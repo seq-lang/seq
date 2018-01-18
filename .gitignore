@@ -1,0 +1,65 @@
+######################
+# Generic .gitignore #
+######################
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.obj
+*.so
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built-in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# CMake #
+#########
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+
+# Other #
+#########
+.idea
+*.cbp
+*.dSYM
+*debug
+*.gch
+*.dylib
+seqtest
+
