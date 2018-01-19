@@ -7,7 +7,7 @@ using namespace seq;
 using namespace llvm;
 
 Op::Op(std::string name, SeqOp op) :
-		Stage(std::move(name), types::Seq(), types::Seq()), op(op)
+    Stage(std::move(name), types::Seq(), types::Seq()), op(op)
 {
 }
 

@@ -18,5 +18,5 @@ llvm_map_components_to_libnames(llvm_libs support core irreader x86asmparser x86
 target_link_libraries(seq ${llvm_libs})
 
 # Seq test
-add_executable(seqtest test/test.cpp src/seq.cpp src/seq.h src/util.cpp src/util.h)
+add_executable(seqtest test/test.cpp)
 target_link_libraries(seqtest seq)

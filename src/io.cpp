@@ -5,7 +5,7 @@
 using namespace seq;
 
 io::SeqData::SeqData(char *data, const uint32_t len) :
-		data(data), len(len)
+    data(data), len(len)
 {
 }
 
@@ -48,7 +48,7 @@ io::DataBlock::DataBlock() : DataBlock(io::DEFAULT_BLOCK_SIZE)
 {
 }
 
-void io::DataBlock::read(std::ifstream &in)
+void io::DataBlock::read(std::ifstream& in)
 {
 	for (len = 0; len < cap; len++) {
 		if (!block[len].read(in))
