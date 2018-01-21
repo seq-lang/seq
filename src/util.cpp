@@ -56,7 +56,7 @@ extern "C" void revcomp(char *seq, const uint32_t len)
 	}
 }
 
-extern "C" void dump(char *seq, const uint32_t len)
+extern "C" void print(char *seq, const uint32_t len)
 {
 	for (uint32_t i = 0; i < len; i++)
 		std::cout << seq[i];

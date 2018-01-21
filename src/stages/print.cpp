@@ -3,7 +3,7 @@
 
 using namespace seq;
 
-Print::Print() : Op("dump", &util::dump)
+Print::Print() : Op("print", &util::print)
 {
 }
 

@@ -2,6 +2,7 @@
 #include "../src/seq.h"
 
 using namespace seq;
+using namespace seq::stageutil;
 
 extern "C" bool is_cpg(char *seq, uint32_t len)
 {
@@ -12,15 +13,22 @@ int main()
 {
 	Seq s = Seq();
 
-	auto pipeline = s | Split::make(10, 1)
-	                  | Filter::make("is_cpg", is_cpg)
-	                  | Print::make()
-	                  | Substr::make(6, 5)
-	                  | Copy::make()
-	                  | RevComp::make()
-	                  | Split::make(1, 1)
-	                  | Print::make();
+	auto p1 = split(10, 1) |
+	          filter("is_cpg", is_cpg) |
+	          print() |
+	          substr(6, 5) |
+	          copy() |
+	          revcomp() |
+	          split(1, 1) |
+	          print();
 
+	auto p2 = split(32, 32) | print();
+
+	auto p3 = print() | copy() | revcomp() | print();
+
+	s.add(&p1);
+	s.add(&p2);
+	s.add(&p3);
 	s.source("test/seqs.txt");
-	s.execute(true);
+	s.execute(true);  // debug=true
 }

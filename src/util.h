@@ -11,7 +11,7 @@ namespace seq {
 		                       uint32_t len2);
 		extern "C" char revcomp_base(char base);
 		extern "C" void revcomp(char *seq, uint32_t len);
-		extern "C" void dump(char *seq, uint32_t len);
+		extern "C" void print(char *seq, uint32_t len);
 	}
 }
 

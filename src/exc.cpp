@@ -2,6 +2,10 @@
 
 using namespace seq;
 
+exc::SeqException::SeqException(std::string msg) : std::runtime_error(msg)
+{
+}
+
 exc::StageException::StageException(std::string msg, Stage &stage) :
     std::runtime_error("(stage: " + stage.getName() + ") " + msg)
 {

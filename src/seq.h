@@ -53,17 +53,29 @@ namespace seq {
 		void validate();
 	};
 
-	class Seq : public Stage {
+	class Seq {
 	private:
 		std::string src;
 		llvm::Function *func;
+		std::vector<Pipeline *> pipelines;
+
+		void codegen(llvm::Module *module, llvm::LLVMContext& context);
 	public:
 		Seq();
-
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
 		void source(std::string source);
+		void add(Pipeline *pipeline);
 		void execute(bool debug=false);
 	};
+
+	namespace stageutil {
+		Copy& copy();
+		Filter& filter(std::string name, SeqPred op);
+		Op& op(std::string name, SeqOp op);
+		Print& print();
+		RevComp& revcomp();
+		Split& split(uint32_t k, uint32_t step);
+		Substr& substr(uint32_t start, uint32_t len);
+	}
 }
 
 std::ostream& operator<<(std::ostream& os, seq::Stage& stage);

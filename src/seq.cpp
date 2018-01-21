@@ -8,6 +8,10 @@
 using namespace seq;
 using namespace llvm;
 
+/*
+ * Stage pipeline
+ */
+
 Pipeline::Pipeline(Stage *head, Stage *tail) : head(head), tail(tail), linked(false)
 {
 }
@@ -97,10 +101,10 @@ void Pipeline::validate()
 
 
 /*
- * Seq methods
+ * Seq -- interface between I/O and JIT
  */
 
-Seq::Seq() : Stage("Seq", types::Void(), types::Seq()), src("")
+Seq::Seq() : src(""), pipelines()
 {
 }
 
@@ -109,16 +113,38 @@ void Seq::source(std::string source)
 	src = std::move(source);
 }
 
+void Seq::add(Pipeline *pipeline)
+{
+	pipelines.push_back(pipeline);
+}
+
+class BaseStage : public Stage {
+public:
+	explicit BaseStage(BasicBlock *block) :
+        Stage("Base", types::Void(), types::Seq())
+	{
+		this->block = block;
+	}
+
+	void codegen(Module *module, LLVMContext& context) override
+	{
+		validate();
+		if (next)
+			next->codegen(module, context);
+	}
+
+	static BaseStage& make(BasicBlock *block)
+	{
+		return *new BaseStage(block);
+	}
+};
+
 void Seq::codegen(Module *module, LLVMContext& context)
 {
-	validate();
-	func = cast<Function>(module->getOrInsertFunction("seq",
+	func = cast<Function>(module->getOrInsertFunction("main",
 	                                                  Type::getVoidTy(context),
 	                                                  IntegerType::getInt8PtrTy(context),
 	                                                  IntegerType::getInt32Ty(context)));
-
-	block = BasicBlock::Create(context, "entry", func);
-	IRBuilder<> builder(block);
 
 	auto args = func->arg_begin();
 	Value *seq = args++;
@@ -127,11 +153,20 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	seq->setName("seq");
 	len->setName("len");
 
-	outs.insert({SeqData::RESULT, seq});
-	outs.insert({SeqData::LEN, len});
+	BasicBlock *block = BasicBlock::Create(context, "entry", func);
+	IRBuilder<> builder(block);
 
-	if (next)
-		next->codegen(module, context);
+	for(auto& pipeline : pipelines) {
+		pipeline->validate();
+		builder.SetInsertPoint(&func->getBasicBlockList().back());
+		block = BasicBlock::Create(context, "entry", func);
+		builder.CreateBr(block);
+		BaseStage *base = &BaseStage::make(block);
+		base->outs.insert({SeqData::RESULT, seq});
+		base->outs.insert({SeqData::LEN, len});
+		pipeline = &(*base | *pipeline);
+		base->codegen(module, context);
+	}
 
 	builder.SetInsertPoint(&func->getBasicBlockList().back());
 	builder.CreateRetVoid();
@@ -141,7 +176,7 @@ void Seq::execute(bool debug)
 {
 	try {
 		if (src.empty())
-			throw exc::StageException("sequence source not specified", *this);
+			throw exc::SeqException("sequence source not specified");
 
 		InitializeNativeTarget();
 		InitializeNativeTargetAsmPrinter();
@@ -159,7 +194,10 @@ void Seq::execute(bool debug)
 		EB.setMCJITMemoryManager(make_unique<SectionMemoryManager>());
 		EB.setUseOrcMCJITReplacement(true);
 		ExecutionEngine *eng = EB.create();
-		finalize(eng);
+
+		for (auto& pipeline : pipelines) {
+			pipeline->getHead()->finalize(eng);
+		}
 
 		auto op = (SeqOp)eng->getPointerToFunction(func);
 
@@ -180,4 +218,44 @@ void Seq::execute(bool debug)
 		errs() << e.what() << '\n';
 		throw;
 	}
+}
+
+
+/*
+ * Stage-building helper functions
+ */
+
+Copy &stageutil::copy()
+{
+	return Copy::make();
+}
+
+Filter& stageutil::filter(std::string name, SeqPred op)
+{
+	return Filter::make(std::move(name), op);
+}
+
+Op &stageutil::op(std::string name, SeqOp op)
+{
+	return Op::make(std::move(name), op);
+}
+
+Print &stageutil::print()
+{
+	return Print::make();
+}
+
+RevComp &stageutil::revcomp()
+{
+	return RevComp::make();
+}
+
+Split &stageutil::split(uint32_t k, uint32_t step)
+{
+	return Split::make(k, step);
+}
+
+Substr &stageutil::substr(uint32_t start, uint32_t len)
+{
+	return Substr::make(start, len);
 }

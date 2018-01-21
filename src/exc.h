@@ -6,6 +6,11 @@
 
 namespace seq {
 	namespace exc {
+		class SeqException : public std::runtime_error {
+		public:
+			SeqException(std::string msg);
+		};
+
 		class StageException : public std::runtime_error {
 		public:
 			StageException(std::string msg, Stage& stage);

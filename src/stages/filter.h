@@ -2,7 +2,6 @@
 #define SEQ_FILTER_H
 
 #include <string>
-#include "../seq.h"
 #include "stage.h"
 
 namespace seq {
