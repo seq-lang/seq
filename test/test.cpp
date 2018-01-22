@@ -13,22 +13,20 @@ int main()
 {
 	Seq s = Seq();
 
-	auto p1 = split(10, 1) |
-	          filter("is_cpg", is_cpg) |
-	          print() |
-	          substr(6, 5) |
-	          copy() |
-	          revcomp() |
-	          split(1, 1) |
-	          print();
+	s |
+	split(10, 1) |
+	filter("is_cpg", is_cpg) |
+	print() |
+	substr(6, 5) |
+	copy() |
+	revcomp() |
+	split(1, 1) |
+	print();
 
-	auto p2 = split(32, 32) | print();
+	s | split(32, 32) | print();
 
-	auto p3 = print() | copy() | revcomp() | print();
+	s | print() | copy() | revcomp() | print();
 
-	s.add(&p1);
-	s.add(&p2);
-	s.add(&p3);
 	s.source("test/seqs.txt");
 	s.execute(true);  // debug=true
 }

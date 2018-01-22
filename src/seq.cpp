@@ -118,6 +118,17 @@ void Seq::add(Pipeline *pipeline)
 	pipelines.push_back(pipeline);
 }
 
+Pipeline& Seq::operator|(Pipeline& to)
+{
+	add(&to);
+	return to;
+}
+
+Pipeline& Seq::operator|(Stage& to)
+{
+	return (*this | *new Pipeline(&to, &to));
+}
+
 class BaseStage : public Stage {
 public:
 	explicit BaseStage(BasicBlock *block) :

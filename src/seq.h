@@ -59,12 +59,15 @@ namespace seq {
 		llvm::Function *func;
 		std::vector<Pipeline *> pipelines;
 
+		void add(Pipeline *pipeline);
 		void codegen(llvm::Module *module, llvm::LLVMContext& context);
 	public:
 		Seq();
 		void source(std::string source);
-		void add(Pipeline *pipeline);
 		void execute(bool debug=false);
+
+		Pipeline& operator|(Pipeline& to);
+		Pipeline& operator|(Stage& to);
 	};
 
 	namespace stageutil {
