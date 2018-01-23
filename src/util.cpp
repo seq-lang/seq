@@ -22,25 +22,26 @@ extern "C" bool seq_eq(char *seq1,
 
 extern "C" char revcomp_base(const char base)
 {
-	static uint8_t rc[1 << 8];
-	static bool init = false;
-
-	if (!init) {
-		for (size_t i = 0; i < sizeof(rc); i++)
-			rc[i] = (uint8_t)i;
-
-		rc['A'] = 'T';
-		rc['C'] = 'G';
-		rc['G'] = 'C';
-		rc['T'] = 'A';
-		rc['a'] = 't';
-		rc['c'] = 'g';
-		rc['g'] = 'c';
-		rc['t'] = 'a';
-		init = true;
+	switch (base) {
+		case 'A':
+			return 'T';
+		case 'C':
+			return 'G';
+		case 'G':
+			return 'C';
+		case 'T':
+			return 'A';
+		case 'a':
+			return 'a';
+		case 'c':
+			return 'c';
+		case 'g':
+			return 'g';
+		case 't':
+			return 't';
+		default:
+			return base;
 	}
-
-	return (char)rc[base];
 }
 
 extern "C" void revcomp(char *seq, const uint32_t len)
@@ -51,8 +52,8 @@ extern "C" void revcomp(char *seq, const uint32_t len)
 		const char a = seq[i];
 		const char b = seq[j];
 
-		seq[i] = seq::util::revcomp_base(b);
-		seq[j] = seq::util::revcomp_base(a);
+		seq[i] = revcomp_base(b);
+		seq[j] = revcomp_base(a);
 	}
 }
 
