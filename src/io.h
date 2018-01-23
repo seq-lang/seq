@@ -4,39 +4,48 @@
 #include <cstdint>
 #include <string>
 #include <fstream>
+#include <map>
+#include "stages/stage.h"
 
 namespace seq {
 	namespace io {
 		static const size_t DEFAULT_BLOCK_SIZE = 1000;
 
-		struct SeqData {
-			char *data;
-			uint32_t len;
+		enum Format {
+			TXT,
+			FASTQ,
+			FASTA,
+			SAM,
+			BAM
+		};
 
-			SeqData();
-			~SeqData();
+		extern const std::map<std::string, Format> EXT_CONV;
 
-			bool read(std::ifstream &in);
+		struct DataCell {
+			char *buf;
+			size_t cap;
+			char *data[seq::SeqData::SEQ_DATA_COUNT];
+			uint32_t lens[seq::SeqData::SEQ_DATA_COUNT];
+
+			DataCell();
+			~DataCell();
+
+			bool read(std::ifstream& in, Format fmt);
 		private:
-			SeqData(char *data, uint32_t len);
+			DataCell(char *data, uint32_t len);
+			bool readFASTQ(std::ifstream& in);
+			bool readTXT(std::ifstream& in);
 		};
 
 		struct DataBlock {
-			SeqData block[DEFAULT_BLOCK_SIZE];
+			DataCell block[DEFAULT_BLOCK_SIZE];
 			size_t len;
 			const size_t cap;
 
 			explicit DataBlock(size_t cap);
 			DataBlock();
 
-			void read(std::ifstream &in);
-		};
-
-		enum Format {
-			FASTQ,
-			FASTA,
-			SAM,
-			BAM
+			void read(std::ifstream &in, Format fmt);
 		};
 	}
 }

@@ -28,7 +28,7 @@ void Filter::codegen(Module *module, LLVMContext& context)
 	block = prev->block;
 	outs = prev->outs;
 
-	auto seqiter = outs.find(SeqData::RESULT);
+	auto seqiter = outs.find(SeqData::SEQ);
 	auto leniter = outs.find(SeqData::LEN);
 
 	if (seqiter == outs.end() || leniter == outs.end())

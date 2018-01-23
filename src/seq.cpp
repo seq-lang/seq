@@ -173,7 +173,7 @@ void Seq::codegen(Module *module, LLVMContext& context)
 		block = BasicBlock::Create(context, "entry", func);
 		builder.CreateBr(block);
 		BaseStage *base = &BaseStage::make(block);
-		base->outs.insert({SeqData::RESULT, seq});
+		base->outs.insert({SeqData::SEQ, seq});
 		base->outs.insert({SeqData::LEN, len});
 		pipeline = &(*base | *pipeline);
 		base->codegen(module, context);
@@ -188,6 +188,13 @@ void Seq::execute(bool debug)
 	try {
 		if (src.empty())
 			throw exc::SeqException("sequence source not specified");
+
+		auto fmtIter = io::EXT_CONV.find(src.substr(src.find_last_of('.') + 1));
+
+		if (fmtIter == io::EXT_CONV.end())
+			throw exc::IOException("unknown file extension in '" + src + "'");
+
+		io::Format fmt = fmtIter->second;
 
 		InitializeNativeTarget();
 		InitializeNativeTargetAsmPrinter();
@@ -219,12 +226,14 @@ void Seq::execute(bool debug)
 			throw exc::IOException("could not open '" + src + "' for reading");
 
 		do {
-			data->read(input);
+			data->read(input, fmt);
 			const size_t len = data->len;
 			for (size_t i = 0; i < len; i++) {
-				op(data->block[i].data, data->block[i].len);
+				op(data->block[i].data[SeqData::SEQ], data->block[i].lens[SeqData::SEQ]);
 			}
 		} while (data->len > 0);
+
+		delete data;
 	} catch (std::exception& e) {
 		errs() << e.what() << '\n';
 		throw;

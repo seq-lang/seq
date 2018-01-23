@@ -36,10 +36,11 @@ namespace seq {
 	class Pipeline;
 
 	enum SeqData {
-		RESULT,
-		IDENT,
+		SEQ,
 		LEN,
-		QUAL
+		QUAL,
+		IDENT,
+		SEQ_DATA_COUNT
 	};
 
 	class Stage {

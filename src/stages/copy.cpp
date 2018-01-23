@@ -10,7 +10,7 @@ Copy::Copy() : Stage("copy", types::Seq(), types::Seq())
 
 void Copy::codegen(Module *module, LLVMContext& context)
 {
-	auto seqiter = prev->outs.find(SeqData::RESULT);
+	auto seqiter = prev->outs.find(SeqData::SEQ);
 	auto leniter = prev->outs.find(SeqData::LEN);
 
 	if (seqiter == outs.end() || leniter == outs.end())
@@ -24,8 +24,8 @@ void Copy::codegen(Module *module, LLVMContext& context)
 	Value *copy = builder.CreateAlloca(IntegerType::getInt8Ty(context), len);
 	builder.CreateMemCpy(copy, seq, len, 1);
 
-	outs.insert({SeqData::RESULT, copy});
-	outs.insert({SeqData::LEN,    len});
+	outs.insert({SeqData::SEQ, copy});
+	outs.insert({SeqData::LEN, len});
 
 	if (next)
 		next->codegen(module, context);
