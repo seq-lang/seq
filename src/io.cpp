@@ -112,6 +112,7 @@ bool DataCell::read(std::ifstream& in, Format fmt)
 	}
 
 	assert(false);
+	return false;
 }
 
 io::DataBlock::DataBlock(const size_t cap) : len(0), cap(cap)
