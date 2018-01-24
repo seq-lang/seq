@@ -24,8 +24,8 @@ namespace seq {
 		struct DataCell {
 			char *buf;
 			size_t cap;
-			char *data[seq::SeqData::SEQ_DATA_COUNT];
-			uint32_t lens[seq::SeqData::SEQ_DATA_COUNT];
+			char *data[SeqData::SEQ_DATA_COUNT];
+			uint32_t lens[SeqData::SEQ_DATA_COUNT];
 
 			DataCell();
 			~DataCell();
@@ -45,7 +45,7 @@ namespace seq {
 			explicit DataBlock(size_t cap);
 			DataBlock();
 
-			void read(std::ifstream &in, Format fmt);
+			void read(std::ifstream& in, Format fmt);
 		};
 	}
 }

@@ -20,16 +20,16 @@ const map<string, Format> io::EXT_CONV = {{"txt",   Format::TXT},
                                           {"sam",   Format::SAM},
                                           {"bam",   Format::FASTQ}};
 
-io::DataCell::DataCell(char *buf, const uint32_t cap) :
+DataCell::DataCell(char *buf, const uint32_t cap) :
     buf(buf), cap(cap)
 {
 }
 
-io::DataCell::DataCell() : DataCell(nullptr, 0)
+DataCell::DataCell() : DataCell(nullptr, 0)
 {
 }
 
-io::DataCell::~DataCell()
+DataCell::~DataCell()
 {
 	free(buf);
 }
