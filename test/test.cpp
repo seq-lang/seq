@@ -27,6 +27,6 @@ int main()
 
 	s | print() | copy() | revcomp() | print();
 
-	s.source("test/seqs.txt");
+	s.source("test/data/seqs.fastq");
 	s.execute(true);  // debug=true
 }
