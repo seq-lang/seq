@@ -12,9 +12,9 @@ Substr::Substr(uint32_t start, uint32_t len) :
 
 void Substr::codegen(Module *module, LLVMContext& context)
 {
-	auto seqiter = prev->outs.find(SeqData::SEQ);
+	auto seqiter = prev->outs->find(SeqData::SEQ);
 
-	if (seqiter == outs.end())
+	if (seqiter == outs->end())
 		throw exc::StageException("pipeline error", *this);
 
 	Value *seq = seqiter->second;
@@ -25,8 +25,8 @@ void Substr::codegen(Module *module, LLVMContext& context)
 	Value *subseq = builder.CreateGEP(seq, subidx);
 	Value *sublen = ConstantInt::get(Type::getInt32Ty(context), len);
 
-	outs.insert({SeqData::SEQ, subseq});
-	outs.insert({SeqData::LEN, sublen});
+	outs->insert({SeqData::SEQ, subseq});
+	outs->insert({SeqData::LEN, sublen});
 
 	if (next)
 		next->codegen(module, context);

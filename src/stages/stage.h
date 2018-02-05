@@ -43,8 +43,11 @@ namespace seq {
 		SEQ_DATA_COUNT
 	};
 
+	class Seq;
+
 	class Stage {
 	private:
+		Seq *base;
 		bool linked;
 
 		types::Type in;
@@ -55,16 +58,21 @@ namespace seq {
 	public:
 		std::string name;
 		llvm::BasicBlock *block;
-		std::map<SeqData, llvm::Value *> outs;
+		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
 
 		friend Pipeline;
 		Stage(std::string name, types::Type in, types::Type out);
-		Stage(std::string name);
+		explicit Stage(std::string name);
 		Pipeline& operator|(Stage& to);
 		Pipeline& operator|(Pipeline& to);
-		std::string& getName();
-		Stage *getPrev();
-		Stage *getNext();
+		std::string getName() const;
+		Stage *getPrev() const;
+		Stage *getNext() const;
+		void setBase(Seq *base);
+		Seq *getBase() const;
+		types::Type getInType() const;
+		types::Type getOutType() const;
+		Pipeline& asPipeline();
 
 		virtual void validate();
 		virtual void codegen(llvm::Module *module, llvm::LLVMContext& context);

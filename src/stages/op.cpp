@@ -19,19 +19,21 @@ void Op::codegen(Module *module, LLVMContext& context)
 		throw exc::StageException("previous stage not compiled", *this);
 
 	func = cast<Function>(
-			module->getOrInsertFunction(name,
-			                            Type::getVoidTy(context),
-			                            IntegerType::getInt8PtrTy(context),
-			                            IntegerType::getInt32Ty(context)));
+	         module->getOrInsertFunction(
+               name,
+	           Type::getVoidTy(context),
+	           IntegerType::getInt8PtrTy(context),
+	           IntegerType::getInt32Ty(context)));
+
 	func->setCallingConv(CallingConv::C);
 
 	block = prev->block;
-	outs = prev->outs;
+	outs->insert(prev->outs->begin(), prev->outs->end());
 
-	auto seqiter = outs.find(SeqData::SEQ);
-	auto leniter = outs.find(SeqData::LEN);
+	auto seqiter = outs->find(SeqData::SEQ);
+	auto leniter = outs->find(SeqData::LEN);
 
-	if (seqiter == outs.end() || leniter == outs.end())
+	if (seqiter == outs->end() || leniter == outs->end())
 		throw exc::StageException("pipeline error", *this);
 
 	IRBuilder<> builder(block);

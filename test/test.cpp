@@ -27,6 +27,12 @@ int main()
 
 	s | print() | copy() | revcomp() | print();
 
+	Var a, b, c, d;
+	a = s | print();
+	b = a | substr(1,5);
+	c = b | split(1,1) | print();
+	d = b | copy() | revcomp() | print();
+
 	s.source("test/data/seqs.fastq");
 	s.execute(true);  // debug=true
 }

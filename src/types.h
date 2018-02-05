@@ -3,14 +3,6 @@
 
 namespace seq {
 	namespace types {
-		struct Base;
-		struct Seq;
-		struct Number;
-		struct Int;
-		struct Float;
-		template<typename T>
-		struct Array;
-
 		struct Base {
 		};
 
@@ -20,7 +12,7 @@ namespace seq {
 		struct Seq : Base {
 		};
 
-		template<typename T>
+		template<unsigned K>
 		struct Mer : Seq {
 		};
 

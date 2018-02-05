@@ -8,11 +8,13 @@
 using namespace seq;
 using namespace llvm;
 
+
 /*
  * Stage pipeline
  */
 
-Pipeline::Pipeline(Stage *head, Stage *tail) : head(head), tail(tail), linked(false)
+Pipeline::Pipeline(Stage *head, Stage *tail) :
+    head(head), tail(tail), linked(false), added(false)
 {
 }
 
@@ -88,53 +90,48 @@ std::ostream& operator<<(std::ostream& os, Pipeline& stage)
 	return os;
 }
 
-Stage *Pipeline::getHead()
+Stage *Pipeline::getHead() const
 {
 	return head;
 }
 
+Stage *Pipeline::getTail() const
+{
+	return tail;
+}
+
+bool Pipeline::isLinked() const
+{
+	return linked;
+}
+
+bool Pipeline::isAdded() const
+{
+	return added;
+}
+
+void Pipeline::setAdded()
+{
+	added = true;
+}
+
 void Pipeline::validate()
 {
-	for (Stage *stage = head; stage; stage = stage->getNext())
+	for (Stage *stage = head; stage; stage = stage->getNext()) {
 		stage->validate();
+	}
 }
 
 
 /*
- * Seq -- interface between I/O and JIT
+ * Var -- intermediate variables
  */
-
-Seq::Seq() : src(""), pipelines()
-{
-}
-
-void Seq::source(std::string source)
-{
-	src = std::move(source);
-}
-
-void Seq::add(Pipeline *pipeline)
-{
-	pipelines.push_back(pipeline);
-}
-
-Pipeline& Seq::operator|(Pipeline& to)
-{
-	add(&to);
-	return to;
-}
-
-Pipeline& Seq::operator|(Stage& to)
-{
-	return (*this | *new Pipeline(&to, &to));
-}
 
 class BaseStage : public Stage {
 public:
-	explicit BaseStage(BasicBlock *block) :
-        Stage("Base", types::Void(), types::Seq())
+	BaseStage(types::Type in, types::Type out) :
+	    Stage("Base", in, out)
 	{
-		this->block = block;
 	}
 
 	void codegen(Module *module, LLVMContext& context) override
@@ -144,18 +141,86 @@ public:
 			next->codegen(module, context);
 	}
 
-	static BaseStage& make(BasicBlock *block)
+	static BaseStage& make(types::Type in, types::Type out)
 	{
-		return *new BaseStage(block);
+		return *new BaseStage(in, out);
 	}
 };
 
+Var::Var() : Var(types::Base())
+{
+}
+
+Var::Var(types::Type type) :
+    assigned(false), type(type), pipeline(nullptr)
+{
+}
+
+Pipeline& Var::operator|(Pipeline& to)
+{
+	if (!assigned)
+		throw exc::SeqException("variable used before assigned");
+
+	if (to.isAdded())
+		throw exc::SeqException("cannot use same pipeline twice");
+
+	to.getHead()->setBase(base);
+	BaseStage& begin = BaseStage::make(types::Void(), type);
+	begin.setBase(base);
+	begin.outs = pipeline->getTail()->outs;
+
+	Pipeline& add = begin | to;
+	add.setAdded();
+	base->add(&add);
+
+	return add;
+}
+
+Pipeline& Var::operator|(Stage& to)
+{
+	return (*this | to.asPipeline());
+}
+
+Var& Var::operator=(Pipeline& to)
+{
+	if (assigned)
+		throw exc::SeqException("variable cannot be assigned twice");
+
+	assigned = true;
+	type = to.getTail()->getOutType();
+	base = to.getHead()->getBase();
+	pipeline = &to;
+
+	return *this;
+}
+
+Var& Var::operator=(Stage& to)
+{
+	return *this = to.asPipeline();
+}
+
+
+/*
+ * Seq -- interface between I/O and JIT
+ */
+
+Seq::Seq() : src(""), func(nullptr)
+{
+}
+
+void Seq::source(std::string source)
+{
+	src = std::move(source);
+}
+
 void Seq::codegen(Module *module, LLVMContext& context)
 {
-	func = cast<Function>(module->getOrInsertFunction("main",
-	                                                  Type::getVoidTy(context),
-	                                                  IntegerType::getInt8PtrTy(context),
-	                                                  IntegerType::getInt32Ty(context)));
+	func = cast<Function>(
+	         module->getOrInsertFunction(
+	           "main",
+	           Type::getVoidTy(context),
+	           IntegerType::getInt8PtrTy(context),
+	           IntegerType::getInt32Ty(context)));
 
 	auto args = func->arg_begin();
 	Value *seq = args++;
@@ -170,13 +235,23 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	for(auto& pipeline : pipelines) {
 		pipeline->validate();
 		builder.SetInsertPoint(&func->getBasicBlockList().back());
-		block = BasicBlock::Create(context, "entry", func);
+		block = BasicBlock::Create(context, "pipeline", func);
 		builder.CreateBr(block);
-		BaseStage *base = &BaseStage::make(block);
-		base->outs.insert({SeqData::SEQ, seq});
-		base->outs.insert({SeqData::LEN, len});
-		pipeline = &(*base | *pipeline);
-		base->codegen(module, context);
+
+		BaseStage *begin;
+		if ((begin = dynamic_cast<BaseStage *>(pipeline->getHead()))) {
+			begin->setBase(pipeline->getHead()->getBase());
+			begin->block = block;
+			pipeline->getHead()->codegen(module, context);
+		} else {
+			begin = &BaseStage::make(types::Void(), types::Seq());
+			begin->setBase(pipeline->getHead()->getBase());
+			begin->block = block;
+			begin->outs->insert({SeqData::SEQ, seq});
+			begin->outs->insert({SeqData::LEN, len});
+			pipeline = &(*begin | *pipeline);
+			begin->codegen(module, context);
+		}
 	}
 
 	builder.SetInsertPoint(&func->getBasicBlockList().back());
@@ -238,6 +313,28 @@ void Seq::execute(bool debug)
 		errs() << e.what() << '\n';
 		throw;
 	}
+}
+
+void Seq::add(Pipeline *pipeline)
+{
+	pipelines.push_back(pipeline);
+}
+
+Function *Seq::getFunc() const
+{
+	return func;
+}
+
+Pipeline& Seq::operator|(Pipeline& to)
+{
+	to.getHead()->setBase(this);
+	add(&to);
+	return to;
+}
+
+Pipeline& Seq::operator|(Stage& to)
+{
+	return (*this | to.asPipeline());
 }
 
 

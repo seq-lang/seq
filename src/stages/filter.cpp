@@ -19,19 +19,21 @@ void Filter::codegen(Module *module, LLVMContext& context)
 		throw exc::StageException("previous stage not compiled", *this);
 
 	func = cast<Function>(
-			module->getOrInsertFunction(name,
-			                            Type::getInt8Ty(context),
-			                            IntegerType::getInt8PtrTy(context),
-			                            IntegerType::getInt32Ty(context)));
+	         module->getOrInsertFunction(
+		       name,
+	           Type::getInt8Ty(context),
+	           IntegerType::getInt8PtrTy(context),
+	           IntegerType::getInt32Ty(context)));
+
 	func->setCallingConv(CallingConv::C);
 
 	block = prev->block;
-	outs = prev->outs;
+	outs->insert(prev->outs->begin(), prev->outs->end());
 
-	auto seqiter = outs.find(SeqData::SEQ);
-	auto leniter = outs.find(SeqData::LEN);
+	auto seqiter = outs->find(SeqData::SEQ);
+	auto leniter = outs->find(SeqData::LEN);
 
-	if (seqiter == outs.end() || leniter == outs.end())
+	if (seqiter == outs.get()->end() || leniter == outs.get()->end())
 		throw exc::StageException("pipeline error", *this);
 
 	std::vector<Value *> args = {seqiter->second, leniter->second};

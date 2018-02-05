@@ -44,27 +44,50 @@ namespace seq {
 		Stage *head;
 		Stage *tail;
 		bool linked;
+		bool added;
 	public:
 		friend Stage;
 		Pipeline(Stage *head, Stage *tail);
 		Pipeline& operator|(Stage& to);
 		Pipeline& operator|(Pipeline& to);
-		Stage *getHead();
+		Stage *getHead() const;
+		Stage *getTail() const;
+		bool isLinked() const;
+		bool isAdded() const;
+		void setAdded();
 		void validate();
+	};
+
+	class Seq;
+
+	class Var {
+	protected:
+		bool assigned;
+		types::Type type;
+		Pipeline *pipeline;
+		Seq *base;
+	public:
+		Var();
+		explicit Var(types::Type type);
+		Pipeline& operator|(Pipeline& to);
+		Pipeline& operator|(Stage& to);
+
+		Var& operator=(Pipeline& to);
+		Var& operator=(Stage& to);
 	};
 
 	class Seq {
 	private:
 		std::string src;
-		llvm::Function *func;
 		std::vector<Pipeline *> pipelines;
-
-		void add(Pipeline *pipeline);
+		llvm::Function *func;
 		void codegen(llvm::Module *module, llvm::LLVMContext& context);
 	public:
 		Seq();
 		void source(std::string source);
 		void execute(bool debug=false);
+		void add(Pipeline *pipeline);
+		llvm::Function *getFunc() const;
 
 		Pipeline& operator|(Pipeline& to);
 		Pipeline& operator|(Stage& to);
