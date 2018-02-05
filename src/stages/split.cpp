@@ -38,22 +38,21 @@ void Split::codegen(Module *module, LLVMContext& context)
 	outs->insert({SeqData::LEN, sublen});
 	block = loop;
 
-	if (next)
-		next->codegen(module, context);
+	codegenNext(module, context);
 
-	builder.SetInsertPoint(block);
+	builder.SetInsertPoint(getAfter());
 	Value *inc = ConstantInt::get(Type::getInt32Ty(context), step);
 	Value *next = builder.CreateAdd(control, inc, "next");
 
 	control->addIncoming(ConstantInt::get(Type::getInt32Ty(context), 0), entry);
-	control->addIncoming(next, block);
+	control->addIncoming(next, getAfter());
 
-	BasicBlock *after = BasicBlock::Create(context, "after", func);
+	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	Value *max = builder.CreateSub(len, sublen);
 	Value *cond = builder.CreateICmpULE(next, max);
-	builder.CreateCondBr(cond, loop, after);
+	builder.CreateCondBr(cond, loop, exit);
 
-	prev->block = after;
+	prev->setAfter(exit);
 }
 
 Split& Split::make(const uint32_t k, const uint32_t step)

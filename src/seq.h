@@ -48,6 +48,7 @@ namespace seq {
 	public:
 		friend Stage;
 		Pipeline(Stage *head, Stage *tail);
+		Pipeline();
 		Pipeline& operator|(Stage& to);
 		Pipeline& operator|(Pipeline& to);
 		Stage *getHead() const;

@@ -8,8 +8,8 @@ using namespace seq;
 using namespace llvm;
 
 Stage::Stage(std::string name, types::Type in, types::Type out) :
-    linked(false), in(in), out(out), prev(nullptr),
-    next(nullptr), name(std::move(name)), block(nullptr),
+    linked(false), in(in), out(out), prev(nullptr), nexts(),
+    name(std::move(name)), block(nullptr), after(nullptr),
     outs(new std::map<SeqData, llvm::Value *>)
 {
 }
@@ -29,17 +29,16 @@ Stage *Stage::getPrev() const
 	return prev;
 }
 
-Stage *Stage::getNext() const
+std::vector<Stage *>& Stage::getNext()
 {
-	return next;
+	return nexts;
 }
 
 void Stage::setBase(Seq *base)
 {
 	this->base = base;
-	Stage *next;
-	if ((next = getNext()))
-	{
+
+	for (auto& next : nexts) {
 		next->setBase(base);
 	}
 }
@@ -64,6 +63,21 @@ Pipeline& Stage::asPipeline()
 	return *new Pipeline(this, this);
 }
 
+void Stage::addNext(Stage *next)
+{
+	nexts.push_back(next);
+}
+
+BasicBlock *Stage::getAfter() const
+{
+	return after ? after : block;
+}
+
+void Stage::setAfter(BasicBlock *block)
+{
+	after = block;
+}
+
 void Stage::validate()
 {
 	if (prev && typeid(prev->out) != typeid(in))
@@ -75,8 +89,16 @@ void Stage::codegen(Module *module, LLVMContext& context)
 	throw exc::StageException("cannot codegen abstract stage", *this);
 }
 
+void Stage::codegenNext(Module *module, LLVMContext& context)
+{
+	for (auto& next : nexts) {
+		next->codegen(module, context);
+	}
+}
+
 void Stage::finalize(ExecutionEngine *eng)
 {
-	if (next)
+	for (auto& next : nexts) {
 		next->finalize(eng);
+	}
 }

@@ -27,10 +27,8 @@ void Copy::codegen(Module *module, LLVMContext& context)
 	outs->insert({SeqData::SEQ, copy});
 	outs->insert({SeqData::LEN, len});
 
-	if (next)
-		next->codegen(module, context);
-
-	prev->block = block;
+	codegenNext(module, context);
+	prev->setAfter(getAfter());
 }
 
 Copy& Copy::make()

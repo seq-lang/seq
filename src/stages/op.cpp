@@ -40,10 +40,8 @@ void Op::codegen(Module *module, LLVMContext& context)
 	std::vector<Value *> args = {seqiter->second, leniter->second};
 	builder.CreateCall(func, args, "");
 
-	if (next)
-		next->codegen(module, context);
-
-	prev->block = block;
+	codegenNext(module, context);
+	prev->setAfter(getAfter());
 }
 
 void Op::finalize(ExecutionEngine *eng)

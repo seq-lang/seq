@@ -18,6 +18,10 @@ Pipeline::Pipeline(Stage *head, Stage *tail) :
 {
 }
 
+Pipeline::Pipeline() : Pipeline(nullptr, nullptr)
+{
+}
+
 Pipeline& Stage::operator|(Stage& to)
 {
 	if (linked)
@@ -26,7 +30,7 @@ Pipeline& Stage::operator|(Stage& to)
 	if (to.linked)
 		throw exc::MultiLinkException(to);
 
-	next = &to;
+	addNext(&to);
 	to.prev = this;
 	to.linked = linked = true;
 	return *new Pipeline(this, &to);
@@ -40,7 +44,7 @@ Pipeline& Stage::operator|(Pipeline& to)
 	if (to.linked)
 		throw exc::MultiLinkException(*to.getHead());
 
-	next = to.head;
+	addNext(to.head);
 	to.head->prev = this;
 	to.head = this;
 	linked = true;
@@ -55,7 +59,7 @@ Pipeline& Pipeline::operator|(Stage& to)
 	if (to.linked)
 		throw exc::MultiLinkException(to);
 
-	tail->next = &to;
+	tail->addNext(&to);
 	to.prev = tail;
 	tail = &to;
 	to.linked = true;
@@ -70,7 +74,7 @@ Pipeline& Pipeline::operator|(Pipeline& to)
 	if (to.linked)
 		throw exc::MultiLinkException(*to.getHead());
 
-	tail->next = to.head;
+	tail->addNext(to.head);
 	to.head->prev = tail;
 	tail = to.tail;
 	to.linked = true;
@@ -84,8 +88,11 @@ std::ostream& operator<<(std::ostream& os, Stage& stage)
 
 std::ostream& operator<<(std::ostream& os, Pipeline& stage)
 {
-	for (Stage *s = stage.getHead(); s; s = s->getNext()) {
+	for (Stage *s = stage.getHead(); s;) {
 		os << *s << " ";
+
+		if (!s->getNext().empty())
+			s = s->getNext()[0];
 	}
 	return os;
 }
@@ -115,11 +122,17 @@ void Pipeline::setAdded()
 	added = true;
 }
 
+static void validateStageRecursive(Stage *stage)
+{
+	stage->validate();
+	for (auto& next : stage->getNext()) {
+		next->validate();
+	}
+}
+
 void Pipeline::validate()
 {
-	for (Stage *stage = head; stage; stage = stage->getNext()) {
-		stage->validate();
-	}
+	validateStageRecursive(head);
 }
 
 
@@ -137,8 +150,7 @@ public:
 	void codegen(Module *module, LLVMContext& context) override
 	{
 		validate();
-		if (next)
-			next->codegen(module, context);
+		codegenNext(module, context);
 	}
 
 	static BaseStage& make(types::Type in, types::Type out)

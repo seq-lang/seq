@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 #include <map>
 
 #include "llvm/ADT/APInt.h"
@@ -54,10 +55,11 @@ namespace seq {
 		types::Type out;
 	protected:
 		Stage *prev;
-		Stage *next;
+		std::vector<Stage *> nexts;
 	public:
 		std::string name;
 		llvm::BasicBlock *block;
+		llvm::BasicBlock *after;
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
 
 		friend Pipeline;
@@ -67,15 +69,19 @@ namespace seq {
 		Pipeline& operator|(Pipeline& to);
 		std::string getName() const;
 		Stage *getPrev() const;
-		Stage *getNext() const;
+		std::vector<Stage *>& getNext();
 		void setBase(Seq *base);
 		Seq *getBase() const;
 		types::Type getInType() const;
 		types::Type getOutType() const;
 		Pipeline& asPipeline();
+		virtual void addNext(Stage *next);
+		virtual llvm::BasicBlock *getAfter() const;
+		virtual void setAfter(llvm::BasicBlock *block);
 
 		virtual void validate();
 		virtual void codegen(llvm::Module *module, llvm::LLVMContext& context);
+		virtual void codegenNext(llvm::Module *module, llvm::LLVMContext& context);
 		virtual void finalize(llvm::ExecutionEngine *eng);
 	};
 }

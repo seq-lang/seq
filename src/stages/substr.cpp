@@ -28,10 +28,8 @@ void Substr::codegen(Module *module, LLVMContext& context)
 	outs->insert({SeqData::SEQ, subseq});
 	outs->insert({SeqData::LEN, sublen});
 
-	if (next)
-		next->codegen(module, context);
-
-	prev->block = block;
+	codegenNext(module, context);
+	prev->setAfter(getAfter());
 }
 
 Substr& Substr::make(const uint32_t start, const uint32_t len)

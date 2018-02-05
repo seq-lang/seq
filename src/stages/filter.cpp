@@ -33,7 +33,7 @@ void Filter::codegen(Module *module, LLVMContext& context)
 	auto seqiter = outs->find(SeqData::SEQ);
 	auto leniter = outs->find(SeqData::LEN);
 
-	if (seqiter == outs.get()->end() || leniter == outs.get()->end())
+	if (seqiter == outs->end() || leniter == outs->end())
 		throw exc::StageException("pipeline error", *this);
 
 	std::vector<Value *> args = {seqiter->second, leniter->second};
@@ -43,14 +43,13 @@ void Filter::codegen(Module *module, LLVMContext& context)
 	BasicBlock *body = BasicBlock::Create(context, "body", block->getParent());
 	block = body;
 
-	if (next)
-		next->codegen(module, context);
+	codegenNext(module, context);
 
-	BasicBlock *after = BasicBlock::Create(context, "after", body->getParent());
-	builder.CreateCondBr(pred, body, after);
-	builder.SetInsertPoint(block);
-	builder.CreateBr(after);
-	prev->block = after;
+	BasicBlock *exit = BasicBlock::Create(context, "exit", body->getParent());
+	builder.CreateCondBr(pred, body, exit);
+	builder.SetInsertPoint(getAfter());
+	builder.CreateBr(exit);
+	prev->setAfter(exit);
 }
 
 void Filter::finalize(ExecutionEngine *eng)
