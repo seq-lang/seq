@@ -1,8 +1,9 @@
 #ifndef SEQ_EXC_H
 #define SEQ_EXC_H
 
+#include <string>
 #include <exception>
-#include "stages/stage.h"
+#include "stage.h"
 
 namespace seq {
 	namespace exc {

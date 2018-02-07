@@ -1,4 +1,4 @@
-#include "../exc.h"
+#include "exc.h"
 #include "copy.h"
 
 using namespace seq;

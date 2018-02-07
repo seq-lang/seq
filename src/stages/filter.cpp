@@ -1,6 +1,6 @@
 #include <string>
 #include <vector>
-#include "../exc.h"
+#include "exc.h"
 #include "filter.h"
 
 using namespace seq;

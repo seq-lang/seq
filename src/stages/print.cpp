@@ -1,4 +1,4 @@
-#include "../util.h"
+#include "util.h"
 #include "print.h"
 
 using namespace seq;

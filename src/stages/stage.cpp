@@ -1,8 +1,8 @@
 #include <string>
 #include <vector>
-#include "../seq.h"
-#include "../exc.h"
-#include "stage.h"
+#include "seq.h"
+#include "pipeline.h"
+#include "exc.h"
 
 using namespace seq;
 using namespace llvm;
@@ -27,6 +27,14 @@ std::string Stage::getName() const
 Stage *Stage::getPrev() const
 {
 	return prev;
+}
+
+void Stage::setPrev(Stage *prev)
+{
+	if (this->prev != nullptr)
+		throw exc::MultiLinkException(*this);
+
+	this->prev = prev;
 }
 
 std::vector<Stage *>& Stage::getNext()
@@ -78,6 +86,16 @@ void Stage::setAfter(BasicBlock *block)
 	after = block;
 }
 
+bool Stage::isLinked() const
+{
+	return linked;
+}
+
+void Stage::setLinked()
+{
+	linked = true;
+}
+
 void Stage::validate()
 {
 	if (prev && typeid(prev->out) != typeid(in))
@@ -101,4 +119,20 @@ void Stage::finalize(ExecutionEngine *eng)
 	for (auto& next : nexts) {
 		next->finalize(eng);
 	}
+}
+
+Pipeline& Stage::operator|(Stage& to)
+{
+	return *new Pipeline(this, &to);
+}
+
+Pipeline& Stage::operator|(Pipeline& to)
+{
+	to.setHead(this);
+	return to;
+}
+
+std::ostream& operator<<(std::ostream& os, Stage& stage)
+{
+	return os << stage.getName();
 }

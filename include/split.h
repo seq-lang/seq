@@ -13,7 +13,6 @@ namespace seq {
 		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
 		static Split& make(uint32_t k, uint32_t step);
 	};
-
 }
 
 #endif /* SEQ_SPLIT_H */

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../src/seq.h"
+#include "seq.h"
 
 using namespace seq;
 using namespace seq::stageutil;

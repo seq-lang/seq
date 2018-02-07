@@ -5,7 +5,7 @@
 #include <string>
 #include <fstream>
 #include <map>
-#include "stages/stage.h"
+#include "stage.h"
 
 namespace seq {
 	namespace io {

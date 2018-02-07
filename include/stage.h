@@ -2,6 +2,7 @@
 #define SEQ_STAGES_H
 
 #include <cstdint>
+#include <iostream>
 #include <string>
 #include <vector>
 #include <map>
@@ -28,13 +29,14 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "../types.h"
+#include "types.h"
 
 namespace seq {
+	class Seq;
+	class Pipeline;
+
 	typedef void (*SeqOp)(char *, uint32_t);
 	typedef bool (*SeqPred)(char *, uint32_t);
-
-	class Pipeline;
 
 	enum SeqData {
 		SEQ,
@@ -43,8 +45,6 @@ namespace seq {
 		IDENT,
 		SEQ_DATA_COUNT
 	};
-
-	class Seq;
 
 	class Stage {
 	private:
@@ -62,13 +62,12 @@ namespace seq {
 		llvm::BasicBlock *after;
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
 
-		friend Pipeline;
 		Stage(std::string name, types::Type in, types::Type out);
 		explicit Stage(std::string name);
-		Pipeline& operator|(Stage& to);
-		Pipeline& operator|(Pipeline& to);
+
 		std::string getName() const;
 		Stage *getPrev() const;
+		void setPrev(Stage *prev);
 		std::vector<Stage *>& getNext();
 		void setBase(Seq *base);
 		Seq *getBase() const;
@@ -78,12 +77,19 @@ namespace seq {
 		virtual void addNext(Stage *next);
 		virtual llvm::BasicBlock *getAfter() const;
 		virtual void setAfter(llvm::BasicBlock *block);
+		bool isLinked() const;
+		void setLinked();
 
 		virtual void validate();
 		virtual void codegen(llvm::Module *module, llvm::LLVMContext& context);
 		virtual void codegenNext(llvm::Module *module, llvm::LLVMContext& context);
 		virtual void finalize(llvm::ExecutionEngine *eng);
+
+		Pipeline& operator|(Stage& to);
+		Pipeline& operator|(Pipeline& to);
 	};
 }
+
+std::ostream& operator<<(std::ostream& os, seq::Stage& stage);
 
 #endif /* SEQ_STAGES_H */

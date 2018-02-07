@@ -1,20 +1,20 @@
-#ifndef SEQ_FILTER_H
-#define SEQ_FILTER_H
+#ifndef SEQ_OP_H
+#define SEQ_OP_H
 
 #include <string>
 #include "stage.h"
 
 namespace seq {
-	class Filter : public Stage {
+	class Op : public Stage {
 	private:
 		llvm::Function *func;
-		SeqPred op;
+		SeqOp op;
 	public:
-		explicit Filter(std::string name, SeqPred op);
+		Op(std::string name, SeqOp op);
 		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
 		void finalize(llvm::ExecutionEngine *eng) override;
-		static Filter& make(std::string name, SeqPred op);
+		static Op& make(std::string name, SeqOp op);
 	};
 }
 
-#endif /* SEQ_FILTER_H */
+#endif /* SEQ_OP_H */

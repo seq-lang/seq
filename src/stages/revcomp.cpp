@@ -1,4 +1,4 @@
-#include "../util.h"
+#include "util.h"
 #include "revcomp.h"
 
 using namespace seq;

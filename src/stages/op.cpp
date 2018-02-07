@@ -1,6 +1,6 @@
 #include <string>
 #include <vector>
-#include "../exc.h"
+#include "exc.h"
 #include "op.h"
 
 using namespace seq;

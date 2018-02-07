@@ -1,5 +1,5 @@
 #include <cstdint>
-#include "../exc.h"
+#include "exc.h"
 #include "split.h"
 
 using namespace seq;
