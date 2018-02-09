@@ -7,28 +7,7 @@
 #include <vector>
 #include <map>
 
-#include "llvm/ADT/APInt.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
-#include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/IR/Argument.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
-
+#include "llvm.h"
 #include "types.h"
 
 namespace seq {
@@ -51,8 +30,8 @@ namespace seq {
 		Seq *base;
 		bool linked;
 
-		types::Type in;
-		types::Type out;
+		types::Type *in;
+		types::Type *out;
 	protected:
 		Stage *prev;
 		std::vector<Stage *> nexts;
@@ -62,7 +41,7 @@ namespace seq {
 		llvm::BasicBlock *after;
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
 
-		Stage(std::string name, types::Type in, types::Type out);
+		Stage(std::string name, types::Type *in, types::Type *out);
 		explicit Stage(std::string name);
 
 		std::string getName() const;
@@ -71,8 +50,8 @@ namespace seq {
 		std::vector<Stage *>& getNext();
 		void setBase(Seq *base);
 		Seq *getBase() const;
-		types::Type getInType() const;
-		types::Type getOutType() const;
+		types::Type *getInType() const;
+		types::Type *getOutType() const;
 		Pipeline& asPipeline();
 		virtual void addNext(Stage *next);
 		virtual llvm::BasicBlock *getAfter() const;

@@ -6,7 +6,7 @@ using namespace llvm;
 using namespace seq;
 
 Substr::Substr(uint32_t start, uint32_t len) :
-    Stage("split", types::Seq(), types::Seq()), start(start - 1), len(len)
+    Stage("split", types::Seq::get(), types::Seq::get()), start(start - 1), len(len)
 {
 }
 

@@ -9,12 +9,12 @@ namespace seq {
 	class Var {
 	protected:
 		bool assigned;
-		types::Type type;
+		types::Type *type;
 		Pipeline *pipeline;
 		Seq *base;
 	public:
 		Var();
-		explicit Var(types::Type type);
+		explicit Var(types::Type *type);
 
 		Pipeline& operator|(Pipeline& to);
 		Pipeline& operator|(Stage& to);

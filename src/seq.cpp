@@ -49,7 +49,7 @@ void Seq::codegen(Module *module, LLVMContext& context)
 			begin->block = block;
 			pipeline->getHead()->codegen(module, context);
 		} else {
-			begin = &BaseStage::make(types::Void(), types::Seq());
+			begin = &BaseStage::make(types::Void::get(), types::Seq::get());
 			begin->setBase(pipeline->getHead()->getBase());
 			begin->block = block;
 			begin->outs->insert({SeqData::SEQ, seq});

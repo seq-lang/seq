@@ -6,11 +6,11 @@
 using namespace seq;
 using namespace llvm;
 
-Var::Var() : Var(types::Base())
+Var::Var() : Var(types::Base::get())
 {
 }
 
-Var::Var(types::Type type) :
+Var::Var(types::Type *type) :
     assigned(false), type(type), pipeline(nullptr)
 {
 }
@@ -24,7 +24,7 @@ Pipeline& Var::operator|(Pipeline& to)
 		throw exc::SeqException("cannot use same pipeline twice");
 
 	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::Void(), type);
+	BaseStage& begin = BaseStage::make(types::Void::get(), type);
 	begin.setBase(base);
 	begin.outs = pipeline->getTail()->outs;
 

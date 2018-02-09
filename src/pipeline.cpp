@@ -1,3 +1,4 @@
+#include "stage.h"
 #include "exc.h"
 #include "pipeline.h"
 

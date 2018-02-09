@@ -7,7 +7,7 @@ using namespace seq;
 using namespace llvm;
 
 Filter::Filter(std::string name, SeqPred op) :
-    Stage(std::move(name), types::Seq(), types::Seq()), op(op)
+    Stage(std::move(name), types::Seq::get(), types::Seq::get()), op(op)
 {
 }
 

@@ -6,7 +6,7 @@ using namespace seq;
 using namespace llvm;
 
 Split::Split(uint32_t k, uint32_t step) :
-    Stage("split", types::Seq(), types::Seq()), k(k), step(step)
+    Stage("split", types::Seq::get(), types::Seq::get()), k(k), step(step)
 {
 }
 

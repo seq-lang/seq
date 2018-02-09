@@ -3,7 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-BaseStage::BaseStage(types::Type in, types::Type out) :
+BaseStage::BaseStage(types::Type *in, types::Type *out) :
     Stage("Base", in, out)
 {
 }
@@ -14,7 +14,7 @@ void BaseStage::codegen(Module *module, LLVMContext& context)
 	codegenNext(module, context);
 }
 
-BaseStage& BaseStage::make(types::Type in, types::Type out)
+BaseStage& BaseStage::make(types::Type *in, types::Type *out)
 {
 	return *new BaseStage(in, out);
 }

@@ -3,9 +3,10 @@
 
 #include <string>
 #include <exception>
-#include "stage.h"
 
 namespace seq {
+	class Stage;
+
 	namespace exc {
 		class SeqException : public std::runtime_error {
 		public:

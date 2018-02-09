@@ -7,7 +7,7 @@
 using namespace seq;
 using namespace llvm;
 
-Stage::Stage(std::string name, types::Type in, types::Type out) :
+Stage::Stage(std::string name, types::Type *in, types::Type *out) :
     linked(false), in(in), out(out), prev(nullptr), nexts(),
     name(std::move(name)), block(nullptr), after(nullptr),
     outs(new std::map<SeqData, llvm::Value *>)
@@ -15,7 +15,7 @@ Stage::Stage(std::string name, types::Type in, types::Type out) :
 }
 
 Stage::Stage(std::string name) :
-    Stage::Stage(std::move(name), types::Void(), types::Void())
+    Stage::Stage(std::move(name), types::Void::get(), types::Void::get())
 {
 }
 
@@ -56,12 +56,12 @@ Seq *Stage::getBase() const
 	return base;
 }
 
-types::Type Stage::getInType() const
+types::Type *Stage::getInType() const
 {
 	return in;
 }
 
-types::Type Stage::getOutType() const
+types::Type *Stage::getOutType() const
 {
 	return out;
 }
@@ -98,7 +98,7 @@ void Stage::setLinked()
 
 void Stage::validate()
 {
-	if (prev && typeid(prev->out) != typeid(in))
+	if (prev && !prev->getOutType()->isChildOf(in))
 		throw exc::ValidationException::ValidationException(*this);
 }
 

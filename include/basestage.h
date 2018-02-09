@@ -7,9 +7,9 @@
 namespace seq {
 	class BaseStage : public Stage {
 	public:
-		BaseStage(types::Type in, types::Type out);
+		BaseStage(types::Type *in, types::Type *out);
 		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
-		static BaseStage& make(types::Type in, types::Type out);
+		static BaseStage& make(types::Type *in, types::Type *out);
 	};
 }
 
