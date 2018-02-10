@@ -9,6 +9,7 @@
 
 #include "llvm.h"
 #include "types.h"
+#include "seqdata.h"
 
 namespace seq {
 	class Seq;
@@ -17,22 +18,13 @@ namespace seq {
 	typedef void (*SeqOp)(char *, uint32_t);
 	typedef bool (*SeqPred)(char *, uint32_t);
 
-	enum SeqData {
-		SEQ,
-		LEN,
-		QUAL,
-		IDENT,
-		SEQ_DATA_COUNT
-	};
-
 	class Stage {
 	private:
 		Seq *base;
 		bool linked;
-
+	protected:
 		types::Type *in;
 		types::Type *out;
-	protected:
 		Stage *prev;
 		std::vector<Stage *> nexts;
 	public:

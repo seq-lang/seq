@@ -63,3 +63,13 @@ extern "C" void print(char *seq, const uint32_t len)
 		std::cout << seq[i];
 	std::cout << std::endl;
 }
+
+extern "C" void print_int(uint32_t x)
+{
+	std::cout << x << std::endl;
+}
+
+extern "C" void print_double(double n)
+{
+	std::cout << n << std::endl;
+}

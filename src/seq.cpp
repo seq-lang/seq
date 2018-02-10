@@ -37,7 +37,7 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	BasicBlock *block = BasicBlock::Create(context, "entry", func);
 	IRBuilder<> builder(block);
 
-	for(auto& pipeline : pipelines) {
+	for (auto& pipeline : pipelines) {
 		pipeline->validate();
 		builder.SetInsertPoint(&func->getBasicBlockList().back());
 		block = BasicBlock::Create(context, "pipeline", func);

@@ -27,7 +27,7 @@ int main()
 	split(1, 1) |
 	print();
 
-	s | split(32, 32) | print();
+	s | split(32, 32) | len() | print();
 
 	s | print() | copy() | revcomp() | print();
 

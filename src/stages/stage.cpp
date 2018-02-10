@@ -98,8 +98,9 @@ void Stage::setLinked()
 
 void Stage::validate()
 {
-	if (prev && !prev->getOutType()->isChildOf(in))
-		throw exc::ValidationException::ValidationException(*this);
+	if (prev && !prev->getOutType()->isChildOf(in)) {
+		throw exc::ValidationException(*this);
+	}
 }
 
 void Stage::codegen(Module *module, LLVMContext& context)

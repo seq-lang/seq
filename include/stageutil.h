@@ -9,6 +9,7 @@
 #include "revcomp.h"
 #include "split.h"
 #include "substr.h"
+#include "len.h"
 
 namespace seq {
 	namespace stageutil {
@@ -19,6 +20,7 @@ namespace seq {
 		RevComp& revcomp();
 		Split& split(uint32_t k, uint32_t step);
 		Substr& substr(uint32_t start, uint32_t len);
+		Len& len();
 	}
 }
 

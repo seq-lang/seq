@@ -1,30 +1,48 @@
 #ifndef SEQ_TYPES_H
 #define SEQ_TYPES_H
 
+#include <string>
+#include <map>
 #include "llvm.h"
+#include "seqdata.h"
 #include "exc.h"
+#include "util.h"
 
 namespace seq {
 	namespace types {
 		class Type {
 		private:
 			Type *parent;
+			SeqData key;
+		protected:
+			llvm::Function *printFunc;
+			std::string printName;
+			void *print;
 		public:
-			Type(Type *parent) : parent(parent)
-			{
-			}
+			Type(Type *parent, SeqData key, std::string printName, void *print);
+			Type(Type *parent, SeqData key);
+			Type(Type *parent);
 
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context)=0;
+
+			virtual void callPrint(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs, llvm::BasicBlock *block);
+
+			virtual void finalizePrint(llvm::ExecutionEngine *eng);
 
 			bool isChildOf(Type *type)
 			{
 				return (this == type) || (parent && parent->isChildOf(type));
 			}
+
+			SeqData getKey() const
+			{
+				return key;
+			}
 		};
 
 		class Base : public Type {
 		private:
-			Base() : Type(nullptr) {}
+			Base() : Type(nullptr) {};
 		public:
 			Base(Base const&)=delete;
 			void operator=(Base const&)=delete;
@@ -43,7 +61,7 @@ namespace seq {
 
 		class Void : public Type {
 		private:
-			Void() : Type(nullptr) {}
+			Void() : Type(nullptr) {};
 		public:
 			Void(Void const&)=delete;
 			void operator=(Void const&)=delete;
@@ -62,7 +80,7 @@ namespace seq {
 
 		class Seq : public Type {
 		private:
-			Seq() : Type(Base::get()) {}
+			Seq() : Type(Base::get(), SeqData::SEQ, "print", (void *)&util::print) {};
 		public:
 			Seq(Seq const&)=delete;
 			void operator=(Seq const&)=delete;
@@ -71,6 +89,8 @@ namespace seq {
 			{
 				return llvm::Type::getInt8Ty(context);
 			}
+
+			void callPrint(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs, llvm::BasicBlock *block) override;
 
 			static Seq *get()
 			{
@@ -82,7 +102,7 @@ namespace seq {
 		template<unsigned K>
 		class Mer : public Type {
 		private:
-			Mer() : Type(Seq::get()) {}
+			Mer() : Type(Seq::get(), SeqData::SEQ, "print", (void *)&util::print) {};
 		public:
 			Mer(Mer const&)=delete;
 			void operator=(Mer const&)=delete;
@@ -101,7 +121,7 @@ namespace seq {
 
 		class Number : public Type {
 		private:
-			Number() : Type(Base::get()) {}
+			Number() : Type(Base::get()) {};
 		public:
 			Number(Number const&)=delete;
 			void operator=(Number const&)=delete;
@@ -120,7 +140,7 @@ namespace seq {
 
 		class Int : public Type {
 		private:
-			Int() : Type(Number::get()) {}
+			Int() : Type(Number::get(), SeqData::INT, "print_int", (void *)&util::print_int) {};
 		public:
 			Int(Int const&)=delete;
 			void operator=(Int const&)=delete;
@@ -139,7 +159,7 @@ namespace seq {
 
 		class Float : public Type {
 		private:
-			Float() : Type(Number::get()) {}
+			Float() : Type(Number::get(), SeqData::DOUBLE, "print_double", (void *)&util::print_double) {};
 		public:
 			Float(Float const&)=delete;
 			void operator=(Float const&)=delete;
@@ -159,7 +179,7 @@ namespace seq {
 		template<typename BASE, unsigned COUNT>
 		class Array : public Type {
 		private:
-			Array() : Type(Base::get()) {}
+			Array() : Type(Base::get(), SeqData::ARRAY) {}
 		public:
 			Array(Array const&)=delete;
 			void operator=(Array const&)=delete;
