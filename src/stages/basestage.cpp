@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 BaseStage::BaseStage(types::Type *in, types::Type *out) :
-    Stage("Base", in, out)
+    Stage("base", in, out)
 {
 }
 

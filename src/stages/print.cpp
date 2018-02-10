@@ -1,6 +1,5 @@
 #include <cassert>
 #include "exc.h"
-#include "util.h"
 #include "print.h"
 
 using namespace seq;

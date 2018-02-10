@@ -8,6 +8,7 @@ using namespace seq;
 Substr::Substr(uint32_t start, uint32_t len) :
     Stage("split", types::Seq::get(), types::Seq::get()), start(start - 1), len(len)
 {
+	name += "(" + std::to_string(start) + "," + std::to_string(len) + ")";
 }
 
 void Substr::codegen(Module *module, LLVMContext& context)

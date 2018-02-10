@@ -8,6 +8,7 @@ using namespace llvm;
 Split::Split(uint32_t k, uint32_t step) :
     Stage("split", types::Seq::get(), types::Seq::get()), k(k), step(step)
 {
+	name += "(" + std::to_string(k) + "," + std::to_string(step) + ")";
 }
 
 void Split::codegen(Module *module, LLVMContext& context)
