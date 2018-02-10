@@ -52,6 +52,7 @@ namespace seq {
 		void setLinked();
 
 		virtual void validate();
+		virtual void ensurePrev();
 		virtual void codegen(llvm::Module *module, llvm::LLVMContext& context);
 		virtual void codegenNext(llvm::Module *module, llvm::LLVMContext& context);
 		virtual void finalize(llvm::ExecutionEngine *eng);

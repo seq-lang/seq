@@ -10,6 +10,9 @@ Copy::Copy() : Stage("copy", types::Seq::get(), types::Seq::get())
 
 void Copy::codegen(Module *module, LLVMContext& context)
 {
+	ensurePrev();
+	validate();
+
 	auto seqiter = prev->outs->find(SeqData::SEQ);
 	auto leniter = prev->outs->find(SeqData::LEN);
 

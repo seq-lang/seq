@@ -21,10 +21,8 @@ void Print::validate()
 
 void Print::codegen(Module *module, LLVMContext& context)
 {
+	ensurePrev();
 	validate();
-
-	if (!prev || !prev->block)
-		throw exc::StageException("previous stage not compiled", *this);
 
 	block = prev->block;
 	outs->insert(prev->outs->begin(), prev->outs->end());

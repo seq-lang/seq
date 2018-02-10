@@ -12,6 +12,9 @@ Split::Split(uint32_t k, uint32_t step) :
 
 void Split::codegen(Module *module, LLVMContext& context)
 {
+	ensurePrev();
+	validate();
+
 	auto seqiter = prev->outs->find(SeqData::SEQ);
 	auto leniter = prev->outs->find(SeqData::LEN);
 

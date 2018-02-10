@@ -12,6 +12,9 @@ Substr::Substr(uint32_t start, uint32_t len) :
 
 void Substr::codegen(Module *module, LLVMContext& context)
 {
+	ensurePrev();
+	validate();
+
 	auto seqiter = prev->outs->find(SeqData::SEQ);
 
 	if (seqiter == outs->end())

@@ -13,10 +13,8 @@ Op::Op(std::string name, SeqOp op) :
 
 void Op::codegen(Module *module, LLVMContext& context)
 {
+	ensurePrev();
 	validate();
-
-	if (!prev || !prev->block)
-		throw exc::StageException("previous stage not compiled", *this);
 
 	func = cast<Function>(
 	         module->getOrInsertFunction(

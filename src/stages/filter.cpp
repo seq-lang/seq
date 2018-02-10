@@ -13,10 +13,8 @@ Filter::Filter(std::string name, SeqPred op) :
 
 void Filter::codegen(Module *module, LLVMContext& context)
 {
+	ensurePrev();
 	validate();
-
-	if (!prev || !prev->block)
-		throw exc::StageException("previous stage not compiled", *this);
 
 	func = cast<Function>(
 	         module->getOrInsertFunction(

@@ -9,6 +9,7 @@ Len::Len() : Stage("len", types::Base::get(), types::Int::get())
 
 void Len::codegen(llvm::Module *module, llvm::LLVMContext &context)
 {
+	ensurePrev();
 	validate();
 
 	if (!prev || !prev->block)

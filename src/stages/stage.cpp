@@ -103,6 +103,12 @@ void Stage::validate()
 	}
 }
 
+void Stage::ensurePrev()
+{
+	if (!prev || !prev->block)
+		throw exc::StageException("previous stage not compiled", *this);
+}
+
 void Stage::codegen(Module *module, LLVMContext& context)
 {
 	throw exc::StageException("cannot codegen abstract stage", *this);
