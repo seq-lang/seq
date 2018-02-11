@@ -108,6 +108,7 @@ std::ostream& operator<<(std::ostream& os, Pipeline& pipeline)
 
 Pipeline& Pipeline::operator|(Stage& to)
 {
+	to.setBase(getHead()->getBase());
 	setTail(&to);
 	return *this;
 }
@@ -120,6 +121,7 @@ Pipeline& Pipeline::operator|(Pipeline& to)
 	if (to.linked)
 		throw exc::MultiLinkException(*to.getHead());
 
+	to.getHead()->setBase(getHead()->getBase());
 	tail->addNext(to.getHead());
 	to.getHead()->setPrev(tail);
 	tail = to.getTail();

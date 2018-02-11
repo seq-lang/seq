@@ -1,3 +1,4 @@
+#include "seq.h"
 #include "exc.h"
 #include "copy.h"
 
@@ -23,8 +24,9 @@ void Copy::codegen(Module *module, LLVMContext& context)
 	Value *len = leniter->second;
 	block = prev->block;
 	IRBuilder<> builder(block);
+	IRBuilder<> preamble(getBase()->getPreamble());
 
-	Value *copy = builder.CreateAlloca(IntegerType::getInt8Ty(context), len);
+	Value *copy = preamble.CreateAlloca(IntegerType::getInt8Ty(context), len);
 	builder.CreateMemCpy(copy, seq, len, 1);
 
 	outs->insert({SeqData::SEQ, copy});

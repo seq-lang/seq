@@ -10,6 +10,7 @@
 #include "split.h"
 #include "substr.h"
 #include "len.h"
+#include "count.h"
 
 namespace seq {
 	namespace stageutil {
@@ -21,6 +22,7 @@ namespace seq {
 		Split& split(uint32_t k, uint32_t step);
 		Substr& substr(uint32_t start, uint32_t len);
 		Len& len();
+		Count& count();
 	}
 }
 

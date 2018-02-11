@@ -9,7 +9,7 @@
 using namespace seq;
 using namespace llvm;
 
-Seq::Seq() : src(""), func(nullptr)
+Seq::Seq() : src(""), func(nullptr), preamble(nullptr)
 {
 }
 
@@ -34,7 +34,10 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	seq->setName("seq");
 	len->setName("len");
 
-	BasicBlock *block = BasicBlock::Create(context, "entry", func);
+	preamble = BasicBlock::Create(context, "preamble", func);
+	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+	BasicBlock *block = entry;
+
 	IRBuilder<> builder(block);
 
 	for (auto& pipeline : pipelines) {
@@ -61,6 +64,9 @@ void Seq::codegen(Module *module, LLVMContext& context)
 
 	builder.SetInsertPoint(&func->getBasicBlockList().back());
 	builder.CreateRetVoid();
+
+	builder.SetInsertPoint(preamble);
+	builder.CreateBr(entry);
 }
 
 void Seq::execute(bool debug)
@@ -123,6 +129,14 @@ void Seq::execute(bool debug)
 void Seq::add(Pipeline *pipeline)
 {
 	pipelines.push_back(pipeline);
+}
+
+BasicBlock *Seq::getPreamble() const
+{
+	if (!preamble)
+		throw exc::SeqException("cannot request preamble before code generation");
+
+	return preamble;
 }
 
 Pipeline& Seq::operator|(Pipeline& to)

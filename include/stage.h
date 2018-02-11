@@ -40,8 +40,8 @@ namespace seq {
 		Stage *getPrev() const;
 		void setPrev(Stage *prev);
 		std::vector<Stage *>& getNext();
-		void setBase(Seq *base);
 		Seq *getBase() const;
+		void setBase(Seq *base);
 		types::Type *getInType() const;
 		types::Type *getOutType() const;
 		Pipeline& asPipeline();

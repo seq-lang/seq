@@ -42,18 +42,24 @@ std::vector<Stage *>& Stage::getNext()
 	return nexts;
 }
 
+Seq *Stage::getBase() const
+{
+	if (!base)
+		throw exc::SeqException("unknown base");
+
+	return base;
+}
+
 void Stage::setBase(Seq *base)
 {
+	if (!base)
+		return;
+
 	this->base = base;
 
 	for (auto& next : nexts) {
 		next->setBase(base);
 	}
-}
-
-Seq *Stage::getBase() const
-{
-	return base;
 }
 
 types::Type *Stage::getInType() const
@@ -130,11 +136,13 @@ void Stage::finalize(ExecutionEngine *eng)
 
 Pipeline& Stage::operator|(Stage& to)
 {
+	to.setBase(getBase());
 	return *new Pipeline(this, &to);
 }
 
 Pipeline& Stage::operator|(Pipeline& to)
 {
+	to.getHead()->setBase(getBase());
 	to.setHead(this);
 	return to;
 }

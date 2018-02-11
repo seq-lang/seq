@@ -42,3 +42,8 @@ Len& stageutil::len()
 {
 	return Len::make();
 }
+
+Count& stageutil::count()
+{
+	return Count::make();
+}

@@ -29,9 +29,9 @@ void Type::callPrint(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs, llv
 	if (!printFunc) {
 		printFunc = llvm::cast<llvm::Function>(
 	                  block->getModule()->getOrInsertFunction(
-		              printName,
-		              llvm::Type::getVoidTy(block->getContext()),
-		              getLLVMType(block->getContext())));
+		                printName,
+		                llvm::Type::getVoidTy(block->getContext()),
+		                getLLVMType(block->getContext())));
 
 		printFunc->setCallingConv(llvm::CallingConv::C);
 	}
@@ -59,10 +59,10 @@ void Seq::callPrint(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs, llvm
 	if (!printFunc) {
 		printFunc = llvm::cast<llvm::Function>(
 		              block->getModule()->getOrInsertFunction(
-		              printName,
-		              llvm::Type::getVoidTy(block->getContext()),
-		              llvm::IntegerType::getInt8PtrTy(block->getContext()),
-		              llvm::IntegerType::getInt32Ty(block->getContext())));
+		                printName,
+		                llvm::Type::getVoidTy(block->getContext()),
+		                llvm::IntegerType::getInt8PtrTy(block->getContext()),
+		                llvm::IntegerType::getInt32Ty(block->getContext())));
 
 		printFunc->setCallingConv(llvm::CallingConv::C);
 	}

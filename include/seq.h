@@ -19,12 +19,14 @@ namespace seq {
 		std::string src;
 		std::vector<Pipeline *> pipelines;
 		llvm::Function *func;
+		llvm::BasicBlock *preamble;
 		void codegen(llvm::Module *module, llvm::LLVMContext& context);
 	public:
 		Seq();
 		void source(std::string source);
 		void execute(bool debug=false);
 		void add(Pipeline *pipeline);
+		llvm::BasicBlock *getPreamble() const;
 
 		Pipeline& operator|(Pipeline& to);
 		Pipeline& operator|(Stage& to);
