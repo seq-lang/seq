@@ -10,7 +10,7 @@ using namespace llvm;
 Stage::Stage(std::string name, types::Type *in, types::Type *out) :
     linked(false), in(in), out(out), prev(nullptr), nexts(),
     name(std::move(name)), block(nullptr), after(nullptr),
-    outs(new std::map<SeqData, llvm::Value *>)
+    outs(new std::map<SeqData, Value *>)
 {
 }
 
@@ -104,9 +104,8 @@ void Stage::setLinked()
 
 void Stage::validate()
 {
-	if (prev && !prev->getOutType()->isChildOf(in)) {
+	if (prev && !prev->getOutType()->isChildOf(in))
 		throw exc::ValidationException(*this);
-	}
 }
 
 void Stage::ensurePrev()

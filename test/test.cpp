@@ -2,6 +2,7 @@
 #include "seq.h"
 
 using namespace seq;
+using namespace seq::types;
 using namespace seq::stageutil;
 
 extern "C" bool is_cpg(char *seq, uint32_t len)
@@ -9,25 +10,30 @@ extern "C" bool is_cpg(char *seq, uint32_t len)
 	return len >= 2 && seq[0] == 'C' && seq[1] == 'G';
 }
 
+static Filter& filt_cpg()
+{
+	return filter("is_cpg", is_cpg);
+}
+
 int main()
 {
-	Seq s;
+	seq::Seq s;
 
 	/*
-	 * Multiple pipelines can be added
-	 * to a source sequence
-	 */
+     * Multiple pipelines can be added
+     * to a source sequence
+     */
 	s |
-	split(10, 1) |
-	filter("is_cpg", is_cpg) |
+	split(10,1) |
+	filt_cpg() |
 	print() |
-	substr(6, 5) |
+	substr(6,5) |
 	copy() |
 	revcomp() |
-	split(1, 1) |
+	split(1,1) |
 	print();
 
-	s | split(32, 32) | len() | print();
+	s | split(32,32) | len() | print();
 
 	s | print() | copy() | revcomp() | print();
 
@@ -45,11 +51,24 @@ int main()
 	 * Pipelines can branch arbitrarily
 	 */
 	Pipeline x, y;
-	x = s | split(32,1) | filter("is_cpg", is_cpg);
+	x = s | split(32,1) | filt_cpg();
 	x | print();
 	y = x | substr(1,16);
 	y | print();
 	y | copy() | revcomp() | print();
+
+	/*
+	 * Global memory can be declared
+	 */
+	Mem m = s.mem<Int>(1000);
+	Var i, v;
+	i = s | split(2,1) | filt_cpg() | count();
+	i | print();
+	s | split(1,1) | count() | m[i];
+	i | m[i];
+	v = m[i];
+	v | print();
+	m[i] | print();
 
 	s.source("test/data/seqs.fastq");
 	s.execute(true);  // debug=true

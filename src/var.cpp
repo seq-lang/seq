@@ -1,3 +1,4 @@
+#include "seq.h"
 #include "stage.h"
 #include "basestage.h"
 #include "exc.h"
@@ -6,13 +7,18 @@
 using namespace seq;
 using namespace llvm;
 
-Var::Var() : Var(types::Base::get())
+Var::Var() : assigned(false), pipeline(nullptr)
 {
 }
 
-Var::Var(types::Type *type) :
-    assigned(false), type(type), pipeline(nullptr)
+types::Type *Var::getType() const
 {
+	return pipeline->getTail()->getOutType();
+}
+
+std::shared_ptr<std::map<SeqData, Value *>> Var::outs() const
+{
+	return pipeline->getTail()->outs;
 }
 
 Pipeline& Var::operator|(Pipeline& to)
@@ -24,15 +30,14 @@ Pipeline& Var::operator|(Pipeline& to)
 		throw exc::SeqException("cannot use same pipeline twice");
 
 	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::Void::get(), type);
+	BaseStage& begin = BaseStage::make(types::Void::get(), getType());
 	begin.setBase(base);
 	begin.outs = pipeline->getTail()->outs;
 
-	Pipeline& add = begin | to;
-	add.setAdded();
-	base->add(&add);
+	Pipeline& full = begin | to;
+	base->add(&full);
 
-	return add;
+	return full;
 }
 
 Pipeline& Var::operator|(Stage& to)
@@ -46,9 +51,15 @@ Var& Var::operator=(Pipeline& to)
 		throw exc::SeqException("variable cannot be assigned twice");
 
 	assigned = true;
-	type = to.getTail()->getOutType();
 	base = to.getHead()->getBase();
 	pipeline = &to;
+
+	if (!pipeline->isAdded()) {
+		BaseStage& begin = BaseStage::make(types::Void::get(), types::Void::get());
+		begin.setBase(base);
+		Pipeline& full = begin | to;
+		base->add(&full);
+	}
 
 	return *this;
 }

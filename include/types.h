@@ -12,6 +12,7 @@ namespace seq {
 	namespace types {
 		class Type {
 		private:
+			std::string name;
 			Type *parent;
 			SeqData key;
 		protected:
@@ -19,9 +20,13 @@ namespace seq {
 			std::string printName;
 			void *print;
 		public:
-			Type(Type *parent, SeqData key, std::string printName, void *print);
-			Type(Type *parent, SeqData key);
-			Type(Type *parent);
+			Type(std::string name,
+			     Type *parent,
+			     SeqData key,
+			     std::string printName,
+			     void *print);
+			Type(std::string name, Type *parent, SeqData key);
+			Type(std::string name, Type *parent);
 
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context)=0;
 
@@ -34,15 +39,38 @@ namespace seq {
 				return (this == type) || (parent && parent->isChildOf(type));
 			}
 
+			std::string getName() const
+			{
+				return name;
+			}
+
 			SeqData getKey() const
 			{
 				return key;
 			}
+
+			virtual uint32_t size() const
+			{
+				return 0;
+			}
+
+			virtual llvm::Value *codegenLoad(llvm::Module *module,
+			                                 llvm::LLVMContext& context,
+			                                 llvm::BasicBlock *block,
+			                                 llvm::Value *ptr,
+			                                 llvm::Value *idx);
+
+			virtual void codegenStore(llvm::Module *module,
+			                          llvm::LLVMContext& context,
+			                          llvm::BasicBlock *block,
+			                          llvm::Value *ptr,
+			                          llvm::Value *idx,
+			                          llvm::Value *val);
 		};
 
 		class Base : public Type {
 		private:
-			Base() : Type(nullptr) {};
+			Base() : Type("Base", nullptr) {};
 		public:
 			Base(Base const&)=delete;
 			void operator=(Base const&)=delete;
@@ -61,7 +89,7 @@ namespace seq {
 
 		class Void : public Type {
 		private:
-			Void() : Type(nullptr) {};
+			Void() : Type("Void", nullptr) {};
 		public:
 			Void(Void const&)=delete;
 			void operator=(Void const&)=delete;
@@ -80,7 +108,7 @@ namespace seq {
 
 		class Seq : public Type {
 		private:
-			Seq() : Type(Base::get(), SeqData::SEQ, "print", (void *)&util::print) {};
+			Seq() : Type("Seq", Base::get(), SeqData::SEQ, "print", (void *)&util::print) {};
 		public:
 			Seq(Seq const&)=delete;
 			void operator=(Seq const&)=delete;
@@ -97,12 +125,21 @@ namespace seq {
 				static Seq instance;
 				return &instance;
 			}
+
+			uint32_t size() const override
+			{
+				return sizeof(char *);
+			}
 		};
 
 		template<unsigned K>
 		class Mer : public Type {
 		private:
-			Mer() : Type(Seq::get(), SeqData::SEQ, "print", (void *)&util::print) {};
+			Mer() : Type("Mer",
+			             Seq::get(),
+			             SeqData::SEQ,
+			             "print",
+			             (void *)&util::print) {};
 		public:
 			Mer(Mer const&)=delete;
 			void operator=(Mer const&)=delete;
@@ -117,11 +154,16 @@ namespace seq {
 				static Mer<K> instance;
 				return &instance;
 			}
+
+			uint32_t size() const override
+			{
+				return K * sizeof(char);
+			}
 		};
 
 		class Number : public Type {
 		private:
-			Number() : Type(Base::get()) {};
+			Number() : Type("Num", Base::get()) {};
 		public:
 			Number(Number const&)=delete;
 			void operator=(Number const&)=delete;
@@ -140,7 +182,11 @@ namespace seq {
 
 		class Int : public Type {
 		private:
-			Int() : Type(Number::get(), SeqData::INT, "print_int", (void *)&util::print_int) {};
+			Int() : Type("Int",
+			             Number::get(),
+			             SeqData::INT,
+			             "print_int",
+			             (void *)&util::print_int) {};
 		public:
 			Int(Int const&)=delete;
 			void operator=(Int const&)=delete;
@@ -155,11 +201,20 @@ namespace seq {
 				static Int instance;
 				return &instance;
 			}
+
+			uint32_t size() const override
+			{
+				return sizeof(int32_t);
+			}
 		};
 
 		class Float : public Type {
 		private:
-			Float() : Type(Number::get(), SeqData::DOUBLE, "print_double", (void *)&util::print_double) {};
+			Float() : Type("Float",
+			               Number::get(),
+			               SeqData::DOUBLE,
+			               "print_double",
+			               (void *)&util::print_double) {};
 		public:
 			Float(Float const&)=delete;
 			void operator=(Float const&)=delete;
@@ -174,12 +229,17 @@ namespace seq {
 				static Float instance;
 				return &instance;
 			}
+
+			uint32_t size() const override
+			{
+				return sizeof(double);
+			}
 		};
 
 		template<typename BASE, unsigned COUNT>
 		class Array : public Type {
 		private:
-			Array() : Type(Base::get(), SeqData::ARRAY) {}
+			Array() : Type("Array", Base::get(), SeqData::ARRAY) {}
 		public:
 			Array(Array const&)=delete;
 			void operator=(Array const&)=delete;
@@ -193,6 +253,11 @@ namespace seq {
 			{
 				static Array<BASE,COUNT> instance;
 				return &instance;
+			}
+
+			uint32_t size() const override
+			{
+				return COUNT * BASE::get().size();
 			}
 		};
 	}

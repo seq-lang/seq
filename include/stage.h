@@ -38,7 +38,7 @@ namespace seq {
 
 		std::string getName() const;
 		Stage *getPrev() const;
-		void setPrev(Stage *prev);
+		virtual void setPrev(Stage *prev);
 		std::vector<Stage *>& getNext();
 		Seq *getBase() const;
 		void setBase(Seq *base);
@@ -57,8 +57,8 @@ namespace seq {
 		virtual void codegenNext(llvm::Module *module, llvm::LLVMContext& context);
 		virtual void finalize(llvm::ExecutionEngine *eng);
 
-		Pipeline& operator|(Stage& to);
-		Pipeline& operator|(Pipeline& to);
+		virtual Pipeline& operator|(Stage& to);
+		virtual Pipeline& operator|(Pipeline& to);
 	};
 }
 

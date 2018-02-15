@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cassert>
 #include "basestage.h"
 #include "util.h"
 #include "exc.h"
@@ -9,7 +10,9 @@
 using namespace seq;
 using namespace llvm;
 
-Seq::Seq() : src(""), func(nullptr), preamble(nullptr)
+Seq::Seq() :
+    src(""), pipelines(), outs(new std::map<SeqData, Value *>()),
+    func(nullptr), once(nullptr), preamble(nullptr)
 {
 }
 
@@ -34,11 +37,30 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	seq->setName("seq");
 	len->setName("len");
 
+	outs->insert({SeqData::SEQ, seq});
+	outs->insert({SeqData::LEN, len});
+
+	/* one-time execution */
+	BasicBlock *onceBr = BasicBlock::Create(context, "oncebr", func);
+	once = BasicBlock::Create(context, "once", func);
+
+	GlobalVariable *init = new GlobalVariable(*module,
+	                                          IntegerType::getInt1Ty(context),
+	                                          false,
+	                                          GlobalValue::PrivateLinkage,
+	                                          nullptr,
+	                                          "init");
+
+	init->setInitializer(ConstantInt::get(IntegerType::getInt1Ty(context), 0));
+
+	/* preamble */
 	preamble = BasicBlock::Create(context, "preamble", func);
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
-	BasicBlock *block = entry;
 
-	IRBuilder<> builder(block);
+	IRBuilder<> builder(onceBr);
+	builder.CreateCondBr(builder.CreateLoad(init), preamble, once);
+
+	BasicBlock *block;
 
 	for (auto& pipeline : pipelines) {
 		pipeline->validate();
@@ -46,24 +68,19 @@ void Seq::codegen(Module *module, LLVMContext& context)
 		block = BasicBlock::Create(context, "pipeline", func);
 		builder.CreateBr(block);
 
-		BaseStage *begin;
-		if ((begin = dynamic_cast<BaseStage *>(pipeline->getHead()))) {
-			begin->setBase(pipeline->getHead()->getBase());
-			begin->block = block;
-			pipeline->getHead()->codegen(module, context);
-		} else {
-			begin = &BaseStage::make(types::Void::get(), types::Seq::get());
-			begin->setBase(pipeline->getHead()->getBase());
-			begin->block = block;
-			begin->outs->insert({SeqData::SEQ, seq});
-			begin->outs->insert({SeqData::LEN, len});
-			pipeline = &(*begin | *pipeline);
-			begin->codegen(module, context);
-		}
+		BaseStage *begin = dynamic_cast<BaseStage *>(pipeline->getHead());
+		assert(begin);
+		begin->setBase(pipeline->getHead()->getBase());
+		begin->block = block;
+		pipeline->getHead()->codegen(module, context);
 	}
 
 	builder.SetInsertPoint(&func->getBasicBlockList().back());
 	builder.CreateRetVoid();
+
+	builder.SetInsertPoint(once);
+	builder.CreateStore(ConstantInt::get(IntegerType::getInt1Ty(context), 1), init);
+	builder.CreateBr(preamble);
 
 	builder.SetInsertPoint(preamble);
 	builder.CreateBr(entry);
@@ -129,6 +146,15 @@ void Seq::execute(bool debug)
 void Seq::add(Pipeline *pipeline)
 {
 	pipelines.push_back(pipeline);
+	pipeline->setAdded();
+}
+
+BasicBlock *Seq::getOnce() const
+{
+	if (!once)
+		throw exc::SeqException("cannot request once before code generation");
+
+	return once;
 }
 
 BasicBlock *Seq::getPreamble() const
@@ -142,8 +168,13 @@ BasicBlock *Seq::getPreamble() const
 Pipeline& Seq::operator|(Pipeline& to)
 {
 	to.getHead()->setBase(this);
-	add(&to);
-	return to;
+	BaseStage& begin = BaseStage::make(types::Void::get(), types::Seq::get());
+	begin.setBase(this);
+	begin.outs = outs;
+	Pipeline& full = begin | to;
+	add(&full);
+
+	return full;
 }
 
 Pipeline& Seq::operator|(Stage& to)

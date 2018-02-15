@@ -15,13 +15,13 @@ include_directories(include/)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 add_library(seq SHARED include/basestage.h include/copy.h include/count.h include/exc.h include/filter.h include/io.h
-                       include/len.h include/op.h include/pipeline.h include/print.h include/revcomp.h include/seq.h
-                       include/seq.h include/var.h include/split.h include/stage.h include/stageutil.h include/substr.h
-                       include/types.h include/util.h src/exc.cpp src/io.cpp src/llvm.h src/pipeline.cpp src/seq.cpp
-                       src/seqdata.h src/stages/basestage.cpp src/stages/copy.cpp src/stages/count.cpp
-                       src/stages/filter.cpp src/stages/len.cpp src/stages/op.cpp src/stages/print.cpp
-                       src/stages/revcomp.cpp src/stages/split.cpp src/stages/stage.cpp src/stages/stageutil.cpp
-                       src/stages/substr.cpp src/types.cpp src/util.cpp src/var.cpp)
+                       include/len.h include/mem.h include/op.h include/pipeline.h include/print.h include/revcomp.h
+                       include/seq.h include/seq.h include/var.h include/split.h include/stage.h include/stageutil.h
+                       include/substr.h include/types.h include/util.h src/exc.cpp src/io.cpp src/llvm.h src/mem.cpp
+                       src/pipeline.cpp src/seq.cpp src/seqdata.h src/stages/basestage.cpp src/stages/copy.cpp
+                       src/stages/count.cpp src/stages/filter.cpp src/stages/len.cpp src/stages/op.cpp
+                       src/stages/print.cpp src/stages/revcomp.cpp src/stages/split.cpp src/stages/stage.cpp
+                       src/stages/stageutil.cpp src/stages/substr.cpp src/types.cpp src/util.cpp src/var.cpp)
 llvm_map_components_to_libnames(llvm_libs support core irreader x86asmparser x86info x86codegen mcjit orcjit)
 target_link_libraries(seq ${llvm_libs})
 
