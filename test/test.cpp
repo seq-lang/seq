@@ -20,9 +20,9 @@ int main()
 	seq::Seq s;
 
 	/*
-     * Multiple pipelines can be added
-     * to a source sequence
-     */
+	 * Multiple pipelines can be added
+	 * to a source sequence
+	 */
 	s |
 	split(10,1) |
 	filt_cpg() |
