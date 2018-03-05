@@ -17,6 +17,7 @@ namespace seq {
 
 	typedef void (*SeqOp)(char *, uint32_t);
 	typedef bool (*SeqPred)(char *, uint32_t);
+	typedef uint32_t (*SeqHash)(char *, uint32_t);
 
 	class Stage {
 	private:

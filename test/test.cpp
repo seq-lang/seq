@@ -10,9 +10,45 @@ extern "C" bool is_cpg(char *seq, uint32_t len)
 	return len >= 2 && seq[0] == 'C' && seq[1] == 'G';
 }
 
+extern "C" uint32_t my_hash_func(char *seq, uint32_t len)
+{
+	uint32_t h = 0;
+
+	for (uint32_t i = 0; i < len; i++) {
+		switch (seq[i]) {
+			case 'A':
+			case 'a':
+				h += 0;
+				break;
+			case 'C':
+			case 'c':
+				h += 1;
+				break;
+			case 'G':
+			case 'g':
+				h += 2;
+				break;
+			case 'T':
+			case 't':
+				h += 3;
+				break;
+			default:
+				break;
+		}
+
+		h <<= 2;
+	}
+	return h;
+}
+
 static Filter& filt_cpg()
 {
 	return filter("is_cpg", is_cpg);
+}
+
+static Hash& my_hash()
+{
+	return hash("my_hash_func", my_hash_func);
 }
 
 int main()
@@ -33,7 +69,7 @@ int main()
 	split(1,1) |
 	print();
 
-	s | split(32,32) | len() | print();
+	s | split(32,32) | my_hash() | print();
 
 	s | print() | copy() | revcomp() | print();
 

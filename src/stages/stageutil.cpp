@@ -18,6 +18,11 @@ Op& stageutil::op(std::string name, SeqOp op)
 	return Op::make(std::move(name), op);
 }
 
+Hash& stageutil::hash(std::string name, SeqHash hash)
+{
+	return Hash::make(std::move(name), hash);
+}
+
 Print& stageutil::print()
 {
 	return Print::make();

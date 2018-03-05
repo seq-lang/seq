@@ -5,6 +5,7 @@
 #include "copy.h"
 #include "filter.h"
 #include "op.h"
+#include "hash.h"
 #include "print.h"
 #include "revcomp.h"
 #include "split.h"
@@ -17,6 +18,7 @@ namespace seq {
 		Copy& copy();
 		Filter& filter(std::string name, SeqPred op);
 		Op& op(std::string name, SeqOp op);
+		Hash& hash(std::string name, SeqHash hash);
 		Print& print();
 		RevComp& revcomp();
 		Split& split(uint32_t k, uint32_t step);
