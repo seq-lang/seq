@@ -33,8 +33,10 @@ namespace seq {
 			bool read(std::ifstream& in, Format fmt);
 		private:
 			DataCell(char *data, uint32_t len);
-			bool readFASTQ(std::ifstream& in);
+			void ensureCap(const size_t new_cap);
 			bool readTXT(std::ifstream& in);
+			bool readFASTQ(std::ifstream& in);
+			bool readFASTA(std::ifstream& in);
 		};
 
 		struct DataBlock {
