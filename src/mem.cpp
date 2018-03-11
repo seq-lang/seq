@@ -165,31 +165,18 @@ void LoadStore::finalize(ExecutionEngine *eng)
 	mem->finalizeMalloc(eng);
 }
 
-static void addWithBase(Pipeline& pipeline, Seq *base)
+Pipeline LoadStore::operator|(Pipeline to)
 {
-	pipeline.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::Void::get(), types::Void::get());
-	begin.setBase(base);
-	Pipeline& full = begin | pipeline;
-	base->add(&full);
-}
+	Pipeline p = Stage::operator|(to);
 
-Pipeline& LoadStore::operator|(Stage& to)
-{
-	Pipeline& full = Stage::operator|(to);
+	if (!p.isAdded()) {
+		Seq *base = mem->getBase();
+		p.getHead()->setBase(base);
+		BaseStage& begin = BaseStage::make(types::Void::get(), types::Void::get());
+		begin.setBase(base);
+		Pipeline full = begin | p;
+		base->add(full);
+	}
 
-	if (!full.isAdded())
-		addWithBase(full, mem->getBase());
-
-	return full;
-}
-
-Pipeline& LoadStore::operator|(Pipeline& to)
-{
-	Pipeline& full = Stage::operator|(to);
-
-	if (!full.isAdded())
-		addWithBase(full, mem->getBase());
-
-	return full;
+	return p;
 }

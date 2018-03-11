@@ -90,8 +90,8 @@ int main()
 	x = s | split(32,1) | filt_cpg();
 	x | print();
 	y = x | substr(1,16);
-	y | print();
-	y | copy() | revcomp() | print();
+	y | (print(),
+	     copy() | revcomp() | print());  // convenient branch syntax
 
 	/*
 	 * Global memory can be declared

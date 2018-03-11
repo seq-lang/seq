@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <map>
 #include "types.h"
+#include "stage.h"
 #include "pipeline.h"
 
 namespace seq {
@@ -12,19 +13,17 @@ namespace seq {
 	class Var {
 	protected:
 		bool assigned;
-		Pipeline *pipeline;
+		Stage *stage;
 		Seq *base;
 	public:
 		Var();
+		Var(Pipeline pipeline);
 
 		types::Type *getType() const;
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs() const;
 
-		Pipeline& operator|(Pipeline& to);
-		Pipeline& operator|(Stage& to);
-
-		Var& operator=(Pipeline& to);
-		Var& operator=(Stage& to);
+		Pipeline operator|(Pipeline to);
+		Var& operator=(Pipeline to);
 	};
 }
 

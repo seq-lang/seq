@@ -37,7 +37,7 @@ void Hash::codegen(Module *module, LLVMContext& context)
 	std::vector<Value *> args = {seqiter->second, leniter->second};
 	Value *hashVal = builder.CreateCall(func, args, "");
 
-	outs->insert({{SeqData::INT, hashVal}});
+	outs->insert({SeqData::INT, hashVal});
 
 	codegenNext(module, context);
 	prev->setAfter(getAfter());

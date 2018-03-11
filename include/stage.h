@@ -22,7 +22,7 @@ namespace seq {
 	class Stage {
 	private:
 		Seq *base;
-		bool linked;
+		bool added;
 	protected:
 		types::Type *in;
 		types::Type *out;
@@ -45,12 +45,11 @@ namespace seq {
 		void setBase(Seq *base);
 		types::Type *getInType() const;
 		types::Type *getOutType() const;
-		Pipeline& asPipeline();
 		virtual void addNext(Stage *next);
 		virtual llvm::BasicBlock *getAfter() const;
 		virtual void setAfter(llvm::BasicBlock *block);
-		bool isLinked() const;
-		void setLinked();
+		bool isAdded() const;
+		void setAdded();
 
 		virtual void validate();
 		virtual void ensurePrev();
@@ -58,8 +57,8 @@ namespace seq {
 		virtual void codegenNext(llvm::Module *module, llvm::LLVMContext& context);
 		virtual void finalize(llvm::ExecutionEngine *eng);
 
-		virtual Pipeline& operator|(Stage& to);
-		virtual Pipeline& operator|(Pipeline& to);
+		virtual Pipeline operator|(Pipeline to);
+		operator Pipeline();
 	};
 }
 

@@ -8,9 +8,8 @@ using namespace seq;
 using namespace llvm;
 
 Stage::Stage(std::string name, types::Type *in, types::Type *out) :
-    linked(false), in(in), out(out), prev(nullptr), nexts(),
-    name(std::move(name)), block(nullptr), after(nullptr),
-    outs(new std::map<SeqData, Value *>)
+    in(in), out(out), prev(nullptr), nexts(), name(std::move(name)),
+    block(nullptr), after(nullptr), outs(new std::map<SeqData, Value *>)
 {
 }
 
@@ -31,7 +30,7 @@ Stage *Stage::getPrev() const
 
 void Stage::setPrev(Stage *prev)
 {
-	if (this->prev != nullptr)
+	if (this->prev)
 		throw exc::MultiLinkException(*this);
 
 	this->prev = prev;
@@ -44,9 +43,6 @@ std::vector<Stage *>& Stage::getNext()
 
 Seq *Stage::getBase() const
 {
-	if (!base)
-		throw exc::SeqException("unknown base");
-
 	return base;
 }
 
@@ -72,11 +68,6 @@ types::Type *Stage::getOutType() const
 	return out;
 }
 
-Pipeline& Stage::asPipeline()
-{
-	return *new Pipeline(this, this);
-}
-
 void Stage::addNext(Stage *next)
 {
 	nexts.push_back(next);
@@ -92,14 +83,18 @@ void Stage::setAfter(BasicBlock *block)
 	after = block;
 }
 
-bool Stage::isLinked() const
+bool Stage::isAdded() const
 {
-	return linked;
+	return added;
 }
 
-void Stage::setLinked()
+void Stage::setAdded()
 {
-	linked = true;
+	added = true;
+
+	for (auto& next : nexts) {
+		next->setAdded();
+	}
 }
 
 void Stage::validate()
@@ -133,17 +128,17 @@ void Stage::finalize(ExecutionEngine *eng)
 	}
 }
 
-Pipeline& Stage::operator|(Stage& to)
-{
-	to.setBase(getBase());
-	return *new Pipeline(this, &to);
-}
-
-Pipeline& Stage::operator|(Pipeline& to)
+Pipeline Stage::operator|(Pipeline to)
 {
 	to.getHead()->setBase(getBase());
-	to.setHead(this);
-	return to;
+	addNext(to.getHead());
+	to.getHead()->setPrev(this);
+	return {this, to.getTail()};
+}
+
+Stage::operator Pipeline()
+{
+	return {this, this};
 }
 
 std::ostream& operator<<(std::ostream& os, Stage& stage)

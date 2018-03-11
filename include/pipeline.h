@@ -2,32 +2,46 @@
 #define SEQ_PIPELINE_H
 
 #include <iostream>
+#include "var.h"
 
 namespace seq {
 	class Stage;
+
+	class PipelineList;
 
 	class Pipeline {
 	private:
 		Stage *head;
 		Stage *tail;
-		bool linked;
-		bool added;
 	public:
 		Pipeline(Stage *head, Stage *tail);
 		Pipeline();
 
 		Stage *getHead() const;
-		void setHead(Stage *head);
 		Stage *getTail() const;
-		void setTail(Stage *tail);
-		bool isLinked() const;
-		void setLinked();
 		bool isAdded() const;
 		void setAdded();
 		void validate();
 
-		Pipeline& operator|(Stage& to);
-		Pipeline& operator|(Pipeline& to);
+		Pipeline operator|(Pipeline to);
+		Pipeline operator|(PipelineList& to);
+		PipelineList& operator,(Pipeline p);
+	};
+
+	class PipelineList {
+		struct Node {
+			Pipeline p;
+			Node *next;
+
+			explicit Node(Pipeline p);
+		};
+
+	public:
+		Node *head;
+		Node *tail;
+
+		explicit PipelineList(Pipeline p);
+		PipelineList& operator,(Pipeline p);
 	};
 }
 

@@ -5,21 +5,8 @@
 using namespace seq;
 
 Pipeline::Pipeline(Stage *head, Stage *tail) :
-    head(head), tail(tail), linked(false), added(false)
+    head(head), tail(tail)
 {
-	if (head->isLinked())
-		throw exc::MultiLinkException(*head);
-
-	if (tail->isLinked())
-		throw exc::MultiLinkException(*tail);
-
-	if (head != tail) {
-		head->addNext(tail);
-		tail->setPrev(head);
-	}
-
-	head->setLinked();
-	tail->setLinked();
 }
 
 Pipeline::Pipeline()=default;
@@ -29,57 +16,19 @@ Stage *Pipeline::getHead() const
 	return head;
 }
 
-void Pipeline::setHead(Stage *newHead)
-{
-	if (isLinked())
-		throw exc::MultiLinkException(*getHead());
-
-	if (newHead->isLinked())
-		throw exc::MultiLinkException(*newHead);
-
-	newHead->addNext(head);
-	head->setPrev(newHead);
-	head = newHead;
-	newHead->setLinked();
-}
-
 Stage *Pipeline::getTail() const
 {
 	return tail;
 }
 
-void Pipeline::setTail(Stage *newTail)
-{
-	if (isLinked())
-		throw exc::MultiLinkException(*getHead());
-
-	if (newTail->isLinked())
-		throw exc::MultiLinkException(*newTail);
-
-	tail->addNext(newTail);
-	newTail->setPrev(tail);
-	tail = newTail;
-	newTail->setLinked();
-}
-
-bool Pipeline::isLinked() const
-{
-	return linked;
-}
-
-void Pipeline::setLinked()
-{
-	linked = true;
-}
-
 bool Pipeline::isAdded() const
 {
-	return added;
+	return head->isAdded();
 }
 
 void Pipeline::setAdded()
 {
-	added = true;
+	head->setAdded();
 }
 
 static void validateStageRecursive(Stage *stage)
@@ -106,25 +55,45 @@ std::ostream& operator<<(std::ostream& os, Pipeline& pipeline)
 	return os;
 }
 
-Pipeline& Pipeline::operator|(Stage& to)
+Pipeline Pipeline::operator|(Pipeline to)
 {
-	to.setBase(getHead()->getBase());
-	setTail(&to);
-	return *this;
-}
-
-Pipeline& Pipeline::operator|(Pipeline& to)
-{
-	if (linked)
-		throw exc::MultiLinkException(*getHead());
-
-	if (to.linked)
-		throw exc::MultiLinkException(*to.getHead());
-
 	to.getHead()->setBase(getHead()->getBase());
 	tail->addNext(to.getHead());
 	to.getHead()->setPrev(tail);
-	tail = to.getTail();
-	to.setLinked();
-	return *this;
+
+	return {getHead(), to.getTail()};
 }
+
+Pipeline Pipeline::operator|(PipelineList& to)
+{
+	for (auto *node = to.head; node; node = node->next) {
+		*this | node->p;
+	}
+
+	return {getHead(), to.tail->p.getTail()};
+}
+
+PipelineList& Pipeline::operator,(Pipeline p)
+{
+	auto& l = *new PipelineList(*this);
+	l , p;
+	return l;
+}
+
+PipelineList::Node::Node(Pipeline p) :
+    p(p), next(nullptr)
+{
+}
+
+PipelineList::PipelineList(Pipeline p)
+{
+	head = tail = new Node(p);
+}
+
+PipelineList& PipelineList::operator,(Pipeline p)
+{
+	auto *n = new Node(p);
+	tail->next = n;
+	tail = n;
+	return *this;
+};

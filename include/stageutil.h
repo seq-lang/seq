@@ -12,6 +12,7 @@
 #include "substr.h"
 #include "len.h"
 #include "count.h"
+#include "range.h"
 
 namespace seq {
 	namespace stageutil {
@@ -25,6 +26,9 @@ namespace seq {
 		Substr& substr(uint32_t start, uint32_t len);
 		Len& len();
 		Count& count();
+		Range& range(uint32_t from, uint32_t to, uint32_t step);
+		Range& range(uint32_t from, uint32_t to);
+		Range& range(uint32_t to);
 	}
 }
 

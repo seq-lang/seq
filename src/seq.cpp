@@ -63,16 +63,16 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	BasicBlock *block;
 
 	for (auto& pipeline : pipelines) {
-		pipeline->validate();
+		pipeline.validate();
 		builder.SetInsertPoint(&func->getBasicBlockList().back());
 		block = BasicBlock::Create(context, "pipeline", func);
 		builder.CreateBr(block);
 
-		BaseStage *begin = dynamic_cast<BaseStage *>(pipeline->getHead());
+		auto *begin = dynamic_cast<BaseStage *>(pipeline.getHead());
 		assert(begin);
-		begin->setBase(pipeline->getHead()->getBase());
+		begin->setBase(pipeline.getHead()->getBase());
 		begin->block = block;
-		pipeline->getHead()->codegen(module, context);
+		pipeline.getHead()->codegen(module, context);
 	}
 
 	builder.SetInsertPoint(&func->getBasicBlockList().back());
@@ -117,7 +117,7 @@ void Seq::execute(bool debug)
 		ExecutionEngine *eng = EB.create();
 
 		for (auto& pipeline : pipelines) {
-			pipeline->getHead()->finalize(eng);
+			pipeline.getHead()->finalize(eng);
 		}
 
 		auto op = (SeqOp)eng->getPointerToFunction(func);
@@ -143,10 +143,13 @@ void Seq::execute(bool debug)
 	}
 }
 
-void Seq::add(Pipeline *pipeline)
+void Seq::add(Pipeline pipeline)
 {
+	if (pipeline.isAdded())
+		throw exc::MultiLinkException(*pipeline.getHead());
+
 	pipelines.push_back(pipeline);
-	pipeline->setAdded();
+	pipeline.setAdded();
 }
 
 BasicBlock *Seq::getOnce() const
@@ -165,19 +168,14 @@ BasicBlock *Seq::getPreamble() const
 	return preamble;
 }
 
-Pipeline& Seq::operator|(Pipeline& to)
+Pipeline Seq::operator|(Pipeline to)
 {
 	to.getHead()->setBase(this);
 	BaseStage& begin = BaseStage::make(types::Void::get(), types::Seq::get());
 	begin.setBase(this);
 	begin.outs = outs;
-	Pipeline& full = begin | to;
-	add(&full);
+	Pipeline full = begin | to;
+	add(full);
 
 	return full;
-}
-
-Pipeline& Seq::operator|(Stage& to)
-{
-	return (*this | to.asPipeline());
 }

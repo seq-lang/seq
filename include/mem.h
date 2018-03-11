@@ -57,8 +57,7 @@ namespace seq {
 		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
 		void finalize(llvm::ExecutionEngine *eng) override;
 
-		Pipeline& operator|(Stage& to) override;
-		Pipeline& operator|(Pipeline& to) override;
+		Pipeline operator|(Pipeline to) override;
 	};
 }
 

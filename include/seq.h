@@ -20,7 +20,7 @@ namespace seq {
 	class Seq {
 	private:
 		std::string src;
-		std::vector<Pipeline *> pipelines;
+		std::vector<Pipeline> pipelines;
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
 		llvm::Function *func;
 		llvm::BasicBlock *once;
@@ -30,7 +30,7 @@ namespace seq {
 		Seq();
 		void source(std::string source);
 		void execute(bool debug=false);
-		void add(Pipeline *pipeline);
+		void add(Pipeline pipeline);
 		llvm::BasicBlock *getOnce() const;
 		llvm::BasicBlock *getPreamble() const;
 
@@ -40,8 +40,7 @@ namespace seq {
 			return {TYPE::get(), size, this};
 		}
 
-		Pipeline& operator|(Pipeline& to);
-		Pipeline& operator|(Stage& to);
+		Pipeline operator|(Pipeline to);
 	};
 }
 

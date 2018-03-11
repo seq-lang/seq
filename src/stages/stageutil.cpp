@@ -52,3 +52,18 @@ Count& stageutil::count()
 {
 	return Count::make();
 }
+
+Range& stageutil::range(uint32_t from, uint32_t to, uint32_t step)
+{
+	return Range::make(from, to, step);
+}
+
+Range& stageutil::range(uint32_t from, uint32_t to)
+{
+	return Range::make(from, to);
+}
+
+Range& stageutil::range(uint32_t to)
+{
+	return Range::make(to);
+}
