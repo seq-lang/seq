@@ -12,9 +12,11 @@ Build with CMake:
 
 ```
 cd seq
-cmake .
+LLVM_DIR=/usr/local/Cellar/llvm/5.0.1/lib/cmake cmake .
 make
 ```
+
+where LLVM_DIR is ... well, LLVM_DIR.
 
 Test:
 
