@@ -15,6 +15,7 @@ extern "C" uint32_t my_hash_func(char *seq, uint32_t len)
 	uint32_t h = 0;
 
 	for (uint32_t i = 0; i < len; i++) {
+		h <<= 2;
 		switch (seq[i]) {
 			case 'A':
 			case 'a':
@@ -35,8 +36,6 @@ extern "C" uint32_t my_hash_func(char *seq, uint32_t len)
 			default:
 				break;
 		}
-
-		h <<= 2;
 	}
 	return h;
 }
