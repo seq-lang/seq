@@ -41,6 +41,7 @@ namespace seq {
 		}
 
 		Pipeline operator|(Pipeline to);
+		Pipeline operator|(PipelineList to);
 	};
 }
 

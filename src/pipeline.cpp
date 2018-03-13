@@ -73,13 +73,6 @@ Pipeline Pipeline::operator|(PipelineList& to)
 	return {getHead(), to.tail->p.getTail()};
 }
 
-PipelineList& Pipeline::operator,(Pipeline p)
-{
-	auto& l = *new PipelineList(*this);
-	l , p;
-	return l;
-}
-
 PipelineList::Node::Node(Pipeline p) :
     p(p), next(nullptr)
 {
@@ -96,4 +89,18 @@ PipelineList& PipelineList::operator,(Pipeline p)
 	tail->next = n;
 	tail = n;
 	return *this;
+};
+
+PipelineList& seq::operator,(Pipeline& from, Pipeline to)
+{
+	auto& l = *new PipelineList(from);
+	l , to;
+	return l;
+};
+
+PipelineList& seq::operator,(Stage& from, Pipeline to)
+{
+	auto& l = *new PipelineList(from);
+	l , to;
+	return l;
 };

@@ -19,12 +19,27 @@ namespace seq {
 		Var();
 		Var(Pipeline pipeline);
 
-		types::Type *getType() const;
-		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs() const;
+		virtual types::Type *getType(Stage *caller) const;
+		virtual std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const;
 
-		Pipeline operator|(Pipeline to);
-		Var& operator=(Pipeline to);
+		virtual Pipeline operator|(Pipeline to);
+		virtual Var& operator=(Pipeline to);
 	};
+
+	class Latest : public Var {
+	private:
+		Latest();
+	public:
+		Latest(Latest const&)=delete;
+		void operator=(Latest const&)=delete;
+
+		types::Type *getType(Stage *caller) const override;
+		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const override;
+
+		static Latest& get();
+	};
+
+	static Latest& _ = Latest::get();
 }
 
 #endif /* SEQ_VAR_H */

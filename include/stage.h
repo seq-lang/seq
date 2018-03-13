@@ -28,6 +28,7 @@ namespace seq {
 		types::Type *out;
 		Stage *prev;
 		std::vector<Stage *> nexts;
+		std::vector<Stage *> weakNexts;  // for variable references
 	public:
 		std::string name;
 		llvm::BasicBlock *block;
@@ -41,11 +42,13 @@ namespace seq {
 		Stage *getPrev() const;
 		virtual void setPrev(Stage *prev);
 		std::vector<Stage *>& getNext();
+		std::vector<Stage *>& getWeakNext();
 		Seq *getBase() const;
 		void setBase(Seq *base);
 		types::Type *getInType() const;
 		types::Type *getOutType() const;
 		virtual void addNext(Stage *next);
+		virtual void addWeakNext(Stage *next);
 		virtual llvm::BasicBlock *getAfter() const;
 		virtual void setAfter(llvm::BasicBlock *block);
 		bool isAdded() const;

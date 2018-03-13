@@ -101,16 +101,26 @@ LoadStore::LoadStore(Mem *mem, Var *idx) :
 
 void LoadStore::validate()
 {
-	if (idx->getType() != types::Int::get())
+	if (idx->getType(this) != types::Int::get())
 		throw exc::SeqException("non-integer array index");
 
-	isStore = getPrev() && (getPrev()->getOutType() != types::Void::get());
+	if (!getPrev() || getPrev()->getOutType() == types::Void::get())
+		isStore = false;
+
+	// somewhat contrived logic for determining whether we are loading or storing...
+	const bool noPrev = (!getPrev() || getPrev()->getOutType() == types::Void::get());
+	const bool noNext = (getNext().empty() && getWeakNext().empty());
+
+	if (noPrev && noNext)
+		isStore = false;
+	else
+		isStore = noNext;
 
 	if (isStore) {
 		in = mem->getType();
 		out = types::Void::get();
 	} else {
-		in = types::Void::get();
+		in = types::Any::get();
 		out = mem->getType();
 	}
 
@@ -135,10 +145,10 @@ void LoadStore::codegen(Module *module, LLVMContext& context)
 		SeqData key = prev->getOutType()->getKey();
 		ensureKey(key);
 
-		auto idxiter = idx->outs()->find(SeqData::INT);
+		auto idxiter = idx->outs(this)->find(SeqData::INT);
 		auto valiter = prev->outs->find(key);
 
-		if (idxiter == idx->outs()->end() || valiter == prev->outs->end())
+		if (idxiter == idx->outs(this)->end() || valiter == prev->outs->end())
 			throw exc::StageException("pipeline error", *this);
 
 		mem->codegenStore(module, context, block, idxiter->second, valiter->second);
@@ -146,9 +156,9 @@ void LoadStore::codegen(Module *module, LLVMContext& context)
 		SeqData key = mem->getType()->getKey();
 		ensureKey(key);
 
-		auto idxiter = idx->outs()->find(SeqData::INT);
+		auto idxiter = idx->outs(this)->find(SeqData::INT);
 
-		if (idxiter == idx->outs()->end())
+		if (idxiter == idx->outs(this)->end())
 			throw exc::StageException("pipeline error", *this);
 
 		Value *val = mem->codegenLoad(module, context, block, idxiter->second);

@@ -16,12 +16,12 @@ Var::Var(Pipeline pipeline) : Var()
 	*this = pipeline;
 }
 
-types::Type *Var::getType() const
+types::Type *Var::getType(Stage *caller) const
 {
 	return stage->getOutType();
 }
 
-std::shared_ptr<std::map<SeqData, Value *>> Var::outs() const
+std::shared_ptr<std::map<SeqData, Value *>> Var::outs(Stage *caller) const
 {
 	return stage->outs;
 }
@@ -35,9 +35,10 @@ Pipeline Var::operator|(Pipeline to)
 		throw exc::SeqException("cannot use same pipeline twice");
 
 	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::Void::get(), getType());
+	BaseStage& begin = BaseStage::make(types::Void::get(), getType(stage));
 	begin.setBase(base);
 	begin.outs = stage->outs;
+	stage->addWeakNext(to.getHead());
 
 	Pipeline full = begin | to;
 	base->add(full);
@@ -62,4 +63,35 @@ Var& Var::operator=(Pipeline to)
 	}
 
 	return *this;
+}
+
+Latest::Latest() : Var()
+{
+}
+
+static void validateCaller(Stage *caller)
+{
+	if (!caller)
+		throw exc::SeqException("unexpected null stage");
+
+	if (!caller->getPrev())
+		throw exc::StageException("stage has no predecessor", *caller);
+}
+
+types::Type *Latest::getType(Stage *caller) const
+{
+	validateCaller(caller);
+	return caller->getPrev()->getOutType();
+}
+
+std::shared_ptr<std::map<SeqData, Value *>> Latest::outs(Stage *caller) const
+{
+	validateCaller(caller);
+	return caller->getPrev()->outs;
+};
+
+Latest& Latest::get()
+{
+	static auto *latest = new Latest();
+	return *latest;
 }

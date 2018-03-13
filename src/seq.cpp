@@ -179,3 +179,12 @@ Pipeline Seq::operator|(Pipeline to)
 
 	return full;
 }
+
+Pipeline Seq::operator|(PipelineList to)
+{
+	for (auto *node = to.head; node; node = node->next) {
+		*this | node->p;
+	}
+
+	return {to.head->p.getHead(), to.tail->p.getTail()};
+}

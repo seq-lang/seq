@@ -25,7 +25,6 @@ namespace seq {
 
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
-		PipelineList& operator,(Pipeline p);
 	};
 
 	class PipelineList {
@@ -43,6 +42,9 @@ namespace seq {
 		explicit PipelineList(Pipeline p);
 		PipelineList& operator,(Pipeline p);
 	};
+
+	PipelineList& operator,(Pipeline& from, Pipeline to);
+	PipelineList& operator,(Stage& from, Pipeline to);
 }
 
 std::ostream& operator<<(std::ostream& os, seq::Pipeline& pipeline);

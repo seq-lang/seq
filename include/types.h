@@ -68,16 +68,34 @@ namespace seq {
 			                          llvm::Value *val);
 		};
 
+		class Any : public Type {
+			Any() : Type("Any", nullptr) {};
+		public:
+			Any(Any const&)=delete;
+			void operator=(Any const&)=delete;
+
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) override
+			{
+				throw exc::SeqException("cannot instantiate Any class");
+			}
+
+			static Any *get()
+			{
+				static Any instance;
+				return &instance;
+			}
+		};
+
 		class Base : public Type {
 		private:
-			Base() : Type("Base", nullptr) {};
+			Base() : Type("Base", Any::get()) {};
 		public:
 			Base(Base const&)=delete;
 			void operator=(Base const&)=delete;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override
 			{
-				throw exc::SeqException("cannot instantiate base class");
+				throw exc::SeqException("cannot instantiate Base class");
 			}
 
 			static Base *get()
@@ -89,7 +107,7 @@ namespace seq {
 
 		class Void : public Type {
 		private:
-			Void() : Type("Void", nullptr) {};
+			Void() : Type("Void", Any::get()) {};
 		public:
 			Void(Void const&)=delete;
 			void operator=(Void const&)=delete;
@@ -170,7 +188,7 @@ namespace seq {
 
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override
 			{
-				throw exc::SeqException("cannot instantiate number class");
+				throw exc::SeqException("cannot instantiate Number class");
 			}
 
 			static Number *get()
