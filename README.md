@@ -77,7 +77,7 @@ kmers | print();
 kmers | revcomp() | print();
 
 s.source("input.fastq");
-s.execute(true);
+s.execute();
 ```
 
 Branching pipelines can also be represented using a `,` shorthand:
@@ -89,7 +89,7 @@ s | split(32,32) | (print(),
                     revcomp() | print());
 
 s.source("input.fastq");
-s.execute(true);
+s.execute();
 ```
 
 #### Stages
@@ -125,7 +125,7 @@ Var d = b | copy() | revcomp();
 d | print();
 
 s.source("input.fastq");
-s.execute(true);
+s.execute();
 ```
 
 #### Arrays
