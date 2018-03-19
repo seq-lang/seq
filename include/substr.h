@@ -7,11 +7,11 @@
 namespace seq {
 	class Substr : public Stage {
 	private:
-		uint32_t start, len;
+		seq_int_t start, len;
 	public:
-		Substr(uint32_t k, uint32_t step);
+		Substr(seq_int_t k, seq_int_t step);
 		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
-		static Substr& make(uint32_t start, uint32_t len);
+		static Substr& make(seq_int_t start, seq_int_t len);
 	};
 }
 

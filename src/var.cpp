@@ -1,6 +1,7 @@
 #include "seq.h"
 #include "stage.h"
 #include "basestage.h"
+#include "mem.h"
 #include "exc.h"
 #include "var.h"
 
@@ -26,6 +27,11 @@ std::shared_ptr<std::map<SeqData, Value *>> Var::outs(Stage *caller) const
 	return stage->outs;
 }
 
+Seq *Var::getBase() const
+{
+	return base;
+}
+
 Pipeline Var::operator|(Pipeline to)
 {
 	if (!assigned)
@@ -35,10 +41,12 @@ Pipeline Var::operator|(Pipeline to)
 		throw exc::SeqException("cannot use same pipeline twice");
 
 	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::Void::get(), getType(stage));
+	BaseStage& begin = BaseStage::make(types::VoidType::get(), getType(stage));
 	begin.setBase(base);
-	begin.outs = stage->outs;
-	stage->addWeakNext(to.getHead());
+	begin.outs = outs(stage);
+
+	if (stage)
+		stage->addWeakNext(to.getHead());
 
 	Pipeline full = begin | to;
 	base->add(full);
@@ -56,13 +64,18 @@ Var& Var::operator=(Pipeline to)
 	stage = to.getTail();
 
 	if (!to.isAdded()) {
-		BaseStage& begin = BaseStage::make(types::Void::get(), types::Void::get());
+		BaseStage& begin = BaseStage::make(types::VoidType::get(), types::VoidType::get());
 		begin.setBase(base);
 		Pipeline full = begin | to;
 		base->add(full);
 	}
 
 	return *this;
+}
+
+LoadStore& Var::operator[](Var& idx)
+{
+	return LoadStore::make(this, &idx);
 }
 
 Latest::Latest() : Var()

@@ -8,107 +8,55 @@
 using namespace seq;
 using namespace llvm;
 
-Mem::Mem(types::Type *of, const uint32_t size, Seq *base) :
-    base(base), of(of), size(size), mallocFunc(nullptr), ptr(nullptr)
+Mem::Mem(types::Type *type, seq_int_t count) :
+    Stage("mem", types::AnyType::get(), types::ArrayType::get(type, count))
 {
 }
 
-types::Type *Mem::getType() const
+void Mem::codegen(llvm::Module *module, llvm::LLVMContext &context)
 {
-	return of;
+	ensurePrev();
+	validate();
+
+	auto *type = (types::ArrayType *)getOutType();
+	block = prev->block;
+	type->callAlloc(outs, block);
+	codegenNext(module, context);
+	prev->setAfter(getAfter());
 }
 
-Seq *Mem::getBase() const
+void Mem::finalize(ExecutionEngine *eng)
 {
-	return base;
+	auto *type = (types::ArrayType *)getOutType();
+	type->finalizeAlloc(eng);
 }
 
-void Mem::makeMalloc(Module *module, LLVMContext& context)
+Mem& Mem::make(types::Type *type, seq_int_t count)
 {
-	if (mallocFunc)
-		return;
-
-	mallocFunc = cast<Function>(
-	               module->getOrInsertFunction(
-	                 "malloc",
-	                 IntegerType::getInt8PtrTy(context),
-	                 IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+	return *new Mem(type, count);
 }
 
-void Mem::finalizeMalloc(ExecutionEngine *eng)
+LoadStore::LoadStore(Var *ptr, Var *idx) :
+    Stage("loadstore", types::VoidType::get(), types::VoidType::get()),
+    ptr(ptr), idx(idx), isStore(false)
 {
-	eng->addGlobalMapping(mallocFunc, (void *)std::malloc);
-}
-
-void Mem::codegenAlloc(Module *module, LLVMContext& context)
-{
-	if (ptr)
-		return;
-
-	if (of->size() == 0)
-		throw exc::SeqException("cannot create array of specified type");
-
-	makeMalloc(module, context);
-	BasicBlock *once = base->getOnce();
-	IRBuilder<> builder(once);
-
-	ptr = new GlobalVariable(*module,
-	                         IntegerType::getIntNPtrTy(context, of->size()*8),
-	                         false,
-	                         GlobalValue::PrivateLinkage,
-	                         nullptr,
-	                         "mem");
-
-	ptr->setInitializer(
-	  ConstantPointerNull::get(IntegerType::getIntNPtrTy(context, of->size())));
-
-	std::vector<Value *> args = {
-	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), size * of->size())};
-	Value *mem = builder.CreateCall(mallocFunc, args);
-	mem = builder.CreatePointerCast(mem, IntegerType::getIntNPtrTy(context, of->size()*8));
-	builder.CreateStore(mem, ptr);
-}
-
-Value *Mem::codegenLoad(Module *module,
-                        LLVMContext& context,
-                        BasicBlock *block,
-                        Value *idx)
-{
-	return of->codegenLoad(module, context, block, ptr, idx);
-}
-
-void Mem::codegenStore(Module *module,
-                       LLVMContext& context,
-                       BasicBlock *block,
-                       Value *idx,
-                       Value *val)
-{
-	of->codegenStore(module, context, block, ptr, idx, val);
-}
-
-LoadStore& Mem::operator[](Var& idx)
-{
-	LoadStore& ls = *new LoadStore(this, &idx);
-	return ls;
-}
-
-LoadStore::LoadStore(Mem *mem, Var *idx) :
-    Stage("loadstore", mem->getType(), mem->getType()),
-    mem(mem), idx(idx), isStore(false)
-{
-	setBase(mem->getBase());
+	setBase(ptr->getBase());
 }
 
 void LoadStore::validate()
 {
-	if (idx->getType(this) != types::Int::get())
+	types::Type *type = ptr->getType(this);
+
+	if (!type->isChildOf(types::ArrayType::get(nullptr, 0)))
+		throw exc::SeqException("cannot index into non-array type '" + type->getName() + "'");
+
+	if (!idx->getType(this)->isChildOf(types::IntType::get()))
 		throw exc::SeqException("non-integer array index");
 
-	if (!getPrev() || getPrev()->getOutType() == types::Void::get())
-		isStore = false;
+	auto *arrayType = (types::ArrayType *)type;
 
 	// somewhat contrived logic for determining whether we are loading or storing...
-	const bool noPrev = (!getPrev() || getPrev()->getOutType() == types::Void::get());
+	const bool noPrev = (!getPrev() || getPrev()->getOutType()->isChildOf(types::VoidType::get()));
 	const bool noNext = (getNext().empty() && getWeakNext().empty());
 
 	if (noPrev && noNext)
@@ -117,11 +65,11 @@ void LoadStore::validate()
 		isStore = noNext;
 
 	if (isStore) {
-		in = mem->getType();
-		out = types::Void::get();
+		in = arrayType->getBaseType();
+		out = types::VoidType::get();
 	} else {
-		in = types::Any::get();
-		out = mem->getType();
+		in = types::AnyType::get();
+		out = arrayType->getBaseType();
 	}
 
 	Stage::validate();
@@ -136,7 +84,13 @@ static void ensureKey(SeqData key)
 void LoadStore::codegen(Module *module, LLVMContext& context)
 {
 	validate();
-	mem->codegenAlloc(module, context);
+
+	auto *arrayType = (types::ArrayType *)ptr->getType(this);
+
+	auto ptriter = ptr->outs(this)->find(SeqData::ARRAY);
+
+	if (ptriter == ptr->outs(this)->end())
+		throw exc::StageException("pipeline error", *this);
 
 	block = prev->block;
 	IRBuilder<> builder(block);
@@ -151,9 +105,9 @@ void LoadStore::codegen(Module *module, LLVMContext& context)
 		if (idxiter == idx->outs(this)->end() || valiter == prev->outs->end())
 			throw exc::StageException("pipeline error", *this);
 
-		mem->codegenStore(module, context, block, idxiter->second, valiter->second);
+		arrayType->codegenStore(block, ptriter->second, idxiter->second, valiter->second);
 	} else {
-		SeqData key = mem->getType()->getKey();
+		SeqData key = arrayType->getBaseType()->getKey();
 		ensureKey(key);
 
 		auto idxiter = idx->outs(this)->find(SeqData::INT);
@@ -161,7 +115,7 @@ void LoadStore::codegen(Module *module, LLVMContext& context)
 		if (idxiter == idx->outs(this)->end())
 			throw exc::StageException("pipeline error", *this);
 
-		Value *val = mem->codegenLoad(module, context, block, idxiter->second);
+		Value *val = arrayType->codegenLoad(block, ptriter->second, idxiter->second);
 
 		outs->insert({key, val});
 	}
@@ -170,23 +124,23 @@ void LoadStore::codegen(Module *module, LLVMContext& context)
 	prev->setAfter(getAfter());
 }
 
-void LoadStore::finalize(ExecutionEngine *eng)
-{
-	mem->finalizeMalloc(eng);
-}
-
 Pipeline LoadStore::operator|(Pipeline to)
 {
 	Pipeline p = Stage::operator|(to);
 
 	if (!p.isAdded()) {
-		Seq *base = mem->getBase();
+		Seq *base = getBase();
 		p.getHead()->setBase(base);
-		BaseStage& begin = BaseStage::make(types::Void::get(), types::Void::get());
+		BaseStage& begin = BaseStage::make(types::VoidType::get(), types::VoidType::get());
 		begin.setBase(base);
 		Pipeline full = begin | p;
 		base->add(full);
 	}
 
 	return p;
+}
+
+LoadStore& LoadStore::make(Var *ptr, Var *idx)
+{
+	return *new LoadStore(ptr, idx);
 }

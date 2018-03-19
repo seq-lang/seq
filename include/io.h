@@ -6,6 +6,7 @@
 #include <fstream>
 #include <map>
 #include "stage.h"
+#include "common.h"
 
 namespace seq {
 	namespace io {
@@ -25,15 +26,15 @@ namespace seq {
 			char *buf;
 			size_t cap;
 			char *data[SeqData::SEQ_DATA_COUNT];
-			uint32_t lens[SeqData::SEQ_DATA_COUNT];
+			seq_int_t lens[SeqData::SEQ_DATA_COUNT];
 
 			DataCell();
 			~DataCell();
 
 			bool read(std::ifstream& in, Format fmt);
 		private:
-			DataCell(char *data, uint32_t len);
-			void ensureCap(const size_t new_cap);
+			DataCell(char *data, size_t len);
+			void ensureCap(size_t new_cap);
 			bool readTXT(std::ifstream& in);
 			bool readFASTQ(std::ifstream& in);
 			bool readFASTA(std::ifstream& in);

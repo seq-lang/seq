@@ -10,9 +10,44 @@
 using namespace seq;
 using namespace llvm;
 
+PipelineAggregator::PipelineAggregator(Seq *base) : base(base), pipelines()
+{
+}
+
+void PipelineAggregator::add(Pipeline pipeline)
+{
+	if (pipeline.isAdded())
+		throw exc::MultiLinkException(*pipeline.getHead());
+
+	pipelines.push_back(pipeline);
+	pipeline.setAdded();
+}
+
+Pipeline PipelineAggregator::operator|(Pipeline to)
+{
+	to.getHead()->setBase(base);
+	BaseStage& begin = BaseStage::make(types::VoidType::get(), types::SeqType::get());
+	begin.setBase(base);
+	begin.outs = base->outs;
+	Pipeline full = begin | to;
+	add(full);
+
+	return full;
+}
+
+Pipeline PipelineAggregator::operator|(PipelineList to)
+{
+	for (auto *node = to.head; node; node = node->next) {
+		*this | node->p;
+	}
+
+	return {to.head->p.getHead(), to.tail->p.getTail()};
+}
+
 Seq::Seq() :
     src(""), pipelines(), outs(new std::map<SeqData, Value *>()),
-    func(nullptr), once(nullptr), preamble(nullptr)
+    func(nullptr), onceBlock(nullptr), preambleBlock(nullptr),
+    main(this), once(this)
 {
 }
 
@@ -28,7 +63,7 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	           "main",
 	           Type::getVoidTy(context),
 	           IntegerType::getInt8PtrTy(context),
-	           IntegerType::getInt32Ty(context)));
+	           seqIntLLVM(context)));
 
 	auto args = func->arg_begin();
 	Value *seq = args++;
@@ -40,9 +75,29 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	outs->insert({SeqData::SEQ, seq});
 	outs->insert({SeqData::LEN, len});
 
+	/* preamble */
+	preambleBlock = BasicBlock::Create(context, "preamble", func);
+
 	/* one-time execution */
 	BasicBlock *onceBr = BasicBlock::Create(context, "oncebr", func);
-	once = BasicBlock::Create(context, "once", func);
+	BasicBlock *origOnceBlock = BasicBlock::Create(context, "once", func);
+	onceBlock = origOnceBlock;  // onceBlock is really the _last_ once-block
+	IRBuilder<> builder(onceBlock);
+
+	for (auto &pipeline : once.pipelines) {
+		pipeline.validate();
+		builder.SetInsertPoint(&func->getBasicBlockList().back());
+		onceBlock = BasicBlock::Create(context, "pipeline", func);
+		builder.CreateBr(onceBlock);
+
+		auto *begin = dynamic_cast<BaseStage *>(pipeline.getHead());
+		assert(begin);
+		begin->setBase(pipeline.getHead()->getBase());
+		begin->block = onceBlock;
+		pipeline.getHead()->codegen(module, context);
+	}
+
+	onceBlock = &func->getBasicBlockList().back();
 
 	GlobalVariable *init = new GlobalVariable(*module,
 	                                          IntegerType::getInt1Ty(context),
@@ -53,16 +108,11 @@ void Seq::codegen(Module *module, LLVMContext& context)
 
 	init->setInitializer(ConstantInt::get(IntegerType::getInt1Ty(context), 0));
 
-	/* preamble */
-	preamble = BasicBlock::Create(context, "preamble", func);
+	/* main */
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
-
-	IRBuilder<> builder(onceBr);
-	builder.CreateCondBr(builder.CreateLoad(init), preamble, once);
-
 	BasicBlock *block;
 
-	for (auto& pipeline : pipelines) {
+	for (auto &pipeline : main.pipelines) {
 		pipeline.validate();
 		builder.SetInsertPoint(&func->getBasicBlockList().back());
 		block = BasicBlock::Create(context, "pipeline", func);
@@ -75,14 +125,18 @@ void Seq::codegen(Module *module, LLVMContext& context)
 		pipeline.getHead()->codegen(module, context);
 	}
 
+	/* stitch it all together */
 	builder.SetInsertPoint(&func->getBasicBlockList().back());
 	builder.CreateRetVoid();
 
-	builder.SetInsertPoint(once);
-	builder.CreateStore(ConstantInt::get(IntegerType::getInt1Ty(context), 1), init);
-	builder.CreateBr(preamble);
+	builder.SetInsertPoint(preambleBlock);
+	builder.CreateBr(onceBr);
 
-	builder.SetInsertPoint(preamble);
+	builder.SetInsertPoint(onceBr);
+	builder.CreateCondBr(builder.CreateLoad(init), entry, origOnceBlock);
+
+	builder.SetInsertPoint(onceBlock);
+	builder.CreateStore(ConstantInt::get(IntegerType::getInt1Ty(context), 1), init);
 	builder.CreateBr(entry);
 }
 
@@ -145,46 +199,31 @@ void Seq::execute(bool debug)
 
 void Seq::add(Pipeline pipeline)
 {
-	if (pipeline.isAdded())
-		throw exc::MultiLinkException(*pipeline.getHead());
-
-	pipelines.push_back(pipeline);
-	pipeline.setAdded();
+	main.add(pipeline);
 }
 
 BasicBlock *Seq::getOnce() const
 {
-	if (!once)
+	if (!onceBlock)
 		throw exc::SeqException("cannot request once before code generation");
 
-	return once;
+	return onceBlock;
 }
 
 BasicBlock *Seq::getPreamble() const
 {
-	if (!preamble)
+	if (!preambleBlock)
 		throw exc::SeqException("cannot request preamble before code generation");
 
-	return preamble;
+	return preambleBlock;
 }
 
 Pipeline Seq::operator|(Pipeline to)
 {
-	to.getHead()->setBase(this);
-	BaseStage& begin = BaseStage::make(types::Void::get(), types::Seq::get());
-	begin.setBase(this);
-	begin.outs = outs;
-	Pipeline full = begin | to;
-	add(full);
-
-	return full;
+	return main | to;
 }
 
 Pipeline Seq::operator|(PipelineList to)
 {
-	for (auto *node = to.head; node; node = node->next) {
-		*this | node->p;
-	}
-
-	return {to.head->p.getHead(), to.tail->p.getTail()};
+	return main | to;
 }

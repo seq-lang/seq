@@ -59,9 +59,9 @@ add_library(seq SHARED include/basestage.h
                        src/stages/stage.cpp
                        src/stages/stageutil.cpp
                        src/stages/substr.cpp
-                       src/types.cpp
+                       src/types/types.cpp
                        src/util.cpp
-                       src/var.cpp)
+                       src/var.cpp src/types/seqt.cpp include/seqt.h src/types/any.cpp include/any.h src/types/void.cpp include/void.h src/types/base.cpp include/base.h src/types/num.cpp include/num.h src/types/array.cpp include/array.h include/common.h src/stages/serialize.cpp include/serialize.h)
 llvm_map_components_to_libnames(llvm_libs support core irreader x86asmparser x86info x86codegen mcjit orcjit)
 target_link_libraries(seq ${llvm_libs})
 

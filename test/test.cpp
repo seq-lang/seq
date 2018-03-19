@@ -5,16 +5,16 @@ using namespace seq;
 using namespace seq::types;
 using namespace seq::stageutil;
 
-extern "C" bool is_cpg(char *seq, uint32_t len)
+extern "C" bool is_cpg(char *seq, seq_int_t len)
 {
 	return len >= 2 && seq[0] == 'C' && seq[1] == 'G';
 }
 
-extern "C" uint32_t my_hash_func(char *seq, uint32_t len)
+extern "C" seq_int_t my_hash_func(char *seq, seq_int_t len)
 {
-	uint32_t h = 0;
+	seq_int_t h = 0;
 
-	for (uint32_t i = 0; i < len; i++) {
+	for (seq_int_t i = 0; i < len; i++) {
 		h <<= 2;
 		switch (seq[i]) {
 			case 'A':
@@ -37,6 +37,7 @@ extern "C" uint32_t my_hash_func(char *seq, uint32_t len)
 				break;
 		}
 	}
+
 	return h;
 }
 
@@ -54,56 +55,11 @@ int main()
 {
 	seq::Seq s;
 
-	/*
-	 * Multiple pipelines can be added
-	 * to a source sequence
-	 */
-	s |
-	split(10,1) |
-	filt_cpg() |
-	print() |
-	substr(6,5) |
-	copy() |
-	revcomp() |
-	split(1,1) |
-	print();
+	Var mem = s.once | Int[10];
+	s.once | range(10) | mem[_];
+	s.once | range(10) | mem[_] | print();
 
-	s | split(32,32) | my_hash() | print();
-
-	s | print() | copy() | revcomp() | print();
-
-	/*
-	 * Vars can be used to refer back to
-	 * results of previous pipelines
-	 */
-	Var a, b, c, d;
-	a = s | print();
-	b = a | substr(1,5);
-	c = b | substr(1,1) | print();
-	d = b | copy() | revcomp() | print();
-
-	/*
-	 * Pipelines can branch arbitrarily
-	 */
-	Pipeline x, y;
-	x = s | split(32,1) | filt_cpg();
-	x | print();
-	y = x | substr(1,16);
-	y | (print(),
-	     copy() | revcomp() | print());  // convenient branch syntax
-
-	/*
-	 * Global memory can be declared
-	 */
-	Mem m = s.mem<Int>(1000);
-	Var i, v;
-	i = s | split(2,1) | filt_cpg() | count();
-	i | print();
-	s | split(1,1) | count() | m[i];
-	i | m[i];
-	v = m[i];
-	v | print();
-	m[i] | print();
+	s | print();
 
 	s.source("test/data/seqs.fastq");
 	s.execute(true);  // debug=true

@@ -14,7 +14,7 @@ Stage::Stage(std::string name, types::Type *in, types::Type *out) :
 }
 
 Stage::Stage(std::string name) :
-    Stage::Stage(std::move(name), types::Void::get(), types::Void::get())
+    Stage::Stage(std::move(name), types::VoidType::get(), types::VoidType::get())
 {
 }
 

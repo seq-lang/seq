@@ -5,8 +5,8 @@
 using namespace seq;
 using namespace llvm;
 
-Split::Split(uint32_t k, uint32_t step) :
-    Stage("split", types::Seq::get(), types::Seq::get()), k(k), step(step)
+Split::Split(seq_int_t k, seq_int_t step) :
+    Stage("split", types::SeqType::get(), types::SeqType::get()), k(k), step(step)
 {
 	name += "(" + std::to_string(k) + "," + std::to_string(step) + ")";
 }
@@ -33,10 +33,10 @@ void Split::codegen(Module *module, LLVMContext& context)
 	builder.CreateBr(loop);
 	builder.SetInsertPoint(loop);
 
-	PHINode *control = builder.CreatePHI(IntegerType::getInt32Ty(context), 2, "i");
+	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
 
 	Value *subseq = builder.CreateGEP(seq, control);
-	Value *sublen = ConstantInt::get(Type::getInt32Ty(context), k);
+	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)k);
 
 	outs->insert({SeqData::SEQ, subseq});
 	outs->insert({SeqData::LEN, sublen});
@@ -45,10 +45,10 @@ void Split::codegen(Module *module, LLVMContext& context)
 	codegenNext(module, context);
 
 	builder.SetInsertPoint(getAfter());
-	Value *inc = ConstantInt::get(Type::getInt32Ty(context), step);
+	Value *inc = ConstantInt::get(seqIntLLVM(context), (uint64_t)step);
 	Value *next = builder.CreateAdd(control, inc, "next");
 
-	control->addIncoming(ConstantInt::get(Type::getInt32Ty(context), 0), entry);
+	control->addIncoming(ConstantInt::get(seqIntLLVM(context), 0), entry);
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
@@ -59,7 +59,7 @@ void Split::codegen(Module *module, LLVMContext& context)
 	prev->setAfter(exit);
 }
 
-Split& Split::make(const uint32_t k, const uint32_t step)
+Split& Split::make(const seq_int_t k, const seq_int_t step)
 {
 	return *new Split(k, step);
 }

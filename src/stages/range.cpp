@@ -6,8 +6,9 @@
 using namespace seq;
 using namespace llvm;
 
-Range::Range(uint32_t from, uint32_t to, uint32_t step) :
-    Stage("range", types::Base::get(), types::Int::get()), from(from), to(to), step(step)
+Range::Range(seq_int_t from, seq_int_t to, seq_int_t step) :
+    Stage("range", types::BaseType::get(), types::IntType::get()),
+    from(from), to(to), step(step)
 {
 	if (from > to)
 		throw exc::StageException("invalid range boundaries", *this);
@@ -15,12 +16,12 @@ Range::Range(uint32_t from, uint32_t to, uint32_t step) :
 	name += "(" + std::to_string(from) + "," + std::to_string(to) + "," + std::to_string(step) + ")";
 }
 
-Range::Range(uint32_t from, uint32_t to) :
+Range::Range(seq_int_t from, seq_int_t to) :
     Range(from, to, 1)
 {
 }
 
-Range::Range(uint32_t to) :
+Range::Range(seq_int_t to) :
     Range(0, to, 1)
 {
 }
@@ -30,9 +31,9 @@ void Range::codegen(Module *module, LLVMContext& context)
 	ensurePrev();
 	validate();
 
-	Value *from = ConstantInt::get(IntegerType::getInt32Ty(context), this->from);
-	Value *to   = ConstantInt::get(IntegerType::getInt32Ty(context), this->to);
-	Value *step = ConstantInt::get(IntegerType::getInt32Ty(context), this->step);
+	Value *from = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->from);
+	Value *to   = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->to);
+	Value *step = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->step);
 
 	BasicBlock *entry = prev->block;
 	Function *func = entry->getParent();
@@ -42,7 +43,7 @@ void Range::codegen(Module *module, LLVMContext& context)
 	builder.CreateBr(loop);
 	builder.SetInsertPoint(loop);
 
-	PHINode *control = builder.CreatePHI(IntegerType::getInt32Ty(context), 2, "i");
+	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
 
 	outs->insert({SeqData::INT, control});
 	block = loop;
@@ -62,17 +63,17 @@ void Range::codegen(Module *module, LLVMContext& context)
 	prev->setAfter(exit);
 }
 
-Range& Range::make(uint32_t from, uint32_t to, uint32_t step)
+Range& Range::make(seq_int_t from, seq_int_t to, seq_int_t step)
 {
 	return *new Range(from, to, step);
 }
 
-Range& Range::make(uint32_t from, uint32_t to)
+Range& Range::make(seq_int_t from, seq_int_t to)
 {
 	return *new Range(from, to);
 }
 
-Range& Range::make(uint32_t to)
+Range& Range::make(seq_int_t to)
 {
 	return *new Range(to);
 }

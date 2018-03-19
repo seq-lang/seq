@@ -10,7 +10,7 @@ namespace seq {
 	namespace exc {
 		class SeqException : public std::runtime_error {
 		public:
-			SeqException(std::string msg);
+			explicit SeqException(std::string msg);
 		};
 
 		class StageException : public std::runtime_error {
@@ -30,7 +30,7 @@ namespace seq {
 
 		class IOException : public std::runtime_error {
 		public:
-			IOException(std::string msg);
+			explicit IOException(std::string msg);
 		};
 	}
 }

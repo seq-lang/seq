@@ -7,7 +7,7 @@ using namespace seq;
 using namespace llvm;
 
 Hash::Hash(std::string name, SeqHash hash) :
-    Stage(std::move(name), types::Seq::get(), types::Int::get()), hash(hash)
+    Stage(std::move(name), types::SeqType::get(), types::IntType::get()), hash(hash)
 {
 }
 
@@ -19,9 +19,9 @@ void Hash::codegen(Module *module, LLVMContext& context)
 	func = cast<Function>(
 	         module->getOrInsertFunction(
 	           name,
-	           IntegerType::getInt32Ty(context),
+	           seqIntLLVM(context),
 	           IntegerType::getInt8PtrTy(context),
-	           IntegerType::getInt32Ty(context)));
+	           seqIntLLVM(context)));
 
 	func->setCallingConv(CallingConv::C);
 

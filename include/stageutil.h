@@ -13,6 +13,7 @@
 #include "len.h"
 #include "count.h"
 #include "range.h"
+#include "serialize.h"
 
 namespace seq {
 	namespace stageutil {
@@ -22,13 +23,15 @@ namespace seq {
 		Hash& hash(std::string name, SeqHash hash);
 		Print& print();
 		RevComp& revcomp();
-		Split& split(uint32_t k, uint32_t step);
-		Substr& substr(uint32_t start, uint32_t len);
+		Split& split(seq_int_t k, seq_int_t step);
+		Substr& substr(seq_int_t start, seq_int_t len);
 		Len& len();
 		Count& count();
-		Range& range(uint32_t from, uint32_t to, uint32_t step);
-		Range& range(uint32_t from, uint32_t to);
-		Range& range(uint32_t to);
+		Range& range(seq_int_t from, seq_int_t to, seq_int_t step);
+		Range& range(seq_int_t from, seq_int_t to);
+		Range& range(seq_int_t to);
+		Serialize& ser(std::string filename);
+		Deserialize& deser(types::Type *type, std::string filename);
 	}
 }
 

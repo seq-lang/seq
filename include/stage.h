@@ -8,16 +8,25 @@
 #include <map>
 
 #include "llvm.h"
-#include "types.h"
 #include "seqdata.h"
+
+#include "types.h"
+#include "any.h"
+#include "base.h"
+#include "void.h"
+#include "seqt.h"
+#include "num.h"
+#include "array.h"
+
+#include "common.h"
 
 namespace seq {
 	class Seq;
 	class Pipeline;
 
-	typedef void (*SeqOp)(char *, uint32_t);
-	typedef bool (*SeqPred)(char *, uint32_t);
-	typedef uint32_t (*SeqHash)(char *, uint32_t);
+	typedef void (*SeqOp)(char *, seq_int_t);
+	typedef bool (*SeqPred)(char *, seq_int_t);
+	typedef seq_int_t (*SeqHash)(char *, seq_int_t);
 
 	class Stage {
 	private:

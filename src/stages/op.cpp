@@ -7,7 +7,7 @@ using namespace seq;
 using namespace llvm;
 
 Op::Op(std::string name, SeqOp op) :
-    Stage(std::move(name), types::Seq::get(), types::Seq::get()), op(op)
+    Stage(std::move(name), types::SeqType::get(), types::SeqType::get()), op(op)
 {
 }
 
@@ -21,7 +21,7 @@ void Op::codegen(Module *module, LLVMContext& context)
                name,
 	           Type::getVoidTy(context),
 	           IntegerType::getInt8PtrTy(context),
-	           IntegerType::getInt32Ty(context)));
+	           seqIntLLVM(context)));
 
 	func->setCallingConv(CallingConv::C);
 
