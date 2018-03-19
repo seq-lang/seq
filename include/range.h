@@ -7,15 +7,15 @@
 namespace seq {
 	class Range : public Stage {
 	private:
-		uint32_t from, to, step;
+		seq_int_t from, to, step;
 	public:
-		Range(uint32_t from, uint32_t to, uint32_t step);
-		Range(uint32_t from, uint32_t to);
-		explicit Range(uint32_t to);
+		Range(seq_int_t from, seq_int_t to, seq_int_t step);
+		Range(seq_int_t from, seq_int_t to);
+		explicit Range(seq_int_t to);
 		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
-		static Range& make(uint32_t from, uint32_t to, uint32_t step);
-		static Range& make(uint32_t from, uint32_t to);
-		static Range& make(uint32_t to);
+		static Range& make(seq_int_t from, seq_int_t to, seq_int_t step);
+		static Range& make(seq_int_t from, seq_int_t to);
+		static Range& make(seq_int_t to);
 	};
 }
 

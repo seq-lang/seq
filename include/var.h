@@ -9,6 +9,7 @@
 
 namespace seq {
 	class Seq;
+	class LoadStore;
 
 	class Var {
 	protected:
@@ -21,9 +22,12 @@ namespace seq {
 
 		virtual types::Type *getType(Stage *caller) const;
 		virtual std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const;
+		Seq *getBase() const;
 
 		virtual Pipeline operator|(Pipeline to);
 		virtual Var& operator=(Pipeline to);
+
+		virtual LoadStore& operator[](Var& idx);
 	};
 
 	class Latest : public Var {

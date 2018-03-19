@@ -2,6 +2,7 @@
 #define SEQ_UTIL_H
 
 #include <cstdint>
+#include "common.h"
 
 namespace seq {
 	namespace util {
@@ -49,16 +50,7 @@ namespace seq {
 			}
 		}
 
-		extern "C" bool seq_eq(char *seq1,
-		                       uint32_t len1,
-		                       char *seq2,
-		                       uint32_t len2);
-
-		extern "C" void revcomp(char *seq, uint32_t len);
-
-		extern "C" void print(char *seq, uint32_t len);
-		extern "C" void print_int(uint32_t x);
-		extern "C" void print_double(double n);
+		SEQ_FUNC void revcomp(char *seq, seq_int_t len);
 	}
 }
 

@@ -33,12 +33,12 @@ RevComp& stageutil::revcomp()
 	return RevComp::make();
 }
 
-Split& stageutil::split(uint32_t k, uint32_t step)
+Split& stageutil::split(seq_int_t k, seq_int_t step)
 {
 	return Split::make(k, step);
 }
 
-Substr& stageutil::substr(uint32_t start, uint32_t len)
+Substr& stageutil::substr(seq_int_t start, seq_int_t len)
 {
 	return Substr::make(start, len);
 }
@@ -53,17 +53,27 @@ Count& stageutil::count()
 	return Count::make();
 }
 
-Range& stageutil::range(uint32_t from, uint32_t to, uint32_t step)
+Range& stageutil::range(seq_int_t from, seq_int_t to, seq_int_t step)
 {
 	return Range::make(from, to, step);
 }
 
-Range& stageutil::range(uint32_t from, uint32_t to)
+Range& stageutil::range(seq_int_t from, seq_int_t to)
 {
 	return Range::make(from, to);
 }
 
-Range& stageutil::range(uint32_t to)
+Range& stageutil::range(seq_int_t to)
 {
 	return Range::make(to);
+}
+
+Serialize& stageutil::ser(std::string filename)
+{
+	return Serialize::make(std::move(filename));
+}
+
+Deserialize& stageutil::deser(types::Type *type, std::string filename)
+{
+	return Deserialize::make(type, std::move(filename));
 }

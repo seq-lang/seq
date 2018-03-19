@@ -130,18 +130,17 @@ s.execute();
 
 #### Arrays
 
-Arrays can be declared using the `mem()` function, which is parameterized by the base type and array
-size, as such:
+Arrays can be declared like this:
 
 ```cpp
 seq::Seq s;
 
 const unsigned N = 10;
-Mem m = s.mem<Int>(N);
+Var m = s.once | Int[10];
 ...
 ```
 
-As an example, we can construct a simple index of 8-mers for an input FASTA file:
+`s.once` is for pipelines only to be executed once, such as declaring global memory. As an example, we can construct a simple index of 8-mers for an input FASTA file:
 
 ```cpp
 #include "seq.h"
@@ -151,13 +150,12 @@ using namespace seq::types;
 using namespace seq::stageutil;
 
 // simple 2-bit encoding
-extern "C" uint32_t my_hash_func(char *seq, uint32_t len)
+SEQ_FUNC seq_int_t my_hash_func(char *seq, seq_int_t len)
 {
-	uint32_t h = 0;
+	seq_int_t h = 0;
 
-	for (uint32_t i = 0; i < len; i++) {
+	for (seq_int_t i = 0; i < len; i++) {
 		h <<= 2;
-
 		switch (seq[i]) {
 			case 'A':
 			case 'a':
@@ -192,7 +190,7 @@ int main()
     seq::Seq s;
 
     const unsigned K = 8;
-    Mem index = s.mem<Int>(1 << (2 * K));  // 4^K
+    Var index = s.once | Int[1 << (2 * K)];  // 4^K
     Pipeline kmers = s | split(K,1);
 
     Var h = kmers | my_hash();
@@ -210,10 +208,10 @@ As a second example, let's store the integers from 0 to 9 in an array and print 
 seq::Seq s;
 
 const unsigned N = 10;
-Mem m = s.mem<Int>(N);
+Var m = s.once | Int[N]
 
-s | range(N) | m[_];
-s | range(N) | m[_] | print();
+s.once | range(N) | m[_];
+s.once | range(N) | m[_] | print();
 
 s.source("input.fastq");
 s.execute();

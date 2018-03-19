@@ -14,7 +14,11 @@ include_directories(include/)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-add_library(seq SHARED include/basestage.h
+add_library(seq SHARED include/any.h
+                       include/array.h
+                       include/base.h
+                       include/basestage.h
+                       include/common.h
                        include/copy.h
                        include/count.h
                        include/exc.h
@@ -23,6 +27,7 @@ add_library(seq SHARED include/basestage.h
                        include/io.h
                        include/len.h
                        include/mem.h
+                       include/num.h
                        include/op.h
                        include/pipeline.h
                        include/print.h
@@ -31,6 +36,8 @@ add_library(seq SHARED include/basestage.h
                        include/revcomp.h
                        include/seq.h
                        include/seq.h
+                       include/seqt.h
+                       include/serialize.h
                        include/split.h
                        include/stage.h
                        include/stageutil.h
@@ -38,10 +45,10 @@ add_library(seq SHARED include/basestage.h
                        include/types.h
                        include/util.h
                        include/var.h
+                       include/void.h
                        src/exc.cpp
                        src/io.cpp
                        src/llvm.h
-                       src/mem.cpp
                        src/pipeline.cpp
                        src/seq.cpp
                        src/seqdata.h
@@ -51,15 +58,23 @@ add_library(seq SHARED include/basestage.h
                        src/stages/filter.cpp
                        src/stages/hash.cpp
                        src/stages/len.cpp
+                       src/stages/mem.cpp
                        src/stages/op.cpp
                        src/stages/print.cpp
                        src/stages/range.cpp
                        src/stages/revcomp.cpp
+                       src/stages/serialize.cpp
                        src/stages/split.cpp
                        src/stages/stage.cpp
                        src/stages/stageutil.cpp
                        src/stages/substr.cpp
-                       src/types.cpp
+                       src/types/any.cpp
+                       src/types/array.cpp
+                       src/types/base.cpp
+                       src/types/num.cpp
+                       src/types/seqt.cpp
+                       src/types/types.cpp
+                       src/types/void.cpp
                        src/util.cpp
                        src/var.cpp)
 llvm_map_components_to_libnames(llvm_libs support core irreader x86asmparser x86info x86codegen mcjit orcjit)

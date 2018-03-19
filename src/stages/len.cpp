@@ -3,7 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-Len::Len() : Stage("len", types::Base::get(), types::Int::get())
+Len::Len() : Stage("len", types::BaseType::get(), types::IntType::get())
 {
 }
 
@@ -11,9 +11,6 @@ void Len::codegen(llvm::Module *module, llvm::LLVMContext &context)
 {
 	ensurePrev();
 	validate();
-
-	if (!prev || !prev->block)
-		throw exc::StageException("previous stage not compiled", *this);
 
 	auto leniter = prev->outs->find(SeqData::LEN);
 

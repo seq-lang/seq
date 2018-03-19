@@ -7,11 +7,11 @@
 namespace seq {
 	class Split : public Stage {
 	private:
-		uint32_t k, step;
+		seq_int_t k, step;
 	public:
-		Split(uint32_t k, uint32_t step);
+		Split(seq_int_t k, seq_int_t step);
 		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
-		static Split& make(uint32_t k, uint32_t step);
+		static Split& make(seq_int_t k, seq_int_t step);
 	};
 }
 

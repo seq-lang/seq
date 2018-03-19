@@ -6,7 +6,7 @@ using namespace seq;
 using namespace llvm;
 
 Print::Print() :
-    Stage("print", types::Base::get(), types::Seq::get())
+    Stage("print", types::BaseType::get(), types::SeqType::get())
 {
 }
 

@@ -5,16 +5,15 @@ using namespace seq;
 using namespace seq::types;
 using namespace seq::stageutil;
 
-extern "C" bool is_cpg(char *seq, uint32_t len)
+SEQ_FUNC bool is_cpg(char *seq, seq_int_t len)
 {
 	return len >= 2 && seq[0] == 'C' && seq[1] == 'G';
 }
 
-extern "C" uint32_t my_hash_func(char *seq, uint32_t len)
+SEQ_FUNC seq_int_t my_hash_func(char *seq, seq_int_t len)
 {
-	uint32_t h = 0;
-
-	for (uint32_t i = 0; i < len; i++) {
+	seq_int_t h = 0;
+	for (seq_int_t i = 0; i < len; i++) {
 		h <<= 2;
 		switch (seq[i]) {
 			case 'A':
@@ -95,7 +94,7 @@ int main()
 	/*
 	 * Global memory can be declared
 	 */
-	Mem m = s.mem<Int>(1000);
+	Var m = s.once | Int[1000];  // array of 1000 integers
 	Var i, v;
 	i = s | split(2,1) | filt_cpg() | count();
 	i | print();

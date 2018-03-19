@@ -20,7 +20,7 @@ const map<string, Format> io::EXT_CONV = {{"txt",   Format::TXT},
                                           {"sam",   Format::SAM},
                                           {"bam",   Format::FASTQ}};
 
-DataCell::DataCell(char *buf, const uint32_t cap) :
+DataCell::DataCell(char *buf, const size_t cap) :
     buf(buf), cap(cap)
 {
 }
@@ -55,7 +55,7 @@ bool DataCell::readTXT(std::ifstream& in)
 	buf[line_len] = '\0';
 
 	data[SeqData::SEQ] = &buf[0];
-	lens[SeqData::SEQ] = (uint32_t)line_len;
+	lens[SeqData::SEQ] = (seq_int_t)line_len;
 
 	return true;
 }
@@ -86,9 +86,9 @@ bool DataCell::readFASTQ(std::ifstream& in)
 	data[SeqData::QUAL]  = &buf[seq_len + 1];
 	data[SeqData::IDENT] = &buf[seq_len + qual_len + 2];
 
-	lens[SeqData::SEQ]   = (uint32_t)seq_len;
-	lens[SeqData::QUAL]  = (uint32_t)qual_len;
-	lens[SeqData::IDENT] = (uint32_t)ident_len;
+	lens[SeqData::SEQ]   = (seq_int_t)seq_len;
+	lens[SeqData::QUAL]  = (seq_int_t)qual_len;
+	lens[SeqData::IDENT] = (seq_int_t)ident_len;
 
 	return true;
 }
@@ -140,8 +140,8 @@ bool DataCell::readFASTA(std::ifstream& in)
 	data[SeqData::IDENT] = &buf[0];
 	data[SeqData::SEQ]   = &buf[ident_len + 1];
 
-	lens[SeqData::IDENT] = (uint32_t)ident_len;
-	lens[SeqData::SEQ]   = (uint32_t)seq_len;
+	lens[SeqData::IDENT] = (seq_int_t)ident_len;
+	lens[SeqData::SEQ]   = (seq_int_t)seq_len;
 
 	return true;
 }
@@ -167,7 +167,7 @@ bool DataCell::read(std::ifstream& in, Format fmt)
 	return false;
 }
 
-io::DataBlock::DataBlock(const size_t cap) : len(0), cap(cap)
+io::DataBlock::DataBlock(const size_t cap) : len(0), cap(cap), last(false)
 {
 }
 
@@ -181,4 +181,6 @@ void io::DataBlock::read(std::ifstream& in, Format fmt)
 		if (!block[len].read(in, fmt))
 			break;
 	}
+
+	last = in.eof();
 }

@@ -5,8 +5,8 @@
 using namespace llvm;
 using namespace seq;
 
-Substr::Substr(uint32_t start, uint32_t len) :
-    Stage("split", types::Seq::get(), types::Seq::get()), start(start - 1), len(len)
+Substr::Substr(seq_int_t start, seq_int_t len) :
+    Stage("split", types::SeqType::get(), types::SeqType::get()), start(start - 1), len(len)
 {
 	name += "(" + std::to_string(start) + "," + std::to_string(len) + ")";
 }
@@ -25,9 +25,9 @@ void Substr::codegen(Module *module, LLVMContext& context)
 	block = prev->block;
 	IRBuilder<> builder(block);
 
-	Value *subidx  = ConstantInt::get(Type::getInt32Ty(context), start);
+	Value *subidx  = ConstantInt::get(seqIntLLVM(context), (uint64_t)start);
 	Value *subseq = builder.CreateGEP(seq, subidx);
-	Value *sublen = ConstantInt::get(Type::getInt32Ty(context), len);
+	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)len);
 
 	outs->insert({SeqData::SEQ, subseq});
 	outs->insert({SeqData::LEN, sublen});
@@ -36,7 +36,7 @@ void Substr::codegen(Module *module, LLVMContext& context)
 	prev->setAfter(getAfter());
 }
 
-Substr& Substr::make(const uint32_t start, const uint32_t len)
+Substr& Substr::make(const seq_int_t start, const seq_int_t len)
 {
 	return *new Substr(start, len);
 }

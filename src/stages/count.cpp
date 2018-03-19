@@ -5,7 +5,7 @@
 using namespace seq;
 using namespace llvm;
 
-Count::Count() : Stage("count", types::Base::get(), types::Int::get())
+Count::Count() : Stage("count", types::BaseType::get(), types::IntType::get())
 {
 }
 
@@ -18,12 +18,12 @@ void Count::codegen(Module *module, LLVMContext& context)
 	IRBuilder<> preamble(getBase()->getPreamble());
 	IRBuilder<> builder(block);
 
-	Value *count = preamble.CreateAlloca(IntegerType::getInt32Ty(context),
-	                                     ConstantInt::get(IntegerType::getInt32Ty(context), 1));
-	preamble.CreateStore(ConstantInt::get(IntegerType::getInt32Ty(context), 0), count);
+	Value *count = preamble.CreateAlloca(seqIntLLVM(context),
+	                                     ConstantInt::get(seqIntLLVM(context), 1));
+	preamble.CreateStore(ConstantInt::get(seqIntLLVM(context), 0), count);
 
 	LoadInst *load = builder.CreateLoad(count);
-	Value *inc = builder.CreateAdd(builder.getInt32(1), load);
+	Value *inc = builder.CreateAdd(ConstantInt::get(seqIntLLVM(context), 1), load);
 	builder.CreateStore(inc, count);
 
 	outs->insert({SeqData::INT, inc});
