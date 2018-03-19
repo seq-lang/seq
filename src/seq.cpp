@@ -46,8 +46,8 @@ Pipeline PipelineAggregator::operator|(PipelineList to)
 
 Seq::Seq() :
     src(""), pipelines(), outs(new std::map<SeqData, Value *>()),
-    func(nullptr), onceBlock(nullptr), preambleBlock(nullptr),
-    main(this), once(this)
+    func(nullptr), preambleBlock(nullptr),
+    main(this), once(this), last(this)
 {
 }
 
@@ -63,14 +63,17 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	           "main",
 	           Type::getVoidTy(context),
 	           IntegerType::getInt8PtrTy(context),
-	           seqIntLLVM(context)));
+	           seqIntLLVM(context),
+	           IntegerType::getInt8Ty(context)));
 
 	auto args = func->arg_begin();
 	Value *seq = args++;
-	Value *len = args;
+	Value *len = args++;
+	Value *isLast = args;
 
 	seq->setName("seq");
 	len->setName("len");
+	isLast->setName("last");
 
 	outs->insert({SeqData::SEQ, seq});
 	outs->insert({SeqData::LEN, len});
@@ -81,7 +84,7 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	/* one-time execution */
 	BasicBlock *onceBr = BasicBlock::Create(context, "oncebr", func);
 	BasicBlock *origOnceBlock = BasicBlock::Create(context, "once", func);
-	onceBlock = origOnceBlock;  // onceBlock is really the _last_ once-block
+	BasicBlock *onceBlock = origOnceBlock;  // onceBlock is really the _last_ once-block
 	IRBuilder<> builder(onceBlock);
 
 	for (auto &pipeline : once.pipelines) {
@@ -125,10 +128,30 @@ void Seq::codegen(Module *module, LLVMContext& context)
 		pipeline.getHead()->codegen(module, context);
 	}
 
-	/* stitch it all together */
-	builder.SetInsertPoint(&func->getBasicBlockList().back());
-	builder.CreateRetVoid();
+	BasicBlock *lastMain = &func->getBasicBlockList().back();
 
+	/* last */
+	BasicBlock *lastBr = BasicBlock::Create(context, "lastbr", func);
+	BasicBlock *origLastBlock = BasicBlock::Create(context, "last", func);
+	BasicBlock *lastBlock = origLastBlock;  // lastBlock is really the _last_ last-block
+
+	for (auto &pipeline : last.pipelines) {
+		pipeline.validate();
+		builder.SetInsertPoint(&func->getBasicBlockList().back());
+		lastBlock = BasicBlock::Create(context, "pipeline", func);
+		builder.CreateBr(lastBlock);
+
+		auto *begin = dynamic_cast<BaseStage *>(pipeline.getHead());
+		assert(begin);
+		begin->setBase(pipeline.getHead()->getBase());
+		begin->block = lastBlock;
+		pipeline.getHead()->codegen(module, context);
+	}
+
+	lastBlock = &func->getBasicBlockList().back();
+	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+
+	/* stitch it all together */
 	builder.SetInsertPoint(preambleBlock);
 	builder.CreateBr(onceBr);
 
@@ -138,6 +161,18 @@ void Seq::codegen(Module *module, LLVMContext& context)
 	builder.SetInsertPoint(onceBlock);
 	builder.CreateStore(ConstantInt::get(IntegerType::getInt1Ty(context), 1), init);
 	builder.CreateBr(entry);
+
+	builder.SetInsertPoint(lastMain);
+	builder.CreateBr(lastBr);
+
+	builder.SetInsertPoint(lastBr);
+	builder.CreateCondBr(isLast, origLastBlock, exit);
+
+	builder.SetInsertPoint(lastBlock);
+	builder.CreateBr(exit);
+
+	builder.SetInsertPoint(exit);
+	builder.CreateRetVoid();
 }
 
 void Seq::execute(bool debug)
@@ -174,7 +209,7 @@ void Seq::execute(bool debug)
 			pipeline.getHead()->finalize(eng);
 		}
 
-		auto op = (SeqOp)eng->getPointerToFunction(func);
+		auto op = (SeqMain)eng->getPointerToFunction(func);
 
 		auto *data = new io::DataBlock();
 		std::ifstream input(src);
@@ -186,7 +221,9 @@ void Seq::execute(bool debug)
 			data->read(input, fmt);
 			const size_t len = data->len;
 			for (size_t i = 0; i < len; i++) {
-				op(data->block[i].data[SeqData::SEQ], data->block[i].lens[SeqData::SEQ]);
+				op(data->block[i].data[SeqData::SEQ],
+				   data->block[i].lens[SeqData::SEQ],
+				   data->last && i == len - 1);
 			}
 		} while (data->len > 0);
 
@@ -200,14 +237,6 @@ void Seq::execute(bool debug)
 void Seq::add(Pipeline pipeline)
 {
 	main.add(pipeline);
-}
-
-BasicBlock *Seq::getOnce() const
-{
-	if (!onceBlock)
-		throw exc::SeqException("cannot request once before code generation");
-
-	return onceBlock;
 }
 
 BasicBlock *Seq::getPreamble() const

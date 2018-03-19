@@ -29,11 +29,10 @@ namespace seq {
 		};
 
 		class Type {
-		private:
+		protected:
 			std::string name;
 			Type *parent;
 			SeqData key;
-		protected:
 			VTable vtable;
 		public:
 			Type(std::string name, Type *parent, SeqData key);

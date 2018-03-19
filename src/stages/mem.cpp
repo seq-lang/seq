@@ -11,6 +11,7 @@ using namespace llvm;
 Mem::Mem(types::Type *type, seq_int_t count) :
     Stage("mem", types::AnyType::get(), types::ArrayType::get(type, count))
 {
+	name += "<" + type->getName() + "," + std::to_string(count) + ">";
 }
 
 void Mem::codegen(llvm::Module *module, llvm::LLVMContext &context)
@@ -131,7 +132,7 @@ Pipeline LoadStore::operator|(Pipeline to)
 	if (!p.isAdded()) {
 		Seq *base = getBase();
 		p.getHead()->setBase(base);
-		BaseStage& begin = BaseStage::make(types::VoidType::get(), types::VoidType::get());
+		BaseStage& begin = BaseStage::make(types::VoidType::get(), types::VoidType::get(), this);
 		begin.setBase(base);
 		Pipeline full = begin | p;
 		base->add(full);

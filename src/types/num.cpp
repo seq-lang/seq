@@ -6,7 +6,7 @@
 using namespace seq;
 using namespace llvm;
 
-extern "C" void printInt(seq_int_t x)
+SEQ_FUNC void printInt(seq_int_t x)
 {
 	std::cout << x << std::endl;
 }
@@ -23,13 +23,13 @@ static seq_int_t deserializeIntDirect(std::istream& in)
 	return *reinterpret_cast<seq_int_t *>(buf);
 }
 
-extern "C" void serializeInt(seq_int_t x, char *filename)
+SEQ_FUNC void serializeInt(seq_int_t x, char *filename)
 {
 	std::ofstream out(filename);
 	serializeIntDirect(x, out);
 }
 
-extern "C" seq_int_t deserializeInt(char *filename)
+SEQ_FUNC seq_int_t deserializeInt(char *filename)
 {
 	std::ifstream in(filename);
 	auto x = deserializeIntDirect(in);
@@ -37,7 +37,7 @@ extern "C" seq_int_t deserializeInt(char *filename)
 	return x;
 }
 
-extern "C" void serializeIntArray(void *x, seq_int_t len, char *filename)
+SEQ_FUNC void serializeIntArray(void *x, seq_int_t len, char *filename)
 {
 	std::ofstream out(filename);
 	auto *y = (seq_int_t *)x;
@@ -49,7 +49,7 @@ extern "C" void serializeIntArray(void *x, seq_int_t len, char *filename)
 	out.close();
 }
 
-extern "C" void *deserializeIntArray(char *filename, seq_int_t *len)
+SEQ_FUNC void *deserializeIntArray(char *filename, seq_int_t *len)
 {
 	std::ifstream in(filename);
 	*len = deserializeIntDirect(in);
@@ -63,7 +63,7 @@ extern "C" void *deserializeIntArray(char *filename, seq_int_t *len)
 	return array;
 }
 
-extern "C" void printFloat(double n)
+SEQ_FUNC void printFloat(double n)
 {
 	std::cout << n << std::endl;
 }
@@ -80,14 +80,14 @@ double deserializeFloatDirect(std::istream& in)
 	return *reinterpret_cast<double *>(buf);
 }
 
-extern "C" void serializeFloat(double x, char *filename)
+SEQ_FUNC void serializeFloat(double x, char *filename)
 {
 	std::ofstream out(filename);
 	serializeFloatDirect(x, out);
 	out.close();
 }
 
-extern "C" double deserializeFloat(char *filename)
+SEQ_FUNC double deserializeFloat(char *filename)
 {
 	std::ifstream in(filename);
 	auto x = deserializeFloatDirect(in);
@@ -95,7 +95,7 @@ extern "C" double deserializeFloat(char *filename)
 	return x;
 }
 
-extern "C" void serializeFloatArray(void *x, seq_int_t len, char *filename)
+SEQ_FUNC void serializeFloatArray(void *x, seq_int_t len, char *filename)
 {
 	std::ofstream out(filename);
 	auto *y = (double *)x;
@@ -107,7 +107,7 @@ extern "C" void serializeFloatArray(void *x, seq_int_t len, char *filename)
 	out.close();
 }
 
-extern "C" void *deserializeFloatArray(char *filename, seq_int_t *len)
+SEQ_FUNC void *deserializeFloatArray(char *filename, seq_int_t *len)
 {
 	std::ifstream in(filename);
 	*len = deserializeIntDirect(in);

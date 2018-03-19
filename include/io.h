@@ -44,6 +44,7 @@ namespace seq {
 			DataCell block[DEFAULT_BLOCK_SIZE];
 			size_t len;
 			const size_t cap;
+			bool last;
 
 			explicit DataBlock(size_t cap);
 			DataBlock();

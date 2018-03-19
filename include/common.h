@@ -15,4 +15,6 @@ namespace seq {
 
 }
 
+#define SEQ_FUNC extern "C"
+
 #endif /* SEQ_COMMON_H */

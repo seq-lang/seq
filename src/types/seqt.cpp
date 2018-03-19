@@ -5,14 +5,14 @@
 using namespace seq;
 using namespace llvm;
 
-extern "C" void printSeq(char *seq, const seq_int_t len)
+SEQ_FUNC void printSeq(char *seq, const seq_int_t len)
 {
 	for (seq_int_t i = 0; i < len; i++)
 		std::cout << seq[i];
 	std::cout << std::endl;
 }
 
-extern "C" void printMer(char *seq, const seq_int_t len)
+SEQ_FUNC void printMer(char *seq, const seq_int_t len)
 {
 	printSeq(seq, len);
 }

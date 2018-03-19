@@ -167,7 +167,7 @@ bool DataCell::read(std::ifstream& in, Format fmt)
 	return false;
 }
 
-io::DataBlock::DataBlock(const size_t cap) : len(0), cap(cap)
+io::DataBlock::DataBlock(const size_t cap) : len(0), cap(cap), last(false)
 {
 }
 
@@ -181,4 +181,6 @@ void io::DataBlock::read(std::ifstream& in, Format fmt)
 		if (!block[len].read(in, fmt))
 			break;
 	}
+
+	last = in.eof();
 }

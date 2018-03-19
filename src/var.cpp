@@ -19,11 +19,17 @@ Var::Var(Pipeline pipeline) : Var()
 
 types::Type *Var::getType(Stage *caller) const
 {
+	if (!assigned)
+		throw exc::SeqException("variable used before assigned");
+
 	return stage->getOutType();
 }
 
 std::shared_ptr<std::map<SeqData, Value *>> Var::outs(Stage *caller) const
 {
+	if (!assigned)
+		throw exc::SeqException("variable used before assigned");
+
 	return stage->outs;
 }
 
@@ -41,7 +47,7 @@ Pipeline Var::operator|(Pipeline to)
 		throw exc::SeqException("cannot use same pipeline twice");
 
 	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::VoidType::get(), getType(stage));
+	BaseStage& begin = BaseStage::make(types::VoidType::get(), getType(stage), stage);
 	begin.setBase(base);
 	begin.outs = outs(stage);
 

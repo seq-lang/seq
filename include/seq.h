@@ -33,7 +33,6 @@ namespace seq {
 		std::vector<Pipeline> pipelines;
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
 		llvm::Function *func;
-		llvm::BasicBlock *onceBlock;
 		llvm::BasicBlock *preambleBlock;
 		void codegen(llvm::Module *module, llvm::LLVMContext& context);
 
@@ -43,11 +42,11 @@ namespace seq {
 
 		PipelineAggregator main;
 		PipelineAggregator once;
+		PipelineAggregator last;
 
 		void source(std::string source);
 		void execute(bool debug=false);
 		void add(Pipeline pipeline);
-		llvm::BasicBlock *getOnce() const;
 		llvm::BasicBlock *getPreamble() const;
 
 		Pipeline operator|(Pipeline to);

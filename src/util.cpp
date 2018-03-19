@@ -4,7 +4,7 @@
 using namespace seq;
 using namespace seq::util;
 
-extern "C" void revcomp(char *seq, const seq_int_t len)
+SEQ_FUNC void revcomp(char *seq, const seq_int_t len)
 {
 	const seq_int_t half = (len + 1)/2;
 	for (seq_int_t i = 0; i < half; i++) {

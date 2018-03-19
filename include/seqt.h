@@ -6,7 +6,7 @@
 
 namespace seq {
 	namespace types {
-		extern "C" void printSeq(char *seq, seq_int_t len);
+		SEQ_FUNC void printSeq(char *seq, seq_int_t len);
 
 		class SeqType : public Type {
 		private:

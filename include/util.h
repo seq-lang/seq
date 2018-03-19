@@ -50,7 +50,7 @@ namespace seq {
 			}
 		}
 
-		extern "C" void revcomp(char *seq, seq_int_t len);
+		SEQ_FUNC void revcomp(char *seq, seq_int_t len);
 	}
 }
 

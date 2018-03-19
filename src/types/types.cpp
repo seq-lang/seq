@@ -170,18 +170,19 @@ void types::Type::callSerializeArray(std::shared_ptr<std::map<SeqData, Value *>>
 	                                             "file");
 	fileVar->setAlignment(1);
 
-	auto arrIter = outs->find(SeqData::ARRAY);
-	auto lenIter = outs->find(SeqData::LEN);
+	auto ptriter = outs->find(SeqData::ARRAY);
+	auto leniter = outs->find(SeqData::LEN);
 
-	if (arrIter == outs->end() || lenIter == outs->end())
+	if (ptriter == outs->end() || leniter == outs->end())
 		throw exc::SeqException("pipeline error");
 
-	Value *arr = arrIter->second;
-	Value *len = lenIter->second;
+	Value *ptr = ptriter->second;
+	Value *len = leniter->second;
 
 	IRBuilder<> builder(block);
+	ptr = builder.CreateLoad(ptr);
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0, false));
-	std::vector<Value *> args = {arr, len, filename};
+	std::vector<Value *> args = {ptr, len, filename};
 	builder.CreateCall(vtable.serializeArrayFunc, args, "");
 }
 
@@ -202,11 +203,11 @@ void types::Type::callDeserializeArray(std::shared_ptr<std::map<SeqData, Value *
 
 	if (!vtable.deserializeArrayFunc) {
 		vtable.deserializeArrayFunc = cast<Function>(
-		                              block->getModule()->getOrInsertFunction(
-		                                "deserialize" + getName() + "Array",
-		                                PointerType::getInt8PtrTy(context),
-		                                IntegerType::getInt8PtrTy(context),
-		                                PointerType::getIntNPtrTy(context, sizeof(seq_int_t) * 8)));
+		                                block->getModule()->getOrInsertFunction(
+		                                  "deserialize" + getName() + "Array",
+		                                  PointerType::getInt8PtrTy(context),
+		                                  IntegerType::getInt8PtrTy(context),
+		                                  PointerType::getIntNPtrTy(context, sizeof(seq_int_t) * 8)));
 
 		vtable.deserializeArrayFunc->setCallingConv(CallingConv::C);
 	}
@@ -223,9 +224,21 @@ void types::Type::callDeserializeArray(std::shared_ptr<std::map<SeqData, Value *
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0));
 	Value *len = builder.CreateAlloca(seqIntLLVM(context), ConstantInt::get(seqIntLLVM(context), 1));
 	std::vector<Value *> args = {filename, len};
-	Value *result = builder.CreateCall(vtable.deserializeArrayFunc, args, "");
-	result = builder.CreatePointerCast(result, IntegerType::getIntNPtrTy(context, (unsigned)size()*8));
-	outs->insert({SeqData::ARRAY, result});
+	Value *mem = builder.CreateCall(vtable.deserializeArrayFunc, args, "");
+	mem = builder.CreatePointerCast(mem, IntegerType::getIntNPtrTy(context, (unsigned)size()*8));
+
+	GlobalVariable *ptr = new GlobalVariable(*module,
+                                         IntegerType::getIntNPtrTy(context, (unsigned)size()*8),
+                                         false,
+                                         GlobalValue::PrivateLinkage,
+                                         nullptr,
+                                         "mem");
+
+	ptr->setInitializer(
+	  ConstantPointerNull::get(IntegerType::getIntNPtrTy(context, (unsigned)size())));
+	builder.CreateStore(mem, ptr);
+
+	outs->insert({SeqData::ARRAY, ptr});
 	outs->insert({SeqData::LEN, len});
 }
 
