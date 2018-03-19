@@ -25,6 +25,7 @@ namespace seq {
 		void add(Pipeline pipeline);
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList to);
+		Pipeline operator|(Var& to);
 	};
 
 	class Seq {

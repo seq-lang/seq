@@ -8,7 +8,7 @@
 using namespace seq;
 using namespace llvm;
 
-Var::Var() : assigned(false), stage(nullptr)
+Var::Var() : stage(nullptr)
 {
 }
 
@@ -19,7 +19,7 @@ Var::Var(Pipeline pipeline) : Var()
 
 types::Type *Var::getType(Stage *caller) const
 {
-	if (!assigned)
+	if (!isAssigned())
 		throw exc::SeqException("variable used before assigned");
 
 	return stage->getOutType();
@@ -27,25 +27,42 @@ types::Type *Var::getType(Stage *caller) const
 
 std::shared_ptr<std::map<SeqData, Value *>> Var::outs(Stage *caller) const
 {
-	if (!assigned)
+	if (!isAssigned())
 		throw exc::SeqException("variable used before assigned");
 
 	return stage->outs;
 }
 
+Stage *Var::getStage() const
+{
+	if (!isAssigned())
+		throw exc::SeqException("variable used before assigned");
+
+	return stage;
+}
+
+bool Var::isAssigned() const
+{
+	return stage != nullptr;
+}
+
 Seq *Var::getBase() const
 {
-	return base;
+	if (!isAssigned())
+		throw exc::SeqException("variable used before assigned");
+
+	return stage->getBase();
 }
 
 Pipeline Var::operator|(Pipeline to)
 {
-	if (!assigned)
+	if (!isAssigned())
 		throw exc::SeqException("variable used before assigned");
 
 	if (to.isAdded())
 		throw exc::SeqException("cannot use same pipeline twice");
 
+	Seq *base = getBase();
 	to.getHead()->setBase(base);
 	BaseStage& begin = BaseStage::make(types::VoidType::get(), getType(stage), stage);
 	begin.setBase(base);
@@ -62,12 +79,11 @@ Pipeline Var::operator|(Pipeline to)
 
 Var& Var::operator=(Pipeline to)
 {
-	if (assigned)
+	if (isAssigned())
 		throw exc::SeqException("variable cannot be assigned twice");
 
-	assigned = true;
-	base = to.getHead()->getBase();
 	stage = to.getTail();
+	Seq *base = getBase();
 
 	if (!to.isAdded()) {
 		BaseStage& begin = BaseStage::make(types::VoidType::get(), types::VoidType::get());
@@ -108,6 +124,21 @@ std::shared_ptr<std::map<SeqData, Value *>> Latest::outs(Stage *caller) const
 	validateCaller(caller);
 	return caller->getPrev()->outs;
 };
+
+Stage *Latest::getStage() const
+{
+	throw exc::SeqException("cannot get stage of _ variable");
+}
+
+bool Latest::isAssigned() const
+{
+	return true;
+}
+
+Seq *Latest::getBase() const
+{
+	throw exc::SeqException("cannot get base of _ variable");
+}
 
 Latest& Latest::get()
 {

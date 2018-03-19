@@ -13,16 +13,16 @@ namespace seq {
 
 	class Var {
 	protected:
-		bool assigned;
 		Stage *stage;
-		Seq *base;
 	public:
 		Var();
 		Var(Pipeline pipeline);
 
 		virtual types::Type *getType(Stage *caller) const;
 		virtual std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const;
-		Seq *getBase() const;
+		virtual Stage *getStage() const;
+		virtual bool isAssigned() const;
+		virtual Seq *getBase() const;
 
 		virtual Pipeline operator|(Pipeline to);
 		virtual Var& operator=(Pipeline to);
@@ -39,6 +39,9 @@ namespace seq {
 
 		types::Type *getType(Stage *caller) const override;
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const override;
+		Stage *getStage() const override;
+		bool isAssigned() const override;
+		Seq *getBase() const override;
 
 		static Latest& get();
 	};

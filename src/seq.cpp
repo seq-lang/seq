@@ -44,6 +44,20 @@ Pipeline PipelineAggregator::operator|(PipelineList to)
 	return {to.head->p.getHead(), to.tail->p.getTail()};
 }
 
+Pipeline PipelineAggregator::operator|(Var& to)
+{
+	if (!to.isAssigned())
+		throw exc::SeqException("variable used before assigned");
+
+	Stage *stage = to.getStage();
+	BaseStage& begin = BaseStage::make(types::VoidType::get(), to.getType(stage), stage);
+	begin.setBase(base);
+	begin.outs = to.outs(stage);
+	add(begin);
+
+	return begin;
+}
+
 Seq::Seq() :
     src(""), pipelines(), outs(new std::map<SeqData, Value *>()),
     func(nullptr), preambleBlock(nullptr),

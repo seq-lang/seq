@@ -92,9 +92,10 @@ int main()
 	     copy() | revcomp() | print());  // convenient branch syntax
 
 	/*
-	 * Global memory can be declared
+	 * Arrays can be declared
 	 */
 	Var m = s.once | Int[1000];  // array of 1000 integers
+	                             // s.once is executed just once, at the start
 	Var i, v;
 	i = s | split(2,1) | filt_cpg() | count();
 	i | print();
@@ -103,6 +104,10 @@ int main()
 	v = m[i];
 	v | print();
 	m[i] | print();
+
+	Var nums = s.last | Int[10];  // s.last is executed just once, at the end
+	s.last | range(10) | nums[_];  // _ refers to prev stage's output
+	s.last | range(10) | nums[_] | print();
 
 	s.source("test/data/seqs.fastq");
 	s.execute(true);  // debug=true
