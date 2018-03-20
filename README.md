@@ -12,11 +12,9 @@ Build with CMake:
 
 ```
 cd seq
-LLVM_DIR=/usr/local/Cellar/llvm/5.0.1/lib/cmake cmake .
+LLVM_DIR=/path/to/llvm/version/lib/cmake cmake .
 make
 ```
-
-where LLVM_DIR is ... well, LLVM_DIR.
 
 Test:
 
@@ -30,7 +28,7 @@ Test:
 
 A `seq::Seq` instance essentially represents a single "module", which is a collection of pipelines
 through which input sequences are passed. Here is a simple example which reads a FASTQ and prints the
-reverse complements of each read's nonoverlapping 32-mers:
+reverse complements of each read's non-overlapping 32-mers:
 
 ```cpp
 #include "seq.h"
@@ -86,8 +84,7 @@ Branching pipelines can also be represented using a `,` shorthand:
 ```cpp
 seq::Seq s;
     
-s | split(32,32) | (print(),
-                    revcomp() | print());
+s | split(32,32) | (print(), revcomp() | print());
 
 s.source("input.fastq");
 s.execute();
@@ -136,7 +133,6 @@ Arrays can be declared like this:
 ```cpp
 seq::Seq s;
 
-const unsigned N = 10;
 Var m = s.once | Int[10];
 ...
 ```
