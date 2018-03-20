@@ -68,6 +68,11 @@ Range& stageutil::range(seq_int_t to)
 	return Range::make(to);
 }
 
+LambdaStage& stageutil::lambda(LambdaContext& lambdaContext)
+{
+	return LambdaStage::make(lambdaContext);
+}
+
 Serialize& stageutil::ser(std::string filename)
 {
 	return Serialize::make(std::move(filename));

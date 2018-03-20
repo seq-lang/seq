@@ -25,6 +25,7 @@ add_library(seq SHARED include/any.h
                        include/filter.h
                        include/hash.h
                        include/io.h
+                       include/lambda.h
                        include/len.h
                        include/mem.h
                        include/num.h
@@ -57,6 +58,7 @@ add_library(seq SHARED include/any.h
                        src/stages/count.cpp
                        src/stages/filter.cpp
                        src/stages/hash.cpp
+                       src/stages/lambda.cpp
                        src/stages/len.cpp
                        src/stages/mem.cpp
                        src/stages/op.cpp

@@ -12,6 +12,7 @@
 #include "stageutil.h"
 #include "var.h"
 #include "mem.h"
+#include "lambda.h"
 #include "io.h"
 #include "exc.h"
 #include "common.h"

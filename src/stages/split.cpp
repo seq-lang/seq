@@ -19,7 +19,7 @@ void Split::codegen(Module *module, LLVMContext& context)
 	auto seqiter = prev->outs->find(SeqData::SEQ);
 	auto leniter = prev->outs->find(SeqData::LEN);
 
-	if (seqiter == outs->end() || leniter == outs->end())
+	if (seqiter == prev->outs->end() || leniter == prev->outs->end())
 		throw exc::StageException("pipeline error", *this);
 
 	Value *seq = seqiter->second;

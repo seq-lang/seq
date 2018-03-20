@@ -18,7 +18,7 @@ void Substr::codegen(Module *module, LLVMContext& context)
 
 	auto seqiter = prev->outs->find(SeqData::SEQ);
 
-	if (seqiter == outs->end())
+	if (seqiter == prev->outs->end())
 		throw exc::StageException("pipeline error", *this);
 
 	Value *seq = seqiter->second;

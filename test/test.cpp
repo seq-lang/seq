@@ -109,6 +109,12 @@ int main()
 	s.last | range(10) | nums[_];  // _ refers to prev stage's output
 	s.last | range(10) | nums[_] | print();
 
+	/*
+	 * Lambdas can be declared
+	 */
+	Lambda z;
+	s.last | range(10) | nums[_] | lambda(1 + z*2) | print();
+
 	s.source("test/data/seqs.fastq");
 	s.execute(true);  // debug=true
 }
