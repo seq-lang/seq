@@ -105,7 +105,7 @@ int main()
 	v | print();
 	m[i] | print();
 
-	Var nums = s.last | Int[10];  // s.last is executed just once, at the end
+	Var nums = s.last | Int[10];   // s.last is executed just once, at the end
 	s.last | range(10) | nums[_];  // _ refers to prev stage's output
 	s.last | range(10) | nums[_] | print();
 

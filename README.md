@@ -66,7 +66,8 @@ loop:                                             ; preds = %loop, %pipeline
   br i1 %3, label %loop, label %exit
 ```
 
-Pipelines can branch arbitrarily. For example, if we instead want to print each original 32-mer in 
+Pipelines can branch arbitrarily.
+For example, if we instead want to print each original 32-mer in 
 addition to the reverse complements (boilerplate is omitted for brevity):
 
 ```cpp
@@ -140,7 +141,8 @@ Var m = s.once | Int[10];
 ...
 ```
 
-`s.once` is for pipelines only to be executed once, such as declaring global memory. As an example, we can construct a simple index of 8-mers for an input FASTA file:
+`s.once` is for pipelines only to be executed once, such as declaring global memory.
+As an example, we can construct a simple index of 8-mers for an input FASTA file:
 
 ```cpp
 #include "seq.h"
@@ -190,9 +192,11 @@ int main()
     seq::Seq s;
 
     const unsigned K = 8;
-    Var index = s.once | Int[1 << (2 * K)];  // 4^K
+    const unsigned N = 1 << (2 * K);  // 4^K
+    
+    /* build the index */
+    Var index = s.once | Int[N];
     Pipeline kmers = s | split(K,1);
-
     Var h = kmers | my_hash();
     kmers | count() | index[h];  // store the kmer offset in our index
 
@@ -208,7 +212,7 @@ As a second example, let's store the integers from 0 to 9 in an array and print 
 seq::Seq s;
 
 const unsigned N = 10;
-Var m = s.once | Int[N]
+Var m = s.once | Int[N];
 
 s.once | range(N) | m[_];
 s.once | range(N) | m[_] | print();
@@ -222,3 +226,51 @@ Note the following:
 - We need the `s |` at the start of each pipeline so that they are associated with `s`. This is
 sometimes implicit, as with variables (e.g. `myvar | ...`) and loads (e.g. `array[i] | ...`), but
 with stages it must be explicit.
+
+#### Lambdas
+
+Here's an example of how lambdas can be used, which builds on the previous example:
+
+```cpp
+seq::Seq s;
+
+const unsigned N = 10;
+Var m = s.once | Int[N];
+Lambda x;
+s.once | range(N) | m[_];
+s.once | range(N) | m[_] | lambda(2*x + 1) | print();
+
+s.source("input.fastq");
+s.execute();
+```
+
+This prints all the odd integers between 1 and 20. In general, `2*x + 1` can be any
+arithmetic expression in terms of `x`.
+
+
+#### Serialization
+
+Objects can be serialized, and later deserialized either in the same program or in a
+different one. For example, let's serialize and deserialize our 8-mer index above:
+
+```cpp
+seq::Seq s;
+
+const unsigned K = 8;
+const unsigned N = 1 << (2 * K);  // 4^K
+
+/* build the index */
+Var index = s.once | Int[N];
+Pipeline kmers = s | split(K,1);
+Var h = kmers | my_hash();
+kmers | count() | index[h];  // store the kmer offset in our index
+
+/* store & read the index */
+s.last | index | ser("index.dat");
+Var newIndex = s.last | deser(Array.of(Int, N), "index.dat");
+
+s.source("input.fasta");
+s.execute(true);
+```
+
+`s.last` is for pipelines to be executed once, after all input sequences are processed.
