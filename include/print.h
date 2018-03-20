@@ -8,7 +8,7 @@ namespace seq {
 	public:
 		Print();
 		void validate() override;
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		void finalize(llvm::ExecutionEngine *eng) override;
 		static Print& make();
 	};

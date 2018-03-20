@@ -10,7 +10,7 @@ namespace seq {
 		seq_int_t start, len;
 	public:
 		Substr(seq_int_t k, seq_int_t step);
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		static Substr& make(seq_int_t start, seq_int_t len);
 	};
 }

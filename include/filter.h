@@ -11,7 +11,7 @@ namespace seq {
 		SeqPred op;
 	public:
 		Filter(std::string name, SeqPred op);
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		void finalize(llvm::ExecutionEngine *eng) override;
 		static Filter& make(std::string name, SeqPred op);
 	};

@@ -9,11 +9,12 @@ Copy::Copy() : Stage("copy", types::SeqType::get(), types::SeqType::get())
 {
 }
 
-void Copy::codegen(Module *module, LLVMContext& context)
+void Copy::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	auto seqiter = prev->outs->find(SeqData::SEQ);
 	auto leniter = prev->outs->find(SeqData::LEN);
 
@@ -32,7 +33,7 @@ void Copy::codegen(Module *module, LLVMContext& context)
 	outs->insert({SeqData::SEQ, copy});
 	outs->insert({SeqData::LEN, len});
 
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

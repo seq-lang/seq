@@ -119,15 +119,15 @@ void Stage::ensurePrev()
 		throw exc::StageException("previous stage not compiled", *this);
 }
 
-void Stage::codegen(Module *module, LLVMContext& context)
+void Stage::codegen(Module *module)
 {
 	throw exc::StageException("cannot codegen abstract stage", *this);
 }
 
-void Stage::codegenNext(Module *module, LLVMContext& context)
+void Stage::codegenNext(Module *module)
 {
 	for (auto& next : nexts) {
-		next->codegen(module, context);
+		next->codegen(module);
 	}
 }
 

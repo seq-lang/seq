@@ -36,7 +36,7 @@ namespace seq {
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
 		llvm::Function *func;
 		llvm::BasicBlock *preambleBlock;
-		void codegen(llvm::Module *module, llvm::LLVMContext& context);
+		void codegen(llvm::Module *module);
 
 		friend PipelineAggregator;
 	public:

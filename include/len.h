@@ -7,7 +7,7 @@ namespace seq {
 	class Len : public Stage {
 	public:
 		Len();
-		void codegen(llvm::Module *module, llvm::LLVMContext &context) override;
+		void codegen(llvm::Module *module) override;
 		static Len& make();
 	};
 }

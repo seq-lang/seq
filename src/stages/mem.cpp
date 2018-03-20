@@ -14,7 +14,7 @@ Mem::Mem(types::Type *type, seq_int_t count) :
 	name += "<" + type->getName() + "," + std::to_string(count) + ">";
 }
 
-void Mem::codegen(llvm::Module *module, llvm::LLVMContext &context)
+void Mem::codegen(llvm::Module *module)
 {
 	ensurePrev();
 	validate();
@@ -22,7 +22,7 @@ void Mem::codegen(llvm::Module *module, llvm::LLVMContext &context)
 	auto *type = (types::ArrayType *)getOutType();
 	block = prev->block;
 	type->callAlloc(outs, block);
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 
@@ -82,7 +82,7 @@ static void ensureKey(SeqData key)
 		throw exc::SeqException("unsupported array type");
 }
 
-void LoadStore::codegen(Module *module, LLVMContext& context)
+void LoadStore::codegen(Module *module)
 {
 	validate();
 
@@ -121,7 +121,7 @@ void LoadStore::codegen(Module *module, LLVMContext& context)
 		outs->insert({key, val});
 	}
 
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

@@ -70,8 +70,10 @@ void Seq::source(std::string source)
 	src = std::move(source);
 }
 
-void Seq::codegen(Module *module, LLVMContext& context)
+void Seq::codegen(Module *module)
 {
+	LLVMContext& context = module->getContext();
+
 	func = cast<Function>(
 	         module->getOrInsertFunction(
 	           "main",
@@ -111,7 +113,7 @@ void Seq::codegen(Module *module, LLVMContext& context)
 		assert(begin);
 		begin->setBase(pipeline.getHead()->getBase());
 		begin->block = onceBlock;
-		pipeline.getHead()->codegen(module, context);
+		pipeline.getHead()->codegen(module);
 	}
 
 	onceBlock = &func->getBasicBlockList().back();
@@ -139,7 +141,7 @@ void Seq::codegen(Module *module, LLVMContext& context)
 		assert(begin);
 		begin->setBase(pipeline.getHead()->getBase());
 		begin->block = block;
-		pipeline.getHead()->codegen(module, context);
+		pipeline.getHead()->codegen(module);
 	}
 
 	BasicBlock *lastMain = &func->getBasicBlockList().back();
@@ -159,7 +161,7 @@ void Seq::codegen(Module *module, LLVMContext& context)
 		assert(begin);
 		begin->setBase(pipeline.getHead()->getBase());
 		begin->block = lastBlock;
-		pipeline.getHead()->codegen(module, context);
+		pipeline.getHead()->codegen(module);
 	}
 
 	lastBlock = &func->getBasicBlockList().back();
@@ -209,7 +211,7 @@ void Seq::execute(bool debug)
 		std::unique_ptr<Module> owner(new Module("seq", context));
 		Module *M = owner.get();
 
-		codegen(M, context);
+		codegen(M);
 
 		if (debug)
 			errs() << *M;

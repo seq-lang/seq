@@ -11,11 +11,12 @@ Split::Split(seq_int_t k, seq_int_t step) :
 	name += "(" + std::to_string(k) + "," + std::to_string(step) + ")";
 }
 
-void Split::codegen(Module *module, LLVMContext& context)
+void Split::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	auto seqiter = prev->outs->find(SeqData::SEQ);
 	auto leniter = prev->outs->find(SeqData::LEN);
 
@@ -42,7 +43,7 @@ void Split::codegen(Module *module, LLVMContext& context)
 	outs->insert({SeqData::LEN, sublen});
 	block = loop;
 
-	codegenNext(module, context);
+	codegenNext(module);
 
 	builder.SetInsertPoint(getAfter());
 	Value *inc = ConstantInt::get(seqIntLLVM(context), (uint64_t)step);

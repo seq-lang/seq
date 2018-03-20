@@ -9,14 +9,14 @@ Serialize::Serialize(std::string filename) :
 	name += "('" + filename + "')";
 }
 
-void Serialize::codegen(Module *module, LLVMContext& context)
+void Serialize::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
 	block = prev->block;
 	prev->getOutType()->callSerialize(prev->outs, block, filename);
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 
@@ -40,14 +40,14 @@ Deserialize::Deserialize(types::Type *type, std::string filename) :
 		throw exc::SeqException("cannot deserialize type '" + type->getName() + "'");
 }
 
-void Deserialize::codegen(Module *module, LLVMContext& context)
+void Deserialize::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
 	block = prev->block;
 	type->callDeserialize(outs, block, filename);
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

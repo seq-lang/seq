@@ -11,7 +11,7 @@ namespace seq {
 		SeqHash hash;
 	public:
 		Hash(std::string name, SeqHash hash);
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		void finalize(llvm::ExecutionEngine *eng) override;
 		static Hash& make(std::string name, SeqHash hash);
 	};

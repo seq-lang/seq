@@ -13,10 +13,10 @@ BaseStage::BaseStage(types::Type *in, types::Type *out) :
 {
 }
 
-void BaseStage::codegen(Module *module, LLVMContext& context)
+void BaseStage::codegen(Module *module)
 {
 	validate();
-	codegenNext(module, context);
+	codegenNext(module);
 }
 
 types::Type *BaseStage::getOutType() const

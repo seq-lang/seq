@@ -7,7 +7,7 @@ namespace seq {
 	class Copy : public Stage {
 	public:
 		Copy();
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		static Copy& make();
 	};
 }

@@ -26,11 +26,12 @@ Range::Range(seq_int_t to) :
 {
 }
 
-void Range::codegen(Module *module, LLVMContext& context)
+void Range::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	Value *from = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->from);
 	Value *to   = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->to);
 	Value *step = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->step);
@@ -48,7 +49,7 @@ void Range::codegen(Module *module, LLVMContext& context)
 	outs->insert({SeqData::INT, control});
 	block = loop;
 
-	codegenNext(module, context);
+	codegenNext(module);
 
 	builder.SetInsertPoint(getAfter());
 	Value *next = builder.CreateAdd(control, step, "next");

@@ -11,11 +11,12 @@ Hash::Hash(std::string name, SeqHash hash) :
 {
 }
 
-void Hash::codegen(Module *module, LLVMContext& context)
+void Hash::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	func = cast<Function>(
 	         module->getOrInsertFunction(
 	           name,
@@ -39,7 +40,7 @@ void Hash::codegen(Module *module, LLVMContext& context)
 
 	outs->insert({SeqData::INT, hashVal});
 
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

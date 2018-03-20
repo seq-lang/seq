@@ -11,11 +11,12 @@ Substr::Substr(seq_int_t start, seq_int_t len) :
 	name += "(" + std::to_string(start) + "," + std::to_string(len) + ")";
 }
 
-void Substr::codegen(Module *module, LLVMContext& context)
+void Substr::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	auto seqiter = prev->outs->find(SeqData::SEQ);
 
 	if (seqiter == prev->outs->end())
@@ -32,7 +33,7 @@ void Substr::codegen(Module *module, LLVMContext& context)
 	outs->insert({SeqData::SEQ, subseq});
 	outs->insert({SeqData::LEN, sublen});
 
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

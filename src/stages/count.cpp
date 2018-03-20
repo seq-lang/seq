@@ -9,11 +9,12 @@ Count::Count() : Stage("count", types::BaseType::get(), types::IntType::get())
 {
 }
 
-void Count::codegen(Module *module, LLVMContext& context)
+void Count::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	block = prev->block;
 	IRBuilder<> preamble(getBase()->getPreamble());
 	IRBuilder<> builder(block);
@@ -28,7 +29,7 @@ void Count::codegen(Module *module, LLVMContext& context)
 
 	outs->insert({SeqData::INT, inc});
 
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

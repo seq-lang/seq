@@ -11,11 +11,12 @@ Op::Op(std::string name, SeqOp op) :
 {
 }
 
-void Op::codegen(Module *module, LLVMContext& context)
+void Op::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	func = cast<Function>(
 	         module->getOrInsertFunction(
                name,
@@ -38,7 +39,7 @@ void Op::codegen(Module *module, LLVMContext& context)
 	std::vector<Value *> args = {seqiter->second, leniter->second};
 	builder.CreateCall(func, args, "");
 
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

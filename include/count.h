@@ -7,7 +7,7 @@ namespace seq {
 	class Count : public Stage {
 	public:
 		Count();
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		static Count& make();
 	};
 }

@@ -18,7 +18,7 @@ void Print::validate()
 	Stage::validate();
 }
 
-void Print::codegen(Module *module, LLVMContext& context)
+void Print::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
@@ -26,7 +26,7 @@ void Print::codegen(Module *module, LLVMContext& context)
 	block = prev->block;
 	outs->insert(prev->outs->begin(), prev->outs->end());
 	prev->getOutType()->callPrint(outs, block);
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

@@ -12,7 +12,7 @@ IdentNode::IdentNode() : LambdaNode({}), v(nullptr)
 {
 }
 
-Value *IdentNode::codegen(LLVMContext& context, BasicBlock *block) const
+Value *IdentNode::codegen(BasicBlock *block) const
 {
 	return v;
 }
@@ -20,49 +20,50 @@ Value *IdentNode::codegen(LLVMContext& context, BasicBlock *block) const
 struct ConstNode : LambdaNode {
 	seq_int_t n;
 	ConstNode(seq_int_t n) : LambdaNode({}), n(n) {}
-	Value *codegen(LLVMContext& context, BasicBlock *block) const override
+	Value *codegen(BasicBlock *block) const override
 	{
+		LLVMContext& context = block->getContext();
 		return ConstantInt::get(seqIntLLVM(context), (uint64_t)n);
 	}
 };
 
 struct AddNode : LambdaNode {
 	AddNode(LambdaNode *a, LambdaNode *b) : LambdaNode({a, b}) {}
-	Value *codegen(LLVMContext& context, BasicBlock *block) const override
+	Value *codegen(BasicBlock *block) const override
 	{
 		IRBuilder<> builder(block);
-		return builder.CreateAdd(children[0]->codegen(context, block),
-		                         children[1]->codegen(context, block));
+		return builder.CreateAdd(children[0]->codegen(block),
+		                         children[1]->codegen(block));
 	}
 };
 
 struct SubNode : LambdaNode {
 	SubNode(LambdaNode *a, LambdaNode *b) : LambdaNode({a, b}) {}
-	Value *codegen(LLVMContext& context, BasicBlock *block) const override
+	Value *codegen(BasicBlock *block) const override
 	{
 		IRBuilder<> builder(block);
-		return builder.CreateSub(children[0]->codegen(context, block),
-		                         children[1]->codegen(context, block));
+		return builder.CreateSub(children[0]->codegen(block),
+		                         children[1]->codegen(block));
 	}
 };
 
 struct MulNode : LambdaNode {
 	MulNode(LambdaNode *a, LambdaNode *b) : LambdaNode({a, b}) {}
-	Value *codegen(LLVMContext& context, BasicBlock *block) const override
+	Value *codegen(BasicBlock *block) const override
 	{
 		IRBuilder<> builder(block);
-		return builder.CreateMul(children[0]->codegen(context, block),
-		                         children[1]->codegen(context, block));
+		return builder.CreateMul(children[0]->codegen(block),
+		                         children[1]->codegen(block));
 	}
 };
 
 struct DivNode : LambdaNode {
 	DivNode(LambdaNode *a, LambdaNode *b) : LambdaNode({a, b}) {}
-	Value *codegen(LLVMContext& context, BasicBlock *block) const override
+	Value *codegen(BasicBlock *block) const override
 	{
 		IRBuilder<> builder(block);
-		return builder.CreateSDiv(children[0]->codegen(context, block),
-		                          children[1]->codegen(context, block));
+		return builder.CreateSDiv(children[0]->codegen(block),
+		                          children[1]->codegen(block));
 	}
 };
 
@@ -71,8 +72,10 @@ LambdaContext::LambdaContext() : lambda(nullptr)
 	root = arg = new IdentNode();
 }
 
-Function *LambdaContext::codegen(Module *module, LLVMContext &context)
+Function *LambdaContext::codegen(Module *module)
 {
+	LLVMContext& context = module->getContext();
+
 	lambda = cast<Function>(
                module->getOrInsertFunction(
                  "lambda",
@@ -81,7 +84,7 @@ Function *LambdaContext::codegen(Module *module, LLVMContext &context)
 
 	arg->v = lambda->arg_begin();
 	BasicBlock *entry = BasicBlock::Create(context, "entry", lambda);
-	Value *result = root->codegen(context, entry);
+	Value *result = root->codegen(entry);
 	IRBuilder<> builder(entry);
 	builder.CreateRet(result);
 
@@ -214,7 +217,7 @@ LambdaStage::LambdaStage(LambdaContext& lambda) :
 {
 }
 
-void LambdaStage::codegen(Module *module, LLVMContext& context)
+void LambdaStage::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
@@ -224,7 +227,7 @@ void LambdaStage::codegen(Module *module, LLVMContext& context)
 	if (iter == prev->outs->end())
 		throw exc::StageException("pipeline error", *this);
 
-	Function *func = lambda.codegen(module, context);
+	Function *func = lambda.codegen(module);
 	block = prev->block;
 	IRBuilder<> builder(block);
 	std::vector<Value *> args = {iter->second};
@@ -232,7 +235,7 @@ void LambdaStage::codegen(Module *module, LLVMContext& context)
 
 	outs->insert({SeqData::INT, result});
 
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

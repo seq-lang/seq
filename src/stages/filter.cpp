@@ -11,11 +11,12 @@ Filter::Filter(std::string name, SeqPred op) :
 {
 }
 
-void Filter::codegen(Module *module, LLVMContext& context)
+void Filter::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	func = cast<Function>(
 	         module->getOrInsertFunction(
 		       name,
@@ -41,7 +42,7 @@ void Filter::codegen(Module *module, LLVMContext& context)
 	BasicBlock *body = BasicBlock::Create(context, "body", block->getParent());
 	block = body;
 
-	codegenNext(module, context);
+	codegenNext(module);
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", body->getParent());
 	builder.CreateCondBr(pred, body, exit);

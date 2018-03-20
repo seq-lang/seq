@@ -7,7 +7,7 @@ Len::Len() : Stage("len", types::BaseType::get(), types::IntType::get())
 {
 }
 
-void Len::codegen(llvm::Module *module, llvm::LLVMContext &context)
+void Len::codegen(llvm::Module *module)
 {
 	ensurePrev();
 	validate();
@@ -20,7 +20,7 @@ void Len::codegen(llvm::Module *module, llvm::LLVMContext &context)
 	block = prev->block;
 	Value *len = leniter->second;
 	outs->insert({SeqData::INT, len});
-	codegenNext(module, context);
+	codegenNext(module);
 	prev->setAfter(getAfter());
 }
 

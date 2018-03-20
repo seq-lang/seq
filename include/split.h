@@ -10,7 +10,7 @@ namespace seq {
 		seq_int_t k, step;
 	public:
 		Split(seq_int_t k, seq_int_t step);
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		static Split& make(seq_int_t k, seq_int_t step);
 	};
 }

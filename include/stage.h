@@ -66,8 +66,8 @@ namespace seq {
 
 		virtual void validate();
 		virtual void ensurePrev();
-		virtual void codegen(llvm::Module *module, llvm::LLVMContext& context);
-		virtual void codegenNext(llvm::Module *module, llvm::LLVMContext& context);
+		virtual void codegen(llvm::Module *module);
+		virtual void codegenNext(llvm::Module *module);
 		virtual void finalize(llvm::ExecutionEngine *eng);
 
 		virtual Pipeline operator|(Pipeline to);

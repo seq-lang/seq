@@ -11,7 +11,7 @@ namespace seq {
 		SeqOp op;
 	public:
 		Op(std::string name, SeqOp op);
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		void finalize(llvm::ExecutionEngine *eng) override;
 		static Op& make(std::string name, SeqOp op);
 	};

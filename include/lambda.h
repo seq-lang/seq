@@ -13,16 +13,14 @@ namespace seq {
 
 	struct LambdaNode {
 		std::vector<LambdaNode *> children;
-		explicit LambdaNode(std::initializer_list<LambdaNode *> children);
-		virtual llvm::Value *codegen(llvm::LLVMContext& context,
-		                             llvm::BasicBlock *block) const=0;
+		LambdaNode(std::initializer_list<LambdaNode *> children);
+		virtual llvm::Value *codegen(llvm::BasicBlock *block) const=0;
 	};
 
 	struct IdentNode : LambdaNode {
 		llvm::Value *v;
 		IdentNode();
-		llvm::Value *codegen(llvm::LLVMContext& context,
-		                     llvm::BasicBlock *block) const override;
+		llvm::Value *codegen(llvm::BasicBlock *block) const override;
 	};
 
 	struct LambdaContext {
@@ -30,7 +28,7 @@ namespace seq {
 		IdentNode *arg;
 		llvm::Function *lambda;
 		LambdaContext();
-		llvm::Function *codegen(llvm::Module *module, llvm::LLVMContext& context);
+		llvm::Function *codegen(llvm::Module *module);
 	};
 
 	struct LambdaContextProxy {
@@ -65,7 +63,7 @@ namespace seq {
 		LambdaContext& lambda;
 	public:
 		LambdaStage(LambdaContext& lambda);
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		static LambdaStage& make(LambdaContext& lambda);
 	};
 

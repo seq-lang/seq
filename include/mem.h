@@ -15,7 +15,7 @@ namespace seq {
 	class Mem : public Stage {
 	public:
 		Mem(types::Type *type, seq_int_t count);
-		void codegen(llvm::Module *module, llvm::LLVMContext &context) override;
+		void codegen(llvm::Module *module) override;
 		void finalize(llvm::ExecutionEngine *eng) override;
 		static Mem& make(types::Type *type, seq_int_t count);
 	};
@@ -28,7 +28,7 @@ namespace seq {
 	public:
 		LoadStore(Var *ptr, Var *idx);
 		void validate() override;
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 
 		Pipeline operator|(Pipeline to) override;
 

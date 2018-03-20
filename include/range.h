@@ -12,7 +12,7 @@ namespace seq {
 		Range(seq_int_t from, seq_int_t to, seq_int_t step);
 		Range(seq_int_t from, seq_int_t to);
 		explicit Range(seq_int_t to);
-		void codegen(llvm::Module *module, llvm::LLVMContext& context) override;
+		void codegen(llvm::Module *module) override;
 		static Range& make(seq_int_t from, seq_int_t to, seq_int_t step);
 		static Range& make(seq_int_t from, seq_int_t to);
 		static Range& make(seq_int_t to);
