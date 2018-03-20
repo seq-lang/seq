@@ -45,6 +45,8 @@ namespace seq {
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
 			seq_int_t size() const override;
 			Type *getBaseType() const;
+			ArrayType *of(Type& base) const;
+			ArrayType *of(Type& base, seq_int_t count) const;
 			static ArrayType *get(Type *base, seq_int_t count);
 		};
 

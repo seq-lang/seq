@@ -55,12 +55,13 @@ namespace seq {
 	};
 
 	namespace types {
-		static Type& Any   = *AnyType::get();
-		static Type& Base  = *BaseType::get();
-		static Type& Void  = *VoidType::get();
-		static Type& Seq   = *SeqType::get();
-		static Type& Int   = *IntType::get();
-		static Type& Float = *FloatType::get();
+		static AnyType&   Any   = *AnyType::get();
+		static BaseType&  Base  = *BaseType::get();
+		static VoidType&  Void  = *VoidType::get();
+		static SeqType&   Seq   = *SeqType::get();
+		static IntType&   Int   = *IntType::get();
+		static FloatType& Float = *FloatType::get();
+		static ArrayType& Array = *ArrayType::get(AnyType::get(), 0);
 	}
 
 }

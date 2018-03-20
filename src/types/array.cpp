@@ -14,8 +14,8 @@ types::ArrayType::ArrayType(Type *base, seq_int_t count) :
 }
 
 void types::ArrayType::callSerialize(std::shared_ptr<std::map<SeqData, Value *>> outs,
-                                 BasicBlock *block,
-                                 std::string file)
+                                     BasicBlock *block,
+                                     std::string file)
 {
 	base->callSerializeArray(outs, block, file);
 }
@@ -26,8 +26,8 @@ void types::ArrayType::finalizeSerialize(ExecutionEngine *eng)
 }
 
 void types::ArrayType::callDeserialize(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
-                                   BasicBlock *block,
-                                   std::string file)
+                                       BasicBlock *block,
+                                       std::string file)
 {
 	base->callDeserializeArray(outs, block, file);
 }
@@ -108,6 +108,16 @@ seq_int_t types::ArrayType::size() const
 types::Type *types::ArrayType::getBaseType() const
 {
 	return base;
+}
+
+types::ArrayType *types::ArrayType::of(Type& base) const
+{
+	return of(base, 0);
+}
+
+types::ArrayType *types::ArrayType::of(Type& base, seq_int_t count) const
+{
+	return ArrayType::get(&base, count);
 }
 
 types::ArrayType *types::ArrayType::get(Type *base, seq_int_t count)
