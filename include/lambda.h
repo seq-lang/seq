@@ -14,13 +14,13 @@ namespace seq {
 	struct LambdaNode {
 		std::vector<LambdaNode *> children;
 		LambdaNode(std::initializer_list<LambdaNode *> children);
-		virtual llvm::Value *codegen(llvm::BasicBlock *block) const=0;
+		virtual llvm::Value *codegen(llvm::BasicBlock *block, bool isFloat) const=0;
 	};
 
 	struct IdentNode : LambdaNode {
 		llvm::Value *v;
 		IdentNode();
-		llvm::Value *codegen(llvm::BasicBlock *block) const override;
+		llvm::Value *codegen(llvm::BasicBlock *block, bool isFloat) const override;
 	};
 
 	struct LambdaContext {
@@ -28,7 +28,7 @@ namespace seq {
 		IdentNode *arg;
 		llvm::Function *lambda;
 		LambdaContext();
-		llvm::Function *codegen(llvm::Module *module);
+		llvm::Function *codegen(llvm::Module *module, bool isFloat);
 	};
 
 	struct LambdaContextProxy {
@@ -60,9 +60,11 @@ namespace seq {
 
 	class LambdaStage : public Stage {
 	private:
+		bool isFloat;
 		LambdaContext& lambda;
 	public:
-		LambdaStage(LambdaContext& lambda);
+		explicit LambdaStage(LambdaContext& lambda);
+		void validate() override;
 		void codegen(llvm::Module *module) override;
 		static LambdaStage& make(LambdaContext& lambda);
 	};
