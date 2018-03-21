@@ -13,7 +13,7 @@ types::ArrayType::ArrayType(Type *base, seq_int_t count) :
 		throw exc::SeqException("array dimension must be positive");
 }
 
-void types::ArrayType::callSerialize(std::shared_ptr<std::map<SeqData, Value *>> outs,
+void types::ArrayType::callSerialize(ValMap outs,
                                      BasicBlock *block,
                                      std::string file)
 {
@@ -25,7 +25,7 @@ void types::ArrayType::finalizeSerialize(ExecutionEngine *eng)
 	base->finalizeSerializeArray(eng);
 }
 
-void types::ArrayType::callDeserialize(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+void types::ArrayType::callDeserialize(ValMap outs,
                                        BasicBlock *block,
                                        std::string file)
 {
@@ -42,7 +42,7 @@ void types::ArrayType::finalizeAlloc(ExecutionEngine *eng)
 	eng->addGlobalMapping(mallocFunc, (void *)std::malloc);
 }
 
-void types::ArrayType::callAlloc(std::shared_ptr<std::map<SeqData, Value *>> outs, BasicBlock *block)
+void types::ArrayType::callAlloc(ValMap outs, BasicBlock *block)
 {
 	if (base->size() == 0)
 		throw exc::SeqException("cannot create array of type '" + base->getName() + "'");

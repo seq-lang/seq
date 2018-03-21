@@ -27,7 +27,7 @@ Type *types::SeqType::getLLVMType(LLVMContext& context)
 	return llvm::Type::getInt8Ty(context);
 }
 
-void types::SeqType::callPrint(std::shared_ptr<std::map<SeqData, Value *>> outs, BasicBlock *block)
+void types::SeqType::callPrint(ValMap outs, BasicBlock *block)
 {
 	if (vtable.print == nullptr)
 		throw exc::SeqException("cannot print specified type");

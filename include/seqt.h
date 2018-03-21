@@ -16,7 +16,7 @@ namespace seq {
 			void operator=(SeqType const&)=delete;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
-			void callPrint(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+			void callPrint(ValMap outs,
 			               llvm::BasicBlock *block) override;
 			seq_int_t size() const override;
 			static SeqType *get();

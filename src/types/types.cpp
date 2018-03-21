@@ -25,7 +25,7 @@ Type *types::Type::getLLVMType(LLVMContext& context)
 	throw exc::SeqException("cannot instantiate '" + getName() + "' class");
 }
 
-void types::Type::callPrint(std::shared_ptr<std::map<SeqData, Value *>> outs, BasicBlock *block)
+void types::Type::callPrint(ValMap outs, BasicBlock *block)
 {
 	if (!vtable.print || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot print type '" + getName() + "'");
@@ -55,7 +55,7 @@ void types::Type::finalizePrint(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.printFunc, vtable.print);
 }
 
-void types::Type::callSerialize(std::shared_ptr<std::map<SeqData, Value *>> outs,
+void types::Type::callSerialize(ValMap outs,
                                 BasicBlock *block,
                                 std::string file)
 {
@@ -77,7 +77,8 @@ void types::Type::callSerialize(std::shared_ptr<std::map<SeqData, Value *>> outs
 	}
 
 	GlobalVariable *fileVar = new GlobalVariable(*module,
-	                                             llvm::ArrayType::get(IntegerType::getInt8Ty(context), file.length() + 1),
+	                                             llvm::ArrayType::get(IntegerType::getInt8Ty(context),
+	                                                                  file.length() + 1),
 	                                             true,
 	                                             GlobalValue::PrivateLinkage,
 	                                             ConstantDataArray::getString(context, file),
@@ -100,7 +101,7 @@ void types::Type::finalizeSerialize(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.serializeFunc, vtable.serialize);
 }
 
-void types::Type::callDeserialize(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+void types::Type::callDeserialize(ValMap outs,
                                   BasicBlock *block,
                                   std::string file)
 {
@@ -140,7 +141,7 @@ void types::Type::finalizeDeserialize(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.deserializeFunc, vtable.deserialize);
 }
 
-void types::Type::callSerializeArray(std::shared_ptr<std::map<SeqData, Value *>> outs,
+void types::Type::callSerializeArray(ValMap outs,
                                      BasicBlock *block,
                                      std::string file)
 {
@@ -191,7 +192,7 @@ void types::Type::finalizeSerializeArray(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.serializeArrayFunc, vtable.serializeArray);
 }
 
-void types::Type::callDeserializeArray(std::shared_ptr<std::map<SeqData, Value *>> outs,
+void types::Type::callDeserializeArray(ValMap outs,
                                        BasicBlock *block,
                                        std::string file)
 {

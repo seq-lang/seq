@@ -16,19 +16,19 @@ namespace seq {
 			ArrayType(ArrayType const&)=delete;
 			void operator=(ArrayType const&)=delete;
 
-			void callSerialize(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+			void callSerialize(ValMap outs,
                                llvm::BasicBlock *block,
                                std::string file) override;
 
 			void finalizeSerialize(llvm::ExecutionEngine *eng) override;
 
-			void callDeserialize(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+			void callDeserialize(ValMap outs,
 			                     llvm::BasicBlock *block,
 			                     std::string file) override;
 
 			void finalizeDeserialize(llvm::ExecutionEngine *eng) override;
 
-			void callAlloc(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+			void callAlloc(ValMap outs,
 			               llvm::BasicBlock *block);
 
 			void finalizeAlloc(llvm::ExecutionEngine *eng);

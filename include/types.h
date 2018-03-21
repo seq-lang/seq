@@ -40,29 +40,29 @@ namespace seq {
 
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context);
 
-			virtual void callPrint(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs, llvm::BasicBlock *block);
+			virtual void callPrint(ValMap outs, llvm::BasicBlock *block);
 
 			virtual void finalizePrint(llvm::ExecutionEngine *eng);
 
-			virtual void callSerialize(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+			virtual void callSerialize(ValMap outs,
 			                           llvm::BasicBlock *block,
 			                           std::string file);
 
 			virtual void finalizeSerialize(llvm::ExecutionEngine *eng);
 
-			virtual void callDeserialize(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+			virtual void callDeserialize(ValMap outs,
 			                             llvm::BasicBlock *block,
 			                             std::string file);
 
 			virtual void finalizeDeserialize(llvm::ExecutionEngine *eng);
 
-			virtual void callSerializeArray(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+			virtual void callSerializeArray(ValMap outs,
 			                                llvm::BasicBlock *block,
 			                                std::string file);
 
 			virtual void finalizeSerializeArray(llvm::ExecutionEngine *eng);
 
-			virtual void callDeserializeArray(std::shared_ptr<std::map<SeqData, llvm::Value *>> outs,
+			virtual void callDeserializeArray(ValMap outs,
 			                                  llvm::BasicBlock *block,
 			                                  std::string file);
 

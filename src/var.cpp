@@ -25,7 +25,7 @@ types::Type *Var::getType(Stage *caller) const
 	return stage->getOutType();
 }
 
-std::shared_ptr<std::map<SeqData, Value *>> Var::outs(Stage *caller) const
+ValMap Var::outs(Stage *caller) const
 {
 	if (!isAssigned())
 		throw exc::SeqException("variable used before assigned");
@@ -110,7 +110,7 @@ types::Type *Const::getType(Stage *caller) const
 	return type;
 }
 
-std::shared_ptr<std::map<SeqData, Value *>> Const::outs(Stage *caller) const
+ValMap Const::outs(Stage *caller) const
 {
 	return outsMap;
 }
@@ -135,7 +135,7 @@ ConstInt::ConstInt(seq_int_t n) : Const(types::IntType::get()), n(n)
 {
 }
 
-std::shared_ptr<std::map<SeqData, Value *>> ConstInt::outs(Stage *caller) const
+ValMap ConstInt::outs(Stage *caller) const
 {
 	if (caller && outsMap->empty()) {
 		LLVMContext& context = caller->getBase()->getContext();
@@ -155,7 +155,7 @@ ConstFloat::ConstFloat(double f) : Const(types::FloatType::get()), f(f)
 {
 }
 
-std::shared_ptr<std::map<SeqData, Value *>> ConstFloat::outs(Stage *caller) const
+ValMap ConstFloat::outs(Stage *caller) const
 {
 	if (caller && outsMap->empty()) {
 		LLVMContext& context = caller->getBase()->getContext();
@@ -190,7 +190,7 @@ types::Type *Latest::getType(Stage *caller) const
 	return caller->getPrev()->getOutType();
 }
 
-std::shared_ptr<std::map<SeqData, Value *>> Latest::outs(Stage *caller) const
+ValMap Latest::outs(Stage *caller) const
 {
 	validateCaller(caller);
 	return caller->getPrev()->outs;

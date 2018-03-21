@@ -2,7 +2,9 @@
 #define SEQ_COMMON_H
 
 #include <cstdint>
+#include <memory>
 #include "llvm.h"
+#include "seqdata.h"
 
 namespace seq {
 
@@ -12,6 +14,8 @@ namespace seq {
 	{
 		return llvm::IntegerType::getIntNTy(context, 8*sizeof(seq_int_t));
 	}
+
+	typedef std::shared_ptr<std::map<SeqData, llvm::Value *>> ValMap;
 
 }
 

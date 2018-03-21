@@ -43,7 +43,7 @@ namespace seq {
 		std::string name;
 		llvm::BasicBlock *block;
 		llvm::BasicBlock *after;
-		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
+		ValMap outs;
 
 		Stage(std::string name, types::Type *in, types::Type *out);
 		explicit Stage(std::string name);

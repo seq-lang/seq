@@ -34,7 +34,7 @@ namespace seq {
 		llvm::LLVMContext context;
 		std::string src;
 		std::vector<Pipeline> pipelines;
-		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
+		ValMap outs;
 		llvm::Function *func;
 		llvm::BasicBlock *preambleBlock;
 		void codegen(llvm::Module *module);

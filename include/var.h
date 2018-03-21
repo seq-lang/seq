@@ -19,7 +19,7 @@ namespace seq {
 		Var(Pipeline pipeline);
 
 		virtual types::Type *getType(Stage *caller) const;
-		virtual std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const;
+		virtual ValMap outs(Stage *caller) const;
 		virtual Stage *getStage() const;
 		virtual bool isAssigned() const;
 		virtual Seq *getBase() const;
@@ -33,11 +33,11 @@ namespace seq {
 	class Const : public Var {
 	protected:
 		types::Type *type;
-		std::shared_ptr<std::map<SeqData, llvm::Value *>> outsMap;
+		ValMap outsMap;
 		Const(types::Type *type);
 	public:
 		types::Type *getType(Stage *caller) const override;
-		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const override;
+		ValMap outs(Stage *caller) const override;
 		Stage *getStage() const override;
 		bool isAssigned() const override;
 		Seq *getBase() const override;
@@ -48,7 +48,7 @@ namespace seq {
 		seq_int_t n;
 	public:
 		ConstInt(seq_int_t n);
-		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const override;
+		ValMap outs(Stage *caller) const override;
 		static ConstInt& get(seq_int_t n);
 	};
 
@@ -57,7 +57,7 @@ namespace seq {
 		double f;
 	public:
 		ConstFloat(double f);
-		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const override;
+		ValMap outs(Stage *caller) const override;
 		static ConstFloat& get(double f);
 	};
 
@@ -69,7 +69,7 @@ namespace seq {
 		void operator=(Latest const&)=delete;
 
 		types::Type *getType(Stage *caller) const override;
-		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs(Stage *caller) const override;
+		ValMap outs(Stage *caller) const override;
 		Stage *getStage() const override;
 		bool isAssigned() const override;
 		Seq *getBase() const override;
