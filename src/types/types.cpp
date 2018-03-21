@@ -240,7 +240,7 @@ void types::Type::callDeserializeArray(ValMap outs,
 	builder.CreateStore(mem, ptr);
 
 	outs->insert({SeqData::ARRAY, ptr});
-	outs->insert({SeqData::LEN, len});
+	outs->insert({SeqData::LEN, builder.CreateLoad(len)});
 }
 
 void types::Type::finalizeDeserializeArray(ExecutionEngine *eng)

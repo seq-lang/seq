@@ -13,6 +13,8 @@ namespace seq {
 	class LoadStore;
 
 	class Mem : public Stage {
+	private:
+		seq_int_t count;
 	public:
 		Mem(types::Type *type, seq_int_t count);
 		void codegen(llvm::Module *module) override;

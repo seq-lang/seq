@@ -15,7 +15,7 @@ void Len::codegen(llvm::Module *module)
 	auto leniter = prev->outs->find(SeqData::LEN);
 
 	if (leniter == prev->outs->end())
-		throw exc::StageException("pipeline error", *this);
+		throw exc::StageException("previous stage '" + prev->getName() + "' does not output a length", *this);
 
 	block = prev->block;
 	Value *len = leniter->second;

@@ -1,3 +1,4 @@
+#include <any.h>
 #include "base.h"
 #include "exc.h"
 #include "array.h"
@@ -5,12 +6,10 @@
 using namespace seq;
 using namespace llvm;
 
-types::ArrayType::ArrayType(Type *base, seq_int_t count) :
+types::ArrayType::ArrayType(Type *base) :
     Type("Array", BaseType::get(), SeqData::ARRAY),
-    base(base), count(count), mallocFunc(nullptr)
+    base(base), mallocFunc(nullptr)
 {
-	if (count < 0)
-		throw exc::SeqException("array dimension must be positive");
 }
 
 void types::ArrayType::callSerialize(ValMap outs,
@@ -42,7 +41,7 @@ void types::ArrayType::finalizeAlloc(ExecutionEngine *eng)
 	eng->addGlobalMapping(mallocFunc, (void *)std::malloc);
 }
 
-void types::ArrayType::callAlloc(ValMap outs, BasicBlock *block)
+void types::ArrayType::callAlloc(ValMap outs, seq_int_t count, BasicBlock *block)
 {
 	if (base->size() == 0)
 		throw exc::SeqException("cannot create array of type '" + base->getName() + "'");
@@ -97,12 +96,12 @@ void types::ArrayType::codegenStore(BasicBlock *block,
 
 Type *types::ArrayType::getLLVMType(LLVMContext& context)
 {
-	return llvm::ArrayType::get(base->getLLVMType(context), (uint64_t)count);
+	return PointerType::get(base->getLLVMType(context), 0);
 }
 
 seq_int_t types::ArrayType::size() const
 {
-	return count * base->size();
+	return base->size();
 }
 
 types::Type *types::ArrayType::getBaseType() const
@@ -112,15 +111,15 @@ types::Type *types::ArrayType::getBaseType() const
 
 types::ArrayType *types::ArrayType::of(Type& base) const
 {
-	return of(base, 0);
+	return ArrayType::get(&base);
 }
 
-types::ArrayType *types::ArrayType::of(Type& base, seq_int_t count) const
+types::ArrayType *types::ArrayType::get(Type *base)
 {
-	return ArrayType::get(&base, count);
+	return new types::ArrayType(base);
 }
 
-types::ArrayType *types::ArrayType::get(Type *base, seq_int_t count)
+types::ArrayType *types::ArrayType::get()
 {
-	return new types::ArrayType(base, count);
+	return new types::ArrayType(types::BaseType::get());
 }

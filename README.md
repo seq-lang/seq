@@ -263,10 +263,10 @@ kmers | count() | index[h];  // store the kmer offset in our index
 
 /* store & read the index */
 s.last | index | ser("index.dat");
-Var newIndex = s.last | deser(Array.of(Int, N), "index.dat");
+Var newIndex = s.last | deser(Array.of(Int), "index.dat");
 
 s.source("input.fasta");
-s.execute(true);
+s.execute();
 ```
 
 `s.last` is for pipelines to be executed once, after all input sequences are processed.

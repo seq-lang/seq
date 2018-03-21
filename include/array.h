@@ -9,9 +9,8 @@ namespace seq {
 		class ArrayType : public Type {
 		private:
 			Type *base;
-			seq_int_t count;
 			llvm::Function *mallocFunc;
-			ArrayType(Type *base, seq_int_t count);
+			ArrayType(Type *base);
 		public:
 			ArrayType(ArrayType const&)=delete;
 			void operator=(ArrayType const&)=delete;
@@ -29,6 +28,7 @@ namespace seq {
 			void finalizeDeserialize(llvm::ExecutionEngine *eng) override;
 
 			void callAlloc(ValMap outs,
+			               seq_int_t count,
 			               llvm::BasicBlock *block);
 
 			void finalizeAlloc(llvm::ExecutionEngine *eng);
@@ -46,8 +46,8 @@ namespace seq {
 			seq_int_t size() const override;
 			Type *getBaseType() const;
 			ArrayType *of(Type& base) const;
-			ArrayType *of(Type& base, seq_int_t count) const;
-			static ArrayType *get(Type *base, seq_int_t count);
+			static ArrayType *get(Type *base);
+			static ArrayType *get();
 		};
 
 	}

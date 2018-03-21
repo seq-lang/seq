@@ -9,9 +9,9 @@ using namespace seq;
 using namespace llvm;
 
 Mem::Mem(types::Type *type, seq_int_t count) :
-    Stage("mem", types::AnyType::get(), types::ArrayType::get(type, count))
+    Stage("mem", types::AnyType::get(), types::ArrayType::get(type)), count(count)
 {
-	name += "<" + type->getName() + "," + std::to_string(count) + ">";
+	name += "(" + type->getName() + "," + std::to_string(count) + ")";
 }
 
 void Mem::codegen(llvm::Module *module)
@@ -21,7 +21,7 @@ void Mem::codegen(llvm::Module *module)
 
 	auto *type = (types::ArrayType *)getOutType();
 	block = prev->block;
-	type->callAlloc(outs, block);
+	type->callAlloc(outs, count, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }
@@ -48,7 +48,7 @@ void LoadStore::validate()
 {
 	types::Type *type = ptr->getType(this);
 
-	if (!type->isChildOf(types::ArrayType::get(nullptr, 0)))
+	if (!type->isChildOf(types::ArrayType::get()))
 		throw exc::SeqException("cannot index into non-array type '" + type->getName() + "'");
 
 	if (!idx->getType(this)->isChildOf(types::IntType::get()))
