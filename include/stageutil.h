@@ -14,6 +14,7 @@
 #include "count.h"
 #include "range.h"
 #include "lambda.h"
+#include "foreach.h"
 #include "serialize.h"
 
 namespace seq {
@@ -32,6 +33,7 @@ namespace seq {
 		Range& range(seq_int_t from, seq_int_t to);
 		Range& range(seq_int_t to);
 		LambdaStage& lambda(LambdaContext& lambdaContext);
+		ForEach& foreach();
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type *type, std::string filename);
 	}

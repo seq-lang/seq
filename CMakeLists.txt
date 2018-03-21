@@ -23,6 +23,7 @@ add_library(seq SHARED include/any.h
                        include/count.h
                        include/exc.h
                        include/filter.h
+                       include/foreach.h
                        include/hash.h
                        include/io.h
                        include/lambda.h
@@ -57,6 +58,7 @@ add_library(seq SHARED include/any.h
                        src/stages/copy.cpp
                        src/stages/count.cpp
                        src/stages/filter.cpp
+                       src/stages/foreach.cpp
                        src/stages/hash.cpp
                        src/stages/lambda.cpp
                        src/stages/len.cpp

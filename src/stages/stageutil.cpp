@@ -73,6 +73,11 @@ LambdaStage& stageutil::lambda(LambdaContext& lambdaContext)
 	return LambdaStage::make(lambdaContext);
 }
 
+ForEach& stageutil::foreach()
+{
+	return ForEach::make();
+}
+
 Serialize& stageutil::ser(std::string filename)
 {
 	return Serialize::make(std::move(filename));

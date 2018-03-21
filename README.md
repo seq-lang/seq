@@ -107,6 +107,7 @@ The following built-in stages are available. Each stage has an input and output 
 | `revcomp()` | `Seq -> Seq` | Reverse complements the input sequence in place |
 | `split(k,step)` | `Seq -> Seq` | Splits input into `k`-mers with step `step` |
 | `substr(pos,len)` | `Seq -> Seq` | Extracts the length-`len` substring of the input at `pos` |
+| `foreach()` | `Array[T] -> T` | Returns each element of input array in order |
 
 #### Variables
 
@@ -241,8 +242,11 @@ s.execute();
 ```
 
 This prints all the odd integers between 1 and 20. In general, `2*x + 1` can be any
-arithmetic expression in terms of `x`.
+arithmetic expression in terms of `x`. Note that we can also use `foreach` to iterate over arrays:
 
+```cpp
+s.once | m | foreach() | lambda(2*x + 1) | print();
+```
 
 #### Serialization
 

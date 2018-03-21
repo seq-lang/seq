@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <vector>
+#include <cassert>
 #include "basestage.h"
 #include "seq.h"
 #include "var.h"
@@ -19,7 +20,8 @@ void Mem::codegen(llvm::Module *module)
 	ensurePrev();
 	validate();
 
-	auto *type = (types::ArrayType *)getOutType();
+	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
+	assert(type != nullptr);
 	block = prev->block;
 	type->callAlloc(outs, count, block);
 	codegenNext(module);
@@ -28,7 +30,8 @@ void Mem::codegen(llvm::Module *module)
 
 void Mem::finalize(ExecutionEngine *eng)
 {
-	auto *type = (types::ArrayType *)getOutType();
+	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
+	assert(type != nullptr);
 	type->finalizeAlloc(eng);
 }
 
@@ -54,7 +57,8 @@ void LoadStore::validate()
 	if (!idx->getType(this)->isChildOf(types::IntType::get()))
 		throw exc::SeqException("non-integer array index");
 
-	auto *arrayType = (types::ArrayType *)type;
+	auto *arrayType = dynamic_cast<types::ArrayType *>(type);
+	assert(type != nullptr);
 
 	// somewhat contrived logic for determining whether we are loading or storing...
 	const bool noPrev = (!getPrev() || getPrev()->getOutType()->isChildOf(types::VoidType::get()));
@@ -86,7 +90,8 @@ void LoadStore::codegen(Module *module)
 {
 	validate();
 
-	auto *arrayType = (types::ArrayType *)ptr->getType(this);
+	auto *arrayType = dynamic_cast<types::ArrayType *>(ptr->getType(this));
+	assert(arrayType != nullptr);
 
 	auto ptriter = ptr->outs(this)->find(SeqData::ARRAY);
 

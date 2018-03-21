@@ -54,7 +54,7 @@ void Split::codegen(Module *module)
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	Value *max = builder.CreateSub(len, sublen);
-	Value *cond = builder.CreateICmpULE(next, max);
+	Value *cond = builder.CreateICmpSLE(next, max);
 	builder.CreateCondBr(cond, loop, exit);
 
 	prev->setAfter(exit);
