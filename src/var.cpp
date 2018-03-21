@@ -100,6 +100,77 @@ LoadStore& Var::operator[](Var& idx)
 	return LoadStore::make(this, &idx);
 }
 
+Const::Const(types::Type *type) :
+    Var(), type(type), outsMap(new std::map<SeqData, Value *>)
+{
+}
+
+types::Type *Const::getType(Stage *caller) const
+{
+	return type;
+}
+
+std::shared_ptr<std::map<SeqData, Value *>> Const::outs(Stage *caller) const
+{
+	return outsMap;
+}
+
+
+Stage *Const::getStage() const
+{
+	return nullptr;
+}
+
+bool Const::isAssigned() const
+{
+	return true;
+}
+
+Seq *Const::getBase() const
+{
+	throw exc::SeqException("cannot get base of const variable");
+}
+
+ConstInt::ConstInt(seq_int_t n) : Const(types::IntType::get()), n(n)
+{
+}
+
+std::shared_ptr<std::map<SeqData, Value *>> ConstInt::outs(Stage *caller) const
+{
+	if (caller && outsMap->empty()) {
+		LLVMContext& context = caller->getBase()->getContext();
+		outsMap->insert({SeqData::INT,
+		                 ConstantInt::get(seqIntLLVM(context), (uint64_t)n, true)});
+	}
+
+	return Const::outs(caller);
+}
+
+ConstInt& ConstInt::get(seq_int_t n)
+{
+	return *new ConstInt(n);
+}
+
+ConstFloat::ConstFloat(double f) : Const(types::FloatType::get()), f(f)
+{
+}
+
+std::shared_ptr<std::map<SeqData, Value *>> ConstFloat::outs(Stage *caller) const
+{
+	if (caller && outsMap->empty()) {
+		LLVMContext& context = caller->getBase()->getContext();
+		outsMap->insert({SeqData::FLOAT,
+		                 ConstantFP::get(Type::getDoubleTy(context), f)});
+	}
+
+	return Const::outs(caller);
+}
+
+ConstFloat& ConstFloat::get(double f)
+{
+	return *new ConstFloat(f);
+}
+
 Latest::Latest() : Var()
 {
 }
@@ -123,7 +194,7 @@ std::shared_ptr<std::map<SeqData, Value *>> Latest::outs(Stage *caller) const
 {
 	validateCaller(caller);
 	return caller->getPrev()->outs;
-};
+}
 
 Stage *Latest::getStage() const
 {

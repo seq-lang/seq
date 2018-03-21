@@ -52,17 +52,23 @@ Pipeline PipelineAggregator::operator|(Var& to)
 	Stage *stage = to.getStage();
 	BaseStage& begin = BaseStage::make(types::VoidType::get(), to.getType(stage), stage);
 	begin.setBase(base);
-	begin.outs = to.outs(stage);
+	begin.outs = to.outs(&begin);
 	add(begin);
 
 	return begin;
 }
 
 Seq::Seq() :
-    src(""), pipelines(), outs(new std::map<SeqData, Value *>()),
+    context(), src(""), pipelines(),
+    outs(new std::map<SeqData, Value *>()),
     func(nullptr), preambleBlock(nullptr),
     main(this), once(this), last(this)
 {
+}
+
+LLVMContext& Seq::getContext()
+{
+	return context;
 }
 
 void Seq::source(std::string source)
@@ -206,7 +212,6 @@ void Seq::execute(bool debug)
 
 		InitializeNativeTarget();
 		InitializeNativeTargetAsmPrinter();
-		LLVMContext context;
 
 		std::unique_ptr<Module> owner(new Module("seq", context));
 		Module *M = owner.get();

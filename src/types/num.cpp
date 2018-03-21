@@ -134,7 +134,7 @@ types::IntType::IntType() : Type("Int", NumberType::get(), SeqData::INT)
 	vtable.deserializeArray = (void *)deserializeIntArray;
 }
 
-types::FloatType::FloatType() : Type("Float", NumberType::get(), SeqData::DOUBLE)
+types::FloatType::FloatType() : Type("Float", NumberType::get(), SeqData::FLOAT)
 {
 	vtable.print = (void *)printFloat;
 	vtable.serialize = (void *)serializeFloat;

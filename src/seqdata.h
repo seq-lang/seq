@@ -11,7 +11,7 @@ namespace seq {
 		IDENT,
 
 		INT,
-		DOUBLE,
+		FLOAT,
 		ARRAY,
 
 		SEQ_DATA_COUNT

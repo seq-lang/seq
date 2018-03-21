@@ -31,6 +31,7 @@ namespace seq {
 
 	class Seq {
 	private:
+		llvm::LLVMContext context;
 		std::string src;
 		std::vector<Pipeline> pipelines;
 		std::shared_ptr<std::map<SeqData, llvm::Value *>> outs;
@@ -46,6 +47,7 @@ namespace seq {
 		PipelineAggregator once;
 		PipelineAggregator last;
 
+		llvm::LLVMContext& getContext();
 		void source(std::string source);
 		void execute(bool debug=false);
 		void add(Pipeline pipeline);
