@@ -1,3 +1,4 @@
+#include <string>
 #include "common.h"
 #include "exc.h"
 #include "lambda.h"
@@ -40,7 +41,7 @@ struct ConstFloatNode : LambdaNode {
 			throw exc::SeqException("floating-point literal in integer lambda");
 
 		LLVMContext& context = block->getContext();
-		return ConstantInt::get(seqIntLLVM(context), f);
+		return ConstantFP::get(Type::getDoubleTy(context), f);
 	}
 };
 
@@ -109,11 +110,12 @@ Function *LambdaContext::codegen(Module *module, bool isFloat)
 {
 	LLVMContext& context = module->getContext();
 
+	static int counter = 0;
 	lambda = cast<Function>(
-               module->getOrInsertFunction(
-                 "lambda",
-                 seqIntLLVM(context),
-                 seqIntLLVM(context)));
+	           module->getOrInsertFunction(
+	             "lambda" + std::to_string(counter++),
+	             isFloat ? Type::getDoubleTy(context) : seqIntLLVM(context),
+	             isFloat ? Type::getDoubleTy(context) : seqIntLLVM(context)));
 
 	arg->v = lambda->arg_begin();
 	BasicBlock *entry = BasicBlock::Create(context, "entry", lambda);
@@ -177,51 +179,99 @@ LambdaContext& seq::operator/(LambdaNode& node, LambdaContext& lambda)
 	return lambda;
 }
 
-LambdaContext& seq::operator+(LambdaContext& lambda, seq_int_t n)
+LambdaContext& seq::operator+(LambdaContext& lambda, int n)
 {
 	LambdaNode& node = *new ConstIntNode(n);
 	return lambda + node;
 }
 
-LambdaContext& seq::operator-(LambdaContext& lambda, seq_int_t n)
+LambdaContext& seq::operator-(LambdaContext& lambda, int n)
 {
 	LambdaNode& node = *new ConstIntNode(n);
 	return lambda - node;
 }
 
-LambdaContext& seq::operator*(LambdaContext& lambda, seq_int_t n)
+LambdaContext& seq::operator*(LambdaContext& lambda, int n)
 {
 	LambdaNode& node = *new ConstIntNode(n);
 	return lambda * node;
 }
 
-LambdaContext& seq::operator/(LambdaContext& lambda, seq_int_t n)
+LambdaContext& seq::operator/(LambdaContext& lambda, int n)
 {
 	LambdaNode& node = *new ConstIntNode(n);
 	return lambda / node;
 }
 
-LambdaContext& seq::operator+(seq_int_t n, LambdaContext& lambda)
+LambdaContext& seq::operator+(int n, LambdaContext& lambda)
 {
 	LambdaNode& node = *new ConstIntNode(n);
 	return node + lambda;
 }
 
-LambdaContext& seq::operator-(seq_int_t n, LambdaContext& lambda)
+LambdaContext& seq::operator-(int n, LambdaContext& lambda)
 {
 	LambdaNode& node = *new ConstIntNode(n);
 	return node - lambda;
 }
 
-LambdaContext& seq::operator*(seq_int_t n, LambdaContext& lambda)
+LambdaContext& seq::operator*(int n, LambdaContext& lambda)
 {
 	LambdaNode& node = *new ConstIntNode(n);
 	return node * lambda;
 }
 
-LambdaContext& seq::operator/(seq_int_t n, LambdaContext& lambda)
+LambdaContext& seq::operator/(int n, LambdaContext& lambda)
 {
 	LambdaNode& node = *new ConstIntNode(n);
+	return node / lambda;
+}
+
+LambdaContext& seq::operator+(LambdaContext& lambda, double f)
+{
+	LambdaNode& node = *new ConstFloatNode(f);
+	return lambda + node;
+}
+
+LambdaContext& seq::operator-(LambdaContext& lambda, double f)
+{
+	LambdaNode& node = *new ConstFloatNode(f);
+	return lambda - node;
+}
+
+LambdaContext& seq::operator*(LambdaContext& lambda, double f)
+{
+	LambdaNode& node = *new ConstFloatNode(f);
+	return lambda * node;
+}
+
+LambdaContext& seq::operator/(LambdaContext& lambda, double f)
+{
+	LambdaNode& node = *new ConstFloatNode(f);
+	return lambda / node;
+}
+
+LambdaContext& seq::operator+(double f, LambdaContext& lambda)
+{
+	LambdaNode& node = *new ConstFloatNode(f);
+	return node + lambda;
+}
+
+LambdaContext& seq::operator-(double f, LambdaContext& lambda)
+{
+	LambdaNode& node = *new ConstFloatNode(f);
+	return node - lambda;
+}
+
+LambdaContext& seq::operator*(double f, LambdaContext& lambda)
+{
+	LambdaNode& node = *new ConstFloatNode(f);
+	return node * lambda;
+}
+
+LambdaContext& seq::operator/(double f, LambdaContext& lambda)
+{
+	LambdaNode& node = *new ConstFloatNode(f);
 	return node / lambda;
 }
 
@@ -271,7 +321,8 @@ void LambdaStage::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	auto iter = prev->outs->find(SeqData::INT);
+	const auto key = isFloat ? SeqData::FLOAT : SeqData::INT;
+	auto iter = prev->outs->find(key);
 
 	if (iter == prev->outs->end())
 		throw exc::StageException("pipeline error", *this);
@@ -282,7 +333,7 @@ void LambdaStage::codegen(Module *module)
 	std::vector<Value *> args = {iter->second};
 	Value *result = builder.CreateCall(func, args);
 
-	outs->insert({SeqData::INT, result});
+	outs->insert({key, result});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());
