@@ -24,7 +24,7 @@ types::SeqType::SeqType() : Type("Seq", BaseType::get(), SeqData::SEQ)
 
 Type *types::SeqType::getLLVMType(LLVMContext& context)
 {
-	return llvm::Type::getInt8Ty(context);
+	return llvm::Type::getInt8PtrTy(context);
 }
 
 void types::SeqType::callPrint(ValMap outs, BasicBlock *block)

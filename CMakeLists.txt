@@ -18,6 +18,7 @@ add_library(seq SHARED include/any.h
                        include/array.h
                        include/base.h
                        include/basestage.h
+                       include/collect.h
                        include/common.h
                        include/copy.h
                        include/count.h
@@ -55,6 +56,7 @@ add_library(seq SHARED include/any.h
                        src/seq.cpp
                        src/seqdata.h
                        src/stages/basestage.cpp
+                       src/stages/collect.cpp
                        src/stages/copy.cpp
                        src/stages/count.cpp
                        src/stages/filter.cpp

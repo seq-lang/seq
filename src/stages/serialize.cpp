@@ -24,6 +24,7 @@ void Serialize::finalize(ExecutionEngine *eng)
 {
 	assert(prev);
 	prev->getOutType()->finalizeSerialize(eng);
+	Stage::finalize(eng);
 }
 
 Serialize& Serialize::make(std::string filename)
@@ -55,6 +56,7 @@ void Deserialize::finalize(ExecutionEngine *eng)
 {
 	assert(prev);
 	type->finalizeDeserialize(eng);
+	Stage::finalize(eng);
 }
 
 Deserialize& Deserialize::make(types::Type *type, std::string filename)

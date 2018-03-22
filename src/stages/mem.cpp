@@ -33,6 +33,7 @@ void Mem::finalize(ExecutionEngine *eng)
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
 	type->finalizeAlloc(eng);
+	Stage::finalize(eng);
 }
 
 Mem& Mem::make(types::Type *type, seq_int_t count)

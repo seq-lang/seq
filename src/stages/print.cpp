@@ -34,6 +34,7 @@ void Print::finalize(ExecutionEngine *eng)
 {
 	assert(prev);
 	prev->getOutType()->finalizePrint(eng);
+	Stage::finalize(eng);
 }
 
 Print& Print::make()
