@@ -18,10 +18,6 @@ namespace seq {
 			void callPrint(ValMap outs,
 			               llvm::BasicBlock *block) override;
 
-			void callAlloc(ValMap outs,
-			               seq_int_t count,
-			               llvm::BasicBlock *block) override;
-
 			void codegenLoad(ValMap outs,
 			                 llvm::BasicBlock *block,
 			                 llvm::Value *ptr,

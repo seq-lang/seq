@@ -27,7 +27,7 @@ void types::Type::callPrint(ValMap outs, BasicBlock *block)
 
 	if (!vtable.printFunc) {
 		vtable.printFunc = cast<Function>(
-	                         block->getModule()->getOrInsertFunction(
+		                     block->getModule()->getOrInsertFunction(
 		                       "print" + getName(),
 		                       llvm::Type::getVoidTy(block->getContext()),
 		                       getLLVMType(block->getContext())));
@@ -151,7 +151,7 @@ void types::Type::callSerializeArray(ValMap outs,
 		                              block->getModule()->getOrInsertFunction(
 		                                "serialize" + getName() + "Array",
 		                                llvm::Type::getVoidTy(context),
-		                                IntegerType::getIntNPtrTy(context, (unsigned)size()*8),
+		                                PointerType::get(getLLVMArrayType(context), 0),
 		                                seqIntLLVM(context),
 		                                IntegerType::getInt8PtrTy(context)));
 
@@ -201,9 +201,9 @@ void types::Type::callDeserializeArray(ValMap outs,
 		vtable.deserializeArrayFunc = cast<Function>(
 		                                block->getModule()->getOrInsertFunction(
 		                                  "deserialize" + getName() + "Array",
-		                                  PointerType::getInt8PtrTy(context),
+		                                  PointerType::get(getLLVMArrayType(context), 0),
 		                                  IntegerType::getInt8PtrTy(context),
-		                                  PointerType::getIntNPtrTy(context, sizeof(seq_int_t) * 8)));
+		                                  PointerType::get(seqIntLLVM(context), 0)));
 
 		vtable.deserializeArrayFunc->setCallingConv(CallingConv::C);
 	}
@@ -221,17 +221,16 @@ void types::Type::callDeserializeArray(ValMap outs,
 	Value *len = builder.CreateAlloca(seqIntLLVM(context), ConstantInt::get(seqIntLLVM(context), 1));
 	std::vector<Value *> args = {filename, len};
 	Value *mem = builder.CreateCall(vtable.deserializeArrayFunc, args, "");
-	mem = builder.CreatePointerCast(mem, IntegerType::getIntNPtrTy(context, (unsigned)size()*8));
 
 	GlobalVariable *ptr = new GlobalVariable(*module,
-                                         IntegerType::getIntNPtrTy(context, (unsigned)size()*8),
-                                         false,
-                                         GlobalValue::PrivateLinkage,
-                                         nullptr,
-                                         "mem");
+	                                         PointerType::get(getLLVMArrayType(context), 0),
+	                                         false,
+	                                         GlobalValue::PrivateLinkage,
+	                                         nullptr,
+	                                         "mem");
 
 	ptr->setInitializer(
-	  ConstantPointerNull::get(IntegerType::getIntNPtrTy(context, (unsigned)size())));
+	  ConstantPointerNull::get(PointerType::get(getLLVMArrayType(context), 0)));
 	builder.CreateStore(mem, ptr);
 
 	outs->insert({SeqData::ARRAY, ptr});
@@ -253,28 +252,28 @@ void types::Type::callAlloc(ValMap outs, seq_int_t count, BasicBlock *block)
 
 	if (!vtable.allocFunc) {
 		vtable.allocFunc = cast<Function>(
-		               module->getOrInsertFunction(
-		                 "malloc",
-		                 IntegerType::getInt8PtrTy(context),
-		                 IntegerType::getIntNTy(context, sizeof(size_t) * 8)));
+		                     module->getOrInsertFunction(
+		                       "malloc",
+		                       IntegerType::getInt8PtrTy(context),
+		                       IntegerType::getIntNTy(context, sizeof(size_t)*8)));
 	}
 
 	IRBuilder<> builder(block);
 
 	GlobalVariable *ptr = new GlobalVariable(*module,
-	                                         IntegerType::getIntNPtrTy(context, (unsigned)size()*8),
+	                                         PointerType::get(getLLVMArrayType(context), 0),
 	                                         false,
 	                                         GlobalValue::PrivateLinkage,
 	                                         nullptr,
 	                                         "mem");
 
 	ptr->setInitializer(
-	  ConstantPointerNull::get(IntegerType::getIntNPtrTy(context, (unsigned)size())));
+	  ConstantPointerNull::get(PointerType::get(getLLVMArrayType(context), 0)));
 
 	std::vector<Value *> args = {
-	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count * size()))};
+	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count*arraySize()))};
 	Value *mem = builder.CreateCall(vtable.allocFunc, args);
-	mem = builder.CreatePointerCast(mem, IntegerType::getIntNPtrTy(context, (unsigned)size()*8));
+	mem = builder.CreatePointerCast(mem, PointerType::get(getLLVMArrayType(context), 0));
 	builder.CreateStore(mem, ptr);
 
 	outs->insert({SeqData::ARRAY, ptr});

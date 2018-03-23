@@ -35,44 +35,6 @@ void types::ArrayType::finalizeDeserialize(ExecutionEngine *eng)
 	base->finalizeDeserializeArray(eng);
 }
 
-void types::ArrayType::callAlloc(ValMap outs, seq_int_t count, BasicBlock *block)
-{
-	if (size() == 0)
-		throw exc::SeqException("cannot create array of type '" + getName() + "'");
-
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-
-	if (!vtable.allocFunc) {
-		vtable.allocFunc = cast<Function>(
-		                     module->getOrInsertFunction(
-		                       "malloc",
-		                       IntegerType::getInt8PtrTy(context),
-		                       IntegerType::getIntNTy(context, sizeof(size_t) * 8)));
-	}
-
-	IRBuilder<> builder(block);
-
-	GlobalVariable *ptr = new GlobalVariable(*module,
-	                                         PointerType::get(getLLVMArrayType(context), 0),
-	                                         false,
-	                                         GlobalValue::PrivateLinkage,
-	                                         nullptr,
-	                                         "mem");
-
-	ptr->setInitializer(
-	  ConstantPointerNull::get(PointerType::get(getLLVMArrayType(context), 0)));
-
-	std::vector<Value *> args = {
-	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count * arraySize()))};
-	Value *mem = builder.CreateCall(vtable.allocFunc, args);
-	mem = builder.CreatePointerCast(mem, PointerType::get(getLLVMArrayType(context), 0));
-	builder.CreateStore(mem, ptr);
-
-	outs->insert({SeqData::ARRAY, ptr});
-	outs->insert({SeqData::LEN, ConstantInt::get(seqIntLLVM(context), (uint64_t)count)});
-}
-
 void types::ArrayType::codegenLoad(ValMap outs,
                                    BasicBlock *block,
                                    Value *ptr,
@@ -148,9 +110,9 @@ types::Type *types::ArrayType::getBaseType() const
 	return base;
 }
 
-types::ArrayType *types::ArrayType::of(Type& base) const
+types::ArrayType& types::ArrayType::of(Type& base) const
 {
-	return ArrayType::get(&base);
+	return *ArrayType::get(&base);
 }
 
 types::ArrayType *types::ArrayType::get(Type *base)

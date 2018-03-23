@@ -277,3 +277,8 @@ Pipeline Seq::operator|(PipelineList to)
 {
 	return main | to;
 }
+
+Pipeline Seq::operator|(Var& to)
+{
+	return main | to;
+}

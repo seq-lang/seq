@@ -71,10 +71,8 @@ int main()
 	 * Vars can be used to refer back to
 	 * results of previous pipelines
 	 */
-	Var hashes = s |
-	    	     split(32,32) |
-	             my_hash() |
-	             collect();  // 'collect' collects inputs into an array
+	Var kmers  = s | split(32,32) | collect();  // 'collect' collects inputs into an array
+	Var hashes = kmers | foreach() | my_hash() | collect();
 	hashes | foreach() | print();
 
 	s | print() | copy() | revcomp() | print();

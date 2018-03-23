@@ -27,10 +27,6 @@ namespace seq {
 
 			void finalizeDeserialize(llvm::ExecutionEngine *eng) override;
 
-			void callAlloc(ValMap outs,
-			               seq_int_t count,
-			               llvm::BasicBlock *block) override;
-
 			void codegenLoad(ValMap outs,
 			                 llvm::BasicBlock *block,
 			                 llvm::Value *ptr,
@@ -46,7 +42,7 @@ namespace seq {
 			seq_int_t size() const override;
 			seq_int_t arraySize() const override;
 			Type *getBaseType() const;
-			ArrayType *of(Type& base) const;
+			ArrayType& of(Type& base) const;
 			static ArrayType *get(Type *base);
 			static ArrayType *get();
 		};

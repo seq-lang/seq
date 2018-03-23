@@ -88,7 +88,7 @@ Serialize& stageutil::ser(std::string filename)
 	return Serialize::make(std::move(filename));
 }
 
-Deserialize& stageutil::deser(types::Type *type, std::string filename)
+Deserialize& stageutil::deser(types::Type& type, std::string filename)
 {
-	return Deserialize::make(type, std::move(filename));
+	return Deserialize::make(&type, std::move(filename));
 }

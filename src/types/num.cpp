@@ -37,19 +37,18 @@ SEQ_FUNC seq_int_t deserializeInt(char *filename)
 	return x;
 }
 
-SEQ_FUNC void serializeIntArray(void *x, seq_int_t len, char *filename)
+SEQ_FUNC void serializeIntArray(seq_int_t *x, seq_int_t len, char *filename)
 {
 	std::ofstream out(filename);
-	auto *y = (seq_int_t *)x;
 
 	serializeIntDirect(len, out);
 	for (seq_int_t i = 0; i < len; i++)
-		serializeIntDirect(y[i], out);
+		serializeIntDirect(x[i], out);
 
 	out.close();
 }
 
-SEQ_FUNC void *deserializeIntArray(char *filename, seq_int_t *len)
+SEQ_FUNC seq_int_t *deserializeIntArray(char *filename, seq_int_t *len)
 {
 	std::ifstream in(filename);
 	*len = deserializeIntDirect(in);
@@ -95,19 +94,18 @@ SEQ_FUNC double deserializeFloat(char *filename)
 	return x;
 }
 
-SEQ_FUNC void serializeFloatArray(void *x, seq_int_t len, char *filename)
+SEQ_FUNC void serializeFloatArray(double *x, seq_int_t len, char *filename)
 {
 	std::ofstream out(filename);
-	auto *y = (double *)x;
 
 	serializeIntDirect(len, out);
 	for (seq_int_t i = 0; i < len; i++)
-		serializeFloatDirect(y[i], out);
+		serializeFloatDirect(x[i], out);
 
 	out.close();
 }
 
-SEQ_FUNC void *deserializeFloatArray(char *filename, seq_int_t *len)
+SEQ_FUNC double *deserializeFloatArray(char *filename, seq_int_t *len)
 {
 	std::ifstream in(filename);
 	*len = deserializeIntDirect(in);

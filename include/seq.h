@@ -55,6 +55,7 @@ namespace seq {
 
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList to);
+		Pipeline operator|(Var& to);
 	};
 
 	namespace types {

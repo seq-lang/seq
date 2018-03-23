@@ -51,41 +51,6 @@ void types::SeqType::callPrint(ValMap outs, BasicBlock *block)
 	builder.CreateCall(vtable.printFunc, args, "");
 }
 
-void types::SeqType::callAlloc(ValMap outs, seq_int_t count, BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-
-	if (!vtable.allocFunc) {
-		vtable.allocFunc = cast<Function>(
-		                     module->getOrInsertFunction(
-		                       "malloc",
-		                       IntegerType::getInt8PtrTy(context),
-		                       IntegerType::getIntNTy(context, sizeof(size_t) * 8)));
-	}
-
-	IRBuilder<> builder(block);
-
-	GlobalVariable *ptr = new GlobalVariable(*module,
-	                                         PointerType::get(getLLVMArrayType(context), 0),
-	                                         false,
-	                                         GlobalValue::PrivateLinkage,
-	                                         nullptr,
-	                                         "mem");
-
-	ptr->setInitializer(
-	  ConstantPointerNull::get(PointerType::get(getLLVMArrayType(context), 0)));
-
-	std::vector<Value *> args = {
-	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count * arraySize()))};
-	Value *mem = builder.CreateCall(vtable.allocFunc, args);
-	mem = builder.CreatePointerCast(mem, PointerType::get(getLLVMArrayType(context), 0));
-	builder.CreateStore(mem, ptr);
-
-	outs->insert({SeqData::ARRAY, ptr});
-	outs->insert({SeqData::LEN, ConstantInt::get(seqIntLLVM(context), (uint64_t)count)});
-}
-
 void types::SeqType::codegenLoad(ValMap outs,
                                  BasicBlock *block,
                                  Value *ptr,
