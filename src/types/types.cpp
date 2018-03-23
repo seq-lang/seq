@@ -20,11 +20,6 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
-Type *types::Type::getLLVMType(LLVMContext& context)
-{
-	throw exc::SeqException("cannot instantiate '" + getName() + "' class");
-}
-
 void types::Type::callPrint(ValMap outs, BasicBlock *block)
 {
 	if (!vtable.print || getKey() == SeqData::NONE)
@@ -248,29 +243,79 @@ void types::Type::finalizeDeserializeArray(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.deserializeArrayFunc, vtable.deserializeArray);
 }
 
-Value *types::Type::codegenLoad(BasicBlock *block,
-                                Value *ptr,
-                                Value *idx)
+void types::Type::callAlloc(ValMap outs, seq_int_t count, BasicBlock *block)
 {
 	if (size() == 0)
+		throw exc::SeqException("cannot create array of type '" + getName() + "'");
+
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+
+	if (!vtable.allocFunc) {
+		vtable.allocFunc = cast<Function>(
+		               module->getOrInsertFunction(
+		                 "malloc",
+		                 IntegerType::getInt8PtrTy(context),
+		                 IntegerType::getIntNTy(context, sizeof(size_t) * 8)));
+	}
+
+	IRBuilder<> builder(block);
+
+	GlobalVariable *ptr = new GlobalVariable(*module,
+	                                         IntegerType::getIntNPtrTy(context, (unsigned)size()*8),
+	                                         false,
+	                                         GlobalValue::PrivateLinkage,
+	                                         nullptr,
+	                                         "mem");
+
+	ptr->setInitializer(
+	  ConstantPointerNull::get(IntegerType::getIntNPtrTy(context, (unsigned)size())));
+
+	std::vector<Value *> args = {
+	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count * size()))};
+	Value *mem = builder.CreateCall(vtable.allocFunc, args);
+	mem = builder.CreatePointerCast(mem, IntegerType::getIntNPtrTy(context, (unsigned)size()*8));
+	builder.CreateStore(mem, ptr);
+
+	outs->insert({SeqData::ARRAY, ptr});
+	outs->insert({SeqData::LEN, ConstantInt::get(seqIntLLVM(context), (uint64_t)count)});
+}
+
+void types::Type::finalizeAlloc(ExecutionEngine *eng)
+{
+	eng->addGlobalMapping(vtable.allocFunc, (void *)std::malloc);
+}
+
+void types::Type::codegenLoad(ValMap outs,
+                              BasicBlock *block,
+                              Value *ptr,
+                              Value *idx)
+{
+	if (size() == 0 || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot load type '" + getName() + "'");
 
 	IRBuilder<> builder(block);
-	Value *ptrActual = builder.CreateLoad(ptr);
-	return builder.CreateLoad(builder.CreateGEP(ptrActual, idx));
+	Value *val = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+	outs->insert({getKey(), val});
 }
 
-void types::Type::codegenStore(BasicBlock *block,
+void types::Type::codegenStore(ValMap outs,
+                               BasicBlock *block,
                                Value *ptr,
-                               Value *idx,
-                               Value *val)
+                               Value *idx)
 {
-	if (size() == 0)
+	if (size() == 0|| getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot store type '" + getName() + "'");
 
+	auto valiter = outs->find(getKey());
+
+	if (valiter == outs->end())
+		throw exc::SeqException("pipeline error");
+
+	Value *val = valiter->second;
+
 	IRBuilder<> builder(block);
-	Value *ptrActual = builder.CreateLoad(ptr);
-	builder.CreateStore(val, builder.CreateGEP(ptrActual, idx));
+	builder.CreateStore(val, builder.CreateGEP(ptr, idx));
 }
 
 bool types::Type::isChildOf(types::Type *type)
@@ -288,9 +333,24 @@ SeqData types::Type::getKey() const
 	return key;
 }
 
+Type *types::Type::getLLVMType(LLVMContext& context)
+{
+	throw exc::SeqException("cannot instantiate '" + getName() + "' class");
+}
+
+Type *types::Type::getLLVMArrayType(LLVMContext& context)
+{
+	return getLLVMType(context);
+}
+
 seq_int_t types::Type::size() const
 {
 	return 0;
+}
+
+seq_int_t types::Type::arraySize() const
+{
+	return size();
 }
 
 Mem& types::Type::operator[](seq_int_t size)

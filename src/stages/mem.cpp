@@ -23,7 +23,7 @@ void Mem::codegen(llvm::Module *module)
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
 	block = prev->block;
-	type->callAlloc(outs, count, block);
+	type->getBaseType()->callAlloc(outs, count, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }
@@ -32,7 +32,7 @@ void Mem::finalize(ExecutionEngine *eng)
 {
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
-	type->finalizeAlloc(eng);
+	type->getBaseType()->finalizeAlloc(eng);
 	Stage::finalize(eng);
 }
 
@@ -81,12 +81,6 @@ void LoadStore::validate()
 	Stage::validate();
 }
 
-static void ensureKey(SeqData key)
-{
-	if (key == SeqData::NONE)
-		throw exc::SeqException("unsupported array type");
-}
-
 void LoadStore::codegen(Module *module)
 {
 	validate();
@@ -102,29 +96,18 @@ void LoadStore::codegen(Module *module)
 	block = prev->block;
 	IRBuilder<> builder(block);
 
+	auto idxiter = idx->outs(this)->find(SeqData::INT);
+
+	if (idxiter == idx->outs(this)->end())
+		throw exc::StageException("pipeline error", *this);
+
+	Value *ptr = builder.CreateLoad(ptriter->second);
+	Value *idx = idxiter->second;
+
 	if (isStore) {
-		SeqData key = prev->getOutType()->getKey();
-		ensureKey(key);
-
-		auto idxiter = idx->outs(this)->find(SeqData::INT);
-		auto valiter = prev->outs->find(key);
-
-		if (idxiter == idx->outs(this)->end() || valiter == prev->outs->end())
-			throw exc::StageException("pipeline error", *this);
-
-		arrayType->codegenStore(block, ptriter->second, idxiter->second, valiter->second);
+		arrayType->getBaseType()->codegenStore(prev->outs, block, ptr, idx);
 	} else {
-		SeqData key = arrayType->getBaseType()->getKey();
-		ensureKey(key);
-
-		auto idxiter = idx->outs(this)->find(SeqData::INT);
-
-		if (idxiter == idx->outs(this)->end())
-			throw exc::StageException("pipeline error", *this);
-
-		Value *val = arrayType->codegenLoad(block, ptriter->second, idxiter->second);
-
-		outs->insert({key, val});
+		arrayType->getBaseType()->codegenLoad(outs, block, ptr, idx);
 	}
 
 	codegenNext(module);

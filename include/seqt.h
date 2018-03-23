@@ -15,10 +15,27 @@ namespace seq {
 			SeqType(SeqType const&)=delete;
 			void operator=(SeqType const&)=delete;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
 			void callPrint(ValMap outs,
 			               llvm::BasicBlock *block) override;
+
+			void callAlloc(ValMap outs,
+			               seq_int_t count,
+			               llvm::BasicBlock *block) override;
+
+			void codegenLoad(ValMap outs,
+			                 llvm::BasicBlock *block,
+			                 llvm::Value *ptr,
+			                 llvm::Value *idx) override;
+
+			void codegenStore(ValMap outs,
+			                  llvm::BasicBlock *block,
+			                  llvm::Value *ptr,
+			                  llvm::Value *idx) override;
+
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
+			llvm::Type *getLLVMArrayType(llvm::LLVMContext& context) override;
 			seq_int_t size() const override;
+			seq_int_t arraySize() const override;
 			static SeqType *get();
 		};
 

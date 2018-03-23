@@ -13,6 +13,7 @@ void ForEach::validate()
 	if (prev && prev->getOutType()->isChildOf(types::ArrayType::get())) {
 		auto *type = dynamic_cast<types::ArrayType *>(prev->getOutType());
 		assert(type != nullptr);
+		in = type;
 		out = type->getBaseType();
 
 		if (out->getKey() == SeqData::NONE)
@@ -46,11 +47,13 @@ void ForEach::codegen(Module *module)
 	builder.SetInsertPoint(loop);
 
 	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
-	Value *ptrActual = builder.CreateLoad(ptr);
-	Value *val = builder.CreateGEP(ptrActual, control);
 
-	outs->insert({out->getKey(), builder.CreateLoad(val)});
+	auto *type = dynamic_cast<types::ArrayType *>(getInType());
+	assert(type != nullptr);
+
 	block = loop;
+	IRBuilder<> builder1(block);
+	type->getBaseType()->codegenLoad(outs, block, builder1.CreateLoad(ptr), control);
 
 	codegenNext(module);
 

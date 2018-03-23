@@ -50,7 +50,7 @@ void Collect::codegen(Module *module)
 	IRBuilder<> builder(block);
 	IRBuilder<> preamble(getBase()->getPreamble());
 
-	type->callAlloc(outs, INIT_VEC_SIZE, getBase()->getPreamble());
+	type->getBaseType()->callAlloc(outs, INIT_VEC_SIZE, getBase()->getPreamble());
 
 	auto arriter = outs->find(SeqData::ARRAY);
 	auto leniter = outs->find(SeqData::LEN);
@@ -66,24 +66,18 @@ void Collect::codegen(Module *module)
 	                                   ConstantInt::get(seqIntLLVM(context), 1));
 	preamble.CreateStore(ConstantInt::get(seqIntLLVM(context), INIT_VEC_SIZE), cap);
 
-	Value *elemPtr = preamble.CreateAlloca(getInType()->getLLVMType(context),
+	Value *elemPtr = preamble.CreateAlloca(getInType()->getLLVMArrayType(context),
 	                                       ConstantInt::get(seqIntLLVM(context), 1));
 
-	auto elemiter = prev->outs->find(getInType()->getKey());
-
-	if (elemiter == prev->outs->end())
-		throw exc::StageException("pipeline error", *this);
-
-	Value *elem = elemiter->second;
-	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getInType()->size());
+	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getInType()->arraySize());
 	Value *lenActual = builder.CreateLoad(len);
 
-	builder.CreateStore(elem, elemPtr);
+	type->getBaseType()->codegenStore(prev->outs, block, elemPtr, ConstantInt::get(seqIntLLVM(context), 0));
 
-	std::vector<Value *> args = {builder.CreateBitCast(ptr,
-	                                                   PointerType::get(IntegerType::getInt8PtrTy(context), 0)),
-	                             builder.CreateBitCast(elemPtr,
-	                                                   IntegerType::getInt8PtrTy(context)),
+	std::vector<Value *> args = {builder.CreatePointerCast(ptr,
+	                                                       PointerType::get(IntegerType::getInt8PtrTy(context), 0)),
+	                             builder.CreatePointerCast(elemPtr,
+	                                                       IntegerType::getInt8PtrTy(context)),
 	                             elemSize,
 	                             lenActual,
 	                             cap};

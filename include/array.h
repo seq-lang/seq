@@ -9,8 +9,8 @@ namespace seq {
 		class ArrayType : public Type {
 		private:
 			Type *base;
-			llvm::Function *mallocFunc;
-			ArrayType(Type *base);
+			llvm::StructType *arrStruct;
+			explicit ArrayType(Type *base);
 		public:
 			ArrayType(ArrayType const&)=delete;
 			void operator=(ArrayType const&)=delete;
@@ -29,21 +29,22 @@ namespace seq {
 
 			void callAlloc(ValMap outs,
 			               seq_int_t count,
-			               llvm::BasicBlock *block);
+			               llvm::BasicBlock *block) override;
 
-			void finalizeAlloc(llvm::ExecutionEngine *eng);
+			void codegenLoad(ValMap outs,
+			                 llvm::BasicBlock *block,
+			                 llvm::Value *ptr,
+			                 llvm::Value *idx) override;
 
-			llvm::Value *codegenLoad(llvm::BasicBlock *block,
-                                     llvm::Value *ptr,
-                                     llvm::Value *idx) override;
-
-			void codegenStore(llvm::BasicBlock *block,
+			void codegenStore(ValMap outs,
+			                  llvm::BasicBlock *block,
 			                  llvm::Value *ptr,
-			                  llvm::Value *idx,
-			                  llvm::Value *val) override;
+			                  llvm::Value *idx) override;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
+			llvm::Type *getLLVMArrayType(llvm::LLVMContext& context) override;
 			seq_int_t size() const override;
+			seq_int_t arraySize() const override;
 			Type *getBaseType() const;
 			ArrayType *of(Type& base) const;
 			static ArrayType *get(Type *base);

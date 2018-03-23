@@ -21,6 +21,7 @@ namespace seq {
 			void *serializeArray = nullptr;
 			void *deserializeArray = nullptr;
 
+			llvm::Function *allocFunc = nullptr;
 			llvm::Function *printFunc = nullptr;
 			llvm::Function *serializeFunc = nullptr;
 			llvm::Function *deserializeFunc = nullptr;
@@ -37,8 +38,6 @@ namespace seq {
 		public:
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
-
-			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context);
 
 			virtual void callPrint(ValMap outs, llvm::BasicBlock *block);
 
@@ -68,19 +67,30 @@ namespace seq {
 
 			virtual void finalizeDeserializeArray(llvm::ExecutionEngine *eng);
 
-			virtual llvm::Value *codegenLoad(llvm::BasicBlock *block,
-			                                 llvm::Value *ptr,
-			                                 llvm::Value *idx);
 
-			virtual void codegenStore(llvm::BasicBlock *block,
+			virtual void callAlloc(ValMap outs,
+			                       seq_int_t count,
+			                       llvm::BasicBlock *block);
+
+			virtual void finalizeAlloc(llvm::ExecutionEngine *eng);
+
+			virtual void codegenLoad(ValMap outs,
+			                         llvm::BasicBlock *block,
+			                         llvm::Value *ptr,
+			                         llvm::Value *idx);
+
+			virtual void codegenStore(ValMap outs,
+			                          llvm::BasicBlock *block,
 			                          llvm::Value *ptr,
-			                          llvm::Value *idx,
-			                          llvm::Value *val);
+			                          llvm::Value *idx);
 
 			virtual bool isChildOf(Type *type);
 			std::string getName() const;
 			SeqData getKey() const;
+			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context);
+			virtual llvm::Type *getLLVMArrayType(llvm::LLVMContext& context);
 			virtual seq_int_t size() const;
+			virtual seq_int_t arraySize() const;
 			Mem& operator[](seq_int_t size);
 		};
 

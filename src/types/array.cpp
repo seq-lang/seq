@@ -7,8 +7,7 @@ using namespace seq;
 using namespace llvm;
 
 types::ArrayType::ArrayType(Type *base) :
-    Type("Array", BaseType::get(), SeqData::ARRAY),
-    base(base), mallocFunc(nullptr)
+    Type("Array", BaseType::get(), SeqData::ARRAY), base(base), arrStruct(nullptr)
 {
 }
 
@@ -36,72 +35,112 @@ void types::ArrayType::finalizeDeserialize(ExecutionEngine *eng)
 	base->finalizeDeserializeArray(eng);
 }
 
-void types::ArrayType::finalizeAlloc(ExecutionEngine *eng)
-{
-	eng->addGlobalMapping(mallocFunc, (void *)std::malloc);
-}
-
 void types::ArrayType::callAlloc(ValMap outs, seq_int_t count, BasicBlock *block)
 {
-	if (base->size() == 0)
-		throw exc::SeqException("cannot create array of type '" + base->getName() + "'");
+	if (size() == 0)
+		throw exc::SeqException("cannot create array of type '" + getName() + "'");
 
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	if (!mallocFunc) {
-		mallocFunc = cast<Function>(
-		               module->getOrInsertFunction(
-		                 "malloc",
-		                 IntegerType::getInt8PtrTy(context),
-		                 IntegerType::getIntNTy(context, sizeof(size_t) * 8)));
+	if (!vtable.allocFunc) {
+		vtable.allocFunc = cast<Function>(
+		                     module->getOrInsertFunction(
+		                       "malloc",
+		                       IntegerType::getInt8PtrTy(context),
+		                       IntegerType::getIntNTy(context, sizeof(size_t) * 8)));
 	}
 
 	IRBuilder<> builder(block);
 
 	GlobalVariable *ptr = new GlobalVariable(*module,
-	                                         IntegerType::getIntNPtrTy(context, (unsigned)base->size()*8),
+	                                         PointerType::get(getLLVMArrayType(context), 0),
 	                                         false,
 	                                         GlobalValue::PrivateLinkage,
 	                                         nullptr,
 	                                         "mem");
 
 	ptr->setInitializer(
-	  ConstantPointerNull::get(IntegerType::getIntNPtrTy(context, (unsigned)base->size())));
+	  ConstantPointerNull::get(PointerType::get(getLLVMArrayType(context), 0)));
 
 	std::vector<Value *> args = {
-	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count * base->size()))};
-	Value *mem = builder.CreateCall(mallocFunc, args);
-	mem = builder.CreatePointerCast(mem, IntegerType::getIntNPtrTy(context, (unsigned)base->size()*8));
+	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count * arraySize()))};
+	Value *mem = builder.CreateCall(vtable.allocFunc, args);
+	mem = builder.CreatePointerCast(mem, PointerType::get(getLLVMArrayType(context), 0));
 	builder.CreateStore(mem, ptr);
 
 	outs->insert({SeqData::ARRAY, ptr});
 	outs->insert({SeqData::LEN, ConstantInt::get(seqIntLLVM(context), (uint64_t)count)});
 }
 
-Value *types::ArrayType::codegenLoad(BasicBlock *block,
-                                     Value *ptr,
-                                     Value *idx)
+void types::ArrayType::codegenLoad(ValMap outs,
+                                   BasicBlock *block,
+                                   Value *ptr,
+                                   Value *idx)
 {
-	return base->codegenLoad(block, ptr, idx);
+	LLVMContext& context = block->getContext();
+	IRBuilder<> builder(block);
+
+	Value *zero = ConstantInt::get(IntegerType::getInt32Ty(context), 0);
+	Value *one  = ConstantInt::get(IntegerType::getInt32Ty(context), 1);
+
+	Value *arrPtr = builder.CreateGEP(ptr, {idx, one});
+	Value *lenPtr = builder.CreateGEP(ptr, {idx, zero});
+
+	outs->insert({SeqData::ARRAY, arrPtr});
+	outs->insert({SeqData::LEN,   builder.CreateLoad(lenPtr)});
 }
 
-void types::ArrayType::codegenStore(BasicBlock *block,
+void types::ArrayType::codegenStore(ValMap outs,
+                                    BasicBlock *block,
                                     Value *ptr,
-                                    Value *idx,
-                                    Value *val)
+                                    Value *idx)
 {
-	base->codegenStore(block, ptr, idx, val);
+	auto arriter = outs->find(SeqData::ARRAY);
+	auto leniter = outs->find(SeqData::LEN);
+
+	if (arriter == outs->end() || leniter == outs->end())
+		throw exc::SeqException("pipeline error");
+
+	LLVMContext& context = block->getContext();
+	Value *arr = arriter->second;
+	Value *len = leniter->second;
+
+	IRBuilder<> builder(block);
+
+	Value *zero = ConstantInt::get(IntegerType::getInt32Ty(context), 0);
+	Value *one  = ConstantInt::get(IntegerType::getInt32Ty(context), 1);
+
+	Value *arrPtr = builder.CreateGEP(ptr, {idx, one});
+	Value *lenPtr = builder.CreateGEP(ptr, {idx, zero});
+
+	builder.CreateStore(builder.CreateLoad(arr), arrPtr);
+	builder.CreateStore(len, lenPtr);
 }
 
 Type *types::ArrayType::getLLVMType(LLVMContext& context)
 {
-	return PointerType::get(base->getLLVMType(context), 0);
+	return PointerType::get(base->getLLVMArrayType(context), 0);
+}
+
+Type *types::ArrayType::getLLVMArrayType(LLVMContext& context)
+{
+	if (!arrStruct) {
+		arrStruct = StructType::create(context, "arr_t");
+		arrStruct->setBody({seqIntLLVM(context), getLLVMType(context)});
+	}
+
+	return arrStruct;
 }
 
 seq_int_t types::ArrayType::size() const
 {
-	return base->size();
+	return sizeof(void *);
+}
+
+seq_int_t types::ArrayType::arraySize() const
+{
+	return sizeof(seq_int_t) + sizeof(void *);
 }
 
 types::Type *types::ArrayType::getBaseType() const

@@ -67,14 +67,18 @@ int main()
 	split(1,1) |
 	print();
 
-	s | split(32,32) | my_hash() | print();
-
-	s | print() | copy() | revcomp() | print();
-
 	/*
 	 * Vars can be used to refer back to
 	 * results of previous pipelines
 	 */
+	Var hashes = s |
+	    	     split(32,32) |
+	             my_hash() |
+	             collect();  // 'collect' collects inputs into an array
+	hashes | foreach() | print();
+
+	s | print() | copy() | revcomp() | print();
+
 	Var a, b, c, d;
 	a = s | print();
 	b = a | substr(1,5);
@@ -113,7 +117,7 @@ int main()
 	 * Lambdas can be declared
 	 */
 	Lambda z;
-	s.last | nums | foreach() | lambda(1 + z*2) | print();  // 'foreach' returns elements in order
+	s.last | nums | foreach() | lambda(1 + z*2) | print();
 
 	s.source("test/data/seqs.fastq");
 	s.execute(true);  // debug=true
