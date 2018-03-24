@@ -5,9 +5,12 @@
 
 namespace seq {
 	class Copy : public Stage {
+	private:
+		llvm::Function *copyFunc;
 	public:
 		Copy();
 		void codegen(llvm::Module *module) override;
+		void finalize(llvm::ExecutionEngine *eng) override;
 		static Copy& make();
 	};
 }

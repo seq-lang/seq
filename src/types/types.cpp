@@ -1,14 +1,10 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
-#include "stage.h"
-#include "mem.h"
-#include "array.h"
-#include "types.h"
+#include "seq.h"
 
 using namespace seq;
 using namespace llvm;
-using seq::SeqData;
 
 types::Type::Type(std::string name, types::Type *parent, SeqData key) :
     name(std::move(name)), parent(parent), key(key)
@@ -20,7 +16,9 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
-void types::Type::callPrint(ValMap outs, BasicBlock *block)
+void types::Type::callPrint(seq::Seq *base,
+                            ValMap outs,
+                            BasicBlock *block)
 {
 	if (!vtable.print || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot print type '" + getName() + "'");
@@ -50,7 +48,8 @@ void types::Type::finalizePrint(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.printFunc, vtable.print);
 }
 
-void types::Type::callSerialize(ValMap outs,
+void types::Type::callSerialize(seq::Seq *base,
+                                ValMap outs,
                                 BasicBlock *block,
                                 std::string file)
 {
@@ -96,7 +95,8 @@ void types::Type::finalizeSerialize(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.serializeFunc, vtable.serialize);
 }
 
-void types::Type::callDeserialize(ValMap outs,
+void types::Type::callDeserialize(seq::Seq *base,
+                                  ValMap outs,
                                   BasicBlock *block,
                                   std::string file)
 {
@@ -136,7 +136,8 @@ void types::Type::finalizeDeserialize(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.deserializeFunc, vtable.deserialize);
 }
 
-void types::Type::callSerializeArray(ValMap outs,
+void types::Type::callSerializeArray(seq::Seq *base,
+                                     ValMap outs,
                                      BasicBlock *block,
                                      std::string file)
 {
@@ -187,7 +188,8 @@ void types::Type::finalizeSerializeArray(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.serializeArrayFunc, vtable.serializeArray);
 }
 
-void types::Type::callDeserializeArray(ValMap outs,
+void types::Type::callDeserializeArray(seq::Seq *base,
+                                       ValMap outs,
                                        BasicBlock *block,
                                        std::string file)
 {
@@ -216,9 +218,10 @@ void types::Type::callDeserializeArray(ValMap outs,
 	                                             "file");
 	fileVar->setAlignment(1);
 
+	IRBuilder<> preamble(base->getPreamble());
 	IRBuilder<> builder(block);
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0));
-	Value *len = builder.CreateAlloca(seqIntLLVM(context), ConstantInt::get(seqIntLLVM(context), 1));
+	Value *len = preamble.CreateAlloca(seqIntLLVM(context), ConstantInt::get(seqIntLLVM(context), 1));
 	std::vector<Value *> args = {filename, len};
 	Value *mem = builder.CreateCall(vtable.deserializeArrayFunc, args, "");
 
@@ -242,7 +245,10 @@ void types::Type::finalizeDeserializeArray(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.deserializeArrayFunc, vtable.deserializeArray);
 }
 
-void types::Type::callAlloc(ValMap outs, seq_int_t count, BasicBlock *block)
+void types::Type::callAlloc(seq::Seq *base,
+                            ValMap outs,
+                            seq_int_t count,
+                            BasicBlock *block)
 {
 	if (size() == 0)
 		throw exc::SeqException("cannot create array of type '" + getName() + "'");
@@ -285,7 +291,8 @@ void types::Type::finalizeAlloc(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.allocFunc, (void *)std::malloc);
 }
 
-void types::Type::codegenLoad(ValMap outs,
+void types::Type::codegenLoad(seq::Seq *base,
+                              ValMap outs,
                               BasicBlock *block,
                               Value *ptr,
                               Value *idx)
@@ -298,7 +305,8 @@ void types::Type::codegenLoad(ValMap outs,
 	outs->insert({getKey(), val});
 }
 
-void types::Type::codegenStore(ValMap outs,
+void types::Type::codegenStore(seq::Seq *base,
+                               ValMap outs,
                                BasicBlock *block,
                                Value *ptr,
                                Value *idx)

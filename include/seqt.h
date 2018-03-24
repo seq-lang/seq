@@ -15,15 +15,18 @@ namespace seq {
 			SeqType(SeqType const&)=delete;
 			void operator=(SeqType const&)=delete;
 
-			void callPrint(ValMap outs,
+			void callPrint(Seq *base,
+			               ValMap outs,
 			               llvm::BasicBlock *block) override;
 
-			void codegenLoad(ValMap outs,
+			void codegenLoad(Seq *base,
+			                 ValMap outs,
 			                 llvm::BasicBlock *block,
 			                 llvm::Value *ptr,
 			                 llvm::Value *idx) override;
 
-			void codegenStore(ValMap outs,
+			void codegenStore(Seq *base,
+			                  ValMap outs,
 			                  llvm::BasicBlock *block,
 			                  llvm::Value *ptr,
 			                  llvm::Value *idx) override;

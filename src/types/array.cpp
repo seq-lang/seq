@@ -1,4 +1,5 @@
 #include <any.h>
+#include "seq.h"
 #include "base.h"
 #include "exc.h"
 #include "array.h"
@@ -6,36 +7,40 @@
 using namespace seq;
 using namespace llvm;
 
-types::ArrayType::ArrayType(Type *base) :
-    Type("Array", BaseType::get(), SeqData::ARRAY), base(base), arrStruct(nullptr)
+types::ArrayType::ArrayType(Type *baseType) :
+    Type("Array", BaseType::get(), SeqData::ARRAY),
+    baseType(baseType), arrStruct(nullptr)
 {
 }
 
-void types::ArrayType::callSerialize(ValMap outs,
+void types::ArrayType::callSerialize(seq::Seq *base,
+                                     ValMap outs,
                                      BasicBlock *block,
                                      std::string file)
 {
-	base->callSerializeArray(outs, block, file);
+	baseType->callSerializeArray(base, outs, block, file);
 }
 
 void types::ArrayType::finalizeSerialize(ExecutionEngine *eng)
 {
-	base->finalizeSerializeArray(eng);
+	baseType->finalizeSerializeArray(eng);
 }
 
-void types::ArrayType::callDeserialize(ValMap outs,
+void types::ArrayType::callDeserialize(seq::Seq *base,
+                                       ValMap outs,
                                        BasicBlock *block,
                                        std::string file)
 {
-	base->callDeserializeArray(outs, block, file);
+	baseType->callDeserializeArray(base, outs, block, file);
 }
 
 void types::ArrayType::finalizeDeserialize(ExecutionEngine *eng)
 {
-	base->finalizeDeserializeArray(eng);
+	baseType->finalizeDeserializeArray(eng);
 }
 
-void types::ArrayType::codegenLoad(ValMap outs,
+void types::ArrayType::codegenLoad(seq::Seq *base,
+                                   ValMap outs,
                                    BasicBlock *block,
                                    Value *ptr,
                                    Value *idx)
@@ -53,7 +58,8 @@ void types::ArrayType::codegenLoad(ValMap outs,
 	outs->insert({SeqData::LEN,   builder.CreateLoad(lenPtr)});
 }
 
-void types::ArrayType::codegenStore(ValMap outs,
+void types::ArrayType::codegenStore(seq::Seq *base,
+                                    ValMap outs,
                                     BasicBlock *block,
                                     Value *ptr,
                                     Value *idx)
@@ -82,7 +88,7 @@ void types::ArrayType::codegenStore(ValMap outs,
 
 Type *types::ArrayType::getLLVMType(LLVMContext& context)
 {
-	return PointerType::get(base->getLLVMArrayType(context), 0);
+	return PointerType::get(baseType->getLLVMArrayType(context), 0);
 }
 
 Type *types::ArrayType::getLLVMArrayType(LLVMContext& context)
@@ -107,17 +113,17 @@ seq_int_t types::ArrayType::arraySize() const
 
 types::Type *types::ArrayType::getBaseType() const
 {
-	return base;
+	return baseType;
 }
 
-types::ArrayType& types::ArrayType::of(Type& base) const
+types::ArrayType& types::ArrayType::of(Type& baseType) const
 {
-	return *ArrayType::get(&base);
+	return *ArrayType::get(&baseType);
 }
 
-types::ArrayType *types::ArrayType::get(Type *base)
+types::ArrayType *types::ArrayType::get(Type *baseType)
 {
-	return new types::ArrayType(base);
+	return new types::ArrayType(baseType);
 }
 
 types::ArrayType *types::ArrayType::get()

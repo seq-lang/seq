@@ -8,31 +8,35 @@ namespace seq {
 
 		class ArrayType : public Type {
 		private:
-			Type *base;
+			Type *baseType;
 			llvm::StructType *arrStruct;
-			explicit ArrayType(Type *base);
+			explicit ArrayType(Type *baseType);
 		public:
 			ArrayType(ArrayType const&)=delete;
 			void operator=(ArrayType const&)=delete;
 
-			void callSerialize(ValMap outs,
+			void callSerialize(Seq *base,
+			                   ValMap outs,
                                llvm::BasicBlock *block,
                                std::string file) override;
 
 			void finalizeSerialize(llvm::ExecutionEngine *eng) override;
 
-			void callDeserialize(ValMap outs,
+			void callDeserialize(Seq *base,
+			                     ValMap outs,
 			                     llvm::BasicBlock *block,
 			                     std::string file) override;
 
 			void finalizeDeserialize(llvm::ExecutionEngine *eng) override;
 
-			void codegenLoad(ValMap outs,
+			void codegenLoad(Seq *base,
+			                 ValMap outs,
 			                 llvm::BasicBlock *block,
 			                 llvm::Value *ptr,
 			                 llvm::Value *idx) override;
 
-			void codegenStore(ValMap outs,
+			void codegenStore(Seq *base,
+			                  ValMap outs,
 			                  llvm::BasicBlock *block,
 			                  llvm::Value *ptr,
 			                  llvm::Value *idx) override;
@@ -42,8 +46,8 @@ namespace seq {
 			seq_int_t size() const override;
 			seq_int_t arraySize() const override;
 			Type *getBaseType() const;
-			ArrayType& of(Type& base) const;
-			static ArrayType *get(Type *base);
+			ArrayType& of(Type& baseType) const;
+			static ArrayType *get(Type *baseType);
 			static ArrayType *get();
 		};
 

@@ -52,8 +52,12 @@ void ForEach::codegen(Module *module)
 	assert(type != nullptr);
 
 	block = loop;
-	IRBuilder<> builder1(block);
-	type->getBaseType()->codegenLoad(outs, block, builder1.CreateLoad(ptr), control);
+	builder.SetInsertPoint(block);
+	type->getBaseType()->codegenLoad(getBase(),
+	                                 outs,
+	                                 block,
+	                                 builder.CreateLoad(ptr),
+	                                 control);
 
 	codegenNext(module);
 

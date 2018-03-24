@@ -10,6 +10,7 @@
 
 namespace seq {
 
+	class Seq;
 	class Mem;
 
 	namespace types {
@@ -39,47 +40,55 @@ namespace seq {
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
 
-			virtual void callPrint(ValMap outs, llvm::BasicBlock *block);
+			virtual void callPrint(Seq *base,
+			                       ValMap outs,
+			                       llvm::BasicBlock *block);
 
 			virtual void finalizePrint(llvm::ExecutionEngine *eng);
 
-			virtual void callSerialize(ValMap outs,
+			virtual void callSerialize(Seq *base,
+			                           ValMap outs,
 			                           llvm::BasicBlock *block,
 			                           std::string file);
 
 			virtual void finalizeSerialize(llvm::ExecutionEngine *eng);
 
-			virtual void callDeserialize(ValMap outs,
+			virtual void callDeserialize(Seq *base,
+			                             ValMap outs,
 			                             llvm::BasicBlock *block,
 			                             std::string file);
 
 			virtual void finalizeDeserialize(llvm::ExecutionEngine *eng);
 
-			virtual void callSerializeArray(ValMap outs,
+			virtual void callSerializeArray(Seq *base,
+			                                ValMap outs,
 			                                llvm::BasicBlock *block,
 			                                std::string file);
 
 			virtual void finalizeSerializeArray(llvm::ExecutionEngine *eng);
 
-			virtual void callDeserializeArray(ValMap outs,
+			virtual void callDeserializeArray(Seq *base,
+			                                  ValMap outs,
 			                                  llvm::BasicBlock *block,
 			                                  std::string file);
 
 			virtual void finalizeDeserializeArray(llvm::ExecutionEngine *eng);
 
-
-			virtual void callAlloc(ValMap outs,
+			virtual void callAlloc(Seq *base,
+			                       ValMap outs,
 			                       seq_int_t count,
 			                       llvm::BasicBlock *block);
 
 			virtual void finalizeAlloc(llvm::ExecutionEngine *eng);
 
-			virtual void codegenLoad(ValMap outs,
+			virtual void codegenLoad(Seq *base,
+			                         ValMap outs,
 			                         llvm::BasicBlock *block,
 			                         llvm::Value *ptr,
 			                         llvm::Value *idx);
 
-			virtual void codegenStore(ValMap outs,
+			virtual void codegenStore(Seq *base,
+			                          ValMap outs,
 			                          llvm::BasicBlock *block,
 			                          llvm::Value *ptr,
 			                          llvm::Value *idx);

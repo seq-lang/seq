@@ -109,7 +109,7 @@ void Stage::setAdded()
 
 void Stage::validate()
 {
-	if (prev && !prev->getOutType()->isChildOf(in))
+	if ((prev && !prev->getOutType()->isChildOf(in)) || !getBase())
 		throw exc::ValidationException(*this);
 }
 

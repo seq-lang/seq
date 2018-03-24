@@ -25,7 +25,7 @@ void Print::codegen(Module *module)
 
 	block = prev->block;
 	outs->insert(prev->outs->begin(), prev->outs->end());
-	prev->getOutType()->callPrint(outs, block);
+	prev->getOutType()->callPrint(getBase(), outs, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }

@@ -23,7 +23,7 @@ void Mem::codegen(llvm::Module *module)
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
 	block = prev->block;
-	type->getBaseType()->callAlloc(outs, count, block);
+	type->getBaseType()->callAlloc(getBase(), outs, count, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }
@@ -105,9 +105,17 @@ void LoadStore::codegen(Module *module)
 	Value *idx = idxiter->second;
 
 	if (isStore) {
-		arrayType->getBaseType()->codegenStore(prev->outs, block, ptr, idx);
+		arrayType->getBaseType()->codegenStore(getBase(),
+		                                       prev->outs,
+		                                       block,
+		                                       ptr,
+		                                       idx);
 	} else {
-		arrayType->getBaseType()->codegenLoad(outs, block, ptr, idx);
+		arrayType->getBaseType()->codegenLoad(getBase(),
+		                                      outs,
+		                                      block,
+		                                      ptr,
+		                                      idx);
 	}
 
 	codegenNext(module);

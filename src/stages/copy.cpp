@@ -5,7 +5,8 @@
 using namespace seq;
 using namespace llvm;
 
-Copy::Copy() : Stage("copy", types::SeqType::get(), types::SeqType::get())
+Copy::Copy() :
+    Stage("copy", types::SeqType::get(), types::SeqType::get()), copyFunc(nullptr)
 {
 }
 
@@ -21,20 +22,34 @@ void Copy::codegen(Module *module)
 	if (seqiter == prev->outs->end() || leniter == prev->outs->end())
 		throw exc::StageException("pipeline error", *this);
 
+	if (!copyFunc) {
+		copyFunc = cast<Function>(
+		             module->getOrInsertFunction(
+		               "copy",
+		               IntegerType::getInt8PtrTy(context),
+		               IntegerType::getInt8PtrTy(context),
+		               seqIntLLVM(context)));
+	}
+
 	Value *seq = seqiter->second;
 	Value *len = leniter->second;
+
 	block = prev->block;
 	IRBuilder<> builder(block);
-	IRBuilder<> preamble(getBase()->getPreamble());
 
-	Value *copy = preamble.CreateAlloca(IntegerType::getInt8Ty(context), len);
-	builder.CreateMemCpy(copy, seq, len, 1);
+	std::vector<Value *> args = {seq, len};
+	Value *copy = builder.CreateCall(copyFunc, args);
 
 	outs->insert({SeqData::SEQ, copy});
 	outs->insert({SeqData::LEN, len});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());
+}
+
+void Copy::finalize(ExecutionEngine *eng)
+{
+	eng->addGlobalMapping(copyFunc, (void *)util::copy);
 }
 
 Copy& Copy::make()

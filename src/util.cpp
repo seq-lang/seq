@@ -19,6 +19,13 @@ SEQ_FUNC void revcomp(char *seq, const seq_int_t len)
 	}
 }
 
+SEQ_FUNC char *copy(char *seq, const seq_int_t len)
+{
+	auto *seq2 = (char *)std::malloc(len);
+	std::memcpy(seq2, seq, len);
+	return seq2;
+}
+
 SEQ_FUNC void append(void **array,
                      void *elem,
                      const seq_int_t elem_size,

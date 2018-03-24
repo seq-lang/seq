@@ -52,6 +52,8 @@ namespace seq {
 
 		SEQ_FUNC void revcomp(char *seq, seq_int_t len);
 
+		SEQ_FUNC char *copy(char *seq, seq_int_t len);
+
 		SEQ_FUNC void append(void **array,
 		                     void *elem,
 		                     seq_int_t elem_size,

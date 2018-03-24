@@ -15,7 +15,7 @@ void Serialize::codegen(Module *module)
 	validate();
 
 	block = prev->block;
-	prev->getOutType()->callSerialize(prev->outs, block, filename);
+	prev->getOutType()->callSerialize(getBase(), prev->outs, block, filename);
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }
@@ -47,7 +47,7 @@ void Deserialize::codegen(Module *module)
 	validate();
 
 	block = prev->block;
-	type->callDeserialize(outs, block, filename);
+	type->callDeserialize(getBase(), outs, block, filename);
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }

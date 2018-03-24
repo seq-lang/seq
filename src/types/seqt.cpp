@@ -22,7 +22,9 @@ types::SeqType::SeqType() : Type("Seq", BaseType::get(), SeqData::SEQ)
 	vtable.print = (void *)printSeq;
 }
 
-void types::SeqType::callPrint(ValMap outs, BasicBlock *block)
+void types::SeqType::callPrint(Seq *base,
+                               ValMap outs,
+                               BasicBlock *block)
 {
 	if (vtable.print == nullptr)
 		throw exc::SeqException("cannot print specified type");
@@ -51,7 +53,8 @@ void types::SeqType::callPrint(ValMap outs, BasicBlock *block)
 	builder.CreateCall(vtable.printFunc, args, "");
 }
 
-void types::SeqType::codegenLoad(ValMap outs,
+void types::SeqType::codegenLoad(Seq *base,
+                                 ValMap outs,
                                  BasicBlock *block,
                                  Value *ptr,
                                  Value *idx)
@@ -69,7 +72,8 @@ void types::SeqType::codegenLoad(ValMap outs,
 	outs->insert({SeqData::LEN, builder.CreateLoad(lenPtr)});
 }
 
-void types::SeqType::codegenStore(ValMap outs,
+void types::SeqType::codegenStore(Seq *base,
+                                  ValMap outs,
                                   BasicBlock *block,
                                   Value *ptr,
                                   Value *idx)
