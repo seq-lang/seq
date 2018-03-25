@@ -62,4 +62,4 @@ CTestTestfile.cmake
 *.gch
 *.dylib
 seqtest
-
+docs/_build

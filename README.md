@@ -3,7 +3,7 @@
 ### Dependencies
 
 - C++11
-- CMake / Make
+- CMake & Make
 - LLVM 5+
 
 ### Build
