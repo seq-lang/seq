@@ -63,3 +63,7 @@ Pipelines consist of several stages chained together. Stages all have an input t
 |                       |                       | type-\ ``T`` object   |
 |                       |                       | from ``file``         |
 +-----------------------+-----------------------+-----------------------+
+
+-----
+
+:doc:`next <variables>`

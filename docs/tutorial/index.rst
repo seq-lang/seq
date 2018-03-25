@@ -3,6 +3,7 @@ Tutorial
 
 .. toctree::
     :maxdepth: 3
+    :name: tutorialtoc
 
     intro
     stages

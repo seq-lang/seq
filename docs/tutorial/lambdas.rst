@@ -21,3 +21,7 @@ This prints all the odd integers between 1 and 20. In general, ``2*x + 1`` can b
 .. code-block:: c++
 
     s.once | m | foreach() | lambda(2*x + 1) | print();
+
+-----
+
+:doc:`next <serialization>`

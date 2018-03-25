@@ -38,6 +38,8 @@ This compiles to the following LLVM IR:
       %3 = icmp ule i32 %next, %2
       br i1 %3, label %loop, label %exit
 
+Several input formats are supported, including TXT, FASTA and FASTQ.
+
 Pipelines can branch arbitrarily. For example, if we instead want to print each original 32-mer in addition to the reverse complements (boilerplate is omitted for brevity from here on out):
 
 .. code-block:: cpp
@@ -70,3 +72,7 @@ Pipelines can also be added to ``s.once`` and ``s.last``, which are executed bef
     s.last | ...  // executed once, at the end
 
 For example, one might use ``s.once`` to declare an array that is updated by each input sequence, then serialize this array in ``s.last`` (these topics are covered later).
+
+-----
+
+:doc:`next <stages>`

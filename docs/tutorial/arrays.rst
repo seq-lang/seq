@@ -103,3 +103,7 @@ Finally, note that ``collect()`` can be used to collect all the outputs of a giv
     s.execute();
 
 Notice also the use of ``foreach()``, which enables iteration over arrays.
+
+-----
+
+:doc:`next <lambdas>`
