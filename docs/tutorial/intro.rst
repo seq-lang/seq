@@ -38,7 +38,14 @@ This compiles to the following LLVM IR:
       %3 = icmp ule i32 %next, %2
       br i1 %3, label %loop, label %exit
 
-Several input formats are supported, including TXT, FASTA and FASTQ.
+Several input formats are supported, including TXT, FASTA and FASTQ. Often, multiple input files are associated with one another and need to be processed simultaneously (e.g. paired-end FASTQs). This is also supported:
+
+.. code-block:: c++
+
+    s[1] | ...  // mate 1
+    s[2] | ...  // mate 2
+    ...
+    s.source("input_1.fastq", "input_2.fastq");
 
 Pipelines can branch arbitrarily. For example, if we instead want to print each original 32-mer in addition to the reverse complements (boilerplate is omitted for brevity from here on out):
 

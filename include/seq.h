@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <initializer_list>
 
 #include "llvm.h"
 #include "pipeline.h"
@@ -24,6 +25,17 @@ namespace seq {
 		std::vector<Pipeline> pipelines;
 		explicit PipelineAggregator(Seq *base);
 		void add(Pipeline pipeline);
+		Pipeline addWithIndex(Pipeline to, seq_int_t idx);
+		Pipeline operator|(Pipeline to);
+		Pipeline operator|(PipelineList to);
+		Pipeline operator|(Var& to);
+	};
+
+	struct PipelineAggregatorProxy {
+		PipelineAggregator& aggr;
+		seq_int_t idx;
+		PipelineAggregatorProxy(PipelineAggregator& aggr, seq_int_t idx);
+		explicit PipelineAggregatorProxy(PipelineAggregator& aggr);
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList to);
 		Pipeline operator|(Var& to);
@@ -32,12 +44,14 @@ namespace seq {
 	class Seq {
 	private:
 		llvm::LLVMContext context;
-		std::string src;
+		std::vector<std::string> sources;
 		std::vector<Pipeline> pipelines;
-		ValMap outs;
+		std::array<ValMap, io::MAX_INPUTS> outs;
 		llvm::Function *func;
 		llvm::BasicBlock *preambleBlock;
+
 		void codegen(llvm::Module *module);
+		bool singleInput() const;
 
 		friend PipelineAggregator;
 	public:
@@ -48,7 +62,15 @@ namespace seq {
 		PipelineAggregator last;
 
 		llvm::LLVMContext& getContext();
-		void source(std::string source);
+		void source(std::string s);
+
+		template<typename ...T>
+		void source(std::string s, T... etc)
+		{
+			source(std::move(s));
+			source(etc...);
+		}
+
 		void execute(bool debug=false);
 		void add(Pipeline pipeline);
 		llvm::BasicBlock *getPreamble() const;
@@ -56,6 +78,8 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList to);
 		Pipeline operator|(Var& to);
+
+		PipelineAggregatorProxy operator[](unsigned idx);
 	};
 
 	namespace types {

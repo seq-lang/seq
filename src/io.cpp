@@ -21,11 +21,12 @@ const map<string, Format> io::EXT_CONV = {{"txt",   Format::TXT},
                                           {"bam",   Format::FASTQ}};
 
 DataCell::DataCell(char *buf, const size_t cap) :
-    buf(buf), cap(cap)
+    buf(buf), used(0), cap(cap)
 {
 }
 
-DataCell::DataCell() : DataCell(nullptr, 0)
+DataCell::DataCell() :
+    DataCell(nullptr, 0)
 {
 }
 
@@ -34,33 +35,48 @@ DataCell::~DataCell()
 	free(buf);
 }
 
-void DataCell::ensureCap(const size_t new_cap)
+char *DataCell::ensureSpace(const size_t idx, const size_t space)
 {
+	const size_t new_cap = used + space;
 	if (new_cap > cap) {
 		buf = (char *)realloc(buf, new_cap);
 		assert(buf);
 		cap = new_cap;
+
+		// possibly new pointer, so re-do these:
+		for (size_t i = 0; i < idx; i++)
+			seqs[i] = {getLen(i, SeqData::SEQ), getData(i, SeqData::SEQ)};
 	}
+	return &buf[used];
 }
 
-bool DataCell::readTXT(std::ifstream& in)
+void DataCell::clear()
+{
+	used = 0;
+}
+
+bool DataCell::readTXT(const size_t idx, ifstream& in)
 {
 	string seq;
 	SAFE(getline(in, seq));
 	const auto line_len = seq.length();
 	const auto new_cap = (line_len + 1);
-	ensureCap(new_cap);
+	char *bufx = ensureSpace(idx, new_cap);
 
-	seq.copy(buf, line_len);
-	buf[line_len] = '\0';
+	seq.copy(bufx, line_len);
+	bufx[line_len] = '\0';
 
-	data[SeqData::SEQ] = &buf[0];
-	lens[SeqData::SEQ] = (seq_int_t)line_len;
+	data[idx][SeqData::SEQ] = &bufx[0] - buf;
+	lens[idx][SeqData::SEQ] = (seq_int_t)line_len;
+
+	seqs[idx] = {getLen(idx, SeqData::SEQ), getData(idx, SeqData::SEQ)};
+
+	used += new_cap;
 
 	return true;
 }
 
-bool DataCell::readFASTQ(std::ifstream& in)
+bool DataCell::readFASTQ(const size_t idx, ifstream& in)
 {
 	string ident, seq, sep, qual;
 	SAFE(getline(in, ident));
@@ -72,28 +88,32 @@ bool DataCell::readFASTQ(std::ifstream& in)
 	const auto qual_len = qual.length();
 	const auto ident_len = ident.length();
 	const auto new_cap = (seq_len + 1) + (qual_len + 1) + (ident_len + 1);
-	ensureCap(new_cap);
+	char *bufx = ensureSpace(idx, new_cap);
 
-	seq.copy(&buf[0], seq_len);
-	qual.copy(&buf[seq_len + 1], qual_len);
-	ident.copy(&buf[seq_len + qual_len + 2], ident_len);
+	seq.copy(&bufx[0], seq_len);
+	qual.copy(&bufx[seq_len + 1], qual_len);
+	ident.copy(&bufx[seq_len + qual_len + 2], ident_len);
 
-	buf[seq_len] =
-	  buf[seq_len + qual_len + 1] =
-	    buf[seq_len + qual_len + ident_len + 2] = '\0';
+	bufx[seq_len] =
+	  bufx[seq_len + qual_len + 1] =
+	    bufx[seq_len + qual_len + ident_len + 2] = '\0';
 
-	data[SeqData::SEQ]   = &buf[0];
-	data[SeqData::QUAL]  = &buf[seq_len + 1];
-	data[SeqData::IDENT] = &buf[seq_len + qual_len + 2];
+	data[idx][SeqData::SEQ]   = &bufx[0] - buf;
+	data[idx][SeqData::QUAL]  = &bufx[seq_len + 1] - buf;
+	data[idx][SeqData::IDENT] = &bufx[seq_len + qual_len + 2] - buf;
 
-	lens[SeqData::SEQ]   = (seq_int_t)seq_len;
-	lens[SeqData::QUAL]  = (seq_int_t)qual_len;
-	lens[SeqData::IDENT] = (seq_int_t)ident_len;
+	lens[idx][SeqData::SEQ]   = (seq_int_t)seq_len;
+	lens[idx][SeqData::QUAL]  = (seq_int_t)qual_len;
+	lens[idx][SeqData::IDENT] = (seq_int_t)ident_len;
+
+	seqs[idx] = {getLen(idx, SeqData::SEQ), getData(idx, SeqData::SEQ)};
+
+	used += new_cap;
 
 	return true;
 }
 
-bool DataCell::readFASTA(std::ifstream& in)
+bool DataCell::readFASTA(const size_t idx, ifstream& in)
 {
 	string ident, line;
 
@@ -116,11 +136,11 @@ bool DataCell::readFASTA(std::ifstream& in)
 
 	const auto ident_len = ident.size();
 	const auto new_cap = ident_len + (seq_len + 1);
-	ensureCap(new_cap);
+	char *bufx = ensureSpace(idx, new_cap);
 
-	ident.copy(&buf[0], ident_len - 1, 1);
-	buf[ident_len] = '\0';
-	char *next = &buf[ident_len + 1];
+	ident.copy(&bufx[0], ident_len - 1, 1);
+	bufx[ident_len] = '\0';
+	char *next = &bufx[ident_len + 1];
 
 	do {
 		const auto here = in.tellg();
@@ -137,24 +157,28 @@ bool DataCell::readFASTA(std::ifstream& in)
 		}
 	} while (true);
 
-	data[SeqData::IDENT] = &buf[0];
-	data[SeqData::SEQ]   = &buf[ident_len + 1];
+	data[idx][SeqData::IDENT] = &bufx[0] - buf;
+	data[idx][SeqData::SEQ]   = &bufx[ident_len + 1] - buf;
 
-	lens[SeqData::IDENT] = (seq_int_t)ident_len;
-	lens[SeqData::SEQ]   = (seq_int_t)seq_len;
+	lens[idx][SeqData::IDENT] = (seq_int_t)ident_len;
+	lens[idx][SeqData::SEQ]   = (seq_int_t)seq_len;
+
+	seqs[idx] = {getLen(idx, SeqData::SEQ), getData(idx, SeqData::SEQ)};
+
+	used += new_cap;
 
 	return true;
 }
 
-bool DataCell::read(std::ifstream& in, Format fmt)
+bool DataCell::read(const size_t idx, ifstream& in, const Format fmt)
 {
 	switch (fmt) {
 		case Format::TXT:
-			return readTXT(in);
+			return readTXT(idx, in);
 		case Format::FASTQ:
-			return readFASTQ(in);
+			return readFASTQ(idx, in);
 		case Format::FASTA:
-			return readFASTA(in);
+			return readFASTA(idx, in);
 		case Format::SAM:
 			// TODO
 		case Format::BAM:
@@ -167,6 +191,19 @@ bool DataCell::read(std::ifstream& in, Format fmt)
 	return false;
 }
 
+bool DataCell::read(vector<ifstream *>& ins, const Format fmt)
+{
+	size_t idx = 0;
+	clear();
+
+	for (auto in : ins) {
+		if (!read(idx++, *in, fmt))
+			return false;
+	}
+
+	return true;
+}
+
 io::DataBlock::DataBlock(const size_t cap) : len(0), cap(cap), last(false)
 {
 }
@@ -175,12 +212,18 @@ io::DataBlock::DataBlock() : DataBlock(io::DEFAULT_BLOCK_SIZE)
 {
 }
 
-void io::DataBlock::read(std::ifstream& in, Format fmt)
+void io::DataBlock::read(vector<ifstream *>& ins, Format fmt)
 {
 	for (len = 0; len < cap; len++) {
-		if (!block[len].read(in, fmt))
+		if (!block[len].read(ins, fmt))
 			break;
 	}
 
-	last = in.eof();
+	last = false;
+	for (auto *in : ins) {
+		if (in->eof()) {
+			last = true;
+			break;
+		}
+	}
 }

@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <common.h>
 #include "basestage.h"
 #include "util.h"
 #include "exc.h"
@@ -23,16 +24,25 @@ void PipelineAggregator::add(Pipeline pipeline)
 	pipeline.setAdded();
 }
 
-Pipeline PipelineAggregator::operator|(Pipeline to)
+Pipeline PipelineAggregator::addWithIndex(Pipeline to, seq_int_t idx)
 {
+	idx -= 1;  // 1-based to 0-based
+	if (idx < 0 || idx >= io::MAX_INPUTS)
+		throw exc::SeqException("invalid sequence index specified");
+
 	to.getHead()->setBase(base);
 	BaseStage& begin = BaseStage::make(types::VoidType::get(), types::SeqType::get());
 	begin.setBase(base);
-	begin.outs = base->outs;
+	begin.outs = base->outs[idx];
 	Pipeline full = begin | to;
 	add(full);
 
 	return full;
+}
+
+Pipeline PipelineAggregator::operator|(Pipeline to)
+{
+	return addWithIndex(to, 1);
 }
 
 Pipeline PipelineAggregator::operator|(PipelineList to)
@@ -58,12 +68,45 @@ Pipeline PipelineAggregator::operator|(Var& to)
 	return begin;
 }
 
+Pipeline PipelineAggregatorProxy::operator|(Pipeline to)
+{
+	return aggr.addWithIndex(to, idx);
+}
+
+Pipeline PipelineAggregatorProxy::operator|(PipelineList to)
+{
+	for (auto *node = to.head; node; node = node->next) {
+		*this | node->p;
+	}
+
+	return {to.head->p.getHead(), to.tail->p.getTail()};
+}
+
+Pipeline PipelineAggregatorProxy::operator|(Var& to)
+{
+	return aggr | to;
+}
+
+PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr, seq_int_t idx) :
+    aggr(aggr), idx(idx)
+{
+
+}
+
+PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr) :
+    PipelineAggregatorProxy(aggr, 1)
+{
+
+}
+
+
 Seq::Seq() :
-    context(), src(""), pipelines(),
-    outs(new std::map<SeqData, Value *>()),
+    context(), sources(), pipelines(),
     func(nullptr), preambleBlock(nullptr),
     main(this), once(this), last(this)
 {
+	for (auto& out : outs)
+		out = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
 }
 
 LLVMContext& Seq::getContext()
@@ -73,7 +116,7 @@ LLVMContext& Seq::getContext()
 
 void Seq::source(std::string source)
 {
-	src = std::move(source);
+	sources.push_back(source);
 }
 
 void Seq::codegen(Module *module)
@@ -84,24 +127,24 @@ void Seq::codegen(Module *module)
 	         module->getOrInsertFunction(
 	           "main",
 	           Type::getVoidTy(context),
-	           IntegerType::getInt8PtrTy(context),
-	           seqIntLLVM(context),
+	           PointerType::get(types::Seq.getLLVMArrayType(context), 0),
 	           IntegerType::getInt8Ty(context)));
 
 	auto args = func->arg_begin();
-	Value *seq = args++;
-	Value *len = args++;
+	Value *seqs = args++;
 	Value *isLast = args;
-
-	seq->setName("seq");
-	len->setName("len");
 	isLast->setName("last");
-
-	outs->insert({SeqData::SEQ, seq});
-	outs->insert({SeqData::LEN, len});
 
 	/* preamble */
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
+
+	for (size_t i = 0; i < sources.size(); i++) {
+		types::Seq.codegenLoad(this,
+		                       outs[i],
+		                       preambleBlock,
+		                       seqs,
+		                       ConstantInt::get(seqIntLLVM(context), i));
+	}
 
 	/* one-time execution */
 	BasicBlock *onceBr = BasicBlock::Create(context, "oncebr", func);
@@ -197,18 +240,31 @@ void Seq::codegen(Module *module)
 	builder.CreateRetVoid();
 }
 
+static io::Format extractExt(const std::string& source)
+{
+	auto fmtIter = io::EXT_CONV.find(source.substr(source.find_last_of('.') + 1));
+
+	if (fmtIter == io::EXT_CONV.end())
+		throw exc::IOException("unknown file extension in '" + source + "'");
+
+	return fmtIter->second;
+}
+
 void Seq::execute(bool debug)
 {
 	try {
-		if (src.empty())
+		if (sources.empty())
 			throw exc::SeqException("sequence source not specified");
 
-		auto fmtIter = io::EXT_CONV.find(src.substr(src.find_last_of('.') + 1));
+		if (sources.size() > io::MAX_INPUTS)
+			throw exc::SeqException("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
 
-		if (fmtIter == io::EXT_CONV.end())
-			throw exc::IOException("unknown file extension in '" + src + "'");
+		io::Format fmt = extractExt(sources[0]);
 
-		io::Format fmt = fmtIter->second;
+		for (const auto& src : sources) {
+			if (extractExt(src) != fmt)
+				throw exc::SeqException("inconsistent input formats");
+		}
 
 		InitializeNativeTarget();
 		InitializeNativeTargetAsmPrinter();
@@ -231,28 +287,41 @@ void Seq::execute(bool debug)
 		}
 
 		auto op = (SeqMain)eng->getPointerToFunction(func);
-
 		auto *data = new io::DataBlock();
-		std::ifstream input(src);
+		std::vector<std::ifstream *> ins;
 
-		if (!input.good())
-			throw exc::IOException("could not open '" + src + "' for reading");
+		for (auto& source : sources) {
+			ins.push_back(new std::ifstream(source));
+
+			if (!ins.back()->good())
+				throw exc::IOException("could not open '" + source + "' for reading");
+		}
 
 		do {
-			data->read(input, fmt);
+			data->read(ins, fmt);
 			const size_t len = data->len;
+
 			for (size_t i = 0; i < len; i++) {
-				op(data->block[i].data[SeqData::SEQ],
-				   data->block[i].lens[SeqData::SEQ],
-				   data->last && i == len - 1);
+				const bool isLast = data->last && i == len - 1;
+				op(data->block[i].seqs.data(), isLast);
 			}
 		} while (data->len > 0);
+
+		for (auto *in : ins) {
+			in->close();
+			delete in;
+		}
 
 		delete data;
 	} catch (std::exception& e) {
 		errs() << e.what() << '\n';
 		throw;
 	}
+}
+
+bool Seq::singleInput() const
+{
+	return sources.size() == 1;
 }
 
 void Seq::add(Pipeline pipeline)
@@ -281,4 +350,9 @@ Pipeline Seq::operator|(PipelineList to)
 Pipeline Seq::operator|(Var& to)
 {
 	return main | to;
+}
+
+PipelineAggregatorProxy Seq::operator[](unsigned idx)
+{
+	return {main, idx};
 }

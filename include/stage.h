@@ -24,7 +24,7 @@ namespace seq {
 	class Seq;
 	class Pipeline;
 
-	typedef void (*SeqMain)(char *, seq_int_t, bool isLast);
+	typedef void (*SeqMain)(seq_t *, bool isLast);
 	typedef void (*SeqOp)(char *, seq_int_t);
 	typedef bool (*SeqPred)(char *, seq_int_t);
 	typedef seq_int_t (*SeqHash)(char *, seq_int_t);
