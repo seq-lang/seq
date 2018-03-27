@@ -27,15 +27,8 @@ void Hash::codegen(Module *module)
 	func->setCallingConv(CallingConv::C);
 
 	block = prev->block;
-
-	auto seqiter = prev->outs->find(SeqData::SEQ);
-	auto leniter = prev->outs->find(SeqData::LEN);
-
-	if (seqiter == prev->outs->end() || leniter == prev->outs->end())
-		throw exc::StageException("pipeline error", *this);
-
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {seqiter->second, leniter->second};
+	std::vector<Value *> args = {getSafe(prev->outs, SeqData::SEQ), getSafe(prev->outs, SeqData::LEN)};
 	Value *hashVal = builder.CreateCall(func, args, "");
 
 	outs->insert({SeqData::INT, hashVal});

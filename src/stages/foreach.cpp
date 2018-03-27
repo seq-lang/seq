@@ -29,14 +29,8 @@ void ForEach::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	auto ptriter = prev->outs->find(SeqData::ARRAY);
-	auto leniter = prev->outs->find(SeqData::LEN);
-
-	if (ptriter == prev->outs->end() || leniter == prev->outs->end())
-		throw exc::StageException("pipeline error", *this);
-
-	Value *ptr = ptriter->second;
-	Value *len = leniter->second;
+	Value *ptr = getSafe(prev->outs, SeqData::ARRAY);
+	Value *len = getSafe(prev->outs, SeqData::LEN);
 
 	BasicBlock *entry = prev->block;
 	Function *func = entry->getParent();

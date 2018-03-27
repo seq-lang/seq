@@ -40,6 +40,12 @@ namespace seq {
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
 
+			virtual void checkEq(Seq *base,
+			                     ValMap ins1,
+			                     ValMap ins2,
+			                     ValMap outs,
+			                     llvm::BasicBlock *block);
+
 			virtual void callPrint(Seq *base,
 			                       ValMap outs,
 			                       llvm::BasicBlock *block);

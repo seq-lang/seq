@@ -16,6 +16,15 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
+void types::Type::checkEq(seq::Seq *base,
+                          ValMap ins1,
+                          ValMap ins2,
+                          ValMap outs,
+                          llvm::BasicBlock *block)
+{
+	throw exc::SeqException("type '" + getName() + "' does not support equality checks");
+}
+
 void types::Type::callPrint(seq::Seq *base,
                             ValMap outs,
                             BasicBlock *block)
@@ -33,13 +42,8 @@ void types::Type::callPrint(seq::Seq *base,
 		vtable.printFunc->setCallingConv(CallingConv::C);
 	}
 
-	auto iter = outs->find(getKey());
-
-	if (iter == outs->end())
-		throw exc::SeqException("pipeline error");
-
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {iter->second};
+	std::vector<Value *> args = {getSafe(outs, getKey())};
 	builder.CreateCall(vtable.printFunc, args, "");
 }
 
@@ -79,14 +83,9 @@ void types::Type::callSerialize(seq::Seq *base,
 	                                             "file");
 	fileVar->setAlignment(1);
 
-	auto iter = outs->find(getKey());
-
-	if (iter == outs->end())
-		throw exc::SeqException("pipeline error");
-
 	IRBuilder<> builder(block);
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0, false));
-	std::vector<Value *> args = {iter->second, filename};
+	std::vector<Value *> args = {getSafe(outs, getKey()), filename};
 	builder.CreateCall(vtable.serializeFunc, args, "");
 }
 
@@ -167,14 +166,8 @@ void types::Type::callSerializeArray(seq::Seq *base,
 	                                             "file");
 	fileVar->setAlignment(1);
 
-	auto ptriter = outs->find(SeqData::ARRAY);
-	auto leniter = outs->find(SeqData::LEN);
-
-	if (ptriter == outs->end() || leniter == outs->end())
-		throw exc::SeqException("pipeline error");
-
-	Value *ptr = ptriter->second;
-	Value *len = leniter->second;
+	Value *ptr = getSafe(outs, SeqData::ARRAY);
+	Value *len = getSafe(outs, SeqData::LEN);
 
 	IRBuilder<> builder(block);
 	ptr = builder.CreateLoad(ptr);
@@ -314,13 +307,7 @@ void types::Type::codegenStore(seq::Seq *base,
 	if (size() == 0|| getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot store type '" + getName() + "'");
 
-	auto valiter = outs->find(getKey());
-
-	if (valiter == outs->end())
-		throw exc::SeqException("pipeline error");
-
-	Value *val = valiter->second;
-
+	Value *val = getSafe(outs, getKey());
 	IRBuilder<> builder(block);
 	builder.CreateStore(val, builder.CreateGEP(ptr, idx));
 }

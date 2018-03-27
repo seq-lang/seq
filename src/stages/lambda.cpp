@@ -322,15 +322,10 @@ void LambdaStage::codegen(Module *module)
 	validate();
 
 	const auto key = isFloat ? SeqData::FLOAT : SeqData::INT;
-	auto iter = prev->outs->find(key);
-
-	if (iter == prev->outs->end())
-		throw exc::StageException("pipeline error", *this);
-
 	Function *func = lambda.codegen(module, isFloat);
 	block = prev->block;
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {iter->second};
+	std::vector<Value *> args = {getSafe(prev->outs, key)};
 	Value *result = builder.CreateCall(func, args);
 
 	outs->insert({key, result});

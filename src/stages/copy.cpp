@@ -16,11 +16,8 @@ void Copy::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	auto seqiter = prev->outs->find(SeqData::SEQ);
-	auto leniter = prev->outs->find(SeqData::LEN);
-
-	if (seqiter == prev->outs->end() || leniter == prev->outs->end())
-		throw exc::StageException("pipeline error", *this);
+	Value *seq = getSafe(prev->outs, SeqData::SEQ);
+	Value *len = getSafe(prev->outs, SeqData::LEN);
 
 	if (!copyFunc) {
 		copyFunc = cast<Function>(
@@ -30,9 +27,6 @@ void Copy::codegen(Module *module)
 		               IntegerType::getInt8PtrTy(context),
 		               seqIntLLVM(context)));
 	}
-
-	Value *seq = seqiter->second;
-	Value *len = leniter->second;
 
 	block = prev->block;
 	IRBuilder<> builder(block);

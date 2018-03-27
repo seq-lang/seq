@@ -12,6 +12,7 @@ namespace seq {
 
 		INT,
 		FLOAT,
+		BOOL,
 		ARRAY,
 
 		SEQ_DATA_COUNT

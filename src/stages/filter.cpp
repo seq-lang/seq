@@ -28,14 +28,7 @@ void Filter::codegen(Module *module)
 
 	block = prev->block;
 	outs->insert(prev->outs->begin(), prev->outs->end());
-
-	auto seqiter = outs->find(SeqData::SEQ);
-	auto leniter = outs->find(SeqData::LEN);
-
-	if (seqiter == outs->end() || leniter == outs->end())
-		throw exc::StageException("pipeline error", *this);
-
-	std::vector<Value *> args = {seqiter->second, leniter->second};
+	std::vector<Value *> args = {getSafe(outs, SeqData::SEQ), getSafe(outs, SeqData::LEN)};
 	IRBuilder<> builder(block);
 	Value *pred = builder.CreateCall(func, args, "");
 

@@ -64,15 +64,9 @@ void types::ArrayType::codegenStore(seq::Seq *base,
                                     Value *ptr,
                                     Value *idx)
 {
-	auto arriter = outs->find(SeqData::ARRAY);
-	auto leniter = outs->find(SeqData::LEN);
-
-	if (arriter == outs->end() || leniter == outs->end())
-		throw exc::SeqException("pipeline error");
-
 	LLVMContext& context = block->getContext();
-	Value *arr = arriter->second;
-	Value *len = leniter->second;
+	Value *arr = getSafe(outs, SeqData::ARRAY);
+	Value *len = getSafe(outs, SeqData::LEN);
 
 	IRBuilder<> builder(block);
 

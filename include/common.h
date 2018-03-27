@@ -5,6 +5,7 @@
 #include <memory>
 #include "llvm.h"
 #include "seqdata.h"
+#include "exc.h"
 
 namespace seq {
 
@@ -26,6 +27,16 @@ namespace seq {
 	}
 
 	typedef std::shared_ptr<std::map<SeqData, llvm::Value *>> ValMap;
+
+	inline llvm::Value *getSafe(ValMap outs, SeqData key)
+	{
+		auto iter = outs->find(key);
+
+		if (iter == outs->end())
+			throw exc::SeqException("pipeline error: could not find required value in outputs");
+
+		return iter->second;
+	}
 
 }
 

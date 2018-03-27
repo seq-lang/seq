@@ -17,12 +17,7 @@ void Substr::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	auto seqiter = prev->outs->find(SeqData::SEQ);
-
-	if (seqiter == prev->outs->end())
-		throw exc::StageException("pipeline error", *this);
-
-	Value *seq = seqiter->second;
+	Value *seq = getSafe(prev->outs, SeqData::SEQ);
 	block = prev->block;
 	IRBuilder<> builder(block);
 

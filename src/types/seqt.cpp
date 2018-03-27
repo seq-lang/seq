@@ -42,14 +42,8 @@ void types::SeqType::callPrint(Seq *base,
 		vtable.printFunc->setCallingConv(CallingConv::C);
 	}
 
-	auto seqiter = outs->find(SeqData::SEQ);
-	auto leniter = outs->find(SeqData::LEN);
-
-	if (seqiter == outs->end() || leniter == outs->end())
-		throw exc::SeqException("pipeline error");
-
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {seqiter->second, leniter->second};
+	std::vector<Value *> args = {getSafe(outs, SeqData::SEQ), getSafe(outs, SeqData::LEN)};
 	builder.CreateCall(vtable.printFunc, args, "");
 }
 
@@ -78,15 +72,9 @@ void types::SeqType::codegenStore(Seq *base,
                                   Value *ptr,
                                   Value *idx)
 {
-	auto seqiter = outs->find(SeqData::SEQ);
-	auto leniter = outs->find(SeqData::LEN);
-
-	if (seqiter == outs->end() || leniter == outs->end())
-		throw exc::SeqException("pipeline error");
-
 	LLVMContext& context = block->getContext();
-	Value *seq = seqiter->second;
-	Value *len = leniter->second;
+	Value *seq = getSafe(outs, SeqData::SEQ);
+	Value *len = getSafe(outs, SeqData::LEN);
 
 	IRBuilder<> builder(block);
 

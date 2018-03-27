@@ -12,14 +12,8 @@ void Len::codegen(llvm::Module *module)
 	ensurePrev();
 	validate();
 
-	auto leniter = prev->outs->find(SeqData::LEN);
-
-	if (leniter == prev->outs->end())
-		throw exc::StageException("previous stage '" + prev->getName() + "' does not output a length", *this);
-
 	block = prev->block;
-	Value *len = leniter->second;
-	outs->insert({SeqData::INT, len});
+	outs->insert({SeqData::INT, getSafe(prev->outs, SeqData::LEN)});
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }

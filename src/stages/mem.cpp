@@ -88,34 +88,23 @@ void LoadStore::codegen(Module *module)
 	auto *arrayType = dynamic_cast<types::ArrayType *>(ptr->getType(this));
 	assert(arrayType != nullptr);
 
-	auto ptriter = ptr->outs(this)->find(SeqData::ARRAY);
-
-	if (ptriter == ptr->outs(this)->end())
-		throw exc::StageException("pipeline error", *this);
-
 	block = prev->block;
 	IRBuilder<> builder(block);
-
-	auto idxiter = idx->outs(this)->find(SeqData::INT);
-
-	if (idxiter == idx->outs(this)->end())
-		throw exc::StageException("pipeline error", *this);
-
-	Value *ptr = builder.CreateLoad(ptriter->second);
-	Value *idx = idxiter->second;
+	Value *ptrVal = builder.CreateLoad(getSafe(ptr->outs(this), SeqData::ARRAY));
+	Value *idxVal = getSafe(idx->outs(this), SeqData::INT);
 
 	if (isStore) {
 		arrayType->getBaseType()->codegenStore(getBase(),
 		                                       prev->outs,
 		                                       block,
-		                                       ptr,
-		                                       idx);
+		                                       ptrVal,
+		                                       idxVal);
 	} else {
 		arrayType->getBaseType()->codegenLoad(getBase(),
 		                                      outs,
 		                                      block,
-		                                      ptr,
-		                                      idx);
+		                                      ptrVal,
+		                                      idxVal);
 	}
 
 	codegenNext(module);
