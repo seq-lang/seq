@@ -29,7 +29,9 @@ void Op::codegen(Module *module)
 	block = prev->block;
 	outs->insert(prev->outs->begin(), prev->outs->end());
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {getSafe(outs, SeqData::SEQ), getSafe(outs, SeqData::LEN)};
+	Value *seq = builder.CreateLoad(getSafe(outs, SeqData::SEQ));
+	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+	std::vector<Value *> args = {seq, len};
 	builder.CreateCall(func, args, "");
 
 	codegenNext(module);

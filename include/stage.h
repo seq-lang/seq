@@ -21,7 +21,7 @@
 #include "common.h"
 
 namespace seq {
-	class Seq;
+	class BaseFunc;
 	class Pipeline;
 
 	typedef void (*SeqMain)(seq_t *, bool isLast);
@@ -31,7 +31,7 @@ namespace seq {
 
 	class Stage {
 	private:
-		Seq *base;
+		BaseFunc *base;
 		bool added;
 	protected:
 		types::Type *in;
@@ -53,8 +53,8 @@ namespace seq {
 		virtual void setPrev(Stage *prev);
 		std::vector<Stage *>& getNext();
 		std::vector<Stage *>& getWeakNext();
-		Seq *getBase() const;
-		void setBase(Seq *base);
+		BaseFunc *getBase() const;
+		void setBase(BaseFunc *base);
 		virtual types::Type *getInType() const;
 		virtual types::Type *getOutType() const;
 		virtual void addNext(Stage *next);

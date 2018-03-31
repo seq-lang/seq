@@ -16,8 +16,13 @@ void Copy::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	Value *seq = getSafe(prev->outs, SeqData::SEQ);
-	Value *len = getSafe(prev->outs, SeqData::LEN);
+	block = prev->block;
+
+	IRBuilder<> builder(block);
+	BasicBlock *preambleBlock = getBase()->getPreamble();
+
+	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
+	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
 
 	if (!copyFunc) {
 		copyFunc = cast<Function>(
@@ -28,14 +33,16 @@ void Copy::codegen(Module *module)
 		               seqIntLLVM(context)));
 	}
 
-	block = prev->block;
-	IRBuilder<> builder(block);
-
 	std::vector<Value *> args = {seq, len};
 	Value *copy = builder.CreateCall(copyFunc, args);
 
-	outs->insert({SeqData::SEQ, copy});
-	outs->insert({SeqData::LEN, len});
+	Value *copyVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
+	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
+	builder.CreateStore(copy, copyVar);
+	builder.CreateStore(len, lenVar);
+
+	outs->insert({SeqData::SEQ, copyVar});
+	outs->insert({SeqData::LEN, lenVar});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

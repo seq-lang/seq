@@ -9,6 +9,7 @@
 #include <initializer_list>
 
 #include "llvm.h"
+#include "func.h"
 #include "pipeline.h"
 #include "stageutil.h"
 #include "var.h"
@@ -19,6 +20,16 @@
 #include "common.h"
 
 namespace seq {
+
+	namespace types {
+		static AnyType&   Any   = *AnyType::get();
+		static BaseType&  Base  = *BaseType::get();
+		static VoidType&  Void  = *VoidType::get();
+		static SeqType&   Seq   = *SeqType::get();
+		static IntType&   Int   = *IntType::get();
+		static FloatType& Float = *FloatType::get();
+		static ArrayType& Array = *ArrayType::get();
+	}
 
 	struct PipelineAggregator {
 		Seq *base;
@@ -41,17 +52,10 @@ namespace seq {
 		Pipeline operator|(Var& to);
 	};
 
-	class Seq {
+	class Seq : public BaseFunc {
 	private:
-		llvm::LLVMContext context;
 		std::vector<std::string> sources;
-		std::vector<Pipeline> pipelines;
 		std::array<ValMap, io::MAX_INPUTS> outs;
-		llvm::Function *func;
-		llvm::BasicBlock *preambleBlock;
-
-		void codegen(llvm::Module *module);
-		bool singleInput() const;
 
 		friend PipelineAggregator;
 	public:
@@ -61,7 +65,6 @@ namespace seq {
 		PipelineAggregator once;
 		PipelineAggregator last;
 
-		llvm::LLVMContext& getContext();
 		void source(std::string s);
 
 		template<typename ...T>
@@ -71,9 +74,13 @@ namespace seq {
 			source(etc...);
 		}
 
+		void codegen(llvm::Module *module) override;
+		void codegenCall(BaseFunc *base,
+		                 ValMap ins,
+		                 ValMap outs,
+		                 llvm::BasicBlock *block) override;
+		void add(Pipeline pipeline) override;
 		void execute(bool debug=false);
-		void add(Pipeline pipeline);
-		llvm::BasicBlock *getPreamble() const;
 
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList to);
@@ -81,16 +88,6 @@ namespace seq {
 
 		PipelineAggregatorProxy operator[](unsigned idx);
 	};
-
-	namespace types {
-		static AnyType&   Any   = *AnyType::get();
-		static BaseType&  Base  = *BaseType::get();
-		static VoidType&  Void  = *VoidType::get();
-		static SeqType&   Seq   = *SeqType::get();
-		static IntType&   Int   = *IntType::get();
-		static FloatType& Float = *FloatType::get();
-		static ArrayType& Array = *ArrayType::get();
-	}
 
 }
 

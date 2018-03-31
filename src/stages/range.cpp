@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <string>
+#include "seq.h"
 #include "exc.h"
 #include "range.h"
 
@@ -32,6 +33,8 @@ void Range::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
+	BasicBlock *preambleBlock = getBase()->getPreamble();
+
 	Value *from = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->from);
 	Value *to   = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->to);
 	Value *step = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->step);
@@ -46,7 +49,9 @@ void Range::codegen(Module *module)
 
 	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
 
-	outs->insert({SeqData::INT, control});
+	Value *intVar = makeAlloca(zeroLLVM(context), preambleBlock);
+	builder.CreateStore(control, intVar);
+	outs->insert({SeqData::INT, intVar});
 	block = loop;
 
 	codegenNext(module);
@@ -58,7 +63,7 @@ void Range::codegen(Module *module)
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
-	Value *cond = builder.CreateICmpULT(next, to);
+	Value *cond = builder.CreateICmpSLT(next, to);
 	builder.CreateCondBr(cond, loop, exit);
 
 	prev->setAfter(exit);

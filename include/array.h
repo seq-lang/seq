@@ -15,36 +15,51 @@ namespace seq {
 			ArrayType(ArrayType const&)=delete;
 			void operator=(ArrayType const&)=delete;
 
-			void callSerialize(Seq *base,
+			llvm::Function *makeFuncOf(llvm::Module *module,
+			                           ValMap outs,
+			                           Type *outType) override;
+
+			llvm::Value *callFuncOf(llvm::Function *func,
+			                        ValMap outs,
+			                        llvm::BasicBlock *block) override;
+
+			llvm::Value *pack(BaseFunc *base,
+			                  ValMap outs,
+			                  llvm::BasicBlock *block) override;
+
+			void unpack(BaseFunc *base,
+			            llvm::Value *value,
+			            ValMap outs,
+			            llvm::BasicBlock *block) override;
+
+			void callSerialize(BaseFunc *base,
 			                   ValMap outs,
                                llvm::BasicBlock *block,
                                std::string file) override;
 
 			void finalizeSerialize(llvm::ExecutionEngine *eng) override;
 
-			void callDeserialize(Seq *base,
+			void callDeserialize(BaseFunc *base,
 			                     ValMap outs,
 			                     llvm::BasicBlock *block,
 			                     std::string file) override;
 
 			void finalizeDeserialize(llvm::ExecutionEngine *eng) override;
 
-			void codegenLoad(Seq *base,
+			void codegenLoad(BaseFunc *base,
 			                 ValMap outs,
 			                 llvm::BasicBlock *block,
 			                 llvm::Value *ptr,
 			                 llvm::Value *idx) override;
 
-			void codegenStore(Seq *base,
+			void codegenStore(BaseFunc *base,
 			                  ValMap outs,
 			                  llvm::BasicBlock *block,
 			                  llvm::Value *ptr,
 			                  llvm::Value *idx) override;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
-			llvm::Type *getLLVMArrayType(llvm::LLVMContext& context) override;
 			seq_int_t size() const override;
-			seq_int_t arraySize() const override;
 			Type *getBaseType() const;
 			ArrayType& of(Type& baseType) const;
 			static ArrayType *get(Type *baseType);

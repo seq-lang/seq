@@ -46,7 +46,7 @@ bool Var::isAssigned() const
 	return stage != nullptr;
 }
 
-Seq *Var::getBase() const
+BaseFunc *Var::getBase() const
 {
 	if (!isAssigned())
 		throw exc::SeqException("variable used before assigned");
@@ -62,7 +62,8 @@ Pipeline Var::operator|(Pipeline to)
 	if (to.isAdded())
 		throw exc::SeqException("cannot use same pipeline twice");
 
-	Seq *base = getBase();
+	ensureConsistentBase(to.getHead()->getBase());
+	BaseFunc *base = getBase();
 	to.getHead()->setBase(base);
 	BaseStage& begin = BaseStage::make(types::VoidType::get(), getType(stage), stage);
 	begin.setBase(base);
@@ -73,7 +74,6 @@ Pipeline Var::operator|(Pipeline to)
 
 	Pipeline full = begin | to;
 	base->add(full);
-
 	return full;
 }
 
@@ -83,7 +83,7 @@ Var& Var::operator=(Pipeline to)
 		throw exc::SeqException("variable cannot be assigned twice");
 
 	stage = to.getTail();
-	Seq *base = getBase();
+	BaseFunc *base = getBase();
 
 	if (!to.isAdded()) {
 		BaseStage& begin = BaseStage::make(types::VoidType::get(), types::VoidType::get());
@@ -97,7 +97,14 @@ Var& Var::operator=(Pipeline to)
 
 LoadStore& Var::operator[](Var& idx)
 {
+	ensureConsistentBase(idx.getBase());
 	return LoadStore::make(this, &idx);
+}
+
+void Var::ensureConsistentBase(BaseFunc *base)
+{
+	if (stage && stage->getBase() && base && stage->getBase() != base)
+		throw exc::SeqException("cannot use variable in different context than where it was assigned");
 }
 
 Const::Const(types::Type *type) :
@@ -126,9 +133,9 @@ bool Const::isAssigned() const
 	return true;
 }
 
-Seq *Const::getBase() const
+BaseFunc *Const::getBase() const
 {
-	throw exc::SeqException("cannot get base of const variable");
+	return nullptr;
 }
 
 ConstInt::ConstInt(seq_int_t n) : Const(types::IntType::get()), n(n)
@@ -139,8 +146,9 @@ ValMap ConstInt::outs(Stage *caller) const
 {
 	if (caller && outsMap->empty()) {
 		LLVMContext& context = caller->getBase()->getContext();
-		outsMap->insert({SeqData::INT,
-		                 ConstantInt::get(seqIntLLVM(context), (uint64_t)n, true)});
+		BasicBlock *preambleBlock = caller->getBase()->getPreamble();
+		Value *var = makeAlloca(ConstantInt::get(seqIntLLVM(context), (uint64_t)n, true), preambleBlock);
+		outsMap->insert({SeqData::INT, var});
 	}
 
 	return Const::outs(caller);
@@ -159,8 +167,9 @@ ValMap ConstFloat::outs(Stage *caller) const
 {
 	if (caller && outsMap->empty()) {
 		LLVMContext& context = caller->getBase()->getContext();
-		outsMap->insert({SeqData::FLOAT,
-		                 ConstantFP::get(Type::getDoubleTy(context), f)});
+		BasicBlock *preambleBlock = caller->getBase()->getPreamble();
+		Value *var = makeAlloca(ConstantFP::get(Type::getDoubleTy(context), f), preambleBlock);
+		outsMap->insert({SeqData::FLOAT, var});
 	}
 
 	return Const::outs(caller);
@@ -198,7 +207,7 @@ ValMap Latest::outs(Stage *caller) const
 
 Stage *Latest::getStage() const
 {
-	throw exc::SeqException("cannot get stage of _ variable");
+	return nullptr;
 }
 
 bool Latest::isAssigned() const
@@ -206,9 +215,9 @@ bool Latest::isAssigned() const
 	return true;
 }
 
-Seq *Latest::getBase() const
+BaseFunc *Latest::getBase() const
 {
-	throw exc::SeqException("cannot get base of _ variable");
+	return nullptr;
 }
 
 Latest& Latest::get()

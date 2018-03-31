@@ -16,6 +16,7 @@
 #include "lambda.h"
 #include "foreach.h"
 #include "collect.h"
+#include "call.h"
 #include "serialize.h"
 
 namespace seq {
@@ -36,6 +37,7 @@ namespace seq {
 		LambdaStage& lambda(LambdaContext& lambdaContext);
 		ForEach& foreach();
 		Collect& collect();
+		Call& call(BaseFunc& func);
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type& type, std::string filename);
 	}

@@ -6,14 +6,14 @@ using namespace seq;
 using namespace llvm;
 
 Print::Print() :
-    Stage("print", types::BaseType::get(), types::SeqType::get())
+    Stage("print", types::BaseType::get(), types::VoidType::get())
 {
 }
 
 void Print::validate()
 {
 	if (prev)
-		out = prev->getOutType();
+		in = out = prev->getOutType();
 
 	Stage::validate();
 }

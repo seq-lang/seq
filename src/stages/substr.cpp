@@ -1,4 +1,5 @@
 #include <cstdint>
+#include "seq.h"
 #include "exc.h"
 #include "substr.h"
 
@@ -17,16 +18,24 @@ void Substr::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	Value *seq = getSafe(prev->outs, SeqData::SEQ);
+	BasicBlock *preambleBlock = getBase()->getPreamble();
+
 	block = prev->block;
 	IRBuilder<> builder(block);
 
+	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
 	Value *subidx  = ConstantInt::get(seqIntLLVM(context), (uint64_t)start);
 	Value *subseq = builder.CreateGEP(seq, subidx);
 	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)len);
 
-	outs->insert({SeqData::SEQ, subseq});
-	outs->insert({SeqData::LEN, sublen});
+	Value *subseqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
+	Value *sublenVar = makeAlloca(zeroLLVM(context), preambleBlock);
+
+	builder.CreateStore(subseq, subseqVar);
+	builder.CreateStore(sublen, sublenVar);
+
+	outs->insert({SeqData::SEQ, subseqVar});
+	outs->insert({SeqData::LEN, sublenVar});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

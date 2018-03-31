@@ -29,8 +29,8 @@ void ForEach::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	Value *ptr = getSafe(prev->outs, SeqData::ARRAY);
-	Value *len = getSafe(prev->outs, SeqData::LEN);
+	Value *ptrVar = getSafe(prev->outs, SeqData::ARRAY);
+	Value *lenVar = getSafe(prev->outs, SeqData::LEN);
 
 	BasicBlock *entry = prev->block;
 	Function *func = entry->getParent();
@@ -47,10 +47,13 @@ void ForEach::codegen(Module *module)
 
 	block = loop;
 	builder.SetInsertPoint(block);
+	Value *ptr = builder.CreateLoad(ptrVar);
+	Value *len = builder.CreateLoad(lenVar);
+
 	type->getBaseType()->codegenLoad(getBase(),
 	                                 outs,
 	                                 block,
-	                                 builder.CreateLoad(ptr),
+	                                 ptr,
 	                                 control);
 
 	codegenNext(module);

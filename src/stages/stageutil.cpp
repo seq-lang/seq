@@ -83,6 +83,11 @@ Collect& stageutil::collect()
 	return Collect::make();
 }
 
+Call& stageutil::call(BaseFunc& func)
+{
+	return Call::make(func);
+}
+
 Serialize& stageutil::ser(std::string filename)
 {
 	return Serialize::make(std::move(filename));

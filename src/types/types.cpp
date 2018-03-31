@@ -16,7 +16,56 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
-void types::Type::checkEq(seq::Seq *base,
+Function *types::Type::makeFuncOf(Module *module, ValMap outs, Type *outType)
+{
+	static int idx = 1;
+	LLVMContext& context = module->getContext();
+
+	Function *func = cast<Function>(
+	                   module->getOrInsertFunction(
+	                     getName() + "Func" + std::to_string(idx++),
+	                     outType->getLLVMType(context),
+	                     PointerType::get(getLLVMType(context), 0)));
+
+	auto args = func->arg_begin();
+	Value *arg = args;
+	outs->insert({getKey(), arg});
+	return func;
+}
+
+Value *types::Type::callFuncOf(llvm::Function *func,
+		                       ValMap outs,
+                               llvm::BasicBlock *block)
+{
+	IRBuilder<> builder(block);
+	Value *input = getSafe(outs, getKey());
+	std::vector<Value *> args = {input};
+	return builder.CreateCall(func, args);
+}
+
+Value *types::Type::pack(BaseFunc *base,
+                         ValMap outs,
+                         BasicBlock *block)
+{
+	IRBuilder<> builder(block);
+	return builder.CreateLoad(getSafe(outs, getKey()));
+}
+
+void types::Type::unpack(BaseFunc *base,
+                         Value *value,
+                         ValMap outs,
+                         BasicBlock *block)
+{
+	LLVMContext& context = base->getContext();
+	BasicBlock *preambleBlock = base->getPreamble();
+	IRBuilder<> builder(block);
+
+	Value *var = makeAlloca(getLLVMType(context), preambleBlock);
+	builder.CreateStore(value, var);
+	outs->insert({getKey(), var});
+}
+
+void types::Type::checkEq(BaseFunc *base,
                           ValMap ins1,
                           ValMap ins2,
                           ValMap outs,
@@ -25,7 +74,7 @@ void types::Type::checkEq(seq::Seq *base,
 	throw exc::SeqException("type '" + getName() + "' does not support equality checks");
 }
 
-void types::Type::callPrint(seq::Seq *base,
+void types::Type::callPrint(BaseFunc *base,
                             ValMap outs,
                             BasicBlock *block)
 {
@@ -43,7 +92,7 @@ void types::Type::callPrint(seq::Seq *base,
 	}
 
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {getSafe(outs, getKey())};
+	std::vector<Value *> args = {builder.CreateLoad(getSafe(outs, getKey()))};
 	builder.CreateCall(vtable.printFunc, args, "");
 }
 
@@ -52,7 +101,7 @@ void types::Type::finalizePrint(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.printFunc, vtable.print);
 }
 
-void types::Type::callSerialize(seq::Seq *base,
+void types::Type::callSerialize(BaseFunc *base,
                                 ValMap outs,
                                 BasicBlock *block,
                                 std::string file)
@@ -85,7 +134,7 @@ void types::Type::callSerialize(seq::Seq *base,
 
 	IRBuilder<> builder(block);
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0, false));
-	std::vector<Value *> args = {getSafe(outs, getKey()), filename};
+	std::vector<Value *> args = {builder.CreateLoad(getSafe(outs, getKey())), filename};
 	builder.CreateCall(vtable.serializeFunc, args, "");
 }
 
@@ -94,7 +143,7 @@ void types::Type::finalizeSerialize(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.serializeFunc, vtable.serialize);
 }
 
-void types::Type::callDeserialize(seq::Seq *base,
+void types::Type::callDeserialize(BaseFunc *base,
                                   ValMap outs,
                                   BasicBlock *block,
                                   std::string file)
@@ -124,10 +173,16 @@ void types::Type::callDeserialize(seq::Seq *base,
 	fileVar->setAlignment(1);
 
 	IRBuilder<> builder(block);
+	BasicBlock *preambleBlock = base->getPreamble();
+
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0, false));
 	std::vector<Value *> args = {filename};
 	Value *result = builder.CreateCall(vtable.deserializeFunc, args, "");
-	outs->insert({getKey(), result});
+
+	Value *resultVar = makeAlloca(getLLVMType(context), preambleBlock);
+	builder.CreateStore(result, resultVar);
+
+	outs->insert({getKey(), resultVar});
 }
 
 void types::Type::finalizeDeserialize(ExecutionEngine *eng)
@@ -135,7 +190,7 @@ void types::Type::finalizeDeserialize(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.deserializeFunc, vtable.deserialize);
 }
 
-void types::Type::callSerializeArray(seq::Seq *base,
+void types::Type::callSerializeArray(BaseFunc *base,
                                      ValMap outs,
                                      BasicBlock *block,
                                      std::string file)
@@ -151,7 +206,7 @@ void types::Type::callSerializeArray(seq::Seq *base,
 		                              block->getModule()->getOrInsertFunction(
 		                                "serialize" + getName() + "Array",
 		                                llvm::Type::getVoidTy(context),
-		                                PointerType::get(getLLVMArrayType(context), 0),
+		                                PointerType::get(getLLVMType(context), 0),
 		                                seqIntLLVM(context),
 		                                IntegerType::getInt8PtrTy(context)));
 
@@ -166,11 +221,10 @@ void types::Type::callSerializeArray(seq::Seq *base,
 	                                             "file");
 	fileVar->setAlignment(1);
 
-	Value *ptr = getSafe(outs, SeqData::ARRAY);
-	Value *len = getSafe(outs, SeqData::LEN);
-
 	IRBuilder<> builder(block);
-	ptr = builder.CreateLoad(ptr);
+	Value *ptr = builder.CreateLoad(getSafe(outs, SeqData::ARRAY));
+	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0, false));
 	std::vector<Value *> args = {ptr, len, filename};
 	builder.CreateCall(vtable.serializeArrayFunc, args, "");
@@ -181,7 +235,7 @@ void types::Type::finalizeSerializeArray(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.serializeArrayFunc, vtable.serializeArray);
 }
 
-void types::Type::callDeserializeArray(seq::Seq *base,
+void types::Type::callDeserializeArray(BaseFunc *base,
                                        ValMap outs,
                                        BasicBlock *block,
                                        std::string file)
@@ -196,7 +250,7 @@ void types::Type::callDeserializeArray(seq::Seq *base,
 		vtable.deserializeArrayFunc = cast<Function>(
 		                                block->getModule()->getOrInsertFunction(
 		                                  "deserialize" + getName() + "Array",
-		                                  PointerType::get(getLLVMArrayType(context), 0),
+		                                  PointerType::get(getLLVMType(context), 0),
 		                                  IntegerType::getInt8PtrTy(context),
 		                                  PointerType::get(seqIntLLVM(context), 0)));
 
@@ -211,26 +265,34 @@ void types::Type::callDeserializeArray(seq::Seq *base,
 	                                             "file");
 	fileVar->setAlignment(1);
 
-	IRBuilder<> preamble(base->getPreamble());
 	IRBuilder<> builder(block);
+
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0));
-	Value *len = preamble.CreateAlloca(seqIntLLVM(context), ConstantInt::get(seqIntLLVM(context), 1));
-	std::vector<Value *> args = {filename, len};
-	Value *mem = builder.CreateCall(vtable.deserializeArrayFunc, args, "");
 
-	GlobalVariable *ptr = new GlobalVariable(*module,
-	                                         PointerType::get(getLLVMArrayType(context), 0),
-	                                         false,
-	                                         GlobalValue::PrivateLinkage,
-	                                         nullptr,
-	                                         "mem");
+	GlobalVariable *ptrVar = new GlobalVariable(*module,
+	                                            PointerType::get(getLLVMType(context), 0),
+	                                            false,
+	                                            GlobalValue::PrivateLinkage,
+	                                            nullptr,
+	                                            "mem");
+	ptrVar->setInitializer(
+	  ConstantPointerNull::get(PointerType::get(getLLVMType(context), 0)));
 
-	ptr->setInitializer(
-	  ConstantPointerNull::get(PointerType::get(getLLVMArrayType(context), 0)));
-	builder.CreateStore(mem, ptr);
+	GlobalVariable *lenVar = new GlobalVariable(*module,
+	                                            seqIntLLVM(context),
+	                                            false,
+	                                            GlobalValue::PrivateLinkage,
+	                                            nullptr,
+	                                            "len");
+	lenVar->setInitializer(zeroLLVM(context));
 
-	outs->insert({SeqData::ARRAY, ptr});
-	outs->insert({SeqData::LEN, builder.CreateLoad(len)});
+	std::vector<Value *> args = {filename, lenVar};
+	Value *ptr = builder.CreateCall(vtable.deserializeArrayFunc, args, "");
+
+	builder.CreateStore(ptr, ptrVar);
+
+	outs->insert({SeqData::ARRAY, ptrVar});
+	outs->insert({SeqData::LEN, lenVar});
 }
 
 void types::Type::finalizeDeserializeArray(ExecutionEngine *eng)
@@ -238,10 +300,9 @@ void types::Type::finalizeDeserializeArray(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.deserializeArrayFunc, vtable.deserializeArray);
 }
 
-void types::Type::callAlloc(seq::Seq *base,
-                            ValMap outs,
-                            seq_int_t count,
-                            BasicBlock *block)
+Value *types::Type::codegenAlloc(BaseFunc *base,
+                                 seq_int_t count,
+                                 BasicBlock *block)
 {
 	if (size() == 0)
 		throw exc::SeqException("cannot create array of type '" + getName() + "'");
@@ -259,24 +320,10 @@ void types::Type::callAlloc(seq::Seq *base,
 
 	IRBuilder<> builder(block);
 
-	GlobalVariable *ptr = new GlobalVariable(*module,
-	                                         PointerType::get(getLLVMArrayType(context), 0),
-	                                         false,
-	                                         GlobalValue::PrivateLinkage,
-	                                         nullptr,
-	                                         "mem");
-
-	ptr->setInitializer(
-	  ConstantPointerNull::get(PointerType::get(getLLVMArrayType(context), 0)));
-
 	std::vector<Value *> args = {
-	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count*arraySize()))};
+	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count*size()))};
 	Value *mem = builder.CreateCall(vtable.allocFunc, args);
-	mem = builder.CreatePointerCast(mem, PointerType::get(getLLVMArrayType(context), 0));
-	builder.CreateStore(mem, ptr);
-
-	outs->insert({SeqData::ARRAY, ptr});
-	outs->insert({SeqData::LEN, ConstantInt::get(seqIntLLVM(context), (uint64_t)count)});
+	return builder.CreatePointerCast(mem, PointerType::get(getLLVMType(context), 0));
 }
 
 void types::Type::finalizeAlloc(ExecutionEngine *eng)
@@ -284,7 +331,7 @@ void types::Type::finalizeAlloc(ExecutionEngine *eng)
 	eng->addGlobalMapping(vtable.allocFunc, (void *)std::malloc);
 }
 
-void types::Type::codegenLoad(seq::Seq *base,
+void types::Type::codegenLoad(BaseFunc *base,
                               ValMap outs,
                               BasicBlock *block,
                               Value *ptr,
@@ -293,12 +340,17 @@ void types::Type::codegenLoad(seq::Seq *base,
 	if (size() == 0 || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot load type '" + getName() + "'");
 
+	LLVMContext& context = base->getContext();
+	BasicBlock *preambleBlock = base->getPreamble();
 	IRBuilder<> builder(block);
+
+	Value *var = makeAlloca(getLLVMType(context), preambleBlock);
 	Value *val = builder.CreateLoad(builder.CreateGEP(ptr, idx));
-	outs->insert({getKey(), val});
+	builder.CreateStore(val, var);
+	outs->insert({getKey(), var});
 }
 
-void types::Type::codegenStore(seq::Seq *base,
+void types::Type::codegenStore(BaseFunc *base,
                                ValMap outs,
                                BasicBlock *block,
                                Value *ptr,
@@ -307,8 +359,8 @@ void types::Type::codegenStore(seq::Seq *base,
 	if (size() == 0|| getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot store type '" + getName() + "'");
 
-	Value *val = getSafe(outs, getKey());
 	IRBuilder<> builder(block);
+	Value *val = builder.CreateLoad(getSafe(outs, getKey()));
 	builder.CreateStore(val, builder.CreateGEP(ptr, idx));
 }
 
@@ -332,19 +384,9 @@ Type *types::Type::getLLVMType(LLVMContext& context)
 	throw exc::SeqException("cannot instantiate '" + getName() + "' class");
 }
 
-Type *types::Type::getLLVMArrayType(LLVMContext& context)
-{
-	return getLLVMType(context);
-}
-
 seq_int_t types::Type::size() const
 {
 	return 0;
-}
-
-seq_int_t types::Type::arraySize() const
-{
-	return size();
 }
 
 Mem& types::Type::operator[](seq_int_t size)

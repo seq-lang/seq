@@ -28,8 +28,12 @@ void Filter::codegen(Module *module)
 
 	block = prev->block;
 	outs->insert(prev->outs->begin(), prev->outs->end());
-	std::vector<Value *> args = {getSafe(outs, SeqData::SEQ), getSafe(outs, SeqData::LEN)};
+
 	IRBuilder<> builder(block);
+	Value *seq = builder.CreateLoad(getSafe(outs, SeqData::SEQ));
+	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+	std::vector<Value *> args = {seq, len};
+
 	Value *pred = builder.CreateCall(func, args, "");
 
 	BasicBlock *body = BasicBlock::Create(context, "body", block->getParent());

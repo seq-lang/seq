@@ -22,6 +22,12 @@ namespace seq {
 			IntType(IntType const&)=delete;
 			void operator=(IntType const&)=delete;
 
+			void checkEq(BaseFunc *base,
+			             ValMap ins1,
+			             ValMap ins2,
+			             ValMap outs,
+			             llvm::BasicBlock *block) override;
+
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
 			seq_int_t size() const override;
 			static IntType *get();
@@ -33,6 +39,12 @@ namespace seq {
 		public:
 			FloatType(FloatType const&)=delete;
 			void operator=(FloatType const&)=delete;
+
+			void checkEq(BaseFunc *base,
+			             ValMap ins1,
+			             ValMap ins2,
+			             ValMap outs,
+			             llvm::BasicBlock *block) override;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
 			seq_int_t size() const override;

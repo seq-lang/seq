@@ -47,53 +47,38 @@ void Collect::codegen(Module *module)
 	}
 
 	block = prev->block;
+	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
-	IRBuilder<> preamble(getBase()->getPreamble());
 
-	type->getBaseType()->callAlloc(getBase(),
-	                               outs,
-	                               INIT_VEC_SIZE,
-	                               getBase()->getPreamble());
+	Value *ptr = type->getBaseType()->codegenAlloc(getBase(), INIT_VEC_SIZE, preambleBlock);
+	Value *ptrVar = makeAlloca(ptr, preambleBlock);
+	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
+	Value *capVar = makeAlloca(ConstantInt::get(seqIntLLVM(context), INIT_VEC_SIZE), preambleBlock);
+	Value *elemVar = makeAlloca(getInType()->getLLVMType(context), preambleBlock);
 
-	auto arriter = outs->find(SeqData::ARRAY);
-	auto leniter = outs->find(SeqData::LEN);
-	assert(arriter != outs->end() && leniter != outs->end());
-
-	Value *ptr = arriter->second;
-
-	Value *len = preamble.CreateAlloca(seqIntLLVM(context),
-	                                   ConstantInt::get(seqIntLLVM(context), 1));
-	preamble.CreateStore(ConstantInt::get(seqIntLLVM(context), 0), len);
-
-	Value *cap = preamble.CreateAlloca(seqIntLLVM(context),
-	                                   ConstantInt::get(seqIntLLVM(context), 1));
-	preamble.CreateStore(ConstantInt::get(seqIntLLVM(context), INIT_VEC_SIZE), cap);
-
-	Value *elemPtr = preamble.CreateAlloca(getInType()->getLLVMArrayType(context),
-	                                       ConstantInt::get(seqIntLLVM(context), 1));
-
-	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getInType()->arraySize());
-	Value *lenActual = builder.CreateLoad(len);
+	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getInType()->size());
+	Value *len = builder.CreateLoad(lenVar);
 
 	type->getBaseType()->codegenStore(getBase(),
 	                                  prev->outs,
 	                                  block,
-	                                  elemPtr,
-	                                  ConstantInt::get(seqIntLLVM(context), 0));
+	                                  elemVar,
+	                                  zeroLLVM(context));
 
-	std::vector<Value *> args = {builder.CreatePointerCast(ptr,
+	std::vector<Value *> args = {builder.CreatePointerCast(ptrVar,
 	                                                       PointerType::get(IntegerType::getInt8PtrTy(context), 0)),
-	                             builder.CreatePointerCast(elemPtr,
+	                             builder.CreatePointerCast(elemVar,
 	                                                       IntegerType::getInt8PtrTy(context)),
 	                             elemSize,
-	                             lenActual,
-	                             cap};
+	                             len,
+	                             capVar};
 	builder.CreateCall(appendFunc, args);
 
-	Value *newLen = builder.CreateAdd(lenActual, ConstantInt::get(seqIntLLVM(context), 1));
-	builder.CreateStore(newLen, len);
+	Value *newLen = builder.CreateAdd(len, oneLLVM(context));
+	builder.CreateStore(newLen, lenVar);
 
-	leniter->second = newLen;
+	outs->insert({SeqData::ARRAY, ptrVar});
+	outs->insert({SeqData::LEN, lenVar});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

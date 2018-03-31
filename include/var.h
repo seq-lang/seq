@@ -8,7 +8,7 @@
 #include "pipeline.h"
 
 namespace seq {
-	class Seq;
+	class BaseFunc;
 	class LoadStore;
 
 	class Var {
@@ -22,12 +22,14 @@ namespace seq {
 		virtual ValMap outs(Stage *caller) const;
 		virtual Stage *getStage() const;
 		virtual bool isAssigned() const;
-		virtual Seq *getBase() const;
+		virtual BaseFunc *getBase() const;
 
 		virtual Pipeline operator|(Pipeline to);
 		virtual Var& operator=(Pipeline to);
 
 		virtual LoadStore& operator[](Var& idx);
+
+		void ensureConsistentBase(BaseFunc *base);
 	};
 
 	class Const : public Var {
@@ -40,7 +42,7 @@ namespace seq {
 		ValMap outs(Stage *caller) const override;
 		Stage *getStage() const override;
 		bool isAssigned() const override;
-		Seq *getBase() const override;
+		BaseFunc *getBase() const override;
 	};
 
 	class ConstInt : public Const {
@@ -72,7 +74,7 @@ namespace seq {
 		ValMap outs(Stage *caller) const override;
 		Stage *getStage() const override;
 		bool isAssigned() const override;
-		Seq *getBase() const override;
+		BaseFunc *getBase() const override;
 
 		static Latest& get();
 	};

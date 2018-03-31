@@ -18,6 +18,7 @@ add_library(seq SHARED include/any.h
                        include/array.h
                        include/base.h
                        include/basestage.h
+                       include/call.h
                        include/collect.h
                        include/common.h
                        include/copy.h
@@ -25,6 +26,7 @@ add_library(seq SHARED include/any.h
                        include/exc.h
                        include/filter.h
                        include/foreach.h
+                       include/func.h
                        include/hash.h
                        include/io.h
                        include/lambda.h
@@ -50,12 +52,14 @@ add_library(seq SHARED include/any.h
                        include/var.h
                        include/void.h
                        src/exc.cpp
+                       src/func.cpp
                        src/io.cpp
                        src/llvm.h
                        src/pipeline.cpp
                        src/seq.cpp
                        src/seqdata.h
                        src/stages/basestage.cpp
+                       src/stages/call.cpp
                        src/stages/collect.cpp
                        src/stages/copy.cpp
                        src/stages/count.cpp

@@ -1,4 +1,5 @@
 #include <cstdint>
+#include "seq.h"
 #include "exc.h"
 #include "split.h"
 
@@ -17,14 +18,17 @@ void Split::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	Value *seq = getSafe(prev->outs, SeqData::SEQ);
-	Value *len = getSafe(prev->outs, SeqData::LEN);
+	BasicBlock *preambleBlock = getBase()->getPreamble();
 
 	BasicBlock *entry = prev->block;
 	Function *func = entry->getParent();
 
 	BasicBlock *loop = BasicBlock::Create(context, "loop", func);
 	IRBuilder<> builder(entry);
+
+	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
+	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
+
 	builder.CreateBr(loop);
 	builder.SetInsertPoint(loop);
 
@@ -33,8 +37,14 @@ void Split::codegen(Module *module)
 	Value *subseq = builder.CreateGEP(seq, control);
 	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)k);
 
-	outs->insert({SeqData::SEQ, subseq});
-	outs->insert({SeqData::LEN, sublen});
+	Value *subseqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
+	Value *sublenVar = makeAlloca(zeroLLVM(context), preambleBlock);
+
+	builder.CreateStore(subseq, subseqVar);
+	builder.CreateStore(sublen, sublenVar);
+
+	outs->insert({SeqData::SEQ, subseqVar});
+	outs->insert({SeqData::LEN, sublenVar});
 	block = loop;
 
 	codegenNext(module);

@@ -16,18 +16,16 @@ void Count::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 	block = prev->block;
-	IRBuilder<> preamble(getBase()->getPreamble());
+	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
 
-	Value *count = preamble.CreateAlloca(seqIntLLVM(context),
-	                                     ConstantInt::get(seqIntLLVM(context), 1));
-	preamble.CreateStore(ConstantInt::get(seqIntLLVM(context), 0), count);
+	Value *countVar = makeAlloca(zeroLLVM(context), preambleBlock);
 
-	LoadInst *load = builder.CreateLoad(count);
-	Value *inc = builder.CreateAdd(ConstantInt::get(seqIntLLVM(context), 1), load);
-	builder.CreateStore(inc, count);
+	Value *count = builder.CreateLoad(countVar);
+	Value *inc = builder.CreateAdd(oneLLVM(context), count);
+	builder.CreateStore(inc, countVar);
 
-	outs->insert({SeqData::INT, inc});
+	outs->insert({SeqData::INT, countVar});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

@@ -2,7 +2,6 @@
 #define SEQ_PIPELINE_H
 
 #include <iostream>
-#include "var.h"
 
 namespace seq {
 	class Stage;

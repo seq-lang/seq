@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include "seq.h"
 #include "exc.h"
 #include "hash.h"
 
@@ -17,6 +18,8 @@ void Hash::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
+	BasicBlock *preambleBlock = getBase()->getPreamble();
+
 	func = cast<Function>(
 	         module->getOrInsertFunction(
 	           name,
@@ -28,10 +31,14 @@ void Hash::codegen(Module *module)
 
 	block = prev->block;
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {getSafe(prev->outs, SeqData::SEQ), getSafe(prev->outs, SeqData::LEN)};
-	Value *hashVal = builder.CreateCall(func, args, "");
+	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
+	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
+	std::vector<Value *> args = {seq, len};
 
-	outs->insert({SeqData::INT, hashVal});
+	Value *hashVar = makeAlloca(zeroLLVM(context), preambleBlock);
+	builder.CreateStore(builder.CreateCall(func, args, ""), hashVar);
+
+	outs->insert({SeqData::INT, hashVar});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

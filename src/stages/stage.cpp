@@ -46,12 +46,12 @@ std::vector<Stage *>& Stage::getWeakNext()
 	return weakNexts;
 }
 
-Seq *Stage::getBase() const
+BaseFunc *Stage::getBase() const
 {
 	return base;
 }
 
-void Stage::setBase(Seq *base)
+void Stage::setBase(BaseFunc *base)
 {
 	if (!base)
 		return;

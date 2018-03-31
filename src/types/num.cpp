@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include "seq.h"
 #include "base.h"
 #include "num.h"
 
@@ -139,6 +140,46 @@ types::FloatType::FloatType() : Type("Float", NumberType::get(), SeqData::FLOAT)
 	vtable.deserialize = (void *)deserializeFloat;
 	vtable.serializeArray = (void *)serializeFloatArray;
 	vtable.deserializeArray = (void *)deserializeFloatArray;
+}
+
+void types::IntType::checkEq(BaseFunc *base,
+                             ValMap ins1,
+                             ValMap ins2,
+                             ValMap outs,
+                             llvm::BasicBlock *block)
+{
+	LLVMContext& context = base->getContext();
+	BasicBlock *preambleBlock = base->getPreamble();
+	IRBuilder<> builder(block);
+
+	Value *n1 = builder.CreateLoad(getSafe(ins1, SeqData::INT));
+	Value *n2 = builder.CreateLoad(getSafe(ins2, SeqData::INT));
+
+	Value *result = builder.CreateICmpEQ(n1, n2);
+	Value *resultVar = makeAlloca(ConstantInt::get(IntegerType::getInt1Ty(context), 0), preambleBlock);
+	builder.CreateStore(result, resultVar);
+
+	outs->insert({SeqData::BOOL, resultVar});
+}
+
+void types::FloatType::checkEq(BaseFunc *base,
+                               ValMap ins1,
+                               ValMap ins2,
+                               ValMap outs,
+                               llvm::BasicBlock *block)
+{
+	LLVMContext& context = base->getContext();
+	BasicBlock *preambleBlock = base->getPreamble();
+	IRBuilder<> builder(block);
+
+	Value *f1 = builder.CreateLoad(getSafe(ins1, SeqData::FLOAT));
+	Value *f2 = builder.CreateLoad(getSafe(ins2, SeqData::FLOAT));
+
+	Value *result = builder.CreateFCmpOEQ(f1, f2);
+	Value *resultVar = makeAlloca(ConstantInt::get(IntegerType::getInt1Ty(context), 0), preambleBlock);
+	builder.CreateStore(result, resultVar);
+
+	outs->insert({SeqData::BOOL, resultVar});
 }
 
 Type *types::IntType::getLLVMType(LLVMContext& context)

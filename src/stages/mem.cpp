@@ -20,10 +20,38 @@ void Mem::codegen(llvm::Module *module)
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
+
 	block = prev->block;
-	type->getBaseType()->callAlloc(getBase(), outs, count, block);
+	IRBuilder<> builder(block);
+
+	GlobalVariable *ptrVar = new GlobalVariable(*module,
+	                                            PointerType::get(type->getBaseType()->getLLVMType(context), 0),
+	                                            false,
+	                                            GlobalValue::PrivateLinkage,
+	                                            nullptr,
+	                                            "mem");
+	ptrVar->setInitializer(
+	  ConstantPointerNull::get(PointerType::get(type->getBaseType()->getLLVMType(context), 0)));
+
+	GlobalVariable *lenVar = new GlobalVariable(*module,
+	                                            seqIntLLVM(context),
+	                                            false,
+	                                            GlobalValue::PrivateLinkage,
+	                                            nullptr,
+	                                            "len");
+	lenVar->setInitializer(zeroLLVM(context));
+
+	Value *ptr = type->getBaseType()->codegenAlloc(getBase(), count, block);
+	Value *len = ConstantInt::get(seqIntLLVM(context), (uint64_t)count);
+	builder.CreateStore(ptr, ptrVar);
+	builder.CreateStore(len, lenVar);
+
+	outs->insert({SeqData::ARRAY, ptrVar});
+	outs->insert({SeqData::LEN, lenVar});
+
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }
@@ -45,6 +73,7 @@ LoadStore::LoadStore(Var *ptr, Var *idx) :
     Stage("loadstore", types::VoidType::get(), types::VoidType::get()),
     ptr(ptr), idx(idx), isStore(false)
 {
+	ptr->ensureConsistentBase(idx->getBase());
 	setBase(ptr->getBase());
 }
 
@@ -91,7 +120,7 @@ void LoadStore::codegen(Module *module)
 	block = prev->block;
 	IRBuilder<> builder(block);
 	Value *ptrVal = builder.CreateLoad(getSafe(ptr->outs(this), SeqData::ARRAY));
-	Value *idxVal = getSafe(idx->outs(this), SeqData::INT);
+	Value *idxVal = builder.CreateLoad(getSafe(idx->outs(this), SeqData::INT));
 
 	if (isStore) {
 		arrayType->getBaseType()->codegenStore(getBase(),
@@ -116,7 +145,7 @@ Pipeline LoadStore::operator|(Pipeline to)
 	Pipeline p = Stage::operator|(to);
 
 	if (!p.isAdded()) {
-		Seq *base = getBase();
+		BaseFunc *base = getBase();
 		p.getHead()->setBase(base);
 		BaseStage& begin = BaseStage::make(types::VoidType::get(), types::VoidType::get(), this);
 		begin.setBase(base);

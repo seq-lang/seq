@@ -1,5 +1,6 @@
 #include <string>
 #include "common.h"
+#include "seq.h"
 #include "exc.h"
 #include "lambda.h"
 
@@ -321,14 +322,24 @@ void LambdaStage::codegen(Module *module)
 	ensurePrev();
 	validate();
 
+	LLVMContext& context = module->getContext();
 	const auto key = isFloat ? SeqData::FLOAT : SeqData::INT;
 	Function *func = lambda.codegen(module, isFloat);
-	block = prev->block;
-	IRBuilder<> builder(block);
-	std::vector<Value *> args = {getSafe(prev->outs, key)};
-	Value *result = builder.CreateCall(func, args);
 
-	outs->insert({key, result});
+	block = prev->block;
+	BasicBlock *preambleBlock = getBase()->getPreamble();
+	IRBuilder<> builder(block);
+
+	std::vector<Value *> args = {builder.CreateLoad(getSafe(prev->outs, key))};
+
+	Value *zeroInt = zeroLLVM(context);
+	Value *zeroFloat = ConstantFP::get(Type::getDoubleTy(context), 0);
+	Value *zero = isFloat ? zeroFloat : zeroInt;
+
+	Value *resultVar = makeAlloca(zero, preambleBlock);
+	builder.CreateStore(builder.CreateCall(func, args), resultVar);
+
+	outs->insert({key, resultVar});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());
