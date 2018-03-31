@@ -34,13 +34,12 @@ void Range::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
-
-	Value *from = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->from);
-	Value *to   = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->to);
-	Value *step = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->step);
-
 	BasicBlock *entry = prev->block;
 	Function *func = entry->getParent();
+
+	Value *from = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->from, true);
+	Value *to   = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->to,   true);
+	Value *step = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->step, true);
 
 	BasicBlock *loop = BasicBlock::Create(context, "range", func);
 	IRBuilder<> builder(entry);
@@ -48,24 +47,28 @@ void Range::codegen(Module *module)
 	builder.SetInsertPoint(loop);
 
 	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
+	Value *next = builder.CreateAdd(control, step, "next");
+	Value *cond = builder.CreateICmpSLT(control, to);
 
 	Value *intVar = makeAlloca(zeroLLVM(context), preambleBlock);
 	builder.CreateStore(control, intVar);
 	outs->insert({SeqData::INT, intVar});
-	block = loop;
+
+	BasicBlock *body = BasicBlock::Create(context, "body", func);
+	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
+
+	block = body;
 
 	codegenNext(module);
 
 	builder.SetInsertPoint(getAfter());
-	Value *next = builder.CreateAdd(control, step, "next");
+	builder.CreateBr(loop);
 
 	control->addIncoming(from, entry);
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
-	Value *cond = builder.CreateICmpSLT(next, to);
-	builder.CreateCondBr(cond, loop, exit);
-
+	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
 }
 

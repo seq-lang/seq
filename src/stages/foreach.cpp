@@ -29,26 +29,29 @@ void ForEach::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	Value *ptrVar = getSafe(prev->outs, SeqData::ARRAY);
-	Value *lenVar = getSafe(prev->outs, SeqData::LEN);
 
 	BasicBlock *entry = prev->block;
 	Function *func = entry->getParent();
 
-	BasicBlock *loop = BasicBlock::Create(context, "foreach", func);
 	IRBuilder<> builder(entry);
+	Value *ptr = builder.CreateLoad(getSafe(prev->outs, SeqData::ARRAY));
+	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
+
+	BasicBlock *loop = BasicBlock::Create(context, "foreach", func);
 	builder.CreateBr(loop);
 	builder.SetInsertPoint(loop);
 
 	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
+	Value *cond = builder.CreateICmpSLT(control, len);
+	Value *next = builder.CreateAdd(control, ConstantInt::get(seqIntLLVM(context), 1), "next");
+
+	BasicBlock *body = BasicBlock::Create(context, "body", func);
+	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
 
 	auto *type = dynamic_cast<types::ArrayType *>(getInType());
 	assert(type != nullptr);
 
-	block = loop;
-	builder.SetInsertPoint(block);
-	Value *ptr = builder.CreateLoad(ptrVar);
-	Value *len = builder.CreateLoad(lenVar);
+	block = body;
 
 	type->getBaseType()->codegenLoad(getBase(),
 	                                 outs,
@@ -59,15 +62,13 @@ void ForEach::codegen(Module *module)
 	codegenNext(module);
 
 	builder.SetInsertPoint(getAfter());
-	Value *next = builder.CreateAdd(control, ConstantInt::get(seqIntLLVM(context), 1), "next");
+	builder.CreateBr(loop);
 
 	control->addIncoming(ConstantInt::get(seqIntLLVM(context), 0), entry);
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
-	Value *cond = builder.CreateICmpSLT(next, len);
-	builder.CreateCondBr(cond, loop, exit);
-
+	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
 }
 

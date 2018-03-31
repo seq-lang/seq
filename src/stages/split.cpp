@@ -19,48 +19,48 @@ void Split::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
-
 	BasicBlock *entry = prev->block;
 	Function *func = entry->getParent();
 
-	BasicBlock *loop = BasicBlock::Create(context, "loop", func);
-	IRBuilder<> builder(entry);
+	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)k);
+	Value *inc    = ConstantInt::get(seqIntLLVM(context), (uint64_t)step);
 
+	IRBuilder<> builder(entry);
 	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
 	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
+	Value *max = builder.CreateSub(len, sublen);
 
+	BasicBlock *loop = BasicBlock::Create(context, "split", func);
 	builder.CreateBr(loop);
 	builder.SetInsertPoint(loop);
 
 	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
+	Value *next = builder.CreateAdd(control, inc, "next");
+	Value *cond = builder.CreateICmpSLE(control, max);
 
+	BasicBlock *body = BasicBlock::Create(context, "body", func);
+	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
+
+	block = body;
+	builder.SetInsertPoint(body);
 	Value *subseq = builder.CreateGEP(seq, control);
-	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)k);
-
 	Value *subseqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
 	Value *sublenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
 	builder.CreateStore(subseq, subseqVar);
 	builder.CreateStore(sublen, sublenVar);
-
 	outs->insert({SeqData::SEQ, subseqVar});
 	outs->insert({SeqData::LEN, sublenVar});
-	block = loop;
 
 	codegenNext(module);
 
 	builder.SetInsertPoint(getAfter());
-	Value *inc = ConstantInt::get(seqIntLLVM(context), (uint64_t)step);
-	Value *next = builder.CreateAdd(control, inc, "next");
+	builder.CreateBr(loop);
 
 	control->addIncoming(ConstantInt::get(seqIntLLVM(context), 0), entry);
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
-	Value *max = builder.CreateSub(len, sublen);
-	Value *cond = builder.CreateICmpSLE(next, max);
-	builder.CreateCondBr(cond, loop, exit);
-
+	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
 }
 
