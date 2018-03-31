@@ -91,13 +91,11 @@ Pipeline PipelineAggregatorProxy::operator|(Var& to)
 PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr, seq_int_t idx) :
     aggr(aggr), idx(idx)
 {
-
 }
 
 PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr) :
     PipelineAggregatorProxy(aggr, 1)
 {
-
 }
 
 

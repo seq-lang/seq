@@ -23,7 +23,9 @@ types::SeqType::SeqType() : Type("Seq", BaseType::get(), SeqData::SEQ)
 	vtable.print = (void *)printSeq;
 }
 
-Function *types::SeqType::makeFuncOf(Module *module, ValMap outs, Type *outType)
+Function *types::SeqType::makeFuncOf(Module *module,
+                                     ValMap outs,
+                                     Type *outType)
 {
 	static int idx = 1;
 	LLVMContext& context = module->getContext();

@@ -13,7 +13,9 @@ types::ArrayType::ArrayType(Type *baseType) :
 {
 }
 
-Function *types::ArrayType::makeFuncOf(Module *module, ValMap outs, Type *outType)
+Function *types::ArrayType::makeFuncOf(Module *module,
+                                       ValMap outs,
+                                       Type *outType)
 {
 	static int idx = 1;
 	LLVMContext& context = module->getContext();

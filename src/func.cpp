@@ -131,18 +131,23 @@ void Func::codegen(Module *module)
 	}
 	compilationContext.inMain = false;
 
-	Stage *tail = pipelines.back().getHead();
-	while (!tail->getNext().empty())
-		tail = tail->getNext().back();
-
-	if (!tail->getOutType()->isChildOf(outType))
-		throw exc::SeqException("function does not output type '" + outType->getName() + "'");
-
-	ValMap tailOuts = tail->outs;
 	BasicBlock *exitBlock = &func->getBasicBlockList().back();
 	builder.SetInsertPoint(exitBlock);
-	Value *result = outType->pack(this, tailOuts, exitBlock);
-	builder.CreateRet(result);
+
+	if (outType->isChildOf(types::VoidType::get())) {
+		builder.CreateRetVoid();
+	} else {
+		Stage *tail = pipelines.back().getHead();
+		while (!tail->getNext().empty())
+			tail = tail->getNext().back();
+
+		if (!tail->getOutType()->isChildOf(outType))
+			throw exc::SeqException("function does not output type '" + outType->getName() + "'");
+
+		ValMap tailOuts = tail->outs;
+		Value *result = outType->pack(this, tailOuts, exitBlock);
+		builder.CreateRet(result);
+	}
 
 	builder.SetInsertPoint(preambleBlock);
 	builder.CreateBr(entry);

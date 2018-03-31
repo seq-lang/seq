@@ -8,7 +8,7 @@ using namespace seq;
 using namespace llvm;
 
 Range::Range(seq_int_t from, seq_int_t to, seq_int_t step) :
-    Stage("range", types::BaseType::get(), types::IntType::get()),
+    Stage("range", types::AnyType::get(), types::IntType::get()),
     from(from), to(to), step(step)
 {
 	if (from > to)

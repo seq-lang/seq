@@ -16,7 +16,9 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
-Function *types::Type::makeFuncOf(Module *module, ValMap outs, Type *outType)
+Function *types::Type::makeFuncOf(Module *module,
+                                  ValMap outs,
+                                  Type *outType)
 {
 	static int idx = 1;
 	LLVMContext& context = module->getContext();
