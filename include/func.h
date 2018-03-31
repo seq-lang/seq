@@ -9,6 +9,8 @@
 
 namespace seq {
 
+	class Call;
+
 	struct CompilationContext {
 		bool inOnce = false;
 		bool inMain = false;
@@ -69,6 +71,8 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList to);
 		Pipeline operator|(Var& to);
+
+		Call& operator()();
 	};
 
 }

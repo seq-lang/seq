@@ -1,4 +1,5 @@
 #include "basestage.h"
+#include "call.h"
 #include "exc.h"
 #include "func.h"
 
@@ -217,4 +218,9 @@ Pipeline Func::operator|(Var& to)
 	add(begin);
 
 	return begin;
+}
+
+Call& Func::operator()()
+{
+	return Call::make(*this);
 }

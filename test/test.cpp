@@ -123,7 +123,7 @@ int main()
 	Func f(types::Seq, Array.of(types::Seq));
 	f | split(32,1) | filt_cpg() | collect();
 
-	s.last | call(f) | foreach() | print();
+	s.last | f() | foreach() | print();
 
 	s.source("test/data/seqs.fastq");
 	s.execute(true);  // debug=true

@@ -37,7 +37,6 @@ namespace seq {
 		LambdaStage& lambda(LambdaContext& lambdaContext);
 		ForEach& foreach();
 		Collect& collect();
-		Call& call(BaseFunc& func);
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type& type, std::string filename);
 	}
