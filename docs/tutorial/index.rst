@@ -9,5 +9,6 @@ Tutorial
     stages
     variables
     arrays
+    functions
     lambdas
     serialization

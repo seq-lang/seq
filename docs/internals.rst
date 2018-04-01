@@ -38,6 +38,8 @@ For example, we would pass a regular sequence using the following map:
 
 where ``seqValue`` and ``lenValue`` are both ``llvm::Value`` pointers.
 
+**Importantly,** these values must be pointers (i.e. representative of pointers in the LLVM IR), such as ``alloca``'d memory or global variables. For instance, ``seqValue`` above would be a pointer to, say, some ``alloca``'d memory that itself contains a character pointer; ``lenValue`` would be a pointer to an integer value.
+
 ``Stage``
 ~~~~~~~~~
 
@@ -141,4 +143,37 @@ Each of the various types inherits from the ``Type`` class:
 
     Key associated with this type
 
-The type classes also support several member functions for generating code for specific operations (e.g. load/store from array, serialization/deserialization, printing).
+The type classes also have several member functions for generating code for specific operations (e.g. load/store from array, serialization/deserialization, printing, creating and calling functions, etc.).
+
+Functions
+---------
+
+The ``seq::Seq`` class is a subclass of ``seq::BaseFunc``, which is a generic wrapper around an LLVM function that is also used for defining Seq functions:
+
+.. cpp:class:: seq::BaseFunc
+
+    General function base class
+
+.. cpp:member:: llvm::Module* seq::BaseFunc::module
+
+    LLVM module associated with this function
+
+.. cpp:member:: llvm::BasicBlock* seq::BaseFunc::initBlock
+
+    Block to be executed *once* (over all invocations) at the start of the function
+
+.. cpp:member:: llvm::BasicBlock* seq::BaseFunc::preambleBlock
+
+    First block in the function; this is where (for example) ``alloca`` should go
+
+.. cpp:function:: virtual seq::types::Type* seq::BaseFunc::getInType() const
+
+    Function input type
+
+.. cpp:function:: virtual seq::types::Type* seq::BaseFunc::getOutType() const
+
+    Function output type
+
+.. cpp:function:: virtual void seq::BaseFunc::codegenCall(seq::BaseFunc *base, seq::ValMap ins, seq::ValMap outs, llvm::BasicBlock *block) const
+
+    Generate code for invoking this function by ``base`` with input ``ins`` in block ``block``; outputs are given in ``outs``

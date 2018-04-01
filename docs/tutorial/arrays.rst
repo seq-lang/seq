@@ -106,4 +106,4 @@ Notice also the use of ``foreach()``, which enables iteration over arrays.
 
 -----
 
-:doc:`next <lambdas>`
+:doc:`next <functions>`
