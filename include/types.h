@@ -57,11 +57,10 @@ namespace seq {
 			                    ValMap outs,
 			                    llvm::BasicBlock *block);
 
-			virtual void checkEq(BaseFunc *base,
-			                     ValMap ins1,
-			                     ValMap ins2,
-			                     ValMap outs,
-			                     llvm::BasicBlock *block);
+			virtual llvm::Value *checkEq(BaseFunc *base,
+			                             ValMap ins1,
+			                             ValMap ins2,
+			                             llvm::BasicBlock *block);
 
 			virtual void callPrint(BaseFunc *base,
 			                       ValMap outs,

@@ -67,11 +67,10 @@ void types::Type::unpack(BaseFunc *base,
 	outs->insert({getKey(), var});
 }
 
-void types::Type::checkEq(BaseFunc *base,
-                          ValMap ins1,
-                          ValMap ins2,
-                          ValMap outs,
-                          llvm::BasicBlock *block)
+Value *types::Type::checkEq(BaseFunc *base,
+                            ValMap ins1,
+                            ValMap ins2,
+                            BasicBlock *block)
 {
 	throw exc::SeqException("type '" + getName() + "' does not support equality checks");
 }

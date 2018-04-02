@@ -91,7 +91,7 @@ PipelineList& PipelineList::operator,(Pipeline p)
 	return *this;
 };
 
-PipelineList& seq::operator,(Pipeline& from, Pipeline to)
+PipelineList& seq::operator,(Pipeline from, Pipeline to)
 {
 	auto& l = *new PipelineList(from);
 	l , to;

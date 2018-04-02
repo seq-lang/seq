@@ -10,8 +10,8 @@ ForEach::ForEach() : Stage("foreach", types::ArrayType::get(), types::VoidType::
 
 void ForEach::validate()
 {
-	if (prev && prev->getOutType()->isChildOf(types::ArrayType::get())) {
-		auto *type = dynamic_cast<types::ArrayType *>(prev->getOutType());
+	if (getPrev() && getPrev()->getOutType()->isChildOf(types::ArrayType::get())) {
+		auto *type = dynamic_cast<types::ArrayType *>(getPrev()->getOutType());
 		assert(type != nullptr);
 		in = type;
 		out = type->getBaseType();
@@ -43,7 +43,7 @@ void ForEach::codegen(Module *module)
 
 	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
 	Value *cond = builder.CreateICmpSLT(control, len);
-	Value *next = builder.CreateAdd(control, ConstantInt::get(seqIntLLVM(context), 1), "next");
+	Value *next = builder.CreateAdd(control, oneLLVM(context), "next");
 
 	BasicBlock *body = BasicBlock::Create(context, "body", func);
 	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
@@ -64,7 +64,7 @@ void ForEach::codegen(Module *module)
 	builder.SetInsertPoint(getAfter());
 	builder.CreateBr(loop);
 
-	control->addIncoming(ConstantInt::get(seqIntLLVM(context), 0), entry);
+	control->addIncoming(zeroLLVM(context), entry);
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);

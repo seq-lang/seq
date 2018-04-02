@@ -32,11 +32,10 @@ namespace seq {
 			            ValMap outs,
 			            llvm::BasicBlock *block) override;
 
-			void checkEq(BaseFunc *base,
-			             ValMap ins1,
-			             ValMap ins2,
-			             ValMap outs,
-			             llvm::BasicBlock *block) override;
+			llvm::Value *checkEq(BaseFunc *base,
+			                     ValMap ins1,
+			                     ValMap ins2,
+			                     llvm::BasicBlock *block) override;
 
 			void callPrint(BaseFunc *base,
 			               ValMap outs,

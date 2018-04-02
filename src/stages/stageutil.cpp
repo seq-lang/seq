@@ -83,6 +83,11 @@ Collect& stageutil::collect()
 	return Collect::make();
 }
 
+Chunk& stageutil::chunk(Func& key)
+{
+	return Chunk::make(key);
+}
+
 Serialize& stageutil::ser(std::string filename)
 {
 	return Serialize::make(std::move(filename));

@@ -164,21 +164,16 @@ static Function *buildSeqEqFunc(Module *module)
 	return eq;
 }
 
-void types::SeqType::checkEq(BaseFunc *base,
-                             ValMap ins1,
-                             ValMap ins2,
-                             ValMap outs,
-                             llvm::BasicBlock *block)
+Value *types::SeqType::checkEq(BaseFunc *base,
+                               ValMap ins1,
+                               ValMap ins2,
+                               BasicBlock *block)
 {
-	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
 	IRBuilder<> builder(block);
-
 	Value *seq1 = builder.CreateLoad(getSafe(ins1, SeqData::SEQ));
 	Value *len1 = builder.CreateLoad(getSafe(ins1, SeqData::LEN));
-
-	Value *seq2 = builder.CreateLoad(getSafe(ins1, SeqData::SEQ));
-	Value *len2 = builder.CreateLoad(getSafe(ins1, SeqData::LEN));
+	Value *seq2 = builder.CreateLoad(getSafe(ins2, SeqData::SEQ));
+	Value *len2 = builder.CreateLoad(getSafe(ins2, SeqData::LEN));
 
 	static Function *eq = nullptr;
 
@@ -186,11 +181,7 @@ void types::SeqType::checkEq(BaseFunc *base,
 		eq = buildSeqEqFunc(block->getModule());
 
 	std::vector<Value *> args = {seq1, len1, seq2, len2};
-	Value *result = builder.CreateCall(eq, args);
-	Value *resultVar = makeAlloca(ConstantInt::get(IntegerType::getInt1Ty(context), 0), preambleBlock);
-	builder.CreateStore(result, resultVar);
-
-	outs->insert({SeqData::BOOL, resultVar});
+	return builder.CreateCall(eq, args);
 }
 
 void types::SeqType::callPrint(BaseFunc *base,

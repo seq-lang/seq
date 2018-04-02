@@ -42,7 +42,7 @@ namespace seq {
 		PipelineList& operator,(Pipeline p);
 	};
 
-	PipelineList& operator,(Pipeline& from, Pipeline to);
+	PipelineList& operator,(Pipeline from, Pipeline to);
 	PipelineList& operator,(Stage& from, Pipeline to);
 }
 
