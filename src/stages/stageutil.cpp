@@ -88,6 +88,11 @@ Chunk& stageutil::chunk(Func& key)
 	return Chunk::make(key);
 }
 
+Chunk& stageutil::chunk()
+{
+	return Chunk::make();
+}
+
 Serialize& stageutil::ser(std::string filename)
 {
 	return Serialize::make(std::move(filename));

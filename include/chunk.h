@@ -7,12 +7,14 @@
 namespace seq {
 	class Chunk : public Stage {
 	private:
-		Func& key;
+		Func *key;
 	public:
-		explicit Chunk(Func& func);
+		explicit Chunk(Func *key);
+		Chunk();
 		void validate() override;
 		void codegen(llvm::Module *module) override;
 		static Chunk& make(Func& key);
+		static Chunk& make();
 	};
 }
 

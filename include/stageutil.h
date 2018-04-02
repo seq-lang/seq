@@ -39,6 +39,7 @@ namespace seq {
 		ForEach& foreach();
 		Collect& collect();
 		Chunk& chunk(Func& key);
+		Chunk& chunk();
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type& type, std::string filename);
 	}

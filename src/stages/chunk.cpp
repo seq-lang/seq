@@ -3,8 +3,12 @@
 using namespace seq;
 using namespace llvm;
 
-Chunk::Chunk(Func& key) :
+Chunk::Chunk(Func *key) :
     Stage("chunk", types::ArrayType::get(), types::ArrayType::get()), key(key)
+{
+}
+
+Chunk::Chunk() : Chunk(nullptr)
 {
 }
 
@@ -16,7 +20,7 @@ void Chunk::validate()
 		auto *type = dynamic_cast<types::ArrayType *>(in);
 		assert(type != nullptr);
 
-		if (!type->getBaseType()->isChildOf(key.getInType()))
+		if (key && !type->getBaseType()->isChildOf(key->getInType()))
 			throw exc::ValidationException(*this);
 	}
 
@@ -59,7 +63,8 @@ void Chunk::codegen(Module *module)
 	                                 body,
 	                                 ptr,
 	                                 control);
-	key.codegenCall(getBase(), firstInChunk, firstInChunkKey, body);
+	if (key)
+		key->codegenCall(getBase(), firstInChunk, firstInChunkKey, body);
 
 	PHINode *control2;
 	{
@@ -83,9 +88,11 @@ void Chunk::codegen(Module *module)
 		                                 body2,
 		                                 ptr,
 		                                 control2);
-		key.codegenCall(getBase(), nextInChunk, nextInChunkKey, body2);
+		if (key)
+			key->codegenCall(getBase(), nextInChunk, nextInChunkKey, body2);
 
-		Value *eq = key.getOutType()->checkEq(getBase(), firstInChunkKey, nextInChunkKey, body2);
+		Value *eq = key ? key->getOutType()->checkEq(getBase(), firstInChunkKey, nextInChunkKey, body2) :
+		                  type->getBaseType()->checkEq(getBase(), firstInChunk, nextInChunk, body2);
 
 		control2->addIncoming(next, body);
 		control2->addIncoming(next2, body2);
@@ -125,5 +132,10 @@ void Chunk::codegen(Module *module)
 
 Chunk& Chunk::make(Func& key)
 {
-	return *new Chunk(key);
+	return *new Chunk(&key);
+}
+
+Chunk& Chunk::make()
+{
+	return *new Chunk();
 }
