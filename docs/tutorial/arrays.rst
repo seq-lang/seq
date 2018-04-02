@@ -104,6 +104,35 @@ Finally, note that ``collect()`` can be used to collect all the outputs of a giv
 
 Notice also the use of ``foreach()``, which enables iteration over arrays.
 
+We can also partition arrays by some key function. For example, let's say we wanted to partition all 5-mers based on their first base:
+
+.. code-block:: c++
+
+    Func key(types::Seq, types::Seq);
+    key | substr(1,1);
+
+    Var kmers = s | split(5,1) | collect();
+    kmers | chunk(key) | (len() | print(), foreach() | print());
+
+(Functions are described in more detail later.) This will output something like this:
+
+.. code-block:: text
+
+    3
+    TTTCA
+    TTCAT
+    TCATT
+    1
+    CATTC
+    1
+    ATTCC
+    2
+    TTCCA
+    TCCAT
+    2
+    CCATT
+    CATTC
+
 -----
 
 :doc:`next <functions>`
