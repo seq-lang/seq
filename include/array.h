@@ -15,9 +15,11 @@ namespace seq {
 			ArrayType(ArrayType const&)=delete;
 			void operator=(ArrayType const&)=delete;
 
-			llvm::Function *makeFuncOf(llvm::Module *module,
-			                           ValMap outs,
-			                           Type *outType) override;
+			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
+
+			void setFuncArgs(llvm::Function *func,
+			                 ValMap outs,
+			                 llvm::BasicBlock *block) override;
 
 			llvm::Value *callFuncOf(llvm::Function *func,
 			                        ValMap outs,

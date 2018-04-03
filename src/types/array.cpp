@@ -13,36 +13,40 @@ types::ArrayType::ArrayType(Type *baseType) :
 {
 }
 
-Function *types::ArrayType::makeFuncOf(Module *module,
-                                       ValMap outs,
-                                       Type *outType)
+Function *types::ArrayType::makeFuncOf(Module *module, Type *outType)
 {
 	static int idx = 1;
 	LLVMContext& context = module->getContext();
 
-	Function *func = cast<Function>(
-	                   module->getOrInsertFunction(
-	                     getName() + "Func" + std::to_string(idx++),
-	                     outType->getLLVMType(context),
-	                     PointerType::get(PointerType::get(getBaseType()->getLLVMType(context), 0), 0),
-	                     PointerType::get(seqIntLLVM(context), 0)));
-
-	auto args = func->arg_begin();
-	Value *ptrVar = args++;
-	Value *lenVar = args;
-	outs->insert({SeqData::ARRAY, ptrVar});
-	outs->insert({SeqData::LEN, lenVar});
-	return func;
+	return cast<Function>(
+	         module->getOrInsertFunction(
+	           getName() + "Func" + std::to_string(idx++),
+	           outType->getLLVMType(context),
+	           PointerType::get(getBaseType()->getLLVMType(context), 0),
+	           seqIntLLVM(context)));
 }
 
-Value *types::ArrayType::callFuncOf(llvm::Function *func,
+void types::ArrayType::setFuncArgs(Function *func,
+                                   ValMap outs,
+                                   BasicBlock *block)
+{
+	auto args = func->arg_begin();
+	Value *ptr = args++;
+	Value *len = args;
+	Value *ptrVar = makeAlloca(ptr, block);
+	Value *lenVar = makeAlloca(len, block);
+	outs->insert({SeqData::ARRAY, ptrVar});
+	outs->insert({SeqData::LEN, lenVar});
+}
+
+Value *types::ArrayType::callFuncOf(Function *func,
 		                            ValMap outs,
-                                    llvm::BasicBlock *block)
+                                    BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	Value *ptrVar = getSafe(outs, SeqData::ARRAY);
-	Value *lenVar = getSafe(outs, SeqData::LEN);
-	std::vector<Value *> args = {ptrVar, lenVar};
+	Value *ptr = builder.CreateLoad(getSafe(outs, SeqData::ARRAY));
+	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+	std::vector<Value *> args = {ptr, len};
 	return builder.CreateCall(func, args);
 }
 

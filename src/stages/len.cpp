@@ -7,7 +7,7 @@ Len::Len() : Stage("len", types::BaseType::get(), types::IntType::get())
 {
 }
 
-void Len::codegen(llvm::Module *module)
+void Len::codegen(Module *module)
 {
 	ensurePrev();
 	validate();

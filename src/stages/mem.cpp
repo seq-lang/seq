@@ -15,7 +15,7 @@ Mem::Mem(types::Type *type, seq_int_t count) :
 	name += "(" + type->getName() + "," + std::to_string(count) + ")";
 }
 
-void Mem::codegen(llvm::Module *module)
+void Mem::codegen(Module *module)
 {
 	ensurePrev();
 	validate();

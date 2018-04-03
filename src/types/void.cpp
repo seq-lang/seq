@@ -9,24 +9,26 @@ types::VoidType::VoidType() : Type("Void", AnyType::get())
 {
 }
 
-Function *types::VoidType::makeFuncOf(Module *module,
-                                      ValMap outs,
-                                      Type *outType)
+Function *types::VoidType::makeFuncOf(Module *module, Type *outType)
 {
 	static int idx = 1;
 	LLVMContext& context = module->getContext();
 
-	Function *func = cast<Function>(
-	                   module->getOrInsertFunction(
-	                     getName() + "Func" + std::to_string(idx++),
-	                     outType->getLLVMType(context)));
-
-	return func;
+	return cast<Function>(
+	         module->getOrInsertFunction(
+	          getName() + "Func" + std::to_string(idx++),
+	          outType->getLLVMType(context)));
 }
 
-Value *types::VoidType::callFuncOf(llvm::Function *func,
+void types::VoidType::setFuncArgs(Function *func,
+                                  ValMap outs,
+                                  BasicBlock *block)
+{
+}
+
+Value *types::VoidType::callFuncOf(Function *func,
 		                           ValMap outs,
-                                   llvm::BasicBlock *block)
+                                   BasicBlock *block)
 {
 	IRBuilder<> builder(block);
 	return builder.CreateCall(func);

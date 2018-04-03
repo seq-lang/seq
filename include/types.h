@@ -40,9 +40,11 @@ namespace seq {
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
 
-			virtual llvm::Function *makeFuncOf(llvm::Module *module,
-			                                   ValMap outs,
-			                                   Type *outType);
+			virtual llvm::Function *makeFuncOf(llvm::Module *module, Type *outType);
+
+			virtual void setFuncArgs(llvm::Function *func,
+			                         ValMap outs,
+			                         llvm::BasicBlock *block);
 
 			virtual llvm::Value *callFuncOf(llvm::Function *func,
 					                        ValMap outs,

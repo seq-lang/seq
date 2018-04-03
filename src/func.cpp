@@ -104,13 +104,14 @@ void Func::codegen(Module *module)
 	compilationContext.reset();
 	LLVMContext& context = module->getContext();
 
-	func = inType->makeFuncOf(module, outs, outType);
+	func = inType->makeFuncOf(module, outType);
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
 
 	codegenInit(module);
 	builder.CreateCall(initFunc);
+	inType->setFuncArgs(func, outs, preambleBlock);
 
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
 	builder.SetInsertPoint(entry);

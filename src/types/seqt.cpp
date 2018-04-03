@@ -23,36 +23,40 @@ types::SeqType::SeqType() : Type("Seq", BaseType::get(), SeqData::SEQ)
 	vtable.print = (void *)printSeq;
 }
 
-Function *types::SeqType::makeFuncOf(Module *module,
-                                     ValMap outs,
-                                     Type *outType)
+Function *types::SeqType::makeFuncOf(Module *module, Type *outType)
 {
 	static int idx = 1;
 	LLVMContext& context = module->getContext();
 
-	Function *func = cast<Function>(
-	                   module->getOrInsertFunction(
-	                     getName() + "Func" + std::to_string(idx++),
-	                     outType->getLLVMType(context),
-	                     PointerType::get(IntegerType::getInt8PtrTy(context), 0),
-	                     PointerType::get(seqIntLLVM(context), 0)));
-
-	auto args = func->arg_begin();
-	Value *seqVar = args++;
-	Value *lenVar = args;
-	outs->insert({SeqData::SEQ, seqVar});
-	outs->insert({SeqData::LEN, lenVar});
-	return func;
+	return cast<Function>(
+	         module->getOrInsertFunction(
+	           getName() + "Func" + std::to_string(idx++),
+	           outType->getLLVMType(context),
+	           IntegerType::getInt8PtrTy(context),
+	           seqIntLLVM(context)));
 }
 
-Value *types::SeqType::callFuncOf(llvm::Function *func,
+void types::SeqType::setFuncArgs(Function *func,
+                                 ValMap outs,
+                                 BasicBlock *block)
+{
+	auto args = func->arg_begin();
+	Value *seq = args++;
+	Value *len = args;
+	Value *seqVar = makeAlloca(seq, block);
+	Value *lenVar = makeAlloca(len, block);
+	outs->insert({SeqData::SEQ, seqVar});
+	outs->insert({SeqData::LEN, lenVar});
+}
+
+Value *types::SeqType::callFuncOf(Function *func,
 		                          ValMap outs,
-                                  llvm::BasicBlock *block)
+                                  BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	Value *seqVar = getSafe(outs, SeqData::SEQ);
-	Value *lenVar = getSafe(outs, SeqData::LEN);
-	std::vector<Value *> args = {seqVar, lenVar};
+	Value *seq = builder.CreateLoad(getSafe(outs, SeqData::SEQ));
+	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+	std::vector<Value *> args = {seq, len};
 	return builder.CreateCall(func, args);
 }
 
@@ -279,7 +283,7 @@ types::MerType::MerType(seq_int_t k) :
 	vtable.print = (void *)printMer;
 }
 
-Type *types::MerType::getLLVMType(llvm::LLVMContext& context)
+Type *types::MerType::getLLVMType(LLVMContext& context)
 {
 	return IntegerType::getIntNTy(context, (unsigned)(2*k));
 }

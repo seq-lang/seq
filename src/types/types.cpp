@@ -16,31 +16,36 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
-Function *types::Type::makeFuncOf(Module *module,
-                                  ValMap outs,
-                                  Type *outType)
+Function *types::Type::makeFuncOf(Module *module, Type *outType)
 {
 	static int idx = 1;
 	LLVMContext& context = module->getContext();
 
-	Function *func = cast<Function>(
-	                   module->getOrInsertFunction(
-	                     getName() + "Func" + std::to_string(idx++),
-	                     outType->getLLVMType(context),
-	                     PointerType::get(getLLVMType(context), 0)));
-
-	auto args = func->arg_begin();
-	Value *arg = args;
-	outs->insert({getKey(), arg});
-	return func;
+	return cast<Function>(
+	         module->getOrInsertFunction(
+	           getName() + "Func" + std::to_string(idx++),
+	           outType->getLLVMType(context),
+	           getLLVMType(context)));
 }
 
-Value *types::Type::callFuncOf(llvm::Function *func,
+void types::Type::setFuncArgs(Function *func,
+                              ValMap outs,
+                              BasicBlock *block)
+{
+	if (getKey() == SeqData::NONE)
+		throw exc::SeqException("cannot initialize arguments of function of type '" + getName() + "'");
+
+	Value *arg = func->arg_begin();
+	Value *var = makeAlloca(arg, block);
+	outs->insert({getKey(), var});
+}
+
+Value *types::Type::callFuncOf(Function *func,
 		                       ValMap outs,
-                               llvm::BasicBlock *block)
+                               BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	Value *input = getSafe(outs, getKey());
+	Value *input = builder.CreateLoad(getSafe(outs, getKey()));
 	std::vector<Value *> args = {input};
 	return builder.CreateCall(func, args);
 }
