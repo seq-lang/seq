@@ -163,6 +163,12 @@ void types::ArrayType::codegenStore(BaseFunc *base,
 	builder.CreateStore(len, lenPtr);
 }
 
+bool types::ArrayType::isChildOf(Type *type)
+{
+	auto *arrayType = dynamic_cast<types::ArrayType *>(type);
+	return arrayType && getBaseType()->isChildOf(arrayType->getBaseType());
+}
+
 Type *types::ArrayType::getLLVMType(LLVMContext& context)
 {
 	if (!arrStruct) {

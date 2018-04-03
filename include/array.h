@@ -60,6 +60,7 @@ namespace seq {
 			                  llvm::Value *ptr,
 			                  llvm::Value *idx) override;
 
+			bool isChildOf(Type *type) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
 			seq_int_t size() const override;
 			Type *getBaseType() const;
