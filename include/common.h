@@ -7,6 +7,9 @@
 #include "seqdata.h"
 #include "exc.h"
 
+#define _SEQ_STR(x) #x
+#define SEQ_NATIVE(x) _SEQ_STR(x), (void *)x
+
 namespace seq {
 
 	typedef int64_t seq_int_t;

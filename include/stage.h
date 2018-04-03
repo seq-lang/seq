@@ -22,6 +22,7 @@
 
 namespace seq {
 	class BaseFunc;
+	class Func;
 	class Pipeline;
 
 	typedef void (*SeqMain)(seq_t *, bool isLast);

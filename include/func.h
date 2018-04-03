@@ -56,7 +56,15 @@ namespace seq {
 		types::Type *outType;
 		std::vector<Pipeline> pipelines;
 		ValMap outs;
+
+		/* for native functions */
+		std::string name;
+		void *rawFunc;
 	public:
+		Func(types::Type& inType,
+		     types::Type& outType,
+		     std::string name,
+		     void *rawFunc);
 		Func(types::Type& inType, types::Type& outType);
 		void codegen(llvm::Module *module) override;
 		void codegenCall(BaseFunc *base,
@@ -64,6 +72,7 @@ namespace seq {
 		                 ValMap outs,
 		                 llvm::BasicBlock *block) override;
 		void add(Pipeline pipeline) override;
+		void finalize(llvm::ExecutionEngine *eng);
 
 		types::Type *getInType() const override;
 		types::Type *getOutType() const override;

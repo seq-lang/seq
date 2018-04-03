@@ -6,11 +6,12 @@
 namespace seq {
 	class Call : public Stage {
 	private:
-		BaseFunc& func;
+		Func& func;
 	public:
-		Call(BaseFunc& func);
+		explicit Call(Func& func);
 		void codegen(llvm::Module *module) override;
-		static Call& make(BaseFunc& func);
+		void finalize(llvm::ExecutionEngine *eng) override;
+		static Call& make(Func& func);
 	};
 }
 

@@ -43,9 +43,18 @@ types::Type *BaseFunc::getOutType() const
 	return types::VoidType::get();
 }
 
-Func::Func(types::Type& inType, types::Type& outType) :
+Func::Func(types::Type& inType,
+           types::Type& outType,
+           std::string name,
+           void *rawFunc) :
     BaseFunc(), inType(&inType), outType(&outType),
-    pipelines(), outs(new std::map<SeqData, Value *>)
+    pipelines(), outs(new std::map<SeqData, Value *>),
+    name(std::move(name)), rawFunc(rawFunc)
+{
+}
+
+Func::Func(types::Type& inType, types::Type& outType) :
+    Func(inType, outType, "", nullptr)
 {
 }
 
@@ -98,13 +107,18 @@ void Func::codegen(Module *module)
 	if (func)
 		return;
 
+	func = inType->makeFuncOf(module, outType);
+
+	if (rawFunc) {
+		func->setName(name);
+		return;
+	}
+
 	if (pipelines.empty())
 		throw exc::SeqException("function has no pipelines");
 
 	compilationContext.reset();
 	LLVMContext& context = module->getContext();
-
-	func = inType->makeFuncOf(module, outType);
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
@@ -174,6 +188,12 @@ void Func::add(Pipeline pipeline)
 	pipeline.setAdded();
 }
 
+void Func::finalize(ExecutionEngine *eng)
+{
+	if (rawFunc)
+		eng->addGlobalMapping(func, rawFunc);
+}
+
 types::Type *Func::getInType() const
 {
 	return inType;
@@ -186,6 +206,9 @@ types::Type *Func::getOutType() const
 
 Pipeline Func::operator|(Pipeline to)
 {
+	if (rawFunc)
+		throw exc::SeqException("cannot add pipelines to native function");
+
 	to.getHead()->setBase(this);
 	BaseStage& begin = BaseStage::make(types::VoidType::get(), inType, nullptr);
 	begin.setBase(this);
@@ -208,6 +231,9 @@ Pipeline Func::operator|(PipelineList to)
 
 Pipeline Func::operator|(Var& to)
 {
+	if (rawFunc)
+		throw exc::SeqException("cannot add pipelines to native function");
+
 	if (!to.isAssigned())
 		throw exc::SeqException("variable used before assigned");
 

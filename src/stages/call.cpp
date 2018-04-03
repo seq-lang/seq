@@ -11,7 +11,7 @@ static types::Type *voidToAny(types::Type *type)
 	return type;
 }
 
-Call::Call(BaseFunc& func) :
+Call::Call(Func& func) :
     Stage("call", voidToAny(func.getInType()), func.getOutType()), func(func)
 {
 }
@@ -27,7 +27,12 @@ void Call::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-Call& Call::make(BaseFunc& func)
+void Call::finalize(ExecutionEngine *eng)
+{
+	func.finalize(eng);
+}
+
+Call& Call::make(Func& func)
 {
 	return *new Call(func);
 }
