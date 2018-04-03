@@ -19,7 +19,7 @@ void Op::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	func = cast<Function>(
 	         module->getOrInsertFunction(
-               name,
+	           name,
 	           Type::getVoidTy(context),
 	           IntegerType::getInt8PtrTy(context),
 	           seqIntLLVM(context)));
