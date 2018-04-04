@@ -8,9 +8,9 @@ Copy& stageutil::copy()
 	return Copy::make();
 }
 
-Filter& stageutil::filter(std::string name, SeqPred op)
+Filter& stageutil::filter(Func& func)
 {
-	return Filter::make(std::move(name), op);
+	return Filter::make(func);
 }
 
 Op& stageutil::op(std::string name, SeqOp op)

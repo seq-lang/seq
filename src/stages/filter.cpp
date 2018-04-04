@@ -1,14 +1,25 @@
 #include <string>
 #include <vector>
+#include "func.h"
 #include "exc.h"
 #include "filter.h"
 
 using namespace seq;
 using namespace llvm;
 
-Filter::Filter(std::string name, SeqPred op) :
-    Stage(std::move(name), types::SeqType::get(), types::SeqType::get()), op(op)
+Filter::Filter(Func& func) :
+    Stage("filter", types::VoidType::get(), types::VoidType::get()), func(func)
 {
+	if (!func.getOutType()->isChildOf(types::BoolType::get()))
+		throw exc::SeqException("filter function must return boolean");
+}
+
+void Filter::validate()
+{
+	if (prev)
+		in = out = prev->getOutType();
+
+	Stage::validate();
 }
 
 void Filter::codegen(Module *module)
@@ -17,24 +28,14 @@ void Filter::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	func = cast<Function>(
-	         module->getOrInsertFunction(
-		       name,
-	           Type::getInt8Ty(context),
-	           IntegerType::getInt8PtrTy(context),
-	           seqIntLLVM(context)));
-
-	func->setCallingConv(CallingConv::C);
-
 	block = prev->block;
 	outs->insert(prev->outs->begin(), prev->outs->end());
 
 	IRBuilder<> builder(block);
-	Value *seq = builder.CreateLoad(getSafe(outs, SeqData::SEQ));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-	std::vector<Value *> args = {seq, len};
 
-	Value *pred = builder.CreateCall(func, args, "");
+	ValMap result = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	func.codegenCall(getBase(), outs, result, block);
+	Value *pred = builder.CreateLoad(getSafe(result, SeqData::BOOL));
 
 	BasicBlock *body = BasicBlock::Create(context, "body", block->getParent());
 	block = body;
@@ -50,11 +51,11 @@ void Filter::codegen(Module *module)
 
 void Filter::finalize(ExecutionEngine *eng)
 {
-	eng->addGlobalMapping(func, (void *)op);
+	func.finalize(eng);
 	Stage::finalize(eng);
 }
 
-Filter& Filter::make(std::string name, SeqPred op)
+Filter& Filter::make(Func& func)
 {
-	return *new Filter(std::move(name), op);
+	return *new Filter(func);
 }

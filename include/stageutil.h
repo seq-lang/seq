@@ -23,7 +23,7 @@
 namespace seq {
 	namespace stageutil {
 		Copy& copy();
-		Filter& filter(std::string name, SeqPred op);
+		Filter& filter(Func& func);
 		Op& op(std::string name, SeqOp op);
 		Hash& hash(std::string name, SeqHash hash);
 		Print& print();

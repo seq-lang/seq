@@ -7,13 +7,13 @@
 namespace seq {
 	class Filter : public Stage {
 	private:
-		llvm::Function *func;
-		SeqPred op;
+		Func& func;
 	public:
-		Filter(std::string name, SeqPred op);
+		explicit Filter(Func& func);
+		void validate() override;
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::ExecutionEngine *eng) override;
-		static Filter& make(std::string name, SeqPred op);
+		static Filter& make(Func& func);
 	};
 }
 

@@ -5,7 +5,7 @@ using namespace seq;
 using namespace seq::types;
 using namespace seq::stageutil;
 
-SEQ_FUNC bool is_cpg(char *seq, seq_int_t len)
+SEQ_FUNC bool is_cpg_func(char *seq, seq_int_t len)
 {
 	return len >= 2 && seq[0] == 'C' && seq[1] == 'G';
 }
@@ -39,19 +39,12 @@ SEQ_FUNC seq_int_t my_hash_func(char *seq, seq_int_t len)
 	return h;
 }
 
-static Filter& filt_cpg()
-{
-	return filter("is_cpg", is_cpg);
-}
-
-static Hash& my_hash()
-{
-	return hash("my_hash_func", my_hash_func);
-}
-
 int main()
 {
 	seq::Seq s;
+
+	Func is_cpg(types::Seq, Bool, SEQ_NATIVE(is_cpg_func));
+	Func my_hash(types::Seq, Int, SEQ_NATIVE(my_hash_func));
 
 	/*
 	 * Multiple pipelines can be added
@@ -59,7 +52,7 @@ int main()
 	 */
 	s |
 	split(10,1) |
-	filt_cpg() |
+	filter(is_cpg) |
 	print() |
 	substr(6,5) |
 	copy() |
@@ -87,7 +80,7 @@ int main()
 	 * Pipelines can branch arbitrarily
 	 */
 	Pipeline x, y;
-	x = s | split(32,1) | filt_cpg();
+	x = s | split(32,1) | filter(is_cpg);
 	x | print();
 	y = x | substr(1,16);
 	y | (print(),
@@ -99,7 +92,7 @@ int main()
 	Var m = s.once | Int[1000];  // array of 1000 integers
 	                             // 's.once' is executed just once, at the start
 	Var i, v;
-	i = s | split(2,1) | filt_cpg() | count();
+	i = s | split(2,1) | filter(is_cpg) | count();
 	i | print();
 	s | split(1,1) | count() | m[i];
 	i | m[i];
@@ -121,7 +114,7 @@ int main()
 	 * Functions can be declared
 	 */
 	Func f(types::Seq, Array.of(types::Seq));
-	f | split(32,1) | filt_cpg() | collect();
+	f | split(32,1) | filter(is_cpg) | collect();
 
 	s.last | f() | foreach() | print();
 

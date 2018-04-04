@@ -30,6 +30,7 @@ void Call::codegen(Module *module)
 void Call::finalize(ExecutionEngine *eng)
 {
 	func.finalize(eng);
+	Stage::finalize(eng);
 }
 
 Call& Call::make(Func& func)
