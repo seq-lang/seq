@@ -49,6 +49,23 @@ namespace seq {
 			static FloatType *get();
 		};
 
+		class BoolType : public Type {
+		private:
+			BoolType();
+		public:
+			BoolType(BoolType const&)=delete;
+			void operator=(BoolType const&)=delete;
+
+			llvm::Value *checkEq(BaseFunc *base,
+			                     ValMap ins1,
+			                     ValMap ins2,
+			                     llvm::BasicBlock *block) override;
+
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
+			seq_int_t size() const override;
+			static BoolType *get();
+		};
+
 	}
 }
 

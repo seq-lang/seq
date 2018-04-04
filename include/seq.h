@@ -28,6 +28,7 @@ namespace seq {
 		static SeqType&   Seq   = *SeqType::get();
 		static IntType&   Int   = *IntType::get();
 		static FloatType& Float = *FloatType::get();
+		static BoolType&  Bool  = *BoolType::get();
 		static ArrayType& Array = *ArrayType::get();
 	}
 
