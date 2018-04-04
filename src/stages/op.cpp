@@ -1,7 +1,7 @@
 #include <string>
 #include <vector>
-#include "exc.h"
-#include "op.h"
+#include "seq/exc.h"
+#include "seq/op.h"
 
 using namespace seq;
 using namespace llvm;

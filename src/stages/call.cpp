@@ -1,5 +1,5 @@
-#include "func.h"
-#include "call.h"
+#include "seq/func.h"
+#include "seq/call.h"
 
 using namespace seq;
 using namespace llvm;

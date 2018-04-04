@@ -1,5 +1,5 @@
-#include "stage.h"
-#include "exc.h"
+#include "seq/stage.h"
+#include "seq/exc.h"
 
 using namespace seq;
 

@@ -1,6 +1,6 @@
 #include <cassert>
-#include "exc.h"
-#include "print.h"
+#include "seq/exc.h"
+#include "seq/print.h"
 
 using namespace seq;
 using namespace llvm;

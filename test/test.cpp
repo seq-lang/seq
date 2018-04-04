@@ -1,5 +1,5 @@
 #include <iostream>
-#include "seq.h"
+#include <seq/seq.h>
 
 using namespace seq;
 using namespace seq::types;

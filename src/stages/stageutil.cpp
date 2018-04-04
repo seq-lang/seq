@@ -1,5 +1,5 @@
 #include <cstdlib>
-#include "stageutil.h"
+#include "seq/stageutil.h"
 
 using namespace seq;
 

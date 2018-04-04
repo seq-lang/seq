@@ -1,6 +1,6 @@
-#include "seq.h"
-#include "util.h"
-#include "collect.h"
+#include "seq/seq.h"
+#include "seq/util.h"
+#include "seq/collect.h"
 
 using namespace seq;
 using namespace llvm;

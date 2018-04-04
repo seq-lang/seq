@@ -1,5 +1,5 @@
-#include "any.h"
-#include "base.h"
+#include "seq/any.h"
+#include "seq/base.h"
 
 using namespace seq;
 using namespace llvm;

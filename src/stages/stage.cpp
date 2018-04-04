@@ -1,8 +1,8 @@
 #include <string>
 #include <vector>
-#include "seq.h"
-#include "pipeline.h"
-#include "exc.h"
+#include "seq/seq.h"
+#include "seq/pipeline.h"
+#include "seq/exc.h"
 
 using namespace seq;
 using namespace llvm;

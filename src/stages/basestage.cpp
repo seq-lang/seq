@@ -1,4 +1,4 @@
-#include "basestage.h"
+#include "seq/basestage.h"
 
 using namespace seq;
 using namespace llvm;

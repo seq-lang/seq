@@ -1,8 +1,8 @@
 #include <cstdint>
 #include <string>
-#include "seq.h"
-#include "exc.h"
-#include "range.h"
+#include "seq/seq.h"
+#include "seq/exc.h"
+#include "seq/range.h"
 
 using namespace seq;
 using namespace llvm;

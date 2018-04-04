@@ -1,7 +1,7 @@
 #include <iostream>
-#include "seq.h"
-#include "base.h"
-#include "seqt.h"
+#include "seq/seq.h"
+#include "seq/base.h"
+#include "seq/seqt.h"
 
 using namespace seq;
 using namespace llvm;

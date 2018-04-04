@@ -1,5 +1,5 @@
-#include "util.h"
-#include "revcomp.h"
+#include "seq/util.h"
+#include "seq/revcomp.h"
 
 using namespace seq;
 

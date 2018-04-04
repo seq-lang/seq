@@ -1,4 +1,4 @@
-#include "chunk.h"
+#include "seq/chunk.h"
 
 using namespace seq;
 using namespace llvm;

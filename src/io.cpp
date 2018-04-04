@@ -3,8 +3,8 @@
 #include <iostream>
 #include <string>
 #include <cassert>
-#include "exc.h"
-#include "io.h"
+#include "seq/exc.h"
+#include "seq/io.h"
 
 using namespace seq;
 using namespace seq::io;

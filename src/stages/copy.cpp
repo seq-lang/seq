@@ -1,6 +1,6 @@
-#include "seq.h"
-#include "exc.h"
-#include "copy.h"
+#include "seq/seq.h"
+#include "seq/exc.h"
+#include "seq/copy.h"
 
 using namespace seq;
 using namespace llvm;

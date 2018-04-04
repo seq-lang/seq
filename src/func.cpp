@@ -1,7 +1,7 @@
-#include "basestage.h"
-#include "call.h"
-#include "exc.h"
-#include "func.h"
+#include "seq/basestage.h"
+#include "seq/call.h"
+#include "seq/exc.h"
+#include "seq/func.h"
 
 using namespace seq;
 using namespace llvm;

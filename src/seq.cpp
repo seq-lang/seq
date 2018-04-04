@@ -2,11 +2,11 @@
 #include <string>
 #include <vector>
 #include <cassert>
-#include "common.h"
-#include "basestage.h"
-#include "util.h"
-#include "exc.h"
-#include "seq.h"
+#include "seq/common.h"
+#include "seq/basestage.h"
+#include "seq/util.h"
+#include "seq/exc.h"
+#include "seq/seq.h"
 
 using namespace seq;
 using namespace llvm;

@@ -1,4 +1,4 @@
-#include "serialize.h"
+#include "seq/serialize.h"
 
 using namespace seq;
 using namespace llvm;

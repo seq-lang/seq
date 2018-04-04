@@ -1,8 +1,8 @@
 #include <string>
 #include <vector>
-#include "seq.h"
-#include "exc.h"
-#include "hash.h"
+#include "seq/seq.h"
+#include "seq/exc.h"
+#include "seq/hash.h"
 
 using namespace seq;
 using namespace llvm;

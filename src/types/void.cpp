@@ -1,6 +1,6 @@
-#include "any.h"
-#include "exc.h"
-#include "void.h"
+#include "seq/any.h"
+#include "seq/exc.h"
+#include "seq/void.h"
 
 using namespace seq;
 using namespace llvm;

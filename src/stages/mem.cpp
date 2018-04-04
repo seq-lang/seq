@@ -1,10 +1,10 @@
 #include <cstdlib>
 #include <vector>
 #include <cassert>
-#include "basestage.h"
-#include "seq.h"
-#include "var.h"
-#include "mem.h"
+#include "seq/basestage.h"
+#include "seq/seq.h"
+#include "seq/var.h"
+#include "seq/mem.h"
 
 using namespace seq;
 using namespace llvm;

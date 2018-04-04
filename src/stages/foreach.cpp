@@ -1,5 +1,5 @@
 #include <cassert>
-#include "foreach.h"
+#include "seq/foreach.h"
 
 using namespace seq;
 using namespace llvm;

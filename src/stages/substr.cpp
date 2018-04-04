@@ -1,7 +1,7 @@
 #include <cstdint>
-#include "seq.h"
-#include "exc.h"
-#include "substr.h"
+#include "seq/seq.h"
+#include "seq/exc.h"
+#include "seq/substr.h"
 
 using namespace llvm;
 using namespace seq;

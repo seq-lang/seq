@@ -1,6 +1,6 @@
-#include "stage.h"
-#include "exc.h"
-#include "pipeline.h"
+#include "seq/stage.h"
+#include "seq/exc.h"
+#include "seq/pipeline.h"
 
 using namespace seq;
 

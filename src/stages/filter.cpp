@@ -1,8 +1,8 @@
 #include <string>
 #include <vector>
-#include "func.h"
-#include "exc.h"
-#include "filter.h"
+#include "seq/func.h"
+#include "seq/exc.h"
+#include "seq/filter.h"
 
 using namespace seq;
 using namespace llvm;

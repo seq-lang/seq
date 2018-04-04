@@ -1,9 +1,9 @@
-#include "seq.h"
-#include "stage.h"
-#include "basestage.h"
-#include "mem.h"
-#include "exc.h"
-#include "var.h"
+#include "seq/seq.h"
+#include "seq/stage.h"
+#include "seq/basestage.h"
+#include "seq/mem.h"
+#include "seq/exc.h"
+#include "seq/var.h"
 
 using namespace seq;
 using namespace llvm;

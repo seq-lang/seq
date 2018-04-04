@@ -14,44 +14,42 @@ include_directories(include/)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-add_library(seq SHARED include/any.h
-                       include/array.h
-                       include/base.h
-                       include/basestage.h
-                       include/call.h
-                       include/chunk.h
-                       include/collect.h
-                       include/common.h
-                       include/copy.h
-                       include/count.h
-                       include/exc.h
-                       include/filter.h
-                       include/foreach.h
-                       include/func.h
-                       include/hash.h
-                       include/io.h
-                       include/lambda.h
-                       include/len.h
-                       include/mem.h
-                       include/num.h
-                       include/op.h
-                       include/pipeline.h
-                       include/print.h
-                       include/range.h
-                       include/range.h
-                       include/revcomp.h
-                       include/seq.h
-                       include/seq.h
-                       include/seqt.h
-                       include/serialize.h
-                       include/split.h
-                       include/stage.h
-                       include/stageutil.h
-                       include/substr.h
-                       include/types.h
-                       include/util.h
-                       include/var.h
-                       include/void.h
+add_library(seq SHARED include/seq/any.h
+                       include/seq/array.h
+                       include/seq/base.h
+                       include/seq/basestage.h
+                       include/seq/call.h
+                       include/seq/chunk.h
+                       include/seq/collect.h
+                       include/seq/common.h
+                       include/seq/copy.h
+                       include/seq/count.h
+                       include/seq/exc.h
+                       include/seq/filter.h
+                       include/seq/foreach.h
+                       include/seq/func.h
+                       include/seq/hash.h
+                       include/seq/io.h
+                       include/seq/lambda.h
+                       include/seq/len.h
+                       include/seq/mem.h
+                       include/seq/num.h
+                       include/seq/op.h
+                       include/seq/pipeline.h
+                       include/seq/print.h
+                       include/seq/range.h
+                       include/seq/revcomp.h
+                       include/seq/seq.h
+                       include/seq/seqt.h
+                       include/seq/serialize.h
+                       include/seq/split.h
+                       include/seq/stage.h
+                       include/seq/stageutil.h
+                       include/seq/substr.h
+                       include/seq/types.h
+                       include/seq/util.h
+                       include/seq/var.h
+                       include/seq/void.h
                        src/exc.cpp
                        src/func.cpp
                        src/io.cpp

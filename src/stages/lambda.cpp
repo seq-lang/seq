@@ -1,8 +1,8 @@
 #include <string>
-#include "common.h"
-#include "seq.h"
-#include "exc.h"
-#include "lambda.h"
+#include "seq/common.h"
+#include "seq/seq.h"
+#include "seq/exc.h"
+#include "seq/lambda.h"
 
 using namespace seq;
 using namespace llvm;

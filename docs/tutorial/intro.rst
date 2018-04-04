@@ -5,7 +5,7 @@ A ``seq::Seq`` instance essentially represents a single "module", which is a col
 
 .. code-block:: c++
 
-    #include "seq.h"
+    #include <seq/seq.h>
 
     using namespace seq;
     using namespace seq::stageutil;

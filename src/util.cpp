@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <cassert>
-#include "util.h"
+#include "seq/util.h"
 
 using namespace seq;
 using namespace seq::util;

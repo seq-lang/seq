@@ -38,7 +38,7 @@ You can then open `_build/html/index.html` with your browser.
 Here's an example program for printing the reverse complements of all non-overlapping 32-mers from an input FASTQ:
 
 ```cpp
-#include "seq.h"
+#include <seq/seq.h>
 
 using namespace seq;
 using namespace seq::stageutil;

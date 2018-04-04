@@ -1,8 +1,8 @@
 #include <iostream>
 #include <fstream>
-#include "seq.h"
-#include "base.h"
-#include "num.h"
+#include "seq/seq.h"
+#include "seq/base.h"
+#include "seq/num.h"
 
 using namespace seq;
 using namespace llvm;
