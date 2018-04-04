@@ -9,7 +9,7 @@
 #include "types.h"
 
 namespace seq {
-	class Seq;
+	class SeqModule;
 	class LoadStore;
 
 	class Mem : public Stage {

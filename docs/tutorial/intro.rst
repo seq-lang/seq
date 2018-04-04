@@ -1,7 +1,7 @@
 Introduction
 ============
 
-A ``seq::Seq`` instance essentially represents a single "module", which is a collection of pipelines through which input sequences are passed. Here is a simple example which reads a FASTQ and prints the reverse complements of each read's non-overlapping 32-mers:
+A ``seq::SeqModule`` instance essentially represents a single "module", which is a collection of pipelines through which input sequences are passed. Here is a simple example which reads a FASTQ and prints the reverse complements of each read's non-overlapping 32-mers:
 
 .. code-block:: c++
 
@@ -12,7 +12,7 @@ A ``seq::Seq`` instance essentially represents a single "module", which is a col
 
     int main()
     {
-        seq::Seq s;
+        SeqModule s;
 
         s | split(32,32) | revcomp() | print();
 
@@ -51,7 +51,7 @@ Pipelines can branch arbitrarily. For example, if we instead want to print each 
 
 .. code-block:: cpp
 
-    seq::Seq s;
+    SeqModule s;
 
     Pipeline kmers = s | split(32,32);
     kmers | print();
@@ -64,7 +64,7 @@ Branching pipelines can also be represented using a `,` shorthand:
 
 .. code-block:: cpp
 
-    seq::Seq s;
+    SeqModule s;
 
     s | split(32,32) | (print(), revcomp() | print());
 

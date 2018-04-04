@@ -41,10 +41,10 @@ SEQ_FUNC seq_int_t my_hash_func(char *seq, seq_int_t len)
 
 int main()
 {
-	seq::Seq s;
+	SeqModule s;
 
-	Func is_cpg(types::Seq, Bool, SEQ_NATIVE(is_cpg_func));
-	Func my_hash(types::Seq, Int, SEQ_NATIVE(my_hash_func));
+	Func is_cpg(Seq, Bool, SEQ_NATIVE(is_cpg_func));
+	Func my_hash(Seq, Int, SEQ_NATIVE(my_hash_func));
 
 	/*
 	 * Multiple pipelines can be added
@@ -113,7 +113,7 @@ int main()
 	/*
 	 * Functions can be declared
 	 */
-	Func f(types::Seq, Array.of(types::Seq));
+	Func f(Seq, Array.of(Seq));
 	f | split(32,1) | filter(is_cpg) | collect();
 
 	s.last | f() | foreach() | print();

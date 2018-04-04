@@ -4,13 +4,13 @@ Internals
 Overview
 --------
 
-The user works directly with a ``Seq`` object:
+The user works directly with a ``SeqModule`` object:
 
-.. cpp:class:: seq::Seq
+.. cpp:class:: seq::SeqModule
 
 The workflow is as follows:
 
-- User specifies pipelines via a ``Seq`` instance
+- User specifies pipelines via a ``SeqModule`` instance
 - User specifies input source
 - Pipelines type-checked and validated
 - Pipelines JIT'ed by LLVM
@@ -49,13 +49,13 @@ Stages make up the pipelines and are where the actual code generation takes plac
 
     Stage class
 
-.. cpp:member:: seq::Seq* seq::Stage::base
+.. cpp:member:: seq::SeqModule* seq::Stage::base
 
-   The ``Seq`` instance associated with this stage
+   The ``SeqModule`` instance associated with this stage
 
 .. cpp:member:: bool seq::Stage::added
 
-    Whether this stage has been added in any pipeline to a ``Seq`` instance
+    Whether this stage has been added in any pipeline to any ``SeqModule``
 
 .. cpp:member:: seq::types::Type* seq::Stage::in
 
@@ -148,7 +148,7 @@ The type classes also have several member functions for generating code for spec
 Functions
 ---------
 
-The ``seq::Seq`` class is a subclass of ``seq::BaseFunc``, which is a generic wrapper around an LLVM function that is also used for defining Seq functions:
+The ``seq::SeqModule`` class is a subclass of ``seq::BaseFunc``, which is a generic wrapper around an LLVM function that is also used for defining Seq functions:
 
 .. cpp:class:: seq::BaseFunc
 

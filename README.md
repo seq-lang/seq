@@ -45,7 +45,7 @@ using namespace seq::stageutil;
 
 int main()
 {
-    seq::Seq s;
+    SeqModule s;
     
     s | split(32,32) | revcomp() | print();
 

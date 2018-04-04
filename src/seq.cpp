@@ -11,7 +11,7 @@
 using namespace seq;
 using namespace llvm;
 
-PipelineAggregator::PipelineAggregator(Seq *base) : base(base), pipelines()
+PipelineAggregator::PipelineAggregator(SeqModule *base) : base(base), pipelines()
 {
 }
 
@@ -99,19 +99,19 @@ PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr) :
 }
 
 
-Seq::Seq() :
+SeqModule::SeqModule() :
     BaseFunc(), sources(), main(this), once(this), last(this)
 {
 	for (auto& out : outs)
 		out = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
 }
 
-void Seq::source(std::string source)
+void SeqModule::source(std::string source)
 {
 	sources.push_back(source);
 }
 
-void Seq::codegen(Module *module)
+void SeqModule::codegen(Module *module)
 {
 	if (func)
 		return;
@@ -249,7 +249,7 @@ void Seq::codegen(Module *module)
 	finalizeInit(module);
 }
 
-void Seq::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *block)
+void SeqModule::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *block)
 {
 	throw exc::SeqException("cannot call Seq instance");
 }
@@ -264,7 +264,7 @@ static io::Format extractExt(const std::string& source)
 	return fmtIter->second;
 }
 
-void Seq::execute(bool debug)
+void SeqModule::execute(bool debug)
 {
 	try {
 		if (sources.empty())
@@ -342,27 +342,27 @@ void Seq::execute(bool debug)
 	}
 }
 
-void Seq::add(Pipeline pipeline)
+void SeqModule::add(Pipeline pipeline)
 {
 	main.add(pipeline);
 }
 
-Pipeline Seq::operator|(Pipeline to)
+Pipeline SeqModule::operator|(Pipeline to)
 {
 	return main | to;
 }
 
-Pipeline Seq::operator|(PipelineList to)
+Pipeline SeqModule::operator|(PipelineList to)
 {
 	return main | to;
 }
 
-Pipeline Seq::operator|(Var& to)
+Pipeline SeqModule::operator|(Var& to)
 {
 	return main | to;
 }
 
-PipelineAggregatorProxy Seq::operator[](unsigned idx)
+PipelineAggregatorProxy SeqModule::operator[](unsigned idx)
 {
 	return {main, idx};
 }

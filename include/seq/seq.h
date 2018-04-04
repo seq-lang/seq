@@ -33,9 +33,9 @@ namespace seq {
 	}
 
 	struct PipelineAggregator {
-		Seq *base;
+		SeqModule *base;
 		std::vector<Pipeline> pipelines;
-		explicit PipelineAggregator(Seq *base);
+		explicit PipelineAggregator(SeqModule *base);
 		void add(Pipeline pipeline);
 		Pipeline addWithIndex(Pipeline to, seq_int_t idx);
 		Pipeline operator|(Pipeline to);
@@ -53,14 +53,14 @@ namespace seq {
 		Pipeline operator|(Var& to);
 	};
 
-	class Seq : public BaseFunc {
+	class SeqModule : public BaseFunc {
 	private:
 		std::vector<std::string> sources;
 		std::array<ValMap, io::MAX_INPUTS> outs;
 
 		friend PipelineAggregator;
 	public:
-		Seq();
+		SeqModule();
 
 		PipelineAggregator main;
 		PipelineAggregator once;

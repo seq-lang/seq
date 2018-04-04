@@ -5,7 +5,7 @@ Objects can be serialized, and later deserialized either in the same program or 
 
 .. code-block:: c++
 
-    seq::Seq s;
+    SeqModule s;
 
     const unsigned K = 8;
     const unsigned N = 1 << (2 * K);  // 4^K

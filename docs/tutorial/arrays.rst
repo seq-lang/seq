@@ -5,7 +5,7 @@ Arrays can be declared like this:
 
 .. code-block:: c++
 
-    seq::Seq s;
+    SeqModule s;
 
     Var m = s.once | Int[10];
     ...
@@ -58,7 +58,7 @@ Arrays can be declared like this:
 
     int main()
     {
-        seq::Seq s;
+        SeqModule s;
 
         const unsigned K = 8;
         const unsigned N = 1 << (2 * K);  // 4^K
@@ -77,7 +77,7 @@ As a second example, let’s store the integers from 0 to 9 in an array and prin
 
 .. code-block:: c++
 
-    seq::Seq s;
+    SeqModule s;
 
     const unsigned N = 10;
     Var m = s.once | Int[N];
@@ -94,7 +94,7 @@ Finally, note that ``collect()`` can be used to collect all the outputs of a giv
 
 .. code-block:: c++
 
-    seq::Seq s;
+    SeqModule s;
 
     Var kmers = s | split(32,32) | collect();
     kmers | foreach() | (print(), copy() | revcomp() | print());
@@ -108,7 +108,7 @@ We can also partition arrays by some key function. For example, let's say we wan
 
 .. code-block:: c++
 
-    Func key(types::Seq, types::Seq);
+    Func key(Seq, Seq);
     key | substr(1,1);
 
     Var kmers = s | split(5,1) | collect();

@@ -5,7 +5,7 @@ Variables can be used to refer to intermediate values in a pipeline. For example
 
 .. code-block:: c++
 
-    seq::Seq s;
+    SeqModule s;
 
     Var a = s | copy();
     Var b = a | len();

@@ -5,7 +5,7 @@ Here's an example of how lambdas can be used, which builds on the previous examp
 
 .. code-block:: c++
 
-    seq::Seq s;
+    SeqModule s;
 
     const unsigned N = 10;
     Var m = s.once | Int[N];
