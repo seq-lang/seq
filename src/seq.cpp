@@ -100,10 +100,15 @@ PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr) :
 
 
 SeqModule::SeqModule() :
-    BaseFunc(), sources(), main(this), once(this), last(this)
+    BaseFunc(), sources(), main(this), once(this), last(this), data(nullptr)
 {
 	for (auto& out : outs)
 		out = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+}
+
+SeqModule::~SeqModule()
+{
+	delete data;
 }
 
 void SeqModule::source(std::string source)
@@ -254,16 +259,6 @@ void SeqModule::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock 
 	throw exc::SeqException("cannot call Seq instance");
 }
 
-static io::Format extractExt(const std::string& source)
-{
-	auto fmtIter = io::EXT_CONV.find(source.substr(source.find_last_of('.') + 1));
-
-	if (fmtIter == io::EXT_CONV.end())
-		throw exc::IOException("unknown file extension in '" + source + "'");
-
-	return fmtIter->second;
-}
-
 void SeqModule::execute(bool debug)
 {
 	try {
@@ -273,10 +268,10 @@ void SeqModule::execute(bool debug)
 		if (sources.size() > io::MAX_INPUTS)
 			throw exc::SeqException("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
 
-		io::Format fmt = extractExt(sources[0]);
+		io::Format fmt = io::extractExt(sources[0]);
 
 		for (const auto& src : sources) {
-			if (extractExt(src) != fmt)
+			if (io::extractExt(src) != fmt)
 				throw exc::SeqException("inconsistent input formats");
 		}
 
@@ -298,19 +293,19 @@ void SeqModule::execute(bool debug)
 		ExecutionEngine *eng = EB.create();
 
 		for (auto& pipeline : once.pipelines) {
-			pipeline.getHead()->finalize(eng);
+			pipeline.getHead()->finalize(module, eng);
 		}
 
 		for (auto& pipeline : main.pipelines) {
-			pipeline.getHead()->finalize(eng);
+			pipeline.getHead()->finalize(module, eng);
 		}
 
 		for (auto& pipeline : last.pipelines) {
-			pipeline.getHead()->finalize(eng);
+			pipeline.getHead()->finalize(module, eng);
 		}
 
 		auto op = (SeqMain)eng->getPointerToFunction(func);
-		auto *data = new io::DataBlock();
+		data = new io::DataBlock();
 		std::vector<std::ifstream *> ins;
 
 		for (auto& source : sources) {
@@ -334,8 +329,6 @@ void SeqModule::execute(bool debug)
 			in->close();
 			delete in;
 		}
-
-		delete data;
 	} catch (std::exception& e) {
 		errs() << e.what() << '\n';
 		throw;

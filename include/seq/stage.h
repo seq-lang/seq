@@ -68,7 +68,7 @@ namespace seq {
 		virtual void ensurePrev();
 		virtual void codegen(llvm::Module *module);
 		virtual void codegenNext(llvm::Module *module);
-		virtual void finalize(llvm::ExecutionEngine *eng);
+		virtual void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 		virtual Pipeline operator|(Pipeline to);
 		operator Pipeline();

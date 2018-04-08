@@ -48,7 +48,7 @@ void Copy::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Copy::finalize(ExecutionEngine *eng)
+void Copy::finalize(Module *module, ExecutionEngine *eng)
 {
 	eng->addGlobalMapping(copyFunc, (void *)util::copy);
 }

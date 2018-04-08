@@ -10,7 +10,7 @@ namespace seq {
 	public:
 		explicit Call(Func& func);
 		void codegen(llvm::Module *module) override;
-		void finalize(llvm::ExecutionEngine *eng) override;
+		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Call& make(Func& func);
 	};
 }

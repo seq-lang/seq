@@ -13,7 +13,7 @@ namespace seq {
 	public:
 		explicit Serialize(std::string filename);
 		void codegen(llvm::Module *module) override;
-		void finalize(llvm::ExecutionEngine *eng) override;
+		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Serialize& make(std::string filename);
 	};
 
@@ -24,7 +24,7 @@ namespace seq {
 	public:
 		Deserialize(types::Type *type, std::string filename);
 		void codegen(llvm::Module *module) override;
-		void finalize(llvm::ExecutionEngine *eng) override;
+		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Deserialize& make(types::Type *type, std::string filename);
 	};
 

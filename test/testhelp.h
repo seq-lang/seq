@@ -1,9 +1,24 @@
-#include <iostream>
+#ifndef SEQ_TESTHELP_H
+#define SEQ_TESTHELP_H
+
+#include <string>
+#include <fstream>
+#include <gtest/gtest.h>
 #include <seq/seq.h>
 
 using namespace seq;
 using namespace seq::types;
 using namespace seq::stageutil;
+
+#define DEFAULT_TEST_INPUT "test/data/single/seqs.txt"
+
+#define TEST_INPUTS_SINGLE "test/data/single/seqs.txt",   \
+                           "test/data/single/seqs.fastq", \
+                           "test/data/single/seqs.fasta"
+
+#define TEST_INPUTS_MULTI  "test/data/multiple/seqs.txt",   \
+                           "test/data/multiple/seqs.fastq", \
+                           "test/data/multiple/seqs.fasta"
 
 SEQ_FUNC bool is_cpg_func(char *seq, seq_int_t len)
 {
@@ -39,7 +54,7 @@ SEQ_FUNC seq_int_t my_hash_func(char *seq, seq_int_t len)
 	return h;
 }
 
-int main()
+static inline void bigTest()
 {
 	SeqModule s;
 
@@ -118,6 +133,8 @@ int main()
 
 	s.last | f() | foreach() | print();
 
-	s.source("test/data/seqs.fastq");
+	s.source("test/data/multiple/seqs.fastq");
 	s.execute(true);  // debug=true
 }
+
+#endif /* SEQ_TESTHELP_H */

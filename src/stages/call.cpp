@@ -27,10 +27,10 @@ void Call::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Call::finalize(ExecutionEngine *eng)
+void Call::finalize(Module *module, ExecutionEngine *eng)
 {
-	func.finalize(eng);
-	Stage::finalize(eng);
+	func.finalize(module, eng);
+	Stage::finalize(module, eng);
 }
 
 Call& Call::make(Func& func)

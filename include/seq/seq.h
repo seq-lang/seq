@@ -61,10 +61,13 @@ namespace seq {
 		friend PipelineAggregator;
 	public:
 		SeqModule();
+		~SeqModule();
 
 		PipelineAggregator main;
 		PipelineAggregator once;
 		PipelineAggregator last;
+
+		io::DataBlock *data;
 
 		void source(std::string s);
 

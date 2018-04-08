@@ -56,12 +56,12 @@ void Mem::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Mem::finalize(ExecutionEngine *eng)
+void Mem::finalize(Module *module, ExecutionEngine *eng)
 {
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
-	type->getBaseType()->finalizeAlloc(eng);
-	Stage::finalize(eng);
+	type->getBaseType()->finalizeAlloc(module, eng);
+	Stage::finalize(module, eng);
 }
 
 Mem& Mem::make(types::Type *type, seq_int_t count)

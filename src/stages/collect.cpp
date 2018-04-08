@@ -84,10 +84,10 @@ void Collect::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Collect::finalize(ExecutionEngine *eng)
+void Collect::finalize(Module *module, ExecutionEngine *eng)
 {
 	eng->addGlobalMapping(appendFunc, (void *)util::append);
-	Stage::finalize(eng);
+	Stage::finalize(module, eng);
 }
 
 Collect& Collect::make()

@@ -42,7 +42,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -pedantic-errors -fstrict-aliasing")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-gnu-zero-variadic-macro-arguments")
 include_directories(src/)
 include_directories(include/)
 
@@ -53,6 +53,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/base.h
                        include/seq/basestage.h
                        include/seq/call.h
+                       include/seq/capture.h
                        include/seq/chunk.h
                        include/seq/collect.h
                        include/seq/common.h
@@ -93,6 +94,7 @@ add_library(seq SHARED include/seq/any.h
                        src/seqdata.h
                        src/stages/basestage.cpp
                        src/stages/call.cpp
+                       src/stages/capture.cpp
                        src/stages/chunk.cpp
                        src/stages/collect.cpp
                        src/stages/copy.cpp
@@ -125,5 +127,9 @@ llvm_map_components_to_libnames(llvm_libs support core irreader x86asmparser x86
 target_link_libraries(seq ${llvm_libs})
 
 # Seq test
-add_executable(seqtest test/test.cpp)
+add_executable(seqtest test/main.cpp
+                       test/stages/counttest.h
+                       test/stages/calltest.h
+                       test/stages/lentest.h
+                       test/testhelp.h)
 target_link_libraries(seqtest seq gtest_main)

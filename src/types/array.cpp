@@ -8,8 +8,7 @@ using namespace seq;
 using namespace llvm;
 
 types::ArrayType::ArrayType(Type *baseType) :
-    Type("Array", BaseType::get(), SeqData::ARRAY),
-    baseType(baseType), arrStruct(nullptr)
+    Type("Array", BaseType::get(), SeqData::ARRAY), baseType(baseType)
 {
 }
 
@@ -94,9 +93,9 @@ void types::ArrayType::callSerialize(BaseFunc *base,
 	baseType->callSerializeArray(base, outs, block, file);
 }
 
-void types::ArrayType::finalizeSerialize(ExecutionEngine *eng)
+void types::ArrayType::finalizeSerialize(Module *module, ExecutionEngine *eng)
 {
-	baseType->finalizeSerializeArray(eng);
+	baseType->finalizeSerializeArray(module, eng);
 }
 
 void types::ArrayType::callDeserialize(BaseFunc *base,
@@ -107,9 +106,9 @@ void types::ArrayType::callDeserialize(BaseFunc *base,
 	baseType->callDeserializeArray(base, outs, block, file);
 }
 
-void types::ArrayType::finalizeDeserialize(ExecutionEngine *eng)
+void types::ArrayType::finalizeDeserialize(Module *module, ExecutionEngine *eng)
 {
-	baseType->finalizeDeserializeArray(eng);
+	baseType->finalizeDeserializeArray(module, eng);
 }
 
 void types::ArrayType::codegenLoad(BaseFunc *base,
@@ -165,18 +164,18 @@ void types::ArrayType::codegenStore(BaseFunc *base,
 
 bool types::ArrayType::isChildOf(Type *type)
 {
+	if (type == BaseType::get())
+		return true;
+
 	auto *arrayType = dynamic_cast<types::ArrayType *>(type);
 	return arrayType && getBaseType()->isChildOf(arrayType->getBaseType());
 }
 
 Type *types::ArrayType::getLLVMType(LLVMContext& context)
 {
-	if (!arrStruct) {
-		arrStruct = StructType::create(context, "arr_t");
-		arrStruct->setBody({seqIntLLVM(context),
-		                    PointerType::get(baseType->getLLVMType(context), 0)});
-	}
-
+	llvm::StructType *arrStruct = StructType::create(context, "arr_t");
+	arrStruct->setBody({seqIntLLVM(context),
+	                    PointerType::get(baseType->getLLVMType(context), 0)});
 	return arrStruct;
 }
 

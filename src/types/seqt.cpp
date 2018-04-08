@@ -197,22 +197,20 @@ void types::SeqType::callPrint(BaseFunc *base,
 
 	LLVMContext& context = block->getContext();
 
-	if (!vtable.printFunc) {
-		vtable.printFunc = cast<Function>(
-		                     block->getModule()->getOrInsertFunction(
-		                       "print" + getName(),
-		                       llvm::Type::getVoidTy(context),
-		                       IntegerType::getInt8PtrTy(context),
-		                       seqIntLLVM(context)));
+	Function *printFunc = cast<Function>(
+	                        block->getModule()->getOrInsertFunction(
+	                          printFuncName(),
+	                          llvm::Type::getVoidTy(context),
+	                          IntegerType::getInt8PtrTy(context),
+	                          seqIntLLVM(context)));
 
-		vtable.printFunc->setCallingConv(CallingConv::C);
-	}
+	printFunc->setCallingConv(CallingConv::C);
 
 	IRBuilder<> builder(block);
 	Value *seq = builder.CreateLoad(getSafe(outs, SeqData::SEQ));
 	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
 	std::vector<Value *> args = {seq, len};
-	builder.CreateCall(vtable.printFunc, args, "");
+	builder.CreateCall(printFunc, args, "");
 }
 
 void types::SeqType::codegenLoad(BaseFunc *base,
@@ -277,35 +275,9 @@ types::SeqType *types::SeqType::get()
 	return &instance;
 }
 
-types::MerType::MerType(seq_int_t k) :
-    Type("Mer", SeqType::get(), SeqData::SEQ), k(k)
-{
-	vtable.print = (void *)printMer;
-}
-
-Type *types::MerType::getLLVMType(LLVMContext& context)
-{
-	return IntegerType::getIntNTy(context, (unsigned)(2*k));
-}
-
 Type *types::SeqType::getLLVMType(LLVMContext& context)
 {
-	static StructType *seqStruct = nullptr;
-
-	if (!seqStruct) {
-		seqStruct = StructType::create(context, "seq_t");
-		seqStruct->setBody({seqIntLLVM(context), IntegerType::getInt8PtrTy(context)});
-	}
-
+	StructType *seqStruct = StructType::create(context, "seq_t");
+	seqStruct->setBody({seqIntLLVM(context), IntegerType::getInt8PtrTy(context)});
 	return seqStruct;
-}
-
-seq_int_t types::MerType::size() const
-{
-	return k * sizeof(char);
-}
-
-types::MerType *types::MerType::get(seq_int_t k)
-{
-	return new MerType(k);
 }

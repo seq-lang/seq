@@ -38,10 +38,10 @@ void Op::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Op::finalize(ExecutionEngine *eng)
+void Op::finalize(Module *module, ExecutionEngine *eng)
 {
 	eng->addGlobalMapping(func, (void *)op);
-	Stage::finalize(eng);
+	Stage::finalize(module, eng);
 }
 
 Op& Op::make(std::string name, SeqOp op)

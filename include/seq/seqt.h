@@ -6,7 +6,6 @@
 
 namespace seq {
 	namespace types {
-		SEQ_FUNC void printSeq(char *seq, seq_int_t len);
 
 		class SeqType : public Type {
 		private:
@@ -58,20 +57,6 @@ namespace seq {
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
 			seq_int_t size() const override;
 			static SeqType *get();
-		};
-
-		class MerType : public Type {
-		private:
-			seq_int_t k;
-			MerType(seq_int_t k);
-		public:
-			MerType(MerType const&)=delete;
-			void operator=(MerType const&)=delete;
-
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
-			seq_int_t size() const override;
-
-			static MerType *get(seq_int_t k);
 		};
 
 	}

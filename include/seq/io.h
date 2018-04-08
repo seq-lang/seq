@@ -70,6 +70,8 @@ namespace seq {
 
 			void read(std::vector<std::ifstream *>& ins, Format fmt);
 		};
+
+		Format extractExt(const std::string& source);
 	}
 }
 

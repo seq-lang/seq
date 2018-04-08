@@ -30,11 +30,11 @@ void Print::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Print::finalize(ExecutionEngine *eng)
+void Print::finalize(Module *module, ExecutionEngine *eng)
 {
 	assert(prev);
-	prev->getOutType()->finalizePrint(eng);
-	Stage::finalize(eng);
+	prev->getOutType()->finalizePrint(module, eng);
+	Stage::finalize(module, eng);
 }
 
 Print& Print::make()

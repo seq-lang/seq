@@ -188,10 +188,15 @@ void Func::add(Pipeline pipeline)
 	pipeline.setAdded();
 }
 
-void Func::finalize(ExecutionEngine *eng)
+void Func::finalize(Module *module, ExecutionEngine *eng)
 {
-	if (rawFunc)
+	if (rawFunc) {
 		eng->addGlobalMapping(func, rawFunc);
+	} else {
+		for (auto &pipeline : pipelines) {
+			pipeline.getHead()->finalize(module, eng);
+		}
+	}
 }
 
 types::Type *Func::getInType() const

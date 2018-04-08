@@ -72,7 +72,7 @@ namespace seq {
 		                 ValMap outs,
 		                 llvm::BasicBlock *block) override;
 		void add(Pipeline pipeline) override;
-		void finalize(llvm::ExecutionEngine *eng);
+		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 		types::Type *getInType() const override;
 		types::Type *getOutType() const override;

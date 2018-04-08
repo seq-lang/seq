@@ -8,7 +8,8 @@ using namespace seq;
 using namespace llvm;
 
 Stage::Stage(std::string name, types::Type *in, types::Type *out) :
-    in(in), out(out), prev(nullptr), nexts(), weakNexts(), name(std::move(name)),
+    base(nullptr), added(false), in(in), out(out),
+    prev(nullptr), nexts(), weakNexts(), name(std::move(name)),
     block(nullptr), after(nullptr), outs(new std::map<SeqData, Value *>)
 {
 }
@@ -131,10 +132,10 @@ void Stage::codegenNext(Module *module)
 	}
 }
 
-void Stage::finalize(ExecutionEngine *eng)
+void Stage::finalize(Module *module, ExecutionEngine *eng)
 {
 	for (auto& next : nexts) {
-		next->finalize(eng);
+		next->finalize(module, eng);
 	}
 }
 

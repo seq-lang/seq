@@ -10,7 +10,7 @@ namespace seq {
 	public:
 		Copy();
 		void codegen(llvm::Module *module) override;
-		void finalize(llvm::ExecutionEngine *eng) override;
+		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Copy& make();
 	};
 }

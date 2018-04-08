@@ -227,3 +227,13 @@ void io::DataBlock::read(vector<ifstream *>& ins, Format fmt)
 		}
 	}
 }
+
+io::Format io::extractExt(const std::string& source)
+{
+	auto fmtIter = io::EXT_CONV.find(source.substr(source.find_last_of('.') + 1));
+
+	if (fmtIter == io::EXT_CONV.end())
+		throw exc::IOException("unknown file extension in '" + source + "'");
+
+	return fmtIter->second;
+}

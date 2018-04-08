@@ -18,7 +18,7 @@ namespace seq {
 	public:
 		Mem(types::Type *type, seq_int_t count);
 		void codegen(llvm::Module *module) override;
-		void finalize(llvm::ExecutionEngine *eng) override;
+		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Mem& make(types::Type *type, seq_int_t count);
 	};
 

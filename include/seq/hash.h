@@ -12,7 +12,7 @@ namespace seq {
 	public:
 		Hash(std::string name, SeqHash hash);
 		void codegen(llvm::Module *module) override;
-		void finalize(llvm::ExecutionEngine *eng) override;
+		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Hash& make(std::string name, SeqHash hash);
 	};
 }

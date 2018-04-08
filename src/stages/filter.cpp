@@ -49,10 +49,10 @@ void Filter::codegen(Module *module)
 	prev->setAfter(exit);
 }
 
-void Filter::finalize(ExecutionEngine *eng)
+void Filter::finalize(Module *module, ExecutionEngine *eng)
 {
-	func.finalize(eng);
-	Stage::finalize(eng);
+	func.finalize(module, eng);
+	Stage::finalize(module, eng);
 }
 
 Filter& Filter::make(Func& func)

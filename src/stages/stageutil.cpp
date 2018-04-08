@@ -102,3 +102,8 @@ Deserialize& stageutil::deser(types::Type& type, std::string filename)
 {
 	return Deserialize::make(&type, std::move(filename));
 }
+
+Capture& stageutil::capture(void *addr)
+{
+	return Capture::make(addr);
+}

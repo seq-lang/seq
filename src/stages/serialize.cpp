@@ -20,11 +20,11 @@ void Serialize::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Serialize::finalize(ExecutionEngine *eng)
+void Serialize::finalize(Module *module, ExecutionEngine *eng)
 {
 	assert(prev);
-	prev->getOutType()->finalizeSerialize(eng);
-	Stage::finalize(eng);
+	prev->getOutType()->finalizeSerialize(module, eng);
+	Stage::finalize(module, eng);
 }
 
 Serialize& Serialize::make(std::string filename)
@@ -52,11 +52,11 @@ void Deserialize::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Deserialize::finalize(ExecutionEngine *eng)
+void Deserialize::finalize(Module *module, ExecutionEngine *eng)
 {
 	assert(prev);
-	type->finalizeDeserialize(eng);
-	Stage::finalize(eng);
+	type->finalizeDeserialize(module, eng);
+	Stage::finalize(module, eng);
 }
 
 Deserialize& Deserialize::make(types::Type *type, std::string filename)

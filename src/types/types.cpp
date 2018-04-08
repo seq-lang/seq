@@ -87,24 +87,24 @@ void types::Type::callPrint(BaseFunc *base,
 	if (!vtable.print || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot print type '" + getName() + "'");
 
-	if (!vtable.printFunc) {
-		vtable.printFunc = cast<Function>(
-		                     block->getModule()->getOrInsertFunction(
-		                       "print" + getName(),
-		                       llvm::Type::getVoidTy(block->getContext()),
-		                       getLLVMType(block->getContext())));
+	Function *printFunc = cast<Function>(
+	                        block->getModule()->getOrInsertFunction(
+	                          printFuncName(),
+	                          llvm::Type::getVoidTy(block->getContext()),
+	                          getLLVMType(block->getContext())));
 
-		vtable.printFunc->setCallingConv(CallingConv::C);
-	}
+	printFunc->setCallingConv(CallingConv::C);
 
 	IRBuilder<> builder(block);
 	std::vector<Value *> args = {builder.CreateLoad(getSafe(outs, getKey()))};
-	builder.CreateCall(vtable.printFunc, args, "");
+	builder.CreateCall(printFunc, args, "");
 }
 
-void types::Type::finalizePrint(ExecutionEngine *eng)
+void types::Type::finalizePrint(Module *module, ExecutionEngine *eng)
 {
-	eng->addGlobalMapping(vtable.printFunc, vtable.print);
+	Function *printFunc = module->getFunction(printFuncName());
+	if (printFunc)
+		eng->addGlobalMapping(printFunc, vtable.print);
 }
 
 void types::Type::callSerialize(BaseFunc *base,
@@ -118,16 +118,14 @@ void types::Type::callSerialize(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	if (!vtable.serializeFunc) {
-		vtable.serializeFunc = cast<Function>(
-		                         block->getModule()->getOrInsertFunction(
-		                           "serialize" + getName(),
-		                           llvm::Type::getVoidTy(context),
-		                           getLLVMType(context),
-		                           IntegerType::getInt8PtrTy(context)));
+	Function *serializeFunc = cast<Function>(
+	                            block->getModule()->getOrInsertFunction(
+	                               serializeFuncName(),
+	                               llvm::Type::getVoidTy(context),
+	                               getLLVMType(context),
+	                               IntegerType::getInt8PtrTy(context)));
 
-		vtable.serializeFunc->setCallingConv(CallingConv::C);
-	}
+	serializeFunc->setCallingConv(CallingConv::C);
 
 	GlobalVariable *fileVar = new GlobalVariable(*module,
 	                                             llvm::ArrayType::get(IntegerType::getInt8Ty(context),
@@ -141,12 +139,14 @@ void types::Type::callSerialize(BaseFunc *base,
 	IRBuilder<> builder(block);
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0, false));
 	std::vector<Value *> args = {builder.CreateLoad(getSafe(outs, getKey())), filename};
-	builder.CreateCall(vtable.serializeFunc, args, "");
+	builder.CreateCall(serializeFunc, args, "");
 }
 
-void types::Type::finalizeSerialize(ExecutionEngine *eng)
+void types::Type::finalizeSerialize(Module *module, ExecutionEngine *eng)
 {
-	eng->addGlobalMapping(vtable.serializeFunc, vtable.serialize);
+	Function *serializeFunc = module->getFunction(serializeFuncName());
+	if (serializeFunc)
+		eng->addGlobalMapping(serializeFunc, vtable.serialize);
 }
 
 void types::Type::callDeserialize(BaseFunc *base,
@@ -160,15 +160,13 @@ void types::Type::callDeserialize(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	if (!vtable.deserializeFunc) {
-		vtable.deserializeFunc = cast<Function>(
-		                           block->getModule()->getOrInsertFunction(
-		                             "deserialize" + getName(),
-		                             getLLVMType(context),
-		                             IntegerType::getInt8PtrTy(context)));
+	Function *deserializeFunc = cast<Function>(
+	                              block->getModule()->getOrInsertFunction(
+	                                deserializeFuncName(),
+	                                getLLVMType(context),
+	                                IntegerType::getInt8PtrTy(context)));
 
-		vtable.deserializeFunc->setCallingConv(CallingConv::C);
-	}
+	deserializeFunc->setCallingConv(CallingConv::C);
 
 	GlobalVariable *fileVar = new GlobalVariable(*module,
 	                                             llvm::ArrayType::get(IntegerType::getInt8Ty(context), file.length() + 1),
@@ -183,7 +181,7 @@ void types::Type::callDeserialize(BaseFunc *base,
 
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0, false));
 	std::vector<Value *> args = {filename};
-	Value *result = builder.CreateCall(vtable.deserializeFunc, args, "");
+	Value *result = builder.CreateCall(deserializeFunc, args, "");
 
 	Value *resultVar = makeAlloca(getLLVMType(context), preambleBlock);
 	builder.CreateStore(result, resultVar);
@@ -191,9 +189,11 @@ void types::Type::callDeserialize(BaseFunc *base,
 	outs->insert({getKey(), resultVar});
 }
 
-void types::Type::finalizeDeserialize(ExecutionEngine *eng)
+void types::Type::finalizeDeserialize(Module *module, ExecutionEngine *eng)
 {
-	eng->addGlobalMapping(vtable.deserializeFunc, vtable.deserialize);
+	Function *deserializeFunc = module->getFunction(deserializeFuncName());
+	if (deserializeFunc)
+		eng->addGlobalMapping(deserializeFunc, vtable.deserialize);
 }
 
 void types::Type::callSerializeArray(BaseFunc *base,
@@ -207,17 +207,15 @@ void types::Type::callSerializeArray(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	if (!vtable.serializeArrayFunc) {
-		vtable.serializeArrayFunc = cast<Function>(
-		                              block->getModule()->getOrInsertFunction(
-		                                "serialize" + getName() + "Array",
-		                                llvm::Type::getVoidTy(context),
-		                                PointerType::get(getLLVMType(context), 0),
-		                                seqIntLLVM(context),
-		                                IntegerType::getInt8PtrTy(context)));
+	Function *serializeArrayFunc = cast<Function>(
+	                                 block->getModule()->getOrInsertFunction(
+	                                   serializeArrayFuncName(),
+	                                   llvm::Type::getVoidTy(context),
+	                                   PointerType::get(getLLVMType(context), 0),
+	                                   seqIntLLVM(context),
+	                                   IntegerType::getInt8PtrTy(context)));
 
-		vtable.serializeArrayFunc->setCallingConv(CallingConv::C);
-	}
+	serializeArrayFunc->setCallingConv(CallingConv::C);
 
 	GlobalVariable *fileVar = new GlobalVariable(*module,
 	                                             llvm::ArrayType::get(IntegerType::getInt8Ty(context), file.length() + 1),
@@ -233,12 +231,14 @@ void types::Type::callSerializeArray(BaseFunc *base,
 
 	Value *filename = builder.CreateGEP(fileVar, ConstantInt::get(seqIntLLVM(context), 0, false));
 	std::vector<Value *> args = {ptr, len, filename};
-	builder.CreateCall(vtable.serializeArrayFunc, args, "");
+	builder.CreateCall(serializeArrayFunc, args, "");
 }
 
-void types::Type::finalizeSerializeArray(ExecutionEngine *eng)
+void types::Type::finalizeSerializeArray(Module *module, ExecutionEngine *eng)
 {
-	eng->addGlobalMapping(vtable.serializeArrayFunc, vtable.serializeArray);
+	Function *serializeArrayFunc = module->getFunction(serializeArrayFuncName());
+	if (serializeArrayFunc)
+		eng->addGlobalMapping(serializeArrayFunc, vtable.serializeArray);
 }
 
 void types::Type::callDeserializeArray(BaseFunc *base,
@@ -252,16 +252,14 @@ void types::Type::callDeserializeArray(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	if (!vtable.deserializeArrayFunc) {
-		vtable.deserializeArrayFunc = cast<Function>(
-		                                block->getModule()->getOrInsertFunction(
-		                                  "deserialize" + getName() + "Array",
-		                                  PointerType::get(getLLVMType(context), 0),
-		                                  IntegerType::getInt8PtrTy(context),
-		                                  PointerType::get(seqIntLLVM(context), 0)));
+	Function *deserializeArrayFunc = cast<Function>(
+	                                   block->getModule()->getOrInsertFunction(
+	                                     deserializeArrayFuncName(),
+	                                     PointerType::get(getLLVMType(context), 0),
+	                                     IntegerType::getInt8PtrTy(context),
+	                                     PointerType::get(seqIntLLVM(context), 0)));
 
-		vtable.deserializeArrayFunc->setCallingConv(CallingConv::C);
-	}
+	deserializeArrayFunc->setCallingConv(CallingConv::C);
 
 	GlobalVariable *fileVar = new GlobalVariable(*module,
 	                                             llvm::ArrayType::get(IntegerType::getInt8Ty(context), file.length() + 1),
@@ -293,7 +291,7 @@ void types::Type::callDeserializeArray(BaseFunc *base,
 	lenVar->setInitializer(zeroLLVM(context));
 
 	std::vector<Value *> args = {filename, lenVar};
-	Value *ptr = builder.CreateCall(vtable.deserializeArrayFunc, args, "");
+	Value *ptr = builder.CreateCall(deserializeArrayFunc, args, "");
 
 	builder.CreateStore(ptr, ptrVar);
 
@@ -301,9 +299,11 @@ void types::Type::callDeserializeArray(BaseFunc *base,
 	outs->insert({SeqData::LEN, lenVar});
 }
 
-void types::Type::finalizeDeserializeArray(ExecutionEngine *eng)
+void types::Type::finalizeDeserializeArray(Module *module, ExecutionEngine *eng)
 {
-	eng->addGlobalMapping(vtable.deserializeArrayFunc, vtable.deserializeArray);
+	Function *deserializeArrayFunc = module->getFunction(deserializeArrayFuncName());
+	if (deserializeArrayFunc)
+		eng->addGlobalMapping(deserializeArrayFunc, vtable.deserializeArray);
 }
 
 Value *types::Type::codegenAlloc(BaseFunc *base,
@@ -316,25 +316,25 @@ Value *types::Type::codegenAlloc(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	if (!vtable.allocFunc) {
-		vtable.allocFunc = cast<Function>(
-		                     module->getOrInsertFunction(
-		                       "malloc",
-		                       IntegerType::getInt8PtrTy(context),
-		                       IntegerType::getIntNTy(context, sizeof(size_t)*8)));
-	}
+	Function *allocFunc = cast<Function>(
+	                        module->getOrInsertFunction(
+	                          allocFuncName(),
+	                          IntegerType::getInt8PtrTy(context),
+	                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
 
 	IRBuilder<> builder(block);
 
 	std::vector<Value *> args = {
 	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count*size()))};
-	Value *mem = builder.CreateCall(vtable.allocFunc, args);
+	Value *mem = builder.CreateCall(allocFunc, args);
 	return builder.CreatePointerCast(mem, PointerType::get(getLLVMType(context), 0));
 }
 
-void types::Type::finalizeAlloc(ExecutionEngine *eng)
+void types::Type::finalizeAlloc(Module *module, ExecutionEngine *eng)
 {
-	eng->addGlobalMapping(vtable.allocFunc, (void *)std::malloc);
+	Function *allocFunc = module->getFunction(allocFuncName());
+	if (allocFunc)
+		eng->addGlobalMapping(allocFunc, (void *)std::malloc);
 }
 
 void types::Type::codegenLoad(BaseFunc *base,

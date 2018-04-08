@@ -9,7 +9,6 @@ namespace seq {
 		class ArrayType : public Type {
 		private:
 			Type *baseType;
-			llvm::StructType *arrStruct;
 			explicit ArrayType(Type *baseType);
 		public:
 			ArrayType(ArrayType const&)=delete;
@@ -39,14 +38,14 @@ namespace seq {
                                llvm::BasicBlock *block,
                                std::string file) override;
 
-			void finalizeSerialize(llvm::ExecutionEngine *eng) override;
+			void finalizeSerialize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 
 			void callDeserialize(BaseFunc *base,
 			                     ValMap outs,
 			                     llvm::BasicBlock *block,
 			                     std::string file) override;
 
-			void finalizeDeserialize(llvm::ExecutionEngine *eng) override;
+			void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 
 			void codegenLoad(BaseFunc *base,
 			                 ValMap outs,

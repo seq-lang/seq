@@ -12,7 +12,7 @@ namespace seq {
 	public:
 		Op(std::string name, SeqOp op);
 		void codegen(llvm::Module *module) override;
-		void finalize(llvm::ExecutionEngine *eng) override;
+		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Op& make(std::string name, SeqOp op);
 	};
 }

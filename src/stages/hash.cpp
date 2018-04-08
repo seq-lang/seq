@@ -44,10 +44,10 @@ void Hash::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Hash::finalize(ExecutionEngine *eng)
+void Hash::finalize(Module *module, ExecutionEngine *eng)
 {
 	eng->addGlobalMapping(func, (void *)hash);
-	Stage::finalize(eng);
+	Stage::finalize(module, eng);
 }
 
 Hash& Hash::make(std::string name, SeqHash hash)

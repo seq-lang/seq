@@ -19,6 +19,7 @@
 #include "chunk.h"
 #include "call.h"
 #include "serialize.h"
+#include "capture.h"
 
 namespace seq {
 	namespace stageutil {
@@ -42,6 +43,7 @@ namespace seq {
 		Chunk& chunk();
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type& type, std::string filename);
+		Capture& capture(void *addr);
 	}
 }
 

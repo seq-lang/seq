@@ -21,13 +21,6 @@ namespace seq {
 			void *deserialize = nullptr;
 			void *serializeArray = nullptr;
 			void *deserializeArray = nullptr;
-
-			llvm::Function *allocFunc = nullptr;
-			llvm::Function *printFunc = nullptr;
-			llvm::Function *serializeFunc = nullptr;
-			llvm::Function *deserializeFunc = nullptr;
-			llvm::Function *serializeArrayFunc = nullptr;
-			llvm::Function *deserializeArrayFunc = nullptr;
 		};
 
 		class Type {
@@ -39,6 +32,13 @@ namespace seq {
 		public:
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
+
+			virtual std::string printFuncName() { return "print" + getName(); }
+			virtual std::string serializeFuncName() { return "serialize" + getName(); }
+			virtual std::string deserializeFuncName() { return "deserialize" + getName(); }
+			virtual std::string serializeArrayFuncName() { return "serialize" + getName() + "Array"; }
+			virtual std::string deserializeArrayFuncName() { return "deserialize" + getName() + "Array"; }
+			virtual std::string allocFuncName() { return "malloc"; }
 
 			virtual llvm::Function *makeFuncOf(llvm::Module *module, Type *outType);
 
@@ -68,41 +68,41 @@ namespace seq {
 			                       ValMap outs,
 			                       llvm::BasicBlock *block);
 
-			virtual void finalizePrint(llvm::ExecutionEngine *eng);
+			virtual void finalizePrint(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual void callSerialize(BaseFunc *base,
 			                           ValMap outs,
 			                           llvm::BasicBlock *block,
 			                           std::string file);
 
-			virtual void finalizeSerialize(llvm::ExecutionEngine *eng);
+			virtual void finalizeSerialize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual void callDeserialize(BaseFunc *base,
 			                             ValMap outs,
 			                             llvm::BasicBlock *block,
 			                             std::string file);
 
-			virtual void finalizeDeserialize(llvm::ExecutionEngine *eng);
+			virtual void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual void callSerializeArray(BaseFunc *base,
 			                                ValMap outs,
 			                                llvm::BasicBlock *block,
 			                                std::string file);
 
-			virtual void finalizeSerializeArray(llvm::ExecutionEngine *eng);
+			virtual void finalizeSerializeArray(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual void callDeserializeArray(BaseFunc *base,
 			                                  ValMap outs,
 			                                  llvm::BasicBlock *block,
 			                                  std::string file);
 
-			virtual void finalizeDeserializeArray(llvm::ExecutionEngine *eng);
+			virtual void finalizeDeserializeArray(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual llvm::Value *codegenAlloc(BaseFunc *base,
 			                                  seq_int_t count,
 			                                  llvm::BasicBlock *block);
 
-			virtual void finalizeAlloc(llvm::ExecutionEngine *eng);
+			virtual void finalizeAlloc(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual void codegenLoad(BaseFunc *base,
 			                         ValMap outs,
