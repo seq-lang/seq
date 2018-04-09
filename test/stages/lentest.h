@@ -1,7 +1,6 @@
 #ifndef SEQ_LENTEST_H
 #define SEQ_LENTEST_H
 
-#include <seq/common.h>
 #include "../testhelp.h"
 
 struct LenTest : ::testing::TestWithParam<std::string> {

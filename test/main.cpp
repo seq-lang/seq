@@ -6,6 +6,7 @@ TEST(BigTest, BigTest)
 }
 
 #include "stages/calltest.h"
+#include "stages/collecttest.h"
 #include "stages/counttest.h"
 #include "stages/lentest.h"
 

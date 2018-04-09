@@ -14,15 +14,16 @@ namespace seq {
 
 	typedef int64_t seq_int_t;
 
-	typedef struct {
+	struct seq_t {
 		seq_int_t len;
 		char *seq;
-	} seq_t;
+	};
 
-	typedef struct {
+	template<typename T = void>
+	struct arr_t {
 		seq_int_t len;
-		void *arr;
-	} arr_t;
+		T *arr;
+	};
 
 	inline llvm::IntegerType *seqIntLLVM(llvm::LLVMContext& context)
 	{

@@ -42,7 +42,9 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -pedantic-errors -fstrict-aliasing")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-gnu-zero-variadic-macro-arguments")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
+                                        -Wno-gnu-zero-variadic-macro-arguments \
+                                        -Wno-return-type-c-linkage")
 include_directories(src/)
 include_directories(include/)
 
@@ -128,8 +130,9 @@ target_link_libraries(seq ${llvm_libs})
 
 # Seq test
 add_executable(seqtest test/main.cpp
-                       test/stages/counttest.h
                        test/stages/calltest.h
+                       test/stages/collecttest.h
+                       test/stages/counttest.h
                        test/stages/lentest.h
                        test/testhelp.h)
 target_link_libraries(seqtest seq gtest_main)

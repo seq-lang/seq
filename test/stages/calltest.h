@@ -16,7 +16,7 @@ namespace calltest {
 		return n + 1;
 	}
 
-	SEQ_FUNC arr_t testFunc2(seq_t s)
+	SEQ_FUNC arr_t<> testFunc2(seq_t s)
 	{
 		call2 = true;
 		return {0, nullptr};
