@@ -31,11 +31,7 @@ TEST_P(CountTest, ZeroCount)
 	EXPECT_EQ(countGot, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(PositiveCountDefault,
-                        CountTest,
-                        ::testing::Values(TEST_INPUTS_SINGLE));
-
-INSTANTIATE_TEST_CASE_P(ZeroCountDefault,
+INSTANTIATE_TEST_CASE_P(CountTestDefault,
                         CountTest,
                         ::testing::Values(TEST_INPUTS_SINGLE));
 

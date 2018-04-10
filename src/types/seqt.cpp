@@ -96,17 +96,22 @@ void types::SeqType::unpack(BaseFunc *base,
 	outs->insert({SeqData::LEN, lenVar});
 }
 
+static inline std::string eqFuncName()
+{
+	return types::SeqType::get()->getName() + "Eq";
+}
+
 static Function *buildSeqEqFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 
 	Function *eq = cast<Function>(
 	                 module->getOrInsertFunction(
-                       "seq_eq",
+	                   eqFuncName(),
 	                   IntegerType::getInt1Ty(context),
 	                   IntegerType::getInt8PtrTy(context),
-                       seqIntLLVM(context),
-                       IntegerType::getInt8PtrTy(context),
+	                   seqIntLLVM(context),
+	                   IntegerType::getInt8PtrTy(context),
 	                   seqIntLLVM(context)));
 
 	auto args = eq->arg_begin();
@@ -173,16 +178,17 @@ Value *types::SeqType::checkEq(BaseFunc *base,
                                ValMap ins2,
                                BasicBlock *block)
 {
+	Module *module = block->getModule();
 	IRBuilder<> builder(block);
 	Value *seq1 = builder.CreateLoad(getSafe(ins1, SeqData::SEQ));
 	Value *len1 = builder.CreateLoad(getSafe(ins1, SeqData::LEN));
 	Value *seq2 = builder.CreateLoad(getSafe(ins2, SeqData::SEQ));
 	Value *len2 = builder.CreateLoad(getSafe(ins2, SeqData::LEN));
 
-	static Function *eq = nullptr;
+	Function *eq = module->getFunction(eqFuncName());
 
 	if (!eq)
-		eq = buildSeqEqFunc(block->getModule());
+		eq = buildSeqEqFunc(module);
 
 	std::vector<Value *> args = {seq1, len1, seq2, len2};
 	return builder.CreateCall(eq, args);

@@ -54,19 +54,7 @@ TEST_P(CollectTest, EmptyCollect)
 	EXPECT_EQ(arrGot.len, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(IntCollectDefault,
-                        CollectTest,
-                        ::testing::Values(TEST_INPUTS_SINGLE));
-
-INSTANTIATE_TEST_CASE_P(SeqCollectDefault,
-                        CollectTest,
-                        ::testing::Values(TEST_INPUTS_SINGLE));
-
-INSTANTIATE_TEST_CASE_P(ArrCollectDefault,
-                        CollectTest,
-                        ::testing::Values(TEST_INPUTS_SINGLE));
-
-INSTANTIATE_TEST_CASE_P(EmptyCollectDefault,
+INSTANTIATE_TEST_CASE_P(CollectTestDefault,
                         CollectTest,
                         ::testing::Values(TEST_INPUTS_SINGLE));
 

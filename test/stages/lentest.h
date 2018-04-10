@@ -29,11 +29,7 @@ TEST_P(LenTest, ZeroLen)
 	EXPECT_EQ(lenGot, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(PositiveLenDefault,
-                        LenTest,
-                        ::testing::Values(TEST_INPUTS_SINGLE));
-
-INSTANTIATE_TEST_CASE_P(ZeroLenDefault,
+INSTANTIATE_TEST_CASE_P(LenTestDefault,
                         LenTest,
                         ::testing::Values(TEST_INPUTS_SINGLE));
 
