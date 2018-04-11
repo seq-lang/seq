@@ -72,6 +72,35 @@ void types::Type::unpack(BaseFunc *base,
 	outs->insert({getKey(), var});
 }
 
+void types::Type::callCopy(BaseFunc *base,
+                           ValMap ins,
+                           ValMap outs,
+                           BasicBlock *block)
+{
+	if (!vtable.copy || getKey() == SeqData::NONE)
+		throw exc::SeqException("cannot copy type '" + getName() + "'");
+
+	Function *copyFunc = cast<Function>(
+	                       block->getModule()->getOrInsertFunction(
+	                         copyFuncName(),
+	                         getLLVMType(block->getContext()),
+	                         getLLVMType(block->getContext())));
+
+	copyFunc->setCallingConv(CallingConv::C);
+
+	IRBuilder<> builder(block);
+	std::vector<Value *> args = {builder.CreateLoad(getSafe(ins, getKey()))};
+	Value *result = builder.CreateCall(copyFunc, args, "");
+	unpack(base, result, outs, block);
+}
+
+void types::Type::finalizeCopy(Module *module, ExecutionEngine *eng)
+{
+	Function *copyFunc = module->getFunction(copyFuncName());
+	if (copyFunc)
+		eng->addGlobalMapping(copyFunc, vtable.print);
+}
+
 Value *types::Type::checkEq(BaseFunc *base,
                             ValMap ins1,
                             ValMap ins2,

@@ -16,6 +16,7 @@ namespace seq {
 	namespace types {
 
 		struct VTable {
+			void *copy = nullptr;
 			void *print = nullptr;
 			void *serialize = nullptr;
 			void *deserialize = nullptr;
@@ -33,6 +34,7 @@ namespace seq {
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
 
+			virtual std::string copyFuncName() { return "copy" + getName(); }
 			virtual std::string printFuncName() { return "print" + getName(); }
 			virtual std::string serializeFuncName() { return "serialize" + getName(); }
 			virtual std::string deserializeFuncName() { return "deserialize" + getName(); }
@@ -63,6 +65,13 @@ namespace seq {
 			                             ValMap ins1,
 			                             ValMap ins2,
 			                             llvm::BasicBlock *block);
+
+			virtual void callCopy(BaseFunc *base,
+			                      ValMap ins,
+			                      ValMap outs,
+			                      llvm::BasicBlock *block);
+
+			virtual void finalizeCopy(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual void callPrint(BaseFunc *base,
 			                       ValMap outs,

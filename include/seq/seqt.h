@@ -38,6 +38,11 @@ namespace seq {
 			                     ValMap ins2,
 			                     llvm::BasicBlock *block) override;
 
+			void callCopy(BaseFunc *base,
+			              ValMap ins,
+			              ValMap outs,
+			              llvm::BasicBlock *block) override;
+
 			void callPrint(BaseFunc *base,
 			               ValMap outs,
 			               llvm::BasicBlock *block) override;

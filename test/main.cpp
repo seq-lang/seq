@@ -8,6 +8,7 @@ TEST(BigTest, BigTest)
 #include "stages/calltest.h"
 #include "stages/chunktest.h"
 #include "stages/collecttest.h"
+#include "stages/copytest.h"
 #include "stages/counttest.h"
 #include "stages/lentest.h"
 

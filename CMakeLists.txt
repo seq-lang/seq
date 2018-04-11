@@ -133,6 +133,7 @@ add_executable(seqtest test/main.cpp
                        test/stages/calltest.h
                        test/stages/chunktest.h
                        test/stages/collecttest.h
+                       test/stages/copytest.h
                        test/stages/counttest.h
                        test/stages/lentest.h
                        test/testhelp.h)

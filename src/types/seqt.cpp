@@ -6,6 +6,13 @@
 using namespace seq;
 using namespace llvm;
 
+SEQ_FUNC char *copySeq(char *seq, const seq_int_t len)
+{
+	auto *seq2 = (char *)std::malloc((size_t)len);
+	std::memcpy(seq2, seq, (size_t)len);
+	return seq2;
+}
+
 SEQ_FUNC void printSeq(char *seq, const seq_int_t len)
 {
 	for (seq_int_t i = 0; i < len; i++)
@@ -13,13 +20,9 @@ SEQ_FUNC void printSeq(char *seq, const seq_int_t len)
 	std::cout << std::endl;
 }
 
-SEQ_FUNC void printMer(char *seq, const seq_int_t len)
-{
-	printSeq(seq, len);
-}
-
 types::SeqType::SeqType() : Type("Seq", BaseType::get(), SeqData::SEQ)
 {
+	vtable.copy = (void *)copySeq;
 	vtable.print = (void *)printSeq;
 }
 
@@ -192,6 +195,39 @@ Value *types::SeqType::checkEq(BaseFunc *base,
 
 	std::vector<Value *> args = {seq1, len1, seq2, len2};
 	return builder.CreateCall(eq, args);
+}
+
+void types::SeqType::callCopy(BaseFunc *base,
+                              ValMap ins,
+                              ValMap outs,
+                              BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	BasicBlock *preambleBlock = base->getPreamble();
+
+	Function *copyFunc = cast<Function>(
+	                       block->getModule()->getOrInsertFunction(
+	                         copyFuncName(),
+	                         IntegerType::getInt8PtrTy(context),
+	                         IntegerType::getInt8PtrTy(context),
+	                         seqIntLLVM(context)));
+
+	copyFunc->setCallingConv(CallingConv::C);
+
+	IRBuilder<> builder(block);
+	Value *seq = builder.CreateLoad(getSafe(ins, SeqData::SEQ));
+	Value *len = builder.CreateLoad(getSafe(ins, SeqData::LEN));
+	std::vector<Value *> args = {seq, len};
+	Value *copy = builder.CreateCall(copyFunc, args, "");
+
+	Value *seqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
+	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
+
+	builder.CreateStore(copy, seqVar);
+	builder.CreateStore(len, lenVar);
+
+	outs->insert({SeqData::SEQ, seqVar});
+	outs->insert({SeqData::LEN, lenVar});
 }
 
 void types::SeqType::callPrint(BaseFunc *base,

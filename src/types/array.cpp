@@ -7,9 +7,18 @@
 using namespace seq;
 using namespace llvm;
 
+SEQ_FUNC void *copyArray(void *arr, seq_int_t len, seq_int_t elem_size)
+{
+	const size_t size = (size_t)len * elem_size;
+	auto *arr2 = std::malloc(size);
+	std::memcpy(arr2, arr, size);
+	return arr2;
+}
+
 types::ArrayType::ArrayType(Type *baseType) :
     Type("Array", BaseType::get(), SeqData::ARRAY), baseType(baseType)
 {
+	vtable.copy = (void *)copyArray;
 }
 
 Function *types::ArrayType::makeFuncOf(Module *module, Type *outType)
@@ -79,6 +88,41 @@ void types::ArrayType::unpack(BaseFunc *base,
 	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
 
 	builder.CreateStore(ptr, ptrVar);
+	builder.CreateStore(len, lenVar);
+
+	outs->insert({SeqData::ARRAY, ptrVar});
+	outs->insert({SeqData::LEN, lenVar});
+}
+
+void types::ArrayType::callCopy(BaseFunc *base,
+                                ValMap ins,
+                                ValMap outs,
+                                BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	BasicBlock *preambleBlock = base->getPreamble();
+
+	Function *copyFunc = cast<Function>(
+	                       block->getModule()->getOrInsertFunction(
+	                         copyFuncName(),
+	                         IntegerType::getInt8PtrTy(context),
+	                         IntegerType::getInt8PtrTy(context),
+	                         seqIntLLVM(context),
+	                         seqIntLLVM(context)));
+
+	copyFunc->setCallingConv(CallingConv::C);
+
+	IRBuilder<> builder(block);
+	Value *ptr = builder.CreateLoad(getSafe(ins, SeqData::ARRAY));
+	Value *len = builder.CreateLoad(getSafe(ins, SeqData::LEN));
+	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size());
+	std::vector<Value *> args = {ptr, len, elemSize};
+	Value *copy = builder.CreateCall(copyFunc, args, "");
+
+	Value *ptrVar = makeAlloca(PointerType::get(getBaseType()->getLLVMType(context), 0), preambleBlock);
+	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
+
+	builder.CreateStore(copy, ptrVar);
 	builder.CreateStore(len, lenVar);
 
 	outs->insert({SeqData::ARRAY, ptrVar});

@@ -33,6 +33,11 @@ namespace seq {
 			            ValMap outs,
 			            llvm::BasicBlock *block) override;
 
+			void callCopy(BaseFunc *base,
+			              ValMap ins,
+			              ValMap outs,
+			              llvm::BasicBlock *block) override;
+
 			void callSerialize(BaseFunc *base,
 			                   ValMap outs,
                                llvm::BasicBlock *block,
