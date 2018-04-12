@@ -10,6 +10,7 @@ TEST(BigTest, BigTest)
 #include "stages/collecttest.h"
 #include "stages/copytest.h"
 #include "stages/counttest.h"
+#include "stages/filtertest.h"
 #include "stages/lentest.h"
 
 int main(int argc, char *argv[])
