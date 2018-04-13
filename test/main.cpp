@@ -1,10 +1,6 @@
 #include "testhelp.h"
 
-TEST(BigTest, BigTest)
-{
-	EXPECT_NO_THROW(bigTest());
-}
-
+#include "core/bigtest.h"
 #include "stages/calltest.h"
 #include "stages/chunktest.h"
 #include "stages/collecttest.h"

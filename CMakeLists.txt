@@ -130,6 +130,7 @@ target_link_libraries(seq ${llvm_libs})
 
 # Seq test
 add_executable(seqtest test/main.cpp
+                       test/core/bigtest.h
                        test/stages/calltest.h
                        test/stages/chunktest.h
                        test/stages/collecttest.h
