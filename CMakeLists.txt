@@ -137,5 +137,6 @@ add_executable(seqtest test/main.cpp
                        test/stages/counttest.h
                        test/stages/filtertest.h
                        test/stages/lentest.h
+                       test/stages/memtest.h
                        test/testhelp.h)
 target_link_libraries(seqtest seq gtest_main)
