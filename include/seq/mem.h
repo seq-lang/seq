@@ -26,15 +26,18 @@ namespace seq {
 	private:
 		Var *ptr;
 		Var *idx;
+		seq_int_t constIdx;
 		bool isStore;
 	public:
 		LoadStore(Var *ptr, Var *idx);
+		LoadStore(Var *ptr, seq_int_t idx);
 		void validate() override;
 		void codegen(llvm::Module *module) override;
 
 		Pipeline operator|(Pipeline to) override;
 
 		static LoadStore& make(Var *ptr, Var *idx);
+		static LoadStore& make(Var *ptr, seq_int_t idx);
 	};
 }
 

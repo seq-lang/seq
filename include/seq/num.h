@@ -27,8 +27,8 @@ namespace seq {
 			                     ValMap ins2,
 			                     llvm::BasicBlock *block) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
-			seq_int_t size() const override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			seq_int_t size(llvm::Module *module) const override;
 			static IntType *get();
 		};
 
@@ -44,8 +44,8 @@ namespace seq {
 			                     ValMap ins2,
 			                     llvm::BasicBlock *block) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
-			seq_int_t size() const override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			seq_int_t size(llvm::Module *module) const override;
 			static FloatType *get();
 		};
 
@@ -61,8 +61,8 @@ namespace seq {
 			                     ValMap ins2,
 			                     llvm::BasicBlock *block) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
-			seq_int_t size() const override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			seq_int_t size(llvm::Module *module) const override;
 			static BoolType *get();
 		};
 

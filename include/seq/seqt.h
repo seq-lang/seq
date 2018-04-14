@@ -59,8 +59,8 @@ namespace seq {
 			                  llvm::Value *ptr,
 			                  llvm::Value *idx) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
-			seq_int_t size() const override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			seq_int_t size(llvm::Module *module) const override;
 			static SeqType *get();
 		};
 

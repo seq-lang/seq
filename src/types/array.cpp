@@ -115,7 +115,7 @@ void types::ArrayType::callCopy(BaseFunc *base,
 	IRBuilder<> builder(block);
 	Value *ptr = builder.CreateLoad(getSafe(ins, SeqData::ARRAY));
 	Value *len = builder.CreateLoad(getSafe(ins, SeqData::LEN));
-	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size());
+	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size(block->getModule()));
 	std::vector<Value *> args = {ptr, len, elemSize};
 	Value *copy = builder.CreateCall(copyFunc, args, "");
 
@@ -206,16 +206,44 @@ void types::ArrayType::codegenStore(BaseFunc *base,
 	builder.CreateStore(len, lenPtr);
 }
 
-bool types::ArrayType::isChildOf(Type *type)
+void types::ArrayType::codegenIndexLoad(BaseFunc *base,
+                                        ValMap outs,
+                                        BasicBlock *block,
+                                        Value *ptr,
+                                        Value *idx)
+{
+	getBaseType()->codegenLoad(base, outs, block, ptr, idx);
+}
+
+void types::ArrayType::codegenIndexStore(BaseFunc *base,
+                                         ValMap outs,
+                                         BasicBlock *block,
+                                         Value *ptr,
+                                         Value *idx)
+{
+	getBaseType()->codegenStore(base, outs, block, ptr, idx);
+}
+
+bool types::ArrayType::isChildOf(Type *type) const
 {
 	if (type == BaseType::get())
 		return true;
 
 	auto *arrayType = dynamic_cast<types::ArrayType *>(type);
-	return arrayType && getBaseType()->isChildOf(arrayType->getBaseType());
+	return arrayType && getBaseType()->is(arrayType->getBaseType());
 }
 
-Type *types::ArrayType::getLLVMType(LLVMContext& context)
+types::Type *types::ArrayType::getBaseType() const
+{
+	return getBaseType(0);
+}
+
+types::Type *types::ArrayType::getBaseType(seq_int_t idx) const
+{
+	return baseType;
+}
+
+Type *types::ArrayType::getLLVMType(LLVMContext& context) const
 {
 	llvm::StructType *arrStruct = StructType::create(context, "arr_t");
 	arrStruct->setBody({seqIntLLVM(context),
@@ -223,14 +251,10 @@ Type *types::ArrayType::getLLVMType(LLVMContext& context)
 	return arrStruct;
 }
 
-seq_int_t types::ArrayType::size() const
+seq_int_t types::ArrayType::size(Module *module) const
 {
-	return sizeof(seq_int_t) + sizeof(void *);
-}
-
-types::Type *types::ArrayType::getBaseType() const
-{
-	return baseType;
+	std::unique_ptr<DataLayout> layout(new DataLayout(module));
+	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::ArrayType& types::ArrayType::of(Type& baseType) const
@@ -240,10 +264,10 @@ types::ArrayType& types::ArrayType::of(Type& baseType) const
 
 types::ArrayType *types::ArrayType::get(Type *baseType)
 {
-	return new types::ArrayType(baseType);
+	return new ArrayType(baseType);
 }
 
 types::ArrayType *types::ArrayType::get()
 {
-	return new types::ArrayType(types::BaseType::get());
+	return new ArrayType(types::BaseType::get());
 }

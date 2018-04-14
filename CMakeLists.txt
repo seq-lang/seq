@@ -75,6 +75,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/pipeline.h
                        include/seq/print.h
                        include/seq/range.h
+                       include/seq/record.h
                        include/seq/revcomp.h
                        include/seq/seq.h
                        include/seq/seqt.h
@@ -120,6 +121,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/array.cpp
                        src/types/base.cpp
                        src/types/num.cpp
+                       src/types/record.cpp
                        src/types/seqt.cpp
                        src/types/types.cpp
                        src/types/void.cpp

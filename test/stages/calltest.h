@@ -9,11 +9,19 @@ namespace calltest {
 	static bool call3 = false;
 	static bool call4 = false;
 	static bool call5 = false;
+	static bool call6 = false;
+	static bool call7 = false;
 
 	static void reset()
 	{
-		call1 = call2 = call3 = call4 = call5 = false;
+		call1 = call2 = call3 = call4 =
+		  call5 = call6 = call7 = false;
 	}
+
+	struct rec_test_t {
+		seq_int_t n;
+		double d;
+	};
 }
 
 SEQ_FUNC seq_int_t callTestFunc1(seq_int_t n)
@@ -42,6 +50,18 @@ SEQ_FUNC seq_int_t callTestFunc4()
 SEQ_FUNC void callTestFunc5()
 {
 	calltest::call5 = true;
+}
+
+SEQ_FUNC calltest::rec_test_t callTestFunc6()
+{
+	calltest::call6 = true;
+	return {42, 3.14};
+}
+
+SEQ_FUNC calltest::rec_test_t callTestFunc7(calltest::rec_test_t r)
+{
+	calltest::call7 = true;
+	return {r.n + 1, r.d + 1.0};
 }
 
 TEST(CallTestIntInt, CallTest)
@@ -113,6 +133,50 @@ TEST(CallTestVoidVoid, CallTest)
 	s.execute();
 
 	EXPECT_TRUE(calltest::call5);
+}
+
+TEST(CallTestVoidRec, CallTest)
+{
+	calltest::reset();
+	seq_int_t intGot = -1;
+	double floatGot = -1.0;
+
+	SeqModule s;
+	Func f(Void, Record.of({Int, Float}), SEQ_NATIVE(callTestFunc6));
+	Var r = s | f();
+	r[1] | capture(&intGot);
+	r[2] | capture(&floatGot);
+
+	s.source(DEFAULT_TEST_INPUT);
+	s.execute();
+
+	EXPECT_TRUE(calltest::call6);
+	EXPECT_EQ(intGot, 42);
+	EXPECT_EQ(floatGot, 3.14);
+}
+
+TEST(CallTestRecRec, CallTest)
+{
+	calltest::reset();
+	seq_int_t intGot = -1;
+	double floatGot = -1.0;
+
+	SeqModule s;
+	Func f1(Void, Record.of({Int, Float}), SEQ_NATIVE(callTestFunc6));
+	Func f2(Record.of({Int, Float}),
+	        Record.of({Int, Float}),
+	        SEQ_NATIVE(callTestFunc7));
+	Var r1 = s | f1();
+	Var r2 = r1 | f2();
+	r2[1] | capture(&intGot);
+	r2[2] | capture(&floatGot);
+
+	s.source(DEFAULT_TEST_INPUT);
+	s.execute();
+
+	EXPECT_TRUE(calltest::call7);
+	EXPECT_EQ(intGot, 42 + 1);
+	EXPECT_EQ(floatGot, 3.14 + 1.0);
 }
 
 #endif /* SEQ_CALLTEST_H */

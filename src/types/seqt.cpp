@@ -306,9 +306,10 @@ void types::SeqType::codegenStore(BaseFunc *base,
 	builder.CreateStore(len, lenPtr);
 }
 
-seq_int_t types::SeqType::size() const
+seq_int_t types::SeqType::size(Module *module) const
 {
-	return sizeof(seq_int_t) + sizeof(char *);
+	std::unique_ptr<DataLayout> layout(new DataLayout(module));
+	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::SeqType *types::SeqType::get()
@@ -317,7 +318,7 @@ types::SeqType *types::SeqType::get()
 	return &instance;
 }
 
-Type *types::SeqType::getLLVMType(LLVMContext& context)
+Type *types::SeqType::getLLVMType(LLVMContext& context) const
 {
 	StructType *seqStruct = StructType::create(context, "seq_t");
 	seqStruct->setBody({seqIntLLVM(context), IntegerType::getInt8PtrTy(context)});

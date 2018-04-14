@@ -11,7 +11,6 @@ namespace seq {
 		public:
 			AnyType(AnyType const&)=delete;
 			void operator=(AnyType const&)=delete;
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
 			static AnyType *get();
 		};
 

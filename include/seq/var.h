@@ -28,6 +28,7 @@ namespace seq {
 		virtual Var& operator=(Pipeline to);
 
 		virtual LoadStore& operator[](Var& idx);
+		virtual LoadStore& operator[](seq_int_t idx);
 
 		void ensureConsistentBase(BaseFunc *base);
 	};

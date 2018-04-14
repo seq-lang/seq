@@ -244,32 +244,32 @@ Value *types::BoolType::checkEq(BaseFunc *base,
 	return builder.CreateICmpEQ(b1, b2);
 }
 
-Type *types::IntType::getLLVMType(LLVMContext& context)
+Type *types::IntType::getLLVMType(LLVMContext& context) const
 {
 	return seqIntLLVM(context);
 }
 
-Type *types::FloatType::getLLVMType(LLVMContext& context)
+Type *types::FloatType::getLLVMType(LLVMContext& context) const
 {
 	return llvm::Type::getDoubleTy(context);
 }
 
-Type *types::BoolType::getLLVMType(LLVMContext& context)
+Type *types::BoolType::getLLVMType(LLVMContext& context) const
 {
 	return IntegerType::getInt8Ty(context);
 }
 
-seq_int_t types::IntType::size() const
+seq_int_t types::IntType::size(Module *module) const
 {
 	return sizeof(seq_int_t);
 }
 
-seq_int_t types::FloatType::size() const
+seq_int_t types::FloatType::size(Module *module) const
 {
 	return sizeof(double);
 }
 
-seq_int_t types::BoolType::size() const
+seq_int_t types::BoolType::size(Module *module) const
 {
 	return sizeof(bool);
 }

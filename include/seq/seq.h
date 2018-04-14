@@ -18,18 +18,20 @@
 #include "io.h"
 #include "exc.h"
 #include "common.h"
+#include "record.h"
 
 namespace seq {
 
 	namespace types {
-		static AnyType&   Any   = *AnyType::get();
-		static BaseType&  Base  = *BaseType::get();
-		static VoidType&  Void  = *VoidType::get();
-		static SeqType&   Seq   = *SeqType::get();
-		static IntType&   Int   = *IntType::get();
-		static FloatType& Float = *FloatType::get();
-		static BoolType&  Bool  = *BoolType::get();
-		static ArrayType& Array = *ArrayType::get();
+		static AnyType&    Any    = *AnyType::get();
+		static BaseType&   Base   = *BaseType::get();
+		static VoidType&   Void   = *VoidType::get();
+		static SeqType&    Seq    = *SeqType::get();
+		static IntType&    Int    = *IntType::get();
+		static FloatType&  Float  = *FloatType::get();
+		static BoolType&   Bool   = *BoolType::get();
+		static ArrayType&  Array  = *ArrayType::get();
+		static RecordType& Record = *RecordType::get({});
 	}
 
 	struct PipelineAggregator {

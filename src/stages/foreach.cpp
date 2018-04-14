@@ -10,7 +10,7 @@ ForEach::ForEach() : Stage("foreach", types::ArrayType::get(), types::VoidType::
 
 void ForEach::validate()
 {
-	if (getPrev() && getPrev()->getOutType()->isChildOf(types::ArrayType::get())) {
+	if (getPrev() && getPrev()->getOutType()->is(types::ArrayType::get())) {
 		auto *type = dynamic_cast<types::ArrayType *>(getPrev()->getOutType());
 		assert(type != nullptr);
 		in = type;

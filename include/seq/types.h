@@ -125,11 +125,25 @@ namespace seq {
 			                          llvm::Value *ptr,
 			                          llvm::Value *idx);
 
-			virtual bool isChildOf(Type *type);
+			virtual void codegenIndexLoad(BaseFunc *base,
+			                              ValMap outs,
+			                              llvm::BasicBlock *block,
+			                              llvm::Value *ptr,
+			                              llvm::Value *idx);
+
+			virtual void codegenIndexStore(BaseFunc *base,
+			                               ValMap outs,
+			                               llvm::BasicBlock *block,
+			                               llvm::Value *ptr,
+			                               llvm::Value *idx);
+
+			virtual bool is(Type *type) const;
+			virtual bool isChildOf(Type *type) const;
 			std::string getName() const;
 			SeqData getKey() const;
-			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context);
-			virtual seq_int_t size() const;
+			virtual Type *getBaseType(seq_int_t idx) const;
+			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
+			virtual seq_int_t size(llvm::Module *module) const;
 			Mem& operator[](seq_int_t size);
 		};
 

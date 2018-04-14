@@ -27,7 +27,7 @@ void Collect::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	if (getInType()->getKey() == SeqData::NONE || getInType()->size() == 0)
+	if (getInType()->getKey() == SeqData::NONE || getInType()->size(module) == 0)
 		throw exc::SeqException("cannot collect elements of type '" + getInType()->getName() + "'");
 
 	LLVMContext& context = module->getContext();
@@ -56,7 +56,7 @@ void Collect::codegen(Module *module)
 	Value *capVar = makeAlloca(ConstantInt::get(seqIntLLVM(context), INIT_VEC_SIZE), preambleBlock);
 	Value *elemVar = makeAlloca(getInType()->getLLVMType(context), preambleBlock);
 
-	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getInType()->size());
+	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getInType()->size(module));
 	Value *len = builder.CreateLoad(lenVar);
 
 	type->getBaseType()->codegenStore(getBase(),

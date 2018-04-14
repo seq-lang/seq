@@ -101,6 +101,11 @@ LoadStore& Var::operator[](Var& idx)
 	return LoadStore::make(this, &idx);
 }
 
+LoadStore& Var::operator[](seq_int_t idx)
+{
+	return LoadStore::make(this, idx);
+}
+
 void Var::ensureConsistentBase(BaseFunc *base)
 {
 	if (stage && stage->getBase() && base && stage->getBase() != base)

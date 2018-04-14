@@ -64,10 +64,23 @@ namespace seq {
 			                  llvm::Value *ptr,
 			                  llvm::Value *idx) override;
 
-			bool isChildOf(Type *type) override;
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) override;
-			seq_int_t size() const override;
+			void codegenIndexLoad(BaseFunc *base,
+			                      ValMap outs,
+			                      llvm::BasicBlock *block,
+			                      llvm::Value *ptr,
+			                      llvm::Value *idx) override;
+
+			void codegenIndexStore(BaseFunc *base,
+			                       ValMap outs,
+			                       llvm::BasicBlock *block,
+			                       llvm::Value *ptr,
+			                       llvm::Value *idx) override;
+
+			bool isChildOf(Type *type) const override;
 			Type *getBaseType() const;
+			Type *getBaseType(seq_int_t idx) const override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			seq_int_t size(llvm::Module *module) const override;
 			ArrayType& of(Type& baseType) const;
 			static ArrayType *get(Type *baseType);
 			static ArrayType *get();

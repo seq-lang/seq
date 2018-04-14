@@ -71,9 +71,16 @@ Mem& Mem::make(types::Type *type, seq_int_t count)
 
 LoadStore::LoadStore(Var *ptr, Var *idx) :
     Stage("loadstore", types::VoidType::get(), types::VoidType::get()),
-    ptr(ptr), idx(idx), isStore(false)
+    ptr(ptr), idx(idx), constIdx(-1), isStore(false)
 {
 	ptr->ensureConsistentBase(idx->getBase());
+	setBase(ptr->getBase());
+}
+
+LoadStore::LoadStore(Var *ptr, seq_int_t idx) :
+    Stage("loadstore", types::VoidType::get(), types::VoidType::get()),
+    ptr(ptr), idx(nullptr), constIdx(idx), isStore(false)
+{
 	setBase(ptr->getBase());
 }
 
@@ -81,14 +88,8 @@ void LoadStore::validate()
 {
 	types::Type *type = ptr->getType(this);
 
-	if (!type->isChildOf(types::ArrayType::get()))
-		throw exc::SeqException("cannot index into non-array type '" + type->getName() + "'");
-
-	if (!idx->getType(this)->isChildOf(types::IntType::get()))
+	if (idx && !idx->getType(this)->isChildOf(types::IntType::get()))
 		throw exc::SeqException("non-integer array index");
-
-	auto *arrayType = dynamic_cast<types::ArrayType *>(type);
-	assert(type != nullptr);
 
 	// somewhat contrived logic for determining whether we are loading or storing...
 	const bool noPrev = (!getPrev() || getPrev()->getOutType()->isChildOf(types::VoidType::get()));
@@ -100,11 +101,11 @@ void LoadStore::validate()
 		isStore = noNext;
 
 	if (isStore) {
-		in = arrayType->getBaseType();
+		in = type->getBaseType(constIdx);  // might not be a const load/store, but then this call should fail
 		out = types::VoidType::get();
 	} else {
 		in = types::AnyType::get();
-		out = arrayType->getBaseType();
+		out = type->getBaseType(constIdx);
 	}
 
 	Stage::validate();
@@ -114,26 +115,27 @@ void LoadStore::codegen(Module *module)
 {
 	validate();
 
-	auto *arrayType = dynamic_cast<types::ArrayType *>(ptr->getType(this));
-	assert(arrayType != nullptr);
+	LLVMContext& context = module->getContext();
+	types::Type *type = ptr->getType(this);
 
 	block = prev->block;
 	IRBuilder<> builder(block);
-	Value *ptrVal = builder.CreateLoad(getSafe(ptr->outs(this), SeqData::ARRAY));
-	Value *idxVal = builder.CreateLoad(getSafe(idx->outs(this), SeqData::INT));
+	Value *ptrVal = builder.CreateLoad(getSafe(ptr->outs(this), type->getKey()));
+	Value *idxVal = idx ? (Value *)builder.CreateLoad(getSafe(idx->outs(this), SeqData::INT)) :
+	                      (Value *)ConstantInt::get(seqIntLLVM(context), (uint64_t)constIdx);
 
 	if (isStore) {
-		arrayType->getBaseType()->codegenStore(getBase(),
-		                                       prev->outs,
-		                                       block,
-		                                       ptrVal,
-		                                       idxVal);
+		type->codegenIndexStore(getBase(),
+		                        prev->outs,
+		                        block,
+		                        ptrVal,
+		                        idxVal);
 	} else {
-		arrayType->getBaseType()->codegenLoad(getBase(),
-		                                      outs,
-		                                      block,
-		                                      ptrVal,
-		                                      idxVal);
+		type->codegenIndexLoad(getBase(),
+		                       outs,
+		                       block,
+		                       ptrVal,
+		                       idxVal);
 	}
 
 	codegenNext(module);
@@ -157,6 +159,11 @@ Pipeline LoadStore::operator|(Pipeline to)
 }
 
 LoadStore& LoadStore::make(Var *ptr, Var *idx)
+{
+	return *new LoadStore(ptr, idx);
+}
+
+LoadStore& LoadStore::make(Var *ptr, seq_int_t idx)
 {
 	return *new LoadStore(ptr, idx);
 }

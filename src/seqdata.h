@@ -14,6 +14,7 @@ namespace seq {
 		FLOAT,
 		BOOL,
 		ARRAY,
+		RECORD,
 
 		SEQ_DATA_COUNT
 	};

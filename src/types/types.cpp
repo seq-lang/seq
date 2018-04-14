@@ -339,7 +339,7 @@ Value *types::Type::codegenAlloc(BaseFunc *base,
                                  seq_int_t count,
                                  BasicBlock *block)
 {
-	if (size() == 0)
+	if (size(block->getModule()) == 0)
 		throw exc::SeqException("cannot create array of type '" + getName() + "'");
 
 	LLVMContext& context = block->getContext();
@@ -354,7 +354,7 @@ Value *types::Type::codegenAlloc(BaseFunc *base,
 	IRBuilder<> builder(block);
 
 	std::vector<Value *> args = {
-	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count*size()))};
+	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count*size(block->getModule())))};
 	Value *mem = builder.CreateCall(allocFunc, args);
 	return builder.CreatePointerCast(mem, PointerType::get(getLLVMType(context), 0));
 }
@@ -372,7 +372,7 @@ void types::Type::codegenLoad(BaseFunc *base,
                               Value *ptr,
                               Value *idx)
 {
-	if (size() == 0 || getKey() == SeqData::NONE)
+	if (size(block->getModule()) == 0 || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot load type '" + getName() + "'");
 
 	LLVMContext& context = base->getContext();
@@ -391,7 +391,7 @@ void types::Type::codegenStore(BaseFunc *base,
                                Value *ptr,
                                Value *idx)
 {
-	if (size() == 0|| getKey() == SeqData::NONE)
+	if (size(block->getModule()) == 0|| getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot store type '" + getName() + "'");
 
 	IRBuilder<> builder(block);
@@ -399,9 +399,32 @@ void types::Type::codegenStore(BaseFunc *base,
 	builder.CreateStore(val, builder.CreateGEP(ptr, idx));
 }
 
-bool types::Type::isChildOf(types::Type *type)
+void types::Type::codegenIndexLoad(BaseFunc *base,
+                                   ValMap outs,
+                                   BasicBlock *block,
+                                   Value *ptr,
+                                   Value *idx)
 {
-	return (getName() == type->getName()) || (parent && parent->isChildOf(type));
+	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
+void types::Type::codegenIndexStore(BaseFunc *base,
+                                    ValMap outs,
+                                    BasicBlock *block,
+                                    Value *ptr,
+                                    Value *idx)
+{
+	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
+bool types::Type::is(types::Type *type) const
+{
+	return getName() == type->getName();
+}
+
+bool types::Type::isChildOf(types::Type *type) const
+{
+	return is(type) || (parent && parent->isChildOf(type));
 }
 
 std::string types::Type::getName() const
@@ -414,12 +437,17 @@ SeqData types::Type::getKey() const
 	return key;
 }
 
-Type *types::Type::getLLVMType(LLVMContext& context)
+types::Type *types::Type::getBaseType(seq_int_t idx) const
+{
+	throw exc::SeqException("type '" + getName() + "' has no base types");
+}
+
+Type *types::Type::getLLVMType(LLVMContext& context) const
 {
 	throw exc::SeqException("cannot instantiate '" + getName() + "' class");
 }
 
-seq_int_t types::Type::size() const
+seq_int_t types::Type::size(Module *module) const
 {
 	return 0;
 }

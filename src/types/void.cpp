@@ -48,7 +48,7 @@ void types::VoidType::unpack(BaseFunc *base,
 {
 }
 
-Type *types::VoidType::getLLVMType(LLVMContext& context)
+Type *types::VoidType::getLLVMType(LLVMContext& context) const
 {
 	return llvm::Type::getVoidTy(context);
 }

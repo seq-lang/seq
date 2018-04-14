@@ -32,7 +32,7 @@ namespace seq {
 			                    ValMap outs,
 			                    llvm::BasicBlock *block) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext &context) override;
+			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			static VoidType *get();
 		};
 
