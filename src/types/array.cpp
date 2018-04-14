@@ -48,7 +48,7 @@ void types::ArrayType::setFuncArgs(Function *func,
 }
 
 Value *types::ArrayType::callFuncOf(Function *func,
-		                            ValMap outs,
+                                    ValMap outs,
                                     BasicBlock *block)
 {
 	IRBuilder<> builder(block);

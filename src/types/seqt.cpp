@@ -53,7 +53,7 @@ void types::SeqType::setFuncArgs(Function *func,
 }
 
 Value *types::SeqType::callFuncOf(Function *func,
-		                          ValMap outs,
+                                  ValMap outs,
                                   BasicBlock *block)
 {
 	IRBuilder<> builder(block);

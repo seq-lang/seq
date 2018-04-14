@@ -27,7 +27,7 @@ void types::VoidType::setFuncArgs(Function *func,
 }
 
 Value *types::VoidType::callFuncOf(Function *func,
-		                           ValMap outs,
+                                   ValMap outs,
                                    BasicBlock *block)
 {
 	IRBuilder<> builder(block);

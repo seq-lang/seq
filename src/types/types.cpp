@@ -41,7 +41,7 @@ void types::Type::setFuncArgs(Function *func,
 }
 
 Value *types::Type::callFuncOf(Function *func,
-		                       ValMap outs,
+                               ValMap outs,
                                BasicBlock *block)
 {
 	IRBuilder<> builder(block);
