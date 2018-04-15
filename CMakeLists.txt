@@ -127,8 +127,24 @@ add_library(seq SHARED include/seq/any.h
                        src/types/void.cpp
                        src/util.cpp
                        src/var.cpp)
-llvm_map_components_to_libnames(llvm_libs support core irreader x86asmparser x86info x86codegen mcjit orcjit executionengine)
-target_link_libraries(seq ${llvm_libs})
+llvm_map_components_to_libnames(LLVM_LIBS support
+                                          core
+                                          irreader
+                                          x86asmparser
+                                          x86info
+                                          x86desc
+                                          x86codegen
+                                          mcjit
+                                          orcjit
+                                          ipo
+                                          executionengine
+                                          instrumentation
+                                          transformutils
+                                          vectorize
+                                          aarch64codegen
+                                          scalaropts
+                                          instcombine)
+target_link_libraries(seq ${LLVM_LIBS})
 
 # Seq test
 add_executable(seqtest test/main.cpp
