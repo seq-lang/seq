@@ -127,7 +127,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/void.cpp
                        src/util.cpp
                        src/var.cpp)
-llvm_map_components_to_libnames(llvm_libs support core irreader x86asmparser x86info x86codegen mcjit orcjit)
+llvm_map_components_to_libnames(llvm_libs support core irreader x86asmparser x86info x86codegen mcjit orcjit executionengine)
 target_link_libraries(seq ${llvm_libs})
 
 # Seq test
