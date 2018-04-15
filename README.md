@@ -1,12 +1,12 @@
-## Seq — a DSL for processing genomic data
+# Seq — a DSL for processing genomic data
 
-### Dependencies
+## Dependencies
 
 - C++11
 - CMake & Make
 - LLVM 5+
 
-### Build
+## Build
 
 Compile:
 
@@ -22,7 +22,7 @@ Test:
 ./seqtest
 ```
 
-### Documentation
+## Documentation
 
 [Sphinx](http://www.sphinx-doc.org) is used for all documentation. To compile, install Sphinx and then:
 
@@ -33,7 +33,7 @@ make html
 
 You can then open `_build/html/index.html` with your browser.
 
-### At a glance
+## At a glance
 
 A full tutorial can be found in the docs, but here's a program showcasing some of the features:
 

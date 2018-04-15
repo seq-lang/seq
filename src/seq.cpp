@@ -27,7 +27,7 @@ void PipelineAggregator::add(Pipeline pipeline)
 Pipeline PipelineAggregator::addWithIndex(Pipeline to, seq_int_t idx)
 {
 	idx -= 1;  // 1-based to 0-based
-	if (idx < 0 || idx >= io::MAX_INPUTS)
+	if (idx < 0 || idx >= (seq_int_t)io::MAX_INPUTS)
 		throw exc::SeqException("invalid sequence index specified");
 
 	to.getHead()->setBase(base);

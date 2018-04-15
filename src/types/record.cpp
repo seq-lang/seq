@@ -90,7 +90,7 @@ bool types::RecordType::isChildOf(Type *type) const
 	if (!recType || types.size() != recType->types.size())
 		return false;
 
-	for (auto i = 0; i < types.size(); i++) {
+	for (size_t i = 0; i < types.size(); i++) {
 		if (!types[i]->is(recType->types[i]))
 			return false;
 	}
@@ -100,7 +100,7 @@ bool types::RecordType::isChildOf(Type *type) const
 
 types::Type *types::RecordType::getBaseType(seq_int_t idx) const
 {
-	if (idx < 1 || idx > types.size())
+	if (idx < 1 || idx > (seq_int_t)types.size())
 		throw exc::SeqException("invalid index into Record (must be constant and in-bounds)");
 
 	return types[idx - 1];
