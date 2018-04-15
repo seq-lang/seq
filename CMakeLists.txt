@@ -129,6 +129,7 @@ add_library(seq SHARED include/seq/any.h
                        src/var.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support
                                           core
+                                          executionengine
                                           irreader
                                           x86asmparser
                                           x86info
@@ -137,7 +138,6 @@ llvm_map_components_to_libnames(LLVM_LIBS support
                                           mcjit
                                           orcjit
                                           ipo
-                                          executionengine
                                           instrumentation
                                           transformutils
                                           vectorize
