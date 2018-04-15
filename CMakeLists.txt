@@ -130,6 +130,8 @@ add_library(seq SHARED include/seq/any.h
 llvm_map_components_to_libnames(LLVM_LIBS support
                                           core
                                           executionengine
+                                          mc
+                                          nativecodegen
                                           irreader
                                           x86asmparser
                                           x86info
