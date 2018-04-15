@@ -89,18 +89,18 @@ PipelineList& PipelineList::operator,(Pipeline p)
 	tail->next = n;
 	tail = n;
 	return *this;
-};
+}
 
 PipelineList& seq::operator,(Pipeline from, Pipeline to)
 {
 	auto& l = *new PipelineList(from);
 	l , to;
 	return l;
-};
+}
 
 PipelineList& seq::operator,(Stage& from, Pipeline to)
 {
 	auto& l = *new PipelineList(from);
 	l , to;
 	return l;
-};
+}
