@@ -127,25 +127,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/void.cpp
                        src/util.cpp
                        src/var.cpp)
-llvm_map_components_to_libnames(LLVM_LIBS support
-                                          core
-                                          executionengine
-                                          mc
-                                          nativecodegen
-                                          irreader
-                                          x86asmparser
-                                          x86info
-                                          x86desc
-                                          x86codegen
-                                          mcjit
-                                          orcjit
-                                          ipo
-                                          instrumentation
-                                          transformutils
-                                          vectorize
-                                          aarch64codegen
-                                          scalaropts
-                                          instcombine)
+llvm_map_components_to_libnames(LLVM_LIBS lto passes objcarcopts mirparser symbolize debuginfopdb debuginfodwarf coverage tablegen dlltooldriver orcjit xcoredisassembler xcorecodegen xcoredesc xcoreinfo xcoreasmprinter systemzdisassembler systemzcodegen systemzasmparser systemzdesc systemzinfo systemzasmprinter sparcdisassembler sparccodegen sparcasmparser sparcdesc sparcinfo sparcasmprinter powerpcdisassembler powerpccodegen powerpcasmparser powerpcdesc powerpcinfo powerpcasmprinter nvptxcodegen nvptxdesc nvptxinfo nvptxasmprinter msp430codegen msp430desc msp430info msp430asmprinter mipsdisassembler mipscodegen mipsasmparser mipsdesc mipsinfo mipsasmprinter lanaidisassembler lanaicodegen lanaiasmparser lanaidesc lanaiasmprinter lanaiinfo hexagondisassembler hexagoncodegen hexagonasmparser hexagondesc hexagoninfo bpfdisassembler bpfcodegen bpfasmparser bpfdesc bpfinfo bpfasmprinter armdisassembler armcodegen armasmparser armdesc arminfo armasmprinter armutils amdgpudisassembler amdgpucodegen amdgpuasmparser amdgpudesc amdgpuinfo amdgpuasmprinter amdgpuutils aarch64disassembler aarch64codegen aarch64asmparser aarch64desc aarch64info aarch64asmprinter aarch64utils objectyaml libdriver option windowsmanifest fuzzmutate x86disassembler x86asmparser x86codegen globalisel selectiondag asmprinter debuginfocodeview debuginfomsf x86desc mcdisassembler x86info x86asmprinter x86utils mcjit lineeditor interpreter executionengine runtimedyld codegen target coroutines ipo instrumentation vectorize scalaropts linker irreader asmparser instcombine transformutils bitwriter analysis profiledata object mcparser mc bitreader core binaryformat support demangle)
 target_link_libraries(seq ${LLVM_LIBS})
 
 # Seq test
