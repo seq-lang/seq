@@ -5,7 +5,14 @@ matrix:
   include:
     - os: linux
       env: LLVM_VERSION=5.0.1
-      addons: { apt: { packages: ["clang-5.0", "llvm-5.0-dev"], sources: ["llvm-toolchain-trusty-5.0", "ubuntu-toolchain-r-test"] } }
+      addons:
+        apt:
+          packages:
+            - clang-5.0
+            - llvm-5.0-dev
+          sources:
+            - llvm-toolchain-trusty-5.0
+            - ubuntu-toolchain-r-test
 
 install:
   ############################################################################
@@ -62,6 +69,7 @@ install:
 
 before_script:
   - cd ${TRAVIS_BUILD_DIR}
+  - export LLVM_DIR=/usr/lib/llvm-${LLVM_VERSION%.[0-9]}/lib/cmake/llvm/
   - (cd build && cmake ..)
 
 script:
