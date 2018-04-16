@@ -7,6 +7,11 @@ matrix:
       env: LLVM_VERSION=5.0.1
       addons: { apt: { packages: ["clang-5.0"], sources: ["llvm-toolchain-trusty-5.0", "ubuntu-toolchain-r-test"] } }
 
+  include:
+    - os: linux
+      env: LLVM_VERSION=6.0.1
+      addons: { apt: { packages: ["clang-6.0"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
+
 install:
   ############################################################################
   # All the dependencies are installed in ${TRAVIS_BUILD_DIR}/deps/
@@ -66,4 +71,6 @@ before_script:
 
 script:
   - cmake --build build --target seq
-  - build/seqtest
+
+notifications:
+  email: false
