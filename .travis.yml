@@ -5,14 +5,7 @@ matrix:
   include:
     - os: linux
       env: LLVM_VERSION=5.0.1
-      addons:
-        apt:
-          packages:
-            - clang-5.0
-            - llvm-5.0-dev
-          sources:
-            - llvm-toolchain-trusty-5.0
-            - ubuntu-toolchain-r-test
+      addons: { apt: { packages: ["clang-5.0"], sources: ["llvm-toolchain-trusty-5.0", "ubuntu-toolchain-r-test"] } }
 
 install:
   ############################################################################
@@ -63,15 +56,14 @@ install:
       fi
       export CXXFLAGS="-isystem ${LLVM_DIR}/install/include/c++/v1"
       export LDFLAGS="-L ${LLVM_DIR}/install/lib -l c++ -l c++abi"
-      #export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${LLVM_DIR}/install/lib"
-      #export PATH="${LLVM_DIR}/clang/bin:${PATH}"
+      export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${LLVM_DIR}/install/lib"
+      export PATH="${LLVM_DIR}/clang/bin:${PATH}"
     fi
 
 before_script:
   - cd ${TRAVIS_BUILD_DIR}
-  - export LLVM_DIR=/usr/lib/llvm-${LLVM_VERSION%.[0-9]}/lib/cmake/llvm/
   - (cd build && cmake ..)
 
 script:
-  - cmake --build build
+  - cmake --build build --target seq
   - build/seqtest
