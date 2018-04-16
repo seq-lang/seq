@@ -3,7 +3,7 @@
 ## Dependencies
 
 - C++11
-- CMake & Make
+- CMake 3.9+
 - LLVM 5+
 
 ## Build
@@ -11,9 +11,9 @@
 Compile:
 
 ```bash
-cd seq
-LLVM_DIR=/path/to/llvm/version/lib/cmake cmake .
-make
+cd seq/build
+LLVM_DIR=/path/to/llvm/version/lib/cmake cmake ..
+cmake --build .
 ```
 
 Test:

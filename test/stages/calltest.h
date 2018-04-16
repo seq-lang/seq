@@ -72,7 +72,7 @@ TEST(CallTestIntInt, CallTest)
 	SeqModule s;
 	Func f(Int, Int, SEQ_NATIVE(callTestFunc1));
 	s | count() | f() | capture(&got);
-	s.source(DEFAULT_TEST_INPUT);
+	s.source(DEFAULT_TEST_INPUT_SINGLE);
 	s.execute();
 
 	EXPECT_TRUE(calltest::call1);
@@ -87,7 +87,7 @@ TEST(CallTestArrSeq, CallTest)
 	SeqModule s;
 	Func f(Seq, Array.of(Int), SEQ_NATIVE(callTestFunc2));
 	s | f() | len() | capture(&got);
-	s.source(DEFAULT_TEST_INPUT);
+	s.source(DEFAULT_TEST_INPUT_SINGLE);
 	s.execute();
 
 	EXPECT_TRUE(calltest::call2);
@@ -101,7 +101,7 @@ TEST(CallTestIntVoid, CallTest)
 	SeqModule s;
 	Func f(Int, Void, SEQ_NATIVE(callTestFunc3));
 	s | count() | f();
-	s.source(DEFAULT_TEST_INPUT);
+	s.source(DEFAULT_TEST_INPUT_SINGLE);
 	s.execute();
 
 	EXPECT_TRUE(calltest::call3);
@@ -115,7 +115,7 @@ TEST(CallTestVoidInt, CallTest)
 	SeqModule s;
 	Func f(Void, Int, SEQ_NATIVE(callTestFunc4));
 	s | f() | capture(&got);
-	s.source(DEFAULT_TEST_INPUT);
+	s.source(DEFAULT_TEST_INPUT_SINGLE);
 	s.execute();
 
 	EXPECT_TRUE(calltest::call4);
@@ -129,7 +129,7 @@ TEST(CallTestVoidVoid, CallTest)
 	SeqModule s;
 	Func f(Void, Void, SEQ_NATIVE(callTestFunc5));
 	s | f();
-	s.source(DEFAULT_TEST_INPUT);
+	s.source(DEFAULT_TEST_INPUT_SINGLE);
 	s.execute();
 
 	EXPECT_TRUE(calltest::call5);
@@ -147,7 +147,7 @@ TEST(CallTestVoidRec, CallTest)
 	r[1] | capture(&intGot);
 	r[2] | capture(&floatGot);
 
-	s.source(DEFAULT_TEST_INPUT);
+	s.source(DEFAULT_TEST_INPUT_SINGLE);
 	s.execute();
 
 	EXPECT_TRUE(calltest::call6);
@@ -171,7 +171,7 @@ TEST(CallTestRecRec, CallTest)
 	r2[1] | capture(&intGot);
 	r2[2] | capture(&floatGot);
 
-	s.source(DEFAULT_TEST_INPUT);
+	s.source(DEFAULT_TEST_INPUT_MULTI);
 	s.execute();
 
 	EXPECT_TRUE(calltest::call7);

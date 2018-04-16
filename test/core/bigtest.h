@@ -116,7 +116,7 @@ static inline void bigTest()
 
 	s.last | f() | foreach() | print();
 
-	s.source("test/data/multiple/seqs.fastq");
+	s.source(DEFAULT_TEST_INPUT_MULTI);
 	s.execute(true);  // debug=true
 }
 

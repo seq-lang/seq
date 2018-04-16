@@ -41,31 +41,6 @@
 ehthumbs.db
 Thumbs.db
 
-# CMake #
-#########
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-/Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-
-# Google Test #
-###############
-*.pc
-googletest-download
-googletest-src
-googletest-build
-
-# Other #
-#########
+# IDE generated files #
+#######################
 .idea
-*.cbp
-*.dSYM
-*debug
-*.gch
-*.dylib
-seqtest
