@@ -4,8 +4,8 @@ sudo: false
 matrix:
   include:
     - os: linux
-      env: LLVM_VERSION=5.0.1
-      addons: { apt: { packages: ["clang-5.0"], sources: ["llvm-toolchain-trusty-5.0", "ubuntu-toolchain-r-test"] } }
+      env: LLVM_VERSION=4.0.1
+      addons: { apt: { packages: ["clang-4.0"], sources: ["llvm-toolchain-trusty-4.0", "ubuntu-toolchain-r-test"] } }
 
 install:
   ############################################################################
