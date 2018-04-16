@@ -1,5 +1,7 @@
 # Seq — a DSL for processing genomic data
 
+[![Build Status](https://travis-ci.com/arshajii/seq.svg?token=QGRVvAxcSasMm4MgJvYL&branch=master)](https://travis-ci.com/arshajii/seq)
+
 ## Dependencies
 
 - C++11

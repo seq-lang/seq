@@ -9,7 +9,7 @@ matrix:
 
   include:
     - os: linux
-      env: LLVM_VERSION=6.0.1
+      env: LLVM_VERSION=6.0.0
       addons: { apt: { packages: ["clang-6.0"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
 
 install:
