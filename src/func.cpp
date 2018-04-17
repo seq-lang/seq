@@ -171,11 +171,16 @@ void Func::codegen(Module *module)
 	finalizeInit(module);
 }
 
-void Func::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *block)
+Value *Func::codegenCallRaw(BaseFunc *base, ValMap ins, BasicBlock *block)
 {
 	module = block->getModule();
 	codegen(module);
-	Value *result = inType->callFuncOf(func, ins, block);
+	return inType->callFuncOf(func, ins, block);
+}
+
+void Func::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *block)
+{
+	Value *result = codegenCallRaw(base, ins, block);
 	outType->unpack(base, result, outs, block);
 }
 
@@ -255,4 +260,38 @@ Pipeline Func::operator|(Var& to)
 Call& Func::operator()()
 {
 	return Call::make(*this);
+}
+
+FuncList::Node::Node(Func& f) :
+    f(f), next(nullptr)
+{
+}
+
+FuncList::FuncList(Func& f)
+{
+	head = tail = new Node(f);
+}
+
+FuncList& FuncList::operator,(Func& f)
+{
+	auto *n = new Node(f);
+	tail->next = n;
+	tail = n;
+	return *this;
+}
+
+FuncList& seq::operator,(Func& f1, Func& f2)
+{
+	auto& l = *new FuncList(f1);
+	l , f2;
+	return l;
+}
+
+MultiCall& FuncList::operator()()
+{
+	std::vector<Func *> funcs;
+	for (Node *n = head; n; n = n->next)
+		funcs.push_back(&n->f);
+
+	return MultiCall::make(funcs);
 }

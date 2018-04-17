@@ -22,6 +22,11 @@ namespace calltest {
 		seq_int_t n;
 		double d;
 	};
+
+	struct rec_test_nested_t {
+		rec_test_t r1;
+		rec_test_t r2;
+	};
 }
 
 SEQ_FUNC seq_int_t callTestFunc1(seq_int_t n)
@@ -62,6 +67,16 @@ SEQ_FUNC calltest::rec_test_t callTestFunc7(calltest::rec_test_t r)
 {
 	calltest::call7 = true;
 	return {r.n + 1, r.d + 1.0};
+}
+
+SEQ_FUNC seq_int_t multiCallTestFunc1(seq_int_t n)
+{
+	return n*2;
+}
+
+SEQ_FUNC double multiCallTestFunc2(seq_int_t n)
+{
+	return n*2.0;
 }
 
 TEST(CallTestIntInt, CallTest)
@@ -166,6 +181,7 @@ TEST(CallTestRecRec, CallTest)
 	Func f2(Record.of({Int, Float}),
 	        Record.of({Int, Float}),
 	        SEQ_NATIVE(callTestFunc7));
+
 	Var r1 = s | f1();
 	Var r2 = r1 | f2();
 	r2[1] | capture(&intGot);
@@ -177,6 +193,50 @@ TEST(CallTestRecRec, CallTest)
 	EXPECT_TRUE(calltest::call7);
 	EXPECT_EQ(intGot, 42 + 1);
 	EXPECT_EQ(floatGot, 3.14 + 1.0);
+}
+
+TEST(MultiCallTestStandard, MultiCallTest)
+{
+	seq_int_t intGot = -1;
+	double floatGot = -1.0;
+
+	SeqModule s;
+	Func f1(Int, Int, SEQ_NATIVE(multiCallTestFunc1));
+	Func f2(Int, Float, SEQ_NATIVE(multiCallTestFunc2));
+
+	Var r = s | range(42,43) | (f1, f2)();
+	r[1] | capture(&intGot);
+	r[2] | capture(&floatGot);
+
+	s.source(DEFAULT_TEST_INPUT_MULTI);
+	s.execute();
+
+	EXPECT_EQ(intGot, 42 * 2);
+	EXPECT_EQ(floatGot, 42 * 2.0);
+}
+
+TEST(MultiCallTestNested, MultiCallTest)
+{
+	calltest::rec_test_nested_t recGot = {};
+
+	SeqModule s;
+	Func f1(Int, Int, SEQ_NATIVE(multiCallTestFunc1));
+	Func f2(Int, Float, SEQ_NATIVE(multiCallTestFunc2));
+	Func f3(Record.of({Int, Float}),
+	        Record.of({Int, Float}),
+	        SEQ_NATIVE(callTestFunc7));
+
+	Var r1 = s | range(42,43) | (f1, f2)();
+	Var r2 = r1 | (f3, f3)();
+	r2 | capture(&recGot);
+
+	s.source(DEFAULT_TEST_INPUT_MULTI);
+	s.execute();
+
+	EXPECT_EQ(recGot.r1.n, 42*2 + 1);
+	EXPECT_EQ(recGot.r1.d, 42*2.0 + 1.0);
+	EXPECT_EQ(recGot.r2.n, 42*2 + 1);
+	EXPECT_EQ(recGot.r2.d, 42*2.0 + 1.0);
 }
 
 #endif /* SEQ_CALLTEST_H */

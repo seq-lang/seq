@@ -10,6 +10,7 @@
 namespace seq {
 
 	class Call;
+	class MultiCall;
 
 	struct CompilationContext {
 		bool inOnce = false;
@@ -67,6 +68,7 @@ namespace seq {
 		     void *rawFunc);
 		Func(types::Type& inType, types::Type& outType);
 		void codegen(llvm::Module *module) override;
+		llvm::Value *codegenCallRaw(BaseFunc *base, ValMap ins, llvm::BasicBlock *block);
 		void codegenCall(BaseFunc *base,
 		                 ValMap ins,
 		                 ValMap outs,
@@ -83,6 +85,25 @@ namespace seq {
 
 		Call& operator()();
 	};
+
+	class FuncList {
+		struct Node {
+			Func& f;
+			Node *next;
+
+			explicit Node(Func& f);
+		};
+
+	public:
+		Node *head;
+		Node *tail;
+
+		explicit FuncList(Func& f);
+		FuncList& operator,(Func& f);
+		MultiCall& operator()();
+	};
+
+	FuncList& operator,(Func& f1, Func& f2);
 
 }
 
