@@ -1,4 +1,4 @@
-#include <seq/record.h>
+#include "seq/record.h"
 #include "seq/func.h"
 #include "seq/call.h"
 
