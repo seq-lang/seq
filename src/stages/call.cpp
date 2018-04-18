@@ -94,5 +94,5 @@ void MultiCall::finalize(Module *module, ExecutionEngine *eng)
 
 MultiCall& MultiCall::make(std::vector<Func *> funcs)
 {
-	return *new MultiCall(funcs);
+	return *new MultiCall(std::move(funcs));
 }
