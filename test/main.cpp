@@ -8,6 +8,7 @@
 #include "stages/counttest.h"
 #include "stages/filtertest.h"
 #include "stages/lentest.h"
+#include "stages/makerectest.h"
 #include "stages/memtest.h"
 
 int main(int argc, char *argv[])

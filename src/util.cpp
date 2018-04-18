@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <cstdint>
+#include <cstring>
 #include <cassert>
 #include "seq/util.h"
 
@@ -33,4 +34,12 @@ SEQ_FUNC void append(void **array,
 
 	auto *bytes = (char *)(*array);
 	std::memcpy(&bytes[len * elem_size], elem, (size_t)elem_size);
+}
+
+SEQ_FUNC bool eq(const char *seq1,
+                 const seq_int_t len1,
+                 const char *seq2,
+                 const seq_int_t len2)
+{
+	return len1 == len2 && std::memcmp(seq1, seq2, (size_t)len1) == 0;
 }

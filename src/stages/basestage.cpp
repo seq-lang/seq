@@ -16,7 +16,14 @@ BaseStage::BaseStage(types::Type *in, types::Type *out) :
 void BaseStage::codegen(Module *module)
 {
 	validate();
+
+	if (prev && !block)
+		block = prev->block;
+
 	codegenNext(module);
+
+	if (prev)
+		prev->setAfter(getAfter());
 }
 
 types::Type *BaseStage::getOutType() const

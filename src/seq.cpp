@@ -4,6 +4,7 @@
 #include <cassert>
 #include "seq/common.h"
 #include "seq/basestage.h"
+#include "seq/makerec.h"
 #include "seq/util.h"
 #include "seq/exc.h"
 #include "seq/seq.h"
@@ -45,13 +46,9 @@ Pipeline PipelineAggregator::operator|(Pipeline to)
 	return addWithIndex(to, 1);
 }
 
-Pipeline PipelineAggregator::operator|(PipelineList to)
+Pipeline PipelineAggregator::operator|(PipelineList& to)
 {
-	for (auto *node = to.head; node; node = node->next) {
-		*this | node->p;
-	}
-
-	return {to.head->p.getHead(), to.tail->p.getTail()};
+	return *this | MakeRec::make(to);
 }
 
 Pipeline PipelineAggregator::operator|(Var& to)
@@ -69,23 +66,44 @@ Pipeline PipelineAggregator::operator|(Var& to)
 	return begin;
 }
 
+Pipeline PipelineAggregator::operator<<(PipelineList& to)
+{
+	bool foundFirst = false;
+	Pipeline first, last;
+
+	for (auto *n = to.head; n; n = n->next) {
+		if (n->isVar)
+			last = *this | *n->v;
+		else
+			last = *this | n->p;
+
+		if (!foundFirst) {
+			first = last;
+			foundFirst = true;
+		}
+	}
+
+	return {first.getHead(), last.getTail()};
+}
+
 Pipeline PipelineAggregatorProxy::operator|(Pipeline to)
 {
 	return aggr.addWithIndex(to, idx);
 }
 
-Pipeline PipelineAggregatorProxy::operator|(PipelineList to)
+Pipeline PipelineAggregatorProxy::operator|(PipelineList& to)
 {
-	for (auto *node = to.head; node; node = node->next) {
-		*this | node->p;
-	}
-
-	return {to.head->p.getHead(), to.tail->p.getTail()};
+	return *this | MakeRec::make(to);
 }
 
 Pipeline PipelineAggregatorProxy::operator|(Var& to)
 {
 	return aggr | to;
+}
+
+Pipeline PipelineAggregatorProxy::operator<<(PipelineList& to)
+{
+	return aggr << to;
 }
 
 PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr, seq_int_t idx) :
@@ -345,7 +363,7 @@ Pipeline SeqModule::operator|(Pipeline to)
 	return main | to;
 }
 
-Pipeline SeqModule::operator|(PipelineList to)
+Pipeline SeqModule::operator|(PipelineList& to)
 {
 	return main | to;
 }
@@ -353,6 +371,11 @@ Pipeline SeqModule::operator|(PipelineList to)
 Pipeline SeqModule::operator|(Var& to)
 {
 	return main | to;
+}
+
+Pipeline SeqModule::operator<<(PipelineList& to)
+{
+	return main << to;
 }
 
 PipelineAggregatorProxy SeqModule::operator[](unsigned idx)

@@ -1,4 +1,6 @@
+#include "seq/makerec.h"
 #include "seq/stage.h"
+#include "seq/var.h"
 #include "seq/exc.h"
 #include "seq/pipeline.h"
 
@@ -58,23 +60,50 @@ std::ostream& operator<<(std::ostream& os, Pipeline& pipeline)
 Pipeline Pipeline::operator|(Pipeline to)
 {
 	to.getHead()->setBase(getHead()->getBase());
-	tail->addNext(to.getHead());
-	to.getHead()->setPrev(tail);
+	getTail()->addNext(to.getHead());
+	to.getHead()->setPrev(getTail());
 
 	return {getHead(), to.getTail()};
 }
 
+Pipeline Pipeline::operator|(Var& to)
+{
+	if (!to.isAssigned())
+		throw exc::SeqException("variable used before assigned");
+
+	to.ensureConsistentBase(getHead()->getBase());
+	Stage *stage = to.getStage();
+	BaseStage& base = BaseStage::make(types::AnyType::get(), to.getType(getTail()), stage);
+	base.outs = to.outs(getTail());
+	return *this | base;
+}
+
 Pipeline Pipeline::operator|(PipelineList& to)
 {
-	for (auto *node = to.head; node; node = node->next) {
-		*this | node->p;
+	return *this | MakeRec::make(to);
+}
+
+Pipeline Pipeline::operator<<(PipelineList& to)
+{
+	Pipeline last;
+
+	for (auto *n = to.head; n; n = n->next) {
+		if (n->isVar)
+			last = *this | *n->v;
+		else
+			last = *this | n->p;
 	}
 
-	return {getHead(), to.tail->p.getTail()};
+	return {getHead(), last.getTail()};
 }
 
 PipelineList::Node::Node(Pipeline p) :
-    p(p), next(nullptr)
+    isVar(false), p(p), v(nullptr), next(nullptr)
+{
+}
+
+PipelineList::Node::Node(Var *v) :
+    isVar(true), p({nullptr, nullptr}), v(v), next(nullptr)
 {
 }
 
@@ -83,11 +112,26 @@ PipelineList::PipelineList(Pipeline p)
 	head = tail = new Node(p);
 }
 
-PipelineList& PipelineList::operator,(Pipeline p)
+PipelineList::PipelineList(Var *v)
 {
-	auto *n = new Node(p);
+	head = tail = new Node(v);
+}
+
+void PipelineList::addNode(Node *n)
+{
 	tail->next = n;
 	tail = n;
+}
+
+PipelineList& PipelineList::operator,(Pipeline p)
+{
+	addNode(new Node(p));
+	return *this;
+}
+
+PipelineList& PipelineList::operator,(Var& v)
+{
+	addNode(new Node(&v));
 	return *this;
 }
 
@@ -101,6 +145,34 @@ PipelineList& seq::operator,(Pipeline from, Pipeline to)
 PipelineList& seq::operator,(Stage& from, Pipeline to)
 {
 	auto& l = *new PipelineList(from);
+	l , to;
+	return l;
+}
+
+PipelineList& seq::operator,(Var& from, Pipeline to)
+{
+	auto& l = *new PipelineList(&from);
+	l , to;
+	return l;
+}
+
+PipelineList& seq::operator,(Pipeline from, Var& to)
+{
+	auto& l = *new PipelineList(from);
+	l , to;
+	return l;
+}
+
+PipelineList& seq::operator,(Stage& from, Var& to)
+{
+	auto& l = *new PipelineList(from);
+	l , to;
+	return l;
+}
+
+PipelineList& seq::operator,(Var& from, Var& to)
+{
+	auto& l = *new PipelineList(&from);
 	l , to;
 	return l;
 }

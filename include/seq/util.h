@@ -57,6 +57,11 @@ namespace seq {
 		                     seq_int_t elem_size,
 		                     seq_int_t len,
 		                     seq_int_t *cap);
+
+		SEQ_FUNC bool eq(const char *seq1,
+		                 seq_int_t len1,
+		                 const char *seq2,
+		                 seq_int_t len2);
 	}
 }
 

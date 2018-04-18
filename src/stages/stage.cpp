@@ -74,6 +74,12 @@ types::Type *Stage::getOutType() const
 	return out;
 }
 
+void Stage::setInOut(types::Type *in, types::Type *out)
+{
+	this->in = in;
+	this->out = out;
+}
+
 void Stage::addNext(Stage *next)
 {
 	nexts.push_back(next);
@@ -141,10 +147,12 @@ void Stage::finalize(Module *module, ExecutionEngine *eng)
 
 Pipeline Stage::operator|(Pipeline to)
 {
-	to.getHead()->setBase(getBase());
-	addNext(to.getHead());
-	to.getHead()->setPrev(this);
-	return {this, to.getTail()};
+	return (Pipeline)*this | to;
+}
+
+Pipeline Stage::operator|(Var& to)
+{
+	return (Pipeline)*this | to;
 }
 
 Stage::operator Pipeline()

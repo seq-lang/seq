@@ -77,6 +77,18 @@ Pipeline Var::operator|(Pipeline to)
 	return full;
 }
 
+Pipeline Var::operator<<(PipelineList& to)
+{
+	for (auto *n = to.head; n; n = n->next) {
+		if (n->isVar)
+			throw exc::SeqException("cannot send var output to another var");
+		else
+			*this | n->p;
+	}
+
+	return {to.head->p.getHead(), to.tail->p.getTail()};
+}
+
 Var& Var::operator=(Pipeline to)
 {
 	if (isAssigned())

@@ -80,8 +80,9 @@ namespace seq {
 		types::Type *getOutType() const override;
 
 		Pipeline operator|(Pipeline to);
-		Pipeline operator|(PipelineList to);
+		Pipeline operator|(PipelineList& to);
 		Pipeline operator|(Var& to);
+		Pipeline operator<<(PipelineList& to);
 
 		Call& operator()();
 	};

@@ -24,6 +24,7 @@ namespace seq {
 	class BaseFunc;
 	class Func;
 	class Pipeline;
+	class Var;
 
 	typedef void (*SeqMain)(seq_t *, bool isLast);
 	typedef void (*SeqOp)(char *, seq_int_t);
@@ -57,6 +58,7 @@ namespace seq {
 		void setBase(BaseFunc *base);
 		virtual types::Type *getInType() const;
 		virtual types::Type *getOutType() const;
+		virtual void setInOut(types::Type *in, types::Type *out);
 		virtual void addNext(Stage *next);
 		virtual void addWeakNext(Stage *next);
 		virtual llvm::BasicBlock *getAfter() const;
@@ -71,6 +73,7 @@ namespace seq {
 		virtual void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 		virtual Pipeline operator|(Pipeline to);
+		virtual Pipeline operator|(Var& to);
 		operator Pipeline();
 	};
 }

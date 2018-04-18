@@ -1,4 +1,5 @@
 #include "seq/basestage.h"
+#include "seq/makerec.h"
 #include "seq/call.h"
 #include "seq/exc.h"
 #include "seq/func.h"
@@ -230,13 +231,9 @@ Pipeline Func::operator|(Pipeline to)
 	return full;
 }
 
-Pipeline Func::operator|(PipelineList to)
+Pipeline Func::operator|(PipelineList& to)
 {
-	for (auto *node = to.head; node; node = node->next) {
-		*this | node->p;
-	}
-
-	return {to.head->p.getHead(), to.tail->p.getTail()};
+	return *this | MakeRec::make(to);
 }
 
 Pipeline Func::operator|(Var& to)
@@ -255,6 +252,26 @@ Pipeline Func::operator|(Var& to)
 	add(begin);
 
 	return begin;
+}
+
+Pipeline Func::operator<<(PipelineList& to)
+{
+	bool foundFirst = false;
+	Pipeline first, last;
+
+	for (auto *n = to.head; n; n = n->next) {
+		if (n->isVar)
+			last = *this | *n->v;
+		else
+			last = *this | n->p;
+
+		if (!foundFirst) {
+			first = last;
+			foundFirst = true;
+		}
+	}
+
+	return {first.getHead(), last.getTail()};
 }
 
 Call& Func::operator()()

@@ -69,6 +69,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/io.h
                        include/seq/lambda.h
                        include/seq/len.h
+                       include/seq/makerec.h
                        include/seq/mem.h
                        include/seq/num.h
                        include/seq/op.h
@@ -107,6 +108,7 @@ add_library(seq SHARED include/seq/any.h
                        src/stages/hash.cpp
                        src/stages/lambda.cpp
                        src/stages/len.cpp
+                       src/stages/makerec.cpp
                        src/stages/mem.cpp
                        src/stages/op.cpp
                        src/stages/print.cpp
@@ -140,6 +142,7 @@ add_executable(seqtest test/main.cpp
                        test/stages/counttest.h
                        test/stages/filtertest.h
                        test/stages/lentest.h
+                       test/stages/makerectest.h
                        test/stages/memtest.h
                        test/testhelp.h)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
