@@ -24,6 +24,7 @@ namespace seq {
 	class BaseFunc;
 	class Func;
 	class Pipeline;
+	class PipelineList;
 	class Var;
 
 	typedef void (*SeqMain)(seq_t *, bool isLast);
@@ -74,6 +75,7 @@ namespace seq {
 
 		virtual Pipeline operator|(Pipeline to);
 		virtual Pipeline operator|(Var& to);
+		virtual Pipeline operator<<(PipelineList& to);
 		operator Pipeline();
 	};
 }

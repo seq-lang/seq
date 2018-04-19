@@ -220,8 +220,11 @@ Pipeline Func::operator|(Pipeline to)
 	if (rawFunc)
 		throw exc::SeqException("cannot add pipelines to native function");
 
+	if (to.isAdded())
+		throw exc::MultiLinkException(*to.getHead());
+
 	to.getHead()->setBase(this);
-	BaseStage& begin = BaseStage::make(types::VoidType::get(), inType, nullptr);
+	BaseStage& begin = BaseStage::make(types::AnyType::get(), inType, nullptr);
 	begin.setBase(this);
 	begin.outs = outs;
 
@@ -246,7 +249,7 @@ Pipeline Func::operator|(Var& to)
 
 	to.ensureConsistentBase(this);
 	Stage *stage = to.getStage();
-	BaseStage& begin = BaseStage::make(types::VoidType::get(), to.getType(stage), stage);
+	BaseStage& begin = BaseStage::make(types::AnyType::get(), to.getType(stage), stage);
 	begin.setBase(this);
 	begin.outs = to.outs(&begin);
 	add(begin);

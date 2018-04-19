@@ -155,6 +155,11 @@ Pipeline Stage::operator|(Var& to)
 	return (Pipeline)*this | to;
 }
 
+Pipeline Stage::operator<<(PipelineList& to)
+{
+	return (Pipeline)*this << to;
+}
+
 Stage::operator Pipeline()
 {
 	return {this, this};

@@ -59,6 +59,9 @@ std::ostream& operator<<(std::ostream& os, Pipeline& pipeline)
 
 Pipeline Pipeline::operator|(Pipeline to)
 {
+	if (to.isAdded())
+		throw exc::MultiLinkException(*to.getHead());
+
 	to.getHead()->setBase(getHead()->getBase());
 	getTail()->addNext(to.getHead());
 	to.getHead()->setPrev(getTail());

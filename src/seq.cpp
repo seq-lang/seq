@@ -32,7 +32,7 @@ Pipeline PipelineAggregator::addWithIndex(Pipeline to, seq_int_t idx)
 		throw exc::SeqException("invalid sequence index specified");
 
 	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::VoidType::get(), types::SeqType::get());
+	BaseStage& begin = BaseStage::make(types::AnyType::get(), types::SeqType::get());
 	begin.setBase(base);
 	begin.outs = base->outs[idx];
 	Pipeline full = begin | to;

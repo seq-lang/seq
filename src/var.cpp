@@ -65,7 +65,7 @@ Pipeline Var::operator|(Pipeline to)
 	ensureConsistentBase(to.getHead()->getBase());
 	BaseFunc *base = getBase();
 	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::VoidType::get(), getType(stage), stage);
+	BaseStage& begin = BaseStage::make(types::AnyType::get(), getType(stage), stage);
 	begin.setBase(base);
 	begin.outs = outs(stage);
 
