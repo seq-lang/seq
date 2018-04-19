@@ -127,7 +127,44 @@ Pipeline PipelineAggregatorProxy::operator|(Var& to)
 
 Pipeline PipelineAggregatorProxy::operator&(PipelineList& to)
 {
-	return aggr << to;
+	Pipeline first, last;
+
+	for (auto *n = to.head; n; n = n->next) {
+		if (n->isVar)
+			last = aggr | *n->v;
+		else
+			last = aggr.addWithIndex(n->p, idx);
+
+		if (n == to.head)
+			first = last;
+	}
+
+	return {first.getHead(), last.getTail()};
+}
+
+Pipeline PipelineAggregatorProxy::operator||(Pipeline to)
+{
+	return aggr.addWithIndex(to, idx, false);
+}
+
+Pipeline PipelineAggregatorProxy::operator&&(PipelineList& to)
+{
+	Pipeline last;
+
+	for (auto *n = to.head; n; n = n->next) {
+		if (n->isVar)
+			throw exc::SeqException("cannot apply && to pipeline list containing var");
+		else {
+			Pipeline p = aggr.addWithIndex(n->p, idx, false);
+
+			if (n == to.head)
+				last = p;
+			else
+				last = last | p;
+		}
+	}
+
+	return last;
 }
 
 PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr, seq_int_t idx) :
