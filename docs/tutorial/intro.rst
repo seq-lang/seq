@@ -60,13 +60,13 @@ Pipelines can branch arbitrarily. For example, if we instead want to print each 
     s.source("input.fastq");
     s.execute();
 
-Branching pipelines can also be represented using a ``,`` shorthand and the branch operator ``<<``:
+Branching pipelines can also be represented using a ``,`` shorthand and the branch operator ``&``:
 
 .. code-block:: cpp
 
     SeqModule s;
 
-    s | split(32,32) << (print(), revcomp() | print());
+    s | split(32,32) & (print(), revcomp() | print());
 
     s.source("input.fastq");
     s.execute();

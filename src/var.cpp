@@ -60,7 +60,48 @@ Pipeline Var::operator|(Pipeline to)
 		throw exc::SeqException("variable used before assigned");
 
 	if (to.isAdded())
-		throw exc::SeqException("cannot use same pipeline twice");
+		throw exc::MultiLinkException(*to.getHead());
+
+	ensureConsistentBase(to.getHead()->getBase());
+	BaseFunc *base = getBase();
+	to.getHead()->setBase(base);
+	BaseStage& begin = BaseStage::make(types::VoidType::get(), getType(stage), stage);
+	begin.setBase(base);
+	begin.outs = outs(stage);
+
+	if (stage)
+		stage->addWeakNext(to.getHead());
+
+	Pipeline full = begin | to;
+	base->add(full);
+	return full;
+}
+
+Pipeline Var::operator&(PipelineList& to)
+{
+	Pipeline first, last;
+
+	for (auto *n = to.head; n; n = n->next) {
+		if (n->isVar)
+			throw exc::SeqException("cannot send var output to another var");
+		else {
+			last = *this | n->p;
+
+			if (n == to.head)
+				first = last;
+		}
+	}
+
+	return {first.getHead(), last.getTail()};
+}
+
+Pipeline Var::operator||(Pipeline to)
+{
+	if (!isAssigned())
+		throw exc::SeqException("variable used before assigned");
+
+	if (to.isAdded())
+		throw exc::MultiLinkException(*to.getHead());
 
 	ensureConsistentBase(to.getHead()->getBase());
 	BaseFunc *base = getBase();
@@ -73,20 +114,27 @@ Pipeline Var::operator|(Pipeline to)
 		stage->addWeakNext(to.getHead());
 
 	Pipeline full = begin | to;
-	base->add(full);
 	return full;
 }
 
-Pipeline Var::operator<<(PipelineList& to)
+Pipeline Var::operator&&(PipelineList& to)
 {
+	Pipeline last;
+
 	for (auto *n = to.head; n; n = n->next) {
 		if (n->isVar)
 			throw exc::SeqException("cannot send var output to another var");
-		else
-			*this | n->p;
+		else {
+			Pipeline p = *this || n->p;
+
+			if (n == to.head)
+				last = p;
+			else
+				last = last | p;
+		}
 	}
 
-	return {to.head->p.getHead(), to.tail->p.getTail()};
+	return last;
 }
 
 Var& Var::operator=(Pipeline to)

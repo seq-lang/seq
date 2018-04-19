@@ -86,7 +86,7 @@ Pipeline Pipeline::operator|(PipelineList& to)
 	return *this | MakeRec::make(to);
 }
 
-Pipeline Pipeline::operator<<(PipelineList& to)
+Pipeline Pipeline::operator&(PipelineList& to)
 {
 	Pipeline last;
 

@@ -39,11 +39,13 @@ namespace seq {
 		std::vector<Pipeline> pipelines;
 		explicit PipelineAggregator(SeqModule *base);
 		void add(Pipeline pipeline);
-		Pipeline addWithIndex(Pipeline to, seq_int_t idx);
+		Pipeline addWithIndex(Pipeline to, seq_int_t idx, bool addFull=true);
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
 		Pipeline operator|(Var& to);
-		Pipeline operator<<(PipelineList& to);
+		Pipeline operator&(PipelineList& to);
+		Pipeline operator||(Pipeline to);
+		Pipeline operator&&(PipelineList& to);
 	};
 
 	struct PipelineAggregatorProxy {
@@ -54,7 +56,9 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
 		Pipeline operator|(Var& to);
-		Pipeline operator<<(PipelineList& to);
+		Pipeline operator&(PipelineList& to);
+		Pipeline operator||(Pipeline to);
+		Pipeline operator&&(PipelineList& to);
 	};
 
 	class SeqModule : public BaseFunc {
@@ -93,7 +97,9 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
 		Pipeline operator|(Var& to);
-		Pipeline operator<<(PipelineList& to);
+		Pipeline operator&(PipelineList& to);
+		Pipeline operator||(Pipeline to);
+		Pipeline operator&&(PipelineList& to);
 
 		PipelineAggregatorProxy operator[](unsigned idx);
 	};
