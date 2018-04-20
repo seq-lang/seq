@@ -187,7 +187,6 @@ ValMap Const::outs(Stage *caller) const
 	return outsMap;
 }
 
-
 Stage *Const::getStage() const
 {
 	return nullptr;
