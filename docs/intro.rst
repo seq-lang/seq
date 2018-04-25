@@ -15,9 +15,9 @@ In a nutshell:
 
 .. code-block:: bash
 
-    cd seq
-    LLVM_DIR=/path/to/llvm/version/lib/cmake cmake .
-    make
+    cd seq/build
+    LLVM_DIR=/path/to/llvm/version/lib/cmake cmake ..
+    cmake --build .
 
 To run the test program:
 
