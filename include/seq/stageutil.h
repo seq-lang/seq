@@ -18,6 +18,7 @@
 #include "collect.h"
 #include "chunk.h"
 #include "call.h"
+#include "getitem.h"
 #include "serialize.h"
 #include "capture.h"
 
@@ -41,6 +42,7 @@ namespace seq {
 		Collect& collect();
 		Chunk& chunk(Func& key);
 		Chunk& chunk();
+		GetItem& get(seq_int_t idx);
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type& type, std::string filename);
 		Capture& capture(void *addr);

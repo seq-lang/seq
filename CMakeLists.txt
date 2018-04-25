@@ -65,6 +65,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/filter.h
                        include/seq/foreach.h
                        include/seq/func.h
+                       include/seq/getitem.h
                        include/seq/hash.h
                        include/seq/io.h
                        include/seq/lambda.h
@@ -105,6 +106,7 @@ add_library(seq SHARED include/seq/any.h
                        src/stages/count.cpp
                        src/stages/filter.cpp
                        src/stages/foreach.cpp
+                       src/stages/getitem.cpp
                        src/stages/hash.cpp
                        src/stages/lambda.cpp
                        src/stages/len.cpp

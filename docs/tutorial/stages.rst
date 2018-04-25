@@ -59,6 +59,10 @@ Pipelines consist of several stages chained together. Stages all have an input t
 | ``chunk(f)``          | ``Array[T]`` →        | Partition input array |
 |                       | ``Array[T]``          | by key function ``f`` |
 +-----------------------+-----------------------+-----------------------+
+| ``get(i)``            | ``Rec[..,T_i,..]``    | Extract the ``i`` th  |
+|                       | → ``T_i``             | member of the input   |
+|                       |                       | record                |
++-----------------------+-----------------------+-----------------------+
 | ``ser(file)``         | ``Any`` → ``Void``    | Serializes input to   |
 |                       |                       | ``file``              |
 +-----------------------+-----------------------+-----------------------+

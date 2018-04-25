@@ -93,6 +93,11 @@ Chunk& stageutil::chunk()
 	return Chunk::make();
 }
 
+GetItem& stageutil::get(seq_int_t idx)
+{
+	return GetItem::make(idx);
+}
+
 Serialize& stageutil::ser(std::string filename)
 {
 	return Serialize::make(std::move(filename));

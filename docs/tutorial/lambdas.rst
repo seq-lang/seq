@@ -24,4 +24,4 @@ This prints all the odd integers between 1 and 20. In general, ``2*x + 1`` can b
 
 -----
 
-:doc:`next <serialization>`
+:doc:`next <records>`

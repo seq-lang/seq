@@ -11,4 +11,5 @@ Tutorial
     arrays
     functions
     lambdas
+    records
     serialization
