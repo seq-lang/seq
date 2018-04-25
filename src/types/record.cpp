@@ -83,7 +83,7 @@ void types::RecordType::codegenIndexStore(BaseFunc *base,
 
 bool types::RecordType::isChildOf(Type *type) const
 {
-	if (type == BaseType::get())
+	if (BaseType::get()->isChildOf(type))
 		return true;
 
 	auto *recType = dynamic_cast<types::RecordType *>(type);

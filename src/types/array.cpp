@@ -226,7 +226,7 @@ void types::ArrayType::codegenIndexStore(BaseFunc *base,
 
 bool types::ArrayType::isChildOf(Type *type) const
 {
-	if (type == BaseType::get())
+	if (BaseType::get()->isChildOf(type))
 		return true;
 
 	auto *arrayType = dynamic_cast<types::ArrayType *>(type);
