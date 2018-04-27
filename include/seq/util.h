@@ -62,6 +62,30 @@ namespace seq {
 		                 seq_int_t len1,
 		                 const char *seq2,
 		                 seq_int_t len2);
+
+		namespace io {
+			SEQ_FUNC void *io_openr(const char *filename);
+
+			SEQ_FUNC void *io_openw(const char *filename);
+
+			SEQ_FUNC void io_close(void *fp);
+
+			SEQ_FUNC void io_read(void *ptr,
+			                      size_t size,
+			                      size_t nmemb,
+			                      void *fp);
+
+			SEQ_FUNC void io_write(const void *ptr,
+			                       seq_int_t size,
+			                       seq_int_t nmemb,
+			                       void *fp);
+
+#define IO_OPEN_READ_FUNC_NAME  "io_openr"
+#define IO_OPEN_WRITE_FUNC_NAME "io_openw"
+#define IO_CLOSE_FUNC_NAME      "io_close"
+#define IO_READ_FUNC_NAME       "io_read"
+#define IO_WRITE_FUNC_NAME      "io_write"
+		}
 	}
 }
 

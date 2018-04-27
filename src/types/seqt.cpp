@@ -230,6 +230,82 @@ void types::SeqType::callCopy(BaseFunc *base,
 	outs->insert({SeqData::LEN, lenVar});
 }
 
+void types::SeqType::callSerialize(BaseFunc *base,
+                                   ValMap outs,
+                                   Value *fp,
+                                   BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+
+	Function *writeFunc = cast<Function>(
+	                        module->getOrInsertFunction(
+	                          IO_WRITE_FUNC_NAME,
+	                          llvm::Type::getVoidTy(context),
+	                          IntegerType::getInt8PtrTy(context),
+	                          seqIntLLVM(context),
+	                          seqIntLLVM(context),
+	                          IntegerType::getInt8PtrTy(context)));
+
+	writeFunc->setCallingConv(CallingConv::C);
+
+	IRBuilder<> builder(block);
+
+	Value *seq = builder.CreateLoad(getSafe(outs, SeqData::SEQ));
+	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+
+	auto subOuts = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	IntType::get()->unpack(base, len, subOuts, block);
+	IntType::get()->callSerialize(base, subOuts, fp, block);
+	builder.CreateCall(writeFunc, {seq, len, oneLLVM(context), fp});
+}
+
+void types::SeqType::callDeserialize(BaseFunc *base,
+                                     ValMap outs,
+                                     Value *fp,
+                                     BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+	BasicBlock *preambleBlock = base->getPreamble();
+
+	Function *readFunc = cast<Function>(
+	                       module->getOrInsertFunction(
+	                         IO_READ_FUNC_NAME,
+	                         llvm::Type::getVoidTy(context),
+	                         IntegerType::getInt8PtrTy(context),
+	                         seqIntLLVM(context),
+	                         seqIntLLVM(context),
+	                         IntegerType::getInt8PtrTy(context)));
+
+	Function *allocFunc = cast<Function>(
+	                        module->getOrInsertFunction(
+	                          allocFuncName(),
+	                          IntegerType::getInt8PtrTy(context),
+	                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+
+	readFunc->setCallingConv(CallingConv::C);
+
+	IRBuilder<> builder(block);
+
+	auto subOuts = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	IntType::get()->callDeserialize(base, subOuts, fp, block);
+	Value *len = builder.CreateLoad(getSafe(subOuts, SeqData::INT));
+	Value *seq = builder.CreateCall(allocFunc, {len});
+	builder.CreateCall(readFunc, {seq, len, oneLLVM(context), fp});
+
+	Value *seqVar = makeAlloca(
+	                  ConstantPointerNull::get(
+	                    IntegerType::getInt8PtrTy(context)), preambleBlock);
+	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
+
+	builder.CreateStore(seq, seqVar);
+	builder.CreateStore(len, lenVar);
+
+	outs->insert({SeqData::SEQ, seqVar});
+	outs->insert({SeqData::LEN, lenVar});
+}
+
 void types::SeqType::callPrint(BaseFunc *base,
                                ValMap outs,
                                BasicBlock *block)

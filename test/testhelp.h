@@ -22,4 +22,6 @@ using namespace seq::stageutil;
                            TEST_DIR "/data/multiple/seqs.fastq", \
                            TEST_DIR "/data/multiple/seqs.fasta"
 
+#define TEST_SERIALIZE_DIR TEST_DIR "/data/serialized/"
+
 #endif /* SEQ_TESTHELP_H */

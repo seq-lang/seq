@@ -147,6 +147,7 @@ add_executable(seqtest test/main.cpp
                        test/stages/lentest.h
                        test/stages/makerectest.h
                        test/stages/memtest.h
+                       test/stages/serializetest.h
                        test/testhelp.h)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
 target_link_libraries(seqtest seq gtest_main)

@@ -16,7 +16,7 @@ SEQ_FUNC void *copyArray(void *arr, seq_int_t len, seq_int_t elem_size)
 }
 
 types::ArrayType::ArrayType(Type *baseType) :
-    Type("Array", BaseType::get(), SeqData::ARRAY), baseType(baseType)
+    Type(baseType->getName() + "Array", BaseType::get(), SeqData::ARRAY), baseType(baseType)
 {
 	vtable.copy = (void *)copyArray;
 }
@@ -131,28 +131,167 @@ void types::ArrayType::callCopy(BaseFunc *base,
 
 void types::ArrayType::callSerialize(BaseFunc *base,
                                      ValMap outs,
-                                     BasicBlock *block,
-                                     std::string file)
+                                     Value *fp,
+                                     BasicBlock *block)
 {
-	baseType->callSerializeArray(base, outs, block, file);
-}
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
 
-void types::ArrayType::finalizeSerialize(Module *module, ExecutionEngine *eng)
-{
-	baseType->finalizeSerializeArray(module, eng);
+	const std::string name = "serialize" + getName();
+	Function *serialize = module->getFunction(name);
+	bool makeFunc = (serialize == nullptr);
+
+	if (makeFunc) {
+		serialize = cast<Function>(
+		              module->getOrInsertFunction(
+		                "serialize" + getName(),
+		                llvm::Type::getVoidTy(context),
+		                PointerType::get(getBaseType()->getLLVMType(context), 0),
+		                seqIntLLVM(context),
+		                IntegerType::getInt8PtrTy(context)));
+	}
+
+	IRBuilder<> builder(block);
+
+	if (makeFunc) {
+		auto args = serialize->arg_begin();
+		Value *ptrArg = args++;
+		Value *lenArg = args++;
+		Value *fpArg = args;
+
+		BasicBlock *entry = BasicBlock::Create(context, "entry", serialize);
+		BasicBlock *loop = BasicBlock::Create(context, "loop", serialize);
+
+		builder.SetInsertPoint(loop);
+		PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
+		Value *next = builder.CreateAdd(control, oneLLVM(context), "next");
+		Value *cond = builder.CreateICmpSLT(control, lenArg);
+
+		BasicBlock *body = BasicBlock::Create(context, "body", serialize);
+		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
+
+		builder.SetInsertPoint(body);
+
+		BaseFuncLite serializeBase(serialize);
+		auto subOuts1 = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		Value *elem = builder.CreateLoad(builder.CreateGEP(ptrArg, control));
+		getBaseType()->unpack(&serializeBase, elem, subOuts1, body);
+		getBaseType()->callSerialize(&serializeBase, subOuts1, fpArg, body);
+
+		builder.CreateBr(loop);
+
+		control->addIncoming(zeroLLVM(context), entry);
+		control->addIncoming(next, body);
+
+		BasicBlock *exit = BasicBlock::Create(context, "exit", serialize);
+		builder.SetInsertPoint(exit);
+		builder.CreateRetVoid();
+		branch->setSuccessor(1, exit);
+
+		builder.SetInsertPoint(entry);
+		auto subOuts2 = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		IntType::get()->unpack(&serializeBase, lenArg, subOuts2, entry);
+		IntType::get()->callSerialize(&serializeBase, subOuts2, fpArg, entry);
+		builder.CreateBr(loop);
+	}
+
+	builder.SetInsertPoint(block);
+	Value *ptr = builder.CreateLoad(getSafe(outs, SeqData::ARRAY));
+	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+	builder.CreateCall(serialize, {ptr, len, fp});
 }
 
 void types::ArrayType::callDeserialize(BaseFunc *base,
                                        ValMap outs,
-                                       BasicBlock *block,
-                                       std::string file)
+                                       Value *fp,
+                                       BasicBlock *block)
 {
-	baseType->callDeserializeArray(base, outs, block, file);
-}
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+	BasicBlock *preambleBlock = base->getPreamble();
 
-void types::ArrayType::finalizeDeserialize(Module *module, ExecutionEngine *eng)
-{
-	baseType->finalizeDeserializeArray(module, eng);
+	const std::string name = "deserialize" + getName();
+	Function *deserialize = module->getFunction(name);
+	bool makeFunc = (deserialize == nullptr);
+
+	if (makeFunc) {
+		deserialize = cast<Function>(
+		              module->getOrInsertFunction(
+		                "deserialize" + getName(),
+		                llvm::Type::getVoidTy(context),
+		                PointerType::get(getBaseType()->getLLVMType(context), 0),
+		                seqIntLLVM(context),
+		                IntegerType::getInt8PtrTy(context)));
+	}
+
+	Function *allocFunc = cast<Function>(
+	                        module->getOrInsertFunction(
+	                          getBaseType()->allocFuncName(),
+	                          IntegerType::getInt8PtrTy(context),
+	                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+
+	IRBuilder<> builder(block);
+
+	if (makeFunc) {
+		auto args = deserialize->arg_begin();
+		Value *ptrArg = args++;
+		Value *lenArg = args++;
+		Value *fpArg = args;
+
+		BasicBlock *entry = BasicBlock::Create(context, "entry", deserialize);
+		BasicBlock *loop = BasicBlock::Create(context, "loop", deserialize);
+
+		builder.SetInsertPoint(loop);
+		PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
+		Value *next = builder.CreateAdd(control, oneLLVM(context), "next");
+		Value *cond = builder.CreateICmpSLT(control, lenArg);
+
+		BasicBlock *body = BasicBlock::Create(context, "body", deserialize);
+		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
+
+		builder.SetInsertPoint(body);
+
+		BaseFuncLite serializeBase(deserialize);
+		auto subOuts1 = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		Value *elemPtr = builder.CreateGEP(ptrArg, control);
+		getBaseType()->callDeserialize(&serializeBase, subOuts1, fpArg, body);
+		Value *elem = getBaseType()->pack(&serializeBase, subOuts1, body);
+		builder.CreateStore(elem, elemPtr);
+
+		builder.CreateBr(loop);
+
+		control->addIncoming(zeroLLVM(context), entry);
+		control->addIncoming(next, body);
+
+		BasicBlock *exit = BasicBlock::Create(context, "exit", deserialize);
+		builder.SetInsertPoint(exit);
+		builder.CreateRetVoid();
+		branch->setSuccessor(1, exit);
+
+		builder.SetInsertPoint(entry);
+		builder.CreateBr(loop);
+	}
+
+	builder.SetInsertPoint(block);
+	auto subOuts2 = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	IntType::get()->callDeserialize(base, subOuts2, fp, block);
+	Value *len = builder.CreateLoad(getSafe(subOuts2, SeqData::INT));
+	Value *size = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size(module));
+	Value *bytes = builder.CreateMul(len, size);
+	bytes = builder.CreateBitCast(bytes, IntegerType::getIntNTy(context, sizeof(size_t)*8));
+	Value *ptr = builder.CreateCall(allocFunc, {bytes});
+	builder.CreateCall(deserialize, {ptr, len, fp});
+
+	Value *ptrVar = makeAlloca(
+	                  ConstantPointerNull::get(
+	                    PointerType::get(getBaseType()->getLLVMType(context), 0)), preambleBlock);
+	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
+
+	builder.CreateStore(ptr, ptrVar);
+	builder.CreateStore(len, lenVar);
+
+	outs->insert({SeqData::ARRAY, ptrVar});
+	outs->insert({SeqData::LEN, lenVar});
 }
 
 void types::ArrayType::codegenLoad(BaseFunc *base,
@@ -224,13 +363,9 @@ void types::ArrayType::codegenIndexStore(BaseFunc *base,
 	getBaseType()->codegenStore(base, outs, block, ptr, idx);
 }
 
-bool types::ArrayType::isChildOf(Type *type) const
+bool types::ArrayType::isGeneric(Type *type) const
 {
-	if (BaseType::get()->isChildOf(type))
-		return true;
-
-	auto *arrayType = dynamic_cast<types::ArrayType *>(type);
-	return arrayType && getBaseType()->is(arrayType->getBaseType());
+	return dynamic_cast<types::ArrayType *>(type) != nullptr;
 }
 
 types::Type *types::ArrayType::getBaseType() const

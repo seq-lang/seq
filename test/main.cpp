@@ -11,6 +11,7 @@
 #include "stages/lentest.h"
 #include "stages/makerectest.h"
 #include "stages/memtest.h"
+#include "stages/serializetest.h"
 
 int main(int argc, char *argv[])
 {

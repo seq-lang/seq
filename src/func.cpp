@@ -151,7 +151,7 @@ void Func::codegen(Module *module)
 	BasicBlock *exitBlock = &func->getBasicBlockList().back();
 	builder.SetInsertPoint(exitBlock);
 
-	if (outType->isChildOf(types::VoidType::get())) {
+	if (outType->is(types::VoidType::get())) {
 		builder.CreateRetVoid();
 	} else {
 		Stage *tail = pipelines.back().getHead();
@@ -315,6 +315,33 @@ Pipeline Func::operator&&(PipelineList& to)
 Call& Func::operator()()
 {
 	return Call::make(*this);
+}
+
+BaseFuncLite::BaseFuncLite(Function *func) : BaseFunc()
+{
+	module = func->getParent();
+	initBlock = nullptr;
+	preambleBlock = &*func->getBasicBlockList().begin();
+	initFunc = nullptr;
+	this->func = func;
+}
+
+void BaseFuncLite::codegen(Module *module)
+{
+	throw exc::SeqException("cannot codegen lite base function");
+}
+
+void BaseFuncLite::codegenCall(BaseFunc *base,
+                               ValMap ins,
+                               ValMap outs,
+                               BasicBlock *block)
+{
+	throw exc::SeqException("cannot call lite base function");
+}
+
+void BaseFuncLite::add(Pipeline pipeline)
+{
+	throw exc::SeqException("cannot add pipelines to lite base function");
 }
 
 FuncList::Node::Node(Func& f) :

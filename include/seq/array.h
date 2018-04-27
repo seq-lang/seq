@@ -14,6 +14,8 @@ namespace seq {
 			ArrayType(ArrayType const&)=delete;
 			void operator=(ArrayType const&)=delete;
 
+			std::string copyFuncName() override { return "copyArray"; }
+
 			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
 
 			void setFuncArgs(llvm::Function *func,
@@ -40,17 +42,13 @@ namespace seq {
 
 			void callSerialize(BaseFunc *base,
 			                   ValMap outs,
-                               llvm::BasicBlock *block,
-                               std::string file) override;
-
-			void finalizeSerialize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
+			                   llvm::Value *fp,
+			                   llvm::BasicBlock *block) override;
 
 			void callDeserialize(BaseFunc *base,
 			                     ValMap outs,
-			                     llvm::BasicBlock *block,
-			                     std::string file) override;
-
-			void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
+			                     llvm::Value *fp,
+			                     llvm::BasicBlock *block) override;
 
 			void codegenLoad(BaseFunc *base,
 			                 ValMap outs,
@@ -76,7 +74,7 @@ namespace seq {
 			                       llvm::Value *ptr,
 			                       llvm::Value *idx) override;
 
-			bool isChildOf(Type *type) const override;
+			bool isGeneric(Type *type) const override;
 			Type *getBaseType() const;
 			Type *getBaseType(seq_int_t idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;

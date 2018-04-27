@@ -28,7 +28,7 @@ void BaseStage::codegen(Module *module)
 
 types::Type *BaseStage::getOutType() const
 {
-	if (proxy && Stage::getOutType()->isChildOf(types::VoidType::get()))
+	if (proxy && Stage::getOutType()->is(types::VoidType::get()))
 		return proxy->getOutType();
 	else
 		return Stage::getOutType();

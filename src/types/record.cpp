@@ -5,13 +5,24 @@
 using namespace seq;
 using namespace llvm;
 
+static std::string getNameFromTypes(std::vector<types::Type *> types)
+{
+	std::string name;
+
+	for (auto *type : types)
+		name += type->getName();
+
+	name += "Recrod";
+	return name;
+}
+
 types::RecordType::RecordType(std::vector<Type *> types) :
-    Type("Record", BaseType::get(), SeqData::RECORD), types(std::move(types))
+    Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD), types(std::move(types))
 {
 }
 
 types::RecordType::RecordType(std::initializer_list<Type *> types) :
-    Type("Record", BaseType::get(), SeqData::RECORD), types(types)
+    Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD), types(types)
 {
 }
 
@@ -22,6 +33,41 @@ void types::RecordType::callCopy(BaseFunc *base,
 {
 	IRBuilder<> builder(block);
 	Value *rec = builder.CreateLoad(getSafe(ins, SeqData::RECORD));
+	unpack(base, rec, outs, block);
+}
+
+void types::RecordType::callSerialize(BaseFunc *base,
+                                      ValMap outs,
+                                      Value *fp,
+                                      BasicBlock *block)
+{
+	IRBuilder<> builder(block);
+	Value *rec = builder.CreateLoad(getSafe(outs, SeqData::RECORD));
+
+	for (int i = 0; i < types.size(); i++) {
+		auto subOuts = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		Value *elem = builder.CreateExtractValue(rec, i);
+		types[i]->unpack(base, elem, subOuts, block);
+		types[i]->callSerialize(base, subOuts, fp, block);
+	}
+}
+
+void types::RecordType::callDeserialize(BaseFunc *base,
+                                        ValMap outs,
+                                        Value *fp,
+                                        BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	IRBuilder<> builder(block);
+	Value *rec = UndefValue::get(getLLVMType(context));
+
+	for (int i = 0; i < types.size(); i++) {
+		auto subOuts = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		types[i]->callDeserialize(base, subOuts, fp, block);
+		Value *elem = types[i]->pack(base, subOuts, block);
+		rec = builder.CreateInsertValue(rec, elem, i);
+	}
+
 	unpack(base, rec, outs, block);
 }
 
@@ -81,21 +127,9 @@ void types::RecordType::codegenIndexStore(BaseFunc *base,
 	type->codegenStore(base, outs, block, elemPtr, zeroLLVM(context));
 }
 
-bool types::RecordType::isChildOf(Type *type) const
+bool types::RecordType::isGeneric(Type *type) const
 {
-	if (BaseType::get()->isChildOf(type))
-		return true;
-
-	auto *recType = dynamic_cast<types::RecordType *>(type);
-	if (!recType || types.size() != recType->types.size())
-		return false;
-
-	for (size_t i = 0; i < types.size(); i++) {
-		if (!types[i]->is(recType->types[i]))
-			return false;
-	}
-
-	return true;
+	return dynamic_cast<types::RecordType *>(type) != nullptr;
 }
 
 types::Type *types::RecordType::getBaseType(seq_int_t idx) const

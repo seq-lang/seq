@@ -92,7 +92,7 @@ void LoadStore::validate()
 		throw exc::SeqException("non-integer array index");
 
 	// somewhat contrived logic for determining whether we are loading or storing...
-	const bool noPrev = (!getPrev() || getPrev()->getOutType()->isChildOf(types::VoidType::get()));
+	const bool noPrev = (!getPrev() || getPrev()->getOutType()->is(types::VoidType::get()));
 	const bool noNext = (getNext().empty() && getWeakNext().empty());
 
 	if (noPrev && noNext)

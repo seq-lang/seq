@@ -23,6 +23,16 @@ namespace seq {
 			              ValMap outs,
 			              llvm::BasicBlock *block) override;
 
+			void callSerialize(BaseFunc *base,
+			                   ValMap outs,
+			                   llvm::Value *fp,
+			                   llvm::BasicBlock *block) override;
+
+			void callDeserialize(BaseFunc *base,
+			                     ValMap outs,
+			                     llvm::Value *fp,
+			                     llvm::BasicBlock *block) override;
+
 			void codegenIndexLoad(BaseFunc *base,
 			                      ValMap outs,
 			                      llvm::BasicBlock *block,
@@ -35,7 +45,7 @@ namespace seq {
 			                       llvm::Value *ptr,
 			                       llvm::Value *idx) override;
 
-			bool isChildOf(Type *type) const override;
+			bool isGeneric(Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;

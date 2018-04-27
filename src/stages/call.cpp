@@ -7,7 +7,7 @@ using namespace llvm;
 
 static types::Type *voidToAny(types::Type *type)
 {
-	if (type->isChildOf(types::VoidType::get()))
+	if (type->is(types::VoidType::get()))
 		return types::AnyType::get();
 	return type;
 }

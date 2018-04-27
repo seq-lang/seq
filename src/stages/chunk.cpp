@@ -14,7 +14,7 @@ Chunk::Chunk() : Chunk(nullptr)
 
 void Chunk::validate()
 {
-	if (getPrev() && getPrev()->getOutType()->is(types::ArrayType::get())) {
+	if (getPrev() && getPrev()->getOutType()->isGeneric(types::ArrayType::get())) {
 		in = out = getPrev()->getOutType();
 
 		auto *type = dynamic_cast<types::ArrayType *>(in);

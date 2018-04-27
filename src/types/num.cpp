@@ -1,5 +1,5 @@
 #include <iostream>
-#include <fstream>
+#include <cstdio>
 #include "seq/seq.h"
 #include "seq/base.h"
 #include "seq/num.h"
@@ -12,169 +12,14 @@ SEQ_FUNC void printInt(seq_int_t x)
 	std::cout << x << std::endl;
 }
 
-static void serializeIntDirect(seq_int_t x, std::ostream& out)
-{
-	out.write(reinterpret_cast<const char *>(&x), sizeof(x));
-}
-
-static seq_int_t deserializeIntDirect(std::istream& in)
-{
-	char buf[sizeof(seq_int_t)];
-	in.read(buf, sizeof(seq_int_t));
-	return *reinterpret_cast<seq_int_t *>(buf);
-}
-
-SEQ_FUNC void serializeInt(seq_int_t x, char *filename)
-{
-	std::ofstream out(filename);
-	serializeIntDirect(x, out);
-}
-
-SEQ_FUNC seq_int_t deserializeInt(char *filename)
-{
-	std::ifstream in(filename);
-	auto x = deserializeIntDirect(in);
-	in.close();
-	return x;
-}
-
-SEQ_FUNC void serializeIntArray(seq_int_t *x, seq_int_t len, char *filename)
-{
-	std::ofstream out(filename);
-
-	serializeIntDirect(len, out);
-	for (seq_int_t i = 0; i < len; i++)
-		serializeIntDirect(x[i], out);
-
-	out.close();
-}
-
-SEQ_FUNC seq_int_t *deserializeIntArray(char *filename, seq_int_t *len)
-{
-	std::ifstream in(filename);
-	*len = deserializeIntDirect(in);
-	auto *array = (seq_int_t *)std::malloc(*len * sizeof(seq_int_t));
-
-	for (seq_int_t i = 0; i < *len; i++) {
-		array[i] = deserializeIntDirect(in);
-	}
-
-	in.close();
-	return array;
-}
-
 SEQ_FUNC void printFloat(double n)
 {
 	std::cout << n << std::endl;
 }
 
-void serializeFloatDirect(double x, std::ostream& out)
-{
-	out.write(reinterpret_cast<const char *>(&x), sizeof(x));
-}
-
-double deserializeFloatDirect(std::istream& in)
-{
-	char buf[sizeof(double)];
-	in.read(buf, sizeof(double));
-	return *reinterpret_cast<double *>(buf);
-}
-
-SEQ_FUNC void serializeFloat(double x, char *filename)
-{
-	std::ofstream out(filename);
-	serializeFloatDirect(x, out);
-	out.close();
-}
-
-SEQ_FUNC double deserializeFloat(char *filename)
-{
-	std::ifstream in(filename);
-	auto x = deserializeFloatDirect(in);
-	in.close();
-	return x;
-}
-
-SEQ_FUNC void serializeFloatArray(double *x, seq_int_t len, char *filename)
-{
-	std::ofstream out(filename);
-
-	serializeIntDirect(len, out);
-	for (seq_int_t i = 0; i < len; i++)
-		serializeFloatDirect(x[i], out);
-
-	out.close();
-}
-
-SEQ_FUNC double *deserializeFloatArray(char *filename, seq_int_t *len)
-{
-	std::ifstream in(filename);
-	*len = deserializeIntDirect(in);
-	auto *array = (double *)std::malloc(*len * sizeof(double));
-
-	for (seq_int_t i = 0; i < *len; i++) {
-		array[i] = deserializeFloatDirect(in);
-	}
-
-	in.close();
-	return array;
-}
-
 SEQ_FUNC void printBool(bool b)
 {
 	std::cout << (b ? "true" : "false") << std::endl;
-}
-
-void serializeBoolDirect(bool x, std::ostream& out)
-{
-	out.write(reinterpret_cast<const char *>(&x), sizeof(x));
-}
-
-bool deserializeBoolDirect(std::istream& in)
-{
-	char buf[sizeof(bool)];
-	in.read(buf, sizeof(bool));
-	return *reinterpret_cast<bool *>(buf);
-}
-
-SEQ_FUNC void serializeBool(bool x, char *filename)
-{
-	std::ofstream out(filename);
-	serializeBoolDirect(x, out);
-	out.close();
-}
-
-SEQ_FUNC bool deserializeBool(char *filename)
-{
-	std::ifstream in(filename);
-	auto x = deserializeBoolDirect(in);
-	in.close();
-	return x;
-}
-
-SEQ_FUNC void serializeBoolArray(bool *x, seq_int_t len, char *filename)
-{
-	std::ofstream out(filename);
-
-	serializeIntDirect(len, out);
-	for (seq_int_t i = 0; i < len; i++)
-		serializeBoolDirect(x[i], out);
-
-	out.close();
-}
-
-SEQ_FUNC bool *deserializeBoolArray(char *filename, seq_int_t *len)
-{
-	std::ifstream in(filename);
-	*len = deserializeIntDirect(in);
-	auto *array = (bool *)std::malloc(*len * sizeof(double));
-
-	for (seq_int_t i = 0; i < *len; i++) {
-		array[i] = deserializeBoolDirect(in);
-	}
-
-	in.close();
-	return array;
 }
 
 types::NumberType::NumberType() : Type("Num", BaseType::get())
@@ -184,28 +29,16 @@ types::NumberType::NumberType() : Type("Num", BaseType::get())
 types::IntType::IntType() : Type("Int", NumberType::get(), SeqData::INT)
 {
 	vtable.print = (void *)printInt;
-	vtable.serialize = (void *)serializeInt;
-	vtable.deserialize = (void *)deserializeInt;
-	vtable.serializeArray = (void *)serializeIntArray;
-	vtable.deserializeArray = (void *)deserializeIntArray;
 }
 
 types::FloatType::FloatType() : Type("Float", NumberType::get(), SeqData::FLOAT)
 {
 	vtable.print = (void *)printFloat;
-	vtable.serialize = (void *)serializeFloat;
-	vtable.deserialize = (void *)deserializeFloat;
-	vtable.serializeArray = (void *)serializeFloatArray;
-	vtable.deserializeArray = (void *)deserializeFloatArray;
 }
 
 types::BoolType::BoolType() : Type("Bool", NumberType::get(), SeqData::BOOL)
 {
 	vtable.print = (void *)printBool;
-	vtable.serialize = (void *)serializeBool;
-	vtable.deserialize = (void *)deserializeBool;
-	vtable.serializeArray = (void *)serializeBoolArray;
-	vtable.deserializeArray = (void *)deserializeBoolArray;
 }
 
 Value *types::IntType::checkEq(BaseFunc *base,

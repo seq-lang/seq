@@ -89,6 +89,18 @@ namespace seq {
 		Call& operator()();
 	};
 
+	class BaseFuncLite : public BaseFunc {
+	public:
+		explicit BaseFuncLite(llvm::Function *func);
+
+		void codegen(llvm::Module *module) override;
+		void codegenCall(BaseFunc *base,
+		                 ValMap ins,
+		                 ValMap outs,
+		                 llvm::BasicBlock *block) override;
+		void add(Pipeline pipeline) override;
+	};
+
 	class FuncList {
 		struct Node {
 			Func& f;

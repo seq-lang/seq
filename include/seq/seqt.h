@@ -47,6 +47,16 @@ namespace seq {
 			               ValMap outs,
 			               llvm::BasicBlock *block) override;
 
+			void callSerialize(BaseFunc *base,
+			                   ValMap outs,
+			                   llvm::Value *fp,
+			                   llvm::BasicBlock *block) override;
+
+			void callDeserialize(BaseFunc *base,
+			                     ValMap outs,
+			                     llvm::Value *fp,
+			                     llvm::BasicBlock *block) override;
+
 			void codegenLoad(BaseFunc *base,
 			                 ValMap outs,
 			                 llvm::BasicBlock *block,

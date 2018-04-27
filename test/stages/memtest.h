@@ -1,6 +1,8 @@
 #ifndef SEQ_MEMTEST_H
 #define SEQ_MEMTEST_H
 
+#include "../testhelp.h"
+
 struct MemTest : ::testing::TestWithParam<std::string> {
 	SeqModule s;
 	arr_t<> arrGot;
