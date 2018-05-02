@@ -1,7 +1,7 @@
 # Google Test download & compile:
 # (adapted from https://github.com/google/googletest/tree/master/googletest)
 # Download and unpack googletest at configure time
-configure_file(cmake/CMakeLists.txt.in googletest-download/CMakeLists.txt)
+configure_file(cmake/GTest.txt.in googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
                 RESULT_VARIABLE result
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
@@ -30,6 +30,33 @@ add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
 # later. Otherwise we have to add them here ourselves.
 if (CMAKE_VERSION VERSION_LESS 2.8.11)
   include_directories("${gtest_SOURCE_DIR}/include")
+endif()
+
+# PEGTL download & compile:
+# (adapted from https://github.com/google/googletest/tree/master/googletest)
+# Download and unpack googletest at configure time
+configure_file(cmake/PEGTL.txt.in pegtl-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+                RESULT_VARIABLE result
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pegtl-download )
+if(result)
+  message(FATAL_ERROR "CMake step for PEGTL failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+                RESULT_VARIABLE result
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pegtl-download )
+if(result)
+  message(FATAL_ERROR "Build step for PEGTL failed: ${result}")
+endif()
+
+# Add PEGTL directly to our build.
+add_subdirectory(${CMAKE_BINARY_DIR}/pegtl-src
+                 ${CMAKE_BINARY_DIR}/pegtl-build
+                 EXCLUDE_FROM_ALL)
+
+# Same as above
+if (CMAKE_VERSION VERSION_LESS 2.8.11)
+  include_directories("${pegtl_SOURCE_DIR}/include")
 endif()
 
 # Seq library
@@ -74,6 +101,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/mem.h
                        include/seq/num.h
                        include/seq/op.h
+                       include/seq/parser.h
                        include/seq/pipeline.h
                        include/seq/print.h
                        include/seq/range.h
@@ -94,6 +122,8 @@ add_library(seq SHARED include/seq/any.h
                        src/func.cpp
                        src/io.cpp
                        src/llvm.h
+                       src/parser/grammar.h
+                       src/parser/parser.cpp
                        src/pipeline.cpp
                        src/seq.cpp
                        src/seqdata.h
@@ -132,12 +162,13 @@ add_library(seq SHARED include/seq/any.h
                        src/util.cpp
                        src/var.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit)
-target_link_libraries(seq ${LLVM_LIBS})
+target_link_libraries(seq ${LLVM_LIBS} pegtl)
 
 # Seq test
 add_executable(seqtest test/main.cpp
                        test/core/bigtest.h
                        test/core/branchtest.h
+                       test/core/standalonetest.h
                        test/stages/calltest.h
                        test/stages/chunktest.h
                        test/stages/collecttest.h

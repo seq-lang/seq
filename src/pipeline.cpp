@@ -53,6 +53,8 @@ std::ostream& operator<<(std::ostream& os, Pipeline& pipeline)
 
 		if (!s->getNext().empty())
 			s = s->getNext()[0];
+		else
+			break;
 	}
 	return os;
 }

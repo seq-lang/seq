@@ -19,6 +19,7 @@
 #include "chunk.h"
 #include "call.h"
 #include "getitem.h"
+#include "makerec.h"
 #include "serialize.h"
 #include "capture.h"
 

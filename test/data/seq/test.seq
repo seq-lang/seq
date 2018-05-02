@@ -1,0 +1,15 @@
+-- this is a comment
+
+module s
+  fun f: Seq -> Array[Seq]
+    |> split(32,32) | collect
+  end
+
+  |> print
+  var v = |> f()  -- inline comment
+  v | foreach | (count, _) | @2 | print
+  |> print
+
+  var arr = {Int, Seq}[10]
+  arr | foreach
+end

@@ -20,6 +20,8 @@
 #include "common.h"
 #include "record.h"
 
+#include "parser.h"
+
 namespace seq {
 
 	namespace types {

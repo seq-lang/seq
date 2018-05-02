@@ -6,7 +6,7 @@
 using namespace seq;
 using namespace llvm;
 
-MakeRec::MakeRec(seq::PipelineList &pl) :
+MakeRec::MakeRec(PipelineList &pl) :
     Stage("makerec", types::VoidType::get(), types::VoidType::get()),
     validated(false), pl(pl), proxy(types::VoidType::get(), types::VoidType::get())
 {

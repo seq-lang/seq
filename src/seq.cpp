@@ -4,7 +4,6 @@
 #include <cassert>
 #include "seq/common.h"
 #include "seq/basestage.h"
-#include "seq/makerec.h"
 #include "seq/util.h"
 #include "seq/exc.h"
 #include "seq/seq.h"
