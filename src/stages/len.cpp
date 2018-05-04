@@ -12,7 +12,7 @@ void Len::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	block = prev->block;
+	block = prev->getAfter();
 	outs->insert({SeqData::INT, getSafe(prev->outs, SeqData::LEN)});
 	codegenNext(module);
 	prev->setAfter(getAfter());

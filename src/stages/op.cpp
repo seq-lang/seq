@@ -26,7 +26,7 @@ void Op::codegen(Module *module)
 
 	func->setCallingConv(CallingConv::C);
 
-	block = prev->block;
+	block = prev->getAfter();
 	outs->insert(prev->outs->begin(), prev->outs->end());
 	IRBuilder<> builder(block);
 	Value *seq = builder.CreateLoad(getSafe(outs, SeqData::SEQ));

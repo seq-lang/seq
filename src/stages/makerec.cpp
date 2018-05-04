@@ -55,7 +55,7 @@ void MakeRec::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	block = proxy.block = prev->block;
+	block = proxy.block = prev->getAfter();
 	proxy.outs = prev->outs;
 	IRBuilder<> builder(block);
 

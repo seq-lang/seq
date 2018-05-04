@@ -28,7 +28,7 @@ void Serialize::codegen(Module *module)
 	                          llvm::Type::getVoidTy(context),
 	                          IntegerType::getInt8PtrTy(context)));
 
-	block = prev->block;
+	block = prev->getAfter();
 
 	GlobalVariable *fileVar = new GlobalVariable(*module,
 	                                             llvm::ArrayType::get(IntegerType::getInt8Ty(context),
@@ -96,7 +96,7 @@ void Deserialize::codegen(Module *module)
 	                          llvm::Type::getVoidTy(context),
 	                          IntegerType::getInt8PtrTy(context)));
 
-	block = prev->block;
+	block = prev->getAfter();
 
 	GlobalVariable *fileVar = new GlobalVariable(*module,
 	                                             llvm::ArrayType::get(IntegerType::getInt8Ty(context),

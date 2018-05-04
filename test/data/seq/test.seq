@@ -7,9 +7,29 @@ module s
 
   |> print
   var v = |> f()  -- inline comment
-  v | foreach | (count, _) | @2 | print
+  v | foreach | (count, _) | {
+    |> @1 | print
+    |> @2 | print
+  }
   |> print
 
   var arr = {Int, Seq}[10]
   arr | foreach
+
+  |> print
+  |> split(64,64) | {
+    var v1 = |> print
+    v1 | split(32,32) | {
+      var v2 = |> print
+      |> split(16,16) | {
+        |> print
+        var v3 = |> copy | print
+        var v4 = v3 | print
+        v3 | print
+      }
+      v2 | print
+    }
+    |> print
+  }
+  |> print
 end

@@ -46,7 +46,7 @@ void Collect::codegen(Module *module)
 		                 PointerType::get(seqIntLLVM(context), 0)));
 	}
 
-	block = prev->block;
+	block = prev->getAfter();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
 

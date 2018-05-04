@@ -14,9 +14,11 @@ namespace seq {
 	class Var {
 	protected:
 		Stage *stage;
+		bool standalone;
+		virtual void assign(Pipeline to);
 	public:
-		Var();
-		Var(Pipeline pipeline);
+		Var(bool standalone=false);
+		Var(Pipeline pipeline, bool standalone=false);
 
 		virtual types::Type *getType(Stage *caller) const;
 		virtual ValMap outs(Stage *caller) const;

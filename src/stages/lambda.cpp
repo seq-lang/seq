@@ -326,7 +326,7 @@ void LambdaStage::codegen(Module *module)
 	const auto key = isFloat ? SeqData::FLOAT : SeqData::INT;
 	Function *func = lambda.codegen(module, isFloat);
 
-	block = prev->block;
+	block = prev->getAfter();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
 

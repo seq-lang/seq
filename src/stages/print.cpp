@@ -23,7 +23,7 @@ void Print::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	block = prev->block;
+	block = prev->getAfter();
 	outs->insert(prev->outs->begin(), prev->outs->end());
 	prev->getOutType()->callPrint(getBase(), outs, block);
 	codegenNext(module);

@@ -81,12 +81,16 @@ struct array_decl : pegtl::seq<type_non_void, seps, pegtl::one<'['>, seps, posit
 /*
  * Stages and Pipelines
  */
+struct statement;
+struct statement_seq : pegtl::star<pegtl::seq<statement, seps>> {};
+
 struct pipeline;
 struct expr : pegtl::sor<pipeline, name> {};
 struct assignment : pegtl::seq<str_var, seps, pegtl::one<'='>, seps, expr> {};
 
 struct call_stage : pegtl::seq<name, seps, pegtl::one<'('>, seps, pegtl::one<')'>> {};
 struct collect_stage : TAO_PEGTL_STRING("collect") {};
+struct copy_stage : TAO_PEGTL_STRING("copy") {};
 struct count_stage : TAO_PEGTL_STRING("count") {};
 struct foreach_stage : TAO_PEGTL_STRING("foreach") {};
 struct getitem_stage : pegtl::seq<pegtl::one<'@'>, seps, positive_integer> {};
@@ -94,16 +98,15 @@ struct print_stage : TAO_PEGTL_STRING("print") {};
 struct record_stage : pegtl::seq<pegtl::one<'('>, pegtl::list<pegtl::seq<seps, pegtl::sor<pipeline, name>, seps>, pegtl::one<','>>, pegtl::one<')'>> {};
 struct split_stage : pegtl::seq<TAO_PEGTL_STRING("split"), seps, pegtl::one<'('>, seps, integer, seps, pegtl::one<','>, seps, integer, seps, pegtl::one<')'>> {};
 
-struct stage : pegtl::sor<call_stage, collect_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage> {};
-struct pipeline : pegtl::seq<stage, pegtl::star< pegtl::seq< seps, pegtl::one<'|'>, seps, stage>>> {};
-
-struct statement;
+struct stage : pegtl::sor<call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage> {};
+struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>> {};
+struct pipeline : pegtl::seq<stage, pegtl::star< pegtl::seq< seps, pegtl::one<'|'>, seps, pegtl::sor<branch, stage>>>> {};
 
 /*
  * Functions
  */
 struct func_decl : pegtl::seq<str_fun, seps, name, seps, pegtl::one<':'>, seps, type, seps, TAO_PEGTL_STRING("->"), seps, type> {};
-struct func_stmt : pegtl::seq<func_decl, seps, pegtl::star<pegtl::seq<statement, seps>>, str_end> {};
+struct func_stmt : pegtl::seq<func_decl, seps, statement_seq, str_end> {};
 
 /*
  * Modules
@@ -116,12 +119,14 @@ struct pipeline_add_stmt_nested : pegtl::seq<name, seps, pegtl::one<'|'>, seps, 
 struct pipeline_array_stmt_toplevel : pegtl::seq<array_decl, seps, pegtl::one<'|'>, seps, pipeline> {};
 struct pipeline_array_stmt_nested : pegtl::seq<array_decl, seps, pegtl::one<'|'>, seps, pipeline> {};
 struct statement : pegtl::sor<var_assign, func_stmt, pipeline_module_stmt_toplevel, pipeline_array_stmt_toplevel, pipeline_add_stmt_toplevel> {};
-struct module : pegtl::seq<str_module, seps, name, seps, pegtl::star<pegtl::seq<statement, seps>>, str_end> {};
+struct module : pegtl::seq<str_module, seps, name, seps, statement_seq, str_end> {};
 
 /*
  * Assignment
  */
-struct var_assign : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, pegtl::sor<pipeline_module_stmt_nested, pipeline_add_stmt_nested, pipeline_array_stmt_nested, array_decl>> {};
+struct var_assign_pipeline : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, pegtl::sor<pipeline_module_stmt_nested, pipeline_add_stmt_nested, pipeline_array_stmt_nested>> {};
+struct var_assign_array : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, array_decl> {};
+struct var_assign : pegtl::sor<var_assign_pipeline, var_assign_array> {};
 
 /*
  * Top-level grammar

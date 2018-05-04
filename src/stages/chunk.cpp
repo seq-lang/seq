@@ -34,7 +34,7 @@ void Chunk::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
-	BasicBlock *entry = prev->block;
+	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
 	IRBuilder<> builder(entry);

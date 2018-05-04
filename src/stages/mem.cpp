@@ -24,7 +24,7 @@ void Mem::codegen(Module *module)
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
 
-	block = prev->block;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 
 	GlobalVariable *ptrVar = new GlobalVariable(*module,
@@ -118,7 +118,7 @@ void LoadStore::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	types::Type *type = ptr->getType(this);
 
-	block = prev->block;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 	Value *ptrVal = builder.CreateLoad(getSafe(ptr->outs(this), type->getKey()));
 	Value *idxVal = idx ? (Value *)builder.CreateLoad(getSafe(idx->outs(this), SeqData::INT)) :

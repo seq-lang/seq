@@ -23,7 +23,7 @@ void Copy::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	block = prev->block;
+	block = prev->getAfter();
 	getInType()->callCopy(getBase(), prev->outs, outs, block);
 
 	codegenNext(module);

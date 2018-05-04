@@ -19,7 +19,7 @@ void Split::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
-	BasicBlock *entry = prev->block;
+	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
 	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)k);

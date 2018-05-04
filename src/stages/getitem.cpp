@@ -30,7 +30,7 @@ void GetItem::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	block = prev->block;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 	Value *recVal = builder.CreateLoad(getSafe(prev->outs, SeqData::RECORD));
 	Value *idxVal = ConstantInt::get(seqIntLLVM(context), (uint64_t)idx);

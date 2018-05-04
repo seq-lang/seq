@@ -46,16 +46,17 @@ void Pipeline::validate()
 	validateStageRecursive(head);
 }
 
+void printHelper(std::ostream& os, Stage *stage)
+{
+	os << *stage << " [ ";
+	for (auto next : stage->getNext())
+		printHelper(os, next);
+	os << " ] ";
+}
+
 std::ostream& operator<<(std::ostream& os, Pipeline& pipeline)
 {
-	for (Stage *s = pipeline.getHead(); s;) {
-		os << *s << " ";
-
-		if (!s->getNext().empty())
-			s = s->getNext()[0];
-		else
-			break;
-	}
+	printHelper(os, pipeline.getHead());
 	return os;
 }
 

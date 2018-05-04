@@ -15,7 +15,7 @@ void Count::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	block = prev->block;
+	block = prev->getAfter();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
 

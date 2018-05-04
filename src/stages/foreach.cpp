@@ -30,7 +30,7 @@ void ForEach::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 
-	BasicBlock *entry = prev->block;
+	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
 	IRBuilder<> builder(entry);

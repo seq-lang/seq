@@ -22,7 +22,7 @@ void Call::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	block = prev->block;
+	block = prev->getAfter();
 	func.codegenCall(getBase(), prev->outs, outs, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
@@ -69,7 +69,7 @@ void MultiCall::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 
-	block = prev->block;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 
 	Value *rec = UndefValue::get(out->getLLVMType(context));

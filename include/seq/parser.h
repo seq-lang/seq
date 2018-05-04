@@ -75,7 +75,7 @@ namespace seq {
 	private:
 		std::vector<std::map<std::string, SeqEntity>> symbols;
 		std::stack<std::vector<SeqEntity>> results;
-		std::stack<SeqEntity> contexts;
+		std::vector<SeqEntity> contexts;
 		std::map<std::string, SeqModule *> modules;
 
 	public:
@@ -111,6 +111,12 @@ namespace seq {
 		{
 			assert(!results.empty());
 			results.top().push_back(ent);
+		}
+
+		SeqEntity& top()
+		{
+			assert(!results.empty() && !results.top().empty());
+			return results.top().back();
 		}
 
 		void push()
@@ -175,19 +181,30 @@ namespace seq {
 
 		void enter(SeqEntity context)
 		{
-			contexts.push(context);
+			contexts.push_back(context);
 		}
 
 		void exit()
 		{
 			assert(!contexts.empty());
-			contexts.pop();
+			contexts.pop_back();
 		}
 
 		SeqEntity context()
 		{
 			assert(!contexts.empty());
-			return contexts.top();
+			return contexts.back();
+		}
+
+		SeqEntity base()
+		{
+			assert(!contexts.empty());
+			for (int i = (int)contexts.size() - 1; i >= 0; i--) {
+				SeqEntity ent = contexts[i];
+				if (ent.type == SeqEntity::MODULE || ent.type == SeqEntity::FUNC)
+					return ent;
+			}
+			assert(0);
 		}
 
 		void addmod(std::string name, SeqModule *module)

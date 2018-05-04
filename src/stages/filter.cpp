@@ -28,7 +28,7 @@ void Filter::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	block = prev->block;
+	block = prev->getAfter();
 	outs->insert(prev->outs->begin(), prev->outs->end());
 
 	IRBuilder<> builder(block);

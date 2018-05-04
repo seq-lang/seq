@@ -116,6 +116,15 @@ struct action<count_stage> {
 };
 
 template<>
+struct action<copy_stage> {
+	static void apply0(ParseState& state)
+	{
+		Pipeline p = stageutil::copy();
+		state.add(p);
+	}
+};
+
+template<>
 struct action<foreach_stage> {
 	static void apply0(ParseState& state)
 	{
@@ -166,110 +175,6 @@ static BaseFunc *getBaseFromEnt(SeqEntity ent)
 
 	return nullptr;
 }
-
-template<>
-struct action<pipeline> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("p", true);
-		Pipeline p = vec[0].value.pipeline;
-
-		for (int i = 1; i < vec.size(); i++) {
-			p = p | vec[i].value.pipeline;
-		}
-
-		p.getHead()->setBase(getBaseFromEnt(state.context()));
-		state.add(p);
-	}
-};
-
-static Pipeline addPipelineGeneric(SeqEntity ent, Pipeline p)
-{
-	switch (ent.type) {
-		case SeqEntity::MODULE:
-			p = *ent.value.module | p;
-			break;
-		case SeqEntity::VAR:
-			p = *ent.value.var | p;
-			break;
-		case SeqEntity::FUNC:
-			p = *ent.value.func | p;
-			break;
-		default:
-			throw exc::SeqException("misplaced pipeline");
-	}
-
-	return p;
-}
-
-template<>
-struct action<pipeline_module_stmt_toplevel> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("p");
-		SeqEntity ent = state.context();
-		Pipeline p = vec[0].value.pipeline;
-		addPipelineGeneric(ent, p);
-	}
-};
-
-template<>
-struct action<pipeline_module_stmt_nested> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("p");
-		SeqEntity ent = state.context();
-		Pipeline p = vec[0].value.pipeline;
-		p = addPipelineGeneric(ent, p);
-		state.add(p);
-	}
-};
-
-template<>
-struct action<pipeline_add_stmt_toplevel> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("sp");
-		SeqEntity ent = state.lookup(vec[0].value.name);
-		Pipeline p = vec[1].value.pipeline;
-		addPipelineGeneric(ent, p);
-	}
-};
-
-template<>
-struct action<pipeline_add_stmt_nested> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("sp");
-		SeqEntity ent = state.lookup(vec[0].value.name);
-		Pipeline p = vec[1].value.pipeline;
-		p = addPipelineGeneric(ent, p);
-		state.add(p);
-	}
-};
-
-template<>
-struct action<pipeline_array_stmt_toplevel> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("pp");
-		SeqEntity ent = state.context();
-		Pipeline p = vec[0].value.pipeline | vec[1].value.pipeline;
-		addPipelineGeneric(ent, p);
-	}
-};
-
-template<>
-struct action<pipeline_array_stmt_nested> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("pp");
-		SeqEntity ent = state.context();
-		Pipeline p = vec[0].value.pipeline | vec[1].value.pipeline;
-		p = addPipelineGeneric(ent, p);
-		state.add(p);
-	}
-};
 
 template<>
 struct action<array_decl> {
@@ -347,6 +252,26 @@ struct action<record_type> {
 /*
  * Control
  */
+static Pipeline addPipelineGeneric(SeqEntity ent, Pipeline p)
+{
+	switch (ent.type) {
+		case SeqEntity::MODULE:
+			return *ent.value.module | p;
+		case SeqEntity::FUNC:
+			return *ent.value.func | p;
+		case SeqEntity::PIPELINE:
+			ent.value.pipeline | p;
+			break;
+		case SeqEntity::VAR:
+			p = *ent.value.var | p;
+			break;
+		default:
+			throw exc::SeqException("misplaced pipeline");
+	}
+
+	return p;
+}
+
 template<typename Rule>
 struct control : pegtl::normal<Rule> {};
 
@@ -463,6 +388,20 @@ struct control<pipeline> : pegtl::normal<pipeline>
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("p", true);
+		Pipeline p = vec[0].value.pipeline;
+
+		for (int i = 1; i < vec.size(); i++) {
+			p = p | vec[i].value.pipeline;
+		}
+
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		state.add(p);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -551,6 +490,46 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	}
 };
 
+static Pipeline makePipelineFromLinkedStage(Stage *stage)
+{
+	Stage *child = stage;
+	while (!child->getNext().empty())
+		child = child->getNext().back();
+	return {stage, child};
+}
+
+template<>
+struct control<branch> : pegtl::normal<branch>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.scope();
+		assert(state.top().type == SeqEntity::PIPELINE);
+		state.enter(state.top());
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.unscope();
+		state.pop();
+		assert(state.top().type == SeqEntity::PIPELINE &&
+		       state.context().type == SeqEntity::PIPELINE);
+		state.top().value.pipeline = makePipelineFromLinkedStage(state.context().value.pipeline.getHead());
+		state.exit();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.unscope();
+		state.exit();
+		state.pop();
+	}
+};
+
 template<>
 struct control<pipeline_module_stmt_toplevel> : pegtl::normal<pipeline_module_stmt_toplevel>
 {
@@ -558,6 +537,15 @@ struct control<pipeline_module_stmt_toplevel> : pegtl::normal<pipeline_module_st
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("p");
+		SeqEntity ent = state.context();
+		Pipeline p = vec[0].value.pipeline;
+		addPipelineGeneric(ent, p);
 	}
 
 	template<typename Input>
@@ -577,6 +565,16 @@ struct control<pipeline_module_stmt_nested> : pegtl::normal<pipeline_module_stmt
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("p");
+		SeqEntity ent = state.context();
+		Pipeline p = vec[0].value.pipeline;
+		p = addPipelineGeneric(ent, p);
+		state.add(p);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -590,6 +588,17 @@ struct control<pipeline_add_stmt_toplevel> : pegtl::normal<pipeline_add_stmt_top
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("sp");
+		SeqEntity ent = state.lookup(vec[0].value.name);
+		Pipeline p = vec[1].value.pipeline;
+		p = addPipelineGeneric(ent, p);
+		if (!p.isAdded())
+			addPipelineGeneric(state.context(), p);
 	}
 
 	template<typename Input>
@@ -609,6 +618,18 @@ struct control<pipeline_add_stmt_nested> : pegtl::normal<pipeline_add_stmt_neste
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("sp");
+		SeqEntity ent = state.lookup(vec[0].value.name);
+		Pipeline p = vec[1].value.pipeline;
+		p = addPipelineGeneric(ent, p);
+		if (!p.isAdded())
+			addPipelineGeneric(state.context(), p);
+		state.add(p);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -622,6 +643,17 @@ struct control<pipeline_array_stmt_toplevel> : pegtl::normal<pipeline_array_stmt
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("pp");
+		SeqEntity ent = state.context();
+		Pipeline p = vec[0].value.pipeline | vec[1].value.pipeline;
+		p = addPipelineGeneric(ent, p);
+		if (!p.isAdded())
+			addPipelineGeneric(state.context(), p);
 	}
 
 	template<typename Input>
@@ -641,6 +673,18 @@ struct control<pipeline_array_stmt_nested> : pegtl::normal<pipeline_array_stmt_n
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("pp");
+		SeqEntity ent = state.context();
+		Pipeline p = vec[0].value.pipeline | vec[1].value.pipeline;
+		p = addPipelineGeneric(ent, p);
+		if (!p.isAdded())
+			addPipelineGeneric(state.context(), p);
+		state.add(p);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -648,7 +692,7 @@ struct control<pipeline_array_stmt_nested> : pegtl::normal<pipeline_array_stmt_n
 };
 
 template<>
-struct control<var_assign> : pegtl::normal<var_assign>
+struct control<var_assign_pipeline> : pegtl::normal<var_assign_pipeline>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
@@ -661,8 +705,37 @@ struct control<var_assign> : pegtl::normal<var_assign>
 	{
 		auto vec = state.get("sp");
 		Pipeline p = vec[1].value.pipeline;
-		p.getHead()->setBase(getBaseFromEnt(state.context()));
-		auto *var = new Var(vec[1].value.pipeline);
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		auto *var = new Var(true);
+		*var = p;
+		state.sym(vec[0].value.name, var);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<var_assign_array> : pegtl::normal<var_assign_array>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("sp");
+		Pipeline p = vec[1].value.pipeline;
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		auto *var = new Var(true);
+		p = addPipelineGeneric(state.context(), p);
+		*var = p;
 		state.sym(vec[0].value.name, var);
 	}
 
