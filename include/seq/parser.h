@@ -22,7 +22,8 @@ namespace seq {
 			VAR,
 			FUNC,
 			TYPE,
-			MODULE
+			MODULE,
+			EXPR
 		} type = EMPTY;
 
 		union U {
@@ -36,6 +37,7 @@ namespace seq {
 			U(Func *func) : func(func) {}
 			U(types::Type *type) : type(type) {}
 			U(SeqModule *module) : module(module) {}
+			U(Expr *expr) : expr(expr) {}
 
 			seq_int_t ival;
 			double fval;
@@ -46,6 +48,7 @@ namespace seq {
 			Func *func;
 			types::Type *type;
 			SeqModule *module;
+			Expr *expr;
 		} value;
 
 		SeqEntity() : type(EMPTY), value() {}
@@ -58,6 +61,7 @@ namespace seq {
 		SeqEntity(Func *func) : type(SeqEntity::FUNC), value(func) {}
 		SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
 		SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
+		SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
 	};
 
 	const std::map<char, int> TYPE_MAP = {{'x', SeqEntity::EMPTY},
@@ -69,7 +73,8 @@ namespace seq {
 	                                      {'v', SeqEntity::VAR},
 	                                      {'f', SeqEntity::FUNC},
 	                                      {'t', SeqEntity::TYPE},
-	                                      {'m', SeqEntity::MODULE}};
+	                                      {'m', SeqEntity::MODULE},
+	                                      {'e', SeqEntity::EXPR}};
 
 	class ParseState {
 	private:

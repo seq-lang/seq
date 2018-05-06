@@ -21,6 +21,11 @@
 #include "record.h"
 
 #include "parser.h"
+#include "expr.h"
+#include "numexpr.h"
+#include "varexpr.h"
+#include "arrayexpr.h"
+#include "lookupexpr.h"
 
 namespace seq {
 

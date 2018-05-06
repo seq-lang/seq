@@ -86,6 +86,10 @@ namespace seq {
 			virtual void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual llvm::Value *codegenAlloc(BaseFunc *base,
+			                                  llvm::Value *count,
+			                                  llvm::BasicBlock *block);
+
+			virtual llvm::Value *codegenAlloc(BaseFunc *base,
 			                                  seq_int_t count,
 			                                  llvm::BasicBlock *block);
 

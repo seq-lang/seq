@@ -67,16 +67,29 @@ struct seq_type : TAO_PEGTL_STRING("Seq") {};
 struct int_type : TAO_PEGTL_STRING("Int") {};
 struct float_type : TAO_PEGTL_STRING("Float") {};
 struct bool_type : TAO_PEGTL_STRING("Bool") {};
-struct array_type : pegtl::seq<TAO_PEGTL_STRING("Array"), seps, pegtl::one<'['>, seps, type_non_void, seps, pegtl::one<']'>> {};
 struct record_type : pegtl::seq<pegtl::one<'{'>, seps, pegtl::list<type_non_void, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<'}'>> {};
+
+struct type_2 : pegtl::sor<void_type, seq_type, int_type, float_type, bool_type, record_type> {};
+struct array_component : pegtl::seq<pegtl::one<'['>, seps, pegtl::one<']'>, seps, pegtl::opt<array_component>> {};
+struct array_type : pegtl::seq<type_2, seps, array_component> {};
 
 struct type_non_void : pegtl::sor<record_type, array_type, seq_type, int_type, float_type, bool_type> {};
 struct type : pegtl::sor<type_non_void, void_type> {};
 
 /*
- * Arrays
+ * Expressions
  */
-struct array_decl : pegtl::seq<type_non_void, seps, pegtl::one<'['>, seps, positive_integer, seps, pegtl::one<']'>> {};
+struct expr;
+struct int_expr : pegtl::seq<integer> {};
+struct var_expr : pegtl::seq<name> {};
+struct atomic_expr : pegtl::sor<int_expr, var_expr> {};
+struct array_expr : pegtl::seq<type_non_void, seps, pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
+struct expr_2 : pegtl::sor<array_expr, atomic_expr> {};
+
+struct index_component : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>, seps, pegtl::opt<index_component>> {};
+struct array_lookup_expr : pegtl::seq<expr_2, seps, index_component> {};
+
+struct expr : pegtl::sor<array_lookup_expr, expr_2> {};
 
 /*
  * Stages and Pipelines
@@ -85,8 +98,6 @@ struct statement;
 struct statement_seq : pegtl::star<pegtl::seq<statement, seps>> {};
 
 struct pipeline;
-struct expr : pegtl::sor<pipeline, name> {};
-struct assignment : pegtl::seq<str_var, seps, pegtl::one<'='>, seps, expr> {};
 
 struct call_stage : pegtl::seq<name, seps, pegtl::one<'('>, seps, pegtl::one<')'>> {};
 struct collect_stage : TAO_PEGTL_STRING("collect") {};
@@ -114,19 +125,17 @@ struct func_stmt : pegtl::seq<func_decl, seps, statement_seq, str_end> {};
 struct var_assign;
 struct pipeline_module_stmt_toplevel : pegtl::seq<TAO_PEGTL_STRING("|>"), seps, pipeline> {};
 struct pipeline_module_stmt_nested : pegtl::seq<TAO_PEGTL_STRING("|>"), seps, pipeline> {};
-struct pipeline_add_stmt_toplevel : pegtl::seq<name, seps, pegtl::one<'|'>, seps, pipeline> {};
-struct pipeline_add_stmt_nested : pegtl::seq<name, seps, pegtl::one<'|'>, seps, pipeline> {};
-struct pipeline_array_stmt_toplevel : pegtl::seq<array_decl, seps, pegtl::one<'|'>, seps, pipeline> {};
-struct pipeline_array_stmt_nested : pegtl::seq<array_decl, seps, pegtl::one<'|'>, seps, pipeline> {};
-struct statement : pegtl::sor<var_assign, func_stmt, pipeline_module_stmt_toplevel, pipeline_array_stmt_toplevel, pipeline_add_stmt_toplevel> {};
+struct pipeline_expr_stmt_toplevel : pegtl::seq<expr, seps, pegtl::one<'|'>, seps, pipeline> {};
+struct pipeline_expr_stmt_nested : pegtl::seq<expr, seps, pegtl::one<'|'>, seps, pipeline> {};
+struct statement : pegtl::sor<var_assign, func_stmt, pipeline_module_stmt_toplevel, pipeline_expr_stmt_toplevel> {};
 struct module : pegtl::seq<str_module, seps, name, seps, statement_seq, str_end> {};
 
 /*
  * Assignment
  */
-struct var_assign_pipeline : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, pegtl::sor<pipeline_module_stmt_nested, pipeline_add_stmt_nested, pipeline_array_stmt_nested>> {};
-struct var_assign_array : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, array_decl> {};
-struct var_assign : pegtl::sor<var_assign_pipeline, var_assign_array> {};
+struct var_assign_pipeline : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, pegtl::sor<pipeline_module_stmt_nested, pipeline_expr_stmt_nested>> {};
+struct var_assign_expr : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, expr> {};
+struct var_assign : pegtl::sor<var_assign_pipeline, var_assign_expr> {};
 
 /*
  * Top-level grammar

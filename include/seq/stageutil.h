@@ -21,6 +21,7 @@
 #include "getitem.h"
 #include "makerec.h"
 #include "serialize.h"
+#include "exprstage.h"
 #include "capture.h"
 
 namespace seq {
@@ -46,6 +47,7 @@ namespace seq {
 		GetItem& get(seq_int_t idx);
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type& type, std::string filename);
+		ExprStage& expr(Expr *expr);
 		Capture& capture(void *addr);
 	}
 }

@@ -283,7 +283,7 @@ Latest::Latest() : Var()
 static void validateCaller(Stage *caller)
 {
 	if (!caller)
-		throw exc::SeqException("unexpected null stage");
+		throw exc::SeqException("misplaced _");
 
 	if (!caller->getPrev())
 		throw exc::StageException("stage has no predecessor", *caller);

@@ -79,6 +79,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 add_library(seq SHARED include/seq/any.h
                        include/seq/array.h
+                       include/seq/arrayexpr.h
                        include/seq/base.h
                        include/seq/basestage.h
                        include/seq/call.h
@@ -89,6 +90,8 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/copy.h
                        include/seq/count.h
                        include/seq/exc.h
+                       include/seq/expr.h
+                       include/seq/exprstage.h
                        include/seq/filter.h
                        include/seq/foreach.h
                        include/seq/func.h
@@ -97,9 +100,11 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/io.h
                        include/seq/lambda.h
                        include/seq/len.h
+                       include/seq/lookupexpr.h
                        include/seq/makerec.h
                        include/seq/mem.h
                        include/seq/num.h
+                       include/seq/numexpr.h
                        include/seq/op.h
                        include/seq/parser.h
                        include/seq/pipeline.h
@@ -117,16 +122,13 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/types.h
                        include/seq/util.h
                        include/seq/var.h
+                       include/seq/varexpr.h
                        include/seq/void.h
-                       src/exc.cpp
-                       src/func.cpp
-                       src/io.cpp
-                       src/llvm.h
-                       src/parser/grammar.h
-                       src/parser/parser.cpp
-                       src/pipeline.cpp
-                       src/seq.cpp
-                       src/seqdata.h
+                       src/expr/arrayexpr.cpp
+                       src/expr/expr.cpp
+                       src/expr/lookupexpr.cpp
+                       src/expr/numexpr.cpp
+                       src/expr/varexpr.cpp
                        src/stages/basestage.cpp
                        src/stages/call.cpp
                        src/stages/capture.cpp
@@ -134,6 +136,7 @@ add_library(seq SHARED include/seq/any.h
                        src/stages/collect.cpp
                        src/stages/copy.cpp
                        src/stages/count.cpp
+                       src/stages/exprstage.cpp
                        src/stages/filter.cpp
                        src/stages/foreach.cpp
                        src/stages/getitem.cpp
@@ -159,6 +162,15 @@ add_library(seq SHARED include/seq/any.h
                        src/types/seqt.cpp
                        src/types/types.cpp
                        src/types/void.cpp
+                       src/exc.cpp
+                       src/func.cpp
+                       src/io.cpp
+                       src/llvm.h
+                       src/parser/grammar.h
+                       src/parser/parser.cpp
+                       src/pipeline.cpp
+                       src/seq.cpp
+                       src/seqdata.h
                        src/util.cpp
                        src/var.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit)
