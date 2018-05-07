@@ -76,7 +76,7 @@ void MultiCall::codegen(Module *module)
 	unsigned idx = 0;
 
 	for (auto *func : funcs) {
-		rec = builder.CreateInsertValue(rec, func->codegenCallRaw(getBase(), prev->outs, block), {idx++});
+		rec = builder.CreateInsertValue(rec, func->codegenCallRaw(getBase(), prev->outs, block), idx++);
 	}
 
 	out->unpack(getBase(), rec, outs, block);

@@ -4,6 +4,7 @@
 #include "expr.h"
 
 namespace seq {
+
 	class IntExpr : public Expr {
 	private:
 		seq_int_t n;
@@ -11,6 +12,15 @@ namespace seq {
 		explicit IntExpr(seq_int_t n);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
 	};
+
+	class FloatExpr : public Expr {
+	private:
+		double f;
+	public:
+		explicit FloatExpr(double f);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+	};
+
 }
 
 #endif /* SEQ_NUMEXPR_H */

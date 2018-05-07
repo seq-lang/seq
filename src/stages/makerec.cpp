@@ -78,7 +78,7 @@ void MakeRec::codegen(Module *module)
 
 		proxy.block = proxy.getAfter();
 		builder.SetInsertPoint(proxy.block);
-		rec = builder.CreateInsertValue(rec, val, {idx++});
+		rec = builder.CreateInsertValue(rec, val, idx++);
 	}
 
 	block = proxy.block;

@@ -53,24 +53,78 @@ template<typename Rule>
 struct action : pegtl::nothing<Rule> {};
 
 template<>
-struct action<positive_integer> {
+struct action<pos_int_dec> {
 	template<typename Input>
 	static void apply(const Input& in, ParseState& state)
 	{
-		const seq_int_t n = std::stol(in.string());
+		const seq_int_t n = std::stol(in.string(), nullptr, 10);
 		assert(n >= 0);
 		state.add(n);
 	}
 };
 
 template<>
-struct action<negative_integer> {
+struct action<neg_int_dec> {
 	template<typename Input>
 	static void apply(const Input& in, ParseState& state)
 	{
-		const seq_int_t n = std::stol(in.string());
-		assert(n < 0);
+		const seq_int_t n = std::stol(in.string(), nullptr, 10);
+		assert(n <= 0);
 		state.add(n);
+	}
+};
+
+template<>
+struct action<pos_int_hex> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		const seq_int_t n = std::stol(in.string(), nullptr, 16);
+		assert(n >= 0);
+		state.add(n);
+	}
+};
+
+template<>
+struct action<neg_int_hex> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		const seq_int_t n = std::stol(in.string(), nullptr, 16);
+		assert(n <= 0);
+		state.add(n);
+	}
+};
+
+template<>
+struct action<pos_int_oct> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		const seq_int_t n = std::stol(in.string(), nullptr, 8);
+		assert(n >= 0);
+		state.add(n);
+	}
+};
+
+template<>
+struct action<neg_int_oct> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		const seq_int_t n = std::stol(in.string(), nullptr, 8);
+		assert(n <= 0);
+		state.add(n);
+	}
+};
+
+template<>
+struct action<numeral> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		const double f = std::stod(in.string());
+		state.add(f);
 	}
 };
 
@@ -185,6 +239,16 @@ struct action<int_expr> {
 	{
 		auto vec = state.get("i");
 		Expr *expr = new IntExpr(vec[0].value.ival);
+		state.add(expr);
+	}
+};
+
+template<>
+struct action<float_expr> {
+	static void apply0(ParseState& state)
+	{
+		auto vec = state.get("f");
+		Expr *expr = new FloatExpr(vec[0].value.fval);
 		state.add(expr);
 	}
 };
@@ -722,6 +786,22 @@ struct control<int_expr> : pegtl::normal<int_expr>
 };
 
 template<>
+struct control<float_expr> : pegtl::normal<float_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<var_expr> : pegtl::normal<var_expr>
 {
 	template<typename Input>
@@ -753,6 +833,35 @@ struct control<array_expr> : pegtl::normal<array_expr>
 		types::Type *type = vec[0].value.type;
 		Expr *count = vec[1].value.expr;
 		Expr *e = new ArrayExpr(type, count);
+		state.add(e);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<record_expr> : pegtl::normal<record_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e", true);
+		std::vector<Expr *> exprs;
+
+		for (auto ent : vec)
+			exprs.push_back(ent.value.expr);
+
+		Expr *e = new RecordExpr(exprs);
 		state.add(e);
 	}
 

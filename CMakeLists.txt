@@ -111,6 +111,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/print.h
                        include/seq/range.h
                        include/seq/record.h
+                       include/seq/recordexpr.h
                        include/seq/revcomp.h
                        include/seq/seq.h
                        include/seq/seqt.h
@@ -128,6 +129,7 @@ add_library(seq SHARED include/seq/any.h
                        src/expr/expr.cpp
                        src/expr/lookupexpr.cpp
                        src/expr/numexpr.cpp
+                       src/expr/recordexpr.cpp
                        src/expr/varexpr.cpp
                        src/stages/basestage.cpp
                        src/stages/call.cpp

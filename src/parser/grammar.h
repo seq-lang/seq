@@ -9,53 +9,51 @@ namespace pegtl = tao::TAO_PEGTL_NAMESPACE;
  * General language
  */
 struct short_comment : pegtl::until<pegtl::eolf> {};
-struct comment : pegtl::disable<pegtl::two<'-'>, short_comment> {};
+struct comment : pegtl::disable<pegtl::one<'#'>, short_comment> {};
 
 struct sep : pegtl::sor<pegtl::ascii::space, comment> {};
 struct seps : pegtl::star<sep> {};
 
 struct str_module : TAO_PEGTL_STRING("module") {};
-struct str_var : TAO_PEGTL_STRING("var") {};
-struct str_pipe : TAO_PEGTL_STRING("pipe") {};
+struct str_var : TAO_PEGTL_STRING("let") {};
 struct str_end : TAO_PEGTL_STRING("end") {};
 struct str_fun : TAO_PEGTL_STRING("fun") {};
 
-struct str_keyword : pegtl::sor<str_module, str_var, str_pipe, str_end, str_fun> {};
+struct str_keyword : pegtl::sor<str_module, str_var, str_end, str_fun> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword>, pegtl::identifier> {};
 
-/*
-struct single : pegtl::one< 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '"', '\'', '0', '\n' > {};
-struct spaces : pegtl::seq< pegtl::one< 'z' >, pegtl::star< pegtl::space > > {};
-struct hexbyte : pegtl::if_must< pegtl::one< 'x' >, pegtl::xdigit, pegtl::xdigit > {};
-struct decbyte : pegtl::if_must< pegtl::digit, pegtl::rep_opt< 2, pegtl::digit > > {};
-struct unichar : pegtl::if_must< pegtl::one< 'u' >, pegtl::one< '{' >, pegtl::plus< pegtl::xdigit >, pegtl::one< '}' > > {};
-struct escaped : pegtl::if_must< pegtl::one< '\\' >, pegtl::sor< hexbyte, decbyte, unichar, single, spaces > > {};
-struct regular : pegtl::not_one< '\r', '\n' > {};
-struct character : pegtl::sor< escaped, regular > {};
+struct odigit : pegtl::range<'0','7'> {};
 
-template< char Q >
-struct short_string : pegtl::if_must< pegtl::one< Q >, pegtl::until< pegtl::one< Q >, character > > {};
-struct literal_string : pegtl::sor< short_string< '"' >, short_string< '\'' >, long_string > {};
-*/
+struct pos_int_hex : pegtl::seq<pegtl::opt<pegtl::one<'+'>>, pegtl::string<'0','x'>, pegtl::plus<pegtl::xdigit>> {};
+struct neg_int_hex : pegtl::seq<pegtl::one<'-'>, pegtl::string<'0','x'>, pegtl::plus<pegtl::xdigit>> {};
 
-struct positive_integer : pegtl::seq<pegtl::opt<pegtl::one<'+'>>, pegtl::plus<pegtl::digit>> {};  // technically non-negative
-struct negative_integer : pegtl::seq<pegtl::one<'-'>, pegtl::plus<pegtl::digit>> {};
-struct integer : pegtl::sor<positive_integer, negative_integer> {};
+struct pos_int_dec : pegtl::seq<pegtl::opt<pegtl::one<'+'>>, pegtl::plus<pegtl::digit>> {};
+struct neg_int_dec : pegtl::seq<pegtl::one<'-'>, pegtl::plus<pegtl::digit>> {};
 
-template<typename E>
-struct exponent : pegtl::opt<pegtl::if_must<E, pegtl::opt< pegtl::one<'+', '-'>>, pegtl::plus<pegtl::digit>>> {};
+struct pos_int_oct : pegtl::seq<pegtl::opt<pegtl::one<'+'>>, pegtl::one<'0'>, pegtl::plus<odigit>> {};
+struct neg_int_oct : pegtl::seq<pegtl::one<'-'>, pegtl::one<'0'>, pegtl::plus<odigit>> {};
 
-template<typename D, typename E>
-struct numeral_three : pegtl::seq<pegtl::if_must<pegtl::one<'.'>, pegtl::plus<D>>, exponent<E>> {};
-template<typename D, typename E>
-struct numeral_two : pegtl::seq<pegtl::plus<D>, pegtl::opt<pegtl::one<'.'>, pegtl::star<D>>, exponent<E>> {};
-template<typename D, typename E>
-struct numeral_one : pegtl::sor<numeral_two<D, E>, numeral_three<D, E>> {};
+struct pos_int : pegtl::sor<pos_int_oct, pos_int_hex, pos_int_dec> {};
+struct neg_int : pegtl::sor<neg_int_oct, neg_int_hex, neg_int_dec> {};
+struct integer : pegtl::sor<pos_int, neg_int> {};
 
-struct decimal : numeral_one<pegtl::digit, pegtl::one<'e', 'E'>> {};
-struct hexadecimal : pegtl::if_must<pegtl::istring<'0', 'x'>, numeral_one< pegtl::xdigit, pegtl::one<'p', 'P'>>> {};
-struct numeral : pegtl::sor<hexadecimal, decimal> {};
+struct plus_minus : pegtl::opt<pegtl::one<'+','-'>> {};
+struct dot : pegtl::one<'.'> {};
+struct inf : pegtl::istring<'i','n','f'> {};
+struct nan : pegtl::istring<'n','a','n'> {};
+
+template< typename D >
+struct number : pegtl::if_then_else<dot,
+                                    pegtl::plus<D>,
+                                    pegtl::seq<pegtl::plus<D>, dot, pegtl::star<D>>> {};
+
+struct e : pegtl::one<'e','E'> {};
+struct p : pegtl::one<'p','P'> {};
+struct exponent : pegtl::seq<plus_minus, pegtl::plus<pegtl::digit>> {};
+struct decimal : pegtl::seq<number<pegtl::digit>, pegtl::opt<e, exponent>> {};
+struct hexadecimal : pegtl::seq<pegtl::one<'0'>, pegtl::one<'x','X'>, number<pegtl::xdigit>, pegtl::opt<p, exponent>> {};
+struct numeral : pegtl::seq<plus_minus, pegtl::sor<hexadecimal, decimal, inf, nan>> {};
 
 /*
  * Types
@@ -81,10 +79,12 @@ struct type : pegtl::sor<type_non_void, void_type> {};
  */
 struct expr;
 struct int_expr : pegtl::seq<integer> {};
+struct float_expr : pegtl::seq<numeral> {};
 struct var_expr : pegtl::seq<name> {};
-struct atomic_expr : pegtl::sor<int_expr, var_expr> {};
+struct atomic_expr : pegtl::sor<float_expr, int_expr, var_expr> {};
 struct array_expr : pegtl::seq<type_non_void, seps, pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
-struct expr_2 : pegtl::sor<array_expr, atomic_expr> {};
+struct record_expr : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>, pegtl::one<')'>> {};
+struct expr_2 : pegtl::sor<record_expr, array_expr, atomic_expr> {};
 
 struct index_component : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>, seps, pegtl::opt<index_component>> {};
 struct array_lookup_expr : pegtl::seq<expr_2, seps, index_component> {};
@@ -104,14 +104,14 @@ struct collect_stage : TAO_PEGTL_STRING("collect") {};
 struct copy_stage : TAO_PEGTL_STRING("copy") {};
 struct count_stage : TAO_PEGTL_STRING("count") {};
 struct foreach_stage : TAO_PEGTL_STRING("foreach") {};
-struct getitem_stage : pegtl::seq<pegtl::one<'@'>, seps, positive_integer> {};
+struct getitem_stage : pegtl::seq<pegtl::one<'@'>, seps, pos_int> {};
 struct print_stage : TAO_PEGTL_STRING("print") {};
 struct record_stage : pegtl::seq<pegtl::one<'('>, pegtl::list<pegtl::seq<seps, pegtl::sor<pipeline, name>, seps>, pegtl::one<','>>, pegtl::one<')'>> {};
 struct split_stage : pegtl::seq<TAO_PEGTL_STRING("split"), seps, pegtl::one<'('>, seps, integer, seps, pegtl::one<','>, seps, integer, seps, pegtl::one<')'>> {};
 
 struct stage : pegtl::sor<call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage> {};
 struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>> {};
-struct pipeline : pegtl::seq<stage, pegtl::star< pegtl::seq< seps, pegtl::one<'|'>, seps, pegtl::sor<branch, stage>>>> {};
+struct pipeline : pegtl::seq<stage, pegtl::star< pegtl::seq<seps, pegtl::one<'|'>, seps, pegtl::sor<branch, stage>>>> {};
 
 /*
  * Functions
