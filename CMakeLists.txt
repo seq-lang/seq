@@ -95,6 +95,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/filter.h
                        include/seq/foreach.h
                        include/seq/func.h
+                       include/seq/getelemexpr.h
                        include/seq/getitem.h
                        include/seq/hash.h
                        include/seq/io.h
@@ -127,6 +128,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/void.h
                        src/expr/arrayexpr.cpp
                        src/expr/expr.cpp
+                       src/expr/getelemexpr.cpp
                        src/expr/lookupexpr.cpp
                        src/expr/numexpr.cpp
                        src/expr/recordexpr.cpp

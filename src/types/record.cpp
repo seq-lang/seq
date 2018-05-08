@@ -12,7 +12,7 @@ static std::string getNameFromTypes(std::vector<types::Type *> types)
 	for (auto *type : types)
 		name += type->getName();
 
-	name += "Recrod";
+	name += "Record";
 	return name;
 }
 

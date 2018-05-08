@@ -119,6 +119,17 @@ struct action<neg_int_oct> {
 };
 
 template<>
+struct action<natural> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		const seq_int_t n = std::stol(in.string(), nullptr, 10);
+		assert(n >= 1);
+		state.add(n);
+	}
+};
+
+template<>
 struct action<numeral> {
 	template<typename Input>
 	static void apply(const Input& in, ParseState& state)
@@ -873,7 +884,7 @@ struct control<record_expr> : pegtl::normal<record_expr>
 };
 
 template<>
-struct control<array_lookup_expr> : pegtl::normal<array_lookup_expr>
+struct control<index_tail> : pegtl::normal<index_tail>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
@@ -884,10 +895,62 @@ struct control<array_lookup_expr> : pegtl::normal<array_lookup_expr>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("ee");
-		Expr *arr = vec[0].value.expr;
-		Expr *idx = vec[1].value.expr;
+		auto vec1 = state.get("e");
+		auto vec2 = state.get("e", true, false);
+		Expr *arr = vec2[0].value.expr;
+		Expr *idx = vec1[0].value.expr;
 		Expr *e = new ArrayLookupExpr(arr, idx);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<elem_tail> : pegtl::normal<elem_tail>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec1 = state.get("i");
+		auto vec2 = state.get("e", true, false);
+		Expr *elem = vec2[0].value.expr;
+		seq_int_t idx = vec1[0].value.ival;
+		Expr *e = new GetElemExpr(elem, idx);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<paren_expr> : pegtl::normal<paren_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		Expr *e = vec[0].value.expr;
 		state.add(e);
 	}
 

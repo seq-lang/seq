@@ -4,16 +4,8 @@
 using namespace seq;
 using namespace llvm;
 
-static types::ArrayType *asArrayType(types::Type *type)
-{
-	types::ArrayType *arrType;
-	if ((arrType = dynamic_cast<types::ArrayType *>(type)))
-		return arrType;
-	throw exc::SeqException("expected array, got '" + type->getName() + "'");
-}
-
 ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :
-    Expr(asArrayType(arr->getType())->getBaseType()), arr(arr), idx(idx)
+    arr(arr), idx(idx)
 {
 	idx->ensure(types::IntType::get());
 }
@@ -27,6 +19,17 @@ Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock *block)
 	Value *idx = this->idx->codegen(base, block);
 	Value *ptr = builder.CreateExtractValue(arr, 1);
 
-	asArrayType(this->arr->getType())->codegenIndexLoad(base, outs, block, ptr, idx);
+	types::ArrayType::get(getType())->codegenIndexLoad(base, outs, block, ptr, idx);
 	return getType()->pack(base, outs, block);
+}
+
+types::Type *ArrayLookupExpr::getType() const
+{
+	types::Type *type = arr->getType();
+	types::ArrayType *arrType;
+
+	if ((arrType = dynamic_cast<types::ArrayType *>(type)))
+		return arrType->getBaseType();
+
+	throw exc::SeqException("expected array, got '" + type->getName() + "'");
 }

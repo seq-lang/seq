@@ -7,16 +7,16 @@ using namespace llvm;
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
     Expr(types::ArrayType::get(type)), count(count)
 {
-	count->ensure(types::IntType::get());
 }
 
 Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock *block)
 {
-	Module *module = block->getModule();
-	LLVMContext& context = block->getContext();
 	auto *type = dynamic_cast<types::ArrayType *>(getType());
 	assert(type != nullptr);
+	count->ensure(types::IntType::get());
 
+	Module *module = block->getModule();
+	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
 
 	GlobalVariable *ptrVar = new GlobalVariable(*module,

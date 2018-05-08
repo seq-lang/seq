@@ -77,6 +77,7 @@ struct type : pegtl::sor<type_non_void, void_type> {};
 /*
  * Expressions
  */
+struct natural : pegtl::seq<pegtl::range<'1','9'>, pegtl::star<pegtl::digit>> {};
 struct expr;
 struct int_expr : pegtl::seq<integer> {};
 struct float_expr : pegtl::seq<numeral> {};
@@ -84,34 +85,39 @@ struct var_expr : pegtl::seq<name> {};
 struct atomic_expr : pegtl::sor<float_expr, int_expr, var_expr> {};
 struct array_expr : pegtl::seq<type_non_void, seps, pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
 struct record_expr : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>, pegtl::one<')'>> {};
-struct expr_2 : pegtl::sor<record_expr, array_expr, atomic_expr> {};
+struct paren_expr : pegtl::seq<pegtl::one<'('>, seps, expr, seps, pegtl::one<')'>> {};
 
-struct index_component : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>, seps, pegtl::opt<index_component>> {};
-struct array_lookup_expr : pegtl::seq<expr_2, seps, index_component> {};
+struct expr_tail;
+struct index_tail : pegtl::if_must<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
+struct elem_tail : pegtl::if_must<pegtl::one<'.'>, seps, natural> {};
+struct expr_tail : pegtl::sor<index_tail, elem_tail> {};
 
-struct expr : pegtl::sor<array_lookup_expr, expr_2> {};
+struct expr_head : pegtl::sor<paren_expr, record_expr, array_expr, atomic_expr> {};
+struct expr : pegtl::seq<expr_head, pegtl::star<seps, expr_tail>> {};
 
 /*
  * Stages and Pipelines
  */
 struct statement;
-struct statement_seq : pegtl::star<pegtl::seq<statement, seps>> {};
+struct statement_seq : pegtl::star<statement, seps> {};
 
 struct pipeline;
+struct pipe_op : TAO_PEGTL_STRING("|>") {};
+struct source_op : TAO_PEGTL_STRING("|") {};
 
 struct call_stage : pegtl::seq<name, seps, pegtl::one<'('>, seps, pegtl::one<')'>> {};
 struct collect_stage : TAO_PEGTL_STRING("collect") {};
 struct copy_stage : TAO_PEGTL_STRING("copy") {};
 struct count_stage : TAO_PEGTL_STRING("count") {};
 struct foreach_stage : TAO_PEGTL_STRING("foreach") {};
-struct getitem_stage : pegtl::seq<pegtl::one<'@'>, seps, pos_int> {};
+struct getitem_stage : pegtl::seq<pegtl::one<'.'>, seps, natural> {};
 struct print_stage : TAO_PEGTL_STRING("print") {};
 struct record_stage : pegtl::seq<pegtl::one<'('>, pegtl::list<pegtl::seq<seps, pegtl::sor<pipeline, name>, seps>, pegtl::one<','>>, pegtl::one<')'>> {};
 struct split_stage : pegtl::seq<TAO_PEGTL_STRING("split"), seps, pegtl::one<'('>, seps, integer, seps, pegtl::one<','>, seps, integer, seps, pegtl::one<')'>> {};
 
 struct stage : pegtl::sor<call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage> {};
 struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>> {};
-struct pipeline : pegtl::seq<stage, pegtl::star< pegtl::seq<seps, pegtl::one<'|'>, seps, pegtl::sor<branch, stage>>>> {};
+struct pipeline : pegtl::seq<stage, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
 
 /*
  * Functions
@@ -123,10 +129,10 @@ struct func_stmt : pegtl::seq<func_decl, seps, statement_seq, str_end> {};
  * Modules
  */
 struct var_assign;
-struct pipeline_module_stmt_toplevel : pegtl::seq<TAO_PEGTL_STRING("|>"), seps, pipeline> {};
-struct pipeline_module_stmt_nested : pegtl::seq<TAO_PEGTL_STRING("|>"), seps, pipeline> {};
-struct pipeline_expr_stmt_toplevel : pegtl::seq<expr, seps, pegtl::one<'|'>, seps, pipeline> {};
-struct pipeline_expr_stmt_nested : pegtl::seq<expr, seps, pegtl::one<'|'>, seps, pipeline> {};
+struct pipeline_module_stmt_toplevel : pegtl::seq<source_op, seps, pipeline> {};
+struct pipeline_module_stmt_nested : pegtl::seq<source_op, seps, pipeline> {};
+struct pipeline_expr_stmt_toplevel : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
+struct pipeline_expr_stmt_nested : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
 struct statement : pegtl::sor<var_assign, func_stmt, pipeline_module_stmt_toplevel, pipeline_expr_stmt_toplevel> {};
 struct module : pegtl::seq<str_module, seps, name, seps, statement_seq, str_end> {};
 

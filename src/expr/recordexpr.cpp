@@ -5,7 +5,7 @@
 using namespace seq;
 using namespace llvm;
 
-RecordExpr::RecordExpr(std::vector<Expr *> exprs) : Expr(types::VoidType::get()), exprs(std::move(exprs))
+RecordExpr::RecordExpr(std::vector<Expr *> exprs) : exprs(std::move(exprs))
 {
 }
 

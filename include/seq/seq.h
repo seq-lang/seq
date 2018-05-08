@@ -27,6 +27,7 @@
 #include "arrayexpr.h"
 #include "recordexpr.h"
 #include "lookupexpr.h"
+#include "getelemexpr.h"
 
 namespace seq {
 

@@ -9,6 +9,7 @@ namespace seq {
 		types::Type *type;
 	public:
 		explicit Expr(types::Type *type);
+		Expr();
 		virtual llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block)=0;
 		virtual types::Type *getType() const;
 		virtual void ensure(types::Type *type);

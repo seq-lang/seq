@@ -3,7 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-VarExpr::VarExpr(Var *var) : Expr(var->getType(nullptr)), var(var)
+VarExpr::VarExpr(Var *var) : var(var)
 {
 }
 
