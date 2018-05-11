@@ -21,6 +21,14 @@ namespace seq {
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
 	};
 
+	class BoolExpr : public Expr {
+	private:
+		bool b;
+	public:
+		explicit BoolExpr(bool b);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+	};
+
 }
 
 #endif /* SEQ_NUMEXPR_H */

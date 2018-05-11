@@ -91,7 +91,7 @@ public:
 
 		if (!multi && result.size() != types.length())
 			throw exc::SeqException(
-			  "too many arguments: got " + std::to_string(result.size()) + " but expected " + std::to_string(types.length()));
+			  "entity count mismatch: got " + std::to_string(result.size()) + " but expected " + std::to_string(types.length()));
 
 		for (int i = 0; i < result.size(); i++) {
 			const char token = multi ? types[0] : types[i];
@@ -534,6 +534,24 @@ struct action<float_expr> {
 	{
 		auto vec = state.get("f");
 		Expr *expr = new FloatExpr(vec[0].value.fval);
+		state.add(expr);
+	}
+};
+
+template<>
+struct action<true_expr> {
+	static void apply0(ParseState& state)
+	{
+		Expr *expr = new BoolExpr(true);
+		state.add(expr);
+	}
+};
+
+template<>
+struct action<false_expr> {
+	static void apply0(ParseState& state)
+	{
+		Expr *expr = new BoolExpr(false);
 		state.add(expr);
 	}
 };

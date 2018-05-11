@@ -18,8 +18,10 @@ struct str_var : TAO_PEGTL_STRING("let") {};
 struct str_end : TAO_PEGTL_STRING("end") {};
 struct str_fun : TAO_PEGTL_STRING("fun") {};
 struct str_source : TAO_PEGTL_STRING("source") {};
+struct str_true : TAO_PEGTL_STRING("true") {};
+struct str_false : TAO_PEGTL_STRING("false") {};
 
-struct str_keyword : pegtl::sor<str_var, str_end, str_fun> {};
+struct str_keyword : pegtl::sor<str_var, str_end, str_fun, str_source, str_true, str_false> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword>, pegtl::identifier> {};
 
@@ -90,9 +92,12 @@ struct natural : pegtl::seq<pegtl::range<'1','9'>, pegtl::star<pegtl::digit>> {}
 struct expr;
 struct int_expr : pegtl::seq<integer> {};
 struct float_expr : pegtl::seq<numeral> {};
+struct true_expr : pegtl::seq<str_true> {};
+struct false_expr : pegtl::seq<str_false> {};
+struct bool_expr : pegtl::sor<true_expr, false_expr> {};
 struct str_expr : pegtl::seq<literal_string> {};
 struct var_expr : pegtl::seq<name> {};
-struct atomic_expr : pegtl::sor<float_expr, int_expr, str_expr, var_expr> {};
+struct atomic_expr : pegtl::sor<bool_expr, float_expr, int_expr, str_expr, var_expr> {};
 struct array_expr : pegtl::seq<type_non_void, seps, pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
 struct record_expr : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>, pegtl::one<')'>> {};
 struct paren_expr : pegtl::seq<pegtl::one<'('>, seps, expr, seps, pegtl::one<')'>> {};
