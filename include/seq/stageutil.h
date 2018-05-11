@@ -23,6 +23,7 @@
 #include "serialize.h"
 #include "exprstage.h"
 #include "capture.h"
+#include "source.h"
 
 namespace seq {
 	namespace stageutil {
@@ -49,6 +50,7 @@ namespace seq {
 		Deserialize& deser(types::Type& type, std::string filename);
 		ExprStage& expr(Expr *expr);
 		Capture& capture(void *addr);
+		Source& source();
 	}
 }
 

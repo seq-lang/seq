@@ -1,10 +1,10 @@
 # this is a comment
 
-module s
-  fun f: Seq -> Seq[]
-    | split(32,32) |> collect
-  end
+fun f: Seq -> Seq[]
+  | split(32,32) |> collect
+end
 
+source args[0]
   | print
   let v = | f()  # inline comment
   v |> foreach |> (count, _) |> {
@@ -35,3 +35,5 @@ module s
 
   (v[1], ((v)[2]), (v[1], 4.2)).3 |> .1 |> print
 end
+
+"hello world" |> print

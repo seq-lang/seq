@@ -117,3 +117,8 @@ Capture& stageutil::capture(void *addr)
 {
 	return Capture::make(addr);
 }
+
+Source& stageutil::source()
+{
+	return Source::make({});
+}

@@ -1,7 +1,242 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <stack>
+#include <map>
+#include <cassert>
 #include "grammar.h"
 #include "seq/parser.h"
 
 using namespace seq;
+
+struct SeqEntity {
+	enum {
+		EMPTY = 0,
+		INT,
+		FLOAT,
+		BOOL,
+		NAME,
+		PIPELINE,
+		VAR,
+		FUNC,
+		TYPE,
+		MODULE,
+		EXPR
+	} type = EMPTY;
+
+	union U {
+		U() : ival(0) {}
+		U(seq_int_t ival) : ival(ival) {}
+		U(double fval) : fval(fval) {}
+		U(bool bval) : bval(bval) {}
+		U(const char *name) : name(name) {}
+		U(Pipeline pipeline) : pipeline(pipeline) {}
+		U(Var *var) : var(var) {}
+		U(Func *func) : func(func) {}
+		U(types::Type *type) : type(type) {}
+		U(SeqModule *module) : module(module) {}
+		U(Expr *expr) : expr(expr) {}
+
+		seq_int_t ival;
+		double fval;
+		bool bval;
+		const char *name;
+		Pipeline pipeline;
+		Var *var;
+		Func *func;
+		types::Type *type;
+		SeqModule *module;
+		Expr *expr;
+	} value;
+
+	SeqEntity() : type(EMPTY), value() {}
+	SeqEntity(seq_int_t ival) : type(SeqEntity::INT), value(ival) {}
+	SeqEntity(double fval) : type(SeqEntity::FLOAT), value(fval) {}
+	SeqEntity(bool bval) : type(SeqEntity::BOOL), value(bval) {}
+	SeqEntity(const char * name) : type(SeqEntity::NAME), value(name) {}
+	SeqEntity(Pipeline pipeline) : type(SeqEntity::PIPELINE), value(pipeline) {}
+	SeqEntity(Var *var) : type(SeqEntity::VAR), value(var) {}
+	SeqEntity(Func *func) : type(SeqEntity::FUNC), value(func) {}
+	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
+	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
+	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
+};
+
+std::ostream& operator<<(std::ostream& os, const SeqEntity& ent);
+
+const std::map<char, int> TYPE_MAP = {{'x', SeqEntity::EMPTY},
+                                      {'i', SeqEntity::INT},
+                                      {'f', SeqEntity::FLOAT},
+                                      {'b', SeqEntity::BOOL},
+                                      {'s', SeqEntity::NAME},
+                                      {'p', SeqEntity::PIPELINE},
+                                      {'v', SeqEntity::VAR},
+                                      {'f', SeqEntity::FUNC},
+                                      {'t', SeqEntity::TYPE},
+                                      {'m', SeqEntity::MODULE},
+                                      {'e', SeqEntity::EXPR}};
+
+class ParseState {
+	typedef std::map<std::string, SeqEntity> SymTab;
+private:
+	std::vector<SymTab> symbols;
+	std::stack<std::vector<SeqEntity>> results;
+	std::vector<SeqEntity> contexts;
+	SeqModule *module;
+public:
+	std::vector<SeqEntity> get(const std::string& types, bool multi=false, bool pop=true)
+	{
+		assert(!types.empty() && !results.empty());
+		std::vector<SeqEntity> result = results.top();
+
+		if (!multi && result.size() != types.length())
+			throw exc::SeqException(
+			  "too many arguments: got " + std::to_string(result.size()) + " but expected " + std::to_string(types.length()));
+
+		for (int i = 0; i < result.size(); i++) {
+			const char token = multi ? types[0] : types[i];
+
+			if (token == '*')
+				continue;
+
+			const auto type = TYPE_MAP.find(token);
+			assert(type != TYPE_MAP.end());
+
+			if (result[i].type != type->second)
+				throw exc::SeqException("unexpected entity type");
+		}
+
+		if (pop)
+			results.pop();
+
+		return result;
+	}
+
+	void add(SeqEntity ent)
+	{
+		assert(!results.empty());
+		results.top().push_back(ent);
+	}
+
+	SeqEntity& top()
+	{
+		assert(!results.empty() && !results.top().empty());
+		return results.top().back();
+	}
+
+	void push()
+	{
+		results.push({});
+	}
+
+	void pop()
+	{
+		assert(!results.empty());
+		results.pop();
+	}
+
+	void scope()
+	{
+		symbols.push_back({});
+	}
+
+	void unscope()
+	{
+		assert(!symbols.empty());
+		symbols.pop_back();
+	}
+
+	static void symadd(const char *name, SeqEntity ent, std::map<std::string, SeqEntity>& syms)
+	{
+		if (strcmp(name, "_") == 0)
+			throw exc::SeqException("symbol '_' is reserved and cannot be used");
+
+		if (syms.find(name) != syms.end())
+			throw exc::SeqException("duplicate symbol '" + std::string(name) + "'");
+
+		syms.insert({name, ent});
+	}
+
+	void sym(const char *name, SeqEntity ent)
+	{
+		assert(!symbols.empty());
+		symadd(name, ent, symbols.back());
+	}
+
+	void symparent(const char *name, SeqEntity ent)
+	{
+		assert(symbols.size() >= 2);
+		symadd(name, ent, symbols[symbols.size() - 2]);
+	}
+
+	static SeqEntity lookupInTable(const char *name, SymTab symtab)
+	{
+		auto iter = symtab.find(name);
+
+		if (iter == symtab.end())
+			return {};
+
+		return iter->second;
+	}
+
+	SeqEntity lookup(const char *name)
+	{
+		if (strcmp(name, "_") == 0)
+			return &_;  // this is our special variable for referring to prev outputs
+
+		for (auto it = symbols.rbegin(); it != symbols.rend(); ++it) {
+			SeqEntity ent = lookupInTable(name, *it);
+			if (ent.type != SeqEntity::EMPTY)
+				return ent;
+		}
+
+		throw exc::SeqException("undefined reference to '" + std::string(name) + "'");
+	}
+
+	void enter(SeqEntity context)
+	{
+		contexts.push_back(context);
+	}
+
+	void exit()
+	{
+		assert(!contexts.empty());
+		contexts.pop_back();
+	}
+
+	SeqEntity context()
+	{
+		assert(!contexts.empty());
+		return contexts.back();
+	}
+
+	SeqEntity base()
+	{
+		assert(!contexts.empty());
+		for (int i = (int)contexts.size() - 1; i >= 0; i--) {
+			SeqEntity ent = contexts[i];
+			if (ent.type == SeqEntity::MODULE || ent.type == SeqEntity::FUNC)
+				return ent;
+		}
+		assert(0);
+	}
+
+	void setModule(SeqModule *module)
+	{
+		assert(this->module == nullptr);
+		this->module = module;
+	}
+
+	SeqModule& getModule()
+	{
+		assert(this->module != nullptr);
+		return *this->module;
+	}
+
+	ParseState() : symbols(), results(), contexts(), module(nullptr)
+	{
+	}
+};
 
 std::ostream& operator<<(std::ostream& os, const SeqEntity& ent)
 {
@@ -149,6 +384,45 @@ struct action<name> {
 	}
 };
 
+static std::string unescape(const std::string& s)
+{
+	std::string res;
+	std::string::const_iterator it = s.begin() + 1;
+
+	while (it != s.end() - 1) {
+		char c = *it++;
+		if (c == '\\' && it != s.end()) {
+			c = *it++;
+			switch (c) {
+				case 'a':  c = '\a'; break;
+				case 'b':  c = '\b'; break;
+				case 'f':  c = '\f'; break;
+				case 'n':  c = '\n'; break;
+				case 'r':  c = '\r'; break;
+				case 't':  c = '\t'; break;
+				case 'v':  c = '\v'; break;
+				case '\\': c = '\\'; break;
+				case '"':  c = '"'; break;
+				default:
+					throw exc::SeqException("undefined escape sequence: '" + std::string(1, c) + "'");
+			}
+		}
+		res += c;
+	}
+
+	return res;
+}
+
+template<>
+struct action<literal_string> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		const char *name = strdup(unescape(in.string()).c_str());
+		state.add(name);
+	}
+};
+
 template<>
 struct action<call_stage> {
 	static void apply0(ParseState& state)
@@ -260,6 +534,17 @@ struct action<float_expr> {
 	{
 		auto vec = state.get("f");
 		Expr *expr = new FloatExpr(vec[0].value.fval);
+		state.add(expr);
+	}
+};
+
+template<>
+struct action<str_expr> {
+	static void apply0(ParseState& state)
+	{
+		auto vec = state.get("s");
+		std::string s(vec[0].value.name);
+		Expr *expr = new StrExpr(s);
 		state.add(expr);
 	}
 };
@@ -508,26 +793,25 @@ struct control<module> : pegtl::normal<module>
 	static void start(Input& in, ParseState& state)
 	{
 		state.scope();
-		state.push();
-		state.enter(new SeqModule());
+		auto *module = new SeqModule(true);
+		state.enter(module);
+		state.sym("args", module->getArgsVar());
 	}
 
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("s");
 		assert(state.context().type == SeqEntity::MODULE);
 		auto *module = state.context().value.module;
 		state.unscope();
 		state.exit();
-		state.addmod(vec[0].value.name, module);
+		state.setModule(module);
 	}
 
 	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.unscope();
-		state.pop();
 		state.exit();
 	}
 };
@@ -612,6 +896,46 @@ struct control<branch> : pegtl::normal<branch>
 		       state.context().type == SeqEntity::PIPELINE);
 		state.top().value.pipeline = makePipelineFromLinkedStage(state.context().value.pipeline.getHead());
 		state.exit();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.unscope();
+		state.exit();
+		state.pop();
+	}
+};
+
+template<>
+struct control<source_block> : pegtl::normal<source_block>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.scope();
+		Pipeline p = stageutil::source();
+		state.enter(p);
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.unscope();
+		auto vec = state.get("e", true);
+		SeqEntity ent = state.context();
+		assert(ent.type == SeqEntity::PIPELINE);
+		auto *source = dynamic_cast<Source *>(ent.value.pipeline.getHead());
+		assert(source != nullptr);
+
+		for (auto e : vec)
+			source->addSource(e.value.expr);
+
+		state.exit();
+
+		SeqEntity context = state.context();
+		addPipelineGeneric(context, ent.value.pipeline);
 	}
 
 	template<typename Input>
@@ -813,6 +1137,22 @@ struct control<float_expr> : pegtl::normal<float_expr>
 };
 
 template<>
+struct control<str_expr> : pegtl::normal<str_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<var_expr> : pegtl::normal<var_expr>
 {
 	template<typename Input>
@@ -893,12 +1233,12 @@ struct control<index_tail> : pegtl::normal<index_tail>
 	}
 
 	template<typename Input>
-	static void success(Input&, ParseState& state)
+	static void success(Input& in, ParseState& state)
 	{
-		auto vec1 = state.get("e");
-		auto vec2 = state.get("e", true, false);
-		Expr *arr = vec2[0].value.expr;
-		Expr *idx = vec1[0].value.expr;
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *arr = state.top().value.expr;
+		Expr *idx = vec[0].value.expr;
 		Expr *e = new ArrayLookupExpr(arr, idx);
 		state.top() = e;
 	}
@@ -922,11 +1262,11 @@ struct control<elem_tail> : pegtl::normal<elem_tail>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec1 = state.get("i");
-		auto vec2 = state.get("e", true, false);
-		Expr *elem = vec2[0].value.expr;
-		seq_int_t idx = vec1[0].value.ival;
-		Expr *e = new GetElemExpr(elem, idx);
+		auto vec = state.get("i");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *rec = state.top().value.expr;
+		seq_int_t idx = vec[0].value.ival;
+		Expr *e = new GetElemExpr(rec, idx);
 		state.top() = e;
 	}
 
@@ -995,12 +1335,12 @@ struct control<record_type> : pegtl::normal<record_type>
 
 #include <tao/pegtl/analyze.hpp>
 
-ParseState seq::parse(std::string input)
+SeqModule& seq::parse(std::string input)
 {
 	ParseState state;
 	pegtl::file_input<> in(input);
 	const size_t issues_found = pegtl::analyze<grammar>();
 	assert(issues_found == 0);
 	pegtl::parse<grammar, action, control>(in, state);
-	return state;
+	return state.getModule();
 }

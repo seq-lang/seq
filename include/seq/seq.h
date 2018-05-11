@@ -23,6 +23,7 @@
 #include "parser.h"
 #include "expr.h"
 #include "numexpr.h"
+#include "strexpr.h"
 #include "varexpr.h"
 #include "arrayexpr.h"
 #include "recordexpr.h"
@@ -39,6 +40,7 @@ namespace seq {
 		static IntType&    Int    = *IntType::get();
 		static FloatType&  Float  = *FloatType::get();
 		static BoolType&   Bool   = *BoolType::get();
+		static StrType&    Str    = *StrType::get();
 		static ArrayType&  Array  = *ArrayType::get();
 		static RecordType& Record = *RecordType::get({});
 	}
@@ -72,12 +74,14 @@ namespace seq {
 
 	class SeqModule : public BaseFunc {
 	private:
+		bool standalone;
 		std::vector<std::string> sources;
 		std::array<ValMap, io::MAX_INPUTS> outs;
+		Var argsVar;
 
 		friend PipelineAggregator;
 	public:
-		SeqModule();
+		explicit SeqModule(bool standalone=false);
 		~SeqModule();
 
 		PipelineAggregator main;
@@ -87,6 +91,7 @@ namespace seq {
 		io::DataBlock *data;
 
 		void source(std::string s);
+		Var *getArgsVar();
 
 		template<typename ...T>
 		void source(std::string s, T... etc)
@@ -101,7 +106,7 @@ namespace seq {
 		                 ValMap outs,
 		                 llvm::BasicBlock *block) override;
 		void add(Pipeline pipeline) override;
-		void execute(bool debug=false);
+		void execute(const std::vector<std::string>& args={}, bool debug=false);
 
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);

@@ -117,7 +117,7 @@ static inline void bigTest()
 	s.last | f() | foreach() | print();
 
 	s.source(DEFAULT_TEST_INPUT_MULTI);
-	s.execute(true);  // debug=true
+	s.execute({}, true);  // debug=true
 }
 
 TEST(BigTest, BigTest)

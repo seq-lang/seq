@@ -31,10 +31,15 @@ Pipeline PipelineAggregator::addWithIndex(Pipeline to, seq_int_t idx, bool addFu
 		throw exc::SeqException("invalid sequence index specified");
 
 	to.getHead()->setBase(base);
-	BaseStage& begin = addFull ? BaseStage::make(types::VoidType::get(), types::SeqType::get()) :
-	                             BaseStage::make(types::AnyType::get(), types::SeqType::get());
+	types::Type *outType = base->standalone ? (types::Type *)types::VoidType::get() :
+	                                          (types::Type *)types::SeqType::get();
+	BaseStage& begin = addFull ? BaseStage::make(types::VoidType::get(), outType) :
+	                             BaseStage::make(types::AnyType::get(), outType);
 	begin.setBase(base);
-	begin.outs = base->outs[idx];
+
+	if (!base->standalone)
+		begin.outs = base->outs[idx];
+
 	Pipeline full = begin | to;
 	if (addFull)
 		add(full);
@@ -177,11 +182,13 @@ PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr) :
 }
 
 
-SeqModule::SeqModule() :
-    BaseFunc(), sources(), main(this), once(this), last(this), data(nullptr)
+SeqModule::SeqModule(bool standalone) :
+    BaseFunc(), standalone(standalone), sources(), argsVar(true),
+    main(this), once(this), last(this), data(nullptr)
 {
-	for (auto& out : outs)
-		out = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	if (!standalone)
+		for (auto& out : outs)
+			out = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
 }
 
 SeqModule::~SeqModule()
@@ -191,7 +198,18 @@ SeqModule::~SeqModule()
 
 void SeqModule::source(std::string source)
 {
+	if (standalone)
+		throw exc::SeqException("cannot add source to standalone module");
+
 	sources.push_back(source);
+}
+
+Var *SeqModule::getArgsVar()
+{
+	if (!standalone)
+		throw exc::SeqException("cannot get argument variable in non-standalone mode");
+
+	return &argsVar;
 }
 
 void SeqModule::codegen(Module *module)
@@ -203,17 +221,35 @@ void SeqModule::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	this->module = module;
 
-	func = cast<Function>(
-	         module->getOrInsertFunction(
-	           "main",
-	           Type::getVoidTy(context),
-	           PointerType::get(types::Seq.getLLVMType(context), 0),
-	           IntegerType::getInt8Ty(context)));
+	types::Type *argsType = nullptr;
+	Value *args = nullptr;
+	Value *seqs = nullptr;
+	Value *isLast = nullptr;
 
-	auto args = func->arg_begin();
-	Value *seqs = args++;
-	Value *isLast = args;
-	isLast->setName("last");
+	if (standalone) {
+		argsType = types::ArrayType::get(types::StrType::get());
+
+		func = cast<Function>(
+		         module->getOrInsertFunction(
+		           "main",
+		           Type::getVoidTy(context),
+		           argsType->getLLVMType(context)));
+
+		auto argiter = func->arg_begin();
+		args = argiter;
+	} else {
+		func = cast<Function>(
+				module->getOrInsertFunction(
+						"main",
+						Type::getVoidTy(context),
+						PointerType::get(types::Seq.getLLVMType(context), 0),
+						IntegerType::getInt8Ty(context)));
+
+		auto argiter = func->arg_begin();
+		seqs = argiter++;
+		isLast = argiter;
+		isLast->setName("last");
+	}
 
 	/* preamble */
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
@@ -222,45 +258,59 @@ void SeqModule::codegen(Module *module)
 	codegenInit(module);
 	builder.CreateCall(initFunc);
 
-	for (size_t i = 0; i < sources.size(); i++) {
-		types::Seq.codegenLoad(this,
-		                       outs[i],
-		                       preambleBlock,
-		                       seqs,
-		                       ConstantInt::get(seqIntLLVM(context), i));
+	if (standalone) {
+		assert(argsType != nullptr);
+		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), argsType);
+		argsType->unpack(this, args, argsBase.outs, preambleBlock);
+		argsVar = argsBase;
+	} else {
+		for (size_t i = 0; i < sources.size(); i++) {
+			types::Seq.codegenLoad(this,
+			                       outs[i],
+			                       preambleBlock,
+			                       seqs,
+			                       ConstantInt::get(seqIntLLVM(context), i));
+		}
 	}
 
-	/* one-time execution */
-	BasicBlock *onceBr = BasicBlock::Create(context, "oncebr", func);
-	BasicBlock *origOnceBlock = BasicBlock::Create(context, "once", func);
-	BasicBlock *onceBlock = origOnceBlock;  // onceBlock is really the _last_ once-block
-	builder.SetInsertPoint(onceBlock);
+	BasicBlock *onceBr = nullptr;
+	BasicBlock *origOnceBlock = nullptr;
+	BasicBlock *onceBlock = nullptr;
+	GlobalVariable *init = nullptr;
 
-	compilationContext.inOnce = true;
-	for (auto &pipeline : once.pipelines) {
-		pipeline.validate();
-		builder.SetInsertPoint(&func->getBasicBlockList().back());
-		onceBlock = BasicBlock::Create(context, "pipeline", func);
-		builder.CreateBr(onceBlock);
+	if (!standalone) {
+		/* one-time execution */
+		onceBr = BasicBlock::Create(context, "oncebr", func);
+		origOnceBlock = BasicBlock::Create(context, "once", func);
+		onceBlock = origOnceBlock;  // onceBlock is really the _last_ once-block
+		builder.SetInsertPoint(onceBlock);
 
-		auto *begin = dynamic_cast<BaseStage *>(pipeline.getHead());
-		assert(begin);
-		begin->setBase(pipeline.getHead()->getBase());
-		begin->block = onceBlock;
-		pipeline.getHead()->codegen(module);
+		compilationContext.inOnce = true;
+		for (auto &pipeline : once.pipelines) {
+			pipeline.validate();
+			builder.SetInsertPoint(&func->getBasicBlockList().back());
+			onceBlock = BasicBlock::Create(context, "pipeline", func);
+			builder.CreateBr(onceBlock);
+
+			auto *begin = dynamic_cast<BaseStage *>(pipeline.getHead());
+			assert(begin);
+			begin->setBase(pipeline.getHead()->getBase());
+			begin->block = onceBlock;
+			pipeline.getHead()->codegen(module);
+		}
+		compilationContext.inOnce = false;
+
+		onceBlock = &func->getBasicBlockList().back();
+
+		init = new GlobalVariable(*module,
+		                          IntegerType::getInt1Ty(context),
+		                          false,
+		                          GlobalValue::PrivateLinkage,
+		                          nullptr,
+		                          "init");
+
+		init->setInitializer(ConstantInt::get(IntegerType::getInt1Ty(context), 0));
 	}
-	compilationContext.inOnce = false;
-
-	onceBlock = &func->getBasicBlockList().back();
-
-	GlobalVariable *init = new GlobalVariable(*module,
-	                                          IntegerType::getInt1Ty(context),
-	                                          false,
-	                                          GlobalValue::PrivateLinkage,
-	                                          nullptr,
-	                                          "init");
-
-	init->setInitializer(ConstantInt::get(IntegerType::getInt1Ty(context), 0));
 
 	/* main */
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
@@ -281,47 +331,55 @@ void SeqModule::codegen(Module *module)
 	}
 	compilationContext.inMain = false;
 
-	BasicBlock *lastMain = &func->getBasicBlockList().back();
+	BasicBlock *lastMain = nullptr;
+	BasicBlock *lastBr = nullptr;
+	BasicBlock *origLastBlock = nullptr;
+	BasicBlock *lastBlock = nullptr;
 
-	/* last */
-	BasicBlock *lastBr = BasicBlock::Create(context, "lastbr", func);
-	BasicBlock *origLastBlock = BasicBlock::Create(context, "last", func);
-	BasicBlock *lastBlock = origLastBlock;  // lastBlock is really the _last_ last-block
+	if (!standalone) {
+		/* last */
+		lastMain = &func->getBasicBlockList().back();
+		lastBr = BasicBlock::Create(context, "lastbr", func);
+		origLastBlock = BasicBlock::Create(context, "last", func);
+		lastBlock = origLastBlock;  // lastBlock is really the _last_ last-block
 
-	compilationContext.inLast = true;
-	for (auto &pipeline : last.pipelines) {
-		pipeline.validate();
-		builder.SetInsertPoint(&func->getBasicBlockList().back());
-		lastBlock = BasicBlock::Create(context, "pipeline", func);
-		builder.CreateBr(lastBlock);
+		compilationContext.inLast = true;
+		for (auto &pipeline : last.pipelines) {
+			pipeline.validate();
+			builder.SetInsertPoint(&func->getBasicBlockList().back());
+			lastBlock = BasicBlock::Create(context, "pipeline", func);
+			builder.CreateBr(lastBlock);
 
-		auto *begin = dynamic_cast<BaseStage *>(pipeline.getHead());
-		assert(begin);
-		begin->setBase(pipeline.getHead()->getBase());
-		begin->block = lastBlock;
-		pipeline.getHead()->codegen(module);
+			auto *begin = dynamic_cast<BaseStage *>(pipeline.getHead());
+			assert(begin);
+			begin->setBase(pipeline.getHead()->getBase());
+			begin->block = lastBlock;
+			pipeline.getHead()->codegen(module);
+		}
+		compilationContext.inLast = false;
 	}
-	compilationContext.inLast = false;
 
 	lastBlock = &func->getBasicBlockList().back();
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 
 	/* stitch it all together */
 	builder.SetInsertPoint(preambleBlock);
-	builder.CreateBr(onceBr);
+	builder.CreateBr(standalone ? entry : onceBr);
 
-	builder.SetInsertPoint(onceBr);
-	builder.CreateCondBr(builder.CreateLoad(init), entry, origOnceBlock);
+	if (!standalone) {
+		builder.SetInsertPoint(onceBr);
+		builder.CreateCondBr(builder.CreateLoad(init), entry, origOnceBlock);
 
-	builder.SetInsertPoint(onceBlock);
-	builder.CreateStore(ConstantInt::get(IntegerType::getInt1Ty(context), 1), init);
-	builder.CreateBr(entry);
+		builder.SetInsertPoint(onceBlock);
+		builder.CreateStore(ConstantInt::get(IntegerType::getInt1Ty(context), 1), init);
+		builder.CreateBr(entry);
 
-	builder.SetInsertPoint(lastMain);
-	builder.CreateBr(lastBr);
+		builder.SetInsertPoint(lastMain);
+		builder.CreateBr(lastBr);
 
-	builder.SetInsertPoint(lastBr);
-	builder.CreateCondBr(isLast, origLastBlock, exit);
+		builder.SetInsertPoint(lastBr);
+		builder.CreateCondBr(isLast, origLastBlock, exit);
+	}
 
 	builder.SetInsertPoint(lastBlock);
 	builder.CreateBr(exit);
@@ -337,20 +395,27 @@ void SeqModule::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock 
 	throw exc::SeqException("cannot call Seq instance");
 }
 
-void SeqModule::execute(bool debug)
+void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 {
 	try {
-		if (sources.empty())
-			throw exc::SeqException("sequence source not specified");
+		if (!args.empty() && !standalone)
+			throw exc::SeqException("cannot only pass arguments in standalone mode");
 
-		if (sources.size() > io::MAX_INPUTS)
-			throw exc::SeqException("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
+		io::Format fmt = io::Format::TXT;
 
-		io::Format fmt = io::extractExt(sources[0]);
+		if (!standalone) {
+			if (sources.empty())
+				throw exc::SeqException("sequence source not specified");
 
-		for (const auto& src : sources) {
-			if (io::extractExt(src) != fmt)
-				throw exc::SeqException("inconsistent input formats");
+			if (sources.size() > io::MAX_INPUTS)
+				throw exc::SeqException("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
+
+			fmt = io::extractExt(sources[0]);
+
+			for (const auto &src : sources) {
+				if (io::extractExt(src) != fmt)
+					throw exc::SeqException("inconsistent input formats");
+			}
 		}
 
 		LLVMContext context;
@@ -370,42 +435,55 @@ void SeqModule::execute(bool debug)
 		EB.setUseOrcMCJITReplacement(true);
 		ExecutionEngine *eng = EB.create();
 
-		for (auto& pipeline : once.pipelines) {
-			pipeline.getHead()->finalize(module, eng);
-		}
+		if (!standalone)
+			for (auto& pipeline : once.pipelines) {
+				pipeline.getHead()->finalize(module, eng);
+			}
 
 		for (auto& pipeline : main.pipelines) {
 			pipeline.getHead()->finalize(module, eng);
 		}
 
-		for (auto& pipeline : last.pipelines) {
-			pipeline.getHead()->finalize(module, eng);
-		}
-
-		auto op = (SeqMain)eng->getPointerToFunction(func);
-		data = new io::DataBlock();
-		std::vector<std::ifstream *> ins;
-
-		for (auto& source : sources) {
-			ins.push_back(new std::ifstream(source));
-
-			if (!ins.back()->good())
-				throw exc::IOException("could not open '" + source + "' for reading");
-		}
-
-		do {
-			data->read(ins, fmt);
-			const size_t len = data->len;
-
-			for (size_t i = 0; i < len; i++) {
-				const bool isLast = data->last && i == len - 1;
-				op(data->block[i].seqs.data(), isLast);
+		if (!standalone)
+			for (auto& pipeline : last.pipelines) {
+				pipeline.getHead()->finalize(module, eng);
 			}
-		} while (data->len > 0);
 
-		for (auto *in : ins) {
-			in->close();
-			delete in;
+		if (standalone) {
+			auto op = (SeqMainStandalone)eng->getPointerToFunction(func);
+			auto numArgs = (seq_int_t)args.size();
+			arr_t<str_t> argsArr = {numArgs, new str_t[numArgs]};
+
+			for (seq_int_t i = 0; i < numArgs; i++)
+				argsArr.arr[i] = {(seq_int_t)args[i].size(), (char *)args[i].data()};
+
+			op(argsArr);
+		} else {
+			auto op = (SeqMain)eng->getPointerToFunction(func);
+			data = new io::DataBlock();
+			std::vector<std::ifstream *> ins;
+
+			for (auto &source : sources) {
+				ins.push_back(new std::ifstream(source));
+
+				if (!ins.back()->good())
+					throw exc::IOException("could not open '" + source + "' for reading");
+			}
+
+			do {
+				data->read(ins, fmt);
+				const size_t len = data->len;
+
+				for (size_t i = 0; i < len; i++) {
+					const bool isLast = data->last && i == len - 1;
+					op(data->block[i].seqs.data(), isLast);
+				}
+			} while (data->len > 0);
+
+			for (auto *in : ins) {
+				in->close();
+				delete in;
+			}
 		}
 	} catch (std::exception& e) {
 		errs() << e.what() << '\n';

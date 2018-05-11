@@ -19,6 +19,11 @@ namespace seq {
 		char *seq;
 	};
 
+	struct str_t {
+		seq_int_t len;
+		char *str;
+	};
+
 	template<typename T = void>
 	struct arr_t {
 		seq_int_t len;

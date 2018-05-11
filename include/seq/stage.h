@@ -28,6 +28,7 @@ namespace seq {
 	class Var;
 
 	typedef void (*SeqMain)(seq_t *, bool isLast);
+	typedef void (*SeqMainStandalone)(arr_t<str_t> args);
 	typedef void (*SeqOp)(char *, seq_int_t);
 	typedef seq_int_t (*SeqHash)(char *, seq_int_t);
 
