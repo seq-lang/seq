@@ -53,6 +53,11 @@ namespace seq {
 
 	typedef std::shared_ptr<std::map<SeqData, llvm::Value *>> ValMap;
 
+	inline ValMap makeValMap()
+	{
+		return std::make_shared<std::map<SeqData, llvm::Value *>>(*new std::map<SeqData, llvm::Value *>());
+	}
+
 	inline llvm::Value *getSafe(ValMap outs, SeqData key)
 	{
 		auto iter = outs->find(key);

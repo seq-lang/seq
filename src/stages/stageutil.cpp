@@ -3,6 +3,11 @@
 
 using namespace seq;
 
+Nop& stageutil::nop()
+{
+	return Nop::make();
+}
+
 Copy& stageutil::copy()
 {
 	return Copy::make();
@@ -121,6 +126,16 @@ CellStage& stageutil::cell(Cell *cell)
 AssignStage& stageutil::assign(Cell *cell, Expr *value)
 {
 	return AssignStage::make(cell, value);
+}
+
+AssignIndexStage& stageutil::assignindex(Expr *array, Expr *idx, Expr *value)
+{
+	return AssignIndexStage::make(array, idx, value);
+}
+
+AssignMemberStage& stageutil::assignmemb(Cell *cell, seq_int_t idx, Expr *value)
+{
+	return AssignMemberStage::make(cell, idx, value);
 }
 
 Capture& stageutil::capture(void *addr)

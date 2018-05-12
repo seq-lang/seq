@@ -121,6 +121,7 @@ struct pipeline;
 struct pipe_op : TAO_PEGTL_STRING("|>") {};
 struct source_op : TAO_PEGTL_STRING("|") {};
 
+struct nop_stage : pegtl::one<'.'> {};
 struct call_stage : pegtl::seq<name, seps, pegtl::one<'('>, seps, pegtl::one<')'>> {};
 struct collect_stage : TAO_PEGTL_STRING("collect") {};
 struct copy_stage : TAO_PEGTL_STRING("copy") {};
@@ -131,7 +132,7 @@ struct print_stage : TAO_PEGTL_STRING("print") {};
 struct record_stage : pegtl::seq<pegtl::one<'('>, pegtl::list<pegtl::seq<seps, pegtl::sor<pipeline, name>, seps>, pegtl::one<','>>, pegtl::one<')'>> {};
 struct split_stage : pegtl::seq<TAO_PEGTL_STRING("split"), seps, pegtl::one<'('>, seps, integer, seps, pegtl::one<','>, seps, integer, seps, pegtl::one<')'>> {};
 
-struct stage : pegtl::sor<call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage> {};
+struct stage : pegtl::sor<call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage, nop_stage> {};
 struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>> {};
 struct pipeline : pegtl::seq<stage, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
 
@@ -155,9 +156,11 @@ struct pipeline_expr_stmt_toplevel : pegtl::seq<expr, seps, pipe_op, seps, pipel
 struct pipeline_expr_stmt_nested : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
 
 struct assign_stmt : pegtl::seq<name, seps, pegtl::one<'='>, seps, expr> {};
+struct assign_member_stmt : pegtl::seq<name, seps, pegtl::one<'.'>, seps, natural, seps, pegtl::one<'='>, seps, expr> {};
+struct assign_expr_stmt : pegtl::seq<expr, seps, pegtl::one<'='>, seps, expr> {};
 
-struct statement : pegtl::sor<source_block, var_decl, cell_decl, func_stmt, assign_stmt, pipeline_module_stmt_toplevel, pipeline_expr_stmt_toplevel> {};
-struct module : pegtl::seq<statement_seq> {};
+struct statement : pegtl::sor<source_block, var_decl, cell_decl, func_stmt, assign_stmt, assign_member_stmt, assign_expr_stmt, pipeline_module_stmt_toplevel, pipeline_expr_stmt_toplevel> {};
+struct module : pegtl::must<statement_seq> {};
 
 /*
  * Assignment
@@ -170,6 +173,6 @@ struct cell_decl : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, 
 /*
  * Top-level grammar
  */
-struct grammar : pegtl::must<pegtl::seq<seps, module, seps>> {};
+struct grammar : pegtl::must<seps, module, seps, pegtl::eof> {};
 
 #endif /* SEQ_GRAMMAR_H */

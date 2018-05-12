@@ -21,6 +21,7 @@
 #include "common.h"
 
 namespace seq {
+
 	class BaseFunc;
 	class Func;
 	class Pipeline;
@@ -79,6 +80,15 @@ namespace seq {
 		virtual Pipeline operator&(PipelineList& to);
 		operator Pipeline();
 	};
+
+	class Nop : public Stage {
+	public:
+		Nop();
+		void validate() override;
+		void codegen(llvm::Module *module) override;
+		static Nop& make();
+	};
+
 }
 
 std::ostream& operator<<(std::ostream& os, seq::Stage& stage);

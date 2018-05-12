@@ -27,6 +27,7 @@
 
 namespace seq {
 	namespace stageutil {
+		Nop& nop();
 		Copy& copy();
 		Filter& filter(Func& func);
 		Op& op(std::string name, SeqOp op);
@@ -50,7 +51,9 @@ namespace seq {
 		Deserialize& deser(types::Type& type, std::string filename);
 		ExprStage& expr(Expr *expr);
 		CellStage& cell(Cell *cell);
-		AssignStage& assign(Cell *cell, Expr *expr);
+		AssignStage& assign(Cell *cell, Expr *value);
+		AssignIndexStage& assignindex(Expr *array, Expr *idx, Expr *value);
+		AssignMemberStage& assignmemb(Cell *cell, seq_int_t idx, Expr *value);
 		Capture& capture(void *addr);
 		Source& source();
 	}

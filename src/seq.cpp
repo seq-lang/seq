@@ -188,7 +188,7 @@ SeqModule::SeqModule(bool standalone) :
 {
 	if (!standalone)
 		for (auto& out : outs)
-			out = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+			out = makeValMap();
 }
 
 SeqModule::~SeqModule()

@@ -14,7 +14,7 @@ Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock *block)
 {
 	IRBuilder<> builder(block);
 
-	auto outs = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	auto outs = makeValMap();
 	Value *arr = this->arr->codegen(base, block);
 	Value *idx = this->idx->codegen(base, block);
 	Value *ptr = builder.CreateExtractValue(arr, 1);
@@ -32,4 +32,14 @@ types::Type *ArrayLookupExpr::getType() const
 		return arrType->getBaseType();
 
 	throw exc::SeqException("expected array, got '" + type->getName() + "'");
+}
+
+Expr *ArrayLookupExpr::getArr()
+{
+	return arr;
+}
+
+Expr *ArrayLookupExpr::getIdx()
+{
+	return idx;
 }

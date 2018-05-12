@@ -56,8 +56,8 @@ void Chunk::codegen(Module *module)
 	auto *type = dynamic_cast<types::ArrayType *>(getInType());
 	assert(type != nullptr);
 
-	ValMap firstInChunk = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
-	ValMap firstInChunkKey = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	ValMap firstInChunk = makeValMap();
+	ValMap firstInChunkKey = makeValMap();
 	type->getBaseType()->codegenLoad(getBase(),
 	                                 firstInChunk,
 	                                 body,
@@ -81,8 +81,8 @@ void Chunk::codegen(Module *module)
 		BranchInst *branch2 = builder.CreateCondBr(cond2, body2, body2);  // we set false-branch below
 		builder.SetInsertPoint(body2);
 
-		ValMap nextInChunk = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
-		ValMap nextInChunkKey = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		ValMap nextInChunk = makeValMap();
+		ValMap nextInChunkKey = makeValMap();
 		type->getBaseType()->codegenLoad(getBase(),
 		                                 nextInChunk,
 		                                 body2,

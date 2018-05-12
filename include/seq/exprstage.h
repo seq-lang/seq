@@ -36,6 +36,28 @@ namespace seq {
 		static AssignStage& make(Cell *cell, Expr *value);
 	};
 
+	class AssignIndexStage : public Stage {
+	private:
+		Expr *array;
+		Expr *idx;
+		Expr *value;
+	public:
+		explicit AssignIndexStage(Expr *array, Expr *idx, Expr *value);
+		void codegen(llvm::Module *module) override;
+		static AssignIndexStage& make(Expr *array, Expr *idx, Expr *value);
+	};
+
+	class AssignMemberStage : public Stage {
+	private:
+		Cell *cell;
+		seq_int_t idx;
+		Expr *value;
+	public:
+		explicit AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value);
+		void codegen(llvm::Module *module) override;
+		static AssignMemberStage& make(Cell *cell, seq_int_t idx, Expr *value);
+	};
+
 }
 
 #endif /* SEQ_EXPRSTAGE_H */

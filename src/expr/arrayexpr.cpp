@@ -41,7 +41,7 @@ Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock *block)
 	builder.CreateStore(ptr, ptrVar);
 	builder.CreateStore(len, lenVar);
 
-	auto outs = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	auto outs = makeValMap();
 	outs->insert({SeqData::ARRAY, ptrVar});
 	outs->insert({SeqData::LEN, lenVar});
 	return type->pack(base, outs, block);

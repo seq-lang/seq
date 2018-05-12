@@ -45,7 +45,7 @@ void types::RecordType::callSerialize(BaseFunc *base,
 	Value *rec = builder.CreateLoad(getSafe(outs, SeqData::RECORD));
 
 	for (int i = 0; i < types.size(); i++) {
-		auto subOuts = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		auto subOuts = makeValMap();
 		Value *elem = builder.CreateExtractValue(rec, i);
 		types[i]->unpack(base, elem, subOuts, block);
 		types[i]->callSerialize(base, subOuts, fp, block);
@@ -62,7 +62,7 @@ void types::RecordType::callDeserialize(BaseFunc *base,
 	Value *rec = UndefValue::get(getLLVMType(context));
 
 	for (int i = 0; i < types.size(); i++) {
-		auto subOuts = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		auto subOuts = makeValMap();
 		types[i]->callDeserialize(base, subOuts, fp, block);
 		Value *elem = types[i]->pack(base, subOuts, block);
 		rec = builder.CreateInsertValue(rec, elem, i);

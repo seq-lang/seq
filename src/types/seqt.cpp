@@ -255,7 +255,7 @@ void types::BaseSeqType::callSerialize(BaseFunc *base,
 	Value *seq = builder.CreateLoad(getSafe(outs, getKey()));
 	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
 
-	auto subOuts = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	auto subOuts = makeValMap();
 	IntType::get()->unpack(base, len, subOuts, block);
 	IntType::get()->callSerialize(base, subOuts, fp, block);
 	builder.CreateCall(writeFunc, {seq, len, oneLLVM(context), fp});
@@ -289,7 +289,7 @@ void types::BaseSeqType::callDeserialize(BaseFunc *base,
 
 	IRBuilder<> builder(block);
 
-	auto subOuts = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	auto subOuts = makeValMap();
 	IntType::get()->callDeserialize(base, subOuts, fp, block);
 	Value *len = builder.CreateLoad(getSafe(subOuts, SeqData::INT));
 	Value *seq = builder.CreateCall(allocFunc, {len});

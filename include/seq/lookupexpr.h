@@ -12,6 +12,9 @@ namespace seq {
 		ArrayLookupExpr(Expr *arr, Expr *idx);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
 		types::Type *getType() const override;
+
+		Expr *getArr();
+		Expr *getIdx();
 	};
 }
 

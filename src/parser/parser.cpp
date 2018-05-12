@@ -432,6 +432,15 @@ struct action<literal_string> {
 };
 
 template<>
+struct action<nop_stage> {
+	static void apply0(ParseState& state)
+	{
+		Pipeline p = stageutil::nop();
+		state.add(p);
+	}
+};
+
+template<>
 struct action<call_stage> {
 	static void apply0(ParseState& state)
 	{
@@ -1186,6 +1195,67 @@ struct control<assign_stmt> : pegtl::normal<assign_stmt>
 
 		Cell *cell = ent.value.cell;
 		Pipeline p = stageutil::assign(cell, vec[1].value.expr);
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		addPipelineGeneric(state.context(), p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<assign_member_stmt> : pegtl::normal<assign_member_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("sie");
+		SeqEntity ent = state.lookup(vec[0].value.name);
+
+		if (ent.type != SeqEntity::CELL)
+			throw exc::SeqException("can only mutate variables declared with 'var'");
+
+		Cell *cell = ent.value.cell;
+		Pipeline p = stageutil::assignmemb(cell, vec[1].value.ival, vec[2].value.expr);
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		addPipelineGeneric(state.context(), p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<assign_expr_stmt> : pegtl::normal<assign_expr_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ee");
+		auto *lookup = dynamic_cast<ArrayLookupExpr *>(vec[0].value.expr);
+
+		if (lookup == nullptr)
+			throw exc::SeqException("can only assign array indices, not general expressions");
+
+		Pipeline p = stageutil::assignindex(lookup->getArr(), lookup->getIdx(), vec[1].value.expr);
 		p.getHead()->setBase(getBaseFromEnt(state.base()));
 		addPipelineGeneric(state.context(), p);
 	}
