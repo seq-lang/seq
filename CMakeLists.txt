@@ -84,6 +84,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/basestage.h
                        include/seq/call.h
                        include/seq/capture.h
+                       include/seq/cell.h
                        include/seq/chunk.h
                        include/seq/collect.h
                        include/seq/common.h
@@ -136,6 +137,8 @@ add_library(seq SHARED include/seq/any.h
                        src/expr/recordexpr.cpp
                        src/expr/strexpr.cpp
                        src/expr/varexpr.cpp
+                       src/parser/grammar.h
+                       src/parser/parser.cpp
                        src/stages/basestage.cpp
                        src/stages/call.cpp
                        src/stages/capture.cpp
@@ -170,12 +173,11 @@ add_library(seq SHARED include/seq/any.h
                        src/types/seqt.cpp
                        src/types/types.cpp
                        src/types/void.cpp
+                       src/cell.cpp
                        src/exc.cpp
                        src/func.cpp
                        src/io.cpp
                        src/llvm.h
-                       src/parser/grammar.h
-                       src/parser/parser.cpp
                        src/pipeline.cpp
                        src/seq.cpp
                        src/seqdata.h

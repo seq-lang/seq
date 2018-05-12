@@ -49,6 +49,8 @@ namespace seq {
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type& type, std::string filename);
 		ExprStage& expr(Expr *expr);
+		CellStage& cell(Cell *cell);
+		AssignStage& assign(Cell *cell, Expr *expr);
 		Capture& capture(void *addr);
 		Source& source();
 	}

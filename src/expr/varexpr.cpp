@@ -16,3 +16,17 @@ types::Type *VarExpr::getType() const
 {
 	return var->getType(nullptr);
 }
+
+CellExpr::CellExpr(Cell *cell) : cell(cell)
+{
+}
+
+Value *CellExpr::codegen(BaseFunc *base, BasicBlock *block)
+{
+	return cell->load(block);
+}
+
+types::Type *CellExpr::getType() const
+{
+	return cell->getType();
+}

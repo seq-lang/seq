@@ -13,6 +13,7 @@
 #include "pipeline.h"
 #include "stageutil.h"
 #include "var.h"
+#include "cell.h"
 #include "mem.h"
 #include "lambda.h"
 #include "io.h"

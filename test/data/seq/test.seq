@@ -39,7 +39,9 @@ end
 "hello world" |> print
 42 |> print
 -13 |> print
-4.2 |> print
-.42 |> print
+var x = 4.2
+x |> print
+x = .42
+x |> print
 true |> print
 false |> print

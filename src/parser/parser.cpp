@@ -18,6 +18,7 @@ struct SeqEntity {
 		NAME,
 		PIPELINE,
 		VAR,
+		CELL,
 		FUNC,
 		TYPE,
 		MODULE,
@@ -32,6 +33,7 @@ struct SeqEntity {
 		U(const char *name) : name(name) {}
 		U(Pipeline pipeline) : pipeline(pipeline) {}
 		U(Var *var) : var(var) {}
+		U(Cell *cell) : cell(cell) {}
 		U(Func *func) : func(func) {}
 		U(types::Type *type) : type(type) {}
 		U(SeqModule *module) : module(module) {}
@@ -43,6 +45,7 @@ struct SeqEntity {
 		const char *name;
 		Pipeline pipeline;
 		Var *var;
+		Cell *cell;
 		Func *func;
 		types::Type *type;
 		SeqModule *module;
@@ -56,6 +59,7 @@ struct SeqEntity {
 	SeqEntity(const char * name) : type(SeqEntity::NAME), value(name) {}
 	SeqEntity(Pipeline pipeline) : type(SeqEntity::PIPELINE), value(pipeline) {}
 	SeqEntity(Var *var) : type(SeqEntity::VAR), value(var) {}
+	SeqEntity(Cell *cell) : type(SeqEntity::CELL), value(cell) {}
 	SeqEntity(Func *func) : type(SeqEntity::FUNC), value(func) {}
 	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
 	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
@@ -219,6 +223,7 @@ public:
 				return ent;
 		}
 		assert(0);
+		return {};
 	}
 
 	void setModule(SeqModule *module)
@@ -261,6 +266,9 @@ std::ostream& operator<<(std::ostream& os, const SeqEntity& ent)
 			break;
 		case SeqEntity::VAR:
 			os << "(var)";
+			break;
+		case SeqEntity::CELL:
+			os << "(cell)";
 			break;
 		case SeqEntity::FUNC:
 			os << "(func)";
@@ -574,10 +582,19 @@ struct action<var_expr> {
 		auto vec = state.get("s");
 		SeqEntity ent = state.lookup(vec[0].value.name);
 
-		if (ent.type != SeqEntity::VAR)
-			throw exc::SeqException("name '" + std::string(vec[0].value.name) + "' does not refer to a variable");
+		Expr *expr = nullptr;
+		switch (ent.type) {
+			case SeqEntity::VAR:
+				expr = new VarExpr(ent.value.var);
+				break;
+			case SeqEntity::CELL:
+				expr = new CellExpr(ent.value.cell);
+				break;
+			default:
+				throw exc::SeqException("name '" + std::string(vec[0].value.name) + "' does not refer to a variable");
 
-		Expr *expr = new VarExpr(ent.value.var);
+		}
+
 		state.add(expr);
 	}
 };
@@ -1113,6 +1130,64 @@ struct control<var_assign_expr> : pegtl::normal<var_assign_expr>
 		p = addPipelineGeneric(state.context(), p);
 		*var = p;
 		state.sym(vec[0].value.name, var);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<cell_decl> : pegtl::normal<cell_decl>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("se");
+		Cell *cell = new Cell(getBaseFromEnt(state.base()), vec[1].value.expr);
+		Pipeline p = stageutil::cell(cell);
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		addPipelineGeneric(state.context(), p);
+		state.sym(vec[0].value.name, cell);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<assign_stmt> : pegtl::normal<assign_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("se");
+		SeqEntity ent = state.lookup(vec[0].value.name);
+
+		if (ent.type != SeqEntity::CELL)
+			throw exc::SeqException("can only reassign variables declared with 'var'");
+
+		Cell *cell = ent.value.cell;
+		Pipeline p = stageutil::assign(cell, vec[1].value.expr);
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		addPipelineGeneric(state.context(), p);
 	}
 
 	template<typename Input>

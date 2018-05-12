@@ -14,14 +14,15 @@ struct comment : pegtl::disable<pegtl::one<'#'>, short_comment> {};
 struct sep : pegtl::sor<pegtl::ascii::space, comment> {};
 struct seps : pegtl::star<sep> {};
 
-struct str_var : TAO_PEGTL_STRING("let") {};
+struct str_let : TAO_PEGTL_STRING("let") {};
+struct str_var : TAO_PEGTL_STRING("var") {};
 struct str_end : TAO_PEGTL_STRING("end") {};
 struct str_fun : TAO_PEGTL_STRING("fun") {};
 struct str_source : TAO_PEGTL_STRING("source") {};
 struct str_true : TAO_PEGTL_STRING("true") {};
 struct str_false : TAO_PEGTL_STRING("false") {};
 
-struct str_keyword : pegtl::sor<str_var, str_end, str_fun, str_source, str_true, str_false> {};
+struct str_keyword : pegtl::sor<str_let, str_var, str_end, str_fun, str_source, str_true, str_false> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword>, pegtl::identifier> {};
 
@@ -146,20 +147,25 @@ struct func_stmt : pegtl::seq<func_decl, seps, statement_seq, str_end> {};
 /*
  * Modules
  */
-struct var_assign;
+struct var_decl;
+struct cell_decl;
 struct pipeline_module_stmt_toplevel : pegtl::seq<source_op, seps, pipeline> {};
 struct pipeline_module_stmt_nested : pegtl::seq<source_op, seps, pipeline> {};
 struct pipeline_expr_stmt_toplevel : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
 struct pipeline_expr_stmt_nested : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
-struct statement : pegtl::sor<source_block, var_assign, func_stmt, pipeline_module_stmt_toplevel, pipeline_expr_stmt_toplevel> {};
+
+struct assign_stmt : pegtl::seq<name, seps, pegtl::one<'='>, seps, expr> {};
+
+struct statement : pegtl::sor<source_block, var_decl, cell_decl, func_stmt, assign_stmt, pipeline_module_stmt_toplevel, pipeline_expr_stmt_toplevel> {};
 struct module : pegtl::seq<statement_seq> {};
 
 /*
  * Assignment
  */
-struct var_assign_pipeline : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, pegtl::sor<pipeline_module_stmt_nested, pipeline_expr_stmt_nested>> {};
-struct var_assign_expr : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, expr> {};
-struct var_assign : pegtl::sor<var_assign_pipeline, var_assign_expr> {};
+struct var_assign_pipeline : pegtl::seq<str_let, seps, name, seps, pegtl::one<'='>, seps, pegtl::sor<pipeline_module_stmt_nested, pipeline_expr_stmt_nested>> {};
+struct var_assign_expr : pegtl::seq<str_let, seps, name, seps, pegtl::one<'='>, seps, expr> {};
+struct var_decl : pegtl::sor<var_assign_pipeline, var_assign_expr> {};
+struct cell_decl : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, expr> {};
 
 /*
  * Top-level grammar

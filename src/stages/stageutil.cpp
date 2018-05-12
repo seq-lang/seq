@@ -113,6 +113,16 @@ ExprStage& stageutil::expr(Expr *expr)
 	return ExprStage::make(expr);
 }
 
+CellStage& stageutil::cell(Cell *cell)
+{
+	return CellStage::make(cell);
+}
+
+AssignStage& stageutil::assign(Cell *cell, Expr *value)
+{
+	return AssignStage::make(cell, value);
+}
+
 Capture& stageutil::capture(void *addr)
 {
 	return Capture::make(addr);
