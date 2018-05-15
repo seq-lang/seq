@@ -32,7 +32,7 @@ struct SeqEntity {
 		U(seq_int_t ival) : ival(ival) {}
 		U(double fval) : fval(fval) {}
 		U(bool bval) : bval(bval) {}
-		U(std::string name) : name(name) {}
+		U(std::string name) : name(std::move(name)) {}
 		U(Pipeline pipeline) : pipeline(pipeline) {}
 		U(Var *var) : var(var) {}
 		U(Cell *cell) : cell(cell) {}
@@ -61,7 +61,7 @@ struct SeqEntity {
 	SeqEntity(seq_int_t ival) : type(SeqEntity::INT), value(ival) {}
 	SeqEntity(double fval) : type(SeqEntity::FLOAT), value(fval) {}
 	SeqEntity(bool bval) : type(SeqEntity::BOOL), value(bval) {}
-	SeqEntity(std::string name) : type(SeqEntity::NAME), value(name) {}
+	SeqEntity(std::string name) : type(SeqEntity::NAME), value(std::move(name)) {}
 	SeqEntity(Pipeline pipeline) : type(SeqEntity::PIPELINE), value(pipeline) {}
 	SeqEntity(Var *var) : type(SeqEntity::VAR), value(var) {}
 	SeqEntity(Cell *cell) : type(SeqEntity::CELL), value(cell) {}
@@ -71,7 +71,7 @@ struct SeqEntity {
 	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
 	SeqEntity(Op op) : type(SeqEntity::OP), value(op) {}
 
-	const SeqEntity& operator=(const SeqEntity& ent)
+	SeqEntity& operator=(const SeqEntity& ent)
 	{
 		type = ent.type;
 		switch (type) {
@@ -115,7 +115,7 @@ struct SeqEntity {
 				break;
 		}
 
-		return ent;
+		return *this;
 	}
 
 	SeqEntity(const SeqEntity& ent)
@@ -123,7 +123,27 @@ struct SeqEntity {
 		*this = ent;
 	}
 
-	~SeqEntity() {}
+	~SeqEntity()=default;
+
+	Pipeline add(Pipeline p)
+	{
+		switch (type) {
+			case SeqEntity::MODULE:
+				return *value.module | p;
+			case SeqEntity::FUNC:
+				return *value.func | p;
+			case SeqEntity::PIPELINE:
+				value.pipeline | p;
+				break;
+			case SeqEntity::VAR:
+				p = *value.var | p;
+				break;
+			default:
+				throw exc::SeqException("misplaced pipeline");
+		}
+
+		return p;
+	}
 };
 
 std::ostream& operator<<(std::ostream& os, const SeqEntity& ent);
@@ -755,25 +775,6 @@ struct action<record_type> {
 /*
  * Control
  */
-static Pipeline addPipelineGeneric(SeqEntity ent, Pipeline p)
-{
-	switch (ent.type) {
-		case SeqEntity::MODULE:
-			return *ent.value.module | p;
-		case SeqEntity::FUNC:
-			return *ent.value.func | p;
-		case SeqEntity::PIPELINE:
-			ent.value.pipeline | p;
-			break;
-		case SeqEntity::VAR:
-			p = *ent.value.var | p;
-			break;
-		default:
-			throw exc::SeqException("misplaced pipeline");
-	}
-
-	return p;
-}
 
 template<typename Rule>
 struct control : pegtl::normal<Rule> {};
@@ -1060,7 +1061,7 @@ struct control<source_block> : pegtl::normal<source_block>
 		state.exit();
 
 		SeqEntity context = state.context();
-		addPipelineGeneric(context, ent.value.pipeline);
+		context.add(ent.value.pipeline);
 	}
 
 	template<typename Input>
@@ -1087,7 +1088,7 @@ struct control<pipeline_module_stmt_toplevel> : pegtl::normal<pipeline_module_st
 		auto vec = state.get("p");
 		SeqEntity ent = state.context();
 		Pipeline p = vec[0].value.pipeline;
-		addPipelineGeneric(ent, p);
+		ent.add(p);
 	}
 
 	template<typename Input>
@@ -1112,7 +1113,7 @@ struct control<pipeline_module_stmt_nested> : pegtl::normal<pipeline_module_stmt
 		auto vec = state.get("p");
 		SeqEntity ent = state.context();
 		Pipeline p = vec[0].value.pipeline;
-		p = addPipelineGeneric(ent, p);
+		p = ent.add(p);
 		state.add(p);
 	}
 
@@ -1138,7 +1139,7 @@ struct control<pipeline_expr_stmt_toplevel> : pegtl::normal<pipeline_expr_stmt_t
 		auto vec = state.get("ep");
 		SeqEntity ent = state.context();
 		Pipeline p = stageutil::expr(vec[0].value.expr) | vec[1].value.pipeline;
-		addPipelineGeneric(ent, p);
+		ent.add(p);
 	}
 
 	template<typename Input>
@@ -1163,7 +1164,7 @@ struct control<pipeline_expr_stmt_nested> : pegtl::normal<pipeline_expr_stmt_nes
 		auto vec = state.get("ep");
 		SeqEntity ent = state.context();
 		Pipeline p = stageutil::expr(vec[0].value.expr) | vec[1].value.pipeline;
-		p = addPipelineGeneric(ent, p);
+		p = ent.add(p);
 		state.add(p);
 	}
 
@@ -1217,7 +1218,7 @@ struct control<var_assign_expr> : pegtl::normal<var_assign_expr>
 		Pipeline p = stageutil::expr(vec[1].value.expr);
 		p.getHead()->setBase(getBaseFromEnt(state.base()));
 		auto *var = new Var(true);
-		p = addPipelineGeneric(state.context(), p);
+		p = state.context().add(p);
 		*var = p;
 		state.sym(vec[0].value.name, var);
 	}
@@ -1245,7 +1246,7 @@ struct control<cell_decl> : pegtl::normal<cell_decl>
 		Cell *cell = new Cell(getBaseFromEnt(state.base()), vec[1].value.expr);
 		Pipeline p = stageutil::cell(cell);
 		p.getHead()->setBase(getBaseFromEnt(state.base()));
-		addPipelineGeneric(state.context(), p);
+		state.context().add(p);
 		state.sym(vec[0].value.name, cell);
 	}
 
@@ -1277,7 +1278,7 @@ struct control<assign_stmt> : pegtl::normal<assign_stmt>
 		Cell *cell = ent.value.cell;
 		Pipeline p = stageutil::assign(cell, vec[1].value.expr);
 		p.getHead()->setBase(getBaseFromEnt(state.base()));
-		addPipelineGeneric(state.context(), p);
+		state.context().add(p);
 	}
 
 	template<typename Input>
@@ -1308,7 +1309,7 @@ struct control<assign_member_stmt> : pegtl::normal<assign_member_stmt>
 		Cell *cell = ent.value.cell;
 		Pipeline p = stageutil::assignmemb(cell, vec[1].value.ival, vec[2].value.expr);
 		p.getHead()->setBase(getBaseFromEnt(state.base()));
-		addPipelineGeneric(state.context(), p);
+		state.context().add(p);
 	}
 
 	template<typename Input>
@@ -1338,7 +1339,7 @@ struct control<assign_expr_stmt> : pegtl::normal<assign_expr_stmt>
 
 		Pipeline p = stageutil::assignindex(lookup->getArr(), lookup->getIdx(), vec[1].value.expr);
 		p.getHead()->setBase(getBaseFromEnt(state.base()));
-		addPipelineGeneric(state.context(), p);
+		state.context().add(p);
 	}
 
 	template<typename Input>
