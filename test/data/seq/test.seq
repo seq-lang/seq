@@ -37,7 +37,7 @@ source args[0]:
 end
 
 "hello world" |> print
-42 |> print
+42 + 2.2 |> print
 -13 |> print
 var x = 4.2
 x |> print

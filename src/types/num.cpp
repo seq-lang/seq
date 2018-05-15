@@ -84,54 +84,54 @@ void types::IntType::initOps()
 
 	vtable.ops = {
 		// int ops
-		{uop("~"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+		{uop("~"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateNot(lhs);
 		}},
 
-		{uop("-"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+		{uop("-"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateNeg(lhs);
 		}},
 
 		// int,int ops
-		{bop("*"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+		{bop("*"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateMul(lhs, rhs);
 		}},
 
-		{bop("/"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+		{bop("/"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateSDiv(lhs, rhs);
 		}},
 
-		{bop("%"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+		{bop("%"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateSRem(lhs, rhs);
 		}},
 
-		{bop("+"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+		{bop("+"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateAdd(lhs, rhs);
 		}},
 
-		{bop("-"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+		{bop("-"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateSub(lhs, rhs);
 		}},
 
 		// int,float ops
-		{bop("*"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
-			return b.CreateMul(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("*"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFMul(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("/"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
-			return b.CreateSDiv(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("/"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFDiv(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("%"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
-			return b.CreateSRem(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("%"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFRem(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("+"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
-			return b.CreateAdd(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("+"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFAdd(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("-"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
-			return b.CreateSub(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("-"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFSub(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
 		}},
 	};
 }
