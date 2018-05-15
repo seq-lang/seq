@@ -7,11 +7,11 @@ using namespace llvm;
 ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :
     arr(arr), idx(idx)
 {
-	idx->ensure(types::IntType::get());
 }
 
 Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock *block)
 {
+	idx->ensure(types::IntType::get());
 	IRBuilder<> builder(block);
 
 	auto outs = makeValMap();
