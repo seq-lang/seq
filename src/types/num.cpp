@@ -77,6 +77,65 @@ Value *types::BoolType::checkEq(BaseFunc *base,
 	return builder.CreateICmpEQ(b1, b2);
 }
 
+void types::IntType::initOps()
+{
+	if (!vtable.ops.empty())
+		return;
+
+	vtable.ops = {
+		// int ops
+		{uop("~"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateNot(lhs);
+		}},
+
+		{uop("-"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateNeg(lhs);
+		}},
+
+		// int,int ops
+		{bop("*"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateMul(lhs, rhs);
+		}},
+
+		{bop("/"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateSDiv(lhs, rhs);
+		}},
+
+		{bop("%"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateSRem(lhs, rhs);
+		}},
+
+		{bop("+"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateAdd(lhs, rhs);
+		}},
+
+		{bop("-"), &Int, &Int, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateSub(lhs, rhs);
+		}},
+
+		// int,float ops
+		{bop("*"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateMul(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		}},
+
+		{bop("/"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateSDiv(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		}},
+
+		{bop("%"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateSRem(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		}},
+
+		{bop("+"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateAdd(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		}},
+
+		{bop("-"), &Float, &Float, [](Value *lhs, llvm::Value *rhs, llvm::IRBuilder<>& b) {
+			return b.CreateSub(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		}},
+	};
+}
+
 Type *types::IntType::getLLVMType(LLVMContext& context) const
 {
 	return seqIntLLVM(context);

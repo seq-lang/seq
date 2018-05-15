@@ -3,7 +3,7 @@
 
 using namespace seq;
 
-RevComp::RevComp() : Op("revcomp", &util::revcomp)
+RevComp::RevComp() : OpStage("revcomp", &util::revcomp)
 {
 }
 

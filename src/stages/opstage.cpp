@@ -1,17 +1,17 @@
 #include <string>
 #include <vector>
 #include "seq/exc.h"
-#include "seq/op.h"
+#include "seq/opstage.h"
 
 using namespace seq;
 using namespace llvm;
 
-Op::Op(std::string name, SeqOp op) :
+OpStage::OpStage(std::string name, SeqOp op) :
     Stage(std::move(name), types::SeqType::get(), types::SeqType::get()), op(op)
 {
 }
 
-void Op::codegen(Module *module)
+void OpStage::codegen(Module *module)
 {
 	ensurePrev();
 	validate();
@@ -38,13 +38,13 @@ void Op::codegen(Module *module)
 	prev->setAfter(getAfter());
 }
 
-void Op::finalize(Module *module, ExecutionEngine *eng)
+void OpStage::finalize(Module *module, ExecutionEngine *eng)
 {
 	eng->addGlobalMapping(func, (void *)op);
 	Stage::finalize(module, eng);
 }
 
-Op& Op::make(std::string name, SeqOp op)
+OpStage& OpStage::make(std::string name, SeqOp op)
 {
-	return *new Op(std::move(name), op);
+	return *new OpStage(std::move(name), op);
 }

@@ -3,9 +3,10 @@
 
 #include <string>
 #include <map>
+#include <functional>
 #include "llvm.h"
 #include "seqdata.h"
-#include "exc.h"
+#include "ops.h"
 #include "util.h"
 
 namespace seq {
@@ -13,11 +14,16 @@ namespace seq {
 	class BaseFunc;
 	class Mem;
 
+	struct OpSpec;
+
 	namespace types {
+
+		class Type;
 
 		struct VTable {
 			void *copy = nullptr;
 			void *print = nullptr;
+			std::vector<OpSpec> ops;
 		};
 
 		class Type {
@@ -119,6 +125,10 @@ namespace seq {
 			                               llvm::Value *ptr,
 			                               llvm::Value *idx);
 
+			virtual void initOps();
+			virtual OpSpec findUOp(const std::string& symbol);
+			virtual OpSpec findBOp(const std::string& symbol, Type *rhsType);
+
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;
 			virtual bool isChildOf(Type *type) const;
@@ -131,6 +141,14 @@ namespace seq {
 		};
 
 	}
+
+	struct OpSpec {
+		Op op;
+		types::Type *rhsType;
+		types::Type *outType;
+		std::function<llvm::Value *(llvm::Value *, llvm::Value *, llvm::IRBuilder<>&)> codegen;
+	};
+
 }
 
 #endif /* SEQ_TYPES_H */

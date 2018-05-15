@@ -299,6 +299,38 @@ void types::Type::codegenIndexStore(BaseFunc *base,
 	throw exc::SeqException("cannot index into type '" + getName() + "'");
 }
 
+void types::Type::initOps()
+{
+}
+
+OpSpec types::Type::findUOp(const std::string &symbol)
+{
+	initOps();
+	Op op = uop(symbol);
+
+	for (auto& e : vtable.ops) {
+		if (e.op == op)
+			return e;
+	}
+
+	throw exc::SeqException("type '" + getName() + "' does not support operator '" + symbol + "'");
+}
+
+OpSpec types::Type::findBOp(const std::string &symbol, types::Type *rhsType)
+{
+	initOps();
+	Op op = bop(symbol);
+
+	for (auto& e : vtable.ops) {
+		if (e.op == op && rhsType->isChildOf(e.rhsType))
+			return e;
+	}
+
+	throw exc::SeqException(
+	  "type '" + getName() + "' does not support operator '" +
+	    symbol + "' applied to type '" + rhsType->getName() + "'");
+}
+
 bool types::Type::is(types::Type *type) const
 {
 	return getName() == type->getName();

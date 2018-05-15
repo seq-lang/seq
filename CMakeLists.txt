@@ -107,7 +107,8 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/mem.h
                        include/seq/num.h
                        include/seq/numexpr.h
-                       include/seq/op.h
+                       include/seq/ops.h
+                       include/seq/opstage.h
                        include/seq/parser.h
                        include/seq/pipeline.h
                        include/seq/print.h
@@ -155,7 +156,7 @@ add_library(seq SHARED include/seq/any.h
                        src/stages/len.cpp
                        src/stages/makerec.cpp
                        src/stages/mem.cpp
-                       src/stages/op.cpp
+                       src/stages/opstage.cpp
                        src/stages/print.cpp
                        src/stages/range.cpp
                        src/stages/revcomp.cpp
@@ -178,6 +179,7 @@ add_library(seq SHARED include/seq/any.h
                        src/func.cpp
                        src/io.cpp
                        src/llvm.h
+                       src/ops.cpp
                        src/pipeline.cpp
                        src/seq.cpp
                        src/seqdata.h

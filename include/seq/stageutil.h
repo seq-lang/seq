@@ -4,7 +4,7 @@
 #include "stage.h"
 #include "copy.h"
 #include "filter.h"
-#include "op.h"
+#include "opstage.h"
 #include "hash.h"
 #include "print.h"
 #include "revcomp.h"
@@ -30,7 +30,7 @@ namespace seq {
 		Nop& nop();
 		Copy& copy();
 		Filter& filter(Func& func);
-		Op& op(std::string name, SeqOp op);
+		OpStage& op(std::string name, SeqOp op);
 		Hash& hash(std::string name, SeqHash hash);
 		Print& print();
 		RevComp& revcomp();

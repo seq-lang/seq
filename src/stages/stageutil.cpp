@@ -18,9 +18,9 @@ Filter& stageutil::filter(Func& func)
 	return Filter::make(func);
 }
 
-Op& stageutil::op(std::string name, SeqOp op)
+OpStage& stageutil::op(std::string name, SeqOp op)
 {
-	return Op::make(std::move(name), op);
+	return OpStage::make(std::move(name), op);
 }
 
 Hash& stageutil::hash(std::string name, SeqHash hash)

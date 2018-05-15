@@ -1,7 +1,7 @@
 #ifndef SEQ_PRINT_H
 #define SEQ_PRINT_H
 
-#include "op.h"
+#include "opstage.h"
 
 namespace seq {
 	class Print : public Stage {

@@ -5,15 +5,15 @@
 #include "stage.h"
 
 namespace seq {
-	class Op : public Stage {
+	class OpStage : public Stage {
 	private:
 		llvm::Function *func;
 		SeqOp op;
 	public:
-		Op(std::string name, SeqOp op);
+		OpStage(std::string name, SeqOp op);
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
-		static Op& make(std::string name, SeqOp op);
+		static OpStage& make(std::string name, SeqOp op);
 	};
 }
 

@@ -91,6 +91,7 @@ struct type : pegtl::sor<type_non_void, void_type> {};
  */
 struct natural : pegtl::seq<pegtl::range<'1','9'>, pegtl::star<pegtl::digit>> {};
 struct expr;
+struct atomic_expr;
 struct int_expr : pegtl::seq<integer> {};
 struct float_expr : pegtl::seq<numeral> {};
 struct true_expr : pegtl::seq<str_true> {};
@@ -98,7 +99,7 @@ struct false_expr : pegtl::seq<str_false> {};
 struct bool_expr : pegtl::sor<true_expr, false_expr> {};
 struct str_expr : pegtl::seq<literal_string> {};
 struct var_expr : pegtl::seq<name> {};
-struct atomic_expr : pegtl::sor<bool_expr, float_expr, int_expr, str_expr, var_expr> {};
+struct literal_expr : pegtl::sor<bool_expr, float_expr, int_expr, str_expr, var_expr> {};
 struct array_expr : pegtl::seq<type_non_void, seps, pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
 struct record_expr : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>, pegtl::one<')'>> {};
 struct paren_expr : pegtl::seq<pegtl::one<'('>, seps, expr, seps, pegtl::one<')'>> {};
@@ -108,8 +109,37 @@ struct index_tail : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'
 struct elem_tail : pegtl::seq<pegtl::one<'.'>, seps, natural> {};
 struct expr_tail : pegtl::sor<index_tail, elem_tail> {};
 
-struct expr_head : pegtl::sor<paren_expr, record_expr, array_expr, atomic_expr> {};
-struct expr : pegtl::seq<expr_head, pegtl::star<seps, expr_tail>> {};
+struct atomic_expr_head : pegtl::sor<paren_expr, record_expr, array_expr, literal_expr> {};
+struct atomic_expr : pegtl::seq<atomic_expr_head, pegtl::star<seps, expr_tail>> {};
+
+struct uop_bitnot : TAO_PEGTL_STRING("~") {};
+struct uop_not : TAO_PEGTL_STRING("!") {};
+struct uop_minus : TAO_PEGTL_STRING("-") {};
+struct uop_plus : TAO_PEGTL_STRING("+") {};
+struct op_uop : pegtl::sor<uop_bitnot, uop_not, uop_minus, uop_plus> {};
+
+struct bop_mul : TAO_PEGTL_STRING("*") {};
+struct bop_div : TAO_PEGTL_STRING("/") {};
+struct bop_mod : TAO_PEGTL_STRING("%") {};
+struct bop_add : TAO_PEGTL_STRING("+") {};
+struct bop_sub : TAO_PEGTL_STRING("-") {};
+struct bop_shl : TAO_PEGTL_STRING("<<") {};
+struct bop_shr : TAO_PEGTL_STRING(">>") {};
+struct bop_lt : TAO_PEGTL_STRING("<") {};
+struct bop_gt : TAO_PEGTL_STRING(">") {};
+struct bop_le : TAO_PEGTL_STRING("<=") {};
+struct bop_ge : TAO_PEGTL_STRING(">=") {};
+struct bop_eq : TAO_PEGTL_STRING("==") {};
+struct bop_ne : TAO_PEGTL_STRING("!=") {};
+struct bop_bitand : TAO_PEGTL_STRING("&") {};
+struct bop_xor : TAO_PEGTL_STRING("^") {};
+struct bop_bitor : TAO_PEGTL_STRING("|") {};
+struct bop_and : TAO_PEGTL_STRING("&&") {};
+struct bop_or : TAO_PEGTL_STRING("||") {};
+struct op_bop : pegtl::sor<bop_mul, bop_div, bop_mod, bop_add, bop_sub, bop_shl, bop_shr, bop_le, bop_ge, bop_lt, bop_gt, bop_eq, bop_ne, bop_and, bop_or, bop_bitand, bop_xor, bop_bitor> {};
+
+struct pipe_op;
+struct expr : pegtl::list<pegtl::seq<pegtl::star<op_uop, seps>, atomic_expr>, pegtl::seq<seps, pegtl::not_at<pipe_op>, op_bop, seps>> {};
 
 /*
  * Stages and Pipelines
@@ -120,6 +150,7 @@ struct statement_seq : pegtl::star<statement, seps> {};
 struct pipeline;
 struct pipe_op : TAO_PEGTL_STRING("|>") {};
 struct source_op : TAO_PEGTL_STRING("|") {};
+struct colon : TAO_PEGTL_STRING(":") {};
 
 struct nop_stage : pegtl::one<'.'> {};
 struct call_stage : pegtl::seq<name, seps, pegtl::one<'('>, seps, pegtl::one<')'>> {};
@@ -137,13 +168,13 @@ struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>
 struct pipeline : pegtl::seq<stage, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
 
 struct source_block_args : pegtl::sor<pegtl::seq<pegtl::one<'('>, seps, pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>>, expr> {};
-struct source_block : pegtl::seq<str_source, seps, source_block_args, seps, statement_seq, str_end> {};
+struct source_block : pegtl::seq<str_source, seps, source_block_args, seps, colon, seps, statement_seq, str_end> {};
 
 /*
  * Functions
  */
 struct func_decl : pegtl::seq<str_fun, seps, name, seps, pegtl::one<':'>, seps, type, seps, TAO_PEGTL_STRING("->"), seps, type> {};
-struct func_stmt : pegtl::seq<func_decl, seps, statement_seq, str_end> {};
+struct func_stmt : pegtl::seq<func_decl, seps, colon, seps, statement_seq, str_end> {};
 
 /*
  * Modules

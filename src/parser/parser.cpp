@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <stack>
+#include <queue>
 #include <map>
 #include <cassert>
 #include "grammar.h"
@@ -22,7 +23,8 @@ struct SeqEntity {
 		FUNC,
 		TYPE,
 		MODULE,
-		EXPR
+		EXPR,
+		OP
 	} type = EMPTY;
 
 	union U {
@@ -30,7 +32,7 @@ struct SeqEntity {
 		U(seq_int_t ival) : ival(ival) {}
 		U(double fval) : fval(fval) {}
 		U(bool bval) : bval(bval) {}
-		U(const char *name) : name(name) {}
+		U(std::string name) : name(name) {}
 		U(Pipeline pipeline) : pipeline(pipeline) {}
 		U(Var *var) : var(var) {}
 		U(Cell *cell) : cell(cell) {}
@@ -38,11 +40,13 @@ struct SeqEntity {
 		U(types::Type *type) : type(type) {}
 		U(SeqModule *module) : module(module) {}
 		U(Expr *expr) : expr(expr) {}
+		U(Op op) : op(std::move(op)) {}
+		~U() {}
 
 		seq_int_t ival;
 		double fval;
 		bool bval;
-		const char *name;
+		std::string name;
 		Pipeline pipeline;
 		Var *var;
 		Cell *cell;
@@ -50,13 +54,14 @@ struct SeqEntity {
 		types::Type *type;
 		SeqModule *module;
 		Expr *expr;
+		Op op;
 	} value;
 
 	SeqEntity() : type(EMPTY), value() {}
 	SeqEntity(seq_int_t ival) : type(SeqEntity::INT), value(ival) {}
 	SeqEntity(double fval) : type(SeqEntity::FLOAT), value(fval) {}
 	SeqEntity(bool bval) : type(SeqEntity::BOOL), value(bval) {}
-	SeqEntity(const char * name) : type(SeqEntity::NAME), value(name) {}
+	SeqEntity(std::string name) : type(SeqEntity::NAME), value(name) {}
 	SeqEntity(Pipeline pipeline) : type(SeqEntity::PIPELINE), value(pipeline) {}
 	SeqEntity(Var *var) : type(SeqEntity::VAR), value(var) {}
 	SeqEntity(Cell *cell) : type(SeqEntity::CELL), value(cell) {}
@@ -64,6 +69,61 @@ struct SeqEntity {
 	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
 	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
 	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
+	SeqEntity(Op op) : type(SeqEntity::OP), value(op) {}
+
+	const SeqEntity& operator=(const SeqEntity& ent)
+	{
+		type = ent.type;
+		switch (type) {
+			case SeqEntity::EMPTY:
+				break;
+			case SeqEntity::INT:
+				value.ival = ent.value.ival;
+				break;
+			case SeqEntity::FLOAT:
+				value.fval = ent.value.fval;
+				break;
+			case SeqEntity::BOOL:
+				value.bval = ent.value.bval;
+				break;
+			case SeqEntity::NAME:
+				value.name = ent.value.name;
+				break;
+			case SeqEntity::PIPELINE:
+				value.pipeline = ent.value.pipeline;
+				break;
+			case SeqEntity::VAR:
+				value.var = ent.value.var;
+				break;
+			case SeqEntity::CELL:
+				value.cell = ent.value.cell;
+				break;
+			case SeqEntity::FUNC:
+				value.func = ent.value.func;
+				break;
+			case SeqEntity::TYPE:
+				value.type = ent.value.type;
+				break;
+			case SeqEntity::MODULE:
+				value.module = ent.value.module;
+				break;
+			case SeqEntity::EXPR:
+				value.expr = ent.value.expr;
+				break;
+			case SeqEntity::OP:
+				value.op = ent.value.op;
+				break;
+		}
+
+		return ent;
+	}
+
+	SeqEntity(const SeqEntity& ent)
+	{
+		*this = ent;
+	}
+
+	~SeqEntity() {}
 };
 
 std::ostream& operator<<(std::ostream& os, const SeqEntity& ent);
@@ -150,9 +210,9 @@ public:
 		symbols.pop_back();
 	}
 
-	static void symadd(const char *name, SeqEntity ent, std::map<std::string, SeqEntity>& syms)
+	static void symadd(std::string name, SeqEntity ent, std::map<std::string, SeqEntity>& syms)
 	{
-		if (strcmp(name, "_") == 0)
+		if (name == "_")
 			throw exc::SeqException("symbol '_' is reserved and cannot be used");
 
 		if (syms.find(name) != syms.end())
@@ -161,19 +221,19 @@ public:
 		syms.insert({name, ent});
 	}
 
-	void sym(const char *name, SeqEntity ent)
+	void sym(std::string name, SeqEntity ent)
 	{
 		assert(!symbols.empty());
 		symadd(name, ent, symbols.back());
 	}
 
-	void symparent(const char *name, SeqEntity ent)
+	void symparent(std::string name, SeqEntity ent)
 	{
 		assert(symbols.size() >= 2);
 		symadd(name, ent, symbols[symbols.size() - 2]);
 	}
 
-	static SeqEntity lookupInTable(const char *name, SymTab symtab)
+	static SeqEntity lookupInTable(std::string name, SymTab symtab)
 	{
 		auto iter = symtab.find(name);
 
@@ -183,9 +243,9 @@ public:
 		return iter->second;
 	}
 
-	SeqEntity lookup(const char *name)
+	SeqEntity lookup(std::string name)
 	{
-		if (strcmp(name, "_") == 0)
+		if (name == "_")
 			return &_;  // this is our special variable for referring to prev outputs
 
 		for (auto it = symbols.rbegin(); it != symbols.rend(); ++it) {
@@ -281,6 +341,9 @@ std::ostream& operator<<(std::ostream& os, const SeqEntity& ent)
 			break;
 		case SeqEntity::EXPR:
 			os << "(expr)";
+			break;
+		case SeqEntity::OP:
+			os << (ent.value.op.binary ? "" : "u") << ent.value.op.symbol;
 			break;
 		default:
 			assert(0);
@@ -387,8 +450,7 @@ struct action<name> {
 	template<typename Input>
 	static void apply(const Input& in, ParseState& state)
 	{
-		const char *name = strdup(in.string().c_str());
-		state.add(name);
+		state.add(in.string());
 	}
 };
 
@@ -426,8 +488,7 @@ struct action<literal_string> {
 	template<typename Input>
 	static void apply(const Input& in, ParseState& state)
 	{
-		const char *name = strdup(unescape(in.string()).c_str());
-		state.add(name);
+		state.add(unescape(in.string()));
 	}
 };
 
@@ -605,6 +666,26 @@ struct action<var_expr> {
 		}
 
 		state.add(expr);
+	}
+};
+
+template<>
+struct action<op_uop> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		Op op = uop(in.string());
+		state.add(op);
+	}
+};
+
+template<>
+struct action<op_bop> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		Op op = bop(in.string());
+		state.add(op);
 	}
 };
 
@@ -1258,6 +1339,74 @@ struct control<assign_expr_stmt> : pegtl::normal<assign_expr_stmt>
 		Pipeline p = stageutil::assignindex(lookup->getArr(), lookup->getIdx(), vec[1].value.expr);
 		p.getHead()->setBase(getBaseFromEnt(state.base()));
 		addPipelineGeneric(state.context(), p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+static Expr *precedenceClimb(std::queue<SeqEntity>& q, const int minPrec)
+{
+	assert(!q.empty());
+	SeqEntity ent = q.front();
+	q.pop();
+	Expr *lhs = nullptr;
+	Op op;
+
+	switch (ent.type) {
+		case SeqEntity::EXPR:
+			lhs = ent.value.expr;
+			break;
+		case SeqEntity::OP:
+			op = ent.value.op;
+			assert(!op.binary);
+			lhs = precedenceClimb(q, op.prec);
+			lhs = new UOpExpr(op, lhs);
+			break;
+		default:
+			assert(0);
+	}
+
+	while (!q.empty()) {
+		SeqEntity lookahead = q.front();
+		assert(lookahead.type == SeqEntity::OP);
+		op = lookahead.value.op;
+		assert(op.binary);
+
+		if (op.prec < minPrec)
+			break;
+
+		q.pop();
+		const int nextMinPrec = op.rightAssoc ? op.prec : (op.prec + 1);
+		Expr *rhs = precedenceClimb(q, nextMinPrec);
+		lhs = new BOpExpr(op, lhs, rhs);
+	}
+
+	return lhs;
+}
+
+template<>
+struct control<expr> : pegtl::normal<expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		std::queue<SeqEntity> q;
+
+		for (auto& ent : vec)
+			q.push(ent);
+
+		state.add(precedenceClimb(q, 0));
 	}
 
 	template<typename Input>
