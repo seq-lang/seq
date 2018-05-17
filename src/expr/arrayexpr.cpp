@@ -9,7 +9,7 @@ ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
 {
 }
 
-Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock *block)
+Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	auto *type = dynamic_cast<types::ArrayType *>(getType());
 	assert(type != nullptr);
@@ -17,7 +17,6 @@ Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock *block)
 
 	Module *module = block->getModule();
 	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
 
 	GlobalVariable *ptrVar = new GlobalVariable(*module,
 	                                            PointerType::get(type->getBaseType()->getLLVMType(context), 0),
@@ -38,6 +37,7 @@ Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock *block)
 
 	Value *len = count->codegen(base, block);
 	Value *ptr = type->getBaseType()->codegenAlloc(base, len, block);
+	IRBuilder<> builder(block);
 	builder.CreateStore(ptr, ptrVar);
 	builder.CreateStore(len, lenVar);
 

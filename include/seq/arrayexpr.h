@@ -9,7 +9,7 @@ namespace seq {
 		Expr *count;
 	public:
 		ArrayExpr(types::Type *type, Expr *count);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 	};
 }
 

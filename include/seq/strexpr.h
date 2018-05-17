@@ -9,7 +9,7 @@ namespace seq {
 		std::string s;
 	public:
 		explicit StrExpr(std::string s);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 	};
 }
 

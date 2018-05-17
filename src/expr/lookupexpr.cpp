@@ -9,14 +9,14 @@ ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :
 {
 }
 
-Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock *block)
+Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	idx->ensure(types::IntType::get());
-	IRBuilder<> builder(block);
 
 	auto outs = makeValMap();
 	Value *arr = this->arr->codegen(base, block);
 	Value *idx = this->idx->codegen(base, block);
+	IRBuilder<> builder(block);
 	Value *ptr = builder.CreateExtractValue(arr, 1);
 
 	types::ArrayType::get(getType())->codegenIndexLoad(base, outs, block, ptr, idx);

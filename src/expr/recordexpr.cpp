@@ -9,7 +9,7 @@ RecordExpr::RecordExpr(std::vector<Expr *> exprs) : exprs(std::move(exprs))
 {
 }
 
-Value *RecordExpr::codegen(BaseFunc *base, BasicBlock *block)
+Value *RecordExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	types::Type *type = getType();
@@ -19,6 +19,7 @@ Value *RecordExpr::codegen(BaseFunc *base, BasicBlock *block)
 	IRBuilder<> builder(block);
 	for (auto *expr : exprs) {
 		Value *val = expr->codegen(base, block);
+		builder.SetInsertPoint(block);  // recall: 'codegen' can change the block
 		rec = builder.CreateInsertValue(rec, val, idx++);
 	}
 

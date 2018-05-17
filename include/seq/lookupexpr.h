@@ -10,7 +10,7 @@ namespace seq {
 		Expr *idx;
 	public:
 		ArrayLookupExpr(Expr *arr, Expr *idx);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 
 		Expr *getArr();

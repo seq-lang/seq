@@ -11,7 +11,7 @@ namespace seq {
 	public:
 		explicit Expr(types::Type *type);
 		Expr();
-		virtual llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block)=0;
+		virtual llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block)=0;
 		virtual types::Type *getType() const;
 		virtual void ensure(types::Type *type);
 	};
@@ -22,7 +22,7 @@ namespace seq {
 		Expr *lhs;
 	public:
 		UOpExpr(Op op, Expr *lhs);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 	};
 
@@ -33,7 +33,7 @@ namespace seq {
 		Expr *rhs;
 	public:
 		BOpExpr(Op op, Expr *lhs, Expr *rhs);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 	};
 

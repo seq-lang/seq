@@ -10,7 +10,7 @@ namespace seq {
 		seq_int_t n;
 	public:
 		explicit IntExpr(seq_int_t n);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 	};
 
 	class FloatExpr : public Expr {
@@ -18,7 +18,7 @@ namespace seq {
 		double f;
 	public:
 		explicit FloatExpr(double f);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 	};
 
 	class BoolExpr : public Expr {
@@ -26,7 +26,7 @@ namespace seq {
 		bool b;
 	public:
 		explicit BoolExpr(bool b);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 	};
 
 }

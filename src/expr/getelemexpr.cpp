@@ -10,11 +10,11 @@ GetElemExpr::GetElemExpr(Expr *rec, seq_int_t idx) :
 	assert(idx >= 1);
 }
 
-llvm::Value *GetElemExpr::codegen(BaseFunc *base, BasicBlock *block)
+llvm::Value *GetElemExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	rec->ensure(types::RecordType::get({}));
-	IRBuilder<> builder(block);
 	Value *rec = this->rec->codegen(base, block);
+	IRBuilder<> builder(block);
 	return builder.CreateExtractValue(rec, idx - 1);
 }
 

@@ -12,7 +12,7 @@ namespace seq {
 		bool rightAssoc;
 		int prec;
 
-		bool operator==(const Op& op)
+		bool operator==(const Op& op) const
 		{
 			return op.symbol == symbol && op.binary == binary;
 		}

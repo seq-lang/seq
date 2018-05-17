@@ -12,7 +12,7 @@ namespace seq {
 		Var *var;
 	public:
 		explicit VarExpr(Var *var);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 	};
 
@@ -21,7 +21,7 @@ namespace seq {
 		Cell *cell;
 	public:
 		explicit CellExpr(Cell *cell);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 	};
 

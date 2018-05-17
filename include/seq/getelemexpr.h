@@ -10,7 +10,7 @@ namespace seq {
 		seq_int_t idx;
 	public:
 		GetElemExpr(Expr *rec, seq_int_t idx);
-		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *block) override;
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 	};
 }

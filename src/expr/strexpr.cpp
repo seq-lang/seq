@@ -8,7 +8,7 @@ StrExpr::StrExpr(std::string s) : Expr(types::StrType::get()), s(std::move(s))
 {
 }
 
-Value *StrExpr::codegen(BaseFunc *base, BasicBlock *block)
+Value *StrExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();

@@ -7,7 +7,7 @@ VarExpr::VarExpr(Var *var) : var(var)
 {
 }
 
-Value *VarExpr::codegen(BaseFunc *base, BasicBlock *block)
+Value *VarExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	return getType()->pack(base, var->outs(nullptr), block);
 }
@@ -21,7 +21,7 @@ CellExpr::CellExpr(Cell *cell) : cell(cell)
 {
 }
 
-Value *CellExpr::codegen(BaseFunc *base, BasicBlock *block)
+Value *CellExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	return cell->load(block);
 }

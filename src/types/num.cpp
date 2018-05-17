@@ -126,27 +126,27 @@ void types::IntType::initOps()
 		}},
 
 		{bop("<"), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateICmpSLT(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateICmpSLT(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop(">"), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateICmpSGT(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateICmpSGT(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("<="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateICmpSLE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateICmpSLE(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop(">="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateICmpSGE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateICmpSGE(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("=="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateICmpEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("!="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateICmpNE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("&"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
@@ -183,27 +183,27 @@ void types::IntType::initOps()
 		}},
 
 		{bop("<"), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOLT(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLT(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop(">"), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOGT(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGT(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("<="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOLE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop(">="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOGE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("=="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOEQ(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOEQ(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("!="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpONE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpONE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
 		}},
 	};
 }
@@ -245,27 +245,27 @@ void types::FloatType::initOps()
 		}},
 
 		{bop("<"), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOLT(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLT(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop(">"), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOGT(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGT(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("<="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOLE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLE(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop(">="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOGE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGE(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("=="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("!="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpONE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpONE(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
 		// float,int ops
@@ -290,27 +290,27 @@ void types::FloatType::initOps()
 		}},
 
 		{bop("<"), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOLT(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLT(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop(">"), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOGT(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGT(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("<="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOLE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop(">="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOGE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("=="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpOEQ(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOEQ(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
 		}},
 
 		{bop("!="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateFCmpONE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpONE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
 		}},
 	};
 }
@@ -323,27 +323,27 @@ void types::BoolType::initOps()
 	vtable.ops = {
 		// bool ops
 		{uop("!"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateNot(b.CreateBitCast(lhs, IntegerType::getInt1Ty(b.getContext()))), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateNot(b.CreateZExt(lhs, IntegerType::getInt1Ty(b.getContext()))), Bool.getLLVMType(b.getContext()));
 		}},
 
 		// bool,bool ops
-		{bop("=="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateICmpEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("=="), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateBitCast(b.CreateICmpNE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("!="), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool.getLLVMType(b.getContext()));
 		}},
 
-		{bop("&"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("&"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateAnd(lhs, rhs);
 		}},
 
-		{bop("^"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("^"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateXor(lhs, rhs);
 		}},
 
-		{bop("|"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("|"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateOr(lhs, rhs);
 		}},
 	};
