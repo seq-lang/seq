@@ -883,12 +883,44 @@ struct control<split_stage> : pegtl::normal<split_stage>
 };
 
 template<>
-struct control<pipeline> : pegtl::normal<pipeline>
+struct control<pipeline_stage> : pegtl::normal<pipeline_stage>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("p", true);
+		Pipeline p = vec[0].value.pipeline;
+
+		for (int i = 1; i < vec.size(); i++) {
+			p = p | vec[i].value.pipeline;
+		}
+
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<pipeline_branch> : pegtl::normal<pipeline_branch>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+		Pipeline nop = stageutil::nop();
+		state.add(nop);
 	}
 
 	template<typename Input>

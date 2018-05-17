@@ -165,7 +165,9 @@ struct split_stage : pegtl::seq<TAO_PEGTL_STRING("split"), seps, pegtl::one<'('>
 
 struct stage : pegtl::sor<call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage, nop_stage> {};
 struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>> {};
-struct pipeline : pegtl::seq<stage, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
+struct pipeline_stage : pegtl::seq<stage, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
+struct pipeline_branch : pegtl::seq<branch, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
+struct pipeline : pegtl::sor<pipeline_stage, pipeline_branch> {};
 
 struct source_block_args : pegtl::sor<pegtl::seq<pegtl::one<'('>, seps, pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>>, expr> {};
 struct source_block : pegtl::seq<str_source, seps, source_block_args, seps, colon, seps, statement_seq, str_end> {};
