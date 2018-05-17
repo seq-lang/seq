@@ -43,7 +43,7 @@ var x = 4.2
 x |> print
 x = .42
 x |> print
-var b = (true, true)
+var b = (true, !true)
 b.1 |> print
-b.2 = false
+b.2 = !!false
 b.2 |> print
