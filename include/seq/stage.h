@@ -21,6 +21,7 @@
 #include "common.h"
 
 namespace seq {
+
 	class BaseFunc;
 	class Func;
 	class Pipeline;
@@ -28,6 +29,7 @@ namespace seq {
 	class Var;
 
 	typedef void (*SeqMain)(seq_t *, bool isLast);
+	typedef void (*SeqMainStandalone)(arr_t<str_t> args);
 	typedef void (*SeqOp)(char *, seq_int_t);
 	typedef seq_int_t (*SeqHash)(char *, seq_int_t);
 
@@ -78,6 +80,15 @@ namespace seq {
 		virtual Pipeline operator&(PipelineList& to);
 		operator Pipeline();
 	};
+
+	class Nop : public Stage {
+	public:
+		Nop();
+		void validate() override;
+		void codegen(llvm::Module *module) override;
+		static Nop& make();
+	};
+
 }
 
 std::ostream& operator<<(std::ostream& os, seq::Stage& stage);

@@ -169,3 +169,31 @@ std::ostream& operator<<(std::ostream& os, Stage& stage)
 {
 	return os << stage.getName();
 }
+
+Nop::Nop() : Stage("nop", types::AnyType::get(), types::VoidType::get())
+{
+}
+
+void Nop::validate()
+{
+	if (prev)
+		out = prev->getOutType();
+
+	Stage::validate();
+}
+
+void Nop::codegen(Module *module)
+{
+	ensurePrev();
+	validate();
+
+	block = prev->getAfter();
+	outs->insert(prev->outs->begin(), prev->outs->end());
+	codegenNext(module);
+	prev->setAfter(getAfter());
+}
+
+Nop& Nop::make()
+{
+	return *new Nop();
+}

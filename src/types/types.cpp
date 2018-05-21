@@ -209,7 +209,7 @@ void types::Type::finalizeDeserialize(Module *module, ExecutionEngine *eng)
 }
 
 Value *types::Type::codegenAlloc(BaseFunc *base,
-                                 seq_int_t count,
+                                 Value *count,
                                  BasicBlock *block)
 {
 	if (size(block->getModule()) == 0)
@@ -226,10 +226,19 @@ Value *types::Type::codegenAlloc(BaseFunc *base,
 
 	IRBuilder<> builder(block);
 
-	std::vector<Value *> args = {
-	  ConstantInt::get(IntegerType::getIntNTy(context, sizeof(size_t)*8), (unsigned)(count*size(block->getModule())))};
-	Value *mem = builder.CreateCall(allocFunc, args);
+	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)size(block->getModule()));
+	Value *fullSize = builder.CreateMul(count, elemSize);
+	fullSize = builder.CreateBitCast(fullSize, IntegerType::getIntNTy(context, sizeof(size_t)*8));
+	Value *mem = builder.CreateCall(allocFunc, {fullSize});
 	return builder.CreatePointerCast(mem, PointerType::get(getLLVMType(context), 0));
+}
+
+Value *types::Type::codegenAlloc(BaseFunc *base,
+                                 seq_int_t count,
+                                 BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	return codegenAlloc(base, ConstantInt::get(seqIntLLVM(context), (uint64_t)count, true), block);
 }
 
 void types::Type::finalizeAlloc(Module *module, ExecutionEngine *eng)
@@ -288,6 +297,38 @@ void types::Type::codegenIndexStore(BaseFunc *base,
                                     Value *idx)
 {
 	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
+void types::Type::initOps()
+{
+}
+
+OpSpec types::Type::findUOp(const std::string &symbol)
+{
+	initOps();
+	Op op = uop(symbol);
+
+	for (auto& e : vtable.ops) {
+		if (e.op == op)
+			return e;
+	}
+
+	throw exc::SeqException("type '" + getName() + "' does not support operator '" + symbol + "'");
+}
+
+OpSpec types::Type::findBOp(const std::string &symbol, types::Type *rhsType)
+{
+	initOps();
+	Op op = bop(symbol);
+
+	for (auto& e : vtable.ops) {
+		if (e.op == op && rhsType->isChildOf(e.rhsType))
+			return e;
+	}
+
+	throw exc::SeqException(
+	  "type '" + getName() + "' does not support operator '" +
+	    symbol + "' applied to type '" + rhsType->getName() + "'");
 }
 
 bool types::Type::is(types::Type *type) const

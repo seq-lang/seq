@@ -8,11 +8,31 @@
 using namespace seq;
 using namespace llvm;
 
-Var::Var() : stage(nullptr)
+/*
+ * In the standalone case, pipelines are responsible for
+ * getting added to whatever base module/function they are
+ * a part of, not variables. For example:
+ *
+ *   var a = ...
+ *   var b = a | <*>
+ *
+ * The * pipeline will be added by "a |" not by "b =". This
+ * makes everything easier and more consistent, but isn't easy
+ * to do via the C++-embedded DSL, since we can have things
+ * like this:
+ *
+ *   var x = m[i]
+ *
+ * There's nothing to incorporate the memory access besides
+ * the var assignment. In the standalone language we can always
+ * keep track of the context we're in and add it automatically.
+ */
+
+Var::Var(bool standalone) : stage(nullptr), standalone(standalone)
 {
 }
 
-Var::Var(Pipeline pipeline) : Var()
+Var::Var(Pipeline pipeline, bool standalone) : Var(standalone)
 {
 	*this = pipeline;
 }
@@ -65,7 +85,8 @@ Pipeline Var::operator|(Pipeline to)
 	ensureConsistentBase(to.getHead()->getBase());
 	BaseFunc *base = getBase();
 	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::VoidType::get(), getType(stage), stage);
+	types::Type *inType = standalone ? (types::Type *)types::AnyType::get() : (types::Type *)types::VoidType::get();
+	BaseStage& begin = BaseStage::make(inType, getType(stage), stage);
 	begin.setBase(base);
 	begin.outs = outs(stage);
 
@@ -73,7 +94,10 @@ Pipeline Var::operator|(Pipeline to)
 		stage->addWeakNext(to.getHead());
 
 	Pipeline full = begin | to;
-	base->add(full);
+
+	if (!standalone)
+		base->add(full);
+
 	return full;
 }
 
@@ -137,19 +161,27 @@ Pipeline Var::operator&&(PipelineList& to)
 	return last;
 }
 
-Var& Var::operator=(Pipeline to)
+void Var::assign(Pipeline to)
 {
 	if (isAssigned())
 		throw exc::SeqException("variable cannot be assigned twice");
 
 	stage = to.getTail();
-	BaseFunc *base = getBase();
+}
 
-	if (!to.isAdded()) {
-		BaseStage& begin = BaseStage::make(types::VoidType::get(), types::VoidType::get());
-		begin.setBase(base);
-		Pipeline full = begin | to;
-		base->add(full);
+Var& Var::operator=(Pipeline to)
+{
+	assign(to);
+
+	if (!standalone) {
+		BaseFunc *base = getBase();
+
+		if (!to.isAdded()) {
+			BaseStage &begin = BaseStage::make(types::VoidType::get(), types::VoidType::get());
+			begin.setBase(base);
+			Pipeline full = begin | to;
+			base->add(full);
+		}
 	}
 
 	return *this;
@@ -251,7 +283,7 @@ Latest::Latest() : Var()
 static void validateCaller(Stage *caller)
 {
 	if (!caller)
-		throw exc::SeqException("unexpected null stage");
+		throw exc::SeqException("misplaced _");
 
 	if (!caller->getPrev())
 		throw exc::StageException("stage has no predecessor", *caller);

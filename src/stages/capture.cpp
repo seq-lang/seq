@@ -23,7 +23,7 @@ void Capture::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 
-	block = prev->block;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 
 	Value *addrAsInt = ConstantInt::get(IntegerType::getIntNTy(context, sizeof(void *) * 8), (uint64_t)addr);

@@ -1,0 +1,64 @@
+# this is a comment
+
+fun f: Seq -> Seq[]
+  | split(32,32) |> collect
+end
+
+source args[0]:
+  | print
+  let v = | f()  # inline comment
+  v |> foreach |> (count, _) |> {
+    | .1 |> print
+    | .2 |> print
+  }
+  | print
+
+  let arr = {Int, Seq}[10]
+  arr |> foreach
+
+  | print
+  | split(64,64) |> {
+    let v1 = | print
+    v1 |> split(32,32) |> {
+      let v2 = | print
+      | split(16,16) |> {
+        | print
+        let v3 = | copy |> print
+        let v4 = v3 |> print
+        v3 |> print
+      }
+      v2 |> print
+    }
+    | print
+  }
+  | print
+
+  (v[1], ((v)[2]), (v[1], 4.2)).3 |> .1 |> print
+end
+
+"hello world" |> print
+42 + 2.2 |> print
+-13 |> print
+var x = 4.2
+x |> print
+x = .42
+x |> print
+var b = (true, !true)
+b.1 |> print
+b.2 = !!false
+b.2 |> print
+
+fun fib: Int -> Int
+  let n = | .  # function input
+  var m = 0
+  if n <= 1:
+    m = n
+  else:
+    let a = n-1 |> fib()
+    let b = n-2 |> fib()
+    m = a + b
+  end
+  m |> .  # function output
+end
+
+10 |> fib() |> print

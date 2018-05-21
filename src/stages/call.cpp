@@ -22,7 +22,7 @@ void Call::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	block = prev->block;
+	block = prev->getAfter();
 	func.codegenCall(getBase(), prev->outs, outs, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
@@ -69,14 +69,14 @@ void MultiCall::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 
-	block = prev->block;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 
 	Value *rec = UndefValue::get(out->getLLVMType(context));
 	unsigned idx = 0;
 
 	for (auto *func : funcs) {
-		rec = builder.CreateInsertValue(rec, func->codegenCallRaw(getBase(), prev->outs, block), {idx++});
+		rec = builder.CreateInsertValue(rec, func->codegenCallRaw(getBase(), prev->outs, block), idx++);
 	}
 
 	out->unpack(getBase(), rec, outs, block);

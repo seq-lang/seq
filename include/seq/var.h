@@ -14,9 +14,11 @@ namespace seq {
 	class Var {
 	protected:
 		Stage *stage;
+		bool standalone;
+		virtual void assign(Pipeline to);
 	public:
-		Var();
-		Var(Pipeline pipeline);
+		explicit Var(bool standalone=false);
+		Var(Pipeline pipeline, bool standalone=false);
 
 		virtual types::Type *getType(Stage *caller) const;
 		virtual ValMap outs(Stage *caller) const;
@@ -40,7 +42,7 @@ namespace seq {
 	protected:
 		types::Type *type;
 		ValMap outsMap;
-		Const(types::Type *type);
+		explicit Const(types::Type *type);
 	public:
 		types::Type *getType(Stage *caller) const override;
 		ValMap outs(Stage *caller) const override;

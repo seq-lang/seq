@@ -78,6 +78,8 @@ namespace seq {
 
 		types::Type *getInType() const override;
 		types::Type *getOutType() const override;
+		void setInOut(types::Type *in, types::Type *out);
+		void setNative(std::string name, void *rawFunc);
 
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);

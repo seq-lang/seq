@@ -28,12 +28,12 @@ void Filter::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	block = prev->block;
+	block = prev->getAfter();
 	outs->insert(prev->outs->begin(), prev->outs->end());
 
 	IRBuilder<> builder(block);
 
-	ValMap result = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	ValMap result = makeValMap();
 	func.codegenCall(getBase(), outs, result, block);
 	Value *pred = builder.CreateLoad(getSafe(result, SeqData::BOOL));
 

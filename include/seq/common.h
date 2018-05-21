@@ -19,6 +19,11 @@ namespace seq {
 		char *seq;
 	};
 
+	struct str_t {
+		seq_int_t len;
+		char *str;
+	};
+
 	template<typename T = void>
 	struct arr_t {
 		seq_int_t len;
@@ -47,6 +52,11 @@ namespace seq {
 	}
 
 	typedef std::shared_ptr<std::map<SeqData, llvm::Value *>> ValMap;
+
+	inline ValMap makeValMap()
+	{
+		return std::make_shared<std::map<SeqData, llvm::Value *>>(*new std::map<SeqData, llvm::Value *>());
+	}
 
 	inline llvm::Value *getSafe(ValMap outs, SeqData key)
 	{

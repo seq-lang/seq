@@ -5,7 +5,7 @@
 using namespace seq;
 using namespace llvm;
 
-Count::Count() : Stage("count", types::BaseType::get(), types::IntType::get())
+Count::Count() : Stage("count", types::AnyType::get(), types::IntType::get())
 {
 }
 
@@ -15,7 +15,7 @@ void Count::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	block = prev->block;
+	block = prev->getAfter();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
 

@@ -6,7 +6,7 @@
 using namespace seq;
 using namespace llvm;
 
-MakeRec::MakeRec(seq::PipelineList &pl) :
+MakeRec::MakeRec(PipelineList &pl) :
     Stage("makerec", types::VoidType::get(), types::VoidType::get()),
     validated(false), pl(pl), proxy(types::VoidType::get(), types::VoidType::get())
 {
@@ -55,7 +55,7 @@ void MakeRec::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	block = proxy.block = prev->block;
+	block = proxy.block = prev->getAfter();
 	proxy.outs = prev->outs;
 	IRBuilder<> builder(block);
 
@@ -78,7 +78,7 @@ void MakeRec::codegen(Module *module)
 
 		proxy.block = proxy.getAfter();
 		builder.SetInsertPoint(proxy.block);
-		rec = builder.CreateInsertValue(rec, val, {idx++});
+		rec = builder.CreateInsertValue(rec, val, idx++);
 	}
 
 	block = proxy.block;

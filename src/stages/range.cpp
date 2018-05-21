@@ -34,7 +34,7 @@ void Range::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
-	BasicBlock *entry = prev->block;
+	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
 	Value *from = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->from, true);

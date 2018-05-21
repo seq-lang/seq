@@ -4,7 +4,7 @@
 #include "stage.h"
 #include "copy.h"
 #include "filter.h"
-#include "op.h"
+#include "opstage.h"
 #include "hash.h"
 #include "print.h"
 #include "revcomp.h"
@@ -19,14 +19,18 @@
 #include "chunk.h"
 #include "call.h"
 #include "getitem.h"
+#include "makerec.h"
 #include "serialize.h"
+#include "exprstage.h"
 #include "capture.h"
+#include "source.h"
 
 namespace seq {
 	namespace stageutil {
+		Nop& nop();
 		Copy& copy();
 		Filter& filter(Func& func);
-		Op& op(std::string name, SeqOp op);
+		OpStage& op(std::string name, SeqOp op);
 		Hash& hash(std::string name, SeqHash hash);
 		Print& print();
 		RevComp& revcomp();
@@ -45,7 +49,14 @@ namespace seq {
 		GetItem& get(seq_int_t idx);
 		Serialize& ser(std::string filename);
 		Deserialize& deser(types::Type& type, std::string filename);
+		ExprStage& expr(Expr *expr);
+		CellStage& cell(Cell *cell);
+		AssignStage& assign(Cell *cell, Expr *value);
+		AssignIndexStage& assignindex(Expr *array, Expr *idx, Expr *value);
+		AssignMemberStage& assignmemb(Cell *cell, seq_int_t idx, Expr *value);
 		Capture& capture(void *addr);
+		Source& source();
+		If& ifstage();
 	}
 }
 

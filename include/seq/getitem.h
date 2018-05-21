@@ -9,8 +9,8 @@ namespace seq {
 		seq_int_t idx;
 	public:
 		explicit GetItem(seq_int_t idx);
-		void codegen(llvm::Module *module) override;
 		void validate() override;
+		void codegen(llvm::Module *module) override;
 		static GetItem& make(seq_int_t idx);
 	};
 }

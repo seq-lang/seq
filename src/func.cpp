@@ -215,6 +215,18 @@ types::Type *Func::getOutType() const
 	return outType;
 }
 
+void Func::setInOut(types::Type *inType, types::Type *outType)
+{
+	this->inType = inType;
+	this->outType = outType;
+}
+
+void Func::setNative(std::string name, void *rawFunc)
+{
+	this->name = name;
+	this->rawFunc = rawFunc;
+}
+
 Pipeline Func::operator|(Pipeline to)
 {
 	if (rawFunc)

@@ -20,7 +20,7 @@ void Substr::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 
-	block = prev->block;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 
 	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));

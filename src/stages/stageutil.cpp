@@ -3,6 +3,11 @@
 
 using namespace seq;
 
+Nop& stageutil::nop()
+{
+	return Nop::make();
+}
+
 Copy& stageutil::copy()
 {
 	return Copy::make();
@@ -13,9 +18,9 @@ Filter& stageutil::filter(Func& func)
 	return Filter::make(func);
 }
 
-Op& stageutil::op(std::string name, SeqOp op)
+OpStage& stageutil::op(std::string name, SeqOp op)
 {
-	return Op::make(std::move(name), op);
+	return OpStage::make(std::move(name), op);
 }
 
 Hash& stageutil::hash(std::string name, SeqHash hash)
@@ -108,7 +113,42 @@ Deserialize& stageutil::deser(types::Type& type, std::string filename)
 	return Deserialize::make(&type, std::move(filename));
 }
 
+ExprStage& stageutil::expr(Expr *expr)
+{
+	return ExprStage::make(expr);
+}
+
+CellStage& stageutil::cell(Cell *cell)
+{
+	return CellStage::make(cell);
+}
+
+AssignStage& stageutil::assign(Cell *cell, Expr *value)
+{
+	return AssignStage::make(cell, value);
+}
+
+AssignIndexStage& stageutil::assignindex(Expr *array, Expr *idx, Expr *value)
+{
+	return AssignIndexStage::make(array, idx, value);
+}
+
+AssignMemberStage& stageutil::assignmemb(Cell *cell, seq_int_t idx, Expr *value)
+{
+	return AssignMemberStage::make(cell, idx, value);
+}
+
 Capture& stageutil::capture(void *addr)
 {
 	return Capture::make(addr);
+}
+
+Source& stageutil::source()
+{
+	return Source::make({});
+}
+
+If& stageutil::ifstage()
+{
+	return If::make();
 }

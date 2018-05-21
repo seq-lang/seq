@@ -7,12 +7,15 @@
 namespace seq {
 	namespace types {
 
-		class SeqType : public Type {
-		private:
-			SeqType();
+		class BaseSeqType : public Type {
+		protected:
+			BaseSeqType(std::string name, SeqData key);
 		public:
-			SeqType(SeqType const&)=delete;
-			void operator=(SeqType const&)=delete;
+			BaseSeqType(BaseSeqType const&)=delete;
+			void operator=(BaseSeqType const&)=delete;
+
+			std::string copyFuncName() override { return "copyBaseSeq"; }
+			std::string printFuncName() override { return "printBaseSeq"; }
 
 			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
 
@@ -69,9 +72,23 @@ namespace seq {
 			                  llvm::Value *ptr,
 			                  llvm::Value *idx) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
+		};
+
+		class SeqType : public BaseSeqType {
+		private:
+			SeqType();
+		public:
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			static SeqType *get();
+		};
+
+		class StrType : public BaseSeqType {
+		private:
+			StrType();
+		public:
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			static StrType *get();
 		};
 
 	}

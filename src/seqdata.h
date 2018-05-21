@@ -13,6 +13,7 @@ namespace seq {
 		INT,
 		FLOAT,
 		BOOL,
+		STR,
 		ARRAY,
 		RECORD,
 

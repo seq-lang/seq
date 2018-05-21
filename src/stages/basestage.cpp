@@ -3,8 +3,10 @@
 using namespace seq;
 using namespace llvm;
 
+static int idx = 1;
+
 BaseStage::BaseStage(types::Type *in, types::Type *out, Stage *proxy) :
-    Stage("base", in, out), proxy(proxy)
+    Stage("base" + std::to_string(idx++), in, out), proxy(proxy)
 {
 }
 
@@ -18,7 +20,7 @@ void BaseStage::codegen(Module *module)
 	validate();
 
 	if (prev && !block)
-		block = prev->block;
+		block = prev->getAfter();
 
 	codegenNext(module);
 

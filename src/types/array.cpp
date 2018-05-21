@@ -173,7 +173,7 @@ void types::ArrayType::callSerialize(BaseFunc *base,
 		builder.SetInsertPoint(body);
 
 		BaseFuncLite serializeBase(serialize);
-		auto subOuts1 = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		auto subOuts1 = makeValMap();
 		Value *elem = builder.CreateLoad(builder.CreateGEP(ptrArg, control));
 		getBaseType()->unpack(&serializeBase, elem, subOuts1, body);
 		getBaseType()->callSerialize(&serializeBase, subOuts1, fpArg, body);
@@ -189,7 +189,7 @@ void types::ArrayType::callSerialize(BaseFunc *base,
 		branch->setSuccessor(1, exit);
 
 		builder.SetInsertPoint(entry);
-		auto subOuts2 = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		auto subOuts2 = makeValMap();
 		IntType::get()->unpack(&serializeBase, lenArg, subOuts2, entry);
 		IntType::get()->callSerialize(&serializeBase, subOuts2, fpArg, entry);
 		builder.CreateBr(loop);
@@ -252,7 +252,7 @@ void types::ArrayType::callDeserialize(BaseFunc *base,
 		builder.SetInsertPoint(body);
 
 		BaseFuncLite serializeBase(deserialize);
-		auto subOuts1 = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+		auto subOuts1 = makeValMap();
 		Value *elemPtr = builder.CreateGEP(ptrArg, control);
 		getBaseType()->callDeserialize(&serializeBase, subOuts1, fpArg, body);
 		Value *elem = getBaseType()->pack(&serializeBase, subOuts1, body);
@@ -273,7 +273,7 @@ void types::ArrayType::callDeserialize(BaseFunc *base,
 	}
 
 	builder.SetInsertPoint(block);
-	auto subOuts2 = std::make_shared<std::map<SeqData, Value *>>(*new std::map<SeqData, Value *>());
+	auto subOuts2 = makeValMap();
 	IntType::get()->callDeserialize(base, subOuts2, fp, block);
 	Value *len = builder.CreateLoad(getSafe(subOuts2, SeqData::INT));
 	Value *size = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size(module));

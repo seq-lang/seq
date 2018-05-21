@@ -29,7 +29,7 @@ void Hash::codegen(Module *module)
 
 	func->setCallingConv(CallingConv::C);
 
-	block = prev->block;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
 	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
