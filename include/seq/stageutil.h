@@ -56,6 +56,7 @@ namespace seq {
 		AssignMemberStage& assignmemb(Cell *cell, seq_int_t idx, Expr *value);
 		Capture& capture(void *addr);
 		Source& source();
+		If& ifstage();
 	}
 }
 

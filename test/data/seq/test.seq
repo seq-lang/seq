@@ -1,6 +1,6 @@
 # this is a comment
 
-fun f: Seq -> Seq[]:
+fun f: Seq -> Seq[]
   | split(32,32) |> collect
 end
 
@@ -47,3 +47,18 @@ var b = (true, !true)
 b.1 |> print
 b.2 = !!false
 b.2 |> print
+
+fun fib: Int -> Int
+  let n = | .  # function input
+  var m = 0
+  if n <= 1:
+    m = n
+  else:
+    let a = n-1 |> fib()
+    let b = n-2 |> fib()
+    m = a + b
+  end
+  m |> .  # function output
+end
+
+10 |> fib() |> print

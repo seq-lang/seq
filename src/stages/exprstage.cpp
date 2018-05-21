@@ -1,4 +1,5 @@
-#include <seq/record.h>
+#include "seq/record.h"
+#include "seq/numexpr.h"
 #include "seq/exprstage.h"
 
 using namespace seq;
@@ -146,4 +147,89 @@ void AssignMemberStage::codegen(Module *module)
 AssignMemberStage& AssignMemberStage::make(Cell *cell, seq_int_t idx, Expr *value)
 {
 	return *new AssignMemberStage(cell, idx, value);
+}
+
+If::If() :
+    Stage("if", types::AnyType::get(), types::VoidType::get()), conds(), branches(), elseAdded(false)
+{
+}
+
+void If::codegen(Module *module)
+{
+	if (conds.empty())
+		throw exc::SeqException("no conditions added to if-stage");
+
+	assert(conds.size() == branches.size());
+
+	for (auto *cond : conds)
+		cond->ensure(types::BoolType::get());
+
+	ensurePrev();
+	validate();
+
+	LLVMContext& context = module->getContext();
+	block = prev->getAfter();
+	Function *func = block->getParent();
+	IRBuilder<> builder(block);
+
+	std::vector<BranchInst *> binsts;
+
+	for (int i = 0; i < conds.size(); i++) {
+		Value *cond = conds[i]->codegen(getBase(), block);
+		BaseStage *branch = branches[i];
+
+		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
+		cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
+
+		BasicBlock *b1 = BasicBlock::Create(context, "", func);
+		BranchInst *binst1 = builder.CreateCondBr(cond, b1, b1);  // we set false-branch below
+
+		branch->block = b1;
+		branch->codegen(module);
+		block = branch->getAfter();
+		builder.SetInsertPoint(block);
+		BranchInst *binst2 = builder.CreateBr(b1);  // we reset this below
+		binsts.push_back(binst2);
+
+		BasicBlock *b2 = BasicBlock::Create(context, "", func);
+		binst1->setSuccessor(1, b2);
+		block = b2;
+	}
+
+	BasicBlock *after = BasicBlock::Create(context, "", func);
+	builder.SetInsertPoint(block);
+	builder.CreateBr(after);
+
+	for (auto *binst : binsts)
+		binst->setSuccessor(0, after);
+
+	codegenNext(module);
+	prev->setAfter(after);
+}
+
+If& If::make()
+{
+	return *new If();
+}
+
+BaseStage& If::addCond(Expr *cond)
+{
+	if (elseAdded)
+		throw exc::SeqException("cannot add else-if branch to if-stage after else branch");
+
+	BaseStage& branch = BaseStage::make(types::AnyType::get(), types::VoidType::get());
+	branch.setBase(getBase());
+	conds.push_back(cond);
+	branches.push_back(&branch);
+	return branch;
+}
+
+BaseStage& If::addElse()
+{
+	if (elseAdded)
+		throw exc::SeqException("cannot add second else branch to if-stage");
+
+	BaseStage& branch = addCond(new BoolExpr(true));
+	elseAdded = true;
+	return branch;
 }

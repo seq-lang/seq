@@ -147,3 +147,8 @@ Source& stageutil::source()
 {
 	return Source::make({});
 }
+
+If& stageutil::ifstage()
+{
+	return If::make();
+}

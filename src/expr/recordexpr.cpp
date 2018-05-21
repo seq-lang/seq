@@ -1,5 +1,5 @@
-#include <seq/record.h>
-#include <seq/void.h>
+#include "seq/record.h"
+#include "seq/void.h"
 #include "seq/recordexpr.h"
 
 using namespace seq;

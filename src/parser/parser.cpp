@@ -1066,7 +1066,7 @@ struct control<branch> : pegtl::normal<branch>
 };
 
 template<>
-struct control<source_block> : pegtl::normal<source_block>
+struct control<source_stmt> : pegtl::normal<source_stmt>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
@@ -1378,6 +1378,141 @@ struct control<assign_expr_stmt> : pegtl::normal<assign_expr_stmt>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
+	}
+};
+
+template<>
+struct control<if_stmt> : pegtl::normal<if_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+		Pipeline p = stageutil::ifstage();
+		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("p");
+		assert(dynamic_cast<If *>(vec[0].value.pipeline.getHead()));
+		state.context().add(vec[0].value.pipeline);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<if_open> : pegtl::normal<if_open>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::PIPELINE);
+		auto *ifstage = dynamic_cast<If *>(state.top().value.pipeline.getHead());
+		assert(ifstage != nullptr);
+		Pipeline branch = ifstage->addCond(vec[0].value.expr);
+		state.enter(branch);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<elif_open> : pegtl::normal<elif_open>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::PIPELINE);
+		auto *ifstage = dynamic_cast<If *>(state.top().value.pipeline.getHead());
+		assert(ifstage != nullptr);
+		Pipeline branch = ifstage->addCond(vec[0].value.expr);
+		state.enter(branch);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<else_open> : pegtl::normal<else_open>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::PIPELINE);
+		auto *ifstage = dynamic_cast<If *>(state.top().value.pipeline.getHead());
+		assert(ifstage != nullptr);
+		Pipeline branch = ifstage->addElse();
+		state.enter(branch);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+	}
+};
+
+template<>
+struct control<if_close> : pegtl::normal<if_close>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.exit();
+	}
+};
+
+template<>
+struct control<elif_close> : pegtl::normal<elif_close>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.exit();
+	}
+};
+
+template<>
+struct control<else_close> : pegtl::normal<else_close>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.exit();
 	}
 };
 

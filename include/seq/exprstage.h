@@ -4,6 +4,7 @@
 #include "expr.h"
 #include "cell.h"
 #include "stage.h"
+#include "basestage.h"
 
 namespace seq {
 
@@ -56,6 +57,19 @@ namespace seq {
 		explicit AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value);
 		void codegen(llvm::Module *module) override;
 		static AssignMemberStage& make(Cell *cell, seq_int_t idx, Expr *value);
+	};
+
+	class If : public Stage {
+	private:
+		std::vector<Expr *> conds;
+		std::vector<BaseStage *> branches;
+		bool elseAdded;
+	public:
+		If();
+		BaseStage& addCond(Expr *cond);
+		BaseStage& addElse();
+		void codegen(llvm::Module *module) override;
+		static If& make();
 	};
 
 }

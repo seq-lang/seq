@@ -37,7 +37,7 @@ static void validateStageRecursive(Stage *stage)
 {
 	stage->validate();
 	for (auto& next : stage->getNext()) {
-		next->validate();
+		validateStageRecursive(next);
 	}
 }
 

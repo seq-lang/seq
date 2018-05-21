@@ -1,5 +1,5 @@
-#include <seq/void.h>
-#include <seq/num.h>
+#include "seq/void.h"
+#include "seq/num.h"
 #include "seq/expr.h"
 
 using namespace seq;
