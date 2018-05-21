@@ -1,0 +1,7 @@
+S src
+B _build/src
+
+PKG llvm
+PKG ctypes
+PKG ppx_deriving
+PKG core

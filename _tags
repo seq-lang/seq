@@ -1,0 +1,4 @@
+<src>: include
+<*>: debug, use_menhir
+<src/*>: package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts), use_bindings
+<*.{byte,native}>: package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts), use_bindings

@@ -1,0 +1,10 @@
+#use "topfind";;
+#thread;;
+#require "core.top";;
+#require "core.syntax";;
+
+#directory "_build" ;;
+#load "ast.cmo" ;; 
+#load "seqlexer.cmo" ;; 
+#load "seqparser.cmo" ;; 
+#load "parse.cmo" ;; 
