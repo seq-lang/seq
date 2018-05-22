@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/arshajii/seq/master/resources/logo.png" alt="logo" width="300">
+![](resources/logo.png)  <!-- .element width="300" -->
 
 # Seq — a DSL for processing genomic data
 
