@@ -1,4 +1,4 @@
-![](resources/logo.png)  <!-- .element width="300" -->
+![](resources/logo.png){:width="300px"}
 
 # Seq — a DSL for processing genomic data
 
