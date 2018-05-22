@@ -1,4 +1,4 @@
-![](resources/logo.png){:width="300px"}
+<img src="resources/logo.png" alt="logo" width="300">
 
 # Seq — a DSL for processing genomic data
 
