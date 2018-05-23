@@ -743,14 +743,6 @@ struct action<op_bop> {
 };
 
 template<>
-struct action<void_type> {
-	static void apply0(ParseState& state)
-	{
-		state.add((types::Type *)&types::Void);
-	}
-};
-
-template<>
 struct action<seq_type> {
 	static void apply0(ParseState& state)
 	{
@@ -1018,7 +1010,7 @@ struct control<module> : pegtl::normal<module>
 		state.scope();
 		auto *module = new SeqModule(true);
 		state.enter(module);
-		state.sym("args", module->getArgsVar());
+		state.sym("args", module->getArgVar());
 	}
 
 	template<typename Input>
@@ -1051,10 +1043,90 @@ struct control<func_decl> : pegtl::normal<func_decl>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("stt");
+		auto vec = state.get("sstt");
 		assert(state.context().type == SeqEntity::FUNC);
 		auto *func = state.context().value.func;
-		func->setInOut(vec[1].value.type, vec[2].value.type);
+		func->setInOut(vec[2].value.type, vec[3].value.type);
+		state.symparent(vec[0].value.name, func);
+		state.sym(vec[1].value.name, func->getArgVar());
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_decl_in_void> : pegtl::normal<func_decl_in_void>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("st");
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+		func->setInOut(types::VoidType::get(), vec[1].value.type);
+		state.symparent(vec[0].value.name, func);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_decl_out_void> : pegtl::normal<func_decl_out_void>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("sst");
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+		func->setInOut(vec[2].value.type, types::VoidType::get());
+		state.symparent(vec[0].value.name, func);
+		state.sym(vec[1].value.name, func->getArgVar());
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_decl_in_out_void> : pegtl::normal<func_decl_in_out_void>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+		func->setInOut(types::VoidType::get(), types::VoidType::get());
 		state.symparent(vec[0].value.name, func);
 	}
 

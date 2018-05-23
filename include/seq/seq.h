@@ -92,7 +92,7 @@ namespace seq {
 		io::DataBlock *data;
 
 		void source(std::string s);
-		Var *getArgsVar();
+		Var *getArgVar() override;
 
 		template<typename ...T>
 		void source(std::string s, T... etc)

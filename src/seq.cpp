@@ -181,9 +181,8 @@ PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr) :
 {
 }
 
-
 SeqModule::SeqModule(bool standalone) :
-    BaseFunc(), standalone(standalone), sources(), argsVar(true),
+    BaseFunc(), standalone(standalone), sources(),
     main(this), once(this), last(this), data(nullptr)
 {
 	if (!standalone)
@@ -204,7 +203,7 @@ void SeqModule::source(std::string source)
 	sources.push_back(source);
 }
 
-Var *SeqModule::getArgsVar()
+Var *SeqModule::getArgVar()
 {
 	if (!standalone)
 		throw exc::SeqException("cannot get argument variable in non-standalone mode");
@@ -261,6 +260,7 @@ void SeqModule::codegen(Module *module)
 	if (standalone) {
 		assert(argsType != nullptr);
 		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), argsType);
+		argsBase.setBase(this);
 		argsType->unpack(this, args, argsBase.outs, preambleBlock);
 		argsVar = argsBase;
 	} else {

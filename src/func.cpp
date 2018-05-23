@@ -9,8 +9,14 @@ using namespace llvm;
 
 BaseFunc::BaseFunc() :
     compilationContext(), module(nullptr), initBlock(nullptr),
-    preambleBlock(nullptr), initFunc(nullptr), func(nullptr)
+    preambleBlock(nullptr), initFunc(nullptr), func(nullptr),
+    argsVar(true)
 {
+}
+
+Var *BaseFunc::getArgVar()
+{
+	return &argsVar;
 }
 
 LLVMContext& BaseFunc::getContext()
@@ -128,6 +134,13 @@ void Func::codegen(Module *module)
 	builder.CreateCall(initFunc);
 	inType->setFuncArgs(func, outs, preambleBlock);
 
+	if (!inType->is(types::VoidType::get())) {
+		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), inType);
+		argsBase.setBase(this);
+		argsBase.outs = outs;
+		argsVar = argsBase;
+	}
+
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
 	builder.SetInsertPoint(entry);
 	BasicBlock *block;
@@ -205,6 +218,14 @@ void Func::finalize(Module *module, ExecutionEngine *eng)
 	}
 }
 
+Var *Func::getArgVar()
+{
+	if (getInType()->is(types::VoidType::get()))
+		throw exc::SeqException("cannot get argument variable of void-input function");
+
+	return &argsVar;
+}
+
 types::Type *Func::getInType() const
 {
 	return inType;
@@ -223,7 +244,7 @@ void Func::setInOut(types::Type *inType, types::Type *outType)
 
 void Func::setNative(std::string name, void *rawFunc)
 {
-	this->name = name;
+	this->name = std::move(name);
 	this->rawFunc = rawFunc;
 }
 

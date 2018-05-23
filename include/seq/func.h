@@ -33,6 +33,7 @@ namespace seq {
 		llvm::BasicBlock *preambleBlock;
 		llvm::Function *initFunc;
 		llvm::Function *func;
+		Var argsVar;
 		BaseFunc();
 	public:
 		virtual void codegenInit(llvm::Module *module);
@@ -44,6 +45,7 @@ namespace seq {
 		                         llvm::BasicBlock *block)=0;
 		virtual void add(Pipeline pipeline)=0;
 
+		virtual Var *getArgVar();
 		llvm::LLVMContext& getContext();
 		llvm::BasicBlock *getInit() const;
 		llvm::BasicBlock *getPreamble() const;
@@ -76,6 +78,7 @@ namespace seq {
 		void add(Pipeline pipeline) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
+		Var *getArgVar() override;
 		types::Type *getInType() const override;
 		types::Type *getOutType() const override;
 		void setInOut(types::Type *in, types::Type *out);

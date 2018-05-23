@@ -1,7 +1,7 @@
 # this is a comment
 
-fun f: Seq -> Seq[]
-  | split 32 32 |> collect
+fun f s: Seq -> Seq[]
+  s |> split 32 32 |> collect
 end
 
 source args[0]:
@@ -36,7 +36,11 @@ source args[0]:
   (v[1], ((v)[2]), (v[1], 4.2)).3 |> .1 |> print
 end
 
-"hello world" |> print
+fun hello
+  "hello world" |> print
+end
+
+| hello()
 42 + 2.2 |> print
 -13 |> print
 var x = 4.2
@@ -48,8 +52,7 @@ b.1 |> print
 b.2 = !!false
 b.2 |> print
 
-fun fib: Int -> Int
-  let n = | .  # function input
+fun fib n: Int -> Int
   var m = 0
   if n <= 1:
     m = n
@@ -63,4 +66,4 @@ end
 
 10 |> fib() |> print
 
-| range (if !b.1 then 1 else 2) 5+5 |> print
+| range (if b.1 then 1 else 2) 5+5 |> print
