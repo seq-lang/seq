@@ -37,6 +37,17 @@ namespace seq {
 		types::Type *getType() const override;
 	};
 
+	class CondExpr : public Expr {
+	private:
+		Expr *cond;
+		Expr *ifTrue;
+		Expr *ifFalse;
+	public:
+		CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+	};
+
 }
 
 #endif /* SEQ_EXPR_H */

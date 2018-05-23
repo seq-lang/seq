@@ -1782,6 +1782,30 @@ struct control<paren_expr> : pegtl::normal<paren_expr>
 };
 
 template<>
+struct control<cond_expr> : pegtl::normal<cond_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("eee");
+		Expr *e = new CondExpr(vec[0].value.expr, vec[1].value.expr, vec[2].value.expr);
+		state.add(e);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<array_type> : pegtl::normal<array_type>
 {
 	template<typename Input>

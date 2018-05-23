@@ -42,7 +42,7 @@ end
 var x = 4.2
 x |> print
 x = .42
-x |> print
+if x < 1 then -x else +x |> print
 var b = (true, !true)
 b.1 |> print
 b.2 = !!false

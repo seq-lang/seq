@@ -101,3 +101,50 @@ types::Type *BOpExpr::getType() const
 	else
 		return lhs->getType()->findBOp(op.symbol, rhs->getType()).outType;
 }
+
+CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse) :
+    Expr(), cond(cond), ifTrue(ifTrue), ifFalse(ifFalse)
+{
+}
+
+llvm::Value *CondExpr::codegen(BaseFunc *base, BasicBlock*& block)
+{
+	cond->ensure(types::BoolType::get());
+
+	LLVMContext& context = block->getContext();
+
+	Value *cond = this->cond->codegen(base, block);
+	IRBuilder<> builder(block);
+	cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
+
+	BasicBlock *b1 = BasicBlock::Create(context, "", block->getParent());
+	BranchInst *branch0 = builder.CreateCondBr(cond, b1, b1);  // we set false-branch below
+
+	Value *ifTrue = this->ifTrue->codegen(base, b1);
+	builder.SetInsertPoint(b1);
+	BranchInst *branch1 = builder.CreateBr(b1);  // changed below
+
+	BasicBlock *b2 = BasicBlock::Create(context, "", block->getParent());
+	branch0->setSuccessor(1, b2);
+	Value *ifFalse = this->ifFalse->codegen(base, b2);
+	builder.SetInsertPoint(b2);
+	BranchInst *branch2 = builder.CreateBr(b2);  // changed below
+
+	block = BasicBlock::Create(context, "", block->getParent());
+	branch1->setSuccessor(0, block);
+	branch2->setSuccessor(0, block);
+	builder.SetInsertPoint(block);
+	PHINode *result = builder.CreatePHI(getType()->getLLVMType(context), 2);
+	result->addIncoming(ifTrue, b1);
+	result->addIncoming(ifFalse, b2);
+	return result;
+}
+
+types::Type *CondExpr::getType() const
+{
+	if (!ifTrue->getType()->is(ifFalse->getType()))
+		throw exc::SeqException("inconsistent types '" + ifTrue->getType()->getName() + "' and '" +
+		                        ifFalse->getType()->getName() + "' in conditional expression");
+
+	return ifTrue->getType();
+}

@@ -19,13 +19,14 @@ struct str_var : TAO_PEGTL_STRING("var") {};
 struct str_end : TAO_PEGTL_STRING("end") {};
 struct str_fun : TAO_PEGTL_STRING("fun") {};
 struct str_if : TAO_PEGTL_STRING("if") {};
+struct str_then : TAO_PEGTL_STRING("then") {};
 struct str_elif : TAO_PEGTL_STRING("elif") {};
 struct str_else : TAO_PEGTL_STRING("else") {};
 struct str_source : TAO_PEGTL_STRING("source") {};
 struct str_true : TAO_PEGTL_STRING("true") {};
 struct str_false : TAO_PEGTL_STRING("false") {};
 
-struct str_keyword : pegtl::sor<str_let, str_var, str_end, str_fun, str_if, str_elif, str_else, str_source, str_true, str_false> {};
+struct str_keyword : pegtl::sor<str_let, str_var, str_end, str_fun, str_if, str_then, str_elif, str_else, str_source, str_true, str_false> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword>, pegtl::identifier> {};
 
@@ -106,13 +107,14 @@ struct literal_expr : pegtl::sor<bool_expr, float_expr, int_expr, str_expr, var_
 struct array_expr : pegtl::seq<type_non_void, seps, pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
 struct record_expr : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>, pegtl::one<')'>> {};
 struct paren_expr : pegtl::seq<pegtl::one<'('>, seps, expr, seps, pegtl::one<')'>> {};
+struct cond_expr : pegtl::seq<str_if, seps, expr, seps, str_then, seps, expr, seps, str_else, seps, expr> {};
 
 struct expr_tail;
 struct index_tail : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
 struct elem_tail : pegtl::seq<pegtl::one<'.'>, seps, natural> {};
 struct expr_tail : pegtl::sor<index_tail, elem_tail> {};
 
-struct atomic_expr_head : pegtl::sor<paren_expr, record_expr, array_expr, literal_expr> {};
+struct atomic_expr_head : pegtl::sor<paren_expr, cond_expr, record_expr, array_expr, literal_expr> {};
 struct atomic_expr : pegtl::seq<atomic_expr_head, pegtl::star<seps, expr_tail>> {};
 
 struct uop_bitnot : TAO_PEGTL_STRING("~") {};
@@ -195,7 +197,7 @@ struct assign_stmt : pegtl::seq<name, seps, pegtl::one<'='>, seps, expr> {};
 struct assign_member_stmt : pegtl::seq<name, seps, pegtl::one<'.'>, seps, natural, seps, pegtl::one<'='>, seps, expr> {};
 struct assign_expr_stmt : pegtl::seq<expr, seps, pegtl::one<'='>, seps, expr> {};
 
-struct if_open : pegtl::if_must<str_if, seps, expr, seps, colon> {};
+struct if_open : pegtl::seq<str_if, seps, expr, seps, colon> {};
 struct elif_open : pegtl::if_must<str_elif, seps, expr, seps, colon> {};
 struct else_open : pegtl::if_must<str_else, seps, colon> {};
 struct if_close : pegtl::success {};
