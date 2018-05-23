@@ -8,8 +8,8 @@ open Ast
 %token <float> FLOAT
 %token <string> ID
 %token LPAREN RPAREN EQ
-%token EOL EOF  
-%token LET MODULE
+%token EOF  
+%token LET
 %token<string> ADD SUB MUL PIPE BRANCH
 
 %nonassoc EQ
@@ -27,21 +27,18 @@ program:
   ;
 
 statement:
-  /* | MODULE; p = ID; s = ID; EOL { Module(p, s) }  */
-  | LET; p = ID; EQ; e = expr; EOL { Definition(Prototype(p, []), [e]) }
-  | e = expr; EOL { Expr e }
-  | EOL { Eof }
+  | LET; p = ID; EQ; e = expr; EOF { Definition(Prototype(p, []), [e]) }
+  | e = expr; EOF { Expr e }
   ;
 
 expr: 
   | n = simple_expr { n } 
   | id = ID; args = arg_list { Identifier(id, args) }
-  | e1 = expr; op = ADD; e2 = expr { Binary(e1, op, e2) }
-  | e1 = expr; op = SUB; e2 = expr { Binary(e1, op, e2) }
-  | e1 = expr; op = MUL; e2 = expr { Binary(e1, op, e2) }
-  | e1 = expr; op = PIPE; e2 = expr { Binary(e1, op, e2) }
-  | e1 = expr; op = BRANCH; e2 = expr { Binary(e1, op, e2) }
+  | e1 = expr; o = op; e2 = expr { Binary(e1, o, e2) }
   | LPAREN; e = expr; RPAREN { e }
+  ;
+%inline op:
+  | ADD | SUB | MUL | PIPE | BRANCH { $1 }
   ;
 simple_expr:
   | n = INT { Int n } 

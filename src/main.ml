@@ -13,7 +13,7 @@ let parse s =
   let lexbuf = Lexing.from_string s in
   try
     let ast = Parser.program Lexer.read lexbuf in
-    ast
+    Ast.flatten ast
   with
   | Lexer.SyntaxError msg ->
     sprintf "%s: %s\n" (print_position lexbuf) msg |> error 

@@ -14,6 +14,9 @@ let llc = global_context ()
 let llm = create_module llc "seq"
 (* let named_values = String.Table.create () ~size:10 *)
 
+let (>>.) f g = f |> ignore ; g
+let (>>) f g x = g f x
+let (<<) f g x = f g x
 
 let void_t   = void_type llc
 let float_t  = double_type llc
@@ -26,42 +29,41 @@ let block    = insert_block llc
   printf "****************\n%s\n****************\n" 
     (string_of_llmodule m) *)
 let dump f = 
-  printf "****************\n%s\n****************\n" 
-    (string_of_llvalue f)
+  string_of_llvalue f |> printf "****************\n%s\n****************\n"
 
 let alloca v ?st bl =
    let lbb = builder_at_end llc bl in
    let vb = build_alloca v "" lbb in
    match st with
-   | Some s -> build_store vb s lbb |> ignore
-   | None -> ()
+    | Some s -> build_store vb s lbb >>. vb
+    | None -> vb
 
 (**********************************************************************)
 
 type seqtype =
   | Void
-  | Int
-  | Float
-  | String 
-  | Array of seqtype
+  | Any
+  | Int of llvalue
+  | Float of llvalue
+  | String of llvalue * llvalue
+  | Array of llvalue * seqtype
 let rec lltype = function
   | Void -> void_t 
-  | Int -> i64_t
-  | Float -> float_t 
-  | String -> 
+  | Int i -> i64_t
+  | Float f -> float_t 
+  | String (l, ptr) -> 
     let str_t = named_struct_type llc "str_t" in
     struct_set_body str_t [| i64_t; ptr_t |] true;
     str_t
-  | Array t ->
+  | Array (l, ptr) ->
     let arr_t = named_struct_type llc "arr_t" in
     struct_set_body arr_t [| i64_t; pointer_type (lltype t) |] true;
     arr_t
 
-type seqsig = { i: seqtype; o: seqtype }
-let llsig sg = 
+(* let llsig sg = 
   let in_t = lltype sg.i in
   let ou_t = lltype sg.o in
-  (in_t, ou_t)
+  (in_t, ou_t) *)
 
 (* let var_map = Hashtbl.create () *)
 (* let reserved_map:(string, seqsig * llvalue) Hashtbl.t = Hashtbl.create () *)
@@ -78,17 +80,99 @@ let initialize_reserved () =
   ) |> String.Table.of_alist_exn
 
 let reserved_map = initialize_reserved ()
-let var_map:(seqsig * llvalue) String.Table.t = String.Table.create ()
+let var_map:(seqtype * seqtype * llvalue) String.Table.t = String.Table.create ()
 
 let fmain = define_function "main" (function_type void_t [| |]) llm
 let llb = builder_at_end llc (entry_block fmain)
+
+type fpos_t = Begin | End (* Where to start? *)
+
+type ret_t = Type of seqtype | Loop of llbasicblock * llvalue
+
+let llpreamble = 
+  llbasicblock
+
+let llmain = 
+  lltype
+
+(*
+id:string args...:expr? inp:type/val llfn:llvalue  -> inp:type
+*)
+let codegen_func id args input ret llfn ?(pf=Begin) = 
+  match id with
+  | "split" -> begin
+    let k, step = match args with
+      | [| k; step |] -> const_int i64_t k, const_int i64_t step
+      | _ -> "args fail" |> error
+    in
+    let seq, len = match input with
+      | String(l, s) -> s, l
+      | _ -> "Wrong input type to split" |> error
+    in
+    match pf with 
+    | Begin -> begin
+      let entry = entry_block llfn in
+      let llb = builder_at_end llc entry in
+
+      let seq = build_load seq "seq" llb in
+      let len = build_load len "len" llb in
+      let max = build_sub len k "sub" llb in
+
+      let loop = append_block llc "split" llfn in
+      build_br loop >>. 
+      position_at_end loop llb >>.
+
+      let phi = build_phi [] "i" llb in
+      let _next = build_add phi step "next" llb in
+      let cond = build_icmp Icmp.Sle phi max "" llb in
+      add_incoming [ctx, entry] phi >>.
+      
+      let body = append_block llc "body_split" llfn in
+      let _branch = build_cond_br cond body body llb in
+
+      position_at_end body llb >>.
+      let subseq = build_gep seq [| phi |] "" llb in
+      let subseq_v = alloca ptr_t ~st:(const_pointer_null ptr_t) llpreamble in
+      let sublen_v = alloca i64_t ~st:(const_int i64_t 0) llpreamble in
+      build_store subseq subseq_v >>.
+      build_store k sublen_v >>.
+      
+      Loop loop
+    end
+    | End -> begin
+      let last = after in
+      let llb = builder_at_end llc last in
+      let loop, phi = match ret with
+        | Loop (l, n) -> l, n
+        | _ -> "whoops" |> error 
+      in
+      build_br loop llb >>.
+
+      add_incoming [next, last] phi >>.
+
+      let exit = append_block llc "exit_split" llfn in
+      
+
+
+      List.append outs (subsqv, sublnv);
+      codegen mdl;
+
+      position_at_end after lbb;
+      build_br loop lbb |> ignore;
+    end
+    | End -> ??
+  end
+  | "split", End ->
+  | "print" ->
+    ??
+  | _ -> sprintf "%s not implemented" id |> error
 
 (* returns (type * type) * llval *)
 let rec codegen = function 
   | Eof -> ({i=Void; o=Void}, mdnull llc)
   | Expr e -> codegen_expr e
   | Definition(prot, exps) -> codegen_def prot exps
-and codegen_expr = function 
+and codegen_expr ?(pf=Begin) = function 
   | Int i -> ({i=Void; o=Int}, const_int i64_t i)
   | Float f -> ({i=Void; o=Float}, const_float float_t f)
   | Identifier(id, args) -> 
@@ -102,6 +186,8 @@ and codegen_expr = function
       | Some (t, v) -> (t, v) 
       | None -> sprintf "Unknown identifier %s" id |> error *)
     end
+  | Pipe pl ->
+    codegen_pipe pl
   | Binary(e1, op, e2) -> 
     let (lt, lhs) = codegen_expr e1 in
     let (rt, rhs) = codegen_expr e2 in 
@@ -132,6 +218,13 @@ and codegen_expr = function
         "not implemented" |> error 
     | _ -> (* missing: branch, leq *)
       sprintf "Unknown operator %s" op |> error
+and codegen_pipe = function 
+  | [] -> assert false
+  | [hd] -> codegen_expr hd
+  | hd :: tl ->
+    codegen_expr hd |> ignore;
+    codegen_pipe tl |> ignore;
+    codegen_expr hd ~pf:End
 and codegen_call id args =
   "ooops" |> error
 and codegen_def prot exps = 

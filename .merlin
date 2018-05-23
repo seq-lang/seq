@@ -5,3 +5,4 @@ PKG llvm
 PKG ctypes
 PKG ppx_deriving
 PKG core
+PKG ppx_sexp_conv

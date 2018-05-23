@@ -8,7 +8,6 @@
 
 let white = [' ' '\t']+
 let newline = ['\n' '\r']
-let cont = '\\' newline
 let digit = ['0'-'9']
 let int = '-'? digit+
 let frac = '.' digit*
@@ -20,9 +19,8 @@ let comment = "#" _*? "\n"
 
 rule read = parse
   | white 
+  | newline
   | comment        { read lexbuf }
-  | cont           { read lexbuf }        
-  | newline        { EOL }
   | "("            { LPAREN }
   | ")"            { RPAREN }
   | "="            { EQ }
@@ -32,7 +30,6 @@ rule read = parse
   | "|>" as op     { PIPE (op) }
   | "," as op      { BRANCH (Char.to_string op) }
   | "let"          { LET }
-  | "module"       { MODULE }
   | int as i       { INT (int_of_string i) }   
   | float as f     { FLOAT (float_of_string f) }
   | ident as id    { ID id }
