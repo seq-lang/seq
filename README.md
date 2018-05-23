@@ -1,5 +1,3 @@
-<img src="resources/logo.png" alt="logo" width="300">
-
 # Seq — a DSL for processing genomic data
 
 [![Build Status](https://travis-ci.com/arshajii/seq.svg?token=QGRVvAxcSasMm4MgJvYL&branch=master)](https://travis-ci.com/arshajii/seq)
