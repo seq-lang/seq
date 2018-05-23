@@ -34,10 +34,15 @@ namespace seq {
 		Hash& hash(std::string name, SeqHash hash);
 		Print& print();
 		RevComp& revcomp();
+		Split& split(Expr *k, Expr *step);
 		Split& split(seq_int_t k, seq_int_t step);
+		Substr& substr(Expr *start, Expr *len);
 		Substr& substr(seq_int_t start, seq_int_t len);
 		Len& len();
 		Count& count();
+		Range& range(Expr *from, Expr *to, Expr *step);
+		Range& range(Expr *from, Expr *to);
+		Range& range(Expr *to);
 		Range& range(seq_int_t from, seq_int_t to, seq_int_t step);
 		Range& range(seq_int_t from, seq_int_t to);
 		Range& range(seq_int_t to);

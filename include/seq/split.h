@@ -2,15 +2,19 @@
 #define SEQ_SPLIT_H
 
 #include <cstdint>
+#include "expr.h"
 #include "stage.h"
 
 namespace seq {
 	class Split : public Stage {
 	private:
-		seq_int_t k, step;
+		Expr *k;
+		Expr *step;
 	public:
+		Split(Expr *k, Expr *step);
 		Split(seq_int_t k, seq_int_t step);
 		void codegen(llvm::Module *module) override;
+		static Split& make(Expr *k, Expr *step);
 		static Split& make(seq_int_t k, seq_int_t step);
 	};
 }

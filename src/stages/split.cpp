@@ -6,14 +6,21 @@
 using namespace seq;
 using namespace llvm;
 
-Split::Split(seq_int_t k, seq_int_t step) :
+Split::Split(Expr *k, Expr *step) :
     Stage("split", types::SeqType::get(), types::SeqType::get()), k(k), step(step)
 {
-	name += "(" + std::to_string(k) + "," + std::to_string(step) + ")";
+}
+
+Split::Split(seq_int_t k, seq_int_t step) :
+    Split(new IntExpr(k), new IntExpr(step))
+{
 }
 
 void Split::codegen(Module *module)
 {
+	k->ensure(types::IntType::get());
+	step->ensure(types::IntType::get());
+
 	ensurePrev();
 	validate();
 
@@ -22,8 +29,8 @@ void Split::codegen(Module *module)
 	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
-	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)k);
-	Value *inc    = ConstantInt::get(seqIntLLVM(context), (uint64_t)step);
+	Value *sublen = k->codegen(getBase(), entry);
+	Value *inc    = step->codegen(getBase(), entry);
 
 	IRBuilder<> builder(entry);
 	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
@@ -62,6 +69,11 @@ void Split::codegen(Module *module)
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
+}
+
+Split& Split::make(Expr *k, Expr *step)
+{
+	return *new Split(k, step);
 }
 
 Split& Split::make(const seq_int_t k, const seq_int_t step)

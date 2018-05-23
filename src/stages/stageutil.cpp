@@ -38,9 +38,19 @@ RevComp& stageutil::revcomp()
 	return RevComp::make();
 }
 
+Split& stageutil::split(Expr *k, Expr *step)
+{
+	return Split::make(k, step);
+}
+
 Split& stageutil::split(seq_int_t k, seq_int_t step)
 {
 	return Split::make(k, step);
+}
+
+Substr& stageutil::substr(Expr *start, Expr *len)
+{
+	return Substr::make(start, len);
 }
 
 Substr& stageutil::substr(seq_int_t start, seq_int_t len)
@@ -56,6 +66,21 @@ Len& stageutil::len()
 Count& stageutil::count()
 {
 	return Count::make();
+}
+
+Range& stageutil::range(Expr *from, Expr *to, Expr *step)
+{
+	return Range::make(from, to, step);
+}
+
+Range& stageutil::range(Expr *from, Expr *to)
+{
+	return Range::make(from, to);
+}
+
+Range& stageutil::range(Expr *to)
+{
+	return Range::make(to);
 }
 
 Range& stageutil::range(seq_int_t from, seq_int_t to, seq_int_t step)

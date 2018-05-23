@@ -6,14 +6,21 @@
 using namespace llvm;
 using namespace seq;
 
-Substr::Substr(seq_int_t start, seq_int_t len) :
-    Stage("split", types::SeqType::get(), types::SeqType::get()), start(start - 1), len(len)
+Substr::Substr(Expr *start, Expr *len) :
+    Stage("substr", types::SeqType::get(), types::SeqType::get()), start(start), len(len)
 {
-	name += "(" + std::to_string(start) + "," + std::to_string(len) + ")";
+}
+
+Substr::Substr(seq::seq_int_t k, seq::seq_int_t step) :
+    Substr(new IntExpr(k), new IntExpr(step))
+{
 }
 
 void Substr::codegen(Module *module)
 {
+	start->ensure(types::IntType::get());
+	len->ensure(types::IntType::get());
+
 	ensurePrev();
 	validate();
 
@@ -21,12 +28,15 @@ void Substr::codegen(Module *module)
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 
 	block = prev->getAfter();
+
+	Value *subidx = start->codegen(getBase(), block);
+	Value *sublen = len->codegen(getBase(), block);
+
 	IRBuilder<> builder(block);
+	subidx = builder.CreateSub(subidx, oneLLVM(context));
 
 	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
-	Value *subidx  = ConstantInt::get(seqIntLLVM(context), (uint64_t)start);
 	Value *subseq = builder.CreateGEP(seq, subidx);
-	Value *sublen = ConstantInt::get(seqIntLLVM(context), (uint64_t)len);
 
 	Value *subseqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
 	Value *sublenVar = makeAlloca(zeroLLVM(context), preambleBlock);
@@ -39,6 +49,11 @@ void Substr::codegen(Module *module)
 
 	codegenNext(module);
 	prev->setAfter(getAfter());
+}
+
+Substr& Substr::make(Expr *start, Expr *len)
+{
+	return *new Substr(start, len);
 }
 
 Substr& Substr::make(const seq_int_t start, const seq_int_t len)

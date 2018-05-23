@@ -596,8 +596,41 @@ template<>
 struct action<split_stage> {
 	static void apply0(ParseState& state)
 	{
-		auto vec = state.get("ii");
-		Pipeline p = stageutil::split(vec[0].value.ival, vec[1].value.ival);
+		auto vec = state.get("ee");
+		Pipeline p = stageutil::split(vec[0].value.expr, vec[1].value.expr);
+		state.add(p);
+	}
+};
+
+template<>
+struct action<substr_stage> {
+	static void apply0(ParseState& state)
+	{
+		auto vec = state.get("ee");
+		Pipeline p = stageutil::substr(vec[0].value.expr, vec[1].value.expr);
+		state.add(p);
+	}
+};
+
+template<>
+struct action<range_stage> {
+	static void apply0(ParseState& state)
+	{
+		auto vec = state.get("e", true);
+		Pipeline p;
+		switch (vec.size()) {
+			case 1:
+				p = stageutil::range(vec[0].value.expr);
+				break;
+			case 2:
+				p = stageutil::range(vec[0].value.expr, vec[1].value.expr);
+				break;
+			case 3:
+				p = stageutil::range(vec[0].value.expr, vec[1].value.expr, vec[2].value.expr);
+				break;
+			default:
+				assert(0);
+		}
 		state.add(p);
 	}
 };
@@ -868,6 +901,38 @@ struct control<record_stage> : pegtl::normal<record_stage>
 
 template<>
 struct control<split_stage> : pegtl::normal<split_stage>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<substr_stage> : pegtl::normal<substr_stage>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<range_stage> : pegtl::normal<range_stage>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)

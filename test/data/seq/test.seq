@@ -1,11 +1,11 @@
 # this is a comment
 
 fun f: Seq -> Seq[]
-  | split(32,32) |> collect
+  | split 32 32 |> collect
 end
 
 source args[0]:
-  | print
+  | substr 0+1 5 |> print
   let v = | f()  # inline comment
   v |> foreach |> (count, _) |> {
     | .1 |> print
@@ -17,11 +17,11 @@ source args[0]:
   arr |> foreach
 
   | print
-  | split(64,64) |> {
+  | split 64 64 |> {
     let v1 = | print
-    v1 |> split(32,32) |> {
+    v1 |> split 32 32 |> {
       let v2 = | print
-      | split(16,16) |> {
+      | split 16 16 |> {
         | print
         let v3 = | copy |> print
         let v4 = v3 |> print
@@ -62,3 +62,5 @@ fun fib: Int -> Int
 end
 
 10 |> fib() |> print
+
+| range (if !b.1 then 1 else 2) 5+5 |> print

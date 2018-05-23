@@ -7,28 +7,43 @@
 using namespace seq;
 using namespace llvm;
 
-Range::Range(seq_int_t from, seq_int_t to, seq_int_t step) :
+Range::Range(Expr *from, Expr *to, Expr *step) :
     Stage("range", types::AnyType::get(), types::IntType::get()),
     from(from), to(to), step(step)
 {
-	if (from > to)
-		throw exc::StageException("invalid range boundaries", *this);
+}
 
-	name += "(" + std::to_string(from) + "," + std::to_string(to) + "," + std::to_string(step) + ")";
+Range::Range(Expr *from, Expr *to) :
+    Range(from, to, new IntExpr(1))
+{
+}
+
+Range::Range(Expr *to) :
+    Range(new IntExpr(0), to, new IntExpr(1))
+{
+}
+
+Range::Range(seq_int_t from, seq_int_t to, seq_int_t step) :
+    Range(new IntExpr(from), new IntExpr(to), new IntExpr(step))
+{
 }
 
 Range::Range(seq_int_t from, seq_int_t to) :
-    Range(from, to, 1)
+    Range(new IntExpr(from), new IntExpr(to))
 {
 }
 
 Range::Range(seq_int_t to) :
-    Range(0, to, 1)
+    Range(new IntExpr(to))
 {
 }
 
 void Range::codegen(Module *module)
 {
+	from->ensure(types::IntType::get());
+	to->ensure(types::IntType::get());
+	step->ensure(types::IntType::get());
+
 	ensurePrev();
 	validate();
 
@@ -37,9 +52,9 @@ void Range::codegen(Module *module)
 	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
-	Value *from = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->from, true);
-	Value *to   = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->to,   true);
-	Value *step = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->step, true);
+	Value *from = this->from->codegen(getBase(), entry);
+	Value *to   = this->to->codegen(getBase(), entry);
+	Value *step = this->step->codegen(getBase(), entry);
 
 	BasicBlock *loop = BasicBlock::Create(context, "range", func);
 	IRBuilder<> builder(entry);
@@ -70,6 +85,21 @@ void Range::codegen(Module *module)
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
+}
+
+Range& Range::make(Expr *from, Expr *to, Expr *step)
+{
+	return *new Range(from, to, step);
+}
+
+Range& Range::make(Expr *from, Expr *to)
+{
+	return *new Range(from, to);
+}
+
+Range& Range::make(Expr *to)
+{
+	return *new Range(to);
 }
 
 Range& Range::make(seq_int_t from, seq_int_t to, seq_int_t step)
