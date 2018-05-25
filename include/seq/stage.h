@@ -17,6 +17,8 @@
 #include "seqt.h"
 #include "num.h"
 #include "array.h"
+#include "record.h"
+#include "funct.h"
 
 #include "common.h"
 

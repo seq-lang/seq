@@ -27,6 +27,13 @@ types::BaseSeqType::BaseSeqType(std::string name, SeqData key) :
 	vtable.print = (void *)printBaseSeq;
 }
 
+llvm::Type *types::BaseSeqType::getFuncType(LLVMContext& context, Type *outType)
+{
+	return FunctionType::get(outType->getLLVMType(context),
+	                         {IntegerType::getInt8PtrTy(context), seqIntLLVM(context)},
+	                         false);
+}
+
 Function *types::BaseSeqType::makeFuncOf(Module *module, Type *outType)
 {
 	static int idx = 1;
@@ -53,7 +60,7 @@ void types::BaseSeqType::setFuncArgs(Function *func,
 	outs->insert({SeqData::LEN, lenVar});
 }
 
-Value *types::BaseSeqType::callFuncOf(Function *func,
+Value *types::BaseSeqType::callFuncOf(Value *func,
                                       ValMap outs,
                                       BasicBlock *block)
 {

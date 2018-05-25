@@ -40,13 +40,15 @@ namespace seq {
 			virtual std::string printFuncName() { return "print" + getName(); }
 			virtual std::string allocFuncName() { return "malloc"; }
 
+			virtual llvm::Type *getFuncType(llvm::LLVMContext& context, Type *outType);
+
 			virtual llvm::Function *makeFuncOf(llvm::Module *module, Type *outType);
 
 			virtual void setFuncArgs(llvm::Function *func,
 			                         ValMap outs,
 			                         llvm::BasicBlock *block);
 
-			virtual llvm::Value *callFuncOf(llvm::Function *func,
+			virtual llvm::Value *callFuncOf(llvm::Value *func,
 					                        ValMap outs,
 			                                llvm::BasicBlock *block);
 
@@ -125,6 +127,12 @@ namespace seq {
 			                               llvm::Value *ptr,
 			                               llvm::Value *idx);
 
+			virtual void call(BaseFunc *base,
+			                  ValMap ins,
+			                  ValMap outs,
+			                  llvm::Value *fn,
+			                  llvm::BasicBlock *block);
+
 			virtual void initOps();
 			virtual OpSpec findUOp(const std::string& symbol);
 			virtual OpSpec findBOp(const std::string& symbol, Type *rhsType);
@@ -135,6 +143,7 @@ namespace seq {
 			std::string getName() const;
 			SeqData getKey() const;
 			virtual Type *getBaseType(seq_int_t idx) const;
+			virtual Type *getCallType();
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
 			Mem& operator[](seq_int_t size);

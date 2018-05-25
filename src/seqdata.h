@@ -16,6 +16,7 @@ namespace seq {
 		STR,
 		ARRAY,
 		RECORD,
+		FUNC,
 
 		SEQ_DATA_COUNT
 	};

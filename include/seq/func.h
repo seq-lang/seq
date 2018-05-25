@@ -51,6 +51,7 @@ namespace seq {
 		llvm::BasicBlock *getPreamble() const;
 		virtual types::Type *getInType() const;
 		virtual types::Type *getOutType() const;
+		virtual llvm::Function *getFunc();
 	};
 
 	class Func : public BaseFunc {

@@ -13,24 +13,26 @@ namespace seq {
 			VoidType(VoidType const &) = delete;
 			void operator=(VoidType const &)= delete;
 
-			virtual llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
+			llvm::Type *getFuncType(llvm::LLVMContext& context, Type *outType) override;
+
+			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
 
 			void setFuncArgs(llvm::Function *func,
 			                 ValMap outs,
 			                 llvm::BasicBlock *block) override;
 
-			virtual llvm::Value *callFuncOf(llvm::Function *func,
-					                        ValMap outs,
-			                                llvm::BasicBlock *block) override;
+			llvm::Value *callFuncOf(llvm::Value *func,
+			                        ValMap outs,
+			                        llvm::BasicBlock *block) override;
 
-			virtual llvm::Value *pack(BaseFunc *base,
-			                          ValMap outs,
-			                          llvm::BasicBlock *block) override;
+			llvm::Value *pack(BaseFunc *base,
+			                  ValMap outs,
+			                  llvm::BasicBlock *block) override;
 
-			virtual void unpack(BaseFunc *base,
-			                    llvm::Value *value,
-			                    ValMap outs,
-			                    llvm::BasicBlock *block) override;
+			void unpack(BaseFunc *base,
+			            llvm::Value *value,
+			            ValMap outs,
+			            llvm::BasicBlock *block) override;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			static VoidType *get();

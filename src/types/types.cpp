@@ -16,6 +16,11 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
+llvm::Type *types::Type::getFuncType(LLVMContext& context, Type *outType)
+{
+	return FunctionType::get(outType->getLLVMType(context), getLLVMType(context), false);
+}
+
 Function *types::Type::makeFuncOf(Module *module, Type *outType)
 {
 	static int idx = 1;
@@ -40,7 +45,7 @@ void types::Type::setFuncArgs(Function *func,
 	outs->insert({getKey(), var});
 }
 
-Value *types::Type::callFuncOf(Function *func,
+Value *types::Type::callFuncOf(Value *func,
                                ValMap outs,
                                BasicBlock *block)
 {
@@ -297,6 +302,20 @@ void types::Type::codegenIndexStore(BaseFunc *base,
                                     Value *idx)
 {
 	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
+types::Type *types::Type::getCallType()
+{
+	throw exc::SeqException("cannot call type '" + getName() + "'");
+}
+
+void types::Type::call(BaseFunc *base,
+                       ValMap ins,
+                       ValMap outs,
+                       Value *fn,
+                       BasicBlock *block)
+{
+	throw exc::SeqException("cannot call type '" + getName() + "'");
 }
 
 void types::Type::initOps()

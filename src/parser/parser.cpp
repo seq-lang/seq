@@ -713,6 +713,9 @@ struct action<var_expr> {
 			case SeqEntity::CELL:
 				expr = new CellExpr(ent.value.cell);
 				break;
+			case SeqEntity::FUNC:
+				expr = new FuncExpr(ent.value.func);
+				break;
 			default:
 				throw exc::SeqException("name '" + std::string(vec[0].value.name) + "' does not refer to a variable");
 
@@ -771,29 +774,6 @@ struct action<bool_type> {
 	static void apply0(ParseState& state)
 	{
 		state.add((types::Type *)&types::Bool);
-	}
-};
-
-template<>
-struct action<array_type> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("t");
-		state.add((types::Type *)types::ArrayType::get(vec[0].value.type));
-	}
-};
-
-template<>
-struct action<record_type> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("t", true);
-		std::vector<types::Type *> types;
-
-		for (auto ent : vec)
-			types.push_back(ent.value.type);
-
-		state.add((types::Type *)types::RecordType::get(types));
 	}
 };
 
@@ -1868,6 +1848,45 @@ struct control<index_tail> : pegtl::normal<index_tail>
 };
 
 template<>
+struct control<call_tail> : pegtl::normal<call_tail>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input& in, ParseState& state)
+	{
+		auto vec = state.get("e", true);
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *func = state.top().value.expr;
+		Expr *arg = nullptr;
+
+		if (vec.size() == 1) {
+			arg = vec[0].value.expr;
+		} else if (vec.size() > 1) {
+			std::vector<Expr *> exprs;
+
+			for (auto ent : vec)
+				exprs.push_back(ent.value.expr);
+
+			arg = new RecordExpr(exprs);
+		}
+
+		Expr *e = new CallExpr(func, arg);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<elem_tail> : pegtl::normal<elem_tail>
 {
 	template<typename Input>
@@ -1952,6 +1971,13 @@ struct control<array_type> : pegtl::normal<array_type>
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("t");
+		state.add((types::Type *)types::ArrayType::get(vec[0].value.type));
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -1968,9 +1994,100 @@ struct control<record_type> : pegtl::normal<record_type>
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("t", true);
+		std::vector<types::Type *> types;
+
+		for (auto ent : vec)
+			types.push_back(ent.value.type);
+
+		state.add((types::Type *)types::RecordType::get(types));
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
+	}
+};
+
+template<>
+struct control<func_type_no_void> : pegtl::normal<func_type_no_void>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("tt");
+		state.add((types::Type *)types::FuncType::get(vec[0].value.type, vec[1].value.type));
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_type_in_void> : pegtl::normal<func_type_in_void>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("t");
+		state.add((types::Type *)types::FuncType::get(types::VoidType::get(), vec[0].value.type));
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_type_out_void> : pegtl::normal<func_type_out_void>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("t");
+		state.add((types::Type *)types::FuncType::get(vec[0].value.type, types::VoidType::get()));
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_type_in_out_void> : pegtl::normal<func_type_in_out_void>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.add((types::Type *)types::FuncType::get(types::VoidType::get(), types::VoidType::get()));
 	}
 };
 

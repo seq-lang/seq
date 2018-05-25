@@ -9,6 +9,11 @@ types::VoidType::VoidType() : Type("Void", AnyType::get())
 {
 }
 
+llvm::Type *types::VoidType::getFuncType(LLVMContext& context, Type *outType)
+{
+	return FunctionType::get(outType->getLLVMType(context), false);
+}
+
 Function *types::VoidType::makeFuncOf(Module *module, Type *outType)
 {
 	static int idx = 1;
@@ -26,7 +31,7 @@ void types::VoidType::setFuncArgs(Function *func,
 {
 }
 
-Value *types::VoidType::callFuncOf(Function *func,
+Value *types::VoidType::callFuncOf(Value *func,
                                    ValMap outs,
                                    BasicBlock *block)
 {

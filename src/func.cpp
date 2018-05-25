@@ -50,6 +50,14 @@ types::Type *BaseFunc::getOutType() const
 	return types::VoidType::get();
 }
 
+Function *BaseFunc::getFunc()
+{
+	if (!func)
+		throw exc::SeqException("function not yet generated");
+
+	return func;
+}
+
 Func::Func(types::Type& inType,
            types::Type& outType,
            std::string name,
@@ -111,6 +119,9 @@ void BaseFunc::finalizeInit(Module *module)
 
 void Func::codegen(Module *module)
 {
+	if (!this->module)
+		this->module = module;
+
 	if (func)
 		return;
 
@@ -187,8 +198,7 @@ void Func::codegen(Module *module)
 
 Value *Func::codegenCallRaw(BaseFunc *base, ValMap ins, BasicBlock *block)
 {
-	module = block->getModule();
-	codegen(module);
+	codegen(block->getModule());
 	return inType->callFuncOf(func, ins, block);
 }
 

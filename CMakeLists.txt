@@ -83,6 +83,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/base.h
                        include/seq/basestage.h
                        include/seq/call.h
+                       include/seq/callexpr.h
                        include/seq/capture.h
                        include/seq/cell.h
                        include/seq/chunk.h
@@ -96,6 +97,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/filter.h
                        include/seq/foreach.h
                        include/seq/func.h
+                       include/seq/funct.h
                        include/seq/getelemexpr.h
                        include/seq/getitem.h
                        include/seq/hash.h
@@ -131,6 +133,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/varexpr.h
                        include/seq/void.h
                        src/expr/arrayexpr.cpp
+                       src/expr/callexpr.cpp
                        src/expr/expr.cpp
                        src/expr/getelemexpr.cpp
                        src/expr/lookupexpr.cpp
@@ -169,6 +172,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/any.cpp
                        src/types/array.cpp
                        src/types/base.cpp
+                       src/types/funct.cpp
                        src/types/num.cpp
                        src/types/record.cpp
                        src/types/seqt.cpp

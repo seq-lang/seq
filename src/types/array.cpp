@@ -21,6 +21,13 @@ types::ArrayType::ArrayType(Type *baseType) :
 	vtable.copy = (void *)copyArray;
 }
 
+llvm::Type *types::ArrayType::getFuncType(LLVMContext& context, Type *outType)
+{
+	return FunctionType::get(outType->getLLVMType(context),
+	                         {PointerType::get(getBaseType()->getLLVMType(context), 0), seqIntLLVM(context)},
+	                         false);
+}
+
 Function *types::ArrayType::makeFuncOf(Module *module, Type *outType)
 {
 	static int idx = 1;
@@ -47,7 +54,7 @@ void types::ArrayType::setFuncArgs(Function *func,
 	outs->insert({SeqData::LEN, lenVar});
 }
 
-Value *types::ArrayType::callFuncOf(Function *func,
+Value *types::ArrayType::callFuncOf(Value *func,
                                     ValMap outs,
                                     BasicBlock *block)
 {

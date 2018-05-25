@@ -19,7 +19,6 @@
 #include "io.h"
 #include "exc.h"
 #include "common.h"
-#include "record.h"
 
 #include "parser.h"
 #include "expr.h"
@@ -30,6 +29,7 @@
 #include "recordexpr.h"
 #include "lookupexpr.h"
 #include "getelemexpr.h"
+#include "callexpr.h"
 
 namespace seq {
 

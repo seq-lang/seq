@@ -17,13 +17,15 @@ namespace seq {
 			std::string copyFuncName() override { return "copyBaseSeq"; }
 			std::string printFuncName() override { return "printBaseSeq"; }
 
+			llvm::Type *getFuncType(llvm::LLVMContext& context, Type *outType) override;
+
 			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
 
 			void setFuncArgs(llvm::Function *func,
 			                 ValMap outs,
 			                 llvm::BasicBlock *block) override;
 
-			llvm::Value *callFuncOf(llvm::Function *func,
+			llvm::Value *callFuncOf(llvm::Value *func,
 			                        ValMap outs,
 			                        llvm::BasicBlock *block) override;
 
