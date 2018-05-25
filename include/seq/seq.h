@@ -106,6 +106,7 @@ namespace seq {
 		                 ValMap ins,
 		                 ValMap outs,
 		                 llvm::BasicBlock *block) override;
+		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 		void execute(const std::vector<std::string>& args={}, bool debug=false);
 

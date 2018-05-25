@@ -117,6 +117,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/range.h
                        include/seq/record.h
                        include/seq/recordexpr.h
+                       include/seq/return.h
                        include/seq/revcomp.h
                        include/seq/seq.h
                        include/seq/seqt.h
@@ -162,6 +163,7 @@ add_library(seq SHARED include/seq/any.h
                        src/stages/opstage.cpp
                        src/stages/print.cpp
                        src/stages/range.cpp
+                       src/stages/return.cpp
                        src/stages/revcomp.cpp
                        src/stages/serialize.cpp
                        src/stages/source.cpp

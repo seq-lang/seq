@@ -1,6 +1,8 @@
 #include "seq/basestage.h"
 #include "seq/makerec.h"
 #include "seq/call.h"
+#include "seq/expr.h"
+#include "seq/return.h"
 #include "seq/exc.h"
 #include "seq/func.h"
 
@@ -8,9 +10,8 @@ using namespace seq;
 using namespace llvm;
 
 BaseFunc::BaseFunc() :
-    compilationContext(), module(nullptr), initBlock(nullptr),
-    preambleBlock(nullptr), initFunc(nullptr), func(nullptr),
-    argsVar(true)
+    module(nullptr), initBlock(nullptr), preambleBlock(nullptr),
+    initFunc(nullptr), func(nullptr), argsVar(true)
 {
 }
 
@@ -135,7 +136,6 @@ void Func::codegen(Module *module)
 	if (pipelines.empty())
 		throw exc::SeqException("function has no pipelines");
 
-	compilationContext.reset();
 	LLVMContext& context = module->getContext();
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
@@ -156,8 +156,6 @@ void Func::codegen(Module *module)
 	builder.SetInsertPoint(entry);
 	BasicBlock *block;
 
-	compilationContext.inFunc = true;
-	compilationContext.inMain = true;
 	for (auto &pipeline : pipelines) {
 		pipeline.validate();
 		builder.SetInsertPoint(&func->getBasicBlockList().back());
@@ -170,7 +168,6 @@ void Func::codegen(Module *module)
 		begin->block = block;
 		pipeline.getHead()->codegen(module);
 	}
-	compilationContext.inMain = false;
 
 	BasicBlock *exitBlock = &func->getBasicBlockList().back();
 	builder.SetInsertPoint(exitBlock);
@@ -182,12 +179,14 @@ void Func::codegen(Module *module)
 		while (!tail->getNext().empty())
 			tail = tail->getNext().back();
 
-		if (!tail->getOutType()->isChildOf(outType))
-			throw exc::SeqException("function does not output type '" + outType->getName() + "'");
+		if (!dynamic_cast<Return *>(tail)) {  // i.e. if there isn't already a return at the end
+			if (!tail->getOutType()->isChildOf(outType))
+				throw exc::SeqException("function does not output type '" + outType->getName() + "'");
 
-		ValMap tailOuts = tail->outs;
-		Value *result = outType->pack(this, tailOuts, exitBlock);
-		builder.CreateRet(result);
+			ValMap tailOuts = tail->outs;
+			Value *result = outType->pack(this, tailOuts, exitBlock);
+			builder.CreateRet(result);
+		}
 	}
 
 	builder.SetInsertPoint(preambleBlock);
@@ -206,6 +205,23 @@ void Func::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *bloc
 {
 	Value *result = codegenCallRaw(base, ins, block);
 	outType->unpack(base, result, outs, block);
+}
+
+void Func::codegenReturn(Expr *expr, BasicBlock*& block)
+{
+	if (!expr->getType()->isChildOf(outType))
+		throw exc::SeqException(
+		  "cannot return '" + expr->getType()->getName() + "' from function returning '" + outType->getName() + "'");
+
+	Value *v = expr->codegen(this, block);
+	IRBuilder<> builder(block);
+	builder.CreateRet(v);
+
+	/*
+	 * Can't have anything after the `ret` instruction we just added,
+	 * so make a new block and return that to the caller.
+	 */
+	block = BasicBlock::Create(block->getContext(), "", block->getParent());
 }
 
 void Func::add(Pipeline pipeline)
@@ -380,6 +396,11 @@ void BaseFuncLite::codegenCall(BaseFunc *base,
                                BasicBlock *block)
 {
 	throw exc::SeqException("cannot call lite base function");
+}
+
+void BaseFuncLite::codegenReturn(Expr *expr, BasicBlock*& block)
+{
+	throw exc::SeqException("cannot return from lite base function");
 }
 
 void BaseFuncLite::add(Pipeline pipeline)

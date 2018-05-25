@@ -11,22 +11,9 @@ namespace seq {
 
 	class Call;
 	class MultiCall;
-
-	struct CompilationContext {
-		bool inOnce = false;
-		bool inMain = false;
-		bool inLast = false;
-		bool inFunc = false;
-
-		inline void reset()
-		{
-			inOnce = inMain = inLast = false;
-		}
-	};
+	class Expr;
 
 	class BaseFunc {
-	public:
-		CompilationContext compilationContext;
 	protected:
 		llvm::Module *module;
 		llvm::BasicBlock *initBlock;
@@ -43,6 +30,7 @@ namespace seq {
 		                         ValMap ins,
 		                         ValMap outs,
 		                         llvm::BasicBlock *block)=0;
+		virtual void codegenReturn(Expr *expr, llvm::BasicBlock*& block)=0;
 		virtual void add(Pipeline pipeline)=0;
 
 		virtual Var *getArgVar();
@@ -76,6 +64,7 @@ namespace seq {
 		                 ValMap ins,
 		                 ValMap outs,
 		                 llvm::BasicBlock *block) override;
+		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
@@ -104,6 +93,7 @@ namespace seq {
 		                 ValMap ins,
 		                 ValMap outs,
 		                 llvm::BasicBlock *block) override;
+		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 	};
 

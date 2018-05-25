@@ -48,11 +48,11 @@ source args[0]:
   (v[1], ((v)[2]), (v[1], 4.2)).3 |> .1 |> print
 end
 
-fun hello
-  "hello world" |> print
+fun hello -> Str
+  return "hello world"
 end
 
-$ hello()
+hello() |> print
 42 + 2.2 |> print
 -13 |> print
 var x = 4.2

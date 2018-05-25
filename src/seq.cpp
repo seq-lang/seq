@@ -216,7 +216,6 @@ void SeqModule::codegen(Module *module)
 	if (func)
 		return;
 
-	compilationContext.reset();
 	LLVMContext& context = module->getContext();
 	this->module = module;
 
@@ -285,7 +284,6 @@ void SeqModule::codegen(Module *module)
 		onceBlock = origOnceBlock;  // onceBlock is really the _last_ once-block
 		builder.SetInsertPoint(onceBlock);
 
-		compilationContext.inOnce = true;
 		for (auto &pipeline : once.pipelines) {
 			pipeline.validate();
 			builder.SetInsertPoint(&func->getBasicBlockList().back());
@@ -298,7 +296,6 @@ void SeqModule::codegen(Module *module)
 			begin->block = onceBlock;
 			pipeline.getHead()->codegen(module);
 		}
-		compilationContext.inOnce = false;
 
 		onceBlock = &func->getBasicBlockList().back();
 
@@ -316,7 +313,6 @@ void SeqModule::codegen(Module *module)
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
 	BasicBlock *block;
 
-	compilationContext.inMain = true;
 	for (auto &pipeline : main.pipelines) {
 		pipeline.validate();
 		builder.SetInsertPoint(&func->getBasicBlockList().back());
@@ -329,7 +325,6 @@ void SeqModule::codegen(Module *module)
 		begin->block = block;
 		pipeline.getHead()->codegen(module);
 	}
-	compilationContext.inMain = false;
 
 	BasicBlock *lastMain = nullptr;
 	BasicBlock *lastBr = nullptr;
@@ -343,7 +338,6 @@ void SeqModule::codegen(Module *module)
 		origLastBlock = BasicBlock::Create(context, "last", func);
 		lastBlock = origLastBlock;  // lastBlock is really the _last_ last-block
 
-		compilationContext.inLast = true;
 		for (auto &pipeline : last.pipelines) {
 			pipeline.validate();
 			builder.SetInsertPoint(&func->getBasicBlockList().back());
@@ -356,7 +350,6 @@ void SeqModule::codegen(Module *module)
 			begin->block = lastBlock;
 			pipeline.getHead()->codegen(module);
 		}
-		compilationContext.inLast = false;
 	}
 
 	lastBlock = &func->getBasicBlockList().back();
@@ -392,7 +385,12 @@ void SeqModule::codegen(Module *module)
 
 void SeqModule::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *block)
 {
-	throw exc::SeqException("cannot call Seq instance");
+	throw exc::SeqException("cannot call SeqModule");
+}
+
+void SeqModule::codegenReturn(Expr *expr, BasicBlock*& block)
+{
+	throw exc::SeqException("cannot return from SeqModule");
 }
 
 void SeqModule::execute(const std::vector<std::string>& args, bool debug)

@@ -187,3 +187,8 @@ If& stageutil::ifstage()
 {
 	return If::make();
 }
+
+Return& stageutil::ret(Expr *expr)
+{
+	return Return::make(expr);
+}

@@ -720,6 +720,14 @@ struct action<bool_type> {
 	}
 };
 
+template<>
+struct action<str_type> {
+	static void apply0(ParseState& state)
+	{
+		state.add((types::Type *)&types::Str);
+	}
+};
+
 /*
  * Control
  */
@@ -1681,6 +1689,31 @@ struct control<else_close> : pegtl::normal<else_close>
 	static void success(Input&, ParseState& state)
 	{
 		state.exit();
+	}
+};
+
+template<>
+struct control<return_stmt> : pegtl::normal<return_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		Pipeline p = stageutil::ret(vec[0].value.expr);
+		p.getHead()->setBase(state.base());
+		state.context().add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
 	}
 };
 
