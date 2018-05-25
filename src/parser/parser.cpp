@@ -979,6 +979,32 @@ struct control<chunk_stage> : pegtl::normal<chunk_stage>
 };
 
 template<>
+struct control<stage_as> : pegtl::normal<stage_as>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		assert(state.top().type == SeqEntity::PIPELINE);
+		auto *var = new Var(true);
+		*var = state.top().value.pipeline;
+		state.sym(vec[0].value.name, var);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<pipeline_stage> : pegtl::normal<pipeline_stage>
 {
 	template<typename Input>
@@ -1706,6 +1732,31 @@ struct control<return_stmt> : pegtl::normal<return_stmt>
 	{
 		auto vec = state.get("e");
 		Pipeline p = stageutil::ret(vec[0].value.expr);
+		p.getHead()->setBase(state.base());
+		state.context().add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<expr_stmt> : pegtl::normal<expr_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		Pipeline p = stageutil::expr(vec[0].value.expr);
 		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}

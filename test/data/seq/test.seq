@@ -19,8 +19,8 @@ source args[0]:
 
   let input = $ .
   let v = farray[0](input)
-  v |> foreach |> (count, _) |> {
-    $ .1 |> print
+  v |> foreach |> (count, _) as t |> {
+    t.1 |> print
     $ .2 |> print
   }
   $ print
