@@ -61,7 +61,11 @@ b.2 = !!false
 b.2 |> print
 
 fun fib n: Int -> Int
-  if n <= 1 then n else fib(n-1) + fib(n-2) |> .
+  fun rec x: {(Int -> Int), Int} -> Int
+    x.1(x.2 - 1) + x.1(x.2 - 2) |> .
+  end
+
+  if n <= 1 then n else rec(fib, n) |> .
 end
 
 10 |> fib() |> print

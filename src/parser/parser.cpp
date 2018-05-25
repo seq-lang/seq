@@ -294,16 +294,24 @@ public:
 		return contexts.back();
 	}
 
-	SeqEntity base()
+	BaseFunc *base()
 	{
 		assert(!contexts.empty());
+
 		for (int i = (int)contexts.size() - 1; i >= 0; i--) {
 			SeqEntity ent = contexts[i];
-			if (ent.type == SeqEntity::MODULE || ent.type == SeqEntity::FUNC)
-				return ent;
+			switch (ent.type) {
+				case SeqEntity::FUNC:
+					return ent.value.func;
+				case SeqEntity::MODULE:
+					return ent.value.module;
+				default:
+					break;
+			}
 		}
+
 		assert(0);
-		return {};
+		return nullptr;
 	}
 
 	void setModule(SeqModule *module)
@@ -635,20 +643,6 @@ struct action<range_stage> {
 	}
 };
 
-static BaseFunc *getBaseFromEnt(SeqEntity ent)
-{
-	switch (ent.type) {
-		case SeqEntity::FUNC:
-			return ent.value.func;
-		case SeqEntity::MODULE:
-			return ent.value.module;
-		default:
-			assert(0);
-	}
-
-	return nullptr;
-}
-
 template<>
 struct action<int_expr> {
 	static void apply0(ParseState& state)
@@ -938,7 +932,7 @@ struct control<pipeline_stage> : pegtl::normal<pipeline_stage>
 			p = p | vec[i].value.pipeline;
 		}
 
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		state.add(p);
 	}
 
@@ -970,7 +964,7 @@ struct control<pipeline_branch> : pegtl::normal<pipeline_branch>
 			p = p | vec[i].value.pipeline;
 		}
 
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		state.add(p);
 	}
 
@@ -1338,7 +1332,7 @@ struct control<var_assign_pipeline> : pegtl::normal<var_assign_pipeline>
 	{
 		auto vec = state.get("sp");
 		Pipeline p = vec[1].value.pipeline;
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		auto *var = new Var(true);
 		*var = p;
 		state.sym(vec[0].value.name, var);
@@ -1365,7 +1359,7 @@ struct control<var_assign_expr> : pegtl::normal<var_assign_expr>
 	{
 		auto vec = state.get("se");
 		Pipeline p = stageutil::expr(vec[1].value.expr);
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		auto *var = new Var(true);
 		p = state.context().add(p);
 		*var = p;
@@ -1392,9 +1386,9 @@ struct control<cell_decl> : pegtl::normal<cell_decl>
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("se");
-		Cell *cell = new Cell(getBaseFromEnt(state.base()), vec[1].value.expr);
+		Cell *cell = new Cell(state.base(), vec[1].value.expr);
 		Pipeline p = stageutil::cell(cell);
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		state.context().add(p);
 		state.sym(vec[0].value.name, cell);
 	}
@@ -1426,7 +1420,7 @@ struct control<assign_stmt> : pegtl::normal<assign_stmt>
 
 		Cell *cell = ent.value.cell;
 		Pipeline p = stageutil::assign(cell, vec[1].value.expr);
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}
 
@@ -1457,7 +1451,7 @@ struct control<assign_member_stmt> : pegtl::normal<assign_member_stmt>
 
 		Cell *cell = ent.value.cell;
 		Pipeline p = stageutil::assignmemb(cell, vec[1].value.ival, vec[2].value.expr);
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}
 
@@ -1487,7 +1481,7 @@ struct control<assign_expr_stmt> : pegtl::normal<assign_expr_stmt>
 			throw exc::SeqException("can only assign array indices, not general expressions");
 
 		Pipeline p = stageutil::assignindex(lookup->getArr(), lookup->getIdx(), vec[1].value.expr);
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}
 
@@ -1506,7 +1500,7 @@ struct control<if_stmt> : pegtl::normal<if_stmt>
 	{
 		state.push();
 		Pipeline p = stageutil::ifstage();
-		p.getHead()->setBase(getBaseFromEnt(state.base()));
+		p.getHead()->setBase(state.base());
 		state.add(p);
 	}
 
