@@ -29,7 +29,8 @@ namespace seq {
 	namespace stageutil {
 		Nop& nop();
 		Copy& copy();
-		Filter& filter(Func& func);
+		Filter& filter(Expr *key);
+		Filter& filter(Func& key);
 		OpStage& op(std::string name, SeqOp op);
 		Hash& hash(std::string name, SeqHash hash);
 		Print& print();
@@ -49,6 +50,7 @@ namespace seq {
 		LambdaStage& lambda(LambdaContext& lambdaContext);
 		ForEach& foreach();
 		Collect& collect();
+		Chunk& chunk(Expr* key);
 		Chunk& chunk(Func& key);
 		Chunk& chunk();
 		GetItem& get(seq_int_t idx);

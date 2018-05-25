@@ -2,18 +2,20 @@
 #define SEQ_FILTER_H
 
 #include <string>
+#include "expr.h"
 #include "stage.h"
 
 namespace seq {
 	class Filter : public Stage {
 	private:
-		Func& func;
+		Expr *key;
 	public:
-		explicit Filter(Func& func);
+		explicit Filter(Expr *key);
+		explicit Filter(Func *key);
 		void validate() override;
 		void codegen(llvm::Module *module) override;
-		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
-		static Filter& make(Func& func);
+		static Filter& make(Expr *key);
+		static Filter& make(Func& key);
 	};
 }
 

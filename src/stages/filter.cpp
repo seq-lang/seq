@@ -1,23 +1,29 @@
 #include <string>
 #include <vector>
 #include "seq/func.h"
+#include "seq/varexpr.h"
 #include "seq/exc.h"
 #include "seq/filter.h"
 
 using namespace seq;
 using namespace llvm;
 
-Filter::Filter(Func& func) :
-    Stage("filter", types::VoidType::get(), types::VoidType::get()), func(func)
+Filter::Filter(Expr *key) :
+    Stage("filter", types::VoidType::get(), types::VoidType::get()), key(key)
 {
-	if (!func.getOutType()->isChildOf(types::BoolType::get()))
-		throw exc::SeqException("filter function must return boolean");
+}
+
+Filter::Filter(Func *key) : Filter(new FuncExpr(key))
+{
 }
 
 void Filter::validate()
 {
 	if (prev)
 		in = out = prev->getOutType();
+
+	if (!key->getType()->getCallType(in)->isChildOf(types::BoolType::get()))
+		throw exc::SeqException("filter key must return boolean");
 
 	Stage::validate();
 }
@@ -31,10 +37,12 @@ void Filter::codegen(Module *module)
 	block = prev->getAfter();
 	outs->insert(prev->outs->begin(), prev->outs->end());
 
-	IRBuilder<> builder(block);
-
 	ValMap result = makeValMap();
-	func.codegenCall(getBase(), outs, result, block);
+
+	Value *f = key->codegen(getBase(), block);
+	key->getType()->call(getBase(), outs, result, f, block);
+
+	IRBuilder<> builder(block);
 	Value *pred = builder.CreateLoad(getSafe(result, SeqData::BOOL));
 
 	BasicBlock *body = BasicBlock::Create(context, "body", block->getParent());
@@ -49,13 +57,12 @@ void Filter::codegen(Module *module)
 	prev->setAfter(exit);
 }
 
-void Filter::finalize(Module *module, ExecutionEngine *eng)
+Filter& Filter::make(Expr *key)
 {
-	func.finalize(module, eng);
-	Stage::finalize(module, eng);
+	return *new Filter(key);
 }
 
-Filter& Filter::make(Func& func)
+Filter& Filter::make(Func& key)
 {
-	return *new Filter(func);
+	return *new Filter(&key);
 }

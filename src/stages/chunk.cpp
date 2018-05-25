@@ -1,28 +1,26 @@
+#include "seq/varexpr.h"
 #include "seq/chunk.h"
 
 using namespace seq;
 using namespace llvm;
 
-Chunk::Chunk(Func *key) :
+Chunk::Chunk(Expr *key) :
     Stage("chunk", types::ArrayType::get(), types::ArrayType::get()), key(key)
 {
 }
 
-Chunk::Chunk() : Chunk(nullptr)
+Chunk::Chunk(Func *key) : Chunk(new FuncExpr(key))
+{
+}
+
+Chunk::Chunk() : Chunk((Expr *)nullptr)
 {
 }
 
 void Chunk::validate()
 {
-	if (getPrev() && getPrev()->getOutType()->isGeneric(types::ArrayType::get())) {
+	if (getPrev() && getPrev()->getOutType()->isGeneric(types::ArrayType::get()))
 		in = out = getPrev()->getOutType();
-
-		auto *type = dynamic_cast<types::ArrayType *>(in);
-		assert(type != nullptr);
-
-		if (key && !type->getBaseType()->isChildOf(key->getInType()))
-			throw exc::ValidationException(*this);
-	}
 
 	Stage::validate();
 }
@@ -37,6 +35,7 @@ void Chunk::codegen(Module *module)
 	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
+	Value *f = key ? key->codegen(getBase(), entry) : nullptr;
 	IRBuilder<> builder(entry);
 	Value *ptr = builder.CreateLoad(getSafe(prev->outs, SeqData::ARRAY));
 	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
@@ -64,7 +63,7 @@ void Chunk::codegen(Module *module)
 	                                 ptr,
 	                                 control);
 	if (key)
-		key->codegenCall(getBase(), firstInChunk, firstInChunkKey, body);
+		key->getType()->call(getBase(), firstInChunk, firstInChunkKey, f, body);
 
 	PHINode *control2;
 	{
@@ -89,9 +88,9 @@ void Chunk::codegen(Module *module)
 		                                 ptr,
 		                                 control2);
 		if (key)
-			key->codegenCall(getBase(), nextInChunk, nextInChunkKey, body2);
+			key->getType()->call(getBase(), nextInChunk, nextInChunkKey, f, body2);
 
-		Value *eq = key ? key->getOutType()->checkEq(getBase(), firstInChunkKey, nextInChunkKey, body2) :
+		Value *eq = key ? key->getType()->getCallType(type->getBaseType())->checkEq(getBase(), firstInChunkKey, nextInChunkKey, body2) :
 		                  type->getBaseType()->checkEq(getBase(), firstInChunk, nextInChunk, body2);
 
 		control2->addIncoming(next, body);
@@ -128,6 +127,11 @@ void Chunk::codegen(Module *module)
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
+}
+
+Chunk& Chunk::make(Expr *key)
+{
+	return *new Chunk(key);
 }
 
 Chunk& Chunk::make(Func& key)

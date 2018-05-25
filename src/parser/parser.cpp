@@ -530,17 +530,19 @@ struct action<nop_stage> {
 };
 
 template<>
-struct action<call_stage> {
+struct action<len_stage> {
 	static void apply0(ParseState& state)
 	{
-		auto vec = state.get("s");
-		SeqEntity ent = state.lookup(vec[0].value.name);
+		Pipeline p = stageutil::len();
+		state.add(p);
+	}
+};
 
-		if (ent.type != SeqEntity::FUNC)
-			throw exc::SeqException("cannot call non-function");
-
-		Func *func = ent.value.func;
-		Pipeline p = (*func)();
+template<>
+struct action<revcomp_stage> {
+	static void apply0(ParseState& state)
+	{
+		Pipeline p = stageutil::revcomp();
 		state.add(p);
 	}
 };
@@ -582,63 +584,10 @@ struct action<foreach_stage> {
 };
 
 template<>
-struct action<getitem_stage> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("i");
-		Pipeline p = stageutil::get(vec[0].value.ival);
-		state.add(p);
-	}
-};
-
-template<>
 struct action<print_stage> {
 	static void apply0(ParseState& state)
 	{
 		Pipeline p = stageutil::print();
-		state.add(p);
-	}
-};
-
-template<>
-struct action<split_stage> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("ee");
-		Pipeline p = stageutil::split(vec[0].value.expr, vec[1].value.expr);
-		state.add(p);
-	}
-};
-
-template<>
-struct action<substr_stage> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("ee");
-		Pipeline p = stageutil::substr(vec[0].value.expr, vec[1].value.expr);
-		state.add(p);
-	}
-};
-
-template<>
-struct action<range_stage> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("e", true);
-		Pipeline p;
-		switch (vec.size()) {
-			case 1:
-				p = stageutil::range(vec[0].value.expr);
-				break;
-			case 2:
-				p = stageutil::range(vec[0].value.expr, vec[1].value.expr);
-				break;
-			case 3:
-				p = stageutil::range(vec[0].value.expr, vec[1].value.expr, vec[2].value.expr);
-				break;
-			default:
-				assert(0);
-		}
 		state.add(p);
 	}
 };
@@ -788,6 +737,20 @@ struct control<call_stage> : pegtl::normal<call_stage>
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		SeqEntity ent = state.lookup(vec[0].value.name);
+
+		if (ent.type != SeqEntity::FUNC)
+			throw exc::SeqException("cannot call non-function");
+
+		Func *func = ent.value.func;
+		Pipeline p = (*func)();
+		state.add(p);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -829,6 +792,14 @@ struct control<getitem_stage> : pegtl::normal<getitem_stage>
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("i");
+		Pipeline p = stageutil::get(vec[0].value.ival);
+		state.add(p);
 	}
 
 	template<typename Input>
@@ -875,6 +846,14 @@ struct control<split_stage> : pegtl::normal<split_stage>
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ee");
+		Pipeline p = stageutil::split(vec[0].value.expr, vec[1].value.expr);
+		state.add(p);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -891,6 +870,14 @@ struct control<substr_stage> : pegtl::normal<substr_stage>
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ee");
+		Pipeline p = stageutil::substr(vec[0].value.expr, vec[1].value.expr);
+		state.add(p);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -904,6 +891,76 @@ struct control<range_stage> : pegtl::normal<range_stage>
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e", true);
+		Pipeline p;
+		switch (vec.size()) {
+			case 1:
+				p = stageutil::range(vec[0].value.expr);
+				break;
+			case 2:
+				p = stageutil::range(vec[0].value.expr, vec[1].value.expr);
+				break;
+			case 3:
+				p = stageutil::range(vec[0].value.expr, vec[1].value.expr, vec[2].value.expr);
+				break;
+			default:
+				assert(0);
+		}
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<filter_stage> : pegtl::normal<filter_stage>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		Pipeline p = stageutil::filter(vec[0].value.expr);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<chunk_stage> : pegtl::normal<chunk_stage>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e", true);
+		assert(vec.size() <= 1);
+		Pipeline p = vec.empty() ? stageutil::chunk() : stageutil::chunk(vec[0].value.expr);
+		state.add(p);
 	}
 
 	template<typename Input>

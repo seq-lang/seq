@@ -23,5 +23,5 @@ Value *CallExpr::codegen(BaseFunc *base, BasicBlock*& block)
 
 types::Type *CallExpr::getType() const
 {
-	return func->getType()->getCallType();
+	return func->getType()->getCallType(arg ? arg->getType() : types::VoidType::get());
 }

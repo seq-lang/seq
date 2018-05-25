@@ -22,7 +22,7 @@ namespace seq {
 			          llvm::BasicBlock *block) override;
 
 			bool is(Type *type) const override;
-			Type *getCallType() override;
+			Type *getCallType(Type *inType) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			static FuncType *get(Type *inType, Type *outType);

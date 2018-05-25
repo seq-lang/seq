@@ -143,7 +143,7 @@ namespace seq {
 			std::string getName() const;
 			SeqData getKey() const;
 			virtual Type *getBaseType(seq_int_t idx) const;
-			virtual Type *getCallType();
+			virtual Type *getCallType(Type *inType);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
 			Mem& operator[](seq_int_t size);

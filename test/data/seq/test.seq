@@ -12,32 +12,36 @@ fun ident s: Seq -> Seq
 end
 
 source args[0]:
-  | substr 0+1 5 |> print
-  let input = | .
+  $ substr 0+1 5 |> {
+    $ print
+    $ revcomp |> print
+  }
+
+  let input = $ .
   let v = farray[0](input)
   v |> foreach |> (count, _) |> {
-    | .1 |> print
-    | .2 |> print
+    $ .1 |> print
+    $ .2 |> print
   }
-  | print
+  $ print
 
   let arr = {Int, Seq}[10]
   arr |> foreach
 
-  | ident() |> print
-  | split 64 64 |> {
-    let v1 = | print
+  $ ident() |> print
+  $ split 64 64 |> {
+    let v1 = $ print
     v1 |> split 32 32 |> {
-      let v2 = | print
-      | split 16 16 |> {
-        | print
-        let v3 = | copy |> print
+      let v2 = $ print
+      $ split 16 16 |> {
+        $ print
+        let v3 = $ copy |> print
         let v4 = v3 |> print
         v3 |> print
       }
       v2 |> print
     }
-    | print
+    $ print
   }
   ident(input) |> print
 
@@ -48,7 +52,7 @@ fun hello
   "hello world" |> print
 end
 
-| hello()
+$ hello()
 42 + 2.2 |> print
 -13 |> print
 var x = 4.2
@@ -71,4 +75,4 @@ end
 10 |> fib() |> print
 fib(10) |> print
 
-| range (if b.1 then 1 else 2) 5+5 |> print
+$ range (if b.1 then 1 else 2) 5+5 |> print

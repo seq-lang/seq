@@ -13,9 +13,14 @@ Copy& stageutil::copy()
 	return Copy::make();
 }
 
-Filter& stageutil::filter(Func& func)
+Filter& stageutil::filter(Expr *key)
 {
-	return Filter::make(func);
+	return Filter::make(key);
+}
+
+Filter& stageutil::filter(Func& key)
+{
+	return Filter::make(key);
 }
 
 OpStage& stageutil::op(std::string name, SeqOp op)
@@ -111,6 +116,11 @@ ForEach& stageutil::foreach()
 Collect& stageutil::collect()
 {
 	return Collect::make();
+}
+
+Chunk& stageutil::chunk(Expr *key)
+{
+	return Chunk::make(key);
 }
 
 Chunk& stageutil::chunk(Func& key)

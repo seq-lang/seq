@@ -304,7 +304,7 @@ void types::Type::codegenIndexStore(BaseFunc *base,
 	throw exc::SeqException("cannot index into type '" + getName() + "'");
 }
 
-types::Type *types::Type::getCallType()
+types::Type *types::Type::getCallType(Type *inType)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
 }

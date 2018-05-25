@@ -31,8 +31,12 @@ bool types::FuncType::is(Type *type) const
 	return inType->is(fnType->inType) && outType->is(fnType->outType);
 }
 
-types::Type *types::FuncType::getCallType()
+types::Type *types::FuncType::getCallType(Type *inType)
 {
+	if (!inType->isChildOf(this->inType))
+		throw exc::SeqException(
+		  "expected function input type '" + this->inType->getName() + "', but got '" + inType->getName() + "'");
+
 	return outType;
 }
 

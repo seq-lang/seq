@@ -157,10 +157,12 @@ struct statement_seq : pegtl::star<statement, seps> {};
 
 struct pipeline;
 struct pipe_op : TAO_PEGTL_STRING("|>") {};
-struct source_op : TAO_PEGTL_STRING("|") {};
+struct source_op : TAO_PEGTL_STRING("$") {};
 struct colon : TAO_PEGTL_STRING(":") {};
 
 struct nop_stage : pegtl::one<'.'> {};
+struct len_stage : TAO_PEGTL_STRING("len") {};
+struct revcomp_stage : TAO_PEGTL_STRING("revcomp") {};
 struct call_stage : pegtl::seq<name, seps, pegtl::one<'('>, seps, pegtl::one<')'>> {};
 struct collect_stage : TAO_PEGTL_STRING("collect") {};
 struct copy_stage : TAO_PEGTL_STRING("copy") {};
@@ -172,8 +174,10 @@ struct record_stage : pegtl::seq<pegtl::one<'('>, pegtl::list<pegtl::seq<seps, p
 struct split_stage : pegtl::seq<TAO_PEGTL_STRING("split"), seps, expr, seps, expr> {};
 struct substr_stage : pegtl::seq<TAO_PEGTL_STRING("substr"), seps, expr, seps, expr> {};
 struct range_stage : pegtl::seq<TAO_PEGTL_STRING("range"), pegtl::rep_min_max<1, 3, seps, expr>> {};
+struct filter_stage : pegtl::seq<TAO_PEGTL_STRING("filter"), seps, expr> {};
+struct chunk_stage : pegtl::seq<TAO_PEGTL_STRING("chunk"), seps, pegtl::opt<expr>> {};
 
-struct stage : pegtl::sor<call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage, substr_stage, range_stage, nop_stage> {};
+struct stage : pegtl::sor<len_stage, revcomp_stage, call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage, substr_stage, range_stage, filter_stage, chunk_stage, nop_stage> {};
 struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>> {};
 struct pipeline_stage : pegtl::seq<stage, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
 struct pipeline_branch : pegtl::seq<branch, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
