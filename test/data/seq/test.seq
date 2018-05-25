@@ -61,15 +61,7 @@ b.2 = !!false
 b.2 |> print
 
 fun fib n: Int -> Int
-  var m = 0
-  if n <= 1:
-    m = n
-  else:
-    let a = n-1 |> fib()
-    let b = n-2 |> fib()
-    m = a + b
-  end
-  m |> .  # function output
+  if n <= 1 then n else fib(n-1) + fib(n-2) |> .
 end
 
 10 |> fib() |> print
