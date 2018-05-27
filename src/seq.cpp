@@ -253,9 +253,6 @@ void SeqModule::codegen(Module *module)
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
 
-	codegenInit(module);
-	builder.CreateCall(initFunc);
-
 	if (standalone) {
 		assert(argsType != nullptr);
 		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), argsType);
@@ -379,8 +376,6 @@ void SeqModule::codegen(Module *module)
 
 	builder.SetInsertPoint(exit);
 	builder.CreateRetVoid();
-
-	finalizeInit(module);
 }
 
 void SeqModule::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *block)

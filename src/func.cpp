@@ -10,8 +10,7 @@ using namespace seq;
 using namespace llvm;
 
 BaseFunc::BaseFunc() :
-    module(nullptr), initBlock(nullptr), preambleBlock(nullptr),
-    initFunc(nullptr), func(nullptr), argsVar(true)
+    module(nullptr), preambleBlock(nullptr), func(nullptr), argsVar(true)
 {
 }
 
@@ -23,14 +22,6 @@ Var *BaseFunc::getArgVar()
 LLVMContext& BaseFunc::getContext()
 {
 	return module->getContext();
-}
-
-BasicBlock *BaseFunc::getInit() const
-{
-	if (!initBlock)
-		throw exc::SeqException("cannot request initialization block before code generation");
-
-	return initBlock;
 }
 
 BasicBlock *BaseFunc::getPreamble() const
@@ -74,50 +65,6 @@ Func::Func(types::Type& inType, types::Type& outType) :
 {
 }
 
-void BaseFunc::codegenInit(Module *module)
-{
-	static int idx = 1;
-
-	if (initFunc)
-		return;
-
-	LLVMContext& context = module->getContext();
-
-	initFunc = cast<Function>(
-	             module->getOrInsertFunction(
-	               "init" + std::to_string(idx++),
-	               Type::getVoidTy(context)));
-
-	BasicBlock *entryBlock = BasicBlock::Create(context, "entry", initFunc);
-	initBlock = BasicBlock::Create(context, "init", initFunc);
-	BasicBlock *exitBlock = BasicBlock::Create(context, "exit", initFunc);
-
-	GlobalVariable *init = new GlobalVariable(*module,
-	                                          IntegerType::getInt1Ty(context),
-	                                          false,
-	                                          GlobalValue::PrivateLinkage,
-	                                          nullptr,
-	                                          "init");
-
-	init->setInitializer(ConstantInt::get(IntegerType::getInt1Ty(context), 0));
-
-	IRBuilder<> builder(entryBlock);
-	Value *initVal = builder.CreateLoad(init);
-	builder.CreateCondBr(initVal, exitBlock, initBlock);
-
-	builder.SetInsertPoint(initBlock);
-	builder.CreateStore(ConstantInt::get(IntegerType::getInt1Ty(context), 1), init);
-
-	builder.SetInsertPoint(exitBlock);
-	builder.CreateRetVoid();
-}
-
-void BaseFunc::finalizeInit(Module *module)
-{
-	IRBuilder<> builder(initBlock);
-	builder.CreateRetVoid();
-}
-
 void Func::codegen(Module *module)
 {
 	if (!this->module)
@@ -140,9 +87,6 @@ void Func::codegen(Module *module)
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
-
-	codegenInit(module);
-	builder.CreateCall(initFunc);
 	inType->setFuncArgs(func, outs, preambleBlock);
 
 	if (!inType->is(types::VoidType::get())) {
@@ -191,8 +135,6 @@ void Func::codegen(Module *module)
 
 	builder.SetInsertPoint(preambleBlock);
 	builder.CreateBr(entry);
-
-	finalizeInit(module);
 }
 
 Value *Func::codegenCallRaw(BaseFunc *base, ValMap ins, BasicBlock *block)
@@ -379,9 +321,7 @@ Call& Func::operator()()
 BaseFuncLite::BaseFuncLite(Function *func) : BaseFunc()
 {
 	module = func->getParent();
-	initBlock = nullptr;
 	preambleBlock = &*func->getBasicBlockList().begin();
-	initFunc = nullptr;
 	this->func = func;
 }
 

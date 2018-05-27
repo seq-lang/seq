@@ -16,15 +16,11 @@ namespace seq {
 	class BaseFunc {
 	protected:
 		llvm::Module *module;
-		llvm::BasicBlock *initBlock;
 		llvm::BasicBlock *preambleBlock;
-		llvm::Function *initFunc;
 		llvm::Function *func;
 		Var argsVar;
 		BaseFunc();
 	public:
-		virtual void codegenInit(llvm::Module *module);
-		virtual void finalizeInit(llvm::Module *module);
 		virtual void codegen(llvm::Module *module)=0;
 		virtual void codegenCall(BaseFunc *base,
 		                         ValMap ins,
@@ -35,7 +31,6 @@ namespace seq {
 
 		virtual Var *getArgVar();
 		llvm::LLVMContext& getContext();
-		llvm::BasicBlock *getInit() const;
 		llvm::BasicBlock *getPreamble() const;
 		virtual types::Type *getInType() const;
 		virtual types::Type *getOutType() const;
