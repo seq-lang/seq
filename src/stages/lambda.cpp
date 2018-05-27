@@ -297,8 +297,7 @@ LambdaContext& seq::operator/(LambdaContext& lambda1, LambdaContext& lambda2)
 }
 
 LambdaStage::LambdaStage(LambdaContext& lambda) :
-    Stage("lambda", types::VoidType::get(), types::VoidType::get()),
-    isFloat(false), lambda(lambda)
+    Stage("lambda"), isFloat(false), lambda(lambda)
 {
 }
 

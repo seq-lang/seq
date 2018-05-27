@@ -70,6 +70,8 @@ namespace seq {
 		virtual void setAfter(llvm::BasicBlock *block);
 		bool isAdded() const;
 		void setAdded();
+		void addBreakToEnclosingLoop(llvm::BranchInst *inst);
+		void addContinueToEnclosingLoop(llvm::BranchInst *inst);
 
 		virtual void validate();
 		virtual void ensurePrev();
@@ -81,6 +83,20 @@ namespace seq {
 		virtual Pipeline operator|(Var& to);
 		virtual Pipeline operator&(PipelineList& to);
 		operator Pipeline();
+	};
+
+	class LoopStage : public Stage {
+	private:
+		std::vector<llvm::BranchInst *> breaks;
+		std::vector<llvm::BranchInst *> continues;
+	public:
+		LoopStage(std::string name, types::Type *in, types::Type *out);
+		explicit LoopStage(std::string name);
+
+		void addBreak(llvm::BranchInst *inst);
+		void addContinue(llvm::BranchInst *inst);
+		void setBreaks(llvm::BasicBlock *block);
+		void setContinues(llvm::BasicBlock *block);
 	};
 
 	class Nop : public Stage {

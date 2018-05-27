@@ -177,6 +177,8 @@ void If::codegen(Module *module)
 	for (int i = 0; i < conds.size(); i++) {
 		Value *cond = conds[i]->codegen(getBase(), block);
 		BaseStage *branch = branches[i];
+		branch->setInOut(types::VoidType::get(), prev->getOutType());
+		branch->outs->insert(prev->outs->begin(), prev->outs->end());
 
 		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
 		cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
@@ -186,7 +188,7 @@ void If::codegen(Module *module)
 
 		branch->block = b1;
 		branch->codegen(module);
-		block = branch->getAfter();
+		block = getAfter();
 		builder.SetInsertPoint(block);
 		BranchInst *binst2 = builder.CreateBr(b1);  // we reset this below
 		binsts.push_back(binst2);
@@ -219,6 +221,7 @@ BaseStage& If::addCond(Expr *cond)
 
 	BaseStage& branch = BaseStage::make(types::AnyType::get(), types::VoidType::get());
 	branch.setBase(getBase());
+	branch.setPrev(this);
 	conds.push_back(cond);
 	branches.push_back(&branch);
 	return branch;
@@ -232,4 +235,72 @@ BaseStage& If::addElse()
 	BaseStage& branch = addCond(new BoolExpr(true));
 	elseAdded = true;
 	return branch;
+}
+
+Return::Return(Expr *expr) :
+    Stage("return", types::AnyType::get(), types::VoidType::get()), expr(expr)
+{
+}
+
+void Return::codegen(Module *module)
+{
+	ensurePrev();
+	validate();
+
+	block = prev->getAfter();
+	getBase()->codegenReturn(expr, block);
+	prev->setAfter(getAfter());
+}
+
+Return& Return::make(Expr *expr)
+{
+	return *new Return(expr);
+}
+
+Break::Break() :
+    Stage("break", types::AnyType::get(), types::VoidType::get())
+{
+}
+
+void Break::codegen(Module *module)
+{
+	ensurePrev();
+	validate();
+
+	LLVMContext& context = module->getContext();
+	block = prev->getAfter();
+	IRBuilder<> builder(block);
+	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by LoopStage::setBreaks
+	addBreakToEnclosingLoop(inst);
+	block = BasicBlock::Create(context, "", block->getParent());
+	prev->setAfter(getAfter());
+}
+
+Break& Break::make()
+{
+	return *new Break();
+}
+
+Continue::Continue() :
+    Stage("continue", types::AnyType::get(), types::VoidType::get())
+{
+}
+
+void Continue::codegen(Module *module)
+{
+	ensurePrev();
+	validate();
+
+	LLVMContext& context = module->getContext();
+	block = prev->getAfter();
+	IRBuilder<> builder(block);
+	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by LoopStage::setContinues
+	addContinueToEnclosingLoop(inst);
+	block = BasicBlock::Create(context, "", block->getParent());
+	prev->setAfter(getAfter());
+}
+
+Continue& Continue::make()
+{
+	return *new Continue();
 }

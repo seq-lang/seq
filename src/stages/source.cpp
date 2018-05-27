@@ -147,7 +147,7 @@ types::Type *Source::determineOutType() const
 }
 
 Source::Source(std::vector<Expr *> sources) :
-    Stage("source", types::VoidType::get(), types::VoidType::get()), sources(std::move(sources))
+    Stage("source"), sources(std::move(sources))
 {
 }
 

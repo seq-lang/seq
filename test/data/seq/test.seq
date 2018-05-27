@@ -75,4 +75,12 @@ end
 10 |> fib() |> print
 fib(10) |> print
 
-$ range (if b.1 then 1 else 2) 5+5 |> print
+$ range (if b.1 then 1 else 2) 5+5 as i |> {
+  if i == 3:
+    continue
+  elif i >= 7:
+    break
+  end
+
+  i |> print
+}

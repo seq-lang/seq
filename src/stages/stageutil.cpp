@@ -192,3 +192,13 @@ Return& stageutil::ret(Expr *expr)
 {
 	return Return::make(expr);
 }
+
+Break& stageutil::brk()
+{
+	return Break::make();
+}
+
+Continue& stageutil::cnt()
+{
+	return Continue::make();
+}

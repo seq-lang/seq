@@ -3,8 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-Capture::Capture(void *addr) :
-    Stage("capture", types::VoidType::get(), types::VoidType::get()), addr(addr)
+Capture::Capture(void *addr) : Stage("capture"), addr(addr)
 {
 }
 

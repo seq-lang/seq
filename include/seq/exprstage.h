@@ -72,6 +72,29 @@ namespace seq {
 		static If& make();
 	};
 
+	class Return : public Stage {
+	private:
+		Expr *expr;
+	public:
+		explicit Return(Expr *expr);
+		void codegen(llvm::Module *module) override;
+		static Return& make(Expr *expr);
+	};
+
+	class Break : public Stage {
+	public:
+		Break();
+		void codegen(llvm::Module *module) override;
+		static Break& make();
+	};
+
+	class Continue : public Stage {
+	public:
+		Continue();
+		void codegen(llvm::Module *module) override;
+		static Continue& make();
+	};
+
 }
 
 #endif /* SEQ_EXPRSTAGE_H */

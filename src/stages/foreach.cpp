@@ -4,7 +4,7 @@
 using namespace seq;
 using namespace llvm;
 
-ForEach::ForEach() : Stage("foreach", types::ArrayType::get(), types::VoidType::get())
+ForEach::ForEach() : LoopStage("foreach", types::ArrayType::get(), types::VoidType::get())
 {
 }
 
@@ -70,6 +70,9 @@ void ForEach::codegen(Module *module)
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
+
+	setBreaks(exit);
+	setContinues(loop);
 }
 
 ForEach& ForEach::make()

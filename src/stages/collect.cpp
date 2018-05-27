@@ -8,7 +8,7 @@ using namespace llvm;
 static const size_t INIT_VEC_SIZE = 10;
 
 Collect::Collect() :
-    Stage("collect", types::VoidType::get(), types::VoidType::get()), appendFunc(nullptr)
+    Stage("collect"), appendFunc(nullptr)
 {
 }
 

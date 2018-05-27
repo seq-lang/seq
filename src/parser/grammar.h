@@ -26,9 +26,11 @@ struct str_source : TAO_PEGTL_STRING("source") {};
 struct str_true : TAO_PEGTL_STRING("true") {};
 struct str_false : TAO_PEGTL_STRING("false") {};
 struct str_return : TAO_PEGTL_STRING("return") {};
+struct str_break : TAO_PEGTL_STRING("break") {};
+struct str_continue : TAO_PEGTL_STRING("continue") {};
 struct str_as : TAO_PEGTL_STRING("as") {};
 
-struct str_keyword : pegtl::sor<str_let, str_var, str_end, str_fun, str_if, str_then, str_elif, str_else, str_source, str_true, str_false, str_return, str_as> {};
+struct str_keyword : pegtl::sor<str_let, str_var, str_end, str_fun, str_if, str_then, str_elif, str_else, str_source, str_true, str_false, str_return, str_break, str_continue, str_as> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword>, pegtl::identifier> {};
 
@@ -223,10 +225,12 @@ struct else_close : pegtl::success {};
 struct if_stmt : pegtl::seq<if_open, seps, statement_seq, if_close, pegtl::star<seps, elif_open, seps, statement_seq, elif_close>, pegtl::opt<seps, else_open, seps, statement_seq, else_close>, seps, str_end> {};
 
 struct return_stmt : pegtl::seq<str_return, seps, expr> {};
+struct break_stmt : pegtl::seq<str_break> {};
+struct continue_stmt : pegtl::seq<str_continue> {};
 
 struct expr_stmt : pegtl::seq<expr> {};
 
-struct statement : pegtl::sor<source_stmt, if_stmt, return_stmt, var_decl, cell_decl, func_stmt, assign_stmt, assign_member_stmt, assign_expr_stmt, pipeline_module_stmt_toplevel, pipeline_expr_stmt_toplevel, expr_stmt> {};
+struct statement : pegtl::sor<source_stmt, if_stmt, return_stmt, break_stmt, continue_stmt, var_decl, cell_decl, func_stmt, assign_stmt, assign_member_stmt, assign_expr_stmt, pipeline_module_stmt_toplevel, pipeline_expr_stmt_toplevel, expr_stmt> {};
 struct module : pegtl::must<statement_seq> {};
 
 /*

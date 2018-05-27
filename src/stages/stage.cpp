@@ -114,6 +114,30 @@ void Stage::setAdded()
 	}
 }
 
+static LoopStage *findEnclosingLoop(Stage *stage)
+{
+	while (stage) {
+		auto *loop = dynamic_cast<LoopStage *>(stage);
+
+		if (loop)
+			return loop;
+
+		stage = stage->getPrev();
+	}
+
+	throw exc::SeqException("break or continue outside of loop");
+}
+
+void Stage::addBreakToEnclosingLoop(BranchInst *inst)
+{
+	findEnclosingLoop(this)->addBreak(inst);
+}
+
+void Stage::addContinueToEnclosingLoop(BranchInst *inst)
+{
+	findEnclosingLoop(this)->addContinue(inst);
+}
+
 void Stage::validate()
 {
 	if ((prev && !prev->getOutType()->isChildOf(in)) || !getBase())
@@ -168,6 +192,38 @@ Stage::operator Pipeline()
 std::ostream& operator<<(std::ostream& os, Stage& stage)
 {
 	return os << stage.getName();
+}
+
+LoopStage::LoopStage(std::string name, types::Type *in, types::Type *out) :
+    Stage(std::move(name), in, out), breaks(), continues()
+{
+}
+
+LoopStage::LoopStage(std::string name) :
+    LoopStage(std::move(name), types::VoidType::get(), types::VoidType::get())
+{
+}
+
+void LoopStage::addBreak(BranchInst *inst)
+{
+	breaks.push_back(inst);
+}
+
+void LoopStage::addContinue(BranchInst *inst)
+{
+	continues.push_back(inst);
+}
+
+void LoopStage::setBreaks(BasicBlock *block)
+{
+	for (auto *inst : breaks)
+		inst->setSuccessor(0, block);
+}
+
+void LoopStage::setContinues(BasicBlock *block)
+{
+	for (auto *inst : continues)
+		inst->setSuccessor(0, block);
 }
 
 Nop::Nop() : Stage("nop", types::AnyType::get(), types::VoidType::get())

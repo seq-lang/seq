@@ -5,8 +5,7 @@
 using namespace seq;
 using namespace llvm;
 
-Copy::Copy() :
-    Stage("copy", types::VoidType::get(), types::VoidType::get())
+Copy::Copy() : Stage("copy")
 {
 }
 

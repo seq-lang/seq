@@ -40,7 +40,7 @@ Call& Call::make(Func& func)
 }
 
 MultiCall::MultiCall(std::vector<Func *> funcs) :
-    Stage("call", types::VoidType::get(), types::VoidType::get()), funcs(std::move(funcs))
+    Stage("call"), funcs(std::move(funcs))
 {
 	if (this->funcs.empty())
 		throw exc::StageException("unexpected empty function vector", *this);

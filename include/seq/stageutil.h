@@ -24,7 +24,6 @@
 #include "exprstage.h"
 #include "capture.h"
 #include "source.h"
-#include "return.h"
 
 namespace seq {
 	namespace stageutil {
@@ -66,6 +65,8 @@ namespace seq {
 		Source& source();
 		If& ifstage();
 		Return& ret(Expr *expr);
+		Break& brk();
+		Continue& cnt();
 	}
 }
 

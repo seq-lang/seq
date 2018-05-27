@@ -4,8 +4,7 @@
 using namespace seq;
 using namespace llvm;
 
-GetItem::GetItem(seq_int_t idx) :
-    Stage("get", types::VoidType::get(), types::VoidType::get()), idx(idx)
+GetItem::GetItem(seq_int_t idx) : Stage("get"), idx(idx)
 {
 
 }

@@ -70,16 +70,14 @@ Mem& Mem::make(types::Type *type, seq_int_t count)
 }
 
 LoadStore::LoadStore(Var *ptr, Var *idx) :
-    Stage("loadstore", types::VoidType::get(), types::VoidType::get()),
-    ptr(ptr), idx(idx), constIdx(-1), isStore(false)
+    Stage("loadstore"), ptr(ptr), idx(idx), constIdx(-1), isStore(false)
 {
 	ptr->ensureConsistentBase(idx->getBase());
 	setBase(ptr->getBase());
 }
 
 LoadStore::LoadStore(Var *ptr, seq_int_t idx) :
-    Stage("loadstore", types::VoidType::get(), types::VoidType::get()),
-    ptr(ptr), idx(nullptr), constIdx(idx), isStore(false)
+    Stage("loadstore"), ptr(ptr), idx(nullptr), constIdx(idx), isStore(false)
 {
 	setBase(ptr->getBase());
 }

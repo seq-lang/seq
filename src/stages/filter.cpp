@@ -8,8 +8,7 @@
 using namespace seq;
 using namespace llvm;
 
-Filter::Filter(Expr *key) :
-    Stage("filter", types::VoidType::get(), types::VoidType::get()), key(key)
+Filter::Filter(Expr *key) : Stage("filter"), key(key)
 {
 }
 

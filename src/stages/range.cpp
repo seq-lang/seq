@@ -8,7 +8,7 @@ using namespace seq;
 using namespace llvm;
 
 Range::Range(Expr *from, Expr *to, Expr *step) :
-    Stage("range", types::AnyType::get(), types::IntType::get()),
+    LoopStage("range", types::AnyType::get(), types::IntType::get()),
     from(from), to(to), step(step)
 {
 }
@@ -85,6 +85,9 @@ void Range::codegen(Module *module)
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
+
+	setBreaks(exit);
+	setContinues(loop);
 }
 
 Range& Range::make(Expr *from, Expr *to, Expr *step)

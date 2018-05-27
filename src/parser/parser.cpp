@@ -1744,6 +1744,30 @@ struct control<return_stmt> : pegtl::normal<return_stmt>
 };
 
 template<>
+struct control<break_stmt> : pegtl::normal<break_stmt>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pipeline p = stageutil::brk();
+		p.getHead()->setBase(state.base());
+		state.context().add(p);
+	}
+};
+
+template<>
+struct control<continue_stmt> : pegtl::normal<continue_stmt>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pipeline p = stageutil::cnt();
+		p.getHead()->setBase(state.base());
+		state.context().add(p);
+	}
+};
+
+template<>
 struct control<expr_stmt> : pegtl::normal<expr_stmt>
 {
 	template<typename Input>

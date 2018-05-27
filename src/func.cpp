@@ -2,7 +2,7 @@
 #include "seq/makerec.h"
 #include "seq/call.h"
 #include "seq/expr.h"
-#include "seq/return.h"
+#include "seq/exprstage.h"
 #include "seq/exc.h"
 #include "seq/func.h"
 
