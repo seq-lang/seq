@@ -759,34 +759,6 @@ struct control<call_stage> : pegtl::normal<call_stage>
 	}
 };
 
-static PipelineList& makePL(SeqEntity ent, ParseState& state)
-{
-	switch (ent.type) {
-		case SeqEntity::PIPELINE:
-			return *new PipelineList(ent.value.pipeline);
-		case SeqEntity::VAR:
-			return *new PipelineList(ent.value.var);
-		case SeqEntity::NAME:
-			return makePL(state.lookup(ent.value.name), state);
-		default:
-			throw exc::SeqException("misplaced expression in record expression");
-	}
-}
-
-static PipelineList& addPL(PipelineList& pl, SeqEntity ent, ParseState& state)
-{
-	switch (ent.type) {
-		case SeqEntity::PIPELINE:
-			return (pl, ent.value.pipeline);
-		case SeqEntity::VAR:
-			return (pl, *ent.value.var);
-		case SeqEntity::NAME:
-			return addPL(pl, state.lookup(ent.value.name), state);
-		default:
-			throw exc::SeqException("misplaced expression in record expression");
-	}
-}
-
 template<>
 struct control<getitem_stage> : pegtl::normal<getitem_stage>
 {
@@ -812,6 +784,54 @@ struct control<getitem_stage> : pegtl::normal<getitem_stage>
 };
 
 template<>
+struct control<record_stage_elem_expr_pipeline> : pegtl::normal<record_stage_elem_expr_pipeline>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ep");
+		Pipeline p = stageutil::expr(vec[0].value.expr) | vec[1].value.pipeline;
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<record_stage_elem_expr> : pegtl::normal<record_stage_elem_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		Pipeline p = stageutil::expr(vec[0].value.expr);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<record_stage> : pegtl::normal<record_stage>
 {
 	template<typename Input>
@@ -823,10 +843,11 @@ struct control<record_stage> : pegtl::normal<record_stage>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("*", true);
-		PipelineList& pl = makePL(vec[0], state);
+		auto vec = state.get("p", true);
+		assert(!vec.empty());
+		PipelineList& pl = *new PipelineList(vec[0].value.pipeline);
 		for (int i = 1; i < vec.size(); i++)
-			pl = addPL(pl, vec[i], state);
+			pl = (pl, vec[i].value.pipeline);
 		Pipeline p = MakeRec::make(pl);
 		state.add(p);
 	}

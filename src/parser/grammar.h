@@ -175,14 +175,18 @@ struct count_stage : TAO_PEGTL_STRING("count") {};
 struct foreach_stage : TAO_PEGTL_STRING("foreach") {};
 struct getitem_stage : pegtl::seq<pegtl::one<'.'>, seps, natural> {};
 struct print_stage : TAO_PEGTL_STRING("print") {};
-struct record_stage : pegtl::seq<pegtl::one<'('>, pegtl::list<pegtl::seq<seps, pegtl::sor<pipeline, name>, seps>, pegtl::one<','>>, pegtl::one<')'>> {};
 struct split_stage : pegtl::seq<TAO_PEGTL_STRING("split"), seps, expr, seps, expr> {};
 struct substr_stage : pegtl::seq<TAO_PEGTL_STRING("substr"), seps, expr, seps, expr> {};
 struct range_stage : pegtl::seq<TAO_PEGTL_STRING("range"), pegtl::rep_min_max<1, 3, seps, expr>> {};
 struct filter_stage : pegtl::seq<TAO_PEGTL_STRING("filter"), seps, expr> {};
 struct chunk_stage : pegtl::seq<TAO_PEGTL_STRING("chunk"), seps, pegtl::opt<expr>> {};
 
-struct stage_raw : pegtl::sor<len_stage, revcomp_stage, call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, record_stage, split_stage, substr_stage, range_stage, filter_stage, chunk_stage, nop_stage> {};
+struct record_stage_elem_pipeline : pegtl::seq<source_op, seps, pipeline> {};
+struct record_stage_elem_expr_pipeline : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
+struct record_stage_elem_expr : pegtl::seq<expr> {};
+struct record_stage : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<pegtl::sor<record_stage_elem_pipeline, record_stage_elem_expr_pipeline, record_stage_elem_expr>, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
+
+struct stage_raw : pegtl::sor<len_stage, revcomp_stage, call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, split_stage, substr_stage, range_stage, filter_stage, chunk_stage, record_stage, nop_stage> {};
 struct stage_as : pegtl::seq<str_as, seps, name> {};
 struct stage : pegtl::seq<stage_raw, pegtl::opt<seps, stage_as>> {};
 struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>> {};
