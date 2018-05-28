@@ -1,345 +1,210 @@
 (* 786 *)
 
-open Ast
 open Core
 open Llvm
-
-(* s | split(32,32) | revcomp() | print(); *)
-
-exception CompileError of string
-let error str =
-  raise (CompileError str)
-
-let llc = global_context () 
-let llm = create_module llc "seq"
-(* let named_values = String.Table.create () ~size:10 *)
-
-let (>>.) f g = f |> ignore ; g
-let (>>) f g x = g f x
-let (<<) f g x = f g x
-
-let void_t   = void_type llc
-let float_t  = double_type llc
-let i64_t    = i64_type llc
-let ptr_t    = i8_type llc |> pointer_type
-let bool_t   = i1_type llc
-let block    = insert_block llc
-
-(* let dump m = 
-  printf "****************\n%s\n****************\n" 
-    (string_of_llmodule m) *)
-let dump f = 
-  string_of_llvalue f |> printf "****************\n%s\n****************\n"
-
-let alloca v ?st bl =
-   let lbb = builder_at_end llc bl in
-   let vb = build_alloca v "" lbb in
-   match st with
-    | Some s -> build_store vb s lbb >>. vb
-    | None -> vb
+open Init
+open Types
+open Utils
 
 (**********************************************************************)
 
-type seqtype =
-  | Void
-  | Any
-  | Int of llvalue
-  | Float of llvalue
-  | String of llvalue * llvalue
-  | Array of llvalue * seqtype
-let rec lltype = function
-  | Void -> void_t 
-  | Int i -> i64_t
-  | Float f -> float_t 
-  | String (l, ptr) -> 
-    let str_t = named_struct_type llc "str_t" in
-    struct_set_body str_t [| i64_t; ptr_t |] true;
-    str_t
-  | Array (l, ptr) ->
-    let arr_t = named_struct_type llc "arr_t" in
-    struct_set_body arr_t [| i64_t; pointer_type (lltype t) |] true;
-    arr_t
+let main =
+  let fn = define_function "main" (function_type void_t [| |]) llm in
+  let entry = entry_block fn in
+  let preamble = insert_block llc "preamble" entry in
+  struct_set_body str_t [| i64_t; ptr_t |] true;
+  struct_set_body arr_t [| i64_t; pointer_type str_t |] true;
+  {fn; preamble; entry}
 
-(* let llsig sg = 
-  let in_t = lltype sg.i in
-  let ou_t = lltype sg.o in
-  (in_t, ou_t) *)
+let rec codegen_expr expr ?(name="") (block, input) = 
+  let llb = builder_at_end llc block in
+  match expr with  
+  | Ast.Int i -> 
+    let a = alloca i64_t main ~name:name in
+    let v = constint i in
+    build_store v a llb >>. block, Int a
+  | Ast.Float f -> 
+    let a = alloca float_t main ~name:name in
+    let v = constflt f in
+    build_store v a llb >>. block, Float a
+  | Ast.String s -> (* TODO: cast as str_t & check with Ariya *)
+    let llb = builder_at_end llc block in
+    let gs = define_global "str" (const_string llc s) llm in
+    set_linkage Linkage.Private gs;
+    set_alignment 1 gs;
+    let a = alloca ptr_t main ~name:name in
+    let sp = build_gep gs [| constint 0; constint 0 |] "" llb in
+    build_store sp a llb >>. block, String a
+  | Ast.Pipe p -> 
+    let pipe = append_block llc "pipeline" main.fn in
+    build_br pipe llb |> ignore;
+    codegen_pipe (pipe, input) p
+  | _ -> 
+    error "Not implemented"
 
-(* let var_map = Hashtbl.create () *)
-(* let reserved_map:(string, seqsig * llvalue) Hashtbl.t = Hashtbl.create () *)
-let initialize_reserved () = 
-  let fns = [
-    ("printi", {i=Int; o=Void}); 
-    ("printf", {i=Float; o=Void});
-    ("prints", {i=String; o=Void});
-  ] in
-  List.map fns ~f:(fun (name, sg) ->
-    let fty = function_type (lltype sg.o) [| lltype sg.i |] in
-    let llf = declare_function name fty llm in
-    (name, (sg, llf))
-  ) |> String.Table.of_alist_exn
-
-let reserved_map = initialize_reserved ()
-let var_map:(seqtype * seqtype * llvalue) String.Table.t = String.Table.create ()
-
-let fmain = define_function "main" (function_type void_t [| |]) llm
-let llb = builder_at_end llc (entry_block fmain)
-
-type fpos_t = Begin | End (* Where to start? *)
-
-type ret_t = Type of seqtype | Loop of llbasicblock * llvalue
-
-let llpreamble = 
-  llbasicblock
-
-let llmain = 
-  lltype
-
-(*
-id:string args...:expr? inp:type/val llfn:llvalue  -> inp:type
-*)
-let codegen_func id args input ret llfn ?(pf=Begin) = 
-  match id with
-  | "split" -> begin
-    let k, step = match args with
-      | [| k; step |] -> const_int i64_t k, const_int i64_t step
-      | _ -> "args fail" |> error
-    in
-    let seq, len = match input with
-      | String(l, s) -> s, l
-      | _ -> "Wrong input type to split" |> error
-    in
-    match pf with 
-    | Begin -> begin
-      let entry = entry_block llfn in
-      let llb = builder_at_end llc entry in
-
-      let seq = build_load seq "seq" llb in
-      let len = build_load len "len" llb in
-      let max = build_sub len k "sub" llb in
-
-      let loop = append_block llc "split" llfn in
-      build_br loop >>. 
-      position_at_end loop llb >>.
-
-      let phi = build_phi [] "i" llb in
-      let _next = build_add phi step "next" llb in
-      let cond = build_icmp Icmp.Sle phi max "" llb in
-      add_incoming [ctx, entry] phi >>.
-      
-      let body = append_block llc "body_split" llfn in
-      let _branch = build_cond_br cond body body llb in
-
-      position_at_end body llb >>.
-      let subseq = build_gep seq [| phi |] "" llb in
-      let subseq_v = alloca ptr_t ~st:(const_pointer_null ptr_t) llpreamble in
-      let sublen_v = alloca i64_t ~st:(const_int i64_t 0) llpreamble in
-      build_store subseq subseq_v >>.
-      build_store k sublen_v >>.
-      
-      Loop loop
-    end
-    | End -> begin
-      let last = after in
-      let llb = builder_at_end llc last in
-      let loop, phi = match ret with
-        | Loop (l, n) -> l, n
-        | _ -> "whoops" |> error 
+and codegen_pipe (block, input) = function
+  | [] -> (block, Void)
+  | Ast.Identifier(name, args) :: tl -> 
+    let llb = builder_at_end llc block in 
+    let args = List.map args ~f:(fun x -> 
+      let name = sprintf "%s_arg" name in
+      let block, ret = codegen_expr x (block, Void) ~name:(name ^ "_v") in
+      let v = match ret with
+        | Void -> error "Argument cannot be void"
+        | Int v | Float v | String v | Array v -> v
       in
-      build_br loop llb >>.
+      build_load v name llb) 
+    in
+    codegen_func (name, Array.of_list args) (block, input) tl
+  | hd :: tl -> 
+    let ret = codegen_expr hd (block, input) in
+    codegen_pipe ret tl
 
-      add_incoming [next, last] phi >>.
+and codegen_func (name, args) (block, input) tl = match name with
+  | "load" -> begin
+    if Array.length args <> 1 then error "load needs 1 argument" else
+    assert (1 = match input with Void -> 1 | _ -> 0);
+    let llb = builder_at_end llc block in 
+    
+    let fn sfx ret arg = 
+      let fty = function_type ret arg in
+      let func = declare_function ("seq_" ^ sfx) fty llm in
+      set_function_call_conv CallConv.c func; 
+      func
+    in
+    (* void *seqSourceInit(char *sources) *)
+    let finit = fn "init" ptr_t [| ptr_t |] in
+    (* seq_int_t seqSourceRead(void *state) *)
+    let fread = fn "read" i64_t [| ptr_t |] in
+    (* seq_t seqSourceGetSingle(void *state, seq_int_t idx) *)
+    let fget = fn "get" str_t [| ptr_t; i64_t |] in
+    (* void seqSourceDealloc(void *state) *)
+    let ffree = fn "free" void_t [| ptr_t |] in
 
-      let exit = append_block llc "exit_split" llfn in
-      
+    (* TODO: cast char* to str_t *)
+    let state = build_call finit args "state" llb in
 
+    let repeat = append_block llc "load_repeat" main.fn in
+    build_br repeat llb |> ignore;
+    position_at_end repeat llb;
 
-      List.append outs (subsqv, sublnv);
-      codegen mdl;
+    let limit = build_call fread [| state |] "read" llb in
 
-      position_at_end after lbb;
-      build_br loop lbb |> ignore;
-    end
-    | End -> ??
+    let loop = append_block llc "load_loop" main.fn in
+    build_br loop llb |> ignore;
+    position_at_end loop llb;
+    
+    let control = build_phi [(constint 0, repeat)] "i" llb in
+    let next = build_add control (constint 1) "next" llb in
+    let cond = build_icmp Icmp.Slt control limit "" llb in
+    
+    let body = append_block llc "load_body" main.fn in
+    let branch = build_cond_br cond body body llb in
+
+    position_at_end body llb;
+    let result = build_call fget [| state; control |] "get" llb in
+    
+    (*  continue in body block with param result; get final block *)
+    let after, _ = codegen_pipe (body, String result) tl in
+    
+    position_at_end after llb;
+    build_br loop llb |> ignore;
+    add_incoming (next, after) control;
+
+    let exit_loop = append_block llc "load_exit_loop" main.fn in
+    let exit_rep = append_block llc "load_exit_repeat" main.fn in
+
+    set_successor branch 1 exit_loop;
+    position_at_end exit_loop llb;
+    let d = build_icmp Icmp.Eq limit (constint 0) "" llb in
+    build_cond_br d exit_rep repeat llb |> ignore;
+
+    position_at_end exit_rep llb;
+    build_call ffree [| state |] "" llb |> ignore;
+
+    (exit_rep, Void)
   end
-  | "split", End ->
-  | "print" ->
-    ??
-  | _ -> sprintf "%s not implemented" id |> error
+  | "print" -> begin 
+    if Array.length args <> 0 then error "print needs 0 arguments" else
+    let llb = builder_at_end llc block in
+    let arg, fn = match input with
+      | Int i    -> 
+        let arg = [| build_load i "arg" llb |] in
+        let fty = function_type void_t [| i64_t |] in
+        let fn = declare_function "print_i" fty llm in
+        arg, fn
+      | Float f  -> 
+        let arg = [| build_load f "arg" llb |] in
+        let fty = function_type void_t [| float_t |] in
+        let fn = declare_function "print_f" fty llm in
+        arg, fn
+      | String s -> 
+        let arg = [| s |] in
+        let fty = function_type void_t [| str_t |] in
+        let fn = declare_function "print_s" fty llm in
+        arg, fn
+      | _ -> "Unknown print type" |> error
+    in
+    set_function_call_conv CallConv.c fn;
+    build_call fn arg "" llb |> ignore;
+    (block, Void)
+  end
+  | "split" -> begin
+    if Array.length args <> 2 then error "split needs 2 arguments" else
+    let sublen, inc = args.(0), args.(1) in
+    let llb = builder_at_end llc block in
 
-(* returns (type * type) * llval *)
-let rec codegen = function 
-  | Eof -> ({i=Void; o=Void}, mdnull llc)
-  | Expr e -> codegen_expr e
-  | Definition(prot, exps) -> codegen_def prot exps
-and codegen_expr ?(pf=Begin) = function 
-  | Int i -> ({i=Void; o=Int}, const_int i64_t i)
-  | Float f -> ({i=Void; o=Float}, const_float float_t f)
-  | Identifier(id, args) -> 
-    (* either function call or variable *)
-    begin
-    match Hashtbl.find reserved_map id with
-    | Some (sg, ll) -> "not implemented" |> error
-    | None -> "not implemented" |> error
-      (* match Hashtbl.find var_map with
-      (* check variables; TODO: userdef functions *)
-      | Some (t, v) -> (t, v) 
-      | None -> sprintf "Unknown identifier %s" id |> error *)
-    end
-  | Pipe pl ->
-    codegen_pipe pl
-  | Binary(e1, op, e2) -> 
-    let (lt, lhs) = codegen_expr e1 in
-    let (rt, rhs) = codegen_expr e2 in 
-    let ari_op f = f lhs rhs "ari" llb in
-    let int_s = {i=Void; o=Int} in
-    let flt_s = {i=Void; o=Float} in
-    match op with
-    | "+" ->
-      if lt = int_s && rt = int_s then 
-        (int_s, ari_op build_add)
-      else if lt = flt_s && rt = flt_s then 
-        (flt_s, ari_op build_fadd)
-      else 
-        sprintf "Types in + do not match" |> error
-    | "-" -> 
-      if lt = int_s && rt = int_s then 
-        (int_s, ari_op build_sub)
-      else if lt = flt_s && rt = flt_s then 
-        (flt_s, ari_op build_fsub)
-      else 
-        sprintf "Types in - do not match" |> error
-    | "*" -> 
-      "not implemented" |> error
-    | "|>" -> 
-      if lt.o <> rt.i then
-        sprintf "Pipeline types do not match" |> error
-      else 
-        "not implemented" |> error 
-    | _ -> (* missing: branch, leq *)
-      sprintf "Unknown operator %s" op |> error
-and codegen_pipe = function 
-  | [] -> assert false
-  | [hd] -> codegen_expr hd
-  | hd :: tl ->
-    codegen_expr hd |> ignore;
-    codegen_pipe tl |> ignore;
-    codegen_expr hd ~pf:End
-and codegen_call id args =
-  "ooops" |> error
-and codegen_def prot exps = 
-  "ooops" |> error 
+    let len, seq = extract input main ~name:"split_input" llb  in
+    let seq = build_load seq "" llb in
+    let len = build_load len "" llb in
+    let max = build_sub len sublen "sub" llb in
 
+    let loop = append_block llc "split" main.fn in
+    build_br loop llb |> ignore;
+    position_at_end loop llb;
 
-(*
-let codegen_init () = 
-  printf  "hello\n";
+    let control = build_phi [(constint 0, block)] "i" llb in
+    let next = build_add control inc "next" llb in
+    let cond = build_icmp Icmp.Sle control max "" llb in
+    
+    let body = append_block llc "split_body" main.fn in
+    let branch = build_cond_br cond body body llb in
 
-  let fty = function_type void_t [| |] in
-  let init_f = define_function "init" fty llm in
-  
-  let init_g = define_global "init_g" (const_null bool_t) llm in
-  
-  let init_b = append_block llc "init" init_f in
-  let exit_b = append_block llc "exit" init_f in
-  
-  let llb = builder_at_end llc (entry_block init_f) in
-  let init_v = build_load init_g "" llb in
-  build_cond_br init_v exit_b init_b llb |> ignore;
-  
-  position_at_end init_b llb;
-  build_store (const_int bool_t 1) init_g llb |> ignore;
-  build_ret_void llb |> ignore;
-  
-  position_at_end exit_b llb;
-  build_ret_void llb |> ignore;
+    position_at_end body llb;
+    let subseq = build_gep seq [| control |] "" llb in
+    let subseq_v = alloca ptr_t main ~name:"subseq_v" ~value:(const_pointer_null ptr_t) in
+    let sublen_v = alloca i64_t main ~name:"sublen_v" ~value:(constint 0) in
+    build_store subseq subseq_v llb |> ignore;
+    build_store sublen sublen_v llb |> ignore;
+    
+    let b = build_load sublen_v "" llb in
+    let result = build_insertvalue (undef str_t) b 0 "" llb in
+    let b = build_load subseq_v "" llb in
+    let result = build_insertvalue result b 1 "" llb in
 
-  dump llm
+    let after, _ = codegen_pipe (body, String result) tl in
 
-let codegen_split k step fn input = 
-  let preamble_b = ?? in
+    position_at_end after llb;
+    build_br loop llb |> ignore;
+    add_incoming (next, after) control;
 
-  let k = const_int i64_t k in
-  let step = const_int i64_t step in
+    let exit = append_block llc "split_exit" main.fn in
+    set_successor branch 1 exit;
+    
+    (exit, Void)
+  end
+  | id -> 
+    sprintf "%s not implemented" id |> error
 
-  let llb = builder_at_end llc (entry_block fn) in
-  let seq = build_load input.seq "" llb in
-  let len = build_load input.len "" llb in
-  let max = build_sub len k "sub" llb in
-
-  let loop = append_block llc "split" fn in
-  build_br loop |> ignore;
-  position_at_end loop llb;
-
-  let ctrl = build_phi [??] "i" llb in
-  let next = build_add ctrl step "next" llb in
-  let cond = build_icmp ?? ctrl max "" llb in
-  let body = append_block llc "body_split" fn in
-  let instr = build_cond_br cond body body llb in
-
-  position_at_end body llb;
-  let subseq = build_gep seq [ctrl] "" llb in
-  let subsqv = alloca ptr_t ~st:(const_pointer_null ptr_t) preamble in
-  let sublnv = alloca i64_t ~st:(const_int i64_t 0) preamble in
-  build_store subseq subsqv |> ignore;  
-  build_store k sublnv |> ignore;  
-
-  List.append outs (subsqv, sublnv);
-  codegen mdl;
-
-  position_at_end after lbb;
-  build_br loop lbb |> ignore;
-
-let codegen_module pipelines =
-  let seq_t = named_struct_type llc "seq_t" in
-  struct_set_body seq_t [| i64_t; ptr_t |] true ;
-
-  let str_t = named_struct_type llc "str_t" in
-  struct_set_body str_t [| i64_t; ptr_t |] true ;
-
-  let arr_t = named_struct_type llc "arr_t" in
-  struct_set_body arr_t [| i64_t; pointer_type str_t |] true ;
-
-  let fty = function_type void_t [| arr_t |] in
-  let main_f = define_function "main" fty llm in
-
-  let preamble_b = append_block llc "preamble" main_f in
-  let llb = builder_at_end llc preamble_b in
-  build_br (entry_block main_f) llb |> ignore;
-
-  (* unpack *)
-  let args = param_begin main_f in
-  let seq = build_extractvalue args 1 "seq" llb in
-  let seq_v = build_alloca str_t "seq_v" llb in  
-  build_store seq seq_v llb |> ignore;
-
-  let len = build_extractvalue args 0 "len" llb in
-  let len_v = build_alloca i64_t "len_v" llb in 
-  build_store len len_v llb |> ignore;
-
-
-  match lookup_function "init" llm with
-    | Some f -> build_call f [| |] "init" llb |> ignore 
-    | None -> CompileError "Can't find init function" |> raise 
-  ;
-  
-  (* base stage *)
-
-  position_at_end (entry_block main_f) llb;
-  pipelines |> List.iter ~f:(fun x->
-    (* validate x; *)
-    let pip_b = append_block llc "pipeline" main_f in
-    position_at_end pip_b llb;
-    build_br pip_b llb |> ignore;
-    (* codegen x mdl pip_b; *)
-  );
-
-  let exit_b = append_block llc "exit" main_f in
-  position_at_end exit_b llb;
-  build_ret_void llb |> ignore;
-  
-  (* jump from last pipeline block to exit *)
-  let last_b = basic_blocks main_f |> Array.last in
-  position_at_end last_b llb;
-  build_br exit_b llb |> ignore;
-*)
+let codegen = function 
+  | Ast.Expr e -> 
+    let final, _ = codegen_expr e (main.entry, Void) in
+    let llb = builder_at_end llc main.preamble in
+    build_br main.entry llb |> ignore;
+    let exit = append_block llc "exit" main.fn in
+    let llb = builder_at_end llc exit in
+    build_ret_void llb |> ignore;
+    position_at_end final llb;
+    build_br exit llb |> ignore
+  | _ -> 
+    error "N/A !!!"

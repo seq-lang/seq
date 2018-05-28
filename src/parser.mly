@@ -6,7 +6,7 @@ open Ast
 
 %token <int> INT
 %token <float> FLOAT
-%token <string> ID
+%token <string> STRING ID
 %token LPAREN RPAREN EQ
 %token EOF  
 %token LET
@@ -43,6 +43,7 @@ expr:
 simple_expr:
   | n = INT { Int n } 
   | n = FLOAT { Float n } 
+  | n = STRING { String n } 
   | id = ID { Identifier(id, []) }
   ;
 arg_list:

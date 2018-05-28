@@ -1,4 +1,13 @@
+<*>: use_menhir
 <src>: include
-<*>: debug, use_menhir
-<src/*>: package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts), use_bindings
-<*.{byte,native}>: package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts), use_bindings
+
+<src/*>: package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts)
+<*.{byte,native}>: package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts)
+
+<clib/libmain.a> or <clib/main.o>: precious
+
+<*.byte>: linkdep(clib/libmain.a), custom
+<*.native>: linkdep(clib/libmain.a)
+
+
+

@@ -6,6 +6,7 @@ open Sexplib.Std
 type expr =
   | Int of int
   | Float of float
+  | String of string
   | Identifier of string * expr list
   | Binary of expr * string * expr
   | Pipe of expr list
@@ -20,7 +21,7 @@ type ast =
   [@@deriving sexp]
 
 let rec flatten_exp = function 
-  | Binary(e1, op, e2) when op = "|>" -> 
+  | Binary(e1, op, e2) when op = "|" -> 
     begin
       let f1 = flatten_exp e1 in
       let f2 = flatten_exp e2 in
@@ -39,19 +40,20 @@ and flatten = function
   | Definition(p, l) -> Definition(p, List.map l ~f:flatten_exp)
   | Eof -> Eof
 
-(* let prn_ast a =
-  sexp_of_ast a |> Sexp.to_string *)
+let prn_ast_sexp a =
+  sexp_of_ast a |> Sexp.to_string 
 
 let rec prn_expr = function
   | Int i -> sprintf "%d" i
   | Float f -> sprintf "%.1f" f
+  | String s -> sprintf "\"%s\"" s
   | Identifier(v, a) -> 
     sprintf "%s%s" v 
       (if List.length a > 0
       then sprintf "(%s)" (List.map a ~f:prn_expr |> String.concat ~sep:", ")
       else "")
   | Binary(e1, op, e2) -> 
-    sprintf "(%s %s %s)" (prn_expr e1) op (prn_expr e2)
+    sprintf "(%s '%s %s)" (prn_expr e1) op (prn_expr e2)
   | Pipe l ->
     let str = List.map l ~f:(fun x -> prn_expr x |> sprintf "%s") |> String.concat ~sep:" | " in
     sprintf "[%s]" str
