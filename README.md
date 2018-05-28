@@ -3,13 +3,10 @@
 ## Dependencies
 
 ```bash
-brew install ocaml opam llvm
-opam init
+make install-osx
 # restart shell
 opam switch 4.06.1
-opam install async yojson core_extended core_bench \  
-	cohttp async_graphics cryptokit menhir \
-	llvm camlp4 batteries ctypes-foreign ppx_deriving
+make install-dep
 ```
 
 ## Build
@@ -17,24 +14,22 @@ opam install async yojson core_extended core_bench \
 Compile:
 
 ```bash
-corebuild main.byte
+make
 ```
 
 Test:
 
 ```bash
-./main.byte
+echo "\!load \"seqs.fasta\" |split 32 32 | print" | ./main.byte
 ```
 
 ## At a glance
 
-Still TODO. The target goal:
-
 ```bash
-# version 1
-load "test.fq" |> split 32 32 |> print
+# version 1 (works)
+load "test.fq" | split 32 32 | print
 
-# version 2
+# version 2 (nope)
 let v = "ACGT\nAACC" |> split 32 32
 v |> print
 

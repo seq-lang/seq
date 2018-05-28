@@ -5,13 +5,13 @@ TARGET := main
 .PHONY: 
 	all clean byte native profile debug sanity test
 
-all:
-	$(OCB) $(TARGET).native
+all: cpp
+	$(OCB) $(TARGET).byte
 
 cpp:
-	$(OCB) -verbose 1 bindings.o
+	make -C clib
 
-debug:
+debug: cpp
 	$(OCB) $(TARGET).byte -tag debug 
 	# OCAMLRUNPARAM=b ./$(TARGET).byte <(echo 'load "test.fq" | print')
 
@@ -26,9 +26,8 @@ test: all
 install-osx:
 	brew install ocaml opam llvm
 	opam init
-	opam switch 4.06.1
 
-install-ocaml-packages:
+install-dep:
 	opam update
 	opam install \
 		async core_extended core_bench \  
