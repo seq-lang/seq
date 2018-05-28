@@ -265,61 +265,6 @@ Pipeline Func::operator|(Var& to)
 	return begin;
 }
 
-Pipeline Func::operator&(PipelineList& to)
-{
-	Pipeline first, last;
-
-	for (auto *n = to.head; n; n = n->next) {
-		if (n->isVar)
-			last = *this | *n->v;
-		else
-			last = *this | n->p;
-
-		if (n == to.head)
-			first = last;
-	}
-
-	return {first.getHead(), last.getTail()};
-}
-
-Pipeline Func::operator||(Pipeline to)
-{
-	if (rawFunc)
-		throw exc::SeqException("cannot add pipelines to native function");
-
-	if (to.isAdded())
-		throw exc::MultiLinkException(*to.getHead());
-
-	to.getHead()->setBase(this);
-	BaseStage& begin = BaseStage::make(types::AnyType::get(), inType, nullptr);
-	begin.setBase(this);
-	begin.outs = outs;
-
-	Pipeline full = begin | to;
-
-	return full;
-}
-
-Pipeline Func::operator&&(PipelineList& to)
-{
-	Pipeline last;
-
-	for (auto *n = to.head; n; n = n->next) {
-		if (n->isVar)
-			throw exc::SeqException("cannot apply && to pipeline list containing var");
-		else {
-			Pipeline p = *this || n->p;
-
-			if (n == to.head)
-				last = p;
-			else
-				last = last | p;
-		}
-	}
-
-	return last;
-}
-
 Call& Func::operator()()
 {
 	return Call::make(*this);

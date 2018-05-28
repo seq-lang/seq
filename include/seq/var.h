@@ -27,9 +27,6 @@ namespace seq {
 		virtual BaseFunc *getBase() const;
 
 		virtual Pipeline operator|(Pipeline to);
-		virtual Pipeline operator&(PipelineList &to);
-		virtual Pipeline operator||(Pipeline to);
-		virtual Pipeline operator&&(PipelineList &to);
 		virtual Var& operator=(Pipeline to);
 
 		virtual LoadStore& operator[](Var& idx);

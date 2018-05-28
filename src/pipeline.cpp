@@ -90,20 +90,6 @@ Pipeline Pipeline::operator|(PipelineList& to)
 	return *this | MakeRec::make(to);
 }
 
-Pipeline Pipeline::operator&(PipelineList& to)
-{
-	Pipeline last;
-
-	for (auto *n = to.head; n; n = n->next) {
-		if (n->isVar)
-			last = *this | *n->v;
-		else
-			last = *this | n->p;
-	}
-
-	return {getHead(), last.getTail()};
-}
-
 PipelineList::Node::Node(Pipeline p) :
     isVar(false), p(p), v(nullptr), next(nullptr)
 {

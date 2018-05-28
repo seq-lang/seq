@@ -101,66 +101,6 @@ Pipeline Var::operator|(Pipeline to)
 	return full;
 }
 
-Pipeline Var::operator&(PipelineList& to)
-{
-	Pipeline first, last;
-
-	for (auto *n = to.head; n; n = n->next) {
-		if (n->isVar)
-			throw exc::SeqException("cannot send var output to another var");
-		else {
-			last = *this | n->p;
-
-			if (n == to.head)
-				first = last;
-		}
-	}
-
-	return {first.getHead(), last.getTail()};
-}
-
-Pipeline Var::operator||(Pipeline to)
-{
-	if (!isAssigned())
-		throw exc::SeqException("variable used before assigned");
-
-	if (to.isAdded())
-		throw exc::MultiLinkException(*to.getHead());
-
-	ensureConsistentBase(to.getHead()->getBase());
-	BaseFunc *base = getBase();
-	to.getHead()->setBase(base);
-	BaseStage& begin = BaseStage::make(types::AnyType::get(), getType(stage), stage);
-	begin.setBase(base);
-	begin.outs = outs(stage);
-
-	if (stage)
-		stage->addWeakNext(to.getHead());
-
-	Pipeline full = begin | to;
-	return full;
-}
-
-Pipeline Var::operator&&(PipelineList& to)
-{
-	Pipeline last;
-
-	for (auto *n = to.head; n; n = n->next) {
-		if (n->isVar)
-			throw exc::SeqException("cannot send var output to another var");
-		else {
-			Pipeline p = *this || n->p;
-
-			if (n == to.head)
-				last = p;
-			else
-				last = last | p;
-		}
-	}
-
-	return last;
-}
-
 void Var::assign(Pipeline to)
 {
 	if (isAssigned())

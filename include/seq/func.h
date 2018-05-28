@@ -72,9 +72,6 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
 		Pipeline operator|(Var& to);
-		Pipeline operator&(PipelineList& to);
-		Pipeline operator||(Pipeline to);
-		Pipeline operator&&(PipelineList& to);
 
 		Call& operator()();
 	};

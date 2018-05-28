@@ -82,7 +82,6 @@ namespace seq {
 
 		virtual Pipeline operator|(Pipeline to);
 		virtual Pipeline operator|(Var& to);
-		virtual Pipeline operator&(PipelineList& to);
 		operator Pipeline();
 	};
 

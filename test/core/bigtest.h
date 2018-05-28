@@ -81,8 +81,8 @@ static inline void bigTest()
 	x = s | split(32,1) | filter(is_cpg);
 	x | print();
 	y = x | substr(1,16);
-	y & (print(),
-	     copy() | revcomp() | print());  // convenient branch syntax
+	y | print();
+	y | copy() | revcomp() | print();
 
 	/*
 	 * Arrays can be declared

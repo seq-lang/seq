@@ -25,7 +25,6 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(Var& to);
 		Pipeline operator|(PipelineList& to);
-		Pipeline operator&(PipelineList& to);
 	};
 
 	class PipelineList {

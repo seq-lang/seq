@@ -232,9 +232,6 @@ public:
 
 	static void symadd(std::string name, SeqEntity ent, std::map<std::string, SeqEntity>& syms)
 	{
-		if (name == "_")
-			throw exc::SeqException("symbol '_' is reserved and cannot be used");
-
 		if (syms.find(name) != syms.end())
 			throw exc::SeqException("duplicate symbol '" + std::string(name) + "'");
 
@@ -265,9 +262,6 @@ public:
 
 	SeqEntity lookup(std::string name)
 	{
-		if (name == "_")
-			return &_;  // this is our special variable for referring to prev outputs
-
 		for (auto it = symbols.rbegin(); it != symbols.rend(); ++it) {
 			SeqEntity ent = lookupInTable(name, *it);
 			if (ent.type != SeqEntity::EMPTY)
@@ -1041,8 +1035,8 @@ struct control<pipeline_branch> : pegtl::normal<pipeline_branch>
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
-		Pipeline nop = stageutil::nop();
-		state.add(nop);
+		Pipeline p = stageutil::nop();
+		state.add(p);
 	}
 
 	template<typename Input>
@@ -1243,18 +1237,19 @@ struct control<branch> : pegtl::normal<branch>
 	{
 		state.scope();
 		assert(state.top().type == SeqEntity::PIPELINE);
-		state.enter(state.top());
+		Pipeline p = stageutil::nop();
 		state.push();
+		state.add(p);
+		state.enter(p);
 	}
 
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
 		state.unscope();
-		state.pop();
-		assert(state.top().type == SeqEntity::PIPELINE &&
-		       state.context().type == SeqEntity::PIPELINE);
-		state.top().value.pipeline = makePipelineFromLinkedStage(state.context().value.pipeline.getHead());
+		auto vec = state.get("p");
+		Pipeline p = makePipelineFromLinkedStage(vec[0].value.pipeline.getHead());
+		state.add(p);
 		state.exit();
 	}
 

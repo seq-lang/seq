@@ -55,9 +55,6 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
 		Pipeline operator|(Var& to);
-		Pipeline operator&(PipelineList& to);
-		Pipeline operator||(Pipeline to);
-		Pipeline operator&&(PipelineList& to);
 	};
 
 	struct PipelineAggregatorProxy {
@@ -68,9 +65,6 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
 		Pipeline operator|(Var& to);
-		Pipeline operator&(PipelineList& to);
-		Pipeline operator||(Pipeline to);
-		Pipeline operator&&(PipelineList& to);
 	};
 
 	class SeqModule : public BaseFunc {
@@ -113,9 +107,6 @@ namespace seq {
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
 		Pipeline operator|(Var& to);
-		Pipeline operator&(PipelineList& to);
-		Pipeline operator||(Pipeline to);
-		Pipeline operator&&(PipelineList& to);
 
 		PipelineAggregatorProxy operator[](unsigned idx);
 	};
