@@ -158,7 +158,7 @@ struct expr : pegtl::list<pegtl::seq<pegtl::star<op_uop, seps>, atomic_expr>, pe
  * Stages and Pipelines
  */
 struct statement;
-struct statement_seq : pegtl::star<statement, seps> {};
+struct statement_seq : pegtl::star<statement, seps, pegtl::opt<pegtl::one<';'>>, seps> {};
 
 struct pipeline;
 struct pipe_op : TAO_PEGTL_STRING("|>") {};
@@ -224,7 +224,7 @@ struct elif_close : pegtl::success {};
 struct else_close : pegtl::success {};
 struct if_stmt : pegtl::seq<if_open, seps, statement_seq, if_close, pegtl::star<seps, elif_open, seps, statement_seq, elif_close>, pegtl::opt<seps, else_open, seps, statement_seq, else_close>, seps, str_end> {};
 
-struct return_stmt : pegtl::seq<str_return, seps, expr> {};
+struct return_stmt : pegtl::seq<str_return, pegtl::opt<seps, expr>> {};
 struct break_stmt : pegtl::seq<str_break> {};
 struct continue_stmt : pegtl::seq<str_continue> {};
 

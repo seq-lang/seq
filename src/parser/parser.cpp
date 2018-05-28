@@ -1730,8 +1730,9 @@ struct control<return_stmt> : pegtl::normal<return_stmt>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("e");
-		Pipeline p = stageutil::ret(vec[0].value.expr);
+		auto vec = state.get("e", true);
+		assert(vec.size() <= 1);
+		Pipeline p = stageutil::ret(vec.empty() ? nullptr : vec[0].value.expr);
 		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}

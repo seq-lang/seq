@@ -151,13 +151,20 @@ void Func::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *bloc
 
 void Func::codegenReturn(Expr *expr, BasicBlock*& block)
 {
-	if (!expr->getType()->isChildOf(outType))
-		throw exc::SeqException(
-		  "cannot return '" + expr->getType()->getName() + "' from function returning '" + outType->getName() + "'");
+	types::Type *type = expr ? expr->getType() : types::VoidType::get();
 
-	Value *v = expr->codegen(this, block);
-	IRBuilder<> builder(block);
-	builder.CreateRet(v);
+	if (!type->isChildOf(outType))
+		throw exc::SeqException(
+		  "cannot return '" + type->getName() + "' from function returning '" + outType->getName() + "'");
+
+	if (expr) {
+		Value *v = expr->codegen(this, block);
+		IRBuilder<> builder(block);
+		builder.CreateRet(v);
+	} else {
+		IRBuilder<> builder(block);
+		builder.CreateRetVoid();
+	}
 
 	/*
 	 * Can't have anything after the `ret` instruction we just added,
