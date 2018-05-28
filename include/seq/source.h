@@ -6,7 +6,7 @@
 #include "stage.h"
 
 namespace seq {
-	class Source : public Stage {
+	class Source : public InitStage {
 	private:
 		std::vector<Expr *> sources;
 		bool isSingle() const;

@@ -147,7 +147,7 @@ types::Type *Source::determineOutType() const
 }
 
 Source::Source(std::vector<Expr *> sources) :
-    Stage("source"), sources(std::move(sources))
+    InitStage("source"), sources(std::move(sources))
 {
 }
 
@@ -220,6 +220,7 @@ void Source::codegen(Module *module)
 
 	block = body;
 
+	codegenInit(block);
 	codegenNext(module);
 
 	builder.SetInsertPoint(getAfter());
@@ -240,6 +241,7 @@ void Source::codegen(Module *module)
 	builder.CreateCall(deallocFunc, {state});
 
 	prev->setAfter(exitRepeat);
+	finalizeInit();
 }
 
 void Source::finalize(Module *module, ExecutionEngine *eng)

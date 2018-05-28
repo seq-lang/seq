@@ -114,6 +114,21 @@ void Stage::setAdded()
 	}
 }
 
+BasicBlock *Stage::getEnclosingInitBlock()
+{
+	Stage *stage = this;
+	while (stage) {
+		auto *base = dynamic_cast<InitStage *>(stage);
+
+		if (base)
+			return base->getInitBlock();
+
+		stage = stage->getPrev();
+	}
+
+	throw exc::SeqException("no enclosing init block found");
+}
+
 static LoopStage *findEnclosingLoop(Stage *stage)
 {
 	while (stage) {
@@ -194,6 +209,45 @@ std::ostream& operator<<(std::ostream& os, Stage& stage)
 	return os << stage.getName();
 }
 
+InitStage::InitStage(std::string name, types::Type *in, types::Type *out) :
+    Stage(std::move(name), in, out), init(nullptr), start(nullptr)
+{
+}
+
+InitStage::InitStage(std::string name) :
+    InitStage(std::move(name), types::VoidType::get(), types::VoidType::get())
+{
+}
+
+void InitStage::codegenInit(llvm::BasicBlock*& block)
+{
+	LLVMContext& context = getBase()->getContext();
+	Function *func = getBase()->getFunc();
+
+	assert(block);
+	init = BasicBlock::Create(context, "init", func);
+
+	IRBuilder<> builder(block);
+	builder.CreateBr(init);
+
+	start = block = BasicBlock::Create(context, "start", func);
+}
+
+void InitStage::finalizeInit()
+{
+	assert(start);
+	IRBuilder<> builder(init);
+	builder.CreateBr(start);
+}
+
+BasicBlock *InitStage::getInitBlock()
+{
+	if (!init)
+		throw exc::SeqException("cannot get base stage init block before code generation");
+
+	return init;
+}
+
 LoopStage::LoopStage(std::string name, types::Type *in, types::Type *out) :
     Stage(std::move(name), in, out), breaks(), continues()
 {
@@ -226,7 +280,7 @@ void LoopStage::setContinues(BasicBlock *block)
 		inst->setSuccessor(0, block);
 }
 
-Nop::Nop() : Stage("nop", types::AnyType::get(), types::VoidType::get())
+Nop::Nop() : InitStage("nop", types::AnyType::get(), types::VoidType::get())
 {
 }
 
@@ -243,10 +297,13 @@ void Nop::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	block = prev->getAfter();
 	outs->insert(prev->outs->begin(), prev->outs->end());
+
+	block = prev->getAfter();
+	codegenInit(block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
+	finalizeInit();
 }
 
 Nop& Nop::make()

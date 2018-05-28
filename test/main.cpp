@@ -1,7 +1,6 @@
 #include "testhelp.h"
 
 #include "core/bigtest.h"
-#include "core/branchtest.h"
 #include "core/standalonetest.h"
 #include "stages/calltest.h"
 #include "stages/chunktest.h"

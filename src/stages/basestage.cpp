@@ -1,3 +1,4 @@
+#include "seq/func.h"
 #include "seq/basestage.h"
 
 using namespace seq;
@@ -6,7 +7,7 @@ using namespace llvm;
 static int idx = 1;
 
 BaseStage::BaseStage(types::Type *in, types::Type *out, Stage *proxy) :
-    Stage("base" + std::to_string(idx++), in, out), proxy(proxy)
+    InitStage("base" + std::to_string(idx++), in, out), proxy(proxy)
 {
 }
 
@@ -22,7 +23,9 @@ void BaseStage::codegen(Module *module)
 	if (prev && !block)
 		block = prev->getAfter();
 
+	codegenInit(block);
 	codegenNext(module);
+	finalizeInit();
 
 	if (prev)
 		prev->setAfter(getAfter());

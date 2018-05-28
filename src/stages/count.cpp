@@ -17,10 +17,14 @@ void Count::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	block = prev->getAfter();
 	BasicBlock *preambleBlock = getBase()->getPreamble();
-	IRBuilder<> builder(block);
+	BasicBlock *initBlock = getEnclosingInitBlock();
 
 	Value *countVar = makeAlloca(zeroLLVM(context), preambleBlock);
 
+	IRBuilder<> builder(initBlock);
+	builder.CreateStore(zeroLLVM(context), countVar);
+
+	builder.SetInsertPoint(block);
 	Value *count = builder.CreateLoad(countVar);
 	Value *inc = builder.CreateAdd(oneLLVM(context), count);
 	builder.CreateStore(inc, countVar);

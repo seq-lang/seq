@@ -1,4 +1,5 @@
 #include "seq/makerec.h"
+#include "seq/basestage.h"
 #include "seq/stage.h"
 #include "seq/var.h"
 #include "seq/exc.h"

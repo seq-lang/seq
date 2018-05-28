@@ -2,7 +2,6 @@
 #define SEQ_MAKEREC_H
 
 #include "stage.h"
-#include "basestage.h"
 #include "pipeline.h"
 
 namespace seq {
@@ -10,7 +9,6 @@ namespace seq {
 	private:
 		bool validated;
 		PipelineList& pl;
-		BaseStage proxy;
 	public:
 		explicit MakeRec(PipelineList& pl);
 		void validate() override;

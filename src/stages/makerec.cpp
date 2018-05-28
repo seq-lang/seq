@@ -7,8 +7,7 @@ using namespace seq;
 using namespace llvm;
 
 MakeRec::MakeRec(PipelineList &pl) :
-    Stage("makerec"), validated(false), pl(pl),
-    proxy(types::VoidType::get(), types::VoidType::get())
+    Stage("makerec"), validated(false), pl(pl)
 {
 }
 
@@ -20,7 +19,7 @@ void MakeRec::validate()
 	if (prev) {
 		for (auto *n = pl.head; n; n = n->next) {
 			if (!n->isVar) {
-				n->p.getHead()->setPrev(&proxy);
+				n->p.getHead()->setPrev(prev);
 				n->p.getHead()->setBase(getBase());
 				n->p.setAdded();
 			}
@@ -28,7 +27,6 @@ void MakeRec::validate()
 	}
 
 	in  = prev->getOutType();
-	proxy.setInOut(prev->getOutType(), prev->getOutType());
 	std::vector<types::Type *> outTypes;
 
 	for (auto *n = pl.head; n; n = n->next) {
@@ -55,8 +53,7 @@ void MakeRec::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	block = proxy.block = prev->getAfter();
-	proxy.outs = prev->outs;
+	block = prev->getAfter();
 	IRBuilder<> builder(block);
 
 	Value *rec = UndefValue::get(out->getLLVMType(context));
@@ -67,22 +64,21 @@ void MakeRec::codegen(Module *module)
 
 		if (n->isVar) {
 			Var *var = n->v;
-			val = var->getType(this)->pack(getBase(), var->outs(this), proxy.getAfter());
+			val = var->getType(this)->pack(getBase(), var->outs(this), prev->getAfter());
 		} else {
 			Pipeline pipeline = n->p;
 			pipeline.getHead()->codegen(module);
 			types::Type *outType = pipeline.getTail()->getOutType();
-			val = outType->pack(getBase(), pipeline.getTail()->outs, proxy.getAfter());
+			val = outType->pack(getBase(), pipeline.getTail()->outs, prev->getAfter());
 			setAfter(pipeline.getHead()->getAfter());
 		}
 
-		proxy.block = proxy.getAfter();
-		builder.SetInsertPoint(proxy.block);
+		block = prev->getAfter();
+		builder.SetInsertPoint(block);
 		rec = builder.CreateInsertValue(rec, val, idx++);
 	}
 
-	block = proxy.block;
-	setAfter(proxy.getAfter());
+	setAfter(prev->getAfter());
 	out->unpack(getBase(), rec, outs, getAfter());
 	codegenNext(module);
 

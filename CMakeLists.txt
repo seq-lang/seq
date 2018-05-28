@@ -195,7 +195,6 @@ target_link_libraries(seq ${LLVM_LIBS} pegtl)
 # Seq test
 add_executable(seqtest test/main.cpp
                        test/core/bigtest.h
-                       test/core/branchtest.h
                        test/core/standalonetest.h
                        test/stages/calltest.h
                        test/stages/chunktest.h

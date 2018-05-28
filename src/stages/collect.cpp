@@ -31,6 +31,8 @@ void Collect::codegen(Module *module)
 		throw exc::SeqException("cannot collect elements of type '" + getInType()->getName() + "'");
 
 	LLVMContext& context = module->getContext();
+	BasicBlock *initBlock = getEnclosingInitBlock();
+
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
 
@@ -76,6 +78,9 @@ void Collect::codegen(Module *module)
 
 	Value *newLen = builder.CreateAdd(len, oneLLVM(context));
 	builder.CreateStore(newLen, lenVar);
+
+	builder.SetInsertPoint(initBlock);
+	builder.CreateStore(zeroLLVM(context), lenVar);
 
 	outs->insert({SeqData::ARRAY, ptrVar});
 	outs->insert({SeqData::LEN, lenVar});

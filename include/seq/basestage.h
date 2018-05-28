@@ -5,7 +5,7 @@
 #include "stage.h"
 
 namespace seq {
-	class BaseStage : public Stage {
+	class BaseStage : public InitStage {
 	private:
 		Stage *proxy;
 	public:
