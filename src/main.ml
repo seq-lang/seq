@@ -51,7 +51,7 @@ let rec toplevel jit fpm =
     with 
     | Init.CompileError msg | ParserError msg -> 
       printf "error: %s\n" msg;
-  end
+  end;
   toplevel jit fpm
 
 let () = 
