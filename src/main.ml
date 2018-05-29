@@ -52,7 +52,7 @@ let rec toplevel jit fpm =
     | Init.CompileError msg | ParserError msg -> 
       printf "error: %s\n" msg;
   end
-  (* toplevel jit fpm *)
+  toplevel jit fpm
 
 let () = 
   LLE.initialize () |> ignore;

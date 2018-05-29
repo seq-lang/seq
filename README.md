@@ -23,6 +23,8 @@ Test:
 echo "\!load \"seqs.fasta\" |split 32 32 | print" | ./main.byte
 ```
 
+Prepend line with `!` to execute it with JIT; otherwise you will just get IR.
+
 ## At a glance
 
 ```bash
