@@ -178,9 +178,9 @@ Capture& stageutil::capture(void *addr)
 	return Capture::make(addr);
 }
 
-Source& stageutil::source()
+Source& stageutil::source(std::vector<Expr *> sources)
 {
-	return Source::make({});
+	return Source::make(sources);
 }
 
 If& stageutil::ifstage()

@@ -261,11 +261,6 @@ void Source::finalize(Module *module, ExecutionEngine *eng)
 	Stage::finalize(module, eng);
 }
 
-void Source::addSource(Expr *source)
-{
-	sources.push_back(source);
-}
-
 Source& Source::make(std::vector<Expr *> sources)
 {
 	return *new Source(std::move(sources));

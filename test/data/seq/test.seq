@@ -8,40 +8,39 @@ let farray = (Seq -> Seq[])[1]
 farray[0] = f
 
 fun ident s: Seq -> Seq
-  s |> .
+  s
 end
 
-source args[0]:
-  $ substr 0+1 5 |> {
-    $ print
-    $ revcomp |> print
+source args[0] as input:
+  input |> substr 0+1 5 |> {
+    _ |> print
+    _ |> revcomp |> print
   }
 
-  let input = $ .
   let v = farray[0](input)
-  v |> foreach as r |> ($ count, r) as t |> {
+  v |> foreach as r |> (|> count, r) as t |> {
     t.1 |> print
-    $ .2 |> print
+    _ |> .2 |> print
   }
-  $ print
+  input |> print
 
   let arr = {Int, Seq}[10]
   arr |> foreach
 
-  $ ident() |> print
-  $ split 64 64 |> {
-    let v1 = $ print
+  input |> ident() |> print
+  input |> split 64 64 |> {
+    let v1 = _ |> print
     v1 |> split 32 32 |> {
-      let v2 = $ print
-      $ split 16 16 |> {
-        $ print
-        let v3 = $ copy |> print
+      let v2 = _ |> print
+      _ |> split 16 16 |> {
+        _ |> print
+        let v3 = _ |> copy |> print
         let v4 = v3 |> print
         v3 |> print
       }
       v2 |> print
     }
-    $ print
+    _ |> print
   }
   ident(input) |> print
 
@@ -66,21 +65,21 @@ b.2 |> print
 
 fun fib n: Int -> Int
   fun rec x: {(Int -> Int), Int} -> Int
-    x.1(x.2 - 1) + x.1(x.2 - 2) |> .
+    x.1(x.2 - 1) + x.1(x.2 - 2)
   end
 
-  if n <= 1 then n else rec(fib, n) |> .
+  if n <= 1 then n else rec(fib, n)
 end
 
 10 |> fib() |> print
 fib(10) |> print
 
-$ range (if b.1 then 1 else 2) 5+5 as i |> {
+range (if b.1 then 1 else 2) 5+5 as i:
   if i == 3:
     continue
   elif i >= 7:
     break
   end
 
-  i |> print
-}
+  range i i+1: _ |> print end
+end

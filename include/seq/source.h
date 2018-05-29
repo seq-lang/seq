@@ -17,8 +17,6 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Source& make(std::vector<Expr *>);
-
-		void addSource(Expr *source);
 	};
 }
 

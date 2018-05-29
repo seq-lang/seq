@@ -62,7 +62,7 @@ namespace seq {
 		AssignIndexStage& assignindex(Expr *array, Expr *idx, Expr *value);
 		AssignMemberStage& assignmemb(Cell *cell, seq_int_t idx, Expr *value);
 		Capture& capture(void *addr);
-		Source& source();
+		Source& source(std::vector<Expr *> sources);
 		If& ifstage();
 		Return& ret(Expr *expr);
 		Break& brk();
