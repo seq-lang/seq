@@ -237,6 +237,57 @@ BaseStage& If::addElse()
 	return branch;
 }
 
+While::While(Expr *cond) :
+    Stage("while", types::AnyType::get(), types::VoidType::get()), cond(cond)
+{
+	loop = true;
+}
+
+void While::codegen(Module *module)
+{
+	cond->ensure(types::BoolType::get());
+
+	ensurePrev();
+	validate();
+
+	LLVMContext& context = module->getContext();
+
+	BasicBlock *entry = prev->getAfter();
+	Function *func = entry->getParent();
+
+	IRBuilder<> builder(entry);
+
+	BasicBlock *loop0 = BasicBlock::Create(context, "while", func);
+	BasicBlock *loop = loop0;
+	builder.CreateBr(loop);
+
+	Value *cond = this->cond->codegen(getBase(), loop);  // recall: this can change `loop`
+	builder.SetInsertPoint(loop);
+	cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
+
+	BasicBlock *body = BasicBlock::Create(context, "body", func);
+	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
+
+	block = body;
+
+	codegenNext(module);
+
+	builder.SetInsertPoint(getAfter());
+	builder.CreateBr(loop0);
+
+	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+	branch->setSuccessor(1, exit);
+	prev->setAfter(exit);
+
+	setBreaks(exit);
+	setContinues(loop0);
+}
+
+While& While::make(Expr *cond)
+{
+	return *new While(cond);
+}
+
 Return::Return(Expr *expr) :
     Stage("return", types::AnyType::get(), types::VoidType::get()), expr(expr)
 {
@@ -270,7 +321,7 @@ void Break::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	block = prev->getAfter();
 	IRBuilder<> builder(block);
-	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by LoopStage::setBreaks
+	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by Stage::setBreaks
 	addBreakToEnclosingLoop(inst);
 	block = BasicBlock::Create(context, "", block->getParent());
 	prev->setAfter(getAfter());
@@ -294,7 +345,7 @@ void Continue::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	block = prev->getAfter();
 	IRBuilder<> builder(block);
-	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by LoopStage::setContinues
+	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by Stage::setContinues
 	addContinueToEnclosingLoop(inst);
 	block = BasicBlock::Create(context, "", block->getParent());
 	prev->setAfter(getAfter());

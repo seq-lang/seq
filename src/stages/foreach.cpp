@@ -4,8 +4,9 @@
 using namespace seq;
 using namespace llvm;
 
-ForEach::ForEach() : LoopStage("foreach", types::ArrayType::get(), types::VoidType::get())
+ForEach::ForEach() : Stage("foreach", types::ArrayType::get(), types::VoidType::get())
 {
+	loop = true;
 }
 
 void ForEach::validate()

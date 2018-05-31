@@ -6,7 +6,7 @@
 #include "stage.h"
 
 namespace seq {
-	class Range : public LoopStage {
+	class Range : public Stage {
 	private:
 		Expr *from;
 		Expr *to;

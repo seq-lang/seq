@@ -1251,6 +1251,59 @@ struct control<branch> : pegtl::normal<branch>
 };
 
 template<>
+struct control<while_args> : pegtl::normal<while_args>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		Pipeline p = stageutil::whilestage(vec[0].value.expr);
+		state.scope();
+		state.enter(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<while_body> : pegtl::normal<while_body>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.unscope();
+		SeqEntity ent = state.context();
+		assert(ent.type == SeqEntity::PIPELINE && dynamic_cast<While *>(ent.value.pipeline.getHead()));
+		state.exit();
+
+		SeqEntity context = state.context();
+		context.add(ent.value.pipeline);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.unscope();
+		state.exit();
+	}
+};
+
+template<>
 struct control<range_args> : pegtl::normal<range_args>
 {
 	template<typename Input>

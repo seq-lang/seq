@@ -22,6 +22,7 @@ struct str_if : TAO_PEGTL_STRING("if") {};
 struct str_then : TAO_PEGTL_STRING("then") {};
 struct str_elif : TAO_PEGTL_STRING("elif") {};
 struct str_else : TAO_PEGTL_STRING("else") {};
+struct str_while : TAO_PEGTL_STRING("while") {};
 struct str_range : TAO_PEGTL_STRING("range") {};
 struct str_source : TAO_PEGTL_STRING("source") {};
 struct str_true : TAO_PEGTL_STRING("true") {};
@@ -31,7 +32,7 @@ struct str_break : TAO_PEGTL_STRING("break") {};
 struct str_continue : TAO_PEGTL_STRING("continue") {};
 struct str_as : TAO_PEGTL_STRING("as") {};
 
-struct str_keyword : pegtl::sor<str_let, str_var, str_end, str_fun, str_if, str_then, str_elif, str_else, str_range, str_source, str_true, str_false, str_return, str_break, str_continue, str_as> {};
+struct str_keyword : pegtl::sor<str_let, str_var, str_end, str_fun, str_if, str_then, str_elif, str_else, str_while, str_range, str_source, str_true, str_false, str_return, str_break, str_continue, str_as> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword>, pegtl::identifier> {};
 
@@ -193,6 +194,10 @@ struct pipeline_stage : pegtl::seq<stage, pegtl::star<seps, pipe_op, seps, pegtl
 struct pipeline_branch : pegtl::seq<branch, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
 struct pipeline : pegtl::sor<pipeline_stage, pipeline_branch> {};
 
+struct while_args : pegtl::if_must<str_while, seps, expr> {};
+struct while_body : pegtl::seq<colon, seps, statement_seq, str_end> {};
+struct while_stmt : pegtl::if_must<while_args, seps, while_body> {};
+
 struct range_args : pegtl::if_must<str_range, seps, pegtl::rep_min_max<1, 3, seps, expr>> {};
 struct range_as : pegtl::opt<str_as, seps, name> {};
 struct range_body : pegtl::seq<colon, seps, statement_seq, str_end> {};
@@ -238,7 +243,7 @@ struct continue_stmt : pegtl::seq<str_continue> {};
 
 struct expr_stmt : pegtl::seq<expr> {};
 
-struct statement : pegtl::sor<range_stmt, source_stmt, if_stmt, return_stmt, break_stmt, continue_stmt, var_decl, cell_decl, func_stmt, assign_stmt, assign_member_stmt, assign_expr_stmt, pipeline_expr_stmt_toplevel, expr_stmt> {};
+struct statement : pegtl::sor<range_stmt, source_stmt, if_stmt, while_stmt, return_stmt, break_stmt, continue_stmt, var_decl, cell_decl, func_stmt, assign_stmt, assign_member_stmt, assign_expr_stmt, pipeline_expr_stmt_toplevel, expr_stmt> {};
 struct module : pegtl::must<statement_seq> {};
 
 /*

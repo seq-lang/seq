@@ -188,6 +188,11 @@ If& stageutil::ifstage()
 	return If::make();
 }
 
+While& stageutil::whilestage(Expr *cond)
+{
+	return While::make(cond);
+}
+
 Return& stageutil::ret(Expr *expr)
 {
 	return Return::make(expr);

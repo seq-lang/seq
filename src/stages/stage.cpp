@@ -8,8 +8,8 @@ using namespace seq;
 using namespace llvm;
 
 Stage::Stage(std::string name, types::Type *in, types::Type *out) :
-    base(nullptr), added(false), in(in), out(out),
-    prev(nullptr), nexts(), weakNexts(), name(std::move(name)),
+    base(nullptr), added(false), breaks(), continues(), in(in), out(out),
+    prev(nullptr), nexts(), weakNexts(), loop(false), name(std::move(name)),
     block(nullptr), after(nullptr), outs(new std::map<SeqData, Value *>)
 {
 }
@@ -129,14 +129,11 @@ BasicBlock *Stage::getEnclosingInitBlock()
 	throw exc::SeqException("no enclosing init block found");
 }
 
-static LoopStage *findEnclosingLoop(Stage *stage)
+static Stage *findEnclosingLoop(Stage *stage)
 {
 	while (stage) {
-		auto *loop = dynamic_cast<LoopStage *>(stage);
-
-		if (loop)
-			return loop;
-
+		if (stage->isLoop())
+			return stage;
 		stage = stage->getPrev();
 	}
 
@@ -151,6 +148,43 @@ void Stage::addBreakToEnclosingLoop(BranchInst *inst)
 void Stage::addContinueToEnclosingLoop(BranchInst *inst)
 {
 	findEnclosingLoop(this)->addContinue(inst);
+}
+
+bool Stage::isLoop()
+{
+	return loop;
+}
+
+void Stage::ensureLoop()
+{
+	if (!loop)
+		throw exc::SeqException("stage '" + getName() + "' is not a loop stage");
+}
+
+void Stage::addBreak(BranchInst *inst)
+{
+	ensureLoop();
+	breaks.push_back(inst);
+}
+
+void Stage::addContinue(BranchInst *inst)
+{
+	ensureLoop();
+	continues.push_back(inst);
+}
+
+void Stage::setBreaks(BasicBlock *block)
+{
+	ensureLoop();
+	for (auto *inst : breaks)
+		inst->setSuccessor(0, block);
+}
+
+void Stage::setContinues(BasicBlock *block)
+{
+	ensureLoop();
+	for (auto *inst : continues)
+		inst->setSuccessor(0, block);
 }
 
 void Stage::validate()
@@ -241,38 +275,6 @@ BasicBlock *InitStage::getInitBlock()
 		throw exc::SeqException("cannot get base stage init block before code generation");
 
 	return init;
-}
-
-LoopStage::LoopStage(std::string name, types::Type *in, types::Type *out) :
-    Stage(std::move(name), in, out), breaks(), continues()
-{
-}
-
-LoopStage::LoopStage(std::string name) :
-    LoopStage(std::move(name), types::VoidType::get(), types::VoidType::get())
-{
-}
-
-void LoopStage::addBreak(BranchInst *inst)
-{
-	breaks.push_back(inst);
-}
-
-void LoopStage::addContinue(BranchInst *inst)
-{
-	continues.push_back(inst);
-}
-
-void LoopStage::setBreaks(BasicBlock *block)
-{
-	for (auto *inst : breaks)
-		inst->setSuccessor(0, block);
-}
-
-void LoopStage::setContinues(BasicBlock *block)
-{
-	for (auto *inst : continues)
-		inst->setSuccessor(0, block);
 }
 
 Nop::Nop() : InitStage("nop", types::AnyType::get(), types::VoidType::get())

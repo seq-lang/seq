@@ -4,7 +4,7 @@
 #include "stage.h"
 
 namespace seq {
-	class ForEach : public LoopStage {
+	class ForEach : public Stage {
 	private:
 	public:
 		ForEach();

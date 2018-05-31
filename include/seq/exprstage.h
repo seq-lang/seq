@@ -72,6 +72,15 @@ namespace seq {
 		static If& make();
 	};
 
+	class While : public Stage {
+	private:
+		Expr *cond;
+	public:
+		While(Expr *cond);
+		void codegen(llvm::Module *module) override;
+		static While& make(Expr *cond);
+	};
+
 	class Return : public Stage {
 	private:
 		Expr *expr;

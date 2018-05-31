@@ -8,9 +8,10 @@ using namespace seq;
 using namespace llvm;
 
 Range::Range(Expr *from, Expr *to, Expr *step) :
-    LoopStage("range", types::AnyType::get(), types::IntType::get()),
+    Stage("range", types::AnyType::get(), types::IntType::get()),
     from(from), to(to), step(step)
 {
+	loop = true;
 }
 
 Range::Range(Expr *from, Expr *to) :

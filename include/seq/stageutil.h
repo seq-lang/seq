@@ -64,6 +64,7 @@ namespace seq {
 		Capture& capture(void *addr);
 		Source& source(std::vector<Expr *> sources);
 		If& ifstage();
+		While& whilestage(Expr *cond);
 		Return& ret(Expr *expr);
 		Break& brk();
 		Continue& cnt();

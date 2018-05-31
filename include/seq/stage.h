@@ -39,12 +39,17 @@ namespace seq {
 	private:
 		BaseFunc *base;
 		bool added;
+
+		/* loops */
+		std::vector<llvm::BranchInst *> breaks;
+		std::vector<llvm::BranchInst *> continues;
 	protected:
 		types::Type *in;
 		types::Type *out;
 		Stage *prev;
 		std::vector<Stage *> nexts;
 		std::vector<Stage *> weakNexts;  // for variable references
+		bool loop;
 	public:
 		std::string name;
 		llvm::BasicBlock *block;
@@ -74,6 +79,13 @@ namespace seq {
 		void addBreakToEnclosingLoop(llvm::BranchInst *inst);
 		void addContinueToEnclosingLoop(llvm::BranchInst *inst);
 
+		bool isLoop();
+		void ensureLoop();
+		void addBreak(llvm::BranchInst *inst);
+		void addContinue(llvm::BranchInst *inst);
+		void setBreaks(llvm::BasicBlock *block);
+		void setContinues(llvm::BasicBlock *block);
+
 		virtual void validate();
 		virtual void ensurePrev();
 		virtual void codegen(llvm::Module *module);
@@ -95,20 +107,6 @@ namespace seq {
 		llvm::BasicBlock *getInitBlock();
 		void codegenInit(llvm::BasicBlock*& block);
 		void finalizeInit();
-	};
-
-	class LoopStage : public Stage {
-	private:
-		std::vector<llvm::BranchInst *> breaks;
-		std::vector<llvm::BranchInst *> continues;
-	public:
-		LoopStage(std::string name, types::Type *in, types::Type *out);
-		explicit LoopStage(std::string name);
-
-		void addBreak(llvm::BranchInst *inst);
-		void addContinue(llvm::BranchInst *inst);
-		void setBreaks(llvm::BasicBlock *block);
-		void setContinues(llvm::BasicBlock *block);
 	};
 
 	class Nop : public InitStage {
