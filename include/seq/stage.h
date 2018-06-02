@@ -50,11 +50,16 @@ namespace seq {
 		std::vector<Stage *> nexts;
 		std::vector<Stage *> weakNexts;  // for variable references
 		bool loop;
+		bool init;
 	public:
 		std::string name;
 		llvm::BasicBlock *block;
 		llvm::BasicBlock *after;
 		llvm::Value *result;
+
+		/* initializations */
+		llvm::BasicBlock *initBlock;
+		llvm::BasicBlock *startBlock;
 
 		Stage(std::string name, types::Type *in, types::Type *out);
 		explicit Stage(std::string name);
@@ -86,6 +91,12 @@ namespace seq {
 		void setBreaks(llvm::BasicBlock *block);
 		void setContinues(llvm::BasicBlock *block);
 
+		bool isInit();
+		void ensureInit();
+		llvm::BasicBlock *getInitBlock();
+		void codegenInit(llvm::BasicBlock*& block);
+		void finalizeInit();
+
 		virtual void validate();
 		virtual void ensurePrev();
 		virtual void codegen(llvm::Module *module);
@@ -96,19 +107,7 @@ namespace seq {
 		operator Pipeline();
 	};
 
-	class InitStage : public Stage {
-	private:
-		llvm::BasicBlock *init;
-		llvm::BasicBlock *start;
-	public:
-		InitStage(std::string name, types::Type *in, types::Type *out);
-		explicit InitStage(std::string name);
-		llvm::BasicBlock *getInitBlock();
-		void codegenInit(llvm::BasicBlock*& block);
-		void finalizeInit();
-	};
-
-	class Nop : public InitStage {
+	class Nop : public Stage {
 	public:
 		Nop();
 		void validate() override;

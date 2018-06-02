@@ -213,7 +213,7 @@ BaseStage& If::addCond(Expr *cond)
 	if (elseAdded)
 		throw exc::SeqException("cannot add else-if branch to if-stage after else branch");
 
-	BaseStage& branch = BaseStage::make(types::AnyType::get(), types::VoidType::get());
+	BaseStage& branch = BaseStage::make(types::AnyType::get(), types::VoidType::get(), false);
 	branch.setBase(getBase());
 	branch.setPrev(this);
 	conds.push_back(cond);

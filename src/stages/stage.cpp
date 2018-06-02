@@ -9,8 +9,8 @@ using namespace llvm;
 
 Stage::Stage(std::string name, types::Type *in, types::Type *out) :
     base(nullptr), added(false), breaks(), continues(), in(in), out(out),
-    prev(nullptr), nexts(), weakNexts(), loop(false), name(std::move(name)),
-    block(nullptr), after(nullptr), result(nullptr)
+    prev(nullptr), nexts(), weakNexts(), loop(false), init(false), name(std::move(name)),
+    block(nullptr), after(nullptr), result(nullptr), initBlock(nullptr), startBlock(nullptr)
 {
 }
 
@@ -118,11 +118,8 @@ BasicBlock *Stage::getEnclosingInitBlock()
 {
 	Stage *stage = this;
 	while (stage) {
-		auto *base = dynamic_cast<InitStage *>(stage);
-
-		if (base)
-			return base->getInitBlock();
-
+		if (stage->isInit())
+			return stage->getInitBlock();
 		stage = stage->getPrev();
 	}
 
@@ -157,7 +154,7 @@ bool Stage::isLoop()
 
 void Stage::ensureLoop()
 {
-	if (!loop)
+	if (!isLoop())
 		throw exc::SeqException("stage '" + getName() + "' is not a loop stage");
 }
 
@@ -185,6 +182,46 @@ void Stage::setContinues(BasicBlock *block)
 	ensureLoop();
 	for (auto *inst : continues)
 		inst->setSuccessor(0, block);
+}
+
+bool Stage::isInit()
+{
+	return init;
+}
+
+void Stage::ensureInit()
+{
+	if (!isInit())
+		throw exc::SeqException("stage '" + getName() + "' is not an initialization stage");
+}
+
+void Stage::codegenInit(llvm::BasicBlock*& block)
+{
+	LLVMContext& context = getBase()->getContext();
+	Function *func = getBase()->getFunc();
+
+	assert(block);
+	initBlock = BasicBlock::Create(context, "init", func);
+
+	IRBuilder<> builder(block);
+	builder.CreateBr(initBlock);
+
+	startBlock = block = BasicBlock::Create(context, "start", func);
+}
+
+void Stage::finalizeInit()
+{
+	assert(startBlock);
+	IRBuilder<> builder(initBlock);
+	builder.CreateBr(startBlock);
+}
+
+BasicBlock *Stage::getInitBlock()
+{
+	if (!initBlock)
+		throw exc::SeqException("cannot get base stage init block before code generation");
+
+	return initBlock;
 }
 
 void Stage::validate()
@@ -233,47 +270,9 @@ std::ostream& operator<<(std::ostream& os, Stage& stage)
 	return os << stage.getName();
 }
 
-InitStage::InitStage(std::string name, types::Type *in, types::Type *out) :
-    Stage(std::move(name), in, out), init(nullptr), start(nullptr)
+Nop::Nop() : Stage("nop", types::AnyType::get(), types::VoidType::get())
 {
-}
-
-InitStage::InitStage(std::string name) :
-    InitStage(std::move(name), types::VoidType::get(), types::VoidType::get())
-{
-}
-
-void InitStage::codegenInit(llvm::BasicBlock*& block)
-{
-	LLVMContext& context = getBase()->getContext();
-	Function *func = getBase()->getFunc();
-
-	assert(block);
-	init = BasicBlock::Create(context, "init", func);
-
-	IRBuilder<> builder(block);
-	builder.CreateBr(init);
-
-	start = block = BasicBlock::Create(context, "start", func);
-}
-
-void InitStage::finalizeInit()
-{
-	assert(start);
-	IRBuilder<> builder(init);
-	builder.CreateBr(start);
-}
-
-BasicBlock *InitStage::getInitBlock()
-{
-	if (!init)
-		throw exc::SeqException("cannot get base stage init block before code generation");
-
-	return init;
-}
-
-Nop::Nop() : InitStage("nop", types::AnyType::get(), types::VoidType::get())
-{
+	init = true;
 }
 
 void Nop::validate()
