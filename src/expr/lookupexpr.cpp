@@ -12,15 +12,9 @@ ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :
 Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	idx->ensure(types::IntType::get());
-
-	auto outs = makeValMap();
 	Value *arr = this->arr->codegen(base, block);
 	Value *idx = this->idx->codegen(base, block);
-	IRBuilder<> builder(block);
-	Value *ptr = builder.CreateExtractValue(arr, 1);
-
-	types::ArrayType::get(getType())->codegenIndexLoad(base, outs, block, ptr, idx);
-	return getType()->pack(base, outs, block);
+	return this->arr->getType()->indexLoad(base, arr, idx, block);
 }
 
 types::Type *ArrayLookupExpr::getType() const

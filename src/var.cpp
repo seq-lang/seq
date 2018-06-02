@@ -45,12 +45,12 @@ types::Type *Var::getType(Stage *caller) const
 	return stage->getOutType();
 }
 
-ValMap Var::outs(Stage *caller) const
+Value*& Var::result(Stage *caller) const
 {
 	if (!isAssigned())
 		throw exc::SeqException("variable used before assigned");
 
-	return stage->outs;
+	return stage->result;
 }
 
 Stage *Var::getStage() const
@@ -88,7 +88,7 @@ Pipeline Var::operator|(Pipeline to)
 	types::Type *inType = standalone ? (types::Type *)types::AnyType::get() : (types::Type *)types::VoidType::get();
 	BaseStage& begin = BaseStage::make(inType, getType(stage), stage);
 	begin.setBase(base);
-	begin.outs = outs(stage);
+	begin.deferResult(&result(stage));
 
 	if (stage)
 		stage->addWeakNext(to.getHead());
@@ -144,78 +144,6 @@ void Var::ensureConsistentBase(BaseFunc *base)
 		throw exc::SeqException("cannot use variable in different context than where it was assigned");
 }
 
-Const::Const(types::Type *type) :
-    Var(), type(type), outsMap(new std::map<SeqData, Value *>)
-{
-}
-
-types::Type *Const::getType(Stage *caller) const
-{
-	return type;
-}
-
-ValMap Const::outs(Stage *caller) const
-{
-	return outsMap;
-}
-
-Stage *Const::getStage() const
-{
-	return nullptr;
-}
-
-bool Const::isAssigned() const
-{
-	return true;
-}
-
-BaseFunc *Const::getBase() const
-{
-	return nullptr;
-}
-
-ConstInt::ConstInt(seq_int_t n) : Const(types::IntType::get()), n(n)
-{
-}
-
-ValMap ConstInt::outs(Stage *caller) const
-{
-	if (caller && outsMap->empty()) {
-		LLVMContext& context = caller->getBase()->getContext();
-		BasicBlock *preambleBlock = caller->getBase()->getPreamble();
-		Value *var = makeAlloca(ConstantInt::get(seqIntLLVM(context), (uint64_t)n, true), preambleBlock);
-		outsMap->insert({SeqData::INT, var});
-	}
-
-	return Const::outs(caller);
-}
-
-ConstInt& ConstInt::get(seq_int_t n)
-{
-	return *new ConstInt(n);
-}
-
-ConstFloat::ConstFloat(double f) : Const(types::FloatType::get()), f(f)
-{
-}
-
-ValMap ConstFloat::outs(Stage *caller) const
-{
-	if (caller && outsMap->empty()) {
-		LLVMContext& context = caller->getBase()->getContext();
-		BasicBlock *preambleBlock = caller->getBase()->getPreamble();
-		Value *var = makeAlloca(ConstantFP::get(Type::getDoubleTy(context), f), preambleBlock);
-		outsMap->insert({SeqData::FLOAT, var});
-	}
-
-	return Const::outs(caller);
-}
-
-ConstFloat& ConstFloat::get(double f)
-{
-	return *new ConstFloat(f);
-}
-
 Latest::Latest() : Var()
 {
 }
@@ -235,10 +163,10 @@ types::Type *Latest::getType(Stage *caller) const
 	return caller->getPrev()->getOutType();
 }
 
-ValMap Latest::outs(Stage *caller) const
+Value*& Latest::result(Stage *caller) const
 {
 	validateCaller(caller);
-	return caller->getPrev()->outs;
+	return caller->getPrev()->result;
 }
 
 Stage *Latest::getStage() const

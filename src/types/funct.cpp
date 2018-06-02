@@ -10,15 +10,17 @@ types::FuncType::FuncType(Type *inType, Type *outType) :
 {
 }
 
-void types::FuncType::call(BaseFunc *base,
-                           ValMap ins,
-                           ValMap outs,
-                           Value *fn,
-                           BasicBlock *block)
+Value *types::FuncType::call(BaseFunc *base,
+                             Value *self,
+                             Value *arg,
+                             BasicBlock *block)
 {
-	IRBuilder<> builder(block);
-	Value *result = inType->callFuncOf(fn, ins, block);
-	outType->unpack(base, result, outs, block);
+	return inType->callFuncOf(self, arg, block);
+}
+
+Value *types::FuncType::defaultValue(BasicBlock *block)
+{
+	return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
 }
 
 bool types::FuncType::is(Type *type) const

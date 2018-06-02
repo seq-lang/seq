@@ -17,22 +17,21 @@ namespace seq {
 
 			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
 
-			void setFuncArgs(llvm::Function *func,
-			                 ValMap outs,
-			                 llvm::BasicBlock *block) override;
+			llvm::Value *setFuncArgs(llvm::Function *func,
+			                         llvm::BasicBlock *block) override;
 
 			llvm::Value *callFuncOf(llvm::Value *func,
-			                        ValMap outs,
+			                        llvm::Value *arg,
 			                        llvm::BasicBlock *block) override;
 
-			llvm::Value *pack(BaseFunc *base,
-			                  ValMap outs,
-			                  llvm::BasicBlock *block) override;
+			llvm::Value *loadFromAlloca(BaseFunc *base,
+			                            llvm::Value *var,
+			                            llvm::BasicBlock *block) override;
 
-			void unpack(BaseFunc *base,
-			            llvm::Value *value,
-			            ValMap outs,
-			            llvm::BasicBlock *block) override;
+			llvm::Value *storeInAlloca(BaseFunc *base,
+			                           llvm::Value *self,
+			                           llvm::BasicBlock *block,
+			                           bool storeDefault=false) override;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			static VoidType *get();

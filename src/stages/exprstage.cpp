@@ -1,5 +1,4 @@
-#include "seq/record.h"
-#include "seq/numexpr.h"
+#include "seq/seq.h"
 #include "seq/exprstage.h"
 
 using namespace seq;
@@ -23,7 +22,7 @@ void ExprStage::codegen(Module *module)
 
 	block = prev->getAfter();
 	Value *val = expr->codegen(getBase(), block);
-	getOutType()->unpack(getBase(), val, outs, block);
+	result = getOutType()->storeInAlloca(getBase(), val, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }
@@ -99,15 +98,10 @@ void AssignIndexStage::codegen(Module *module)
 	validate();
 
 	block = prev->getAfter();
-	IRBuilder<> builder(block);
-
-	auto outs = makeValMap();
 	Value *val = value->codegen(getBase(), block);
 	Value *arr = array->codegen(getBase(), block);
-	Value *ptr = builder.CreateExtractValue(arr, 1);
 	Value *idx = this->idx->codegen(getBase(), block);
-	value->getType()->unpack(getBase(), val, outs, block);
-	array->getType()->codegenIndexStore(getBase(), outs, block, ptr, idx);
+	array->getType()->indexStore(getBase(), arr, idx, val, block);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());
@@ -178,7 +172,7 @@ void If::codegen(Module *module)
 		Value *cond = conds[i]->codegen(getBase(), block);
 		BaseStage *branch = branches[i];
 		branch->setInOut(types::VoidType::get(), prev->getOutType());
-		branch->outs->insert(prev->outs->begin(), prev->outs->end());
+		branch->result = prev->result;
 
 		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
 		cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));

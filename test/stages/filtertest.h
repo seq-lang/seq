@@ -8,9 +8,9 @@ SEQ_FUNC bool filterTestFunc1(seq_int_t n)
 	return n%2 == 0;
 }
 
-SEQ_FUNC bool filterTestFunc2(char *seq, seq_int_t len)
+SEQ_FUNC bool filterTestFunc2(seq_t seq)
 {
-	return len > 0 && seq[0] == 'A';
+	return seq.len > 0 && seq.seq[0] == 'A';
 }
 
 struct FilterTest : ::testing::TestWithParam<std::string> {

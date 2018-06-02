@@ -15,11 +15,12 @@ namespace seq {
 			FuncType(FuncType const&)=delete;
 			void operator=(FuncType const&)=delete;
 
-			void call(BaseFunc *base,
-			          ValMap ins,
-			          ValMap outs,
-			          llvm::Value *fn,
-			          llvm::BasicBlock *block) override;
+			llvm::Value *call(BaseFunc *base,
+			                  llvm::Value *self,
+			                  llvm::Value *arg,
+			                  llvm::BasicBlock *block) override;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			bool is(Type *type) const override;
 			Type *getCallType(Type *inType) override;

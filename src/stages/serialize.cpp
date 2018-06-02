@@ -41,7 +41,8 @@ void Serialize::codegen(Module *module)
 
 	IRBuilder<> builder(block);
 	Value *fp = builder.CreateCall(openFunc, {builder.CreateGEP(fileVar, zeroLLVM(context))});
-	prev->getOutType()->callSerialize(getBase(), prev->outs, fp, block);
+	Value *val = builder.CreateLoad(prev->result);
+	prev->getOutType()->serialize(getBase(), val, fp, block);
 	builder.CreateCall(closeFunc, {fp});
 	codegenNext(module);
 	prev->setAfter(getAfter());
@@ -109,8 +110,10 @@ void Deserialize::codegen(Module *module)
 
 	IRBuilder<> builder(block);
 	Value *fp = builder.CreateCall(openFunc, {builder.CreateGEP(fileVar, zeroLLVM(context))});
-	type->callDeserialize(getBase(), outs, fp, block);
+	Value *val = type->deserialize(getBase(), fp, block);
 	builder.CreateCall(closeFunc, {fp});
+	result = type->storeInAlloca(getBase(), val, block, true);
+
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }

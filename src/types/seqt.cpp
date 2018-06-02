@@ -27,86 +27,6 @@ types::BaseSeqType::BaseSeqType(std::string name, SeqData key) :
 	vtable.print = (void *)printBaseSeq;
 }
 
-llvm::Type *types::BaseSeqType::getFuncType(LLVMContext& context, Type *outType)
-{
-	return FunctionType::get(outType->getLLVMType(context),
-	                         {IntegerType::getInt8PtrTy(context), seqIntLLVM(context)},
-	                         false);
-}
-
-Function *types::BaseSeqType::makeFuncOf(Module *module, Type *outType)
-{
-	static int idx = 1;
-	LLVMContext& context = module->getContext();
-
-	return cast<Function>(
-	         module->getOrInsertFunction(
-	           getName() + "Func" + std::to_string(idx++),
-	           outType->getLLVMType(context),
-	           IntegerType::getInt8PtrTy(context),
-	           seqIntLLVM(context)));
-}
-
-void types::BaseSeqType::setFuncArgs(Function *func,
-                                     ValMap outs,
-                                     BasicBlock *block)
-{
-	auto args = func->arg_begin();
-	Value *seq = args++;
-	Value *len = args;
-	Value *seqVar = makeAlloca(seq, block);
-	Value *lenVar = makeAlloca(len, block);
-	outs->insert({getKey(), seqVar});
-	outs->insert({SeqData::LEN, lenVar});
-}
-
-Value *types::BaseSeqType::callFuncOf(Value *func,
-                                      ValMap outs,
-                                      BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	Value *seq = builder.CreateLoad(getSafe(outs, getKey()));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-	std::vector<Value *> args = {seq, len};
-	return builder.CreateCall(func, args);
-}
-
-Value *types::BaseSeqType::pack(BaseFunc *base,
-                                ValMap outs,
-                                BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
-
-	Value *seq = builder.CreateLoad(getSafe(outs, getKey()));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-
-	Value *packed = builder.CreateInsertValue(UndefValue::get(getLLVMType(context)), len, {0});
-	return builder.CreateInsertValue(packed, seq, {1});
-}
-
-void types::BaseSeqType::unpack(BaseFunc *base,
-                                Value *value,
-                                ValMap outs,
-                                BasicBlock *block)
-{
-	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
-	IRBuilder<> builder(block);
-
-	Value *seq = builder.CreateExtractValue(value, {1});
-	Value *len = builder.CreateExtractValue(value, {0});
-
-	Value *seqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
-	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(seq, seqVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({getKey(), seqVar});
-	outs->insert({SeqData::LEN, lenVar});
-}
-
 static inline std::string eqFuncName()
 {
 	return "BaseSeqEq";
@@ -184,34 +104,31 @@ static Function *buildSeqEqFunc(Module *module)
 	return eq;
 }
 
-Value *types::BaseSeqType::checkEq(BaseFunc *base,
-                                   ValMap ins1,
-                                   ValMap ins2,
-                                   BasicBlock *block)
+Value *types::BaseSeqType::eq(BaseFunc *base,
+                              Value *self,
+                              Value *other,
+                              BasicBlock *block)
 {
 	Module *module = block->getModule();
-	IRBuilder<> builder(block);
-	Value *seq1 = builder.CreateLoad(getSafe(ins1, getKey()));
-	Value *len1 = builder.CreateLoad(getSafe(ins1, SeqData::LEN));
-	Value *seq2 = builder.CreateLoad(getSafe(ins2, getKey()));
-	Value *len2 = builder.CreateLoad(getSafe(ins2, SeqData::LEN));
+	Value *seq1 = Seq.memb(self, "ptr", block);
+	Value *len1 = Seq.memb(self, "len", block);
+	Value *seq2 = Seq.memb(other, "ptr", block);
+	Value *len2 = Seq.memb(other, "len", block);
 
 	Function *eq = module->getFunction(eqFuncName());
 
 	if (!eq)
 		eq = buildSeqEqFunc(module);
 
-	std::vector<Value *> args = {seq1, len1, seq2, len2};
-	return builder.CreateCall(eq, args);
+	IRBuilder<> builder(block);
+	return builder.CreateCall(eq, {seq1, len1, seq2, len2});
 }
 
-void types::BaseSeqType::callCopy(BaseFunc *base,
-                                  ValMap ins,
-                                  ValMap outs,
-                                  BasicBlock *block)
+Value *types::BaseSeqType::copy(BaseFunc *base,
+                                Value *self,
+                                BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
 
 	Function *copyFunc = cast<Function>(
 	                       block->getModule()->getOrInsertFunction(
@@ -222,26 +139,18 @@ void types::BaseSeqType::callCopy(BaseFunc *base,
 
 	copyFunc->setCallingConv(CallingConv::C);
 
+	Value *seq = Seq.memb(self, "ptr", block);
+	Value *len = Seq.memb(self, "len", block);
+
 	IRBuilder<> builder(block);
-	Value *seq = builder.CreateLoad(getSafe(ins, getKey()));
-	Value *len = builder.CreateLoad(getSafe(ins, SeqData::LEN));
-	std::vector<Value *> args = {seq, len};
-	Value *copy = builder.CreateCall(copyFunc, args, "");
-
-	Value *seqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
-	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(copy, seqVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({getKey(), seqVar});
-	outs->insert({SeqData::LEN, lenVar});
+	Value *copy = builder.CreateCall(copyFunc, {seq, len});
+	return make(copy, len, block);
 }
 
-void types::BaseSeqType::callSerialize(BaseFunc *base,
-                                       ValMap outs,
-                                       Value *fp,
-                                       BasicBlock *block)
+void types::BaseSeqType::serialize(BaseFunc *base,
+                                   Value *self,
+                                   Value *fp,
+                                   BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
@@ -257,25 +166,20 @@ void types::BaseSeqType::callSerialize(BaseFunc *base,
 
 	writeFunc->setCallingConv(CallingConv::C);
 
+	Value *seq = Seq.memb(self, "ptr", block);
+	Value *len = Seq.memb(self, "len", block);
+	Int.serialize(base, len, fp, block);
+
 	IRBuilder<> builder(block);
-
-	Value *seq = builder.CreateLoad(getSafe(outs, getKey()));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-
-	auto subOuts = makeValMap();
-	IntType::get()->unpack(base, len, subOuts, block);
-	IntType::get()->callSerialize(base, subOuts, fp, block);
 	builder.CreateCall(writeFunc, {seq, len, oneLLVM(context), fp});
 }
 
-void types::BaseSeqType::callDeserialize(BaseFunc *base,
-                                         ValMap outs,
-                                         Value *fp,
-                                         BasicBlock *block)
+Value *types::BaseSeqType::deserialize(BaseFunc *base,
+                                       Value *fp,
+                                       BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
-	BasicBlock *preambleBlock = base->getPreamble();
 
 	Function *readFunc = cast<Function>(
 	                       module->getOrInsertFunction(
@@ -296,27 +200,15 @@ void types::BaseSeqType::callDeserialize(BaseFunc *base,
 
 	IRBuilder<> builder(block);
 
-	auto subOuts = makeValMap();
-	IntType::get()->callDeserialize(base, subOuts, fp, block);
-	Value *len = builder.CreateLoad(getSafe(subOuts, SeqData::INT));
+	Value *len = Int.deserialize(base, fp, block);
 	Value *seq = builder.CreateCall(allocFunc, {len});
 	builder.CreateCall(readFunc, {seq, len, oneLLVM(context), fp});
-
-	Value *seqVar = makeAlloca(
-	                  ConstantPointerNull::get(
-	                    IntegerType::getInt8PtrTy(context)), preambleBlock);
-	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(seq, seqVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({getKey(), seqVar});
-	outs->insert({SeqData::LEN, lenVar});
+	return make(seq, len, block);
 }
 
-void types::BaseSeqType::callPrint(BaseFunc *base,
-                                   ValMap outs,
-                                   BasicBlock *block)
+void types::BaseSeqType::print(BaseFunc *base,
+                               Value *self,
+                               BasicBlock *block)
 {
 	if (vtable.print == nullptr)
 		throw exc::SeqException("cannot print specified type");
@@ -332,62 +224,30 @@ void types::BaseSeqType::callPrint(BaseFunc *base,
 
 	printFunc->setCallingConv(CallingConv::C);
 
+	Value *seq = Seq.memb(self, "ptr", block);
+	Value *len = Seq.memb(self, "len", block);
+
 	IRBuilder<> builder(block);
-	Value *seq = builder.CreateLoad(getSafe(outs, getKey()));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-	std::vector<Value *> args = {seq, len};
-	builder.CreateCall(printFunc, args, "");
+	builder.CreateCall(printFunc, {seq, len});
 }
 
-void types::BaseSeqType::codegenLoad(BaseFunc *base,
-                                     ValMap outs,
-                                     BasicBlock *block,
-                                     Value *ptr,
-                                     Value *idx)
-{
-	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
-	IRBuilder<> builder(block);
-
-	Value *zero = ConstantInt::get(IntegerType::getInt32Ty(context), 0);
-	Value *one  = ConstantInt::get(IntegerType::getInt32Ty(context), 1);
-
-	Value *seqPtr = builder.CreateGEP(ptr, {idx, one});
-	Value *lenPtr = builder.CreateGEP(ptr, {idx, zero});
-
-	Value *seq = builder.CreateLoad(seqPtr);
-	Value *len = builder.CreateLoad(lenPtr);
-
-	Value *seqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
-	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(seq, seqVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({getKey(), seqVar});
-	outs->insert({SeqData::LEN, lenVar});
-}
-
-void types::BaseSeqType::codegenStore(BaseFunc *base,
-                                      ValMap outs,
-                                      BasicBlock *block,
-                                      Value *ptr,
-                                      Value *idx)
+Value *types::BaseSeqType::defaultValue(BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
+	Value *ptr = ConstantPointerNull::get(IntegerType::getInt8PtrTy(context));
+	Value *len = zeroLLVM(context);
+	return make(ptr, len, block);
+}
 
-	Value *seq = builder.CreateLoad(getSafe(outs, getKey()));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+void types::BaseSeqType::initFields()
+{
+	if (!vtable.fields.empty())
+		return;
 
-	Value *zero = ConstantInt::get(IntegerType::getInt32Ty(context), 0);
-	Value *one  = ConstantInt::get(IntegerType::getInt32Ty(context), 1);
-
-	Value *seqPtr = builder.CreateGEP(ptr, {idx, one});
-	Value *lenPtr = builder.CreateGEP(ptr, {idx, zero});
-
-	builder.CreateStore(seq, seqPtr);
-	builder.CreateStore(len, lenPtr);
+	vtable.fields = {
+		{"len", {0, &Int}},
+		{"ptr", {1, &Void}}
+	};
 }
 
 seq_int_t types::BaseSeqType::size(Module *module) const
@@ -401,11 +261,35 @@ types::SeqType::SeqType() : BaseSeqType("Seq", SeqData::SEQ)
 {
 }
 
+Value *types::SeqType::memb(Value *self,
+                            const std::string& name,
+                            BasicBlock *block)
+{
+	return BaseSeqType::memb(self, name, block);
+}
+
+Value *types::SeqType::setMemb(Value *self,
+                               const std::string& name,
+                               Value *val,
+                               BasicBlock *block)
+{
+	return BaseSeqType::setMemb(self, name, val, block);
+}
+
 Type *types::SeqType::getLLVMType(LLVMContext& context) const
 {
 	StructType *seqStruct = StructType::create(context, "seq_t");
 	seqStruct->setBody({seqIntLLVM(context), IntegerType::getInt8PtrTy(context)});
 	return seqStruct;
+}
+
+Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block)
+{
+	LLVMContext& context = ptr->getContext();
+	Value *self = UndefValue::get(getLLVMType(context));
+	self = Seq.setMemb(self, "ptr", ptr, block);
+	self = Seq.setMemb(self, "len", len, block);
+	return self;
 }
 
 types::SeqType *types::SeqType::get()
@@ -419,11 +303,35 @@ types::StrType::StrType() : BaseSeqType("Str", SeqData::STR)
 {
 }
 
+Value *types::StrType::memb(Value *self,
+                            const std::string& name,
+                            BasicBlock *block)
+{
+	return BaseSeqType::memb(self, name, block);
+}
+
+Value *types::StrType::setMemb(Value *self,
+                               const std::string& name,
+                               Value *val,
+                               BasicBlock *block)
+{
+	return BaseSeqType::setMemb(self, name, val, block);
+}
+
 Type *types::StrType::getLLVMType(LLVMContext& context) const
 {
 	StructType *seqStruct = StructType::create(context, "str_t");
 	seqStruct->setBody({seqIntLLVM(context), IntegerType::getInt8PtrTy(context)});
 	return seqStruct;
+}
+
+Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block)
+{
+	LLVMContext& context = ptr->getContext();
+	Value *self = UndefValue::get(getLLVMType(context));
+	self = Str.setMemb(self, "ptr", ptr, block);
+	self = Str.setMemb(self, "len", len, block);
+	return self;
 }
 
 types::StrType *types::StrType::get()

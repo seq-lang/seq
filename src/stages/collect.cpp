@@ -52,7 +52,7 @@ void Collect::codegen(Module *module)
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
 
-	Value *ptr = type->getBaseType()->codegenAlloc(getBase(), INIT_VEC_SIZE, preambleBlock);
+	Value *ptr = type->getBaseType()->alloc(getBase(), INIT_VEC_SIZE, preambleBlock);
 	Value *ptrVar = makeAlloca(ptr, preambleBlock);
 	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
 	Value *capVar = makeAlloca(ConstantInt::get(seqIntLLVM(context), INIT_VEC_SIZE), preambleBlock);
@@ -60,12 +60,9 @@ void Collect::codegen(Module *module)
 
 	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getInType()->size(module));
 	Value *len = builder.CreateLoad(lenVar);
+	Value *val = builder.CreateLoad(prev->result);
 
-	type->getBaseType()->codegenStore(getBase(),
-	                                  prev->outs,
-	                                  block,
-	                                  elemVar,
-	                                  zeroLLVM(context));
+	type->getBaseType()->store(getBase(), val, elemVar, zeroLLVM(context), block);
 
 	std::vector<Value *> args = {builder.CreatePointerCast(ptrVar,
 	                                                       PointerType::get(IntegerType::getInt8PtrTy(context), 0)),
@@ -79,11 +76,14 @@ void Collect::codegen(Module *module)
 	Value *newLen = builder.CreateAdd(len, oneLLVM(context));
 	builder.CreateStore(newLen, lenVar);
 
-	builder.SetInsertPoint(initBlock);
-	builder.CreateStore(zeroLLVM(context), lenVar);
+	Value *newPtr = builder.CreateLoad(ptrVar);
+	Value *arr = type->make(newPtr, newLen, block);
+	result = getOutType()->storeInAlloca(getBase(), arr, block, true);
 
-	outs->insert({SeqData::ARRAY, ptrVar});
-	outs->insert({SeqData::LEN, lenVar});
+	builder.SetInsertPoint(initBlock);
+	Value *resultRead = getOutType()->loadFromAlloca(getBase(), result, initBlock);
+	resultRead = getOutType()->setMemb(resultRead, "len", zeroLLVM(context), initBlock);
+	getOutType()->store(getBase(), resultRead, result, zeroLLVM(context), initBlock);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

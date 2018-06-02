@@ -23,7 +23,11 @@ void Call::codegen(Module *module)
 	validate();
 
 	block = prev->getAfter();
-	func.codegenCall(getBase(), prev->outs, outs, block);
+	IRBuilder<> builder(block);
+	Value *arg = builder.CreateLoad(prev->result);
+	Value *val = func.codegenCall(getBase(), arg, block);
+	result = func.getOutType()->storeInAlloca(getBase(), val, block, true);
+
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }
@@ -72,14 +76,15 @@ void MultiCall::codegen(Module *module)
 	block = prev->getAfter();
 	IRBuilder<> builder(block);
 
-	Value *rec = UndefValue::get(out->getLLVMType(context));
+	Value *arg = builder.CreateLoad(prev->result);
+	Value *rec = UndefValue::get(getOutType()->getLLVMType(context));
 	unsigned idx = 0;
 
 	for (auto *func : funcs) {
-		rec = builder.CreateInsertValue(rec, func->codegenCallRaw(getBase(), prev->outs, block), idx++);
+		rec = builder.CreateInsertValue(rec, func->codegenCall(getBase(), arg, block), idx++);
 	}
 
-	out->unpack(getBase(), rec, outs, block);
+	result = getOutType()->storeInAlloca(getBase(), rec, block, true);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

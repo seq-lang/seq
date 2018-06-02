@@ -22,10 +22,9 @@ namespace seq {
 		BaseFunc();
 	public:
 		virtual void codegen(llvm::Module *module)=0;
-		virtual void codegenCall(BaseFunc *base,
-		                         ValMap ins,
-		                         ValMap outs,
-		                         llvm::BasicBlock *block)=0;
+		virtual llvm::Value *codegenCall(BaseFunc *base,
+		                                 llvm::Value *arg,
+		                                 llvm::BasicBlock *block)=0;
 		virtual void codegenReturn(Expr *expr, llvm::BasicBlock*& block)=0;
 		virtual void add(Pipeline pipeline)=0;
 
@@ -42,7 +41,7 @@ namespace seq {
 		types::Type *inType;
 		types::Type *outType;
 		std::vector<Pipeline> pipelines;
-		ValMap outs;
+		llvm::Value *result;
 
 		/* for native functions */
 		std::string name;
@@ -54,11 +53,9 @@ namespace seq {
 		     void *rawFunc);
 		Func(types::Type& inType, types::Type& outType);
 		void codegen(llvm::Module *module) override;
-		llvm::Value *codegenCallRaw(BaseFunc *base, ValMap ins, llvm::BasicBlock *block);
-		void codegenCall(BaseFunc *base,
-		                 ValMap ins,
-		                 ValMap outs,
-		                 llvm::BasicBlock *block) override;
+		llvm::Value *codegenCall(BaseFunc *base,
+		                         llvm::Value *arg,
+		                         llvm::BasicBlock *block) override;
 		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
@@ -71,7 +68,6 @@ namespace seq {
 
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
-		Pipeline operator|(Var& to);
 
 		Call& operator()();
 	};
@@ -81,10 +77,9 @@ namespace seq {
 		explicit BaseFuncLite(llvm::Function *func);
 
 		void codegen(llvm::Module *module) override;
-		void codegenCall(BaseFunc *base,
-		                 ValMap ins,
-		                 ValMap outs,
-		                 llvm::BasicBlock *block) override;
+		llvm::Value *codegenCall(BaseFunc *base,
+		                         llvm::Value *arg,
+		                         llvm::BasicBlock *block) override;
 		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 	};

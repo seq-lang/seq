@@ -1,3 +1,4 @@
+#include "seq/seq.h"
 #include "seq/len.h"
 
 using namespace seq;
@@ -13,7 +14,11 @@ void Len::codegen(Module *module)
 	validate();
 
 	block = prev->getAfter();
-	outs->insert({SeqData::INT, getSafe(prev->outs, SeqData::LEN)});
+	IRBuilder<> builder(block);
+	Value *val = builder.CreateLoad(prev->result);
+	Value *len = prev->getOutType()->memb(val, "len", block);
+	result = types::Int.storeInAlloca(getBase(), len, block, true);
+
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }

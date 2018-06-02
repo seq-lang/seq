@@ -321,24 +321,16 @@ void LambdaStage::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	LLVMContext& context = module->getContext();
-	const auto key = isFloat ? SeqData::FLOAT : SeqData::INT;
 	Function *func = lambda.codegen(module, isFloat);
-
 	block = prev->getAfter();
-	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
+	Value *val = builder.CreateLoad(prev->result);
+	Value *out = builder.CreateCall(func, {val});
 
-	std::vector<Value *> args = {builder.CreateLoad(getSafe(prev->outs, key))};
-
-	Value *zeroInt = zeroLLVM(context);
-	Value *zeroFloat = ConstantFP::get(Type::getDoubleTy(context), 0);
-	Value *zero = isFloat ? zeroFloat : zeroInt;
-
-	Value *resultVar = makeAlloca(zero, preambleBlock);
-	builder.CreateStore(builder.CreateCall(func, args), resultVar);
-
-	outs->insert({key, resultVar});
+	if (isFloat)
+		result = types::Float.storeInAlloca(getBase(), out, block, true);
+	else
+		result = types::Int.storeInAlloca(getBase(), out, block, true);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

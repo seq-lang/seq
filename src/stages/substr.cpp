@@ -25,8 +25,6 @@ void Substr::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	BasicBlock *preambleBlock = getBase()->getPreamble();
-
 	block = prev->getAfter();
 
 	Value *subidx = start->codegen(getBase(), block);
@@ -35,17 +33,11 @@ void Substr::codegen(Module *module)
 	IRBuilder<> builder(block);
 	subidx = builder.CreateSub(subidx, oneLLVM(context));
 
-	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
-	Value *subseq = builder.CreateGEP(seq, subidx);
-
-	Value *subseqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
-	Value *sublenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(subseq, subseqVar);
-	builder.CreateStore(sublen, sublenVar);
-
-	outs->insert({SeqData::SEQ, subseqVar});
-	outs->insert({SeqData::LEN, sublenVar});
+	Value *seq = builder.CreateLoad(prev->result);
+	Value *ptr = types::Seq.memb(seq, "ptr", block);
+	Value *subptr = builder.CreateGEP(ptr, subidx);
+	Value *subseq = types::Seq.make(subptr, sublen, block);
+	result = types::Seq.storeInAlloca(getBase(), subseq, block, true);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

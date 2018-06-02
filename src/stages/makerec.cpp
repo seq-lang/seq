@@ -64,22 +64,22 @@ void MakeRec::codegen(Module *module)
 
 		if (n->isVar) {
 			Var *var = n->v;
-			val = var->getType(this)->pack(getBase(), var->outs(this), prev->getAfter());
+			builder.SetInsertPoint(prev->getAfter());
+			val = builder.CreateLoad(var->result(this));
 		} else {
 			Pipeline pipeline = n->p;
 			pipeline.getHead()->codegen(module);
-			types::Type *outType = pipeline.getTail()->getOutType();
-			val = outType->pack(getBase(), pipeline.getTail()->outs, prev->getAfter());
+			builder.SetInsertPoint(prev->getAfter());
+			val = builder.CreateLoad(pipeline.getTail()->result);
 			setAfter(pipeline.getHead()->getAfter());
 		}
 
 		block = prev->getAfter();
-		builder.SetInsertPoint(block);
 		rec = builder.CreateInsertValue(rec, val, idx++);
 	}
 
 	setAfter(prev->getAfter());
-	out->unpack(getBase(), rec, outs, getAfter());
+	result = getOutType()->storeInAlloca(getBase(), rec, getAfter(), true);
 	codegenNext(module);
 
 	prev->setAfter(getAfter());

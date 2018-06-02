@@ -25,32 +25,32 @@ Function *types::VoidType::makeFuncOf(Module *module, Type *outType)
 	          outType->getLLVMType(context)));
 }
 
-void types::VoidType::setFuncArgs(Function *func,
-                                  ValMap outs,
-                                  BasicBlock *block)
+Value *types::VoidType::setFuncArgs(Function *func, BasicBlock *block)
 {
+	return nullptr;
 }
 
-Value *types::VoidType::callFuncOf(Value *func,
-                                   ValMap outs,
-                                   BasicBlock *block)
+Value *types::VoidType::callFuncOf(llvm::Value *func,
+                                   llvm::Value *arg,
+                                   llvm::BasicBlock *block)
 {
 	IRBuilder<> builder(block);
 	return builder.CreateCall(func);
 }
 
-Value *types::VoidType::pack(BaseFunc *base,
-                             ValMap outs,
-                             BasicBlock *block)
+Value *types::VoidType::loadFromAlloca(BaseFunc *base,
+                                       Value *var,
+                                       BasicBlock *block)
 {
 	return nullptr;
 }
 
-void types::VoidType::unpack(BaseFunc *base,
-                             Value *value,
-                             ValMap outs,
-                             BasicBlock *block)
+Value *types::VoidType::storeInAlloca(BaseFunc *base,
+                                      Value *self,
+                                      BasicBlock *block,
+                                      bool storeDefault)
 {
+	return nullptr;
 }
 
 Type *types::VoidType::getLLVMType(LLVMContext& context) const

@@ -21,7 +21,7 @@ namespace seq {
 		Var(Pipeline pipeline, bool standalone=false);
 
 		virtual types::Type *getType(Stage *caller) const;
-		virtual ValMap outs(Stage *caller) const;
+		virtual llvm::Value*& result(Stage *caller) const;
 		virtual Stage *getStage() const;
 		virtual bool isAssigned() const;
 		virtual BaseFunc *getBase() const;
@@ -35,37 +35,6 @@ namespace seq {
 		void ensureConsistentBase(BaseFunc *base);
 	};
 
-	class Const : public Var {
-	protected:
-		types::Type *type;
-		ValMap outsMap;
-		explicit Const(types::Type *type);
-	public:
-		types::Type *getType(Stage *caller) const override;
-		ValMap outs(Stage *caller) const override;
-		Stage *getStage() const override;
-		bool isAssigned() const override;
-		BaseFunc *getBase() const override;
-	};
-
-	class ConstInt : public Const {
-	private:
-		seq_int_t n;
-	public:
-		ConstInt(seq_int_t n);
-		ValMap outs(Stage *caller) const override;
-		static ConstInt& get(seq_int_t n);
-	};
-
-	class ConstFloat : public Const {
-	private:
-		double f;
-	public:
-		ConstFloat(double f);
-		ValMap outs(Stage *caller) const override;
-		static ConstFloat& get(double f);
-	};
-
 	class Latest : public Var {
 	private:
 		Latest();
@@ -74,7 +43,7 @@ namespace seq {
 		void operator=(Latest const&)=delete;
 
 		types::Type *getType(Stage *caller) const override;
-		ValMap outs(Stage *caller) const override;
+		llvm::Value*& result(Stage *caller) const override;
 		Stage *getStage() const override;
 		bool isAssigned() const override;
 		BaseFunc *getBase() const override;

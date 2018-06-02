@@ -15,34 +15,8 @@ Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	assert(type != nullptr);
 	count->ensure(types::IntType::get());
 
-	Module *module = block->getModule();
-	LLVMContext& context = block->getContext();
-
-	GlobalVariable *ptrVar = new GlobalVariable(*module,
-	                                            PointerType::get(type->getBaseType()->getLLVMType(context), 0),
-	                                            false,
-	                                            GlobalValue::PrivateLinkage,
-	                                            nullptr,
-	                                            "mem");
-	ptrVar->setInitializer(
-	  ConstantPointerNull::get(PointerType::get(type->getBaseType()->getLLVMType(context), 0)));
-
-	GlobalVariable *lenVar = new GlobalVariable(*module,
-	                                            seqIntLLVM(context),
-	                                            false,
-	                                            GlobalValue::PrivateLinkage,
-	                                            nullptr,
-	                                            "len");
-	lenVar->setInitializer(zeroLLVM(context));
-
 	Value *len = count->codegen(base, block);
-	Value *ptr = type->getBaseType()->codegenAlloc(base, len, block);
-	IRBuilder<> builder(block);
-	builder.CreateStore(ptr, ptrVar);
-	builder.CreateStore(len, lenVar);
-
-	auto outs = makeValMap();
-	outs->insert({SeqData::ARRAY, ptrVar});
-	outs->insert({SeqData::LEN, lenVar});
-	return type->pack(base, outs, block);
+	Value *ptr = type->getBaseType()->alloc(base, len, block);
+	Value *arr = type->make(ptr, len, block);
+	return arr;
 }

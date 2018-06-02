@@ -26,49 +26,33 @@ types::RecordType::RecordType(std::initializer_list<Type *> types) :
 {
 }
 
-void types::RecordType::callCopy(BaseFunc *base,
-                                 ValMap ins,
-                                 ValMap outs,
-                                 BasicBlock *block)
+void types::RecordType::serialize(BaseFunc *base,
+                                  Value *self,
+                                  Value *fp,
+                                  BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	Value *rec = builder.CreateLoad(getSafe(ins, SeqData::RECORD));
-	unpack(base, rec, outs, block);
+
+	for (int i = 0; i < types.size(); i++) {
+		Value *elem = builder.CreateExtractValue(self, i);
+		types[i]->serialize(base, elem, fp, block);
+	}
 }
 
-void types::RecordType::callSerialize(BaseFunc *base,
-                                      ValMap outs,
+Value *types::RecordType::deserialize(BaseFunc *base,
                                       Value *fp,
                                       BasicBlock *block)
 {
-	IRBuilder<> builder(block);
-	Value *rec = builder.CreateLoad(getSafe(outs, SeqData::RECORD));
-
-	for (int i = 0; i < types.size(); i++) {
-		auto subOuts = makeValMap();
-		Value *elem = builder.CreateExtractValue(rec, i);
-		types[i]->unpack(base, elem, subOuts, block);
-		types[i]->callSerialize(base, subOuts, fp, block);
-	}
-}
-
-void types::RecordType::callDeserialize(BaseFunc *base,
-                                        ValMap outs,
-                                        Value *fp,
-                                        BasicBlock *block)
-{
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
-	Value *rec = UndefValue::get(getLLVMType(context));
+	Value *self = UndefValue::get(getLLVMType(context));
 
 	for (int i = 0; i < types.size(); i++) {
-		auto subOuts = makeValMap();
-		types[i]->callDeserialize(base, subOuts, fp, block);
-		Value *elem = types[i]->pack(base, subOuts, block);
-		rec = builder.CreateInsertValue(rec, elem, i);
+		Value *elem = types[i]->deserialize(base, fp, block);
+		self = builder.CreateInsertValue(self, elem, i);
 	}
 
-	unpack(base, rec, outs, block);
+	return self;
 }
 
 static seq_int_t getIdxSafe(Value *idx, const seq_int_t max)
@@ -85,46 +69,55 @@ static seq_int_t getIdxSafe(Value *idx, const seq_int_t max)
 	}
 }
 
-void types::RecordType::codegenIndexLoad(BaseFunc *base,
-                                         ValMap outs,
-                                         BasicBlock *block,
-                                         Value *ptr,
-                                         Value *idx)
+Value *types::RecordType::indexLoad(BaseFunc *base,
+                                    Value *self,
+                                    Value *idx,
+                                    BasicBlock *block)
 {
 	const seq_int_t idxReal = getIdxSafe(idx, (seq_int_t)types.size());
 	Type *type = types[idxReal];
 
 	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
 	IRBuilder<> builder(block);
 
-	Value *recPtr = makeAlloca(ptr->getType(), preambleBlock);
-	builder.CreateStore(ptr, recPtr);
+	Value *recPtr = storeInAlloca(base, self, block);
 	Value *elemPtr = builder.CreateGEP(recPtr,
 	                                   {ConstantInt::get(IntegerType::getInt32Ty(context), 0),
 	                                    ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)idxReal)});
-	type->codegenLoad(base, outs, block, elemPtr, zeroLLVM(context));
+	return type->load(base, elemPtr, zeroLLVM(context), block);
 }
 
-void types::RecordType::codegenIndexStore(BaseFunc *base,
-                                          ValMap outs,
-                                          BasicBlock *block,
-                                          Value *ptr,
-                                          Value *idx)
+void types::RecordType::indexStore(BaseFunc *base,
+                                   Value *self,
+                                   Value *idx,
+                                   Value *val,
+                                   BasicBlock *block)
 {
 	const seq_int_t idxReal = getIdxSafe(idx, (seq_int_t)types.size());
 	Type *type = types[idxReal];
 
 	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
 	IRBuilder<> builder(block);
 
-	Value *recPtr = makeAlloca(ptr->getType(), preambleBlock);
-	builder.CreateStore(ptr, recPtr);
+	Value *recPtr = storeInAlloca(base, self, block);
 	Value *elemPtr = builder.CreateGEP(recPtr,
 	                                   {ConstantInt::get(IntegerType::getInt32Ty(context), 0),
 	                                    ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)idxReal)});
-	type->codegenStore(base, outs, block, elemPtr, zeroLLVM(context));
+	type->store(base, val, elemPtr, zeroLLVM(context), block);
+}
+
+Value *types::RecordType::defaultValue(BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	Value *self = UndefValue::get(getLLVMType(context));
+
+	for (int i = 0; i < types.size(); i++) {
+		Value *elem = types[i]->defaultValue(block);
+		IRBuilder<> builder(block);
+		self = builder.CreateInsertValue(self, elem, i);
+	}
+
+	return self;
 }
 
 bool types::RecordType::isGeneric(Type *type) const

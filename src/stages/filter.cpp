@@ -34,15 +34,12 @@ void Filter::codegen(Module *module)
 
 	LLVMContext& context = module->getContext();
 	block = prev->getAfter();
-	outs->insert(prev->outs->begin(), prev->outs->end());
-
-	ValMap result = makeValMap();
+	result = prev->result;
 
 	Value *f = key->codegen(getBase(), block);
-	key->getType()->call(getBase(), outs, result, f, block);
-
 	IRBuilder<> builder(block);
-	Value *pred = builder.CreateLoad(getSafe(result, SeqData::BOOL));
+	Value *x = builder.CreateLoad(result);
+	Value *pred = key->getType()->call(getBase(), f, x, block);
 
 	BasicBlock *body = BasicBlock::Create(context, "body", block->getParent());
 	block = body;

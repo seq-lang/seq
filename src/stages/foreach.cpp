@@ -35,8 +35,8 @@ void ForEach::codegen(Module *module)
 	Function *func = entry->getParent();
 
 	IRBuilder<> builder(entry);
-	Value *ptr = builder.CreateLoad(getSafe(prev->outs, SeqData::ARRAY));
-	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
+	Value *arr = builder.CreateLoad(prev->result);
+	Value *len = getInType()->memb(arr, "len", entry);
 
 	BasicBlock *loop = BasicBlock::Create(context, "foreach", func);
 	builder.CreateBr(loop);
@@ -53,12 +53,8 @@ void ForEach::codegen(Module *module)
 	assert(type != nullptr);
 
 	block = body;
-
-	type->getBaseType()->codegenLoad(getBase(),
-	                                 outs,
-	                                 block,
-	                                 ptr,
-	                                 control);
+	Value *val = type->indexLoad(getBase(), arr, control, block);
+	result = type->getBaseType()->storeInAlloca(getBase(), val, block, true);
 
 	codegenNext(module);
 

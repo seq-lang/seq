@@ -23,7 +23,9 @@ void Copy::codegen(Module *module)
 	validate();
 
 	block = prev->getAfter();
-	getInType()->callCopy(getBase(), prev->outs, outs, block);
+	IRBuilder<> builder(block);
+	Value *copy = getInType()->copy(getBase(), builder.CreateLoad(prev->result), block);
+	result = getInType()->storeInAlloca(getBase(), copy, block, true);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

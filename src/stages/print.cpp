@@ -24,8 +24,10 @@ void Print::codegen(Module *module)
 	validate();
 
 	block = prev->getAfter();
-	outs->insert(prev->outs->begin(), prev->outs->end());
-	prev->getOutType()->callPrint(getBase(), outs, block);
+	result = prev->result;
+	IRBuilder<> builder(block);
+	prev->getOutType()->print(getBase(), builder.CreateLoad(result), block);
+
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }

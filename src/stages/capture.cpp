@@ -27,7 +27,7 @@ void Capture::codegen(Module *module)
 
 	Value *addrAsInt = ConstantInt::get(IntegerType::getIntNTy(context, sizeof(void *) * 8), (uint64_t)addr);
 	Value *addrAsPtr = builder.CreateIntToPtr(addrAsInt, PointerType::get(getInType()->getLLVMType(context), 0));
-	Value *val = getInType()->pack(getBase(), prev->outs, block);
+	Value *val = builder.CreateLoad(prev->result);
 	builder.CreateStore(val, addrAsPtr);
 
 	codegenNext(module);

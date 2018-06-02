@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <functional>
+#include <utility>
 #include "llvm.h"
 #include "seqdata.h"
 #include "ops.h"
@@ -23,6 +24,7 @@ namespace seq {
 		struct VTable {
 			void *copy = nullptr;
 			void *print = nullptr;
+			std::map<std::string, std::pair<int, Type *>> fields;
 			std::vector<OpSpec> ops;
 		};
 
@@ -44,96 +46,102 @@ namespace seq {
 
 			virtual llvm::Function *makeFuncOf(llvm::Module *module, Type *outType);
 
-			virtual void setFuncArgs(llvm::Function *func,
-			                         ValMap outs,
-			                         llvm::BasicBlock *block);
+			virtual llvm::Value *setFuncArgs(llvm::Function *func,
+			                                 llvm::BasicBlock *block);
 
 			virtual llvm::Value *callFuncOf(llvm::Value *func,
-					                        ValMap outs,
+					                        llvm::Value *arg,
 			                                llvm::BasicBlock *block);
 
-			virtual llvm::Value *pack(BaseFunc *base,
-			                          ValMap outs,
+			virtual llvm::Value *loadFromAlloca(BaseFunc *base,
+			                                    llvm::Value *var,
+			                                    llvm::BasicBlock *block);
+
+			virtual llvm::Value *storeInAlloca(BaseFunc *base,
+			                                   llvm::Value *self,
+			                                   llvm::BasicBlock *block,
+			                                   bool storeDefault=false);
+
+			virtual llvm::Value *eq(BaseFunc *base,
+			                        llvm::Value *self,
+			                        llvm::Value *other,
+			                        llvm::BasicBlock *block);
+
+			virtual llvm::Value *copy(BaseFunc *base,
+			                          llvm::Value *self,
 			                          llvm::BasicBlock *block);
-
-			virtual void unpack(BaseFunc *base,
-			                    llvm::Value *value,
-			                    ValMap outs,
-			                    llvm::BasicBlock *block);
-
-			virtual llvm::Value *checkEq(BaseFunc *base,
-			                             ValMap ins1,
-			                             ValMap ins2,
-			                             llvm::BasicBlock *block);
-
-			virtual void callCopy(BaseFunc *base,
-			                      ValMap ins,
-			                      ValMap outs,
-			                      llvm::BasicBlock *block);
 
 			virtual void finalizeCopy(llvm::Module *module, llvm::ExecutionEngine *eng);
 
-			virtual void callPrint(BaseFunc *base,
-			                       ValMap outs,
-			                       llvm::BasicBlock *block);
+			virtual void print(BaseFunc *base,
+			                   llvm::Value *self,
+			                   llvm::BasicBlock *block);
 
 			virtual void finalizePrint(llvm::Module *module, llvm::ExecutionEngine *eng);
 
-			virtual void callSerialize(BaseFunc *base,
-			                           ValMap outs,
-			                           llvm::Value *fp,
-			                           llvm::BasicBlock *block);
+			virtual void serialize(BaseFunc *base,
+			                       llvm::Value *self,
+			                       llvm::Value *fp,
+			                       llvm::BasicBlock *block);
 
 			virtual void finalizeSerialize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
-			virtual void callDeserialize(BaseFunc *base,
-			                             ValMap outs,
-			                             llvm::Value *fp,
-			                             llvm::BasicBlock *block);
+			virtual llvm::Value *deserialize(BaseFunc *base,
+			                                 llvm::Value *fp,
+			                                 llvm::BasicBlock *block);
 
 			virtual void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
-			virtual llvm::Value *codegenAlloc(BaseFunc *base,
-			                                  llvm::Value *count,
-			                                  llvm::BasicBlock *block);
+			virtual llvm::Value *alloc(BaseFunc *base,
+			                           llvm::Value *count,
+			                           llvm::BasicBlock *block);
 
-			virtual llvm::Value *codegenAlloc(BaseFunc *base,
-			                                  seq_int_t count,
-			                                  llvm::BasicBlock *block);
+			virtual llvm::Value *alloc(BaseFunc *base,
+			                           seq_int_t count,
+			                           llvm::BasicBlock *block);
 
 			virtual void finalizeAlloc(llvm::Module *module, llvm::ExecutionEngine *eng);
 
-			virtual void codegenLoad(BaseFunc *base,
-			                         ValMap outs,
-			                         llvm::BasicBlock *block,
-			                         llvm::Value *ptr,
-			                         llvm::Value *idx);
-
-			virtual void codegenStore(BaseFunc *base,
-			                          ValMap outs,
-			                          llvm::BasicBlock *block,
+			virtual llvm::Value *load(BaseFunc *base,
 			                          llvm::Value *ptr,
-			                          llvm::Value *idx);
+			                          llvm::Value *idx,
+			                          llvm::BasicBlock *block);
 
-			virtual void codegenIndexLoad(BaseFunc *base,
-			                              ValMap outs,
-			                              llvm::BasicBlock *block,
-			                              llvm::Value *ptr,
-			                              llvm::Value *idx);
+			virtual void store(BaseFunc *base,
+			                   llvm::Value *self,
+			                   llvm::Value *ptr,
+			                   llvm::Value *idx,
+			                   llvm::BasicBlock *block);
 
-			virtual void codegenIndexStore(BaseFunc *base,
-			                               ValMap outs,
-			                               llvm::BasicBlock *block,
-			                               llvm::Value *ptr,
-			                               llvm::Value *idx);
+			virtual llvm::Value *indexLoad(BaseFunc *base,
+			                               llvm::Value *self,
+			                               llvm::Value *idx,
+			                               llvm::BasicBlock *block);
 
-			virtual void call(BaseFunc *base,
-			                  ValMap ins,
-			                  ValMap outs,
-			                  llvm::Value *fn,
-			                  llvm::BasicBlock *block);
+			virtual void indexStore(BaseFunc *base,
+			                        llvm::Value *self,
+			                        llvm::Value *idx,
+			                        llvm::Value *val,
+			                        llvm::BasicBlock *block);
+
+			virtual llvm::Value *call(BaseFunc *base,
+			                          llvm::Value *self,
+			                          llvm::Value *arg,
+			                          llvm::BasicBlock *block);
+
+			virtual llvm::Value *memb(llvm::Value *self,
+			                          const std::string& name,
+			                          llvm::BasicBlock *block);
+
+			virtual llvm::Value *setMemb(llvm::Value *self,
+			                             const std::string& name,
+			                             llvm::Value *val,
+			                             llvm::BasicBlock *block);
+
+			virtual llvm::Value *defaultValue(llvm::BasicBlock *block);
 
 			virtual void initOps();
+			virtual void initFields();
 			virtual OpSpec findUOp(const std::string& symbol);
 			virtual OpSpec findBOp(const std::string& symbol, Type *rhsType);
 

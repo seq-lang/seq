@@ -7,7 +7,8 @@ using namespace llvm;
 static int idx = 1;
 
 BaseStage::BaseStage(types::Type *in, types::Type *out, Stage *proxy) :
-    InitStage("base" + std::to_string(idx++), in, out), proxy(proxy)
+    InitStage("base" + std::to_string(idx++), in, out),
+    proxy(proxy), deferredResult(nullptr)
 {
 }
 
@@ -23,6 +24,9 @@ void BaseStage::codegen(Module *module)
 	if (prev && !block)
 		block = prev->getAfter();
 
+	if (!result && deferredResult)
+		result = *deferredResult;
+
 	codegenInit(block);
 	codegenNext(module);
 	finalizeInit();
@@ -37,6 +41,11 @@ types::Type *BaseStage::getOutType() const
 		return proxy->getOutType();
 	else
 		return Stage::getOutType();
+}
+
+void BaseStage::deferResult(Value **result)
+{
+	deferredResult = result;
 }
 
 BaseStage& BaseStage::make(types::Type *in, types::Type *out, Stage *proxy)

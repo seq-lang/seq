@@ -1,6 +1,6 @@
 #include <string>
 #include <vector>
-#include "seq/exc.h"
+#include "seq/seq.h"
 #include "seq/opstage.h"
 
 using namespace seq;
@@ -27,12 +27,12 @@ void OpStage::codegen(Module *module)
 	func->setCallingConv(CallingConv::C);
 
 	block = prev->getAfter();
-	outs->insert(prev->outs->begin(), prev->outs->end());
+	result = prev->result;
 	IRBuilder<> builder(block);
-	Value *seq = builder.CreateLoad(getSafe(outs, SeqData::SEQ));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-	std::vector<Value *> args = {seq, len};
-	builder.CreateCall(func, args, "");
+	Value *seq = builder.CreateLoad(result);
+	Value *ptr = types::Seq.memb(seq, "ptr", block);
+	Value *len = types::Seq.memb(seq, "len", block);
+	builder.CreateCall(func, {ptr, len});
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

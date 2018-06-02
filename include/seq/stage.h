@@ -54,7 +54,7 @@ namespace seq {
 		std::string name;
 		llvm::BasicBlock *block;
 		llvm::BasicBlock *after;
-		ValMap outs;
+		llvm::Value *result;
 
 		Stage(std::string name, types::Type *in, types::Type *out);
 		explicit Stage(std::string name);
@@ -93,7 +93,6 @@ namespace seq {
 		virtual void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 		virtual Pipeline operator|(Pipeline to);
-		virtual Pipeline operator|(Var& to);
 		operator Pipeline();
 	};
 

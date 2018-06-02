@@ -3,17 +3,17 @@
 
 #include "../testhelp.h"
 
-SEQ_FUNC bool is_cpg_func(char *seq, seq_int_t len)
+SEQ_FUNC bool is_cpg_func(seq_t seq)
 {
-	return len >= 2 && seq[0] == 'C' && seq[1] == 'G';
+	return seq.len >= 2 && seq.seq[0] == 'C' && seq.seq[1] == 'G';
 }
 
-SEQ_FUNC seq_int_t my_hash_func(char *seq, seq_int_t len)
+SEQ_FUNC seq_int_t my_hash_func(seq_t seq)
 {
 	seq_int_t h = 0;
-	for (seq_int_t i = 0; i < len; i++) {
+	for (seq_int_t i = 0; i < seq.len; i++) {
 		h <<= 2;
-		switch (seq[i]) {
+		switch (seq.seq[i]) {
 			case 'A':
 			case 'a':
 				h += 0;
@@ -87,8 +87,8 @@ static inline void bigTest()
 	/*
 	 * Arrays can be declared
 	 */
-	Var m = s.once | Int[1000];  // array of 1000 integers
-	                             // 's.once' is executed just once, at the start
+	Var m = s | Int[1000];  // array of 1000 integers
+
 	Var i, v;
 	i = s | split(2,1) | filter(is_cpg) | count();
 	i | print();
@@ -101,12 +101,6 @@ static inline void bigTest()
 	Var nums = s.last | Int[10];   // 's.last' is executed just once, at the end
 	s.last | range(10) | nums[_];  // '_' refers to prev stage's output
 	s.last | range(10) | nums[_] | print();
-
-	/*
-	 * Lambdas can be declared
-	 */
-	Lambda z;
-	s.last | nums | foreach() | lambda(1 + z*2) | print();
 
 	/*
 	 * Functions can be declared

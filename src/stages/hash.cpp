@@ -18,7 +18,6 @@ void Hash::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	BasicBlock *preambleBlock = getBase()->getPreamble();
 
 	func = cast<Function>(
 	         module->getOrInsertFunction(
@@ -31,14 +30,12 @@ void Hash::codegen(Module *module)
 
 	block = prev->getAfter();
 	IRBuilder<> builder(block);
-	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
-	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
-	std::vector<Value *> args = {seq, len};
+	Value *seq = builder.CreateLoad(prev->result);
+	Value *ptr = types::Seq.memb(seq, "ptr", block);
+	Value *len = types::Seq.memb(seq, "len", block);
 
-	Value *hashVar = makeAlloca(zeroLLVM(context), preambleBlock);
-	builder.CreateStore(builder.CreateCall(func, args, ""), hashVar);
-
-	outs->insert({SeqData::INT, hashVar});
+	Value *hash = builder.CreateCall(func, {ptr, len});
+	result = types::Int.storeInAlloca(getBase(), hash, block, true);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

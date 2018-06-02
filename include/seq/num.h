@@ -22,10 +22,12 @@ namespace seq {
 			IntType(IntType const&)=delete;
 			void operator=(IntType const&)=delete;
 
-			llvm::Value *checkEq(BaseFunc *base,
-			                     ValMap ins1,
-			                     ValMap ins2,
-			                     llvm::BasicBlock *block) override;
+			llvm::Value *eq(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *other,
+			                llvm::BasicBlock *block) override;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
@@ -40,10 +42,12 @@ namespace seq {
 			FloatType(FloatType const&)=delete;
 			void operator=(FloatType const&)=delete;
 
-			llvm::Value *checkEq(BaseFunc *base,
-			                     ValMap ins1,
-			                     ValMap ins2,
-			                     llvm::BasicBlock *block) override;
+			llvm::Value *eq(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *other,
+			                llvm::BasicBlock *block) override;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
@@ -58,10 +62,12 @@ namespace seq {
 			BoolType(BoolType const&)=delete;
 			void operator=(BoolType const&)=delete;
 
-			llvm::Value *checkEq(BaseFunc *base,
-			                     ValMap ins1,
-			                     ValMap ins2,
-			                     llvm::BasicBlock *block) override;
+			llvm::Value *eq(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *other,
+			                llvm::BasicBlock *block) override;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;

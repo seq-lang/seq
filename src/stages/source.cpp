@@ -147,7 +147,7 @@ types::Type *Source::determineOutType() const
 }
 
 Source::Source(std::vector<Expr *> sources) :
-    InitStage("source"), sources(std::move(sources))
+    Stage("source"), sources(std::move(sources))
 {
 }
 
@@ -189,7 +189,7 @@ void Source::codegen(Module *module)
 		Value *str = expr->codegen(getBase(), entry);
 		Value *idxVal = ConstantInt::get(seqIntLLVM(context), idx++);
 		Value *slot = builder.CreateGEP(sourcesVar, {zeroLLVM(context), idxVal});
-		Value *strVal = builder.CreateExtractValue(str, 1);
+		Value *strVal = types::Str.memb(str, "ptr", entry);
 		builder.CreateStore(strVal, slot);
 	}
 
@@ -215,12 +215,11 @@ void Source::codegen(Module *module)
 	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
 
 	builder.SetInsertPoint(body);
-	Value *result = builder.CreateCall(isSingle() ? getSingleFunc : getFunc, {state, control});
-	getOutType()->unpack(getBase(), result, outs, builder.GetInsertBlock());
+	Value *val = builder.CreateCall(isSingle() ? getSingleFunc : getFunc, {state, control});
+	result = getOutType()->storeInAlloca(getBase(), val, body, true);
 
 	block = body;
 
-	codegenInit(block);
 	codegenNext(module);
 
 	builder.SetInsertPoint(getAfter());
@@ -241,7 +240,6 @@ void Source::codegen(Module *module)
 	builder.CreateCall(deallocFunc, {state});
 
 	prev->setAfter(exitRepeat);
-	finalizeInit();
 }
 
 void Source::finalize(Module *module, ExecutionEngine *eng)

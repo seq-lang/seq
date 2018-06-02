@@ -51,23 +51,6 @@ namespace seq {
 		return llvm::ConstantInt::get(seqIntLLVM(context), 1);
 	}
 
-	typedef std::shared_ptr<std::map<SeqData, llvm::Value *>> ValMap;
-
-	inline ValMap makeValMap()
-	{
-		return std::make_shared<std::map<SeqData, llvm::Value *>>(*new std::map<SeqData, llvm::Value *>());
-	}
-
-	inline llvm::Value *getSafe(ValMap outs, SeqData key)
-	{
-		auto iter = outs->find(key);
-
-		if (iter == outs->end())
-			throw exc::SeqException("pipeline error: could not find required value in outputs");
-
-		return iter->second;
-	}
-
 	inline llvm::Value *makeAlloca(llvm::Type *type, llvm::BasicBlock *block)
 	{
 		llvm::IRBuilder<> builder(block);

@@ -16,71 +16,40 @@ namespace seq {
 
 			std::string copyFuncName() override { return "copyArray"; }
 
-			llvm::Type *getFuncType(llvm::LLVMContext& context, Type *outType) override;
-
-			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
-
-			void setFuncArgs(llvm::Function *func,
-			                 ValMap outs,
-			                 llvm::BasicBlock *block) override;
-
-			llvm::Value *callFuncOf(llvm::Value *func,
-			                        ValMap outs,
-			                        llvm::BasicBlock *block) override;
-
-			llvm::Value *pack(BaseFunc *base,
-			                  ValMap outs,
+			llvm::Value *copy(BaseFunc *base,
+			                  llvm::Value *self,
 			                  llvm::BasicBlock *block) override;
 
-			void unpack(BaseFunc *base,
-			            llvm::Value *value,
-			            ValMap outs,
-			            llvm::BasicBlock *block) override;
+			void serialize(BaseFunc *base,
+			               llvm::Value *self,
+			               llvm::Value *fp,
+			               llvm::BasicBlock *block) override;
 
-			void callCopy(BaseFunc *base,
-			              ValMap ins,
-			              ValMap outs,
-			              llvm::BasicBlock *block) override;
+			llvm::Value *deserialize(BaseFunc *base,
+			                         llvm::Value *fp,
+			                         llvm::BasicBlock *block) override;
 
-			void callSerialize(BaseFunc *base,
-			                   ValMap outs,
-			                   llvm::Value *fp,
-			                   llvm::BasicBlock *block) override;
+			llvm::Value *indexLoad(BaseFunc *base,
+			                       llvm::Value *self,
+			                       llvm::Value *idx,
+			                       llvm::BasicBlock *block) override;
 
-			void callDeserialize(BaseFunc *base,
-			                     ValMap outs,
-			                     llvm::Value *fp,
-			                     llvm::BasicBlock *block) override;
+			void indexStore(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *idx,
+			                llvm::Value *val,
+			                llvm::BasicBlock *block) override;
 
-			void codegenLoad(BaseFunc *base,
-			                 ValMap outs,
-			                 llvm::BasicBlock *block,
-			                 llvm::Value *ptr,
-			                 llvm::Value *idx) override;
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
-			void codegenStore(BaseFunc *base,
-			                  ValMap outs,
-			                  llvm::BasicBlock *block,
-			                  llvm::Value *ptr,
-			                  llvm::Value *idx) override;
-
-			void codegenIndexLoad(BaseFunc *base,
-			                      ValMap outs,
-			                      llvm::BasicBlock *block,
-			                      llvm::Value *ptr,
-			                      llvm::Value *idx) override;
-
-			void codegenIndexStore(BaseFunc *base,
-			                       ValMap outs,
-			                       llvm::BasicBlock *block,
-			                       llvm::Value *ptr,
-			                       llvm::Value *idx) override;
+			void initFields() override;
 
 			bool isGeneric(Type *type) const override;
 			Type *getBaseType() const;
 			Type *getBaseType(seq_int_t idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
+			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block);
 			ArrayType& of(Type& baseType) const;
 			static ArrayType *get(Type *baseType);
 			static ArrayType *get();

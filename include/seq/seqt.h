@@ -17,71 +17,52 @@ namespace seq {
 			std::string copyFuncName() override { return "copyBaseSeq"; }
 			std::string printFuncName() override { return "printBaseSeq"; }
 
-			llvm::Type *getFuncType(llvm::LLVMContext& context, Type *outType) override;
+			llvm::Value *eq(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *other,
+			                llvm::BasicBlock *block) override;
 
-			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
-
-			void setFuncArgs(llvm::Function *func,
-			                 ValMap outs,
-			                 llvm::BasicBlock *block) override;
-
-			llvm::Value *callFuncOf(llvm::Value *func,
-			                        ValMap outs,
-			                        llvm::BasicBlock *block) override;
-
-			llvm::Value *pack(BaseFunc *base,
-			                  ValMap outs,
+			llvm::Value *copy(BaseFunc *base,
+			                  llvm::Value *self,
 			                  llvm::BasicBlock *block) override;
 
-			void unpack(BaseFunc *base,
-			            llvm::Value *value,
-			            ValMap outs,
-			            llvm::BasicBlock *block) override;
+			void print(BaseFunc *base,
+			           llvm::Value *self,
+			           llvm::BasicBlock *block) override;
 
-			llvm::Value *checkEq(BaseFunc *base,
-			                     ValMap ins1,
-			                     ValMap ins2,
-			                     llvm::BasicBlock *block) override;
-
-			void callCopy(BaseFunc *base,
-			              ValMap ins,
-			              ValMap outs,
-			              llvm::BasicBlock *block) override;
-
-			void callPrint(BaseFunc *base,
-			               ValMap outs,
+			void serialize(BaseFunc *base,
+			               llvm::Value *self,
+			               llvm::Value *fp,
 			               llvm::BasicBlock *block) override;
 
-			void callSerialize(BaseFunc *base,
-			                   ValMap outs,
-			                   llvm::Value *fp,
-			                   llvm::BasicBlock *block) override;
+			llvm::Value *deserialize(BaseFunc *base,
+			                         llvm::Value *fp,
+			                         llvm::BasicBlock *block) override;
 
-			void callDeserialize(BaseFunc *base,
-			                     ValMap outs,
-			                     llvm::Value *fp,
-			                     llvm::BasicBlock *block) override;
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
-			void codegenLoad(BaseFunc *base,
-			                 ValMap outs,
-			                 llvm::BasicBlock *block,
-			                 llvm::Value *ptr,
-			                 llvm::Value *idx) override;
-
-			void codegenStore(BaseFunc *base,
-			                  ValMap outs,
-			                  llvm::BasicBlock *block,
-			                  llvm::Value *ptr,
-			                  llvm::Value *idx) override;
+			void initFields() override;
 
 			seq_int_t size(llvm::Module *module) const override;
+
+			virtual llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block)=0;
 		};
 
 		class SeqType : public BaseSeqType {
 		private:
 			SeqType();
 		public:
+			llvm::Value *memb(llvm::Value *self,
+			                  const std::string& name,
+			                  llvm::BasicBlock *block) override;
+
+			llvm::Value *setMemb(llvm::Value *self,
+			                     const std::string& name,
+			                     llvm::Value *val,
+			                     llvm::BasicBlock *block) override;
+
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
 			static SeqType *get();
 		};
 
@@ -89,7 +70,17 @@ namespace seq {
 		private:
 			StrType();
 		public:
+			llvm::Value *memb(llvm::Value *self,
+			                  const std::string& name,
+			                  llvm::BasicBlock *block) override;
+
+			llvm::Value *setMemb(llvm::Value *self,
+			                     const std::string& name,
+			                     llvm::Value *val,
+			                     llvm::BasicBlock *block) override;
+
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
 			static StrType *get();
 		};
 

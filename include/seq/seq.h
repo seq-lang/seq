@@ -54,7 +54,6 @@ namespace seq {
 		Pipeline addWithIndex(Pipeline to, seq_int_t idx, bool addFull=true);
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
-		Pipeline operator|(Var& to);
 	};
 
 	struct PipelineAggregatorProxy {
@@ -64,14 +63,13 @@ namespace seq {
 		explicit PipelineAggregatorProxy(PipelineAggregator& aggr);
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
-		Pipeline operator|(Var& to);
 	};
 
 	class SeqModule : public BaseFunc {
 	private:
 		bool standalone;
 		std::vector<std::string> sources;
-		std::array<ValMap, io::MAX_INPUTS> outs;
+		std::array<llvm::Value *, io::MAX_INPUTS> results;
 		Var argsVar;
 
 		friend PipelineAggregator;
@@ -96,17 +94,15 @@ namespace seq {
 		}
 
 		void codegen(llvm::Module *module) override;
-		void codegenCall(BaseFunc *base,
-		                 ValMap ins,
-		                 ValMap outs,
-		                 llvm::BasicBlock *block) override;
+		llvm::Value *codegenCall(BaseFunc *base,
+		                         llvm::Value *arg,
+		                         llvm::BasicBlock *block) override;
 		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 		void execute(const std::vector<std::string>& args={}, bool debug=false);
 
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
-		Pipeline operator|(Var& to);
 
 		PipelineAggregatorProxy operator[](unsigned idx);
 	};

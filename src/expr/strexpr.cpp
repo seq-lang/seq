@@ -24,11 +24,7 @@ Value *StrExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	strVar->setAlignment(1);
 
 	IRBuilder<> builder(preambleBlock);
-	Value *strVal = builder.CreateGEP(strVar, zeroLLVM(context));
-	Value *lenVal = ConstantInt::get(seqIntLLVM(context), s.length());
-
-	Value *val = UndefValue::get(getType()->getLLVMType(context));
-	val = builder.CreateInsertValue(val, lenVal, 0);
-	val = builder.CreateInsertValue(val, strVal, 1);
-	return val;
+	Value *str = builder.CreateGEP(strVar, zeroLLVM(context));
+	Value *len = ConstantInt::get(seqIntLLVM(context), s.length());
+	return types::Str.make(str, len, preambleBlock);
 }

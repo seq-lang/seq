@@ -31,14 +31,11 @@ void GetItem::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	block = prev->getAfter();
 	IRBuilder<> builder(block);
-	Value *recVal = builder.CreateLoad(getSafe(prev->outs, SeqData::RECORD));
-	Value *idxVal = ConstantInt::get(seqIntLLVM(context), (uint64_t)idx);
+	Value *rec = builder.CreateLoad(prev->result);
+	Value *idx = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->idx);
 
-	getInType()->codegenIndexLoad(getBase(),
-	                              outs,
-	                              block,
-	                              recVal,
-	                              idxVal);
+	Value *val = getInType()->indexLoad(getBase(), rec, idx, block);
+	result = getInType()->getBaseType(this->idx)->storeInAlloca(getBase(), val, block, true);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

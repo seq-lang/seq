@@ -38,7 +38,7 @@ Pipeline PipelineAggregator::addWithIndex(Pipeline to, seq_int_t idx, bool addFu
 	begin.setBase(base);
 
 	if (!base->standalone)
-		begin.outs = base->outs[idx];
+		begin.deferResult(&base->results[idx]);
 
 	Pipeline full = begin | to;
 	if (addFull)
@@ -57,21 +57,6 @@ Pipeline PipelineAggregator::operator|(PipelineList& to)
 	return *this | MakeRec::make(to);
 }
 
-Pipeline PipelineAggregator::operator|(Var& to)
-{
-	if (!to.isAssigned())
-		throw exc::SeqException("variable used before assigned");
-
-	to.ensureConsistentBase(base);
-	Stage *stage = to.getStage();
-	BaseStage& begin = BaseStage::make(types::VoidType::get(), to.getType(stage), stage);
-	begin.setBase(base);
-	begin.outs = to.outs(&begin);
-	add(begin);
-
-	return begin;
-}
-
 Pipeline PipelineAggregatorProxy::operator|(Pipeline to)
 {
 	return aggr.addWithIndex(to, idx);
@@ -80,11 +65,6 @@ Pipeline PipelineAggregatorProxy::operator|(Pipeline to)
 Pipeline PipelineAggregatorProxy::operator|(PipelineList& to)
 {
 	return *this | MakeRec::make(to);
-}
-
-Pipeline PipelineAggregatorProxy::operator|(Var& to)
-{
-	return aggr | to;
 }
 
 PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr, seq_int_t idx) :
@@ -98,12 +78,9 @@ PipelineAggregatorProxy::PipelineAggregatorProxy(PipelineAggregator& aggr) :
 }
 
 SeqModule::SeqModule(bool standalone) :
-    BaseFunc(), standalone(standalone), sources(),
+    BaseFunc(), standalone(standalone), sources(), results(),
     main(this), once(this), last(this), data(nullptr)
 {
-	if (!standalone)
-		for (auto& out : outs)
-			out = makeValMap();
 }
 
 SeqModule::~SeqModule()
@@ -173,15 +150,15 @@ void SeqModule::codegen(Module *module)
 		assert(argsType != nullptr);
 		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), argsType);
 		argsBase.setBase(this);
-		argsType->unpack(this, args, argsBase.outs, preambleBlock);
+		argsBase.result = argsType->storeInAlloca(this, args, preambleBlock);
 		argsVar = argsBase;
 	} else {
 		for (size_t i = 0; i < sources.size(); i++) {
-			types::Seq.codegenLoad(this,
-			                       outs[i],
-			                       preambleBlock,
-			                       seqs,
-			                       ConstantInt::get(seqIntLLVM(context), i));
+			Value *seq = types::Seq.load(this,
+			                             seqs,
+			                             ConstantInt::get(seqIntLLVM(context), i),
+			                             preambleBlock);
+			results[i] = types::Seq.storeInAlloca(this, seq, preambleBlock);
 		}
 	}
 
@@ -249,7 +226,6 @@ void SeqModule::codegen(Module *module)
 		lastMain = &func->getBasicBlockList().back();
 		lastBr = BasicBlock::Create(context, "lastbr", func);
 		origLastBlock = BasicBlock::Create(context, "last", func);
-		lastBlock = origLastBlock;  // lastBlock is really the _last_ last-block
 
 		for (auto &pipeline : last.pipelines) {
 			pipeline.validate();
@@ -294,7 +270,7 @@ void SeqModule::codegen(Module *module)
 	builder.CreateRetVoid();
 }
 
-void SeqModule::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *block)
+Value *SeqModule::codegenCall(BaseFunc *base, Value *arg, BasicBlock *block)
 {
 	throw exc::SeqException("cannot call SeqModule");
 }
@@ -411,11 +387,6 @@ Pipeline SeqModule::operator|(Pipeline to)
 }
 
 Pipeline SeqModule::operator|(PipelineList& to)
-{
-	return main | to;
-}
-
-Pipeline SeqModule::operator|(Var& to)
 {
 	return main | to;
 }

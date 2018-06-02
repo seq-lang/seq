@@ -11,14 +11,9 @@ CallExpr::CallExpr(Expr *func, Expr *arg) :
 
 Value *CallExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
-	auto ins = makeValMap();
-	auto outs = makeValMap();
 	Value *f = func->codegen(base, block);
 	Value *x = arg ? arg->codegen(base, block) : nullptr;
-	if (arg)
-		arg->getType()->unpack(base, x, ins, block);
-	func->getType()->call(base, ins, outs, f, block);
-	return getType()->pack(base, outs, block);
+	return func->getType()->call(base, f, x, block);
 }
 
 types::Type *CallExpr::getType() const

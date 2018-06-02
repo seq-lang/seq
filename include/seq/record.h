@@ -18,32 +18,27 @@ namespace seq {
 			RecordType(RecordType const&)=delete;
 			void operator=(RecordType const&)=delete;
 
-			void callCopy(BaseFunc *base,
-			              ValMap ins,
-			              ValMap outs,
-			              llvm::BasicBlock *block) override;
+			void serialize(BaseFunc *base,
+			               llvm::Value *self,
+			               llvm::Value *fp,
+			               llvm::BasicBlock *block) override;
 
-			void callSerialize(BaseFunc *base,
-			                   ValMap outs,
-			                   llvm::Value *fp,
-			                   llvm::BasicBlock *block) override;
+			llvm::Value *deserialize(BaseFunc *base,
+			                         llvm::Value *fp,
+			                         llvm::BasicBlock *block) override;
 
-			void callDeserialize(BaseFunc *base,
-			                     ValMap outs,
-			                     llvm::Value *fp,
-			                     llvm::BasicBlock *block) override;
+			llvm::Value *indexLoad(BaseFunc *base,
+			                       llvm::Value *self,
+			                       llvm::Value *idx,
+			                       llvm::BasicBlock *block) override;
 
-			void codegenIndexLoad(BaseFunc *base,
-			                      ValMap outs,
-			                      llvm::BasicBlock *block,
-			                      llvm::Value *ptr,
-			                      llvm::Value *idx) override;
+			void indexStore(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *idx,
+			                llvm::Value *val,
+			                llvm::BasicBlock *block) override;
 
-			void codegenIndexStore(BaseFunc *base,
-			                       ValMap outs,
-			                       llvm::BasicBlock *block,
-			                       llvm::Value *ptr,
-			                       llvm::Value *idx) override;
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			bool isGeneric(Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;

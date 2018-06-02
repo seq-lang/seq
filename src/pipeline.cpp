@@ -73,18 +73,6 @@ Pipeline Pipeline::operator|(Pipeline to)
 	return {getHead(), to.getTail()};
 }
 
-Pipeline Pipeline::operator|(Var& to)
-{
-	if (!to.isAssigned())
-		throw exc::SeqException("variable used before assigned");
-
-	to.ensureConsistentBase(getHead()->getBase());
-	Stage *stage = to.getStage();
-	BaseStage& base = BaseStage::make(types::AnyType::get(), to.getType(getTail()), stage);
-	base.outs = to.outs(getTail());
-	return *this | base;
-}
-
 Pipeline Pipeline::operator|(PipelineList& to)
 {
 	return *this | MakeRec::make(to);

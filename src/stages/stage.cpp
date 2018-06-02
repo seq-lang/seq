@@ -10,7 +10,7 @@ using namespace llvm;
 Stage::Stage(std::string name, types::Type *in, types::Type *out) :
     base(nullptr), added(false), breaks(), continues(), in(in), out(out),
     prev(nullptr), nexts(), weakNexts(), loop(false), name(std::move(name)),
-    block(nullptr), after(nullptr), outs(new std::map<SeqData, Value *>)
+    block(nullptr), after(nullptr), result(nullptr)
 {
 }
 
@@ -223,11 +223,6 @@ Pipeline Stage::operator|(Pipeline to)
 	return (Pipeline)*this | to;
 }
 
-Pipeline Stage::operator|(Var& to)
-{
-	return (Pipeline)*this | to;
-}
-
 Stage::operator Pipeline()
 {
 	return {this, this};
@@ -294,7 +289,7 @@ void Nop::codegen(Module *module)
 	ensurePrev();
 	validate();
 
-	outs->insert(prev->outs->begin(), prev->outs->end());
+	result = prev->result;
 
 	block = prev->getAfter();
 	codegenInit(block);

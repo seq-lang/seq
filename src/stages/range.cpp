@@ -49,7 +49,6 @@ void Range::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	BasicBlock *preambleBlock = getBase()->getPreamble();
 	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
@@ -66,9 +65,7 @@ void Range::codegen(Module *module)
 	Value *next = builder.CreateAdd(control, step, "next");
 	Value *cond = builder.CreateICmpSLT(control, to);
 
-	Value *intVar = makeAlloca(zeroLLVM(context), preambleBlock);
-	builder.CreateStore(control, intVar);
-	outs->insert({SeqData::INT, intVar});
+	result = types::Int.storeInAlloca(getBase(), control, loop, true);
 
 	BasicBlock *body = BasicBlock::Create(context, "body", func);
 	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below

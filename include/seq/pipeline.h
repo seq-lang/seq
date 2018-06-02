@@ -23,7 +23,6 @@ namespace seq {
 		void validate();
 
 		Pipeline operator|(Pipeline to);
-		Pipeline operator|(Var& to);
 		Pipeline operator|(PipelineList& to);
 	};
 

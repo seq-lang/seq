@@ -41,40 +41,46 @@ types::BoolType::BoolType() : Type("Bool", NumberType::get(), SeqData::BOOL)
 	vtable.print = (void *)printBool;
 }
 
-Value *types::IntType::checkEq(BaseFunc *base,
-                               ValMap ins1,
-                               ValMap ins2,
-                               BasicBlock *block)
+Value *types::IntType::eq(BaseFunc *base,
+                          Value *self,
+                          Value *other,
+                          BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	Value *n1 = builder.CreateLoad(getSafe(ins1, SeqData::INT));
-	Value *n2 = builder.CreateLoad(getSafe(ins2, SeqData::INT));
-
-	return builder.CreateICmpEQ(n1, n2);
+	return builder.CreateICmpEQ(self, other);
 }
 
-Value *types::FloatType::checkEq(BaseFunc *base,
-                                 ValMap ins1,
-                                 ValMap ins2,
-                                 BasicBlock *block)
+Value *types::FloatType::eq(BaseFunc *base,
+                            Value *self,
+                            Value *other,
+                            BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	Value *f1 = builder.CreateLoad(getSafe(ins1, SeqData::FLOAT));
-	Value *f2 = builder.CreateLoad(getSafe(ins2, SeqData::FLOAT));
-
-	return builder.CreateFCmpOEQ(f1, f2);
+	return builder.CreateFCmpOEQ(self, other);
 }
 
-Value *types::BoolType::checkEq(BaseFunc *base,
-                                ValMap ins1,
-                                ValMap ins2,
-                                BasicBlock *block)
+Value *types::BoolType::eq(BaseFunc *base,
+                           Value *self,
+                           Value *other,
+                           BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	Value *b1 = builder.CreateLoad(getSafe(ins1, SeqData::BOOL));
-	Value *b2 = builder.CreateLoad(getSafe(ins2, SeqData::BOOL));
+	return builder.CreateICmpEQ(self, other);
+}
 
-	return builder.CreateICmpEQ(b1, b2);
+Value *types::IntType::defaultValue(BasicBlock *block)
+{
+	return ConstantInt::get(getLLVMType(block->getContext()), 0);
+}
+
+Value *types::FloatType::defaultValue(BasicBlock *block)
+{
+	return ConstantFP::get(getLLVMType(block->getContext()), 0.0);
+}
+
+Value *types::BoolType::defaultValue(BasicBlock *block)
+{
+	return ConstantInt::get(getLLVMType(block->getContext()), 0);
 }
 
 void types::IntType::initOps()

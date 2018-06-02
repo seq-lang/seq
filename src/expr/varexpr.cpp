@@ -9,7 +9,8 @@ VarExpr::VarExpr(Var *var) : var(var)
 
 Value *VarExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
-	return getType()->pack(base, var->outs(nullptr), block);
+	IRBuilder<> builder(block);
+	return builder.CreateLoad(var->result(nullptr));
 }
 
 types::Type *VarExpr::getType() const

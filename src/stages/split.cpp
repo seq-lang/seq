@@ -25,7 +25,6 @@ void Split::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	BasicBlock *preambleBlock = getBase()->getPreamble();
 	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
@@ -33,8 +32,9 @@ void Split::codegen(Module *module)
 	Value *inc    = step->codegen(getBase(), entry);
 
 	IRBuilder<> builder(entry);
-	Value *seq = builder.CreateLoad(getSafe(prev->outs, SeqData::SEQ));
-	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
+	Value *seq = builder.CreateLoad(prev->result);
+	Value *ptr = types::Seq.memb(seq, "ptr", entry);
+	Value *len = types::Seq.memb(seq, "len", entry);
 	Value *max = builder.CreateSub(len, sublen);
 
 	BasicBlock *loop = BasicBlock::Create(context, "split", func);
@@ -50,13 +50,9 @@ void Split::codegen(Module *module)
 
 	block = body;
 	builder.SetInsertPoint(body);
-	Value *subseq = builder.CreateGEP(seq, control);
-	Value *subseqVar = makeAlloca(nullPtrLLVM(context), preambleBlock);
-	Value *sublenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-	builder.CreateStore(subseq, subseqVar);
-	builder.CreateStore(sublen, sublenVar);
-	outs->insert({SeqData::SEQ, subseqVar});
-	outs->insert({SeqData::LEN, sublenVar});
+	Value *subptr = builder.CreateGEP(ptr, control);
+	Value *subseq = types::Seq.make(subptr, sublen, body);
+	result = types::Seq.storeInAlloca(getBase(), subseq, body, true);
 
 	codegenNext(module);
 

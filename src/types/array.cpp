@@ -21,93 +21,11 @@ types::ArrayType::ArrayType(Type *baseType) :
 	vtable.copy = (void *)copyArray;
 }
 
-llvm::Type *types::ArrayType::getFuncType(LLVMContext& context, Type *outType)
-{
-	return FunctionType::get(outType->getLLVMType(context),
-	                         {PointerType::get(getBaseType()->getLLVMType(context), 0), seqIntLLVM(context)},
-	                         false);
-}
-
-Function *types::ArrayType::makeFuncOf(Module *module, Type *outType)
-{
-	static int idx = 1;
-	LLVMContext& context = module->getContext();
-
-	return cast<Function>(
-	         module->getOrInsertFunction(
-	           getName() + "Func" + std::to_string(idx++),
-	           outType->getLLVMType(context),
-	           PointerType::get(getBaseType()->getLLVMType(context), 0),
-	           seqIntLLVM(context)));
-}
-
-void types::ArrayType::setFuncArgs(Function *func,
-                                   ValMap outs,
-                                   BasicBlock *block)
-{
-	auto args = func->arg_begin();
-	Value *ptr = args++;
-	Value *len = args;
-	Value *ptrVar = makeAlloca(ptr, block);
-	Value *lenVar = makeAlloca(len, block);
-	outs->insert({SeqData::ARRAY, ptrVar});
-	outs->insert({SeqData::LEN, lenVar});
-}
-
-Value *types::ArrayType::callFuncOf(Value *func,
-                                    ValMap outs,
-                                    BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	Value *ptr = builder.CreateLoad(getSafe(outs, SeqData::ARRAY));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-	std::vector<Value *> args = {ptr, len};
-	return builder.CreateCall(func, args);
-}
-
-Value *types::ArrayType::pack(BaseFunc *base,
-                              ValMap outs,
+Value *types::ArrayType::copy(BaseFunc *base,
+                              Value *self,
                               BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
-
-	Value *ptr = builder.CreateLoad(getSafe(outs, SeqData::ARRAY));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-
-	Value *packed = builder.CreateInsertValue(UndefValue::get(getLLVMType(context)), len, {0});
-	return builder.CreateInsertValue(packed, ptr, {1});
-}
-
-void types::ArrayType::unpack(BaseFunc *base,
-                              Value *value,
-                              ValMap outs,
-                              BasicBlock *block)
-{
-	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
-	IRBuilder<> builder(block);
-
-	Value *ptr = builder.CreateExtractValue(value, {1});
-	Value *len = builder.CreateExtractValue(value, {0});
-
-	Value *ptrVar = makeAlloca(PointerType::get(getBaseType()->getLLVMType(context), 0), preambleBlock);
-	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(ptr, ptrVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({SeqData::ARRAY, ptrVar});
-	outs->insert({SeqData::LEN, lenVar});
-}
-
-void types::ArrayType::callCopy(BaseFunc *base,
-                                ValMap ins,
-                                ValMap outs,
-                                BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
 
 	Function *copyFunc = cast<Function>(
 	                       block->getModule()->getOrInsertFunction(
@@ -120,26 +38,18 @@ void types::ArrayType::callCopy(BaseFunc *base,
 	copyFunc->setCallingConv(CallingConv::C);
 
 	IRBuilder<> builder(block);
-	Value *ptr = builder.CreateLoad(getSafe(ins, SeqData::ARRAY));
-	Value *len = builder.CreateLoad(getSafe(ins, SeqData::LEN));
+	Value *ptr = Array.memb(self, "ptr", block);
+	Value *len = Array.memb(self, "len", block);
 	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size(block->getModule()));
 	std::vector<Value *> args = {ptr, len, elemSize};
 	Value *copy = builder.CreateCall(copyFunc, args, "");
-
-	Value *ptrVar = makeAlloca(PointerType::get(getBaseType()->getLLVMType(context), 0), preambleBlock);
-	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(copy, ptrVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({SeqData::ARRAY, ptrVar});
-	outs->insert({SeqData::LEN, lenVar});
+	return make(copy, len, block);
 }
 
-void types::ArrayType::callSerialize(BaseFunc *base,
-                                     ValMap outs,
-                                     Value *fp,
-                                     BasicBlock *block)
+void types::ArrayType::serialize(BaseFunc *base,
+                                 Value *self,
+                                 Value *fp,
+                                 BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
@@ -180,10 +90,8 @@ void types::ArrayType::callSerialize(BaseFunc *base,
 		builder.SetInsertPoint(body);
 
 		BaseFuncLite serializeBase(serialize);
-		auto subOuts1 = makeValMap();
-		Value *elem = builder.CreateLoad(builder.CreateGEP(ptrArg, control));
-		getBaseType()->unpack(&serializeBase, elem, subOuts1, body);
-		getBaseType()->callSerialize(&serializeBase, subOuts1, fpArg, body);
+		Value *elem = getBaseType()->load(base, ptrArg, control, body);
+		getBaseType()->serialize(&serializeBase, elem, fpArg, body);
 
 		builder.CreateBr(loop);
 
@@ -196,26 +104,22 @@ void types::ArrayType::callSerialize(BaseFunc *base,
 		branch->setSuccessor(1, exit);
 
 		builder.SetInsertPoint(entry);
-		auto subOuts2 = makeValMap();
-		IntType::get()->unpack(&serializeBase, lenArg, subOuts2, entry);
-		IntType::get()->callSerialize(&serializeBase, subOuts2, fpArg, entry);
+		Int.serialize(&serializeBase, lenArg, fpArg, entry);
 		builder.CreateBr(loop);
 	}
 
 	builder.SetInsertPoint(block);
-	Value *ptr = builder.CreateLoad(getSafe(outs, SeqData::ARRAY));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
+	Value *ptr = Array.memb(self, "ptr", block);
+	Value *len = Array.memb(self, "len", block);
 	builder.CreateCall(serialize, {ptr, len, fp});
 }
 
-void types::ArrayType::callDeserialize(BaseFunc *base,
-                                       ValMap outs,
-                                       Value *fp,
-                                       BasicBlock *block)
+Value *types::ArrayType::deserialize(BaseFunc *base,
+                                     Value *fp,
+                                     BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
-	BasicBlock *preambleBlock = base->getPreamble();
 
 	const std::string name = "deserialize" + getName();
 	Function *deserialize = module->getFunction(name);
@@ -258,11 +162,9 @@ void types::ArrayType::callDeserialize(BaseFunc *base,
 
 		builder.SetInsertPoint(body);
 
-		BaseFuncLite serializeBase(deserialize);
-		auto subOuts1 = makeValMap();
+		BaseFuncLite deserializeBase(deserialize);
 		Value *elemPtr = builder.CreateGEP(ptrArg, control);
-		getBaseType()->callDeserialize(&serializeBase, subOuts1, fpArg, body);
-		Value *elem = getBaseType()->pack(&serializeBase, subOuts1, body);
+		Value *elem = getBaseType()->deserialize(&deserializeBase, fpArg, body);
 		builder.CreateStore(elem, elemPtr);
 
 		builder.CreateBr(loop);
@@ -280,99 +182,56 @@ void types::ArrayType::callDeserialize(BaseFunc *base,
 	}
 
 	builder.SetInsertPoint(block);
-	auto subOuts2 = makeValMap();
-	IntType::get()->callDeserialize(base, subOuts2, fp, block);
-	Value *len = builder.CreateLoad(getSafe(subOuts2, SeqData::INT));
+	Value *len = Int.deserialize(base, fp, block);
 	Value *size = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size(module));
 	Value *bytes = builder.CreateMul(len, size);
 	bytes = builder.CreateBitCast(bytes, IntegerType::getIntNTy(context, sizeof(size_t)*8));
 	Value *ptr = builder.CreateCall(allocFunc, {bytes});
 	builder.CreateCall(deserialize, {ptr, len, fp});
-
-	Value *ptrVar = makeAlloca(
-	                  ConstantPointerNull::get(
-	                    PointerType::get(getBaseType()->getLLVMType(context), 0)), preambleBlock);
-	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(ptr, ptrVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({SeqData::ARRAY, ptrVar});
-	outs->insert({SeqData::LEN, lenVar});
+	return make(ptr, len, block);
 }
 
-void types::ArrayType::codegenLoad(BaseFunc *base,
-                                   ValMap outs,
-                                   BasicBlock *block,
-                                   Value *ptr,
-                                   Value *idx)
+Value *types::ArrayType::indexLoad(BaseFunc *base,
+                                   Value *self,
+                                   Value *idx,
+                                   BasicBlock *block)
 {
-	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
-	IRBuilder<> builder(block);
-
-	Value *zero = ConstantInt::get(IntegerType::getInt32Ty(context), 0);
-	Value *one  = ConstantInt::get(IntegerType::getInt32Ty(context), 1);
-
-	Value *memPtr = builder.CreateGEP(ptr, {idx, one});
-	Value *lenPtr = builder.CreateGEP(ptr, {idx, zero});
-
-	Value *mem = builder.CreateLoad(memPtr);
-	Value *len = builder.CreateLoad(lenPtr);
-
-	Value *memVar = makeAlloca(PointerType::get(getBaseType()->getLLVMType(context), 0), preambleBlock);
-	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-
-	builder.CreateStore(mem, memVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({SeqData::ARRAY, memVar});
-	outs->insert({SeqData::LEN, lenVar});
+	Value *ptr = Array.memb(self, "ptr", block);
+	return getBaseType()->load(base, ptr, idx, block);
 }
 
-void types::ArrayType::codegenStore(BaseFunc *base,
-                                    ValMap outs,
-                                    BasicBlock *block,
-                                    Value *ptr,
-                                    Value *idx)
+void types::ArrayType::indexStore(BaseFunc *base,
+                                  Value *self,
+                                  Value *idx,
+                                  Value *val,
+                                  BasicBlock *block)
 {
-	LLVMContext& context = base->getContext();
-	IRBuilder<> builder(block);
-
-	Value *arr = builder.CreateLoad(getSafe(outs, SeqData::ARRAY));
-	Value *len = builder.CreateLoad(getSafe(outs, SeqData::LEN));
-
-	Value *zero = ConstantInt::get(IntegerType::getInt32Ty(context), 0);
-	Value *one  = ConstantInt::get(IntegerType::getInt32Ty(context), 1);
-
-	Value *arrPtr = builder.CreateGEP(ptr, {idx, one});
-	Value *lenPtr = builder.CreateGEP(ptr, {idx, zero});
-
-	builder.CreateStore(arr, arrPtr);
-	builder.CreateStore(len, lenPtr);
+	Value *ptr = Array.memb(self, "ptr", block);
+	getBaseType()->store(base, val, ptr, idx, block);
 }
 
-void types::ArrayType::codegenIndexLoad(BaseFunc *base,
-                                        ValMap outs,
-                                        BasicBlock *block,
-                                        Value *ptr,
-                                        Value *idx)
+Value *types::ArrayType::defaultValue(BasicBlock *block)
 {
-	getBaseType()->codegenLoad(base, outs, block, ptr, idx);
-}
-
-void types::ArrayType::codegenIndexStore(BaseFunc *base,
-                                         ValMap outs,
-                                         BasicBlock *block,
-                                         Value *ptr,
-                                         Value *idx)
-{
-	getBaseType()->codegenStore(base, outs, block, ptr, idx);
+	LLVMContext& context = block->getContext();
+	Value *ptr = ConstantPointerNull::get(PointerType::get(getBaseType()->getLLVMType(context), 0));
+	Value *len = zeroLLVM(context);
+	return make(ptr, len, block);
 }
 
 bool types::ArrayType::isGeneric(Type *type) const
 {
 	return dynamic_cast<types::ArrayType *>(type) != nullptr;
+}
+
+void types::ArrayType::initFields()
+{
+	if (!vtable.fields.empty())
+		return;
+
+	vtable.fields = {
+		{"len", {0, &Int}},
+		{"ptr", {1, &Void}}
+	};
 }
 
 types::Type *types::ArrayType::getBaseType() const
@@ -397,6 +256,15 @@ seq_int_t types::ArrayType::size(Module *module) const
 {
 	std::unique_ptr<DataLayout> layout(new DataLayout(module));
 	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
+}
+
+Value *types::ArrayType::make(Value *ptr, Value *len, BasicBlock *block)
+{
+	LLVMContext& context = ptr->getContext();
+	Value *self = UndefValue::get(getLLVMType(context));
+	self = Array.setMemb(self, "ptr", ptr, block);
+	self = Array.setMemb(self, "len", len, block);
+	return self;
 }
 
 types::ArrayType& types::ArrayType::of(Type& baseType) const

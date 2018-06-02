@@ -18,9 +18,10 @@ source args[0] as input:
   }
 
   let v = farray[0](input)
-  v |> foreach as r |> (|> count, r) as t |> {
+  v |> foreach as r |> (|> count, r, r |> split 1 1) as t |> {
     t.1 |> print
     _ |> .2 |> print
+    t.3 |> print
   }
   input |> print
 
@@ -51,7 +52,12 @@ fun hello -> Str
   return "hello world"
 end
 
+fun hello2
+  "hello again" |> print
+end
+
 hello() |> print
+hello2()
 42 + 2.2 |> print
 -13 |> print
 var x = 4.2

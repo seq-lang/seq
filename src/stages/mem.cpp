@@ -25,32 +25,10 @@ void Mem::codegen(Module *module)
 	assert(type != nullptr);
 
 	block = prev->getAfter();
-	IRBuilder<> builder(block);
-
-	GlobalVariable *ptrVar = new GlobalVariable(*module,
-	                                            PointerType::get(type->getBaseType()->getLLVMType(context), 0),
-	                                            false,
-	                                            GlobalValue::PrivateLinkage,
-	                                            nullptr,
-	                                            "mem");
-	ptrVar->setInitializer(
-	  ConstantPointerNull::get(PointerType::get(type->getBaseType()->getLLVMType(context), 0)));
-
-	GlobalVariable *lenVar = new GlobalVariable(*module,
-	                                            seqIntLLVM(context),
-	                                            false,
-	                                            GlobalValue::PrivateLinkage,
-	                                            nullptr,
-	                                            "len");
-	lenVar->setInitializer(zeroLLVM(context));
-
-	Value *ptr = type->getBaseType()->codegenAlloc(getBase(), count, block);
+	Value *ptr = type->getBaseType()->alloc(getBase(), count, block);
 	Value *len = ConstantInt::get(seqIntLLVM(context), (uint64_t)count);
-	builder.CreateStore(ptr, ptrVar);
-	builder.CreateStore(len, lenVar);
-
-	outs->insert({SeqData::ARRAY, ptrVar});
-	outs->insert({SeqData::LEN, lenVar});
+	Value *arr = type->make(ptr, len, block);
+	result = getOutType()->storeInAlloca(getBase(), arr, block, true);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());
@@ -118,22 +96,16 @@ void LoadStore::codegen(Module *module)
 
 	block = prev->getAfter();
 	IRBuilder<> builder(block);
-	Value *ptrVal = builder.CreateLoad(getSafe(ptr->outs(this), type->getKey()));
-	Value *idxVal = idx ? (Value *)builder.CreateLoad(getSafe(idx->outs(this), SeqData::INT)) :
-	                      (Value *)ConstantInt::get(seqIntLLVM(context), (uint64_t)constIdx);
+	Value *arr = builder.CreateLoad(ptr->result(this));
+	Value *idx = this->idx ? (Value *)builder.CreateLoad(this->idx->result(this)) :
+	                         (Value *)ConstantInt::get(seqIntLLVM(context), (uint64_t)constIdx);
 
 	if (isStore) {
-		type->codegenIndexStore(getBase(),
-		                        prev->outs,
-		                        block,
-		                        ptrVal,
-		                        idxVal);
+		Value *val = builder.CreateLoad(prev->result);
+		type->indexStore(getBase(), arr, idx, val, block);
 	} else {
-		type->codegenIndexLoad(getBase(),
-		                       outs,
-		                       block,
-		                       ptrVal,
-		                       idxVal);
+		Value *val = type->indexLoad(getBase(), arr, idx, block);
+		result = getOutType()->storeInAlloca(getBase(), val, block, true);
 	}
 
 	codegenNext(module);

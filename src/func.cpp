@@ -54,9 +54,8 @@ Func::Func(types::Type& inType,
            types::Type& outType,
            std::string name,
            void *rawFunc) :
-    BaseFunc(), inType(&inType), outType(&outType),
-    pipelines(), outs(new std::map<SeqData, Value *>),
-    name(std::move(name)), rawFunc(rawFunc)
+    BaseFunc(), inType(&inType), outType(&outType), pipelines(),
+    result(nullptr), name(std::move(name)), rawFunc(rawFunc)
 {
 }
 
@@ -87,12 +86,12 @@ void Func::codegen(Module *module)
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
-	inType->setFuncArgs(func, outs, preambleBlock);
+	result = inType->setFuncArgs(func, preambleBlock);
 
 	if (!inType->is(types::VoidType::get())) {
 		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), inType);
 		argsBase.setBase(this);
-		argsBase.outs = outs;
+		argsBase.result = result;
 		argsVar = argsBase;
 	}
 
@@ -127,9 +126,7 @@ void Func::codegen(Module *module)
 			if (!tail->getOutType()->isChildOf(outType))
 				throw exc::SeqException("function does not output type '" + outType->getName() + "'");
 
-			ValMap tailOuts = tail->outs;
-			Value *result = outType->pack(this, tailOuts, exitBlock);
-			builder.CreateRet(result);
+			builder.CreateRet(builder.CreateLoad(tail->result));
 		}
 	}
 
@@ -137,16 +134,10 @@ void Func::codegen(Module *module)
 	builder.CreateBr(entry);
 }
 
-Value *Func::codegenCallRaw(BaseFunc *base, ValMap ins, BasicBlock *block)
+Value *Func::codegenCall(BaseFunc *base, Value *arg, BasicBlock *block)
 {
 	codegen(block->getModule());
-	return inType->callFuncOf(func, ins, block);
-}
-
-void Func::codegenCall(BaseFunc *base, ValMap ins, ValMap outs, BasicBlock *block)
-{
-	Value *result = codegenCallRaw(base, ins, block);
-	outType->unpack(base, result, outs, block);
+	return inType->callFuncOf(func, arg, block);
 }
 
 void Func::codegenReturn(Expr *expr, BasicBlock*& block)
@@ -232,9 +223,9 @@ Pipeline Func::operator|(Pipeline to)
 		throw exc::MultiLinkException(*to.getHead());
 
 	to.getHead()->setBase(this);
-	BaseStage& begin = BaseStage::make(types::AnyType::get(), inType, nullptr);
+	BaseStage& begin = BaseStage::make(types::AnyType::get(), inType);
 	begin.setBase(this);
-	begin.outs = outs;
+	begin.deferResult(&result);
 
 	Pipeline full = begin | to;
 	add(full);
@@ -245,24 +236,6 @@ Pipeline Func::operator|(Pipeline to)
 Pipeline Func::operator|(PipelineList& to)
 {
 	return *this | MakeRec::make(to);
-}
-
-Pipeline Func::operator|(Var& to)
-{
-	if (rawFunc)
-		throw exc::SeqException("cannot add pipelines to native function");
-
-	if (!to.isAssigned())
-		throw exc::SeqException("variable used before assigned");
-
-	to.ensureConsistentBase(this);
-	Stage *stage = to.getStage();
-	BaseStage& begin = BaseStage::make(types::VoidType::get(), to.getType(stage), stage);
-	begin.setBase(this);
-	begin.outs = to.outs(&begin);
-	add(begin);
-
-	return begin;
 }
 
 Call& Func::operator()()
@@ -282,10 +255,7 @@ void BaseFuncLite::codegen(Module *module)
 	throw exc::SeqException("cannot codegen lite base function");
 }
 
-void BaseFuncLite::codegenCall(BaseFunc *base,
-                               ValMap ins,
-                               ValMap outs,
-                               BasicBlock *block)
+Value *BaseFuncLite::codegenCall(BaseFunc *base, Value *arg, BasicBlock *block)
 {
 	throw exc::SeqException("cannot call lite base function");
 }

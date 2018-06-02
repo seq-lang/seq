@@ -1,4 +1,4 @@
-#include "seq/varexpr.h"
+#include "seq/seq.h"
 #include "seq/chunk.h"
 
 using namespace seq;
@@ -31,16 +31,17 @@ void Chunk::codegen(Module *module)
 	validate();
 
 	LLVMContext& context = module->getContext();
-	BasicBlock *preambleBlock = getBase()->getPreamble();
 	BasicBlock *entry = prev->getAfter();
 	Function *func = entry->getParent();
 
 	Value *f = key ? key->codegen(getBase(), entry) : nullptr;
 	IRBuilder<> builder(entry);
-	Value *ptr = builder.CreateLoad(getSafe(prev->outs, SeqData::ARRAY));
-	Value *len = builder.CreateLoad(getSafe(prev->outs, SeqData::LEN));
+	Value *arr = builder.CreateLoad(prev->result);
+	Value *ptr = getInType()->memb(arr, "ptr", entry);
+	Value *len = getInType()->memb(arr, "len", entry);
 
 	BasicBlock *loop = BasicBlock::Create(context, "chunk", func);
+
 	builder.CreateBr(loop);
 	builder.SetInsertPoint(loop);
 
@@ -55,15 +56,9 @@ void Chunk::codegen(Module *module)
 	auto *type = dynamic_cast<types::ArrayType *>(getInType());
 	assert(type != nullptr);
 
-	ValMap firstInChunk = makeValMap();
-	ValMap firstInChunkKey = makeValMap();
-	type->getBaseType()->codegenLoad(getBase(),
-	                                 firstInChunk,
-	                                 body,
-	                                 ptr,
-	                                 control);
+	Value *firstInChunk = type->getBaseType()->load(getBase(), ptr, control, body);
 	if (key)
-		key->getType()->call(getBase(), firstInChunk, firstInChunkKey, f, body);
+		firstInChunk = key->getType()->call(getBase(), f, firstInChunk, body);
 
 	PHINode *control2;
 	{
@@ -80,18 +75,13 @@ void Chunk::codegen(Module *module)
 		BranchInst *branch2 = builder.CreateCondBr(cond2, body2, body2);  // we set false-branch below
 		builder.SetInsertPoint(body2);
 
-		ValMap nextInChunk = makeValMap();
-		ValMap nextInChunkKey = makeValMap();
-		type->getBaseType()->codegenLoad(getBase(),
-		                                 nextInChunk,
-		                                 body2,
-		                                 ptr,
-		                                 control2);
-		if (key)
-			key->getType()->call(getBase(), nextInChunk, nextInChunkKey, f, body2);
+		Value *nextInChunk = type->getBaseType()->load(getBase(), ptr, control2, body2);
 
-		Value *eq = key ? key->getType()->getCallType(type->getBaseType())->checkEq(getBase(), firstInChunkKey, nextInChunkKey, body2) :
-		                  type->getBaseType()->checkEq(getBase(), firstInChunk, nextInChunk, body2);
+		if (key)
+			nextInChunk = key->getType()->call(getBase(), f, nextInChunk, body2);
+
+		Value *eq = key ? key->getType()->getCallType(type->getBaseType())->eq(getBase(), firstInChunk, nextInChunk, body2) :
+		                  type->getBaseType()->eq(getBase(), firstInChunk, nextInChunk, body2);
 
 		control2->addIncoming(next, body);
 		control2->addIncoming(next2, body2);
@@ -107,14 +97,8 @@ void Chunk::codegen(Module *module)
 
 	Value *subptr = builder.CreateGEP(ptr, control);
 	Value *sublen = builder.CreateSub(control2, control);
-	Value *subptrVar = makeAlloca(
-	                     ConstantPointerNull::get(
-	                       PointerType::get(type->getBaseType()->getLLVMType(context), 0)), preambleBlock);
-	Value *sublenVar = makeAlloca(zeroLLVM(context), preambleBlock);
-	builder.CreateStore(subptr, subptrVar);
-	builder.CreateStore(sublen, sublenVar);
-	outs->insert({SeqData::ARRAY, subptrVar});
-	outs->insert({SeqData::LEN, sublenVar});
+	Value *sub = type->make(subptr, sublen, builder.GetInsertBlock());
+	result = getOutType()->storeInAlloca(getBase(), sub, builder.GetInsertBlock(), true);
 
 	codegenNext(module);
 

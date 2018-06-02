@@ -33,54 +33,63 @@ Function *types::Type::makeFuncOf(Module *module, Type *outType)
 	           getLLVMType(context)));
 }
 
-void types::Type::setFuncArgs(Function *func,
-                              ValMap outs,
-                              BasicBlock *block)
+Value *types::Type::setFuncArgs(Function *func,
+                                BasicBlock *block)
 {
 	if (getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot initialize arguments of function of type '" + getName() + "'");
 
 	Value *arg = func->arg_begin();
-	Value *var = makeAlloca(arg, block);
-	outs->insert({getKey(), var});
+	return makeAlloca(arg, block);
 }
 
 Value *types::Type::callFuncOf(Value *func,
-                               ValMap outs,
+                               Value *arg,
                                BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	Value *input = builder.CreateLoad(getSafe(outs, getKey()));
-	std::vector<Value *> args = {input};
-	return builder.CreateCall(func, args);
+	return builder.CreateCall(func, arg);
 }
 
-Value *types::Type::pack(BaseFunc *base,
-                         ValMap outs,
-                         BasicBlock *block)
+Value *types::Type::loadFromAlloca(BaseFunc *base,
+                                   Value *var,
+                                   BasicBlock *block)
 {
 	IRBuilder<> builder(block);
-	return builder.CreateLoad(getSafe(outs, getKey()));
+	return builder.CreateLoad(var);
 }
 
-void types::Type::unpack(BaseFunc *base,
-                         Value *value,
-                         ValMap outs,
-                         BasicBlock *block)
+Value *types::Type::storeInAlloca(BaseFunc *base,
+                                  Value *self,
+                                  BasicBlock *block,
+                                  bool storeDefault)
 {
 	LLVMContext& context = base->getContext();
 	BasicBlock *preambleBlock = base->getPreamble();
 	IRBuilder<> builder(block);
 
 	Value *var = makeAlloca(getLLVMType(context), preambleBlock);
-	builder.CreateStore(value, var);
-	outs->insert({getKey(), var});
+	builder.CreateStore(self, var);
+
+	if (storeDefault) {
+		builder.SetInsertPoint(preambleBlock);
+		builder.CreateStore(defaultValue(preambleBlock), var);
+	}
+
+	return var;
 }
 
-void types::Type::callCopy(BaseFunc *base,
-                           ValMap ins,
-                           ValMap outs,
-                           BasicBlock *block)
+Value *types::Type::eq(BaseFunc *base,
+                       Value *self,
+                       Value *other,
+                       BasicBlock *block)
+{
+	throw exc::SeqException("type '" + getName() + "' does not support equality checks");
+}
+
+llvm::Value *types::Type::copy(BaseFunc *base,
+                               Value *self,
+                               BasicBlock *block)
 {
 	if (!vtable.copy || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot copy type '" + getName() + "'");
@@ -94,9 +103,7 @@ void types::Type::callCopy(BaseFunc *base,
 	copyFunc->setCallingConv(CallingConv::C);
 
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {builder.CreateLoad(getSafe(ins, getKey()))};
-	Value *result = builder.CreateCall(copyFunc, args, "");
-	unpack(base, result, outs, block);
+	return builder.CreateCall(copyFunc, {self});
 }
 
 void types::Type::finalizeCopy(Module *module, ExecutionEngine *eng)
@@ -106,17 +113,9 @@ void types::Type::finalizeCopy(Module *module, ExecutionEngine *eng)
 		eng->addGlobalMapping(copyFunc, vtable.print);
 }
 
-Value *types::Type::checkEq(BaseFunc *base,
-                            ValMap ins1,
-                            ValMap ins2,
-                            BasicBlock *block)
-{
-	throw exc::SeqException("type '" + getName() + "' does not support equality checks");
-}
-
-void types::Type::callPrint(BaseFunc *base,
-                            ValMap outs,
-                            BasicBlock *block)
+void types::Type::print(BaseFunc *base,
+                        Value *self,
+                        BasicBlock *block)
 {
 	if (!vtable.print || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot print type '" + getName() + "'");
@@ -130,8 +129,7 @@ void types::Type::callPrint(BaseFunc *base,
 	printFunc->setCallingConv(CallingConv::C);
 
 	IRBuilder<> builder(block);
-	std::vector<Value *> args = {builder.CreateLoad(getSafe(outs, getKey()))};
-	builder.CreateCall(printFunc, args, "");
+	builder.CreateCall(printFunc, {self});
 }
 
 void types::Type::finalizePrint(Module *module, ExecutionEngine *eng)
@@ -141,10 +139,10 @@ void types::Type::finalizePrint(Module *module, ExecutionEngine *eng)
 		eng->addGlobalMapping(printFunc, vtable.print);
 }
 
-void types::Type::callSerialize(BaseFunc *base,
-                                ValMap outs,
-                                Value *fp,
-                                BasicBlock *block)
+void types::Type::serialize(BaseFunc *base,
+                            Value *self,
+                            Value *fp,
+                            BasicBlock *block)
 {
 	if (getKey() == SeqData::NONE)
 		throw exc::SeqException("type '" + getName() + "' cannot be serialized");
@@ -164,7 +162,8 @@ void types::Type::callSerialize(BaseFunc *base,
 	writeFunc->setCallingConv(CallingConv::C);
 
 	IRBuilder<> builder(block);
-	Value *ptrVal = builder.CreatePointerCast(getSafe(outs, getKey()), IntegerType::getInt8PtrTy(context));
+	Value *selfPtr = storeInAlloca(base, self, block);
+	Value *ptrVal = builder.CreatePointerCast(selfPtr, IntegerType::getInt8PtrTy(context));
 	Value *sizeVal = ConstantInt::get(seqIntLLVM(context), (uint64_t)size(module));
 	builder.CreateCall(writeFunc, {ptrVal, sizeVal, oneLLVM(context), fp});
 }
@@ -176,10 +175,9 @@ void types::Type::finalizeSerialize(Module *module, ExecutionEngine *eng)
 		eng->addGlobalMapping(writeFunc, (void *)util::io::io_write);
 }
 
-void types::Type::callDeserialize(BaseFunc *base,
-                                  ValMap outs,
-                                  Value *fp,
-                                  BasicBlock *block)
+Value *types::Type::deserialize(BaseFunc *base,
+                                Value *fp,
+                                BasicBlock *block)
 {
 	if (getKey() == SeqData::NONE)
 		throw exc::SeqException("type '" + getName() + "' cannot be serialized");
@@ -203,7 +201,7 @@ void types::Type::callDeserialize(BaseFunc *base,
 	Value *resultVar = makeAlloca(getLLVMType(context), preambleBlock);
 	Value *sizeVal = ConstantInt::get(seqIntLLVM(context), (uint64_t)size(module));
 	builder.CreateCall(readFunc, {resultVar, sizeVal, oneLLVM(context), fp});
-	unpack(base, builder.CreateLoad(resultVar), outs, block);
+	return builder.CreateLoad(resultVar);
 }
 
 void types::Type::finalizeDeserialize(Module *module, ExecutionEngine *eng)
@@ -213,9 +211,9 @@ void types::Type::finalizeDeserialize(Module *module, ExecutionEngine *eng)
 		eng->addGlobalMapping(readFunc, (void *)util::io::io_read);
 }
 
-Value *types::Type::codegenAlloc(BaseFunc *base,
-                                 Value *count,
-                                 BasicBlock *block)
+Value *types::Type::alloc(BaseFunc *base,
+                          Value *count,
+                          BasicBlock *block)
 {
 	if (size(block->getModule()) == 0)
 		throw exc::SeqException("cannot create array of type '" + getName() + "'");
@@ -238,12 +236,12 @@ Value *types::Type::codegenAlloc(BaseFunc *base,
 	return builder.CreatePointerCast(mem, PointerType::get(getLLVMType(context), 0));
 }
 
-Value *types::Type::codegenAlloc(BaseFunc *base,
-                                 seq_int_t count,
-                                 BasicBlock *block)
+Value *types::Type::alloc(BaseFunc *base,
+                          seq_int_t count,
+                          BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
-	return codegenAlloc(base, ConstantInt::get(seqIntLLVM(context), (uint64_t)count, true), block);
+	return alloc(base, ConstantInt::get(seqIntLLVM(context), (uint64_t)count, true), block);
 }
 
 void types::Type::finalizeAlloc(Module *module, ExecutionEngine *eng)
@@ -253,72 +251,95 @@ void types::Type::finalizeAlloc(Module *module, ExecutionEngine *eng)
 		eng->addGlobalMapping(allocFunc, (void *)std::malloc);
 }
 
-void types::Type::codegenLoad(BaseFunc *base,
-                              ValMap outs,
-                              BasicBlock *block,
-                              Value *ptr,
-                              Value *idx)
+Value *types::Type::load(BaseFunc *base,
+                         Value *ptr,
+                         Value *idx,
+                         BasicBlock *block)
 {
 	if (size(block->getModule()) == 0 || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot load type '" + getName() + "'");
 
-	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
 	IRBuilder<> builder(block);
-
-	Value *var = makeAlloca(getLLVMType(context), preambleBlock);
-	Value *val = builder.CreateLoad(builder.CreateGEP(ptr, idx));
-	builder.CreateStore(val, var);
-	outs->insert({getKey(), var});
+	return builder.CreateLoad(builder.CreateGEP(ptr, idx));
 }
 
-void types::Type::codegenStore(BaseFunc *base,
-                               ValMap outs,
-                               BasicBlock *block,
-                               Value *ptr,
-                               Value *idx)
+void types::Type::store(BaseFunc *base,
+                        Value *self,
+                        Value *ptr,
+                        Value *idx,
+                        BasicBlock *block)
 {
 	if (size(block->getModule()) == 0|| getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot store type '" + getName() + "'");
 
 	IRBuilder<> builder(block);
-	Value *val = builder.CreateLoad(getSafe(outs, getKey()));
-	builder.CreateStore(val, builder.CreateGEP(ptr, idx));
+	builder.CreateStore(self, builder.CreateGEP(ptr, idx));
 }
 
-void types::Type::codegenIndexLoad(BaseFunc *base,
-                                   ValMap outs,
-                                   BasicBlock *block,
-                                   Value *ptr,
-                                   Value *idx)
+Value *types::Type::indexLoad(BaseFunc *base,
+                              Value *self,
+                              Value *idx,
+                              BasicBlock *block)
 {
 	throw exc::SeqException("cannot index into type '" + getName() + "'");
 }
 
-void types::Type::codegenIndexStore(BaseFunc *base,
-                                    ValMap outs,
-                                    BasicBlock *block,
-                                    Value *ptr,
-                                    Value *idx)
+void types::Type::indexStore(BaseFunc *base,
+                             Value *self,
+                             Value *idx,
+                             Value *val,
+                             BasicBlock *block)
 {
 	throw exc::SeqException("cannot index into type '" + getName() + "'");
 }
 
-types::Type *types::Type::getCallType(Type *inType)
+Value *types::Type::call(BaseFunc *base,
+                         Value *self,
+                         Value *arg,
+                         BasicBlock *block)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
 }
 
-void types::Type::call(BaseFunc *base,
-                       ValMap ins,
-                       ValMap outs,
-                       Value *fn,
-                       BasicBlock *block)
+Value *types::Type::memb(Value *self,
+                         const std::string& name,
+                         BasicBlock *block)
 {
-	throw exc::SeqException("cannot call type '" + getName() + "'");
+	initFields();
+	auto iter = vtable.fields.find(name);
+
+	if (iter == vtable.fields.end())
+		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+
+	IRBuilder<> builder(block);
+	return builder.CreateExtractValue(self, iter->second.first);
+}
+
+Value *types::Type::setMemb(Value *self,
+                            const std::string& name,
+                            Value *val,
+                            BasicBlock *block)
+{
+	initFields();
+	auto iter = vtable.fields.find(name);
+
+	if (iter == vtable.fields.end())
+		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+
+	IRBuilder<> builder(block);
+	return builder.CreateInsertValue(self, val, iter->second.first);
+}
+
+Value *types::Type::defaultValue(BasicBlock *block)
+{
+	throw exc::SeqException("type '" + getName() + "' has no default value");
 }
 
 void types::Type::initOps()
+{
+}
+
+void types::Type::initFields()
 {
 }
 
@@ -378,6 +399,11 @@ SeqData types::Type::getKey() const
 types::Type *types::Type::getBaseType(seq_int_t idx) const
 {
 	throw exc::SeqException("type '" + getName() + "' has no base types");
+}
+
+types::Type *types::Type::getCallType(Type *inType)
+{
+	throw exc::SeqException("cannot call type '" + getName() + "'");
 }
 
 Type *types::Type::getLLVMType(LLVMContext& context) const
