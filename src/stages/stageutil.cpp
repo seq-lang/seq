@@ -180,7 +180,7 @@ Capture& stageutil::capture(void *addr)
 
 Source& stageutil::source(std::vector<Expr *> sources)
 {
-	return Source::make(sources);
+	return Source::make(std::move(sources));
 }
 
 If& stageutil::ifstage()

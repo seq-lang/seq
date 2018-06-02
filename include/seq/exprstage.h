@@ -76,7 +76,7 @@ namespace seq {
 	private:
 		Expr *cond;
 	public:
-		While(Expr *cond);
+		explicit While(Expr *cond);
 		void codegen(llvm::Module *module) override;
 		static While& make(Expr *cond);
 	};
