@@ -12,13 +12,13 @@ fun ident s: Seq -> Seq
 end
 
 source args[0] as input:
-  input |> substr 0+1 5 |> {
+  input |> substr 0+1 5 {
     _ |> print
     _ |> revcomp |> print
   }
 
   let v = farray[0](input)
-  v |> foreach as r |> (|> count, r, r |> split 1 1) as t |> {
+  v |> foreach as r |> (|> count, r, r |> split 1 1) as t {
     t.1 |> print
     _ |> .2 |> print
     t.3 |> print
@@ -29,11 +29,11 @@ source args[0] as input:
   arr |> foreach
 
   input |> ident() |> print
-  input |> split 64 64 |> {
+  input |> split 64 64 {
     let v1 = _ |> print
-    v1 |> split 32 32 |> {
+    v1 |> split 32 32 {
       let v2 = _ |> print
-      _ |> split 16 16 |> {
+      _ |> split 16 16 {
         _ |> print
         let v3 = _ |> copy |> print
         let v4 = v3 |> print

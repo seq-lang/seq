@@ -189,9 +189,16 @@ struct record_stage : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<pegtl::sor<r
 struct stage_raw : pegtl::sor<len_stage, revcomp_stage, call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, split_stage, substr_stage, filter_stage, chunk_stage, record_stage, nop_stage> {};
 struct stage_as : pegtl::seq<str_as, seps, name> {};
 struct stage : pegtl::seq<stage_raw, pegtl::opt<seps, stage_as>> {};
-struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, pegtl::one<'}'>> {};
-struct pipeline_stage : pegtl::seq<stage, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
-struct pipeline_branch : pegtl::seq<branch, pegtl::star<seps, pipe_op, seps, pegtl::sor<branch, stage>>> {};
+struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, seps, pegtl::one<'}'>> {};
+
+struct pipeline_component;
+struct pipeline_component_branch;
+struct pipeline_component_stage : pegtl::seq<stage, pegtl::opt<seps, pegtl::sor<pipeline_component_branch, pegtl::seq<pipe_op, seps, pipeline_component_stage>>>> {};
+struct pipeline_component_branch : pegtl::seq<branch, pegtl::opt<seps, pipe_op, pipeline_component>> {};
+struct pipeline_component : pegtl::sor<pipeline_component_stage, pipeline_component_branch> {};
+
+struct pipeline_stage : pegtl::seq<pipeline_component_stage> {};
+struct pipeline_branch : pegtl::seq<pipeline_component_branch> {};
 struct pipeline : pegtl::sor<pipeline_stage, pipeline_branch> {};
 
 struct while_args : pegtl::if_must<str_while, seps, expr> {};
