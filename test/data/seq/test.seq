@@ -22,6 +22,7 @@ source args[0] as input:
     t.1 |> print
     _ |> .2 |> print
     t.3 |> print
+    continue
   }
   input |> print
 

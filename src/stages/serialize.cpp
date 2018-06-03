@@ -40,7 +40,7 @@ void Serialize::codegen(Module *module)
 	fileVar->setAlignment(1);
 
 	IRBuilder<> builder(block);
-	Value *fp = builder.CreateCall(openFunc, {builder.CreateGEP(fileVar, zeroLLVM(context))});
+	Value *fp = builder.CreateCall(openFunc, {builder.CreateBitCast(fileVar, IntegerType::getInt8PtrTy(context))});
 	Value *val = builder.CreateLoad(prev->result);
 	prev->getOutType()->serialize(getBase(), val, fp, block);
 	builder.CreateCall(closeFunc, {fp});
@@ -109,7 +109,7 @@ void Deserialize::codegen(Module *module)
 	fileVar->setAlignment(1);
 
 	IRBuilder<> builder(block);
-	Value *fp = builder.CreateCall(openFunc, {builder.CreateGEP(fileVar, zeroLLVM(context))});
+	Value *fp = builder.CreateCall(openFunc, {builder.CreateBitCast(fileVar, IntegerType::getInt8PtrTy(context))});
 	Value *val = type->deserialize(getBase(), fp, block);
 	builder.CreateCall(closeFunc, {fp});
 	result = type->storeInAlloca(getBase(), val, block, true);

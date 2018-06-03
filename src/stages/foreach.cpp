@@ -38,11 +38,15 @@ void ForEach::codegen(Module *module)
 	Value *arr = builder.CreateLoad(prev->result);
 	Value *len = getInType()->memb(arr, "len", entry);
 
+	BasicBlock *loopCont = BasicBlock::Create(context, "foreach_cont", func);
 	BasicBlock *loop = BasicBlock::Create(context, "foreach", func);
 	builder.CreateBr(loop);
-	builder.SetInsertPoint(loop);
 
-	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
+	builder.SetInsertPoint(loopCont);
+	builder.CreateBr(loop);
+
+	builder.SetInsertPoint(loop);
+	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 3, "i");
 	Value *cond = builder.CreateICmpSLT(control, len);
 	Value *next = builder.CreateAdd(control, oneLLVM(context), "next");
 
@@ -62,6 +66,7 @@ void ForEach::codegen(Module *module)
 	builder.CreateBr(loop);
 
 	control->addIncoming(zeroLLVM(context), entry);
+	control->addIncoming(next, loopCont);
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
@@ -69,7 +74,7 @@ void ForEach::codegen(Module *module)
 	prev->setAfter(exit);
 
 	setBreaks(exit);
-	setContinues(loop);
+	setContinues(loopCont);
 }
 
 ForEach& ForEach::make()

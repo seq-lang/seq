@@ -80,54 +80,64 @@ SEQ_FUNC void seqSourceDealloc(void *state)
 static Function *seqSourceInitFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
-	return cast<Function>(
-	         module->getOrInsertFunction(
-	           "seqSourceInit",
-	           IntegerType::getInt8PtrTy(context),
-	           PointerType::get(IntegerType::getInt8PtrTy(context), 0),
-	           seqIntLLVM(context)));
+	auto *f = cast<Function>(
+	            module->getOrInsertFunction(
+	              "seqSourceInit",
+	              IntegerType::getInt8PtrTy(context),
+	              PointerType::get(IntegerType::getInt8PtrTy(context), 0),
+	              seqIntLLVM(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
 }
 
 static Function *seqSourceReadFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
-	return cast<Function>(
-	         module->getOrInsertFunction(
-	           "seqSourceRead",
-	           seqIntLLVM(context),
-	           IntegerType::getInt8PtrTy(context)));
+	auto *f = cast<Function>(
+	            module->getOrInsertFunction(
+	              "seqSourceRead",
+	              seqIntLLVM(context),
+	              IntegerType::getInt8PtrTy(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
 }
 
 static Function *seqSourceGetFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
-	return cast<Function>(
-	         module->getOrInsertFunction(
-	           "seqSourceGet",
-	           types::ArrayType::get(types::SeqType::get())->getLLVMType(context),
-	           IntegerType::getInt8PtrTy(context),
-	           seqIntLLVM(context)));
+	auto *f = cast<Function>(
+	            module->getOrInsertFunction(
+	              "seqSourceGet",
+	              types::ArrayType::get(types::SeqType::get())->getLLVMType(context),
+	              IntegerType::getInt8PtrTy(context),
+	              seqIntLLVM(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
 }
 
 static Function *seqSourceGetSingleFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
-	return cast<Function>(
-	         module->getOrInsertFunction(
-	           "seqSourceGetSingle",
-	           types::SeqType::get()->getLLVMType(context),
-	           IntegerType::getInt8PtrTy(context),
-	           seqIntLLVM(context)));
+	auto *f = cast<Function>(
+	            module->getOrInsertFunction(
+	              "seqSourceGetSingle",
+	              types::SeqType::get()->getLLVMType(context),
+	              IntegerType::getInt8PtrTy(context),
+	              seqIntLLVM(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
 }
 
 static Function *seqSourceDeallocFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
-	return cast<Function>(
-	         module->getOrInsertFunction(
-	           "seqSourceDealloc",
-	           Type::getVoidTy(context),
-	           IntegerType::getInt8PtrTy(context)));
+	auto *f = cast<Function>(
+	            module->getOrInsertFunction(
+	              "seqSourceDealloc",
+	              Type::getVoidTy(context),
+	              IntegerType::getInt8PtrTy(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
 }
 
 bool Source::isSingle() const
@@ -244,11 +254,11 @@ void Source::codegen(Module *module)
 
 void Source::finalize(Module *module, ExecutionEngine *eng)
 {
-	Function *initFunc = module->getFunction("seqSourceInit");
-	Function *readFunc = module->getFunction("seqSourceRead");
-	Function *getFunc = module->getFunction("seqSourceGet");
-	Function *getSingleFunc = module->getFunction("seqSourceGetSingle");
-	Function *deallocFunc = module->getFunction("seqSourceDealloc");
+	Function *initFunc = seqSourceInitFunc(module);
+	Function *readFunc = seqSourceReadFunc(module);
+	Function *getFunc = seqSourceGetFunc(module);
+	Function *getSingleFunc = seqSourceGetSingleFunc(module);
+	Function *deallocFunc = seqSourceDeallocFunc(module);
 
 	eng->addGlobalMapping(initFunc, (void *)seqSourceInit);
 	eng->addGlobalMapping(readFunc, (void *)seqSourceRead);

@@ -43,6 +43,7 @@ namespace seq {
 
 			void initFields() override;
 
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 
 			virtual llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block)=0;
@@ -61,7 +62,6 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
 			static SeqType *get();
 		};
@@ -79,7 +79,6 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
 			static StrType *get();
 		};

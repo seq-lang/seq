@@ -199,8 +199,9 @@ Value *types::Type::deserialize(BaseFunc *base,
 
 	IRBuilder<> builder(block);
 	Value *resultVar = makeAlloca(getLLVMType(context), preambleBlock);
+	Value *resultVarGeneric = builder.CreateBitCast(resultVar, IntegerType::getInt8PtrTy(context));
 	Value *sizeVal = ConstantInt::get(seqIntLLVM(context), (uint64_t)size(module));
-	builder.CreateCall(readFunc, {resultVar, sizeVal, oneLLVM(context), fp});
+	builder.CreateCall(readFunc, {resultVarGeneric, sizeVal, oneLLVM(context), fp});
 	return builder.CreateLoad(resultVar);
 }
 

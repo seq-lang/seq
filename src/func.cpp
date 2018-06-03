@@ -123,10 +123,12 @@ void Func::codegen(Module *module)
 			tail = tail->getNext().back();
 
 		if (!dynamic_cast<Return *>(tail)) {  // i.e. if there isn't already a return at the end
-			if (!tail->getOutType()->isChildOf(outType))
-				throw exc::SeqException("function does not output type '" + outType->getName() + "'");
-
-			builder.CreateRet(builder.CreateLoad(tail->result));
+			if (tail->getOutType()->isChildOf(outType))
+				builder.CreateRet(builder.CreateLoad(tail->result));
+			else
+				builder.CreateRet(outType->defaultValue(exitBlock));
+		} else {
+			builder.CreateUnreachable();
 		}
 	}
 

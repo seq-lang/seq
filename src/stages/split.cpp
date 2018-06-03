@@ -9,6 +9,7 @@ using namespace llvm;
 Split::Split(Expr *k, Expr *step) :
     Stage("split", types::SeqType::get(), types::SeqType::get()), k(k), step(step)
 {
+	loop = true;
 }
 
 Split::Split(seq_int_t k, seq_int_t step) :
@@ -37,11 +38,15 @@ void Split::codegen(Module *module)
 	Value *len = types::Seq.memb(seq, "len", entry);
 	Value *max = builder.CreateSub(len, sublen);
 
+	BasicBlock *loopCont = BasicBlock::Create(context, "split_cont", func);
 	BasicBlock *loop = BasicBlock::Create(context, "split", func);
 	builder.CreateBr(loop);
-	builder.SetInsertPoint(loop);
 
-	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
+	builder.SetInsertPoint(loopCont);
+	builder.CreateBr(loop);
+
+	builder.SetInsertPoint(loop);
+	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 3, "i");
 	Value *next = builder.CreateAdd(control, inc, "next");
 	Value *cond = builder.CreateICmpSLE(control, max);
 
@@ -60,11 +65,15 @@ void Split::codegen(Module *module)
 	builder.CreateBr(loop);
 
 	control->addIncoming(ConstantInt::get(seqIntLLVM(context), 0), entry);
+	control->addIncoming(next, loopCont);
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	branch->setSuccessor(1, exit);
 	prev->setAfter(exit);
+
+	setBreaks(exit);
+	setContinues(loopCont);
 }
 
 Split& Split::make(Expr *k, Expr *step)

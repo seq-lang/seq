@@ -260,7 +260,7 @@ void SeqModule::codegen(Module *module)
 		builder.CreateBr(lastBr);
 
 		builder.SetInsertPoint(lastBr);
-		builder.CreateCondBr(isLast, origLastBlock, exit);
+		builder.CreateCondBr(builder.CreateTrunc(isLast, IntegerType::getInt1Ty(context)), origLastBlock, exit);
 	}
 
 	builder.SetInsertPoint(lastBlock);
@@ -312,8 +312,36 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 
 		codegen(module);
 
-		if (debug)
+		if (verifyModule(*module, &errs())) {
+			if (debug)
+				errs() << *module;
+			assert(0);
+		}
+
+		if (!debug) {
+			std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
+			std::unique_ptr<legacy::FunctionPassManager> fpm(new legacy::FunctionPassManager(module));
+
+			fpm->doInitialization();
+			for (Function &f : *module)
+				fpm->run(f);
+			fpm->doFinalization();
+
+			unsigned optLevel = 3;
+			unsigned sizeLevel = 0;
+			PassManagerBuilder builder;
+			builder.OptLevel = optLevel;
+			builder.SizeLevel = sizeLevel;
+			builder.Inliner = createFunctionInliningPass(optLevel, sizeLevel, false);
+			builder.DisableUnitAtATime = false;
+			builder.DisableUnrollLoops = false;
+			builder.LoopVectorize = true;
+			builder.SLPVectorize = true;
+			builder.populateModulePassManager(*pm);
+			pm->run(*module);
+		} else {
 			errs() << *module;
+		}
 
 		EngineBuilder EB(std::move(owner));
 		EB.setMCJITMemoryManager(make_unique<SectionMemoryManager>());

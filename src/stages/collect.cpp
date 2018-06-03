@@ -83,7 +83,8 @@ void Collect::codegen(Module *module)
 	builder.SetInsertPoint(initBlock);
 	Value *resultRead = getOutType()->loadFromAlloca(getBase(), result, initBlock);
 	resultRead = getOutType()->setMemb(resultRead, "len", zeroLLVM(context), initBlock);
-	getOutType()->store(getBase(), resultRead, result, zeroLLVM(context), initBlock);
+	builder.CreateStore(zeroLLVM(context), lenVar);
+	builder.CreateStore(resultRead, result);
 
 	codegenNext(module);
 	prev->setAfter(getAfter());

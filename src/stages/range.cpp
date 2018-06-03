@@ -56,12 +56,17 @@ void Range::codegen(Module *module)
 	Value *to   = this->to->codegen(getBase(), entry);
 	Value *step = this->step->codegen(getBase(), entry);
 
+	BasicBlock *loopCont = BasicBlock::Create(context, "range_cont", func);
 	BasicBlock *loop = BasicBlock::Create(context, "range", func);
+
 	IRBuilder<> builder(entry);
 	builder.CreateBr(loop);
-	builder.SetInsertPoint(loop);
 
-	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
+	builder.SetInsertPoint(loopCont);
+	builder.CreateBr(loop);
+
+	builder.SetInsertPoint(loop);
+	PHINode *control = builder.CreatePHI(seqIntLLVM(context), 3, "i");
 	Value *next = builder.CreateAdd(control, step, "next");
 	Value *cond = builder.CreateICmpSLT(control, to);
 
@@ -78,6 +83,7 @@ void Range::codegen(Module *module)
 	builder.CreateBr(loop);
 
 	control->addIncoming(from, entry);
+	control->addIncoming(next, loopCont);
 	control->addIncoming(next, getAfter());
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
@@ -85,7 +91,7 @@ void Range::codegen(Module *module)
 	prev->setAfter(exit);
 
 	setBreaks(exit);
-	setContinues(loop);
+	setContinues(loopCont);
 }
 
 Range& Range::make(Expr *from, Expr *to, Expr *step)

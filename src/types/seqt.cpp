@@ -139,11 +139,11 @@ Value *types::BaseSeqType::copy(BaseFunc *base,
 
 	copyFunc->setCallingConv(CallingConv::C);
 
-	Value *seq = Seq.memb(self, "ptr", block);
+	Value *ptr = Seq.memb(self, "ptr", block);
 	Value *len = Seq.memb(self, "len", block);
 
 	IRBuilder<> builder(block);
-	Value *copy = builder.CreateCall(copyFunc, {seq, len});
+	Value *copy = builder.CreateCall(copyFunc, {ptr, len});
 	return make(copy, len, block);
 }
 
@@ -166,12 +166,12 @@ void types::BaseSeqType::serialize(BaseFunc *base,
 
 	writeFunc->setCallingConv(CallingConv::C);
 
-	Value *seq = Seq.memb(self, "ptr", block);
+	Value *ptr = Seq.memb(self, "ptr", block);
 	Value *len = Seq.memb(self, "len", block);
 	Int.serialize(base, len, fp, block);
 
 	IRBuilder<> builder(block);
-	builder.CreateCall(writeFunc, {seq, len, oneLLVM(context), fp});
+	builder.CreateCall(writeFunc, {ptr, len, oneLLVM(context), fp});
 }
 
 Value *types::BaseSeqType::deserialize(BaseFunc *base,
@@ -201,9 +201,9 @@ Value *types::BaseSeqType::deserialize(BaseFunc *base,
 	IRBuilder<> builder(block);
 
 	Value *len = Int.deserialize(base, fp, block);
-	Value *seq = builder.CreateCall(allocFunc, {len});
-	builder.CreateCall(readFunc, {seq, len, oneLLVM(context), fp});
-	return make(seq, len, block);
+	Value *ptr = builder.CreateCall(allocFunc, {len});
+	builder.CreateCall(readFunc, {ptr, len, oneLLVM(context), fp});
+	return make(ptr, len, block);
 }
 
 void types::BaseSeqType::print(BaseFunc *base,
@@ -224,11 +224,11 @@ void types::BaseSeqType::print(BaseFunc *base,
 
 	printFunc->setCallingConv(CallingConv::C);
 
-	Value *seq = Seq.memb(self, "ptr", block);
+	Value *ptr = Seq.memb(self, "ptr", block);
 	Value *len = Seq.memb(self, "len", block);
 
 	IRBuilder<> builder(block);
-	builder.CreateCall(printFunc, {seq, len});
+	builder.CreateCall(printFunc, {ptr, len});
 }
 
 Value *types::BaseSeqType::defaultValue(BasicBlock *block)
@@ -248,6 +248,11 @@ void types::BaseSeqType::initFields()
 		{"len", {0, &Int}},
 		{"ptr", {1, &Void}}
 	};
+}
+
+Type *types::BaseSeqType::getLLVMType(LLVMContext& context) const
+{
+	return StructType::get(seqIntLLVM(context), IntegerType::getInt8PtrTy(context));
 }
 
 seq_int_t types::BaseSeqType::size(Module *module) const
@@ -274,13 +279,6 @@ Value *types::SeqType::setMemb(Value *self,
                                BasicBlock *block)
 {
 	return BaseSeqType::setMemb(self, name, val, block);
-}
-
-Type *types::SeqType::getLLVMType(LLVMContext& context) const
-{
-	StructType *seqStruct = StructType::create(context, "seq_t");
-	seqStruct->setBody({seqIntLLVM(context), IntegerType::getInt8PtrTy(context)});
-	return seqStruct;
 }
 
 Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block)
@@ -316,13 +314,6 @@ Value *types::StrType::setMemb(Value *self,
                                BasicBlock *block)
 {
 	return BaseSeqType::setMemb(self, name, val, block);
-}
-
-Type *types::StrType::getLLVMType(LLVMContext& context) const
-{
-	StructType *seqStruct = StructType::create(context, "str_t");
-	seqStruct->setBody({seqIntLLVM(context), IntegerType::getInt8PtrTy(context)});
-	return seqStruct;
 }
 
 Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block)

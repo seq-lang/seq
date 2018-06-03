@@ -135,13 +135,11 @@ types::Type *types::RecordType::getBaseType(seq_int_t idx) const
 
 Type *types::RecordType::getLLVMType(LLVMContext& context) const
 {
-	llvm::StructType *recStruct = StructType::create(context, "rec_t");
 	std::vector<llvm::Type *> body;
 	for (auto& type : types)
 		body.push_back(type->getLLVMType(context));
 
-	recStruct->setBody(body);
-	return recStruct;
+	return StructType::get(context, body);
 }
 
 seq_int_t types::RecordType::size(Module *module) const

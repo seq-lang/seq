@@ -40,6 +40,7 @@ void Filter::codegen(Module *module)
 	IRBuilder<> builder(block);
 	Value *x = builder.CreateLoad(result);
 	Value *pred = key->getType()->call(getBase(), f, x, block);
+	pred = builder.CreateTrunc(pred, IntegerType::getInt1Ty(context));
 
 	BasicBlock *body = BasicBlock::Create(context, "body", block->getParent());
 	block = body;

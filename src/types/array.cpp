@@ -39,10 +39,12 @@ Value *types::ArrayType::copy(BaseFunc *base,
 
 	IRBuilder<> builder(block);
 	Value *ptr = Array.memb(self, "ptr", block);
+	ptr = builder.CreateBitCast(ptr, IntegerType::getInt8PtrTy(context));
 	Value *len = Array.memb(self, "len", block);
 	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size(block->getModule()));
 	std::vector<Value *> args = {ptr, len, elemSize};
 	Value *copy = builder.CreateCall(copyFunc, args, "");
+	copy = builder.CreateBitCast(copy, PointerType::get(getBaseType()->getLLVMType(context), 0));
 	return make(copy, len, block);
 }
 
@@ -187,6 +189,7 @@ Value *types::ArrayType::deserialize(BaseFunc *base,
 	Value *bytes = builder.CreateMul(len, size);
 	bytes = builder.CreateBitCast(bytes, IntegerType::getIntNTy(context, sizeof(size_t)*8));
 	Value *ptr = builder.CreateCall(allocFunc, {bytes});
+	ptr = builder.CreateBitCast(ptr, PointerType::get(getBaseType()->getLLVMType(context), 0));
 	builder.CreateCall(deserialize, {ptr, len, fp});
 	return make(ptr, len, block);
 }
@@ -246,10 +249,7 @@ types::Type *types::ArrayType::getBaseType(seq_int_t idx) const
 
 Type *types::ArrayType::getLLVMType(LLVMContext& context) const
 {
-	llvm::StructType *arrStruct = StructType::create(context, "arr_t");
-	arrStruct->setBody({seqIntLLVM(context),
-	                    PointerType::get(baseType->getLLVMType(context), 0)});
-	return arrStruct;
+	return StructType::get(seqIntLLVM(context), PointerType::get(baseType->getLLVMType(context), 0));
 }
 
 seq_int_t types::ArrayType::size(Module *module) const
