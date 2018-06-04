@@ -3,6 +3,7 @@
 #include <vector>
 #include <stack>
 #include <queue>
+#include <set>
 #include <map>
 #include <cassert>
 #include <tao/pegtl/analyze.hpp>
@@ -197,7 +198,7 @@ public:
 		return result;
 	}
 
-	void add(SeqEntity ent)
+	void add(const SeqEntity& ent)
 	{
 		assert(!results.empty());
 		results.top().push_back(ent);
@@ -222,13 +223,18 @@ public:
 
 	void scope()
 	{
-		symbols.push_back({});
+		symbols.emplace_back();
 	}
 
 	void unscope()
 	{
 		assert(!symbols.empty());
 		symbols.pop_back();
+	}
+
+	static bool isBarrier(std::map<std::string, SeqEntity>& syms)
+	{
+		return syms.find("*") != syms.end();
 	}
 
 	static void symadd(std::string name, SeqEntity ent, std::map<std::string, SeqEntity>& syms)
@@ -239,19 +245,28 @@ public:
 		syms.insert({name, ent});
 	}
 
-	void sym(std::string name, SeqEntity ent)
+	void sym(std::string name, const SeqEntity& ent)
 	{
 		assert(!symbols.empty());
-		symadd(name, ent, symbols.back());
+		symadd(std::move(name), ent, symbols.back());
 	}
 
-	void symparent(std::string name, SeqEntity ent)
+	/*
+	 * We don't want functions to access non-global variables defined outside of them;
+	 * this method prevents that.
+	 */
+	void scopeBarrier()
+	{
+		sym("*", {});
+	}
+
+	void symparent(std::string name, const SeqEntity& ent)
 	{
 		assert(symbols.size() >= 2);
-		symadd(name, ent, symbols[symbols.size() - 2]);
+		symadd(std::move(name), ent, symbols[symbols.size() - 2]);
 	}
 
-	static SeqEntity lookupInTable(std::string name, SymTab symtab)
+	static SeqEntity lookupInTable(const std::string& name, SymTab symtab)
 	{
 		auto iter = symtab.find(name);
 
@@ -261,18 +276,30 @@ public:
 		return iter->second;
 	}
 
-	SeqEntity lookup(std::string name)
+	SeqEntity lookup(const std::string& name)
 	{
+		static const std::set<int> disallowBrokenBarriers = {SeqEntity::EMPTY, SeqEntity::VAR, SeqEntity::CELL};
+		bool barrierBroken = false;
+		SeqEntity found;
+
 		for (auto it = symbols.rbegin(); it != symbols.rend(); ++it) {
 			SeqEntity ent = lookupInTable(name, *it);
-			if (ent.type != SeqEntity::EMPTY)
-				return ent;
+			if (ent.type != SeqEntity::EMPTY) {
+				found = ent;
+				break;
+			}
+
+			if (isBarrier(*it))
+				barrierBroken = true;
 		}
+
+		if (!barrierBroken || disallowBrokenBarriers.find(found.type) == disallowBrokenBarriers.end())
+			return found;
 
 		throw exc::SeqException("undefined reference to '" + std::string(name) + "'");
 	}
 
-	void enter(SeqEntity context)
+	void enter(const SeqEntity& context)
 	{
 		contexts.push_back(context);
 	}
@@ -732,7 +759,7 @@ struct action<custom_type> {
 
 		try {
 			ent = state.lookup(in.string());
-		} catch (exc::SeqException) {
+		} catch (exc::SeqException&) {
 			return false;
 		}
 
@@ -1073,6 +1100,7 @@ struct control<module> : pegtl::normal<module>
 	static void start(Input& in, ParseState& state)
 	{
 		state.scope();
+		state.scopeBarrier();
 		auto *module = new SeqModule(true);
 		state.enter(module);
 		state.sym("args", module->getArgVar());
@@ -1209,6 +1237,7 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	static void start(Input&, ParseState& state)
 	{
 		state.scope();
+		state.scopeBarrier();
 		state.enter(new Func(types::Void, types::Void));
 	}
 
