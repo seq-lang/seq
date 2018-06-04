@@ -8,8 +8,9 @@ namespace seq {
 	class RecordExpr : public Expr {
 	private:
 		std::vector<Expr *> exprs;
+		std::vector<std::string> names;
 	public:
-		explicit RecordExpr(std::vector<Expr *> exprs);
+		explicit RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names={});
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 	};

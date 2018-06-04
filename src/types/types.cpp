@@ -316,6 +316,17 @@ Value *types::Type::memb(Value *self,
 	return builder.CreateExtractValue(self, iter->second.first);
 }
 
+types::Type *types::Type::membType(const std::string& name)
+{
+	initFields();
+	auto iter = vtable.fields.find(name);
+
+	if (iter == vtable.fields.end() || iter->second.second->is(types::VoidType::get()))
+		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+
+	return iter->second.second;
+}
+
 Value *types::Type::setMemb(Value *self,
                             const std::string& name,
                             Value *val,

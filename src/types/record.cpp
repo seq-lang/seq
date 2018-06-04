@@ -16,13 +16,17 @@ static std::string getNameFromTypes(std::vector<types::Type *> types)
 	return name;
 }
 
-types::RecordType::RecordType(std::vector<Type *> types) :
-    Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD), types(std::move(types))
+types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names) :
+    Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD),
+    types(std::move(types)), names(std::move(names))
 {
+	if (!this->names.empty() && this->names.size() != this->types.size())
+		throw exc::SeqException("type and name vectors differ in length");
 }
 
 types::RecordType::RecordType(std::initializer_list<Type *> types) :
-    Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD), types(types)
+    Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD),
+    types(types), names()
 {
 }
 
@@ -120,6 +124,21 @@ Value *types::RecordType::defaultValue(BasicBlock *block)
 	return self;
 }
 
+void types::RecordType::initFields()
+{
+	if (!vtable.fields.empty())
+		return;
+
+	assert(names.empty() || names.size() == types.size());
+
+	for (int i = 0; i < types.size(); i++) {
+		vtable.fields.insert({std::to_string(i+1), {i, types[i]}});
+
+		if (!names.empty() && !names[i].empty())
+			vtable.fields.insert({names[i], {i, types[i]}});
+	}
+}
+
 bool types::RecordType::isGeneric(Type *type) const
 {
 	return dynamic_cast<types::RecordType *>(type) != nullptr;
@@ -157,9 +176,9 @@ types::RecordType& types::RecordType::of(std::initializer_list<std::reference_wr
 	return *RecordType::get(typesPtr);
 }
 
-types::RecordType *types::RecordType::get(std::vector<Type *> types)
+types::RecordType *types::RecordType::get(std::vector<Type *> types, std::vector<std::string> names)
 {
-	return new RecordType(std::move(types));
+	return new RecordType(std::move(types), std::move(names));
 }
 
 types::RecordType *types::RecordType::get(std::initializer_list<Type *> types)

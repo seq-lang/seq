@@ -32,7 +32,7 @@ namespace seq {
 		Cell *cell;
 		Expr *value;
 	public:
-		explicit AssignStage(Cell *cell, Expr *value);
+		AssignStage(Cell *cell, Expr *value);
 		void codegen(llvm::Module *module) override;
 		static AssignStage& make(Cell *cell, Expr *value);
 	};
@@ -43,7 +43,7 @@ namespace seq {
 		Expr *idx;
 		Expr *value;
 	public:
-		explicit AssignIndexStage(Expr *array, Expr *idx, Expr *value);
+		AssignIndexStage(Expr *array, Expr *idx, Expr *value);
 		void codegen(llvm::Module *module) override;
 		static AssignIndexStage& make(Expr *array, Expr *idx, Expr *value);
 	};
@@ -51,11 +51,13 @@ namespace seq {
 	class AssignMemberStage : public Stage {
 	private:
 		Cell *cell;
-		seq_int_t idx;
+		std::string memb;
 		Expr *value;
 	public:
-		explicit AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value);
+		AssignMemberStage(Cell *cell, std::string memb, Expr *value);
+		AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value);
 		void codegen(llvm::Module *module) override;
+		static AssignMemberStage& make(Cell *cell, std::string memb, Expr *value);
 		static AssignMemberStage& make(Cell *cell, seq_int_t idx, Expr *value);
 	};
 

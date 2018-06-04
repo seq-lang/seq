@@ -5,7 +5,8 @@
 using namespace seq;
 using namespace llvm;
 
-RecordExpr::RecordExpr(std::vector<Expr *> exprs) : exprs(std::move(exprs))
+RecordExpr::RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names) :
+    exprs(std::move(exprs)), names(std::move(names))
 {
 }
 
@@ -31,5 +32,5 @@ types::Type *RecordExpr::getType() const
 	std::vector<types::Type *> types;
 	for (auto *expr : exprs)
 		types.push_back(expr->getType());
-	return types::RecordType::get(types);
+	return names.empty() ? types::RecordType::get(types) : types::RecordType::get(types, names);
 }

@@ -113,9 +113,14 @@ AssignIndexStage& AssignIndexStage::make(Expr *array, Expr *idx, Expr *value)
 }
 
 
-AssignMemberStage::AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value) :
+AssignMemberStage::AssignMemberStage(Cell *cell, std::string memb, Expr *value) :
     Stage("(.=)", types::AnyType::get(), types::VoidType::get()),
-    cell(cell), idx(idx), value(value)
+    cell(cell), memb(memb), value(value)
+{
+}
+
+AssignMemberStage::AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value) :
+    AssignMemberStage(cell, std::to_string(idx), value)
 {
 }
 
@@ -124,18 +129,23 @@ void AssignMemberStage::codegen(Module *module)
 	if (!cell->getType()->isGeneric(types::RecordType::get({})))
 		throw exc::SeqException("can only assign members of record type");
 
-	value->ensure(cell->getType()->getBaseType(idx));
+	value->ensure(cell->getType()->membType(memb));
 
 	ensurePrev();
 	validate();
 
 	block = prev->getAfter();
-	IRBuilder<> builder(block);
 	Value *rec = cell->load(block);
-	rec = builder.CreateInsertValue(rec, value->codegen(getBase(), block), idx - 1);
+	Value *val = value->codegen(getBase(), block);
+	rec = cell->getType()->setMemb(rec, memb, val, block);
 	cell->store(rec, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
+}
+
+AssignMemberStage& AssignMemberStage::make(Cell *cell, std::string memb, Expr *value)
+{
+	return *new AssignMemberStage(cell, memb, value);
 }
 
 AssignMemberStage& AssignMemberStage::make(Cell *cell, seq_int_t idx, Expr *value)

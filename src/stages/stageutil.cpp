@@ -173,6 +173,11 @@ AssignMemberStage& stageutil::assignmemb(Cell *cell, seq_int_t idx, Expr *value)
 	return AssignMemberStage::make(cell, idx, value);
 }
 
+AssignMemberStage& stageutil::assignmemb(Cell *cell, std::string memb, Expr *value)
+{
+	return AssignMemberStage::make(cell, memb, value);
+}
+
 Capture& stageutil::capture(void *addr)
 {
 	return Capture::make(addr);

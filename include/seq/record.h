@@ -12,7 +12,8 @@ namespace seq {
 		class RecordType : public Type {
 		private:
 			std::vector<Type *> types;
-			explicit RecordType(std::vector<Type *> types);
+			std::vector<std::string> names;
+			RecordType(std::vector<Type *> types, std::vector<std::string> names);
 			RecordType(std::initializer_list<Type *> types);
 		public:
 			RecordType(RecordType const&)=delete;
@@ -40,12 +41,14 @@ namespace seq {
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
+			void initFields() override;
+
 			bool isGeneric(Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			RecordType& of(std::initializer_list<std::reference_wrapper<Type>> types) const;
-			static RecordType *get(std::vector<Type *> types);
+			static RecordType *get(std::vector<Type *> types, std::vector<std::string> names={});
 			static RecordType *get(std::initializer_list<Type *> types);
 		};
 

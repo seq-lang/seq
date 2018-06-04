@@ -133,6 +133,8 @@ namespace seq {
 			                          const std::string& name,
 			                          llvm::BasicBlock *block);
 
+			virtual Type *membType(const std::string& name);
+
 			virtual llvm::Value *setMemb(llvm::Value *self,
 			                             const std::string& name,
 			                             llvm::Value *val,

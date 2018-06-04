@@ -4,21 +4,24 @@
 using namespace seq;
 using namespace llvm;
 
+GetElemExpr::GetElemExpr(Expr *rec, std::string memb) :
+    rec(rec), memb(std::move(memb))
+{
+}
+
 GetElemExpr::GetElemExpr(Expr *rec, seq_int_t idx) :
-    rec(rec), idx(idx)
+    GetElemExpr(rec, std::to_string(idx))
 {
 	assert(idx >= 1);
 }
 
 llvm::Value *GetElemExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
-	rec->ensure(types::RecordType::get({}));
 	Value *rec = this->rec->codegen(base, block);
-	IRBuilder<> builder(block);
-	return builder.CreateExtractValue(rec, idx - 1);
+	return this->rec->getType()->memb(rec, memb, block);
 }
 
 types::Type *GetElemExpr::getType() const
 {
-	return rec->getType()->getBaseType(idx);
+	return rec->getType()->membType(memb);
 }

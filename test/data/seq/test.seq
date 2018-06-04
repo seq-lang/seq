@@ -71,8 +71,10 @@ b.2 = !!false
 b.2 |> print
 
 fun fib n: Int -> Int
-  fun rec x: {(Int -> Int), Int} -> Int
-    x.1(x.2 - 1) + x.1(x.2 - 2)
+  type F = {f: (Int -> Int), x: Int}
+
+  fun rec pair: F -> Int
+    pair.f(pair.x - 1) + pair.f(pair.x - 2)
   end
 
   if n <= 1 then n else rec(fib, n)
@@ -90,3 +92,19 @@ range (if b.1 then 1 else 2) 5+5 as i:
 
   range i i+1: _ |> print end
 end
+
+type Person = {name: Str, age: Int}
+
+fun whois person: Person
+  person.name |> print
+  person.age  |> print
+end
+
+fun birthday person: Person -> Person
+  (person.name, person.age + 1)
+end
+
+var joe = (name: "Joe", age: 42)
+whois(joe)
+joe = birthday(joe)
+whois(joe)
