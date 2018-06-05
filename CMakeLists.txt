@@ -192,6 +192,11 @@ add_library(seq SHARED include/seq/any.h
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo)
 target_link_libraries(seq ${LLVM_LIBS} pegtl)
 
+# Seq command-line tool
+add_executable(seqcc src/seq/main.cpp)
+target_link_libraries(seqcc seq)
+set_target_properties(seqcc PROPERTIES OUTPUT_NAME seq)
+
 # Seq test
 add_executable(seqtest test/main.cpp
                        test/core/bigtest.h
