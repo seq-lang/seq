@@ -221,6 +221,11 @@ Value *types::ArrayType::defaultValue(BasicBlock *block)
 	return make(ptr, len, block);
 }
 
+bool types::ArrayType::isAtomic() const
+{
+	return false;
+}
+
 bool types::ArrayType::isGeneric(Type *type) const
 {
 	return dynamic_cast<types::ArrayType *>(type) != nullptr;

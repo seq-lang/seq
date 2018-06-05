@@ -383,6 +383,11 @@ OpSpec types::Type::findBOp(const std::string &symbol, types::Type *rhsType)
 	    symbol + "' applied to type '" + rhsType->getName() + "'");
 }
 
+bool types::Type::isAtomic() const
+{
+	return true;
+}
+
 bool types::Type::is(types::Type *type) const
 {
 	return getName() == type->getName();

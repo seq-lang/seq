@@ -43,6 +43,7 @@ namespace seq {
 
 			void initFields() override;
 
+			bool isAtomic() const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 

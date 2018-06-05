@@ -250,6 +250,11 @@ void types::BaseSeqType::initFields()
 	};
 }
 
+bool types::BaseSeqType::isAtomic() const
+{
+	return false;
+}
+
 Type *types::BaseSeqType::getLLVMType(LLVMContext& context) const
 {
 	return StructType::get(seqIntLLVM(context), IntegerType::getInt8PtrTy(context));

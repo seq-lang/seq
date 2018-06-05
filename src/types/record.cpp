@@ -124,6 +124,15 @@ Value *types::RecordType::defaultValue(BasicBlock *block)
 	return self;
 }
 
+bool types::RecordType::isAtomic() const
+{
+	for (auto *type : types) {
+		if (!type->isAtomic())
+			return false;
+	}
+	return true;
+}
+
 void types::RecordType::initFields()
 {
 	if (!vtable.fields.empty())

@@ -147,6 +147,7 @@ namespace seq {
 			virtual OpSpec findUOp(const std::string& symbol);
 			virtual OpSpec findBOp(const std::string& symbol, Type *rhsType);
 
+			virtual bool isAtomic() const;
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;
 			virtual bool isChildOf(Type *type) const;

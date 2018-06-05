@@ -44,6 +44,7 @@ namespace seq {
 
 			void initFields() override;
 
+			bool isAtomic() const override;
 			bool isGeneric(Type *type) const override;
 			Type *getBaseType() const;
 			Type *getBaseType(seq_int_t idx) const override;
