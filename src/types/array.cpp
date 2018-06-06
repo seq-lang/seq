@@ -7,10 +7,10 @@
 using namespace seq;
 using namespace llvm;
 
-SEQ_FUNC void *copyArray(void *arr, seq_int_t len, seq_int_t elem_size)
+SEQ_FUNC void *copyArray(void *arr, seq_int_t len, seq_int_t elem_size, bool atomic)
 {
 	const size_t size = (size_t)len * elem_size;
-	auto *arr2 = std::malloc(size);
+	auto *arr2 = atomic ? seqAllocAtomic(size) : seqAlloc(size);
 	std::memcpy(arr2, arr, size);
 	return arr2;
 }
@@ -33,17 +33,18 @@ Value *types::ArrayType::copy(BaseFunc *base,
 	                         IntegerType::getInt8PtrTy(context),
 	                         IntegerType::getInt8PtrTy(context),
 	                         seqIntLLVM(context),
-	                         seqIntLLVM(context)));
+	                         seqIntLLVM(context),
+	                         IntegerType::getInt8Ty(context)));
 
 	copyFunc->setCallingConv(CallingConv::C);
 
 	IRBuilder<> builder(block);
+	Value *atomic = ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)getBaseType()->isAtomic());
 	Value *ptr = Array.memb(self, "ptr", block);
 	ptr = builder.CreateBitCast(ptr, IntegerType::getInt8PtrTy(context));
 	Value *len = Array.memb(self, "len", block);
 	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)getBaseType()->size(block->getModule()));
-	std::vector<Value *> args = {ptr, len, elemSize};
-	Value *copy = builder.CreateCall(copyFunc, args, "");
+	Value *copy = builder.CreateCall(copyFunc, {ptr, len, elemSize, atomic});
 	copy = builder.CreateBitCast(copy, PointerType::get(getBaseType()->getLLVMType(context), 0));
 	return make(copy, len, block);
 }

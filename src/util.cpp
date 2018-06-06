@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iostream>
 #include <cassert>
+#include "seq/seqgc.h"
 #include "seq/util.h"
 
 using namespace seq;
@@ -30,7 +31,7 @@ SEQ_FUNC void append(void **array,
 {
 	if (len >= *cap) {
 		*cap = (*cap * 3)/2 + 1;
-		*array = std::realloc(*array, (size_t)(*cap * elem_size));
+		*array = seqRealloc(*array, (size_t)(*cap * elem_size));
 		assert(*array);
 	}
 

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <cassert>
+#include "seq/seqgc.h"
 #include "seq/exc.h"
 #include "seq/io.h"
 
@@ -32,14 +33,13 @@ DataCell::DataCell() :
 
 DataCell::~DataCell()
 {
-	free(buf);
 }
 
 char *DataCell::ensureSpace(const size_t idx, const size_t space)
 {
 	const size_t new_cap = used + space;
 	if (new_cap > cap) {
-		buf = (char *)realloc(buf, new_cap);
+		buf = (char *)(buf ? seq::seqRealloc(buf, new_cap) : seqAllocAtomic(new_cap));
 		assert(buf);
 		cap = new_cap;
 

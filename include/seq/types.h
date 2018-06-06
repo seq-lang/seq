@@ -38,9 +38,11 @@ namespace seq {
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
 
+			virtual bool isAtomic() const;
+
 			virtual std::string copyFuncName() { return "copy" + getName(); }
 			virtual std::string printFuncName() { return "print" + getName(); }
-			virtual std::string allocFuncName() { return "malloc"; }
+			virtual std::string allocFuncName() { return isAtomic() ? "seqAllocAtomic" : "seqAlloc"; }
 
 			virtual llvm::Type *getFuncType(llvm::LLVMContext& context, Type *outType);
 
@@ -147,7 +149,6 @@ namespace seq {
 			virtual OpSpec findUOp(const std::string& symbol);
 			virtual OpSpec findBOp(const std::string& symbol, Type *rhsType);
 
-			virtual bool isAtomic() const;
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;
 			virtual bool isChildOf(Type *type) const;

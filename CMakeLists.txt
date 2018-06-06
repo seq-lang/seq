@@ -119,6 +119,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/recordexpr.h
                        include/seq/revcomp.h
                        include/seq/seq.h
+                       include/seq/seqgc.h
                        include/seq/seqt.h
                        include/seq/serialize.h
                        include/seq/source.h
@@ -186,11 +187,12 @@ add_library(seq SHARED include/seq/any.h
                        src/ops.cpp
                        src/pipeline.cpp
                        src/seq.cpp
+                       src/seqgc.cpp
                        src/seqdata.h
                        src/util.cpp
                        src/var.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo)
-target_link_libraries(seq ${LLVM_LIBS} pegtl)
+target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
 
 # Seq command-line tool
 add_executable(seqcc src/seq/main.cpp)

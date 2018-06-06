@@ -19,6 +19,7 @@
 #include "io.h"
 #include "exc.h"
 #include "common.h"
+#include "seqgc.h"
 
 #include "parser.h"
 #include "expr.h"
@@ -71,6 +72,7 @@ namespace seq {
 		std::vector<std::string> sources;
 		std::array<llvm::Value *, io::MAX_INPUTS> results;
 		Var argsVar;
+		llvm::Function *initFunc;
 
 		friend PipelineAggregator;
 	public:

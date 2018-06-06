@@ -130,11 +130,11 @@ void SeqModule::codegen(Module *module)
 		args = argiter;
 	} else {
 		func = cast<Function>(
-				module->getOrInsertFunction(
-						"main",
-						Type::getVoidTy(context),
-						PointerType::get(types::Seq.getLLVMType(context), 0),
-						IntegerType::getInt8Ty(context)));
+		         module->getOrInsertFunction(
+		           "main",
+		           Type::getVoidTy(context),
+		           PointerType::get(types::Seq.getLLVMType(context), 0),
+		           IntegerType::getInt8Ty(context)));
 
 		auto argiter = func->arg_begin();
 		seqs = argiter++;
@@ -147,6 +147,10 @@ void SeqModule::codegen(Module *module)
 	IRBuilder<> builder(preambleBlock);
 
 	if (standalone) {
+		initFunc = cast<Function>(module->getOrInsertFunction("seqGCInit", Type::getVoidTy(context)));
+		initFunc->setCallingConv(CallingConv::C);
+		builder.CreateCall(initFunc);
+
 		assert(argsType != nullptr);
 		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), argsType);
 		argsBase.setBase(this);
@@ -363,6 +367,9 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 			}
 
 		if (standalone) {
+			assert(initFunc);
+			eng->addGlobalMapping(initFunc, (void *)seqGCInit);
+
 			auto op = (SeqMainStandalone)eng->getPointerToFunction(func);
 			auto numArgs = (seq_int_t)args.size();
 			arr_t<str_t> argsArr = {numArgs, new str_t[numArgs]};
@@ -372,6 +379,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 
 			op(argsArr);
 		} else {
+			seqGCInit();
 			auto op = (SeqMain)eng->getPointerToFunction(func);
 			data = new io::DataBlock();
 			std::vector<std::ifstream *> ins;

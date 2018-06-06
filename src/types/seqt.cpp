@@ -8,7 +8,7 @@ using namespace llvm;
 
 SEQ_FUNC char *copyBaseSeq(char *seq, const seq_int_t len)
 {
-	auto *seq2 = (char *)std::malloc((size_t)len);
+	auto *seq2 = (char *)seqAllocAtomic((size_t)len);
 	std::memcpy(seq2, seq, (size_t)len);
 	return seq2;
 }

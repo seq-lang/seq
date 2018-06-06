@@ -249,7 +249,7 @@ void types::Type::finalizeAlloc(Module *module, ExecutionEngine *eng)
 {
 	Function *allocFunc = module->getFunction(allocFuncName());
 	if (allocFunc)
-		eng->addGlobalMapping(allocFunc, (void *)std::malloc);
+		eng->addGlobalMapping(allocFunc, (void *)(isAtomic() ? seqAllocAtomic : seqAlloc));
 }
 
 Value *types::Type::load(BaseFunc *base,
