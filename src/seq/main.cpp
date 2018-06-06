@@ -16,6 +16,13 @@ int main(int argc, char **argv)
 	ParseCommandLineOptions(argc, argv);
 	vector<string> argsVec(args);
 
-	SeqModule& s = parse(input.c_str());
-	s.execute(argsVec);
+	try {
+		SeqModule& s = parse(input.c_str());
+		s.execute(argsVec);
+	} catch (exc::SeqException& e) {
+		std::cerr << "error: " << e.what() << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
 }

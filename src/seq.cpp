@@ -286,129 +286,124 @@ void SeqModule::codegenReturn(Expr *expr, BasicBlock*& block)
 
 void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 {
-	try {
-		if (!args.empty() && !standalone)
-			throw exc::SeqException("cannot only pass arguments in standalone mode");
+	if (!args.empty() && !standalone)
+		throw exc::SeqException("cannot only pass arguments in standalone mode");
 
-		io::Format fmt = io::Format::TXT;
+	io::Format fmt = io::Format::TXT;
 
-		if (!standalone) {
-			if (sources.empty())
-				throw exc::SeqException("sequence source not specified");
+	if (!standalone) {
+		if (sources.empty())
+			throw exc::SeqException("sequence source not specified");
 
-			if (sources.size() > io::MAX_INPUTS)
-				throw exc::SeqException("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
+		if (sources.size() > io::MAX_INPUTS)
+			throw exc::SeqException("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
 
-			fmt = io::extractExt(sources[0]);
+		fmt = io::extractExt(sources[0]);
 
-			for (const auto &src : sources) {
-				if (io::extractExt(src) != fmt)
-					throw exc::SeqException("inconsistent input formats");
-			}
+		for (const auto &src : sources) {
+			if (io::extractExt(src) != fmt)
+				throw exc::SeqException("inconsistent input formats");
 		}
+	}
 
-		LLVMContext context;
-		InitializeNativeTarget();
-		InitializeNativeTargetAsmPrinter();
+	LLVMContext context;
+	InitializeNativeTarget();
+	InitializeNativeTargetAsmPrinter();
 
-		std::unique_ptr<Module> owner(new Module("seq", context));
-		Module *module = owner.get();
+	std::unique_ptr<Module> owner(new Module("seq", context));
+	Module *module = owner.get();
 
-		codegen(module);
+	codegen(module);
 
-		if (verifyModule(*module, &errs())) {
-			if (debug)
-				errs() << *module;
-			assert(0);
-		}
-
-		if (!debug) {
-			std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
-			std::unique_ptr<legacy::FunctionPassManager> fpm(new legacy::FunctionPassManager(module));
-
-			fpm->doInitialization();
-			for (Function &f : *module)
-				fpm->run(f);
-			fpm->doFinalization();
-
-			unsigned optLevel = 3;
-			unsigned sizeLevel = 0;
-			PassManagerBuilder builder;
-			builder.OptLevel = optLevel;
-			builder.SizeLevel = sizeLevel;
-			builder.Inliner = createFunctionInliningPass(optLevel, sizeLevel, false);
-			builder.DisableUnitAtATime = false;
-			builder.DisableUnrollLoops = false;
-			builder.LoopVectorize = true;
-			builder.SLPVectorize = true;
-			builder.populateModulePassManager(*pm);
-			pm->run(*module);
-		} else {
+	if (verifyModule(*module, &errs())) {
+		if (debug)
 			errs() << *module;
-		}
+		assert(0);
+	}
 
-		EngineBuilder EB(std::move(owner));
-		EB.setMCJITMemoryManager(make_unique<SectionMemoryManager>());
-		EB.setUseOrcMCJITReplacement(true);
-		ExecutionEngine *eng = EB.create();
+	if (!debug) {
+		std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
+		std::unique_ptr<legacy::FunctionPassManager> fpm(new legacy::FunctionPassManager(module));
 
-		if (!standalone)
-			for (auto& pipeline : once.pipelines) {
-				pipeline.getHead()->finalize(module, eng);
-			}
+		fpm->doInitialization();
+		for (Function &f : *module)
+			fpm->run(f);
+		fpm->doFinalization();
 
-		for (auto& pipeline : main.pipelines) {
+		unsigned optLevel = 3;
+		unsigned sizeLevel = 0;
+		PassManagerBuilder builder;
+		builder.OptLevel = optLevel;
+		builder.SizeLevel = sizeLevel;
+		builder.Inliner = createFunctionInliningPass(optLevel, sizeLevel, false);
+		builder.DisableUnitAtATime = false;
+		builder.DisableUnrollLoops = false;
+		builder.LoopVectorize = true;
+		builder.SLPVectorize = true;
+		builder.populateModulePassManager(*pm);
+		pm->run(*module);
+	} else {
+		errs() << *module;
+	}
+
+	EngineBuilder EB(std::move(owner));
+	EB.setMCJITMemoryManager(make_unique<SectionMemoryManager>());
+	EB.setUseOrcMCJITReplacement(true);
+	ExecutionEngine *eng = EB.create();
+
+	if (!standalone)
+		for (auto& pipeline : once.pipelines) {
 			pipeline.getHead()->finalize(module, eng);
 		}
 
-		if (!standalone)
-			for (auto& pipeline : last.pipelines) {
-				pipeline.getHead()->finalize(module, eng);
-			}
+	for (auto& pipeline : main.pipelines) {
+		pipeline.getHead()->finalize(module, eng);
+	}
 
-		if (standalone) {
-			assert(initFunc);
-			eng->addGlobalMapping(initFunc, (void *)seqGCInit);
-
-			auto op = (SeqMainStandalone)eng->getPointerToFunction(func);
-			auto numArgs = (seq_int_t)args.size();
-			arr_t<str_t> argsArr = {numArgs, new str_t[numArgs]};
-
-			for (seq_int_t i = 0; i < numArgs; i++)
-				argsArr.arr[i] = {(seq_int_t)args[i].size(), (char *)args[i].data()};
-
-			op(argsArr);
-		} else {
-			seqGCInit();
-			auto op = (SeqMain)eng->getPointerToFunction(func);
-			data = new io::DataBlock();
-			std::vector<std::ifstream *> ins;
-
-			for (auto &source : sources) {
-				ins.push_back(new std::ifstream(source));
-
-				if (!ins.back()->good())
-					throw exc::IOException("could not open '" + source + "' for reading");
-			}
-
-			do {
-				data->read(ins, fmt);
-				const size_t len = data->len;
-
-				for (size_t i = 0; i < len; i++) {
-					const bool isLast = data->last && i == len - 1;
-					op(data->block[i].seqs.data(), isLast);
-				}
-			} while (data->len > 0);
-
-			for (auto *in : ins) {
-				in->close();
-				delete in;
-			}
+	if (!standalone)
+		for (auto& pipeline : last.pipelines) {
+			pipeline.getHead()->finalize(module, eng);
 		}
-	} catch (std::exception& e) {
-		errs() << e.what() << '\n';
-		throw;
+
+	if (standalone) {
+		assert(initFunc);
+		eng->addGlobalMapping(initFunc, (void *)seqGCInit);
+
+		auto op = (SeqMainStandalone)eng->getPointerToFunction(func);
+		auto numArgs = (seq_int_t)args.size();
+		arr_t<str_t> argsArr = {numArgs, new str_t[numArgs]};
+
+		for (seq_int_t i = 0; i < numArgs; i++)
+			argsArr.arr[i] = {(seq_int_t)args[i].size(), (char *)args[i].data()};
+
+		op(argsArr);
+	} else {
+		seqGCInit();
+		auto op = (SeqMain)eng->getPointerToFunction(func);
+		data = new io::DataBlock();
+		std::vector<std::ifstream *> ins;
+
+		for (auto &source : sources) {
+			ins.push_back(new std::ifstream(source));
+
+			if (!ins.back()->good())
+				throw exc::IOException("could not open '" + source + "' for reading");
+		}
+
+		do {
+			data->read(ins, fmt);
+			const size_t len = data->len;
+
+			for (size_t i = 0; i < len; i++) {
+				const bool isLast = data->last && i == len - 1;
+				op(data->block[i].seqs.data(), isLast);
+			}
+		} while (data->len > 0);
+
+		for (auto *in : ins) {
+			in->close();
+			delete in;
+		}
 	}
 }
 
