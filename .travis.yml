@@ -12,6 +12,10 @@ matrix:
       env: LLVM_VERSION=6.0.0
       addons: { apt: { packages: ["clang-6.0", "libgc-dev"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
 
+  include:
+    - os: osx
+      osx_image: xcode9.1
+
 install:
   ############################################################################
   # All the dependencies are installed in ${TRAVIS_BUILD_DIR}/deps/
@@ -63,6 +67,16 @@ install:
       export LDFLAGS="-L ${LLVM_DIR}/install/lib -l c++ -l c++abi"
       export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${LLVM_DIR}/install/lib"
       export PATH="${LLVM_DIR}/clang/bin:${PATH}"
+    else
+      brew install --with-toolchain llvm || brew upgrade llvm
+    fi
+
+  ############################################################################
+  # Install Boehm GC on macOS
+  ############################################################################
+  - |
+    if [[ "${TRAVIS_OS_NAME}" != "linux" ]]; then
+      brew install bdw-gc || brew upgrade bdw-gc
     fi
 
 before_script:
