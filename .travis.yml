@@ -5,12 +5,12 @@ matrix:
   include:
     - os: linux
       env: LLVM_VERSION=5.0.1
-      addons: { apt: { packages: ["clang-5.0"], sources: ["llvm-toolchain-trusty-5.0", "ubuntu-toolchain-r-test"] } }
+      addons: { apt: { packages: ["clang-5.0", "libgc-dev"], sources: ["llvm-toolchain-trusty-5.0", "ubuntu-toolchain-r-test"] } }
 
   include:
     - os: linux
       env: LLVM_VERSION=6.0.0
-      addons: { apt: { packages: ["clang-6.0"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
+      addons: { apt: { packages: ["clang-6.0", "libgc-dev"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
 
 install:
   ############################################################################

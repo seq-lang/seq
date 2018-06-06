@@ -32,6 +32,7 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
   include_directories("${gtest_SOURCE_DIR}/include")
 endif()
 
+
 # PEGTL download & compile:
 # (adapted from https://github.com/google/googletest/tree/master/googletest)
 # Download and unpack googletest at configure time
@@ -58,6 +59,7 @@ add_subdirectory(${CMAKE_BINARY_DIR}/pegtl-src
 if (CMAKE_VERSION VERSION_LESS 2.8.11)
   include_directories("${pegtl_SOURCE_DIR}/include")
 endif()
+
 
 # Seq library
 cmake_minimum_required(VERSION 3.9)
@@ -194,10 +196,12 @@ add_library(seq SHARED include/seq/any.h
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo)
 target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
 
+
 # Seq command-line tool
 add_executable(seqcc src/seq/main.cpp)
 target_link_libraries(seqcc seq)
 set_target_properties(seqcc PROPERTIES OUTPUT_NAME seq)
+
 
 # Seq test
 add_executable(seqtest test/main.cpp
