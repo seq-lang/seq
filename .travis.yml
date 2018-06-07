@@ -75,7 +75,7 @@ install:
 
 before_script:
   - cd ${TRAVIS_BUILD_DIR}
-  - (cd build && cmake ..)
+  - (cd build && cmake .. -DLLVM_DIR=${LLVM_DIR}/lib/cmake/llvm/)
 
 script:
   - cmake --build build
