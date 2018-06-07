@@ -193,7 +193,7 @@ add_library(seq SHARED include/seq/any.h
                        src/seqdata.h
                        src/util.cpp
                        src/var.cpp)
-llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86desc x86codegen mcjit orcjit ipo instrumentation executionengine vectorize instcombine aarch64codegen transformutils scalaropts)
+llvm_map_components_to_libnames(LLVM_LIBS orcjit aarch64codegen x86disassembler x86asmparser x86codegen globalisel selectiondag asmprinter debuginfocodeview debuginfomsf codegen ipo instrumentation vectorize scalaropts instcombine transformutils bitwriter x86desc mcdisassembler x86info x86asmprinter x86utils mcjit executionengine target analysis profiledata runtimedyld irreader object mcparser bitreader mc core binaryformat support demangle)
 target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
 
 
