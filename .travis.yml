@@ -12,11 +12,6 @@ matrix:
       env: LLVM_VERSION=6.0.0
       addons: { apt: { packages: ["clang-6.0", "libgc-dev"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
 
-  include:
-    - os: osx
-      env: LLVM_VERSION=6.0.0
-      osx_image: xcode9.1
-
 install:
   ############################################################################
   # All the dependencies are installed in ${TRAVIS_BUILD_DIR}/deps/
@@ -55,11 +50,7 @@ install:
         LLVM_URL="http://llvm.org/releases/${LLVM_VERSION}/llvm-${LLVM_VERSION}.src.tar.xz"
         LIBCXX_URL="http://llvm.org/releases/${LLVM_VERSION}/libcxx-${LLVM_VERSION}.src.tar.xz"
         LIBCXXABI_URL="http://llvm.org/releases/${LLVM_VERSION}/libcxxabi-${LLVM_VERSION}.src.tar.xz"
-        if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-          CLANG_URL="http://llvm.org/releases/${LLVM_VERSION}/clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz"
-        else
-          CLANG_URL="http://llvm.org/releases/${LLVM_VERSION}/clang+llvm-${LLVM_VERSION}-x86_64-apple-darwin.tar.xz"
-        fi
+        CLANG_URL="http://llvm.org/releases/${LLVM_VERSION}/clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz"
         mkdir -p ${LLVM_DIR} ${LLVM_DIR}/build ${LLVM_DIR}/projects/libcxx ${LLVM_DIR}/projects/libcxxabi ${LLVM_DIR}/clang
         travis_retry wget -O - ${LLVM_URL}      | tar --strip-components=1 -xJ -C ${LLVM_DIR}
         travis_retry wget -O - ${LIBCXX_URL}    | tar --strip-components=1 -xJ -C ${LLVM_DIR}/projects/libcxx
