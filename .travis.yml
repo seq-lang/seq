@@ -78,7 +78,7 @@ before_script:
   - (cd build && cmake ..)
 
 script:
-  - cmake --build build --target seq
+  - cmake --build build
 
 notifications:
   email: false
