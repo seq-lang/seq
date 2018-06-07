@@ -193,7 +193,7 @@ add_library(seq SHARED include/seq/any.h
                        src/seqdata.h
                        src/util.cpp
                        src/var.cpp)
-llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo)
+llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86desc x86codegen mcjit orcjit ipo instrumentation executionengine vectorize instcombine aarch64codegen transformutils scalaropts)
 target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
 
 
