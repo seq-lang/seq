@@ -9,9 +9,7 @@ matrix:
 
 before_install:
   - sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
-  - test -r ~/.bash_profile && echo "export PATH='$(brew --prefix)/bin:$(brew --prefix)/sbin'":'"$PATH"' >>~/.bash_profile
-  - echo "export PATH='$(brew --prefix)/bin:$(brew --prefix)/sbin'":'"$PATH"' >>~/.profile
-  - source ~/.profile
+  - export PATH="$HOME/.linuxbrew/bin:$PATH"
 
 install:
   - if [[ "${LLVM_VERSION}" != "" ]]; then export CXX="clang++-${LLVM_VERSION%.[0-9]}"; fi
@@ -26,7 +24,7 @@ install:
 
 before_script:
   - cd ${TRAVIS_BUILD_DIR}
-  - (cd build && cmake .. -DLLVM_DIR=/home/linuxbrew/.linuxbrew/Cellar/llvm/6.0.0_2/lib/cmake/llvm)
+  - (cd build && cmake .. -DLLVM_DIR=`brew --prefix llvm`/lib/cmake/llvm)
 
 script:
   - cmake --build build
