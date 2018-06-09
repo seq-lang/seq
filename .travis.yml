@@ -1,30 +1,47 @@
 language: cpp
 sudo: false
 
+#cache:
+#  directories:
+#    - $HOME/llvm-build-6.0.0
+#    - $HOME/llvm-src-6.0.0
+
 matrix:
   include:
     - os: linux
       env: LLVM_VERSION=6.0.0
-      addons: { apt: { packages: ["clang-6.0"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
+      addons: { apt: { packages: ["clang-6.0", "libgc-dev"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
 
 before_install:
-  - sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
-  - export PATH="$HOME/.linuxbrew/bin:$PATH"
+  - if [[ "${LLVM_VERSION}" != "" ]]; then export CXX="clang++-${LLVM_VERSIONSION%.[0-9]}"; fi
+  - export LD_LIBRARY_PATH=$HOME/llvm-build-${LLVM_VERSION}/lib:$LD_LIBRARY_PATH
+  - export PATH=$HOME/llvm-build-${LLVM_VERSION}/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/llvm-build-${LLVM_VER}/lib:$LD_LIBRARY_PATH
+  - export PATH=$HOME/llvm-build-${LLVM_VER}/bin:$PATH
+  - mkdir -p $HOME/bin
+  - export PATH=$HOME/bin:$PATH
 
 install:
-  - if [[ "${LLVM_VERSION}" != "" ]]; then export CXX="clang++-${LLVM_VERSION%.[0-9]}"; fi
-  - ${CXX} --version
+ - curl https://cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.tar.gz | tar -xzf - -C $HOME
+ - export PATH=$HOME/cmake-3.10.1-Linux-x86_64/bin:$PATH
+ - curl -L https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip -o ninja-linux.zip
+ - unzip ninja-linux.zip -d $HOME/bin
+ - curl -L https://github.com/llvm-mirror/llvm/archive/089d4c0c490687db6c75f1d074e99c4d42936a50.zip -o out.zip
+ - unzip -q out.zip -d $HOME
+ - rsync -ac $HOME/llvm-089d4c0c490687db6c75f1d074e99c4d42936a50/ $HOME/llvm-src-${LLVM_VERSION}
+ - cd $HOME/llvm-src-${LLVM_VERSION}
+ - mkdir -p build && cd build
+ - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O0 -DCMAKE_INSTALL_PREFIX=$HOME/llvm-build-${LLVM_VERSION} -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_BUILD_LLVM_DYLIB=True -DLLVM_LINK_LLVM_DYLIB=True -GNinja ..
+ - ninja -j3 install
+ - cd $TRAVIS_BUILD_DIR
+ - ln -s $HOME/llvm-build-${LLVM_VERSION}/bin/llvm-config $HOME/bin/llvm-config
 
-  - brew install cmake || brew upgrade cmake
-  - cmake --version
-
-  - brew install --with-toolchain llvm || brew upgrade llvm
-
-  - brew install bdw-gc || brew upgrade bdw-gc
+ - ${CXX} --version
+ - llvm-config --version
 
 before_script:
   - cd ${TRAVIS_BUILD_DIR}
-  - (cd build && cmake .. -DLLVM_DIR=`brew --prefix llvm`/lib/cmake/llvm)
+  - (cd build && cmake .. -DLLVM_DIR=`llvm-config --cmakedir`)
 
 script:
   - cmake --build build
