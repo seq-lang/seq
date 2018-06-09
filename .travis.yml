@@ -13,11 +13,11 @@ matrix:
       addons: { apt: { packages: ["clang-6.0", "libgc-dev"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
 
 before_install:
-  - if [[ "${LLVM_VERSION}" != "" ]]; then export CXX="clang++-${LLVM_VERSIONSION%.[0-9]}"; fi
+  - export CXX="clang++-${LLVM_VERSION%.[0-9]}"
   - export LD_LIBRARY_PATH=$HOME/llvm-build-${LLVM_VERSION}/lib:$LD_LIBRARY_PATH
   - export PATH=$HOME/llvm-build-${LLVM_VERSION}/bin:$PATH
-  - export LD_LIBRARY_PATH=$HOME/llvm-build-${LLVM_VER}/lib:$LD_LIBRARY_PATH
-  - export PATH=$HOME/llvm-build-${LLVM_VER}/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/llvm-build-${LLVM_VERSION}/lib:$LD_LIBRARY_PATH
+  - export PATH=$HOME/llvm-build-${LLVM_VERSION}/bin:$PATH
   - mkdir -p $HOME/bin
   - export PATH=$HOME/bin:$PATH
 
