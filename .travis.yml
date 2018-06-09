@@ -13,7 +13,6 @@ matrix:
       addons: { apt: { packages: ["clang-6.0", "libgc-dev"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
 
 before_install:
-  - export CXX="clang++-${LLVM_VERSION%.[0-9]}"
   - export LD_LIBRARY_PATH=$HOME/llvm-build-${LLVM_VERSION}/lib:$LD_LIBRARY_PATH
   - export PATH=$HOME/llvm-build-${LLVM_VERSION}/bin:$PATH
   - export LD_LIBRARY_PATH=$HOME/llvm-build-${LLVM_VERSION}/lib:$LD_LIBRARY_PATH
@@ -22,6 +21,8 @@ before_install:
   - export PATH=$HOME/bin:$PATH
 
 install:
+ - export CXX="clang++-${LLVM_VERSION%.[0-9]}"
+ - ${CXX} --version
  - curl https://cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.tar.gz | tar -xzf - -C $HOME
  - export PATH=$HOME/cmake-3.10.1-Linux-x86_64/bin:$PATH
  - curl -L https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip -o ninja-linux.zip
@@ -35,8 +36,6 @@ install:
  - ninja -j3 install
  - cd $TRAVIS_BUILD_DIR
  - ln -s $HOME/llvm-build-${LLVM_VERSION}/bin/llvm-config $HOME/bin/llvm-config
-
- - ${CXX} --version
  - llvm-config --version
 
 before_script:
