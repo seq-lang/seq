@@ -13,17 +13,6 @@ namespace seq {
 			VoidType(VoidType const &) = delete;
 			void operator=(VoidType const &)= delete;
 
-			llvm::Type *getFuncType(llvm::LLVMContext& context, Type *outType) override;
-
-			llvm::Function *makeFuncOf(llvm::Module *module, Type *outType) override;
-
-			llvm::Value *setFuncArgs(llvm::Function *func,
-			                         llvm::BasicBlock *block) override;
-
-			llvm::Value *callFuncOf(llvm::Value *func,
-			                        llvm::Value *arg,
-			                        llvm::BasicBlock *block) override;
-
 			llvm::Value *loadFromAlloca(BaseFunc *base,
 			                            llvm::Value *var,
 			                            llvm::BasicBlock *block) override;

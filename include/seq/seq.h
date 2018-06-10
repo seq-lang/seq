@@ -86,7 +86,7 @@ namespace seq {
 		io::DataBlock *data;
 
 		void source(std::string s);
-		Var *getArgVar() override;
+		Var *getArgVar();
 
 		template<typename ...T>
 		void source(std::string s, T... etc)
@@ -97,7 +97,7 @@ namespace seq {
 
 		void codegen(llvm::Module *module) override;
 		llvm::Value *codegenCall(BaseFunc *base,
-		                         llvm::Value *arg,
+		                         std::vector<llvm::Value *> args,
 		                         llvm::BasicBlock *block) override;
 		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;

@@ -9,4 +9,10 @@ TEST(StandaloneTest, StandaloneTest)
 	EXPECT_NO_THROW(s.execute({DEFAULT_TEST_INPUT_MULTI}, true));
 }
 
+TEST(StandaloneTestOpt, StandaloneTest)
+{
+	SeqModule& s = parse(TEST_DIR "/data/seq/test.seq");
+	EXPECT_NO_THROW(s.execute({DEFAULT_TEST_INPUT_MULTI}));
+}
+
 #endif /* SEQ_STANDALONETEST_H */

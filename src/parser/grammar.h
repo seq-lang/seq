@@ -98,9 +98,9 @@ struct record_type_elem_unnamed : pegtl::seq<type, pegtl::success> {};
 struct record_type_elem : pegtl::sor<record_type_elem_named, record_type_elem_unnamed> {};
 struct record_type : pegtl::seq<pegtl::one<'{'>, seps, pegtl::list<record_type_elem, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<'}'>> {};
 
-struct func_type_no_void : pegtl::seq<pegtl::one<'('>, seps, type, seps, TAO_PEGTL_STRING("->"), seps, type, seps, pegtl::one<')'>> {};
+struct func_type_no_void : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<type, seps>, seps, TAO_PEGTL_STRING("->"), seps, type, seps, pegtl::one<')'>> {};
 struct func_type_in_void : pegtl::seq<pegtl::one<'('>, seps, TAO_PEGTL_STRING("->"), seps, type, seps, pegtl::one<')'>> {};
-struct func_type_out_void : pegtl::seq<pegtl::one<'('>, seps, type, seps, TAO_PEGTL_STRING("->"), seps, pegtl::one<')'>> {};
+struct func_type_out_void : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<type, seps>, seps, TAO_PEGTL_STRING("->"), seps, pegtl::one<')'>> {};
 struct func_type_in_out_void : pegtl::seq<pegtl::one<'('>, seps, TAO_PEGTL_STRING("->"), seps, pegtl::one<')'>> {};
 struct func_type : pegtl::sor<func_type_no_void, func_type_in_void, func_type_out_void, func_type_in_out_void> {};
 
@@ -184,7 +184,7 @@ struct pipeline;
 struct nop_stage : pegtl::one<'.'> {};
 struct len_stage : TAO_PEGTL_STRING("len") {};
 struct revcomp_stage : TAO_PEGTL_STRING("revcomp") {};
-struct call_stage : pegtl::seq<name, seps, pegtl::one<'('>, seps, pegtl::one<')'>> {};
+struct call_stage : pegtl::seq<name> {};
 struct collect_stage : TAO_PEGTL_STRING("collect") {};
 struct copy_stage : TAO_PEGTL_STRING("copy") {};
 struct count_stage : TAO_PEGTL_STRING("count") {};
@@ -201,7 +201,7 @@ struct record_stage_elem_expr_pipeline : pegtl::seq<expr, seps, pipe_op, seps, p
 struct record_stage_elem_expr : pegtl::seq<expr> {};
 struct record_stage : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<pegtl::sor<record_stage_elem_pipeline, record_stage_elem_expr_pipeline, record_stage_elem_expr>, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
 
-struct stage_raw : pegtl::sor<len_stage, revcomp_stage, call_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, split_stage, substr_stage, filter_stage, chunk_stage, record_stage, nop_stage> {};
+struct stage_raw : pegtl::sor<len_stage, revcomp_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, split_stage, substr_stage, filter_stage, chunk_stage, record_stage, nop_stage, call_stage> {};
 struct stage_as : pegtl::seq<str_as, seps, name> {};
 struct stage : pegtl::seq<stage_raw, pegtl::opt<seps, stage_as>> {};
 struct branch : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, seps, pegtl::one<'}'>> {};
@@ -235,11 +235,11 @@ struct typedef_stmt : pegtl::if_must<str_typedef, seps, pegtl::not_at<builtin_ty
 /*
  * Functions
  */
-struct func_decl : pegtl::seq<str_fun, seps, name, seps, name, seps, pegtl::one<':'>, seps, type, seps, TAO_PEGTL_STRING("->"), seps, type> {};
-struct func_decl_in_void : pegtl::seq<str_fun, seps, name, seps, TAO_PEGTL_STRING("->"), seps, type> {};
-struct func_decl_out_void : pegtl::seq<str_fun, seps, name, seps, name, seps, pegtl::one<':'>, seps, type> {};
+struct func_args : pegtl::opt<pegtl::seq<pegtl::one<'('>, seps, pegtl::opt<pegtl::list<pegtl::seq<name, seps, pegtl::one<':'>, seps, type>, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<')'>>> {};
+struct func_decl : pegtl::seq<str_fun, seps, name, seps, func_args, seps, TAO_PEGTL_STRING("->"), seps, type> {};
+struct func_decl_out_void : pegtl::seq<str_fun, seps, name, seps, func_args> {};
 struct func_decl_in_out_void : pegtl::seq<str_fun, seps, name> {};
-struct func_stmt : pegtl::seq<pegtl::sor<func_decl, func_decl_in_void, func_decl_out_void, func_decl_in_out_void>, seps, statement_seq, str_end> {};
+struct func_stmt : pegtl::seq<pegtl::sor<func_decl, func_decl_out_void, func_decl_in_out_void>, seps, statement_seq, str_end> {};
 
 /*
  * Modules

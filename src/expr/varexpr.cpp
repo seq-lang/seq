@@ -44,5 +44,5 @@ Value *FuncExpr::codegen(BaseFunc *base, BasicBlock*& block)
 
 types::Type *FuncExpr::getType() const
 {
-	return types::FuncType::get(func->getInType(), func->getOutType());
+	return types::FuncType::get(func->getInTypes(), func->getOutType());
 }

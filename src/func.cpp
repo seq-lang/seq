@@ -10,13 +10,8 @@ using namespace seq;
 using namespace llvm;
 
 BaseFunc::BaseFunc() :
-    module(nullptr), preambleBlock(nullptr), func(nullptr), argsVar(true)
+    module(nullptr), preambleBlock(nullptr), func(nullptr)
 {
-}
-
-Var *BaseFunc::getArgVar()
-{
-	return &argsVar;
 }
 
 LLVMContext& BaseFunc::getContext()
@@ -50,13 +45,29 @@ Function *BaseFunc::getFunc()
 	return func;
 }
 
+Func::Func(std::string name,
+           std::vector<std::string> argNames,
+           std::vector<types::Type *> inTypes,
+           types::Type *outType) :
+    BaseFunc(), inTypes(std::move(inTypes)), outType(outType), pipelines(), result(nullptr),
+    argNames(std::move(argNames)), argVars(), name(std::move(name)), rawFunc(nullptr)
+{
+	if (!this->argNames.empty())
+		assert(this->argNames.size() == this->inTypes.size());
+}
+
 Func::Func(types::Type& inType,
            types::Type& outType,
            std::string name,
            void *rawFunc) :
-    BaseFunc(), inType(&inType), outType(&outType), pipelines(),
-    result(nullptr), name(std::move(name)), rawFunc(rawFunc)
+    Func(std::move(name), {}, {}, &outType)
 {
+	if (inType.is(types::VoidType::get()))
+		inTypes = {};
+	else
+		inTypes = {&inType};
+
+	this->rawFunc = rawFunc;
 }
 
 Func::Func(types::Type& inType, types::Type& outType) :
@@ -72,27 +83,44 @@ void Func::codegen(Module *module)
 	if (func)
 		return;
 
-	func = inType->makeFuncOf(module, outType);
+	LLVMContext& context = module->getContext();
+
+	std::vector<Type *> types;
+	for (auto *type : inTypes)
+		types.push_back(type->getLLVMType(context));
+
+	static int idx = 1;
+	func = cast<Function>(
+	         module->getOrInsertFunction(name.empty() ? "Func" + std::to_string(idx++) : name,
+	                                     FunctionType::get(outType->getLLVMType(context), types, false)));
 
 	if (rawFunc) {
-		func->setName(name);
 		return;
 	}
 
 	if (pipelines.empty())
 		throw exc::SeqException("function has no pipelines");
 
-	LLVMContext& context = module->getContext();
-
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
-	result = inType->setFuncArgs(func, preambleBlock);
 
-	if (!inType->is(types::VoidType::get())) {
-		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), inType);
+	// this is purely for backwards-compatibility with the non-standalone version
+	if (!inTypes.empty()) {
+		Value *arg = func->arg_begin();
+		result = makeAlloca(arg, preambleBlock);
+	}
+
+	assert(argNames.empty() || argNames.size() == inTypes.size());
+	auto argsIter = func->arg_begin();
+	for (unsigned i = 0; i < argNames.size(); i++) {
+		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), inTypes[i]);
+		argsBase.result = makeAlloca(argsIter, preambleBlock);
+		++argsIter;
 		argsBase.setBase(this);
-		argsBase.result = result;
-		argsVar = argsBase;
+		auto iter = argVars.find(argNames[i]);
+		assert(iter != argVars.end());
+		auto *var = iter->second;
+		*var = argsBase;
 	}
 
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
@@ -136,10 +164,11 @@ void Func::codegen(Module *module)
 	builder.CreateBr(entry);
 }
 
-Value *Func::codegenCall(BaseFunc *base, Value *arg, BasicBlock *block)
+Value *Func::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBlock *block)
 {
 	codegen(block->getModule());
-	return inType->callFuncOf(func, arg, block);
+	IRBuilder<> builder(block);
+	return builder.CreateCall(func, args);
 }
 
 void Func::codegenReturn(Expr *expr, BasicBlock*& block)
@@ -186,17 +215,29 @@ void Func::finalize(Module *module, ExecutionEngine *eng)
 	}
 }
 
-Var *Func::getArgVar()
+bool Func::singleInput() const
 {
-	if (getInType()->is(types::VoidType::get()))
-		throw exc::SeqException("cannot get argument variable of void-input function");
+	return inTypes.size() <= 1;
+}
 
-	return &argsVar;
+Var *Func::getArgVar(std::string name)
+{
+	auto iter = argVars.find(name);
+	if (iter == argVars.end())
+		throw exc::SeqException("function has no argument '" + name + "'");
+	return iter->second;
 }
 
 types::Type *Func::getInType() const
 {
-	return inType;
+	if (inTypes.size() > 1)
+		throw exc::SeqException("function has multiple input types");
+	return inTypes.empty() ? types::VoidType::get() : inTypes[0];
+}
+
+std::vector<types::Type *> Func::getInTypes() const
+{
+	return inTypes;
 }
 
 types::Type *Func::getOutType() const
@@ -204,10 +245,29 @@ types::Type *Func::getOutType() const
 	return outType;
 }
 
-void Func::setInOut(types::Type *inType, types::Type *outType)
+void Func::setIns(std::vector<types::Type *> inTypes)
 {
-	this->inType = inType;
+	this->inTypes = std::move(inTypes);
+}
+
+void Func::setOut(types::Type *outType)
+{
 	this->outType = outType;
+}
+
+void Func::setName(std::string name)
+{
+	this->name = std::move(name);
+}
+
+void Func::setArgNames(std::vector<std::string> argNames)
+{
+	this->argNames = std::move(argNames);
+	assert(this->inTypes.size() == this->argNames.size());
+
+	argVars.clear();
+	for (unsigned i = 0; i < this->argNames.size(); i++)
+		argVars.insert({this->argNames[i], new Var(true)});
 }
 
 void Func::setNative(std::string name, void *rawFunc)
@@ -225,7 +285,8 @@ Pipeline Func::operator|(Pipeline to)
 		throw exc::MultiLinkException(*to.getHead());
 
 	to.getHead()->setBase(this);
-	BaseStage& begin = BaseStage::make(types::AnyType::get(), inType);
+	BaseStage& begin = BaseStage::make(types::AnyType::get(),
+	                                   inTypes.size() > 1 ? types::VoidType::get() : getInType());
 	begin.setBase(this);
 	begin.deferResult(&result);
 
@@ -257,7 +318,7 @@ void BaseFuncLite::codegen(Module *module)
 	throw exc::SeqException("cannot codegen lite base function");
 }
 
-Value *BaseFuncLite::codegenCall(BaseFunc *base, Value *arg, BasicBlock *block)
+Value *BaseFuncLite::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBlock *block)
 {
 	throw exc::SeqException("cannot call lite base function");
 }
@@ -270,38 +331,4 @@ void BaseFuncLite::codegenReturn(Expr *expr, BasicBlock*& block)
 void BaseFuncLite::add(Pipeline pipeline)
 {
 	throw exc::SeqException("cannot add pipelines to lite base function");
-}
-
-FuncList::Node::Node(Func& f) :
-    f(f), next(nullptr)
-{
-}
-
-FuncList::FuncList(Func& f)
-{
-	head = tail = new Node(f);
-}
-
-FuncList& FuncList::operator,(Func& f)
-{
-	auto *n = new Node(f);
-	tail->next = n;
-	tail = n;
-	return *this;
-}
-
-FuncList& seq::operator,(Func& f1, Func& f2)
-{
-	auto& l = *new FuncList(f1);
-	l , f2;
-	return l;
-}
-
-MultiCall& FuncList::operator()()
-{
-	std::vector<Func *> funcs;
-	for (Node *n = head; n; n = n->next)
-		funcs.push_back(&n->f);
-
-	return MultiCall::make(funcs);
 }

@@ -16,41 +16,6 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
-llvm::Type *types::Type::getFuncType(LLVMContext& context, Type *outType)
-{
-	return FunctionType::get(outType->getLLVMType(context), getLLVMType(context), false);
-}
-
-Function *types::Type::makeFuncOf(Module *module, Type *outType)
-{
-	static int idx = 1;
-	LLVMContext& context = module->getContext();
-
-	return cast<Function>(
-	         module->getOrInsertFunction(
-	           getName() + "Func" + std::to_string(idx++),
-	           outType->getLLVMType(context),
-	           getLLVMType(context)));
-}
-
-Value *types::Type::setFuncArgs(Function *func,
-                                BasicBlock *block)
-{
-	if (getKey() == SeqData::NONE)
-		throw exc::SeqException("cannot initialize arguments of function of type '" + getName() + "'");
-
-	Value *arg = func->arg_begin();
-	return makeAlloca(arg, block);
-}
-
-Value *types::Type::callFuncOf(Value *func,
-                               Value *arg,
-                               BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	return builder.CreateCall(func, arg);
-}
-
 Value *types::Type::loadFromAlloca(BaseFunc *base,
                                    Value *var,
                                    BasicBlock *block)
@@ -296,7 +261,7 @@ void types::Type::indexStore(BaseFunc *base,
 
 Value *types::Type::call(BaseFunc *base,
                          Value *self,
-                         Value *arg,
+                         std::vector<Value *> args,
                          BasicBlock *block)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
@@ -418,7 +383,7 @@ types::Type *types::Type::getBaseType(seq_int_t idx) const
 	throw exc::SeqException("type '" + getName() + "' has no base types");
 }
 
-types::Type *types::Type::getCallType(Type *inType)
+types::Type *types::Type::getCallType(std::vector<Type *> inTypes)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
 }

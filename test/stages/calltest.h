@@ -195,48 +195,4 @@ TEST(CallTestRecRec, CallTest)
 	EXPECT_EQ(floatGot, 3.14 + 1.0);
 }
 
-TEST(MultiCallTestStandard, MultiCallTest)
-{
-	seq_int_t intGot = -1;
-	double floatGot = -1.0;
-
-	SeqModule s;
-	Func f1(Int, Int, SEQ_NATIVE(multiCallTestFunc1));
-	Func f2(Int, Float, SEQ_NATIVE(multiCallTestFunc2));
-
-	Var r = s | range(42,43) | (f1, f2)();
-	r[1] | capture(&intGot);
-	r[2] | capture(&floatGot);
-
-	s.source(DEFAULT_TEST_INPUT_MULTI);
-	s.execute();
-
-	EXPECT_EQ(intGot, 42 * 2);
-	EXPECT_EQ(floatGot, 42 * 2.0);
-}
-
-TEST(MultiCallTestNested, MultiCallTest)
-{
-	calltest::rec_test_nested_t recGot = {};
-
-	SeqModule s;
-	Func f1(Int, Int, SEQ_NATIVE(multiCallTestFunc1));
-	Func f2(Int, Float, SEQ_NATIVE(multiCallTestFunc2));
-	Func f3(Record.of({Int, Float}),
-	        Record.of({Int, Float}),
-	        SEQ_NATIVE(callTestFunc7));
-
-	Var r1 = s | range(42,43) | (f1, f2)();
-	Var r2 = r1 | (f3, f3)();
-	r2 | capture(&recGot);
-
-	s.source(DEFAULT_TEST_INPUT_MULTI);
-	s.execute();
-
-	EXPECT_EQ(recGot.r1.n, 42*2 + 1);
-	EXPECT_EQ(recGot.r1.d, 42*2.0 + 1.0);
-	EXPECT_EQ(recGot.r2.n, 42*2 + 1);
-	EXPECT_EQ(recGot.r2.d, 42*2.0 + 1.0);
-}
-
 #endif /* SEQ_CALLTEST_H */

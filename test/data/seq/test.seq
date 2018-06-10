@@ -1,13 +1,13 @@
 # this is a comment
 
-fun f s: Seq -> Seq[]
+fun f(s: Seq) -> Seq[]
   s |> split 32 32 |> collect
 end
 
 let farray = (Seq -> Seq[])[1]
 farray[0] = f
 
-fun ident s: Seq -> Seq
+fun ident(s: Seq) -> Seq
   s
 end
 
@@ -29,7 +29,7 @@ source args[0] as input:
   let arr = {Int, Seq}[10]
   arr |> foreach
 
-  input |> ident() |> print
+  input |> ident |> print
   input |> split 64 64 {
     let v1 = _ |> print
     v1 |> split 32 32 {
@@ -70,17 +70,21 @@ b.1 |> print
 b.2 = !!false
 b.2 |> print
 
-fun fib n: Int -> Int
+fun fib(n: Int) -> Int
   type F = {f: (Int -> Int), x: Int}
 
-  fun rec pair: F -> Int
-    pair.f(pair.x - 1) + pair.f(pair.x - 2)
+  fun apply(f:(Int -> Int), x:Int) -> Int
+    f(x)
   end
 
-  if n <= 1 then n else rec(fib, n)
+  fun rec(pair: F) -> Int
+    apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
+  end
+
+  if n <= 1 then n else rec((fib, n))
 end
 
-10 |> fib() |> print
+10 |> fib |> print
 fib(10) |> print
 
 range (if b.1 then 1 else 2) 5+5 as i:
@@ -95,12 +99,12 @@ end
 
 type Person = {name: Str, age: Int}
 
-fun whois person: Person
+fun whois(person: Person)
   person.name |> print
   person.age  |> print
 end
 
-fun birthday person: Person -> Person
+fun birthday(person: Person) -> Person
   (person.name, person.age + 1)
 end
 

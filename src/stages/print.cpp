@@ -15,6 +15,9 @@ void Print::validate()
 	if (prev)
 		in = out = prev->getOutType();
 
+	if (in->is(types::VoidType::get()))
+		throw exc::SeqException("cannot print void type");
+
 	Stage::validate();
 }
 

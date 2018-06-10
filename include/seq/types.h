@@ -44,17 +44,6 @@ namespace seq {
 			virtual std::string printFuncName() { return "print" + getName(); }
 			virtual std::string allocFuncName() { return isAtomic() ? "seqAllocAtomic" : "seqAlloc"; }
 
-			virtual llvm::Type *getFuncType(llvm::LLVMContext& context, Type *outType);
-
-			virtual llvm::Function *makeFuncOf(llvm::Module *module, Type *outType);
-
-			virtual llvm::Value *setFuncArgs(llvm::Function *func,
-			                                 llvm::BasicBlock *block);
-
-			virtual llvm::Value *callFuncOf(llvm::Value *func,
-					                        llvm::Value *arg,
-			                                llvm::BasicBlock *block);
-
 			virtual llvm::Value *loadFromAlloca(BaseFunc *base,
 			                                    llvm::Value *var,
 			                                    llvm::BasicBlock *block);
@@ -128,7 +117,7 @@ namespace seq {
 
 			virtual llvm::Value *call(BaseFunc *base,
 			                          llvm::Value *self,
-			                          llvm::Value *arg,
+			                          std::vector<llvm::Value *> args,
 			                          llvm::BasicBlock *block);
 
 			virtual llvm::Value *memb(llvm::Value *self,
@@ -155,7 +144,7 @@ namespace seq {
 			std::string getName() const;
 			SeqData getKey() const;
 			virtual Type *getBaseType(seq_int_t idx) const;
-			virtual Type *getCallType(Type *inType);
+			virtual Type *getCallType(std::vector<Type *> inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
 			Mem& operator[](seq_int_t size);

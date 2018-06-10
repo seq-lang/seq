@@ -198,9 +198,9 @@ target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
 
 
 # Seq command-line tool
-add_executable(seqcc src/seq/main.cpp)
-target_link_libraries(seqcc seq)
-set_target_properties(seqcc PROPERTIES OUTPUT_NAME seq)
+add_executable(seqc src/seq/main.cpp)
+target_link_libraries(seqc seq)
+set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
 # Seq test

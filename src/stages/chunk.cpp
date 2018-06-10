@@ -22,6 +22,12 @@ void Chunk::validate()
 	if (getPrev() && getPrev()->getOutType()->isGeneric(types::ArrayType::get()))
 		in = out = getPrev()->getOutType();
 
+	auto *arrType = dynamic_cast<types::ArrayType *>(in);
+	if (arrType) {
+		// checks if this is a proper call:
+		key->getType()->getCallType({arrType->getBaseType()});
+	}
+
 	Stage::validate();
 }
 
@@ -58,7 +64,7 @@ void Chunk::codegen(Module *module)
 
 	Value *firstInChunk = type->getBaseType()->load(getBase(), ptr, control, body);
 	if (key)
-		firstInChunk = key->getType()->call(getBase(), f, firstInChunk, body);
+		firstInChunk = key->getType()->call(getBase(), f, {firstInChunk}, body);
 
 	PHINode *control2;
 	{
@@ -78,9 +84,9 @@ void Chunk::codegen(Module *module)
 		Value *nextInChunk = type->getBaseType()->load(getBase(), ptr, control2, body2);
 
 		if (key)
-			nextInChunk = key->getType()->call(getBase(), f, nextInChunk, body2);
+			nextInChunk = key->getType()->call(getBase(), f, {nextInChunk}, body2);
 
-		Value *eq = key ? key->getType()->getCallType(type->getBaseType())->eq(getBase(), firstInChunk, nextInChunk, body2) :
+		Value *eq = key ? key->getType()->getCallType({type->getBaseType()})->eq(getBase(), firstInChunk, nextInChunk, body2) :
 		                  type->getBaseType()->eq(getBase(), firstInChunk, nextInChunk, body2);
 
 		control2->addIncoming(next, body);

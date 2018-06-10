@@ -274,7 +274,7 @@ void SeqModule::codegen(Module *module)
 	builder.CreateRetVoid();
 }
 
-Value *SeqModule::codegenCall(BaseFunc *base, Value *arg, BasicBlock *block)
+Value *SeqModule::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBlock *block)
 {
 	throw exc::SeqException("cannot call SeqModule");
 }

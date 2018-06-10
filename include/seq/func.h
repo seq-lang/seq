@@ -18,17 +18,15 @@ namespace seq {
 		llvm::Module *module;
 		llvm::BasicBlock *preambleBlock;
 		llvm::Function *func;
-		Var argsVar;
 		BaseFunc();
 	public:
 		virtual void codegen(llvm::Module *module)=0;
 		virtual llvm::Value *codegenCall(BaseFunc *base,
-		                                 llvm::Value *arg,
+		                                 std::vector<llvm::Value *> args,
 		                                 llvm::BasicBlock *block)=0;
 		virtual void codegenReturn(Expr *expr, llvm::BasicBlock*& block)=0;
 		virtual void add(Pipeline pipeline)=0;
 
-		virtual Var *getArgVar();
 		llvm::LLVMContext& getContext();
 		llvm::BasicBlock *getPreamble() const;
 		virtual types::Type *getInType() const;
@@ -38,15 +36,22 @@ namespace seq {
 
 	class Func : public BaseFunc {
 	private:
-		types::Type *inType;
+		std::vector<types::Type *> inTypes;
 		types::Type *outType;
 		std::vector<Pipeline> pipelines;
 		llvm::Value *result;
+
+		std::vector<std::string> argNames;
+		std::map<std::string, Var *> argVars;
 
 		/* for native functions */
 		std::string name;
 		void *rawFunc;
 	public:
+		Func(std::string name,
+		     std::vector<std::string> argNames,
+		     std::vector<types::Type *> inTypes,
+		     types::Type *outType);
 		Func(types::Type& inType,
 		     types::Type& outType,
 		     std::string name,
@@ -54,16 +59,21 @@ namespace seq {
 		Func(types::Type& inType, types::Type& outType);
 		void codegen(llvm::Module *module) override;
 		llvm::Value *codegenCall(BaseFunc *base,
-		                         llvm::Value *arg,
+		                         std::vector<llvm::Value *> args,
 		                         llvm::BasicBlock *block) override;
 		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
-		Var *getArgVar() override;
+		bool singleInput() const;
+		Var *getArgVar(std::string name);
 		types::Type *getInType() const override;
+		std::vector<types::Type *> getInTypes() const;
 		types::Type *getOutType() const override;
-		void setInOut(types::Type *in, types::Type *out);
+		void setIns(std::vector<types::Type *> inTypes);
+		void setOut(types::Type *outType);
+		void setName(std::string name);
+		void setArgNames(std::vector<std::string> argNames);
 		void setNative(std::string name, void *rawFunc);
 
 		Pipeline operator|(Pipeline to);
@@ -78,30 +88,11 @@ namespace seq {
 
 		void codegen(llvm::Module *module) override;
 		llvm::Value *codegenCall(BaseFunc *base,
-		                         llvm::Value *arg,
+		                         std::vector<llvm::Value *> args,
 		                         llvm::BasicBlock *block) override;
 		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 	};
-
-	class FuncList {
-		struct Node {
-			Func& f;
-			Node *next;
-
-			explicit Node(Func& f);
-		};
-
-	public:
-		Node *head;
-		Node *tail;
-
-		explicit FuncList(Func& f);
-		FuncList& operator,(Func& f);
-		MultiCall& operator()();
-	};
-
-	FuncList& operator,(Func& f1, Func& f2);
 
 }
 

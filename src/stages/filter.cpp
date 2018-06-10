@@ -21,7 +21,7 @@ void Filter::validate()
 	if (prev)
 		in = out = prev->getOutType();
 
-	if (!key->getType()->getCallType(in)->isChildOf(types::BoolType::get()))
+	if (!key->getType()->getCallType({in})->isChildOf(types::BoolType::get()))
 		throw exc::SeqException("filter key must return boolean");
 
 	Stage::validate();
@@ -39,7 +39,7 @@ void Filter::codegen(Module *module)
 	Value *f = key->codegen(getBase(), block);
 	IRBuilder<> builder(block);
 	Value *x = builder.CreateLoad(result);
-	Value *pred = key->getType()->call(getBase(), f, x, block);
+	Value *pred = key->getType()->call(getBase(), f, {x}, block);
 	pred = builder.CreateTrunc(pred, IntegerType::getInt1Ty(context));
 
 	BasicBlock *body = BasicBlock::Create(context, "body", block->getParent());
