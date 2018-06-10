@@ -17,8 +17,9 @@ install:
   ############################################################################
   # Pick up the overriden compiler if any
   ############################################################################
-  - if [[ "${COMPILER}" != "" ]]; then export CXX=${COMPILER}; fi
-  - if [[ "${LLVM_VERSION}" != "" ]]; then export CXX="clang++-${LLVM_VERSION%.[0-9]}"; fi
+  - export CC="clang-${LLVM_VERSION%.[0-9]}"
+  - export CXX="clang++-${LLVM_VERSION%.[0-9]}"
+  - ${CC} --version
   - ${CXX} --version
 
   ############################################################################
