@@ -6,16 +6,16 @@ matrix:
     - os: linux
 
 install:
-  # apt LLVM does not have RTTI enabled, but conda's does:
+  # apt's LLVM does not have RTTI enabled, but conda's does:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
-  - conda config --prepend channels conda-forge
   - conda update -q conda
   - conda info -a
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION cmake llvmdev clangdev bdw-gc
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
+  - conda install -c conda-forge cmake llvmdev clangdev bdw-gc
 
 before_script:
   - export CXX=clang
@@ -24,10 +24,8 @@ before_script:
   - llvm-config --prefix
   - llvm-config --has-rtti
 
-  - cd ${TRAVIS_BUILD_DIR}
-  - (cd build && cmake -DLLVM_DIR=`llvm-config --cmakedir` ..)
-
 script:
+  - (cd build && cmake -DCMAKE_EXE_LINKER_FLAGS="-lstdc++" -DLLVM_DIR=`llvm-config --cmakedir` ..)
   - cmake --build build
 
 notifications:
