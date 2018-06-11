@@ -22,7 +22,7 @@ before_script:
   - llvm-config --has-rtti
 
 script:
-  - (cd build && cmake -DCMAKE_EXE_LINKER_FLAGS="-lstdc++" -DLLVM_DIR=`llvm-config --cmakedir` ..)
+  - (cd build && cmake -DCMAKE_EXE_LINKER_FLAGS="-lstdc++ -rdynamic" -DLLVM_DIR=`llvm-config --cmakedir` ..)
   - cmake --build build
 
 notifications:
