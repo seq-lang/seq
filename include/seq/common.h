@@ -51,17 +51,18 @@ namespace seq {
 		return llvm::ConstantInt::get(seqIntLLVM(context), 1);
 	}
 
-	inline llvm::Value *makeAlloca(llvm::Type *type, llvm::BasicBlock *block)
+	inline llvm::Value *makeAlloca(llvm::Type *type, llvm::BasicBlock *block, uint64_t n=1)
 	{
+		llvm::LLVMContext& context = block->getContext();
 		llvm::IRBuilder<> builder(block);
-		llvm::Value *ptr = builder.CreateAlloca(type);
+		llvm::Value *ptr = builder.CreateAlloca(type, llvm::ConstantInt::get(seqIntLLVM(context), n));
 		return ptr;
 	}
 
-	inline llvm::Value *makeAlloca(llvm::Value *value, llvm::BasicBlock *block)
+	inline llvm::Value *makeAlloca(llvm::Value *value, llvm::BasicBlock *block, uint64_t n=1)
 	{
 		llvm::IRBuilder<> builder(block);
-		llvm::Value *ptr = makeAlloca(value->getType(), block);
+		llvm::Value *ptr = makeAlloca(value->getType(), block, n);
 		builder.CreateStore(value, ptr);
 		return ptr;
 	}

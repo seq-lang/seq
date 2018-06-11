@@ -25,6 +25,7 @@ before_script:
 script:
   - (cd build && cmake -DCMAKE_EXE_LINKER_FLAGS="-lstdc++ -rdynamic" -DLLVM_DIR=`llvm-config --cmakedir` ..)
   - cmake --build build
+  - build/seqtest
 
 notifications:
   email: false

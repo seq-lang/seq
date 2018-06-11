@@ -178,19 +178,11 @@ void Source::codegen(Module *module)
 	Function *deallocFunc = seqSourceDeallocFunc(module);
 
 	LLVMContext& context = module->getContext();
-
-	std::vector<Constant *> sourceVars;
-
-	ArrayType *strArrayType = ArrayType::get(Type::getInt8Ty(context)->getPointerTo(), sources.size());
-	GlobalVariable *sourcesVar = new GlobalVariable(*module,
-	                                                strArrayType,
-	                                                true,
-	                                                GlobalValue::PrivateLinkage,
-	                                                ConstantArray::get(strArrayType, sourceVars),
-	                                                "sources");
-
 	BasicBlock *entry = prev->getAfter();
+	BasicBlock *preambleBlock = getBase()->getPreamble();
 	Function *func = entry->getParent();
+
+	Value *sourcesVar = makeAlloca(IntegerType::getInt8PtrTy(context), preambleBlock, sources.size());
 	IRBuilder<> builder(entry);
 
 	unsigned idx = 0;
@@ -198,7 +190,7 @@ void Source::codegen(Module *module)
 		expr->ensure(types::StrType::get());
 		Value *str = expr->codegen(getBase(), entry);
 		Value *idxVal = ConstantInt::get(seqIntLLVM(context), idx++);
-		Value *slot = builder.CreateGEP(sourcesVar, {zeroLLVM(context), idxVal});
+		Value *slot = builder.CreateGEP(sourcesVar, idxVal);
 		Value *strVal = types::Str.memb(str, "ptr", entry);
 		builder.CreateStore(strVal, slot);
 	}
