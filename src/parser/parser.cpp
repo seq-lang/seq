@@ -64,7 +64,7 @@ struct SeqEntity {
 	SeqEntity(seq_int_t ival) : type(SeqEntity::INT), value(ival) {}
 	SeqEntity(double fval) : type(SeqEntity::FLOAT), value(fval) {}
 	SeqEntity(bool bval) : type(SeqEntity::BOOL), value(bval) {}
-	SeqEntity(std::string name) : type(SeqEntity::NAME), value(std::move(name)) {}
+	SeqEntity(std::string name) : type(SeqEntity::NAME) { new (&value.name) std::string(std::move(name)); }
 	SeqEntity(Pipeline pipeline) : type(SeqEntity::PIPELINE), value(pipeline) {}
 	SeqEntity(Var *var) : type(SeqEntity::VAR), value(var) {}
 	SeqEntity(Cell *cell) : type(SeqEntity::CELL), value(cell) {}
@@ -72,7 +72,7 @@ struct SeqEntity {
 	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
 	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
 	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
-	SeqEntity(Op op) : type(SeqEntity::OP), value(op) {}
+	SeqEntity(Op op) : type(SeqEntity::OP) { new (&value.op) Op(std::move(op)); }
 
 	SeqEntity& operator=(const SeqEntity& ent)
 	{
@@ -90,7 +90,7 @@ struct SeqEntity {
 				value.bval = ent.value.bval;
 				break;
 			case SeqEntity::NAME:
-				value.name = ent.value.name;
+				new (&value.name) std::string(ent.value.name);
 				break;
 			case SeqEntity::PIPELINE:
 				value.pipeline = ent.value.pipeline;
@@ -114,7 +114,7 @@ struct SeqEntity {
 				value.expr = ent.value.expr;
 				break;
 			case SeqEntity::OP:
-				value.op = ent.value.op;
+				new (&value.op) Op(ent.value.op);
 				break;
 		}
 
