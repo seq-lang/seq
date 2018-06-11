@@ -3,6 +3,7 @@
 
 #include <string>
 #include <exception>
+#include <stdexcept>
 
 namespace seq {
 	class Stage;

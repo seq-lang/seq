@@ -4,82 +4,26 @@ sudo: false
 matrix:
   include:
     - os: linux
-      env: LLVM_VERSION=6.0.0
-      addons: { apt: { packages: ["clang-6.0", "libgc-dev", "ninja-build"], sources: ["llvm-toolchain-trusty-6.0", "ubuntu-toolchain-r-test"] } }
 
 install:
-  ############################################################################
-  # All the dependencies are installed in ${TRAVIS_BUILD_DIR}/deps/
-  ############################################################################
-  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
-  - mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
+  # apt LLVM does not have RTTI enabled, but conda's does:
+  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION cmake llvmdev clangdev bdw-gc
 
-  ############################################################################
-  # Pick up the overriden compiler if any
-  ############################################################################
-  - export CC="clang-${LLVM_VERSION%.[0-9]}"
-  - export CXX="clang++-${LLVM_VERSION%.[0-9]}"
-  - ${CC} --version
-  - ${CXX} --version
-
-  ############################################################################
-  # Install a recent CMake (unless already installed on OS X)
-  ############################################################################
-  - CMAKE_VERSION=3.9.0
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      CMAKE_URL="https://cmake.org/files/v${CMAKE_VERSION%.[0-9]}/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz"
-      mkdir cmake && travis_retry wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
-      export PATH=${DEPS_DIR}/cmake/bin:${PATH}
-    else
-      brew install cmake || brew upgrade cmake
-    fi
-  - cmake --version
-
-  ############################################################################
-  # Install libc++ and libc++abi
-  ############################################################################
-  - |
-    if [[ "${LLVM_VERSION}" != "" ]]; then
-      LLVM_DIR=${DEPS_DIR}/llvm-${LLVM_VERSION}
-      if [[ -z "$(ls -A ${LLVM_DIR})" ]]; then
-        LLVM_URL="http://llvm.org/releases/${LLVM_VERSION}/llvm-${LLVM_VERSION}.src.tar.xz"
-        LIBCXX_URL="http://llvm.org/releases/${LLVM_VERSION}/libcxx-${LLVM_VERSION}.src.tar.xz"
-        LIBCXXABI_URL="http://llvm.org/releases/${LLVM_VERSION}/libcxxabi-${LLVM_VERSION}.src.tar.xz"
-        CLANG_URL="http://llvm.org/releases/${LLVM_VERSION}/clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz"
-        mkdir -p ${LLVM_DIR} ${LLVM_DIR}/build ${LLVM_DIR}/projects/libcxx ${LLVM_DIR}/projects/libcxxabi ${LLVM_DIR}/clang
-        travis_retry wget -O - ${LLVM_URL}      | tar --strip-components=1 -xJ -C ${LLVM_DIR}
-        travis_retry wget -O - ${LIBCXX_URL}    | tar --strip-components=1 -xJ -C ${LLVM_DIR}/projects/libcxx
-        travis_retry wget -O - ${LIBCXXABI_URL} | tar --strip-components=1 -xJ -C ${LLVM_DIR}/projects/libcxxabi
-        (cd ${LLVM_DIR}/build && \
-         cmake -DCMAKE_BUILD_TYPE=Release \
-               -DCMAKE_CXX_FLAGS_RELEASE=-O0 \
-               -DCMAKE_INSTALL_PREFIX=${LLVM_DIR}/install \
-               -DLLVM_PARALLEL_LINK_JOBS=1 \
-               -DLLVM_TARGETS_TO_BUILD=X86 \
-               -DLLVM_BUILD_LLVM_DYLIB=True \
-               -DLLVM_LINK_LLVM_DYLIB=True \
-               -GNinja .. && \
-         ninja -j3 install)
-        (cd ${LLVM_DIR}/build/projects/libcxx && make install -j2)
-        (cd ${LLVM_DIR}/build/projects/libcxxabi && make install -j2)
-      fi
-      export CXXFLAGS="-isystem ${LLVM_DIR}/install/include/c++/v1"
-      export LDFLAGS="-L ${LLVM_DIR}/install/lib -l c++ -l c++abi"
-      export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${LLVM_DIR}/install/lib"
-      export PATH="${LLVM_DIR}/clang/bin:${PATH}"
-    fi
-
-  ############################################################################
-  # Install Boehm GC on macOS
-  ############################################################################
-  - |
-    if [[ "${TRAVIS_OS_NAME}" != "linux" ]]; then
-      brew install bdw-gc || brew upgrade bdw-gc
-    fi
 before_script:
+  - export CXX=clang
+  - ${CXX} --version
+  - llvm-config --version
+  - llvm-config --prefix
+
   - cd ${TRAVIS_BUILD_DIR}
-  - (cd build && cmake .. -DLLVM_DIR=`${LLVM_DIR}/install/bin/llvm-config --cmakedir`)
+  - (cd build && cmake -DLLVM_DIR=`llvm-config --cmakedir` ..)
 
 script:
   - cmake --build build
