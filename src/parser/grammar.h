@@ -57,8 +57,8 @@ struct integer : pegtl::sor<pos_int, neg_int> {};
 
 struct plus_minus : pegtl::opt<pegtl::one<'+','-'>> {};
 struct dot : pegtl::one<'.'> {};
-struct inf : pegtl::istring<'i','n','f'> {};
-struct nan : pegtl::istring<'n','a','n'> {};
+struct inf_literal : pegtl::istring<'i','n','f'> {};
+struct nan_literal : pegtl::istring<'n','a','n'> {};
 
 template< typename D >
 struct number : pegtl::if_then_else<dot,
@@ -70,7 +70,7 @@ struct p : pegtl::one<'p','P'> {};
 struct exponent : pegtl::seq<plus_minus, pegtl::plus<pegtl::digit>> {};
 struct decimal : pegtl::seq<number<pegtl::digit>, pegtl::opt<e, exponent>> {};
 struct hexadecimal : pegtl::seq<pegtl::one<'0'>, pegtl::one<'x','X'>, number<pegtl::xdigit>, pegtl::opt<p, exponent>> {};
-struct numeral : pegtl::seq<plus_minus, pegtl::sor<hexadecimal, decimal, inf, nan>> {};
+struct numeral : pegtl::seq<plus_minus, pegtl::sor<hexadecimal, decimal, inf_literal, nan_literal>> {};
 
 struct escape_chars : pegtl::one<'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '"'> {};
 struct escaped : pegtl::seq<pegtl::one<'\\'>, escape_chars> {};
