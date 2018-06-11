@@ -26,6 +26,7 @@ script:
   - (cd build && cmake -DCMAKE_EXE_LINKER_FLAGS="-lstdc++ -rdynamic" -DLLVM_DIR=`llvm-config --cmakedir` ..)
   - cmake --build build
   - build/seqtest
+  - build/seq test/code/test.seq test/data/multiple/seqs.fastq
 
 notifications:
   email: false
