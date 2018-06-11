@@ -3,23 +3,24 @@ sudo: false
 
 matrix:
   include:
-    - os: osx
-      env: CONDA_OS_NAME=MacOSX
-
     - os: linux
       env: CONDA_OS_NAME=Linux
 
+    - os: osx
+      env: CONDA_OS_NAME=MacOSX
+
 install:
   # apt's LLVM does not have RTTI enabled, but conda's does:
-  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-${CONDA_OS_NAME}-x86_64.sh -O miniconda.sh;
+  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-${CONDA_OS_NAME}-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda install -c conda-forge cmake llvmdev clangdev bdw-gc
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CXX=clang; fi
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew install bdw-gc; fi
 
 before_script:
-  - export CXX=clang
   - ${CXX} --version
   - llvm-config --version
   - llvm-config --prefix
