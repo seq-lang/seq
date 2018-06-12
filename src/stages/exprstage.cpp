@@ -178,7 +178,7 @@ void If::codegen(Module *module)
 
 	std::vector<BranchInst *> binsts;
 
-	for (int i = 0; i < conds.size(); i++) {
+	for (unsigned i = 0; i < conds.size(); i++) {
 		Value *cond = conds[i]->codegen(getBase(), block);
 		BaseStage *branch = branches[i];
 		branch->setInOut(types::VoidType::get(), prev->getOutType());

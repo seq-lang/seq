@@ -180,7 +180,7 @@ public:
 			throw exc::SeqException(
 			  "entity count mismatch: got " + std::to_string(result.size()) + " but expected " + std::to_string(types.length()));
 
-		for (int i = 0; i < result.size(); i++) {
+		for (unsigned i = 0; i < result.size(); i++) {
 			const char token = multi ? types[0] : types[i];
 
 			if (token == '*')
@@ -896,7 +896,7 @@ struct control<record_stage> : pegtl::normal<record_stage>
 		auto vec = state.get("p", true);
 		assert(!vec.empty());
 		PipelineList& pl = *new PipelineList(vec[0].value.pipeline);
-		for (int i = 1; i < vec.size(); i++)
+		for (unsigned i = 1; i < vec.size(); i++)
 			pl = (pl, vec[i].value.pipeline);
 		Pipeline p = MakeRec::make(pl);
 		state.add(p);
@@ -1047,7 +1047,7 @@ struct control<pipeline_stage> : pegtl::normal<pipeline_stage>
 		auto vec = state.get("p", true);
 		Pipeline p = vec[0].value.pipeline;
 
-		for (int i = 1; i < vec.size(); i++) {
+		for (unsigned i = 1; i < vec.size(); i++) {
 			p = p | vec[i].value.pipeline;
 		}
 
@@ -1079,7 +1079,7 @@ struct control<pipeline_branch> : pegtl::normal<pipeline_branch>
 		auto vec = state.get("p", true);
 		Pipeline p = vec[0].value.pipeline;
 
-		for (int i = 1; i < vec.size(); i++) {
+		for (unsigned i = 1; i < vec.size(); i++) {
 			p = p | vec[i].value.pipeline;
 		}
 
@@ -2301,7 +2301,7 @@ struct control<record_expr> : pegtl::normal<record_expr>
 		std::vector<Expr *> exprs;
 		std::vector<std::string> names;
 
-		for (int i = 0; i < vec.size(); i += 2) {
+		for (unsigned i = 0; i < vec.size(); i += 2) {
 			assert(vec[i].type == SeqEntity::NAME);
 			assert(vec[i+1].type == SeqEntity::EXPR);
 			names.push_back(vec[i].value.name);
@@ -2568,7 +2568,7 @@ struct control<record_type> : pegtl::normal<record_type>
 		std::vector<types::Type *> types;
 		std::vector<std::string> names;
 
-		for (int i = 0; i < vec.size(); i += 2) {
+		for (unsigned i = 0; i < vec.size(); i += 2) {
 			assert(vec[i].type == SeqEntity::NAME);
 			assert(vec[i+1].type == SeqEntity::TYPE);
 			names.push_back(vec[i].value.name);

@@ -13,8 +13,8 @@
 
 namespace seq {
 	namespace io {
-		static const size_t DEFAULT_BLOCK_SIZE = 1000;
-		static const size_t MAX_INPUTS = 5;
+		static const int DEFAULT_BLOCK_SIZE = 1000;
+		static const int MAX_INPUTS = 5;
 
 		enum Format {
 			TXT,

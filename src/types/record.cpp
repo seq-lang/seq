@@ -37,7 +37,7 @@ void types::RecordType::serialize(BaseFunc *base,
 {
 	IRBuilder<> builder(block);
 
-	for (int i = 0; i < types.size(); i++) {
+	for (unsigned i = 0; i < types.size(); i++) {
 		Value *elem = builder.CreateExtractValue(self, i);
 		types[i]->serialize(base, elem, fp, block);
 	}
@@ -51,7 +51,7 @@ Value *types::RecordType::deserialize(BaseFunc *base,
 	IRBuilder<> builder(block);
 	Value *self = UndefValue::get(getLLVMType(context));
 
-	for (int i = 0; i < types.size(); i++) {
+	for (unsigned i = 0; i < types.size(); i++) {
 		Value *elem = types[i]->deserialize(base, fp, block);
 		self = builder.CreateInsertValue(self, elem, i);
 	}
@@ -115,7 +115,7 @@ Value *types::RecordType::defaultValue(BasicBlock *block)
 	LLVMContext& context = block->getContext();
 	Value *self = UndefValue::get(getLLVMType(context));
 
-	for (int i = 0; i < types.size(); i++) {
+	for (unsigned i = 0; i < types.size(); i++) {
 		Value *elem = types[i]->defaultValue(block);
 		IRBuilder<> builder(block);
 		self = builder.CreateInsertValue(self, elem, i);
@@ -140,7 +140,7 @@ void types::RecordType::initFields()
 
 	assert(names.empty() || names.size() == types.size());
 
-	for (int i = 0; i < types.size(); i++) {
+	for (unsigned i = 0; i < types.size(); i++) {
 		vtable.fields.insert({std::to_string(i+1), {i, types[i]}});
 
 		if (!names.empty() && !names[i].empty())
