@@ -3,20 +3,20 @@
 
 SEQ_FUNC void seq::seqGCInit()
 {
-	GC_init();
+	GC_INIT();
 }
 
 SEQ_FUNC void *seq::seqAlloc(size_t n)
 {
-	return GC_malloc(n);
+	return GC_MALLOC(n);
 }
 
 SEQ_FUNC void *seq::seqAllocAtomic(size_t n)
 {
-	return GC_malloc_atomic(n);
+	return GC_MALLOC_ATOMIC(n);
 }
 
 SEQ_FUNC void *seq::seqRealloc(void *p, size_t n)
 {
-	return GC_realloc(p, n);
+	return GC_REALLOC(p, n);
 }

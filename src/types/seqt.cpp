@@ -15,9 +15,8 @@ SEQ_FUNC char *copyBaseSeq(char *seq, const seq_int_t len)
 
 SEQ_FUNC void printBaseSeq(char *seq, const seq_int_t len)
 {
-	for (seq_int_t i = 0; i < len; i++)
-		std::cout << seq[i];
-	std::cout << std::endl;
+	std::cout.write(seq, len);
+	std::cout << '\n';
 }
 
 types::BaseSeqType::BaseSeqType(std::string name, SeqData key) :
