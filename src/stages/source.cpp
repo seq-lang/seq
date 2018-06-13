@@ -39,7 +39,7 @@ struct IOState {
 		}
 	}
 
-	~IOState()
+	void close()
 	{
 		for (auto *in : ins) {
 			in->close();
@@ -50,7 +50,9 @@ struct IOState {
 
 SEQ_FUNC void *seqSourceInit(char **sources, seq_int_t numSources)
 {
-	return new IOState(sources, numSources);
+	auto *state = (IOState *)seqAlloc(sizeof(IOState));
+	new (state) IOState(sources, numSources);
+	return state;
 }
 
 SEQ_FUNC seq_int_t seqSourceRead(void *state)
@@ -63,18 +65,19 @@ SEQ_FUNC seq_int_t seqSourceRead(void *state)
 SEQ_FUNC arr_t<seq_t> seqSourceGet(void *state, seq_int_t idx)
 {
 	auto *ioState = (IOState *)state;
-	return {(seq_int_t)ioState->ins.size(), ioState->data.block[idx].seqs.data()};
+	return ioState->data.block[idx].getSeqs(ioState->ins.size());
 }
 
 SEQ_FUNC seq_t seqSourceGetSingle(void *state, seq_int_t idx)
 {
 	auto *ioState = (IOState *)state;
-	return ioState->data.block[idx].seqs.data()[0];
+	return ioState->data.block[idx].getSeq();
 }
 
 SEQ_FUNC void seqSourceDealloc(void *state)
 {
-	delete (IOState *)state;
+	auto *ioState = (IOState *)state;
+	ioState->close();
 }
 
 static Function *seqSourceInitFunc(Module *module)

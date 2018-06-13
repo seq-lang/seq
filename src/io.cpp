@@ -31,15 +31,11 @@ DataCell::DataCell() :
 {
 }
 
-DataCell::~DataCell()
-{
-}
-
 char *DataCell::ensureSpace(const size_t idx, const size_t space)
 {
 	const size_t new_cap = used + space;
 	if (new_cap > cap) {
-		buf = (char *)(buf ? seq::seqRealloc(buf, new_cap) : seqAllocAtomic(new_cap));
+		buf = (char *)(buf ? seqRealloc(buf, new_cap) : seqAllocAtomic(new_cap));
 		assert(buf);
 		cap = new_cap;
 
@@ -52,7 +48,17 @@ char *DataCell::ensureSpace(const size_t idx, const size_t space)
 
 void DataCell::clear()
 {
+	buf = nullptr;
+	cap = 0;
 	used = 0;
+}
+
+arr_t<seq_t> DataCell::getSeqs(const size_t count)
+{
+	const size_t bytes = count * sizeof(seq_t);
+	auto *data = (seq_t *)seqAlloc(bytes);
+	std::memcpy(data, seqs.data(), bytes);
+	return {(seq_int_t)count, data};
 }
 
 bool DataCell::readTXT(const size_t idx, ifstream& in)

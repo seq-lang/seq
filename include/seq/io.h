@@ -35,20 +35,26 @@ namespace seq {
 			std::array<seq_t, MAX_INPUTS> seqs;
 
 			DataCell();
-			~DataCell();
 
 			bool read(std::vector<std::ifstream *>& ins, Format fmt);
 			void clear();
 
-			inline char *getData(const size_t idx, const SeqData key)
+			inline char *getData(size_t idx, SeqData key)
 			{
 				return buf + data[idx][key];
 			}
 
-			inline seq_int_t getLen(const size_t idx, const SeqData key)
+			inline seq_int_t getLen(size_t idx, SeqData key)
 			{
 				return lens[idx][key];
 			}
+
+			inline seq_t getSeq(size_t idx=0)
+			{
+				return seqs[0];
+			}
+
+			arr_t<seq_t> getSeqs(size_t count);
 		private:
 			DataCell(char *data, size_t len);
 			char *ensureSpace(size_t idx, size_t space);
