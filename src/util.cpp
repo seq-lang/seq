@@ -10,6 +10,13 @@
 using namespace seq;
 using namespace seq::util;
 
+SEQ_FUNC void seqinit()
+{
+	seqGCInit();
+	std::ios_base::sync_with_stdio(false);
+	std::cin.tie(nullptr);
+}
+
 SEQ_FUNC void revcomp(char *seq, const seq_int_t len)
 {
 	const seq_int_t half = (len + 1)/2;

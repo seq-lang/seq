@@ -6,6 +6,8 @@
 
 namespace seq {
 	namespace util {
+		SEQ_FUNC void seqinit();
+
 		inline int ord(const char base)
 		{
 			switch (base) {

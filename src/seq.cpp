@@ -147,7 +147,7 @@ void SeqModule::codegen(Module *module)
 	IRBuilder<> builder(preambleBlock);
 
 	if (standalone) {
-		initFunc = cast<Function>(module->getOrInsertFunction("seqGCInit", Type::getVoidTy(context)));
+		initFunc = cast<Function>(module->getOrInsertFunction("seqinit", Type::getVoidTy(context)));
 		initFunc->setCallingConv(CallingConv::C);
 		builder.CreateCall(initFunc);
 
@@ -367,7 +367,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 
 	if (standalone) {
 		assert(initFunc);
-		eng->addGlobalMapping(initFunc, (void *)seqGCInit);
+		eng->addGlobalMapping(initFunc, (void *)util::seqinit);
 
 		auto op = (SeqMainStandalone)eng->getPointerToFunction(func);
 		auto numArgs = (seq_int_t)args.size();
@@ -378,7 +378,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 
 		op(argsArr);
 	} else {
-		seqGCInit();
+		util::seqinit();
 		auto op = (SeqMain)eng->getPointerToFunction(func);
 		data = new io::DataBlock();
 		std::vector<std::ifstream *> ins;
