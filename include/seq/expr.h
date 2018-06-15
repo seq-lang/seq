@@ -48,6 +48,12 @@ namespace seq {
 		types::Type *getType() const override;
 	};
 
+	class DefaultExpr : public Expr {
+	public:
+		explicit DefaultExpr(types::Type *type);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+	};
+
 }
 
 #endif /* SEQ_EXPR_H */

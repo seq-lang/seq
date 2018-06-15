@@ -29,7 +29,7 @@ UOpExpr::UOpExpr(Op op, Expr *lhs) :
 {
 }
 
-llvm::Value *UOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *UOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	auto spec = lhs->getType()->findUOp(op.symbol);
 	Value *lhs = this->lhs->codegen(base, block);
@@ -47,7 +47,7 @@ BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs) :
 {
 }
 
-llvm::Value *BOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *BOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 
@@ -107,7 +107,7 @@ CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse) :
 {
 }
 
-llvm::Value *CondExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *CondExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	cond->ensure(types::BoolType::get());
 
@@ -147,4 +147,13 @@ types::Type *CondExpr::getType() const
 		                        ifFalse->getType()->getName() + "' in conditional expression");
 
 	return ifTrue->getType();
+}
+
+DefaultExpr::DefaultExpr(types::Type *type) : Expr(type)
+{
+}
+
+Value *DefaultExpr::codegen(BaseFunc *base, BasicBlock*& block)
+{
+	return getType()->defaultValue(block);
 }

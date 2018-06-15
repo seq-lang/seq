@@ -1,17 +1,16 @@
 # this is a comment
 
-fun f(s: Seq) -> Seq[]
+fun f(s: Seq) -> Seq[]:
   s |> split 32 32 |> collect
-end
 
 let farray = (Seq -> Seq[])[1]
 farray[0] = f
 
-fun ident(s: Seq) -> Seq
+fun ident(s: Seq) -> Seq {
   s
-end
+}
 
-source args[0] as input:
+source args[0] as input {
   input |> substr 0+1 5 {
     _ |> print
     _ |> revcomp |> print
@@ -47,15 +46,14 @@ source args[0] as input:
   ident(input) |> print
 
   (v[1], ((v)[2]), (v[1], 4.2)).3 |> .1 |> print
-end
+}
 
-fun hello -> Str
+fun hello -> Str:
   return "hello world"
-end
 
-fun hello2
+
+fun hello2:
   "hello again" |> print
-end
 
 hello() |> print
 hello2()
@@ -70,45 +68,60 @@ b.1 |> print
 b.2 = !!false
 b.2 |> print
 
-fun fib(n: Int) -> Int
+fun fib(n: Int) -> Int {
   type F = {f: (Int -> Int), x: Int}
 
-  fun apply(f:(Int -> Int), x:Int) -> Int
-    f(x)
-  end
+  fun apply(f: (Int -> Int), x: Int) -> Int: f(x)
 
-  fun rec(pair: F) -> Int
+  fun rec(pair: F) -> Int:
     apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
-  end
 
   if n <= 1 then n else rec((fib, n))
-end
+}
 
 10 |> fib |> print
 fib(10) |> print
 
-range (if b.1 then 1 else 2) 5+5 as i:
+range (if b.1 then 1 else 2) 5+5 as i {
   if i == 3:
     continue
   elif i >= 7:
     break
-  end
-
-  range i i+1: _ |> print end
-end
+  else:
+    range i i+1: _ |> print
+}
 
 type Person = {name: Str, age: Int}
 
-fun whois(person: Person)
+fun whois(person: Person) {
   person.name |> print
   person.age  |> print
-end
+}
 
-fun birthday(person: Person) -> Person
+fun birthday(person: Person) -> Person:
   (person.name, person.age + 1)
-end
+
 
 var joe = (name: "Joe", age: 42)
 whois(joe)
 joe = birthday(joe)
 whois(joe)
+
+let ints = Int[100]
+range ints.len as i:
+  ints[i] = i+1
+var s = 0
+ints |> foreach as n: s = s + n
+s |> print
+
+class Pair {a: Int, b: Int} {
+  fun sum(self: Pair, c: Int) -> Int:
+    self.a + self.b + c
+}
+
+var p = <Pair>
+p.a = 42
+p.b = 19
+
+p.sum(100) |> print
+

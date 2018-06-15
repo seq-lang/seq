@@ -126,9 +126,6 @@ AssignMemberStage::AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value) :
 
 void AssignMemberStage::codegen(Module *module)
 {
-	if (!cell->getType()->isGeneric(types::RecordType::get({})))
-		throw exc::SeqException("can only assign members of record type");
-
 	value->ensure(cell->getType()->membType(memb));
 
 	ensurePrev();

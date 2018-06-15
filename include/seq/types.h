@@ -83,13 +83,8 @@ namespace seq {
 
 			virtual void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
-			virtual llvm::Value *alloc(BaseFunc *base,
-			                           llvm::Value *count,
-			                           llvm::BasicBlock *block);
-
-			virtual llvm::Value *alloc(BaseFunc *base,
-			                           seq_int_t count,
-			                           llvm::BasicBlock *block);
+			virtual llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block);
+			virtual llvm::Value *alloc(seq_int_t count, llvm::BasicBlock *block);
 
 			virtual void finalizeAlloc(llvm::Module *module, llvm::ExecutionEngine *eng);
 

@@ -10,9 +10,10 @@ namespace seq {
 	namespace types {
 
 		class RecordType : public Type {
-		private:
+		protected:
 			std::vector<Type *> types;
 			std::vector<std::string> names;
+			llvm::Type *typeCached;
 			RecordType(std::vector<Type *> types, std::vector<std::string> names);
 			RecordType(std::initializer_list<Type *> types);
 		public:
@@ -47,6 +48,7 @@ namespace seq {
 			bool isGeneric(Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			llvm::Type *getLLVMTypeNamed(std::string name, llvm::LLVMContext& context);
 			seq_int_t size(llvm::Module *module) const override;
 			RecordType& of(std::initializer_list<std::reference_wrapper<Type>> types) const;
 			static RecordType *get(std::vector<Type *> types, std::vector<std::string> names={});

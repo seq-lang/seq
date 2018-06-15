@@ -177,9 +177,7 @@ void types::Type::finalizeDeserialize(Module *module, ExecutionEngine *eng)
 		eng->addGlobalMapping(readFunc, (void *)util::io::io_read);
 }
 
-Value *types::Type::alloc(BaseFunc *base,
-                          Value *count,
-                          BasicBlock *block)
+Value *types::Type::alloc(Value *count, BasicBlock *block)
 {
 	if (size(block->getModule()) == 0)
 		throw exc::SeqException("cannot create array of type '" + getName() + "'");
@@ -202,12 +200,10 @@ Value *types::Type::alloc(BaseFunc *base,
 	return builder.CreatePointerCast(mem, PointerType::get(getLLVMType(context), 0));
 }
 
-Value *types::Type::alloc(BaseFunc *base,
-                          seq_int_t count,
-                          BasicBlock *block)
+Value *types::Type::alloc(seq_int_t count, BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
-	return alloc(base, ConstantInt::get(seqIntLLVM(context), (uint64_t)count, true), block);
+	return alloc(ConstantInt::get(seqIntLLVM(context), (uint64_t)count, true), block);
 }
 
 void types::Type::finalizeAlloc(Module *module, ExecutionEngine *eng)

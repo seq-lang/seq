@@ -19,6 +19,7 @@
 #include "array.h"
 #include "record.h"
 #include "funct.h"
+#include "ref.h"
 
 #include "common.h"
 

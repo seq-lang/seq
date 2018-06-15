@@ -119,6 +119,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/range.h
                        include/seq/record.h
                        include/seq/recordexpr.h
+                       include/seq/ref.h
                        include/seq/revcomp.h
                        include/seq/seq.h
                        include/seq/seqgc.h
@@ -178,6 +179,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/funct.cpp
                        src/types/num.cpp
                        src/types/record.cpp
+                       src/types/ref.cpp
                        src/types/seqt.cpp
                        src/types/types.cpp
                        src/types/void.cpp

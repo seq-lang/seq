@@ -300,6 +300,21 @@ public:
 		throw exc::SeqException("undefined reference to '" + std::string(name) + "'");
 	}
 
+	void addMethods(types::RefType *ref)
+	{
+		for (auto const& e : symbols.back()) {
+			switch (e.second.type) {
+				case SeqEntity::EMPTY:
+					break;
+				case SeqEntity::FUNC:
+					ref->addMethod(e.first, e.second.value.func);
+					break;
+				default:
+					throw exc::SeqException("non-function entity present in class definition");
+			}
+		}
+	}
+
 	void enter(const SeqEntity& context)
 	{
 		contexts.push_back(context);
@@ -1301,6 +1316,63 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	}
 };
 
+template<>
+struct control<class_decl> : pegtl::normal<class_decl>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("st");
+		auto *rec = dynamic_cast<types::RecordType *>(vec[1].value.type);
+		assert(rec);
+		types::RefType *ref = types::RefType::get(vec[0].value.name);
+		ref->setContents(rec);
+		types::Type *type = ref;
+
+		state.sym(vec[0].value.name, type);
+		state.enter(type);
+		state.scope();
+		state.scopeBarrier();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<class_stmt> : pegtl::normal<class_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.context().type == SeqEntity::TYPE);
+		auto *ref = dynamic_cast<types::RefType *>(state.context().value.type);
+		assert(ref);
+		state.exit();
+		state.addMethods(ref);
+		state.unscope();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+	}
+};
+
 static Pipeline makePipelineFromLinkedStage(Stage *stage)
 {
 	Stage *child = stage;
@@ -2225,6 +2297,30 @@ struct control<array_expr> : pegtl::normal<array_expr>
 		types::Type *type = vec[0].value.type;
 		Expr *count = vec[1].value.expr;
 		Expr *e = new ArrayExpr(type, count);
+		state.add(e);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<default_expr> : pegtl::normal<default_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("t");
+		Expr *e = new DefaultExpr(vec[0].value.type);
 		state.add(e);
 	}
 
