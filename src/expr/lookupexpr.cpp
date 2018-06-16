@@ -27,13 +27,3 @@ types::Type *ArrayLookupExpr::getType() const
 
 	throw exc::SeqException("expected array, got '" + type->getName() + "'");
 }
-
-Expr *ArrayLookupExpr::getArr()
-{
-	return arr;
-}
-
-Expr *ArrayLookupExpr::getIdx()
-{
-	return idx;
-}

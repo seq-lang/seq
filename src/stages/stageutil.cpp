@@ -168,14 +168,14 @@ AssignIndexStage& stageutil::assignindex(Expr *array, Expr *idx, Expr *value)
 	return AssignIndexStage::make(array, idx, value);
 }
 
-AssignMemberStage& stageutil::assignmemb(Cell *cell, seq_int_t idx, Expr *value)
+AssignMemberStage& stageutil::assignmemb(Expr *expr, seq_int_t idx, Expr *value)
 {
-	return AssignMemberStage::make(cell, idx, value);
+	return AssignMemberStage::make(expr, idx, value);
 }
 
-AssignMemberStage& stageutil::assignmemb(Cell *cell, std::string memb, Expr *value)
+AssignMemberStage& stageutil::assignmemb(Expr *expr, std::string memb, Expr *value)
 {
-	return AssignMemberStage::make(cell, memb, value);
+	return AssignMemberStage::make(expr, memb, value);
 }
 
 Capture& stageutil::capture(void *addr)

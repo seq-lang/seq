@@ -65,7 +65,7 @@ x = .42
 if x < 1 then -x else +x |> print
 var b = (true, !true)
 b.1 |> print
-b.2 = !!false
+b = (b.1, !!false)
 b.2 |> print
 
 fun fib(n: Int) -> Int {
@@ -115,13 +115,32 @@ ints |> foreach as n: s = s + n
 s |> print
 
 class Pair(a: Int, b: Int) {
-  fun sum(self: Pair, c: Int) -> Int:
+  fun sum(self: Pair, c: Int) -> Int {
     self.a + self.b + c
+  }
+
+  fun print(self: Pair) {
+    self.a |> print
+    self.b |> print
+  }
+
+  fun swap(self: Pair) {
+    let tmp = self.a
+    self.a = self.b
+    self.b = tmp
+  }
 }
 
-var p = <Pair>
-p.a = 42
-p.b = 19
+fun pair(a: Int, b: Int) -> Pair {
+  var p = <Pair>
+  p.a = a
+  p.b = b
+  return p
+}
 
+var p = pair(42,19)
 p.sum(100) |> print
 
+p.print()
+p.swap()
+p.print()

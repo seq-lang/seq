@@ -50,15 +50,15 @@ namespace seq {
 
 	class AssignMemberStage : public Stage {
 	private:
-		Cell *cell;
+		Expr *expr;
 		std::string memb;
 		Expr *value;
 	public:
-		AssignMemberStage(Cell *cell, std::string memb, Expr *value);
-		AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value);
+		AssignMemberStage(Expr *expr, std::string memb, Expr *value);
+		AssignMemberStage(Expr *expr, seq_int_t idx, Expr *value);
 		void codegen(llvm::Module *module) override;
-		static AssignMemberStage& make(Cell *cell, std::string memb, Expr *value);
-		static AssignMemberStage& make(Cell *cell, seq_int_t idx, Expr *value);
+		static AssignMemberStage& make(Expr *expr, std::string memb, Expr *value);
+		static AssignMemberStage& make(Expr *expr, seq_int_t idx, Expr *value);
 	};
 
 	class If : public Stage {

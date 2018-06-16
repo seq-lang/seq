@@ -1891,14 +1891,8 @@ struct control<assign_member_idx_stmt> : pegtl::normal<assign_member_idx_stmt>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("sie");
-		SeqEntity ent = state.lookup(vec[0].value.name);
-
-		if (ent.type != SeqEntity::CELL)
-			throw exc::SeqException("can only mutate variables declared with 'var'");
-
-		Cell *cell = ent.value.cell;
-		Pipeline p = stageutil::assignmemb(cell, vec[1].value.ival, vec[2].value.expr);
+		auto vec = state.get("eie");
+		Pipeline p = stageutil::assignmemb(vec[0].value.expr, vec[1].value.ival, vec[2].value.expr);
 		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}
@@ -1922,14 +1916,8 @@ struct control<assign_member_stmt> : pegtl::normal<assign_member_stmt>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("sse");
-		SeqEntity ent = state.lookup(vec[0].value.name);
-
-		if (ent.type != SeqEntity::CELL)
-			throw exc::SeqException("can only mutate variables declared with 'var'");
-
-		Cell *cell = ent.value.cell;
-		Pipeline p = stageutil::assignmemb(cell, vec[1].value.name, vec[2].value.expr);
+		auto vec = state.get("ese");
+		Pipeline p = stageutil::assignmemb(vec[0].value.expr, vec[1].value.name, vec[2].value.expr);
 		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}
@@ -1942,7 +1930,7 @@ struct control<assign_member_stmt> : pegtl::normal<assign_member_stmt>
 };
 
 template<>
-struct control<assign_expr_stmt> : pegtl::normal<assign_expr_stmt>
+struct control<assign_array_stmt> : pegtl::normal<assign_array_stmt>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
@@ -1953,13 +1941,8 @@ struct control<assign_expr_stmt> : pegtl::normal<assign_expr_stmt>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("ee");
-		auto *lookup = dynamic_cast<ArrayLookupExpr *>(vec[0].value.expr);
-
-		if (lookup == nullptr)
-			throw exc::SeqException("can only assign array indices, not general expressions");
-
-		Pipeline p = stageutil::assignindex(lookup->getArr(), lookup->getIdx(), vec[1].value.expr);
+		auto vec = state.get("eee");
+		Pipeline p = stageutil::assignindex(vec[0].value.expr, vec[1].value.expr, vec[2].value.expr);
 		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}

@@ -113,41 +113,39 @@ AssignIndexStage& AssignIndexStage::make(Expr *array, Expr *idx, Expr *value)
 }
 
 
-AssignMemberStage::AssignMemberStage(Cell *cell, std::string memb, Expr *value) :
+AssignMemberStage::AssignMemberStage(Expr *expr, std::string memb, Expr *value) :
     Stage("(.=)", types::AnyType::get(), types::VoidType::get()),
-    cell(cell), memb(memb), value(value)
+    expr(expr), memb(std::move(memb)), value(value)
 {
 }
 
-AssignMemberStage::AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value) :
-    AssignMemberStage(cell, std::to_string(idx), value)
+AssignMemberStage::AssignMemberStage(Expr *expr, seq_int_t idx, Expr *value) :
+    AssignMemberStage(expr, std::to_string(idx), value)
 {
 }
 
 void AssignMemberStage::codegen(Module *module)
 {
-	value->ensure(cell->getType()->membType(memb));
+	value->ensure(expr->getType()->membType(memb));
 
 	ensurePrev();
 	validate();
 
 	block = prev->getAfter();
-	Value *rec = cell->load(block);
-	Value *val = value->codegen(getBase(), block);
-	rec = cell->getType()->setMemb(rec, memb, val, block);
-	cell->store(rec, block);
-	codegenNext(module);
+	Value *x = expr->codegen(getBase(), block);
+	Value *v = value->codegen(getBase(), block);
+	expr->getType()->setMemb(x, memb, v, block);
 	prev->setAfter(getAfter());
 }
 
-AssignMemberStage& AssignMemberStage::make(Cell *cell, std::string memb, Expr *value)
+AssignMemberStage& AssignMemberStage::make(Expr *expr, std::string memb, Expr *value)
 {
-	return *new AssignMemberStage(cell, memb, value);
+	return *new AssignMemberStage(expr, memb, value);
 }
 
-AssignMemberStage& AssignMemberStage::make(Cell *cell, seq_int_t idx, Expr *value)
+AssignMemberStage& AssignMemberStage::make(Expr *expr, seq_int_t idx, Expr *value)
 {
-	return *new AssignMemberStage(cell, idx, value);
+	return *new AssignMemberStage(expr, idx, value);
 }
 
 If::If() :
