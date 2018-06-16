@@ -18,7 +18,7 @@ static std::string getNameFromTypes(std::vector<types::Type *> types)
 
 types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names) :
     Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD),
-    types(std::move(types)), names(std::move(names)), typeCached(nullptr)
+    types(std::move(types)), names(std::move(names))
 {
 	if (!this->names.empty() && this->names.size() != this->types.size())
 		throw exc::SeqException("type and name vectors differ in length");
@@ -26,7 +26,7 @@ types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string
 
 types::RecordType::RecordType(std::initializer_list<Type *> types) :
     Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD),
-    types(types), names(), typeCached(nullptr)
+    types(types), names()
 {
 }
 
@@ -170,17 +170,12 @@ Type *types::RecordType::getLLVMType(LLVMContext& context) const
 	return StructType::get(context, body);
 }
 
-Type *types::RecordType::getLLVMTypeNamed(std::string name, LLVMContext& context)
+void types::RecordType::addLLVMTypesToStruct(StructType *structType)
 {
-	if (typeCached)
-		return typeCached;
-
 	std::vector<llvm::Type *> body;
 	for (auto& type : types)
-		body.push_back(type->getLLVMType(context));
-
-	typeCached = StructType::create(context, body, name);
-	return typeCached;
+		body.push_back(type->getLLVMType(structType->getContext()));
+	structType->setBody(body);
 }
 
 seq_int_t types::RecordType::size(Module *module) const

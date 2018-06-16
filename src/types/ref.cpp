@@ -1,13 +1,11 @@
 #include <cassert>
-#include "seq/varexpr.h"
-#include "seq/base.h"
-#include "seq/ref.h"
+#include "seq/seq.h"
 
 using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name) :
-    Type(std::move(name), BaseType::get()), contents(nullptr), methods()
+    Type(std::move(name), BaseType::get()), contents(nullptr), methods(), typeCached(nullptr)
 {
 }
 
@@ -22,6 +20,8 @@ void types::RefType::setContents(types::RecordType *contents)
 		throw exc::SeqException("cannot re-set contents of reference type");
 
 	this->contents = contents;
+	typeCached = StructType::create(getLLVMContext(), name);
+	this->contents->addLLVMTypesToStruct(typeCached);
 }
 
 void types::RefType::addMethod(std::string name, Func *func)
@@ -83,15 +83,19 @@ Value *types::RefType::setMemb(Value *self,
 
 Value *types::RefType::defaultValue(BasicBlock *block)
 {
-	assert(contents);
-	LLVMContext& context = block->getContext();
-	Value *val = contents->defaultValue(block);
-	Value *ref = contents->alloc(1, block);
-	IRBuilder<> builder(block);
-	val = builder.CreateBitCast(val, contents->getLLVMTypeNamed(name, context));
-	ref = builder.CreateBitCast(ref, getLLVMType(context));
-	builder.CreateStore(val, ref);
-	return ref;
+	return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
+}
+
+void types::RefType::initOps()
+{
+	if (!vtable.ops.empty())
+		return;
+
+	vtable.ops = {
+		{uop("!"), this, &Bool, [](Value *lhs, Value *rhs, IRBuilder<> &b) {
+			return b.CreateZExt(b.CreateIsNull(lhs), Bool.getLLVMType(b.getContext()));
+		}}
+	};
 }
 
 void types::RefType::initFields()
@@ -113,13 +117,26 @@ types::Type *types::RefType::getBaseType(seq_int_t idx) const
 
 Type *types::RefType::getLLVMType(llvm::LLVMContext& context) const
 {
-	assert(contents);
-	return PointerType::get(contents->getLLVMTypeNamed(name, context), 0);
+	assert(typeCached);
+	return PointerType::get(typeCached, 0);
 }
 
 seq_int_t types::RefType::size(Module *module) const
 {
 	return sizeof(void *);
+}
+
+Value *types::RefType::make(BasicBlock *block) const
+{
+	assert(contents);
+	LLVMContext& context = block->getContext();
+	Value *val = contents->defaultValue(block);
+	Value *ref = contents->alloc(1, block);
+	IRBuilder<> builder(block);
+	val = builder.CreateBitCast(val, typeCached);
+	ref = builder.CreateBitCast(ref, getLLVMType(context));
+	builder.CreateStore(val, ref);
+	return ref;
 }
 
 types::RefType *types::RefType::get(std::string name)

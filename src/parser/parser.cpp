@@ -1118,6 +1118,7 @@ struct control<module> : pegtl::normal<module>
 		state.scope();
 		state.scopeBarrier();
 		auto *module = new SeqModule(true);
+		state.setModule(module);
 		state.enter(module);
 		state.sym("args", module->getArgVar());
 	}
@@ -1126,10 +1127,8 @@ struct control<module> : pegtl::normal<module>
 	static void success(Input&, ParseState& state)
 	{
 		assert(state.context().type == SeqEntity::MODULE);
-		auto *module = state.context().value.module;
 		state.unscope();
 		state.exit();
-		state.setModule(module);
 	}
 
 	template<typename Input>
@@ -1317,7 +1316,7 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 };
 
 template<>
-struct control<class_decl> : pegtl::normal<class_decl>
+struct control<class_open> : pegtl::normal<class_open>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
@@ -1328,15 +1327,48 @@ struct control<class_decl> : pegtl::normal<class_decl>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("st");
-		auto *rec = dynamic_cast<types::RecordType *>(vec[1].value.type);
-		assert(rec);
+		auto vec = state.get("s");
 		types::RefType *ref = types::RefType::get(vec[0].value.name);
-		ref->setContents(rec);
 		types::Type *type = ref;
-
 		state.sym(vec[0].value.name, type);
 		state.enter(type);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<class_type> : pegtl::normal<class_type>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		assert(!vec.empty() && vec.size()%2 == 0);
+		std::vector<types::Type *> types;
+		std::vector<std::string> names;
+
+		for (unsigned i = 0; i < vec.size(); i += 2) {
+			assert(vec[i].type == SeqEntity::NAME);
+			assert(vec[i+1].type == SeqEntity::TYPE);
+			names.push_back(vec[i].value.name);
+			types.push_back(vec[i+1].value.type);
+		}
+
+		assert(state.context().type == SeqEntity::TYPE);
+		auto *ref = dynamic_cast<types::RefType *>(state.context().value.type);
+		assert(ref);
+		ref->setContents(types::RecordType::get(types, names));
 		state.scope();
 		state.scopeBarrier();
 	}
@@ -2746,7 +2778,7 @@ struct control<func_type_out_void> : pegtl::normal<func_type_out_void>
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("t", true);
-		assert(vec.size() >= 1);
+		assert(!vec.empty());
 		std::vector<types::Type *> types;
 		for (auto ent : vec)
 			types.push_back(ent.value.type);

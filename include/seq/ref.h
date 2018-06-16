@@ -15,6 +15,7 @@ namespace seq {
 		private:
 			RecordType *contents;
 			std::map<std::string, Func *> methods;
+			llvm::StructType *typeCached;
 			explicit RefType(std::string name);
 		public:
 			RefType(RefType const&)=delete;
@@ -36,11 +37,13 @@ namespace seq {
 			                     llvm::BasicBlock *block) override;
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+			void initOps() override;
 			void initFields() override;
 			bool isAtomic() const override;
 			Type *getBaseType(seq_int_t idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
+			llvm::Value *make(llvm::BasicBlock *block) const;
 			static RefType *get(std::string name);
 		};
 

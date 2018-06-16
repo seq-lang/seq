@@ -16,6 +16,7 @@ BaseFunc::BaseFunc() :
 
 LLVMContext& BaseFunc::getContext()
 {
+	assert(module);
 	return module->getContext();
 }
 

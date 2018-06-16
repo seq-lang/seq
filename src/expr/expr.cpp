@@ -1,3 +1,4 @@
+#include <seq/ref.h>
 #include "seq/void.h"
 #include "seq/num.h"
 #include "seq/expr.h"
@@ -155,5 +156,9 @@ DefaultExpr::DefaultExpr(types::Type *type) : Expr(type)
 
 Value *DefaultExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
+	types::RefType *refType = nullptr;
+	if ((refType = dynamic_cast<types::RefType *>(getType())))
+		return refType->make(block);
+
 	return getType()->defaultValue(block);
 }

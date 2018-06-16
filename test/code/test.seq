@@ -114,7 +114,7 @@ var s = 0
 ints |> foreach as n: s = s + n
 s |> print
 
-class Pair {a: Int, b: Int} {
+class Pair(a: Int, b: Int) {
   fun sum(self: Pair, c: Int) -> Int:
     self.a + self.b + c
 }

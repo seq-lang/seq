@@ -306,7 +306,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 		}
 	}
 
-	LLVMContext context;
+	LLVMContext& context = getLLVMContext();
 	InitializeNativeTarget();
 	InitializeNativeTargetAsmPrinter();
 
@@ -425,4 +425,10 @@ Pipeline SeqModule::operator|(PipelineList& to)
 PipelineAggregatorProxy SeqModule::operator[](unsigned idx)
 {
 	return {main, idx};
+}
+
+llvm::LLVMContext& seq::getLLVMContext()
+{
+	static LLVMContext context;
+	return context;
 }
