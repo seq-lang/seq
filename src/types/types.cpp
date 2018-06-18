@@ -31,7 +31,7 @@ SeqData types::Type::getKey() const
 	return key;
 }
 
-types::VTable types::Type::getVTable() const
+types::VTable& types::Type::getVTable()
 {
 	return vtable;
 }
@@ -76,7 +76,7 @@ llvm::Value *types::Type::copy(BaseFunc *base,
                                Value *self,
                                BasicBlock *block)
 {
-	if (!vtable.copy || getKey() == SeqData::NONE)
+	if (!getVTable().copy || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot copy type '" + getName() + "'");
 
 	Function *copyFunc = cast<Function>(
@@ -95,14 +95,14 @@ void types::Type::finalizeCopy(Module *module, ExecutionEngine *eng)
 {
 	Function *copyFunc = module->getFunction(copyFuncName());
 	if (copyFunc)
-		eng->addGlobalMapping(copyFunc, vtable.print);
+		eng->addGlobalMapping(copyFunc, getVTable().print);
 }
 
 void types::Type::print(BaseFunc *base,
                         Value *self,
                         BasicBlock *block)
 {
-	if (!vtable.print || getKey() == SeqData::NONE)
+	if (!getVTable().print || getKey() == SeqData::NONE)
 		throw exc::SeqException("cannot print type '" + getName() + "'");
 
 	Function *printFunc = cast<Function>(
@@ -121,7 +121,7 @@ void types::Type::finalizePrint(Module *module, ExecutionEngine *eng)
 {
 	Function *printFunc = module->getFunction(printFuncName());
 	if (printFunc)
-		eng->addGlobalMapping(printFunc, vtable.print);
+		eng->addGlobalMapping(printFunc, getVTable().print);
 }
 
 void types::Type::serialize(BaseFunc *base,
@@ -288,9 +288,9 @@ Value *types::Type::memb(Value *self,
                          BasicBlock *block)
 {
 	initFields();
-	auto iter = vtable.fields.find(name);
+	auto iter = getVTable().fields.find(name);
 
-	if (iter == vtable.fields.end())
+	if (iter == getVTable().fields.end())
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
 	IRBuilder<> builder(block);
@@ -300,9 +300,9 @@ Value *types::Type::memb(Value *self,
 types::Type *types::Type::membType(const std::string& name)
 {
 	initFields();
-	auto iter = vtable.fields.find(name);
+	auto iter = getVTable().fields.find(name);
 
-	if (iter == vtable.fields.end() || iter->second.second->is(types::VoidType::get()))
+	if (iter == getVTable().fields.end() || iter->second.second->is(types::VoidType::get()))
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
 	return iter->second.second;
@@ -314,9 +314,9 @@ Value *types::Type::setMemb(Value *self,
                             BasicBlock *block)
 {
 	initFields();
-	auto iter = vtable.fields.find(name);
+	auto iter = getVTable().fields.find(name);
 
-	if (iter == vtable.fields.end())
+	if (iter == getVTable().fields.end())
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
 	IRBuilder<> builder(block);
@@ -341,7 +341,7 @@ OpSpec types::Type::findUOp(const std::string &symbol)
 	initOps();
 	Op op = uop(symbol);
 
-	for (auto& e : vtable.ops) {
+	for (auto& e : getVTable().ops) {
 		if (e.op == op)
 			return e;
 	}
@@ -354,7 +354,7 @@ OpSpec types::Type::findBOp(const std::string &symbol, types::Type *rhsType)
 	initOps();
 	Op op = bop(symbol);
 
-	for (auto& e : vtable.ops) {
+	for (auto& e : getVTable().ops) {
 		if (e.op == op && rhsType->isChildOf(e.rhsType))
 			return e;
 	}

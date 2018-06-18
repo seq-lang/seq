@@ -21,7 +21,8 @@ types::Type *Expr::getType() const
 
 void Expr::ensure(types::Type *type)
 {
-	if (!getType()->isGeneric(type))
+	types::Type *actual = getType();
+	if (!actual->is(type) && !type->is(actual) && !actual->isGeneric(type))
 		throw exc::SeqException("expected '" + type->getName() + "', got '" + getType()->getName() + "'");
 }
 

@@ -305,6 +305,7 @@ public:
 		for (auto const& e : symbols.back()) {
 			switch (e.second.type) {
 				case SeqEntity::EMPTY:
+				case SeqEntity::TYPE:
 					break;
 				case SeqEntity::FUNC:
 					ref->addMethod(e.first, e.second.value.func);
@@ -1333,6 +1334,8 @@ struct control<class_open> : pegtl::normal<class_open>
 		types::RefType *ref = types::RefType::get(vec[0].value.name);
 		types::Type *type = ref;
 		state.sym(vec[0].value.name, type);
+		state.scope();
+		state.scopeBarrier();
 
 		ref->addGenerics((unsigned)vec.size() - 1);
 		for (unsigned i = 1; i < vec.size(); i++) {
@@ -1377,9 +1380,6 @@ struct control<class_type> : pegtl::normal<class_type>
 		auto *ref = dynamic_cast<types::RefType *>(state.context().value.type);
 		assert(ref);
 		ref->setContents(types::RecordType::get(types, names));
-		ref->finalizeLLVMType();
-		state.scope();
-		state.scopeBarrier();
 	}
 
 	template<typename Input>

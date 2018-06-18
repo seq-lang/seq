@@ -39,10 +39,10 @@ namespace seq {
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
 
-			std::string getName() const;
-			Type *getParent() const;
-			SeqData getKey() const;
-			VTable getVTable() const;
+			virtual std::string getName() const;
+			virtual Type *getParent() const;
+			virtual SeqData getKey() const;
+			virtual VTable& getVTable();
 
 			virtual bool isAtomic() const;
 

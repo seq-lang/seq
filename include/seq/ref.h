@@ -15,13 +15,13 @@ namespace seq {
 
 		class RefType : public Type {
 		private:
-			unsigned idx;
 			RecordType *contents;
 			std::map<std::string, Func *> methods;
 			std::vector<GenericType *> generics;
 			llvm::StructType *typeCached;
 			std::map<void *, void *> cloneCache;
 			std::vector<std::pair<std::vector<Type *>, RefType *>> realizationCache;
+			mutable bool llvmTypeInProgress;
 			explicit RefType(std::string name);
 		public:
 			RefType(RefType const&)=delete;
@@ -32,7 +32,6 @@ namespace seq {
 			void addMethod(std::string name, Func *func);
 			void addGenerics(unsigned count);
 			void setGeneric(unsigned idx, Type *type);
-			void finalizeLLVMType();
 			GenericType *getGeneric(unsigned idx);
 
 			bool seenClone(void *p);
@@ -90,13 +89,17 @@ namespace seq {
 		class GenericType : public Type {
 		private:
 			RefType *ref;
-			unsigned idx;
 			Type *type;
 		public:
-			GenericType(RefType *ref, unsigned idx);
+			explicit GenericType(RefType *ref);
 			void realize(Type *type);
 			void release();
 			void ensure() const;
+
+			std::string getName() const override;
+			Type *getParent() const override;
+			SeqData getKey() const override;
+			VTable& getVTable() override;
 
 			bool isAtomic() const override;
 
@@ -201,7 +204,7 @@ namespace seq {
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			Mem& operator[](seq_int_t size) override;
-			static GenericType *get(RefType *ref, unsigned idx);
+			static GenericType *get(RefType *ref);
 
 			GenericType *clone(RefType *ref) override;
 		};

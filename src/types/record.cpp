@@ -135,16 +135,16 @@ bool types::RecordType::isAtomic() const
 
 void types::RecordType::initFields()
 {
-	if (!vtable.fields.empty())
+	if (!getVTable().fields.empty())
 		return;
 
 	assert(names.empty() || names.size() == types.size());
 
 	for (unsigned i = 0; i < types.size(); i++) {
-		vtable.fields.insert({std::to_string(i+1), {i, types[i]}});
+		getVTable().fields.insert({std::to_string(i+1), {i, types[i]}});
 
 		if (!names.empty() && !names[i].empty())
-			vtable.fields.insert({names[i], {i, types[i]}});
+			getVTable().fields.insert({names[i], {i, types[i]}});
 	}
 }
 

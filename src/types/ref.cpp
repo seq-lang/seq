@@ -5,8 +5,9 @@ using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name) :
-    Type(std::move(name), BaseType::get(), SeqData::REF), idx(0), contents(nullptr), methods(), generics(),
-    typeCached(StructType::create(getLLVMContext(), name)), cloneCache(), realizationCache()
+    Type(name, BaseType::get(), SeqData::REF), contents(nullptr), methods(), generics(),
+    typeCached(StructType::create(getLLVMContext(), name)), cloneCache(),
+    realizationCache(), llvmTypeInProgress(false)
 {
 }
 
@@ -23,12 +24,6 @@ void types::RefType::setContents(types::RecordType *contents)
 	this->contents = contents;
 }
 
-void types::RefType::finalizeLLVMType()
-{
-	assert(contents);
-	contents->addLLVMTypesToStruct(typeCached);
-}
-
 void types::RefType::addMethod(std::string name, Func *func)
 {
 	if (methods.find(name) != methods.end())
@@ -41,7 +36,7 @@ void types::RefType::addGenerics(unsigned count)
 {
 	assert(generics.empty());
 	for (unsigned i = 0; i < count; i++)
-		generics.push_back(types::GenericType::get(this, i));
+		generics.push_back(types::GenericType::get(this));
 
 	std::vector<types::Type *> types;
 	for (auto *generic : generics)
@@ -86,7 +81,7 @@ types::RefType *types::RefType::realize(std::vector<types::Type *> types)
 {
 	if (types.size() != generics.size())
 		throw exc::SeqException("expected " + std::to_string(generics.size()) +
-		                        " type paramters, but got " + std::to_string(types.size()));
+		                        " type parameters, but got " + std::to_string(types.size()));
 
 	// see if we've encountered this realization before:
 	for (auto& v : realizationCache) {
@@ -104,12 +99,11 @@ types::RefType *types::RefType::realize(std::vector<types::Type *> types)
 	}
 
 	types::RefType *x = clone(this);
-	cloneCache.clear();
 
 	for (unsigned i = 0; i < types.size(); i++)
 		x->setGeneric(i, types[i]);
 
-	x->finalizeLLVMType();
+	cloneCache.clear();
 	realizationCache.emplace_back(types, x);
 	return x;
 }
@@ -205,6 +199,15 @@ types::Type *types::RefType::getBaseType(seq_int_t idx) const
 Type *types::RefType::getLLVMType(llvm::LLVMContext& context) const
 {
 	assert(typeCached);
+	if (llvmTypeInProgress)
+		return PointerType::get(typeCached, 0);
+
+	if (typeCached->isOpaque()) {
+		llvmTypeInProgress = true;
+		contents->addLLVMTypesToStruct(typeCached);
+		llvmTypeInProgress = false;
+	}
+
 	return PointerType::get(typeCached, 0);
 }
 
@@ -236,13 +239,13 @@ types::RefType *types::RefType::clone(types::RefType *ref)
 	if (ref->seenClone(this))
 		return (types::RefType *)ref->getClone(this);
 
-	types::RefType *x = types::RefType::get(name + "." + std::to_string(idx + 1));
+	types::RefType *x = types::RefType::get(name);
 	ref->addClone(this, x);
-	x->idx = idx + 1;
 	x->setContents(contents->clone(ref));
 
 	std::map<std::string, Func *> methodsCloned;
-	std::vector<GenericType *> genericsCloned;
+	std::vector<types::GenericType *> genericsCloned;
+	std::vector<std::pair<std::vector<types::Type *>, RefType *>> realizationCacheCloned;
 
 	for (auto& method : methods)
 		methodsCloned.insert({method.first, method.second->clone(ref)});
@@ -250,8 +253,17 @@ types::RefType *types::RefType::clone(types::RefType *ref)
 	for (auto *generic : generics)
 		genericsCloned.push_back(generic->clone(ref));
 
+	for (auto& p : realizationCache) {
+		std::vector<types::Type *> typesCloned;
+		for (auto *type : p.first)
+			typesCloned.push_back(type->clone(ref));
+		realizationCacheCloned.emplace_back(typesCloned, p.second->clone(ref));
+	}
+
 	x->methods = methodsCloned;
 	x->generics = genericsCloned;
+	x->realizationCache = realizationCacheCloned;
+
 	return x;
 }
 
@@ -298,18 +310,15 @@ types::MethodType *types::MethodType::clone(types::RefType *ref)
 	return MethodType::get(self->clone(ref), func->clone(ref));
 }
 
-types::GenericType::GenericType(types::RefType *ref, unsigned idx) :
-    Type("Generic", BaseType::get()), ref(ref), idx(idx), type(nullptr)
+types::GenericType::GenericType(types::RefType *ref) :
+    Type("Generic", BaseType::get()), ref(ref), type(nullptr)
 {
 }
 
 void types::GenericType::realize(types::Type *type)
 {
+	assert(!this->type);
 	this->type = type;
-	name = type->getName();
-	parent = type->getParent();
-	key = type->getKey();
-	vtable = type->getVTable();
 }
 
 void types::GenericType::release()
@@ -321,6 +330,31 @@ void types::GenericType::ensure() const
 {
 	if (!type)
 		throw exc::SeqException("generic type not yet realized");
+}
+
+std::string types::GenericType::getName() const
+{
+	if (!type)
+		return "Generic";
+	return type->getName();
+}
+
+types::Type *types::GenericType::getParent() const
+{
+	ensure();
+	return type->getParent();
+}
+
+SeqData types::GenericType::getKey() const
+{
+	ensure();
+	return type->getKey();
+}
+
+types::VTable& types::GenericType::getVTable()
+{
+	ensure();
+	return type->getVTable();
 }
 
 std::string types::GenericType::copyFuncName()
@@ -582,10 +616,7 @@ types::Type *types::GenericType::getCallType(std::vector<Type *> inTypes)
 
 Type *types::GenericType::getLLVMType(LLVMContext& context) const
 {
-	// this is just the easiest approach: return a type we won't use
-	if (!type)
-		return seqIntLLVM(context);
-
+	ensure();
 	return type->getLLVMType(context);
 }
 
@@ -601,9 +632,9 @@ Mem& types::GenericType::operator[](seq_int_t size)
 	return (*type)[size];
 }
 
-types::GenericType *types::GenericType::get(types::RefType *ref, unsigned idx)
+types::GenericType *types::GenericType::get(types::RefType *ref)
 {
-	return new GenericType(ref, idx);
+	return new GenericType(ref);
 }
 
 types::GenericType *types::GenericType::clone(types::RefType *ref)
@@ -611,7 +642,7 @@ types::GenericType *types::GenericType::clone(types::RefType *ref)
 	if (ref->seenClone(this))
 		return (types::GenericType *)ref->getClone(this);
 
-	auto *x = types::GenericType::get(this->ref->clone(ref), idx);
+	auto *x = types::GenericType::get(this->ref->clone(ref));
 	ref->addClone(this, x);
 	if (type) x->realize(type->clone(ref));
 	return x;
