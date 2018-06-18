@@ -14,6 +14,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static OpStage& make(std::string name, SeqOp op);
+
+		OpStage *clone(types::RefType *ref) override;
 	};
 }
 

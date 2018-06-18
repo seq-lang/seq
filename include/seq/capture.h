@@ -12,6 +12,8 @@ namespace seq {
 		void validate() override;
 		void codegen(llvm::Module *module) override;
 		static Capture& make(void *addr);
+
+		Capture *clone(types::RefType *ref) override;
 	};
 }
 

@@ -20,6 +20,7 @@ namespace seq {
 	namespace types {
 
 		class Type;
+		class RefType;
 
 		struct VTable {
 			void *copy = nullptr;
@@ -37,6 +38,11 @@ namespace seq {
 		public:
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
+
+			std::string getName() const;
+			Type *getParent() const;
+			SeqData getKey() const;
+			VTable getVTable() const;
 
 			virtual bool isAtomic() const;
 
@@ -136,13 +142,13 @@ namespace seq {
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;
 			virtual bool isChildOf(Type *type) const;
-			std::string getName() const;
-			SeqData getKey() const;
 			virtual Type *getBaseType(seq_int_t idx) const;
 			virtual Type *getCallType(std::vector<Type *> inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
-			Mem& operator[](seq_int_t size);
+			virtual Mem& operator[](seq_int_t size);
+
+			virtual Type *clone(RefType *ref);
 		};
 
 	}

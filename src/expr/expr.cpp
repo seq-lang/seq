@@ -25,6 +25,11 @@ void Expr::ensure(types::Type *type)
 		throw exc::SeqException("expected '" + type->getName() + "', got '" + getType()->getName() + "'");
 }
 
+Expr *Expr::clone(types::RefType *ref)
+{
+	return this;
+}
+
 UOpExpr::UOpExpr(Op op, Expr *lhs) :
     Expr(), op(std::move(op)), lhs(lhs)
 {
@@ -41,6 +46,11 @@ Value *UOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
 types::Type *UOpExpr::getType() const
 {
 	return lhs->getType()->findUOp(op.symbol).outType;
+}
+
+UOpExpr *UOpExpr::clone(types::RefType *ref)
+{
+	return new UOpExpr(op, lhs->clone(ref));
 }
 
 BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs) :
@@ -103,6 +113,11 @@ types::Type *BOpExpr::getType() const
 		return lhs->getType()->findBOp(op.symbol, rhs->getType()).outType;
 }
 
+BOpExpr *BOpExpr::clone(types::RefType *ref)
+{
+	return new BOpExpr(op, lhs->clone(ref), rhs->clone(ref));
+}
+
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse) :
     Expr(), cond(cond), ifTrue(ifTrue), ifFalse(ifFalse)
 {
@@ -150,6 +165,11 @@ types::Type *CondExpr::getType() const
 	return ifTrue->getType();
 }
 
+CondExpr *CondExpr::clone(types::RefType *ref)
+{
+	return new CondExpr(cond->clone(ref), ifTrue->clone(ref), ifFalse->clone(ref));
+}
+
 DefaultExpr::DefaultExpr(types::Type *type) : Expr(type)
 {
 }
@@ -161,4 +181,9 @@ Value *DefaultExpr::codegen(BaseFunc *base, BasicBlock*& block)
 		return refType->make(block);
 
 	return getType()->defaultValue(block);
+}
+
+DefaultExpr *DefaultExpr::clone(types::RefType *ref)
+{
+	return new DefaultExpr(getType()->clone(ref));
 }

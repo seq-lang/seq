@@ -45,3 +45,14 @@ GetItem& GetItem::make(seq_int_t idx)
 {
 	return *new GetItem(idx);
 }
+
+GetItem *GetItem::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (GetItem *)ref->getClone(this);
+
+	GetItem& x = GetItem::make(idx);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

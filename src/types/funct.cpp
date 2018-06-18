@@ -6,7 +6,7 @@ using namespace llvm;
 
 static std::string getFuncName(std::vector<types::Type *> inTypes)
 {
-	std::string name = "";
+	std::string name;
 	for (auto *type : inTypes)
 		name += type->getName();
 	name += "Func";
@@ -78,4 +78,12 @@ seq_int_t types::FuncType::size(Module *module) const
 types::FuncType *types::FuncType::get(std::vector<Type *> inTypes, Type *outType)
 {
 	return new FuncType(std::move(inTypes), outType);
+}
+
+types::FuncType *types::FuncType::clone(types::RefType *ref)
+{
+	std::vector<Type *> inTypesCloned;
+	for (auto *type : inTypes)
+		inTypesCloned.push_back(type->clone(ref));
+	return get(inTypesCloned, outType->clone(ref));
 }

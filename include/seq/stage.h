@@ -106,6 +106,9 @@ namespace seq {
 
 		virtual Pipeline operator|(Pipeline to);
 		operator Pipeline();
+
+		virtual Stage *clone(types::RefType *ref);
+		virtual void setCloneBase(Stage *stage, types::RefType *ref);
 	};
 
 	class Nop : public Stage {
@@ -114,6 +117,8 @@ namespace seq {
 		void validate() override;
 		void codegen(llvm::Module *module) override;
 		static Nop& make();
+
+		Nop *clone(types::RefType *ref) override;
 	};
 
 }

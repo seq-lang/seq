@@ -12,6 +12,8 @@ namespace seq {
 		void validate() override;
 		void codegen(llvm::Module *module) override;
 		static GetItem& make(seq_int_t idx);
+
+		GetItem *clone(types::RefType *ref) override;
 	};
 }
 

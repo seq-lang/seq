@@ -114,33 +114,45 @@ var s = 0
 ints |> foreach as n: s = s + n
 s |> print
 
-class Pair(a: Int, b: Int) {
-  fun sum(self: Pair, c: Int) -> Int {
+class Pair[T](a: T, b: T) {
+  fun sum(self: Pair[T], c: T) -> T {
     self.a + self.b + c
   }
 
-  fun print(self: Pair) {
+  fun print(self: Pair[T]) {
     self.a |> print
     self.b |> print
   }
 
-  fun swap(self: Pair) {
+  fun swap(self: Pair[T]) {
     let tmp = self.a
     self.a = self.b
     self.b = tmp
   }
 }
 
-fun pair(a: Int, b: Int) -> Pair {
-  var p = <Pair>
+fun int_pair(a: Int, b: Int) -> Pair[Int] {
+  let p = <Pair[Int]>
   p.a = a
   p.b = b
   return p
 }
 
-var p = pair(42,19)
-p.sum(100) |> print
+fun float_pair(a: Float, b: Float) -> Pair[Float] {
+  let p = <Pair[Float]>
+  p.a = a
+  p.b = b
+  return p
+}
 
-p.print()
+let p = int_pair(42, 19)
+p.sum(100) |> print  # 42 + 19 + 100 = 161
+p.print()  # 42,19
 p.swap()
-p.print()
+p.print()  # 19,42
+
+let q = float_pair(4.2, 1.9)
+q.sum(10.0) |> print
+q.print()
+q.swap()
+q.print()

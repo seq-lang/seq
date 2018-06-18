@@ -69,6 +69,17 @@ Serialize& Serialize::make(std::string filename)
 	return *new Serialize(std::move(filename));
 }
 
+Serialize *Serialize::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Serialize *)ref->getClone(this);
+
+	Serialize& x = Serialize::make(filename);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}
+
 Deserialize::Deserialize(types::Type *type, std::string filename) :
     Stage("deser", types::AnyType::get(), type), type(type), filename(filename)
 {
@@ -135,4 +146,15 @@ void Deserialize::finalize(Module *module, ExecutionEngine *eng)
 Deserialize& Deserialize::make(types::Type *type, std::string filename)
 {
 	return *new Deserialize(type, std::move(filename));
+}
+
+Deserialize *Deserialize::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Deserialize *)ref->getClone(this);
+
+	Deserialize& x = Deserialize::make(type->clone(ref), filename);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
 }

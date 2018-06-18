@@ -268,3 +268,18 @@ Source& Source::make(std::vector<Expr *> sources)
 {
 	return *new Source(std::move(sources));
 }
+
+Source *Source::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Source *)ref->getClone(this);
+
+	std::vector<Expr *> sourcesCloned;
+	for (auto *source : sources)
+		sourcesCloned.push_back(source->clone(ref));
+
+	Source& x = Source::make(sourcesCloned);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

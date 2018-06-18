@@ -92,6 +92,7 @@ struct bool_type : TAO_PEGTL_STRING("Bool") {};
 struct str_type : TAO_PEGTL_STRING("Str") {};
 struct builtin_type : pegtl::sor<seq_type, int_type, float_type, bool_type, str_type> {};
 struct custom_type : pegtl::seq<pegtl::not_at<pegtl::sor<str_keyword, builtin_type>>, pegtl::identifier> {};
+struct realized_type : pegtl::seq<custom_type, seps, pegtl::one<'['>, seps, pegtl::list<type, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
 
 struct record_type_elem_named : pegtl::seq<name, seps, colon, seps, type> {};
 struct record_type_elem_unnamed : pegtl::seq<type, pegtl::success> {};
@@ -108,7 +109,7 @@ struct type_2 : pegtl::sor<seq_type, int_type, float_type, bool_type, str_type, 
 struct array_component : pegtl::seq<pegtl::one<'['>, seps, pegtl::one<']'>, seps, pegtl::opt<array_component>> {};
 struct array_type : pegtl::seq<type_2, seps, array_component> {};
 
-struct type : pegtl::sor<array_type, record_type, func_type, seq_type, int_type, float_type, bool_type, str_type, custom_type> {};
+struct type : pegtl::sor<array_type, record_type, func_type, seq_type, int_type, float_type, bool_type, str_type, realized_type, custom_type> {};
 
 /*
  * Expressions
@@ -249,7 +250,8 @@ struct func_stmt : pegtl::seq<pegtl::sor<func_decl, func_decl_out_void, func_dec
 /*
  * Classes
  */
-struct class_open : pegtl::if_must<str_class, seps, name> {};
+struct class_generics : pegtl::seq<pegtl::one<'['>, seps, pegtl::list<name, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
+struct class_open : pegtl::if_must<str_class, seps, name, pegtl::opt<seps, class_generics>> {};
 struct class_type : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<record_type_elem_named, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
 struct class_stmt : pegtl::if_must<class_open, seps, class_type, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<func_stmt, seps>, seps>, pegtl::one<'}'>> {};
 

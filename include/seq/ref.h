@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <utility>
 #include "funct.h"
 #include "record.h"
 
@@ -10,12 +11,17 @@ namespace seq {
 	class Func;
 
 	namespace types {
+		class GenericType;
 
 		class RefType : public Type {
 		private:
+			unsigned idx;
 			RecordType *contents;
 			std::map<std::string, Func *> methods;
+			std::vector<GenericType *> generics;
 			llvm::StructType *typeCached;
+			std::map<void *, void *> cloneCache;
+			std::vector<std::pair<std::vector<Type *>, RefType *>> realizationCache;
 			explicit RefType(std::string name);
 		public:
 			RefType(RefType const&)=delete;
@@ -24,6 +30,16 @@ namespace seq {
 			RecordType *getContents();
 			void setContents(RecordType *contents);
 			void addMethod(std::string name, Func *func);
+			void addGenerics(unsigned count);
+			void setGeneric(unsigned idx, Type *type);
+			void finalizeLLVMType();
+			GenericType *getGeneric(unsigned idx);
+
+			bool seenClone(void *p);
+			void *getClone(void *p);
+			void addClone(void *p, void *clone);
+
+			RefType *realize(std::vector<Type *> types);
 
 			llvm::Value *memb(llvm::Value *self,
 			                  const std::string& name,
@@ -40,11 +56,14 @@ namespace seq {
 			void initOps() override;
 			void initFields() override;
 			bool isAtomic() const override;
+			bool is(types::Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			llvm::Value *make(llvm::BasicBlock *block) const;
 			static RefType *get(std::string name);
+
+			RefType *clone(RefType *ref) override;
 		};
 
 		class MethodType : public RecordType {
@@ -64,6 +83,127 @@ namespace seq {
 			Type *getCallType(std::vector<Type *> inTypes) override;
 			llvm::Value *make(llvm::Value *self, llvm::Value *func, llvm::BasicBlock *block);
 			static MethodType *get(RefType *self, FuncType *func);
+
+			MethodType *clone(RefType *ref) override;
+		};
+
+		class GenericType : public Type {
+		private:
+			RefType *ref;
+			unsigned idx;
+			Type *type;
+		public:
+			GenericType(RefType *ref, unsigned idx);
+			void realize(Type *type);
+			void release();
+			void ensure() const;
+
+			bool isAtomic() const override;
+
+			std::string copyFuncName() override;
+			std::string printFuncName() override;
+			std::string allocFuncName() override;
+
+			llvm::Value *loadFromAlloca(BaseFunc *base,
+			                            llvm::Value *var,
+			                            llvm::BasicBlock *block) override;
+
+			llvm::Value *storeInAlloca(BaseFunc *base,
+			                           llvm::Value *self,
+			                           llvm::BasicBlock *block,
+			                           bool storeDefault=false) override;
+
+			llvm::Value *eq(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *other,
+			                llvm::BasicBlock *block) override;
+
+			llvm::Value *copy(BaseFunc *base,
+			                          llvm::Value *self,
+			                          llvm::BasicBlock *block) override;
+
+			void finalizeCopy(llvm::Module *module, llvm::ExecutionEngine *eng) override;
+
+			void print(BaseFunc *base,
+			           llvm::Value *self,
+			           llvm::BasicBlock *block) override;
+
+			void finalizePrint(llvm::Module *module, llvm::ExecutionEngine *eng) override;
+
+			void serialize(BaseFunc *base,
+			               llvm::Value *self,
+			               llvm::Value *fp,
+			               llvm::BasicBlock *block) override;
+
+			void finalizeSerialize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
+
+			llvm::Value *deserialize(BaseFunc *base,
+			                         llvm::Value *fp,
+			                         llvm::BasicBlock *block) override;
+
+			void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
+
+			llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block) override;
+			llvm::Value *alloc(seq_int_t count, llvm::BasicBlock *block) override;
+
+			void finalizeAlloc(llvm::Module *module, llvm::ExecutionEngine *eng) override;
+
+			llvm::Value *load(BaseFunc *base,
+			                  llvm::Value *ptr,
+			                  llvm::Value *idx,
+			                  llvm::BasicBlock *block) override;
+
+			void store(BaseFunc *base,
+			           llvm::Value *self,
+			           llvm::Value *ptr,
+			           llvm::Value *idx,
+			           llvm::BasicBlock *block) override;
+
+			llvm::Value *indexLoad(BaseFunc *base,
+			                       llvm::Value *self,
+			                       llvm::Value *idx,
+			                       llvm::BasicBlock *block) override;
+
+			void indexStore(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *idx,
+			                llvm::Value *val,
+			                llvm::BasicBlock *block) override;
+
+			llvm::Value *call(BaseFunc *base,
+			                  llvm::Value *self,
+			                  std::vector<llvm::Value *> args,
+			                  llvm::BasicBlock *block) override;
+
+			llvm::Value *memb(llvm::Value *self,
+			                  const std::string& name,
+			                  llvm::BasicBlock *block) override;
+
+			Type *membType(const std::string& name) override;
+
+			llvm::Value *setMemb(llvm::Value *self,
+			                     const std::string& name,
+			                     llvm::Value *val,
+			                     llvm::BasicBlock *block) override;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+
+			void initOps() override;
+			void initFields() override;
+			OpSpec findUOp(const std::string& symbol) override;
+			OpSpec findBOp(const std::string& symbol, Type *rhsType) override;
+
+			bool is(Type *type) const override;
+			bool isGeneric(Type *type) const override;
+			bool isChildOf(Type *type) const override;
+			Type *getBaseType(seq_int_t idx) const override;
+			Type *getCallType(std::vector<Type *> inTypes) override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			seq_int_t size(llvm::Module *module) const override;
+			Mem& operator[](seq_int_t size) override;
+			static GenericType *get(RefType *ref, unsigned idx);
+
+			GenericType *clone(RefType *ref) override;
 		};
 
 	}

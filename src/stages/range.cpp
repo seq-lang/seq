@@ -123,3 +123,14 @@ Range& Range::make(seq_int_t to)
 {
 	return *new Range(to);
 }
+
+Range *Range::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Range *)ref->getClone(this);
+
+	Range& x = Range::make(from->clone(ref), to->clone(ref), step->clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

@@ -34,3 +34,11 @@ types::Type *RecordExpr::getType() const
 		types.push_back(expr->getType());
 	return names.empty() ? types::RecordType::get(types) : types::RecordType::get(types, names);
 }
+
+RecordExpr *RecordExpr::clone(types::RefType *ref)
+{
+	std::vector<Expr *> exprsCloned;
+	for (auto *expr : exprs)
+		exprsCloned.push_back(expr->clone(ref));
+	return new RecordExpr(exprsCloned, names);
+}

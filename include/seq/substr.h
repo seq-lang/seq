@@ -16,6 +16,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		static Substr& make(Expr *start, Expr *len);
 		static Substr& make(seq_int_t start, seq_int_t len);
+
+		Substr *clone(types::RefType *ref) override;
 	};
 }
 

@@ -17,6 +17,8 @@ namespace seq {
 		llvm::Value *load(llvm::BasicBlock *block);
 		void store(llvm::Value *val, llvm::BasicBlock *block);
 		types::Type *getType();
+
+		Cell *clone(types::RefType *ref);
 	};
 }
 

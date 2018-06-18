@@ -78,6 +78,11 @@ Pipeline Pipeline::operator|(PipelineList& to)
 	return *this | MakeRec::make(to);
 }
 
+Pipeline Pipeline::clone(types::RefType *ref)
+{
+	return {head->clone(ref), tail->clone(ref)};
+}
+
 PipelineList::Node::Node(Pipeline p) :
     isVar(false), p(p), v(nullptr), next(nullptr)
 {
@@ -86,6 +91,17 @@ PipelineList::Node::Node(Pipeline p) :
 PipelineList::Node::Node(Var *v) :
     isVar(true), p({nullptr, nullptr}), v(v), next(nullptr)
 {
+}
+
+PipelineList::Node *PipelineList::Node::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Node *)ref->getClone(this);
+
+	Node *x = isVar ? new Node(v->clone(ref)) : new Node(p.clone(ref));
+	ref->addClone(this, x);
+	x->next = next ? next->clone(ref) : nullptr;
+	return x;
 }
 
 PipelineList::PipelineList(Pipeline p)
@@ -102,6 +118,14 @@ void PipelineList::addNode(Node *n)
 {
 	tail->next = n;
 	tail = n;
+}
+
+PipelineList *PipelineList::clone(types::RefType *ref)
+{
+	auto *x = new PipelineList(nullptr);
+	x->head = head->clone(ref);
+	x->tail = tail->clone(ref);
+	return x;
 }
 
 PipelineList& PipelineList::operator,(Pipeline p)

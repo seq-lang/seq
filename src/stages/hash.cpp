@@ -51,3 +51,14 @@ Hash& Hash::make(std::string name, SeqHash hash)
 {
 	return *new Hash(std::move(name), hash);
 }
+
+Hash *Hash::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Hash *)ref->getClone(this);
+
+	Hash& x = Hash::make(name, hash);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

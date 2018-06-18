@@ -65,3 +65,15 @@ BaseStage& BaseStage::make(types::Type *in, types::Type *out, bool init)
 {
 	return *new BaseStage(in, out, init);
 }
+
+BaseStage *BaseStage::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (BaseStage *)ref->getClone(this);
+
+	BaseStage& x = proxy ? BaseStage::make(in->clone(ref), out->clone(ref), proxy->clone(ref), init) :
+	                       BaseStage::make(in->clone(ref), out->clone(ref), init);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

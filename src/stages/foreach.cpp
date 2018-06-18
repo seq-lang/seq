@@ -81,3 +81,14 @@ ForEach& ForEach::make()
 {
 	return *new ForEach();
 }
+
+ForEach *ForEach::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (ForEach *)ref->getClone(this);
+
+	ForEach& x = ForEach::make();
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

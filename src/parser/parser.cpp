@@ -1113,7 +1113,7 @@ template<>
 struct control<module> : pegtl::normal<module>
 {
 	template<typename Input>
-	static void start(Input& in, ParseState& state)
+	static void start(Input&, ParseState& state)
 	{
 		state.scope();
 		state.scopeBarrier();
@@ -1327,10 +1327,18 @@ struct control<class_open> : pegtl::normal<class_open>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("s");
+		auto vec = state.get("s", true);
+		assert(!vec.empty());
+
 		types::RefType *ref = types::RefType::get(vec[0].value.name);
 		types::Type *type = ref;
 		state.sym(vec[0].value.name, type);
+
+		ref->addGenerics((unsigned)vec.size() - 1);
+		for (unsigned i = 1; i < vec.size(); i++) {
+			state.sym(vec[i].value.name, (types::Type *)ref->getGeneric(i - 1));
+		}
+
 		state.enter(type);
 	}
 
@@ -1369,6 +1377,7 @@ struct control<class_type> : pegtl::normal<class_type>
 		auto *ref = dynamic_cast<types::RefType *>(state.context().value.type);
 		assert(ref);
 		ref->setContents(types::RecordType::get(types, names));
+		ref->finalizeLLVMType();
 		state.scope();
 		state.scopeBarrier();
 	}
@@ -2440,7 +2449,7 @@ struct control<index_tail> : pegtl::normal<index_tail>
 	}
 
 	template<typename Input>
-	static void success(Input& in, ParseState& state)
+	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("e");
 		assert(state.top().type == SeqEntity::EXPR);
@@ -2467,7 +2476,7 @@ struct control<call_tail> : pegtl::normal<call_tail>
 	}
 
 	template<typename Input>
-	static void success(Input& in, ParseState& state)
+	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("e", true);
 		assert(state.top().type == SeqEntity::EXPR);
@@ -2687,6 +2696,40 @@ struct control<record_type> : pegtl::normal<record_type>
 		}
 
 		state.add((types::Type *)types::RecordType::get(types, names));
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<realized_type> : pegtl::normal<realized_type>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("t", true);
+		assert(!vec.empty());
+		auto *ref = dynamic_cast<types::RefType *>(vec[0].value.type);
+
+		if (!ref)
+			throw exc::SeqException("can only type-instantiate reference types");
+
+		std::vector<types::Type *> types;
+		for (unsigned i = 1; i < vec.size(); i++)
+			types.push_back(vec[i].value.type);
+
+		types::Type *realized = ref->realize(types);
+		state.add(realized);
 	}
 
 	template<typename Input>

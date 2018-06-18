@@ -16,6 +16,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		static Split& make(Expr *k, Expr *step);
 		static Split& make(seq_int_t k, seq_int_t step);
+
+		Split *clone(types::RefType *ref) override;
 	};
 }
 

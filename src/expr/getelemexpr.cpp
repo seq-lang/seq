@@ -25,3 +25,8 @@ types::Type *GetElemExpr::getType() const
 {
 	return rec->getType()->membType(memb);
 }
+
+GetElemExpr *GetElemExpr::clone(types::RefType *ref)
+{
+	return new GetElemExpr(rec->clone(ref), memb);
+}

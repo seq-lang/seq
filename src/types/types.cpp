@@ -16,6 +16,26 @@ types::Type::Type(std::string name, Type *parent) :
 {
 }
 
+std::string types::Type::getName() const
+{
+	return name;
+}
+
+types::Type *types::Type::getParent() const
+{
+	return parent;
+}
+
+SeqData types::Type::getKey() const
+{
+	return key;
+}
+
+types::VTable types::Type::getVTable() const
+{
+	return vtable;
+}
+
 Value *types::Type::loadFromAlloca(BaseFunc *base,
                                    Value *var,
                                    BasicBlock *block)
@@ -364,16 +384,6 @@ bool types::Type::isChildOf(types::Type *type) const
 	return is(type) || (parent && parent->isChildOf(type));
 }
 
-std::string types::Type::getName() const
-{
-	return name;
-}
-
-SeqData types::Type::getKey() const
-{
-	return key;
-}
-
 types::Type *types::Type::getBaseType(seq_int_t idx) const
 {
 	throw exc::SeqException("type '" + getName() + "' has no base types");
@@ -397,4 +407,9 @@ seq_int_t types::Type::size(Module *module) const
 Mem& types::Type::operator[](seq_int_t size)
 {
 	return Mem::make(this, size);
+}
+
+types::Type *types::Type::clone(RefType *ref)
+{
+	return this;
 }

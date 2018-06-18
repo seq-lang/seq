@@ -202,3 +202,17 @@ types::RecordType *types::RecordType::get(std::initializer_list<Type *> types)
 {
 	return new RecordType(types);
 }
+
+types::RecordType *types::RecordType::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (types::RecordType *)ref->getClone(this);
+
+	std::vector<Type *> typesCloned;
+	for (auto *type : types)
+		typesCloned.push_back(type->clone(ref));
+
+	auto *x = types::RecordType::get(typesCloned, names);
+	ref->addClone(this, x);
+	return x;
+}

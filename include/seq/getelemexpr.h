@@ -13,6 +13,7 @@ namespace seq {
 		GetElemExpr(Expr *rec, seq_int_t idx);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
+		GetElemExpr *clone(types::RefType *ref) override;
 	};
 }
 

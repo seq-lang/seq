@@ -46,6 +46,11 @@ Function *BaseFunc::getFunc()
 	return func;
 }
 
+BaseFunc *BaseFunc::clone(types::RefType *ref)
+{
+	return this;
+}
+
 Func::Func(std::string name,
            std::vector<std::string> argNames,
            std::vector<types::Type *> inTypes,
@@ -92,7 +97,8 @@ void Func::codegen(Module *module)
 
 	static int idx = 1;
 	func = cast<Function>(
-	         module->getOrInsertFunction(name.empty() ? "Func" + std::to_string(idx++) : name,
+	         module->getOrInsertFunction(name.empty() ? ("Func." + std::to_string(idx++)) :
+	                                                    (rawFunc ? name : name + "." + std::to_string(idx++)),
 	                                     FunctionType::get(outType->getLLVMType(context), types, false)));
 
 	if (rawFunc) {
@@ -267,8 +273,8 @@ void Func::setArgNames(std::vector<std::string> argNames)
 	assert(this->inTypes.size() == this->argNames.size());
 
 	argVars.clear();
-	for (unsigned i = 0; i < this->argNames.size(); i++)
-		argVars.insert({this->argNames[i], new Var(true)});
+	for (auto& s : this->argNames)
+		argVars.insert({s, new Var(true)});
 }
 
 void Func::setNative(std::string name, void *rawFunc)
@@ -305,6 +311,33 @@ Pipeline Func::operator|(PipelineList& to)
 Call& Func::operator()()
 {
 	return Call::make(*this);
+}
+
+Func *Func::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Func *)ref->getClone(this);
+
+	std::vector<types::Type *> inTypesCloned;
+	std::vector<Pipeline> pipelinesCloned;
+
+	for (auto *type : inTypes)
+		inTypesCloned.push_back(type->clone(ref));
+
+	auto *x = new Func(ref->getName() + "." + name, argNames, inTypesCloned, outType->clone(ref));
+	ref->addClone(this, x);
+
+	for (auto& pipeline : pipelines)
+		pipelinesCloned.push_back(pipeline.clone(ref));
+
+	x->pipelines = pipelinesCloned;
+
+	std::map<std::string, Var *> argVarsCloned;
+	for (auto& e : argVars)
+		argVarsCloned.insert({e.first, e.second->clone(ref)});
+	x->argVars = argVarsCloned;
+
+	return x;
 }
 
 BaseFuncLite::BaseFuncLite(Function *func) : BaseFunc()

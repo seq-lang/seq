@@ -133,3 +133,14 @@ Chunk& Chunk::make()
 {
 	return *new Chunk();
 }
+
+Chunk *Chunk::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Chunk *)ref->getClone(this);
+
+	Chunk& x = Chunk::make(key->clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

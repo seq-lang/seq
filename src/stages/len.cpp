@@ -27,3 +27,14 @@ Len& Len::make()
 {
 	return *new Len();
 }
+
+Len *Len::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Len *)ref->getClone(this);
+
+	Len& x = Len::make();
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

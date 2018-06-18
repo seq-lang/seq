@@ -13,6 +13,7 @@ namespace seq {
 		explicit RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names={});
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
+		RecordExpr *clone(types::RefType *ref) override;
 	};
 }
 

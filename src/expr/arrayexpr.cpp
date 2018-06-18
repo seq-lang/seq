@@ -20,3 +20,8 @@ Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	Value *arr = type->make(ptr, len, block);
 	return arr;
 }
+
+ArrayExpr *ArrayExpr::clone(types::RefType *ref)
+{
+	return new ArrayExpr(getType()->clone(ref)->getBaseType(0), count->clone(ref));
+}

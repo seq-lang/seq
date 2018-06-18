@@ -100,3 +100,14 @@ Collect& Collect::make()
 {
 	return *new Collect();
 }
+
+Collect *Collect::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Collect *)ref->getClone(this);
+
+	Collect& x = Collect::make();
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

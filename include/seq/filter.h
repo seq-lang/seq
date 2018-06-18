@@ -16,6 +16,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		static Filter& make(Expr *key);
 		static Filter& make(Func& key);
+
+		Filter *clone(types::RefType *ref) override;
 	};
 }
 

@@ -15,6 +15,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static MakeRec& make(PipelineList& pl);
+
+		MakeRec *clone(types::RefType *ref) override;
 	};
 }
 

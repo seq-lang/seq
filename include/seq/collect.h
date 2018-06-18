@@ -13,6 +13,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Collect& make();
+
+		Collect *clone(types::RefType *ref) override;
 	};
 }
 

@@ -18,6 +18,8 @@ namespace seq {
 		static Chunk& make(Expr *key);
 		static Chunk& make(Func& key);
 		static Chunk& make();
+
+		Chunk *clone(types::RefType *ref) override;
 	};
 }
 
