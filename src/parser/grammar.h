@@ -105,7 +105,7 @@ struct func_type_out_void : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<type, 
 struct func_type_in_out_void : pegtl::seq<pegtl::one<'('>, seps, TAO_PEGTL_STRING("->"), seps, pegtl::one<')'>> {};
 struct func_type : pegtl::sor<func_type_no_void, func_type_in_void, func_type_out_void, func_type_in_out_void> {};
 
-struct type_2 : pegtl::sor<seq_type, int_type, float_type, bool_type, str_type, record_type, func_type> {};
+struct type_2 : pegtl::sor<seq_type, int_type, float_type, bool_type, str_type, record_type, func_type, realized_type, custom_type> {};
 struct array_component : pegtl::seq<pegtl::one<'['>, seps, pegtl::one<']'>, seps, pegtl::opt<array_component>> {};
 struct array_type : pegtl::seq<type_2, seps, array_component> {};
 
