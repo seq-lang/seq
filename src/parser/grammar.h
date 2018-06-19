@@ -13,6 +13,7 @@ struct comment : pegtl::disable<pegtl::one<'#'>, short_comment> {};
 
 struct sep : pegtl::sor<pegtl::ascii::space, comment> {};
 struct seps : pegtl::star<sep> {};
+struct seps_must : pegtl::plus<sep> {};
 
 struct colon : TAO_PEGTL_STRING(":") {};
 struct pipe_op : TAO_PEGTL_STRING("|>") {};
@@ -137,7 +138,7 @@ struct paren_expr : pegtl::seq<pegtl::one<'('>, seps, expr, seps, pegtl::one<')'
 struct cond_expr : pegtl::seq<str_if, seps, expr, seps, str_then, seps, expr, seps, str_else, seps, expr> {};
 
 struct expr_tail;
-struct not_a_stmt : pegtl::not_at<seps, pegtl::one<'='>> {};  // make sure we're not actually in an assignment statement (e.g. "a[i] = c" or "a.foo = 42")
+struct not_a_stmt : pegtl::not_at<seps, pegtl::one<'='>, seps_must> {};  // make sure we're not actually in an assignment statement (e.g. "a[i] = c" or "a.foo = 42")
 struct index_tail : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>, not_a_stmt> {};
 struct call_tail : pegtl::seq<pegtl::one<'('>, seps, pegtl::opt<pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<')'>> {};
 struct elem_idx_tail : pegtl::seq<pegtl::one<'.'>, seps, natural, not_a_stmt> {};
@@ -253,7 +254,7 @@ struct func_stmt : pegtl::seq<pegtl::sor<func_decl, func_decl_out_void, func_dec
 struct class_generics : pegtl::seq<pegtl::one<'['>, seps, pegtl::list<name, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
 struct class_open : pegtl::if_must<str_class, seps, name, pegtl::opt<seps, class_generics>> {};
 struct class_type : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<record_type_elem_named, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
-struct class_stmt : pegtl::if_must<class_open, seps, class_type, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<func_stmt, seps>, seps>, pegtl::one<'}'>> {};
+struct class_stmt : pegtl::if_must<class_open, seps, class_type, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<pegtl::sor<func_stmt, class_stmt>, seps>, seps>, pegtl::one<'}'>> {};
 
 /*
  * Modules

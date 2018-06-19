@@ -402,7 +402,7 @@ Return *Return::clone(types::RefType *ref)
 	if (ref->seenClone(this))
 		return (Return *)ref->getClone(this);
 
-	Return& x = Return::make(expr->clone(ref));
+	Return& x = Return::make(expr ? expr->clone(ref) : nullptr);
 	ref->addClone(this, &x);
 	Stage::setCloneBase(&x, ref);
 	return &x;

@@ -642,8 +642,9 @@ types::GenericType *types::GenericType::clone(types::RefType *ref)
 	if (ref->seenClone(this))
 		return (types::GenericType *)ref->getClone(this);
 
-	auto *x = types::GenericType::get(this->ref->clone(ref));
+	auto *x = types::GenericType::get(nullptr);
 	ref->addClone(this, x);
+	x->ref = this->ref->clone(ref);
 	if (type) x->realize(type->clone(ref));
 	return x;
 }
