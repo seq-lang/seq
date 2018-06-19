@@ -267,7 +267,7 @@ Stage::operator Pipeline()
 
 void Stage::setCloneBase(Stage *stage, types::RefType *ref)
 {
-	stage->base = base->clone(ref);
+	if (base) stage->base = base->clone(ref);
 	if (isAdded()) stage->setAdded();
 	if (prev) stage->prev = prev->clone(ref);
 
