@@ -15,6 +15,7 @@ namespace seq {
 
 		class RefType : public Type {
 		private:
+			RefType *root;
 			RecordType *contents;
 			std::map<std::string, Func *> methods;
 			std::vector<GenericType *> generics;
@@ -95,6 +96,7 @@ namespace seq {
 			void realize(Type *type);
 			void release();
 			void ensure() const;
+			Type *getType() const;
 
 			std::string getName() const override;
 			Type *getParent() const override;

@@ -4,10 +4,25 @@
 using namespace seq;
 using namespace llvm;
 
+template<typename T = types::Type>
+static bool typeMatch(const std::vector<T*>& v1, const std::vector<T*>& v2)
+{
+	if (v1.size() != v2.size())
+		return false;
+
+	for (unsigned i = 0; i < v1.size(); i++) {
+		if (!v1[i]->is(v2[i]) && !v2[i]->is(v1[i]))
+			return false;
+	}
+
+	return true;
+}
+
 types::RefType::RefType(std::string name) :
-    Type(name, BaseType::get(), SeqData::REF), contents(nullptr), methods(), generics(),
-    typeCached(StructType::create(getLLVMContext(), name)), cloneCache(),
-    realizationCache(), llvmTypeInProgress(false)
+    Type(name, BaseType::get(), SeqData::REF), root(this),
+    contents(nullptr), methods(), generics(),
+    typeCached(StructType::create(getLLVMContext(), name)),
+    cloneCache(), realizationCache(), llvmTypeInProgress(false)
 {
 }
 
@@ -42,7 +57,7 @@ void types::RefType::addGenerics(unsigned count)
 	for (auto *generic : generics)
 		types.push_back(generic);
 
-	realizationCache.emplace_back(types, this);
+	root->realizationCache.emplace_back(types, this);
 }
 
 void types::RefType::setGeneric(unsigned idx, types::Type *type)
@@ -84,17 +99,8 @@ types::RefType *types::RefType::realize(std::vector<types::Type *> types)
 		                        " type parameters, but got " + std::to_string(types.size()));
 
 	// see if we've encountered this realization before:
-	for (auto& v : realizationCache) {
-		assert(v.first.size() == types.size());
-		bool match = true;
-		for (unsigned i = 0; i < types.size(); i++) {
-			if (!types[i]->is(v.first[i])) {
-				match = false;
-				break;
-			}
-		}
-
-		if (match)
+	for (auto& v : root->realizationCache) {
+		if (typeMatch<>(v.first, types))
 			return v.second;
 	}
 
@@ -104,7 +110,7 @@ types::RefType *types::RefType::realize(std::vector<types::Type *> types)
 		x->setGeneric(i, types[i]);
 
 	cloneCache.clear();
-	realizationCache.emplace_back(types, x);
+	root->realizationCache.emplace_back(types, x);
 	return x;
 }
 
@@ -187,7 +193,8 @@ bool types::RefType::isAtomic() const
 
 bool types::RefType::is(types::Type *type) const
 {
-	return this == type;
+	auto *ref = dynamic_cast<types::RefType *>(type);
+	return ref && (root == ref->root) && typeMatch<types::GenericType>(generics, ref->generics);
 }
 
 types::Type *types::RefType::getBaseType(seq_int_t idx) const
@@ -198,6 +205,15 @@ types::Type *types::RefType::getBaseType(seq_int_t idx) const
 
 Type *types::RefType::getLLVMType(llvm::LLVMContext& context) const
 {
+	std::vector<types::Type *> realizedTypes;
+	for (auto *t : generics)
+		realizedTypes.push_back(t->getType());
+
+	for (auto& v : root->realizationCache) {
+		if (typeMatch(v.first, realizedTypes) && v.second != this)
+			return v.second->getLLVMType(context);
+	}
+
 	assert(typeCached);
 	if (llvmTypeInProgress)
 		return PointerType::get(typeCached, 0);
@@ -245,7 +261,6 @@ types::RefType *types::RefType::clone(types::RefType *ref)
 
 	std::map<std::string, Func *> methodsCloned;
 	std::vector<types::GenericType *> genericsCloned;
-	std::vector<std::pair<std::vector<types::Type *>, RefType *>> realizationCacheCloned;
 
 	for (auto& method : methods)
 		methodsCloned.insert({method.first, method.second->clone(ref)});
@@ -253,16 +268,9 @@ types::RefType *types::RefType::clone(types::RefType *ref)
 	for (auto *generic : generics)
 		genericsCloned.push_back(generic->clone(ref));
 
-	for (auto& p : realizationCache) {
-		std::vector<types::Type *> typesCloned;
-		for (auto *type : p.first)
-			typesCloned.push_back(type->clone(ref));
-		realizationCacheCloned.emplace_back(typesCloned, p.second->clone(ref));
-	}
-
 	x->methods = methodsCloned;
 	x->generics = genericsCloned;
-	x->realizationCache = realizationCacheCloned;
+	x->root = root;
 
 	return x;
 }
@@ -330,6 +338,13 @@ void types::GenericType::ensure() const
 {
 	if (!type)
 		throw exc::SeqException("generic type not yet realized");
+}
+
+types::Type *types::GenericType::getType() const
+{
+	ensure();
+	auto *genType = dynamic_cast<types::GenericType *>(type);
+	return genType ? genType->getType() : type;
 }
 
 std::string types::GenericType::getName() const
