@@ -254,7 +254,7 @@ struct func_stmt : pegtl::seq<pegtl::sor<func_decl, func_decl_out_void, func_dec
 struct class_generics : pegtl::seq<pegtl::one<'['>, seps, pegtl::list<name, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
 struct class_open : pegtl::if_must<str_class, seps, name, pegtl::opt<seps, class_generics>> {};
 struct class_type : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<record_type_elem_named, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
-struct class_stmt : pegtl::if_must<class_open, seps, class_type, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<pegtl::sor<func_stmt, class_stmt>, seps>, seps>, pegtl::one<'}'>> {};
+struct class_stmt : pegtl::if_must<class_open, seps, class_type, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<func_stmt, seps>, seps>, pegtl::one<'}'>> {};
 
 /*
  * Modules
