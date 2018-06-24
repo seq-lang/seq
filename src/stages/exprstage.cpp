@@ -88,7 +88,8 @@ void AssignStage::codegen(Module *module)
 	validate();
 
 	block = prev->getAfter();
-	cell->store(value->codegen(getBase(), block), block);
+	Value *val = value->codegen(getBase(), block);
+	cell->store(val, block);
 	codegenNext(module);
 	prev->setAfter(getAfter());
 }
@@ -117,7 +118,6 @@ AssignIndexStage::AssignIndexStage(Expr *array, Expr *idx, Expr *value) :
 
 void AssignIndexStage::codegen(Module *module)
 {
-	this->idx->ensure(types::IntType::get());
 	this->idx->ensure(types::IntType::get());
 
 	if (!array->getType()->isGeneric(types::ArrayType::get()))
