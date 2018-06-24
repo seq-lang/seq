@@ -308,6 +308,16 @@ types::Type *types::Type::membType(const std::string& name)
 	return iter->second.second;
 }
 
+Value *types::Type::staticMemb(const std::string& name, BasicBlock *block)
+{
+	throw exc::SeqException("type '" + getName() + "' has no static member '" + name + "'");
+}
+
+types::Type *types::Type::staticMembType(const std::string& name)
+{
+	throw exc::SeqException("type '" + getName() + "' has no static member '" + name + "'");
+}
+
 Value *types::Type::setMemb(Value *self,
                             const std::string& name,
                             Value *val,

@@ -2332,6 +2332,32 @@ struct control<array_expr> : pegtl::normal<array_expr>
 };
 
 template<>
+struct control<static_memb_expr> : pegtl::normal<static_memb_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ts");
+		types::Type *type = vec[0].value.type;
+		std::string memb = vec[1].value.name;
+		Expr *e = new GetStaticElemExpr(type, memb);
+		state.add(e);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<default_expr> : pegtl::normal<default_expr>
 {
 	template<typename Input>

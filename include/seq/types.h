@@ -132,6 +132,10 @@ namespace seq {
 			                             llvm::Value *val,
 			                             llvm::BasicBlock *block);
 
+			virtual llvm::Value *staticMemb(const std::string& name, llvm::BasicBlock *block);
+
+			virtual Type *staticMembType(const std::string& name);
+
 			virtual llvm::Value *defaultValue(llvm::BasicBlock *block);
 
 			virtual void initOps();

@@ -30,3 +30,23 @@ GetElemExpr *GetElemExpr::clone(types::RefType *ref)
 {
 	return new GetElemExpr(rec->clone(ref), memb);
 }
+
+GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb) :
+    Expr(), type(type), memb(std::move(memb))
+{
+}
+
+Value *GetStaticElemExpr::codegen(BaseFunc *base, BasicBlock*& block)
+{
+	return type->staticMemb(memb, block);
+}
+
+types::Type *GetStaticElemExpr::getType() const
+{
+	return type->staticMembType(memb);
+}
+
+GetStaticElemExpr *GetStaticElemExpr::clone(types::RefType *ref)
+{
+	return new GetStaticElemExpr(type->clone(ref), memb);
+}

@@ -163,6 +163,30 @@ Value *types::RefType::setMemb(Value *self,
 	return self;
 }
 
+Value *types::RefType::staticMemb(const std::string& name, BasicBlock *block)
+{
+	auto iter = methods.find(name);
+
+	if (iter == methods.end())
+		return Type::staticMemb(name, block);
+
+	FuncExpr e(iter->second);
+	auto *type = dynamic_cast<FuncType *>(e.getType());
+	assert(type);
+	return e.codegen(nullptr, block);
+}
+
+types::Type *types::RefType::staticMembType(const std::string& name)
+{
+	auto iter = methods.find(name);
+
+	if (iter == methods.end())
+		return Type::staticMembType(name);
+
+	FuncExpr e(iter->second);
+	return e.getType();
+}
+
 Value *types::RefType::defaultValue(BasicBlock *block)
 {
 	return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
@@ -559,6 +583,18 @@ Value *types::GenericType::setMemb(Value *self,
 {
 	ensure();
 	return type->setMemb(self, name, val, block);
+}
+
+Value *types::GenericType::staticMemb(const std::string& name, BasicBlock *block)
+{
+	ensure();
+	return type->staticMemb(name, block);
+}
+
+types::Type *types::GenericType::staticMembType(const std::string& name)
+{
+	ensure();
+	return type->staticMembType(name);
 }
 
 Value *types::GenericType::defaultValue(BasicBlock *block)
