@@ -19,6 +19,9 @@ namespace seq {
 			RecordType(RecordType const&)=delete;
 			void operator=(RecordType const&)=delete;
 
+			bool empty() const;
+			std::vector<Type *> getTypes();
+
 			void serialize(BaseFunc *base,
 			               llvm::Value *self,
 			               llvm::Value *fp,

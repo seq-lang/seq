@@ -131,28 +131,14 @@ class Pair[T](a: T, b: T) {
   }
 }
 
-fun int_pair(a: Int, b: Int) -> Pair[Int] {
-  let p = <Pair[Int]>
-  p.a = a
-  p.b = b
-  return p
-}
-
-fun float_pair(a: Float, b: Float) -> Pair[Float] {
-  let p = <Pair[Float]>
-  p.a = a
-  p.b = b
-  return p
-}
-
-let p = int_pair(42, 19)
+let p = Pair[Int](42, 19)
 p.sum(100) |> print  # 42 + 19 + 100 = 161
 p.print()  # 42,19
 p.swap()
 p.print()  # 19,42
 
-let q = float_pair(4.2, 1.9)
+let q = Pair[Float](4.2, 1.9)
 q.sum(10.0) |> print
 q.print()
 q.swap()
-q.print()
+Pair[Float].print(q)

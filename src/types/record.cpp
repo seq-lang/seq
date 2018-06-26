@@ -30,6 +30,16 @@ types::RecordType::RecordType(std::initializer_list<Type *> types) :
 {
 }
 
+bool types::RecordType::empty() const
+{
+	return types.empty();
+}
+
+std::vector<types::Type *> types::RecordType::getTypes()
+{
+	return types;
+}
+
 void types::RecordType::serialize(BaseFunc *base,
                                   Value *self,
                                   Value *fp,

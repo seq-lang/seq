@@ -171,16 +171,41 @@ CondExpr *CondExpr::clone(types::RefType *ref)
 	return new CondExpr(cond->clone(ref), ifTrue->clone(ref), ifFalse->clone(ref));
 }
 
+ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
+    Expr(), type(type), args(std::move(args))
+{
+}
+
+Value *ConstructExpr::codegen(BaseFunc *base, BasicBlock*& block)
+{
+	std::vector<Value *> vals;
+	for (auto *arg : args)
+		vals.push_back(arg->codegen(base, block));
+	return type->construct(base, vals, block);
+}
+
+types::Type *ConstructExpr::getType() const
+{
+	std::vector<types::Type *> types;
+	for (auto *arg : args)
+		types.push_back(arg->getType());
+	return type->getConstructType(types);
+}
+
+ConstructExpr *ConstructExpr::clone(types::RefType *ref)
+{
+	std::vector<Expr *> argsCloned;
+	for (auto *arg : args)
+		args.push_back(arg->clone(ref));
+	return new ConstructExpr(type->clone(ref), argsCloned);
+}
+
 DefaultExpr::DefaultExpr(types::Type *type) : Expr(type)
 {
 }
 
 Value *DefaultExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
-	types::RefType *refType = nullptr;
-	if ((refType = dynamic_cast<types::RefType *>(getType())))
-		return refType->make(block);
-
 	return getType()->defaultValue(block);
 }
 

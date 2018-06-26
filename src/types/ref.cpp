@@ -192,6 +192,13 @@ Value *types::RefType::defaultValue(BasicBlock *block)
 	return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
 }
 
+Value *types::RefType::construct(BaseFunc *base,
+                                 std::vector<Value *> args,
+                                 BasicBlock *block)
+{
+	return make(block, args);
+}
+
 void types::RefType::initOps()
 {
 	if (!vtable.ops.empty())
@@ -227,6 +234,23 @@ types::Type *types::RefType::getBaseType(seq_int_t idx) const
 	return contents->getBaseType(idx);
 }
 
+types::Type *types::RefType::getConstructType(std::vector<Type *> inTypes)
+{
+	std::vector<types::Type *> expTypes = contents->getTypes();
+
+	if (inTypes.size() != expTypes.size())
+		throw exc::SeqException("expected " + std::to_string(expTypes.size()) + " arguments, " +
+		                        "but got " + std::to_string(inTypes.size()));
+
+	for (unsigned i = 0; i < inTypes.size(); i++) {
+		if (!inTypes[i]->is(expTypes[i]) && !expTypes[i]->is(inTypes[i]))
+			throw exc::SeqException("expected " + expTypes[i]->getName() +
+			                        ", but got " + inTypes[i]->getName());
+	}
+
+	return this;
+}
+
 Type *types::RefType::getLLVMType(llvm::LLVMContext& context) const
 {
 	std::vector<types::Type *> realizedTypes;
@@ -256,7 +280,7 @@ seq_int_t types::RefType::size(Module *module) const
 	return sizeof(void *);
 }
 
-Value *types::RefType::make(BasicBlock *block) const
+Value *types::RefType::make(BasicBlock *block, std::vector<Value *> vals)
 {
 	assert(contents);
 	LLVMContext& context = block->getContext();
@@ -266,6 +290,12 @@ Value *types::RefType::make(BasicBlock *block) const
 	val = builder.CreateBitCast(val, typeCached);
 	ref = builder.CreateBitCast(ref, getLLVMType(context));
 	builder.CreateStore(val, ref);
+
+	if (!vals.empty()) {
+		for (unsigned i = 0; i < vals.size(); i++)
+			ref = setMemb(ref, std::to_string(i+1), vals[i], block);
+	}
+
 	return ref;
 }
 
@@ -603,6 +633,15 @@ Value *types::GenericType::defaultValue(BasicBlock *block)
 	return type->defaultValue(block);
 }
 
+Value *types::GenericType::construct(BaseFunc *base,
+                                     std::vector<Value *> args,
+                                     BasicBlock *block)
+{
+	ensure();
+	return type->construct(base, args, block);
+}
+
+
 void types::GenericType::initOps()
 {
 	ensure();
@@ -663,6 +702,12 @@ types::Type *types::GenericType::getCallType(std::vector<Type *> inTypes)
 {
 	ensure();
 	return type->getCallType(inTypes);
+}
+
+types::Type *types::GenericType::getConstructType(std::vector<Type *> inTypes)
+{
+	ensure();
+	return type->getConstructType(inTypes);
 }
 
 Type *types::GenericType::getLLVMType(LLVMContext& context) const

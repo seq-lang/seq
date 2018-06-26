@@ -138,6 +138,10 @@ namespace seq {
 
 			virtual llvm::Value *defaultValue(llvm::BasicBlock *block);
 
+			virtual llvm::Value *construct(BaseFunc *base,
+			                               std::vector<llvm::Value *> args,
+			                               llvm::BasicBlock *block);
+
 			virtual void initOps();
 			virtual void initFields();
 			virtual OpSpec findUOp(const std::string& symbol);
@@ -148,6 +152,7 @@ namespace seq {
 			virtual bool isChildOf(Type *type) const;
 			virtual Type *getBaseType(seq_int_t idx) const;
 			virtual Type *getCallType(std::vector<Type *> inTypes);
+			virtual Type *getConstructType(std::vector<Type *> inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
 			virtual Mem& operator[](seq_int_t size);

@@ -2332,6 +2332,38 @@ struct control<array_expr> : pegtl::normal<array_expr>
 };
 
 template<>
+struct control<construct_expr> : pegtl::normal<construct_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		assert(!vec.empty() && vec[0].type == SeqEntity::TYPE);
+
+		std::vector<Expr *> args;
+		for (unsigned i = 1; i < vec.size(); i++) {
+			assert(vec[i].type == SeqEntity::EXPR);
+			args.push_back(vec[i].value.expr);
+		}
+
+		Expr *e = new ConstructExpr(vec[0].value.type, args);
+		state.add(e);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<static_memb_expr> : pegtl::normal<static_memb_expr>
 {
 	template<typename Input>

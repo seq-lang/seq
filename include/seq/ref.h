@@ -57,14 +57,21 @@ namespace seq {
 			Type *staticMembType(const std::string& name) override;
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+
+			llvm::Value *construct(BaseFunc *base,
+			                       std::vector<llvm::Value *> args,
+			                       llvm::BasicBlock *block) override;
+
 			void initOps() override;
 			void initFields() override;
 			bool isAtomic() const override;
 			bool is(types::Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
+			Type *getConstructType(std::vector<Type *> inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
-			llvm::Value *make(llvm::BasicBlock *block) const;
+			llvm::Value *make(llvm::BasicBlock *block,
+			                  std::vector<llvm::Value *> vals={});
 			static RefType *get(std::string name);
 
 			RefType *clone(RefType *ref) override;
@@ -201,6 +208,10 @@ namespace seq {
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
+			llvm::Value *construct(BaseFunc *base,
+			                       std::vector<llvm::Value *> args,
+			                       llvm::BasicBlock *block) override;
+
 			void initOps() override;
 			void initFields() override;
 			OpSpec findUOp(const std::string& symbol) override;
@@ -211,6 +222,7 @@ namespace seq {
 			bool isChildOf(Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
 			Type *getCallType(std::vector<Type *> inTypes) override;
+			Type *getConstructType(std::vector<Type *> inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			Mem& operator[](seq_int_t size) override;

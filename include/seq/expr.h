@@ -52,6 +52,17 @@ namespace seq {
 		CondExpr *clone(types::RefType *ref) override;
 	};
 
+	class ConstructExpr : public Expr {
+	private:
+		types::Type *type;
+		std::vector<Expr *> args;
+	public:
+		ConstructExpr(types::Type *type, std::vector<Expr *> args);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		ConstructExpr *clone(types::RefType *ref) override;
+	};
+
 	class DefaultExpr : public Expr {
 	public:
 		explicit DefaultExpr(types::Type *type);

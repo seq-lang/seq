@@ -338,6 +338,13 @@ Value *types::Type::defaultValue(BasicBlock *block)
 	throw exc::SeqException("type '" + getName() + "' has no default value");
 }
 
+Value *types::Type::construct(BaseFunc *base,
+                              std::vector<Value *> args,
+                              BasicBlock *block)
+{
+	throw exc::SeqException("cannot construct type '" + getName() + "'");
+}
+
 void types::Type::initOps()
 {
 }
@@ -402,6 +409,11 @@ types::Type *types::Type::getBaseType(seq_int_t idx) const
 types::Type *types::Type::getCallType(std::vector<Type *> inTypes)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
+}
+
+types::Type *types::Type::getConstructType(std::vector<Type *> inTypes)
+{
+	throw exc::SeqException("cannot construct type '" + getName() + "'");
 }
 
 Type *types::Type::getLLVMType(LLVMContext& context) const

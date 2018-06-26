@@ -127,6 +127,7 @@ struct str_expr : pegtl::seq<literal_string> {};
 struct var_expr : pegtl::seq<name> {};
 struct literal_expr : pegtl::sor<bool_expr, float_expr, int_expr, str_expr, var_expr> {};
 struct array_expr : pegtl::seq<type, seps, pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>> {};
+struct construct_expr : pegtl::seq<type, seps, pegtl::one<'('>, seps, pegtl::opt<pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<')'>> {};
 struct static_memb_expr : pegtl::seq<type, seps, pegtl::one<'.'>, seps, name> {};
 struct default_expr : pegtl::seq<pegtl::one<'<'>, seps, type, seps, pegtl::one<'>'>> {};
 
@@ -147,7 +148,7 @@ struct elem_memb_tail : pegtl::seq<pegtl::one<'.'>, seps, name, not_a_stmt> {};
 struct elem_tail : pegtl::sor<elem_idx_tail, elem_memb_tail> {};
 struct expr_tail : pegtl::sor<index_tail, call_tail, elem_tail> {};
 
-struct atomic_expr_head : pegtl::sor<default_expr, array_expr, static_memb_expr, record_expr, paren_expr, cond_expr, literal_expr> {};
+struct atomic_expr_head : pegtl::sor<default_expr, array_expr, construct_expr, static_memb_expr, record_expr, paren_expr, cond_expr, literal_expr> {};
 struct atomic_expr : pegtl::seq<atomic_expr_head, pegtl::star<seps, expr_tail>> {};
 
 struct uop_bitnot : TAO_PEGTL_STRING("~") {};
