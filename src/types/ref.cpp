@@ -20,7 +20,7 @@ static bool typeMatch(const std::vector<T*>& v1, const std::vector<T*>& v2)
 
 types::RefType::RefType(std::string name) :
     Type(name, BaseType::get(), SeqData::REF), root(this),
-    contents(nullptr), methods(), generics(),
+    contents(types::RecordType::get({})), methods(), generics(),
     typeCached(StructType::create(getLLVMContext(), name)),
     cloneCache(), realizationCache(), llvmTypeInProgress(false)
 {
@@ -33,9 +33,6 @@ types::RecordType *types::RefType::getContents()
 
 void types::RefType::setContents(types::RecordType *contents)
 {
-	if (this->contents)
-		throw exc::SeqException("cannot re-set contents of reference type");
-
 	this->contents = contents;
 }
 
