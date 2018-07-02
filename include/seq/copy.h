@@ -11,6 +11,8 @@ namespace seq {
 		void validate() override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Copy& make();
+
+		Copy *clone(types::RefType *ref) override;
 	};
 }
 

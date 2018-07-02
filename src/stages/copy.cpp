@@ -40,3 +40,14 @@ Copy& Copy::make()
 {
 	return *new Copy();
 }
+
+Copy *Copy::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Copy *)ref->getClone(this);
+
+	Copy& x = Copy::make();
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

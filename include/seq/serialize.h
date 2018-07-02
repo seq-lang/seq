@@ -15,6 +15,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Serialize& make(std::string filename);
+
+		Serialize *clone(types::RefType *ref) override;
 	};
 
 	class Deserialize : public Stage {
@@ -26,6 +28,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Deserialize& make(types::Type *type, std::string filename);
+
+		Deserialize *clone(types::RefType *ref) override;
 	};
 
 }

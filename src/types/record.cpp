@@ -30,6 +30,16 @@ types::RecordType::RecordType(std::initializer_list<Type *> types) :
 {
 }
 
+bool types::RecordType::empty() const
+{
+	return types.empty();
+}
+
+std::vector<types::Type *> types::RecordType::getTypes()
+{
+	return types;
+}
+
 void types::RecordType::serialize(BaseFunc *base,
                                   Value *self,
                                   Value *fp,
@@ -135,16 +145,16 @@ bool types::RecordType::isAtomic() const
 
 void types::RecordType::initFields()
 {
-	if (!vtable.fields.empty())
+	if (!getVTable().fields.empty())
 		return;
 
 	assert(names.empty() || names.size() == types.size());
 
 	for (unsigned i = 0; i < types.size(); i++) {
-		vtable.fields.insert({std::to_string(i+1), {i, types[i]}});
+		getVTable().fields.insert({std::to_string(i+1), {i, types[i]}});
 
 		if (!names.empty() && !names[i].empty())
-			vtable.fields.insert({names[i], {i, types[i]}});
+			getVTable().fields.insert({names[i], {i, types[i]}});
 	}
 }
 
@@ -170,6 +180,14 @@ Type *types::RecordType::getLLVMType(LLVMContext& context) const
 	return StructType::get(context, body);
 }
 
+void types::RecordType::addLLVMTypesToStruct(StructType *structType)
+{
+	std::vector<llvm::Type *> body;
+	for (auto& type : types)
+		body.push_back(type->getLLVMType(structType->getContext()));
+	structType->setBody(body);
+}
+
 seq_int_t types::RecordType::size(Module *module) const
 {
 	std::unique_ptr<DataLayout> layout(new DataLayout(module));
@@ -193,4 +211,18 @@ types::RecordType *types::RecordType::get(std::vector<Type *> types, std::vector
 types::RecordType *types::RecordType::get(std::initializer_list<Type *> types)
 {
 	return new RecordType(types);
+}
+
+types::RecordType *types::RecordType::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (types::RecordType *)ref->getClone(this);
+
+	std::vector<Type *> typesCloned;
+	for (auto *type : types)
+		typesCloned.push_back(type->clone(ref));
+
+	auto *x = types::RecordType::get(typesCloned, names);
+	ref->addClone(this, x);
+	return x;
 }

@@ -24,6 +24,8 @@ namespace seq {
 
 		Pipeline operator|(Pipeline to);
 		Pipeline operator|(PipelineList& to);
+
+		Pipeline clone(types::RefType *ref);
 	};
 
 	class PipelineList {
@@ -35,6 +37,8 @@ namespace seq {
 
 			explicit Node(Pipeline p);
 			explicit Node(Var *v);
+
+			Node *clone(types::RefType *ref);
 		};
 	private:
 		void addNode(Node *n);
@@ -46,6 +50,8 @@ namespace seq {
 		explicit PipelineList(Var *v);
 		PipelineList& operator,(Pipeline p);
 		PipelineList& operator,(Var& v);
+
+		PipelineList *clone(types::RefType *ref);
 	};
 
 	PipelineList& operator,(Pipeline from, Pipeline to);

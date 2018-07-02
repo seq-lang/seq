@@ -27,6 +27,8 @@ namespace seq {
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			static FuncType *get(std::vector<Type *> inTypes, Type *outType);
+
+			FuncType *clone(RefType *ref) override;
 		};
 
 	}

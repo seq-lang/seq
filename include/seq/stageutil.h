@@ -60,8 +60,8 @@ namespace seq {
 		CellStage& cell(Cell *cell);
 		AssignStage& assign(Cell *cell, Expr *value);
 		AssignIndexStage& assignindex(Expr *array, Expr *idx, Expr *value);
-		AssignMemberStage& assignmemb(Cell *cell, seq_int_t idx, Expr *value);
-		AssignMemberStage& assignmemb(Cell *cell, std::string name, Expr *value);
+		AssignMemberStage& assignmemb(Expr *expr, seq_int_t idx, Expr *value);
+		AssignMemberStage& assignmemb(Expr *expr, std::string name, Expr *value);
 		Capture& capture(void *addr);
 		Source& source(std::vector<Expr *> sources);
 		If& ifstage();

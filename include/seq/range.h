@@ -25,6 +25,8 @@ namespace seq {
 		static Range& make(seq_int_t from, seq_int_t to, seq_int_t step);
 		static Range& make(seq_int_t from, seq_int_t to);
 		static Range& make(seq_int_t to);
+
+		Range *clone(types::RefType *ref) override;
 	};
 }
 

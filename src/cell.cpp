@@ -37,3 +37,13 @@ types::Type *Cell::getType()
 {
 	return init->getType();
 }
+
+Cell *Cell::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Cell *)ref->getClone(this);
+
+	auto *x = new Cell(base->clone(ref), init->clone(ref));
+	ref->addClone(this, x);
+	return x;
+}

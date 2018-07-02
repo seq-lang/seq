@@ -28,12 +28,7 @@ types::Type *ArrayLookupExpr::getType() const
 	throw exc::SeqException("expected array, got '" + type->getName() + "'");
 }
 
-Expr *ArrayLookupExpr::getArr()
+ArrayLookupExpr *ArrayLookupExpr::clone(types::RefType *ref)
 {
-	return arr;
-}
-
-Expr *ArrayLookupExpr::getIdx()
-{
-	return idx;
+	return new ArrayLookupExpr(arr->clone(ref), idx->clone(ref));
 }

@@ -38,3 +38,14 @@ Capture& Capture::make(void *addr)
 {
 	return *new Capture(addr);
 }
+
+Capture *Capture::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Capture *)ref->getClone(this);
+
+	Capture& x = Capture::make(addr);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

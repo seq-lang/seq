@@ -340,3 +340,8 @@ LambdaStage& LambdaStage::make(LambdaContext& lambda)
 {
 	return *new LambdaStage(lambda);
 }
+
+LambdaStage *LambdaStage::clone(types::RefType *ref)
+{
+	throw exc::SeqException("cannot clone lambda stage");
+}

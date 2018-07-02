@@ -23,6 +23,8 @@ namespace seq {
 		                       Stage *proxy,
 		                       bool init=true);
 		static BaseStage& make(types::Type *in, types::Type *out, bool init=true);
+
+		BaseStage *clone(types::RefType *ref) override;
 	};
 }
 

@@ -11,6 +11,8 @@ namespace seq {
 		void validate() override;
 		void codegen(llvm::Module *module) override;
 		static ForEach& make();
+
+		ForEach *clone(types::RefType *ref) override;
 	};
 }
 

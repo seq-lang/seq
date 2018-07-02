@@ -20,6 +20,7 @@ namespace seq {
 	namespace types {
 
 		class Type;
+		class RefType;
 
 		struct VTable {
 			void *copy = nullptr;
@@ -37,6 +38,11 @@ namespace seq {
 		public:
 			Type(std::string name, Type *parent, SeqData key);
 			Type(std::string name, Type *parent);
+
+			virtual std::string getName() const;
+			virtual Type *getParent() const;
+			virtual SeqData getKey() const;
+			virtual VTable& getVTable();
 
 			virtual bool isAtomic() const;
 
@@ -83,13 +89,8 @@ namespace seq {
 
 			virtual void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
-			virtual llvm::Value *alloc(BaseFunc *base,
-			                           llvm::Value *count,
-			                           llvm::BasicBlock *block);
-
-			virtual llvm::Value *alloc(BaseFunc *base,
-			                           seq_int_t count,
-			                           llvm::BasicBlock *block);
+			virtual llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block);
+			virtual llvm::Value *alloc(seq_int_t count, llvm::BasicBlock *block);
 
 			virtual void finalizeAlloc(llvm::Module *module, llvm::ExecutionEngine *eng);
 
@@ -131,7 +132,15 @@ namespace seq {
 			                             llvm::Value *val,
 			                             llvm::BasicBlock *block);
 
+			virtual llvm::Value *staticMemb(const std::string& name, llvm::BasicBlock *block);
+
+			virtual Type *staticMembType(const std::string& name);
+
 			virtual llvm::Value *defaultValue(llvm::BasicBlock *block);
+
+			virtual llvm::Value *construct(BaseFunc *base,
+			                               std::vector<llvm::Value *> args,
+			                               llvm::BasicBlock *block);
 
 			virtual void initOps();
 			virtual void initFields();
@@ -141,13 +150,14 @@ namespace seq {
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;
 			virtual bool isChildOf(Type *type) const;
-			std::string getName() const;
-			SeqData getKey() const;
 			virtual Type *getBaseType(seq_int_t idx) const;
 			virtual Type *getCallType(std::vector<Type *> inTypes);
+			virtual Type *getConstructType(std::vector<Type *> inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
-			Mem& operator[](seq_int_t size);
+			virtual Mem& operator[](seq_int_t size);
+
+			virtual Type *clone(RefType *ref);
 		};
 
 	}

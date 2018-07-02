@@ -16,6 +16,7 @@ namespace seq {
 		void validate() override;
 		void codegen(llvm::Module *module) override;
 		static ExprStage& make(Expr *expr);
+		ExprStage *clone(types::RefType *ref) override;
 	};
 
 	class CellStage : public Stage {
@@ -25,6 +26,7 @@ namespace seq {
 		explicit CellStage(Cell *cell);
 		void codegen(llvm::Module *module) override;
 		static CellStage& make(Cell *cell);
+		CellStage *clone(types::RefType *ref) override;
 	};
 
 	class AssignStage : public Stage {
@@ -35,6 +37,7 @@ namespace seq {
 		AssignStage(Cell *cell, Expr *value);
 		void codegen(llvm::Module *module) override;
 		static AssignStage& make(Cell *cell, Expr *value);
+		AssignStage *clone(types::RefType *ref) override;
 	};
 
 	class AssignIndexStage : public Stage {
@@ -46,19 +49,21 @@ namespace seq {
 		AssignIndexStage(Expr *array, Expr *idx, Expr *value);
 		void codegen(llvm::Module *module) override;
 		static AssignIndexStage& make(Expr *array, Expr *idx, Expr *value);
+		AssignIndexStage *clone(types::RefType *ref) override;
 	};
 
 	class AssignMemberStage : public Stage {
 	private:
-		Cell *cell;
+		Expr *expr;
 		std::string memb;
 		Expr *value;
 	public:
-		AssignMemberStage(Cell *cell, std::string memb, Expr *value);
-		AssignMemberStage(Cell *cell, seq_int_t idx, Expr *value);
+		AssignMemberStage(Expr *expr, std::string memb, Expr *value);
+		AssignMemberStage(Expr *expr, seq_int_t idx, Expr *value);
 		void codegen(llvm::Module *module) override;
-		static AssignMemberStage& make(Cell *cell, std::string memb, Expr *value);
-		static AssignMemberStage& make(Cell *cell, seq_int_t idx, Expr *value);
+		static AssignMemberStage& make(Expr *expr, std::string memb, Expr *value);
+		static AssignMemberStage& make(Expr *expr, seq_int_t idx, Expr *value);
+		AssignMemberStage *clone(types::RefType *ref) override;
 	};
 
 	class If : public Stage {
@@ -72,6 +77,7 @@ namespace seq {
 		BaseStage& addElse();
 		void codegen(llvm::Module *module) override;
 		static If& make();
+		If *clone(types::RefType *ref) override;
 	};
 
 	class While : public Stage {
@@ -81,6 +87,7 @@ namespace seq {
 		explicit While(Expr *cond);
 		void codegen(llvm::Module *module) override;
 		static While& make(Expr *cond);
+		While *clone(types::RefType *ref) override;
 	};
 
 	class Return : public Stage {
@@ -90,6 +97,7 @@ namespace seq {
 		explicit Return(Expr *expr);
 		void codegen(llvm::Module *module) override;
 		static Return& make(Expr *expr);
+		Return *clone(types::RefType *ref) override;
 	};
 
 	class Break : public Stage {
@@ -97,6 +105,7 @@ namespace seq {
 		Break();
 		void codegen(llvm::Module *module) override;
 		static Break& make();
+		Break *clone(types::RefType *ref) override;
 	};
 
 	class Continue : public Stage {
@@ -104,6 +113,7 @@ namespace seq {
 		Continue();
 		void codegen(llvm::Module *module) override;
 		static Continue& make();
+		Continue *clone(types::RefType *ref) override;
 	};
 
 }

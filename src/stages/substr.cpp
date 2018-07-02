@@ -52,3 +52,14 @@ Substr& Substr::make(const seq_int_t start, const seq_int_t len)
 {
 	return *new Substr(start, len);
 }
+
+Substr *Substr::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Substr *)ref->getClone(this);
+
+	Substr& x = Substr::make(start->clone(ref), len->clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

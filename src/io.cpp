@@ -35,7 +35,7 @@ char *DataCell::ensureSpace(const size_t idx, const size_t space)
 {
 	const size_t new_cap = used + space;
 	if (new_cap > cap) {
-		buf = (char *)(buf ? seqRealloc(buf, new_cap) : seqAllocAtomic(new_cap));
+		buf = (char *)seqRealloc(buf, new_cap);
 		assert(buf);
 		cap = new_cap;
 
@@ -48,8 +48,7 @@ char *DataCell::ensureSpace(const size_t idx, const size_t space)
 
 void DataCell::clear()
 {
-	buf = nullptr;
-	cap = 0;
+	buf = (char *)seqAllocAtomic(cap);
 	used = 0;
 }
 

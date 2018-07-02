@@ -17,6 +17,7 @@ namespace seq {
 		ARRAY,
 		RECORD,
 		FUNC,
+		REF,
 
 		SEQ_DATA_COUNT
 	};

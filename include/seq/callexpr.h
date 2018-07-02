@@ -13,6 +13,7 @@ namespace seq {
 		CallExpr(Expr *func, std::vector<Expr *> args);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
+		CallExpr *clone(types::RefType *ref) override;
 	};
 }
 

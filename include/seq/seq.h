@@ -109,6 +109,8 @@ namespace seq {
 		PipelineAggregatorProxy operator[](unsigned idx);
 	};
 
+	llvm::LLVMContext& getLLVMContext();
+
 }
 
 #endif /* SEQ_SEQ_H */

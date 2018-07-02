@@ -18,6 +18,11 @@ types::Type *VarExpr::getType() const
 	return var->getType(nullptr);
 }
 
+VarExpr *VarExpr::clone(types::RefType *ref)
+{
+	return new VarExpr(var->clone(ref));
+}
+
 CellExpr::CellExpr(Cell *cell) : cell(cell)
 {
 }
@@ -30,6 +35,11 @@ Value *CellExpr::codegen(BaseFunc *base, BasicBlock*& block)
 types::Type *CellExpr::getType() const
 {
 	return cell->getType();
+}
+
+CellExpr *CellExpr::clone(types::RefType *ref)
+{
+	return new CellExpr(cell->clone(ref));
 }
 
 FuncExpr::FuncExpr(Func *func) : func(func)
@@ -45,4 +55,9 @@ Value *FuncExpr::codegen(BaseFunc *base, BasicBlock*& block)
 types::Type *FuncExpr::getType() const
 {
 	return types::FuncType::get(func->getInTypes(), func->getOutType());
+}
+
+FuncExpr *FuncExpr::clone(types::RefType *ref)
+{
+	return new FuncExpr(func->clone(ref));
 }

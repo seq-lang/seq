@@ -25,7 +25,7 @@ void Mem::codegen(Module *module)
 	assert(type != nullptr);
 
 	block = prev->getAfter();
-	Value *ptr = type->getBaseType()->alloc(getBase(), count, block);
+	Value *ptr = type->getBaseType()->alloc(count, block);
 	Value *len = ConstantInt::get(seqIntLLVM(context), (uint64_t)count);
 	Value *arr = type->make(ptr, len, block);
 	result = getOutType()->storeInAlloca(getBase(), arr, block, true);

@@ -1,3 +1,4 @@
+#include <seq/ref.h>
 #include "seq/void.h"
 #include "seq/num.h"
 #include "seq/expr.h"
@@ -20,8 +21,14 @@ types::Type *Expr::getType() const
 
 void Expr::ensure(types::Type *type)
 {
-	if (!getType()->isGeneric(type))
+	types::Type *actual = getType();
+	if (!actual->is(type) && !type->is(actual) && !actual->isGeneric(type))
 		throw exc::SeqException("expected '" + type->getName() + "', got '" + getType()->getName() + "'");
+}
+
+Expr *Expr::clone(types::RefType *ref)
+{
+	return this;
 }
 
 UOpExpr::UOpExpr(Op op, Expr *lhs) :
@@ -29,7 +36,7 @@ UOpExpr::UOpExpr(Op op, Expr *lhs) :
 {
 }
 
-llvm::Value *UOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *UOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	auto spec = lhs->getType()->findUOp(op.symbol);
 	Value *lhs = this->lhs->codegen(base, block);
@@ -42,12 +49,17 @@ types::Type *UOpExpr::getType() const
 	return lhs->getType()->findUOp(op.symbol).outType;
 }
 
+UOpExpr *UOpExpr::clone(types::RefType *ref)
+{
+	return new UOpExpr(op, lhs->clone(ref));
+}
+
 BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs) :
     Expr(), op(std::move(op)), lhs(lhs), rhs(rhs)
 {
 }
 
-llvm::Value *BOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *BOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 
@@ -102,12 +114,17 @@ types::Type *BOpExpr::getType() const
 		return lhs->getType()->findBOp(op.symbol, rhs->getType()).outType;
 }
 
+BOpExpr *BOpExpr::clone(types::RefType *ref)
+{
+	return new BOpExpr(op, lhs->clone(ref), rhs->clone(ref));
+}
+
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse) :
     Expr(), cond(cond), ifTrue(ifTrue), ifFalse(ifFalse)
 {
 }
 
-llvm::Value *CondExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *CondExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	cond->ensure(types::BoolType::get());
 
@@ -147,4 +164,52 @@ types::Type *CondExpr::getType() const
 		                        ifFalse->getType()->getName() + "' in conditional expression");
 
 	return ifTrue->getType();
+}
+
+CondExpr *CondExpr::clone(types::RefType *ref)
+{
+	return new CondExpr(cond->clone(ref), ifTrue->clone(ref), ifFalse->clone(ref));
+}
+
+ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
+    Expr(), type(type), args(std::move(args))
+{
+}
+
+Value *ConstructExpr::codegen(BaseFunc *base, BasicBlock*& block)
+{
+	std::vector<Value *> vals;
+	for (auto *arg : args)
+		vals.push_back(arg->codegen(base, block));
+	return type->construct(base, vals, block);
+}
+
+types::Type *ConstructExpr::getType() const
+{
+	std::vector<types::Type *> types;
+	for (auto *arg : args)
+		types.push_back(arg->getType());
+	return type->getConstructType(types);
+}
+
+ConstructExpr *ConstructExpr::clone(types::RefType *ref)
+{
+	std::vector<Expr *> argsCloned;
+	for (auto *arg : args)
+		args.push_back(arg->clone(ref));
+	return new ConstructExpr(type->clone(ref), argsCloned);
+}
+
+DefaultExpr::DefaultExpr(types::Type *type) : Expr(type)
+{
+}
+
+Value *DefaultExpr::codegen(BaseFunc *base, BasicBlock*& block)
+{
+	return getType()->defaultValue(block);
+}
+
+DefaultExpr *DefaultExpr::clone(types::RefType *ref)
+{
+	return new DefaultExpr(getType()->clone(ref));
 }

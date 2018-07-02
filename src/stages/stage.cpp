@@ -265,6 +265,31 @@ Stage::operator Pipeline()
 	return {this, this};
 }
 
+void Stage::setCloneBase(Stage *stage, types::RefType *ref)
+{
+	if (base) stage->base = base->clone(ref);
+	if (isAdded()) stage->setAdded();
+	if (prev) stage->prev = prev->clone(ref);
+
+	std::vector<Stage *> nextsCloned;
+	std::vector<Stage *> weakNextsCloned;
+
+	for (auto *next : nexts)
+		nextsCloned.push_back(next->clone(ref));
+
+	for (auto *next : weakNexts)
+		weakNextsCloned.push_back(next->clone(ref));
+
+	stage->nexts = nextsCloned;
+	stage->weakNexts = weakNextsCloned;
+	stage->name = name;
+}
+
+Stage *Stage::clone(types::RefType *ref)
+{
+	throw exc::SeqException("cannot clone stage '" + getName() + "'");
+}
+
 std::ostream& operator<<(std::ostream& os, Stage& stage)
 {
 	return os << stage.getName();
@@ -300,4 +325,15 @@ void Nop::codegen(Module *module)
 Nop& Nop::make()
 {
 	return *new Nop();
+}
+
+Nop *Nop::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Nop *)ref->getClone(this);
+
+	Nop& x = Nop::make();
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
 }

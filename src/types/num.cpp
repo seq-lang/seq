@@ -329,7 +329,7 @@ void types::BoolType::initOps()
 	vtable.ops = {
 		// bool ops
 		{uop("!"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateNot(b.CreateZExt(lhs, IntegerType::getInt1Ty(b.getContext()))), Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateNot(b.CreateTrunc(lhs, IntegerType::getInt1Ty(b.getContext()))), Bool.getLLVMType(b.getContext()));
 		}},
 
 		// bool,bool ops

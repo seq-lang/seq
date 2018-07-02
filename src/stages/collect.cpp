@@ -52,7 +52,7 @@ void Collect::codegen(Module *module)
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
 
-	Value *ptr = type->getBaseType()->alloc(getBase(), INIT_VEC_SIZE, preambleBlock);
+	Value *ptr = type->getBaseType()->alloc(INIT_VEC_SIZE, preambleBlock);
 	Value *ptrVar = makeAlloca(ptr, preambleBlock);
 	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
 	Value *capVar = makeAlloca(ConstantInt::get(seqIntLLVM(context), INIT_VEC_SIZE), preambleBlock);
@@ -99,4 +99,15 @@ void Collect::finalize(Module *module, ExecutionEngine *eng)
 Collect& Collect::make()
 {
 	return *new Collect();
+}
+
+Collect *Collect::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Collect *)ref->getClone(this);
+
+	Collect& x = Collect::make();
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
 }

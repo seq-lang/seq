@@ -63,3 +63,14 @@ Filter& Filter::make(Func& key)
 {
 	return *new Filter(&key);
 }
+
+Filter *Filter::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Filter *)ref->getClone(this);
+
+	Filter& x = Filter::make(key->clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

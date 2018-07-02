@@ -32,3 +32,14 @@ Count& Count::make()
 {
 	return *new Count();
 }
+
+Count *Count::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Count *)ref->getClone(this);
+
+	Count& x = Count::make();
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

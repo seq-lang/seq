@@ -75,6 +75,8 @@ namespace seq {
 		void validate() override;
 		void codegen(llvm::Module *module) override;
 		static LambdaStage& make(LambdaContext& lambda);
+
+		LambdaStage *clone(types::RefType *ref) override;
 	};
 
 }

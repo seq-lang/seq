@@ -46,3 +46,14 @@ Print& Print::make()
 {
 	return *new Print();
 }
+
+Print *Print::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Print *)ref->getClone(this);
+
+	Print& x = Print::make();
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

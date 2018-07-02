@@ -144,6 +144,17 @@ void Var::ensureConsistentBase(BaseFunc *base)
 		throw exc::SeqException("cannot use variable in different context than where it was assigned");
 }
 
+Var *Var::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Var *)ref->getClone(this);
+
+	auto *x = new Var(standalone);
+	ref->addClone(this, x);
+	if (stage) x->stage = stage->clone(ref);
+	return x;
+}
+
 Latest::Latest() : Var()
 {
 }
@@ -188,4 +199,9 @@ Latest& Latest::get()
 {
 	static auto *latest = new Latest();
 	return *latest;
+}
+
+Latest *Latest::clone(types::RefType *ref)
+{
+	throw exc::SeqException("cannot clone special '_' variable");
 }

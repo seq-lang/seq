@@ -33,6 +33,8 @@ namespace seq {
 		virtual LoadStore& operator[](seq_int_t idx);
 
 		void ensureConsistentBase(BaseFunc *base);
+
+		virtual Var *clone(types::RefType *ref);
 	};
 
 	class Latest : public Var {
@@ -49,6 +51,8 @@ namespace seq {
 		BaseFunc *getBase() const override;
 
 		static Latest& get();
+
+		Latest *clone(types::RefType *ref) override;
 	};
 
 	static Latest& _ = Latest::get();

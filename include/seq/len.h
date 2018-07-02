@@ -9,6 +9,8 @@ namespace seq {
 		Len();
 		void codegen(llvm::Module *module) override;
 		static Len& make();
+
+		Len *clone(types::RefType *ref) override;
 	};
 }
 

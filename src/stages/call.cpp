@@ -57,3 +57,14 @@ Call& Call::make(Func& func)
 {
 	return *new Call(func);
 }
+
+Call *Call::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Call *)ref->getClone(this);
+
+	Call& x = Call::make(*func.clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

@@ -99,3 +99,14 @@ MakeRec& MakeRec::make(PipelineList& pl)
 {
 	return *new MakeRec(pl);
 }
+
+MakeRec *MakeRec::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (MakeRec *)ref->getClone(this);
+
+	MakeRec& x = MakeRec::make(*pl.clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

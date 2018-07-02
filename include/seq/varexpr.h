@@ -15,6 +15,7 @@ namespace seq {
 		explicit VarExpr(Var *var);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
+		VarExpr *clone(types::RefType *ref) override;
 	};
 
 	class CellExpr : public Expr {
@@ -24,6 +25,7 @@ namespace seq {
 		explicit CellExpr(Cell *cell);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
+		CellExpr *clone(types::RefType *ref) override;
 	};
 
 	class FuncExpr : public Expr {
@@ -33,6 +35,7 @@ namespace seq {
 		explicit FuncExpr(Func *func);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
+		FuncExpr *clone(types::RefType *ref) override;
 	};
 
 }

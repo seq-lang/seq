@@ -48,3 +48,14 @@ OpStage& OpStage::make(std::string name, SeqOp op)
 {
 	return *new OpStage(std::move(name), op);
 }
+
+OpStage *OpStage::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (OpStage *)ref->getClone(this);
+
+	OpStage& x = OpStage::make(name, op);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

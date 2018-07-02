@@ -14,6 +14,8 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 		static Hash& make(std::string name, SeqHash hash);
+
+		Hash *clone(types::RefType *ref) override;
 	};
 }
 

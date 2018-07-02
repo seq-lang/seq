@@ -85,3 +85,14 @@ Split& Split::make(const seq_int_t k, const seq_int_t step)
 {
 	return *new Split(k, step);
 }
+
+Split *Split::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Split *)ref->getClone(this);
+
+	Split& x = Split::make(k->clone(ref), step->clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}

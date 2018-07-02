@@ -25,3 +25,11 @@ types::Type *CallExpr::getType() const
 		types.push_back(e->getType());
 	return func->getType()->getCallType(types);
 }
+
+CallExpr *CallExpr::clone(types::RefType *ref)
+{
+	std::vector<Expr *> argsCloned;
+	for (auto *arg : args)
+		argsCloned.push_back(arg->clone(ref));
+	return new CallExpr(func->clone(ref), argsCloned);
+}

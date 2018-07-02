@@ -32,6 +32,8 @@ namespace seq {
 		virtual types::Type *getInType() const;
 		virtual types::Type *getOutType() const;
 		virtual llvm::Function *getFunc();
+
+		virtual BaseFunc *clone(types::RefType *ref);
 	};
 
 	class Func : public BaseFunc {
@@ -44,7 +46,6 @@ namespace seq {
 		std::vector<std::string> argNames;
 		std::map<std::string, Var *> argVars;
 
-		/* for native functions */
 		std::string name;
 		void *rawFunc;
 	public:
@@ -57,6 +58,7 @@ namespace seq {
 		     std::string name,
 		     void *rawFunc);
 		Func(types::Type& inType, types::Type& outType);
+
 		void codegen(llvm::Module *module) override;
 		llvm::Value *codegenCall(BaseFunc *base,
 		                         std::vector<llvm::Value *> args,
@@ -80,6 +82,8 @@ namespace seq {
 		Pipeline operator|(PipelineList& to);
 
 		Call& operator()();
+
+		Func *clone(types::RefType *ref) override;
 	};
 
 	class BaseFuncLite : public BaseFunc {

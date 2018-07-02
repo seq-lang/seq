@@ -54,6 +54,8 @@ namespace seq {
 			ArrayType& of(Type& baseType) const;
 			static ArrayType *get(Type *baseType);
 			static ArrayType *get();
+
+			ArrayType *clone(RefType *ref) override;
 		};
 
 	}
