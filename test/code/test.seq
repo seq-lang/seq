@@ -142,3 +142,17 @@ q.sum(10.0) |> print
 q.print()
 q.swap()
 Pair[Float].print(q)
+
+fun print_coord(t: {Int, Int}) {
+  match t {
+    case (x, 0): x |> print
+    case (0, y): y |> print
+    case (x, y) { x |> print ; y |> print }
+  }
+}
+
+print_coord((0, 42))
+"---" |> print
+print_coord((13, 0))
+"---" |> print
+print_coord((11, 22))

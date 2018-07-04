@@ -36,8 +36,10 @@ struct str_continue : TAO_PEGTL_STRING("continue") {};
 struct str_as : TAO_PEGTL_STRING("as") {};
 struct str_typedef : TAO_PEGTL_STRING("type") {};
 struct str_class : TAO_PEGTL_STRING("class") {};
+struct str_match : TAO_PEGTL_STRING("match") {};
+struct str_case : TAO_PEGTL_STRING("case") {};
 
-struct str_keyword : pegtl::sor<str_let, str_var, str_fun, str_if, str_then, str_elif, str_else, str_while, str_range, str_source, str_true, str_false, str_return, str_break, str_continue, str_as, str_typedef, str_class> {};
+struct str_keyword : pegtl::sor<str_let, str_var, str_fun, str_if, str_then, str_elif, str_else, str_while, str_range, str_source, str_true, str_false, str_return, str_break, str_continue, str_as, str_typedef, str_class, str_match, str_case> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword>, pegtl::identifier> {};
 
@@ -180,6 +182,18 @@ struct op_bop : pegtl::sor<bop_mul, bop_div, bop_mod, bop_add, bop_sub, bop_shl,
 struct expr : pegtl::list<pegtl::seq<pegtl::star<op_uop, seps>, atomic_expr>, pegtl::seq<seps, pegtl::not_at<pipe_op>, op_bop, seps>> {};
 
 /*
+ * Patterns
+ */
+struct pattern;
+struct int_pattern : pegtl::seq<integer> {};
+struct float_pattern : pegtl::seq<numeral> {};
+struct true_pattern : pegtl::seq<str_true> {};
+struct false_pattern : pegtl::seq<str_false> {};
+struct record_pattern : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<pattern, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
+struct wildcard_pattern : pegtl::seq<name> {};
+struct pattern : pegtl::sor<int_pattern, float_pattern, true_pattern, false_pattern, record_pattern, wildcard_pattern> {};
+
+/*
  * Stages and Pipelines
  */
 struct statement;
@@ -279,13 +293,18 @@ struct elif_close : pegtl::success {};
 struct else_close : pegtl::success {};
 struct if_stmt : pegtl::seq<if_open, seps, block, if_close, pegtl::star<seps, elif_open, seps, block, elif_close>, pegtl::opt<seps, else_open, seps, block, else_close>> {};
 
+struct match_open : pegtl::seq<str_match, seps, expr> {};
+struct case_open : pegtl::seq<str_case, seps, pattern> {};
+struct case_close : pegtl::success {};
+struct match_stmt : pegtl::seq<match_open, seps, pegtl::one<'{'>, seps, pegtl::list<pegtl::seq<case_open, seps, block, case_close>, seps>, seps, pegtl::one<'}'>> {};
+
 struct return_stmt : pegtl::seq<str_return, pegtl::opt<seps, expr>> {};
 struct break_stmt : pegtl::seq<str_break> {};
 struct continue_stmt : pegtl::seq<str_continue> {};
 
 struct expr_stmt : pegtl::seq<expr> {};
 
-struct statement : pegtl::sor<class_stmt, typedef_stmt, range_stmt, source_stmt, while_stmt, return_stmt, break_stmt, continue_stmt, var_decl, cell_decl, func_stmt, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, pipeline_expr_stmt_toplevel, expr_stmt, if_stmt> {};
+struct statement : pegtl::sor<class_stmt, typedef_stmt, range_stmt, source_stmt, while_stmt, return_stmt, break_stmt, continue_stmt, var_decl, cell_decl, func_stmt, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, pipeline_expr_stmt_toplevel, expr_stmt, if_stmt, match_stmt> {};
 struct module : pegtl::must<statement_seq> {};
 
 /*

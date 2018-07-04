@@ -27,6 +27,7 @@ struct SeqEntity {
 		TYPE,
 		MODULE,
 		EXPR,
+		PATTERN,
 		OP
 	} type = EMPTY;
 
@@ -43,6 +44,7 @@ struct SeqEntity {
 		U(types::Type *type) : type(type) {}
 		U(SeqModule *module) : module(module) {}
 		U(Expr *expr) : expr(expr) {}
+		U(Pattern *pattern) : pattern(pattern) {}
 		U(Op op) : op(std::move(op)) {}
 		~U() {}
 
@@ -57,6 +59,7 @@ struct SeqEntity {
 		types::Type *type;
 		SeqModule *module;
 		Expr *expr;
+		Pattern *pattern;
 		Op op;
 	} value;
 
@@ -72,6 +75,7 @@ struct SeqEntity {
 	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
 	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
 	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
+	SeqEntity(Pattern *pattern) : type(SeqEntity::PATTERN), value(pattern) {}
 	SeqEntity(Op op) : type(SeqEntity::OP) { new (&value.op) Op(std::move(op)); }
 
 	SeqEntity& operator=(const SeqEntity& ent)
@@ -112,6 +116,9 @@ struct SeqEntity {
 				break;
 			case SeqEntity::EXPR:
 				value.expr = ent.value.expr;
+				break;
+			case SeqEntity::PATTERN:
+				value.pattern = ent.value.pattern;
 				break;
 			case SeqEntity::OP:
 				new (&value.op) Op(ent.value.op);
@@ -161,7 +168,8 @@ const std::map<char, int> TYPE_MAP = {{'x', SeqEntity::EMPTY},
                                       {'f', SeqEntity::FUNC},
                                       {'t', SeqEntity::TYPE},
                                       {'m', SeqEntity::MODULE},
-                                      {'e', SeqEntity::EXPR}};
+                                      {'e', SeqEntity::EXPR},
+                                      {'q', SeqEntity::PATTERN}};
 
 class ParseState {
 	typedef std::map<std::string, SeqEntity> SymTab;
@@ -2008,6 +2016,7 @@ struct control<if_open> : pegtl::normal<if_open>
 		assert(ifstage != nullptr);
 		Pipeline branch = ifstage->addCond(vec[0].value.expr);
 		state.enter(branch);
+		state.scope();
 	}
 
 	template<typename Input>
@@ -2035,6 +2044,7 @@ struct control<elif_open> : pegtl::normal<elif_open>
 		assert(ifstage != nullptr);
 		Pipeline branch = ifstage->addCond(vec[0].value.expr);
 		state.enter(branch);
+		state.scope();
 	}
 
 	template<typename Input>
@@ -2060,6 +2070,7 @@ struct control<else_open> : pegtl::normal<else_open>
 		assert(ifstage != nullptr);
 		Pipeline branch = ifstage->addElse();
 		state.enter(branch);
+		state.scope();
 	}
 
 	template<typename Input>
@@ -2075,6 +2086,7 @@ struct control<if_close> : pegtl::normal<if_close>
 	static void success(Input&, ParseState& state)
 	{
 		state.exit();
+		state.unscope();
 	}
 };
 
@@ -2085,6 +2097,7 @@ struct control<elif_close> : pegtl::normal<elif_close>
 	static void success(Input&, ParseState& state)
 	{
 		state.exit();
+		state.unscope();
 	}
 };
 
@@ -2095,6 +2108,98 @@ struct control<else_close> : pegtl::normal<else_close>
 	static void success(Input&, ParseState& state)
 	{
 		state.exit();
+		state.unscope();
+	}
+};
+
+template<>
+struct control<match_stmt> : pegtl::normal<match_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+		Pipeline p = stageutil::matchstage();
+		p.getHead()->setBase(state.base());
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("p");
+		assert(dynamic_cast<Match *>(vec[0].value.pipeline.getHead()));
+		state.context().add(vec[0].value.pipeline);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<match_open> : pegtl::normal<match_open>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::PIPELINE);
+		auto *matchstage = dynamic_cast<Match *>(state.top().value.pipeline.getHead());
+		assert(matchstage != nullptr);
+		matchstage->setValue(vec[0].value.expr);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<case_open> : pegtl::normal<case_open>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("q");
+		assert(state.top().type == SeqEntity::PIPELINE);
+		auto *matchstage = dynamic_cast<Match *>(state.top().value.pipeline.getHead());
+		assert(matchstage != nullptr);
+		Pipeline branch = matchstage->addCase(vec[0].value.pattern);
+		state.enter(branch);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<case_close> : pegtl::normal<case_close>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.exit();
+		state.unscope();  // leaving the pattern's scope
 	}
 };
 
@@ -2883,6 +2988,158 @@ struct control<func_type_in_out_void> : pegtl::normal<func_type_in_out_void>
 	static void success(Input&, ParseState& state)
 	{
 		state.add((types::Type *)types::FuncType::get({}, types::VoidType::get()));
+	}
+};
+
+template<>
+struct control<pattern> : pegtl::normal<pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.scope();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		// The case parsing functions will un-scope for us
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.unscope();
+	}
+};
+
+template<>
+struct control<int_pattern> : pegtl::normal<int_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("i");
+		Pattern *p = new IntPattern(vec[0].value.ival);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<float_pattern> : pegtl::normal<float_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("f");
+		Pattern *p = new FloatPattern(vec[0].value.fval);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<true_pattern> : pegtl::normal<true_pattern>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pattern *p = new BoolPattern(true);
+		state.add(p);
+	}
+};
+
+template<>
+struct control<false_pattern> : pegtl::normal<false_pattern>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pattern *p = new BoolPattern(false);
+		state.add(p);
+	}
+};
+
+template<>
+struct control<record_pattern> : pegtl::normal<record_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("q", true);
+		assert(!vec.empty());
+
+		std::vector<Pattern *> patterns;
+		for (auto& e : vec)
+			patterns.push_back(e.value.pattern);
+
+		Pattern *p = new RecordPattern(patterns);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<wildcard_pattern> : pegtl::normal<wildcard_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		std::string name = vec[0].value.name;
+
+		auto *p = new Wildcard();
+
+		if (name != "_")
+			state.sym(name, p->getVar());
+
+		state.add((Pattern *)p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
 	}
 };
 

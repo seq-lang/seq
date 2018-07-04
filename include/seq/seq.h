@@ -16,6 +16,7 @@
 #include "cell.h"
 #include "mem.h"
 #include "lambda.h"
+#include "patterns.h"
 #include "io.h"
 #include "exc.h"
 #include "common.h"

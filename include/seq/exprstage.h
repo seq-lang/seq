@@ -5,6 +5,7 @@
 #include "cell.h"
 #include "stage.h"
 #include "basestage.h"
+#include "patterns.h"
 
 namespace seq {
 
@@ -78,6 +79,20 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		static If& make();
 		If *clone(types::RefType *ref) override;
+	};
+
+	class Match : public Stage {
+	private:
+		Expr *value;
+		std::vector<Pattern *> patterns;
+		std::vector<BaseStage *> branches;
+	public:
+		Match();
+		void setValue(Expr *value);
+		BaseStage& addCase(Pattern *pattern);
+		void codegen(llvm::Module *module) override;
+		static Match& make();
+		Match *clone(types::RefType *ref) override;
 	};
 
 	class While : public Stage {
