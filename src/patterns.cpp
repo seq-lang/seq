@@ -39,7 +39,10 @@ Var *Wildcard::getVar()
 	return var;
 }
 
-Value *Wildcard::codegen(BaseFunc *base, types::Type *type, Value *val, BasicBlock *&block)
+Value *Wildcard::codegen(BaseFunc *base,
+                         types::Type *type,
+                         Value *val,
+                         BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	result = type->storeInAlloca(base, val, block, true);
@@ -70,7 +73,10 @@ Var *BoundPattern::getVar()
 	return var;
 }
 
-Value *BoundPattern::codegen(BaseFunc *base, types::Type *type, Value *val, BasicBlock *&block)
+Value *BoundPattern::codegen(BaseFunc *base,
+                             types::Type *type,
+                             Value *val,
+                             BasicBlock*& block)
 {
 	result = type->storeInAlloca(base, val, block, true);
 	auto& p = BaseStage::make(&types::Any, type);
@@ -90,10 +96,15 @@ BoolPattern::BoolPattern(bool val) :
 {
 }
 
+StrPattern::StrPattern(std::string val) :
+    Pattern(&types::Str), val(std::move(val))
+{
+}
+
 Value *IntPattern::codegen(BaseFunc *base,
                            types::Type *type,
                            Value *val,
-                           BasicBlock *&block)
+                           BasicBlock*& block)
 {
 	validate(type);
 	LLVMContext& context = block->getContext();
@@ -105,13 +116,23 @@ Value *IntPattern::codegen(BaseFunc *base,
 Value *BoolPattern::codegen(BaseFunc *base,
                             types::Type *type,
                             Value *val,
-                            BasicBlock *&block)
+                            BasicBlock*& block)
 {
 	validate(type);
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
 	Value *pat = ConstantInt::get(types::Bool.getLLVMType(context), (uint64_t)this->val);
 	return builder.CreateFCmpOEQ(val, pat);
+}
+
+Value *StrPattern::codegen(BaseFunc *base,
+                           types::Type *type,
+                           Value *val,
+                           BasicBlock*& block)
+{
+	validate(type);
+	Value *pat = StrExpr(this->val).codegen(base, block);
+	return types::Str.eq(base, val, pat, block);
 }
 
 RecordPattern::RecordPattern(std::vector<Pattern *> patterns) :
@@ -138,7 +159,7 @@ void RecordPattern::validate(types::Type *type)
 Value *RecordPattern::codegen(BaseFunc *base,
                               types::Type *type,
                               Value *val,
-                              BasicBlock *&block)
+                              BasicBlock*& block)
 {
 	validate(type);
 	LLVMContext& context = block->getContext();
@@ -171,7 +192,7 @@ RangePattern::RangePattern(seq_int_t a, seq_int_t b) :
 Value *RangePattern::codegen(BaseFunc *base,
                              types::Type *type,
                              Value *val,
-                             BasicBlock *&block)
+                             BasicBlock*& block)
 {
 	validate(type);
 	LLVMContext& context = block->getContext();
@@ -199,7 +220,7 @@ void OrPattern::validate(types::Type *type)
 Value *OrPattern::codegen(BaseFunc *base,
                           types::Type *type,
                           Value *val,
-                          BasicBlock *&block)
+                          BasicBlock*& block)
 {
 	validate(type);
 	LLVMContext& context = block->getContext();

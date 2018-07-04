@@ -3047,6 +3047,30 @@ struct control<false_pattern> : pegtl::normal<false_pattern>
 };
 
 template<>
+struct control<str_pattern> : pegtl::normal<str_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		Pattern *p = new StrPattern(vec[0].value.name);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<record_pattern> : pegtl::normal<record_pattern>
 {
 	template<typename Input>

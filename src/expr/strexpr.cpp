@@ -24,7 +24,7 @@ Value *StrExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	strVar->setAlignment(1);
 
 	IRBuilder<> builder(preambleBlock);
-	Value *str = builder.CreateGEP(strVar, zeroLLVM(context));
+	Value *str = builder.CreateBitCast(strVar, IntegerType::getInt8PtrTy(context));
 	Value *len = ConstantInt::get(seqIntLLVM(context), s.length());
 	return types::Str.make(str, len, preambleBlock);
 }

@@ -74,6 +74,17 @@ namespace seq {
 		                     llvm::BasicBlock*& block) override;
 	};
 
+	class StrPattern : public Pattern {
+	private:
+		std::string val;
+	public:
+		explicit StrPattern(std::string val);
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+	};
+
 	class RecordPattern : public Pattern {
 		std::vector<Pattern *> patterns;
 	public:
