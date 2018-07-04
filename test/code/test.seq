@@ -144,15 +144,16 @@ q.swap()
 Pair[Float].print(q)
 
 fun print_coord(t: {Int, Int}) {
+  # this syntax is based largely on Rust's
   match t {
-    case (0, 0) | (1, 0...1): "(!)" |> print
+    case (0 | 1, w @ 0...1) { "(!)" |> print ; w |> print }
     case (x, 0): x |> print
     case (0, y): y |> print
     case (x, y) { x |> print ; y |> print }
   }
 }
 
-print_coord((0, 42))
+print_coord((0, 1))
 "---" |> print
 print_coord((13, 0))
 "---" |> print

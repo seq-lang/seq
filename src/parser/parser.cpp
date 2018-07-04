@@ -3107,6 +3107,32 @@ struct control<wildcard_pattern> : pegtl::normal<wildcard_pattern>
 };
 
 template<>
+struct control<bound_pattern> : pegtl::normal<bound_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("sq");
+		std::string name = vec[0].value.name;
+		auto *p = new BoundPattern(vec[1].value.pattern);
+		state.sym(name, p->getVar(), true);
+		state.add((Pattern *)p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<range_pattern> : pegtl::normal<range_pattern>
 {
 	template<typename Input>

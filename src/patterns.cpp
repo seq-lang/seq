@@ -42,14 +42,42 @@ Var *Wildcard::getVar()
 Value *Wildcard::codegen(BaseFunc *base, types::Type *type, Value *val, BasicBlock *&block)
 {
 	LLVMContext& context = block->getContext();
-
 	result = type->storeInAlloca(base, val, block, true);
 	auto& p = BaseStage::make(&types::Any, type);
 	p.setBase(base);
 	p.result = result;
 	*var = p;
-
 	return ConstantInt::get(IntegerType::getInt1Ty(context), 1);
+}
+
+BoundPattern::BoundPattern(Pattern *pattern) :
+    Pattern(&types::Any), var(new Var(true)), result(nullptr), pattern(pattern)
+{
+}
+
+void BoundPattern::validate(types::Type *type)
+{
+	pattern->validate(type);
+}
+
+BoundPattern *BoundPattern::clone()
+{
+	return new BoundPattern(pattern->clone());
+}
+
+Var *BoundPattern::getVar()
+{
+	return var;
+}
+
+Value *BoundPattern::codegen(BaseFunc *base, types::Type *type, Value *val, BasicBlock *&block)
+{
+	result = type->storeInAlloca(base, val, block, true);
+	auto& p = BaseStage::make(&types::Any, type);
+	p.setBase(base);
+	p.result = result;
+	*var = p;
+	return pattern->codegen(base, type, val, block);
 }
 
 IntPattern::IntPattern(seq_int_t val) :

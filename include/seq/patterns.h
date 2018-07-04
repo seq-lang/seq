@@ -36,6 +36,22 @@ namespace seq {
 		Var *getVar();
 	};
 
+	class BoundPattern : public Pattern {
+	private:
+		Var *var;
+		llvm::Value *result;
+		Pattern *pattern;
+	public:
+		explicit BoundPattern(Pattern *pattern);
+		void validate(types::Type *type) override;
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+		BoundPattern *clone() override;
+		Var *getVar();
+	};
+
 	class IntPattern : public Pattern {
 	private:
 		seq_int_t val;
