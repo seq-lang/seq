@@ -145,6 +145,7 @@ Pair[Float].print(q)
 
 fun print_coord(t: {Int, Int}) {
   match t {
+    case (0, 0) | (1, 0...1): "(!)" |> print
     case (x, 0): x |> print
     case (0, y): y |> print
     case (x, y) { x |> print ; y |> print }

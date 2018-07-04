@@ -43,7 +43,7 @@ Value *Wildcard::codegen(BaseFunc *base, types::Type *type, Value *val, BasicBlo
 {
 	LLVMContext& context = block->getContext();
 
-	result = type->storeInAlloca(base, val, block);
+	result = type->storeInAlloca(base, val, block, true);
 	auto& p = BaseStage::make(&types::Any, type);
 	p.setBase(base);
 	p.result = result;
@@ -54,11 +54,6 @@ Value *Wildcard::codegen(BaseFunc *base, types::Type *type, Value *val, BasicBlo
 
 IntPattern::IntPattern(seq_int_t val) :
     Pattern(&types::Int), val(val)
-{
-}
-
-FloatPattern::FloatPattern(double val) :
-    Pattern(&types::Float), val(val)
 {
 }
 
@@ -77,18 +72,6 @@ Value *IntPattern::codegen(BaseFunc *base,
 	IRBuilder<> builder(block);
 	Value *pat = ConstantInt::get(types::Int.getLLVMType(context), (uint64_t)this->val, true);
 	return builder.CreateICmpEQ(val, pat);
-}
-
-Value *FloatPattern::codegen(BaseFunc *base,
-                             types::Type *type,
-                             Value *val,
-                             BasicBlock *&block)
-{
-	validate(type);
-	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
-	Value *pat = ConstantFP::get(types::Float.getLLVMType(context), this->val);
-	return builder.CreateFCmpOEQ(val, pat);
 }
 
 Value *BoolPattern::codegen(BaseFunc *base,
@@ -150,4 +133,63 @@ RecordPattern *RecordPattern::clone()
 	for (auto *elem : patterns)
 		patternsCloned.push_back(elem->clone());
 	return new RecordPattern(patternsCloned);
+}
+
+RangePattern::RangePattern(seq_int_t a, seq_int_t b) :
+    Pattern(&types::Int), a(a), b(b)
+{
+}
+
+Value *RangePattern::codegen(BaseFunc *base,
+                             types::Type *type,
+                             Value *val,
+                             BasicBlock *&block)
+{
+	validate(type);
+	LLVMContext& context = block->getContext();
+
+	Value *a = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->a, true);
+	Value *b = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->b, true);
+
+	IRBuilder<> builder(block);
+	Value *c1 = builder.CreateICmpSLE(a, val);
+	Value *c2 = builder.CreateICmpSLE(val, b);
+	return builder.CreateAnd(c1, c2);
+}
+
+OrPattern::OrPattern(std::vector<Pattern *> patterns) :
+    Pattern(&types::Any), patterns(std::move(patterns))
+{
+}
+
+void OrPattern::validate(types::Type *type)
+{
+	for (auto *pattern : patterns)
+		pattern->validate(type);
+}
+
+Value *OrPattern::codegen(BaseFunc *base,
+                          types::Type *type,
+                          Value *val,
+                          BasicBlock *&block)
+{
+	validate(type);
+	LLVMContext& context = block->getContext();
+	Value *result = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
+
+	for (auto *pattern : patterns) {
+		Value *subRes = pattern->codegen(base, type, val, block);
+		IRBuilder<> builder(block);
+		result = builder.CreateOr(result, subRes);
+	}
+
+	return result;
+}
+
+OrPattern *OrPattern::clone()
+{
+	std::vector<Pattern *> patternsCloned;
+	for (auto *elem : patterns)
+		patternsCloned.push_back(elem->clone());
+	return new OrPattern(patternsCloned);
 }

@@ -189,9 +189,12 @@ struct int_pattern : pegtl::seq<integer> {};
 struct float_pattern : pegtl::seq<numeral> {};
 struct true_pattern : pegtl::seq<str_true> {};
 struct false_pattern : pegtl::seq<str_false> {};
-struct record_pattern : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<pattern, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
+struct record_pattern : pegtl::seq<pegtl::one<'('>, seps, pegtl::sor<pegtl::seq<pattern, pegtl::plus<seps, pegtl::one<','>, seps, pattern>>, pegtl::seq<pattern, seps, pegtl::one<','>>>, seps, pegtl::one<')'>> {};
 struct wildcard_pattern : pegtl::seq<name> {};
-struct pattern : pegtl::sor<int_pattern, float_pattern, true_pattern, false_pattern, record_pattern, wildcard_pattern> {};
+struct range_pattern : pegtl::seq<integer, seps, TAO_PEGTL_STRING("..."), seps, integer> {};
+struct paren_pattern : pegtl::seq<pegtl::one<'('>, seps, pattern, seps, pegtl::one<')'>> {};
+struct pattern0 : pegtl::sor<range_pattern, int_pattern, float_pattern, true_pattern, false_pattern, record_pattern, wildcard_pattern, paren_pattern> {};
+struct pattern : pegtl::list<pattern0, pegtl::seq<seps, pegtl::one<'|'>, seps>> {};
 
 /*
  * Stages and Pipelines

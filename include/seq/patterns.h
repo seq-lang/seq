@@ -47,17 +47,6 @@ namespace seq {
 		                     llvm::BasicBlock*& block) override;
 	};
 
-	class FloatPattern : public Pattern {
-	private:
-		double val;
-	public:
-		explicit FloatPattern(double val);
-		llvm::Value *codegen(BaseFunc *base,
-		                     types::Type *type,
-		                     llvm::Value *val,
-		                     llvm::BasicBlock*& block) override;
-	};
-
 	class BoolPattern : public Pattern {
 	private:
 		bool val;
@@ -79,6 +68,30 @@ namespace seq {
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
 		RecordPattern *clone() override;
+	};
+
+	class RangePattern : public Pattern {
+	private:
+		seq_int_t a;
+		seq_int_t b;
+	public:
+		RangePattern(seq_int_t a, seq_int_t b);
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+	};
+
+	class OrPattern : public Pattern {
+		std::vector<Pattern *> patterns;
+	public:
+		explicit OrPattern(std::vector<Pattern *> patterns);
+		void validate(types::Type *type) override;
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+		OrPattern *clone() override;
 	};
 
 }

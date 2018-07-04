@@ -246,18 +246,25 @@ public:
 		return syms.find("*") != syms.end();
 	}
 
-	static void symadd(std::string name, SeqEntity ent, std::map<std::string, SeqEntity>& syms)
+	static void symadd(std::string name,
+	                   SeqEntity ent,
+	                   std::map<std::string, SeqEntity>& syms,
+	                   bool override)
 	{
-		if (syms.find(name) != syms.end())
-			throw exc::SeqException("duplicate symbol '" + std::string(name) + "'");
+		if (syms.find(name) != syms.end()) {
+			if (override)
+				syms.find(name)->second = ent;
+			else
+				throw exc::SeqException("duplicate symbol '" + std::string(name) + "'");
+		}
 
 		syms.insert({name, ent});
 	}
 
-	void sym(std::string name, const SeqEntity& ent)
+	void sym(std::string name, const SeqEntity& ent, bool override=false)
 	{
 		assert(!symbols.empty());
-		symadd(std::move(name), ent, symbols.back());
+		symadd(std::move(name), ent, symbols.back(), override);
 	}
 
 	/*
@@ -269,10 +276,10 @@ public:
 		sym("*", {});
 	}
 
-	void symparent(std::string name, const SeqEntity& ent)
+	void symparent(std::string name, const SeqEntity& ent, bool override=false)
 	{
 		assert(symbols.size() >= 2);
-		symadd(std::move(name), ent, symbols[symbols.size() - 2]);
+		symadd(std::move(name), ent, symbols[symbols.size() - 2], override);
 	}
 
 	static SeqEntity lookupInTable(const std::string& name, SymTab symtab)
@@ -2172,6 +2179,7 @@ struct control<case_open> : pegtl::normal<case_open>
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+		state.scope();
 	}
 
 	template<typename Input>
@@ -2189,6 +2197,7 @@ struct control<case_open> : pegtl::normal<case_open>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
+		state.unscope();
 	}
 };
 
@@ -2199,7 +2208,7 @@ struct control<case_close> : pegtl::normal<case_close>
 	static void success(Input&, ParseState& state)
 	{
 		state.exit();
-		state.unscope();  // leaving the pattern's scope
+		state.unscope();
 	}
 };
 
@@ -2992,28 +3001,6 @@ struct control<func_type_in_out_void> : pegtl::normal<func_type_in_out_void>
 };
 
 template<>
-struct control<pattern> : pegtl::normal<pattern>
-{
-	template<typename Input>
-	static void start(Input&, ParseState& state)
-	{
-		state.scope();
-	}
-
-	template<typename Input>
-	static void success(Input&, ParseState& state)
-	{
-		// The case parsing functions will un-scope for us
-	}
-
-	template<typename Input>
-	static void failure(Input&, ParseState& state)
-	{
-		state.unscope();
-	}
-};
-
-template<>
 struct control<int_pattern> : pegtl::normal<int_pattern>
 {
 	template<typename Input>
@@ -3027,30 +3014,6 @@ struct control<int_pattern> : pegtl::normal<int_pattern>
 	{
 		auto vec = state.get("i");
 		Pattern *p = new IntPattern(vec[0].value.ival);
-		state.add(p);
-	}
-
-	template<typename Input>
-	static void failure(Input&, ParseState& state)
-	{
-		state.pop();
-	}
-};
-
-template<>
-struct control<float_pattern> : pegtl::normal<float_pattern>
-{
-	template<typename Input>
-	static void start(Input&, ParseState& state)
-	{
-		state.push();
-	}
-
-	template<typename Input>
-	static void success(Input&, ParseState& state)
-	{
-		auto vec = state.get("f");
-		Pattern *p = new FloatPattern(vec[0].value.fval);
 		state.add(p);
 	}
 
@@ -3131,9 +3094,69 @@ struct control<wildcard_pattern> : pegtl::normal<wildcard_pattern>
 		auto *p = new Wildcard();
 
 		if (name != "_")
-			state.sym(name, p->getVar());
+			state.sym(name, p->getVar(), true);
 
 		state.add((Pattern *)p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<range_pattern> : pegtl::normal<range_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ii");
+		Pattern *p = new RangePattern(vec[0].value.ival, vec[1].value.ival);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<pattern> : pegtl::normal<pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("q", true);
+		assert(!vec.empty());
+
+		Pattern *p = nullptr;
+
+		if (vec.size() == 1) {
+			p = vec[0].value.pattern;
+		} else {
+			std::vector<Pattern *> patterns;
+			for (auto &e : vec)
+				patterns.push_back(e.value.pattern);
+			p = new OrPattern(patterns);
+		}
+
+		state.add(p);
 	}
 
 	template<typename Input>
