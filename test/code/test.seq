@@ -171,5 +171,5 @@ bb[0] = aa
 match bb {
   case [[1, 2, ...]]: "one" |> print
   case [[2, ..., 3]]: "two" |> print
-  case [[3, ..., 3]]: "three" |> print
+  case []: "three" |> print
 }

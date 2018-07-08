@@ -193,7 +193,7 @@ struct str_pattern : pegtl::seq<literal_string> {};
 struct record_pattern : pegtl::seq<pegtl::one<'('>, seps, pegtl::sor<pegtl::seq<pattern, pegtl::plus<seps, pegtl::one<','>, seps, pattern>>, pegtl::seq<pattern, seps, pegtl::one<','>>>, seps, pegtl::one<')'>> {};
 struct star_pattern : TAO_PEGTL_STRING("...") {};
 struct array_element_pattern : pegtl::sor<pattern, star_pattern> {};
-struct array_pattern : pegtl::seq<pegtl::one<'['>, seps, pegtl::list<array_element_pattern, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
+struct array_pattern : pegtl::seq<pegtl::one<'['>, seps, pegtl::opt<pegtl::list<array_element_pattern, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<']'>> {};
 struct wildcard_pattern : pegtl::seq<name> {};
 struct range_pattern : pegtl::seq<integer, seps, TAO_PEGTL_STRING("..."), seps, integer> {};
 struct bound_pattern : pegtl::seq<name, seps, pegtl::one<'@'>, seps, pattern> {};

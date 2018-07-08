@@ -3124,7 +3124,6 @@ struct control<array_pattern> : pegtl::normal<array_pattern>
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("q", true);
-		assert(!vec.empty());
 
 		std::vector<Pattern *> patterns;
 		for (auto& e : vec)
