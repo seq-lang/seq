@@ -15,7 +15,7 @@ void Pattern::validate(types::Type *type)
 		                        " but got " + type->getName());
 }
 
-Pattern *Pattern::clone()
+Pattern *Pattern::clone(types::RefType *ref)
 {
 	return this;
 }
@@ -29,7 +29,7 @@ void Wildcard::validate(types::Type *type)
 {
 }
 
-Wildcard *Wildcard::clone()
+Wildcard *Wildcard::clone(types::RefType *ref)
 {
 	return new Wildcard();
 }
@@ -63,9 +63,9 @@ void BoundPattern::validate(types::Type *type)
 	pattern->validate(type);
 }
 
-BoundPattern *BoundPattern::clone()
+BoundPattern *BoundPattern::clone(types::RefType *ref)
 {
-	return new BoundPattern(pattern->clone());
+	return new BoundPattern(pattern->clone(ref));
 }
 
 Var *BoundPattern::getVar()
@@ -193,11 +193,11 @@ Value *RecordPattern::codegen(BaseFunc *base,
 	return result;
 }
 
-RecordPattern *RecordPattern::clone()
+RecordPattern *RecordPattern::clone(types::RefType *ref)
 {
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
-		patternsCloned.push_back(elem->clone());
+		patternsCloned.push_back(elem->clone(ref));
 	return new RecordPattern(patternsCloned);
 }
 
@@ -285,7 +285,7 @@ Value *ArrayPattern::codegen(BaseFunc *base,
 
 	BasicBlock *checkBlock = block;
 
-	block = BasicBlock::Create(block->getContext(), "", block->getParent());  // block where we determine the final result
+	block = BasicBlock::Create(context, "", block->getParent());  // final result block
 	builder.CreateBr(block);
 	branch->setSuccessor(1, block);
 
@@ -297,11 +297,11 @@ Value *ArrayPattern::codegen(BaseFunc *base,
 	return resultFinal;
 }
 
-ArrayPattern *ArrayPattern::clone()
+ArrayPattern *ArrayPattern::clone(types::RefType *ref)
 {
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
-		patternsCloned.push_back(elem->clone());
+		patternsCloned.push_back(elem->clone(ref));
 	return new ArrayPattern(patternsCloned);
 }
 
@@ -356,10 +356,57 @@ Value *OrPattern::codegen(BaseFunc *base,
 	return result;
 }
 
-OrPattern *OrPattern::clone()
+OrPattern *OrPattern::clone(types::RefType *ref)
 {
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
-		patternsCloned.push_back(elem->clone());
+		patternsCloned.push_back(elem->clone(ref));
 	return new OrPattern(patternsCloned);
+}
+
+GuardedPattern::GuardedPattern(Pattern *pattern, Expr *guard) :
+    Pattern(&types::Int), pattern(pattern), guard(guard)
+{
+}
+
+void GuardedPattern::validate(types::Type *type)
+{
+	pattern->validate(type);
+}
+
+Value *GuardedPattern::codegen(BaseFunc *base,
+                               types::Type *type,
+                               Value *val,
+                               BasicBlock*& block)
+{
+	validate(type);
+	LLVMContext& context = block->getContext();
+
+	Value *patternResult = pattern->codegen(base, type, val, block);
+	BasicBlock *startBlock = block;
+	IRBuilder<> builder(block);
+	block = BasicBlock::Create(context, "", block->getParent());  // guard eval block
+	BranchInst *branch = builder.CreateCondBr(patternResult, block, block);
+
+	guard->ensure(&types::Bool);
+	Value *guardResult = guard->codegen(base, block);
+	BasicBlock *checkBlock = block;
+	builder.SetInsertPoint(block);
+	guardResult = builder.CreateTrunc(guardResult, IntegerType::getInt1Ty(context));
+
+	block = BasicBlock::Create(context, "", block->getParent());  // final result block
+	builder.CreateBr(block);
+	branch->setSuccessor(1, block);
+
+	builder.SetInsertPoint(block);
+	PHINode *resultFinal = builder.CreatePHI(IntegerType::getInt1Ty(context), 2);
+	resultFinal->addIncoming(ConstantInt::get(IntegerType::getInt1Ty(context), 0), startBlock);  // pattern didn't match
+	resultFinal->addIncoming(guardResult, checkBlock);  // result of guard
+
+	return resultFinal;
+}
+
+GuardedPattern *GuardedPattern::clone(types::RefType *ref)
+{
+	return new GuardedPattern(pattern->clone(ref), guard->clone(ref));
 }

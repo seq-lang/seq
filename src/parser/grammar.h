@@ -199,7 +199,8 @@ struct range_pattern : pegtl::seq<integer, seps, TAO_PEGTL_STRING("..."), seps, 
 struct bound_pattern : pegtl::seq<name, seps, pegtl::one<'@'>, seps, pattern> {};
 struct paren_pattern : pegtl::seq<pegtl::one<'('>, seps, pattern, seps, pegtl::one<')'>> {};
 struct pattern0 : pegtl::sor<range_pattern, int_pattern, float_pattern, true_pattern, false_pattern, str_pattern, record_pattern, array_pattern, bound_pattern, wildcard_pattern, paren_pattern> {};
-struct pattern : pegtl::list<pattern0, pegtl::seq<seps, pegtl::one<'|'>, seps>> {};
+struct guarded_pattern : pegtl::seq<pattern0, seps, str_if, seps, expr> {};
+struct pattern : pegtl::list<pegtl::sor<guarded_pattern, pattern0>, pegtl::seq<seps, pegtl::one<'|'>, seps>> {};
 
 /*
  * Stages and Pipelines

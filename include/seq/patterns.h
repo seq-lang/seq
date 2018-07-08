@@ -18,7 +18,7 @@ namespace seq {
 		                             types::Type *type,
 		                             llvm::Value *val,
 		                             llvm::BasicBlock*& block)=0;
-		virtual Pattern *clone();
+		virtual Pattern *clone(types::RefType *ref);
 	};
 
 	class Wildcard : public Pattern {
@@ -32,7 +32,7 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
-		Wildcard *clone() override;
+		Wildcard *clone(types::RefType *ref) override;
 		Var *getVar();
 	};
 
@@ -48,7 +48,7 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
-		BoundPattern *clone() override;
+		BoundPattern *clone(types::RefType *ref) override;
 		Var *getVar();
 	};
 
@@ -104,7 +104,7 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
-		RecordPattern *clone() override;
+		RecordPattern *clone(types::RefType *ref) override;
 	};
 
 	class ArrayPattern : public Pattern {
@@ -116,7 +116,7 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
-		ArrayPattern *clone() override;
+		ArrayPattern *clone(types::RefType *ref) override;
 	};
 
 	class RangePattern : public Pattern {
@@ -140,7 +140,20 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
-		OrPattern *clone() override;
+		OrPattern *clone(types::RefType *ref) override;
+	};
+
+	class GuardedPattern : public Pattern {
+		Pattern *pattern;
+		Expr *guard;
+	public:
+		explicit GuardedPattern(Pattern *pattern, Expr *guard);
+		void validate(types::Type *type) override;
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+		GuardedPattern *clone(types::RefType *ref) override;
 	};
 
 }

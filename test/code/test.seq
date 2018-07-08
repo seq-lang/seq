@@ -146,6 +146,7 @@ Pair[Float].print(q)
 fun print_coord(t: {Int, Int, Str}) {
   # this syntax is based largely on Rust's
   match t {
+    case (x, y, _) if x == y && x < 5: "EQUAL" |> print
     case (x @ (0 | 1), y @ 0...1, a @ "a") { a |> print ; x |> print ; y |> print }
     case (x, 0, "b"): x |> print
     case (0, y, "b"): y |> print

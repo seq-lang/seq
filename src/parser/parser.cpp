@@ -3222,6 +3222,30 @@ struct control<range_pattern> : pegtl::normal<range_pattern>
 };
 
 template<>
+struct control<guarded_pattern> : pegtl::normal<guarded_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("qe");
+		Pattern *p = new GuardedPattern(vec[0].value.pattern, vec[1].value.expr);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<pattern> : pegtl::normal<pattern>
 {
 	template<typename Input>

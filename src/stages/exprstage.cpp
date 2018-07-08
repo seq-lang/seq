@@ -410,7 +410,7 @@ Match *Match::clone(types::RefType *ref)
 	std::vector<BaseStage *> branchesCloned;
 
 	for (auto *pattern : patterns)
-		patternsCloned.push_back(pattern->clone());
+		patternsCloned.push_back(pattern->clone(ref));
 
 	for (auto *branch : branches)
 		branchesCloned.push_back(branch->clone(ref));
