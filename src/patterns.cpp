@@ -86,6 +86,23 @@ Value *BoundPattern::codegen(BaseFunc *base,
 	return pattern->codegen(base, type, val, block);
 }
 
+StarPattern::StarPattern() : Pattern(&types::Any)
+{
+}
+
+void StarPattern::validate(types::Type *type)
+{
+}
+
+Value *StarPattern::codegen(BaseFunc *base,
+                            types::Type *type,
+                            Value *val,
+                            BasicBlock*& block)
+{
+	assert(0);
+	return nullptr;
+}
+
 IntPattern::IntPattern(seq_int_t val) :
     Pattern(&types::Int), val(val)
 {
@@ -182,6 +199,110 @@ RecordPattern *RecordPattern::clone()
 	for (auto *elem : patterns)
 		patternsCloned.push_back(elem->clone());
 	return new RecordPattern(patternsCloned);
+}
+
+ArrayPattern::ArrayPattern(std::vector<Pattern *> patterns) :
+    Pattern(&types::Any), patterns(std::move(patterns))
+{
+}
+
+void ArrayPattern::validate(types::Type *type)
+{
+	if (!type->isGeneric(&types::Array))
+		throw exc::SeqException("cannot match array pattern with non-array value");
+
+	types::Type *baseType = type->getBaseType(0);
+	for (auto *pattern : patterns)
+		pattern->validate(baseType);
+}
+
+Value *ArrayPattern::codegen(BaseFunc *base,
+                             types::Type *type,
+                             Value *val,
+                             BasicBlock*& block)
+{
+	validate(type);
+	LLVMContext& context = block->getContext();
+
+	bool hasStar = false;
+	unsigned star = 0;
+
+	for (unsigned i = 0; i < patterns.size(); i++) {
+		if (dynamic_cast<StarPattern *>(patterns[i])) {
+			assert(!hasStar);
+			star = i;
+			hasStar = true;
+		}
+	}
+
+	Value *len = type->memb(val, "len", block);
+	Value *lenMatch = nullptr;
+	BasicBlock *startBlock = block;
+	IRBuilder<> builder(block);
+
+	if (hasStar) {
+		Value *minLen = ConstantInt::get(seqIntLLVM(context), patterns.size() - 1);
+		lenMatch = builder.CreateICmpSGE(len, minLen);
+	} else {
+		Value *expectedLen = ConstantInt::get(seqIntLLVM(context), patterns.size());
+		lenMatch = builder.CreateICmpEQ(len, expectedLen);
+	}
+
+	block = BasicBlock::Create(context, "", block->getParent());  // block for checking array contents
+	BranchInst *branch = builder.CreateCondBr(lenMatch, block, block);
+
+	builder.SetInsertPoint(block);
+	Value *result = ConstantInt::get(IntegerType::getInt1Ty(context), 1);
+
+	if (hasStar) {
+		for (unsigned i = 0; i < star; i++) {
+			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
+			Value *sub = type->indexLoad(base, val, idx, block);
+			Value *subRes = patterns[i]->codegen(base, type->getBaseType(0), sub, block);
+			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
+			result = builder.CreateAnd(result, subRes);
+		}
+
+		for (unsigned i = star + 1; i < patterns.size(); i++) {
+			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
+			idx = builder.CreateAdd(idx, len);
+			idx = builder.CreateSub(idx, ConstantInt::get(seqIntLLVM(context), patterns.size()));
+
+			Value *sub = type->indexLoad(base, val, idx, block);
+			Value *subRes = patterns[i]->codegen(base, type->getBaseType(0), sub, block);
+			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
+			result = builder.CreateAnd(result, subRes);
+		}
+	} else {
+		for (unsigned i = 0; i < patterns.size(); i++) {
+			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
+			Value *sub = type->indexLoad(base, val, idx, block);
+			Value *subRes = patterns[i]->codegen(base, type->getBaseType(0), sub, block);
+			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
+			result = builder.CreateAnd(result, subRes);
+		}
+	}
+
+	BasicBlock *checkBlock = block;
+
+	block = BasicBlock::Create(block->getContext(), "", block->getParent());  // block where we determine the final result
+	builder.CreateBr(block);
+	branch->setSuccessor(1, block);
+
+	builder.SetInsertPoint(block);
+	PHINode *resultFinal = builder.CreatePHI(IntegerType::getInt1Ty(context), 2);
+	resultFinal->addIncoming(ConstantInt::get(IntegerType::getInt1Ty(context), 0), startBlock);  // length didn't match
+	resultFinal->addIncoming(result, checkBlock);  // result of checking array elements
+
+	return resultFinal;
+}
+
+ArrayPattern *ArrayPattern::clone()
+{
+	std::vector<Pattern *> patternsCloned;
+	for (auto *elem : patterns)
+		patternsCloned.push_back(elem->clone());
+	return new ArrayPattern(patternsCloned);
 }
 
 RangePattern::RangePattern(seq_int_t a, seq_int_t b) :

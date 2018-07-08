@@ -52,6 +52,16 @@ namespace seq {
 		Var *getVar();
 	};
 
+	class StarPattern : public Pattern {
+	public:
+		StarPattern();
+		void validate(types::Type *type) override;
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+	};
+
 	class IntPattern : public Pattern {
 	private:
 		seq_int_t val;
@@ -95,6 +105,18 @@ namespace seq {
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
 		RecordPattern *clone() override;
+	};
+
+	class ArrayPattern : public Pattern {
+		std::vector<Pattern *> patterns;
+	public:
+		explicit ArrayPattern(std::vector<Pattern *> patterns);
+		void validate(types::Type *type) override;
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+		ArrayPattern *clone() override;
 	};
 
 	class RangePattern : public Pattern {

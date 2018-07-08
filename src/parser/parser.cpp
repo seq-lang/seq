@@ -3101,6 +3101,47 @@ struct control<record_pattern> : pegtl::normal<record_pattern>
 };
 
 template<>
+struct control<star_pattern> : pegtl::normal<star_pattern>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pattern *p = new StarPattern();
+		state.add(p);
+	}
+};
+
+template<>
+struct control<array_pattern> : pegtl::normal<array_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("q", true);
+		assert(!vec.empty());
+
+		std::vector<Pattern *> patterns;
+		for (auto& e : vec)
+			patterns.push_back(e.value.pattern);
+
+		Pattern *p = new ArrayPattern(patterns);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<wildcard_pattern> : pegtl::normal<wildcard_pattern>
 {
 	template<typename Input>
