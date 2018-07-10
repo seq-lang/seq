@@ -40,13 +40,30 @@ namespace seq {
 			                llvm::Value *val,
 			                llvm::BasicBlock *block) override;
 
+			llvm::Value *indexSlice(BaseFunc *base,
+			                        llvm::Value *self,
+			                        llvm::Value *from,
+			                        llvm::Value *to,
+			                        llvm::BasicBlock *block) override;
+
+			llvm::Value *indexSliceNoFrom(BaseFunc *base,
+			                              llvm::Value *self,
+			                              llvm::Value *to,
+			                              llvm::BasicBlock *block) override;
+
+			llvm::Value *indexSliceNoTo(BaseFunc *base,
+			                            llvm::Value *self,
+			                            llvm::Value *from,
+			                            llvm::BasicBlock *block) override;
+
+			Type *indexType() const override;
+
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initFields() override;
 
 			bool isAtomic() const override;
 			bool isGeneric(Type *type) const override;
-			Type *getBaseType() const;
 			Type *getBaseType(seq_int_t idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;

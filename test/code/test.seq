@@ -169,7 +169,7 @@ let bb = Int[][1]
 bb[0] = aa
 
 match bb {
-  case [[1, 2, ...]]: "one" |> print
+  case [[1, 2, ...]]: "one"[0:3] |> print
   case [[2, ..., 3]]: "two" |> print
   case []: "three" |> print
 }

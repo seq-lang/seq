@@ -275,6 +275,36 @@ void types::Type::indexStore(BaseFunc *base,
 	throw exc::SeqException("cannot index into type '" + getName() + "'");
 }
 
+Value *types::Type::indexSlice(BaseFunc *base,
+                               Value *self,
+                               Value *from,
+                               Value *to,
+                               BasicBlock *block)
+{
+	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
+Value *types::Type::indexSliceNoFrom(BaseFunc *base,
+                                     Value *self,
+                                     Value *to,
+                                     BasicBlock *block)
+{
+	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
+Value *types::Type::indexSliceNoTo(BaseFunc *base,
+                                   Value *self,
+                                   Value *to,
+                                   BasicBlock *block)
+{
+	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
+types::Type *types::Type::indexType() const
+{
+	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
 Value *types::Type::call(BaseFunc *base,
                          Value *self,
                          std::vector<Value *> args,

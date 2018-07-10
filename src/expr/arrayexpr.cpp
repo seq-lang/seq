@@ -16,7 +16,7 @@ Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	count->ensure(types::IntType::get());
 
 	Value *len = count->codegen(base, block);
-	Value *ptr = type->getBaseType()->alloc(len, block);
+	Value *ptr = type->indexType()->alloc(len, block);
 	Value *arr = type->make(ptr, len, block);
 	return arr;
 }

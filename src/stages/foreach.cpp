@@ -15,7 +15,7 @@ void ForEach::validate()
 		auto *type = dynamic_cast<types::ArrayType *>(getPrev()->getOutType());
 		assert(type != nullptr);
 		in = type;
-		out = type->getBaseType();
+		out = type->indexType();
 
 		if (out->getKey() == SeqData::NONE)
 			throw exc::SeqException("cannot iterate over array of '" + out->getName() + "'");
@@ -58,7 +58,7 @@ void ForEach::codegen(Module *module)
 
 	block = body;
 	Value *val = type->indexLoad(getBase(), arr, control, block);
-	result = type->getBaseType()->storeInAlloca(getBase(), val, block, true);
+	result = type->indexType()->storeInAlloca(getBase(), val, block, true);
 
 	codegenNext(module);
 

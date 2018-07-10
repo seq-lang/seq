@@ -125,7 +125,7 @@ void AssignIndexStage::codegen(Module *module)
 
 	auto *arrType = dynamic_cast<types::ArrayType *>(array->getType());
 	assert(arrType != nullptr);
-	value->ensure(arrType->getBaseType());
+	value->ensure(arrType->indexType());
 
 	ensurePrev();
 	validate();

@@ -144,11 +144,14 @@ struct cond_expr : pegtl::seq<str_if, seps, expr, seps, str_then, seps, expr, se
 struct expr_tail;
 struct not_a_stmt : pegtl::not_at<seps, pegtl::one<'='>, seps_must> {};  // make sure we're not actually in an assignment statement (e.g. "a[i] = c" or "a.foo = 42")
 struct index_tail : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>, not_a_stmt> {};
+struct slice_tail : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<':'>, seps, expr, seps, pegtl::one<']'>, not_a_stmt> {};
+struct slice_tail_no_from : pegtl::seq<pegtl::one<'['>, seps, pegtl::one<':'>, seps, expr, seps, pegtl::one<']'>, not_a_stmt> {};
+struct slice_tail_no_to : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<':'>, seps, pegtl::one<']'>, not_a_stmt> {};
 struct call_tail : pegtl::seq<pegtl::one<'('>, seps, pegtl::opt<pegtl::list<expr, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<')'>> {};
 struct elem_idx_tail : pegtl::seq<pegtl::one<'.'>, seps, natural, not_a_stmt> {};
 struct elem_memb_tail : pegtl::seq<pegtl::one<'.'>, seps, name, not_a_stmt> {};
 struct elem_tail : pegtl::sor<elem_idx_tail, elem_memb_tail> {};
-struct expr_tail : pegtl::sor<index_tail, call_tail, elem_tail> {};
+struct expr_tail : pegtl::sor<slice_tail, slice_tail_no_to, slice_tail_no_from, index_tail, call_tail, elem_tail> {};
 
 struct atomic_expr_head : pegtl::sor<default_expr, array_expr, construct_expr, static_memb_expr, record_expr, paren_expr, cond_expr, literal_expr> {};
 struct atomic_expr : pegtl::seq<atomic_expr_head, pegtl::star<seps, expr_tail>> {};

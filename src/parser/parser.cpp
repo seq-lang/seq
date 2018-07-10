@@ -2639,6 +2639,90 @@ struct control<index_tail> : pegtl::normal<index_tail>
 };
 
 template<>
+struct control<slice_tail> : pegtl::normal<slice_tail>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ee");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *arr = state.top().value.expr;
+		Expr *from = vec[0].value.expr;
+		Expr *to = vec[1].value.expr;
+		Expr *e = new ArraySliceExpr(arr, from, to);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<slice_tail_no_from> : pegtl::normal<slice_tail_no_from>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *arr = state.top().value.expr;
+		Expr *from = nullptr;
+		Expr *to = vec[0].value.expr;
+		Expr *e = new ArraySliceExpr(arr, from, to);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<slice_tail_no_to> : pegtl::normal<slice_tail_no_to>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *arr = state.top().value.expr;
+		Expr *from = vec[0].value.expr;
+		Expr *to = nullptr;
+		Expr *e = new ArraySliceExpr(arr, from, to);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<call_tail> : pegtl::normal<call_tail>
 {
 	template<typename Input>
