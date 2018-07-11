@@ -305,6 +305,113 @@ ArrayPattern *ArrayPattern::clone(types::RefType *ref)
 	return new ArrayPattern(patternsCloned);
 }
 
+SeqPattern::SeqPattern(std::string pattern) :
+    Pattern(&types::Seq), pattern(std::move(pattern))
+{
+}
+
+Value *SeqPattern::codegen(BaseFunc *base,
+                           types::Type *type,
+                           Value *val,
+                           BasicBlock*& block)
+{
+	validate(type);
+	LLVMContext& context = block->getContext();
+
+	std::vector<char> patterns;
+
+	bool hasStar = false;
+	unsigned star = 0;
+
+	for (char c : pattern) {
+		if (isspace(c))
+			continue;
+
+		switch (c) {
+			case 'A':
+			case 'C':
+			case 'G':
+			case 'T':
+				patterns.push_back(c);
+				break;
+			case '.':
+				if (!hasStar) {
+					star = (unsigned)patterns.size();
+					hasStar = true;
+					patterns.push_back('.');
+				}
+				break;
+			default:
+				assert(0);
+		}
+	}
+
+	Value *ptr = type->memb(val, "ptr", block);
+	Value *len = type->memb(val, "len", block);
+	Value *lenMatch = nullptr;
+	BasicBlock *startBlock = block;
+	IRBuilder<> builder(block);
+
+	if (hasStar) {
+		Value *minLen = ConstantInt::get(seqIntLLVM(context), patterns.size() - 1);
+		lenMatch = builder.CreateICmpSGE(len, minLen);
+	} else {
+		Value *expectedLen = ConstantInt::get(seqIntLLVM(context), patterns.size());
+		lenMatch = builder.CreateICmpEQ(len, expectedLen);
+	}
+
+	block = BasicBlock::Create(context, "", block->getParent());  // block for checking array contents
+	BranchInst *branch = builder.CreateCondBr(lenMatch, block, block);
+
+	builder.SetInsertPoint(block);
+	Value *result = ConstantInt::get(IntegerType::getInt1Ty(context), 1);
+
+	if (hasStar) {
+		for (unsigned i = 0; i < star; i++) {
+			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
+			Value *sub = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+			Value *c = ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)patterns[i]);
+			Value *subRes = builder.CreateICmpEQ(sub, c);
+			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
+			result = builder.CreateAnd(result, subRes);
+		}
+
+		for (unsigned i = star + 1; i < patterns.size(); i++) {
+			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
+			idx = builder.CreateAdd(idx, len);
+			idx = builder.CreateSub(idx, ConstantInt::get(seqIntLLVM(context), patterns.size()));
+
+			Value *sub = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+			Value *c = ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)patterns[i]);
+			Value *subRes = builder.CreateICmpEQ(sub, c);
+			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
+			result = builder.CreateAnd(result, subRes);
+		}
+	} else {
+		for (unsigned i = 0; i < patterns.size(); i++) {
+			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
+			Value *sub = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+			Value *c = ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)patterns[i]);
+			Value *subRes = builder.CreateICmpEQ(sub, c);
+			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
+			result = builder.CreateAnd(result, subRes);
+		}
+	}
+
+	BasicBlock *checkBlock = block;
+
+	block = BasicBlock::Create(context, "", block->getParent());  // final result block
+	builder.CreateBr(block);
+	branch->setSuccessor(1, block);
+
+	builder.SetInsertPoint(block);
+	PHINode *resultFinal = builder.CreatePHI(IntegerType::getInt1Ty(context), 2);
+	resultFinal->addIncoming(ConstantInt::get(IntegerType::getInt1Ty(context), 0), startBlock);  // length didn't match
+	resultFinal->addIncoming(result, checkBlock);  // result of checking array elements
+
+	return resultFinal;
+}
+
 RangePattern::RangePattern(seq_int_t a, seq_int_t b) :
     Pattern(&types::Int), a(a), b(b)
 {

@@ -84,6 +84,8 @@ template<char Q>
 struct short_string : pegtl::seq<pegtl::one<Q>, pegtl::until<pegtl::one<Q>, character>> {};
 struct literal_string : short_string<'"'> {};
 
+struct nucleotide : pegtl::one<'A', 'C', 'G', 'T', 'N'> {};
+
 /*
  * Types
  */
@@ -197,11 +199,13 @@ struct record_pattern : pegtl::seq<pegtl::one<'('>, seps, pegtl::sor<pegtl::seq<
 struct star_pattern : TAO_PEGTL_STRING("...") {};
 struct array_element_pattern : pegtl::sor<pattern, star_pattern> {};
 struct array_pattern : pegtl::seq<pegtl::one<'['>, seps, pegtl::opt<pegtl::list<array_element_pattern, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<']'>> {};
+struct seq_pattern0 : pegtl::seq<pegtl::star<nucleotide>, pegtl::opt<TAO_PEGTL_STRING("..."), pegtl::star<nucleotide>>> {};
+struct seq_pattern : pegtl::seq<pegtl::one<'`'>, seq_pattern0, pegtl::one<'`'>> {};
 struct wildcard_pattern : pegtl::seq<name> {};
 struct range_pattern : pegtl::seq<integer, seps, TAO_PEGTL_STRING("..."), seps, integer> {};
 struct bound_pattern : pegtl::seq<name, seps, pegtl::one<'@'>, seps, pattern> {};
 struct paren_pattern : pegtl::seq<pegtl::one<'('>, seps, pattern, seps, pegtl::one<')'>> {};
-struct pattern0 : pegtl::sor<range_pattern, int_pattern, float_pattern, true_pattern, false_pattern, str_pattern, record_pattern, array_pattern, bound_pattern, wildcard_pattern, paren_pattern> {};
+struct pattern0 : pegtl::sor<range_pattern, int_pattern, float_pattern, true_pattern, false_pattern, str_pattern, record_pattern, array_pattern, seq_pattern, bound_pattern, wildcard_pattern, paren_pattern> {};
 struct guarded_pattern : pegtl::seq<pattern0, seps, str_if, seps, expr> {};
 struct pattern : pegtl::list<pegtl::sor<guarded_pattern, pattern0>, pegtl::seq<seps, pegtl::one<'|'>, seps>> {};
 

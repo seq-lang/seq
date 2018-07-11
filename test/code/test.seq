@@ -29,6 +29,15 @@ source args[0] as input {
   arr |> foreach
 
   input |> ident |> print
+
+  match input {
+    case (q @ `A...`) if q.len > 150: "match: A" |> print
+    case `C...`: "match: C" |> print
+    case `G...`: "match: G" |> print
+    case `T...`: "match: T" |> print
+    case _: "match: _" |> print
+  }
+
   input |> split 64 64 {
     let v1 = _ |> print
     v1 |> split 32 32 {

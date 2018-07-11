@@ -803,6 +803,15 @@ struct action<custom_type> {
 	}
 };
 
+template<>
+struct action<seq_pattern0> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		state.add(in.string());
+	}
+};
+
 /*
  * Control
  */
@@ -3214,6 +3223,30 @@ struct control<array_pattern> : pegtl::normal<array_pattern>
 			patterns.push_back(e.value.pattern);
 
 		Pattern *p = new ArrayPattern(patterns);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<seq_pattern> : pegtl::normal<seq_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		Pattern *p = new SeqPattern(vec[0].value.name);
 		state.add(p);
 	}
 

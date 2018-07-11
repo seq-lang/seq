@@ -119,6 +119,16 @@ namespace seq {
 		ArrayPattern *clone(types::RefType *ref) override;
 	};
 
+	class SeqPattern : public Pattern {
+		std::string pattern;
+	public:
+		explicit SeqPattern(std::string pattern);
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+	};
+
 	class RangePattern : public Pattern {
 	private:
 		seq_int_t a;
