@@ -34,7 +34,7 @@ source args[0] as input {
     case (q @ `A...`) if q.len > 150: "match: A" |> print
     case `C...`: "match: C" |> print
     case `G...`: "match: G" |> print
-    case `T...`: "match: T" |> print
+    case `_...`: "match: _..." |> print
     case _: "match: _" |> print
   }
 

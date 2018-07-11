@@ -332,13 +332,15 @@ Value *SeqPattern::codegen(BaseFunc *base,
 			case 'C':
 			case 'G':
 			case 'T':
+			case 'N':
+			case '_':
 				patterns.push_back(c);
 				break;
 			case '.':
 				if (!hasStar) {
 					star = (unsigned)patterns.size();
 					hasStar = true;
-					patterns.push_back('.');
+					patterns.push_back('\0');
 				}
 				break;
 			default:
@@ -368,6 +370,7 @@ Value *SeqPattern::codegen(BaseFunc *base,
 
 	if (hasStar) {
 		for (unsigned i = 0; i < star; i++) {
+			if (patterns[i] == '_') continue;
 			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
 			Value *sub = builder.CreateLoad(builder.CreateGEP(ptr, idx));
 			Value *c = ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)patterns[i]);
@@ -377,6 +380,7 @@ Value *SeqPattern::codegen(BaseFunc *base,
 		}
 
 		for (unsigned i = star + 1; i < patterns.size(); i++) {
+			if (patterns[i] == '_') continue;
 			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
 			idx = builder.CreateAdd(idx, len);
 			idx = builder.CreateSub(idx, ConstantInt::get(seqIntLLVM(context), patterns.size()));
@@ -389,6 +393,7 @@ Value *SeqPattern::codegen(BaseFunc *base,
 		}
 	} else {
 		for (unsigned i = 0; i < patterns.size(); i++) {
+			if (patterns[i] == '_') continue;
 			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
 			Value *sub = builder.CreateLoad(builder.CreateGEP(ptr, idx));
 			Value *c = ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)patterns[i]);

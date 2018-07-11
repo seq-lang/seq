@@ -199,7 +199,8 @@ struct record_pattern : pegtl::seq<pegtl::one<'('>, seps, pegtl::sor<pegtl::seq<
 struct star_pattern : TAO_PEGTL_STRING("...") {};
 struct array_element_pattern : pegtl::sor<pattern, star_pattern> {};
 struct array_pattern : pegtl::seq<pegtl::one<'['>, seps, pegtl::opt<pegtl::list<array_element_pattern, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<']'>> {};
-struct seq_pattern0 : pegtl::seq<pegtl::star<nucleotide>, pegtl::opt<TAO_PEGTL_STRING("..."), pegtl::star<nucleotide>>> {};
+struct nucleotide_pattern : pegtl::sor<nucleotide, pegtl::one<'_'>> {};
+struct seq_pattern0 : pegtl::seq<pegtl::star<nucleotide_pattern>, pegtl::opt<TAO_PEGTL_STRING("..."), pegtl::star<nucleotide_pattern>>> {};
 struct seq_pattern : pegtl::seq<pegtl::one<'`'>, seq_pattern0, pegtl::one<'`'>> {};
 struct wildcard_pattern : pegtl::seq<name> {};
 struct range_pattern : pegtl::seq<integer, seps, TAO_PEGTL_STRING("..."), seps, integer> {};
