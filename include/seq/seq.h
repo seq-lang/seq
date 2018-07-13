@@ -36,16 +36,17 @@
 namespace seq {
 
 	namespace types {
-		static AnyType&    Any    = *AnyType::get();
-		static BaseType&   Base   = *BaseType::get();
-		static VoidType&   Void   = *VoidType::get();
-		static SeqType&    Seq    = *SeqType::get();
-		static IntType&    Int    = *IntType::get();
-		static FloatType&  Float  = *FloatType::get();
-		static BoolType&   Bool   = *BoolType::get();
-		static StrType&    Str    = *StrType::get();
-		static ArrayType&  Array  = *ArrayType::get();
-		static RecordType& Record = *RecordType::get({});
+		static AnyType&      Any    = *AnyType::get();
+		static BaseType&     Base   = *BaseType::get();
+		static VoidType&     Void   = *VoidType::get();
+		static SeqType&      Seq    = *SeqType::get();
+		static IntType&      Int    = *IntType::get();
+		static FloatType&    Float  = *FloatType::get();
+		static BoolType&     Bool   = *BoolType::get();
+		static StrType&      Str    = *StrType::get();
+		static ArrayType&    Array  = *ArrayType::get();
+		static RecordType&   Record = *RecordType::get({});
+		static OptionalType& Opt    = *OptionalType::get();
 	}
 
 	struct PipelineAggregator {

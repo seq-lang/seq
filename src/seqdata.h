@@ -18,6 +18,7 @@ namespace seq {
 		RECORD,
 		FUNC,
 		REF,
+		OPTIONAL,
 
 		SEQ_DATA_COUNT
 	};

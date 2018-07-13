@@ -129,6 +129,19 @@ namespace seq {
 		                     llvm::BasicBlock*& block) override;
 	};
 
+	class OptPattern : public Pattern {
+	private:
+		Pattern *pattern;
+	public:
+		explicit OptPattern(Pattern *pattern);
+		void validate(types::Type *type) override;
+		llvm::Value *codegen(BaseFunc *base,
+		                     types::Type *type,
+		                     llvm::Value *val,
+		                     llvm::BasicBlock*& block) override;
+		OptPattern *clone(types::RefType *ref) override;
+	};
+
 	class RangePattern : public Pattern {
 	private:
 		seq_int_t a;

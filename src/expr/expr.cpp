@@ -1,4 +1,5 @@
 #include <seq/ref.h>
+#include <seq/optional.h>
 #include "seq/void.h"
 #include "seq/num.h"
 #include "seq/expr.h"
@@ -22,7 +23,7 @@ types::Type *Expr::getType() const
 void Expr::ensure(types::Type *type)
 {
 	types::Type *actual = getType();
-	if (!actual->is(type) && !type->is(actual) && !actual->isGeneric(type))
+	if (!actual->is(type) && !type->is(actual))
 		throw exc::SeqException("expected '" + type->getName() + "', got '" + getType()->getName() + "'");
 }
 
@@ -198,6 +199,26 @@ ConstructExpr *ConstructExpr::clone(types::RefType *ref)
 	for (auto *arg : args)
 		args.push_back(arg->clone(ref));
 	return new ConstructExpr(type->clone(ref), argsCloned);
+}
+
+OptExpr::OptExpr(Expr *val) : Expr(), val(val)
+{
+}
+
+Value *OptExpr::codegen(BaseFunc *base, BasicBlock*& block)
+{
+	Value *val = this->val->codegen(base, block);
+	return ((types::OptionalType *)getType())->make(val, block);
+}
+
+types::Type *OptExpr::getType() const
+{
+	return types::OptionalType::get(val->getType());
+}
+
+OptExpr *OptExpr::clone(types::RefType *ref)
+{
+	return new OptExpr(val->clone(ref));
 }
 
 DefaultExpr::DefaultExpr(types::Type *type) : Expr(type)

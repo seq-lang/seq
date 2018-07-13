@@ -417,6 +417,66 @@ Value *SeqPattern::codegen(BaseFunc *base,
 	return resultFinal;
 }
 
+OptPattern::OptPattern(Pattern *pattern) :
+    Pattern(&types::Any), pattern(pattern)
+{
+}
+
+void OptPattern::validate(types::Type *type)
+{
+	auto *optType = dynamic_cast<types::OptionalType *>(type);
+	if (!optType)
+		throw exc::SeqException("cannot match optional pattern against non-optional value");
+
+	if (pattern)
+		pattern->validate(optType->getBaseType(0));
+}
+
+Value *OptPattern::codegen(BaseFunc *base,
+                           types::Type *type,
+                           Value *val,
+                           BasicBlock*& block)
+{
+	validate(type);
+	LLVMContext& context = block->getContext();
+
+	auto *optType = dynamic_cast<types::OptionalType *>(type);
+	assert(optType);
+
+	if (!pattern) {  // no pattern means we're matching the empty optional pattern
+		Value *has = optType->has(val, block);
+		IRBuilder<> builder(block);
+		return builder.CreateNot(has);
+	}
+
+	Value *hasResult = optType->has(val, block);
+	BasicBlock *startBlock = block;
+	IRBuilder<> builder(block);
+	block = BasicBlock::Create(context, "", block->getParent());  // pattern eval block
+	BranchInst *branch = builder.CreateCondBr(hasResult, block, block);
+
+	Value *had = optType->val(val, block);
+	Value *patternResult = pattern->codegen(base, optType->getBaseType(0), had, block);
+	BasicBlock *checkBlock = block;
+	builder.SetInsertPoint(block);
+
+	block = BasicBlock::Create(context, "", block->getParent());  // final result block
+	builder.CreateBr(block);
+	branch->setSuccessor(1, block);
+
+	builder.SetInsertPoint(block);
+	PHINode *resultFinal = builder.CreatePHI(IntegerType::getInt1Ty(context), 2);
+	resultFinal->addIncoming(ConstantInt::get(IntegerType::getInt1Ty(context), 0), startBlock);  // no value
+	resultFinal->addIncoming(patternResult, checkBlock);  // result of pattern match
+
+	return resultFinal;
+}
+
+OptPattern *OptPattern::clone(types::RefType *ref)
+{
+	return new OptPattern(pattern->clone(ref));
+}
+
 RangePattern::RangePattern(seq_int_t a, seq_int_t b) :
     Pattern(&types::Int), a(a), b(b)
 {

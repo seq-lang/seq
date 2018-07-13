@@ -63,6 +63,16 @@ namespace seq {
 		ConstructExpr *clone(types::RefType *ref) override;
 	};
 
+	class OptExpr : public Expr {
+	private:
+		Expr *val;
+	public:
+		explicit OptExpr(Expr *val);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		OptExpr *clone(types::RefType *ref) override;
+	};
+
 	class DefaultExpr : public Expr {
 	public:
 		explicit DefaultExpr(types::Type *type);

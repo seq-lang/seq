@@ -2817,6 +2817,19 @@ struct control<elem_memb_tail> : pegtl::normal<elem_memb_tail>
 };
 
 template<>
+struct control<make_opt_tail> : pegtl::normal<make_opt_tail>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *val = state.top().value.expr;
+		Expr *e = new OptExpr(val);
+		state.top() = e;
+	}
+};
+
+template<>
 struct control<paren_expr> : pegtl::normal<paren_expr>
 {
 	template<typename Input>
@@ -2865,25 +2878,28 @@ struct control<cond_expr> : pegtl::normal<cond_expr>
 };
 
 template<>
-struct control<array_type> : pegtl::normal<array_type>
+struct control<array_tail> : pegtl::normal<array_tail>
 {
-	template<typename Input>
-	static void start(Input&, ParseState& state)
-	{
-		state.push();
-	}
-
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("t");
-		state.add((types::Type *)types::ArrayType::get(vec[0].value.type));
+		assert(state.top().type == SeqEntity::TYPE);
+		types::Type *type0 = state.top().value.type;
+		types::Type *type = types::ArrayType::get(type0);
+		state.top() = type;
 	}
+};
 
+template<>
+struct control<opt_tail> : pegtl::normal<opt_tail>
+{
 	template<typename Input>
-	static void failure(Input&, ParseState& state)
+	static void success(Input&, ParseState& state)
 	{
-		state.pop();
+		assert(state.top().type == SeqEntity::TYPE);
+		types::Type *type0 = state.top().value.type;
+		types::Type *type = types::OptionalType::get(type0);
+		state.top() = type;
 	}
 };
 
@@ -3338,6 +3354,17 @@ struct control<range_pattern> : pegtl::normal<range_pattern>
 };
 
 template<>
+struct control<empty_opt_pattern> : pegtl::normal<empty_opt_pattern>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pattern *p = new OptPattern(nullptr);
+		state.add(p);
+	}
+};
+
+template<>
 struct control<guarded_pattern> : pegtl::normal<guarded_pattern>
 {
 	template<typename Input>
@@ -3358,6 +3385,19 @@ struct control<guarded_pattern> : pegtl::normal<guarded_pattern>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
+	}
+};
+
+template<>
+struct control<opt_pattern_tail> : pegtl::normal<opt_pattern_tail>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::PATTERN);
+		Pattern *p0 = state.top().value.pattern;
+		Pattern *p = new OptPattern(p0);
+		state.top() = p;
 	}
 };
 

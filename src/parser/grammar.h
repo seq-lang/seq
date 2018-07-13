@@ -110,11 +110,12 @@ struct func_type_out_void : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<type, 
 struct func_type_in_out_void : pegtl::seq<pegtl::one<'('>, seps, TAO_PEGTL_STRING("->"), seps, pegtl::one<')'>> {};
 struct func_type : pegtl::sor<func_type_no_void, func_type_in_void, func_type_out_void, func_type_in_out_void> {};
 
-struct type_2 : pegtl::sor<seq_type, int_type, float_type, bool_type, str_type, record_type, func_type, realized_type, custom_type> {};
-struct array_component : pegtl::seq<pegtl::one<'['>, seps, pegtl::one<']'>, seps, pegtl::opt<array_component>> {};
-struct array_type : pegtl::seq<type_2, seps, array_component> {};
+struct array_tail : pegtl::seq<pegtl::one<'['>, seps, pegtl::one<']'>> {};
+struct opt_tail : pegtl::one<'?'> {};
+struct type_tail : pegtl::sor<array_tail, opt_tail> {};
 
-struct type : pegtl::sor<array_type, record_type, func_type, seq_type, int_type, float_type, bool_type, str_type, realized_type, custom_type> {};
+struct type0 : pegtl::sor<record_type, func_type, seq_type, int_type, float_type, bool_type, str_type, realized_type, custom_type> {};
+struct type : pegtl::seq<type0, pegtl::star<seps, type_tail>> {};
 
 /*
  * Expressions
@@ -153,7 +154,8 @@ struct call_tail : pegtl::seq<pegtl::one<'('>, seps, pegtl::opt<pegtl::list<expr
 struct elem_idx_tail : pegtl::seq<pegtl::one<'.'>, seps, natural, not_a_stmt> {};
 struct elem_memb_tail : pegtl::seq<pegtl::one<'.'>, seps, name, not_a_stmt> {};
 struct elem_tail : pegtl::sor<elem_idx_tail, elem_memb_tail> {};
-struct expr_tail : pegtl::sor<slice_tail, slice_tail_no_to, slice_tail_no_from, index_tail, call_tail, elem_tail> {};
+struct make_opt_tail : pegtl::one<'?'> {};
+struct expr_tail : pegtl::sor<slice_tail, slice_tail_no_to, slice_tail_no_from, index_tail, call_tail, elem_tail, make_opt_tail> {};
 
 struct atomic_expr_head : pegtl::sor<default_expr, array_expr, construct_expr, static_memb_expr, record_expr, paren_expr, cond_expr, literal_expr> {};
 struct atomic_expr : pegtl::seq<atomic_expr_head, pegtl::star<seps, expr_tail>> {};
@@ -204,11 +206,17 @@ struct seq_pattern0 : pegtl::seq<pegtl::star<nucleotide_pattern>, pegtl::opt<TAO
 struct seq_pattern : pegtl::seq<pegtl::one<'`'>, seq_pattern0, pegtl::one<'`'>> {};
 struct wildcard_pattern : pegtl::seq<name> {};
 struct range_pattern : pegtl::seq<integer, seps, TAO_PEGTL_STRING("..."), seps, integer> {};
+struct empty_opt_pattern : pegtl::one<'?'> {};
 struct bound_pattern : pegtl::seq<name, seps, pegtl::one<'@'>, seps, pattern> {};
 struct paren_pattern : pegtl::seq<pegtl::one<'('>, seps, pattern, seps, pegtl::one<')'>> {};
-struct pattern0 : pegtl::sor<range_pattern, int_pattern, float_pattern, true_pattern, false_pattern, str_pattern, record_pattern, array_pattern, seq_pattern, bound_pattern, wildcard_pattern, paren_pattern> {};
-struct guarded_pattern : pegtl::seq<pattern0, seps, str_if, seps, expr> {};
-struct pattern : pegtl::list<pegtl::sor<guarded_pattern, pattern0>, pegtl::seq<seps, pegtl::one<'|'>, seps>> {};
+
+struct opt_pattern_tail : pegtl::one<'?'> {};
+struct pattern_tail : pegtl::sor<opt_pattern_tail> {};
+
+struct pattern0 : pegtl::sor<empty_opt_pattern, range_pattern, int_pattern, float_pattern, true_pattern, false_pattern, str_pattern, record_pattern, array_pattern, seq_pattern, bound_pattern, wildcard_pattern, paren_pattern> {};
+struct pattern1 : pegtl::seq<pattern0, pegtl::star<seps, pattern_tail>> {};
+struct guarded_pattern : pegtl::seq<pattern1, seps, str_if, seps, expr> {};
+struct pattern : pegtl::list<pegtl::sor<guarded_pattern, pattern1>, pegtl::seq<seps, pegtl::one<'|'>, seps>> {};
 
 /*
  * Stages and Pipelines

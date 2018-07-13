@@ -177,7 +177,7 @@ Type *types::RecordType::getLLVMType(LLVMContext& context) const
 	for (auto& type : types)
 		body.push_back(type->getLLVMType(context));
 
-	return StructType::get(context, body);
+	return StructType::get(context, body, true);
 }
 
 void types::RecordType::addLLVMTypesToStruct(StructType *structType)
@@ -185,7 +185,7 @@ void types::RecordType::addLLVMTypesToStruct(StructType *structType)
 	std::vector<llvm::Type *> body;
 	for (auto& type : types)
 		body.push_back(type->getLLVMType(structType->getContext()));
-	structType->setBody(body);
+	structType->setBody(body, true);
 }
 
 seq_int_t types::RecordType::size(Module *module) const
