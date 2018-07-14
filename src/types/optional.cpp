@@ -53,15 +53,12 @@ Type *types::OptionalType::getLLVMType(LLVMContext& context) const
 	if (isRefOpt())
 		return baseType->getLLVMType(context);
 	else
-		return StructType::get(context,
-		                       {IntegerType::getInt1Ty(context), baseType->getLLVMType(context)},
-		                       true);
+		return StructType::get(IntegerType::getInt1Ty(context), baseType->getLLVMType(context));
 }
 
 seq_int_t types::OptionalType::size(Module *module) const
 {
-	std::unique_ptr<DataLayout> layout(new DataLayout(module));
-	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 Value *types::OptionalType::make(Value *val, BasicBlock *block)

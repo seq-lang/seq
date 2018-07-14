@@ -312,6 +312,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 
 	std::unique_ptr<Module> owner(new Module("seq", context));
 	Module *module = owner.get();
+	module->setDataLayout(EngineBuilder().selectTarget()->createDataLayout());
 
 	codegen(module);
 

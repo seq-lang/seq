@@ -304,8 +304,7 @@ Type *types::BaseSeqType::getLLVMType(LLVMContext& context) const
 
 seq_int_t types::BaseSeqType::size(Module *module) const
 {
-	std::unique_ptr<DataLayout> layout(new DataLayout(module));
-	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 /* derived Seq type */

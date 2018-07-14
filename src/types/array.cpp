@@ -291,8 +291,7 @@ Type *types::ArrayType::getLLVMType(LLVMContext& context) const
 
 seq_int_t types::ArrayType::size(Module *module) const
 {
-	std::unique_ptr<DataLayout> layout(new DataLayout(module));
-	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 Value *types::ArrayType::make(Value *ptr, Value *len, BasicBlock *block)
