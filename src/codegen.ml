@@ -44,7 +44,8 @@ let rec codegen_expr expr ?(name="") (block, input) =
 
 and codegen_pipe (block, input) = function
   | [] -> (block, Void)
-  | Ast.Identifier(name, args) :: tl -> 
+  (* TODO: match Ident *)
+  | Ast.Call(name, args) :: tl -> 
     let llb = builder_at_end llc block in 
     let args = List.map args ~f:(fun x -> 
       let name = sprintf "%s_arg" name in
@@ -124,7 +125,7 @@ and codegen_func (name, args) (block, input) tl = match name with
 
     (exit_rep, Void)
   end
-  | "print" -> begin 
+  | "_print" -> begin 
     if Array.length args <> 0 then error "print needs 0 arguments" else
     let llb = builder_at_end llc block in
     let arg, fn = match input with
@@ -207,4 +208,4 @@ let codegen = function
     position_at_end final llb;
     build_br exit llb |> ignore
   | _ -> 
-    error "N/A !!!"
+    error "Not implemented !!!"

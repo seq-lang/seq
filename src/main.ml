@@ -1,8 +1,8 @@
 (* 786 *)
 
-open Core
-
 module LLE = Llvm_executionengine
+
+open Core
 
 exception ParserError of string
 
@@ -12,10 +12,12 @@ let parse s =
     sprintf "%s;line %d;pos %d" pos.pos_fname pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
   in
   let error msg = raise (ParserError msg) in
+
   let lexbuf = Lexing.from_string s in
   try
-    let ast = Parser.program Lexer.read lexbuf in
-    Ast.flatten ast
+    let state = Lexer.stack_create () in
+    let ast = Parser.program (Lexer.token state) lexbuf in
+    ast
   with
   | Lexer.SyntaxError msg ->
     sprintf "%s: %s\n" (print_position lexbuf) msg |> error 
@@ -36,9 +38,8 @@ let rec toplevel jit fpm =
           parse (line ^ "\n"), false 
       in
       Ast.prn_ast_sexp ast |> printf "%s\n";
-      Ast.prn_ast ast |> printf "%s\n";
-      let _r = Codegen.codegen ast in
-
+      
+      (* let _ = Codegen.codegen ast in
       Utils.dump ();
       Llvm_analysis.assert_valid_function Codegen.main.fn;
       if exec then begin
@@ -47,7 +48,7 @@ let rec toplevel jit fpm =
         let f = LLE.get_function_address "main" ct jit in
         f ();
         LLE.remove_module Init.llm jit
-      end
+      end *)
     with 
     | Init.CompileError msg | ParserError msg -> 
       printf "error: %s\n" msg;
@@ -60,5 +61,5 @@ let () =
   let fpm = Llvm.PassManager.create_function Init.llm in
   Llvm.PassManager.initialize fpm |> ignore;
 
-  printf "🐪 🐫 🐪 🚶🏻‍  seq « 0.1 » 🚶🏻‍ 🐫 🐪 🐫\n%!";
+  printf "🐪 🐫 🐪 🚶🏻‍  seqcaml « 0.1 » 🚶🏻‍ 🐫 🐪 🐫\n%!";
   toplevel jit fpm

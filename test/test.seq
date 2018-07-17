@@ -1,0 +1,76 @@
+# comment
+# TODO_LEX: missing `in`, `{`..`}` (dicts), `;`, `.`, structs
+# add regex matches (r''), fix floating ambig
+# fix extra indents
+# TODO_PARS: not, proper comparison rule, elif, print ambig, vars?
+
+#! DEF ID LP ID RP COLON NL INDENT RETURN ID PIPE ID LP INT COMMA INT RP PIPE ID NL DEDENT
+def f(s): # cmt
+    return s |> split(32, 32) |> collect
+
+#! ID EQ LS ID RS NL
+farray = [f]
+
+#! DEF ID LP ID RP COLON NL INDENT RETURN ID NL DEDENT
+def ident(s):
+    return s
+
+### LEXER ERR (extra indent)
+#! DEF ID LP ID RP COLON NL INDENT FOR ID IN ID LP ID RP COLON NL INDENT ID EQ STRING NL YIELD ID NL DEDENT DEDENT
+def yiyi(n):
+    for i in range(n):
+        y = "COOL" # fails with extra indent no idea 
+        yield i
+
+#! ID EQ ID LP ID LS INT RS RP NL
+input = source(args[0])
+
+#! ID PIPE ID LP INT ADD INT COMMA INT RP PIPE ID LP LS ID COMMA ID PIPE ID RS RP NL
+input |> substr(0+1, 5) |> branch([
+    _print,
+    revcomp |> _print
+])
+
+#! FOR ID IN ID COLON NL INDENT ID EQ ID LP ID COMMA INT ADD INT COMMA INT RP NL PRINT ID NL PRINT ID LP ID RP NL DEDENT
+for seq in input:
+    j = substr(seq, 0+1, 5)
+    print j
+    print revcomp(j)
+
+#! ID EQ STRING NL
+w = "ACBD\nCGTA"
+
+#! MATCH ID COLON NL INDENT CASE STRING AS ID COLON NL INDENT PRINT ID NL DEDENT CASE STRING AS ID COLON NL INDENT ID PIPE ID NL DEDENT DEDENT
+match w:
+    case "A..A": 
+        print y
+    case "J" as w: 
+        w |> _print 
+
+#! IF ID EEQ STRING OR ID EEQ STRING COLON NL INDENT PRINT STRING NL DEDENT ELSE COLON NL INDENT ID EQ FLOAT NL ID EQ FLOAT NL ID EQ FLOAT NL ID EQ FLOAT NL ID EQ ID NL ID EQ FLOAT NL ID EQ FLOAT NL PRINT ID NL DEDENT
+if w == "AC" or w == "XX":
+    print "hello"
+# TODO
+# ELIF ID EEQ STRING ADD STRING AND ID EEQ INT COLON NL INDENT ID EQ FLOAT ADD INT SUB INT MUL INT DIV INT NL PRINT ID NL DEDENT
+# elif w == "GC"+"AF" and w == 3: # ERR: test "not"
+#     z = 5.3 + 11 - 485 * 6 / 2
+#     print z
+else:
+    f = 1.e20 # if 1e20 lexer fails :( [parses INT ID FLOAT]
+    y = 1.
+    y = .1
+    ff = 1.e-6
+    fq = e9 # lexer fails; parser e9 as ID
+    fff = .1e-11
+    qq = 3.5e16
+    print w
+
+#! FOR ID IN ID LP INT RP COLON NL INDENT IF ID GEQ INT COLON NL INDENT BREAK NL DEDENT IF ID LESS INT COLON NL INDENT CONTINUE NL DEDENT DEDENT
+for i in range(20):
+    if i >= 10:
+        break
+    if i < 3: 
+        continue
+
+#! ID EQ EXTERN NL
+y = `r load(ggplot)`

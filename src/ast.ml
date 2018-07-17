@@ -4,27 +4,47 @@ open Core
 open Sexplib.Std
 
 type expr =
+  | Bool of bool
   | Int of int
   | Float of float
   | String of string
-  | Identifier of string * expr list
+  | Ident of string
   | Binary of expr * string * expr
-  | Pipe of expr list
-and proto =
-  | Prototype of string * string list
+  | Pipe of expr list  
+  | Index of string * expr
+  | Call of string * expr list
+  | List of expr list
+  | Extern of string * string
+  (* | IfExpr of expr * expr * expr *)
   [@@deriving sexp]
 
-type ast =
-  | Definition of proto * expr list
+type statement =
+  | Pass
   | Expr of expr
+  | Print of expr list
+  | Assign of string * expr (* x = sth *)
+  | For of string * expr * statement list (* var, array, for-st *)
+    | Break 
+    | Continue
+  | IfElse of expr * statement list * statement list (* cond, if-st, else-st *)
+  | Match of expr * case list
+  | Function of string * string list * statement list (* name, args, fun-st *)
+    | Return of expr
+    | Yield of expr
   | Eof
+and case =
+  | Case of expr * string option * statement list
   [@@deriving sexp]
 
-let rec flatten_exp = function 
-  | Binary(e1, op, e2) when op = "|" -> 
+type ast = 
+  | Module of statement list
+  [@@deriving sexp]
+
+let rec flatten = function 
+  | Binary(e1, op, e2) when op = "|>" -> 
     begin
-      let f1 = flatten_exp e1 in
-      let f2 = flatten_exp e2 in
+      let f1 = flatten e1 in
+      let f2 = flatten e2 in
       match f1, f2 with 
       (* TODO optimize calls below, @ is O(n) *)
       | Pipe f1, Pipe f2 -> Pipe (f1 @ f2) 
@@ -32,37 +52,11 @@ let rec flatten_exp = function
       | f1, Pipe f2 -> Pipe (f1 :: f2)
       | f1, f2 -> Pipe [f1; f2]
     end
-  | Binary(e1, op, e2) -> Binary(flatten_exp e1, op, flatten_exp e2)
-  | Identifier(i, l) -> Identifier(i, List.map l ~f:flatten_exp)
+  | Binary(e1, op, e2) -> Binary(flatten e1, op, flatten e2)
+  | Index(s, e) -> Index(s, flatten e)
+  | Call(c, l) -> Call(c, List.map l ~f:flatten)
+  | List(l) -> List(List.map l ~f:flatten)
   | _ as e -> e
-and flatten = function 
-  | Expr e -> Expr (flatten_exp e)
-  | Definition(p, l) -> Definition(p, List.map l ~f:flatten_exp)
-  | Eof -> Eof
 
 let prn_ast_sexp a =
   sexp_of_ast a |> Sexp.to_string 
-
-let rec prn_expr = function
-  | Int i -> sprintf "%d" i
-  | Float f -> sprintf "%.1f" f
-  | String s -> sprintf "\"%s\"" s
-  | Identifier(v, a) -> 
-    sprintf "%s%s" v 
-      (if List.length a > 0
-      then sprintf "(%s)" (List.map a ~f:prn_expr |> String.concat ~sep:", ")
-      else "")
-  | Binary(e1, op, e2) -> 
-    sprintf "(%s '%s %s)" (prn_expr e1) op (prn_expr e2)
-  | Pipe l ->
-    let str = List.map l ~f:(fun x -> prn_expr x |> sprintf "%s") |> String.concat ~sep:" | " in
-    sprintf "[%s]" str
-and prn_proto = function
-  | Prototype(p, sa) -> 
-    sprintf "def %s(%s)" p 
-      (String.concat ~sep:" " (List.map sa ~f:(sprintf "%s")))
-and prn_ast = function
-  | Definition(p, e) -> 
-    sprintf "%s { %s }" (prn_proto p) (List.map e ~f:prn_expr |> String.concat ~sep:";")
-  | Expr e -> prn_expr e
-  | Eof -> sprintf "EOF"
