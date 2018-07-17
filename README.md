@@ -9,6 +9,30 @@ opam switch 4.06.1
 make install-dep
 ```
 
+## Parser/Lexer: Debugging 101
+
+To get tokens do:
+
+```bash
+cd src
+corebuild lexer.byte
+echo "blah blah" | ./lexer.byte | perl -pe 's|\(.+?\)||g'
+```
+
+Perl is used to remove arguments (which are kept because they are useful for debugging; however Menhir does not support them in the grammar check mode).
+
+To check the validity of grammar with some tokens do
+
+```
+menhir --interpret --interpret-show-cst -v --trace parser.mly
+```
+
+For example, to test 5-th tokenization in [test/test.seq] do
+
+```
+cat test.seq | grep '^#!' | tail -n+5 | head -n1 | tail -c+4 | menhir --interpret --interpret-show-cst -v --trace parser.mly
+```
+
 ## Build
 
 Compile:
