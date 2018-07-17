@@ -144,6 +144,9 @@ struct record_expr : pegtl::seq<pegtl::one<'('>, seps, record_expr_item, seps, p
 struct paren_expr : pegtl::seq<pegtl::one<'('>, seps, expr, seps, pegtl::one<')'>> {};
 struct cond_expr : pegtl::seq<str_if, seps, expr, seps, str_then, seps, expr, seps, str_else, seps, expr> {};
 
+struct pattern;
+struct match_expr : pegtl::seq<str_match, seps, expr, seps, pegtl::one<'{'>, seps, pegtl::plus<str_case, seps, pattern, seps, pegtl::one<':'>, seps, expr, seps>, seps, pegtl::one<'}'>> {};
+
 struct expr_tail;
 struct not_a_stmt : pegtl::not_at<seps, pegtl::one<'='>, seps_must> {};  // make sure we're not actually in an assignment statement (e.g. "a[i] = c" or "a.foo = 42")
 struct index_tail : pegtl::seq<pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>, not_a_stmt> {};
@@ -157,7 +160,7 @@ struct elem_tail : pegtl::sor<elem_idx_tail, elem_memb_tail> {};
 struct make_opt_tail : pegtl::one<'?'> {};
 struct expr_tail : pegtl::sor<slice_tail, slice_tail_no_to, slice_tail_no_from, index_tail, call_tail, elem_tail, make_opt_tail> {};
 
-struct atomic_expr_head : pegtl::sor<default_expr, array_expr, construct_expr, static_memb_expr, record_expr, paren_expr, cond_expr, literal_expr> {};
+struct atomic_expr_head : pegtl::sor<default_expr, array_expr, construct_expr, static_memb_expr, record_expr, paren_expr, cond_expr, match_expr, literal_expr> {};
 struct atomic_expr : pegtl::seq<atomic_expr_head, pegtl::star<seps, expr_tail>> {};
 
 struct uop_bitnot : TAO_PEGTL_STRING("~") {};

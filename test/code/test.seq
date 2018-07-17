@@ -160,6 +160,7 @@ fun print_coord(t: {Int, Int, Str}) {
     case (x, 0, "b"): x |> print
     case (0, y, "b"): y |> print
     case (x, y, "b") { x |> print ; y |> print }
+    case (x, y, z) {}
   }
 }
 
@@ -177,8 +178,11 @@ aa[2] = 3?
 let bb = Int?[][1]
 bb[0] = aa
 
-match bb {
-  case [[1?, 2?, ...]]: "one"[0:3] |> print
-  case [[2?, ..., 3?]]: "two" |> print
-  case []: "three" |> print
-}
+let cc = match bb {
+           case [[1?, 2?, ...]]: "one"[0:3]
+           case [[2?, ..., 3?]]: "two"
+           case []: "three"
+           case _: ""
+         }
+
+cc |> print

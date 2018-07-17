@@ -18,6 +18,7 @@ namespace seq {
 		                             types::Type *type,
 		                             llvm::Value *val,
 		                             llvm::BasicBlock*& block)=0;
+		virtual bool isCatchAll();
 		virtual Pattern *clone(types::RefType *ref);
 	};
 
@@ -32,6 +33,7 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
+		bool isCatchAll() override;
 		Wildcard *clone(types::RefType *ref) override;
 		Var *getVar();
 	};
@@ -48,6 +50,7 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
+		bool isCatchAll() override;
 		BoundPattern *clone(types::RefType *ref) override;
 		Var *getVar();
 	};
@@ -104,6 +107,7 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
+		bool isCatchAll() override;
 		RecordPattern *clone(types::RefType *ref) override;
 	};
 
@@ -163,6 +167,7 @@ namespace seq {
 		                     types::Type *type,
 		                     llvm::Value *val,
 		                     llvm::BasicBlock*& block) override;
+		bool isCatchAll() override;
 		OrPattern *clone(types::RefType *ref) override;
 	};
 

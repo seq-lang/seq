@@ -172,6 +172,116 @@ CondExpr *CondExpr::clone(types::RefType *ref)
 	return new CondExpr(cond->clone(ref), ifTrue->clone(ref), ifFalse->clone(ref));
 }
 
+MatchExpr::MatchExpr() :
+    Expr(), value(nullptr), patterns(), exprs()
+{
+}
+
+void MatchExpr::setValue(Expr *value)
+{
+	if (this->value)
+		throw exc::SeqException("cannot re-set match expression's value");
+
+	this->value = value;
+}
+
+void MatchExpr::addCase(Pattern *pattern, Expr *expr)
+{
+	patterns.push_back(pattern);
+	exprs.push_back(expr);
+}
+
+Value *MatchExpr::codegen(BaseFunc *base, BasicBlock *&block)
+{
+	if (patterns.empty())
+		throw exc::SeqException("no patterns added to match-stage");
+
+	assert(patterns.size() == exprs.size() && value);
+
+	LLVMContext& context = block->getContext();
+	Function *func = block->getParent();
+
+	IRBuilder<> builder(block);
+	types::Type *valType = value->getType();
+	types::Type *resType = getType();
+
+	bool seenCatchAll = false;
+	for (auto *pattern : patterns) {
+		if (pattern->isCatchAll())
+			seenCatchAll = true;
+	}
+
+	if (!seenCatchAll)
+		throw exc::SeqException("match expression missing catch-all pattern");
+
+	Value *val = value->codegen(base, block);
+
+	std::vector<std::pair<BranchInst *, Value *>> binsts;
+
+	for (unsigned i = 0; i < patterns.size(); i++) {
+		Value *cond = patterns[i]->codegen(base, valType, val, block);
+
+		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
+		block = BasicBlock::Create(context, "", func);  // match block
+		BranchInst *binst1 = builder.CreateCondBr(cond, block, block);  // we set false-branch below
+
+		Value *result = exprs[i]->codegen(base, block);
+		builder.SetInsertPoint(block);
+		BranchInst *binst2 = builder.CreateBr(block);  // we reset this below
+		binsts.emplace_back(binst2, result);
+
+		block = BasicBlock::Create(context, "", func);  // mismatch block (eval next pattern)
+		binst1->setSuccessor(1, block);
+	}
+
+	builder.SetInsertPoint(block);
+	builder.CreateUnreachable();
+
+	block = BasicBlock::Create(context, "", func);
+	builder.SetInsertPoint(block);
+
+	PHINode *result = builder.CreatePHI(resType->getLLVMType(context), (unsigned)patterns.size());
+	for (auto& binst : binsts) {
+		binst.first->setSuccessor(0, block);
+		result->addIncoming(binst.second, binst.first->getParent());
+	}
+
+	return result;
+}
+
+types::Type *MatchExpr::getType() const
+{
+	assert(!exprs.empty());
+	types::Type *type = exprs[0]->getType();
+
+	for (auto *expr : exprs) {
+		if (!expr->getType()->is(type) && !type->is(expr->getType()))
+			throw exc::SeqException("inconsistent result types in match expression");
+	}
+
+	return type;
+}
+
+MatchExpr *MatchExpr::clone(types::RefType *ref)
+{
+	auto *x = new MatchExpr();
+
+	std::vector<Pattern *> patternsCloned;
+	std::vector<Expr *> exprsCloned;
+
+	for (auto *pattern : patterns)
+		patternsCloned.push_back(pattern->clone(ref));
+
+	for (auto *expr : exprs)
+		exprsCloned.push_back(expr->clone(ref));
+
+	if (value) x->value = value->clone(ref);
+	x->patterns = patternsCloned;
+	x->exprs = exprsCloned;
+
+	return x;
+}
+
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
     Expr(), type(type), args(std::move(args))
 {

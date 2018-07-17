@@ -15,6 +15,11 @@ void Pattern::validate(types::Type *type)
 		                        " but got " + type->getName());
 }
 
+bool Pattern::isCatchAll()
+{
+	return false;
+}
+
 Pattern *Pattern::clone(types::RefType *ref)
 {
 	return this;
@@ -27,6 +32,11 @@ Wildcard::Wildcard() :
 
 void Wildcard::validate(types::Type *type)
 {
+}
+
+bool Wildcard::isCatchAll()
+{
+	return true;
 }
 
 Wildcard *Wildcard::clone(types::RefType *ref)
@@ -61,6 +71,11 @@ BoundPattern::BoundPattern(Pattern *pattern) :
 void BoundPattern::validate(types::Type *type)
 {
 	pattern->validate(type);
+}
+
+bool BoundPattern::isCatchAll()
+{
+	return pattern->isCatchAll();
 }
 
 BoundPattern *BoundPattern::clone(types::RefType *ref)
@@ -191,6 +206,15 @@ Value *RecordPattern::codegen(BaseFunc *base,
 	}
 
 	return result;
+}
+
+bool RecordPattern::isCatchAll()
+{
+	for (auto *pattern : patterns) {
+		if (!pattern->isCatchAll())
+			return false;
+	}
+	return true;
 }
 
 RecordPattern *RecordPattern::clone(types::RefType *ref)
@@ -526,6 +550,15 @@ Value *OrPattern::codegen(BaseFunc *base,
 	}
 
 	return result;
+}
+
+bool OrPattern::isCatchAll()
+{
+	for (auto *pattern : patterns) {
+		if (pattern->isCatchAll())
+			return true;
+	}
+	return false;
 }
 
 OrPattern *OrPattern::clone(types::RefType *ref)

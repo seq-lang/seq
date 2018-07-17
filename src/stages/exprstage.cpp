@@ -326,7 +326,7 @@ void Match::codegen(Module *module)
 	if (patterns.empty())
 		throw exc::SeqException("no patterns added to match-stage");
 
-	assert(patterns.size() == branches.size());
+	assert(patterns.size() == branches.size() && value);
 
 	ensurePrev();
 	validate();
@@ -337,6 +337,16 @@ void Match::codegen(Module *module)
 
 	IRBuilder<> builder(block);
 	types::Type *valType = value->getType();
+
+	bool seenCatchAll = false;
+	for (auto *pattern : patterns) {
+		if (pattern->isCatchAll())
+			seenCatchAll = true;
+	}
+
+	if (!seenCatchAll)
+		throw exc::SeqException("match statement missing catch-all pattern");
+
 	Value *val = value->codegen(getBase(), block);
 
 	std::vector<BranchInst *> binsts;

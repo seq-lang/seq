@@ -2878,6 +2878,42 @@ struct control<cond_expr> : pegtl::normal<cond_expr>
 };
 
 template<>
+struct control<match_expr> : pegtl::normal<match_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		assert(!vec.empty() && vec[0].type == SeqEntity::EXPR);
+		MatchExpr *match = new MatchExpr();
+		Expr *val = vec[0].value.expr;
+		match->setValue(val);
+
+		for (unsigned i = 1; i < vec.size(); i += 2) {
+			assert(i + 1 < vec.size() &&
+			       vec[i].type == SeqEntity::PATTERN &&
+			       vec[i+1].type == SeqEntity::EXPR);
+
+			match->addCase(vec[i].value.pattern, vec[i+1].value.expr);
+		}
+
+		state.add((Expr *)match);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<array_tail> : pegtl::normal<array_tail>
 {
 	template<typename Input>
@@ -2940,7 +2976,7 @@ struct control<record_type_elem_unnamed> : pegtl::normal<record_type_elem_unname
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("t");
-		std::string empty = "";
+		std::string empty;
 		state.add(empty);
 		state.add(vec[0].value.type);
 	}
