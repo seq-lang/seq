@@ -116,6 +116,24 @@ namespace seq {
 			                        llvm::Value *val,
 			                        llvm::BasicBlock *block);
 
+			virtual llvm::Value *indexSlice(BaseFunc *base,
+			                                llvm::Value *self,
+			                                llvm::Value *from,
+			                                llvm::Value *to,
+			                                llvm::BasicBlock *block);
+
+			virtual llvm::Value *indexSliceNoFrom(BaseFunc *base,
+			                                      llvm::Value *self,
+			                                      llvm::Value *to,
+			                                      llvm::BasicBlock *block);
+
+			virtual llvm::Value *indexSliceNoTo(BaseFunc *base,
+			                                    llvm::Value *self,
+			                                    llvm::Value *from,
+			                                    llvm::BasicBlock *block);
+
+			virtual Type *indexType() const;
+
 			virtual llvm::Value *call(BaseFunc *base,
 			                          llvm::Value *self,
 			                          std::vector<llvm::Value *> args,

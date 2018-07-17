@@ -52,7 +52,7 @@ void Collect::codegen(Module *module)
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	IRBuilder<> builder(block);
 
-	Value *ptr = type->getBaseType()->alloc(INIT_VEC_SIZE, preambleBlock);
+	Value *ptr = type->indexType()->alloc(INIT_VEC_SIZE, preambleBlock);
 	Value *ptrVar = makeAlloca(ptr, preambleBlock);
 	Value *lenVar = makeAlloca(zeroLLVM(context), preambleBlock);
 	Value *capVar = makeAlloca(ConstantInt::get(seqIntLLVM(context), INIT_VEC_SIZE), preambleBlock);
@@ -62,7 +62,7 @@ void Collect::codegen(Module *module)
 	Value *len = builder.CreateLoad(lenVar);
 	Value *val = builder.CreateLoad(prev->result);
 
-	type->getBaseType()->store(getBase(), val, elemVar, zeroLLVM(context), block);
+	type->indexType()->store(getBase(), val, elemVar, zeroLLVM(context), block);
 
 	std::vector<Value *> args = {builder.CreatePointerCast(ptrVar,
 	                                                       PointerType::get(IntegerType::getInt8PtrTy(context), 0)),

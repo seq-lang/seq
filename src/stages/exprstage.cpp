@@ -125,7 +125,7 @@ void AssignIndexStage::codegen(Module *module)
 
 	auto *arrType = dynamic_cast<types::ArrayType *>(array->getType());
 	assert(arrType != nullptr);
-	value->ensure(arrType->getBaseType());
+	value->ensure(arrType->indexType());
 
 	ensurePrev();
 	validate();
@@ -310,6 +310,124 @@ If *If::clone(types::RefType *ref)
 	x.conds = condsCloned;
 	x.branches = branchesCloned;
 	x.elseAdded = elseAdded;
+
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}
+
+Match::Match() :
+    Stage("match", types::AnyType::get(), types::VoidType::get()),
+    value(nullptr), patterns(), branches()
+{
+}
+
+void Match::codegen(Module *module)
+{
+	if (patterns.empty())
+		throw exc::SeqException("no patterns added to match-stage");
+
+	assert(patterns.size() == branches.size() && value);
+
+	ensurePrev();
+	validate();
+
+	LLVMContext& context = module->getContext();
+	block = prev->getAfter();
+	Function *func = block->getParent();
+
+	IRBuilder<> builder(block);
+	types::Type *valType = value->getType();
+
+	bool seenCatchAll = false;
+	for (auto *pattern : patterns) {
+		if (pattern->isCatchAll())
+			seenCatchAll = true;
+	}
+
+	if (!seenCatchAll)
+		throw exc::SeqException("match statement missing catch-all pattern");
+
+	Value *val = value->codegen(getBase(), block);
+
+	std::vector<BranchInst *> binsts;
+
+	for (unsigned i = 0; i < patterns.size(); i++) {
+		Value *cond = patterns[i]->codegen(getBase(), valType, val, block);
+		BaseStage *branch = branches[i];
+		branch->setInOut(types::VoidType::get(), prev->getOutType());
+		branch->result = prev->result;
+
+		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
+
+		BasicBlock *b1 = BasicBlock::Create(context, "", func);
+		BranchInst *binst1 = builder.CreateCondBr(cond, b1, b1);  // we set false-branch below
+
+		branch->block = b1;
+		branch->codegen(module);
+		block = getAfter();
+		builder.SetInsertPoint(block);
+		BranchInst *binst2 = builder.CreateBr(b1);  // we reset this below
+		binsts.push_back(binst2);
+
+		BasicBlock *b2 = BasicBlock::Create(context, "", func);
+		binst1->setSuccessor(1, b2);
+		block = b2;
+	}
+
+	BasicBlock *after = BasicBlock::Create(context, "", func);
+	builder.SetInsertPoint(block);
+	builder.CreateBr(after);
+
+	for (auto *binst : binsts)
+		binst->setSuccessor(0, after);
+
+	codegenNext(module);
+	prev->setAfter(after);
+}
+
+Match& Match::make()
+{
+	return *new Match();
+}
+
+void Match::setValue(Expr *value)
+{
+	if (this->value)
+		throw exc::SeqException("cannot re-set match stage's value");
+
+	this->value = value;
+}
+
+BaseStage& Match::addCase(Pattern *pattern)
+{
+	BaseStage& branch = BaseStage::make(types::AnyType::get(), types::VoidType::get(), false);
+	branch.setBase(getBase());
+	branch.setPrev(this);
+	patterns.push_back(pattern);
+	branches.push_back(&branch);
+	return branch;
+}
+
+Match *Match::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Match *)ref->getClone(this);
+
+	Match& x = Match::make();
+	ref->addClone(this, &x);
+
+	std::vector<Pattern *> patternsCloned;
+	std::vector<BaseStage *> branchesCloned;
+
+	for (auto *pattern : patterns)
+		patternsCloned.push_back(pattern->clone(ref));
+
+	for (auto *branch : branches)
+		branchesCloned.push_back(branch->clone(ref));
+
+	if (value) x.value = value->clone(ref);
+	x.patterns = patternsCloned;
+	x.branches = branchesCloned;
 
 	Stage::setCloneBase(&x, ref);
 	return &x;

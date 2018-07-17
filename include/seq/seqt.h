@@ -39,6 +39,27 @@ namespace seq {
 			                         llvm::Value *fp,
 			                         llvm::BasicBlock *block) override;
 
+			llvm::Value *indexLoad(BaseFunc *base,
+			                       llvm::Value *self,
+			                       llvm::Value *idx,
+			                       llvm::BasicBlock *block) override;
+
+			llvm::Value *indexSlice(BaseFunc *base,
+			                        llvm::Value *self,
+			                        llvm::Value *from,
+			                        llvm::Value *to,
+			                        llvm::BasicBlock *block) override;
+
+			llvm::Value *indexSliceNoFrom(BaseFunc *base,
+			                              llvm::Value *self,
+			                              llvm::Value *to,
+			                              llvm::BasicBlock *block) override;
+
+			llvm::Value *indexSliceNoTo(BaseFunc *base,
+			                            llvm::Value *self,
+			                            llvm::Value *from,
+			                            llvm::BasicBlock *block) override;
+
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initFields() override;
@@ -63,6 +84,7 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
+			Type *indexType() const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
 			static SeqType *get();
 		};
@@ -80,6 +102,7 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
+			Type *indexType() const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
 			static StrType *get();
 		};

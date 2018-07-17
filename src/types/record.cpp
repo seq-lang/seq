@@ -190,8 +190,7 @@ void types::RecordType::addLLVMTypesToStruct(StructType *structType)
 
 seq_int_t types::RecordType::size(Module *module) const
 {
-	std::unique_ptr<DataLayout> layout(new DataLayout(module));
-	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::RecordType& types::RecordType::of(std::initializer_list<std::reference_wrapper<Type>> types) const

@@ -25,7 +25,7 @@ void Mem::codegen(Module *module)
 	assert(type != nullptr);
 
 	block = prev->getAfter();
-	Value *ptr = type->getBaseType()->alloc(count, block);
+	Value *ptr = type->indexType()->alloc(count, block);
 	Value *len = ConstantInt::get(seqIntLLVM(context), (uint64_t)count);
 	Value *arr = type->make(ptr, len, block);
 	result = getOutType()->storeInAlloca(getBase(), arr, block, true);
@@ -38,7 +38,7 @@ void Mem::finalize(Module *module, ExecutionEngine *eng)
 {
 	auto *type = dynamic_cast<types::ArrayType *>(getOutType());
 	assert(type != nullptr);
-	type->getBaseType()->finalizeAlloc(module, eng);
+	type->indexType()->finalizeAlloc(module, eng);
 	Stage::finalize(module, eng);
 }
 

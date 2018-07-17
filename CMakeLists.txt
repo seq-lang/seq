@@ -113,7 +113,9 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/numexpr.h
                        include/seq/ops.h
                        include/seq/opstage.h
+                       include/seq/optional.h
                        include/seq/parser.h
+                       include/seq/patterns.h
                        include/seq/pipeline.h
                        include/seq/print.h
                        include/seq/range.h
@@ -178,6 +180,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/base.cpp
                        src/types/funct.cpp
                        src/types/num.cpp
+                       src/types/optional.cpp
                        src/types/record.cpp
                        src/types/ref.cpp
                        src/types/seqt.cpp
@@ -189,6 +192,7 @@ add_library(seq SHARED include/seq/any.h
                        src/io.cpp
                        src/llvm.h
                        src/ops.cpp
+                       src/patterns.cpp
                        src/pipeline.cpp
                        src/seq.cpp
                        src/seqgc.cpp

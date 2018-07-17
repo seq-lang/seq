@@ -1,6 +1,7 @@
 #ifndef SEQ_EXPR_H
 #define SEQ_EXPR_H
 
+#include "patterns.h"
 #include "types.h"
 
 namespace seq {
@@ -52,6 +53,20 @@ namespace seq {
 		CondExpr *clone(types::RefType *ref) override;
 	};
 
+	class MatchExpr : public Expr {
+	private:
+		Expr *value;
+		std::vector<Pattern *> patterns;
+		std::vector<Expr *> exprs;
+	public:
+		MatchExpr();
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		MatchExpr *clone(types::RefType *ref) override;
+		void setValue(Expr *value);
+		void addCase(Pattern *pattern, Expr *expr);
+	};
+
 	class ConstructExpr : public Expr {
 	private:
 		types::Type *type;
@@ -61,6 +76,16 @@ namespace seq {
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		ConstructExpr *clone(types::RefType *ref) override;
+	};
+
+	class OptExpr : public Expr {
+	private:
+		Expr *val;
+	public:
+		explicit OptExpr(Expr *val);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		OptExpr *clone(types::RefType *ref) override;
 	};
 
 	class DefaultExpr : public Expr {

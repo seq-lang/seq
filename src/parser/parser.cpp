@@ -27,6 +27,7 @@ struct SeqEntity {
 		TYPE,
 		MODULE,
 		EXPR,
+		PATTERN,
 		OP
 	} type = EMPTY;
 
@@ -43,6 +44,7 @@ struct SeqEntity {
 		U(types::Type *type) : type(type) {}
 		U(SeqModule *module) : module(module) {}
 		U(Expr *expr) : expr(expr) {}
+		U(Pattern *pattern) : pattern(pattern) {}
 		U(Op op) : op(std::move(op)) {}
 		~U() {}
 
@@ -57,6 +59,7 @@ struct SeqEntity {
 		types::Type *type;
 		SeqModule *module;
 		Expr *expr;
+		Pattern *pattern;
 		Op op;
 	} value;
 
@@ -72,6 +75,7 @@ struct SeqEntity {
 	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
 	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
 	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
+	SeqEntity(Pattern *pattern) : type(SeqEntity::PATTERN), value(pattern) {}
 	SeqEntity(Op op) : type(SeqEntity::OP) { new (&value.op) Op(std::move(op)); }
 
 	SeqEntity& operator=(const SeqEntity& ent)
@@ -112,6 +116,9 @@ struct SeqEntity {
 				break;
 			case SeqEntity::EXPR:
 				value.expr = ent.value.expr;
+				break;
+			case SeqEntity::PATTERN:
+				value.pattern = ent.value.pattern;
 				break;
 			case SeqEntity::OP:
 				new (&value.op) Op(ent.value.op);
@@ -161,7 +168,8 @@ const std::map<char, int> TYPE_MAP = {{'x', SeqEntity::EMPTY},
                                       {'f', SeqEntity::FUNC},
                                       {'t', SeqEntity::TYPE},
                                       {'m', SeqEntity::MODULE},
-                                      {'e', SeqEntity::EXPR}};
+                                      {'e', SeqEntity::EXPR},
+                                      {'q', SeqEntity::PATTERN}};
 
 class ParseState {
 	typedef std::map<std::string, SeqEntity> SymTab;
@@ -238,18 +246,25 @@ public:
 		return syms.find("*") != syms.end();
 	}
 
-	static void symadd(std::string name, SeqEntity ent, std::map<std::string, SeqEntity>& syms)
+	static void symadd(std::string name,
+	                   SeqEntity ent,
+	                   std::map<std::string, SeqEntity>& syms,
+	                   bool override)
 	{
-		if (syms.find(name) != syms.end())
-			throw exc::SeqException("duplicate symbol '" + std::string(name) + "'");
+		if (syms.find(name) != syms.end()) {
+			if (override)
+				syms.find(name)->second = ent;
+			else
+				throw exc::SeqException("duplicate symbol '" + std::string(name) + "'");
+		}
 
 		syms.insert({name, ent});
 	}
 
-	void sym(std::string name, const SeqEntity& ent)
+	void sym(std::string name, const SeqEntity& ent, bool override=false)
 	{
 		assert(!symbols.empty());
-		symadd(std::move(name), ent, symbols.back());
+		symadd(std::move(name), ent, symbols.back(), override);
 	}
 
 	/*
@@ -261,10 +276,10 @@ public:
 		sym("*", {});
 	}
 
-	void symparent(std::string name, const SeqEntity& ent)
+	void symparent(std::string name, const SeqEntity& ent, bool override=false)
 	{
 		assert(symbols.size() >= 2);
-		symadd(std::move(name), ent, symbols[symbols.size() - 2]);
+		symadd(std::move(name), ent, symbols[symbols.size() - 2], override);
 	}
 
 	static SeqEntity lookupInTable(const std::string& name, SymTab symtab)
@@ -785,6 +800,15 @@ struct action<custom_type> {
 
 		state.add(ent.value.type);
 		return true;
+	}
+};
+
+template<>
+struct action<seq_pattern0> {
+	template<typename Input>
+	static void apply(const Input& in, ParseState& state)
+	{
+		state.add(in.string());
 	}
 };
 
@@ -2008,6 +2032,7 @@ struct control<if_open> : pegtl::normal<if_open>
 		assert(ifstage != nullptr);
 		Pipeline branch = ifstage->addCond(vec[0].value.expr);
 		state.enter(branch);
+		state.scope();
 	}
 
 	template<typename Input>
@@ -2035,6 +2060,7 @@ struct control<elif_open> : pegtl::normal<elif_open>
 		assert(ifstage != nullptr);
 		Pipeline branch = ifstage->addCond(vec[0].value.expr);
 		state.enter(branch);
+		state.scope();
 	}
 
 	template<typename Input>
@@ -2060,6 +2086,7 @@ struct control<else_open> : pegtl::normal<else_open>
 		assert(ifstage != nullptr);
 		Pipeline branch = ifstage->addElse();
 		state.enter(branch);
+		state.scope();
 	}
 
 	template<typename Input>
@@ -2075,6 +2102,7 @@ struct control<if_close> : pegtl::normal<if_close>
 	static void success(Input&, ParseState& state)
 	{
 		state.exit();
+		state.unscope();
 	}
 };
 
@@ -2085,6 +2113,7 @@ struct control<elif_close> : pegtl::normal<elif_close>
 	static void success(Input&, ParseState& state)
 	{
 		state.exit();
+		state.unscope();
 	}
 };
 
@@ -2095,6 +2124,100 @@ struct control<else_close> : pegtl::normal<else_close>
 	static void success(Input&, ParseState& state)
 	{
 		state.exit();
+		state.unscope();
+	}
+};
+
+template<>
+struct control<match_stmt> : pegtl::normal<match_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+		Pipeline p = stageutil::matchstage();
+		p.getHead()->setBase(state.base());
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("p");
+		assert(dynamic_cast<Match *>(vec[0].value.pipeline.getHead()));
+		state.context().add(vec[0].value.pipeline);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<match_open> : pegtl::normal<match_open>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::PIPELINE);
+		auto *matchstage = dynamic_cast<Match *>(state.top().value.pipeline.getHead());
+		assert(matchstage != nullptr);
+		matchstage->setValue(vec[0].value.expr);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<case_open> : pegtl::normal<case_open>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+		state.scope();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("q");
+		assert(state.top().type == SeqEntity::PIPELINE);
+		auto *matchstage = dynamic_cast<Match *>(state.top().value.pipeline.getHead());
+		assert(matchstage != nullptr);
+		Pipeline branch = matchstage->addCase(vec[0].value.pattern);
+		state.enter(branch);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+		state.unscope();
+	}
+};
+
+template<>
+struct control<case_close> : pegtl::normal<case_close>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.exit();
+		state.unscope();
 	}
 };
 
@@ -2525,6 +2648,90 @@ struct control<index_tail> : pegtl::normal<index_tail>
 };
 
 template<>
+struct control<slice_tail> : pegtl::normal<slice_tail>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ee");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *arr = state.top().value.expr;
+		Expr *from = vec[0].value.expr;
+		Expr *to = vec[1].value.expr;
+		Expr *e = new ArraySliceExpr(arr, from, to);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<slice_tail_no_from> : pegtl::normal<slice_tail_no_from>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *arr = state.top().value.expr;
+		Expr *from = nullptr;
+		Expr *to = vec[0].value.expr;
+		Expr *e = new ArraySliceExpr(arr, from, to);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<slice_tail_no_to> : pegtl::normal<slice_tail_no_to>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *arr = state.top().value.expr;
+		Expr *from = vec[0].value.expr;
+		Expr *to = nullptr;
+		Expr *e = new ArraySliceExpr(arr, from, to);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<call_tail> : pegtl::normal<call_tail>
 {
 	template<typename Input>
@@ -2610,6 +2817,19 @@ struct control<elem_memb_tail> : pegtl::normal<elem_memb_tail>
 };
 
 template<>
+struct control<make_opt_tail> : pegtl::normal<make_opt_tail>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *val = state.top().value.expr;
+		Expr *e = new OptExpr(val);
+		state.top() = e;
+	}
+};
+
+template<>
 struct control<paren_expr> : pegtl::normal<paren_expr>
 {
 	template<typename Input>
@@ -2658,7 +2878,7 @@ struct control<cond_expr> : pegtl::normal<cond_expr>
 };
 
 template<>
-struct control<array_type> : pegtl::normal<array_type>
+struct control<match_expr> : pegtl::normal<match_expr>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
@@ -2669,14 +2889,53 @@ struct control<array_type> : pegtl::normal<array_type>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		auto vec = state.get("t");
-		state.add((types::Type *)types::ArrayType::get(vec[0].value.type));
+		auto vec = state.get("*", true);
+		assert(!vec.empty() && vec[0].type == SeqEntity::EXPR);
+		MatchExpr *match = new MatchExpr();
+		Expr *val = vec[0].value.expr;
+		match->setValue(val);
+
+		for (unsigned i = 1; i < vec.size(); i += 2) {
+			assert(i + 1 < vec.size() &&
+			       vec[i].type == SeqEntity::PATTERN &&
+			       vec[i+1].type == SeqEntity::EXPR);
+
+			match->addCase(vec[i].value.pattern, vec[i+1].value.expr);
+		}
+
+		state.add((Expr *)match);
 	}
 
 	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
+	}
+};
+
+template<>
+struct control<array_tail> : pegtl::normal<array_tail>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::TYPE);
+		types::Type *type0 = state.top().value.type;
+		types::Type *type = types::ArrayType::get(type0);
+		state.top() = type;
+	}
+};
+
+template<>
+struct control<opt_tail> : pegtl::normal<opt_tail>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::TYPE);
+		types::Type *type0 = state.top().value.type;
+		types::Type *type = types::OptionalType::get(type0);
+		state.top() = type;
 	}
 };
 
@@ -2717,7 +2976,7 @@ struct control<record_type_elem_unnamed> : pegtl::normal<record_type_elem_unname
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("t");
-		std::string empty = "";
+		std::string empty;
 		state.add(empty);
 		state.add(vec[0].value.type);
 	}
@@ -2883,6 +3142,334 @@ struct control<func_type_in_out_void> : pegtl::normal<func_type_in_out_void>
 	static void success(Input&, ParseState& state)
 	{
 		state.add((types::Type *)types::FuncType::get({}, types::VoidType::get()));
+	}
+};
+
+template<>
+struct control<int_pattern> : pegtl::normal<int_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("i");
+		Pattern *p = new IntPattern(vec[0].value.ival);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<true_pattern> : pegtl::normal<true_pattern>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pattern *p = new BoolPattern(true);
+		state.add(p);
+	}
+};
+
+template<>
+struct control<false_pattern> : pegtl::normal<false_pattern>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pattern *p = new BoolPattern(false);
+		state.add(p);
+	}
+};
+
+template<>
+struct control<str_pattern> : pegtl::normal<str_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		Pattern *p = new StrPattern(vec[0].value.name);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<record_pattern> : pegtl::normal<record_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("q", true);
+		assert(!vec.empty());
+
+		std::vector<Pattern *> patterns;
+		for (auto& e : vec)
+			patterns.push_back(e.value.pattern);
+
+		Pattern *p = new RecordPattern(patterns);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<star_pattern> : pegtl::normal<star_pattern>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pattern *p = new StarPattern();
+		state.add(p);
+	}
+};
+
+template<>
+struct control<array_pattern> : pegtl::normal<array_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("q", true);
+
+		std::vector<Pattern *> patterns;
+		for (auto& e : vec)
+			patterns.push_back(e.value.pattern);
+
+		Pattern *p = new ArrayPattern(patterns);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<seq_pattern> : pegtl::normal<seq_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		Pattern *p = new SeqPattern(vec[0].value.name);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<wildcard_pattern> : pegtl::normal<wildcard_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		std::string name = vec[0].value.name;
+
+		auto *p = new Wildcard();
+
+		if (name != "_")
+			state.sym(name, p->getVar(), true);
+
+		state.add((Pattern *)p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<bound_pattern> : pegtl::normal<bound_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("sq");
+		std::string name = vec[0].value.name;
+		auto *p = new BoundPattern(vec[1].value.pattern);
+		state.sym(name, p->getVar(), true);
+		state.add((Pattern *)p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<range_pattern> : pegtl::normal<range_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ii");
+		Pattern *p = new RangePattern(vec[0].value.ival, vec[1].value.ival);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<empty_opt_pattern> : pegtl::normal<empty_opt_pattern>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Pattern *p = new OptPattern(nullptr);
+		state.add(p);
+	}
+};
+
+template<>
+struct control<guarded_pattern> : pegtl::normal<guarded_pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("qe");
+		Pattern *p = new GuardedPattern(vec[0].value.pattern, vec[1].value.expr);
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<opt_pattern_tail> : pegtl::normal<opt_pattern_tail>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::PATTERN);
+		Pattern *p0 = state.top().value.pattern;
+		Pattern *p = new OptPattern(p0);
+		state.top() = p;
+	}
+};
+
+template<>
+struct control<pattern> : pegtl::normal<pattern>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("q", true);
+		assert(!vec.empty());
+
+		Pattern *p = nullptr;
+
+		if (vec.size() == 1) {
+			p = vec[0].value.pattern;
+		} else {
+			std::vector<Pattern *> patterns;
+			for (auto &e : vec)
+				patterns.push_back(e.value.pattern);
+			p = new OrPattern(patterns);
+		}
+
+		state.add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
 	}
 };
 

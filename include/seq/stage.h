@@ -20,6 +20,7 @@
 #include "record.h"
 #include "funct.h"
 #include "ref.h"
+#include "optional.h"
 
 #include "common.h"
 

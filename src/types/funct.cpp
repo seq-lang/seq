@@ -71,8 +71,7 @@ Type *types::FuncType::getLLVMType(LLVMContext &context) const
 
 seq_int_t types::FuncType::size(Module *module) const
 {
-	std::unique_ptr<DataLayout> layout(new DataLayout(module));
-	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::FuncType *types::FuncType::get(std::vector<Type *> inTypes, Type *outType)

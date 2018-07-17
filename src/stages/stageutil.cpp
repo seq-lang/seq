@@ -193,6 +193,11 @@ If& stageutil::ifstage()
 	return If::make();
 }
 
+Match& stageutil::matchstage()
+{
+	return Match::make();
+}
+
 While& stageutil::whilestage(Expr *cond)
 {
 	return While::make(cond);

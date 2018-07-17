@@ -29,6 +29,15 @@ source args[0] as input {
   arr |> foreach
 
   input |> ident |> print
+
+  match input {
+    case (q @ `A...`) if q.len > 150: "match: A" |> print
+    case `C...`: "match: C" |> print
+    case `G...`: "match: G" |> print
+    case `_...`: "match: _..." |> print
+    case _: "match: _" |> print
+  }
+
   input |> split 64 64 {
     let v1 = _ |> print
     v1 |> split 32 32 {
@@ -142,3 +151,38 @@ q.sum(10.0) |> print
 q.print()
 q.swap()
 Pair[Float].print(q)
+
+fun print_coord(t: {Int, Int, Str}) {
+  # this syntax is based largely on Rust's
+  match t {
+    case (x, y, _) if x == y && x < 5: "EQUAL" |> print
+    case (x @ (0 | 1), y @ 0...1, a @ "a") { a |> print ; x |> print ; y |> print }
+    case (x, 0, "b"): x |> print
+    case (0, y, "b"): y |> print
+    case (x, y, "b") { x |> print ; y |> print }
+    case (x, y, z) {}
+  }
+}
+
+print_coord((0, 1, "a"))
+"---" |> print
+print_coord((13, 0, "b"))
+"---" |> print
+print_coord((11, 22, "b"))
+
+let aa = Int?[3]  # array of optional ints
+aa[0] = 1?
+aa[1] = 2?
+aa[2] = 3?
+
+let bb = Int?[][1]
+bb[0] = aa
+
+let cc = match bb {
+           case [[1?, 2?, ...]]: "one"[0:3]
+           case [[2?, ..., 3?]]: "two"
+           case []: "three"
+           case _: ""
+         }
+
+cc |> print

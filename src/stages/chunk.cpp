@@ -25,7 +25,7 @@ void Chunk::validate()
 	auto *arrType = dynamic_cast<types::ArrayType *>(in);
 	if (arrType) {
 		// checks if this is a proper call:
-		key->getType()->getCallType({arrType->getBaseType()});
+		key->getType()->getCallType({arrType->indexType()});
 	}
 
 	Stage::validate();
@@ -62,7 +62,7 @@ void Chunk::codegen(Module *module)
 	auto *type = dynamic_cast<types::ArrayType *>(getInType());
 	assert(type != nullptr);
 
-	Value *firstInChunk = type->getBaseType()->load(getBase(), ptr, control, body);
+	Value *firstInChunk = type->indexType()->load(getBase(), ptr, control, body);
 	if (key)
 		firstInChunk = key->getType()->call(getBase(), f, {firstInChunk}, body);
 
@@ -81,13 +81,13 @@ void Chunk::codegen(Module *module)
 		BranchInst *branch2 = builder.CreateCondBr(cond2, body2, body2);  // we set false-branch below
 		builder.SetInsertPoint(body2);
 
-		Value *nextInChunk = type->getBaseType()->load(getBase(), ptr, control2, body2);
+		Value *nextInChunk = type->indexType()->load(getBase(), ptr, control2, body2);
 
 		if (key)
 			nextInChunk = key->getType()->call(getBase(), f, {nextInChunk}, body2);
 
-		Value *eq = key ? key->getType()->getCallType({type->getBaseType()})->eq(getBase(), firstInChunk, nextInChunk, body2) :
-		                  type->getBaseType()->eq(getBase(), firstInChunk, nextInChunk, body2);
+		Value *eq = key ? key->getType()->getCallType({type->indexType()})->eq(getBase(), firstInChunk, nextInChunk, body2) :
+		                  type->indexType()->eq(getBase(), firstInChunk, nextInChunk, body2);
 
 		control2->addIncoming(next, body);
 		control2->addIncoming(next2, body2);

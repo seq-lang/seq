@@ -230,6 +230,49 @@ void types::BaseSeqType::print(BaseFunc *base,
 	builder.CreateCall(printFunc, {ptr, len});
 }
 
+Value *types::BaseSeqType::indexLoad(BaseFunc *base,
+                                     Value *self,
+                                     Value *idx,
+                                     BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	Value *ptr = memb(self, "ptr", block);
+	IRBuilder<> builder(block);
+	ptr = builder.CreateGEP(ptr, idx);
+	return make(ptr, oneLLVM(context), block);
+}
+
+Value *types::BaseSeqType::indexSlice(BaseFunc *base,
+                                      Value *self,
+                                      Value *from,
+                                      Value *to,
+                                      BasicBlock *block)
+{
+	Value *ptr = memb(self, "ptr", block);
+	IRBuilder<> builder(block);
+	ptr = builder.CreateGEP(ptr, from);
+	Value *len = builder.CreateSub(to, from);
+	return make(ptr, len, block);
+}
+
+Value *types::BaseSeqType::indexSliceNoFrom(BaseFunc *base,
+                                            Value *self,
+                                            Value *to,
+                                            BasicBlock *block)
+{
+	Value *zero = zeroLLVM(block->getContext());
+	return indexSlice(base, self, zero, to, block);
+}
+
+Value *types::BaseSeqType::indexSliceNoTo(BaseFunc *base,
+                                          Value *self,
+                                          Value *from,
+                                          BasicBlock *block)
+{
+	Value *len = Array.memb(self, "len", block);
+	return indexSlice(base, self, from, len, block);
+}
+
 Value *types::BaseSeqType::defaultValue(BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
@@ -261,8 +304,7 @@ Type *types::BaseSeqType::getLLVMType(LLVMContext& context) const
 
 seq_int_t types::BaseSeqType::size(Module *module) const
 {
-	std::unique_ptr<DataLayout> layout(new DataLayout(module));
-	return layout->getTypeAllocSize(getLLVMType(module->getContext()));
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 /* derived Seq type */
@@ -283,6 +325,11 @@ Value *types::SeqType::setMemb(Value *self,
                                BasicBlock *block)
 {
 	return BaseSeqType::setMemb(self, name, val, block);
+}
+
+types::Type *types::SeqType::indexType() const
+{
+	return SeqType::get();
 }
 
 Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block)
@@ -318,6 +365,11 @@ Value *types::StrType::setMemb(Value *self,
                                BasicBlock *block)
 {
 	return BaseSeqType::setMemb(self, name, val, block);
+}
+
+types::Type *types::StrType::indexType() const
+{
+	return StrType::get();
 }
 
 Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block)
