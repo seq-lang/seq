@@ -279,9 +279,14 @@ Value *SeqModule::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBl
 	throw exc::SeqException("cannot call SeqModule");
 }
 
-void SeqModule::codegenReturn(Expr *expr, BasicBlock*& block)
+void SeqModule::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
 	throw exc::SeqException("cannot return from SeqModule");
+}
+
+void SeqModule::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
+{
+	throw exc::SeqException("cannot yield from SeqModule");
 }
 
 void SeqModule::execute(const std::vector<std::string>& args, bool debug)
@@ -323,18 +328,14 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 		assert(0);
 	}
 
+	std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
+	std::unique_ptr<legacy::FunctionPassManager> fpm(new legacy::FunctionPassManager(module));
+
+	unsigned optLevel = 3;
+	unsigned sizeLevel = 0;
+	PassManagerBuilder builder;
+
 	if (!debug) {
-		std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
-		std::unique_ptr<legacy::FunctionPassManager> fpm(new legacy::FunctionPassManager(module));
-
-		fpm->doInitialization();
-		for (Function &f : *module)
-			fpm->run(f);
-		fpm->doFinalization();
-
-		unsigned optLevel = 3;
-		unsigned sizeLevel = 0;
-		PassManagerBuilder builder;
 		builder.OptLevel = optLevel;
 		builder.SizeLevel = sizeLevel;
 		builder.Inliner = createFunctionInliningPass(optLevel, sizeLevel, false);
@@ -342,11 +343,27 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 		builder.DisableUnrollLoops = false;
 		builder.LoopVectorize = true;
 		builder.SLPVectorize = true;
-		builder.populateModulePassManager(*pm);
-		pm->run(*module);
-	} else {
-		errs() << *module;
 	}
+
+	addCoroutinePassesToExtensionPoints(builder);
+	builder.populateModulePassManager(*pm);
+	builder.populateFunctionPassManager(*fpm);
+
+	fpm->doInitialization();
+	for (Function &f : *module)
+		fpm->run(f);
+	fpm->doFinalization();
+
+	pm->run(*module);
+
+	if (verifyModule(*module, &errs())) {
+		if (debug)
+			errs() << *module;
+		assert(0);
+	}
+
+	if (debug)
+		errs() << *module;
 
 	EngineBuilder EB(std::move(owner));
 	EB.setMCJITMemoryManager(make_unique<SectionMemoryManager>());

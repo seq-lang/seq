@@ -1341,6 +1341,35 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 };
 
 template<>
+struct control<gen_stmt> : pegtl::normal<gen_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.scope();
+		state.scopeBarrier();
+		state.enter(new Func(types::Void, types::Void));
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.unscope();
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+		func->setGen();
+		state.exit();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.unscope();
+		state.exit();
+	}
+};
+
+template<>
 struct control<class_open> : pegtl::normal<class_open>
 {
 	template<typename Input>
@@ -1522,6 +1551,62 @@ struct control<while_body> : pegtl::normal<while_body>
 		state.unscope();
 		SeqEntity ent = state.context();
 		assert(ent.type == SeqEntity::PIPELINE && dynamic_cast<While *>(ent.value.pipeline.getHead()));
+		state.exit();
+
+		SeqEntity context = state.context();
+		context.add(ent.value.pipeline);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.unscope();
+		state.exit();
+	}
+};
+
+template<>
+struct control<for_args> : pegtl::normal<for_args>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("se");
+		Pipeline p = stageutil::forstage(vec[1].value.expr);
+		auto *v = new Var(true);
+		*v = p;
+		state.scope();
+		state.sym(vec[0].value.name, v);
+		state.enter(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<for_body> : pegtl::normal<for_body>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		state.unscope();
+		SeqEntity ent = state.context();
+		assert(ent.type == SeqEntity::PIPELINE && dynamic_cast<For *>(ent.value.pipeline.getHead()));
 		state.exit();
 
 		SeqEntity context = state.context();
@@ -2236,6 +2321,32 @@ struct control<return_stmt> : pegtl::normal<return_stmt>
 		auto vec = state.get("e", true);
 		assert(vec.size() <= 1);
 		Pipeline p = stageutil::ret(vec.empty() ? nullptr : vec[0].value.expr);
+		p.getHead()->setBase(state.base());
+		state.context().add(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<yield_stmt> : pegtl::normal<yield_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e", true);
+		assert(vec.size() <= 1);
+		Pipeline p = stageutil::yield(vec.empty() ? nullptr : vec[0].value.expr);
 		p.getHead()->setBase(state.base());
 		state.context().add(p);
 	}

@@ -203,9 +203,19 @@ While& stageutil::whilestage(Expr *cond)
 	return While::make(cond);
 }
 
+For& stageutil::forstage(Expr *gen)
+{
+	return For::make(gen);
+}
+
 Return& stageutil::ret(Expr *expr)
 {
 	return Return::make(expr);
+}
+
+Yield& stageutil::yield(Expr *expr)
+{
+	return Yield::make(expr);
 }
 
 Break& stageutil::brk()

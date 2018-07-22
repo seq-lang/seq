@@ -67,7 +67,9 @@ namespace seq {
 		If& ifstage();
 		Match& matchstage();
 		While& whilestage(Expr *cond);
+		For& forstage(Expr *gen);
 		Return& ret(Expr *expr);
+		Yield& yield(Expr *expr);
 		Break& brk();
 		Continue& cnt();
 	}

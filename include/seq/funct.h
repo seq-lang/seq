@@ -31,6 +31,33 @@ namespace seq {
 			FuncType *clone(RefType *ref) override;
 		};
 
+		// Generator types really represent generator handles in LLVM
+		class GenType : public Type {
+		private:
+			Type *outType;
+			explicit GenType(Type *outType);
+		public:
+			GenType(GenType const&)=delete;
+			void operator=(FuncType const&)=delete;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+			llvm::Value *done(llvm::Value *self, llvm::BasicBlock *block);
+			void resume(llvm::Value *self, llvm::BasicBlock *block);
+			llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block);
+			void destroy(llvm::Value *self, llvm::BasicBlock *block);
+
+			Type *getBaseType(seq_int_t idx) const override;
+			bool is(Type *type) const override;
+			bool isGeneric(Type *type) const override;
+			void initOps() override;
+			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
+			seq_int_t size(llvm::Module *module) const override;
+			static GenType *get(Type *outType);
+			static GenType *get();
+
+			GenType *clone(RefType *ref) override;
+		};
+
 	}
 }
 

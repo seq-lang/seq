@@ -55,8 +55,10 @@ Func::Func(std::string name,
            std::vector<std::string> argNames,
            std::vector<types::Type *> inTypes,
            types::Type *outType) :
-    BaseFunc(), inTypes(std::move(inTypes)), outType(outType), pipelines(), result(nullptr),
-    argNames(std::move(argNames)), argVars(), name(std::move(name)), rawFunc(nullptr)
+    BaseFunc(), inTypes(std::move(inTypes)), outType(outType), pipelines(),
+    result(nullptr), argNames(std::move(argNames)), argVars(), gen(false),
+    promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr),
+    name(std::move(name)), rawFunc(nullptr)
 {
 	if (!this->argNames.empty())
 		assert(this->argNames.size() == this->inTypes.size());
@@ -79,6 +81,12 @@ Func::Func(types::Type& inType,
 Func::Func(types::Type& inType, types::Type& outType) :
     Func(inType, outType, "", nullptr)
 {
+}
+
+void Func::setGen()
+{
+	gen = true;
+	outType = types::GenType::get(outType);
 }
 
 void Func::codegen(Module *module)
@@ -105,11 +113,23 @@ void Func::codegen(Module *module)
 		return;
 	}
 
-	if (pipelines.empty())
-		throw exc::SeqException("function has no pipelines");
-
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
+
+	/*
+	 * Set up general generator intrinsics, if indeed a generator
+	 */
+	Value *id = nullptr;
+	if (gen) {
+		promise = makeAlloca(outType->getBaseType(0)->getLLVMType(context), preambleBlock);
+		promise->setName("promise");
+		Value *promiseRaw = builder.CreateBitCast(promise, IntegerType::getInt8PtrTy(context));
+		Function *idFn = Intrinsic::getDeclaration(module, Intrinsic::coro_id);
+		Value *nullPtr = ConstantPointerNull::get(IntegerType::getInt8PtrTy(context));
+		id = builder.CreateCall(idFn, {ConstantInt::get(IntegerType::getInt32Ty(context), 0), promiseRaw, nullPtr, nullPtr});
+		id->setName("id");
+	}
+
 
 	// this is purely for backwards-compatibility with the non-standalone version
 	if (!inTypes.empty()) {
@@ -130,8 +150,54 @@ void Func::codegen(Module *module)
 		*var = argsBase;
 	}
 
+	BasicBlock *allocBlock = nullptr;
+	Value *alloc = nullptr;
+	if (gen) {
+		allocBlock = BasicBlock::Create(context, "alloc", func);
+		builder.SetInsertPoint(allocBlock);
+		Function *sizeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_size, {seqIntLLVM(context)});
+		Value *size = builder.CreateCall(sizeFn);
+		alloc = types::BoolType::get()->alloc(size, allocBlock);  // want i8* so just use Bool for ease
+	}
+
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+	BasicBlock *entryActual = entry;
+
+	if (gen) {
+		builder.CreateBr(entry);
+		builder.SetInsertPoint(entry);
+		PHINode *phi = builder.CreatePHI(IntegerType::getInt8PtrTy(context), 2);
+		phi->addIncoming(ConstantPointerNull::get(IntegerType::getInt8PtrTy(context)), preambleBlock);
+		phi->addIncoming(alloc, allocBlock);
+
+		Function *beginFn = Intrinsic::getDeclaration(module, Intrinsic::coro_begin);
+		handle = builder.CreateCall(beginFn, {id, phi});
+		handle->setName("hdl");
+
+		/*
+		 * Cleanup code
+		 */
+		cleanup = BasicBlock::Create(context, "cleanup", func);
+		builder.SetInsertPoint(cleanup);
+		Function *freeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_free);
+		builder.CreateCall(freeFn, {id, handle});
+
+		suspend = BasicBlock::Create(context, "suspend", func);
+		builder.CreateBr(suspend);
+		builder.SetInsertPoint(suspend);
+
+		Function *endFn = Intrinsic::getDeclaration(module, Intrinsic::coro_end);
+		builder.CreateCall(endFn, {handle, ConstantInt::get(IntegerType::getInt1Ty(context), 0)});
+		builder.CreateRet(handle);
+	}
+
 	builder.SetInsertPoint(entry);
+
+	if (gen) {
+		// make sure the generator is initially suspended:
+		codegenYield(nullptr, outType->getBaseType(0), entry);
+	}
+
 	BasicBlock *block;
 
 	for (auto &pipeline : pipelines) {
@@ -150,25 +216,38 @@ void Func::codegen(Module *module)
 	BasicBlock *exitBlock = &func->getBasicBlockList().back();
 	builder.SetInsertPoint(exitBlock);
 
-	if (outType->is(types::VoidType::get())) {
-		builder.CreateRetVoid();
+	if (gen) {
+		codegenYield(nullptr, nullptr, exitBlock);  // final yield
 	} else {
-		Stage *tail = pipelines.back().getHead();
-		while (!tail->getNext().empty())
-			tail = tail->getNext().back();
-
-		if (!dynamic_cast<Return *>(tail)) {  // i.e. if there isn't already a return at the end
-			if (tail->getOutType()->isChildOf(outType))
-				builder.CreateRet(builder.CreateLoad(tail->result));
-			else
-				builder.CreateRet(outType->defaultValue(exitBlock));
+		if (outType->is(types::VoidType::get())) {
+			builder.CreateRetVoid();
 		} else {
-			builder.CreateUnreachable();
+			Stage *tail = pipelines.back().getHead();
+			while (!tail->getNext().empty())
+				tail = tail->getNext().back();
+
+			if (!dynamic_cast<Return *>(tail)) {  // i.e. if there isn't already a return at the end
+				if (tail->getOutType()->isChildOf(outType))
+					builder.CreateRet(builder.CreateLoad(tail->result));
+				else
+					builder.CreateRet(outType->defaultValue(exitBlock));
+			} else {
+				builder.CreateUnreachable();
+			}
 		}
 	}
 
 	builder.SetInsertPoint(preambleBlock);
-	builder.CreateBr(entry);
+	if (gen) {
+		Function *allocFn = Intrinsic::getDeclaration(module, Intrinsic::coro_alloc);
+		Value *needAlloc = builder.CreateCall(allocFn, id);
+		builder.CreateCondBr(needAlloc, allocBlock, entryActual);
+
+		cleanup->moveAfter(&func->getBasicBlockList().back());
+		suspend->moveAfter(cleanup);
+	} else {
+		builder.CreateBr(entry);
+	}
 }
 
 Value *Func::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBlock *block)
@@ -178,18 +257,18 @@ Value *Func::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBlock *
 	return builder.CreateCall(func, args);
 }
 
-void Func::codegenReturn(Expr *expr, BasicBlock*& block)
+void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
-	types::Type *type = expr ? expr->getType() : types::VoidType::get();
+	if (gen)
+		throw exc::SeqException("cannot return from generator");
 
 	if (!type->isChildOf(outType))
 		throw exc::SeqException(
 		  "cannot return '" + type->getName() + "' from function returning '" + outType->getName() + "'");
 
-	if (expr) {
-		Value *v = expr->codegen(this, block);
+	if (val) {
 		IRBuilder<> builder(block);
-		builder.CreateRet(v);
+		builder.CreateRet(val);
 	} else {
 		IRBuilder<> builder(block);
 		builder.CreateRetVoid();
@@ -200,6 +279,43 @@ void Func::codegenReturn(Expr *expr, BasicBlock*& block)
 	 * so make a new block and return that to the caller.
 	 */
 	block = BasicBlock::Create(block->getContext(), "", block->getParent());
+}
+
+// type = nullptr means final yield
+void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
+{
+	if (!gen)
+		throw exc::SeqException("cannot yield from a non-generator");
+
+	if (type && !type->isChildOf(outType->getBaseType(0)))
+		throw exc::SeqException(
+		  "cannot yield '" + type->getName() + "' from generator yielding '" + outType->getBaseType(0)->getName() + "'");
+
+	LLVMContext& context = block->getContext();
+	IRBuilder<> builder(block);
+
+	if (val)
+		builder.CreateStore(val, promise);
+
+	Function *suspFn = Intrinsic::getDeclaration(module, Intrinsic::coro_suspend);
+	Value *tok = ConstantTokenNone::get(context);
+	Value *final = ConstantInt::get(IntegerType::getInt1Ty(context), type ? 0 : 1);
+	Value *susp = builder.CreateCall(suspFn, {tok, final});
+
+	/*
+	 * Can't have anything after the `ret` instruction we just added,
+	 * so make a new block and return that to the caller.
+	 */
+	block = BasicBlock::Create(block->getContext(), "", block->getParent());
+
+	SwitchInst *inst = builder.CreateSwitch(susp, suspend, 2);
+	inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 0), block);
+	inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 1), cleanup);
+
+	if (!type) {
+		builder.SetInsertPoint(block);
+		builder.CreateUnreachable();
+	}
 }
 
 void Func::add(Pipeline pipeline)
@@ -337,6 +453,8 @@ Func *Func::clone(types::RefType *ref)
 		argVarsCloned.insert({e.first, e.second->clone(ref)});
 	x->argVars = argVarsCloned;
 
+	x->gen = gen;
+
 	return x;
 }
 
@@ -357,9 +475,14 @@ Value *BaseFuncLite::codegenCall(BaseFunc *base, std::vector<Value *> args, Basi
 	throw exc::SeqException("cannot call lite base function");
 }
 
-void BaseFuncLite::codegenReturn(Expr *expr, BasicBlock*& block)
+void BaseFuncLite::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
 	throw exc::SeqException("cannot return from lite base function");
+}
+
+void BaseFuncLite::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
+{
+	throw exc::SeqException("cannot yield from lite base function");
 }
 
 void BaseFuncLite::add(Pipeline pipeline)

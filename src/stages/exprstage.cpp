@@ -495,6 +495,88 @@ While *While::clone(types::RefType *ref)
 	return &x;
 }
 
+For::For(Expr *gen) :
+    Stage("for", types::AnyType::get(), types::VoidType::get()), gen(gen)
+{
+	loop = true;
+}
+
+void For::validate()
+{
+	if (!gen->getType()->isGeneric(types::GenType::get()))
+		throw exc::SeqException("cannot iterate over non-generator");
+
+	out = gen->getType()->getBaseType(0);
+	Stage::validate();
+}
+
+void For::codegen(Module *module)
+{
+	ensurePrev();
+	validate();
+
+	auto *type = dynamic_cast<types::GenType *>(gen->getType());
+	assert(type);
+
+	LLVMContext& context = module->getContext();
+
+	BasicBlock *entry = prev->getAfter();
+	Function *func = entry->getParent();
+
+	Value *gen = this->gen->codegen(getBase(), entry);
+	IRBuilder<> builder(entry);
+
+	BasicBlock *loopCont = BasicBlock::Create(context, "for_cont", func);
+	BasicBlock *loop = BasicBlock::Create(context, "for", func);
+	builder.CreateBr(loop);
+
+	builder.SetInsertPoint(loopCont);
+	builder.CreateBr(loop);
+
+	builder.SetInsertPoint(loop);
+	type->resume(gen, loop);
+	Value *cond = type->done(gen, loop);
+	BasicBlock *body = BasicBlock::Create(context, "body", func);
+	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set true-branch below
+
+	block = body;
+	Value *val = type->promise(gen, block);
+	result = type->getBaseType(0)->storeInAlloca(getBase(), val, block);
+
+	codegenNext(module);
+
+	builder.SetInsertPoint(getAfter());
+	builder.CreateBr(loop);
+
+	BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
+	branch->setSuccessor(0, cleanup);
+	type->destroy(gen, cleanup);
+
+	builder.SetInsertPoint(cleanup);
+	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+	builder.CreateBr(exit);
+	prev->setAfter(exit);
+
+	setBreaks(exit);
+	setContinues(loopCont);
+}
+
+For& For::make(Expr *gen)
+{
+	return *new For(gen);
+}
+
+For *For::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (For *)ref->getClone(this);
+
+	For& x = For::make(gen->clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}
+
 Return::Return(Expr *expr) :
     Stage("return", types::AnyType::get(), types::VoidType::get()), expr(expr)
 {
@@ -506,7 +588,9 @@ void Return::codegen(Module *module)
 	validate();
 
 	block = prev->getAfter();
-	getBase()->codegenReturn(expr, block);
+	types::Type *type = expr ? expr->getType() : types::VoidType::get();
+	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
+	getBase()->codegenReturn(val, type, block);
 	prev->setAfter(getAfter());
 }
 
@@ -521,6 +605,39 @@ Return *Return::clone(types::RefType *ref)
 		return (Return *)ref->getClone(this);
 
 	Return& x = Return::make(expr ? expr->clone(ref) : nullptr);
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}
+
+Yield::Yield(Expr *expr) :
+    Stage("Yield", types::AnyType::get(), types::VoidType::get()), expr(expr)
+{
+}
+
+void Yield::codegen(Module *module)
+{
+	ensurePrev();
+	validate();
+
+	block = prev->getAfter();
+	types::Type *type = expr ? expr->getType() : types::VoidType::get();
+	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
+	getBase()->codegenYield(val, type, block);
+	prev->setAfter(getAfter());
+}
+
+Yield& Yield::make(Expr *expr)
+{
+	return *new Yield(expr);
+}
+
+Yield *Yield::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Yield *)ref->getClone(this);
+
+	Yield& x = Yield::make(expr ? expr->clone(ref) : nullptr);
 	ref->addClone(this, &x);
 	Stage::setCloneBase(&x, ref);
 	return &x;

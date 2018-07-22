@@ -1,4 +1,4 @@
-#include "seq/base.h"
+#include "seq/seq.h"
 #include "seq/funct.h"
 
 using namespace seq;
@@ -85,4 +85,114 @@ types::FuncType *types::FuncType::clone(types::RefType *ref)
 	for (auto *type : inTypes)
 		inTypesCloned.push_back(type->clone(ref));
 	return get(inTypesCloned, outType->clone(ref));
+}
+
+types::GenType::GenType(Type *outType) :
+    Type(outType->getName() + "Gen", BaseType::get(), SeqData::FUNC), outType(outType)
+{
+}
+
+Value *types::GenType::defaultValue(BasicBlock *block)
+{
+	return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
+}
+
+Value *types::GenType::done(Value *self, BasicBlock *block)
+{
+	Function *doneFn = Intrinsic::getDeclaration(block->getModule(), Intrinsic::coro_done);
+	IRBuilder<> builder(block);
+	return builder.CreateCall(doneFn, self);
+}
+
+void types::GenType::resume(Value *self, BasicBlock *block)
+{
+	Function *resFn = Intrinsic::getDeclaration(block->getModule(), Intrinsic::coro_resume);
+	IRBuilder<> builder(block);
+	builder.CreateCall(resFn, self);
+}
+
+Value *types::GenType::promise(Value *self, BasicBlock *block)
+{
+	if (outType->is(types::VoidType::get()))
+		return nullptr;
+
+	LLVMContext& context = block->getContext();
+	IRBuilder<> builder(block);
+
+	Function *promFn = Intrinsic::getDeclaration(block->getModule(), Intrinsic::coro_promise);
+
+	Value *aln = ConstantInt::get(IntegerType::getInt32Ty(context),
+	                              block->getModule()->getDataLayout().getPrefTypeAlignment(outType->getLLVMType(context)));
+	Value *from = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
+
+	Value *ptr = builder.CreateCall(promFn, {self, aln, from});
+	ptr = builder.CreateBitCast(ptr, PointerType::get(outType->getLLVMType(context), 0));
+	return builder.CreateLoad(ptr);
+}
+
+void types::GenType::destroy(Value *self, BasicBlock *block)
+{
+	Function *destFn = Intrinsic::getDeclaration(block->getModule(), Intrinsic::coro_destroy);
+	IRBuilder<> builder(block);
+	builder.CreateCall(destFn, self);
+}
+
+types::Type *types::GenType::getBaseType(seq_int_t idx) const
+{
+	return outType;
+}
+
+bool types::GenType::is(Type *type) const
+{
+	auto *genType = dynamic_cast<GenType *>(type);
+	return genType && outType->is(genType->outType);
+}
+
+bool types::GenType::isGeneric(Type *type) const
+{
+	return (dynamic_cast<GenType *>(type) != nullptr);
+}
+
+void types::GenType::initOps()
+{
+	if (!vtable.ops.empty())
+		return;
+
+	vtable.ops = {
+		{uop("+"), this, outType, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			BasicBlock *block = b.GetInsertBlock();
+			resume(lhs, block);
+			return promise(lhs, block);
+		}},
+
+		{uop("~"), this, &types::Void, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			destroy(lhs, b.GetInsertBlock());
+			return nullptr;
+		}},
+	};
+}
+
+Type *types::GenType::getLLVMType(LLVMContext &context) const
+{
+	return IntegerType::getInt8PtrTy(context);
+}
+
+seq_int_t types::GenType::size(Module *module) const
+{
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
+}
+
+types::GenType *types::GenType::get(Type *outType)
+{
+	return new GenType(outType);
+}
+
+types::GenType *types::GenType::get()
+{
+	return get(types::BaseType::get());
+}
+
+types::GenType *types::GenType::clone(types::RefType *ref)
+{
+	return get(outType->clone(ref));
 }

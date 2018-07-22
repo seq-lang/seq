@@ -1,7 +1,4 @@
-#include <seq/ref.h>
-#include <seq/optional.h>
-#include "seq/void.h"
-#include "seq/num.h"
+#include "seq/seq.h"
 #include "seq/expr.h"
 
 using namespace seq;

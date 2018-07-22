@@ -101,7 +101,12 @@ namespace seq {
 		llvm::Value *codegenCall(BaseFunc *base,
 		                         std::vector<llvm::Value *> args,
 		                         llvm::BasicBlock *block) override;
-		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
+		void codegenReturn(llvm::Value *val,
+		                   types::Type *type,
+		                   llvm::BasicBlock*& block) override;
+		void codegenYield(llvm::Value *val,
+		                  types::Type *type,
+		                  llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 		void execute(const std::vector<std::string>& args={}, bool debug=false);
 

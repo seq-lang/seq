@@ -1,5 +1,13 @@
 # this is a comment
 
+gen split(s: Seq, k: Int, step: Int) -> Seq {
+  var i = 0
+  while i+k <= s.len {
+    yield s[i:i+k]
+    i = i + step
+  }
+}
+
 fun f(s: Seq) -> Seq[]:
   s |> split 32 32 |> collect
 
@@ -38,8 +46,8 @@ source args[0] as input {
     case _: "match: _" |> print
   }
 
-  input |> split 64 64 {
-    let v1 = _ |> print
+  for t in split(input, 64, 64) {
+    let v1 = t |> print
     v1 |> split 32 32 {
       let v2 = _ |> print
       _ |> split 16 16 {
@@ -50,7 +58,7 @@ source args[0] as input {
       }
       v2 |> print
     }
-    _ |> print
+    t |> print
   }
   ident(input) |> print
 

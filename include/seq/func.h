@@ -24,7 +24,12 @@ namespace seq {
 		virtual llvm::Value *codegenCall(BaseFunc *base,
 		                                 std::vector<llvm::Value *> args,
 		                                 llvm::BasicBlock *block)=0;
-		virtual void codegenReturn(Expr *expr, llvm::BasicBlock*& block)=0;
+		virtual void codegenReturn(llvm::Value *val,
+		                           types::Type *type,
+		                           llvm::BasicBlock*& block)=0;
+		virtual void codegenYield(llvm::Value *val,
+		                          types::Type *type,
+		                          llvm::BasicBlock*& block)=0;
 		virtual void add(Pipeline pipeline)=0;
 
 		llvm::LLVMContext& getContext();
@@ -46,6 +51,12 @@ namespace seq {
 		std::vector<std::string> argNames;
 		std::map<std::string, Var *> argVars;
 
+		bool gen;
+		llvm::Value *promise;
+		llvm::Value *handle;
+		llvm::BasicBlock *cleanup;
+		llvm::BasicBlock *suspend;
+
 		std::string name;
 		void *rawFunc;
 	public:
@@ -59,11 +70,17 @@ namespace seq {
 		     void *rawFunc);
 		Func(types::Type& inType, types::Type& outType);
 
+		void setGen();
 		void codegen(llvm::Module *module) override;
 		llvm::Value *codegenCall(BaseFunc *base,
 		                         std::vector<llvm::Value *> args,
 		                         llvm::BasicBlock *block) override;
-		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
+		void codegenReturn(llvm::Value *val,
+		                   types::Type *type,
+		                   llvm::BasicBlock*& block) override;
+		void codegenYield(llvm::Value *val,
+		                  types::Type *type,
+		                  llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng);
 
@@ -94,7 +111,12 @@ namespace seq {
 		llvm::Value *codegenCall(BaseFunc *base,
 		                         std::vector<llvm::Value *> args,
 		                         llvm::BasicBlock *block) override;
-		void codegenReturn(Expr *expr, llvm::BasicBlock*& block) override;
+		void codegenReturn(llvm::Value *val,
+		                   types::Type *type,
+		                   llvm::BasicBlock*& block) override;
+		void codegenYield(llvm::Value *val,
+		                  types::Type *type,
+		                  llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
 	};
 

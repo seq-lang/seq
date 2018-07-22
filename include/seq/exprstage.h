@@ -105,6 +105,17 @@ namespace seq {
 		While *clone(types::RefType *ref) override;
 	};
 
+	class For : public Stage {
+	private:
+		Expr *gen;
+	public:
+		explicit For(Expr *gen);
+		void validate() override;
+		void codegen(llvm::Module *module) override;
+		static For& make(Expr *gen);
+		For *clone(types::RefType *ref) override;
+	};
+
 	class Return : public Stage {
 	private:
 		Expr *expr;
@@ -113,6 +124,16 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		static Return& make(Expr *expr);
 		Return *clone(types::RefType *ref) override;
+	};
+
+	class Yield : public Stage {
+	private:
+		Expr *expr;
+	public:
+		explicit Yield(Expr *expr);
+		void codegen(llvm::Module *module) override;
+		static Yield& make(Expr *expr);
+		Yield *clone(types::RefType *ref) override;
 	};
 
 	class Break : public Stage {
