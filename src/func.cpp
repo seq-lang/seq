@@ -1,9 +1,4 @@
-#include "seq/basestage.h"
-#include "seq/makerec.h"
-#include "seq/call.h"
-#include "seq/expr.h"
-#include "seq/exprstage.h"
-#include "seq/exc.h"
+#include "seq/seq.h"
 #include "seq/func.h"
 
 using namespace seq;
@@ -157,7 +152,14 @@ void Func::codegen(Module *module)
 		builder.SetInsertPoint(allocBlock);
 		Function *sizeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_size, {seqIntLLVM(context)});
 		Value *size = builder.CreateCall(sizeFn);
-		alloc = types::BoolType::get()->alloc(size, allocBlock);  // want i8* so just use Bool for ease
+
+		Function *allocFunc = cast<Function>(
+		                        module->getOrInsertFunction(
+		                          ALLOC_FUNC_NAME,
+		                          IntegerType::getInt8PtrTy(context),
+		                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+
+		alloc = builder.CreateCall(allocFunc, size);
 	}
 
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);

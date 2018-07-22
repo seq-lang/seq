@@ -8,6 +8,7 @@
 #include "llvm.h"
 #include "seqdata.h"
 #include "ops.h"
+#include "seqgc.h"
 #include "util.h"
 
 namespace seq {
@@ -48,7 +49,7 @@ namespace seq {
 
 			virtual std::string copyFuncName() { return "copy" + getName(); }
 			virtual std::string printFuncName() { return "print" + getName(); }
-			virtual std::string allocFuncName() { return isAtomic() ? "seqAllocAtomic" : "seqAlloc"; }
+			virtual std::string allocFuncName() { return isAtomic() ? ALLOC_ATOMIC_FUNC_NAME : ALLOC_FUNC_NAME; }
 
 			virtual llvm::Value *loadFromAlloca(BaseFunc *base,
 			                                    llvm::Value *var,
