@@ -146,17 +146,22 @@ class Pair[T](a: T, b: T) {
     self.a = self.b
     self.b = tmp
   }
+
+  gen iter(self: Pair[T]) -> T {
+    yield self.a
+    yield self.b
+  }
 }
 
 let p = Pair[Int](42, 19)
 p.sum(100) |> print  # 42 + 19 + 100 = 161
 p.print()  # 42,19
 p.swap()
-p.print()  # 19,42
+for a in p.iter(): a |> print  # 19,42
 
 let q = Pair[Float](4.2, 1.9)
 q.sum(10.0) |> print
-q.print()
+for a in q.iter(): a |> print
 q.swap()
 Pair[Float].print(q)
 
