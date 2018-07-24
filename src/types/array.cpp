@@ -92,7 +92,8 @@ void types::ArrayType::serialize(BaseFunc *base,
 
 		builder.SetInsertPoint(body);
 
-		BaseFuncLite serializeBase(serialize);
+		BaseFuncLite serializeBase({}, nullptr, [serialize](Module *) { return serialize; });
+		serializeBase.codegen(module);
 		Value *elem = indexType()->load(base, ptrArg, control, body);
 		indexType()->serialize(&serializeBase, elem, fpArg, body);
 
@@ -165,7 +166,8 @@ Value *types::ArrayType::deserialize(BaseFunc *base,
 
 		builder.SetInsertPoint(body);
 
-		BaseFuncLite deserializeBase(deserialize);
+		BaseFuncLite deserializeBase({}, nullptr, [deserialize](Module *) { return deserialize; });
+		deserializeBase.codegen(module);
 		Value *elemPtr = builder.CreateGEP(ptrArg, control);
 		Value *elem = indexType()->deserialize(&deserializeBase, fpArg, body);
 		builder.CreateStore(elem, elemPtr);
@@ -223,7 +225,7 @@ Value *types::ArrayType::indexSlice(BaseFunc *base,
 	Value *ptr = Array.memb(self, "ptr", block);
 	IRBuilder<> builder(block);
 	ptr = builder.CreateGEP(ptr, from);
-	Value *len = builder.CreateSub(from, to);
+	Value *len = builder.CreateSub(to, from);
 	return make(ptr, len, block);
 }
 

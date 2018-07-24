@@ -15,6 +15,7 @@ namespace seq {
 
 	class BaseFunc;
 	class Mem;
+	class Func;
 
 	struct OpSpec;
 
@@ -27,6 +28,7 @@ namespace seq {
 			void *copy = nullptr;
 			void *print = nullptr;
 			std::map<std::string, std::pair<int, Type *>> fields;
+			std::map<std::string, BaseFunc *> methods;
 			std::vector<OpSpec> ops;
 		};
 
@@ -150,6 +152,8 @@ namespace seq {
 			                             const std::string& name,
 			                             llvm::Value *val,
 			                             llvm::BasicBlock *block);
+
+			virtual void addMethod(std::string name, BaseFunc *func);
 
 			virtual llvm::Value *staticMemb(const std::string& name, llvm::BasicBlock *block);
 

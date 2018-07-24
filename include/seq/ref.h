@@ -17,7 +17,6 @@ namespace seq {
 		private:
 			RefType *root;
 			RecordType *contents;
-			std::map<std::string, Func *> methods;
 			std::vector<GenericType *> generics;
 			llvm::StructType *typeCached;
 			std::map<void *, void *> cloneCache;
@@ -30,7 +29,6 @@ namespace seq {
 
 			RecordType *getContents();
 			void setContents(RecordType *contents);
-			void addMethod(std::string name, Func *func);
 			void addGenerics(unsigned count);
 			void setGeneric(unsigned idx, Type *type);
 			GenericType *getGeneric(unsigned idx);
@@ -79,9 +77,9 @@ namespace seq {
 
 		class MethodType : public RecordType {
 		private:
-			RefType *self;
+			Type *self;
 			FuncType *func;
-			explicit MethodType(RefType *self, FuncType *func);
+			MethodType(Type *self, FuncType *func);
 		public:
 			MethodType(MethodType const&)=delete;
 			void operator=(MethodType const&)=delete;
@@ -93,7 +91,7 @@ namespace seq {
 
 			Type *getCallType(std::vector<Type *> inTypes) override;
 			llvm::Value *make(llvm::Value *self, llvm::Value *func, llvm::BasicBlock *block);
-			static MethodType *get(RefType *self, FuncType *func);
+			static MethodType *get(Type *self, FuncType *func);
 
 			MethodType *clone(RefType *ref) override;
 		};
@@ -201,6 +199,8 @@ namespace seq {
 			                     const std::string& name,
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
+
+			void addMethod(std::string name, BaseFunc *func) override;
 
 			llvm::Value *staticMemb(const std::string& name, llvm::BasicBlock *block) override;
 

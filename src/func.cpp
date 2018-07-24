@@ -33,6 +33,11 @@ types::Type *BaseFunc::getOutType() const
 	return types::VoidType::get();
 }
 
+types::FuncType *BaseFunc::getFuncType() const
+{
+	return types::FuncType::get({}, types::VoidType::get());
+}
+
 Function *BaseFunc::getFunc()
 {
 	if (!func)
@@ -124,7 +129,6 @@ void Func::codegen(Module *module)
 		id = builder.CreateCall(idFn, {ConstantInt::get(IntegerType::getInt32Ty(context), 0), promiseRaw, nullPtr, nullPtr});
 		id->setName("id");
 	}
-
 
 	// this is purely for backwards-compatibility with the non-standalone version
 	if (!inTypes.empty()) {
@@ -370,6 +374,11 @@ types::Type *Func::getOutType() const
 	return outType;
 }
 
+types::FuncType *Func::getFuncType() const
+{
+	return types::FuncType::get(getInTypes(), getOutType());
+}
+
 void Func::setIns(std::vector<types::Type *> inTypes)
 {
 	this->inTypes = std::move(inTypes);
@@ -460,21 +469,29 @@ Func *Func::clone(types::RefType *ref)
 	return x;
 }
 
-BaseFuncLite::BaseFuncLite(Function *func) : BaseFunc()
+BaseFuncLite::BaseFuncLite(std::vector<types::Type *> inTypes,
+                           types::Type *outType,
+                           std::function<llvm::Function *(llvm::Module *)> codegenLambda) :
+    BaseFunc(), inTypes(std::move(inTypes)), outType(outType), codegenLambda(codegenLambda)
 {
-	module = func->getParent();
-	preambleBlock = &*func->getBasicBlockList().begin();
-	this->func = func;
 }
 
 void BaseFuncLite::codegen(Module *module)
 {
-	throw exc::SeqException("cannot codegen lite base function");
+	if (!this->module)
+		this->module = module;
+
+	if (func)
+		return;
+
+	func = codegenLambda(module);
+	preambleBlock = &*func->getBasicBlockList().begin();
 }
 
 Value *BaseFuncLite::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBlock *block)
 {
-	throw exc::SeqException("cannot call lite base function");
+	IRBuilder<> builder(block);
+	return builder.CreateCall(func, args);
 }
 
 void BaseFuncLite::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
@@ -490,4 +507,43 @@ void BaseFuncLite::codegenYield(Value *val, types::Type *type, BasicBlock*& bloc
 void BaseFuncLite::add(Pipeline pipeline)
 {
 	throw exc::SeqException("cannot add pipelines to lite base function");
+}
+
+types::Type *BaseFuncLite::getInType() const
+{
+	if (inTypes.size() > 1)
+		throw exc::SeqException("function has multiple input types");
+	return inTypes.empty() ? types::VoidType::get() : inTypes[0];
+}
+
+std::vector<types::Type *> BaseFuncLite::getInTypes() const
+{
+	return inTypes;
+}
+
+types::Type *BaseFuncLite::getOutType() const
+{
+	return outType;
+}
+
+types::FuncType *BaseFuncLite::getFuncType() const
+{
+	return types::FuncType::get(getInTypes(), getOutType());
+}
+
+BaseFuncLite *BaseFuncLite::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (BaseFuncLite *)ref->getClone(this);
+
+	std::vector<types::Type *> inTypesCloned;
+	std::vector<Pipeline> pipelinesCloned;
+
+	for (auto *type : inTypes)
+		inTypesCloned.push_back(type->clone(ref));
+
+	auto *x = new BaseFuncLite(inTypesCloned, outType->clone(ref), codegenLambda);
+	ref->addClone(this, x);
+
+	return x;
 }

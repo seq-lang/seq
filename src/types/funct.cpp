@@ -90,6 +90,31 @@ types::FuncType *types::FuncType::clone(types::RefType *ref)
 types::GenType::GenType(Type *outType) :
     Type(outType->getName() + "Gen", BaseType::get(), SeqData::FUNC), outType(outType)
 {
+	OptionalType *optType = types::OptionalType::get(this->outType);
+	addMethod("next", new BaseFuncLite({this}, optType, [this, optType](Module *module) {
+		LLVMContext& context = module->getContext();
+		auto *f = cast<Function>(module->getOrInsertFunction("seq.gen.next", optType->getLLVMType(context), getLLVMType(context)));
+		Value *arg = f->arg_begin();
+
+		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
+		BasicBlock *a = BasicBlock::Create(context, "done", f);
+		BasicBlock *b = BasicBlock::Create(context, "return", f);
+
+		IRBuilder<> builder(entry);
+		resume(arg, entry);
+		Value *d = done(arg, entry);
+		builder.CreateCondBr(d, a, b);
+
+		builder.SetInsertPoint(a);
+		destroy(arg, a);
+		builder.CreateRet(optType->make(nullptr, a));
+
+		builder.SetInsertPoint(b);
+		Value *val = promise(arg, b);
+		builder.CreateRet(optType->make(val, b));
+
+		return f;
+	}));
 }
 
 Value *types::GenType::defaultValue(BasicBlock *block)
@@ -151,25 +176,6 @@ bool types::GenType::is(Type *type) const
 bool types::GenType::isGeneric(Type *type) const
 {
 	return (dynamic_cast<GenType *>(type) != nullptr);
-}
-
-void types::GenType::initOps()
-{
-	if (!vtable.ops.empty())
-		return;
-
-	vtable.ops = {
-		{uop("+"), this, outType, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			BasicBlock *block = b.GetInsertBlock();
-			resume(lhs, block);
-			return promise(lhs, block);
-		}},
-
-		{uop("~"), this, &types::Void, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			destroy(lhs, b.GetInsertBlock());
-			return nullptr;
-		}},
-	};
 }
 
 Type *types::GenType::getLLVMType(LLVMContext &context) const

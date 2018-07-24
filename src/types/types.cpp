@@ -318,24 +318,43 @@ Value *types::Type::memb(Value *self,
                          BasicBlock *block)
 {
 	initFields();
-	auto iter = getVTable().fields.find(name);
+	auto iter1 = getVTable().methods.find(name);
 
-	if (iter == getVTable().fields.end())
+	if (iter1 != getVTable().methods.end()) {
+		FuncExpr e(iter1->second);
+		auto *type = dynamic_cast<FuncType *>(e.getType());
+		assert(type);
+		Value *func = e.codegen(nullptr, block);
+		return MethodType::get(this, type)->make(self, func, block);
+	}
+
+	auto iter2 = getVTable().fields.find(name);
+
+	if (iter2 == getVTable().fields.end())
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
 	IRBuilder<> builder(block);
-	return builder.CreateExtractValue(self, iter->second.first);
+	return builder.CreateExtractValue(self, iter2->second.first);
 }
 
 types::Type *types::Type::membType(const std::string& name)
 {
 	initFields();
-	auto iter = getVTable().fields.find(name);
+	auto iter1 = getVTable().methods.find(name);
 
-	if (iter == getVTable().fields.end() || iter->second.second->is(types::VoidType::get()))
+	if (iter1 != getVTable().methods.end()) {
+		FuncExpr e(iter1->second);
+		auto *type = dynamic_cast<FuncType *>(e.getType());
+		assert(type);
+		return MethodType::get(this, type);
+	}
+
+	auto iter2 = getVTable().fields.find(name);
+
+	if (iter2 == getVTable().fields.end() || iter2->second.second->is(types::VoidType::get()))
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
-	return iter->second.second;
+	return iter2->second.second;
 }
 
 Value *types::Type::staticMemb(const std::string& name, BasicBlock *block)
@@ -357,10 +376,21 @@ Value *types::Type::setMemb(Value *self,
 	auto iter = getVTable().fields.find(name);
 
 	if (iter == getVTable().fields.end())
-		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+		throw exc::SeqException("type '" + getName() + "' has no assignable member '" + name + "'");
 
 	IRBuilder<> builder(block);
 	return builder.CreateInsertValue(self, val, iter->second.first);
+}
+
+void types::Type::addMethod(std::string name, BaseFunc *func)
+{
+	if (getVTable().methods.find(name) != getVTable().methods.end())
+		throw exc::SeqException("duplicate method '" + name + "'");
+
+	if (getVTable().fields.find(name) != getVTable().fields.end())
+		throw exc::SeqException("field '" + name + "' conflicts with method");
+
+	getVTable().methods.insert({name, func});
 }
 
 Value *types::Type::defaultValue(BasicBlock *block)

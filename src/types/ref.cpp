@@ -20,7 +20,7 @@ static bool typeMatch(const std::vector<T*>& v1, const std::vector<T*>& v2)
 
 types::RefType::RefType(std::string name) :
     Type(name, BaseType::get(), SeqData::REF), root(this),
-    contents(types::RecordType::get({})), methods(), generics(),
+    contents(types::RecordType::get({})), generics(),
     typeCached(StructType::create(getLLVMContext(), name)),
     cloneCache(), realizationCache(), llvmTypeInProgress(false)
 {
@@ -34,14 +34,6 @@ types::RecordType *types::RefType::getContents()
 void types::RefType::setContents(types::RecordType *contents)
 {
 	this->contents = contents;
-}
-
-void types::RefType::addMethod(std::string name, Func *func)
-{
-	if (methods.find(name) != methods.end())
-		throw exc::SeqException("duplicate method '" + name + "'");
-
-	methods.insert({name, func});
 }
 
 void types::RefType::addGenerics(unsigned count)
@@ -116,9 +108,9 @@ Value *types::RefType::memb(Value *self,
                             BasicBlock *block)
 {
 	initFields();
-	auto iter = methods.find(name);
+	auto iter = getVTable().methods.find(name);
 
-	if (iter != methods.end()) {
+	if (iter != getVTable().methods.end()) {
 		FuncExpr e(iter->second);
 		auto *type = dynamic_cast<FuncType *>(e.getType());
 		assert(type);
@@ -135,9 +127,9 @@ Value *types::RefType::memb(Value *self,
 types::Type *types::RefType::membType(const std::string& name)
 {
 	initFields();
-	auto iter = methods.find(name);
+	auto iter = getVTable().methods.find(name);
 
-	if (iter != methods.end()) {
+	if (iter != getVTable().methods.end()) {
 		FuncExpr e(iter->second);
 		auto *type = dynamic_cast<FuncType *>(e.getType());
 		assert(type);
@@ -162,9 +154,9 @@ Value *types::RefType::setMemb(Value *self,
 
 Value *types::RefType::staticMemb(const std::string& name, BasicBlock *block)
 {
-	auto iter = methods.find(name);
+	auto iter = getVTable().methods.find(name);
 
-	if (iter == methods.end())
+	if (iter == getVTable().methods.end())
 		return Type::staticMemb(name, block);
 
 	FuncExpr e(iter->second);
@@ -175,9 +167,9 @@ Value *types::RefType::staticMemb(const std::string& name, BasicBlock *block)
 
 types::Type *types::RefType::staticMembType(const std::string& name)
 {
-	auto iter = methods.find(name);
+	auto iter = getVTable().methods.find(name);
 
-	if (iter == methods.end())
+	if (iter == getVTable().methods.end())
 		return Type::staticMembType(name);
 
 	FuncExpr e(iter->second);
@@ -310,23 +302,23 @@ types::RefType *types::RefType::clone(types::RefType *ref)
 	ref->addClone(this, x);
 	x->setContents(contents->clone(ref));
 
-	std::map<std::string, Func *> methodsCloned;
+	std::map<std::string, BaseFunc *> methodsCloned;
 	std::vector<types::GenericType *> genericsCloned;
 
-	for (auto& method : methods)
+	for (auto& method : getVTable().methods)
 		methodsCloned.insert({method.first, method.second->clone(ref)});
 
 	for (auto *generic : generics)
 		genericsCloned.push_back(generic->clone(ref));
 
-	x->methods = methodsCloned;
+	x->getVTable().methods = methodsCloned;
 	x->generics = genericsCloned;
 	x->root = root;
 
 	return x;
 }
 
-types::MethodType::MethodType(types::RefType *self, FuncType *func) :
+types::MethodType::MethodType(types::Type *self, FuncType *func) :
     RecordType({self, func}, {"self", "func"}), self(self), func(func)
 {
 }
@@ -359,7 +351,7 @@ Value *types::MethodType::make(Value *self, Value *func, BasicBlock *block)
 	return method;
 }
 
-types::MethodType *types::MethodType::get(types::RefType *self, types::FuncType *func)
+types::MethodType *types::MethodType::get(types::Type *self, types::FuncType *func)
 {
 	return new MethodType(self, func);
 }
@@ -610,6 +602,12 @@ Value *types::GenericType::setMemb(Value *self,
 {
 	ensure();
 	return type->setMemb(self, name, val, block);
+}
+
+void types::GenericType::addMethod(std::string name, BaseFunc *func)
+{
+	ensure();
+	type->addMethod(name, func);
 }
 
 Value *types::GenericType::staticMemb(const std::string& name, BasicBlock *block)

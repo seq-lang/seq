@@ -30,9 +30,9 @@ namespace seq {
 
 	class FuncExpr : public Expr {
 	private:
-		Func *func;
+		BaseFunc *func;
 	public:
-		explicit FuncExpr(Func *func);
+		explicit FuncExpr(BaseFunc *func);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		FuncExpr *clone(types::RefType *ref) override;

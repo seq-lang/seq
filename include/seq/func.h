@@ -10,7 +10,6 @@
 namespace seq {
 
 	class Call;
-	class MultiCall;
 	class Expr;
 
 	class BaseFunc {
@@ -36,6 +35,7 @@ namespace seq {
 		llvm::BasicBlock *getPreamble() const;
 		virtual types::Type *getInType() const;
 		virtual types::Type *getOutType() const;
+		virtual types::FuncType *getFuncType() const;
 		virtual llvm::Function *getFunc();
 
 		virtual BaseFunc *clone(types::RefType *ref);
@@ -89,6 +89,7 @@ namespace seq {
 		types::Type *getInType() const override;
 		std::vector<types::Type *> getInTypes() const;
 		types::Type *getOutType() const override;
+		types::FuncType *getFuncType() const override;
 		void setIns(std::vector<types::Type *> inTypes);
 		void setOut(types::Type *outType);
 		void setName(std::string name);
@@ -104,8 +105,14 @@ namespace seq {
 	};
 
 	class BaseFuncLite : public BaseFunc {
+	private:
+		std::vector<types::Type *> inTypes;
+		types::Type *outType;
+		std::function<llvm::Function *(llvm::Module *)> codegenLambda;
 	public:
-		explicit BaseFuncLite(llvm::Function *func);
+		BaseFuncLite(std::vector<types::Type *> inTypes,
+		             types::Type *outType,
+		             std::function<llvm::Function *(llvm::Module *)> codegenLambda);
 
 		void codegen(llvm::Module *module) override;
 		llvm::Value *codegenCall(BaseFunc *base,
@@ -118,6 +125,13 @@ namespace seq {
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block) override;
 		void add(Pipeline pipeline) override;
+
+		types::Type *getInType() const override;
+		std::vector<types::Type *> getInTypes() const;
+		types::Type *getOutType() const override;
+		types::FuncType *getFuncType() const override;
+
+		BaseFuncLite *clone(types::RefType *ref) override;
 	};
 
 }

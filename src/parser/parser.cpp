@@ -3051,6 +3051,19 @@ struct control<opt_tail> : pegtl::normal<opt_tail>
 };
 
 template<>
+struct control<gen_tail> : pegtl::normal<gen_tail>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::TYPE);
+		types::Type *type0 = state.top().value.type;
+		types::Type *type = types::GenType::get(type0);
+		state.top() = type;
+	}
+};
+
+template<>
 struct control<record_type_elem_named> : pegtl::normal<record_type_elem_named>
 {
 	template<typename Input>

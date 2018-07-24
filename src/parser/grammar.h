@@ -116,7 +116,8 @@ struct func_type : pegtl::sor<func_type_no_void, func_type_in_void, func_type_ou
 
 struct array_tail : pegtl::seq<pegtl::one<'['>, seps, pegtl::one<']'>> {};
 struct opt_tail : pegtl::one<'?'> {};
-struct type_tail : pegtl::sor<array_tail, opt_tail> {};
+struct gen_tail : pegtl::one<'+'> {};
+struct type_tail : pegtl::sor<array_tail, opt_tail, gen_tail> {};
 
 struct type0 : pegtl::sor<record_type, func_type, seq_type, int_type, float_type, bool_type, str_type, realized_type, custom_type> {};
 struct type : pegtl::seq<type0, pegtl::star<seps, type_tail>> {};

@@ -42,7 +42,7 @@ CellExpr *CellExpr::clone(types::RefType *ref)
 	return new CellExpr(cell->clone(ref));
 }
 
-FuncExpr::FuncExpr(Func *func) : func(func)
+FuncExpr::FuncExpr(BaseFunc *func) : func(func)
 {
 }
 
@@ -54,7 +54,7 @@ Value *FuncExpr::codegen(BaseFunc *base, BasicBlock*& block)
 
 types::Type *FuncExpr::getType() const
 {
-	return types::FuncType::get(func->getInTypes(), func->getOutType());
+	return func->getFuncType();
 }
 
 FuncExpr *FuncExpr::clone(types::RefType *ref)
