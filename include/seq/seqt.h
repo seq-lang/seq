@@ -84,6 +84,7 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
+			void initOps() override;
 			Type *indexType() const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
 			static SeqType *get();
@@ -102,6 +103,7 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
+			void initOps() override;
 			Type *indexType() const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
 			static StrType *get();

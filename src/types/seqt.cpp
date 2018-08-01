@@ -327,6 +327,19 @@ Value *types::SeqType::setMemb(Value *self,
 	return BaseSeqType::setMemb(self, name, val, block);
 }
 
+void types::SeqType::initOps()
+{
+	if (!vtable.ops.empty())
+		return;
+
+	vtable.ops = {
+		{bop("=="), this, &Bool, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			Value *x = eq(nullptr, lhs, rhs, b.GetInsertBlock());
+			return b.CreateZExt(x, Bool.getLLVMType(b.getContext()));
+		}},
+	};
+}
+
 types::Type *types::SeqType::indexType() const
 {
 	return SeqType::get();
@@ -365,6 +378,19 @@ Value *types::StrType::setMemb(Value *self,
                                BasicBlock *block)
 {
 	return BaseSeqType::setMemb(self, name, val, block);
+}
+
+void types::StrType::initOps()
+{
+	if (!vtable.ops.empty())
+		return;
+
+	vtable.ops = {
+		{bop("=="), this, &Bool, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			Value *x = eq(nullptr, lhs, rhs, b.GetInsertBlock());
+			return b.CreateZExt(x, Bool.getLLVMType(b.getContext()));
+		}},
+	};
 }
 
 types::Type *types::StrType::indexType() const
