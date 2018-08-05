@@ -112,6 +112,10 @@ and read state = parse
       | "case" -> P.CASE
       | "as" -> P.AS
       | "pass" -> P.PASS
+      | "of" -> P.OF
+      | "while" -> P.WHILE
+      | "type" -> P.TYPE
+      | "default" -> P.DEFAULT
       | _ -> P.ID(id)
   }
 
@@ -234,6 +238,11 @@ and read_extern state buf = parse
     | P.FLOAT(s) -> sprintf "FLOAT(%f)" s
     | P.EEQ(s) -> "EEQ" 
     | P.NEQ(s) -> "NEQ"
+    | P.OF -> "OF"
+    | P.PASS -> "PASS"
+    | P.WHILE -> "WHILE"
+    | P.TYPE -> "TYPE"
+    | P.DEFAULT -> "DEFAULT"
     | _ -> SyntaxError "unknown token" |> raise
   
   let lexmain () =
@@ -257,5 +266,5 @@ and read_extern state buf = parse
     in 
     loop 0 @@ token state lexbuf
     
-  let () = lexmain ()
+  (* let () = lexmain () *)
 }
