@@ -116,6 +116,9 @@ and read state = parse
       | "while" -> P.WHILE
       | "type" -> P.TYPE
       | "default" -> P.DEFAULT
+      | "lambda" -> P.LAMBDA
+      | "assert" -> P.ASSERT
+      | "global" -> P.GLOBAL
       | _ -> P.ID(id)
   }
 
@@ -125,17 +128,27 @@ and read state = parse
     P.EXTERN(r, s)
   }
 
+  | "+=" as op { P.PLUSEQ op }
+  | "-=" as op { P.MINEQ op }
+  | "**=" as op { P.POWEQ op }
+  | "*=" as op { P.MULEQ op }
+  | "//=" as op { P.FDIVEQ op }
+  | "/=" as op { P.DIVEQ op }
+  | "%=" as op { P.MODEQ op }
+
   | "+" as op { P.ADD (Char.to_string op) }
   | "-" as op { P.SUB (Char.to_string op) }
+  | "**" as op { P.POW op }
   | "*" as op { P.MUL (Char.to_string op) }
-  | "/" as op { P.DIV (Char.to_string op) }
   | "==" as op { P.EEQ op }
   | "!=" as op { P.NEQ op }
   | ">=" as op { P.GEQ op }
   | ">" as op { P.GREAT (Char.to_string op) }
   | "<=" as op { P.LEQ op }
   | "<" as op { P.LESS (Char.to_string op) }
+  | "//" as op { P.FDIV op }
   | "/" as op { P.DIV (Char.to_string op) }
+  | "%" as op { P.MOD (Char.to_string op) }
   | "|>" as op { P.PIPE op }
 
   | "(" { ignore_nl state; P.LP }
@@ -146,8 +159,11 @@ and read state = parse
   | "}" { aware_nl state;  P.RB }
   | "=" { P.EQ }
   | ":" { P.COLON }
-  | "." { P.DOT }
+  | ";" { P.SEMICOLON }
+  | "@" { P.AT }
   | "," { P.COMMA }
+  | "..." { P.ELLIPSIS}
+  | "." { P.DOT }
   
   | int as i   { P.INT (int_of_string i) }   
   | float as f { P.FLOAT (float_of_string f) }
@@ -206,7 +222,7 @@ and read_extern state buf = parse
     | P.EQ -> "EQ"
     | P.EXTERN(r, s) -> sprintf "EXTERN(%s, `%s`)" r s
     | P.FOR -> "FOR"
-    | P.ID(s) -> sprintf "ID(%s)" s 
+    | P.ID(s) -> sprintf "ID" 
     | P.IF -> "IF"
     | P.IN -> "IN"
     | P.INDENT -> "INDENT"
@@ -221,7 +237,7 @@ and read_extern state buf = parse
     | P.RETURN -> "RETURN"
     | P.RP -> "RP"
     | P.RS -> "RS"
-    | P.STRING(s) -> sprintf "STRING(%s)" s
+    | P.STRING(s) -> sprintf "STRING"
     | P.YIELD -> "YIELD"
     | P.MATCH -> "MATCH"
     | P.CASE -> "CASE"
@@ -234,8 +250,8 @@ and read_extern state buf = parse
     | P.LEQ(s) -> "LEQ"
     | P.LESS(s) -> "LESS"
     | P.PIPE(s) -> "PIPE"
-    | P.INT(s) -> sprintf "INT(%d)" s
-    | P.FLOAT(s) -> sprintf "FLOAT(%f)" s
+    | P.INT(s) -> sprintf "INT" 
+    | P.FLOAT(s) -> sprintf "FLOAT"
     | P.EEQ(s) -> "EEQ" 
     | P.NEQ(s) -> "NEQ"
     | P.OF -> "OF"
@@ -243,6 +259,22 @@ and read_extern state buf = parse
     | P.WHILE -> "WHILE"
     | P.TYPE -> "TYPE"
     | P.DEFAULT -> "DEFAULT"
+    | P.LAMBDA -> "LAMBDA"
+    | P.ASSERT -> "ASSERT"
+    | P.GLOBAL -> "GLOBAL"
+    | P.ELLIPSIS -> "ELLIPSIS"
+    | P.AT -> "AT"
+    | P.SEMICOLON -> "SEMICOLON"
+    | P.PLUSEQ(s) -> "PLUSEQ"
+    | P.MINEQ(s) -> "MINEQ"
+    | P.POWEQ(s) -> "POWEQ"
+    | P.MULEQ(s) -> "MULEQ"
+    | P.FDIVEQ(s) -> "FDIVEQ"
+    | P.DIVEQ(s) -> "DIVEQ"
+    | P.MODEQ(s) -> "MODEQ"
+    | P.POW(s) -> "POW"
+    | P.MOD(s) -> "MOD"
+    | P.FDIV(s) -> "FDIV"
     | _ -> SyntaxError "unknown token" |> raise
   
   let lexmain () =
@@ -264,7 +296,6 @@ and read_extern state buf = parse
         printf "%s " (to_string x);
         loop level @@ token state lexbuf
     in 
-    loop 0 @@ token state lexbuf
-    
+    loop 0 @@ token state lexbuf  
   (* let () = lexmain () *)
 }

@@ -49,8 +49,8 @@ let rec toplevel jit fpm =
       else
         parse (line ^ "\n"), false 
     in
-    Ast.prn_ast ast |> printf "%s\n";
-    (* Ast.prn_ast_sexp ast |> printf "%s\n"; *)
+    Ast.prn_ast_sexp ast |> 
+      printf "%s\n";
     
     (* let _ = Codegen.codegen ast in
     Utils.dump ();

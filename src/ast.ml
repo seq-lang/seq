@@ -4,83 +4,63 @@ open Core
 open Sexplib.Std
 
 type expr =
-  | Default
   | Bool of bool
   | Int of int
   | Float of float
   | String of string
-  | Ident of string
-  | Binary of expr * string * expr
-  | Pipe of expr list  
-  | Index of string * expr
-  | Call of string * callarg list
-  | List of expr list
+  | Id of string
+  | Tuple of expr list
+  | List of expr list 
   | Dict of (expr * expr) list
-  | Extern of string * string
-  | As of string * string 
-and callarg =
-  | NamedArg of string * expr
-  | ExprArg of expr
+  | Set of expr list
+  | IfExpr of expr * expr * expr 
+  | Lambda of vararg list * expr
+  | Pipe of expr list
+  | Cond of expr * string * expr
+  | Not of expr
+  | Call of expr * expr list
+  | Index of expr * expr list
+  | Dot of expr * expr
+  | Binary of expr * string * expr
+  | KeyValue of expr * expr 
+  | Ellipsis
+  | Slice of expr option * expr option * expr option
+and vararg = 
+  | TypedArg of expr * string option
+  | NamedArg of expr * expr
   [@@deriving sexp]
 
 type statement =
-  | Pass
-  | Expr of expr
+  | Pass | Break | Continue
+  | Statements of statement list
+  | Assign of expr list * expr list
+  | AssignEq of expr list * string * expr list
   | Print of expr list
-  | Assign of string * expr (* x = sth *)
-  | For of string * expr * statement list (* var, array, for-st *)
-  | While of expr * statement list 
-    | Break 
-    | Continue
+  | Return of expr list
+  | Yield of expr list
+  | Global of expr list 
+  | Assert of expr list
+  | While of expr * statement list
+  | For of expr * expr list * statement list
   | If of (expr * statement list) list
-  | Match of expr * (expr * string option * statement list) list
-  | Function of (string * typet) * defarg list * statement list (* name, args, fun-st *)
-    | Return of expr
-    | Yield of expr
-  | Eof
-and typet =
-  | Type of string
-  | Auto
-and defarg =
-  | Arg of (string * typet)
-  | KeyValArg of (string * typet) * expr
+  | Match of expr * (expr * expr option * statement list) list
+  | Function of vararg * vararg list * statement list
+  | DecoratedFunction of decorator list * statement
+and decorator =
+  | Decorator of expr * expr list
   [@@deriving sexp]
 
 type ast = 
   | Module of statement list
   [@@deriving sexp]
 
-let rec flatten = function 
-  | Binary(e1, op, e2) when op = "|>" -> 
-    begin
-      let f1 = flatten e1 in
-      let f2 = flatten e2 in
-      match f1, f2 with 
-      (* TODO optimize calls below, @ is O(n) *)
-      | Pipe f1, Pipe f2 -> Pipe (f1 @ f2) 
-      | Pipe f1, f2 -> Pipe (f1 @ [f2])
-      | f1, Pipe f2 -> Pipe (f1 :: f2)
-      | f1, f2 -> Pipe [f1; f2]
-    end
-  | Binary(e1, op, e2) -> Binary(flatten e1, op, flatten e2)
-  | Index(s, e) -> Index(s, flatten e)
-  | Call(c, l) -> Call(c, List.map l ~f:(
-      fun x -> match x with
-        | NamedArg(n, e) -> NamedArg(n, flatten e)
-        | ExprArg(e) -> ExprArg(flatten e)))
-  | List(l) -> List(List.map l ~f:flatten)
-  | Dict(l) -> Dict(List.map l ~f:(
-      fun (k, v) -> (flatten k, flatten v)))
-  | _ as e -> e
-
 let prn_ast_sexp a =
   sexp_of_ast a |> Sexp.to_string 
 
+(*
 let sci sep lst fn =
   String.concat ~sep:sep @@ List.map ~f:fn lst
-
 let pad l = String.make (l * 2) ' '
-
 let rec prn_ast = function 
   | Module sl -> sci "\n" sl (prn_statement 0)
 and prn_statement level st = 
@@ -141,3 +121,4 @@ and prn_expr = function
   | As(s, t) -> sprintf "As[%s, %s]" s t
 
 
+*)
