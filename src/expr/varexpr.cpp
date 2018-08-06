@@ -3,23 +3,23 @@
 using namespace seq;
 using namespace llvm;
 
-CellExpr::CellExpr(Cell *cell) : cell(cell)
+VarExpr::VarExpr(Var *var) : var(var)
 {
 }
 
-Value *CellExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *VarExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
-	return cell->load(base, block);
+	return var->load(base, block);
 }
 
-types::Type *CellExpr::getType() const
+types::Type *VarExpr::getType() const
 {
-	return cell->getType();
+	return var->getType();
 }
 
-CellExpr *CellExpr::clone(types::RefType *ref)
+VarExpr *VarExpr::clone(types::RefType *ref)
 {
-	return new CellExpr(cell->clone(ref));
+	return new VarExpr(var->clone(ref));
 }
 
 FuncExpr::FuncExpr(BaseFunc *func) : func(func)

@@ -6,12 +6,12 @@
 using namespace seq;
 using namespace llvm;
 
-Block::Block(Stage *parent) :
+Block::Block(Stmt *parent) :
     parent(parent), stmts()
 {
 }
 
-void Block::add(Stage *stmt)
+void Block::add(Stmt *stmt)
 {
 	stmts.push_back(stmt);
 	stmt->setParent(this);
@@ -31,7 +31,7 @@ Block *Block::clone(types::RefType *ref)
 	auto *x = new Block(parent ? parent->clone(ref) : nullptr);
 	ref->addClone(this, x);
 
-	std::vector<Stage *> stmtsCloned;
+	std::vector<Stmt *> stmtsCloned;
 
 	for (auto *stmt : stmts)
 		stmtsCloned.push_back(stmt->clone(ref));
@@ -40,18 +40,18 @@ Block *Block::clone(types::RefType *ref)
 	return x;
 }
 
-Stage::Stage(std::string name) :
+Stmt::Stmt(std::string name) :
     base(nullptr), breaks(), continues(),
     parent(nullptr), loop(false), name(std::move(name))
 {
 }
 
-std::string Stage::getName() const
+std::string Stmt::getName() const
 {
 	return name;
 }
 
-Stage *Stage::getPrev() const
+Stmt *Stmt::getPrev() const
 {
 	if (!parent)
 		return nullptr;
@@ -59,18 +59,18 @@ Stage *Stage::getPrev() const
 	return parent->parent;
 }
 
-void Stage::setParent(Block *parent)
+void Stmt::setParent(Block *parent)
 {
 	assert(!this->parent);
 	this->parent = parent;
 }
 
-BaseFunc *Stage::getBase() const
+BaseFunc *Stmt::getBase() const
 {
 	return base;
 }
 
-void Stage::setBase(BaseFunc *base)
+void Stmt::setBase(BaseFunc *base)
 {
 	if (!base)
 		return;
@@ -78,83 +78,82 @@ void Stage::setBase(BaseFunc *base)
 	this->base = base;
 }
 
-static Stage *findEnclosingLoop(Stage *stage)
+static Stmt *findEnclosingLoop(Stmt *stmt)
 {
-	while (stage) {
-		if (stage->isLoop())
-			return stage;
-		stage = stage->getPrev();
+	while (stmt) {
+		if (stmt->isLoop())
+			return stmt;
+		stmt = stmt->getPrev();
 	}
 
 	throw exc::SeqException("break or continue outside of loop");
 }
 
-void Stage::addBreakToEnclosingLoop(BranchInst *inst)
+void Stmt::addBreakToEnclosingLoop(BranchInst *inst)
 {
 	findEnclosingLoop(this)->addBreak(inst);
 }
 
-void Stage::addContinueToEnclosingLoop(BranchInst *inst)
+void Stmt::addContinueToEnclosingLoop(BranchInst *inst)
 {
 	findEnclosingLoop(this)->addContinue(inst);
 }
 
-bool Stage::isLoop()
+bool Stmt::isLoop()
 {
 	return loop;
 }
 
-void Stage::ensureLoop()
+void Stmt::ensureLoop()
 {
-	if (!isLoop())
-		throw exc::SeqException("stage '" + getName() + "' is not a loop stage");
+	assert(isLoop());
 }
 
-void Stage::addBreak(BranchInst *inst)
+void Stmt::addBreak(BranchInst *inst)
 {
 	ensureLoop();
 	breaks.push_back(inst);
 }
 
-void Stage::addContinue(BranchInst *inst)
+void Stmt::addContinue(BranchInst *inst)
 {
 	ensureLoop();
 	continues.push_back(inst);
 }
 
-void Stage::setBreaks(BasicBlock *block)
+void Stmt::setBreaks(BasicBlock *block)
 {
 	ensureLoop();
 	for (auto *inst : breaks)
 		inst->setSuccessor(0, block);
 }
 
-void Stage::setContinues(BasicBlock *block)
+void Stmt::setContinues(BasicBlock *block)
 {
 	ensureLoop();
 	for (auto *inst : continues)
 		inst->setSuccessor(0, block);
 }
 
-void Stage::codegen(BasicBlock*& block)
+void Stmt::codegen(BasicBlock*& block)
 {
-	throw exc::StageException("cannot codegen abstract stage", *this);
+	throw exc::SeqException("cannot codegen abstract statement");
 }
 
-void Stage::setCloneBase(Stage *stage, types::RefType *ref)
+void Stmt::setCloneBase(Stmt *stmt, types::RefType *ref)
 {
-	if (base) stage->base = base->clone(ref);
-	if (parent) stage->parent = parent->clone(ref);
-	stage->loop = loop;
-	stage->name = name;
+	if (base) stmt->base = base->clone(ref);
+	if (parent) stmt->parent = parent->clone(ref);
+	stmt->loop = loop;
+	stmt->name = name;
 }
 
-Stage *Stage::clone(types::RefType *ref)
+Stmt *Stmt::clone(types::RefType *ref)
 {
-	throw exc::SeqException("cannot clone stage '" + getName() + "'");
+	throw exc::SeqException("cannot clone '" + getName() + "' statement");
 }
 
-std::ostream& operator<<(std::ostream& os, Stage& stage)
+std::ostream& operator<<(std::ostream& os, Stmt& stmt)
 {
-	return os << stage.getName();
+	return os << stmt.getName();
 }

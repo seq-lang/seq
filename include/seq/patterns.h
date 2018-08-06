@@ -23,7 +23,7 @@ namespace seq {
 
 	class Wildcard : public Pattern {
 	private:
-		Cell *var;
+		Var *var;
 	public:
 		Wildcard();
 		void validate(types::Type *type) override;
@@ -33,12 +33,12 @@ namespace seq {
 		                     llvm::BasicBlock*& block) override;
 		bool isCatchAll() override;
 		Wildcard *clone(types::RefType *ref) override;
-		Cell *getVar();
+		Var *getVar();
 	};
 
 	class BoundPattern : public Pattern {
 	private:
-		Cell *var;
+		Var *var;
 		Pattern *pattern;
 	public:
 		explicit BoundPattern(Pattern *pattern);
@@ -49,7 +49,7 @@ namespace seq {
 		                     llvm::BasicBlock*& block) override;
 		bool isCatchAll() override;
 		BoundPattern *clone(types::RefType *ref) override;
-		Cell *getVar();
+		Var *getVar();
 	};
 
 	class StarPattern : public Pattern {

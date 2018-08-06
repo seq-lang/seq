@@ -1,25 +1,25 @@
-#ifndef SEQ_CELL_H
-#define SEQ_CELL_H
+#ifndef SEQ_VAR_H
+#define SEQ_VAR_H
 
 #include "types.h"
 #include "expr.h"
 #include "func.h"
 
 namespace seq {
-	class Cell {
+	class Var {
 	private:
 		types::Type *type;
 		llvm::Value *ptr;
 
 		void allocaIfNeeded(BaseFunc *base);
 	public:
-		explicit Cell(types::Type *type=nullptr);
+		explicit Var(types::Type *type=nullptr);
 		llvm::Value *load(BaseFunc *base, llvm::BasicBlock *block);
 		void store(BaseFunc *base, llvm::Value *val, llvm::BasicBlock *block);
 		void setType(types::Type *type);
 		types::Type *getType();
-		Cell *clone(types::RefType *ref);
+		Var *clone(types::RefType *ref);
 	};
 }
 
-#endif /* SEQ_CELL_H */
+#endif /* SEQ_VAR_H */

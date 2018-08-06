@@ -10,9 +10,9 @@
 
 #include "llvm.h"
 #include "func.h"
-#include "exprstage.h"
+#include "lang.h"
 #include "source.h"
-#include "cell.h"
+#include "var.h"
 #include "patterns.h"
 #include "io.h"
 #include "exc.h"
@@ -49,12 +49,12 @@ namespace seq {
 	class SeqModule : public BaseFunc {
 	private:
 		Block *scope;
-		Cell argsVar;
+		Var argsVar;
 		llvm::Function *initFunc;
 	public:
 		SeqModule();
 		Block *getBlock();
-		Cell *getArgVar();
+		Var *getArgVar();
 
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,

@@ -26,7 +26,7 @@ Pattern *Pattern::clone(types::RefType *ref)
 }
 
 Wildcard::Wildcard() :
-    Pattern(&types::Any), var(new Cell())
+    Pattern(&types::Any), var(new Var())
 {
 }
 
@@ -51,7 +51,7 @@ Wildcard *Wildcard::clone(types::RefType *ref)
 	return x;
 }
 
-Cell *Wildcard::getVar()
+Var *Wildcard::getVar()
 {
 	return var;
 }
@@ -68,7 +68,7 @@ Value *Wildcard::codegen(BaseFunc *base,
 }
 
 BoundPattern::BoundPattern(Pattern *pattern) :
-    Pattern(&types::Any), var(new Cell()), pattern(pattern)
+    Pattern(&types::Any), var(new Var()), pattern(pattern)
 {
 }
 
@@ -94,7 +94,7 @@ BoundPattern *BoundPattern::clone(types::RefType *ref)
 	return x;
 }
 
-Cell *BoundPattern::getVar()
+Var *BoundPattern::getVar()
 {
 	return var;
 }

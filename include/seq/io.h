@@ -8,7 +8,7 @@
 #include <array>
 #include <vector>
 #include <map>
-#include "stage.h"
+#include "stmt.h"
 #include "common.h"
 
 namespace seq {

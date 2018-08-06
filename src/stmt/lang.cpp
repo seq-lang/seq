@@ -1,11 +1,11 @@
 #include "seq/seq.h"
-#include "seq/exprstage.h"
+#include "seq/lang.h"
 
 using namespace seq;
 using namespace llvm;
 
 Print::Print(Expr *expr) :
-    Stage("print"), expr(expr)
+    Stmt("print"), expr(expr)
 {
 }
 
@@ -16,116 +16,96 @@ void Print::codegen(BasicBlock*& block)
 	type->print(getBase(), val, block);
 }
 
-Print& Print::make(Expr *expr)
-{
-	return *new Print(expr);
-}
-
 Print *Print::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
 		return (Print *)ref->getClone(this);
 
-	Print& x = Print::make(expr->clone(ref));
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new Print(expr->clone(ref));
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
-ExprStage::ExprStage(Expr *expr) :
-    Stage("expr"), expr(expr)
+ExprStmt::ExprStmt(Expr *expr) :
+    Stmt("expr"), expr(expr)
 {
 }
 
-void ExprStage::codegen(BasicBlock*& block)
+void ExprStmt::codegen(BasicBlock*& block)
 {
 	expr->codegen(getBase(), block);
 }
 
-ExprStage& ExprStage::make(Expr *expr)
-{
-	return *new ExprStage(expr);
-}
-
-ExprStage *ExprStage::clone(types::RefType *ref)
+ExprStmt *ExprStmt::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
-		return (ExprStage *)ref->getClone(this);
+		return (ExprStmt *)ref->getClone(this);
 
-	ExprStage& x = ExprStage::make(expr->clone(ref));
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new ExprStmt(expr->clone(ref));
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
-CellStage::CellStage(Expr *init) :
-    Stage("cell"), init(init), var(new Cell())
+VarStmt::VarStmt(Expr *init) :
+    Stmt("var"), init(init), var(new Var())
 {
 }
 
-Cell *CellStage::getVar()
+Var *VarStmt::getVar()
 {
 	return var;
 }
 
-void CellStage::codegen(BasicBlock*& block)
+void VarStmt::codegen(BasicBlock*& block)
 {
 	var->setType(init->getType());
 	Value *val = init->codegen(getBase(), block);
 	var->store(getBase(), val, block);
 }
 
-CellStage& CellStage::make(Expr *init)
-{
-	return *new CellStage(init);
-}
-
-CellStage *CellStage::clone(types::RefType *ref)
+VarStmt *VarStmt::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
-		return (CellStage *)ref->getClone(this);
+		return (VarStmt *)ref->getClone(this);
 
-	CellStage& x = CellStage::make(init->clone(ref));
-	ref->addClone(this, &x);
-	x.var = var->clone(ref);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new VarStmt(init->clone(ref));
+	ref->addClone(this, x);
+	x->var = var->clone(ref);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
-AssignStage::AssignStage(Cell *cell, Expr *value) :
-    Stage("(=)"), cell(cell), value(value)
+Assign::Assign(Var *var, Expr *value) :
+    Stmt("(=)"), var(var), value(value)
 {
 }
 
-void AssignStage::codegen(BasicBlock*& block)
+void Assign::codegen(BasicBlock*& block)
 {
-	value->ensure(cell->getType());
+	value->ensure(var->getType());
 	Value *val = value->codegen(getBase(), block);
-	cell->store(getBase(), val, block);
+	var->store(getBase(), val, block);
 }
 
-AssignStage& AssignStage::make(Cell *cell, Expr *value)
-{
-	return *new AssignStage(cell, value);
-}
-
-AssignStage *AssignStage::clone(types::RefType *ref)
+Assign *Assign::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
-		return (AssignStage *)ref->getClone(this);
+		return (Assign *)ref->getClone(this);
 
-	AssignStage& x = AssignStage::make(cell->clone(ref), value->clone(ref));
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new Assign(var->clone(ref), value->clone(ref));
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
-AssignIndexStage::AssignIndexStage(Expr *array, Expr *idx, Expr *value) :
-    Stage("([]=)"), array(array), idx(idx), value(value)
+AssignIndex::AssignIndex(Expr *array, Expr *idx, Expr *value) :
+    Stmt("([]=)"), array(array), idx(idx), value(value)
 {
 }
 
-void AssignIndexStage::codegen(BasicBlock*& block)
+void AssignIndex::codegen(BasicBlock*& block)
 {
 	this->idx->ensure(types::IntType::get());
 
@@ -142,33 +122,28 @@ void AssignIndexStage::codegen(BasicBlock*& block)
 	array->getType()->indexStore(getBase(), arr, idx, val, block);
 }
 
-AssignIndexStage& AssignIndexStage::make(Expr *array, Expr *idx, Expr *value)
-{
-	return *new AssignIndexStage(array, idx, value);
-}
-
-AssignIndexStage *AssignIndexStage::clone(types::RefType *ref)
+AssignIndex *AssignIndex::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
-		return (AssignIndexStage *)ref->getClone(this);
+		return (AssignIndex *)ref->getClone(this);
 
-	AssignIndexStage& x = AssignIndexStage::make(array->clone(ref), idx->clone(ref), value->clone(ref));
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new AssignIndex(array->clone(ref), idx->clone(ref), value->clone(ref));
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
-AssignMemberStage::AssignMemberStage(Expr *expr, std::string memb, Expr *value) :
-    Stage("(.=)"), expr(expr), memb(std::move(memb)), value(value)
+AssignMember::AssignMember(Expr *expr, std::string memb, Expr *value) :
+    Stmt("(.=)"), expr(expr), memb(std::move(memb)), value(value)
 {
 }
 
-AssignMemberStage::AssignMemberStage(Expr *expr, seq_int_t idx, Expr *value) :
-    AssignMemberStage(expr, std::to_string(idx), value)
+AssignMember::AssignMember(Expr *expr, seq_int_t idx, Expr *value) :
+    AssignMember(expr, std::to_string(idx), value)
 {
 }
 
-void AssignMemberStage::codegen(BasicBlock*& block)
+void AssignMember::codegen(BasicBlock*& block)
 {
 	value->ensure(expr->getType()->membType(memb));
 	Value *x = expr->codegen(getBase(), block);
@@ -176,36 +151,26 @@ void AssignMemberStage::codegen(BasicBlock*& block)
 	expr->getType()->setMemb(x, memb, v, block);
 }
 
-AssignMemberStage& AssignMemberStage::make(Expr *expr, std::string memb, Expr *value)
-{
-	return *new AssignMemberStage(expr, std::move(memb), value);
-}
-
-AssignMemberStage& AssignMemberStage::make(Expr *expr, seq_int_t idx, Expr *value)
-{
-	return *new AssignMemberStage(expr, idx, value);
-}
-
-AssignMemberStage *AssignMemberStage::clone(types::RefType *ref)
+AssignMember *AssignMember::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
-		return (AssignMemberStage *)ref->getClone(this);
+		return (AssignMember *)ref->getClone(this);
 
-	AssignMemberStage& x = AssignMemberStage::make(expr->clone(ref), memb, value->clone(ref));
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new AssignMember(expr->clone(ref), memb, value->clone(ref));
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
 If::If() :
-    Stage("if"), conds(), branches(), elseAdded(false)
+    Stmt("if"), conds(), branches(), elseAdded(false)
 {
 }
 
 void If::codegen(BasicBlock*& block)
 {
 	if (conds.empty())
-		throw exc::SeqException("no conditions added to if-stage");
+		throw exc::SeqException("no conditions added to 'if' statement");
 
 	assert(conds.size() == branches.size());
 
@@ -249,15 +214,10 @@ void If::codegen(BasicBlock*& block)
 	block = after;
 }
 
-If& If::make()
-{
-	return *new If();
-}
-
 Block *If::addCond(Expr *cond)
 {
 	if (elseAdded)
-		throw exc::SeqException("cannot add else-if branch to if-stage after else branch");
+		throw exc::SeqException("cannot add else-if branch to 'if' statement after else branch");
 
 	auto *branch = new Block(this);
 	conds.push_back(cond);
@@ -268,7 +228,7 @@ Block *If::addCond(Expr *cond)
 Block *If::addElse()
 {
 	if (elseAdded)
-		throw exc::SeqException("cannot add second else branch to if-stage");
+		throw exc::SeqException("cannot add second else branch to 'if' statement");
 
 	Block *branch = addCond(new BoolExpr(true));
 	elseAdded = true;
@@ -280,8 +240,8 @@ If *If::clone(types::RefType *ref)
 	if (ref->seenClone(this))
 		return (If *)ref->getClone(this);
 
-	If& x = If::make();
-	ref->addClone(this, &x);
+	auto *x = new If();
+	ref->addClone(this, x);
 
 	std::vector<Expr *> condsCloned;
 	std::vector<Block *> branchesCloned;
@@ -292,23 +252,23 @@ If *If::clone(types::RefType *ref)
 	for (auto *branch : branches)
 		branchesCloned.push_back(branch->clone(ref));
 
-	x.conds = condsCloned;
-	x.branches = branchesCloned;
-	x.elseAdded = elseAdded;
+	x->conds = condsCloned;
+	x->branches = branchesCloned;
+	x->elseAdded = elseAdded;
 
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
 Match::Match() :
-    Stage("match"), value(nullptr), patterns(), branches()
+    Stmt("match"), value(nullptr), patterns(), branches()
 {
 }
 
 void Match::codegen(BasicBlock*& block)
 {
 	if (patterns.empty())
-		throw exc::SeqException("no patterns added to match-stage");
+		throw exc::SeqException("no patterns added to 'match' statement");
 
 	assert(patterns.size() == branches.size() && value);
 
@@ -361,16 +321,9 @@ void Match::codegen(BasicBlock*& block)
 	block = after;
 }
 
-Match& Match::make()
-{
-	return *new Match();
-}
-
 void Match::setValue(Expr *value)
 {
-	if (this->value)
-		throw exc::SeqException("cannot re-set match stage's value");
-
+	assert(!this->value);
 	this->value = value;
 }
 
@@ -387,8 +340,8 @@ Match *Match::clone(types::RefType *ref)
 	if (ref->seenClone(this))
 		return (Match *)ref->getClone(this);
 
-	Match& x = Match::make();
-	ref->addClone(this, &x);
+	auto *x = new Match();
+	ref->addClone(this, x);
 
 	std::vector<Pattern *> patternsCloned;
 	std::vector<Block *> branchesCloned;
@@ -399,16 +352,16 @@ Match *Match::clone(types::RefType *ref)
 	for (auto *branch : branches)
 		branchesCloned.push_back(branch->clone(ref));
 
-	if (value) x.value = value->clone(ref);
-	x.patterns = patternsCloned;
-	x.branches = branchesCloned;
+	if (value) x->value = value->clone(ref);
+	x->patterns = patternsCloned;
+	x->branches = branchesCloned;
 
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
 While::While(Expr *cond) :
-    Stage("while"), cond(cond), scope(new Block(this))
+    Stmt("while"), cond(cond), scope(new Block(this))
 {
 	loop = true;
 }
@@ -454,26 +407,21 @@ void While::codegen(BasicBlock*& block)
 	setContinues(loop0);
 }
 
-While& While::make(Expr *cond)
-{
-	return *new While(cond);
-}
-
 While *While::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
 		return (While *)ref->getClone(this);
 
-	While& x = While::make(cond->clone(ref));
-	ref->addClone(this, &x);
-	delete x.scope;
-	x.scope = scope->clone(ref);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new While(cond->clone(ref));
+	ref->addClone(this, x);
+	delete x->scope;
+	x->scope = scope->clone(ref);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
 For::For(Expr *gen) :
-    Stage("for"), gen(gen), scope(new Block(this)), var(new Cell())
+    Stmt("for"), gen(gen), scope(new Block(this)), var(new Var())
 {
 	loop = true;
 }
@@ -483,7 +431,7 @@ Block *For::getBlock()
 	return scope;
 }
 
-Cell *For::getVar()
+Var *For::getVar()
 {
 	return var;
 }
@@ -540,27 +488,22 @@ void For::codegen(BasicBlock*& block)
 	setContinues(loopCont);
 }
 
-For& For::make(Expr *gen)
-{
-	return *new For(gen);
-}
-
 For *For::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
 		return (For *)ref->getClone(this);
 
-	For& x = For::make(gen->clone(ref));
-	ref->addClone(this, &x);
-	delete x.scope;
-	x.scope = scope->clone(ref);
-	x.var = var->clone(ref);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new For(gen->clone(ref));
+	ref->addClone(this, x);
+	delete x->scope;
+	x->scope = scope->clone(ref);
+	x->var = var->clone(ref);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
 Return::Return(Expr *expr) :
-    Stage("return"), expr(expr)
+    Stmt("return"), expr(expr)
 {
 }
 
@@ -571,24 +514,19 @@ void Return::codegen(BasicBlock*& block)
 	getBase()->codegenReturn(val, type, block);
 }
 
-Return& Return::make(Expr *expr)
-{
-	return *new Return(expr);
-}
-
 Return *Return::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
 		return (Return *)ref->getClone(this);
 
-	Return& x = Return::make(expr ? expr->clone(ref) : nullptr);
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new Return(expr ? expr->clone(ref) : nullptr);
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
 Yield::Yield(Expr *expr) :
-    Stage("Yield"), expr(expr)
+    Stmt("Yield"), expr(expr)
 {
 }
 
@@ -599,24 +537,19 @@ void Yield::codegen(BasicBlock*& block)
 	getBase()->codegenYield(val, type, block);
 }
 
-Yield& Yield::make(Expr *expr)
-{
-	return *new Yield(expr);
-}
-
 Yield *Yield::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
 		return (Yield *)ref->getClone(this);
 
-	Yield& x = Yield::make(expr ? expr->clone(ref) : nullptr);
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new Yield(expr ? expr->clone(ref) : nullptr);
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
 Break::Break() :
-    Stage("break")
+    Stmt("break")
 {
 }
 
@@ -629,24 +562,19 @@ void Break::codegen(BasicBlock*& block)
 	block = BasicBlock::Create(context, "", block->getParent());
 }
 
-Break& Break::make()
-{
-	return *new Break();
-}
-
 Break *Break::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
 		return (Break *)ref->getClone(this);
 
-	Break& x = Break::make();
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new Break();
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }
 
 Continue::Continue() :
-    Stage("continue")
+    Stmt("continue")
 {
 }
 
@@ -659,18 +587,13 @@ void Continue::codegen(BasicBlock*& block)
 	block = BasicBlock::Create(context, "", block->getParent());
 }
 
-Continue& Continue::make()
-{
-	return *new Continue();
-}
-
 Continue *Continue::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
 		return (Continue *)ref->getClone(this);
 
-	Continue& x = Continue::make();
-	ref->addClone(this, &x);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new Continue();
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }

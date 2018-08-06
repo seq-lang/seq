@@ -25,7 +25,7 @@ Block *SeqModule::getBlock()
 	return scope;
 }
 
-Cell *SeqModule::getArgVar()
+Var *SeqModule::getArgVar()
 {
 	return &argsVar;
 }

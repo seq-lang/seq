@@ -1,20 +1,20 @@
 #ifndef SEQ_VAREXPR_H
 #define SEQ_VAREXPR_H
 
-#include "cell.h"
+#include "var.h"
 #include "func.h"
 #include "expr.h"
 
 namespace seq {
 
-	class CellExpr : public Expr {
+	class VarExpr : public Expr {
 	private:
-		Cell *cell;
+		Var *var;
 	public:
-		explicit CellExpr(Cell *cell);
+		explicit VarExpr(Var *var);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
-		CellExpr *clone(types::RefType *ref) override;
+		VarExpr *clone(types::RefType *ref) override;
 	};
 
 	class FuncExpr : public Expr {

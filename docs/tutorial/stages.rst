@@ -4,7 +4,7 @@ Stages
 Pipelines consist of several stages chained together. Stages all have an input type and an output type. The following built-in stages are supported in ``seq::stageutil``:
 
 +-----------------------+-----------------------+-----------------------+
-| Stage                 | Types                 | Description           |
+| Stmt                 | Types                 | Description           |
 +=======================+=======================+=======================+
 | ``copy()``            | ``Seq`` → ``Seq``     | Copies input sequence |
 |                       |                       | into a new buffer     |

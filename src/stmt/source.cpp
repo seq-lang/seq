@@ -151,7 +151,7 @@ bool Source::isSingle() const
 types::Type *Source::determineOutType() const
 {
 	if (sources.empty())
-		throw exc::SeqException("no sources given to source stage");
+		throw exc::SeqException("no sources given to 'source' statement");
 
 	if (isSingle())
 		return types::SeqType::get();
@@ -160,7 +160,7 @@ types::Type *Source::determineOutType() const
 }
 
 Source::Source(std::vector<Expr *> sources) :
-    Stage("source"), sources(std::move(sources)), scope(new Block(this)), var(new Cell())
+    Stmt("source"), sources(std::move(sources)), scope(new Block(this)), var(new Var())
 {
 }
 
@@ -169,7 +169,7 @@ Block *Source::getBlock()
 	return scope;
 }
 
-Cell *Source::getVar()
+Var *Source::getVar()
 {
 	return var;
 }
@@ -250,11 +250,6 @@ void Source::codegen(BasicBlock*& block)
 	block = exitRepeat;
 }
 
-Source& Source::make(std::vector<Expr *> sources)
-{
-	return *new Source(std::move(sources));
-}
-
 Source *Source::clone(types::RefType *ref)
 {
 	if (ref->seenClone(this))
@@ -264,12 +259,12 @@ Source *Source::clone(types::RefType *ref)
 	for (auto *source : sources)
 		sourcesCloned.push_back(source->clone(ref));
 
-	Source& x = Source::make(sourcesCloned);
-	ref->addClone(this, &x);
-	delete x.scope;
-	delete x.var;
-	x.scope = scope->clone(ref);
-	x.var = var->clone(ref);
-	Stage::setCloneBase(&x, ref);
-	return &x;
+	auto *x = new Source(sourcesCloned);
+	ref->addClone(this, x);
+	delete x->scope;
+	delete x->var;
+	x->scope = scope->clone(ref);
+	x->var = var->clone(ref);
+	Stmt::setCloneBase(x, ref);
+	return x;
 }

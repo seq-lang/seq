@@ -21,7 +21,7 @@ struct SeqEntity {
 		FLOAT,
 		BOOL,
 		NAME,
-		CELL,
+		VAR,
 		FUNC,
 		TYPE,
 		MODULE,
@@ -37,13 +37,13 @@ struct SeqEntity {
 		U(double fval) : fval(fval) {}
 		U(bool bval) : bval(bval) {}
 		U(std::string name) : name(std::move(name)) {}
-		U(Cell *cell) : cell(cell) {}
+		U(Var *var) : var(var) {}
 		U(Func *func) : func(func) {}
 		U(types::Type *type) : type(type) {}
 		U(SeqModule *module) : module(module) {}
 		U(Expr *expr) : expr(expr) {}
 		U(Pattern *pattern) : pattern(pattern) {}
-		U(Stage *stmt) : stmt(stmt) {}
+		U(Stmt *stmt) : stmt(stmt) {}
 		U(Op op) : op(std::move(op)) {}
 		~U() {}
 
@@ -51,13 +51,13 @@ struct SeqEntity {
 		double fval;
 		bool bval;
 		std::string name;
-		Cell *cell;
+		Var *var;
 		Func *func;
 		types::Type *type;
 		SeqModule *module;
 		Expr *expr;
 		Pattern *pattern;
-		Stage *stmt;
+		Stmt *stmt;
 		Op op;
 	} value;
 
@@ -66,13 +66,13 @@ struct SeqEntity {
 	SeqEntity(double fval) : type(SeqEntity::FLOAT), value(fval) {}
 	SeqEntity(bool bval) : type(SeqEntity::BOOL), value(bval) {}
 	SeqEntity(std::string name) : type(SeqEntity::NAME) { new (&value.name) std::string(std::move(name)); }
-	SeqEntity(Cell *cell) : type(SeqEntity::CELL), value(cell) {}
+	SeqEntity(Var *var) : type(SeqEntity::VAR), value(var) {}
 	SeqEntity(Func *func) : type(SeqEntity::FUNC), value(func) {}
 	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
 	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
 	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
 	SeqEntity(Pattern *pattern) : type(SeqEntity::PATTERN), value(pattern) {}
-	SeqEntity(Stage *stmt) : type(SeqEntity::STMT), value(stmt) {}
+	SeqEntity(Stmt *stmt) : type(SeqEntity::STMT), value(stmt) {}
 	SeqEntity(Op op) : type(SeqEntity::OP) { new (&value.op) Op(std::move(op)); }
 
 	SeqEntity& operator=(const SeqEntity& ent)
@@ -93,8 +93,8 @@ struct SeqEntity {
 			case SeqEntity::NAME:
 				new (&value.name) std::string(ent.value.name);
 				break;
-			case SeqEntity::CELL:
-				value.cell = ent.value.cell;
+			case SeqEntity::VAR:
+				value.var = ent.value.var;
 				break;
 			case SeqEntity::FUNC:
 				value.func = ent.value.func;
@@ -267,7 +267,7 @@ public:
 
 	SeqEntity lookup(const std::string& name)
 	{
-		static const std::set<int> disallowBrokenBarriers = {SeqEntity::EMPTY, SeqEntity::CELL};
+		static const std::set<int> disallowBrokenBarriers = {SeqEntity::EMPTY, SeqEntity::VAR};
 		bool barrierBroken = false;
 		SeqEntity found;
 
@@ -332,7 +332,7 @@ public:
 		contexts.pop_back();
 	}
 
-	void stmt(Stage *stmt)
+	void stmt(Stmt *stmt)
 	{
 		assert(!blocks.empty() && blocks.back());
 		blocks.back()->add(stmt);
@@ -393,8 +393,8 @@ std::ostream& operator<<(std::ostream& os, const SeqEntity& ent)
 		case SeqEntity::NAME:
 			os << ent.value.name;
 			break;
-		case SeqEntity::CELL:
-			os << "(cell)";
+		case SeqEntity::VAR:
+			os << "(var)";
 			break;
 		case SeqEntity::FUNC:
 			os << "(func)";
@@ -616,8 +616,8 @@ struct action<var_expr> {
 
 		Expr *expr = nullptr;
 		switch (ent.type) {
-			case SeqEntity::CELL:
-				expr = new CellExpr(ent.value.cell);
+			case SeqEntity::VAR:
+				expr = new VarExpr(ent.value.var);
 				break;
 			case SeqEntity::FUNC:
 				expr = new FuncExpr(ent.value.func);
@@ -1220,7 +1220,7 @@ struct control<source_args> : pegtl::normal<source_args>
 		state.scope();
 		state.stmt(p);
 
-		state.context((Stage *)p);
+		state.context((Stmt *)p);
 		state.enter(p->getBlock());
 	}
 
@@ -1323,7 +1323,7 @@ struct control<var_decl> : pegtl::normal<var_decl>
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("se");
-		auto *p = new CellStage(vec[1].value.expr);
+		auto *p = new VarStmt(vec[1].value.expr);
 		p->setBase(state.base());
 		state.stmt(p);
 		state.sym(vec[0].value.name, p->getVar());
@@ -1351,11 +1351,11 @@ struct control<assign_stmt> : pegtl::normal<assign_stmt>
 		auto vec = state.get("se");
 		SeqEntity ent = state.lookup(vec[0].value.name);
 
-		if (ent.type != SeqEntity::CELL)
+		if (ent.type != SeqEntity::VAR)
 			throw exc::SeqException("can only reassign variables declared with 'var'");
 
-		Cell *cell = ent.value.cell;
-		auto *p = new AssignStage(cell, vec[1].value.expr);
+		Var *var = ent.value.var;
+		auto *p = new Assign(var, vec[1].value.expr);
 		p->setBase(state.base());
 		state.stmt(p);
 	}
@@ -1380,7 +1380,7 @@ struct control<assign_member_idx_stmt> : pegtl::normal<assign_member_idx_stmt>
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("eie");
-		auto *p = new AssignMemberStage(vec[0].value.expr, vec[1].value.ival, vec[2].value.expr);
+		auto *p = new AssignMember(vec[0].value.expr, vec[1].value.ival, vec[2].value.expr);
 		p->setBase(state.base());
 		state.stmt(p);
 	}
@@ -1405,7 +1405,7 @@ struct control<assign_member_stmt> : pegtl::normal<assign_member_stmt>
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("ese");
-		auto *p = new AssignMemberStage(vec[0].value.expr, vec[1].value.name, vec[2].value.expr);
+		auto *p = new AssignMember(vec[0].value.expr, vec[1].value.name, vec[2].value.expr);
 		p->setBase(state.base());
 		state.stmt(p);
 	}
@@ -1430,7 +1430,7 @@ struct control<assign_array_stmt> : pegtl::normal<assign_array_stmt>
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("eee");
-		auto *p = new AssignIndexStage(vec[0].value.expr, vec[1].value.expr, vec[2].value.expr);
+		auto *p = new AssignIndex(vec[0].value.expr, vec[1].value.expr, vec[2].value.expr);
 		p->setBase(state.base());
 		state.stmt(p);
 	}
@@ -1450,7 +1450,7 @@ struct control<if_stmt> : pegtl::normal<if_stmt>
 	{
 		auto *p = new If();
 		p->setBase(state.base());
-		state.context((Stage *)p);
+		state.context((Stmt *)p);
 	}
 
 	template<typename Input>
@@ -1593,7 +1593,7 @@ struct control<match_stmt> : pegtl::normal<match_stmt>
 	{
 		auto *p = new Match();
 		p->setBase(state.base());
-		state.context((Stage *)p);
+		state.context((Stmt *)p);
 	}
 
 	template<typename Input>
@@ -1768,7 +1768,7 @@ struct control<expr_stmt> : pegtl::normal<expr_stmt>
 	static void success(Input&, ParseState& state)
 	{
 		auto vec = state.get("e");
-		auto *p = new ExprStage(vec[0].value.expr);
+		auto *p = new ExprStmt(vec[0].value.expr);
 		p->setBase(state.base());
 		state.stmt(p);
 	}

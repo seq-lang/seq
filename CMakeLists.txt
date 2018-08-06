@@ -84,15 +84,14 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/arrayexpr.h
                        include/seq/base.h
                        include/seq/callexpr.h
-                       include/seq/cell.h
                        include/seq/common.h
                        include/seq/exc.h
                        include/seq/expr.h
-                       include/seq/exprstage.h
                        include/seq/func.h
                        include/seq/funct.h
                        include/seq/getelemexpr.h
                        include/seq/io.h
+                       include/seq/lang.h
                        include/seq/lookupexpr.h
                        include/seq/num.h
                        include/seq/numexpr.h
@@ -107,12 +106,13 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/seqgc.h
                        include/seq/seqt.h
                        include/seq/source.h
-                       include/seq/stage.h
+                       include/seq/stmt.h
                        include/seq/strexpr.h
                        include/seq/types.h
                        include/seq/util.h
                        include/seq/varexpr.h
                        include/seq/void.h
+                       include/seq/var.h
                        src/expr/arrayexpr.cpp
                        src/expr/callexpr.cpp
                        src/expr/expr.cpp
@@ -124,9 +124,9 @@ add_library(seq SHARED include/seq/any.h
                        src/expr/varexpr.cpp
                        src/parser/grammar.h
                        src/parser/parser.cpp
-                       src/stages/exprstage.cpp
-                       src/stages/source.cpp
-                       src/stages/stage.cpp
+                       src/stmt/lang.cpp
+                       src/stmt/source.cpp
+                       src/stmt/stmt.cpp
                        src/types/any.cpp
                        src/types/array.cpp
                        src/types/base.cpp
@@ -138,7 +138,6 @@ add_library(seq SHARED include/seq/any.h
                        src/types/seqt.cpp
                        src/types/types.cpp
                        src/types/void.cpp
-                       src/cell.cpp
                        src/exc.cpp
                        src/func.cpp
                        src/io.cpp
@@ -148,7 +147,8 @@ add_library(seq SHARED include/seq/any.h
                        src/seq.cpp
                        src/seqgc.cpp
                        src/seqdata.h
-                       src/util.cpp)
+                       src/util.cpp
+                       src/var.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
 

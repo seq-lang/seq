@@ -1,14 +1,14 @@
 #ifndef SEQ_FUNC_H
 #define SEQ_FUNC_H
 
-#include "stage.h"
+#include "stmt.h"
 #include "types.h"
 #include "common.h"
 
 namespace seq {
 
 	class Expr;
-	class Cell;
+	class Var;
 
 	class BaseFunc {
 	protected:
@@ -43,7 +43,7 @@ namespace seq {
 		Block *scope;
 
 		std::vector<std::string> argNames;
-		std::map<std::string, Cell *> argVars;
+		std::map<std::string, Var *> argVars;
 
 		bool gen;
 		llvm::Value *promise;
@@ -65,7 +65,7 @@ namespace seq {
 		void codegenYield(llvm::Value *val,
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block) override;
-		Cell *getArgVar(std::string name);
+		Var *getArgVar(std::string name);
 		types::Type *getInType() const override;
 		std::vector<types::Type *> getInTypes() const;
 		types::Type *getOutType() const override;

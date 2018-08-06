@@ -176,9 +176,7 @@ MatchExpr::MatchExpr() :
 
 void MatchExpr::setValue(Expr *value)
 {
-	if (this->value)
-		throw exc::SeqException("cannot re-set match expression's value");
-
+	assert(!this->value);
 	this->value = value;
 }
 
@@ -190,9 +188,7 @@ void MatchExpr::addCase(Pattern *pattern, Expr *expr)
 
 Value *MatchExpr::codegen(BaseFunc *base, BasicBlock *&block)
 {
-	if (patterns.empty())
-		throw exc::SeqException("no patterns added to match-stage");
-
+	assert(!patterns.empty());
 	assert(patterns.size() == exprs.size() && value);
 
 	LLVMContext& context = block->getContext();

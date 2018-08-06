@@ -216,11 +216,11 @@ var cc = match bb {
 
 print cc
 
-}
-}
-
 
 # ---------
+}
+}
+
 # run the above twice, and test cloning:
 MyGiantClass[Float].main(args)
 MyGiantClass[Int].main(args)

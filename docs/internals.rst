@@ -21,7 +21,7 @@ Because sequences can have a lot of metadata associated with them (e.g. identifi
 Stages and Pipelines
 --------------------
 
-Pipelines are constructed from multiple ``Stage`` instances linked together. Values are passed from one stage to another by virtue of a map from keys (representing value types) to the values themselves:
+Pipelines are constructed from multiple ``Stmt`` instances linked together. Values are passed from one stage to another by virtue of a map from keys (representing value types) to the values themselves:
 
 .. cpp:enum:: seq::SeqData
 
@@ -40,77 +40,77 @@ where ``seqValue`` and ``lenValue`` are both ``llvm::Value`` pointers.
 
 **Importantly,** these values must be pointers (i.e. representative of pointers in the LLVM IR), such as ``alloca``'d memory or global variables. For instance, ``seqValue`` above would be a pointer to, say, some ``alloca``'d memory that itself contains a character pointer; ``lenValue`` would be a pointer to an integer value.
 
-``Stage``
+``Stmt``
 ~~~~~~~~~
 
 Stages make up the pipelines and are where the actual code generation takes place.
 
-.. cpp:class:: seq::Stage
+.. cpp:class:: seq::Stmt
 
-    Stage class
+    Stmt class
 
-.. cpp:member:: seq::SeqModule* seq::Stage::base
+.. cpp:member:: seq::SeqModule* seq::Stmt::base
 
    The ``SeqModule`` instance associated with this stage
 
-.. cpp:member:: bool seq::Stage::added
+.. cpp:member:: bool seq::Stmt::added
 
     Whether this stage has been added in any pipeline to any ``SeqModule``
 
-.. cpp:member:: seq::types::Type* seq::Stage::in
+.. cpp:member:: seq::types::Type* seq::Stmt::in
 
-    Stage input type
+    Stmt input type
 
-.. cpp:member:: seq::types::Type* seq::Stage::out
+.. cpp:member:: seq::types::Type* seq::Stmt::out
 
-    Stage output type
+    Stmt output type
 
-.. cpp:member:: seq::Stage* seq::Stage::prev
+.. cpp:member:: seq::Stmt* seq::Stmt::prev
 
     Pointer to previous stage
 
-.. cpp:member:: std::vector<seq::Stage*> seq::Stage::nexts
+.. cpp:member:: std::vector<seq::Stmt*> seq::Stmt::nexts
 
     Vector of subsequent stages actually linked to this stage
 
-.. cpp:member:: std::string seq::Stage::name
+.. cpp:member:: std::string seq::Stmt::name
 
     Name of this stage (primarily for debugging)
 
-.. cpp:member:: llvm::BasicBlock* seq::Stage::block
+.. cpp:member:: llvm::BasicBlock* seq::Stmt::block
 
     The block to which this stage will be compiled
 
-.. cpp:member:: llvm::BasicBlock* seq::Stage::after
+.. cpp:member:: llvm::BasicBlock* seq::Stmt::after
 
     The block following ``block``
 
-.. cpp:member:: seq::ValMap seq::Stage::outs
+.. cpp:member:: seq::ValMap seq::Stmt::outs
 
     Map of all output values for this stage
 
-.. cpp:function:: virtual void seq::Stage::codegen(llvm::Module *module)
+.. cpp:function:: virtual void seq::Stmt::codegen(llvm::Module *module)
 
     Generates LLVM IR for this stage and for subsequent stages.
 
-.. cpp:function:: virtual void seq::Stage::finalize(llvm::ExecutionEngine *eng)
+.. cpp:function:: virtual void seq::Stmt::finalize(llvm::ExecutionEngine *eng)
 
     Performs any finalization actions on the LLVM execution engine (e.g. adding flobal mappings to call external functions).
 
 ``Pipeline``
 ~~~~~~~~~~~~
 
-Pipelines are conceptually just a head stage and a tail stage. The ``Pipeline`` class is purely for convenience, and does not store any independent state information; all the data is in the ``Stage`` instances.
+Pipelines are conceptually just a head stage and a tail stage. The ``Pipeline`` class is purely for convenience, and does not store any independent state information; all the data is in the ``Stmt`` instances.
 
 .. cpp:class:: seq::Pipeline
 
     Pipeline class
 
-.. cpp:member:: seq::Stage* seq::Pipeline::head
+.. cpp:member:: seq::Stmt* seq::Pipeline::head
 
     Head of this pipeline
 
-.. cpp:member:: seq::Stage* seq::Pipeline::tail
+.. cpp:member:: seq::Stmt* seq::Pipeline::tail
 
     Tail of this pipeline (rightmost in the case of branching)
 

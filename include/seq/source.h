@@ -3,22 +3,21 @@
 
 #include <vector>
 #include "expr.h"
-#include "stage.h"
+#include "stmt.h"
 
 namespace seq {
-	class Source : public Stage {
+	class Source : public Stmt {
 	private:
 		std::vector<Expr *> sources;
 		Block *scope;
-		Cell *var;
+		Var *var;
 		bool isSingle() const;
 		types::Type *determineOutType() const;
 	public:
 		explicit Source(std::vector<Expr *> sources);
 		Block *getBlock();
-		Cell *getVar();
+		Var *getVar();
 		void codegen(llvm::BasicBlock*& block) override;
-		static Source& make(std::vector<Expr *>);
 		Source *clone(types::RefType *ref) override;
 	};
 }

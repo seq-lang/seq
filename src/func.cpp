@@ -272,7 +272,7 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	}
 }
 
-Cell *Func::getArgVar(std::string name)
+Var *Func::getArgVar(std::string name)
 {
 	auto iter = argVars.find(name);
 	if (iter == argVars.end())
@@ -324,7 +324,7 @@ void Func::setArgNames(std::vector<std::string> argNames)
 
 	argVars.clear();
 	for (auto& s : this->argNames)
-		argVars.insert({s, new Cell()});
+		argVars.insert({s, new Var()});
 }
 
 Func *Func::clone(types::RefType *ref)
@@ -341,7 +341,7 @@ Func *Func::clone(types::RefType *ref)
 	ref->addClone(this, x);
 	x->scope = scope->clone(ref);
 
-	std::map<std::string, Cell *> argVarsCloned;
+	std::map<std::string, Var *> argVarsCloned;
 	for (auto& e : argVars)
 		argVarsCloned.insert({e.first, e.second->clone(ref)});
 	x->argVars = argVarsCloned;
