@@ -4,38 +4,45 @@
 using namespace seq;
 using namespace llvm;
 
-Cell::Cell(BaseFunc *base, Expr *init) :
-    base(base), init(init), ptr(nullptr)
+Cell::Cell(types::Type *type) :
+    type(type), ptr(nullptr)
 {
 }
 
-void Cell::codegen(BasicBlock *block)
+void Cell::allocaIfNeeded(BaseFunc *base)
 {
-	assert(!ptr);
-	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
+	if (ptr)
+		return;
+
+	assert(type);
+	LLVMContext& context = base->getContext();
 	ptr = makeAlloca(getType()->getLLVMType(context), base->getPreamble());
-	Value *val = init->codegen(base, block);
-	builder.CreateStore(val, ptr);
 }
 
-Value *Cell::load(BasicBlock *block)
+Value *Cell::load(BaseFunc *base, BasicBlock *block)
 {
-	assert(ptr);
+	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
 	return builder.CreateLoad(ptr);
 }
 
-void Cell::store(Value *val, BasicBlock *block)
+void Cell::store(BaseFunc *base, Value *val, BasicBlock *block)
 {
-	assert(ptr);
+	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
 	builder.CreateStore(val, ptr);
 }
 
+void Cell::setType(types::Type *type)
+{
+	assert(!this->type);
+	this->type = type;
+}
+
 types::Type *Cell::getType()
 {
-	return init->getType();
+	assert(type);
+	return type;
 }
 
 Cell *Cell::clone(types::RefType *ref)
@@ -43,7 +50,8 @@ Cell *Cell::clone(types::RefType *ref)
 	if (ref->seenClone(this))
 		return (Cell *)ref->getClone(this);
 
-	auto *x = new Cell(base->clone(ref), init->clone(ref));
+	auto *x = new Cell();
 	ref->addClone(this, x);
+	if (type) x->setType(type->clone(ref));
 	return x;
 }

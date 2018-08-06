@@ -486,11 +486,6 @@ seq_int_t types::Type::size(Module *module) const
 	return 0;
 }
 
-Mem& types::Type::operator[](seq_int_t size)
-{
-	return Mem::make(this, size);
-}
-
 types::Type *types::Type::clone(RefType *ref)
 {
 	return this;

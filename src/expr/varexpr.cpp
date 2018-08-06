@@ -3,33 +3,13 @@
 using namespace seq;
 using namespace llvm;
 
-VarExpr::VarExpr(Var *var) : var(var)
-{
-}
-
-Value *VarExpr::codegen(BaseFunc *base, BasicBlock*& block)
-{
-	IRBuilder<> builder(block);
-	return builder.CreateLoad(var->result(nullptr));
-}
-
-types::Type *VarExpr::getType() const
-{
-	return var->getType(nullptr);
-}
-
-VarExpr *VarExpr::clone(types::RefType *ref)
-{
-	return new VarExpr(var->clone(ref));
-}
-
 CellExpr::CellExpr(Cell *cell) : cell(cell)
 {
 }
 
 Value *CellExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
-	return cell->load(block);
+	return cell->load(base, block);
 }
 
 types::Type *CellExpr::getType() const

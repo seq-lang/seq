@@ -8,7 +8,6 @@
 
 using namespace seq;
 using namespace seq::types;
-using namespace seq::stageutil;
 
 #define DEFAULT_TEST_INPUT_SINGLE TEST_DIR "/data/single/seqs.txt"
 

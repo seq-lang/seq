@@ -55,32 +55,18 @@ Func::Func(std::string name,
            std::vector<std::string> argNames,
            std::vector<types::Type *> inTypes,
            types::Type *outType) :
-    BaseFunc(), inTypes(std::move(inTypes)), outType(outType), pipelines(),
-    result(nullptr), argNames(std::move(argNames)), argVars(), gen(false),
-    promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr),
-    name(std::move(name)), rawFunc(nullptr)
+    BaseFunc(), name(std::move(name)), inTypes(std::move(inTypes)),
+    outType(outType), scope(new Block()), argNames(std::move(argNames)),
+    argVars(), gen(false), promise(nullptr), handle(nullptr),
+    cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
 		assert(this->argNames.size() == this->inTypes.size());
 }
 
-Func::Func(types::Type& inType,
-           types::Type& outType,
-           std::string name,
-           void *rawFunc) :
-    Func(std::move(name), {}, {}, &outType)
+Block *Func::getBlock()
 {
-	if (inType.is(types::VoidType::get()))
-		inTypes = {};
-	else
-		inTypes = {&inType};
-
-	this->rawFunc = rawFunc;
-}
-
-Func::Func(types::Type& inType, types::Type& outType) :
-    Func(inType, outType, "", nullptr)
-{
+	return scope;
 }
 
 void Func::setGen()
@@ -106,12 +92,9 @@ void Func::codegen(Module *module)
 	static int idx = 1;
 	func = cast<Function>(
 	         module->getOrInsertFunction(name.empty() ? ("Func." + std::to_string(idx++)) :
-	                                                    (rawFunc ? name : name + "." + std::to_string(idx++)),
+	                                                    (name + "." + std::to_string(idx++)),
 	                                     FunctionType::get(outType->getLLVMType(context), types, false)));
 
-	if (rawFunc) {
-		return;
-	}
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
@@ -130,23 +113,14 @@ void Func::codegen(Module *module)
 		id->setName("id");
 	}
 
-	// this is purely for backwards-compatibility with the non-standalone version
-	if (!inTypes.empty()) {
-		Value *arg = func->arg_begin();
-		result = makeAlloca(arg, preambleBlock);
-	}
-
 	assert(argNames.empty() || argNames.size() == inTypes.size());
 	auto argsIter = func->arg_begin();
 	for (unsigned i = 0; i < argNames.size(); i++) {
-		BaseStage& argsBase = BaseStage::make(types::VoidType::get(), inTypes[i]);
-		argsBase.result = makeAlloca(argsIter, preambleBlock);
-		++argsIter;
-		argsBase.setBase(this);
 		auto iter = argVars.find(argNames[i]);
 		assert(iter != argVars.end());
-		auto *var = iter->second;
-		*var = argsBase;
+		iter->second->setType(inTypes[i]);
+		iter->second->store(this, argsIter, preambleBlock);
+		++argsIter;
 	}
 
 	BasicBlock *allocBlock = nullptr;
@@ -204,22 +178,10 @@ void Func::codegen(Module *module)
 		codegenYield(nullptr, outType->getBaseType(0), entry);
 	}
 
-	BasicBlock *block;
+	BasicBlock *block = entry;
+	scope->codegen(block);
 
-	for (auto &pipeline : pipelines) {
-		pipeline.validate();
-		builder.SetInsertPoint(&func->getBasicBlockList().back());
-		block = BasicBlock::Create(context, "pipeline", func);
-		builder.CreateBr(block);
-
-		auto *begin = dynamic_cast<BaseStage *>(pipeline.getHead());
-		assert(begin);
-		begin->setBase(pipeline.getHead()->getBase());
-		begin->block = block;
-		pipeline.getHead()->codegen(module);
-	}
-
-	BasicBlock *exitBlock = &func->getBasicBlockList().back();
+	BasicBlock *exitBlock = block;
 	builder.SetInsertPoint(exitBlock);
 
 	if (gen) {
@@ -228,15 +190,8 @@ void Func::codegen(Module *module)
 		if (outType->is(types::VoidType::get())) {
 			builder.CreateRetVoid();
 		} else {
-			Stage *tail = pipelines.back().getHead();
-			while (!tail->getNext().empty())
-				tail = tail->getNext().back();
-
-			if (!dynamic_cast<Return *>(tail)) {  // i.e. if there isn't already a return at the end
-				if (tail->getOutType()->isChildOf(outType))
-					builder.CreateRet(builder.CreateLoad(tail->result));
-				else
-					builder.CreateRet(outType->defaultValue(exitBlock));
+			if (!dynamic_cast<Return *>(scope->stmts.back())) {  // i.e. if there isn't already a return at the end
+				builder.CreateRet(outType->defaultValue(exitBlock));
 			} else {
 				builder.CreateUnreachable();
 			}
@@ -254,13 +209,6 @@ void Func::codegen(Module *module)
 	} else {
 		builder.CreateBr(entry);
 	}
-}
-
-Value *Func::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBlock *block)
-{
-	codegen(block->getModule());
-	IRBuilder<> builder(block);
-	return builder.CreateCall(func, args);
 }
 
 void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
@@ -324,32 +272,7 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	}
 }
 
-void Func::add(Pipeline pipeline)
-{
-	if (pipeline.isAdded())
-		throw exc::MultiLinkException(*pipeline.getHead());
-
-	pipelines.push_back(pipeline);
-	pipeline.setAdded();
-}
-
-void Func::finalize(Module *module, ExecutionEngine *eng)
-{
-	if (rawFunc) {
-		eng->addGlobalMapping(func, rawFunc);
-	} else {
-		for (auto &pipeline : pipelines) {
-			pipeline.getHead()->finalize(module, eng);
-		}
-	}
-}
-
-bool Func::singleInput() const
-{
-	return inTypes.size() <= 1;
-}
-
-Var *Func::getArgVar(std::string name)
+Cell *Func::getArgVar(std::string name)
 {
 	auto iter = argVars.find(name);
 	if (iter == argVars.end())
@@ -401,43 +324,7 @@ void Func::setArgNames(std::vector<std::string> argNames)
 
 	argVars.clear();
 	for (auto& s : this->argNames)
-		argVars.insert({s, new Var(true)});
-}
-
-void Func::setNative(std::string name, void *rawFunc)
-{
-	this->name = std::move(name);
-	this->rawFunc = rawFunc;
-}
-
-Pipeline Func::operator|(Pipeline to)
-{
-	if (rawFunc)
-		throw exc::SeqException("cannot add pipelines to native function");
-
-	if (to.isAdded())
-		throw exc::MultiLinkException(*to.getHead());
-
-	to.getHead()->setBase(this);
-	BaseStage& begin = BaseStage::make(types::AnyType::get(),
-	                                   inTypes.size() > 1 ? types::VoidType::get() : getInType());
-	begin.setBase(this);
-	begin.deferResult(&result);
-
-	Pipeline full = begin | to;
-	add(full);
-
-	return full;
-}
-
-Pipeline Func::operator|(PipelineList& to)
-{
-	return *this | MakeRec::make(to);
-}
-
-Call& Func::operator()()
-{
-	return Call::make(*this);
+		argVars.insert({s, new Cell()});
 }
 
 Func *Func::clone(types::RefType *ref)
@@ -446,33 +333,27 @@ Func *Func::clone(types::RefType *ref)
 		return (Func *)ref->getClone(this);
 
 	std::vector<types::Type *> inTypesCloned;
-	std::vector<Pipeline> pipelinesCloned;
 
 	for (auto *type : inTypes)
 		inTypesCloned.push_back(type->clone(ref));
 
 	auto *x = new Func(ref->getName() + "." + name, argNames, inTypesCloned, outType->clone(ref));
 	ref->addClone(this, x);
+	x->scope = scope->clone(ref);
 
-	for (auto& pipeline : pipelines)
-		pipelinesCloned.push_back(pipeline.clone(ref));
-
-	x->pipelines = pipelinesCloned;
-
-	std::map<std::string, Var *> argVarsCloned;
+	std::map<std::string, Cell *> argVarsCloned;
 	for (auto& e : argVars)
 		argVarsCloned.insert({e.first, e.second->clone(ref)});
 	x->argVars = argVarsCloned;
 
 	x->gen = gen;
-
 	return x;
 }
 
 BaseFuncLite::BaseFuncLite(std::vector<types::Type *> inTypes,
                            types::Type *outType,
                            std::function<llvm::Function *(llvm::Module *)> codegenLambda) :
-    BaseFunc(), inTypes(std::move(inTypes)), outType(outType), codegenLambda(codegenLambda)
+    BaseFunc(), inTypes(std::move(inTypes)), outType(outType), codegenLambda(std::move(codegenLambda))
 {
 }
 
@@ -488,12 +369,6 @@ void BaseFuncLite::codegen(Module *module)
 	preambleBlock = &*func->getBasicBlockList().begin();
 }
 
-Value *BaseFuncLite::codegenCall(BaseFunc *base, std::vector<Value *> args, BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	return builder.CreateCall(func, args);
-}
-
 void BaseFuncLite::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
 	throw exc::SeqException("cannot return from lite base function");
@@ -502,11 +377,6 @@ void BaseFuncLite::codegenReturn(Value *val, types::Type *type, BasicBlock*& blo
 void BaseFuncLite::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 {
 	throw exc::SeqException("cannot yield from lite base function");
-}
-
-void BaseFuncLite::add(Pipeline pipeline)
-{
-	throw exc::SeqException("cannot add pipelines to lite base function");
 }
 
 types::Type *BaseFuncLite::getInType() const
@@ -537,7 +407,6 @@ BaseFuncLite *BaseFuncLite::clone(types::RefType *ref)
 		return (BaseFuncLite *)ref->getClone(this);
 
 	std::vector<types::Type *> inTypesCloned;
-	std::vector<Pipeline> pipelinesCloned;
 
 	for (auto *type : inTypes)
 		inTypesCloned.push_back(type->clone(ref));

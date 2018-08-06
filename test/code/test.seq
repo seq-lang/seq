@@ -1,4 +1,18 @@
-# this is a comment
+# everything below is really in a giant generic
+# class to test cloning capabilities; this can
+# safely be ignored when reading the code though
+class MyGiantClass[T] {
+fun main(args: Str[]) {
+# ---------
+
+
+gen range(a: Int, b: Int) -> Int {
+  var i = a
+  while i < b {
+    yield i
+    i = i + 1
+  }
+}
 
 gen split(s: Seq, k: Int, step: Int) -> Seq {
   var i = 0
@@ -8,61 +22,65 @@ gen split(s: Seq, k: Int, step: Int) -> Seq {
   }
 }
 
-fun f(s: Seq) -> Seq[]:
-  s |> split 32 32 |> collect
+gen enum(s: Seq[]) -> {Int, Seq} {
+  var i = 0
+  for j in range(0, s.len) {
+    yield (i, s[j])
+    i = i + 1
+  }
+}
 
-let farray = (Seq -> Seq[])[1]
+fun f(s: Seq) -> Seq[] {
+  var v = Seq[s.len/32]
+  var i = 0
+  for t in split(s, 32, 32) {
+    v[i] = t
+    i = i + 1
+  }
+  return v
+}
+
+var farray = (Seq -> Seq[])[1]
 farray[0] = f
 
 fun ident(s: Seq) -> Seq {
-  s
+  return s
 }
 
 source args[0] as input {
-  input |> substr 0+1 5 {
-    _ |> print
-    _ |> revcomp |> print
+
+  var v = farray[0](input)
+  for r in enum(v) {
+    print r.1
+    print r.2
   }
+  print input
 
-  let v = farray[0](input)
-  v |> foreach as r |> (|> count, r, r |> split 1 1) as t {
-    t.1 |> print
-    _ |> .2 |> print
-    t.3 |> print
-    continue
-  }
-  input |> print
+  var arr = {Int, Seq}[10]
 
-  let arr = {Int, Seq}[10]
-  arr |> foreach
-
-  input |> ident |> print
+  print ident(input)
 
   match input {
-    case (q @ `A...`) if q.len > 150: "match: A" |> print
-    case `C...`: "match: C" |> print
-    case `G...`: "match: G" |> print
-    case `_...`: "match: _..." |> print
-    case _: "match: _" |> print
+    case (q @ `A...`) if q.len > 150: print "match: A"
+    case `C...`: print "match: C"
+    case `G...`: "match: G"
+    case `_...`: "match: _..."
+    case _: print "match: _"
   }
 
-  for t in split(input, 64, 64) {
-    let v1 = t |> print
-    v1 |> split 32 32 {
-      let v2 = _ |> print
-      _ |> split 16 16 {
-        _ |> print
-        let v3 = _ |> copy |> print
-        let v4 = v3 |> print
-        v3 |> print
+  for v1 in split(input, 64, 64) {
+    print v1
+    for v2 in split(v1, 32, 32) {
+      for v3 in split(v2, 16, 16) {
+        print v3
       }
-      v2 |> print
+      print v2
     }
-    t |> print
+    print v1
   }
-  ident(input) |> print
+  print ident(input)
 
-  (v[1], ((v)[2]), (v[1], 4.2)).3 |> .1 |> print
+  print (v[1], ((v)[2]), (v[1], 4.2)).3.1
 }
 
 fun hello -> Str:
@@ -70,79 +88,77 @@ fun hello -> Str:
 
 
 fun hello2:
-  "hello again" |> print
+  print "hello again"
 
-hello() |> print
+print hello()
 hello2()
-42 + 2.2 |> print
--13 |> print
+print 42 + 2.2
+print -13
 var x = 4.2
-x |> print
+print x
 x = .42
-if x < 1 then -x else +x |> print
+print if x < 1 then -x else +x
 var b = (true, !true)
-b.1 |> print
+print b.1
 b = (b.1, !!false)
-b.2 |> print
+print b.2
 
 fun fib(n: Int) -> Int {
   type F = {f: (Int -> Int), x: Int}
 
-  fun apply(f: (Int -> Int), x: Int) -> Int: f(x)
+  fun apply(f: (Int -> Int), x: Int) -> Int: return f(x)
 
   fun rec(pair: F) -> Int:
-    apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
+    return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
 
-  if n <= 1 then n else rec((fib, n))
+  return if n <= 1 then n else rec((fib, n))
 }
 
-10 |> fib |> print
-fib(10) |> print
+print fib(10)
 
-range (if b.1 then 1 else 2) 5+5 as i {
+for i in range((if b.1 then 1 else 2), 5+5) {
   if i == 3:
     continue
   elif i >= 7:
     break
   else:
-    range i i+1: _ |> print
+    for _ in range(i, i+1): print _
 }
 
 type Person = {name: Str, age: Int}
 
 fun whois(person: Person) {
-  person.name |> print
-  person.age  |> print
+  print person.name
+  print person.age
 }
 
 fun birthday(person: Person) -> Person:
-  (person.name, person.age + 1)
-
+  return (person.name, person.age + 1)
 
 var joe = (name: "Joe", age: 42)
 whois(joe)
 joe = birthday(joe)
 whois(joe)
 
-let ints = Int[100]
-range ints.len as i:
+var ints = Int[100]
+for i in range(0, ints.len):
   ints[i] = i+1
 var s = 0
-ints |> foreach as n: s = s + n
-s |> print
+for _ in range(0, ints.len): s = s + ints[_]
+print s
 
 class Pair[T](a: T, b: T) {
   fun sum(self: Pair[T], c: T) -> T {
-    self.a + self.b + c
+    return self.a + self.b + c
   }
 
-  fun print(self: Pair[T]) {
-    self.a |> print
-    self.b |> print
+  fun dump(self: Pair[T]) {
+    print self.a
+    print self.b
   }
 
   fun swap(self: Pair[T]) {
-    let tmp = self.a
+    var tmp = self.a
     self.a = self.b
     self.b = tmp
   }
@@ -153,49 +169,58 @@ class Pair[T](a: T, b: T) {
   }
 }
 
-let p = Pair[Int](42, 19)
-p.sum(100) |> print  # 42 + 19 + 100 = 161
-p.print()  # 42,19
+var p = Pair[Int](42, 19)
+print p.sum(100)  # 42 + 19 + 100 = 161
+p.dump()  # 42,19
 p.swap()
-for a in p.iter(): a |> print  # 19,42
+for a in p.iter(): print a  # 19,42
 
-let q = Pair[Float](4.2, 1.9)
-q.sum(10.0) |> print
-for a in q.iter(): a |> print
+var q = Pair[Float](4.2, 1.9)
+print q.sum(10.0)
+for a in q.iter(): print a
 q.swap()
-Pair[Float].print(q)
+Pair[Float].dump(q)
 
 fun print_coord(t: {Int, Int, Str}) {
   # this syntax is based largely on Rust's
   match t {
-    case (x, y, _) if x == y && x < 5: "EQUAL" |> print
-    case (x @ (0 | 1), y @ 0...1, a @ "a") { a |> print ; x |> print ; y |> print }
-    case (x, 0, "b"): x |> print
-    case (0, y, "b"): y |> print
-    case (x, y, "b") { x |> print ; y |> print }
+    case (x, y, _) if x == y && x < 5: print "EQUAL"
+    case (x @ (0 | 1), y @ 0...1, a @ "a") { print a ; print x ; print y }
+    case (x, 0, "b"): print x
+    case (0, y, "b"): print y
+    case (x, y, "b") { print x ; print y }
     case (x, y, z) {}
   }
 }
 
 print_coord((0, 1, "a"))
-"---" |> print
+print "---"
 print_coord((13, 0, "b"))
-"---" |> print
+print "---"
 print_coord((11, 22, "b"))
 
-let aa = Int?[3]  # array of optional ints
+var aa = Int?[3]  # array of optional ints
 aa[0] = 1?
 aa[1] = 2?
 aa[2] = 3?
 
-let bb = Int?[][1]
+var bb = Int?[][1]
 bb[0] = aa
 
-let cc = match bb {
+var cc = match bb {
            case [[1?, 2?, ...]]: "one"[0:3]
            case [[2?, ..., 3?]]: "two"
            case []: "three"
            case _: ""
          }
 
-cc |> print
+print cc
+
+}
+}
+
+
+# ---------
+# run the above twice, and test cloning:
+MyGiantClass[Float].main(args)
+MyGiantClass[Int].main(args)

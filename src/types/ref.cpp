@@ -276,8 +276,9 @@ Value *types::RefType::make(BasicBlock *block, std::vector<Value *> vals)
 	Value *val = contents->defaultValue(block);
 	Value *ref = contents->alloc(1, block);
 	IRBuilder<> builder(block);
-	val = builder.CreateBitCast(val, typeCached);
-	ref = builder.CreateBitCast(ref, getLLVMType(context));
+	llvm::Type *type = getLLVMType(context);
+	ref = builder.CreateBitCast(ref, type);
+	val = builder.CreateBitCast(val, cast<PointerType>(type)->getElementType());
 	builder.CreateStore(val, ref);
 
 	if (!vals.empty()) {
@@ -715,12 +716,6 @@ seq_int_t types::GenericType::size(Module *module) const
 {
 	ensure();
 	return type->size(module);
-}
-
-Mem& types::GenericType::operator[](seq_int_t size)
-{
-	ensure();
-	return (*type)[size];
 }
 
 types::GenericType *types::GenericType::get(types::RefType *ref)

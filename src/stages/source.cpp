@@ -160,20 +160,23 @@ types::Type *Source::determineOutType() const
 }
 
 Source::Source(std::vector<Expr *> sources) :
-    Stage("source"), sources(std::move(sources))
+    Stage("source"), sources(std::move(sources)), scope(new Block(this)), var(new Cell())
 {
 }
 
-void Source::validate()
+Block *Source::getBlock()
 {
-	out = determineOutType();
+	return scope;
 }
 
-void Source::codegen(Module *module)
+Cell *Source::getVar()
 {
-	ensurePrev();
-	validate();
+	return var;
+}
 
+void Source::codegen(BasicBlock*& block)
+{
+	Module *module = block->getModule();
 	Function *initFunc = seqSourceInitFunc(module);
 	Function *readFunc = seqSourceReadFunc(module);
 	Function *getFunc = seqSourceGetFunc(module);
@@ -181,10 +184,11 @@ void Source::codegen(Module *module)
 	Function *deallocFunc = seqSourceDeallocFunc(module);
 
 	LLVMContext& context = module->getContext();
-	BasicBlock *entry = prev->getAfter();
+	BasicBlock *entry = block;
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	Function *func = entry->getParent();
 
+	var->setType(determineOutType());
 	Value *sourcesVar = makeAlloca(IntegerType::getInt8PtrTy(context), preambleBlock, sources.size());
 	IRBuilder<> builder(entry);
 
@@ -221,17 +225,16 @@ void Source::codegen(Module *module)
 
 	builder.SetInsertPoint(body);
 	Value *val = builder.CreateCall(isSingle() ? getSingleFunc : getFunc, {state, control});
-	result = getOutType()->storeInAlloca(getBase(), val, body, true);
+	var->store(getBase(), val, body);
 
 	block = body;
+	scope->codegen(block);
 
-	codegenNext(module);
-
-	builder.SetInsertPoint(getAfter());
+	builder.SetInsertPoint(block);
 	builder.CreateBr(loop);
 
 	control->addIncoming(zeroLLVM(context), repeat);
-	control->addIncoming(next, getAfter());
+	control->addIncoming(next, block);
 
 	BasicBlock *exitLoop = BasicBlock::Create(context, "exit_loop", func);
 	BasicBlock *exitRepeat = BasicBlock::Create(context, "exit_repeat", func);
@@ -244,24 +247,7 @@ void Source::codegen(Module *module)
 	builder.SetInsertPoint(exitRepeat);
 	builder.CreateCall(deallocFunc, {state});
 
-	prev->setAfter(exitRepeat);
-}
-
-void Source::finalize(Module *module, ExecutionEngine *eng)
-{
-	Function *initFunc = seqSourceInitFunc(module);
-	Function *readFunc = seqSourceReadFunc(module);
-	Function *getFunc = seqSourceGetFunc(module);
-	Function *getSingleFunc = seqSourceGetSingleFunc(module);
-	Function *deallocFunc = seqSourceDeallocFunc(module);
-
-	eng->addGlobalMapping(initFunc, (void *)seqSourceInit);
-	eng->addGlobalMapping(readFunc, (void *)seqSourceRead);
-	eng->addGlobalMapping(getFunc, (void *)seqSourceGet);
-	eng->addGlobalMapping(getSingleFunc, (void *)seqSourceGetSingle);
-	eng->addGlobalMapping(deallocFunc, (void *)seqSourceDealloc);
-
-	Stage::finalize(module, eng);
+	block = exitRepeat;
 }
 
 Source& Source::make(std::vector<Expr *> sources)
@@ -280,6 +266,10 @@ Source *Source::clone(types::RefType *ref)
 
 	Source& x = Source::make(sourcesCloned);
 	ref->addClone(this, &x);
+	delete x.scope;
+	delete x.var;
+	x.scope = scope->clone(ref);
+	x.var = var->clone(ref);
 	Stage::setCloneBase(&x, ref);
 	return &x;
 }

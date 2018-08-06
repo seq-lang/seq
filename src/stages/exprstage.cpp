@@ -4,27 +4,42 @@
 using namespace seq;
 using namespace llvm;
 
-ExprStage::ExprStage(Expr *expr) :
-    Stage("expr", types::AnyType::get(), types::VoidType::get()), expr(expr)
+Print::Print(Expr *expr) :
+    Stage("print"), expr(expr)
 {
 }
 
-void ExprStage::validate()
+void Print::codegen(BasicBlock*& block)
 {
-	out = expr->getType();
-	Stage::validate();
-}
-
-void ExprStage::codegen(Module *module)
-{
-	ensurePrev();
-	validate();
-
-	block = prev->getAfter();
+	types::Type *type = expr->getType();
 	Value *val = expr->codegen(getBase(), block);
-	result = getOutType()->storeInAlloca(getBase(), val, block);
-	codegenNext(module);
-	prev->setAfter(getAfter());
+	type->print(getBase(), val, block);
+}
+
+Print& Print::make(Expr *expr)
+{
+	return *new Print(expr);
+}
+
+Print *Print::clone(types::RefType *ref)
+{
+	if (ref->seenClone(this))
+		return (Print *)ref->getClone(this);
+
+	Print& x = Print::make(expr->clone(ref));
+	ref->addClone(this, &x);
+	Stage::setCloneBase(&x, ref);
+	return &x;
+}
+
+ExprStage::ExprStage(Expr *expr) :
+    Stage("expr"), expr(expr)
+{
+}
+
+void ExprStage::codegen(BasicBlock*& block)
+{
+	expr->codegen(getBase(), block);
 }
 
 ExprStage& ExprStage::make(Expr *expr)
@@ -43,25 +58,26 @@ ExprStage *ExprStage::clone(types::RefType *ref)
 	return &x;
 }
 
-CellStage::CellStage(Cell *cell) :
-    Stage("cell", types::AnyType::get(), types::VoidType::get()), cell(cell)
+CellStage::CellStage(Expr *init) :
+    Stage("cell"), init(init), var(new Cell())
 {
 }
 
-void CellStage::codegen(Module *module)
+Cell *CellStage::getVar()
 {
-	ensurePrev();
-	validate();
-
-	block = prev->getAfter();
-	cell->codegen(block);
-	codegenNext(module);
-	prev->setAfter(getAfter());
+	return var;
 }
 
-CellStage& CellStage::make(Cell *cell)
+void CellStage::codegen(BasicBlock*& block)
 {
-	return *new CellStage(cell);
+	var->setType(init->getType());
+	Value *val = init->codegen(getBase(), block);
+	var->store(getBase(), val, block);
+}
+
+CellStage& CellStage::make(Expr *init)
+{
+	return *new CellStage(init);
 }
 
 CellStage *CellStage::clone(types::RefType *ref)
@@ -69,29 +85,23 @@ CellStage *CellStage::clone(types::RefType *ref)
 	if (ref->seenClone(this))
 		return (CellStage *)ref->getClone(this);
 
-	CellStage& x = CellStage::make(cell->clone(ref));
+	CellStage& x = CellStage::make(init->clone(ref));
 	ref->addClone(this, &x);
+	x.var = var->clone(ref);
 	Stage::setCloneBase(&x, ref);
 	return &x;
 }
 
 AssignStage::AssignStage(Cell *cell, Expr *value) :
-    Stage("(=)", types::AnyType::get(), types::VoidType::get()), cell(cell), value(value)
+    Stage("(=)"), cell(cell), value(value)
 {
 }
 
-void AssignStage::codegen(Module *module)
+void AssignStage::codegen(BasicBlock*& block)
 {
 	value->ensure(cell->getType());
-
-	ensurePrev();
-	validate();
-
-	block = prev->getAfter();
 	Value *val = value->codegen(getBase(), block);
-	cell->store(val, block);
-	codegenNext(module);
-	prev->setAfter(getAfter());
+	cell->store(getBase(), val, block);
 }
 
 AssignStage& AssignStage::make(Cell *cell, Expr *value)
@@ -111,12 +121,11 @@ AssignStage *AssignStage::clone(types::RefType *ref)
 }
 
 AssignIndexStage::AssignIndexStage(Expr *array, Expr *idx, Expr *value) :
-    Stage("([]=)", types::AnyType::get(), types::VoidType::get()),
-    array(array), idx(idx), value(value)
+    Stage("([]=)"), array(array), idx(idx), value(value)
 {
 }
 
-void AssignIndexStage::codegen(Module *module)
+void AssignIndexStage::codegen(BasicBlock*& block)
 {
 	this->idx->ensure(types::IntType::get());
 
@@ -127,17 +136,10 @@ void AssignIndexStage::codegen(Module *module)
 	assert(arrType != nullptr);
 	value->ensure(arrType->indexType());
 
-	ensurePrev();
-	validate();
-
-	block = prev->getAfter();
 	Value *val = value->codegen(getBase(), block);
 	Value *arr = array->codegen(getBase(), block);
 	Value *idx = this->idx->codegen(getBase(), block);
 	array->getType()->indexStore(getBase(), arr, idx, val, block);
-
-	codegenNext(module);
-	prev->setAfter(getAfter());
 }
 
 AssignIndexStage& AssignIndexStage::make(Expr *array, Expr *idx, Expr *value)
@@ -157,8 +159,7 @@ AssignIndexStage *AssignIndexStage::clone(types::RefType *ref)
 }
 
 AssignMemberStage::AssignMemberStage(Expr *expr, std::string memb, Expr *value) :
-    Stage("(.=)", types::AnyType::get(), types::VoidType::get()),
-    expr(expr), memb(std::move(memb)), value(value)
+    Stage("(.=)"), expr(expr), memb(std::move(memb)), value(value)
 {
 }
 
@@ -167,18 +168,12 @@ AssignMemberStage::AssignMemberStage(Expr *expr, seq_int_t idx, Expr *value) :
 {
 }
 
-void AssignMemberStage::codegen(Module *module)
+void AssignMemberStage::codegen(BasicBlock*& block)
 {
 	value->ensure(expr->getType()->membType(memb));
-
-	ensurePrev();
-	validate();
-
-	block = prev->getAfter();
 	Value *x = expr->codegen(getBase(), block);
 	Value *v = value->codegen(getBase(), block);
 	expr->getType()->setMemb(x, memb, v, block);
-	prev->setAfter(getAfter());
 }
 
 AssignMemberStage& AssignMemberStage::make(Expr *expr, std::string memb, Expr *value)
@@ -203,11 +198,11 @@ AssignMemberStage *AssignMemberStage::clone(types::RefType *ref)
 }
 
 If::If() :
-    Stage("if", types::AnyType::get(), types::VoidType::get()), conds(), branches(), elseAdded(false)
+    Stage("if"), conds(), branches(), elseAdded(false)
 {
 }
 
-void If::codegen(Module *module)
+void If::codegen(BasicBlock*& block)
 {
 	if (conds.empty())
 		throw exc::SeqException("no conditions added to if-stage");
@@ -217,11 +212,7 @@ void If::codegen(Module *module)
 	for (auto *cond : conds)
 		cond->ensure(types::BoolType::get());
 
-	ensurePrev();
-	validate();
-
-	LLVMContext& context = module->getContext();
-	block = prev->getAfter();
+	LLVMContext& context = block->getContext();
 	Function *func = block->getParent();
 	IRBuilder<> builder(block);
 
@@ -229,9 +220,7 @@ void If::codegen(Module *module)
 
 	for (unsigned i = 0; i < conds.size(); i++) {
 		Value *cond = conds[i]->codegen(getBase(), block);
-		BaseStage *branch = branches[i];
-		branch->setInOut(types::VoidType::get(), prev->getOutType());
-		branch->result = prev->result;
+		Block *branch = branches[i];
 
 		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
 		cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
@@ -239,9 +228,8 @@ void If::codegen(Module *module)
 		BasicBlock *b1 = BasicBlock::Create(context, "", func);
 		BranchInst *binst1 = builder.CreateCondBr(cond, b1, b1);  // we set false-branch below
 
-		branch->block = b1;
-		branch->codegen(module);
-		block = getAfter();
+		block = b1;
+		branch->codegen(block);
 		builder.SetInsertPoint(block);
 		BranchInst *binst2 = builder.CreateBr(b1);  // we reset this below
 		binsts.push_back(binst2);
@@ -258,8 +246,7 @@ void If::codegen(Module *module)
 	for (auto *binst : binsts)
 		binst->setSuccessor(0, after);
 
-	codegenNext(module);
-	prev->setAfter(after);
+	block = after;
 }
 
 If& If::make()
@@ -267,25 +254,23 @@ If& If::make()
 	return *new If();
 }
 
-BaseStage& If::addCond(Expr *cond)
+Block *If::addCond(Expr *cond)
 {
 	if (elseAdded)
 		throw exc::SeqException("cannot add else-if branch to if-stage after else branch");
 
-	BaseStage& branch = BaseStage::make(types::AnyType::get(), types::VoidType::get(), false);
-	branch.setBase(getBase());
-	branch.setPrev(this);
+	auto *branch = new Block(this);
 	conds.push_back(cond);
-	branches.push_back(&branch);
+	branches.push_back(branch);
 	return branch;
 }
 
-BaseStage& If::addElse()
+Block *If::addElse()
 {
 	if (elseAdded)
 		throw exc::SeqException("cannot add second else branch to if-stage");
 
-	BaseStage& branch = addCond(new BoolExpr(true));
+	Block *branch = addCond(new BoolExpr(true));
 	elseAdded = true;
 	return branch;
 }
@@ -299,7 +284,7 @@ If *If::clone(types::RefType *ref)
 	ref->addClone(this, &x);
 
 	std::vector<Expr *> condsCloned;
-	std::vector<BaseStage *> branchesCloned;
+	std::vector<Block *> branchesCloned;
 
 	for (auto *cond : conds)
 		condsCloned.push_back(cond->clone(ref));
@@ -316,23 +301,18 @@ If *If::clone(types::RefType *ref)
 }
 
 Match::Match() :
-    Stage("match", types::AnyType::get(), types::VoidType::get()),
-    value(nullptr), patterns(), branches()
+    Stage("match"), value(nullptr), patterns(), branches()
 {
 }
 
-void Match::codegen(Module *module)
+void Match::codegen(BasicBlock*& block)
 {
 	if (patterns.empty())
 		throw exc::SeqException("no patterns added to match-stage");
 
 	assert(patterns.size() == branches.size() && value);
 
-	ensurePrev();
-	validate();
-
-	LLVMContext& context = module->getContext();
-	block = prev->getAfter();
+	LLVMContext& context = block->getContext();
 	Function *func = block->getParent();
 
 	IRBuilder<> builder(block);
@@ -353,18 +333,15 @@ void Match::codegen(Module *module)
 
 	for (unsigned i = 0; i < patterns.size(); i++) {
 		Value *cond = patterns[i]->codegen(getBase(), valType, val, block);
-		BaseStage *branch = branches[i];
-		branch->setInOut(types::VoidType::get(), prev->getOutType());
-		branch->result = prev->result;
+		Block *branch = branches[i];
 
 		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
 
 		BasicBlock *b1 = BasicBlock::Create(context, "", func);
 		BranchInst *binst1 = builder.CreateCondBr(cond, b1, b1);  // we set false-branch below
 
-		branch->block = b1;
-		branch->codegen(module);
-		block = getAfter();
+		block = b1;
+		branch->codegen(block);
 		builder.SetInsertPoint(block);
 		BranchInst *binst2 = builder.CreateBr(b1);  // we reset this below
 		binsts.push_back(binst2);
@@ -381,8 +358,7 @@ void Match::codegen(Module *module)
 	for (auto *binst : binsts)
 		binst->setSuccessor(0, after);
 
-	codegenNext(module);
-	prev->setAfter(after);
+	block = after;
 }
 
 Match& Match::make()
@@ -398,13 +374,11 @@ void Match::setValue(Expr *value)
 	this->value = value;
 }
 
-BaseStage& Match::addCase(Pattern *pattern)
+Block *Match::addCase(Pattern *pattern)
 {
-	BaseStage& branch = BaseStage::make(types::AnyType::get(), types::VoidType::get(), false);
-	branch.setBase(getBase());
-	branch.setPrev(this);
+	auto *branch = new Block(this);
 	patterns.push_back(pattern);
-	branches.push_back(&branch);
+	branches.push_back(branch);
 	return branch;
 }
 
@@ -417,7 +391,7 @@ Match *Match::clone(types::RefType *ref)
 	ref->addClone(this, &x);
 
 	std::vector<Pattern *> patternsCloned;
-	std::vector<BaseStage *> branchesCloned;
+	std::vector<Block *> branchesCloned;
 
 	for (auto *pattern : patterns)
 		patternsCloned.push_back(pattern->clone(ref));
@@ -434,21 +408,22 @@ Match *Match::clone(types::RefType *ref)
 }
 
 While::While(Expr *cond) :
-    Stage("while", types::AnyType::get(), types::VoidType::get()), cond(cond)
+    Stage("while"), cond(cond), scope(new Block(this))
 {
 	loop = true;
 }
 
-void While::codegen(Module *module)
+Block *While::getBlock()
+{
+	return scope;
+}
+
+void While::codegen(BasicBlock*& block)
 {
 	cond->ensure(types::BoolType::get());
+	LLVMContext& context = block->getContext();
 
-	ensurePrev();
-	validate();
-
-	LLVMContext& context = module->getContext();
-
-	BasicBlock *entry = prev->getAfter();
+	BasicBlock *entry = block;
 	Function *func = entry->getParent();
 
 	IRBuilder<> builder(entry);
@@ -466,14 +441,14 @@ void While::codegen(Module *module)
 
 	block = body;
 
-	codegenNext(module);
+	scope->codegen(block);
 
-	builder.SetInsertPoint(getAfter());
+	builder.SetInsertPoint(block);
 	builder.CreateBr(loop0);
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	branch->setSuccessor(1, exit);
-	prev->setAfter(exit);
+	block = exit;
 
 	setBreaks(exit);
 	setContinues(loop0);
@@ -491,38 +466,42 @@ While *While::clone(types::RefType *ref)
 
 	While& x = While::make(cond->clone(ref));
 	ref->addClone(this, &x);
+	delete x.scope;
+	x.scope = scope->clone(ref);
 	Stage::setCloneBase(&x, ref);
 	return &x;
 }
 
 For::For(Expr *gen) :
-    Stage("for", types::AnyType::get(), types::VoidType::get()), gen(gen)
+    Stage("for"), gen(gen), scope(new Block(this)), var(new Cell())
 {
 	loop = true;
 }
 
-void For::validate()
+Block *For::getBlock()
+{
+	return scope;
+}
+
+Cell *For::getVar()
+{
+	return var;
+}
+
+void For::codegen(BasicBlock*& block)
 {
 	if (!gen->getType()->isGeneric(types::GenType::get()))
 		throw exc::SeqException("cannot iterate over non-generator");
 
-	out = gen->getType()->getBaseType(0);
-	Stage::validate();
-}
-
-void For::codegen(Module *module)
-{
-	ensurePrev();
-	validate();
-
 	auto *type = dynamic_cast<types::GenType *>(gen->getType());
 	assert(type);
 
-	LLVMContext& context = module->getContext();
+	LLVMContext& context = block->getContext();
 
-	BasicBlock *entry = prev->getAfter();
+	BasicBlock *entry = block;
 	Function *func = entry->getParent();
 
+	var->setType(type->getBaseType(0));
 	Value *gen = this->gen->codegen(getBase(), entry);
 	IRBuilder<> builder(entry);
 
@@ -541,11 +520,11 @@ void For::codegen(Module *module)
 
 	block = body;
 	Value *val = type->promise(gen, block);
-	result = type->getBaseType(0)->storeInAlloca(getBase(), val, block);
+	var->store(getBase(), val, block);
 
-	codegenNext(module);
+	scope->codegen(block);
 
-	builder.SetInsertPoint(getAfter());
+	builder.SetInsertPoint(block);
 	builder.CreateBr(loop);
 
 	BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
@@ -555,7 +534,7 @@ void For::codegen(Module *module)
 	builder.SetInsertPoint(cleanup);
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	builder.CreateBr(exit);
-	prev->setAfter(exit);
+	block = exit;
 
 	setBreaks(exit);
 	setContinues(loopCont);
@@ -573,25 +552,23 @@ For *For::clone(types::RefType *ref)
 
 	For& x = For::make(gen->clone(ref));
 	ref->addClone(this, &x);
+	delete x.scope;
+	x.scope = scope->clone(ref);
+	x.var = var->clone(ref);
 	Stage::setCloneBase(&x, ref);
 	return &x;
 }
 
 Return::Return(Expr *expr) :
-    Stage("return", types::AnyType::get(), types::VoidType::get()), expr(expr)
+    Stage("return"), expr(expr)
 {
 }
 
-void Return::codegen(Module *module)
+void Return::codegen(BasicBlock*& block)
 {
-	ensurePrev();
-	validate();
-
-	block = prev->getAfter();
 	types::Type *type = expr ? expr->getType() : types::VoidType::get();
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
 	getBase()->codegenReturn(val, type, block);
-	prev->setAfter(getAfter());
 }
 
 Return& Return::make(Expr *expr)
@@ -611,20 +588,15 @@ Return *Return::clone(types::RefType *ref)
 }
 
 Yield::Yield(Expr *expr) :
-    Stage("Yield", types::AnyType::get(), types::VoidType::get()), expr(expr)
+    Stage("Yield"), expr(expr)
 {
 }
 
-void Yield::codegen(Module *module)
+void Yield::codegen(BasicBlock*& block)
 {
-	ensurePrev();
-	validate();
-
-	block = prev->getAfter();
 	types::Type *type = expr ? expr->getType() : types::VoidType::get();
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
 	getBase()->codegenYield(val, type, block);
-	prev->setAfter(getAfter());
 }
 
 Yield& Yield::make(Expr *expr)
@@ -644,22 +616,17 @@ Yield *Yield::clone(types::RefType *ref)
 }
 
 Break::Break() :
-    Stage("break", types::AnyType::get(), types::VoidType::get())
+    Stage("break")
 {
 }
 
-void Break::codegen(Module *module)
+void Break::codegen(BasicBlock*& block)
 {
-	ensurePrev();
-	validate();
-
-	LLVMContext& context = module->getContext();
-	block = prev->getAfter();
+	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
-	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by Stage::setBreaks
+	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by `setBreaks`
 	addBreakToEnclosingLoop(inst);
 	block = BasicBlock::Create(context, "", block->getParent());
-	prev->setAfter(getAfter());
 }
 
 Break& Break::make()
@@ -679,22 +646,17 @@ Break *Break::clone(types::RefType *ref)
 }
 
 Continue::Continue() :
-    Stage("continue", types::AnyType::get(), types::VoidType::get())
+    Stage("continue")
 {
 }
 
-void Continue::codegen(Module *module)
+void Continue::codegen(BasicBlock*& block)
 {
-	ensurePrev();
-	validate();
-
-	LLVMContext& context = module->getContext();
-	block = prev->getAfter();
+	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
-	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by Stage::setContinues
+	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by `setContinues`
 	addContinueToEnclosingLoop(inst);
 	block = BasicBlock::Create(context, "", block->getParent());
-	prev->setAfter(getAfter());
 }
 
 Continue& Continue::make()

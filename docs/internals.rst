@@ -73,10 +73,6 @@ Stages make up the pipelines and are where the actual code generation takes plac
 
     Vector of subsequent stages actually linked to this stage
 
-.. cpp:member:: std::vector<seq::Stage*> seq::Stage::weakNexts
-
-    Vector of subsequent stages implicitly linked to this stage (e.g. by a ``Var``)
-
 .. cpp:member:: std::string seq::Stage::name
 
     Name of this stage (primarily for debugging)
@@ -92,10 +88,6 @@ Stages make up the pipelines and are where the actual code generation takes plac
 .. cpp:member:: seq::ValMap seq::Stage::outs
 
     Map of all output values for this stage
-
-.. cpp:function:: virtual void seq::Stage::validate()
-
-    Performs type-checking based on previous stage's output type and expected input type. Some stages override this member function to first select the appropriate input and output types based on context.
 
 .. cpp:function:: virtual void seq::Stage::codegen(llvm::Module *module)
 
@@ -173,7 +165,3 @@ The ``seq::SeqModule`` class is a subclass of ``seq::BaseFunc``, which is a gene
 .. cpp:function:: virtual seq::types::Type* seq::BaseFunc::getOutType() const
 
     Function output type
-
-.. cpp:function:: virtual void seq::BaseFunc::codegenCall(seq::BaseFunc *base, seq::ValMap ins, seq::ValMap outs, llvm::BasicBlock *block) const
-
-    Generate code for invoking this function by ``base`` with input ``ins`` in block ``block``; outputs are given in ``outs``

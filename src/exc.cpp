@@ -12,11 +12,6 @@ exc::StageException::StageException(std::string msg, Stage &stage) :
 {
 }
 
-exc::MultiLinkException::MultiLinkException(Stage &stage) :
-    StageException("stage linked multiple times", stage)
-{
-}
-
 exc::ValidationException::ValidationException(Stage &stage) :
     StageException("validation failed", stage)
 {

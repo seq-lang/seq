@@ -83,59 +83,34 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/array.h
                        include/seq/arrayexpr.h
                        include/seq/base.h
-                       include/seq/basestage.h
-                       include/seq/call.h
                        include/seq/callexpr.h
-                       include/seq/capture.h
                        include/seq/cell.h
-                       include/seq/chunk.h
-                       include/seq/collect.h
                        include/seq/common.h
-                       include/seq/copy.h
-                       include/seq/count.h
                        include/seq/exc.h
                        include/seq/expr.h
                        include/seq/exprstage.h
-                       include/seq/filter.h
-                       include/seq/foreach.h
                        include/seq/func.h
                        include/seq/funct.h
                        include/seq/getelemexpr.h
-                       include/seq/getitem.h
-                       include/seq/hash.h
                        include/seq/io.h
-                       include/seq/lambda.h
-                       include/seq/len.h
                        include/seq/lookupexpr.h
-                       include/seq/makerec.h
-                       include/seq/mem.h
                        include/seq/num.h
                        include/seq/numexpr.h
                        include/seq/ops.h
-                       include/seq/opstage.h
                        include/seq/optional.h
                        include/seq/parser.h
                        include/seq/patterns.h
-                       include/seq/pipeline.h
-                       include/seq/print.h
-                       include/seq/range.h
                        include/seq/record.h
                        include/seq/recordexpr.h
                        include/seq/ref.h
-                       include/seq/revcomp.h
                        include/seq/seq.h
                        include/seq/seqgc.h
                        include/seq/seqt.h
-                       include/seq/serialize.h
                        include/seq/source.h
-                       include/seq/split.h
                        include/seq/stage.h
-                       include/seq/stageutil.h
                        include/seq/strexpr.h
-                       include/seq/substr.h
                        include/seq/types.h
                        include/seq/util.h
-                       include/seq/var.h
                        include/seq/varexpr.h
                        include/seq/void.h
                        src/expr/arrayexpr.cpp
@@ -149,32 +124,9 @@ add_library(seq SHARED include/seq/any.h
                        src/expr/varexpr.cpp
                        src/parser/grammar.h
                        src/parser/parser.cpp
-                       src/stages/basestage.cpp
-                       src/stages/call.cpp
-                       src/stages/capture.cpp
-                       src/stages/chunk.cpp
-                       src/stages/collect.cpp
-                       src/stages/copy.cpp
-                       src/stages/count.cpp
                        src/stages/exprstage.cpp
-                       src/stages/filter.cpp
-                       src/stages/foreach.cpp
-                       src/stages/getitem.cpp
-                       src/stages/hash.cpp
-                       src/stages/lambda.cpp
-                       src/stages/len.cpp
-                       src/stages/makerec.cpp
-                       src/stages/mem.cpp
-                       src/stages/opstage.cpp
-                       src/stages/print.cpp
-                       src/stages/range.cpp
-                       src/stages/revcomp.cpp
-                       src/stages/serialize.cpp
                        src/stages/source.cpp
-                       src/stages/split.cpp
                        src/stages/stage.cpp
-                       src/stages/stageutil.cpp
-                       src/stages/substr.cpp
                        src/types/any.cpp
                        src/types/array.cpp
                        src/types/base.cpp
@@ -193,12 +145,10 @@ add_library(seq SHARED include/seq/any.h
                        src/llvm.h
                        src/ops.cpp
                        src/patterns.cpp
-                       src/pipeline.cpp
                        src/seq.cpp
                        src/seqgc.cpp
                        src/seqdata.h
-                       src/util.cpp
-                       src/var.cpp)
+                       src/util.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
 
@@ -211,18 +161,7 @@ set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 # Seq test
 add_executable(seqtest test/main.cpp
-                       test/core/bigtest.h
                        test/core/standalonetest.h
-                       test/stages/calltest.h
-                       test/stages/chunktest.h
-                       test/stages/collecttest.h
-                       test/stages/copytest.h
-                       test/stages/counttest.h
-                       test/stages/filtertest.h
-                       test/stages/lentest.h
-                       test/stages/makerectest.h
-                       test/stages/memtest.h
-                       test/stages/serializetest.h
                        test/testhelp.h)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
 target_link_libraries(seqtest seq gtest_main)

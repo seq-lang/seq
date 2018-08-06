@@ -225,7 +225,6 @@ namespace seq {
 			Type *getConstructType(std::vector<Type *> inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
-			Mem& operator[](seq_int_t size) override;
 			static GenericType *get(RefType *ref);
 
 			GenericType *clone(RefType *ref) override;

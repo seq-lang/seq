@@ -9,15 +9,16 @@ namespace seq {
 	class Source : public Stage {
 	private:
 		std::vector<Expr *> sources;
+		Block *scope;
+		Cell *var;
 		bool isSingle() const;
 		types::Type *determineOutType() const;
 	public:
 		explicit Source(std::vector<Expr *> sources);
-		void validate() override;
-		void codegen(llvm::Module *module) override;
-		void finalize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
+		Block *getBlock();
+		Cell *getVar();
+		void codegen(llvm::BasicBlock*& block) override;
 		static Source& make(std::vector<Expr *>);
-
 		Source *clone(types::RefType *ref) override;
 	};
 }

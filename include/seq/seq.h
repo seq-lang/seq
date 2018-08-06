@@ -10,12 +10,9 @@
 
 #include "llvm.h"
 #include "func.h"
-#include "pipeline.h"
-#include "stageutil.h"
-#include "var.h"
+#include "exprstage.h"
+#include "source.h"
 #include "cell.h"
-#include "mem.h"
-#include "lambda.h"
 #include "patterns.h"
 #include "io.h"
 #include "exc.h"
@@ -49,71 +46,24 @@ namespace seq {
 		static OptionalType& Opt    = *OptionalType::get();
 	}
 
-	struct PipelineAggregator {
-		SeqModule *base;
-		std::vector<Pipeline> pipelines;
-		explicit PipelineAggregator(SeqModule *base);
-		void add(Pipeline pipeline);
-		Pipeline addWithIndex(Pipeline to, seq_int_t idx, bool addFull=true);
-		Pipeline operator|(Pipeline to);
-		Pipeline operator|(PipelineList& to);
-	};
-
-	struct PipelineAggregatorProxy {
-		PipelineAggregator& aggr;
-		seq_int_t idx;
-		PipelineAggregatorProxy(PipelineAggregator& aggr, seq_int_t idx);
-		explicit PipelineAggregatorProxy(PipelineAggregator& aggr);
-		Pipeline operator|(Pipeline to);
-		Pipeline operator|(PipelineList& to);
-	};
-
 	class SeqModule : public BaseFunc {
 	private:
-		bool standalone;
-		std::vector<std::string> sources;
-		std::array<llvm::Value *, io::MAX_INPUTS> results;
-		Var argsVar;
+		Block *scope;
+		Cell argsVar;
 		llvm::Function *initFunc;
-
-		friend PipelineAggregator;
 	public:
-		explicit SeqModule(bool standalone=false);
-		~SeqModule();
-
-		PipelineAggregator main;
-		PipelineAggregator once;
-		PipelineAggregator last;
-
-		io::DataBlock *data;
-
-		void source(std::string s);
-		Var *getArgVar();
-
-		template<typename ...T>
-		void source(std::string s, T... etc)
-		{
-			source(std::move(s));
-			source(etc...);
-		}
+		SeqModule();
+		Block *getBlock();
+		Cell *getArgVar();
 
 		void codegen(llvm::Module *module) override;
-		llvm::Value *codegenCall(BaseFunc *base,
-		                         std::vector<llvm::Value *> args,
-		                         llvm::BasicBlock *block) override;
 		void codegenReturn(llvm::Value *val,
 		                   types::Type *type,
 		                   llvm::BasicBlock*& block) override;
 		void codegenYield(llvm::Value *val,
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block) override;
-		void add(Pipeline pipeline) override;
 		void execute(const std::vector<std::string>& args={}, bool debug=false);
-
-		Pipeline operator|(Pipeline to);
-		Pipeline operator|(PipelineList& to);
-
-		PipelineAggregatorProxy operator[](unsigned idx);
 	};
 
 	llvm::LLVMContext& getLLVMContext();

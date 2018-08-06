@@ -304,7 +304,7 @@ ConstructExpr *ConstructExpr::clone(types::RefType *ref)
 {
 	std::vector<Expr *> argsCloned;
 	for (auto *arg : args)
-		args.push_back(arg->clone(ref));
+		argsCloned.push_back(arg->clone(ref));
 	return new ConstructExpr(type->clone(ref), argsCloned);
 }
 

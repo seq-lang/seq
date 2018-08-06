@@ -4,7 +4,6 @@
 #include <vector>
 #include "types.h"
 #include "func.h"
-#include "var.h"
 
 namespace seq {
 
@@ -24,8 +23,7 @@ namespace seq {
 
 	class Wildcard : public Pattern {
 	private:
-		Var *var;
-		llvm::Value *result;
+		Cell *var;
 	public:
 		Wildcard();
 		void validate(types::Type *type) override;
@@ -35,13 +33,12 @@ namespace seq {
 		                     llvm::BasicBlock*& block) override;
 		bool isCatchAll() override;
 		Wildcard *clone(types::RefType *ref) override;
-		Var *getVar();
+		Cell *getVar();
 	};
 
 	class BoundPattern : public Pattern {
 	private:
-		Var *var;
-		llvm::Value *result;
+		Cell *var;
 		Pattern *pattern;
 	public:
 		explicit BoundPattern(Pattern *pattern);
@@ -52,7 +49,7 @@ namespace seq {
 		                     llvm::BasicBlock*& block) override;
 		bool isCatchAll() override;
 		BoundPattern *clone(types::RefType *ref) override;
-		Var *getVar();
+		Cell *getVar();
 	};
 
 	class StarPattern : public Pattern {

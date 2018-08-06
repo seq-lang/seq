@@ -178,7 +178,6 @@ namespace seq {
 			virtual Type *getConstructType(std::vector<Type *> inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
-			virtual Mem& operator[](seq_int_t size);
 
 			virtual Type *clone(RefType *ref);
 		};

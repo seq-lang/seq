@@ -19,11 +19,6 @@ namespace seq {
 			StageException(std::string msg, Stage& stage);
 		};
 
-		class MultiLinkException : public StageException {
-		public:
-			explicit MultiLinkException(Stage& stage);
-		};
-
 		class ValidationException : public StageException {
 		public:
 			explicit ValidationException(Stage& stage);

@@ -26,7 +26,7 @@ Pattern *Pattern::clone(types::RefType *ref)
 }
 
 Wildcard::Wildcard() :
-    Pattern(&types::Any), var(new Var(true)), result(nullptr)
+    Pattern(&types::Any), var(new Cell())
 {
 }
 
@@ -41,10 +41,17 @@ bool Wildcard::isCatchAll()
 
 Wildcard *Wildcard::clone(types::RefType *ref)
 {
-	return new Wildcard();
+	if (ref->seenClone(this))
+		return (Wildcard *)ref->getClone(this);
+
+	auto *x = new Wildcard();
+	ref->addClone(this, x);
+	delete x->var;
+	x->var = var->clone(ref);
+	return x;
 }
 
-Var *Wildcard::getVar()
+Cell *Wildcard::getVar()
 {
 	return var;
 }
@@ -55,16 +62,13 @@ Value *Wildcard::codegen(BaseFunc *base,
                          BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
-	result = type->storeInAlloca(base, val, block, true);
-	auto& p = BaseStage::make(&types::Any, type);
-	p.setBase(base);
-	p.result = result;
-	*var = p;
+	var->setType(type);
+	var->store(base, val, block);
 	return ConstantInt::get(IntegerType::getInt1Ty(context), 1);
 }
 
 BoundPattern::BoundPattern(Pattern *pattern) :
-    Pattern(&types::Any), var(new Var(true)), result(nullptr), pattern(pattern)
+    Pattern(&types::Any), var(new Cell()), pattern(pattern)
 {
 }
 
@@ -80,10 +84,17 @@ bool BoundPattern::isCatchAll()
 
 BoundPattern *BoundPattern::clone(types::RefType *ref)
 {
-	return new BoundPattern(pattern->clone(ref));
+	if (ref->seenClone(this))
+		return (BoundPattern *)ref->getClone(this);
+
+	auto *x = new BoundPattern(pattern->clone(ref));
+	ref->addClone(this, x);
+	delete x->var;
+	x->var = var->clone(ref);
+	return x;
 }
 
-Var *BoundPattern::getVar()
+Cell *BoundPattern::getVar()
 {
 	return var;
 }
@@ -93,11 +104,8 @@ Value *BoundPattern::codegen(BaseFunc *base,
                              Value *val,
                              BasicBlock*& block)
 {
-	result = type->storeInAlloca(base, val, block, true);
-	auto& p = BaseStage::make(&types::Any, type);
-	p.setBase(base);
-	p.result = result;
-	*var = p;
+	var->setType(type);
+	var->store(base, val, block);
 	return pattern->codegen(base, type, val, block);
 }
 

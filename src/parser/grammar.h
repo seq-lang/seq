@@ -18,7 +18,7 @@ struct seps_must : pegtl::plus<sep> {};
 struct colon : TAO_PEGTL_STRING(":") {};
 struct pipe_op : TAO_PEGTL_STRING("|>") {};
 
-struct str_let : TAO_PEGTL_STRING("let") {};
+struct str_print : TAO_PEGTL_STRING("print") {};
 struct str_var : TAO_PEGTL_STRING("var") {};
 struct str_fun : TAO_PEGTL_STRING("fun") {};
 struct str_gen : TAO_PEGTL_STRING("gen") {};
@@ -28,7 +28,6 @@ struct str_elif : TAO_PEGTL_STRING("elif") {};
 struct str_else : TAO_PEGTL_STRING("else") {};
 struct str_while : TAO_PEGTL_STRING("while") {};
 struct str_for : TAO_PEGTL_STRING("for") {};
-struct str_range : TAO_PEGTL_STRING("range") {};
 struct str_source : TAO_PEGTL_STRING("source") {};
 struct str_true : TAO_PEGTL_STRING("true") {};
 struct str_false : TAO_PEGTL_STRING("false") {};
@@ -43,7 +42,7 @@ struct str_class : TAO_PEGTL_STRING("class") {};
 struct str_match : TAO_PEGTL_STRING("match") {};
 struct str_case : TAO_PEGTL_STRING("case") {};
 
-struct str_keyword : pegtl::sor<str_let, str_var, str_fun, str_gen, str_if, str_then, str_elif, str_else, str_while, str_for, str_range, str_source, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case> {};
+struct str_keyword : pegtl::sor<str_print, str_var, str_fun, str_gen, str_if, str_then, str_elif, str_else, str_while, str_for, str_source, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword, pegtl::not_at<pegtl::identifier_other>>, pegtl::identifier> {};
 
@@ -147,10 +146,10 @@ struct record_expr_item : pegtl::sor<record_expr_item_named, record_expr_item_un
 struct record_expr : pegtl::seq<pegtl::one<'('>, seps, record_expr_item, seps, pegtl::one<','>, seps, pegtl::opt<pegtl::list<record_expr_item, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<')'>> {};
 
 struct paren_expr : pegtl::seq<pegtl::one<'('>, seps, expr, seps, pegtl::one<')'>> {};
-struct cond_expr : pegtl::seq<str_if, seps, expr, seps, str_then, seps, expr, seps, str_else, seps, expr> {};
+struct cond_expr : pegtl::seq<str_if, seps_must, expr, seps, str_then, seps, expr, seps, str_else, seps, expr> {};
 
 struct pattern;
-struct match_expr : pegtl::seq<str_match, seps, expr, seps, pegtl::one<'{'>, seps, pegtl::plus<str_case, seps, pattern, seps, pegtl::one<':'>, seps, expr, seps>, seps, pegtl::one<'}'>> {};
+struct match_expr : pegtl::seq<str_match, seps_must, expr, seps, pegtl::one<'{'>, seps, pegtl::plus<str_case, seps_must, pattern, seps, pegtl::one<':'>, seps, expr, seps>, seps, pegtl::one<'}'>> {};
 
 struct expr_tail;
 struct not_a_stmt : pegtl::not_at<seps, pegtl::one<'='>, seps_must> {};  // make sure we're not actually in an assignment statement (e.g. "a[i] = c" or "a.foo = 42")
@@ -223,11 +222,11 @@ struct pattern_tail : pegtl::sor<opt_pattern_tail> {};
 
 struct pattern0 : pegtl::sor<empty_opt_pattern, range_pattern, int_pattern, float_pattern, true_pattern, false_pattern, str_pattern, record_pattern, array_pattern, seq_pattern, bound_pattern, wildcard_pattern, paren_pattern> {};
 struct pattern1 : pegtl::seq<pattern0, pegtl::star<seps, pattern_tail>> {};
-struct guarded_pattern : pegtl::seq<pattern1, seps, str_if, seps, expr> {};
+struct guarded_pattern : pegtl::seq<pattern1, seps_must, str_if, seps_must, expr> {};
 struct pattern : pegtl::list<pegtl::sor<guarded_pattern, pattern1>, pegtl::seq<seps, pegtl::one<'|'>, seps>> {};
 
 /*
- * Stages and Pipelines
+ * Statements
  */
 struct statement;
 struct statement_seq : pegtl::star<statement, pegtl::opt<seps, pegtl::one<';'>>, seps> {};
@@ -235,62 +234,22 @@ struct block_single : pegtl::seq<pegtl::one<':'>, seps, statement, pegtl::opt<se
 struct block_multi : pegtl::seq<pegtl::one<'{'>, seps, statement_seq, seps, pegtl::one<'}'>> {};
 struct block : pegtl::sor<block_single, block_multi> {};
 
-struct pipeline;
+struct print_stmt : pegtl::seq<str_print, seps_must, expr> {};
 
-struct nop_stage : pegtl::one<'.'> {};
-struct len_stage : TAO_PEGTL_STRING("len") {};
-struct revcomp_stage : TAO_PEGTL_STRING("revcomp") {};
-struct call_stage : pegtl::seq<name> {};
-struct collect_stage : TAO_PEGTL_STRING("collect") {};
-struct copy_stage : TAO_PEGTL_STRING("copy") {};
-struct count_stage : TAO_PEGTL_STRING("count") {};
-struct foreach_stage : TAO_PEGTL_STRING("foreach") {};
-struct getitem_stage : pegtl::seq<pegtl::one<'.'>, seps, natural> {};
-struct print_stage : TAO_PEGTL_STRING("print") {};
-struct split_stage : pegtl::seq<TAO_PEGTL_STRING("split"), seps, expr, seps, expr> {};
-struct substr_stage : pegtl::seq<TAO_PEGTL_STRING("substr"), seps, expr, seps, expr> {};
-struct filter_stage : pegtl::seq<TAO_PEGTL_STRING("filter"), seps, expr> {};
-struct chunk_stage : pegtl::seq<TAO_PEGTL_STRING("chunk"), seps, pegtl::opt<expr>> {};
-
-struct record_stage_elem_pipeline : pegtl::seq<pipe_op, seps, pipeline> {};
-struct record_stage_elem_expr_pipeline : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
-struct record_stage_elem_expr : pegtl::seq<expr> {};
-struct record_stage : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<pegtl::sor<record_stage_elem_pipeline, record_stage_elem_expr_pipeline, record_stage_elem_expr>, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
-
-struct stage_raw : pegtl::sor<len_stage, revcomp_stage, collect_stage, copy_stage, count_stage, foreach_stage, getitem_stage, print_stage, split_stage, substr_stage, filter_stage, chunk_stage, record_stage, nop_stage, call_stage> {};
-struct stage_as : pegtl::seq<str_as, seps, name> {};
-struct stage : pegtl::seq<stage_raw, pegtl::opt<seps, stage_as>> {};
-struct branch : pegtl::seq<block> {};
-
-struct pipeline_component;
-struct pipeline_component_branch;
-struct pipeline_component_stage : pegtl::seq<stage, pegtl::opt<seps, pegtl::sor<pipeline_component_branch, pegtl::seq<pipe_op, seps, pipeline_component_stage>>>> {};
-struct pipeline_component_branch : pegtl::seq<branch, pegtl::opt<seps, pipe_op, pipeline_component>> {};
-struct pipeline_component : pegtl::sor<pipeline_component_stage, pipeline_component_branch> {};
-
-struct pipeline_stage : pegtl::seq<pipeline_component_stage> {};
-struct pipeline_branch : pegtl::seq<pipeline_component_branch> {};
-struct pipeline : pegtl::sor<pipeline_stage, pipeline_branch> {};
-
-struct while_args : pegtl::if_must<str_while, seps, expr> {};
+struct while_args : pegtl::if_must<str_while, seps_must, expr> {};
 struct while_body : pegtl::seq<block> {};
 struct while_stmt : pegtl::if_must<while_args, seps, while_body> {};
 
-struct for_args : pegtl::if_must<str_for, seps, name, seps, str_in, seps, expr> {};
+struct for_args : pegtl::if_must<str_for, seps_must, name, seps_must, str_in, seps_must, expr> {};
 struct for_body : pegtl::seq<block> {};
 struct for_stmt : pegtl::if_must<for_args, seps, for_body> {};
 
-struct range_args : pegtl::if_must<str_range, seps, pegtl::rep_min_max<1, 3, seps, expr>> {};
-struct range_as : pegtl::opt<str_as, seps, name> {};
-struct range_body : pegtl::seq<block> {};
-struct range_stmt : pegtl::if_must<range_args, seps, range_as, seps, range_body> {};
-
-struct source_args : pegtl::if_must<str_source, seps, pegtl::list<expr, seps>> {};
-struct source_as : pegtl::opt<str_as, seps, name> {};
+struct source_args : pegtl::if_must<str_source, seps_must, pegtl::list<expr, seps>> {};
+struct source_as : pegtl::opt<str_as, seps_must, name> {};
 struct source_body : pegtl::seq<block> {};
 struct source_stmt : pegtl::if_must<source_args, seps, source_as, seps, source_body> {};
 
-struct typedef_stmt : pegtl::if_must<str_typedef, seps, pegtl::not_at<builtin_type>, name, seps, pegtl::one<'='>, seps, type> {};
+struct typedef_stmt : pegtl::if_must<str_typedef, seps_must, pegtl::not_at<builtin_type>, name, seps, pegtl::one<'='>, seps, type> {};
 
 /*
  * Functions
@@ -299,64 +258,49 @@ struct func_args : pegtl::opt<pegtl::seq<pegtl::one<'('>, seps, pegtl::opt<pegtl
 struct func_decl : pegtl::seq<name, seps, func_args, seps, TAO_PEGTL_STRING("->"), seps, type> {};
 struct func_decl_out_void : pegtl::seq<name, seps, func_args> {};
 struct func_decl_in_out_void : pegtl::seq<name> {};
-struct func_stmt : pegtl::seq<str_fun, seps, pegtl::sor<func_decl, func_decl_out_void, func_decl_in_out_void>, seps, block> {};
-struct gen_stmt : pegtl::seq<str_gen, seps, pegtl::sor<func_decl, func_decl_out_void, func_decl_in_out_void>, seps, block> {};
+struct func_stmt : pegtl::seq<str_fun, seps_must, pegtl::sor<func_decl, func_decl_out_void, func_decl_in_out_void>, seps, block> {};
+struct gen_stmt : pegtl::seq<str_gen, seps_must, pegtl::sor<func_decl, func_decl_out_void, func_decl_in_out_void>, seps, block> {};
 
 /*
  * Classes
  */
 struct class_generics : pegtl::seq<pegtl::one<'['>, seps, pegtl::list<name, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
-struct class_open : pegtl::if_must<str_class, seps, name, pegtl::opt<seps, class_generics>> {};
+struct class_open : pegtl::if_must<str_class, seps_must, name, pegtl::opt<seps, class_generics>> {};
 struct class_type : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<record_type_elem_named, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<')'>> {};
 struct class_stmt : pegtl::if_must<class_open, seps, pegtl::opt<class_type>, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<pegtl::sor<func_stmt, gen_stmt>, seps>, seps>, pegtl::one<'}'>> {};
 
 /*
  * Modules
  */
-struct var_decl;
-struct cell_decl;
-struct pipeline_expr_stmt_toplevel : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
-struct pipeline_expr_stmt_nested : pegtl::seq<expr, seps, pipe_op, seps, pipeline> {};
+struct var_decl : pegtl::seq<str_var, seps_must, name, seps, pegtl::one<'='>, seps, expr> {};
 
 struct assign_stmt : pegtl::seq<name, seps, pegtl::one<'='>, seps, expr> {};
 struct assign_member_idx_stmt : pegtl::seq<expr, seps, pegtl::one<'.'>, seps, natural, seps, pegtl::one<'='>, seps, expr> {};
 struct assign_member_stmt : pegtl::seq<expr, seps, pegtl::one<'.'>, seps, name, seps, pegtl::one<'='>, seps, expr> {};
 struct assign_array_stmt : pegtl::seq<expr, seps, pegtl::one<'['>, seps, expr, seps, pegtl::one<']'>, seps, pegtl::one<'='>, seps, expr> {};
 
-struct if_open : pegtl::seq<str_if, seps, expr> {};
-struct elif_open : pegtl::if_must<str_elif, seps, expr> {};
+struct if_open : pegtl::seq<str_if, seps_must, expr> {};
+struct elif_open : pegtl::if_must<str_elif, seps_must, expr> {};
 struct else_open : pegtl::seq<str_else> {};
 struct if_close : pegtl::success {};
 struct elif_close : pegtl::success {};
 struct else_close : pegtl::success {};
 struct if_stmt : pegtl::seq<if_open, seps, block, if_close, pegtl::star<seps, elif_open, seps, block, elif_close>, pegtl::opt<seps, else_open, seps, block, else_close>> {};
 
-struct match_open : pegtl::seq<str_match, seps, expr> {};
-struct case_open : pegtl::seq<str_case, seps, pattern> {};
+struct match_open : pegtl::seq<str_match, seps_must, expr> {};
+struct case_open : pegtl::seq<str_case, seps_must, pattern> {};
 struct case_close : pegtl::success {};
 struct match_stmt : pegtl::seq<match_open, seps, pegtl::one<'{'>, seps, pegtl::list<pegtl::seq<case_open, seps, block, case_close>, seps>, seps, pegtl::one<'}'>> {};
 
-struct return_stmt : pegtl::seq<str_return, pegtl::opt<seps, expr>> {};
-struct yield_stmt : pegtl::seq<str_yield, pegtl::opt<seps, expr>> {};
+struct return_stmt : pegtl::seq<str_return, pegtl::opt<seps_must, expr>> {};
+struct yield_stmt : pegtl::seq<str_yield, pegtl::opt<seps_must, expr>> {};
 struct break_stmt : pegtl::seq<str_break> {};
 struct continue_stmt : pegtl::seq<str_continue> {};
 
 struct expr_stmt : pegtl::seq<expr> {};
 
-struct statement : pegtl::sor<class_stmt, typedef_stmt, range_stmt, source_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, cell_decl, func_stmt, gen_stmt, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, pipeline_expr_stmt_toplevel, expr_stmt, if_stmt, match_stmt> {};
+struct statement : pegtl::sor<class_stmt, typedef_stmt, source_stmt, print_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, func_stmt, gen_stmt, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, expr_stmt, if_stmt, match_stmt> {};
 struct module : pegtl::must<statement_seq> {};
-
-/*
- * Assignment
- */
-struct var_assign_pipeline : pegtl::seq<str_let, seps, name, seps, pegtl::one<'='>, seps, pipeline_expr_stmt_nested> {};
-struct var_assign_expr : pegtl::seq<str_let, seps, name, seps, pegtl::one<'='>, seps, expr> {};
-struct var_decl : pegtl::sor<var_assign_pipeline, var_assign_expr> {};
-struct cell_decl : pegtl::seq<str_var, seps, name, seps, pegtl::one<'='>, seps, expr> {};
-
-/*
- * Top-level grammar
- */
 struct grammar : pegtl::must<seps, module, seps, pegtl::eof> {};
 
 #endif /* SEQ_GRAMMAR_H */
