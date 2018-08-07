@@ -23,16 +23,6 @@ BasicBlock *BaseFunc::getPreamble() const
 	return preambleBlock;
 }
 
-types::Type *BaseFunc::getInType() const
-{
-	return types::VoidType::get();
-}
-
-types::Type *BaseFunc::getOutType() const
-{
-	return types::VoidType::get();
-}
-
 types::FuncType *BaseFunc::getFuncType() const
 {
 	return types::FuncType::get({}, types::VoidType::get());
@@ -51,13 +41,9 @@ BaseFunc *BaseFunc::clone(types::RefType *ref)
 	return this;
 }
 
-Func::Func(std::string name,
-           std::vector<std::string> argNames,
-           std::vector<types::Type *> inTypes,
-           types::Type *outType) :
-    BaseFunc(), name(std::move(name)), inTypes(std::move(inTypes)),
-    outType(outType), scope(new Block()), argNames(std::move(argNames)),
-    argVars(), gen(false), promise(nullptr), handle(nullptr),
+Func::Func() :
+    BaseFunc(), name(), inTypes(), outType(), scope(new Block()),
+    argNames(), argVars(), gen(false), promise(nullptr), handle(nullptr),
     cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
@@ -109,7 +95,11 @@ void Func::codegen(Module *module)
 		Value *promiseRaw = builder.CreateBitCast(promise, IntegerType::getInt8PtrTy(context));
 		Function *idFn = Intrinsic::getDeclaration(module, Intrinsic::coro_id);
 		Value *nullPtr = ConstantPointerNull::get(IntegerType::getInt8PtrTy(context));
-		id = builder.CreateCall(idFn, {ConstantInt::get(IntegerType::getInt32Ty(context), 0), promiseRaw, nullPtr, nullPtr});
+		id = builder.CreateCall(idFn,
+		                        {ConstantInt::get(IntegerType::getInt32Ty(context), 0),
+		                         promiseRaw,
+		                         nullPtr,
+		                         nullPtr});
 		id->setName("id");
 	}
 
@@ -190,7 +180,8 @@ void Func::codegen(Module *module)
 		if (outType->is(types::VoidType::get())) {
 			builder.CreateRetVoid();
 		} else {
-			if (!dynamic_cast<Return *>(scope->stmts.back())) {  // i.e. if there isn't already a return at the end
+			// i.e. if there isn't already a return at the end
+			if (!dynamic_cast<Return *>(scope->stmts.back())) {
 				builder.CreateRet(outType->defaultValue(exitBlock));
 			} else {
 				builder.CreateUnreachable();
@@ -218,7 +209,8 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 
 	if (!type->isChildOf(outType))
 		throw exc::SeqException(
-		  "cannot return '" + type->getName() + "' from function returning '" + outType->getName() + "'");
+		  "cannot return '" + type->getName() + "' from function returning '" +
+		  outType->getName() + "'");
 
 	if (val) {
 		IRBuilder<> builder(block);
@@ -243,7 +235,8 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 
 	if (type && !type->isChildOf(outType->getBaseType(0)))
 		throw exc::SeqException(
-		  "cannot yield '" + type->getName() + "' from generator yielding '" + outType->getBaseType(0)->getName() + "'");
+		  "cannot yield '" + type->getName() + "' from generator yielding '" +
+		  outType->getBaseType(0)->getName() + "'");
 
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
@@ -280,26 +273,9 @@ Var *Func::getArgVar(std::string name)
 	return iter->second;
 }
 
-types::Type *Func::getInType() const
-{
-	if (inTypes.size() > 1)
-		throw exc::SeqException("function has multiple input types");
-	return inTypes.empty() ? types::VoidType::get() : inTypes[0];
-}
-
-std::vector<types::Type *> Func::getInTypes() const
-{
-	return inTypes;
-}
-
-types::Type *Func::getOutType() const
-{
-	return outType;
-}
-
 types::FuncType *Func::getFuncType() const
 {
-	return types::FuncType::get(getInTypes(), getOutType());
+	return types::FuncType::get(inTypes, outType);
 }
 
 void Func::setIns(std::vector<types::Type *> inTypes)
@@ -337,8 +313,12 @@ Func *Func::clone(types::RefType *ref)
 	for (auto *type : inTypes)
 		inTypesCloned.push_back(type->clone(ref));
 
-	auto *x = new Func(ref->getName() + "." + name, argNames, inTypesCloned, outType->clone(ref));
+	auto *x = new Func();
 	ref->addClone(this, x);
+	x->name = ref->getName() + "." + name;
+	x->argNames = argNames;
+	x->inTypes = inTypesCloned;
+	x->outType = outType->clone(ref);
 	x->scope = scope->clone(ref);
 
 	std::map<std::string, Var *> argVarsCloned;
@@ -353,7 +333,8 @@ Func *Func::clone(types::RefType *ref)
 BaseFuncLite::BaseFuncLite(std::vector<types::Type *> inTypes,
                            types::Type *outType,
                            std::function<llvm::Function *(llvm::Module *)> codegenLambda) :
-    BaseFunc(), inTypes(std::move(inTypes)), outType(outType), codegenLambda(std::move(codegenLambda))
+    BaseFunc(), inTypes(std::move(inTypes)),
+    outType(outType), codegenLambda(std::move(codegenLambda))
 {
 }
 
@@ -379,26 +360,9 @@ void BaseFuncLite::codegenYield(Value *val, types::Type *type, BasicBlock*& bloc
 	throw exc::SeqException("cannot yield from lite base function");
 }
 
-types::Type *BaseFuncLite::getInType() const
-{
-	if (inTypes.size() > 1)
-		throw exc::SeqException("function has multiple input types");
-	return inTypes.empty() ? types::VoidType::get() : inTypes[0];
-}
-
-std::vector<types::Type *> BaseFuncLite::getInTypes() const
-{
-	return inTypes;
-}
-
-types::Type *BaseFuncLite::getOutType() const
-{
-	return outType;
-}
-
 types::FuncType *BaseFuncLite::getFuncType() const
 {
-	return types::FuncType::get(getInTypes(), getOutType());
+	return types::FuncType::get(inTypes, outType);
 }
 
 BaseFuncLite *BaseFuncLite::clone(types::RefType *ref)

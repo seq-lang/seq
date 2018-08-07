@@ -24,14 +24,10 @@ namespace seq {
 		virtual void codegenYield(llvm::Value *val,
 		                          types::Type *type,
 		                          llvm::BasicBlock*& block)=0;
-
 		llvm::LLVMContext& getContext();
 		llvm::BasicBlock *getPreamble() const;
-		virtual types::Type *getInType() const;
-		virtual types::Type *getOutType() const;
 		virtual types::FuncType *getFuncType() const;
 		virtual llvm::Function *getFunc();
-
 		virtual BaseFunc *clone(types::RefType *ref);
 	};
 
@@ -51,11 +47,7 @@ namespace seq {
 		llvm::BasicBlock *cleanup;
 		llvm::BasicBlock *suspend;
 	public:
-		Func(std::string name,
-		     std::vector<std::string> argNames,
-		     std::vector<types::Type *> inTypes,
-		     types::Type *outType);
-
+		Func();
 		Block *getBlock();
 		void setGen();
 		void codegen(llvm::Module *module) override;
@@ -66,9 +58,6 @@ namespace seq {
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block) override;
 		Var *getArgVar(std::string name);
-		types::Type *getInType() const override;
-		std::vector<types::Type *> getInTypes() const;
-		types::Type *getOutType() const override;
 		types::FuncType *getFuncType() const override;
 		void setIns(std::vector<types::Type *> inTypes);
 		void setOut(types::Type *outType);
@@ -86,7 +75,6 @@ namespace seq {
 		BaseFuncLite(std::vector<types::Type *> inTypes,
 		             types::Type *outType,
 		             std::function<llvm::Function *(llvm::Module *)> codegenLambda);
-
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,
 		                   types::Type *type,
@@ -94,12 +82,7 @@ namespace seq {
 		void codegenYield(llvm::Value *val,
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block) override;
-
-		types::Type *getInType() const override;
-		std::vector<types::Type *> getInTypes() const;
-		types::Type *getOutType() const override;
 		types::FuncType *getFuncType() const override;
-
 		BaseFuncLite *clone(types::RefType *ref) override;
 	};
 

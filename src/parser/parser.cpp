@@ -918,7 +918,7 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	{
 		state.scope();
 		state.scopeBarrier();
-		auto *func = new Func("", {}, {}, &types::Void);
+		auto *func = new Func();
 		state.enter(func->getBlock());
 		state.context(func);
 	}
@@ -948,7 +948,7 @@ struct control<gen_stmt> : pegtl::normal<gen_stmt>
 	{
 		state.scope();
 		state.scopeBarrier();
-		auto *func = new Func("", {}, {}, &types::Void);
+		auto *func = new Func();
 		state.enter(func->getBlock());
 		state.context(func);
 	}
