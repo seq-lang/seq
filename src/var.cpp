@@ -5,7 +5,7 @@ using namespace seq;
 using namespace llvm;
 
 Var::Var(types::Type *type) :
-    type(type), ptr(nullptr)
+    type(type), ptr(nullptr), global(false)
 {
 }
 
@@ -14,9 +14,23 @@ void Var::allocaIfNeeded(BaseFunc *base)
 	if (ptr)
 		return;
 
-	assert(type);
 	LLVMContext& context = base->getContext();
-	ptr = makeAlloca(getType()->getLLVMType(context), base->getPreamble());
+	if (global) {
+		Type *llvmType = getType()->getLLVMType(context);
+		ptr = new GlobalVariable(*base->getPreamble()->getModule(),
+		                         llvmType,
+		                         false,
+		                         GlobalValue::PrivateLinkage,
+		                         Constant::getNullValue(llvmType),
+		                         "var");
+	} else {
+		ptr = makeAlloca(getType()->getLLVMType(context), base->getPreamble());
+	}
+}
+
+void Var::setGlobal()
+{
+	global = true;
 }
 
 Value *Var::load(BaseFunc *base, BasicBlock *block)

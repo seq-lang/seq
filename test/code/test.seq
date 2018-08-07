@@ -2,7 +2,7 @@
 # class to test cloning capabilities; this can
 # safely be ignored when reading the code though
 class MyGiantClass[T] {
-fun main(args: Str[]) {
+def main(args: Str[]) {
 # ---------
 
 
@@ -30,7 +30,7 @@ gen enum(s: Seq[]) -> {Int, Seq} {
   }
 }
 
-fun f(s: Seq) -> Seq[] {
+def f(s: Seq) -> Seq[] {
   var v = Seq[s.len/32]
   var i = 0
   for t in split(s, 32, 32) {
@@ -43,7 +43,7 @@ fun f(s: Seq) -> Seq[] {
 var farray = (Seq -> Seq[])[1]
 farray[0] = f
 
-fun ident(s: Seq) -> Seq {
+def ident(s: Seq) -> Seq {
   return s
 }
 
@@ -83,11 +83,11 @@ source args[0] as input {
   print (v[1], ((v)[2]), (v[1], 4.2)).3.1
 }
 
-fun hello -> Str:
+def hello -> Str:
   return "hello world"
 
 
-fun hello2:
+def hello2:
   print "hello again"
 
 print hello()
@@ -103,12 +103,12 @@ print b.1
 b = (b.1, !!false)
 print b.2
 
-fun fib(n: Int) -> Int {
+def fib(n: Int) -> Int {
   type F = {f: (Int -> Int), x: Int}
 
-  fun apply(f: (Int -> Int), x: Int) -> Int: return f(x)
+  def apply(f: (Int -> Int), x: Int) -> Int: return f(x)
 
-  fun rec(pair: F) -> Int:
+  def rec(pair: F) -> Int:
     return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
 
   return if n <= 1 then n else rec((fib, n))
@@ -127,12 +127,12 @@ for i in range((if b.1 then 1 else 2), 5+5) {
 
 type Person = {name: Str, age: Int}
 
-fun whois(person: Person) {
+def whois(person: Person) {
   print person.name
   print person.age
 }
 
-fun birthday(person: Person) -> Person:
+def birthday(person: Person) -> Person:
   return (person.name, person.age + 1)
 
 var joe = (name: "Joe", age: 42)
@@ -140,24 +140,24 @@ whois(joe)
 joe = birthday(joe)
 whois(joe)
 
-var ints = Int[100]
+global ints = Int[100]
 for i in range(0, ints.len):
   ints[i] = i+1
-var s = 0
+global s = 0
 for _ in range(0, ints.len): s = s + ints[_]
 print s
 
 class Pair[T](a: T, b: T) {
-  fun sum(self: Pair[T], c: T) -> T {
+  def sum(self: Pair[T], c: T) -> T {
     return self.a + self.b + c
   }
 
-  fun dump(self: Pair[T]) {
+  def dump(self: Pair[T]) {
     print self.a
     print self.b
   }
 
-  fun swap(self: Pair[T]) {
+  def swap(self: Pair[T]) {
     var tmp = self.a
     self.a = self.b
     self.b = tmp
@@ -181,7 +181,7 @@ for a in q.iter(): print a
 q.swap()
 Pair[Float].dump(q)
 
-fun print_coord(t: {Int, Int, Str}) {
+def print_coord(t: {Int, Int, Str}) {
   # this syntax is based largely on Rust's
   match t {
     case (x, y, _) if x == y && x < 5: print "EQUAL"

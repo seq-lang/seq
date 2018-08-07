@@ -10,10 +10,11 @@ namespace seq {
 	private:
 		types::Type *type;
 		llvm::Value *ptr;
-
+		bool global;
 		void allocaIfNeeded(BaseFunc *base);
 	public:
 		explicit Var(types::Type *type=nullptr);
+		void setGlobal();
 		llvm::Value *load(BaseFunc *base, llvm::BasicBlock *block);
 		void store(BaseFunc *base, llvm::Value *val, llvm::BasicBlock *block);
 		void setType(types::Type *type);

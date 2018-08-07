@@ -1337,6 +1337,33 @@ struct control<var_decl> : pegtl::normal<var_decl>
 };
 
 template<>
+struct control<global_decl> : pegtl::normal<global_decl>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("se");
+		auto *p = new VarStmt(vec[1].value.expr);
+		p->setBase(state.base());
+		state.stmt(p);
+		state.sym(vec[0].value.name, p->getVar());
+		p->getVar()->setGlobal();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<assign_stmt> : pegtl::normal<assign_stmt>
 {
 	template<typename Input>
