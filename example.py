@@ -10,6 +10,7 @@ def f(x): # comment
     yield x |> collect(33)
 
 x = 5 # var, ok
+y = s'22'
 
 for i in range(5):
     if i >= 1:

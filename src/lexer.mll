@@ -1,4 +1,5 @@
 (* 786 *)
+(* Heavily inspired and borrowed from https://github.com/m2ym/ocaml-pythonlib/ *)
 
 {
   module B = Buffer
@@ -29,6 +30,12 @@
     let n = ref 0 in 
     String.iter ~f:(fun c -> if c = '\n' then incr n) s;
     !n
+
+  let seq_string pfx u =
+    match pfx with
+    | "r'" | "R'" -> P.REGEX u
+    | "s'" | "S'" -> P.SEQ u
+    | _ -> P.STRING u
 }
 
 (* lexer regex expressions *)
@@ -49,6 +56,8 @@ let escape = '\\' _
 
 let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
+
+let stringprefix = ('s' | 'S')? ('r' | 'R')?
 
 let ident = alpha alphanum*
 
@@ -119,10 +128,15 @@ and read state = parse
       | "lambda" -> P.LAMBDA
       | "assert" -> P.ASSERT
       | "global" -> P.GLOBAL
+      | "import" -> P.IMPORT
+      | "from" -> P.FROM
       | _ -> P.ID(id)
   }
 
-  | '"' { read_string state (Buffer.create 17) lexbuf }
+  | stringprefix '\''     { single_string state (L.lexeme lexbuf) lexbuf }
+  | stringprefix '"'      { double_string state (L.lexeme lexbuf) lexbuf }
+  | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
+  | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
   | '`' (ident as r) ' ' { 
     let s = read_extern state (Buffer.create 17) lexbuf in
     P.EXTERN(r, s)
@@ -182,19 +196,23 @@ and offset state = parse
   | ' '  { state.offset <- state.offset + 1; offset state lexbuf }
   | '\t' { state.offset <- state.offset + 8; offset state lexbuf }
 
-(* parse quoted string *)
-and read_string state buf = parse
-  | '"'           { P.STRING (B.contents buf) }
-  | '\\' '/'      { B.add_char buf '/'; read_string state buf lexbuf }
-  | '\\' '\\'     { B.add_char buf '\\'; read_string state buf lexbuf }
-  | '\\' 'b'      { B.add_char buf '\b'; read_string state buf lexbuf }
-  | '\\' 'f'      { B.add_char buf '\012'; read_string state buf lexbuf }
-  | '\\' 'n'      { B.add_char buf '\n'; read_string state buf lexbuf }
-  | '\\' 'r'      { B.add_char buf '\r'; read_string state buf lexbuf }
-  | '\\' 't'      { B.add_char buf '\t'; read_string state buf lexbuf }
-  | [^ '"' '\\']+ { B.add_string buf @@ L.lexeme lexbuf; read_string state buf lexbuf }
-  | _             { SyntaxError ("Illegal string character: " ^ L.lexeme lexbuf) |> raise }
-  | eof           { SyntaxError "String is not terminated" |> raise }
+(* parse strings *)
+and single_string state prefix = parse
+  | (([^ '\\' '\r' '\n' '\''] | escape)* as s) '\'' { seq_string prefix s }
+and single_docstr state prefix = shortest
+  | (([^ '\\'] | escape)* as s) "'''" { 
+    let lines = count_lines s in  
+    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines };
+    seq_string prefix s
+  }
+and double_string state prefix = parse
+  | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) '"' { seq_string prefix s }
+and double_docstr state prefix = shortest
+  | (([^ '\\'] | escape)* as s) "\"\"\"" { 
+    let lines = count_lines s in
+    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines };
+    seq_string prefix s
+  }
 
 (* parse backquoted string (extern language spec) *)
 and read_extern state buf = parse
@@ -275,7 +293,9 @@ and read_extern state buf = parse
     | P.POW(s) -> "POW"
     | P.MOD(s) -> "MOD"
     | P.FDIV(s) -> "FDIV"
-    | _ -> SyntaxError "unknown token" |> raise
+    | P.REGEX(s) -> "REGEX"
+    | P.SEQ(s) -> "SEQ"
+    | _ -> SyntaxError "unknown token encountered during printing" |> raise
   
   let lexmain () =
     let lexbuf = L.from_channel stdin in
