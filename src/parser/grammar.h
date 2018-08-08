@@ -24,7 +24,6 @@ struct str_global : TAO_PEGTL_STRING("global") {};
 struct str_def : TAO_PEGTL_STRING("def") {};
 struct str_gen : TAO_PEGTL_STRING("gen") {};
 struct str_if : TAO_PEGTL_STRING("if") {};
-struct str_then : TAO_PEGTL_STRING("then") {};
 struct str_elif : TAO_PEGTL_STRING("elif") {};
 struct str_else : TAO_PEGTL_STRING("else") {};
 struct str_while : TAO_PEGTL_STRING("while") {};
@@ -43,7 +42,7 @@ struct str_class : TAO_PEGTL_STRING("class") {};
 struct str_match : TAO_PEGTL_STRING("match") {};
 struct str_case : TAO_PEGTL_STRING("case") {};
 
-struct str_keyword : pegtl::sor<str_print, str_var, str_global, str_def, str_gen, str_if, str_then, str_elif, str_else, str_while, str_for, str_source, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case> {};
+struct str_keyword : pegtl::sor<str_print, str_var, str_global, str_def, str_gen, str_if, str_elif, str_else, str_while, str_for, str_source, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword, pegtl::not_at<pegtl::identifier_other>>, pegtl::identifier> {};
 
@@ -147,7 +146,6 @@ struct record_expr_item : pegtl::sor<record_expr_item_named, record_expr_item_un
 struct record_expr : pegtl::seq<pegtl::one<'('>, seps, record_expr_item, seps, pegtl::one<','>, seps, pegtl::opt<pegtl::list<record_expr_item, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<')'>> {};
 
 struct paren_expr : pegtl::seq<pegtl::one<'('>, seps, expr, seps, pegtl::one<')'>> {};
-struct cond_expr : pegtl::seq<str_if, seps_must, expr, seps, str_then, seps, expr, seps, str_else, seps, expr> {};
 
 struct pattern;
 struct match_expr : pegtl::seq<str_match, seps_must, expr, seps, pegtl::one<'{'>, seps, pegtl::plus<str_case, seps_must, pattern, seps, pegtl::one<':'>, seps, expr, seps>, seps, pegtl::one<'}'>> {};
@@ -163,9 +161,10 @@ struct elem_idx_tail : pegtl::seq<pegtl::one<'.'>, seps, natural, not_a_stmt> {}
 struct elem_memb_tail : pegtl::seq<pegtl::one<'.'>, seps, name, not_a_stmt> {};
 struct elem_tail : pegtl::sor<elem_idx_tail, elem_memb_tail> {};
 struct make_opt_tail : pegtl::one<'?'> {};
-struct expr_tail : pegtl::sor<slice_tail, slice_tail_no_to, slice_tail_no_from, index_tail, call_tail, elem_tail, make_opt_tail> {};
+struct cond_tail : pegtl::seq<str_if, seps, expr, seps, str_else, seps, expr> {};
+struct expr_tail : pegtl::sor<slice_tail, slice_tail_no_to, slice_tail_no_from, index_tail, call_tail, elem_tail, make_opt_tail, cond_tail> {};
 
-struct atomic_expr_head : pegtl::sor<default_expr, array_expr, construct_expr, static_memb_expr, record_expr, paren_expr, cond_expr, match_expr, literal_expr> {};
+struct atomic_expr_head : pegtl::sor<default_expr, array_expr, construct_expr, static_memb_expr, record_expr, paren_expr, match_expr, literal_expr> {};
 struct atomic_expr : pegtl::seq<atomic_expr_head, pegtl::star<seps, expr_tail>> {};
 
 struct uop_bitnot : TAO_PEGTL_STRING("~") {};

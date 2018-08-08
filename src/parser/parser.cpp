@@ -2345,6 +2345,34 @@ struct control<make_opt_tail> : pegtl::normal<make_opt_tail>
 };
 
 template<>
+struct control<cond_tail> : pegtl::normal<cond_tail>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("ee");
+		assert(state.top().type == SeqEntity::EXPR);
+		Expr *ifTrue = state.top().value.expr;
+		Expr *cond = vec[0].value.expr;
+		Expr *ifFalse = vec[1].value.expr;
+		Expr *e = new CondExpr(cond, ifTrue, ifFalse);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
 struct control<paren_expr> : pegtl::normal<paren_expr>
 {
 	template<typename Input>
@@ -2358,30 +2386,6 @@ struct control<paren_expr> : pegtl::normal<paren_expr>
 	{
 		auto vec = state.get("e");
 		Expr *e = vec[0].value.expr;
-		state.add(e);
-	}
-
-	template<typename Input>
-	static void failure(Input&, ParseState& state)
-	{
-		state.pop();
-	}
-};
-
-template<>
-struct control<cond_expr> : pegtl::normal<cond_expr>
-{
-	template<typename Input>
-	static void start(Input&, ParseState& state)
-	{
-		state.push();
-	}
-
-	template<typename Input>
-	static void success(Input&, ParseState& state)
-	{
-		auto vec = state.get("eee");
-		Expr *e = new CondExpr(vec[0].value.expr, vec[1].value.expr, vec[2].value.expr);
 		state.add(e);
 	}
 

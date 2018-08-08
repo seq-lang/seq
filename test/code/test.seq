@@ -97,7 +97,7 @@ print -13
 var x = 4.2
 print x
 x = .42
-print if x < 1 then -x else +x
+print -x if x < 1 else +x
 var b = (true, !true)
 print b.1
 b = (b.1, !!false)
@@ -111,12 +111,12 @@ def fib(n: Int) -> Int {
   def rec(pair: F) -> Int:
     return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
 
-  return if n <= 1 then n else rec((fib, n))
+  return n if n <= 1 else rec((fib, n))
 }
 
 print fib(10)
 
-for i in range((if b.1 then 1 else 2), 5+5) {
+for i in range(1 if b.1 else 2, 5+5) {
   if i == 3:
     continue
   elif i >= 7:
