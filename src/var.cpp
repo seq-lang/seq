@@ -28,6 +28,11 @@ void Var::allocaIfNeeded(BaseFunc *base)
 	}
 }
 
+bool Var::isGlobal()
+{
+	return global;
+}
+
 void Var::setGlobal()
 {
 	global = true;

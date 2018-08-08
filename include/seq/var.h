@@ -14,6 +14,7 @@ namespace seq {
 		void allocaIfNeeded(BaseFunc *base);
 	public:
 		explicit Var(types::Type *type=nullptr);
+		bool isGlobal();
 		void setGlobal();
 		llvm::Value *load(BaseFunc *base, llvm::BasicBlock *block);
 		void store(BaseFunc *base, llvm::Value *val, llvm::BasicBlock *block);

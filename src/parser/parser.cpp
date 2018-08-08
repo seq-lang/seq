@@ -265,9 +265,13 @@ public:
 		return iter->second;
 	}
 
+	static bool disallowBrokenBarriers(const SeqEntity& ent)
+	{
+		return ent.type == SeqEntity::VAR && !ent.value.var->isGlobal();
+	}
+
 	SeqEntity lookup(const std::string& name)
 	{
-		static const std::set<int> disallowBrokenBarriers = {SeqEntity::EMPTY, SeqEntity::VAR};
 		bool barrierBroken = false;
 		SeqEntity found;
 
@@ -282,10 +286,10 @@ public:
 				barrierBroken = true;
 		}
 
-		if (!barrierBroken || disallowBrokenBarriers.find(found.type) == disallowBrokenBarriers.end())
-			return found;
+		if (found.type == SeqEntity::EMPTY || (barrierBroken && disallowBrokenBarriers(found)))
+			throw exc::SeqException("undefined reference to '" + std::string(name) + "'");
 
-		throw exc::SeqException("undefined reference to '" + std::string(name) + "'");
+		return found;
 	}
 
 	void addMethods(types::RefType *ref)
