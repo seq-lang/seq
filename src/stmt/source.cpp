@@ -250,7 +250,7 @@ void Source::codegen(BasicBlock*& block)
 	block = exitRepeat;
 }
 
-Source *Source::clone(types::RefType *ref)
+Source *Source::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Source *)ref->getClone(this);

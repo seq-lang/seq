@@ -64,6 +64,13 @@ Value *types::Type::storeInAlloca(BaseFunc *base,
 	return var;
 }
 
+Value *types::Type::storeInAlloca(BaseFunc *base,
+                                  Value *self,
+                                  BasicBlock *block)
+{
+	return storeInAlloca(base, self, block, false);
+}
+
 Value *types::Type::eq(BaseFunc *base,
                        Value *self,
                        Value *other,
@@ -486,7 +493,7 @@ seq_int_t types::Type::size(Module *module) const
 	return 0;
 }
 
-types::Type *types::Type::clone(RefType *ref)
+types::Type *types::Type::clone(Generic *ref)
 {
 	return this;
 }

@@ -21,7 +21,7 @@ Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return arr;
 }
 
-ArrayExpr *ArrayExpr::clone(types::RefType *ref)
+ArrayExpr *ArrayExpr::clone(Generic *ref)
 {
 	return new ArrayExpr(getType()->clone(ref)->getBaseType(0), count->clone(ref));
 }

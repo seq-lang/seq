@@ -23,7 +23,7 @@ void Block::codegen(BasicBlock*& block)
 		stmt->codegen(block);
 }
 
-Block *Block::clone(types::RefType *ref)
+Block *Block::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Block *)ref->getClone(this);
@@ -140,7 +140,7 @@ void Stmt::codegen(BasicBlock*& block)
 	throw exc::SeqException("cannot codegen abstract statement");
 }
 
-void Stmt::setCloneBase(Stmt *stmt, types::RefType *ref)
+void Stmt::setCloneBase(Stmt *stmt, Generic *ref)
 {
 	if (base) stmt->base = base->clone(ref);
 	if (parent) stmt->parent = parent->clone(ref);
@@ -148,7 +148,7 @@ void Stmt::setCloneBase(Stmt *stmt, types::RefType *ref)
 	stmt->name = name;
 }
 
-Stmt *Stmt::clone(types::RefType *ref)
+Stmt *Stmt::clone(Generic *ref)
 {
 	throw exc::SeqException("cannot clone '" + getName() + "' statement");
 }

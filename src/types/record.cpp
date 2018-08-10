@@ -212,7 +212,7 @@ types::RecordType *types::RecordType::get(std::initializer_list<Type *> types)
 	return new RecordType(types);
 }
 
-types::RecordType *types::RecordType::clone(types::RefType *ref)
+types::RecordType *types::RecordType::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (types::RecordType *)ref->getClone(this);

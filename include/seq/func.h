@@ -28,7 +28,7 @@ namespace seq {
 		llvm::BasicBlock *getPreamble() const;
 		virtual types::FuncType *getFuncType() const;
 		virtual llvm::Function *getFunc();
-		virtual BaseFunc *clone(types::RefType *ref);
+		virtual BaseFunc *clone(Generic *ref);
 	};
 
 	class Func : public BaseFunc {
@@ -63,7 +63,7 @@ namespace seq {
 		void setOut(types::Type *outType);
 		void setName(std::string name);
 		void setArgNames(std::vector<std::string> argNames);
-		Func *clone(types::RefType *ref) override;
+		Func *clone(Generic *ref) override;
 	};
 
 	class BaseFuncLite : public BaseFunc {
@@ -83,7 +83,7 @@ namespace seq {
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block) override;
 		types::FuncType *getFuncType() const override;
-		BaseFuncLite *clone(types::RefType *ref) override;
+		BaseFuncLite *clone(Generic *ref) override;
 	};
 
 }

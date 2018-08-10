@@ -36,7 +36,7 @@ Function *BaseFunc::getFunc()
 	return func;
 }
 
-BaseFunc *BaseFunc::clone(types::RefType *ref)
+BaseFunc *BaseFunc::clone(Generic *ref)
 {
 	return this;
 }
@@ -303,7 +303,7 @@ void Func::setArgNames(std::vector<std::string> argNames)
 		argVars.insert({s, new Var()});
 }
 
-Func *Func::clone(types::RefType *ref)
+Func *Func::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Func *)ref->getClone(this);
@@ -315,7 +315,7 @@ Func *Func::clone(types::RefType *ref)
 
 	auto *x = new Func();
 	ref->addClone(this, x);
-	x->name = ref->getName() + "." + name;
+	x->name = ref->genericName() + "." + name;
 	x->argNames = argNames;
 	x->inTypes = inTypesCloned;
 	x->outType = outType->clone(ref);
@@ -365,7 +365,7 @@ types::FuncType *BaseFuncLite::getFuncType() const
 	return types::FuncType::get(inTypes, outType);
 }
 
-BaseFuncLite *BaseFuncLite::clone(types::RefType *ref)
+BaseFuncLite *BaseFuncLite::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (BaseFuncLite *)ref->getClone(this);

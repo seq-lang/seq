@@ -22,7 +22,7 @@ types::Type *ArrayLookupExpr::getType() const
 	return arr->getType()->indexType();
 }
 
-ArrayLookupExpr *ArrayLookupExpr::clone(types::RefType *ref)
+ArrayLookupExpr *ArrayLookupExpr::clone(Generic *ref)
 {
 	return new ArrayLookupExpr(arr->clone(ref), idx->clone(ref));
 }
@@ -58,7 +58,7 @@ types::Type *ArraySliceExpr::getType() const
 	return arr->getType();
 }
 
-ArraySliceExpr *ArraySliceExpr::clone(types::RefType *ref)
+ArraySliceExpr *ArraySliceExpr::clone(Generic *ref)
 {
 	return new ArraySliceExpr(arr->clone(ref), from->clone(ref), to->clone(ref));
 }

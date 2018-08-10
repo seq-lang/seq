@@ -79,7 +79,7 @@ types::FuncType *types::FuncType::get(std::vector<Type *> inTypes, Type *outType
 	return new FuncType(std::move(inTypes), outType);
 }
 
-types::FuncType *types::FuncType::clone(types::RefType *ref)
+types::FuncType *types::FuncType::clone(Generic *ref)
 {
 	std::vector<Type *> inTypesCloned;
 	for (auto *type : inTypes)
@@ -198,7 +198,7 @@ types::GenType *types::GenType::get()
 	return get(types::BaseType::get());
 }
 
-types::GenType *types::GenType::clone(types::RefType *ref)
+types::GenType *types::GenType::clone(Generic *ref)
 {
 	return get(outType->clone(ref));
 }

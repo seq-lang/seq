@@ -72,7 +72,7 @@ namespace seq {
 			static ArrayType *get(Type *baseType);
 			static ArrayType *get();
 
-			ArrayType *clone(RefType *ref) override;
+			ArrayType *clone(Generic *ref) override;
 		};
 
 	}

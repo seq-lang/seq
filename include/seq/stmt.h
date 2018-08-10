@@ -20,6 +20,7 @@
 #include "record.h"
 #include "funct.h"
 #include "ref.h"
+#include "generic.h"
 #include "optional.h"
 
 #include "common.h"
@@ -39,7 +40,7 @@ namespace seq {
 		explicit Block(Stmt *parent=nullptr);
 		void add(Stmt *stmt);
 		void codegen(llvm::BasicBlock*& block);
-		Block *clone(types::RefType *ref);
+		Block *clone(Generic *ref);
 	};
 
 	class Stmt {
@@ -71,8 +72,8 @@ namespace seq {
 		void setContinues(llvm::BasicBlock *block);
 
 		virtual void codegen(llvm::BasicBlock*& block);
-		virtual Stmt *clone(types::RefType *ref);
-		virtual void setCloneBase(Stmt *stmt, types::RefType *ref);
+		virtual Stmt *clone(Generic *ref);
+		virtual void setCloneBase(Stmt *stmt, Generic *ref);
 	};
 
 }

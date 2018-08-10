@@ -107,7 +107,7 @@ types::OptionalType *types::OptionalType::get()
 	return get(types::BaseType::get());
 }
 
-types::OptionalType *types::OptionalType::clone(types::RefType *ref)
+types::OptionalType *types::OptionalType::clone(Generic *ref)
 {
 	return get(baseType->clone(ref));
 }

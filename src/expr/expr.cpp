@@ -24,7 +24,7 @@ void Expr::ensure(types::Type *type)
 		throw exc::SeqException("expected '" + type->getName() + "', got '" + getType()->getName() + "'");
 }
 
-Expr *Expr::clone(types::RefType *ref)
+Expr *Expr::clone(Generic *ref)
 {
 	return this;
 }
@@ -47,7 +47,7 @@ types::Type *UOpExpr::getType() const
 	return lhs->getType()->findUOp(op.symbol).outType;
 }
 
-UOpExpr *UOpExpr::clone(types::RefType *ref)
+UOpExpr *UOpExpr::clone(Generic *ref)
 {
 	return new UOpExpr(op, lhs->clone(ref));
 }
@@ -112,7 +112,7 @@ types::Type *BOpExpr::getType() const
 		return lhs->getType()->findBOp(op.symbol, rhs->getType()).outType;
 }
 
-BOpExpr *BOpExpr::clone(types::RefType *ref)
+BOpExpr *BOpExpr::clone(Generic *ref)
 {
 	return new BOpExpr(op, lhs->clone(ref), rhs->clone(ref));
 }
@@ -164,7 +164,7 @@ types::Type *CondExpr::getType() const
 	return ifTrue->getType();
 }
 
-CondExpr *CondExpr::clone(types::RefType *ref)
+CondExpr *CondExpr::clone(Generic *ref)
 {
 	return new CondExpr(cond->clone(ref), ifTrue->clone(ref), ifFalse->clone(ref));
 }
@@ -255,7 +255,7 @@ types::Type *MatchExpr::getType() const
 	return type;
 }
 
-MatchExpr *MatchExpr::clone(types::RefType *ref)
+MatchExpr *MatchExpr::clone(Generic *ref)
 {
 	auto *x = new MatchExpr();
 
@@ -296,7 +296,7 @@ types::Type *ConstructExpr::getType() const
 	return type->getConstructType(types);
 }
 
-ConstructExpr *ConstructExpr::clone(types::RefType *ref)
+ConstructExpr *ConstructExpr::clone(Generic *ref)
 {
 	std::vector<Expr *> argsCloned;
 	for (auto *arg : args)
@@ -319,7 +319,7 @@ types::Type *OptExpr::getType() const
 	return types::OptionalType::get(val->getType());
 }
 
-OptExpr *OptExpr::clone(types::RefType *ref)
+OptExpr *OptExpr::clone(Generic *ref)
 {
 	return new OptExpr(val->clone(ref));
 }
@@ -333,7 +333,7 @@ Value *DefaultExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return getType()->defaultValue(block);
 }
 
-DefaultExpr *DefaultExpr::clone(types::RefType *ref)
+DefaultExpr *DefaultExpr::clone(Generic *ref)
 {
 	return new DefaultExpr(getType()->clone(ref));
 }

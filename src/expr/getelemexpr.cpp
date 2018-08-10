@@ -26,7 +26,7 @@ types::Type *GetElemExpr::getType() const
 	return rec->getType()->membType(memb);
 }
 
-GetElemExpr *GetElemExpr::clone(types::RefType *ref)
+GetElemExpr *GetElemExpr::clone(Generic *ref)
 {
 	return new GetElemExpr(rec->clone(ref), memb);
 }
@@ -46,7 +46,7 @@ types::Type *GetStaticElemExpr::getType() const
 	return type->staticMembType(memb);
 }
 
-GetStaticElemExpr *GetStaticElemExpr::clone(types::RefType *ref)
+GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref)
 {
 	return new GetStaticElemExpr(type->clone(ref), memb);
 }

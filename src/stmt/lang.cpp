@@ -16,7 +16,7 @@ void Print::codegen(BasicBlock*& block)
 	type->print(getBase(), val, block);
 }
 
-Print *Print::clone(types::RefType *ref)
+Print *Print::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Print *)ref->getClone(this);
@@ -37,7 +37,7 @@ void ExprStmt::codegen(BasicBlock*& block)
 	expr->codegen(getBase(), block);
 }
 
-ExprStmt *ExprStmt::clone(types::RefType *ref)
+ExprStmt *ExprStmt::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (ExprStmt *)ref->getClone(this);
@@ -65,7 +65,7 @@ void VarStmt::codegen(BasicBlock*& block)
 	var->store(getBase(), val, block);
 }
 
-VarStmt *VarStmt::clone(types::RefType *ref)
+VarStmt *VarStmt::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (VarStmt *)ref->getClone(this);
@@ -89,7 +89,7 @@ void Assign::codegen(BasicBlock*& block)
 	var->store(getBase(), val, block);
 }
 
-Assign *Assign::clone(types::RefType *ref)
+Assign *Assign::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Assign *)ref->getClone(this);
@@ -122,7 +122,7 @@ void AssignIndex::codegen(BasicBlock*& block)
 	array->getType()->indexStore(getBase(), arr, idx, val, block);
 }
 
-AssignIndex *AssignIndex::clone(types::RefType *ref)
+AssignIndex *AssignIndex::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (AssignIndex *)ref->getClone(this);
@@ -151,7 +151,7 @@ void AssignMember::codegen(BasicBlock*& block)
 	expr->getType()->setMemb(x, memb, v, block);
 }
 
-AssignMember *AssignMember::clone(types::RefType *ref)
+AssignMember *AssignMember::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (AssignMember *)ref->getClone(this);
@@ -235,7 +235,7 @@ Block *If::addElse()
 	return branch;
 }
 
-If *If::clone(types::RefType *ref)
+If *If::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (If *)ref->getClone(this);
@@ -335,7 +335,7 @@ Block *Match::addCase(Pattern *pattern)
 	return branch;
 }
 
-Match *Match::clone(types::RefType *ref)
+Match *Match::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Match *)ref->getClone(this);
@@ -407,7 +407,7 @@ void While::codegen(BasicBlock*& block)
 	setContinues(loop0);
 }
 
-While *While::clone(types::RefType *ref)
+While *While::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (While *)ref->getClone(this);
@@ -488,7 +488,7 @@ void For::codegen(BasicBlock*& block)
 	setContinues(loopCont);
 }
 
-For *For::clone(types::RefType *ref)
+For *For::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (For *)ref->getClone(this);
@@ -514,7 +514,7 @@ void Return::codegen(BasicBlock*& block)
 	getBase()->codegenReturn(val, type, block);
 }
 
-Return *Return::clone(types::RefType *ref)
+Return *Return::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Return *)ref->getClone(this);
@@ -537,7 +537,7 @@ void Yield::codegen(BasicBlock*& block)
 	getBase()->codegenYield(val, type, block);
 }
 
-Yield *Yield::clone(types::RefType *ref)
+Yield *Yield::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Yield *)ref->getClone(this);
@@ -562,7 +562,7 @@ void Break::codegen(BasicBlock*& block)
 	block = BasicBlock::Create(context, "", block->getParent());
 }
 
-Break *Break::clone(types::RefType *ref)
+Break *Break::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Break *)ref->getClone(this);
@@ -587,7 +587,7 @@ void Continue::codegen(BasicBlock*& block)
 	block = BasicBlock::Create(context, "", block->getParent());
 }
 
-Continue *Continue::clone(types::RefType *ref)
+Continue *Continue::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Continue *)ref->getClone(this);

@@ -20,7 +20,7 @@ namespace seq {
 		void store(BaseFunc *base, llvm::Value *val, llvm::BasicBlock *block);
 		void setType(types::Type *type);
 		types::Type *getType();
-		Var *clone(types::RefType *ref);
+		Var *clone(Generic *ref);
 	};
 }
 

@@ -13,7 +13,7 @@ namespace seq {
 		ArrayLookupExpr(Expr *arr, Expr *idx);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
-		ArrayLookupExpr *clone(types::RefType *ref) override;
+		ArrayLookupExpr *clone(Generic *ref) override;
 	};
 
 	class ArraySliceExpr : public Expr {
@@ -25,7 +25,7 @@ namespace seq {
 		ArraySliceExpr(Expr *arr, Expr *from, Expr *to);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
-		ArraySliceExpr *clone(types::RefType *ref) override;
+		ArraySliceExpr *clone(Generic *ref) override;
 	};
 
 }

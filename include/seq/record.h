@@ -56,7 +56,7 @@ namespace seq {
 			static RecordType *get(std::vector<Type *> types, std::vector<std::string> names={});
 			static RecordType *get(std::initializer_list<Type *> types);
 
-			RecordType *clone(RefType *ref) override;
+			RecordType *clone(Generic *ref) override;
 		};
 
 	}

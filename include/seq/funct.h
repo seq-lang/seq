@@ -28,7 +28,7 @@ namespace seq {
 			seq_int_t size(llvm::Module *module) const override;
 			static FuncType *get(std::vector<Type *> inTypes, Type *outType);
 
-			FuncType *clone(RefType *ref) override;
+			FuncType *clone(Generic *ref) override;
 		};
 
 		// Generator types really represent generator handles in LLVM
@@ -54,7 +54,7 @@ namespace seq {
 			static GenType *get(Type *outType);
 			static GenType *get();
 
-			GenType *clone(RefType *ref) override;
+			GenType *clone(Generic *ref) override;
 		};
 
 	}

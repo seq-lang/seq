@@ -320,7 +320,7 @@ types::ArrayType *types::ArrayType::get()
 	return new ArrayType(types::BaseType::get());
 }
 
-types::ArrayType *types::ArrayType::clone(types::RefType *ref)
+types::ArrayType *types::ArrayType::clone(Generic *ref)
 {
 	return get(indexType()->clone(ref));
 }

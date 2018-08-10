@@ -17,7 +17,7 @@ types::Type *VarExpr::getType() const
 	return var->getType();
 }
 
-VarExpr *VarExpr::clone(types::RefType *ref)
+VarExpr *VarExpr::clone(Generic *ref)
 {
 	return new VarExpr(var->clone(ref));
 }
@@ -37,7 +37,7 @@ types::Type *FuncExpr::getType() const
 	return func->getFuncType();
 }
 
-FuncExpr *FuncExpr::clone(types::RefType *ref)
+FuncExpr *FuncExpr::clone(Generic *ref)
 {
 	return new FuncExpr(func->clone(ref));
 }

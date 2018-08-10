@@ -64,7 +64,7 @@ types::Type *Var::getType()
 	return type;
 }
 
-Var *Var::clone(types::RefType *ref)
+Var *Var::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Var *)ref->getClone(this);

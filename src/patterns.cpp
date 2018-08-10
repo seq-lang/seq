@@ -20,7 +20,7 @@ bool Pattern::isCatchAll()
 	return false;
 }
 
-Pattern *Pattern::clone(types::RefType *ref)
+Pattern *Pattern::clone(Generic *ref)
 {
 	return this;
 }
@@ -39,7 +39,7 @@ bool Wildcard::isCatchAll()
 	return true;
 }
 
-Wildcard *Wildcard::clone(types::RefType *ref)
+Wildcard *Wildcard::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (Wildcard *)ref->getClone(this);
@@ -82,7 +82,7 @@ bool BoundPattern::isCatchAll()
 	return pattern->isCatchAll();
 }
 
-BoundPattern *BoundPattern::clone(types::RefType *ref)
+BoundPattern *BoundPattern::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (BoundPattern *)ref->getClone(this);
@@ -225,7 +225,7 @@ bool RecordPattern::isCatchAll()
 	return true;
 }
 
-RecordPattern *RecordPattern::clone(types::RefType *ref)
+RecordPattern *RecordPattern::clone(Generic *ref)
 {
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
@@ -329,7 +329,7 @@ Value *ArrayPattern::codegen(BaseFunc *base,
 	return resultFinal;
 }
 
-ArrayPattern *ArrayPattern::clone(types::RefType *ref)
+ArrayPattern *ArrayPattern::clone(Generic *ref)
 {
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
@@ -504,7 +504,7 @@ Value *OptPattern::codegen(BaseFunc *base,
 	return resultFinal;
 }
 
-OptPattern *OptPattern::clone(types::RefType *ref)
+OptPattern *OptPattern::clone(Generic *ref)
 {
 	return new OptPattern(pattern->clone(ref));
 }
@@ -569,7 +569,7 @@ bool OrPattern::isCatchAll()
 	return false;
 }
 
-OrPattern *OrPattern::clone(types::RefType *ref)
+OrPattern *OrPattern::clone(Generic *ref)
 {
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
@@ -619,7 +619,7 @@ Value *GuardedPattern::codegen(BaseFunc *base,
 	return resultFinal;
 }
 
-GuardedPattern *GuardedPattern::clone(types::RefType *ref)
+GuardedPattern *GuardedPattern::clone(Generic *ref)
 {
 	return new GuardedPattern(pattern->clone(ref), guard->clone(ref));
 }

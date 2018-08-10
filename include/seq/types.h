@@ -14,15 +14,14 @@
 namespace seq {
 
 	class BaseFunc;
-	class Mem;
 	class Func;
+	class Generic;
 
 	struct OpSpec;
 
 	namespace types {
 
 		class Type;
-		class RefType;
 
 		struct VTable {
 			void *copy = nullptr;
@@ -60,7 +59,11 @@ namespace seq {
 			virtual llvm::Value *storeInAlloca(BaseFunc *base,
 			                                   llvm::Value *self,
 			                                   llvm::BasicBlock *block,
-			                                   bool storeDefault=false);
+			                                   bool storeDefault);
+
+			virtual llvm::Value *storeInAlloca(BaseFunc *base,
+			                                   llvm::Value *self,
+			                                   llvm::BasicBlock *block);
 
 			virtual llvm::Value *eq(BaseFunc *base,
 			                        llvm::Value *self,
@@ -179,7 +182,7 @@ namespace seq {
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
 
-			virtual Type *clone(RefType *ref);
+			virtual Type *clone(Generic *ref);
 		};
 
 	}

@@ -31,7 +31,7 @@ namespace seq {
 			OptionalType& of(Type& baseType) const;
 			static OptionalType *get(Type *baseType);
 			static OptionalType *get();
-			OptionalType *clone(RefType *ref) override;
+			OptionalType *clone(Generic *ref) override;
 		};
 
 	}

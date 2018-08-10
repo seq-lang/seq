@@ -26,7 +26,7 @@ types::Type *CallExpr::getType() const
 	return func->getType()->getCallType(types);
 }
 
-CallExpr *CallExpr::clone(types::RefType *ref)
+CallExpr *CallExpr::clone(Generic *ref)
 {
 	std::vector<Expr *> argsCloned;
 	for (auto *arg : args)

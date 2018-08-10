@@ -20,7 +20,7 @@ namespace seq {
 			llvm::Value *storeInAlloca(BaseFunc *base,
 			                           llvm::Value *self,
 			                           llvm::BasicBlock *block,
-			                           bool storeDefault=false) override;
+			                           bool storeDefault) override;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			static VoidType *get();

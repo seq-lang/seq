@@ -14,7 +14,7 @@ namespace seq {
 		GetElemExpr(Expr *rec, seq_int_t idx);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
-		GetElemExpr *clone(types::RefType *ref) override;
+		GetElemExpr *clone(Generic *ref) override;
 	};
 
 	class GetStaticElemExpr : public Expr {
@@ -25,7 +25,7 @@ namespace seq {
 		GetStaticElemExpr(types::Type *type, std::string memb);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
-		GetStaticElemExpr *clone(types::RefType *ref) override;
+		GetStaticElemExpr *clone(Generic *ref) override;
 	};
 
 }

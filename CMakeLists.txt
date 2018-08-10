@@ -89,6 +89,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/expr.h
                        include/seq/func.h
                        include/seq/funct.h
+                       include/seq/generic.h
                        include/seq/getelemexpr.h
                        include/seq/io.h
                        include/seq/lang.h
@@ -131,6 +132,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/array.cpp
                        src/types/base.cpp
                        src/types/funct.cpp
+                       src/types/generic.cpp
                        src/types/num.cpp
                        src/types/optional.cpp
                        src/types/record.cpp
