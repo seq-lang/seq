@@ -44,3 +44,6 @@ Thumbs.db
 # IDE generated files #
 #######################
 .idea
+
+# Doxygen
+dox
