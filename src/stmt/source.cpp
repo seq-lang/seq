@@ -160,7 +160,7 @@ types::Type *Source::determineOutType() const
 }
 
 Source::Source(std::vector<Expr *> sources) :
-    Stmt("source"), sources(std::move(sources)), scope(new Block(this)), var(new Var())
+    Stmt("source"), sources(std::move(sources)), scope(new Block(this)), var(new Var(determineOutType()))
 {
 }
 
@@ -188,7 +188,6 @@ void Source::codegen(BasicBlock*& block)
 	BasicBlock *preambleBlock = getBase()->getPreamble();
 	Function *func = entry->getParent();
 
-	var->setType(determineOutType());
 	Value *sourcesVar = makeAlloca(IntegerType::getInt8PtrTy(context), preambleBlock, sources.size());
 	IRBuilder<> builder(entry);
 

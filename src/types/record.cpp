@@ -217,11 +217,15 @@ types::RecordType *types::RecordType::clone(Generic *ref)
 	if (ref->seenClone(this))
 		return (types::RecordType *)ref->getClone(this);
 
+	auto *x = types::RecordType::get({}, {});
+	ref->addClone(this, x);
+
 	std::vector<Type *> typesCloned;
 	for (auto *type : types)
 		typesCloned.push_back(type->clone(ref));
 
-	auto *x = types::RecordType::get(typesCloned, names);
-	ref->addClone(this, x);
+	x->types = typesCloned;
+	x->names = names;
+	x->name = getNameFromTypes(typesCloned);
 	return x;
 }

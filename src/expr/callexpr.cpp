@@ -15,6 +15,7 @@ Value *CallExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	std::vector<Value *> x;
 	for (auto *e : args)
 		x.push_back(e->codegen(base, block));
+	getType();  // validates call
 	return func->getType()->call(base, f, x, block);
 }
 

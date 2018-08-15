@@ -158,6 +158,8 @@ namespace seq {
 
 			virtual void addMethod(std::string name, BaseFunc *func);
 
+			virtual BaseFunc *getMethod(const std::string& name);
+
 			virtual llvm::Value *staticMemb(const std::string& name, llvm::BasicBlock *block);
 
 			virtual Type *staticMembType(const std::string& name);

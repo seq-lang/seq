@@ -28,6 +28,17 @@ namespace seq {
 		GetStaticElemExpr *clone(Generic *ref) override;
 	};
 
+	class MethodExpr : public Expr {
+	private:
+		Expr *expr;
+		BaseFunc *method;
+	public:
+		MethodExpr(Expr *expr, BaseFunc *method);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::MethodType *getType() const override;
+		MethodExpr *clone(Generic *ref) override;
+	};
+
 }
 
 #endif /* SEQ_GETELEMEXPR_H */

@@ -10,10 +10,16 @@ namespace seq {
 	namespace types {
 		class GenericType : public Type {
 		private:
+			bool aboutToBeRealized;
+			std::string genericName;
 			Type *type;
 		public:
 			GenericType();
+			void markAboutToBeRealized();
+			void unmarkAboutToBeRealized();
+			void setName(std::string name);
 			void realize(Type *type);
+			bool realized() const;
 			void ensure() const;
 			Type *getType() const;
 
@@ -142,32 +148,49 @@ namespace seq {
 			static GenericType *get();
 
 			GenericType *clone(Generic *ref) override;
+			GenericType *cloneAndRealize(Generic *ref, types::Type *type);
 		};
 	}
 
 	class Generic {
 	private:
+		bool performCaching;
 		Generic *root;
+
 		std::vector<types::GenericType *> generics;
-		std::map<void *, void *> cloneCache;
 		std::vector<std::pair<std::vector<types::Type *>, Generic *>> realizationCache;
+		std::map<void *, void *> cloneCache;
 	public:
-		explicit Generic(Generic *root);
+		explicit Generic(bool performCaching);
 
 		virtual std::string genericName()=0;
 		virtual Generic *clone(Generic *ref)=0;
 
+		std::vector<types::Type *> getRealizedTypes() const;
 		bool is(Generic *other) const;
-		Generic *findRealizedType() const;
+		Generic *findCachedRealizedType(std::vector<types::Type *> types) const;
 		void setCloneBase(Generic *x, Generic *ref);
 		void addGenerics(unsigned count);
-		void setGeneric(unsigned idx, types::Type *type);
 		types::GenericType *getGeneric(unsigned idx);
 		bool seenClone(void *p);
 		void *getClone(void *p);
 		void addClone(void *p, void *clone);
 		virtual Generic *realize(std::vector<types::Type *> types);
 	};
+
+	template<typename T = types::Type>
+	static bool typeMatch(const std::vector<T*>& v1, const std::vector<T*>& v2)
+	{
+		if (v1.size() != v2.size())
+			return false;
+
+		for (unsigned i = 0; i < v1.size(); i++) {
+			if (!v1[i]->is(v2[i]) && !v2[i]->is(v1[i]))
+				return false;
+		}
+
+		return true;
+	}
 }
 
 #endif /* SEQ_GENERIC_H */

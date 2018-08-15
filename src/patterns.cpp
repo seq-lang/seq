@@ -32,6 +32,7 @@ Wildcard::Wildcard() :
 
 void Wildcard::validate(types::Type *type)
 {
+	var->setType(type);
 }
 
 bool Wildcard::isCatchAll()
@@ -62,7 +63,6 @@ Value *Wildcard::codegen(BaseFunc *base,
                          BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
-	var->setType(type);
 	var->store(base, val, block);
 	return ConstantInt::get(IntegerType::getInt1Ty(context), 1);
 }
@@ -74,6 +74,7 @@ BoundPattern::BoundPattern(Pattern *pattern) :
 
 void BoundPattern::validate(types::Type *type)
 {
+	var->setType(type);
 	pattern->validate(type);
 }
 
@@ -104,7 +105,6 @@ Value *BoundPattern::codegen(BaseFunc *base,
                              Value *val,
                              BasicBlock*& block)
 {
-	var->setType(type);
 	var->store(base, val, block);
 	return pattern->codegen(base, type, val, block);
 }
@@ -146,7 +146,6 @@ Value *IntPattern::codegen(BaseFunc *base,
                            Value *val,
                            BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
 	Value *pat = ConstantInt::get(types::Int.getLLVMType(context), (uint64_t)this->val, true);
@@ -158,7 +157,6 @@ Value *BoolPattern::codegen(BaseFunc *base,
                             Value *val,
                             BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
 	Value *pat = ConstantInt::get(types::Bool.getLLVMType(context), (uint64_t)this->val);
@@ -170,7 +168,6 @@ Value *StrPattern::codegen(BaseFunc *base,
                            Value *val,
                            BasicBlock*& block)
 {
-	validate(type);
 	Value *pat = StrExpr(this->val).codegen(base, block);
 	return types::Str.eq(base, val, pat, block);
 }
@@ -201,7 +198,6 @@ Value *RecordPattern::codegen(BaseFunc *base,
                               Value *val,
                               BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 	Value *result = ConstantInt::get(IntegerType::getInt1Ty(context), 1);
 
@@ -253,7 +249,6 @@ Value *ArrayPattern::codegen(BaseFunc *base,
                              Value *val,
                              BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 
 	bool hasStar = false;
@@ -347,7 +342,6 @@ Value *SeqPattern::codegen(BaseFunc *base,
                            Value *val,
                            BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 
 	std::vector<char> patterns;
@@ -469,7 +463,6 @@ Value *OptPattern::codegen(BaseFunc *base,
                            Value *val,
                            BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 
 	auto *optType = dynamic_cast<types::OptionalType *>(type);
@@ -519,7 +512,6 @@ Value *RangePattern::codegen(BaseFunc *base,
                              Value *val,
                              BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 
 	Value *a = ConstantInt::get(seqIntLLVM(context), (uint64_t)this->a, true);
@@ -547,7 +539,6 @@ Value *OrPattern::codegen(BaseFunc *base,
                           Value *val,
                           BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 	Value *result = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
 
@@ -592,7 +583,6 @@ Value *GuardedPattern::codegen(BaseFunc *base,
                                Value *val,
                                BasicBlock*& block)
 {
-	validate(type);
 	LLVMContext& context = block->getContext();
 
 	Value *patternResult = pattern->codegen(base, type, val, block);

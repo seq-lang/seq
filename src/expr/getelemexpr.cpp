@@ -50,3 +50,25 @@ GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref)
 {
 	return new GetStaticElemExpr(type->clone(ref), memb);
 }
+
+MethodExpr::MethodExpr(Expr *expr, BaseFunc *method) :
+    Expr(), expr(expr), method(method)
+{
+}
+
+Value *MethodExpr::codegen(BaseFunc *base, llvm::BasicBlock*& block)
+{
+	Value *self = expr->codegen(base, block);
+	Value *func = FuncExpr(method).codegen(base, block);
+	return getType()->make(self, func, block);
+}
+
+types::MethodType *MethodExpr::getType() const
+{
+	return types::MethodType::get(expr->getType(), method->getFuncType());
+}
+
+MethodExpr *MethodExpr::clone(Generic *ref)
+{
+	return new MethodExpr(expr->clone(ref), method->clone(ref));
+}

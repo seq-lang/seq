@@ -1,8 +1,29 @@
+class Pair[T](a: T, b: T) {
+  def sum[S](self: Pair[T], c: S) -> S {
+    return self.a + self.b + c
+  }
+
+  def dump(self: Pair[T]) {
+    print self.a
+    print self.b
+  }
+
+  def swap(self: Pair[T]) {
+    var tmp = self.a
+    self.a = self.b
+    self.b = tmp
+  }
+
+  gen iter(self: Pair[T]) -> T {
+    yield self.a
+    yield self.b
+  }
+}
+
 # everything below is really in a giant generic
-# class to test cloning capabilities; this can
+# function to test cloning capabilities; this can
 # safely be ignored when reading the code though
-class MyGiantClass[T] {
-def main(args: Str[]) {
+def main[T](args: Str[]) {
 # ---------
 
 
@@ -147,36 +168,14 @@ global s = 0
 for _ in range(0, ints.len): s = s + ints[_]
 print s
 
-class Pair[T](a: T, b: T) {
-  def sum(self: Pair[T], c: T) -> T {
-    return self.a + self.b + c
-  }
-
-  def dump(self: Pair[T]) {
-    print self.a
-    print self.b
-  }
-
-  def swap(self: Pair[T]) {
-    var tmp = self.a
-    self.a = self.b
-    self.b = tmp
-  }
-
-  gen iter(self: Pair[T]) -> T {
-    yield self.a
-    yield self.b
-  }
-}
-
 var p = Pair[Int](42, 19)
-print p.sum(100)  # 42 + 19 + 100 = 161
+print p.sum[Float](100.1)  # 42 + 19 + 100 = 161
 p.dump()  # 42,19
 p.swap()
 for a in p.iter(): print a  # 19,42
 
 var q = Pair[Float](4.2, 1.9)
-print q.sum(10.0)
+print q.sum[Float](10.0)
 for a in q.iter(): print a
 q.swap()
 Pair[Float].dump(q)
@@ -219,8 +218,7 @@ print cc
 
 # ---------
 }
-}
 
 # run the above twice, and test cloning:
-MyGiantClass[Float].main(args)
-MyGiantClass[Int].main(args)
+main[Float](args)
+main[Int](args)

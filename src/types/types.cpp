@@ -400,6 +400,16 @@ void types::Type::addMethod(std::string name, BaseFunc *func)
 	getVTable().methods.insert({name, func});
 }
 
+BaseFunc *types::Type::getMethod(const std::string& name)
+{
+	auto iter = getVTable().methods.find(name);
+
+	if (iter == getVTable().methods.end())
+		throw exc::SeqException("type '" + getName() + "' has no method '" + name + "'");
+
+	return iter->second;
+}
+
 Value *types::Type::defaultValue(BasicBlock *block)
 {
 	throw exc::SeqException("type '" + getName() + "' has no default value");

@@ -42,7 +42,7 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 }
 
 Func::Func() :
-    BaseFunc(), name(), inTypes(), outType(), scope(new Block()),
+    BaseFunc(), Generic(false), name(), inTypes(), outType(), scope(new Block()),
     argNames(), argVars(), gen(false), promise(nullptr), handle(nullptr),
     cleanup(nullptr), suspend(nullptr)
 {
@@ -59,6 +59,19 @@ void Func::setGen()
 {
 	gen = true;
 	outType = types::GenType::get(outType);
+}
+
+std::string Func::genericName()
+{
+	return name;
+}
+
+Func *Func::realize(std::vector<types::Type *> types)
+{
+	Generic *x = Generic::realize(types);
+	auto *func = dynamic_cast<Func *>(x);
+	assert(func);
+	return func;
 }
 
 void Func::codegen(Module *module)
@@ -108,7 +121,6 @@ void Func::codegen(Module *module)
 	for (unsigned i = 0; i < argNames.size(); i++) {
 		auto iter = argVars.find(argNames[i]);
 		assert(iter != argVars.end());
-		iter->second->setType(inTypes[i]);
 		iter->second->store(this, argsIter, preambleBlock);
 		++argsIter;
 	}
@@ -296,11 +308,11 @@ void Func::setName(std::string name)
 void Func::setArgNames(std::vector<std::string> argNames)
 {
 	this->argNames = std::move(argNames);
-	assert(this->inTypes.size() == this->argNames.size());
+	assert(inTypes.size() == this->argNames.size());
 
 	argVars.clear();
-	for (auto& s : this->argNames)
-		argVars.insert({s, new Var()});
+	for (unsigned i = 0; i < this->argNames.size(); i++)
+		argVars.insert({this->argNames[i], new Var(inTypes[i])});
 }
 
 Func *Func::clone(Generic *ref)
@@ -308,14 +320,15 @@ Func *Func::clone(Generic *ref)
 	if (ref->seenClone(this))
 		return (Func *)ref->getClone(this);
 
-	std::vector<types::Type *> inTypesCloned;
+	Func *x = new Func();
+	ref->addClone(this, x);
+	setCloneBase(x, ref);
 
+	std::vector<types::Type *> inTypesCloned;
 	for (auto *type : inTypes)
 		inTypesCloned.push_back(type->clone(ref));
 
-	auto *x = new Func();
-	ref->addClone(this, x);
-	x->name = ref->genericName() + "." + name;
+	x->name = name;
 	x->argNames = argNames;
 	x->inTypes = inTypesCloned;
 	x->outType = outType->clone(ref);

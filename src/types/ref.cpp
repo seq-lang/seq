@@ -5,10 +5,8 @@ using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name) :
-    Type(name, BaseType::get(), SeqData::REF), Generic(this),
-    contents(types::RecordType::get({})),
-    typeCached(StructType::create(getLLVMContext(), name)),
-    llvmTypeInProgress(false)
+    Type(std::move(name), BaseType::get(), SeqData::REF), Generic(true),
+    root(this), cache(), contents(types::RecordType::get({}))
 {
 }
 
@@ -26,7 +24,7 @@ types::RefType *types::RefType::realize(std::vector<types::Type *> types)
 {
 	Generic *x = Generic::realize(types);
 	auto *ref = dynamic_cast<types::RefType *>(x);
-	assert(x);
+	assert(ref);
 	return ref;
 }
 
@@ -141,7 +139,7 @@ bool types::RefType::isAtomic() const
 bool types::RefType::is(types::Type *type) const
 {
 	auto *ref = dynamic_cast<types::RefType *>(type);
-	return ref && Generic::is(ref);
+	return ref && name == ref->name && Generic::is(ref);
 }
 
 types::Type *types::RefType::getBaseType(seq_int_t idx) const
@@ -169,25 +167,18 @@ types::Type *types::RefType::getConstructType(std::vector<Type *> inTypes)
 
 Type *types::RefType::getLLVMType(llvm::LLVMContext& context) const
 {
-	Generic *cached = findRealizedType();
+	std::vector<types::Type *> types = getRealizedTypes();
 
-	if (cached) {
-		auto *ref = dynamic_cast<types::RefType *>(cached);
-		assert(ref);
-		return ref->getLLVMType(context);
+	for (auto& v : root->cache) {
+		if (typeMatch<>(v.first, types)) {
+			return PointerType::get(v.second, 0);
+		}
 	}
 
-	assert(typeCached);
-	if (llvmTypeInProgress)
-		return PointerType::get(typeCached, 0);
-
-	if (typeCached->isOpaque()) {
-		llvmTypeInProgress = true;
-		contents->addLLVMTypesToStruct(typeCached);
-		llvmTypeInProgress = false;
-	}
-
-	return PointerType::get(typeCached, 0);
+	StructType *structType = StructType::create(context, name);
+	root->cache.emplace_back(types, structType);
+	contents->addLLVMTypesToStruct(structType);
+	return PointerType::get(structType, 0);
 }
 
 seq_int_t types::RefType::size(Module *module) const
@@ -227,16 +218,16 @@ types::RefType *types::RefType::clone(Generic *ref)
 
 	types::RefType *x = types::RefType::get(name);
 	ref->addClone(this, x);
-
 	setCloneBase(x, ref);
+
 	x->setContents(contents->clone(ref));
 
 	std::map<std::string, BaseFunc *> methodsCloned;
-
 	for (auto& method : getVTable().methods)
 		methodsCloned.insert({method.first, method.second->clone(ref)});
 
 	x->getVTable().methods = methodsCloned;
+	x->root = root;
 	return x;
 }
 

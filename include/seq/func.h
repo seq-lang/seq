@@ -31,7 +31,7 @@ namespace seq {
 		virtual BaseFunc *clone(Generic *ref);
 	};
 
-	class Func : public BaseFunc {
+	class Func : public BaseFunc, public Generic {
 	private:
 		std::string name;
 		std::vector<types::Type *> inTypes;
@@ -50,6 +50,10 @@ namespace seq {
 		Func();
 		Block *getBlock();
 		void setGen();
+
+		std::string genericName() override;
+		Func *realize(std::vector<types::Type *> types) override;
+
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,
 		                   types::Type *type,
@@ -63,6 +67,7 @@ namespace seq {
 		void setOut(types::Type *outType);
 		void setName(std::string name);
 		void setArgNames(std::vector<std::string> argNames);
+
 		Func *clone(Generic *ref) override;
 	};
 

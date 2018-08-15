@@ -16,9 +16,9 @@ namespace seq {
 
 		class RefType : public Type, public Generic {
 		private:
+			RefType *root;
+			mutable std::vector<std::pair<std::vector<types::Type *>, llvm::StructType *>> cache;
 			RecordType *contents;
-			llvm::StructType *typeCached;
-			mutable bool llvmTypeInProgress;
 			explicit RefType(std::string name);
 		public:
 			RefType(RefType const&)=delete;
@@ -60,7 +60,7 @@ namespace seq {
 			                  std::vector<llvm::Value *> vals={});
 			static RefType *get(std::string name);
 
-			RefType *clone(Generic *ref) override;
+			types::RefType *clone(Generic *ref) override;
 		};
 
 		class MethodType : public RecordType {

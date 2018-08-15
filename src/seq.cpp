@@ -120,6 +120,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 		builder.SLPVectorize = true;
 	}
 
+	builder.MergeFunctions = true;
 	addCoroutinePassesToExtensionPoints(builder);
 	builder.populateModulePassManager(*pm);
 	builder.populateFunctionPassManager(*fpm);

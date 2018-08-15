@@ -563,26 +563,6 @@ struct action<literal_string> {
 };
 
 template<>
-struct action<int_expr> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("i");
-		Expr *expr = new IntExpr(vec[0].value.ival);
-		state.add(expr);
-	}
-};
-
-template<>
-struct action<float_expr> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("f");
-		Expr *expr = new FloatExpr(vec[0].value.fval);
-		state.add(expr);
-	}
-};
-
-template<>
 struct action<true_expr> {
 	static void apply0(ParseState& state)
 	{
@@ -596,41 +576,6 @@ struct action<false_expr> {
 	static void apply0(ParseState& state)
 	{
 		Expr *expr = new BoolExpr(false);
-		state.add(expr);
-	}
-};
-
-template<>
-struct action<str_expr> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("s");
-		std::string s(vec[0].value.name);
-		Expr *expr = new StrExpr(s);
-		state.add(expr);
-	}
-};
-
-template<>
-struct action<var_expr> {
-	static void apply0(ParseState& state)
-	{
-		auto vec = state.get("s");
-		SeqEntity ent = state.lookup(vec[0].value.name);
-
-		Expr *expr = nullptr;
-		switch (ent.type) {
-			case SeqEntity::VAR:
-				expr = new VarExpr(ent.value.var);
-				break;
-			case SeqEntity::FUNC:
-				expr = new FuncExpr(ent.value.func);
-				break;
-			default:
-				throw exc::SeqException("name '" + std::string(vec[0].value.name) + "' does not refer to a variable");
-
-		}
-
 		state.add(expr);
 	}
 };
@@ -770,6 +715,8 @@ struct control<func_decl> : pegtl::normal<func_decl>
 	template<typename Input>
 	static void start(Input&, ParseState& state)
 	{
+		state.scope();
+		state.scopeBarrier();
 		state.push();
 	}
 
@@ -824,6 +771,7 @@ struct control<func_decl> : pegtl::normal<func_decl>
 	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
+		state.unscope();
 		state.pop();
 	}
 };
@@ -834,6 +782,8 @@ struct control<func_decl_out_void> : pegtl::normal<func_decl_out_void>
 	template<typename Input>
 	static void start(Input&, ParseState& state)
 	{
+		state.scope();
+		state.scopeBarrier();
 		state.push();
 	}
 
@@ -885,6 +835,7 @@ struct control<func_decl_out_void> : pegtl::normal<func_decl_out_void>
 	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
+		state.unscope();
 		state.pop();
 	}
 };
@@ -895,6 +846,8 @@ struct control<func_decl_in_out_void> : pegtl::normal<func_decl_in_out_void>
 	template<typename Input>
 	static void start(Input&, ParseState& state)
 	{
+		state.scope();
+		state.scopeBarrier();
 		state.push();
 	}
 
@@ -910,6 +863,38 @@ struct control<func_decl_in_out_void> : pegtl::normal<func_decl_in_out_void>
 	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
+		state.unscope();
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_generics> : pegtl::normal<func_generics>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s", true);
+		assert(!vec.empty());
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+
+		func->addGenerics((unsigned)vec.size());
+		for (unsigned i = 0; i < vec.size(); i++) {
+			state.sym(vec[i].value.name, (types::Type *)func->getGeneric(i));
+			func->getGeneric(i)->setName(vec[i].value.name);
+		}
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
 		state.pop();
 	}
 };
@@ -920,8 +905,6 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	template<typename Input>
 	static void start(Input&, ParseState& state)
 	{
-		state.scope();
-		state.scopeBarrier();
 		auto *func = new Func();
 		state.enter(func->getBlock());
 		state.context(func);
@@ -930,7 +913,7 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		state.unscope();
+		state.unscope();  // for the scope introduced by `func_decl*`
 		state.exit();
 		state.uncontext();
 	}
@@ -938,7 +921,6 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
-		state.unscope();
 		state.exit();
 		state.uncontext();
 	}
@@ -950,8 +932,6 @@ struct control<gen_stmt> : pegtl::normal<gen_stmt>
 	template<typename Input>
 	static void start(Input&, ParseState& state)
 	{
-		state.scope();
-		state.scopeBarrier();
 		auto *func = new Func();
 		state.enter(func->getBlock());
 		state.context(func);
@@ -960,7 +940,7 @@ struct control<gen_stmt> : pegtl::normal<gen_stmt>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		state.unscope();
+		state.unscope();  // for the scope introduced by `func_decl*`
 		assert(state.context().type == SeqEntity::FUNC);
 		auto *func = state.context().value.func;
 		func->setGen();
@@ -971,7 +951,6 @@ struct control<gen_stmt> : pegtl::normal<gen_stmt>
 	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
-		state.unscope();
 		state.exit();
 		state.uncontext();
 	}
@@ -1001,6 +980,7 @@ struct control<class_open> : pegtl::normal<class_open>
 		ref->addGenerics((unsigned)vec.size() - 1);
 		for (unsigned i = 1; i < vec.size(); i++) {
 			state.sym(vec[i].value.name, (types::Type *)ref->getGeneric(i - 1));
+			ref->getGeneric(i - 1)->setName(vec[i].value.name);
 		}
 
 		state.context(type);
@@ -1889,6 +1869,14 @@ struct control<int_expr> : pegtl::normal<int_expr>
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("i");
+		Expr *expr = new IntExpr(vec[0].value.ival);
+		state.add(expr);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -1902,6 +1890,14 @@ struct control<float_expr> : pegtl::normal<float_expr>
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("f");
+		Expr *expr = new FloatExpr(vec[0].value.fval);
+		state.add(expr);
 	}
 
 	template<typename Input>
@@ -1921,6 +1917,15 @@ struct control<str_expr> : pegtl::normal<str_expr>
 	}
 
 	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		std::string s(vec[0].value.name);
+		Expr *expr = new StrExpr(s);
+		state.add(expr);
+	}
+
+	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
 		state.pop();
@@ -1934,6 +1939,68 @@ struct control<var_expr> : pegtl::normal<var_expr>
 	static void start(Input&, ParseState& state)
 	{
 		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		SeqEntity ent = state.lookup(vec[0].value.name);
+
+		Expr *expr = nullptr;
+		switch (ent.type) {
+			case SeqEntity::VAR:
+				expr = new VarExpr(ent.value.var);
+				break;
+			case SeqEntity::FUNC:
+				expr = new FuncExpr(ent.value.func);
+				break;
+			default:
+				throw exc::SeqException("name '" + std::string(vec[0].value.name) + "' does not refer to a variable");
+		}
+
+		state.add(expr);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<realized_func_expr> : pegtl::normal<realized_func_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		assert(vec.size() >= 2);
+		assert(vec[0].type == SeqEntity::NAME);
+
+		SeqEntity ent = state.lookup(vec[0].value.name);
+
+		if (ent.type != SeqEntity::FUNC)
+			throw exc::SeqException("can only type-instantiate generic functions");
+
+		Func *func = ent.value.func;
+
+		std::vector<types::Type *> types;
+		for (unsigned i = 1; i < vec.size(); i++) {
+			assert(vec[i].type == SeqEntity::TYPE);
+			types.push_back(vec[i].value.type);
+		}
+
+		Func *realized = func->realize(types);
+		FuncExpr *e = new FuncExpr(realized);
+		state.add(e);
 	}
 
 	template<typename Input>
@@ -2017,6 +2084,50 @@ struct control<static_memb_expr> : pegtl::normal<static_memb_expr>
 		types::Type *type = vec[0].value.type;
 		std::string memb = vec[1].value.name;
 		Expr *e = new GetStaticElemExpr(type, memb);
+		state.add(e);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<static_memb_realized_expr> : pegtl::normal<static_memb_realized_expr>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		assert(vec.size() >= 3);
+		assert(vec[0].type == SeqEntity::TYPE);
+		assert(vec[1].type == SeqEntity::NAME);
+
+		types::Type *type = vec[0].value.type;
+		std::string name = vec[1].value.name;
+
+		BaseFunc *method = type->getMethod(name);
+		auto *func = dynamic_cast<Func *>(method);
+
+		if (!func)
+			throw exc::SeqException("method '" + name + "' of type '" + type->getName() + "' is not generic");
+
+		std::vector<types::Type *> types;
+		for (unsigned i = 2; i < vec.size(); i++) {
+			assert(vec[i].type == SeqEntity::TYPE);
+			types.push_back(vec[i].value.type);
+		}
+
+		Func *realized = func->realize(types);
+		Expr *e = new FuncExpr(realized);
 		state.add(e);
 	}
 
@@ -2321,6 +2432,51 @@ struct control<elem_memb_tail> : pegtl::normal<elem_memb_tail>
 		Expr *rec = state.top().value.expr;
 		std::string memb = vec[0].value.name;
 		Expr *e = new GetElemExpr(rec, memb);
+		state.top() = e;
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<elem_memb_realized_tail> : pegtl::normal<elem_memb_realized_tail>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		assert(vec.size() >= 2);
+		assert(vec[0].type == SeqEntity::NAME);
+		assert(state.top().type == SeqEntity::EXPR);
+
+		Expr *rec = state.top().value.expr;
+		std::string name = vec[0].value.name;
+
+		types::Type *type = rec->getType();
+		BaseFunc *method = type->getMethod(name);
+		auto *func = dynamic_cast<Func *>(method);
+
+		if (!func)
+			throw exc::SeqException("method '" + name + "' of type '" + type->getName() + "' is not generic");
+
+		std::vector<types::Type *> types;
+		for (unsigned i = 1; i < vec.size(); i++) {
+			assert(vec[i].type == SeqEntity::TYPE);
+			types.push_back(vec[i].value.type);
+		}
+
+		Func *realized = func->realize(types);
+		Expr *e = new MethodExpr(rec, realized);
 		state.top() = e;
 	}
 

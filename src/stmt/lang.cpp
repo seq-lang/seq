@@ -49,7 +49,7 @@ ExprStmt *ExprStmt::clone(Generic *ref)
 }
 
 VarStmt::VarStmt(Expr *init) :
-    Stmt("var"), init(init), var(new Var())
+    Stmt("var"), init(init), var(new Var(init->getType()))
 {
 }
 
@@ -60,7 +60,6 @@ Var *VarStmt::getVar()
 
 void VarStmt::codegen(BasicBlock*& block)
 {
-	var->setType(init->getType());
 	Value *val = init->codegen(getBase(), block);
 	var->store(getBase(), val, block);
 }
@@ -329,9 +328,11 @@ void Match::setValue(Expr *value)
 
 Block *Match::addCase(Pattern *pattern)
 {
+	assert(value);
 	auto *branch = new Block(this);
 	patterns.push_back(pattern);
 	branches.push_back(branch);
+	pattern->validate(value->getType());
 	return branch;
 }
 
@@ -421,7 +422,7 @@ While *While::clone(Generic *ref)
 }
 
 For::For(Expr *gen) :
-    Stmt("for"), gen(gen), scope(new Block(this)), var(new Var())
+    Stmt("for"), gen(gen), scope(new Block(this)), var(new Var(gen->getType()->getBaseType(0)))
 {
 	loop = true;
 }
@@ -449,7 +450,6 @@ void For::codegen(BasicBlock*& block)
 	BasicBlock *entry = block;
 	Function *func = entry->getParent();
 
-	var->setType(type->getBaseType(0));
 	Value *gen = this->gen->codegen(getBase(), entry);
 	IRBuilder<> builder(entry);
 

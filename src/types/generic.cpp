@@ -4,23 +4,24 @@
 using namespace seq;
 using namespace llvm;
 
-template<typename T = types::Type>
-static bool typeMatch(const std::vector<T*>& v1, const std::vector<T*>& v2)
+types::GenericType::GenericType() :
+    Type("Generic", BaseType::get()), aboutToBeRealized(false), type(nullptr)
 {
-	if (v1.size() != v2.size())
-		return false;
-
-	for (unsigned i = 0; i < v1.size(); i++) {
-		if (!v1[i]->is(v2[i]) && !v2[i]->is(v1[i]))
-			return false;
-	}
-
-	return true;
 }
 
-types::GenericType::GenericType() :
-    Type("Generic", BaseType::get()), type(nullptr)
+void types::GenericType::markAboutToBeRealized()
 {
+	aboutToBeRealized = true;
+}
+
+void types::GenericType::unmarkAboutToBeRealized()
+{
+	aboutToBeRealized = false;
+}
+
+void types::GenericType::setName(std::string name)
+{
+	genericName = std::move(name);
 }
 
 void types::GenericType::realize(types::Type *type)
@@ -29,10 +30,15 @@ void types::GenericType::realize(types::Type *type)
 	this->type = type;
 }
 
+bool types::GenericType::realized() const
+{
+	return type != nullptr;
+}
+
 void types::GenericType::ensure() const
 {
-	if (!type)
-		throw exc::SeqException("generic type not yet realized");
+	if (!realized())
+		throw exc::SeqException("generic type '" + genericName + "' not yet realized");
 }
 
 types::Type *types::GenericType::getType() const
@@ -329,10 +335,21 @@ bool types::GenericType::isAtomic() const
 
 bool types::GenericType::is(types::Type *type) const
 {
-	if (!this->type)
+	if (!realized())
 		return this == type;
 
-	return this->type->is(type);
+	// reduce argument to realized type
+	types::GenericType *g1 = nullptr;
+	while ((g1 = dynamic_cast<types::GenericType *>(type)) && g1->realized())
+		type = g1->type;
+
+	// reduce ourselves to realized type
+	types::GenericType *g2 = nullptr;
+	types::Type *self = this->type;
+	while ((g2 = dynamic_cast<types::GenericType *>(self)) && g2->realized())
+		self = g2->type;
+
+	return self->is(type);
 }
 
 bool types::GenericType::isGeneric(types::Type *type) const
@@ -387,31 +404,53 @@ types::GenericType *types::GenericType::clone(Generic *ref)
 	if (ref->seenClone(this))
 		return (types::GenericType *)ref->getClone(this);
 
+	if (!aboutToBeRealized && !realized())
+		return this;
+
 	auto *x = types::GenericType::get();
 	ref->addClone(this, x);
+	x->setName(genericName);
 	if (type) x->realize(type->clone(ref));
 	return x;
 }
 
-Generic::Generic(Generic *root) :
-    root(root), generics(), cloneCache(), realizationCache()
+types::GenericType *types::GenericType::cloneAndRealize(Generic *ref, types::Type *type)
 {
+	if (ref->seenClone(this))
+		return (types::GenericType *)ref->getClone(this);
+
+	assert(!realized());
+
+	auto *x = types::GenericType::get();
+	ref->addClone(this, x);
+	x->realize(type);
+	return x;
+}
+
+Generic::Generic(bool performCaching) :
+    performCaching(performCaching), root(this), generics(), cloneCache()
+{
+}
+
+std::vector<types::Type *> Generic::getRealizedTypes() const
+{
+	std::vector<types::Type *> types;
+	for (auto *generic : generics)
+		types.push_back(generic->getType());
+	return types;
 }
 
 bool Generic::is(Generic *other) const
 {
-	return (root == other->root) && typeMatch<types::GenericType>(generics, other->generics);
+	return typeMatch<types::GenericType>(generics, other->generics);
 }
 
-Generic *Generic::findRealizedType() const
+Generic *Generic::findCachedRealizedType(std::vector<types::Type *> types) const
 {
-	std::vector<types::Type *> realizedTypes;
-	for (auto *t : generics)
-		realizedTypes.push_back(t->getType());
-
 	for (auto& v : root->realizationCache) {
-		if (typeMatch(v.first, realizedTypes) && v.second != this)
+		if (typeMatch<>(v.first, types)) {
 			return v.second;
+		}
 	}
 
 	return nullptr;
@@ -419,17 +458,19 @@ Generic *Generic::findRealizedType() const
 
 void Generic::setCloneBase(Generic *x, Generic *ref)
 {
-	x->root = root;
-
 	std::vector<types::GenericType *> genericsCloned;
 	for (auto *generic : generics)
 		genericsCloned.push_back(generic->clone(ref));
 
 	x->generics = genericsCloned;
+	x->root = root;
 }
 
 void Generic::addGenerics(unsigned count)
 {
+	generics.clear();
+	root->realizationCache.clear();
+
 	for (unsigned i = 0; i < count; i++)
 		generics.push_back(types::GenericType::get());
 
@@ -438,14 +479,6 @@ void Generic::addGenerics(unsigned count)
 		types.push_back(generic);
 
 	root->realizationCache.emplace_back(types, this);
-}
-
-void Generic::setGeneric(unsigned idx, types::Type *type)
-{
-	if (idx >= generics.size())
-		throw exc::SeqException("too many type specifiers for '" + genericName() + "'");
-
-	generics[idx]->realize(type);
 }
 
 types::GenericType *Generic::getGeneric(unsigned idx)
@@ -478,18 +511,25 @@ Generic *Generic::realize(std::vector<types::Type *> types)
 		throw exc::SeqException("expected " + std::to_string(generics.size()) +
 		                        " type parameters, but got " + std::to_string(types.size()));
 
-	// see if we've encountered this realization before:
-	for (auto& v : root->realizationCache) {
-		if (typeMatch<>(v.first, types))
-			return v.second;
+	if (performCaching) {
+		Generic *cached = findCachedRealizedType(types);
+
+		if (cached)
+			return cached;
 	}
 
+	for (auto *generic : generics)
+		generic->markAboutToBeRealized();
+
 	Generic *x = clone(this);
+	root->realizationCache.emplace_back(types, x);
 
 	for (unsigned i = 0; i < types.size(); i++)
-		x->setGeneric(i, types[i]);
+		x->generics[i]->realize(types[i]);
+
+	for (auto *generic : generics)
+		generic->unmarkAboutToBeRealized();
 
 	cloneCache.clear();
-	root->realizationCache.emplace_back(types, x);
 	return x;
 }

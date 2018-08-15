@@ -1,4 +1,4 @@
-#include "seq/common.h"
+#include "seq/seq.h"
 #include "seq/var.h"
 
 using namespace seq;
