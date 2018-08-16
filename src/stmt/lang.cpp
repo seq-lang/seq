@@ -49,7 +49,7 @@ ExprStmt *ExprStmt::clone(Generic *ref)
 }
 
 VarStmt::VarStmt(Expr *init) :
-    Stmt("var"), init(init), var(new Var(init->getType()))
+    Stmt("var"), init(init), var(new Var())
 {
 }
 
@@ -60,6 +60,7 @@ Var *VarStmt::getVar()
 
 void VarStmt::codegen(BasicBlock*& block)
 {
+	var->setType(init->getType());
 	Value *val = init->codegen(getBase(), block);
 	var->store(getBase(), val, block);
 }
@@ -422,7 +423,7 @@ While *While::clone(Generic *ref)
 }
 
 For::For(Expr *gen) :
-    Stmt("for"), gen(gen), scope(new Block(this)), var(new Var(gen->getType()->getBaseType(0)))
+    Stmt("for"), gen(gen), scope(new Block(this)), var(new Var())
 {
 	loop = true;
 }
@@ -441,6 +442,8 @@ void For::codegen(BasicBlock*& block)
 {
 	if (!gen->getType()->isGeneric(types::GenType::get()))
 		throw exc::SeqException("cannot iterate over non-generator");
+
+	var->setType(gen->getType()->getBaseType(0));
 
 	auto *type = dynamic_cast<types::GenType *>(gen->getType());
 	assert(type);

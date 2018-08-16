@@ -18,7 +18,7 @@ class Pair[T](a: T, b: T) {
     yield self.a
     yield self.b
   }
-}
+
 
 # everything below is really in a giant generic
 # function to test cloning capabilities; this can
@@ -218,7 +218,8 @@ print cc
 
 # ---------
 }
+}
 
 # run the above twice, and test cloning:
-main[Float](args)
-main[Int](args)
+Pair[Str].main[Float](args)
+Pair[Seq].main[Int](args)

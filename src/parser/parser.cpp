@@ -1047,6 +1047,7 @@ struct control<class_stmt> : pegtl::normal<class_stmt>
 		state.uncontext();
 		state.addMethods(ref);
 		state.unscope();
+		ref->setDone();
 	}
 
 	template<typename Input>
@@ -2462,21 +2463,13 @@ struct control<elem_memb_realized_tail> : pegtl::normal<elem_memb_realized_tail>
 		Expr *rec = state.top().value.expr;
 		std::string name = vec[0].value.name;
 
-		types::Type *type = rec->getType();
-		BaseFunc *method = type->getMethod(name);
-		auto *func = dynamic_cast<Func *>(method);
-
-		if (!func)
-			throw exc::SeqException("method '" + name + "' of type '" + type->getName() + "' is not generic");
-
 		std::vector<types::Type *> types;
 		for (unsigned i = 1; i < vec.size(); i++) {
 			assert(vec[i].type == SeqEntity::TYPE);
 			types.push_back(vec[i].value.type);
 		}
 
-		Func *realized = func->realize(types);
-		Expr *e = new MethodExpr(rec, realized);
+		Expr *e = new MethodExpr(rec, name, types);
 		state.top() = e;
 	}
 

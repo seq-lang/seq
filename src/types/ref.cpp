@@ -6,8 +6,20 @@ using namespace llvm;
 
 types::RefType::RefType(std::string name) :
     Type(std::move(name), BaseType::get(), SeqData::REF), Generic(true),
-    root(this), cache(), contents(types::RecordType::get({}))
+    done(false), root(this), cache(), pendingRealizations(),
+    contents(types::RecordType::get({}))
 {
+}
+
+void types::RefType::setDone()
+{
+	assert(this == root && !done);
+	done = true;
+
+	for (auto& pair : pendingRealizations)
+		pair.second->realize(realize(pair.first));
+
+	pendingRealizations.clear();
 }
 
 void types::RefType::setContents(types::RecordType *contents)
@@ -20,9 +32,22 @@ std::string types::RefType::genericName()
 	return getName();
 }
 
-types::RefType *types::RefType::realize(std::vector<types::Type *> types)
+types::Type *types::RefType::realize(std::vector<types::Type *> types)
 {
-	Generic *x = Generic::realize(types);
+	assert(this == root);
+
+	auto *cached = dynamic_cast<types::RefType *>(findCachedRealizedType(types));
+
+	if (cached)
+		return cached;
+
+	if (!done) {
+		types::GenericType *proxy = types::GenericType::get();
+		pendingRealizations.emplace_back(types, proxy);
+		return proxy;
+	}
+
+	Generic *x = realizeGeneric(types);
 	auto *ref = dynamic_cast<types::RefType *>(x);
 	assert(ref);
 	return ref;
@@ -228,6 +253,7 @@ types::RefType *types::RefType::clone(Generic *ref)
 
 	x->getVTable().methods = methodsCloned;
 	x->root = root;
+	x->done = true;
 	return x;
 }
 

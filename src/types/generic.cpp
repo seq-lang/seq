@@ -5,7 +5,8 @@ using namespace seq;
 using namespace llvm;
 
 types::GenericType::GenericType() :
-    Type("Generic", BaseType::get()), aboutToBeRealized(false), type(nullptr)
+    Type("Generic", BaseType::get()), aboutToBeRealized(false),
+    genericName(), type(nullptr)
 {
 }
 
@@ -414,19 +415,6 @@ types::GenericType *types::GenericType::clone(Generic *ref)
 	return x;
 }
 
-types::GenericType *types::GenericType::cloneAndRealize(Generic *ref, types::Type *type)
-{
-	if (ref->seenClone(this))
-		return (types::GenericType *)ref->getClone(this);
-
-	assert(!realized());
-
-	auto *x = types::GenericType::get();
-	ref->addClone(this, x);
-	x->realize(type);
-	return x;
-}
-
 Generic::Generic(bool performCaching) :
     performCaching(performCaching), root(this), generics(), cloneCache()
 {
@@ -505,7 +493,7 @@ void Generic::addClone(void *p, void *clone)
 	cloneCache.insert({p, clone});
 }
 
-Generic *Generic::realize(std::vector<types::Type *> types)
+Generic *Generic::realizeGeneric(std::vector<types::Type *> types)
 {
 	if (types.size() != generics.size())
 		throw exc::SeqException("expected " + std::to_string(generics.size()) +

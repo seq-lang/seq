@@ -68,7 +68,7 @@ std::string Func::genericName()
 
 Func *Func::realize(std::vector<types::Type *> types)
 {
-	Generic *x = Generic::realize(types);
+	Generic *x = Generic::realizeGeneric(types);
 	auto *func = dynamic_cast<Func *>(x);
 	assert(func);
 	return func;
@@ -320,7 +320,7 @@ Func *Func::clone(Generic *ref)
 	if (ref->seenClone(this))
 		return (Func *)ref->getClone(this);
 
-	Func *x = new Func();
+	auto *x = new Func();
 	ref->addClone(this, x);
 	setCloneBase(x, ref);
 

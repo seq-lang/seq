@@ -52,7 +52,7 @@ namespace seq {
 		void setGen();
 
 		std::string genericName() override;
-		Func *realize(std::vector<types::Type *> types) override;
+		Func *realize(std::vector<types::Type *> types);
 
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,

@@ -51,24 +51,47 @@ GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref)
 	return new GetStaticElemExpr(type->clone(ref), memb);
 }
 
-MethodExpr::MethodExpr(Expr *expr, BaseFunc *method) :
-    Expr(), expr(expr), method(method)
+MethodExpr::MethodExpr(Expr *expr, std::string name, std::vector<types::Type *> types) :
+    Expr(), expr(expr), name(std::move(name)), types(std::move(types))
 {
 }
 
 Value *MethodExpr::codegen(BaseFunc *base, llvm::BasicBlock*& block)
 {
+	types::Type *type = expr->getType();
+	auto *func = dynamic_cast<Func *>(type->getMethod(name));
+
+	if (!func)
+		throw exc::SeqException("method '" + name + "' of type '" + type->getName() + "' is not generic");
+
 	Value *self = expr->codegen(base, block);
-	Value *func = FuncExpr(method).codegen(base, block);
-	return getType()->make(self, func, block);
+
+	if (!types.empty())
+		func = func->realize(types);
+
+	Value *method = FuncExpr(func).codegen(base, block);
+	return getType()->make(self, method, block);
 }
 
 types::MethodType *MethodExpr::getType() const
 {
-	return types::MethodType::get(expr->getType(), method->getFuncType());
+	types::Type *type = expr->getType();
+	auto *func = dynamic_cast<Func *>(type->getMethod(name));
+
+	if (!func)
+		throw exc::SeqException("method '" + name + "' of type '" + type->getName() + "' is not generic");
+
+	if (!types.empty())
+		func = func->realize(types);
+
+	return types::MethodType::get(expr->getType(), func->getFuncType());
 }
 
 MethodExpr *MethodExpr::clone(Generic *ref)
 {
-	return new MethodExpr(expr->clone(ref), method->clone(ref));
+	std::vector<types::Type *> typesCloned;
+	for (auto *type : types)
+		typesCloned.push_back(type->clone(ref));
+
+	return new MethodExpr(expr->clone(ref), name, typesCloned);
 }

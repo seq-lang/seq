@@ -184,7 +184,6 @@ void MatchExpr::addCase(Pattern *pattern, Expr *expr)
 {
 	patterns.push_back(pattern);
 	exprs.push_back(expr);
-	pattern->validate(value->getType());
 }
 
 Value *MatchExpr::codegen(BaseFunc *base, BasicBlock *&block)
@@ -201,6 +200,7 @@ Value *MatchExpr::codegen(BaseFunc *base, BasicBlock *&block)
 
 	bool seenCatchAll = false;
 	for (auto *pattern : patterns) {
+		pattern->validate(value->getType());
 		if (pattern->isCatchAll())
 			seenCatchAll = true;
 	}

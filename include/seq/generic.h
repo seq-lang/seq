@@ -148,7 +148,6 @@ namespace seq {
 			static GenericType *get();
 
 			GenericType *clone(Generic *ref) override;
-			GenericType *cloneAndRealize(Generic *ref, types::Type *type);
 		};
 	}
 
@@ -175,7 +174,7 @@ namespace seq {
 		bool seenClone(void *p);
 		void *getClone(void *p);
 		void addClone(void *p, void *clone);
-		virtual Generic *realize(std::vector<types::Type *> types);
+		virtual Generic *realizeGeneric(std::vector<types::Type *> types);
 	};
 
 	template<typename T = types::Type>

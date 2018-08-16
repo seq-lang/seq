@@ -31,9 +31,10 @@ namespace seq {
 	class MethodExpr : public Expr {
 	private:
 		Expr *expr;
-		BaseFunc *method;
+		std::string name;
+		std::vector<types::Type *> types;
 	public:
-		MethodExpr(Expr *expr, BaseFunc *method);
+		MethodExpr(Expr *expr, std::string method, std::vector<types::Type *> realizedTypes);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::MethodType *getType() const override;
 		MethodExpr *clone(Generic *ref) override;
