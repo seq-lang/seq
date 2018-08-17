@@ -30,13 +30,13 @@ type expr =
   | Not of expr
   | Binary of expr * string * expr
   | Index of expr * expr list
-  | Dot of expr * expr
+  | Slice of expr option * expr option * expr option
+  | Dot of expr * string
   | Call of expr * vararg list
 
   | Comprehension of expr list * expr list * expr option
   | ComprehensionIf of expr
   | Ellipsis
-  | Slice of expr option * expr option * expr option
 and vararg = 
   | PlainArg of expr
   | TypedArg of expr * string option
@@ -46,6 +46,7 @@ and vararg =
 type statement =
   | Pass | Break | Continue
   | Statements of statement list
+  | Exprs of expr list
   | Assign of expr list * expr list
   | AssignEq of expr list * string * expr list
   | Print of expr list
@@ -56,7 +57,7 @@ type statement =
   | Type of expr * vararg list
   | While of expr * statement list
   | For of expr list * expr list * statement list
-  | If of (expr * statement list) list
+  | If of (expr option * statement list) list
   | Match of expr * (expr * expr option * statement list) list
   | Function of vararg * vararg list * statement list
   | DecoratedFunction of decorator list * statement
@@ -102,7 +103,7 @@ let rec prn_expr = function
   | Not(e) -> sprintf "Not[%s]" @@ prn_expr e
   | Binary(e, o, ee) -> sprintf "%s[%s, %s]" o (prn_expr e) (prn_expr ee)
   | Index(i, e) -> sprintf "%s.[%s]" (prn_expr i) (sci ", " e prn_expr)
-  | Dot(i, e) -> sprintf "%s.%s" (prn_expr i) (prn_expr e)
+  | Dot(i, e) -> sprintf "%s.%s" (prn_expr i) e
   | Call(i, cl) -> sprintf "Call[%s; %s]" (prn_expr i) (sci ", " cl prn_va)
   | Comprehension(fi, ei, li) -> 
     let cont = match li with None -> "" | Some x -> prn_expr x in
@@ -125,6 +126,7 @@ let rec prn_statement level st =
   let s = match st with
   | Pass -> "Pass" | Break -> "Break" | Continue -> "Continue"
   | Statements(sl) -> sci "; " sl (prn_statement level)
+  | Exprs(el) -> sci "," el prn_expr
   | Assign(sl, el) -> sprintf "Asgn[%s := %s]" (sci ", " sl prn_expr) (sci ", " el prn_expr)
   | AssignEq(sl, op, el) -> sprintf "Asgn[%s %s %s]" (sci ", " sl prn_expr) op (sci ", " el prn_expr)
   | Print(el) -> sprintf "Print[%s]" (sci ", " el (prn_expr))
@@ -141,7 +143,8 @@ let rec prn_statement level st =
       sci "\n" stl (prn_statement (level + 1))
   | If(el) -> sprintf "If[\n%s]" @@ 
       sci "\n" el (fun (e, sl) -> 
-        sprintf "%s%s -> [\n%s]" (pad (level+1)) (prn_expr e) @@
+        let cnd = match e with | Some _e -> prn_expr _e | None -> "_" in
+        sprintf "%s%s -> [\n%s]" (pad (level+1)) cnd @@
           sci "\n" sl (prn_statement (level+2)))
   | Match(e, ml) -> sprintf "Match[%s;\n%s]" (prn_expr e) @@ 
       sci "\n" ml (fun (e, v, sl) -> 

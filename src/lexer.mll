@@ -121,7 +121,6 @@ and read state = parse
       | "case" -> P.CASE
       | "as" -> P.AS
       | "pass" -> P.PASS
-      | "of" -> P.OF
       | "while" -> P.WHILE
       | "type" -> P.TYPE
       | "default" -> P.DEFAULT
@@ -150,6 +149,7 @@ and read state = parse
   | "/=" as op { P.DIVEQ op }
   | "%=" as op { P.MODEQ op }
 
+  | "->" { P.OF }
   | "+" as op { P.ADD (Char.to_string op) }
   | "-" as op { P.SUB (Char.to_string op) }
   | "**" as op { P.POW op }
@@ -222,100 +222,3 @@ and read_extern state buf = parse
   | eof      { SyntaxError "Extern is not terminated" |> raise }
 
 (* end of lexer specification *)
-
-{
-  let to_string = function
-    | P.AND(s) -> "AND"
-    | P.AS -> "AS"
-    | P.BREAK -> "BREAK"
-    | P.COLON -> "COLON"
-    | P.COMMA -> "COMMA"
-    | P.CONTINUE -> "CONTINUE"
-    | P.DEDENT -> "DEDENT"
-    | P.DEF -> "DEF"
-    | P.DOT -> "DOT"
-    | P.ELIF -> "ELIF"
-    | P.ELSE -> "ELSE"
-    | P.EOF -> "EOF"
-    | P.EQ -> "EQ"
-    | P.EXTERN(r, s) -> sprintf "EXTERN(%s, `%s`)" r s
-    | P.FOR -> "FOR"
-    | P.ID(s) -> sprintf "ID" 
-    | P.IF -> "IF"
-    | P.IN -> "IN"
-    | P.INDENT -> "INDENT"
-    | P.LB -> "LB"
-    | P.LP -> "LP"
-    | P.LS -> "LS"
-    | P.NL -> "NL"
-    | P.NOT(s)-> "NOT"
-    | P.OR(s) -> "OR"
-    | P.PRINT -> "PRINT"
-    | P.RB -> "RB"
-    | P.RETURN -> "RETURN"
-    | P.RP -> "RP"
-    | P.RS -> "RS"
-    | P.STRING(s) -> sprintf "STRING"
-    | P.YIELD -> "YIELD"
-    | P.MATCH -> "MATCH"
-    | P.CASE -> "CASE"
-    | P.ADD(s) -> "ADD" 
-    | P.SUB(s) -> "SUB" 
-    | P.MUL(s) -> "MUL" 
-    | P.DIV(s) -> "DIV" 
-    | P.GEQ(s) -> "GEQ" 
-    | P.GREAT(s) -> "GREAT"
-    | P.LEQ(s) -> "LEQ"
-    | P.LESS(s) -> "LESS"
-    | P.PIPE(s) -> "PIPE"
-    | P.INT(s) -> sprintf "INT" 
-    | P.FLOAT(s) -> sprintf "FLOAT"
-    | P.EEQ(s) -> "EEQ" 
-    | P.NEQ(s) -> "NEQ"
-    | P.OF -> "OF"
-    | P.PASS -> "PASS"
-    | P.WHILE -> "WHILE"
-    | P.TYPE -> "TYPE"
-    | P.DEFAULT -> "DEFAULT"
-    | P.LAMBDA -> "LAMBDA"
-    | P.ASSERT -> "ASSERT"
-    | P.GLOBAL -> "GLOBAL"
-    | P.ELLIPSIS -> "ELLIPSIS"
-    | P.AT -> "AT"
-    | P.SEMICOLON -> "SEMICOLON"
-    | P.PLUSEQ(s) -> "PLUSEQ"
-    | P.MINEQ(s) -> "MINEQ"
-    | P.POWEQ(s) -> "POWEQ"
-    | P.MULEQ(s) -> "MULEQ"
-    | P.FDIVEQ(s) -> "FDIVEQ"
-    | P.DIVEQ(s) -> "DIVEQ"
-    | P.MODEQ(s) -> "MODEQ"
-    | P.POW(s) -> "POW"
-    | P.MOD(s) -> "MOD"
-    | P.FDIV(s) -> "FDIV"
-    | P.REGEX(s) -> "REGEX"
-    | P.SEQ(s) -> "SEQ"
-    | _ -> SyntaxError "unknown token encountered during printing" |> raise
-  
-  let lexmain () =
-    let lexbuf = L.from_channel stdin in
-    let state = stack_create () in
-    let rec loop level = function
-      | P.INDENT as x -> 
-        printf "%s\n%s" (to_string x) (String.make (level+1) ' ');
-        loop (level + 1) @@ token state lexbuf
-      | P.DEDENT as x -> 
-        printf "%s\n%s" (to_string x) (String.make (level-1) ' ');
-        loop (level - 1) @@ token state lexbuf
-      | P.NL as x ->
-        printf "%s\n%s" (to_string x) (String.make level ' ');
-        loop level @@ token state lexbuf
-      | P.EOF -> 
-        ()
-      | x ->  
-        printf "%s " (to_string x);
-        loop level @@ token state lexbuf
-    in 
-    loop 0 @@ token state lexbuf  
-  (* let () = lexmain () *)
-}

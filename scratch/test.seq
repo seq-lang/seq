@@ -1,0 +1,39 @@
+# this is seq test file 
+
+#def fn(i: int, j: int) -> int:
+#	k = Array[int](10)
+#	return i + j
+
+print 1 + 2
+
+b = True
+i = 32
+f = 16.5
+s = 'hello'
+
+j = i + 16
+print j
+
+k = 1 if j > 20 else 0
+print k
+print s
+
+# Call
+# Dot
+# Index, SliceIndex
+
+t = (1, 'hello')
+print t
+
+x = 1; y = 2; print x + y
+
+if x == 1:
+	print 'x is one'
+else:
+	print 'whoops'
+
+print 'loop'
+i = 0
+while i < 32:
+	print i
+	i = i + 1

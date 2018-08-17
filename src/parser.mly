@@ -10,6 +10,10 @@
     | [] -> raise_s [%message "flat function failed unexpectedly" (x: expr list)]
     | h::[] -> h 
     | h::el -> Pipe (h::el)
+  
+  exception NotImplentedError of string
+
+  let noimp s = raise (NotImplentedError s)
 %}
 
 %token <int> INT
@@ -26,6 +30,7 @@
 %token SEMICOLON /* ; */
 %token AT        /* @ */
 %token COMMA     /* , */
+%token OF        /* -> */
 
 /* parentheses */
 %token LP RP /* ( ) parentheses */
@@ -37,7 +42,7 @@
 %token CONTINUE BREAK
 %token IF ELSE ELIF
 %token MATCH CASE AS DEFAULT
-%token DEF OF RETURN YIELD
+%token DEF RETURN YIELD
 %token PRINT PASS IMPORT FROM
 %token TYPE LAMBDA ASSERT GLOBAL
 
@@ -68,14 +73,16 @@ program: /* Entry point */
 atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
   | ID { Id $1 }
   | INT { Int $1 } 
+  /* TODO fix floating point */
   | FLOAT { Float $1 } 
-  | TRUE { Bool true}
+  | TRUE { Bool true }
   | FALSE { Bool false }
   | STRING { String $1 } 
   | REGEX { Regex $1 } 
   | SEQ { Seq $1 } 
   | EXTERN { let a, b = $1 in Extern (a, b) }
-  | tuple | list | dict { $1 }
+  | tuple { $1 }
+  | list | dict { $1 }
 tuple: /* Tuples: (1, 2, 3) */
   | LP RP { Tuple [] }
   | LP test comprehension RP { Generator ($2, $3) }
@@ -111,8 +118,10 @@ test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 
   | pipe_test { flat $1 }
   | ifc = pipe_test; IF cnd = pipe_test; ELSE elc = test 
     { IfExpr (flat cnd, flat ifc, elc) }
-  | LAMBDA separated_list(COMMA, param) COLON test 
-    { Lambda ($2, $4) }
+  /* | LAMBDA separated_list(COMMA, param) COLON test { 
+    NotImplented "Lambda"
+    Lambda ($2, $4) 
+  } */
 test_list: 
   | separated_nonempty_list(COMMA, test) { $1 }
 pipe_test: /* Pipe operator: a, a |> b */
@@ -120,10 +129,10 @@ pipe_test: /* Pipe operator: a, a |> b */
   | or_test PIPE pipe_test { $1::$3 }
 or_test: /* OR operator: a, a or b */
   | and_test { $1 }
-  | and_test OR and_test { Cond ($1, $2, $3) }
+  | and_test OR or_test { Cond ($1, $2, $3) }
 and_test: /* AND operator: a, a and b */
   | not_test { $1 }
-  | not_test AND not_test { Cond ($1, $2, $3) } 
+  | not_test AND and_test { Cond ($1, $2, $3) } 
 not_test: /* General comparison: a, not a, a < 5 */
   | expr { $1 }
   | NOT not_test { Not $2 }
@@ -131,11 +140,13 @@ not_test: /* General comparison: a, not a, a < 5 */
 %inline cond_op:
   /* TODO: in, is in, is not in, not in, not */
   | LESS | LEQ | GREAT | GEQ | EEQ | NEQ { $1 }
-expr: /* General arithmetic: 4, a(4), a[5], a.x, 5 + p */
+expr_term: /* Expression term: 4, a(4), a[5], a.x, p */
   | atom { $1 }
-  | atom LP separated_nonempty_list(COMMA, arg) RP { Call ($1, $3) }
-  | atom LS separated_nonempty_list(COMMA, sub) RS { Index ($1, $3) }
-  | atom DOT ID { Dot ($1, Id $3) }
+  | expr_term LP separated_list(COMMA, arg) RP { Call ($1, $3) }
+  | expr_term LS separated_nonempty_list(COMMA, sub) RS { Index ($1, $3) }
+  | expr_term DOT ID { Dot ($1, $3) }
+expr: /* General arithmetic: 4, 5 + p */
+  | expr_term { $1 }
   | expr bin_op expr { Binary ($1, $2, $3) }
 arg: /* Arguments: 5, a=3 */
   /* TODO: arguments as generators w/o parenthesis */
@@ -150,6 +161,7 @@ sub: /* Subscripts: ..., a, 1:2, 1::3 */
   | test? COLON test? COLON test? { Slice ($1, $3, $5) }
 %inline bin_op: 
   /* TODO: bit shift ops and ~ */
+  /* TODO: unary op */
   | ADD | SUB | MUL | DIV | FDIV | MOD | POW { $1 }  
 
 /*******************************************************/
@@ -161,9 +173,9 @@ statement: /* Statements */
   | WHILE test COLON suite { While ($2, $4) }
   | FOR separated_nonempty_list(COMMA, expr) IN test_list COLON suite 
     { For ($2, $4, $6) }
-  | IF test COLON suite { If [($2, $4)] }
-  | IF test COLON suite; rest = elif_suite { If (($2, $4)::rest) }
-  | MATCH test COLON case_suite { Match ($2, $4) }
+  | IF test COLON suite { If [(Some $2, $4)] }
+  | IF test COLON suite; rest = elif_suite { If ((Some $2, $4)::rest) }
+  | MATCH test COLON NL INDENT case_suite DEDENT { Match ($2, $6) }
   | func { $1 }
   | decorator+ func { DecoratedFunction ($1, $2) }
   | NL { Pass }
@@ -182,6 +194,7 @@ small_statement: /* Simple one-line statements: 5+3, print x */
     { Global (List.map ~f:(fun x -> Id x) $2) }
   | ASSERT test_list { Assert $2 }
 expr_statement: /* Expression statement: a + 3 - 5 */
+  | test_list { Exprs $1 }
   /* TODO: https://www.python.org/dev/peps/pep-3132/ */
   | test_list aug_eq test_list { AssignEq ($1, $2, $3) }
    /* TODO: a = b = c = d = ... separated_nonempty_list(EQ, test_list) {  */
@@ -193,9 +206,9 @@ suite: /* Indentation blocks */
   | separated_nonempty_list(SEMICOLON, small_statement) NL { $1 }
   | NL INDENT statement+ DEDENT { $3 }
 elif_suite:
-  | ELIF test COLON suite { [($2, $4)] }
-  | ELSE COLON suite { [(Bool true, $3)] }
-  | ELIF test COLON suite; rest = elif_suite { ($2, $4)::rest }
+  | ELIF test COLON suite { [(Some $2, $4)] }
+  | ELSE COLON suite { [(None, $3)] }
+  | ELIF test COLON suite; rest = elif_suite { (Some $2, $4)::rest }
 case_suite:
   | DEFAULT COLON suite { [(Ellipsis, None, $3)] }
   | case { [$1] }
@@ -218,7 +231,7 @@ decorator:
   | AT dotted_name LP separated_list(COMMA, arg) RP NL { Decorator ($2, $4) }
 dotted_name:
   | ID { Id $1 }
-  | ID DOT dotted_name { Dot (Id $1, $3) }
+  | dotted_name DOT ID { Dot ($1, $3) }
 func: 
   | DEF; n = ID; LP a = separated_list(COMMA, param); RP COLON; 
     s = suite { Function (TypedArg (Id n, None), a, s) }
@@ -230,4 +243,4 @@ param:
   | typed_param { $1 }
   | ID EQ test { NamedArg (Id $1, $3) }
 typed_param:
-  | ID OF ID { TypedArg (Id $1, Some $3) }
+  | ID COLON ID { TypedArg (Id $1, Some $3) }
