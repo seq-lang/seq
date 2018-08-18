@@ -46,6 +46,7 @@ namespace seq {
 		llvm::Value *handle;
 		llvm::BasicBlock *cleanup;
 		llvm::BasicBlock *suspend;
+		llvm::BasicBlock *exit;
 	public:
 		Func();
 		Block *getBlock();

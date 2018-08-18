@@ -193,6 +193,8 @@ void Func::codegen(Module *module)
 		Function *endFn = Intrinsic::getDeclaration(module, Intrinsic::coro_end);
 		builder.CreateCall(endFn, {handle, ConstantInt::get(IntegerType::getInt1Ty(context), 0)});
 		builder.CreateRet(handle);
+
+		exit = BasicBlock::Create(context, "final", func);
 	}
 
 	builder.SetInsertPoint(entry);
@@ -209,7 +211,8 @@ void Func::codegen(Module *module)
 	builder.SetInsertPoint(exitBlock);
 
 	if (gen) {
-		codegenYield(nullptr, nullptr, exitBlock);  // final yield
+		builder.CreateBr(exit);
+		codegenYield(nullptr, nullptr, exit);  // final yield
 	} else {
 		if (outType->is(types::VoidType::get())) {
 			builder.CreateRetVoid();
@@ -229,7 +232,8 @@ void Func::codegen(Module *module)
 		Value *needAlloc = builder.CreateCall(allocFn, id);
 		builder.CreateCondBr(needAlloc, allocBlock, entryActual);
 
-		cleanup->moveAfter(&func->getBasicBlockList().back());
+		exit->moveAfter(&func->getBasicBlockList().back());
+		cleanup->moveAfter(exit);
 		suspend->moveAfter(cleanup);
 	} else {
 		builder.CreateBr(entry);
@@ -238,20 +242,24 @@ void Func::codegen(Module *module)
 
 void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
-	if (gen)
-		throw exc::SeqException("cannot return from generator");
+	if (gen && val)
+		throw exc::SeqException("cannot return value from generator");
 
-	if (!type->isChildOf(outType))
+	if (val && !type->isChildOf(outType))
 		throw exc::SeqException(
 		  "cannot return '" + type->getName() + "' from function returning '" +
 		  outType->getName() + "'");
 
-	if (val) {
-		IRBuilder<> builder(block);
-		builder.CreateRet(val);
+	IRBuilder<> builder(block);
+
+	if (gen) {
+		builder.CreateBr(exit);
 	} else {
-		IRBuilder<> builder(block);
-		builder.CreateRetVoid();
+		if (val) {
+			builder.CreateRet(val);
+		} else {
+			builder.CreateRetVoid();
+		}
 	}
 
 	/*
