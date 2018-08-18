@@ -389,9 +389,14 @@ Value *types::Type::setMemb(Value *self,
 	return builder.CreateInsertValue(self, val, iter->second.first);
 }
 
+bool types::Type::hasMethod(std::string name)
+{
+	return getVTable().methods.find(std::move(name)) != getVTable().methods.end();
+}
+
 void types::Type::addMethod(std::string name, BaseFunc *func)
 {
-	if (getVTable().methods.find(name) != getVTable().methods.end())
+	if (hasMethod(name))
 		throw exc::SeqException("duplicate method '" + name + "'");
 
 	if (getVTable().fields.find(name) != getVTable().fields.end())

@@ -53,6 +53,29 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 	return ref;
 }
 
+std::vector<types::Type *> types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes)
+{
+	std::vector<types::Type *> inTypes = contents->getTypes();
+	assert(unrealized() && argTypes.size() == inTypes.size());
+	std::vector<types::Type *> types(numGenerics(), nullptr);
+
+	for (unsigned i = 0; i < argTypes.size(); i++) {
+		auto *genericType = dynamic_cast<types::GenericType *>(inTypes[i]);
+		if (genericType) {
+			int idx = findGenericParameter(genericType);
+			if (idx >= 0 && !types[idx])
+				types[idx] = argTypes[i];
+		}
+	}
+
+	for (auto *type : types) {
+		if (!type)
+			throw exc::SeqException("cannot deduce all type parameters for construction of generic class '" + getName() + "'");
+	}
+
+	return types;
+}
+
 Value *types::RefType::memb(Value *self,
                             const std::string& name,
                             BasicBlock *block)

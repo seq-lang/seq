@@ -22,6 +22,7 @@ namespace seq {
 		BaseFunc *func;
 	public:
 		explicit FuncExpr(BaseFunc *func);
+		BaseFunc *getFunc();
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		FuncExpr *clone(Generic *ref) override;

@@ -283,6 +283,7 @@ ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
 
 Value *ConstructExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
+	getType();  // validates construction
 	std::vector<Value *> vals;
 	for (auto *arg : args)
 		vals.push_back(arg->codegen(base, block));
@@ -294,6 +295,12 @@ types::Type *ConstructExpr::getType() const
 	std::vector<types::Type *> types;
 	for (auto *arg : args)
 		types.push_back(arg->getType());
+
+	// type parameter deduction if constructing generic class:
+	auto *ref = dynamic_cast<types::RefType *>(type);
+	if (ref && ref->numGenerics() > 0 && ref->unrealized())
+		type = ref->realize(ref->deduceTypesFromArgTypes(types));
+
 	return type->getConstructType(types);
 }
 

@@ -26,6 +26,11 @@ FuncExpr::FuncExpr(BaseFunc *func) : func(func)
 {
 }
 
+BaseFunc *FuncExpr::getFunc()
+{
+	return func;
+}
+
 Value *FuncExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	func->codegen(block->getModule());

@@ -420,6 +420,15 @@ Generic::Generic(bool performCaching) :
 {
 }
 
+bool Generic::unrealized()
+{
+	for (auto *generic : generics) {
+		if (generic->realized())
+			return false;
+	}
+	return true;
+}
+
 std::vector<types::Type *> Generic::getRealizedTypes() const
 {
 	std::vector<types::Type *> types;
@@ -467,6 +476,11 @@ void Generic::addGenerics(unsigned count)
 		types.push_back(generic);
 
 	root->realizationCache.emplace_back(types, this);
+}
+
+unsigned Generic::numGenerics()
+{
+	return (unsigned)generics.size();
 }
 
 types::GenericType *Generic::getGeneric(unsigned idx)
@@ -520,4 +534,14 @@ Generic *Generic::realizeGeneric(std::vector<types::Type *> types)
 
 	cloneCache.clear();
 	return x;
+}
+
+int Generic::findGenericParameter(types::GenericType *type)
+{
+	for (unsigned i = 0; i < generics.size(); i++) {
+		if (type == generics[i])
+			return i;
+	}
+
+	return -1;
 }

@@ -53,6 +53,7 @@ namespace seq {
 
 		std::string genericName() override;
 		Func *realize(std::vector<types::Type *> types);
+		std::vector<types::Type *> deduceTypesFromArgTypes(std::vector<types::Type *> argTypes);
 
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,

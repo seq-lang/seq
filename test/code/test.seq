@@ -23,7 +23,7 @@ class Pair[T](a: T, b: T) {
 # everything below is really in a giant generic
 # function to test cloning capabilities; this can
 # safely be ignored when reading the code though
-def main[T](args: Str[]) {
+def main[Z](args: Str[]) {
 # ---------
 
 
@@ -169,13 +169,14 @@ for _ in range(0, ints.len): s = s + ints[_]
 print s
 
 var p = Pair[Int](42, 19)
-print p.sum[Float](100.1)  # 42 + 19 + 100 = 161
+print p.sum(100.1)  # 42 + 19 + 100 = 161
+print p.sum(100)
 p.dump()  # 42,19
 p.swap()
 for a in p.iter(): print a  # 19,42
 
 var q = Pair[Float](4.2, 1.9)
-print q.sum[Float](10.0)
+print q.sum(10.0)
 for a in q.iter(): print a
 q.swap()
 Pair[Float].dump(q)

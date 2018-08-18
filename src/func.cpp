@@ -68,10 +68,32 @@ std::string Func::genericName()
 
 Func *Func::realize(std::vector<types::Type *> types)
 {
-	Generic *x = Generic::realizeGeneric(types);
+	Generic *x = realizeGeneric(std::move(types));
 	auto *func = dynamic_cast<Func *>(x);
 	assert(func);
 	return func;
+}
+
+std::vector<types::Type *> Func::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes)
+{
+	assert(unrealized() && argTypes.size() == inTypes.size());
+	std::vector<types::Type *> types(numGenerics(), nullptr);
+
+	for (unsigned i = 0; i < argTypes.size(); i++) {
+		auto *genericType = dynamic_cast<types::GenericType *>(inTypes[i]);
+		if (genericType) {
+			int idx = findGenericParameter(genericType);
+			if (idx >= 0 && !types[idx])
+				types[idx] = argTypes[i];
+		}
+	}
+
+	for (auto *type : types) {
+		if (!type)
+			throw exc::SeqException("cannot deduce all type parameters for call of generic function '" + name + "'");
+	}
+
+	return types;
 }
 
 void Func::codegen(Module *module)

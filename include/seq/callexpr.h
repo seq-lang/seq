@@ -7,7 +7,7 @@
 namespace seq {
 	class CallExpr : public Expr {
 	private:
-		Expr *func;
+		mutable Expr *func;
 		std::vector<Expr *> args;
 	public:
 		CallExpr(Expr *func, std::vector<Expr *> args);

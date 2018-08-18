@@ -11,11 +11,11 @@ CallExpr::CallExpr(Expr *func, std::vector<Expr *> args) :
 
 Value *CallExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
+	getType();  // validates call
 	Value *f = func->codegen(base, block);
 	std::vector<Value *> x;
 	for (auto *e : args)
 		x.push_back(e->codegen(base, block));
-	getType();  // validates call
 	return func->getType()->call(base, f, x, block);
 }
 
@@ -24,6 +24,29 @@ types::Type *CallExpr::getType() const
 	std::vector<types::Type *> types;
 	for (auto *e : args)
 		types.push_back(e->getType());
+
+	// type parameter deduction if calling generic function:
+	auto *funcExpr = dynamic_cast<FuncExpr *>(func);
+	if (funcExpr) {
+		auto *f = dynamic_cast<Func *>(funcExpr->getFunc());
+		if (f && f->numGenerics() > 0 && f->unrealized())
+			func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(types)));
+	}
+
+	auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
+	if (elemExpr) {
+		std::string name = elemExpr->getMemb();
+		types::Type *type = elemExpr->getRec()->getType();
+		if (type->hasMethod(name)) {
+			auto *f = dynamic_cast<Func *>(type->getMethod(name));
+			if (f && f->numGenerics() > 0 && f->unrealized()) {
+				std::vector<types::Type *> typesFull(types);
+				typesFull.insert(typesFull.begin(), type);  // methods take 'self' as first argument
+				func = new MethodExpr(elemExpr->getRec(), name, f->deduceTypesFromArgTypes(typesFull));
+			}
+		}
+	}
+
 	return func->getType()->getCallType(types);
 }
 

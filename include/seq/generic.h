@@ -165,16 +165,19 @@ namespace seq {
 		virtual std::string genericName()=0;
 		virtual Generic *clone(Generic *ref)=0;
 
+		bool unrealized();
 		std::vector<types::Type *> getRealizedTypes() const;
 		bool is(Generic *other) const;
 		Generic *findCachedRealizedType(std::vector<types::Type *> types) const;
 		void setCloneBase(Generic *x, Generic *ref);
 		void addGenerics(unsigned count);
+		unsigned numGenerics();
 		types::GenericType *getGeneric(unsigned idx);
 		bool seenClone(void *p);
 		void *getClone(void *p);
 		void addClone(void *p, void *clone);
-		virtual Generic *realizeGeneric(std::vector<types::Type *> types);
+		Generic *realizeGeneric(std::vector<types::Type *> types);
+		int findGenericParameter(types::GenericType *type);
 	};
 
 	template<typename T = types::Type>

@@ -12,6 +12,8 @@ namespace seq {
 	public:
 		GetElemExpr(Expr *rec, std::string memb);
 		GetElemExpr(Expr *rec, seq_int_t idx);
+		Expr *getRec();
+		std::string getMemb();
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		GetElemExpr *clone(Generic *ref) override;

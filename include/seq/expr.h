@@ -69,7 +69,7 @@ namespace seq {
 
 	class ConstructExpr : public Expr {
 	private:
-		types::Type *type;
+		mutable types::Type *type;
 		std::vector<Expr *> args;
 	public:
 		ConstructExpr(types::Type *type, std::vector<Expr *> args);

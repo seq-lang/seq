@@ -15,6 +15,16 @@ GetElemExpr::GetElemExpr(Expr *rec, seq_int_t idx) :
 	assert(idx >= 1);
 }
 
+Expr *GetElemExpr::getRec()
+{
+	return rec;
+}
+
+std::string GetElemExpr::getMemb()
+{
+	return memb;
+}
+
 llvm::Value *GetElemExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	Value *rec = this->rec->codegen(base, block);

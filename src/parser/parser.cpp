@@ -2000,7 +2000,7 @@ struct control<realized_func_expr> : pegtl::normal<realized_func_expr>
 		}
 
 		Func *realized = func->realize(types);
-		FuncExpr *e = new FuncExpr(realized);
+		auto *e = new FuncExpr(realized);
 		state.add(e);
 	}
 

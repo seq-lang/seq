@@ -47,6 +47,7 @@ namespace seq {
 			void setContents(RecordType *contents);
 			std::string genericName() override;
 			types::Type *realize(std::vector<types::Type *> types);
+			std::vector<types::Type *> deduceTypesFromArgTypes(std::vector<types::Type *> argTypes);
 
 			llvm::Value *memb(llvm::Value *self,
 			                  const std::string& name,
