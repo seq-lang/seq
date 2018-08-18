@@ -140,8 +140,8 @@ void Func::codegen(Module *module)
 
 	assert(argNames.empty() || argNames.size() == inTypes.size());
 	auto argsIter = func->arg_begin();
-	for (unsigned i = 0; i < argNames.size(); i++) {
-		auto iter = argVars.find(argNames[i]);
+	for (auto& argName : argNames) {
+		auto iter = argVars.find(argName);
 		assert(iter != argVars.end());
 		iter->second->store(this, argsIter, preambleBlock);
 		++argsIter;

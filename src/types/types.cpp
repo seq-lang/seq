@@ -391,7 +391,7 @@ Value *types::Type::setMemb(Value *self,
 
 bool types::Type::hasMethod(std::string name)
 {
-	return getVTable().methods.find(std::move(name)) != getVTable().methods.end();
+	return getVTable().methods.find(name) != getVTable().methods.end();
 }
 
 void types::Type::addMethod(std::string name, BaseFunc *func)
