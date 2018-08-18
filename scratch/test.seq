@@ -23,7 +23,7 @@ print s
 # Index, SliceIndex
 
 t = (1, 'hello')
-print t
+# print t
 
 x = 1; y = 2; print x + y
 

@@ -5,11 +5,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include <caml/alloc.h>
-#include <caml/mlvalues.h>
 #include <caml/fail.h>
+#include <caml/alloc.h>
+#include <caml/memory.h>
+#include <caml/mlvalues.h>
 
 #include <seq/seq.h>
+
+#include "format.h"
 
 using namespace std;
 using namespace seq;
@@ -17,255 +20,388 @@ using namespace seq;
 unordered_map<string, Var*> variables;
 vector<vector<string>> current_vars;
 
+#define PE(l, s, ...)   fmt::print(stderr, "{}" s, string(l, ' '), ##__VA_ARGS__)
+#define E(...)          fmt::print(stderr, __VA_ARGS__)
+#define S(...)          fmt::format(__VA_ARGS__)
+
 Expr *descent_expr(value ast);
 Expr *descent_vararg(value ast)
 {
+   CAMLparam1(ast);
+   CAMLlocal1(a);
+   Expr *e;
+
    switch (Tag_val(ast)) {
-   case 0: { // | PlainArg of expr
-      return descent_expr(Field(ast, 0));
+      case 0: { // | PlainArg of expr
+         a = Field(ast, 0);
+         e = descent_expr(a);
+         break;
+      }
+      default: S("vararg {} not implemented", Tag_val(ast));
    }
-   default: throw "not implemented";
-   }
+   return e;
 }
+
+#define CAMLiter(list, head, pff) \
+   while (list != Val_emptylist) { \
+      head = Field(list, 0); \
+      pff; \
+      list = Field(list, 1); \
+   }
+
 
 Expr *descent_expr(value ast)
 {
+   CAMLparam1(ast);
+   CAMLlocal5(head, head2, a, b, c);
+   Expr *e = NULL;
+
    if (Is_long(ast)) {
-      throw "ellipsis not yet supported";
+      throw S("ellipsis not yet supported");
    } else switch (Tag_val(ast)) {
       case 0: { // | Bool of bool
-         return new BoolExpr(Int_val(Field(ast, 0)));
+         bool b = Int_val(Field(ast, 0));
+         E("Bool({})", b);
+         e = new BoolExpr(b);
+         break;
       }
       case 1: { // | Int of int
-         return new IntExpr(Int_val(Field(ast, 0)));
+         int i = Int_val(Field(ast, 0));
+         E("Int({})", i);
+         e = new IntExpr(i);
+         break;
       }
       case 2: { // | Float of float
-         return new FloatExpr(Double_val(Field(ast, 0)));
+         double f = Double_val(Field(ast, 0));
+         E("Float({})", f);
+         e = new FloatExpr(f);
+         break;
       }
       case 3: { // | String of string
          string v = String_val(Field(ast, 0));
-         return new StrExpr(v);
+         E("String({})", v);
+         e = new StrExpr(v);
+         break;
       }
       case 5: { // | Id of string
          string v = String_val(Field(ast, 0));
          auto it = variables.find(v);
          if (it == variables.end()) {
-            throw "variable " + v + " not found";
+            throw S("variable {} not found", v);
          } else {
-            return new VarExpr(it->second);
+            E("Var({})", v);
+            e = new VarExpr(it->second);
+            break;
          }
       }
       case 16: { // | IfExpr of expr * expr * expr
-         auto cond = descent_expr(Field(ast, 0));
-         auto ift = descent_expr(Field(ast, 1));
-         auto iff = descent_expr(Field(ast, 2));
-         return new CondExpr(cond, ift, iff);
+         E("Cond[");
+         a = Field(ast, 0);
+         auto cond = descent_expr(a);
+         E("; ");
+         a = Field(ast, 1);
+         auto ift = descent_expr(a);
+         E("; ");
+         a = Field(ast, 2);
+         auto iff = descent_expr(a);
+         E("]");
+         e = new CondExpr(cond, ift, iff);
+         break;
       }
       case 19:   // | Cond of expr * string * expr
       case 21: { // | Binary of expr * string * expr
-         auto lhs = descent_expr(Field(ast, 0));
          auto op = String_val(Field(ast, 1));
-         auto rhs = descent_expr(Field(ast, 2));
-         return new BOpExpr(bop(op), lhs, rhs);
+         E("{}[", op);
+         a = Field(ast, 0);
+         auto lhs = descent_expr(a);
+         E(", ");
+         a = Field(ast, 2);
+         auto rhs = descent_expr(a);
+         E("]");
+         e = new BOpExpr(bop(op), lhs, rhs);
+         break;
       }
       case 24: { // | Call of expr * vararg list
-         auto fn = descent_expr(Field(ast, 0));
+         E("Call[");
+         a = Field(ast, 0);
+         auto fn = descent_expr(a);
          vector<Expr*> args;
-         for (value head = Field(ast, 1); head != Val_emptylist; head = Field(head, 1)) {
-            args.push_back(descent_vararg(Field(head, 0)));
-         }
-         return new CallExpr(fn, args);
+         a = Field(ast, 1);
+         CAMLiter(a, head, {
+            E(", ");
+            args.push_back(descent_vararg(head));
+         });
+         E("]");
+         e = new CallExpr(fn, args);
+         break;
       }
       case 23: { // | Dot of expr * string
-         auto lhs = descent_expr(Field(ast, 0));
+         E("Dot[");
+         a = Field(ast, 0);
+         auto lhs = descent_expr(a);
          string rhs = String_val(Field(ast, 1));
-         return new GetElemExpr(lhs, rhs);
+         E(", {}]", rhs);
+         e = new GetElemExpr(lhs, rhs);
+         break;
       }
       case 22: { // | Index of expr * expr list
-         auto lhs = descent_expr(Field(ast, 0));
-         auto rhs = descent_expr(Field(ast, 1));
-         return new ArrayLookupExpr(lhs, rhs);
+         E("Index[");
+         a = Field(ast, 0);
+         auto lhs = descent_expr(a);
+         E(", ");
+         a = Field(ast, 1);
+         head = Field(a, 0); // first element
+         auto rhs = descent_expr(head);
+         E("]");
+         e = new ArrayLookupExpr(lhs, rhs);
+         break;
       }
-      case 27: { // | SliceIndex of expr * expr option * expr option * expr option
-         throw "not yet implemented"; 
-            // Needs to be merged into the case 22
-         auto arr = descent_expr(Field(ast, 0));
-         auto stc = Field(ast, 1);
-         Expr *st = stc == Val_int(0) ? NULL : descent_expr(Field(stc, 0));
-         auto edc = Field(ast, 2);
-         Expr *ed = edc == Val_int(0) ? NULL : descent_expr(Field(edc, 0));
-         return new ArraySliceExpr(arr, st, ed);
-      }
+      // case 27: { // | SliceIndex of expr * expr option * expr option * expr option
+      //    throw S("slicing not yet implemented"); 
+      //       // Needs to be merged into the case 22
+      //    auto arr = descent_expr(Field(ast, 0));
+      //    auto stc = Field(ast, 1);
+      //    Expr *st = stc == Val_int(0) ? NULL : descent_expr(Field(stc, 0));
+      //    auto edc = Field(ast, 2);
+      //    Expr *ed = edc == Val_int(0) ? NULL : descent_expr(Field(edc, 0));
+      //    e = new ArraySliceExpr(arr, st, ed);
+      //    break;
+      // }
       case 8: { // | Tuple of expr list
+         E("Tuple[");
          vector<Expr*> exprs;
-         for (value head = Field(ast, 0); head != Val_emptylist; head = Field(head, 1)) {
-            exprs.push_back(descent_expr(Field(head, 0)));
-         }
-         return new RecordExpr(exprs, vector<string>(exprs.size(), ""));
+         int cnt = 0;
+         a = Field(ast, 0);
+         CAMLiter(a, head, {
+            if (cnt++) E(", ");
+            exprs.push_back(descent_expr(head));
+         });
+         E("]");
+         e = new RecordExpr(exprs, vector<string>(exprs.size(), ""));
+         break;
       }
-      default: throw "wrong item";
+      default: throw S("expression {} not implemented", Tag_val(ast));
    }
-   throw "shouldn't be here";
-   return NULL;
+   return e;
 }
 
-Stmt *descent_statement(value ast, Block *curBlock, BaseFunc *base, bool isFunc = false) 
+Stmt *descent_statement(value ast, Block *curBlock, BaseFunc *base, int level = 0, bool isFunc = false) 
 {
+   CAMLparam1(ast);
+   CAMLlocal5(head, head2, a, b, c);
+   Stmt *s = NULL;
+
+   // E("here-- {} {}\n", Is_long(ast), Is_long(ast)?Int_val(ast):Tag_val(ast));
+
    if (Is_long(ast)) switch (Int_val(ast)) {
       case 0: // | Pass
-         return NULL;
+         PE(level, "Pass\n");
+         s = NULL;
+         break;
       case 1: { // | Break
-         auto s = new Break();
-         s->setBase(base);
-         return s;
+         PE(level, "Break\n");
+         s = new Break();
+         break;
       }
       case 2: { // | Continue
-         auto s = new Continue();
-         s->setBase(base);
-         return s;
+         PE(level, "Continue\n");
+         s = new Continue();
+         break;
       }
-      default:
-         throw "whoops invalid is_long in statement";
+      default: throw S("unknown simple statement {}", Int_val(ast));
    } else switch (Tag_val(ast)) {
       case 0: { // | Statements of statement list
-         for (value head = Field(ast, 0); head != Val_emptylist; head = Field(head, 1)) {
-            curBlock->add(descent_statement(Field(head, 0), curBlock, base));
-         }
+         a = Field(ast, 0);
+         CAMLiter(a, head, {
+            auto st = descent_statement(head, curBlock, base, level, isFunc);
+            if (st) curBlock->add(st);
+         });
+         break;
       }
       case 1: { // | Exprs of expr list -- single only
-         auto s = new ExprStmt(descent_expr(Field(ast, 0)));
-         s->setBase(base);
-         return s;
+         PE(level, "");
+         head = Field(ast, 0);
+         s = new ExprStmt(descent_expr(head));
+         E("\n");
+         break;
       }
-      case 2: { // | Assign of expr list * expr list
-         value ex = Field(ast, 0);
-         auto rhs = descent_expr(Field(ast, 1));
-         switch (Tag_val(ex)) {
+      case 2: { // | Assign of expr * expr list
+         b = Field(ast, 1);
+         head2 = Field(b, 0); // get first
+
+         head = Field(ast, 0);
+         switch (Tag_val(head)) {
             case 5: { // | Id of string
-               string v = String_val(Field(ex, 0));
+               head = Field(head, 0);
+               string v = String_val(head);
                auto it = variables.find(v);
                if (it == variables.end()) {
-                  auto s = new VarStmt(rhs);
-                  s->setBase(base);
-                  variables[v] = s->getVar();
+                  PE(level, "Var[{} := ", v);
+                  auto rhs = descent_expr(head2);
+                  E("]\n");
+                  s = new VarStmt(rhs);
+                  variables[v] = ((VarStmt*)s)->getVar();
                   current_vars.back().push_back(v);
-                  return s;
                } else {
-                  auto s = new Assign(it->second, rhs);
-                  s->setBase(base);
-                  return s;
+                  PE(level, "Assign[{} := ", v);
+                  auto rhs = descent_expr(head2);
+                  E("]\n");
+                  s = new Assign(it->second, rhs);
                }
+               break;
             }
             case 22: { // idx
-               auto lh = descent_expr(Field(ex, 0));
-               auto rh = descent_expr(Field(ex, 1));
-               auto s = new AssignIndex(lh, rh, rhs);
-               s->setBase(base);
-               return s;
+               PE(level, "AssignIndex[");
+               a = Field(head, 0);
+               auto lh = descent_expr(a);
+               E("; ");
+               a = Field(head, 1);
+               auto rh = descent_expr(a);
+               E(" := ");
+               auto rhs = descent_expr(head2);
+               E("]\n");
+               s = new AssignIndex(lh, rh, rhs);
+               break;
             }
-            default: throw "Assignment that is not yet implemented!";
+            default: throw S("Assignment that is not yet implemented!");
          }
-         throw "Shouldn't be here honestly...!";
+         break;
       }
       case 4: { // | Print of expr list -- single only
-         auto s = new Print(descent_expr(Field(ast, 0)));
-         s->setBase(base);
-         return s;
+         PE(level, "Print[");
+         a = Field(ast, 0);
+         head = Field(a, 0); // only first
+         s = new Print(descent_expr(head));
+         E("]\n");
+         break;
       }
       case 12: { // | If of (expr option * statement list) list
-         auto ifs = new If();
-         for (value head = Field(ast, 0); head != Val_emptylist; head = Field(head, 1)) {
-            auto item = Field(head, 0); // expr option * statement list
+         s = new If();
+         PE(level, "If[\n");
+         a = Field(ast, 0);
+         CAMLiter(a, head, { // head = expr option * statement list
+            b = Field(head, 0); 
             Block *block;
-            if (Field(item, 0) == Val_int(0)) {
-               block = ifs->addElse();
+            if (b == Val_int(0)) {
+               PE(level + 1, "_ -> [\n");
+               block = ((If*)s)->addElse();
             } else {
-               auto expr = descent_expr(Field(Field(item, 0), 0));
-               block = ifs->addCond(expr);
+               PE(level + 1, "");
+               c = Field(b, 0);
+               auto expr = descent_expr(c);
+               E(" -> [\n");
+               block = ((If*)s)->addCond(expr);
             }
+
             current_vars.push_back(vector<string>());
-            for (value h2 = Field(item, 1); h2 != Val_emptylist; h2 = Field(h2, 1)) {
-               block->add(descent_statement(Field(h2, 0), block, base));
-            }
+            c = Field(head, 1);
+            CAMLiter(c, head2, {
+               auto ss = descent_statement(head2, block, base, level + 2, isFunc);
+               if (ss) block->add(ss);
+            });
             for (auto v: current_vars.back())
                variables.erase(v);
             current_vars.pop_back();
-         }
-         ifs->setBase(base);
-         return ifs;
+            PE(level + 1, "]\n");
+         });
+         PE(level, "]\n");
+         break;
       }
       case 10: { // | While of expr * statement list
-         auto cond = descent_expr(Field(ast, 0));
-         auto whs = new While(cond);
+         PE(level, "While[");
+         a = Field(ast, 0);
+         auto cond = descent_expr(a);
+         s = new While(cond);
+         E("; \n");
          current_vars.push_back(vector<string>());
-         for (value h2 = Field(ast, 1); h2 != Val_emptylist; h2 = Field(h2, 1)) {
-            whs->getBlock()->add(descent_statement(Field(h2, 0), whs->getBlock(), base));
-         }
+         b = Field(ast, 1);
+         CAMLiter(b, head, {
+            auto ss = descent_statement(head, ((While*)s)->getBlock(), base, level + 1, isFunc);
+            if (ss) ((While*)s)->getBlock()->add(ss);
+         });
          for (auto v: current_vars.back())
             variables.erase(v);
          current_vars.pop_back();
-         whs->setBase(base);
-         return whs;
+         PE(level, "]\n");
+         break;
       }
-      case 11: { // | For of expr list * expr list * statement list
-         auto gen = descent_expr(Field(ast, 1));
-         auto frs = new For(gen);
+      case 11: { // | For of expr * expr * statement list
+         PE(level, "For[");
+         a = Field(ast, 1);
+         auto gen = descent_expr(a);
+         s = new For(gen);
 
          string var;
-         value ex = Field(ast, 0);
-         switch (Tag_val(ex)) {
+         a = Field(ast, 0);
+         switch (Tag_val(a)) {
             case 5: { // | Id of string
-               var = String_val(Field(ex, 0));
+               var = String_val(Field(a, 0));
             }
-            default: throw "invalid for variable";
+            default: throw S("invalid tag {} for for-variable", Tag_val(a));
          }
          if (variables.find(var) != variables.end()) {
-            throw "for variable " + var + " already declared";
+            throw S("for-variable '{}' already declared", var);
          }
+         E(" AS Var[{}];\n", var);
 
          current_vars.push_back(vector<string>());
          current_vars.back().push_back(var);
-         variables[var] = frs->getVar();
-         for (value h2 = Field(ast, 1); h2 != Val_emptylist; h2 = Field(h2, 1)) {
-            frs->getBlock()->add(descent_statement(Field(h2, 0), frs->getBlock(), base));
-         }
+         variables[var] = ((For*)s)->getVar();
+         a = Field(ast, 2);
+         CAMLiter(a, head, {
+            auto ss = descent_statement(head, ((For*)s)->getBlock(), base, level + 1, isFunc);
+            if (ss) ((For*)s)->getBlock()->add(ss);
+         });
          for (auto v: current_vars.back())
             variables.erase(v);
          current_vars.pop_back();
-         frs->setBase(base);
-         return frs;
+         PE(level, "]\n");
+         break;
       }
       case 5: { // | Return of expr list
-         auto s = new Return(descent_expr(Field(ast, 0)));
-         s->setBase(base);
-         return s;
+         PE(level, "Return[");
+         a = Field(ast, 0);
+         s = new Return(descent_expr(a));
+         E("]\n");
+         break;
       }
       case 6: { // | Yield of expr list
-         auto s = new Yield(descent_expr(Field(ast, 0)));
+         PE(level, "Yield[");
+         a = Field(ast, 0);
+         s = new Yield(descent_expr(a));
          if (isFunc) {
+            E("; fn := {}", ((Func*)base)->genericName());
             ((Func*)base)->setGen();
+         } else {
+            throw S("Yield in SeqModule");
          }
-         s->setBase(base);
-         return s;
+         E("]\n");
+         break;
       }
       // case 14: { // | Function of vararg * vararg list * statement list
       // }
-      default: throw "not yet implemented statement";
+      default: throw S("statement {} not yet implemented", Tag_val(ast));
    }
-   throw "shouldn't be here";
-   return NULL;
+   if (s) s->setBase(base);
+   return s;
 }
 
 SeqModule *descent_module(value ast)
 {
+   CAMLparam1(ast);
+   CAMLlocal2(head, list);
+
+   E("Module Start\n");
    auto mod = new SeqModule();
    current_vars.push_back(vector<string>());
-   for (value head = Field(ast, 0); head != Val_emptylist; head = Field(head, 1)) {
-      mod->getBlock()->add(descent_statement(Field(head, 0), 
-         mod->getBlock(), 
-         mod));
-   }
-   throw "vars?";
+   
+   list = Field(ast, 0);
+   CAMLiter(list, head, {
+      auto ss = descent_statement(head, mod->getBlock(), mod, 0, false);
+      if (ss) mod->getBlock()->add(ss);
+   });
+   E("Module End\n");
+   E("|> IR ==>\n");
    return mod;
 }
 
@@ -274,12 +410,18 @@ SeqModule *descent_module(value ast)
 extern "C" 
 CAMLprim value caml_compile(value ast) 
 {
+   CAMLparam1(ast);
+
+   E("C++ parser is about to kick ass\n");
    try {
       auto module = descent_module(ast);
       module->execute(vector<string>(), true);
-   } catch (string s) {
-      s = "C++ exception: " + s;
+   } catch (string &s) {
       caml_failwith(s.c_str());
+   } catch (exc::SeqException &e) {
+      caml_failwith(e.what());
+   } catch (...) {
+      caml_failwith("N/A");
    }
 
    return Val_unit;

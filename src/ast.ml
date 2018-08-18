@@ -47,8 +47,8 @@ type statement =
   | Pass | Break | Continue
   | Statements of statement list
   | Exprs of expr list
-  | Assign of expr list * expr list
-  | AssignEq of expr list * string * expr list
+  | Assign of expr * expr list
+  | AssignEq of expr * string * expr list
   | Print of expr list
   | Return of expr list
   | Yield of expr list
@@ -56,7 +56,7 @@ type statement =
   | Assert of expr list
   | Type of expr * vararg list
   | While of expr * statement list
-  | For of expr list * expr list * statement list
+  | For of expr * expr * statement list
   | If of (expr option * statement list) list
   | Match of expr * (expr * expr option * statement list) list
   | Function of vararg * vararg list * statement list
@@ -125,10 +125,10 @@ and prn_va = function
 let rec prn_statement level st = 
   let s = match st with
   | Pass -> "Pass" | Break -> "Break" | Continue -> "Continue"
-  | Statements(sl) -> sci "; " sl (prn_statement level)
-  | Exprs(el) -> sci "," el prn_expr
-  | Assign(sl, el) -> sprintf "Asgn[%s := %s]" (sci ", " sl prn_expr) (sci ", " el prn_expr)
-  | AssignEq(sl, op, el) -> sprintf "Asgn[%s %s %s]" (sci ", " sl prn_expr) op (sci ", " el prn_expr)
+  | Statements(sl) -> sprintf "Statements[\n%s]" (sci "\n" sl (prn_statement (level+1)))
+  | Exprs(el) -> sprintf "Exprs[%s]" (sci "," el prn_expr)
+  | Assign(sl, el) -> sprintf "Asgn[%s := %s]" (prn_expr sl) (sci ", " el prn_expr)
+  | AssignEq(sl, op, el) -> sprintf "Asgn[%s %s %s]" (prn_expr sl) op (sci ", " el prn_expr)
   | Print(el) -> sprintf "Print[%s]" (sci ", " el (prn_expr))
   | Yield(el) -> sprintf "Yield[%s]" (sci ", " el (prn_expr))
   | Return(el) -> sprintf "Return[%s]" (sci ", " el (prn_expr))
@@ -139,7 +139,7 @@ let rec prn_statement level st =
     sprintf "While[%s;\n%s]" (prn_expr e) @@
       sci "\n" sl (prn_statement (level + 1))
   | For(sl, el, stl) -> 
-    sprintf "For[%s; %s;\n%s]" (sci ", " sl prn_expr) (sci ", " el prn_expr) @@
+    sprintf "For[%s; %s;\n%s]" (prn_expr sl) (prn_expr el) @@
       sci "\n" stl (prn_statement (level + 1))
   | If(el) -> sprintf "If[\n%s]" @@ 
       sci "\n" el (fun (e, sl) -> 

@@ -9,7 +9,7 @@ all: cpp
 	$(OCB) $(TARGET).byte
 
 cpp:
-	make -C clib
+	make -C clib shared
 
 debug: cpp
 	$(OCB) $(TARGET).byte -tag debug 

@@ -103,6 +103,8 @@ and read state = parse
   
   | ident as id {
     match id with
+      | "True" -> P.TRUE
+      | "False" -> P.FALSE
       | "if" -> P.IF
       | "elif" -> P.ELIF
       | "else" -> P.ELSE

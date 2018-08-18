@@ -9,13 +9,17 @@ let print_position lexbuf =
 external c_compile: Ast.ast -> unit = "caml_compile"
 
 let () = 
+  fprintf stderr "Hello!\n";
   let ic = In_channel.stdin in
   let lines = In_channel.input_lines ic in
-  let lexbuf = Lexing.from_string @@ (String.concat ~sep:"\n" lines) ^ "\n" in
+  let code = (String.concat ~sep:"\n" lines) ^ "\n" in
+  let lexbuf = Lexing.from_string code in
   let state = Lexer.stack_create () in
   try
+    fprintf stderr "|> Code ==> \n%s\n" code;
     let ast = Parser.program (Lexer.token state) lexbuf in  
     fprintf stderr "|> AST::Caml ==> \n%s\n" @@ Ast.prn_ast ast;
+    fprintf stderr "|> C++ ==>\n%!"; 
     c_compile ast
   with 
   | Lexer.SyntaxError msg ->

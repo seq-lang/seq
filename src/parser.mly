@@ -169,9 +169,9 @@ sub: /* Subscripts: ..., a, 1:2, 1::3 */
 statement: /* Statements */
   /* TODO: try/except, with */
   /* n.b. for/while does not support else */
-  | separated_nonempty_list(SEMICOLON, small_statement) NL { Statements $1 }
+  | separated_nonempty_list(SEMICOLON, small_statement) NL { if List.length $1 == 1 then List.hd_exn $1 else Statements $1 }
   | WHILE test COLON suite { While ($2, $4) }
-  | FOR separated_nonempty_list(COMMA, expr) IN test_list COLON suite 
+  | FOR expr IN test COLON suite 
     { For ($2, $4, $6) }
   | IF test COLON suite { If [(Some $2, $4)] }
   | IF test COLON suite; rest = elif_suite { If ((Some $2, $4)::rest) }
@@ -196,9 +196,15 @@ small_statement: /* Simple one-line statements: 5+3, print x */
 expr_statement: /* Expression statement: a + 3 - 5 */
   | test_list { Exprs $1 }
   /* TODO: https://www.python.org/dev/peps/pep-3132/ */
-  | test_list aug_eq test_list { AssignEq ($1, $2, $3) }
+  | test aug_eq test_list { 
+    assert (List.length $3 == 1);
+    AssignEq ($1, $2, $3) 
+  }
    /* TODO: a = b = c = d = ... separated_nonempty_list(EQ, test_list) {  */
-  | test_list EQ test_list { Assign ($1, $3) }
+  | test EQ test_list { 
+    assert (List.length $3 == 1);
+    Assign ($1, $3) 
+  }
 %inline aug_eq: 
   /* TODO: bit shift ops */
   | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ { $1 }
