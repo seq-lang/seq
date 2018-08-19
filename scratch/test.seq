@@ -37,3 +37,27 @@ i = 0
 while i < 32:
 	print i
 	i = i + 1
+
+def test(x: int, y: int, z: str) -> str:
+	print z
+	print x + y
+	return "success"
+
+def test2(x: int, y: int, z: str) -> void:
+	print z
+	print x + y
+
+def yiyi(x: int) -> int:
+	y = 0
+	while y < x:
+		yield y
+		y = y + 1
+
+# print yiyi(10)
+
+for i in yiyi(10):
+	print i
+
+test2(1, 2, "o-hai")
+k = test(1, 2, "o-hai")
+print k

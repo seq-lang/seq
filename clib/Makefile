@@ -2,7 +2,7 @@ libmain.a: main.o caml.o format.o
 	ar rsc libmain.a main.o caml.o format.o
 
 shared: main.o caml.o format.o
-	g++ -dynamiclib main.o caml.o format.o \
+	g++ -g -dynamiclib main.o caml.o format.o \
 		-o libmain.dylib \
 		-L cpp/build -lseq \
 		-lgc \

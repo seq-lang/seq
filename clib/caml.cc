@@ -17,6 +17,9 @@
 using namespace std;
 using namespace seq;
 
+// TODO: maybe make func and var inherit from same object?
+
+unordered_map<string, Func*> functions;
 unordered_map<string, Var*> variables;
 vector<vector<string>> current_vars;
 
@@ -49,6 +52,16 @@ Expr *descent_vararg(value ast)
       list = Field(list, 1); \
    }
 
+types::Type *type(string s) {
+   if (s == "void") return types::VoidType::get();
+   if (s == "int") return types::IntType::get();
+   if (s == "str") return types::StrType::get();
+   if (s == "bool") return types::BoolType::get();
+   if (s == "float") return types::FloatType::get();
+   throw S("Type not yet supported");
+   // if (s == "array[]") return types::FloatType::get();
+   // if (s == "seq") return types::SeqType::get();
+}
 
 Expr *descent_expr(value ast)
 {
@@ -87,12 +100,16 @@ Expr *descent_expr(value ast)
          string v = String_val(Field(ast, 0));
          auto it = variables.find(v);
          if (it == variables.end()) {
-            throw S("variable {} not found", v);
+            auto iz = functions.find(v);
+            if (iz == functions.end())
+               throw S("variable {} not found", v);
+            E("Func({})", v);
+            e = new FuncExpr(iz->second);
          } else {
             E("Var({})", v);
             e = new VarExpr(it->second);
-            break;
          }
+         break;
       }
       case 16: { // | IfExpr of expr * expr * expr
          E("Cond[");
@@ -121,10 +138,12 @@ Expr *descent_expr(value ast)
          e = new BOpExpr(bop(op), lhs, rhs);
          break;
       }
-      case 24: { // | Call of expr * vararg list
+      case 25: { // | Call of expr * vararg list
          E("Call[");
          a = Field(ast, 0);
          auto fn = descent_expr(a);
+         if (dynamic_cast<FuncExpr*>(fn) == nullptr)
+            throw S("CallExpr requires Func");
          vector<Expr*> args;
          a = Field(ast, 1);
          CAMLiter(a, head, {
@@ -135,7 +154,7 @@ Expr *descent_expr(value ast)
          e = new CallExpr(fn, args);
          break;
       }
-      case 23: { // | Dot of expr * string
+      case 24: { // | Dot of expr * string
          E("Dot[");
          a = Field(ast, 0);
          auto lhs = descent_expr(a);
@@ -220,7 +239,8 @@ Stmt *descent_statement(value ast, Block *curBlock, BaseFunc *base, int level = 
       }
       case 1: { // | Exprs of expr list -- single only
          PE(level, "");
-         head = Field(ast, 0);
+         a = Field(ast, 0);
+         head = Field(a, 0);
          s = new ExprStmt(descent_expr(head));
          E("\n");
          break;
@@ -336,6 +356,7 @@ Stmt *descent_statement(value ast, Block *curBlock, BaseFunc *base, int level = 
          switch (Tag_val(a)) {
             case 5: { // | Id of string
                var = String_val(Field(a, 0));
+               break;
             }
             default: throw S("invalid tag {} for for-variable", Tag_val(a));
          }
@@ -361,14 +382,16 @@ Stmt *descent_statement(value ast, Block *curBlock, BaseFunc *base, int level = 
       case 5: { // | Return of expr list
          PE(level, "Return[");
          a = Field(ast, 0);
-         s = new Return(descent_expr(a));
+         head = Field(a, 0);
+         s = new Return(descent_expr(head));
          E("]\n");
          break;
       }
       case 6: { // | Yield of expr list
          PE(level, "Yield[");
          a = Field(ast, 0);
-         s = new Yield(descent_expr(a));
+         head = Field(a, 0);
+         s = new Yield(descent_expr(head));
          if (isFunc) {
             E("; fn := {}", ((Func*)base)->genericName());
             ((Func*)base)->setGen();
@@ -378,8 +401,88 @@ Stmt *descent_statement(value ast, Block *curBlock, BaseFunc *base, int level = 
          E("]\n");
          break;
       }
-      // case 14: { // | Function of vararg * vararg list * statement list
-      // }
+      case 14: { // | Function of vararg * vararg list * statement list
+         auto f = new Func();
+         
+         // name
+         string type, name;
+         a = Field(ast, 0);
+         switch (Tag_val(a)) {
+            case 1: { // str * str option
+               b = Field(a, 0);
+               name = String_val(b);
+               b = Field(a, 1);
+               if (b != Val_int(0)) {
+                  b = Field(b, 0);
+                  type = String_val(b);
+               } else throw S("Generics not yet supported");
+               break;
+            }
+            default: throw S("Func requires typed arg--- got {}", Tag_val(a));
+         }
+         f->setName(name);
+         f->setOut(::type(type));
+         PE(level, "Func[{}: {} (", name, type);
+
+         current_vars.push_back(vector<string>());
+         if (functions.find(name) != functions.end())
+            throw S("Function {} already there", name);
+         functions[name] = f;
+
+         vector<string> argNames;
+         vector<types::Type*> types;
+         a = Field(ast, 1);
+         int cnt = 0;
+         CAMLiter(a, head, {
+            switch (Tag_val(head)) {
+               case 1: { // str * str option
+                  b = Field(head, 0);
+                  argNames.push_back(String_val(b));
+                  b = Field(head, 1);
+                  string t;
+                  if (b != Val_int(0)) {
+                     b = Field(b, 0);
+                     t = String_val(b);
+                     types.push_back(::type(t));
+                  } else throw S("Generics not yet supported");
+                  if (cnt++) E(", ");
+                  E("{}: {}", argNames.back(), t);
+                  break;
+               }
+               default: throw S("Func-arg requires typed arg, got {}", Tag_val(head));
+            }
+         });
+         f->setIns(types);
+         f->setArgNames(argNames);
+         E(")\n");
+
+         unordered_map<string, Var*> restore;
+         for (auto an: argNames) {
+            current_vars.back().push_back(an);
+            if (variables.find(an) != variables.end())
+               restore[an] = variables[an];
+            variables[an] = f->getArgVar(an);
+         }
+
+         a = Field(ast, 2);
+         CAMLiter(a, head, {
+            auto ss = descent_statement(head, f->getBlock(), f, level + 1, true);
+            if (ss) f->getBlock()->add(ss);
+         });
+         PE(level, "]\n");
+
+         current_vars.pop_back();
+         for (auto v: current_vars.back()) {
+            variables.erase(v);
+         }
+         for (auto v: restore) {
+            variables[v.first] = v.second;
+         }
+         /// TODO clean-up function?f
+
+         s = NULL;
+         break;
+      }
       default: throw S("statement {} not yet implemented", Tag_val(ast));
    }
    if (s) s->setBase(base);

@@ -152,7 +152,7 @@ arg: /* Arguments: 5, a=3 */
   /* TODO: arguments as generators w/o parenthesis */
   /* | test comprehension { Generator ($1, $2)  } */
   | test { PlainArg $1 }
-  | ID EQ test { NamedArg (Id $1, $3) }
+  | ID EQ test { NamedArg ($1, $3) }
 sub: /* Subscripts: ..., a, 1:2, 1::3 */
   /* TODO: support args/kwargs? */
   | ELLIPSIS { Ellipsis }
@@ -240,13 +240,13 @@ dotted_name:
   | dotted_name DOT ID { Dot ($1, $3) }
 func: 
   | DEF; n = ID; LP a = separated_list(COMMA, param); RP COLON; 
-    s = suite { Function (TypedArg (Id n, None), a, s) }
+    s = suite { Function (TypedArg (n, None), a, s) }
   | DEF; n = ID; LP a = separated_list(COMMA, param); RP OF; t = ID; COLON; 
-    s = suite { Function (TypedArg (Id n, Some t), a, s) }
+    s = suite { Function (TypedArg (n, Some t), a, s) }
 param:
   /* TODO tuple params--- are they really needed? */
-  | ID { TypedArg (Id $1, None) }
+  | ID { TypedArg ($1, None) }
   | typed_param { $1 }
-  | ID EQ test { NamedArg (Id $1, $3) }
+  | ID EQ test { NamedArg ($1, $3) }
 typed_param:
-  | ID COLON ID { TypedArg (Id $1, Some $3) }
+  | ID COLON ID { TypedArg ($1, Some $3) }

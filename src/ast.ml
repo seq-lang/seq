@@ -11,7 +11,7 @@ type expr =
   | Extern of string * string
   | Id of string
   | Regex of string
-  | Seq of string
+  | Seq of string (* 7 *)
 
   | Tuple of expr list
   | Generator of expr * expr
@@ -20,10 +20,10 @@ type expr =
   | Set of expr list
   | SetGenerator of expr * expr
   | Dict of (expr * expr) list
-  | DictGenerator of (expr * expr) * expr
+  | DictGenerator of (expr * expr) * expr (* 15 *)
 
   | IfExpr of expr * expr * expr 
-  | Lambda of vararg list * expr
+  | Lambda of vararg list * expr (* 17 *)
 
   | Pipe of expr list
   | Cond of expr * string * expr
@@ -32,15 +32,15 @@ type expr =
   | Index of expr * expr list
   | Slice of expr option * expr option * expr option
   | Dot of expr * string
-  | Call of expr * vararg list
+  | Call of expr * vararg list (* 25 *)
 
   | Comprehension of expr list * expr list * expr option
   | ComprehensionIf of expr
   | Ellipsis
 and vararg = 
   | PlainArg of expr
-  | TypedArg of expr * string option
-  | NamedArg of expr * expr
+  | TypedArg of string * string option
+  | NamedArg of string * expr
   [@@deriving sexp]
 
 type statement =
@@ -119,8 +119,8 @@ and prn_va = function
   | PlainArg(p) -> prn_expr p
   | TypedArg(p, o) -> 
     let o = match o with None -> "any" | Some x -> x in 
-    sprintf "%s of %s" (prn_expr p) o
-  | NamedArg(n, e) -> sprintf "%s = %s" (prn_expr n) (prn_expr e)
+    sprintf "%s of %s" p o
+  | NamedArg(n, e) -> sprintf "%s = %s" n (prn_expr e)
 
 let rec prn_statement level st = 
   let s = match st with
