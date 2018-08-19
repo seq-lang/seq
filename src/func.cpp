@@ -57,6 +57,9 @@ Block *Func::getBlock()
 
 void Func::setGen()
 {
+	if (gen)
+		return;
+
 	gen = true;
 	outType = types::GenType::get(outType);
 }

@@ -14,7 +14,7 @@ class Pair[T](a: T, b: T) {
     self.b = tmp
   }
 
-  gen iter(self: Pair[T]) -> T {
+  def iter(self: Pair[T]) -> T {
     yield self.a
     yield self.b
     return
@@ -28,7 +28,7 @@ def main[Z](args: Str[]) {
 # ---------
 
 
-gen range(a: Int, b: Int) -> Int {
+def range(a: Int, b: Int) -> Int {
   var i = a
   while i < b {
     yield i
@@ -36,7 +36,7 @@ gen range(a: Int, b: Int) -> Int {
   }
 }
 
-gen split(s: Seq, k: Int, step: Int) -> Seq {
+def split(s: Seq, k: Int, step: Int) -> Seq {
   var i = 0
   while i+k <= s.len {
     yield s[i:i+k]
@@ -44,7 +44,7 @@ gen split(s: Seq, k: Int, step: Int) -> Seq {
   }
 }
 
-gen enum(s: Seq[]) -> {Int, Seq} {
+def enum(s: Seq[]) -> {Int, Seq} {
   var i = 0
   for j in range(0, s.len) {
     yield (i, s[j])
