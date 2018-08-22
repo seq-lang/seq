@@ -125,6 +125,7 @@ namespace seq {
 		Expr *expr;
 	public:
 		explicit Return(Expr *expr);
+		Expr *getExpr();
 		void codegen(llvm::BasicBlock*& block) override;
 		Return *clone(Generic *ref) override;
 	};
@@ -134,6 +135,7 @@ namespace seq {
 		Expr *expr;
 	public:
 		explicit Yield(Expr *expr);
+		Expr *getExpr();
 		void codegen(llvm::BasicBlock*& block) override;
 		Yield *clone(Generic *ref) override;
 	};

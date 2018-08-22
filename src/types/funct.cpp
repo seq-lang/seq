@@ -90,10 +90,15 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 types::GenType::GenType(Type *outType) :
     Type(outType->getName() + "Gen", BaseType::get(), SeqData::FUNC), outType(outType)
 {
-	OptionalType *optType = types::OptionalType::get(this->outType);
-	addMethod("next", new BaseFuncLite({this}, optType, [this, optType](Module *module) {
+	types::Type *type = this->outType->is(&types::Void) ? (types::Type *)&types::Void :
+	                                                      types::OptionalType::get(outType);
+
+	addMethod("next", new BaseFuncLite({this}, type, [this, type](Module *module) {
+		auto *optType = dynamic_cast<types::OptionalType *>(type);
 		LLVMContext& context = module->getContext();
-		auto *f = cast<Function>(module->getOrInsertFunction("seq.gen.next", optType->getLLVMType(context), getLLVMType(context)));
+		auto *f = cast<Function>(module->getOrInsertFunction("seq.gen.next",
+		                                                     type->getLLVMType(context),
+		                                                     getLLVMType(context)));
 		Value *arg = f->arg_begin();
 
 		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
@@ -107,11 +112,18 @@ types::GenType::GenType(Type *outType) :
 
 		builder.SetInsertPoint(a);
 		destroy(arg, a);
-		builder.CreateRet(optType->make(nullptr, a));
+		if (optType)
+			builder.CreateRet(optType->make(nullptr, a));
+		else
+			builder.CreateRetVoid();
 
 		builder.SetInsertPoint(b);
-		Value *val = promise(arg, b);
-		builder.CreateRet(optType->make(val, b));
+		if (optType) {
+			Value *val = promise(arg, b);
+			builder.CreateRet(optType->make(val, b));
+		} else {
+			builder.CreateRetVoid();
+		}
 
 		return f;
 	}));

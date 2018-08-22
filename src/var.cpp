@@ -4,6 +4,12 @@
 using namespace seq;
 using namespace llvm;
 
+static void ensureNonVoid(types::Type *type)
+{
+	if (type->is(&types::Void))
+		throw exc::SeqException("cannot load or store void variable");
+}
+
 Var::Var(types::Type *type) :
     type(type), ptr(nullptr), global(false)
 {
@@ -40,6 +46,7 @@ void Var::setGlobal()
 
 Value *Var::load(BaseFunc *base, BasicBlock *block)
 {
+	ensureNonVoid(getType());
 	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
 	return builder.CreateLoad(ptr);
@@ -47,6 +54,7 @@ Value *Var::load(BaseFunc *base, BasicBlock *block)
 
 void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
 {
+	ensureNonVoid(getType());
 	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
 	builder.CreateStore(val, ptr);

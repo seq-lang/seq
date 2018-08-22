@@ -470,8 +470,10 @@ void For::codegen(BasicBlock*& block)
 	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set true-branch below
 
 	block = body;
-	Value *val = type->promise(gen, block);
-	var->store(getBase(), val, block);
+	if (!type->getBaseType(0)->is(&types::Void)) {
+		Value *val = type->promise(gen, block);
+		var->store(getBase(), val, block);
+	}
 
 	scope->codegen(block);
 
@@ -510,6 +512,11 @@ Return::Return(Expr *expr) :
 {
 }
 
+Expr *Return::getExpr()
+{
+	return expr;
+}
+
 void Return::codegen(BasicBlock*& block)
 {
 	types::Type *type = expr ? expr->getType() : types::VoidType::get();
@@ -531,6 +538,11 @@ Return *Return::clone(Generic *ref)
 Yield::Yield(Expr *expr) :
     Stmt("Yield"), expr(expr)
 {
+}
+
+Expr *Yield::getExpr()
+{
+	return expr;
 }
 
 void Yield::codegen(BasicBlock*& block)

@@ -42,7 +42,7 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 }
 
 Func::Func() :
-    BaseFunc(), Generic(false), name(), inTypes(), outType(), scope(new Block()),
+    BaseFunc(), Generic(false), name(), inTypes(), outType(nullptr), scope(new Block()),
     argNames(), argVars(), gen(false), promise(nullptr), handle(nullptr),
     cleanup(nullptr), suspend(nullptr)
 {
@@ -128,16 +128,25 @@ void Func::codegen(Module *module)
 	 */
 	Value *id = nullptr;
 	if (gen) {
-		promise = makeAlloca(outType->getBaseType(0)->getLLVMType(context), preambleBlock);
-		promise->setName("promise");
-		Value *promiseRaw = builder.CreateBitCast(promise, IntegerType::getInt8PtrTy(context));
 		Function *idFn = Intrinsic::getDeclaration(module, Intrinsic::coro_id);
 		Value *nullPtr = ConstantPointerNull::get(IntegerType::getInt8PtrTy(context));
-		id = builder.CreateCall(idFn,
-		                        {ConstantInt::get(IntegerType::getInt32Ty(context), 0),
-		                         promiseRaw,
-		                         nullPtr,
-		                         nullPtr});
+
+		if (!outType->getBaseType(0)->is(&types::Void)) {
+			promise = makeAlloca(outType->getBaseType(0)->getLLVMType(context), preambleBlock);
+			promise->setName("promise");
+			Value *promiseRaw = builder.CreateBitCast(promise, IntegerType::getInt8PtrTy(context));
+			id = builder.CreateCall(idFn,
+			                        {ConstantInt::get(IntegerType::getInt32Ty(context), 0),
+			                         promiseRaw,
+			                         nullPtr,
+			                         nullPtr});
+		} else {
+			id = builder.CreateCall(idFn,
+			                        {ConstantInt::get(IntegerType::getInt32Ty(context), 0),
+			                         nullPtr,
+			                         nullPtr,
+			                         nullPtr});
+		}
 		id->setName("id");
 	}
 
@@ -286,8 +295,10 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
 
-	if (val)
+	if (val) {
+		assert(promise);
 		builder.CreateStore(val, promise);
+	}
 
 	Function *suspFn = Intrinsic::getDeclaration(module, Intrinsic::coro_suspend);
 	Value *tok = ConstantTokenNone::get(context);
