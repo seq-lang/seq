@@ -22,8 +22,14 @@ VarExpr *VarExpr::clone(Generic *ref)
 	return new VarExpr(var->clone(ref));
 }
 
-FuncExpr::FuncExpr(BaseFunc *func) : func(func)
+FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types) :
+    func(func), types(std::move(types))
 {
+}
+
+bool FuncExpr::isParameterized()
+{
+	return !types.empty();
 }
 
 BaseFunc *FuncExpr::getFunc()
@@ -33,6 +39,14 @@ BaseFunc *FuncExpr::getFunc()
 
 Value *FuncExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
+	auto *f = dynamic_cast<Func *>(func);
+	if (f) {
+		if (!types.empty())
+			func = f->realize(types);
+	} else if (!types.empty()) {
+		throw exc::SeqException("cannot type-instantiate non-generic function");
+	}
+
 	func->codegen(block->getModule());
 	return func->getFunc();
 }

@@ -27,7 +27,7 @@ types::Type *CallExpr::getType() const
 
 	// type parameter deduction if calling generic function:
 	auto *funcExpr = dynamic_cast<FuncExpr *>(func);
-	if (funcExpr) {
+	if (funcExpr && !funcExpr->isParameterized()) {
 		auto *f = dynamic_cast<Func *>(funcExpr->getFunc());
 		if (f && f->numGenerics() > 0 && f->unrealized())
 			func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(types)));

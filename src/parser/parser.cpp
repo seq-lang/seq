@@ -1976,8 +1976,7 @@ struct control<realized_func_expr> : pegtl::normal<realized_func_expr>
 			types.push_back(vec[i].value.type);
 		}
 
-		Func *realized = func->realize(types);
-		auto *e = new FuncExpr(realized);
+		Expr *e = new FuncExpr(func, types);
 		state.add(e);
 	}
 
@@ -2104,8 +2103,7 @@ struct control<static_memb_realized_expr> : pegtl::normal<static_memb_realized_e
 			types.push_back(vec[i].value.type);
 		}
 
-		Func *realized = func->realize(types);
-		Expr *e = new FuncExpr(realized);
+		Expr *e = new FuncExpr(func, types);
 		state.add(e);
 	}
 

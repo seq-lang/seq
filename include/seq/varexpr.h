@@ -20,8 +20,10 @@ namespace seq {
 	class FuncExpr : public Expr {
 	private:
 		BaseFunc *func;
+		std::vector<types::Type *> types;
 	public:
-		explicit FuncExpr(BaseFunc *func);
+		explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types={});
+		bool isParameterized();
 		BaseFunc *getFunc();
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
