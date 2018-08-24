@@ -230,7 +230,7 @@ void Func::codegen(Module *module)
 			builder.CreateRetVoid();
 		} else {
 			// i.e. if there isn't already a return at the end
-			if (!dynamic_cast<Return *>(scope->stmts.back())) {
+			if (scope->stmts.empty() || !dynamic_cast<Return *>(scope->stmts.back())) {
 				builder.CreateRet(outType->defaultValue(exitBlock));
 			} else {
 				builder.CreateUnreachable();
