@@ -1,10 +1,5 @@
 #include <iostream>
-#include <string>
-#include <vector>
 #include <cassert>
-#include "seq/common.h"
-#include "seq/util.h"
-#include "seq/exc.h"
 #include "seq/seq.h"
 
 using namespace seq;

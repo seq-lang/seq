@@ -18,6 +18,81 @@ namespace seq {
 		virtual Expr *clone(Generic *ref);
 	};
 
+	class IntExpr : public Expr {
+	private:
+		seq_int_t n;
+	public:
+		explicit IntExpr(seq_int_t n);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+	};
+
+	class FloatExpr : public Expr {
+	private:
+		double f;
+	public:
+		explicit FloatExpr(double f);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+	};
+
+	class BoolExpr : public Expr {
+	private:
+		bool b;
+	public:
+		explicit BoolExpr(bool b);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+	};
+
+	class StrExpr : public Expr {
+	private:
+		std::string s;
+	public:
+		explicit StrExpr(std::string s);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+	};
+
+	class VarExpr : public Expr {
+	private:
+		Var *var;
+	public:
+		explicit VarExpr(Var *var);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		VarExpr *clone(Generic *ref) override;
+	};
+
+	class FuncExpr : public Expr {
+	private:
+		BaseFunc *func;
+		std::vector<types::Type *> types;
+	public:
+		explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types={});
+		bool isParameterized();
+		BaseFunc *getFunc();
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		FuncExpr *clone(Generic *ref) override;
+	};
+
+	class ArrayExpr : public Expr {
+	private:
+		Expr *count;
+	public:
+		ArrayExpr(types::Type *type, Expr *count);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		ArrayExpr *clone(Generic *ref) override;
+	};
+
+	class RecordExpr : public Expr {
+	private:
+		std::vector<Expr *> exprs;
+		std::vector<std::string> names;
+	public:
+		explicit RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names={});
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		RecordExpr *clone(Generic *ref) override;
+	};
+
 	class UOpExpr : public Expr {
 	private:
 		Op op;
@@ -39,6 +114,77 @@ namespace seq {
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		BOpExpr *clone(Generic *ref) override;
+	};
+
+	class ArrayLookupExpr : public Expr {
+	private:
+		Expr *arr;
+		Expr *idx;
+	public:
+		ArrayLookupExpr(Expr *arr, Expr *idx);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		ArrayLookupExpr *clone(Generic *ref) override;
+	};
+
+	class ArraySliceExpr : public Expr {
+	private:
+		Expr *arr;
+		Expr *from;
+		Expr *to;
+	public:
+		ArraySliceExpr(Expr *arr, Expr *from, Expr *to);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		ArraySliceExpr *clone(Generic *ref) override;
+	};
+
+	class GetElemExpr : public Expr {
+	private:
+		Expr *rec;
+		std::string memb;
+	public:
+		GetElemExpr(Expr *rec, std::string memb);
+		GetElemExpr(Expr *rec, seq_int_t idx);
+		Expr *getRec();
+		std::string getMemb();
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		GetElemExpr *clone(Generic *ref) override;
+	};
+
+	class GetStaticElemExpr : public Expr {
+	private:
+		types::Type *type;
+		std::string memb;
+	public:
+		GetStaticElemExpr(types::Type *type, std::string memb);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		GetStaticElemExpr *clone(Generic *ref) override;
+	};
+
+	class MethodExpr : public Expr {
+	private:
+		Expr *expr;
+		std::string name;
+		std::vector<types::Type *> types;
+	public:
+		MethodExpr(Expr *expr, std::string method, std::vector<types::Type *> realizedTypes);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::MethodType *getType() const override;
+		MethodExpr *clone(Generic *ref) override;
+	};
+
+	class CallExpr : public Expr {
+	private:
+		mutable Expr *func;
+		std::vector<Expr *> args;
+	public:
+		CallExpr(Expr *func, std::vector<Expr *> args);
+		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType() const override;
+		CallExpr *clone(Generic *ref) override;
 	};
 
 	class CondExpr : public Expr {

@@ -10,7 +10,6 @@
 #include <tao/pegtl/analyze.hpp>
 #include "seq/seq.h"
 #include "grammar.h"
-#include "seq/parser.h"
 
 using namespace seq;
 

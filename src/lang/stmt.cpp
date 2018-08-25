@@ -1,7 +1,4 @@
-#include <string>
-#include <vector>
 #include "seq/seq.h"
-#include "seq/exc.h"
 
 using namespace seq;
 using namespace llvm;

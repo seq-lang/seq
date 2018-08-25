@@ -1,5 +1,5 @@
-#include "seq/ops.h"
-#include <iostream>
+#include "seq/seq.h"
+
 using namespace seq;
 
 std::vector<Op> ops;

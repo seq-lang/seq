@@ -1,6 +1,4 @@
-#include "seq/func.h"
-#include "seq/base.h"
-#include "seq/record.h"
+#include "seq/seq.h"
 
 using namespace seq;
 using namespace llvm;

@@ -1,5 +1,4 @@
 #include "seq/seq.h"
-#include "seq/generic.h"
 
 using namespace seq;
 using namespace llvm;

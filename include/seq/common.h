@@ -3,12 +3,9 @@
 
 #include <cstdint>
 #include <memory>
-#include "llvm.h"
-#include "seqdata.h"
+#include "util/llvm.h"
+#include "util/seqdata.h"
 #include "exc.h"
-
-#define _SEQ_STR(x) #x
-#define SEQ_NATIVE(x) _SEQ_STR(x), (void *)x
 
 namespace seq {
 

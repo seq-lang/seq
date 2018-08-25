@@ -7,8 +7,8 @@
 #include <vector>
 #include <map>
 
-#include "llvm.h"
-#include "seqdata.h"
+#include "util/llvm.h"
+#include "util/seqdata.h"
 
 #include "types.h"
 #include "any.h"

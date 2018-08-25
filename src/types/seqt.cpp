@@ -1,7 +1,5 @@
 #include <iostream>
 #include "seq/seq.h"
-#include "seq/base.h"
-#include "seq/seqt.h"
 
 using namespace seq;
 using namespace llvm;

@@ -1,8 +1,6 @@
 #include <iostream>
 #include <cstdio>
 #include "seq/seq.h"
-#include "seq/base.h"
-#include "seq/num.h"
 
 using namespace seq;
 using namespace llvm;

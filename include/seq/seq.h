@@ -6,29 +6,23 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <initializer_list>
 
-#include "llvm.h"
+#include "expr.h"
 #include "func.h"
 #include "lang.h"
+#include "ops.h"
+#include "patterns.h"
 #include "source.h"
 #include "var.h"
-#include "patterns.h"
-#include "io.h"
-#include "exc.h"
+
 #include "common.h"
+#include "exc.h"
+#include "io.h"
 #include "seqgc.h"
 
 #include "parser.h"
-#include "expr.h"
-#include "numexpr.h"
-#include "strexpr.h"
-#include "varexpr.h"
-#include "arrayexpr.h"
-#include "recordexpr.h"
-#include "lookupexpr.h"
-#include "getelemexpr.h"
-#include "callexpr.h"
+
+#include "util/llvm.h"
 
 namespace seq {
 

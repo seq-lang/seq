@@ -81,53 +81,42 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 add_library(seq SHARED include/seq/any.h
                        include/seq/array.h
-                       include/seq/arrayexpr.h
                        include/seq/base.h
-                       include/seq/callexpr.h
                        include/seq/common.h
                        include/seq/exc.h
                        include/seq/expr.h
                        include/seq/func.h
                        include/seq/funct.h
                        include/seq/generic.h
-                       include/seq/getelemexpr.h
                        include/seq/io.h
                        include/seq/lang.h
-                       include/seq/lookupexpr.h
                        include/seq/num.h
-                       include/seq/numexpr.h
                        include/seq/ops.h
                        include/seq/optional.h
                        include/seq/parser.h
                        include/seq/patterns.h
                        include/seq/record.h
-                       include/seq/recordexpr.h
                        include/seq/ref.h
                        include/seq/seq.h
                        include/seq/seqgc.h
                        include/seq/seqt.h
                        include/seq/source.h
                        include/seq/stmt.h
-                       include/seq/strexpr.h
                        include/seq/types.h
                        include/seq/util.h
-                       include/seq/varexpr.h
                        include/seq/void.h
                        include/seq/var.h
-                       src/expr/arrayexpr.cpp
-                       src/expr/callexpr.cpp
-                       src/expr/expr.cpp
-                       src/expr/getelemexpr.cpp
-                       src/expr/lookupexpr.cpp
-                       src/expr/numexpr.cpp
-                       src/expr/recordexpr.cpp
-                       src/expr/strexpr.cpp
-                       src/expr/varexpr.cpp
+                       src/lang/expr.cpp
+                       src/lang/func.cpp
+                       src/lang/lang.cpp
+                       src/lang/ops.cpp
+                       src/lang/patterns.cpp
+                       src/lang/seq.cpp
+                       src/lang/source.cpp
+                       src/lang/stmt.cpp
+                       src/lang/var.cpp
                        src/parser/grammar.h
                        src/parser/parser.cpp
-                       src/stmt/lang.cpp
-                       src/stmt/source.cpp
-                       src/stmt/stmt.cpp
                        src/types/any.cpp
                        src/types/array.cpp
                        src/types/base.cpp
@@ -140,17 +129,12 @@ add_library(seq SHARED include/seq/any.h
                        src/types/seqt.cpp
                        src/types/types.cpp
                        src/types/void.cpp
-                       src/exc.cpp
-                       src/func.cpp
-                       src/io.cpp
-                       src/llvm.h
-                       src/ops.cpp
-                       src/patterns.cpp
-                       src/seq.cpp
-                       src/seqgc.cpp
-                       src/seqdata.h
-                       src/util.cpp
-                       src/var.cpp)
+                       src/util/exc.cpp
+                       src/util/io.cpp
+                       src/util/llvm.h
+                       src/util/seqdata.h
+                       src/util/seqgc.cpp
+                       src/util/util.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
 

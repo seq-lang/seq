@@ -1,8 +1,4 @@
 #include "seq/seq.h"
-#include "seq/any.h"
-#include "seq/base.h"
-#include "seq/exc.h"
-#include "seq/array.h"
 
 using namespace seq;
 using namespace llvm;

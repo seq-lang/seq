@@ -5,8 +5,8 @@
 #include <map>
 #include <functional>
 #include <utility>
-#include "llvm.h"
-#include "seqdata.h"
+#include "util/llvm.h"
+#include "util/seqdata.h"
 #include "ops.h"
 #include "seqgc.h"
 #include "util.h"
