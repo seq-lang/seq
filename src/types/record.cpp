@@ -132,6 +132,17 @@ Value *types::RecordType::defaultValue(BasicBlock *block)
 	return self;
 }
 
+
+Value *types::RecordType::construct(BaseFunc *base,
+                                    std::vector<Value *> args,
+                                    BasicBlock *block)
+{
+	Value *val = defaultValue(block);
+	for (unsigned i = 0; i < args.size(); i++)
+		val = setMemb(val, std::to_string(i+1), args[i], block);
+	return val;
+}
+
 bool types::RecordType::isAtomic() const
 {
 	for (auto *type : types) {
@@ -167,6 +178,21 @@ types::Type *types::RecordType::getBaseType(seq_int_t idx) const
 		throw exc::SeqException("invalid index into Record (must be constant and in-bounds)");
 
 	return types[idx - 1];
+}
+
+types::Type *types::RecordType::getConstructType(std::vector<Type *> inTypes)
+{
+	if (inTypes.size() != types.size())
+		throw exc::SeqException("expected " + std::to_string(types.size()) + " arguments, " +
+		                        "but got " + std::to_string(inTypes.size()));
+
+	for (unsigned i = 0; i < inTypes.size(); i++) {
+		if (!inTypes[i]->is(types[i]) && !types[i]->is(inTypes[i]))
+			throw exc::SeqException("expected " + types[i]->getName() +
+			                        ", but got " + inTypes[i]->getName());
+	}
+
+	return this;
 }
 
 Type *types::RecordType::getLLVMType(LLVMContext& context) const
