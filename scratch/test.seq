@@ -4,8 +4,10 @@
 #	k = Array[int](10)
 #	return i + j
 
+print '*** INIT ***'
 print 1 + 2
 
+print '*** VAR_ASSGN ***'
 b = True
 i = 32
 f = 16.5
@@ -14,50 +16,76 @@ s = 'hello'
 j = i + 16
 print j
 
+print '*** INLINE_IF ***'
 k = 1 if j > 20 else 0
 print k
 print s
 
-# Call
-# Dot
-# Index, SliceIndex
+# # Call
+# # Dot
+# # Index, SliceIndex
 
+print '*** TUPLE ***'
 t = (1, 'hello')
-# print t
+# # print t
 
+print '*** MULTI_STMT ***'
 x = 1; y = 2; print x + y
 
+print '*** IF ***'
 if x == 1:
-	print 'x is one'
+   print 'x is one'
 else:
-	print 'whoops'
+   print 'whoops'
 
+print '*** WHILE ***'
 print 'loop'
 i = 0
 while i < 32:
-	print i
-	i = i + 1
+   print i
+   i = i + 1
 
+print '*** FN ***'
 def test(x: int, y: int, z: str) -> str:
-	print z
-	print x + y
-	return "success"
+   print z
+   print x + y
+   return "success"
+test(10, 1, "ohai")
+yy = test(10, 1, "ohai1")
+print yy
 
-def test2(x: int, y: int, z: str) -> void:
-	print z
-	print x + y
+def test2(x: int, y: int, z) -> void:
+   print z
+   print x + y
+# test2(1, 2, "hello")
+# test2(1, 2, 3.14)
 
 def yiyi(x: int) -> int:
-	y = 0
-	while y < x:
-		yield y
-		y = y + 1
+   y = 0
+   while y < x:
+      print y
+      yield y
+      y = y + 1
+for ii in yiyi(10):
+   print ii
 
-# print yiyi(10)
+# test2(1, 2, "o-hai")
+# k = test(1, 2, "o-hai")
+# print k
 
-for i in yiyi(10):
-	print i
 
-test2(1, 2, "o-hai")
-k = test(1, 2, "o-hai")
-print k
+# print "*** ARRAYS ***"
+# arr = array(int, 10)
+# i = 0
+# while i < 10:
+#    print i
+#    arr[i] = i 
+#    i = i + 1
+# while i >= 0:
+#    print arr[i]
+#    i = i - 1
+
+# type T(name: str, age: int)
+# t = T("hamo", 29)
+
+

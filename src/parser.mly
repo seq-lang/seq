@@ -1,19 +1,18 @@
 /* 786 */
 
-%[@trace true]
-
 %{
   open Ast
   open Core
 
+  let flat x = x
+  (* 
   let flat x = match x with
     | [] -> raise_s [%message "flat function failed unexpectedly" (x: expr list)]
     | h::[] -> h 
     | h::el -> Pipe (h::el)
-  
-  exception NotImplentedError of string
+  *)
 
-  let noimp s = raise (NotImplentedError s)
+  let noimp s = raise (NotImplentedError ("Not yet implemented: " ^ s))
 %}
 
 %token <int> INT
@@ -42,8 +41,8 @@
 %token CONTINUE BREAK
 %token IF ELSE ELIF
 %token MATCH CASE AS DEFAULT
-%token DEF RETURN YIELD
-%token PRINT PASS IMPORT FROM
+%token DEF RETURN YIELD ARRAY
+%token PRINT PASS IMPORT FROM CLASS
 %token TYPE LAMBDA ASSERT GLOBAL
 
 /* booleans */
@@ -71,6 +70,7 @@ program: /* Entry point */
 /*******************************************************/
 
 atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
+  | ARRAY { Array }
   | ID { Id $1 }
   | INT { Int $1 } 
   /* TODO fix floating point */
@@ -78,27 +78,52 @@ atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
   | TRUE { Bool true }
   | FALSE { Bool false }
   | STRING { String $1 } 
-  | REGEX { Regex $1 } 
-  | SEQ { Seq $1 } 
-  | EXTERN { let a, b = $1 in Extern (a, b) }
+  | REGEX { 
+    noimp "Regex" 
+    (* Regex $1 *) }
+  | SEQ { 
+    noimp "Seq" 
+    (* Seq $1 *) }
+  | EXTERN { 
+    noimp "Extern" 
+    (* let a, b = $1 in Extern (a, b) *) }
   | tuple { $1 }
   | list | dict { $1 }
 tuple: /* Tuples: (1, 2, 3) */
   | LP RP { Tuple [] }
-  | LP test comprehension RP { Generator ($2, $3) }
+  | LP test comprehension RP { 
+    noimp "Generator" 
+    (* Generator ($2, $3)  *)
+  }
   | LP test COMMA RP { Tuple [$2] }
   | LP test_list RP { Tuple $2 }
 list: /* Lists: [1, 2, 3] */
   /* TODO needs trailing comma support */
-  | LS RS { List [] }
-  | LS test comprehension RS { ListGenerator ($2, $3) }
-  | LS test_list RS { List $2 }
+  | LS RS { 
+    noimp "List"
+    (* List [] *) }
+  | LS test comprehension RS { 
+    noimp "List"
+    (* ListGenerator ($2, $3) *) }
+  | LS test_list RS { 
+    noimp "List"
+    (* List $2 *) }
 dict: /* Dictionaries and sets: {1: 2, 3: 4}, {1, 2} */
-  | LB RB { Dict [] }
-  | LB separated_nonempty_list(COMMA, test) RB { Set $2 }
-  | LB test comprehension RB { SetGenerator ($2, $3) }
-  | LB dictitem comprehension RB { DictGenerator ($2, $3) }
-  | LB separated_nonempty_list(COMMA, dictitem) RB { Dict $2 }
+  | LB RB { 
+    noimp "Dict"
+    (* Dict [] *) }
+  | LB separated_nonempty_list(COMMA, test) RB { 
+    noimp "Dict"
+    (* Set $2 *) }
+  | LB test comprehension RB { 
+    noimp "Dict"
+    (* SetGenerator ($2, $3) *) }
+  | LB dictitem comprehension RB { 
+    noimp "Dict"
+    (* DictGenerator ($2, $3) *) }
+  | LB separated_nonempty_list(COMMA, dictitem) RB { 
+    noimp "Dict"
+    (* Dict $2 *) }
 dictitem: 
   | test COLON test { ($1, $3) }
 
@@ -106,11 +131,13 @@ comprehension:
   | FOR separated_nonempty_list(COMMA, expr) 
     IN separated_nonempty_list(COMMA, pipe_test) 
     comprehension? 
-    { Comprehension ($2, List.map ~f:flat $4, $5) }
+    { noimp "Comprehension"
+    (* Comprehension ($2, List.map ~f:flat $4, $5) *) }
   | FOR separated_nonempty_list(COMMA, expr) 
     IN separated_nonempty_list(COMMA, pipe_test) 
     IF pipe_test 
-    { Comprehension ($2, List.map ~f:flat $4, Some (ComprehensionIf (flat $6))) }
+    { noimp "Comprehension"
+    (* Comprehension ($2, List.map ~f:flat $4, Some (ComprehensionIf (flat $6))) *) }
 
 /*******************************************************/
 
@@ -118,15 +145,16 @@ test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 
   | pipe_test { flat $1 }
   | ifc = pipe_test; IF cnd = pipe_test; ELSE elc = test 
     { IfExpr (flat cnd, flat ifc, elc) }
-  /* | LAMBDA separated_list(COMMA, param) COLON test { 
-    NotImplented "Lambda"
+  /* TODO: shift/reduce conflict
+  | LAMBDA separated_list(COMMA, param) COLON test { 
+    noimp "Lambda"
     Lambda ($2, $4) 
   } */
 test_list: 
   | separated_nonempty_list(COMMA, test) { $1 }
 pipe_test: /* Pipe operator: a, a |> b */
-  | or_test { [$1] }
-  | or_test PIPE pipe_test { $1::$3 }
+  | or_test { $1 }
+  | or_test PIPE pipe_test { Binary ($1, $2, $3) }
 or_test: /* OR operator: a, a or b */
   | and_test { $1 }
   | and_test OR or_test { Cond ($1, $2, $3) }
@@ -142,20 +170,27 @@ not_test: /* General comparison: a, not a, a < 5 */
   | LESS | LEQ | GREAT | GEQ | EEQ | NEQ { $1 }
 expr_term: /* Expression term: 4, a(4), a[5], a.x, p */
   | atom { $1 }
-  | expr_term LP separated_list(COMMA, arg) RP { Call ($1, $3) }
-  | expr_term LS separated_nonempty_list(COMMA, sub) RS { Index ($1, $3) }
+  | expr_term LP separated_list(COMMA, test) RP { Call ($1, $3) }
+  | expr_term LS separated_nonempty_list(COMMA, sub) RS { 
+    (* TODO: tuple index *)
+    Index ($1, List.hd_exn $3) 
+  }
   | expr_term DOT ID { Dot ($1, $3) }
 expr: /* General arithmetic: 4, 5 + p */
   | expr_term { $1 }
   | expr bin_op expr { Binary ($1, $2, $3) }
-arg: /* Arguments: 5, a=3 */
+arg: /* Definition arguments: 5, a=3 */
   /* TODO: arguments as generators w/o parenthesis */
   /* | test comprehension { Generator ($1, $2)  } */
-  | test { PlainArg $1 }
-  | ID EQ test { NamedArg ($1, $3) }
+  | ID { PlainArg $1 }
+  | ID EQ test { 
+    noimp "NamedArg"
+    (* NamedArg ($1, $3)  *) }
 sub: /* Subscripts: ..., a, 1:2, 1::3 */
   /* TODO: support args/kwargs? */
-  | ELLIPSIS { Ellipsis }
+  | ELLIPSIS { 
+    noimp "Ellipsis" 
+    (* Ellipsis *) }
   | test { $1 }
   | test? COLON test? { Slice ($1, $3, None) }
   | test? COLON test? COLON test? { Slice ($1, $3, $5) }
@@ -169,41 +204,52 @@ sub: /* Subscripts: ..., a, 1:2, 1::3 */
 statement: /* Statements */
   /* TODO: try/except, with */
   /* n.b. for/while does not support else */
-  | separated_nonempty_list(SEMICOLON, small_statement) NL { if List.length $1 == 1 then List.hd_exn $1 else Statements $1 }
+  | separated_nonempty_list(SEMICOLON, small_statement) NL { 
+    if List.length $1 = 1 then List.hd_exn $1 else Statements $1 }
   | WHILE test COLON suite { While ($2, $4) }
   | FOR expr IN test COLON suite 
     { For ($2, $4, $6) }
   | IF test COLON suite { If [(Some $2, $4)] }
   | IF test COLON suite; rest = elif_suite { If ((Some $2, $4)::rest) }
-  | MATCH test COLON NL INDENT case_suite DEDENT { Match ($2, $6) }
-  | func { $1 }
-  | decorator+ func { DecoratedFunction ($1, $2) }
+  | MATCH test COLON NL INDENT case_suite DEDENT { 
+    noimp "match"
+    (* Match ($2, $6) *) }
+  | func_statement 
+  | class_statement
+    { $1 }
   | NL { Pass }
 small_statement: /* Simple one-line statements: 5+3, print x */
   /* TODO del, exec/eval?,  */
   | expr_statement { $1 }
-  | import_statement { $1 }
+  | import_statement { noimp "Import" (* $1 *) }
   | PRINT test_list { Print $2 }
   | PASS { Pass }
   | BREAK { Break }
   | CONTINUE { Continue }
-  | RETURN test_list { Return $2 }
-  | YIELD test_list { Yield $2 }
-  | TYPE ID LP separated_list(COMMA, typed_param) RP { Type (Id $2, $4) }
+  | RETURN test_list { 
+    (*TODO: tuples *) 
+    Return (List.hd_exn $2) }
+  | YIELD test_list { 
+    (*TODO: tuples *) 
+    Yield (List.hd_exn $2) }
+  | TYPE ID LP separated_list(COMMA, typed_param) RP { Type ($2, $4) }
   | GLOBAL separated_nonempty_list(COMMA, ID) 
-    { Global (List.map ~f:(fun x -> Id x) $2) }
-  | ASSERT test_list { Assert $2 }
+    { noimp "Global"
+    (* Global (List.map ~f:(fun x -> Id x) $2) *) }
+  | ASSERT test_list { 
+    noimp "Assert" 
+    (* Assert $2 *) }
 expr_statement: /* Expression statement: a + 3 - 5 */
   | test_list { Exprs $1 }
   /* TODO: https://www.python.org/dev/peps/pep-3132/ */
   | test aug_eq test_list { 
-    assert (List.length $3 == 1);
-    AssignEq ($1, $2, $3) 
+    (* TODO tuple assignment *)
+    AssignEq ($1, $2, List.hd_exn $3) 
   }
    /* TODO: a = b = c = d = ... separated_nonempty_list(EQ, test_list) {  */
   | test EQ test_list { 
-    assert (List.length $3 == 1);
-    Assign ($1, $3) 
+    (* TODO tuple assignment *)
+    Assign ($1, List.hd_exn $3) 
   }
 %inline aug_eq: 
   /* TODO: bit shift ops */
@@ -216,25 +262,40 @@ elif_suite:
   | ELSE COLON suite { [(None, $3)] }
   | ELIF test COLON suite; rest = elif_suite { (Some $2, $4)::rest }
 case_suite:
-  | DEFAULT COLON suite { [(Ellipsis, None, $3)] }
+  | DEFAULT COLON suite { [(None, None, $3)] }
   | case { [$1] }
   | case; rest = case_suite { $1::rest }
 case:
-  | CASE test COLON suite { ($2, None, $4) }
-  | CASE test AS ID COLON suite { ($2, Some (Id $4), $6) }
+  | CASE test COLON suite { (Some $2, None, $4) }
+  | CASE test AS ID COLON suite { (Some $2, Some (Id $4), $6) }
 import_statement:
-  | FROM dotted_name IMPORT MUL { ImportFrom ($2, None) }
-  | FROM dotted_name IMPORT separated_list(COMMA, import_as) { ImportFrom ($2, Some $4) }
-  | IMPORT separated_list(COMMA, import_as) { Import ($2) }
+  | FROM dotted_name IMPORT MUL { 
+    noimp "Import" 
+    (* ImportFrom ($2, None) *) }
+  | FROM dotted_name IMPORT separated_list(COMMA, import_as) { 
+    noimp "Import" 
+    (* ImportFrom ($2, Some $4) *) }
+  | IMPORT separated_list(COMMA, import_as) { 
+    noimp "Import" 
+    (* Import ($2) *) }
 import_as:
   | dotted_name { ($1, None) }
   | dotted_name AS ID { ($1, Some (Id $3)) }
 
 /*******************************************************/
 
+func_statement:
+  | func { $1 }
+  | decorator+ func { 
+    noimp "decorator"
+    (* DecoratedFunction ($1, $2) *) }
 decorator:
-  | AT dotted_name NL { Decorator ($2, []) }
-  | AT dotted_name LP separated_list(COMMA, arg) RP NL { Decorator ($2, $4) }
+  | AT dotted_name NL { 
+    noimp "decorator"
+    (* Decorator ($2, []) *) }
+  | AT dotted_name LP separated_list(COMMA, arg) RP NL { 
+    noimp "decorator"
+    (* Decorator ($2, $4) *) }
 dotted_name:
   | ID { Id $1 }
   | dotted_name DOT ID { Dot ($1, $3) }
@@ -247,6 +308,23 @@ param:
   /* TODO tuple params--- are they really needed? */
   | ID { TypedArg ($1, None) }
   | typed_param { $1 }
-  | ID EQ test { NamedArg ($1, $3) }
+  | ID EQ test { 
+    noimp "NamedArg"
+    (*NamedArg ($1, $3)*) }
 typed_param:
   | ID COLON ID { TypedArg ($1, Some $3) }
+
+/*******************************************************/
+
+class_statement:
+  | CLASS ID LP; mems = separated_list(COMMA, typed_param) RP COLON; fns = class_member 
+    { Class ($2, mems, fns) }
+class_member:
+  | PASS { [] }
+  | INDENT func_statement+ DEDENT { $2 } 
+
+
+(*
+Ty(...)
+int(...)
+ *)

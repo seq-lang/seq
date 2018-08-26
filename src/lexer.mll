@@ -131,6 +131,8 @@ and read state = parse
       | "global" -> P.GLOBAL
       | "import" -> P.IMPORT
       | "from" -> P.FROM
+      | "class" -> P.CLASS
+      | "array" -> P.ARRAY
       | _ -> P.ID(id)
   }
 

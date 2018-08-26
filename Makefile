@@ -5,18 +5,19 @@ TARGET := main
 .PHONY: 
 	all clean byte native profile debug sanity test
 
-all: cpp
+all:
 	$(OCB) $(TARGET).byte
 
 cpp:
 	make -C clib shared
 
-debug: cpp
+debug: 
 	$(OCB) $(TARGET).byte -tag debug 
 	# OCAMLRUNPARAM=b ./$(TARGET).byte <(echo 'load "test.fq" | print')
 
 clean:
-	$(OCB) -clean
+	$(OCB) -clean;
+	rm -f src/parser.{ml,mli}
 
 test: all
 	$(OCB) -I test test.native
