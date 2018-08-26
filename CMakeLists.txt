@@ -60,6 +60,20 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
   include_directories("${pegtl_SOURCE_DIR}/include")
 endif()
 
+# Set up OCAML includes
+find_program(OCAMLFIND NAMES ocamlfind)
+execute_process(
+   COMMAND ${OCAMLFIND} ocamlc -where
+   RESULT_VARIABLE result
+   OUTPUT_VARIABLE OCAML_STDLIB_PATH
+   OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (result)
+   message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
+endif()
+message(STATUS "Found OCAML ${OCAML_STDLIB_PATH}")
+include_directories(${OCAML_STDLIB_PATH})
+link_directories(${OCAML_STDLIB_PATH})
+
 
 # Seq library
 cmake_minimum_required(VERSION 3.9)
@@ -134,9 +148,10 @@ add_library(seq SHARED include/seq/any.h
                        src/util/llvm.h
                        src/util/seqdata.h
                        src/util/seqgc.cpp
-                       src/util/util.cpp)
+                       src/util/util.cpp
+                       src/foreign.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
+target_link_libraries(seq ${LLVM_LIBS} gc pegtl camlrun_shared)
 
 
 # Seq command-line tool
