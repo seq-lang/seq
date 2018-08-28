@@ -14,6 +14,12 @@ void Block::add(Stmt *stmt)
 	stmt->setParent(this);
 }
 
+void Block::resolveTypes()
+{
+	for (auto *stmt : stmts)
+		stmt->resolveTypes();
+}
+
 void Block::codegen(BasicBlock*& block)
 {
 	for (auto *stmt : stmts)
@@ -130,6 +136,10 @@ void Stmt::setContinues(BasicBlock *block)
 	ensureLoop();
 	for (auto *inst : continues)
 		inst->setSuccessor(0, block);
+}
+
+void Stmt::resolveTypes()
+{
 }
 
 void Stmt::codegen(BasicBlock*& block)

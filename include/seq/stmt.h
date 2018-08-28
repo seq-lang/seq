@@ -39,6 +39,7 @@ namespace seq {
 
 		explicit Block(Stmt *parent=nullptr);
 		void add(Stmt *stmt);
+		void resolveTypes();
 		void codegen(llvm::BasicBlock*& block);
 		Block *clone(Generic *ref);
 	};
@@ -71,6 +72,7 @@ namespace seq {
 		void setBreaks(llvm::BasicBlock *block);
 		void setContinues(llvm::BasicBlock *block);
 
+		virtual void resolveTypes();
 		virtual void codegen(llvm::BasicBlock*& block);
 		virtual Stmt *clone(Generic *ref);
 		virtual void setCloneBase(Stmt *stmt, Generic *ref);

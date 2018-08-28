@@ -12,7 +12,7 @@ namespace seq {
 		types::Type *type;
 	public:
 		explicit Pattern(types::Type *type);
-		virtual void validate(types::Type *type);
+		virtual void resolveTypes(types::Type *type);
 		virtual llvm::Value *codegen(BaseFunc *base,
 		                             types::Type *type,
 		                             llvm::Value *val,
@@ -26,7 +26,7 @@ namespace seq {
 		Var *var;
 	public:
 		Wildcard();
-		void validate(types::Type *type) override;
+		void resolveTypes(types::Type *type) override;
 		llvm::Value *codegen(BaseFunc *base,
 		                     types::Type *type,
 		                     llvm::Value *val,
@@ -42,7 +42,7 @@ namespace seq {
 		Pattern *pattern;
 	public:
 		explicit BoundPattern(Pattern *pattern);
-		void validate(types::Type *type) override;
+		void resolveTypes(types::Type *type) override;
 		llvm::Value *codegen(BaseFunc *base,
 		                     types::Type *type,
 		                     llvm::Value *val,
@@ -55,7 +55,7 @@ namespace seq {
 	class StarPattern : public Pattern {
 	public:
 		StarPattern();
-		void validate(types::Type *type) override;
+		void resolveTypes(types::Type *type) override;
 		llvm::Value *codegen(BaseFunc *base,
 		                     types::Type *type,
 		                     llvm::Value *val,
@@ -99,7 +99,7 @@ namespace seq {
 		std::vector<Pattern *> patterns;
 	public:
 		explicit RecordPattern(std::vector<Pattern *> patterns);
-		void validate(types::Type *type) override;
+		void resolveTypes(types::Type *type) override;
 		llvm::Value *codegen(BaseFunc *base,
 		                     types::Type *type,
 		                     llvm::Value *val,
@@ -112,7 +112,7 @@ namespace seq {
 		std::vector<Pattern *> patterns;
 	public:
 		explicit ArrayPattern(std::vector<Pattern *> patterns);
-		void validate(types::Type *type) override;
+		void resolveTypes(types::Type *type) override;
 		llvm::Value *codegen(BaseFunc *base,
 		                     types::Type *type,
 		                     llvm::Value *val,
@@ -135,7 +135,7 @@ namespace seq {
 		Pattern *pattern;
 	public:
 		explicit OptPattern(Pattern *pattern);
-		void validate(types::Type *type) override;
+		void resolveTypes(types::Type *type) override;
 		llvm::Value *codegen(BaseFunc *base,
 		                     types::Type *type,
 		                     llvm::Value *val,
@@ -159,7 +159,7 @@ namespace seq {
 		std::vector<Pattern *> patterns;
 	public:
 		explicit OrPattern(std::vector<Pattern *> patterns);
-		void validate(types::Type *type) override;
+		void resolveTypes(types::Type *type) override;
 		llvm::Value *codegen(BaseFunc *base,
 		                     types::Type *type,
 		                     llvm::Value *val,
@@ -173,7 +173,7 @@ namespace seq {
 		Expr *guard;
 	public:
 		explicit GuardedPattern(Pattern *pattern, Expr *guard);
-		void validate(types::Type *type) override;
+		void resolveTypes(types::Type *type) override;
 		llvm::Value *codegen(BaseFunc *base,
 		                     types::Type *type,
 		                     llvm::Value *val,

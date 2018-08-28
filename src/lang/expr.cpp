@@ -11,6 +11,10 @@ Expr::Expr() : Expr(types::VoidType::get())
 {
 }
 
+void Expr::resolveTypes()
+{
+}
+
 types::Type *Expr::getType() const
 {
 	return type;
@@ -117,6 +121,11 @@ BaseFunc *FuncExpr::getFunc()
 	return func;
 }
 
+void FuncExpr::resolveTypes()
+{
+	func->resolveTypes();
+}
+
 Value *FuncExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	auto *f = dynamic_cast<Func *>(func);
@@ -146,6 +155,11 @@ ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
 {
 }
 
+void ArrayExpr::resolveTypes()
+{
+	count->resolveTypes();
+}
+
 Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	auto *type = dynamic_cast<types::ArrayType *>(getType());
@@ -166,6 +180,12 @@ ArrayExpr *ArrayExpr::clone(Generic *ref)
 RecordExpr::RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names) :
     exprs(std::move(exprs)), names(std::move(names))
 {
+}
+
+void RecordExpr::resolveTypes()
+{
+	for (auto *expr : exprs)
+		expr->resolveTypes();
 }
 
 Value *RecordExpr::codegen(BaseFunc *base, BasicBlock*& block)
@@ -206,6 +226,11 @@ UOpExpr::UOpExpr(Op op, Expr *lhs) :
 {
 }
 
+void UOpExpr::resolveTypes()
+{
+	lhs->resolveTypes();
+}
+
 Value *UOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	auto spec = lhs->getType()->findUOp(op.symbol);
@@ -227,6 +252,12 @@ UOpExpr *UOpExpr::clone(Generic *ref)
 BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs) :
     Expr(), op(std::move(op)), lhs(lhs), rhs(rhs)
 {
+}
+
+void BOpExpr::resolveTypes()
+{
+	lhs->resolveTypes();
+	rhs->resolveTypes();
 }
 
 Value *BOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
@@ -294,6 +325,12 @@ ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :
 {
 }
 
+void ArrayLookupExpr::resolveTypes()
+{
+	arr->resolveTypes();
+	idx->resolveTypes();
+}
+
 Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	idx->ensure(types::IntType::get());
@@ -315,6 +352,13 @@ ArrayLookupExpr *ArrayLookupExpr::clone(Generic *ref)
 ArraySliceExpr::ArraySliceExpr(Expr *arr, Expr *from, Expr *to) :
     arr(arr), from(from), to(to)
 {
+}
+
+void ArraySliceExpr::resolveTypes()
+{
+	arr->resolveTypes();
+	from->resolveTypes();
+	to->resolveTypes();
 }
 
 Value *ArraySliceExpr::codegen(BaseFunc *base, BasicBlock*& block)
@@ -369,6 +413,11 @@ std::string GetElemExpr::getMemb()
 	return memb;
 }
 
+void GetElemExpr::resolveTypes()
+{
+	rec->resolveTypes();
+}
+
 llvm::Value *GetElemExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	Value *rec = this->rec->codegen(base, block);
@@ -408,6 +457,11 @@ GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref)
 MethodExpr::MethodExpr(Expr *expr, std::string name, std::vector<types::Type *> types) :
     Expr(), expr(expr), name(std::move(name)), types(std::move(types))
 {
+}
+
+void MethodExpr::resolveTypes()
+{
+	expr->resolveTypes();
 }
 
 Value *MethodExpr::codegen(BaseFunc *base, llvm::BasicBlock*& block)
@@ -453,6 +507,13 @@ MethodExpr *MethodExpr::clone(Generic *ref)
 CallExpr::CallExpr(Expr *func, std::vector<Expr *> args) :
     func(func), args(std::move(args))
 {
+}
+
+void CallExpr::resolveTypes()
+{
+	func->resolveTypes();
+	for (auto *arg : args)
+		arg->resolveTypes();
 }
 
 Value *CallExpr::codegen(BaseFunc *base, BasicBlock*& block)
@@ -507,6 +568,13 @@ CallExpr *CallExpr::clone(Generic *ref)
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse) :
     Expr(), cond(cond), ifTrue(ifTrue), ifFalse(ifFalse)
 {
+}
+
+void CondExpr::resolveTypes()
+{
+	cond->resolveTypes();
+	ifTrue->resolveTypes();
+	ifFalse->resolveTypes();
 }
 
 Value *CondExpr::codegen(BaseFunc *base, BasicBlock*& block)
@@ -573,6 +641,18 @@ void MatchExpr::addCase(Pattern *pattern, Expr *expr)
 	exprs.push_back(expr);
 }
 
+void MatchExpr::resolveTypes()
+{
+	assert(value);
+	value->resolveTypes();
+
+	for (auto *pattern : patterns)
+		pattern->resolveTypes(value->getType());
+
+	for (auto *expr : exprs)
+		expr->resolveTypes();
+}
+
 Value *MatchExpr::codegen(BaseFunc *base, BasicBlock *&block)
 {
 	assert(!patterns.empty());
@@ -587,7 +667,6 @@ Value *MatchExpr::codegen(BaseFunc *base, BasicBlock *&block)
 
 	bool seenCatchAll = false;
 	for (auto *pattern : patterns) {
-		pattern->validate(value->getType());
 		if (pattern->isCatchAll())
 			seenCatchAll = true;
 	}
@@ -668,6 +747,12 @@ ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
 {
 }
 
+void ConstructExpr::resolveTypes()
+{
+	for (auto *arg : args)
+		arg->resolveTypes();
+}
+
 Value *ConstructExpr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	getType();  // validates construction
@@ -701,6 +786,11 @@ ConstructExpr *ConstructExpr::clone(Generic *ref)
 
 OptExpr::OptExpr(Expr *val) : Expr(), val(val)
 {
+}
+
+void OptExpr::resolveTypes()
+{
+	val->resolveTypes();
 }
 
 Value *OptExpr::codegen(BaseFunc *base, BasicBlock*& block)

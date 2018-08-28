@@ -172,6 +172,14 @@ Var *Source::getVar()
 	return var;
 }
 
+void Source::resolveTypes()
+{
+	for (auto *source : sources)
+		source->resolveTypes();
+
+	scope->resolveTypes();
+}
+
 void Source::codegen(BasicBlock*& block)
 {
 	Module *module = block->getModule();

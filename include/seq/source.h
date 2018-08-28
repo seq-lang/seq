@@ -17,6 +17,7 @@ namespace seq {
 		explicit Source(std::vector<Expr *> sources);
 		Block *getBlock();
 		Var *getVar();
+		void resolveTypes() override;
 		void codegen(llvm::BasicBlock*& block) override;
 		Source *clone(Generic *ref) override;
 	};

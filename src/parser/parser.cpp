@@ -914,7 +914,13 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	{
 		state.unscope();  // for the scope introduced by `func_decl*`
 		state.exit();
+
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
 		state.uncontext();
+
+		auto *p = new FuncStmt(func);
+		state.stmt(p);
 	}
 
 	template<typename Input>
@@ -1675,7 +1681,14 @@ struct control<return_stmt> : pegtl::normal<return_stmt>
 		auto vec = state.get("e", true);
 		assert(vec.size() <= 1);
 		auto *p = new Return(vec.empty() ? nullptr : vec[0].value.expr);
-		p->setBase(state.base());
+
+		BaseFunc *base = state.base();
+
+		auto *func = dynamic_cast<Func *>(base);
+		if (func)
+			func->sawReturn(p);
+
+		p->setBase(base);
 		state.stmt(p);
 	}
 
@@ -1706,7 +1719,7 @@ struct control<yield_stmt> : pegtl::normal<yield_stmt>
 
 		auto *func = dynamic_cast<Func *>(base);
 		if (func)
-			func->setGen();
+			func->sawYield(p);
 
 		p->setBase(base);
 		state.stmt(p);

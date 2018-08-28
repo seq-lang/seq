@@ -8,6 +8,10 @@ BaseFunc::BaseFunc() :
 {
 }
 
+void BaseFunc::resolveTypes()
+{
+}
+
 LLVMContext& BaseFunc::getContext()
 {
 	assert(module);
@@ -41,9 +45,9 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 }
 
 Func::Func() :
-    BaseFunc(), Generic(false), name(), inTypes(), outType(nullptr), scope(new Block()),
-    argNames(), argVars(), gen(false), promise(nullptr), handle(nullptr),
-    cleanup(nullptr), suspend(nullptr)
+    BaseFunc(), Generic(false), name(), inTypes(), outType(&types::Void), scope(new Block()),
+    argNames(), argVars(), ret(nullptr), yield(nullptr), typesResolved(false), gen(false),
+    promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
 		assert(this->argNames.size() == this->inTypes.size());
@@ -52,15 +56,6 @@ Func::Func() :
 Block *Func::getBlock()
 {
 	return scope;
-}
-
-void Func::setGen()
-{
-	if (gen)
-		return;
-
-	gen = true;
-	outType = types::GenType::get(outType);
 }
 
 std::string Func::genericName()
@@ -73,6 +68,7 @@ Func *Func::realize(std::vector<types::Type *> types)
 	Generic *x = realizeGeneric(std::move(types));
 	auto *func = dynamic_cast<Func *>(x);
 	assert(func);
+	func->resolveTypes();
 	return func;
 }
 
@@ -98,6 +94,60 @@ std::vector<types::Type *> Func::deduceTypesFromArgTypes(std::vector<types::Type
 	return types;
 }
 
+void Func::sawReturn(Return *ret)
+{
+	if (this->ret)
+		return;
+
+	this->ret = ret;
+}
+
+void Func::sawYield(Yield *yield)
+{
+	if (this->yield)
+		return;
+
+	this->yield = yield;
+	gen = true;
+	outType = types::GenType::get(outType);
+}
+
+static std::string getFuncName(std::string& name)
+{
+	static int idx = 1;
+	return name.empty() ? ("func." + std::to_string(idx++)) :
+	                      (name + "." + std::to_string(idx++));
+}
+
+void Func::resolveTypes()
+{
+	if (typesResolved)
+		return;
+
+	typesResolved = true;
+
+	try {
+		scope->resolveTypes();
+
+		// return type deduction
+		if ((outType->is(&types::Void) || outType->is(types::GenType::get(&types::Void))) && (yield || (ret && ret->getExpr()))) {
+			if (yield) {
+				outType = types::GenType::get(yield->getExpr() ? yield->getExpr()->getType() : &types::Void);
+			} else if (ret) {
+				outType = ret->getExpr() ? ret->getExpr()->getType() : &types::Void;
+			} else {
+				assert(0);
+			}
+		}
+	} catch (exc::SeqException& e){
+		/*
+		 * Function had some generic types which could not be resolved yet; not a real issue
+		 * though, since these will be resolved whenever the generics are instantiated, so we
+		 * catch this exception and ignore it.
+		 */
+	}
+}
+
 void Func::codegen(Module *module)
 {
 	if (!this->module)
@@ -106,18 +156,17 @@ void Func::codegen(Module *module)
 	if (func)
 		return;
 
+	resolveTypes();
+
 	LLVMContext& context = module->getContext();
 
 	std::vector<Type *> types;
 	for (auto *type : inTypes)
 		types.push_back(type->getLLVMType(context));
 
-	static int idx = 1;
 	func = cast<Function>(
-	         module->getOrInsertFunction(name.empty() ? ("Func." + std::to_string(idx++)) :
-	                                                    (name + "." + std::to_string(idx++)),
+	         module->getOrInsertFunction(getFuncName(name),
 	                                     FunctionType::get(outType->getLLVMType(context), types, false)));
-
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
@@ -261,6 +310,9 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 		  "cannot return '" + type->getName() + "' from function returning '" +
 		  outType->getName() + "'");
 
+	if (val && type && type->is(&types::Void))
+		throw exc::SeqException("cannot return void value from function");
+
 	IRBuilder<> builder(block);
 
 	if (gen) {
@@ -290,6 +342,9 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 		throw exc::SeqException(
 		  "cannot yield '" + type->getName() + "' from generator yielding '" +
 		  outType->getBaseType(0)->getName() + "'");
+
+	if (val && type && type->is(&types::Void))
+		throw exc::SeqException("cannot yield void value from generator");
 
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
@@ -382,6 +437,8 @@ Func *Func::clone(Generic *ref)
 		argVarsCloned.insert({e.first, e.second->clone(ref)});
 	x->argVars = argVarsCloned;
 
+	if (ret) x->ret = ret->clone(ref);
+	if (yield) x->yield = yield->clone(ref);
 	x->gen = gen;
 	return x;
 }

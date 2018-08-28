@@ -12,6 +12,7 @@ namespace seq {
 	public:
 		explicit Expr(types::Type *type);
 		Expr();
+		virtual void resolveTypes();
 		virtual llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block)=0;
 		virtual types::Type *getType() const;
 		virtual void ensure(types::Type *type);
@@ -68,6 +69,7 @@ namespace seq {
 		explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types={});
 		bool isParameterized();
 		BaseFunc *getFunc();
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		FuncExpr *clone(Generic *ref) override;
@@ -78,6 +80,7 @@ namespace seq {
 		Expr *count;
 	public:
 		ArrayExpr(types::Type *type, Expr *count);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		ArrayExpr *clone(Generic *ref) override;
 	};
@@ -88,6 +91,7 @@ namespace seq {
 		std::vector<std::string> names;
 	public:
 		explicit RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names={});
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		RecordExpr *clone(Generic *ref) override;
@@ -99,6 +103,7 @@ namespace seq {
 		Expr *lhs;
 	public:
 		UOpExpr(Op op, Expr *lhs);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		UOpExpr *clone(Generic *ref) override;
@@ -111,6 +116,7 @@ namespace seq {
 		Expr *rhs;
 	public:
 		BOpExpr(Op op, Expr *lhs, Expr *rhs);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		BOpExpr *clone(Generic *ref) override;
@@ -122,6 +128,7 @@ namespace seq {
 		Expr *idx;
 	public:
 		ArrayLookupExpr(Expr *arr, Expr *idx);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		ArrayLookupExpr *clone(Generic *ref) override;
@@ -134,6 +141,7 @@ namespace seq {
 		Expr *to;
 	public:
 		ArraySliceExpr(Expr *arr, Expr *from, Expr *to);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		ArraySliceExpr *clone(Generic *ref) override;
@@ -148,6 +156,7 @@ namespace seq {
 		GetElemExpr(Expr *rec, seq_int_t idx);
 		Expr *getRec();
 		std::string getMemb();
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		GetElemExpr *clone(Generic *ref) override;
@@ -171,6 +180,7 @@ namespace seq {
 		std::vector<types::Type *> types;
 	public:
 		MethodExpr(Expr *expr, std::string method, std::vector<types::Type *> realizedTypes);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::MethodType *getType() const override;
 		MethodExpr *clone(Generic *ref) override;
@@ -182,6 +192,7 @@ namespace seq {
 		std::vector<Expr *> args;
 	public:
 		CallExpr(Expr *func, std::vector<Expr *> args);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		CallExpr *clone(Generic *ref) override;
@@ -194,6 +205,7 @@ namespace seq {
 		Expr *ifFalse;
 	public:
 		CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		CondExpr *clone(Generic *ref) override;
@@ -206,6 +218,7 @@ namespace seq {
 		std::vector<Expr *> exprs;
 	public:
 		MatchExpr();
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		MatchExpr *clone(Generic *ref) override;
@@ -219,6 +232,7 @@ namespace seq {
 		std::vector<Expr *> args;
 	public:
 		ConstructExpr(types::Type *type, std::vector<Expr *> args);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		ConstructExpr *clone(Generic *ref) override;
@@ -229,6 +243,7 @@ namespace seq {
 		Expr *val;
 	public:
 		explicit OptExpr(Expr *val);
+		void resolveTypes() override;
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType() const override;
 		OptExpr *clone(Generic *ref) override;
