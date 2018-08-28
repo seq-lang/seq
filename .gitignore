@@ -47,3 +47,7 @@ Thumbs.db
 
 # Doxygen
 dox
+
+# Ocaml
+ocaml/_build
+*.cm[iot]
