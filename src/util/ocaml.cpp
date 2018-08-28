@@ -5,7 +5,7 @@ using namespace seq;
 #define FOREIGN extern "C"
 
 FOREIGN { 
-   #include <caml/fail.h> 
+	#include <caml/fail.h> 
 }
 
 /***** Types *****/
@@ -19,23 +19,27 @@ FOREIGN types::Type *seq_type()         { return types::SeqType::get(); }
 FOREIGN types::Type *generic_type()     { return types::GenericType::get(); } 
 
 FOREIGN types::Type *array_type(types::Type *base) { 
-   return types::ArrayType::get(base); 
+	return types::ArrayType::get(base); 
 } 
 
 FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz) { 
-   return types::RecordType::get(
-      vector<types::Type*>(ty, ty + sz),
-      vector<string>(names, names + sz)); 
+	return types::RecordType::get(
+		vector<types::Type*>(ty, ty + sz),
+		vector<string>(names, names + sz)); 
 } 
 
 FOREIGN types::Type *ref_type(const char *name, types::RecordType *rec) { 
-   auto f = types::RefType::get(name); 
-   f->setContents(rec);
-   return f;
+	auto f = types::RefType::get(name); 
+	f->setContents(rec);
+	return f;
 } 
 
 FOREIGN void add_ref_method(types::Type *ref, const char *name, Func *fn) { 
-   ref->addMethod(name, fn);
+	ref->addMethod(name, fn);
+}
+
+FOREIGN void set_ref_done(types::RefType *ref) {
+	ref->setDone();
 }
 
 /***** Expressions *****/
@@ -48,138 +52,196 @@ FOREIGN Expr *func_expr(Func *f)      { return new FuncExpr(f); }
 FOREIGN Expr *var_expr(Var *v)        { return new VarExpr(v); }
 
 FOREIGN Expr *cond_expr(Expr *cond, Expr *ift, Expr *iff) {
-   return new CondExpr(cond, ift, iff);
+	return new CondExpr(cond, ift, iff);
 }
 
 FOREIGN Expr *uop_expr(const char *op, Expr *lhs) {
-   return new UOpExpr(uop(string(op)), lhs);
+	return new UOpExpr(uop(string(op)), lhs);
 }
 
 FOREIGN Expr *bop_expr(const char *op, Expr *lhs, Expr *rhs) {
-   return new BOpExpr(bop(string(op)), lhs, rhs);
+	return new BOpExpr(bop(string(op)), lhs, rhs);
 }
 
 FOREIGN Expr *call_expr(Expr *fn, Expr **args, size_t size) {
-   return new CallExpr(fn, vector<Expr*>(args, args + size));
+	return new CallExpr(fn, vector<Expr*>(args, args + size));
 }
 
-FOREIGN Expr *getelem_expr(Expr *lhs, const char *rhs) {
-   return new GetElemExpr(lhs, string(rhs));
+FOREIGN Expr *get_elem_expr(Expr *lhs, const char *rhs) {
+	return new GetElemExpr(lhs, string(rhs));
 }
 
 FOREIGN Expr *array_expr(types::Type *ty, Expr *cnt) {
-   return new ArrayExpr(ty, cnt);
+	return new ArrayExpr(ty, cnt);
 }
 
 FOREIGN Expr *construct_expr(types::Type *ty, Expr **args, size_t len) {
-   return new ConstructExpr(ty, vector<Expr*>(args, args + len));
+	return new ConstructExpr(ty, vector<Expr*>(args, args + len));
 }
 
 FOREIGN Expr *array_lookup_expr(Expr *lhs, Expr *rhs) {
-   return new ArrayLookupExpr(lhs, rhs);
+	return new ArrayLookupExpr(lhs, rhs);
 }
 
 FOREIGN Expr *array_slice_expr(Expr *arr, Expr *st, Expr *ed) {
-   return new ArraySliceExpr(arr, st, ed);
+	return new ArraySliceExpr(arr, st, ed);
 }
 
 FOREIGN Expr *record_expr(Expr **args, size_t size) {
-   return new RecordExpr(
-      vector<Expr*>(args, args + size), 
-      vector<string>(size, ""));
+	return new RecordExpr(
+		vector<Expr*>(args, args + size), 
+		vector<string>(size, ""));
 }
 
 FOREIGN Expr *static_expr(types::Type *ty, const char *name) {
-   return new GetStaticElemExpr(ty, string(name));
+	return new GetStaticElemExpr(ty, string(name));
 }
 
 FOREIGN Expr *method_expr(Expr *expr, Func *method) {
-   throw exc::SeqException("wrooong!");
-   // return new MethodExpr(expr, method);
+	throw exc::SeqException("wrooong!");
+	// return new MethodExpr(expr, method);
 }
 
 /***** Statements *****/
 
 FOREIGN Stmt *pass_stmt() { // Needed at all?
-   return NULL;
+	return NULL;
 }
 
 FOREIGN Stmt *break_stmt() {
-   return new Break();
+	return new Break();
 }
 
 FOREIGN Stmt *continue_stmt() {
-   return new Continue();
+	return new Continue();
 }
 
 FOREIGN Stmt *expr_stmt(Expr *e) {
-   return new ExprStmt(e);
+	return new ExprStmt(e);
 }
 
 FOREIGN Stmt *var_stmt(Expr *v) {
-   return new VarStmt(v);
+	return new VarStmt(v);
 }
 
 FOREIGN Var *var_stmt_var(VarStmt *v) {
-   return v->getVar();
+	return v->getVar();
 }
 
 FOREIGN Stmt *assign_stmt(Var *v, Expr *rhs) {
-   return new Assign(v, rhs);
+	return new Assign(v, rhs);
+}
+
+FOREIGN Stmt *assign_member_stmt(Expr *lh, const char *name, Expr *rh) {
+	return new AssignMember(lh, name, rh);
 }
 
 FOREIGN Stmt *assign_index_stmt(Expr *lh, Expr *rh, Expr *rhs) {
-   return new AssignIndex(lh, rh, rhs);
+	return new AssignIndex(lh, rh, rhs);
 }
 
 FOREIGN Stmt *print_stmt(Expr *e) {
-   return new Print(e);
+	return new Print(e);
 }
 
 FOREIGN Stmt *if_stmt() {
-   return new If();
+	return new If();
 }
 
 FOREIGN Stmt *while_stmt(Expr *cond) {
-   return new While(cond);
+	return new While(cond);
 }
 
 FOREIGN Stmt *for_stmt(Expr *gen) {
-   return new For(gen);
+	return new For(gen);
 }
 
 FOREIGN Stmt *return_stmt(Expr *e) {
-   return new Return(e);
+	return new Return(e);
 }
 
 FOREIGN Stmt *yield_stmt(Expr *e) {
-   return new Yield(e);
+	return new Yield(e);
+}
+
+FOREIGN Stmt *func_stmt(Func *f) {
+	return new FuncStmt(f);
 }
 
 /***** Functions *****/
 
-FOREIGN Func *func_stmt(const char *name, types::Type *out) {
-   Func *f = new Func();
-   f->setName(string(name));
-   f->setOut(out);
-   return f;
+FOREIGN Func *func(const char *name) {
+	Func *f = new Func();
+	f->setName(string(name));
+	// f->setOut(out);
+	return f;
 }
 
 FOREIGN Block *get_func_block (Func *st) { 
-   return st->getBlock(); 
+	return st->getBlock(); 
 }
 
 FOREIGN Var *get_func_arg (Func *f, const char *arg) {
-   return f->getArgVar(string(arg));
+	return f->getArgVar(string(arg));
 }
 
-FOREIGN void set_func_gen (Func *f) {
-   f->setGen();
+FOREIGN void set_func_return (Func *f, Return *ret) {
+	f->sawReturn(ret);
+}
+
+FOREIGN void set_func_yield (Func *f, Yield *ret) {
+	f->sawYield(ret);
 }
 
 FOREIGN void set_func_params (Func *f, const char **names, types::Type **types, size_t len) {
-   f->setIns(vector<types::Type*>(types, types + len));
-   f->setArgNames(vector<string>(names, names + len));
+	f->setIns(vector<types::Type*>(types, types + len));
+	f->setArgNames(vector<string>(names, names + len));
+}
+
+FOREIGN void set_func_generics(Func *fn, int n) {
+	fn->addGenerics(n);
+}
+
+FOREIGN types::Type *get_func_generic(Func *fn, int idx) {
+	return fn->getGeneric(idx);
+}
+
+FOREIGN void set_func_generic_name(Func *fn, int idx, const char *name) {
+	fn->getGeneric(idx)->setName(name);
+}
+
+FOREIGN Stmt *match_stmt (Expr *cond) {
+	auto m = new Match();
+	m->setValue(cond);
+	return m;
+}
+
+FOREIGN Block *add_match_case (Match *m, Pattern *p) {
+	return m->addCase(p);
+}
+
+FOREIGN Pattern *bound_pattern (Pattern *p) {
+	return new BoundPattern(p);
+}
+
+FOREIGN Pattern *wildcard_pattern (void) {
+	return new Wildcard();
+}
+
+FOREIGN Pattern *int_pattern (int i) {
+	return new IntPattern(i);
+}
+
+FOREIGN Pattern *str_pattern (const char *c) {
+	return new StrPattern(string(c));
+}
+
+FOREIGN Pattern *bool_pattern (bool b) {
+	return new BoolPattern(b);
+}
+
+FOREIGN Var *get_bound_pattern_var (BoundPattern *b) {
+	return b->getVar();
 }
 
 /***** Block utils *****/
@@ -191,26 +253,26 @@ FOREIGN Block *get_else_block (If *st)           { return st->addElse(); }
 FOREIGN Block *get_elif_block (If *st, Expr *ex) { return st->addCond(ex); }
 
 FOREIGN Var *get_for_var(For *f) {
-   return f->getVar();
+	return f->getVar();
 }
 
 FOREIGN void set_base (Stmt *st, BaseFunc *base) {
-   if (st) st->setBase(base);
+	if (st) st->setBase(base);
 }
 
 FOREIGN void add_stmt (Stmt *st, Block *block) {
-   if (st) block->add(st);
+	if (st) block->add(st);
 }
 
 FOREIGN void *init_module() {
-   return new SeqModule();
+	return new SeqModule();
 }
 
 FOREIGN void exec_module(SeqModule *sm, char debug) {
-   try {
-      sm->execute(vector<string>(), debug);
-   } catch (exc::SeqException &e) {
-      caml_failwith(e.what());
-   }
+	try {
+		sm->execute(vector<string>(), debug);
+	} catch (exc::SeqException &e) {
+		caml_failwith(e.what());
+	}
 }
 
