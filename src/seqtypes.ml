@@ -25,6 +25,9 @@ let seq_block: seq_block typ = ptr void
 type seq_module = unit ptr 
 let seq_module: seq_module typ = ptr void
 
+type seq_pattern = unit ptr 
+let seq_pattern: seq_pattern typ = ptr void
+
 (* Types *)
 
 let void_type    = foreign "void_type"    (void @-> returning seq_type)
@@ -49,6 +52,8 @@ let record_type names types =
 let add_ref_method = foreign "add_ref_method"
   (seq_type @-> string @-> seq_func @-> returning void)
 
+let set_ref_done = foreign "set_ref_done" (seq_type @-> returning void)
+
 (* Expressions *)
 
 let bool_expr  = foreign "bool_expr"  (bool @-> returning seq_expr)
@@ -72,7 +77,7 @@ let call_expr expr lst =
 	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
 	call_expr' expr (CArray.start c_arr) c_len
 
-let getelem_expr = foreign "getelem_expr" 
+let get_elem_expr = foreign "get_elem_expr" 
 	(seq_expr @-> string @-> returning seq_expr)
 let array_expr = foreign "array_expr"
   (seq_type @-> seq_expr @-> returning seq_expr)
@@ -96,7 +101,7 @@ let record_expr lst =
 	record_expr' (CArray.start c_arr) c_len
 
 let static_expr = foreign "static_expr"   
-  (seq_var @-> string @-> returning seq_expr)
+  (seq_type @-> string @-> returning seq_expr)
 let method_expr = foreign "method_expr"   
   (seq_expr @-> seq_func @-> returning seq_expr)
 
@@ -116,6 +121,8 @@ let var_stmt_var = foreign "var_stmt_var"
   (seq_stmt @-> returning seq_var)
 let assign_stmt = foreign "assign_stmt" 
 	(seq_var @-> seq_expr @-> returning seq_stmt)
+let assign_member_stmt = foreign "assign_member_stmt" 
+	(seq_expr @-> string @-> seq_expr @-> returning seq_stmt)
 let assign_index_stmt = foreign "assign_index_stmt" 
 	(seq_expr @-> seq_expr @-> seq_expr @-> returning seq_stmt)
 let print_stmt = foreign "print_stmt" 
@@ -130,13 +137,30 @@ let return_stmt = foreign "return_stmt"
 	(seq_expr @-> returning seq_stmt)
 let yield_stmt = foreign "yield_stmt" 
 	(seq_expr @-> returning seq_stmt)
+let func_stmt = foreign "func_stmt" 
+  (seq_func @-> returning seq_stmt)
+
+let match_stmt = foreign "match_stmt" 
+  (seq_expr @-> returning seq_stmt)
+let add_match_case = foreign "add_match_case" 
+  (seq_stmt @-> seq_pattern @-> returning seq_block)
+
+let bound_pattern    = foreign "bound_pattern" (seq_pattern @-> returning seq_pattern)
+let wildcard_pattern = foreign "wildcard_pattern" (void @-> returning seq_pattern)
+let int_pattern      = foreign "int_pattern" (int @-> returning seq_pattern)
+let str_pattern      = foreign "str_pattern" (string @-> returning seq_pattern)
+let bool_pattern     = foreign "bool_pattern" (bool @-> returning seq_pattern)
+
+let get_bound_pattern_var = foreign "get_bound_pattern_var" 
+  (seq_pattern @-> returning seq_var)
 
 (* Functions *)
 
-let func_stmt = foreign "func_stmt" (string @-> seq_type @-> returning seq_func)
+let func = foreign "func" (string @-> returning seq_func)
 let get_func_block = foreign "get_func_block" (seq_func @-> returning seq_block)
 let get_func_arg = foreign "get_func_arg" (seq_func @-> string @-> returning seq_var)
-let set_func_gen = foreign "set_func_gen" (seq_func @-> returning void)
+let set_func_return = foreign "set_func_return" (seq_func @-> seq_stmt @-> returning void)
+let set_func_yield = foreign "set_func_yield" (seq_func @-> seq_stmt @-> returning void)
 let set_func_params' = foreign "set_func_params"
   (seq_func @-> ptr string @-> ptr seq_type @-> size_t @-> returning void)
 let set_func_params fn names types = 
@@ -146,6 +170,10 @@ let set_func_params fn names types =
 	let a_arr = CArray.of_list seq_type types in
   let a_len = Unsigned.Size_t.of_int (CArray.length a_arr) in
 	set_func_params' fn (CArray.start n_arr) (CArray.start a_arr) a_len
+
+let set_func_generics = foreign "set_func_generics" (seq_func @-> int @-> returning void)
+let get_func_generic = foreign "get_func_generic" (seq_func @-> int @-> returning seq_type)
+let set_func_generic_name = foreign "set_func_generic_name" (seq_func @-> int @-> string @-> returning void)
 
 (* Utils *)
 

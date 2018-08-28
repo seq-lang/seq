@@ -41,7 +41,7 @@
 %token CONTINUE BREAK
 %token IF ELSE ELIF
 %token MATCH CASE AS DEFAULT
-%token DEF RETURN YIELD ARRAY
+%token DEF RETURN YIELD ARRAY 
 %token PRINT PASS IMPORT FROM CLASS
 %token TYPE LAMBDA ASSERT GLOBAL
 
@@ -211,9 +211,7 @@ statement: /* Statements */
     { For ($2, $4, $6) }
   | IF test COLON suite { If [(Some $2, $4)] }
   | IF test COLON suite; rest = elif_suite { If ((Some $2, $4)::rest) }
-  | MATCH test COLON NL INDENT case_suite DEDENT { 
-    noimp "match"
-    (* Match ($2, $6) *) }
+  | MATCH test COLON NL INDENT case_suite DEDENT { Match ($2, $6) }
   | func_statement 
   | class_statement
     { $1 }
@@ -222,7 +220,7 @@ small_statement: /* Simple one-line statements: 5+3, print x */
   /* TODO del, exec/eval?,  */
   | expr_statement { $1 }
   | import_statement { noimp "Import" (* $1 *) }
-  | PRINT test_list { Print $2 }
+  | PRINT test_list { Print (List.hd_exn $2) }
   | PASS { Pass }
   | BREAK { Break }
   | CONTINUE { Continue }
@@ -240,7 +238,10 @@ small_statement: /* Simple one-line statements: 5+3, print x */
     noimp "Assert" 
     (* Assert $2 *) }
 expr_statement: /* Expression statement: a + 3 - 5 */
-  | test_list { Exprs $1 }
+  | test_list { 
+      (*assert List.length $1 = 1;*)
+      Exprs (List.hd_exn $1)
+    }
   /* TODO: https://www.python.org/dev/peps/pep-3132/ */
   | test aug_eq test_list { 
     (* TODO tuple assignment *)
@@ -267,7 +268,7 @@ case_suite:
   | case; rest = case_suite { $1::rest }
 case:
   | CASE test COLON suite { (Some $2, None, $4) }
-  | CASE test AS ID COLON suite { (Some $2, Some (Id $4), $6) }
+  | CASE test AS ID COLON suite { (Some $2, Some ($4), $6) }
 import_statement:
   | FROM dotted_name IMPORT MUL { 
     noimp "Import" 
@@ -317,7 +318,7 @@ typed_param:
 /*******************************************************/
 
 class_statement:
-  | CLASS ID LP; mems = separated_list(COMMA, typed_param) RP COLON; fns = class_member 
+  | CLASS ID LP; mems = separated_list(COMMA, typed_param) RP COLON NL; fns = class_member 
     { Class ($2, mems, fns) }
 class_member:
   | PASS { [] }

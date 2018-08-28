@@ -74,18 +74,51 @@ for ii in yiyi(10):
 # print k
 
 
-# print "*** ARRAYS ***"
-# arr = array(int, 10)
-# i = 0
-# while i < 10:
-#    print i
-#    arr[i] = i 
-#    i = i + 1
-# while i >= 0:
-#    print arr[i]
-#    i = i - 1
-
-# type T(name: str, age: int)
-# t = T("hamo", 29)
+#type T(name: str)
+#t = T("hamo")
 
 
+print "*** ARRAYS ***"
+arr = array(int, 10)
+i = 0
+while i < 10:
+   arr[i] = i 
+   i = i + 1
+print arr[55]
+while i >= 0:
+   print arr[i]
+   i = i - 1
+
+print "*** TYPES ***"
+type T(name: str, age: int)
+tt = T("hamo", 29)
+print tt.name
+
+print "*** CLASSES ***"
+class IntList(content: str, age: int):
+   def print_content_with(self, i: int) -> void:
+      print self.content
+      self.age = 16
+      print i
+
+   def static_print(i: int) -> void:
+      print i
+
+
+il = IntList("hai", 10)
+il.print_content_with(3)
+il.content = "hai2"
+il.print_content_with(4)
+IntList.static_print(5)
+
+print "*** GENERICS ***"
+def ff(x, y: int):
+   return x + y
+print ff(3, 5)
+
+print "*** MATCH ***"
+il.age = 10
+match il.age:
+   case 10: print 'first'
+   case 15 as y: print 'second'; print y
+   default: print 'whoops'
