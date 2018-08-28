@@ -1,0 +1,79 @@
+# comment
+
+# atoms
+e = 1 + e - 0.5
+y = True or False
+s = 'hehe' + "he\the"
+s = s'hehe' + S"HAI"
+r = r'a+\n"e' + R"eh'.+()"
+y = """
+h
+g
+""" + s'''
+a
+b
+'''
+ex = `c pow(2)`
+y = () - (1, ) + (1, 2, 3) - (a for a in 1, 2, 3)
+l = [] + [1] * [1, 2, 'hallo', []] + [y for y in a for j in b if x > 3]
+d = {} + {5} + {5, 5} - {y for y in [1, 2]}
+d = {} + {5: 3.0} + {5: 'a', 6: s'b'} - {a: b for a, b in x.iteritems() if b > 3}
+
+# expressions
+a = 5 |> printf(r'' + x, a=5, b=c[3] if a==4 else q)
+a = (lambda a, b: a+d)(1)
+y = a or b and c or not 5 < d <= 6 and c != 5
+call(a, x=(lambda a, b: a+d)(1), d).haha[15]
+y = a + c * c / d % e - f // g ** 3
+sub = sub[1:2, 3:4, ::] + sub[11:2:3] + s[::-1]
+sub += q[1::2] + q[1:2:] + q[:2:3] + q[:2:] + q[...]
+
+# small statements
+import a
+import a.b, c.d as d
+from a import *
+from c.d import f, g.h as hh
+print a, b |> c - d
+pass
+type Hey(a of string, b of int)
+assert 'thou shalt' != not 'pass', 53
+a, b //= c, d, e
+a, b, c = 1, {a: b, c:d}, (343, 34)
+
+# statements
+a, b += 2, 3; print a, b; import f; assert a; y **= f
+while 15 > a: break
+for a, b in 5, 38 + 16, (eha,):
+    if a < 3:
+        continue
+        if c < d:
+            print 'hehe'
+            if 1:
+                pass
+            else:
+                pass
+        elif y >= 16 |> qw or ee:
+            print 'whatever'
+            if 1: print 'hi'
+            elif 2: q += 5
+        else: 'survived' |> printf
+match y + 5 |> fx:
+    case 1: s'hi'
+    case 2 as a: a += 99
+    default: 
+        'whoops'
+
+# functions
+@dec
+def f(x): return x
+
+@dec()
+def f(x): yield x, 1
+
+@dec1(5, 16)
+@dec2
+@dec3(y=55, a|>b)
+def f(x of int) of str:
+    global a, b
+    return x, y + 3, (1, )
+
