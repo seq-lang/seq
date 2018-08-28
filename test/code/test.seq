@@ -1,5 +1,5 @@
 class Pair[T](a: T, b: T) {
-  def sum[S](self: Pair[T], c: S) -> S {
+  def sum[S](self: Pair[T], c: S) {
     return self.a + self.b + c
   }
 
@@ -14,7 +14,7 @@ class Pair[T](a: T, b: T) {
     self.b = tmp
   }
 
-  def iter(self: Pair[T]) -> T {
+  def iter(self: Pair[T]) {
     yield self.a
     yield self.b
     return
@@ -28,7 +28,7 @@ def main[Z](args: Str[]) {
 # ---------
 
 
-def range(a: Int, b: Int) -> Int {
+def range(a: Int, b: Int) {
   var i = a
   while i < b {
     yield i
@@ -36,7 +36,7 @@ def range(a: Int, b: Int) -> Int {
   }
 }
 
-def split(s: Seq, k: Int, step: Int) -> Seq {
+def split(s: Seq, k: Int, step: Int) {
   var i = 0
   while i+k <= s.len {
     yield s[i:i+k]
@@ -44,7 +44,7 @@ def split(s: Seq, k: Int, step: Int) -> Seq {
   }
 }
 
-def enum(s: Seq[]) -> {Int, Seq} {
+def enum(s: Seq[]) {
   var i = 0
   for j in range(0, s.len) {
     yield (i, s[j])
@@ -52,7 +52,7 @@ def enum(s: Seq[]) -> {Int, Seq} {
   }
 }
 
-def f(s: Seq) -> Seq[] {
+def f(s: Seq) {
   var v = Seq[s.len/32]
   var i = 0
   for t in split(s, 32, 32) {
@@ -65,7 +65,7 @@ def f(s: Seq) -> Seq[] {
 var farray = (Seq -> Seq[])[1]
 farray[0] = f
 
-def ident(s: Seq) -> Seq {
+def ident(s: Seq) {
   return s
 }
 
@@ -105,7 +105,7 @@ source args[0] as input {
   print (v[1], ((v)[2]), (v[1], 4.2)).3.1
 }
 
-def hello -> Str:
+def hello:
   return "hello world"
 
 
@@ -125,12 +125,12 @@ print b.1
 b = (b.1, !!false)
 print b.2
 
-def fib(n: Int) -> Int {
+def fib(n: Int) {
   type F = {f: (Int -> Int), x: Int}
 
-  def apply(f: (Int -> Int), x: Int) -> Int: return f(x)
+  def apply(f: (Int -> Int), x: Int): return f(x)
 
-  def rec(pair: F) -> Int:
+  def rec(pair: F):
     return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
 
   return n if n <= 1 else rec((fib, n))
@@ -154,8 +154,8 @@ def whois(person: Person) {
   print person.age
 }
 
-def birthday(person: Person) -> Person:
-  return (person.name, person.age + 1)
+def birthday(person: Person):
+  return Person(person.name, person.age + 1)
 
 var joe = (name: "Joe", age: 42)
 whois(joe)

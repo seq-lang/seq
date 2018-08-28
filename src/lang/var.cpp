@@ -61,7 +61,6 @@ void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
 
 void Var::setType(types::Type *type)
 {
-	assert(!this->type);
 	this->type = type;
 }
 

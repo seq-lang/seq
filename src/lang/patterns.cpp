@@ -7,7 +7,7 @@ Pattern::Pattern(types::Type *type) : type(type)
 {
 }
 
-void Pattern::validate(types::Type *type)
+void Pattern::resolveTypes(types::Type *type)
 {
 	if (!type->is(this->type))
 		throw exc::SeqException("pattern type mismatch: expected " + this->type->getName() +
@@ -29,7 +29,7 @@ Wildcard::Wildcard() :
 {
 }
 
-void Wildcard::validate(types::Type *type)
+void Wildcard::resolveTypes(types::Type *type)
 {
 	var->setType(type);
 }
@@ -71,10 +71,10 @@ BoundPattern::BoundPattern(Pattern *pattern) :
 {
 }
 
-void BoundPattern::validate(types::Type *type)
+void BoundPattern::resolveTypes(types::Type *type)
 {
 	var->setType(type);
-	pattern->validate(type);
+	pattern->resolveTypes(type);
 }
 
 bool BoundPattern::isCatchAll()
@@ -112,7 +112,7 @@ StarPattern::StarPattern() : Pattern(&types::Any)
 {
 }
 
-void StarPattern::validate(types::Type *type)
+void StarPattern::resolveTypes(types::Type *type)
 {
 }
 
@@ -176,7 +176,7 @@ RecordPattern::RecordPattern(std::vector<Pattern *> patterns) :
 {
 }
 
-void RecordPattern::validate(types::Type *type)
+void RecordPattern::resolveTypes(types::Type *type)
 {
 	auto *rec = dynamic_cast<types::RecordType *>(type);
 
@@ -189,7 +189,7 @@ void RecordPattern::validate(types::Type *type)
 		throw exc::SeqException("record element count mismatch in pattern");
 
 	for (unsigned i = 0; i < types.size(); i++)
-		patterns[i]->validate(types[i]);
+		patterns[i]->resolveTypes(types[i]);
 }
 
 Value *RecordPattern::codegen(BaseFunc *base,
@@ -233,14 +233,14 @@ ArrayPattern::ArrayPattern(std::vector<Pattern *> patterns) :
 {
 }
 
-void ArrayPattern::validate(types::Type *type)
+void ArrayPattern::resolveTypes(types::Type *type)
 {
 	if (!type->isGeneric(&types::Array))
 		throw exc::SeqException("cannot match array pattern with non-array value");
 
 	types::Type *baseType = type->getBaseType(0);
 	for (auto *pattern : patterns)
-		pattern->validate(baseType);
+		pattern->resolveTypes(baseType);
 }
 
 Value *ArrayPattern::codegen(BaseFunc *base,
@@ -447,14 +447,14 @@ OptPattern::OptPattern(Pattern *pattern) :
 {
 }
 
-void OptPattern::validate(types::Type *type)
+void OptPattern::resolveTypes(types::Type *type)
 {
 	auto *optType = dynamic_cast<types::OptionalType *>(type);
 	if (!optType)
 		throw exc::SeqException("cannot match optional pattern against non-optional value");
 
 	if (pattern)
-		pattern->validate(optType->getBaseType(0));
+		pattern->resolveTypes(optType->getBaseType(0));
 }
 
 Value *OptPattern::codegen(BaseFunc *base,
@@ -527,10 +527,10 @@ OrPattern::OrPattern(std::vector<Pattern *> patterns) :
 {
 }
 
-void OrPattern::validate(types::Type *type)
+void OrPattern::resolveTypes(types::Type *type)
 {
 	for (auto *pattern : patterns)
-		pattern->validate(type);
+		pattern->resolveTypes(type);
 }
 
 Value *OrPattern::codegen(BaseFunc *base,
@@ -572,9 +572,9 @@ GuardedPattern::GuardedPattern(Pattern *pattern, Expr *guard) :
 {
 }
 
-void GuardedPattern::validate(types::Type *type)
+void GuardedPattern::resolveTypes(types::Type *type)
 {
-	pattern->validate(type);
+	pattern->resolveTypes(type);
 }
 
 Value *GuardedPattern::codegen(BaseFunc *base,

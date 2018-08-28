@@ -50,6 +50,10 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 	Generic *x = realizeGeneric(types);
 	auto *ref = dynamic_cast<types::RefType *>(x);
 	assert(ref);
+
+	for (auto& method : ref->getVTable().methods)
+		method.second->resolveTypes();
+
 	return ref;
 }
 

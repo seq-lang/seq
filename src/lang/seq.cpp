@@ -25,11 +25,17 @@ Var *SeqModule::getArgVar()
 	return &argsVar;
 }
 
+void SeqModule::resolveTypes()
+{
+	scope->resolveTypes();
+}
+
 void SeqModule::codegen(Module *module)
 {
 	if (func)
 		return;
 
+	resolveTypes();
 	LLVMContext& context = module->getContext();
 	this->module = module;
 

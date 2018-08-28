@@ -50,6 +50,7 @@ namespace seq {
 		Block *getBlock();
 		Var *getArgVar();
 
+		void resolveTypes() override;
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,
 		                   types::Type *type,

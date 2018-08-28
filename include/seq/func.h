@@ -9,6 +9,8 @@ namespace seq {
 
 	class Expr;
 	class Var;
+	class Return;
+	class Yield;
 
 	class BaseFunc {
 	protected:
@@ -17,6 +19,7 @@ namespace seq {
 		llvm::Function *func;
 		BaseFunc();
 	public:
+		virtual void resolveTypes();
 		virtual void codegen(llvm::Module *module)=0;
 		virtual void codegenReturn(llvm::Value *val,
 		                           types::Type *type,
@@ -41,6 +44,10 @@ namespace seq {
 		std::vector<std::string> argNames;
 		std::map<std::string, Var *> argVars;
 
+		Return *ret;
+		Yield *yield;
+		bool typesResolved;  // make sure we don't keep resolving recursively
+
 		bool gen;
 		llvm::Value *promise;
 		llvm::Value *handle;
@@ -50,12 +57,15 @@ namespace seq {
 	public:
 		Func();
 		Block *getBlock();
-		void setGen();
 
 		std::string genericName() override;
 		Func *realize(std::vector<types::Type *> types);
 		std::vector<types::Type *> deduceTypesFromArgTypes(std::vector<types::Type *> argTypes);
 
+		void sawReturn(Return *ret);
+		void sawYield(Yield *yield);
+
+		void resolveTypes() override;
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,
 		                   types::Type *type,

@@ -8,6 +8,11 @@ Print::Print(Expr *expr) :
 {
 }
 
+void Print::resolveTypes()
+{
+	expr->resolveTypes();
+}
+
 void Print::codegen(BasicBlock*& block)
 {
 	types::Type *type = expr->getType();
@@ -29,6 +34,11 @@ Print *Print::clone(Generic *ref)
 ExprStmt::ExprStmt(Expr *expr) :
     Stmt("expr"), expr(expr)
 {
+}
+
+void ExprStmt::resolveTypes()
+{
+	expr->resolveTypes();
 }
 
 void ExprStmt::codegen(BasicBlock*& block)
@@ -57,9 +67,14 @@ Var *VarStmt::getVar()
 	return var;
 }
 
+void VarStmt::resolveTypes()
+{
+	init->resolveTypes();
+	var->setType(init->getType());
+}
+
 void VarStmt::codegen(BasicBlock*& block)
 {
-	var->setType(init->getType());
 	Value *val = init->codegen(getBase(), block);
 	var->store(getBase(), val, block);
 }
@@ -76,9 +91,40 @@ VarStmt *VarStmt::clone(Generic *ref)
 	return x;
 }
 
+FuncStmt::FuncStmt(Func *func) :
+    Stmt("func"), func(func)
+{
+}
+
+void FuncStmt::resolveTypes()
+{
+	func->resolveTypes();
+}
+
+void FuncStmt::codegen(BasicBlock*& block)
+{
+}
+
+FuncStmt *FuncStmt::clone(Generic *ref)
+{
+	if (ref->seenClone(this))
+		return (FuncStmt *)ref->getClone(this);
+
+	auto *x = new FuncStmt(nullptr);
+	ref->addClone(this, x);
+	x->func = func->clone(ref);
+	Stmt::setCloneBase(x, ref);
+	return x;
+}
+
 Assign::Assign(Var *var, Expr *value) :
     Stmt("(=)"), var(var), value(value)
 {
+}
+
+void Assign::resolveTypes()
+{
+	value->resolveTypes();
 }
 
 void Assign::codegen(BasicBlock*& block)
@@ -102,6 +148,13 @@ Assign *Assign::clone(Generic *ref)
 AssignIndex::AssignIndex(Expr *array, Expr *idx, Expr *value) :
     Stmt("([]=)"), array(array), idx(idx), value(value)
 {
+}
+
+void AssignIndex::resolveTypes()
+{
+	array->resolveTypes();
+	idx->resolveTypes();
+	value->resolveTypes();
 }
 
 void AssignIndex::codegen(BasicBlock*& block)
@@ -142,6 +195,12 @@ AssignMember::AssignMember(Expr *expr, seq_int_t idx, Expr *value) :
 {
 }
 
+void AssignMember::resolveTypes()
+{
+	expr->resolveTypes();
+	value->resolveTypes();
+}
+
 void AssignMember::codegen(BasicBlock*& block)
 {
 	value->ensure(expr->getType()->membType(memb));
@@ -164,6 +223,15 @@ AssignMember *AssignMember::clone(Generic *ref)
 If::If() :
     Stmt("if"), conds(), branches(), elseAdded(false)
 {
+}
+
+void If::resolveTypes()
+{
+	for (auto *cond : conds)
+		cond->resolveTypes();
+
+	for (auto *branch : branches)
+		branch->resolveTypes();
 }
 
 void If::codegen(BasicBlock*& block)
@@ -264,6 +332,18 @@ Match::Match() :
 {
 }
 
+void Match::resolveTypes()
+{
+	assert(value);
+	value->resolveTypes();
+
+	for (auto *pattern : patterns)
+		pattern->resolveTypes(value->getType());
+
+	for (auto *branch : branches)
+		branch->resolveTypes();
+}
+
 void Match::codegen(BasicBlock*& block)
 {
 	if (patterns.empty())
@@ -332,7 +412,6 @@ Block *Match::addCase(Pattern *pattern)
 	auto *branch = new Block(this);
 	patterns.push_back(pattern);
 	branches.push_back(branch);
-	pattern->validate(value->getType());
 	return branch;
 }
 
@@ -370,6 +449,12 @@ While::While(Expr *cond) :
 Block *While::getBlock()
 {
 	return scope;
+}
+
+void While::resolveTypes()
+{
+	cond->resolveTypes();
+	scope->resolveTypes();
 }
 
 void While::codegen(BasicBlock*& block)
@@ -437,12 +522,17 @@ Var *For::getVar()
 	return var;
 }
 
+void For::resolveTypes()
+{
+	gen->resolveTypes();
+	var->setType(gen->getType()->getBaseType(0));
+	scope->resolveTypes();
+}
+
 void For::codegen(BasicBlock*& block)
 {
 	if (!gen->getType()->isGeneric(types::GenType::get()))
 		throw exc::SeqException("cannot iterate over non-generator");
-
-	var->setType(gen->getType()->getBaseType(0));
 
 	auto *type = dynamic_cast<types::GenType *>(gen->getType());
 	assert(type);
@@ -516,6 +606,11 @@ Expr *Return::getExpr()
 	return expr;
 }
 
+void Return::resolveTypes()
+{
+	if (expr) expr->resolveTypes();
+}
+
 void Return::codegen(BasicBlock*& block)
 {
 	types::Type *type = expr ? expr->getType() : types::VoidType::get();
@@ -542,6 +637,11 @@ Yield::Yield(Expr *expr) :
 Expr *Yield::getExpr()
 {
 	return expr;
+}
+
+void Yield::resolveTypes()
+{
+	if (expr) expr->resolveTypes();
 }
 
 void Yield::codegen(BasicBlock*& block)
