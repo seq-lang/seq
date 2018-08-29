@@ -62,11 +62,10 @@ endif()
 
 # Set up OCAML includes
 find_program(OCAMLFIND NAMES ocamlfind)
-execute_process(
-   COMMAND ${OCAMLFIND} ocamlc -where
-   RESULT_VARIABLE result
-   OUTPUT_VARIABLE OCAML_STDLIB_PATH
-   OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND ${OCAMLFIND} ocamlc -where
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE OCAML_STDLIB_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 if (result)
    message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
 endif()
@@ -146,10 +145,10 @@ add_library(seq SHARED include/seq/any.h
                        src/util/exc.cpp
                        src/util/io.cpp
                        src/util/llvm.h
+                       src/util/ocaml.cpp
                        src/util/seqdata.h
                        src/util/seqgc.cpp
-                       src/util/util.cpp
-                       src/util/ocaml.cpp)
+                       src/util/util.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} gc pegtl camlrun_shared)
 
