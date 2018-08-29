@@ -19,6 +19,7 @@ install:
   - bash -ex .travis-ocaml.sh
   - opam update
   - opam install -y ocamlfind
+  - eval $(opam env)
 
   # apt's LLVM does not have RTTI enabled, but conda's does:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-${CONDA_OS_NAME}-x86_64.sh -O miniconda.sh
