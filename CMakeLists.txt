@@ -150,7 +150,7 @@ add_library(seq SHARED include/seq/any.h
                        src/util/seqgc.cpp
                        src/util/util.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} gc pegtl camlrun)
+target_link_libraries(seq ${LLVM_LIBS} gc pegtl camlrun_shared)
 
 
 # Seq command-line tool
