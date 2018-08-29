@@ -95,8 +95,8 @@ FOREIGN Expr *array_slice_expr(Expr *arr, Expr *st, Expr *ed) {
 
 FOREIGN Expr *record_expr(Expr **args, size_t size) {
 	return new RecordExpr(
-		vector<Expr*>(args, args + size),
-		vector<string>(size, ""));
+	             vector<Expr*>(args, args + size),
+	             vector<string>(size, ""));
 }
 
 FOREIGN Expr *static_expr(types::Type *ty, const char *name) {
@@ -111,7 +111,7 @@ FOREIGN Expr *method_expr(Expr *expr, Func *method) {
 /***** Statements *****/
 
 FOREIGN Stmt *pass_stmt() { // Needed at all?
-	return NULL;
+	return nullptr;
 }
 
 FOREIGN Stmt *break_stmt() {
@@ -177,29 +177,29 @@ FOREIGN Stmt *func_stmt(Func *f) {
 /***** Functions *****/
 
 FOREIGN Func *func(const char *name) {
-	Func *f = new Func();
+	auto *f = new Func();
 	f->setName(string(name));
 	// f->setOut(out);
 	return f;
 }
 
-FOREIGN Block *get_func_block (Func *st) {
+FOREIGN Block *get_func_block(Func *st) {
 	return st->getBlock();
 }
 
-FOREIGN Var *get_func_arg (Func *f, const char *arg) {
+FOREIGN Var *get_func_arg(Func *f, const char *arg) {
 	return f->getArgVar(string(arg));
 }
 
-FOREIGN void set_func_return (Func *f, Return *ret) {
+FOREIGN void set_func_return(Func *f, Return *ret) {
 	f->sawReturn(ret);
 }
 
-FOREIGN void set_func_yield (Func *f, Yield *ret) {
+FOREIGN void set_func_yield(Func *f, Yield *ret) {
 	f->sawYield(ret);
 }
 
-FOREIGN void set_func_params (Func *f, const char **names, types::Type **types, size_t len) {
+FOREIGN void set_func_params(Func *f, const char **names, types::Type **types, size_t len) {
 	f->setIns(vector<types::Type*>(types, types + len));
 	f->setArgNames(vector<string>(names, names + len));
 }
@@ -216,57 +216,57 @@ FOREIGN void set_func_generic_name(Func *fn, int idx, const char *name) {
 	fn->getGeneric(idx)->setName(name);
 }
 
-FOREIGN Stmt *match_stmt (Expr *cond) {
+FOREIGN Stmt *match_stmt(Expr *cond) {
 	auto m = new Match();
 	m->setValue(cond);
 	return m;
 }
 
-FOREIGN Block *add_match_case (Match *m, Pattern *p) {
+FOREIGN Block *add_match_case(Match *m, Pattern *p) {
 	return m->addCase(p);
 }
 
-FOREIGN Pattern *bound_pattern (Pattern *p) {
+FOREIGN Pattern *bound_pattern(Pattern *p) {
 	return new BoundPattern(p);
 }
 
-FOREIGN Pattern *wildcard_pattern (void) {
+FOREIGN Pattern *wildcard_pattern(void) {
 	return new Wildcard();
 }
 
-FOREIGN Pattern *int_pattern (int i) {
+FOREIGN Pattern *int_pattern(int i) {
 	return new IntPattern(i);
 }
 
-FOREIGN Pattern *str_pattern (const char *c) {
+FOREIGN Pattern *str_pattern(const char *c) {
 	return new StrPattern(string(c));
 }
 
-FOREIGN Pattern *bool_pattern (bool b) {
+FOREIGN Pattern *bool_pattern(bool b) {
 	return new BoolPattern(b);
 }
 
-FOREIGN Var *get_bound_pattern_var (BoundPattern *b) {
+FOREIGN Var *get_bound_pattern_var(BoundPattern *b) {
 	return b->getVar();
 }
 
 /***** Block utils *****/
 
-FOREIGN Block *get_module_block (SeqModule *st)  { return st->getBlock(); }
-FOREIGN Block *get_while_block (While *st)       { return st->getBlock(); }
-FOREIGN Block *get_for_block (For *st)           { return st->getBlock(); }
-FOREIGN Block *get_else_block (If *st)           { return st->addElse(); }
-FOREIGN Block *get_elif_block (If *st, Expr *ex) { return st->addCond(ex); }
+FOREIGN Block *get_module_block(SeqModule *st)  { return st->getBlock(); }
+FOREIGN Block *get_while_block(While *st)       { return st->getBlock(); }
+FOREIGN Block *get_for_block(For *st)           { return st->getBlock(); }
+FOREIGN Block *get_else_block(If *st)           { return st->addElse(); }
+FOREIGN Block *get_elif_block(If *st, Expr *ex) { return st->addCond(ex); }
 
 FOREIGN Var *get_for_var(For *f) {
 	return f->getVar();
 }
 
-FOREIGN void set_base (Stmt *st, BaseFunc *base) {
+FOREIGN void set_base(Stmt *st, BaseFunc *base) {
 	if (st) st->setBase(base);
 }
 
-FOREIGN void add_stmt (Stmt *st, Block *block) {
+FOREIGN void add_stmt(Stmt *st, Block *block) {
 	if (st) block->add(st);
 }
 

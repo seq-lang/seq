@@ -884,7 +884,7 @@ struct control<func_generics> : pegtl::normal<func_generics>
 		assert(state.context().type == SeqEntity::FUNC);
 		auto *func = state.context().value.func;
 
-		func->addGenerics((unsigned)vec.size());
+		func->addGenerics((int)vec.size());
 		for (unsigned i = 0; i < vec.size(); i++) {
 			state.sym(vec[i].value.name, (types::Type *)func->getGeneric(i));
 			func->getGeneric(i)->setName(vec[i].value.name);
@@ -952,7 +952,7 @@ struct control<class_open> : pegtl::normal<class_open>
 		state.scope();
 		state.scopeBarrier();
 
-		ref->addGenerics((unsigned)vec.size() - 1);
+		ref->addGenerics((int)vec.size() - 1);
 		for (unsigned i = 1; i < vec.size(); i++) {
 			state.sym(vec[i].value.name, (types::Type *)ref->getGeneric(i - 1));
 			ref->getGeneric(i - 1)->setName(vec[i].value.name);
