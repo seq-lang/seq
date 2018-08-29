@@ -66,9 +66,11 @@ execute_process(COMMAND ${OCAMLFIND} ocamlc -where
                 RESULT_VARIABLE result
                 OUTPUT_VARIABLE OCAML_STDLIB_PATH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 if (result)
-   message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
+  message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
 endif()
+
 message(STATUS "Found OCAML ${OCAML_STDLIB_PATH}")
 include_directories(${OCAML_STDLIB_PATH})
 link_directories(${OCAML_STDLIB_PATH})
