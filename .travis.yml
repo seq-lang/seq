@@ -4,19 +4,27 @@ sudo: false
 matrix:
   include:
     - os: linux
-      env: CONDA_OS_NAME=Linux
+      env:
+        - CONDA_OS_NAME=Linux
+        - OCAML_VERSION=4.07
 
     - os: osx
-      env: CONDA_OS_NAME=MacOSX
+      env:
+        - CONDA_OS_NAME=MacOSX
+        - OCAML_VERSION=4.07
 
 install:
+  # install OCaml
+  - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-opam.sh
+  - bash -ex .travis-opam.sh
+
   # apt's LLVM does not have RTTI enabled, but conda's does:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-${CONDA_OS_NAME}-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  - conda install -c conda-forge cmake llvmdev clangdev bdw-gc ocaml
+  - conda install -c conda-forge cmake llvmdev clangdev bdw-gc
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CXX=clang++; fi
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew install bdw-gc; fi
 
