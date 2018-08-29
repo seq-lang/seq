@@ -170,9 +170,9 @@ namespace seq {
 		bool is(Generic *other) const;
 		Generic *findCachedRealizedType(std::vector<types::Type *> types) const;
 		void setCloneBase(Generic *x, Generic *ref);
-		void addGenerics(unsigned count);
+		void addGenerics(int count);
 		unsigned numGenerics();
-		types::GenericType *getGeneric(unsigned idx);
+		types::GenericType *getGeneric(int idx);
 		bool seenClone(void *p);
 		void *getClone(void *p);
 		void addClone(void *p, void *clone);

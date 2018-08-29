@@ -462,12 +462,12 @@ void Generic::setCloneBase(Generic *x, Generic *ref)
 	x->root = root;
 }
 
-void Generic::addGenerics(unsigned count)
+void Generic::addGenerics(int count)
 {
 	generics.clear();
 	root->realizationCache.clear();
 
-	for (unsigned i = 0; i < count; i++)
+	for (int i = 0; i < count; i++)
 		generics.push_back(types::GenericType::get());
 
 	std::vector<types::Type *> types;
@@ -482,7 +482,7 @@ unsigned Generic::numGenerics()
 	return (unsigned)generics.size();
 }
 
-types::GenericType *Generic::getGeneric(unsigned idx)
+types::GenericType *Generic::getGeneric(int idx)
 {
 	assert(idx < generics.size());
 	return generics[idx];
