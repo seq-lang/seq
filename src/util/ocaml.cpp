@@ -1,40 +1,46 @@
 #include "seq/seq.h"
+
 using namespace std;
 using namespace seq;
 
 #define FOREIGN extern "C"
 
-FOREIGN { 
-	#include <caml/fail.h> 
+FOREIGN {
+	#include <caml/fail.h>
 }
+
+typedef value (*c_primitive)();
+c_primitive caml_builtin_cprim[] = {nullptr};
+char *caml_names_of_builtin_cprim[] = {nullptr};
+int caml_compare_unordered = 1;
 
 /***** Types *****/
 
-FOREIGN types::Type *void_type()        { return types::VoidType::get(); } 
-FOREIGN types::Type *bool_type()        { return types::BoolType::get(); } 
-FOREIGN types::Type *int_type()         { return types::IntType::get(); } 
-FOREIGN types::Type *float_type()       { return types::FloatType::get(); } 
-FOREIGN types::Type *str_type()         { return types::StrType::get(); } 
-FOREIGN types::Type *seq_type()         { return types::SeqType::get(); } 
-FOREIGN types::Type *generic_type()     { return types::GenericType::get(); } 
+FOREIGN types::Type *void_type()        { return types::VoidType::get(); }
+FOREIGN types::Type *bool_type()        { return types::BoolType::get(); }
+FOREIGN types::Type *int_type()         { return types::IntType::get(); }
+FOREIGN types::Type *float_type()       { return types::FloatType::get(); }
+FOREIGN types::Type *str_type()         { return types::StrType::get(); }
+FOREIGN types::Type *seq_type()         { return types::SeqType::get(); }
+FOREIGN types::Type *generic_type()     { return types::GenericType::get(); }
 
-FOREIGN types::Type *array_type(types::Type *base) { 
-	return types::ArrayType::get(base); 
-} 
+FOREIGN types::Type *array_type(types::Type *base) {
+	return types::ArrayType::get(base);
+}
 
-FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz) { 
+FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz) {
 	return types::RecordType::get(
 		vector<types::Type*>(ty, ty + sz),
-		vector<string>(names, names + sz)); 
-} 
+		vector<string>(names, names + sz));
+}
 
-FOREIGN types::Type *ref_type(const char *name, types::RecordType *rec) { 
-	auto f = types::RefType::get(name); 
+FOREIGN types::Type *ref_type(const char *name, types::RecordType *rec) {
+	auto f = types::RefType::get(name);
 	f->setContents(rec);
 	return f;
-} 
+}
 
-FOREIGN void add_ref_method(types::Type *ref, const char *name, Func *fn) { 
+FOREIGN void add_ref_method(types::Type *ref, const char *name, Func *fn) {
 	ref->addMethod(name, fn);
 }
 
@@ -89,7 +95,7 @@ FOREIGN Expr *array_slice_expr(Expr *arr, Expr *st, Expr *ed) {
 
 FOREIGN Expr *record_expr(Expr **args, size_t size) {
 	return new RecordExpr(
-		vector<Expr*>(args, args + size), 
+		vector<Expr*>(args, args + size),
 		vector<string>(size, ""));
 }
 
@@ -177,8 +183,8 @@ FOREIGN Func *func(const char *name) {
 	return f;
 }
 
-FOREIGN Block *get_func_block (Func *st) { 
-	return st->getBlock(); 
+FOREIGN Block *get_func_block (Func *st) {
+	return st->getBlock();
 }
 
 FOREIGN Var *get_func_arg (Func *f, const char *arg) {
@@ -275,4 +281,3 @@ FOREIGN void exec_module(SeqModule *sm, char debug) {
 		caml_failwith(e.what());
 	}
 }
-
