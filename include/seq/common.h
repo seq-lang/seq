@@ -10,12 +10,12 @@
 namespace seq {
 
 	struct SrcInfo {
-		std::string file;
+		const char *file;
 		int line;
 		int col;
-		SrcInfo(std::string file, int line, int col) :
-		    file(std::move(file)), line(line), col(col) {};
-		SrcInfo() : SrcInfo("", 0, 0) {};
+		SrcInfo(const char *file, int line, int col) :
+		    file(file), line(line), col(col) {};
+		SrcInfo() : SrcInfo(nullptr, 0, 0) {};
 	};
 
 	struct SrcObject {
@@ -100,7 +100,7 @@ namespace seq {
 			SeqException(const std::string& msg, SrcInfo info) noexcept :
 			    SrcObject(), std::runtime_error(msg)
 			{
-				setSrcInfo(std::move(info));
+				setSrcInfo(info);
 			}
 
 			explicit SeqException(const std::string& msg) noexcept : SeqException(msg, {})
