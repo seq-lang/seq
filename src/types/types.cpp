@@ -389,7 +389,7 @@ Value *types::Type::setMemb(Value *self,
 	return builder.CreateInsertValue(self, val, iter->second.first);
 }
 
-bool types::Type::hasMethod(std::string name)
+bool types::Type::hasMethod(const std::string& name)
 {
 	return getVTable().methods.find(name) != getVTable().methods.end();
 }

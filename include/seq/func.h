@@ -3,6 +3,8 @@
 
 #include "stmt.h"
 #include "types.h"
+#include "funct.h"
+#include "generic.h"
 #include "common.h"
 
 namespace seq {
@@ -34,7 +36,7 @@ namespace seq {
 		virtual BaseFunc *clone(Generic *ref);
 	};
 
-	class Func : public BaseFunc, public Generic {
+	class Func : public BaseFunc, public Generic, public SrcObject {
 	private:
 		std::string name;
 		std::vector<types::Type *> inTypes;

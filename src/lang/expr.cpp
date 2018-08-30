@@ -3,7 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-Expr::Expr(types::Type *type) : type(type)
+Expr::Expr(types::Type *type) : SrcObject(), type(type)
 {
 }
 
@@ -11,11 +11,25 @@ Expr::Expr() : Expr(types::VoidType::get())
 {
 }
 
+Value *Expr::codegen(BaseFunc *base, BasicBlock *&block)
+{
+	SEQ_TRY(
+		return codegen0(base, block);
+	);
+}
+
+types::Type *Expr::getType() const
+{
+	SEQ_TRY(
+		return getType0();
+	);
+}
+
 void Expr::resolveTypes()
 {
 }
 
-types::Type *Expr::getType() const
+types::Type *Expr::getType0() const
 {
 	return type;
 }
@@ -24,7 +38,7 @@ void Expr::ensure(types::Type *type)
 {
 	types::Type *actual = getType();
 	if (!actual->is(type) && !type->is(actual))
-		throw exc::SeqException("expected '" + type->getName() + "', got '" + getType()->getName() + "'");
+		throw exc::SeqException("expected '" + type->getName() + "', got '" + getType()->getName() + "'", getSrcInfo());
 }
 
 Expr *Expr::clone(Generic *ref)
@@ -36,7 +50,7 @@ IntExpr::IntExpr(seq_int_t n) : Expr(types::IntType::get()), n(n)
 {
 }
 
-Value *IntExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *IntExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	return ConstantInt::get(getType()->getLLVMType(context), (uint64_t)n, true);
@@ -46,7 +60,7 @@ FloatExpr::FloatExpr(double f) : Expr(types::FloatType::get()), f(f)
 {
 }
 
-Value *FloatExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *FloatExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	return ConstantFP::get(getType()->getLLVMType(context), f);
@@ -56,7 +70,7 @@ BoolExpr::BoolExpr(bool b) : Expr(types::BoolType::get()), b(b)
 {
 }
 
-Value *BoolExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *BoolExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	return ConstantInt::get(getType()->getLLVMType(context), b);
@@ -66,7 +80,7 @@ StrExpr::StrExpr(std::string s) : Expr(types::StrType::get()), s(std::move(s))
 {
 }
 
-Value *StrExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *StrExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
@@ -91,12 +105,12 @@ VarExpr::VarExpr(Var *var) : var(var)
 {
 }
 
-Value *VarExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *VarExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	return var->load(base, block);
 }
 
-types::Type *VarExpr::getType() const
+types::Type *VarExpr::getType0() const
 {
 	return var->getType();
 }
@@ -126,7 +140,7 @@ void FuncExpr::resolveTypes()
 	func->resolveTypes();
 }
 
-Value *FuncExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	auto *f = dynamic_cast<Func *>(func);
 	if (f) {
@@ -140,7 +154,7 @@ Value *FuncExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return func->getFunc();
 }
 
-types::Type *FuncExpr::getType() const
+types::Type *FuncExpr::getType0() const
 {
 	return func->getFuncType();
 }
@@ -160,7 +174,7 @@ void ArrayExpr::resolveTypes()
 	count->resolveTypes();
 }
 
-Value *ArrayExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	auto *type = dynamic_cast<types::ArrayType *>(getType());
 	assert(type != nullptr);
@@ -188,7 +202,7 @@ void RecordExpr::resolveTypes()
 		expr->resolveTypes();
 }
 
-Value *RecordExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *RecordExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	types::Type *type = getType();
@@ -205,7 +219,7 @@ Value *RecordExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return rec;
 }
 
-types::Type *RecordExpr::getType() const
+types::Type *RecordExpr::getType0() const
 {
 	std::vector<types::Type *> types;
 	for (auto *expr : exprs)
@@ -231,7 +245,7 @@ void UOpExpr::resolveTypes()
 	lhs->resolveTypes();
 }
 
-Value *UOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	auto spec = lhs->getType()->findUOp(op.symbol);
 	Value *lhs = this->lhs->codegen(base, block);
@@ -239,7 +253,7 @@ Value *UOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return spec.codegen(lhs, nullptr, builder);
 }
 
-types::Type *UOpExpr::getType() const
+types::Type *UOpExpr::getType0() const
 {
 	return lhs->getType()->findUOp(op.symbol).outType;
 }
@@ -260,7 +274,7 @@ void BOpExpr::resolveTypes()
 	rhs->resolveTypes();
 }
 
-Value *BOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 
@@ -307,7 +321,7 @@ Value *BOpExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	}
 }
 
-types::Type *BOpExpr::getType() const
+types::Type *BOpExpr::getType0() const
 {
 	if (op == bop("&&") || op == bop("||"))
 		return types::BoolType::get();
@@ -331,7 +345,7 @@ void ArrayLookupExpr::resolveTypes()
 	idx->resolveTypes();
 }
 
-Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	idx->ensure(types::IntType::get());
 	Value *arr = this->arr->codegen(base, block);
@@ -339,7 +353,7 @@ Value *ArrayLookupExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return this->arr->getType()->indexLoad(base, arr, idx, block);
 }
 
-types::Type *ArrayLookupExpr::getType() const
+types::Type *ArrayLookupExpr::getType0() const
 {
 	return arr->getType()->indexType();
 }
@@ -361,7 +375,7 @@ void ArraySliceExpr::resolveTypes()
 	to->resolveTypes();
 }
 
-Value *ArraySliceExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	assert(from || to);
 	if (from) from->ensure(types::IntType::get());
@@ -382,7 +396,7 @@ Value *ArraySliceExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	}
 }
 
-types::Type *ArraySliceExpr::getType() const
+types::Type *ArraySliceExpr::getType0() const
 {
 	return arr->getType();
 }
@@ -418,13 +432,13 @@ void GetElemExpr::resolveTypes()
 	rec->resolveTypes();
 }
 
-llvm::Value *GetElemExpr::codegen(BaseFunc *base, BasicBlock*& block)
+llvm::Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	Value *rec = this->rec->codegen(base, block);
 	return this->rec->getType()->memb(rec, memb, block);
 }
 
-types::Type *GetElemExpr::getType() const
+types::Type *GetElemExpr::getType0() const
 {
 	return rec->getType()->membType(memb);
 }
@@ -439,12 +453,12 @@ GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb) :
 {
 }
 
-Value *GetStaticElemExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	return type->staticMemb(memb, block);
 }
 
-types::Type *GetStaticElemExpr::getType() const
+types::Type *GetStaticElemExpr::getType0() const
 {
 	return type->staticMembType(memb);
 }
@@ -464,7 +478,7 @@ void MethodExpr::resolveTypes()
 	expr->resolveTypes();
 }
 
-Value *MethodExpr::codegen(BaseFunc *base, llvm::BasicBlock*& block)
+Value *MethodExpr::codegen0(BaseFunc *base, llvm::BasicBlock*& block)
 {
 	types::Type *type = expr->getType();
 	auto *func = dynamic_cast<Func *>(type->getMethod(name));
@@ -478,10 +492,10 @@ Value *MethodExpr::codegen(BaseFunc *base, llvm::BasicBlock*& block)
 		func = func->realize(types);
 
 	Value *method = FuncExpr(func).codegen(base, block);
-	return getType()->make(self, method, block);
+	return getType0()->make(self, method, block);
 }
 
-types::MethodType *MethodExpr::getType() const
+types::MethodType *MethodExpr::getType0() const
 {
 	types::Type *type = expr->getType();
 	auto *func = dynamic_cast<Func *>(type->getMethod(name));
@@ -516,7 +530,7 @@ void CallExpr::resolveTypes()
 		arg->resolveTypes();
 }
 
-Value *CallExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *CallExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	getType();  // validates call
 	Value *f = func->codegen(base, block);
@@ -526,7 +540,7 @@ Value *CallExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return func->getType()->call(base, f, x, block);
 }
 
-types::Type *CallExpr::getType() const
+types::Type *CallExpr::getType0() const
 {
 	std::vector<types::Type *> types;
 	for (auto *e : args)
@@ -577,7 +591,7 @@ void CondExpr::resolveTypes()
 	ifFalse->resolveTypes();
 }
 
-Value *CondExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *CondExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	cond->ensure(types::BoolType::get());
 
@@ -610,7 +624,7 @@ Value *CondExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return result;
 }
 
-types::Type *CondExpr::getType() const
+types::Type *CondExpr::getType0() const
 {
 	if (!ifTrue->getType()->is(ifFalse->getType()))
 		throw exc::SeqException("inconsistent types '" + ifTrue->getType()->getName() + "' and '" +
@@ -653,7 +667,7 @@ void MatchExpr::resolveTypes()
 		expr->resolveTypes();
 }
 
-Value *MatchExpr::codegen(BaseFunc *base, BasicBlock *&block)
+Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block)
 {
 	assert(!patterns.empty());
 	assert(patterns.size() == exprs.size() && value);
@@ -709,7 +723,7 @@ Value *MatchExpr::codegen(BaseFunc *base, BasicBlock *&block)
 	return result;
 }
 
-types::Type *MatchExpr::getType() const
+types::Type *MatchExpr::getType0() const
 {
 	assert(!exprs.empty());
 	types::Type *type = exprs[0]->getType();
@@ -753,7 +767,7 @@ void ConstructExpr::resolveTypes()
 		arg->resolveTypes();
 }
 
-Value *ConstructExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	getType();  // validates construction
 	std::vector<Value *> vals;
@@ -762,7 +776,7 @@ Value *ConstructExpr::codegen(BaseFunc *base, BasicBlock*& block)
 	return type->construct(base, vals, block);
 }
 
-types::Type *ConstructExpr::getType() const
+types::Type *ConstructExpr::getType0() const
 {
 	std::vector<types::Type *> types;
 	for (auto *arg : args)
@@ -793,13 +807,13 @@ void OptExpr::resolveTypes()
 	val->resolveTypes();
 }
 
-Value *OptExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *OptExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	Value *val = this->val->codegen(base, block);
 	return ((types::OptionalType *)getType())->make(val, block);
 }
 
-types::Type *OptExpr::getType() const
+types::Type *OptExpr::getType0() const
 {
 	return types::OptionalType::get(val->getType());
 }
@@ -813,7 +827,7 @@ DefaultExpr::DefaultExpr(types::Type *type) : Expr(type)
 {
 }
 
-Value *DefaultExpr::codegen(BaseFunc *base, BasicBlock*& block)
+Value *DefaultExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	return getType()->defaultValue(block);
 }

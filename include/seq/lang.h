@@ -14,7 +14,7 @@ namespace seq {
 	public:
 		explicit Print(Expr *expr);
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		Print *clone(Generic *ref) override;
 	};
 
@@ -24,7 +24,7 @@ namespace seq {
 	public:
 		explicit ExprStmt(Expr *expr);
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		ExprStmt *clone(Generic *ref) override;
 	};
 
@@ -36,7 +36,7 @@ namespace seq {
 		explicit VarStmt(Expr *init);
 		Var *getVar();
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		VarStmt *clone(Generic *ref) override;
 	};
 
@@ -46,7 +46,7 @@ namespace seq {
 	public:
 		explicit FuncStmt(Func *func);
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		FuncStmt *clone(Generic *ref) override;
 	};
 
@@ -57,7 +57,7 @@ namespace seq {
 	public:
 		Assign(Var *var, Expr *value);
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		Assign *clone(Generic *ref) override;
 	};
 
@@ -69,7 +69,7 @@ namespace seq {
 	public:
 		AssignIndex(Expr *array, Expr *idx, Expr *value);
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		AssignIndex *clone(Generic *ref) override;
 	};
 
@@ -82,7 +82,7 @@ namespace seq {
 		AssignMember(Expr *expr, std::string memb, Expr *value);
 		AssignMember(Expr *expr, seq_int_t idx, Expr *value);
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		AssignMember *clone(Generic *ref) override;
 	};
 
@@ -96,7 +96,7 @@ namespace seq {
 		Block *addCond(Expr *cond);
 		Block *addElse();
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		If *clone(Generic *ref) override;
 	};
 
@@ -110,7 +110,7 @@ namespace seq {
 		void setValue(Expr *value);
 		Block *addCase(Pattern *pattern);
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		Match *clone(Generic *ref) override;
 	};
 
@@ -122,7 +122,7 @@ namespace seq {
 		explicit While(Expr *cond);
 		Block *getBlock();
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		While *clone(Generic *ref) override;
 	};
 
@@ -136,7 +136,7 @@ namespace seq {
 		Block *getBlock();
 		Var *getVar();
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		For *clone(Generic *ref) override;
 	};
 
@@ -147,7 +147,7 @@ namespace seq {
 		explicit Return(Expr *expr);
 		Expr *getExpr();
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		Return *clone(Generic *ref) override;
 	};
 
@@ -158,21 +158,21 @@ namespace seq {
 		explicit Yield(Expr *expr);
 		Expr *getExpr();
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		Yield *clone(Generic *ref) override;
 	};
 
 	class Break : public Stmt {
 	public:
 		Break();
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		Break *clone(Generic *ref) override;
 	};
 
 	class Continue : public Stmt {
 	public:
 		Continue();
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		Continue *clone(Generic *ref) override;
 	};
 

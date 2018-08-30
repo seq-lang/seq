@@ -18,8 +18,7 @@ types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string
     Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD),
     types(std::move(types)), names(std::move(names))
 {
-	if (!this->names.empty() && this->names.size() != this->types.size())
-		throw exc::SeqException("type and name vectors differ in length");
+	assert(this->names.empty() || this->names.size() == this->types.size());
 }
 
 types::RecordType::RecordType(std::initializer_list<Type *> types) :
@@ -175,7 +174,7 @@ bool types::RecordType::isGeneric(Type *type) const
 types::Type *types::RecordType::getBaseType(seq_int_t idx) const
 {
 	if (idx < 1 || idx > (seq_int_t)types.size())
-		throw exc::SeqException("invalid index into Record (must be constant and in-bounds)");
+		throw exc::SeqException("invalid index into record (must be constant and in-bounds)");
 
 	return types[idx - 1];
 }

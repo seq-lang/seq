@@ -3,10 +3,41 @@
 
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include "util/llvm.h"
 #include "util/seqdata.h"
 
 namespace seq {
+
+	struct SrcInfo {
+		std::string file;
+		int line;
+		int col;
+		SrcInfo(std::string file, int line, int col) :
+		    file(std::move(file)), line(line), col(col) {};
+		SrcInfo() : SrcInfo("", 0, 0) {};
+	};
+
+	struct SrcObject {
+	private:
+		SrcInfo info;
+	public:
+		SrcObject() : info() {}
+		SrcObject(const SrcObject& s)
+		{
+			setSrcInfo(s.getSrcInfo());
+		}
+
+		SrcInfo getSrcInfo() const
+		{
+			return info;
+		}
+
+		void setSrcInfo(SrcInfo info)
+		{
+			this->info = std::move(info);
+		}
+	};
 
 	typedef int64_t seq_int_t;
 
@@ -63,8 +94,38 @@ namespace seq {
 		return ptr;
 	}
 
+	namespace exc {
+		class SeqException : public SrcObject, public std::runtime_error {
+		public:
+			SeqException(const std::string& msg, SrcInfo info) noexcept :
+			    SrcObject(), std::runtime_error(msg)
+			{
+				setSrcInfo(std::move(info));
+			}
+
+			explicit SeqException(const std::string& msg) noexcept : SeqException(msg, {})
+			{
+			}
+
+			SeqException(const SeqException& e) noexcept : SrcObject(e), std::runtime_error(e)
+			{
+			}
+		};
+	}
+
 }
 
 #define SEQ_FUNC extern "C"
+
+#define SEQ_TRY(block) \
+    do { \
+        try { \
+            block \
+        } catch (seq::exc::SeqException& e) { \
+            if (e.getSrcInfo().line <= 0) \
+                e.setSrcInfo(getSrcInfo()); \
+            throw e; \
+        } \
+    } while (0) \
 
 #endif /* SEQ_COMMON_H */

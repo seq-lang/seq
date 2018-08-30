@@ -3,7 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-Pattern::Pattern(types::Type *type) : type(type)
+Pattern::Pattern(types::Type *type) : SrcObject(), type(type)
 {
 }
 
@@ -11,7 +11,7 @@ void Pattern::resolveTypes(types::Type *type)
 {
 	if (!type->is(this->type))
 		throw exc::SeqException("pattern type mismatch: expected " + this->type->getName() +
-		                        " but got " + type->getName());
+		                        " but got " + type->getName(), getSrcInfo());
 }
 
 bool Pattern::isCatchAll()
@@ -181,12 +181,12 @@ void RecordPattern::resolveTypes(types::Type *type)
 	auto *rec = dynamic_cast<types::RecordType *>(type);
 
 	if (!rec)
-		throw exc::SeqException("cannot match record pattern with non-record value");
+		throw exc::SeqException("cannot match record pattern with non-record value", getSrcInfo());
 
 	std::vector<types::Type *> types = rec->getTypes();
 
 	if (types.size() != patterns.size())
-		throw exc::SeqException("record element count mismatch in pattern");
+		throw exc::SeqException("record element count mismatch in pattern", getSrcInfo());
 
 	for (unsigned i = 0; i < types.size(); i++)
 		patterns[i]->resolveTypes(types[i]);
@@ -236,7 +236,7 @@ ArrayPattern::ArrayPattern(std::vector<Pattern *> patterns) :
 void ArrayPattern::resolveTypes(types::Type *type)
 {
 	if (!type->isGeneric(&types::Array))
-		throw exc::SeqException("cannot match array pattern with non-array value");
+		throw exc::SeqException("cannot match array pattern with non-array value", getSrcInfo());
 
 	types::Type *baseType = type->getBaseType(0);
 	for (auto *pattern : patterns)
@@ -451,7 +451,7 @@ void OptPattern::resolveTypes(types::Type *type)
 {
 	auto *optType = dynamic_cast<types::OptionalType *>(type);
 	if (!optType)
-		throw exc::SeqException("cannot match optional pattern against non-optional value");
+		throw exc::SeqException("cannot match optional pattern against non-optional value", getSrcInfo());
 
 	if (pattern)
 		pattern->resolveTypes(optType->getBaseType(0));

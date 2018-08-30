@@ -6,24 +6,9 @@
 #include <string>
 #include <vector>
 #include <map>
-
-#include "util/llvm.h"
-#include "util/seqdata.h"
-
-#include "types.h"
-#include "any.h"
-#include "base.h"
-#include "void.h"
-#include "seqt.h"
-#include "num.h"
-#include "array.h"
-#include "record.h"
-#include "funct.h"
-#include "ref.h"
 #include "generic.h"
-#include "optional.h"
-
 #include "common.h"
+#include "util/llvm.h"
 
 namespace seq {
 
@@ -44,8 +29,9 @@ namespace seq {
 		Block *clone(Generic *ref);
 	};
 
-	class Stmt {
+	class Stmt : public SrcObject {
 	private:
+		std::string name;
 		BaseFunc *base;
 
 		/* loops */
@@ -55,7 +41,6 @@ namespace seq {
 		Block *parent;
 		bool loop;
 	public:
-		std::string name;
 		explicit Stmt(std::string name);
 		std::string getName() const;
 		Stmt *getPrev() const;
@@ -72,9 +57,10 @@ namespace seq {
 		void setBreaks(llvm::BasicBlock *block);
 		void setContinues(llvm::BasicBlock *block);
 
+		void codegen(llvm::BasicBlock*& block);
 		virtual void resolveTypes();
-		virtual void codegen(llvm::BasicBlock*& block);
-		virtual Stmt *clone(Generic *ref);
+		virtual void codegen0(llvm::BasicBlock*& block)=0;
+		virtual Stmt *clone(Generic *ref)=0;
 		virtual void setCloneBase(Stmt *stmt, Generic *ref);
 	};
 
