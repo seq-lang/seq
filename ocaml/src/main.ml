@@ -6,6 +6,7 @@ open Ast
 open Seqtypes
 
 exception SeqCamlError of string
+exception SeqCError of string
 
 (* 
 TODO: 
@@ -308,7 +309,9 @@ let seq_exec ast =
   Stack.push ctx.stack [];
   match ast with Module stmts -> 
     List.iter stmts ~f:(get_seq_stmt ctx module_block);
-  exec_module seq_module false
+  let msg = exec_module seq_module false in
+  if String.length msg > 0 then
+    raise (SeqCError (msg))
   
 let () = 
   fprintf stderr "behold the ocaml-seq!\n";
@@ -337,5 +340,5 @@ let () =
     fprintf stderr "!! Menhir error %s: %s\n%!" (print_position lexbuf) (Lexing.lexeme lexbuf)
   | SeqCamlError msg ->
     fprintf stderr "!! OCaml/Seq error: %s\n%!" msg
-  | Failure msg ->
+  | SeqCError msg ->
     fprintf stderr "!! C++/JIT error: %s\n%!" msg
