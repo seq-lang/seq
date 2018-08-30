@@ -13,7 +13,7 @@ void Print::resolveTypes()
 	expr->resolveTypes();
 }
 
-void Print::codegen(BasicBlock*& block)
+void Print::codegen0(BasicBlock*& block)
 {
 	types::Type *type = expr->getType();
 	Value *val = expr->codegen(getBase(), block);
@@ -41,7 +41,7 @@ void ExprStmt::resolveTypes()
 	expr->resolveTypes();
 }
 
-void ExprStmt::codegen(BasicBlock*& block)
+void ExprStmt::codegen0(BasicBlock*& block)
 {
 	expr->codegen(getBase(), block);
 }
@@ -73,7 +73,7 @@ void VarStmt::resolveTypes()
 	var->setType(init->getType());
 }
 
-void VarStmt::codegen(BasicBlock*& block)
+void VarStmt::codegen0(BasicBlock*& block)
 {
 	Value *val = init->codegen(getBase(), block);
 	var->store(getBase(), val, block);
@@ -101,7 +101,7 @@ void FuncStmt::resolveTypes()
 	func->resolveTypes();
 }
 
-void FuncStmt::codegen(BasicBlock*& block)
+void FuncStmt::codegen0(BasicBlock*& block)
 {
 }
 
@@ -127,7 +127,7 @@ void Assign::resolveTypes()
 	value->resolveTypes();
 }
 
-void Assign::codegen(BasicBlock*& block)
+void Assign::codegen0(BasicBlock*& block)
 {
 	value->ensure(var->getType());
 	Value *val = value->codegen(getBase(), block);
@@ -157,7 +157,7 @@ void AssignIndex::resolveTypes()
 	value->resolveTypes();
 }
 
-void AssignIndex::codegen(BasicBlock*& block)
+void AssignIndex::codegen0(BasicBlock*& block)
 {
 	this->idx->ensure(types::IntType::get());
 
@@ -201,7 +201,7 @@ void AssignMember::resolveTypes()
 	value->resolveTypes();
 }
 
-void AssignMember::codegen(BasicBlock*& block)
+void AssignMember::codegen0(BasicBlock*& block)
 {
 	value->ensure(expr->getType()->membType(memb));
 	Value *x = expr->codegen(getBase(), block);
@@ -234,12 +234,9 @@ void If::resolveTypes()
 		branch->resolveTypes();
 }
 
-void If::codegen(BasicBlock*& block)
+void If::codegen0(BasicBlock*& block)
 {
-	if (conds.empty())
-		throw exc::SeqException("no conditions added to 'if' statement");
-
-	assert(conds.size() == branches.size());
+	assert(!conds.empty() && conds.size() == branches.size());
 
 	for (auto *cond : conds)
 		cond->ensure(types::BoolType::get());
@@ -283,9 +280,7 @@ void If::codegen(BasicBlock*& block)
 
 Block *If::addCond(Expr *cond)
 {
-	if (elseAdded)
-		throw exc::SeqException("cannot add else-if branch to 'if' statement after else branch");
-
+	assert(!elseAdded);
 	auto *branch = new Block(this);
 	conds.push_back(cond);
 	branches.push_back(branch);
@@ -294,9 +289,7 @@ Block *If::addCond(Expr *cond)
 
 Block *If::addElse()
 {
-	if (elseAdded)
-		throw exc::SeqException("cannot add second else branch to 'if' statement");
-
+	assert(!elseAdded);
 	Block *branch = addCond(new BoolExpr(true));
 	elseAdded = true;
 	return branch;
@@ -344,12 +337,9 @@ void Match::resolveTypes()
 		branch->resolveTypes();
 }
 
-void Match::codegen(BasicBlock*& block)
+void Match::codegen0(BasicBlock*& block)
 {
-	if (patterns.empty())
-		throw exc::SeqException("no patterns added to 'match' statement");
-
-	assert(patterns.size() == branches.size() && value);
+	assert(!patterns.empty() && patterns.size() == branches.size() && value);
 
 	LLVMContext& context = block->getContext();
 	Function *func = block->getParent();
@@ -457,7 +447,7 @@ void While::resolveTypes()
 	scope->resolveTypes();
 }
 
-void While::codegen(BasicBlock*& block)
+void While::codegen0(BasicBlock*& block)
 {
 	cond->ensure(types::BoolType::get());
 	LLVMContext& context = block->getContext();
@@ -529,7 +519,7 @@ void For::resolveTypes()
 	scope->resolveTypes();
 }
 
-void For::codegen(BasicBlock*& block)
+void For::codegen0(BasicBlock*& block)
 {
 	if (!gen->getType()->isGeneric(types::GenType::get()))
 		throw exc::SeqException("cannot iterate over non-generator");
@@ -611,7 +601,7 @@ void Return::resolveTypes()
 	if (expr) expr->resolveTypes();
 }
 
-void Return::codegen(BasicBlock*& block)
+void Return::codegen0(BasicBlock*& block)
 {
 	types::Type *type = expr ? expr->getType() : types::VoidType::get();
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
@@ -644,7 +634,7 @@ void Yield::resolveTypes()
 	if (expr) expr->resolveTypes();
 }
 
-void Yield::codegen(BasicBlock*& block)
+void Yield::codegen0(BasicBlock*& block)
 {
 	types::Type *type = expr ? expr->getType() : types::VoidType::get();
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
@@ -667,7 +657,7 @@ Break::Break() :
 {
 }
 
-void Break::codegen(BasicBlock*& block)
+void Break::codegen0(BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
@@ -692,7 +682,7 @@ Continue::Continue() :
 {
 }
 
-void Continue::codegen(BasicBlock*& block)
+void Continue::codegen0(BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);

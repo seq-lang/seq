@@ -18,7 +18,7 @@ namespace seq {
 		Block *getBlock();
 		Var *getVar();
 		void resolveTypes() override;
-		void codegen(llvm::BasicBlock*& block) override;
+		void codegen0(llvm::BasicBlock*& block) override;
 		Source *clone(Generic *ref) override;
 	};
 }

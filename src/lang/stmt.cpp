@@ -44,8 +44,8 @@ Block *Block::clone(Generic *ref)
 }
 
 Stmt::Stmt(std::string name) :
-    base(nullptr), breaks(), continues(),
-    parent(nullptr), loop(false), name(std::move(name))
+    SrcObject(), name(std::move(name)), base(nullptr), breaks(), continues(),
+    parent(nullptr), loop(false)
 {
 }
 
@@ -83,13 +83,15 @@ void Stmt::setBase(BaseFunc *base)
 
 static Stmt *findEnclosingLoop(Stmt *stmt)
 {
+	Stmt *orig = stmt;
+
 	while (stmt) {
 		if (stmt->isLoop())
 			return stmt;
 		stmt = stmt->getPrev();
 	}
 
-	throw exc::SeqException("break or continue outside of loop");
+	throw exc::SeqException("break or continue outside of loop", orig->getSrcInfo());
 }
 
 void Stmt::addBreakToEnclosingLoop(BranchInst *inst)
@@ -138,13 +140,15 @@ void Stmt::setContinues(BasicBlock *block)
 		inst->setSuccessor(0, block);
 }
 
-void Stmt::resolveTypes()
+void Stmt::codegen(BasicBlock *&block)
 {
+	SEQ_TRY(
+		return codegen0(block);
+	);
 }
 
-void Stmt::codegen(BasicBlock*& block)
+void Stmt::resolveTypes()
 {
-	throw exc::SeqException("cannot codegen abstract statement");
 }
 
 void Stmt::setCloneBase(Stmt *stmt, Generic *ref)
@@ -153,11 +157,6 @@ void Stmt::setCloneBase(Stmt *stmt, Generic *ref)
 	if (parent) stmt->parent = parent->clone(ref);
 	stmt->loop = loop;
 	stmt->name = name;
-}
-
-Stmt *Stmt::clone(Generic *ref)
-{
-	throw exc::SeqException("cannot clone '" + getName() + "' statement");
 }
 
 std::ostream& operator<<(std::ostream& os, Stmt& stmt)

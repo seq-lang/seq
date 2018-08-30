@@ -207,9 +207,6 @@ void types::BaseSeqType::print(BaseFunc *base,
                                Value *self,
                                BasicBlock *block)
 {
-	if (vtable.print == nullptr)
-		throw exc::SeqException("cannot print specified type");
-
 	LLVMContext& context = block->getContext();
 
 	Function *printFunc = cast<Function>(

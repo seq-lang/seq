@@ -43,7 +43,8 @@ Op seq::uop(const std::string& symbol)
 			return op;
 	}
 
-	throw exc::SeqException("invalid unary operator: '" + symbol + "'");
+	assert(0);
+	return ops[0];
 }
 
 Op seq::bop(const std::string& symbol)
@@ -55,5 +56,6 @@ Op seq::bop(const std::string& symbol)
 			return op;
 	}
 
-	throw exc::SeqException("invalid binary operator: '" + symbol + "'");
+	assert(0);
+	return ops[0];
 }

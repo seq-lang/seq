@@ -20,9 +20,7 @@ LLVMContext& BaseFunc::getContext()
 
 BasicBlock *BaseFunc::getPreamble() const
 {
-	if (!preambleBlock)
-		throw exc::SeqException("cannot request preamble before code generation");
-
+	assert(preambleBlock);
 	return preambleBlock;
 }
 
@@ -33,9 +31,7 @@ types::FuncType *BaseFunc::getFuncType() const
 
 Function *BaseFunc::getFunc()
 {
-	if (!func)
-		throw exc::SeqException("function not yet generated");
-
+	assert(func);
 	return func;
 }
 
@@ -45,9 +41,9 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 }
 
 Func::Func() :
-    BaseFunc(), Generic(false), name(), inTypes(), outType(&types::Void), scope(new Block()),
-    argNames(), argVars(), ret(nullptr), yield(nullptr), typesResolved(false), gen(false),
-    promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
+    BaseFunc(), Generic(false), SrcObject(), name(), inTypes(), outType(&types::Void),
+    scope(new Block()), argNames(), argVars(), ret(nullptr), yield(nullptr), typesResolved(false),
+    gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
 		assert(this->argNames.size() == this->inTypes.size());
@@ -305,7 +301,7 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 	if (gen && val)
 		throw exc::SeqException("cannot return value from generator");
 
-	if (val && !type->isChildOf(outType))
+	if (val && type && !type->isChildOf(outType))
 		throw exc::SeqException(
 		  "cannot return '" + type->getName() + "' from function returning '" +
 		  outType->getName() + "'");
@@ -378,8 +374,7 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 Var *Func::getArgVar(std::string name)
 {
 	auto iter = argVars.find(name);
-	if (iter == argVars.end())
-		throw exc::SeqException("function has no argument '" + name + "'");
+	assert(iter != argVars.end());
 	return iter->second;
 }
 
@@ -465,12 +460,12 @@ void BaseFuncLite::codegen(Module *module)
 
 void BaseFuncLite::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
-	throw exc::SeqException("cannot return from lite base function");
+	assert(0);
 }
 
 void BaseFuncLite::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 {
-	throw exc::SeqException("cannot yield from lite base function");
+	assert(0);
 }
 
 types::FuncType *BaseFuncLite::getFuncType() const

@@ -156,7 +156,7 @@ namespace seq {
 			                             llvm::Value *val,
 			                             llvm::BasicBlock *block);
 
-			virtual bool hasMethod(std::string name);
+			virtual bool hasMethod(const std::string& name);
 
 			virtual void addMethod(std::string name, BaseFunc *func);
 

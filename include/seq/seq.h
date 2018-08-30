@@ -15,6 +15,19 @@
 #include "source.h"
 #include "var.h"
 
+#include "types.h"
+#include "any.h"
+#include "base.h"
+#include "void.h"
+#include "seqt.h"
+#include "num.h"
+#include "array.h"
+#include "record.h"
+#include "funct.h"
+#include "ref.h"
+#include "optional.h"
+#include "generic.h"
+
 #include "common.h"
 #include "io.h"
 #include "seqgc.h"
@@ -22,6 +35,7 @@
 #include "parser.h"
 
 #include "util/llvm.h"
+#include "util/seqdata.h"
 
 namespace seq {
 
@@ -59,13 +73,6 @@ namespace seq {
 		                  llvm::BasicBlock*& block) override;
 		void execute(const std::vector<std::string>& args={}, bool debug=false);
 	};
-
-	namespace exc {
-		class SeqException : public std::runtime_error {
-		public:
-			explicit SeqException(const std::string& msg);
-		};
-	}
 
 	llvm::LLVMContext& getLLVMContext();
 

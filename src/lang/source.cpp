@@ -142,8 +142,7 @@ bool Source::isSingle() const
 
 types::Type *Source::determineOutType() const
 {
-	if (sources.empty())
-		throw exc::SeqException("no sources given to 'source' statement");
+	assert(!sources.empty());
 
 	if (isSingle())
 		return types::SeqType::get();
@@ -174,7 +173,7 @@ void Source::resolveTypes()
 	scope->resolveTypes();
 }
 
-void Source::codegen(BasicBlock*& block)
+void Source::codegen0(BasicBlock*& block)
 {
 	Module *module = block->getModule();
 	Function *initFunc = seqSourceInitFunc(module);

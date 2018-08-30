@@ -4,10 +4,11 @@
 #include <vector>
 #include "types.h"
 #include "func.h"
+#include "common.h"
 
 namespace seq {
 
-	class Pattern {
+	class Pattern : public SrcObject {
 	private:
 		types::Type *type;
 	public:

@@ -77,12 +77,12 @@ void SeqModule::codegen(Module *module)
 
 void SeqModule::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
-	throw exc::SeqException("cannot return from SeqModule");
+	assert(0);
 }
 
 void SeqModule::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 {
-	throw exc::SeqException("cannot yield from SeqModule");
+	assert(0);
 }
 
 void SeqModule::execute(const std::vector<std::string>& args, bool debug)
@@ -158,10 +158,6 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 		argsArr.arr[i] = {(seq_int_t)args[i].size(), (char *)args[i].data()};
 
 	op(argsArr);
-}
-
-exc::SeqException::SeqException(const std::string& msg) : std::runtime_error(msg)
-{
 }
 
 llvm::LLVMContext& seq::getLLVMContext()
