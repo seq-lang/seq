@@ -196,7 +196,7 @@ let init_module = foreign "init_module"
   (void @-> returning seq_module)
 
 let exec_module = foreign "exec_module" 
-  (seq_module @-> bool @-> returning void)
+  (seq_module @-> bool @-> returning string)
 
 
 

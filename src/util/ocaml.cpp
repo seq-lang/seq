@@ -5,15 +5,6 @@ using namespace seq;
 
 #define FOREIGN extern "C"
 
-FOREIGN {
-	#include <caml/fail.h>
-}
-
-typedef value (*c_primitive)();
-c_primitive caml_builtin_cprim[] = {nullptr};
-char *caml_names_of_builtin_cprim[] = {nullptr};
-int caml_compare_unordered = 1;
-
 /***** Types *****/
 
 FOREIGN types::Type *void_type()        { return types::VoidType::get(); }
@@ -274,10 +265,14 @@ FOREIGN void *init_module() {
 	return new SeqModule();
 }
 
-FOREIGN void exec_module(SeqModule *sm, char debug) {
-	try {
+FOREIGN const char *exec_module(SeqModule *sm, char debug) {
+   const size_t max_len = 1024;
+	char *msg = new char[max_len];
+   memset(msg, 0, max_len);
+   try {
 		sm->execute(vector<string>(), debug);
 	} catch (exc::SeqException &e) {
-		caml_failwith(e.what());
+      strncpy(msg, e.what(), max_len);
 	}
+   return msg;
 }
