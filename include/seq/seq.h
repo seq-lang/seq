@@ -16,7 +16,6 @@
 #include "var.h"
 
 #include "common.h"
-#include "exc.h"
 #include "io.h"
 #include "seqgc.h"
 
@@ -60,6 +59,13 @@ namespace seq {
 		                  llvm::BasicBlock*& block) override;
 		void execute(const std::vector<std::string>& args={}, bool debug=false);
 	};
+
+	namespace exc {
+		class SeqException : public std::runtime_error {
+		public:
+			explicit SeqException(const std::string& msg);
+		};
+	}
 
 	llvm::LLVMContext& getLLVMContext();
 

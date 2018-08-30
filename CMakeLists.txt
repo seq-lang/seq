@@ -98,7 +98,6 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/array.h
                        include/seq/base.h
                        include/seq/common.h
-                       include/seq/exc.h
                        include/seq/expr.h
                        include/seq/func.h
                        include/seq/funct.h
@@ -144,7 +143,6 @@ add_library(seq SHARED include/seq/any.h
                        src/types/seqt.cpp
                        src/types/types.cpp
                        src/types/void.cpp
-                       src/util/exc.cpp
                        src/util/io.cpp
                        src/util/llvm.h
                        src/util/ocaml.cpp

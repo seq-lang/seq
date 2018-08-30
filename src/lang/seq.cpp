@@ -160,6 +160,10 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 	op(argsArr);
 }
 
+exc::SeqException::SeqException(const std::string& msg) : std::runtime_error(msg)
+{
+}
+
 llvm::LLVMContext& seq::getLLVMContext()
 {
 	static LLVMContext context;

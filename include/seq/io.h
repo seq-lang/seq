@@ -78,6 +78,7 @@ namespace seq {
 		};
 
 		Format extractExt(const std::string& source);
+		void error(const std::string& msg);
 	}
 }
 

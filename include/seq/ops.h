@@ -2,7 +2,6 @@
 #define SEQ_OPS_H
 
 #include <vector>
-#include "exc.h"
 
 namespace seq {
 

@@ -5,7 +5,6 @@
 #include <memory>
 #include "util/llvm.h"
 #include "util/seqdata.h"
-#include "exc.h"
 
 namespace seq {
 

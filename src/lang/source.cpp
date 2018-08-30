@@ -3,12 +3,6 @@
 using namespace seq;
 using namespace llvm;
 
-static inline void ioError(const std::string& msg)
-{
-	std::cerr << "IO error: " << msg << std::endl;
-	abort();
-}
-
 struct IOState {
 	io::DataBlock data;
 	std::vector<std::ifstream *> ins;
@@ -18,22 +12,22 @@ struct IOState {
 	    data(), ins()
 	{
 		if (numSources == 0)
-			ioError("sequence source not specified");
+			io::error("sequence source not specified");
 
 		if (numSources > io::MAX_INPUTS)
-			ioError("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
+			io::error("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
 
 		fmt = io::extractExt(sources[0]);
 
 		for (seq_int_t i = 1; i < numSources; i++) {
 			if (io::extractExt(sources[i]) != fmt)
-				ioError("inconsistent input formats");
+				io::error("inconsistent input formats");
 		}
 
 		for (seq_int_t i = 0; i < numSources; i++) {
 			ins.push_back(new std::ifstream(sources[i]));
 			if (!ins.back()->good())
-				ioError("could not open '" + std::string(sources[i]) + "' for reading");
+				io::error("could not open '" + std::string(sources[i]) + "' for reading");
 		}
 	}
 

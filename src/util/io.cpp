@@ -1,10 +1,8 @@
 #include <cstdlib>
 #include <cstdint>
 #include <iostream>
-#include <string>
 #include <cassert>
 #include "seq/seqgc.h"
-#include "seq/exc.h"
 #include "seq/io.h"
 
 using namespace seq;
@@ -238,7 +236,13 @@ io::Format io::extractExt(const std::string& source)
 	auto fmtIter = io::EXT_CONV.find(source.substr(source.find_last_of('.') + 1));
 
 	if (fmtIter == io::EXT_CONV.end())
-		throw exc::IOException("unknown file extension in '" + source + "'");
+		io::error("unknown file extension in '" + source + "'");
 
 	return fmtIter->second;
+}
+
+void io::error(const std::string& msg)
+{
+	std::cerr << "I/O error: " << msg << std::endl;
+	abort();
 }
