@@ -213,3 +213,113 @@ types::GenType *types::GenType::clone(Generic *ref)
 {
 	return get(outType->clone(ref));
 }
+
+types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::Type *> callTypes) :
+    Type("PartialFunc", BaseType::get(), SeqData::FUNC), callee(callee), callTypes(std::move(callTypes))
+{
+	std::vector<types::Type *> types;
+	types.push_back(this->callee);
+	for (auto *type : this->callTypes) {
+		if (type)
+			types.push_back(type);
+	}
+	contents = types::RecordType::get(types);
+}
+
+Value *types::PartialFuncType::call(BaseFunc *base,
+                                    Value *self,
+                                    std::vector<Value *> args,
+                                    BasicBlock *block)
+{
+	IRBuilder<> builder(block);
+	std::vector<Value *> argsFull;
+	Value *func = contents->memb(self, "1", block);
+
+	unsigned next1 = 2, next2 = 0;
+	for (auto *type : callTypes) {
+		if (type) {
+			argsFull.push_back(contents->memb(self, std::to_string(next1++), block));
+		} else {
+			assert(next2 < args.size());
+			argsFull.push_back(args[next2++]);
+		}
+	}
+
+	return callee->call(base, func, argsFull, block);
+}
+
+Value *types::PartialFuncType::defaultValue(BasicBlock *block)
+{
+	return contents->defaultValue(block);
+}
+
+template <typename T>
+static bool nullMatch(std::vector<T *> v1, std::vector<T *> v2)
+{
+	if (v1.size() != v2.size())
+		return false;
+
+	for (unsigned i = 0; i < v1.size(); i++) {
+		if ((v1[i] == nullptr) ^ (v2[i] == nullptr))
+			return false;
+	}
+
+	return true;
+}
+
+bool types::PartialFuncType::is(types::Type *type) const
+{
+	auto *p = dynamic_cast<types::PartialFuncType *>(type);
+	return p && nullMatch(callTypes, p->callTypes) && contents->is(p->contents);
+}
+
+types::Type *types::PartialFuncType::getCallType(std::vector<types::Type *> inTypes)
+{
+	std::vector<types::Type *> types(callTypes);
+	unsigned next = 0;
+	for (auto*& type : types) {
+		if (!type) {
+			if (next >= inTypes.size())
+				throw exc::SeqException("too few arguments passed to partial function call");
+			type = inTypes[next++];
+		}
+	}
+
+	if (next < inTypes.size())
+		throw exc::SeqException("too many arguments passed to partial function call");
+
+	return callee->getCallType(types);
+}
+
+Type *types::PartialFuncType::getLLVMType(LLVMContext &context) const
+{
+	return contents->getLLVMType(context);
+}
+
+seq_int_t types::PartialFuncType::size(Module *module) const
+{
+	return contents->size(module);
+}
+
+types::PartialFuncType *types::PartialFuncType::get(types::Type *callee, std::vector<types::Type *> callTypes)
+{
+	return new types::PartialFuncType(callee, std::move(callTypes));
+}
+
+Value *types::PartialFuncType::make(Value *func, std::vector<Value *> args, BasicBlock *block)
+{
+	Value *self = contents->defaultValue(block);
+	IRBuilder<> builder(block);
+	self = builder.CreateInsertValue(self, func, 0);
+	for (unsigned i = 0; i < args.size(); i++)
+		self = builder.CreateInsertValue(self, args[i], i + 1);
+	return self;
+}
+
+types::PartialFuncType *types::PartialFuncType::clone(Generic *ref)
+{
+	std::vector<types::Type *> callTypesCloned;
+	for (auto *type : callTypes)
+		callTypesCloned.push_back(type ? type->clone(ref) : nullptr);
+	return get(callee->clone(ref), callTypesCloned);
+}

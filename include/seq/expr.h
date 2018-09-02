@@ -23,6 +23,13 @@ namespace seq {
 		virtual Expr *clone(Generic *ref);
 	};
 
+	class BlankExpr : public Expr {
+	public:
+		BlankExpr();
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+	};
+
 	class IntExpr : public Expr {
 	private:
 		seq_int_t n;
@@ -200,6 +207,18 @@ namespace seq {
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
 		CallExpr *clone(Generic *ref) override;
+	};
+
+	class PartialCallExpr : public Expr {
+	private:
+		Expr *func;
+		std::vector<Expr *> args;
+	public:
+		PartialCallExpr(Expr *func, std::vector<Expr *> args);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::PartialFuncType *getType0() const override;
+		PartialCallExpr *clone(Generic *ref) override;
 	};
 
 	class CondExpr : public Expr {

@@ -144,7 +144,7 @@ for i in range(1 if b.1 else 2, 5+5) {
   elif i >= 7:
     break
   else:
-    for _ in range(i, i+1): print _
+    for z in range(i, i+1): print z
 }
 
 type Person = {name: Str, age: Int}
@@ -166,7 +166,7 @@ global ints = Int[100]
 for i in range(0, ints.len):
   ints[i] = i+1
 global s = 0
-for _ in range(0, ints.len): s = s + ints[_]
+for z in range(0, ints.len): s = s + ints[z]
 print s
 
 var p = Pair[Int](42, 19)
@@ -217,6 +217,14 @@ var cc = match bb {
 
 print cc
 
+
+def add(a: Int, b: Int, c: Int):
+  return a + b + c
+
+var add_one = add(_, 1, _)
+var add_two = add(3, _, -1)
+print add_one(5, 0)
+print add_two(42)
 
 # ---------
 }

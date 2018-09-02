@@ -1850,6 +1850,17 @@ struct control<expr> : pegtl::normal<expr>
 };
 
 template<>
+struct control<blank_expr> : pegtl::normal<blank_expr>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		Expr *expr = new BlankExpr();
+		state.add(expr);
+	}
+};
+
+template<>
 struct control<int_expr> : pegtl::normal<int_expr>
 {
 	template<typename Input>
@@ -2361,11 +2372,18 @@ struct control<call_tail> : pegtl::normal<call_tail>
 		assert(state.top().type == SeqEntity::EXPR);
 		Expr *func = state.top().value.expr;
 		std::vector<Expr *> args;
+		bool isPartialCall = false;
 
-		for (auto ent : vec)
-			args.push_back(ent.value.expr);
+		for (auto ent : vec) {
+			if (dynamic_cast<BlankExpr *>(ent.value.expr)) {
+				isPartialCall = true;
+				args.push_back(nullptr);
+			} else {
+				args.push_back(ent.value.expr);
+			}
+		}
 
-		Expr *e = new CallExpr(func, args);
+		Expr *e = isPartialCall ? (Expr *)new PartialCallExpr(func, args) : new CallExpr(func, args);
 		state.top() = e;
 	}
 

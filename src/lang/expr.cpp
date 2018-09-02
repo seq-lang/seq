@@ -46,6 +46,20 @@ Expr *Expr::clone(Generic *ref)
 	return this;
 }
 
+BlankExpr::BlankExpr() : Expr(&types::Void)
+{
+}
+
+types::Type *BlankExpr::getType0() const
+{
+	throw exc::SeqException("misplaced '_'");
+}
+
+Value *BlankExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	throw exc::SeqException("misplaced '_'");
+}
+
 IntExpr::IntExpr(seq_int_t n) : Expr(types::IntType::get()), n(n)
 {
 }
@@ -577,6 +591,51 @@ CallExpr *CallExpr::clone(Generic *ref)
 	for (auto *arg : args)
 		argsCloned.push_back(arg->clone(ref));
 	return new CallExpr(func->clone(ref), argsCloned);
+}
+
+PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args) :
+    func(func), args(std::move(args))
+{
+}
+
+void PartialCallExpr::resolveTypes()
+{
+	func->resolveTypes();
+	for (auto *arg : args) {
+		if (arg)
+			arg->resolveTypes();
+	}
+}
+
+Value *PartialCallExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	types::PartialFuncType *par = getType0();
+
+	Value *f = func->codegen(base, block);
+	std::vector<Value *> x;
+	for (auto *e : args) {
+		if (e)
+			x.push_back(e->codegen(base, block));
+	}
+
+	return par->make(f, x, block);
+}
+
+types::PartialFuncType *PartialCallExpr::getType0() const
+{
+	types::Type *callee = func->getType();
+	std::vector<types::Type *> callTypes;
+	for (auto *arg : args)
+		callTypes.push_back(arg ? arg->getType() : nullptr);
+	return types::PartialFuncType::get(callee, callTypes);
+}
+
+PartialCallExpr *PartialCallExpr::clone(seq::Generic *ref)
+{
+	std::vector<Expr *> argsCloned;
+	for (auto *arg : args)
+		argsCloned.push_back(arg ? arg->clone(ref) : nullptr);
+	return new PartialCallExpr(func->clone(ref), argsCloned);
 }
 
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse) :

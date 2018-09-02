@@ -2,6 +2,7 @@
 #define SEQ_FUNCT_H
 
 #include "types.h"
+#include "record.h"
 
 namespace seq {
 	namespace types {
@@ -55,6 +56,35 @@ namespace seq {
 			static GenType *get();
 
 			GenType *clone(Generic *ref) override;
+		};
+
+		class PartialFuncType : public Type {
+		private:
+			Type *callee;
+			std::vector<Type *> callTypes;
+			RecordType *contents;
+
+			// callTypes[i] == null means the argument is unknown
+			PartialFuncType(Type *callee, std::vector<Type *> callTypes);
+		public:
+			PartialFuncType(PartialFuncType const&)=delete;
+			void operator=(PartialFuncType const&)=delete;
+
+			llvm::Value *call(BaseFunc *base,
+			                  llvm::Value *self,
+			                  std::vector<llvm::Value *> args,
+			                  llvm::BasicBlock *block) override;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+
+			bool is(Type *type) const override;
+			Type *getCallType(std::vector<Type *> inTypes) override;
+			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
+			seq_int_t size(llvm::Module *module) const override;
+			static PartialFuncType *get(Type *callee, std::vector<types::Type *> callTypes);
+
+			llvm::Value *make(llvm::Value *func, std::vector<llvm::Value *> args, llvm::BasicBlock *block);
+			PartialFuncType *clone(Generic *ref) override;
 		};
 
 	}
