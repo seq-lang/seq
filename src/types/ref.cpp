@@ -67,7 +67,7 @@ std::vector<types::Type *> types::RefType::deduceTypesFromArgTypes(std::vector<t
 		auto *genericType = dynamic_cast<types::GenericType *>(inTypes[i]);
 		if (genericType) {
 			int idx = findGenericParameter(genericType);
-			if (idx >= 0 && !types[idx])
+			if (idx >= 0 && !types[idx] && argTypes[i])
 				types[idx] = argTypes[i];
 		}
 	}

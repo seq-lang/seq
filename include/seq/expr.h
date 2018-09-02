@@ -211,7 +211,7 @@ namespace seq {
 
 	class PartialCallExpr : public Expr {
 	private:
-		Expr *func;
+		mutable Expr *func;
 		std::vector<Expr *> args;
 	public:
 		PartialCallExpr(Expr *func, std::vector<Expr *> args);

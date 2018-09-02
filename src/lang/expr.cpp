@@ -151,19 +151,19 @@ BaseFunc *FuncExpr::getFunc()
 
 void FuncExpr::resolveTypes()
 {
-	func->resolveTypes();
-}
-
-Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock*& block)
-{
 	auto *f = dynamic_cast<Func *>(func);
 	if (f) {
-		if (!types.empty())
+		if (f->unrealized() && !types.empty())
 			func = f->realize(types);
 	} else if (!types.empty()) {
 		throw exc::SeqException("cannot type-instantiate non-generic function");
 	}
 
+	func->resolveTypes();
+}
+
+Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
 	func->codegen(block->getModule());
 	return func->getFunc();
 }
@@ -175,7 +175,10 @@ types::Type *FuncExpr::getType0() const
 
 FuncExpr *FuncExpr::clone(Generic *ref)
 {
-	return new FuncExpr(func->clone(ref));
+	std::vector<types::Type *> typesCloned;
+	for (auto *type : types)
+		typesCloned.push_back(type->clone(ref));
+	return new FuncExpr(func->clone(ref), typesCloned);
 }
 
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
@@ -554,18 +557,13 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	return func->getType()->call(base, f, x, block);
 }
 
-types::Type *CallExpr::getType0() const
+static void deduceTypeParametersIfNecessary(Expr*& func, std::vector<types::Type *> argTypes)
 {
-	std::vector<types::Type *> types;
-	for (auto *e : args)
-		types.push_back(e->getType());
-
-	// type parameter deduction if calling generic function:
 	auto *funcExpr = dynamic_cast<FuncExpr *>(func);
 	if (funcExpr && !funcExpr->isParameterized()) {
 		auto *f = dynamic_cast<Func *>(funcExpr->getFunc());
 		if (f && f->numGenerics() > 0 && f->unrealized())
-			func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(types)));
+			func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)));
 	}
 
 	auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
@@ -575,13 +573,21 @@ types::Type *CallExpr::getType0() const
 		if (type->hasMethod(name)) {
 			auto *f = dynamic_cast<Func *>(type->getMethod(name));
 			if (f && f->numGenerics() > 0 && f->unrealized()) {
-				std::vector<types::Type *> typesFull(types);
+				std::vector<types::Type *> typesFull(argTypes);
 				typesFull.insert(typesFull.begin(), type);  // methods take 'self' as first argument
 				func = new MethodExpr(elemExpr->getRec(), name, f->deduceTypesFromArgTypes(typesFull));
 			}
 		}
 	}
+}
 
+types::Type *CallExpr::getType0() const
+{
+	std::vector<types::Type *> types;
+	for (auto *e : args)
+		types.push_back(e->getType());
+
+	deduceTypeParametersIfNecessary(func, types);
 	return func->getType()->getCallType(types);
 }
 
@@ -623,11 +629,12 @@ Value *PartialCallExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 types::PartialFuncType *PartialCallExpr::getType0() const
 {
-	types::Type *callee = func->getType();
-	std::vector<types::Type *> callTypes;
-	for (auto *arg : args)
-		callTypes.push_back(arg ? arg->getType() : nullptr);
-	return types::PartialFuncType::get(callee, callTypes);
+	std::vector<types::Type *> types;
+	for (auto *e : args)
+		types.push_back(e ? e->getType() : nullptr);
+
+	deduceTypeParametersIfNecessary(func, types);
+	return types::PartialFuncType::get(func->getType(), types);
 }
 
 PartialCallExpr *PartialCallExpr::clone(seq::Generic *ref)
