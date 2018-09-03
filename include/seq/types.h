@@ -5,11 +5,18 @@
 #include <map>
 #include <functional>
 #include <utility>
-#include "util/llvm.h"
-#include "util/seqdata.h"
+#include "llvm.h"
 #include "ops.h"
-#include "seqgc.h"
-#include "util.h"
+#include "lib.h"
+
+#define SEQ_STRINGIFY(x) #x
+#define SEQ_TOSTRING(x)  SEQ_STRINGIFY(x)
+
+#define SEQ_ASSIGN_VTABLE_FIELD(field, value) \
+    do { \
+	    vtable.field = (void *)(value); \
+        vtable.field##Name = SEQ_TOSTRING(value); \
+    } while (0)
 
 namespace seq {
 
@@ -26,31 +33,47 @@ namespace seq {
 		struct VTable {
 			void *copy = nullptr;
 			void *print = nullptr;
-			std::map<std::string, std::pair<int, Type *>> fields;
-			std::map<std::string, BaseFunc *> methods;
-			std::vector<OpSpec> ops;
+
+			std::string copyName = "";
+			std::string printName = "";
+
+			std::map<std::string, std::pair<int, Type *>> fields = {};
+			std::map<std::string, BaseFunc *> methods = {};
+			std::vector<OpSpec> ops = {};
+		};
+
+		enum Key {
+			NONE,
+			SEQ,
+			INT,
+			FLOAT,
+			BOOL,
+			STR,
+			ARRAY,
+			RECORD,
+			FUNC,
+			REF,
+			OPTIONAL,
 		};
 
 		class Type {
 		protected:
 			std::string name;
 			Type *parent;
-			SeqData key;
+			Key key;
 			VTable vtable;
 		public:
-			Type(std::string name, Type *parent, SeqData key);
+			Type(std::string name, Type *parent, Key key);
 			Type(std::string name, Type *parent);
 
 			virtual std::string getName() const;
 			virtual Type *getParent() const;
-			virtual SeqData getKey() const;
+			virtual Key getKey() const;
 			virtual VTable& getVTable();
 
 			virtual bool isAtomic() const;
 
-			virtual std::string copyFuncName() { return "copy" + getName(); }
-			virtual std::string printFuncName() { return "print" + getName(); }
-			virtual std::string allocFuncName() { return isAtomic() ? ALLOC_ATOMIC_FUNC_NAME : ALLOC_FUNC_NAME; }
+			virtual std::string allocFuncName() { return isAtomic() ? "seq_alloc_atomic" : "seq_alloc"; }
 
 			virtual llvm::Value *loadFromAlloca(BaseFunc *base,
 			                                    llvm::Value *var,

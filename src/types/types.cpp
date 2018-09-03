@@ -6,13 +6,13 @@
 using namespace seq;
 using namespace llvm;
 
-types::Type::Type(std::string name, types::Type *parent, SeqData key) :
+types::Type::Type(std::string name, types::Type *parent, Key key) :
     name(std::move(name)), parent(parent), key(key)
 {
 }
 
 types::Type::Type(std::string name, Type *parent) :
-    Type(std::move(name), parent, SeqData::NONE)
+    Type(std::move(name), parent, Key::NONE)
 {
 }
 
@@ -26,7 +26,7 @@ types::Type *types::Type::getParent() const
 	return parent;
 }
 
-SeqData types::Type::getKey() const
+types::Key types::Type::getKey() const
 {
 	return key;
 }
@@ -83,12 +83,12 @@ llvm::Value *types::Type::copy(BaseFunc *base,
                                Value *self,
                                BasicBlock *block)
 {
-	if (!getVTable().copy || getKey() == SeqData::NONE)
+	if (!getVTable().copy || getKey() == Key::NONE)
 		throw exc::SeqException("cannot copy type '" + getName() + "'");
 
 	Function *copyFunc = cast<Function>(
 	                       block->getModule()->getOrInsertFunction(
-	                         copyFuncName(),
+	                         getVTable().copyName,
 	                         getLLVMType(block->getContext()),
 	                         getLLVMType(block->getContext())));
 
@@ -100,21 +100,21 @@ llvm::Value *types::Type::copy(BaseFunc *base,
 
 void types::Type::finalizeCopy(Module *module, ExecutionEngine *eng)
 {
-	Function *copyFunc = module->getFunction(copyFuncName());
+	Function *copyFunc = module->getFunction(getVTable().copyName);
 	if (copyFunc)
-		eng->addGlobalMapping(copyFunc, getVTable().print);
+		eng->addGlobalMapping(copyFunc, getVTable().copy);
 }
 
 void types::Type::print(BaseFunc *base,
                         Value *self,
                         BasicBlock *block)
 {
-	if (!getVTable().print || getKey() == SeqData::NONE)
+	if (!getVTable().print || getKey() == Key::NONE)
 		throw exc::SeqException("cannot print type '" + getName() + "'");
 
 	Function *printFunc = cast<Function>(
 	                        block->getModule()->getOrInsertFunction(
-	                          printFuncName(),
+	                          getVTable().printName,
 	                          llvm::Type::getVoidTy(block->getContext()),
 	                          getLLVMType(block->getContext())));
 
@@ -126,7 +126,7 @@ void types::Type::print(BaseFunc *base,
 
 void types::Type::finalizePrint(Module *module, ExecutionEngine *eng)
 {
-	Function *printFunc = module->getFunction(printFuncName());
+	Function *printFunc = module->getFunction(getVTable().printName);
 	if (printFunc)
 		eng->addGlobalMapping(printFunc, getVTable().print);
 }
@@ -136,7 +136,7 @@ void types::Type::serialize(BaseFunc *base,
                             Value *fp,
                             BasicBlock *block)
 {
-	if (getKey() == SeqData::NONE)
+	if (getKey() == Key::NONE)
 		throw exc::SeqException("type '" + getName() + "' cannot be serialized");
 
 	LLVMContext& context = block->getContext();
@@ -144,7 +144,7 @@ void types::Type::serialize(BaseFunc *base,
 
 	Function *writeFunc = cast<Function>(
 	                        module->getOrInsertFunction(
-	                          IO_WRITE_FUNC_NAME,
+	                          "seq_io_write",
 	                          llvm::Type::getVoidTy(context),
 	                          IntegerType::getInt8PtrTy(context),
 	                          seqIntLLVM(context),
@@ -162,16 +162,16 @@ void types::Type::serialize(BaseFunc *base,
 
 void types::Type::finalizeSerialize(Module *module, ExecutionEngine *eng)
 {
-	Function *writeFunc = module->getFunction(IO_WRITE_FUNC_NAME);
+	Function *writeFunc = module->getFunction("seq_io_write");
 	if (writeFunc)
-		eng->addGlobalMapping(writeFunc, (void *)util::io::io_write);
+		eng->addGlobalMapping(writeFunc, (void *)seq_io_write);
 }
 
 Value *types::Type::deserialize(BaseFunc *base,
                                 Value *fp,
                                 BasicBlock *block)
 {
-	if (getKey() == SeqData::NONE)
+	if (getKey() == Key::NONE)
 		throw exc::SeqException("type '" + getName() + "' cannot be serialized");
 
 	LLVMContext& context = block->getContext();
@@ -180,7 +180,7 @@ Value *types::Type::deserialize(BaseFunc *base,
 
 	Function *readFunc = cast<Function>(
 	                       module->getOrInsertFunction(
-	                         IO_READ_FUNC_NAME,
+	                         "seq_io_read",
 	                         llvm::Type::getVoidTy(context),
 	                         IntegerType::getInt8PtrTy(context),
 	                         seqIntLLVM(context),
@@ -199,9 +199,9 @@ Value *types::Type::deserialize(BaseFunc *base,
 
 void types::Type::finalizeDeserialize(Module *module, ExecutionEngine *eng)
 {
-	Function *readFunc = module->getFunction(IO_READ_FUNC_NAME);
+	Function *readFunc = module->getFunction("seq_io_read");
 	if (readFunc)
-		eng->addGlobalMapping(readFunc, (void *)util::io::io_read);
+		eng->addGlobalMapping(readFunc, (void *)seq_io_read);
 }
 
 Value *types::Type::alloc(Value *count, BasicBlock *block)
@@ -237,7 +237,7 @@ void types::Type::finalizeAlloc(Module *module, ExecutionEngine *eng)
 {
 	Function *allocFunc = module->getFunction(allocFuncName());
 	if (allocFunc)
-		eng->addGlobalMapping(allocFunc, (void *)(isAtomic() ? seqAllocAtomic : seqAlloc));
+		eng->addGlobalMapping(allocFunc, (void *)(isAtomic() ? seq_alloc_atomic : seq_alloc));
 }
 
 Value *types::Type::load(BaseFunc *base,
@@ -245,7 +245,7 @@ Value *types::Type::load(BaseFunc *base,
                          Value *idx,
                          BasicBlock *block)
 {
-	if (size(block->getModule()) == 0 || getKey() == SeqData::NONE)
+	if (size(block->getModule()) == 0 || getKey() == Key::NONE)
 		throw exc::SeqException("cannot load type '" + getName() + "'");
 
 	IRBuilder<> builder(block);
@@ -258,7 +258,7 @@ void types::Type::store(BaseFunc *base,
                         Value *idx,
                         BasicBlock *block)
 {
-	if (size(block->getModule()) == 0|| getKey() == SeqData::NONE)
+	if (size(block->getModule()) == 0|| getKey() == Key::NONE)
 		throw exc::SeqException("cannot store type '" + getName() + "'");
 
 	IRBuilder<> builder(block);

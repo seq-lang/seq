@@ -8,7 +8,7 @@
 #include <map>
 #include "generic.h"
 #include "common.h"
-#include "util/llvm.h"
+#include "llvm.h"
 
 namespace seq {
 

@@ -9,13 +9,10 @@ namespace seq {
 
 		class BaseSeqType : public Type {
 		protected:
-			BaseSeqType(std::string name, SeqData key);
+			BaseSeqType(std::string name, Key key);
 		public:
 			BaseSeqType(BaseSeqType const&)=delete;
 			void operator=(BaseSeqType const&)=delete;
-
-			std::string copyFuncName() override { return "copyBaseSeq"; }
-			std::string printFuncName() override { return "printBaseSeq"; }
 
 			llvm::Value *eq(BaseFunc *base,
 			                llvm::Value *self,

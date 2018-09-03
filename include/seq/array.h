@@ -14,8 +14,6 @@ namespace seq {
 			ArrayType(ArrayType const&)=delete;
 			void operator=(ArrayType const&)=delete;
 
-			std::string copyFuncName() override { return "copyArray"; }
-
 			llvm::Value *copy(BaseFunc *base,
 			                  llvm::Value *self,
 			                  llvm::BasicBlock *block) override;

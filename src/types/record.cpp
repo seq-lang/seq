@@ -15,14 +15,14 @@ static std::string getNameFromTypes(std::vector<types::Type *> types)
 }
 
 types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names) :
-    Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD),
+    Type(getNameFromTypes(types), BaseType::get(), Key::RECORD),
     types(std::move(types)), names(std::move(names))
 {
 	assert(this->names.empty() || this->names.size() == this->types.size());
 }
 
 types::RecordType::RecordType(std::initializer_list<Type *> types) :
-    Type(getNameFromTypes(types), BaseType::get(), SeqData::RECORD),
+    Type(getNameFromTypes(types), BaseType::get(), Key::RECORD),
     types(types), names()
 {
 }

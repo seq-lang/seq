@@ -70,6 +70,8 @@ namespace seq {
 			PartialFuncType(PartialFuncType const&)=delete;
 			void operator=(PartialFuncType const&)=delete;
 
+			bool isAtomic() const override;
+
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
 			                  std::vector<llvm::Value *> args,

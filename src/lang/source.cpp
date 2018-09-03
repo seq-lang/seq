@@ -3,81 +3,12 @@
 using namespace seq;
 using namespace llvm;
 
-struct IOState {
-	io::DataBlock data;
-	std::vector<std::ifstream *> ins;
-	io::Format fmt;
-
-	IOState(char **sources, const seq_int_t numSources) :
-	    data(), ins()
-	{
-		if (numSources == 0)
-			io::error("sequence source not specified");
-
-		if (numSources > io::MAX_INPUTS)
-			io::error("too many inputs (max: " + std::to_string(io::MAX_INPUTS) + ")");
-
-		fmt = io::extractExt(sources[0]);
-
-		for (seq_int_t i = 1; i < numSources; i++) {
-			if (io::extractExt(sources[i]) != fmt)
-				io::error("inconsistent input formats");
-		}
-
-		for (seq_int_t i = 0; i < numSources; i++) {
-			ins.push_back(new std::ifstream(sources[i]));
-			if (!ins.back()->good())
-				io::error("could not open '" + std::string(sources[i]) + "' for reading");
-		}
-	}
-
-	void close()
-	{
-		for (auto *in : ins) {
-			in->close();
-			delete in;
-		}
-	}
-};
-
-SEQ_FUNC void *seqSourceInit(char **sources, seq_int_t numSources)
-{
-	auto *state = (IOState *)seqAlloc(sizeof(IOState));
-	new (state) IOState(sources, numSources);
-	return state;
-}
-
-SEQ_FUNC seq_int_t seqSourceRead(void *state)
-{
-	auto *ioState = (IOState *)state;
-	ioState->data.read(ioState->ins, ioState->fmt);
-	return (seq_int_t)ioState->data.len;
-}
-
-SEQ_FUNC arr_t<seq_t> seqSourceGet(void *state, seq_int_t idx)
-{
-	auto *ioState = (IOState *)state;
-	return ioState->data.block[idx].getSeqs(ioState->ins.size());
-}
-
-SEQ_FUNC seq_t seqSourceGetSingle(void *state, seq_int_t idx)
-{
-	auto *ioState = (IOState *)state;
-	return ioState->data.block[idx].getSeq();
-}
-
-SEQ_FUNC void seqSourceDealloc(void *state)
-{
-	auto *ioState = (IOState *)state;
-	ioState->close();
-}
-
 static Function *seqSourceInitFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
-	              "seqSourceInit",
+	              "seq_source_init",
 	              IntegerType::getInt8PtrTy(context),
 	              PointerType::get(IntegerType::getInt8PtrTy(context), 0),
 	              seqIntLLVM(context)));
@@ -90,7 +21,7 @@ static Function *seqSourceReadFunc(Module *module)
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
-	              "seqSourceRead",
+	              "seq_source_read",
 	              seqIntLLVM(context),
 	              IntegerType::getInt8PtrTy(context)));
 	f->setCallingConv(CallingConv::C);
@@ -102,7 +33,7 @@ static Function *seqSourceGetFunc(Module *module)
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
-	              "seqSourceGet",
+	              "seq_source_get",
 	              types::ArrayType::get(types::SeqType::get())->getLLVMType(context),
 	              IntegerType::getInt8PtrTy(context),
 	              seqIntLLVM(context)));
@@ -115,7 +46,7 @@ static Function *seqSourceGetSingleFunc(Module *module)
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
-	              "seqSourceGetSingle",
+	              "seq_source_get_single",
 	              types::SeqType::get()->getLLVMType(context),
 	              IntegerType::getInt8PtrTy(context),
 	              seqIntLLVM(context)));
@@ -128,7 +59,7 @@ static Function *seqSourceDeallocFunc(Module *module)
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
-	              "seqSourceDealloc",
+	              "seq_source_dealloc",
 	              Type::getVoidTy(context),
 	              IntegerType::getInt8PtrTy(context)));
 	f->setCallingConv(CallingConv::C);

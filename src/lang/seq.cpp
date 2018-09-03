@@ -114,7 +114,7 @@ void SeqModule::codegen(Module *module)
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
 
-	initFunc = cast<Function>(module->getOrInsertFunction("seqinit", Type::getVoidTy(context)));
+	initFunc = cast<Function>(module->getOrInsertFunction("seq_init", Type::getVoidTy(context)));
 	initFunc->setCallingConv(CallingConv::C);
 	builder.CreateCall(initFunc);
 
@@ -202,7 +202,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 
 	assert(initFunc);
 	assert(strlenFunc);
-	eng->addGlobalMapping(initFunc, (void *)util::seqinit);
+	eng->addGlobalMapping(initFunc, (void *)seq_init);
 	eng->addGlobalMapping(strlenFunc, (void *)strlen);
 
 	typedef void (*Main)(const int, const char **);

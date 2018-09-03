@@ -5,38 +5,23 @@
 using namespace seq;
 using namespace llvm;
 
-SEQ_FUNC void printInt(seq_int_t x)
-{
-	std::cout << x << std::endl;
-}
-
-SEQ_FUNC void printFloat(double n)
-{
-	std::cout << n << std::endl;
-}
-
-SEQ_FUNC void printBool(bool b)
-{
-	std::cout << (b ? "true" : "false") << std::endl;
-}
-
 types::NumberType::NumberType() : Type("Num", BaseType::get())
 {
 }
 
-types::IntType::IntType() : Type("Int", NumberType::get(), SeqData::INT)
+types::IntType::IntType() : Type("Int", NumberType::get(), Key::INT)
 {
-	vtable.print = (void *)printInt;
+	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_int);
 }
 
-types::FloatType::FloatType() : Type("Float", NumberType::get(), SeqData::FLOAT)
+types::FloatType::FloatType() : Type("Float", NumberType::get(), Key::FLOAT)
 {
-	vtable.print = (void *)printFloat;
+	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_float);
 }
 
-types::BoolType::BoolType() : Type("Bool", NumberType::get(), SeqData::BOOL)
+types::BoolType::BoolType() : Type("Bool", NumberType::get(), Key::BOOL)
 {
-	vtable.print = (void *)printBool;
+	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_bool);
 }
 
 Value *types::IntType::eq(BaseFunc *base,

@@ -60,7 +60,7 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
   include_directories("${pegtl_SOURCE_DIR}/include")
 endif()
 
-# Seq library
+
 cmake_minimum_required(VERSION 3.9)
 project(Seq)
 
@@ -76,6 +76,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
 include_directories(src/)
 include_directories(include/)
 
+
+# Seq runtime library
+add_library(seqrt SHARED include/seq/lib.h
+                         src/seq/lib.cpp)
+target_link_libraries(seqrt gc)
+
+
+# Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 add_library(seq SHARED include/seq/any.h
@@ -86,8 +94,8 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/func.h
                        include/seq/funct.h
                        include/seq/generic.h
-                       include/seq/io.h
                        include/seq/lang.h
+                       include/seq/llvm.h
                        include/seq/num.h
                        include/seq/ops.h
                        include/seq/optional.h
@@ -96,12 +104,10 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/record.h
                        include/seq/ref.h
                        include/seq/seq.h
-                       include/seq/seqgc.h
                        include/seq/seqt.h
                        include/seq/source.h
                        include/seq/stmt.h
                        include/seq/types.h
-                       include/seq/util.h
                        include/seq/void.h
                        include/seq/var.h
                        src/lang/expr.cpp
@@ -127,14 +133,9 @@ add_library(seq SHARED include/seq/any.h
                        src/types/seqt.cpp
                        src/types/types.cpp
                        src/types/void.cpp
-                       src/util/io.cpp
-                       src/util/llvm.h
-                       src/util/ocaml.cpp
-                       src/util/seqdata.h
-                       src/util/seqgc.cpp
-                       src/util/util.cpp)
+                       src/util/ocaml.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} gc pegtl)
+target_link_libraries(seq ${LLVM_LIBS} seqrt pegtl)
 
 
 # Seq command-line tool

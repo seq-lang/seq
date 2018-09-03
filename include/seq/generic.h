@@ -25,13 +25,11 @@ namespace seq {
 
 			std::string getName() const override;
 			Type *getParent() const override;
-			SeqData getKey() const override;
+			Key getKey() const override;
 			VTable& getVTable() override;
 
 			bool isAtomic() const override;
 
-			std::string copyFuncName() override;
-			std::string printFuncName() override;
 			std::string allocFuncName() override;
 
 			llvm::Value *loadFromAlloca(BaseFunc *base,

@@ -213,7 +213,7 @@ void Func::codegen(Module *module)
 
 		Function *allocFunc = cast<Function>(
 		                        module->getOrInsertFunction(
-		                          ALLOC_FUNC_NAME,
+		                          "seq_alloc",
 		                          IntegerType::getInt8PtrTy(context),
 		                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
 

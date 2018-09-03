@@ -13,7 +13,7 @@ static std::string getFuncName(std::vector<types::Type *> inTypes)
 }
 
 types::FuncType::FuncType(std::vector<types::Type *> inTypes, Type *outType) :
-    Type(getFuncName(inTypes), BaseType::get(), SeqData::FUNC),
+    Type(getFuncName(inTypes), BaseType::get(), Key::FUNC),
     inTypes(std::move(inTypes)), outType(outType)
 {
 }
@@ -87,7 +87,7 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 }
 
 types::GenType::GenType(Type *outType) :
-    Type(outType->getName() + "Gen", BaseType::get(), SeqData::FUNC), outType(outType)
+    Type(outType->getName() + "Gen", BaseType::get(), Key::FUNC), outType(outType)
 {
 	types::Type *type = this->outType->is(&types::Void) ? (types::Type *)&types::Void :
 	                                                      types::OptionalType::get(outType);
@@ -215,7 +215,7 @@ types::GenType *types::GenType::clone(Generic *ref)
 }
 
 types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::Type *> callTypes) :
-    Type("PartialFunc", BaseType::get(), SeqData::FUNC), callee(callee), callTypes(std::move(callTypes))
+    Type("PartialFunc", BaseType::get(), Key::FUNC), callee(callee), callTypes(std::move(callTypes))
 {
 	std::vector<types::Type *> types;
 	types.push_back(this->callee);
@@ -224,6 +224,11 @@ types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::
 			types.push_back(type);
 	}
 	contents = types::RecordType::get(types);
+}
+
+bool types::PartialFuncType::isAtomic() const
+{
+	return contents->isAtomic();
 }
 
 Value *types::PartialFuncType::call(BaseFunc *base,

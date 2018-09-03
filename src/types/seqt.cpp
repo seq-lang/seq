@@ -4,29 +4,16 @@
 using namespace seq;
 using namespace llvm;
 
-SEQ_FUNC char *copyBaseSeq(char *seq, const seq_int_t len)
-{
-	auto *seq2 = (char *)seqAllocAtomic((size_t)len);
-	std::memcpy(seq2, seq, (size_t)len);
-	return seq2;
-}
-
-SEQ_FUNC void printBaseSeq(char *seq, const seq_int_t len)
-{
-	std::cout.write(seq, len);
-	std::cout << '\n';
-}
-
-types::BaseSeqType::BaseSeqType(std::string name, SeqData key) :
+types::BaseSeqType::BaseSeqType(std::string name, Key key) :
     Type(std::move(name), BaseType::get(), key)
 {
-	vtable.copy = (void *)copyBaseSeq;
-	vtable.print = (void *)printBaseSeq;
+	SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_seq);
+	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_seq);
 }
 
 static inline std::string eqFuncName()
 {
-	return "BaseSeqEq";
+	return "seq.baseseq.eq";
 }
 
 static Function *buildSeqEqFunc(Module *module)
@@ -129,7 +116,7 @@ Value *types::BaseSeqType::copy(BaseFunc *base,
 
 	Function *copyFunc = cast<Function>(
 	                       block->getModule()->getOrInsertFunction(
-	                         copyFuncName(),
+	                         getVTable().copyName,
 	                         IntegerType::getInt8PtrTy(context),
 	                         IntegerType::getInt8PtrTy(context),
 	                         seqIntLLVM(context)));
@@ -154,7 +141,7 @@ void types::BaseSeqType::serialize(BaseFunc *base,
 
 	Function *writeFunc = cast<Function>(
 	                        module->getOrInsertFunction(
-	                          IO_WRITE_FUNC_NAME,
+	                          "seq_io_write",
 	                          llvm::Type::getVoidTy(context),
 	                          IntegerType::getInt8PtrTy(context),
 	                          seqIntLLVM(context),
@@ -180,7 +167,7 @@ Value *types::BaseSeqType::deserialize(BaseFunc *base,
 
 	Function *readFunc = cast<Function>(
 	                       module->getOrInsertFunction(
-	                         IO_READ_FUNC_NAME,
+	                         "seq_io_read",
 	                         llvm::Type::getVoidTy(context),
 	                         IntegerType::getInt8PtrTy(context),
 	                         seqIntLLVM(context),
@@ -211,7 +198,7 @@ void types::BaseSeqType::print(BaseFunc *base,
 
 	Function *printFunc = cast<Function>(
 	                        block->getModule()->getOrInsertFunction(
-	                          printFuncName(),
+	                          getVTable().printName,
 	                          llvm::Type::getVoidTy(context),
 	                          IntegerType::getInt8PtrTy(context),
 	                          seqIntLLVM(context)));
@@ -303,7 +290,7 @@ seq_int_t types::BaseSeqType::size(Module *module) const
 }
 
 /* derived Seq type */
-types::SeqType::SeqType() : BaseSeqType("Seq", SeqData::SEQ)
+types::SeqType::SeqType() : BaseSeqType("Seq", Key::SEQ)
 {
 }
 
@@ -356,7 +343,7 @@ types::SeqType *types::SeqType::get()
 }
 
 /* derived Str type */
-types::StrType::StrType() : BaseSeqType("Str", SeqData::STR)
+types::StrType::StrType() : BaseSeqType("Str", Key::STR)
 {
 }
 

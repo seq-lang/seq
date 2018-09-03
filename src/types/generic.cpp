@@ -61,7 +61,7 @@ types::Type *types::GenericType::getParent() const
 	return type->getParent();
 }
 
-SeqData types::GenericType::getKey() const
+types::Key types::GenericType::getKey() const
 {
 	ensure();
 	return type->getKey();
@@ -71,18 +71,6 @@ types::VTable& types::GenericType::getVTable()
 {
 	ensure();
 	return type->getVTable();
-}
-
-std::string types::GenericType::copyFuncName()
-{
-	ensure();
-	return type->copyFuncName();
-}
-
-std::string types::GenericType::printFuncName()
-{
-	ensure();
-	return type->printFuncName();
 }
 
 std::string types::GenericType::allocFuncName()

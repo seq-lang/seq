@@ -29,13 +29,8 @@
 #include "generic.h"
 
 #include "common.h"
-#include "io.h"
-#include "seqgc.h"
-
 #include "parser.h"
-
-#include "util/llvm.h"
-#include "util/seqdata.h"
+#include "llvm.h"
 
 namespace seq {
 

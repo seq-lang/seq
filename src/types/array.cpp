@@ -3,18 +3,10 @@
 using namespace seq;
 using namespace llvm;
 
-SEQ_FUNC void *copyArray(void *arr, seq_int_t len, seq_int_t elem_size, bool atomic)
-{
-	const size_t size = (size_t)len * elem_size;
-	auto *arr2 = atomic ? seqAllocAtomic(size) : seqAlloc(size);
-	std::memcpy(arr2, arr, size);
-	return arr2;
-}
-
 types::ArrayType::ArrayType(Type *baseType) :
-    Type(baseType->getName() + "Array", BaseType::get(), SeqData::ARRAY), baseType(baseType)
+    Type(baseType->getName() + "Array", BaseType::get(), Key::ARRAY), baseType(baseType)
 {
-	vtable.copy = (void *)copyArray;
+	SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_array);
 }
 
 Value *types::ArrayType::copy(BaseFunc *base,
@@ -25,7 +17,7 @@ Value *types::ArrayType::copy(BaseFunc *base,
 
 	Function *copyFunc = cast<Function>(
 	                       block->getModule()->getOrInsertFunction(
-	                         copyFuncName(),
+	                         getVTable().copyName,
 	                         IntegerType::getInt8PtrTy(context),
 	                         IntegerType::getInt8PtrTy(context),
 	                         seqIntLLVM(context),

@@ -5,7 +5,7 @@ using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name) :
-    Type(std::move(name), BaseType::get(), SeqData::REF), Generic(true),
+    Type(std::move(name), BaseType::get(), Key::REF), Generic(true),
     done(false), root(this), cache(), pendingRealizations(),
     contents(types::RecordType::get({}))
 {

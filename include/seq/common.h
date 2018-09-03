@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include "util/llvm.h"
-#include "util/seqdata.h"
+#include "lib.h"
+#include "llvm.h"
 
 namespace seq {
 
@@ -35,26 +35,8 @@ namespace seq {
 
 		void setSrcInfo(SrcInfo info)
 		{
-			this->info = std::move(info);
+			this->info = info;
 		}
-	};
-
-	typedef int64_t seq_int_t;
-
-	struct seq_t {
-		seq_int_t len;
-		char *seq;
-	};
-
-	struct str_t {
-		seq_int_t len;
-		char *str;
-	};
-
-	template<typename T = void>
-	struct arr_t {
-		seq_int_t len;
-		T *arr;
 	};
 
 	inline llvm::IntegerType *seqIntLLVM(llvm::LLVMContext& context)
@@ -114,8 +96,6 @@ namespace seq {
 	}
 
 }
-
-#define SEQ_FUNC extern "C"
 
 #define SEQ_TRY(block) \
     do { \
