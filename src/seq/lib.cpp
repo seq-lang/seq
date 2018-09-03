@@ -6,6 +6,7 @@
 #include <map>
 #include <cstdlib>
 #include <cstring>
+#include <cassert>
 #include <gc.h>
 #include "seq/lib.h"
 
@@ -420,7 +421,7 @@ bool DataCell::read(const size_t idx, ifstream& in, const Format fmt)
 			break;
 	}
 
-	assert(false);
+	assert(0);
 	return false;
 }
 
