@@ -458,16 +458,6 @@ void BaseFuncLite::codegen(Module *module)
 	preambleBlock = &*func->getBasicBlockList().begin();
 }
 
-void BaseFuncLite::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
-{
-	assert(0);
-}
-
-void BaseFuncLite::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
-{
-	assert(0);
-}
-
 types::FuncType *BaseFuncLite::getFuncType() const
 {
 	return types::FuncType::get(inTypes, outType);

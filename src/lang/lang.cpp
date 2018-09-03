@@ -605,7 +605,9 @@ void Return::codegen0(BasicBlock*& block)
 {
 	types::Type *type = expr ? expr->getType() : types::VoidType::get();
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
-	getBase()->codegenReturn(val, type, block);
+	auto *func = dynamic_cast<Func *>(getBase());
+	assert(func);
+	func->codegenReturn(val, type, block);
 }
 
 Return *Return::clone(Generic *ref)
@@ -638,7 +640,9 @@ void Yield::codegen0(BasicBlock*& block)
 {
 	types::Type *type = expr ? expr->getType() : types::VoidType::get();
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
-	getBase()->codegenYield(val, type, block);
+	auto *func = dynamic_cast<Func *>(getBase());
+	assert(func);
+	func->codegenYield(val, type, block);
 }
 
 Yield *Yield::clone(Generic *ref)

@@ -15,8 +15,6 @@ namespace seq {
 	class BaseFunc;
 	class Func;
 
-	typedef void (*SeqMain)(arr_t<str_t> args);
-
 	class Stmt;
 	struct Block {
 		Stmt *parent;

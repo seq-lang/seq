@@ -58,6 +58,7 @@ namespace seq {
 		Block *scope;
 		Var argsVar;
 		llvm::Function *initFunc;
+		llvm::Function *strlenFunc;
 	public:
 		SeqModule();
 		Block *getBlock();
@@ -65,12 +66,6 @@ namespace seq {
 
 		void resolveTypes() override;
 		void codegen(llvm::Module *module) override;
-		void codegenReturn(llvm::Value *val,
-		                   types::Type *type,
-		                   llvm::BasicBlock*& block) override;
-		void codegenYield(llvm::Value *val,
-		                  types::Type *type,
-		                  llvm::BasicBlock*& block) override;
 		void execute(const std::vector<std::string>& args={}, bool debug=false);
 	};
 

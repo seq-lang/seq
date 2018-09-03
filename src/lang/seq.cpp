@@ -11,7 +11,7 @@ static types::Type *argsType()
 }
 
 SeqModule::SeqModule() :
-    BaseFunc(), scope(new Block()), argsVar(argsType()), initFunc(nullptr)
+    BaseFunc(), scope(new Block()), argsVar(argsType()), initFunc(nullptr), strlenFunc(nullptr)
 {
 }
 
@@ -30,6 +30,64 @@ void SeqModule::resolveTypes()
 	scope->resolveTypes();
 }
 
+static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
+{
+#define LLVM_I32() IntegerType::getInt32Ty(context)
+	LLVMContext& context = realMain->getContext();
+	Module *module = realMain->getParent();
+
+	types::StrType *strType = types::StrType::get();
+	types::ArrayType *arrType = types::ArrayType::get(strType);
+
+	auto *func = cast<Function>(
+	               module->getOrInsertFunction(
+	                 "main",
+	                 LLVM_I32(),
+	                 LLVM_I32(),
+	                 PointerType::get(IntegerType::getInt8PtrTy(context), 0)));
+
+	auto argiter = func->arg_begin();
+	Value *argc = argiter++;
+	Value *argv = argiter;
+
+	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+	BasicBlock *loop = BasicBlock::Create(context, "loop", func);
+
+	IRBuilder<> builder(entry);
+	Value *len = builder.CreateZExt(argc, seqIntLLVM(context));
+	Value *ptr = strType->alloc(len, entry);
+	Value *arr = arrType->make(ptr, len, entry);
+	builder.CreateBr(loop);
+
+	builder.SetInsertPoint(loop);
+	PHINode *control = builder.CreatePHI(IntegerType::getInt32Ty(context), 2, "i");
+	Value *next = builder.CreateAdd(control, ConstantInt::get(LLVM_I32(), 1), "next");
+	Value *cond = builder.CreateICmpSLT(control, argc);
+
+	BasicBlock *body = BasicBlock::Create(context, "body", func);
+	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
+
+	builder.SetInsertPoint(body);
+	Value *arg = builder.CreateLoad(builder.CreateGEP(argv, control));
+	Value *argLen = builder.CreateZExtOrTrunc(builder.CreateCall(strlen, arg), seqIntLLVM(context));
+	Value *str = strType->make(arg, argLen, body);
+	arrType->indexStore(nullptr, arr, control, str, body);
+	builder.CreateBr(loop);
+
+	control->addIncoming(ConstantInt::get(LLVM_I32(), 0), entry);
+	control->addIncoming(next, body);
+
+	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+	branch->setSuccessor(1, exit);
+
+	builder.SetInsertPoint(exit);
+	builder.CreateCall(realMain, {arr});
+	builder.CreateRet(ConstantInt::get(LLVM_I32(), 0));
+
+	return func;
+#undef LLVM_I32
+}
+
 void SeqModule::codegen(Module *module)
 {
 	if (func)
@@ -45,7 +103,7 @@ void SeqModule::codegen(Module *module)
 
 	func = cast<Function>(
 	         module->getOrInsertFunction(
-	           "main",
+	           "seq.main",
 	           Type::getVoidTy(context),
 	           argsType->getLLVMType(context)));
 
@@ -60,6 +118,9 @@ void SeqModule::codegen(Module *module)
 	initFunc->setCallingConv(CallingConv::C);
 	builder.CreateCall(initFunc);
 
+	strlenFunc = cast<Function>(module->getOrInsertFunction("strlen", Type::getIntNTy(context, 8*sizeof(size_t)), IntegerType::getInt8PtrTy(context)));
+	strlenFunc->setCallingConv(CallingConv::C);
+
 	assert(argsType != nullptr);
 	argsVar.store(this, args, preambleBlock);
 
@@ -73,16 +134,8 @@ void SeqModule::codegen(Module *module)
 
 	builder.SetInsertPoint(preambleBlock);
 	builder.CreateBr(entry);
-}
 
-void SeqModule::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
-{
-	assert(0);
-}
-
-void SeqModule::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
-{
-	assert(0);
+	func = makeCanonicalMainFunc(func, strlenFunc);
 }
 
 void SeqModule::execute(const std::vector<std::string>& args, bool debug)
@@ -148,19 +201,20 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 	ExecutionEngine *eng = EB.create();
 
 	assert(initFunc);
+	assert(strlenFunc);
 	eng->addGlobalMapping(initFunc, (void *)util::seqinit);
+	eng->addGlobalMapping(strlenFunc, (void *)strlen);
 
-	auto op = (SeqMain)eng->getPointerToFunction(func);
-	auto numArgs = (seq_int_t)args.size();
-	arr_t<str_t> argsArr = {numArgs, new str_t[numArgs]};
-
-	for (seq_int_t i = 0; i < numArgs; i++)
-		argsArr.arr[i] = {(seq_int_t)args[i].size(), (char *)args[i].data()};
-
-	op(argsArr);
+	typedef void (*Main)(const int, const char **);
+	auto main = (Main)eng->getPointerToFunction(func);
+	auto argc = (int)args.size();
+	auto *argv = new const char *[argc];
+	for (int i = 0; i < argc; i++)
+		argv[i] = args[i].c_str();
+	main(argc, argv);
 }
 
-llvm::LLVMContext& seq::getLLVMContext()
+LLVMContext& seq::getLLVMContext()
 {
 	static LLVMContext context;
 	return context;

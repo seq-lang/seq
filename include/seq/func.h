@@ -23,12 +23,6 @@ namespace seq {
 	public:
 		virtual void resolveTypes();
 		virtual void codegen(llvm::Module *module)=0;
-		virtual void codegenReturn(llvm::Value *val,
-		                           types::Type *type,
-		                           llvm::BasicBlock*& block)=0;
-		virtual void codegenYield(llvm::Value *val,
-		                          types::Type *type,
-		                          llvm::BasicBlock*& block)=0;
 		llvm::LLVMContext& getContext();
 		llvm::BasicBlock *getPreamble() const;
 		virtual types::FuncType *getFuncType() const;
@@ -71,10 +65,10 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,
 		                   types::Type *type,
-		                   llvm::BasicBlock*& block) override;
+		                   llvm::BasicBlock*& block);
 		void codegenYield(llvm::Value *val,
 		                  types::Type *type,
-		                  llvm::BasicBlock*& block) override;
+		                  llvm::BasicBlock*& block);
 		Var *getArgVar(std::string name);
 		types::FuncType *getFuncType() const override;
 		void setIns(std::vector<types::Type *> inTypes);
@@ -95,12 +89,6 @@ namespace seq {
 		             types::Type *outType,
 		             std::function<llvm::Function *(llvm::Module *)> codegenLambda);
 		void codegen(llvm::Module *module) override;
-		void codegenReturn(llvm::Value *val,
-		                   types::Type *type,
-		                   llvm::BasicBlock*& block) override;
-		void codegenYield(llvm::Value *val,
-		                  types::Type *type,
-		                  llvm::BasicBlock*& block) override;
 		types::FuncType *getFuncType() const override;
 		BaseFuncLite *clone(Generic *ref) override;
 	};
