@@ -547,24 +547,22 @@ void CallExpr::resolveTypes()
 		arg->resolveTypes();
 }
 
-Value *CallExpr::codegen0(BaseFunc *base, BasicBlock*& block)
-{
-	getType();  // validates call
-	Value *f = func->codegen(base, block);
-	std::vector<Value *> x;
-	for (auto *e : args)
-		x.push_back(e->codegen(base, block));
-	return func->getType()->call(base, f, x, block);
-}
-
-static void deduceTypeParametersIfNecessary(Expr*& func, std::vector<types::Type *> argTypes)
+static Func *getFuncFromFuncExpr(Expr *func)
 {
 	auto *funcExpr = dynamic_cast<FuncExpr *>(func);
-	if (funcExpr && !funcExpr->isParameterized()) {
+	if (funcExpr) {
 		auto *f = dynamic_cast<Func *>(funcExpr->getFunc());
-		if (f && f->numGenerics() > 0 && f->unrealized())
-			func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)));
+		if (f) return f;
 	}
+
+	return nullptr;
+}
+
+static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types::Type *>& argTypes)
+{
+	Func *f = getFuncFromFuncExpr(func);
+	if (f && f->numGenerics() > 0 && f->unrealized())
+		func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)));
 
 	auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
 	if (elemExpr) {
@@ -581,11 +579,41 @@ static void deduceTypeParametersIfNecessary(Expr*& func, std::vector<types::Type
 	}
 }
 
+Value *CallExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	types::Type *type = getType();  // validates call
+	Value *f = func->codegen(base, block);
+	std::vector<Value *> x;
+	for (auto *e : args)
+		x.push_back(e->codegen(base, block));
+
+	// check if this is really a partial function
+	Func *f0 = getFuncFromFuncExpr(func);
+	if (f0 && f0->getFuncType()->argCount() > x.size()) {
+		auto *partial = dynamic_cast<types::PartialFuncType *>(type);
+		assert(partial);
+		return partial->make(f, x, block);
+	}
+
+	return func->getType()->call(base, f, x, block);
+}
+
 types::Type *CallExpr::getType0() const
 {
 	std::vector<types::Type *> types;
 	for (auto *e : args)
 		types.push_back(e->getType());
+
+	// check if this is really a partial function
+	Func *f = getFuncFromFuncExpr(func);
+	int missingArgs = 0;
+	if (f && (missingArgs = (int)f->getFuncType()->argCount() - (int)types.size()) > 0) {
+		for (int i = 0; i < missingArgs; i++)
+			types.insert(types.begin(), nullptr);
+
+		deduceTypeParametersIfNecessary(func, types);
+		return types::PartialFuncType::get(func->getType(), types);
+	}
 
 	deduceTypeParametersIfNecessary(func, types);
 	return func->getType()->getCallType(types);

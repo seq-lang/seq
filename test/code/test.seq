@@ -221,7 +221,7 @@ print cc
 def add[T](a: T, b: T, c: T):
   return a + b + c
 
-var add_one = add(_, 1, _)
+var add_one = add(1)
 var add_two = add[Int](3, _, -1)
 print add[Int](1, 2, 3)
 print add_one(5, 0)

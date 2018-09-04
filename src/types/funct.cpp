@@ -18,6 +18,11 @@ types::FuncType::FuncType(std::vector<types::Type *> inTypes, Type *outType) :
 {
 }
 
+unsigned types::FuncType::argCount() const
+{
+	return (unsigned)inTypes.size();
+}
+
 Value *types::FuncType::call(BaseFunc *base,
                              Value *self,
                              std::vector<Value *> args,

@@ -16,6 +16,8 @@ namespace seq {
 			FuncType(FuncType const&)=delete;
 			void operator=(FuncType const&)=delete;
 
+			unsigned argCount() const;
+
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
 			                  std::vector<llvm::Value *> args,
