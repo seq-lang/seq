@@ -298,6 +298,32 @@ FOREIGN Block *get_for_block(For *st)           { return st->getBlock(); }
 FOREIGN Block *get_else_block(If *st)           { return st->addElse(); }
 FOREIGN Block *get_elif_block(If *st, Expr *ex) { return st->addCond(ex); }
 
+FOREIGN struct seq_srcinfo {
+   char *file;
+   int line;
+   int col;
+};
+
+FOREIGN void set_pos (SrcObject *obj, const char *f, int l, int c) 
+{
+   if (obj) {
+      // int type = dynamic_cast<Expr*>(obj) ? 1 : (dynamic_cast<Stmt*>(obj) ? 2 : 0);
+      obj->setSrcInfo(SrcInfo(string(f), l, c));
+   }
+}
+
+FOREIGN seq_srcinfo get_pos (SrcObject *obj) 
+{
+   if (!obj) {
+      return seq_srcinfo { "", 0, 0 };
+   }
+   auto info = obj->getSrcInfo();
+   char *c = new char[info.file.size() + 1];
+   strncpy(c, info.file.c_str(), info.file.size());
+   c[info.file.size()] = 0;
+   return seq_srcinfo { c, info.line, info.col };
+}
+
 FOREIGN Var *get_for_var(For *f)
 {
 	return f->getVar();
@@ -318,15 +344,25 @@ FOREIGN void *init_module()
 	return new SeqModule();
 }
 
-FOREIGN const char *exec_module(SeqModule *sm, char debug)
+FOREIGN bool exec_module(SeqModule *sm, char debug, char **error, seq_srcinfo **srcInfo)
 {
-	const size_t max_len = 1024;
-	auto *msg = new char[max_len];
-	memset(msg, 0, max_len);
 	try {
 		sm->execute(vector<string>(), debug);
+      *error = NULL;
+      *srcInfo = NULL;
+      return true;
 	} catch (exc::SeqException &e) {
-		strncpy(msg, e.what(), max_len);
+      string msg = e.what();
+      *error = new char[msg.size() + 1];
+      strncpy(*error, msg.c_str(), msg.size());
+
+      auto info = e.getSrcInfo();
+      *srcInfo = new seq_srcinfo;
+      (*srcInfo)->line = info.line;
+      (*srcInfo)->col = info.col;
+      (*srcInfo)->file = new char[info.file.size() + 1];
+      strncpy((*srcInfo)->file, info.file.c_str(), info.file.size());
+
+      return false;
 	}
-	return msg;
 }

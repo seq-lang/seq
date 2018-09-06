@@ -1,8 +1,6 @@
 <*>: use_menhir
 <src>: include
 
-<src/*>: package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts)
-<*.{byte,native}>: package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts)
-
-<clib>: -traverse
+<src/*>: debug, package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts)
+<*.{byte,native}>: debug, package(llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts)
 

@@ -10,12 +10,12 @@
 namespace seq {
 
 	struct SrcInfo {
-		const char *file;
+		std::string file;
 		int line;
 		int col;
-		SrcInfo(const char *file, int line, int col) :
+		SrcInfo(const std::string &file, int line, int col) :
 		    file(file), line(line), col(col) {};
-		SrcInfo() : SrcInfo(nullptr, 0, 0) {};
+		SrcInfo() : SrcInfo("", 0, 0) {};
 	};
 
 	struct SrcObject {
@@ -37,6 +37,10 @@ namespace seq {
 		{
 			this->info = info;
 		}
+
+      virtual ~SrcObject() {
+         
+      }
 	};
 
 	inline llvm::IntegerType *seqIntLLVM(llvm::LLVMContext& context)

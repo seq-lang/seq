@@ -3,6 +3,8 @@
 open Ctypes 
 open Foreign
 
+exception SeqCError of string * Ast.pos_t
+
 (* Seq types *)
 type seq_type = unit ptr 
 let seq_type: seq_type typ = ptr void
@@ -27,6 +29,16 @@ let seq_module: seq_module typ = ptr void
 
 type seq_pattern = unit ptr 
 let seq_pattern: seq_pattern typ = ptr void
+
+
+type seq_srcinfo
+let seq_srcinfo: seq_srcinfo structure typ = structure "seq_srcinfo"
+
+let srcinfo_file = field seq_srcinfo "file" string
+let srcinfo_line = field seq_srcinfo "line" int
+let srcinfo_col = field seq_srcinfo "col" int ;;
+
+seal seq_srcinfo
 
 (* Types *)
 
@@ -75,7 +87,7 @@ let call_expr' = foreign "call_expr"
 let call_expr expr lst = 
 	let c_arr = CArray.of_list seq_expr lst in
 	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
-	call_expr' expr (CArray.start c_arr) c_len
+	call_expr' expr (CArray.start c_arr) c_len 
 
 let get_elem_expr = foreign "get_elem_expr" 
 	(seq_expr @-> string @-> returning seq_expr)
@@ -183,6 +195,21 @@ let get_for_block    = foreign "get_for_block"    (seq_stmt @-> returning seq_bl
 let get_else_block   = foreign "get_else_block"   (seq_stmt @-> returning seq_block)
 let get_elif_block   = foreign "get_elif_block"   (seq_stmt @-> seq_expr @-> returning seq_block)
 
+let get_pos_t_from_srcinfo src: Ast.pos_t = 
+  let file = getf src srcinfo_file in
+  let line = getf src srcinfo_line in
+  let col = getf src srcinfo_col in
+  {pos_fname = file; pos_lnum = line; pos_cnum = col; pos_bol = 0}
+
+let get_pos' = foreign "get_pos" (seq_expr @-> returning seq_srcinfo)
+let get_pos expr : Ast.pos_t =
+  let sp = get_pos' expr in
+  get_pos_t_from_srcinfo sp
+  
+let set_pos' = foreign "set_pos" (seq_expr @-> string @-> int @-> int @-> returning void)
+let set_pos expr (pos: Ast.pos_t) = 
+  set_pos' expr pos.pos_fname pos.pos_lnum (pos.pos_cnum - pos.pos_bol)
+
 let get_for_var = foreign "get_for_var" 
   (seq_stmt @-> returning seq_var)
 
@@ -195,8 +222,16 @@ let add_stmt = foreign "add_stmt"
 let init_module = foreign "init_module"
   (void @-> returning seq_module)
 
-let exec_module = foreign "exec_module" 
-  (seq_module @-> bool @-> returning string)
+let exec_module' = foreign "exec_module" 
+  (seq_module @-> bool @-> ptr (ptr char) @-> ptr (ptr seq_srcinfo) @-> returning bool)
 
+let exec_module mdl debug = 
+  let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
+  let src_addr = Ctypes.allocate (ptr seq_srcinfo) (from_voidp seq_srcinfo null) in
+  let ret = exec_module' mdl debug err_addr src_addr in
 
+  if not ret then
+    let msg = coerce (ptr char) string (!@ err_addr) in
+    let pos = get_pos_t_from_srcinfo (!@ !@ src_addr) in
+    raise (SeqCError (msg, pos))
 

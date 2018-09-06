@@ -34,30 +34,10 @@ endif()
 
 
 # PEGTL download & compile:
-# (adapted from https://github.com/google/googletest/tree/master/googletest)
-# Download and unpack googletest at configure time
-configure_file(cmake/PEGTL.txt.in pegtl-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-                RESULT_VARIABLE result
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pegtl-download )
-if(result)
-  message(FATAL_ERROR "CMake step for PEGTL failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-                RESULT_VARIABLE result
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pegtl-download )
-if(result)
-  message(FATAL_ERROR "Build step for PEGTL failed: ${result}")
-endif()
-
-# Add PEGTL directly to our build.
-add_subdirectory(${CMAKE_BINARY_DIR}/pegtl-src
-                 ${CMAKE_BINARY_DIR}/pegtl-build
-                 EXCLUDE_FROM_ALL)
 
 # Same as above
 if (CMAKE_VERSION VERSION_LESS 2.8.11)
-  include_directories("${pegtl_SOURCE_DIR}/include")
+  include_directories("${PEGTL_SOURCE_DIR}/include")
 endif()
 
 
@@ -69,8 +49,8 @@ message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -pedantic-errors -fstrict-aliasing")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall \
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pedantic -fstrict-aliasing")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall \
                                         -Wno-gnu-zero-variadic-macro-arguments \
                                         -Wno-return-type-c-linkage")
 include_directories(src/)
@@ -135,7 +115,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/void.cpp
                        src/util/ocaml.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} seqrt pegtl)
+target_link_libraries(seq ${LLVM_LIBS} seqrt)
 
 
 # Seq command-line tool

@@ -16,6 +16,8 @@ s = 'hello'
 j = i + 16
 print j
 
+j='a'
+
 print '*** INLINE_IF ***'
 k = 1 if j > 20 else 0
 print k
