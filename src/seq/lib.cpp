@@ -165,7 +165,6 @@ enum Format {
 
 enum SeqData {
 	SEQ,
-	LEN,
 	QUAL,
 	IDENT,
 	SEQ_DATA_COUNT
