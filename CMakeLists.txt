@@ -135,7 +135,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/void.cpp
                        src/util/ocaml.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} seqrt)
+target_link_libraries(seq ${LLVM_LIBS} seqrt pegtl)
 
 
 # Seq command-line tool
