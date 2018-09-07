@@ -318,14 +318,12 @@ typed_param:
 /*******************************************************/
 
 class_statement:
-  | CLASS ID LP; mems = separated_list(COMMA, typed_param) RP COLON NL; fns = class_member 
+  | CLASS ID LP; mems = separated_list(COMMA, class_param) RP COLON NL; fns = class_member 
     { Class ((fst $2, snd $2), mems, fns, $1) }
+class_param:
+  | ID { TypedArg ((fst $1, snd $1), None) }
+  | typed_param { $1 }
 class_member:
   | PASS { [] }
   | INDENT func_statement+ DEDENT { $2 } 
 
-
-(*
-Ty(...)
-int(...)
- *)

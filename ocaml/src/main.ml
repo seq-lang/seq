@@ -269,15 +269,45 @@ let rec get_seq_stmt ctx block stmt : unit =
   | Function(_, _, _, pos) as fn ->
     let _, fn = get_seq_fn ctx fn in 
     func_stmt fn, pos
-  | Class((class_name, _), args, functions, pos) ->
+  | Class((class_name, name_pos), args, functions, pos) ->
     if is_some (Hashtbl.find ctx.map class_name) then
-      seq_error (sprintf "Class %s already defined" class_name) pos;
+      seq_error (sprintf "Class %s already defined" class_name) name_pos;
     
-    let arg_names, arg_types = List.unzip @@ List.map args ~f:match_arg in
-    let record_typ = record_type arg_names (List.map arg_types ~f:(get_type_exn ctx)) in
-    let typ = ref_type class_name record_typ in
+    let arg_names, arg_types = List.unzip @@ List.map args ~f:match_arg in 
+    let generic_types = String.Table.create () in
+    let arg_types, generic_count = List.fold arg_types ~init:([], 0) ~f:(fun (acc_types, acc_count) t -> 
+      match Hashtbl.find ctx.map t, String.length t with 
+      | Some _, _ -> 
+        t::acc_types, acc_count
+      | _, 0 -> 
+        let t = (sprintf "''%d" acc_count) in (* in-code genrics can only have one quote *)
+        Hashtbl.set generic_types ~key:t ~data:acc_count;
+        (t::acc_types, acc_count + 1)
+      | _, _ when t.[0] = '\'' -> (match Hashtbl.find generic_types t with
+        | Some _ -> 
+          t::acc_types, acc_count
+        | None ->
+          Hashtbl.set generic_types ~key:t ~data:acc_count;
+          (t::acc_types, acc_count + 1))
+      | _, _ -> 
+        noimp (sprintf "Type %s" t))
+    in
+    let typ = ref_type class_name in
     Hashtbl.set ctx.map ~key:class_name ~data:(Type typ);
-    
+    fprintf stderr "--%s >> %d--\n%!" class_name generic_count ;
+    set_ref_generics typ generic_count;
+
+    let arg_types = List.map (List.rev arg_types) ~f:(fun t ->
+      match Hashtbl.find generic_types t with 
+      | Some generic_index -> 
+        set_ref_generic_name typ generic_index t; 
+        get_ref_generic typ generic_index
+      | None -> 
+        get_type_exn ctx t)
+    in
+    set_ref_record typ @@ record_type arg_names arg_types;
+
+    (* functions inherit types and functions; variables are off-limits *)
     List.iter functions ~f:(fun f -> 
       let name, fn = get_seq_fn ctx f ~parent_class:class_name in 
       add_ref_method typ name fn);
@@ -329,11 +359,13 @@ and get_seq_fn ctx ?parent_class = function
       | _, _ -> 
         noimp (sprintf "Type %s" t))
     in
+    fprintf stderr "--%s >> %d--\n%!" fn_name generic_count ;
     set_func_generics fn generic_count;
     let arg_types = List.map (List.rev arg_types) ~f:(fun t ->
       match Hashtbl.find generic_types t with 
       | Some generic_index -> 
-        set_func_generic_name fn generic_index t; get_func_generic fn generic_index
+        set_func_generic_name fn generic_index t; 
+        get_func_generic fn generic_index
       | None -> 
         get_type_exn ctx t)
     in
@@ -396,7 +428,8 @@ let () =
   try
     (* fprintf stderr "|> Code ==> \n%s\n" code; *)
     let ast = Parser.program (Lexer.token state) lexbuf in  
-    fprintf stderr "|> AST::Caml ==> \n%s\n" @@ Ast.prn_ast ast;
+    let prn_pos (pos: pos_t) = "" in
+    fprintf stderr "|> AST::Caml ==> \n%s\n" @@ Ast.prn_ast prn_pos ast;
     fprintf stderr "|> C++ ==>\n%!";
     seq_exec ast
   with 

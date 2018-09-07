@@ -49,7 +49,7 @@ let float_type   = foreign "float_type"   (void @-> returning seq_type)
 let str_type     = foreign "str_type"     (void @-> returning seq_type)
 let generic_type = foreign "generic_type" (void @-> returning seq_type)
 let array_type   = foreign "array_type"   (seq_type @-> returning seq_type)
-let ref_type     = foreign "ref_type"     (string @-> seq_type @-> returning seq_type)
+let ref_type     = foreign "ref_type"     (string @-> returning seq_type)
 
 let record_type' = foreign "record_type" 
   (ptr string @-> ptr seq_type @-> size_t @-> returning seq_type)
@@ -60,6 +60,9 @@ let record_type names types =
 	let a_arr = CArray.of_list seq_type types in
   let a_len = Unsigned.Size_t.of_int (CArray.length a_arr) in
 	record_type' (CArray.start n_arr) (CArray.start a_arr) a_len
+
+let set_ref_record = foreign "set_ref_record"
+  (seq_type @-> seq_type @-> returning void)
 
 let add_ref_method = foreign "add_ref_method"
   (seq_type @-> string @-> seq_func @-> returning void)
@@ -183,9 +186,16 @@ let set_func_params fn names types =
   let a_len = Unsigned.Size_t.of_int (CArray.length a_arr) in
 	set_func_params' fn (CArray.start n_arr) (CArray.start a_arr) a_len
 
+
+(* Generics --- needs better typing ... *)
+
 let set_func_generics = foreign "set_func_generics" (seq_func @-> int @-> returning void)
 let get_func_generic = foreign "get_func_generic" (seq_func @-> int @-> returning seq_type)
 let set_func_generic_name = foreign "set_func_generic_name" (seq_func @-> int @-> string @-> returning void)
+
+let set_ref_generics = foreign "set_ref_generics" (seq_type @-> int @-> returning void)
+let get_ref_generic = foreign "get_ref_generic" (seq_type @-> int @-> returning seq_type)
+let set_ref_generic_name = foreign "set_ref_generic_name" (seq_type @-> int @-> string @-> returning void)
 
 (* Utils *)
 

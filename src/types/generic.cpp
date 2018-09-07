@@ -407,6 +407,12 @@ Generic::Generic(bool performCaching) :
 {
 }
 
+
+Generic::~Generic()
+{
+   
+}
+
 bool Generic::unrealized()
 {
 	for (auto *generic : generics) {

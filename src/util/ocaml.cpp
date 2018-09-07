@@ -27,11 +27,15 @@ FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz
 	         vector<string>(names, names + sz));
 }
 
-FOREIGN types::Type *ref_type(const char *name, types::RecordType *rec)
+FOREIGN types::Type *ref_type(const char *name)
 {
 	auto f = types::RefType::get(name);
-	f->setContents(rec);
 	return f;
+}
+
+FOREIGN void set_ref_record(types::RefType *f, types::RecordType *rec) 
+{
+   f->setContents(rec);
 }
 
 FOREIGN void add_ref_method(types::Type *ref, const char *name, Func *fn)
@@ -235,18 +239,34 @@ FOREIGN void set_func_params(Func *f, const char **names, types::Type **types, s
 
 FOREIGN void set_func_generics(Func *fn, int n)
 {
-	fn->addGenerics(n);
+   fn->addGenerics(n);
 }
 
 FOREIGN types::Type *get_func_generic(Func *fn, int idx)
 {
-	return fn->getGeneric(idx);
+   return fn->getGeneric(idx);
 }
 
 FOREIGN void set_func_generic_name(Func *fn, int idx, const char *name)
 {
-	fn->getGeneric(idx)->setName(name);
+   fn->getGeneric(idx)->setName(name);
 }
+
+FOREIGN void set_ref_generics(types::RefType *fn, int n)
+{
+   fn->addGenerics(n);
+}
+
+FOREIGN types::Type *get_ref_generic(types::RefType *fn, int idx)
+{
+   return fn->getGeneric(idx);
+}
+
+FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, const char *name)
+{
+   fn->getGeneric(idx)->setName(name);
+}
+
 
 FOREIGN Stmt *match_stmt(Expr *cond)
 {
@@ -315,7 +335,7 @@ FOREIGN void set_pos (SrcObject *obj, const char *f, int l, int c)
 FOREIGN seq_srcinfo get_pos (SrcObject *obj) 
 {
    if (!obj) {
-      return seq_srcinfo { "", 0, 0 };
+      return seq_srcinfo { (char*)"", 0, 0 };
    }
    auto info = obj->getSrcInfo();
    char *c = new char[info.file.size() + 1];

@@ -49,6 +49,10 @@ Func::Func() :
 		assert(this->argNames.size() == this->inTypes.size());
 }
 
+Func::~Func()
+{
+}
+
 Block *Func::getBlock()
 {
 	return scope;

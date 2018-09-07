@@ -11,6 +11,11 @@ types::RefType::RefType(std::string name) :
 {
 }
 
+types::RefType::~RefType()
+{
+
+}
+
 void types::RefType::setDone()
 {
 	assert(this == root && !done);

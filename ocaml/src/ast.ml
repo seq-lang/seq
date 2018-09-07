@@ -80,19 +80,17 @@ let sci sep lst fn =
 let pad l = 
   String.make (l * 2) ' ' 
 
-let prn_pos (pos: pos_t) = 
-   sprintf "%d:%d" pos.pos_lnum (pos.pos_cnum - pos.pos_bol)
-let rec prn_expr = function
-  | Array pos -> sprintf "{%s}Array()" (prn_pos pos)
-  | Bool(b, pos) -> sprintf "{%s}Bool(%b)" (prn_pos pos) b
-  | Int(i, pos) -> sprintf "{%s}Int(%d)" (prn_pos pos) i
-  | Float(f, pos) -> sprintf "{%s}Float(%f)" (prn_pos pos) f
-  | String(s, pos) -> sprintf "{%s}String(%s)" (prn_pos pos) s
+let rec prn_expr prn_pos = function
+  | Array pos -> sprintf "%sArray()" (prn_pos pos)
+  | Bool(b, pos) -> sprintf "%sBool(%b)" (prn_pos pos) b
+  | Int(i, pos) -> sprintf "%sInt(%d)" (prn_pos pos) i
+  | Float(f, pos) -> sprintf "%sFloat(%f)" (prn_pos pos) f
+  | String(s, pos) -> sprintf "%sString(%s)" (prn_pos pos) s
   (* | Regex(s, _) -> sprintf "Regex(%s)" s *)
   (* | Seq(s, _) -> sprintf "Seq(%s)" s *)
   (* | Extern(l, v, _) -> sprintf "Extern_%s(%s)" l v *)
-  | Id(i, pos) -> sprintf "{%s}%s" (prn_pos pos) i
-  | Tuple(el, pos) -> sprintf "{%s}Tuple(%s)" (prn_pos pos) @@ sci ", " el prn_expr
+  | Id(i, pos) -> sprintf "%s%s" (prn_pos pos) i
+  | Tuple(el, pos) -> sprintf "%sTuple(%s)" (prn_pos pos) @@ sci ", " el (prn_expr prn_pos)
   (* | Generator(e, ge, _) -> sprintf "Gen[%s; %s]" (prn_expr e) (prn_expr ge) *)
   (* | List(el, _) -> sprintf "List(%s)" @@ sci ", " el prn_expr *)
   (* | ListGenerator(e, ge, _) -> sprintf "ListGen[%s; %s]" (prn_expr e) (prn_expr ge) *)
@@ -100,73 +98,73 @@ let rec prn_expr = function
   (* | SetGenerator(e, ge, _) -> sprintf "SetGen[%s; %s]" (prn_expr e) (prn_expr ge) *)
   (* | Dict(el, _) -> sprintf "Dict(%s)" @@ sci ", " el (fun (x, y) -> sprintf "%s:%s" (prn_expr x) (prn_expr y)) *)
   (* | DictGenerator((k, v), ge, _) -> sprintf "DictGen[%s:%s; %s]" (prn_expr k) (prn_expr v) (prn_expr ge) *)
-  | IfExpr(c, i, e) -> sprintf "InlineIf[%s; %s; %s]" (prn_expr c) (prn_expr i) (prn_expr e)
-  (* | Lambda(v, e, _) -> sprintf "Lambda[%s; %s]" (sci ", " v prn_va) (prn_expr e)  *)
-  (* | Pipe(el, _) -> sprintf "Pipe[%s]" @@ sci ", " el prn_expr *)
-  | Cond(e, (o, pos), ee) -> sprintf "{%s}%s[%s, %s]" (prn_pos pos) o (prn_expr e) (prn_expr ee)
-  | Binary(e, (o, pos), ee) -> sprintf "{%s}%s[%s, %s]" (prn_pos pos) o (prn_expr e) (prn_expr ee)
-  | Unary((o, pos), e) -> sprintf "{%s}%s[%s]" (prn_pos pos) o @@ prn_expr e
-  | Index(i, e) -> sprintf "%s.[%s]" (prn_expr i) (prn_expr e)
-  | Dot(i, (e, pos)) -> sprintf "{%s}Dot[%s, %s]" (prn_pos pos) (prn_expr i) e
-  | Call(i, cl) -> sprintf "Call[%s; %s]" (prn_expr i) (sci ", " cl prn_expr)
+  | IfExpr(c, i, e) -> sprintf "InlineIf[%s; %s; %s]" (prn_expr prn_pos c) (prn_expr prn_pos i) (prn_expr prn_pos e)
+  (* | Lambda(v, e, _) -> sprintf "Lambda[%s; %s]" (sci ", " v prn_va) (prn_expr prn_pos e)  *)
+  (* | Pipe(el, _) -> sprintf "Pipe[%s]" @@ sci ", " el prn_expr prn_pos *)
+  | Cond(e, (o, pos), ee) -> sprintf "%s%s[%s, %s]" (prn_pos pos) o (prn_expr prn_pos e) (prn_expr prn_pos ee)
+  | Binary(e, (o, pos), ee) -> sprintf "%s%s[%s, %s]" (prn_pos pos) o (prn_expr prn_pos e) (prn_expr prn_pos ee)
+  | Unary((o, pos), e) -> sprintf "%s%s[%s]" (prn_pos pos) o @@ prn_expr prn_pos e
+  | Index(i, e) -> sprintf "%s.[%s]" (prn_expr prn_pos i) (prn_expr prn_pos e)
+  | Dot(i, (e, pos)) -> sprintf "%sDot[%s, %s]" (prn_pos pos) (prn_expr prn_pos i) e
+  | Call(i, cl) -> sprintf "Call[%s; %s]" (prn_expr prn_pos i) (sci ", " cl (prn_expr prn_pos))
   (* | Comprehension(fi, ei, li, _) ->  *)
     (* let cont = match li with None -> "" | Some x -> prn_expr x in *)
     (* sprintf "_For[%s; %s]%s" (sci ", " fi prn_expr) (sci ", " ei prn_expr) cont *)
   (* | ComprehensionIf(e, _) -> sprintf "_If[%s]" @@ prn_expr e *)
   (* | Ellipsis -> "..." *)
   | Slice(a, b, c, pos) ->
-    let a = match a with None -> "" | Some x -> prn_expr x in
-    let b = match b with None -> "" | Some x -> prn_expr x in
-    let c = match c with None -> "" | Some x -> prn_expr x in
-    sprintf "{%s}Slice[%s, %s, %s]" a b c (prn_pos pos)
-and prn_va = function
-  | PlainArg(p, pos) -> sprintf "{%s}%s" (prn_pos pos) p
+    let a = match a with None -> "" | Some x -> prn_expr prn_pos x in
+    let b = match b with None -> "" | Some x -> prn_expr prn_pos x in
+    let c = match c with None -> "" | Some x -> prn_expr prn_pos x in
+    sprintf "%sSlice[%s, %s, %s]" a b c (prn_pos pos)
+and prn_va prn_pos = function
+  | PlainArg(p, pos) -> sprintf "%s%s" (prn_pos pos) p
   | TypedArg((p, pos), o) -> 
     let o = match o with None -> "any" | Some (x, _) -> x in 
-    sprintf "{%s}%s of %s" (prn_pos pos) p o 
+    sprintf "%s%s of %s" (prn_pos pos) p o 
   (* | NamedArg(n, e, _) -> sprintf "%s = %s" n (prn_expr e) *)
-let rec prn_statement level st = 
+let rec prn_statement level prn_pos st = 
   let s = match st with
-  | Pass pos -> sprintf "{%s}Pass"  (prn_pos pos)
-  | Break pos -> sprintf "{%s}Break"  (prn_pos pos)
-  | Continue pos -> sprintf "{%s}Continue" (prn_pos pos)
-  | Statements(sl) -> sprintf "Statements[\n%s]" (sci "\n" sl (prn_statement (level+1)))
-  | Exprs(el) -> sprintf "Exprs[%s]" (sci "," [el] prn_expr)
-  | Assign(sl, el) -> sprintf "Asgn[%s := %s]" (prn_expr sl) (prn_expr el)
-  | AssignEq(sl, (op, pos), el) -> sprintf "Asgn[%s {%s}%s %s]" (prn_expr sl) (prn_pos pos) op (prn_expr el)
-  | Print(el, pos) -> sprintf "{%s}Print[%s]" (prn_pos pos) (sci ", " [el] (prn_expr))
-  | Yield(el, pos) -> sprintf "{%s}Yield[%s]" (prn_pos pos) (prn_expr el)
-  | Return(el, pos) -> sprintf "{%s}Return[%s]" (prn_pos pos) (prn_expr el)
+  | Pass pos -> sprintf "%sPass"  (prn_pos pos)
+  | Break pos -> sprintf "%sBreak"  (prn_pos pos)
+  | Continue pos -> sprintf "%sContinue" (prn_pos pos)
+  | Statements(sl) -> sprintf "Statements[\n%s]" (sci "\n" sl (prn_statement (level+1) prn_pos))
+  | Exprs(el) -> sprintf "Exprs[%s]" (sci "," [el] (prn_expr prn_pos))
+  | Assign(sl, el) -> sprintf "Asgn[%s := %s]" (prn_expr prn_pos sl) (prn_expr prn_pos el)
+  | AssignEq(sl, (op, pos), el) -> sprintf "Asgn[%s %s%s %s]" (prn_expr prn_pos sl) (prn_pos pos) op (prn_expr prn_pos el)
+  | Print(el, pos) -> sprintf "%sPrint[%s]" (prn_pos pos) (sci ", " [el] (prn_expr prn_pos))
+  | Yield(el, pos) -> sprintf "%sYield[%s]" (prn_pos pos) (prn_expr prn_pos el)
+  | Return(el, pos) -> sprintf "%sReturn[%s]" (prn_pos pos) (prn_expr prn_pos el)
   (* | Global(el, _) -> sprintf "Global[%s]" (sci ", " el (prn_expr)) *)
   (* | Assert(el, _) -> sprintf "Assert[%s]" (sci ", " el (prn_expr)) *)
-  | Type((e, _), vl, pos) -> sprintf "{%s}Type[%s; %s]" (prn_pos pos) e (sci ", " vl prn_va)
+  | Type((e, _), vl, pos) -> sprintf "%sType[%s; %s]" (prn_pos pos) e (sci ", " vl (prn_va prn_pos))
   | While(e, sl, pos) ->
-    sprintf "{%s}While[%s;\n%s]" (prn_pos pos) (prn_expr e) @@
-      sci "\n" sl (prn_statement (level + 1))
+    sprintf "%sWhile[%s;\n%s]" (prn_pos pos) (prn_expr prn_pos e) @@
+      sci "\n" sl (prn_statement (level + 1) prn_pos)
   | For(sl, el, stl, pos) -> 
-    sprintf "{%s}For[%s; %s;\n%s]" (prn_pos pos) (prn_expr sl) (prn_expr el) @@
-      sci "\n" stl (prn_statement (level + 1))
+    sprintf "%sFor[%s; %s;\n%s]" (prn_pos pos) (prn_expr prn_pos sl) (prn_expr prn_pos el) @@
+      sci "\n" stl (prn_statement (level + 1) prn_pos)
   | If(el) -> sprintf "If[\n%s]" @@ 
       sci "\n" el (fun (e, sl, pos) -> 
-        let cnd = match e with | Some _e -> prn_expr _e | None -> "_" in
-        sprintf "%s{%s}%s -> [\n%s]" (pad (level+1)) (prn_pos pos) cnd @@
-          sci "\n" sl (prn_statement (level+2)))
-  | Match(e, ml, pos) -> sprintf "{%s}Match[%s;\n%s]" (prn_pos pos) (prn_expr e) @@ 
+        let cnd = match e with | Some _e -> prn_expr prn_pos _e | None -> "_" in
+        sprintf "%s%s%s -> [\n%s]" (pad (level+1)) (prn_pos pos) cnd @@
+          sci "\n" sl (prn_statement (level+2) prn_pos))
+  | Match(e, ml, pos) -> sprintf "%sMatch[%s;\n%s]" (prn_pos pos) (prn_expr prn_pos e) @@ 
       sci "\n" ml (fun (e, v, sl, _) -> 
         let pv = match v with | Some (e, _) -> " AS " ^ (e) | None -> "" in
-        let pe = match e with | Some e -> (prn_expr e) | None -> "DEFAULT" in
-        sprintf "%s%s%s -> [\n%s]" (pad (level+1)) pe pv @@
-          sci "\n" sl (prn_statement (level+2)))
+        let pe = match e with | Some e -> (prn_expr prn_pos e) | None -> "DEFAULT" in
+        sprintf "%s%s%s -> [\n%s]" (pad (level + 1)) pe pv @@
+          sci "\n" sl (prn_statement (level + 2) prn_pos))
   (*| DecoratedFunction(dl, f) -> (sci ("\n" ^ (pad level)) dl 
         (fun d -> match d with Decorator(dd, da) -> 
           sprintf "Decorator[%s; %s]" (prn_expr dd) @@ sci ", " da prn_va)) ^ 
       (prn_statement level f) *)
   | Function(v, vl, sl, pos) -> 
-      sprintf "{%s}Def[%s; %s;\n%s]" (prn_pos pos) (prn_va v) (sci ", " vl prn_va) @@ 
-        sci "\n" sl (prn_statement (level + 1))
+      sprintf "%sDef[%s; %s;\n%s]" (prn_pos pos) (prn_va prn_pos v) (sci ", " vl (prn_va prn_pos)) @@ 
+        sci "\n" sl (prn_statement (level + 1) prn_pos)
   | Class((v, _), vl, sl, pos) -> 
-      sprintf "{%s} Class[%s; %s;\n%s]" (prn_pos pos) v (sci ", " vl prn_va) @@ 
-        sci "\n" sl (prn_statement (level + 1))
+      sprintf "%s Class[%s; %s;\n%s]" (prn_pos pos) v (sci ", " vl (prn_va prn_pos)) @@ 
+        sci "\n" sl (prn_statement (level + 1) prn_pos)
   (* | Import(el, _) -> 
     sprintf "Import[%s]" @@ sci ", " el (fun (a, b) ->
       let b = match b with None -> "" | Some x -> " as " ^ (prn_expr x) in
@@ -177,5 +175,5 @@ let rec prn_statement level st =
       (prn_expr a) ^ b
     ) in sprintf "Import[%s; %s]" (prn_expr e) el *)
   in (pad level) ^ s
-let prn_ast ast =
-  match ast with Module sl -> sci "\n" sl (prn_statement 0)
+let prn_ast prn_pos ast =
+  match ast with Module sl -> sci "\n" sl (prn_statement 0 prn_pos)

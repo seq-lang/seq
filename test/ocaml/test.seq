@@ -16,8 +16,6 @@ s = 'hello'
 j = i + 16
 print j
 
-j='a'
-
 print '*** INLINE_IF ***'
 k = 1 if j > 20 else 0
 print k
@@ -124,3 +122,14 @@ match il.age:
    case 10: print 'first'
    case 15 as y: print 'second'; print y
    default: print 'whoops'
+
+class Cls(a, b):
+   def prn(self):
+      print self.a
+      print self.b
+
+cl1 = Cls(5, 15)
+cl1.prn()
+
+cl2 = Cls(5, 'oo')
+cl2.prn()
