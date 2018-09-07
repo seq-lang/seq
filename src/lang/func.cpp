@@ -26,7 +26,7 @@ BasicBlock *BaseFunc::getPreamble() const
 
 types::FuncType *BaseFunc::getFuncType() const
 {
-	return types::FuncType::get({}, types::VoidType::get());
+	return types::FuncType::get({}, types::Void);
 }
 
 Function *BaseFunc::getFunc()
@@ -41,7 +41,7 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 }
 
 Func::Func() :
-    BaseFunc(), Generic(false), SrcObject(), name(), inTypes(), outType(&types::Void),
+    BaseFunc(), Generic(false), SrcObject(), name(), inTypes(), outType(types::Void),
     scope(new Block()), argNames(), argVars(), ret(nullptr), yield(nullptr), typesResolved(false),
     gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
@@ -130,11 +130,11 @@ void Func::resolveTypes()
 		scope->resolveTypes();
 
 		// return type deduction
-		if ((outType->is(&types::Void) || outType->is(types::GenType::get(&types::Void))) && (yield || (ret && ret->getExpr()))) {
+		if ((outType->is(types::Void) || outType->is(types::GenType::get(types::Void))) && (yield || (ret && ret->getExpr()))) {
 			if (yield) {
-				outType = types::GenType::get(yield->getExpr() ? yield->getExpr()->getType() : &types::Void);
+				outType = types::GenType::get(yield->getExpr() ? yield->getExpr()->getType() : types::Void);
 			} else if (ret) {
-				outType = ret->getExpr() ? ret->getExpr()->getType() : &types::Void;
+				outType = ret->getExpr() ? ret->getExpr()->getType() : types::Void;
 			} else {
 				assert(0);
 			}
@@ -179,7 +179,7 @@ void Func::codegen(Module *module)
 		Function *idFn = Intrinsic::getDeclaration(module, Intrinsic::coro_id);
 		Value *nullPtr = ConstantPointerNull::get(IntegerType::getInt8PtrTy(context));
 
-		if (!outType->getBaseType(0)->is(&types::Void)) {
+		if (!outType->getBaseType(0)->is(types::Void)) {
 			promise = makeAlloca(outType->getBaseType(0)->getLLVMType(context), preambleBlock);
 			promise->setName("promise");
 			Value *promiseRaw = builder.CreateBitCast(promise, IntegerType::getInt8PtrTy(context));
@@ -274,7 +274,7 @@ void Func::codegen(Module *module)
 		builder.CreateBr(exit);
 		codegenYield(nullptr, nullptr, exit);  // final yield
 	} else {
-		if (outType->is(types::VoidType::get())) {
+		if (outType->is(types::Void)) {
 			builder.CreateRetVoid();
 		} else {
 			// i.e. if there isn't already a return at the end
@@ -310,7 +310,7 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 		  "cannot return '" + type->getName() + "' from function returning '" +
 		  outType->getName() + "'");
 
-	if (val && type && type->is(&types::Void))
+	if (val && type && type->is(types::Void))
 		throw exc::SeqException("cannot return void value from function");
 
 	IRBuilder<> builder(block);
@@ -343,7 +343,7 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 		  "cannot yield '" + type->getName() + "' from generator yielding '" +
 		  outType->getBaseType(0)->getName() + "'");
 
-	if (val && type && type->is(&types::Void))
+	if (val && type && type->is(types::Void))
 		throw exc::SeqException("cannot yield void value from generator");
 
 	LLVMContext& context = block->getContext();

@@ -66,9 +66,8 @@ namespace seq {
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block);
-			ArrayType& of(Type& baseType) const;
-			static ArrayType *get(Type *baseType);
-			static ArrayType *get();
+			static ArrayType *get(Type *baseType) noexcept;
+			static ArrayType *get() noexcept;
 
 			ArrayType *clone(Generic *ref) override;
 		};

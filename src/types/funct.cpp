@@ -94,8 +94,9 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 types::GenType::GenType(Type *outType) :
     Type(outType->getName() + "Gen", BaseType::get(), Key::FUNC), outType(outType)
 {
-	types::Type *type = this->outType->is(&types::Void) ? (types::Type *)&types::Void :
-	                                                      types::OptionalType::get(outType);
+	types::VoidType *voidType = types::VoidType::get();
+	types::Type *type = this->outType->is(voidType) ? (types::Type *)voidType :
+	                                                  types::OptionalType::get(outType);
 
 	addMethod("next", new BaseFuncLite({this}, type, [this, type](Module *module) {
 		auto *optType = dynamic_cast<types::OptionalType *>(type);
@@ -154,7 +155,7 @@ void types::GenType::resume(Value *self, BasicBlock *block)
 
 Value *types::GenType::promise(Value *self, BasicBlock *block)
 {
-	if (outType->is(types::VoidType::get()))
+	if (outType->is(types::Void))
 		return nullptr;
 
 	LLVMContext& context = block->getContext();
@@ -204,12 +205,12 @@ seq_int_t types::GenType::size(Module *module) const
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
-types::GenType *types::GenType::get(Type *outType)
+types::GenType *types::GenType::get(Type *outType) noexcept
 {
 	return new GenType(outType);
 }
 
-types::GenType *types::GenType::get()
+types::GenType *types::GenType::get() noexcept
 {
 	return get(types::BaseType::get());
 }

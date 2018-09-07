@@ -13,7 +13,7 @@ namespace seq {
 		std::string file;
 		int line;
 		int col;
-		SrcInfo(const std::string file, int line, int col) :
+		SrcInfo(std::string file, int line, int col) :
 		    file(std::move(file)), line(line), col(col) {};
 		SrcInfo() : SrcInfo("", 0, 0) {};
 	};
@@ -84,7 +84,7 @@ namespace seq {
 			SeqException(const std::string& msg, SrcInfo info) noexcept :
 			    SrcObject(), std::runtime_error(msg)
 			{
-				setSrcInfo(info);
+				setSrcInfo(std::move(info));
 			}
 
 			explicit SeqException(const std::string& msg) noexcept : SeqException(msg, {})

@@ -176,8 +176,8 @@ void types::RefType::initOps()
 		return;
 
 	vtable.ops = {
-		{uop("!"), this, &Bool, [](Value *lhs, Value *rhs, IRBuilder<> &b) {
-			return b.CreateZExt(b.CreateIsNull(lhs), Bool.getLLVMType(b.getContext()));
+		{uop("!"), this, Bool, [](Value *lhs, Value *rhs, IRBuilder<> &b) {
+			return b.CreateZExt(b.CreateIsNull(lhs), Bool->getLLVMType(b.getContext()));
 		}}
 	};
 }

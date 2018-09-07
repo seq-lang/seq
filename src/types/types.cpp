@@ -358,7 +358,7 @@ types::Type *types::Type::membType(const std::string& name)
 
 	auto iter2 = getVTable().fields.find(name);
 
-	if (iter2 == getVTable().fields.end() || iter2->second.second->is(types::VoidType::get()))
+	if (iter2 == getVTable().fields.end() || iter2->second.second->is(types::Void))
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
 	return iter2->second.second;

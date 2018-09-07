@@ -7,7 +7,7 @@ Expr::Expr(types::Type *type) : SrcObject(), type(type)
 {
 }
 
-Expr::Expr() : Expr(types::VoidType::get())
+Expr::Expr() : Expr(types::Void)
 {
 }
 
@@ -46,7 +46,7 @@ Expr *Expr::clone(Generic *ref)
 	return this;
 }
 
-BlankExpr::BlankExpr() : Expr(&types::Void)
+BlankExpr::BlankExpr() : Expr(types::Void)
 {
 }
 
@@ -60,7 +60,7 @@ Value *BlankExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	throw exc::SeqException("misplaced '_'");
 }
 
-IntExpr::IntExpr(seq_int_t n) : Expr(types::IntType::get()), n(n)
+IntExpr::IntExpr(seq_int_t n) : Expr(types::Int), n(n)
 {
 }
 
@@ -70,7 +70,7 @@ Value *IntExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	return ConstantInt::get(getType()->getLLVMType(context), (uint64_t)n, true);
 }
 
-FloatExpr::FloatExpr(double f) : Expr(types::FloatType::get()), f(f)
+FloatExpr::FloatExpr(double f) : Expr(types::Float), f(f)
 {
 }
 
@@ -80,17 +80,17 @@ Value *FloatExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	return ConstantFP::get(getType()->getLLVMType(context), f);
 }
 
-BoolExpr::BoolExpr(bool b) : Expr(types::BoolType::get()), b(b)
+BoolExpr::BoolExpr(bool b) : Expr(types::Bool), b(b)
 {
 }
 
 Value *BoolExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
-	return ConstantInt::get(getType()->getLLVMType(context), b);
+	return ConstantInt::get(getType()->getLLVMType(context), b ? 1 : 0);
 }
 
-StrExpr::StrExpr(std::string s) : Expr(types::StrType::get()), s(std::move(s))
+StrExpr::StrExpr(std::string s) : Expr(types::Str), s(std::move(s))
 {
 }
 
@@ -112,7 +112,7 @@ Value *StrExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	IRBuilder<> builder(preambleBlock);
 	Value *str = builder.CreateBitCast(strVar, IntegerType::getInt8PtrTy(context));
 	Value *len = ConstantInt::get(seqIntLLVM(context), s.length());
-	return types::Str.make(str, len, preambleBlock);
+	return types::Str->make(str, len, preambleBlock);
 }
 
 VarExpr::VarExpr(Var *var) : var(var)
@@ -195,7 +195,7 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	auto *type = dynamic_cast<types::ArrayType *>(getType());
 	assert(type != nullptr);
-	count->ensure(types::IntType::get());
+	count->ensure(types::Int);
 
 	Value *len = count->codegen(base, block);
 	Value *ptr = type->indexType()->alloc(len, block);
@@ -301,8 +301,8 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	if (op == bop("&&") || op == bop("||")) {
 		const bool isAnd = (op == bop("&&"));
 
-		lhs->ensure(types::BoolType::get());
-		rhs->ensure(types::BoolType::get());
+		lhs->ensure(types::Bool);
+		rhs->ensure(types::Bool);
 		Value *lhs = this->lhs->codegen(base, block);
 
 		BasicBlock *b1 = BasicBlock::Create(context, "", block->getParent());
@@ -318,7 +318,7 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		builder.CreateBr(b2);
 		builder.SetInsertPoint(b2);
 
-		Type *boolTy = types::BoolType::get()->getLLVMType(context);
+		Type *boolTy = types::Bool->getLLVMType(context);
 		Value *t = ConstantInt::get(boolTy, 1);
 		Value *f = ConstantInt::get(boolTy, 0);
 
@@ -341,7 +341,7 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 types::Type *BOpExpr::getType0() const
 {
 	if (op == bop("&&") || op == bop("||"))
-		return types::BoolType::get();
+		return types::Bool;
 	else
 		return lhs->getType()->findBOp(op.symbol, rhs->getType()).outType;
 }
@@ -364,7 +364,7 @@ void ArrayLookupExpr::resolveTypes()
 
 Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
-	idx->ensure(types::IntType::get());
+	idx->ensure(types::Int);
 	Value *arr = this->arr->codegen(base, block);
 	Value *idx = this->idx->codegen(base, block);
 	return this->arr->getType()->indexLoad(base, arr, idx, block);
@@ -395,8 +395,8 @@ void ArraySliceExpr::resolveTypes()
 Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	assert(from || to);
-	if (from) from->ensure(types::IntType::get());
-	if (to) to->ensure(types::IntType::get());
+	if (from) from->ensure(types::Int);
+	if (to) to->ensure(types::Int);
 
 	Value *arr = this->arr->codegen(base, block);
 
@@ -687,7 +687,7 @@ void CondExpr::resolveTypes()
 
 Value *CondExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
-	cond->ensure(types::BoolType::get());
+	cond->ensure(types::Bool);
 
 	LLVMContext& context = block->getContext();
 

@@ -7,12 +7,12 @@ using namespace seq;
 
 /***** Types *****/
 
-FOREIGN types::Type *void_type()        { return types::VoidType::get(); }
-FOREIGN types::Type *bool_type()        { return types::BoolType::get(); }
-FOREIGN types::Type *int_type()         { return types::IntType::get(); }
-FOREIGN types::Type *float_type()       { return types::FloatType::get(); }
-FOREIGN types::Type *str_type()         { return types::StrType::get(); }
-FOREIGN types::Type *seq_type()         { return types::SeqType::get(); }
+FOREIGN types::Type *void_type()        { return types::Void; }
+FOREIGN types::Type *bool_type()        { return types::Bool; }
+FOREIGN types::Type *int_type()         { return types::Int; }
+FOREIGN types::Type *float_type()       { return types::Float; }
+FOREIGN types::Type *str_type()         { return types::Str; }
+FOREIGN types::Type *seq_type()         { return types::Seq; }
 FOREIGN types::Type *generic_type()     { return types::GenericType::get(); }
 
 FOREIGN types::Type *array_type(types::Type *base)

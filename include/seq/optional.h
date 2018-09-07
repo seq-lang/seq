@@ -29,7 +29,7 @@ namespace seq {
 			llvm::Value *has(llvm::Value *self, llvm::BasicBlock *block);
 			llvm::Value *val(llvm::Value *self, llvm::BasicBlock *block);
 			OptionalType& of(Type& baseType) const;
-			static OptionalType *get(Type *baseType);
+			static OptionalType *get(Type *baseType) noexcept;
 			static OptionalType *get();
 			OptionalType *clone(Generic *ref) override;
 		};

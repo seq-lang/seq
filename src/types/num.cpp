@@ -73,126 +73,126 @@ void types::IntType::initOps()
 
 	vtable.ops = {
 		// int ops
-		{uop("~"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{uop("~"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateNot(lhs);
 		}},
 
-		{uop("-"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{uop("-"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateNeg(lhs);
 		}},
 
-		{uop("+"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{uop("+"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return lhs;
 		}},
 
 		// int,int ops
-		{bop("*"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("*"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateMul(lhs, rhs);
 		}},
 
-		{bop("/"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("/"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateSDiv(lhs, rhs);
 		}},
 
-		{bop("%"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("%"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateSRem(lhs, rhs);
 		}},
 
-		{bop("+"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("+"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateAdd(lhs, rhs);
 		}},
 
-		{bop("-"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("-"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateSub(lhs, rhs);
 		}},
 
-		{bop("<<"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("<<"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateShl(lhs, rhs);
 		}},
 
-		{bop(">>"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop(">>"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateAShr(lhs, rhs);
 		}},
 
-		{bop("<"), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpSLT(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("<"), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpSLT(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">"), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpSGT(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop(">"), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpSGT(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("<="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpSLE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("<="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpSLE(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpSGE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop(">="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpSGE(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("=="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("=="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("!="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("&"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("&"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateAnd(lhs, rhs);
 		}},
 
-		{bop("^"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("^"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateXor(lhs, rhs);
 		}},
 
-		{bop("|"), &Int, &Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("|"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateOr(lhs, rhs);
 		}},
 
 		// int,float ops
-		{bop("*"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFMul(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("*"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFMul(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("/"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFDiv(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("/"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFDiv(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("%"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFRem(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("%"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFRem(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("+"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFAdd(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("+"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFAdd(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("-"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFSub(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs);
+		{bop("-"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFSub(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
 		}},
 
-		{bop("<"), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLT(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+		{bop("<"), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOLT(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">"), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGT(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+		{bop(">"), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOGT(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("<="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+		{bop("<="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOLE(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+		{bop(">="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOGE(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("=="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOEQ(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+		{bop("=="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOEQ(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpONE(b.CreateSIToFP(lhs, Float.getLLVMType(b.getContext())), rhs), Bool.getLLVMType(b.getContext()));
+		{bop("!="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpONE(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
 		}},
 	};
 }
@@ -204,102 +204,102 @@ void types::FloatType::initOps()
 
 	vtable.ops = {
 		// float ops
-		{uop("-"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{uop("-"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateFNeg(lhs);
 		}},
 
-		{uop("+"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{uop("+"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return lhs;
 		}},
 
 		// float,float ops
-		{bop("*"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("*"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateFMul(lhs, rhs);
 		}},
 
-		{bop("/"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("/"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateFDiv(lhs, rhs);
 		}},
 
-		{bop("%"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("%"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateFRem(lhs, rhs);
 		}},
 
-		{bop("+"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("+"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateFAdd(lhs, rhs);
 		}},
 
-		{bop("-"), &Float, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("-"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateFSub(lhs, rhs);
 		}},
 
-		{bop("<"), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLT(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("<"), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOLT(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">"), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGT(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop(">"), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOGT(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("<="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("<="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOLE(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop(">="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOGE(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("=="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("=="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOEQ(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), &Float, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpONE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("!="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpONE(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
 		// float,int ops
-		{bop("*"), &Int, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFMul(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext())));
+		{bop("*"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFMul(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
 		}},
 
-		{bop("/"), &Int, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFDiv(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext())));
+		{bop("/"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFDiv(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
 		}},
 
-		{bop("%"), &Int, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFRem(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext())));
+		{bop("%"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFRem(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
 		}},
 
-		{bop("+"), &Int, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFAdd(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext())));
+		{bop("+"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFAdd(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
 		}},
 
-		{bop("-"), &Int, &Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFSub(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext())));
+		{bop("-"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateFSub(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
 		}},
 
-		{bop("<"), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLT(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+		{bop("<"), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOLT(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">"), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGT(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+		{bop(">"), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOGT(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("<="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+		{bop("<="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOLE(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+		{bop(">="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOGE(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("=="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOEQ(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+		{bop("=="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpOEQ(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), &Int, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpONE(lhs, b.CreateSIToFP(rhs, Float.getLLVMType(b.getContext()))), Bool.getLLVMType(b.getContext()));
+		{bop("!="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateFCmpONE(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
 		}},
 	};
 }
@@ -311,28 +311,28 @@ void types::BoolType::initOps()
 
 	vtable.ops = {
 		// bool ops
-		{uop("!"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateNot(b.CreateTrunc(lhs, IntegerType::getInt1Ty(b.getContext()))), Bool.getLLVMType(b.getContext()));
+		{uop("!"), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateNot(b.CreateTrunc(lhs, IntegerType::getInt1Ty(b.getContext()))), Bool->getLLVMType(b.getContext()));
 		}},
 
 		// bool,bool ops
-		{bop("=="), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("=="), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool.getLLVMType(b.getContext()));
+		{bop("!="), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("&"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("&"), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateAnd(lhs, rhs);
 		}},
 
-		{bop("^"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("^"), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateXor(lhs, rhs);
 		}},
 
-		{bop("|"), &Bool, &Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("|"), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateOr(lhs, rhs);
 		}},
 	};
@@ -368,25 +368,25 @@ seq_int_t types::BoolType::size(Module *module) const
 	return sizeof(bool);
 }
 
-types::NumberType *types::NumberType::get()
+types::NumberType *types::NumberType::get() noexcept
 {
 	static NumberType instance;
 	return &instance;
 }
 
-types::IntType *types::IntType::get()
+types::IntType *types::IntType::get() noexcept
 {
 	static IntType instance;
 	return &instance;
 }
 
-types::FloatType *types::FloatType::get()
+types::FloatType *types::FloatType::get() noexcept
 {
 	static FloatType instance;
 	return &instance;
 }
 
-types::BoolType *types::BoolType::get()
+types::BoolType *types::BoolType::get() noexcept
 {
 	static BoolType instance;
 	return &instance;

@@ -11,7 +11,7 @@ namespace seq {
 		public:
 			AnyType(AnyType const&)=delete;
 			void operator=(AnyType const&)=delete;
-			static AnyType *get();
+			static AnyType *get() noexcept;
 		};
 
 	}

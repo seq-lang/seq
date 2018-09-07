@@ -159,9 +159,9 @@ void AssignIndex::resolveTypes()
 
 void AssignIndex::codegen0(BasicBlock*& block)
 {
-	this->idx->ensure(types::IntType::get());
+	this->idx->ensure(types::Int);
 
-	if (!array->getType()->isGeneric(types::ArrayType::get()))
+	if (!array->getType()->isGeneric(types::Array))
 		throw exc::SeqException("can only assign indices of array type");
 
 	auto *arrType = dynamic_cast<types::ArrayType *>(array->getType());
@@ -521,7 +521,7 @@ void For::resolveTypes()
 
 void For::codegen0(BasicBlock*& block)
 {
-	if (!gen->getType()->isGeneric(types::GenType::get()))
+	if (!gen->getType()->isGeneric(types::Gen))
 		throw exc::SeqException("cannot iterate over non-generator");
 
 	auto *type = dynamic_cast<types::GenType *>(gen->getType());
@@ -549,7 +549,7 @@ void For::codegen0(BasicBlock*& block)
 	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set true-branch below
 
 	block = body;
-	if (!type->getBaseType(0)->is(&types::Void)) {
+	if (!type->getBaseType(0)->is(types::Void)) {
 		Value *val = type->promise(gen, block);
 		var->store(getBase(), val, block);
 	}
@@ -603,7 +603,7 @@ void Return::resolveTypes()
 
 void Return::codegen0(BasicBlock*& block)
 {
-	types::Type *type = expr ? expr->getType() : types::VoidType::get();
+	types::Type *type = expr ? expr->getType() : types::Void;
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
 	auto *func = dynamic_cast<Func *>(getBase());
 	assert(func);
@@ -638,7 +638,7 @@ void Yield::resolveTypes()
 
 void Yield::codegen0(BasicBlock*& block)
 {
-	types::Type *type = expr ? expr->getType() : types::VoidType::get();
+	types::Type *type = expr ? expr->getType() : types::Void;
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
 	auto *func = dynamic_cast<Func *>(getBase());
 	assert(func);

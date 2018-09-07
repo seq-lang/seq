@@ -94,10 +94,10 @@ Value *types::BaseSeqType::eq(BaseFunc *base,
                               BasicBlock *block)
 {
 	Module *module = block->getModule();
-	Value *seq1 = Seq.memb(self, "ptr", block);
-	Value *len1 = Seq.memb(self, "len", block);
-	Value *seq2 = Seq.memb(other, "ptr", block);
-	Value *len2 = Seq.memb(other, "len", block);
+	Value *seq1 = memb(self, "ptr", block);
+	Value *len1 = memb(self, "len", block);
+	Value *seq2 = memb(other, "ptr", block);
+	Value *len2 = memb(other, "len", block);
 
 	Function *eq = module->getFunction(eqFuncName());
 
@@ -123,8 +123,8 @@ Value *types::BaseSeqType::copy(BaseFunc *base,
 
 	copyFunc->setCallingConv(CallingConv::C);
 
-	Value *ptr = Seq.memb(self, "ptr", block);
-	Value *len = Seq.memb(self, "len", block);
+	Value *ptr = memb(self, "ptr", block);
+	Value *len = memb(self, "len", block);
 
 	IRBuilder<> builder(block);
 	Value *copy = builder.CreateCall(copyFunc, {ptr, len});
@@ -150,9 +150,9 @@ void types::BaseSeqType::serialize(BaseFunc *base,
 
 	writeFunc->setCallingConv(CallingConv::C);
 
-	Value *ptr = Seq.memb(self, "ptr", block);
-	Value *len = Seq.memb(self, "len", block);
-	Int.serialize(base, len, fp, block);
+	Value *ptr = memb(self, "ptr", block);
+	Value *len = memb(self, "len", block);
+	Int->serialize(base, len, fp, block);
 
 	IRBuilder<> builder(block);
 	builder.CreateCall(writeFunc, {ptr, len, oneLLVM(context), fp});
@@ -184,7 +184,7 @@ Value *types::BaseSeqType::deserialize(BaseFunc *base,
 
 	IRBuilder<> builder(block);
 
-	Value *len = Int.deserialize(base, fp, block);
+	Value *len = Int->deserialize(base, fp, block);
 	Value *ptr = builder.CreateCall(allocFunc, {len});
 	builder.CreateCall(readFunc, {ptr, len, oneLLVM(context), fp});
 	return make(ptr, len, block);
@@ -205,8 +205,8 @@ void types::BaseSeqType::print(BaseFunc *base,
 
 	printFunc->setCallingConv(CallingConv::C);
 
-	Value *ptr = Seq.memb(self, "ptr", block);
-	Value *len = Seq.memb(self, "len", block);
+	Value *ptr = memb(self, "ptr", block);
+	Value *len = memb(self, "len", block);
 
 	IRBuilder<> builder(block);
 	builder.CreateCall(printFunc, {ptr, len});
@@ -251,7 +251,7 @@ Value *types::BaseSeqType::indexSliceNoTo(BaseFunc *base,
                                           Value *from,
                                           BasicBlock *block)
 {
-	Value *len = Array.memb(self, "len", block);
+	Value *len = memb(self, "len", block);
 	return indexSlice(base, self, from, len, block);
 }
 
@@ -269,8 +269,8 @@ void types::BaseSeqType::initFields()
 		return;
 
 	vtable.fields = {
-		{"len", {0, &Int}},
-		{"ptr", {1, &Void}}
+		{"len", {0, Int}},
+		{"ptr", {1, Void}}
 	};
 }
 
@@ -315,9 +315,9 @@ void types::SeqType::initOps()
 		return;
 
 	vtable.ops = {
-		{bop("=="), this, &Bool, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("=="), this, Bool, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			Value *x = eq(nullptr, lhs, rhs, b.GetInsertBlock());
-			return b.CreateZExt(x, Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
 		}},
 	};
 }
@@ -331,12 +331,12 @@ Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block)
 {
 	LLVMContext& context = ptr->getContext();
 	Value *self = UndefValue::get(getLLVMType(context));
-	self = Seq.setMemb(self, "ptr", ptr, block);
-	self = Seq.setMemb(self, "len", len, block);
+	self = setMemb(self, "ptr", ptr, block);
+	self = setMemb(self, "len", len, block);
 	return self;
 }
 
-types::SeqType *types::SeqType::get()
+types::SeqType *types::SeqType::get() noexcept
 {
 	static types::SeqType instance;
 	return &instance;
@@ -368,9 +368,9 @@ void types::StrType::initOps()
 		return;
 
 	vtable.ops = {
-		{bop("=="), this, &Bool, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
+		{bop("=="), this, Bool, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			Value *x = eq(nullptr, lhs, rhs, b.GetInsertBlock());
-			return b.CreateZExt(x, Bool.getLLVMType(b.getContext()));
+			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
 		}},
 	};
 }
@@ -384,12 +384,12 @@ Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block)
 {
 	LLVMContext& context = ptr->getContext();
 	Value *self = UndefValue::get(getLLVMType(context));
-	self = Str.setMemb(self, "ptr", ptr, block);
-	self = Str.setMemb(self, "len", len, block);
+	self = setMemb(self, "ptr", ptr, block);
+	self = setMemb(self, "len", len, block);
 	return self;
 }
 
-types::StrType *types::StrType::get()
+types::StrType *types::StrType::get() noexcept
 {
 	static types::StrType instance;
 	return &instance;

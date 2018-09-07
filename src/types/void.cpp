@@ -27,7 +27,7 @@ Type *types::VoidType::getLLVMType(LLVMContext& context) const
 	return llvm::Type::getVoidTy(context);
 }
 
-types::VoidType *types::VoidType::get()
+types::VoidType *types::VoidType::get() noexcept
 {
 	static types::VoidType instance;
 	return &instance;

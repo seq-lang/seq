@@ -25,7 +25,7 @@ Pattern *Pattern::clone(Generic *ref)
 }
 
 Wildcard::Wildcard() :
-    Pattern(&types::Any), var(new Var())
+    Pattern(types::Any), var(new Var())
 {
 }
 
@@ -67,7 +67,7 @@ Value *Wildcard::codegen(BaseFunc *base,
 }
 
 BoundPattern::BoundPattern(Pattern *pattern) :
-    Pattern(&types::Any), var(new Var()), pattern(pattern)
+    Pattern(types::Any), var(new Var()), pattern(pattern)
 {
 }
 
@@ -108,7 +108,7 @@ Value *BoundPattern::codegen(BaseFunc *base,
 	return pattern->codegen(base, type, val, block);
 }
 
-StarPattern::StarPattern() : Pattern(&types::Any)
+StarPattern::StarPattern() : Pattern(types::Any)
 {
 }
 
@@ -126,17 +126,17 @@ Value *StarPattern::codegen(BaseFunc *base,
 }
 
 IntPattern::IntPattern(seq_int_t val) :
-    Pattern(&types::Int), val(val)
+    Pattern(types::Int), val(val)
 {
 }
 
 BoolPattern::BoolPattern(bool val) :
-    Pattern(&types::Bool), val(val)
+    Pattern(types::Bool), val(val)
 {
 }
 
 StrPattern::StrPattern(std::string val) :
-    Pattern(&types::Str), val(std::move(val))
+    Pattern(types::Str), val(std::move(val))
 {
 }
 
@@ -147,7 +147,7 @@ Value *IntPattern::codegen(BaseFunc *base,
 {
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
-	Value *pat = ConstantInt::get(types::Int.getLLVMType(context), (uint64_t)this->val, true);
+	Value *pat = ConstantInt::get(types::Int->getLLVMType(context), (uint64_t)this->val, true);
 	return builder.CreateICmpEQ(val, pat);
 }
 
@@ -158,7 +158,7 @@ Value *BoolPattern::codegen(BaseFunc *base,
 {
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
-	Value *pat = ConstantInt::get(types::Bool.getLLVMType(context), (uint64_t)this->val);
+	Value *pat = ConstantInt::get(types::Bool->getLLVMType(context), (uint64_t)this->val);
 	return builder.CreateFCmpOEQ(val, pat);
 }
 
@@ -168,11 +168,11 @@ Value *StrPattern::codegen(BaseFunc *base,
                            BasicBlock*& block)
 {
 	Value *pat = StrExpr(this->val).codegen(base, block);
-	return types::Str.eq(base, val, pat, block);
+	return types::Str->eq(base, val, pat, block);
 }
 
 RecordPattern::RecordPattern(std::vector<Pattern *> patterns) :
-    Pattern(&types::Any), patterns(std::move(patterns))
+    Pattern(types::Any), patterns(std::move(patterns))
 {
 }
 
@@ -229,13 +229,13 @@ RecordPattern *RecordPattern::clone(Generic *ref)
 }
 
 ArrayPattern::ArrayPattern(std::vector<Pattern *> patterns) :
-    Pattern(&types::Any), patterns(std::move(patterns))
+    Pattern(types::Any), patterns(std::move(patterns))
 {
 }
 
 void ArrayPattern::resolveTypes(types::Type *type)
 {
-	if (!type->isGeneric(&types::Array))
+	if (!type->isGeneric(types::Array))
 		throw exc::SeqException("cannot match array pattern with non-array value", getSrcInfo());
 
 	types::Type *baseType = type->getBaseType(0);
@@ -332,7 +332,7 @@ ArrayPattern *ArrayPattern::clone(Generic *ref)
 }
 
 SeqPattern::SeqPattern(std::string pattern) :
-    Pattern(&types::Seq), pattern(std::move(pattern))
+    Pattern(types::Seq), pattern(std::move(pattern))
 {
 }
 
@@ -443,7 +443,7 @@ Value *SeqPattern::codegen(BaseFunc *base,
 }
 
 OptPattern::OptPattern(Pattern *pattern) :
-    Pattern(&types::Any), pattern(pattern)
+    Pattern(types::Any), pattern(pattern)
 {
 }
 
@@ -502,7 +502,7 @@ OptPattern *OptPattern::clone(Generic *ref)
 }
 
 RangePattern::RangePattern(seq_int_t a, seq_int_t b) :
-    Pattern(&types::Int), a(a), b(b)
+    Pattern(types::Int), a(a), b(b)
 {
 }
 
@@ -523,7 +523,7 @@ Value *RangePattern::codegen(BaseFunc *base,
 }
 
 OrPattern::OrPattern(std::vector<Pattern *> patterns) :
-    Pattern(&types::Any), patterns(std::move(patterns))
+    Pattern(types::Any), patterns(std::move(patterns))
 {
 }
 
@@ -568,7 +568,7 @@ OrPattern *OrPattern::clone(Generic *ref)
 }
 
 GuardedPattern::GuardedPattern(Pattern *pattern, Expr *guard) :
-    Pattern(&types::Int), pattern(pattern), guard(guard)
+    Pattern(types::Int), pattern(pattern), guard(guard)
 {
 }
 
@@ -590,7 +590,7 @@ Value *GuardedPattern::codegen(BaseFunc *base,
 	block = BasicBlock::Create(context, "", block->getParent());  // guard eval block
 	BranchInst *branch = builder.CreateCondBr(patternResult, block, block);
 
-	guard->ensure(&types::Bool);
+	guard->ensure(types::Bool);
 	Value *guardResult = guard->codegen(base, block);
 	BasicBlock *checkBlock = block;
 	builder.SetInsertPoint(block);

@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::GenericType::GenericType() :
-    Type("Generic", BaseType::get()), aboutToBeRealized(false),
+    Type("Generic", types::BaseType::get()), aboutToBeRealized(false),
     genericName(), type(nullptr)
 {
 }
@@ -410,7 +410,6 @@ Generic::Generic(bool performCaching) :
 
 Generic::~Generic()
 {
-   
 }
 
 bool Generic::unrealized()

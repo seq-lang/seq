@@ -84,7 +84,7 @@ namespace seq {
 			void initOps() override;
 			Type *indexType() const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
-			static SeqType *get();
+			static SeqType *get() noexcept;
 		};
 
 		class StrType : public BaseSeqType {
@@ -103,7 +103,7 @@ namespace seq {
 			void initOps() override;
 			Type *indexType() const override;
 			llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block) override;
-			static StrType *get();
+			static StrType *get() noexcept;
 		};
 
 	}

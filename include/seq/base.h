@@ -12,7 +12,7 @@ namespace seq {
 		public:
 			BaseType(BaseType const&)=delete;
 			void operator=(BaseType const&)=delete;
-			static BaseType *get();
+			static BaseType *get() noexcept;
 		};
 
 	}

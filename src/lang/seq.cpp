@@ -7,7 +7,7 @@ using namespace llvm;
 
 static types::Type *argsType()
 {
-	return types::ArrayType::get(types::StrType::get());
+	return types::ArrayType::get(types::Str);
 }
 
 SeqModule::SeqModule() :
@@ -36,8 +36,7 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 	LLVMContext& context = realMain->getContext();
 	Module *module = realMain->getParent();
 
-	types::StrType *strType = types::StrType::get();
-	types::ArrayType *arrType = types::ArrayType::get(strType);
+	types::ArrayType *arrType = types::ArrayType::get(types::Str);
 
 	auto *func = cast<Function>(
 	               module->getOrInsertFunction(
@@ -55,7 +54,7 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 
 	IRBuilder<> builder(entry);
 	Value *len = builder.CreateZExt(argc, seqIntLLVM(context));
-	Value *ptr = strType->alloc(len, entry);
+	Value *ptr = types::Str->alloc(len, entry);
 	Value *arr = arrType->make(ptr, len, entry);
 	builder.CreateBr(loop);
 
@@ -70,7 +69,7 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 	builder.SetInsertPoint(body);
 	Value *arg = builder.CreateLoad(builder.CreateGEP(argv, control));
 	Value *argLen = builder.CreateZExtOrTrunc(builder.CreateCall(strlen, arg), seqIntLLVM(context));
-	Value *str = strType->make(arg, argLen, body);
+	Value *str = types::Str->make(arg, argLen, body);
 	arrType->indexStore(nullptr, arr, control, str, body);
 	builder.CreateBr(loop);
 
@@ -99,7 +98,7 @@ void SeqModule::codegen(Module *module)
 
 	types::Type *argsType = nullptr;
 	Value *args = nullptr;
-	argsType = types::ArrayType::get(types::StrType::get());
+	argsType = types::ArrayType::get(types::Str);
 
 	func = cast<Function>(
 	         module->getOrInsertFunction(

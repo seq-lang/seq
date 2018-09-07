@@ -12,7 +12,7 @@ namespace seq {
 		public:
 			NumberType(NumberType const&)=delete;
 			void operator=(NumberType const&)=delete;
-			static NumberType *get();
+			static NumberType *get() noexcept;
 		};
 
 		class IntType : public Type {
@@ -32,7 +32,7 @@ namespace seq {
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
-			static IntType *get();
+			static IntType *get() noexcept;
 		};
 
 		class FloatType : public Type {
@@ -52,7 +52,7 @@ namespace seq {
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
-			static FloatType *get();
+			static FloatType *get() noexcept;
 		};
 
 		class BoolType : public Type {
@@ -72,7 +72,7 @@ namespace seq {
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
-			static BoolType *get();
+			static BoolType *get() noexcept;
 		};
 
 	}

@@ -23,7 +23,7 @@ namespace seq {
 			                           bool storeDefault) override;
 
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
-			static VoidType *get();
+			static VoidType *get() noexcept;
 		};
 
 	}

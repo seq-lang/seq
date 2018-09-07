@@ -28,9 +28,9 @@ Value *types::ArrayType::copy(BaseFunc *base,
 
 	IRBuilder<> builder(block);
 	Value *atomic = ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)indexType()->isAtomic());
-	Value *ptr = Array.memb(self, "ptr", block);
+	Value *ptr = memb(self, "ptr", block);
 	ptr = builder.CreateBitCast(ptr, IntegerType::getInt8PtrTy(context));
-	Value *len = Array.memb(self, "len", block);
+	Value *len = memb(self, "len", block);
 	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)indexType()->size(block->getModule()));
 	Value *copy = builder.CreateCall(copyFunc, {ptr, len, elemSize, atomic});
 	copy = builder.CreateBitCast(copy, PointerType::get(indexType()->getLLVMType(context), 0));
@@ -96,13 +96,13 @@ void types::ArrayType::serialize(BaseFunc *base,
 		branch->setSuccessor(1, exit);
 
 		builder.SetInsertPoint(entry);
-		Int.serialize(&serializeBase, lenArg, fpArg, entry);
+		Int->serialize(&serializeBase, lenArg, fpArg, entry);
 		builder.CreateBr(loop);
 	}
 
 	builder.SetInsertPoint(block);
-	Value *ptr = Array.memb(self, "ptr", block);
-	Value *len = Array.memb(self, "len", block);
+	Value *ptr = memb(self, "ptr", block);
+	Value *len = memb(self, "len", block);
 	builder.CreateCall(serialize, {ptr, len, fp});
 }
 
@@ -175,7 +175,7 @@ Value *types::ArrayType::deserialize(BaseFunc *base,
 	}
 
 	builder.SetInsertPoint(block);
-	Value *len = Int.deserialize(base, fp, block);
+	Value *len = Int->deserialize(base, fp, block);
 	Value *size = ConstantInt::get(seqIntLLVM(context), (uint64_t)indexType()->size(module));
 	Value *bytes = builder.CreateMul(len, size);
 	bytes = builder.CreateBitCast(bytes, IntegerType::getIntNTy(context, sizeof(size_t)*8));
@@ -190,7 +190,7 @@ Value *types::ArrayType::indexLoad(BaseFunc *base,
                                    Value *idx,
                                    BasicBlock *block)
 {
-	Value *ptr = Array.memb(self, "ptr", block);
+	Value *ptr = memb(self, "ptr", block);
 	return indexType()->load(base, ptr, idx, block);
 }
 
@@ -200,7 +200,7 @@ void types::ArrayType::indexStore(BaseFunc *base,
                                   Value *val,
                                   BasicBlock *block)
 {
-	Value *ptr = Array.memb(self, "ptr", block);
+	Value *ptr = memb(self, "ptr", block);
 	indexType()->store(base, val, ptr, idx, block);
 }
 
@@ -210,7 +210,7 @@ Value *types::ArrayType::indexSlice(BaseFunc *base,
                                     Value *to,
                                     BasicBlock *block)
 {
-	Value *ptr = Array.memb(self, "ptr", block);
+	Value *ptr = memb(self, "ptr", block);
 	IRBuilder<> builder(block);
 	ptr = builder.CreateGEP(ptr, from);
 	Value *len = builder.CreateSub(to, from);
@@ -231,7 +231,7 @@ Value *types::ArrayType::indexSliceNoTo(BaseFunc *base,
                                         Value *from,
                                         BasicBlock *block)
 {
-	Value *len = Array.memb(self, "len", block);
+	Value *len = memb(self, "len", block);
 	return indexSlice(base, self, from, len, block);
 }
 
@@ -264,8 +264,8 @@ void types::ArrayType::initFields()
 		return;
 
 	vtable.fields = {
-		{"len", {0, &Int}},
-		{"ptr", {1, &Void}}
+		{"len", {0, Int}},
+		{"ptr", {1, Void}}
 	};
 }
 
@@ -288,22 +288,17 @@ Value *types::ArrayType::make(Value *ptr, Value *len, BasicBlock *block)
 {
 	LLVMContext& context = ptr->getContext();
 	Value *self = UndefValue::get(getLLVMType(context));
-	self = Array.setMemb(self, "ptr", ptr, block);
-	self = Array.setMemb(self, "len", len, block);
+	self = setMemb(self, "ptr", ptr, block);
+	self = setMemb(self, "len", len, block);
 	return self;
 }
 
-types::ArrayType& types::ArrayType::of(Type& baseType) const
-{
-	return *ArrayType::get(&baseType);
-}
-
-types::ArrayType *types::ArrayType::get(Type *baseType)
+types::ArrayType *types::ArrayType::get(Type *baseType) noexcept
 {
 	return new ArrayType(baseType);
 }
 
-types::ArrayType *types::ArrayType::get()
+types::ArrayType *types::ArrayType::get() noexcept
 {
 	return new ArrayType(types::BaseType::get());
 }

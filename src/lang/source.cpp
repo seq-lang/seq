@@ -34,7 +34,7 @@ static Function *seqSourceGetFunc(Module *module)
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
 	              "seq_source_get",
-	              types::ArrayType::get(types::SeqType::get())->getLLVMType(context),
+	              types::ArrayType::get(types::Seq)->getLLVMType(context),
 	              IntegerType::getInt8PtrTy(context),
 	              seqIntLLVM(context)));
 	f->setCallingConv(CallingConv::C);
@@ -47,7 +47,7 @@ static Function *seqSourceGetSingleFunc(Module *module)
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
 	              "seq_source_get_single",
-	              types::SeqType::get()->getLLVMType(context),
+	              types::Seq->getLLVMType(context),
 	              IntegerType::getInt8PtrTy(context),
 	              seqIntLLVM(context)));
 	f->setCallingConv(CallingConv::C);
@@ -76,9 +76,9 @@ types::Type *Source::determineOutType() const
 	assert(!sources.empty());
 
 	if (isSingle())
-		return types::SeqType::get();
+		return types::Seq;
 
-	return types::ArrayType::get(types::SeqType::get());
+	return types::ArrayType::get(types::Seq);
 }
 
 Source::Source(std::vector<Expr *> sources) :
@@ -123,11 +123,11 @@ void Source::codegen0(BasicBlock*& block)
 
 	unsigned idx = 0;
 	for (auto *expr : sources) {
-		expr->ensure(types::StrType::get());
+		expr->ensure(types::Str);
 		Value *str = expr->codegen(getBase(), entry);
 		Value *idxVal = ConstantInt::get(seqIntLLVM(context), idx++);
 		Value *slot = builder.CreateGEP(sourcesVar, idxVal);
-		Value *strVal = types::Str.memb(str, "ptr", entry);
+		Value *strVal = expr->getType()->memb(str, "ptr", entry);
 		builder.CreateStore(strVal, slot);
 	}
 

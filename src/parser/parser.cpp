@@ -603,7 +603,7 @@ template<>
 struct action<seq_type> {
 	static void apply0(ParseState& state)
 	{
-		state.add((types::Type *)&types::Seq);
+		state.add((types::Type *)types::Seq);
 	}
 };
 
@@ -611,7 +611,7 @@ template<>
 struct action<int_type> {
 	static void apply0(ParseState& state)
 	{
-		state.add((types::Type *)&types::Int);
+		state.add((types::Type *)types::Int);
 	}
 };
 
@@ -619,7 +619,7 @@ template<>
 struct action<float_type> {
 	static void apply0(ParseState& state)
 	{
-		state.add((types::Type *)&types::Float);
+		state.add((types::Type *)types::Float);
 	}
 };
 
@@ -627,7 +627,7 @@ template<>
 struct action<bool_type> {
 	static void apply0(ParseState& state)
 	{
-		state.add((types::Type *)&types::Bool);
+		state.add((types::Type *)types::Bool);
 	}
 };
 
@@ -635,7 +635,7 @@ template<>
 struct action<str_type> {
 	static void apply0(ParseState& state)
 	{
-		state.add((types::Type *)&types::Str);
+		state.add((types::Type *)types::Str);
 	}
 };
 
@@ -821,7 +821,7 @@ struct control<func_decl_out_void> : pegtl::normal<func_decl_out_void>
 		}
 
 		func->setName(name.value.name);
-		func->setOut(types::VoidType::get());
+		func->setOut(types::Void);
 		func->setIns(argTypes);
 		func->setArgNames(argNames);
 
@@ -2811,7 +2811,7 @@ struct control<func_type_out_void> : pegtl::normal<func_type_out_void>
 		std::vector<types::Type *> types;
 		for (auto ent : vec)
 			types.push_back(ent.value.type);
-		state.add((types::Type *)types::FuncType::get(types, types::VoidType::get()));
+		state.add((types::Type *)types::FuncType::get(types, types::Void));
 	}
 
 	template<typename Input>
@@ -2827,7 +2827,7 @@ struct control<func_type_in_out_void> : pegtl::normal<func_type_in_out_void>
 	template<typename Input>
 	static void success(Input&, ParseState& state)
 	{
-		state.add((types::Type *)types::FuncType::get({}, types::VoidType::get()));
+		state.add((types::Type *)types::FuncType::get({}, types::Void));
 	}
 };
 

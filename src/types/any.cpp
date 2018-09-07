@@ -7,7 +7,7 @@ types::AnyType::AnyType() : Type("Any", nullptr)
 {
 }
 
-types::AnyType *types::AnyType::get()
+types::AnyType *types::AnyType::get() noexcept
 {
 	static types::AnyType instance;
 	return &instance;

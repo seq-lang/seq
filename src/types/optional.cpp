@@ -27,8 +27,8 @@ void types::OptionalType::initFields()
 		return;
 
 	vtable.fields = {
-		{"has", {0, &Void}},
-		{"val", {1, &Void}}
+		{"has", {0, Void}},
+		{"val", {1, Void}}
 	};
 }
 
@@ -91,14 +91,9 @@ Value *types::OptionalType::val(Value *self, BasicBlock *block)
 	return isRefOpt() ? self : memb(self, "val", block);
 }
 
-types::OptionalType *types::OptionalType::get(types::Type *baseType)
+types::OptionalType *types::OptionalType::get(types::Type *baseType) noexcept
 {
 	return new OptionalType(baseType);
-}
-
-types::OptionalType& types::OptionalType::of(Type& baseType) const
-{
-	return *OptionalType::get(&baseType);
 }
 
 types::OptionalType *types::OptionalType::get()

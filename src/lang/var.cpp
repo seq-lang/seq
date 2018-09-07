@@ -5,7 +5,7 @@ using namespace llvm;
 
 static void ensureNonVoid(types::Type *type)
 {
-	if (type->is(&types::Void))
+	if (type->is(types::Void))
 		throw exc::SeqException("cannot load or store void variable");
 }
 
