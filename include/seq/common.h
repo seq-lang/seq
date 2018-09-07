@@ -13,8 +13,8 @@ namespace seq {
 		std::string file;
 		int line;
 		int col;
-		SrcInfo(const std::string &file, int line, int col) :
-		    file(file), line(line), col(col) {};
+		SrcInfo(const std::string file, int line, int col) :
+		    file(std::move(file)), line(line), col(col) {};
 		SrcInfo() : SrcInfo("", 0, 0) {};
 	};
 
@@ -35,12 +35,10 @@ namespace seq {
 
 		void setSrcInfo(SrcInfo info)
 		{
-			this->info = info;
+			this->info = std::move(info);
 		}
 
-      virtual ~SrcObject() {
-         
-      }
+		virtual ~SrcObject()=default;
 	};
 
 	inline llvm::IntegerType *seqIntLLVM(llvm::LLVMContext& context)

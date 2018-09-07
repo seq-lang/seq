@@ -250,7 +250,7 @@ const map<string, Format> EXT_CONV = {{"txt",   Format::TXT},
                                       {"bam",   Format::FASTQ}};
 
 DataCell::DataCell(char *buf, const size_t cap) :
-    buf(buf), used(0), cap(cap)
+    buf(buf), used(0), cap(cap), data(), lens(), seqs()
 {
 }
 

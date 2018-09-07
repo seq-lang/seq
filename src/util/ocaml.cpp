@@ -33,9 +33,9 @@ FOREIGN types::Type *ref_type(const char *name)
 	return f;
 }
 
-FOREIGN void set_ref_record(types::RefType *f, types::RecordType *rec) 
+FOREIGN void set_ref_record(types::RefType *f, types::RecordType *rec)
 {
-   f->setContents(rec);
+	f->setContents(rec);
 }
 
 FOREIGN void add_ref_method(types::Type *ref, const char *name, Func *fn)
@@ -239,32 +239,32 @@ FOREIGN void set_func_params(Func *f, const char **names, types::Type **types, s
 
 FOREIGN void set_func_generics(Func *fn, int n)
 {
-   fn->addGenerics(n);
+	fn->addGenerics(n);
 }
 
 FOREIGN types::Type *get_func_generic(Func *fn, int idx)
 {
-   return fn->getGeneric(idx);
+	return fn->getGeneric(idx);
 }
 
 FOREIGN void set_func_generic_name(Func *fn, int idx, const char *name)
 {
-   fn->getGeneric(idx)->setName(name);
+	fn->getGeneric(idx)->setName(name);
 }
 
 FOREIGN void set_ref_generics(types::RefType *fn, int n)
 {
-   fn->addGenerics(n);
+	fn->addGenerics(n);
 }
 
 FOREIGN types::Type *get_ref_generic(types::RefType *fn, int idx)
 {
-   return fn->getGeneric(idx);
+	return fn->getGeneric(idx);
 }
 
 FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, const char *name)
 {
-   fn->getGeneric(idx)->setName(name);
+	fn->getGeneric(idx)->setName(name);
 }
 
 
@@ -319,29 +319,29 @@ FOREIGN Block *get_else_block(If *st)           { return st->addElse(); }
 FOREIGN Block *get_elif_block(If *st, Expr *ex) { return st->addCond(ex); }
 
 FOREIGN struct seq_srcinfo {
-   char *file;
-   int line;
-   int col;
+	char *file;
+	int line;
+	int col;
 };
 
-FOREIGN void set_pos (SrcObject *obj, const char *f, int l, int c) 
+FOREIGN void set_pos (SrcObject *obj, const char *f, int l, int c)
 {
-   if (obj) {
-      // int type = dynamic_cast<Expr*>(obj) ? 1 : (dynamic_cast<Stmt*>(obj) ? 2 : 0);
-      obj->setSrcInfo(SrcInfo(string(f), l, c));
-   }
+	if (obj) {
+		// int type = dynamic_cast<Expr*>(obj) ? 1 : (dynamic_cast<Stmt*>(obj) ? 2 : 0);
+		obj->setSrcInfo(SrcInfo(string(f), l, c));
+	}
 }
 
-FOREIGN seq_srcinfo get_pos (SrcObject *obj) 
+FOREIGN seq_srcinfo get_pos (SrcObject *obj)
 {
-   if (!obj) {
-      return seq_srcinfo { (char*)"", 0, 0 };
-   }
-   auto info = obj->getSrcInfo();
-   char *c = new char[info.file.size() + 1];
-   strncpy(c, info.file.c_str(), info.file.size());
-   c[info.file.size()] = 0;
-   return seq_srcinfo { c, info.line, info.col };
+	if (!obj) {
+		return seq_srcinfo { (char*)"", 0, 0 };
+	}
+	auto info = obj->getSrcInfo();
+	auto *c = new char[info.file.size() + 1];
+	strncpy(c, info.file.c_str(), info.file.size());
+	c[info.file.size()] = 0;
+	return seq_srcinfo { c, info.line, info.col };
 }
 
 FOREIGN Var *get_for_var(For *f)
@@ -368,21 +368,21 @@ FOREIGN bool exec_module(SeqModule *sm, char debug, char **error, seq_srcinfo **
 {
 	try {
 		sm->execute(vector<string>(), debug);
-      *error = NULL;
-      *srcInfo = NULL;
-      return true;
+		*error = nullptr;
+		*srcInfo = nullptr;
+		return true;
 	} catch (exc::SeqException &e) {
-      string msg = e.what();
-      *error = new char[msg.size() + 1];
-      strncpy(*error, msg.c_str(), msg.size());
+		string msg = e.what();
+		*error = new char[msg.size() + 1];
+		strncpy(*error, msg.c_str(), msg.size());
 
-      auto info = e.getSrcInfo();
-      *srcInfo = new seq_srcinfo;
-      (*srcInfo)->line = info.line;
-      (*srcInfo)->col = info.col;
-      (*srcInfo)->file = new char[info.file.size() + 1];
-      strncpy((*srcInfo)->file, info.file.c_str(), info.file.size());
+		auto info = e.getSrcInfo();
+		*srcInfo = new seq_srcinfo;
+		(*srcInfo)->line = info.line;
+		(*srcInfo)->col = info.col;
+		(*srcInfo)->file = new char[info.file.size() + 1];
+		strncpy((*srcInfo)->file, info.file.c_str(), info.file.size());
 
-      return false;
+		return false;
 	}
 }

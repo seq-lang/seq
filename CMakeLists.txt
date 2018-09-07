@@ -34,10 +34,30 @@ endif()
 
 
 # PEGTL download & compile:
+# (adapted from https://github.com/google/googletest/tree/master/googletest)
+# Download and unpack googletest at configure time
+configure_file(cmake/PEGTL.txt.in pegtl-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+                RESULT_VARIABLE result
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pegtl-download )
+if(result)
+  message(FATAL_ERROR "CMake step for PEGTL failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+                RESULT_VARIABLE result
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pegtl-download )
+if(result)
+  message(FATAL_ERROR "Build step for PEGTL failed: ${result}")
+endif()
+
+# Add PEGTL directly to our build.
+add_subdirectory(${CMAKE_BINARY_DIR}/pegtl-src
+                 ${CMAKE_BINARY_DIR}/pegtl-build
+                 EXCLUDE_FROM_ALL)
 
 # Same as above
 if (CMAKE_VERSION VERSION_LESS 2.8.11)
-  include_directories("${PEGTL_SOURCE_DIR}/include")
+  include_directories("${pegtl_SOURCE_DIR}/include")
 endif()
 
 

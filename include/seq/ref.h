@@ -42,7 +42,7 @@ namespace seq {
 			explicit RefType(std::string name);
 		public:
 			RefType(RefType const&)=delete;
-         virtual ~RefType();
+			virtual ~RefType();
 			void operator=(RefType const&)=delete;
 			void setDone();
 			void setContents(RecordType *contents);

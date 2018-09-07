@@ -159,10 +159,10 @@ namespace seq {
 		std::map<void *, void *> cloneCache;
 	public:
 		explicit Generic(bool performCaching);
+		virtual ~Generic();
 
 		virtual std::string genericName()=0;
 		virtual Generic *clone(Generic *ref)=0;
-      virtual ~Generic();
 
 		bool unrealized();
 		std::vector<types::Type *> getRealizedTypes() const;
