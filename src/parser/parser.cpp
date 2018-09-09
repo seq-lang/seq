@@ -1822,7 +1822,7 @@ static Expr *precedenceClimb(std::queue<SeqEntity>& q, const int minPrec)
 }
 
 template<>
-struct control<expr> : pegtl::normal<expr>
+struct control<expr_no_pipe> : pegtl::normal<expr_no_pipe>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
@@ -1840,6 +1840,35 @@ struct control<expr> : pegtl::normal<expr>
 			q.push(ent);
 
 		state.add(precedenceClimb(q, 0));
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<expr_pipe> : pegtl::normal<expr_pipe>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("e", true);
+		std::vector<Expr *> stages;
+
+		for (auto& ent : vec)
+			stages.push_back(ent.value.expr);
+
+		Expr *expr = new PipeExpr(stages);
+		state.add(expr);
 	}
 
 	template<typename Input>

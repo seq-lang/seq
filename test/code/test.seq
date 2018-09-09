@@ -225,7 +225,7 @@ var add_one = add(1)
 var add_two = add[Int](3, _, -1)
 print add[Int](1, 2, 3)
 print add_one(5, 0)
-print add_two(42)
+print 42 |> add_two
 
 # ---------
 }

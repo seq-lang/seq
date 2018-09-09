@@ -30,6 +30,14 @@ namespace seq {
 		types::Type *getType0() const override;
 	};
 
+	class ValueExpr : public Expr {
+	private:
+		llvm::Value *val;
+	public:
+		ValueExpr(types::Type *type, llvm::Value *val);
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+	};
+
 	class IntExpr : public Expr {
 	private:
 		seq_int_t n;
@@ -277,6 +285,17 @@ namespace seq {
 		explicit DefaultExpr(types::Type *type);
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		DefaultExpr *clone(Generic *ref) override;
+	};
+
+	class PipeExpr : public Expr {
+	private:
+		std::vector<Expr *> stages;
+	public:
+		explicit PipeExpr(std::vector<Expr *> stages);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		PipeExpr *clone(Generic *ref) override;
 	};
 
 }

@@ -1,3 +1,4 @@
+#include <queue>
 #include "seq/seq.h"
 
 using namespace seq;
@@ -58,6 +59,15 @@ types::Type *BlankExpr::getType0() const
 Value *BlankExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	throw exc::SeqException("misplaced '_'");
+}
+
+ValueExpr::ValueExpr(types::Type *type, Value *val) : Expr(type), val(val)
+{
+}
+
+Value *ValueExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	return val;
 }
 
 IntExpr::IntExpr(seq_int_t n) : Expr(types::Int), n(n)
@@ -929,4 +939,119 @@ Value *DefaultExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 DefaultExpr *DefaultExpr::clone(Generic *ref)
 {
 	return new DefaultExpr(getType()->clone(ref));
+}
+
+PipeExpr::PipeExpr(std::vector<seq::Expr *> stages) :
+    Expr(), stages(std::move(stages))
+{
+}
+
+void PipeExpr::resolveTypes()
+{
+	for (auto *stage : stages)
+		stage->resolveTypes();
+}
+
+static Value *codegenPipe(BaseFunc *base,
+                          Value *val,
+                          types::Type *type,
+                          BasicBlock*& block,
+                          std::queue<Expr *>& stages)
+{
+	if (stages.empty())
+		return val;
+
+	Expr *stage = stages.front();
+	stages.pop();
+
+	if (!val) {
+		assert(!type);
+		type = stage->getType();
+		val = stage->codegen(base, block);
+		return codegenPipe(base, val, type, block, stages);
+	}
+
+	LLVMContext& context = block->getContext();
+	Function *func = block->getParent();
+
+	assert(val && type);
+
+	ValueExpr arg(type, val);
+	CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
+	type = call.getType();
+	val = call.codegen(base, block);
+
+	if (type->isGeneric(types::Gen) && stage != stages.back()) {
+		auto *genType = dynamic_cast<types::GenType *>(type);
+		assert(genType);
+		Value *gen = val;
+		IRBuilder<> builder(block);
+
+		BasicBlock *loop = BasicBlock::Create(context, "pipe", func);
+		builder.CreateBr(loop);
+
+		builder.SetInsertPoint(loop);
+		genType->resume(gen, loop);
+		Value *cond = genType->done(gen, loop);
+		BasicBlock *body = BasicBlock::Create(context, "body", func);
+		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set true-branch below
+
+		block = body;
+		type = genType->getBaseType(0);
+		val = type->is(types::Void) ? nullptr : genType->promise(gen, block);
+
+		codegenPipe(base, val, type, block, stages);
+
+		builder.SetInsertPoint(block);
+		builder.CreateBr(loop);
+
+		BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
+		branch->setSuccessor(0, cleanup);
+		genType->destroy(gen, cleanup);
+
+		builder.SetInsertPoint(cleanup);
+		BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+		builder.CreateBr(exit);
+		block = exit;
+		return nullptr;
+	} else {
+		return codegenPipe(base, val, type, block, stages);
+	}
+}
+
+Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	std::queue<Expr *> queue;
+	for (auto *stage : stages)
+		queue.push(stage);
+
+	return codegenPipe(base, nullptr, nullptr, block, queue);
+}
+
+types::Type *PipeExpr::getType0() const
+{
+	types::Type *type = nullptr;
+	for (auto *stage : stages) {
+		if (!type) {
+			type = stage->getType();
+			continue;
+		}
+
+		ValueExpr arg(type, nullptr);
+		CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
+		type = call.getType();
+
+		if (stage != stages.back() && type->isGeneric(types::Gen))
+			return types::Void;
+	}
+	assert(type);
+	return type;
+}
+
+PipeExpr *PipeExpr::clone(Generic *ref)
+{
+	std::vector<Expr *> stagesCloned;
+	for (auto *stage : stages)
+		stagesCloned.push_back(stage->clone(ref));
+	return new PipeExpr(stagesCloned);
 }

@@ -196,7 +196,9 @@ struct bop_and : TAO_PEGTL_STRING("&&") {};
 struct bop_or : TAO_PEGTL_STRING("||") {};
 struct op_bop : pegtl::sor<bop_mul, bop_div, bop_mod, bop_add, bop_sub, bop_shl, bop_shr, bop_le, bop_ge, bop_lt, bop_gt, bop_eq, bop_ne, bop_and, bop_or, bop_bitand, bop_xor, bop_bitor> {};
 
-struct expr : pegtl::list<pegtl::seq<pegtl::star<op_uop, seps>, atomic_expr>, pegtl::seq<seps, pegtl::not_at<pipe_op>, op_bop, seps>> {};
+struct expr_no_pipe : pegtl::list<pegtl::seq<pegtl::star<op_uop, seps>, atomic_expr>, pegtl::seq<seps, pegtl::not_at<pipe_op>, op_bop, seps>> {};
+struct expr_pipe : pegtl::seq<expr_no_pipe, pegtl::plus<seps, TAO_PEGTL_STRING("|>"), seps, expr_no_pipe>> {};
+struct expr : pegtl::sor<expr_pipe, expr_no_pipe> {};
 
 /*
  * Patterns
