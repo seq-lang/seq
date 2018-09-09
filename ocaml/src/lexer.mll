@@ -143,7 +143,9 @@ and read state = parse
   | stringprefix '"'      { double_string state (L.lexeme lexbuf) lexbuf }
   | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
   | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
-  | '`' (ident as r) ' ' { 
+
+  | '`' (ident as gen) { P.GENERIC ("`" ^ gen, cur_pos lexbuf) }
+  | (ident as r) '`' { 
     let s = read_extern state (Buffer.create 17) lexbuf in
     P.EXTERN(r, s, cur_pos lexbuf)
   }

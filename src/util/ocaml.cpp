@@ -349,6 +349,17 @@ FOREIGN Var *get_for_var(For *f)
 	return f->getVar();
 }
 
+FOREIGN types::Type *get_type(Expr *e)
+{
+	return e->getType();
+}
+
+FOREIGN types::Type *get_var_type(Var *e)
+{
+	return e->getType();
+}
+
+
 FOREIGN void set_base(Stmt *st, BaseFunc *base)
 {
 	if (st) st->setBase(base);

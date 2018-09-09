@@ -4,6 +4,7 @@ open Core
 
 open Ast
 open Seqtypes
+module T = ANSITerminal 
 
 exception SeqCamlError of string * pos_t
 
@@ -150,13 +151,26 @@ let rec get_seq_stmt ctx block stmt : unit =
   | Statements stmts ->
     List.iter stmts ~f:(get_seq_stmt ctx block);
     pass_stmt (), {pos_fname=""; pos_cnum=0; pos_lnum=0; pos_bol=0}
-  | Assign(lh_expr, rh_expr) ->
-    let rh_expr = get_seq_expr ctx rh_expr in begin 
+  | Assign(lh_expr, rh_expr) -> (* a = b *)
+    (* fprintf stderr ">> %s\n%!" @@ prn_expr (fun x->sprintf "<<%d>> " x.pos_lnum) lh_expr; *)
+    let rh_expr = get_seq_expr ctx rh_expr in 
+    (* let rh_type = get_type rh_expr in  *)
+    begin
     match lh_expr with
     | Id(var, pos) -> begin
       match Hashtbl.find ctx.map var with
       | Some v -> (match v with 
-        | Var v 
+        | Var v ->
+          (* let lh_type = get_var_type v in
+          if lh_type <> rh_type then begin
+          (* if false then begin *)
+            T.eprintf [T.black; T.on_yellow] "[WARN] shadowing variable %s" var;
+            let var_stmt = var_stmt rh_expr in
+            Hashtbl.set ctx.map ~key:var ~data:(Var (var_stmt_var var_stmt));
+            Stack.push ctx.stack (var::Stack.pop_exn ctx.stack);
+            var_stmt, pos
+          end else *)
+            assign_stmt v rh_expr, pos
         | Func v -> 
           assign_stmt v rh_expr, pos
         | Type _ -> 
@@ -280,10 +294,10 @@ let rec get_seq_stmt ctx block stmt : unit =
       | Some _, _ -> 
         t::acc_types, acc_count
       | _, 0 -> 
-        let t = (sprintf "''%d" acc_count) in (* in-code genrics can only have one quote *)
+        let t = (sprintf "``%d" acc_count) in (* in-code genrics can only have one quote *)
         Hashtbl.set generic_types ~key:t ~data:acc_count;
         (t::acc_types, acc_count + 1)
-      | _, _ when t.[0] = '\'' -> (match Hashtbl.find generic_types t with
+      | _, _ when t.[0] = '`' -> (match Hashtbl.find generic_types t with
         | Some _ -> 
           t::acc_types, acc_count
         | None ->
@@ -294,7 +308,6 @@ let rec get_seq_stmt ctx block stmt : unit =
     in
     let typ = ref_type class_name in
     Hashtbl.set ctx.map ~key:class_name ~data:(Type typ);
-    fprintf stderr "--%s >> %d--\n%!" class_name generic_count ;
     set_ref_generics typ generic_count;
 
     let arg_types = List.map (List.rev arg_types) ~f:(fun t ->
@@ -347,10 +360,10 @@ and get_seq_fn ctx ?parent_class = function
       | Some _, _ -> 
         t::acc_types, acc_count
       | _, 0 -> 
-        let t = (sprintf "''%d" acc_count) in (* in-code genrics can only have one quote *)
+        let t = (sprintf "``%d" acc_count) in (* in-code genrics can only have one quote *)
         Hashtbl.set generic_types ~key:t ~data:acc_count;
         (t::acc_types, acc_count + 1)
-      | _, _ when t.[0] = '\'' -> (match Hashtbl.find generic_types t with
+      | _, _ when t.[0] = '`' -> (match Hashtbl.find generic_types t with
         | Some _ -> 
           t::acc_types, acc_count
         | None ->
@@ -359,7 +372,6 @@ and get_seq_fn ctx ?parent_class = function
       | _, _ -> 
         noimp (sprintf "Type %s" t))
     in
-    fprintf stderr "--%s >> %d--\n%!" fn_name generic_count ;
     set_func_generics fn generic_count;
     let arg_types = List.map (List.rev arg_types) ~f:(fun t ->
       match Hashtbl.find generic_types t with 
@@ -420,17 +432,18 @@ let () =
   let state = Lexer.stack_create () in
   let print_error kind ?msg (pos: pos_t) = 
     let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
-    fprintf stderr "%s error: line %d%s\n" kind line (match msg with 
-      |Some m -> sprintf " with %s" m | None -> "");
-    fprintf stderr "%3d: %s\n" line lines.(line - 1);
-    fprintf stderr "    %s^---here---\n%!" (String.make col ' ')
+    let style = [T.Bold; T.red] in
+    T.eprintf style "[ERROR] %s error: line %d%s\n" kind line (match msg with 
+      | Some m -> sprintf " with %s" m | None -> "");
+    T.eprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
+    T.eprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col);
   in
   try
-    (* fprintf stderr "|> Code ==> \n%s\n" code; *)
     let ast = Parser.program (Lexer.token state) lexbuf in  
     let prn_pos (pos: pos_t) = "" in
-    fprintf stderr "|> AST::Caml ==> \n%s\n" @@ Ast.prn_ast prn_pos ast;
-    fprintf stderr "|> C++ ==>\n%!";
+    T.eprintf [T.Bold; T.green] "|> AST ==> \n";
+    T.eprintf [T.green] "%s\n%!" @@ Ast.prn_ast prn_pos ast;
+    T.eprintf [T.Bold] "|> Output ==>\n%!";
     seq_exec ast
   with 
   | Lexer.SyntaxError (msg, pos) ->

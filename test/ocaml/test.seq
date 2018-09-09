@@ -5,7 +5,7 @@
 #	return i + j
 
 print '*** INIT ***'
-print 1 + 2
+print 1 + 2 - 'ee'
 
 print '*** VAR_ASSGN ***'
 b = True
@@ -14,6 +14,8 @@ f = 16.5
 s = 'hello'
 
 j = i + 16
+print j
+j %= 7
 print j
 
 print '*** INLINE_IF ***'
@@ -123,7 +125,7 @@ match il.age:
    case 15 as y: print 'second'; print y
    default: print 'whoops'
 
-class Cls(a, b):
+class Cls(a: `t, b: `t):
    def prn(self):
       print self.a
       print self.b
@@ -131,5 +133,5 @@ class Cls(a, b):
 cl1 = Cls(5, 15)
 cl1.prn()
 
-cl2 = Cls(5, 'oo')
-cl2.prn()
+cl2 = Cls(5, 5)
+cl2.prn

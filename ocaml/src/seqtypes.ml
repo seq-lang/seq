@@ -205,6 +205,9 @@ let get_for_block    = foreign "get_for_block"    (seq_stmt @-> returning seq_bl
 let get_else_block   = foreign "get_else_block"   (seq_stmt @-> returning seq_block)
 let get_elif_block   = foreign "get_elif_block"   (seq_stmt @-> seq_expr @-> returning seq_block)
 
+let get_type = foreign "get_type" (seq_expr @-> returning seq_type)
+let get_var_type = foreign "get_var_type" (seq_var @-> returning seq_type)
+
 let get_pos_t_from_srcinfo src: Ast.pos_t = 
   let file = getf src srcinfo_file in
   let line = getf src srcinfo_line in

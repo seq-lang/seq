@@ -17,7 +17,7 @@
 
 %token <int * Ast.pos_t>             INT
 %token <float * Ast.pos_t>           FLOAT
-%token <string * Ast.pos_t>          STRING ID
+%token <string * Ast.pos_t>          STRING ID GENERIC
 %token <string * Ast.pos_t>          REGEX SEQ
 %token <string * string * Ast.pos_t> EXTERN
 
@@ -245,7 +245,9 @@ expr_statement: /* Expression statement: a + 3 - 5 */
   /* TODO: https://www.python.org/dev/peps/pep-3132/ */
   | test aug_eq test_list { 
     (* TODO tuple assignment *)
-    AssignEq ($1, $2, List.hd_exn $3) 
+    let op, pos = fst $2, snd $2 in
+    let op = String.sub op 0 (String.length op - 1) in
+    Assign ($1, Binary($1, (op, pos), List.hd_exn $3))
   }
    /* TODO: a = b = c = d = ... separated_nonempty_list(EQ, test_list) {  */
   | test EQ test_list { 
@@ -303,8 +305,9 @@ dotted_name:
 func: 
   | DEF; n = ID; LP a = separated_list(COMMA, param); RP COLON; 
     s = suite { Function (TypedArg ((fst n, snd n), None), a, s, $1) }
-  | DEF; n = ID; LP a = separated_list(COMMA, param); RP OF; t = ID; COLON; 
-    s = suite { Function (TypedArg ((fst n, snd n), Some (fst t, snd t)), a, s, $1) }
+  | DEF; n = ID; LP a = separated_list(COMMA, param); RP OF; t = ID; COLON; s = suite
+  | DEF; n = ID; LP a = separated_list(COMMA, param); RP OF; t = GENERIC; COLON; s = suite 
+    { Function (TypedArg ((fst n, snd n), Some (fst t, snd t)), a, s, $1) }
 param:
   /* TODO tuple params--- are they really needed? */
   | ID { TypedArg ((fst $1, snd $1), None) }
@@ -313,7 +316,10 @@ param:
     noimp "NamedArg"
     (*NamedArg ($1, $3)*) }
 typed_param:
-  | ID COLON ID { TypedArg ((fst $1, snd $1), Some (fst $3, snd $3)) }
+  | ID COLON ID 
+  | ID COLON GENERIC { 
+    TypedArg ((fst $1, snd $1), Some (fst $3, snd $3)) 
+  }
 
 /*******************************************************/
 
