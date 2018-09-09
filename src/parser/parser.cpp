@@ -1047,6 +1047,10 @@ struct control<print_stmt> : pegtl::normal<print_stmt>
 		auto *p = new Print(vec[0].value.expr);
 		p->setBase(state.base());
 		state.stmt(p);
+
+		p = new Print(new StrExpr("\n"));
+		p->setBase(state.base());
+		state.stmt(p);
 	}
 
 	template<typename Input>

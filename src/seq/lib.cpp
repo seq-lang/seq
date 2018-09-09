@@ -71,23 +71,22 @@ SEQ_FUNC void *seq_copy_array(void *arr, seq_int_t len, seq_int_t elem_size, boo
 
 SEQ_FUNC void seq_print_int(seq_int_t n)
 {
-	cout << n << '\n';
+	cout << n;
 }
 
 SEQ_FUNC void seq_print_float(double f)
 {
-	cout << f << '\n';
+	cout << f;
 }
 
 SEQ_FUNC void seq_print_bool(bool b)
 {
-	cout << (b ? "true" : "false") << '\n';
+	cout << (b ? "true" : "false");
 }
 
 SEQ_FUNC void seq_print_seq(char *seq, seq_int_t len)
 {
 	cout.write(seq, len);
-	cout << '\n';
 }
 
 
