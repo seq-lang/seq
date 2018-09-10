@@ -99,11 +99,23 @@ let rec get_seq_expr ctx expr =
       let typ = get_type_exn ctx typ in
       construct_expr typ (List.map args ~f:(get_seq_expr ctx)), pos
     | _ ->
-      let callee_expr = get_seq_expr ctx callee_expr in
-      let args_exprs = List.map args ~f:(get_seq_expr ctx) in
-      let pos = get_pos callee_expr in
-      call_expr callee_expr args_exprs, pos
+      if List.exists args ~f:((=)(Ellipsis)) then (
+        let callee_expr = get_seq_expr ctx callee_expr in
+        let args_exprs = List.map args ~f:(fun x ->
+          match x with 
+          | Ellipsis -> Ctypes.null
+          | _ -> get_seq_expr ctx x) in
+        let pos = get_pos callee_expr in
+        partial_expr callee_expr args_exprs, pos
+      ) else (
+        let callee_expr = get_seq_expr ctx callee_expr in
+        let args_exprs = List.map args ~f:(get_seq_expr ctx) in
+        let pos = get_pos callee_expr in
+        call_expr callee_expr args_exprs, pos)
     end
+  | Pipe exprs ->
+    let exprs = List.map exprs ~f:(get_seq_expr ctx) in
+    pipe_expr exprs, get_pos (List.hd_exn exprs)
   | Dot(lh_expr, (rhs, pos)) -> begin
     match lh_expr with
     | Id(typ, _) when has_type ctx typ -> 
@@ -193,8 +205,19 @@ let rec get_seq_stmt ctx block stmt : unit =
   | Exprs expr ->
     let expr = get_seq_expr ctx expr in
     expr_stmt expr, (get_pos expr)
-  | Print (print_expr, pos) ->
-    print_stmt (get_seq_expr ctx print_expr), pos
+  | Print (print_exprs, pos) ->
+    (* TODO: fix pos arguments *)
+    List.iter print_exprs ~f:(fun ps -> 
+      let stmt = print_stmt @@ get_seq_expr ctx ps in
+      set_base stmt ctx.base;
+      set_pos stmt pos;
+      add_stmt stmt block;
+      let stmt = print_stmt @@ get_seq_expr ctx @@ String(" ", pos) in
+      set_base stmt ctx.base;
+      set_pos stmt pos;
+      add_stmt stmt block
+    );
+    print_stmt (get_seq_expr ctx @@ String("\n", pos)), pos
   | Return (ret_expr, pos) ->
     let ret_stmt = return_stmt (get_seq_expr ctx ret_expr) in
     set_func_return ctx.base ret_stmt; 
@@ -433,17 +456,17 @@ let () =
   let print_error kind ?msg (pos: pos_t) = 
     let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
     let style = [T.Bold; T.red] in
-    T.eprintf style "[ERROR] %s error: line %d%s\n" kind line (match msg with 
+    eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: line %d%s\n" kind line (match msg with 
       | Some m -> sprintf " with %s" m | None -> "");
-    T.eprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
-    T.eprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col);
+    eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
+    eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col);
   in
   try
     let ast = Parser.program (Lexer.token state) lexbuf in  
     let prn_pos (pos: pos_t) = "" in
-    T.eprintf [T.Bold; T.green] "|> AST ==> \n";
-    T.eprintf [T.green] "%s\n%!" @@ Ast.prn_ast prn_pos ast;
-    T.eprintf [T.Bold] "|> Output ==>\n%!";
+    eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST ==> \n";
+    eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast prn_pos ast;
+    eprintf "%s%!" @@ T.sprintf [T.Bold] "|> Output ==>\n%!";
     seq_exec ast
   with 
   | Lexer.SyntaxError (msg, pos) ->

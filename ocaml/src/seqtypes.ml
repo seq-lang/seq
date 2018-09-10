@@ -92,6 +92,22 @@ let call_expr expr lst =
 	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
 	call_expr' expr (CArray.start c_arr) c_len 
 
+
+let partial_expr' = foreign "partial_expr" 
+	(seq_expr @-> ptr seq_expr @-> size_t @-> returning seq_expr)
+let partial_expr expr lst = 
+	let c_arr = CArray.of_list seq_expr lst in
+	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
+	partial_expr' expr (CArray.start c_arr) c_len 
+
+let pipe_expr' = foreign "pipe_expr" 
+	(ptr seq_expr @-> size_t @-> returning seq_expr)
+let pipe_expr lst = 
+	let c_arr = CArray.of_list seq_expr lst in
+	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
+	pipe_expr' (CArray.start c_arr) c_len 
+
+
 let get_elem_expr = foreign "get_elem_expr" 
 	(seq_expr @-> string @-> returning seq_expr)
 let array_expr = foreign "array_expr"

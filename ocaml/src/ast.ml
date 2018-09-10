@@ -29,7 +29,7 @@ type expr =
   | IfExpr of expr * expr * expr
   (* | Lambda of vararg list * expr  *)
 
-  (* | Pipe of expr list *)
+  | Pipe of expr list
   | Cond of expr * (string * pos_t) * expr
   | Unary of (string * pos_t) * expr
   | Binary of expr * (string * pos_t) * expr
@@ -40,7 +40,7 @@ type expr =
 
   (* | Comprehension of expr list * expr list * expr option *)
   (* | ComprehensionIf of expr *)
-  (* | Ellipsis *)
+  | Ellipsis
 and vararg = 
   | PlainArg of string * pos_t
   | TypedArg of (string * pos_t) * (string * pos_t) option 
@@ -54,7 +54,7 @@ type statement =
   | Exprs of expr
   | Assign of expr * expr
   | AssignEq of expr * (string * pos_t) * expr
-  | Print of expr * pos_t
+  | Print of expr list * pos_t
   | Return of expr * pos_t
   | Yield of expr * pos_t
   (* | Global of expr list  *)
@@ -100,7 +100,7 @@ let rec prn_expr prn_pos = function
   (* | DictGenerator((k, v), ge, _) -> sprintf "DictGen[%s:%s; %s]" (prn_expr k) (prn_expr v) (prn_expr ge) *)
   | IfExpr(c, i, e) -> sprintf "InlineIf[%s; %s; %s]" (prn_expr prn_pos c) (prn_expr prn_pos i) (prn_expr prn_pos e)
   (* | Lambda(v, e, _) -> sprintf "Lambda[%s; %s]" (sci ", " v prn_va) (prn_expr prn_pos e)  *)
-  (* | Pipe(el, _) -> sprintf "Pipe[%s]" @@ sci ", " el prn_expr prn_pos *)
+  | Pipe(el) -> sprintf "Pipe[%s]" @@ sci ", " el (prn_expr prn_pos)
   | Cond(e, (o, pos), ee) -> sprintf "%s%s[%s, %s]" (prn_pos pos) o (prn_expr prn_pos e) (prn_expr prn_pos ee)
   | Binary(e, (o, pos), ee) -> sprintf "%s%s[%s, %s]" (prn_pos pos) o (prn_expr prn_pos e) (prn_expr prn_pos ee)
   | Unary((o, pos), e) -> sprintf "%s%s[%s]" (prn_pos pos) o @@ prn_expr prn_pos e
@@ -111,7 +111,7 @@ let rec prn_expr prn_pos = function
     (* let cont = match li with None -> "" | Some x -> prn_expr x in *)
     (* sprintf "_For[%s; %s]%s" (sci ", " fi prn_expr) (sci ", " ei prn_expr) cont *)
   (* | ComprehensionIf(e, _) -> sprintf "_If[%s]" @@ prn_expr e *)
-  (* | Ellipsis -> "..." *)
+  | Ellipsis -> "..."
   | Slice(a, b, c, pos) ->
     let a = match a with None -> "" | Some x -> prn_expr prn_pos x in
     let b = match b with None -> "" | Some x -> prn_expr prn_pos x in
@@ -132,7 +132,7 @@ let rec prn_statement level prn_pos st =
   | Exprs(el) -> sprintf "Exprs[%s]" (sci "," [el] (prn_expr prn_pos))
   | Assign(sl, el) -> sprintf "Asgn[%s := %s]" (prn_expr prn_pos sl) (prn_expr prn_pos el)
   | AssignEq(sl, (op, pos), el) -> sprintf "Asgn[%s %s%s %s]" (prn_expr prn_pos sl) (prn_pos pos) op (prn_expr prn_pos el)
-  | Print(el, pos) -> sprintf "%sPrint[%s]" (prn_pos pos) (sci ", " [el] (prn_expr prn_pos))
+  | Print(ell, pos) -> sprintf "%sPrint[%s]" (prn_pos pos) (sci ", " ell (prn_expr prn_pos))
   | Yield(el, pos) -> sprintf "%sYield[%s]" (prn_pos pos) (prn_expr prn_pos el)
   | Return(el, pos) -> sprintf "%sReturn[%s]" (prn_pos pos) (prn_expr prn_pos el)
   (* | Global(el, _) -> sprintf "Global[%s]" (sci ", " el (prn_expr)) *)

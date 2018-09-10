@@ -77,6 +77,17 @@ FOREIGN Expr *call_expr(Expr *fn, Expr **args, size_t size)
 	return new CallExpr(fn, vector<Expr*>(args, args + size));
 }
 
+FOREIGN Expr *partial_expr(Expr *fn, Expr **args, size_t size)
+{
+	return new PartialCallExpr(fn, vector<Expr*>(args, args + size));
+}
+
+FOREIGN Expr *pipe_expr(Expr **args, size_t size)
+{
+	return new PipeExpr(vector<Expr*>(args, args + size));
+}
+
+
 FOREIGN Expr *get_elem_expr(Expr *lhs, const char *rhs)
 {
 	return new GetElemExpr(lhs, string(rhs));

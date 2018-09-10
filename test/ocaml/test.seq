@@ -1,137 +1,162 @@
-# this is seq test file 
 
-#def fn(i: int, j: int) -> int:
-#	k = Array[int](10)
-#	return i + j
+def split(s: str, k: int, step: int):
+   i = 0
+   while i + k <= s.len:
+      yield s[i:i + k]
+      i += step
 
-print '*** INIT ***'
-print 1 + 2 - 'ee'
+def double(x: str):
+   yield x
+   yield x
 
-print '*** VAR_ASSGN ***'
-b = True
-i = 32
-f = 16.5
-s = 'hello'
+def echo(x: str):
+   print x
 
-j = i + 16
-print j
-j %= 7
-print j
+s = "helloworld"
+for sp in split(s, 3, 1):
+   print '>', sp
 
-print '*** INLINE_IF ***'
-k = 1 if j > 20 else 0
-print k
-print s
+gen = s |> split(..., 3, 1) |> double(...)
+for j in gen:
+   print j
 
-# # Call
-# # Dot
-# # Index, SliceIndex
 
-print '*** TUPLE ***'
-t = (1, 'hello')
-# # print t
+# # this is seq test file 
 
-print '*** MULTI_STMT ***'
-x = 1; y = 2; print x + y
+# #def fn(i: int, j: int) -> int:
+# #	k = Array[int](10)
+# #	return i + j
 
-print '*** IF ***'
-if x == 1:
-   print 'x is one'
-else:
-   print 'whoops'
+# print '*** INIT ***'
+# print 1 + 2 
 
-print '*** WHILE ***'
-print 'loop'
-i = 0
-while i < 32:
-   print i
-   i = i + 1
+# print '*** VAR_ASSGN ***'
+# b = True
+# i = 32
+# f = 16.5
+# s = 'hello'
 
-print '*** FN ***'
-def test(x: int, y: int, z: str) -> str:
-   print z
-   print x + y
-   return "success"
-test(10, 1, "ohai")
-yy = test(10, 1, "ohai1")
-print yy
+# j = i + 16
+# print j
+# j %= 7
+# print j
 
-def test2(x: int, y: int, z) -> void:
-   print z
-   print x + y
-# test2(1, 2, "hello")
-# test2(1, 2, 3.14)
-
-def yiyi(x: int) -> int:
-   y = 0
-   while y < x:
-      print y
-      yield y
-      y = y + 1
-for ii in yiyi(10):
-   print ii
-
-# test2(1, 2, "o-hai")
-# k = test(1, 2, "o-hai")
+# print '*** INLINE_IF ***'
+# k = 1 if j > 20 else 0
 # print k
+# print s
+
+# # # Call
+# # # Dot
+# # # Index, SliceIndex
+
+# print '*** TUPLE ***'
+# t = (1, 'hello')
+# # # print t
+
+# print '*** MULTI_STMT ***'
+# x = 1; y = 2; print x + y
+
+# print '*** IF ***'
+# if x == 1:
+#    print 'x is one'
+# else:
+#    print 'whoops'
+
+# print '*** WHILE ***'
+# print 'loop'
+# i = 0
+# while i < 32:
+#    print i
+#    i = i + 1
+
+# print '*** FN ***'
+# def test(x: int, y: int, z: str) -> str:
+#    print z
+#    print x + y
+#    return "success"
+# test(10, 1, "ohai")
+# yy = test(10, 1, "ohai1")
+# print yy
+
+# def test2(x: int, y: int, z) -> void:
+#    print z
+#    print x + y
+# # test2(1, 2, "hello")
+# # test2(1, 2, 3.14)
+
+# def yiyi(x: int) -> int:
+#    y = 0
+#    while y < x:
+#       print y
+#       yield y
+#       y = y + 1
+# for ii in yiyi(10):
+#    print ii
+
+# # test2(1, 2, "o-hai")
+# # k = test(1, 2, "o-hai")
+# # print k
 
 
-#type T(name: str)
-#t = T("hamo")
+# #type T(name: str)
+# #t = T("hamo")
 
 
-print "*** ARRAYS ***"
-arr = array(int, 10)
-i = 0
-while i < 10:
-   arr[i] = i 
-   i = i + 1
-print arr[55]
-while i >= 0:
-   print arr[i]
-   i = i - 1
+# print "*** ARRAYS ***"
+# arr = array(int, 10)
+# i = 0
+# while i < 10:
+#    arr[i] = i 
+#    i = i + 1
+# print arr[55]
+# while i >= 0:
+#    print arr[i]
+#    i = i - 1
 
-print "*** TYPES ***"
-type T(name: str, age: int)
-tt = T("hamo", 29)
-print tt.name
+# print "*** TYPES ***"
+# type T(name: str, age: int)
+# tt = T("hamo", 29)
+# print tt.name
 
-print "*** CLASSES ***"
-class IntList(content: str, age: int):
-   def print_content_with(self, i: int) -> void:
-      print self.content
-      self.age = 16
-      print i
+# print "*** CLASSES ***"
+# class IntList(content: str, age: int):
+#    def print_content_with(self, i: int) -> void:
+#       print self.content
+#       self.age = 16
+#       print i
 
-   def static_print(i: int) -> void:
-      print i
+#    def static_print(i: int) -> void:
+#       print i
 
 
-il = IntList("hai", 10)
-il.print_content_with(3)
-il.content = "hai2"
-il.print_content_with(4)
-IntList.static_print(5)
+# il = IntList("hai", 10)
+# il.print_content_with(3)
+# il.content = "hai2"
+# il.print_content_with(4)
+# IntList.static_print(5)
 
-print "*** GENERICS ***"
-def ff(x, y: int):
-   return x + y
-print ff(3, 5)
+# print "*** GENERICS ***"
+# def ff(x, y: int):
+#    return x + y
+# print ff(3, 5)
 
-print "*** MATCH ***"
-il.age = 10
-match il.age:
-   case 10: print 'first'
-   case 15 as y: print 'second'; print y
-   default: print 'whoops'
+# print "*** MATCH ***"
+# il.age = 10
+# match il.age:
+#    case 10: print 'first'
+#    case 15 as y: print 'second'; print y
+#    default: print 'whoops'
 
-class Cls(a: `t, b: `t):
-   def prn(self):
-      print self.a
-      print self.b
+# class Cls(a: `t, b: `t):
+#    def prn(self):
+#       print self.a
+#       print self.b
 
-cl1 = Cls(5, 15)
-cl1.prn()
+# cl1 = Cls(5, 15)
+# cl1.prn()
 
-cl2 = Cls(5, 5)
-cl2.prn
+# cl2 = Cls(5, 5)
+# cl2.prn
+
+# print 1, 2, 3, 'ohai', cl1.a

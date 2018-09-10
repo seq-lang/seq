@@ -4,13 +4,10 @@
   open Ast
   open Core
 
-  let flat x = x
-  (* 
   let flat x = match x with
-    | [] -> raise_s [%message "flat function failed unexpectedly" (x: expr list)]
+    | [] -> raise_s [%message "flat function failed unexpectedly"] 
     | h::[] -> h 
     | h::el -> Pipe (h::el)
-  *)
 
   let noimp s = raise (NotImplentedError ("Not yet implemented: " ^ s))
 %}
@@ -151,8 +148,8 @@ test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 
 test_list: 
   | separated_nonempty_list(COMMA, test) { $1 }
 pipe_test: /* Pipe operator: a, a |> b */
-  | or_test { $1 }
-  | or_test PIPE pipe_test { Binary ($1, $2, $3) }
+  | or_test { [$1] }
+  | or_test PIPE pipe_test { $1::$3 }
 or_test: /* OR operator: a, a or b */
   | and_test { $1 }
   | and_test OR or_test { Cond ($1, $2, $3) }
@@ -168,12 +165,15 @@ not_test: /* General comparison: a, not a, a < 5 */
   | LESS | LEQ | GREAT | GEQ | EEQ | NEQ { $1 }
 expr_term: /* Expression term: 4, a(4), a[5], a.x, p */
   | atom { $1 }
-  | expr_term LP separated_list(COMMA, test) RP { Call ($1, $3) }
+  | expr_term LP separated_list(COMMA, call_term) RP { Call ($1, $3) }
   | expr_term LS separated_nonempty_list(COMMA, sub) RS { 
     (* TODO: tuple index *)
     Index ($1, List.hd_exn $3) 
   }
   | expr_term DOT ID { Dot ($1, (fst $3, snd $3)) }
+call_term:
+	| ELLIPSIS { Ellipsis }
+	| test { $1 }
 expr: /* General arithmetic: 4, 5 + p */
   | expr_term { $1 }
   | ADD expr_term 
@@ -220,7 +220,7 @@ small_statement: /* Simple one-line statements: 5+3, print x */
   /* TODO del, exec/eval?,  */
   | expr_statement { $1 }
   | import_statement { noimp "Import" (* $1 *) }
-  | PRINT test_list { Print (List.hd_exn $2, $1) }
+  | PRINT test_list { Print ($2, $1) }
   | PASS { Pass $1 }
   | BREAK { Break $1 }
   | CONTINUE { Continue $1 }
