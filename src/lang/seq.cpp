@@ -48,6 +48,8 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 	auto argiter = func->arg_begin();
 	Value *argc = argiter++;
 	Value *argv = argiter;
+	argc->setName("argc");
+	argv->setName("argv");
 
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
 	BasicBlock *loop = BasicBlock::Create(context, "loop", func);
@@ -204,13 +206,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 	eng->addGlobalMapping(initFunc, (void *)seq_init);
 	eng->addGlobalMapping(strlenFunc, (void *)strlen);
 
-	typedef void (*Main)(const int, const char **);
-	auto main = (Main)eng->getPointerToFunction(func);
-	auto argc = (int)args.size();
-	auto *argv = new const char *[argc];
-	for (int i = 0; i < argc; i++)
-		argv[i] = args[i].c_str();
-	main(argc, argv);
+	eng->runFunctionAsMain(func, args, nullptr);
 }
 
 LLVMContext& seq::getLLVMContext()
