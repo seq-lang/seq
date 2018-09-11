@@ -524,9 +524,6 @@ void For::resolveTypes()
 
 void For::codegen0(BasicBlock*& block)
 {
-	if (!gen->getType()->isGeneric(types::Gen))
-		throw exc::SeqException("cannot iterate over non-generator");
-
 	auto *type = dynamic_cast<types::GenType *>(gen->getType());
 	assert(type);
 
