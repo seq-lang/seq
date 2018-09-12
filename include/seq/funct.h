@@ -51,7 +51,6 @@ namespace seq {
 
 			Type *getBaseType(seq_int_t idx) const override;
 			bool is(Type *type) const override;
-			bool isGeneric(Type *type) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			static GenType *get(Type *outType) noexcept;

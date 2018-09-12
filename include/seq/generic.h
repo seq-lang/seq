@@ -137,7 +137,6 @@ namespace seq {
 
 			bool is(Type *type) const override;
 			bool isGeneric(Type *type) const override;
-			bool isChildOf(Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
 			Type *getCallType(std::vector<Type *> inTypes) override;
 			Type *getConstructType(std::vector<Type *> inTypes) override;
@@ -186,7 +185,7 @@ namespace seq {
 			return false;
 
 		for (unsigned i = 0; i < v1.size(); i++) {
-			if (!v1[i]->is(v2[i]) && !v2[i]->is(v1[i]))
+			if (!types::is(v1[i], v2[i]))
 				return false;
 		}
 

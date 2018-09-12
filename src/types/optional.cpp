@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::OptionalType::OptionalType(seq::types::Type *baseType) :
-    Type(baseType->getName() + "Optional", BaseType::get(), Key::OPTIONAL), baseType(baseType)
+    Type(baseType->getName() + "?", BaseType::get(), Key::OPTIONAL), baseType(baseType)
 {
 }
 
@@ -35,11 +35,6 @@ void types::OptionalType::initFields()
 bool types::OptionalType::isAtomic() const
 {
 	return baseType->isAtomic();
-}
-
-bool types::OptionalType::isGeneric(Type *type) const
-{
-	return dynamic_cast<types::OptionalType *>(type) != nullptr;
 }
 
 types::Type *types::OptionalType::getBaseType(seq_int_t idx) const

@@ -202,7 +202,6 @@ namespace seq {
 
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;
-			virtual bool isChildOf(Type *type) const;
 			virtual Type *getBaseType(seq_int_t idx) const;
 			virtual Type *getCallType(std::vector<Type *> inTypes);
 			virtual Type *getConstructType(std::vector<Type *> inTypes);
@@ -212,6 +211,7 @@ namespace seq {
 			virtual Type *clone(Generic *ref);
 		};
 
+		bool is(Type *type1, Type *type2);
 	}
 
 	struct OpSpec {

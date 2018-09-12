@@ -51,7 +51,6 @@ namespace seq {
 			void initFields() override;
 
 			bool isAtomic() const override;
-			bool isGeneric(Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
 			Type *getConstructType(std::vector<Type *> inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;

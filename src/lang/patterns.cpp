@@ -9,7 +9,7 @@ Pattern::Pattern(types::Type *type) : SrcObject(), type(type)
 
 void Pattern::resolveTypes(types::Type *type)
 {
-	if (!type->is(this->type))
+	if (!types::is(type, this->type))
 		throw exc::SeqException("pattern type mismatch: expected " + this->type->getName() +
 		                        " but got " + type->getName(), getSrcInfo());
 }

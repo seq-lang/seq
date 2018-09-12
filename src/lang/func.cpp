@@ -49,9 +49,7 @@ Func::Func() :
 		assert(this->argNames.size() == this->inTypes.size());
 }
 
-Func::~Func()
-{
-}
+Func::~Func()=default;
 
 Block *Func::getBlock()
 {
@@ -74,7 +72,12 @@ Func *Func::realize(std::vector<types::Type *> types)
 
 std::vector<types::Type *> Func::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes)
 {
-	assert(unrealized() && argTypes.size() == inTypes.size());
+	assert(unrealized());
+
+	if (argTypes.size() != inTypes.size())
+		throw exc::SeqException("expected " + std::to_string(inTypes.size()) + " function arguments, " +
+		                        "but got " + std::to_string(argTypes.size()));
+
 	std::vector<types::Type *> types(numGenerics(), nullptr);
 
 	for (unsigned i = 0; i < argTypes.size(); i++) {
@@ -305,7 +308,7 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 	if (gen && val)
 		throw exc::SeqException("cannot return value from generator");
 
-	if (val && type && !type->isChildOf(outType))
+	if (val && type && !types::is(type, outType))
 		throw exc::SeqException(
 		  "cannot return '" + type->getName() + "' from function returning '" +
 		  outType->getName() + "'");
@@ -338,7 +341,7 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	if (!gen)
 		throw exc::SeqException("cannot yield from a non-generator");
 
-	if (type && !type->isChildOf(outType->getBaseType(0)))
+	if (type && !types::is(type, outType->getBaseType(0)))
 		throw exc::SeqException(
 		  "cannot yield '" + type->getName() + "' from generator yielding '" +
 		  outType->getBaseType(0)->getName() + "'");

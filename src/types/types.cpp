@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
+#include <typeinfo>
 #include "seq/seq.h"
 
 using namespace seq;
@@ -454,7 +455,7 @@ OpSpec types::Type::findBOp(const std::string &symbol, types::Type *rhsType)
 	Op op = bop(symbol);
 
 	for (auto& e : getVTable().ops) {
-		if (e.op == op && rhsType->isChildOf(e.rhsType))
+		if (e.op == op && types::is(rhsType, e.rhsType))
 			return e;
 	}
 
@@ -470,17 +471,12 @@ bool types::Type::isAtomic() const
 
 bool types::Type::is(types::Type *type) const
 {
-	return getName() == type->getName();
+	return isGeneric(type);
 }
 
 bool types::Type::isGeneric(types::Type *type) const
 {
-	return is(type);
-}
-
-bool types::Type::isChildOf(types::Type *type) const
-{
-	return is(type) || (parent && parent->isChildOf(type));
+	return typeid(*this) == typeid(*type);
 }
 
 types::Type *types::Type::getBaseType(seq_int_t idx) const
@@ -511,4 +507,9 @@ seq_int_t types::Type::size(Module *module) const
 types::Type *types::Type::clone(Generic *ref)
 {
 	return this;
+}
+
+bool types::is(types::Type *type1, types::Type *type2)
+{
+	return type1->is(type2) || type2->is(type1);
 }

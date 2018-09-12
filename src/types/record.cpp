@@ -5,12 +5,15 @@ using namespace llvm;
 
 static std::string getNameFromTypes(std::vector<types::Type *> types)
 {
-	std::string name;
+	std::string name = "(";
 
-	for (auto *type : types)
+	for (auto *type : types) {
 		name += type->getName();
+		if (type != types.back())
+			name += ", ";
+	}
 
-	name += "Record";
+	name += ")";
 	return name;
 }
 
@@ -166,11 +169,6 @@ void types::RecordType::initFields()
 	}
 }
 
-bool types::RecordType::isGeneric(Type *type) const
-{
-	return dynamic_cast<types::RecordType *>(type) != nullptr;
-}
-
 types::Type *types::RecordType::getBaseType(seq_int_t idx) const
 {
 	if (idx < 1 || idx > (seq_int_t)types.size())
@@ -186,7 +184,7 @@ types::Type *types::RecordType::getConstructType(std::vector<Type *> inTypes)
 		                        "but got " + std::to_string(inTypes.size()));
 
 	for (unsigned i = 0; i < inTypes.size(); i++) {
-		if (!inTypes[i]->is(types[i]) && !types[i]->is(inTypes[i]))
+		if (!types::is(inTypes[i], types[i]))
 			throw exc::SeqException("expected " + types[i]->getName() +
 			                        ", but got " + inTypes[i]->getName());
 	}

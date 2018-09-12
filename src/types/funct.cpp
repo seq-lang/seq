@@ -3,17 +3,23 @@
 using namespace seq;
 using namespace llvm;
 
-static std::string getFuncName(std::vector<types::Type *> inTypes)
+static std::string getFuncName(std::vector<types::Type *> inTypes, types::Type *outType)
 {
-	std::string name;
-	for (auto *type : inTypes)
+	std::string name = "((";
+	for (auto *type : inTypes) {
 		name += type->getName();
-	name += "Func";
+		if (type != inTypes.back())
+			name += ", ";
+	}
+
+	name += ") -> ";
+	name += outType->getName();
+	name += ")";
 	return name;
 }
 
-types::FuncType::FuncType(std::vector<types::Type *> inTypes, Type *outType) :
-    Type(getFuncName(inTypes), BaseType::get(), Key::FUNC),
+types::FuncType::FuncType(std::vector<types::Type *> inTypes, types::Type *outType) :
+    Type(getFuncName(inTypes, outType), BaseType::get(), Key::FUNC),
     inTypes(std::move(inTypes)), outType(outType)
 {
 }
@@ -41,11 +47,11 @@ bool types::FuncType::is(Type *type) const
 {
 	auto *fnType = dynamic_cast<FuncType *>(type);
 
-	if (!fnType || !outType->is(fnType->outType) || inTypes.size() != fnType->inTypes.size())
+	if (!fnType || !types::is(outType, fnType->outType) || inTypes.size() != fnType->inTypes.size())
 		return false;
 
 	for (unsigned i = 0; i < inTypes.size(); i++)
-		if (!inTypes[i]->is(fnType->inTypes[i]))
+		if (!types::is(inTypes[i], fnType->inTypes[i]))
 			return false;
 
 	return true;
@@ -57,7 +63,7 @@ types::Type *types::FuncType::getCallType(std::vector<Type *> inTypes)
 		throw exc::SeqException("expected " + std::to_string(this->inTypes.size()) + " arguments, but got " + std::to_string(inTypes.size()));
 
 	for (unsigned i = 0; i < inTypes.size(); i++)
-		if (!inTypes[i]->isChildOf(this->inTypes[i]))
+		if (!types::is(inTypes[i], this->inTypes[i]))
 			throw exc::SeqException(
 			  "expected function input type '" + this->inTypes[i]->getName() + "', but got '" + inTypes[i]->getName() + "'");
 
@@ -92,7 +98,7 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 }
 
 types::GenType::GenType(Type *outType) :
-    Type(outType->getName() + "Gen", BaseType::get(), Key::FUNC), outType(outType)
+    Type(outType->getName() + "+", BaseType::get(), Key::FUNC), outType(outType)
 {
 	types::VoidType *voidType = types::VoidType::get();
 	types::Type *type = this->outType->is(voidType) ? (types::Type *)voidType :
@@ -187,12 +193,7 @@ types::Type *types::GenType::getBaseType(seq_int_t idx) const
 bool types::GenType::is(Type *type) const
 {
 	auto *genType = dynamic_cast<GenType *>(type);
-	return genType && outType->is(genType->outType);
-}
-
-bool types::GenType::isGeneric(Type *type) const
-{
-	return (dynamic_cast<GenType *>(type) != nullptr);
+	return genType && types::is(outType, genType->outType);
 }
 
 Type *types::GenType::getLLVMType(LLVMContext &context) const
@@ -220,8 +221,22 @@ types::GenType *types::GenType::clone(Generic *ref)
 	return get(outType->clone(ref));
 }
 
+static std::string getPartialFuncName(types::Type *callee, std::vector<types::Type *> callTypes)
+{
+	std::string name = callee->getName();
+	name += "(";
+	for (unsigned i = 0; i < callTypes.size(); i++) {
+		name += callTypes[i] ? callTypes[i]->getName() : "_";
+		if (i < callTypes.size() - 1)
+			name += ", ";
+	}
+
+	name += ")";
+	return name;
+}
+
 types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::Type *> callTypes) :
-    Type("PartialFunc", BaseType::get(), Key::FUNC), callee(callee), callTypes(std::move(callTypes))
+    Type(getPartialFuncName(callee, callTypes), BaseType::get(), Key::FUNC), callee(callee), callTypes(std::move(callTypes))
 {
 	std::vector<types::Type *> types;
 	types.push_back(this->callee);
@@ -281,7 +296,7 @@ static bool nullMatch(std::vector<T *> v1, std::vector<T *> v2)
 bool types::PartialFuncType::is(types::Type *type) const
 {
 	auto *p = dynamic_cast<types::PartialFuncType *>(type);
-	return p && nullMatch(callTypes, p->callTypes) && contents->is(p->contents);
+	return p && nullMatch(callTypes, p->callTypes) && types::is(contents, p->contents);
 }
 
 types::Type *types::PartialFuncType::getCallType(std::vector<types::Type *> inTypes)

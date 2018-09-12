@@ -38,7 +38,7 @@ types::Type *Expr::getType0() const
 void Expr::ensure(types::Type *type)
 {
 	types::Type *actual = getType();
-	if (!actual->is(type) && !type->is(actual))
+	if (!types::is(type, actual))
 		throw exc::SeqException("expected '" + type->getName() + "', got '" + getType()->getName() + "'", getSrcInfo());
 }
 
@@ -730,11 +730,13 @@ Value *CondExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 types::Type *CondExpr::getType0() const
 {
-	if (!ifTrue->getType()->is(ifFalse->getType()))
-		throw exc::SeqException("inconsistent types '" + ifTrue->getType()->getName() + "' and '" +
-		                        ifFalse->getType()->getName() + "' in conditional expression");
+	types::Type *trueType = ifTrue->getType();
+	types::Type *falseType = ifFalse->getType();
+	if (!types::is(trueType, falseType))
+		throw exc::SeqException("inconsistent types '" + trueType->getName() + "' and '" +
+		                        falseType->getName() + "' in conditional expression");
 
-	return ifTrue->getType();
+	return trueType;
 }
 
 CondExpr *CondExpr::clone(Generic *ref)
@@ -833,7 +835,7 @@ types::Type *MatchExpr::getType0() const
 	types::Type *type = exprs[0]->getType();
 
 	for (auto *expr : exprs) {
-		if (!expr->getType()->is(type) && !type->is(expr->getType()))
+		if (!types::is(type, expr->getType()))
 			throw exc::SeqException("inconsistent result types in match expression");
 	}
 

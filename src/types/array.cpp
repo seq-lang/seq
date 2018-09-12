@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::ArrayType::ArrayType(Type *baseType) :
-    Type(baseType->getName() + "Array", BaseType::get(), Key::ARRAY), baseType(baseType)
+    Type(baseType->getName() + "[]", BaseType::get(), Key::ARRAY), baseType(baseType)
 {
 	SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_array);
 }
@@ -251,11 +251,6 @@ Value *types::ArrayType::defaultValue(BasicBlock *block)
 bool types::ArrayType::isAtomic() const
 {
 	return false;
-}
-
-bool types::ArrayType::isGeneric(Type *type) const
-{
-	return dynamic_cast<types::ArrayType *>(type) != nullptr;
 }
 
 void types::ArrayType::initFields()

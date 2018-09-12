@@ -11,10 +11,7 @@ types::RefType::RefType(std::string name) :
 {
 }
 
-types::RefType::~RefType()
-{
-
-}
+types::RefType::~RefType()=default;
 
 void types::RefType::setDone()
 {
@@ -30,6 +27,12 @@ void types::RefType::setDone()
 void types::RefType::setContents(types::RecordType *contents)
 {
 	this->contents = contents;
+}
+
+std::string types::RefType::getName() const
+{
+	std::string params = contents->getName();
+	return Type::getName() + "[" + params.substr(1, params.length() - 2) + "]";
 }
 
 std::string types::RefType::genericName()
@@ -64,8 +67,13 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 
 std::vector<types::Type *> types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes)
 {
+	assert(unrealized());
 	std::vector<types::Type *> inTypes = contents->getTypes();
-	assert(unrealized() && argTypes.size() == inTypes.size());
+
+	if (argTypes.size() != inTypes.size())
+		throw exc::SeqException("expected " + std::to_string(inTypes.size()) + " constructor arguments, " +
+		                        "but got " + std::to_string(argTypes.size()));
+
 	std::vector<types::Type *> types(numGenerics(), nullptr);
 
 	for (unsigned i = 0; i < argTypes.size(); i++) {
@@ -214,7 +222,7 @@ types::Type *types::RefType::getConstructType(std::vector<Type *> inTypes)
 		                        "but got " + std::to_string(inTypes.size()));
 
 	for (unsigned i = 0; i < inTypes.size(); i++) {
-		if (!inTypes[i]->is(expTypes[i]) && !expTypes[i]->is(inTypes[i]))
+		if (!types::is(inTypes[i], expTypes[i]))
 			throw exc::SeqException("expected " + expTypes[i]->getName() +
 			                        ", but got " + inTypes[i]->getName());
 	}

@@ -51,7 +51,7 @@ types::Type *types::GenericType::getType() const
 std::string types::GenericType::getName() const
 {
 	if (!type)
-		return "Generic";
+		return genericName.empty() ? "<Generic>" : genericName;
 	return type->getName();
 }
 
@@ -346,12 +346,6 @@ bool types::GenericType::isGeneric(types::Type *type) const
 	return this->type->isGeneric(type);
 }
 
-bool types::GenericType::isChildOf(types::Type *type) const
-{
-	ensure();
-	return this->type->isChildOf(type);
-}
-
 types::Type *types::GenericType::getBaseType(seq_int_t idx) const
 {
 	ensure();
@@ -407,10 +401,7 @@ Generic::Generic(bool performCaching) :
 {
 }
 
-
-Generic::~Generic()
-{
-}
+Generic::~Generic()=default;
 
 bool Generic::unrealized()
 {

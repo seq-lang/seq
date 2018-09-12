@@ -46,6 +46,7 @@ namespace seq {
 			void operator=(RefType const&)=delete;
 			void setDone();
 			void setContents(RecordType *contents);
+			std::string getName() const override;
 			std::string genericName() override;
 			types::Type *realize(std::vector<types::Type *> types);
 			std::vector<types::Type *> deduceTypesFromArgTypes(std::vector<types::Type *> argTypes);
