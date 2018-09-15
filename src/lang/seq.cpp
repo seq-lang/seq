@@ -5,13 +5,9 @@
 using namespace seq;
 using namespace llvm;
 
-static types::Type *argsType()
-{
-	return types::ArrayType::get(types::Str);
-}
-
 SeqModule::SeqModule() :
-    BaseFunc(), scope(new Block()), argsVar(argsType()), initFunc(nullptr), strlenFunc(nullptr)
+    BaseFunc(), scope(new Block()), argVar(new Var(types::ArrayType::get(types::Str))),
+    initFunc(nullptr), strlenFunc(nullptr)
 {
 }
 
@@ -22,7 +18,7 @@ Block *SeqModule::getBlock()
 
 Var *SeqModule::getArgVar()
 {
-	return &argsVar;
+	return argVar;
 }
 
 void SeqModule::resolveTypes()
@@ -123,7 +119,7 @@ void SeqModule::codegen(Module *module)
 	strlenFunc->setCallingConv(CallingConv::C);
 
 	assert(argsType != nullptr);
-	argsVar.store(this, args, preambleBlock);
+	argVar->store(this, args, preambleBlock);
 
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
 	BasicBlock *block = entry;
@@ -141,7 +137,7 @@ void SeqModule::codegen(Module *module)
 
 void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 {
-	LLVMContext& context = getLLVMContext();
+	LLVMContext context;
 	InitializeNativeTarget();
 	InitializeNativeTargetAsmPrinter();
 
@@ -207,10 +203,4 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 	eng->addGlobalMapping(strlenFunc, (void *)strlen);
 
 	eng->runFunctionAsMain(func, args, nullptr);
-}
-
-LLVMContext& seq::getLLVMContext()
-{
-	static LLVMContext context;
-	return context;
 }

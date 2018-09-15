@@ -50,7 +50,7 @@ namespace seq {
 	class SeqModule : public BaseFunc {
 	private:
 		Block *scope;
-		Var argsVar;
+		Var *argVar;
 		llvm::Function *initFunc;
 		llvm::Function *strlenFunc;
 	public:
@@ -62,8 +62,6 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void execute(const std::vector<std::string>& args={}, bool debug=false);
 	};
-
-	llvm::LLVMContext& getLLVMContext();
 
 }
 
