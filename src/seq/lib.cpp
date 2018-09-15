@@ -225,7 +225,7 @@ struct DataBlock {
 void error(const string& msg)
 {
 	cerr << "I/O error: " << msg << endl;
-	abort();
+	exit(EXIT_FAILURE);
 }
 
 Format extractExt(const string& source)
