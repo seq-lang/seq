@@ -42,33 +42,18 @@ namespace seq {
 			std::vector<OpSpec> ops = {};
 		};
 
-		enum Key {
-			NONE,
-			SEQ,
-			INT,
-			FLOAT,
-			BOOL,
-			STR,
-			ARRAY,
-			RECORD,
-			FUNC,
-			REF,
-			OPTIONAL,
-		};
-
 		class Type {
 		protected:
 			std::string name;
 			Type *parent;
-			Key key;
+			bool abstract;
 			VTable vtable;
 		public:
-			Type(std::string name, Type *parent, Key key);
-			Type(std::string name, Type *parent);
+			Type(std::string name, Type *parent, bool abstract=false);
 
 			virtual std::string getName() const;
 			virtual Type *getParent() const;
-			virtual Key getKey() const;
+			virtual bool isAbstract() const;
 			virtual VTable& getVTable();
 
 			virtual bool isAtomic() const;
@@ -165,7 +150,7 @@ namespace seq {
 
 			virtual llvm::Value *call(BaseFunc *base,
 			                          llvm::Value *self,
-			                          std::vector<llvm::Value *> args,
+			                          const std::vector<llvm::Value *>& args,
 			                          llvm::BasicBlock *block);
 
 			virtual llvm::Value *memb(llvm::Value *self,
@@ -192,7 +177,7 @@ namespace seq {
 			virtual llvm::Value *defaultValue(llvm::BasicBlock *block);
 
 			virtual llvm::Value *construct(BaseFunc *base,
-			                               std::vector<llvm::Value *> args,
+			                               const std::vector<llvm::Value *>& args,
 			                               llvm::BasicBlock *block);
 
 			virtual void initOps();
@@ -203,8 +188,8 @@ namespace seq {
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;
 			virtual Type *getBaseType(seq_int_t idx) const;
-			virtual Type *getCallType(std::vector<Type *> inTypes);
-			virtual Type *getConstructType(std::vector<Type *> inTypes);
+			virtual Type *getCallType(const std::vector<Type *>& inTypes);
+			virtual Type *getConstructType(const std::vector<Type *>& inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
 

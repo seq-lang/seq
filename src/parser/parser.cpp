@@ -32,19 +32,19 @@ struct SeqEntity {
 
 	union U {
 		U() : ival(0) {}
-		U(seq_int_t ival) : ival(ival) {}
-		U(double fval) : fval(fval) {}
-		U(bool bval) : bval(bval) {}
-		U(std::string name) : name(std::move(name)) {}
-		U(Var *var) : var(var) {}
-		U(Func *func) : func(func) {}
-		U(types::Type *type) : type(type) {}
-		U(SeqModule *module) : module(module) {}
-		U(Expr *expr) : expr(expr) {}
-		U(Pattern *pattern) : pattern(pattern) {}
-		U(Stmt *stmt) : stmt(stmt) {}
-		U(Op op) : op(std::move(op)) {}
-		~U() {}
+		U(seq_int_t ival) : ival(ival) {}               // NOLINT
+		U(double fval) : fval(fval) {}                  // NOLINT
+		U(bool bval) : bval(bval) {}                    // NOLINT
+		U(std::string name) : name(std::move(name)) {}  // NOLINT
+		U(Var *var) : var(var) {}                       // NOLINT
+		U(Func *func) : func(func) {}                   // NOLINT
+		U(types::Type *type) : type(type) {}            // NOLINT
+		U(SeqModule *module) : module(module) {}        // NOLINT
+		U(Expr *expr) : expr(expr) {}                   // NOLINT
+		U(Pattern *pattern) : pattern(pattern) {}       // NOLINT
+		U(Stmt *stmt) : stmt(stmt) {}                   // NOLINT
+		U(Op op) : op(std::move(op)) {}                 // NOLINT
+		~U() {};                                        // NOLINT
 
 		seq_int_t ival;
 		double fval;
@@ -61,18 +61,18 @@ struct SeqEntity {
 	} value;
 
 	SeqEntity() : type(EMPTY), value() {}
-	SeqEntity(seq_int_t ival) : type(SeqEntity::INT), value(ival) {}
-	SeqEntity(double fval) : type(SeqEntity::FLOAT), value(fval) {}
-	SeqEntity(bool bval) : type(SeqEntity::BOOL), value(bval) {}
-	SeqEntity(std::string name) : type(SeqEntity::NAME) { new (&value.name) std::string(std::move(name)); }
-	SeqEntity(Var *var) : type(SeqEntity::VAR), value(var) {}
-	SeqEntity(Func *func) : type(SeqEntity::FUNC), value(func) {}
-	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}
-	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}
-	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}
-	SeqEntity(Pattern *pattern) : type(SeqEntity::PATTERN), value(pattern) {}
-	SeqEntity(Stmt *stmt) : type(SeqEntity::STMT), value(stmt) {}
-	SeqEntity(Op op) : type(SeqEntity::OP) { new (&value.op) Op(std::move(op)); }
+	SeqEntity(seq_int_t ival) : type(SeqEntity::INT), value(ival) {}                                         // NOLINT
+	SeqEntity(double fval) : type(SeqEntity::FLOAT), value(fval) {}                                          // NOLINT
+	SeqEntity(bool bval) : type(SeqEntity::BOOL), value(bval) {}                                             // NOLINT
+	SeqEntity(std::string name) : type(SeqEntity::NAME) { new (&value.name) std::string(std::move(name)); }  // NOLINT
+	SeqEntity(Var *var) : type(SeqEntity::VAR), value(var) {}                                                // NOLINT
+	SeqEntity(Func *func) : type(SeqEntity::FUNC), value(func) {}                                            // NOLINT
+	SeqEntity(types::Type *type) : type(SeqEntity::TYPE), value(type) {}                                     // NOLINT
+	SeqEntity(SeqModule *module) : type(SeqEntity::MODULE), value(module) {}                                 // NOLINT
+	SeqEntity(Expr *expr) : type(SeqEntity::EXPR), value(expr) {}                                            // NOLINT
+	SeqEntity(Pattern *pattern) : type(SeqEntity::PATTERN), value(pattern) {}                                // NOLINT
+	SeqEntity(Stmt *stmt) : type(SeqEntity::STMT), value(stmt) {}                                            // NOLINT
+	SeqEntity(Op op) : type(SeqEntity::OP) { new (&value.op) Op(std::move(op)); }                            // NOLINT
 
 	SeqEntity& operator=(const SeqEntity& ent)
 	{
@@ -131,16 +131,21 @@ struct SeqEntity {
 
 std::ostream& operator<<(std::ostream& os, const SeqEntity& ent);
 
-const std::map<char, int> TYPE_MAP = {{'x', SeqEntity::EMPTY},
-                                      {'i', SeqEntity::INT},
-                                      {'f', SeqEntity::FLOAT},
-                                      {'b', SeqEntity::BOOL},
-                                      {'s', SeqEntity::NAME},
-                                      {'f', SeqEntity::FUNC},
-                                      {'t', SeqEntity::TYPE},
-                                      {'m', SeqEntity::MODULE},
-                                      {'e', SeqEntity::EXPR},
-                                      {'q', SeqEntity::PATTERN}};
+static std::map<char, int> makeTypeMap() noexcept
+{
+	return {{'x', SeqEntity::EMPTY},
+	        {'i', SeqEntity::INT},
+	        {'f', SeqEntity::FLOAT},
+	        {'b', SeqEntity::BOOL},
+	        {'s', SeqEntity::NAME},
+	        {'f', SeqEntity::FUNC},
+	        {'t', SeqEntity::TYPE},
+	        {'m', SeqEntity::MODULE},
+	        {'e', SeqEntity::EXPR},
+	        {'q', SeqEntity::PATTERN}};
+};
+
+const std::map<char, int> TYPE_MAP = makeTypeMap();
 
 class ParseState {
 	typedef std::map<std::string, SeqEntity> SymTab;
@@ -725,7 +730,7 @@ struct control<func_decl> : pegtl::normal<func_decl>
 		auto vec = state.get("*", true);
 		std::deque<SeqEntity> deq;
 
-		for (auto ent : vec)
+		for (auto& ent : vec)
 			deq.push_back(ent);
 
 		assert(deq.size() >= 2);
@@ -1176,8 +1181,8 @@ struct control<source_args> : pegtl::normal<source_args>
 		auto vec = state.get("e", true);
 
 		std::vector<Expr *> sources;
-		for (auto e : vec)
-			sources.push_back(e.value.expr);
+		for (auto ent : vec)
+			sources.push_back(ent.value.expr);
 
 		auto *p = new Source(sources);
 		p->setBase(state.base());
@@ -2950,8 +2955,8 @@ struct control<record_pattern> : pegtl::normal<record_pattern>
 		assert(!vec.empty());
 
 		std::vector<Pattern *> patterns;
-		for (auto& e : vec)
-			patterns.push_back(e.value.pattern);
+		for (auto& ent : vec)
+			patterns.push_back(ent.value.pattern);
 
 		Pattern *p = new RecordPattern(patterns);
 		state.add(p);
@@ -2990,8 +2995,8 @@ struct control<array_pattern> : pegtl::normal<array_pattern>
 		auto vec = state.get("q", true);
 
 		std::vector<Pattern *> patterns;
-		for (auto& e : vec)
-			patterns.push_back(e.value.pattern);
+		for (auto& ent : vec)
+			patterns.push_back(ent.value.pattern);
 
 		Pattern *p = new ArrayPattern(patterns);
 		state.add(p);
@@ -3177,8 +3182,8 @@ struct control<pattern> : pegtl::normal<pattern>
 			p = vec[0].value.pattern;
 		} else {
 			std::vector<Pattern *> patterns;
-			for (auto &e : vec)
-				patterns.push_back(e.value.pattern);
+			for (auto& ent : vec)
+				patterns.push_back(ent.value.pattern);
 			p = new OrPattern(patterns);
 		}
 

@@ -45,14 +45,14 @@ namespace seq {
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			llvm::Value *construct(BaseFunc *base,
-			                       std::vector<llvm::Value *> args,
+			                       const std::vector<llvm::Value *>& args,
 			                       llvm::BasicBlock *block) override;
 
 			void initFields() override;
 
 			bool isAtomic() const override;
 			Type *getBaseType(seq_int_t idx) const override;
-			Type *getConstructType(std::vector<Type *> inTypes) override;
+			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			void addLLVMTypesToStruct(llvm::StructType *structType);
 			seq_int_t size(llvm::Module *module) const override;

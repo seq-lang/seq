@@ -18,14 +18,14 @@ static std::string getNameFromTypes(std::vector<types::Type *> types)
 }
 
 types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names) :
-    Type(getNameFromTypes(types), BaseType::get(), Key::RECORD),
+    Type(getNameFromTypes(types), BaseType::get()),
     types(std::move(types)), names(std::move(names))
 {
 	assert(this->names.empty() || this->names.size() == this->types.size());
 }
 
 types::RecordType::RecordType(std::initializer_list<Type *> types) :
-    Type(getNameFromTypes(types), BaseType::get(), Key::RECORD),
+    Type(getNameFromTypes(types), BaseType::get()),
     types(types), names()
 {
 }
@@ -136,7 +136,7 @@ Value *types::RecordType::defaultValue(BasicBlock *block)
 
 
 Value *types::RecordType::construct(BaseFunc *base,
-                                    std::vector<Value *> args,
+                                    const std::vector<Value *>& args,
                                     BasicBlock *block)
 {
 	Value *val = defaultValue(block);
@@ -177,7 +177,7 @@ types::Type *types::RecordType::getBaseType(seq_int_t idx) const
 	return types[idx - 1];
 }
 
-types::Type *types::RecordType::getConstructType(std::vector<Type *> inTypes)
+types::Type *types::RecordType::getConstructType(const std::vector<Type *>& inTypes)
 {
 	if (inTypes.size() != types.size())
 		throw exc::SeqException("expected " + std::to_string(types.size()) + " arguments, " +

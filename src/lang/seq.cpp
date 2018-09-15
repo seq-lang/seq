@@ -177,7 +177,7 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 	builder.populateFunctionPassManager(*fpm);
 
 	fpm->doInitialization();
-	for (Function &f : *module)
+	for (Function& f : *module)
 		fpm->run(f);
 	fpm->doFinalization();
 

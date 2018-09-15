@@ -9,17 +9,17 @@ types::NumberType::NumberType() : Type("Num", BaseType::get())
 {
 }
 
-types::IntType::IntType() : Type("Int", NumberType::get(), Key::INT)
+types::IntType::IntType() : Type("Int", NumberType::get())
 {
 	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_int);
 }
 
-types::FloatType::FloatType() : Type("Float", NumberType::get(), Key::FLOAT)
+types::FloatType::FloatType() : Type("Float", NumberType::get())
 {
 	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_float);
 }
 
-types::BoolType::BoolType() : Type("Bool", NumberType::get(), Key::BOOL)
+types::BoolType::BoolType() : Type("Bool", NumberType::get())
 {
 	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_bool);
 }

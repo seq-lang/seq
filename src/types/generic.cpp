@@ -61,10 +61,10 @@ types::Type *types::GenericType::getParent() const
 	return type->getParent();
 }
 
-types::Key types::GenericType::getKey() const
+bool types::GenericType::isAbstract() const
 {
 	ensure();
-	return type->getKey();
+	return type->isAbstract();
 }
 
 types::VTable& types::GenericType::getVTable()
@@ -228,7 +228,7 @@ void types::GenericType::indexStore(BaseFunc *base,
 
 Value *types::GenericType::call(BaseFunc *base,
                                 Value *self,
-                                std::vector<Value *> args,
+                                const std::vector<Value *>& args,
                                 BasicBlock *block)
 {
 	ensure();
@@ -283,7 +283,7 @@ Value *types::GenericType::defaultValue(BasicBlock *block)
 }
 
 Value *types::GenericType::construct(BaseFunc *base,
-                                     std::vector<Value *> args,
+                                     const std::vector<Value *>& args,
                                      BasicBlock *block)
 {
 	ensure();
@@ -303,13 +303,13 @@ void types::GenericType::initFields()
 	type->initFields();
 }
 
-OpSpec types::GenericType::findUOp(const std::string &symbol)
+OpSpec types::GenericType::findUOp(const std::string& symbol)
 {
 	ensure();
 	return type->findUOp(symbol);
 }
 
-OpSpec types::GenericType::findBOp(const std::string &symbol, types::Type *rhsType)
+OpSpec types::GenericType::findBOp(const std::string& symbol, types::Type *rhsType)
 {
 	ensure();
 	return type->findBOp(symbol, rhsType);
@@ -352,13 +352,13 @@ types::Type *types::GenericType::getBaseType(seq_int_t idx) const
 	return type->getBaseType(idx);
 }
 
-types::Type *types::GenericType::getCallType(std::vector<Type *> inTypes)
+types::Type *types::GenericType::getCallType(const std::vector<Type *>& inTypes)
 {
 	ensure();
 	return type->getCallType(inTypes);
 }
 
-types::Type *types::GenericType::getConstructType(std::vector<Type *> inTypes)
+types::Type *types::GenericType::getConstructType(const std::vector<Type *>& inTypes)
 {
 	ensure();
 	return type->getConstructType(inTypes);
@@ -400,8 +400,6 @@ Generic::Generic(bool performCaching) :
     performCaching(performCaching), root(this), generics(), cloneCache()
 {
 }
-
-Generic::~Generic()=default;
 
 bool Generic::unrealized()
 {

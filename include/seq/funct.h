@@ -20,13 +20,13 @@ namespace seq {
 
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
-			                  std::vector<llvm::Value *> args,
+			                  const std::vector<llvm::Value *>& args,
 			                  llvm::BasicBlock *block) override;
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			bool is(Type *type) const override;
-			Type *getCallType(std::vector<Type *> inTypes) override;
+			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			static FuncType *get(std::vector<Type *> inTypes, Type *outType);
@@ -75,13 +75,13 @@ namespace seq {
 
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
-			                  std::vector<llvm::Value *> args,
+			                  const std::vector<llvm::Value *>& args,
 			                  llvm::BasicBlock *block) override;
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			bool is(Type *type) const override;
-			Type *getCallType(std::vector<Type *> inTypes) override;
+			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			static PartialFuncType *get(Type *callee, std::vector<types::Type *> callTypes);

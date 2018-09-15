@@ -7,13 +7,8 @@
 using namespace seq;
 using namespace llvm;
 
-types::Type::Type(std::string name, types::Type *parent, Key key) :
-    name(std::move(name)), parent(parent), key(key)
-{
-}
-
-types::Type::Type(std::string name, Type *parent) :
-    Type(std::move(name), parent, Key::NONE)
+types::Type::Type(std::string name, types::Type *parent, bool abstract) :
+    name(std::move(name)), parent(parent), abstract(abstract)
 {
 }
 
@@ -27,9 +22,9 @@ types::Type *types::Type::getParent() const
 	return parent;
 }
 
-types::Key types::Type::getKey() const
+bool types::Type::isAbstract() const
 {
-	return key;
+	return abstract;
 }
 
 types::VTable& types::Type::getVTable()
@@ -84,14 +79,14 @@ llvm::Value *types::Type::copy(BaseFunc *base,
                                Value *self,
                                BasicBlock *block)
 {
-	if (!getVTable().copy || getKey() == Key::NONE)
+	if (!getVTable().copy || isAbstract())
 		throw exc::SeqException("cannot copy type '" + getName() + "'");
 
-	Function *copyFunc = cast<Function>(
-	                       block->getModule()->getOrInsertFunction(
-	                         getVTable().copyName,
-	                         getLLVMType(block->getContext()),
-	                         getLLVMType(block->getContext())));
+	auto *copyFunc = cast<Function>(
+	                   block->getModule()->getOrInsertFunction(
+	                     getVTable().copyName,
+	                     getLLVMType(block->getContext()),
+	                     getLLVMType(block->getContext())));
 
 	copyFunc->setCallingConv(CallingConv::C);
 
@@ -110,14 +105,14 @@ void types::Type::print(BaseFunc *base,
                         Value *self,
                         BasicBlock *block)
 {
-	if (!getVTable().print || getKey() == Key::NONE)
+	if (!getVTable().print || isAbstract())
 		throw exc::SeqException("cannot print type '" + getName() + "'");
 
-	Function *printFunc = cast<Function>(
-	                        block->getModule()->getOrInsertFunction(
-	                          getVTable().printName,
-	                          llvm::Type::getVoidTy(block->getContext()),
-	                          getLLVMType(block->getContext())));
+	auto *printFunc = cast<Function>(
+	                    block->getModule()->getOrInsertFunction(
+	                      getVTable().printName,
+	                      llvm::Type::getVoidTy(block->getContext()),
+	                      getLLVMType(block->getContext())));
 
 	printFunc->setCallingConv(CallingConv::C);
 
@@ -137,20 +132,20 @@ void types::Type::serialize(BaseFunc *base,
                             Value *fp,
                             BasicBlock *block)
 {
-	if (getKey() == Key::NONE)
+	if (isAbstract())
 		throw exc::SeqException("type '" + getName() + "' cannot be serialized");
 
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	Function *writeFunc = cast<Function>(
-	                        module->getOrInsertFunction(
-	                          "seq_io_write",
-	                          llvm::Type::getVoidTy(context),
-	                          IntegerType::getInt8PtrTy(context),
-	                          seqIntLLVM(context),
-	                          seqIntLLVM(context),
-	                          IntegerType::getInt8PtrTy(context)));
+	auto *writeFunc = cast<Function>(
+	                    module->getOrInsertFunction(
+	                      "seq_io_write",
+	                      llvm::Type::getVoidTy(context),
+	                      IntegerType::getInt8PtrTy(context),
+	                      seqIntLLVM(context),
+	                      seqIntLLVM(context),
+	                      IntegerType::getInt8PtrTy(context)));
 
 	writeFunc->setCallingConv(CallingConv::C);
 
@@ -172,21 +167,21 @@ Value *types::Type::deserialize(BaseFunc *base,
                                 Value *fp,
                                 BasicBlock *block)
 {
-	if (getKey() == Key::NONE)
+	if (isAbstract())
 		throw exc::SeqException("type '" + getName() + "' cannot be serialized");
 
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 	BasicBlock *preambleBlock = base->getPreamble();
 
-	Function *readFunc = cast<Function>(
-	                       module->getOrInsertFunction(
-	                         "seq_io_read",
-	                         llvm::Type::getVoidTy(context),
-	                         IntegerType::getInt8PtrTy(context),
-	                         seqIntLLVM(context),
-	                         seqIntLLVM(context),
-	                         IntegerType::getInt8PtrTy(context)));
+	auto *readFunc = cast<Function>(
+	                   module->getOrInsertFunction(
+	                     "seq_io_read",
+	                     llvm::Type::getVoidTy(context),
+	                     IntegerType::getInt8PtrTy(context),
+	                     seqIntLLVM(context),
+	                     seqIntLLVM(context),
+	                     IntegerType::getInt8PtrTy(context)));
 
 	readFunc->setCallingConv(CallingConv::C);
 
@@ -213,11 +208,11 @@ Value *types::Type::alloc(Value *count, BasicBlock *block)
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	Function *allocFunc = cast<Function>(
-	                        module->getOrInsertFunction(
-	                          allocFuncName(),
-	                          IntegerType::getInt8PtrTy(context),
-	                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+	auto *allocFunc = cast<Function>(
+	                    module->getOrInsertFunction(
+	                      allocFuncName(),
+	                      IntegerType::getInt8PtrTy(context),
+	                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
 
 	IRBuilder<> builder(block);
 
@@ -246,7 +241,7 @@ Value *types::Type::load(BaseFunc *base,
                          Value *idx,
                          BasicBlock *block)
 {
-	if (size(block->getModule()) == 0 || getKey() == Key::NONE)
+	if (size(block->getModule()) == 0 || isAbstract())
 		throw exc::SeqException("cannot load type '" + getName() + "'");
 
 	IRBuilder<> builder(block);
@@ -259,7 +254,7 @@ void types::Type::store(BaseFunc *base,
                         Value *idx,
                         BasicBlock *block)
 {
-	if (size(block->getModule()) == 0|| getKey() == Key::NONE)
+	if (size(block->getModule()) == 0 || isAbstract())
 		throw exc::SeqException("cannot store type '" + getName() + "'");
 
 	IRBuilder<> builder(block);
@@ -315,7 +310,7 @@ types::Type *types::Type::indexType() const
 
 Value *types::Type::call(BaseFunc *base,
                          Value *self,
-                         std::vector<Value *> args,
+                         const std::vector<Value *>& args,
                          BasicBlock *block)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
@@ -422,7 +417,7 @@ Value *types::Type::defaultValue(BasicBlock *block)
 }
 
 Value *types::Type::construct(BaseFunc *base,
-                              std::vector<Value *> args,
+                              const std::vector<Value *>& args,
                               BasicBlock *block)
 {
 	throw exc::SeqException("cannot construct type '" + getName() + "'");
@@ -436,7 +431,7 @@ void types::Type::initFields()
 {
 }
 
-OpSpec types::Type::findUOp(const std::string &symbol)
+OpSpec types::Type::findUOp(const std::string& symbol)
 {
 	initOps();
 	Op op = uop(symbol);
@@ -449,7 +444,7 @@ OpSpec types::Type::findUOp(const std::string &symbol)
 	throw exc::SeqException("type '" + getName() + "' does not support operator '" + symbol + "'");
 }
 
-OpSpec types::Type::findBOp(const std::string &symbol, types::Type *rhsType)
+OpSpec types::Type::findBOp(const std::string& symbol, types::Type *rhsType)
 {
 	initOps();
 	Op op = bop(symbol);
@@ -484,12 +479,12 @@ types::Type *types::Type::getBaseType(seq_int_t idx) const
 	throw exc::SeqException("type '" + getName() + "' has no base types");
 }
 
-types::Type *types::Type::getCallType(std::vector<Type *> inTypes)
+types::Type *types::Type::getCallType(const std::vector<Type *>& inTypes)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
 }
 
-types::Type *types::Type::getConstructType(std::vector<Type *> inTypes)
+types::Type *types::Type::getConstructType(const std::vector<Type *>& inTypes)
 {
 	throw exc::SeqException("cannot construct type '" + getName() + "'");
 }

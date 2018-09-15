@@ -9,7 +9,7 @@ namespace seq {
 
 		class BaseSeqType : public Type {
 		protected:
-			BaseSeqType(std::string name, Key key);
+			explicit BaseSeqType(std::string name);
 		public:
 			BaseSeqType(BaseSeqType const&)=delete;
 			void operator=(BaseSeqType const&)=delete;

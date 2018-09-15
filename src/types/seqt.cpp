@@ -4,8 +4,8 @@
 using namespace seq;
 using namespace llvm;
 
-types::BaseSeqType::BaseSeqType(std::string name, Key key) :
-    Type(std::move(name), BaseType::get(), key)
+types::BaseSeqType::BaseSeqType(std::string name) :
+    Type(std::move(name), BaseType::get())
 {
 	SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_seq);
 	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_seq);
@@ -20,14 +20,14 @@ static Function *buildSeqEqFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 
-	Function *eq = cast<Function>(
-	                 module->getOrInsertFunction(
-	                   eqFuncName(),
-	                   IntegerType::getInt1Ty(context),
-	                   IntegerType::getInt8PtrTy(context),
-	                   seqIntLLVM(context),
-	                   IntegerType::getInt8PtrTy(context),
-	                   seqIntLLVM(context)));
+	auto *eq = cast<Function>(
+	             module->getOrInsertFunction(
+	               eqFuncName(),
+	               IntegerType::getInt1Ty(context),
+	               IntegerType::getInt8PtrTy(context),
+	               seqIntLLVM(context),
+	               IntegerType::getInt8PtrTy(context),
+	               seqIntLLVM(context)));
 
 	auto args = eq->arg_begin();
 	Value *seq1 = args++;
@@ -114,12 +114,12 @@ Value *types::BaseSeqType::copy(BaseFunc *base,
 {
 	LLVMContext& context = block->getContext();
 
-	Function *copyFunc = cast<Function>(
-	                       block->getModule()->getOrInsertFunction(
-	                         getVTable().copyName,
-	                         IntegerType::getInt8PtrTy(context),
-	                         IntegerType::getInt8PtrTy(context),
-	                         seqIntLLVM(context)));
+	auto *copyFunc = cast<Function>(
+	                   block->getModule()->getOrInsertFunction(
+	                     getVTable().copyName,
+	                     IntegerType::getInt8PtrTy(context),
+	                     IntegerType::getInt8PtrTy(context),
+	                     seqIntLLVM(context)));
 
 	copyFunc->setCallingConv(CallingConv::C);
 
@@ -139,14 +139,14 @@ void types::BaseSeqType::serialize(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	Function *writeFunc = cast<Function>(
-	                        module->getOrInsertFunction(
-	                          "seq_io_write",
-	                          llvm::Type::getVoidTy(context),
-	                          IntegerType::getInt8PtrTy(context),
-	                          seqIntLLVM(context),
-	                          seqIntLLVM(context),
-	                          IntegerType::getInt8PtrTy(context)));
+	auto *writeFunc = cast<Function>(
+	                    module->getOrInsertFunction(
+	                      "seq_io_write",
+	                      llvm::Type::getVoidTy(context),
+	                      IntegerType::getInt8PtrTy(context),
+	                      seqIntLLVM(context),
+	                      seqIntLLVM(context),
+	                      IntegerType::getInt8PtrTy(context)));
 
 	writeFunc->setCallingConv(CallingConv::C);
 
@@ -165,20 +165,20 @@ Value *types::BaseSeqType::deserialize(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	Function *readFunc = cast<Function>(
-	                       module->getOrInsertFunction(
-	                         "seq_io_read",
-	                         llvm::Type::getVoidTy(context),
-	                         IntegerType::getInt8PtrTy(context),
-	                         seqIntLLVM(context),
-	                         seqIntLLVM(context),
-	                         IntegerType::getInt8PtrTy(context)));
+	auto *readFunc = cast<Function>(
+	                   module->getOrInsertFunction(
+	                     "seq_io_read",
+	                     llvm::Type::getVoidTy(context),
+	                     IntegerType::getInt8PtrTy(context),
+	                     seqIntLLVM(context),
+	                     seqIntLLVM(context),
+	                     IntegerType::getInt8PtrTy(context)));
 
-	Function *allocFunc = cast<Function>(
-	                        module->getOrInsertFunction(
-	                          allocFuncName(),
-	                          IntegerType::getInt8PtrTy(context),
-	                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+	auto *allocFunc = cast<Function>(
+	                    module->getOrInsertFunction(
+	                      allocFuncName(),
+	                      IntegerType::getInt8PtrTy(context),
+	                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
 
 	readFunc->setCallingConv(CallingConv::C);
 
@@ -196,12 +196,12 @@ void types::BaseSeqType::print(BaseFunc *base,
 {
 	LLVMContext& context = block->getContext();
 
-	Function *printFunc = cast<Function>(
-	                        block->getModule()->getOrInsertFunction(
-	                          getVTable().printName,
-	                          llvm::Type::getVoidTy(context),
-	                          IntegerType::getInt8PtrTy(context),
-	                          seqIntLLVM(context)));
+	auto *printFunc = cast<Function>(
+	                    block->getModule()->getOrInsertFunction(
+	                      getVTable().printName,
+	                      llvm::Type::getVoidTy(context),
+	                      IntegerType::getInt8PtrTy(context),
+	                      seqIntLLVM(context)));
 
 	printFunc->setCallingConv(CallingConv::C);
 
@@ -290,7 +290,7 @@ seq_int_t types::BaseSeqType::size(Module *module) const
 }
 
 /* derived Seq type */
-types::SeqType::SeqType() : BaseSeqType("Seq", Key::SEQ)
+types::SeqType::SeqType() : BaseSeqType("Seq")
 {
 }
 
@@ -343,7 +343,7 @@ types::SeqType *types::SeqType::get() noexcept
 }
 
 /* derived Str type */
-types::StrType::StrType() : BaseSeqType("Str", Key::STR)
+types::StrType::StrType() : BaseSeqType("Str")
 {
 }
 

@@ -5,13 +5,11 @@ using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name) :
-    Type(std::move(name), BaseType::get(), Key::REF), Generic(true),
+    Type(std::move(name), BaseType::get()), Generic(true),
     done(false), root(this), cache(), pendingRealizations(),
     contents(types::RecordType::get({}))
 {
 }
-
-types::RefType::~RefType()=default;
 
 void types::RefType::setDone()
 {
@@ -172,7 +170,7 @@ Value *types::RefType::defaultValue(BasicBlock *block)
 }
 
 Value *types::RefType::construct(BaseFunc *base,
-                                 std::vector<Value *> args,
+                                 const std::vector<Value *>& args,
                                  BasicBlock *block)
 {
 	return make(block, args);
@@ -184,7 +182,7 @@ void types::RefType::initOps()
 		return;
 
 	vtable.ops = {
-		{uop("!"), this, Bool, [](Value *lhs, Value *rhs, IRBuilder<> &b) {
+		{uop("!"), this, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
 			return b.CreateZExt(b.CreateIsNull(lhs), Bool->getLLVMType(b.getContext()));
 		}}
 	};
@@ -213,7 +211,7 @@ types::Type *types::RefType::getBaseType(seq_int_t idx) const
 	return contents->getBaseType(idx);
 }
 
-types::Type *types::RefType::getConstructType(std::vector<Type *> inTypes)
+types::Type *types::RefType::getConstructType(const std::vector<Type *>& inTypes)
 {
 	std::vector<types::Type *> expTypes = contents->getTypes();
 
@@ -304,7 +302,7 @@ types::MethodType::MethodType(types::Type *self, FuncType *func) :
 
 Value *types::MethodType::call(BaseFunc *base,
                                Value *self,
-                               std::vector<Value *> args,
+                               const std::vector<Value *>& args,
                                BasicBlock *block)
 {
 	Value *x = memb(self, "self", block);
@@ -314,7 +312,7 @@ Value *types::MethodType::call(BaseFunc *base,
 	return func->call(base, f, argsFull, block);
 }
 
-types::Type *types::MethodType::getCallType(std::vector<Type *> inTypes)
+types::Type *types::MethodType::getCallType(const std::vector<Type *>& inTypes)
 {
 	std::vector<Type *> inTypesFull(inTypes);
 	inTypesFull.insert(inTypesFull.begin(), self);

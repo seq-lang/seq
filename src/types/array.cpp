@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::ArrayType::ArrayType(Type *baseType) :
-    Type(baseType->getName() + "[]", BaseType::get(), Key::ARRAY), baseType(baseType)
+    Type(baseType->getName() + "[]", BaseType::get()), baseType(baseType)
 {
 	SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_array);
 }
@@ -15,14 +15,14 @@ Value *types::ArrayType::copy(BaseFunc *base,
 {
 	LLVMContext& context = block->getContext();
 
-	Function *copyFunc = cast<Function>(
-	                       block->getModule()->getOrInsertFunction(
-	                         getVTable().copyName,
-	                         IntegerType::getInt8PtrTy(context),
-	                         IntegerType::getInt8PtrTy(context),
-	                         seqIntLLVM(context),
-	                         seqIntLLVM(context),
-	                         IntegerType::getInt8Ty(context)));
+	auto *copyFunc = cast<Function>(
+	                   block->getModule()->getOrInsertFunction(
+	                     getVTable().copyName,
+	                     IntegerType::getInt8PtrTy(context),
+	                     IntegerType::getInt8PtrTy(context),
+	                     seqIntLLVM(context),
+	                     seqIntLLVM(context),
+	                     IntegerType::getInt8Ty(context)));
 
 	copyFunc->setCallingConv(CallingConv::C);
 
@@ -127,11 +127,11 @@ Value *types::ArrayType::deserialize(BaseFunc *base,
 		                IntegerType::getInt8PtrTy(context)));
 	}
 
-	Function *allocFunc = cast<Function>(
-	                        module->getOrInsertFunction(
-	                          indexType()->allocFuncName(),
-	                          IntegerType::getInt8PtrTy(context),
-	                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+	auto *allocFunc = cast<Function>(
+	                    module->getOrInsertFunction(
+	                      indexType()->allocFuncName(),
+	                      IntegerType::getInt8PtrTy(context),
+	                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
 
 	IRBuilder<> builder(block);
 

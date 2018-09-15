@@ -240,13 +240,18 @@ Format extractExt(const string& source)
 
 #define SAFE(x) if (!(x)) return false;
 
-const map<string, Format> EXT_CONV = {{"txt",   Format::TXT},
-                                      {"fastq", Format::FASTQ},
-                                      {"fq",    Format::FASTQ},
-                                      {"fasta", Format::FASTA},
-                                      {"fa",    Format::FASTA},
-                                      {"sam",   Format::SAM},
-                                      {"bam",   Format::FASTQ}};
+static map<string, Format> makeExtConvMap() noexcept
+{
+	return {{"txt",   Format::TXT},
+	        {"fastq", Format::FASTQ},
+	        {"fq",    Format::FASTQ},
+	        {"fasta", Format::FASTA},
+	        {"fa",    Format::FASTA},
+	        {"sam",   Format::SAM},
+	        {"bam",   Format::FASTQ}};
+};
+
+const map<string, Format> EXT_CONV = makeExtConvMap();
 
 DataCell::DataCell(char *buf, const size_t cap) :
     buf(buf), used(0), cap(cap), data(), lens(), seqs()

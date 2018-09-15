@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::OptionalType::OptionalType(seq::types::Type *baseType) :
-    Type(baseType->getName() + "?", BaseType::get(), Key::OPTIONAL), baseType(baseType)
+    Type(baseType->getName() + "?", BaseType::get()), baseType(baseType)
 {
 }
 

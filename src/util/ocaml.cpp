@@ -393,7 +393,7 @@ FOREIGN bool exec_module(SeqModule *sm, char debug, char **error, seq_srcinfo **
 		*error = nullptr;
 		*srcInfo = nullptr;
 		return true;
-	} catch (exc::SeqException &e) {
+	} catch (exc::SeqException& e) {
 		string msg = e.what();
 		*error = new char[msg.size() + 1];
 		strncpy(*error, msg.c_str(), msg.size());

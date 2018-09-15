@@ -49,8 +49,6 @@ Func::Func() :
 		assert(this->argNames.size() == this->inTypes.size());
 }
 
-Func::~Func()=default;
-
 Block *Func::getBlock()
 {
 	return scope;
@@ -218,11 +216,11 @@ void Func::codegen(Module *module)
 		Function *sizeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_size, {seqIntLLVM(context)});
 		Value *size = builder.CreateCall(sizeFn);
 
-		Function *allocFunc = cast<Function>(
-		                        module->getOrInsertFunction(
-		                          "seq_alloc",
-		                          IntegerType::getInt8PtrTy(context),
-		                          IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+		auto *allocFunc = cast<Function>(
+		                    module->getOrInsertFunction(
+		                      "seq_alloc",
+		                      IntegerType::getInt8PtrTy(context),
+		                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
 
 		alloc = builder.CreateCall(allocFunc, size);
 	}

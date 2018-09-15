@@ -25,7 +25,7 @@ namespace seq {
 
 			std::string getName() const override;
 			Type *getParent() const override;
-			Key getKey() const override;
+			bool isAbstract() const override;
 			VTable& getVTable() override;
 
 			bool isAtomic() const override;
@@ -104,7 +104,7 @@ namespace seq {
 
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
-			                  std::vector<llvm::Value *> args,
+			                  const std::vector<llvm::Value *>& args,
 			                  llvm::BasicBlock *block) override;
 
 			llvm::Value *memb(llvm::Value *self,
@@ -127,7 +127,7 @@ namespace seq {
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			llvm::Value *construct(BaseFunc *base,
-			                       std::vector<llvm::Value *> args,
+			                       const std::vector<llvm::Value *>& args,
 			                       llvm::BasicBlock *block) override;
 
 			void initOps() override;
@@ -138,8 +138,8 @@ namespace seq {
 			bool is(Type *type) const override;
 			bool isGeneric(Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
-			Type *getCallType(std::vector<Type *> inTypes) override;
-			Type *getConstructType(std::vector<Type *> inTypes) override;
+			Type *getCallType(const std::vector<Type *>& inTypes) override;
+			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			static GenericType *get();
@@ -158,7 +158,6 @@ namespace seq {
 		std::map<void *, void *> cloneCache;
 	public:
 		explicit Generic(bool performCaching);
-		virtual ~Generic();
 
 		virtual std::string genericName()=0;
 		virtual Generic *clone(Generic *ref)=0;

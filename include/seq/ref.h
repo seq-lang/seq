@@ -42,7 +42,6 @@ namespace seq {
 			explicit RefType(std::string name);
 		public:
 			RefType(RefType const&)=delete;
-			virtual ~RefType();
 			void operator=(RefType const&)=delete;
 			void setDone();
 			void setContents(RecordType *contents);
@@ -69,7 +68,7 @@ namespace seq {
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			llvm::Value *construct(BaseFunc *base,
-			                       std::vector<llvm::Value *> args,
+			                       const std::vector<llvm::Value *>& args,
 			                       llvm::BasicBlock *block) override;
 
 			void initOps() override;
@@ -77,7 +76,7 @@ namespace seq {
 			bool isAtomic() const override;
 			bool is(types::Type *type) const override;
 			Type *getBaseType(seq_int_t idx) const override;
-			Type *getConstructType(std::vector<Type *> inTypes) override;
+			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			llvm::Value *make(llvm::BasicBlock *block,
@@ -98,10 +97,10 @@ namespace seq {
 
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
-			                  std::vector<llvm::Value *> args,
+			                  const std::vector<llvm::Value *>& args,
 			                  llvm::BasicBlock *block) override;
 
-			Type *getCallType(std::vector<Type *> inTypes) override;
+			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			llvm::Value *make(llvm::Value *self, llvm::Value *func, llvm::BasicBlock *block);
 			static MethodType *get(Type *self, FuncType *func);
 

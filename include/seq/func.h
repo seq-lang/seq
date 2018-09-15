@@ -52,7 +52,6 @@ namespace seq {
 		llvm::BasicBlock *exit;
 	public:
 		Func();
-		virtual ~Func();
 		Block *getBlock();
 
 		std::string genericName() override;

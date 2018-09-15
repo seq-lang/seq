@@ -37,8 +37,6 @@ namespace seq {
 		{
 			this->info = std::move(info);
 		}
-
-		virtual ~SrcObject()=default;
 	};
 
 	inline llvm::IntegerType *seqIntLLVM(llvm::LLVMContext& context)
@@ -91,7 +89,7 @@ namespace seq {
 			{
 			}
 
-			SeqException(const SeqException& e) noexcept : SrcObject(e), std::runtime_error(e)
+			SeqException(const SeqException& e) noexcept : SrcObject(e), std::runtime_error(e)  // NOLINT
 			{
 			}
 		};

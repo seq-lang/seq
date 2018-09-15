@@ -19,7 +19,7 @@ static std::string getFuncName(std::vector<types::Type *> inTypes, types::Type *
 }
 
 types::FuncType::FuncType(std::vector<types::Type *> inTypes, types::Type *outType) :
-    Type(getFuncName(inTypes, outType), BaseType::get(), Key::FUNC),
+    Type(getFuncName(inTypes, outType), BaseType::get()),
     inTypes(std::move(inTypes)), outType(outType)
 {
 }
@@ -31,7 +31,7 @@ unsigned types::FuncType::argCount() const
 
 Value *types::FuncType::call(BaseFunc *base,
                              Value *self,
-                             std::vector<Value *> args,
+                             const std::vector<Value *>& args,
                              BasicBlock *block)
 {
 	IRBuilder<> builder(block);
@@ -57,7 +57,7 @@ bool types::FuncType::is(Type *type) const
 	return true;
 }
 
-types::Type *types::FuncType::getCallType(std::vector<Type *> inTypes)
+types::Type *types::FuncType::getCallType(const std::vector<Type *>& inTypes)
 {
 	if (this->inTypes.size() != inTypes.size())
 		throw exc::SeqException("expected " + std::to_string(this->inTypes.size()) + " arguments, but got " + std::to_string(inTypes.size()));
@@ -70,7 +70,7 @@ types::Type *types::FuncType::getCallType(std::vector<Type *> inTypes)
 	return outType;
 }
 
-Type *types::FuncType::getLLVMType(LLVMContext &context) const
+Type *types::FuncType::getLLVMType(LLVMContext& context) const
 {
 	std::vector<llvm::Type *> types;
 	for (auto *type : inTypes)
@@ -98,7 +98,7 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 }
 
 types::GenType::GenType(Type *outType) :
-    Type(outType->getName() + "+", BaseType::get(), Key::FUNC), outType(outType)
+    Type(outType->getName() + "+", BaseType::get()), outType(outType)
 {
 	types::VoidType *voidType = types::VoidType::get();
 	types::Type *type = this->outType->is(voidType) ? (types::Type *)voidType :
@@ -196,7 +196,7 @@ bool types::GenType::is(Type *type) const
 	return genType && types::is(outType, genType->outType);
 }
 
-Type *types::GenType::getLLVMType(LLVMContext &context) const
+Type *types::GenType::getLLVMType(LLVMContext& context) const
 {
 	return IntegerType::getInt8PtrTy(context);
 }
@@ -236,7 +236,7 @@ static std::string getPartialFuncName(types::Type *callee, std::vector<types::Ty
 }
 
 types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::Type *> callTypes) :
-    Type(getPartialFuncName(callee, callTypes), BaseType::get(), Key::FUNC), callee(callee), callTypes(std::move(callTypes))
+    Type(getPartialFuncName(callee, callTypes), BaseType::get()), callee(callee), callTypes(std::move(callTypes))
 {
 	std::vector<types::Type *> types;
 	types.push_back(this->callee);
@@ -254,7 +254,7 @@ bool types::PartialFuncType::isAtomic() const
 
 Value *types::PartialFuncType::call(BaseFunc *base,
                                     Value *self,
-                                    std::vector<Value *> args,
+                                    const std::vector<Value *>& args,
                                     BasicBlock *block)
 {
 	IRBuilder<> builder(block);
@@ -299,7 +299,7 @@ bool types::PartialFuncType::is(types::Type *type) const
 	return p && nullMatch(callTypes, p->callTypes) && types::is(contents, p->contents);
 }
 
-types::Type *types::PartialFuncType::getCallType(std::vector<types::Type *> inTypes)
+types::Type *types::PartialFuncType::getCallType(const std::vector<types::Type *>& inTypes)
 {
 	std::vector<types::Type *> types(callTypes);
 	unsigned next = 0;
@@ -317,7 +317,7 @@ types::Type *types::PartialFuncType::getCallType(std::vector<types::Type *> inTy
 	return callee->getCallType(types);
 }
 
-Type *types::PartialFuncType::getLLVMType(LLVMContext &context) const
+Type *types::PartialFuncType::getLLVMType(LLVMContext& context) const
 {
 	return contents->getLLVMType(context);
 }
