@@ -104,6 +104,7 @@ void SeqModule::codegen(Module *module)
 	           Type::getVoidTy(context),
 	           argsType->getLLVMType(context)));
 
+	func->setLinkage(GlobalValue::PrivateLinkage);
 	auto argiter = func->arg_begin();
 	args = argiter;
 

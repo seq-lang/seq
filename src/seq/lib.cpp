@@ -56,10 +56,18 @@ SEQ_FUNC char *seq_copy_seq(char *seq, seq_int_t len)
 	return seq2;
 }
 
-SEQ_FUNC void *seq_copy_array(void *arr, seq_int_t len, seq_int_t elem_size, bool atomic)
+SEQ_FUNC void *seq_copy_array(void *arr, seq_int_t len, seq_int_t elem_size)
 {
 	const size_t size = (size_t)len * elem_size;
-	auto *arr2 = atomic ? seq_alloc_atomic(size) : seq_alloc(size);
+	auto *arr2 = seq_alloc(size);
+	memcpy(arr2, arr, size);
+	return arr2;
+}
+
+SEQ_FUNC void *seq_copy_array_atomic(void *arr, seq_int_t len, seq_int_t elem_size)
+{
+	const size_t size = (size_t)len * elem_size;
+	auto *arr2 = seq_alloc_atomic(size);
 	memcpy(arr2, arr, size);
 	return arr2;
 }

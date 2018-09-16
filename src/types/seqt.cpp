@@ -29,6 +29,7 @@ static Function *buildSeqEqFunc(Module *module)
 	               IntegerType::getInt8PtrTy(context),
 	               seqIntLLVM(context)));
 
+	eq->setLinkage(GlobalValue::PrivateLinkage);
 	auto args = eq->arg_begin();
 	Value *seq1 = args++;
 	Value *len1 = args++;

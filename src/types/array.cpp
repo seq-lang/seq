@@ -6,13 +6,17 @@ using namespace llvm;
 types::ArrayType::ArrayType(Type *baseType) :
     Type(baseType->getName() + "[]", BaseType::get()), baseType(baseType)
 {
-	SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_array);
 }
 
 Value *types::ArrayType::copy(BaseFunc *base,
                               Value *self,
                               BasicBlock *block)
 {
+	if (baseType->isAtomic())
+		SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_array_atomic);
+	else
+		SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_array);
+
 	LLVMContext& context = block->getContext();
 
 	auto *copyFunc = cast<Function>(
@@ -21,18 +25,16 @@ Value *types::ArrayType::copy(BaseFunc *base,
 	                     IntegerType::getInt8PtrTy(context),
 	                     IntegerType::getInt8PtrTy(context),
 	                     seqIntLLVM(context),
-	                     seqIntLLVM(context),
-	                     IntegerType::getInt8Ty(context)));
+	                     seqIntLLVM(context)));
 
 	copyFunc->setCallingConv(CallingConv::C);
 
 	IRBuilder<> builder(block);
-	Value *atomic = ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)indexType()->isAtomic());
 	Value *ptr = memb(self, "ptr", block);
 	ptr = builder.CreateBitCast(ptr, IntegerType::getInt8PtrTy(context));
 	Value *len = memb(self, "len", block);
 	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)indexType()->size(block->getModule()));
-	Value *copy = builder.CreateCall(copyFunc, {ptr, len, elemSize, atomic});
+	Value *copy = builder.CreateCall(copyFunc, {ptr, len, elemSize});
 	copy = builder.CreateBitCast(copy, PointerType::get(indexType()->getLLVMType(context), 0));
 	return make(copy, len, block);
 }
@@ -45,18 +47,20 @@ void types::ArrayType::serialize(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	const std::string name = "serialize" + getName();
+	const std::string name = "seq.ser." + getName();
 	Function *serialize = module->getFunction(name);
 	bool makeFunc = (serialize == nullptr);
 
 	if (makeFunc) {
 		serialize = cast<Function>(
 		              module->getOrInsertFunction(
-		                "serialize" + getName(),
+		                name,
 		                llvm::Type::getVoidTy(context),
 		                PointerType::get(indexType()->getLLVMType(context), 0),
 		                seqIntLLVM(context),
 		                IntegerType::getInt8PtrTy(context)));
+
+		serialize->setLinkage(GlobalValue::PrivateLinkage);
 	}
 
 	IRBuilder<> builder(block);
@@ -113,18 +117,20 @@ Value *types::ArrayType::deserialize(BaseFunc *base,
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 
-	const std::string name = "deserialize" + getName();
+	const std::string name = "seq.deser." + getName();
 	Function *deserialize = module->getFunction(name);
 	bool makeFunc = (deserialize == nullptr);
 
 	if (makeFunc) {
 		deserialize = cast<Function>(
-		              module->getOrInsertFunction(
-		                "deserialize" + getName(),
-		                llvm::Type::getVoidTy(context),
-		                PointerType::get(indexType()->getLLVMType(context), 0),
-		                seqIntLLVM(context),
-		                IntegerType::getInt8PtrTy(context)));
+		                module->getOrInsertFunction(
+		                  name,
+		                  llvm::Type::getVoidTy(context),
+		                  PointerType::get(indexType()->getLLVMType(context), 0),
+		                  seqIntLLVM(context),
+		                  IntegerType::getInt8PtrTy(context)));
+
+		deserialize->setLinkage(GlobalValue::PrivateLinkage);
 	}
 
 	auto *allocFunc = cast<Function>(

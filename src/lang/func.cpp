@@ -168,6 +168,7 @@ void Func::codegen(Module *module)
 	func = cast<Function>(
 	         module->getOrInsertFunction(getFuncName(name),
 	                                     FunctionType::get(outType->getLLVMType(context), types, false)));
+	func->setLinkage(GlobalValue::PrivateLinkage);
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);

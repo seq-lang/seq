@@ -27,7 +27,8 @@ SEQ_FUNC void *seq_alloc_atomic(size_t n);
 SEQ_FUNC void *seq_realloc(void *p, size_t n);
 
 SEQ_FUNC char *seq_copy_seq(char *seq, seq_int_t len);
-SEQ_FUNC void *seq_copy_array(void *arr, seq_int_t len, seq_int_t elem_size, bool atomic);
+SEQ_FUNC void *seq_copy_array(void *arr, seq_int_t len, seq_int_t elem_size);
+SEQ_FUNC void *seq_copy_array_atomic(void *arr, seq_int_t len, seq_int_t elem_size);
 
 SEQ_FUNC void seq_print_int(seq_int_t n);
 SEQ_FUNC void seq_print_float(double f);

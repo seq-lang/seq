@@ -110,6 +110,7 @@ types::GenType::GenType(Type *outType) :
 		auto *f = cast<Function>(module->getOrInsertFunction("seq.gen.next",
 		                                                     type->getLLVMType(context),
 		                                                     getLLVMType(context)));
+		f->setLinkage(GlobalValue::PrivateLinkage);
 		Value *arg = f->arg_begin();
 
 		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
