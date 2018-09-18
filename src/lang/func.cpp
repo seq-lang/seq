@@ -42,7 +42,7 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 
 Func::Func() :
     BaseFunc(), Generic(false), SrcObject(), name(), inTypes(), outType(types::Void),
-    scope(new Block()), argNames(), argVars(), ret(nullptr), yield(nullptr), typesResolved(false),
+    scope(new Block()), argNames(), argVars(), ret(nullptr), yield(nullptr), resolvingTypes(false),
     gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
@@ -122,10 +122,10 @@ static std::string getFuncName(std::string& name)
 
 void Func::resolveTypes()
 {
-	if (typesResolved)
+	if (resolvingTypes)
 		return;
 
-	typesResolved = true;
+	resolvingTypes = true;
 
 	try {
 		scope->resolveTypes();
@@ -147,6 +147,8 @@ void Func::resolveTypes()
 		 * catch this exception and ignore it.
 		 */
 	}
+
+	resolvingTypes = false;
 }
 
 void Func::codegen(Module *module)

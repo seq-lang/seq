@@ -7,9 +7,9 @@ static std::string getNameFromTypes(std::vector<types::Type *> types)
 {
 	std::string name = "(";
 
-	for (auto *type : types) {
-		name += type->getName();
-		if (type != types.back())
+	for (unsigned i = 0; i < types.size(); i++) {
+		name += types[i]->getName();
+		if (i < types.size() - 1)
 			name += ", ";
 	}
 

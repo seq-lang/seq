@@ -6,9 +6,9 @@ using namespace llvm;
 static std::string getFuncName(std::vector<types::Type *> inTypes, types::Type *outType)
 {
 	std::string name = "((";
-	for (auto *type : inTypes) {
-		name += type->getName();
-		if (type != inTypes.back())
+	for (unsigned i = 0; i < inTypes.size(); i++) {
+		name += inTypes[i]->getName();
+		if (i < inTypes.size() - 1)
 			name += ", ";
 	}
 

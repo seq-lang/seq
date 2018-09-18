@@ -42,7 +42,7 @@ namespace seq {
 
 		Return *ret;
 		Yield *yield;
-		bool typesResolved;  // make sure we don't keep resolving recursively
+		bool resolvingTypes;  // make sure we don't keep resolving recursively
 
 		bool gen;
 		llvm::Value *promise;
