@@ -40,7 +40,7 @@ FOREIGN void set_ref_record(types::RefType *f, types::RecordType *rec)
 
 FOREIGN void add_ref_method(types::Type *ref, const char *name, Func *fn)
 {
-	ref->addMethod(name, fn);
+	ref->addMethod(name, fn, false);
 }
 
 FOREIGN void set_ref_done(types::RefType *ref)

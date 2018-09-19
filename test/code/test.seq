@@ -1,3 +1,13 @@
+ext Int {
+  def iter(self: Int) {
+    var i = 0
+    while i < self {
+      yield i
+      i = i + 1
+    }
+  }
+}
+
 class Pair[T](a: T, b: T) {
   def sum[Z,S](self: Z, c: S) {
     return self.a + self.b + c
@@ -163,10 +173,10 @@ joe = birthday(joe)
 whois(joe)
 
 global ints = Int[100]
-for i in range(0, ints.len):
+for i in ints.len.iter():
   ints[i] = i+1
 global s = 0
-for z in range(0, ints.len): s = s + ints[z]
+for z in ints.len.iter(): s = s + ints[z]
 print s
 
 var p = Pair[Int](42, 19)

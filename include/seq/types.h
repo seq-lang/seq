@@ -166,7 +166,9 @@ namespace seq {
 
 			virtual bool hasMethod(const std::string& name);
 
-			virtual void addMethod(std::string name, BaseFunc *func);
+			virtual void addMethod(std::string name,
+			                       BaseFunc *func,
+			                       bool force);
 
 			virtual BaseFunc *getMethod(const std::string& name);
 

@@ -138,7 +138,7 @@ types::GenType::GenType(Type *outType) :
 		}
 
 		return f;
-	}));
+	}), false);
 }
 
 Value *types::GenType::defaultValue(BasicBlock *block)

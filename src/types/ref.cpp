@@ -109,7 +109,12 @@ Value *types::RefType::memb(Value *self,
 	assert(contents);
 	IRBuilder<> builder(block);
 	Value *x = builder.CreateLoad(self);
-	return contents->memb(x, name, block);
+
+	try {
+		return contents->memb(x, name, block);
+	} catch (exc::SeqException& e) {
+		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+	}
 }
 
 types::Type *types::RefType::membType(const std::string& name)
@@ -124,7 +129,11 @@ types::Type *types::RefType::membType(const std::string& name)
 		return MethodType::get(this, type);
 	}
 
-	return contents->membType(name);
+	try {
+		return contents->membType(name);
+	} catch (exc::SeqException& e) {
+		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+	}
 }
 
 Value *types::RefType::setMemb(Value *self,

@@ -258,10 +258,10 @@ Value *types::GenericType::setMemb(Value *self,
 	return type->setMemb(self, name, val, block);
 }
 
-void types::GenericType::addMethod(std::string name, BaseFunc *func)
+void types::GenericType::addMethod(std::string name, BaseFunc *func, bool force)
 {
 	ensure();
-	type->addMethod(name, func);
+	type->addMethod(name, func, force);
 }
 
 Value *types::GenericType::staticMemb(const std::string& name, BasicBlock *block)
