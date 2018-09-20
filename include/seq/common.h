@@ -28,6 +28,8 @@ namespace seq {
 			setSrcInfo(s.getSrcInfo());
 		}
 
+		virtual ~SrcObject()=default;
+
 		SrcInfo getSrcInfo() const
 		{
 			return info;
