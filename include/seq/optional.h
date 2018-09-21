@@ -21,7 +21,9 @@ namespace seq {
 			void initFields() override;
 
 			bool isAtomic() const override;
-			Type *getBaseType(seq_int_t idx) const override;
+			bool is(Type *type) const override;
+			unsigned numBaseTypes() const override;
+			Type *getBaseType(unsigned idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			llvm::Value *make(llvm::Value *val, llvm::BasicBlock *block);

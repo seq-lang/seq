@@ -346,7 +346,13 @@ bool types::GenericType::isGeneric(types::Type *type) const
 	return this->type->isGeneric(type);
 }
 
-types::Type *types::GenericType::getBaseType(seq_int_t idx) const
+unsigned types::GenericType::numBaseTypes() const
+{
+	ensure();
+	return type->numBaseTypes();
+}
+
+types::Type *types::GenericType::getBaseType(unsigned idx) const
 {
 	ensure();
 	return type->getBaseType(idx);

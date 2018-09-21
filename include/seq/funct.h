@@ -26,6 +26,8 @@ namespace seq {
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			bool is(Type *type) const override;
+			unsigned numBaseTypes() const override;
+			Type *getBaseType(unsigned idx) const override;
 			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			seq_int_t size(llvm::Module *module) const override;
@@ -49,8 +51,9 @@ namespace seq {
 			llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block);
 			void destroy(llvm::Value *self, llvm::BasicBlock *block);
 
-			Type *getBaseType(seq_int_t idx) const override;
 			bool is(Type *type) const override;
+			unsigned numBaseTypes() const override;
+			Type *getBaseType(unsigned idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			static GenType *get(Type *outType) noexcept;

@@ -189,7 +189,8 @@ namespace seq {
 
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;
-			virtual Type *getBaseType(seq_int_t idx) const;
+			virtual unsigned numBaseTypes() const;
+			virtual Type *getBaseType(unsigned idx) const;
 			virtual Type *getCallType(const std::vector<Type *>& inTypes);
 			virtual Type *getConstructType(const std::vector<Type *>& inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;

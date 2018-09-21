@@ -154,6 +154,21 @@ bool types::RecordType::isAtomic() const
 	return true;
 }
 
+bool types::RecordType::is(types::Type *type) const
+{
+	unsigned b = numBaseTypes();
+
+	if (!isGeneric(type) || b != type->numBaseTypes())
+		return false;
+
+	for (unsigned i = 0; i < b; i++) {
+		if (!types::is(getBaseType(i), type->getBaseType(i)))
+			return false;
+	}
+
+	return true;
+}
+
 void types::RecordType::initFields()
 {
 	if (!getVTable().fields.empty())
@@ -169,12 +184,14 @@ void types::RecordType::initFields()
 	}
 }
 
-types::Type *types::RecordType::getBaseType(seq_int_t idx) const
+unsigned types::RecordType::numBaseTypes() const
 {
-	if (idx < 1 || idx > (seq_int_t)types.size())
-		throw exc::SeqException("invalid index into record (must be constant and in-bounds)");
+	return (unsigned)types.size();
+}
 
-	return types[idx - 1];
+types::Type *types::RecordType::getBaseType(unsigned idx) const
+{
+	return types[idx];
 }
 
 types::Type *types::RecordType::getConstructType(const std::vector<Type *>& inTypes)

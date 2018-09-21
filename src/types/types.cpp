@@ -480,7 +480,12 @@ bool types::Type::isGeneric(types::Type *type) const
 	return typeid(*this) == typeid(*type);
 }
 
-types::Type *types::Type::getBaseType(seq_int_t idx) const
+unsigned types::Type::numBaseTypes() const
+{
+	return 0;
+}
+
+types::Type *types::Type::getBaseType(unsigned idx) const
 {
 	throw exc::SeqException("type '" + getName() + "' has no base types");
 }

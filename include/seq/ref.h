@@ -75,7 +75,8 @@ namespace seq {
 			void initFields() override;
 			bool isAtomic() const override;
 			bool is(types::Type *type) const override;
-			Type *getBaseType(seq_int_t idx) const override;
+			unsigned numBaseTypes() const override;
+			Type *getBaseType(unsigned idx) const override;
 			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
@@ -100,6 +101,9 @@ namespace seq {
 			                  const std::vector<llvm::Value *>& args,
 			                  llvm::BasicBlock *block) override;
 
+			bool is(types::Type *type) const override;
+			unsigned numBaseTypes() const override;
+			Type *getBaseType(unsigned idx) const override;
 			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			llvm::Value *make(llvm::Value *self, llvm::Value *func, llvm::BasicBlock *block);
 			static MethodType *get(Type *self, FuncType *func);

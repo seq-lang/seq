@@ -135,7 +135,7 @@ print b.1
 b = (b.1, !!false)
 print b.2
 
-def fib(n: Int) {
+def fib(n: Int) -> Int {
   type F = {f: (Int -> Int), x: Int}
 
   def apply(f: (Int -> Int), x: Int): return f(x)

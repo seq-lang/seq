@@ -259,6 +259,11 @@ bool types::ArrayType::isAtomic() const
 	return false;
 }
 
+bool types::ArrayType::is(types::Type *type) const
+{
+	return isGeneric(type) && types::is(getBaseType(0), type->getBaseType(0));
+}
+
 void types::ArrayType::initFields()
 {
 	if (!vtable.fields.empty())
@@ -270,7 +275,12 @@ void types::ArrayType::initFields()
 	};
 }
 
-types::Type *types::ArrayType::getBaseType(seq_int_t idx) const
+unsigned types::ArrayType::numBaseTypes() const
+{
+	return 1;
+}
+
+types::Type *types::ArrayType::getBaseType(unsigned idx) const
 {
 	return baseType;
 }
