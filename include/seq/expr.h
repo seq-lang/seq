@@ -30,6 +30,12 @@ namespace seq {
 		types::Type *getType0() const override;
 	};
 
+	class TypeExpr : public Expr {
+	public:
+		TypeExpr(types::Type *type);
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+	};
+
 	class ValueExpr : public Expr {
 	private:
 		llvm::Value *val;

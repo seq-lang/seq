@@ -50,12 +50,13 @@ FOREIGN void set_ref_done(types::RefType *ref)
 
 /***** Expressions *****/
 
-FOREIGN Expr *bool_expr(char b)       { return new BoolExpr(b); }
-FOREIGN Expr *int_expr(int i)         { return new IntExpr(i); }
-FOREIGN Expr *float_expr(double f)    { return new FloatExpr(f); }
-FOREIGN Expr *str_expr(const char *s) { return new StrExpr(string(s)); }
-FOREIGN Expr *func_expr(Func *f)      { return new FuncExpr(f); }
-FOREIGN Expr *var_expr(Var *v)        { return new VarExpr(v); }
+FOREIGN Expr *bool_expr(char b)         { return new BoolExpr(b); }
+FOREIGN Expr *int_expr(int i)           { return new IntExpr(i); }
+FOREIGN Expr *float_expr(double f)      { return new FloatExpr(f); }
+FOREIGN Expr *str_expr(const char *s)   { return new StrExpr(string(s)); }
+FOREIGN Expr *func_expr(Func *f)        { return new FuncExpr(f); }
+FOREIGN Expr *var_expr(Var *v)          { return new VarExpr(v); }
+FOREIGN Expr *type_expr(types::Type *t) { return new TypeExpr(t); }
 
 FOREIGN Expr *cond_expr(Expr *cond, Expr *ift, Expr *iff)
 {
@@ -86,7 +87,6 @@ FOREIGN Expr *pipe_expr(Expr **args, size_t size)
 {
 	return new PipeExpr(vector<Expr*>(args, args + size));
 }
-
 
 FOREIGN Expr *get_elem_expr(Expr *lhs, const char *rhs)
 {
@@ -278,7 +278,6 @@ FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, const char *name)
 	fn->getGeneric(idx)->setName(name);
 }
 
-
 FOREIGN Stmt *match_stmt(Expr *cond)
 {
 	auto m = new Match();
@@ -335,7 +334,7 @@ FOREIGN struct seq_srcinfo {
 	int col;
 };
 
-FOREIGN void set_pos (SrcObject *obj, const char *f, int l, int c)
+FOREIGN void set_pos(SrcObject *obj, const char *f, int l, int c)
 {
 	if (obj) {
 		// int type = dynamic_cast<Expr*>(obj) ? 1 : (dynamic_cast<Stmt*>(obj) ? 2 : 0);
@@ -343,7 +342,7 @@ FOREIGN void set_pos (SrcObject *obj, const char *f, int l, int c)
 	}
 }
 
-FOREIGN seq_srcinfo get_pos (SrcObject *obj)
+FOREIGN seq_srcinfo get_pos(SrcObject *obj)
 {
 	if (!obj) {
 		return seq_srcinfo { (char*)"", 0, 0 };
