@@ -254,6 +254,15 @@ Value *types::ArrayType::defaultValue(BasicBlock *block)
 	return make(ptr, len, block);
 }
 
+Value *types::ArrayType::construct(BaseFunc *base,
+                                   const std::vector<Value *>& args,
+                                   BasicBlock *block)
+{
+	ValueExpr count(types::Int, args[0]);
+	ArrayExpr e(getBaseType(0), &count);
+	return e.codegen(base, block);
+}
+
 bool types::ArrayType::isAtomic() const
 {
 	return false;
@@ -283,6 +292,14 @@ unsigned types::ArrayType::numBaseTypes() const
 types::Type *types::ArrayType::getBaseType(unsigned idx) const
 {
 	return baseType;
+}
+
+types::Type *types::ArrayType::getConstructType(const std::vector<types::Type *>& inTypes)
+{
+	if (inTypes.size() != 1 || !types::is(inTypes[0], types::Int))
+		throw exc::SeqException("array constructor takes exactly 1 integer argument");
+
+	return this;
 }
 
 Type *types::ArrayType::getLLVMType(LLVMContext& context) const
