@@ -12,7 +12,6 @@
 #include "lang.h"
 #include "ops.h"
 #include "patterns.h"
-#include "source.h"
 #include "var.h"
 
 #include "types.h"
@@ -27,6 +26,7 @@
 #include "ref.h"
 #include "optional.h"
 #include "generic.h"
+#include "source.h"
 
 #include "common.h"
 #include "parser.h"
@@ -35,16 +35,17 @@
 namespace seq {
 
 	namespace types {
-		static AnyType      *Any   = AnyType::get();
-		static BaseType     *Base  = BaseType::get();
-		static VoidType     *Void  = VoidType::get();
-		static SeqType      *Seq   = SeqType::get();
-		static IntType      *Int   = IntType::get();
-		static FloatType    *Float = FloatType::get();
-		static BoolType     *Bool  = BoolType::get();
-		static StrType      *Str   = StrType::get();
-		static ArrayType    *Array = ArrayType::get();
-		static GenType      *Gen   = GenType::get();
+		static AnyType    *Any    = AnyType::get();
+		static BaseType   *Base   = BaseType::get();
+		static VoidType   *Void   = VoidType::get();
+		static SeqType    *Seq    = SeqType::get();
+		static IntType    *Int    = IntType::get();
+		static FloatType  *Float  = FloatType::get();
+		static BoolType   *Bool   = BoolType::get();
+		static StrType    *Str    = StrType::get();
+		static ArrayType  *Array  = ArrayType::get();
+		static GenType    *Gen    = GenType::get();
+		static SourceType *Source = SourceType::get();
 	}
 
 	class SeqModule : public BaseFunc {

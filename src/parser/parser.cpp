@@ -645,6 +645,14 @@ struct action<str_type> {
 };
 
 template<>
+struct action<source_type> {
+	static void apply0(ParseState& state)
+	{
+		state.add((types::Type *)types::Source);
+	}
+};
+
+template<>
 struct action<custom_type> {
 	template<typename Input>
 	static bool apply(const Input& in, ParseState& state)
@@ -1190,94 +1198,6 @@ struct control<for_body> : pegtl::normal<for_body>
 	{
 		state.unscope();
 		state.exit();
-	}
-};
-
-template<>
-struct control<source_args> : pegtl::normal<source_args>
-{
-	template<typename Input>
-	static void start(Input&, ParseState& state)
-	{
-		state.push();
-	}
-
-	template<typename Input>
-	static void success(Input&, ParseState& state)
-	{
-		auto vec = state.get("e", true);
-
-		std::vector<Expr *> sources;
-		for (auto ent : vec)
-			sources.push_back(ent.value.expr);
-
-		auto *p = new Source(sources);
-		p->setBase(state.base());
-		state.scope();
-		state.stmt(p);
-
-		state.context((Stmt *)p);
-		state.enter(p->getBlock());
-	}
-
-	template<typename Input>
-	static void failure(Input&, ParseState& state)
-	{
-		state.pop();
-	}
-};
-
-template<>
-struct control<source_as> : pegtl::normal<source_as>
-{
-	template<typename Input>
-	static void start(Input&, ParseState& state)
-	{
-		state.push();
-	}
-
-	template<typename Input>
-	static void success(Input&, ParseState& state)
-	{
-		auto vec = state.get("s", true);
-		assert(vec.size() <= 1);
-
-		SeqEntity ent = state.context();
-		assert(ent.type == SeqEntity::STMT);
-		auto *p = dynamic_cast<Source *>(ent.value.stmt);
-		assert(p);
-		state.sym(vec.empty() ? "_" : vec[0].value.name, p->getVar());
-	}
-
-	template<typename Input>
-	static void failure(Input&, ParseState& state)
-	{
-		state.pop();
-	}
-};
-
-template<>
-struct control<source_body> : pegtl::normal<source_body>
-{
-	template<typename Input>
-	static void start(Input&, ParseState& state)
-	{
-	}
-
-	template<typename Input>
-	static void success(Input&, ParseState& state)
-	{
-		state.unscope();
-		state.exit();
-		state.uncontext();
-	}
-
-	template<typename Input>
-	static void failure(Input&, ParseState& state)
-	{
-		state.unscope();
-		state.exit();
-		state.uncontext();
 	}
 };
 

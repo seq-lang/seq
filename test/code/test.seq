@@ -1,3 +1,31 @@
+ext Source {
+  def iter(self: Source) {
+    while true {
+      var n = self.read();
+      if n == 0 { break }
+      var i = 0
+      while i < n {
+        yield self.get(i)
+        i = i + 1
+      }
+    }
+    self.close()
+  }
+
+  def iter_multi(self: Source) {
+    while true {
+      var n = self.read();
+      if n == 0 { break }
+      var i = 0
+      while i < n {
+        yield self.get_multi(i)
+        i = i + 1
+      }
+    }
+    self.close()
+  }
+}
+
 ext Int {
   def iter(self: Int) {
     var i = 0
@@ -79,7 +107,7 @@ def ident(s: Seq) {
   return s
 }
 
-source args[0] as input {
+for input in Source(args[0]).iter() {
 
   var v = farray[0](input)
   for r in enum(v) {

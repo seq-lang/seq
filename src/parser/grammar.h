@@ -27,7 +27,6 @@ struct str_elif : TAO_PEGTL_STRING("elif") {};
 struct str_else : TAO_PEGTL_STRING("else") {};
 struct str_while : TAO_PEGTL_STRING("while") {};
 struct str_for : TAO_PEGTL_STRING("for") {};
-struct str_source : TAO_PEGTL_STRING("source") {};
 struct str_true : TAO_PEGTL_STRING("true") {};
 struct str_false : TAO_PEGTL_STRING("false") {};
 struct str_return : TAO_PEGTL_STRING("return") {};
@@ -42,7 +41,7 @@ struct str_match : TAO_PEGTL_STRING("match") {};
 struct str_case : TAO_PEGTL_STRING("case") {};
 struct str_ext : TAO_PEGTL_STRING("ext") {};
 
-struct str_keyword : pegtl::sor<str_print, str_var, str_global, str_def, str_if, str_elif, str_else, str_while, str_for, str_source, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case, str_ext> {};
+struct str_keyword : pegtl::sor<str_print, str_var, str_global, str_def, str_if, str_elif, str_else, str_while, str_for, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case, str_ext> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword, pegtl::not_at<pegtl::identifier_other>>, pegtl::identifier> {};
 
@@ -98,7 +97,8 @@ struct int_type : TAO_PEGTL_STRING("Int") {};
 struct float_type : TAO_PEGTL_STRING("Float") {};
 struct bool_type : TAO_PEGTL_STRING("Bool") {};
 struct str_type : TAO_PEGTL_STRING("Str") {};
-struct builtin_type : pegtl::sor<seq_type, int_type, float_type, bool_type, str_type> {};
+struct source_type : TAO_PEGTL_STRING("Source") {};
+struct builtin_type : pegtl::sor<seq_type, int_type, float_type, bool_type, str_type, source_type> {};
 struct custom_type : pegtl::seq<pegtl::not_at<pegtl::sor<str_keyword, builtin_type>>, pegtl::identifier> {};
 struct realized_type : pegtl::seq<custom_type, seps, pegtl::one<'['>, seps, pegtl::list<type, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
 
@@ -118,7 +118,7 @@ struct opt_tail : pegtl::one<'?'> {};
 struct gen_tail : pegtl::one<'+'> {};
 struct type_tail : pegtl::sor<array_tail, opt_tail, gen_tail> {};
 
-struct type0 : pegtl::sor<record_type, func_type, seq_type, int_type, float_type, bool_type, str_type, realized_type, custom_type> {};
+struct type0 : pegtl::sor<record_type, func_type, seq_type, int_type, float_type, bool_type, str_type, source_type, realized_type, custom_type> {};
 struct type : pegtl::seq<type0, pegtl::star<seps, type_tail>> {};
 
 /*
@@ -253,11 +253,6 @@ struct for_args : pegtl::if_must<str_for, seps_must, name, seps_must, str_in, se
 struct for_body : pegtl::seq<block> {};
 struct for_stmt : pegtl::if_must<for_args, seps, for_body> {};
 
-struct source_args : pegtl::if_must<str_source, seps_must, pegtl::list<expr, seps>> {};
-struct source_as : pegtl::opt<str_as, seps_must, name> {};
-struct source_body : pegtl::seq<block> {};
-struct source_stmt : pegtl::if_must<source_args, seps, source_as, seps, source_body> {};
-
 struct typedef_stmt : pegtl::if_must<str_typedef, seps_must, pegtl::not_at<builtin_type>, name, seps, pegtl::one<'='>, seps, type> {};
 
 /*
@@ -314,7 +309,7 @@ struct continue_stmt : pegtl::seq<str_continue> {};
 
 struct expr_stmt : pegtl::seq<expr> {};
 
-struct statement : pegtl::sor<typedef_stmt, source_stmt, print_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, global_decl, func_stmt, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, expr_stmt, if_stmt, match_stmt> {};
+struct statement : pegtl::sor<typedef_stmt, print_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, global_decl, func_stmt, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, expr_stmt, if_stmt, match_stmt> {};
 struct statement_toplvl : pegtl::sor<class_stmt, ext_stmt, statement> {};
 struct module : pegtl::must<statement_seq_toplvl> {};
 struct grammar : pegtl::must<seps, module, seps, pegtl::eof> {};

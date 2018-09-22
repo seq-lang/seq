@@ -131,8 +131,10 @@ void Func::resolveTypes()
 
 void Func::codegen(Module *module)
 {
-	if (!this->module)
+	if (this->module != module) {
+		func = nullptr;
 		this->module = module;
+	}
 
 	if (func)
 		return;
@@ -434,8 +436,10 @@ BaseFuncLite::BaseFuncLite(std::vector<types::Type *> inTypes,
 
 void BaseFuncLite::codegen(Module *module)
 {
-	if (!this->module)
+	if (this->module != module) {
+		func = nullptr;
 		this->module = module;
+	}
 
 	if (func)
 		return;

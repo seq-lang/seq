@@ -116,7 +116,6 @@ add_library(seq SHARED include/seq/any.h
                        src/lang/ops.cpp
                        src/lang/patterns.cpp
                        src/lang/seq.cpp
-                       src/lang/source.cpp
                        src/lang/stmt.cpp
                        src/lang/var.cpp
                        src/parser/grammar.h
@@ -131,6 +130,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/record.cpp
                        src/types/ref.cpp
                        src/types/seqt.cpp
+                       src/types/source.cpp
                        src/types/types.cpp
                        src/types/void.cpp
                        src/util/ocaml.cpp)

@@ -1,26 +1,31 @@
 #ifndef SEQ_SOURCE_H
 #define SEQ_SOURCE_H
 
-#include <vector>
-#include "expr.h"
-#include "stmt.h"
+#include "types.h"
 
 namespace seq {
-	class Source : public Stmt {
-	private:
-		std::vector<Expr *> sources;
-		Block *scope;
-		Var *var;
-		bool isSingle() const;
-		types::Type *determineOutType() const;
-	public:
-		explicit Source(std::vector<Expr *> sources);
-		Block *getBlock();
-		Var *getVar();
-		void resolveTypes() override;
-		void codegen0(llvm::BasicBlock*& block) override;
-		Source *clone(Generic *ref) override;
-	};
+	namespace types {
+
+		class SourceType : public Type {
+		private:
+			SourceType();
+		public:
+			SourceType(SourceType const&)=delete;
+			void operator=(SourceType const&)=delete;
+
+			llvm::Value *construct(BaseFunc *base,
+			                       const std::vector<llvm::Value *>& args,
+			                       llvm::BasicBlock *block) override;
+
+			bool isAtomic() const override;
+			Type *getConstructType(const std::vector<Type *>& inTypes) override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			seq_int_t size(llvm::Module *module) const override;
+
+			static SourceType *get() noexcept;
+		};
+
+	}
 }
 
 #endif /* SEQ_SOURCE_H */
