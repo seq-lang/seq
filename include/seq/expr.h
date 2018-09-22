@@ -79,6 +79,14 @@ namespace seq {
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 	};
 
+	class SeqExpr : public Expr {
+	private:
+		std::string s;
+	public:
+		explicit SeqExpr(std::string s);
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+	};
+
 	class VarExpr : public Expr {
 	private:
 		Var *var;

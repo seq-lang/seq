@@ -72,6 +72,7 @@ FOREIGN Expr *bool_expr(char b)           { E("bool_expr[{}]", b); return new Bo
 FOREIGN Expr *int_expr(int i)             { E("int_expr[{}]", i); return new IntExpr(i); }
 FOREIGN Expr *float_expr(double f)        { E("float_expr[{}]", f); return new FloatExpr(f); }
 FOREIGN Expr *str_expr(const char *s)     { E("str_expr[{}]", s); return new StrExpr(string(s)); }
+FOREIGN Expr *seq_expr(const char *s)     { E("seq_expr[{}]", s); return new SeqExpr(string(s)); }
 FOREIGN Expr *str_seq_expr(const char *s) { E("seq_expr[{}]", s); return new StrExpr(string(s)); }
 FOREIGN Expr *func_expr(Func *f)          { E("func_expr[{}]", f->genericName()); return new FuncExpr(f); }
 FOREIGN Expr *var_expr(Var *v)            { E("var_expr"); return new VarExpr(v); }
