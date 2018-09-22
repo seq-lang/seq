@@ -139,6 +139,30 @@ Value *StrExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	return types::Str->make(str, len, preambleBlock);
 }
 
+SeqExpr::SeqExpr(std::string s) : Expr(types::Seq), s(std::move(s))
+{
+}
+
+Value *SeqExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+	BasicBlock *preambleBlock = base->getPreamble();
+
+	GlobalVariable *seqVar = new GlobalVariable(*module,
+	                                            llvm::ArrayType::get(IntegerType::getInt8Ty(context), s.length() + 1),
+	                                            true,
+	                                            GlobalValue::PrivateLinkage,
+	                                            ConstantDataArray::getString(context, s),
+	                                            "seq_literal");
+	seqVar->setAlignment(1);
+
+	IRBuilder<> builder(preambleBlock);
+	Value *seq = builder.CreateBitCast(seqVar, IntegerType::getInt8PtrTy(context));
+	Value *len = ConstantInt::get(seqIntLLVM(context), s.length());
+	return types::Seq->make(seq, len, preambleBlock);
+}
+
 VarExpr::VarExpr(Var *var) : var(var)
 {
 }

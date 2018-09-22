@@ -102,6 +102,22 @@ namespace seq {
 			                llvm::Value *val,
 			                llvm::BasicBlock *block) override;
 
+			llvm::Value *indexSlice(BaseFunc *base,
+			                        llvm::Value *self,
+			                        llvm::Value *from,
+			                        llvm::Value *to,
+			                        llvm::BasicBlock *block) override;
+
+			llvm::Value *indexSliceNoFrom(BaseFunc *base,
+			                              llvm::Value *self,
+			                              llvm::Value *to,
+			                              llvm::BasicBlock *block) override;
+
+			llvm::Value *indexSliceNoTo(BaseFunc *base,
+			                            llvm::Value *self,
+			                            llvm::Value *from,
+			                            llvm::BasicBlock *block) override;
+
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
 			                  const std::vector<llvm::Value *>& args,

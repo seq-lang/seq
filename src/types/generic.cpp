@@ -226,6 +226,34 @@ void types::GenericType::indexStore(BaseFunc *base,
 	type->indexStore(base, self, idx, val, block);
 }
 
+Value *types::GenericType::indexSlice(BaseFunc *base,
+                                      Value *self,
+                                      Value *from,
+                                      Value *to,
+                                      BasicBlock *block)
+{
+	ensure();
+	return type->indexSlice(base, self, from, to, block);
+}
+
+Value *types::GenericType::indexSliceNoFrom(BaseFunc *base,
+                                            Value *self,
+                                            Value *to,
+                                            BasicBlock *block)
+{
+	ensure();
+	return type->indexSliceNoFrom(base, self, to, block);
+}
+
+Value *types::GenericType::indexSliceNoTo(BaseFunc *base,
+                                          Value *self,
+                                          Value *to,
+                                          BasicBlock *block)
+{
+	ensure();
+	return type->indexSliceNoTo(base, self, to, block);
+}
+
 Value *types::GenericType::call(BaseFunc *base,
                                 Value *self,
                                 const std::vector<Value *>& args,
