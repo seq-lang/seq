@@ -16,9 +16,8 @@ void Block::add(Stmt *stmt)
 
 void Block::resolveTypes()
 {
-	for (Stmt *stmt : stmts) {
-      stmt->resolveTypes();
-   }
+	for (Stmt *stmt : stmts)
+		stmt->resolveTypes();
 }
 
 void Block::codegen(BasicBlock*& block)
