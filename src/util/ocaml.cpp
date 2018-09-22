@@ -37,6 +37,11 @@ FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz
 	         vector<string>(names, names + sz));
 }
 
+FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
+{
+	return types::FuncType::get(vector<types::Type*>(ty, ty + sz), ret);
+}
+
 FOREIGN types::Type *ref_type(const char *name)
 {
 	auto f = types::RefType::get(name);

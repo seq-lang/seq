@@ -32,6 +32,7 @@ let init_context fn =
   Hashtbl.set ctx.map ~key:"seq"   ~data:(Type (str_seq_type ()));
   Hashtbl.set ctx.map ~key:"bool"  ~data:(Type (bool_type ()));
   Hashtbl.set ctx.map ~key:"float" ~data:(Type (float_type ()));
+  (* Hashtbl.set ctx.map ~key:"array" ~data:(Type (array_type (generic_type ()))); *)
   ctx
 
 (* placeholder for NotImplemented *)
@@ -113,14 +114,25 @@ let rec get_seq_expr ctx expr =
     | Some st -> get_seq_expr ctx st in
     array_slice_expr lh_expr (unpack st) (unpack ed), pos
   | Index(Id("array", pos), indices) ->
-    let index_exprs = List.map indices ~f:(get_seq_expr ctx) in
-    if List.length index_exprs <> 1 then 
+    if List.length indices <> 1 then 
       seq_error "Array needs only one type" pos;
     let typ_expr = get_seq_expr ctx (List.hd_exn indices) in 
     if get_expr_name typ_expr <> "type" then
       seq_error "Not a valid type" (get_pos typ_expr);
     let typ = get_type typ_expr ctx.base in
     type_expr (array_type typ), pos
+  | Index(Id("callable", pos), indices) ->
+    let typ_exprs = List.map indices ~f:(fun t ->
+      let typ_expr = get_seq_expr ctx t in
+      if get_expr_name typ_expr <> "type" then
+        seq_error "Not a valid type" (get_pos typ_expr);
+      typ_expr) in
+    let ret, args = match List.rev typ_exprs with
+    | ret::tl -> 
+      get_type ret ctx.base, List.map tl ~f:(get_type ret) |> List.rev
+    | [] -> 
+      seq_error "Callable needs at least two arguments" pos in
+    type_expr (func_type ret args), pos
   | Index(lh_expr, indices) ->
     let lh_expr = get_seq_expr ctx lh_expr in
     let index_exprs = List.map indices ~f:(get_seq_expr ctx) in
@@ -222,18 +234,19 @@ let rec get_seq_stmt ctx block stmt : unit =
   | Print (print_exprs, pos) ->
     (* TODO: fix pos arguments *)
     List.iteri print_exprs ~f:(fun i ps -> 
+      (* eprintf "~~ %s%!\n" @@ prn_expr (fun x -> "") ps; *)
       if i > 0 then begin
-        let stmt = print_stmt @@ get_seq_expr ctx @@ String(" ", pos) in
+        let stmt = String(" ", pos) |> get_seq_expr ctx |> print_stmt in
         set_base stmt ctx.base;
         set_pos stmt pos;
         add_stmt stmt block
       end;
-      let stmt = print_stmt @@ get_seq_expr ctx ps in
+      let stmt = ps |> get_seq_expr ctx |> print_stmt in
       set_base stmt ctx.base;
       set_pos stmt pos;
       add_stmt stmt block
     );
-    print_stmt (get_seq_expr ctx @@ String("\n", pos)), pos
+    String("\n", pos) |> get_seq_expr ctx |> print_stmt, pos
   | Return (ret_expr, pos) ->
     let ret_stmt = return_stmt (get_seq_expr ctx ret_expr) in
     set_func_return ctx.base ret_stmt; 

@@ -158,7 +158,7 @@ and_test: /* AND operator: a, a and b */
   | not_test AND and_test { Binary ($1, $2, $3) } 
 not_test: /* General comparison: a, not a, a < 5 */
   | expr { $1 }
-  | NOT not_test { Unary ($1, $2) }
+  | NOT not_test { Unary (("!", snd $1), $2) }
   | expr cond_op not_test { Binary ($1, $2, $3) }
 %inline cond_op:
   /* TODO: in, is in, is not in, not in, not */

@@ -52,6 +52,13 @@ let generic_type = foreign "generic_type" (void @-> returning seq_type)
 let array_type   = foreign "array_type"   (seq_type @-> returning seq_type)
 let ref_type     = foreign "ref_type"     (string @-> returning seq_type)
 
+let func_type' = foreign "func_type" 
+  (seq_type @-> ptr seq_type @-> size_t @-> returning seq_type)
+let func_type ret types = 
+	let a_arr = CArray.of_list seq_type types in
+  let a_len = Unsigned.Size_t.of_int (CArray.length a_arr) in
+	func_type' ret (CArray.start a_arr) a_len
+
 let record_type' = foreign "record_type" 
   (ptr string @-> ptr seq_type @-> size_t @-> returning seq_type)
 let record_type names types = 
