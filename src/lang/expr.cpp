@@ -47,6 +47,11 @@ Expr *Expr::clone(Generic *ref)
 	return this;
 }
 
+std::string Expr::getName() const
+{
+	return name;
+}
+
 BlankExpr::BlankExpr() : Expr(types::Void)
 {
 }
@@ -63,6 +68,7 @@ Value *BlankExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 TypeExpr::TypeExpr(types::Type *type) : Expr(type)
 {
+	name = "type";
 }
 
 Value *TypeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
@@ -120,12 +126,12 @@ Value *StrExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	BasicBlock *preambleBlock = base->getPreamble();
 
 	GlobalVariable *strVar = new GlobalVariable(*module,
-	                                            llvm::ArrayType::get(IntegerType::getInt8Ty(context),
-	                                                                 s.length() + 1),
-	                                            true,
-	                                            GlobalValue::PrivateLinkage,
-	                                            ConstantDataArray::getString(context, s),
-	                                            "str_literal");
+															  llvm::ArrayType::get(IntegerType::getInt8Ty(context),
+																						  s.length() + 1),
+															  true,
+															  GlobalValue::PrivateLinkage,
+															  ConstantDataArray::getString(context, s),
+															  "str_literal");
 	strVar->setAlignment(1);
 
 	IRBuilder<> builder(preambleBlock);
@@ -154,8 +160,9 @@ VarExpr *VarExpr::clone(Generic *ref)
 }
 
 FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types) :
-    func(func), types(std::move(types))
+	 func(func), types(std::move(types))
 {
+	name = "func";
 }
 
 bool FuncExpr::isParameterized()
@@ -201,7 +208,7 @@ FuncExpr *FuncExpr::clone(Generic *ref)
 }
 
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
-    Expr(types::ArrayType::get(type)), count(count)
+	 Expr(types::ArrayType::get(type)), count(count)
 {
 }
 
@@ -228,7 +235,7 @@ ArrayExpr *ArrayExpr::clone(Generic *ref)
 }
 
 RecordExpr::RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names) :
-    exprs(std::move(exprs)), names(std::move(names))
+	 exprs(std::move(exprs)), names(std::move(names))
 {
 }
 
@@ -272,7 +279,7 @@ RecordExpr *RecordExpr::clone(Generic *ref)
 }
 
 UOpExpr::UOpExpr(Op op, Expr *lhs) :
-    Expr(), op(std::move(op)), lhs(lhs)
+	 Expr(), op(std::move(op)), lhs(lhs)
 {
 }
 
@@ -300,7 +307,7 @@ UOpExpr *UOpExpr::clone(Generic *ref)
 }
 
 BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs) :
-    Expr(), op(std::move(op)), lhs(lhs), rhs(rhs)
+	 Expr(), op(std::move(op)), lhs(lhs), rhs(rhs)
 {
 }
 
@@ -371,7 +378,7 @@ BOpExpr *BOpExpr::clone(Generic *ref)
 }
 
 ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :
-    arr(arr), idx(idx)
+	 arr(arr), idx(idx)
 {
 }
 
@@ -400,7 +407,7 @@ ArrayLookupExpr *ArrayLookupExpr::clone(Generic *ref)
 }
 
 ArraySliceExpr::ArraySliceExpr(Expr *arr, Expr *from, Expr *to) :
-    arr(arr), from(from), to(to)
+	 arr(arr), from(from), to(to)
 {
 }
 
@@ -443,12 +450,12 @@ ArraySliceExpr *ArraySliceExpr::clone(Generic *ref)
 }
 
 GetElemExpr::GetElemExpr(Expr *rec, std::string memb) :
-    rec(rec), memb(std::move(memb))
+	 rec(rec), memb(std::move(memb))
 {
 }
 
 GetElemExpr::GetElemExpr(Expr *rec, seq_int_t idx) :
-    GetElemExpr(rec, std::to_string(idx))
+	 GetElemExpr(rec, std::to_string(idx))
 {
 	assert(idx >= 1);
 }
@@ -485,7 +492,7 @@ GetElemExpr *GetElemExpr::clone(Generic *ref)
 }
 
 GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb) :
-    Expr(), type(type), memb(std::move(memb))
+	 Expr(), type(type), memb(std::move(memb))
 {
 }
 
@@ -505,7 +512,7 @@ GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref)
 }
 
 MethodExpr::MethodExpr(Expr *expr, std::string name, std::vector<types::Type *> types) :
-    Expr(), expr(expr), name(std::move(name)), types(std::move(types))
+	 Expr(), expr(expr), name(std::move(name)), types(std::move(types))
 {
 }
 
@@ -555,7 +562,7 @@ MethodExpr *MethodExpr::clone(Generic *ref)
 }
 
 CallExpr::CallExpr(Expr *func, std::vector<Expr *> args) :
-    func(func), args(std::move(args))
+	 func(func), args(std::move(args))
 {
 }
 
@@ -647,7 +654,7 @@ CallExpr *CallExpr::clone(Generic *ref)
 }
 
 PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args) :
-    func(func), args(std::move(args))
+	 func(func), args(std::move(args))
 {
 }
 
@@ -693,7 +700,7 @@ PartialCallExpr *PartialCallExpr::clone(seq::Generic *ref)
 }
 
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse) :
-    Expr(), cond(cond), ifTrue(ifTrue), ifFalse(ifFalse)
+	 Expr(), cond(cond), ifTrue(ifTrue), ifFalse(ifFalse)
 {
 }
 
@@ -743,7 +750,7 @@ types::Type *CondExpr::getType0() const
 	types::Type *falseType = ifFalse->getType();
 	if (!types::is(trueType, falseType))
 		throw exc::SeqException("inconsistent types '" + trueType->getName() + "' and '" +
-		                        falseType->getName() + "' in conditional expression");
+										falseType->getName() + "' in conditional expression");
 
 	return trueType;
 }
@@ -754,7 +761,7 @@ CondExpr *CondExpr::clone(Generic *ref)
 }
 
 MatchExpr::MatchExpr() :
-    Expr(), value(nullptr), patterns(), exprs()
+	 Expr(), value(nullptr), patterns(), exprs()
 {
 }
 
@@ -872,7 +879,7 @@ MatchExpr *MatchExpr::clone(Generic *ref)
 }
 
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
-    Expr(), type(type), args(std::move(args))
+	 Expr(), type(type), args(std::move(args))
 {
 }
 
@@ -953,7 +960,7 @@ DefaultExpr *DefaultExpr::clone(Generic *ref)
 }
 
 PipeExpr::PipeExpr(std::vector<seq::Expr *> stages) :
-    Expr(), stages(std::move(stages))
+	 Expr(), stages(std::move(stages))
 {
 }
 
@@ -964,10 +971,10 @@ void PipeExpr::resolveTypes()
 }
 
 static Value *codegenPipe(BaseFunc *base,
-                          Value *val,
-                          types::Type *type,
-                          BasicBlock*& block,
-                          std::queue<Expr *>& stages)
+								  Value *val,
+								  types::Type *type,
+								  BasicBlock*& block,
+								  std::queue<Expr *>& stages)
 {
 	if (stages.empty())
 		return val;

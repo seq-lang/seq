@@ -8,22 +8,19 @@ module T = ANSITerminal
 
 exception SeqCamlError of string * pos_t
 
-(* 
-TODO: 
-- matches
-- type shadowing
-- ast/error
-*)
 
+(* context hashtable members *)
 type assignable = 
-  | Var of seq_var
+  | Var  of seq_var
   | Func of seq_func
   | Type of seq_type
+
 type context = { 
   base: seq_func; 
   map: (string, assignable) Hashtbl.t;
   stack: (string list) Stack.t 
 }
+
 let dummy_pos: pos_t = {pos_fname=""; pos_cnum=0; pos_lnum=0; pos_bol=0}
 
 let init_context fn = 
@@ -40,47 +37,36 @@ let init_context fn =
 (* placeholder for NotImplemented *)
 let noimp s = 
   raise (NotImplentedError ("Not yet implemented: " ^ s))
+let seq_error msg pos =
+  raise (SeqCamlError (msg, pos))
 
 (* return seq_type for a string name *)
-let get_type_exn ctx typ = 
-  match Hashtbl.find ctx.map typ with
-  | Some (Type t) -> t
-  | _ -> noimp (sprintf "Type %s" typ)
 let has_type ctx s = 
   match Hashtbl.find ctx.map s with 
   | Some (Type _) -> true 
   | _ -> false
 
-let seq_error msg pos =
-  raise (SeqCamlError (msg, pos))
-
-(* let realize_type  *)
 
 let rec get_seq_expr ctx expr = 
   let expr, pos = begin
   match expr with
-  | Bool(b, pos) -> 
-    bool_expr b, pos
-  | Int(i, pos) -> 
-    int_expr i, pos
-  | Float(f, pos) -> 
-    float_expr f, pos
-  | String(s, pos) -> 
-    str_expr s, pos
-  | Seq(s, pos) -> 
-    str_seq_expr s, pos
-  | Id(var, pos) -> begin
+  | Bool(b, pos)    -> bool_expr b, pos
+  | Int(i, pos)     -> int_expr i, pos
+  | Float(f, pos)   -> float_expr f, pos
+  | String(s, pos)  -> str_expr s, pos
+  | Seq(s, pos)     -> str_seq_expr s, pos
+  | Generic(var, pos)
+  | Id(var, pos)    -> begin
     match Hashtbl.find ctx.map var with
-    | Some assgn -> (match assgn with
-      | Var v -> 
-        var_expr v, pos
-      | Func f -> 
-        func_expr f, pos
-      | Type _ -> 
-        noimp (sprintf "Type expression %s" var))
-    | None -> 
-      seq_error (sprintf "Variable %s not found" var) pos
+    | Some (Var v)  -> var_expr v, pos
+    | Some (Func f) -> func_expr f, pos
+    | Some (Type t) -> type_expr t, pos 
+    | None -> seq_error (sprintf "%s not found" var) pos
     end
+  | TypeOf(expr, pos) ->
+    let expr = get_seq_expr ctx expr in
+    let typ = get_type expr ctx.base in
+    type_expr typ, pos
   | IfExpr(cond, if_expr, else_expr) ->
     let if_expr = get_seq_expr ctx if_expr in 
     let else_expr = get_seq_expr ctx else_expr in
@@ -89,59 +75,20 @@ let rec get_seq_expr ctx expr =
     cond_expr c_expr if_expr else_expr, pos
   | Unary((op, pos), expr) -> 
     uop_expr op (get_seq_expr ctx expr), pos
-  | Cond(lh_expr, (op, pos), rh_expr)
   | Binary(lh_expr, (op, pos), rh_expr) ->
     let lh_expr = get_seq_expr ctx lh_expr in
     let rh_expr = get_seq_expr ctx rh_expr in
     bop_expr op lh_expr rh_expr, pos
-  | Call(callee_expr, typs, args) -> begin
-    match callee_expr with 
-    | Typeof(expr, pos) -> (* typeof(x) () *)
-      let expr = get_seq_expr ctx expr in
-      let typ = get_type expr ctx.base in
-      construct_expr typ (List.map args ~f:(get_seq_expr ctx)), pos
-    | Id("array", pos) -> begin
-      if List.length typs <> 1 then
-        seq_error "Type of array is required" pos;
-      if List.length args <> 1 then
-        seq_error "Size of array is required" pos;
-      match parse_type ctx @@ List.hd_exn typs with
-      | None ->
-        seq_error (sprintf "Type %s is not declared" @@ prn_typ (fun x -> "") (List.hd_exn typs)) pos;
-      | Some typ ->
-        let sz = List.hd_exn args in
-        array_expr typ (get_seq_expr ctx sz), pos
-      end
-    | Id(typ, pos) when has_type ctx typ -> (* class[int]() *)
-      let typs = List.map typs ~f:(fun t ->
-        match parse_type ctx t with
-        | None -> 
-          seq_error (sprintf "Type %s is not declared" @@ prn_typ (fun x -> "") t) pos;
-        | Some t -> t) 
-      in
-      let typ = match parse_type ctx @@ TClass((typ, pos), []) with
-        | Some typ -> realize_type typ typs 
-        | None -> seq_error (sprintf "Type %s is not declared" typ) pos
-      in
-      construct_expr typ (List.map args ~f:(get_seq_expr ctx)), pos
+  | Call(callee_expr, args) -> begin
+    let callee_expr = get_seq_expr ctx callee_expr in
+    match get_expr_name callee_expr with
+    | "type" ->    
+      let typ = get_type callee_expr ctx.base in
+      construct_expr typ (List.map args ~f:(get_seq_expr ctx)), get_pos callee_expr
     | _ -> (* fn[t](...) *)
-      let callee_expr = get_seq_expr ctx callee_expr in
-      let callee_expr = 
-        if List.length typs > 0 then 
-          let fn = realize_func callee_expr @@ List.map typs ~f:(fun t ->
-            match parse_type ctx t with
-            | None -> 
-              seq_error (sprintf "Type %s is not declared" @@ prn_typ (fun x -> "") t) (get_pos callee_expr);
-            | Some t -> t) 
-          in 
-          func_expr fn
-        else callee_expr 
-      in
-      let args_exprs = List.map args ~f:(fun x ->
-        match x with 
+      let args_exprs = List.map args ~f:(function
         | Ellipsis -> Ctypes.null
-        | _ -> get_seq_expr ctx x) 
-      in
+        | ex -> get_seq_expr ctx ex) in
       let pos = get_pos callee_expr in
       if List.exists args ~f:((=)(Ellipsis)) then   
         partial_expr callee_expr args_exprs, pos
@@ -151,155 +98,124 @@ let rec get_seq_expr ctx expr =
   | Pipe exprs ->
     let exprs = List.map exprs ~f:(get_seq_expr ctx) in
     pipe_expr exprs, get_pos (List.hd_exn exprs)
-  | Dot(lh_expr, (rhs, pos)) -> begin
-    match lh_expr with
-    | Id(typ, pos) when has_type ctx typ -> 
-      let typ = match parse_type ctx @@ TClass((typ, pos), []) with
-        | None -> 
-          seq_error (sprintf "Type %s is not declared" typ) pos;
-        | Some t -> t 
-      in
+  | Dot(lh_expr, (rhs, pos)) -> 
+    let lh_expr = get_seq_expr ctx lh_expr in
+    if get_expr_name lh_expr = "type" then 
+      let typ = get_type lh_expr ctx.base in
       static_expr typ rhs, pos
-    | _ -> 
-      get_elem_expr (get_seq_expr ctx lh_expr) rhs, pos
-    end
-  | Index(lh_expr, index_expr) ->
-    let lh_expr = get_seq_expr ctx lh_expr in begin
-    match index_expr with
-    | Slice(st, ed, step, pos) ->
-      if is_some step then noimp "Step";
-      let st = match st with None -> Ctypes.null | Some st -> get_seq_expr ctx st in
-      let ed = match ed with None -> Ctypes.null | Some ed -> get_seq_expr ctx ed in
-      array_slice_expr lh_expr st ed, pos
-    | _ -> 
-      let index_expr = get_seq_expr ctx index_expr in
-      let pos = get_pos index_expr in
-      array_lookup_expr lh_expr index_expr, pos
+    else 
+      get_elem_expr lh_expr rhs, pos
+  | Index(lh_expr, [Slice(st, ed, step, pos)]) ->
+    let lh_expr = get_seq_expr ctx lh_expr in 
+    if is_some step then noimp "Step";
+    let unpack st = match st with 
+    | None -> Ctypes.null 
+    | Some st -> get_seq_expr ctx st in
+    array_slice_expr lh_expr (unpack st) (unpack ed), pos
+  | Index(Id("array", pos), indices) ->
+    let index_exprs = List.map indices ~f:(get_seq_expr ctx) in
+    if List.length index_exprs <> 1 then 
+      seq_error "Array needs only one type" pos;
+    let typ_expr = get_seq_expr ctx (List.hd_exn indices) in 
+    if get_expr_name typ_expr <> "type" then
+      seq_error "Not a valid type" (get_pos typ_expr);
+    let typ = get_type typ_expr ctx.base in
+    type_expr (array_type typ), pos
+  | Index(lh_expr, indices) ->
+    let lh_expr = get_seq_expr ctx lh_expr in
+    let index_exprs = List.map indices ~f:(get_seq_expr ctx) in
+    begin match get_expr_name lh_expr with 
+    | "type" ->
+      let typ = List.map indices ~f:(fun t ->
+          let typ_expr = get_seq_expr ctx t in 
+          if get_expr_name typ_expr <> "type" then
+            seq_error "Not a valid type" (get_pos typ_expr);
+          get_type typ_expr ctx.base) 
+        |> realize_type (get_type lh_expr ctx.base) in
+      type_expr typ, get_pos lh_expr
+    | "func" ->
+      let fn = List.map indices ~f:(fun t ->
+          let typ_expr = get_seq_expr ctx t in 
+          if get_expr_name typ_expr <> "type" then
+            seq_error "Not a valid type" (get_pos typ_expr);
+          get_type typ_expr ctx.base) 
+        |> realize_func lh_expr in
+      func_expr fn, get_pos lh_expr
+    | _ ->
+      if List.length index_exprs <> 1 then 
+        seq_error "Index needs only one item" (get_pos lh_expr);
+      array_lookup_expr lh_expr (List.hd_exn index_exprs), get_pos lh_expr
     end
   | Tuple(args, pos) ->
     record_expr (List.map args ~f:(get_seq_expr ctx)), pos
-  | Typeof(expr, pos) ->
-    seq_error "Invalid typeof" pos
-  | _ -> 
-    noimp "Unknown expr"
+  | _ -> noimp "Unknown expr"
   end
   in 
   set_pos expr pos;
   expr
-and parse_type ctx = function
-  | TGeneric(typ, pos) -> begin
-    match Hashtbl.find ctx.map typ with 
-    | Some (Type t) -> Some t
-    | _ -> None
-    end
-  | TClass((typ, pos), param_typs) -> begin
-    match Hashtbl.find ctx.map typ with 
-    | Some (Type t) -> Some (realize_type t @@ List.map param_typs ~f:(fun t ->
-      match parse_type ctx t with
-      | None -> 
-        seq_error (sprintf "Type %s is not declared" @@ prn_typ (fun x -> "") t) pos;
-      | Some t -> t))
-    | _ -> None
-    end
-  | TTypeof(expr) ->
-    let expr = get_seq_expr ctx expr in
-    Some (get_type expr ctx.base)
-
-let match_arg = function
-  | Arg((n, _), None) -> (n, (TGeneric("`", dummy_pos)))
-  | Arg((n, _), Some t) -> (n, t)
   
-let set_generics ctx pos types args set_generics get_generic =
-  let generic_types = String.Table.create () in
+let set_generics ctx types args set_generic_count get_generic =
   let arg_names, arg_types = List.unzip @@ List.map args ~f:(function 
-    | Arg((n, _), None) -> (n, None)
-    | Arg((n, _), Some t) -> (n, Some(t))) 
-  in 
-  List.iteri types ~f:(fun i -> function 
-    | TGeneric(t, _) -> Hashtbl.set generic_types ~key:t ~data:i
-    | _ -> seq_error "Generic needed (forgot `?)" pos);
-  let arg_types, generic_count = 
-    List.fold arg_types ~init:([], 0) ~f:(fun (acc_types, acc_count) -> function
-      | None -> 
-        let t = (sprintf "``%d" acc_count) in (* in-code genrics can only have one quote *)
-        Hashtbl.set generic_types ~key:t ~data:acc_count;
-        TGeneric(t, dummy_pos)::acc_types, acc_count + 1
-      | Some (TGeneric (gen, _) as t) -> begin
-        match Hashtbl.find generic_types gen with 
-        | Some _ -> t::acc_types, acc_count
-        | None -> 
-          Hashtbl.set generic_types ~key:gen ~data:acc_count;
-          t::acc_types, acc_count + 1
-        end
-      | Some t -> begin 
-        match parse_type ctx t with
-        | Some _ -> t::acc_types, acc_count
-        | None -> noimp (sprintf "Type %s" @@ prn_typ (fun x -> "") t)
-        end)
-  in
-  let generic_count = generic_count + (List.length types) in
-  eprintf "> %d\n%!" generic_count;
-  set_generics generic_count;
-  let arg_types = List.map (List.rev arg_types) ~f:(function 
-    | TGeneric(gen, _) -> 
-      let idx = Hashtbl.find_exn generic_types gen in
-      (* set_ref_generic_name typ idx t;  *)
-      get_generic idx gen
-    | _ as t -> Option.value_exn (parse_type ctx t))
-  in
+    | Arg((n, pos), None) -> (n, Generic(sprintf "``%s" n, pos))
+    | Arg((n, _), Some t) -> (n, t)) in 
+  
+  let generics = List.append arg_types types 
+    |> List.filter_map ~f:(function Generic(g, _) -> Some g | _ -> None) 
+    |> List.dedup_and_sort ~compare in
+  set_generic_count (List.length generics);
+  List.iteri generics ~f:(fun cnt key ->
+    let data = Type (get_generic cnt key) in
+    Hashtbl.set ctx.map ~key ~data);
+
+  let arg_types = List.map arg_types ~f:(fun t ->
+    let typ_expr = get_seq_expr ctx t in
+    match get_expr_name typ_expr with
+    | "type" -> get_type typ_expr ctx.base
+    | _ -> seq_error "Not a type" (get_pos typ_expr)) in
   arg_names, arg_types
 
 let rec get_seq_stmt ctx block stmt : unit = 
   let stmt, pos = begin 
   match stmt with
-  | Pass pos -> 
-    pass_stmt (), pos
-  | Break pos -> 
-    break_stmt (), pos
-  | Continue pos -> 
-    continue_stmt (), pos
+  | Pass pos     -> pass_stmt (), pos
+  | Break pos    -> break_stmt (), pos
+  | Continue pos -> continue_stmt (), pos
   | Statements stmts ->
     List.iter stmts ~f:(get_seq_stmt ctx block);
     pass_stmt (), dummy_pos
-  | Assign(lh_expr, rh_expr) -> (* a = b *)
-    (* fprintf stderr ">> %s\n%!" @@ prn_expr (fun x->sprintf "<<%d>> " x.pos_lnum) lh_expr; *)
+  | Assign(Id(var, pos), rh_expr) -> begin
     let rh_expr = get_seq_expr ctx rh_expr in 
     let rh_type = get_type rh_expr ctx.base in 
-    begin
-    match lh_expr with
-    | Id(var, pos) -> begin
-      match Hashtbl.find ctx.map var with
-      | Some v -> (match v with 
-        | Var v ->
-          let lh_type = get_var_type v in
-          if lh_type <> rh_type then begin
-          (* if false then begin *)
-            T.eprintf [T.black; T.on_yellow] "[WARN] shadowing variable %s\n" var;
-            let var_stmt = var_stmt rh_expr in
-            Hashtbl.set ctx.map ~key:var ~data:(Var (var_stmt_var var_stmt));
-            Stack.push ctx.stack (var::Stack.pop_exn ctx.stack);
-            var_stmt, pos
-          end else 
-            assign_stmt v rh_expr, pos
-        | Func v -> 
-          assign_stmt v rh_expr, pos
-        | Type _ -> 
-          noimp "Type assignment (should it be?)")
-      | None -> 
-        let var_stmt = var_stmt rh_expr in
-        Hashtbl.set ctx.map ~key:var ~data:(Var (var_stmt_var var_stmt));
-        Stack.push ctx.stack (var::Stack.pop_exn ctx.stack);
-        var_stmt, pos
-      end
-    | Dot(lh_expr, (rhs, pos)) ->
-      assign_member_stmt (get_seq_expr ctx lh_expr) rhs rh_expr, pos
-    | Index(var_expr, index_expr) -> 
-      let index_expr = get_seq_expr ctx index_expr in
-      let pos = get_pos index_expr in
-      assign_index_stmt (get_seq_expr ctx var_expr) index_expr rh_expr, pos
-    | _ -> 
-      seq_error "Assignment requires Id / Dot / Index on LHS" (get_pos rh_expr)
+    match Hashtbl.find ctx.map var with
+    | Some (Var v) when rh_type <> get_var_type v ->  
+      T.eprintf [T.black; T.on_yellow] "[WARN] shadowing variable %s\n" var;
+      let var_stmt = var_stmt rh_expr in
+      Hashtbl.set ctx.map ~key:var ~data:(Var (var_stmt_var var_stmt));
+      Stack.push ctx.stack (var::Stack.pop_exn ctx.stack);
+      var_stmt, pos
+    | Some (Var v) ->
+      assign_stmt v rh_expr, pos
+    | Some (Func v) -> 
+      assign_stmt v rh_expr, pos
+    | Some (Type _) -> 
+      noimp "Type assignment (should it be?)"
+    | None -> 
+      let var_stmt = var_stmt rh_expr in
+      Hashtbl.set ctx.map ~key:var ~data:(Var (var_stmt_var var_stmt));
+      Stack.push ctx.stack (var::Stack.pop_exn ctx.stack);
+      var_stmt, pos
     end
+  | Assign(Dot(lh_expr, (rhs, pos)), rh_expr) -> (* a = b *)
+    let rh_expr = get_seq_expr ctx rh_expr in 
+    assign_member_stmt (get_seq_expr ctx lh_expr) rhs rh_expr, pos
+  | Assign(Index(var_expr, [index_expr]), rh_expr) -> (* a = b *)
+    let index_expr = get_seq_expr ctx index_expr in
+    let rh_expr = get_seq_expr ctx rh_expr in 
+    let pos = get_pos index_expr in
+    assign_index_stmt (get_seq_expr ctx var_expr) index_expr rh_expr, pos
+  | Assign(e, _) ->
+    let expr = get_seq_expr ctx e in
+    seq_error "Assignment requires Id / Dot / Index on LHS" (get_pos expr)
   | Exprs expr ->
     let expr = get_seq_expr ctx expr in
     expr_stmt expr, (get_pos expr)
@@ -329,16 +245,14 @@ let rec get_seq_stmt ctx block stmt : unit =
   | Type((name, pos), args, _) ->
     let arg_names, arg_types = List.unzip @@ List.map args ~f:(function
       | Arg((n, p), None) -> seq_error "Type with generic argument" p
-      | Arg((n, _), Some t) -> (n, t)
-    ) in
+      | Arg((n, _), Some t) -> (n, t)) in
     if is_some (Hashtbl.find ctx.map name) then
       raise (SeqCamlError (sprintf "Type %s already defined" name, pos));
-    let typ = record_type arg_names (List.map arg_types ~f:(fun t ->
-      match parse_type ctx t with
-      | None -> 
-        seq_error (sprintf "Type %s is not declared" @@ prn_typ (fun x -> "") t) pos;
-      | Some t -> t)) 
-    in
+    let typ = record_type arg_names @@ List.map arg_types ~f:(fun t ->
+      let typ_expr = get_seq_expr ctx t in
+      match get_expr_name typ_expr with
+      | "type" -> get_type typ_expr ctx.base
+      | _ -> seq_error "Not a type" (get_pos typ_expr)) in
     Hashtbl.set ctx.map ~key:name ~data:(Type typ);
     pass_stmt (), pos
   | If(if_blocks) -> 
@@ -348,13 +262,11 @@ let rec get_seq_stmt ctx block stmt : unit =
       | None -> 
         get_else_block if_stmt
       | Some cond_expr -> 
-        get_elif_block if_stmt @@ get_seq_expr ctx cond_expr
-      in
+        get_elif_block if_stmt @@ get_seq_expr ctx cond_expr in
       Stack.push ctx.stack [];
       List.iter stmts ~f:(get_seq_stmt ctx if_block);
       Stack.pop_exn ctx.stack |> List.iter ~f:(Hashtbl.remove ctx.map);
-      pos)
-    in
+      pos) in
     if_stmt, (List.hd_exn positions)
   | While(cond_expr, stmts, pos) ->
     let cond_expr = get_seq_expr ctx cond_expr in
@@ -371,9 +283,7 @@ let rec get_seq_stmt ctx block stmt : unit =
     let for_var_name, for_var = match for_var with
     | Id (for_var_name, _) -> 
       (for_var_name, get_for_var for_stmt)
-    | _ -> 
-      noimp "For non-ID variable"
-    in
+    | _ -> noimp "For non-ID variable" in
     (* for variable shadows the original variable if it exists *)
     let prev_var = Hashtbl.find ctx.map for_var_name in
     let for_block = get_for_block for_stmt in
@@ -384,7 +294,7 @@ let rec get_seq_stmt ctx block stmt : unit =
     begin match prev_var with 
     | Some prev_var -> 
       Hashtbl.set ctx.map ~key:for_var_name ~data:prev_var
-    | _ -> ()
+    | _ -> () 
     end;
     for_stmt, pos
   | Match(what_expr, cases, pos) ->
@@ -401,8 +311,7 @@ let rec get_seq_stmt ctx block stmt : unit =
         pat, bound_var_name, prev_var
       | None -> 
         let pat = get_seq_case_pattern ctx cond in
-        pat, "", None
-      in
+        pat, "", None in
       let case_block = add_match_case match_stmt pat in
       List.iter stmts ~f:(get_seq_stmt ctx case_block);
       Stack.pop_exn ctx.stack |> List.iter ~f:(Hashtbl.remove ctx.map);
@@ -419,26 +328,22 @@ let rec get_seq_stmt ctx block stmt : unit =
       seq_error (sprintf "Class %s already defined" class_name) name_pos;
     
     let typ = ref_type class_name in
-    let ref_ctx_map = Hashtbl.copy ctx.map in
-    let arg_names, arg_types = 
-      set_generics ctx pos types args (set_ref_generics typ) (fun idx name -> 
-        set_ref_generic_name typ idx name;
-        let t = get_ref_generic typ idx in
-        Hashtbl.set ref_ctx_map ~key:name ~data:(Type t);
-        t) 
-    in
     Hashtbl.set ctx.map ~key:class_name ~data:(Type typ);
-    Hashtbl.set ref_ctx_map ~key:class_name ~data:(Type typ);
+    let ref_ctx = {ctx with map=Hashtbl.copy ctx.map} in
+    let arg_names, arg_types = set_generics ref_ctx types args 
+      (set_ref_generics typ) 
+      (fun idx name -> 
+        set_ref_generic_name typ idx name;
+        get_ref_generic typ idx) in
     set_ref_record typ @@ record_type arg_names arg_types;
 
     (* functions inherit types and functions; variables are off-limits *)
     List.iter functions ~f:(fun f -> 
-      let name, fn = get_seq_fn {ctx with map=ref_ctx_map} f ~parent_class:class_name in 
+      let name, fn = get_seq_fn ref_ctx f ~parent_class:class_name in 
       add_ref_method typ name fn);
     set_ref_done typ;
     pass_stmt (), pos
-  | _ -> 
-    noimp "Unknown stmt"
+  | _ -> noimp "Unknown stmt"
   end
   in 
   set_base stmt ctx.base;
@@ -447,7 +352,8 @@ let rec get_seq_stmt ctx block stmt : unit =
 
 and get_seq_fn ctx ?parent_class = function 
   | Function(return_typ, types, args, stmts, pos) ->
-    let fn_name, _ = match_arg return_typ in
+    let fn_name = match return_typ with Arg((n, _), _) -> n in
+
     if is_some @@ Hashtbl.find ctx.map fn_name then 
       seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
     
@@ -457,14 +363,14 @@ and get_seq_fn ctx ?parent_class = function
       Hashtbl.set ctx.map ~key:fn_name ~data:(Func fn);
 
     (* handle statements *)
-    let fn_ctx = {(init_context fn) with map=(Hashtbl.copy ctx.map)} in
-    let arg_names, arg_types = 
-      set_generics ctx pos types args (set_func_generics fn) (fun idx name -> 
+    let fn_ctx = {(init_context fn) 
+      with map=Hashtbl.filter ctx.map ~f:(fun v -> 
+        match v with Func x | Type x -> true | _ -> false)} in
+    let arg_names, arg_types = set_generics fn_ctx types args 
+      (set_func_generics fn) 
+      (fun idx name -> 
         set_func_generic_name fn idx name;
-        let t = get_func_generic fn idx in
-        Hashtbl.set fn_ctx.map ~key:name ~data:(Type t);
-        t) 
-    in
+        get_func_generic fn idx) in
     set_func_params fn arg_names arg_types;
 
     List.iter arg_names ~f:(fun arg_name -> 
@@ -509,8 +415,8 @@ let () =
   let print_error kind ?msg (pos: pos_t) = 
     let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
     let style = [T.Bold; T.red] in
-    eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: line %d%s\n" kind line (match msg with 
-      | Some m -> sprintf " with %s" m | None -> "");
+    eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: (line %d) %s\n" kind line (match msg with 
+      | Some m -> sprintf "%s" m | None -> "");
     eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
     eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col);
   in

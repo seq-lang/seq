@@ -80,6 +80,9 @@ let str_seq_expr  = foreign "str_seq_expr" (string @-> returning seq_expr)
 let func_expr  = foreign "func_expr"  (seq_func @-> returning seq_expr)
 let var_expr   = foreign "var_expr"   (seq_var @-> returning seq_expr)
 
+let type_expr   = foreign "type_expr" (seq_type @-> returning seq_expr)
+
+
 let cond_expr = foreign "cond_expr" 
 	(seq_expr @-> seq_expr @-> seq_expr @-> returning seq_expr)
 let uop_expr = foreign "uop_expr" 
@@ -239,7 +242,10 @@ let get_else_block   = foreign "get_else_block"   (seq_stmt @-> returning seq_bl
 let get_elif_block   = foreign "get_elif_block"   (seq_stmt @-> seq_expr @-> returning seq_block)
 
 let get_type = foreign "get_type" (seq_expr @-> seq_func @-> returning seq_type)
+let get_func = foreign "get_func" (seq_expr @-> returning seq_func)
 let get_var_type = foreign "get_var_type" (seq_var @-> returning seq_type)
+
+let get_expr_name = foreign "get_expr_name" (seq_expr @-> returning string)
 
 let get_pos_t_from_srcinfo src: Ast.pos_t = 
   let file = getf src srcinfo_file in

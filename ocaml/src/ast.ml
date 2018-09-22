@@ -7,13 +7,7 @@ exception NotImplentedError of string
 type pos_t = Lexing.position
 type ident = string * pos_t
 
-type typ = 
-  | TGeneric of ident
-  | TClass of ident * typ list
-  | TTypeof of expr
-  (* | TTuple of typ list  *)
-  (* | TFunction of typ * typ list *)
-and expr =
+type expr =
   | Bool of bool * pos_t
   | Int of int * pos_t
   | Float of float * pos_t
@@ -23,7 +17,9 @@ and expr =
   (* | Regex of string *)
   | Seq of ident
 
-  | TypeExpr of typ
+  | Generic of ident
+  | TypeOf of expr * pos_t 
+
   | Tuple of expr list * pos_t
   (* | Generator of expr * expr *)
   (* | List of expr list  *)
@@ -37,20 +33,18 @@ and expr =
   (* | Lambda of vararg list * expr  *)
 
   | Pipe of expr list
-  | Cond of expr * ident * expr
   | Unary of ident * expr
   | Binary of expr * ident * expr
   | Index of expr * expr list
   | Slice of expr option * expr option * expr option * pos_t
   | Dot of expr * ident
-  | Typeof of expr * pos_t
   | Call of expr * expr list 
 
   (* | Comprehension of expr list * expr list * expr option *)
   (* | ComprehensionIf of expr *)
   | Ellipsis
 and arg = 
-  | Arg of ident * typ option 
+  | Arg of ident * expr option 
   (* | NamedArg of string * expr *)
 
 type statement =
@@ -71,8 +65,8 @@ type statement =
   | For of expr * expr * statement list * pos_t
   | If of (expr option * statement list * pos_t) list
   | Match of expr * (expr option * ident option * statement list * pos_t) list * pos_t
-  | Function of arg * typ list * arg list * statement list * pos_t (* def arg [typ list] (arg list): st list *)
-  | Class of ident * typ list * arg list * statement list * pos_t
+  | Function of arg * expr list * arg list * statement list * pos_t (* def arg [typ list] (arg list): st list *)
+  | Class of ident * expr list * arg list * statement list * pos_t
   (* | DecoratedFunction of decorator list * statement *)
   (* | Import of (expr * expr option) list *)
   (* | ImportFrom of expr * ((expr * expr option) list) option *)
@@ -96,7 +90,7 @@ let rec prn_expr prn_pos = function
   | Seq(s, pos) -> sprintf "%sSeq(%s)" (prn_pos pos) s
   (* | Extern(l, v, _) -> sprintf "Extern_%s(%s)" l v *)
   | Id(i, pos) -> sprintf "%s%s" (prn_pos pos) i
-  | Typeof(expr, pos) -> sprintf "%sTypeof(%s)" (prn_pos pos) (prn_expr prn_pos expr)
+  | Generic(i, pos) -> sprintf "%s%s" (prn_pos pos) i
   | Tuple(el, pos) -> sprintf "%sTuple(%s)" (prn_pos pos) @@ sci ", " el (prn_expr prn_pos)
   (* | Generator(e, ge, _) -> sprintf "Gen[%s; %s]" (prn_expr e) (prn_expr ge) *)
   (* | List(el, _) -> sprintf "List(%s)" @@ sci ", " el prn_expr *)
@@ -105,16 +99,15 @@ let rec prn_expr prn_pos = function
   (* | SetGenerator(e, ge, _) -> sprintf "SetGen[%s; %s]" (prn_expr e) (prn_expr ge) *)
   (* | Dict(el, _) -> sprintf "Dict(%s)" @@ sci ", " el (fun (x, y) -> sprintf "%s:%s" (prn_expr x) (prn_expr y)) *)
   (* | DictGenerator((k, v), ge, _) -> sprintf "DictGen[%s:%s; %s]" (prn_expr k) (prn_expr v) (prn_expr ge) *)
-  | IfExpr(c, i, e) -> sprintf "InlineIf[%s; %s; %s]" (prn_expr prn_pos c) (prn_expr prn_pos i) (prn_expr prn_pos e)
+  | IfExpr(c, i, e) -> sprintf "If(%s; %s; %s)" (prn_expr prn_pos c) (prn_expr prn_pos i) (prn_expr prn_pos e)
   (* | Lambda(v, e, _) -> sprintf "Lambda[%s; %s]" (sci ", " v prn_va) (prn_expr prn_pos e)  *)
-  | Pipe(el) -> sprintf "Pipe[%s]" @@ sci ", " el (prn_expr prn_pos)
-  | Cond(e, (o, pos), ee) -> sprintf "%s%s[%s, %s]" (prn_pos pos) o (prn_expr prn_pos e) (prn_expr prn_pos ee)
-  | Binary(e, (o, pos), ee) -> sprintf "%s%s[%s, %s]" (prn_pos pos) o (prn_expr prn_pos e) (prn_expr prn_pos ee)
-  | Unary((o, pos), e) -> sprintf "%s%s[%s]" (prn_pos pos) o @@ prn_expr prn_pos e
-  | Index(i, e) -> sprintf "%s.[%s]" (prn_expr prn_pos i) (prn_expr prn_pos e)
-  | Dot(i, (e, pos)) -> sprintf "%sDot[%s, %s]" (prn_pos pos) (prn_expr prn_pos i) e
-  | Call(i, tl, cl) -> sprintf "Call<%s>[%s; %s]" (prn_expr prn_pos i) (sci ", " tl (prn_typ prn_pos)) (sci ", " cl (prn_expr prn_pos))
-
+  | Pipe(el) -> sprintf "Pipe(%s)" @@ sci ", " el (prn_expr prn_pos)
+  | Binary(e, (o, pos), ee) -> sprintf "%s%s(%s; %s)" (prn_pos pos) o (prn_expr prn_pos e) (prn_expr prn_pos ee)
+  | Unary((o, pos), e) -> sprintf "%s%s(%s)" (prn_pos pos) o @@ prn_expr prn_pos e
+  | Index(i, el) -> sprintf "Index(%s; %s)" (prn_expr prn_pos i) (sci ", " el (prn_expr prn_pos))
+  | Dot(i, (e, pos)) -> sprintf "%sDot(%s; %s)" (prn_pos pos) (prn_expr prn_pos i) e
+  | Call(i, cl) -> sprintf "Call(%s; %s)" (prn_expr prn_pos i) (sci ", " cl (prn_expr prn_pos))
+  | TypeOf(e, pos) -> sprintf "%sTypeOf(%s)" (prn_pos pos) (prn_expr prn_pos e)
   (* | Comprehension(fi, ei, li, _) ->  *)
     (* let cont = match li with None -> "" | Some x -> prn_expr x in *)
     (* sprintf "_For[%s; %s]%s" (sci ", " fi prn_expr) (sci ", " ei prn_expr) cont *)
@@ -124,18 +117,12 @@ let rec prn_expr prn_pos = function
     let a = match a with None -> "" | Some x -> prn_expr prn_pos x in
     let b = match b with None -> "" | Some x -> prn_expr prn_pos x in
     let c = match c with None -> "" | Some x -> prn_expr prn_pos x in
-    sprintf "%sSlice[%s, %s, %s]" a b c (prn_pos pos)
-and prn_typ prn_pos = function
-  | TGeneric(s, pos) -> sprintf "%s%s" (prn_pos pos) s
-  | TClass((s, pos), l) -> sprintf "%s%s[%s]" (prn_pos pos) s (sci ", " l (prn_typ prn_pos))
-  (* | TFunction(s, l) -> sprintf "%s[%s]" (prn_typ prn_pos s) (sci ", " l (prn_typ prn_pos)) *)
-  (* | TTuple(l) -> sprintf "Tuple[%s]" (sci ", " l (prn_typ prn_pos)) *)
-  | TTypeof(e) -> sprintf "TypeOf[%s]" (prn_expr prn_pos e)
+    sprintf "%sSlice(%s; %s; %s)" a b c (prn_pos pos)
 and prn_va prn_pos = function
   | Arg((p, pos), o) -> 
     let o = match o with 
       | None -> "any" 
-      | Some x -> prn_typ prn_pos x 
+      | Some x -> prn_expr prn_pos x 
     in 
     sprintf "%s%s of %s" (prn_pos pos) p o 
   (* | NamedArg(n, e, _) -> sprintf "%s = %s" n (prn_expr e) *)
@@ -146,8 +133,8 @@ let rec prn_statement level prn_pos st =
   | Continue pos -> sprintf "%sContinue" (prn_pos pos)
   | Statements(sl) -> sprintf "Statements[\n%s]" (sci "\n" sl (prn_statement (level+1) prn_pos))
   | Exprs(el) -> sprintf "Exprs[%s]" (sci "," [el] (prn_expr prn_pos))
-  | Assign(sl, el) -> sprintf "Asgn[%s := %s]" (prn_expr prn_pos sl) (prn_expr prn_pos el)
-  | AssignEq(sl, (op, pos), el) -> sprintf "Asgn[%s %s%s %s]" (prn_expr prn_pos sl) (prn_pos pos) op (prn_expr prn_pos el)
+  | Assign(sl, el) -> sprintf "Asgn[%s; %s]" (prn_expr prn_pos sl) (prn_expr prn_pos el)
+  | AssignEq(sl, (op, pos), el) -> sprintf "Asgn[%s; %s%s; %s]" (prn_expr prn_pos sl) (prn_pos pos) op (prn_expr prn_pos el)
   | Print(ell, pos) -> sprintf "%sPrint[%s]" (prn_pos pos) (sci ", " ell (prn_expr prn_pos))
   | Yield(el, pos) -> sprintf "%sYield[%s]" (prn_pos pos) (prn_expr prn_pos el)
   | Return(el, pos) -> sprintf "%sReturn[%s]" (prn_pos pos) (prn_expr prn_pos el)
@@ -176,10 +163,10 @@ let rec prn_statement level prn_pos st =
           sprintf "Decorator[%s; %s]" (prn_expr dd) @@ sci ", " da prn_va)) ^ 
       (prn_statement level f) *)
   | Function(v, tl, vl, sl, pos) -> 
-      sprintf "%sDef[%s; %s; %s;\n%s]" (prn_pos pos) (sci ", " tl (prn_typ prn_pos)) (prn_va prn_pos v) (sci ", " vl (prn_va prn_pos)) @@ 
+      sprintf "%sDef<%s>[%s; %s;\n%s]" (prn_pos pos) (sci ", " tl (prn_expr prn_pos)) (prn_va prn_pos v) (sci ", " vl (prn_va prn_pos)) @@ 
         sci "\n" sl (prn_statement (level + 1) prn_pos)
   | Class((v, _), tl, vl, sl, pos) -> 
-      sprintf "%s Class[%s; %s; %s;\n%s]" (prn_pos pos) (sci ", " tl (prn_typ prn_pos)) v (sci ", " vl (prn_va prn_pos)) @@ 
+      sprintf "%sClass<%s>[%s; %s;\n%s]" (prn_pos pos) (sci ", " tl (prn_expr prn_pos)) v (sci ", " vl (prn_va prn_pos)) @@ 
         sci "\n" sl (prn_statement (level + 1) prn_pos)
   (* | Import(el, _) -> 
     sprintf "Import[%s]" @@ sci ", " el (fun (a, b) ->

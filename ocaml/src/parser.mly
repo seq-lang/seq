@@ -80,6 +80,9 @@ atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
     (* let a, b = $1 in Extern (a, b) *) }
   | tuple { $1 }
   | list | dict { $1 }
+  | generic { $1 }
+generic:
+  | GENERIC { Generic (fst $1, snd $1) }
 tuple: /* Tuples: (1, 2, 3) */
   | LP RP { Tuple ([], $1) }
   | LP test comprehension RP { 
@@ -136,6 +139,7 @@ test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 
   | pipe_test { flat $1 }
   | ifc = pipe_test; IF cnd = pipe_test; ELSE elc = test 
     { IfExpr (flat cnd, flat ifc, elc) }
+  | TYPEOF LP test RP { TypeOf ($3, $1) }
   /* TODO: shift/reduce conflict
   | LAMBDA separated_list(COMMA, param) COLON test { 
     noimp "Lambda"
@@ -148,31 +152,26 @@ pipe_test: /* Pipe operator: a, a |> b */
   | or_test PIPE pipe_test { $1::$3 }
 or_test: /* OR operator: a, a or b */
   | and_test { $1 }
-  | and_test OR or_test { Cond ($1, $2, $3) }
+  | and_test OR or_test { Binary ($1, $2, $3) }
 and_test: /* AND operator: a, a and b */
   | not_test { $1 }
-  | not_test AND and_test { Cond ($1, $2, $3) } 
+  | not_test AND and_test { Binary ($1, $2, $3) } 
 not_test: /* General comparison: a, not a, a < 5 */
   | expr { $1 }
   | NOT not_test { Unary ($1, $2) }
-  | expr cond_op not_test { Cond ($1, $2, $3) }
+  | expr cond_op not_test { Binary ($1, $2, $3) }
 %inline cond_op:
   /* TODO: in, is in, is not in, not in, not */
   | LESS | LEQ | GREAT | GEQ | EEQ | NEQ { $1 }
 expr_term: /* Expression term: 4, a(4), a[5], a.x, p */
   | atom { $1 }
-  | expr_term 
-    LP; args = separated_list(COMMA, call_term); RP 
-    { let types = match types with None -> [] | Some x -> x in
-      Call ($1, types, args) }
-  | TYPEOF; LP; e = expr_term; RP;
-    LP; args = separated_list(COMMA, call_term); RP 
-    { Call (Typeof(e, $1), args) }
-  | expr_term LS separated_nonempty_list(COMMA, sub) RS { 
-    (* TODO: tuple index *)
-    Index ($1, [List.hd_exn $3]) 
-  }
-  | expr_term DOT ID { Dot ($1, (fst $3, snd $3)) }
+  | expr_term LP; args = separated_list(COMMA, call_term); RP 
+    { Call ($1, args) }
+  | expr_term LS separated_nonempty_list(COMMA, sub) RS
+    /* TODO: tuple index */
+    { Index ($1, [List.hd_exn $3]) }
+  | expr_term DOT ID 
+    { Dot ($1, (fst $3, snd $3)) }
 call_term:
 	| ELLIPSIS { Ellipsis }
 	| test { $1 }
@@ -189,7 +188,6 @@ sub: /* Subscripts: ..., a, 1:2, 1::3 */
   | test { $1 }
   | test? COLON test? { Slice ($1, $3, None, $2) }
   | test? COLON test? COLON test? { Slice ($1, $3, $5, $2) }
-  | type_spec { TypeExpr $1 }
 %inline bin_op: 
   /* TODO: bit shift ops and ~ */
   /* TODO: unary op */
@@ -283,21 +281,6 @@ import_as:
 
 /*******************************************************/
 
-type_spec:
-  | ID { TClass ((fst $1, snd $1), []) }
-  | ID type_list { TClass ((fst $1, snd $1), $2) }
-  | generic_type { $1 }
-  | TYPEOF LP test RP { TTypeof ($3) } 
-type_list:
-  | LS; separated_list(COMMA, type_spec); RS { $2 }
-generic_type:
-  | GENERIC { TGeneric (fst $1, snd $1) }
-generic_type_list: /* used during the function or class definitions */
-  | LS; separated_list(COMMA, generic_type); RS { $2 }
-
-
-/*******************************************************/
-
 func_statement:
   | func { $1 }
   | decorator+ func { 
@@ -314,6 +297,8 @@ dotted_name:
   | ID { Id (fst $1, snd $1) }
   | dotted_name DOT ID { Dot ($1, (fst $3, snd $3)) }
 
+generic_type_list:
+   | LS; separated_nonempty_list(COMMA, generic); RS { $2 }
 func: 
   | DEF; n = ID;
     intypes = generic_type_list?
@@ -324,7 +309,7 @@ func:
     { let intypes = match intypes with None -> [] | Some x -> x in
       Function (Arg(n, ret), intypes, params, s, $1) }
 func_ret_type:
-  | OF; type_spec { $2 }
+  | OF; test { $2 }
 func_param:
   /* TODO tuple params--- are they really needed? */
   | typed_param { $1 }
@@ -334,8 +319,7 @@ func_param:
 typed_param:
   | ID param_type? { Arg ((fst $1, snd $1), $2) }
 param_type:
-  | COLON type_spec { $2 }
-  
+  | COLON test { $2 }
 
 class_statement:
   | CLASS ; n = ID;
@@ -343,7 +327,7 @@ class_statement:
     LP; mems = separated_list(COMMA, typed_param) RP;
     COLON NL; 
     fns = class_members
-    { let intypes = match intypes with None -> [] | Some x -> x in
+    { let intypes = Option.value intypes ~default:[] in
       Class ((fst n, snd n), intypes, mems, fns, $1) }
 class_members:
   | PASS { [] }

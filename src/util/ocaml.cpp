@@ -51,7 +51,7 @@ FOREIGN void set_ref_record(types::RefType *f, types::RecordType *rec)
 FOREIGN void add_ref_method(types::Type *ref, const char *name, Func *fn)
 {
 	E("add_ref_method[{}, {}, {}]", ref->getName(), name, fn->genericName());
-	ref->addMethod(name, fn);
+	ref->addMethod(name, fn, false);
 }
 
 FOREIGN void set_ref_done(types::RefType *ref)
@@ -62,13 +62,14 @@ FOREIGN void set_ref_done(types::RefType *ref)
 
 /***** Expressions *****/
 
-FOREIGN Expr *bool_expr(char b)       { E("bool_expr[{}]", b); return new BoolExpr(b); }
-FOREIGN Expr *int_expr(int i)         { E("int_expr[{}]", i); return new IntExpr(i); }
-FOREIGN Expr *float_expr(double f)    { E("float_expr[{}]", f); return new FloatExpr(f); }
-FOREIGN Expr *str_expr(const char *s) { E("str_expr[{}]", s); return new StrExpr(string(s)); }
+FOREIGN Expr *bool_expr(char b)           { E("bool_expr[{}]", b); return new BoolExpr(b); }
+FOREIGN Expr *int_expr(int i)             { E("int_expr[{}]", i); return new IntExpr(i); }
+FOREIGN Expr *float_expr(double f)        { E("float_expr[{}]", f); return new FloatExpr(f); }
+FOREIGN Expr *str_expr(const char *s)     { E("str_expr[{}]", s); return new StrExpr(string(s)); }
 FOREIGN Expr *str_seq_expr(const char *s) { E("seq_expr[{}]", s); return new StrExpr(string(s)); }
-FOREIGN Expr *func_expr(Func *f)      { E("func_expr[{}]", f->genericName()); return new FuncExpr(f); }
-FOREIGN Expr *var_expr(Var *v)        { E("var_expr"); return new VarExpr(v); }
+FOREIGN Expr *func_expr(Func *f)          { E("func_expr[{}]", f->genericName()); return new FuncExpr(f); }
+FOREIGN Expr *var_expr(Var *v)            { E("var_expr"); return new VarExpr(v); }
+FOREIGN Expr *type_expr(types::Type *t)   { E("type_expr"); return new TypeExpr(t); }
 
 FOREIGN Expr *cond_expr(Expr *cond, Expr *ift, Expr *iff)
 {
@@ -308,6 +309,15 @@ FOREIGN types::Type *get_func_generic(Func *fn, int idx)
 	return fn->getGeneric(idx);
 }
 
+FOREIGN char *get_expr_name(Expr *ex)
+{
+   string s = ex->getName();
+   auto *c = new char[s.size() + 1];
+	strncpy(c, s.c_str(), s.size());
+	c[s.size()] = 0;
+	return c;
+}
+
 FOREIGN void set_func_generic_name(Func *fn, int idx, const char *name)
 {
 	E("set_func_generic_name[{}, {}, {}]", fn->genericName(), idx, name);
@@ -443,6 +453,12 @@ FOREIGN types::Type *get_type(Expr *e, BaseFunc *base)
    e->resolveTypes();
    // E("!! type={}", e->getType()->getName());
 	return e->getType();
+}
+
+FOREIGN BaseFunc *get_func(FuncExpr *e)
+{
+	E("get_func");
+   return e->getFunc();
 }
 
 FOREIGN types::Type *get_var_type(Var *e)

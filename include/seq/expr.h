@@ -11,11 +11,14 @@ namespace seq {
 	class Expr : public SrcObject {
 	private:
 		types::Type *type;
+	protected:
+		std::string name;
 	public:
 		explicit Expr(types::Type *type);
 		Expr();
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block);
 		types::Type *getType() const;
+		std::string getName() const;
 		virtual void resolveTypes();
 		virtual llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block)=0;
 		virtual types::Type *getType0() const;
