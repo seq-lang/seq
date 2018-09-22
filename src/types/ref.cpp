@@ -109,7 +109,12 @@ Value *types::RefType::memb(Value *self,
 	assert(contents);
 	IRBuilder<> builder(block);
 	Value *x = builder.CreateLoad(self);
-	return contents->memb(x, name, block);
+
+	try {
+		return contents->memb(x, name, block);
+	} catch (exc::SeqException& e) {
+		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+	}
 }
 
 types::Type *types::RefType::membType(const std::string& name)
@@ -124,7 +129,11 @@ types::Type *types::RefType::membType(const std::string& name)
 		return MethodType::get(this, type);
 	}
 
-	return contents->membType(name);
+	try {
+		return contents->membType(name);
+	} catch (exc::SeqException& e) {
+		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+	}
 }
 
 Value *types::RefType::setMemb(Value *self,
@@ -205,7 +214,13 @@ bool types::RefType::is(types::Type *type) const
 	return ref && name == ref->name && Generic::is(ref);
 }
 
-types::Type *types::RefType::getBaseType(seq_int_t idx) const
+unsigned types::RefType::numBaseTypes() const
+{
+	assert(contents);
+	return contents->numBaseTypes();
+}
+
+types::Type *types::RefType::getBaseType(unsigned idx) const
 {
 	assert(contents);
 	return contents->getBaseType(idx);
@@ -310,6 +325,23 @@ Value *types::MethodType::call(BaseFunc *base,
 	std::vector<Value *> argsFull(args);
 	argsFull.insert(argsFull.begin(), x);
 	return func->call(base, f, argsFull, block);
+}
+
+bool types::MethodType::is(types::Type *type) const
+{
+	return isGeneric(type) &&
+	       types::is(getBaseType(0), type->getBaseType(0)) &&
+	       types::is(getBaseType(1), type->getBaseType(1));
+}
+
+unsigned types::MethodType::numBaseTypes() const
+{
+	return 2;
+}
+
+types::Type *types::MethodType::getBaseType(unsigned idx) const
+{
+	return idx ? self : func;
 }
 
 types::Type *types::MethodType::getCallType(const std::vector<Type *>& inTypes)

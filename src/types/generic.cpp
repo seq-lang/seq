@@ -258,10 +258,10 @@ Value *types::GenericType::setMemb(Value *self,
 	return type->setMemb(self, name, val, block);
 }
 
-void types::GenericType::addMethod(std::string name, BaseFunc *func)
+void types::GenericType::addMethod(std::string name, BaseFunc *func, bool force)
 {
 	ensure();
-	type->addMethod(name, func);
+	type->addMethod(name, func, force);
 }
 
 Value *types::GenericType::staticMemb(const std::string& name, BasicBlock *block)
@@ -346,7 +346,13 @@ bool types::GenericType::isGeneric(types::Type *type) const
 	return this->type->isGeneric(type);
 }
 
-types::Type *types::GenericType::getBaseType(seq_int_t idx) const
+unsigned types::GenericType::numBaseTypes() const
+{
+	ensure();
+	return type->numBaseTypes();
+}
+
+types::Type *types::GenericType::getBaseType(unsigned idx) const
 {
 	ensure();
 	return type->getBaseType(idx);

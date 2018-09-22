@@ -40,8 +40,9 @@ struct str_typedef : TAO_PEGTL_STRING("type") {};
 struct str_class : TAO_PEGTL_STRING("class") {};
 struct str_match : TAO_PEGTL_STRING("match") {};
 struct str_case : TAO_PEGTL_STRING("case") {};
+struct str_ext : TAO_PEGTL_STRING("ext") {};
 
-struct str_keyword : pegtl::sor<str_print, str_var, str_global, str_def, str_if, str_elif, str_else, str_while, str_for, str_source, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case> {};
+struct str_keyword : pegtl::sor<str_print, str_var, str_global, str_def, str_if, str_elif, str_else, str_while, str_for, str_source, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case, str_ext> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword, pegtl::not_at<pegtl::identifier_other>>, pegtl::identifier> {};
 
@@ -278,6 +279,11 @@ struct class_type : pegtl::seq<pegtl::one<'('>, seps, pegtl::list<record_type_el
 struct class_stmt : pegtl::if_must<class_open, seps, pegtl::opt<class_type>, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<func_stmt, seps>, seps>, pegtl::one<'}'>> {};
 
 /*
+ * Extensions
+ */
+struct ext_stmt : pegtl::seq<str_ext, seps, type, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<func_stmt, seps>, seps>, pegtl::one<'}'>> {};
+
+/*
  * Modules
  */
 struct var_decl : pegtl::seq<str_var, seps_must, name, seps, pegtl::one<'='>, seps, expr> {};
@@ -309,7 +315,7 @@ struct continue_stmt : pegtl::seq<str_continue> {};
 struct expr_stmt : pegtl::seq<expr> {};
 
 struct statement : pegtl::sor<typedef_stmt, source_stmt, print_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, global_decl, func_stmt, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, expr_stmt, if_stmt, match_stmt> {};
-struct statement_toplvl : pegtl::sor<class_stmt, statement> {};
+struct statement_toplvl : pegtl::sor<class_stmt, ext_stmt, statement> {};
 struct module : pegtl::must<statement_seq_toplvl> {};
 struct grammar : pegtl::must<seps, module, seps, pegtl::eof> {};
 

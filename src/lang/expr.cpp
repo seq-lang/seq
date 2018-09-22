@@ -61,6 +61,15 @@ Value *BlankExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	throw exc::SeqException("misplaced '_'");
 }
 
+TypeExpr::TypeExpr(types::Type *type) : Expr(type)
+{
+}
+
+Value *TypeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	throw exc::SeqException("misplaced type expression");
+}
+
 ValueExpr::ValueExpr(types::Type *type, Value *val) : Expr(type), val(val)
 {
 }

@@ -296,7 +296,7 @@ public:
 		return found;
 	}
 
-	void addMethods(types::RefType *ref)
+	void addMethods(types::Type *ref, bool force=false)
 	{
 		for (auto const& e : symbols.back()) {
 			switch (e.second.type) {
@@ -304,7 +304,7 @@ public:
 				case SeqEntity::TYPE:
 					break;
 				case SeqEntity::FUNC:
-					ref->addMethod(e.first, e.second.value.func);
+					ref->addMethod(e.first, e.second.value.func, force);
 					break;
 				default:
 					throw exc::SeqException("non-function entity present in class definition");
@@ -1033,6 +1033,33 @@ struct control<class_stmt> : pegtl::normal<class_stmt>
 	template<typename Input>
 	static void failure(Input&, ParseState& state)
 	{
+	}
+};
+
+template<>
+struct control<ext_stmt> : pegtl::normal<ext_stmt>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+		state.scope();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("t");
+		types::Type *type = vec[0].value.type;
+		state.addMethods(type, true);
+		state.unscope();
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+		state.unscope();
 	}
 };
 

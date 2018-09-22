@@ -51,7 +51,9 @@ namespace seq {
 			void initFields() override;
 
 			bool isAtomic() const override;
-			Type *getBaseType(seq_int_t idx) const override;
+			bool is(Type *type) const override;
+			unsigned numBaseTypes() const override;
+			Type *getBaseType(unsigned idx) const override;
 			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			void addLLVMTypesToStruct(llvm::StructType *structType);

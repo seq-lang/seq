@@ -57,6 +57,16 @@ bool types::FuncType::is(Type *type) const
 	return true;
 }
 
+unsigned types::FuncType::numBaseTypes() const
+{
+	return 1 + argCount();
+}
+
+types::Type *types::FuncType::getBaseType(unsigned idx) const
+{
+	return idx ? outType : inTypes[idx - 1];
+}
+
 types::Type *types::FuncType::getCallType(const std::vector<Type *>& inTypes)
 {
 	if (this->inTypes.size() != inTypes.size())
@@ -138,7 +148,7 @@ types::GenType::GenType(Type *outType) :
 		}
 
 		return f;
-	}));
+	}), false);
 }
 
 Value *types::GenType::defaultValue(BasicBlock *block)
@@ -186,15 +196,20 @@ void types::GenType::destroy(Value *self, BasicBlock *block)
 	builder.CreateCall(destFn, self);
 }
 
-types::Type *types::GenType::getBaseType(seq_int_t idx) const
-{
-	return outType;
-}
-
 bool types::GenType::is(Type *type) const
 {
 	auto *genType = dynamic_cast<GenType *>(type);
 	return genType && types::is(outType, genType->outType);
+}
+
+unsigned types::GenType::numBaseTypes() const
+{
+	return 1;
+}
+
+types::Type *types::GenType::getBaseType(unsigned idx) const
+{
+	return outType;
 }
 
 Type *types::GenType::getLLVMType(LLVMContext& context) const

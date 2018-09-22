@@ -118,7 +118,9 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
-			void addMethod(std::string name, BaseFunc *func) override;
+			void addMethod(std::string name,
+			               BaseFunc *func,
+			               bool force) override;
 
 			llvm::Value *staticMemb(const std::string& name, llvm::BasicBlock *block) override;
 
@@ -137,7 +139,8 @@ namespace seq {
 
 			bool is(Type *type) const override;
 			bool isGeneric(Type *type) const override;
-			Type *getBaseType(seq_int_t idx) const override;
+			unsigned numBaseTypes() const override;
+			Type *getBaseType(unsigned idx) const override;
 			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;

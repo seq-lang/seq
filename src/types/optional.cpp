@@ -37,7 +37,17 @@ bool types::OptionalType::isAtomic() const
 	return baseType->isAtomic();
 }
 
-types::Type *types::OptionalType::getBaseType(seq_int_t idx) const
+bool types::OptionalType::is(types::Type *type) const
+{
+	return isGeneric(type) && types::is(getBaseType(0), type->getBaseType(0));
+}
+
+unsigned types::OptionalType::numBaseTypes() const
+{
+	return 1;
+}
+
+types::Type *types::OptionalType::getBaseType(unsigned idx) const
 {
 	return baseType;
 }
