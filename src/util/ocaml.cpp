@@ -258,9 +258,9 @@ FOREIGN Stmt *func_stmt(Func *f)
 
 /***** Functions *****/
 
-FOREIGN Func *func(const char *name) 
+FOREIGN Func *func(const char *name)
 {
-   E("func[{}]", name);
+	E("func[{}]", name);
 	auto *f = new Func();
 	f->setName(string(name));
 	return f;
@@ -311,8 +311,8 @@ FOREIGN types::Type *get_func_generic(Func *fn, int idx)
 
 FOREIGN char *get_expr_name(Expr *ex)
 {
-   string s = ex->getName();
-   auto *c = new char[s.size() + 1];
+	string s = ex->getName();
+	auto *c = new char[s.size() + 1];
 	strncpy(c, s.c_str(), s.size());
 	c[s.size()] = 0;
 	return c;
@@ -342,17 +342,17 @@ FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, const char *name)
 	fn->getGeneric(idx)->setName(name);
 }
 
-FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types, size_t sz) 
+FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types, size_t sz)
 {
-   if (sz == 0) return t;
-   return t->realize(vector<types::Type*>(types, types + sz));
+	if (sz == 0) return t;
+	return t->realize(vector<types::Type*>(types, types + sz));
 }
 
-FOREIGN BaseFunc *realize_func(FuncExpr *e, types::Type **types, size_t sz) 
+FOREIGN BaseFunc *realize_func(FuncExpr *e, types::Type **types, size_t sz)
 {
-   Func *fn = dynamic_cast<Func*>(e->getFunc());
-   if (sz == 0) return fn;
-   return fn->realize(vector<types::Type*>(types, types + sz));
+	Func *fn = dynamic_cast<Func*>(e->getFunc());
+	if (sz == 0) return fn;
+	return fn->realize(vector<types::Type*>(types, types + sz));
 }
 
 FOREIGN Stmt *match_stmt(Expr *cond)
@@ -423,7 +423,7 @@ FOREIGN void set_pos(SrcObject *obj, const char *f, int l, int c)
 {
 	if (obj) {
 		// int type = dynamic_cast<Expr*>(obj) ? 1 : (dynamic_cast<Stmt*>(obj) ? 2 : 0);
-      // E("set_pos[{}]", obj->getName());
+		// E("set_pos[{}]", obj->getName());
 		obj->setSrcInfo(SrcInfo(string(f), l, c));
 	}
 }
@@ -449,16 +449,16 @@ FOREIGN Var *get_for_var(For *f)
 FOREIGN types::Type *get_type(Expr *e, BaseFunc *base)
 {
 	E("get_type");
-   base->resolveTypes();
-   e->resolveTypes();
-   // E("!! type={}", e->getType()->getName());
+	base->resolveTypes();
+	e->resolveTypes();
+	// E("!! type={}", e->getType()->getName());
 	return e->getType();
 }
 
 FOREIGN BaseFunc *get_func(FuncExpr *e)
 {
 	E("get_func");
-   return e->getFunc();
+	return e->getFunc();
 }
 
 FOREIGN types::Type *get_var_type(Var *e)
@@ -470,17 +470,17 @@ FOREIGN types::Type *get_var_type(Var *e)
 FOREIGN void set_base(Stmt *st, BaseFunc *base)
 {
 	if (st) {
-      E("set_base[{}]", st->getName());
-      st->setBase(base);
-   }
+		E("set_base[{}]", st->getName());
+		st->setBase(base);
+	}
 }
 
 FOREIGN void add_stmt(Stmt *st, Block *block)
 {
 	if (st) {
-      E("add_stmt[{}]", st->getName());
-      block->add(st);
-   }
+		E("add_stmt[{}]", st->getName());
+		block->add(st);
+	}
 }
 
 FOREIGN void *init_module()

@@ -34,7 +34,7 @@ namespace seq {
 		{
 			return info;
 		}
-            
+
 		void setSrcInfo(SrcInfo info)
 		{
 			this->info = std::move(info);
