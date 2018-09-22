@@ -148,6 +148,7 @@ namespace seq {
 			static GenericType *get();
 
 			GenericType *clone(Generic *ref) override;
+			bool findInType(types::Type *type, std::vector<unsigned>& path);
 		};
 	}
 
@@ -171,13 +172,14 @@ namespace seq {
 		Generic *findCachedRealizedType(std::vector<types::Type *> types) const;
 		void setCloneBase(Generic *x, Generic *ref);
 		void addGenerics(int count);
-		unsigned numGenerics();
-		types::GenericType *getGeneric(int idx);
+		unsigned numGenerics() const;
+		types::GenericType *getGeneric(int idx) const;
 		bool seenClone(void *p);
 		void *getClone(void *p);
 		void addClone(void *p, void *clone);
 		Generic *realizeGeneric(std::vector<types::Type *> types);
-		int findGenericParameter(types::GenericType *type);
+		std::vector<types::Type *> deduceTypesFromArgTypes(const std::vector<types::Type *>& inTypes,
+		                                                   const std::vector<types::Type *>& argTypes);
 	};
 
 	template<typename T = types::Type>

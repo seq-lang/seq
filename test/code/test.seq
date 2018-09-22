@@ -9,7 +9,7 @@ ext Int {
 }
 
 class Pair[T](a: T, b: T) {
-  def sum[Z,S](self: Z, c: S) {
+  def sum[Z,S](self: Pair[Z], c: S) {
     return self.a + self.b + c
   }
 

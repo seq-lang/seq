@@ -64,7 +64,7 @@ unsigned types::FuncType::numBaseTypes() const
 
 types::Type *types::FuncType::getBaseType(unsigned idx) const
 {
-	return idx ? outType : inTypes[idx - 1];
+	return idx ? inTypes[idx - 1] : outType;
 }
 
 types::Type *types::FuncType::getCallType(const std::vector<Type *>& inTypes)

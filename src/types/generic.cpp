@@ -348,8 +348,7 @@ bool types::GenericType::isGeneric(types::Type *type) const
 
 unsigned types::GenericType::numBaseTypes() const
 {
-	ensure();
-	return type->numBaseTypes();
+	return realized() ? type->numBaseTypes() : 0;
 }
 
 types::Type *types::GenericType::getBaseType(unsigned idx) const
@@ -400,6 +399,22 @@ types::GenericType *types::GenericType::clone(Generic *ref)
 	x->setName(genericName);
 	if (type) x->realize(type->clone(ref));
 	return x;
+}
+
+bool types::GenericType::findInType(types::Type *type, std::vector<unsigned>& path)
+{
+	if (type->is(this))
+		return true;
+
+	const unsigned numBases = type->numBaseTypes();
+	for (unsigned i = 0; i < numBases; i++) {
+		path.push_back(i);
+		if (findInType(type->getBaseType(i), path))
+			return true;
+		path.pop_back();
+	}
+
+	return false;
 }
 
 Generic::Generic(bool performCaching) :
@@ -465,12 +480,12 @@ void Generic::addGenerics(int count)
 	root->realizationCache.emplace_back(types, this);
 }
 
-unsigned Generic::numGenerics()
+unsigned Generic::numGenerics() const
 {
 	return (unsigned)generics.size();
 }
 
-types::GenericType *Generic::getGeneric(int idx)
+types::GenericType *Generic::getGeneric(int idx) const
 {
 	assert(idx < generics.size());
 	return generics[idx];
@@ -523,12 +538,56 @@ Generic *Generic::realizeGeneric(std::vector<types::Type *> types)
 	return x;
 }
 
-int Generic::findGenericParameter(types::GenericType *type)
+std::vector<types::Type *> Generic::deduceTypesFromArgTypes(const std::vector<types::Type *>& inTypes,
+                                                            const std::vector<types::Type *>& argTypes)
 {
-	for (unsigned i = 0; i < generics.size(); i++) {
-		if (type == generics[i])
-			return i;
+	assert(unrealized());
+
+	if (argTypes.size() != inTypes.size())
+		throw exc::SeqException("expected " + std::to_string(inTypes.size()) + " arguments, " +
+		                        "but got " + std::to_string(argTypes.size()));
+
+	std::vector<types::Type *> types(numGenerics(), nullptr);
+	std::vector<unsigned> path;
+
+	for (unsigned i = 0; i < types.size(); i++) {
+		for (unsigned j = 0; j < argTypes.size(); j++) {
+			if (!argTypes[j])
+				continue;
+
+			path.clear();
+			types::Type *inType = inTypes[j];
+
+			if (getGeneric(i)->findInType(inType, path)) {
+				types::Type *argType = argTypes[j];
+
+				/*
+				 * OK, we found the generic type nested in `inType`;
+				 * now extract the corresponding type from `argType`.
+				 */
+				bool match = true;
+				for (unsigned k : path) {
+					if (argType->numBaseTypes() <= k) {
+						match = false;
+						break;
+					}
+
+					inType = inType->getBaseType(k);
+					argType = argType->getBaseType(k);
+				}
+
+				if (match) {
+					types[i] = argType;
+					break;
+				}
+			}
+		}
 	}
 
-	return -1;
+	for (auto *type : types) {
+		if (!type)
+			throw exc::SeqException("cannot deduce all type parameters for construction of generic '" + genericName() + "'");
+	}
+
+	return types;
 }

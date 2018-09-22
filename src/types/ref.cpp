@@ -29,8 +29,16 @@ void types::RefType::setContents(types::RecordType *contents)
 
 std::string types::RefType::getName() const
 {
-	std::string params = contents->getName();
-	return Type::getName() + "[" + params.substr(1, params.length() - 2) + "]";
+	std::string name = this->name + "[";
+
+	for (unsigned i = 0; i < numGenerics(); i++) {
+		name += getGeneric(i)->getName();
+		if (i < numGenerics() - 1)
+			name += ", ";
+	}
+
+	name += "]";
+	return name;
 }
 
 std::string types::RefType::genericName()
@@ -65,30 +73,7 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 
 std::vector<types::Type *> types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes)
 {
-	assert(unrealized());
-	std::vector<types::Type *> inTypes = contents->getTypes();
-
-	if (argTypes.size() != inTypes.size())
-		throw exc::SeqException("expected " + std::to_string(inTypes.size()) + " constructor arguments, " +
-		                        "but got " + std::to_string(argTypes.size()));
-
-	std::vector<types::Type *> types(numGenerics(), nullptr);
-
-	for (unsigned i = 0; i < argTypes.size(); i++) {
-		auto *genericType = dynamic_cast<types::GenericType *>(inTypes[i]);
-		if (genericType) {
-			int idx = findGenericParameter(genericType);
-			if (idx >= 0 && !types[idx] && argTypes[i])
-				types[idx] = argTypes[i];
-		}
-	}
-
-	for (auto *type : types) {
-		if (!type)
-			throw exc::SeqException("cannot deduce all type parameters for construction of generic class '" + getName() + "'");
-	}
-
-	return types;
+	return Generic::deduceTypesFromArgTypes(contents->getTypes(), argTypes);
 }
 
 Value *types::RefType::memb(Value *self,
