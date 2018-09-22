@@ -33,6 +33,8 @@ namespace seq {
 			return info;
 		}
 
+      virtual ~SrcObject()=default;
+      
 		void setSrcInfo(SrcInfo info)
 		{
 			this->info = std::move(info);

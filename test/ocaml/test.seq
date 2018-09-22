@@ -1,3 +1,10 @@
+def test[`x](y: `x):
+   a = array[`x](1)
+   a[0] = y
+   return a
+
+a = test[float](4)
+print a[0], a.len
 
 def split(s: str, k: int, step: int):
    i = 0
@@ -16,9 +23,24 @@ s = "helloworld"
 for sp in split(s, 3, 1):
    print '>', sp
 
-gen = s |> split(..., 3, 1) |> double(...)
-for j in gen:
-   print j
+s |> split(3, 1) \
+  |> double \
+  |> echo
+
+b = True
+i = 32
+f = 16.5
+s = 'hello'
+
+j = i + 16
+print b, i, f, s, j
+
+f = 20.0
+print 'new f', f
+
+
+f = 'hi'
+print 'new f', f
 
 
 # # this is seq test file 

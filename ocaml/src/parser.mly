@@ -39,7 +39,7 @@
 %token <Ast.pos_t> FOR IN WHILE CONTINUE BREAK        /* loops */
 %token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT /* conditionals */
 %token <Ast.pos_t> DEF RETURN YIELD LAMBDA            /* functions */
-%token <Ast.pos_t> TYPE CLASS ARRAY                   /* types */
+%token <Ast.pos_t> TYPE CLASS TYPEOF                  /* types */
 %token <Ast.pos_t> IMPORT FROM GLOBAL                 /* variables */
 %token <Ast.pos_t> PRINT PASS ASSERT                  /* keywords */
 %token <Ast.pos_t> TRUE FALSE                         /* booleans */
@@ -65,10 +65,8 @@ program: /* Entry point */
 /*******************************************************/
 
 atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
-  | ARRAY { Array $1 }
   | ID { Id (fst $1, snd $1) }
   | INT { Int (fst $1, snd $1) } 
-  /* TODO fix floating point */
   | FLOAT { Float (fst $1, snd $1) } 
   | TRUE { Bool (true, $1) }
   | FALSE { Bool (false, $1) }
@@ -76,9 +74,7 @@ atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
   | REGEX { 
     noimp "Regex" 
     (* Regex $1 *) }
-  | SEQ { 
-    noimp "Seq" 
-    (* Seq $1 *) }
+  | SEQ { Seq $1 }
   | EXTERN { 
     noimp "Extern" 
     (* let a, b = $1 in Extern (a, b) *) }
@@ -165,10 +161,16 @@ not_test: /* General comparison: a, not a, a < 5 */
   | LESS | LEQ | GREAT | GEQ | EEQ | NEQ { $1 }
 expr_term: /* Expression term: 4, a(4), a[5], a.x, p */
   | atom { $1 }
-  | expr_term LP separated_list(COMMA, call_term) RP { Call ($1, $3) }
+  | expr_term 
+    LP; args = separated_list(COMMA, call_term); RP 
+    { let types = match types with None -> [] | Some x -> x in
+      Call ($1, types, args) }
+  | TYPEOF; LP; e = expr_term; RP;
+    LP; args = separated_list(COMMA, call_term); RP 
+    { Call (Typeof(e, $1), args) }
   | expr_term LS separated_nonempty_list(COMMA, sub) RS { 
     (* TODO: tuple index *)
-    Index ($1, List.hd_exn $3) 
+    Index ($1, [List.hd_exn $3]) 
   }
   | expr_term DOT ID { Dot ($1, (fst $3, snd $3)) }
 call_term:
@@ -179,13 +181,6 @@ expr: /* General arithmetic: 4, 5 + p */
   | ADD expr_term 
   | SUB expr_term { Unary($1, $2) }
   | expr bin_op expr { Binary ($1, $2, $3) }
-arg: /* Definition arguments: 5, a=3 */
-  /* TODO: arguments as generators w/o parenthesis */
-  /* | test comprehension { Generator ($1, $2)  } */
-  | ID { PlainArg (fst $1, snd $1) }
-  | ID EQ test { 
-    noimp "NamedArg"
-    (* NamedArg ($1, $3)  *) }
 sub: /* Subscripts: ..., a, 1:2, 1::3 */
   /* TODO: support args/kwargs? */
   | ELLIPSIS { 
@@ -194,6 +189,7 @@ sub: /* Subscripts: ..., a, 1:2, 1::3 */
   | test { $1 }
   | test? COLON test? { Slice ($1, $3, None, $2) }
   | test? COLON test? COLON test? { Slice ($1, $3, $5, $2) }
+  | type_spec { TypeExpr $1 }
 %inline bin_op: 
   /* TODO: bit shift ops and ~ */
   /* TODO: unary op */
@@ -287,6 +283,21 @@ import_as:
 
 /*******************************************************/
 
+type_spec:
+  | ID { TClass ((fst $1, snd $1), []) }
+  | ID type_list { TClass ((fst $1, snd $1), $2) }
+  | generic_type { $1 }
+  | TYPEOF LP test RP { TTypeof ($3) } 
+type_list:
+  | LS; separated_list(COMMA, type_spec); RS { $2 }
+generic_type:
+  | GENERIC { TGeneric (fst $1, snd $1) }
+generic_type_list: /* used during the function or class definitions */
+  | LS; separated_list(COMMA, generic_type); RS { $2 }
+
+
+/*******************************************************/
+
 func_statement:
   | func { $1 }
   | decorator+ func { 
@@ -296,40 +307,45 @@ decorator:
   | AT dotted_name NL { 
     noimp "decorator"
     (* Decorator ($2, []) *) }
-  | AT dotted_name LP separated_list(COMMA, arg) RP NL { 
+  | AT dotted_name LP separated_list(COMMA, test) RP NL { 
     noimp "decorator"
     (* Decorator ($2, $4) *) }
 dotted_name:
   | ID { Id (fst $1, snd $1) }
   | dotted_name DOT ID { Dot ($1, (fst $3, snd $3)) }
+
 func: 
-  | DEF; n = ID; LP a = separated_list(COMMA, param); RP COLON; 
-    s = suite { Function (TypedArg ((fst n, snd n), None), a, s, $1) }
-  | DEF; n = ID; LP a = separated_list(COMMA, param); RP OF; t = ID; COLON; s = suite
-  | DEF; n = ID; LP a = separated_list(COMMA, param); RP OF; t = GENERIC; COLON; s = suite 
-    { Function (TypedArg ((fst n, snd n), Some (fst t, snd t)), a, s, $1) }
-param:
+  | DEF; n = ID;
+    intypes = generic_type_list?
+    LP params = separated_list(COMMA, func_param); RP
+    ret = func_ret_type?
+    COLON;
+    s = suite 
+    { let intypes = match intypes with None -> [] | Some x -> x in
+      Function (Arg(n, ret), intypes, params, s, $1) }
+func_ret_type:
+  | OF; type_spec { $2 }
+func_param:
   /* TODO tuple params--- are they really needed? */
-  | ID { TypedArg ((fst $1, snd $1), None) }
   | typed_param { $1 }
   | ID EQ test { 
     noimp "NamedArg"
     (*NamedArg ($1, $3)*) }
 typed_param:
-  | ID COLON ID 
-  | ID COLON GENERIC { 
-    TypedArg ((fst $1, snd $1), Some (fst $3, snd $3)) 
-  }
-
-/*******************************************************/
+  | ID param_type? { Arg ((fst $1, snd $1), $2) }
+param_type:
+  | COLON type_spec { $2 }
+  
 
 class_statement:
-  | CLASS ID LP; mems = separated_list(COMMA, class_param) RP COLON NL; fns = class_member 
-    { Class ((fst $2, snd $2), mems, fns, $1) }
-class_param:
-  | ID { TypedArg ((fst $1, snd $1), None) }
-  | typed_param { $1 }
-class_member:
+  | CLASS ; n = ID;
+    intypes = generic_type_list?
+    LP; mems = separated_list(COMMA, typed_param) RP;
+    COLON NL; 
+    fns = class_members
+    { let intypes = match intypes with None -> [] | Some x -> x in
+      Class ((fst n, snd n), intypes, mems, fns, $1) }
+class_members:
   | PASS { [] }
   | INDENT func_statement+ DEDENT { $2 } 
 

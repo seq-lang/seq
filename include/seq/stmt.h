@@ -40,7 +40,7 @@ namespace seq {
 		bool loop;
 	public:
 		explicit Stmt(std::string name);
-		std::string getName() const;
+      std::string getName() const;
 		Stmt *getPrev() const;
 		void setParent(Block *parent);
 		BaseFunc *getBase() const;

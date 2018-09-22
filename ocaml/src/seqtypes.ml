@@ -47,6 +47,7 @@ let bool_type    = foreign "bool_type"    (void @-> returning seq_type)
 let int_type     = foreign "int_type"     (void @-> returning seq_type)
 let float_type   = foreign "float_type"   (void @-> returning seq_type)
 let str_type     = foreign "str_type"     (void @-> returning seq_type)
+let str_seq_type = foreign "str_seq_type" (void @-> returning seq_type)
 let generic_type = foreign "generic_type" (void @-> returning seq_type)
 let array_type   = foreign "array_type"   (seq_type @-> returning seq_type)
 let ref_type     = foreign "ref_type"     (string @-> returning seq_type)
@@ -75,6 +76,7 @@ let bool_expr  = foreign "bool_expr"  (bool @-> returning seq_expr)
 let int_expr   = foreign "int_expr"   (int @-> returning seq_expr)
 let float_expr = foreign "float_expr" (float @-> returning seq_expr)
 let str_expr   = foreign "str_expr"   (string @-> returning seq_expr)
+let str_seq_expr  = foreign "str_seq_expr" (string @-> returning seq_expr)
 let func_expr  = foreign "func_expr"  (seq_func @-> returning seq_expr)
 let var_expr   = foreign "var_expr"   (seq_var @-> returning seq_expr)
 
@@ -213,6 +215,21 @@ let set_ref_generics = foreign "set_ref_generics" (seq_type @-> int @-> returnin
 let get_ref_generic = foreign "get_ref_generic" (seq_type @-> int @-> returning seq_type)
 let set_ref_generic_name = foreign "set_ref_generic_name" (seq_type @-> int @-> string @-> returning void)
 
+let realize_type' = foreign "realize_type"
+  (seq_type @-> ptr seq_type @-> size_t @-> returning seq_type)
+let realize_type typ typs =
+  let c_arr = CArray.of_list seq_expr typs in
+	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
+	realize_type' typ (CArray.start c_arr) c_len
+
+let realize_func' = foreign "realize_func"
+  (seq_expr @-> ptr seq_type @-> size_t @-> returning seq_func)
+let realize_func fn_expr typs =
+  let c_arr = CArray.of_list seq_expr typs in
+	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
+  realize_func' fn_expr (CArray.start c_arr) c_len
+
+
 (* Utils *)
 
 let get_module_block = foreign "get_module_block" (seq_module @-> returning seq_block)
@@ -221,7 +238,7 @@ let get_for_block    = foreign "get_for_block"    (seq_stmt @-> returning seq_bl
 let get_else_block   = foreign "get_else_block"   (seq_stmt @-> returning seq_block)
 let get_elif_block   = foreign "get_elif_block"   (seq_stmt @-> seq_expr @-> returning seq_block)
 
-let get_type = foreign "get_type" (seq_expr @-> returning seq_type)
+let get_type = foreign "get_type" (seq_expr @-> seq_func @-> returning seq_type)
 let get_var_type = foreign "get_var_type" (seq_var @-> returning seq_type)
 
 let get_pos_t_from_srcinfo src: Ast.pos_t = 

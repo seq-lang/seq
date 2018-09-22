@@ -135,7 +135,7 @@ and read state = parse
       | "import"   -> P.IMPORT     (cur_pos lexbuf)
       | "from"     -> P.FROM       (cur_pos lexbuf)
       | "class"    -> P.CLASS      (cur_pos lexbuf)
-      | "array"    -> P.ARRAY      (cur_pos lexbuf)
+      | "typeof"   -> P.TYPEOF     (cur_pos lexbuf)
       | _          -> P.ID         (id, cur_pos lexbuf)
   }
 
