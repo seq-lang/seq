@@ -1,5 +1,7 @@
 # Testbed !
 
+# import seqlib
+
 def range(a: int, b):
    i = a
    while i < b:

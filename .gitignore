@@ -44,6 +44,7 @@ Thumbs.db
 # IDE generated files #
 #######################
 .idea
+.mypy_cache
 
 # Doxygen
 dox
@@ -51,3 +52,7 @@ dox
 # Ocaml
 ocaml/_build
 *.cm[iot]
+*.byte
+*.native
+*.dSYM
+*.conflicts
