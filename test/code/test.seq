@@ -111,8 +111,8 @@ for input in Source(args[0]).iter() {
 
   var v = farray[0](input)
   for r in enum(v) {
-    print r.1
-    print r.2
+    print r[0]
+    print r[1]
   }
   print input
 
@@ -140,7 +140,7 @@ for input in Source(args[0]).iter() {
   }
   print ident(input)
 
-  print (v[1], ((v)[2]), (v[1], 4.2)).3.1
+  print (v[1], ((v)[2]), (v[1], 4.2))[2][0]
 }
 
 def hello:
@@ -159,9 +159,9 @@ print x
 x = .42
 print -x if x < 1 else +x
 var b = (true, !true)
-print b.1
-b = (b.1, !!false)
-print b.2
+print b[0]
+b = (b[0], !!false)
+print b[1]
 
 def fib(n: Int) -> Int {
   type F = {f: (Int -> Int), x: Int}
@@ -176,7 +176,7 @@ def fib(n: Int) -> Int {
 
 print fib(10)
 
-for i in range(1 if b.1 else 2, 5+5) {
+for i in range(1 if b[0] else 2, 5+5) {
   if i == 3:
     continue
   elif i >= 7:

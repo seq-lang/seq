@@ -95,6 +95,11 @@ Value *IntExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	return ConstantInt::get(getType()->getLLVMType(context), (uint64_t)n, true);
 }
 
+seq_int_t IntExpr::value() const
+{
+	return n;
+}
+
 FloatExpr::FloatExpr(double f) : Expr(types::Float), f(f)
 {
 }
@@ -414,6 +419,16 @@ void ArrayLookupExpr::resolveTypes()
 Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	idx->ensure(types::Int);
+
+	types::Type *type = arr->getType();
+	auto *idxLit = dynamic_cast<IntExpr *>(idx);
+
+	// check if this is a record lookup
+	if (type->isGeneric(types::RecordType::get({})) && idxLit) {
+		GetElemExpr e(arr, idxLit->value() + 1);
+		return e.codegen0(base, block);
+	}
+
 	Value *arr = this->arr->codegen(base, block);
 	Value *idx = this->idx->codegen(base, block);
 	return this->arr->getType()->indexLoad(base, arr, idx, block);
@@ -421,6 +436,13 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 types::Type *ArrayLookupExpr::getType0() const
 {
+	types::Type *type = arr->getType();
+	auto *idxLit = dynamic_cast<IntExpr *>(idx);
+
+	// check if this is a record lookup
+	if (type->isGeneric(types::RecordType::get({})) && idxLit)
+		return type->getBaseType((unsigned)idxLit->value());
+
 	return arr->getType()->indexType();
 }
 
