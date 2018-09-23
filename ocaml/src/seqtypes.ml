@@ -81,7 +81,7 @@ let set_ref_done = foreign "set_ref_done" (seq_type @-> returning void)
 
 let bool_expr  = foreign "bool_expr"  (bool @-> returning seq_expr)
 let int_expr   = foreign "int_expr"   (int @-> returning seq_expr)
-let float_expr = foreign "float_expr" (float @-> returning seq_expr)
+let float_expr = foreign "float_expr" (double @-> returning seq_expr)
 let str_expr   = foreign "str_expr"   (string @-> returning seq_expr)
 let str_seq_expr  = foreign "str_seq_expr" (string @-> returning seq_expr)
 let func_expr  = foreign "func_expr"  (seq_func @-> returning seq_expr)
