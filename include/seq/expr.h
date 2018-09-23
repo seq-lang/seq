@@ -53,6 +53,7 @@ namespace seq {
 	public:
 		explicit IntExpr(seq_int_t n);
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		seq_int_t value() const;
 	};
 
 	class FloatExpr : public Expr {
