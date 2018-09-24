@@ -82,7 +82,7 @@ def split(s: Seq, k: Int, step: Int) {
   }
 }
 
-def enum(s: Seq[]) {
+def enum[T](s: T) {
   var i = 0
   for j in range(0, s.len) {
     yield (i, s[j])

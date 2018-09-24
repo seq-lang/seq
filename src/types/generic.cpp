@@ -254,6 +254,12 @@ Value *types::GenericType::indexSliceNoTo(BaseFunc *base,
 	return type->indexSliceNoTo(base, self, to, block);
 }
 
+types::Type* types::GenericType::indexType() const
+{
+	ensure();
+	return type->indexType();
+}
+
 Value *types::GenericType::call(BaseFunc *base,
                                 Value *self,
                                 const std::vector<Value *>& args,

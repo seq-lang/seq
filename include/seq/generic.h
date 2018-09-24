@@ -118,6 +118,8 @@ namespace seq {
 			                            llvm::Value *from,
 			                            llvm::BasicBlock *block) override;
 
+			Type *indexType() const override;
+
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
 			                  const std::vector<llvm::Value *>& args,
