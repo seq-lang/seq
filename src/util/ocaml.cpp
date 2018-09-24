@@ -455,10 +455,16 @@ FOREIGN Var *get_for_var(For *f)
 FOREIGN types::Type *get_type(Expr *e, BaseFunc *base)
 {
 	E("get_type");
-	base->resolveTypes();
-	e->resolveTypes();
+	types::Type *ret = 0;
+	try {
+		base->resolveTypes();
+		e->resolveTypes();
 	// E("!! type={}", e->getType()->getName());
-	return e->getType();
+		ret = e->getType();
+	} catch (exc::SeqException &e) {
+		; // shadow now?
+	}
+	return ret;
 }
 
 FOREIGN BaseFunc *get_func(FuncExpr *e)

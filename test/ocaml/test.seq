@@ -1,46 +1,55 @@
-def test[`x](y: `x):
-   a = array[`x](1)
-   a[0] = y
-   return a
+def range(a, b):
+   i = a
+   while i < b:
+      yield i
+      i += 1
 
-a = test[float](4)
-print a[0], a.len
+for i in range(0, 10):
+ 	print i
 
-def split(s: str, k: int, step: int):
-   i = 0
-   while i + k <= s.len:
-      yield s[i:i + k]
-      i += step
+# def test[`x](y: `x):
+#    a = array[`x](1)
+#    a[0] = y
+#    return a
 
-def double(x: str):
-   yield x
-   yield x
+# a = test[float](4)
+# print a[0], a.len
 
-def echo(x: str):
-   print x
+# def split(s: str, k: int, step: int):
+#    i = 0
+#    while i + k <= s.len:
+#       yield s[i:i + k]
+#       i += step
 
-s = "helloworld"
-for sp in split(s, 3, 1):
-   print '>', sp
+# def double(x: str):
+#    yield x
+#    yield x
 
-s |> split(3, 1) \
-  |> double \
-  |> echo
+# def echo(x: str):
+#    print x
 
-b = True
-i = 32
-f = 16.5
-s = 'hello'
+# s = "helloworld"
+# for sp in split(s, 3, 1):
+#    print '>', sp
 
-j = i + 16
-print b, i, f, s, j
+# s |> split(3, 1) \
+#   |> double \
+#   |> echo
 
-f = 20.0
-print 'new f', f
+# b = True
+# i = 32
+# f = 16.5
+# s = 'hello'
+
+# j = i + 16
+# print b, i, f, s, j
+
+# f = 20.0
+# print 'new f', f
 
 
-f = 'hi'
-print 'new f', f
+# f = 'hi'
+# print 'new f', f
 
 
 # # this is seq test file 

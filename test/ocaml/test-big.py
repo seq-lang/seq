@@ -1,15 +1,19 @@
 # Testbed !
 
-# import seqlib
+import seqlib
 
-def range(a: int, b):
+ii = 5
+for i in ii.iter():
+   print 'woohoo', i
+
+def range(a, b):
    i = a
    while i < b:
       yield i
       i += 1
 
 def main(args: array[str]):   
-   def split(s: seq, k, step: int): # TODO: step fails w/o type annotation
+   def split(s, k, step):
       i = 0
       while i + k < s.len:
          yield s[i:i + k]
@@ -21,7 +25,7 @@ def main(args: array[str]):
          yield (i, s[j])
          i += 1
    
-   def f(s: seq): # TODO: fails w/o type annotation
+   def f(s: seq): 
       v = array[seq](s.len / 32)
       i = 0
       for t in split(s, 32, 32):
@@ -106,9 +110,9 @@ print b[1]
 #    def rec(pair: F):
 #       return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
 #    return n if n <= 1 else rec(F(fib, n))
-# def fib(n: int) -> int:
-   # return n if n <= 1 else fib(n-1)+fib(n-2)
-# print fib(10)
+def fib(n):
+   return n if n <= 1 else fib(n-1)+fib(n-2)
+print fib(10)
 
 for i in range(1 if b[0] else 2, 5 + 5):
    if i == 3: continue

@@ -51,6 +51,7 @@ let str_seq_type = foreign "str_seq_type" (void @-> returning seq_type)
 let generic_type = foreign "generic_type" (void @-> returning seq_type)
 let array_type   = foreign "array_type"   (seq_type @-> returning seq_type)
 let ref_type     = foreign "ref_type"     (string @-> returning seq_type)
+let file_type     = foreign "source_type" (void @-> returning seq_type)
 
 let func_type' = foreign "func_type" 
   (seq_type @-> ptr seq_type @-> size_t @-> returning seq_type)

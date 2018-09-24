@@ -67,8 +67,9 @@ type statement =
   | Match of expr * (expr option * ident option * statement list * pos_t) list * pos_t
   | Function of arg * expr list * arg list * statement list * pos_t (* def arg [typ list] (arg list): st list *)
   | Class of ident * expr list * arg list * statement list * pos_t
+  | Extend of ident * statement list * pos_t
   (* | DecoratedFunction of decorator list * statement *)
-  (* | Import of (expr * expr option) list *)
+  | Import of (ident * ident option) list * pos_t
   (* | ImportFrom of expr * ((expr * expr option) list) option *)
 (* and decorator = *)
   (* | Decorator of expr * vararg list *)
@@ -168,11 +169,13 @@ let rec prn_statement level prn_pos st =
   | Class((v, _), tl, vl, sl, pos) -> 
       sprintf "%sClass<%s>[%s; %s;\n%s]" (prn_pos pos) (sci ", " tl (prn_expr prn_pos)) v (sci ", " vl (prn_va prn_pos)) @@ 
         sci "\n" sl (prn_statement (level + 1) prn_pos)
-  (* | Import(el, _) -> 
-    sprintf "Import[%s]" @@ sci ", " el (fun (a, b) ->
-      let b = match b with None -> "" | Some x -> " as " ^ (prn_expr x) in
-      (prn_expr a) ^ b)
-  | ImportFrom(e, el, _) -> 
+  | Extend((v, _), sl, pos) -> 
+    sprintf "%sExtend[%s;\n%s]" (prn_pos pos) v @@ sci "\n" sl (prn_statement (level + 1) prn_pos)
+  | Import(el, pos) -> 
+    sprintf "%sImport[%s]" (prn_pos pos) @@ sci ", " el (fun ((a, _), b) ->
+      let b = match b with None -> "" | Some (b, _) -> " as " ^ b in
+      a ^ b)
+  (*| ImportFrom(e, el, _) -> 
     let el = match el with None -> "all" | Some x -> sci ", " x (fun (a, b, _) ->
       let b = match b with None -> "" | Some x -> " as " ^ (prn_expr x) in
       (prn_expr a) ^ b

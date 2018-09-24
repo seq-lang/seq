@@ -16,6 +16,7 @@ type assignable =
   | Type of seq_type
 
 type context = { 
+  prefix: string;
   base: seq_func; 
   map: (string, assignable) Hashtbl.t;
   stack: (string list) Stack.t 
@@ -23,8 +24,16 @@ type context = {
 
 let dummy_pos: pos_t = {pos_fname=""; pos_cnum=0; pos_lnum=0; pos_bol=0}
 
+let print_error kind lines ?msg (pos: pos_t) = 
+  let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
+  let style = [T.Bold; T.red] in
+  eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: (line %d) %s\n" kind line (match msg with 
+    | Some m -> sprintf "%s" m | None -> "");
+  eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
+  eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col)
+
 let init_context fn = 
-  let ctx = {base = fn; map = String.Table.create (); stack = Stack.create ()} in
+  let ctx = {base = fn; map = String.Table.create (); stack = Stack.create (); prefix=""} in
   (* initialize POD types *)
   Hashtbl.set ctx.map ~key:"void"  ~data:(Type (void_type ()));
   Hashtbl.set ctx.map ~key:"int"   ~data:(Type (int_type ()));
@@ -32,6 +41,7 @@ let init_context fn =
   Hashtbl.set ctx.map ~key:"seq"   ~data:(Type (str_seq_type ()));
   Hashtbl.set ctx.map ~key:"bool"  ~data:(Type (bool_type ()));
   Hashtbl.set ctx.map ~key:"float" ~data:(Type (float_type ()));
+  Hashtbl.set ctx.map ~key:"file"  ~data:(Type (file_type ()));
   (* Hashtbl.set ctx.map ~key:"array" ~data:(Type (array_type (generic_type ()))); *)
   ctx
 
@@ -40,13 +50,6 @@ let noimp s =
   raise (NotImplentedError ("Not yet implemented: " ^ s))
 let seq_error msg pos =
   raise (SeqCamlError (msg, pos))
-
-(* return seq_type for a string name *)
-let has_type ctx s = 
-  match Hashtbl.find ctx.map s with 
-  | Some (Type _) -> true 
-  | _ -> false
-
 
 let rec get_seq_expr ctx expr = 
   let expr, pos = begin
@@ -139,23 +142,23 @@ let rec get_seq_expr ctx expr =
     begin match get_expr_name lh_expr with 
     | "type" ->
       let typ = List.map indices ~f:(fun t ->
-          let typ_expr = get_seq_expr ctx t in 
-          if get_expr_name typ_expr <> "type" then
-            seq_error "Not a valid type" (get_pos typ_expr);
-          get_type typ_expr ctx.base) 
-        |> realize_type (get_type lh_expr ctx.base) in
+        let typ_expr = get_seq_expr ctx t in 
+        if get_expr_name typ_expr <> "type" then
+          seq_error "Not a valid type" (get_pos typ_expr);
+        get_type typ_expr ctx.base) |> realize_type (get_type lh_expr ctx.base) in
       type_expr typ, get_pos lh_expr
     | "func" ->
+      eprintf "hi!\n%!";
       let fn = List.map indices ~f:(fun t ->
-          let typ_expr = get_seq_expr ctx t in 
-          if get_expr_name typ_expr <> "type" then
-            seq_error "Not a valid type" (get_pos typ_expr);
-          get_type typ_expr ctx.base) 
-        |> realize_func lh_expr in
+        let typ_expr = get_seq_expr ctx t in 
+        if get_expr_name typ_expr <> "type" then
+          seq_error "Not a valid type" (get_pos typ_expr);
+        get_type typ_expr ctx.base) |> realize_func lh_expr in
       func_expr fn, get_pos lh_expr
     | _ ->
       if List.length index_exprs <> 1 then 
         seq_error "Index needs only one item" (get_pos lh_expr);
+      (* eprintf ">>> array lookup expr yay! %s\n%!" (prn_expr (fun x->"") @@ List.hd_exn indices); *)
       array_lookup_expr lh_expr (List.hd_exn index_exprs), get_pos lh_expr
     end
   | Tuple(args, pos) ->
@@ -171,7 +174,7 @@ let set_generics ctx types args set_generic_count get_generic =
     | Arg((n, pos), None) -> (n, Generic(sprintf "``%s" n, pos))
     | Arg((n, _), Some t) -> (n, t)) in 
   
-  let generics = List.append arg_types types 
+  let generics = List.append types arg_types  
     |> List.filter_map ~f:(function Generic(g, _) -> Some g | _ -> None) 
     |> List.dedup_and_sort ~compare in
   set_generic_count (List.length generics);
@@ -199,7 +202,7 @@ let rec get_seq_stmt ctx block stmt : unit =
     let rh_expr = get_seq_expr ctx rh_expr in 
     let rh_type = get_type rh_expr ctx.base in 
     match Hashtbl.find ctx.map var with
-    | Some (Var v) when rh_type <> get_var_type v ->  
+    | Some (Var v) when (rh_type <> Ctypes.null) && (rh_type <> get_var_type v) ->  
       T.eprintf [T.black; T.on_yellow] "[WARN] shadowing variable %s\n" var;
       let var_stmt = var_stmt rh_expr in
       Hashtbl.set ctx.map ~key:var ~data:(Var (var_stmt_var var_stmt));
@@ -356,12 +359,45 @@ let rec get_seq_stmt ctx block stmt : unit =
       add_ref_method typ name fn);
     set_ref_done typ;
     pass_stmt (), pos
+  | Extend((class_name, name_pos), functions, pos) ->
+    let typ = match Hashtbl.find ctx.map class_name with
+    | Some (Type t) -> t 
+    | None -> seq_error (sprintf "Cannot extend non-existing class %s" class_name) pos in
+    (* functions inherit types and functions; variables are off-limits *)
+    let ref_ctx = {ctx with map=Hashtbl.copy ctx.map} in
+    List.iter functions ~f:(fun f -> 
+      let name, fn = get_seq_fn ref_ctx f ~parent_class:class_name in 
+      add_ref_method typ name fn);
+    pass_stmt (), pos
+  | Import(il, pos) ->
+    List.iter il ~f:(fun ((what, _), as_what) ->
+      parse_file ctx block ("../test/ocaml/" ^ what ^ ".py"));
+    pass_stmt (), pos
   | _ -> noimp "Unknown stmt"
   end
   in 
   set_base stmt ctx.base;
   set_pos stmt pos;
   add_stmt stmt block
+and parse_file ctx block infile = 
+  let lines = In_channel.read_lines infile in
+  let code = (String.concat ~sep:"\n" lines) ^ "\n" in
+  let lines = Array.of_list lines in
+  let lexbuf = Lexing.from_string code in
+  let state = Lexer.stack_create () in
+  try
+    let ast = Parser.program (Lexer.token state) lexbuf in  
+    let prn_pos (pos: pos_t) = "" in
+    eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
+    eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast prn_pos ast;
+    match ast with Module stmts -> 
+      List.iter stmts ~f:(get_seq_stmt ctx block)
+  with 
+  | Lexer.SyntaxError (msg, pos) ->
+    print_error "Lexer" lines pos ~msg:msg
+  | Parser.Error ->
+    (* check https://github.com/dbp/funtal/blob/e9a9b9d/parse.ml#L64-L89 *)
+    print_error "Parser" lines lexbuf.lex_start_p
 
 and get_seq_fn ctx ?parent_class = function 
   | Function(return_typ, types, args, stmts, pos) ->
@@ -404,50 +440,21 @@ and get_seq_case_pattern ctx = function
   | Some (Bool (b, _)) -> bool_pattern b
   | _ -> noimp "Match condition"
 
-let seq_exec ast = 
-  let seq_module = init_module () in
-  let module_block = get_module_block seq_module in
-  let ctx = init_context seq_module in
-  Stack.push ctx.stack [];
-  match ast with Module stmts -> 
-    List.iter stmts ~f:(get_seq_stmt ctx module_block);
-  exec_module seq_module false 
-  
-  
 let () = 
   fprintf stderr "behold the ocaml-seq!\n";
   if Array.length Sys.argv < 2 then begin
     noimp "No arguments"
   end;
-  let infile = Sys.argv.(1) in
-  let lines = In_channel.read_lines infile in
-  let code = (String.concat ~sep:"\n" lines) ^ "\n" in
-  let lines = Array.of_list lines in
-  let lexbuf = Lexing.from_string code in
-  let state = Lexer.stack_create () in
-  let print_error kind ?msg (pos: pos_t) = 
-    let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
-    let style = [T.Bold; T.red] in
-    eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: (line %d) %s\n" kind line (match msg with 
-      | Some m -> sprintf "%s" m | None -> "");
-    eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
-    eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col);
-  in
-  try
-    let ast = Parser.program (Lexer.token state) lexbuf in  
-    let prn_pos (pos: pos_t) = "" in
-    eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST ==> \n";
-    eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast prn_pos ast;
-    eprintf "%s%!" @@ T.sprintf [T.Bold] "|> Output ==>\n%!";
-    seq_exec ast
+  try 
+    let seq_module = init_module () in
+    let module_block = get_module_block seq_module in
+    let ctx = init_context seq_module in
+    Stack.push ctx.stack [];
+    parse_file ctx module_block Sys.argv.(1);
+    exec_module seq_module false
   with 
-  | Lexer.SyntaxError (msg, pos) ->
-    print_error "Lexer" pos ~msg:msg
-  | Parser.Error ->
-    (* check https://github.com/dbp/funtal/blob/e9a9b9d/parse.ml#L64-L89 *)
-    print_error "Parser" lexbuf.lex_start_p
   | SeqCamlError (msg, pos) ->
-    print_error "CamlAst" pos ~msg:msg
+    print_error "CamlAst" [||] pos ~msg:msg
   | SeqCError (msg, pos) ->
-    print_error "Compiler" pos ~msg:msg
+    print_error "Compiler" [||] pos ~msg:msg
   

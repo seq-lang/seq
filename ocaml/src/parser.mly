@@ -39,7 +39,7 @@
 %token <Ast.pos_t> FOR IN WHILE CONTINUE BREAK        /* loops */
 %token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT /* conditionals */
 %token <Ast.pos_t> DEF RETURN YIELD LAMBDA            /* functions */
-%token <Ast.pos_t> TYPE CLASS TYPEOF                  /* types */
+%token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND           /* types */
 %token <Ast.pos_t> IMPORT FROM GLOBAL                 /* variables */
 %token <Ast.pos_t> PRINT PASS ASSERT                  /* keywords */
 %token <Ast.pos_t> TRUE FALSE                         /* booleans */
@@ -208,12 +208,13 @@ statement: /* Statements */
   | MATCH test COLON NL INDENT case_suite DEDENT { Match ($2, $6, $1) }
   | func_statement 
   | class_statement
+  | extend_statement
     { $1 }
   | NL { Pass $1 }
 small_statement: /* Simple one-line statements: 5+3, print x */
   /* TODO del, exec/eval?,  */
   | expr_statement { $1 }
-  | import_statement { noimp "Import" (* $1 *) }
+  | import_statement { $1 }
   | PRINT test_list { Print ($2, $1) }
   | PASS { Pass $1 }
   | BREAK { Break $1 }
@@ -272,12 +273,11 @@ import_statement:
   | FROM dotted_name IMPORT separated_list(COMMA, import_as) { 
     noimp "Import" 
     (* ImportFrom ($2, Some $4) *) }
-  | IMPORT separated_list(COMMA, import_as) { 
-    noimp "Import" 
-    (* Import ($2) *) }
+  | IMPORT separated_list(COMMA, import_as) 
+    { Import ($2, $1) }
 import_as:
-  | dotted_name { ($1, None) }
-  | dotted_name AS ID { ($1, Some (Id (fst $3, snd $3))) }
+  | ID { ((fst $1, snd $1), None) }
+  | ID AS ID { ((fst $1, snd $1), Some (fst $3, snd $3)) }
 
 /*******************************************************/
 
@@ -332,4 +332,8 @@ class_statement:
 class_members:
   | PASS { [] }
   | INDENT func_statement+ DEDENT { $2 } 
+extend_statement:
+  | EXTEND ; n = ID; COLON NL; 
+    fns = class_members
+    { Extend ((fst n, snd n), fns, $1) }
 
