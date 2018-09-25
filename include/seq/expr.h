@@ -101,8 +101,10 @@ namespace seq {
 	class FuncExpr : public Expr {
 	private:
 		BaseFunc *func;
+		BaseFunc *func0;  // original non-type-instantiated function, if any
 		std::vector<types::Type *> types;
 	public:
+		FuncExpr(BaseFunc *func, BaseFunc *func0, std::vector<types::Type *> types={});
 		explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types={});
 		bool isParameterized();
 		BaseFunc *getFunc();

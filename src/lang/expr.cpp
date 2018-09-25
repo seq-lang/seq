@@ -187,10 +187,15 @@ VarExpr *VarExpr::clone(Generic *ref)
 	return new VarExpr(var->clone(ref));
 }
 
-FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types) :
-    func(func), types(std::move(types))
+FuncExpr::FuncExpr(BaseFunc *func, BaseFunc *func0, std::vector<types::Type *> types) :
+    func(func), func0(func0), types(std::move(types))
 {
 	name = "func";
+}
+
+FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types) :
+    FuncExpr(func, nullptr, types)
+{
 }
 
 bool FuncExpr::isParameterized()
@@ -207,8 +212,10 @@ void FuncExpr::resolveTypes()
 {
 	auto *f = dynamic_cast<Func *>(func);
 	if (f) {
-		if (f->unrealized() && !types.empty())
+		if (f->unrealized() && !types.empty()) {
+			func0 = func;
 			func = f->realize(types);
+		}
 	} else if (!types.empty()) {
 		throw exc::SeqException("cannot type-instantiate non-generic function");
 	}
@@ -232,7 +239,7 @@ FuncExpr *FuncExpr::clone(Generic *ref)
 	std::vector<types::Type *> typesCloned;
 	for (auto *type : types)
 		typesCloned.push_back(type->clone(ref));
-	return new FuncExpr(func->clone(ref), typesCloned);
+	return new FuncExpr((func0 ? func0 : func)->clone(ref), typesCloned);
 }
 
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
@@ -633,18 +640,18 @@ static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types
 {
 	Func *f = getFuncFromFuncExpr(func);
 	if (f && f->numGenerics() > 0 && f->unrealized())
-		func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)));
+		func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)), f);
 
 	auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
 	if (elemExpr) {
 		std::string name = elemExpr->getMemb();
 		types::Type *type = elemExpr->getRec()->getType();
 		if (type->hasMethod(name)) {
-			auto *f = dynamic_cast<Func *>(type->getMethod(name));
-			if (f && f->numGenerics() > 0 && f->unrealized()) {
+			auto *g = dynamic_cast<Func *>(type->getMethod(name));
+			if (g && g->numGenerics() > 0 && g->unrealized()) {
 				std::vector<types::Type *> typesFull(argTypes);
 				typesFull.insert(typesFull.begin(), type);  // methods take 'self' as first argument
-				func = new MethodExpr(elemExpr->getRec(), name, f->deduceTypesFromArgTypes(typesFull));
+				func = new MethodExpr(elemExpr->getRec(), name, g->deduceTypesFromArgTypes(typesFull));
 			}
 		}
 	}
