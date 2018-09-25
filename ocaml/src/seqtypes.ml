@@ -218,6 +218,8 @@ let set_func_params fn names types =
 
 (* Generics --- needs better typing ... *)
 
+let set_func_out = foreign "set_func_out" (seq_func @-> seq_type @-> returning void)
+
 let set_func_generics = foreign "set_func_generics" (seq_func @-> int @-> returning void)
 let get_func_generic = foreign "get_func_generic" (seq_func @-> int @-> returning seq_type)
 let set_func_generic_name = foreign "set_func_generic_name" (seq_func @-> int @-> string @-> returning void)

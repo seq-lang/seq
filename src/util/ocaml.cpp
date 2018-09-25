@@ -148,7 +148,7 @@ FOREIGN Expr *record_expr(Expr **args, size_t size)
 	E("record_expr[{}]", size);
 	return new RecordExpr(
 	             vector<Expr*>(args, args + size),
-	             vector<string>(size, ""));
+	             vector<string>(size, " "));
 }
 
 FOREIGN Expr *static_expr(types::Type *ty, const char *name)
@@ -270,6 +270,11 @@ FOREIGN Func *func(const char *name)
 	auto *f = new Func();
 	f->setName(string(name));
 	return f;
+}
+
+FOREIGN void set_func_out(Func *f, types::Type *typ)
+{
+	f->setOut(typ);
 }
 
 FOREIGN Block *get_func_block(Func *st)
