@@ -855,6 +855,7 @@ Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block)
 
 	bool seenCatchAll = false;
 	for (auto *pattern : patterns) {
+		pattern->resolveTypes(valType);
 		if (pattern->isCatchAll())
 			seenCatchAll = true;
 	}

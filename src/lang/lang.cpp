@@ -349,6 +349,7 @@ void Match::codegen0(BasicBlock*& block)
 
 	bool seenCatchAll = false;
 	for (auto *pattern : patterns) {
+		pattern->resolveTypes(valType);
 		if (pattern->isCatchAll())
 			seenCatchAll = true;
 	}
@@ -515,18 +516,18 @@ Var *For::getVar()
 void For::resolveTypes()
 {
 	gen->resolveTypes();
-
-	if (!gen->getType()->isGeneric(types::Gen))
-		throw exc::SeqException("cannot iterate over non-generator");
-
 	var->setType(gen->getType()->getBaseType(0));
 	scope->resolveTypes();
 }
 
 void For::codegen0(BasicBlock*& block)
 {
-	auto *type = dynamic_cast<types::GenType *>(gen->getType());
-	assert(type);
+	types::Type *type = gen->getType();
+	if (!type->isGeneric(types::Gen))
+		throw exc::SeqException("cannot iterate over non-generator of type '" + type->getName() + "'");
+
+	auto *genType = dynamic_cast<types::GenType *>(type);
+	assert(genType);
 
 	LLVMContext& context = block->getContext();
 
@@ -544,14 +545,14 @@ void For::codegen0(BasicBlock*& block)
 	builder.CreateBr(loop);
 
 	builder.SetInsertPoint(loop);
-	type->resume(gen, loop);
-	Value *cond = type->done(gen, loop);
+	genType->resume(gen, loop);
+	Value *cond = genType->done(gen, loop);
 	BasicBlock *body = BasicBlock::Create(context, "body", func);
 	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set true-branch below
 
 	block = body;
-	if (!type->getBaseType(0)->is(types::Void)) {
-		Value *val = type->promise(gen, block);
+	if (!genType->getBaseType(0)->is(types::Void)) {
+		Value *val = genType->promise(gen, block);
 		var->store(getBase(), val, block);
 	}
 
@@ -562,7 +563,7 @@ void For::codegen0(BasicBlock*& block)
 
 	BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
 	branch->setSuccessor(0, cleanup);
-	type->destroy(gen, cleanup);
+	genType->destroy(gen, cleanup);
 
 	builder.SetInsertPoint(cleanup);
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
