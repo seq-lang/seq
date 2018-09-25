@@ -61,12 +61,13 @@ def main(args: array[str]):
 
 
       print 'eee', v[0]
-      # Fails
+      # TODO Fails
       # match v[0]:
       #    #case 'A...' as q if q.len > 150: 
       #    #   print 'case A with if'
-      #    case 'CCTGCATCACGACGACCGCCGCCACCGTCAGC': print 'caught sth'
-      #    # case 5: print 'no way'
+      #    case 'CCTGCATCACGACGACCGCCGCCACCGTCAGC': 
+      #       print 'caught sth'
+      #    # case 5: print 'no way' # LLVM exception
       #    default: print 'default'
       
       for v1 in split(input, 64, 64):
@@ -80,7 +81,7 @@ def main(args: array[str]):
       # print v[1]
       #a = (v[1], v[2], (v[1], 4.2)) CRASHES
       #print a[2][0]
-   # file(args[0]).iter() |> process_input CRASHES
+   # file(args[0]).iter() |> process_input(...) # TODO CRASHES
    for i in file(args[0]).iter():
    	process_input(i)
 
@@ -174,7 +175,7 @@ q = Pair(4.2, 1.9)
 print q.sum(10.0)
 for a in q.iter(): print a
 q.swap()
-# Pair[float].dump(q) # requires explicit type on dump --- expected function input type '``self', but got 'Pair[Float]'
+# Pair[float].dump(q) # TODO requires explicit type on dump --- expected function input type '``self', but got 'Pair[Float]'
 
 # def print_coord(t: Type(Int, Int, Str)):
 # 	match t:
