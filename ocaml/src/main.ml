@@ -131,10 +131,10 @@ let rec get_seq_expr ctx expr =
         seq_error "Not a valid type" (get_pos typ_expr);
       typ_expr) in
     let ret, args = match List.rev typ_exprs with
-    | ret::tl -> 
-      get_type ret ctx.base, List.map tl ~f:(get_type ret) |> List.rev
+    | hd::tl -> 
+      get_type hd ctx.base, List.map tl ~f:(fun t -> get_type t ctx.base) |> List.rev
     | [] -> 
-      seq_error "Callable needs at least two arguments" pos in
+      seq_error "Callable needs at least one argument" pos in
     type_expr (func_type ret args), pos
   | Index(lh_expr, indices) ->
     let lh_expr = get_seq_expr ctx lh_expr in
@@ -401,7 +401,7 @@ and parse_file ctx block infile =
 
 and get_seq_fn ctx ?parent_class = function 
   | Function(return_typ, types, args, stmts, pos) ->
-    let fn_name = match return_typ with Arg((n, _), _) -> n in
+    let fn_name, ret_typ = match return_typ with Arg((n, _), typ) -> n, typ in
 
     if is_some @@ Hashtbl.find ctx.map fn_name then 
       seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
@@ -410,6 +410,13 @@ and get_seq_fn ctx ?parent_class = function
     (* add it to the table only if it is "pure" function *)
     if is_none parent_class then 
       Hashtbl.set ctx.map ~key:fn_name ~data:(Func fn);
+    
+    if is_some ret_typ then begin
+      let typ_expr = get_seq_expr ctx (Option.value_exn ret_typ) in  
+      match get_expr_name typ_expr with
+      | "type" -> set_func_out fn (get_type typ_expr ctx.base)
+      | _ -> seq_error "Not a type" (get_pos typ_expr)
+    end;
 
     (* handle statements *)
     let fn_ctx = {(init_context fn) 

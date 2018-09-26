@@ -169,7 +169,7 @@ expr_term: /* Expression term: 4, a(4), a[5], a.x, p */
     { Call ($1, args) }
   | expr_term LS separated_nonempty_list(COMMA, sub) RS
     /* TODO: tuple index */
-    { Index ($1, [List.hd_exn $3]) }
+    { Index ($1, $3) }
   | expr_term DOT ID 
     { Dot ($1, (fst $3, snd $3)) }
 call_term:

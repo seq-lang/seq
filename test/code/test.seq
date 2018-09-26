@@ -1,28 +1,23 @@
 ext Source {
-  def iter(self: Source) {
+  def _iter_helper[T](self: Source, getter: T) {
     while true {
       var n = self.read();
       if n == 0 { break }
       var i = 0
       while i < n {
-        yield self.get(i)
+        yield getter(i)
         i = i + 1
       }
     }
     self.close()
   }
 
+  def iter(self: Source) {
+    return self._iter_helper(self.get)
+  }
+
   def iter_multi(self: Source) {
-    while true {
-      var n = self.read();
-      if n == 0 { break }
-      var i = 0
-      while i < n {
-        yield self.get_multi(i)
-        i = i + 1
-      }
-    }
-    self.close()
+    return self._iter_helper(self.get_multi)
   }
 }
 
