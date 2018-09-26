@@ -618,6 +618,16 @@ CallExpr::CallExpr(Expr *func, std::vector<Expr *> args) :
 {
 }
 
+Expr *CallExpr::getFuncExpr() const
+{
+	return func;
+}
+
+void CallExpr::setFuncExpr(Expr *func)
+{
+	this->func = func;
+}
+
 void CallExpr::resolveTypes()
 {
 	func->resolveTypes();
@@ -638,10 +648,43 @@ static Func *getFuncFromFuncExpr(Expr *func)
 
 static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types::Type *>& argTypes)
 {
+	// simple call
 	Func *f = getFuncFromFuncExpr(func);
 	if (f && f->numGenerics() > 0 && f->unrealized())
 		func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)), f);
 
+	// calling a partial function (common in pipes)
+	auto *callExpr = dynamic_cast<CallExpr *>(func);
+	if (callExpr) {
+		auto *parType = dynamic_cast<types::PartialFuncType *>(callExpr->getType());
+		Func *g = getFuncFromFuncExpr(callExpr->getFuncExpr());
+		if (g && g->numGenerics() > 0 && g->unrealized() && parType) {
+			// painful process of organizing types correctly...
+			std::vector<types::Type *> typesFull;
+			std::vector<types::Type *> callTypes = parType->getCallTypes();
+
+			unsigned next = 0;
+			bool fail = false;
+			for (auto *type : callTypes) {
+				if (type) {
+					typesFull.push_back(type);
+				} else {
+					if (next < argTypes.size()) {
+						typesFull.push_back(argTypes[next++]);
+					} else {
+						fail = true;
+						break;
+					}
+				}
+			}
+
+			if (!fail)
+				callExpr->setFuncExpr(
+				  new FuncExpr(g->realize(g->deduceTypesFromArgTypes(typesFull)), g));
+		}
+	}
+
+	// calling a method
 	auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
 	if (elemExpr) {
 		std::string name = elemExpr->getMemb();
@@ -689,7 +732,15 @@ types::Type *CallExpr::getType0() const
 		for (int i = 0; i < missingArgs; i++)
 			types.insert(types.begin(), nullptr);
 
-		deduceTypeParametersIfNecessary(func, types);
+		try {
+			deduceTypeParametersIfNecessary(func, types);
+		} catch (exc::SeqException&) {
+			/*
+			 * Wasn't able to deduce types now, but may
+			 * be able to later.
+			 */
+		}
+
 		return types::PartialFuncType::get(func->getType(), types);
 	}
 

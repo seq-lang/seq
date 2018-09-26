@@ -263,6 +263,11 @@ types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::
 	contents = types::RecordType::get(types);
 }
 
+std::vector<types::Type *> types::PartialFuncType::getCallTypes() const
+{
+	return callTypes;
+}
+
 bool types::PartialFuncType::isAtomic() const
 {
 	return contents->isAtomic();

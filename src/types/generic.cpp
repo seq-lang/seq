@@ -620,7 +620,7 @@ std::vector<types::Type *> Generic::deduceTypesFromArgTypes(const std::vector<ty
 
 	for (auto *type : types) {
 		if (!type)
-			throw exc::SeqException("cannot deduce all type parameters for construction of generic '" + genericName() + "'");
+			throw exc::SeqException("cannot deduce all type parameters for generic '" + genericName() + "'");
 	}
 
 	return types;

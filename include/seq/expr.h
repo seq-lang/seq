@@ -231,6 +231,8 @@ namespace seq {
 		std::vector<Expr *> args;
 	public:
 		CallExpr(Expr *func, std::vector<Expr *> args);
+		Expr *getFuncExpr() const;
+		void setFuncExpr(Expr *func);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
