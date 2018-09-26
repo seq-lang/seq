@@ -1,9 +1,8 @@
 S src
 B _build/src
 
-PKG llvm
-PKG ANSITerminal
-PKG ctypes
-PKG ppx_deriving
 PKG core
+PKG ctypes
+PKG ANSITerminal
+PKG ppx_deriving
 PKG ppx_sexp_conv

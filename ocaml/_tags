@@ -1,6 +1,5 @@
 <*>: use_menhir
 <src>: include
 
-<src/*>: debug, package(ANSITerminal,llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts)
-<*.{byte,native}>: debug, package(ANSITerminal,llvm,llvm.analysis,llvm.executionengine,llvm.scalar_opts)
-
+<src/*>: debug, package(ANSITerminal, ctypes, ctypes.foreign)
+<*.{byte,native}>: debug, package(ANSITerminal, ctypes, ctypes.foreign)
