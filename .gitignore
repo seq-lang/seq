@@ -56,3 +56,4 @@ ocaml/_build
 *.native
 *.dSYM
 *.conflicts
+.merlin

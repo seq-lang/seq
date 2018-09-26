@@ -241,7 +241,7 @@ expr_statement: /* Expression statement: a + 3 - 5 */
   | test aug_eq test_list { 
     (* TODO tuple assignment *)
     let op, pos = fst $2, snd $2 in
-    let op = String.sub op 0 (String.length op - 1) in
+    let op = String.sub op ~pos:0 ~len:(String.length op - 1) in
     Assign ($1, Binary($1, (op, pos), List.hd_exn $3))
   }
    /* TODO: a = b = c = d = ... separated_nonempty_list(EQ, test_list) {  */

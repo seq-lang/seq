@@ -19,12 +19,10 @@ extend file:
     self.close()
 
   def iter(self):
-    for i in self.iter_helper(self.get):
-      yield i
-
+    return self.iter_helper(self.get)
+    
   def iter_multi(self):
-    for i in self.iter_helper(self.get_multi):
-      yield i
-
+    return self.iter_helper(self.get)
+    
       
 

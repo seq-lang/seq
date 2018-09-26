@@ -1,36 +1,13 @@
-OCB_FLAGS :=  
-OCB := corebuild $(OCB_FLAGS)
-TARGET := main
-
-.PHONY: 
-	all clean byte native profile debug sanity test
-
 all:
-	$(OCB) $(TARGET).byte
-
-cpp:
-	make -C clib shared
-
-debug: 
-	$(OCB) $(TARGET).byte -tag debug 
-	# OCAMLRUNPARAM=b ./$(TARGET).byte <(echo 'load "test.fq" | print')
-
+	make -j ../build
+	LIBRARY_PATH=`pwd`/../build dune build src/main.exe
+	ln -s -f _build/default/src/main.exe .
+	
 clean:
-	$(OCB) -clean;
-	rm -f src/parser.{ml,mli}
-
-test: all
-	$(OCB) -I test test.native
-	./test.native
-	./toy.native test.txt 2>&1 | grep -e error -e ERROR || echo ok
-
-install-osx:
-	brew install ocaml opam llvm
-	opam init
+	dune clean
 
 install-dep:
+	brew install ocaml opam 
+	opam init
 	opam update
-	opam install \
-		async core_extended core_bench \  
-		cohttp async_graphics cryptokit menhir \
-		llvm camlp4 batteries ctypes-foreign ppx_deriving
+	opam install core core_extended core_bench dune ctypes ctypes-foreign ansiterminal menhir ppx_deriving

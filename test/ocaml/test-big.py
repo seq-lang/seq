@@ -81,7 +81,7 @@ def main(args: array[str]):
       # print v[1]
       #a = (v[1], v[2], (v[1], 4.2)) CRASHES
       #print a[2][0]
-   # file(args[0]).iter() |> process_input(...) # TODO CRASHES
+   file(args[0]).iter() |> process_input(...) # TODO CRASHES
    for i in file(args[0]).iter():
    	process_input(i)
 

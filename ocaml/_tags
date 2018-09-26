@@ -1,5 +1,0 @@
-<*>: use_menhir
-<src>: include
-
-<src/*>: debug, package(ANSITerminal, ctypes, ctypes.foreign)
-<*.{byte,native}>: debug, package(ANSITerminal, ctypes, ctypes.foreign)

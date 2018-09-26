@@ -260,7 +260,7 @@ let rec get_seq_stmt ctx block stmt : unit =
     yield_stmt, pos
   | Type((name, pos), args, _) ->
     let arg_names, arg_types = List.unzip @@ List.map args ~f:(function
-      | Arg((n, p), None) -> seq_error "Type with generic argument" p
+      | Arg((_, p), None) -> seq_error "Type with generic argument" p
       | Arg((n, _), Some t) -> (n, t)) in
     if is_some (Hashtbl.find ctx.map name) then
       raise (SeqCamlError (sprintf "Type %s already defined" name, pos));
@@ -359,10 +359,10 @@ let rec get_seq_stmt ctx block stmt : unit =
       add_ref_method typ name fn);
     set_ref_done typ;
     pass_stmt (), pos
-  | Extend((class_name, name_pos), functions, pos) ->
+  | Extend((class_name, _), functions, pos) ->
     let typ = match Hashtbl.find ctx.map class_name with
     | Some (Type t) -> t 
-    | None -> seq_error (sprintf "Cannot extend non-existing class %s" class_name) pos in
+    | _ -> seq_error (sprintf "Cannot extend non-existing class %s" class_name) pos in
     (* functions inherit types and functions; variables are off-limits *)
     let ref_ctx = {ctx with map=Hashtbl.copy ctx.map} in
     List.iter functions ~f:(fun f -> 
@@ -370,7 +370,7 @@ let rec get_seq_stmt ctx block stmt : unit =
       add_ref_method typ name fn);
     pass_stmt (), pos
   | Import(il, pos) ->
-    List.iter il ~f:(fun ((what, _), as_what) ->
+    List.iter il ~f:(fun ((what, _), _) ->
       parse_file ctx block ("../test/ocaml/" ^ what ^ ".py"));
     pass_stmt (), pos
   | _ -> noimp "Unknown stmt"
@@ -387,9 +387,8 @@ and parse_file ctx block infile =
   let state = Lexer.stack_create () in
   try
     let ast = Parser.program (Lexer.token state) lexbuf in  
-    let prn_pos (pos: pos_t) = "" in
     eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
-    eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast prn_pos ast;
+    eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast (fun _ -> "") ast;
     match ast with Module stmts -> 
       List.iter stmts ~f:(get_seq_stmt ctx block)
   with 
@@ -421,7 +420,7 @@ and get_seq_fn ctx ?parent_class = function
     (* handle statements *)
     let fn_ctx = {(init_context fn) 
       with map=Hashtbl.filter ctx.map ~f:(fun v -> 
-        match v with Func x | Type x -> true | _ -> false)} in
+        match v with Func _ | Type _ -> true | _ -> false)} in
     let arg_names, arg_types = set_generics fn_ctx types args 
       (set_func_generics fn) 
       (fun idx name -> 
@@ -439,7 +438,7 @@ and get_seq_fn ctx ?parent_class = function
   | _ -> 
     seq_error "get_seq_func MUST HAVE Function as an input" dummy_pos
 
-and get_seq_case_pattern ctx = function
+and get_seq_case_pattern _ = function
   (*  condition, guard, statements *)
   | None -> wildcard_pattern ()
   | Some (Int (i, _)) -> int_pattern i

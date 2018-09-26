@@ -1,0 +1,8 @@
+(ocamllex lexer)
+(menhir 
+   (modules parser))
+(executable
+   (name main)
+   (libraries base core ANSITerminal ctypes ctypes.foreign)
+   (preprocess (pps ppx_jane))
+   (link_flags (-cclib -lseq)))
