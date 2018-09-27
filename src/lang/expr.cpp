@@ -665,6 +665,33 @@ static Func *getFuncFromFuncExpr(Expr *func)
 	return nullptr;
 }
 
+static bool getFullCallTypesForPartial(Func *func,
+                                       types::PartialFuncType *parType,
+                                       const std::vector<types::Type *>& argTypes,
+                                       std::vector<types::Type *>& typesFull)
+{
+	if (func && func->numGenerics() > 0 && func->unrealized() && parType) {
+		// painful process of organizing types correctly...
+		std::vector<types::Type *> callTypes = parType->getCallTypes();
+
+		unsigned next = 0;
+		for (auto *type : callTypes) {
+			if (type) {
+				typesFull.push_back(type);
+			} else {
+				if (next < argTypes.size())
+					typesFull.push_back(argTypes[next++]);
+				else
+					return false;
+			}
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types::Type *>& argTypes)
 {
 	/*
@@ -681,38 +708,31 @@ static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types
 		if (f && f->numGenerics() > 0 && f->unrealized())
 			func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)), func);
 
-		// calling a partial function (common in pipes)
+		// partial call I -- known partial
+		auto *partialExpr = dynamic_cast<PartialCallExpr *>(func);
+		if (partialExpr) {
+			auto *parType = dynamic_cast<types::PartialFuncType *>(partialExpr->getType());
+			Func *g = getFuncFromFuncExpr(partialExpr->getFuncExpr());
+			std::vector<types::Type *> typesFull;
+
+			if (getFullCallTypesForPartial(g, parType, argTypes, typesFull))
+				partialExpr->setFuncExpr(
+				  new FuncExpr(g->realize(g->deduceTypesFromArgTypes(typesFull)), partialExpr->getFuncExpr()));
+		}
+
+		// partial call II -- partial masquerading as regular call
 		auto *callExpr = dynamic_cast<CallExpr *>(func);
 		if (callExpr) {
 			auto *parType = dynamic_cast<types::PartialFuncType *>(callExpr->getType());
 			Func *g = getFuncFromFuncExpr(callExpr->getFuncExpr());
-			if (g && g->numGenerics() > 0 && g->unrealized() && parType) {
-				// painful process of organizing types correctly...
-				std::vector<types::Type *> typesFull;
-				std::vector<types::Type *> callTypes = parType->getCallTypes();
+			std::vector<types::Type *> typesFull;
 
-				unsigned next = 0;
-				bool fail = false;
-				for (auto *type : callTypes) {
-					if (type) {
-						typesFull.push_back(type);
-					} else {
-						if (next < argTypes.size()) {
-							typesFull.push_back(argTypes[next++]);
-						} else {
-							fail = true;
-							break;
-						}
-					}
-				}
-
-				if (!fail)
-					callExpr->setFuncExpr(
-					  new FuncExpr(g->realize(g->deduceTypesFromArgTypes(typesFull)), callExpr->getFuncExpr()));
-			}
+			if (getFullCallTypesForPartial(g, parType, argTypes, typesFull))
+				callExpr->setFuncExpr(
+				  new FuncExpr(g->realize(g->deduceTypesFromArgTypes(typesFull)), callExpr->getFuncExpr()));
 		}
 
-		// calling a method
+		// method call
 		auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
 		if (elemExpr) {
 			std::string name = elemExpr->getMemb();
@@ -727,7 +747,7 @@ static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types
 			}
 		}
 
-		// calling a static method
+		// static method call
 		auto *elemStaticExpr = dynamic_cast<GetStaticElemExpr *>(func);
 		if (elemStaticExpr) {
 			std::string name = elemStaticExpr->getMemb();
@@ -741,7 +761,8 @@ static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types
 	} catch(exc::SeqException&) {
 		/*
 		 * We weren't able to deduce type parameters now,
-		 * but we may be able to do so later.
+		 * but we may be able to do so later, so ignore
+		 * any exceptions.
 		 */
 	}
 }
@@ -797,6 +818,16 @@ CallExpr *CallExpr::clone(Generic *ref)
 PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args) :
     func(func), args(std::move(args))
 {
+}
+
+Expr *PartialCallExpr::getFuncExpr() const
+{
+	return func;
+}
+
+void PartialCallExpr::setFuncExpr(Expr *func)
+{
+	this->func = func;
 }
 
 void PartialCallExpr::resolveTypes()

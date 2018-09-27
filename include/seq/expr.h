@@ -251,6 +251,8 @@ namespace seq {
 		std::vector<Expr *> args;
 	public:
 		PartialCallExpr(Expr *func, std::vector<Expr *> args);
+		Expr *getFuncExpr() const;
+		void setFuncExpr(Expr *func);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::PartialFuncType *getType0() const override;
