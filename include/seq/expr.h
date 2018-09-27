@@ -101,17 +101,17 @@ namespace seq {
 	class FuncExpr : public Expr {
 	private:
 		BaseFunc *func;
-		BaseFunc *func0;  // original non-type-instantiated function, if any
 		std::vector<types::Type *> types;
+		Expr *orig;  // original expression before type deduction, if any
 	public:
-		FuncExpr(BaseFunc *func, BaseFunc *func0, std::vector<types::Type *> types={});
+		FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types={});
 		explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types={});
 		bool isParameterized();
 		BaseFunc *getFunc();
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
-		FuncExpr *clone(Generic *ref) override;
+		Expr *clone(Generic *ref) override;
 	};
 
 	class ArrayExpr : public Expr {
@@ -207,6 +207,8 @@ namespace seq {
 		std::string memb;
 	public:
 		GetStaticElemExpr(types::Type *type, std::string memb);
+		types::Type *getTypeInExpr() const;
+		std::string getMemb() const;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
 		GetStaticElemExpr *clone(Generic *ref) override;
@@ -217,12 +219,16 @@ namespace seq {
 		Expr *expr;
 		std::string name;
 		std::vector<types::Type *> types;
+		Expr *orig;  // original expression before type deduction, if any
 	public:
-		MethodExpr(Expr *expr, std::string method, std::vector<types::Type *> realizedTypes);
+		MethodExpr(Expr *expr,
+		           std::string method,
+		           std::vector<types::Type *> realizedTypes,
+		           Expr *orig=nullptr);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::MethodType *getType0() const override;
-		MethodExpr *clone(Generic *ref) override;
+		Expr *clone(Generic *ref) override;
 	};
 
 	class CallExpr : public Expr {

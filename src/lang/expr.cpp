@@ -187,14 +187,14 @@ VarExpr *VarExpr::clone(Generic *ref)
 	return new VarExpr(var->clone(ref));
 }
 
-FuncExpr::FuncExpr(BaseFunc *func, BaseFunc *func0, std::vector<types::Type *> types) :
-    func(func), func0(func0), types(std::move(types))
+FuncExpr::FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types) :
+    func(func), types(std::move(types)), orig(orig)
 {
 	name = "func";
 }
 
 FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types) :
-    FuncExpr(func, nullptr, types)
+    FuncExpr(func, nullptr, std::move(types))
 {
 }
 
@@ -213,7 +213,7 @@ void FuncExpr::resolveTypes()
 	auto *f = dynamic_cast<Func *>(func);
 	if (f) {
 		if (f->unrealized() && !types.empty()) {
-			func0 = func;
+			orig = new FuncExpr(func, types);
 			func = f->realize(types);
 		}
 	} else if (!types.empty()) {
@@ -234,12 +234,15 @@ types::Type *FuncExpr::getType0() const
 	return func->getFuncType();
 }
 
-FuncExpr *FuncExpr::clone(Generic *ref)
+Expr *FuncExpr::clone(Generic *ref)
 {
+	if (orig)
+		return orig->clone(ref);
+
 	std::vector<types::Type *> typesCloned;
 	for (auto *type : types)
 		typesCloned.push_back(type->clone(ref));
-	return new FuncExpr((func0 ? func0 : func)->clone(ref), typesCloned);
+	return new FuncExpr(func->clone(ref), typesCloned);
 }
 
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
@@ -548,6 +551,16 @@ GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb) :
 {
 }
 
+types::Type *GetStaticElemExpr::getTypeInExpr() const
+{
+	return type;
+}
+
+std::string GetStaticElemExpr::getMemb() const
+{
+	return memb;
+}
+
 Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	return type->staticMemb(memb, block);
@@ -563,8 +576,11 @@ GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref)
 	return new GetStaticElemExpr(type->clone(ref), memb);
 }
 
-MethodExpr::MethodExpr(Expr *expr, std::string name, std::vector<types::Type *> types) :
-    Expr(), expr(expr), name(std::move(name)), types(std::move(types))
+MethodExpr::MethodExpr(Expr *expr,
+                       std::string name,
+                       std::vector<types::Type *> types,
+                       Expr *orig) :
+    Expr(), expr(expr), name(std::move(name)), types(std::move(types)), orig(orig)
 {
 }
 
@@ -604,8 +620,11 @@ types::MethodType *MethodExpr::getType0() const
 	return types::MethodType::get(expr->getType(), func->getFuncType());
 }
 
-MethodExpr *MethodExpr::clone(Generic *ref)
+Expr *MethodExpr::clone(Generic *ref)
 {
+	if (orig)
+		return orig->clone(ref);
+
 	std::vector<types::Type *> typesCloned;
 	for (auto *type : types)
 		typesCloned.push_back(type->clone(ref));
@@ -648,55 +667,82 @@ static Func *getFuncFromFuncExpr(Expr *func)
 
 static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types::Type *>& argTypes)
 {
-	// simple call
-	Func *f = getFuncFromFuncExpr(func);
-	if (f && f->numGenerics() > 0 && f->unrealized())
-		func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)), f);
+	/*
+	 * Important note: If we're able to deduce type parameters, we change the structure
+	 * of the AST by replacing functions etc. However, in order for generics/cloning to
+	 * work properly, we need to preserve the original AST. For this reason, both FuncExpr
+	 * and MethodExpr take an optional 'orig' argument representing the original Expr to
+	 * be returned when cloning.
+	 */
 
-	// calling a partial function (common in pipes)
-	auto *callExpr = dynamic_cast<CallExpr *>(func);
-	if (callExpr) {
-		auto *parType = dynamic_cast<types::PartialFuncType *>(callExpr->getType());
-		Func *g = getFuncFromFuncExpr(callExpr->getFuncExpr());
-		if (g && g->numGenerics() > 0 && g->unrealized() && parType) {
-			// painful process of organizing types correctly...
-			std::vector<types::Type *> typesFull;
-			std::vector<types::Type *> callTypes = parType->getCallTypes();
+	try {
+		// simple call
+		Func *f = getFuncFromFuncExpr(func);
+		if (f && f->numGenerics() > 0 && f->unrealized())
+			func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)), func);
 
-			unsigned next = 0;
-			bool fail = false;
-			for (auto *type : callTypes) {
-				if (type) {
-					typesFull.push_back(type);
-				} else {
-					if (next < argTypes.size()) {
-						typesFull.push_back(argTypes[next++]);
+		// calling a partial function (common in pipes)
+		auto *callExpr = dynamic_cast<CallExpr *>(func);
+		if (callExpr) {
+			auto *parType = dynamic_cast<types::PartialFuncType *>(callExpr->getType());
+			Func *g = getFuncFromFuncExpr(callExpr->getFuncExpr());
+			if (g && g->numGenerics() > 0 && g->unrealized() && parType) {
+				// painful process of organizing types correctly...
+				std::vector<types::Type *> typesFull;
+				std::vector<types::Type *> callTypes = parType->getCallTypes();
+
+				unsigned next = 0;
+				bool fail = false;
+				for (auto *type : callTypes) {
+					if (type) {
+						typesFull.push_back(type);
 					} else {
-						fail = true;
-						break;
+						if (next < argTypes.size()) {
+							typesFull.push_back(argTypes[next++]);
+						} else {
+							fail = true;
+							break;
+						}
 					}
 				}
-			}
 
-			if (!fail)
-				callExpr->setFuncExpr(
-				  new FuncExpr(g->realize(g->deduceTypesFromArgTypes(typesFull)), g));
-		}
-	}
-
-	// calling a method
-	auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
-	if (elemExpr) {
-		std::string name = elemExpr->getMemb();
-		types::Type *type = elemExpr->getRec()->getType();
-		if (type->hasMethod(name)) {
-			auto *g = dynamic_cast<Func *>(type->getMethod(name));
-			if (g && g->numGenerics() > 0 && g->unrealized()) {
-				std::vector<types::Type *> typesFull(argTypes);
-				typesFull.insert(typesFull.begin(), type);  // methods take 'self' as first argument
-				func = new MethodExpr(elemExpr->getRec(), name, g->deduceTypesFromArgTypes(typesFull));
+				if (!fail)
+					callExpr->setFuncExpr(
+					  new FuncExpr(g->realize(g->deduceTypesFromArgTypes(typesFull)), callExpr->getFuncExpr()));
 			}
 		}
+
+		// calling a method
+		auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
+		if (elemExpr) {
+			std::string name = elemExpr->getMemb();
+			types::Type *type = elemExpr->getRec()->getType();
+			if (type->hasMethod(name)) {
+				auto *g = dynamic_cast<Func *>(type->getMethod(name));
+				if (g && g->numGenerics() > 0 && g->unrealized()) {
+					std::vector<types::Type *> typesFull(argTypes);
+					typesFull.insert(typesFull.begin(), type);  // methods take 'self' as first argument
+					func = new MethodExpr(elemExpr->getRec(), name, g->deduceTypesFromArgTypes(typesFull), func);
+				}
+			}
+		}
+
+		// calling a static method
+		auto *elemStaticExpr = dynamic_cast<GetStaticElemExpr *>(func);
+		if (elemStaticExpr) {
+			std::string name = elemStaticExpr->getMemb();
+			types::Type *type = elemStaticExpr->getTypeInExpr();
+			if (type->hasMethod(name)) {
+				auto *g = dynamic_cast<Func *>(type->getMethod(name));
+				if (g && g->numGenerics() > 0 && g->unrealized())
+					func = new FuncExpr(g->realize(g->deduceTypesFromArgTypes(argTypes)), func);
+			}
+		}
+	} catch(exc::SeqException&) {
+		/*
+		 * We weren't able to deduce type parameters now,
+		 * but we may be able to do so later.
+		 */
 	}
 }
 
@@ -732,15 +778,7 @@ types::Type *CallExpr::getType0() const
 		for (int i = 0; i < missingArgs; i++)
 			types.insert(types.begin(), nullptr);
 
-		try {
-			deduceTypeParametersIfNecessary(func, types);
-		} catch (exc::SeqException&) {
-			/*
-			 * Wasn't able to deduce types now, but may
-			 * be able to later.
-			 */
-		}
-
+		deduceTypeParametersIfNecessary(func, types);
 		return types::PartialFuncType::get(func->getType(), types);
 	}
 
