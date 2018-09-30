@@ -42,6 +42,11 @@ FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
 	return types::FuncType::get(vector<types::Type*>(ty, ty + sz), ret);
 }
 
+FOREIGN types::Type *gen_type(types::Type *ret)
+{
+	return types::GenType::get(ret);
+}
+
 FOREIGN types::Type *ref_type(const char *name)
 {
 	auto f = types::RefType::get(name);
@@ -404,6 +409,12 @@ FOREIGN Pattern *str_pattern(const char *c)
 	return new StrPattern(string(c));
 }
 
+FOREIGN Pattern *seq_pattern(const char *c)
+{
+	E("seq_pattern[{}]", c);
+	return new SeqPattern(string(c));
+}
+
 FOREIGN Pattern *bool_pattern(bool b)
 {
 	E("bool_pattern[{}]", b);
@@ -423,6 +434,12 @@ FOREIGN Block *get_while_block(While *st)       { return st->getBlock(); }
 FOREIGN Block *get_for_block(For *st)           { return st->getBlock(); }
 FOREIGN Block *get_else_block(If *st)           { E("else_block"); return st->addElse(); }
 FOREIGN Block *get_elif_block(If *st, Expr *ex) { E("cond_block"); return st->addCond(ex); }
+
+FOREIGN char type_eq(types::Type *a, types::Type *b)
+{
+   return types::is(a, b);
+}
+
 
 FOREIGN struct seq_srcinfo {
 	char *file;

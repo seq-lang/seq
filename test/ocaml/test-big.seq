@@ -49,7 +49,7 @@ def main(args: array[str]):
    for i in range(0, y.len):
       print 'infernal', y[i]
    
-   def process_input(input):
+   def process_input(input: seq):
       v = f(input) #  farr[0](input) -- currently not inheriting vars from function
       for r in enum(v):
          print r[0], r[1]
@@ -59,16 +59,14 @@ def main(args: array[str]):
 
       # arr = array[type(int, seq)](10)
 
-
       print 'eee', v[0]
-      # TODO Fails
-      # match v[0]:
-      #    #case 'A...' as q if q.len > 150: 
-      #    #   print 'case A with if'
-      #    case 'CCTGCATCACGACGACCGCCGCCACCGTCAGC': 
-      #       print 'caught sth'
-      #    # case 5: print 'no way' # LLVM exception
-      #    default: print 'default'
+      match v[0]:
+         #case 'A...' as q if q.len > 150: 
+         #   print 'case A with if'
+         case s'CCTGCATCACGACGACCGCCGCCACCGTCAGC': 
+            print 'caught sth'
+         # case 5: print 'no way' # LLVM exception
+         default: print 'default'
       
       for v1 in split(input, 64, 64):
          print v1
@@ -78,12 +76,14 @@ def main(args: array[str]):
             print v2
          print v1
       print ident(input)
-      # print v[1]
-      #a = (v[1], v[2], (v[1], 4.2)) CRASHES
-      #print a[2][0]
-   file(args[0]).iter() |> process_input(...) # TODO CRASHES
+      print '>>>', v[1]
+      # a = (v[1], ((v)[2]), (v[1], 4.2)) #TODO CRASHES
+      a = (v[1], v[2], (v[1], 4.2))
+      print a[2][1]
    for i in file(args[0]).iter():
    	process_input(i)
+   # y = file(args[0]).iter()
+   # y |> process_input(...) # TODO CRASHES
 
 
 args = array[str](1)
@@ -110,7 +110,7 @@ x = .42
 print -x if x < 1 else +x
 b = (True, not True)
 print b[0]
-b = (b[0], not not False) # TODO: bad shadow warning
+b = (b[0], not not False) 
 print b[1]
 
 def fib(n: int) -> int:
@@ -175,7 +175,7 @@ q = Pair(4.2, 1.9)
 print q.sum(10.0)
 for a in q.iter(): print a
 q.swap()
-# Pair[float].dump(q) # TODO requires explicit type on dump --- expected function input type '``self', but got 'Pair[Float]'
+Pair[float].dump(q)
 
 # def print_coord(t: Type(Int, Int, Str)):
 # 	match t:
@@ -191,7 +191,6 @@ q.swap()
 # print_coord((13, 0, "b"))
 # print "---"
 # print_coord((11, 22, "b"))
-
 
 def add[`T](a: `T, b: `T, c: `T):
   return a + b + c

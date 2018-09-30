@@ -1,0 +1,26 @@
+{
+    "name": "seq",
+    "displayName": "Seq",
+    "description": "Seq language support",
+    "version": "0.0.1",
+    "publisher": "MIT",
+    "engines": {
+        "vscode": "^1.27.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "seq",
+            "aliases": ["Seq", "seq"],
+            "extensions": [".seq"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "seq",
+            "scopeName": "source.seq",
+            "path": "./syntaxes/seq.tmLanguage"
+        }]
+    }
+}

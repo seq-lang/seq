@@ -60,6 +60,9 @@ let func_type ret types =
   let a_len = Unsigned.Size_t.of_int (CArray.length a_arr) in
 	func_type' ret (CArray.start a_arr) a_len
 
+let gen_type = foreign "gen_type" 
+  (seq_type @-> returning seq_type)
+
 let record_type' = foreign "record_type" 
   (ptr string @-> ptr seq_type @-> size_t @-> returning seq_type)
 let record_type names types = 
@@ -193,6 +196,7 @@ let bound_pattern    = foreign "bound_pattern" (seq_pattern @-> returning seq_pa
 let wildcard_pattern = foreign "wildcard_pattern" (void @-> returning seq_pattern)
 let int_pattern      = foreign "int_pattern" (int @-> returning seq_pattern)
 let str_pattern      = foreign "str_pattern" (string @-> returning seq_pattern)
+let str_seq_pattern  = foreign "seq_pattern" (string @-> returning seq_pattern)
 let bool_pattern     = foreign "bool_pattern" (bool @-> returning seq_pattern)
 
 let get_bound_pattern_var = foreign "get_bound_pattern_var" 
@@ -271,6 +275,8 @@ let get_pos expr : Ast.pos_t =
 let set_pos' = foreign "set_pos" (seq_expr @-> string @-> int @-> int @-> returning void)
 let set_pos expr (pos: Ast.pos_t) = 
   set_pos' expr pos.pos_fname pos.pos_lnum (pos.pos_cnum - pos.pos_bol)
+
+let types_eq = foreign "type_eq" (seq_type @-> seq_type @-> returning bool)
 
 let get_for_var = foreign "get_for_var" 
   (seq_stmt @-> returning seq_var)

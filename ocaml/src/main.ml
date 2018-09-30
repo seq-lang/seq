@@ -17,23 +17,17 @@ type assignable =
 
 type context = { 
   prefix: string;
-  base: seq_func; 
+  filename: string;
+  base: seq_func;
+  mdl: seq_func; 
   map: (string, assignable) Hashtbl.t;
   stack: (string list) Stack.t 
 }
 
 let dummy_pos: pos_t = {pos_fname=""; pos_cnum=0; pos_lnum=0; pos_bol=0}
 
-let print_error kind lines ?msg (pos: pos_t) = 
-  let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
-  let style = [T.Bold; T.red] in
-  eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: (line %d) %s\n" kind line (match msg with 
-    | Some m -> sprintf "%s" m | None -> "");
-  eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
-  eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col)
-
-let init_context fn = 
-  let ctx = {base = fn; map = String.Table.create (); stack = Stack.create (); prefix=""} in
+let init_context fn mdl filename = 
+  let ctx = {base = fn; mdl; map = String.Table.create (); stack = Stack.create (); prefix=""; filename} in
   (* initialize POD types *)
   Hashtbl.set ctx.map ~key:"void"  ~data:(Type (void_type ()));
   Hashtbl.set ctx.map ~key:"int"   ~data:(Type (int_type ()));
@@ -136,6 +130,14 @@ let rec get_seq_expr ctx expr =
     | [] -> 
       seq_error "Callable needs at least one argument" pos in
     type_expr (func_type ret args), pos
+  | Index(Id("yieldable", pos), indices) ->
+    if List.length indices <> 1 then 
+      seq_error "Yieldable needs only one type" pos;
+    let typ_expr = get_seq_expr ctx (List.hd_exn indices) in 
+    if get_expr_name typ_expr <> "type" then
+      seq_error "Not a valid type" (get_pos typ_expr);
+    let typ = get_type typ_expr ctx.base in
+    type_expr (gen_type typ), pos
   | Index(lh_expr, indices) ->
     let lh_expr = get_seq_expr ctx lh_expr in
     let index_exprs = List.map indices ~f:(get_seq_expr ctx) in
@@ -202,7 +204,7 @@ let rec get_seq_stmt ctx block stmt : unit =
     let rh_expr = get_seq_expr ctx rh_expr in 
     let rh_type = get_type rh_expr ctx.base in 
     match Hashtbl.find ctx.map var with
-    | Some (Var v) when (rh_type <> Ctypes.null) && (rh_type <> get_var_type v) ->  
+    | Some (Var v) when (rh_type <> Ctypes.null) && not (types_eq rh_type (get_var_type v)) ->  
       T.eprintf [T.black; T.on_yellow] "[WARN] shadowing variable %s\n" var;
       let var_stmt = var_stmt rh_expr in
       Hashtbl.set ctx.map ~key:var ~data:(Var (var_stmt_var var_stmt));
@@ -371,7 +373,8 @@ let rec get_seq_stmt ctx block stmt : unit =
     pass_stmt (), pos
   | Import(il, pos) ->
     List.iter il ~f:(fun ((what, _), _) ->
-      parse_file ctx block ("../test/ocaml/" ^ what ^ ".py"));
+      let _ = parse_file ctx.mdl (sprintf "%s/%s.seq" (Filename.dirname ctx.filename) what) in 
+      ());
     pass_stmt (), pos
   | _ -> noimp "Unknown stmt"
   end
@@ -379,25 +382,48 @@ let rec get_seq_stmt ctx block stmt : unit =
   set_base stmt ctx.base;
   set_pos stmt pos;
   add_stmt stmt block
-and parse_file ctx block infile = 
+and parse_file ?execute mdl infile = 
+  let print_error kind lines ?msg (pos: pos_t) = 
+    let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
+    let style = [T.Bold; T.red] in
+    eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: (line %d) %s\n" kind line (match msg with 
+      | Some m -> sprintf "%s" m | None -> "");
+    eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
+    eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col)
+  in
   let lines = In_channel.read_lines infile in
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
   let lines = Array.of_list lines in
   let lexbuf = Lexing.from_string code in
   let state = Lexer.stack_create () in
   try
+    let ctx = init_context mdl mdl (Filename.realpath infile) in
+    Stack.push ctx.stack [];
+    let module_block = get_module_block mdl in
     let ast = Parser.program (Lexer.token state) lexbuf in  
     eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
     eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast (fun _ -> "") ast;
     match ast with Module stmts -> 
-      List.iter stmts ~f:(get_seq_stmt ctx block)
+      List.iter stmts ~f:(get_seq_stmt ctx module_block);
+    (match execute with
+     | Some (true) -> exec_module ctx.mdl false;
+     | _ -> ());
+    ctx
   with 
   | Lexer.SyntaxError (msg, pos) ->
-    print_error "Lexer" lines pos ~msg:msg
+    print_error "Lexer" lines pos ~msg:msg;
+    exit 1
   | Parser.Error ->
     (* check https://github.com/dbp/funtal/blob/e9a9b9d/parse.ml#L64-L89 *)
-    print_error "Parser" lines lexbuf.lex_start_p
-
+    print_error "Parser" lines lexbuf.lex_start_p;
+    exit 1
+  | SeqCamlError (msg, pos) ->
+    print_error "CamlAst" lines pos ~msg:msg;
+    exit 1
+  | SeqCError (msg, pos) ->
+    print_error "Compiler" lines pos ~msg:msg;
+    exit 1
+  
 and get_seq_fn ctx ?parent_class = function 
   | Function(return_typ, types, args, stmts, pos) ->
     let fn_name, ret_typ = match return_typ with Arg((n, _), typ) -> n, typ in
@@ -418,7 +444,7 @@ and get_seq_fn ctx ?parent_class = function
     end;
 
     (* handle statements *)
-    let fn_ctx = {(init_context fn) 
+    let fn_ctx = {(init_context fn ctx.mdl ctx.filename) 
       with map=Hashtbl.filter ctx.map ~f:(fun v -> 
         match v with Func _ | Type _ -> true | _ -> false)} in
     let arg_names, arg_types = set_generics fn_ctx types args 
@@ -443,6 +469,7 @@ and get_seq_case_pattern _ = function
   | None -> wildcard_pattern ()
   | Some (Int (i, _)) -> int_pattern i
   | Some (String (s, _)) -> str_pattern s
+  | Some (Seq (s, _)) -> str_seq_pattern s
   | Some (Bool (b, _)) -> bool_pattern b
   | _ -> noimp "Match condition"
 
@@ -451,16 +478,6 @@ let () =
   if Array.length Sys.argv < 2 then begin
     noimp "No arguments"
   end;
-  try 
-    let seq_module = init_module () in
-    let module_block = get_module_block seq_module in
-    let ctx = init_context seq_module in
-    Stack.push ctx.stack [];
-    parse_file ctx module_block Sys.argv.(1);
-    exec_module seq_module false
-  with 
-  | SeqCamlError (msg, pos) ->
-    print_error "CamlAst" [||] pos ~msg:msg
-  | SeqCError (msg, pos) ->
-    print_error "Compiler" [||] pos ~msg:msg
+  let seq_module = init_module () in
+  ignore @@ parse_file seq_module Sys.argv.(1) ~execute:true
   
