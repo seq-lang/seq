@@ -1152,6 +1152,9 @@ static Value *codegenPipe(BaseFunc *base,
 	if (stages.empty())
 		return val;
 
+	LLVMContext& context = block->getContext();
+	Function *func = block->getParent();
+
 	Expr *stage = stages.front();
 	stages.pop();
 
@@ -1159,18 +1162,13 @@ static Value *codegenPipe(BaseFunc *base,
 		assert(!type);
 		type = stage->getType();
 		val = stage->codegen(base, block);
-		return codegenPipe(base, val, type, block, stages);
+	} else {
+		assert(val && type);
+		ValueExpr arg(type, val);
+		CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
+		type = call.getType();
+		val = call.codegen(base, block);
 	}
-
-	LLVMContext& context = block->getContext();
-	Function *func = block->getParent();
-
-	assert(val && type);
-
-	ValueExpr arg(type, val);
-	CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
-	type = call.getType();
-	val = call.codegen(base, block);
 
 	if (type->isGeneric(types::Gen) && stage != stages.back()) {
 		auto *genType = dynamic_cast<types::GenType *>(type);
