@@ -102,14 +102,18 @@ SEQ_FUNC void seq_print_seq(char *seq, seq_int_t len)
  * General I/O
  */
 
+void error(const string& msg)
+{
+	cerr << "I/O error: " << msg << endl;
+	exit(EXIT_FAILURE);
+}
+
 static inline void *seqio_openx(const char *filename, const char *mode)
 {
 	void *fp = fopen(filename, mode);
 
-	if (!fp) {
-		cerr << "error: unable to open file '" << filename << "'" << endl;
-		exit(-1);
-	}
+	if (!fp)
+		error("unable to open file '" + string(filename) + "'");
 
 	return fp;
 }
@@ -126,21 +130,17 @@ SEQ_FUNC void *seq_io_openw(const char *filename)
 
 SEQ_FUNC void seq_io_close(void *fp)
 {
-	if (fclose((FILE *)fp) != 0) {
-		cerr << "error: unable to close file" << endl;
-		exit(-1);
-	}
+	if (fclose((FILE *)fp) != 0)
+		error("unable to close file");
 }
 
 SEQ_FUNC void seq_io_read(void *ptr,
-                          size_t size,
-                          size_t nmemb,
+                          seq_int_t size,
+                          seq_int_t nmemb,
                           void *fp)
 {
-	if (fread(ptr, (size_t)size, (size_t)nmemb, (FILE *)fp) != nmemb) {
-		cerr << "error: unable to read from file" << endl;
-		exit(-1);
-	}
+	if ((seq_int_t)fread(ptr, (size_t)size, (size_t)nmemb, (FILE *)fp) != nmemb)
+		error("unable to read from file");
 }
 
 SEQ_FUNC void seq_io_write(const void *ptr,
@@ -148,10 +148,8 @@ SEQ_FUNC void seq_io_write(const void *ptr,
                            seq_int_t nmemb,
                            void *fp)
 {
-	if (fwrite(ptr, (size_t)size, (size_t)nmemb, (FILE *)fp) != nmemb) {
-		cerr << "error: unable to write to file" << endl;
-		exit(-1);
-	}
+	if ((seq_int_t)fwrite(ptr, (size_t)size, (size_t)nmemb, (FILE *)fp) != nmemb)
+		error("unable to write to file");
 }
 
 
@@ -229,12 +227,6 @@ struct DataBlock {
 
 	void read(vector<ifstream *>& ins, Format fmt);
 };
-
-void error(const string& msg)
-{
-	cerr << "I/O error: " << msg << endl;
-	exit(EXIT_FAILURE);
-}
 
 Format extractExt(const string& source)
 {

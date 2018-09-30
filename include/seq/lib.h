@@ -39,8 +39,8 @@ SEQ_FUNC void *seq_io_openr(const char *filename);
 SEQ_FUNC void *seq_io_openw(const char *filename);
 SEQ_FUNC void seq_io_close(void *fp);
 SEQ_FUNC void seq_io_read(void *ptr,
-                          size_t size,
-                          size_t nmemb,
+                          seq_int_t size,
+                          seq_int_t nmemb,
                           void *fp);
 SEQ_FUNC void seq_io_write(const void *ptr,
                            seq_int_t size,

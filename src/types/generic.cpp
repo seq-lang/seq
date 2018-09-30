@@ -521,7 +521,7 @@ unsigned Generic::numGenerics() const
 
 types::GenericType *Generic::getGeneric(int idx) const
 {
-	assert(idx < generics.size());
+	assert((unsigned)idx < generics.size());
 	return generics[idx];
 }
 
