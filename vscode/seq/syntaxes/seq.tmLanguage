@@ -116,18 +116,6 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>&lt;&gt;</string>
-			<key>name</key>
-			<string>invalid.deprecated.operator.seq</string>
-		</dict>
-		<dict>
-			<key>match</key>
-			<string>(?&lt;!\.)(apply|buffer|coerce|intern)\s*(?=\()</string>
-			<key>name</key>
-			<string>invalid.deprecated.function.seq</string>
-		</dict>
-		<dict>
-			<key>match</key>
 			<string>&lt;\=|&gt;\=|\=\=|&lt;|&gt;|\!\=</string>
 			<key>name</key>
 			<string>keyword.operator.comparison.seq</string>
@@ -1477,7 +1465,7 @@
 						\b(
 							bool | buffer | bytearray | bytes | complex | dict | float | seq | void | 
 							frozenset | int | list | long | memoryview | object | property | array |
-							callable | yieldable |
+							callable | yieldable
 							range | set | slice | str | tuple | type | unicode | xrange)
 						\b(?!(\s*\())</string>
 			<key>name</key>
