@@ -437,7 +437,7 @@ FOREIGN Block *get_elif_block(If *st, Expr *ex) { E("cond_block"); return st->ad
 
 FOREIGN char type_eq(types::Type *a, types::Type *b)
 {
-   return types::is(a, b);
+	return types::is(a, b);
 }
 
 
