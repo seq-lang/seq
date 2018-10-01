@@ -8,7 +8,7 @@ extend int:
       i += 1
 
 extend file:
-  def iter(self): # -> yieldable[seq]:
+  def iter(self):
     while True:
       n = self.read()
       if n == 0:

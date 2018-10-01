@@ -80,10 +80,7 @@ def main(args: array[str]):
       # a = (v[1], ((v)[2]), (v[1], 4.2)) #TODO CRASHES
       a = (v[1], v[2], (v[1], 4.2))
       print a[2][1]
-   for i in file(args[0]).iter():
-   	process_input(i)
-   # y = file(args[0]).iter()
-   # y |> process_input(...) # TODO CRASHES
+   file(args[0]).iter() |> process_input 
 
 
 args = array[str](1)
