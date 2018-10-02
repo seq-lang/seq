@@ -1,0 +1,76 @@
+# 786
+
+# benchmarks:
+# - reverse complementing 10g FASTA
+# - printing all 16-mers from 10g FASTA
+# - count number of CpG islands (e.g. all CG-only subseqs)
+
+import seqlib
+
+def range(i):
+   return i.iter()
+
+def len(s):
+   return s.len
+
+def echo(s):
+   print s
+
+def split(s, k, step):
+   i = 0
+   while i + k < s.len:
+      yield s[i:i + k]
+      i += step
+
+def is_cpg(s):
+   return s == 'C' or s == 'G'
+
+def cpg(s):
+   in_cpg = False
+   for i in range(len(s)):
+      if is_cpg(s[i]):
+         j = i + 1
+         while j < len(s) and is_cpg(j):
+            j += 1
+         yield s[i:j]
+
+def cpg_count(s):
+   count = 0
+   for cp in cpg(s):
+      count += 1
+   return count
+
+def revcomp(c):
+   return ('A' if c == 'T' else \
+          ('C' if c == 'G' else \
+          ('G' if c == 'C' else \
+          ('T' if c == 'A' else c))))
+
+def rc_copy(s):
+   for i in range(len(s)):
+      cp[i] = revcomp(s[len(s) - i - 1])
+   return cp
+
+def rc_inmem(s):
+   for i in range(len(s)):
+      j = len(s) - i - 1
+      tmp = s[i]
+      s[i] = revcomp(s[j])
+      s[j] = revcomp(tmp)
+   return s
+
+# will need timing constructs
+f = file(__argv__[2])
+match __argv__[3]:
+   case '1': print '>> 1'; f.iter() |> rc_copy |> echo
+   case '2': print '>> 2'; f.iter() |> rc_inmem |> echo
+   case '3': print '>> 3'; f.iter() |> split(16, 1) |> echo
+   case '4':
+      print '>> 4'
+      gen = f.iter() |> cpg_count 
+      cnt = 0
+      for cnt in gen:
+         total += cnt
+      print cnt
+   default:
+      print 'whoops!'

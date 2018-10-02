@@ -400,6 +400,22 @@ and parse_file ?execute mdl infile =
     let ctx = init_context mdl mdl (Filename.realpath infile) in
     Stack.push ctx.stack [];
     let module_block = get_module_block mdl in
+
+    let at = array_type (str_type ()) in
+    let ae = construct_expr at [int_expr (Array.length Sys.argv)] in
+    let av = var_stmt ae in
+    set_base av ctx.base;
+    add_stmt av module_block;
+    let av = var_stmt_var av in
+    Array.iteri Sys.argv ~f:(fun idx s ->
+      (* eprintf "--> %d:%s\n" idx s; *)
+      let st = assign_index_stmt (var_expr av) (int_expr idx) (str_expr s) in
+      set_base st ctx.base;
+      add_stmt st module_block
+    ); 
+    Hashtbl.set ctx.map ~key:"__argv__" ~data:(Var av);
+    Stack.push ctx.stack ("__argv__"::Stack.pop_exn ctx.stack);
+
     let ast = Parser.program (Lexer.token state) lexbuf in  
     eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
     eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast (fun _ -> "") ast;
