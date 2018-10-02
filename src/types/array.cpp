@@ -246,6 +246,11 @@ types::Type *types::ArrayType::indexType() const
 	return baseType;
 }
 
+types::Type *types::ArrayType::subscriptType() const
+{
+	return types::Int;
+}
+
 Value *types::ArrayType::defaultValue(BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();

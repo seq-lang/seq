@@ -146,7 +146,11 @@ namespace seq {
 			                                    llvm::Value *from,
 			                                    llvm::BasicBlock *block);
 
+			// type of 'A[i]'
 			virtual Type *indexType() const;
+
+			// type of 'i' in 'A[i]'
+			virtual Type *subscriptType() const;
 
 			virtual llvm::Value *call(BaseFunc *base,
 			                          llvm::Value *self,

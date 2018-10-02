@@ -120,6 +120,8 @@ namespace seq {
 
 			Type *indexType() const override;
 
+			Type *subscriptType() const override;
+
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
 			                  const std::vector<llvm::Value *>& args,

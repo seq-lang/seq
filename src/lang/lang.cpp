@@ -159,19 +159,14 @@ void AssignIndex::resolveTypes()
 
 void AssignIndex::codegen0(BasicBlock*& block)
 {
-	this->idx->ensure(types::Int);
-
-	if (!array->getType()->isGeneric(types::Array))
-		throw exc::SeqException("can only assign indices of array type");
-
-	auto *arrType = dynamic_cast<types::ArrayType *>(array->getType());
-	assert(arrType != nullptr);
-	value->ensure(arrType->indexType());
+	types::Type *arrType = array->getType();
+	this->idx->ensure(arrType->subscriptType());
+	this->value->ensure(arrType->indexType());
 
 	Value *val = value->codegen(getBase(), block);
 	Value *arr = array->codegen(getBase(), block);
 	Value *idx = this->idx->codegen(getBase(), block);
-	array->getType()->indexStore(getBase(), arr, idx, val, block);
+	arrType->indexStore(getBase(), arr, idx, val, block);
 }
 
 AssignIndex *AssignIndex::clone(Generic *ref)

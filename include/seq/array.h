@@ -56,6 +56,8 @@ namespace seq {
 
 			Type *indexType() const override;
 
+			Type *subscriptType() const override;
+
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			llvm::Value *construct(BaseFunc *base,

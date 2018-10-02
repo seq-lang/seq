@@ -308,6 +308,11 @@ types::Type *types::Type::indexType() const
 	throw exc::SeqException("cannot index into type '" + getName() + "'");
 }
 
+types::Type *types::Type::subscriptType() const
+{
+	throw exc::SeqException("cannot index into type '" + getName() + "'");
+}
+
 Value *types::Type::call(BaseFunc *base,
                          Value *self,
                          const std::vector<Value *>& args,

@@ -260,6 +260,12 @@ types::Type* types::GenericType::indexType() const
 	return type->indexType();
 }
 
+types::Type* types::GenericType::subscriptType() const
+{
+	ensure();
+	return type->subscriptType();
+}
+
 Value *types::GenericType::call(BaseFunc *base,
                                 Value *self,
                                 const std::vector<Value *>& args,

@@ -428,8 +428,6 @@ void ArrayLookupExpr::resolveTypes()
 
 Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
-	idx->ensure(types::Int);
-
 	types::Type *type = arr->getType();
 	auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
@@ -439,9 +437,10 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		return e.codegen0(base, block);
 	}
 
+	idx->ensure(type->subscriptType());
 	Value *arr = this->arr->codegen(base, block);
 	Value *idx = this->idx->codegen(base, block);
-	return this->arr->getType()->indexLoad(base, arr, idx, block);
+	return type->indexLoad(base, arr, idx, block);
 }
 
 types::Type *ArrayLookupExpr::getType0() const
@@ -469,28 +468,29 @@ ArraySliceExpr::ArraySliceExpr(Expr *arr, Expr *from, Expr *to) :
 void ArraySliceExpr::resolveTypes()
 {
 	arr->resolveTypes();
-	from->resolveTypes();
-	to->resolveTypes();
+	if (from) from->resolveTypes();
+	if (to) to->resolveTypes();
 }
 
 Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	assert(from || to);
-	if (from) from->ensure(types::Int);
-	if (to) to->ensure(types::Int);
+	types::Type *type = arr->getType();
+	if (from) from->ensure(type->subscriptType());
+	if (to) to->ensure(type->subscriptType());
 
 	Value *arr = this->arr->codegen(base, block);
 
 	if (!from) {
 		Value *to = this->to->codegen(base, block);
-		return this->arr->getType()->indexSliceNoFrom(base, arr, to, block);
+		return type->indexSliceNoFrom(base, arr, to, block);
 	} else if (!to) {
 		Value *from = this->from->codegen(base, block);
-		return this->arr->getType()->indexSliceNoTo(base, arr, from, block);
+		return type->indexSliceNoTo(base, arr, from, block);
 	} else {
 		Value *from = this->from->codegen(base, block);
 		Value *to = this->to->codegen(base, block);
-		return this->arr->getType()->indexSlice(base, arr, from, to, block);
+		return type->indexSlice(base, arr, from, to, block);
 	}
 }
 
@@ -501,7 +501,9 @@ types::Type *ArraySliceExpr::getType0() const
 
 ArraySliceExpr *ArraySliceExpr::clone(Generic *ref)
 {
-	return new ArraySliceExpr(arr->clone(ref), from->clone(ref), to->clone(ref));
+	return new ArraySliceExpr(arr->clone(ref),
+	                          from ? from->clone(ref) : nullptr,
+	                          to ? to->clone(ref) : nullptr);
 }
 
 GetElemExpr::GetElemExpr(Expr *rec, std::string memb) :

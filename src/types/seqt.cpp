@@ -328,6 +328,11 @@ types::Type *types::SeqType::indexType() const
 	return SeqType::get();
 }
 
+types::Type *types::SeqType::subscriptType() const
+{
+	return types::Int;
+}
+
 Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block)
 {
 	LLVMContext& context = ptr->getContext();
@@ -379,6 +384,11 @@ void types::StrType::initOps()
 types::Type *types::StrType::indexType() const
 {
 	return StrType::get();
+}
+
+types::Type *types::StrType::subscriptType() const
+{
+	return types::Int;
 }
 
 Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block)
