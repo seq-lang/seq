@@ -310,6 +310,29 @@ Value *types::SeqType::setMemb(Value *self,
 	return BaseSeqType::setMemb(self, name, val, block);
 }
 
+void types::SeqType::indexStore(BaseFunc *base,
+                                Value *self,
+                                Value *idx,
+                                Value *val,
+                                BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+	Function *memmoveFn = Intrinsic::getDeclaration(module,
+	                                                Intrinsic::memmove,
+	                                                {IntegerType::getInt8PtrTy(context),
+	                                                 IntegerType::getInt8PtrTy(context),
+	                                                 IntegerType::getInt64Ty(context)});
+	Value *dest = memb(self, "ptr", block);
+	Value *source = memb(val, "ptr", block);
+	Value *len = memb(val, "len", block);
+	Value *vol = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
+
+	IRBuilder<> builder(block);
+	dest = builder.CreateGEP(dest, idx);
+	builder.CreateCall(memmoveFn, {dest, source, len, vol});
+}
+
 void types::SeqType::initOps()
 {
 	if (!vtable.ops.empty())

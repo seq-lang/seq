@@ -81,6 +81,12 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
+			void indexStore(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *idx,
+			                llvm::Value *val,
+			                llvm::BasicBlock *block) override;
+
 			void initOps() override;
 			Type *indexType() const override;
 			Type *subscriptType() const override;
