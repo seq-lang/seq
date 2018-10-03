@@ -515,6 +515,11 @@ seq_int_t types::Type::size(Module *module) const
 	return 0;
 }
 
+types::GenType *types::Type::asGen()
+{
+	return nullptr;
+}
+
 types::Type *types::Type::clone(Generic *ref)
 {
 	return this;

@@ -165,6 +165,9 @@ namespace seq {
 			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
+
+			GenType *asGen() override;
+
 			static GenericType *get();
 
 			GenericType *clone(Generic *ref) override;

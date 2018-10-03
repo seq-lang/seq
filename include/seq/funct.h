@@ -56,6 +56,9 @@ namespace seq {
 			Type *getBaseType(unsigned idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
 			seq_int_t size(llvm::Module *module) const override;
+
+			GenType *asGen() override;
+
 			static GenType *get(Type *outType) noexcept;
 			static GenType *get() noexcept;
 

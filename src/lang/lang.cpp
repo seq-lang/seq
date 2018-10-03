@@ -521,7 +521,7 @@ void For::codegen0(BasicBlock*& block)
 	if (!type->isGeneric(types::Gen))
 		throw exc::SeqException("cannot iterate over non-generator of type '" + type->getName() + "'");
 
-	auto *genType = dynamic_cast<types::GenType *>(type);
+	types::GenType *genType = type->asGen();
 	assert(genType);
 
 	LLVMContext& context = block->getContext();

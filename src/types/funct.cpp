@@ -222,6 +222,11 @@ seq_int_t types::GenType::size(Module *module) const
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
+types::GenType *types::GenType::asGen()
+{
+	return this;
+}
+
 types::GenType *types::GenType::get(Type *outType) noexcept
 {
 	return new GenType(outType);

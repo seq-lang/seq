@@ -421,6 +421,12 @@ seq_int_t types::GenericType::size(Module *module) const
 	return type->size(module);
 }
 
+types::GenType *types::GenericType::asGen()
+{
+	ensure();
+	return type->asGen();
+}
+
 types::GenericType *types::GenericType::get()
 {
 	return new GenericType();

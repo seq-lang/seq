@@ -29,6 +29,7 @@ namespace seq {
 	namespace types {
 
 		class Type;
+		class GenType;
 
 		struct VTable {
 			void *copy = nullptr;
@@ -199,6 +200,13 @@ namespace seq {
 			virtual Type *getConstructType(const std::vector<Type *>& inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
 			virtual seq_int_t size(llvm::Module *module) const;
+
+			/*
+			 * The following method(s) are basically for overriding
+			 * dynamic_cast so that generic types can be converted
+			 * to the types they represent easily.
+			 */
+			virtual GenType *asGen();
 
 			virtual Type *clone(Generic *ref);
 		};
