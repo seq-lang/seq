@@ -293,6 +293,38 @@ seq_int_t types::BaseSeqType::size(Module *module) const
 /* derived Seq type */
 types::SeqType::SeqType() : BaseSeqType("Seq")
 {
+	addMethod("copy", new BaseFuncLite({this}, this, [this](Module *module) {
+		LLVMContext& context = module->getContext();
+		auto *f = cast<Function>(module->getOrInsertFunction("seq.seq.copy",
+		                                                     getLLVMType(context),
+		                                                     getLLVMType(context)));
+		f->setLinkage(GlobalValue::PrivateLinkage);
+
+		auto *allocFunc = cast<Function>(
+		                    module->getOrInsertFunction(
+		                      "seq_alloc_atomic",
+		                      IntegerType::getInt8PtrTy(context),
+		                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+
+		Function *memcpyFn = Intrinsic::getDeclaration(module,
+		                                               Intrinsic::memcpy,
+		                                               {IntegerType::getInt8PtrTy(context),
+		                                                IntegerType::getInt8PtrTy(context),
+		                                                IntegerType::getInt64Ty(context)});
+		Value *arg = f->arg_begin();
+
+		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
+		Value *ptr = memb(arg, "ptr", entry);
+		Value *len = memb(arg, "len", entry);
+		Value *vol = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
+
+		IRBuilder<> builder(entry);
+		Value *ptrCopy = builder.CreateCall(allocFunc, len);
+		builder.CreateCall(memcpyFn, {ptrCopy, ptr, len, vol});
+		Value *copy = make(ptrCopy, len, entry);
+		builder.CreateRet(copy);
+		return f;
+	}), false);
 }
 
 Value *types::SeqType::memb(Value *self,
