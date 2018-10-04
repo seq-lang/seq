@@ -158,6 +158,7 @@ and read state = parse
   | "{" { ignore_nl state; P.LB (cur_pos lexbuf) }
   | "}" { aware_nl state;  P.RB (cur_pos lexbuf) }
   
+  | ":="  { P.ASSGN_EQ  (cur_pos lexbuf) }
   | "="   { P.EQ        (cur_pos lexbuf) }
   | "->"  { P.OF        (cur_pos lexbuf) }
   | ":"   { P.COLON     (cur_pos lexbuf) }

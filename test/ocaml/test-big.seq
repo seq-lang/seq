@@ -33,7 +33,7 @@ def main(args: array[str]):
          i += 1
       return v
    
-   farr = array[typeof(f)](1)
+   farr = array[callable[seq, array[seq]]](1)
    farr[0] = f
 
    def ident(s):
@@ -105,7 +105,8 @@ x = 4.2
 print x
 x = .42
 print -x if x < 1 else +x
-b = (True, not True)
+b = 5; print b
+b := (True, not True)
 print b[0]
 b = (b[0], not not False) 
 print b[1]

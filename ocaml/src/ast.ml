@@ -53,7 +53,7 @@ type statement =
   | Continue of pos_t
   | Statements of statement list
   | Exprs of expr
-  | Assign of expr * expr
+  | Assign of expr * expr * bool
   | AssignEq of expr * ident * expr
   | Print of expr list * pos_t
   | Return of expr * pos_t
@@ -134,7 +134,7 @@ let rec prn_statement level prn_pos st =
   | Continue pos -> sprintf "%sContinue" (prn_pos pos)
   | Statements(sl) -> sprintf "Statements[\n%s]" (sci "\n" sl (prn_statement (level+1) prn_pos))
   | Exprs(el) -> sprintf "Exprs[%s]" (sci "," [el] (prn_expr prn_pos))
-  | Assign(sl, el) -> sprintf "Asgn[%s; %s]" (prn_expr prn_pos sl) (prn_expr prn_pos el)
+  | Assign(sl, el, shdw) -> sprintf "Asgn%s[%s; %s]" (if shdw then "!" else "") (prn_expr prn_pos sl) (prn_expr prn_pos el)
   | AssignEq(sl, (op, pos), el) -> sprintf "Asgn[%s; %s%s; %s]" (prn_expr prn_pos sl) (prn_pos pos) op (prn_expr prn_pos el)
   | Print(ell, pos) -> sprintf "%sPrint[%s]" (prn_pos pos) (sci ", " ell (prn_expr prn_pos))
   | Yield(el, pos) -> sprintf "%sYield[%s]" (prn_pos pos) (prn_expr prn_pos el)

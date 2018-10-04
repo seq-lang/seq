@@ -255,11 +255,16 @@ let get_for_block    = foreign "get_for_block"    (seq_stmt @-> returning seq_bl
 let get_else_block   = foreign "get_else_block"   (seq_stmt @-> returning seq_block)
 let get_elif_block   = foreign "get_elif_block"   (seq_stmt @-> seq_expr @-> returning seq_block)
 
-let get_type = foreign "get_type" (seq_expr @-> seq_func @-> returning seq_type)
 let get_func = foreign "get_func" (seq_expr @-> returning seq_func)
 let get_var_type = foreign "get_var_type" (seq_var @-> returning seq_type)
 
 let get_expr_name = foreign "get_expr_name" (seq_expr @-> returning string)
+
+let get_type' = foreign "get_type" (seq_expr @-> returning seq_type)
+let get_type typ_expr =
+  match get_expr_name typ_expr with
+  | "type" -> Some (get_type' typ_expr)
+  | _ -> None
 
 let get_pos_t_from_srcinfo src: Ast.pos_t = 
   let file = getf src srcinfo_file in

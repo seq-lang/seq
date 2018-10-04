@@ -7,32 +7,25 @@
 
 import seqlib
 
-def range(i):
-   return i.iter()
-
-def len(s):
-   return s.len
-
-def echo(s):
-   print s
-
 def split(s, k, step):
    i = 0
-   while i + k < s.len:
+   while i + k < len(s):
       yield s[i:i + k]
       i += step
 
 def is_cpg(s):
-   return s == 'C' or s == 'G'
+   return s == s'C' or s == s'G'
 
 def cpg(s):
-   in_cpg = False
-   for i in range(len(s)):
+   i = 0
+   while i < len(s):
       if is_cpg(s[i]):
          j = i + 1
-         while j < len(s) and is_cpg(j):
+         while j < len(s) and is_cpg(s[j]):
             j += 1
          yield s[i:j]
+         i = j + 1
+      else: i += 1
 
 def cpg_count(s):
    count = 0
@@ -41,36 +34,32 @@ def cpg_count(s):
    return count
 
 def revcomp(c):
-   return ('A' if c == 'T' else \
-          ('C' if c == 'G' else \
-          ('G' if c == 'C' else \
-          ('T' if c == 'A' else c))))
+   return (s'A' if c == s'T' else \
+          (s'C' if c == s'G' else \
+          (s'G' if c == s'C' else \
+          (s'T' if c == s'A' else c))))
 
 def rc_copy(s):
+   cp = s
    for i in range(len(s)):
+      print i, s[i], '<->', revcomp(s[i]), len(s) - i - 1, s[len(s) - i - 1], revcomp(s[len(s) - i - 1])
       cp[i] = revcomp(s[len(s) - i - 1])
+   print s
+   print cp
    return cp
 
-def rc_inmem(s):
-   for i in range(len(s)):
-      j = len(s) - i - 1
-      tmp = s[i]
-      s[i] = revcomp(s[j])
-      s[j] = revcomp(tmp)
-   return s
+print rc_copy(s'ACGTACGTACGTACGTACGTACGT')
 
 # will need timing constructs
 f = file(__argv__[2])
 match __argv__[3]:
-   case '1': print '>> 1'; f.iter() |> rc_copy |> echo
-   case '2': print '>> 2'; f.iter() |> rc_inmem |> echo
-   case '3': print '>> 3'; f.iter() |> split(16, 1) |> echo
-   case '4':
-      print '>> 4'
-      gen = f.iter() |> cpg_count 
-      cnt = 0
-      for cnt in gen:
-         total += cnt
-      print cnt
-   default:
-      print 'whoops!'
+   case '1': print '>> 1'; iter(f) |> rc_copy
+#    case '2': print '>> 2'; iter(f) |> split(16, 1) |> echo
+#    case '3':
+#       print '>> 3'
+#       total = 0
+#       for line in iter(f):
+#          total += cpg_count(line)
+#       # gen = iter(f) |> cpg_count  not working
+#       print total
+   default: print 'whoops!'

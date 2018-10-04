@@ -26,11 +26,8 @@ def len(s):
 def echo(s):
    print s
 
-#   def iter(self):
-   #  return self.iter_helper(self.get)
-    
-#   def iter_multi(self):
-#     return self.iter_helper(self.get)
+def iter(f):
+   return f.iter()
     
       
 

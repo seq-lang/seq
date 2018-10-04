@@ -45,7 +45,7 @@
 %token <Ast.pos_t> TRUE FALSE                         /* booleans */
 
 /* operators */
-%token <Ast.pos_t>         EQ ELLIPSIS
+%token <Ast.pos_t>         EQ ASSGN_EQ ELLIPSIS
 %token<string * Ast.pos_t> ADD SUB MUL DIV FDIV POW MOD 
 %token<string * Ast.pos_t> PLUSEQ MINEQ MULEQ DIVEQ MODEQ POWEQ FDIVEQ
 %token<string * Ast.pos_t> AND OR NOT
@@ -90,7 +90,8 @@ tuple: /* Tuples: (1, 2, 3) */
     (* Generator ($2, $3)  *)
   }
   | LP test COMMA RP { Tuple ([$2], $1)  }
-  | LP test_list RP { Tuple ($2, $1) }
+  | LP test_list RP 
+    { if List.length $2 > 1 then Tuple ($2, $1) else List.hd_exn $2 }
 list: /* Lists: [1, 2, 3] */
   /* TODO needs trailing comma support */
   | LS RS { 
@@ -242,13 +243,16 @@ expr_statement: /* Expression statement: a + 3 - 5 */
     (* TODO tuple assignment *)
     let op, pos = fst $2, snd $2 in
     let op = String.sub op ~pos:0 ~len:(String.length op - 1) in
-    Assign ($1, Binary($1, (op, pos), List.hd_exn $3))
+    Assign ($1, Binary($1, (op, pos), List.hd_exn $3), false)
   }
    /* TODO: a = b = c = d = ... separated_nonempty_list(EQ, test_list) {  */
   | test EQ test_list { 
-    (* TODO tuple assignment *)
-    Assign ($1, List.hd_exn $3) 
+    Assign ($1, List.hd_exn $3, false) 
   }
+  | test ASSGN_EQ test_list { 
+    Assign ($1, List.hd_exn $3, true) 
+  }
+
 %inline aug_eq: 
   /* TODO: bit shift ops */
   | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ { $1 }
