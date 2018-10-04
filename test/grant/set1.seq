@@ -40,26 +40,23 @@ def revcomp(c):
           (s'T' if c == s'A' else c))))
 
 def rc_copy(s):
-   cp = s
+   cp = s.copy()
    for i in range(len(s)):
-      print i, s[i], '<->', revcomp(s[i]), len(s) - i - 1, s[len(s) - i - 1], revcomp(s[len(s) - i - 1])
+      # print i, s[i], '<->', revcomp(s[i]), len(s) - i - 1, s[len(s) - i - 1], revcomp(s[len(s) - i - 1])
       cp[i] = revcomp(s[len(s) - i - 1])
-   print s
-   print cp
+   # print s
+   # print cp
    return cp
-
-print rc_copy(s'ACGTACGTACGTACGTACGTACGT')
 
 # will need timing constructs
 f = file(__argv__[2])
 match __argv__[3]:
-   case '1': print '>> 1'; iter(f) |> rc_copy
-#    case '2': print '>> 2'; iter(f) |> split(16, 1) |> echo
-#    case '3':
-#       print '>> 3'
-#       total = 0
-#       for line in iter(f):
-#          total += cpg_count(line)
-#       # gen = iter(f) |> cpg_count  not working
-#       print total
+   case '1': iter(f) |> rc_copy |> echo
+   case '2': iter(f) |> split(16, 1) |> echo
+   case '3':
+      total = 0
+      for line in iter(f):
+         total += cpg_count(line)
+      # gen = iter(f) |> cpg_count  not working
+      print total
    default: print 'whoops!'
