@@ -306,21 +306,15 @@ types::SeqType::SeqType() : BaseSeqType("Seq")
 		                      IntegerType::getInt8PtrTy(context),
 		                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
 
-		Function *memcpyFn = Intrinsic::getDeclaration(module,
-		                                               Intrinsic::memcpy,
-		                                               {IntegerType::getInt8PtrTy(context),
-		                                                IntegerType::getInt8PtrTy(context),
-		                                                IntegerType::getInt64Ty(context)});
 		Value *arg = f->arg_begin();
 
 		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
 		Value *ptr = memb(arg, "ptr", entry);
 		Value *len = memb(arg, "len", entry);
-		Value *vol = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
 
 		IRBuilder<> builder(entry);
 		Value *ptrCopy = builder.CreateCall(allocFunc, len);
-		builder.CreateCall(memcpyFn, {ptrCopy, ptr, len, vol});
+		builder.CreateMemCpy(ptrCopy, 1, ptr, 1, len);
 		Value *copy = make(ptrCopy, len, entry);
 		builder.CreateRet(copy);
 		return f;
@@ -348,21 +342,13 @@ void types::SeqType::indexStore(BaseFunc *base,
                                 Value *val,
                                 BasicBlock *block)
 {
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-	Function *memmoveFn = Intrinsic::getDeclaration(module,
-	                                                Intrinsic::memmove,
-	                                                {IntegerType::getInt8PtrTy(context),
-	                                                 IntegerType::getInt8PtrTy(context),
-	                                                 IntegerType::getInt64Ty(context)});
 	Value *dest = memb(self, "ptr", block);
 	Value *source = memb(val, "ptr", block);
 	Value *len = memb(val, "len", block);
-	Value *vol = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
 
 	IRBuilder<> builder(block);
 	dest = builder.CreateGEP(dest, idx);
-	builder.CreateCall(memmoveFn, {dest, source, len, vol});
+	builder.CreateMemMove(dest, 1, source, 1, len);
 }
 
 void types::SeqType::initOps()
