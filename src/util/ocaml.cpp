@@ -527,7 +527,7 @@ FOREIGN bool exec_module(SeqModule *sm, char debug, char **error, seq_srcinfo **
 		string msg = e.what();
 		*error = new char[msg.size() + 1];
 		strncpy(*error, msg.c_str(), msg.size());
-      error[msg.size()] = 0;
+		error[msg.size()] = 0;
 
 		auto info = e.getSrcInfo();
 		*srcInfo = new seq_srcinfo;
@@ -535,7 +535,7 @@ FOREIGN bool exec_module(SeqModule *sm, char debug, char **error, seq_srcinfo **
 		(*srcInfo)->col = info.col;
 		(*srcInfo)->file = new char[info.file.size() + 1];
 		strncpy((*srcInfo)->file, info.file.c_str(), info.file.size());
-      (*srcInfo)->file[info.file.size()] = 0;
+		(*srcInfo)->file[info.file.size()] = 0;
 
 		return false;
 	}
