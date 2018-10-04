@@ -15,22 +15,18 @@ def split(s, k, step):
 def is_cpg(s):
    return s == 'C' or s == 'G'
 
-def cpg(s):
+def cpg_count(s):
    i = 0
+   total = 0
    while i < len(s):
       if is_cpg(s[i]):
          j = i + 1
          while j < len(s) and is_cpg(s[j]):
             j += 1
-         yield s[i:j]
+         total += 1
          i = j + 1
       else: i += 1
-
-def cpg_count(s):
-   count = 0
-   for _ in cpg(s):
-      count += 1
-   return count
+   return total
 
 def revcomp(c):
    return ('A' if c == 'T' else \
@@ -44,12 +40,17 @@ def rc_copy(s):
 
 with open(sys.argv[1], 'r') as f:
    if sys.argv[2] == '1':
+      total = 0
       for l in f:
-         print(rc_copy(l.strip()))
+         total += len(rc_copy(l.strip()))
+      print(total)
    elif sys.argv[2] == '2':
+      total, t2 = 0, 0
       for l in f:
          for s in split(l.strip(), 16, 1):
-            print(s)
+            total += len(s)
+            t2 += 1
+      print(total, t2)
    elif sys.argv[2] == '3':
       cnt = 0
       for l in f:

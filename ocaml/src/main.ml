@@ -390,8 +390,8 @@ and parse_file ?execute mdl infile =
     Stack.push ctx.stack ("__argv__"::Stack.pop_exn ctx.stack);
 
     let ast = Parser.program (Lexer.token state) lexbuf in  
-    eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
-    eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast (fun _ -> "") ast;
+    (*eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
+    eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast (fun _ -> "") ast;*)
     match ast with Module stmts -> 
       List.iter stmts ~f:(get_seq_stmt ctx module_block);
     (match execute with
@@ -461,7 +461,6 @@ and get_seq_case_pattern _ = function
   | _ -> noimp "Match condition"
 
 let () = 
-  fprintf stderr "behold the ocaml-seq!\n";
   if Array.length Sys.argv < 2 then begin
     noimp "No arguments"
   end;

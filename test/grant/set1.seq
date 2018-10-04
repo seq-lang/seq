@@ -16,22 +16,18 @@ def split(s, k, step):
 def is_cpg(s):
    return s == s'C' or s == s'G'
 
-def cpg(s):
+def cpg_count(s):
    i = 0
+   total = 0
    while i < len(s):
       if is_cpg(s[i]):
          j = i + 1
          while j < len(s) and is_cpg(s[j]):
             j += 1
-         yield s[i:j]
+         total += 1
          i = j + 1
       else: i += 1
-
-def cpg_count(s):
-   count = 0
-   for cp in cpg(s):
-      count += 1
-   return count
+   return total
 
 def revcomp(c):
    return (s'A' if c == s'T' else \
@@ -42,17 +38,25 @@ def revcomp(c):
 def rc_copy(s):
    cp = s.copy()
    for i in range(len(s)):
-      # print i, s[i], '<->', revcomp(s[i]), len(s) - i - 1, s[len(s) - i - 1], revcomp(s[len(s) - i - 1])
       cp[i] = revcomp(s[len(s) - i - 1])
-   # print s
-   # print cp
    return cp
 
 # will need timing constructs
 f = file(__argv__[2])
 match __argv__[3]:
-   case '1': iter(f) |> rc_copy |> echo
-   case '2': iter(f) |> split(16, 1) |> echo
+   case '1': 
+      total = 0
+      for l in iter(f):
+         total += len(rc_copy(l))
+      print total
+   case '2': 
+      total = 0
+      t2 = 0
+      for l in iter(f):
+         for s in split(l, 16, 1):
+            total += len(s)
+            t2 += 1
+      print total, t2
    case '3':
       total = 0
       for line in iter(f):

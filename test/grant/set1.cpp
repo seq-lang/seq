@@ -25,30 +25,36 @@ string rc_copy(string s) {
 
 void exp1(ifstream &fin) { 
    string s;
+   long long total = 0;
    while (getline(fin, s)) {
-      cout << rc_copy(s) << "\n";
+      auto y = rc_copy(s);
+      total += y.size();
    }
+   cout << total << endl;
 }
 
 void exp2(ifstream &fin) { 
    string s;
+   long long total = 0, total2 = 0;
    while (getline(fin, s)) {
       int i = 0;
       int k = 16;
       int step = 1;
       while (i + k < s.size()) {
-         cout << s.substr(i, k) << "\n";
+         total += s.substr(i, k).size();
+         total2++;
          i += step;
       }
    }
+   cout << total << ' ' << total2 << endl;
 }
 
 bool is_cpg(char s) {
    return (s == 'C' || s == 'G');
 }
 
-int cpg_count(string s) {
-   int count = 0;
+long long cpg_count(string s) {
+   long long count = 0;
    int i = 0;
    while (i < s.size()) {
       if (is_cpg(s[i])) {
@@ -65,11 +71,11 @@ int cpg_count(string s) {
 
 void exp3(ifstream &fin) { 
    string s;
-   int res = 0;
+   long long res = 0;
    while (getline(fin, s)) {
       res += cpg_count(s);
    }
-   cout << res << "\n";
+   cout << res << endl;
 }
 
 int main(int argc, char **argv) {
@@ -80,6 +86,5 @@ int main(int argc, char **argv) {
       case '3': exp3(fin); break;
       default: cerr << "whoops" << endl;
    }
-   cout << flush;
    return 0;
 }
