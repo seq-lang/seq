@@ -314,7 +314,7 @@ types::SeqType::SeqType() : BaseSeqType("Seq")
 
 		IRBuilder<> builder(entry);
 		Value *ptrCopy = builder.CreateCall(allocFunc, len);
-		builder.CreateMemCpy(ptrCopy, 1, ptr, 1, len);
+		makeMemCpy(ptrCopy, ptr, len, entry, 1);
 		Value *copy = make(ptrCopy, len, entry);
 		builder.CreateRet(copy);
 		return f;
@@ -348,7 +348,7 @@ void types::SeqType::indexStore(BaseFunc *base,
 
 	IRBuilder<> builder(block);
 	dest = builder.CreateGEP(dest, idx);
-	builder.CreateMemMove(dest, 1, source, 1, len);
+	makeMemMove(dest, source, len, block, 1);
 }
 
 void types::SeqType::initOps()

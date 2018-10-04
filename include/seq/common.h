@@ -78,6 +78,34 @@ namespace seq {
 		return ptr;
 	}
 
+	inline void makeMemCpy(llvm::Value *dst,
+	                       llvm::Value *src,
+	                       llvm::Value *size,
+	                       llvm::BasicBlock *block,
+	                       unsigned align=0)
+	{
+		llvm::IRBuilder<> builder(block);
+#if LLVM_VERSION_MAJOR >= 7
+		builder.CreateMemCpy(dst, align, src, align, size);
+#else
+		builder.CreateMemCpy(dst, src, size, align);
+#endif
+	}
+
+	inline void makeMemMove(llvm::Value *dst,
+	                        llvm::Value *src,
+	                        llvm::Value *size,
+	                        llvm::BasicBlock *block,
+	                        unsigned align=0)
+	{
+		llvm::IRBuilder<> builder(block);
+#if LLVM_VERSION_MAJOR >= 7
+		builder.CreateMemMove(dst, align, src, align, size);
+#else
+		builder.CreateMemMove(dst, src, size, align);
+#endif
+	}
+
 	namespace exc {
 		class SeqException : public SrcObject, public std::runtime_error {
 		public:
