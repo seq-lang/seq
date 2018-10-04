@@ -249,6 +249,11 @@ seq_int_t types::RefType::size(Module *module) const
 	return sizeof(void *);
 }
 
+types::RefType *types::RefType::asRef()
+{
+	return this;
+}
+
 Value *types::RefType::make(BasicBlock *block, std::vector<Value *> vals)
 {
 	assert(contents);

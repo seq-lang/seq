@@ -421,10 +421,28 @@ seq_int_t types::GenericType::size(Module *module) const
 	return type->size(module);
 }
 
+types::RecordType *types::GenericType::asRec()
+{
+	ensure();
+	return type->asRec();
+}
+
+types::RefType *types::GenericType::asRef()
+{
+	ensure();
+	return type->asRef();
+}
+
 types::GenType *types::GenericType::asGen()
 {
 	ensure();
 	return type->asGen();
+}
+
+types::OptionalType *types::GenericType::asOpt()
+{
+	ensure();
+	return type->asOpt();
 }
 
 types::GenericType *types::GenericType::get()

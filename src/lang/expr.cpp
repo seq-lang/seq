@@ -432,7 +432,7 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
 	// check if this is a record lookup
-	if (type->isGeneric(types::RecordType::get({})) && idxLit) {
+	if (type->asRec() && idxLit) {
 		GetElemExpr e(arr, idxLit->value() + 1);
 		return e.codegen0(base, block);
 	}
@@ -449,7 +449,7 @@ types::Type *ArrayLookupExpr::getType0() const
 	auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
 	// check if this is a record lookup
-	if (type->isGeneric(types::RecordType::get({})) && idxLit)
+	if (type->asRec() && idxLit)
 		return type->getBaseType((unsigned)idxLit->value());
 
 	return arr->getType()->indexType();
@@ -1172,9 +1172,8 @@ static Value *codegenPipe(BaseFunc *base,
 		val = call.codegen(base, block);
 	}
 
-	if (type->isGeneric(types::Gen) && stage != stages.back()) {
-		auto *genType = dynamic_cast<types::GenType *>(type);
-		assert(genType);
+	types::GenType *genType = type->asGen();
+	if (genType && stage != stages.back()) {
 		Value *gen = val;
 		IRBuilder<> builder(block);
 
@@ -1232,7 +1231,7 @@ types::Type *PipeExpr::getType0() const
 		CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
 		type = call.getType();
 
-		if (stage != stages.back() && type->isGeneric(types::Gen))
+		if (stage != stages.back() && type->asGen())
 			return types::Void;
 	}
 	assert(type);

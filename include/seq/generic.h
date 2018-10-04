@@ -166,7 +166,10 @@ namespace seq {
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 
+			RecordType *asRec() override;
+			RefType *asRef() override;
 			GenType *asGen() override;
+			OptionalType *asOpt() override;
 
 			static GenericType *get();
 

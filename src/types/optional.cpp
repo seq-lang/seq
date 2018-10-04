@@ -13,7 +13,7 @@ types::OptionalType::OptionalType(seq::types::Type *baseType) :
  */
 bool types::OptionalType::isRefOpt() const
 {
-	return (dynamic_cast<types::RefType *>(baseType) != nullptr);
+	return (baseType->asRef() != nullptr);
 }
 
 Value *types::OptionalType::defaultValue(BasicBlock *block)
@@ -63,6 +63,11 @@ Type *types::OptionalType::getLLVMType(LLVMContext& context) const
 seq_int_t types::OptionalType::size(Module *module) const
 {
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
+}
+
+types::OptionalType *types::OptionalType::asOpt()
+{
+	return this;
 }
 
 Value *types::OptionalType::make(Value *val, BasicBlock *block)

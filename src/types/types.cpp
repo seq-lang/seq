@@ -515,7 +515,22 @@ seq_int_t types::Type::size(Module *module) const
 	return 0;
 }
 
+types::RecordType *types::Type::asRec()
+{
+	return nullptr;
+}
+
+types::RefType *types::Type::asRef()
+{
+	return nullptr;
+}
+
 types::GenType *types::Type::asGen()
+{
+	return nullptr;
+}
+
+types::OptionalType *types::Type::asOpt()
 {
 	return nullptr;
 }

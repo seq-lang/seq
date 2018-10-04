@@ -231,6 +231,11 @@ seq_int_t types::RecordType::size(Module *module) const
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
+types::RecordType *types::RecordType::asRec()
+{
+	return this;
+}
+
 types::RecordType& types::RecordType::of(std::initializer_list<std::reference_wrapper<Type>> types) const
 {
 	std::vector<Type *> typesPtr;

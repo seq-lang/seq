@@ -518,14 +518,12 @@ void For::resolveTypes()
 void For::codegen0(BasicBlock*& block)
 {
 	types::Type *type = gen->getType();
-	if (!type->isGeneric(types::Gen))
+	types::GenType *genType = type->asGen();
+
+	if (!genType)
 		throw exc::SeqException("cannot iterate over non-generator of type '" + type->getName() + "'");
 
-	types::GenType *genType = type->asGen();
-	assert(genType);
-
 	LLVMContext& context = block->getContext();
-
 	BasicBlock *entry = block;
 	Function *func = entry->getParent();
 

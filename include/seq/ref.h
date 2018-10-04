@@ -80,6 +80,9 @@ namespace seq {
 			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
+
+			RefType *asRef() override;
+
 			llvm::Value *make(llvm::BasicBlock *block,
 			                  std::vector<llvm::Value *> vals={});
 			static RefType *get(std::string name);

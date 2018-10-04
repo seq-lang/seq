@@ -29,7 +29,10 @@ namespace seq {
 	namespace types {
 
 		class Type;
+		class RecordType;
+		class RefType;
 		class GenType;
+		class OptionalType;
 
 		struct VTable {
 			void *copy = nullptr;
@@ -202,11 +205,14 @@ namespace seq {
 			virtual seq_int_t size(llvm::Module *module) const;
 
 			/*
-			 * The following method(s) are basically for overriding
+			 * The following method are basically for overriding
 			 * dynamic_cast so that generic types can be converted
 			 * to the types they represent easily.
 			 */
+			virtual RecordType *asRec();
+			virtual RefType *asRef();
 			virtual GenType *asGen();
+			virtual OptionalType *asOpt();
 
 			virtual Type *clone(Generic *ref);
 		};

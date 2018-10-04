@@ -58,6 +58,9 @@ namespace seq {
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			void addLLVMTypesToStruct(llvm::StructType *structType);
 			seq_int_t size(llvm::Module *module) const override;
+
+			RecordType *asRec() override;
+
 			RecordType& of(std::initializer_list<std::reference_wrapper<Type>> types) const;
 			static RecordType *get(std::vector<Type *> types, std::vector<std::string> names={});
 			static RecordType *get(std::initializer_list<Type *> types);

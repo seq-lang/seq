@@ -178,7 +178,7 @@ RecordPattern::RecordPattern(std::vector<Pattern *> patterns) :
 
 void RecordPattern::resolveTypes(types::Type *type)
 {
-	auto *rec = dynamic_cast<types::RecordType *>(type);
+	types::RecordType *rec = type->asRec();
 
 	if (!rec)
 		throw exc::SeqException("cannot match record pattern with non-record value", getSrcInfo());
@@ -449,7 +449,7 @@ OptPattern::OptPattern(Pattern *pattern) :
 
 void OptPattern::resolveTypes(types::Type *type)
 {
-	auto *optType = dynamic_cast<types::OptionalType *>(type);
+	types::OptionalType *optType = type->asOpt();
 	if (!optType)
 		throw exc::SeqException("cannot match optional pattern against non-optional value", getSrcInfo());
 
@@ -464,7 +464,7 @@ Value *OptPattern::codegen(BaseFunc *base,
 {
 	LLVMContext& context = block->getContext();
 
-	auto *optType = dynamic_cast<types::OptionalType *>(type);
+	types::OptionalType *optType = type->asOpt();
 	assert(optType);
 
 	if (!pattern) {  // no pattern means we're matching the empty optional pattern
@@ -498,7 +498,7 @@ Value *OptPattern::codegen(BaseFunc *base,
 
 OptPattern *OptPattern::clone(Generic *ref)
 {
-	return new OptPattern(pattern->clone(ref));
+	return new OptPattern(pattern ? pattern->clone(ref) : nullptr);
 }
 
 RangePattern::RangePattern(seq_int_t a, seq_int_t b) :
