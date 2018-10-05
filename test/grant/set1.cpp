@@ -79,6 +79,9 @@ void exp3(ifstream &fin) {
 }
 
 int main(int argc, char **argv) {
+   ios_base::sync_with_stdio(false);
+	cin.tie(nullptr);
+
    ifstream fin(argv[1]);
    switch (argv[2][0]) {
       case '1': exp1(fin); break;
