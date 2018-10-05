@@ -46,6 +46,7 @@ namespace seq {
 		static ArrayType  *Array  = ArrayType::get();
 		static GenType    *Gen    = GenType::get();
 		static SourceType *Source = SourceType::get();
+		static RawType    *Raw    = RawType::get();
 	}
 
 	class SeqModule : public BaseFunc {

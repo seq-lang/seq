@@ -7,11 +7,11 @@ static inline Function *seqSourceInitFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
-	            module->getOrInsertFunction(
-	              "seq_source_init",
-	              IntegerType::getInt8PtrTy(context),
-	              PointerType::get(IntegerType::getInt8PtrTy(context), 0),
-	              seqIntLLVM(context)));
+					module->getOrInsertFunction(
+					  "seq_source_init",
+					  IntegerType::getInt8PtrTy(context),
+					  PointerType::get(IntegerType::getInt8PtrTy(context), 0),
+					  seqIntLLVM(context)));
 	f->setCallingConv(CallingConv::C);
 	return f;
 }
@@ -20,10 +20,10 @@ static inline Function *seqSourceReadFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
-	            module->getOrInsertFunction(
-	              "seq_source_read",
-	              seqIntLLVM(context),
-	              IntegerType::getInt8PtrTy(context)));
+					module->getOrInsertFunction(
+					  "seq_source_read",
+					  seqIntLLVM(context),
+					  IntegerType::getInt8PtrTy(context)));
 	f->setCallingConv(CallingConv::C);
 	return f;
 }
@@ -32,11 +32,11 @@ static inline Function *seqSourceGetFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
-	            module->getOrInsertFunction(
-	              "seq_source_get",
-	              types::ArrayType::get(types::Seq)->getLLVMType(context),
-	              IntegerType::getInt8PtrTy(context),
-	              seqIntLLVM(context)));
+					module->getOrInsertFunction(
+					  "seq_source_get",
+					  types::ArrayType::get(types::Seq)->getLLVMType(context),
+					  IntegerType::getInt8PtrTy(context),
+					  seqIntLLVM(context)));
 	f->setCallingConv(CallingConv::C);
 	return f;
 }
@@ -45,11 +45,11 @@ static inline Function *seqSourceGetSingleFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
-	            module->getOrInsertFunction(
-	              "seq_source_get_single",
-	              types::Seq->getLLVMType(context),
-	              IntegerType::getInt8PtrTy(context),
-	              seqIntLLVM(context)));
+					module->getOrInsertFunction(
+					  "seq_source_get_single",
+					  types::Seq->getLLVMType(context),
+					  IntegerType::getInt8PtrTy(context),
+					  seqIntLLVM(context)));
 	f->setCallingConv(CallingConv::C);
 	return f;
 }
@@ -58,10 +58,10 @@ static inline Function *seqSourceDeallocFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
-	            module->getOrInsertFunction(
-	              "seq_source_dealloc",
-	              Type::getVoidTy(context),
-	              IntegerType::getInt8PtrTy(context)));
+					module->getOrInsertFunction(
+					  "seq_source_dealloc",
+					  Type::getVoidTy(context),
+					  IntegerType::getInt8PtrTy(context)));
 	f->setCallingConv(CallingConv::C);
 	return f;
 }
@@ -86,8 +86,8 @@ types::SourceType::SourceType() : Type("Source", BaseType::get())
 }
 
 Value *types::SourceType::construct(BaseFunc *base,
-                                    const std::vector<Value *>& args,
-                                    BasicBlock *block)
+												const std::vector<Value *>& args,
+												BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
@@ -140,4 +140,110 @@ seq_int_t types::SourceType::size(Module *module) const
 types::SourceType *types::SourceType::get() noexcept
 {
 	return new SourceType();
+}
+
+/************************************************************************/
+
+static inline Function *seqRawInitFunc(Module *module)
+{
+	LLVMContext& context = module->getContext();
+	auto *f = cast<Function>(
+					module->getOrInsertFunction(
+					  "seq_raw_init",
+					  IntegerType::getInt8PtrTy(context),
+					  PointerType::get(IntegerType::getInt8PtrTy(context), 0)
+				 ));
+	f->setCallingConv(CallingConv::C);
+	return f;
+}
+
+static inline Function *seqRawReadFunc(Module *module)
+{
+	LLVMContext& context = module->getContext();
+	auto *f = cast<Function>(
+					module->getOrInsertFunction(
+					  "seq_raw_read",
+					  types::Seq->getLLVMType(context),
+					  IntegerType::getInt8PtrTy(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
+}
+
+static inline Function *seqRawDeallocFunc(Module *module)
+{
+	LLVMContext& context = module->getContext();
+	auto *f = cast<Function>(
+					module->getOrInsertFunction(
+					  "seq_raw_dealloc",
+					  Type::getVoidTy(context),
+					  IntegerType::getInt8PtrTy(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
+}
+
+types::RawType::RawType() : Type("RawFile", BaseType::get())
+{
+	addMethod("read", new BaseFuncLite({this}, types::SeqType::get(), [](Module *module) {
+		return seqRawReadFunc(module);
+	}), false);
+
+	addMethod("close", new BaseFuncLite({this}, types::VoidType::get(), [](Module *module) {
+		return seqRawDeallocFunc(module);
+	}), false);
+}
+
+Value *types::RawType::construct(BaseFunc *base,
+											const std::vector<Value *>& args,
+											BasicBlock *block)
+{
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+	Function *initFunc = seqRawInitFunc(module);
+	BasicBlock *preambleBlock = base->getPreamble();
+	Value *sources = makeAlloca(IntegerType::getInt8PtrTy(context), preambleBlock, args.size());
+	IRBuilder<> builder(block);
+
+	unsigned idx = 0;
+	for (auto *str : args) {
+		Value *idxVal = ConstantInt::get(seqIntLLVM(context), idx++);
+		Value *slot = builder.CreateGEP(sources, idxVal);
+		Value *strVal = types::Str->memb(str, "ptr", block);
+		builder.CreateStore(strVal, slot);
+	}
+
+	Value *source = builder.CreateCall(initFunc, {sources});
+	return source;
+}
+
+bool types::RawType::isAtomic() const
+{
+	return false;
+}
+
+types::Type *types::RawType::getConstructType(const std::vector<types::Type *>& inTypes)
+{
+	if (inTypes.empty())
+		throw exc::SeqException("RawFile constructor takes at least one argument");
+
+	for (auto *type : inTypes) {
+		if (!types::is(type, types::Str))
+			throw exc::SeqException("RawFile constructor takes only string arguments");
+	}
+
+	return this;
+}
+
+Type *types::RawType::getLLVMType(LLVMContext &context) const
+{
+	return IntegerType::getInt8PtrTy(context);
+}
+
+seq_int_t types::RawType::size(Module *module) const
+{
+	return sizeof(void *);
+}
+
+types::RawType *types::RawType::get() noexcept
+{
+	return new RawType();
 }

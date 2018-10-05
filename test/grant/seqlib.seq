@@ -1,22 +1,5 @@
 # Seq library 
 
-extend int:
-  def iter(self):
-    i = 0
-    while i < self:
-      yield i
-      i += 1
-
-extend file:
-  def iter(self):
-    while True:
-      n = self.read()
-      if n == 0:
-        break
-      for i in n.iter():
-        yield self.get(i)
-    self.close()
-
 def range(i):
    return i.iter()
 
@@ -26,8 +9,30 @@ def len(s):
 def echo(s):
    print s
 
+extend int:
+  def iter(self):
+    i = 0
+    while i < self:
+      yield i
+      i += 1
+
+extend file:
+  def iter_old(self):
+    while True:
+      n = self.read()
+      if n == 0:
+        break
+      for i in n.iter():
+        yield self.get(i)
+    self.close()
+
+  def iter(self):
+    while True:
+      s = self.read()
+      if len(s) == 0:
+        break
+      yield s
+    self.close()
+
 def iter(f):
    return f.iter()
-    
-      
-

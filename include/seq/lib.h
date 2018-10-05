@@ -53,4 +53,15 @@ SEQ_FUNC seq_arr_t<seq_t> seq_source_get(void *state, seq_int_t idx);
 SEQ_FUNC seq_t seq_source_get_single(void *state, seq_int_t idx);
 SEQ_FUNC void seq_source_dealloc(void *state);
 
+
+struct RawInput {
+	FILE *f;
+	char *buf;
+	size_t n;
+	RawInput(): f(0),buf(0),n(0) {}
+};
+SEQ_FUNC void *seq_raw_init(char **sources);
+SEQ_FUNC seq_t seq_raw_read(void *st);
+SEQ_FUNC void seq_raw_dealloc(void *st);
+
 #endif /* SEQ_LIB_H */
