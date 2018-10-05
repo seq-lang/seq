@@ -5,12 +5,11 @@
 #include <array>
 #include <map>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 #include <cassert>
 #include <gc.h>
 #include "seq/lib.h"
-
-#include <stdio.h>
 
 using namespace std;
 
@@ -137,18 +136,18 @@ SEQ_FUNC void seq_io_close(void *fp)
 }
 
 SEQ_FUNC void seq_io_read(void *ptr,
-								  seq_int_t size,
-								  seq_int_t nmemb,
-								  void *fp)
+                          seq_int_t size,
+                          seq_int_t nmemb,
+                          void *fp)
 {
 	if ((seq_int_t)fread(ptr, (size_t)size, (size_t)nmemb, (FILE *)fp) != nmemb)
 		error("unable to read from file");
 }
 
 SEQ_FUNC void seq_io_write(const void *ptr,
-									seq_int_t size,
-									seq_int_t nmemb,
-									void *fp)
+                           seq_int_t size,
+                           seq_int_t nmemb,
+                           void *fp)
 {
 	if ((seq_int_t)fwrite(ptr, (size_t)size, (size_t)nmemb, (FILE *)fp) != nmemb)
 		error("unable to write to file");
@@ -245,23 +244,23 @@ Format extractExt(const string& source)
 static map<string, Format> makeExtConvMap() noexcept
 {
 	return {{"txt",   Format::TXT},
-			  {"fastq", Format::FASTQ},
-			  {"fq",    Format::FASTQ},
-			  {"fasta", Format::FASTA},
-			  {"fa",    Format::FASTA},
-			  {"sam",   Format::SAM},
-			  {"bam",   Format::FASTQ}};
+	        {"fastq", Format::FASTQ},
+	        {"fq",    Format::FASTQ},
+	        {"fasta", Format::FASTA},
+	        {"fa",    Format::FASTA},
+	        {"sam",   Format::SAM},
+	        {"bam",   Format::FASTQ}};
 };
 
 const map<string, Format> EXT_CONV = makeExtConvMap();
 
 DataCell::DataCell(char *buf, const size_t cap) :
-	 buf(buf), used(0), cap(cap), data(), lens(), seqs()
+    buf(buf), used(0), cap(cap), data(), lens(), seqs()
 {
 }
 
 DataCell::DataCell() :
-	 DataCell(nullptr, 0)
+    DataCell(nullptr, 0)
 {
 }
 
@@ -335,7 +334,7 @@ bool DataCell::readFASTQ(const size_t idx, ifstream& in)
 
 	bufx[seq_len] =
 	  bufx[seq_len + qual_len + 1] =
-		 bufx[seq_len + qual_len + ident_len + 2] = '\0';
+	    bufx[seq_len + qual_len + ident_len + 2] = '\0';
 
 	data[idx][SeqData::SEQ]   = &bufx[0] - buf;
 	data[idx][SeqData::QUAL]  = &bufx[seq_len + 1] - buf;
@@ -473,7 +472,7 @@ struct IOState {
 	Format fmt;
 
 	IOState(char **sources, const seq_int_t numSources) :
-		 data(), ins()
+	    data(), ins()
 	{
 		if (numSources == 0)
 			error("sequence source not specified");
@@ -538,6 +537,13 @@ SEQ_FUNC void seq_source_dealloc(void *state)
 
 /************************************************************************/
 
+struct RawInput {
+	FILE *f;
+	char *buf;
+	size_t n;
+	RawInput(): f(nullptr), buf(nullptr), n(0) {}
+};
+
 SEQ_FUNC void *seq_raw_init(char **sources)
 {
 	auto *state = new RawInput();
@@ -547,8 +553,8 @@ SEQ_FUNC void *seq_raw_init(char **sources)
 
 SEQ_FUNC seq_t seq_raw_read(void *st)
 {
-	RawInput *state = (RawInput*) st;
-	int read = getline(&state->buf, &state->n, state->f);
+	auto *state = (RawInput *)st;
+	auto read = getline(&state->buf, &state->n, state->f);
 	if (read == -1) {
 		if (state->n > 0) {
 			state->buf[0] = 0;
@@ -563,9 +569,9 @@ SEQ_FUNC seq_t seq_raw_read(void *st)
 
 SEQ_FUNC void seq_raw_dealloc(void *st)
 {
-	RawInput *state = (RawInput*) st;
+	auto *state = (RawInput *)st;
 	if (state->f)
 		fclose(state->f);
-	if (state->buf) 
+	if (state->buf)
 		free(state->buf);
 }

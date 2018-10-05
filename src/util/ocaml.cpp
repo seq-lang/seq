@@ -33,8 +33,8 @@ FOREIGN types::Type *array_type(types::Type *base)
 FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz)
 {
 	return types::RecordType::get(
-				vector<types::Type*>(ty, ty + sz),
-				vector<string>(names, names + sz));
+	         vector<types::Type*>(ty, ty + sz),
+	         vector<string>(names, names + sz));
 }
 
 FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
@@ -152,8 +152,8 @@ FOREIGN Expr *record_expr(Expr **args, size_t size)
 {
 	E("record_expr[{}]", size);
 	return new RecordExpr(
-					 vector<Expr*>(args, args + size),
-					 vector<string>(size, " "));
+	             vector<Expr*>(args, args + size),
+	             vector<string>(size, " "));
 }
 
 FOREIGN Expr *static_expr(types::Type *ty, const char *name)

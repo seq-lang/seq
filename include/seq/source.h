@@ -13,8 +13,8 @@ namespace seq {
 			void operator=(SourceType const&)=delete;
 
 			llvm::Value *construct(BaseFunc *base,
-										  const std::vector<llvm::Value *>& args,
-										  llvm::BasicBlock *block) override;
+			                       const std::vector<llvm::Value *>& args,
+			                       llvm::BasicBlock *block) override;
 
 			bool isAtomic() const override;
 			Type *getConstructType(const std::vector<Type *>& inTypes) override;
@@ -32,8 +32,8 @@ namespace seq {
 			void operator=(RawType const&)=delete;
 
 			llvm::Value *construct(BaseFunc *base,
-										  const std::vector<llvm::Value *>& args,
-										  llvm::BasicBlock *block) override;
+			                       const std::vector<llvm::Value *>& args,
+			                       llvm::BasicBlock *block) override;
 
 			bool isAtomic() const override;
 			Type *getConstructType(const std::vector<Type *>& inTypes) override;
