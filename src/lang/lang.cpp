@@ -511,7 +511,12 @@ Var *For::getVar()
 void For::resolveTypes()
 {
 	gen->resolveTypes();
-	var->setType(gen->getType()->getBaseType(0));
+	types::Type *type = gen->getType();
+
+	if (!type->asGen())
+		throw exc::SeqException("cannot iterate over non-generator of type '" + type->getName() + "'");
+
+	var->setType(type->getBaseType(0));
 	scope->resolveTypes();
 }
 
