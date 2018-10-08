@@ -127,7 +127,7 @@ types::Type *types::SourceType::getConstructType(const std::vector<types::Type *
 	return this;
 }
 
-Type *types::SourceType::getLLVMType(LLVMContext &context) const
+Type *types::SourceType::getLLVMType(LLVMContext& context) const
 {
 	return IntegerType::getInt8PtrTy(context);
 }

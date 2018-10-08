@@ -150,12 +150,18 @@ const std::map<char, int> TYPE_MAP = makeTypeMap();
 class ParseState {
 	typedef std::map<std::string, SeqEntity> SymTab;
 private:
+	std::string file;
 	std::vector<SymTab> symbols;
 	std::stack<std::vector<SeqEntity>> results;
 	std::vector<SeqEntity> contexts;
 	std::vector<Block *> blocks;
 	SeqModule *module;
 public:
+	std::string getFile() const
+	{
+		return file;
+	}
+
 	std::vector<SeqEntity> get(const std::string& types, bool multi=false, bool pop=true)
 	{
 		assert(!types.empty() && !results.empty());
@@ -378,7 +384,8 @@ public:
 		return *this->module;
 	}
 
-	ParseState() : symbols(), results(), contexts(), blocks(), module(nullptr)
+	ParseState(const std::string& file) :
+	    file(file), symbols(), results(), contexts(), blocks(), module(nullptr)
 	{
 	}
 };
@@ -697,7 +704,7 @@ struct control<module> : pegtl::normal<module>
 	{
 		state.scope();
 		state.scopeBarrier();
-		auto *module = new SeqModule();
+		auto *module = new SeqModule(state.getFile());
 		state.setModule(module);
 		state.enter(module->getBlock());
 		state.context(module);
@@ -869,6 +876,7 @@ struct control<func_decl_in_out_void> : pegtl::normal<func_decl_in_out_void>
 		auto vec = state.get("s");
 		assert(state.context().type == SeqEntity::FUNC);
 		auto *func = state.context().value.func;
+		func->setName(vec[0].value.name);
 		state.symparent(vec[0].value.name, func);
 	}
 
@@ -940,6 +948,159 @@ struct control<func_stmt> : pegtl::normal<func_stmt>
 	static void failure(Input&, ParseState& state)
 	{
 		state.exit();
+		state.uncontext();
+	}
+};
+
+template<>
+struct control<func_decl_predefine> : pegtl::normal<func_decl_predefine>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		std::deque<SeqEntity> deq;
+
+		for (auto& ent : vec)
+			deq.push_back(ent);
+
+		assert(deq.size() >= 2);
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+
+		SeqEntity name = deq.front();
+		SeqEntity type = deq.back();
+		deq.pop_front();
+		deq.pop_back();
+		assert(name.type == SeqEntity::NAME);
+		assert(type.type == SeqEntity::TYPE);
+
+		std::vector<types::Type *> argTypes;
+
+		while (!deq.empty()) {
+			SeqEntity argType = deq.front();
+			deq.pop_front();
+			assert(argType.type == SeqEntity::TYPE);
+			argTypes.push_back(argType.value.type);
+		}
+
+		func->setName(name.value.name);
+		func->setOut(type.value.type);
+		func->setIns(argTypes);
+		state.sym(name.value.name, func);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_decl_out_void_predefine> : pegtl::normal<func_decl_out_void_predefine>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("*", true);
+		std::deque<SeqEntity> deq;
+
+		for (auto& ent : vec)
+			deq.push_back(ent);
+
+		assert(!deq.empty());
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+
+		SeqEntity name = deq.front();
+		deq.pop_front();
+		assert(name.type == SeqEntity::NAME);
+		std::vector<types::Type *> argTypes;
+
+		while (!deq.empty()) {
+			SeqEntity argType = deq.front();
+			deq.pop_front();
+			assert(argType.type == SeqEntity::TYPE);
+			argTypes.push_back(argType.value.type);
+		}
+
+		func->setName(name.value.name);
+		func->setOut(types::Void);
+		func->setIns(argTypes);
+		state.sym(name.value.name, func);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_decl_in_out_void_predefine> : pegtl::normal<func_decl_in_out_void_predefine>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		state.push();
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		auto vec = state.get("s");
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+		func->setName(vec[0].value.name);
+		state.sym(vec[0].value.name, func);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
+		state.pop();
+	}
+};
+
+template<>
+struct control<func_stmt_c_ext> : pegtl::normal<func_stmt_c_ext>
+{
+	template<typename Input>
+	static void start(Input&, ParseState& state)
+	{
+		auto *func = new Func();
+		func->setExternal();
+		state.context(func);
+	}
+
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.context().type == SeqEntity::FUNC);
+		auto *func = state.context().value.func;
+		state.uncontext();
+
+		auto *p = new FuncStmt(func);
+		state.stmt(p);
+	}
+
+	template<typename Input>
+	static void failure(Input&, ParseState& state)
+	{
 		state.uncontext();
 	}
 };
@@ -1045,7 +1206,7 @@ struct control<class_stmt> : pegtl::normal<class_stmt>
 };
 
 template<>
-struct control<ext_stmt> : pegtl::normal<ext_stmt>
+struct control<extend_stmt> : pegtl::normal<extend_stmt>
 {
 	template<typename Input>
 	static void start(Input&, ParseState& state)
@@ -3146,7 +3307,7 @@ struct control<pattern> : pegtl::normal<pattern>
 
 SeqModule& seq::parse(std::string input)
 {
-	ParseState state;
+	ParseState state(input);
 	pegtl::file_input<> in(input);
 	const size_t issues_found = pegtl::analyze<grammar>();
 	assert(issues_found == 0);

@@ -1,14 +1,23 @@
 #include <iostream>
+#include <system_error>
 #include <cassert>
 #include "seq/seq.h"
 
 using namespace seq;
 using namespace llvm;
 
-SeqModule::SeqModule() :
+SeqModule::SeqModule(std::string source) :
     BaseFunc(), scope(new Block()), argVar(new Var(types::ArrayType::get(types::Str))),
     initFunc(nullptr), strlenFunc(nullptr)
 {
+	static LLVMContext context;
+	InitializeNativeTarget();
+	InitializeNativeTargetAsmPrinter();
+
+	module = new Module("seq", context);
+	module->setSourceFileName(source);
+	module->setTargetTriple(EngineBuilder().selectTarget()->getTargetTriple().str());
+	module->setDataLayout(EngineBuilder().selectTarget()->createDataLayout());
 }
 
 Block *SeqModule::getBlock()
@@ -87,6 +96,8 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 
 void SeqModule::codegen(Module *module)
 {
+	assert(module);
+
 	if (func)
 		return;
 
@@ -136,25 +147,16 @@ void SeqModule::codegen(Module *module)
 	func = makeCanonicalMainFunc(func, strlenFunc);
 }
 
-void SeqModule::execute(const std::vector<std::string>& args, bool debug)
+void SeqModule::verify()
 {
-	LLVMContext context;
-	InitializeNativeTarget();
-	InitializeNativeTargetAsmPrinter();
-
-	std::unique_ptr<Module> owner(new Module("seq", context));
-	Module *module = owner.get();
-	module->setTargetTriple(EngineBuilder().selectTarget()->getTargetTriple().str());
-	module->setDataLayout(EngineBuilder().selectTarget()->createDataLayout());
-
-	codegen(module);
-
 	if (verifyModule(*module, &errs())) {
-		if (debug)
-			errs() << *module;
+		errs() << *module;
 		assert(0);
 	}
+}
 
+void SeqModule::optimize(bool debug)
+{
 	std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
 	std::unique_ptr<legacy::FunctionPassManager> fpm(new legacy::FunctionPassManager(module));
 
@@ -181,18 +183,44 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 	for (Function& f : *module)
 		fpm->run(f);
 	fpm->doFinalization();
-
 	pm->run(*module);
+}
 
-	if (verifyModule(*module, &errs())) {
-		if (debug)
-			errs() << *module;
-		assert(0);
-	}
+void SeqModule::compile(const std::string& out, bool debug)
+{
+	codegen(module);
+	verify();
+	optimize(debug);
+	verify();
 
 	if (debug)
 		errs() << *module;
 
+	std::error_code err;
+	raw_fd_ostream stream(out, err);
+	WriteBitcodeToFile(*module, stream);
+	module = nullptr;
+
+	if (err) {
+		std::cerr << "error: " << err.message() << std::endl;
+		exit(err.value());
+	}
+}
+
+void SeqModule::execute(const std::vector<std::string>& args,
+                        const std::vector<std::string>& libs,
+                        bool debug)
+{
+	codegen(module);
+	verify();
+	optimize(debug);
+	verify();
+
+	if (debug)
+		errs() << *module;
+
+	std::unique_ptr<Module> owner(module);
+	module = nullptr;
 	EngineBuilder EB(std::move(owner));
 	EB.setMCJITMemoryManager(make_unique<SectionMemoryManager>());
 	EB.setUseOrcMCJITReplacement(true);
@@ -202,6 +230,14 @@ void SeqModule::execute(const std::vector<std::string>& args, bool debug)
 	assert(strlenFunc);
 	eng->addGlobalMapping(initFunc, (void *)seq_init);
 	eng->addGlobalMapping(strlenFunc, (void *)strlen);
+
+	std::string err;
+	for (auto& lib : libs) {
+		if (sys::DynamicLibrary::LoadLibraryPermanently(lib.c_str(), &err)) {
+			std::cerr << "error: " << err << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	eng->runFunctionAsMain(func, args, nullptr);
 }

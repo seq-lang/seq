@@ -12,13 +12,29 @@ using namespace llvm::cl;
 int main(int argc, char **argv)
 {
 	opt<string> input(Positional, desc("<input file>"), Required);
+	opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; print LLVM IR)"));
+	opt<string> output("o", desc("Write LLVM bitcode to specified file instead of running with JIT"));
+	cl::list<string> libs("L", desc("Load and link the specified library"));
 	cl::list<string> args(ConsumeAfter, desc("<program arguments>..."));
+
 	ParseCommandLineOptions(argc, argv);
+	vector<string> libsVec(libs);
 	vector<string> argsVec(args);
 
 	try {
 		SeqModule& s = parse(input.c_str());
-		s.execute(argsVec);
+
+		if (output.getValue().empty()) {
+			s.execute(argsVec, libsVec, debug.getValue());
+		} else {
+			if (!libsVec.empty())
+				std::cerr << "warning: ignoring libraries during compilation" << std::endl;
+
+			if (!argsVec.empty())
+				std::cerr << "warning: ignoring arguments during compilation" << std::endl;
+
+			s.compile(output.getValue(), debug.getValue());
+		}
 	} catch (exc::SeqException& e) {
 		std::cerr << "error: " << e.what() << std::endl;
 		return EXIT_FAILURE;

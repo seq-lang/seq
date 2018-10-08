@@ -6,7 +6,7 @@
 TEST(StandaloneTest, StandaloneTest)
 {
 	SeqModule& s = parse(TEST_DIR "/code/test.seq");
-	EXPECT_NO_THROW(s.execute({DEFAULT_TEST_INPUT_MULTI}, true));
+	EXPECT_NO_THROW(s.execute({DEFAULT_TEST_INPUT_MULTI}, {}, true));
 }
 
 TEST(StandaloneTestOpt, StandaloneTest)

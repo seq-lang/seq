@@ -32,6 +32,7 @@ namespace seq {
 
 	class Func : public BaseFunc, public Generic, public SrcObject {
 	private:
+		bool external;
 		std::string name;
 		std::vector<types::Type *> inTypes;
 		types::Type *outType;
@@ -69,8 +70,12 @@ namespace seq {
 		void codegenYield(llvm::Value *val,
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block);
+
+		bool isExternal() const;
 		Var *getArgVar(std::string name);
 		types::FuncType *getFuncType() const override;
+
+		void setExternal();
 		void setIns(std::vector<types::Type *> inTypes);
 		void setOut(types::Type *outType);
 		void setName(std::string name);

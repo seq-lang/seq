@@ -56,13 +56,18 @@ namespace seq {
 		llvm::Function *initFunc;
 		llvm::Function *strlenFunc;
 	public:
-		SeqModule();
+		explicit SeqModule(std::string source="unnamed.seq");
 		Block *getBlock();
 		Var *getArgVar();
 
 		void resolveTypes() override;
 		void codegen(llvm::Module *module) override;
-		void execute(const std::vector<std::string>& args={}, bool debug=false);
+		void verify();
+		void optimize(bool debug=false);
+		void compile(const std::string& out, bool debug=false);
+		void execute(const std::vector<std::string>& args={},
+		             const std::vector<std::string>& libs={},
+		             bool debug=false);
 	};
 
 }

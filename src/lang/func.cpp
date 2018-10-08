@@ -41,9 +41,9 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 }
 
 Func::Func() :
-    BaseFunc(), Generic(false), SrcObject(), name(), inTypes(), outType(types::Void),
-    scope(new Block()), argNames(), argVars(), ret(nullptr), yield(nullptr), resolvingTypes(false),
-    gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
+    BaseFunc(), Generic(false), SrcObject(), external(false), name(), inTypes(),
+    outType(types::Void), scope(new Block()), argNames(), argVars(), ret(nullptr), yield(nullptr),
+    resolvingTypes(false), gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
 		assert(this->argNames.size() == this->inTypes.size());
@@ -91,8 +91,11 @@ void Func::sawYield(Yield *yield)
 	outType = types::GenType::get(outType);
 }
 
-static std::string getFuncName(std::string& name)
+static std::string getFuncName(std::string& name, bool external=false)
 {
+	if (external)
+		return name;
+
 	static int idx = 1;
 	return name.empty() ? ("func." + std::to_string(idx++)) :
 	                      (name + "." + std::to_string(idx++));
@@ -100,7 +103,7 @@ static std::string getFuncName(std::string& name)
 
 void Func::resolveTypes()
 {
-	if (resolvingTypes)
+	if (external || resolvingTypes)
 		return;
 
 	resolvingTypes = true;
@@ -148,8 +151,12 @@ void Func::codegen(Module *module)
 		types.push_back(type->getLLVMType(context));
 
 	func = cast<Function>(
-	         module->getOrInsertFunction(getFuncName(name),
+	         module->getOrInsertFunction(getFuncName(name, external),
 	                                     FunctionType::get(outType->getLLVMType(context), types, false)));
+
+	if (external)
+		return;
+
 	func->setLinkage(GlobalValue::PrivateLinkage);
 
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
@@ -359,6 +366,11 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	}
 }
 
+bool Func::isExternal() const
+{
+	return external;
+}
+
 Var *Func::getArgVar(std::string name)
 {
 	auto iter = argVars.find(name);
@@ -369,6 +381,11 @@ Var *Func::getArgVar(std::string name)
 types::FuncType *Func::getFuncType() const
 {
 	return types::FuncType::get(inTypes, outType);
+}
+
+void Func::setExternal()
+{
+	external = true;
 }
 
 void Func::setIns(std::vector<types::Type *> inTypes)
@@ -409,6 +426,7 @@ Func *Func::clone(Generic *ref)
 	for (auto *type : inTypes)
 		inTypesCloned.push_back(type->clone(ref));
 
+	x->external = external;
 	x->name = name;
 	x->argNames = argNames;
 	x->inTypes = inTypesCloned;

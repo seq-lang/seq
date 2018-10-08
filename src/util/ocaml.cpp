@@ -519,7 +519,7 @@ FOREIGN bool exec_module(SeqModule *sm, char debug, char **error, seq_srcinfo **
 {
 	E("exec_module");
 	try {
-		sm->execute(vector<string>(), debug);
+		sm->execute({}, {}, debug);
 		*error = nullptr;
 		*srcInfo = nullptr;
 		return true;

@@ -1,4 +1,4 @@
-ext Source {
+extend Source {
   def _iter_helper[T](self: Source, getter: T) {
     while true {
       var n = self.read();
@@ -21,7 +21,7 @@ ext Source {
   }
 }
 
-ext Int {
+extend Int {
   def iter(self: Int) {
     var i = 0
     while i < self {

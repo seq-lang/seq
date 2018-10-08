@@ -39,9 +39,10 @@ struct str_typedef : TAO_PEGTL_STRING("type") {};
 struct str_class : TAO_PEGTL_STRING("class") {};
 struct str_match : TAO_PEGTL_STRING("match") {};
 struct str_case : TAO_PEGTL_STRING("case") {};
-struct str_ext : TAO_PEGTL_STRING("ext") {};
+struct str_extend : TAO_PEGTL_STRING("extend") {};
+struct str_extern : TAO_PEGTL_STRING("extern") {};
 
-struct str_keyword : pegtl::sor<str_print, str_var, str_global, str_def, str_if, str_elif, str_else, str_while, str_for, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case, str_ext> {};
+struct str_keyword : pegtl::sor<str_print, str_var, str_global, str_def, str_if, str_elif, str_else, str_while, str_for, str_true, str_false, str_return, str_yield, str_break, str_continue, str_as, str_in, str_typedef, str_class, str_match, str_case, str_extend, str_extern> {};
 
 struct name : pegtl::seq<pegtl::not_at<str_keyword, pegtl::not_at<pegtl::identifier_other>>, pegtl::identifier> {};
 
@@ -65,7 +66,7 @@ struct dot : pegtl::one<'.'> {};
 struct inf_literal : pegtl::istring<'i','n','f'> {};
 struct nan_literal : pegtl::istring<'n','a','n'> {};
 
-template< typename D >
+template <typename D>
 struct number : pegtl::if_then_else<dot,
                                     pegtl::plus<D>,
                                     pegtl::seq<pegtl::plus<D>, dot, pegtl::star<D>>> {};
@@ -82,7 +83,7 @@ struct escaped : pegtl::seq<pegtl::one<'\\'>, escape_chars> {};
 struct regular : pegtl::not_one<'\r', '\n'> {};
 struct character : pegtl::sor<escaped, regular> {};
 
-template<char Q>
+template <char Q>
 struct short_string : pegtl::seq<pegtl::one<Q>, pegtl::until<pegtl::one<Q>, character>> {};
 struct literal_string : short_string<'"'> {};
 
@@ -260,10 +261,22 @@ struct typedef_stmt : pegtl::if_must<str_typedef, seps_must, pegtl::not_at<built
  */
 struct func_generics : pegtl::seq<pegtl::one<'['>, seps, pegtl::list<name, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
 struct func_args : pegtl::opt<pegtl::seq<pegtl::one<'('>, seps, pegtl::opt<pegtl::list<pegtl::seq<name, seps, pegtl::one<':'>, seps, type>, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<')'>>> {};
+struct func_args_predefine : pegtl::opt<pegtl::seq<pegtl::one<'('>, seps, pegtl::opt<pegtl::list<type, pegtl::seq<seps, pegtl::one<','>, seps>>>, seps, pegtl::one<')'>>> {};
+
 struct func_decl : pegtl::seq<name, pegtl::opt<seps, func_generics>, seps, func_args, seps, TAO_PEGTL_STRING("->"), seps, type> {};
 struct func_decl_out_void : pegtl::seq<name, pegtl::opt<seps, func_generics>, seps, func_args> {};
 struct func_decl_in_out_void : pegtl::seq<name, pegtl::opt<seps, func_generics>> {};
+
+struct func_decl_predefine : pegtl::seq<name, seps, func_args_predefine, seps, TAO_PEGTL_STRING("->"), seps, type> {};
+struct func_decl_out_void_predefine : pegtl::seq<name, seps, func_args_predefine> {};
+struct func_decl_in_out_void_predefine : pegtl::seq<name> {};
+
 struct func_stmt : pegtl::seq<str_def, seps_must, pegtl::sor<func_decl, func_decl_out_void, func_decl_in_out_void>, seps, block> {};
+
+#define FUNC_STMT_EXT(lang) pegtl::seq<str_extern, seps, pegtl::one<'('>, seps, TAO_PEGTL_STRING(lang), seps, pegtl::one<')'>, seps, pegtl::sor<func_decl_predefine, func_decl_out_void_predefine, func_decl_in_out_void_predefine>>
+struct func_stmt_c_ext : FUNC_STMT_EXT("C") {};
+
+struct func_stmt_ext : pegtl::sor<func_stmt_c_ext> {};
 
 /*
  * Classes
@@ -276,7 +289,7 @@ struct class_stmt : pegtl::if_must<class_open, seps, pegtl::opt<class_type>, sep
 /*
  * Extensions
  */
-struct ext_stmt : pegtl::seq<str_ext, seps, type, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<func_stmt, seps>, seps>, pegtl::one<'}'>> {};
+struct extend_stmt : pegtl::seq<str_extend, seps, type, seps, pegtl::one<'{'>, seps, pegtl::opt<pegtl::list<func_stmt, seps>, seps>, pegtl::one<'}'>> {};
 
 /*
  * Modules
@@ -309,8 +322,8 @@ struct continue_stmt : pegtl::seq<str_continue> {};
 
 struct expr_stmt : pegtl::seq<expr> {};
 
-struct statement : pegtl::sor<typedef_stmt, print_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, global_decl, func_stmt, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, expr_stmt, if_stmt, match_stmt> {};
-struct statement_toplvl : pegtl::sor<class_stmt, ext_stmt, statement> {};
+struct statement : pegtl::sor<typedef_stmt, print_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, global_decl, func_stmt, func_stmt_ext, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, expr_stmt, if_stmt, match_stmt> {};
+struct statement_toplvl : pegtl::sor<class_stmt, extend_stmt, statement> {};
 struct module : pegtl::must<statement_seq_toplvl> {};
 struct grammar : pegtl::must<seps, module, seps, pegtl::eof> {};
 

@@ -22,7 +22,7 @@ namespace seq {
 			                           llvm::BasicBlock *block,
 			                           bool storeDefault) override;
 
-			llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			static VoidType *get() noexcept;
 		};
 
