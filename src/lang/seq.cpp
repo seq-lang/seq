@@ -188,7 +188,6 @@ void SeqModule::optimize(bool debug)
 
 void SeqModule::compile(const std::string& out, bool debug)
 {
-#if LLVM_VERSION_MAJOR >= 7
 	codegen(module);
 	verify();
 	optimize(debug);
@@ -198,18 +197,20 @@ void SeqModule::compile(const std::string& out, bool debug)
 		errs() << *module;
 
 	std::error_code err;
-	raw_fd_ostream stream(out, err);
+	raw_fd_ostream stream(out, err, llvm::sys::fs::F_None);
+
+#if LLVM_VERSION_MAJOR >= 7
 	WriteBitcodeToFile(*module, stream);
+#else
+	WriteBitcodeToFile(module, stream);
+#endif
+
 	module = nullptr;
 
 	if (err) {
 		std::cerr << "error: " << err.message() << std::endl;
 		exit(err.value());
 	}
-#else
-	std::cerr << "error: compilation to LLVM bitcode requires LLVM 7+" << std::endl;
-	exit(EXIT_FAILURE);
-#endif
 }
 
 void SeqModule::execute(const std::vector<std::string>& args,
