@@ -25,6 +25,7 @@
 #include "funct.h"
 #include "ref.h"
 #include "optional.h"
+#include "ptr.h"
 #include "generic.h"
 #include "source.h"
 

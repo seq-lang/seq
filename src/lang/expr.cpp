@@ -120,7 +120,7 @@ Value *BoolExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	return ConstantInt::get(getType()->getLLVMType(context), b ? 1 : 0);
 }
 
-StrExpr::StrExpr(std::string s) : Expr(types::Str), s(std::move(s))
+StrExpr::StrExpr(std::string s) : Expr(types::Str), s(std::move(s)), strVar(nullptr)
 {
 }
 
@@ -130,13 +130,15 @@ Value *StrExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	Module *module = block->getModule();
 	BasicBlock *preambleBlock = base->getPreamble();
 
-	GlobalVariable *strVar = new GlobalVariable(*module,
-	                                            llvm::ArrayType::get(IntegerType::getInt8Ty(context), s.length() + 1),
-	                                            true,
-	                                            GlobalValue::PrivateLinkage,
-	                                            ConstantDataArray::getString(context, s),
-	                                            "str_literal");
-	strVar->setAlignment(1);
+	if (!strVar || strVar->getParent() != module) {
+		strVar = new GlobalVariable(*module,
+		                            llvm::ArrayType::get(IntegerType::getInt8Ty(context), s.length() + 1),
+		                            true,
+		                            GlobalValue::PrivateLinkage,
+		                            ConstantDataArray::getString(context, s),
+		                            "str_literal");
+		strVar->setAlignment(1);
+	}
 
 	IRBuilder<> builder(preambleBlock);
 	Value *str = builder.CreateBitCast(strVar, IntegerType::getInt8PtrTy(context));

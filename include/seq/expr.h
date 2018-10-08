@@ -75,6 +75,7 @@ namespace seq {
 	class StrExpr : public Expr {
 	private:
 		std::string s;
+		llvm::GlobalVariable *strVar;
 	public:
 		explicit StrExpr(std::string s);
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;

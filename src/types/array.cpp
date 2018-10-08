@@ -285,7 +285,7 @@ void types::ArrayType::initFields()
 
 	vtable.fields = {
 		{"len", {0, Int}},
-		{"ptr", {1, Void}}
+		{"ptr", {1, PtrType::get(indexType())}}
 	};
 }
 
@@ -309,7 +309,7 @@ types::Type *types::ArrayType::getConstructType(const std::vector<types::Type *>
 
 Type *types::ArrayType::getLLVMType(LLVMContext& context) const
 {
-	return StructType::get(seqIntLLVM(context), PointerType::get(baseType->getLLVMType(context), 0));
+	return StructType::get(seqIntLLVM(context), PointerType::get(indexType()->getLLVMType(context), 0));
 }
 
 seq_int_t types::ArrayType::size(Module *module) const

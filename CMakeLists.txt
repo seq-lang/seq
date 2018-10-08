@@ -98,6 +98,7 @@ add_library(seq SHARED include/seq/any.h
                        include/seq/optional.h
                        include/seq/parser.h
                        include/seq/patterns.h
+                       include/seq/ptr.h
                        include/seq/record.h
                        include/seq/ref.h
                        include/seq/seq.h
@@ -124,6 +125,7 @@ add_library(seq SHARED include/seq/any.h
                        src/types/generic.cpp
                        src/types/num.cpp
                        src/types/optional.cpp
+                       src/types/ptr.cpp
                        src/types/record.cpp
                        src/types/ref.cpp
                        src/types/seqt.cpp

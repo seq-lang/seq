@@ -1249,7 +1249,8 @@ struct control<print_stmt> : pegtl::normal<print_stmt>
 		p->setBase(state.base());
 		state.stmt(p);
 
-		p = new Print(new StrExpr("\n"));
+		static auto *newline = new StrExpr("\n");
+		p = new Print(newline);
 		p->setBase(state.base());
 		state.stmt(p);
 	}
@@ -2767,6 +2768,19 @@ struct control<gen_tail> : pegtl::normal<gen_tail>
 		assert(state.top().type == SeqEntity::TYPE);
 		types::Type *type0 = state.top().value.type;
 		types::Type *type = types::GenType::get(type0);
+		state.top() = type;
+	}
+};
+
+template<>
+struct control<ptr_tail> : pegtl::normal<ptr_tail>
+{
+	template<typename Input>
+	static void success(Input&, ParseState& state)
+	{
+		assert(state.top().type == SeqEntity::TYPE);
+		types::Type *type0 = state.top().value.type;
+		types::Type *type = types::PtrType::get(type0);
 		state.top() = type;
 	}
 };
