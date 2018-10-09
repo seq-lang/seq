@@ -85,6 +85,16 @@ Value *types::ByteType::defaultValue(BasicBlock *block)
 	return ConstantInt::get(getLLVMType(block->getContext()), 0);
 }
 
+Value *types::ByteType::construct(BaseFunc *base,
+                                  const std::vector<Value *>& args,
+                                  BasicBlock *block)
+{
+	assert(args.size() == 1);
+	LLVMContext& context = block->getContext();
+	IRBuilder<> builder(block);
+	return builder.CreateTrunc(args[0], getLLVMType(context));
+}
+
 void types::IntType::initOps()
 {
 	if (!vtable.ops.empty())
@@ -378,6 +388,14 @@ void types::ByteType::initOps()
 			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool->getLLVMType(b.getContext()));
 		}},
 	};
+}
+
+types::Type *types::ByteType::getConstructType(const std::vector<types::Type *>& inTypes)
+{
+	if (inTypes.size() != 1 || !inTypes[0]->is(types::Int))
+		throw exc::SeqException("byte constructor takes a single int argument");
+
+	return this;
 }
 
 Type *types::IntType::getLLVMType(LLVMContext& context) const

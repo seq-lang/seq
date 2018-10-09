@@ -264,6 +264,14 @@ Value *types::BaseSeqType::defaultValue(BasicBlock *block)
 	return make(ptr, len, block);
 }
 
+Value *types::BaseSeqType::construct(BaseFunc *base,
+                                     const std::vector<Value *>& args,
+                                     BasicBlock *block)
+{
+	assert(args.size() == 2);
+	return make(args[0], args[1], block);
+}
+
 void types::BaseSeqType::initFields()
 {
 	if (!vtable.fields.empty())
@@ -278,6 +286,18 @@ void types::BaseSeqType::initFields()
 bool types::BaseSeqType::isAtomic() const
 {
 	return false;
+}
+
+types::Type *types::BaseSeqType::getConstructType(const std::vector<types::Type *>& inTypes)
+{
+	if (inTypes.size() != 2 ||
+	    !inTypes[0]->is(types::PtrType::get(types::Byte)) ||
+	    !inTypes[1]->is(types::Int)) {
+
+		throw exc::SeqException("string/sequence constructor takes a byte pointer and int as arguments");
+	}
+
+	return this;
 }
 
 Type *types::BaseSeqType::getLLVMType(LLVMContext& context) const
