@@ -93,6 +93,11 @@ SEQ_FUNC void seq_print_bool(bool b)
 	cout << (b ? "true" : "false");
 }
 
+SEQ_FUNC void seq_print_byte(char c)
+{
+	cout << c;
+}
+
 SEQ_FUNC void seq_print_seq(char *seq, seq_int_t len)
 {
 	cout.write(seq, len);

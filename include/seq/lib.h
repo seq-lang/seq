@@ -33,6 +33,7 @@ SEQ_FUNC void *seq_copy_array_atomic(void *arr, seq_int_t len, seq_int_t elem_si
 SEQ_FUNC void seq_print_int(seq_int_t n);
 SEQ_FUNC void seq_print_float(double f);
 SEQ_FUNC void seq_print_bool(bool b);
+SEQ_FUNC void seq_print_byte(char c);
 SEQ_FUNC void seq_print_seq(char *seq, seq_int_t len);
 
 SEQ_FUNC void *seq_io_openr(const char *filename);

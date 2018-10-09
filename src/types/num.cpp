@@ -24,6 +24,11 @@ types::BoolType::BoolType() : Type("Bool", NumberType::get())
 	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_bool);
 }
 
+types::ByteType::ByteType() : Type("Byte", NumberType::get())
+{
+	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_byte);
+}
+
 Value *types::IntType::eq(BaseFunc *base,
                           Value *self,
                           Value *other,
@@ -51,6 +56,15 @@ Value *types::BoolType::eq(BaseFunc *base,
 	return builder.CreateICmpEQ(self, other);
 }
 
+Value *types::ByteType::eq(BaseFunc *base,
+                           Value *self,
+                           Value *other,
+                           BasicBlock *block)
+{
+	IRBuilder<> builder(block);
+	return builder.CreateICmpEQ(self, other);
+}
+
 Value *types::IntType::defaultValue(BasicBlock *block)
 {
 	return ConstantInt::get(getLLVMType(block->getContext()), 0);
@@ -62,6 +76,11 @@ Value *types::FloatType::defaultValue(BasicBlock *block)
 }
 
 Value *types::BoolType::defaultValue(BasicBlock *block)
+{
+	return ConstantInt::get(getLLVMType(block->getContext()), 0);
+}
+
+Value *types::ByteType::defaultValue(BasicBlock *block)
 {
 	return ConstantInt::get(getLLVMType(block->getContext()), 0);
 }
@@ -338,6 +357,29 @@ void types::BoolType::initOps()
 	};
 }
 
+void types::ByteType::initOps()
+{
+	if (!vtable.ops.empty())
+		return;
+
+	vtable.ops = {
+		// bool ops
+		{uop("!"), Byte, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			Value *zero = ConstantInt::get(Byte->getLLVMType(b.getContext()), 0);
+			return b.CreateZExt(b.CreateICmpEQ(lhs, zero), Bool->getLLVMType(b.getContext()));
+		}},
+
+		// bool,bool ops
+		{bop("=="), Byte, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{bop("!="), Byte, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		}},
+	};
+}
+
 Type *types::IntType::getLLVMType(LLVMContext& context) const
 {
 	return seqIntLLVM(context);
@@ -349,6 +391,11 @@ Type *types::FloatType::getLLVMType(LLVMContext& context) const
 }
 
 Type *types::BoolType::getLLVMType(LLVMContext& context) const
+{
+	return IntegerType::getInt8Ty(context);
+}
+
+Type *types::ByteType::getLLVMType(LLVMContext& context) const
 {
 	return IntegerType::getInt8Ty(context);
 }
@@ -366,6 +413,11 @@ seq_int_t types::FloatType::size(Module *module) const
 seq_int_t types::BoolType::size(Module *module) const
 {
 	return sizeof(bool);
+}
+
+seq_int_t types::ByteType::size(Module *module) const
+{
+	return 1;
 }
 
 types::NumberType *types::NumberType::get() noexcept
@@ -389,5 +441,11 @@ types::FloatType *types::FloatType::get() noexcept
 types::BoolType *types::BoolType::get() noexcept
 {
 	static BoolType instance;
+	return &instance;
+}
+
+types::ByteType *types::ByteType::get() noexcept
+{
+	static ByteType instance;
 	return &instance;
 }

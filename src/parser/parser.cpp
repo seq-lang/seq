@@ -644,6 +644,14 @@ struct action<bool_type> {
 };
 
 template<>
+struct action<byte_type> {
+	static void apply0(ParseState& state)
+	{
+		state.add((types::Type *)types::Byte);
+	}
+};
+
+template<>
 struct action<str_type> {
 	static void apply0(ParseState& state)
 	{

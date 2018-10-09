@@ -97,9 +97,10 @@ struct seq_type : TAO_PEGTL_STRING("Seq") {};
 struct int_type : TAO_PEGTL_STRING("Int") {};
 struct float_type : TAO_PEGTL_STRING("Float") {};
 struct bool_type : TAO_PEGTL_STRING("Bool") {};
+struct byte_type : TAO_PEGTL_STRING("Byte") {};
 struct str_type : TAO_PEGTL_STRING("Str") {};
 struct source_type : TAO_PEGTL_STRING("Source") {};
-struct builtin_type : pegtl::sor<seq_type, int_type, float_type, bool_type, str_type, source_type> {};
+struct builtin_type : pegtl::sor<seq_type, int_type, float_type, bool_type, byte_type, str_type, source_type> {};
 struct custom_type : pegtl::seq<pegtl::not_at<pegtl::sor<str_keyword, builtin_type>>, pegtl::identifier> {};
 struct realized_type : pegtl::seq<custom_type, seps, pegtl::one<'['>, seps, pegtl::list<type, pegtl::seq<seps, pegtl::one<','>, seps>>, seps, pegtl::one<']'>> {};
 
@@ -120,7 +121,7 @@ struct gen_tail : pegtl::one<'+'> {};
 struct ptr_tail : pegtl::one<'*'> {};
 struct type_tail : pegtl::sor<array_tail, opt_tail, gen_tail, ptr_tail> {};
 
-struct type0 : pegtl::sor<record_type, func_type, seq_type, int_type, float_type, bool_type, str_type, source_type, realized_type, custom_type> {};
+struct type0 : pegtl::sor<record_type, func_type, seq_type, int_type, float_type, bool_type, byte_type, str_type, source_type, realized_type, custom_type> {};
 struct type : pegtl::seq<type0, pegtl::star<seps, type_tail>> {};
 
 /*

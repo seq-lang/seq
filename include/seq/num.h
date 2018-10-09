@@ -75,6 +75,26 @@ namespace seq {
 			static BoolType *get() noexcept;
 		};
 
+		class ByteType : public Type {
+		private:
+			ByteType();
+		public:
+			ByteType(ByteType const&)=delete;
+			void operator=(BoolType const&)=delete;
+
+			llvm::Value *eq(BaseFunc *base,
+			                llvm::Value *self,
+			                llvm::Value *other,
+			                llvm::BasicBlock *block) override;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+
+			void initOps() override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			seq_int_t size(llvm::Module *module) const override;
+			static ByteType *get() noexcept;
+		};
+
 	}
 }
 

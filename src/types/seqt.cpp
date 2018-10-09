@@ -271,7 +271,7 @@ void types::BaseSeqType::initFields()
 
 	vtable.fields = {
 		{"len", {0, Int}},
-		{"ptr", {1, Void}}
+		{"ptr", {1, PtrType::get(Byte)}}
 	};
 }
 

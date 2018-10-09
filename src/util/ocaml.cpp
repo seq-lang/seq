@@ -18,6 +18,7 @@ using namespace seq;
 
 FOREIGN types::Type *void_type()        { return types::Void; }
 FOREIGN types::Type *bool_type()        { return types::Bool; }
+FOREIGN types::Type *byte_type()        { return types::Byte; }
 FOREIGN types::Type *int_type()         { return types::Int; }
 FOREIGN types::Type *float_type()       { return types::Float; }
 FOREIGN types::Type *str_type()         { return types::Str; }
