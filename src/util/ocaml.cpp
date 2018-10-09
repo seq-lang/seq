@@ -53,6 +53,11 @@ FOREIGN types::Type *ref_type(const char *name)
 	return f;
 }
 
+FOREIGN types::Type *ptr_type(types::Type *base)
+{
+	return types::PtrType::get(base);
+}
+
 FOREIGN void set_ref_record(types::RefType *f, types::RecordType *rec)
 {
 	E("set_ref_record[{}, {}]", f->getName(), rec->getName());
@@ -323,6 +328,12 @@ FOREIGN types::Type *get_func_generic(Func *fn, int idx)
 {
 	E("get_func_generic[{}, {}]", fn->genericName(), idx);
 	return fn->getGeneric(idx);
+}
+
+FOREIGN void set_func_extern(Func *fn)
+{
+	E("set_func_extern");
+	fn->setExternal();
 }
 
 FOREIGN char *get_expr_name(Expr *ex)
