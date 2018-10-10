@@ -65,7 +65,10 @@ type statement =
   | For of expr * expr * statement list * pos_t
   | If of (expr option * statement list * pos_t) list
   | Match of expr * (expr option * ident option * statement list * pos_t) list * pos_t
-  | Function of arg * expr list * arg list * statement list * pos_t (* def arg [typ list] (arg list): st list *)
+  | Function of arg * expr list * arg list * statement list * pos_t 
+    (* def arg [typ list] (arg list): st list *)
+  | Extern of string * string option * arg * arg list * pos_t 
+    (* def lang lib arg [typ list] (arg list): st list *)
   | Class of ident * expr list * arg list * statement list * pos_t
   | Extend of ident * statement list * pos_t
   (* | DecoratedFunction of decorator list * statement *)
@@ -89,7 +92,6 @@ let rec prn_expr prn_pos = function
   | String(s, pos) -> sprintf "%sString(%s)" (prn_pos pos) s
   (* | Regex(s, _) -> sprintf "Regex(%s)" s *)
   | Seq(s, pos) -> sprintf "%sSeq(%s)" (prn_pos pos) s
-  (* | Extern(l, v, _) -> sprintf "Extern_%s(%s)" l v *)
   | Id(i, pos) -> sprintf "%s%s" (prn_pos pos) i
   | Generic(i, pos) -> sprintf "%s%s" (prn_pos pos) i
   | Tuple(el, pos) -> sprintf "%sTuple(%s)" (prn_pos pos) @@ sci ", " el (prn_expr prn_pos)
@@ -166,6 +168,10 @@ let rec prn_statement level prn_pos st =
   | Function(v, tl, vl, sl, pos) -> 
       sprintf "%sDef<%s>[%s; %s;\n%s]" (prn_pos pos) (sci ", " tl (prn_expr prn_pos)) (prn_va prn_pos v) (sci ", " vl (prn_va prn_pos)) @@ 
         sci "\n" sl (prn_statement (level + 1) prn_pos)
+  | Extern(lng, dylib, v, vl, pos) -> 
+      sprintf "%sExtern<%s%s>[%s; %s]" (prn_pos pos) lng 
+        (match dylib with Some s -> ", "^s | None -> "") 
+        (prn_va prn_pos v) (sci ", " vl (prn_va prn_pos)) 
   | Class((v, _), tl, vl, sl, pos) -> 
       sprintf "%sClass<%s>[%s; %s;\n%s]" (prn_pos pos) (sci ", " tl (prn_expr prn_pos)) v (sci ", " vl (prn_va prn_pos)) @@ 
         sci "\n" sl (prn_statement (level + 1) prn_pos)

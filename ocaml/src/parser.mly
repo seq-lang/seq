@@ -16,7 +16,6 @@
 %token <float * Ast.pos_t>           FLOAT
 %token <string * Ast.pos_t>          STRING ID GENERIC
 %token <string * Ast.pos_t>          REGEX SEQ
-%token <string * string * Ast.pos_t> EXTERN
 
 /* blocks */
 %token <Ast.pos_t> INDENT 
@@ -38,7 +37,7 @@
 /* keywords */
 %token <Ast.pos_t> FOR IN WHILE CONTINUE BREAK        /* loops */
 %token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT /* conditionals */
-%token <Ast.pos_t> DEF RETURN YIELD LAMBDA            /* functions */
+%token <Ast.pos_t> DEF RETURN YIELD EXTERN            /* functions */
 %token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND           /* types */
 %token <Ast.pos_t> IMPORT FROM GLOBAL                 /* variables */
 %token <Ast.pos_t> PRINT PASS ASSERT                  /* keywords */
@@ -75,9 +74,6 @@ atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
     noimp "Regex" 
     (* Regex $1 *) }
   | SEQ { Seq $1 }
-  | EXTERN { 
-    noimp "Extern" 
-    (* let a, b = $1 in Extern (a, b) *) }
   | tuple { $1 }
   | list | dict { $1 }
   | generic { $1 }
@@ -312,6 +308,12 @@ func:
     s = suite 
     { let intypes = match intypes with None -> [] | Some x -> x in
       Function (Arg(n, ret), intypes, params, s, $1) }
+  | EXTERN; lang = ID; dylib = dylib_spec?; n = ID;
+    LP params = separated_list(COMMA, typed_param); RP
+    ret = func_ret_type 
+    { Extern ((fst lang), dylib, Arg(n, Some ret), params, $1) }
+dylib_spec:
+  | LP STRING RP { fst $2 }
 func_ret_type:
   | OF; test { $2 }
 func_param:

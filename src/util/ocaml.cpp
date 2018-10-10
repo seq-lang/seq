@@ -48,6 +48,7 @@ FOREIGN types::Type *gen_type(types::Type *ret)
 	return types::GenType::get(ret);
 }
 
+
 FOREIGN types::Type *ref_type(const char *name)
 {
 	auto f = types::RefType::get(name);

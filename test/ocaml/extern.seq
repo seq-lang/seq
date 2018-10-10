@@ -1,0 +1,52 @@
+# 786
+
+extern c fopen(f: ptr[byte], m: ptr[byte]) -> ptr[void]
+extern c fclose(f: ptr[void]) -> int
+extern c getline(lineptr: ptr[ptr[byte]], n: ptr[int], file: ptr[void]) -> int
+extern c free(m: ptr[void]) -> void
+extern c system(c: ptr[byte]) -> int
+
+class File(fp: ptr[void]):
+   def init(path: str) -> File:
+      fp = fopen(path.ptr, "rb".ptr)
+      return File(fp)
+
+   def read(self):
+      buf = ptr[ptr[byte]](1)
+      sz = ptr[int](1)
+      rd = getline(buf, sz, self.fp)
+      if rd != -1:
+         if buf[0][rd - 1] == byte(10):
+            rd -= 1
+         return str(buf[0], rd)
+      else:
+         return ""
+
+   def read_yield(self):
+      buf = ptr[ptr[byte]](1)
+      sz = ptr[int](1)
+      rd = getline(buf, sz, self.fp)
+      if rd != -1:
+         if buf[0][rd - 1] == byte(10):
+            rd -= 1
+         yield str(buf[0], rd)
+
+   def clean(self) -> void:
+      if self.fp:
+         fclose(self.fp)
+      if self.buf[0]:
+         free(self.buf[0])
+
+
+f = File.init("dune-project")
+system("cat dune-project".ptr)
+
+print f.read()
+print f.read()
+
+# this:
+# print f.read_yield() #-> compile error
+# print f.read_yield() #-> compile error
+# this: only one line
+#for l in f.read_yield():
+#   print l

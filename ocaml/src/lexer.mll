@@ -129,7 +129,7 @@ and read state = parse
       | "while"    -> P.WHILE      (cur_pos lexbuf)
       | "type"     -> P.TYPE       (cur_pos lexbuf)
       | "default"  -> P.DEFAULT    (cur_pos lexbuf)
-      | "lambda"   -> P.LAMBDA     (cur_pos lexbuf)
+      (*| "lambda"   -> P.LAMBDA     (cur_pos lexbuf)*)
       | "assert"   -> P.ASSERT     (cur_pos lexbuf)
       | "global"   -> P.GLOBAL     (cur_pos lexbuf)
       | "import"   -> P.IMPORT     (cur_pos lexbuf)
@@ -137,6 +137,7 @@ and read state = parse
       | "class"    -> P.CLASS      (cur_pos lexbuf)
       | "typeof"   -> P.TYPEOF     (cur_pos lexbuf)
       | "extend"   -> P.EXTEND     (cur_pos lexbuf)
+      | "extern"   -> P.EXTERN     (cur_pos lexbuf)
       | _          -> P.ID         (id, cur_pos lexbuf)
   }
 
@@ -146,10 +147,10 @@ and read state = parse
   | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
 
   | '`' (ident as gen) { P.GENERIC ("`" ^ gen, cur_pos lexbuf) }
-  | (ident as r) '`' { 
+(*  | (ident as r) '`' { 
     let s = read_extern state (Buffer.create 17) lexbuf in
     P.EXTERN(r, s, cur_pos lexbuf)
-  }
+  }*)
   
   | "(" { ignore_nl state; P.LP (cur_pos lexbuf) }
   | ")" { aware_nl state;  P.RP (cur_pos lexbuf) }

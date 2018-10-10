@@ -37,7 +37,7 @@ let init_context fn mdl filename =
   Hashtbl.set ctx.map ~key:"bool"  ~data:(Type (bool_type ()));
   Hashtbl.set ctx.map ~key:"float" ~data:(Type (float_type ()));
   Hashtbl.set ctx.map ~key:"file"  ~data:(Type (file_type ()));
-  (* Hashtbl.set ctx.map ~key:"array" ~data:(Type (array_type (generic_type ()))); *)
+  Hashtbl.set ctx.map ~key:"byte"  ~data:(Type (byte_type ()));
   ctx
 
 (* placeholder for NotImplemented *)
@@ -115,6 +115,11 @@ let rec get_seq_expr ctx expr =
       seq_error "Array needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (array_type typ), pos
+  | Index(Id("ptr", pos), indices) -> 
+    if List.length indices <> 1 then 
+      seq_error "Pointer needs only one type" pos;
+    let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
+    type_expr (ptr_type typ), pos
   | Index(Id("callable", pos), indices) -> 
     let typ_exprs = List.map indices ~f:(get_type_from_expr_exn ctx) in
     let ret, args = match List.rev typ_exprs with
@@ -148,6 +153,7 @@ let rec get_seq_expr ctx expr =
   in 
   set_pos expr pos;
   expr
+
 and get_type_from_expr_exn ctx (t:Ast.expr) = 
   let typ_expr = get_seq_expr ctx t in
   match get_type typ_expr with
@@ -314,6 +320,27 @@ let rec get_seq_stmt ctx block stmt : unit =
   | Function(_, _, _, _, pos) as fn ->
     let _, fn = get_seq_fn ctx fn in 
     func_stmt fn, pos
+  | Extern("c", _, ret, args, pos) ->
+    let fn_name, ret_typ = match ret with 
+    | Arg((n, _), Some typ) -> n, typ 
+    | _ -> seq_error "Return type must be defined for extern functions" pos in
+    if is_some @@ Hashtbl.find ctx.map fn_name then 
+      seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
+    
+    let fn = func fn_name in
+    Hashtbl.set ctx.map ~key:fn_name ~data:(Func fn);
+    
+    let typ = get_type_from_expr_exn ctx ret_typ in
+    set_func_out fn typ;
+
+    let arg_names, arg_types = List.unzip @@ List.map args ~f:(function 
+      | Arg((n, _), Some t) -> (n, get_type_from_expr_exn ctx t) 
+      | _ -> seq_error "Argument type must be defined for extern functions" pos) in 
+    set_func_params fn arg_names arg_types;
+    set_func_extern fn;
+    func_stmt fn, pos
+  | Extern(_, _, _, _, _) ->
+    noimp "Non-c externs"
   | Class((class_name, name_pos), types, args, functions, pos) ->
     if is_some (Hashtbl.find ctx.map class_name) then
       seq_error (sprintf "Class %s already defined" class_name) name_pos;
@@ -355,6 +382,54 @@ let rec get_seq_stmt ctx block stmt : unit =
   set_base stmt ctx.base;
   set_pos stmt pos;
   add_stmt stmt block
+
+and get_seq_fn ctx ?parent_class = function 
+  | Function(return_typ, types, args, stmts, pos) ->
+    let fn_name, ret_typ = match return_typ with Arg((n, _), typ) -> n, typ in
+
+    if is_some @@ Hashtbl.find ctx.map fn_name then 
+      seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
+    
+    let fn = func fn_name in
+    (* add it to the table only if it is "pure" function *)
+    if is_none parent_class then 
+      Hashtbl.set ctx.map ~key:fn_name ~data:(Func fn);
+    
+    if is_some ret_typ then begin
+      let typ = get_type_from_expr_exn ctx (Option.value_exn ret_typ) in
+      set_func_out fn typ
+    end;
+
+    (* handle statements *)
+    let fn_ctx = {(init_context fn ctx.mdl ctx.filename) 
+      with map=Hashtbl.filter ctx.map ~f:(fun v -> 
+        match v with Func _ | Type _ -> true | _ -> false)} in
+    let arg_names, arg_types = set_generics fn_ctx types args 
+      (set_func_generics fn) 
+      (fun idx name -> 
+        set_func_generic_name fn idx name;
+        get_func_generic fn idx) in
+    set_func_params fn arg_names arg_types;
+
+    List.iter arg_names ~f:(fun arg_name -> 
+      Hashtbl.set fn_ctx.map ~key:arg_name ~data:(Var (get_func_arg fn arg_name)));
+    Stack.push fn_ctx.stack arg_names;
+    
+    let fn_block = get_func_block fn in
+    List.iter stmts ~f:(get_seq_stmt fn_ctx fn_block);
+    (fn_name, fn)
+  | _ -> 
+    seq_error "get_seq_func MUST HAVE Function as an input" dummy_pos
+
+and get_seq_case_pattern _ = function
+  (*  condition, guard, statements *)
+  | None -> wildcard_pattern ()
+  | Some (Int (i, _)) -> int_pattern i
+  | Some (String (s, _)) -> str_pattern s
+  | Some (Seq (s, _)) -> str_seq_pattern s
+  | Some (Bool (b, _)) -> bool_pattern b
+  | _ -> noimp "Match condition"
+
 and parse_file ?execute mdl infile = 
   let print_error kind lines ?msg (pos: pos_t) = 
     let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
@@ -413,53 +488,6 @@ and parse_file ?execute mdl infile =
     print_error "Compiler" lines pos ~msg:msg;
     exit 1
   
-and get_seq_fn ctx ?parent_class = function 
-  | Function(return_typ, types, args, stmts, pos) ->
-    let fn_name, ret_typ = match return_typ with Arg((n, _), typ) -> n, typ in
-
-    if is_some @@ Hashtbl.find ctx.map fn_name then 
-      seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
-    
-    let fn = func fn_name in
-    (* add it to the table only if it is "pure" function *)
-    if is_none parent_class then 
-      Hashtbl.set ctx.map ~key:fn_name ~data:(Func fn);
-    
-    if is_some ret_typ then begin
-      let typ = get_type_from_expr_exn ctx (Option.value_exn ret_typ) in
-      set_func_out fn typ
-    end;
-
-    (* handle statements *)
-    let fn_ctx = {(init_context fn ctx.mdl ctx.filename) 
-      with map=Hashtbl.filter ctx.map ~f:(fun v -> 
-        match v with Func _ | Type _ -> true | _ -> false)} in
-    let arg_names, arg_types = set_generics fn_ctx types args 
-      (set_func_generics fn) 
-      (fun idx name -> 
-        set_func_generic_name fn idx name;
-        get_func_generic fn idx) in
-    set_func_params fn arg_names arg_types;
-
-    List.iter arg_names ~f:(fun arg_name -> 
-      Hashtbl.set fn_ctx.map ~key:arg_name ~data:(Var (get_func_arg fn arg_name)));
-    Stack.push fn_ctx.stack arg_names;
-    
-    let fn_block = get_func_block fn in
-    List.iter stmts ~f:(get_seq_stmt fn_ctx fn_block);
-    (fn_name, fn)
-  | _ -> 
-    seq_error "get_seq_func MUST HAVE Function as an input" dummy_pos
-
-and get_seq_case_pattern _ = function
-  (*  condition, guard, statements *)
-  | None -> wildcard_pattern ()
-  | Some (Int (i, _)) -> int_pattern i
-  | Some (String (s, _)) -> str_pattern s
-  | Some (Seq (s, _)) -> str_seq_pattern s
-  | Some (Bool (b, _)) -> bool_pattern b
-  | _ -> noimp "Match condition"
-
 let () = 
   if Array.length Sys.argv < 2 then begin
     noimp "No arguments"
