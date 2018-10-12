@@ -70,7 +70,7 @@ types::Type *types::FuncType::getBaseType(unsigned idx) const
 types::Type *types::FuncType::getCallType(const std::vector<Type *>& inTypes)
 {
 	if (this->inTypes.size() != inTypes.size())
-		throw exc::SeqException("expected " + std::to_string(this->inTypes.size()) + " arguments, but got " + std::to_string(inTypes.size()));
+		throw exc::SeqException("expected " + std::to_string(this->inTypes.size()) + " argument(s), but got " + std::to_string(inTypes.size()));
 
 	for (unsigned i = 0; i < inTypes.size(); i++)
 		if (!types::is(inTypes[i], this->inTypes[i]))

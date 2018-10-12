@@ -93,23 +93,63 @@ Value *types::Type::call(BaseFunc *base,
 	throw exc::SeqException("cannot call type '" + getName() + "'");
 }
 
+static Value *funcAsMethod(types::Type *type,
+                           BaseFunc *method,
+                           Value *self,
+                           BasicBlock *block)
+{
+	FuncExpr e(method);
+	auto *funcType = dynamic_cast<types::FuncType *>(e.getType());
+	assert(funcType);
+	Value *func = e.codegen(nullptr, block);
+	return types::MethodType::get(type, funcType)->make(self, func, block);
+}
+
+static types::MethodType *funcAsMethodType(types::Type *type, BaseFunc *method)
+{
+	FuncExpr e(method);
+	auto *funcType = dynamic_cast<types::FuncType *>(e.getType());
+	assert(funcType);
+	return types::MethodType::get(type, funcType);
+}
+
+static Value *funcAsStaticMethod(BaseFunc *method, BasicBlock *block)
+{
+	FuncExpr e(method);
+	Value *func = e.codegen(nullptr, block);
+	return func;
+}
+
+static types::FuncType *funcAsStaticMethodType(BaseFunc *method)
+{
+	FuncExpr e(method);
+	auto *funcType = dynamic_cast<types::FuncType *>(e.getType());
+	assert(funcType);
+	return funcType;
+}
+
 Value *types::Type::memb(Value *self,
                          const std::string& name,
                          BasicBlock *block)
 {
 	initFields();
-	auto iter1 = getVTable().methods.find(name);
+	initOps();
 
-	if (iter1 != getVTable().methods.end()) {
-		FuncExpr e(iter1->second);
-		auto *type = dynamic_cast<FuncType *>(e.getType());
-		assert(type);
-		Value *func = e.codegen(nullptr, block);
-		return MethodType::get(this, type)->make(self, func, block);
+	for (auto& magic : vtable.overloads) {
+		if (magic.name == name)
+			return funcAsMethod(this, magic.func, self, block);
 	}
 
-	auto iter2 = getVTable().fields.find(name);
+	for (auto& magic : vtable.magic) {
+		if (name == magic.name)
+			return funcAsMethod(this, magic.asFunc(this), self, block);
+	}
 
+	auto iter1 = getVTable().methods.find(name);
+	if (iter1 != getVTable().methods.end())
+		return funcAsMethod(this, iter1->second, self, block);
+
+	auto iter2 = getVTable().fields.find(name);
 	if (iter2 == getVTable().fields.end())
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
@@ -120,17 +160,23 @@ Value *types::Type::memb(Value *self,
 types::Type *types::Type::membType(const std::string& name)
 {
 	initFields();
-	auto iter1 = getVTable().methods.find(name);
+	initOps();
 
-	if (iter1 != getVTable().methods.end()) {
-		FuncExpr e(iter1->second);
-		auto *type = dynamic_cast<FuncType *>(e.getType());
-		assert(type);
-		return MethodType::get(this, type);
+	for (auto& magic : vtable.overloads) {
+		if (magic.name == name)
+			return funcAsMethodType(this, magic.func);
 	}
 
-	auto iter2 = getVTable().fields.find(name);
+	for (auto& magic : vtable.magic) {
+		if (name == magic.name)
+			return funcAsMethodType(this, magic.asFunc(this));
+	}
 
+	auto iter1 = getVTable().methods.find(name);
+	if (iter1 != getVTable().methods.end())
+		return funcAsMethodType(this, iter1->second);
+
+	auto iter2 = getVTable().fields.find(name);
 	if (iter2 == getVTable().fields.end() || iter2->second.second->is(types::Void))
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
@@ -139,11 +185,43 @@ types::Type *types::Type::membType(const std::string& name)
 
 Value *types::Type::staticMemb(const std::string& name, BasicBlock *block)
 {
+	initOps();
+
+	for (auto& magic : vtable.overloads) {
+		if (magic.name == name)
+			return funcAsStaticMethod(magic.func, block);
+	}
+
+	for (auto& magic : vtable.magic) {
+		if (name == magic.name)
+			return funcAsStaticMethod(magic.asFunc(this), block);
+	}
+
+	auto iter1 = getVTable().methods.find(name);
+	if (iter1 != getVTable().methods.end())
+		return funcAsStaticMethod(iter1->second, block);
+
 	throw exc::SeqException("type '" + getName() + "' has no static member '" + name + "'");
 }
 
 types::Type *types::Type::staticMembType(const std::string& name)
 {
+	initOps();
+
+	for (auto& magic : vtable.overloads) {
+		if (magic.name == name)
+			return funcAsStaticMethodType(magic.func);
+	}
+
+	for (auto& magic : vtable.magic) {
+		if (name == magic.name)
+			return funcAsStaticMethodType(magic.asFunc(this));
+	}
+
+	auto iter1 = getVTable().methods.find(name);
+	if (iter1 != getVTable().methods.end())
+		return funcAsStaticMethodType(iter1->second);
+
 	throw exc::SeqException("type '" + getName() + "' has no static member '" + name + "'");
 }
 
@@ -164,6 +242,16 @@ Value *types::Type::setMemb(Value *self,
 
 bool types::Type::hasMethod(const std::string& name)
 {
+	for (auto& magic : vtable.overloads) {
+		if (magic.name == name)
+			return true;
+	}
+
+	for (auto& magic : vtable.magic) {
+		if (name == magic.name)
+			return true;
+	}
+
 	return getVTable().methods.find(name) != getVTable().methods.end();
 }
 
@@ -382,6 +470,46 @@ types::OptionalType *types::Type::asOpt()
 types::Type *types::Type::clone(Generic *ref)
 {
 	return this;
+}
+
+BaseFunc *MagicMethod::asFunc(types::Type *type) const
+{
+	std::vector<types::Type *> argsFull(args);
+	argsFull.insert(argsFull.begin(), type);
+
+	return new BaseFuncLite(argsFull, out, [this,type](Module *module) {
+		LLVMContext& context = module->getContext();
+		std::vector<Type *> types;
+		types.push_back(type->getLLVMType(context));
+
+		for (auto *arg : args)
+			types.push_back(arg->getLLVMType(context));
+
+		static int idx = 1;
+		auto *func = cast<Function>(module->getOrInsertFunction("seq.magic." + name + "." + std::to_string(idx++),
+		                                                        FunctionType::get(out->getLLVMType(context), types, false)));
+
+		BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+
+		std::vector<Value *> args;
+		for (auto& arg : func->args())
+			args.push_back(&arg);
+
+		Value *self = nullptr;
+		if (!args.empty()) {
+			self = args[0];
+			args.erase(args.begin());
+		}
+
+		IRBuilder<> builder(entry);
+		Value *result = codegen(self, args, builder);
+		if (result)
+			builder.CreateRet(result);
+		else
+			builder.CreateRetVoid();
+
+		return func;
+	});
 }
 
 bool types::is(types::Type *type1, types::Type *type2)

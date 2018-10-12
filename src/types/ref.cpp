@@ -87,14 +87,11 @@ Value *types::RefType::memb(Value *self,
                             BasicBlock *block)
 {
 	initFields();
-	auto iter = getVTable().methods.find(name);
+	initOps();
 
-	if (iter != getVTable().methods.end()) {
-		FuncExpr e(iter->second);
-		auto *type = dynamic_cast<FuncType *>(e.getType());
-		assert(type);
-		Value *func = e.codegen(nullptr, block);
-		return MethodType::get(this, type)->make(self, func, block);
+	try {
+		return Type::memb(self, name, block);
+	} catch (exc::SeqException& e) {
 	}
 
 	assert(contents);
@@ -111,13 +108,11 @@ Value *types::RefType::memb(Value *self,
 types::Type *types::RefType::membType(const std::string& name)
 {
 	initFields();
-	auto iter = getVTable().methods.find(name);
+	initOps();
 
-	if (iter != getVTable().methods.end()) {
-		FuncExpr e(iter->second);
-		auto *type = dynamic_cast<FuncType *>(e.getType());
-		assert(type);
-		return MethodType::get(this, type);
+	try {
+		return Type::membType(name);
+	} catch (exc::SeqException& e) {
 	}
 
 	try {
@@ -138,30 +133,6 @@ Value *types::RefType::setMemb(Value *self,
 	x = contents->setMemb(x, name, val, block);
 	builder.CreateStore(x, self);
 	return self;
-}
-
-Value *types::RefType::staticMemb(const std::string& name, BasicBlock *block)
-{
-	auto iter = getVTable().methods.find(name);
-
-	if (iter == getVTable().methods.end())
-		return Type::staticMemb(name, block);
-
-	FuncExpr e(iter->second);
-	auto *type = dynamic_cast<FuncType *>(e.getType());
-	assert(type);
-	return e.codegen(nullptr, block);
-}
-
-types::Type *types::RefType::staticMembType(const std::string& name)
-{
-	auto iter = getVTable().methods.find(name);
-
-	if (iter == getVTable().methods.end())
-		return Type::staticMembType(name);
-
-	FuncExpr e(iter->second);
-	return e.getType();
 }
 
 Value *types::RefType::defaultValue(BasicBlock *block)

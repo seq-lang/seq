@@ -145,6 +145,8 @@ namespace seq {
 		std::function<llvm::Value *(llvm::Value *,
 		                            std::vector<llvm::Value *>,
 		                            llvm::IRBuilder<>&)> codegen;
+
+		BaseFunc *asFunc(types::Type *type) const;
 	};
 
 	struct MagicOverload {

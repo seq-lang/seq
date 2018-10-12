@@ -61,10 +61,6 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
-			llvm::Value *staticMemb(const std::string& name, llvm::BasicBlock *block) override;
-
-			Type *staticMembType(const std::string& name) override;
-
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initOps() override;

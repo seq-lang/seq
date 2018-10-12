@@ -12,7 +12,7 @@ extend Source {
     self.close()
   }
 
-  def iter(self: Source) {
+  def __iter__(self: Source) {
     return self._iter_helper(self.get)
   }
 
@@ -113,7 +113,7 @@ def ident(s: Seq) {
   return s
 }
 
-for input in Source(args[0]).iter() {
+for input in Source(args[0]) {
 
   var v = farray[0](input.copy())
   for r in enum(v) {
