@@ -79,95 +79,16 @@ std::string types::GenericType::allocFuncName()
 	return type->allocFuncName();
 }
 
-Value *types::GenericType::loadFromAlloca(BaseFunc *base,
-                                          Value *var,
-                                          BasicBlock *block)
+void types::GenericType::print(Value *self, BasicBlock *block)
 {
 	ensure();
-	return type->loadFromAlloca(base, var, block);
-}
-
-Value *types::GenericType::storeInAlloca(BaseFunc *base,
-                                         Value *self,
-                                         BasicBlock *block,
-                                         bool storeDefault)
-{
-	ensure();
-	return type->storeInAlloca(base, self, block, storeDefault);
-}
-
-Value *types::GenericType::storeInAlloca(BaseFunc *base,
-                                         Value *self,
-                                         BasicBlock *block)
-{
-	ensure();
-	return type->storeInAlloca(base, self, block);
-}
-
-Value *types::GenericType::eq(BaseFunc *base,
-                              Value *self,
-                              Value *other,
-                              BasicBlock *block)
-{
-	ensure();
-	return type->eq(base, self, other, block);
-}
-
-llvm::Value *types::GenericType::copy(BaseFunc *base,
-                                      Value *self,
-                                      BasicBlock *block)
-{
-	ensure();
-	return type->copy(base, self, block);
-}
-
-void types::GenericType::finalizeCopy(Module *module, ExecutionEngine *eng)
-{
-	ensure();
-	type->finalizeCopy(module, eng);
-}
-
-void types::GenericType::print(BaseFunc *base,
-                               Value *self,
-                               BasicBlock *block)
-{
-	ensure();
-	type->print(base, self, block);
+	type->print(self, block);
 }
 
 void types::GenericType::finalizePrint(Module *module, ExecutionEngine *eng)
 {
 	ensure();
 	type->finalizePrint(module, eng);
-}
-
-void types::GenericType::serialize(BaseFunc *base,
-                                   Value *self,
-                                   Value *fp,
-                                   BasicBlock *block)
-{
-	ensure();
-	type->serialize(base, self, fp, block);
-}
-
-void types::GenericType::finalizeSerialize(Module *module, ExecutionEngine *eng)
-{
-	ensure();
-	type->finalizeSerialize(module, eng);
-}
-
-Value *types::GenericType::deserialize(BaseFunc *base,
-                                       Value *fp,
-                                       BasicBlock *block)
-{
-	ensure();
-	return type->deserialize(base, fp, block);
-}
-
-void types::GenericType::finalizeDeserialize(Module *module, ExecutionEngine *eng)
-{
-	ensure();
-	type->finalizeDeserialize(module, eng);
 }
 
 Value *types::GenericType::alloc(Value *count, BasicBlock *block)
@@ -180,90 +101,6 @@ Value *types::GenericType::alloc(seq_int_t count, BasicBlock *block)
 {
 	ensure();
 	return type->alloc(count, block);
-}
-
-void types::GenericType::finalizeAlloc(Module *module, ExecutionEngine *eng)
-{
-	ensure();
-	type->finalizeAlloc(module, eng);
-}
-
-Value *types::GenericType::load(BaseFunc *base,
-                                Value *ptr,
-                                Value *idx,
-                                BasicBlock *block)
-{
-	ensure();
-	return type->load(base, ptr, idx, block);
-}
-
-void types::GenericType::store(BaseFunc *base,
-                               Value *self,
-                               Value *ptr,
-                               Value *idx,
-                               BasicBlock *block)
-{
-	ensure();
-	type->store(base, self, ptr, idx, block);
-}
-
-Value *types::GenericType::indexLoad(BaseFunc *base,
-                                     Value *self,
-                                     Value *idx,
-                                     BasicBlock *block)
-{
-	ensure();
-	return type->indexLoad(base, self, idx, block);
-}
-
-void types::GenericType::indexStore(BaseFunc *base,
-                                    Value *self,
-                                    Value *idx,
-                                    Value *val,
-                                    BasicBlock *block)
-{
-	ensure();
-	type->indexStore(base, self, idx, val, block);
-}
-
-Value *types::GenericType::indexSlice(BaseFunc *base,
-                                      Value *self,
-                                      Value *from,
-                                      Value *to,
-                                      BasicBlock *block)
-{
-	ensure();
-	return type->indexSlice(base, self, from, to, block);
-}
-
-Value *types::GenericType::indexSliceNoFrom(BaseFunc *base,
-                                            Value *self,
-                                            Value *to,
-                                            BasicBlock *block)
-{
-	ensure();
-	return type->indexSliceNoFrom(base, self, to, block);
-}
-
-Value *types::GenericType::indexSliceNoTo(BaseFunc *base,
-                                          Value *self,
-                                          Value *to,
-                                          BasicBlock *block)
-{
-	ensure();
-	return type->indexSliceNoTo(base, self, to, block);
-}
-
-types::Type* types::GenericType::indexType() const
-{
-	ensure();
-	return type->indexType();
-}
-
-types::Type* types::GenericType::subscriptType() const
-{
-	ensure();
-	return type->subscriptType();
 }
 
 Value *types::GenericType::call(BaseFunc *base,
@@ -322,14 +159,11 @@ Value *types::GenericType::defaultValue(BasicBlock *block)
 	return type->defaultValue(block);
 }
 
-Value *types::GenericType::construct(BaseFunc *base,
-                                     const std::vector<Value *>& args,
-                                     BasicBlock *block)
+Value *types::GenericType::boolValue(Value *self, BasicBlock *block)
 {
 	ensure();
-	return type->construct(base, args, block);
+	return type->boolValue(self, block);
 }
-
 
 void types::GenericType::initOps()
 {
@@ -343,16 +177,20 @@ void types::GenericType::initFields()
 	type->initFields();
 }
 
-OpSpec types::GenericType::findUOp(const std::string& symbol)
+types::Type *types::GenericType::magicOut(const std::string& name, std::vector<types::Type *> args)
 {
 	ensure();
-	return type->findUOp(symbol);
+	return type->magicOut(name, args);
 }
 
-OpSpec types::GenericType::findBOp(const std::string& symbol, types::Type *rhsType)
+Value *types::GenericType::callMagic(const std::string& name,
+                                     std::vector<types::Type *> argTypes,
+                                     Value *self,
+                                     std::vector<Value *> args,
+                                     BasicBlock *block)
 {
 	ensure();
-	return type->findBOp(symbol, rhsType);
+	return type->callMagic(name, argTypes, self, args, block);
 }
 
 bool types::GenericType::isAtomic() const
@@ -401,12 +239,6 @@ types::Type *types::GenericType::getCallType(const std::vector<Type *>& inTypes)
 {
 	ensure();
 	return type->getCallType(inTypes);
-}
-
-types::Type *types::GenericType::getConstructType(const std::vector<Type *>& inTypes)
-{
-	ensure();
-	return type->getConstructType(inTypes);
 }
 
 Type *types::GenericType::getLLVMType(LLVMContext& context) const
@@ -465,20 +297,36 @@ types::GenericType *types::GenericType::clone(Generic *ref)
 	return x;
 }
 
-bool types::GenericType::findInType(types::Type *type, std::vector<unsigned>& path)
+static bool findInTypeHelper(types::GenericType *gen,
+                             types::Type *type,
+                             std::vector<unsigned>& path,
+                             std::vector<types::Type *>& seen)
 {
-	if (type->is(this))
+	if (type->is(gen))
 		return true;
+
+	for (auto *saw : seen) {
+		if (saw == type)
+			return false;
+	}
 
 	const unsigned numBases = type->numBaseTypes();
 	for (unsigned i = 0; i < numBases; i++) {
 		path.push_back(i);
-		if (findInType(type->getBaseType(i), path))
+		seen.push_back(type);
+		if (findInTypeHelper(gen, type->getBaseType(i), path, seen))
 			return true;
 		path.pop_back();
+		seen.pop_back();
 	}
 
 	return false;
+}
+
+bool types::GenericType::findInType(types::Type *type, std::vector<unsigned>& path)
+{
+	std::vector<types::Type *> seen;
+	return findInTypeHelper(this, type, path, seen);
 }
 
 Generic::Generic(bool performCaching) :

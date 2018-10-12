@@ -29,6 +29,9 @@ void types::RefType::setContents(types::RecordType *contents)
 
 std::string types::RefType::getName() const
 {
+	if (numGenerics() == 0)
+		return name;
+
 	std::string name = this->name + "[";
 
 	for (unsigned i = 0; i < numGenerics(); i++) {
@@ -67,6 +70,9 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 
 	for (auto& method : ref->getVTable().methods)
 		method.second->resolveTypes();
+
+	for (auto& magic : ref->getVTable().overloads)
+		magic.func->resolveTypes();
 
 	return ref;
 }
@@ -163,22 +169,27 @@ Value *types::RefType::defaultValue(BasicBlock *block)
 	return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
 }
 
-Value *types::RefType::construct(BaseFunc *base,
-                                 const std::vector<Value *>& args,
-                                 BasicBlock *block)
-{
-	return make(block, args);
-}
-
 void types::RefType::initOps()
 {
-	if (!vtable.ops.empty())
+	if (!vtable.magic.empty())
 		return;
 
-	vtable.ops = {
-		{uop("!"), this, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateIsNull(lhs), Bool->getLLVMType(b.getContext()));
-		}}
+	vtable.magic = {
+		{"__new__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			self = contents->alloc(1, b.GetInsertBlock());
+			self = b.CreateBitCast(self, getLLVMType(b.getContext()));
+			return self;
+		}},
+
+		{"__init__", contents->getTypes(), this, SEQ_MAGIC_CAPT(self, args, b) {
+			for (unsigned i = 0; i < args.size(); i++)
+				self = setMemb(self, std::to_string(i+1), args[i], b.GetInsertBlock());
+			return self;
+		}},
+
+		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateIsNotNull(self), Bool->getLLVMType(b.getContext()));
+		}},
 	};
 }
 
@@ -211,24 +222,7 @@ types::Type *types::RefType::getBaseType(unsigned idx) const
 	return contents->getBaseType(idx);
 }
 
-types::Type *types::RefType::getConstructType(const std::vector<Type *>& inTypes)
-{
-	std::vector<types::Type *> expTypes = contents->getTypes();
-
-	if (inTypes.size() != expTypes.size())
-		throw exc::SeqException("expected " + std::to_string(expTypes.size()) + " arguments, " +
-		                        "but got " + std::to_string(inTypes.size()));
-
-	for (unsigned i = 0; i < inTypes.size(); i++) {
-		if (!types::is(inTypes[i], expTypes[i]))
-			throw exc::SeqException("expected " + expTypes[i]->getName() +
-			                        ", but got " + inTypes[i]->getName());
-	}
-
-	return this;
-}
-
-Type *types::RefType::getLLVMType(llvm::LLVMContext& context) const
+Type *types::RefType::getLLVMType(LLVMContext& context) const
 {
 	std::vector<types::Type *> types = getRealizedTypes();
 
@@ -266,10 +260,8 @@ Value *types::RefType::make(BasicBlock *block, std::vector<Value *> vals)
 	val = builder.CreateBitCast(val, cast<PointerType>(type)->getElementType());
 	builder.CreateStore(val, ref);
 
-	if (!vals.empty()) {
-		for (unsigned i = 0; i < vals.size(); i++)
-			ref = setMemb(ref, std::to_string(i+1), vals[i], block);
-	}
+	for (unsigned i = 0; i < vals.size(); i++)
+		ref = setMemb(ref, std::to_string(i+1), vals[i], block);
 
 	return ref;
 }
@@ -290,11 +282,16 @@ types::RefType *types::RefType::clone(Generic *ref)
 
 	x->setContents(contents->clone(ref));
 
+	std::vector<MagicOverload> overloadsCloned;
+	for (auto& magic : getVTable().overloads)
+		overloadsCloned.push_back({magic.name, magic.func->clone(ref)});
+
 	std::map<std::string, BaseFunc *> methodsCloned;
 	for (auto& method : getVTable().methods)
 		methodsCloned.insert({method.first, method.second->clone(ref)});
 
 	x->getVTable().methods = methodsCloned;
+	x->getVTable().overloads = overloadsCloned;
 	x->root = root;
 	x->done = true;
 	return x;

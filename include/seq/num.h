@@ -22,11 +22,6 @@ namespace seq {
 			IntType(IntType const&)=delete;
 			void operator=(IntType const&)=delete;
 
-			llvm::Value *eq(BaseFunc *base,
-			                llvm::Value *self,
-			                llvm::Value *other,
-			                llvm::BasicBlock *block) override;
-
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initOps() override;
@@ -41,11 +36,6 @@ namespace seq {
 		public:
 			FloatType(FloatType const&)=delete;
 			void operator=(FloatType const&)=delete;
-
-			llvm::Value *eq(BaseFunc *base,
-			                llvm::Value *self,
-			                llvm::Value *other,
-			                llvm::BasicBlock *block) override;
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
@@ -62,11 +52,6 @@ namespace seq {
 			BoolType(BoolType const&)=delete;
 			void operator=(BoolType const&)=delete;
 
-			llvm::Value *eq(BaseFunc *base,
-			                llvm::Value *self,
-			                llvm::Value *other,
-			                llvm::BasicBlock *block) override;
-
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initOps() override;
@@ -82,21 +67,9 @@ namespace seq {
 			ByteType(ByteType const&)=delete;
 			void operator=(BoolType const&)=delete;
 
-			llvm::Value *eq(BaseFunc *base,
-			                llvm::Value *self,
-			                llvm::Value *other,
-			                llvm::BasicBlock *block) override;
-
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
-			llvm::Value *construct(BaseFunc *base,
-			                       const std::vector<llvm::Value *>& args,
-			                       llvm::BasicBlock *block) override;
-
 			void initOps() override;
-
-			Type *getConstructType(const std::vector<Type *>& inTypes) override;
-
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 			static ByteType *get() noexcept;

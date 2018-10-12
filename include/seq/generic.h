@@ -32,95 +32,12 @@ namespace seq {
 
 			std::string allocFuncName() override;
 
-			llvm::Value *loadFromAlloca(BaseFunc *base,
-			                            llvm::Value *var,
-			                            llvm::BasicBlock *block) override;
-
-			llvm::Value *storeInAlloca(BaseFunc *base,
-			                           llvm::Value *self,
-			                           llvm::BasicBlock *block,
-			                           bool storeDefault) override;
-
-			llvm::Value *storeInAlloca(BaseFunc *base,
-			                           llvm::Value *self,
-			                           llvm::BasicBlock *block) override;
-
-			llvm::Value *eq(BaseFunc *base,
-			                llvm::Value *self,
-			                llvm::Value *other,
-			                llvm::BasicBlock *block) override;
-
-			llvm::Value *copy(BaseFunc *base,
-			                          llvm::Value *self,
-			                          llvm::BasicBlock *block) override;
-
-			void finalizeCopy(llvm::Module *module, llvm::ExecutionEngine *eng) override;
-
-			void print(BaseFunc *base,
-			           llvm::Value *self,
-			           llvm::BasicBlock *block) override;
+			void print(llvm::Value *self, llvm::BasicBlock *block) override;
 
 			void finalizePrint(llvm::Module *module, llvm::ExecutionEngine *eng) override;
 
-			void serialize(BaseFunc *base,
-			               llvm::Value *self,
-			               llvm::Value *fp,
-			               llvm::BasicBlock *block) override;
-
-			void finalizeSerialize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
-
-			llvm::Value *deserialize(BaseFunc *base,
-			                         llvm::Value *fp,
-			                         llvm::BasicBlock *block) override;
-
-			void finalizeDeserialize(llvm::Module *module, llvm::ExecutionEngine *eng) override;
-
 			llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block) override;
 			llvm::Value *alloc(seq_int_t count, llvm::BasicBlock *block) override;
-
-			void finalizeAlloc(llvm::Module *module, llvm::ExecutionEngine *eng) override;
-
-			llvm::Value *load(BaseFunc *base,
-			                  llvm::Value *ptr,
-			                  llvm::Value *idx,
-			                  llvm::BasicBlock *block) override;
-
-			void store(BaseFunc *base,
-			           llvm::Value *self,
-			           llvm::Value *ptr,
-			           llvm::Value *idx,
-			           llvm::BasicBlock *block) override;
-
-			llvm::Value *indexLoad(BaseFunc *base,
-			                       llvm::Value *self,
-			                       llvm::Value *idx,
-			                       llvm::BasicBlock *block) override;
-
-			void indexStore(BaseFunc *base,
-			                llvm::Value *self,
-			                llvm::Value *idx,
-			                llvm::Value *val,
-			                llvm::BasicBlock *block) override;
-
-			llvm::Value *indexSlice(BaseFunc *base,
-			                        llvm::Value *self,
-			                        llvm::Value *from,
-			                        llvm::Value *to,
-			                        llvm::BasicBlock *block) override;
-
-			llvm::Value *indexSliceNoFrom(BaseFunc *base,
-			                              llvm::Value *self,
-			                              llvm::Value *to,
-			                              llvm::BasicBlock *block) override;
-
-			llvm::Value *indexSliceNoTo(BaseFunc *base,
-			                            llvm::Value *self,
-			                            llvm::Value *from,
-			                            llvm::BasicBlock *block) override;
-
-			Type *indexType() const override;
-
-			Type *subscriptType() const override;
 
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
@@ -148,21 +65,22 @@ namespace seq {
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
-			llvm::Value *construct(BaseFunc *base,
-			                       const std::vector<llvm::Value *>& args,
-			                       llvm::BasicBlock *block) override;
+			llvm::Value *boolValue(llvm::Value *self, llvm::BasicBlock *block) override;
 
 			void initOps() override;
 			void initFields() override;
-			OpSpec findUOp(const std::string& symbol) override;
-			OpSpec findBOp(const std::string& symbol, Type *rhsType) override;
+			Type *magicOut(const std::string& name, std::vector<Type *> args) override;
+			llvm::Value *callMagic(const std::string& name,
+			                       std::vector<Type *> argTypes,
+			                       llvm::Value *self,
+			                       std::vector<llvm::Value *> args,
+			                       llvm::BasicBlock *block) override;
 
 			bool is(Type *type) const override;
 			bool isGeneric(Type *type) const override;
 			unsigned numBaseTypes() const override;
 			Type *getBaseType(unsigned idx) const override;
 			Type *getCallType(const std::vector<Type *>& inTypes) override;
-			Type *getConstructType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 

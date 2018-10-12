@@ -17,7 +17,7 @@ void Print::codegen0(BasicBlock*& block)
 {
 	types::Type *type = expr->getType();
 	Value *val = expr->codegen(getBase(), block);
-	type->print(getBase(), val, block);
+	type->print(val, block);
 }
 
 Print *Print::clone(Generic *ref)
@@ -159,14 +159,10 @@ void AssignIndex::resolveTypes()
 
 void AssignIndex::codegen0(BasicBlock*& block)
 {
-	types::Type *arrType = array->getType();
-	this->idx->ensure(arrType->subscriptType());
-	this->value->ensure(arrType->indexType());
-
 	Value *val = value->codegen(getBase(), block);
 	Value *arr = array->codegen(getBase(), block);
 	Value *idx = this->idx->codegen(getBase(), block);
-	arrType->indexStore(getBase(), arr, idx, val, block);
+	array->getType()->callMagic("__setitem__", {this->idx->getType(), value->getType()}, arr, {idx, val}, block);
 }
 
 AssignIndex *AssignIndex::clone(Generic *ref)
@@ -233,17 +229,14 @@ void If::codegen0(BasicBlock*& block)
 {
 	assert(!conds.empty() && conds.size() == branches.size());
 
-	for (auto *cond : conds)
-		cond->ensure(types::BoolType::get());
-
 	LLVMContext& context = block->getContext();
 	Function *func = block->getParent();
 	IRBuilder<> builder(block);
-
 	std::vector<BranchInst *> binsts;
 
 	for (unsigned i = 0; i < conds.size(); i++) {
 		Value *cond = conds[i]->codegen(getBase(), block);
+		cond = conds[i]->getType()->boolValue(cond, block);
 		Block *branch = branches[i];
 
 		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
@@ -445,12 +438,9 @@ void While::resolveTypes()
 
 void While::codegen0(BasicBlock*& block)
 {
-	cond->ensure(types::BoolType::get());
 	LLVMContext& context = block->getContext();
-
 	BasicBlock *entry = block;
 	Function *func = entry->getParent();
-
 	IRBuilder<> builder(entry);
 
 	BasicBlock *loop0 = BasicBlock::Create(context, "while", func);
@@ -458,6 +448,7 @@ void While::codegen0(BasicBlock*& block)
 	builder.CreateBr(loop);
 
 	Value *cond = this->cond->codegen(getBase(), loop);  // recall: this can change `loop`
+	cond = this->cond->getType()->boolValue(cond, loop);
 	builder.SetInsertPoint(loop);
 	cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
 

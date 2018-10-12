@@ -66,7 +66,7 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 	builder.CreateBr(loop);
 
 	builder.SetInsertPoint(loop);
-	PHINode *control = builder.CreatePHI(IntegerType::getInt32Ty(context), 2, "i");
+	PHINode *control = builder.CreatePHI(LLVM_I32(), 2, "i");
 	Value *next = builder.CreateAdd(control, ConstantInt::get(LLVM_I32(), 1), "next");
 	Value *cond = builder.CreateICmpSLT(control, argc);
 
@@ -77,7 +77,8 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 	Value *arg = builder.CreateLoad(builder.CreateGEP(argv, control));
 	Value *argLen = builder.CreateZExtOrTrunc(builder.CreateCall(strlen, arg), seqIntLLVM(context));
 	Value *str = types::Str->make(arg, argLen, body);
-	arrType->indexStore(nullptr, arr, control, str, body);
+	Value *idx = builder.CreateZExt(control, types::Int->getLLVMType(context));
+	arrType->callMagic("__setitem__", {types::Int, types::Str}, arr, {idx, str}, body);
 	builder.CreateBr(loop);
 
 	control->addIncoming(ConstantInt::get(LLVM_I32(), 0), entry);

@@ -29,42 +29,6 @@ types::ByteType::ByteType() : Type("Byte", NumberType::get())
 	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_byte);
 }
 
-Value *types::IntType::eq(BaseFunc *base,
-                          Value *self,
-                          Value *other,
-                          BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	return builder.CreateICmpEQ(self, other);
-}
-
-Value *types::FloatType::eq(BaseFunc *base,
-                            Value *self,
-                            Value *other,
-                            BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	return builder.CreateFCmpOEQ(self, other);
-}
-
-Value *types::BoolType::eq(BaseFunc *base,
-                           Value *self,
-                           Value *other,
-                           BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	return builder.CreateICmpEQ(self, other);
-}
-
-Value *types::ByteType::eq(BaseFunc *base,
-                           Value *self,
-                           Value *other,
-                           BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	return builder.CreateICmpEQ(self, other);
-}
-
 Value *types::IntType::defaultValue(BasicBlock *block)
 {
 	return ConstantInt::get(getLLVMType(block->getContext()), 0);
@@ -85,317 +49,343 @@ Value *types::ByteType::defaultValue(BasicBlock *block)
 	return ConstantInt::get(getLLVMType(block->getContext()), 0);
 }
 
-Value *types::ByteType::construct(BaseFunc *base,
-                                  const std::vector<Value *>& args,
-                                  BasicBlock *block)
-{
-	assert(args.size() == 1);
-	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
-	return builder.CreateTrunc(args[0], getLLVMType(context));
-}
-
 void types::IntType::initOps()
 {
-	if (!vtable.ops.empty())
+	if (!vtable.magic.empty())
 		return;
 
-	vtable.ops = {
-		// int ops
-		{uop("~"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateNot(lhs);
+	vtable.magic = {
+		{"__init__", {Float}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateFPToSI(args[0], Int->getLLVMType(b.getContext()));
 		}},
 
-		{uop("-"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateNeg(lhs);
+		// int unary
+		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
+			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
+			return b.CreateZExt(b.CreateICmpNE(self, zero), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{uop("+"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return lhs;
+		{"__pos__", {}, Int, SEQ_MAGIC(self, args, b) {
+			return self;
 		}},
 
-		// int,int ops
-		{bop("*"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateMul(lhs, rhs);
+		{"__neg__", {}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateNeg(self);
 		}},
 
-		{bop("/"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateSDiv(lhs, rhs);
+		{"__invert__", {}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateNot(self);
 		}},
 
-		{bop("%"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateSRem(lhs, rhs);
+		// int,int binary
+		{"__add__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateAdd(self, args[0]);
 		}},
 
-		{bop("+"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateAdd(lhs, rhs);
+		{"__sub__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateSub(self, args[0]);
 		}},
 
-		{bop("-"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateSub(lhs, rhs);
+		{"__mul__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateMul(self, args[0]);
 		}},
 
-		{bop("<<"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateShl(lhs, rhs);
+		{"__div__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateSDiv(self, args[0]);
 		}},
 
-		{bop(">>"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateAShr(lhs, rhs);
+		{"__mod__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateSRem(self, args[0]);
 		}},
 
-		{bop("<"), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpSLT(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__lshift__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateShl(self, args[0]);
 		}},
 
-		{bop(">"), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpSGT(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__rshift__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateAShr(self, args[0]);
 		}},
 
-		{bop("<="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpSLE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__eq__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpSGE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__ne__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("=="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__lt__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpSLT(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__gt__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpSGT(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("&"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateAnd(lhs, rhs);
+		{"__le__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpSLE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("^"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateXor(lhs, rhs);
+		{"__ge__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpSGE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("|"), Int, Int, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateOr(lhs, rhs);
+		{"__and__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateAnd(self, args[0]);
 		}},
 
-		// int,float ops
-		{bop("*"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFMul(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
+		{"__or__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateOr(self, args[0]);
 		}},
 
-		{bop("/"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFDiv(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
+		{"__xor__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateXor(self, args[0]);
 		}},
 
-		{bop("%"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFRem(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
+		// int,float binary
+		{"__add__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateFAdd(self, args[0]);
 		}},
 
-		{bop("+"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFAdd(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
+		{"__sub__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateFSub(self, args[0]);
 		}},
 
-		{bop("-"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFSub(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs);
+		{"__mul__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateFMul(self, args[0]);
 		}},
 
-		{bop("<"), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLT(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
+		{"__div__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateFDiv(self, args[0]);
 		}},
 
-		{bop(">"), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGT(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
+		{"__mod__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateFRem(self, args[0]);
 		}},
 
-		{bop("<="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLE(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
+		{"__eq__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGE(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
+		{"__ne__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpONE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("=="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOEQ(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
+		{"__lt__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLT(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpONE(b.CreateSIToFP(lhs, Float->getLLVMType(b.getContext())), rhs), Bool->getLLVMType(b.getContext()));
+		{"__gt__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGT(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__le__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLE(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__ge__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 	};
 }
 
 void types::FloatType::initOps()
 {
-	if (!vtable.ops.empty())
+	if (!vtable.magic.empty())
 		return;
 
-	vtable.ops = {
-		// float ops
-		{uop("-"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFNeg(lhs);
+	vtable.magic = {
+		{"__init__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			return b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 		}},
 
-		{uop("+"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return lhs;
+		// float unary
+		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
+			Value *zero = ConstantFP::get(Float->getLLVMType(b.getContext()), 0.0);
+			return b.CreateZExt(b.CreateFCmpONE(self, zero), Bool->getLLVMType(b.getContext()));
 		}},
 
-		// float,float ops
-		{bop("*"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFMul(lhs, rhs);
+		{"__pos__", {}, Float, SEQ_MAGIC(self, args, b) {
+			return self;
 		}},
 
-		{bop("/"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFDiv(lhs, rhs);
+		{"__neg__", {}, Float, SEQ_MAGIC(self, args, b) {
+			return b.CreateFNeg(self);
 		}},
 
-		{bop("%"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFRem(lhs, rhs);
+		// float,float binary
+		{"__add__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			return b.CreateFAdd(self, args[0]);
 		}},
 
-		{bop("+"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFAdd(lhs, rhs);
+		{"__sub__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			return b.CreateFSub(self, args[0]);
 		}},
 
-		{bop("-"), Float, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFSub(lhs, rhs);
+		{"__mul__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			return b.CreateFMul(self, args[0]);
 		}},
 
-		{bop("<"), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLT(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__div__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			return b.CreateFDiv(self, args[0]);
 		}},
 
-		{bop(">"), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGT(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__mod__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			return b.CreateFRem(self, args[0]);
 		}},
 
-		{bop("<="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__eq__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateFCmpOEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__ne__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateFCmpONE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("=="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOEQ(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__lt__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateFCmpOLT(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), Float, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpONE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__gt__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateFCmpOGT(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		// float,int ops
-		{bop("*"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFMul(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
+		{"__le__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateFCmpOLE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("/"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFDiv(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
+		{"__ge__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateFCmpOGE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("%"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFRem(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
+		// float,int binary
+		{"__add__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateFAdd(self, args[0]);
 		}},
 
-		{bop("+"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFAdd(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
+		{"__sub__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateFSub(self, args[0]);
 		}},
 
-		{bop("-"), Int, Float, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateFSub(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext())));
+		{"__mul__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateFMul(self, args[0]);
 		}},
 
-		{bop("<"), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLT(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
+		{"__div__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateFDiv(self, args[0]);
 		}},
 
-		{bop(">"), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGT(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
+		{"__mod__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateFRem(self, args[0]);
 		}},
 
-		{bop("<="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOLE(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
+		{"__eq__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop(">="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOGE(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
+		{"__ne__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpONE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("=="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpOEQ(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
+		{"__lt__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLT(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), Int, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateFCmpONE(lhs, b.CreateSIToFP(rhs, Float->getLLVMType(b.getContext()))), Bool->getLLVMType(b.getContext()));
+		{"__gt__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGT(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__le__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOLE(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__ge__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateFCmpOGE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 	};
 }
 
 void types::BoolType::initOps()
 {
-	if (!vtable.ops.empty())
+	if (!vtable.magic.empty())
 		return;
 
-	vtable.ops = {
-		// bool ops
-		{uop("!"), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateNot(b.CreateTrunc(lhs, IntegerType::getInt1Ty(b.getContext()))), Bool->getLLVMType(b.getContext()));
+	vtable.magic = {
+		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
+			return self;
 		}},
 
-		// bool,bool ops
-		{bop("=="), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__invert__", {}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateNot(b.CreateTrunc(self, IntegerType::getInt1Ty(b.getContext()))), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__eq__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("&"), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateAnd(lhs, rhs);
+		{"__ne__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("^"), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateXor(lhs, rhs);
+		{"__and__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateAnd(self, args[0]);
 		}},
 
-		{bop("|"), Bool, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateOr(lhs, rhs);
+		{"__or__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateOr(self, args[0]);
+		}},
+
+		{"__xor__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateXor(self, args[0]);
 		}},
 	};
 }
 
 void types::ByteType::initOps()
 {
-	if (!vtable.ops.empty())
+	if (!vtable.magic.empty())
 		return;
 
-	vtable.ops = {
-		// bool ops
-		{uop("!"), Byte, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
+	vtable.magic = {
+		{"__init__", {Int}, Byte, SEQ_MAGIC(self, args, b) {
+			return b.CreateTrunc(args[0], Byte->getLLVMType(b.getContext()));
+		}},
+
+		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantInt::get(Byte->getLLVMType(b.getContext()), 0);
-			return b.CreateZExt(b.CreateICmpEQ(lhs, zero), Bool->getLLVMType(b.getContext()));
+			return b.CreateZExt(b.CreateICmpNE(self, zero), Bool->getLLVMType(b.getContext()));
 		}},
 
-		// bool,bool ops
-		{bop("=="), Byte, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpEQ(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__eq__", {Byte}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{bop("!="), Byte, Bool, [](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			return b.CreateZExt(b.CreateICmpNE(lhs, rhs), Bool->getLLVMType(b.getContext()));
+		{"__ne__", {Byte}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 	};
-}
-
-types::Type *types::ByteType::getConstructType(const std::vector<types::Type *>& inTypes)
-{
-	if (inTypes.size() != 1 || !inTypes[0]->is(types::Int))
-		throw exc::SeqException("byte constructor takes a single int argument");
-
-	return this;
 }
 
 Type *types::IntType::getLLVMType(LLVMContext& context) const

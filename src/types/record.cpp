@@ -40,86 +40,6 @@ std::vector<types::Type *> types::RecordType::getTypes()
 	return types;
 }
 
-void types::RecordType::serialize(BaseFunc *base,
-                                  Value *self,
-                                  Value *fp,
-                                  BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-
-	for (unsigned i = 0; i < types.size(); i++) {
-		Value *elem = builder.CreateExtractValue(self, i);
-		types[i]->serialize(base, elem, fp, block);
-	}
-}
-
-Value *types::RecordType::deserialize(BaseFunc *base,
-                                      Value *fp,
-                                      BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
-	Value *self = UndefValue::get(getLLVMType(context));
-
-	for (unsigned i = 0; i < types.size(); i++) {
-		Value *elem = types[i]->deserialize(base, fp, block);
-		self = builder.CreateInsertValue(self, elem, i);
-	}
-
-	return self;
-}
-
-static seq_int_t getIdxSafe(Value *idx, const seq_int_t max)
-{
-	if (auto *constIdx = dyn_cast<ConstantInt>(idx)) {
-		const seq_int_t idxReal = constIdx->getSExtValue();
-
-		if (idxReal < 1 || idxReal > max)
-			throw exc::SeqException("index into record out of bounds");
-
-		return idxReal - 1;  // 1-based to 0-based
-	} else {
-		throw exc::SeqException("index into record must be constant");
-	}
-}
-
-Value *types::RecordType::indexLoad(BaseFunc *base,
-                                    Value *self,
-                                    Value *idx,
-                                    BasicBlock *block)
-{
-	const seq_int_t idxReal = getIdxSafe(idx, (seq_int_t)types.size());
-	Type *type = types[idxReal];
-
-	LLVMContext& context = base->getContext();
-	IRBuilder<> builder(block);
-
-	Value *recPtr = storeInAlloca(base, self, block);
-	Value *elemPtr = builder.CreateGEP(recPtr,
-	                                   {ConstantInt::get(IntegerType::getInt32Ty(context), 0),
-	                                    ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)idxReal)});
-	return type->load(base, elemPtr, zeroLLVM(context), block);
-}
-
-void types::RecordType::indexStore(BaseFunc *base,
-                                   Value *self,
-                                   Value *idx,
-                                   Value *val,
-                                   BasicBlock *block)
-{
-	const seq_int_t idxReal = getIdxSafe(idx, (seq_int_t)types.size());
-	Type *type = types[idxReal];
-
-	LLVMContext& context = base->getContext();
-	IRBuilder<> builder(block);
-
-	Value *recPtr = storeInAlloca(base, self, block);
-	Value *elemPtr = builder.CreateGEP(recPtr,
-	                                   {ConstantInt::get(IntegerType::getInt32Ty(context), 0),
-	                                    ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)idxReal)});
-	type->store(base, val, elemPtr, zeroLLVM(context), block);
-}
-
 Value *types::RecordType::defaultValue(BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
@@ -132,17 +52,6 @@ Value *types::RecordType::defaultValue(BasicBlock *block)
 	}
 
 	return self;
-}
-
-
-Value *types::RecordType::construct(BaseFunc *base,
-                                    const std::vector<Value *>& args,
-                                    BasicBlock *block)
-{
-	Value *val = defaultValue(block);
-	for (unsigned i = 0; i < args.size(); i++)
-		val = setMemb(val, std::to_string(i+1), args[i], block);
-	return val;
 }
 
 bool types::RecordType::isAtomic() const
@@ -169,6 +78,21 @@ bool types::RecordType::is(types::Type *type) const
 	return true;
 }
 
+void types::RecordType::initOps()
+{
+	if (!vtable.magic.empty())
+		return;
+
+	vtable.magic = {
+		{"__init__", types, this, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *val = defaultValue(b.GetInsertBlock());
+			for (unsigned i = 0; i < args.size(); i++)
+				val = setMemb(val, std::to_string(i+1), args[i], b.GetInsertBlock());
+			return val;
+		}},
+	};
+}
+
 void types::RecordType::initFields()
 {
 	if (!getVTable().fields.empty())
@@ -192,21 +116,6 @@ unsigned types::RecordType::numBaseTypes() const
 types::Type *types::RecordType::getBaseType(unsigned idx) const
 {
 	return types[idx];
-}
-
-types::Type *types::RecordType::getConstructType(const std::vector<Type *>& inTypes)
-{
-	if (inTypes.size() != types.size())
-		throw exc::SeqException("expected " + std::to_string(types.size()) + " arguments, " +
-		                        "but got " + std::to_string(inTypes.size()));
-
-	for (unsigned i = 0; i < inTypes.size(); i++) {
-		if (!types::is(inTypes[i], types[i]))
-			throw exc::SeqException("expected " + types[i]->getName() +
-			                        ", but got " + inTypes[i]->getName());
-	}
-
-	return this;
 }
 
 Type *types::RecordType::getLLVMType(LLVMContext& context) const

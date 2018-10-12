@@ -51,6 +51,7 @@ namespace seq {
 			llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block);
 			void destroy(llvm::Value *self, llvm::BasicBlock *block);
 
+			void initOps() override;
 			bool is(Type *type) const override;
 			unsigned numBaseTypes() const override;
 			Type *getBaseType(unsigned idx) const override;

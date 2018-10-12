@@ -12,12 +12,8 @@ namespace seq {
 			SourceType(SourceType const&)=delete;
 			void operator=(SourceType const&)=delete;
 
-			llvm::Value *construct(BaseFunc *base,
-			                       const std::vector<llvm::Value *>& args,
-			                       llvm::BasicBlock *block) override;
-
 			bool isAtomic() const override;
-			Type *getConstructType(const std::vector<Type *>& inTypes) override;
+			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 
@@ -31,12 +27,8 @@ namespace seq {
 			RawType(RawType const&)=delete;
 			void operator=(RawType const&)=delete;
 
-			llvm::Value *construct(BaseFunc *base,
-			                       const std::vector<llvm::Value *>& args,
-			                       llvm::BasicBlock *block) override;
-
 			bool isAtomic() const override;
-			Type *getConstructType(const std::vector<Type *>& inTypes) override;
+			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			seq_int_t size(llvm::Module *module) const override;
 

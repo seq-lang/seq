@@ -196,6 +196,18 @@ void types::GenType::destroy(Value *self, BasicBlock *block)
 	builder.CreateCall(destFn, self);
 }
 
+void types::GenType::initOps()
+{
+	if (!vtable.magic.empty())
+		return;
+
+	vtable.magic = {
+		{"__iter__", {}, this, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+	};
+}
+
 bool types::GenType::is(Type *type) const
 {
 	auto *genType = dynamic_cast<GenType *>(type);

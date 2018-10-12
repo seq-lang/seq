@@ -8,264 +8,12 @@ types::ArrayType::ArrayType(Type *baseType) :
 {
 }
 
-Value *types::ArrayType::copy(BaseFunc *base,
-                              Value *self,
-                              BasicBlock *block)
-{
-	if (baseType->isAtomic())
-		SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_array_atomic);
-	else
-		SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_array);
-
-	LLVMContext& context = block->getContext();
-
-	auto *copyFunc = cast<Function>(
-	                   block->getModule()->getOrInsertFunction(
-	                     getVTable().copyName,
-	                     IntegerType::getInt8PtrTy(context),
-	                     IntegerType::getInt8PtrTy(context),
-	                     seqIntLLVM(context),
-	                     seqIntLLVM(context)));
-
-	copyFunc->setCallingConv(CallingConv::C);
-
-	IRBuilder<> builder(block);
-	Value *ptr = memb(self, "ptr", block);
-	ptr = builder.CreateBitCast(ptr, IntegerType::getInt8PtrTy(context));
-	Value *len = memb(self, "len", block);
-	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)indexType()->size(block->getModule()));
-	Value *copy = builder.CreateCall(copyFunc, {ptr, len, elemSize});
-	copy = builder.CreateBitCast(copy, PointerType::get(indexType()->getLLVMType(context), 0));
-	return make(copy, len, block);
-}
-
-void types::ArrayType::serialize(BaseFunc *base,
-                                 Value *self,
-                                 Value *fp,
-                                 BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-
-	const std::string name = "seq.ser." + getName();
-	Function *serialize = module->getFunction(name);
-	bool makeFunc = (serialize == nullptr);
-
-	if (makeFunc) {
-		serialize = cast<Function>(
-		              module->getOrInsertFunction(
-		                name,
-		                llvm::Type::getVoidTy(context),
-		                PointerType::get(indexType()->getLLVMType(context), 0),
-		                seqIntLLVM(context),
-		                IntegerType::getInt8PtrTy(context)));
-
-		serialize->setLinkage(GlobalValue::PrivateLinkage);
-	}
-
-	IRBuilder<> builder(block);
-
-	if (makeFunc) {
-		auto args = serialize->arg_begin();
-		Value *ptrArg = args++;
-		Value *lenArg = args++;
-		Value *fpArg = args;
-
-		BasicBlock *entry = BasicBlock::Create(context, "entry", serialize);
-		BasicBlock *loop = BasicBlock::Create(context, "loop", serialize);
-
-		builder.SetInsertPoint(loop);
-		PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
-		Value *next = builder.CreateAdd(control, oneLLVM(context), "next");
-		Value *cond = builder.CreateICmpSLT(control, lenArg);
-
-		BasicBlock *body = BasicBlock::Create(context, "body", serialize);
-		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
-
-		builder.SetInsertPoint(body);
-
-		BaseFuncLite serializeBase({}, nullptr, [serialize](Module *) { return serialize; });
-		serializeBase.codegen(module);
-		Value *elem = indexType()->load(base, ptrArg, control, body);
-		indexType()->serialize(&serializeBase, elem, fpArg, body);
-
-		builder.CreateBr(loop);
-
-		control->addIncoming(zeroLLVM(context), entry);
-		control->addIncoming(next, body);
-
-		BasicBlock *exit = BasicBlock::Create(context, "exit", serialize);
-		builder.SetInsertPoint(exit);
-		builder.CreateRetVoid();
-		branch->setSuccessor(1, exit);
-
-		builder.SetInsertPoint(entry);
-		Int->serialize(&serializeBase, lenArg, fpArg, entry);
-		builder.CreateBr(loop);
-	}
-
-	builder.SetInsertPoint(block);
-	Value *ptr = memb(self, "ptr", block);
-	Value *len = memb(self, "len", block);
-	builder.CreateCall(serialize, {ptr, len, fp});
-}
-
-Value *types::ArrayType::deserialize(BaseFunc *base,
-                                     Value *fp,
-                                     BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-
-	const std::string name = "seq.deser." + getName();
-	Function *deserialize = module->getFunction(name);
-	bool makeFunc = (deserialize == nullptr);
-
-	if (makeFunc) {
-		deserialize = cast<Function>(
-		                module->getOrInsertFunction(
-		                  name,
-		                  llvm::Type::getVoidTy(context),
-		                  PointerType::get(indexType()->getLLVMType(context), 0),
-		                  seqIntLLVM(context),
-		                  IntegerType::getInt8PtrTy(context)));
-
-		deserialize->setLinkage(GlobalValue::PrivateLinkage);
-	}
-
-	auto *allocFunc = cast<Function>(
-	                    module->getOrInsertFunction(
-	                      indexType()->allocFuncName(),
-	                      IntegerType::getInt8PtrTy(context),
-	                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
-
-	IRBuilder<> builder(block);
-
-	if (makeFunc) {
-		auto args = deserialize->arg_begin();
-		Value *ptrArg = args++;
-		Value *lenArg = args++;
-		Value *fpArg = args;
-
-		BasicBlock *entry = BasicBlock::Create(context, "entry", deserialize);
-		BasicBlock *loop = BasicBlock::Create(context, "loop", deserialize);
-
-		builder.SetInsertPoint(loop);
-		PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
-		Value *next = builder.CreateAdd(control, oneLLVM(context), "next");
-		Value *cond = builder.CreateICmpSLT(control, lenArg);
-
-		BasicBlock *body = BasicBlock::Create(context, "body", deserialize);
-		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
-
-		builder.SetInsertPoint(body);
-
-		BaseFuncLite deserializeBase({}, nullptr, [deserialize](Module *) { return deserialize; });
-		deserializeBase.codegen(module);
-		Value *elemPtr = builder.CreateGEP(ptrArg, control);
-		Value *elem = indexType()->deserialize(&deserializeBase, fpArg, body);
-		builder.CreateStore(elem, elemPtr);
-
-		builder.CreateBr(loop);
-
-		control->addIncoming(zeroLLVM(context), entry);
-		control->addIncoming(next, body);
-
-		BasicBlock *exit = BasicBlock::Create(context, "exit", deserialize);
-		builder.SetInsertPoint(exit);
-		builder.CreateRetVoid();
-		branch->setSuccessor(1, exit);
-
-		builder.SetInsertPoint(entry);
-		builder.CreateBr(loop);
-	}
-
-	builder.SetInsertPoint(block);
-	Value *len = Int->deserialize(base, fp, block);
-	Value *size = ConstantInt::get(seqIntLLVM(context), (uint64_t)indexType()->size(module));
-	Value *bytes = builder.CreateMul(len, size);
-	bytes = builder.CreateBitCast(bytes, IntegerType::getIntNTy(context, sizeof(size_t)*8));
-	Value *ptr = builder.CreateCall(allocFunc, {bytes});
-	ptr = builder.CreateBitCast(ptr, PointerType::get(indexType()->getLLVMType(context), 0));
-	builder.CreateCall(deserialize, {ptr, len, fp});
-	return make(ptr, len, block);
-}
-
-Value *types::ArrayType::indexLoad(BaseFunc *base,
-                                   Value *self,
-                                   Value *idx,
-                                   BasicBlock *block)
-{
-	Value *ptr = memb(self, "ptr", block);
-	return indexType()->load(base, ptr, idx, block);
-}
-
-void types::ArrayType::indexStore(BaseFunc *base,
-                                  Value *self,
-                                  Value *idx,
-                                  Value *val,
-                                  BasicBlock *block)
-{
-	Value *ptr = memb(self, "ptr", block);
-	indexType()->store(base, val, ptr, idx, block);
-}
-
-Value *types::ArrayType::indexSlice(BaseFunc *base,
-                                    Value *self,
-                                    Value *from,
-                                    Value *to,
-                                    BasicBlock *block)
-{
-	Value *ptr = memb(self, "ptr", block);
-	IRBuilder<> builder(block);
-	ptr = builder.CreateGEP(ptr, from);
-	Value *len = builder.CreateSub(to, from);
-	return make(ptr, len, block);
-}
-
-Value *types::ArrayType::indexSliceNoFrom(BaseFunc *base,
-                                          Value *self,
-                                          Value *to,
-                                          BasicBlock *block)
-{
-	Value *zero = zeroLLVM(block->getContext());
-	return indexSlice(base, self, zero, to, block);
-}
-
-Value *types::ArrayType::indexSliceNoTo(BaseFunc *base,
-                                        Value *self,
-                                        Value *from,
-                                        BasicBlock *block)
-{
-	Value *len = memb(self, "len", block);
-	return indexSlice(base, self, from, len, block);
-}
-
-types::Type *types::ArrayType::indexType() const
-{
-	return baseType;
-}
-
-types::Type *types::ArrayType::subscriptType() const
-{
-	return types::Int;
-}
-
 Value *types::ArrayType::defaultValue(BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
-	Value *ptr = ConstantPointerNull::get(PointerType::get(indexType()->getLLVMType(context), 0));
+	Value *ptr = ConstantPointerNull::get(PointerType::get(getBaseType(0)->getLLVMType(context), 0));
 	Value *len = zeroLLVM(context);
 	return make(ptr, len, block);
-}
-
-Value *types::ArrayType::construct(BaseFunc *base,
-                                   const std::vector<Value *>& args,
-                                   BasicBlock *block)
-{
-	ValueExpr count(types::Int, args[0]);
-	ArrayExpr e(getBaseType(0), &count);
-	return e.codegen(base, block);
 }
 
 bool types::ArrayType::isAtomic() const
@@ -278,6 +26,62 @@ bool types::ArrayType::is(types::Type *type) const
 	return isGeneric(type) && types::is(getBaseType(0), type->getBaseType(0));
 }
 
+void types::ArrayType::initOps()
+{
+	if (!vtable.magic.empty())
+		return;
+
+	vtable.magic = {
+		{"__init__", {Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = getBaseType(0)->alloc(args[0], b.GetInsertBlock());
+			return make(ptr, args[0], b.GetInsertBlock());
+		}},
+
+		{"__init__", {PtrType::get(getBaseType(0)), Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return make(args[0], args[1], b.GetInsertBlock());
+		}},
+
+		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *len = memb(self, "len", b.GetInsertBlock());
+			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
+			return b.CreateZExt(b.CreateICmpNE(len, zero), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__getitem__", {Int}, getBaseType(0), SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			return b.CreateLoad(ptr);
+		}},
+
+		{"__slice__", {Int, Int}, getBaseType(0), SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			Value *len = b.CreateSub(args[1], args[0]);
+			return make(ptr, len, b.GetInsertBlock());
+		}},
+
+		{"__slice_left__", {Int}, getBaseType(0), SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			return make(ptr, args[0], b.GetInsertBlock());
+		}},
+
+		{"__slice_right__", {Int}, getBaseType(0), SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			Value *to = memb(self, "len", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			Value *len = b.CreateSub(to, args[0]);
+			return make(ptr, len, b.GetInsertBlock());
+		}},
+
+		{"__setitem__", {Int, getBaseType(0)}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			b.CreateStore(args[1], ptr);
+			return (Value *)nullptr;
+		}},
+	};
+}
+
 void types::ArrayType::initFields()
 {
 	if (!vtable.fields.empty())
@@ -285,7 +89,7 @@ void types::ArrayType::initFields()
 
 	vtable.fields = {
 		{"len", {0, Int}},
-		{"ptr", {1, PtrType::get(indexType())}}
+		{"ptr", {1, PtrType::get(getBaseType(0))}}
 	};
 }
 
@@ -299,17 +103,9 @@ types::Type *types::ArrayType::getBaseType(unsigned idx) const
 	return baseType;
 }
 
-types::Type *types::ArrayType::getConstructType(const std::vector<types::Type *>& inTypes)
-{
-	if (inTypes.size() != 1 || !types::is(inTypes[0], types::Int))
-		throw exc::SeqException("array constructor takes exactly 1 integer argument");
-
-	return this;
-}
-
 Type *types::ArrayType::getLLVMType(LLVMContext& context) const
 {
-	return StructType::get(seqIntLLVM(context), PointerType::get(indexType()->getLLVMType(context), 0));
+	return StructType::get(seqIntLLVM(context), PointerType::get(getBaseType(0)->getLLVMType(context), 0));
 }
 
 seq_int_t types::ArrayType::size(Module *module) const
@@ -338,5 +134,5 @@ types::ArrayType *types::ArrayType::get() noexcept
 
 types::ArrayType *types::ArrayType::clone(Generic *ref)
 {
-	return get(indexType()->clone(ref));
+	return get(getBaseType(0)->clone(ref));
 }

@@ -476,27 +476,17 @@ struct IOState {
 	vector<ifstream *> ins;
 	Format fmt;
 
-	IOState(char **sources, const seq_int_t numSources) :
+	IOState() :
 	    data(), ins()
 	{
-		if (numSources == 0)
-			error("sequence source not specified");
+	}
 
-		if (numSources > MAX_INPUTS)
-			error("too many inputs (max: " + to_string(MAX_INPUTS) + ")");
-
-		fmt = extractExt(sources[0]);
-
-		for (seq_int_t i = 1; i < numSources; i++) {
-			if (extractExt(sources[i]) != fmt)
-				error("inconsistent input formats");
-		}
-
-		for (seq_int_t i = 0; i < numSources; i++) {
-			ins.push_back(new ifstream(sources[i]));
-			if (!ins.back()->good())
-				error("could not open '" + string(sources[i]) + "' for reading");
-		}
+	void setSource(std::string source)
+	{
+		fmt = extractExt(source);
+		ins.push_back(new ifstream(source));
+		if (!ins.back()->good())
+			error("could not open '" + source + "' for reading");
 	}
 
 	void close()
@@ -508,11 +498,17 @@ struct IOState {
 	}
 };
 
-SEQ_FUNC void *seq_source_init(char **sources, seq_int_t numSources)
+SEQ_FUNC void *seq_source_new()
 {
 	auto *state = (IOState *)seq_alloc(sizeof(IOState));
-	new (state) IOState(sources, numSources);
+	new (state) IOState();
 	return state;
+}
+
+SEQ_FUNC void seq_source_init(void *state, seq_str_t source)
+{
+	auto *ioState = (IOState *)state;
+	ioState->setSource(string(source.str, (unsigned long)source.len));
 }
 
 SEQ_FUNC seq_int_t seq_source_read(void *state)
@@ -549,11 +545,17 @@ struct RawInput {
 	RawInput(): f(nullptr), buf(nullptr), n(0) {}
 };
 
-SEQ_FUNC void *seq_raw_init(char **sources)
+SEQ_FUNC void *seq_raw_new()
 {
-	auto *state = new RawInput();
-	state->f = fopen(sources[0], "r");
+	auto *state = (RawInput *)seq_alloc(sizeof(RawInput));
+	new (state) RawInput();
 	return state;
+}
+
+SEQ_FUNC void seq_raw_init(void *st, seq_str_t source)
+{
+	auto *state = (RawInput *)st;
+	state->f = fopen(string(source.str, (unsigned long)source.len).data(), "r");
 }
 
 SEQ_FUNC seq_t seq_raw_read(void *st)

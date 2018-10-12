@@ -3,15 +3,26 @@
 using namespace seq;
 using namespace llvm;
 
+static inline Function *seqSourceNewFunc(Module *module)
+{
+	LLVMContext& context = module->getContext();
+	auto *f = cast<Function>(
+	            module->getOrInsertFunction(
+	              "seq_source_new",
+	              IntegerType::getInt8PtrTy(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
+}
+
 static inline Function *seqSourceInitFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
 	              "seq_source_init",
+	              Type::getVoidTy(context),
 	              IntegerType::getInt8PtrTy(context),
-	              PointerType::get(IntegerType::getInt8PtrTy(context), 0),
-	              seqIntLLVM(context)));
+	              types::Str->getLLVMType(context)));
 	f->setCallingConv(CallingConv::C);
 	return f;
 }
@@ -85,46 +96,28 @@ types::SourceType::SourceType() : Type("Source", BaseType::get())
 	}), false);
 }
 
-Value *types::SourceType::construct(BaseFunc *base,
-                                    const std::vector<Value *>& args,
-                                    BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-	Function *initFunc = seqSourceInitFunc(module);
-	BasicBlock *preambleBlock = base->getPreamble();
-	Value *sources = makeAlloca(IntegerType::getInt8PtrTy(context), preambleBlock, args.size());
-	IRBuilder<> builder(block);
-
-	unsigned idx = 0;
-	for (auto *str : args) {
-		Value *idxVal = ConstantInt::get(seqIntLLVM(context), idx++);
-		Value *slot = builder.CreateGEP(sources, idxVal);
-		Value *strVal = types::Str->memb(str, "ptr", block);
-		builder.CreateStore(strVal, slot);
-	}
-
-	Value *numSources = ConstantInt::get(seqIntLLVM(context), args.size());
-	Value *source = builder.CreateCall(initFunc, {sources, numSources});
-	return source;
-}
-
 bool types::SourceType::isAtomic() const
 {
 	return false;
 }
 
-types::Type *types::SourceType::getConstructType(const std::vector<types::Type *>& inTypes)
+void types::SourceType::initOps()
 {
-	if (inTypes.empty())
-		throw exc::SeqException("Source constructor takes at least one argument");
+	if (!vtable.magic.empty())
+		return;
 
-	for (auto *type : inTypes) {
-		if (!types::is(type, types::Str))
-			throw exc::SeqException("Source constructor takes only string arguments");
-	}
+	vtable.magic = {
+		{"__new__", {}, this, SEQ_MAGIC(self, args, b) {
+			Function *newFunc = seqSourceNewFunc(b.GetInsertBlock()->getModule());
+			return b.CreateCall(newFunc);
+		}},
 
-	return this;
+		{"__init__", {Str}, this, SEQ_MAGIC(self, args, b) {
+			Function *initFunc = seqSourceInitFunc(b.GetInsertBlock()->getModule());
+			b.CreateCall(initFunc, {self, args[0]});
+			return self;
+		}},
+	};
 }
 
 Type *types::SourceType::getLLVMType(LLVMContext& context) const
@@ -144,14 +137,26 @@ types::SourceType *types::SourceType::get() noexcept
 
 /************************************************************************/
 
+static inline Function *seqRawNewFunc(Module *module)
+{
+	LLVMContext& context = module->getContext();
+	auto *f = cast<Function>(
+	            module->getOrInsertFunction(
+	              "seq_raw_new",
+	              IntegerType::getInt8PtrTy(context)));
+	f->setCallingConv(CallingConv::C);
+	return f;
+}
+
 static inline Function *seqRawInitFunc(Module *module)
 {
 	LLVMContext& context = module->getContext();
 	auto *f = cast<Function>(
 	            module->getOrInsertFunction(
 	              "seq_raw_init",
+	              Type::getVoidTy(context),
 	              IntegerType::getInt8PtrTy(context),
-	              PointerType::get(IntegerType::getInt8PtrTy(context), 0)));
+	              types::Str->getLLVMType(context)));
 	f->setCallingConv(CallingConv::C);
 	return f;
 }
@@ -191,45 +196,28 @@ types::RawType::RawType() : Type("RawFile", BaseType::get())
 	}), false);
 }
 
-Value *types::RawType::construct(BaseFunc *base,
-                                 const std::vector<Value *>& args,
-                                 BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-	Function *initFunc = seqRawInitFunc(module);
-	BasicBlock *preambleBlock = base->getPreamble();
-	Value *sources = makeAlloca(IntegerType::getInt8PtrTy(context), preambleBlock, args.size());
-	IRBuilder<> builder(block);
-
-	unsigned idx = 0;
-	for (auto *str : args) {
-		Value *idxVal = ConstantInt::get(seqIntLLVM(context), idx++);
-		Value *slot = builder.CreateGEP(sources, idxVal);
-		Value *strVal = types::Str->memb(str, "ptr", block);
-		builder.CreateStore(strVal, slot);
-	}
-
-	Value *source = builder.CreateCall(initFunc, {sources});
-	return source;
-}
-
 bool types::RawType::isAtomic() const
 {
 	return false;
 }
 
-types::Type *types::RawType::getConstructType(const std::vector<types::Type *>& inTypes)
+void types::RawType::initOps()
 {
-	if (inTypes.empty())
-		throw exc::SeqException("RawFile constructor takes at least one argument");
+	if (!vtable.magic.empty())
+		return;
 
-	for (auto *type : inTypes) {
-		if (!types::is(type, types::Str))
-			throw exc::SeqException("RawFile constructor takes only string arguments");
-	}
+	vtable.magic = {
+		{"__new__", {}, this, SEQ_MAGIC(self, args, b) {
+			Function *newFunc = seqRawNewFunc(b.GetInsertBlock()->getModule());
+			return b.CreateCall(newFunc);
+		}},
 
-	return this;
+		{"__init__", {Str}, this, SEQ_MAGIC(self, args, b) {
+			Function *initFunc = seqRawInitFunc(b.GetInsertBlock()->getModule());
+			b.CreateCall(initFunc, {self, args[0]});
+			return self;
+		}},
+	};
 }
 
 Type *types::RawType::getLLVMType(LLVMContext& context) const

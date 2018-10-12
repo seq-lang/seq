@@ -264,7 +264,7 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	count->ensure(types::Int);
 
 	Value *len = count->codegen(base, block);
-	Value *ptr = type->indexType()->alloc(len, block);
+	Value *ptr = type->getBaseType(0)->alloc(len, block);
 	Value *arr = type->make(ptr, len, block);
 	return arr;
 }
@@ -330,15 +330,22 @@ void UOpExpr::resolveTypes()
 
 Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
-	auto spec = lhs->getType()->findUOp(op.symbol);
-	Value *lhs = this->lhs->codegen(base, block);
-	IRBuilder<> builder(block);
-	return spec.codegen(lhs, nullptr, builder);
+	Value *self = lhs->codegen(base, block);
+
+	if (op == uop("!")) {
+		Value *b = lhs->getType()->boolValue(self, block);
+		return types::Bool->callMagic("__invert__", {}, b, {}, block);
+	} else {
+		return lhs->getType()->callMagic(op.magic, {}, self, {}, block);
+	}
 }
 
 types::Type *UOpExpr::getType0() const
 {
-	return lhs->getType()->findUOp(op.symbol).outType;
+	if (op == uop("!"))
+		return types::Bool;
+	else
+		return lhs->getType()->magicOut(op.magic, {});
 }
 
 UOpExpr *UOpExpr::clone(Generic *ref)
@@ -367,9 +374,8 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	if (op == bop("&&") || op == bop("||")) {
 		const bool isAnd = (op == bop("&&"));
 
-		lhs->ensure(types::Bool);
-		rhs->ensure(types::Bool);
 		Value *lhs = this->lhs->codegen(base, block);
+		lhs = this->lhs->getType()->boolValue(lhs, block);
 
 		BasicBlock *b1 = BasicBlock::Create(context, "", block->getParent());
 
@@ -378,6 +384,7 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		BranchInst *branch = builder.CreateCondBr(lhs, b1, b1);  // one branch changed below
 
 		Value *rhs = this->rhs->codegen(base, b1);
+		rhs = this->rhs->getType()->boolValue(rhs, b1);
 		builder.SetInsertPoint(b1);
 
 		BasicBlock *b2 = BasicBlock::Create(context, "", block->getParent());
@@ -396,11 +403,9 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		block = b2;
 		return result;
 	} else {
-		auto spec = lhs->getType()->findBOp(op.symbol, rhs->getType());
-		Value *lhs = this->lhs->codegen(base, block);
-		Value *rhs = this->rhs->codegen(base, block);
-		IRBuilder<> builder(block);
-		return spec.codegen(lhs, rhs, builder);
+		Value *self = lhs->codegen(base, block);
+		Value *arg  = rhs->codegen(base, block);
+		return lhs->getType()->callMagic(op.magic, {rhs->getType()}, self, {arg}, block);
 	}
 }
 
@@ -409,7 +414,7 @@ types::Type *BOpExpr::getType0() const
 	if (op == bop("&&") || op == bop("||"))
 		return types::Bool;
 	else
-		return lhs->getType()->findBOp(op.symbol, rhs->getType()).outType;
+		return lhs->getType()->magicOut(op.magic, {rhs->getType()});
 }
 
 BOpExpr *BOpExpr::clone(Generic *ref)
@@ -439,10 +444,9 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		return e.codegen0(base, block);
 	}
 
-	idx->ensure(type->subscriptType());
 	Value *arr = this->arr->codegen(base, block);
 	Value *idx = this->idx->codegen(base, block);
-	return type->indexLoad(base, arr, idx, block);
+	return type->callMagic("__getitem__", {this->idx->getType()}, arr, {idx}, block);
 }
 
 types::Type *ArrayLookupExpr::getType0() const
@@ -454,7 +458,7 @@ types::Type *ArrayLookupExpr::getType0() const
 	if (type->asRec() && idxLit)
 		return type->getBaseType((unsigned)idxLit->value());
 
-	return arr->getType()->indexType();
+	return type->magicOut("__getitem__", {idx->getType()});
 }
 
 ArrayLookupExpr *ArrayLookupExpr::clone(Generic *ref)
@@ -476,23 +480,22 @@ void ArraySliceExpr::resolveTypes()
 
 Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
-	assert(from || to);
 	types::Type *type = arr->getType();
-	if (from) from->ensure(type->subscriptType());
-	if (to) to->ensure(type->subscriptType());
-
 	Value *arr = this->arr->codegen(base, block);
+
+	if (!from && !to)
+		return type->callMagic("__copy__", {}, arr, {}, block);
 
 	if (!from) {
 		Value *to = this->to->codegen(base, block);
-		return type->indexSliceNoFrom(base, arr, to, block);
+		return type->callMagic("__slice_left__", {this->to->getType()}, arr, {to}, block);
 	} else if (!to) {
 		Value *from = this->from->codegen(base, block);
-		return type->indexSliceNoTo(base, arr, from, block);
+		return type->callMagic("__slice_right__", {this->from->getType()}, arr, {from}, block);
 	} else {
 		Value *from = this->from->codegen(base, block);
 		Value *to = this->to->codegen(base, block);
-		return type->indexSlice(base, arr, from, to, block);
+		return type->callMagic("__slice__", {this->from->getType(), this->to->getType()}, arr, {from, to}, block);
 	}
 }
 
@@ -889,11 +892,11 @@ void CondExpr::resolveTypes()
 
 Value *CondExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
-	cond->ensure(types::Bool);
 
 	LLVMContext& context = block->getContext();
 
 	Value *cond = this->cond->codegen(base, block);
+	cond = this->cond->getType()->boolValue(cond, block);
 	IRBuilder<> builder(block);
 	cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
 
@@ -1069,10 +1072,26 @@ void ConstructExpr::resolveTypes()
 Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	getType();  // validates construction
+
+	std::vector<types::Type *> types;
+	for (auto *arg : args)
+		types.push_back(arg->getType());
+
 	std::vector<Value *> vals;
 	for (auto *arg : args)
 		vals.push_back(arg->codegen(base, block));
-	return type->construct(base, vals, block);
+
+	Value *self;
+
+	try {
+		self = type->callMagic("__new__", {}, nullptr, {}, block);
+	} catch (exc::SeqException&) {
+		// no __new__ defined, so just pass default value to __init__
+		self = type->defaultValue(block);
+	}
+
+	Value *ret = type->callMagic("__init__", types, self, vals, block);
+	return type->magicOut("__init__", types)->is(types::Void) ? self : ret;
 }
 
 types::Type *ConstructExpr::getType0() const
@@ -1086,7 +1105,8 @@ types::Type *ConstructExpr::getType0() const
 	if (ref && ref->numGenerics() > 0 && ref->unrealized())
 		type = ref->realize(ref->deduceTypesFromArgTypes(types));
 
-	return type->getConstructType(types);
+	types::Type *ret = type->magicOut("__init__", types);
+	return ret->is(types::Void) ? type : ret;
 }
 
 ConstructExpr *ConstructExpr::clone(Generic *ref)

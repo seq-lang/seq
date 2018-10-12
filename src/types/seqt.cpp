@@ -89,8 +89,7 @@ static Function *buildSeqEqFunc(Module *module)
 	return eq;
 }
 
-Value *types::BaseSeqType::eq(BaseFunc *base,
-                              Value *self,
+Value *types::BaseSeqType::eq(Value *self,
                               Value *other,
                               BasicBlock *block)
 {
@@ -109,91 +108,7 @@ Value *types::BaseSeqType::eq(BaseFunc *base,
 	return builder.CreateCall(eq, {seq1, len1, seq2, len2});
 }
 
-Value *types::BaseSeqType::copy(BaseFunc *base,
-                                Value *self,
-                                BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-
-	auto *copyFunc = cast<Function>(
-	                   block->getModule()->getOrInsertFunction(
-	                     getVTable().copyName,
-	                     IntegerType::getInt8PtrTy(context),
-	                     IntegerType::getInt8PtrTy(context),
-	                     seqIntLLVM(context)));
-
-	copyFunc->setCallingConv(CallingConv::C);
-
-	Value *ptr = memb(self, "ptr", block);
-	Value *len = memb(self, "len", block);
-
-	IRBuilder<> builder(block);
-	Value *copy = builder.CreateCall(copyFunc, {ptr, len});
-	return make(copy, len, block);
-}
-
-void types::BaseSeqType::serialize(BaseFunc *base,
-                                   Value *self,
-                                   Value *fp,
-                                   BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-
-	auto *writeFunc = cast<Function>(
-	                    module->getOrInsertFunction(
-	                      "seq_io_write",
-	                      llvm::Type::getVoidTy(context),
-	                      IntegerType::getInt8PtrTy(context),
-	                      seqIntLLVM(context),
-	                      seqIntLLVM(context),
-	                      IntegerType::getInt8PtrTy(context)));
-
-	writeFunc->setCallingConv(CallingConv::C);
-
-	Value *ptr = memb(self, "ptr", block);
-	Value *len = memb(self, "len", block);
-	Int->serialize(base, len, fp, block);
-
-	IRBuilder<> builder(block);
-	builder.CreateCall(writeFunc, {ptr, len, oneLLVM(context), fp});
-}
-
-Value *types::BaseSeqType::deserialize(BaseFunc *base,
-                                       Value *fp,
-                                       BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-
-	auto *readFunc = cast<Function>(
-	                   module->getOrInsertFunction(
-	                     "seq_io_read",
-	                     llvm::Type::getVoidTy(context),
-	                     IntegerType::getInt8PtrTy(context),
-	                     seqIntLLVM(context),
-	                     seqIntLLVM(context),
-	                     IntegerType::getInt8PtrTy(context)));
-
-	auto *allocFunc = cast<Function>(
-	                    module->getOrInsertFunction(
-	                      allocFuncName(),
-	                      IntegerType::getInt8PtrTy(context),
-	                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
-
-	readFunc->setCallingConv(CallingConv::C);
-
-	IRBuilder<> builder(block);
-
-	Value *len = Int->deserialize(base, fp, block);
-	Value *ptr = builder.CreateCall(allocFunc, {len});
-	builder.CreateCall(readFunc, {ptr, len, oneLLVM(context), fp});
-	return make(ptr, len, block);
-}
-
-void types::BaseSeqType::print(BaseFunc *base,
-                               Value *self,
-                               BasicBlock *block)
+void types::BaseSeqType::print(Value *self, BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
 
@@ -213,63 +128,12 @@ void types::BaseSeqType::print(BaseFunc *base,
 	builder.CreateCall(printFunc, {ptr, len});
 }
 
-Value *types::BaseSeqType::indexLoad(BaseFunc *base,
-                                     Value *self,
-                                     Value *idx,
-                                     BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	Value *ptr = memb(self, "ptr", block);
-	IRBuilder<> builder(block);
-	ptr = builder.CreateGEP(ptr, idx);
-	return make(ptr, oneLLVM(context), block);
-}
-
-Value *types::BaseSeqType::indexSlice(BaseFunc *base,
-                                      Value *self,
-                                      Value *from,
-                                      Value *to,
-                                      BasicBlock *block)
-{
-	Value *ptr = memb(self, "ptr", block);
-	IRBuilder<> builder(block);
-	ptr = builder.CreateGEP(ptr, from);
-	Value *len = builder.CreateSub(to, from);
-	return make(ptr, len, block);
-}
-
-Value *types::BaseSeqType::indexSliceNoFrom(BaseFunc *base,
-                                            Value *self,
-                                            Value *to,
-                                            BasicBlock *block)
-{
-	Value *zero = zeroLLVM(block->getContext());
-	return indexSlice(base, self, zero, to, block);
-}
-
-Value *types::BaseSeqType::indexSliceNoTo(BaseFunc *base,
-                                          Value *self,
-                                          Value *from,
-                                          BasicBlock *block)
-{
-	Value *len = memb(self, "len", block);
-	return indexSlice(base, self, from, len, block);
-}
-
 Value *types::BaseSeqType::defaultValue(BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
 	Value *ptr = ConstantPointerNull::get(IntegerType::getInt8PtrTy(context));
 	Value *len = zeroLLVM(context);
 	return make(ptr, len, block);
-}
-
-Value *types::BaseSeqType::construct(BaseFunc *base,
-                                     const std::vector<Value *>& args,
-                                     BasicBlock *block)
-{
-	assert(args.size() == 2);
-	return make(args[0], args[1], block);
 }
 
 void types::BaseSeqType::initFields()
@@ -286,18 +150,6 @@ void types::BaseSeqType::initFields()
 bool types::BaseSeqType::isAtomic() const
 {
 	return false;
-}
-
-types::Type *types::BaseSeqType::getConstructType(const std::vector<types::Type *>& inTypes)
-{
-	if (inTypes.size() != 2 ||
-	    !inTypes[0]->is(types::PtrType::get(types::Byte)) ||
-	    !inTypes[1]->is(types::Int)) {
-
-		throw exc::SeqException("string/sequence constructor takes a byte pointer and int as arguments");
-	}
-
-	return this;
 }
 
 Type *types::BaseSeqType::getLLVMType(LLVMContext& context) const
@@ -356,42 +208,88 @@ Value *types::SeqType::setMemb(Value *self,
 	return BaseSeqType::setMemb(self, name, val, block);
 }
 
-void types::SeqType::indexStore(BaseFunc *base,
-                                Value *self,
-                                Value *idx,
-                                Value *val,
-                                BasicBlock *block)
-{
-	Value *dest = memb(self, "ptr", block);
-	Value *source = memb(val, "ptr", block);
-	Value *len = memb(val, "len", block);
-
-	IRBuilder<> builder(block);
-	dest = builder.CreateGEP(dest, idx);
-	makeMemMove(dest, source, len, block, 1);
-}
-
 void types::SeqType::initOps()
 {
-	if (!vtable.ops.empty())
+	if (!vtable.magic.empty())
 		return;
 
-	vtable.ops = {
-		{bop("=="), this, Bool, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			Value *x = eq(nullptr, lhs, rhs, b.GetInsertBlock());
+	vtable.magic = {
+		{"__init__", {PtrType::get(Byte), Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
+			return make(args[0], args[1], b.GetInsertBlock());
+		}},
+
+		{"__copy__", {}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
+			BasicBlock *block = b.GetInsertBlock();
+			Module *module = block->getModule();
+			LLVMContext& context = module->getContext();
+
+			auto *allocFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_alloc_atomic",
+			                      IntegerType::getInt8PtrTy(context),
+			                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+
+			Value *ptr = memb(self, "ptr", block);
+			Value *len = memb(self, "len", block);
+			Value *ptrCopy = b.CreateCall(allocFunc, len);
+			makeMemCpy(ptrCopy, ptr, len, block, 1);
+			Value *copy = make(ptrCopy, len, block);
+			return copy;
+		}},
+
+		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *len = memb(self, "len", b.GetInsertBlock());
+			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
+			return b.CreateZExt(b.CreateICmpNE(len, zero), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__getitem__", {Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			return make(ptr, oneLLVM(b.getContext()), b.GetInsertBlock());
+		}},
+
+		{"__slice__", {Int, Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			Value *len = b.CreateSub(args[1], args[0]);
+			return make(ptr, len, b.GetInsertBlock());
+		}},
+
+		{"__slice_left__", {Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			return make(ptr, args[0], b.GetInsertBlock());
+		}},
+
+		{"__slice_right__", {Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			Value *to = memb(self, "len", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			Value *len = b.CreateSub(to, args[0]);
+			return make(ptr, len, b.GetInsertBlock());
+		}},
+
+		{"__setitem__", {Int, Seq}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			BasicBlock *block = b.GetInsertBlock();
+			Value *dest = memb(self, "ptr", block);
+			Value *source = memb(args[1], "ptr", block);
+			Value *len = memb(args[1], "len", block);
+			dest = b.CreateGEP(dest, args[0]);
+			makeMemMove(dest, source, len, block, 1);
+			return (Value *)nullptr;
+		}},
+
+		{"__eq__", {Seq}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *x = eq(self, args[0], b.GetInsertBlock());
+			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__ne__", {Seq}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *x = eq(self, args[0], b.GetInsertBlock());
+			x = b.CreateNot(x);
 			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
 		}},
 	};
-}
-
-types::Type *types::SeqType::indexType() const
-{
-	return SeqType::get();
-}
-
-types::Type *types::SeqType::subscriptType() const
-{
-	return types::Int;
 }
 
 Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block)
@@ -431,25 +329,76 @@ Value *types::StrType::setMemb(Value *self,
 
 void types::StrType::initOps()
 {
-	if (!vtable.ops.empty())
+	if (!vtable.magic.empty())
 		return;
 
-	vtable.ops = {
-		{bop("=="), this, Bool, [this](Value *lhs, Value *rhs, IRBuilder<>& b) {
-			Value *x = eq(nullptr, lhs, rhs, b.GetInsertBlock());
+	vtable.magic = {
+		{"__init__", {PtrType::get(Byte), Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			return make(args[0], args[1], b.GetInsertBlock());
+		}},
+
+		{"__copy__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			BasicBlock *block = b.GetInsertBlock();
+			Module *module = block->getModule();
+			LLVMContext& context = module->getContext();
+
+			auto *allocFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_alloc_atomic",
+			                      IntegerType::getInt8PtrTy(context),
+			                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+
+			Value *ptr = memb(self, "ptr", block);
+			Value *len = memb(self, "len", block);
+			Value *ptrCopy = b.CreateCall(allocFunc, len);
+			makeMemCpy(ptrCopy, ptr, len, block, 1);
+			Value *copy = make(ptrCopy, len, block);
+			return copy;
+		}},
+
+		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *len = memb(self, "len", b.GetInsertBlock());
+			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
+			return b.CreateZExt(b.CreateICmpNE(len, zero), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__getitem__", {Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			return make(ptr, oneLLVM(b.getContext()), b.GetInsertBlock());
+		}},
+
+		{"__slice__", {Int, Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			Value *len = b.CreateSub(args[1], args[0]);
+			return make(ptr, len, b.GetInsertBlock());
+		}},
+
+		{"__slice_left__", {Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			return make(ptr, args[0], b.GetInsertBlock());
+		}},
+
+		{"__slice_right__", {Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+			Value *to = memb(self, "len", b.GetInsertBlock());
+			ptr = b.CreateGEP(ptr, args[0]);
+			Value *len = b.CreateSub(to, args[0]);
+			return make(ptr, len, b.GetInsertBlock());
+		}},
+
+		{"__eq__", {Str}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *x = eq(self, args[0], b.GetInsertBlock());
+			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__ne__", {Str}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *x = eq(self, args[0], b.GetInsertBlock());
+			x = b.CreateNot(x);
 			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
 		}},
 	};
-}
-
-types::Type *types::StrType::indexType() const
-{
-	return StrType::get();
-}
-
-types::Type *types::StrType::subscriptType() const
-{
-	return types::Int;
 }
 
 Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block)

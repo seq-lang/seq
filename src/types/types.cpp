@@ -32,78 +32,7 @@ types::VTable& types::Type::getVTable()
 	return vtable;
 }
 
-Value *types::Type::loadFromAlloca(BaseFunc *base,
-                                   Value *var,
-                                   BasicBlock *block)
-{
-	IRBuilder<> builder(block);
-	return builder.CreateLoad(var);
-}
-
-Value *types::Type::storeInAlloca(BaseFunc *base,
-                                  Value *self,
-                                  BasicBlock *block,
-                                  bool storeDefault)
-{
-	LLVMContext& context = base->getContext();
-	BasicBlock *preambleBlock = base->getPreamble();
-	IRBuilder<> builder(block);
-
-	Value *var = makeAlloca(getLLVMType(context), preambleBlock);
-	builder.CreateStore(self, var);
-
-	if (storeDefault) {
-		builder.SetInsertPoint(preambleBlock);
-		builder.CreateStore(defaultValue(preambleBlock), var);
-	}
-
-	return var;
-}
-
-Value *types::Type::storeInAlloca(BaseFunc *base,
-                                  Value *self,
-                                  BasicBlock *block)
-{
-	return storeInAlloca(base, self, block, false);
-}
-
-Value *types::Type::eq(BaseFunc *base,
-                       Value *self,
-                       Value *other,
-                       BasicBlock *block)
-{
-	throw exc::SeqException("type '" + getName() + "' does not support equality checks");
-}
-
-llvm::Value *types::Type::copy(BaseFunc *base,
-                               Value *self,
-                               BasicBlock *block)
-{
-	if (!getVTable().copy || isAbstract())
-		throw exc::SeqException("cannot copy type '" + getName() + "'");
-
-	auto *copyFunc = cast<Function>(
-	                   block->getModule()->getOrInsertFunction(
-	                     getVTable().copyName,
-	                     getLLVMType(block->getContext()),
-	                     getLLVMType(block->getContext())));
-
-	copyFunc->setCallingConv(CallingConv::C);
-
-	IRBuilder<> builder(block);
-	return builder.CreateCall(copyFunc, {self});
-}
-
-void types::Type::finalizeCopy(Module *module, ExecutionEngine *eng)
-{
-	Function *copyFunc = module->getFunction(getVTable().copyName);
-	if (copyFunc)
-		eng->addGlobalMapping(copyFunc, getVTable().copy);
-}
-
-void types::Type::print(BaseFunc *base,
-                        Value *self,
-                        BasicBlock *block)
+void types::Type::print(Value *self, BasicBlock *block)
 {
 	if (!getVTable().print || isAbstract())
 		throw exc::SeqException("cannot print type '" + getName() + "'");
@@ -125,79 +54,6 @@ void types::Type::finalizePrint(Module *module, ExecutionEngine *eng)
 	Function *printFunc = module->getFunction(getVTable().printName);
 	if (printFunc)
 		eng->addGlobalMapping(printFunc, getVTable().print);
-}
-
-void types::Type::serialize(BaseFunc *base,
-                            Value *self,
-                            Value *fp,
-                            BasicBlock *block)
-{
-	if (isAbstract())
-		throw exc::SeqException("type '" + getName() + "' cannot be serialized");
-
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-
-	auto *writeFunc = cast<Function>(
-	                    module->getOrInsertFunction(
-	                      "seq_io_write",
-	                      llvm::Type::getVoidTy(context),
-	                      IntegerType::getInt8PtrTy(context),
-	                      seqIntLLVM(context),
-	                      seqIntLLVM(context),
-	                      IntegerType::getInt8PtrTy(context)));
-
-	writeFunc->setCallingConv(CallingConv::C);
-
-	IRBuilder<> builder(block);
-	Value *selfPtr = storeInAlloca(base, self, block);
-	Value *ptrVal = builder.CreatePointerCast(selfPtr, IntegerType::getInt8PtrTy(context));
-	Value *sizeVal = ConstantInt::get(seqIntLLVM(context), (uint64_t)size(module));
-	builder.CreateCall(writeFunc, {ptrVal, sizeVal, oneLLVM(context), fp});
-}
-
-void types::Type::finalizeSerialize(Module *module, ExecutionEngine *eng)
-{
-	Function *writeFunc = module->getFunction("seq_io_write");
-	if (writeFunc)
-		eng->addGlobalMapping(writeFunc, (void *)seq_io_write);
-}
-
-Value *types::Type::deserialize(BaseFunc *base,
-                                Value *fp,
-                                BasicBlock *block)
-{
-	if (isAbstract())
-		throw exc::SeqException("type '" + getName() + "' cannot be serialized");
-
-	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
-	BasicBlock *preambleBlock = base->getPreamble();
-
-	auto *readFunc = cast<Function>(
-	                   module->getOrInsertFunction(
-	                     "seq_io_read",
-	                     llvm::Type::getVoidTy(context),
-	                     IntegerType::getInt8PtrTy(context),
-	                     seqIntLLVM(context),
-	                     seqIntLLVM(context),
-	                     IntegerType::getInt8PtrTy(context)));
-
-	readFunc->setCallingConv(CallingConv::C);
-
-	IRBuilder<> builder(block);
-	Value *resultVar = makeAlloca(getLLVMType(context), preambleBlock);
-	Value *resultVarGeneric = builder.CreateBitCast(resultVar, IntegerType::getInt8PtrTy(context));
-	Value *sizeVal = ConstantInt::get(seqIntLLVM(context), (uint64_t)size(module));
-	builder.CreateCall(readFunc, {resultVarGeneric, sizeVal, oneLLVM(context), fp});
-	return builder.CreateLoad(resultVar);
-}
-
-void types::Type::finalizeDeserialize(Module *module, ExecutionEngine *eng)
-{
-	Function *readFunc = module->getFunction("seq_io_read");
-	if (readFunc)
-		eng->addGlobalMapping(readFunc, (void *)seq_io_read);
 }
 
 Value *types::Type::alloc(Value *count, BasicBlock *block)
@@ -227,90 +83,6 @@ Value *types::Type::alloc(seq_int_t count, BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
 	return alloc(ConstantInt::get(seqIntLLVM(context), (uint64_t)count, true), block);
-}
-
-void types::Type::finalizeAlloc(Module *module, ExecutionEngine *eng)
-{
-	Function *allocFunc = module->getFunction(allocFuncName());
-	if (allocFunc)
-		eng->addGlobalMapping(allocFunc, (void *)(isAtomic() ? seq_alloc_atomic : seq_alloc));
-}
-
-Value *types::Type::load(BaseFunc *base,
-                         Value *ptr,
-                         Value *idx,
-                         BasicBlock *block)
-{
-	if (size(block->getModule()) == 0 || isAbstract())
-		throw exc::SeqException("cannot load type '" + getName() + "'");
-
-	IRBuilder<> builder(block);
-	return builder.CreateLoad(builder.CreateGEP(ptr, idx));
-}
-
-void types::Type::store(BaseFunc *base,
-                        Value *self,
-                        Value *ptr,
-                        Value *idx,
-                        BasicBlock *block)
-{
-	if (size(block->getModule()) == 0 || isAbstract())
-		throw exc::SeqException("cannot store type '" + getName() + "'");
-
-	IRBuilder<> builder(block);
-	builder.CreateStore(self, builder.CreateGEP(ptr, idx));
-}
-
-Value *types::Type::indexLoad(BaseFunc *base,
-                              Value *self,
-                              Value *idx,
-                              BasicBlock *block)
-{
-	throw exc::SeqException("cannot index into type '" + getName() + "'");
-}
-
-void types::Type::indexStore(BaseFunc *base,
-                             Value *self,
-                             Value *idx,
-                             Value *val,
-                             BasicBlock *block)
-{
-	throw exc::SeqException("cannot index into type '" + getName() + "'");
-}
-
-Value *types::Type::indexSlice(BaseFunc *base,
-                               Value *self,
-                               Value *from,
-                               Value *to,
-                               BasicBlock *block)
-{
-	throw exc::SeqException("cannot index into type '" + getName() + "'");
-}
-
-Value *types::Type::indexSliceNoFrom(BaseFunc *base,
-                                     Value *self,
-                                     Value *to,
-                                     BasicBlock *block)
-{
-	throw exc::SeqException("cannot index into type '" + getName() + "'");
-}
-
-Value *types::Type::indexSliceNoTo(BaseFunc *base,
-                                   Value *self,
-                                   Value *to,
-                                   BasicBlock *block)
-{
-	throw exc::SeqException("cannot index into type '" + getName() + "'");
-}
-
-types::Type *types::Type::indexType() const
-{
-	throw exc::SeqException("cannot index into type '" + getName() + "'");
-}
-
-types::Type *types::Type::subscriptType() const
-{
-	throw exc::SeqException("cannot index into type '" + getName() + "'");
 }
 
 Value *types::Type::call(BaseFunc *base,
@@ -395,8 +167,26 @@ bool types::Type::hasMethod(const std::string& name)
 	return getVTable().methods.find(name) != getVTable().methods.end();
 }
 
+static bool isMagic(const std::string& name)
+{
+	return name.size() >= 4 &&
+	       name[0] == '_' &&
+	       name[1] == '_' &&
+	       name[name.size() - 1] == '_' &&
+	       name[name.size() - 2] == '_';
+}
+
 void types::Type::addMethod(std::string name, BaseFunc *func, bool force)
 {
+	if (isMagic(name)) {
+		if (name == "__new__")
+			throw exc::SeqException("cannot override __new__");
+
+		// insert at the start so we always find the latest-added alternative first
+		vtable.overloads.insert(vtable.overloads.begin(), {name, func});
+		return;
+	}
+
 	if (hasMethod(name)) {
 		if (force) {
 			getVTable().methods[name] = func;
@@ -427,11 +217,12 @@ Value *types::Type::defaultValue(BasicBlock *block)
 	throw exc::SeqException("type '" + getName() + "' has no default value");
 }
 
-Value *types::Type::construct(BaseFunc *base,
-                              const std::vector<Value *>& args,
-                              BasicBlock *block)
+Value *types::Type::boolValue(Value *self, BasicBlock *block)
 {
-	throw exc::SeqException("cannot construct type '" + getName() + "'");
+	if (!magicOut("__bool__", {})->is(types::Bool))
+		throw exc::SeqException("the output type of __bool__ is not boolean");
+
+	return callMagic("__bool__", {}, self, {}, block);
 }
 
 void types::Type::initOps()
@@ -442,32 +233,90 @@ void types::Type::initFields()
 {
 }
 
-OpSpec types::Type::findUOp(const std::string& symbol)
+static std::string argsVecToStr(const std::vector<types::Type *>& args)
 {
-	initOps();
-	Op op = uop(symbol);
+	if (args.empty())
+		return "()";
 
-	for (auto& e : getVTable().ops) {
-		if (e.op == op)
-			return e;
-	}
+	std::string result = "(" + args[0]->getName();
+	for (unsigned i = 1; i< args.size(); i++)
+		result += ", " + args[i]->getName();
 
-	throw exc::SeqException("type '" + getName() + "' does not support operator '" + symbol + "'");
+	result += ")";
+	return result;
 }
 
-OpSpec types::Type::findBOp(const std::string& symbol, types::Type *rhsType)
+types::Type *types::Type::magicOut(const std::string& name, std::vector<types::Type *> args)
 {
 	initOps();
-	Op op = bop(symbol);
 
-	for (auto& e : getVTable().ops) {
-		if (e.op == op && types::is(rhsType, e.rhsType))
-			return e;
+	args.insert(args.begin(), this);
+	for (auto& magic : vtable.overloads) {
+		if (magic.name != name)
+			continue;
+
+		try {
+			std::vector<Expr *> argExprs;
+			for (auto *arg : args)
+				argExprs.push_back(new ValueExpr(arg, nullptr));
+
+			FuncExpr func(magic.func);
+			CallExpr call(&func, argExprs);
+			call.resolveTypes();
+			return call.getType();
+		} catch (exc::SeqException& s) {
+			// maybe a later method will match our argument types, so continue
+		}
+	}
+	args.erase(args.begin());
+
+	for (auto& magic : vtable.magic) {
+		if (name == magic.name && typeMatch<>(args, magic.args))
+			return magic.out;
 	}
 
-	throw exc::SeqException(
-	  "type '" + getName() + "' does not support operator '" +
-	    symbol + "' applied to type '" + rhsType->getName() + "'");
+	throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() + "' with specified argument types " + argsVecToStr(args));
+}
+
+Value *types::Type::callMagic(const std::string& name,
+                              std::vector<types::Type *> argTypes,
+                              Value *self,
+                              std::vector<Value *> args,
+                              BasicBlock *block)
+{
+	initOps();
+
+	argTypes.insert(argTypes.begin(), this);
+	args.insert(args.begin(), self);
+	for (auto& magic : vtable.overloads) {
+		if (magic.name != name)
+			continue;
+
+		try {
+			std::vector<Expr *> argExprs;
+			assert(argTypes.size() == args.size());
+			for (unsigned i = 0; i < args.size(); i++)
+				argExprs.push_back(new ValueExpr(argTypes[i], args[i]));
+
+			FuncExpr func(magic.func);
+			CallExpr call(&func, argExprs);
+			call.resolveTypes();
+			return call.codegen(nullptr, block);
+		} catch (exc::SeqException&) {
+			// maybe a later method will match our argument types, so continue
+		}
+	}
+	argTypes.erase(argTypes.begin());
+	args.erase(args.begin());
+
+	for (auto& magic : vtable.magic) {
+		if (name == magic.name && typeMatch<>(argTypes, magic.args)) {
+			IRBuilder<> builder(block);
+			return magic.codegen(self, args, builder);
+		}
+	}
+
+	throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() + "' with specified argument types " + argsVecToStr(argTypes));
 }
 
 bool types::Type::isAtomic() const
@@ -498,11 +347,6 @@ types::Type *types::Type::getBaseType(unsigned idx) const
 types::Type *types::Type::getCallType(const std::vector<Type *>& inTypes)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
-}
-
-types::Type *types::Type::getConstructType(const std::vector<Type *>& inTypes)
-{
-	throw exc::SeqException("cannot construct type '" + getName() + "'");
 }
 
 Type *types::Type::getLLVMType(LLVMContext& context) const

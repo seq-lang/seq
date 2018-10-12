@@ -14,6 +14,11 @@ struct seq_t {
 	char *seq;
 };
 
+struct seq_str_t {
+	seq_int_t len;
+	char *str;
+};
+
 template<typename T = void>
 struct seq_arr_t {
 	seq_int_t len;
@@ -48,13 +53,15 @@ SEQ_FUNC void seq_io_write(const void *ptr,
                            seq_int_t nmemb,
                            void *fp);
 
-SEQ_FUNC void *seq_source_init(char **sources, seq_int_t numSources);
+SEQ_FUNC void *seq_source_new();
+SEQ_FUNC void seq_source_init(void *state, seq_str_t source);
 SEQ_FUNC seq_int_t seq_source_read(void *state);
 SEQ_FUNC seq_arr_t<seq_t> seq_source_get(void *state, seq_int_t idx);
 SEQ_FUNC seq_t seq_source_get_single(void *state, seq_int_t idx);
 SEQ_FUNC void seq_source_dealloc(void *state);
 
-SEQ_FUNC void *seq_raw_init(char **sources);
+SEQ_FUNC void *seq_raw_new();
+SEQ_FUNC void seq_raw_init(void *st, seq_str_t source);
 SEQ_FUNC seq_t seq_raw_read(void *st);
 SEQ_FUNC void seq_raw_dealloc(void *st);
 
