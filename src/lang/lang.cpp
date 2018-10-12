@@ -513,19 +513,20 @@ void For::resolveTypes()
 
 void For::codegen0(BasicBlock*& block)
 {
-	types::Type *type = gen->getType();
+	types::Type *type = gen->getType()->magicOut("__iter__", {});
 	types::GenType *genType = type->asGen();
 
 	if (!genType)
-		throw exc::SeqException("cannot iterate over non-generator of type '" + type->getName() + "'");
+		throw exc::SeqException("cannot iterate over object of type '" + type->getName() + "'");
 
 	LLVMContext& context = block->getContext();
 	BasicBlock *entry = block;
 	Function *func = entry->getParent();
 
 	Value *gen = this->gen->codegen(getBase(), entry);
-	IRBuilder<> builder(entry);
+	gen = this->gen->getType()->callMagic("__iter__", {}, gen, {}, entry);
 
+	IRBuilder<> builder(entry);
 	BasicBlock *loopCont = BasicBlock::Create(context, "for_cont", func);
 	BasicBlock *loop = BasicBlock::Create(context, "for", func);
 	builder.CreateBr(loop);
