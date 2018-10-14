@@ -90,6 +90,21 @@ void types::RecordType::initOps()
 				val = setMemb(val, std::to_string(i+1), args[i], b.GetInsertBlock());
 			return val;
 		}},
+
+		{"__copy__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			BasicBlock *block = b.GetInsertBlock();
+			Value *val = defaultValue(block);
+			for (unsigned i = 0; i < types.size(); i++) {
+				Value *elem = memb(self, std::to_string(i+1), block);
+
+				if (!types::is(types[i], types[i]->magicOut("__copy__", {})))
+					throw exc::SeqException("__copy__ returned an object of a different type");
+
+				Value *copy = types[i]->callMagic("__copy__", {}, elem, {}, block);
+				val = setMemb(val, std::to_string(i + 1), copy, block);
+			}
+			return val;
+		}},
 	};
 }
 
@@ -135,7 +150,7 @@ void types::RecordType::addLLVMTypesToStruct(StructType *structType)
 	structType->setBody(body);
 }
 
-seq_int_t types::RecordType::size(Module *module) const
+size_t types::RecordType::size(Module *module) const
 {
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }

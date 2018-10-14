@@ -125,7 +125,7 @@ Type *types::SourceType::getLLVMType(LLVMContext& context) const
 	return IntegerType::getInt8PtrTy(context);
 }
 
-seq_int_t types::SourceType::size(Module *module) const
+size_t types::SourceType::size(Module *module) const
 {
 	return sizeof(void *);
 }
@@ -225,7 +225,7 @@ Type *types::RawType::getLLVMType(LLVMContext& context) const
 	return IntegerType::getInt8PtrTy(context);
 }
 
-seq_int_t types::RawType::size(Module *module) const
+size_t types::RawType::size(Module *module) const
 {
 	return sizeof(void *);
 }

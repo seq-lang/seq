@@ -89,7 +89,7 @@ Type *types::FuncType::getLLVMType(LLVMContext& context) const
 	return PointerType::get(FunctionType::get(outType->getLLVMType(context), types, false), 0);
 }
 
-seq_int_t types::FuncType::size(Module *module) const
+size_t types::FuncType::size(Module *module) const
 {
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
@@ -229,7 +229,7 @@ Type *types::GenType::getLLVMType(LLVMContext& context) const
 	return IntegerType::getInt8PtrTy(context);
 }
 
-seq_int_t types::GenType::size(Module *module) const
+size_t types::GenType::size(Module *module) const
 {
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
@@ -360,7 +360,7 @@ Type *types::PartialFuncType::getLLVMType(LLVMContext& context) const
 	return contents->getLLVMType(context);
 }
 
-seq_int_t types::PartialFuncType::size(Module *module) const
+size_t types::PartialFuncType::size(Module *module) const
 {
 	return contents->size(module);
 }

@@ -22,7 +22,7 @@ namespace seq {
 			unsigned numBaseTypes() const override;
 			Type *getBaseType(unsigned idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 			static PtrType *get(Type *baseType) noexcept;
 			static PtrType *get() noexcept;
 

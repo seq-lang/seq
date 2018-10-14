@@ -73,19 +73,7 @@ types::VTable& types::GenericType::getVTable()
 	return type->getVTable();
 }
 
-std::string types::GenericType::allocFuncName()
-{
-	ensure();
-	return type->allocFuncName();
-}
-
 Value *types::GenericType::alloc(Value *count, BasicBlock *block)
-{
-	ensure();
-	return type->alloc(count, block);
-}
-
-Value *types::GenericType::alloc(seq_int_t count, BasicBlock *block)
 {
 	ensure();
 	return type->alloc(count, block);
@@ -247,7 +235,7 @@ Type *types::GenericType::getLLVMType(LLVMContext& context) const
 	return type->getLLVMType(context);
 }
 
-seq_int_t types::GenericType::size(Module *module) const
+size_t types::GenericType::size(Module *module) const
 {
 	ensure();
 	return type->size(module);

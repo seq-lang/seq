@@ -68,6 +68,10 @@ void types::IntType::initOps()
 			return (Value *)nullptr;
 		}},
 
+		{"__copy__", {}, Int, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
 		// int unary
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
@@ -232,6 +236,10 @@ void types::FloatType::initOps()
 			return (Value *)nullptr;
 		}},
 
+		{"__copy__", {}, Float, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
 		// float unary
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantFP::get(Float->getLLVMType(b.getContext()), 0.0);
@@ -368,6 +376,10 @@ void types::BoolType::initOps()
 			return (Value *)nullptr;
 		}},
 
+		{"__copy__", {}, Bool, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -421,6 +433,10 @@ void types::ByteType::initOps()
 			return (Value *)nullptr;
 		}},
 
+		{"__copy__", {}, Byte, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantInt::get(Byte->getLLVMType(b.getContext()), 0);
 			return b.CreateZExt(b.CreateICmpNE(self, zero), Bool->getLLVMType(b.getContext()));
@@ -456,22 +472,22 @@ Type *types::ByteType::getLLVMType(LLVMContext& context) const
 	return IntegerType::getInt8Ty(context);
 }
 
-seq_int_t types::IntType::size(Module *module) const
+size_t types::IntType::size(Module *module) const
 {
 	return sizeof(seq_int_t);
 }
 
-seq_int_t types::FloatType::size(Module *module) const
+size_t types::FloatType::size(Module *module) const
 {
 	return sizeof(double);
 }
 
-seq_int_t types::BoolType::size(Module *module) const
+size_t types::BoolType::size(Module *module) const
 {
 	return sizeof(bool);
 }
 
-seq_int_t types::ByteType::size(Module *module) const
+size_t types::ByteType::size(Module *module) const
 {
 	return 1;
 }

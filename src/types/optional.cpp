@@ -60,7 +60,7 @@ Type *types::OptionalType::getLLVMType(LLVMContext& context) const
 		return StructType::get(IntegerType::getInt1Ty(context), baseType->getLLVMType(context));
 }
 
-seq_int_t types::OptionalType::size(Module *module) const
+size_t types::OptionalType::size(Module *module) const
 {
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }

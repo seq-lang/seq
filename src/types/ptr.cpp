@@ -24,6 +24,10 @@ void types::PtrType::initOps()
 			return getBaseType(0)->alloc(args[0], b.GetInsertBlock());
 		}},
 
+		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateIsNotNull(self), Bool->getLLVMType(b.getContext()));
 		}},
@@ -98,7 +102,7 @@ Type *types::PtrType::getLLVMType(LLVMContext& context) const
 	return PointerType::get(getBaseType(0)->getLLVMType(context), 0);
 }
 
-seq_int_t types::PtrType::size(Module *module) const
+size_t types::PtrType::size(Module *module) const
 {
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }

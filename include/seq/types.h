@@ -46,13 +46,9 @@ namespace seq {
 			virtual Type *getParent() const;
 			virtual bool isAbstract() const;
 			virtual VTable& getVTable();
-
 			virtual bool isAtomic() const;
 
-			virtual std::string allocFuncName() { return isAtomic() ? "seq_alloc_atomic" : "seq_alloc"; }
-
 			virtual llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block);
-			virtual llvm::Value *alloc(seq_int_t count, llvm::BasicBlock *block);
 
 			virtual llvm::Value *call(BaseFunc *base,
 			                          llvm::Value *self,
@@ -101,7 +97,7 @@ namespace seq {
 			virtual Type *getBaseType(unsigned idx) const;
 			virtual Type *getCallType(const std::vector<Type *>& inTypes);
 			virtual llvm::Type *getLLVMType(llvm::LLVMContext& context) const;
-			virtual seq_int_t size(llvm::Module *module) const;
+			virtual size_t size(llvm::Module *module) const;
 
 			/*
 			 * The following method are basically for overriding

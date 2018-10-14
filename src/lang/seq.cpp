@@ -128,7 +128,7 @@ void SeqModule::codegen(Module *module)
 	initFunc->setCallingConv(CallingConv::C);
 	builder.CreateCall(initFunc);
 
-	strlenFunc = cast<Function>(module->getOrInsertFunction("strlen", Type::getIntNTy(context, 8*sizeof(size_t)), IntegerType::getInt8PtrTy(context)));
+	strlenFunc = cast<Function>(module->getOrInsertFunction("strlen", seqIntLLVM(context), IntegerType::getInt8PtrTy(context)));
 	strlenFunc->setCallingConv(CallingConv::C);
 
 	assert(argsType != nullptr);

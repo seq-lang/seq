@@ -70,7 +70,7 @@ namespace seq {
 			unsigned numBaseTypes() const override;
 			Type *getBaseType(unsigned idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 
 			RefType *asRef() override;
 

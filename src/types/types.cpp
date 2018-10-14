@@ -39,26 +39,16 @@ Value *types::Type::alloc(Value *count, BasicBlock *block)
 
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
+	auto *allocFunc = makeAllocFunc(module, isAtomic());
 
-	auto *allocFunc = cast<Function>(
-	                    module->getOrInsertFunction(
-	                      allocFuncName(),
-	                      IntegerType::getInt8PtrTy(context),
-	                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
+	if (!count)
+		count = ConstantInt::get(seqIntLLVM(context), 1, true);
 
 	IRBuilder<> builder(block);
-
-	Value *elemSize = ConstantInt::get(seqIntLLVM(context), (uint64_t)size(block->getModule()));
+	Value *elemSize = ConstantInt::get(seqIntLLVM(context), size(block->getModule()));
 	Value *fullSize = builder.CreateMul(count, elemSize);
-	fullSize = builder.CreateBitCast(fullSize, IntegerType::getIntNTy(context, sizeof(size_t)*8));
 	Value *mem = builder.CreateCall(allocFunc, {fullSize});
 	return builder.CreatePointerCast(mem, PointerType::get(getLLVMType(context), 0));
-}
-
-Value *types::Type::alloc(seq_int_t count, BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-	return alloc(ConstantInt::get(seqIntLLVM(context), (uint64_t)count, true), block);
 }
 
 Value *types::Type::call(BaseFunc *base,
@@ -418,7 +408,7 @@ Type *types::Type::getLLVMType(LLVMContext& context) const
 	throw exc::SeqException("cannot instantiate '" + getName() + "' class");
 }
 
-seq_int_t types::Type::size(Module *module) const
+size_t types::Type::size(Module *module) const
 {
 	return 0;
 }

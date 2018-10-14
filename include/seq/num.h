@@ -26,7 +26,7 @@ namespace seq {
 
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 			static IntType *get() noexcept;
 		};
 
@@ -41,7 +41,7 @@ namespace seq {
 
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 			static FloatType *get() noexcept;
 		};
 
@@ -56,7 +56,7 @@ namespace seq {
 
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 			static BoolType *get() noexcept;
 		};
 
@@ -71,7 +71,7 @@ namespace seq {
 
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 			static ByteType *get() noexcept;
 		};
 

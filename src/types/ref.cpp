@@ -147,7 +147,7 @@ void types::RefType::initOps()
 
 	vtable.magic = {
 		{"__new__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
-			self = contents->alloc(1, b.GetInsertBlock());
+			self = contents->alloc(nullptr, b.GetInsertBlock());
 			self = b.CreateBitCast(self, getLLVMType(b.getContext()));
 			return self;
 		}},
@@ -209,7 +209,7 @@ Type *types::RefType::getLLVMType(LLVMContext& context) const
 	return PointerType::get(structType, 0);
 }
 
-seq_int_t types::RefType::size(Module *module) const
+size_t types::RefType::size(Module *module) const
 {
 	return sizeof(void *);
 }
@@ -224,7 +224,7 @@ Value *types::RefType::make(BasicBlock *block, std::vector<Value *> vals)
 	assert(contents);
 	LLVMContext& context = block->getContext();
 	Value *val = contents->defaultValue(block);
-	Value *ref = contents->alloc(1, block);
+	Value *ref = contents->alloc(nullptr, block);
 	IRBuilder<> builder(block);
 	llvm::Type *type = getLLVMType(context);
 	ref = builder.CreateBitCast(ref, type);

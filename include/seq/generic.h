@@ -27,13 +27,9 @@ namespace seq {
 			Type *getParent() const override;
 			bool isAbstract() const override;
 			VTable& getVTable() override;
-
 			bool isAtomic() const override;
 
-			std::string allocFuncName() override;
-
 			llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block) override;
-			llvm::Value *alloc(seq_int_t count, llvm::BasicBlock *block) override;
 
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
@@ -82,7 +78,7 @@ namespace seq {
 			Type *getBaseType(unsigned idx) const override;
 			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 
 			RecordType *asRec() override;
 			RefType *asRef() override;

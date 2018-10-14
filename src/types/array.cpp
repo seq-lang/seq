@@ -41,6 +41,23 @@ void types::ArrayType::initOps()
 			return make(args[0], args[1], b.GetInsertBlock());
 		}},
 
+		{"__copy__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			BasicBlock *block = b.GetInsertBlock();
+			Module *module = block->getModule();
+			LLVMContext& context = module->getContext();
+
+			auto *allocFunc = makeAllocFunc(module, getBaseType(0)->isAtomic());
+			Value *ptr = memb(self, "ptr", block);
+			Value *len = memb(self, "len", block);
+			Value *elemSize = ConstantInt::get(seqIntLLVM(context), size(module));
+			Value *numBytes = b.CreateMul(len, elemSize);
+			Value *ptrCopy = b.CreateCall(allocFunc, len);
+			makeMemCpy(ptrCopy, ptr, numBytes, block);
+			ptrCopy = b.CreateBitCast(ptrCopy, membType("ptr")->getLLVMType(context));
+			Value *copy = make(ptrCopy, len, block);
+			return copy;
+		}},
+
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return memb(self, "len", b.GetInsertBlock());
 		}},
@@ -112,7 +129,7 @@ Type *types::ArrayType::getLLVMType(LLVMContext& context) const
 	return StructType::get(seqIntLLVM(context), PointerType::get(getBaseType(0)->getLLVMType(context), 0));
 }
 
-seq_int_t types::ArrayType::size(Module *module) const
+size_t types::ArrayType::size(Module *module) const
 {
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }

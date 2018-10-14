@@ -135,7 +135,7 @@ Type *types::BaseSeqType::getLLVMType(LLVMContext& context) const
 	return StructType::get(seqIntLLVM(context), IntegerType::getInt8PtrTy(context));
 }
 
-seq_int_t types::BaseSeqType::size(Module *module) const
+size_t types::BaseSeqType::size(Module *module) const
 {
 	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
@@ -143,32 +143,6 @@ seq_int_t types::BaseSeqType::size(Module *module) const
 /* derived Seq type */
 types::SeqType::SeqType() : BaseSeqType("Seq")
 {
-	addMethod("copy", new BaseFuncLite({this}, this, [this](Module *module) {
-		LLVMContext& context = module->getContext();
-		auto *f = cast<Function>(module->getOrInsertFunction("seq.seq.copy",
-		                                                     getLLVMType(context),
-		                                                     getLLVMType(context)));
-		f->setLinkage(GlobalValue::PrivateLinkage);
-
-		auto *allocFunc = cast<Function>(
-		                    module->getOrInsertFunction(
-		                      "seq_alloc_atomic",
-		                      IntegerType::getInt8PtrTy(context),
-		                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
-
-		Value *arg = f->arg_begin();
-
-		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
-		Value *ptr = memb(arg, "ptr", entry);
-		Value *len = memb(arg, "len", entry);
-
-		IRBuilder<> builder(entry);
-		Value *ptrCopy = builder.CreateCall(allocFunc, len);
-		makeMemCpy(ptrCopy, ptr, len, entry, 1);
-		Value *copy = make(ptrCopy, len, entry);
-		builder.CreateRet(copy);
-		return f;
-	}), false);
 }
 
 Value *types::SeqType::memb(Value *self,
@@ -212,14 +186,7 @@ void types::SeqType::initOps()
 		{"__copy__", {}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
 			BasicBlock *block = b.GetInsertBlock();
 			Module *module = block->getModule();
-			LLVMContext& context = module->getContext();
-
-			auto *allocFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_alloc_atomic",
-			                      IntegerType::getInt8PtrTy(context),
-			                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
-
+			auto *allocFunc = makeAllocFunc(module, true);
 			Value *ptr = memb(self, "ptr", block);
 			Value *len = memb(self, "len", block);
 			Value *ptrCopy = b.CreateCall(allocFunc, len);
@@ -345,23 +312,8 @@ void types::StrType::initOps()
 			return (Value *)nullptr;
 		}},
 
-		{"__copy__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
-			BasicBlock *block = b.GetInsertBlock();
-			Module *module = block->getModule();
-			LLVMContext& context = module->getContext();
-
-			auto *allocFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_alloc_atomic",
-			                      IntegerType::getInt8PtrTy(context),
-			                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
-
-			Value *ptr = memb(self, "ptr", block);
-			Value *len = memb(self, "len", block);
-			Value *ptrCopy = b.CreateCall(allocFunc, len);
-			makeMemCpy(ptrCopy, ptr, len, block, 1);
-			Value *copy = make(ptrCopy, len, block);
-			return copy;
+		{"__copy__", {}, Str, SEQ_MAGIC(self, args, b) {
+			return self;
 		}},
 
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {

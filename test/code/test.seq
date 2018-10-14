@@ -115,7 +115,7 @@ def ident(s: Seq) {
 
 for input in Source(args[0]) {
 
-  var v = farray[0](input.copy())
+  var v = farray[0](input.__copy__())
   for r in enum(v) {
     print r[0]
     print r[1]

@@ -106,6 +106,16 @@ namespace seq {
 #endif
 	}
 
+	inline llvm::Function *makeAllocFunc(llvm::Module *module, bool atomic)
+	{
+		llvm::LLVMContext& context = module->getContext();
+		return llvm::cast<llvm::Function>(
+		         module->getOrInsertFunction(
+		           atomic ? "seq_alloc_atomic" : "seq_alloc",
+		           llvm::IntegerType::getInt8PtrTy(context),
+		           seqIntLLVM(context)));
+	}
+
 	namespace exc {
 		class SeqException : public SrcObject, public std::runtime_error {
 		public:

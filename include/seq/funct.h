@@ -30,7 +30,7 @@ namespace seq {
 			Type *getBaseType(unsigned idx) const override;
 			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 			static FuncType *get(std::vector<Type *> inTypes, Type *outType);
 
 			FuncType *clone(Generic *ref) override;
@@ -56,7 +56,7 @@ namespace seq {
 			unsigned numBaseTypes() const override;
 			Type *getBaseType(unsigned idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 
 			GenType *asGen() override;
 
@@ -92,7 +92,7 @@ namespace seq {
 			bool is(Type *type) const override;
 			Type *getCallType(const std::vector<Type *>& inTypes) override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 			static PartialFuncType *get(Type *callee, std::vector<types::Type *> callTypes);
 
 			llvm::Value *make(llvm::Value *func, std::vector<llvm::Value *> args, llvm::BasicBlock *block);

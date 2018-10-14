@@ -32,7 +32,7 @@ namespace seq {
 			Type *getBaseType(unsigned idx) const override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
 			void addLLVMTypesToStruct(llvm::StructType *structType);
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 
 			RecordType *asRec() override;
 

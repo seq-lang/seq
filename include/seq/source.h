@@ -15,7 +15,7 @@ namespace seq {
 			bool isAtomic() const override;
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 
 			static SourceType *get() noexcept;
 		};
@@ -30,7 +30,7 @@ namespace seq {
 			bool isAtomic() const override;
 			void initOps() override;
 			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			seq_int_t size(llvm::Module *module) const override;
+			size_t size(llvm::Module *module) const override;
 
 			static RawType *get() noexcept;
 		};

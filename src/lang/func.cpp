@@ -205,13 +205,7 @@ void Func::codegen(Module *module)
 		builder.SetInsertPoint(allocBlock);
 		Function *sizeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_size, {seqIntLLVM(context)});
 		Value *size = builder.CreateCall(sizeFn);
-
-		auto *allocFunc = cast<Function>(
-		                    module->getOrInsertFunction(
-		                      "seq_alloc",
-		                      IntegerType::getInt8PtrTy(context),
-		                      IntegerType::getIntNTy(context, sizeof(size_t)*8)));
-
+		auto *allocFunc = makeAllocFunc(module, false);
 		alloc = builder.CreateCall(allocFunc, size);
 	}
 
