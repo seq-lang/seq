@@ -45,6 +45,11 @@ SEQ_FUNC void *seq_realloc(void *p, size_t n)
 	return GC_REALLOC(p, n);
 }
 
+SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data))
+{
+	GC_REGISTER_FINALIZER(p, f, nullptr, nullptr, nullptr);
+}
+
 
 /*
  * Printing

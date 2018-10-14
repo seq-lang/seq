@@ -51,9 +51,13 @@ namespace seq {
 			                     llvm::Value *val,
 			                     llvm::BasicBlock *block) override;
 
+			bool hasMethod(const std::string& name) override;
+
 			void addMethod(std::string name,
 			               BaseFunc *func,
 			               bool force) override;
+
+			BaseFunc *getMethod(const std::string& name) override;
 
 			llvm::Value *staticMemb(const std::string& name, llvm::BasicBlock *block) override;
 

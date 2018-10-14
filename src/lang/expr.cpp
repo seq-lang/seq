@@ -1071,6 +1071,9 @@ void ConstructExpr::resolveTypes()
 
 Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+
 	getType();  // validates construction
 
 	std::vector<types::Type *> types;
@@ -1083,9 +1086,38 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 	Value *self;
 
-	try {
+	if (type->hasMethod("__new__")) {
 		self = type->callMagic("__new__", {}, nullptr, {}, block);
-	} catch (exc::SeqException&) {
+
+		if (type->hasMethod("__del__")) {
+			// make and register the finalizer
+			static int idx = 1;
+			auto *finalizeFunc = cast<Function>(
+			                       module->getOrInsertFunction(
+			                         "seq.finalizer." + std::to_string(idx++),
+			                         Type::getVoidTy(context),
+			                         IntegerType::getInt8PtrTy(context),
+			                         IntegerType::getInt8PtrTy(context)));
+
+			BasicBlock *entry = BasicBlock::Create(context, "entry", finalizeFunc);
+			Value *obj = finalizeFunc->arg_begin();
+			IRBuilder<> builder(entry);
+			obj = builder.CreateBitCast(obj, type->getLLVMType(context));
+			type->callMagic("__del__", {}, obj, {}, entry);
+			builder.CreateRetVoid();
+
+			auto *registerFunc = cast<Function>(
+			                       module->getOrInsertFunction(
+			                         "seq_register_finalizer",
+			                         Type::getVoidTy(context),
+			                         IntegerType::getInt8PtrTy(context),
+			                         finalizeFunc->getType()));
+
+			builder.SetInsertPoint(block);
+			obj = builder.CreateBitCast(self, IntegerType::getInt8PtrTy(context));
+			builder.CreateCall(registerFunc, {obj, finalizeFunc});
+		}
+	} else {
 		// no __new__ defined, so just pass default value to __init__
 		self = type->defaultValue(block);
 	}

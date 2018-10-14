@@ -30,6 +30,7 @@ SEQ_FUNC void seq_init();
 SEQ_FUNC void *seq_alloc(size_t n);
 SEQ_FUNC void *seq_alloc_atomic(size_t n);
 SEQ_FUNC void *seq_realloc(void *p, size_t n);
+SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data));
 
 SEQ_FUNC void seq_print_int(seq_int_t n);
 SEQ_FUNC void seq_print_float(double f);
