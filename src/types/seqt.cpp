@@ -228,6 +228,10 @@ void types::SeqType::initOps()
 			return copy;
 		}},
 
+		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
+			return memb(self, "len", b.GetInsertBlock());
+		}},
+
 		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *len = memb(self, "len", b.GetInsertBlock());
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
@@ -358,6 +362,10 @@ void types::StrType::initOps()
 			makeMemCpy(ptrCopy, ptr, len, block, 1);
 			Value *copy = make(ptrCopy, len, block);
 			return copy;
+		}},
+
+		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
+			return memb(self, "len", b.GetInsertBlock());
 		}},
 
 		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {

@@ -41,6 +41,10 @@ void types::ArrayType::initOps()
 			return make(args[0], args[1], b.GetInsertBlock());
 		}},
 
+		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
+			return memb(self, "len", b.GetInsertBlock());
+		}},
+
 		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *len = memb(self, "len", b.GetInsertBlock());
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
