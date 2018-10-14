@@ -79,18 +79,6 @@ std::string types::GenericType::allocFuncName()
 	return type->allocFuncName();
 }
 
-void types::GenericType::print(Value *self, BasicBlock *block)
-{
-	ensure();
-	type->print(self, block);
-}
-
-void types::GenericType::finalizePrint(Module *module, ExecutionEngine *eng)
-{
-	ensure();
-	type->finalizePrint(module, eng);
-}
-
 Value *types::GenericType::alloc(Value *count, BasicBlock *block)
 {
 	ensure();

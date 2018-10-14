@@ -7,8 +7,6 @@ using namespace llvm;
 types::BaseSeqType::BaseSeqType(std::string name) :
     Type(std::move(name), BaseType::get())
 {
-	SEQ_ASSIGN_VTABLE_FIELD(copy, seq_copy_seq);
-	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_seq);
 }
 
 static inline std::string eqFuncName()
@@ -108,26 +106,6 @@ Value *types::BaseSeqType::eq(Value *self,
 	return builder.CreateCall(eq, {seq1, len1, seq2, len2});
 }
 
-void types::BaseSeqType::print(Value *self, BasicBlock *block)
-{
-	LLVMContext& context = block->getContext();
-
-	auto *printFunc = cast<Function>(
-	                    block->getModule()->getOrInsertFunction(
-	                      getVTable().printName,
-	                      llvm::Type::getVoidTy(context),
-	                      IntegerType::getInt8PtrTy(context),
-	                      seqIntLLVM(context)));
-
-	printFunc->setCallingConv(CallingConv::C);
-
-	Value *ptr = memb(self, "ptr", block);
-	Value *len = memb(self, "len", block);
-
-	IRBuilder<> builder(block);
-	builder.CreateCall(printFunc, {ptr, len});
-}
-
 Value *types::BaseSeqType::defaultValue(BasicBlock *block)
 {
 	LLVMContext& context = block->getContext();
@@ -216,6 +194,19 @@ void types::SeqType::initOps()
 	vtable.magic = {
 		{"__init__", {PtrType::get(Byte), Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
 			return make(args[0], args[1], b.GetInsertBlock());
+		}},
+
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_seq",
+			                      llvm::Type::getVoidTy(context),
+			                      getLLVMType(context)));
+
+			b.CreateCall(printFunc, self);
+			return (Value *)nullptr;
 		}},
 
 		{"__copy__", {}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
@@ -335,6 +326,19 @@ void types::StrType::initOps()
 	vtable.magic = {
 		{"__init__", {PtrType::get(Byte), Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			return make(args[0], args[1], b.GetInsertBlock());
+		}},
+
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_str",
+			                      llvm::Type::getVoidTy(context),
+			                      getLLVMType(context)));
+
+			b.CreateCall(printFunc, self);
+			return (Value *)nullptr;
 		}},
 
 		{"__copy__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {

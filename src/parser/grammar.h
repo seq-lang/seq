@@ -324,8 +324,8 @@ struct continue_stmt : pegtl::seq<str_continue> {};
 
 struct expr_stmt : pegtl::seq<expr> {};
 
-struct statement : pegtl::sor<typedef_stmt, print_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, global_decl, func_stmt, func_stmt_ext, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, expr_stmt, if_stmt, match_stmt> {};
-struct statement_toplvl : pegtl::sor<class_stmt, extend_stmt, statement> {};
+struct statement : pegtl::sor<extend_stmt, typedef_stmt, print_stmt, while_stmt, for_stmt, return_stmt, yield_stmt, break_stmt, continue_stmt, var_decl, global_decl, func_stmt, func_stmt_ext, assign_stmt, assign_member_idx_stmt, assign_member_stmt, assign_array_stmt, expr_stmt, if_stmt, match_stmt> {};
+struct statement_toplvl : pegtl::sor<class_stmt, statement> {};
 struct module : pegtl::must<statement_seq_toplvl> {};
 struct grammar : pegtl::must<seps, module, seps, pegtl::eof> {};
 

@@ -47,34 +47,6 @@ SEQ_FUNC void *seq_realloc(void *p, size_t n)
 
 
 /*
- * Copying
- */
-
-SEQ_FUNC char *seq_copy_seq(char *seq, seq_int_t len)
-{
-	auto *seq2 = (char *)seq_alloc_atomic((size_t)len);
-	memcpy(seq2, seq, (size_t)len);
-	return seq2;
-}
-
-SEQ_FUNC void *seq_copy_array(void *arr, seq_int_t len, seq_int_t elem_size)
-{
-	const size_t size = (size_t)len * elem_size;
-	auto *arr2 = seq_alloc(size);
-	memcpy(arr2, arr, size);
-	return arr2;
-}
-
-SEQ_FUNC void *seq_copy_array_atomic(void *arr, seq_int_t len, seq_int_t elem_size)
-{
-	const size_t size = (size_t)len * elem_size;
-	auto *arr2 = seq_alloc_atomic(size);
-	memcpy(arr2, arr, size);
-	return arr2;
-}
-
-
-/*
  * Printing
  */
 
@@ -98,9 +70,14 @@ SEQ_FUNC void seq_print_byte(char c)
 	cout << c;
 }
 
-SEQ_FUNC void seq_print_seq(char *seq, seq_int_t len)
+SEQ_FUNC void seq_print_str(seq_str_t str)
 {
-	cout.write(seq, len);
+	cout.write(str.str, str.len);
+}
+
+SEQ_FUNC void seq_print_seq(seq_t seq)
+{
+	cout.write(seq.seq, seq.len);
 }
 
 

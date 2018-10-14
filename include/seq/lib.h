@@ -31,15 +31,12 @@ SEQ_FUNC void *seq_alloc(size_t n);
 SEQ_FUNC void *seq_alloc_atomic(size_t n);
 SEQ_FUNC void *seq_realloc(void *p, size_t n);
 
-SEQ_FUNC char *seq_copy_seq(char *seq, seq_int_t len);
-SEQ_FUNC void *seq_copy_array(void *arr, seq_int_t len, seq_int_t elem_size);
-SEQ_FUNC void *seq_copy_array_atomic(void *arr, seq_int_t len, seq_int_t elem_size);
-
 SEQ_FUNC void seq_print_int(seq_int_t n);
 SEQ_FUNC void seq_print_float(double f);
 SEQ_FUNC void seq_print_bool(bool b);
 SEQ_FUNC void seq_print_byte(char c);
-SEQ_FUNC void seq_print_seq(char *seq, seq_int_t len);
+SEQ_FUNC void seq_print_str(seq_str_t str);
+SEQ_FUNC void seq_print_seq(seq_t seq);
 
 SEQ_FUNC void *seq_io_openr(const char *filename);
 SEQ_FUNC void *seq_io_openw(const char *filename);

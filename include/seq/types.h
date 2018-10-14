@@ -9,15 +9,6 @@
 #include "ops.h"
 #include "lib.h"
 
-#define SEQ_STRINGIFY(x) #x
-#define SEQ_TOSTRING(x)  SEQ_STRINGIFY(x)
-
-#define SEQ_ASSIGN_VTABLE_FIELD(field, value) \
-    do { \
-	    vtable.field = (void *)(value); \
-        vtable.field##Name = SEQ_TOSTRING(value); \
-    } while (0)
-
 namespace seq {
 
 	class BaseFunc;
@@ -36,12 +27,6 @@ namespace seq {
 		class OptionalType;
 
 		struct VTable {
-			void *copy = nullptr;
-			void *print = nullptr;
-
-			std::string copyName = "";
-			std::string printName = "";
-
 			std::map<std::string, std::pair<int, Type *>> fields = {};
 			std::map<std::string, BaseFunc *> methods = {};
 			std::vector<MagicMethod> magic = {};
@@ -65,10 +50,6 @@ namespace seq {
 			virtual bool isAtomic() const;
 
 			virtual std::string allocFuncName() { return isAtomic() ? "seq_alloc_atomic" : "seq_alloc"; }
-
-			virtual void print(llvm::Value *self, llvm::BasicBlock *block);
-
-			virtual void finalizePrint(llvm::Module *module, llvm::ExecutionEngine *eng);
 
 			virtual llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block);
 			virtual llvm::Value *alloc(seq_int_t count, llvm::BasicBlock *block);

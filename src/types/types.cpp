@@ -32,30 +32,6 @@ types::VTable& types::Type::getVTable()
 	return vtable;
 }
 
-void types::Type::print(Value *self, BasicBlock *block)
-{
-	if (!getVTable().print || isAbstract())
-		throw exc::SeqException("cannot print type '" + getName() + "'");
-
-	auto *printFunc = cast<Function>(
-	                    block->getModule()->getOrInsertFunction(
-	                      getVTable().printName,
-	                      llvm::Type::getVoidTy(block->getContext()),
-	                      getLLVMType(block->getContext())));
-
-	printFunc->setCallingConv(CallingConv::C);
-
-	IRBuilder<> builder(block);
-	builder.CreateCall(printFunc, {self});
-}
-
-void types::Type::finalizePrint(Module *module, ExecutionEngine *eng)
-{
-	Function *printFunc = module->getFunction(getVTable().printName);
-	if (printFunc)
-		eng->addGlobalMapping(printFunc, getVTable().print);
-}
-
 Value *types::Type::alloc(Value *count, BasicBlock *block)
 {
 	if (size(block->getModule()) == 0)

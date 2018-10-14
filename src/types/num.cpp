@@ -11,22 +11,18 @@ types::NumberType::NumberType() : Type("Num", BaseType::get())
 
 types::IntType::IntType() : Type("Int", NumberType::get())
 {
-	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_int);
 }
 
 types::FloatType::FloatType() : Type("Float", NumberType::get())
 {
-	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_float);
 }
 
 types::BoolType::BoolType() : Type("Bool", NumberType::get())
 {
-	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_bool);
 }
 
 types::ByteType::ByteType() : Type("Byte", NumberType::get())
 {
-	SEQ_ASSIGN_VTABLE_FIELD(print, seq_print_byte);
 }
 
 Value *types::IntType::defaultValue(BasicBlock *block)
@@ -57,6 +53,19 @@ void types::IntType::initOps()
 	vtable.magic = {
 		{"__init__", {Float}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateFPToSI(args[0], Int->getLLVMType(b.getContext()));
+		}},
+
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_int",
+			                      llvm::Type::getVoidTy(context),
+			                      getLLVMType(context)));
+
+			b.CreateCall(printFunc, self);
+			return (Value *)nullptr;
 		}},
 
 		// int unary
@@ -210,6 +219,19 @@ void types::FloatType::initOps()
 			return b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 		}},
 
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_float",
+			                      llvm::Type::getVoidTy(context),
+			                      getLLVMType(context)));
+
+			b.CreateCall(printFunc, self);
+			return (Value *)nullptr;
+		}},
+
 		// float unary
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantFP::get(Float->getLLVMType(b.getContext()), 0.0);
@@ -333,6 +355,19 @@ void types::BoolType::initOps()
 		return;
 
 	vtable.magic = {
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_bool",
+			                      llvm::Type::getVoidTy(context),
+			                      getLLVMType(context)));
+
+			b.CreateCall(printFunc, self);
+			return (Value *)nullptr;
+		}},
+
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -371,6 +406,19 @@ void types::ByteType::initOps()
 	vtable.magic = {
 		{"__init__", {Int}, Byte, SEQ_MAGIC(self, args, b) {
 			return b.CreateTrunc(args[0], Byte->getLLVMType(b.getContext()));
+		}},
+
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_byte",
+			                      llvm::Type::getVoidTy(context),
+			                      getLLVMType(context)));
+
+			b.CreateCall(printFunc, self);
+			return (Value *)nullptr;
 		}},
 
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {

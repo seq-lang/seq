@@ -18,8 +18,6 @@ namespace seq {
 			                llvm::Value *other,
 			                llvm::BasicBlock *block);
 
-			void print(llvm::Value *self, llvm::BasicBlock *block) override;
-
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initFields() override;

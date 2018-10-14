@@ -32,10 +32,6 @@ namespace seq {
 
 			std::string allocFuncName() override;
 
-			void print(llvm::Value *self, llvm::BasicBlock *block) override;
-
-			void finalizePrint(llvm::Module *module, llvm::ExecutionEngine *eng) override;
-
 			llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block) override;
 			llvm::Value *alloc(seq_int_t count, llvm::BasicBlock *block) override;
 

@@ -15,9 +15,8 @@ void Print::resolveTypes()
 
 void Print::codegen0(BasicBlock*& block)
 {
-	types::Type *type = expr->getType();
 	Value *val = expr->codegen(getBase(), block);
-	type->print(val, block);
+	expr->getType()->callMagic("__print__", {}, val, {}, block);
 }
 
 Print *Print::clone(Generic *ref)
