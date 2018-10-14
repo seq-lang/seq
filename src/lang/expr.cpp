@@ -511,6 +511,40 @@ ArraySliceExpr *ArraySliceExpr::clone(Generic *ref)
 	                          to ? to->clone(ref) : nullptr);
 }
 
+ArrayContainsExpr::ArrayContainsExpr(Expr *val, Expr *arr) :
+    val(val), arr(arr)
+{
+}
+
+void ArrayContainsExpr::resolveTypes()
+{
+	val->resolveTypes();
+	arr->resolveTypes();
+}
+
+Value *ArrayContainsExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	types::Type *valType = val->getType();
+	types::Type *arrType = arr->getType();
+
+	if (!arrType->magicOut("__contains__", {valType})->is(types::Bool))
+		throw exc::SeqException("__contains__ does not return a boolean value");
+
+	Value *val = this->val->codegen(base, block);
+	Value *arr = this->arr->codegen(base, block);
+	return arrType->callMagic("__contains__", {valType}, arr, {val}, block);
+}
+
+types::Type *ArrayContainsExpr::getType0() const
+{
+	return types::Bool;
+}
+
+ArrayContainsExpr *ArrayContainsExpr::clone(Generic *ref)
+{
+	return new ArrayContainsExpr(val->clone(ref), arr->clone(ref));
+}
+
 GetElemExpr::GetElemExpr(Expr *rec, std::string memb) :
     rec(rec), memb(std::move(memb))
 {

@@ -175,6 +175,35 @@ AssignIndex *AssignIndex::clone(Generic *ref)
 	return x;
 }
 
+DelIndex::DelIndex(Expr *array, Expr *idx) :
+    Stmt("del []"), array(array), idx(idx)
+{
+}
+
+void DelIndex::resolveTypes()
+{
+	array->resolveTypes();
+	idx->resolveTypes();
+}
+
+void DelIndex::codegen0(BasicBlock*& block)
+{
+	Value *arr = array->codegen(getBase(), block);
+	Value *idx = this->idx->codegen(getBase(), block);
+	array->getType()->callMagic("__delitem__", {this->idx->getType()}, arr, {idx}, block);
+}
+
+DelIndex *DelIndex::clone(Generic *ref)
+{
+	if (ref->seenClone(this))
+		return (DelIndex *)ref->getClone(this);
+
+	auto *x = new DelIndex(array->clone(ref), idx->clone(ref));
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
+}
+
 AssignMember::AssignMember(Expr *expr, std::string memb, Expr *value) :
     Stmt("(.=)"), expr(expr), memb(std::move(memb)), value(value)
 {

@@ -48,6 +48,12 @@ class Pair[T](a: T, b: T) {
     print self.b
   }
 
+  def __print__(self: Pair[T]) {
+    self.a.__print__()
+    print ""
+    self.b.__print__()
+  }
+
   def swap(self: Pair[T]) {
     var tmp = self.a
     self.a = self.b
@@ -216,7 +222,7 @@ print s
 var p = Pair[Int](42)
 print p.sum(100.1)  # 42 + 19 + 100 = 161
 print p.sum(100)
-p.dump()  # 42,19
+print p  # 42,19
 p.swap()
 for a in p.iter(): print a  # 19,42
 

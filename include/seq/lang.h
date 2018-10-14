@@ -73,6 +73,17 @@ namespace seq {
 		AssignIndex *clone(Generic *ref) override;
 	};
 
+	class DelIndex : public Stmt {
+	private:
+		Expr *array;
+		Expr *idx;
+	public:
+		DelIndex(Expr *array, Expr *idx);
+		void resolveTypes() override;
+		void codegen0(llvm::BasicBlock*& block) override;
+		DelIndex *clone(Generic *ref) override;
+	};
+
 	class AssignMember : public Stmt {
 	private:
 		Expr *expr;

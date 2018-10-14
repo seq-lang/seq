@@ -187,6 +187,18 @@ namespace seq {
 		ArraySliceExpr *clone(Generic *ref) override;
 	};
 
+	class ArrayContainsExpr : public Expr {
+	private:
+		Expr *val;
+		Expr *arr;
+	public:
+		ArrayContainsExpr(Expr *val, Expr *arr);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		ArrayContainsExpr *clone(Generic *ref) override;
+	};
+
 	class GetElemExpr : public Expr {
 	private:
 		Expr *rec;

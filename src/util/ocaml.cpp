@@ -155,6 +155,12 @@ FOREIGN Expr *array_slice_expr(Expr *arr, Expr *st, Expr *ed)
 	return new ArraySliceExpr(arr, st, ed);
 }
 
+FOREIGN Expr *array_contains_expr(Expr *lhs, Expr *rhs)
+{
+	E("array_contains_expr");
+	return new ArrayContainsExpr(lhs, rhs);
+}
+
 FOREIGN Expr *record_expr(Expr **args, size_t size)
 {
 	E("record_expr[{}]", size);
@@ -230,6 +236,12 @@ FOREIGN Stmt *assign_index_stmt(Expr *lh, Expr *rh, Expr *rhs)
 {
 	E("assign_index_stmt");
 	return new AssignIndex(lh, rh, rhs);
+}
+
+FOREIGN Stmt *del_index_stmt(Expr *lh, Expr *rh)
+{
+	E("del_index_stmt");
+	return new DelIndex(lh, rh);
 }
 
 FOREIGN Stmt *print_stmt(Expr *e)
