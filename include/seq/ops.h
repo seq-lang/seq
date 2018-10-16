@@ -10,7 +10,8 @@ namespace seq {
 		bool binary;
 		bool rightAssoc;
 		int prec;
-		std::string magic;
+		std::string magic="";
+		std::string magicReflected="";
 
 		bool operator==(const Op& op) const
 		{
