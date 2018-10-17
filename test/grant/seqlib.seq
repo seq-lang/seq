@@ -1,17 +1,17 @@
 # Seq library 
 
 extend int:
-  def iter(self):
-    i = 0
-    while i < self:
-      yield i
-      i += 1
+   def range(self):
+      i = 0
+      while i < self:
+         yield i
+         i += 1
       
 def range(i):
-   return i.iter()
+   return i.range()
 
 def len(s):
-   return s.len
+   return s.__len__()
 
 def echo(s):
    print s
@@ -23,8 +23,8 @@ def iter(f):
 extern c free(m: ptr[byte]) -> void
 
 def os_system(s):
-  extern c system(m: ptr[byte]) -> int
-  return system(s.ptr)
+   extern c system(m: ptr[byte]) -> int
+   return system(s.ptr)
 
 # class Str(buf: ptr[ptr[byte]], sz: ptr[int]):
 #    def __init__(self):
@@ -67,7 +67,7 @@ class File(fp: ptr[byte], buf: ptr[ptr[byte]], sz: ptr[int]):
          if rd != -1:
             if self.buf[0][rd - 1] == byte(10):
                rd -= 1
-            yield str(self.buf[0], rd)
+            yield seq(self.buf[0], rd)
          else:
             break
 

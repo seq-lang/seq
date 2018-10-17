@@ -495,5 +495,5 @@ let () =
     noimp "No arguments"
   end;
   let seq_module = init_module () in
-  ignore @@ parse_file seq_module ~print_ast:true Sys.argv.(1) ~execute:true
+  ignore @@ parse_file seq_module Sys.argv.(1) ~execute:true
   
