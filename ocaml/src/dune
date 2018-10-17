@@ -1,3 +1,6 @@
+(env
+   (dev (flags (:standard -warn-error -a+31))))
+
 (ocamllex lexer)
 (menhir 
    (modules parser))

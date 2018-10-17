@@ -42,24 +42,24 @@ def rc_copy(s):
    return cp
 
 # will need timing constructs
-f = file(__argv__[2])
+f = File(__argv__[2])
 match __argv__[3]:
    case '1': 
       total = 0
-      for l in iter(f):
+      for l in f:
          total += len(rc_copy(l))
       print total
    case '2': 
       total = 0
       t2 = 0
-      for l in iter(f):
+      for l in f:
          for s in split(l, 16, 1):
             total += len(s)
             t2 += 1
       print total, t2
    case '3':
       total = 0
-      for line in iter(f):
+      for line in f:
          total += cpg_count(line)
       # gen = iter(f) |> cpg_count  not working
       print total

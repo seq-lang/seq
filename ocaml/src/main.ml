@@ -430,14 +430,15 @@ and get_seq_case_pattern _ = function
   | Some (Bool (b, _)) -> bool_pattern b
   | _ -> noimp "Match condition"
 
-and parse_file ?execute mdl infile = 
+and parse_file ?execute ?print_ast mdl infile = 
   let print_error kind lines ?msg (pos: pos_t) = 
     let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
     let style = [T.Bold; T.red] in
     eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: (line %d) %s\n" kind line (match msg with 
       | Some m -> sprintf "%s" m | None -> "");
     eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
-    eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s\n%!" (String.drop_prefix lines.(line - 1) col)
+    eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s" (String.drop_prefix lines.(line - 1) col);
+    eprintf "%s%!" @@ T.sprintf [] "\n"
   in
   let lines = In_channel.read_lines infile in
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
@@ -465,8 +466,9 @@ and parse_file ?execute mdl infile =
     Stack.push ctx.stack ("__argv__"::Stack.pop_exn ctx.stack);
 
     let ast = Parser.program (Lexer.token state) lexbuf in  
-    (*eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
-    eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast (fun _ -> "") ast;*)
+    if is_some print_ast then (
+      eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
+      eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast ast);
     match ast with Module stmts -> 
       List.iter stmts ~f:(get_seq_stmt ctx module_block);
     (match execute with
@@ -493,5 +495,5 @@ let () =
     noimp "No arguments"
   end;
   let seq_module = init_module () in
-  ignore @@ parse_file seq_module Sys.argv.(1) ~execute:true
+  ignore @@ parse_file seq_module ~print_ast:true Sys.argv.(1) ~execute:true
   
