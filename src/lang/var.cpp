@@ -72,6 +72,9 @@ types::Type *Var::getType()
 
 Var *Var::clone(Generic *ref)
 {
+	if (isGlobal())
+		return this;
+
 	if (ref->seenClone(this))
 		return (Var *)ref->getClone(this);
 

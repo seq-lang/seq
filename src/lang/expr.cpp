@@ -318,6 +318,17 @@ RecordExpr *RecordExpr::clone(Generic *ref)
 	return new RecordExpr(exprsCloned, names);
 }
 
+static void uopError(const std::string& sym, types::Type *t)
+{
+	throw exc::SeqException("operator '" + sym + "' cannot be applied to type '" + t->getName() + "'");
+}
+
+static void bopError(const std::string& sym, types::Type *t1, types::Type *t2)
+{
+	throw exc::SeqException("operator '" + sym + "' cannot be applied to types '" +
+	                        t1->getName() + "' and '" + t2->getName() + "'");
+}
+
 UOpExpr::UOpExpr(Op op, Expr *lhs) :
     Expr(), op(std::move(op)), lhs(lhs)
 {
@@ -330,22 +341,38 @@ void UOpExpr::resolveTypes()
 
 Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	types::Type *lhsType = lhs->getType();
 	Value *self = lhs->codegen(base, block);
 
 	if (op == uop("!")) {
-		Value *b = lhs->getType()->boolValue(self, block);
+		Value *b = lhsType->boolValue(self, block);
 		return types::Bool->callMagic("__invert__", {}, b, {}, block);
 	} else {
-		return lhs->getType()->callMagic(op.magic, {}, self, {}, block);
+		try {
+			return lhsType->callMagic(op.magic, {}, self, {}, block);
+		} catch (exc::SeqException&) {
+		}
+
+		uopError(op.symbol, lhsType);
+		return nullptr;
 	}
 }
 
 types::Type *UOpExpr::getType0() const
 {
-	if (op == uop("!"))
+	types::Type *lhsType = lhs->getType();
+
+	if (op == uop("!")) {
 		return types::Bool;
-	else
-		return lhs->getType()->magicOut(op.magic, {});
+	} else {
+		try {
+			return lhsType->magicOut(op.magic, {});
+		} catch (exc::SeqException&) {
+		}
+
+		uopError(op.symbol, lhsType);
+		return nullptr;
+	}
 }
 
 UOpExpr *UOpExpr::clone(Generic *ref)
@@ -403,18 +430,51 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		block = b2;
 		return result;
 	} else {
+		types::Type *lhsType = lhs->getType();
+		types::Type *rhsType = rhs->getType();
 		Value *self = lhs->codegen(base, block);
-		Value *arg  = rhs->codegen(base, block);
-		return lhs->getType()->callMagic(op.magic, {rhs->getType()}, self, {arg}, block);
+		Value *arg = rhs->codegen(base, block);
+
+		try {
+			return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block);
+		} catch (exc::SeqException&) {
+		}
+
+		if (!op.magicReflected.empty()) {
+			try {
+				return rhsType->callMagic(op.magicReflected, {lhsType}, arg, {self}, block);
+			} catch (exc::SeqException&) {
+			}
+		}
+
+		bopError(op.symbol, lhsType, rhsType);
+		return nullptr;
 	}
 }
 
 types::Type *BOpExpr::getType0() const
 {
-	if (op == bop("&&") || op == bop("||"))
+	if (op == bop("&&") || op == bop("||")) {
 		return types::Bool;
-	else
-		return lhs->getType()->magicOut(op.magic, {rhs->getType()});
+	} else {
+		types::Type *lhsType = lhs->getType();
+		types::Type *rhsType = rhs->getType();
+
+		try {
+			return lhsType->magicOut(op.magic, {rhsType});
+		} catch (exc::SeqException&) {
+		}
+
+		if (!op.magicReflected.empty()) {
+			try {
+				return rhsType->magicOut(op.magicReflected, {lhsType});
+			} catch (exc::SeqException&) {
+			}
+		}
+
+		bopError(op.symbol, lhsType, rhsType);
+		return nullptr;
+	}
 }
 
 BOpExpr *BOpExpr::clone(Generic *ref)
