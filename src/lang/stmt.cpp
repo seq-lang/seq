@@ -142,9 +142,13 @@ void Stmt::setContinues(BasicBlock *block)
 
 void Stmt::codegen(BasicBlock *&block)
 {
-	SEQ_TRY(
+	try {
 		return codegen0(block);
-	);
+	} catch (exc::SeqException& e) {
+		if (e.getSrcInfo().line <= 0)
+			e.setSrcInfo(getSrcInfo());
+		throw e;
+	}
 }
 
 void Stmt::resolveTypes()

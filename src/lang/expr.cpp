@@ -14,16 +14,24 @@ Expr::Expr() : Expr(types::Void)
 
 Value *Expr::codegen(BaseFunc *base, BasicBlock *&block)
 {
-	SEQ_TRY(
+	try {
 		return codegen0(base, block);
-	);
+	} catch (exc::SeqException& e) {
+		if (e.getSrcInfo().line <= 0)
+			e.setSrcInfo(getSrcInfo());
+		throw e;
+	}
 }
 
 types::Type *Expr::getType() const
 {
-	SEQ_TRY(
+	try {
 		return getType0();
-	);
+	} catch (exc::SeqException& e) {
+		if (e.getSrcInfo().line <= 0)
+			e.setSrcInfo(getSrcInfo());
+		throw e;
+	}
 }
 
 void Expr::resolveTypes()

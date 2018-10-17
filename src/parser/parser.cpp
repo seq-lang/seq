@@ -384,8 +384,8 @@ public:
 		return *this->module;
 	}
 
-	ParseState(const std::string& file) :
-	    file(file), symbols(), results(), contexts(), blocks(), module(nullptr)
+	ParseState(std::string file) :
+	    file(std::move(file)), symbols(), results(), contexts(), blocks(), module(nullptr)
 	{
 	}
 };

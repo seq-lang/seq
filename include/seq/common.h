@@ -48,8 +48,7 @@ namespace seq {
 
 	inline llvm::Constant *nullPtrLLVM(llvm::LLVMContext& context)
 	{
-		return llvm::ConstantPointerNull::get(
-		         llvm::PointerType::getInt8PtrTy(context));
+		return llvm::ConstantPointerNull::get(llvm::PointerType::getInt8PtrTy(context));
 	}
 
 	inline llvm::Constant *zeroLLVM(llvm::LLVMContext& context)
@@ -136,16 +135,5 @@ namespace seq {
 	}
 
 }
-
-#define SEQ_TRY(block) \
-    do { \
-        try { \
-            block \
-        } catch (seq::exc::SeqException& e) { \
-            if (e.getSrcInfo().line <= 0) \
-                e.setSrcInfo(getSrcInfo()); \
-            throw e; \
-        } \
-    } while (0) \
 
 #endif /* SEQ_COMMON_H */
