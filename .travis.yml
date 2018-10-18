@@ -28,7 +28,7 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda install -c conda-forge cmake llvmdev clangdev bdw-gc
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CXX=clang++; fi
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CC=clang CXX=clang++; fi
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew install bdw-gc; fi
 
 before_script:
