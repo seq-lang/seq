@@ -2,7 +2,7 @@ all:
 	make -j ../build
 	LIBRARY_PATH=`pwd`/../build dune build src/main.exe src/main.so
 	ln -s -f _build/default/src/main.exe .
-	cp _build/default/src/main.so libparser.dylib
+	ln -s -f _build/default/src/main.so libparser.dylib
 
 cpp:
 	g++ -g -c -std=c++11 code.cpp -I "`ocamlc -where`" 
@@ -16,7 +16,7 @@ cpp:
 	
 clean:
 	dune clean
-	
+
 
 install-dep:
 	brew install ocaml opam 
