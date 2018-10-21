@@ -176,14 +176,14 @@ let set_generics ctx types args set_generic_count get_generic =
   let arg_types = List.map arg_types ~f:(get_type_from_expr_exn ctx) in
   arg_names, arg_types
 
-let rec get_seq_stmt ctx block stmt : unit = 
+let rec get_seq_stmt ctx block parsemod stmt = 
   let stmt, pos = begin 
   match stmt with
   | Pass pos     -> pass_stmt (), pos
   | Break pos    -> break_stmt (), pos
   | Continue pos -> continue_stmt (), pos
   | Statements stmts ->
-    List.iter stmts ~f:(get_seq_stmt ctx block);
+    List.iter stmts ~f:(get_seq_stmt ctx block parsemod);
     pass_stmt (), dummy_pos
   | Assign(Id(var, pos), rh_expr, shadow) -> begin
     let rh_expr = get_seq_expr ctx rh_expr in 
@@ -261,7 +261,7 @@ let rec get_seq_stmt ctx block stmt : unit =
       | Some cond_expr -> 
         get_elif_block if_stmt @@ get_seq_expr ctx cond_expr in
       Stack.push ctx.stack [];
-      List.iter stmts ~f:(get_seq_stmt ctx if_block);
+      List.iter stmts ~f:(get_seq_stmt ctx if_block parsemod);
       Stack.pop_exn ctx.stack |> List.iter ~f:(Hashtbl.remove ctx.map);
       pos) in
     if_stmt, (List.hd_exn positions)
@@ -270,7 +270,7 @@ let rec get_seq_stmt ctx block stmt : unit =
     let while_stmt = while_stmt(cond_expr) in
     let while_block = get_while_block while_stmt in
     Stack.push ctx.stack [];
-    List.iter stmts ~f:(get_seq_stmt ctx while_block);
+    List.iter stmts ~f:(get_seq_stmt ctx while_block parsemod);
     Stack.pop_exn ctx.stack |> List.iter ~f:(Hashtbl.remove ctx.map);
     while_stmt, pos
   | For(for_var, gen_expr, stmts, pos) ->
@@ -286,7 +286,7 @@ let rec get_seq_stmt ctx block stmt : unit =
     let for_block = get_for_block for_stmt in
     Stack.push ctx.stack [for_var_name]; 
     Hashtbl.set ctx.map ~key:for_var_name ~data:(Var for_var);
-    List.iter stmts ~f:(get_seq_stmt ctx for_block);
+    List.iter stmts ~f:(get_seq_stmt ctx for_block parsemod);
     Stack.pop_exn ctx.stack |> List.iter ~f:(Hashtbl.remove ctx.map);
     begin match prev_var with 
     | Some prev_var -> 
@@ -310,7 +310,7 @@ let rec get_seq_stmt ctx block stmt : unit =
         let pat = get_seq_case_pattern ctx cond in
         pat, "", None in
       let case_block = add_match_case match_stmt pat in
-      List.iter stmts ~f:(get_seq_stmt ctx case_block);
+      List.iter stmts ~f:(get_seq_stmt ctx case_block parsemod);
       Stack.pop_exn ctx.stack |> List.iter ~f:(Hashtbl.remove ctx.map);
       match prev_var with 
       | Some prev_var -> 
@@ -318,7 +318,7 @@ let rec get_seq_stmt ctx block stmt : unit =
       | _ -> ());
     match_stmt, pos
   | Function(_, _, _, _, pos) as fn ->
-    let _, fn = get_seq_fn ctx fn in 
+    let _, fn = get_seq_fn ctx parsemod fn in 
     func_stmt fn, pos
   | Extern("c", _, ret, args, pos) ->
     let fn_name, ret_typ = match ret with 
@@ -357,7 +357,7 @@ let rec get_seq_stmt ctx block stmt : unit =
 
     (* functions inherit types and functions; variables are off-limits *)
     List.iter functions ~f:(fun f -> 
-      let name, fn = get_seq_fn ref_ctx f ~parent_class:class_name in 
+      let name, fn = get_seq_fn ref_ctx parsemod ~parent_class:class_name f in 
       add_ref_method typ name fn);
     set_ref_done typ;
     pass_stmt (), pos
@@ -368,12 +368,12 @@ let rec get_seq_stmt ctx block stmt : unit =
     (* functions inherit types and functions; variables are off-limits *)
     let ref_ctx = {ctx with map=Hashtbl.copy ctx.map} in
     List.iter functions ~f:(fun f -> 
-      let name, fn = get_seq_fn ref_ctx f ~parent_class:class_name in 
+      let name, fn = get_seq_fn ref_ctx parsemod ~parent_class:class_name f in 
       add_ref_method typ name fn);
     pass_stmt (), pos
   | Import(il, pos) ->
     List.iter il ~f:(fun ((what, _), _) ->
-      let import_ctx = parse_file ctx.mdl (sprintf "%s/%s.seq" (Filename.dirname ctx.filename) what) in 
+      let import_ctx = parsemod ctx.mdl (sprintf "%s/%s.seq" (Filename.dirname ctx.filename) what) in 
       Hashtbl.iteri import_ctx.map ~f:(Hashtbl.set ctx.map));
     pass_stmt (), pos
   | _ -> noimp "Unknown stmt"
@@ -383,7 +383,7 @@ let rec get_seq_stmt ctx block stmt : unit =
   set_pos stmt pos;
   add_stmt stmt block
 
-and get_seq_fn ctx ?parent_class = function 
+and get_seq_fn ctx ?parent_class parsemod = function 
   | Function(return_typ, types, args, stmts, pos) ->
     let fn_name, ret_typ = match return_typ with Arg((n, _), typ) -> n, typ in
 
@@ -416,7 +416,7 @@ and get_seq_fn ctx ?parent_class = function
     Stack.push fn_ctx.stack arg_names;
     
     let fn_block = get_func_block fn in
-    List.iter stmts ~f:(get_seq_stmt fn_ctx fn_block);
+    List.iter stmts ~f:(get_seq_stmt fn_ctx fn_block parsemod);
     (fn_name, fn)
   | _ -> 
     seq_error "get_seq_func MUST HAVE Function as an input" dummy_pos
@@ -430,21 +430,15 @@ and get_seq_case_pattern _ = function
   | Some (Bool (b, _)) -> bool_pattern b
   | _ -> noimp "Match condition"
 
-and parse_file ?execute ?print_ast mdl infile = 
-  let print_error kind lines ?msg (pos: pos_t) = 
-    let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
-    let style = [T.Bold; T.red] in
-    eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: (line %d) %s\n" kind line (match msg with 
-      | Some m -> sprintf "%s" m | None -> "");
-    eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix lines.(line - 1) col);
-    eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s" (String.drop_prefix lines.(line - 1) col);
-    eprintf "%s%!" @@ T.sprintf [] "\n"
-  in
+and parse_module ?execute ?print_ast mdl infile error_handler = 
   let lines = In_channel.read_lines infile in
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
   let lines = Array.of_list lines in
   let lexbuf = Lexing.from_string code in
   let state = Lexer.stack_create () in
+  let onerror kind msg (pos: Lexing.position) = 
+    let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
+    error_handler kind msg line col lines.(line - 1) in
   try
     let ctx = init_context mdl mdl (Filename.realpath infile) in
     Stack.push ctx.stack [];
@@ -469,31 +463,51 @@ and parse_file ?execute ?print_ast mdl infile =
     if is_some print_ast then (
       eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of %s ==> \n" infile;
       eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast ast);
+
+    let parsemod mdl fl = 
+      parse_module mdl fl error_handler in
     match ast with Module stmts -> 
-      List.iter stmts ~f:(get_seq_stmt ctx module_block);
+      List.iter stmts ~f:(get_seq_stmt ctx module_block parsemod);
     (match execute with
      | Some (true) -> exec_module ctx.mdl false;
      | _ -> ());
     ctx
   with 
-  | Lexer.SyntaxError (msg, pos) ->
-    print_error "Lexer" lines pos ~msg:msg;
-    exit 1
+  | Lexer.SyntaxError(msg, pos) ->
+    onerror "Lexer" msg pos
   | Parser.Error ->
     (* check https://github.com/dbp/funtal/blob/e9a9b9d/parse.ml#L64-L89 *)
-    print_error "Parser" lines lexbuf.lex_start_p;
-    exit 1
-  | SeqCamlError (msg, pos) ->
-    print_error "CamlAst" lines pos ~msg:msg;
-    exit 1
-  | SeqCError (msg, pos) ->
-    print_error "Compiler" lines pos ~msg:msg;
-    exit 1
-  
-let () = 
-  if Array.length Sys.argv < 2 then begin
-    noimp "No arguments"
-  end;
+    let pos = lexbuf.lex_start_p in
+    onerror "Parser" "Parser error" pos
+  | SeqCamlError(msg, pos) ->
+    onerror "ASTGenerator" msg pos
+  | SeqCError(msg, pos) ->
+    onerror "SeqLib" msg pos
+
+let parse fname = 
+  let error_handler _ _ _ _ _ = 
+    eprintf ">> OCaml exception died! <<\n%!";
+    exit 1 in
   let seq_module = init_module () in
-  ignore @@ parse_file seq_module Sys.argv.(1) ~execute:true
-  
+  ignore @@ parse_module seq_module fname error_handler ~execute:false;
+  let adr = Ctypes.raw_address_of_ptr (Ctypes.to_voidp seq_module) in
+  eprintf "[Ocaml] %nx\n%!" adr;
+  adr
+
+let () = 
+  let _ = Callback.register "parse_c" parse in
+
+  if Array.length Sys.argv >= 2 then begin
+    let seq_module = init_module () in
+    let error_handler kind msg line col file_line = 
+      let style = [T.Bold; T.red] in
+      eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: (line %d) %s\n" kind line msg;
+      eprintf "%s%!" @@ T.sprintf style "[ERROR] %3d: %s" line (String.prefix file_line col);
+      eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s" (String.drop_prefix file_line col);
+      eprintf "%s%!" @@ T.sprintf [] "\n";
+      exit 1
+    in
+
+    ignore @@ parse_module seq_module Sys.argv.(1) error_handler ~execute:true
+  end
+    

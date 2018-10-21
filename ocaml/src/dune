@@ -2,10 +2,11 @@
    (dev (flags (:standard -warn-error -a+31))))
 
 (ocamllex lexer)
-(menhir 
-   (modules parser))
+(menhir (modules parser))
+
 (executable
    (name main)
-   (libraries base core ANSITerminal ctypes ctypes.foreign)
-   (preprocess (pps ppx_jane))
-   (link_flags (-cclib -lseq)))
+   (libraries base core ANSITerminal ctypes ctypes.foreign ctypes.stubs)
+   (link_flags (-cclib -lseq -cclib -Wl,-install_name,libparser.dylib))
+   (modes shared_object exe)
+)

@@ -5,7 +5,7 @@
   open Core
 
   let flat x = match x with
-    | [] -> raise_s [%message "flat function failed unexpectedly"] 
+    | [] -> raise Caml.Not_found 
     | h::[] -> h 
     | h::el -> Pipe (h::el)
 
