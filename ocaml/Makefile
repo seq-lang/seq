@@ -1,6 +1,7 @@
 all:
 	make -j ../build
-	LIBRARY_PATH=`pwd`/../build dune build src/main.exe src/main.so
+	ln -s -f ../build/libseq.dylib .
+	dune build --build-dir build src/main.exe src/main.so
 	ln -s -f _build/default/src/main.exe .
 	ln -s -f _build/default/src/main.so libparser.dylib
 
