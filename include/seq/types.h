@@ -6,7 +6,6 @@
 #include <functional>
 #include <utility>
 #include "llvm.h"
-#include "ops.h"
 #include "lib.h"
 
 namespace seq {

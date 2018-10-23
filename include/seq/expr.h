@@ -4,6 +4,7 @@
 #include "patterns.h"
 #include "types.h"
 #include "ref.h"
+#include "ops.h"
 #include "common.h"
 
 namespace seq {
