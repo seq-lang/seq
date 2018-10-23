@@ -1,0 +1,66 @@
+class list[`t](arr: array[`t], len: int):
+    def __init__(self: list[`t], arr: array[`t], len: int):
+        self.arr = arr
+        self.len = len
+
+    def __init__(self: list[`t]):
+        return list[`t](array[`t](10), 0)
+
+    def __len__(self: list[`t]):
+        return self.len
+
+    def __getitem__(self: list[`t], idx: int):
+        return self.arr[idx]
+
+    def __setitem__(self: list[`t], idx: int, val: `t):
+        self.arr[idx] = val
+
+    def __slice__(self: list[`t], a: int, b: int):
+        return list[`t](self.arr[a:b], b - a)
+
+    def __slice_left__(self: list[`t], b: int):
+        return list[`t](self.arr[:b], b)
+
+    def __slice_right__(self: list[`t], a: int):
+        return list[`t](self.arr[a:], self.len - a)
+
+    def __copy__(self: list[`t]):
+        return list[`t](self.arr.__copy__(), self.len)
+
+    def __iter__(self: list[`t]):
+        i = 0
+        while i < self.len:
+            yield self.arr[i]
+            i += 1
+
+    def _resize_if_full(self: list[`t]):
+        if self.len == self.arr.len:
+            new_arr = array[`t]((1 + 3*self.len)/2)
+            i = 0
+            while i < self.len:
+                new_arr[i] = self.arr[i]
+                i += 1
+            self.arr = new_arr
+
+    def append(self: list[`t], x: `t):
+        self._resize_if_full()
+        self.arr[self.len] = x
+        self.len += 1
+
+    def remove(self: list[`t], idx: int):
+        while idx < self.len - 1:
+            self.arr[idx] = self.arr[idx + 1]
+            idx += 1
+        self.len -= 1
+
+v = list[int]()
+
+i = 0
+while i < 15:
+    v.append(i)
+    i += 1
+v.remove(3)
+v = v[1:].__copy__()
+
+for a in v:
+    print a

@@ -51,7 +51,7 @@ void types::ArrayType::initOps()
 			Value *len = memb(self, "len", block);
 			Value *elemSize = ConstantInt::get(seqIntLLVM(context), size(module));
 			Value *numBytes = b.CreateMul(len, elemSize);
-			Value *ptrCopy = b.CreateCall(allocFunc, len);
+			Value *ptrCopy = b.CreateCall(allocFunc, numBytes);
 			makeMemCpy(ptrCopy, ptr, numBytes, block);
 			ptrCopy = b.CreateBitCast(ptrCopy, membType("ptr")->getLLVMType(context));
 			Value *copy = make(ptrCopy, len, block);
