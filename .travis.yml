@@ -6,10 +6,12 @@ matrix:
     - os: linux
       env:
         - CONDA_OS_NAME=Linux
+        - OCAML_VERSION=4.07
 
     - os: osx
       env:
         - CONDA_OS_NAME=MacOSX
+        - OCAML_VERSION=4.07
 
 install:
   # install OCaml:
