@@ -200,9 +200,27 @@ let int_pattern      = foreign "int_pattern" (int @-> returning seq_pattern)
 let str_pattern      = foreign "str_pattern" (string @-> returning seq_pattern)
 let str_seq_pattern  = foreign "seq_pattern" (string @-> returning seq_pattern)
 let bool_pattern     = foreign "bool_pattern" (bool @-> returning seq_pattern)
+let range_pattern    = foreign "range_pattern" (int @-> int @-> returning seq_pattern)
+let guarded_pattern  = foreign "guarded_pattern" (seq_pattern @-> seq_expr @-> returning seq_pattern)
+let star_pattern     = foreign "star_pattern" (void @-> returning seq_pattern)
+
 
 let get_bound_pattern_var = foreign "get_bound_pattern_var" 
   (seq_pattern @-> returning seq_var)
+
+let list_pattern_helper lst fn =
+  let c_arr = CArray.of_list seq_pattern lst in
+  let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
+  fn (CArray.start c_arr) c_len
+
+let array_pattern lst = 
+  list_pattern_helper lst @@ foreign "array_pattern" (ptr seq_pattern @-> size_t @-> returning seq_pattern) 
+
+let record_pattern lst = 
+  list_pattern_helper lst @@ foreign "record_pattern" (ptr seq_pattern @-> size_t @-> returning seq_pattern) 
+
+let or_pattern lst = 
+  list_pattern_helper lst @@ foreign "or_pattern" (ptr seq_pattern @-> size_t @-> returning seq_pattern) 
 
 (* Functions *)
 

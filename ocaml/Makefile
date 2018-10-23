@@ -2,8 +2,8 @@ all:
 	make -j ../build
 	ln -s -f ../build/libseq.dylib .
 	dune build --build-dir build src/main.exe src/main.so
-	ln -s -f _build/default/src/main.exe .
-	ln -s -f _build/default/src/main.so libparser.dylib
+	ln -s -f build/default/src/main.exe .
+	ln -s -f build/default/src/main.so libparser.dylib
 
 cpp:
 	g++ -g -c -std=c++11 code.cpp -I "`ocamlc -where`" 
@@ -16,7 +16,7 @@ cpp:
 		-L../build -lseq
 	
 clean:
-	dune clean
+	dune clean --build-dir build
 
 
 install-dep:
