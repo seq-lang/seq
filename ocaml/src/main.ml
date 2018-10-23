@@ -67,11 +67,10 @@ let rec get_seq_expr ctx expr =
     (* let expr = get_seq_expr ctx expr in 
     let typ = get_type expr ctx.base in
     type_expr typ, pos *)
-  | IfExpr(cond, if_expr, else_expr) ->
+  | IfExpr(cond, if_expr, else_expr, pos) ->
     let if_expr = get_seq_expr ctx if_expr in 
     let else_expr = get_seq_expr ctx else_expr in
     let c_expr = get_seq_expr ctx cond in 
-    let pos = get_pos c_expr in
     cond_expr c_expr if_expr else_expr, pos
   | Unary((op, pos), expr) -> 
     uop_expr op (get_seq_expr ctx expr), pos
@@ -79,59 +78,58 @@ let rec get_seq_expr ctx expr =
     let lh_expr = get_seq_expr ctx lh_expr in
     let rh_expr = get_seq_expr ctx rh_expr in
     bop_expr op lh_expr rh_expr, pos
-  | Call(callee_expr, args) -> begin
+  | Call(callee_expr, args, pos) -> begin
     let callee_expr = get_seq_expr ctx callee_expr in
     match get_type callee_expr with
     | Some typ ->    
       construct_expr typ (List.map args ~f:(get_seq_expr ctx)), get_pos callee_expr
     | None -> (* fn[t](...) *)
       let args_exprs = List.map args ~f:(function
-        | Ellipsis -> Ctypes.null
+        | Ellipsis(_) -> Ctypes.null
         | ex -> get_seq_expr ctx ex) in
-      let pos = get_pos callee_expr in
-      if List.exists args ~f:((=)(Ellipsis)) then   
+      if List.exists args_exprs ~f:((=)(Ctypes.null)) then   
         partial_expr callee_expr args_exprs, pos
       else 
         call_expr callee_expr args_exprs, pos
     end
-  | Pipe exprs ->
+  | Pipe(exprs, pos) ->
     let exprs = List.map exprs ~f:(get_seq_expr ctx) in
-    pipe_expr exprs, get_pos (List.hd_exn exprs)
-  | Dot(lh_expr, (rhs, pos)) -> begin
+    pipe_expr exprs, pos
+  | Dot(lh_expr, (rhs, _), pos) -> begin
     let lh_expr = get_seq_expr ctx lh_expr in
     match get_type lh_expr with
     | Some typ -> static_expr typ rhs, pos
     | None -> get_elem_expr lh_expr rhs, pos
     end
-  | Index(lh_expr, [Slice(st, ed, step, pos)]) ->
+  | Index(lh_expr, [Slice(st, ed, step, _)], pos) ->
     let lh_expr = get_seq_expr ctx lh_expr in 
     if is_some step then noimp "Step";
     let unpack st = match st with 
     | None -> Ctypes.null 
     | Some st -> get_seq_expr ctx st in
     array_slice_expr lh_expr (unpack st) (unpack ed), pos
-  | Index(Id("array", pos), indices) -> 
+  | Index(Id("array", _), indices, pos) -> 
     if List.length indices <> 1 then 
       seq_error "Array needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (array_type typ), pos
-  | Index(Id("ptr", pos), indices) -> 
+  | Index(Id("ptr", _), indices, pos) -> 
     if List.length indices <> 1 then 
       seq_error "Pointer needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (ptr_type typ), pos
-  | Index(Id("callable", pos), indices) -> 
+  | Index(Id("callable", _), indices, pos) -> 
     let typ_exprs = List.map indices ~f:(get_type_from_expr_exn ctx) in
     let ret, args = match List.rev typ_exprs with
     | hd::tl -> hd, tl |> List.rev
     | [] -> seq_error "Callable needs at least one argument" pos in
     type_expr (func_type ret args), pos
-  | Index(Id("yieldable", pos), indices) -> 
+  | Index(Id("yieldable", _), indices, pos) -> 
     if List.length indices <> 1 then 
       seq_error "Yieldable needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (gen_type typ), pos
-  | Index(lh_expr, indices) -> begin
+  | Index(lh_expr, indices, pos) -> begin
     let lh_expr = get_seq_expr ctx lh_expr in
     let index_exprs = List.map indices ~f:(get_seq_expr ctx) in
     match get_type lh_expr with 
@@ -185,7 +183,7 @@ let rec get_seq_stmt ctx block parsemod stmt =
   | Statements stmts ->
     List.iter stmts ~f:(get_seq_stmt ctx block parsemod);
     pass_stmt (), dummy_pos
-  | Assign(Id(var, pos), rh_expr, shadow) -> begin
+  | Assign([Id(var, _)], [rh_expr], shadow, pos) -> begin
     let rh_expr = get_seq_expr ctx rh_expr in 
     match Hashtbl.find ctx.map var with
     | Some (Var _) when shadow ->  
@@ -205,17 +203,24 @@ let rec get_seq_stmt ctx block parsemod stmt =
       Stack.push ctx.stack (var::Stack.pop_exn ctx.stack);
       var_stmt, pos
     end
-  | Assign(Dot(lh_expr, (rhs, pos)), rh_expr, _) -> (* a = b *)
+  | Assign([Dot(lh_expr, (rhs, _))], [rh_expr], _, pos) -> (* a.x = b *)
     let rh_expr = get_seq_expr ctx rh_expr in 
     assign_member_stmt (get_seq_expr ctx lh_expr) rhs rh_expr, pos
-  | Assign(Index(var_expr, [index_expr]), rh_expr, _) -> (* a = b *)
+  | Assign([Index(var_expr, [index_expr])], [rh_expr], _, pos) -> (* a[x] = b *)
     let index_expr = get_seq_expr ctx index_expr in
     let rh_expr = get_seq_expr ctx rh_expr in 
-    let pos = get_pos index_expr in
     assign_index_stmt (get_seq_expr ctx var_expr) index_expr rh_expr, pos
-  | Assign(e, _, _) ->
-    let expr = get_seq_expr ctx e in
-    seq_error "Assignment requires Id / Dot / Index on LHS" (get_pos expr)
+  | Assign(lh, rh, shadow, pos) ->
+    seq_error "Not supported" pos;
+    (* if List.length lh != List.length rh then
+      seq_error "RHS must match LHS" pos;
+    if List.length lh < 2 then
+      seq_error "Assignment requires Id / Dot / Index on LHS" pos;
+    List.iter (List.zip_exn lh rh) ~f:(fun (lhs, rhs) ->
+      let rh_expr = get_seq_expr ctx rh_expr in
+      let var_stmt = var_stmt rh_expr in
+      get_seq_stmt ctx block parsemod Assign([lhs], [rhs], shadow, pos));
+    pass_stmt (), pos *)
   | Exprs expr ->
     let expr = get_seq_expr ctx expr in
     expr_stmt expr, (get_pos expr)
@@ -252,9 +257,9 @@ let rec get_seq_stmt ctx block parsemod stmt =
     let typ = record_type arg_names @@ List.map arg_types ~f:(get_type_from_expr_exn ctx) in
     Hashtbl.set ctx.map ~key:name ~data:(Type typ);
     pass_stmt (), pos
-  | If(if_blocks) -> 
+  | If(if_blocks, pos) -> 
     let if_stmt = if_stmt () in
-    let positions = List.map if_blocks ~f:(fun (cond_expr, stmts, pos) ->
+    List.iter if_blocks ~f:(fun (cond_expr, stmts, _) ->
       let if_block = match cond_expr with 
       | None -> 
         get_else_block if_stmt
@@ -262,9 +267,8 @@ let rec get_seq_stmt ctx block parsemod stmt =
         get_elif_block if_stmt @@ get_seq_expr ctx cond_expr in
       Stack.push ctx.stack [];
       List.iter stmts ~f:(get_seq_stmt ctx if_block parsemod);
-      Stack.pop_exn ctx.stack |> List.iter ~f:(Hashtbl.remove ctx.map);
-      pos) in
-    if_stmt, (List.hd_exn positions)
+      Stack.pop_exn ctx.stack |> List.iter ~f:(Hashtbl.remove ctx.map));
+    if_stmt, pos
   | While(cond_expr, stmts, pos) ->
     let cond_expr = get_seq_expr ctx cond_expr in
     let while_stmt = while_stmt(cond_expr) in
@@ -424,10 +428,14 @@ and get_seq_fn ctx ?parent_class parsemod = function
 and get_seq_case_pattern _ = function
   (*  condition, guard, statements *)
   | None -> wildcard_pattern ()
+  | Some ()
   | Some (Int (i, _)) -> int_pattern i
   | Some (String (s, _)) -> str_pattern s
   | Some (Seq (s, _)) -> str_seq_pattern s
   | Some (Bool (b, _)) -> bool_pattern b
+
+  | Some (Tuple (t, _)) -> record_pattern b
+  | Some (List (a, _)) -> array_pattern a
   | _ -> noimp "Match condition"
 
 and parse_module ?execute ?print_ast mdl infile error_handler = 
