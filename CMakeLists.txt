@@ -142,7 +142,7 @@ add_custom_command(OUTPUT ${LIB_SEQPARSE}
                            ocaml/src/parser.mly
                            ocaml/src/seqtypes.ml
                            ocaml/dune-project
-                   COMMENT "Compiling Seq's OCaml components..."
+                   COMMENT "Compiling Seq's OCaml components"
                    VERBATIM)
 add_custom_target(seqparse_target DEPENDS ${LIB_SEQPARSE})
 add_library(seqparse SHARED IMPORTED)

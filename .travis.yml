@@ -41,6 +41,7 @@ before_script:
 script:
   - (cd build && cmake ..)
   - cmake --build build
+  - ls build
   - build/seqtest
   - build/seq test/code/test.seq test/data/multiple/seqs.fastq
 
