@@ -18,7 +18,7 @@ install:
   - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
   - bash -ex .travis-ocaml.sh
   - opam update
-  - opam install -y ocamlfind
+  - opam install -y ocamlfind core core_extended core_bench dune ctypes ctypes-foreign ansiterminal menhir ppx_deriving
   - eval $(opam env)
 
   # apt's LLVM does not have RTTI enabled, but conda's does:
