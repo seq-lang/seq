@@ -78,18 +78,18 @@ type statement = [
   (* | `Decorator of expr * vararg list *)
 ] 
 and pattern = [
-  | `WildcardPattern
+  | `WildcardPattern of ident option
+  | `StarPattern
   | `BoundPattern of ident * pattern
   | `IntPattern of int
   | `BoolPattern of bool
   | `StrPattern of string
   | `SeqPattern of string
-  | `TuplePattern of expr list
-  | `ListPattern of expr list
+  | `TuplePattern of pattern list
+  | `ListPattern of pattern list
   | `RangePattern of int * int
   | `OrPattern of pattern list
-  (* | `GuardedPattern of expr * expr *)
-  (* | `StarPattern *)
+  | `GuardedPattern of pattern * expr
 ]
 
 type ast = 
@@ -154,22 +154,25 @@ and prn_vararg ?prn_pos vararg =
 let rec prn_stmt ?prn_pos level st = 
   let pad l = String.make (l * 2) ' ' in
 
-  let prn_pos = Option.value prn_pos ~default:(fun x -> "") in
+  let prn_pos = Option.value prn_pos ~default:(fun _ -> "") in
   let prn_stmt = prn_stmt ~prn_pos (level + 1) in
   let prn_expr = prn_expr ~prn_pos in
   let prn_vararg = prn_vararg ~prn_pos in
 
   let rec prn_pat = function 
-  | `WildcardPattern -> "DEFAULT"
+  | `WildcardPattern(None) -> "DEFAULT"
+  | `WildcardPattern(Some(o, _)) -> sprintf "DEFAULT(%s)" o 
   | `BoundPattern((i, _), p) -> sprintf "%s AS %s" (prn_pat p) i
   | `IntPattern i -> sprintf "%d" i
   | `BoolPattern b -> sprintf "%b" b
   | `StrPattern s -> sprintf "'%s'" s
   | `SeqPattern s -> sprintf "s'%s'" s
-  | `TuplePattern tl -> sprintf "(%s)" (sci tl prn_expr)
-  | `ListPattern tl -> sprintf "[%s]" (sci tl prn_expr)
+  | `TuplePattern tl -> sprintf "(%s)" (sci tl prn_pat)
+  | `ListPattern tl -> sprintf "[%s]" (sci tl prn_pat)
   | `RangePattern (i, j) -> sprintf "%d...%d" i j
-  | `OrPattern pl -> sci ~sep:" | " pl prn_pat in
+  | `OrPattern pl -> sci ~sep:" | " pl prn_pat 
+  | `GuardedPattern(p, expr) -> sprintf "%s IF %s" (prn_pat p) (prn_expr expr)
+  | `StarPattern -> "..." in
 
   let repr, pos = match st with
   | `Pass pos     -> sprintf "Pass", Some pos

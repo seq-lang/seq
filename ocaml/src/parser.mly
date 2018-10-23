@@ -273,7 +273,7 @@ elif_suite:
     { (Some $2, $4, $1)::rest }
 case_suite:
   | DEFAULT COLON suite 
-    { [(`WildcardPattern, $3, $1)] }
+    { [(`WildcardPattern None, $3, $1)] }
   | case { [$1] }
   | case; rest = case_suite 
     { $1::rest }
@@ -290,16 +290,21 @@ case:
       let pat = `BoundPattern ((fst $4, snd $4), pat) in
       (pat, $6, $1) }
 case_type:
-  | INT     { `IntPattern (fst $1) }
-  | bool    { `BoolPattern (fst $1) }
-  | STRING  { `StrPattern (fst $1) }
-  | SEQ     { `SeqPattern (fst $1) }
-  | tuple   { `TuplePattern (fst $1) }
-  | dynlist { `ListPattern (fst $1) }
-  /* star pattern? 
-     guarded pattern? */
+  | ELLIPSIS { `StarPattern }
+  | ID       { `WildcardPattern (Some $1) }
+  | INT      { `IntPattern (fst $1) }
+  | bool     { `BoolPattern (fst $1) }
+  | STRING   { `StrPattern (fst $1) }
+  | SEQ      { `SeqPattern (fst $1) }
+  | LP separated_nonempty_list(COMMA, case_type) RP   
+    { `TuplePattern ($2) }
+  | LS separated_nonempty_list(COMMA, case_type) RS
+    { `ListPattern ($2) }
   | INT ELLIPSIS INT 
     { `RangePattern(fst $1, fst $3) }
+  | case_type IF or_test /* TODO resolve conflict */
+    { `GuardedPattern($1, $3) }
+
 import_statement:
   | FROM dotted_name IMPORT MUL 
     { noimp "Import" (* ImportFrom ($2, None) *) }
