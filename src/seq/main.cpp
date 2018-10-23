@@ -3,6 +3,7 @@
 #include <vector>
 #include "llvm/Support/CommandLine.h"
 #include "seq/seq.h"
+#include "seq/parser.h"
 
 using namespace std;
 using namespace seq;
@@ -22,10 +23,10 @@ int main(int argc, char **argv)
 	vector<string> argsVec(args);
 
 	try {
-		SeqModule& s = parse(input.c_str());
+		SeqModule *s = parse(input.c_str());
 
 		if (output.getValue().empty()) {
-			s.execute(argsVec, libsVec, debug.getValue());
+			s->execute(argsVec, libsVec, debug.getValue());
 		} else {
 			if (!libsVec.empty())
 				std::cerr << "warning: ignoring libraries during compilation" << std::endl;
@@ -33,7 +34,7 @@ int main(int argc, char **argv)
 			if (!argsVec.empty())
 				std::cerr << "warning: ignoring arguments during compilation" << std::endl;
 
-			s.compile(output.getValue(), debug.getValue());
+			s->compile(output.getValue(), debug.getValue());
 		}
 	} catch (exc::SeqException& e) {
 		std::cerr << "error: " << e.what() << std::endl;

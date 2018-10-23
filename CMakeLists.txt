@@ -61,6 +61,21 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
 endif()
 
 
+# Set up OCaml includes
+find_program(OCAMLFIND NAMES ocamlfind)
+execute_process(COMMAND ${OCAMLFIND} ocamlc -where
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE OCAML_STDLIB_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (result)
+  message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
+endif()
+
+message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
+include_directories(${OCAML_STDLIB_PATH})
+link_directories(${OCAML_STDLIB_PATH})
+
+
 cmake_minimum_required(VERSION 3.9)
 project(Seq)
 
@@ -116,8 +131,6 @@ add_library(seq SHARED include/seq/any.h
                        src/lang/seq.cpp
                        src/lang/stmt.cpp
                        src/lang/var.cpp
-                       src/parser/grammar.h
-                       src/parser/parser.cpp
                        src/types/any.cpp
                        src/types/array.cpp
                        src/types/base.cpp
@@ -137,9 +150,37 @@ llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmpar
 target_link_libraries(seq ${LLVM_LIBS} seqrt pegtl)
 
 
+# Seq parsing library
+set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
+set(LIB_SEQPARSE "${DUNE_BUILD_DIR}/default/src/main.so")
+
+find_program(OPAM NAMES opam)
+if(NOT OPAM)
+  message(FATAL_ERROR "opam command not found")
+endif()
+
+add_custom_command(OUTPUT ${LIB_SEQPARSE}
+                   COMMAND ${OPAM} exec -- dune build --build-dir ${DUNE_BUILD_DIR} src/main.exe src/main.so
+                   COMMAND ln -s -f ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/libparser.dylib
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ocaml"
+                   DEPENDS ocaml/src/ast.ml
+                           ocaml/src/dune
+                           ocaml/src/lexer.mll
+                           ocaml/src/main.ml
+                           ocaml/src/parser.mly
+                           ocaml/src/seqtypes.ml
+                           ocaml/dune-project
+                   COMMENT "Compiling Seq's OCaml components..."
+                   VERBATIM)
+add_custom_target(seqparse_target DEPENDS ${LIB_SEQPARSE})
+add_library(seqparse SHARED IMPORTED)
+add_dependencies(seqparse seqparse_target)
+set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
+
+
 # Seq command-line tool
 add_executable(seqc src/seq/main.cpp)
-target_link_libraries(seqc seq)
+target_link_libraries(seqc seq seqparse asmrun)
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
@@ -148,4 +189,4 @@ add_executable(seqtest test/main.cpp
                        test/core/standalonetest.h
                        test/testhelp.h)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
-target_link_libraries(seqtest seq gtest_main)
+target_link_libraries(seqtest seq seqparse asmrun gtest_main)

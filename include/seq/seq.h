@@ -30,7 +30,6 @@
 #include "source.h"
 
 #include "common.h"
-#include "parser.h"
 #include "llvm.h"
 
 namespace seq {
