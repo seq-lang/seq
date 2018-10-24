@@ -31,3 +31,19 @@ for i in range(10):
    print i
 
 echo(4)
+
+print "**********"
+v = list[int]()
+
+i = 0
+while i < 15:
+    v.append(i)
+    i += 1
+
+v = v[1:].__copy__()
+v.insert(0, 99)
+v.reverse()
+print v.count(99)
+
+for a in v:
+    print a

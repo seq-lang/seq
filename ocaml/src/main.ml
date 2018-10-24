@@ -532,6 +532,10 @@ let init file error_handler =
       sprintf "__argv__[%d] = \"%s\"" idx s)) in
     parse_string (String.concat ~sep:"\n" preamble) ctx ~fname:"<preamble>";
 
+    let cwd = Sys.getcwd () in
+    let stdlib_path = sprintf "%s/lib.seq" cwd in
+    parse_file stdlib_path ctx;
+
     parse_file file ctx;
     Some mdl
   with CompilerError(typ, pos, file_line) ->
