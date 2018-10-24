@@ -468,7 +468,6 @@ let rec get_seq_stmt ctx block parsemod (stmt: extended_statement) =
   ignore @@ finalize_stmt stmt pos
   
 and parse_module ?execute ?print_ast mdl infile error_handler = 
-
   let preamble = [| sprintf  "__argv__ = array[str](%d)\n" (Array.length Sys.argv) |] in
   let preamble = Array.append preamble @@ Array.mapi Sys.argv ~f:(fun idx s ->
     sprintf "__argv[%d] = \"%s\"\n" idx s) in
@@ -482,7 +481,8 @@ and parse_module ?execute ?print_ast mdl infile error_handler =
   let state = Lexer.stack_create () in
   let onerror kind msg (pos: Lexing.position) =
     let line, col = pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
-    error_handler kind msg line col lines.(line - 1) in
+    error_handler kind msg line col lines.(line - 1);
+    None in
   try
     let ctx = init_context mdl mdl (Filename.realpath infile) in
     Stack.push ctx.stack (String.Hash_set.create ());
@@ -500,7 +500,7 @@ and parse_module ?execute ?print_ast mdl infile error_handler =
     (match execute with
      | Some (true) -> exec_module ctx.mdl false;
      | _ -> ());
-    ctx
+    Some ctx
   with
   | Lexer.SyntaxError(msg, pos) ->
     onerror "Lexer" msg pos
@@ -513,10 +513,11 @@ and parse_module ?execute ?print_ast mdl infile error_handler =
   | SeqCError(msg, pos) ->
     onerror "SeqLib" msg pos
 
+open Ctypes
 let parse fname =
-  let error_handler _ _ _ _ _ =
-    eprintf ">> OCaml exception died! <<\n%!";
-    exit 1 in
+  let callback = Foreign.foreign "caml_error_callback" (string @-> string @-> int @-> int @-> string @-> returning void) in
+  let error_handler kind msg line col file_line =
+    callback kind msg line col file_line in
   let seq_module = init_module () in
   ignore @@ parse_module seq_module fname error_handler ~execute:false;
   let adr = Ctypes.raw_address_of_ptr (Ctypes.to_voidp seq_module) in
@@ -539,4 +540,5 @@ let () =
 
     ignore @@ parse_module seq_module Sys.argv.(1) error_handler ~execute:true
   end
+
 

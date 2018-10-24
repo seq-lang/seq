@@ -5,11 +5,22 @@
 #include <cstdio>
 #include <string>
 
+struct handlers {
+	void (*error_callback)(char*, char*, int, int, char*);
+};
+
 struct seq_srcinfo {
 	char *file;
 	int line;
 	int col;
 };
+
+extern "C" void caml_error_callback(char* kind, char* msg, int line, int col, char* file_line)
+{
+	std::fprintf(stderr, "[C] >>>WOOHOO kind: %s, msg: %s, [%d, %d]\nLine: %s\n", 
+		kind, msg, line, col, file_line);	
+	exit(38);
+}
 
 void *parse_file(char *fp)
 {

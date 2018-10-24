@@ -1,3 +1,6 @@
+OCAML_DIR = $(shell ocamlc -where)
+ -include  $(OCAML_DIR)/Makefile.config
+
 all:
 	#make -j -C ../build
 	ln -s -f ../build/libseq.dylib .
@@ -10,7 +13,7 @@ cpp:
 	LIBRARY_PATH="/usr/local/opt/libffi/lib:${LIBRARY_PATH}" \
 		g++ -o code.exe \
 		code.o \
-		-lffi -pthread -lm -ldl \
+		-lffi $(NATIVECCLIBS) \
 		-L"`ocamlc -where`" -lasmrun \
 		-L. -lparser \
 		-L../build -lseq
