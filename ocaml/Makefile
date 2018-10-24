@@ -1,5 +1,5 @@
 all:
-	make -j ../build
+	#make -j -C ../build
 	ln -s -f ../build/libseq.dylib .
 	dune build --build-dir build src/main.exe src/main.so
 	ln -s -f build/default/src/main.exe .

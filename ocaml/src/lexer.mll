@@ -190,6 +190,7 @@ and read state = parse
   | "/"   as op { P.DIV    (Char.to_string op, cur_pos lexbuf) }
   | "%"   as op { P.MOD    (Char.to_string op, cur_pos lexbuf) }
   | "|>"  as op { P.PIPE   (op, cur_pos lexbuf) }
+  | "|"   as op { P.MATCHOR (cur_pos lexbuf) }
 
   | int as i   { P.INT   (int_of_string i, cur_pos lexbuf) }   
   | float as f { P.FLOAT (float_of_string f, cur_pos lexbuf) }

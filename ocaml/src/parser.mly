@@ -36,13 +36,13 @@
 %token <Ast.pos_t> LB RB     /* { } braces */
 
 /* keywords */
-%token <Ast.pos_t> FOR IN WHILE CONTINUE BREAK        /* loops */
-%token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT /* conditionals */
-%token <Ast.pos_t> DEF RETURN YIELD EXTERN            /* functions */
-%token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND           /* types */
-%token <Ast.pos_t> IMPORT FROM GLOBAL                 /* variables */
-%token <Ast.pos_t> PRINT PASS ASSERT                  /* keywords */
-%token <Ast.pos_t> TRUE FALSE                         /* booleans */
+%token <Ast.pos_t> FOR IN WHILE CONTINUE BREAK                /* loops */
+%token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT MATCHOR /* conditionals */
+%token <Ast.pos_t> DEF RETURN YIELD EXTERN                    /* functions */
+%token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND                   /* types */
+%token <Ast.pos_t> IMPORT FROM GLOBAL                         /* variables */
+%token <Ast.pos_t> PRINT PASS ASSERT                          /* keywords */
+%token <Ast.pos_t> TRUE FALSE                                 /* booleans */
 
 /* operators */
 %token <Ast.pos_t>         EQ ASSGN_EQ ELLIPSIS
@@ -129,6 +129,7 @@ comprehension:
 /*******************************************************/
 
 test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 */
+  | LP test RP { $2 }
   | pipe_test 
     { flat $1 }
   | ifc = pipe_test; IF cnd = pipe_test; ELSE elc = test 
@@ -278,12 +279,12 @@ case_suite:
   | case; rest = case_suite 
     { $1::rest }
 case:  
-  | CASE separated_nonempty_list(OR, case_type) COLON suite
+  | CASE separated_nonempty_list(MATCHOR, case_type) COLON suite
     { let pat = if List.length $2 = 1 
                 then List.hd_exn $2
                 else `OrPattern $2 in
       (pat, $4, $1) }
-  | CASE separated_nonempty_list(OR, case_type) AS ID COLON suite 
+  | CASE separated_nonempty_list(MATCHOR, case_type) AS ID COLON suite 
     { let pat = if List.length $2 = 1 
                 then List.hd_exn $2
                 else `OrPattern $2 in
@@ -302,7 +303,7 @@ case_type:
     { `ListPattern ($2) }
   | INT ELLIPSIS INT 
     { `RangePattern(fst $1, fst $3) }
-  | case_type IF or_test /* TODO resolve conflict */
+  | case_type IF or_test 
     { `GuardedPattern($1, $3) }
 
 import_statement:

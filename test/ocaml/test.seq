@@ -2,6 +2,8 @@
 a = 5
 b = 3
 
+print (a)
+
 print a, b
 a, b = b, a
 
