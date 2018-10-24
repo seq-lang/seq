@@ -12,21 +12,23 @@
 
   type stack = {
     stack: int Stack.t;
+    fname: string;
     mutable offset: int;
     mutable ignore_newline: bool;
   }
   
-  let stack_create () =
+  let stack_create fname =
     let stack = Stack.create () in
     Stack.push stack 0;
-    {stack = stack; offset = 0; ignore_newline = false}
+    {stack = stack; offset = 0; ignore_newline = false; fname}
   
   let ignore_nl t =
     t.ignore_newline <- true
   and aware_nl t =
     t.ignore_newline <- false
 
-  let cur_pos (lexbuf: Lexing.lexbuf) = lexbuf.lex_start_p
+  let cur_pos state (lexbuf: Lexing.lexbuf) = 
+    {lexbuf.lex_start_p with pos_fname = state.fname}
 
   let count_lines s =
     let n = ref 0 in 
@@ -72,11 +74,11 @@ rule token state = parse
     let last = Stack.top_exn state.stack in
     if cur < last then begin
       Stack.pop state.stack |> ignore;
-      P.DEDENT (cur_pos lexbuf)
+      P.DEDENT (cur_pos state lexbuf)
     end
     else if cur > last then begin
       Stack.push state.stack cur;
-      P.INDENT (cur_pos lexbuf)
+      P.INDENT (cur_pos state lexbuf)
     end
     else read state lexbuf (* go ahead with parsing *)
   }
@@ -91,7 +93,7 @@ and read state = parse
     if not state.ignore_newline then begin
       state.offset <- 0;
       offset state lexbuf;
-      P.NL (cur_pos lexbuf)
+      P.NL (cur_pos state lexbuf)
     end 
     else read state lexbuf 
   }
@@ -106,39 +108,39 @@ and read state = parse
   
   | ident as id {
     match id with
-      | "True"     -> P.TRUE       (cur_pos lexbuf)
-      | "False"    -> P.FALSE      (cur_pos lexbuf)
-      | "if"       -> P.IF         (cur_pos lexbuf)
-      | "elif"     -> P.ELIF       (cur_pos lexbuf)
-      | "else"     -> P.ELSE       (cur_pos lexbuf)
-      | "def"      -> P.DEF        (cur_pos lexbuf)
-      | "for"      -> P.FOR        (cur_pos lexbuf)
-      | "break"    -> P.BREAK      (cur_pos lexbuf)
-      | "continue" -> P.CONTINUE   (cur_pos lexbuf)
-      | "in"       -> P.IN         (cur_pos lexbuf)
-      | "or"       -> P.OR         ("||", cur_pos lexbuf)
-      | "and"      -> P.AND        ("&&", cur_pos lexbuf)
-      | "not"      -> P.NOT        ("!",  cur_pos lexbuf)
-      | "print"    -> P.PRINT      (cur_pos lexbuf)
-      | "return"   -> P.RETURN     (cur_pos lexbuf)
-      | "yield"    -> P.YIELD      (cur_pos lexbuf)
-      | "match"    -> P.MATCH      (cur_pos lexbuf)
-      | "case"     -> P.CASE       (cur_pos lexbuf)
-      | "as"       -> P.AS         (cur_pos lexbuf)
-      | "pass"     -> P.PASS       (cur_pos lexbuf)
-      | "while"    -> P.WHILE      (cur_pos lexbuf)
-      | "type"     -> P.TYPE       (cur_pos lexbuf)
-      | "default"  -> P.DEFAULT    (cur_pos lexbuf)
-      (*| "lambda"   -> P.LAMBDA     (cur_pos lexbuf)*)
-      | "assert"   -> P.ASSERT     (cur_pos lexbuf)
-      | "global"   -> P.GLOBAL     (cur_pos lexbuf)
-      | "import"   -> P.IMPORT     (cur_pos lexbuf)
-      | "from"     -> P.FROM       (cur_pos lexbuf)
-      | "class"    -> P.CLASS      (cur_pos lexbuf)
-      | "typeof"   -> P.TYPEOF     (cur_pos lexbuf)
-      | "extend"   -> P.EXTEND     (cur_pos lexbuf)
-      | "extern"   -> P.EXTERN     (cur_pos lexbuf)
-      | _          -> P.ID         (id, cur_pos lexbuf)
+      | "True"     -> P.TRUE       (cur_pos state lexbuf)
+      | "False"    -> P.FALSE      (cur_pos state lexbuf)
+      | "if"       -> P.IF         (cur_pos state lexbuf)
+      | "elif"     -> P.ELIF       (cur_pos state lexbuf)
+      | "else"     -> P.ELSE       (cur_pos state lexbuf)
+      | "def"      -> P.DEF        (cur_pos state lexbuf)
+      | "for"      -> P.FOR        (cur_pos state lexbuf)
+      | "break"    -> P.BREAK      (cur_pos state lexbuf)
+      | "continue" -> P.CONTINUE   (cur_pos state lexbuf)
+      | "in"       -> P.IN         (cur_pos state lexbuf)
+      | "or"       -> P.OR         ("||", cur_pos state lexbuf)
+      | "and"      -> P.AND        ("&&", cur_pos state lexbuf)
+      | "not"      -> P.NOT        ("!",  cur_pos state lexbuf)
+      | "print"    -> P.PRINT      (cur_pos state lexbuf)
+      | "return"   -> P.RETURN     (cur_pos state lexbuf)
+      | "yield"    -> P.YIELD      (cur_pos state lexbuf)
+      | "match"    -> P.MATCH      (cur_pos state lexbuf)
+      | "case"     -> P.CASE       (cur_pos state lexbuf)
+      | "as"       -> P.AS         (cur_pos state lexbuf)
+      | "pass"     -> P.PASS       (cur_pos state lexbuf)
+      | "while"    -> P.WHILE      (cur_pos state lexbuf)
+      | "type"     -> P.TYPE       (cur_pos state lexbuf)
+      | "default"  -> P.DEFAULT    (cur_pos state lexbuf)
+      (*| "lambda"   -> P.LAMBDA     (cur_pos state lexbuf)*)
+      | "assert"   -> P.ASSERT     (cur_pos state lexbuf)
+      | "global"   -> P.GLOBAL     (cur_pos state lexbuf)
+      | "import"   -> P.IMPORT     (cur_pos state lexbuf)
+      | "from"     -> P.FROM       (cur_pos state lexbuf)
+      | "class"    -> P.CLASS      (cur_pos state lexbuf)
+      | "typeof"   -> P.TYPEOF     (cur_pos state lexbuf)
+      | "extend"   -> P.EXTEND     (cur_pos state lexbuf)
+      | "extern"   -> P.EXTERN     (cur_pos state lexbuf)
+      | _          -> P.ID         (id, cur_pos state lexbuf)
   }
 
   | stringprefix '\''     { single_string state (L.lexeme lexbuf) lexbuf }
@@ -146,59 +148,59 @@ and read state = parse
   | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
   | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
 
-  | '`' (ident as gen) { P.GENERIC ("`" ^ gen, cur_pos lexbuf) }
+  | '`' (ident as gen) { P.GENERIC ("`" ^ gen, cur_pos state lexbuf) }
 (*  | (ident as r) '`' { 
     let s = read_extern state (Buffer.create 17) lexbuf in
-    P.EXTERN(r, s, cur_pos lexbuf)
+    P.EXTERN(r, s, cur_pos state lexbuf)
   }*)
   
-  | "(" { ignore_nl state; P.LP (cur_pos lexbuf) }
-  | ")" { aware_nl state;  P.RP (cur_pos lexbuf) }
-  | "[" { ignore_nl state; P.LS (cur_pos lexbuf) }
-  | "]" { aware_nl state;  P.RS (cur_pos lexbuf) }
-  | "{" { ignore_nl state; P.LB (cur_pos lexbuf) }
-  | "}" { aware_nl state;  P.RB (cur_pos lexbuf) }
+  | "(" { ignore_nl state; P.LP (cur_pos state lexbuf) }
+  | ")" { aware_nl state;  P.RP (cur_pos state lexbuf) }
+  | "[" { ignore_nl state; P.LS (cur_pos state lexbuf) }
+  | "]" { aware_nl state;  P.RS (cur_pos state lexbuf) }
+  | "{" { ignore_nl state; P.LB (cur_pos state lexbuf) }
+  | "}" { aware_nl state;  P.RB (cur_pos state lexbuf) }
   
-  | ":="  { P.ASSGN_EQ  (cur_pos lexbuf) }
-  | "="   { P.EQ        (cur_pos lexbuf) }
-  | "->"  { P.OF        (cur_pos lexbuf) }
-  | ":"   { P.COLON     (cur_pos lexbuf) }
-  | ";"   { P.SEMICOLON (cur_pos lexbuf) }
-  | "@"   { P.AT        (cur_pos lexbuf) }
-  | ","   { P.COMMA     (cur_pos lexbuf) }
-  | "..." { P.ELLIPSIS  (cur_pos lexbuf) }
-  | "."   { P.DOT       (cur_pos lexbuf) }
+  | ":="  { P.ASSGN_EQ  (cur_pos state lexbuf) }
+  | "="   { P.EQ        (cur_pos state lexbuf) }
+  | "->"  { P.OF        (cur_pos state lexbuf) }
+  | ":"   { P.COLON     (cur_pos state lexbuf) }
+  | ";"   { P.SEMICOLON (cur_pos state lexbuf) }
+  | "@"   { P.AT        (cur_pos state lexbuf) }
+  | ","   { P.COMMA     (cur_pos state lexbuf) }
+  | "..." { P.ELLIPSIS  (cur_pos state lexbuf) }
+  | "."   { P.DOT       (cur_pos state lexbuf) }
 
-  | "+="  as op { P.PLUSEQ (op, cur_pos lexbuf) }
-  | "-="  as op { P.MINEQ  (op, cur_pos lexbuf) }
-  | "**=" as op { P.POWEQ  (op, cur_pos lexbuf) }
-  | "*="  as op { P.MULEQ  (op, cur_pos lexbuf) }
-  | "//=" as op { P.FDIVEQ (op, cur_pos lexbuf) }
-  | "/="  as op { P.DIVEQ  (op, cur_pos lexbuf) }
-  | "%="  as op { P.MODEQ  (op, cur_pos lexbuf) }
-  | "+"   as op { P.ADD    (Char.to_string op, cur_pos lexbuf) }
-  | "-"   as op { P.SUB    (Char.to_string op, cur_pos lexbuf) }
-  | "**"  as op { P.POW    (op, cur_pos lexbuf) }
-  | "*"   as op { P.MUL    (Char.to_string op, cur_pos lexbuf) }
-  | "=="  as op { P.EEQ    (op, cur_pos lexbuf) }
-  | "!="  as op { P.NEQ    (op, cur_pos lexbuf) }
-  | ">="  as op { P.GEQ    (op, cur_pos lexbuf) }
-  | ">"   as op { P.GREAT  (Char.to_string op, cur_pos lexbuf) }
-  | "<="  as op { P.LEQ    (op, cur_pos lexbuf) }
-  | "<"   as op { P.LESS   (Char.to_string op, cur_pos lexbuf) }
-  | "//"  as op { P.FDIV   (op, cur_pos lexbuf) }
-  | "/"   as op { P.DIV    (Char.to_string op, cur_pos lexbuf) }
-  | "%"   as op { P.MOD    (Char.to_string op, cur_pos lexbuf) }
-  | "|>"  as op { P.PIPE   (op, cur_pos lexbuf) }
-  | "|"   as op { P.MATCHOR (cur_pos lexbuf) }
+  | "+="  as op { P.PLUSEQ (op, cur_pos state lexbuf) }
+  | "-="  as op { P.MINEQ  (op, cur_pos state lexbuf) }
+  | "**=" as op { P.POWEQ  (op, cur_pos state lexbuf) }
+  | "*="  as op { P.MULEQ  (op, cur_pos state lexbuf) }
+  | "//=" as op { P.FDIVEQ (op, cur_pos state lexbuf) }
+  | "/="  as op { P.DIVEQ  (op, cur_pos state lexbuf) }
+  | "%="  as op { P.MODEQ  (op, cur_pos state lexbuf) }
+  | "+"   as op { P.ADD    (Char.to_string op, cur_pos state lexbuf) }
+  | "-"   as op { P.SUB    (Char.to_string op, cur_pos state lexbuf) }
+  | "**"  as op { P.POW    (op, cur_pos state lexbuf) }
+  | "*"   as op { P.MUL    (Char.to_string op, cur_pos state lexbuf) }
+  | "=="  as op { P.EEQ    (op, cur_pos state lexbuf) }
+  | "!="  as op { P.NEQ    (op, cur_pos state lexbuf) }
+  | ">="  as op { P.GEQ    (op, cur_pos state lexbuf) }
+  | ">"   as op { P.GREAT  (Char.to_string op, cur_pos state lexbuf) }
+  | "<="  as op { P.LEQ    (op, cur_pos state lexbuf) }
+  | "<"   as op { P.LESS   (Char.to_string op, cur_pos state lexbuf) }
+  | "//"  as op { P.FDIV   (op, cur_pos state lexbuf) }
+  | "/"   as op { P.DIV    (Char.to_string op, cur_pos state lexbuf) }
+  | "%"   as op { P.MOD    (Char.to_string op, cur_pos state lexbuf) }
+  | "|>"  as op { P.PIPE   (op, cur_pos state lexbuf) }
+  | "|"   as op { P.MATCHOR (cur_pos state lexbuf) }
 
-  | int as i   { P.INT   (int_of_string i, cur_pos lexbuf) }   
-  | float as f { P.FLOAT (float_of_string f, cur_pos lexbuf) }
+  | int as i   { P.INT   (int_of_string i, cur_pos state lexbuf) }   
+  | float as f { P.FLOAT (float_of_string f, cur_pos state lexbuf) }
   
-  | eof { P.EOF (cur_pos lexbuf) }
+  | eof { P.EOF (cur_pos state lexbuf) }
   | _ {
     let tok = L.lexeme lexbuf in
-    let pos = cur_pos lexbuf in
+    let pos = cur_pos state lexbuf in
     SyntaxError (Format.sprintf "Unknown token '%s'" tok, pos) |> raise
   }
 
@@ -210,27 +212,27 @@ and offset state = parse
 
 (* parse strings *)
 and single_string state prefix = parse
-  | (([^ '\\' '\r' '\n' '\''] | escape)* as s) '\'' { seq_string prefix s (cur_pos lexbuf) }
+  | (([^ '\\' '\r' '\n' '\''] | escape)* as s) '\'' { seq_string prefix s (cur_pos state lexbuf) }
 and single_docstr state prefix = shortest
   | (([^ '\\'] | escape)* as s) "'''" { 
     let lines = count_lines s in  
     lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines };
-    seq_string prefix s (cur_pos lexbuf)
+    seq_string prefix s (cur_pos state lexbuf)
   }
 and double_string state prefix = parse
-  | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) '"' { seq_string prefix s (cur_pos lexbuf) }
+  | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) '"' { seq_string prefix s (cur_pos state lexbuf) }
 and double_docstr state prefix = shortest
   | (([^ '\\'] | escape)* as s) "\"\"\"" { 
     let lines = count_lines s in
     lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines };
-    seq_string prefix s (cur_pos lexbuf)
+    seq_string prefix s (cur_pos state lexbuf)
   }
 
 (* parse backquoted string (extern language spec) *)
 and read_extern state buf = parse
   | '`'      { B.contents buf }
   | [^ '`']+ { B.add_string buf @@ L.lexeme lexbuf; read_extern state buf lexbuf }
-  | _        { SyntaxError ("Illegal extern character: " ^ L.lexeme lexbuf, cur_pos lexbuf) |> raise }
-  | eof      { SyntaxError ("Extern is not terminated", cur_pos lexbuf) |> raise }
+  | _        { SyntaxError ("Illegal extern character: " ^ L.lexeme lexbuf, cur_pos state lexbuf) |> raise }
+  | eof      { SyntaxError ("Extern is not terminated", cur_pos state lexbuf) |> raise }
 
 (* end of lexer specification *)

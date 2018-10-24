@@ -7,8 +7,6 @@
 
 import seqlib
 
-
-
 def split(s, k, step):
    i = 0
    while i + k < len(s):

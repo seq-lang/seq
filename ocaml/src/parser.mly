@@ -10,7 +10,6 @@
     | h::el, pos -> `Pipe (h::el, pos)
 
   let noimp s = raise (NotImplentedError ("Not yet implemented: " ^ s))
-  let dummy_pos: pos_t = {pos_fname=""; pos_cnum=0; pos_lnum=0; pos_bol=0}
 %}
 
 %token <int * Ast.pos_t>             INT
@@ -144,7 +143,7 @@ test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 
 test_list: 
   | separated_nonempty_list(COMMA, test) { $1 }
 pipe_test: /* Pipe operator: a, a |> b */
-  | or_test { ([$1], dummy_pos) }
+  | or_test { ([$1], Lexing.dummy_pos) }
   | or_test PIPE pipe_test { ($1::(fst $3), snd $2) }
 or_test: /* OR operator: a, a or b */
   | and_test { $1 }

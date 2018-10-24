@@ -1,4 +1,15 @@
 
+import seqlib
+
+class A(i: int):
+   def test(self, x):
+      print self.i, x
+
+q = A(1)
+q.test(5)
+
+
+print __argv__[1]
 
 a = 5
 b = 3
@@ -15,3 +26,8 @@ y[0], y[1] = y[1], y[0]
 print y[0], y[1]
 
 print a, b
+
+for i in range(10):
+   print i
+
+echo(4)

@@ -7,16 +7,6 @@ extend int:
       yield i
       i += 1
 
-extend file:
-  def iter(self):
-    while True:
-      n = self.read()
-      if n == 0:
-        break
-      for i in n.iter():
-        yield self.get(i)
-    self.close()
-
 def range(i):
    return i.iter()
 
@@ -25,12 +15,4 @@ def len(s):
 
 def echo(s):
    print s
-
-#   def iter(self):
-   #  return self.iter_helper(self.get)
-    
-#   def iter_multi(self):
-#     return self.iter_helper(self.get)
-    
-      
 
