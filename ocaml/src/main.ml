@@ -529,7 +529,7 @@ let rec parse_string ?fname ?debug code ctx =
     raise @@ CompilerError(Compiler(msg), pos)
 
 and parse_file ?debug file ctx =
-  eprintf "==> parsing %s\n" file;
+  (* eprintf "==> parsing %s\n" file; *)
   let lines = In_channel.read_lines file in
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
   parse_string ?debug ~fname:(Filename.realpath file) code ctx
@@ -592,9 +592,12 @@ let () =
       | Descent s -> "descent", s
       | Compiler s -> "compiler", s in
 
-      let file_line = try
-        let lines = In_channel.read_lines file in List.nth lines (line - 1)
-        with _ -> None in 
+      let file_line = 
+        if String.length file > 0 && file.[0] <> '<' then 
+          try
+            let lines = In_channel.read_lines file in List.nth lines (line - 1)
+          with _ -> None 
+        else None in
 
       let style = [T.Bold; T.red] in
       eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: %s\n" kind msg;
