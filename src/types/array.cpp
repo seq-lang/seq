@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::ArrayType::ArrayType(Type *baseType) :
-    Type(baseType->getName() + "[]", BaseType::get()), baseType(baseType)
+    Type("array[" + baseType->getName() + "]", BaseType::get()), baseType(baseType)
 {
 }
 

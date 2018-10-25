@@ -141,7 +141,7 @@ size_t types::BaseSeqType::size(Module *module) const
 }
 
 /* derived Seq type */
-types::SeqType::SeqType() : BaseSeqType("Seq")
+types::SeqType::SeqType() : BaseSeqType("seq")
 {
 }
 
@@ -270,7 +270,7 @@ types::SeqType *types::SeqType::get() noexcept
 }
 
 /* derived Str type */
-types::StrType::StrType() : BaseSeqType("Str")
+types::StrType::StrType() : BaseSeqType("str")
 {
 }
 

@@ -3,7 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-types::VoidType::VoidType() : Type("Void", AnyType::get(), true)
+types::VoidType::VoidType() : Type("void", AnyType::get(), true)
 {
 }
 

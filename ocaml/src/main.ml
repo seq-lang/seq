@@ -99,7 +99,7 @@ end
 
 (* placeholder for NotImplemented *)
 let noimp s =
-  raise (NotImplentedError ("Not yet implemented: " ^ s))
+  raise (NotImplentedError ("not yet implemented: " ^ s))
 let seq_error msg pos =
   raise (SeqCamlError (msg, pos))
 
@@ -122,9 +122,9 @@ let rec get_seq_expr (ctx: Context.t) expr =
     | Some (Context.Var v::_)  -> var_expr v, pos
     | Some (Context.Func f::_) -> func_expr f, pos
     | Some (Context.Type t::_) -> type_expr t, pos
-    | _ -> seq_error (sprintf "%s not found" var) pos
+    | _ -> seq_error (sprintf "symbol '%s' not found" var) pos
     end
-  | `List(args, pos) -> 
+  | `List(args, pos) ->
     let typ = match Hashtbl.find ctx.map "list" with
     | Some ([Type t]) -> t
     | _ -> seq_error "list type not found" pos in
@@ -170,7 +170,7 @@ let rec get_seq_expr (ctx: Context.t) expr =
     end
   | `Index(lh_expr, [`Slice(st, ed, step, _)], pos) ->
     let lh_expr = get_seq_expr lh_expr in
-    if is_some step then noimp "Step";
+    if is_some step then noimp "step";
     let unpack st = Option.value_map st ~f:get_seq_expr ~default:Ctypes.null in
     array_slice_expr lh_expr (unpack st) (unpack ed), pos
   | `Index(`Id("array", _), indices, pos) ->
@@ -180,18 +180,18 @@ let rec get_seq_expr (ctx: Context.t) expr =
     type_expr (array_type typ), pos
   | `Index(`Id("ptr", _), indices, pos) ->
     if List.length indices <> 1 then
-      seq_error "Pointer needs only one type" pos;
+      seq_error "pointer needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (ptr_type typ), pos
   | `Index(`Id("callable", _), indices, pos) ->
     let typ_exprs = List.map indices ~f:(get_type_from_expr_exn ctx) in
     let ret, args = match List.rev typ_exprs with
     | hd::tl -> hd, tl |> List.rev
-    | [] -> seq_error "Callable needs at least one argument" pos in
+    | [] -> seq_error "callable needs at least one argument" pos in
     type_expr (func_type ret args), pos
   | `Index(`Id("yieldable", _), indices, pos) ->
     if List.length indices <> 1 then
-      seq_error "Yieldable needs only one type" pos;
+      seq_error "yieldable needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (gen_type typ), pos
   | `Index(lh_expr, indices, pos) -> begin
@@ -206,7 +206,7 @@ let rec get_seq_expr (ctx: Context.t) expr =
       func_expr fn, get_pos lh_expr
     | _ ->
       if List.length index_exprs <> 1 then
-        seq_error "Index needs only one item" (get_pos lh_expr);
+        seq_error "index needs only one item" (get_pos lh_expr);
       array_lookup_expr lh_expr (List.hd_exn index_exprs), get_pos lh_expr
     end
   | `Tuple(args, pos) ->
@@ -220,7 +220,7 @@ and get_type_from_expr_exn ctx t =
   let typ_expr = get_seq_expr ctx t in
   match get_type typ_expr with
   | Some typ -> typ
-  | _ -> seq_error "Not a type" (get_pos typ_expr)
+  | _ -> seq_error "not a type" (get_pos typ_expr)
 
 let set_generics ctx types args set_generic_count get_generic =
   let arg_names, arg_types = List.unzip @@ List.map args ~f:(function
@@ -282,7 +282,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     let index_expr = get_seq_expr ctx index_expr in
     assign_index_stmt (get_seq_expr ctx var_expr) index_expr rh_expr, pos
   | `AssignExpr(_, _, _, pos) ->
-    seq_error "Assignment requires Id / Dot / Index on LHS" pos
+    seq_error "assignment requires Id / Dot / Index on LHS" pos
   | `Pass pos     -> pass_stmt (), pos
   | `Break pos    -> break_stmt (), pos
   | `Continue pos -> continue_stmt (), pos
@@ -327,10 +327,10 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     yield_stmt, pos
   | `Type((name, pos), args, _) ->
     let arg_names, arg_types = List.unzip @@ List.map args ~f:(function
-      | `Arg((_, p), None) -> seq_error "Type with generic argument" p
+      | `Arg((_, p), None) -> seq_error "type with generic argument" p
       | `Arg((n, _), Some t) -> (n, t)) in
     if is_some @@ Context.in_block ctx name then
-      raise (SeqCamlError (sprintf "Type %s already defined" name, pos));
+      raise (SeqCamlError (sprintf "type %s already defined" name, pos));
     let typ = record_type arg_names @@ List.map arg_types ~f:(get_type_from_expr_exn ctx) in
     Context.add ctx name (Context.Type typ);
     pass_stmt (), pos
@@ -357,7 +357,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     let for_var_name, for_var = match for_var with
     | `Id (for_var_name, _) ->
       (for_var_name, get_for_var for_stmt)
-    | _ -> noimp "For non-ID variable" in
+    | _ -> noimp "for non-ID variable" in
 
     let for_block = get_for_block for_stmt in
     add_block for_block stmts ~init:(fun ctx ->
@@ -386,7 +386,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
       | `GuardedPattern(pat, expr) ->
         guarded_pattern (match_pattern ctx pat) (get_seq_expr ctx expr)
       | `BoundPattern ((_, pos), _) ->
-        seq_error "Invalid bound pattern" pos
+        seq_error "invalid bound pattern" pos
     in
     let match_stmt = match_stmt (get_seq_expr ctx what_expr) in
     List.iter cases ~f:(fun (pattern, stmts, _) ->
@@ -410,7 +410,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     let fn_name, ret_typ = match return_typ with `Arg((n, _), typ) -> n, typ in
 
     if is_some @@ Context.in_block ctx fn_name then
-      seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
+      seq_error (sprintf "cannot define function %s as the variable with same name exists" fn_name) pos;
     let fn = func fn_name in
     begin match ctx.ref_class with
     | Some(typ) -> add_ref_method typ fn_name fn
@@ -439,9 +439,9 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
   | `Extern("c", _, ret, args, pos) ->
     let fn_name, ret_typ = match ret with
     | `Arg((n, _), Some typ) -> n, typ
-    | _ -> seq_error "Return type must be defined for extern functions" pos in
+    | _ -> seq_error "return type must be defined for extern functions" pos in
     if is_some @@ Context.in_block ctx fn_name then
-      seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
+      seq_error (sprintf "cannot define function %s as the variable with same name exists" fn_name) pos;
 
     let fn = func fn_name in
     Context.add ctx fn_name (Context.Func fn);
@@ -450,14 +450,14 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
 
     let arg_names, arg_types = List.unzip @@ List.map args ~f:(function
       | `Arg((n, _), Some t) -> (n, get_type_from_expr_exn ctx t)
-      | _ -> seq_error "Argument type must be defined for extern functions" pos) in
+      | _ -> seq_error "argument type must be defined for extern functions" pos) in
     set_func_params fn arg_names arg_types;
     set_func_extern fn;
     func_stmt fn, pos
-  | `Extern(_, _, _, _, _) -> noimp "Non-c externs"
+  | `Extern(_, _, _, _, _) -> noimp "non-c externs"
   | `Class((class_name, name_pos), types, args, functions, pos) ->
     if is_some @@ Context.in_block ctx class_name then
-      seq_error (sprintf "Cannot define class %s as the variable with same name exists" class_name) name_pos;
+      seq_error (sprintf "cannot define class %s as the variable with same name exists" class_name) name_pos;
 
     let typ = ref_type class_name in
     Context.add ctx class_name (Context.Type typ);
@@ -478,7 +478,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
   | `Extend((class_name, _), functions, pos) ->
     let typ = match Context.in_block ctx class_name with
     | Some (Context.Type t) -> t
-    | _ -> seq_error (sprintf "Cannot extend non-existing class %s" class_name) pos in
+    | _ -> seq_error (sprintf "cannot extend non-existing class %s" class_name) pos in
     let ref_ctx = {ctx with
                    map = Hashtbl.copy ctx.map;
                    ref_class = Some(typ)} in
@@ -550,14 +550,14 @@ open Ctypes
 let parse_c fname =
   let error_handler typ (pos: pos_t) file_line =
     let file, line, col = pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
-    let kind, msg = match typ with
-    | Lexer s -> "Lexer", s
-    | Parser -> "Parser", "Parsing error"
-    | Descent s -> "ASTGenerator", s
-    | Compiler s -> "SeqLib", s in
+    let msg = match typ with
+    | Lexer s -> s
+    | Parser -> "parsing error"
+    | Descent s -> s
+    | Compiler s -> s in
     let callback = Foreign.foreign "caml_error_callback"
-      (string @-> string @-> int @-> int @-> string @-> returning void) in
-    callback kind msg line col file
+      (string @-> int @-> int @-> string @-> returning void) in
+    callback msg line col file
   in
   let seq_module = init fname error_handler in
   match seq_module with

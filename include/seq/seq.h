@@ -57,9 +57,10 @@ namespace seq {
 		llvm::Function *initFunc;
 		llvm::Function *strlenFunc;
 	public:
-		explicit SeqModule(std::string source="unnamed.seq");
+		SeqModule();
 		Block *getBlock();
 		Var *getArgVar();
+		void setFileName(std::string file);
 
 		void resolveTypes() override;
 		void codegen(llvm::Module *module) override;

@@ -6,7 +6,7 @@
 #include <string>
 
 struct handlers {
-	void (*error_callback)(char*, char*, int, int, char*);
+	void (*error_callback)(char*, int, int, char*);
 };
 
 struct seq_srcinfo {
@@ -15,10 +15,10 @@ struct seq_srcinfo {
 	int col;
 };
 
-extern "C" void caml_error_callback(char* kind, char* msg, int line, int col, char* file_line)
+extern "C" void caml_error_callback(char* msg, int line, int col, char* file_line)
 {
-	std::fprintf(stderr, "[C] >>>WOOHOO kind: %s, msg: %s, [%d, %d]\nLine: %s\n", 
-		kind, msg, line, col, file_line);	
+	std::fprintf(stderr, "[C] >>>WOOHOO msg: %s, [%d, %d]\nLine: %s\n",
+		msg, line, col, file_line);
 	exit(38);
 }
 

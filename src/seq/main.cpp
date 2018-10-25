@@ -22,23 +22,18 @@ int main(int argc, char **argv)
 	vector<string> libsVec(libs);
 	vector<string> argsVec(args);
 
-	try {
-		SeqModule *s = parse(input.c_str());
+	SeqModule *s = parse(input.c_str());
 
-		if (output.getValue().empty()) {
-			s->execute(argsVec, libsVec, debug.getValue());
-		} else {
-			if (!libsVec.empty())
-				std::cerr << "warning: ignoring libraries during compilation" << std::endl;
+	if (output.getValue().empty()) {
+		execute(s, argsVec, libsVec, debug.getValue());
+	} else {
+		if (!libsVec.empty())
+			std::cerr << "warning: ignoring libraries during compilation" << std::endl;
 
-			if (!argsVec.empty())
-				std::cerr << "warning: ignoring arguments during compilation" << std::endl;
+		if (!argsVec.empty())
+			std::cerr << "warning: ignoring arguments during compilation" << std::endl;
 
-			s->compile(output.getValue(), debug.getValue());
-		}
-	} catch (exc::SeqException& e) {
-		std::cerr << "error: " << e.what() << std::endl;
-		return EXIT_FAILURE;
+		compile(s, output.getValue(), debug.getValue());
 	}
 
 	return EXIT_SUCCESS;

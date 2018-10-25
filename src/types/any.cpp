@@ -3,7 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-types::AnyType::AnyType() : Type("Any", nullptr, true)
+types::AnyType::AnyType() : Type("any", nullptr, true)
 {
 }
 

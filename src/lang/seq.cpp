@@ -6,7 +6,7 @@
 using namespace seq;
 using namespace llvm;
 
-SeqModule::SeqModule(std::string source) :
+SeqModule::SeqModule() :
     BaseFunc(), scope(new Block()), argVar(new Var(types::ArrayType::get(types::Str))),
     initFunc(nullptr), strlenFunc(nullptr)
 {
@@ -15,7 +15,6 @@ SeqModule::SeqModule(std::string source) :
 	InitializeNativeTargetAsmPrinter();
 
 	module = new Module("seq", context);
-	module->setSourceFileName(source);
 	module->setTargetTriple(EngineBuilder().selectTarget()->getTargetTriple().str());
 	module->setDataLayout(EngineBuilder().selectTarget()->createDataLayout());
 }
@@ -28,6 +27,11 @@ Block *SeqModule::getBlock()
 Var *SeqModule::getArgVar()
 {
 	return argVar;
+}
+
+void SeqModule::setFileName(std::string file)
+{
+	module->setSourceFileName(std::move(file));
 }
 
 void SeqModule::resolveTypes()
