@@ -1,14 +1,24 @@
 #ifndef SEQ_PARSER_H
 #define SEQ_PARSER_H
 
+#include <iostream>
+#include <string>
 #include <caml/mlvalues.h>
 #include <caml/callback.h>
 #include <caml/alloc.h>
 
+extern "C" void caml_error_callback(char *kind, char *msg, int line, int col, char *file_line)
+{
+	std::cerr << "error (line " << line << "): " << msg << std::endl;
+	std::cerr << "    " << file_line << std::endl;
+	std::cerr << "    " << std::string((unsigned long)col, ' ') << '^' << std::endl;
+	exit(EXIT_FAILURE);
+}
+
 namespace seq {
 	class SeqModule;
 
-	SeqModule *parse(std::string file)
+	SeqModule *parse(const std::string& file)
 	{
 		static value *closure_f = nullptr;
 		if (!closure_f) {

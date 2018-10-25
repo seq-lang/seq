@@ -7,8 +7,8 @@ open Seqtypes
 module T = ANSITerminal
 
 type seq_error =
-  | Lexer of string 
-  | Parser 
+  | Lexer of string
+  | Parser
   | Descent of string
   | Compiler of string
 
@@ -27,7 +27,7 @@ module Context = struct
   type t = {
     (* filename; TODO: remove *)
     filename: string;
-    
+
     (* part of class definition? *)
     ref_class: seq_type option;
 
@@ -45,12 +45,12 @@ module Context = struct
   }
 
   let init filename mdl base block =
-    let ctx = {filename; 
-               ref_class = None; 
-               mdl; 
-               base; 
+    let ctx = {filename;
+               ref_class = None;
+               mdl;
+               base;
                block;
-               stack = Stack.create (); 
+               stack = Stack.create ();
                map = String.Table.create ()} in
     Stack.push ctx.stack (String.Hash_set.create ());
     (* initialize POD types *)
@@ -65,7 +65,7 @@ module Context = struct
     ctx
 
   let add ctx key var =
-    begin match Hashtbl.find ctx.map key with 
+    begin match Hashtbl.find ctx.map key with
     | None -> Hashtbl.set ctx.map ~key ~data:[var]
     | Some lst -> Hashtbl.set ctx.map ~key ~data:(var::lst)
     end;
@@ -84,13 +84,13 @@ module Context = struct
     | Some(hd::_) -> Some(hd)
     | _ -> None
     (* if Stack.length ctx.stack = 0 then None
-    else if Hash_set.exists (Stack.top_exn ctx.stack) ~f:((=)key) then 
+    else if Hash_set.exists (Stack.top_exn ctx.stack) ~f:((=)key) then
       Some (List.hd_exn @@ Hashtbl.find_exn ctx.map key)
     else None *)
 
-  let dump ctx = 
+  let dump ctx =
     eprintf "Filename: %s\n" ctx.filename;
-    eprintf "Keys: \n"; 
+    eprintf "Keys: \n";
     Hashtbl.iter_keys ctx.map ~f:(fun k -> eprintf "   %s\n" k);
     eprintf "Stack: \n";
     Stack.iter ctx.stack ~f:(fun k -> Hash_set.iter k ~f:(eprintf "%s, "); eprintf "\n");
@@ -131,11 +131,11 @@ let rec get_seq_expr (ctx: Context.t) expr =
     let typ = get_type expr ctx.base in
     type_expr typ, pos *)
   | `IfExpr(cond, if_expr, else_expr, pos) ->
-    let if_expr = get_seq_expr if_expr in 
+    let if_expr = get_seq_expr if_expr in
     let else_expr = get_seq_expr else_expr in
-    let c_expr = get_seq_expr cond in 
+    let c_expr = get_seq_expr cond in
     cond_expr c_expr if_expr else_expr, pos
-  | `Unary((op, pos), expr) -> 
+  | `Unary((op, pos), expr) ->
     uop_expr op (get_seq_expr expr), pos
   | `Binary(lh_expr, (op, pos), rh_expr) ->
     let lh_expr = get_seq_expr lh_expr in
@@ -150,7 +150,7 @@ let rec get_seq_expr (ctx: Context.t) expr =
       let args_exprs = List.map args ~f:(function
         | `Ellipsis(_) -> Ctypes.null
         | ex -> get_seq_expr ex) in
-      if List.exists args_exprs ~f:((=)(Ctypes.null)) then   
+      if List.exists args_exprs ~f:((=)(Ctypes.null)) then
         partial_expr callee_expr args_exprs, pos
       else
         call_expr callee_expr args_exprs, pos
@@ -165,28 +165,28 @@ let rec get_seq_expr (ctx: Context.t) expr =
     | None -> get_elem_expr lh_expr rhs, pos
     end
   | `Index(lh_expr, [`Slice(st, ed, step, _)], pos) ->
-    let lh_expr = get_seq_expr lh_expr in 
+    let lh_expr = get_seq_expr lh_expr in
     if is_some step then noimp "Step";
     let unpack st = Option.value_map st ~f:get_seq_expr ~default:Ctypes.null in
     array_slice_expr lh_expr (unpack st) (unpack ed), pos
-  | `Index(`Id("array", _), indices, pos) -> 
-    if List.length indices <> 1 then 
+  | `Index(`Id("array", _), indices, pos) ->
+    if List.length indices <> 1 then
       seq_error "Array needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (array_type typ), pos
-  | `Index(`Id("ptr", _), indices, pos) -> 
-    if List.length indices <> 1 then 
+  | `Index(`Id("ptr", _), indices, pos) ->
+    if List.length indices <> 1 then
       seq_error "Pointer needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (ptr_type typ), pos
-  | `Index(`Id("callable", _), indices, pos) -> 
+  | `Index(`Id("callable", _), indices, pos) ->
     let typ_exprs = List.map indices ~f:(get_type_from_expr_exn ctx) in
     let ret, args = match List.rev typ_exprs with
     | hd::tl -> hd, tl |> List.rev
     | [] -> seq_error "Callable needs at least one argument" pos in
     type_expr (func_type ret args), pos
-  | `Index(`Id("yieldable", _), indices, pos) -> 
-    if List.length indices <> 1 then 
+  | `Index(`Id("yieldable", _), indices, pos) ->
+    if List.length indices <> 1 then
       seq_error "Yieldable needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (gen_type typ), pos
@@ -219,16 +219,16 @@ and get_type_from_expr_exn ctx (t:Ast.expr) =
   | _ -> seq_error "Not a type" (get_pos typ_expr)
 
 let set_generics ctx types args set_generic_count get_generic =
-  let arg_names, arg_types = List.unzip @@ List.map args ~f:(function 
+  let arg_names, arg_types = List.unzip @@ List.map args ~f:(function
     | `Arg((n, pos), None) -> (n, `Generic(sprintf "``%s" n, pos))
-    | `Arg((n, _), Some t) -> (n, t)) in 
-  
-  let generics = List.append types arg_types  
-    |> List.filter_map ~f:(function `Generic(g, _) -> Some g | _ -> None) 
+    | `Arg((n, _), Some t) -> (n, t)) in
+
+  let generics = List.append types arg_types
+    |> List.filter_map ~f:(function `Generic(g, _) -> Some g | _ -> None)
     |> List.dedup_and_sort ~compare in
   set_generic_count (List.length generics);
 
-  List.iteri generics ~f:(fun cnt key -> 
+  List.iteri generics ~f:(fun cnt key ->
     Context.add ctx key (Context.Type (get_generic cnt key)));
   let arg_types = List.map arg_types ~f:(get_type_from_expr_exn ctx) in
   arg_names, arg_types
@@ -237,23 +237,23 @@ type extended_statement =
   [ statement
   | `AssignExpr of expr * seq_expr * bool * pos_t ]
 
-let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) = 
-  let get_seq_stmt ?ct s = 
-    get_seq_stmt (Option.value ct ~default:ctx) 
-                 parsemod 
-                 (s :> extended_statement) in 
-  let finalize_stmt stmt pos = 
+let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
+  let get_seq_stmt ?ct s =
+    get_seq_stmt (Option.value ct ~default:ctx)
+                 parsemod
+                 (s :> extended_statement) in
+  let finalize_stmt stmt pos =
     set_base stmt ctx.base;
     set_pos stmt pos;
     add_stmt stmt ctx.block;
     stmt in
-  let add_block ?ct ?init bl stmts = 
+  let add_block ?ct ?init bl stmts =
     let ctx = Option.value ct ~default:ctx in
     Stack.push ctx.stack (String.Hash_set.create ());
     (Option.value init ~default:(fun _ -> ())) ctx;
     List.iter stmts ~f:(get_seq_stmt ~ct:{ctx with block = bl});
     Context.clear_block ctx in
-  let stmt, pos = begin 
+  let stmt, pos = begin
   match stmt with
   | `AssignExpr(`Id(var, _), rh_expr, shadow, pos) -> begin
     match Hashtbl.find ctx.map var with
@@ -286,13 +286,13 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     List.iter stmts ~f:get_seq_stmt;
     pass_stmt (), Lexing.dummy_pos
   | `Assign([lhs], [rhs], shadow, pos) ->
-    let rh_expr = get_seq_expr ctx rhs in 
+    let rh_expr = get_seq_expr ctx rhs in
     let stmt = `AssignExpr(lhs, rh_expr, shadow, pos) in
     get_seq_stmt stmt;
     pass_stmt (), pos
   | `Assign(lh, rh, shadow, pos) ->
     if List.length lh <> List.length rh then
-      seq_error "RHS must match LHS" pos;      
+      seq_error "RHS must match LHS" pos;
     let var_stmts = List.map rh ~f:(fun rhs ->
       let rh_expr = get_seq_expr ctx rhs in
       finalize_stmt (var_stmt rh_expr) pos) in
@@ -330,11 +330,11 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     let typ = record_type arg_names @@ List.map arg_types ~f:(get_type_from_expr_exn ctx) in
     Context.add ctx name (Context.Type typ);
     pass_stmt (), pos
-  | `If(if_blocks, pos) -> 
+  | `If(if_blocks, pos) ->
     let if_stmt = if_stmt () in
     List.iter if_blocks ~f:(fun (cond_expr, stmts, _) ->
-      let if_block = match cond_expr with 
-      | None -> 
+      let if_block = match cond_expr with
+      | None ->
         get_else_block if_stmt
       | Some cond_expr ->
         get_elif_block if_stmt @@ get_seq_expr ctx cond_expr in
@@ -351,16 +351,16 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     let for_stmt = for_stmt gen_expr in
 
     let for_var_name, for_var = match for_var with
-    | `Id (for_var_name, _) -> 
+    | `Id (for_var_name, _) ->
       (for_var_name, get_for_var for_stmt)
     | _ -> noimp "For non-ID variable" in
 
     let for_block = get_for_block for_stmt in
-    add_block for_block stmts ~init:(fun ctx -> 
+    add_block for_block stmts ~init:(fun ctx ->
       Context.add ctx for_var_name (Context.Var for_var));
     for_stmt, pos
   | `Match(what_expr, cases, pos) ->
-    let rec match_pattern ctx = function 
+    let rec match_pattern ctx = function
       | `IntPattern i -> int_pattern i
       | `BoolPattern b -> bool_pattern b
       | `StrPattern s -> str_pattern s
@@ -373,26 +373,26 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
         let var = get_bound_pattern_var pat in
         Context.add ctx id (Context.Var var);
         pat
-      | `TuplePattern tl -> 
+      | `TuplePattern tl ->
         record_pattern @@ List.map tl ~f:(match_pattern ctx)
-      | `ListPattern tl -> 
+      | `ListPattern tl ->
         array_pattern @@ List.map tl ~f:(match_pattern ctx)
-      | `OrPattern tl -> 
+      | `OrPattern tl ->
         or_pattern  @@ List.map tl ~f:(match_pattern ctx)
-      | `GuardedPattern(pat, expr) -> 
+      | `GuardedPattern(pat, expr) ->
         guarded_pattern (match_pattern ctx pat) (get_seq_expr ctx expr)
-      | `BoundPattern ((_, pos), _) -> 
+      | `BoundPattern ((_, pos), _) ->
         seq_error "Invalid bound pattern" pos
     in
     let match_stmt = match_stmt (get_seq_expr ctx what_expr) in
-    List.iter cases ~f:(fun (pattern, stmts, _) -> 
-      let pat, var = match pattern with 
-      | `BoundPattern((name, _), pat) -> 
+    List.iter cases ~f:(fun (pattern, stmts, _) ->
+      let pat, var = match pattern with
+      | `BoundPattern((name, _), pat) ->
         Stack.push ctx.stack (String.Hash_set.create ());
         let pat = bound_pattern (match_pattern ctx pat) in
         Context.clear_block ctx;
         pat, Some(name, get_bound_pattern_var pat)
-      | _ as p -> 
+      | _ as p ->
         Stack.push ctx.stack (String.Hash_set.create ());
         let pat = match_pattern ctx p in
         Context.clear_block ctx;
@@ -405,10 +405,10 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
   | `Function(return_typ, types, args, stmts, pos) ->
     let fn_name, ret_typ = match return_typ with `Arg((n, _), typ) -> n, typ in
 
-    if is_some @@ Context.in_block ctx fn_name then 
+    if is_some @@ Context.in_block ctx fn_name then
       seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
-    let fn = func fn_name in    
-    begin match ctx.ref_class with 
+    let fn = func fn_name in
+    begin match ctx.ref_class with
     | Some(typ) -> add_ref_method typ fn_name fn
     | None -> Context.add ctx fn_name (Context.Func fn)
     end;
@@ -418,25 +418,25 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     end;
     (* handle statements *)
     let fn_block = get_func_block fn in
-    let fn_ctx = {(Context.init ctx.filename ctx.mdl fn fn_block) with 
+    let fn_ctx = {(Context.init ctx.filename ctx.mdl fn fn_block) with
                   map = Hashtbl.map ctx.map ~f:(List.filter ~f:(fun v ->
                     match v with Context.Func _ | Context.Type _ -> true | _ -> false))} in
-    let arg_names, arg_types = set_generics fn_ctx types args 
-      (set_func_generics fn) 
-      (fun idx name -> 
+    let arg_names, arg_types = set_generics fn_ctx types args
+      (set_func_generics fn)
+      (fun idx name ->
         set_func_generic_name fn idx name;
         get_func_generic fn idx) in
     set_func_params fn arg_names arg_types;
 
     add_block fn_block stmts ~ct:fn_ctx ~init:(fun ctx ->
-      List.iter arg_names ~f:(fun arg_name -> 
+      List.iter arg_names ~f:(fun arg_name ->
         Context.add ctx arg_name (Context.Var (get_func_arg fn arg_name))));
     func_stmt fn, pos
   | `Extern("c", _, ret, args, pos) ->
-    let fn_name, ret_typ = match ret with 
-    | `Arg((n, _), Some typ) -> n, typ 
+    let fn_name, ret_typ = match ret with
+    | `Arg((n, _), Some typ) -> n, typ
     | _ -> seq_error "Return type must be defined for extern functions" pos in
-    if is_some @@ Context.in_block ctx fn_name then 
+    if is_some @@ Context.in_block ctx fn_name then
       seq_error (sprintf "Cannot define function %s as the variable with same name exists" fn_name) pos;
 
     let fn = func fn_name in
@@ -444,30 +444,30 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     let typ = get_type_from_expr_exn ctx ret_typ in
     set_func_out fn typ;
 
-    let arg_names, arg_types = List.unzip @@ List.map args ~f:(function 
-      | `Arg((n, _), Some t) -> (n, get_type_from_expr_exn ctx t) 
-      | _ -> seq_error "Argument type must be defined for extern functions" pos) in 
+    let arg_names, arg_types = List.unzip @@ List.map args ~f:(function
+      | `Arg((n, _), Some t) -> (n, get_type_from_expr_exn ctx t)
+      | _ -> seq_error "Argument type must be defined for extern functions" pos) in
     set_func_params fn arg_names arg_types;
     set_func_extern fn;
     func_stmt fn, pos
   | `Extern(_, _, _, _, _) -> noimp "Non-c externs"
   | `Class((class_name, name_pos), types, args, functions, pos) ->
-    if is_some @@ Context.in_block ctx class_name then 
+    if is_some @@ Context.in_block ctx class_name then
       seq_error (sprintf "Cannot define class %s as the variable with same name exists" class_name) name_pos;
 
     let typ = ref_type class_name in
     Context.add ctx class_name (Context.Type typ);
-    let ref_ctx = {ctx with 
+    let ref_ctx = {ctx with
                    map = Hashtbl.copy ctx.map;
                    ref_class = Some(typ)} in
-    let arg_names, arg_types = set_generics ref_ctx types args 
-      (set_ref_generics typ) 
-      (fun idx name -> 
+    let arg_names, arg_types = set_generics ref_ctx types args
+      (set_ref_generics typ)
+      (fun idx name ->
         set_ref_generic_name typ idx name;
         get_ref_generic typ idx) in
     set_ref_record typ @@ record_type arg_names arg_types;
-    
-    List.iter functions ~f:(fun f -> 
+
+    List.iter functions ~f:(fun f ->
       ignore @@ get_seq_stmt ~ct:ref_ctx (f :> extended_statement));
     set_ref_done typ;
     pass_stmt (), pos
@@ -475,10 +475,10 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     let typ = match Context.in_block ctx class_name with
     | Some (Context.Type t) -> t
     | _ -> seq_error (sprintf "Cannot extend non-existing class %s" class_name) pos in
-    let ref_ctx = {ctx with 
-                   map = Hashtbl.copy ctx.map; 
+    let ref_ctx = {ctx with
+                   map = Hashtbl.copy ctx.map;
                    ref_class = Some(typ)} in
-    List.iter functions ~f:(fun f -> 
+    List.iter functions ~f:(fun f ->
       ignore @@ get_seq_stmt ~ct:ref_ctx (f :> extended_statement));
     pass_stmt (), pos
   | `Import(il, pos) ->
@@ -488,23 +488,23 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     pass_stmt (), pos
   end in
   ignore @@ finalize_stmt stmt pos
-  
-let rec parse_string ?fname ?debug code ctx = 
+
+let rec parse_string ?fname ?debug code ctx =
   let lines = Array.of_list @@ String.split code ~on:'\n' in
   let getline (pos: pos_t) = lines.(pos.pos_lnum - 1) in
-  
+
   let lexbuf = Lexing.from_string (code ^ "\n") in
   try
     let state = Lexer.stack_create (Option.value fname ~default:"") in
     let ast = Parser.program (Lexer.token state) lexbuf in
-    
+
     if is_some debug then begin
       eprintf "%s%!" @@ T.sprintf [T.Bold; T.green] "|> AST of \n%s ==> \n" code;
       eprintf "%s%!" @@ T.sprintf [T.green] "%s\n%!" @@ Ast.prn_ast ast
     end;
 
-    match ast with Module stmts -> 
-      List.iter stmts ~f:(fun x -> 
+    match ast with Module stmts ->
+      List.iter stmts ~f:(fun x ->
         get_seq_stmt ctx parse_file (x :> extended_statement));
   with
   | Lexer.SyntaxError(msg, pos) ->
@@ -522,18 +522,18 @@ and parse_file ?debug file ctx =
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
   parse_string ?debug ~fname:(Filename.realpath file) code ctx
 
-let init file error_handler = 
+let init file error_handler =
   try
     let mdl = init_module () in
-    let ctx = Context.init (Filename.realpath file) mdl mdl (get_module_block mdl) in 
+    let ctx = Context.init (Filename.realpath file) mdl mdl (get_module_block mdl) in
 
     let preamble = sprintf  "__argv__ = array[str](%d)" (Array.length Sys.argv) in
     let preamble = preamble::(Array.to_list @@ Array.mapi Sys.argv ~f:(fun idx s ->
       sprintf "__argv__[%d] = \"%s\"" idx s)) in
     parse_string (String.concat ~sep:"\n" preamble) ctx ~fname:"<preamble>";
 
-    let cwd = Sys.getcwd () in
-    let stdlib_path = sprintf "%s/lib.seq" cwd in
+    let seqpath = match Sys.getenv "SEQ_PATH" with | Some x -> x ^ "/" | None -> "" in
+    let stdlib_path = sprintf "%sstdlib.seq" seqpath in
     parse_file stdlib_path ctx;
 
     parse_file file ctx;
@@ -546,35 +546,35 @@ open Ctypes
 let parse_c fname =
   let error_handler typ (pos: pos_t) file_line =
     let file, line, col = pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
-    let kind, msg = match typ with 
+    let kind, msg = match typ with
     | Lexer s -> "Lexer", s
     | Parser -> "Parser", "Parsing error"
     | Descent s -> "ASTGenerator", s
     | Compiler s -> "SeqLib", s in
-    let callback = Foreign.foreign "caml_error_callback" 
+    let callback = Foreign.foreign "caml_error_callback"
       (string @-> string @-> int @-> int @-> string @-> returning void) in
     callback kind msg line col file
   in
   let seq_module = init fname error_handler in
-  match seq_module with 
-  | Some seq_module -> Ctypes.raw_address_of_ptr (Ctypes.to_voidp seq_module) 
+  match seq_module with
+  | Some seq_module -> Ctypes.raw_address_of_ptr (Ctypes.to_voidp seq_module)
   | None -> Nativeint.zero
-  
+
 let () =
   let _ = Callback.register "parse_c" parse_c in
 
   if Array.length Sys.argv >= 2 then
-    try 
+    try
       let m = init Sys.argv.(1) (fun a b c -> raise @@ CompilerError(a, b, c)) in
-      match m with 
+      match m with
       | Some m -> begin
-        try exec_module m false 
+        try exec_module m false
         with SeqCError(msg, pos) -> raise @@ CompilerError(Compiler(msg), pos, "")
       end
       | None -> raise Caml.Not_found
     with CompilerError (typ, pos, file_line) ->
       let file, line, col = pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
-      let kind, msg = match typ with 
+      let kind, msg = match typ with
       | Lexer s -> "Lexer", s
       | Parser -> "Parser", "Parsing error"
       | Descent s -> "Descent", s
