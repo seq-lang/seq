@@ -202,13 +202,13 @@ Value *ListExpr::codegen0(BaseFunc *base, BasicBlock *&block)
 	append.resolveTypes();
 	types::Type *methodType = append.getType();
 	Value *method = append.codegen(base, block);
+	methodType->getCallType({elemType});  // validates call
 
 	for (auto *elem : elems) {
 		if (!types::is(elemType, elem->getType()))
 			throw exc::SeqException("inconsistent list element types '" + elemType->getName() + "' and '" + elem->getType()->getName() + "'");
 
 		Value *x = elem->codegen(base, block);
-		methodType->getCallType({elemType});
 		methodType->call(base, method, {x}, block);
 	}
 
