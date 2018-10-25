@@ -277,17 +277,22 @@ BaseFunc *FuncExpr::getFunc()
 
 void FuncExpr::resolveTypes()
 {
-	auto *f = dynamic_cast<Func *>(func);
-	if (f) {
-		if (f->unrealized() && !types.empty()) {
-			orig = new FuncExpr(func, types);
-			func = f->realize(types);
+	try {
+		auto *f = dynamic_cast<Func *>(func);
+		if (f) {
+			if (f->unrealized() && !types.empty()) {
+				orig = new FuncExpr(func, types);
+				func = f->realize(types);
+			}
+		} else if (!types.empty()) {
+			throw exc::SeqException("cannot type-instantiate non-generic function");
 		}
-	} else if (!types.empty()) {
-		throw exc::SeqException("cannot type-instantiate non-generic function");
-	}
 
-	func->resolveTypes();
+		func->resolveTypes();
+	} catch (exc::SeqException& e) {
+		e.setSrcInfo(getSrcInfo());
+		throw e;
+	}
 }
 
 Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock*& block)

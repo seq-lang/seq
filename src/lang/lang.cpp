@@ -530,12 +530,19 @@ Var *For::getVar()
 void For::resolveTypes()
 {
 	gen->resolveTypes();
-	types::GenType *genType = gen->getType()->magicOut("__iter__", {})->asGen();
 
-	if (!genType)
-		throw exc::SeqException("__iter__ does not return a generator");
+	try {
+		types::GenType *genType = gen->getType()->magicOut("__iter__", {})->asGen();
 
-	var->setType(genType->getBaseType(0));
+		if (!genType)
+			throw exc::SeqException("__iter__ does not return a generator");
+
+		var->setType(genType->getBaseType(0));
+	} catch (exc::SeqException& e) {
+		e.setSrcInfo(getSrcInfo());
+		throw e;
+	}
+
 	scope->resolveTypes();
 }
 

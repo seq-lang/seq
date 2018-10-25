@@ -108,7 +108,7 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 }
 
 types::GenType::GenType(Type *outType) :
-    Type(outType->getName() + "+", BaseType::get()), outType(outType)
+    Type("generator[" + outType->getName() + "]", BaseType::get()), outType(outType)
 {
 	types::VoidType *voidType = types::VoidType::get();
 	types::Type *type = this->outType->is(voidType) ? (types::Type *)voidType :
@@ -254,22 +254,8 @@ types::GenType *types::GenType::clone(Generic *ref)
 	return get(outType->clone(ref));
 }
 
-static std::string getPartialFuncName(types::Type *callee, std::vector<types::Type *> callTypes)
-{
-	std::string name = callee->getName();
-	name += "(";
-	for (unsigned i = 0; i < callTypes.size(); i++) {
-		name += callTypes[i] ? callTypes[i]->getName() : "_";
-		if (i < callTypes.size() - 1)
-			name += ", ";
-	}
-
-	name += ")";
-	return name;
-}
-
 types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::Type *> callTypes) :
-    Type(getPartialFuncName(callee, callTypes), BaseType::get()), callee(callee), callTypes(std::move(callTypes))
+    Type("<partial call type>", BaseType::get()), callee(callee), callTypes(std::move(callTypes))
 {
 	std::vector<types::Type *> types;
 	types.push_back(this->callee);
