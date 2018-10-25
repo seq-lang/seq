@@ -90,6 +90,18 @@ namespace seq {
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 	};
 
+	class ListExpr : public Expr {
+	private:
+		std::vector<Expr *> elems;
+		types::Type *listType;
+	public:
+		explicit ListExpr(std::vector<Expr *> elems, types::Type *listType);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		ListExpr *clone(Generic *ref) override;
+	};
+
 	class VarExpr : public Expr {
 	private:
 		Var *var;

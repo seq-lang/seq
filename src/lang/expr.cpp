@@ -178,6 +178,64 @@ Value *SeqExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	return types::Seq->make(seq, len, preambleBlock);
 }
 
+ListExpr::ListExpr(std::vector<Expr *> elems, types::Type *listType) :
+    Expr(), elems(std::move(elems)), listType(listType)
+{
+}
+
+void ListExpr::resolveTypes()
+{
+	for (auto *elem : elems)
+		elem->resolveTypes();
+}
+
+Value *ListExpr::codegen0(BaseFunc *base, BasicBlock *&block)
+{
+	types::Type *type = getType();
+	assert(!elems.empty());
+	types::Type *elemType = elems[0]->getType();
+
+	ConstructExpr construct(type, {});
+	Value *list = construct.codegen(base, block);
+	ValueExpr v(type, list);
+	GetElemExpr append(&v, "append");
+	append.resolveTypes();
+	types::Type *methodType = append.getType();
+	Value *method = append.codegen(base, block);
+
+	for (auto *elem : elems) {
+		if (!types::is(elemType, elem->getType()))
+			throw exc::SeqException("inconsistent list element types '" + elemType->getName() + "' and '" + elem->getType()->getName() + "'");
+
+		Value *x = elem->codegen(base, block);
+		methodType->getCallType({elemType});
+		methodType->call(base, method, {x}, block);
+	}
+
+	return list;
+}
+
+types::Type *ListExpr::getType0() const
+{
+	if (elems.empty())
+		throw exc::SeqException("cannot infer type of empty list");
+
+	types::Type *elemType = elems[0]->getType();
+	auto *generic = dynamic_cast<Generic *>(listType);
+	assert(generic);
+	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({elemType}));
+	assert(realized);
+	return realized;
+}
+
+ListExpr *ListExpr::clone(Generic *ref)
+{
+	std::vector<Expr *> elemsCloned;
+	for (auto *elem : elems)
+		elemsCloned.push_back(elem->clone(ref));
+	return new ListExpr(elemsCloned, listType->clone(ref));
+}
+
 VarExpr::VarExpr(Var *var) : var(var)
 {
 }

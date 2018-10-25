@@ -92,19 +92,3 @@ class list[`t](arr: array[`t], len: int):
 
     def copy(self: list[`t]):
         return self.__copy__()
-
-# test
-v = list[int]()
-
-i = 0
-while i < 15:
-    v.append(i)
-    i += 1
-
-v = v[1:].__copy__()
-v.insert(0, 99)
-v.reverse()
-print v.count(99)
-
-for a in v:
-    print a
