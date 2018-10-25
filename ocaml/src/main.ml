@@ -12,8 +12,8 @@ type seq_error =
   | Descent of string
   | Compiler of string
 
-(* Error Type, Position, Offending line *)
-exception CompilerError of seq_error * pos_t * string
+(* Error Type, Position*)
+exception CompilerError of seq_error * pos_t
 exception SeqCamlError of string * pos_t
 
 (* context hashtable members *)
@@ -189,9 +189,9 @@ let rec get_seq_expr (ctx: Context.t) expr =
     | hd::tl -> hd, tl |> List.rev
     | [] -> seq_error "callable needs at least one argument" pos in
     type_expr (func_type ret args), pos
-  | `Index(`Id("yieldable", _), indices, pos) ->
+  | `Index(`Id("generator", _), indices, pos) ->
     if List.length indices <> 1 then
-      seq_error "yieldable needs only one type" pos;
+      seq_error "generator needs only one type" pos;
     let typ = get_type_from_expr_exn ctx (List.hd_exn indices) in
     type_expr (gen_type typ), pos
   | `Index(lh_expr, indices, pos) -> begin
@@ -485,21 +485,28 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     List.iter functions ~f:(fun f ->
       ignore @@ get_seq_stmt ~ct:ref_ctx (f :> extended_statement));
     pass_stmt (), pos
-  | `Import(il, pos) ->
-    List.iter il ~f:(fun ((what, _), _) ->
+  | `Import(imports, pos) ->
+    List.iter imports ~f:(fun ((what, pos), _) ->
       let file = sprintf "%s/%s.seq" (Filename.dirname ctx.filename) what in
-      parsemod file ctx);
+      match Sys.file_exists file with
+      | `Yes -> parsemod file ctx
+      | _ -> 
+        let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
+        let file = sprintf "%s/%s.seq" seqpath what in
+        match Sys.file_exists file with
+        | `Yes -> parsemod file ctx
+        | _ -> seq_error (sprintf "cannot locate module %s" what) pos);
     pass_stmt (), pos
   end in
   ignore @@ finalize_stmt stmt pos
 
 let rec parse_string ?fname ?debug code ctx =
   let lines = Array.of_list @@ String.split code ~on:'\n' in
-  let getline (pos: pos_t) = lines.(pos.pos_lnum - 1) in
+  let fname = Option.value fname ~default:"" in 
 
   let lexbuf = Lexing.from_string (code ^ "\n") in
   try
-    let state = Lexer.stack_create (Option.value fname ~default:"") in
+    let state = Lexer.stack_create fname in
     let ast = Parser.program (Lexer.token state) lexbuf in
 
     if is_some debug then begin
@@ -512,16 +519,17 @@ let rec parse_string ?fname ?debug code ctx =
         get_seq_stmt ctx parse_file (x :> extended_statement));
   with
   | Lexer.SyntaxError(msg, pos) ->
-    raise @@ CompilerError(Lexer(msg), pos, getline pos)
+    raise @@ CompilerError(Lexer(msg), pos)
   | Parser.Error ->
-    let pos = lexbuf.lex_start_p in
-    raise @@ CompilerError(Parser, pos, getline pos)
+    let pos = {lexbuf.lex_start_p with pos_fname = fname} in
+    raise @@ CompilerError(Parser, pos)
   | SeqCamlError(msg, pos) ->
-    raise @@ CompilerError(Descent(msg), pos, getline pos)
+    raise @@ CompilerError(Descent(msg), pos)
   | SeqCError(msg, pos) ->
-    raise @@ CompilerError(Compiler(msg), pos, getline pos)
+    raise @@ CompilerError(Compiler(msg), pos)
 
 and parse_file ?debug file ctx =
+  eprintf "==> parsing %s\n" file;
   let lines = In_channel.read_lines file in
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
   parse_string ?debug ~fname:(Filename.realpath file) code ctx
@@ -536,19 +544,19 @@ let init file error_handler =
       sprintf "__argv__[%d] = \"%s\"" idx s)) in
     parse_string (String.concat ~sep:"\n" preamble) ctx ~fname:"<preamble>";
 
-    let seqpath = match Sys.getenv "SEQ_PATH" with | Some x -> x ^ "/" | None -> "" in
-    let stdlib_path = sprintf "%sstdlib.seq" seqpath in
+    let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
+    let stdlib_path = sprintf "%s/stdlib.seq" seqpath in
     parse_file stdlib_path ctx;
 
     parse_file file ctx;
     Some mdl
-  with CompilerError(typ, pos, file_line) ->
-    error_handler typ pos file_line;
+  with CompilerError(typ, pos) ->
+    error_handler typ pos;
     None
 
 open Ctypes
 let parse_c fname =
-  let error_handler typ (pos: pos_t) file_line =
+  let error_handler typ (pos: pos_t) =
     let file, line, col = pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
     let msg = match typ with
     | Lexer s -> s
@@ -569,24 +577,33 @@ let () =
 
   if Array.length Sys.argv >= 2 then
     try
-      let m = init Sys.argv.(1) (fun a b c -> raise @@ CompilerError(a, b, c)) in
+      let m = init Sys.argv.(1) (fun a b -> raise @@ CompilerError(a, b)) in
       match m with
       | Some m -> begin
         try exec_module m false
-        with SeqCError(msg, pos) -> raise @@ CompilerError(Compiler(msg), pos, "")
+        with SeqCError(msg, pos) -> raise @@ CompilerError(Compiler(msg), pos)
       end
       | None -> raise Caml.Not_found
-    with CompilerError (typ, pos, file_line) ->
+    with CompilerError (typ, pos) ->
       let file, line, col = pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol in
       let kind, msg = match typ with
-      | Lexer s -> "Lexer", s
-      | Parser -> "Parser", "Parsing error"
-      | Descent s -> "Descent", s
-      | Compiler s -> "Compiler", s in
+      | Lexer s -> "lexer", s
+      | Parser -> "parser", "Parsing error"
+      | Descent s -> "descent", s
+      | Compiler s -> "compiler", s in
+
+      let file_line = try
+        let lines = In_channel.read_lines file in List.nth lines (line - 1)
+        with _ -> None in 
+
       let style = [T.Bold; T.red] in
-      eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error in %s:\n" kind file;
-      eprintf "%s%!" @@ T.sprintf style "        %s\n" msg;
-      eprintf "%s%!" @@ T.sprintf style "   %3d: %s" line (String.prefix file_line col);
-      eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s" (String.drop_prefix file_line col);
-      eprintf "%s%!" @@ T.sprintf [] "\n";
+      eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: %s\n" kind msg;
+      begin match file_line with 
+      | Some file_line ->
+        eprintf "%s%!" @@ T.sprintf style "        %s: %d,%d\n" file line col;
+        eprintf "%s%!" @@ T.sprintf style "   %3d: %s" line (String.prefix file_line col);
+        eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s" (String.drop_prefix file_line col);
+        eprintf "%s%!" @@ T.sprintf [] "\n"
+      | None -> ()
+      end;
       exit 1

@@ -1465,7 +1465,7 @@
 						\b(
 							bool | buffer | bytearray | bytes | complex | dict | float | seq | void | 
 							frozenset | int | list | long | memoryview | object | property | array |
-							callable | yieldable
+							callable | generator
 							range | set | slice | str | tuple | type | unicode | xrange)
 						\b(?!(\s*\())</string>
 			<key>name</key>

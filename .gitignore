@@ -51,6 +51,7 @@ dox
 
 # Ocaml
 ocaml/_build
+ocaml/build
 *.cm[iot]
 *.byte
 *.native
