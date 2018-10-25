@@ -124,7 +124,7 @@ target_link_libraries(seq ${LLVM_LIBS} seqrt)
 
 # Seq parsing library
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
-set(LIB_SEQPARSE "${DUNE_BUILD_DIR}/default/src/main.so")
+set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/libseqparser.so")
 
 find_program(OPAM NAMES opam)
 if(NOT OPAM)
@@ -133,7 +133,7 @@ endif()
 
 add_custom_command(OUTPUT ${LIB_SEQPARSE}
                    COMMAND ${OPAM} exec -- dune build --build-dir ${DUNE_BUILD_DIR} src/main.exe src/main.so
-                   COMMAND ln -s -f ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/libparser.dylib
+                   COMMAND cp ${DUNE_BUILD_DIR}/default/src/main.so ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ocaml"
                    DEPENDS ocaml/src/ast.ml
                            ocaml/src/dune

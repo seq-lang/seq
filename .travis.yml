@@ -37,6 +37,7 @@ before_script:
   - llvm-config --prefix
   - llvm-config --has-rtti
   - export LLVM_DIR=`llvm-config --cmakedir`
+  - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
 
 script:
   - (cd build && cmake ..)
