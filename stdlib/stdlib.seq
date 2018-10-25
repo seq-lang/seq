@@ -1,1 +1,37 @@
+def range(a: int, b: int):
+    i = a
+    while i < b:
+        yield i
+        i += 1
 
+def len(x):
+    return x.__len__()
+
+def iter(x):
+    return x.__iter__()
+
+def copy(x):
+    return x.__copy__()
+
+def abs(x):
+    return x.__abs__()
+
+def any(x):
+    for a in x:
+        if a:
+            return True
+    return False
+
+def all(x):
+    for a in x:
+        if not a:
+            return False
+    return True
+
+def filter(f, x):
+    for a in x:
+        if f(a):
+            yield a
+
+def echo(x):
+   print x
