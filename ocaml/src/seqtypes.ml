@@ -110,6 +110,12 @@ let call_expr expr lst =
 	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
 	call_expr' expr (CArray.start c_arr) c_len 
 
+let list_expr' = foreign "list_expr" 
+  (seq_type @-> ptr seq_expr @-> size_t @-> returning seq_expr)
+let list_expr typ lst = 
+  let c_arr = CArray.of_list seq_expr lst in
+  let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
+  list_expr' typ (CArray.start c_arr) c_len 
 
 let partial_expr' = foreign "partial_expr" 
 	(seq_expr @-> ptr seq_expr @-> size_t @-> returning seq_expr)

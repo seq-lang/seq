@@ -110,7 +110,6 @@ let rec get_seq_expr (ctx: Context.t) expr =
   | `Ellipsis _      -> noimp "random ellipsis"
   | `Slice _         -> noimp "random slice"
   | `Dict _          -> noimp "random dict"
-  | `List _          -> noimp "random list"
 
   | `Bool(b, pos)    -> bool_expr b, pos
   | `Int(i, pos)     -> int_expr i, pos
@@ -125,6 +124,11 @@ let rec get_seq_expr (ctx: Context.t) expr =
     | Some (Context.Type t::_) -> type_expr t, pos
     | _ -> seq_error (sprintf "%s not found" var) pos
     end
+  | `List(args, pos) -> 
+    let typ = match Hashtbl.find ctx.map "list" with
+    | Some ([Type t]) -> t
+    | _ -> seq_error "list type not found" pos in
+    list_expr typ (List.map args ~f:get_seq_expr), pos
   | `TypeOf(_, _) ->
     noimp "TypeOf"
     (* let expr = get_seq_expr expr in
@@ -212,7 +216,7 @@ let rec get_seq_expr (ctx: Context.t) expr =
   set_pos expr pos;
   expr
 
-and get_type_from_expr_exn ctx (t:Ast.expr) =
+and get_type_from_expr_exn ctx t =
   let typ_expr = get_seq_expr ctx t in
   match get_type typ_expr with
   | Some typ -> typ

@@ -1,6 +1,9 @@
 
 import seqlib
 
+sa= list[int]()
+sa.append(1)
+
 class A(i: int):
    def test(self, x):
       print self.i, x
@@ -8,6 +11,11 @@ class A(i: int):
 q = A(1)
 q.test(5)
 
+w = [1,2,3,4,5]
+for i in w:
+	print w
+for j in [3,4,5]:
+	print j
 
 print __argv__[1]
 
