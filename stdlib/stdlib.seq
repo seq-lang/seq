@@ -28,6 +28,12 @@ def all(x):
             return False
     return True
 
+def enum(x):
+    i = 0
+    for a in x:
+        yield (i,a)
+        i += 1
+
 def filter(f, x):
     for a in x:
         if f(a):
