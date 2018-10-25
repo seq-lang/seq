@@ -1,5 +1,7 @@
 (env
-   (dev (flags (:standard -warn-error -a+31))))
+   (dev (flags (:standard -warn-error -a+31)))
+   (macos (flags (:standard -cclib -Wl,-install_name,@rpath/libseqparser.so)))
+)
 
 (ocamllex lexer)
 (menhir (modules parser))
@@ -7,6 +9,6 @@
 (executable
    (name main)
    (libraries base core ANSITerminal ctypes ctypes.foreign ctypes.stubs)
-   (link_flags (-cclib -L%{project_root}/.. -cclib -lseq -cclib -Wl,-install_name,@rpath/libseqparser.so))
-   (modes shared_object exe)
+   (link_flags (-cclib -L%{project_root}/.. -cclib -lseq))
+   (modes shared_object exe) 
 )
