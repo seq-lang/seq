@@ -198,18 +198,17 @@ Value *ListExpr::codegen0(BaseFunc *base, BasicBlock *&block)
 	ConstructExpr construct(type, {});
 	Value *list = construct.codegen(base, block);
 	ValueExpr v(type, list);
-	GetElemExpr append(&v, "append");
-	append.resolveTypes();
-	types::Type *methodType = append.getType();
-	Value *method = append.codegen(base, block);
-	methodType->getCallType({elemType});  // validates call
 
 	for (auto *elem : elems) {
 		if (!types::is(elemType, elem->getType()))
 			throw exc::SeqException("inconsistent list element types '" + elemType->getName() + "' and '" + elem->getType()->getName() + "'");
 
 		Value *x = elem->codegen(base, block);
-		methodType->call(base, method, {x}, block);
+		GetElemExpr append(&v, "append");
+		ValueExpr arg(elemType, x);
+		CallExpr call(&append, {&arg});
+		call.resolveTypes();
+		call.codegen(base, block);
 	}
 
 	return list;

@@ -3,8 +3,11 @@ class list[`t](arr: array[`t], len: int):
         self.arr = arr
         self.len = len
 
+    def __init__(self: list[`t], cap: int):
+        return list[`t](array[`t](cap), 0)
+
     def __init__(self: list[`t]):
-        return list[`t](array[`t](10), 0)
+        return list[`t](10)
 
     def __len__(self: list[`t]):
         return self.len
@@ -41,6 +44,18 @@ class list[`t](arr: array[`t], len: int):
         while i < self.len:
             yield self.arr[i]
             i += 1
+
+    def __mul__(self: list[`t], n: int):
+        new_len = self.len * n
+        v = list[`t](new_len)
+        i = 0
+        while i < n:
+            j = 0
+            while j < self.len:
+                v.append(self[j])
+                j += 1
+            i += 1
+        return v
 
     def _resize_if_full(self: list[`t]):
         if self.len == self.arr.len:
@@ -89,6 +104,3 @@ class list[`t](arr: array[`t], len: int):
             self[i] = self[j]
             self[j] = x
             i += 1
-
-    def copy(self: list[`t]):
-        return self.__copy__()

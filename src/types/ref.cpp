@@ -91,7 +91,7 @@ Value *types::RefType::memb(Value *self,
 
 	try {
 		return Type::memb(self, name, block);
-	} catch (exc::SeqException& e) {
+	} catch (exc::SeqException&) {
 	}
 
 	assert(contents);
@@ -100,7 +100,7 @@ Value *types::RefType::memb(Value *self,
 
 	try {
 		return contents->memb(x, name, block);
-	} catch (exc::SeqException& e) {
+	} catch (exc::SeqException&) {
 		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 	}
 }
