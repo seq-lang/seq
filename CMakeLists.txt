@@ -123,6 +123,12 @@ target_link_libraries(seq ${LLVM_LIBS} seqrt)
 
 
 # Seq parsing library
+if(APPLE)
+  set(DUNE_PROFILE "--profile=macos-dev")
+else()
+  set(DUNE_PROFILE "")
+endif()
+
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/libseqparser.so")
 
@@ -132,7 +138,7 @@ if(NOT OPAM)
 endif()
 
 add_custom_command(OUTPUT ${LIB_SEQPARSE}
-                   COMMAND ${OPAM} exec -- dune build --build-dir ${DUNE_BUILD_DIR} src/main.exe src/main.so
+                   COMMAND ${OPAM} exec -- dune build ${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} src/main.exe src/main.so
                    COMMAND cp ${DUNE_BUILD_DIR}/default/src/main.so ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ocaml"
                    DEPENDS ocaml/src/ast.ml
