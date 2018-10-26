@@ -4,7 +4,7 @@ OCAML_DIR = $(shell ocamlc -where)
 all:
 	#make -j -C ../build
 	ln -s -f ../build/libseq.dylib .
-	dune build --build-dir build --profile macos src/main.exe src/main.so
+	dune build --build-dir build --profile macos-dev src/main.exe src/main.so
 	ln -s -f build/default/src/main.exe .
 	ln -s -f build/default/src/main.so libparser.dylib
 
