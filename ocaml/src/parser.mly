@@ -36,7 +36,7 @@
 
 /* keywords */
 %token <Ast.pos_t> FOR IN WHILE CONTINUE BREAK                /* loops */
-%token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT MATCHOR /* conditionals */
+%token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT         /* conditionals */
 %token <Ast.pos_t> DEF RETURN YIELD EXTERN                    /* functions */
 %token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND                   /* types */
 %token <Ast.pos_t> IMPORT FROM GLOBAL                         /* variables */
@@ -50,10 +50,16 @@
 %token<string * Ast.pos_t> AND OR NOT
 %token<string * Ast.pos_t> EEQ NEQ LESS LEQ GREAT GEQ
 %token<string * Ast.pos_t> PIPE 
+%token<string * Ast.pos_t> B_LSH B_RSH B_AND B_XOR B_NOT B_OR
 
 /* operator precedence */
+%left B_OR
+%left B_XOR 
+%left B_AND
+%left B_LSH B_RSH 
 %left ADD SUB
-%left MUL DIV FDIV POW MOD
+%left MUL DIV FDIV MOD
+%left POW
 
 %start <Ast.ast> program
 %%
@@ -76,6 +82,7 @@ atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
   | generic { $1 }
   | REGEX 
     { noimp "Regex" (* Regex $1 *) }
+  | LP test RP { $2 }
 bool:
   | TRUE    { (true, $1) }
   | FALSE   { (false, $1) }
@@ -128,7 +135,6 @@ comprehension:
 /*******************************************************/
 
 test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 */
-  | LP test RP { $2 }
   | pipe_test 
     { flat $1 }
   | ifc = pipe_test; IF cnd = pipe_test; ELSE elc = test 
@@ -179,6 +185,7 @@ expr: /* General arithmetic: 4, 5 + p */
   | expr_term { $1 }
   | ADD expr_term 
   | SUB expr_term 
+  | B_NOT expr_term
     { `Unary($1, $2) }
   | expr bin_op expr 
     { `Binary ($1, $2, $3) }
@@ -190,8 +197,8 @@ sub: /* Subscripts: ..., a, 1:2, 1::3 */
   | test? COLON test? COLON test? 
     { `Slice ($1, $3, $5, $2) }
 %inline bin_op: 
-  /* TODO: bit shift ops and ~ */
-  | ADD | SUB | MUL | DIV | FDIV | MOD | POW { $1 }  
+  | ADD | SUB | MUL | DIV | FDIV | MOD | POW | B_AND | B_OR | B_XOR | B_LSH | B_RSH 
+  { $1 }  
 
 /*******************************************************/
 
@@ -225,12 +232,20 @@ small_statement: /* Simple one-line statements: 5+3, print x */
   | PASS     { `Pass $1 }
   | BREAK    { `Break $1 }
   | CONTINUE { `Continue $1 }
-  | PRINT test_list 
+  | PRINT separated_list(COMMA, test)
     { `Print ($2, $1) }
-  | RETURN test_list 
-    { (*TODO: tuples *) `Return (List.hd_exn $2, $1) }
-  | YIELD test_list 
-    { (*TODO: tuples *) `Yield (List.hd_exn $2, $1) }
+  | RETURN separated_list(COMMA, test)
+    { match List.length $2 with
+      | 0 -> `Return (None, $1)
+      | 1 -> `Return (Some (List.hd_exn $2), $1)
+      | _ -> `Return (Some (`Tuple ($2, $1)), $1)
+    }
+  | YIELD separated_list(COMMA, test)
+    { match List.length $2 with
+      | 0 -> `Yield (None, $1)
+      | 1 -> `Yield (Some (List.hd_exn $2), $1)
+      | _ -> `Yield (Some (`Tuple ($2, $1)), $1)
+    }
   | TYPE ID LP separated_list(COMMA, typed_param) RP 
     { `Type ((fst $2, snd $2), $4, $1) }
   | GLOBAL separated_nonempty_list(COMMA, ID) 
@@ -278,12 +293,18 @@ case_suite:
   | case; rest = case_suite 
     { $1::rest }
 case:  
-  | CASE separated_nonempty_list(MATCHOR, case_type) COLON suite
+  | CASE separated_nonempty_list(OR, case_type) COLON suite
     { let pat = if List.length $2 = 1 
                 then List.hd_exn $2
                 else `OrPattern $2 in
       (pat, $4, $1) }
-  | CASE separated_nonempty_list(MATCHOR, case_type) AS ID COLON suite 
+  | CASE separated_nonempty_list(OR, case_type) IF or_test COLON suite
+    { let pat = if List.length $2 = 1 
+                then List.hd_exn $2
+                else `OrPattern $2 in
+      let pat = `GuardedPattern (pat, $4) in
+      (pat, $6, $1) }
+  | CASE separated_nonempty_list(OR, case_type) AS ID COLON suite 
     { let pat = if List.length $2 = 1 
                 then List.hd_exn $2
                 else `OrPattern $2 in
@@ -302,8 +323,6 @@ case_type:
     { `ListPattern ($2) }
   | INT ELLIPSIS INT 
     { `RangePattern(fst $1, fst $3) }
-  | case_type IF or_test 
-    { `GuardedPattern($1, $3) }
 
 import_statement:
   | FROM dotted_name IMPORT MUL 
@@ -371,14 +390,16 @@ class_statement:
     intypes = generic_type_list?
     LP; mems = separated_list(COMMA, typed_param) RP;
     COLON NL; 
-    fns = class_members
+    INDENT fns = class_members DEDENT
     { let intypes = Option.value intypes ~default:[] in
       `Class ((fst n, snd n), intypes, mems, fns, $1) }
 class_members:
-  | PASS { [] }
-  | INDENT func_statement+ DEDENT { $2 } 
+  | PASS NL { [] }
+  | func_statement { [$1] } 
+  | func_statement class_members { $1::$2 }
+  | PASS class_members { $2 }
 extend_statement:
   | EXTEND ; n = ID; COLON NL; 
-    fns = class_members
+    INDENT fns = class_members DEDENT
     { `Extend ((fst n, snd n), fns, $1) }
 

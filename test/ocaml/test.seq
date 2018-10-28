@@ -1,56 +1,94 @@
 
 
-sa= list[int]()
-sa.append(1)
+def foo():
+   return
 
-class A(i: int):
-   def test(self, x):
-      print self.i, x
+def fx():
+   return 1, 2
 
-q = A(1)
-q.test(5)
 
-w = [1,2,3,4,5]
-for i in w:
-	print i
-for j in [3,4,5]:
-	print j
+foo()
+print 'hi'
 
-print __argv__[1]
+yo = fx()
+print yo[0]
 
-a = 5
-b = 3
+class X():
+   pass
 
-print (a)
+class A(f: int):
+   def sta(l):
+      return l+1
+   def foo(self):
+      print 'A.foo'
+      print 'fooooo', A.sta(5)
 
-print a, b
-a, b = b, a
+e = A(5)
+e.foo()
 
-y = array[int](2)
-y[0], y[1] = 1, 2
-print y[0], y[1]
-y[0], y[1] = y[1], y[0]
-print y[0], y[1]
+yo = X()
 
-print a, b
+print 1 ^ 2, 1 | 2, 1 & 2, ~1, 1<<1, 2>>1
 
-for i in range(10):
-   print i
+(((1))-1)
 
-echo(4)
+print (1)+1-(((1))-1)
+print (((1)))
+print (((yo[(0)])))
 
-print "**********"
-v = list[int]()
 
-i = 0
-while i < 15:
-    v.append(i)
-    i += 1
 
-v = v[1:].__copy__()
-v.insert(0, 99)
-v.reverse()
-print v.count(99)
+# sa= list[int]()
+# sa.append(1)
 
-for a in v:
-    print a
+# class A(i: int):
+#    def test(self, x):
+#       print self.i, x
+
+# q = A(1)
+# q.test(5)
+
+# w = [1,2,3,4,5]
+# for i in w:
+# 	print i
+# for j in [3,4,5]:
+# 	print j
+
+# print __argv__[1]
+
+# a = 5
+# b = 3
+
+# print (a)
+
+# print a, b
+# a, b = b, a
+
+# y = array[int](2)
+# y[0], y[1] = 1, 2
+# print y[0], y[1]
+# y[0], y[1] = y[1], y[0]
+# print y[0], y[1]
+
+# print a, b
+
+# for i in range(10):
+#    print i
+
+# echo(4)
+
+# print "**********"
+# v = list[int]()
+
+# i = 0
+# while i < 15:
+#     v.append(i)
+#     i += 1
+
+# v = v[1:].__copy__()
+# v.insert(0, 99)
+# v.reverse()
+# print v.count(99)
+
+# for a in v:
+#     print a

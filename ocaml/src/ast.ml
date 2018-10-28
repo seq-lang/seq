@@ -56,8 +56,8 @@ type statement = [
   | `Exprs of expr
   | `Assign of expr list * expr list * bool * pos_t
   | `Print of expr list * pos_t
-  | `Return of expr * pos_t
-  | `Yield of expr * pos_t
+  | `Return of expr option * pos_t
+  | `Yield of expr option * pos_t
   (* | `Global of expr list  *)
   (* | `Assert of expr list *)
   | `Type of ident * arg list * pos_t
@@ -190,9 +190,9 @@ let rec prn_stmt ?prn_pos level st =
   | `Print(exprs, pos) -> 
     sprintf "Print[%s]" (sci exprs prn_expr), Some pos
   | `Yield(expr, pos) -> 
-    sprintf "Yield[%s]" (prn_expr expr), Some pos
+    sprintf "Yield[%s]" (Option.value_map expr ~default:"" ~f:prn_expr), Some pos
   | `Return(expr, pos) -> 
-    sprintf "Return[%s]" (prn_expr expr), Some pos
+    sprintf "Return[%s]" (Option.value_map expr ~default:"" ~f:prn_expr), Some pos
   | `Type((typ, _), args, pos) -> 
     sprintf "Type[%s; %s]" typ (sci args prn_vararg), Some pos
   | `While(conde, stmts, pos) ->

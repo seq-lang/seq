@@ -153,13 +153,21 @@ and read state = parse
     let s = read_extern state (Buffer.create 17) lexbuf in
     P.EXTERN(r, s, cur_pos state lexbuf)
   }*)
-  
+
   | "(" { ignore_nl state; P.LP (cur_pos state lexbuf) }
   | ")" { aware_nl state;  P.RP (cur_pos state lexbuf) }
   | "[" { ignore_nl state; P.LS (cur_pos state lexbuf) }
   | "]" { aware_nl state;  P.RS (cur_pos state lexbuf) }
   | "{" { ignore_nl state; P.LB (cur_pos state lexbuf) }
   | "}" { aware_nl state;  P.RB (cur_pos state lexbuf) }
+
+  | "<<"  as op { P.B_LSH (op, cur_pos state lexbuf) }
+  | ">>"  as op { P.B_RSH (op, cur_pos state lexbuf) }
+  | "&"   as op { P.B_AND (Char.to_string op, cur_pos state lexbuf) }
+  | "^"   as op { P.B_XOR (Char.to_string op, cur_pos state lexbuf) }
+  | "~"   as op { P.B_NOT (Char.to_string op, cur_pos state lexbuf) }
+  | "|>"  as op { P.PIPE  (op, cur_pos state lexbuf) }
+  | "|"   as op { P.B_OR  (Char.to_string op, cur_pos state lexbuf) }
   
   | ":="  { P.ASSGN_EQ  (cur_pos state lexbuf) }
   | "="   { P.EQ        (cur_pos state lexbuf) }
@@ -191,8 +199,6 @@ and read state = parse
   | "//"  as op { P.FDIV   (op, cur_pos state lexbuf) }
   | "/"   as op { P.DIV    (Char.to_string op, cur_pos state lexbuf) }
   | "%"   as op { P.MOD    (Char.to_string op, cur_pos state lexbuf) }
-  | "|>"  as op { P.PIPE   (op, cur_pos state lexbuf) }
-  | "|"   as op { P.MATCHOR (cur_pos state lexbuf) }
 
   | int as i   { P.INT   (int_of_string i, cur_pos state lexbuf) }   
   | float as f { P.FLOAT (float_of_string f, cur_pos state lexbuf) }
