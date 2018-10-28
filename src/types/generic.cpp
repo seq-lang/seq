@@ -441,7 +441,7 @@ Generic *Generic::realizeGeneric(std::vector<types::Type *> types)
 std::vector<types::Type *> Generic::deduceTypesFromArgTypes(const std::vector<types::Type *>& inTypes,
                                                             const std::vector<types::Type *>& argTypes)
 {
-	assert(unrealized());
+	assert(numGenerics() > 0 && unrealized());
 
 	if (argTypes.size() != inTypes.size())
 		throw exc::SeqException("expected " + std::to_string(inTypes.size()) + " arguments, " +

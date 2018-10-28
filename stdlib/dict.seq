@@ -1,0 +1,101 @@
+class _dict_entry[`k,`v](k: `k, v: `v, hash: int, next: _dict_entry[`k,`v]):
+    def __init__(self: _dict_entry[`k,`v], k: `k, v: `v, hash: int):
+        self.k = k
+        self.v = v
+        self.hash = hash
+        self.next = self.__none__()
+
+    def eq(self: _dict_entry[`k,`v], k: `k, hash: int):
+        return self.hash == hash and self.k == k
+
+class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
+    def _make_table(self: dict[`k,`v], len: int):
+        table = array[_dict_entry[`k,`v]](len)
+        for i in range(0, len):
+            table[i] = table[i].__none__()
+        return table
+
+    def _find(self: dict[`k,`v], k: `k, h: int):
+        idx = h.__and__(self.table.len - 1)
+        e = self.table[idx]
+        while e:
+            if e.eq(k, h):
+                break
+            e = e.next
+        return e
+
+    def _entry_iter(self: dict[`k,`v]):
+        table = self.table
+        for i in range(0, table.len):
+            e = table[i]
+            while e:
+                yield e
+                e = e.next
+
+    def _insert(self: dict[`k,`v], table: array[_dict_entry[`k,`v]], e: _dict_entry[`k,`v]):
+        idx = e.hash.__and__(table.len - 1)
+        e.next = table[idx]
+        table[idx] = e
+        self.size += 1
+
+    def _resize(self: dict[`k,`v]):
+        table = self._make_table(2 * self.table.len)
+        for e in self._entry_iter():
+            self._insert(table, e)
+        self.table = table
+
+    def __init__(self: dict[`k,`v]):
+        self.table = self._make_table(16)
+        self.size = 0
+
+    def get(self: dict[`k,`v], k: `k, s: `v):
+        e = self._find(k, hash(k))
+        return e.v if e else s
+
+    def __contains__(self: dict[`k,`v], k: `k):
+        return self._find(k, hash(k)).__bool__()
+
+    def __setitem__(self: dict[`k,`v], k: `k, v: `v):
+        h = hash(k)
+        e = self._find(k, h)
+        if e:
+            e.v = v
+        else:
+            if self.size*2 >= self.table.len:
+                self._resize()
+            self._insert(self.table, _dict_entry[`k,`v](k, v, h))
+
+    def __delitem__(self: dict[`k,`v], k: `k):
+        h = hash(k)
+        idx = h.__and__(self.table.len - 1)
+        e = self.table[idx]
+        prev = e.__none__()
+
+        while e:
+            if e.eq(k, h):
+                if prev:
+                    prev.next = e.next
+                else:
+                    self.table[idx] = e.next
+                self.size -= 1
+                break
+            prev = e
+            e = e.next
+
+    def keys(self: dict[`k,`v]):
+        for e in self._entry_iter():
+            yield e.k
+
+    def values(self: dict[`k,`v]):
+        for e in self._entry_iter():
+            yield e.v
+
+    def items(self: dict[`k,`v]):
+        for e in self._entry_iter():
+            yield (e.k, e.v)
+
+    def __iter__(self: dict[`k,`v]):
+        return self.keys()
+
+    def __len__(self: dict[`k,`v]):
+        return self.size

@@ -68,11 +68,11 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 	auto *ref = dynamic_cast<types::RefType *>(x);
 	assert(ref);
 
-	for (auto& method : ref->getVTable().methods)
-		method.second->resolveTypes();
-
 	for (auto& magic : ref->getVTable().overloads)
 		magic.func->resolveTypes();
+
+	for (auto& method : ref->getVTable().methods)
+		method.second->resolveTypes();
 
 	return ref;
 }
@@ -160,6 +160,24 @@ void types::RefType::initOps()
 
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateIsNotNull(self), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__print__", {}, Void, SEQ_MAGIC(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_ptr",
+			                      llvm::Type::getVoidTy(context),
+			                      IntegerType::getInt8PtrTy(context)));
+
+			Value *p = b.CreateBitCast(self, IntegerType::getInt8PtrTy(context));
+			b.CreateCall(printFunc, p);
+			return (Value *)nullptr;
+		}},
+
+		{"__none__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return defaultValue(b.GetInsertBlock());
 		}},
 	};
 }
@@ -261,8 +279,8 @@ types::RefType *types::RefType::clone(Generic *ref)
 	for (auto& method : getVTable().methods)
 		methodsCloned.insert({method.first, method.second->clone(ref)});
 
-	x->getVTable().methods = methodsCloned;
 	x->getVTable().overloads = overloadsCloned;
+	x->getVTable().methods = methodsCloned;
 	x->root = root;
 	x->done = true;
 	return x;

@@ -101,12 +101,12 @@ Value *types::Type::memb(Value *self,
 	initFields();
 	initOps();
 
-	for (auto& magic : vtable.overloads) {
-		if (magic.name == name)
+	for (auto& magic : getVTable().overloads) {
+		if (name == magic.name)
 			return funcAsMethod(this, magic.func, self, block);
 	}
 
-	for (auto& magic : vtable.magic) {
+	for (auto& magic : getVTable().magic) {
 		if (name == magic.name)
 			return funcAsMethod(this, magic.asFunc(this), self, block);
 	}
@@ -128,12 +128,12 @@ types::Type *types::Type::membType(const std::string& name)
 	initFields();
 	initOps();
 
-	for (auto& magic : vtable.overloads) {
-		if (magic.name == name)
+	for (auto& magic : getVTable().overloads) {
+		if (name == magic.name)
 			return funcAsMethodType(this, magic.func);
 	}
 
-	for (auto& magic : vtable.magic) {
+	for (auto& magic : getVTable().magic) {
 		if (name == magic.name)
 			return funcAsMethodType(this, magic.asFunc(this));
 	}
@@ -153,12 +153,12 @@ Value *types::Type::staticMemb(const std::string& name, BasicBlock *block)
 {
 	initOps();
 
-	for (auto& magic : vtable.overloads) {
-		if (magic.name == name)
+	for (auto& magic : getVTable().overloads) {
+		if (name == magic.name)
 			return funcAsStaticMethod(magic.func, block);
 	}
 
-	for (auto& magic : vtable.magic) {
+	for (auto& magic : getVTable().magic) {
 		if (name == magic.name)
 			return funcAsStaticMethod(magic.asFunc(this), block);
 	}
@@ -174,12 +174,12 @@ types::Type *types::Type::staticMembType(const std::string& name)
 {
 	initOps();
 
-	for (auto& magic : vtable.overloads) {
-		if (magic.name == name)
+	for (auto& magic : getVTable().overloads) {
+		if (name == magic.name)
 			return funcAsStaticMethodType(magic.func);
 	}
 
-	for (auto& magic : vtable.magic) {
+	for (auto& magic : getVTable().magic) {
 		if (name == magic.name)
 			return funcAsStaticMethodType(magic.asFunc(this));
 	}
@@ -208,12 +208,12 @@ Value *types::Type::setMemb(Value *self,
 
 bool types::Type::hasMethod(const std::string& name)
 {
-	for (auto& magic : vtable.overloads) {
-		if (magic.name == name)
+	for (auto& magic : getVTable().overloads) {
+		if (name == magic.name)
 			return true;
 	}
 
-	for (auto& magic : vtable.magic) {
+	for (auto& magic : getVTable().magic) {
 		if (name == magic.name)
 			return true;
 	}
@@ -237,7 +237,7 @@ void types::Type::addMethod(std::string name, BaseFunc *func, bool force)
 			throw exc::SeqException("cannot override __new__");
 
 		// insert at the start so we always find the latest-added alternative first
-		vtable.overloads.insert(vtable.overloads.begin(), {name, func});
+		getVTable().overloads.insert(getVTable().overloads.begin(), {name, func});
 		return;
 	}
 
@@ -318,7 +318,7 @@ types::Type *types::Type::magicOut(const std::string& name, std::vector<types::T
 			CallExpr call(&func, argExprs);
 			call.resolveTypes();
 			return call.getType();
-		} catch (exc::SeqException& s) {
+		} catch (exc::SeqException&) {
 			// maybe a later method will match our argument types, so continue
 		}
 	}

@@ -85,6 +85,11 @@ SEQ_FUNC void seq_print_seq(seq_t seq)
 	cout.write(seq.seq, seq.len);
 }
 
+SEQ_FUNC void seq_print_ptr(void *p)
+{
+	cout << p;
+}
+
 
 /*
  * General I/O
