@@ -1,5 +1,3 @@
-import list 
-
 def range(a: int, b: int):
     i = a
     while i < b:
@@ -17,6 +15,9 @@ def copy(x):
 
 def abs(x):
     return x.__abs__()
+
+def hash(x):
+    return x.__hash__()
 
 def any(x):
     for a in x:
@@ -43,3 +44,11 @@ def filter(f, x):
 
 def echo(x):
    print x
+
+extend int:
+    def __hash__(self: int):
+        return self
+
+import list
+import dict
+import set

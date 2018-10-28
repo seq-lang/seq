@@ -1,0 +1,82 @@
+class _set_entry[`k](k: `k, hash: int, next: _set_entry[`k]):
+    def __init__(self: _set_entry[`k], k: `k, hash: int):
+        self.k = k
+        self.hash = hash
+        self.next = self.__none__()
+
+    def eq(self: _set_entry[`k], k: `k, hash: int):
+        return self.hash == hash and self.k == k
+
+class set[`k](table: array[_set_entry[`k]], size: int):
+    def _make_table(self: set[`k], len: int):
+        table = array[_set_entry[`k]](len)
+        for i in range(0, len):
+            table[i] = table[i].__none__()
+        return table
+
+    def _find(self: set[`k], k: `k, h: int):
+        idx = h.__and__(self.table.len - 1)
+        e = self.table[idx]
+        while e:
+            if e.eq(k, h):
+                break
+            e = e.next
+        return e
+
+    def _entry_iter(self: set[`k]) -> _set_entry[`k]:
+        table = self.table
+        for i in range(0, table.len):
+            e = table[i]
+            while e:
+                yield e
+                e = e.next
+
+    def _insert(self: set[`k], table: array[_set_entry[`k]], e: _set_entry[`k]):
+        idx = e.hash.__and__(table.len - 1)
+        e.next = table[idx]
+        table[idx] = e
+        self.size += 1
+
+    def _resize(self: set[`k]):
+        table = self._make_table(2 * self.table.len)
+        for e in self._entry_iter():
+            self._insert(table, e)
+        self.table = table
+
+    def __init__(self: set[`k]):
+        self.table = self._make_table(16)
+        self.size = 0
+
+    def __contains__(self: set[`k], k: `k):
+        return self._find(k, hash(k)).__bool__()
+
+    def add(self: set[`k], k: `k):
+        h = hash(k)
+        if not self._find(k, h):
+            if self.size*2 >= self.table.len:
+                self._resize()
+            self._insert(self.table, _set_entry[`k](k, h))
+
+    def remove(self: set[`k], k: `k):
+        h = hash(k)
+        idx = h.__and__(self.table.len - 1)
+        e = self.table[idx]
+        prev = e.__none__()
+
+        while e:
+            if e.eq(k, h):
+                if prev:
+                    prev.next = e.next
+                else:
+                    self.table[idx] = e.next
+                self.size -= 1
+                break
+            prev = e
+            e = e.next
+
+    def __iter__(self: set[`k]):
+        for e in self._entry_iter():
+            yield e.k
+
+    def __len__(self: set[`k]):
+        return self.size

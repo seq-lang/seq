@@ -38,6 +38,7 @@ SEQ_FUNC void seq_print_bool(bool b);
 SEQ_FUNC void seq_print_byte(char c);
 SEQ_FUNC void seq_print_str(seq_str_t str);
 SEQ_FUNC void seq_print_seq(seq_t seq);
+SEQ_FUNC void seq_print_ptr(void *p);
 
 SEQ_FUNC void *seq_io_openr(const char *filename);
 SEQ_FUNC void *seq_io_openw(const char *filename);

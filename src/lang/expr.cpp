@@ -1048,7 +1048,7 @@ static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types
 					func = new FuncExpr(g->realize(g->deduceTypesFromArgTypes(argTypes)), func);
 			}
 		}
-	} catch(exc::SeqException&) {
+	} catch (exc::SeqException&) {
 		/*
 		 * We weren't able to deduce type parameters now,
 		 * but we may be able to do so later, so ignore
