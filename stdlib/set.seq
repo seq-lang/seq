@@ -8,14 +8,14 @@ class _set_entry[`k](k: `k, hash: int, next: _set_entry[`k]):
         return self.hash == hash and self.k == k
 
 class set[`k](table: array[_set_entry[`k]], size: int):
-    def _make_table(self: set[`k], len: int):
+    def _make_table(len: int):
         table = array[_set_entry[`k]](len)
         for i in range(0, len):
             table[i] = table[i].__none__()
         return table
 
     def _find(self: set[`k], k: `k, h: int):
-        idx = h.__and__(self.table.len - 1)
+        idx = h & (self.table.len - 1)
         e = self.table[idx]
         while e:
             if e.eq(k, h):
@@ -32,19 +32,19 @@ class set[`k](table: array[_set_entry[`k]], size: int):
                 e = e.next
 
     def _insert(self: set[`k], table: array[_set_entry[`k]], e: _set_entry[`k]):
-        idx = e.hash.__and__(table.len - 1)
+        idx = e.hash & (table.len - 1)
         e.next = table[idx]
         table[idx] = e
         self.size += 1
 
     def _resize(self: set[`k]):
-        table = self._make_table(2 * self.table.len)
+        table = set[`k]._make_table(2 * self.table.len)
         for e in self._entry_iter():
             self._insert(table, e)
         self.table = table
 
     def __init__(self: set[`k]):
-        self.table = self._make_table(16)
+        self.table = set[`k]._make_table(16)
         self.size = 0
 
     def __contains__(self: set[`k], k: `k):
@@ -59,7 +59,7 @@ class set[`k](table: array[_set_entry[`k]], size: int):
 
     def remove(self: set[`k], k: `k):
         h = hash(k)
-        idx = h.__and__(self.table.len - 1)
+        idx = h & (self.table.len - 1)
         e = self.table[idx]
         prev = e.__none__()
 
@@ -70,7 +70,7 @@ class set[`k](table: array[_set_entry[`k]], size: int):
                 else:
                     self.table[idx] = e.next
                 self.size -= 1
-                break
+                return
             prev = e
             e = e.next
 

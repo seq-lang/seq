@@ -9,14 +9,14 @@ class _dict_entry[`k,`v](k: `k, v: `v, hash: int, next: _dict_entry[`k,`v]):
         return self.hash == hash and self.k == k
 
 class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
-    def _make_table(self: dict[`k,`v], len: int):
+    def _make_table(len: int):
         table = array[_dict_entry[`k,`v]](len)
         for i in range(0, len):
             table[i] = table[i].__none__()
         return table
 
     def _find(self: dict[`k,`v], k: `k, h: int):
-        idx = h.__and__(self.table.len - 1)
+        idx = h & (self.table.len - 1)
         e = self.table[idx]
         while e:
             if e.eq(k, h):
@@ -33,19 +33,19 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
                 e = e.next
 
     def _insert(self: dict[`k,`v], table: array[_dict_entry[`k,`v]], e: _dict_entry[`k,`v]):
-        idx = e.hash.__and__(table.len - 1)
+        idx = e.hash & (table.len - 1)
         e.next = table[idx]
         table[idx] = e
         self.size += 1
 
     def _resize(self: dict[`k,`v]):
-        table = self._make_table(2 * self.table.len)
+        table = dict[`k,`v]._make_table(2 * self.table.len)
         for e in self._entry_iter():
             self._insert(table, e)
         self.table = table
 
     def __init__(self: dict[`k,`v]):
-        self.table = self._make_table(16)
+        self.table = dict[`k,`v]._make_table(16)
         self.size = 0
 
     def get(self: dict[`k,`v], k: `k, s: `v):
@@ -67,7 +67,7 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
 
     def __delitem__(self: dict[`k,`v], k: `k):
         h = hash(k)
-        idx = h.__and__(self.table.len - 1)
+        idx = h & (self.table.len - 1)
         e = self.table[idx]
         prev = e.__none__()
 
@@ -78,7 +78,7 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
                 else:
                     self.table[idx] = e.next
                 self.size -= 1
-                break
+                return
             prev = e
             e = e.next
 
