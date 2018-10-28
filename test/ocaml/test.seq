@@ -16,6 +16,11 @@ print yo[0]
 class X():
    pass
 
+class Ay[`t](a: `t):
+   def foobar(a: Ay[`t], x: `t):  # <-- should NOT be generic
+      pass
+
+
 class A(f: int):
    def sta(l):
       return l+1
@@ -26,7 +31,7 @@ class A(f: int):
 e = A(5)
 e.foo()
 
-yo = X()
+# yo = X()
 
 print 1 ^ 2, 1 | 2, 1 & 2, ~1, 1<<1, 2>>1
 

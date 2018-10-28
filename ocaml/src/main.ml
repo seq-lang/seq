@@ -233,8 +233,14 @@ let set_generics ctx types args set_generic_count get_generic =
     | `Arg((n, pos), None) -> (n, `Generic(sprintf "``%s" n, pos))
     | `Arg((n, _), Some t) -> (n, t)) in
 
-  let generics = List.append types arg_types
-    |> List.filter_map ~f:(function `Generic(g, _) -> Some g | _ -> None)
+  let type_args = List.map types ~f:(function
+    | `Generic (g, _) -> g
+    (* TODO fix position *)
+    | _ -> seq_error "Type not a generic" Lexing.dummy_pos) in 
+  let generic_args = List.filter_map arg_types ~f:(function
+    | `Generic(g, _) when (String.is_prefix g ~prefix:"``") -> Some g
+    | _ -> None) in
+  let generics = List.append type_args generic_args
     |> List.dedup_and_sort ~compare in
   set_generic_count (List.length generics);
 
@@ -439,6 +445,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     let arg_names, arg_types = set_generics fn_ctx types args
       (set_func_generics fn)
       (fun idx name ->
+        (* eprintf "generic for %s: %d %s\n"  fn_name idx name; *)
         set_func_generic_name fn idx name;
         get_func_generic fn idx) in
     set_func_params fn arg_names arg_types;
