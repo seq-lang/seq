@@ -169,6 +169,16 @@ FOREIGN Expr *list_expr(types::Type *ty, Expr **args, size_t len)
 	return new ListExpr(vector<Expr*>(args, args + len), ty);
 }
 
+FOREIGN Expr *set_expr(types::Type *ty, Expr **args, size_t len)
+{
+	return new SetExpr(vector<Expr*>(args, args + len), ty);
+}
+
+FOREIGN Expr *dict_expr(types::Type *ty, Expr **args, size_t len)
+{
+	return new DictExpr(vector<Expr*>(args, args + len), ty);
+}
+
 /***** Statements *****/
 
 FOREIGN Stmt *pass_stmt()  // Needed at all?

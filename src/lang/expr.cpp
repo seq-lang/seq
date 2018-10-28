@@ -235,6 +235,125 @@ ListExpr *ListExpr::clone(Generic *ref)
 	return new ListExpr(elemsCloned, listType->clone(ref));
 }
 
+SetExpr::SetExpr(std::vector<Expr *> elems, types::Type *setType) :
+    Expr(), elems(std::move(elems)), setType(setType)
+{
+}
+
+void SetExpr::resolveTypes()
+{
+	for (auto *elem : elems)
+		elem->resolveTypes();
+}
+
+Value *SetExpr::codegen0(BaseFunc *base, BasicBlock *&block)
+{
+	types::Type *type = getType();
+	assert(!elems.empty());
+	types::Type *elemType = elems[0]->getType();
+
+	ConstructExpr construct(type, {});
+	Value *set = construct.codegen(base, block);
+	ValueExpr v(type, set);
+
+	for (auto *elem : elems) {
+		if (!types::is(elemType, elem->getType()))
+			throw exc::SeqException("inconsistent set element types '" + elemType->getName() + "' and '" + elem->getType()->getName() + "'");
+
+		Value *x = elem->codegen(base, block);
+		GetElemExpr append(&v, "add");
+		ValueExpr arg(elemType, x);
+		CallExpr call(&append, {&arg});
+		call.resolveTypes();
+		call.codegen(base, block);
+	}
+
+	return set;
+}
+
+types::Type *SetExpr::getType0() const
+{
+	if (elems.empty())
+		throw exc::SeqException("cannot infer type of empty set");
+
+	types::Type *elemType = elems[0]->getType();
+	auto *generic = dynamic_cast<Generic *>(setType);
+	assert(generic);
+	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({elemType}));
+	assert(realized);
+	return realized;
+}
+
+SetExpr *SetExpr::clone(Generic *ref)
+{
+	std::vector<Expr *> elemsCloned;
+	for (auto *elem : elems)
+		elemsCloned.push_back(elem->clone(ref));
+	return new SetExpr(elemsCloned, setType->clone(ref));
+}
+
+DictExpr::DictExpr(std::vector<Expr *> elems, types::Type *dictType) :
+    Expr(), elems(std::move(elems)), dictType(dictType)
+{
+}
+
+void DictExpr::resolveTypes()
+{
+	for (auto *elem : elems)
+		elem->resolveTypes();
+}
+
+Value *DictExpr::codegen0(BaseFunc *base, BasicBlock *&block)
+{
+	types::Type *type = getType();
+	assert(!elems.empty() && elems.size() % 2 == 0);
+	types::Type *keyType = elems[0]->getType();
+	types::Type *valType = elems[1]->getType();
+
+	ConstructExpr construct(type, {});
+	Value *dict = construct.codegen(base, block);
+
+	for (unsigned i = 0; i < elems.size(); i += 2) {
+		Expr *key = elems[i];
+		Expr *val = elems[i+1];
+
+		if (!types::is(keyType, key->getType()))
+			throw exc::SeqException("inconsistent dict key types '" + keyType->getName() + "' and '" + key->getType()->getName() + "'");
+
+		if (!types::is(valType, val->getType()))
+			throw exc::SeqException("inconsistent dict value types '" + valType->getName() + "' and '" + val->getType()->getName() + "'");
+
+		Value *k = key->codegen(base, block);
+		Value *v = val->codegen(base, block);
+		type->callMagic("__setitem__", {keyType, valType}, dict, {k, v}, block);
+	}
+
+	return dict;
+}
+
+types::Type *DictExpr::getType0() const
+{
+	if (elems.empty())
+		throw exc::SeqException("cannot infer type of empty dict");
+
+	assert(elems.size() % 2 == 0);
+	types::Type *keyType = elems[0]->getType();
+	types::Type *valType = elems[1]->getType();
+	auto *generic = dynamic_cast<Generic *>(dictType);
+	assert(generic);
+	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({keyType, valType}));
+	assert(realized);
+	return realized;
+}
+
+DictExpr *DictExpr::clone(Generic *ref)
+{
+	std::vector<Expr *> elemsCloned;
+	for (auto *elem : elems)
+		elemsCloned.push_back(elem->clone(ref));
+	return new DictExpr(elemsCloned, dictType->clone(ref));
+}
+
 VarExpr::VarExpr(Var *var) : var(var)
 {
 }

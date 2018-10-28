@@ -24,6 +24,10 @@ void types::PtrType::initOps()
 			return getBaseType(0)->alloc(args[0], b.GetInsertBlock());
 		}},
 
+		{"__init__", {PtrType::get(Base)}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+		}},
+
 		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -84,7 +88,9 @@ bool types::PtrType::isAtomic() const
 
 bool types::PtrType::is(types::Type *type) const
 {
-	return isGeneric(type) && types::is(getBaseType(0), type->getBaseType(0));
+	return isGeneric(type) && (getBaseType(0)->is(types::Base) ||
+	                           type->getBaseType(0)->is(types::Base) ||
+	                           types::is(getBaseType(0), type->getBaseType(0)));
 }
 
 unsigned types::PtrType::numBaseTypes() const

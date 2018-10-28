@@ -102,6 +102,30 @@ namespace seq {
 		ListExpr *clone(Generic *ref) override;
 	};
 
+	class SetExpr : public Expr {
+	private:
+		std::vector<Expr *> elems;
+		types::Type *setType;
+	public:
+		explicit SetExpr(std::vector<Expr *> elems, types::Type *setType);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		SetExpr *clone(Generic *ref) override;
+	};
+
+	class DictExpr : public Expr {
+	private:
+		std::vector<Expr *> elems;
+		types::Type *dictType;
+	public:
+		explicit DictExpr(std::vector<Expr *> elems, types::Type *dictType);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		DictExpr *clone(Generic *ref) override;
+	};
+
 	class VarExpr : public Expr {
 	private:
 		Var *var;
