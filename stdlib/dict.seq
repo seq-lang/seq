@@ -53,7 +53,7 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
         return e.v if e else s
 
     def __contains__(self: dict[`k,`v], k: `k):
-        return True if self._find(k, hash(k)) else False
+        return self._find(k, hash(k)).__bool__()
 
     def __setitem__(self: dict[`k,`v], k: `k, v: `v):
         h = hash(k)

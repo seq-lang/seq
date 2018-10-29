@@ -384,11 +384,6 @@ FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types) :
 {
 }
 
-bool FuncExpr::isParameterized()
-{
-	return !types.empty();
-}
-
 BaseFunc *FuncExpr::getFunc()
 {
 	return func;
@@ -818,6 +813,7 @@ std::string GetElemExpr::getMemb()
 void GetElemExpr::resolveTypes()
 {
 	rec->resolveTypes();
+	rec->getType()->resolveTypes();
 }
 
 llvm::Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock*& block)
@@ -851,6 +847,11 @@ std::string GetStaticElemExpr::getMemb() const
 	return memb;
 }
 
+void GetStaticElemExpr::resolveTypes()
+{
+	type->resolveTypes();
+}
+
 Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	return type->staticMemb(memb, block);
@@ -877,6 +878,7 @@ MethodExpr::MethodExpr(Expr *expr,
 void MethodExpr::resolveTypes()
 {
 	expr->resolveTypes();
+	expr->getType()->resolveTypes();
 }
 
 Value *MethodExpr::codegen0(BaseFunc *base, llvm::BasicBlock*& block)

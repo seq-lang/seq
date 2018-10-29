@@ -38,6 +38,7 @@ namespace seq {
 			Type *parent;
 			bool abstract;
 			VTable vtable;
+			bool resolving;
 		public:
 			Type(std::string name, Type *parent, bool abstract=false);
 
@@ -89,6 +90,7 @@ namespace seq {
 			                               llvm::Value *self,
 			                               std::vector<llvm::Value *> args,
 			                               llvm::BasicBlock *block);
+			virtual void resolveTypes();
 
 			virtual bool is(Type *type) const;
 			virtual bool isGeneric(Type *type) const;

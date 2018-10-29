@@ -36,7 +36,7 @@ namespace seq {
 
 	class TypeExpr : public Expr {
 	public:
-		TypeExpr(types::Type *type);
+		explicit TypeExpr(types::Type *type);
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 	};
 
@@ -144,7 +144,6 @@ namespace seq {
 	public:
 		FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types={});
 		explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types={});
-		bool isParameterized();
 		BaseFunc *getFunc();
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
@@ -259,6 +258,7 @@ namespace seq {
 		GetStaticElemExpr(types::Type *type, std::string memb);
 		types::Type *getTypeInExpr() const;
 		std::string getMemb() const;
+		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
 		GetStaticElemExpr *clone(Generic *ref) override;

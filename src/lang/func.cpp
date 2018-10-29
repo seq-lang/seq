@@ -121,7 +121,7 @@ void Func::resolveTypes()
 				assert(0);
 			}
 		}
-	} catch (exc::SeqException& e){
+	} catch (exc::SeqException&) {
 		/*
 		 * Function had some generic types which could not be resolved yet; not a real issue
 		 * though, since these will be resolved whenever the generics are instantiated, so we

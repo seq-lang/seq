@@ -181,6 +181,12 @@ Value *types::GenericType::callMagic(const std::string& name,
 	return type->callMagic(name, argTypes, self, args, block);
 }
 
+void types::GenericType::resolveTypes()
+{
+	if (type)
+		type->resolveTypes();
+}
+
 bool types::GenericType::isAtomic() const
 {
 	ensure();
