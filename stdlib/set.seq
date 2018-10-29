@@ -48,7 +48,7 @@ class set[`k](table: array[_set_entry[`k]], size: int):
         self.size = 0
 
     def __contains__(self: set[`k], k: `k):
-        return self._find(k, hash(k)).__bool__()
+        return True if self._find(k, hash(k)) else False
 
     def add(self: set[`k], k: `k):
         h = hash(k)
