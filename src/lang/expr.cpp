@@ -12,6 +12,10 @@ Expr::Expr() : Expr(types::Void)
 {
 }
 
+void Expr::resolveTypes()
+{
+}
+
 Value *Expr::codegen(BaseFunc *base, BasicBlock *&block)
 {
 	try {
@@ -32,10 +36,6 @@ types::Type *Expr::getType() const
 			e.setSrcInfo(getSrcInfo());
 		throw e;
 	}
-}
-
-void Expr::resolveTypes()
-{
 }
 
 types::Type *Expr::getType0() const
@@ -64,14 +64,28 @@ BlankExpr::BlankExpr() : Expr(types::Void)
 {
 }
 
+Value *BlankExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	throw exc::SeqException("misplaced '_'");
+}
+
 types::Type *BlankExpr::getType0() const
 {
 	throw exc::SeqException("misplaced '_'");
 }
 
-Value *BlankExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+NoneExpr::NoneExpr() : Expr()
 {
-	throw exc::SeqException("misplaced '_'");
+}
+
+Value *NoneExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	return getType0()->defaultValue(block);
+}
+
+types::Type *NoneExpr::getType0() const
+{
+	return types::RefType::none();
 }
 
 TypeExpr::TypeExpr(types::Type *type) : Expr(type)
@@ -500,6 +514,44 @@ RecordExpr *RecordExpr::clone(Generic *ref)
 	for (auto *expr : exprs)
 		exprsCloned.push_back(expr->clone(ref));
 	return new RecordExpr(exprsCloned, names);
+}
+
+IsExpr::IsExpr(Expr *lhs, Expr *rhs) :
+    Expr(), lhs(lhs), rhs(rhs)
+{
+}
+
+void IsExpr::resolveTypes()
+{
+	lhs->resolveTypes();
+	rhs->resolveTypes();
+}
+
+Value *IsExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	LLVMContext& context = block->getContext();
+	types::RefType *ref1 = lhs->getType()->asRef();
+	types::RefType *ref2 = rhs->getType()->asRef();
+
+	if (!(ref1 && ref2 && types::is(ref1, ref2)))
+		throw exc::SeqException("both sides of 'is' expression must be of same reference type");
+
+	Value *lhs = this->lhs->codegen(base, block);
+	Value *rhs = this->rhs->codegen(base, block);
+	IRBuilder<> builder(block);
+	Value *is = builder.CreateICmpEQ(lhs, rhs);
+	is = builder.CreateZExt(is, types::Bool->getLLVMType(context));
+	return is;
+}
+
+types::Type *IsExpr::getType0() const
+{
+	return types::Bool;
+}
+
+IsExpr *IsExpr::clone(Generic *ref)
+{
+	return new IsExpr(lhs->clone(ref), rhs->clone(ref));
 }
 
 static void uopError(const std::string& sym, types::Type *t)
@@ -1350,6 +1402,7 @@ ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
 
 void ConstructExpr::resolveTypes()
 {
+	type->resolveTypes();
 	for (auto *arg : args)
 		arg->resolveTypes();
 }

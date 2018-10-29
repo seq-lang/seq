@@ -67,13 +67,7 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 	Generic *x = realizeGeneric(types);
 	auto *ref = dynamic_cast<types::RefType *>(x);
 	assert(ref);
-
-	for (auto& magic : ref->getVTable().overloads)
-		magic.func->resolveTypes();
-
-	for (auto& method : ref->getVTable().methods)
-		method.second->resolveTypes();
-
+	ref->resolveTypes();
 	return ref;
 }
 
@@ -95,7 +89,9 @@ Value *types::RefType::memb(Value *self,
 	}
 
 	assert(contents);
+	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
+	self = builder.CreateBitCast(self, getStructPointerType(context));
 	Value *x = builder.CreateLoad(self);
 
 	try {
@@ -128,7 +124,9 @@ Value *types::RefType::setMemb(Value *self,
                                BasicBlock *block)
 {
 	initFields();
+	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
+	self = builder.CreateBitCast(self, getStructPointerType(context));
 	Value *x = builder.CreateLoad(self);
 	x = contents->setMemb(x, name, val, block);
 	builder.CreateStore(x, self);
@@ -153,8 +151,10 @@ void types::RefType::initOps()
 		}},
 
 		{"__init__", contents->getTypes(), this, SEQ_MAGIC_CAPT(self, args, b) {
+			self = b.CreateBitCast(self, getStructPointerType(b.getContext()));
 			for (unsigned i = 0; i < args.size(); i++)
 				self = setMemb(self, std::to_string(i+1), args[i], b.GetInsertBlock());
+			self = b.CreateBitCast(self, getLLVMType(b.getContext()));
 			return self;
 		}},
 
@@ -171,8 +171,7 @@ void types::RefType::initOps()
 			                      llvm::Type::getVoidTy(context),
 			                      IntegerType::getInt8PtrTy(context)));
 
-			Value *p = b.CreateBitCast(self, IntegerType::getInt8PtrTy(context));
-			b.CreateCall(printFunc, p);
+			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},
 
@@ -195,8 +194,8 @@ bool types::RefType::isAtomic() const
 
 bool types::RefType::is(types::Type *type) const
 {
-	auto *ref = dynamic_cast<types::RefType *>(type);
-	return ref && name == ref->name && Generic::is(ref);
+	types::RefType *ref = type->asRef();
+	return ref && (ref == none() || this == none() || (name == ref->name && Generic::is(ref)));
 }
 
 unsigned types::RefType::numBaseTypes() const
@@ -211,7 +210,7 @@ types::Type *types::RefType::getBaseType(unsigned idx) const
 	return contents->getBaseType(idx);
 }
 
-Type *types::RefType::getLLVMType(LLVMContext& context) const
+Type *types::RefType::getStructPointerType(LLVMContext& context) const
 {
 	std::vector<types::Type *> types = getRealizedTypes();
 
@@ -225,6 +224,11 @@ Type *types::RefType::getLLVMType(LLVMContext& context) const
 	root->cache.emplace_back(types, structType);
 	contents->addLLVMTypesToStruct(structType);
 	return PointerType::get(structType, 0);
+}
+
+Type *types::RefType::getLLVMType(LLVMContext& context) const
+{
+	return IntegerType::getInt8PtrTy(context);
 }
 
 size_t types::RefType::size(Module *module) const
@@ -244,7 +248,7 @@ Value *types::RefType::make(BasicBlock *block, std::vector<Value *> vals)
 	Value *val = contents->defaultValue(block);
 	Value *ref = contents->alloc(nullptr, block);
 	IRBuilder<> builder(block);
-	llvm::Type *type = getLLVMType(context);
+	llvm::Type *type = getStructPointerType(context);
 	ref = builder.CreateBitCast(ref, type);
 	val = builder.CreateBitCast(val, cast<PointerType>(type)->getElementType());
 	builder.CreateStore(val, ref);
@@ -252,6 +256,7 @@ Value *types::RefType::make(BasicBlock *block, std::vector<Value *> vals)
 	for (unsigned i = 0; i < vals.size(); i++)
 		ref = setMemb(ref, std::to_string(i+1), vals[i], block);
 
+	ref = builder.CreateBitCast(ref, getLLVMType(context));
 	return ref;
 }
 
@@ -284,6 +289,12 @@ types::RefType *types::RefType::clone(Generic *ref)
 	x->root = root;
 	x->done = true;
 	return x;
+}
+
+types::RefType *types::RefType::none()
+{
+	static RefType *noneRef = RefType::get("<None>");
+	return noneRef;
 }
 
 types::MethodType::MethodType(types::Type *self, FuncType *func) :

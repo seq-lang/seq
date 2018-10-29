@@ -34,6 +34,13 @@ namespace seq {
 		types::Type *getType0() const override;
 	};
 
+	class NoneExpr : public Expr {
+	public:
+		NoneExpr();
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+	};
+
 	class TypeExpr : public Expr {
 	public:
 		explicit TypeExpr(types::Type *type);
@@ -171,6 +178,18 @@ namespace seq {
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
 		RecordExpr *clone(Generic *ref) override;
+	};
+
+	class IsExpr : public Expr {
+	private:
+		Expr *lhs;
+		Expr *rhs;
+	public:
+		IsExpr(Expr *lhs, Expr *rhs);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		IsExpr *clone(Generic *ref) override;
 	};
 
 	class UOpExpr : public Expr {

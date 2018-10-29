@@ -77,6 +77,7 @@ FOREIGN void set_ref_done(types::RefType *ref)
 
 /***** Expressions *****/
 
+FOREIGN Expr *none_expr()                 { E("none_expr"); return new NoneExpr(); }
 FOREIGN Expr *bool_expr(char b)           { E("bool_expr[{}]", b); return new BoolExpr(b); }
 FOREIGN Expr *int_expr(int i)             { E("int_expr[{}]", i); return new IntExpr(i); }
 FOREIGN Expr *float_expr(double f)        { E("float_expr[{}]", f); return new FloatExpr(f); }
@@ -85,6 +86,11 @@ FOREIGN Expr *str_seq_expr(const char *s) { E("seq_expr[{}]", s); return new Seq
 FOREIGN Expr *func_expr(Func *f)          { E("func_expr[{}]", f->genericName()); return new FuncExpr(f); }
 FOREIGN Expr *var_expr(Var *v)            { E("var_expr"); return new VarExpr(v); }
 FOREIGN Expr *type_expr(types::Type *t)   { E("type_expr"); return new TypeExpr(t); }
+
+FOREIGN Expr *is_expr(Expr *lhs, Expr *rhs)
+{
+	return new IsExpr(lhs, rhs);
+}
 
 FOREIGN Expr *cond_expr(Expr *cond, Expr *ift, Expr *iff)
 {

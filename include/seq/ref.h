@@ -40,6 +40,8 @@ namespace seq {
 
 			RecordType *contents;
 			explicit RefType(std::string name);
+
+			llvm::Type *getStructPointerType(llvm::LLVMContext& context) const;
 		public:
 			RefType(RefType const&)=delete;
 			void operator=(RefType const&)=delete;
@@ -79,6 +81,8 @@ namespace seq {
 			static RefType *get(std::string name);
 
 			types::RefType *clone(Generic *ref) override;
+
+			static RefType *none();
 		};
 
 		class MethodType : public RecordType {
