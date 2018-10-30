@@ -70,12 +70,12 @@ class AVLNode[`k,`v](key: `k,
          self.key, s.key = s.key, self.key
          return s.delete()
 
-   def __iter__(self):
-      for i in self.left:
-         yield i
-      yield self
-      for i in self.right:
-         yield i
+   # def __iter__(self):
+   #    for i in self.left:
+   #       yield i
+   #    yield self
+   #    for i in self.right:
+   #       yield i
 
 def max(x, y):
    return x if x > y else y
@@ -182,12 +182,10 @@ class AVL[`k, `v](root: AVLNode[`k, `v]):
             self.root.parent = None
       else:
          deleted = node.delete()   
-      ## node.parent is actually the old parent of the node,
-      ## which is the first potentially out-of-balance node.
       self.rebalance(deleted.parent)
  
    def __setitem__(self, k: `k, v: `v):
-      self.insert(self, k, v)
+      self.insert(k, v)
 
    def __getitem__(self, k):
       nd = self.find(k)
@@ -196,18 +194,18 @@ class AVL[`k, `v](root: AVLNode[`k, `v]):
          exit(1)
       return nd.value
 
-   def __iter__(self):
-      if self.root:
-         for i in self.root:
-            yield i.key, i.value
+   # def __iter__(self):
+   #    if self.root:
+   #       for i in self.root:
+   #          yield i.key, i.value
 
 tree = AVL[int, str]()
 tree[3] = "hai3"
-tree[5] = "hai5"
-tree[1] = "hai1"
+# tree[5] = "hai5"
+# tree[1] = "hai1"
 
-for y in tree:
-   print y[0], y[1]
+# for y in tree:
+#    print y[0], y[1]
 
 # for item in items:
 #    tree.insert(item)

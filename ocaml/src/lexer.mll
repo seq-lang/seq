@@ -31,15 +31,14 @@
     {lexbuf.lex_start_p with pos_fname = state.fname}
 
   let count_lines s =
-    let n = ref 0 in 
-    String.iter ~f:(fun c -> if c = '\n' then incr n) s;
-    !n
+    String.fold ~init:0 ~f:(fun acc c -> if c = '\n' then acc + 1 else acc) s
 
   let seq_string pfx u st =
+    let escape = Scanf.unescaped in
     match pfx with
-    | "r'" | "R'" -> P.REGEX  (u, st)
-    | "s'" | "S'" -> P.SEQ    (u, st)
-    | _           -> P.STRING (u, st)
+    | "r'" | "R'" -> P.REGEX  (escape u, st)
+    | "s'" | "S'" -> P.SEQ    (escape u, st)
+    | _           -> P.STRING (escape u, st)
 }
 
 (* lexer regex expressions *)
