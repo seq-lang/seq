@@ -70,12 +70,12 @@ class AVLNode[`k,`v](key: `k,
          self.key, s.key = s.key, self.key
          return s.delete()
 
-   # def __iter__(self):
-   #    for i in self.left:
-   #       yield i
-   #    yield self
-   #    for i in self.right:
-   #       yield i
+   def __iter__(self):
+      for i in self.left:
+         yield i
+      yield self
+      for i in self.right:
+         yield i
 
 def max(x, y):
    return x if x > y else y
@@ -194,10 +194,10 @@ class AVL[`k, `v](root: AVLNode[`k, `v]):
          exit(1)
       return nd.value
 
-   # def __iter__(self):
-   #    if self.root:
-   #       for i in self.root:
-   #          yield i.key, i.value
+   def __iter__(self):
+      if self.root:
+         for i in self.root:
+            yield i.key, i.value
 
 tree = AVL[int, str]()
 tree[3] = "hai3"
