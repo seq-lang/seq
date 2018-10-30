@@ -2,13 +2,15 @@ class AVLNode[`k,`v](key: `k,
                       value: `v, 
                       parent: AVLNode[`k, `v], 
                       left: AVLNode[`k, `v], 
-                      right: AVLNode[`k, `v]):
+                      right: AVLNode[`k, `v],
+                      height: int):
    def __init__(self, parent, k, v):
       self.key = k
       self.value = v
       self.parent = parent
       self.left = None
       self.right = None
+      self.height = -1
   
    def find(self, k):
       if k == self.key:
@@ -71,11 +73,13 @@ class AVLNode[`k,`v](key: `k,
          return s.delete()
 
    def __iter__(self):
-      for i in self.left:
-         yield i
+      if self.left:
+         for i in self.left:
+            yield i
       yield self
-      for i in self.right:
-         yield i
+      if self.right:
+         for i in self.right:
+            yield i
 
 def max(x, y):
    return x if x > y else y
@@ -96,10 +100,14 @@ class AVL[`k, `v](root: AVLNode[`k, `v]):
       self.root = None
   
    def find(self, k):
-      return self.root and self.root.find(k)
+      if not self.root:
+         return None  
+      return self.root.find(k)
  
    def find_min(self):
-      return self.root.find_min() if self.root else None
+      if not self.root:
+         return None 
+      return self.root.find_min()
  
    def next_larger(self, k):
       node = self.find(k)
@@ -187,7 +195,7 @@ class AVL[`k, `v](root: AVLNode[`k, `v]):
    def __setitem__(self, k: `k, v: `v):
       self.insert(k, v)
 
-   def __getitem__(self, k):
+   def __getitem__(self, k: `k):
       nd = self.find(k)
       if not nd:
          print 'whoops', k, 'not found'
@@ -201,11 +209,13 @@ class AVL[`k, `v](root: AVLNode[`k, `v]):
 
 tree = AVL[int, str]()
 tree[3] = "hai3"
-# tree[5] = "hai5"
-# tree[1] = "hai1"
+tree[5] = "hai5"
+tree[1] = "hai1"
 
-# for y in tree:
-#    print y[0], y[1]
+# print tree.find(1).value
+
+for y in tree:
+   print y[0], y[1]
 
 # for item in items:
 #    tree.insert(item)
