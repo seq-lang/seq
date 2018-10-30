@@ -33,9 +33,11 @@ FOREIGN types::Type *array_type(types::Type *base)
 
 FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz)
 {
+	vector<string> s;
+	for (int i=0; i<sz; i++) s.push_back(names[i]);
 	return types::RecordType::get(
 	         vector<types::Type*>(ty, ty + sz),
-	         vector<string>(names, names + sz));
+	         s);
 }
 
 FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
@@ -308,8 +310,10 @@ FOREIGN void set_func_yield(Func *f, Yield *ret)
 
 FOREIGN void set_func_params(Func *f, const char **names, types::Type **types, size_t len)
 {
+	vector<string> s;
+	for (int i=0; i<len; i++) s.push_back(names[i]);
 	f->setIns(vector<types::Type*>(types, types + len));
-	f->setArgNames(vector<string>(names, names + len));
+	f->setArgNames(s);
 }
 
 FOREIGN void set_func_generics(Func *fn, int n)

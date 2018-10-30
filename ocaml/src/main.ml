@@ -457,6 +457,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
         (* eprintf "generic for %s: %d %s\n"  fn_name idx name; *)
         set_func_generic_name fn idx name;
         get_func_generic fn idx) in
+    (* eprintf "-- %s\n%!" fn_name; *)
     set_func_params fn arg_names arg_types;
 
     add_block fn_block stmts ~ct:fn_ctx ~init:(fun ctx ->
