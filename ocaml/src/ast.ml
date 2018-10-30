@@ -8,6 +8,7 @@ type pos_t = Lexing.position
 type ident = string * pos_t
 
 type expr = [
+  | `None of pos_t
   | `Bool of bool * pos_t
   | `Int of int * pos_t
   | `Float of float * pos_t
@@ -103,6 +104,7 @@ let rec prn_expr ?prn_pos e =
   let prn_pos = Option.value prn_pos ~default:(fun _ -> "") in
   let prn_expr = prn_expr ~prn_pos in 
   let repr, pos = match e with
+  | `None(pos)       -> "None", pos
   | `Ellipsis(pos)   -> "...", pos
   | `Bool(b, pos)    -> sprintf "Bool(%b)" b, pos
   | `Int(i, pos)     -> sprintf "Int(%d)" i, pos

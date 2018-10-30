@@ -35,19 +35,19 @@
 %token <Ast.pos_t> LB RB     /* { } braces */
 
 /* keywords */
-%token <Ast.pos_t> FOR IN WHILE CONTINUE BREAK                /* loops */
+%token <Ast.pos_t> FOR WHILE CONTINUE BREAK                   /* loops */
 %token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT         /* conditionals */
 %token <Ast.pos_t> DEF RETURN YIELD EXTERN                    /* functions */
 %token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND                   /* types */
 %token <Ast.pos_t> IMPORT FROM GLOBAL                         /* variables */
 %token <Ast.pos_t> PRINT PASS ASSERT                          /* keywords */
-%token <Ast.pos_t> TRUE FALSE                                 /* booleans */
+%token <Ast.pos_t> TRUE FALSE NONE                            /* booleans */
 
 /* operators */
 %token <Ast.pos_t>         EQ ASSGN_EQ ELLIPSIS
 %token<string * Ast.pos_t> ADD SUB MUL DIV FDIV POW MOD 
 %token<string * Ast.pos_t> PLUSEQ MINEQ MULEQ DIVEQ MODEQ POWEQ FDIVEQ
-%token<string * Ast.pos_t> AND OR NOT
+%token<string * Ast.pos_t> AND OR NOT IS ISNOT IN NOTIN
 %token<string * Ast.pos_t> EEQ NEQ LESS LEQ GREAT GEQ
 %token<string * Ast.pos_t> PIPE 
 %token<string * Ast.pos_t> B_LSH B_RSH B_AND B_XOR B_NOT B_OR
@@ -70,6 +70,7 @@ program: /* Entry point */
 /*******************************************************/
 
 atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
+  | NONE    { `None $1 }
   | ID      { `Id (fst $1, snd $1) }
   | INT     { `Int (fst $1, snd $1) } 
   | FLOAT   { `Float (fst $1, snd $1) } 
@@ -167,7 +168,8 @@ not_test: /* General comparison: a, not a, a < 5 */
     { `Binary ($1, $2, $3) }
 %inline cond_op:
   /* TODO: in, is in, is not in, not in, not */
-  | LESS | LEQ | GREAT | GEQ | EEQ | NEQ { $1 }
+  | LESS | LEQ | GREAT | GEQ | EEQ | NEQ | IS | ISNOT | IN | NOTIN
+  { $1 }
 expr_term: /* Expression term: 4, a(4), a[5], a.x, p */
   | atom { $1 }
   | expr_term LP; args = separated_list(COMMA, call_term); RP 

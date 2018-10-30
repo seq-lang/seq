@@ -14,18 +14,18 @@
     stack: int Stack.t;
     fname: string;
     mutable offset: int;
-    mutable ignore_newline: bool;
+    mutable ignore_newline: int;
   }
   
   let stack_create fname =
     let stack = Stack.create () in
     Stack.push stack 0;
-    {stack = stack; offset = 0; ignore_newline = false; fname}
+    {stack = stack; offset = 0; ignore_newline = 0; fname}
   
   let ignore_nl t =
-    t.ignore_newline <- true
+    t.ignore_newline <- t.ignore_newline + 1
   and aware_nl t =
-    t.ignore_newline <- false
+    t.ignore_newline <- t.ignore_newline - 1
 
   let cur_pos state (lexbuf: Lexing.lexbuf) = 
     {lexbuf.lex_start_p with pos_fname = state.fname}
@@ -90,7 +90,7 @@ and read state = parse
       pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines;
       pos_bol = lexbuf.lex_curr_p.pos_cnum
     };
-    if not state.ignore_newline then begin
+    if state.ignore_newline <= 0 then begin
       state.offset <- 0;
       offset state lexbuf;
       P.NL (cur_pos state lexbuf)
@@ -106,6 +106,8 @@ and read state = parse
   }
   | white+ { read state lexbuf }
   
+  | "is" white+ "not" { P.ISNOT ("is not", cur_pos state lexbuf) }
+  | "not" white+ "in" { P.NOTIN ("not in", cur_pos state lexbuf) }
   | ident as id {
     match id with
       | "True"     -> P.TRUE       (cur_pos state lexbuf)
@@ -117,7 +119,7 @@ and read state = parse
       | "for"      -> P.FOR        (cur_pos state lexbuf)
       | "break"    -> P.BREAK      (cur_pos state lexbuf)
       | "continue" -> P.CONTINUE   (cur_pos state lexbuf)
-      | "in"       -> P.IN         (cur_pos state lexbuf)
+      | "in"       -> P.IN         ("in", cur_pos state lexbuf)
       | "or"       -> P.OR         ("||", cur_pos state lexbuf)
       | "and"      -> P.AND        ("&&", cur_pos state lexbuf)
       | "not"      -> P.NOT        ("!",  cur_pos state lexbuf)
@@ -140,6 +142,8 @@ and read state = parse
       | "typeof"   -> P.TYPEOF     (cur_pos state lexbuf)
       | "extend"   -> P.EXTEND     (cur_pos state lexbuf)
       | "extern"   -> P.EXTERN     (cur_pos state lexbuf)
+      | "None"     -> P.NONE       (cur_pos state lexbuf)
+      | "is"       -> P.IS         ("is", cur_pos state lexbuf)
       | _          -> P.ID         (id, cur_pos state lexbuf)
   }
 

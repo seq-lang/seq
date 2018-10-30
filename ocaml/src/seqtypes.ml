@@ -85,6 +85,7 @@ let set_ref_done = foreign "set_ref_done" (seq_type @-> returning void)
 
 (* Expressions *)
 
+let none_expr  = foreign "none_expr"  (void @-> returning seq_expr)
 let bool_expr  = foreign "bool_expr"  (bool @-> returning seq_expr)
 let int_expr   = foreign "int_expr"   (int @-> returning seq_expr)
 let float_expr = foreign "float_expr" (double @-> returning seq_expr)
@@ -131,6 +132,8 @@ let pipe_expr lst =
 	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
 	pipe_expr' (CArray.start c_arr) c_len 
 
+let is_expr = foreign "is_expr" 
+  (seq_expr @-> seq_expr @-> returning seq_expr)
 
 let get_elem_expr = foreign "get_elem_expr" 
 	(seq_expr @-> string @-> returning seq_expr)

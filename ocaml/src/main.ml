@@ -117,6 +117,7 @@ let rec get_seq_expr (ctx: Context.t) expr =
   | `Slice _         -> noimp "random slice"
   | `Dict _          -> noimp "random dict"
 
+  | `None(pos)       -> none_expr (), pos
   | `Bool(b, pos)    -> bool_expr b, pos
   | `Int(i, pos)     -> int_expr i, pos
   | `Float(f, pos)   -> float_expr f, pos
@@ -147,6 +148,14 @@ let rec get_seq_expr (ctx: Context.t) expr =
     cond_expr c_expr if_expr else_expr, pos
   | `Unary((op, pos), expr) ->
     uop_expr op (get_seq_expr expr), pos
+  | `Binary(lh_expr, ("is", pos), rh_expr) ->
+    let lh_expr = get_seq_expr lh_expr in
+    let rh_expr = get_seq_expr rh_expr in
+    is_expr lh_expr rh_expr, pos
+  | `Binary(lh_expr, ("is not", pos), rh_expr) ->
+    let lh_expr = get_seq_expr lh_expr in
+    let rh_expr = get_seq_expr rh_expr in
+    uop_expr "!" @@ is_expr lh_expr rh_expr, pos
   | `Binary(lh_expr, (op, pos), rh_expr) ->
     let lh_expr = get_seq_expr lh_expr in
     let rh_expr = get_seq_expr rh_expr in
