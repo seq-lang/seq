@@ -40,7 +40,7 @@
 %token <Ast.pos_t> DEF RETURN YIELD EXTERN                    /* functions */
 %token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND                   /* types */
 %token <Ast.pos_t> IMPORT FROM GLOBAL                         /* variables */
-%token <Ast.pos_t> PRINT PASS ASSERT                          /* keywords */
+%token <Ast.pos_t> PRINT PASS ASSERT DEL                      /* keywords */
 %token <Ast.pos_t> TRUE FALSE NONE                            /* booleans */
 
 /* operators */
@@ -80,6 +80,7 @@ atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
   | tuple   { `Tuple $1 }
   | dynlist { `List $1 }
   | dict    { `Dict $1 }
+  | set     { `Set $1 }
   | generic { $1 }
   | REGEX 
     { noimp "Regex" (* Regex $1 *) }
@@ -107,13 +108,14 @@ dynlist: /* Lists: [1, 2, 3] */
     { ($2, $1) }
   | LS test comprehension RS 
     { noimp "List"(* ListGenerator ($2, $3) *) }
+set:
+  | LB separated_nonempty_list(COMMA, test) RB 
+    { ($2, $1) }
+  | LB test comprehension RB 
+    { noimp "Set" (* SetGenerator ($2, $3) *) }
 dict: /* Dictionaries and sets: {1: 2, 3: 4}, {1, 2} */
   | LB RB 
     { ([], $1) }
-  | LB separated_nonempty_list(COMMA, test) RB 
-    { noimp "Set" (* Set $2 *) }
-  | LB test comprehension RB 
-    { noimp "Set" (* SetGenerator ($2, $3) *) }
   | LB dictitem comprehension RB 
     { noimp "Dict"(* DictGenerator ($2, $3) *) }
   | LB separated_nonempty_list(COMMA, dictitem) RB 
@@ -234,6 +236,8 @@ small_statement: /* Simple one-line statements: 5+3, print x */
   | PASS     { `Pass $1 }
   | BREAK    { `Break $1 }
   | CONTINUE { `Continue $1 }
+  | DEL separated_nonempty_list(COMMA, test)
+    { `Del ($2, $1) }
   | PRINT separated_list(COMMA, test)
     { `Print ($2, $1) }
   | RETURN separated_list(COMMA, test)

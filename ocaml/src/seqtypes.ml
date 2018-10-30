@@ -111,12 +111,15 @@ let call_expr expr lst =
 	let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
 	call_expr' expr (CArray.start c_arr) c_len 
 
-let list_expr' = foreign "list_expr" 
-  (seq_type @-> ptr seq_expr @-> size_t @-> returning seq_expr)
-let list_expr typ lst = 
+let lexp name typ lst = 
   let c_arr = CArray.of_list seq_expr lst in
   let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
-  list_expr' typ (CArray.start c_arr) c_len 
+  let fn = foreign name (seq_type @-> ptr seq_expr @-> size_t @-> returning seq_expr) in
+  fn typ (CArray.start c_arr) c_len 
+
+let list_expr = lexp "list_expr"
+let dict_expr = lexp "dict_expr"
+let set_expr = lexp "set_expr"
 
 let partial_expr' = foreign "partial_expr" 
 	(seq_expr @-> ptr seq_expr @-> size_t @-> returning seq_expr)
@@ -143,6 +146,12 @@ let array_lookup_expr = foreign "array_lookup_expr"
 	(seq_expr @-> seq_expr @-> returning seq_expr)
 let array_slice_expr = foreign "array_slice_expr" 
 	(seq_expr @-> seq_expr @-> seq_expr @-> returning seq_expr)
+
+let array_contains_expr = foreign "array_contains_expr"
+  (seq_expr @-> seq_expr @-> returning seq_expr)
+
+let del_index_stmt = foreign "del_index_stmt"
+  (seq_expr @-> seq_expr @-> returning seq_stmt)
 
 let construct_expr' = foreign "construct_expr"
   (seq_type @-> ptr seq_expr @-> size_t @-> returning seq_expr)

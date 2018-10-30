@@ -12,7 +12,7 @@ class AVLNode[`k,`v](key: `k,
       self.right = None
       self.height = -1
   
-   def find(self, k):
+   def find(self, k: `k) -> AVLNode[`k, `v]:
       if k == self.key:
          return self
       elif k < self.key:
@@ -28,7 +28,7 @@ class AVLNode[`k,`v](key: `k,
  
    def find_min(self):
       current = self
-      while current.left is not None:
+      while current.left:
          current = current.left
       return current
  
@@ -99,17 +99,17 @@ class AVL[`k, `v](root: AVLNode[`k, `v]):
    def __init__(self):
       self.root = None
   
-   def find(self, k):
+   def find(self, k) -> AVLNode[`k, `v]:
       if not self.root:
          return None  
       return self.root.find(k)
  
-   def find_min(self):
+   def find_min(self) -> AVLNode[`k, `v]:
       if not self.root:
          return None 
       return self.root.find_min()
  
-   def next_larger(self, k):
+   def next_larger(self, k) -> AVLNode[`k, `v]:
       node = self.find(k)
       return node.next_larger() if node else None
  
@@ -192,6 +192,11 @@ class AVL[`k, `v](root: AVLNode[`k, `v]):
          deleted = node.delete()   
       self.rebalance(deleted.parent)
  
+   def __contains__(self, k):
+      if self.find(k):
+         return True
+      return False
+
    def __setitem__(self, k: `k, v: `v):
       self.insert(k, v)
 
@@ -212,10 +217,26 @@ tree[3] = "hai3"
 tree[5] = "hai5"
 tree[1] = "hai1"
 
-# print tree.find(1).value
+print tree[1]
+print tree.find(1).value
 
-for y in tree:
-   print y[0], y[1]
+print (4 in tree)
+
+ei = {
+   1: "ow", 
+   2: "he", 3: "mmm"
+}
+print ei.get(1, "---")
+print ei.get(5, "---")
+print (3 in ei)
+
+for i in ei: print i
+
+del ei[2]
+for i in ei: print i
+
+# for y in tree:
+#    print y[0], y[1]
 
 # for item in items:
 #    tree.insert(item)

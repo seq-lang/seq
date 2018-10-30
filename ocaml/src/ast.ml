@@ -22,10 +22,10 @@ type expr = [
 
   | `Tuple of expr list * pos_t
   | `List of expr list * pos_t
+  | `Set of expr list * pos_t
   | `Dict of (expr * expr) list * pos_t
   (* | `Generator of expr * expr *)
   (* | `ListGenerator of expr * expr *)
-  (* | `Set of expr list *)
   (* | `SetGenerator of expr * expr *)
   (* | `DictGenerator of (expr * expr) * expr *)
 
@@ -56,6 +56,7 @@ type statement = [
   | `Statements of statement list
   | `Exprs of expr
   | `Assign of expr list * expr list * bool * pos_t
+  | `Del of expr list * pos_t
   | `Print of expr list * pos_t
   | `Return of expr option * pos_t
   | `Yield of expr option * pos_t
@@ -115,6 +116,7 @@ let rec prn_expr ?prn_pos e =
   | `Generic(i, pos) -> sprintf "%s" i, pos
   | `Tuple(els, pos) -> sprintf "Tuple(%s)" (sci els prn_expr), pos
   | `List(els, pos)  -> sprintf "List(%s)" (sci els prn_expr), pos
+  | `Set(els, pos)   -> sprintf "Set(%s)" (sci els prn_expr), pos
   | `Dict(els, pos)  -> sprintf "Dict(%s)" (sci els (fun (a, b) -> 
                         sprintf "%s:%s" (prn_expr a) (prn_expr b))), 
                        pos
@@ -191,6 +193,8 @@ let rec prn_stmt ?prn_pos level st =
       (sci rhs prn_expr), Some pos
   | `Print(exprs, pos) -> 
     sprintf "Print[%s]" (sci exprs prn_expr), Some pos
+  | `Del(exprs, pos) -> 
+    sprintf "Del[%s]" (sci exprs prn_expr), Some pos
   | `Yield(expr, pos) -> 
     sprintf "Yield[%s]" (Option.value_map expr ~default:"" ~f:prn_expr), Some pos
   | `Return(expr, pos) -> 

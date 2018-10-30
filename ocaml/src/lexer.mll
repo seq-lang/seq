@@ -141,6 +141,7 @@ and read state = parse
       | "typeof"   -> P.TYPEOF     (cur_pos state lexbuf)
       | "extend"   -> P.EXTEND     (cur_pos state lexbuf)
       | "extern"   -> P.EXTERN     (cur_pos state lexbuf)
+      | "del"      -> P.DEL        (cur_pos state lexbuf)
       | "None"     -> P.NONE       (cur_pos state lexbuf)
       | "is"       -> P.IS         ("is", cur_pos state lexbuf)
       | _          -> P.ID         (id, cur_pos state lexbuf)

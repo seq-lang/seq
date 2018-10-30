@@ -115,7 +115,6 @@ let rec get_seq_expr (ctx: Context.t) expr =
   match expr with
   | `Ellipsis _      -> noimp "random ellipsis"
   | `Slice _         -> noimp "random slice"
-  | `Dict _          -> noimp "random dict"
 
   | `None(pos)       -> none_expr (), pos
   | `Bool(b, pos)    -> bool_expr b, pos
@@ -136,6 +135,18 @@ let rec get_seq_expr (ctx: Context.t) expr =
     | Some ([Type t]) -> t
     | _ -> seq_error "list type not found" pos in
     list_expr typ (List.map args ~f:get_seq_expr), pos
+  | `Dict(args, pos) ->
+    let typ = match Hashtbl.find ctx.map "dict" with
+    | Some ([Type t]) -> t
+    | _ -> seq_error "dict type not found" pos in
+    let args = List.fold ~init:[] ~f:(fun acc (x, y) -> y::x::acc) args
+      |> List.rev in
+    dict_expr typ (List.map args ~f:get_seq_expr), pos
+  | `Set(args, pos) ->
+    let typ = match Hashtbl.find ctx.map "set" with
+    | Some ([Type t]) -> t
+    | _ -> seq_error "set type not found" pos in
+    set_expr typ (List.map args ~f:get_seq_expr), pos
   | `TypeOf(_, _) ->
     noimp "TypeOf"
     (* let expr = get_seq_expr expr in
@@ -156,6 +167,14 @@ let rec get_seq_expr (ctx: Context.t) expr =
     let lh_expr = get_seq_expr lh_expr in
     let rh_expr = get_seq_expr rh_expr in
     uop_expr "!" @@ is_expr lh_expr rh_expr, pos
+  | `Binary(lh_expr, ("in", pos), rh_expr) ->
+    let lh_expr = get_seq_expr lh_expr in
+    let rh_expr = get_seq_expr rh_expr in
+    array_contains_expr lh_expr rh_expr, pos
+  | `Binary(lh_expr, ("not in", pos), rh_expr) ->
+    let lh_expr = get_seq_expr lh_expr in
+    let rh_expr = get_seq_expr rh_expr in
+    uop_expr "!" @@ array_contains_expr lh_expr rh_expr, pos
   | `Binary(lh_expr, (op, pos), rh_expr) ->
     let lh_expr = get_seq_expr lh_expr in
     let rh_expr = get_seq_expr rh_expr in
@@ -338,6 +357,15 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
       let stmt = ps |> get_seq_expr ctx |> print_stmt in
       ignore @@ finalize_stmt stmt pos);
     `String("\n", pos) |> get_seq_expr ctx |> print_stmt, pos
+  | `Del ([`Index(lhs, [rhs], _)], pos) ->
+    let lhs_expr = get_seq_expr ctx lhs in
+    let rhs_expr = get_seq_expr ctx rhs in
+    del_index_stmt lhs_expr rhs_expr, pos
+  | `Del ([_], pos) ->
+    seq_error "cannot del non-index expression" pos
+  | `Del (exprs, pos) ->
+    List.iter exprs ~f:(fun ex -> get_seq_stmt @@ `Del([ex], pos));
+    pass_stmt (), pos
   | `Return (None, pos) ->
     return_stmt (Ctypes.null), pos
   | `Return (Some ret_expr, pos) ->
