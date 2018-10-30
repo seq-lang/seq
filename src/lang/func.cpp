@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 BaseFunc::BaseFunc() :
-    module(nullptr), preambleBlock(nullptr), func(nullptr)
+    parent(nullptr), module(nullptr), preambleBlock(nullptr), func(nullptr)
 {
 }
 
@@ -33,6 +33,11 @@ Function *BaseFunc::getFunc()
 {
 	assert(func);
 	return func;
+}
+
+void BaseFunc::setEnclosingClass(types::Type *parent)
+{
+	this->parent = parent;
 }
 
 BaseFunc *BaseFunc::clone(Generic *ref)
@@ -91,14 +96,31 @@ void Func::sawYield(Yield *yield)
 	outType = types::GenType::get(outType);
 }
 
-static std::string getFuncName(std::string& name, bool external=false)
+std::string Func::getMangledFuncName()
 {
 	if (external)
 		return name;
 
-	static int idx = 1;
-	return name.empty() ? ("func." + std::to_string(idx++)) :
-	                      (name + "." + std::to_string(idx++));
+	std::string mangled = name;
+
+	if (numGenerics() > 0) {
+		mangled += "[";
+		for (unsigned i = 0; i < numGenerics(); i++) {
+			mangled += getGeneric(i)->getName();
+			if (i < numGenerics() - 1)
+				mangled += ",";
+		}
+		mangled += "]";
+	}
+
+	if (parent)
+		mangled = parent->getName() + "::" + mangled;
+
+	types::FuncType *funcType = getFuncType();
+	for (unsigned i = 0; i < funcType->numBaseTypes(); i++)
+		mangled += "." + funcType->getBaseType(i)->getName();
+
+	return mangled;
 }
 
 void Func::resolveTypes()
@@ -143,22 +165,25 @@ void Func::codegen(Module *module)
 		return;
 
 	resolveTypes();
-
 	LLVMContext& context = module->getContext();
-
 	std::vector<Type *> types;
 	for (auto *type : inTypes)
 		types.push_back(type->getLLVMType(context));
 
-	func = cast<Function>(
-	         module->getOrInsertFunction(getFuncName(name, external),
-	                                     FunctionType::get(outType->getLLVMType(context), types, false)));
+	std::string mangledName = getMangledFuncName();
+	auto *cached = module->getFunction(mangledName);
+	if (cached) {
+		func = cast<Function>(cached);
+		return;
+	}
+
+	FunctionType *funcTypeLLVM = FunctionType::get(outType->getLLVMType(context), types, false);
+	func = cast<Function>(module->getOrInsertFunction(mangledName, funcTypeLLVM));
 
 	if (external)
 		return;
 
 	func->setLinkage(GlobalValue::PrivateLinkage);
-
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
 
@@ -360,11 +385,6 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	}
 }
 
-bool Func::isExternal() const
-{
-	return external;
-}
-
 Var *Func::getArgVar(std::string name)
 {
 	auto iter = argVars.find(name);
@@ -432,6 +452,7 @@ Func *Func::clone(Generic *ref)
 		argVarsCloned.insert({e.first, e.second->clone(ref)});
 	x->argVars = argVarsCloned;
 
+	if (parent) x->parent = parent->clone(ref);
 	if (ret) x->ret = ret->clone(ref);
 	if (yield) x->yield = yield->clone(ref);
 	x->gen = gen;

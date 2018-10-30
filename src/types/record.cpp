@@ -3,30 +3,14 @@
 using namespace seq;
 using namespace llvm;
 
-static std::string getNameFromTypes(std::vector<types::Type *> types)
-{
-	std::string name = "(";
-
-	for (unsigned i = 0; i < types.size(); i++) {
-		name += types[i]->getName();
-		if (i < types.size() - 1)
-			name += ", ";
-	}
-
-	name += ")";
-	return name;
-}
-
 types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names) :
-    Type(getNameFromTypes(types), BaseType::get()),
-    types(std::move(types)), names(std::move(names))
+    Type("<record>", BaseType::get()), types(std::move(types)), names(std::move(names))
 {
 	assert(this->names.empty() || this->names.size() == this->types.size());
 }
 
 types::RecordType::RecordType(std::initializer_list<Type *> types) :
-    Type(getNameFromTypes(types), BaseType::get()),
-    types(types), names()
+    Type("<record>", BaseType::get()), types(types), names()
 {
 }
 
@@ -38,6 +22,20 @@ bool types::RecordType::empty() const
 std::vector<types::Type *> types::RecordType::getTypes()
 {
 	return types;
+}
+
+std::string types::RecordType::getName() const
+{
+	std::string name = "(";
+
+	for (unsigned i = 0; i < types.size(); i++) {
+		name += types[i]->getName();
+		if (i < types.size() - 1)
+			name += ",";
+	}
+
+	name += ")";
+	return name;
 }
 
 Value *types::RecordType::defaultValue(BasicBlock *block)
@@ -193,6 +191,6 @@ types::RecordType *types::RecordType::clone(Generic *ref)
 
 	x->types = typesCloned;
 	x->names = names;
-	x->name = getNameFromTypes(typesCloned);
+	x->name = name;
 	return x;
 }

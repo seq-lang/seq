@@ -14,7 +14,18 @@ types::Type::Type(std::string name, types::Type *parent, bool abstract) :
 
 std::string types::Type::getName() const
 {
-	return name;
+	std::string nameFull = name;
+	if (numBaseTypes() > 0) {
+		nameFull += "[";
+		for (unsigned i = 0; i < numBaseTypes(); i++) {
+			nameFull += getBaseType(i)->getName();
+			if (i < numBaseTypes() - 1)
+				nameFull += ",";
+		}
+		nameFull += "]";
+	}
+
+	return nameFull;
 }
 
 types::Type *types::Type::getParent() const
@@ -237,12 +248,14 @@ void types::Type::addMethod(std::string name, BaseFunc *func, bool force)
 			throw exc::SeqException("cannot override __new__");
 
 		// insert at the start so we always find the latest-added alternative first
+		func->setEnclosingClass(this);
 		getVTable().overloads.insert(getVTable().overloads.begin(), {name, func});
 		return;
 	}
 
 	if (hasMethod(name)) {
 		if (force) {
+			func->setEnclosingClass(this);
 			getVTable().methods[name] = func;
 			return;
 		} else {
@@ -253,6 +266,7 @@ void types::Type::addMethod(std::string name, BaseFunc *func, bool force)
 	if (getVTable().fields.find(name) != getVTable().fields.end())
 		throw exc::SeqException("field '" + name + "' conflicts with method");
 
+	func->setEnclosingClass(this);
 	getVTable().methods.insert({name, func});
 }
 

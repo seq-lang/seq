@@ -22,6 +22,7 @@ namespace seq {
 			bool empty() const;
 			std::vector<Type *> getTypes();
 
+			std::string getName() const override;
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initOps() override;

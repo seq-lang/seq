@@ -3,24 +3,8 @@
 using namespace seq;
 using namespace llvm;
 
-static std::string getFuncName(std::vector<types::Type *> inTypes, types::Type *outType)
-{
-	std::string name = "((";
-	for (unsigned i = 0; i < inTypes.size(); i++) {
-		name += inTypes[i]->getName();
-		if (i < inTypes.size() - 1)
-			name += ", ";
-	}
-
-	name += ") -> ";
-	name += outType->getName();
-	name += ")";
-	return name;
-}
-
 types::FuncType::FuncType(std::vector<types::Type *> inTypes, types::Type *outType) :
-    Type(getFuncName(inTypes, outType), BaseType::get()),
-    inTypes(std::move(inTypes)), outType(outType)
+    Type("function", BaseType::get()), inTypes(std::move(inTypes)), outType(outType)
 {
 }
 
@@ -108,7 +92,7 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 }
 
 types::GenType::GenType(Type *outType) :
-    Type("generator[" + outType->getName() + "]", BaseType::get()), outType(outType)
+    Type("generator", BaseType::get()), outType(outType)
 {
 	types::VoidType *voidType = types::VoidType::get();
 	types::Type *type = this->outType->is(voidType) ? (types::Type *)voidType :
@@ -255,7 +239,7 @@ types::GenType *types::GenType::clone(Generic *ref)
 }
 
 types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::Type *> callTypes) :
-    Type("<partial call type>", BaseType::get()), callee(callee), callTypes(std::move(callTypes))
+    Type("partial", BaseType::get()), callee(callee), callTypes(std::move(callTypes))
 {
 	std::vector<types::Type *> types;
 	types.push_back(this->callee);
@@ -321,6 +305,16 @@ bool types::PartialFuncType::is(types::Type *type) const
 {
 	auto *p = dynamic_cast<types::PartialFuncType *>(type);
 	return p && nullMatch(callTypes, p->callTypes) && types::is(contents, p->contents);
+}
+
+unsigned types::PartialFuncType::numBaseTypes() const
+{
+	return contents->numBaseTypes();
+}
+
+types::Type *types::PartialFuncType::getBaseType(unsigned idx) const
+{
+	return contents->getBaseType(idx);
 }
 
 types::Type *types::PartialFuncType::getCallType(const std::vector<types::Type *>& inTypes)

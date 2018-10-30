@@ -37,7 +37,7 @@ std::string types::RefType::getName() const
 	for (unsigned i = 0; i < numGenerics(); i++) {
 		name += getGeneric(i)->getName();
 		if (i < numGenerics() - 1)
-			name += ", ";
+			name += ",";
 	}
 
 	name += "]";

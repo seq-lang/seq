@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::PtrType::PtrType(Type *baseType) :
-    Type("ptr[" + baseType->getName() + "]", BaseType::get()), baseType(baseType)
+    Type("ptr", BaseType::get()), baseType(baseType)
 {
 }
 

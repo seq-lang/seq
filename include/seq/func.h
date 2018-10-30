@@ -16,6 +16,7 @@ namespace seq {
 
 	class BaseFunc {
 	protected:
+		types::Type *parent;
 		llvm::Module *module;
 		llvm::BasicBlock *preambleBlock;
 		llvm::Function *func;
@@ -27,6 +28,7 @@ namespace seq {
 		llvm::BasicBlock *getPreamble() const;
 		virtual types::FuncType *getFuncType() const;
 		virtual llvm::Function *getFunc();
+		virtual void setEnclosingClass(types::Type *parent);
 		virtual BaseFunc *clone(Generic *ref);
 	};
 
@@ -51,6 +53,8 @@ namespace seq {
 		llvm::BasicBlock *cleanup;
 		llvm::BasicBlock *suspend;
 		llvm::BasicBlock *exit;
+
+		std::string getMangledFuncName();
 	public:
 		Func();
 		Block *getBlock();
@@ -71,7 +75,6 @@ namespace seq {
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block);
 
-		bool isExternal() const;
 		Var *getArgVar(std::string name);
 		types::FuncType *getFuncType() const override;
 
