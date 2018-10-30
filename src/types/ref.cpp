@@ -73,6 +73,12 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 
 std::vector<types::Type *> types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes)
 {
+	// deal with custom __init__s:
+	for (auto& magic : vtable.overloads) {
+		if (magic.name == "__init__")
+			throw exc::SeqException("cannot deduce type parameters with custom __init__ methods");
+	}
+
 	return Generic::deduceTypesFromArgTypes(contents->getTypes(), argTypes);
 }
 
