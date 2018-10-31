@@ -314,6 +314,24 @@ static std::string argsVecToStr(const std::vector<types::Type *>& args)
 	return result;
 }
 
+static types::Type *callType(BaseFunc *func, std::vector<types::Type *> args)
+{
+	auto *f = dynamic_cast<Func *>(func);
+	if (f && f->numGenerics() > 0)
+		throw exc::SeqException("magic method overrides cannot be generic (" + f->genericName() + ")");
+
+	types::FuncType *funcType = func->getFuncType();
+	if (args.size() != funcType->numBaseTypes() - 1)
+		return nullptr;
+
+	for (unsigned i = 1; i < funcType->numBaseTypes(); i++) {
+		if (!types::is(args[i-1], funcType->getBaseType(i)))
+			return nullptr;
+	}
+
+	return funcType->getBaseType(0);
+}
+
 types::Type *types::Type::magicOut(const std::string& name, std::vector<types::Type *> args)
 {
 	initOps();
@@ -323,18 +341,9 @@ types::Type *types::Type::magicOut(const std::string& name, std::vector<types::T
 		if (magic.name != name)
 			continue;
 
-		try {
-			std::vector<Expr *> argExprs;
-			for (auto *arg : args)
-				argExprs.push_back(new ValueExpr(arg, nullptr));
-
-			FuncExpr func(magic.func);
-			CallExpr call(&func, argExprs);
-			call.resolveTypes();
-			return call.getType();
-		} catch (exc::SeqException&) {
-			// maybe a later method will match our argument types, so continue
-		}
+		types::Type *type = callType(magic.func, args);
+		if (type)
+			return type;
 	}
 	args.erase(args.begin());
 
@@ -360,7 +369,7 @@ Value *types::Type::callMagic(const std::string& name,
 		if (magic.name != name)
 			continue;
 
-		try {
+		if (callType(magic.func, argTypes)) {
 			std::vector<Expr *> argExprs;
 			assert(argTypes.size() == args.size());
 			for (unsigned i = 0; i < args.size(); i++)
@@ -370,8 +379,6 @@ Value *types::Type::callMagic(const std::string& name,
 			CallExpr call(&func, argExprs);
 			call.resolveTypes();
 			return call.codegen(nullptr, block);
-		} catch (exc::SeqException&) {
-			// maybe a later method will match our argument types, so continue
 		}
 	}
 	argTypes.erase(argTypes.begin());
