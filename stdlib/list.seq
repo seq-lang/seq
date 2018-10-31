@@ -4,10 +4,12 @@ class list[`t](arr: array[`t], len: int):
         self.len = len
 
     def __init__(self: list[`t], cap: int):
-        return list[`t](array[`t](cap), 0)
+        self.arr = array[`t](cap)
+        self.len = 0
 
     def __init__(self: list[`t]):
-        return list[`t](10)
+        self.arr = array[`t](10)
+        self.len = 0
 
     def __len__(self: list[`t]):
         return self.len
