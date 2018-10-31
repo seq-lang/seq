@@ -1,6 +1,7 @@
 l = [1,2,3,4]
 l.pop()
 l.append(5)
+del l[0]
 
 for a in l:
     print a
@@ -12,4 +13,4 @@ for i in range(0,10):
 for v in d.items():
     print v[0],v[1]
 
-print d.__contains__(5)
+print 5 in d

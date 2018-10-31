@@ -67,7 +67,7 @@ SEQ_FUNC void seq_print_float(double f)
 
 SEQ_FUNC void seq_print_bool(bool b)
 {
-	cout << (b ? "true" : "false");
+	cout << (b ? "True" : "False");
 }
 
 SEQ_FUNC void seq_print_byte(char c)
@@ -87,7 +87,10 @@ SEQ_FUNC void seq_print_seq(seq_t seq)
 
 SEQ_FUNC void seq_print_ptr(void *p)
 {
-	cout << p;
+	if (p)
+		cout << p;
+	else
+		cout << "None";
 }
 
 
