@@ -16,7 +16,7 @@ namespace seq {
 
 	class BaseFunc {
 	protected:
-		types::Type *parent;
+		types::Type *parentType;
 		llvm::Module *module;
 		llvm::BasicBlock *preambleBlock;
 		llvm::Function *func;
@@ -28,7 +28,7 @@ namespace seq {
 		llvm::BasicBlock *getPreamble() const;
 		virtual types::FuncType *getFuncType() const;
 		virtual llvm::Function *getFunc();
-		virtual void setEnclosingClass(types::Type *parent);
+		virtual void setEnclosingClass(types::Type *parentType);
 		virtual BaseFunc *clone(Generic *ref);
 	};
 
@@ -43,6 +43,7 @@ namespace seq {
 		std::vector<std::string> argNames;
 		std::map<std::string, Var *> argVars;
 
+		Func *parentFunc;
 		Return *ret;
 		Yield *yield;
 		bool resolvingTypes;  // make sure we don't keep resolving recursively
@@ -63,6 +64,7 @@ namespace seq {
 		Func *realize(std::vector<types::Type *> types);
 		std::vector<types::Type *> deduceTypesFromArgTypes(std::vector<types::Type *> argTypes);
 
+		void setEnclosingFunc(Func *parentFunc);
 		void sawReturn(Return *ret);
 		void sawYield(Yield *yield);
 

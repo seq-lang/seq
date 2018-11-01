@@ -191,6 +191,5 @@ types::RecordType *types::RecordType::clone(Generic *ref)
 
 	x->types = typesCloned;
 	x->names = names;
-	x->name = name;
 	return x;
 }

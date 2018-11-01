@@ -298,6 +298,11 @@ FOREIGN Var *get_func_arg(Func *f, const char *arg)
 	return f->getArgVar(string(arg));
 }
 
+FOREIGN void set_func_enclosing(Func *f, Func *outer)
+{
+	f->setEnclosingFunc(outer);
+}
+
 FOREIGN void set_func_return(Func *f, Return *ret)
 {
 	f->sawReturn(ret);

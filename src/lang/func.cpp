@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 BaseFunc::BaseFunc() :
-    parent(nullptr), module(nullptr), preambleBlock(nullptr), func(nullptr)
+    parentType(nullptr), module(nullptr), preambleBlock(nullptr), func(nullptr)
 {
 }
 
@@ -35,9 +35,9 @@ Function *BaseFunc::getFunc()
 	return func;
 }
 
-void BaseFunc::setEnclosingClass(types::Type *parent)
+void BaseFunc::setEnclosingClass(types::Type *parentType)
 {
-	this->parent = parent;
+	this->parentType = parentType;
 }
 
 BaseFunc *BaseFunc::clone(Generic *ref)
@@ -46,8 +46,8 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 }
 
 Func::Func() :
-    BaseFunc(), Generic(false), SrcObject(), external(false), name(), inTypes(),
-    outType(types::Void), scope(new Block()), argNames(), argVars(), ret(nullptr), yield(nullptr),
+    BaseFunc(), Generic(false), SrcObject(), external(false), name(), inTypes(), outType(types::Void),
+    scope(new Block()), argNames(), argVars(), parentFunc(nullptr), ret(nullptr), yield(nullptr),
     resolvingTypes(false), gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
@@ -78,6 +78,11 @@ std::vector<types::Type *> Func::deduceTypesFromArgTypes(std::vector<types::Type
 	return Generic::deduceTypesFromArgTypes(inTypes, argTypes);
 }
 
+void Func::setEnclosingFunc(Func *parentFunc)
+{
+	this->parentFunc = parentFunc;
+}
+
 void Func::sawReturn(Return *ret)
 {
 	if (this->ret)
@@ -96,10 +101,21 @@ void Func::sawYield(Yield *yield)
 	outType = types::GenType::get(outType);
 }
 
+/*
+ * Mangling rules:
+ *   - Base function name is mangled as "<name>[<generic type 1>,<generic type 2>,(...),<generic type N>]" or
+ *     simply "<name>" if function is not generic.
+ *   - If function is nested in function g, "<mangled name of g>::" is prepended to the name.
+ *   - If function is method of class C, "<type name of C>::" is prepended to the name.
+ *   - ".<out type>.<arg type 1>.<arg type 2>.(...).<arg type N>" is appended to the name.
+ */
 std::string Func::getMangledFuncName()
 {
 	if (external)
 		return name;
+
+	// a nested function can't be a class method:
+	assert(!(parentType && parentFunc));
 
 	std::string mangled = name;
 
@@ -113,8 +129,11 @@ std::string Func::getMangledFuncName()
 		mangled += "]";
 	}
 
-	if (parent)
-		mangled = parent->getName() + "::" + mangled;
+	if (parentFunc)
+		mangled = parentFunc->getMangledFuncName() + "::" + mangled;
+
+	if (parentType)
+		mangled = parentType->getName() + "::" + mangled;
 
 	types::FuncType *funcType = getFuncType();
 	for (unsigned i = 0; i < funcType->numBaseTypes(); i++)
@@ -452,7 +471,8 @@ Func *Func::clone(Generic *ref)
 		argVarsCloned.insert({e.first, e.second->clone(ref)});
 	x->argVars = argVarsCloned;
 
-	if (parent) x->parent = parent->clone(ref);
+	if (parentType) x->parentType = parentType->clone(ref);
+	if (parentFunc) x->parentFunc = parentFunc->clone(ref);
 	if (ret) x->ret = ret->clone(ref);
 	if (yield) x->yield = yield->clone(ref);
 	x->gen = gen;
