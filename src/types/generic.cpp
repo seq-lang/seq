@@ -249,26 +249,22 @@ size_t types::GenericType::size(Module *module) const
 
 types::RecordType *types::GenericType::asRec()
 {
-	ensure();
-	return type->asRec();
+	return type ? type->asRec() : nullptr;
 }
 
 types::RefType *types::GenericType::asRef()
 {
-	ensure();
-	return type->asRef();
+	return type ? type->asRef() : nullptr;
 }
 
 types::GenType *types::GenericType::asGen()
 {
-	ensure();
-	return type->asGen();
+	return type ? type->asGen() : nullptr;
 }
 
 types::OptionalType *types::GenericType::asOpt()
 {
-	ensure();
-	return type->asOpt();
+	return type ? type->asOpt() : nullptr;
 }
 
 types::GenericType *types::GenericType::get()
