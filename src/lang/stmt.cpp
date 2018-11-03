@@ -140,7 +140,7 @@ void Stmt::setContinues(BasicBlock *block)
 		inst->setSuccessor(0, block);
 }
 
-void Stmt::codegen(BasicBlock *&block)
+void Stmt::codegen(BasicBlock*& block)
 {
 	try {
 		return codegen0(block);

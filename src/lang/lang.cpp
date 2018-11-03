@@ -311,6 +311,12 @@ Block *If::addElse()
 	return branch;
 }
 
+Block *If::getBlock(unsigned int idx)
+{
+	assert(idx < branches.size());
+	return branches[idx];
+}
+
 If *If::clone(Generic *ref)
 {
 	if (ref->seenClone(this))

@@ -16,7 +16,7 @@ void Expr::resolveTypes()
 {
 }
 
-Value *Expr::codegen(BaseFunc *base, BasicBlock *&block)
+Value *Expr::codegen(BaseFunc *base, BasicBlock*& block)
 {
 	try {
 		return codegen0(base, block);
@@ -203,7 +203,7 @@ void ListExpr::resolveTypes()
 		elem->resolveTypes();
 }
 
-Value *ListExpr::codegen0(BaseFunc *base, BasicBlock *&block)
+Value *ListExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	types::Type *type = getType();
 	assert(!elems.empty());
@@ -260,7 +260,7 @@ void SetExpr::resolveTypes()
 		elem->resolveTypes();
 }
 
-Value *SetExpr::codegen0(BaseFunc *base, BasicBlock *&block)
+Value *SetExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	types::Type *type = getType();
 	assert(!elems.empty());
@@ -317,7 +317,7 @@ void DictExpr::resolveTypes()
 		elem->resolveTypes();
 }
 
-Value *DictExpr::codegen0(BaseFunc *base, BasicBlock *&block)
+Value *DictExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	types::Type *type = getType();
 	assert(!elems.empty() && elems.size() % 2 == 0);
@@ -366,6 +366,67 @@ DictExpr *DictExpr::clone(Generic *ref)
 	for (auto *elem : elems)
 		elemsCloned.push_back(elem->clone(ref));
 	return new DictExpr(elemsCloned, dictType->clone(ref));
+}
+
+ListCompExpr::ListCompExpr(Expr *val, For *body, types::Type *listType) :
+    Expr(), val(val), body(body), listType(listType)
+{
+}
+
+void ListCompExpr::resolveTypes()
+{
+	body->resolveTypes();
+	val->resolveTypes();
+}
+
+Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	types::Type *type = getType();
+	ConstructExpr construct(type, {});
+	Value *list = construct.codegen(base, block);
+	ValueExpr v(type, list);
+
+	// find the innermost block, where we'll be adding to the collection
+	Block *inner = body->getBlock();
+	while (!inner->stmts.empty()) {
+		Stmt *stmt = inner->stmts.back();
+		auto *next1 = dynamic_cast<For *>(stmt);
+		auto *next2 = dynamic_cast<If *>(stmt);
+
+		if (next1) {
+			inner = next1->getBlock();
+		} else if (next2) {
+			inner = next2->getBlock();
+		} else {
+			break;
+		}
+	}
+
+	GetElemExpr append(&v, "append");
+	CallExpr call(&append, {val});
+	ExprStmt callStmt(&call);
+	callStmt.resolveTypes();
+
+	inner->stmts.push_back(&callStmt);
+	body->codegen(block);
+	inner->stmts.pop_back();
+
+	return list;
+}
+
+types::Type *ListCompExpr::getType0() const
+{
+	types::Type *elemType = val->getType();
+	auto *generic = dynamic_cast<Generic *>(listType);
+	assert(generic);
+	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({elemType}));
+	assert(realized);
+	return realized;
+}
+
+ListCompExpr *ListCompExpr::clone(Generic *ref)
+{
+	return new ListCompExpr(val->clone(ref), body->clone(ref), listType->clone(ref));
 }
 
 VarExpr::VarExpr(Var *var) : var(var)
@@ -1305,7 +1366,7 @@ void MatchExpr::resolveTypes()
 		expr->resolveTypes();
 }
 
-Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block)
+Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	assert(!patterns.empty());
 	assert(patterns.size() == exprs.size() && value);

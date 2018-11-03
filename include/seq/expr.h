@@ -133,6 +133,21 @@ namespace seq {
 		DictExpr *clone(Generic *ref) override;
 	};
 
+	class For;
+
+	class ListCompExpr : public Expr {
+	private:
+		Expr *val;
+		For *body;
+		types::Type *listType;
+	public:
+		explicit ListCompExpr(Expr *val, For *body, types::Type *listType);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		ListCompExpr *clone(Generic *ref) override;
+	};
+
 	class VarExpr : public Expr {
 	private:
 		Var *var;

@@ -106,6 +106,7 @@ namespace seq {
 		If();
 		Block *addCond(Expr *cond);
 		Block *addElse();
+		Block *getBlock(unsigned idx=0);
 		void resolveTypes() override;
 		void codegen0(llvm::BasicBlock*& block) override;
 		If *clone(Generic *ref) override;
