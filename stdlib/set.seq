@@ -2,7 +2,7 @@ class _set_entry[`k](k: `k, hash: int, next: _set_entry[`k]):
     def __init__(self: _set_entry[`k], k: `k, hash: int):
         self.k = k
         self.hash = hash
-        self.next = self.__none__()
+        self.next = None
 
     def eq(self: _set_entry[`k], k: `k, hash: int):
         return self.hash == hash and self.k == k
@@ -10,8 +10,8 @@ class _set_entry[`k](k: `k, hash: int, next: _set_entry[`k]):
 class set[`k](table: array[_set_entry[`k]], size: int):
     def _make_table(len: int):
         table = array[_set_entry[`k]](len)
-        for i in range(0, len):
-            table[i] = table[i].__none__()
+        for i in range(len):
+            table[i] = None
         return table
 
     def _find(self: set[`k], k: `k, h: int):
@@ -25,7 +25,7 @@ class set[`k](table: array[_set_entry[`k]], size: int):
 
     def _entry_iter(self: set[`k]) -> _set_entry[`k]:
         table = self.table
-        for i in range(0, table.len):
+        for i in range(table.len):
             e = table[i]
             while e:
                 yield e
@@ -61,7 +61,7 @@ class set[`k](table: array[_set_entry[`k]], size: int):
         h = hash(k)
         idx = h & (self.table.len - 1)
         e = self.table[idx]
-        prev = e.__none__()
+        prev = None
 
         while e:
             if e.eq(k, h):

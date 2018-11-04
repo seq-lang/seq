@@ -180,10 +180,6 @@ void types::RefType::initOps()
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},
-
-		{"__none__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
-			return defaultValue(b.GetInsertBlock());
-		}},
 	};
 }
 

@@ -189,7 +189,17 @@ types::RecordType *types::RecordType::clone(Generic *ref)
 	for (auto *type : types)
 		typesCloned.push_back(type->clone(ref));
 
+	std::vector<MagicOverload> overloadsCloned;
+	for (auto& magic : getVTable().overloads)
+		overloadsCloned.push_back({magic.name, magic.func->clone(ref)});
+
+	std::map<std::string, BaseFunc *> methodsCloned;
+	for (auto& method : getVTable().methods)
+		methodsCloned.insert({method.first, method.second->clone(ref)});
+
 	x->types = typesCloned;
 	x->names = names;
+	x->getVTable().overloads = overloadsCloned;
+	x->getVTable().methods = methodsCloned;
 	return x;
 }

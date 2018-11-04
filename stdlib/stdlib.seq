@@ -1,8 +1,18 @@
-def range(a: int, b: int):
-    i = a
-    while i < b:
-        yield i
-        i += 1
+type range(lo: int, hi: int)
+extend range:
+    def __init__(self: range, lo: int, hi: int) -> range:
+        return (lo, hi)
+
+    def __init__(self: range, hi: int) -> range:
+        return (0, hi)
+
+    def __iter__(self: range):
+        lo = self.lo
+        hi = self.hi
+        i = lo
+        while i < hi:
+            yield i
+            i += 1
 
 def len(x):
     return x.__len__()

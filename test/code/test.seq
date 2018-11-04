@@ -7,7 +7,7 @@ for a in l:
     print a
 
 d = dict[int,int]()
-for i in range(0,10):
+for i in range(10,20):
     d[i] = 2*i + 1
 
 for v in d.items():

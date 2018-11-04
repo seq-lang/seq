@@ -3,7 +3,7 @@ class _dict_entry[`k,`v](k: `k, v: `v, hash: int, next: _dict_entry[`k,`v]):
         self.k = k
         self.v = v
         self.hash = hash
-        self.next = self.__none__()
+        self.next = None
 
     def eq(self: _dict_entry[`k,`v], k: `k, hash: int):
         return self.hash == hash and self.k == k
@@ -11,8 +11,8 @@ class _dict_entry[`k,`v](k: `k, v: `v, hash: int, next: _dict_entry[`k,`v]):
 class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
     def _make_table(len: int):
         table = array[_dict_entry[`k,`v]](len)
-        for i in range(0, len):
-            table[i] = table[i].__none__()
+        for i in range(len):
+            table[i] = None
         return table
 
     def _find(self: dict[`k,`v], k: `k, h: int):
@@ -26,7 +26,7 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
 
     def _entry_iter(self: dict[`k,`v]):
         table = self.table
-        for i in range(0, table.len):
+        for i in range(table.len):
             e = table[i]
             while e:
                 yield e
@@ -69,7 +69,7 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
         h = hash(k)
         idx = h & (self.table.len - 1)
         e = self.table[idx]
-        prev = e.__none__()
+        prev = None
 
         while e:
             if e.eq(k, h):
