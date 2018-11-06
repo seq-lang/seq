@@ -24,13 +24,13 @@ type expr = [
   | `List of expr list * pos_t
   | `Set of expr list * pos_t
   | `Dict of (expr * expr) list * pos_t
+  | `ListGenerator of expr * expr * pos_t
+  | `DictGenerator of (expr * expr) * expr * pos_t
   (* | `Generator of expr * expr *)
-  (* | `ListGenerator of expr * expr *)
   (* | `SetGenerator of expr * expr *)
-  (* | `DictGenerator of (expr * expr) * expr *)
 
   | `IfExpr of expr * expr * expr * pos_t
-  (* | `Lambda of vararg list * expr  *)
+  | `Lambda of ident list * expr * pos_t
 
   | `Pipe of expr list * pos_t
   | `Unary of ident * expr
@@ -40,13 +40,12 @@ type expr = [
   | `Dot of expr * ident * pos_t
   | `Call of expr * expr list  * pos_t
 
-  (* | `Comprehension of expr list * expr list * expr option *)
-  (* | `ComprehensionIf of expr *)
+  (* var, array, if_cond, next_comprehension *)
+  | `Comprehension of expr * expr * expr option * expr option * pos_t
   | `Ellipsis of pos_t 
 ]
 and arg = [
   | `Arg of ident * expr option 
-  (* | `NamedArg of string * expr *)
 ]
 
 type statement = [
@@ -142,6 +141,16 @@ let rec prn_expr ?prn_pos e =
     let b = Option.value_map b ~default:"" ~f:prn_expr in
     let c = Option.value_map c ~default:"" ~f:prn_expr in
     sprintf "Slice(%s; %s; %s)" a b c, pos
+  | `ListGenerator(r, c, pos) ->
+    sprintf "GenList(%s; %s)" (prn_expr r) (prn_expr c), pos
+  | `DictGenerator((r1, r2), c, pos) ->
+    sprintf "GenDict(%s : %s; %s)" (prn_expr r1) (prn_expr r2) (prn_expr c), pos
+  | `Comprehension(var, iterable, if_cond, next_comprehension, pos) ->
+    sprintf "<< for %s in %s%s %s>>" (prn_expr var) (prn_expr iterable)
+      Option.map if_cond ~default:"" ~f:(sprintf "if %s")
+      Option.map next_comprehension ~default:"" ~f:prn_expr, pos
+  | `Lambda(params, expr, pos) ->
+    sprintf "Lambda(%s; %s)" (sci params prn_expr) (prn_expr expr), pos
   in
   sprintf "%s%s" (prn_pos pos) repr
 

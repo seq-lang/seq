@@ -245,6 +245,15 @@ let rec get_seq_expr (ctx: Context.t) expr =
     end
   | `Tuple(args, pos) ->
     record_expr (List.map args ~f:get_seq_expr), pos
+  | `ListGenerator(expr, generator, pos) ->
+    let typ = match Hashtbl.find ctx.map "list" with
+    | Some ([Type t]) -> t
+    | _ -> seq_error "list type not found" pos in
+    list_comp_expr typ (get_seq_expr expr) (get_seq_expr generator)
+  | `Comprehension(var, iterable, if_cond, next_comprehension, pos) ->
+    begin
+    let var = match var with `Id(var, _) -> var 
+    end
   end
   in
   set_pos expr pos;

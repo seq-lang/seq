@@ -132,7 +132,7 @@ and read state = parse
       | "while"    -> P.WHILE      (cur_pos state lexbuf)
       | "type"     -> P.TYPE       (cur_pos state lexbuf)
       | "default"  -> P.DEFAULT    (cur_pos state lexbuf)
-      (*| "lambda"   -> P.LAMBDA     (cur_pos state lexbuf)*)
+      | "lambda"   -> P.LAMBDA     (cur_pos state lexbuf)
       | "assert"   -> P.ASSERT     (cur_pos state lexbuf)
       | "global"   -> P.GLOBAL     (cur_pos state lexbuf)
       | "import"   -> P.IMPORT     (cur_pos state lexbuf)
