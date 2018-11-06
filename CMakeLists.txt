@@ -1,53 +1,3 @@
-# Google Test download & compile:
-# (adapted from https://github.com/google/googletest/tree/master/googletest)
-# Download and unpack googletest at configure time
-configure_file(cmake/GTest.txt.in googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-                RESULT_VARIABLE result
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-                RESULT_VARIABLE result
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif()
-
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-# Add googletest directly to our build. This defines
-# the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
-                 ${CMAKE_BINARY_DIR}/googletest-build
-                 EXCLUDE_FROM_ALL)
-
-# The gtest/gtest_main targets carry header search path
-# dependencies automatically when using CMake 2.8.11 or
-# later. Otherwise we have to add them here ourselves.
-if (CMAKE_VERSION VERSION_LESS 2.8.11)
-  include_directories("${gtest_SOURCE_DIR}/include")
-endif()
-
-
-# Set up OCaml includes
-find_program(OCAMLFIND NAMES ocamlfind)
-execute_process(COMMAND ${OCAMLFIND} ocamlc -where
-                RESULT_VARIABLE result
-                OUTPUT_VARIABLE OCAML_STDLIB_PATH
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-if (result)
-  message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
-endif()
-
-message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
-include_directories(${OCAML_STDLIB_PATH})
-link_directories(${OCAML_STDLIB_PATH})
-
-
 cmake_minimum_required(VERSION 3.9)
 project(Seq)
 
@@ -123,6 +73,19 @@ target_link_libraries(seq ${LLVM_LIBS} seqrt)
 
 
 # Seq parsing library
+find_program(OCAMLFIND NAMES ocamlfind)
+execute_process(COMMAND ${OCAMLFIND} ocamlc -where
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE OCAML_STDLIB_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (result)
+  message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
+endif()
+
+message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
+include_directories(${OCAML_STDLIB_PATH})
+link_directories(${OCAML_STDLIB_PATH})
+
 if(APPLE)
   set(DUNE_PROFILE "macos-dev")
 else()
@@ -151,6 +114,7 @@ add_custom_command(OUTPUT ${LIB_SEQPARSE}
                    COMMENT "Compiling Seq's OCaml components"
                    VERBATIM)
 add_custom_target(seqparse_target DEPENDS ${LIB_SEQPARSE})
+add_dependencies(seqparse_target seq)
 add_library(seqparse SHARED IMPORTED)
 add_dependencies(seqparse seqparse_target)
 set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
@@ -163,8 +127,6 @@ set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
 # Seq test
-add_executable(seqtest test/main.cpp
-                       test/core/standalonetest.h
-                       test/testhelp.h)
+add_executable(seqtest test/main.cpp)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
-target_link_libraries(seqtest seq seqparse asmrun gtest_main)
+target_link_libraries(seqtest seq seqparse asmrun)
