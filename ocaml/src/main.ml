@@ -279,10 +279,11 @@ and get_list_comprehension_for ?fstmt (ctx: Context.t) typ expr = function
     Context.add ctx for_var_name (Context.Var for_var);
     
     let for_block = get_for_block for_stmt in
-    let ctx = {ctx with block = for_block} in
     let last_block = match if_cond with
-      | None -> for_block
+      | None -> 
+        for_block
       | Some expr ->
+        let ctx = {ctx with block = for_block} in
         let if_expr = get_seq_expr ctx expr in
         let if_stmt = if_stmt () in
         let if_block = get_elif_block if_stmt if_expr in
