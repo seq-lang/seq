@@ -102,7 +102,7 @@ namespace seq {
 		std::vector<Expr *> elems;
 		types::Type *listType;
 	public:
-		explicit ListExpr(std::vector<Expr *> elems, types::Type *listType);
+		ListExpr(std::vector<Expr *> elems, types::Type *listType);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
@@ -114,7 +114,7 @@ namespace seq {
 		std::vector<Expr *> elems;
 		types::Type *setType;
 	public:
-		explicit SetExpr(std::vector<Expr *> elems, types::Type *setType);
+		SetExpr(std::vector<Expr *> elems, types::Type *setType);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
@@ -126,7 +126,7 @@ namespace seq {
 		std::vector<Expr *> elems;
 		types::Type *dictType;
 	public:
-		explicit DictExpr(std::vector<Expr *> elems, types::Type *dictType);
+		DictExpr(std::vector<Expr *> elems, types::Type *dictType);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
@@ -140,12 +140,42 @@ namespace seq {
 		Expr *val;
 		For *body;
 		types::Type *listType;
+		bool realize;
 	public:
-		explicit ListCompExpr(Expr *val, For *body, types::Type *listType);
+		ListCompExpr(Expr *val, For *body, types::Type *listType, bool realize=true);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
 		ListCompExpr *clone(Generic *ref) override;
+	};
+
+	class SetCompExpr : public Expr {
+	private:
+		Expr *val;
+		For *body;
+		types::Type *setType;
+		bool realize;
+	public:
+		SetCompExpr(Expr *val, For *body, types::Type *setType, bool realize=true);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		SetCompExpr *clone(Generic *ref) override;
+	};
+
+	class DictCompExpr : public Expr {
+	private:
+		Expr *key;
+		Expr *val;
+		For *body;
+		types::Type *dictType;
+		bool realize;
+	public:
+		DictCompExpr(Expr *key, Expr *val, For *body, types::Type *dictType, bool realize=true);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		DictCompExpr *clone(Generic *ref) override;
 	};
 
 	class VarExpr : public Expr {

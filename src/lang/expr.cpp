@@ -368,8 +368,8 @@ DictExpr *DictExpr::clone(Generic *ref)
 	return new DictExpr(elemsCloned, dictType->clone(ref));
 }
 
-ListCompExpr::ListCompExpr(Expr *val, For *body, types::Type *listType) :
-    Expr(), val(val), body(body), listType(listType)
+ListCompExpr::ListCompExpr(Expr *val, For *body, types::Type *listType, bool realize) :
+    Expr(), val(val), body(body), listType(listType), realize(realize)
 {
 }
 
@@ -416,6 +416,9 @@ Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 types::Type *ListCompExpr::getType0() const
 {
+	if (!realize)
+		return listType;
+
 	types::Type *elemType = val->getType();
 	auto *generic = dynamic_cast<Generic *>(listType);
 	assert(generic);
@@ -426,7 +429,135 @@ types::Type *ListCompExpr::getType0() const
 
 ListCompExpr *ListCompExpr::clone(Generic *ref)
 {
-	return new ListCompExpr(val->clone(ref), body->clone(ref), listType->clone(ref));
+	return new ListCompExpr(val->clone(ref), body->clone(ref), listType->clone(ref), realize);
+}
+
+SetCompExpr::SetCompExpr(Expr *val, For *body, types::Type *setType, bool realize) :
+    Expr(), val(val), body(body), setType(setType), realize(realize)
+{
+}
+
+void SetCompExpr::resolveTypes()
+{
+	body->resolveTypes();
+	val->resolveTypes();
+}
+
+Value *SetCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	types::Type *type = getType();
+	ConstructExpr construct(type, {});
+	Value *set = construct.codegen(base, block);
+	ValueExpr v(type, set);
+
+	// find the innermost block, where we'll be adding to the collection
+	Block *inner = body->getBlock();
+	while (!inner->stmts.empty()) {
+		Stmt *stmt = inner->stmts.back();
+		auto *next1 = dynamic_cast<For *>(stmt);
+		auto *next2 = dynamic_cast<If *>(stmt);
+
+		if (next1) {
+			inner = next1->getBlock();
+		} else if (next2) {
+			inner = next2->getBlock();
+		} else {
+			break;
+		}
+	}
+
+	GetElemExpr append(&v, "add");
+	CallExpr call(&append, {val});
+	ExprStmt callStmt(&call);
+	callStmt.resolveTypes();
+
+	inner->stmts.push_back(&callStmt);
+	body->codegen(block);
+	inner->stmts.pop_back();
+
+	return set;
+}
+
+types::Type *SetCompExpr::getType0() const
+{
+	if (!realize)
+		return setType;
+
+	types::Type *elemType = val->getType();
+	auto *generic = dynamic_cast<Generic *>(setType);
+	assert(generic);
+	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({elemType}));
+	assert(realized);
+	return realized;
+}
+
+SetCompExpr *SetCompExpr::clone(Generic *ref)
+{
+	return new SetCompExpr(val->clone(ref), body->clone(ref), setType->clone(ref), realize);
+}
+
+DictCompExpr::DictCompExpr(Expr *key, Expr *val, For *body, types::Type *dictType, bool realize) :
+    Expr(), key(key), val(val), body(body), dictType(dictType), realize(realize)
+{
+}
+
+void DictCompExpr::resolveTypes()
+{
+	body->resolveTypes();
+	key->resolveTypes();
+	val->resolveTypes();
+}
+
+Value *DictCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	types::Type *type = getType();
+	ConstructExpr construct(type, {});
+	Value *dict = construct.codegen(base, block);
+	ValueExpr v(type, dict);
+
+	// find the innermost block, where we'll be adding to the collection
+	Block *inner = body->getBlock();
+	while (!inner->stmts.empty()) {
+		Stmt *stmt = inner->stmts.back();
+		auto *next1 = dynamic_cast<For *>(stmt);
+		auto *next2 = dynamic_cast<If *>(stmt);
+
+		if (next1) {
+			inner = next1->getBlock();
+		} else if (next2) {
+			inner = next2->getBlock();
+		} else {
+			break;
+		}
+	}
+
+	AssignIndex assignStmt(&v, key, val);
+	assignStmt.resolveTypes();
+
+	inner->stmts.push_back(&assignStmt);
+	body->codegen(block);
+	inner->stmts.pop_back();
+
+	return dict;
+}
+
+types::Type *DictCompExpr::getType0() const
+{
+	if (!realize)
+		return dictType;
+
+	types::Type *keyType = key->getType();
+	types::Type *valType = val->getType();
+	auto *generic = dynamic_cast<Generic *>(dictType);
+	assert(generic);
+	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({keyType, valType}));
+	assert(realized);
+	return realized;
+}
+
+DictCompExpr *DictCompExpr::clone(Generic *ref)
+{
+	return new DictCompExpr(key->clone(ref), val->clone(ref), body->clone(ref), dictType->clone(ref), realize);
 }
 
 VarExpr::VarExpr(Var *var) : var(var)

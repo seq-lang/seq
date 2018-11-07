@@ -192,6 +192,16 @@ FOREIGN Expr *list_comp_expr(types::Type *ty, Expr *val, For *body)
 	return new ListCompExpr(val, body, ty);
 }
 
+FOREIGN Expr *set_comp_expr(types::Type *ty, Expr *val, For *body)
+{
+	return new SetCompExpr(val, body, ty);
+}
+
+FOREIGN Expr *dict_comp_expr(types::Type *ty, Expr *key, Expr *val, For *body)
+{
+	return new DictCompExpr(key, val, body, ty);
+}
+
 /***** Statements *****/
 
 FOREIGN Stmt *pass_stmt()  // Needed at all?
