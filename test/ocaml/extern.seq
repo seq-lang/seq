@@ -1,7 +1,6 @@
 # 786
 
-import seqlib 
-
-f = File('README.md')
-for i in f:
+l = [1,2,3,4,5]
+y = [a+1 for a in l]
+for i in y:
    print i

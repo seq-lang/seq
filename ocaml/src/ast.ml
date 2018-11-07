@@ -147,10 +147,10 @@ let rec prn_expr ?prn_pos e =
     sprintf "GenDict(%s : %s; %s)" (prn_expr r1) (prn_expr r2) (prn_expr c), pos
   | `Comprehension(var, iterable, if_cond, next_comprehension, pos) ->
     sprintf "<< for %s in %s%s %s>>" (prn_expr var) (prn_expr iterable)
-      Option.map if_cond ~default:"" ~f:(sprintf "if %s")
-      Option.map next_comprehension ~default:"" ~f:prn_expr, pos
+      (Option.value_map if_cond ~default:"" ~f:(fun x -> sprintf "if %s" (prn_expr x)))
+      (Option.value_map next_comprehension ~default:"" ~f:prn_expr), pos
   | `Lambda(params, expr, pos) ->
-    sprintf "Lambda(%s; %s)" (sci params prn_expr) (prn_expr expr), pos
+    sprintf "Lambda(%s; %s)" (sci params (fun (x, _) -> x)) (prn_expr expr), pos
   in
   sprintf "%s%s" (prn_pos pos) repr
 

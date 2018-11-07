@@ -223,6 +223,9 @@ let guarded_pattern  = foreign "guarded_pattern" (seq_pattern @-> seq_expr @-> r
 let star_pattern     = foreign "star_pattern" (void @-> returning seq_pattern)
 
 
+let list_comp_expr = foreign "list_comp_expr" (seq_type @-> seq_expr @-> seq_stmt @-> returning seq_expr)
+
+
 let get_bound_pattern_var = foreign "get_bound_pattern_var" 
   (seq_pattern @-> returning seq_var)
 

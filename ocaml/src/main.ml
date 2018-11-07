@@ -109,6 +109,13 @@ let noimp s =
 let seq_error msg pos =
   raise (SeqCamlError (msg, pos))
 
+let finalize_stmt (ctx: Context.t) stmt pos =
+  set_base stmt ctx.base;
+  set_pos stmt pos;
+  add_stmt stmt ctx.block;
+  stmt
+
+
 let rec get_seq_expr (ctx: Context.t) expr =
   let get_seq_expr = get_seq_expr ctx in
   let expr, pos = begin
@@ -247,17 +254,54 @@ let rec get_seq_expr (ctx: Context.t) expr =
     record_expr (List.map args ~f:get_seq_expr), pos
   | `ListGenerator(expr, generator, pos) ->
     let typ = match Hashtbl.find ctx.map "list" with
-    | Some ([Type t]) -> t
-    | _ -> seq_error "list type not found" pos in
-    list_comp_expr typ (get_seq_expr expr) (get_seq_expr generator)
-  | `Comprehension(var, iterable, if_cond, next_comprehension, pos) ->
-    begin
-    let var = match var with `Id(var, _) -> var 
-    end
+      | Some ([Type t]) -> t
+      | _ -> seq_error "list type not found" pos 
+    in
+    get_list_comprehension_for ctx typ expr generator, pos 
+  | `Lambda _ -> noimp "lambda"
+  | `DictGenerator _ -> noimp "dict_gen"
+  | `Comprehension _ -> noimp "shouldnt be here"
   end
   in
   set_pos expr pos;
   expr
+
+and get_list_comprehension_for ?fstmt (ctx: Context.t) typ expr = function
+  | `Comprehension(for_var, gen_expr, if_cond, next_comprehension, pos) ->
+    let gen_expr = get_seq_expr ctx gen_expr in
+    let for_stmt = for_stmt gen_expr in
+    let for_var_name, for_var = match for_var with
+    | `Id (for_var_name, _) ->
+      (for_var_name, get_for_var for_stmt)
+    | _ -> noimp "for non-ID variable" in
+
+    Context.add_block ctx;
+    Context.add ctx for_var_name (Context.Var for_var);
+    
+    let for_block = get_for_block for_stmt in
+    let ctx = {ctx with block = for_block} in
+    let last_block = match if_cond with
+      | None -> for_block
+      | Some expr ->
+        let if_expr = get_seq_expr ctx expr in
+        let if_stmt = if_stmt () in
+        let if_block = get_elif_block if_stmt if_expr in
+        ignore @@ finalize_stmt ctx if_stmt pos;
+        if_block
+    in
+    let fstmt = Option.value ~default:for_stmt fstmt in
+    let lexp = match next_comprehension with
+      | None -> 
+        let expr = get_seq_expr ctx expr in
+        list_comp_expr typ expr fstmt 
+      | Some (`Comprehension _ as c) ->
+        get_list_comprehension_for ~fstmt {ctx with block = last_block} typ expr c
+      | _ -> noimp "cant happen"
+    in
+    ignore @@ finalize_stmt ctx for_stmt pos;
+    Context.clear_block ctx;
+    lexp
+  | _ -> noimp "no wai"
 
 and get_type_from_expr_exn ctx t =
   let typ_expr = get_seq_expr ctx t in
@@ -295,11 +339,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     get_seq_stmt (Option.value ct ~default:ctx)
                  parsemod
                  (s :> extended_statement) in
-  let finalize_stmt stmt pos =
-    set_base stmt ctx.base;
-    set_pos stmt pos;
-    add_stmt stmt ctx.block;
-    stmt in
+  let finalize_stmt x y = finalize_stmt ctx x y in 
   let add_block ?ct ?init bl stmts =
     let ctx = Option.value ct ~default:ctx in
     Context.add_block ctx;

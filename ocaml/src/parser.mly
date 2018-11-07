@@ -37,7 +37,7 @@
 /* keywords */
 %token <Ast.pos_t> FOR WHILE CONTINUE BREAK                   /* loops */
 %token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT         /* conditionals */
-%token <Ast.pos_t> DEF RETURN YIELD EXTERN                    /* functions */
+%token <Ast.pos_t> DEF RETURN YIELD EXTERN LAMBDA             /* functions */
 %token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND                   /* types */
 %token <Ast.pos_t> IMPORT FROM GLOBAL                         /* variables */
 %token <Ast.pos_t> PRINT PASS ASSERT DEL                      /* keywords */
@@ -49,7 +49,7 @@
 %token<string * Ast.pos_t> PLUSEQ MINEQ MULEQ DIVEQ MODEQ POWEQ FDIVEQ
 %token<string * Ast.pos_t> AND OR NOT IS ISNOT IN NOTIN
 %token<string * Ast.pos_t> EEQ NEQ LESS LEQ GREAT GEQ
-%token<string * Ast.pos_t> PIPE LAMBDA_OP
+%token<string * Ast.pos_t> PIPE 
 %token<string * Ast.pos_t> B_LSH B_RSH B_AND B_XOR B_NOT B_OR
 
 /* operator precedence */
@@ -85,6 +85,8 @@ atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
   | REGEX 
     { noimp "Regex" (* Regex $1 *) }
   | LP test RP { $2 }
+  | dict_generator { $1 }
+  | dynlist_generator { $1 }
 bool:
   | TRUE    { (true, $1) }
   | FALSE   { (false, $1) }
@@ -106,8 +108,9 @@ dynlist: /* Lists: [1, 2, 3] */
     { ([], $1) }
   | LS test_list RS 
     { ($2, $1) }
+dynlist_generator:
   | LS test comprehension RS 
-    { ListGenerator ($2, $3, $1) }
+    { `ListGenerator ($2, $3, $1) }
 set:
   | LB separated_nonempty_list(COMMA, test) RB 
     { ($2, $1) }
@@ -116,20 +119,20 @@ set:
 dict: /* Dictionaries and sets: {1: 2, 3: 4}, {1, 2} */
   | LB RB 
     { ([], $1) }
-  | LB dictitem comprehension RB 
-    { DictGenerator ($2, $3, $1) }
   | LB separated_nonempty_list(COMMA, dictitem) RB 
     { ($2, $1) }
+dict_generator:
+  | LB dictitem comprehension RB 
+    { `DictGenerator ($2, $3, $1) }
 dictitem: 
   | test COLON test { ($1, $3) }
 
 comprehension:
-  | FOR expr IN pipe_test comprehension_if? 
-    comprehension?
-    { Comprehension ($2, List.map ~f:flat $4, $5, $6, $1) }
+  | FOR expr IN pipe_test comprehension_if? comprehension?
+    { `Comprehension ($2, flat $4, $5, $6, $1) }
 comprehension_if:
   | IF pipe_test
-    { $2 }
+    { flat $2 }
 
 /*******************************************************/
 
@@ -140,9 +143,8 @@ test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 
     { `IfExpr (flat cnd, flat ifc, elc, $2) }
   | TYPEOF LP test RP 
     { `TypeOf ($3, $1) }
-  | LAMBDA separated_list(COMMA, ID) COLON test { 
-    `Lambda ($2, $4, $1) 
-  }
+  | LAMBDA separated_list(COMMA, ID) COLON test 
+    { `Lambda ($2, $4, $1) }
 test_list: 
   | separated_nonempty_list(COMMA, test) { $1 }
 pipe_test: /* Pipe operator: a, a |> b */
