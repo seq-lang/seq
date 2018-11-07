@@ -1,6 +1,5 @@
 # 786
 
-l = [1,2,3,4,5]
-y = [1<<a for a in l]
+y = [1<<a for a in [1,2,3,4,5]]
 for i in y:
    print i
