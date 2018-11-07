@@ -1,0 +1,4 @@
+v = [11, 22, 33]
+print v[0]  # EXPECT: 11
+print v[1]  # EXPECT: 22
+print v[2]  # EXPECT: 33

@@ -1,0 +1,2 @@
+print 2 + 2     # EXPECT: 4
+print 3.14 * 2  # EXPECT: 6.28
