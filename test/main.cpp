@@ -34,7 +34,7 @@ static vector<string> findExpects(const string& filename)
 	}
 
 	string line;
-	regex expect(R"(#\s*EXPECT\s*:\s*([^\n]*))");
+	regex expect(R"(#\s*EXPECT\s*:\s*(.*))");
 	smatch m;
 	vector<string> result;
 
