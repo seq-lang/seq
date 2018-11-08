@@ -305,15 +305,20 @@ and get_list_comprehension_for ?fstmt (ctx: Context.t) fn = function
         ignore @@ finalize_stmt ctx if_stmt pos;
         if_block
     in
-    let fstmt = Option.value ~default:for_stmt fstmt in
+    let for_stmt = Option.value ~default:for_stmt fstmt in
     let lexp = match next_comprehension with
       | None -> 
-        fn ctx fstmt 
+        fn ctx for_stmt 
       | Some (`Comprehension _ as c) ->
-        get_list_comprehension_for ~fstmt {ctx with block = last_block} fn c
+        get_list_comprehension_for ~fstmt:for_stmt {ctx with block = last_block} fn c
       | _ -> noimp "cant happen"
     in
-    ignore @@ finalize_stmt ctx for_stmt pos;
+    if is_some fstmt then
+      ignore @@ finalize_stmt ctx for_stmt pos
+    else begin
+      set_base for_stmt ctx.base;
+      set_pos for_stmt pos
+    end;
     Context.clear_block ctx;
     lexp
   | _ -> noimp "no wai"

@@ -10,7 +10,11 @@ for a in d.items():
 j = {a: a+1 for a in d}
 for a in j.items():
    print 'dict', a[0], a[1]
-# j = {a: [i for i in range(0, a)] for a in d}
+j := {a: [i for i in range(0, a)] for a in d}
+for a in j.items():
+   print 'dict--', a[0], len(a[1])
+   for ii in a[1]:
+      print '   ii', ii
 
 e = {1,2,3,4,5, 5}
 for a in e:
