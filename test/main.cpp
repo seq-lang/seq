@@ -3,7 +3,6 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <regex>
 #include <dirent.h>
 #include <seq/seq.h>
 #include <seq/parser.h>
@@ -24,6 +23,13 @@ vector<string> splitlines(const string &output)
 	return result;
 }
 
+static string findExpectOnLine(const string& line)
+{
+	static const string EXPECT_STR = "# EXPECT: ";
+	size_t pos = line.find(EXPECT_STR);
+	return pos == string::npos ? "" : line.substr(pos + EXPECT_STR.length());
+}
+
 static vector<string> findExpects(const string& filename)
 {
 	ifstream file(filename);
@@ -34,13 +40,12 @@ static vector<string> findExpects(const string& filename)
 	}
 
 	string line;
-	regex expect(R"(#\s*EXPECT\s*:\s*(.*))");
-	smatch m;
 	vector<string> result;
 
 	while (getline(file, line)) {
-		if (regex_search(line, m, expect))
-			result.push_back(m[1]);
+		string expect = findExpectOnLine(line);
+		if (!expect.empty())
+			result.push_back(expect);
 	}
 
 	file.close();
@@ -49,6 +54,7 @@ static vector<string> findExpects(const string& filename)
 
 static bool runTest(const string& filename, bool debug)
 {
+	cout << "TEST: " << filename << endl;
 	vector<string> expects = findExpects(filename);
 	stringstream buffer;
 	streambuf *old = cout.rdbuf(buffer.rdbuf());
@@ -58,8 +64,6 @@ static bool runTest(const string& filename, bool debug)
 	vector<string> results = splitlines(buffer.str());
 
 	bool pass = true;
-
-	cout << "TEST: " << filename << endl;
 	if (results.size() != expects.size()) {
 		cout << "  GOT:" << endl;
 		for (auto& line : results)
@@ -93,11 +97,12 @@ static bool runTest(const string& filename, bool debug)
 	return pass;
 }
 
-static bool isSeqFile(const std::string& filename) {
+static bool isSeqFile(const std::string& filename)
+{
 	static const string ext = ".seq";
 	if (filename.length() >= ext.length())
 		return (filename.compare(filename.length() - ext.length(), ext.length(), ext) == 0);
-    else
+	else
 		return false;
 }
 
