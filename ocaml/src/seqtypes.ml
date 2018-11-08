@@ -224,6 +224,8 @@ let star_pattern     = foreign "star_pattern" (void @-> returning seq_pattern)
 
 
 let list_comp_expr = foreign "list_comp_expr" (seq_type @-> seq_expr @-> seq_stmt @-> returning seq_expr)
+let set_comp_expr = foreign "set_comp_expr" (seq_type @-> seq_expr @-> seq_stmt @-> returning seq_expr)
+let dict_comp_expr = foreign "dict_comp_expr" (seq_type @-> seq_expr @-> seq_expr @-> seq_stmt @-> returning seq_expr)
 
 
 let get_bound_pattern_var = foreign "get_bound_pattern_var" 

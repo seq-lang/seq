@@ -87,6 +87,7 @@ atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
   | LP test RP { $2 }
   | dict_generator { $1 }
   | dynlist_generator { $1 }
+  | set_generator { $1 }
 bool:
   | TRUE    { (true, $1) }
   | FALSE   { (false, $1) }
@@ -114,8 +115,9 @@ dynlist_generator:
 set:
   | LB separated_nonempty_list(COMMA, test) RB 
     { ($2, $1) }
+set_generator:
   | LB test comprehension RB 
-    { noimp "Set" (* SetGenerator ($2, $3) *) }
+    { `SetGenerator ($2, $3, $1) }
 dict: /* Dictionaries and sets: {1: 2, 3: 4}, {1, 2} */
   | LB RB 
     { ([], $1) }

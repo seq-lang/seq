@@ -117,6 +117,7 @@ let finalize_stmt (ctx: Context.t) stmt pos =
 
 
 let rec get_seq_expr (ctx: Context.t) expr =
+  let get_seq_expr_ctx = get_seq_expr in
   let get_seq_expr = get_seq_expr ctx in
   let expr, pos = begin
   match expr with
@@ -257,16 +258,30 @@ let rec get_seq_expr (ctx: Context.t) expr =
       | Some ([Type t]) -> t
       | _ -> seq_error "list type not found" pos 
     in
-    get_list_comprehension_for ctx typ expr generator, pos 
+    let fn ctx fstmt = list_comp_expr typ (get_seq_expr_ctx ctx expr) fstmt in
+    get_list_comprehension_for ctx fn generator, pos 
+  | `SetGenerator(expr, generator, pos) ->
+    let typ = match Hashtbl.find ctx.map "set" with
+      | Some ([Type t]) -> t
+      | _ -> seq_error "list type not found" pos 
+    in
+    let fn ctx fstmt = set_comp_expr typ (get_seq_expr_ctx ctx expr) fstmt in
+    get_list_comprehension_for ctx fn generator, pos 
+  | `DictGenerator(expr, generator, pos) ->
+    let typ = match Hashtbl.find ctx.map "dict" with
+      | Some ([Type t]) -> t
+      | _ -> seq_error "list type not found" pos 
+    in
+    let fn ctx fstmt = dict_comp_expr typ (get_seq_expr_ctx ctx (fst expr)) (get_seq_expr_ctx ctx (snd expr)) fstmt in
+    get_list_comprehension_for ctx fn generator, pos 
   | `Lambda _ -> noimp "lambda"
-  | `DictGenerator _ -> noimp "dict_gen"
   | `Comprehension _ -> noimp "shouldnt be here"
   end
   in
   set_pos expr pos;
   expr
 
-and get_list_comprehension_for ?fstmt (ctx: Context.t) typ expr = function
+and get_list_comprehension_for ?fstmt (ctx: Context.t) fn = function
   | `Comprehension(for_var, gen_expr, if_cond, next_comprehension, pos) ->
     let gen_expr = get_seq_expr ctx gen_expr in
     let for_stmt = for_stmt gen_expr in
@@ -293,10 +308,9 @@ and get_list_comprehension_for ?fstmt (ctx: Context.t) typ expr = function
     let fstmt = Option.value ~default:for_stmt fstmt in
     let lexp = match next_comprehension with
       | None -> 
-        let expr = get_seq_expr ctx expr in
-        list_comp_expr typ expr fstmt 
+        fn ctx fstmt 
       | Some (`Comprehension _ as c) ->
-        get_list_comprehension_for ~fstmt {ctx with block = last_block} typ expr c
+        get_list_comprehension_for ~fstmt {ctx with block = last_block} fn c
       | _ -> noimp "cant happen"
     in
     ignore @@ finalize_stmt ctx for_stmt pos;

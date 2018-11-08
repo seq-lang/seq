@@ -25,9 +25,9 @@ type expr = [
   | `Set of expr list * pos_t
   | `Dict of (expr * expr) list * pos_t
   | `ListGenerator of expr * expr * pos_t
+  | `SetGenerator of expr * expr * pos_t
   | `DictGenerator of (expr * expr) * expr * pos_t
   (* | `Generator of expr * expr *)
-  (* | `SetGenerator of expr * expr *)
 
   | `IfExpr of expr * expr * expr * pos_t
   | `Lambda of ident list * expr * pos_t
@@ -143,6 +143,8 @@ let rec prn_expr ?prn_pos e =
     sprintf "Slice(%s; %s; %s)" a b c, pos
   | `ListGenerator(r, c, pos) ->
     sprintf "GenList(%s; %s)" (prn_expr r) (prn_expr c), pos
+  | `SetGenerator(r, c, pos) ->
+    sprintf "GenSet(%s; %s)" (prn_expr r) (prn_expr c), pos
   | `DictGenerator((r1, r2), c, pos) ->
     sprintf "GenDict(%s : %s; %s)" (prn_expr r1) (prn_expr r2) (prn_expr c), pos
   | `Comprehension(var, iterable, if_cond, next_comprehension, pos) ->
