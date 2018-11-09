@@ -34,15 +34,15 @@ FOREIGN types::Type *array_type(types::Type *base)
 FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz)
 {
 	vector<string> s;
-	for (int i=0; i<sz; i++) s.push_back(names[i]);
-	return types::RecordType::get(
-	         vector<types::Type*>(ty, ty + sz),
-	         s);
+	for (size_t i = 0; i < sz; i++)
+		s.emplace_back(string(names[i]));
+
+	return types::RecordType::get(vector<types::Type *>(ty, ty + sz), s);
 }
 
 FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
 {
-	return types::FuncType::get(vector<types::Type*>(ty, ty + sz), ret);
+	return types::FuncType::get(vector<types::Type *>(ty, ty + sz), ret);
 }
 
 FOREIGN types::Type *gen_type(types::Type *ret)
@@ -53,8 +53,7 @@ FOREIGN types::Type *gen_type(types::Type *ret)
 
 FOREIGN types::Type *ref_type(const char *name)
 {
-	auto f = types::RefType::get(name);
-	return f;
+	return types::RefType::get(name);
 }
 
 FOREIGN types::Type *ptr_type(types::Type *base)
@@ -111,17 +110,17 @@ FOREIGN Expr *bop_expr(const char *op, Expr *lhs, Expr *rhs)
 
 FOREIGN Expr *call_expr(Expr *fn, Expr **args, size_t size)
 {
-	return new CallExpr(fn, vector<Expr*>(args, args + size));
+	return new CallExpr(fn, vector<Expr *>(args, args + size));
 }
 
 FOREIGN Expr *partial_expr(Expr *fn, Expr **args, size_t size)
 {
-	return new PartialCallExpr(fn, vector<Expr*>(args, args + size));
+	return new PartialCallExpr(fn, vector<Expr *>(args, args + size));
 }
 
 FOREIGN Expr *pipe_expr(Expr **args, size_t size)
 {
-	return new PipeExpr(vector<Expr*>(args, args + size));
+	return new PipeExpr(vector<Expr *>(args, args + size));
 }
 
 FOREIGN Expr *get_elem_expr(Expr *lhs, const char *rhs)
@@ -136,7 +135,7 @@ FOREIGN Expr *array_expr(types::Type *ty, Expr *cnt)
 
 FOREIGN Expr *construct_expr(types::Type *ty, Expr **args, size_t len)
 {
-	return new ConstructExpr(ty, vector<Expr*>(args, args + len));
+	return new ConstructExpr(ty, vector<Expr *>(args, args + len));
 }
 
 FOREIGN Expr *array_lookup_expr(Expr *lhs, Expr *rhs)
@@ -157,7 +156,7 @@ FOREIGN Expr *array_contains_expr(Expr *lhs, Expr *rhs)
 FOREIGN Expr *record_expr(Expr **args, size_t size)
 {
 	return new RecordExpr(
-	             vector<Expr*>(args, args + size),
+	             vector<Expr *>(args, args + size),
 	             vector<string>(size, " "));
 }
 
@@ -168,23 +167,23 @@ FOREIGN Expr *static_expr(types::Type *ty, const char *name)
 
 FOREIGN Expr *method_expr(Expr *expr, Func *method)
 {
-	throw exc::SeqException("wrooong!");
-	// return new MethodExpr(expr, method);
+	assert(0);
+	return nullptr;
 }
 
 FOREIGN Expr *list_expr(types::Type *ty, Expr **args, size_t len)
 {
-	return new ListExpr(vector<Expr*>(args, args + len), ty);
+	return new ListExpr(vector<Expr *>(args, args + len), ty);
 }
 
 FOREIGN Expr *set_expr(types::Type *ty, Expr **args, size_t len)
 {
-	return new SetExpr(vector<Expr*>(args, args + len), ty);
+	return new SetExpr(vector<Expr *>(args, args + len), ty);
 }
 
 FOREIGN Expr *dict_expr(types::Type *ty, Expr **args, size_t len)
 {
-	return new DictExpr(vector<Expr*>(args, args + len), ty);
+	return new DictExpr(vector<Expr *>(args, args + len), ty);
 }
 
 FOREIGN Expr *list_comp_expr(types::Type *ty, Expr *val, For *body)
@@ -204,7 +203,7 @@ FOREIGN Expr *dict_comp_expr(types::Type *ty, Expr *key, Expr *val, For *body)
 
 /***** Statements *****/
 
-FOREIGN Stmt *pass_stmt()  // Needed at all?
+FOREIGN Stmt *pass_stmt()
 {
 	return nullptr;
 }
@@ -331,8 +330,10 @@ FOREIGN void set_func_yield(Func *f, Yield *ret)
 FOREIGN void set_func_params(Func *f, const char **names, types::Type **types, size_t len)
 {
 	vector<string> s;
-	for (int i=0; i<len; i++) s.push_back(names[i]);
-	f->setIns(vector<types::Type*>(types, types + len));
+	for (size_t i = 0; i < len; i++)
+		s.emplace_back(string(names[i]));
+
+	f->setIns(vector<types::Type *>(types, types + len));
 	f->setArgNames(s);
 }
 
@@ -383,14 +384,14 @@ FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, const char *name)
 FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types, size_t sz)
 {
 	if (sz == 0) return t;
-	return t->realize(vector<types::Type*>(types, types + sz));
+	return t->realize(vector<types::Type *>(types, types + sz));
 }
 
 FOREIGN BaseFunc *realize_func(FuncExpr *e, types::Type **types, size_t sz)
 {
-	Func *fn = dynamic_cast<Func*>(e->getFunc());
+	auto *fn = dynamic_cast<Func *>(e->getFunc());
 	if (sz == 0) return fn;
-	return fn->realize(vector<types::Type*>(types, types + sz));
+	return fn->realize(vector<types::Type *>(types, types + sz));
 }
 
 FOREIGN Stmt *match_stmt(Expr *cond)
@@ -442,17 +443,17 @@ FOREIGN Pattern *range_pattern(int a, int b)
 
 FOREIGN Pattern *record_pattern(Pattern **p, size_t size)
 {
-	return new RecordPattern(vector<Pattern*>(p, p + size));
+	return new RecordPattern(vector<Pattern *>(p, p + size));
 }
 
 FOREIGN Pattern *or_pattern(Pattern **p, size_t size)
 {
-	return new OrPattern(vector<Pattern*>(p, p + size));
+	return new OrPattern(vector<Pattern *>(p, p + size));
 }
 
 FOREIGN Pattern *array_pattern(Pattern **p, size_t size)
 {
-	return new ArrayPattern(vector<Pattern*>(p, p + size));
+	return new ArrayPattern(vector<Pattern *>(p, p + size));
 }
 
 FOREIGN Pattern *seq_pattern(const char *c)
@@ -493,7 +494,7 @@ FOREIGN struct seq_srcinfo {
 FOREIGN void set_pos(SrcObject *obj, const char *f, int l, int c)
 {
 	if (obj) {
-		// int type = dynamic_cast<Expr*>(obj) ? 1 : (dynamic_cast<Stmt*>(obj) ? 2 : 0);
+		// int type = dynamic_cast<Expr *>(obj) ? 1 : (dynamic_cast<Stmt *>(obj) ? 2 : 0);
 		// E("set_pos[{}]", obj->getName());
 		obj->setSrcInfo(SrcInfo(string(f), l, c));
 	}
@@ -502,7 +503,7 @@ FOREIGN void set_pos(SrcObject *obj, const char *f, int l, int c)
 FOREIGN seq_srcinfo get_pos(SrcObject *obj)
 {
 	if (!obj) {
-		return seq_srcinfo { (char*)"", 0, 0 };
+		return seq_srcinfo { (char *)"", 0, 0 };
 	}
 	auto info = obj->getSrcInfo();
 	auto *c = new char[info.file.size() + 1];
