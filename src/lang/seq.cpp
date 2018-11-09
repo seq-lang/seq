@@ -31,7 +31,7 @@ Var *SeqModule::getArgVar()
 
 void SeqModule::setFileName(std::string file)
 {
-	module->setSourceFileName(std::move(file));
+	module->setSourceFileName(file);
 }
 
 void SeqModule::resolveTypes()
