@@ -5,6 +5,11 @@ open Foreign
 
 exception SeqCError of string * Ast.pos_t
 
+type cstring = unit ptr
+let cstring: cstring typ = ptr void
+let strdup = foreign "strdup" (string @-> returning cstring)
+let array_of_string_list l = CArray.of_list cstring (List.map strdup l)
+
 (* Seq types *)
 type seq_type = unit ptr
 let seq_type: seq_type typ = ptr void
@@ -254,11 +259,11 @@ let set_func_return = foreign "set_func_return" (seq_func @-> seq_stmt @-> retur
 let set_func_extern = foreign "set_func_extern" (seq_func @-> returning void)
 let set_func_yield = foreign "set_func_yield" (seq_func @-> seq_stmt @-> returning void)
 let set_func_params' = foreign "set_func_params"
-  (seq_func @-> ptr string @-> ptr seq_type @-> size_t @-> returning void)
+  (seq_func @-> ptr cstring @-> ptr seq_type @-> size_t @-> returning void)
 let set_func_params fn names types =
   if List.length names != List.length types then
     Failure ("set_func_params len(names) != len(types)") |> raise;
-  let n_arr = CArray.of_list string names in
+  let n_arr = array_of_string_list names in
   let a_arr = CArray.of_list seq_type types in
   let a_len = Unsigned.Size_t.of_int (CArray.length a_arr) in
   set_func_params' fn (CArray.start n_arr) (CArray.start a_arr) a_len
