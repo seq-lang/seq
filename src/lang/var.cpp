@@ -10,7 +10,7 @@ static void ensureNonVoid(types::Type *type)
 }
 
 Var::Var(types::Type *type) :
-    type(type), ptr(nullptr), global(false)
+    type(type), ptr(nullptr), global(false), mapped(nullptr)
 {
 }
 
@@ -35,16 +35,35 @@ void Var::allocaIfNeeded(BaseFunc *base)
 
 bool Var::isGlobal()
 {
+	if (mapped)
+		return mapped->isGlobal();
 	return global;
 }
 
 void Var::setGlobal()
 {
-	global = true;
+	if (mapped)
+		mapped->setGlobal();
+	else
+		global = true;
+}
+
+void Var::mapTo(Var *mapped)
+{
+	assert(!mapped);
+	this->mapped = mapped;
+}
+
+void Var::unmap()
+{
+	mapped = nullptr;
 }
 
 Value *Var::load(BaseFunc *base, BasicBlock *block)
 {
+	if (mapped)
+		return mapped->load(base, block);
+
 	ensureNonVoid(getType());
 	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
@@ -53,6 +72,11 @@ Value *Var::load(BaseFunc *base, BasicBlock *block)
 
 void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
 {
+	if (mapped) {
+		mapped->store(base, val, block);
+		return;
+	}
+
 	ensureNonVoid(getType());
 	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
@@ -61,11 +85,17 @@ void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
 
 void Var::setType(types::Type *type)
 {
-	this->type = type;
+	if (mapped)
+		mapped->setType(type);
+	else
+		this->type = type;
 }
 
 types::Type *Var::getType()
 {
+	if (mapped)
+		return mapped->getType();
+
 	assert(type);
 	return type;
 }
@@ -78,6 +108,7 @@ Var *Var::clone(Generic *ref)
 	if (ref->seenClone(this))
 		return (Var *)ref->getClone(this);
 
+	// we intentionally don't clone this->mapped; should be set in codegen if needed
 	auto *x = new Var();
 	ref->addClone(this, x);
 	if (type) x->setType(type->clone(ref));

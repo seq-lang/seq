@@ -560,6 +560,94 @@ DictCompExpr *DictCompExpr::clone(Generic *ref)
 	return new DictCompExpr(key->clone(ref), val->clone(ref), body->clone(ref), dictType->clone(ref), realize);
 }
 
+GenExpr::GenExpr(Expr *val, For *body, std::vector<Var *> captures) :
+    Expr(), val(val), body(body), captures(std::move(captures))
+{
+}
+
+void GenExpr::resolveTypes()
+{
+	body->resolveTypes();
+	val->resolveTypes();
+}
+
+static std::string argName(unsigned i)
+{
+	return "arg" + std::to_string(i);
+}
+
+Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	// find the innermost block, where we'll be yielding
+	Block *inner = body->getBlock();
+	while (!inner->stmts.empty()) {
+		Stmt *stmt = inner->stmts.back();
+		auto *next1 = dynamic_cast<For *>(stmt);
+		auto *next2 = dynamic_cast<If *>(stmt);
+
+		if (next1) {
+			inner = next1->getBlock();
+		} else if (next2) {
+			inner = next2->getBlock();
+		} else {
+			break;
+		}
+	}
+
+	Yield yieldStmt(val);
+	inner->stmts.push_back(&yieldStmt);
+	static int idx = 1;
+	Func implicitGen;
+	implicitGen.setName("seq.implicit_gen." + std::to_string(idx++));
+
+	std::vector<types::Type *> inTypes;
+	std::vector<std::string> names;
+	for (unsigned i = 0; i < captures.size(); i++) {
+		inTypes.push_back(captures[i]->getType());
+		names.push_back(argName(i));
+	}
+
+	implicitGen.setIns(inTypes);
+	implicitGen.setArgNames(names);
+
+	// make sure we codegen wrt function argument vars:
+	for (unsigned i = 0; i < captures.size(); i++)
+		captures[i]->mapTo(implicitGen.getArgVar(argName(i)));
+
+	implicitGen.getBlock()->add(body);
+	implicitGen.sawYield(&yieldStmt);
+	implicitGen.codegen(block->getModule());
+
+	// now call the generator:
+	types::FuncType *funcType = implicitGen.getFuncType();
+	Function *func = implicitGen.getFunc();
+	std::vector<Value *> args;
+
+	for (auto *var : captures)
+		args.push_back(var->load(base, block));
+
+	Value *gen = funcType->call(base, func, args, block);
+	inner->stmts.pop_back();
+
+	for (auto *var : captures)
+		var->unmap();
+
+	return gen;
+}
+
+types::Type *GenExpr::getType0() const
+{
+	return types::GenType::get(val->getType());
+}
+
+GenExpr *GenExpr::clone(Generic *ref)
+{
+	std::vector<Var *> capturesCloned;
+	for (auto *var : captures)
+		capturesCloned.push_back(var);
+	return new GenExpr(val->clone(ref), body->clone(ref), capturesCloned);
+}
+
 VarExpr::VarExpr(Var *var) : var(var)
 {
 }

@@ -178,6 +178,19 @@ namespace seq {
 		DictCompExpr *clone(Generic *ref) override;
 	};
 
+	class GenExpr : public Expr {
+	private:
+		Expr *val;
+		For *body;
+		std::vector<Var *> captures;
+	public:
+		GenExpr(Expr *val, For *body, std::vector<Var *> captures);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		GenExpr *clone(Generic *ref) override;
+	};
+
 	class VarExpr : public Expr {
 	private:
 		Var *var;

@@ -201,6 +201,11 @@ FOREIGN Expr *dict_comp_expr(types::Type *ty, Expr *key, Expr *val, For *body)
 	return new DictCompExpr(key, val, body, ty);
 }
 
+FOREIGN Expr *gen_expr(Expr *val, For *body, Var **captures, size_t len)
+{
+	return new GenExpr(val, body, vector<Var *>(captures, captures + len));
+}
+
 /***** Statements *****/
 
 FOREIGN Stmt *pass_stmt()
