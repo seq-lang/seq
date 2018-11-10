@@ -44,7 +44,7 @@ module Context = struct
     map: (string, assignable list) Hashtbl.t;
   }
 
-  let add_block ctx = 
+  let add_block ctx =
     Stack.push ctx.stack (String.Hash_set.create ())
 
   let init filename mdl base block =
@@ -256,24 +256,24 @@ let rec get_seq_expr (ctx: Context.t) expr =
   | `ListGenerator(expr, generator, pos) ->
     let typ = match Hashtbl.find ctx.map "list" with
       | Some ([Type t]) -> t
-      | _ -> seq_error "list type not found" pos 
+      | _ -> seq_error "list type not found" pos
     in
     let fn ctx fstmt = list_comp_expr typ (get_seq_expr_ctx ctx expr) fstmt in
-    get_list_comprehension_for ctx fn generator, pos 
+    get_list_comprehension_for ctx fn generator, pos
   | `SetGenerator(expr, generator, pos) ->
     let typ = match Hashtbl.find ctx.map "set" with
       | Some ([Type t]) -> t
-      | _ -> seq_error "list type not found" pos 
+      | _ -> seq_error "list type not found" pos
     in
     let fn ctx fstmt = set_comp_expr typ (get_seq_expr_ctx ctx expr) fstmt in
-    get_list_comprehension_for ctx fn generator, pos 
+    get_list_comprehension_for ctx fn generator, pos
   | `DictGenerator(expr, generator, pos) ->
     let typ = match Hashtbl.find ctx.map "dict" with
       | Some ([Type t]) -> t
-      | _ -> seq_error "list type not found" pos 
+      | _ -> seq_error "list type not found" pos
     in
     let fn ctx fstmt = dict_comp_expr typ (get_seq_expr_ctx ctx (fst expr)) (get_seq_expr_ctx ctx (snd expr)) fstmt in
-    get_list_comprehension_for ctx fn generator, pos 
+    get_list_comprehension_for ctx fn generator, pos
   | `Lambda _ -> noimp "lambda"
   | `Comprehension _ -> noimp "shouldnt be here"
   end
@@ -292,10 +292,10 @@ and get_list_comprehension_for ?fstmt (ctx: Context.t) fn = function
 
     Context.add_block ctx;
     Context.add ctx for_var_name (Context.Var for_var);
-    
+
     let for_block = get_for_block for_stmt in
     let last_block = match if_cond with
-      | None -> 
+      | None ->
         for_block
       | Some expr ->
         let ctx = {ctx with block = for_block} in
@@ -307,8 +307,8 @@ and get_list_comprehension_for ?fstmt (ctx: Context.t) fn = function
     in
     let for_stmt = Option.value ~default:for_stmt fstmt in
     let lexp = match next_comprehension with
-      | None -> 
-        fn ctx for_stmt 
+      | None ->
+        fn ctx for_stmt
       | Some (`Comprehension _ as c) ->
         get_list_comprehension_for ~fstmt:for_stmt {ctx with block = last_block} fn c
       | _ -> noimp "cant happen"
@@ -337,7 +337,7 @@ let set_generics ctx types args set_generic_count get_generic =
   let type_args = List.map types ~f:(function
     | `Generic (g, _) -> g
     (* TODO fix position *)
-    | _ -> seq_error "Type not a generic" Lexing.dummy_pos) in 
+    | _ -> seq_error "Type not a generic" Lexing.dummy_pos) in
   let generic_args = List.filter_map arg_types ~f:(function
     | `Generic(g, _) when (String.is_prefix g ~prefix:"``") -> Some g
     | _ -> None) in
@@ -359,7 +359,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
     get_seq_stmt (Option.value ct ~default:ctx)
                  parsemod
                  (s :> extended_statement) in
-  let finalize_stmt x y = finalize_stmt ctx x y in 
+  let finalize_stmt x y = finalize_stmt ctx x y in
   let add_block ?ct ?init bl stmts =
     let ctx = Option.value ct ~default:ctx in
     Context.add_block ctx;
@@ -616,7 +616,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
       let file = sprintf "%s/%s.seq" (Filename.dirname ctx.filename) what in
       match Sys.file_exists file with
       | `Yes -> parsemod file ctx
-      | _ -> 
+      | _ ->
         let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
         let file = sprintf "%s/%s.seq" seqpath what in
         match Sys.file_exists file with
@@ -627,7 +627,7 @@ let rec get_seq_stmt (ctx: Context.t) parsemod (stmt: extended_statement) =
   ignore @@ finalize_stmt stmt pos
 
 let rec parse_string ?fname ?debug code ctx =
-  let fname = Option.value fname ~default:"" in 
+  let fname = Option.value fname ~default:"" in
 
   let lexbuf = Lexing.from_string (code ^ "\n") in
   try
@@ -717,16 +717,16 @@ let () =
       | Descent s -> "descent", s
       | Compiler s -> "compiler", s in
 
-      let file_line = 
-        if String.length file > 0 && file.[0] <> '<' then 
+      let file_line =
+        if String.length file > 0 && file.[0] <> '<' then
           try
             let lines = In_channel.read_lines file in List.nth lines (line - 1)
-          with _ -> None 
+          with _ -> None
         else None in
 
       let style = [T.Bold; T.red] in
       eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: %s\n" kind msg;
-      begin match file_line with 
+      begin match file_line with
       | Some file_line ->
         eprintf "%s%!" @@ T.sprintf style "        %s: %d,%d\n" file line col;
         eprintf "%s%!" @@ T.sprintf style "   %3d: %s" line (String.prefix file_line col);
