@@ -29,6 +29,10 @@ class A[`a,`b,`c](a: `a, b: `b, c: `c):
     def m6[`t](v: array[array[array[`t]]]):
         return v[0][0][0]
 
+# explicit realization:
+def m7[`t,`s]():
+    print "works"
+
 a1 = A(42, 3.14, "hello")
 a2 = A(1, 2, 3)
 v1 = array[array[array[str]]](1)
@@ -50,3 +54,6 @@ a2.m4(True)                         # EXPECT: 1 2 3 True True
 a1.m5()                             # EXPECT: 42 3.14 hello
 a2.m5()                             # EXPECT: 1 2 3
 print A.m6(v1)                      # EXPECT: world
+m7[str,float]()                     # EXPECT: works
+m7[str,float]()                     # EXPECT: works
+m7[float,str]()                     # EXPECT: works
