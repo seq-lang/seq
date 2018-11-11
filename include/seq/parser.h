@@ -38,7 +38,7 @@ namespace seq {
 	void execute(SeqModule *module, std::vector<std::string> args={}, std::vector<std::string> libs={}, bool debug=false)
 	{
 		try {
-			module->execute(std::move(args), std::move(libs), debug);
+			module->execute(args, libs, debug);
 		} catch (exc::SeqException& e) {
 			compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line, e.getSrcInfo().col);
 		}

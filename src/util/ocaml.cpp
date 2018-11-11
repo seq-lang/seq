@@ -295,6 +295,11 @@ FOREIGN Stmt *func_stmt(Func *f)
 
 /***** Functions *****/
 
+FOREIGN Var *get_module_arg(SeqModule *m)
+{
+	return m->getArgVar();
+}
+
 FOREIGN Func *func(const char *name)
 {
 	auto *f = new Func();

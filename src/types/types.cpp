@@ -45,7 +45,7 @@ types::VTable& types::Type::getVTable()
 
 Value *types::Type::alloc(Value *count, BasicBlock *block)
 {
-	if (size(block->getModule()) == 0)
+	if (isAbstract())
 		throw exc::SeqException("cannot create array of type '" + getName() + "'");
 
 	LLVMContext& context = block->getContext();
