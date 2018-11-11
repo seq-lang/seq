@@ -71,11 +71,11 @@ let gen_type = foreign "gen_type"
   (seq_type @-> returning seq_type)
 
 let record_type' = foreign "record_type"
-  (ptr string @-> ptr seq_type @-> size_t @-> returning seq_type)
+  (ptr cstring @-> ptr seq_type @-> size_t @-> returning seq_type)
 let record_type names types =
   if List.length names != List.length types then
     Failure ("set_func_params len(names) != len(types)") |> raise;
-  let n_arr = CArray.of_list string names in
+  let n_arr = array_of_string_list names in
   let a_arr = CArray.of_list seq_type types in
   let a_len = Unsigned.Size_t.of_int (CArray.length a_arr) in
   record_type' (CArray.start n_arr) (CArray.start a_arr) a_len
