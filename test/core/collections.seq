@@ -1,0 +1,78 @@
+# lists:
+l1 = [i+1 for i in range(100)]
+l1 = l1[98:]
+l2 = [1, 2] * 2
+
+# EXPECT: 99
+# EXPECT: 100
+for a in l1:
+    print a
+
+# EXPECT: 1
+# EXPECT: 2
+# EXPECT: 1
+# EXPECT: 2
+for a in l2:
+    print a
+
+l1 = [i*2 for i in range(3)]
+l1.insert(0, 99)
+l1[0] += 1
+del l1[1]
+
+# EXPECT: 100
+# EXPECT: 2
+# EXPECT: 4
+for a in l1[0:3]:
+    print a
+
+
+# sets:
+s1 = {a%8 for a in range(100)}
+for a in range(8):
+    if a not in s1:
+        print "fail"
+
+for a in range(8,100):
+    if a in s1:
+        print "fail"
+
+print 5 in s1  # EXPECT: True
+s1.remove(5)
+print 5 in s1  # EXPECT: False
+print len(s1)  # EXPECT: 7
+
+
+# dicts:
+d1 = {a: a*a for a in range(5)}
+
+# EXPECT: 0
+# EXPECT: 1
+# EXPECT: 4
+# EXPECT: 9
+# EXPECT: 16
+# EXPECT: -1
+for a in range(6):
+    print d1.get(a, -1)
+
+print 2 in d1        # EXPECT: True
+del d1[2]
+print 2 in d1        # EXPECT: False
+d1[2] = 44
+print 2 in d1        # EXPECT: True
+print d1.get(2, -1)  # EXPECT: 44
+
+del d1[3]
+del d1[4]
+
+# EXPECT: 0
+# EXPECT: 1
+# EXPECT: 2
+for k in d1:
+    print k
+
+# EXPECT: 0 0
+# EXPECT: 1 1
+# EXPECT: 2 44
+for t in d1.items():
+    print t[0], t[1]

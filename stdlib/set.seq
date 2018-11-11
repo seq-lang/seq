@@ -61,6 +61,7 @@ class set[`k](table: array[_set_entry[`k]], size: int):
         h = hash(k)
         idx = h & (self.table.len - 1)
         e = self.table[idx]
+        prev = e  # hacky way to ensure type of `prev` is correct
         prev = None
 
         while e:

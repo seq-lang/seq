@@ -341,6 +341,7 @@ types::Type *types::Type::magicOut(const std::string& name, std::vector<types::T
 		if (magic.name != name)
 			continue;
 
+		magic.func->resolveTypes();
 		types::Type *type = callType(magic.func, args);
 		if (type)
 			return type;
