@@ -4,7 +4,6 @@ def perms(elements):
     else:
         for perm in perms(elements[1:]):
             for i in range(len(elements)):
-                # nb elements[0:1] works in both string and list contexts
                 yield perm[:i] + elements[0:1] + perm[i:]
 
 for a in perms([1,2,3,4]):
