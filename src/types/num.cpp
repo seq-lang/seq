@@ -55,6 +55,10 @@ void types::IntType::initOps()
 			return b.CreateFPToSI(args[0], Int->getLLVMType(b.getContext()));
 		}},
 
+		{"__init__", {Byte}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(args[0], Int->getLLVMType(b.getContext()));
+		}},
+
 		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			Module *module = b.GetInsertBlock()->getModule();

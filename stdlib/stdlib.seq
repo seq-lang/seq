@@ -59,6 +59,22 @@ extend int:
     def __hash__(self: int):
         return self
 
+extend str:
+    def __hash__(self: str):
+        h = 0
+        p, n = self.ptr, self.len
+        for i in range(n):
+            h = 31*h + int(p[i])
+        return h
+
+extend seq:
+    def __hash__(self: seq):
+        h = 0
+        p, n = self.ptr, self.len
+        for i in range(n):
+            h = 31*h + int(p[i])
+        return h
+
 import list
 import dict
 import set
