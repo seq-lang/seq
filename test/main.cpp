@@ -59,6 +59,7 @@ static bool runTest(const string& filename, bool debug)
 	stringstream buffer;
 	streambuf *old = cout.rdbuf(buffer.rdbuf());
 	SeqModule *module = parse(filename);
+	module->setFlags(SEQ_FLAG_NONE);
 	execute(module, {}, {}, debug);
 	cout.rdbuf(old);
 	vector<string> results = splitlines(buffer.str());

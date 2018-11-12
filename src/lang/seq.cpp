@@ -8,7 +8,7 @@ using namespace llvm;
 
 SeqModule::SeqModule() :
     BaseFunc(), scope(new Block()), argVar(new Var(types::ArrayType::get(types::Str))),
-    initFunc(nullptr), strlenFunc(nullptr)
+    initFunc(nullptr), strlenFunc(nullptr), flags(SEQ_FLAG_FASTIO)
 {
 	static LLVMContext context;
 	InitializeNativeTarget();
@@ -32,6 +32,11 @@ Var *SeqModule::getArgVar()
 void SeqModule::setFileName(std::string file)
 {
 	module->setSourceFileName(file);
+}
+
+void SeqModule::setFlags(int flags)
+{
+	this->flags = flags;
 }
 
 void SeqModule::resolveTypes()
@@ -128,9 +133,9 @@ void SeqModule::codegen(Module *module)
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
 
-	initFunc = cast<Function>(module->getOrInsertFunction("seq_init", Type::getVoidTy(context)));
+	initFunc = cast<Function>(module->getOrInsertFunction("seq_init", Type::getVoidTy(context), seqIntLLVM(context)));
 	initFunc->setCallingConv(CallingConv::C);
-	builder.CreateCall(initFunc);
+	builder.CreateCall(initFunc, ConstantInt::get(seqIntLLVM(context), (uint64_t)flags));
 
 	strlenFunc = cast<Function>(module->getOrInsertFunction("strlen", seqIntLLVM(context), IntegerType::getInt8PtrTy(context)));
 	strlenFunc->setCallingConv(CallingConv::C);

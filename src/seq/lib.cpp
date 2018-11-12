@@ -18,11 +18,14 @@ using namespace std;
  * General initialization
  */
 
-SEQ_FUNC void seq_init()
+SEQ_FUNC void seq_init(seq_int_t flags)
 {
 	GC_INIT();
-	ios_base::sync_with_stdio(false);
-	cin.tie(nullptr);
+
+	if (flags & SEQ_FLAG_FASTIO) {
+		ios_base::sync_with_stdio(false);
+		cin.tie(nullptr);
+	}
 }
 
 
