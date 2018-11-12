@@ -47,6 +47,14 @@ class list[`t](arr: array[`t], len: int):
             yield self.arr[i]
             i += 1
 
+    def __add__(self: list[`t], other: list[`t]):
+        v = list[`t](self.len + other.len)
+        for a in self:
+            v.append(a)
+        for a in other:
+            v.append(a)
+        return v
+
     def __mul__(self: list[`t], n: int):
         new_len = self.len * n
         v = list[`t](new_len)
@@ -106,3 +114,15 @@ class list[`t](arr: array[`t], len: int):
             self[i] = self[j]
             self[j] = x
             i += 1
+
+    def __print__(self: list[`t]):
+        n = len(self)
+        if n == 0:
+            "[]".__print__()
+        else:
+            "[".__print__()
+            self[0].__print__()
+            for i in range(1, n):
+                ", ".__print__()
+                self[i].__print__()
+            "]".__print__()
