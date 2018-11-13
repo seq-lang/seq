@@ -188,6 +188,16 @@ namespace seq {
 		Continue *clone(Generic *ref) override;
 	};
 
+	class Assert : public Stmt {
+	private:
+		Expr *expr;
+	public:
+		explicit Assert(Expr *expr);
+		void resolveTypes() override;
+		void codegen0(llvm::BasicBlock*& block) override;
+		Assert *clone(Generic *ref) override;
+	};
+
 }
 
 #endif /* SEQ_LANG_H */

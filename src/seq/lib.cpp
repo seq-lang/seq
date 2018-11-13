@@ -15,16 +15,24 @@ using namespace std;
 
 
 /*
- * General initialization
+ * General
  */
 
 SEQ_FUNC void seq_init(seq_int_t flags)
 {
 	GC_INIT();
 
-	if (flags & SEQ_FLAG_FASTIO) {
+	if ((uint64_t)flags & SEQ_FLAG_FASTIO) {
 		ios_base::sync_with_stdio(false);
 		cin.tie(nullptr);
+	}
+}
+
+SEQ_FUNC void seq_assert(bool check, seq_str_t file, seq_int_t line)
+{
+	if (!check) {
+		std::cerr << "assertion failed on line " << line << " (" << file.str << ")" << std::endl;
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -470,11 +478,11 @@ struct IOState {
 	Format fmt;
 
 	IOState() :
-	    data(), ins()
+	    data(), ins(), fmt()
 	{
 	}
 
-	void setSource(std::string source)
+	void setSource(const std::string& source)
 	{
 		fmt = extractExt(source);
 		ins.push_back(new ifstream(source));

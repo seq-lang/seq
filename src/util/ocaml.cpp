@@ -223,6 +223,11 @@ FOREIGN Stmt *continue_stmt()
 	return new Continue();
 }
 
+FOREIGN Stmt *assert_stmt(Expr *e)
+{
+	return new Assert(e);
+}
+
 FOREIGN Stmt *expr_stmt(Expr *e)
 {
 	return new ExprStmt(e);

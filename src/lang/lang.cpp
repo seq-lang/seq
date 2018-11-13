@@ -655,7 +655,7 @@ Return *Return::clone(Generic *ref)
 }
 
 Yield::Yield(Expr *expr) :
-    Stmt("Yield"), expr(expr)
+    Stmt("yield"), expr(expr)
 {
 }
 
@@ -734,6 +734,49 @@ Continue *Continue::clone(Generic *ref)
 		return (Continue *)ref->getClone(this);
 
 	auto *x = new Continue();
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	return x;
+}
+
+Assert::Assert(Expr *expr) :
+    Stmt("assert"), expr(expr)
+{
+}
+
+void Assert::resolveTypes()
+{
+	expr->resolveTypes();
+}
+
+void Assert::codegen0(BasicBlock*& block)
+{
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+
+	auto *func = cast<Function>(
+	               module->getOrInsertFunction(
+	                 "seq_assert",
+	                 Type::getVoidTy(context),
+	                 types::Bool->getLLVMType(context),
+	                 types::Int->getLLVMType(context),
+	                 types::Str->getLLVMType(context)));
+
+	Value *check = expr->codegen(getBase(), block);
+	check = expr->getType()->boolValue(check, block);
+	Value *file = StrExpr(getSrcInfo().file).codegen(getBase(), block);
+	Value *line = IntExpr(getSrcInfo().line).codegen(getBase(), block);
+
+	IRBuilder<> builder(block);
+	builder.CreateCall(func, {check, line, file});
+}
+
+Assert *Assert::clone(Generic *ref)
+{
+	if (ref->seenClone(this))
+		return (Assert *)ref->getClone(this);
+
+	auto *x = new Assert(expr->clone(ref));
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
 	return x;
