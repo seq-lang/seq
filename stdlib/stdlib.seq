@@ -52,6 +52,10 @@ def filter(f, x):
         if f(a):
             yield a
 
+def map(f, x):
+    for a in x:
+        yield f(a)
+
 def echo(x):
     print x
 

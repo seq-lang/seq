@@ -51,7 +51,8 @@ std::string types::RefType::genericName()
 
 types::Type *types::RefType::realize(std::vector<types::Type *> types)
 {
-	assert(this == root);
+	if (this != root)
+		return root->realize(types);
 
 	auto *cached = dynamic_cast<types::RefType *>(findCachedRealizedType(types));
 
@@ -89,10 +90,8 @@ Value *types::RefType::memb(Value *self,
 	initFields();
 	initOps();
 
-	try {
+	if (Type::hasMethod(name))
 		return Type::memb(self, name, block);
-	} catch (exc::SeqException&) {
-	}
 
 	assert(contents);
 	LLVMContext& context = block->getContext();
