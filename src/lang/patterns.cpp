@@ -48,7 +48,7 @@ Wildcard *Wildcard::clone(Generic *ref)
 	ref->addClone(this, x);
 	delete x->var;
 	x->var = var->clone(ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Var *Wildcard::getVar()
@@ -91,7 +91,7 @@ BoundPattern *BoundPattern::clone(Generic *ref)
 	ref->addClone(this, x);
 	delete x->var;
 	x->var = var->clone(ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Var *BoundPattern::getVar()
@@ -228,7 +228,7 @@ RecordPattern *RecordPattern::clone(Generic *ref)
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
 		patternsCloned.push_back(elem->clone(ref));
-	return new RecordPattern(patternsCloned);
+	SEQ_RETURN_CLONE(new RecordPattern(patternsCloned));
 }
 
 ArrayPattern::ArrayPattern(std::vector<Pattern *> patterns) :
@@ -331,7 +331,7 @@ ArrayPattern *ArrayPattern::clone(Generic *ref)
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
 		patternsCloned.push_back(elem->clone(ref));
-	return new ArrayPattern(patternsCloned);
+	SEQ_RETURN_CLONE(new ArrayPattern(patternsCloned));
 }
 
 SeqPattern::SeqPattern(std::string pattern) :
@@ -501,7 +501,7 @@ Value *OptPattern::codegen(BaseFunc *base,
 
 OptPattern *OptPattern::clone(Generic *ref)
 {
-	return new OptPattern(pattern ? pattern->clone(ref) : nullptr);
+	SEQ_RETURN_CLONE(new OptPattern(pattern ? pattern->clone(ref) : nullptr));
 }
 
 RangePattern::RangePattern(seq_int_t a, seq_int_t b) :
@@ -567,7 +567,7 @@ OrPattern *OrPattern::clone(Generic *ref)
 	std::vector<Pattern *> patternsCloned;
 	for (auto *elem : patterns)
 		patternsCloned.push_back(elem->clone(ref));
-	return new OrPattern(patternsCloned);
+	SEQ_RETURN_CLONE(new OrPattern(patternsCloned));
 }
 
 GuardedPattern::GuardedPattern(Pattern *pattern, Expr *guard) :
@@ -613,5 +613,5 @@ Value *GuardedPattern::codegen(BaseFunc *base,
 
 GuardedPattern *GuardedPattern::clone(Generic *ref)
 {
-	return new GuardedPattern(pattern->clone(ref), guard->clone(ref));
+	SEQ_RETURN_CLONE(new GuardedPattern(pattern->clone(ref), guard->clone(ref)));
 }

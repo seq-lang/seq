@@ -27,7 +27,7 @@ Print *Print::clone(Generic *ref)
 	auto *x = new Print(expr->clone(ref));
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 ExprStmt::ExprStmt(Expr *expr) :
@@ -53,7 +53,7 @@ ExprStmt *ExprStmt::clone(Generic *ref)
 	auto *x = new ExprStmt(expr->clone(ref));
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 VarStmt::VarStmt(Expr *init) :
@@ -87,7 +87,7 @@ VarStmt *VarStmt::clone(Generic *ref)
 	ref->addClone(this, x);
 	x->var = var->clone(ref);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 FuncStmt::FuncStmt(Func *func) :
@@ -113,7 +113,7 @@ FuncStmt *FuncStmt::clone(Generic *ref)
 	ref->addClone(this, x);
 	x->func = func->clone(ref);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Assign::Assign(Var *var, Expr *value) :
@@ -141,7 +141,7 @@ Assign *Assign::clone(Generic *ref)
 	auto *x = new Assign(var->clone(ref), value->clone(ref));
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 AssignIndex::AssignIndex(Expr *array, Expr *idx, Expr *value) :
@@ -172,7 +172,7 @@ AssignIndex *AssignIndex::clone(Generic *ref)
 	auto *x = new AssignIndex(array->clone(ref), idx->clone(ref), value->clone(ref));
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 DelIndex::DelIndex(Expr *array, Expr *idx) :
@@ -201,7 +201,7 @@ DelIndex *DelIndex::clone(Generic *ref)
 	auto *x = new DelIndex(array->clone(ref), idx->clone(ref));
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 AssignMember::AssignMember(Expr *expr, std::string memb, Expr *value) :
@@ -236,7 +236,7 @@ AssignMember *AssignMember::clone(Generic *ref)
 	auto *x = new AssignMember(expr->clone(ref), memb, value->clone(ref));
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 If::If() :
@@ -339,7 +339,7 @@ If *If::clone(Generic *ref)
 	x->elseAdded = elseAdded;
 
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Match::Match() :
@@ -450,7 +450,7 @@ Match *Match::clone(Generic *ref)
 	x->branches = branchesCloned;
 
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 While::While(Expr *cond) :
@@ -514,7 +514,7 @@ While *While::clone(Generic *ref)
 	delete x->scope;
 	x->scope = scope->clone(ref);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 For::For(Expr *gen) :
@@ -616,7 +616,7 @@ For *For::clone(Generic *ref)
 	x->scope = scope->clone(ref);
 	x->var = var->clone(ref);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Return::Return(Expr *expr) :
@@ -651,7 +651,7 @@ Return *Return::clone(Generic *ref)
 	auto *x = new Return(expr ? expr->clone(ref) : nullptr);
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Yield::Yield(Expr *expr) :
@@ -686,7 +686,7 @@ Yield *Yield::clone(Generic *ref)
 	auto *x = new Yield(expr ? expr->clone(ref) : nullptr);
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Break::Break() :
@@ -711,7 +711,7 @@ Break *Break::clone(Generic *ref)
 	auto *x = new Break();
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Continue::Continue() :
@@ -736,7 +736,7 @@ Continue *Continue::clone(Generic *ref)
 	auto *x = new Continue();
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 Assert::Assert(Expr *expr) :
@@ -779,5 +779,5 @@ Assert *Assert::clone(Generic *ref)
 	auto *x = new Assert(expr->clone(ref));
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
-	return x;
+	SEQ_RETURN_CLONE(x);
 }

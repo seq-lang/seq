@@ -246,7 +246,7 @@ ListExpr *ListExpr::clone(Generic *ref)
 	std::vector<Expr *> elemsCloned;
 	for (auto *elem : elems)
 		elemsCloned.push_back(elem->clone(ref));
-	return new ListExpr(elemsCloned, listType->clone(ref));
+	SEQ_RETURN_CLONE(new ListExpr(elemsCloned, listType->clone(ref)));
 }
 
 SetExpr::SetExpr(std::vector<Expr *> elems, types::Type *setType) :
@@ -303,7 +303,7 @@ SetExpr *SetExpr::clone(Generic *ref)
 	std::vector<Expr *> elemsCloned;
 	for (auto *elem : elems)
 		elemsCloned.push_back(elem->clone(ref));
-	return new SetExpr(elemsCloned, setType->clone(ref));
+	SEQ_RETURN_CLONE(new SetExpr(elemsCloned, setType->clone(ref)));
 }
 
 DictExpr::DictExpr(std::vector<Expr *> elems, types::Type *dictType) :
@@ -365,7 +365,7 @@ DictExpr *DictExpr::clone(Generic *ref)
 	std::vector<Expr *> elemsCloned;
 	for (auto *elem : elems)
 		elemsCloned.push_back(elem->clone(ref));
-	return new DictExpr(elemsCloned, dictType->clone(ref));
+	SEQ_RETURN_CLONE(new DictExpr(elemsCloned, dictType->clone(ref)));
 }
 
 ListCompExpr::ListCompExpr(Expr *val, For *body, types::Type *listType, bool realize) :
@@ -429,7 +429,7 @@ types::Type *ListCompExpr::getType0() const
 
 ListCompExpr *ListCompExpr::clone(Generic *ref)
 {
-	return new ListCompExpr(val->clone(ref), body->clone(ref), listType->clone(ref), realize);
+	SEQ_RETURN_CLONE(new ListCompExpr(val->clone(ref), body->clone(ref), listType->clone(ref), realize));
 }
 
 SetCompExpr::SetCompExpr(Expr *val, For *body, types::Type *setType, bool realize) :
@@ -493,7 +493,7 @@ types::Type *SetCompExpr::getType0() const
 
 SetCompExpr *SetCompExpr::clone(Generic *ref)
 {
-	return new SetCompExpr(val->clone(ref), body->clone(ref), setType->clone(ref), realize);
+	SEQ_RETURN_CLONE(new SetCompExpr(val->clone(ref), body->clone(ref), setType->clone(ref), realize));
 }
 
 DictCompExpr::DictCompExpr(Expr *key, Expr *val, For *body, types::Type *dictType, bool realize) :
@@ -557,7 +557,7 @@ types::Type *DictCompExpr::getType0() const
 
 DictCompExpr *DictCompExpr::clone(Generic *ref)
 {
-	return new DictCompExpr(key->clone(ref), val->clone(ref), body->clone(ref), dictType->clone(ref), realize);
+	SEQ_RETURN_CLONE(new DictCompExpr(key->clone(ref), val->clone(ref), body->clone(ref), dictType->clone(ref), realize));
 }
 
 GenExpr::GenExpr(Expr *val, For *body, std::vector<Var *> captures) :
@@ -645,7 +645,7 @@ GenExpr *GenExpr::clone(Generic *ref)
 	std::vector<Var *> capturesCloned;
 	for (auto *var : captures)
 		capturesCloned.push_back(var);
-	return new GenExpr(val->clone(ref), body->clone(ref), capturesCloned);
+	SEQ_RETURN_CLONE(new GenExpr(val->clone(ref), body->clone(ref), capturesCloned));
 }
 
 VarExpr::VarExpr(Var *var) : var(var)
@@ -664,7 +664,7 @@ types::Type *VarExpr::getType0() const
 
 VarExpr *VarExpr::clone(Generic *ref)
 {
-	return new VarExpr(var->clone(ref));
+	SEQ_RETURN_CLONE(new VarExpr(var->clone(ref)));
 }
 
 FuncExpr::FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types) :
@@ -722,7 +722,7 @@ Expr *FuncExpr::clone(Generic *ref)
 	std::vector<types::Type *> typesCloned;
 	for (auto *type : types)
 		typesCloned.push_back(type->clone(ref));
-	return new FuncExpr(func->clone(ref), typesCloned);
+	SEQ_RETURN_CLONE(new FuncExpr(func->clone(ref), typesCloned));
 }
 
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
@@ -749,7 +749,7 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 ArrayExpr *ArrayExpr::clone(Generic *ref)
 {
-	return new ArrayExpr(getType()->clone(ref)->getBaseType(0), count->clone(ref));
+	SEQ_RETURN_CLONE(new ArrayExpr(getType()->clone(ref)->getBaseType(0), count->clone(ref)));
 }
 
 RecordExpr::RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names) :
@@ -793,7 +793,7 @@ RecordExpr *RecordExpr::clone(Generic *ref)
 	std::vector<Expr *> exprsCloned;
 	for (auto *expr : exprs)
 		exprsCloned.push_back(expr->clone(ref));
-	return new RecordExpr(exprsCloned, names);
+	SEQ_RETURN_CLONE(new RecordExpr(exprsCloned, names));
 }
 
 IsExpr::IsExpr(Expr *lhs, Expr *rhs) :
@@ -831,7 +831,7 @@ types::Type *IsExpr::getType0() const
 
 IsExpr *IsExpr::clone(Generic *ref)
 {
-	return new IsExpr(lhs->clone(ref), rhs->clone(ref));
+	SEQ_RETURN_CLONE(new IsExpr(lhs->clone(ref), rhs->clone(ref)));
 }
 
 static void uopError(const std::string& sym, types::Type *t)
@@ -893,7 +893,7 @@ types::Type *UOpExpr::getType0() const
 
 UOpExpr *UOpExpr::clone(Generic *ref)
 {
-	return new UOpExpr(op, lhs->clone(ref));
+	SEQ_RETURN_CLONE(new UOpExpr(op, lhs->clone(ref)));
 }
 
 BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs) :
@@ -995,7 +995,7 @@ types::Type *BOpExpr::getType0() const
 
 BOpExpr *BOpExpr::clone(Generic *ref)
 {
-	return new BOpExpr(op, lhs->clone(ref), rhs->clone(ref));
+	SEQ_RETURN_CLONE(new BOpExpr(op, lhs->clone(ref), rhs->clone(ref)));
 }
 
 ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :
@@ -1039,7 +1039,7 @@ types::Type *ArrayLookupExpr::getType0() const
 
 ArrayLookupExpr *ArrayLookupExpr::clone(Generic *ref)
 {
-	return new ArrayLookupExpr(arr->clone(ref), idx->clone(ref));
+	SEQ_RETURN_CLONE(new ArrayLookupExpr(arr->clone(ref), idx->clone(ref)));
 }
 
 ArraySliceExpr::ArraySliceExpr(Expr *arr, Expr *from, Expr *to) :
@@ -1082,9 +1082,9 @@ types::Type *ArraySliceExpr::getType0() const
 
 ArraySliceExpr *ArraySliceExpr::clone(Generic *ref)
 {
-	return new ArraySliceExpr(arr->clone(ref),
-	                          from ? from->clone(ref) : nullptr,
-	                          to ? to->clone(ref) : nullptr);
+	SEQ_RETURN_CLONE(new ArraySliceExpr(arr->clone(ref),
+	                                    from ? from->clone(ref) : nullptr,
+	                                    to ? to->clone(ref) : nullptr));
 }
 
 ArrayContainsExpr::ArrayContainsExpr(Expr *val, Expr *arr) :
@@ -1118,7 +1118,7 @@ types::Type *ArrayContainsExpr::getType0() const
 
 ArrayContainsExpr *ArrayContainsExpr::clone(Generic *ref)
 {
-	return new ArrayContainsExpr(val->clone(ref), arr->clone(ref));
+	SEQ_RETURN_CLONE(new ArrayContainsExpr(val->clone(ref), arr->clone(ref)));
 }
 
 GetElemExpr::GetElemExpr(Expr *rec, std::string memb) :
@@ -1161,7 +1161,7 @@ types::Type *GetElemExpr::getType0() const
 
 GetElemExpr *GetElemExpr::clone(Generic *ref)
 {
-	return new GetElemExpr(rec->clone(ref), memb);
+	SEQ_RETURN_CLONE(new GetElemExpr(rec->clone(ref), memb));
 }
 
 GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb) :
@@ -1196,7 +1196,7 @@ types::Type *GetStaticElemExpr::getType0() const
 
 GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref)
 {
-	return new GetStaticElemExpr(type->clone(ref), memb);
+	SEQ_RETURN_CLONE(new GetStaticElemExpr(type->clone(ref), memb));
 }
 
 MethodExpr::MethodExpr(Expr *expr,
@@ -1253,7 +1253,7 @@ Expr *MethodExpr::clone(Generic *ref)
 	for (auto *type : types)
 		typesCloned.push_back(type->clone(ref));
 
-	return new MethodExpr(expr->clone(ref), name, typesCloned);
+	SEQ_RETURN_CLONE(new MethodExpr(expr->clone(ref), name, typesCloned));
 }
 
 CallExpr::CallExpr(Expr *func, std::vector<Expr *> args) :
@@ -1436,7 +1436,7 @@ CallExpr *CallExpr::clone(Generic *ref)
 	std::vector<Expr *> argsCloned;
 	for (auto *arg : args)
 		argsCloned.push_back(arg->clone(ref));
-	return new CallExpr(func->clone(ref), argsCloned);
+	SEQ_RETURN_CLONE(new CallExpr(func->clone(ref), argsCloned));
 }
 
 PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args) :
@@ -1492,7 +1492,7 @@ PartialCallExpr *PartialCallExpr::clone(seq::Generic *ref)
 	std::vector<Expr *> argsCloned;
 	for (auto *arg : args)
 		argsCloned.push_back(arg ? arg->clone(ref) : nullptr);
-	return new PartialCallExpr(func->clone(ref), argsCloned);
+	SEQ_RETURN_CLONE(new PartialCallExpr(func->clone(ref), argsCloned));
 }
 
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse) :
@@ -1553,7 +1553,7 @@ types::Type *CondExpr::getType0() const
 
 CondExpr *CondExpr::clone(Generic *ref)
 {
-	return new CondExpr(cond->clone(ref), ifTrue->clone(ref), ifFalse->clone(ref));
+	SEQ_RETURN_CLONE(new CondExpr(cond->clone(ref), ifTrue->clone(ref), ifFalse->clone(ref)));
 }
 
 MatchExpr::MatchExpr() :
@@ -1672,7 +1672,7 @@ MatchExpr *MatchExpr::clone(Generic *ref)
 	x->patterns = patternsCloned;
 	x->exprs = exprsCloned;
 
-	return x;
+	SEQ_RETURN_CLONE(x);
 }
 
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
@@ -1764,7 +1764,7 @@ ConstructExpr *ConstructExpr::clone(Generic *ref)
 	std::vector<Expr *> argsCloned;
 	for (auto *arg : args)
 		argsCloned.push_back(arg->clone(ref));
-	return new ConstructExpr(type->clone(ref), argsCloned);
+	SEQ_RETURN_CLONE(new ConstructExpr(type->clone(ref), argsCloned));
 }
 
 OptExpr::OptExpr(Expr *val) : Expr(), val(val)
@@ -1789,7 +1789,7 @@ types::Type *OptExpr::getType0() const
 
 OptExpr *OptExpr::clone(Generic *ref)
 {
-	return new OptExpr(val->clone(ref));
+	SEQ_RETURN_CLONE(new OptExpr(val->clone(ref)));
 }
 
 DefaultExpr::DefaultExpr(types::Type *type) : Expr(type)
@@ -1803,7 +1803,7 @@ Value *DefaultExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 DefaultExpr *DefaultExpr::clone(Generic *ref)
 {
-	return new DefaultExpr(getType()->clone(ref));
+	SEQ_RETURN_CLONE(new DefaultExpr(getType()->clone(ref)));
 }
 
 PipeExpr::PipeExpr(std::vector<seq::Expr *> stages) :
@@ -1915,5 +1915,5 @@ PipeExpr *PipeExpr::clone(Generic *ref)
 	std::vector<Expr *> stagesCloned;
 	for (auto *stage : stages)
 		stagesCloned.push_back(stage->clone(ref));
-	return new PipeExpr(stagesCloned);
+	SEQ_RETURN_CLONE(new PipeExpr(stagesCloned));
 }

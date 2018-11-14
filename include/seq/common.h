@@ -136,4 +136,11 @@ namespace seq {
 
 }
 
+#define SEQ_RETURN_CLONE(e) \
+	do { \
+		auto *__x = (e); \
+		__x->setSrcInfo(getSrcInfo()); \
+		return __x; \
+	} while (0)
+
 #endif /* SEQ_COMMON_H */
