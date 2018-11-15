@@ -3,15 +3,10 @@
 using namespace seq;
 using namespace llvm;
 
-types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names) :
-    Type("<record>", BaseType::get()), types(std::move(types)), names(std::move(names))
+types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names, std::string name) :
+    Type(std::move(name), BaseType::get()), types(std::move(types)), names(std::move(names))
 {
 	assert(this->names.empty() || this->names.size() == this->types.size());
-}
-
-types::RecordType::RecordType(std::initializer_list<Type *> types) :
-    Type("<record>", BaseType::get()), types(types), names()
-{
 }
 
 bool types::RecordType::empty() const
@@ -26,6 +21,9 @@ std::vector<types::Type *> types::RecordType::getTypes()
 
 std::string types::RecordType::getName() const
 {
+	if (!name.empty())
+		return name;
+
 	std::string name = "(";
 
 	for (unsigned i = 0; i < types.size(); i++) {
@@ -158,25 +156,6 @@ types::RecordType *types::RecordType::asRec()
 	return this;
 }
 
-types::RecordType& types::RecordType::of(std::initializer_list<std::reference_wrapper<Type>> types) const
-{
-	std::vector<Type *> typesPtr;
-	for (auto& type : types)
-		typesPtr.push_back(&type.get());
-
-	return *RecordType::get(typesPtr);
-}
-
-types::RecordType *types::RecordType::get(std::vector<Type *> types, std::vector<std::string> names)
-{
-	return new RecordType(std::move(types), std::move(names));
-}
-
-types::RecordType *types::RecordType::get(std::initializer_list<Type *> types)
-{
-	return new RecordType(types);
-}
-
 types::RecordType *types::RecordType::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
@@ -202,4 +181,9 @@ types::RecordType *types::RecordType::clone(Generic *ref)
 	x->getVTable().overloads = overloadsCloned;
 	x->getVTable().methods = methodsCloned;
 	return x;
+}
+
+types::RecordType *types::RecordType::get(std::vector<Type *> types, std::vector<std::string> names, std::string name)
+{
+	return new RecordType(std::move(types), std::move(names), std::move(name));
 }

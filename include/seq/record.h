@@ -13,8 +13,7 @@ namespace seq {
 		protected:
 			std::vector<Type *> types;
 			std::vector<std::string> names;
-			RecordType(std::vector<Type *> types, std::vector<std::string> names);
-			RecordType(std::initializer_list<Type *> types);
+			explicit RecordType(std::vector<Type *> types, std::vector<std::string> names={}, std::string name="");
 		public:
 			RecordType(RecordType const&)=delete;
 			void operator=(RecordType const&)=delete;
@@ -36,12 +35,8 @@ namespace seq {
 			size_t size(llvm::Module *module) const override;
 
 			RecordType *asRec() override;
-
-			RecordType& of(std::initializer_list<std::reference_wrapper<Type>> types) const;
-			static RecordType *get(std::vector<Type *> types, std::vector<std::string> names={});
-			static RecordType *get(std::initializer_list<Type *> types);
-
 			RecordType *clone(Generic *ref) override;
+			static RecordType *get(std::vector<Type *> types, std::vector<std::string> names={}, std::string name="");
 		};
 
 	}

@@ -31,13 +31,18 @@ FOREIGN types::Type *array_type(types::Type *base)
 	return types::ArrayType::get(base);
 }
 
-FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz)
+FOREIGN types::Type *record_type_named(const char **names, types::Type **ty, size_t sz, const char *name)
 {
 	vector<string> s;
 	for (size_t i = 0; i < sz; i++)
 		s.emplace_back(string(names[i]));
 
-	return types::RecordType::get(vector<types::Type *>(ty, ty + sz), s);
+	return types::RecordType::get(vector<types::Type *>(ty, ty + sz), s, string(name));
+}
+
+FOREIGN types::Type *record_type(const char **names, types::Type **ty, size_t sz)
+{
+	return record_type_named(names, ty, sz, "");
 }
 
 FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
