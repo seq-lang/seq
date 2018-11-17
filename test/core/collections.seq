@@ -61,6 +61,7 @@ print 2 in d1        # EXPECT: False
 d1[2] = 44
 print 2 in d1        # EXPECT: True
 print d1.get(2, -1)  # EXPECT: 44
+print d1[3]          # EXPECT: 9
 
 del d1[3]
 del d1[4]

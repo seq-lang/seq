@@ -55,6 +55,11 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
     def __contains__(self: dict[`k,`v], k: `k):
         return self._find(k, hash(k)).__bool__()
 
+    def __getitem__(self: dict[`k,`v], k: `k):
+        e = self._find(k, hash(k))
+        if e:
+            return e.v
+
     def __setitem__(self: dict[`k,`v], k: `k, v: `v):
         h = hash(k)
         e = self._find(k, h)
