@@ -98,7 +98,7 @@ static bool runTest(const string& filename, bool debug)
 	return pass;
 }
 
-static bool isSeqFile(const std::string& filename)
+static bool isSeqFile(const string& filename)
 {
 	static const string ext = ".seq";
 	if (filename.length() >= ext.length())
@@ -107,7 +107,7 @@ static bool isSeqFile(const std::string& filename)
 		return false;
 }
 
-static bool runTestsFromDir(const std::string& path, bool debug)
+static bool runTestsFromDir(const string& path, bool debug)
 {
 	DIR *dir;
 	struct dirent *ent;
