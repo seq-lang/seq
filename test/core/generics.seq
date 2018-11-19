@@ -2,6 +2,10 @@ class A[`a,`b,`c](a: `a, b: `b, c: `c):
     def dump(a, b, c):
         print a, b, c
 
+    # non-generic method:
+    def m0(self: A[`a,`b,`c], a: int):
+        print a
+
     # basic generics:
     def m1[`x](self: A[`a,`b,`c], other: A[`x,`x,`x]):
         print other.a, other.b, other.c
@@ -41,6 +45,7 @@ v3 = array[str](1)
 v1[0] = v2
 v2[0] = v3
 v3[0] = "world"
+f = a2.m0
 
 a1.m1(a2)                           # EXPECT: 1 2 3
 A[int,float,str].m2(1, 1.0, "one")  # EXPECT: 1 1 one
@@ -57,3 +62,4 @@ print A.m6(v1)                      # EXPECT: world
 m7[str,float]()                     # EXPECT: works
 m7[str,float]()                     # EXPECT: works
 m7[float,str]()                     # EXPECT: works
+f(99)                               # EXPECT: 99
