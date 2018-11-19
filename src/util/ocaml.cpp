@@ -170,10 +170,9 @@ FOREIGN Expr *static_expr(types::Type *ty, const char *name)
 	return new GetStaticElemExpr(ty, string(name));
 }
 
-FOREIGN Expr *method_expr(Expr *expr, Func *method)
+FOREIGN Expr *method_expr(Expr *expr, const char *name, types::Type **types, size_t len)
 {
-	assert(0);
-	return nullptr;
+	return new MethodExpr(expr, name, vector<types::Type *>(types, types + len));
 }
 
 FOREIGN Expr *list_expr(types::Type *ty, Expr **args, size_t len)
