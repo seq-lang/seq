@@ -16,7 +16,7 @@ void Print::resolveTypes()
 void Print::codegen0(BasicBlock*& block)
 {
 	Value *val = expr->codegen(getBase(), block);
-	expr->getType()->callMagic("__print__", {}, val, {}, block, findEnclosingTryCatch());
+	expr->getType()->callMagic("__print__", {}, val, {}, block, getTryCatch());
 }
 
 Print *Print::clone(Generic *ref)
@@ -166,7 +166,7 @@ void AssignIndex::codegen0(BasicBlock*& block)
 	                            arr,
 	                            {idx, val},
 	                            block,
-	                            findEnclosingTryCatch());
+	                            getTryCatch());
 }
 
 AssignIndex *AssignIndex::clone(Generic *ref)
@@ -200,7 +200,7 @@ void DelIndex::codegen0(BasicBlock*& block)
 	                            arr,
 	                            {idx},
 	                            block,
-	                            findEnclosingTryCatch());
+	                            getTryCatch());
 }
 
 DelIndex *DelIndex::clone(Generic *ref)
@@ -271,7 +271,7 @@ void If::codegen0(BasicBlock*& block)
 	Function *func = block->getParent();
 	IRBuilder<> builder(block);
 	std::vector<BranchInst *> binsts;
-	TryCatch *tc = findEnclosingTryCatch();
+	TryCatch *tc = getTryCatch();
 
 	for (unsigned i = 0; i < conds.size(); i++) {
 		Value *cond = conds[i]->codegen(getBase(), block);
@@ -770,7 +770,7 @@ void While::codegen0(BasicBlock*& block)
 	builder.CreateBr(loop);
 
 	Value *cond = this->cond->codegen(getBase(), loop);  // recall: this can change `loop`
-	cond = this->cond->getType()->boolValue(cond, loop, findEnclosingTryCatch());
+	cond = this->cond->getType()->boolValue(cond, loop, getTryCatch());
 	builder.SetInsertPoint(loop);
 	cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
 
@@ -853,7 +853,7 @@ void For::codegen0(BasicBlock*& block)
 	Function *func = entry->getParent();
 
 	Value *gen = this->gen->codegen(getBase(), entry);
-	gen = this->gen->getType()->callMagic("__iter__", {}, gen, {}, entry, findEnclosingTryCatch());
+	gen = this->gen->getType()->callMagic("__iter__", {}, gen, {}, entry, getTryCatch());
 
 	IRBuilder<> builder(entry);
 	BasicBlock *loopCont = BasicBlock::Create(context, "for_cont", func);
@@ -1051,7 +1051,7 @@ void Assert::codegen0(BasicBlock*& block)
 	                 types::Str->getLLVMType(context)));
 
 	Value *check = expr->codegen(getBase(), block);
-	check = expr->getType()->boolValue(check, block, findEnclosingTryCatch());
+	check = expr->getType()->boolValue(check, block, getTryCatch());
 	Value *file = StrExpr(getSrcInfo().file).codegen(getBase(), block);
 	Value *line = IntExpr(getSrcInfo().line).codegen(getBase(), block);
 

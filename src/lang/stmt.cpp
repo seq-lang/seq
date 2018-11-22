@@ -104,7 +104,11 @@ void Stmt::addContinueToEnclosingLoop(BranchInst *inst)
 	findEnclosingLoop(this)->addContinue(inst);
 }
 
-TryCatch *Stmt::findEnclosingTryCatch()
+void Stmt::setTryCatch(TryCatch *tc)
+{
+}
+
+TryCatch *Stmt::getTryCatch()
 {
 	Stmt *stmt = this;
 

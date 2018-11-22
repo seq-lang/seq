@@ -12,9 +12,14 @@ Expr::Expr() : Expr(types::Void)
 {
 }
 
-void Expr::setEnclosingTryCatch(TryCatch *tc)
+void Expr::setTryCatch(TryCatch *tc)
 {
 	this->tc = tc;
+}
+
+TryCatch *Expr::getTryCatch()
+{
+	return tc;
 }
 
 void Expr::resolveTypes()
@@ -1857,7 +1862,7 @@ static Value *codegenPipe(BaseFunc *base,
 		assert(val && type);
 		ValueExpr arg(type, val);
 		CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
-		call.setEnclosingTryCatch(tc);
+		call.setTryCatch(tc);
 		type = call.getType();
 		val = call.codegen(base, block);
 	}

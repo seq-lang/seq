@@ -18,6 +18,7 @@ namespace seq {
 	public:
 		explicit Pattern(types::Type *type);
 		void setTryCatch(TryCatch *tc);
+		TryCatch *getTryCatch();
 		virtual void resolveTypes(types::Type *type);
 		virtual llvm::Value *codegen(BaseFunc *base,
 		                             types::Type *type,

@@ -477,7 +477,8 @@ Func *Func::clone(Generic *ref)
 	if (ret) x->ret = ret->clone(ref);
 	if (yield) x->yield = yield->clone(ref);
 	x->gen = gen;
-	SEQ_RETURN_CLONE(x);
+	x->setSrcInfo(getSrcInfo());
+	return x;
 }
 
 BaseFuncLite::BaseFuncLite(std::vector<types::Type *> inTypes,

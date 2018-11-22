@@ -386,7 +386,7 @@ Value *types::Type::callMagic(const std::string& name,
 
 			FuncExpr func(magic.func);
 			CallExpr call(&func, argExprs);
-			call.setEnclosingTryCatch(tc);
+			call.setTryCatch(tc);
 			call.resolveTypes();
 			return call.codegen(nullptr, block);
 		}

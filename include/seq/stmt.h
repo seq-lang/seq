@@ -48,7 +48,8 @@ namespace seq {
 		void setBase(BaseFunc *base);
 		void addBreakToEnclosingLoop(llvm::BranchInst *inst);
 		void addContinueToEnclosingLoop(llvm::BranchInst *inst);
-		TryCatch *findEnclosingTryCatch();
+		void setTryCatch(TryCatch *tc);
+		TryCatch *getTryCatch();
 
 		bool isLoop();
 		void ensureLoop();

@@ -12,6 +12,11 @@ void Pattern::setTryCatch(TryCatch *tc)
 	this->tc = tc;
 }
 
+TryCatch *Pattern::getTryCatch()
+{
+	return tc;
+}
+
 void Pattern::resolveTypes(types::Type *type)
 {
 	if (!types::is(type, this->type))
