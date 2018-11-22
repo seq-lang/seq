@@ -87,7 +87,7 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 	Value *argLen = builder.CreateZExtOrTrunc(builder.CreateCall(strlen, arg), seqIntLLVM(context));
 	Value *str = types::Str->make(arg, argLen, body);
 	Value *idx = builder.CreateZExt(control, types::Int->getLLVMType(context));
-	arrType->callMagic("__setitem__", {types::Int, types::Str}, arr, {idx, str}, body);
+	arrType->callMagic("__setitem__", {types::Int, types::Str}, arr, {idx, str}, body, nullptr);
 	builder.CreateBr(loop);
 
 	control->addIncoming(ConstantInt::get(LLVM_I32(), 0), entry);

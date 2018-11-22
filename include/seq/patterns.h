@@ -8,11 +8,16 @@
 
 namespace seq {
 
+	class TryCatch;
+
 	class Pattern : public SrcObject {
 	private:
 		types::Type *type;
+	protected:
+		TryCatch *tc;
 	public:
 		explicit Pattern(types::Type *type);
+		void setTryCatch(TryCatch *tc);
 		virtual void resolveTypes(types::Type *type);
 		virtual llvm::Value *codegen(BaseFunc *base,
 		                             types::Type *type,

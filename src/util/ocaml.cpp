@@ -500,6 +500,11 @@ FOREIGN Var *get_bound_pattern_var(BoundPattern *b)
 	return b->getVar();
 }
 
+FOREIGN void set_pattern_trycatch(Pattern *p, TryCatch *tc)
+{
+	p->setTryCatch(tc);
+}
+
 /***** Block utils *****/
 
 FOREIGN Block *get_module_block(SeqModule *st)  { return st->getBlock(); }

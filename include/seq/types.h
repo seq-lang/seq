@@ -13,6 +13,7 @@ namespace seq {
 	class BaseFunc;
 	class Func;
 	class Generic;
+	class TryCatch;
 
 	struct MagicMethod;
 	struct MagicOverload;
@@ -83,7 +84,9 @@ namespace seq {
 
 			virtual llvm::Value *defaultValue(llvm::BasicBlock *block);
 
-			virtual llvm::Value *boolValue(llvm::Value *self, llvm::BasicBlock *block);
+			virtual llvm::Value *boolValue(llvm::Value *self,
+			                               llvm::BasicBlock*& block,
+			                               TryCatch *tc);
 
 			virtual void initOps();
 			virtual void initFields();
@@ -92,7 +95,8 @@ namespace seq {
 			                               std::vector<Type *> argTypes,
 			                               llvm::Value *self,
 			                               std::vector<llvm::Value *> args,
-			                               llvm::BasicBlock *block);
+			                               llvm::BasicBlock*& block,
+			                               TryCatch *tc);
 			virtual void resolveTypes();
 
 			virtual bool is(Type *type) const;

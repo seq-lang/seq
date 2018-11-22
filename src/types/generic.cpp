@@ -155,10 +155,10 @@ Value *types::GenericType::defaultValue(BasicBlock *block)
 	return type->defaultValue(block);
 }
 
-Value *types::GenericType::boolValue(Value *self, BasicBlock *block)
+Value *types::GenericType::boolValue(Value *self, BasicBlock*& block, TryCatch *tc)
 {
 	ensure();
-	return type->boolValue(self, block);
+	return type->boolValue(self, block, tc);
 }
 
 void types::GenericType::initOps()
@@ -183,10 +183,11 @@ Value *types::GenericType::callMagic(const std::string& name,
                                      std::vector<types::Type *> argTypes,
                                      Value *self,
                                      std::vector<Value *> args,
-                                     BasicBlock *block)
+                                     BasicBlock*& block,
+                                     TryCatch *tc)
 {
 	ensure();
-	return type->callMagic(name, argTypes, self, args, block);
+	return type->callMagic(name, argTypes, self, args, block, tc);
 }
 
 void types::GenericType::resolveTypes()

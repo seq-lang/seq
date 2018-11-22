@@ -292,12 +292,12 @@ Value *types::Type::defaultValue(BasicBlock *block)
 	throw exc::SeqException("type '" + getName() + "' has no default value");
 }
 
-Value *types::Type::boolValue(Value *self, BasicBlock *block)
+Value *types::Type::boolValue(Value *self, BasicBlock*& block, TryCatch *tc)
 {
 	if (!magicOut("__bool__", {})->is(types::Bool))
 		throw exc::SeqException("the output type of __bool__ is not boolean");
 
-	return callMagic("__bool__", {}, self, {}, block);
+	return callMagic("__bool__", {}, self, {}, block, tc);
 }
 
 void types::Type::initOps()
@@ -367,7 +367,8 @@ Value *types::Type::callMagic(const std::string& name,
                               std::vector<types::Type *> argTypes,
                               Value *self,
                               std::vector<Value *> args,
-                              BasicBlock *block)
+                              BasicBlock*& block,
+                              TryCatch *tc)
 {
 	initOps();
 
@@ -385,6 +386,7 @@ Value *types::Type::callMagic(const std::string& name,
 
 			FuncExpr func(magic.func);
 			CallExpr call(&func, argExprs);
+			call.setEnclosingTryCatch(tc);
 			call.resolveTypes();
 			return call.codegen(nullptr, block);
 		}

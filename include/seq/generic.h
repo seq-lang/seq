@@ -64,7 +64,9 @@ namespace seq {
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
-			llvm::Value *boolValue(llvm::Value *self, llvm::BasicBlock *block) override;
+			llvm::Value *boolValue(llvm::Value *self,
+			                       llvm::BasicBlock*& block,
+			                       TryCatch *tc) override;
 
 			void initOps() override;
 			void initFields() override;
@@ -73,7 +75,8 @@ namespace seq {
 			                       std::vector<Type *> argTypes,
 			                       llvm::Value *self,
 			                       std::vector<llvm::Value *> args,
-			                       llvm::BasicBlock *block) override;
+			                       llvm::BasicBlock*& block,
+			                       TryCatch *tc) override;
 			void resolveTypes() override;
 
 			bool is(Type *type) const override;

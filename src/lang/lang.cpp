@@ -16,7 +16,7 @@ void Print::resolveTypes()
 void Print::codegen0(BasicBlock*& block)
 {
 	Value *val = expr->codegen(getBase(), block);
-	expr->getType()->callMagic("__print__", {}, val, {}, block);
+	expr->getType()->callMagic("__print__", {}, val, {}, block, findEnclosingTryCatch());
 }
 
 Print *Print::clone(Generic *ref)
@@ -161,7 +161,12 @@ void AssignIndex::codegen0(BasicBlock*& block)
 	Value *val = value->codegen(getBase(), block);
 	Value *arr = array->codegen(getBase(), block);
 	Value *idx = this->idx->codegen(getBase(), block);
-	array->getType()->callMagic("__setitem__", {this->idx->getType(), value->getType()}, arr, {idx, val}, block);
+	array->getType()->callMagic("__setitem__",
+	                            {this->idx->getType(), value->getType()},
+	                            arr,
+	                            {idx, val},
+	                            block,
+	                            findEnclosingTryCatch());
 }
 
 AssignIndex *AssignIndex::clone(Generic *ref)
@@ -190,7 +195,12 @@ void DelIndex::codegen0(BasicBlock*& block)
 {
 	Value *arr = array->codegen(getBase(), block);
 	Value *idx = this->idx->codegen(getBase(), block);
-	array->getType()->callMagic("__delitem__", {this->idx->getType()}, arr, {idx}, block);
+	array->getType()->callMagic("__delitem__",
+	                            {this->idx->getType()},
+	                            arr,
+	                            {idx},
+	                            block,
+	                            findEnclosingTryCatch());
 }
 
 DelIndex *DelIndex::clone(Generic *ref)
@@ -261,10 +271,11 @@ void If::codegen0(BasicBlock*& block)
 	Function *func = block->getParent();
 	IRBuilder<> builder(block);
 	std::vector<BranchInst *> binsts;
+	TryCatch *tc = findEnclosingTryCatch();
 
 	for (unsigned i = 0; i < conds.size(); i++) {
 		Value *cond = conds[i]->codegen(getBase(), block);
-		cond = conds[i]->getType()->boolValue(cond, block);
+		cond = conds[i]->getType()->boolValue(cond, block, tc);
 		Block *branch = branches[i];
 
 		builder.SetInsertPoint(block);  // recall: expr codegen can change the block
@@ -759,7 +770,7 @@ void While::codegen0(BasicBlock*& block)
 	builder.CreateBr(loop);
 
 	Value *cond = this->cond->codegen(getBase(), loop);  // recall: this can change `loop`
-	cond = this->cond->getType()->boolValue(cond, loop);
+	cond = this->cond->getType()->boolValue(cond, loop, findEnclosingTryCatch());
 	builder.SetInsertPoint(loop);
 	cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
 
@@ -842,7 +853,7 @@ void For::codegen0(BasicBlock*& block)
 	Function *func = entry->getParent();
 
 	Value *gen = this->gen->codegen(getBase(), entry);
-	gen = this->gen->getType()->callMagic("__iter__", {}, gen, {}, entry);
+	gen = this->gen->getType()->callMagic("__iter__", {}, gen, {}, entry, findEnclosingTryCatch());
 
 	IRBuilder<> builder(entry);
 	BasicBlock *loopCont = BasicBlock::Create(context, "for_cont", func);
@@ -1040,7 +1051,7 @@ void Assert::codegen0(BasicBlock*& block)
 	                 types::Str->getLLVMType(context)));
 
 	Value *check = expr->codegen(getBase(), block);
-	check = expr->getType()->boolValue(check, block);
+	check = expr->getType()->boolValue(check, block, findEnclosingTryCatch());
 	Value *file = StrExpr(getSrcInfo().file).codegen(getBase(), block);
 	Value *line = IntExpr(getSrcInfo().line).codegen(getBase(), block);
 
