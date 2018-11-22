@@ -179,7 +179,7 @@ Value *StrPattern::codegen(BaseFunc *base,
 {
 	LLVMContext& context = block->getContext();
 	Value *pat = StrExpr(this->val).codegen(base, block);
-	Value *b = types::Str->callMagic("__eq__", {type}, pat, {val}, block, tc);
+	Value *b = types::Str->callMagic("__eq__", {type}, pat, {val}, block, getTryCatch());
 	IRBuilder<> builder(block);
 	return builder.CreateTrunc(b, IntegerType::getInt1Ty(context));
 }
@@ -296,7 +296,7 @@ Value *ArrayPattern::codegen(BaseFunc *base,
 	if (hasStar) {
 		for (unsigned i = 0; i < star; i++) {
 			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
-			Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx}, block, tc);
+			Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx}, block, getTryCatch());
 			Value *subRes = patterns[i]->codegen(base, type->magicOut("__getitem__", {types::Int}), sub, block);
 			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
 			result = builder.CreateAnd(result, subRes);
@@ -307,7 +307,7 @@ Value *ArrayPattern::codegen(BaseFunc *base,
 			idx = builder.CreateAdd(idx, len);
 			idx = builder.CreateSub(idx, ConstantInt::get(seqIntLLVM(context), patterns.size()));
 
-			Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx}, block, tc);
+			Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx}, block, getTryCatch());
 			Value *subRes = patterns[i]->codegen(base, type->magicOut("__getitem__", {types::Int}), sub, block);
 			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
 			result = builder.CreateAnd(result, subRes);
@@ -315,7 +315,7 @@ Value *ArrayPattern::codegen(BaseFunc *base,
 	} else {
 		for (unsigned i = 0; i < patterns.size(); i++) {
 			Value *idx = ConstantInt::get(seqIntLLVM(context), i);
-			Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx}, block, tc);
+			Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx}, block, getTryCatch());
 			Value *subRes = patterns[i]->codegen(base, type->magicOut("__getitem__", {types::Int}), sub, block);
 			builder.SetInsertPoint(block);  // recall that pattern codegen can change the block
 			result = builder.CreateAnd(result, subRes);
@@ -604,7 +604,7 @@ Value *GuardedPattern::codegen(BaseFunc *base,
 	BranchInst *branch = builder.CreateCondBr(patternResult, block, block);
 
 	Value *guardResult = guard->codegen(base, block);
-	guardResult = guard->getType()->boolValue(guardResult, block, tc);
+	guardResult = guard->getType()->boolValue(guardResult, block, getTryCatch());
 	BasicBlock *checkBlock = block;
 	builder.SetInsertPoint(block);
 	guardResult = builder.CreateTrunc(guardResult, IntegerType::getInt1Ty(context));

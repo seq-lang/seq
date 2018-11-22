@@ -12,9 +12,9 @@ namespace seq {
 	class Expr : public SrcObject {
 	private:
 		types::Type *type;
+		TryCatch *tc;
 	protected:
 		std::string name;
-		TryCatch *tc;
 	public:
 		explicit Expr(types::Type *type);
 		Expr();

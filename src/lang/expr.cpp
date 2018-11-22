@@ -4,7 +4,7 @@
 using namespace seq;
 using namespace llvm;
 
-Expr::Expr(types::Type *type) : SrcObject(), type(type), tc(nullptr)
+Expr::Expr(types::Type *type) : SrcObject(), type(type), tc(nullptr), name("")
 {
 }
 
@@ -349,7 +349,7 @@ Value *DictExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 		Value *k = key->codegen(base, block);
 		Value *v = val->codegen(base, block);
-		type->callMagic("__setitem__", {keyType, valType}, dict, {k, v}, block, tc);
+		type->callMagic("__setitem__", {keyType, valType}, dict, {k, v}, block, getTryCatch());
 	}
 
 	return dict;
@@ -636,9 +636,19 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	for (auto *var : captures)
 		args.push_back(var->load(base, block));
 
-	Value *gen = funcType->call(base, func, args, block, nullptr, nullptr);
-	inner->stmts.pop_back();
+	Value *gen;
+	if (getTryCatch()) {
+		LLVMContext& context = block->getContext();
+		Function *parent = block->getParent();
+		BasicBlock *unwind = getTryCatch()->getExceptionBlock();
+		BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
+		gen = funcType->call(base, func, args, block, normal, unwind);
+		block = normal;
+	} else {
+		gen = funcType->call(base, func, args, block, nullptr, nullptr);
+	}
 
+	inner->stmts.pop_back();
 	for (auto *var : captures)
 		var->unmap();
 
@@ -871,11 +881,11 @@ Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	Value *self = lhs->codegen(base, block);
 
 	if (op == uop("!")) {
-		Value *b = lhsType->boolValue(self, block, tc);
-		return types::Bool->callMagic("__invert__", {}, b, {}, block, tc);
+		Value *b = lhsType->boolValue(self, block, getTryCatch());
+		return types::Bool->callMagic("__invert__", {}, b, {}, block, getTryCatch());
 	} else {
 		try {
-			return lhsType->callMagic(op.magic, {}, self, {}, block, tc);
+			return lhsType->callMagic(op.magic, {}, self, {}, block, getTryCatch());
 		} catch (exc::SeqException&) {
 		}
 
@@ -928,7 +938,7 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		const bool isAnd = (op == bop("&&"));
 
 		Value *lhs = this->lhs->codegen(base, block);
-		lhs = this->lhs->getType()->boolValue(lhs, block, tc);
+		lhs = this->lhs->getType()->boolValue(lhs, block, getTryCatch());
 
 		BasicBlock *b1 = BasicBlock::Create(context, "", block->getParent());
 
@@ -937,7 +947,7 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		BranchInst *branch = builder.CreateCondBr(lhs, b1, b1);  // one branch changed below
 
 		Value *rhs = this->rhs->codegen(base, b1);
-		rhs = this->rhs->getType()->boolValue(rhs, b1, tc);
+		rhs = this->rhs->getType()->boolValue(rhs, b1, getTryCatch());
 		builder.SetInsertPoint(b1);
 
 		BasicBlock *b2 = BasicBlock::Create(context, "", block->getParent());
@@ -962,13 +972,13 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		Value *arg = rhs->codegen(base, block);
 
 		try {
-			return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block, tc);
+			return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block, getTryCatch());
 		} catch (exc::SeqException&) {
 		}
 
 		if (!op.magicReflected.empty()) {
 			try {
-				return rhsType->callMagic(op.magicReflected, {lhsType}, arg, {self}, block, tc);
+				return rhsType->callMagic(op.magicReflected, {lhsType}, arg, {self}, block, getTryCatch());
 			} catch (exc::SeqException&) {
 			}
 		}
@@ -1032,7 +1042,7 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 	Value *arr = this->arr->codegen(base, block);
 	Value *idx = this->idx->codegen(base, block);
-	return type->callMagic("__getitem__", {this->idx->getType()}, arr, {idx}, block, tc);
+	return type->callMagic("__getitem__", {this->idx->getType()}, arr, {idx}, block, getTryCatch());
 }
 
 types::Type *ArrayLookupExpr::getType0() const
@@ -1070,20 +1080,20 @@ Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	Value *arr = this->arr->codegen(base, block);
 
 	if (!from && !to)
-		return type->callMagic("__copy__", {}, arr, {}, block, tc);
+		return type->callMagic("__copy__", {}, arr, {}, block, getTryCatch());
 
 	if (!from) {
 		Value *to = this->to->codegen(base, block);
-		return type->callMagic("__slice_left__", {this->to->getType()}, arr, {to}, block, tc);
+		return type->callMagic("__slice_left__", {this->to->getType()}, arr, {to}, block, getTryCatch());
 	} else if (!to) {
 		Value *from = this->from->codegen(base, block);
-		return type->callMagic("__slice_right__", {this->from->getType()}, arr, {from}, block, tc);
+		return type->callMagic("__slice_right__", {this->from->getType()}, arr, {from}, block, getTryCatch());
 	} else {
 		Value *from = this->from->codegen(base, block);
 		Value *to = this->to->codegen(base, block);
 		return type->callMagic("__slice__",
 		                       {this->from->getType(), this->to->getType()},
-		                       arr, {from, to}, block, tc);
+		                       arr, {from, to}, block, getTryCatch());
 	}
 }
 
@@ -1120,7 +1130,7 @@ Value *ArrayContainsExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 	Value *val = this->val->codegen(base, block);
 	Value *arr = this->arr->codegen(base, block);
-	return arrType->callMagic("__contains__", {valType}, arr, {val}, block, tc);
+	return arrType->callMagic("__contains__", {valType}, arr, {val}, block, getTryCatch());
 }
 
 types::Type *ArrayContainsExpr::getType0() const
@@ -1419,10 +1429,10 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		return partial->make(f, x, block);
 	}
 
-	if (tc) {
+	if (getTryCatch()) {
 		LLVMContext& context = block->getContext();
 		Function *parent = block->getParent();
-		BasicBlock *unwind = tc->getExceptionBlock();
+		BasicBlock *unwind = getTryCatch()->getExceptionBlock();
 		BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
 		Value *v = func->getType()->call(base, f, x, block, normal, unwind);
 		block = normal;
@@ -1533,7 +1543,7 @@ Value *CondExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	Value *cond = this->cond->codegen(base, block);
-	cond = this->cond->getType()->boolValue(cond, block, tc);
+	cond = this->cond->getType()->boolValue(cond, block, getTryCatch());
 	IRBuilder<> builder(block);
 	cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
 
@@ -1725,7 +1735,7 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	Value *self;
 
 	if (type->hasMethod("__new__")) {
-		self = type->callMagic("__new__", {}, nullptr, {}, block, tc);
+		self = type->callMagic("__new__", {}, nullptr, {}, block, getTryCatch());
 
 		if (type->hasMethod("__del__")) {
 			// make and register the finalizer
@@ -1741,7 +1751,7 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 			Value *obj = finalizeFunc->arg_begin();
 			IRBuilder<> builder(entry);
 			obj = builder.CreateBitCast(obj, type->getLLVMType(context));
-			type->callMagic("__del__", {}, obj, {}, entry, tc);
+			type->callMagic("__del__", {}, obj, {}, entry, getTryCatch());
 			builder.SetInsertPoint(entry);
 			builder.CreateRetVoid();
 
@@ -1761,7 +1771,7 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		self = type->defaultValue(block);
 	}
 
-	Value *ret = type->callMagic("__init__", types, self, vals, block, tc);
+	Value *ret = type->callMagic("__init__", types, self, vals, block, getTryCatch());
 	return type->magicOut("__init__", types)->is(types::Void) ? self : ret;
 }
 
@@ -1910,7 +1920,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	for (auto *stage : stages)
 		queue.push(stage);
 
-	return codegenPipe(base, nullptr, nullptr, block, queue, tc);
+	return codegenPipe(base, nullptr, nullptr, block, queue, getTryCatch());
 }
 
 types::Type *PipeExpr::getType0() const

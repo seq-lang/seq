@@ -13,7 +13,6 @@ namespace seq {
 	class Pattern : public SrcObject {
 	private:
 		types::Type *type;
-	protected:
 		TryCatch *tc;
 	public:
 		explicit Pattern(types::Type *type);
