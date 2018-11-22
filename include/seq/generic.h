@@ -23,6 +23,7 @@ namespace seq {
 			void ensure() const;
 			Type *getType() const;
 
+			int getID() const override;
 			std::string getName() const override;
 			Type *getParent() const override;
 			bool isAbstract() const override;
@@ -34,7 +35,9 @@ namespace seq {
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
 			                  const std::vector<llvm::Value *>& args,
-			                  llvm::BasicBlock *block) override;
+			                  llvm::BasicBlock *block,
+			                  llvm::BasicBlock *normal,
+			                  llvm::BasicBlock *unwind) override;
 
 			llvm::Value *memb(llvm::Value *self,
 			                  const std::string& name,

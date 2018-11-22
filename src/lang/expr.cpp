@@ -4,12 +4,17 @@
 using namespace seq;
 using namespace llvm;
 
-Expr::Expr(types::Type *type) : SrcObject(), type(type)
+Expr::Expr(types::Type *type) : SrcObject(), type(type), tc(nullptr)
 {
 }
 
 Expr::Expr() : Expr(types::Void)
 {
+}
+
+void Expr::setEnclosingTryCatch(TryCatch *tc)
+{
+	this->tc = tc;
 }
 
 void Expr::resolveTypes()
@@ -626,7 +631,7 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	for (auto *var : captures)
 		args.push_back(var->load(base, block));
 
-	Value *gen = funcType->call(base, func, args, block);
+	Value *gen = funcType->call(base, func, args, block, nullptr, nullptr);
 	inner->stmts.pop_back();
 
 	for (auto *var : captures)
@@ -1407,7 +1412,17 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		return partial->make(f, x, block);
 	}
 
-	return func->getType()->call(base, f, x, block);
+	if (tc) {
+		LLVMContext& context = block->getContext();
+		Function *parent = block->getParent();
+		BasicBlock *unwind = tc->getExceptionBlock();
+		BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
+		Value *v = func->getType()->call(base, f, x, block, normal, unwind);
+		block = normal;
+		return v;
+	} else {
+		return func->getType()->call(base, f, x, block, nullptr, nullptr);
+	}
 }
 
 types::Type *CallExpr::getType0() const

@@ -277,6 +277,16 @@ FOREIGN Stmt *if_stmt()
 	return new If();
 }
 
+FOREIGN Stmt *trycatch_stmt()
+{
+	return new TryCatch();
+}
+
+FOREIGN Stmt *throw_stmt(Expr *expr)
+{
+	return new Throw(expr);
+}
+
 FOREIGN Stmt *while_stmt(Expr *cond)
 {
 	return new While(cond);
@@ -497,6 +507,29 @@ FOREIGN Block *get_while_block(While *st)       { return st->getBlock(); }
 FOREIGN Block *get_for_block(For *st)           { return st->getBlock(); }
 FOREIGN Block *get_else_block(If *st)           { E("else_block"); return st->addElse(); }
 FOREIGN Block *get_elif_block(If *st, Expr *ex) { E("cond_block"); return st->addCond(ex); }
+FOREIGN Block *get_trycatch_block(TryCatch *tc) { return tc->getBlock(); }
+
+FOREIGN Block *get_trycatch_catch(TryCatch *tc, types::Type *t)
+{
+	E("catch_block");
+	return tc->addCatch(t);
+}
+
+FOREIGN Block *get_trycatch_finally(TryCatch *tc)
+{
+	E("finally_block");
+	return tc->getFinally();
+}
+
+FOREIGN Var *get_trycatch_var(TryCatch *tc, unsigned idx)
+{
+	return tc->getVar(idx);
+}
+
+FOREIGN void set_enclosing_trycatch(Expr *e, TryCatch *tc)
+{
+	e->setEnclosingTryCatch(tc);
+}
 
 FOREIGN char type_eq(types::Type *a, types::Type *b)
 {

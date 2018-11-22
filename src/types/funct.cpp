@@ -16,10 +16,13 @@ unsigned types::FuncType::argCount() const
 Value *types::FuncType::call(BaseFunc *base,
                              Value *self,
                              const std::vector<Value *>& args,
-                             BasicBlock *block)
+                             BasicBlock *block,
+                             BasicBlock *normal,
+                             BasicBlock *unwind)
 {
 	IRBuilder<> builder(block);
-	return builder.CreateCall(self, args);
+	return normal ? (Value *)builder.CreateInvoke(self, normal, unwind, args) :
+	                builder.CreateCall(self, args);
 }
 
 Value *types::FuncType::defaultValue(BasicBlock *block)
@@ -263,7 +266,9 @@ bool types::PartialFuncType::isAtomic() const
 Value *types::PartialFuncType::call(BaseFunc *base,
                                     Value *self,
                                     const std::vector<Value *>& args,
-                                    BasicBlock *block)
+                                    BasicBlock *block,
+                                    BasicBlock *normal,
+                                    BasicBlock *unwind)
 {
 	IRBuilder<> builder(block);
 	std::vector<Value *> argsFull;
@@ -279,7 +284,7 @@ Value *types::PartialFuncType::call(BaseFunc *base,
 		}
 	}
 
-	return callee->call(base, func, argsFull, block);
+	return callee->call(base, func, argsFull, block, normal, unwind);
 }
 
 Value *types::PartialFuncType::defaultValue(BasicBlock *block)

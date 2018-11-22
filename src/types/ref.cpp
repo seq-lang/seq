@@ -306,13 +306,15 @@ types::MethodType::MethodType(types::Type *self, FuncType *func) :
 Value *types::MethodType::call(BaseFunc *base,
                                Value *self,
                                const std::vector<Value *>& args,
-                               BasicBlock *block)
+                               BasicBlock *block,
+                               BasicBlock *normal,
+                               BasicBlock *unwind)
 {
 	Value *x = memb(self, "self", block);
 	Value *f = memb(self, "func", block);
 	std::vector<Value *> argsFull(args);
 	argsFull.insert(argsFull.begin(), x);
-	return func->call(base, f, argsFull, block);
+	return func->call(base, f, argsFull, block, normal, unwind);
 }
 
 bool types::MethodType::is(types::Type *type) const

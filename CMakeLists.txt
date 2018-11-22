@@ -13,7 +13,8 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 # Seq runtime library
 add_library(seqrt SHARED include/seq/lib.h
-                         src/seq/lib.cpp)
+                         src/seq/lib.cpp
+                         src/seq/exc.cpp)
 target_link_libraries(seqrt gc)
 
 

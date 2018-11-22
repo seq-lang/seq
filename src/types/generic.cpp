@@ -48,6 +48,12 @@ types::Type *types::GenericType::getType() const
 	return genType ? genType->getType() : type;
 }
 
+int types::GenericType::getID() const
+{
+	ensure();
+	return type->getID();
+}
+
 std::string types::GenericType::getName() const
 {
 	if (!type)
@@ -82,10 +88,12 @@ Value *types::GenericType::alloc(Value *count, BasicBlock *block)
 Value *types::GenericType::call(BaseFunc *base,
                                 Value *self,
                                 const std::vector<Value *>& args,
-                                BasicBlock *block)
+                                BasicBlock *block,
+                                BasicBlock *normal,
+                                BasicBlock *unwind)
 {
 	ensure();
-	return type->call(base, self, args, block);
+	return type->call(base, self, args, block, normal, unwind);
 }
 
 Value *types::GenericType::memb(Value *self,

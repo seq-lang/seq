@@ -14,6 +14,7 @@ namespace seq {
 
 	class BaseFunc;
 	class Func;
+	class TryCatch;
 
 	class Stmt;
 	struct Block {
@@ -47,6 +48,7 @@ namespace seq {
 		void setBase(BaseFunc *base);
 		void addBreakToEnclosingLoop(llvm::BranchInst *inst);
 		void addContinueToEnclosingLoop(llvm::BranchInst *inst);
+		TryCatch *findEnclosingTryCatch();
 
 		bool isLoop();
 		void ensureLoop();

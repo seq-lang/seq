@@ -112,6 +112,36 @@ namespace seq {
 		If *clone(Generic *ref) override;
 	};
 
+	class TryCatch : public Stmt {
+	private:
+		Block *scope;
+		std::vector<types::Type *> catchTypes;
+		std::vector<Block *> catchBlocks;
+		std::vector<Var *> catchVars;
+		Block *finally;
+		llvm::BasicBlock *exceptionBlock;
+	public:
+		TryCatch();
+		Block *getBlock();
+		Var *getVar(unsigned idx);
+		Block *addCatch(types::Type *type);
+		Block *getFinally();
+		llvm::BasicBlock *getExceptionBlock();
+		void resolveTypes() override;
+		void codegen0(llvm::BasicBlock*& block) override;
+		TryCatch *clone(Generic *ref) override;
+	};
+
+	class Throw : public Stmt {
+	private:
+		Expr *expr;
+	public:
+		explicit Throw(Expr *expr);
+		void resolveTypes() override;
+		void codegen0(llvm::BasicBlock*& block) override;
+		Throw *clone(Generic *ref) override;
+	};
+
 	class Match : public Stmt {
 	private:
 		Expr *value;

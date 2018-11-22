@@ -115,6 +115,43 @@ namespace seq {
 		           seqIntLLVM(context)));
 	}
 
+	inline llvm::Function *makePersonalityFunc(llvm::Module *module)
+	{
+		llvm::LLVMContext& context = module->getContext();
+		return llvm::cast<llvm::Function>(
+		         module->getOrInsertFunction(
+		           "seq_personality",
+		           llvm::IntegerType::getInt32Ty(context),
+		           llvm::IntegerType::getInt32Ty(context),
+		           llvm::IntegerType::getInt32Ty(context),
+		           llvm::IntegerType::getInt64Ty(context),
+		           llvm::IntegerType::getInt8PtrTy(context),
+		           llvm::IntegerType::getInt8PtrTy(context)));
+	}
+
+	inline llvm::Function *makeExcAllocFunc(llvm::Module *module)
+	{
+		llvm::LLVMContext& context = module->getContext();
+		return llvm::cast<llvm::Function>(
+		         module->getOrInsertFunction(
+		           "seq_alloc_exc",
+		           llvm::IntegerType::getInt8PtrTy(context),
+		           llvm::IntegerType::getInt32Ty(context),
+		           llvm::IntegerType::getInt8PtrTy(context)));
+	}
+
+	inline llvm::Function *makeThrowFunc(llvm::Module *module)
+	{
+		llvm::LLVMContext& context = module->getContext();
+		auto *f = llvm::cast<llvm::Function>(
+		             module->getOrInsertFunction(
+		               "seq_throw",
+		               llvm::Type::getVoidTy(context),
+		               llvm::IntegerType::getInt8PtrTy(context)));
+		f->setDoesNotReturn();
+		return f;
+	}
+
 	namespace exc {
 		class SeqException : public SrcObject, public std::runtime_error {
 		public:

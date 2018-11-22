@@ -97,7 +97,9 @@ namespace seq {
 			llvm::Value *call(BaseFunc *base,
 			                  llvm::Value *self,
 			                  const std::vector<llvm::Value *>& args,
-			                  llvm::BasicBlock *block) override;
+			                  llvm::BasicBlock *block,
+			                  llvm::BasicBlock *normal,
+			                  llvm::BasicBlock *unwind) override;
 
 			bool is(types::Type *type) const override;
 			unsigned numBaseTypes() const override;

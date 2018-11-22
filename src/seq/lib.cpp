@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
+#include <unwind.h>
 #include <gc.h>
 #include "seq/lib.h"
 
@@ -18,9 +19,13 @@ using namespace std;
  * General
  */
 
+void seq_exc_init();
+
 SEQ_FUNC void seq_init(seq_int_t flags)
 {
 	GC_INIT();
+
+	seq_exc_init();
 
 	if ((uint64_t)flags & SEQ_FLAG_FASTIO) {
 		ios_base::sync_with_stdio(false);

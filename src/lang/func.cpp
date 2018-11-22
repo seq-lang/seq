@@ -203,6 +203,7 @@ void Func::codegen(Module *module)
 		return;
 
 	func->setLinkage(GlobalValue::PrivateLinkage);
+	func->setPersonalityFn(makePersonalityFunc(module));
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
 

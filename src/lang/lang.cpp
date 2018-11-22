@@ -342,6 +342,283 @@ If *If::clone(Generic *ref)
 	SEQ_RETURN_CLONE(x);
 }
 
+TryCatch::TryCatch() :
+    Stmt("try"), scope(new Block(this)), catchTypes(), catchBlocks(),
+    catchVars(), finally(new Block(this)), exceptionBlock(nullptr)
+{
+}
+
+Block *TryCatch::getBlock()
+{
+	return scope;
+}
+
+Var *TryCatch::getVar(unsigned idx)
+{
+	assert(idx < catchVars.size());
+	return catchVars[idx];
+}
+
+Block *TryCatch::addCatch(types::Type *type)
+{
+	if (!type) {
+		// make sure we have at most one catch-all:
+		for (auto *catchType : catchTypes)
+			assert(catchType);
+	}
+
+	auto *block = new Block(this);
+	catchTypes.push_back(type);
+	catchBlocks.push_back(block);
+	catchVars.push_back(type ? new Var(type) : nullptr);
+	return block;
+}
+
+Block *TryCatch::getFinally()
+{
+	return finally;
+}
+
+BasicBlock *TryCatch::getExceptionBlock()
+{
+	assert(exceptionBlock);
+	return exceptionBlock;
+}
+
+void TryCatch::resolveTypes()
+{
+	scope->resolveTypes();
+	for (auto *block : catchBlocks)
+		block->resolveTypes();
+	finally->resolveTypes();
+}
+
+void TryCatch::codegen0(BasicBlock*& block)
+{
+	assert(catchTypes.size() == catchBlocks.size());
+
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+	Function *func = block->getParent();
+	BaseFunc *base = getBase();
+	BasicBlock *preambleBlock = base->getPreamble();
+
+	// entry block:
+	BasicBlock *entryBlock = BasicBlock::Create(context, "entry", func);
+
+	// unwind block for invoke
+	exceptionBlock = BasicBlock::Create(context, "exception", func);
+
+	// block which routes exception to correct catch handler block
+	BasicBlock *exceptionRouteBlock = BasicBlock::Create(context, "exceptionRoute", func);
+
+	// foreign exception handler
+	BasicBlock *externalExceptionBlock = BasicBlock::Create(context, "externalException", func);
+
+	// block which calls _Unwind_Resume
+	BasicBlock *unwindResumeBlock = BasicBlock::Create(context, "unwindResume", func);
+
+	// clean up block which delete exception if needed
+	BasicBlock *endBlock = llvm::BasicBlock::Create(context, "end", func);
+
+	StructType *padType = StructType::get(IntegerType::getInt8PtrTy(context),
+	                                      IntegerType::getInt32Ty(context));
+	StructType *typeInfoType = StructType::get(IntegerType::getInt32Ty(context));
+	StructType *unwindType = StructType::get(IntegerType::getInt64Ty(context));  // header only
+	StructType *excType = StructType::get(typeInfoType, IntegerType::getInt8PtrTy(context));
+
+	// exception storage/state:
+	ConstantInt *excStateNotThrown = ConstantInt::get(Type::getInt8Ty(context), 0);
+	ConstantInt *excStateThrown    = ConstantInt::get(Type::getInt8Ty(context), 1);
+	ConstantInt *excStateCaught    = ConstantInt::get(Type::getInt8Ty(context), 2);
+	Value *excFlag    = makeAlloca(excStateNotThrown, preambleBlock);
+	Value *excStore   = makeAlloca(ConstantPointerNull::get(IntegerType::getInt8PtrTy(context)), preambleBlock);
+	Value *catchStore = makeAlloca(ConstantAggregateZero::get(padType), preambleBlock);
+
+	// finally:
+	BasicBlock *finallyBlock = BasicBlock::Create(context, "finally", func);
+	finally->codegen(finallyBlock);
+	IRBuilder<> builder(finallyBlock);
+	SwitchInst *theSwitch = builder.CreateSwitch(builder.CreateLoad(excFlag), endBlock, 2);
+	theSwitch->addCase(excStateCaught, endBlock);
+	theSwitch->addCase(excStateThrown, unwindResumeBlock);
+
+	std::vector<BasicBlock *> catches;
+	for (unsigned i = 0; i < catchTypes.size(); i++) {
+		BasicBlock *catchBlock = BasicBlock::Create(context, "catch" + std::to_string(i+1), func);
+		catches.push_back(catchBlock);
+	}
+
+	// codegen try:
+	scope->codegen(entryBlock);
+
+	// make sure we always get to finally block:
+	builder.SetInsertPoint(entryBlock);
+	builder.CreateBr(finallyBlock);
+
+	// rethrow if uncaught:
+	builder.SetInsertPoint(unwindResumeBlock);
+	builder.CreateResume(builder.CreateLoad(catchStore));
+
+	// exception handling:
+	builder.SetInsertPoint(exceptionBlock);
+	LandingPadInst *caughtResult = builder.CreateLandingPad(padType, (unsigned)catchTypes.size());
+	caughtResult->setCleanup(true);
+	std::vector<Value *> typeIndices;
+
+	for (auto *catchType : catchTypes) {
+		if (catchType && !catchType->asRef())
+			throw exc::SeqException("cannot catch non-reference type '" + catchType->getName() + "'");
+
+		const std::string typeVarName = catchType ? ("seq.typeidx." + catchType->getName()) : "";
+		Value *tidx = catchType ? (Value *)module->getGlobalVariable(typeVarName) :
+		                          ConstantPointerNull::get(PointerType::get(typeInfoType, 0));
+		int idx = catchType ? catchType->getID() : 0;
+		if (!tidx)
+			tidx = new GlobalVariable(*module,
+			                          typeInfoType,
+			                          true,
+			                          GlobalValue::PrivateLinkage,
+			                          ConstantStruct::get(typeInfoType,
+			                                              ConstantInt::get(IntegerType::getInt32Ty(context),
+			                                                               (uint64_t)idx,
+			                                                               true)),
+			                          typeVarName);
+		typeIndices.push_back(tidx);
+		caughtResult->addClause(ConstantInt::get(seqIntLLVM(context), (uint64_t)catchType->getID()));
+	}
+
+	Value *unwindException = builder.CreateExtractValue(caughtResult, 0);
+	Value *retTypeInfoIndex = builder.CreateExtractValue(caughtResult, 1);
+
+	builder.CreateStore(caughtResult, catchStore);
+	builder.CreateStore(unwindException, excStore);
+	builder.CreateStore(excStateThrown, excFlag);
+
+	Value *unwindExceptionClass =
+	  builder.CreateLoad(builder.CreateStructGEP(
+	    unwindType,
+	    builder.CreatePointerCast(unwindException, unwindType->getPointerTo()),
+	    0));
+
+	// check for foreign exceptions:
+	builder.CreateCondBr(builder.CreateICmpEQ(unwindExceptionClass, ConstantInt::get(IntegerType::getInt64Ty(context), seq_exc_class())),
+	                     exceptionRouteBlock,
+	                     externalExceptionBlock);
+
+	// external exception:
+	{
+		// TODO: just failing now, but can actually handle this
+		BoolExpr b(false);
+		Assert fail(&b);
+		fail.codegen(externalExceptionBlock);
+	}
+	builder.SetInsertPoint(externalExceptionBlock);
+	builder.CreateBr(finallyBlock);
+
+	// reroute Seq exceptions:
+	builder.SetInsertPoint(exceptionRouteBlock);
+	Value *excVal = builder.CreatePointerCast(
+	                  builder.CreateConstGEP1_64(unwindException, (uint64_t)seq_exc_offset()),
+	                  excType->getPointerTo());
+	//Value *typeInfoThrown = builder.CreateStructGEP(excType, excVal, 0);
+	Value *objPtr = builder.CreateStructGEP(excType, excVal, 1);
+	//Value *typeInfoThrownType = builder.CreateStructGEP(builder.getInt8PtrTy(), typeInfoThrown, 0);
+
+	SwitchInst *switchToCatchBlock = builder.CreateSwitch(retTypeInfoIndex,
+	                                                      finallyBlock,
+	                                                      (unsigned)catches.size());
+	for (unsigned i = 0; i < catches.size(); i++) {
+		BasicBlock *catchBlock = catches[i];
+		switchToCatchBlock->addCase(
+		  ConstantInt::get(IntegerType::getInt32Ty(context), i + 1),
+		  catchBlock);
+
+		builder.SetInsertPoint(catchBlock);
+		Var *var = catchVars[i];
+
+		if (var) {
+			Value *obj = builder.CreateBitCast(objPtr, catchTypes[i]->getLLVMType(context));
+			var->store(base, obj, catchBlock);
+		}
+
+		catchBlocks[i]->codegen(catchBlock);
+		builder.SetInsertPoint(catchBlock);
+		builder.CreateStore(excStateCaught, excFlag);
+		builder.CreateBr(finallyBlock);
+	}
+
+	// link in our new blocks, and update the caller's block:
+	builder.SetInsertPoint(block);
+	builder.CreateBr(entryBlock);
+	block = endBlock;
+}
+
+TryCatch *TryCatch::clone(Generic *ref)
+{
+	if (ref->seenClone(this))
+		return (TryCatch *)ref->getClone(this);
+
+	auto *x = new TryCatch();
+	ref->addClone(this, x);
+	x->scope = scope->clone(ref);
+
+	std::vector<types::Type *> catchTypesCloned;
+	std::vector<Block *> catchBlocksCloned;
+	std::vector<Var *> catchVarsCloned;
+
+	for (auto *type : catchTypes)
+		catchTypesCloned.push_back(type->clone(ref));
+
+	for (auto *block : catchBlocks)
+		catchBlocksCloned.push_back(block->clone(ref));
+
+	for (auto *var : catchVars)
+		catchVarsCloned.push_back(var->clone(ref));
+
+	x->catchTypes = catchTypesCloned;
+	x->catchBlocks = catchBlocksCloned;
+	x->catchVars = catchVarsCloned;
+	x->finally = finally->clone(ref);
+
+	Stmt::setCloneBase(x, ref);
+	SEQ_RETURN_CLONE(x);
+}
+
+Throw::Throw(Expr *expr) :
+    Stmt("throw"), expr(expr)
+{
+}
+
+void Throw::resolveTypes()
+{
+	expr->resolveTypes();
+}
+
+void Throw::codegen0(BasicBlock*& block)
+{
+	types::Type *type = expr->getType();
+	if (!type->asRef())
+		throw exc::SeqException("cannot throw non-reference type '" + type->getName() + "'");
+
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
+	Function *excAllocFunc = makeExcAllocFunc(module);
+	Function *throwFunc = makeThrowFunc(module);
+
+	Value *obj = expr->codegen(getBase(), block);
+	IRBuilder<> builder(block);
+	Value *exc = builder.CreateCall(excAllocFunc,
+	                                {ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)type->getID(), true),
+	                                 obj});
+	builder.CreateCall(throwFunc, exc);
+}
+
+Throw *Throw::clone(Generic *ref)
+{
+	SEQ_RETURN_CLONE(new Throw(expr->clone(ref)));
+}
+
 Match::Match() :
     Stmt("match"), value(nullptr), patterns(), branches()
 {

@@ -104,6 +104,19 @@ void Stmt::addContinueToEnclosingLoop(BranchInst *inst)
 	findEnclosingLoop(this)->addContinue(inst);
 }
 
+TryCatch *Stmt::findEnclosingTryCatch()
+{
+	Stmt *stmt = this;
+
+	while (stmt) {
+		if (auto *s = dynamic_cast<TryCatch *>(stmt))
+			return s;
+		stmt = stmt->getPrev();
+	}
+
+	return nullptr;
+}
+
 bool Stmt::isLoop()
 {
 	return loop;

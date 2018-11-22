@@ -42,6 +42,7 @@ namespace seq {
 		public:
 			Type(std::string name, Type *parent, bool abstract=false);
 
+			virtual int getID() const;
 			virtual std::string getName() const;
 			virtual Type *getParent() const;
 			virtual bool isAbstract() const;
@@ -53,7 +54,9 @@ namespace seq {
 			virtual llvm::Value *call(BaseFunc *base,
 			                          llvm::Value *self,
 			                          const std::vector<llvm::Value *>& args,
-			                          llvm::BasicBlock *block);
+			                          llvm::BasicBlock *block,
+			                          llvm::BasicBlock *normal,
+			                          llvm::BasicBlock *unwind);
 
 			virtual llvm::Value *memb(llvm::Value *self,
 			                          const std::string& name,

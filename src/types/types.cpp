@@ -12,6 +12,11 @@ types::Type::Type(std::string name, types::Type *parent, bool abstract) :
 {
 }
 
+int types::Type::getID() const
+{
+	return (int)std::hash<std::string>()(getName());
+}
+
 std::string types::Type::getName() const
 {
 	std::string nameFull = name;
@@ -65,7 +70,9 @@ Value *types::Type::alloc(Value *count, BasicBlock *block)
 Value *types::Type::call(BaseFunc *base,
                          Value *self,
                          const std::vector<Value *>& args,
-                         BasicBlock *block)
+                         BasicBlock *block,
+                         BasicBlock *normal,
+                         BasicBlock *unwind)
 {
 	throw exc::SeqException("cannot call type '" + getName() + "'");
 }

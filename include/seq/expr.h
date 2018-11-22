@@ -14,9 +14,11 @@ namespace seq {
 		types::Type *type;
 	protected:
 		std::string name;
+		TryCatch *tc;
 	public:
 		explicit Expr(types::Type *type);
 		Expr();
+		void setEnclosingTryCatch(TryCatch *tc);
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block);
 		types::Type *getType() const;
 		std::string getName() const;
