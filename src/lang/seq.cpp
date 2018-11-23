@@ -59,6 +59,7 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 	                 LLVM_I32(),
 	                 PointerType::get(IntegerType::getInt8PtrTy(context), 0)));
 
+	func->setPersonalityFn(makePersonalityFunc(module));
 	auto argiter = func->arg_begin();
 	Value *argc = argiter++;
 	Value *argv = argiter;
@@ -126,6 +127,7 @@ void SeqModule::codegen(Module *module)
 	           argsType->getLLVMType(context)));
 
 	func->setLinkage(GlobalValue::PrivateLinkage);
+	func->setPersonalityFn(makePersonalityFunc(module));
 	auto argiter = func->arg_begin();
 	args = argiter;
 

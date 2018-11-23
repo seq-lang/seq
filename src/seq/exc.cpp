@@ -93,7 +93,9 @@ SEQ_FUNC void *seq_alloc_exc(int type, void *obj)
 
 SEQ_FUNC void seq_throw(void *exc)
 {
-	_Unwind_RaiseException((_Unwind_Exception *)exc);
+	_Unwind_Reason_Code code = _Unwind_RaiseException((_Unwind_Exception *)exc);
+	std::cerr << "error: uncaught exception (code: " << code << ")" << std::endl;
+	std::abort();
 }
 
 /// Read a uleb128 encoded value and advance pointer
@@ -275,9 +277,7 @@ static bool handleActionValue(int64_t *resultAction,
 {
 	bool ret = false;
 
-	if (!resultAction ||
-	    !exceptionObject ||
-	    (exceptionClass != ourBaseExceptionClass))
+	if (!resultAction || !exceptionObject || (exceptionClass != ourBaseExceptionClass))
 		return ret;
 
 	auto *excp = (struct OurBaseException_t *)(((char*)exceptionObject) + ourBaseFromUnwindOffset);
@@ -382,18 +382,14 @@ static _Unwind_Reason_Code handleLsda(int version,
 	uint8_t         callSiteEncoding = *lsda++;
 	auto            callSiteTableLength = (uint32_t)readULEB128(&lsda);
 	const uint8_t   *callSiteTableStart = lsda;
-	const uint8_t   *callSiteTableEnd = callSiteTableStart +
-	callSiteTableLength;
+	const uint8_t   *callSiteTableEnd = callSiteTableStart + callSiteTableLength;
 	const uint8_t   *actionTableStart = callSiteTableEnd;
 	const uint8_t   *callSitePtr = callSiteTableStart;
 
 	while (callSitePtr < callSiteTableEnd) {
-		uintptr_t start = readEncodedPointer(&callSitePtr,
-		                                     callSiteEncoding);
-		uintptr_t length = readEncodedPointer(&callSitePtr,
-		                                      callSiteEncoding);
-		uintptr_t landingPad = readEncodedPointer(&callSitePtr,
-		                                          callSiteEncoding);
+		uintptr_t start = readEncodedPointer(&callSitePtr, callSiteEncoding);
+		uintptr_t length = readEncodedPointer(&callSitePtr, callSiteEncoding);
+		uintptr_t landingPad = readEncodedPointer(&callSitePtr, callSiteEncoding);
 
 		// Note: Action value
 		uintptr_t actionEntry = readULEB128(&callSitePtr);
