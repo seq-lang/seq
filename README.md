@@ -1,4 +1,4 @@
-# Seq — a DSL for processing genomic data
+# Seq — a language for computational genomics
 
 [![Build Status](https://travis-ci.com/arshajii/seq.svg?token=QGRVvAxcSasMm4MgJvYL&branch=master)](https://travis-ci.com/arshajii/seq)
 
@@ -8,6 +8,7 @@
 - CMake 3.9+
 - LLVM 5+
 - Boehm GC
+- OCaml
 
 ## Build
 

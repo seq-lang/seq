@@ -8,7 +8,6 @@ Contents
    :maxdepth: 2
 
    intro
-   tutorial/index
    internals
 
 Indices and tables
