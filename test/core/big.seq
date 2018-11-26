@@ -36,7 +36,7 @@ class X[`t](t: `t):
                 yield a[i]
                 i += 1
 
-        farr = array[callable[seq, array[seq]]](1)
+        farr = array[function[seq, array[seq]]](1)
         farr[0] = f
 
         def ident(s):
@@ -102,8 +102,8 @@ class X[`t](t: `t):
         print b[1]
 
         def fib(n: int) -> int:
-            type F(f: callable[int, int], x: int)
-            def apply(f: callable[int, int], x: int):
+            type F(f: function[int, int], x: int)
+            def apply(f: function[int, int], x: int):
                 return f(x)
             def rec(pair: F):
                 return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)

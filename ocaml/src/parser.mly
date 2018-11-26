@@ -1,56 +1,70 @@
-/* 786 */
+(******************************************************************************
+  786
+  Menhir grammar for Seq language
+ ******************************************************************************)
 
 %{
-  open Ast
   open Core
+  open Ast
+  open Ast.ExprNode
+  open Ast.StmtNode
 
-  let flat x = match x with
-    | [], _ -> raise Caml.Not_found
-    | h::[], _ -> h
-    | h::el, pos -> `Pipe (h::el, pos)
+  let noimp s =
+    failwith (sprintf "not yet implemented: %s" s)
 
-  let noimp s = raise (NotImplentedError ("Not yet implemented: " ^ s))
+  (* Calculates the total span of a region 
+     bounded by [st] and [ed] *)
+  let pos st ed =
+    Ast.Pos.{ st with len = (ed.col + ed.len) - st.col }
+
+  (* Converts list of expressions into the pipeline AST node *)
+  let flat x = 
+    match x with
+    | _, []      -> failwith "empty pipeline expression"
+    | _, h::[]   -> h
+    | pos, h::el -> pos, Pipe (h::el)
 %}
 
-%token <int * Ast.pos_t>             INT
-%token <float * Ast.pos_t>           FLOAT
-%token <string * Ast.pos_t>          STRING ID GENERIC
-%token <string * Ast.pos_t>          REGEX SEQ
+/* constants */
+%token <Ast.Pos.t * int>    INT
+%token <Ast.Pos.t * float>  FLOAT
+%token <Ast.Pos.t * string> STRING ID GENERIC
+%token <Ast.Pos.t * string> REGEX SEQ
 
 /* blocks */
-%token <Ast.pos_t> INDENT
-%token <Ast.pos_t> DEDENT
-%token <Ast.pos_t> EOF
-%token <Ast.pos_t> NL        /* \n */
-%token <Ast.pos_t> DOT       /* . */
-%token <Ast.pos_t> COLON     /* : */
-%token <Ast.pos_t> SEMICOLON /* ; */
-%token <Ast.pos_t> AT        /* @ */
-%token <Ast.pos_t> COMMA     /* , */
-%token <Ast.pos_t> OF        /* -> */
+%token <Ast.Pos.t> INDENT 
+%token <Ast.Pos.t> DEDENT
+%token <Ast.Pos.t> EOF
+%token <Ast.Pos.t> NL        // \n 
+%token <Ast.Pos.t> DOT       // . 
+%token <Ast.Pos.t> COLON     // : 
+%token <Ast.Pos.t> SEMICOLON // ; 
+%token <Ast.Pos.t> AT        // @ 
+%token <Ast.Pos.t> COMMA     // , 
+%token <Ast.Pos.t> OF        // -> 
 
 /* parentheses */
-%token <Ast.pos_t> LP RP     /* ( ) parentheses */
-%token <Ast.pos_t> LS RS     /* [ ] squares */
-%token <Ast.pos_t> LB RB     /* { } braces */
+%token <Ast.Pos.t> LP RP     // ( ) parentheses 
+%token <Ast.Pos.t> LS RS     // [ ] squares 
+%token <Ast.Pos.t> LB RB     // { } braces 
 
 /* keywords */
-%token <Ast.pos_t> FOR WHILE CONTINUE BREAK                   /* loops */
-%token <Ast.pos_t> IF ELSE ELIF MATCH CASE AS DEFAULT         /* conditionals */
-%token <Ast.pos_t> DEF RETURN YIELD EXTERN LAMBDA             /* functions */
-%token <Ast.pos_t> TYPE CLASS TYPEOF EXTEND                   /* types */
-%token <Ast.pos_t> IMPORT FROM GLOBAL                         /* variables */
-%token <Ast.pos_t> PRINT PASS ASSERT DEL                      /* keywords */
-%token <Ast.pos_t> TRUE FALSE NONE                            /* booleans */
+%token <Ast.Pos.t> FOR WHILE CONTINUE BREAK           // loops 
+%token <Ast.Pos.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals 
+%token <Ast.Pos.t> DEF RETURN YIELD EXTERN LAMBDA     // functions 
+%token <Ast.Pos.t> TYPE CLASS TYPEOF EXTEND           // types 
+%token <Ast.Pos.t> IMPORT FROM GLOBAL                 // variables 
+%token <Ast.Pos.t> PRINT PASS ASSERT DEL              // keywords 
+%token <Ast.Pos.t> TRUE FALSE NONE                    // booleans 
 
 /* operators */
-%token <Ast.pos_t>         EQ ASSGN_EQ ELLIPSIS
-%token<string * Ast.pos_t> ADD SUB MUL DIV FDIV POW MOD
-%token<string * Ast.pos_t> PLUSEQ MINEQ MULEQ DIVEQ MODEQ POWEQ FDIVEQ
-%token<string * Ast.pos_t> AND OR NOT IS ISNOT IN NOTIN
-%token<string * Ast.pos_t> EEQ NEQ LESS LEQ GREAT GEQ
-%token<string * Ast.pos_t> PIPE
-%token<string * Ast.pos_t> B_LSH B_RSH B_AND B_XOR B_NOT B_OR
+%token<Ast.Pos.t>          EQ ASSGN_EQ ELLIPSIS
+%token<Ast.Pos.t * string> ADD SUB MUL DIV FDIV POW MOD 
+%token<Ast.Pos.t * string> PLUSEQ MINEQ MULEQ DIVEQ MODEQ POWEQ FDIVEQ
+%token<Ast.Pos.t * string> AND OR NOT IS ISNOT IN NOTIN
+%token<Ast.Pos.t * string> EEQ NEQ LESS LEQ GREAT GEQ
+%token<Ast.Pos.t * string> PIPE 
+%token<Ast.Pos.t * string> B_LSH B_RSH B_AND B_XOR B_NOT B_OR
 
 /* operator precedence */
 %left B_OR
@@ -61,287 +75,422 @@
 %left MUL DIV FDIV MOD
 %left POW
 
-%start <Ast.ast> program
+%start <Ast.t> program
 %%
 
-program: /* Entry point */
-  | statement+ EOF { Module $1 }
+/******************************************************************************
+  Notes:
+  - Each rule returns a tuple (position, node)
+  - Position should span whole rule 
+    - example: for binary expression "a+b"a position starts at "a" 
+               and has length of size 3
+    - Function "pos" is a helper that calculates the proper position
+      given start and the end of the interval
+ ******************************************************************************/
 
-/*******************************************************/
+program: // Entry point 
+  | statement+ EOF 
+    { Module (List.concat $1) }
 
-atom: /* Basic structures: identifiers, nums/strings, tuples/list/dicts */
-  | NONE    { `None $1 }
-  | ID      { `Id (fst $1, snd $1) }
-  | INT     { `Int (fst $1, snd $1) }
-  | FLOAT   { `Float (fst $1, snd $1) }
-  | STRING  { `String (fst $1, snd $1) }
-  | SEQ     { `Seq $1 }
-  | bool    { `Bool $1 }
-  | tuple   { `Tuple $1 }
-  | dynlist { `List $1 }
-  | dict    { `Dict $1 }
-  | set     { `Set $1 }
-  | generic { $1 }
-  | REGEX
-    { noimp "Regex" (* Regex $1 *) }
+/******************************************************************************
+ ************                      ATOMS                     ******************
+ ******************************************************************************/
+
+atom: // Basic structures: identifiers, nums/strings, tuples/list/dicts 
+  | NONE       { $1, Empty () }
+  | ID         { fst $1, Id (snd $1) }
+  | INT        { fst $1, Int (snd $1) }
+  | FLOAT      { fst $1, Float (snd $1) }
+  | STRING     { fst $1, String (snd $1) }
+  | SEQ        { fst $1, Seq (snd $1) }
+  | bool       { fst $1, Bool (snd $1) }
+  | tuple      { fst $1, Tuple (snd $1) }
+  | lists      { fst $1, List (snd $1) }
+  | dict       { fst $1, Dict (snd $1) }
+  | set        { fst $1, Set (snd $1) }
+  | generic    { fst $1, Generic (snd $1) } 
   | LP test RP { $2 }
-  | dict_generator { $1 }
-  | dynlist_generator { $1 }
-  | set_generator { $1 }
+  | dict_gen   { $1 }
+  | list_gen   { $1 }
+  | set_gen    { $1 }
+  | REGEX      { noimp "Regex" }
+
 bool:
-  | TRUE    { (true, $1) }
-  | FALSE   { (false, $1) }
+  | TRUE  { $1, true  }
+  | FALSE { $1, false }
 generic:
-  | GENERIC
-    { `Generic (fst $1, snd $1) }
-tuple: /* Tuples: (1, 2, 3) */
+  | GENERIC 
+    { $1 }
+tuple: // Tuples: (1, 2, 3) 
   | LP RP
-    { ([], $1) }
+    { pos $1 $2, 
+      [] }
   | LP test comprehension RP
     { noimp "Generator" (* Generator ($2, $3)  *) }
   | LP test COMMA RP
-    { ([$2], $1)  }
+    { pos $1 $4, 
+      [$2] }
   | LP test COMMA test_list RP
-    { ($2::$4, $1) }
-dynlist: /* Lists: [1, 2, 3] */
-  /* TODO needs trailing comma support */
+    { pos $1 $5, 
+      $2 :: $4 }
+lists: // Lists: [1, 2, 3] 
+  // TODO needs trailing comma support 
   | LS RS
-    { ([], $1) }
+    { pos $1 $2, 
+      [] }
   | LS test_list RS
-    { ($2, $1) }
-dynlist_generator:
+    { pos $1 $3, 
+      $2 }
+list_gen:
   | LS test comprehension RS
-    { `ListGenerator ($2, $3, $1) }
+    { pos $1 $4, 
+      ListGenerator ($2, $3) }
 set:
   | LB separated_nonempty_list(COMMA, test) RB
-    { ($2, $1) }
-set_generator:
+    { pos $1 $3, 
+      $2 }
+set_gen:
   | LB test comprehension RB
-    { `SetGenerator ($2, $3, $1) }
-dict: /* Dictionaries and sets: {1: 2, 3: 4}, {1, 2} */
+    { pos $1 $4, 
+      SetGenerator ($2, $3) }
+dict: // Dictionaries: {1: 2, 3: 4} 
   | LB RB
-    { ([], $1) }
+    { pos $1 $2, [] }
   | LB separated_nonempty_list(COMMA, dictitem) RB
-    { ($2, $1) }
-dict_generator:
+    { pos $1 $3, 
+      $2 }
+dict_gen:
   | LB dictitem comprehension RB
-    { `DictGenerator ($2, $3, $1) }
+    { pos $1 $4, 
+      DictGenerator ($2, $3) }
 dictitem:
-  | test COLON test { ($1, $3) }
+  | test COLON test 
+    { $1, $3 }
 
 comprehension:
-  | FOR expr IN pipe_test comprehension_if? comprehension?
-    { `Comprehension ($2, flat $4, $5, $6, $1) }
+  | FOR ID IN pipe_test comprehension_if? comprehension?
+    { let last = match $6, $5, $4 with
+        | Some (p, _), _, _
+        | None, Some (p, _), _
+        | None, None, (p, _) -> p
+      in
+      pos $1 last, 
+      ExprNode.{ var = snd $2; gen = flat $4; cond = $5; next = $6 } }
 comprehension_if:
   | IF pipe_test
-    { flat $2 }
+    { let exp = flat $2 in 
+      pos $1 (fst exp), 
+      snd exp }
 
-/*******************************************************/
+/******************************************************************************
+ ************                   EXPRESSIONS                  ******************
+ ******************************************************************************/
 
-test: /* General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 */
+test: // General expression: 5 <= p.x[1:2:3] - 16, 5 if x else y, lambda y: y+3 
   | pipe_test
     { flat $1 }
   | ifc = pipe_test; IF cnd = pipe_test; ELSE elc = test
-    { `IfExpr (flat cnd, flat ifc, elc, $2) }
+    { pos (fst ifc) (fst elc), 
+      IfExpr (flat cnd, flat ifc, elc) }
   | TYPEOF LP test RP
-    { `TypeOf ($3, $1) }
+    { pos $1 $4, 
+      TypeOf $3 }
   | LAMBDA separated_list(COMMA, ID) COLON test
-    { `Lambda ($2, $4, $1) }
+    { pos $1 (fst $4), 
+      Lambda ($2, $4) }
 test_list:
-  | separated_nonempty_list(COMMA, test) { $1 }
-pipe_test: /* Pipe operator: a, a |> b */
-  | or_test { ([$1], Lexing.dummy_pos) }
-  | or_test PIPE pipe_test { ($1::(fst $3), snd $2) }
-or_test: /* OR operator: a, a or b */
-  | and_test { $1 }
+  | separated_nonempty_list(COMMA, test) 
+    { $1 }
+
+pipe_test: // Pipe operator: a, a |> b 
+  | o = or_test 
+    { fst o, [o] }
+  | or_test PIPE pipe_test 
+    { pos (fst $1) (fst $3), 
+      $1 :: (snd $3) }
+or_test: // OR operator: a, a or b 
+  | and_test 
+    { $1 }
   | and_test OR or_test
-    { `Binary ($1, $2, $3) }
-and_test: /* AND operator: a, a and b */
-  | not_test { $1 }
+    { pos (fst $1) (fst $3), 
+      Binary ($1, snd $2, $3) }
+and_test: // AND operator: a, a and b 
+  | not_test 
+    { $1 }
   | not_test AND and_test
-    { `Binary ($1, $2, $3) }
-not_test: /* General comparison: a, not a, a < 5 */
-  | expr { $1 }
+    { pos (fst $1) (fst $3), 
+      Binary ($1, snd $2, $3) }
+not_test: // General comparison: a, not a, a < 5 
+  | expr 
+    { $1 }
   | NOT not_test
-    { `Unary (("!", snd $1), $2) }
+    { pos (fst $1) (fst $2), 
+      Unary ("!", $2) }
   | expr cond_op not_test
-    { `Binary ($1, $2, $3) }
+    { pos (fst $1) (fst $3), 
+      Binary ($1, snd $2, $3) }
 %inline cond_op:
-  /* TODO: in, is in, is not in, not in, not */
   | LESS | LEQ | GREAT | GEQ | EEQ | NEQ | IS | ISNOT | IN | NOTIN
   { $1 }
-expr_term: /* Expression term: 4, a(4), a[5], a.x, p */
-  | atom { $1 }
+
+expr_term: // Expression term: 4, a(4), a[5], a.x, p 
+  | atom 
+    { $1 }
   | expr_term LP; args = separated_list(COMMA, call_term); RP
-    { `Call ($1, args, $2) }
+    { pos (fst $1) $4, 
+      Call ($1, args) }
   | expr_term LS separated_nonempty_list(COMMA, sub) RS
-    /* TODO: tuple index */
-    { `Index ($1, $3, $2) }
+    // TODO: tuple index
+    { pos (fst $1) $4, 
+      Index ($1, $3) }
   | expr_term DOT ID
-    { `Dot ($1, (fst $3, snd $3), $2) }
+    { pos (fst $1) (fst $3), 
+      Dot ($1, snd $3) }
 call_term:
   | ELLIPSIS
-    { `Ellipsis $1 }
-  | test { $1 }
-expr: /* General arithmetic: 4, 5 + p */
-  | expr_term { $1 }
+    { $1, 
+      Ellipsis () }
+  | test 
+    { $1 }
+expr: // General arithmetic: 4, 5 + p 
+  | expr_term 
+    { $1 }
   | ADD expr_term
   | SUB expr_term
   | B_NOT expr_term
-    { `Unary($1, $2) }
+    { pos (fst $1) (fst $2), 
+      Unary(snd $1, $2) }
   | expr bin_op expr
-    { `Binary ($1, $2, $3) }
-sub: /* Subscripts: ..., a, 1:2, 1::3 */
-  /* TODO: support args/kwargs? */
-  | test { $1 }
+    { pos (fst $1) (fst $3), 
+      Binary ($1, snd $2, $3) }
+sub: // Subscripts: ..., a, 1:2, 1::3 
+  // TODO: support args/kwargs? 
+  | test 
+    { $1 }
   | test? COLON test?
-    { `Slice ($1, $3, None, $2) }
+    { let f = Option.value_map $1 ~f:fst ~default:$2 in
+      let l = Option.value_map $3 ~f:fst ~default:$2 in
+      pos f l, 
+      Slice ($1, $3, None) }
   | test? COLON test? COLON test?
-    { `Slice ($1, $3, $5, $2) }
+    { let f = Option.value_map $1 ~f:fst ~default:$2 in
+      let l = Option.value_map $5 ~f:fst ~default:$4 in
+      pos f l, 
+      Slice ($1, $3, $5) }
 %inline bin_op:
-  | ADD | SUB | MUL | DIV | FDIV | MOD | POW | B_AND | B_OR | B_XOR | B_LSH | B_RSH
-  { $1 }
+  | ADD | SUB | MUL | DIV | FDIV | MOD | POW 
+  | B_AND | B_OR | B_XOR | B_LSH | B_RSH
+    { $1 }
 
-/*******************************************************/
+/******************************************************************************
+ ************                   STATEMENTS                   ******************
+ ******************************************************************************/
 
-statement: /* Statements */
-  /* TODO: try/except, with */
-  /* n.b. for/while does not support else */
+statement: // Statements: all rules return list of statements 
+  // TODO: try/except, with 
+  // n.b. for/while does not support else 
   | separated_nonempty_list(SEMICOLON, small_statement) NL
-    { if List.length $1 = 1
-      then List.hd_exn $1
-      else `Statements $1 }
+    { $1 }
+  | NL
+    {[ $1, 
+       Pass () ]}
   | WHILE test COLON suite
-    { `While ($2, $4, $1) }
-  | FOR expr IN test COLON suite
-    { `For ($2, $4, $6, $1) }
+    {[ pos $1 $3, 
+       While ($2, $4) ]}
+  | FOR separated_list(COMMA, ID) IN test COLON suite
+    {[ pos $1 $5, 
+       For (List.map $2 ~f:snd, $4, $6) ]}
   | IF test COLON suite
-    { `If ([(Some $2, $4, $1)], $1) }
+    {[ pos $1 $3, 
+       If ([pos $1 $3, { cond = Some $2; stmts = $4 }]) ]}
   | IF test COLON suite; rest = elif_suite
-    { `If ((Some $2, $4, $1)::rest, $1) }
+    {[ pos $1 $3, 
+       If ((pos $1 $3, { cond = Some $2; stmts = $4 }) :: rest) ]}
   | MATCH test COLON NL INDENT case_suite DEDENT
-    { `Match ($2, $6, $1) }
+    {[ pos $1 $4, 
+       Match ($2, $6) ]}
   | func_statement
   | class_statement
   | extend_statement
+    {[ $1 ]}
+small_statement: // Simple one-line statements: 5+3, print x 
+  | expr_statement   
     { $1 }
-  | NL
-    { `Pass $1 }
-small_statement: /* Simple one-line statements: 5+3, print x */
-  /* TODO del, exec/eval?,  */
-  | expr_statement { $1 }
-  | import_statement { $1 }
-  | PASS     { `Pass $1 }
-  | BREAK    { `Break $1 }
-  | CONTINUE { `Continue $1 }
+  | import_statement 
+    { $1 }
+  | type_stmt        
+    { $1 }
+  | PASS     
+    { $1, 
+      Pass () }
+  | BREAK    
+    { $1, 
+      Break () }
+  | CONTINUE 
+    { $1, 
+      Continue () }
   | DEL separated_nonempty_list(COMMA, test)
-    { `Del ($2, $1) }
+    { pos $1 (fst @@ List.last_exn $2), 
+      Del $2 }
   | PRINT separated_list(COMMA, test)
-    { `Print ($2, $1) }
-  | RETURN separated_list(COMMA, test)
-    { match List.length $2 with
-      | 0 -> `Return (None, $1)
-      | 1 -> `Return (Some (List.hd_exn $2), $1)
-      | _ -> `Return (Some (`Tuple ($2, $1)), $1)
-    }
-  | YIELD separated_list(COMMA, test)
-    { match List.length $2 with
-      | 0 -> `Yield (None, $1)
-      | 1 -> `Yield (Some (List.hd_exn $2), $1)
-      | _ -> `Yield (Some (`Tuple ($2, $1)), $1)
-    }
-  | TYPE ID LP separated_list(COMMA, typed_param) RP
-    { `Type ((fst $2, snd $2), $4, $1) }
-  | GLOBAL separated_nonempty_list(COMMA, ID)
-    { noimp "Global" (* Global (List.map ~f:(fun x -> Id x) $2) *) }
+    { let l = Option.value_map (List.last $2) ~f:fst ~default:$1 in
+      pos $1 l, 
+      Print $2 }
   | ASSERT test_list
-    { noimp "Assert" (* Assert $2 *) }
-expr_statement: /* Expression statement: a + 3 - 5 */
-  | test_list
-    { (*assert List.length $1 = 1;*)
-      `Exprs (List.hd_exn $1)
-    }
-  /* TODO: https://www.python.org/dev/peps/pep-3132/ */
-  | test aug_eq test_list
-    {
-      (* TODO tuple assignment *)
-      let op, pos = fst $2, snd $2 in
-      let op = String.sub op ~pos:0 ~len:(String.length op - 1) in
-      `Assign ([$1], [`Binary($1, (op, pos), List.hd_exn $3)], false, pos)
-    }
-   /* TODO: a = b = c = d = ... separated_nonempty_list(EQ, test_list) {  */
-  | test_list EQ test_list
-    { `Assign ($1, $3, false, $2) }
-  | test_list ASSGN_EQ test_list
-    { `Assign ($1, $3, true, $2) }
-%inline aug_eq:
-  /* TODO: bit shift ops */
-  | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ { $1 }
+    { pos $1 (fst @@ List.last_exn $2), 
+      Assert $2 }
+  | RETURN separated_list(COMMA, test)
+    { let pos, expr = match List.length $2 with
+        | 0 -> $1, 
+               None
+        | 1 -> pos $1 (fst @@ List.last_exn $2), 
+               Some (List.hd_exn $2)
+        | _ -> pos $1 (fst @@ List.last_exn $2), 
+               Some (pos (fst @@ List.hd_exn $2) (fst @@ List.last_exn $2), 
+                     Tuple $2)
+      in 
+      pos, 
+      Return expr }
+  | YIELD separated_list(COMMA, test)
+    { let pos, expr = match List.length $2 with
+        | 0 -> $1, 
+               None
+        | 1 -> pos $1 (fst @@ List.last_exn $2), 
+               Some (List.hd_exn $2)
+        | _ -> pos $1 (fst @@ List.last_exn $2), 
+               Some (pos (fst @@ List.hd_exn $2) (fst @@ List.last_exn $2), 
+                     Tuple $2)
+      in 
+      pos, 
+      Yield expr }
+  | GLOBAL separated_nonempty_list(COMMA, ID) 
+    { noimp "Global" }
 
-suite: /* Indentation blocks */
+param_type:
+  | COLON test 
+    { $2 }
+typed_param:
+  | ID param_type? 
+    { let last = Option.value_map $2 ~f:fst ~default:(fst $1) in
+      pos (fst $1) last, 
+      { name = snd $1; typ = $2 } }
+type_stmt:
+  | TYPE ID LP separated_list(COMMA, typed_param) RP 
+    { pos $1 $5, 
+      Type (snd $2, $4) }
+expr_statement: // Expression statement: a + 3 - 5 
+  | test_list
+    { assert ((List.length $1) = 1);
+      let expr = List.hd_exn $1 in
+      fst expr, 
+      Expr expr }
+  | test aug_eq test_list
+    // TODO: tuple assignment: https://www.python.org/dev/peps/pep-3132/ 
+    // TODO: a = b = c = d = ... separated_nonempty_list(EQ, test_list) 
+    { let op = String.sub (snd $2) ~pos:0 ~len:(String.length (snd $2) - 1) in
+      pos (fst $1) (fst @@ List.last_exn $3), 
+      Assign ([$1], 
+              [pos (fst $1) (fst @@ List.last_exn $3), 
+               Binary($1, op, List.hd_exn $3)], 
+              false) }
+  | test_list EQ test_list
+    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $3), 
+      Assign ($1, $3, false) }
+  | test_list ASSGN_EQ test_list
+    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $3), 
+      Assign ($1, $3, true) }
+ %inline aug_eq:
+  // TODO: bit shift ops 
+  | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ 
+    { $1 }
+
+suite: // Indentation blocks
   | separated_nonempty_list(SEMICOLON, small_statement) NL
     { $1 }
   | NL INDENT statement+ DEDENT
-    { $3 }
+    { List.concat $3 }
 elif_suite:
   | ELIF test COLON suite
-    { [(Some $2, $4, $1)] }
+    {[ pos $1 $3, 
+       { cond = Some $2; stmts = $4 } ]}
   | ELSE COLON suite
-    { [(None, $3, $1)] }
+    {[ pos $1 $2, 
+       { cond = None; stmts = $3 } ]}
   | ELIF test COLON suite; rest = elif_suite
-    { (Some $2, $4, $1)::rest }
+    { (pos $1 $3, { cond = Some $2; stmts = $4 }) :: rest }
 case_suite:
   | DEFAULT COLON suite
-    { [(`WildcardPattern None, $3, $1)] }
-  | case { [$1] }
+    {[ pos $1 $2, 
+       { pattern = WildcardPattern None; stmts = $3 } ]}
+  | case 
+    {[ $1 ]}
   | case; rest = case_suite
-    { $1::rest }
+    { $1 :: rest }
 case:
   | CASE separated_nonempty_list(OR, case_type) COLON suite
-    { let pat = if List.length $2 = 1
-                then List.hd_exn $2
-                else `OrPattern $2 in
-      (pat, $4, $1) }
+    { let pattern = 
+        if List.length $2 = 1 then List.hd_exn $2
+        else OrPattern $2 
+      in
+      pos $1 $3, 
+      { pattern; stmts = $4 } }
   | CASE separated_nonempty_list(OR, case_type) IF or_test COLON suite
-    { let pat = if List.length $2 = 1
-                then List.hd_exn $2
-                else `OrPattern $2 in
-      let pat = `GuardedPattern (pat, $4) in
-      (pat, $6, $1) }
+    { let pattern = 
+        if List.length $2 = 1 then List.hd_exn $2
+        else OrPattern $2 
+      in
+      pos $1 $5, 
+      { pattern = GuardedPattern (pattern, $4); stmts = $6 } }
   | CASE separated_nonempty_list(OR, case_type) AS ID COLON suite
-    { let pat = if List.length $2 = 1
-                then List.hd_exn $2
-                else `OrPattern $2 in
-      let pat = `BoundPattern ((fst $4, snd $4), pat) in
-      (pat, $6, $1) }
+    { let pattern = 
+        if List.length $2 = 1 then List.hd_exn $2
+        else OrPattern $2 
+      in
+      pos $1 $5, 
+      { pattern = BoundPattern (snd $4, pattern); stmts = $6 } }
 case_type:
-  | ELLIPSIS { `StarPattern }
-  | ID       { `WildcardPattern (Some $1) }
-  | INT      { `IntPattern (fst $1) }
-  | bool     { `BoolPattern (fst $1) }
-  | STRING   { `StrPattern (fst $1) }
-  | SEQ      { `SeqPattern (fst $1) }
+  | ELLIPSIS 
+    { StarPattern }
+  | ID       
+    { WildcardPattern (Some (snd $1)) }
+  | INT      
+    { IntPattern (snd $1) }
+  | bool     
+    { BoolPattern (snd $1) }
+  | STRING   
+    { StrPattern (snd $1) }
+  | SEQ      
+    { SeqPattern (snd $1) }
   | LP separated_nonempty_list(COMMA, case_type) RP
-    { `TuplePattern ($2) }
+    { TuplePattern ($2) }
   | LS separated_nonempty_list(COMMA, case_type) RS
-    { `ListPattern ($2) }
+    { ListPattern ($2) }
   | INT ELLIPSIS INT
-    { `RangePattern(fst $1, fst $3) }
-
+    { RangePattern(snd $1, snd $3) }
+dotted_name:
+  | ID
+    { fst $1, 
+      Id (snd $1) }
+  | dotted_name DOT ID
+    { pos (fst $1) (fst $3), 
+      Dot ($1, snd $3) }
 import_statement:
   | FROM dotted_name IMPORT MUL
     { noimp "Import" (* ImportFrom ($2, None) *) }
   | FROM dotted_name IMPORT separated_list(COMMA, import_as)
     { noimp "Import"(* ImportFrom ($2, Some $4) *) }
   | IMPORT separated_list(COMMA, import_as)
-    { `Import ($2, $1) }
+    { pos $1 (fst @@ fst @@ List.last_exn $2), 
+      Import $2 }
 import_as:
   | ID
-    { ((fst $1, snd $1), None) }
+    { $1, None }
   | ID AS ID
-    { ((fst $1, snd $1), Some (fst $3, snd $3)) }
+    { $1, Some (snd $3) } 
 
-/*******************************************************/
+/******************************************************************************
+ ************                    GENERICS                    ******************
+ ******************************************************************************/
 
 func_statement:
   | func { $1 }
@@ -352,58 +501,58 @@ decorator:
     { noimp "decorator" (* Decorator ($2, []) *) }
   | AT dotted_name LP separated_list(COMMA, test) RP NL
     { noimp "decorator" (* Decorator ($2, $4) *) }
-dotted_name:
-  | ID
-    { `Id (fst $1, snd $1) }
-  | dotted_name DOT ID
-    { `Dot ($1, (fst $3, snd $3)) }
 
 generic_type_list:
-   | LS; separated_nonempty_list(COMMA, generic); RS { $2 }
+  | LS; separated_nonempty_list(COMMA, generic); RS 
+    { $2 }
 func:
-  | DEF; n = ID;
+  | DEF; name = ID;
     intypes = generic_type_list?;
     LP params = separated_list(COMMA, func_param); RP
-    ret = func_ret_type?;
+    typ = func_ret_type?;
     COLON;
     s = suite
-    {
-      let intypes = Option.value intypes ~default:[] in
-      `Function (`Arg(n, ret), intypes, params, s, $1)
-    }
-  | EXTERN; lang = ID; dylib = dylib_spec?; n = ID;
+    { let intypes = Option.value intypes ~default:[] in
+      pos $1 $8, 
+      Generic (Function 
+        ((fst name, {name = snd name; typ}), intypes, params, s)) }
+  | EXTERN; lang = ID; dylib = dylib_spec?; name = ID;
     LP params = separated_list(COMMA, typed_param); RP
-    ret = func_ret_type; NL
-    { `Extern ((fst lang), dylib, `Arg(n, Some ret), params, $1) }
+    typ = func_ret_type; NL
+    { pos $1 (fst typ), 
+      Extern (snd lang, dylib, 
+        (fst name, {name = snd name; typ = Some(typ)}), params) }
 dylib_spec:
-  | LP STRING RP { fst $2 }
+  | LP STRING RP 
+    { snd $2 }
 func_ret_type:
-  | OF; test { $2 }
+  | OF; test 
+    { $2 }
 func_param:
-  /* TODO tuple params--- are they really needed? */
-  | typed_param { $1 }
+  // TODO tuple params--- are they really needed? 
+  | typed_param 
+    { $1 }
   | ID EQ test
     { noimp "NamedArg"(*NamedArg ($1, $3)*) }
-typed_param:
-  | ID param_type? { `Arg ((fst $1, snd $1), $2) }
-param_type:
-  | COLON test { $2 }
 
 class_statement:
   | CLASS ; n = ID;
     intypes = generic_type_list?
     LP; mems = separated_list(COMMA, typed_param) RP;
-    COLON NL;
-    INDENT fns = class_members DEDENT
+    COLON NL; 
+    INDENT fns = class_member+ DEDENT
     { let intypes = Option.value intypes ~default:[] in
-      `Class ((fst n, snd n), intypes, mems, fns, $1) }
-class_members:
-  | PASS NL { [] }
-  | func_statement { [$1] }
-  | func_statement class_members { $1::$2 }
-  | PASS class_members { $2 }
+      pos $1 $7, 
+      Generic (Class (snd n, intypes, mems, List.filter_opt fns)) }
+class_member:
+  | PASS NL { None }
+  /* | type_stmt NL { Some $1 } */
+  | class_statement 
+  | func_statement 
+    { Some (fst $1, match snd $1 with Generic c -> c | _ -> assert false) }
 extend_statement:
-  | EXTEND ; n = ID; COLON NL;
-    INDENT fns = class_members DEDENT
-    { `Extend ((fst n, snd n), fns, $1) }
+  | EXTEND ; n = ID; COLON NL; 
+    INDENT fns = class_member+ DEDENT
+    { pos $1 $3, 
+      Extend (snd n, List.filter_opt fns) }
 

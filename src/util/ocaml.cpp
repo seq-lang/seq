@@ -13,7 +13,6 @@ using namespace seq;
 #define E(...)
 #endif
 
-
 /***** Types *****/
 
 FOREIGN types::Type *void_type()        { return types::Void; }
@@ -31,11 +30,18 @@ FOREIGN types::Type *array_type(types::Type *base)
 	return types::ArrayType::get(base);
 }
 
+FOREIGN char *get_type_name(types::Type *ex)
+{
+	return strdup(ex->getName().c_str());
+}
+
 FOREIGN types::Type *record_type_named(const char **names, types::Type **ty, size_t sz, const char *name)
 {
 	vector<string> s;
-	for (size_t i = 0; i < sz; i++)
+	for (size_t i = 0; i < sz; i++) {
 		s.emplace_back(string(names[i]));
+		free(names[i]);
+	}
 
 	return types::RecordType::get(vector<types::Type *>(ty, ty + sz), s, string(name));
 }
@@ -50,7 +56,7 @@ FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
 	return types::FuncType::get(vector<types::Type *>(ty, ty + sz), ret);
 }
 
-FOREIGN types::Type *gen_type(types::Type *ret)
+FOREIGN types::Type *generator_type(types::Type *ret)
 {
 	return types::GenType::get(ret);
 }
@@ -58,7 +64,9 @@ FOREIGN types::Type *gen_type(types::Type *ret)
 
 FOREIGN types::Type *ref_type(const char *name)
 {
-	return types::RefType::get(name);
+	auto t = types::RefType::get(name);
+	free(name);
+	return name;
 }
 
 FOREIGN types::Type *ptr_type(types::Type *base)
@@ -74,6 +82,8 @@ FOREIGN void set_ref_record(types::RefType *f, types::RecordType *rec)
 FOREIGN void add_ref_method(types::Type *ref, const char *name, Func *fn)
 {
 	ref->addMethod(name, fn, false);
+	free(name);
+	return t;
 }
 
 FOREIGN void set_ref_done(types::RefType *ref)
@@ -83,15 +93,19 @@ FOREIGN void set_ref_done(types::RefType *ref)
 
 /***** Expressions *****/
 
-FOREIGN Expr *none_expr()                 { E("none_expr"); return new NoneExpr(); }
-FOREIGN Expr *bool_expr(char b)           { E("bool_expr[{}]", b); return new BoolExpr(b); }
-FOREIGN Expr *int_expr(int i)             { E("int_expr[{}]", i); return new IntExpr(i); }
-FOREIGN Expr *float_expr(double f)        { E("float_expr[{}]", f); return new FloatExpr(f); }
-FOREIGN Expr *str_expr(const char *s)     { E("str_expr[{}]", s); return new StrExpr(string(s)); }
-FOREIGN Expr *str_seq_expr(const char *s) { E("seq_expr[{}]", s); return new SeqExpr(string(s)); }
-FOREIGN Expr *func_expr(Func *f)          { E("func_expr[{}]", f->genericName()); return new FuncExpr(f); }
-FOREIGN Expr *var_expr(Var *v)            { E("var_expr"); return new VarExpr(v); }
-FOREIGN Expr *type_expr(types::Type *t)   { E("type_expr"); return new TypeExpr(t); }
+FOREIGN Expr *none_expr()                 { return new NoneExpr(); }
+FOREIGN Expr *bool_expr(char b)           { return new BoolExpr(b); }
+FOREIGN Expr *int_expr(int i)             { return new IntExpr(i); }
+FOREIGN Expr *float_expr(double f)        { return new FloatExpr(f); }
+FOREIGN Expr *str_expr(const char *s)     { 
+		auto t = StrExpr(string(s)); free(s); return t; 
+	}
+FOREIGN Expr *str_seq_expr(const char *s) { 
+		auto t = SeqExpr(string(s)); free(s); return t; 
+	}
+FOREIGN Expr *func_expr(Func *f)          { return new FuncExpr(f); }
+FOREIGN Expr *var_expr(Var *v)            { return new VarExpr(v); }
+FOREIGN Expr *type_expr(types::Type *t)   { return new TypeExpr(t); }
 
 FOREIGN Expr *is_expr(Expr *lhs, Expr *rhs)
 {
@@ -105,12 +119,16 @@ FOREIGN Expr *cond_expr(Expr *cond, Expr *ift, Expr *iff)
 
 FOREIGN Expr *uop_expr(const char *op, Expr *lhs)
 {
-	return new UOpExpr(uop(string(op)), lhs);
+	auto t = new UOpExpr(uop(string(op)), lhs);
+	free(op);
+	return t;
 }
 
 FOREIGN Expr *bop_expr(const char *op, Expr *lhs, Expr *rhs)
 {
-	return new BOpExpr(bop(string(op)), lhs, rhs);
+	auto t = new BOpExpr(bop(string(op)), lhs, rhs);
+	free(op);
+	return t;
 }
 
 FOREIGN Expr *call_expr(Expr *fn, Expr **args, size_t size)
@@ -130,7 +148,9 @@ FOREIGN Expr *pipe_expr(Expr **args, size_t size)
 
 FOREIGN Expr *get_elem_expr(Expr *lhs, const char *rhs)
 {
-	return new GetElemExpr(lhs, string(rhs));
+	auto t = new GetElemExpr(lhs, string(rhs));
+	free(rhs);
+	return t;
 }
 
 FOREIGN Expr *array_expr(types::Type *ty, Expr *cnt)
@@ -167,12 +187,16 @@ FOREIGN Expr *record_expr(Expr **args, size_t size)
 
 FOREIGN Expr *static_expr(types::Type *ty, const char *name)
 {
-	return new GetStaticElemExpr(ty, string(name));
+	auto t = new GetStaticElemExpr(ty, string(name));
+	free(name);
+	return t;
 }
 
 FOREIGN Expr *method_expr(Expr *expr, const char *name, types::Type **types, size_t len)
 {
-	return new MethodExpr(expr, name, vector<types::Type *>(types, types + len));
+	auto t = new MethodExpr(expr, name, vector<types::Type *>(types, types + len));
+	free(name);
+	return t;
 }
 
 FOREIGN Expr *list_expr(types::Type *ty, Expr **args, size_t len)
@@ -254,7 +278,9 @@ FOREIGN Stmt *assign_stmt(Var *v, Expr *rhs)
 
 FOREIGN Stmt *assign_member_stmt(Expr *lh, const char *name, Expr *rh)
 {
-	return new AssignMember(lh, name, rh);
+	auto t = new AssignMember(lh, name, rh);
+	free(name);
+	return t;
 }
 
 FOREIGN Stmt *assign_index_stmt(Expr *lh, Expr *rh, Expr *rhs)
@@ -323,6 +349,7 @@ FOREIGN Func *func(const char *name)
 {
 	auto *f = new Func();
 	f->setName(string(name));
+	free(name);
 	return f;
 }
 
@@ -338,7 +365,9 @@ FOREIGN Block *get_func_block(Func *st)
 
 FOREIGN Var *get_func_arg(Func *f, const char *arg)
 {
-	return f->getArgVar(string(arg));
+	auto t = f->getArgVar(string(arg));
+	free(arg);
+	return t;
 }
 
 FOREIGN void set_func_enclosing(Func *f, Func *outer)
@@ -359,8 +388,10 @@ FOREIGN void set_func_yield(Func *f, Yield *ret)
 FOREIGN void set_func_params(Func *f, const char **names, types::Type **types, size_t len)
 {
 	vector<string> s;
-	for (size_t i = 0; i < len; i++)
+	for (size_t i = 0; i < len; i++) {
 		s.emplace_back(string(names[i]));
+		free(names[i]);
+	}
 
 	f->setIns(vector<types::Type *>(types, types + len));
 	f->setArgNames(s);
@@ -383,16 +414,13 @@ FOREIGN void set_func_extern(Func *fn)
 
 FOREIGN char *get_expr_name(Expr *ex)
 {
-	string s = ex->getName();
-	auto *c = new char[s.size() + 1];
-	strncpy(c, s.c_str(), s.size());
-	c[s.size()] = 0;
-	return c;
+	return strdup(ex->getName().c_str());
 }
 
 FOREIGN void set_func_generic_name(Func *fn, int idx, const char *name)
 {
 	fn->getGeneric(idx)->setName(name);
+	free(name);
 }
 
 FOREIGN void set_ref_generics(types::RefType *fn, int n)
@@ -408,6 +436,7 @@ FOREIGN types::Type *get_ref_generic(types::RefType *fn, int idx)
 FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, const char *name)
 {
 	fn->getGeneric(idx)->setName(name);
+	free(name);
 }
 
 FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types, size_t sz)
@@ -462,7 +491,9 @@ FOREIGN Pattern *int_pattern(int i)
 
 FOREIGN Pattern *str_pattern(const char *c)
 {
-	return new StrPattern(string(c));
+	auto t = new StrPattern(string(c));
+	free(c);
+	return t;
 }
 
 FOREIGN Pattern *range_pattern(int a, int b)
@@ -487,7 +518,9 @@ FOREIGN Pattern *array_pattern(Pattern **p, size_t size)
 
 FOREIGN Pattern *seq_pattern(const char *c)
 {
-	return new SeqPattern(string(c));
+	auto t = new SeqPattern(string(c));
+	free(c);
+	return t;
 }
 
 FOREIGN Pattern *bool_pattern(bool b)
@@ -546,27 +579,23 @@ FOREIGN struct seq_srcinfo {
 	char *file;
 	int line;
 	int col;
+	int line;
 };
 
 FOREIGN void set_pos(SrcObject *obj, const char *f, int l, int c)
 {
-	if (obj) {
-		// int type = dynamic_cast<Expr *>(obj) ? 1 : (dynamic_cast<Stmt *>(obj) ? 2 : 0);
-		// E("set_pos[{}]", obj->getName());
-		obj->setSrcInfo(SrcInfo(string(f), l, c));
-	}
+	if (!obj) return;
+	obj->setSrcInfo(SrcInfo(string(f), l, c));
+	free(f);
 }
 
 FOREIGN seq_srcinfo get_pos(SrcObject *obj)
 {
 	if (!obj) {
-		return seq_srcinfo { (char *)"", 0, 0 };
+		return seq_srcinfo { (char *)"", 0, 0, 0 };
 	}
 	auto info = obj->getSrcInfo();
-	auto *c = new char[info.file.size() + 1];
-	strncpy(c, info.file.c_str(), info.file.size());
-	c[info.file.size()] = 0;
-	return seq_srcinfo { c, info.line, info.col };
+	return seq_srcinfo { strdup(info.file.c_str()), info.line, info.col, 0 };
 }
 
 FOREIGN Var *get_for_var(For *f)
@@ -609,27 +638,31 @@ FOREIGN void *init_module()
 	return new SeqModule();
 }
 
-FOREIGN bool exec_module(SeqModule *sm, char debug, char **error, seq_srcinfo **srcInfo)
+FOREIGN bool exec_module(
+	SeqModule *sm, char **args, size_t arg_len,
+	char debug, char **error, seq_srcinfo **srcInfo)
 {
 	try {
-		sm->execute({}, {}, debug);
+		vector<string> s;
+		for (size_t i = 0; i < arg_len; i++) {
+			s.emplace_back(string(args[i]));
+			free(args[i]);
+		}
+		sm->execute(s, {}, debug);
 		*error = nullptr;
 		*srcInfo = nullptr;
 		return true;
 	} catch (exc::SeqException &e) {
 		string msg = e.what();
-		*error = new char[msg.size() + 1];
-		strncpy(*error, msg.c_str(), msg.size());
-		error[msg.size()] = nullptr;
-
+		*error = strdup(msg.c_str());
+		
 		auto info = e.getSrcInfo();
 		*srcInfo = new seq_srcinfo;
 		(*srcInfo)->line = info.line;
 		(*srcInfo)->col = info.col;
-		(*srcInfo)->file = new char[info.file.size() + 1];
-		strncpy((*srcInfo)->file, info.file.c_str(), info.file.size());
-		(*srcInfo)->file[info.file.size()] = 0;
-
+		(*srcInfo)->file = strdup(info.file.c_str());
+		(*srcInfo)->len = 0;
+		
 		return false;
 	}
 }
