@@ -194,19 +194,28 @@ struct
 
     while_stmt
 
-  and parse_for ctx pos (for_var, gen_expr, stmts) =
+  and parse_for ctx pos (for_vars, gen_expr, stmts) =
     let gen_expr = E.parse ctx gen_expr in
     let for_stmt = Llvm.Stmt.loop gen_expr in
     let block = Llvm.Stmt.Block.loop for_stmt in
 
-    begin match for_var with
-      | [name] ->
-        let var = Llvm.Var.loop for_stmt in
-        add_block { ctx with block } stmts ~preprocess:(fun ctx ->
-          Ctx.add ctx name (Ctx.Assignable.Var var));
-      | _ -> 
-        serr ~pos "multiple for variables" 
-    end;
+    let var = Llvm.Var.loop for_stmt in
+    let var_expr = Llvm.Expr.var var in
+    
+    add_block { ctx with block } stmts 
+      ~preprocess:(fun ctx ->
+        match for_vars with
+        | [name] ->
+          let var = Llvm.Var.loop for_stmt in
+          Ctx.add ctx name (Ctx.Assignable.Var var)
+        | for_vars -> 
+          List.iteri for_vars ~f:(fun idx var_name ->
+            let expr = Llvm.Expr.lookup var_expr (Llvm.Expr.int idx) in
+            let var_stmt = Llvm.Stmt.var expr in
+            let var = Llvm.Var.var_of_stmt var_stmt in
+            Ctx.add ctx var_name (Ctx.Assignable.Var var)
+          )
+      );
     for_stmt
 
   and parse_if ctx pos cases =

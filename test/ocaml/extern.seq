@@ -3,22 +3,22 @@
 for i in [1<<a for a in [1,2,3,4,5]]:
    print i
 
-d = {1: "2", 3: "4", 5: "6"}
-for a in d.items():
-   print a[0], a[1]
+# d = {1: "2", 3: "4", 5: "6"}
+# for a in d.items():
+#    print a[0], a[1]
 
-j = {a: a+1 for a in d}
-for a in j.items():
-   print 'dict', a[0], a[1]
-j := {a: [i for i in range(0, a)] for a in d}
-for a in j.items():
-   print 'dict--', a[0], len(a[1])
-   for ii in a[1]:
-      print '   ii', ii
+# j = {a: a+1 for a in d}
+# for a in j.items():
+#    print 'dict', a[0], a[1]
+# j := {a: [i for i in range(0, a)] for a in d}
+# for a in j.items():
+#    print 'dict--', a[0], len(a[1])
+#    for ii in a[1]:
+#       print '   ii', ii
 
-e = {1,2,3,4,5, 5}
-for a in e:
-   print 'set', a
-w={i*2 for i in e}
-for i in w:
-   print i
+# e = {1,2,3,4,5, 5}
+# for a in e:
+#    print 'set', a
+# w={i*2 for i in e}
+# for i in w:
+#    print i
