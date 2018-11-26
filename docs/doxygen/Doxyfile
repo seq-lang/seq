@@ -1,0 +1,14 @@
+PROJECT_NAME      = "seq"
+XML_OUTPUT        = xml
+INPUT             = ../../include ../../src/lang ../../src/seq ../../src/types ../../src/util
+GENERATE_LATEX    = NO
+GENERATE_MAN      = NO
+GENERATE_RTF      = NO
+CASE_SENSE_NAMES  = NO
+GENERATE_XML      = YES
+GENERATE_HTML     = NO
+RECURSIVE         = YES
+QUIET             = YES
+JAVADOC_AUTOBRIEF = YES
+WARN_IF_UNDOCUMENTED = NO
+

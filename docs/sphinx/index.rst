@@ -9,6 +9,7 @@ Contents
 
    intro
    internals
+   doxygen
 
 Indices and tables
 ------------------

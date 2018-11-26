@@ -43,6 +43,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
     'sphinx.ext.intersphinx',
+    'breathe'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -160,6 +161,13 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+
+breathe_projects = {'seq': '../'}
+breathe_default_project = 'seq'
+breathe_projects_source = {
+  'seq' : ( '../seq/include', ['types.h'] )
+}
+
 
 # -- Options for todo extension ----------------------------------------------
 

@@ -27,13 +27,6 @@ static int64_t ourBaseFromUnwindOffset;
 
 static const unsigned char ourBaseExcpClassChars[] = {'o', 'b', 'j', '\0', 's', 'e', 'q', '\0'};
 
-/// Generates our _Unwind_Exception class from a given character array.
-/// thereby handling arbitrary lengths (not in standard), and handling
-/// embedded \0s.
-/// See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
-/// @param classChars char array to encode. NULL values not checkedf
-/// @param classCharsSize number of chars in classChars. Value is not checked.
-/// @returns class value
 static uint64_t genClass(const unsigned char classChars[], size_t classCharsSize)
 {
 	uint64_t ret = classChars[0];
@@ -98,11 +91,6 @@ SEQ_FUNC void seq_throw(void *exc)
 	std::abort();
 }
 
-/// Read a uleb128 encoded value and advance pointer
-/// See Variable Length Data in:
-/// @link http://dwarfstd.org/Dwarf3.pdf @unlink
-/// @param data reference variable holding memory pointer to decode from
-/// @returns decoded value
 static uintptr_t readULEB128(const uint8_t **data)
 {
 	uintptr_t result = 0;
@@ -121,11 +109,6 @@ static uintptr_t readULEB128(const uint8_t **data)
 	return result;
 }
 
-/// Read a sleb128 encoded value and advance pointer
-/// See Variable Length Data in:
-/// @link http://dwarfstd.org/Dwarf3.pdf @unlink
-/// @param data reference variable holding memory pointer to decode from
-/// @returns decoded value
 static uintptr_t readSLEB128(const uint8_t **data)
 {
 	uintptr_t result = 0;
@@ -174,12 +157,6 @@ static unsigned getEncodingSize(uint8_t encoding)
 	}
 }
 
-/// Read a pointer encoded value and advance pointer
-/// See Variable Length Data in:
-/// @link http://dwarfstd.org/Dwarf3.pdf @unlink
-/// @param data reference variable holding memory pointer to decode from
-/// @param encoding dwarf encoding type
-/// @returns decoded value
 static uintptr_t readEncodedPointer(const uint8_t **data, uint8_t encoding)
 {
 	uintptr_t result = 0;
@@ -250,24 +227,6 @@ static uintptr_t readEncodedPointer(const uint8_t **data, uint8_t encoding)
 	return result;
 }
 
-/// Deals with Dwarf actions matching our type infos
-/// (OurExceptionType_t instances). Returns whether or not a dwarf emitted
-/// action matches the supplied exception type. If such a match succeeds,
-/// the resultAction argument will be set with > 0 index value. Only
-/// corresponding llvm.eh.selector type info arguments, cleanup arguments
-/// are supported. Filters are not supported.
-/// See Variable Length Data in:
-/// @link http://dwarfstd.org/Dwarf3.pdf @unlink
-/// Also see @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
-/// @param resultAction reference variable which will be set with result
-/// @param classInfo our array of type info pointers (to globals)
-/// @param actionEntry index into above type info array or 0 (clean up).
-///        We do not support filters.
-/// @param exceptionClass exception class (_Unwind_Exception::exception_class)
-///        of thrown exception.
-/// @param exceptionObject thrown _Unwind_Exception instance.
-/// @returns whether or not a type info was found. False is returned if only
-///          a cleanup was found
 static bool handleActionValue(int64_t *resultAction,
                               uint8_t TTypeEncoding,
                               const uint8_t *ClassInfo,
@@ -322,17 +281,6 @@ static bool handleActionValue(int64_t *resultAction,
 	return ret;
 }
 
-/// Deals with the Language specific data portion of the emitted dwarf code.
-/// See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
-/// @param version unsupported (ignored), unwind version
-/// @param lsda language specific data area
-/// @param _Unwind_Action actions minimally supported unwind stage
-///        (forced specifically not supported)
-/// @param exceptionClass exception class (_Unwind_Exception::exception_class)
-///        of thrown exception.
-/// @param exceptionObject thrown _Unwind_Exception instance.
-/// @param context unwind system context
-/// @returns minimally supported unwinding control indicator
 static _Unwind_Reason_Code handleLsda(int version,
                                       const uint8_t *lsda,
                                       _Unwind_Action actions,
@@ -461,17 +409,6 @@ static _Unwind_Reason_Code handleLsda(int version,
 	return ret;
 }
 
-/// This is the personality function which is embedded (dwarf emitted), in the
-/// dwarf unwind info block. Again see: JITDwarfEmitter.cpp.
-/// See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
-/// @param version unsupported (ignored), unwind version
-/// @param _Unwind_Action actions minimally supported unwind stage
-///        (forced specifically not supported)
-/// @param exceptionClass exception class (_Unwind_Exception::exception_class)
-///        of thrown exception.
-/// @param exceptionObject thrown _Unwind_Exception instance.
-/// @param context unwind system context
-/// @returns minimally supported unwinding control indicator
 SEQ_FUNC _Unwind_Reason_Code seq_personality(int version,
                                              _Unwind_Action actions,
                                              uint64_t exceptionClass,
