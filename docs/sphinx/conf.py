@@ -162,11 +162,8 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 
-breathe_projects = {'seq': '../'}
+breathe_projects = {'seq': '../doxygen/xml'}
 breathe_default_project = 'seq'
-breathe_projects_source = {
-  'seq' : ( '../seq/include', ['types.h'] )
-}
 
 
 # -- Options for todo extension ----------------------------------------------
