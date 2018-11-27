@@ -11,7 +11,7 @@ namespace seq {
 		private:
 			std::vector<Type *> inTypes;
 			Type *outType;
-			FuncType(std::vector<Type *> inTypes, Type *outType);
+			FuncType(std::vector<types::Type *> inTypes, Type *outType);
 		public:
 			FuncType(FuncType const&)=delete;
 			void operator=(FuncType const&)=delete;
@@ -75,7 +75,7 @@ namespace seq {
 			RecordType *contents;
 
 			// callTypes[i] == null means the argument is unknown
-			PartialFuncType(Type *callee, std::vector<Type *> callTypes);
+			PartialFuncType(Type *callee, std::vector<types::Type *> callTypes);
 		public:
 			PartialFuncType(PartialFuncType const&)=delete;
 			void operator=(PartialFuncType const&)=delete;

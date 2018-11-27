@@ -9,6 +9,12 @@
 
 namespace seq {
 
+	/**
+	 * Class from which all Seq expressions derive.
+	 *
+	 * An "expression" can be thought of as an AST, potentially
+	 * containing subexpressions. Every expression has a type.
+	 */
 	class Expr : public SrcObject {
 	private:
 		types::Type *type;
