@@ -94,53 +94,53 @@ FOREIGN void set_ref_done(types::RefType *ref)
 
 /***** Expressions *****/
 
-FOREIGN Expr *none_expr() 
-{ 
-	return new NoneExpr(); 
+FOREIGN Expr *none_expr()
+{
+	return new NoneExpr();
 }
 
-FOREIGN Expr *bool_expr(char b) 
-{ 
-	return new BoolExpr(b); 
+FOREIGN Expr *bool_expr(char b)
+{
+	return new BoolExpr(b);
 }
 
-FOREIGN Expr *int_expr(int i) 
-{ 
-	return new IntExpr(i); 
+FOREIGN Expr *int_expr(int i)
+{
+	return new IntExpr(i);
 }
 
-FOREIGN Expr *float_expr(double f) 
-{ 
-	return new FloatExpr(f); 
+FOREIGN Expr *float_expr(double f)
+{
+	return new FloatExpr(f);
 }
 
-FOREIGN Expr *str_expr(char *s) 
-{ 
-	Expr *t = new StrExpr(string(s)); 
-	free(s); 
-	return t; 
+FOREIGN Expr *str_expr(char *s)
+{
+	Expr *t = new StrExpr(string(s));
+	free(s);
+	return t;
 }
 
-FOREIGN Expr *str_seq_expr(char *s) 
-{ 
-	Expr *t = new SeqExpr(string(s)); 
-	free(s); 
-	return t; 
+FOREIGN Expr *str_seq_expr(char *s)
+{
+	Expr *t = new SeqExpr(string(s));
+	free(s);
+	return t;
 }
 
-FOREIGN Expr *func_expr(Func *f)          
-{ 
-	return new FuncExpr(f); 
+FOREIGN Expr *func_expr(Func *f)
+{
+	return new FuncExpr(f);
 }
 
-FOREIGN Expr *var_expr(Var *v)            
-{ 
-	return new VarExpr(v); 
+FOREIGN Expr *var_expr(Var *v)
+{
+	return new VarExpr(v);
 }
 
-FOREIGN Expr *type_expr(types::Type *t)   
-{ 
-	return new TypeExpr(t); 
+FOREIGN Expr *type_expr(types::Type *t)
+{
+	return new TypeExpr(t);
 }
 
 FOREIGN Expr *is_expr(Expr *lhs, Expr *rhs)
@@ -630,7 +630,7 @@ FOREIGN struct seq_srcinfo {
 FOREIGN void set_pos(SrcObject *obj, char *f, int l, int c)
 {
 	if (!obj) return;
-	obj->setSrcInfo(SrcInfo(string(f), l, c));
+	obj->setSrcInfo(SrcInfo(string(f), l, c, 1));
 	free(f);
 }
 
@@ -700,14 +700,14 @@ FOREIGN bool exec_module(
 	} catch (exc::SeqException &e) {
 		string msg = e.what();
 		*error = strdup(msg.c_str());
-		
+
 		auto info = e.getSrcInfo();
 		*srcInfo = new seq_srcinfo;
 		(*srcInfo)->line = info.line;
 		(*srcInfo)->col = info.col;
 		(*srcInfo)->file = strdup(info.file.c_str());
 		(*srcInfo)->len = 0;
-		
+
 		return false;
 	}
 }

@@ -13,9 +13,10 @@ namespace seq {
 		std::string file;
 		int line;
 		int col;
-		SrcInfo(std::string file, int line, int col) :
-		    file(std::move(file)), line(line), col(col) {};
-		SrcInfo() : SrcInfo("", 0, 0) {};
+		int len;
+		SrcInfo(std::string file, int line, int col, int len) :
+		    file(std::move(file)), line(line), col(col), len(len) {};
+		SrcInfo() : SrcInfo("", 0, 0, 0) {};
 	};
 
 	struct SrcObject {
