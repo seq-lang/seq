@@ -291,15 +291,15 @@ struct
 
     Llvm.Stmt.pass ()
   
-  and parse_import ctx pos imports =
+  and parse_import ?(ext="seq") ctx pos imports =
     List.iter imports ~f:(fun ((pos, what), _) ->
-      let file = sprintf "%s/%s.seq" (Filename.dirname ctx.filename) what in
+      let file = sprintf "%s/%s.%s" (Filename.dirname ctx.filename) what ext in
       match Sys.file_exists file with
       | `Yes -> 
         ctx.parse_file ctx file
       | _ -> 
         let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
-        let file = sprintf "%s/%s.seq" seqpath what in
+        let file = sprintf "%s/%s.%s" seqpath what ext in
         match Sys.file_exists file with
         | `Yes -> 
           ctx.parse_file ctx file

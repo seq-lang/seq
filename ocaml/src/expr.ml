@@ -27,8 +27,8 @@ struct
       | Generic p | Id p -> parse_id       ctx pos p
       | Tuple          p -> parse_tuple    ctx pos p
       | List           p -> parse_list     ctx pos p
-      | Dict           p -> parse_dict     ctx pos p
       | Set            p -> parse_list     ctx pos p ~kind:"set"
+      | Dict           p -> parse_dict     ctx pos p
       | ListGenerator  p -> parse_list_gen ctx pos p
       | SetGenerator   p -> parse_list_gen ctx pos p ~kind:"set"
       | DictGenerator  p -> parse_dict_gen ctx pos p

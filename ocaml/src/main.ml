@@ -35,7 +35,7 @@ let rec parse_string ?fname ?debug ctx code =
     raise @@ CompilerError(Compiler(msg), [pos])
 
 and parse_file ?debug ctx file =
-  (* eprintf "==> parsing %s\n" file; *)
+  Util.dbg "parsing %s" file;
   let lines = In_channel.read_lines file in
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
   parse_string ?debug ~fname:(Filename.realpath file) ctx code
