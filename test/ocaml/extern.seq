@@ -1,61 +1,26 @@
 # 786
 
-# class foo[`t](a: `t):
-#     def bar(self):
-#         print self.a
+for i in [1,2,3,4,5]:
+   print i
 
-# a = foo(1)
-# print a.a
+print [1<<a for a in [1,2,3,4,5]]
 
-# class qlist[`t](arr: array[`t], len: int):
-#     pass
-#     # def __init__(self: qlist[`t], arr: array[`t], len: int):
-#         # self.arr = arr
-#         # self.len = len
+d = {1: "2", 3: "4", 5: "6"}
+print d
 
+j = {a: a+1 for a in d}
+for k, v in j.items():
+   print 'dict', k, v
 
-# a := array[int](1)
-# a[0] = 10
-# b = qlist(a, 1)
-# print b.len
-# print b.arr[0]
-
-y=[1,2,3,4,5]
-print y
-
-# y=1
-# print y
-
-# print len(__argv__)
-# print __argv__[0]
-# print __argv__[1]
-
-# z = [1,2,3,4,5]
-# print z[0]
-
-
-#for i in [1,2,3,4,5]:
-#    print i
-
-#for i in [1<<a for a in [1,2,3,4,5]]:
-#   print i
-
-# d = {1: "2", 3: "4", 5: "6"}
-# for a in d.items():
-#    print a[0], a[1]
-
-# j = {a: a+1 for a in d}
-# for a in j.items():
-#    print 'dict', a[0], a[1]
-# j := {a: [i for i in range(0, a)] for a in d}
+j := {a: [i for i in range(0, a)] for a in d}
+print j
 # for a in j.items():
 #    print 'dict--', a[0], len(a[1])
 #    for ii in a[1]:
 #       print '   ii', ii
 
-# e = {1,2,3,4,5, 5}
-# for a in e:
-#    print 'set', a
-# w={i*2 for i in e}
-# for i in w:
-#    print i
+e = {1,2,3,4,5, 5}
+print e, {i*2 for i in e}
+
+print [i*j for i in [1,2,3,4,5] for j in [5,4,3,2,1] if i == j]
+

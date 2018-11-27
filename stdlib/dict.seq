@@ -105,3 +105,21 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
 
     def __len__(self: dict[`k,`v]):
         return self.size
+
+    def __print__(self: dict[`k, `v]):
+        n = len(self)
+        if n == 0:
+            "{}".__print__()
+        else:
+            "{".__print__()
+            first = True
+            for e in self._entry_iter():
+                if not first:
+                    ", ".__print__()
+                else:
+                    first = False
+                e.k.__print__()
+                ": ".__print__()
+                e.v.__print__()
+            "}".__print__()
+

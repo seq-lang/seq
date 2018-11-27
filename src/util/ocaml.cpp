@@ -148,6 +148,11 @@ FOREIGN Expr *is_expr(Expr *lhs, Expr *rhs)
 	return new IsExpr(lhs, rhs);
 }
 
+FOREIGN Expr *is_not_expr(Expr *lhs, Expr *rhs)
+{
+	return new UOpExpr(uop("!"), new IsExpr(lhs, rhs));
+}
+
 FOREIGN Expr *cond_expr(Expr *cond, Expr *ift, Expr *iff)
 {
 	return new CondExpr(cond, ift, iff);
@@ -209,9 +214,14 @@ FOREIGN Expr *array_slice_expr(Expr *arr, Expr *st, Expr *ed)
 	return new ArraySliceExpr(arr, st, ed);
 }
 
-FOREIGN Expr *array_contains_expr(Expr *lhs, Expr *rhs)
+FOREIGN Expr *in_expr(Expr *lhs, Expr *rhs)
 {
 	return new ArrayContainsExpr(lhs, rhs);
+}
+
+FOREIGN Expr *not_in_expr(Expr *lhs, Expr *rhs)
+{
+	return new UOpExpr(uop("!"), ArrayContainsExpr(lhs, rhs));
 }
 
 FOREIGN Expr *record_expr(Expr **args, size_t size)

@@ -114,9 +114,9 @@ module Type = struct
       (t @-> t @-> returning Ctypes.void) 
       typ rt
 
-  let add_cls_method typ s f = foreign "add_ref_method"
+  let add_cls_method typ name func = foreign "add_ref_method"
     (t @-> cstring @-> Types.func @-> returning Ctypes.void)
-    typ (strdup s) f
+    typ (strdup name) func
 
   let set_cls_done = foreign "set_ref_done" 
     (t @-> returning Ctypes.void)
@@ -198,8 +198,7 @@ module Expr = struct
 
   let binary lh bop rh = 
     let fn = match bop with
-      | "is" | "is not" 
-      | "in" | "in not" ->
+      | "is" | "is not" | "in" | "in not" ->
         let prefix = 
           String.tr bop ~target:' ' ~replacement:'_' 
         in
@@ -450,10 +449,10 @@ module Func = struct
       (strdup name)
 
   let set_return = foreign "set_func_return" 
-    (t @-> Types.stmt @-> returning void)
+    (t @-> Types.expr @-> returning void)
 
   let set_yield = foreign "set_func_yield" 
-    (t @-> Types.stmt @-> returning void)
+    (t @-> Types.expr @-> returning void)
 
   let set_type = foreign "set_func_out" 
     (t @-> Types.typ @-> returning void)

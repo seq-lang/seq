@@ -194,28 +194,32 @@ struct
 
     while_stmt
 
-  and parse_for ctx pos (for_vars, gen_expr, stmts) =
+  and parse_for ?next ctx pos (for_vars, gen_expr, stmts) =
     let gen_expr = E.parse ctx gen_expr in
     let for_stmt = Llvm.Stmt.loop gen_expr in
     let block = Llvm.Stmt.Block.loop for_stmt in
+    let for_ctx = { ctx with block } in
 
-    let var = Llvm.Var.loop for_stmt in
-    let var_expr = Llvm.Expr.var var in
-    
-    add_block { ctx with block } stmts 
-      ~preprocess:(fun ctx ->
-        match for_vars with
+    Ctx.add_block for_ctx;
+      let var = Llvm.Var.loop for_stmt in
+      begin match for_vars with
         | [name] ->
-          let var = Llvm.Var.loop for_stmt in
-          Ctx.add ctx name (Ctx.Assignable.Var var)
+          Ctx.add for_ctx name (Ctx.Assignable.Var var)
         | for_vars -> 
+          let var_expr = Llvm.Expr.var var in
           List.iteri for_vars ~f:(fun idx var_name ->
             let expr = Llvm.Expr.lookup var_expr (Llvm.Expr.int idx) in
             let var_stmt = Llvm.Stmt.var expr in
+            ignore @@ finalize_stmt for_ctx var_stmt pos;
             let var = Llvm.Var.var_of_stmt var_stmt in
-            Ctx.add ctx var_name (Ctx.Assignable.Var var)
-          )
-      );
+            Ctx.add for_ctx var_name (Ctx.Assignable.Var var))
+      end;
+      let _ = match next with 
+        | Some next -> next for_ctx for_stmt
+        | None -> ignore @@ List.map stmts ~f:(parse for_ctx)
+      in
+    Ctx.clear_block for_ctx;
+
     for_stmt
 
   and parse_if ctx pos cases =
@@ -270,7 +274,7 @@ struct
     Llvm.Func.set_args fn names types;
     Llvm.Func.set_extern fn;
     let typ = E.parse_type ctx (Option.value_exn typ) in
-    Llvm.Func.set_return fn typ;
+    Llvm.Func.set_type fn typ;
     
     Ctx.add ctx name (Ctx.Assignable.Func fn);
     Llvm.Stmt.func fn
@@ -316,8 +320,9 @@ struct
       | Some cls -> Llvm.Type.add_cls_method cls name fn
       | None -> Ctx.add ctx name (Ctx.Assignable.Func fn)
     end;
+
     Option.value_map typ
-      ~f:(fun typ -> Llvm.Func.set_return fn (E.parse_type ctx typ))
+      ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type ctx typ))
       ~default:();
 
     let new_ctx = 

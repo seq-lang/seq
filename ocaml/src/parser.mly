@@ -168,14 +168,14 @@ dictitem:
     { $1, $3 }
 
 comprehension:
-  | FOR ID IN pipe_test comprehension_if? comprehension?
+  | FOR separated_list(COMMA, ID) IN pipe_test comprehension_if? comprehension?
     { let last = match $6, $5, $4 with
         | Some (p, _), _, _
         | None, Some (p, _), _
         | None, None, (p, _) -> p
       in
       pos $1 last, 
-      ExprNode.{ var = snd $2; gen = flat $4; cond = $5; next = $6 } }
+      ExprNode.{ var = List.map $2 ~f:snd; gen = flat $4; cond = $5; next = $6 } }
 comprehension_if:
   | IF pipe_test
     { let exp = flat $2 in 

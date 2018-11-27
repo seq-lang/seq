@@ -81,3 +81,17 @@ class set[`k](table: array[_set_entry[`k]], size: int):
 
     def __len__(self: set[`k]):
         return self.size
+
+    def __print__(self: set[`k]):
+        n = len(self)
+        if n == 0:
+            "{}".__print__()
+        else:
+            "{".__print__()
+            first = True
+            for i in self.__iter__():
+                if first: first = False
+                else: ", ".__print__()
+                i.__print__()
+            "}".__print__()
+

@@ -57,7 +57,7 @@ struct
   and generic = 
     string
   and comprehension =
-    { var: string; 
+    { var: string list; 
       gen: t; 
       cond: t option; 
       next: (comprehension tt) option }
@@ -140,7 +140,7 @@ struct
     in
     let next = Option.value_map next ~default:"" ~f:to_string_comprehension in
     sprintf "Comp(%s; %s%s %s)" 
-      var (to_string gen) cond next
+      (sci var Fn.id) (to_string gen) cond next
 end 
 
 module StmtNode = 
