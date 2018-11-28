@@ -36,7 +36,7 @@ class X[`t](t: `t):
                 yield a[i]
                 i += 1
 
-        farr = array[function[seq, array[seq]]](1)
+        farr = array[function[array[seq], seq]](1)
         farr[0] = f
 
         def ident(s):
