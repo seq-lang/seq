@@ -16,7 +16,7 @@ namespace seq {
 		int len;
 		SrcInfo(std::string file, int line, int col, int len) :
 		    file(std::move(file)), line(line), col(col), len(len) {};
-		SrcInfo() : SrcInfo("", 0, 0, 0) {};
+		SrcInfo() : SrcInfo("<internal>", 0, 0, 0) {};
 	};
 
 	struct SrcObject {
