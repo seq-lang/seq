@@ -177,17 +177,17 @@ module Expr = struct
     let arr, len = list_to_carr t args in
     fn typ arr len
 
-  let list_comprehension ~kind typ expr for_stmt = 
+  let list_comprehension ~kind typ expr = 
     let fn = foreign (kind ^ "_comp_expr")
-      (Types.typ @-> t @-> Types.stmt @-> returning t)
+      (Types.typ @-> t @-> returning t)
     in
-    fn typ expr for_stmt
+    fn typ expr
 
-  let dict_comprehension typ expr1 expr2 for_stmt = 
+  let dict_comprehension typ expr1 expr2 = 
     let fn = foreign "dict_comp_expr"
-      (Types.typ @-> t @-> t @-> Types.stmt @-> returning t)
+      (Types.typ @-> t @-> t @-> returning t)
     in
-    fn typ expr1 expr2 for_stmt
+    fn typ expr1 expr2
 
   let cond = foreign "cond_expr" 
     (t @-> t @-> t @-> returning t)
@@ -256,6 +256,11 @@ module Expr = struct
   let set_pos expr (pos: Ast.Pos.t) = foreign "set_pos" 
     Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
     expr (strdup pos.file) pos.line pos.col pos.len
+
+  let set_comprehension_body ~kind expr body = 
+    foreign (sprintf "set_%s_comp_body" kind)
+      (t @-> Types.stmt @-> returning Ctypes.void)
+      expr body
 
   let get_name = foreign "get_expr_name" 
     (t @-> returning string)

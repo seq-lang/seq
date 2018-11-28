@@ -22,5 +22,9 @@ print j
 e = {1,2,3,4,5, 5}
 print e, {i*2 for i in e}
 
-print [i*j for i in [1,2,3,4,5] for j in [5,4,3,2,1] if i == j]
+for i in [1,2,3,4,5]:
+    for j in [1,2,3,4,5]:
+        if i==j:
+            print 'init', i*j
+print [kj for i in [1,2,3,4,5] for kj in [5,4,3,2,1] if i == kj]
 

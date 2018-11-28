@@ -152,6 +152,7 @@ namespace seq {
 		bool realize;
 	public:
 		ListCompExpr(Expr *val, For *body, types::Type *listType, bool realize=true);
+		void setBody(For *body);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
@@ -166,6 +167,7 @@ namespace seq {
 		bool realize;
 	public:
 		SetCompExpr(Expr *val, For *body, types::Type *setType, bool realize=true);
+		void setBody(For *body);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
@@ -181,6 +183,7 @@ namespace seq {
 		bool realize;
 	public:
 		DictCompExpr(Expr *key, Expr *val, For *body, types::Type *dictType, bool realize=true);
+		void setBody(For *body);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;

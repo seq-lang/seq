@@ -221,7 +221,7 @@ FOREIGN Expr *in_expr(Expr *lhs, Expr *rhs)
 
 FOREIGN Expr *not_in_expr(Expr *lhs, Expr *rhs)
 {
-	return new UOpExpr(uop("!"), ArrayContainsExpr(lhs, rhs));
+	return new UOpExpr(uop("!"), new ArrayContainsExpr(lhs, rhs));
 }
 
 FOREIGN Expr *record_expr(Expr **args, size_t size)
@@ -260,19 +260,34 @@ FOREIGN Expr *dict_expr(types::Type *ty, Expr **args, size_t len)
 	return new DictExpr(vector<Expr *>(args, args + len), ty);
 }
 
-FOREIGN Expr *list_comp_expr(types::Type *ty, Expr *val, For *body)
+FOREIGN Expr *list_comp_expr(types::Type *ty, Expr *val)
 {
-	return new ListCompExpr(val, body, ty);
+	return new ListCompExpr(val, nullptr, ty);
 }
 
-FOREIGN Expr *set_comp_expr(types::Type *ty, Expr *val, For *body)
+FOREIGN Expr *set_comp_expr(types::Type *ty, Expr *val)
 {
-	return new SetCompExpr(val, body, ty);
+	return new SetCompExpr(val, nullptr, ty);
 }
 
-FOREIGN Expr *dict_comp_expr(types::Type *ty, Expr *key, Expr *val, For *body)
+FOREIGN Expr *dict_comp_expr(types::Type *ty, Expr *key, Expr *val)
 {
-	return new DictCompExpr(key, val, body, ty);
+	return new DictCompExpr(key, val, nullptr, ty);
+}
+
+FOREIGN void set_list_comp_body (ListCompExpr *e, For * body) 
+{
+	e->setBody(body);
+}
+
+FOREIGN void set_set_comp_body (SetCompExpr *e, For * body) 
+{
+	e->setBody(body);
+}
+
+FOREIGN void set_dict_comp_body (DictCompExpr *e, For * body) 
+{
+	e->setBody(body);
 }
 
 FOREIGN Expr *gen_expr(Expr *val, For *body, Var **captures, size_t len)
@@ -648,7 +663,7 @@ FOREIGN Var *get_for_var(For *f)
 	return f->getVar();
 }
 
-FOREIGN types::Type *get_type(Expr *e, BaseFunc *base)
+FOREIGN types::Type *get_type(Expr *e)
 {
 	auto ret = e->getType();
 	return ret;

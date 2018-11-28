@@ -383,6 +383,11 @@ ListCompExpr::ListCompExpr(Expr *val, For *body, types::Type *listType, bool rea
 {
 }
 
+void ListCompExpr::setBody(For *body)
+{
+	this->body = body;
+}
+
 void ListCompExpr::resolveTypes()
 {
 	body->resolveTypes();
@@ -447,6 +452,11 @@ SetCompExpr::SetCompExpr(Expr *val, For *body, types::Type *setType, bool realiz
 {
 }
 
+void SetCompExpr::setBody(For *body)
+{
+	this->body = body;
+}
+
 void SetCompExpr::resolveTypes()
 {
 	body->resolveTypes();
@@ -509,6 +519,11 @@ SetCompExpr *SetCompExpr::clone(Generic *ref)
 DictCompExpr::DictCompExpr(Expr *key, Expr *val, For *body, types::Type *dictType, bool realize) :
     Expr(), key(key), val(val), body(body), dictType(dictType), realize(realize)
 {
+}
+
+void DictCompExpr::setBody(For *body)
+{
+	this->body = body;
 }
 
 void DictCompExpr::resolveTypes()

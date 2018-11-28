@@ -201,23 +201,26 @@ struct
     let for_ctx = { ctx with block } in
 
     Ctx.add_block for_ctx;
-      let var = Llvm.Var.loop for_stmt in
-      begin match for_vars with
-        | [name] ->
-          Ctx.add for_ctx name (Ctx.Assignable.Var var)
-        | for_vars -> 
-          let var_expr = Llvm.Expr.var var in
-          List.iteri for_vars ~f:(fun idx var_name ->
-            let expr = Llvm.Expr.lookup var_expr (Llvm.Expr.int idx) in
-            let var_stmt = Llvm.Stmt.var expr in
-            ignore @@ finalize_stmt for_ctx var_stmt pos;
-            let var = Llvm.Var.var_of_stmt var_stmt in
-            Ctx.add for_ctx var_name (Ctx.Assignable.Var var))
-      end;
-      let _ = match next with 
-        | Some next -> next for_ctx for_stmt
-        | None -> ignore @@ List.map stmts ~f:(parse for_ctx)
-      in
+    let var = Llvm.Var.loop for_stmt in
+    let t = Llvm.Type.expr_type (Llvm.Expr.var var) in
+    begin match for_vars with
+      | [name] ->
+        Ctx.add for_ctx name (Ctx.Assignable.Var var)
+      | for_vars -> 
+        let var_expr = Llvm.Expr.var var in
+        List.iteri for_vars ~f:(fun idx var_name ->
+          let expr = Llvm.Expr.lookup var_expr (Llvm.Expr.int idx) in
+          let var_stmt = Llvm.Stmt.var expr in
+          ignore @@ finalize_stmt for_ctx var_stmt pos;
+          let var = Llvm.Var.var_of_stmt var_stmt in
+          Ctx.add for_ctx var_name (Ctx.Assignable.Var var))
+    end;
+    let _ = match next with 
+      | Some next -> 
+        next for_ctx for_stmt
+      | None -> 
+        ignore @@ List.map stmts ~f:(parse for_ctx)
+    in
     Ctx.clear_block for_ctx;
 
     for_stmt

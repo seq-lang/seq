@@ -113,20 +113,26 @@ struct
   and parse_list_gen ?(kind="list") ctx _ (expr, gen) = 
     let typ = get_internal_type ctx kind in
     let final_expr = ref Ctypes.null in 
-    ignore @@ comprehension_helper ctx gen ~finally:(fun ctx fstmt ->
-      let expr = parse ctx expr in
-      final_expr := Llvm.Expr.list_comprehension ~kind typ expr fstmt);
+    let body = comprehension_helper ctx gen 
+      ~finally:(fun ctx ->
+        let expr = parse ctx expr in
+        final_expr := Llvm.Expr.list_comprehension ~kind typ expr)
+    in
     assert (not (Ctypes.is_null !final_expr));
+    Llvm.Expr.set_comprehension_body ~kind !final_expr body;
     !final_expr
 
   and parse_dict_gen ctx _ (expr, gen) = 
     let typ = get_internal_type ctx "dict" in
     let final_expr = ref Ctypes.null in 
-    ignore @@ comprehension_helper ctx gen ~finally:(fun ctx fstmt ->
-      let e1 = parse ctx (fst expr) in
-      let e2 = parse ctx (snd expr) in 
-      final_expr := Llvm.Expr.dict_comprehension typ e1 e2 fstmt);
+    let body = comprehension_helper ctx gen 
+      ~finally:(fun ctx ->
+        let e1 = parse ctx (fst expr) in
+        let e2 = parse ctx (snd expr) in 
+        final_expr := Llvm.Expr.dict_comprehension typ e1 e2)
+    in
     assert (not (Ctypes.is_null !final_expr));
+    Llvm.Expr.set_comprehension_body ~kind:"dict" !final_expr body;
     !final_expr
 
   and parse_if ctx _  (cond, if_expr, else_expr) =
@@ -212,28 +218,27 @@ struct
   (** [comprehension_helper context finalize comprehension] 
       constructs a [for] statement for [comprehension] and passes it to 
       the finalization function [finalize context for_stmt].  *)
-  and comprehension_helper ?(add=false) ~finally 
-      (ctx: Ctx.t) (pos, {var; gen; cond; next}) =
-    S.parse_for ctx pos (var, gen, [])
+  and comprehension_helper ?(add=false) ~finally (ctx: Ctx.t) (pos, comp) =
+    S.parse_for ctx pos (comp.var, comp.gen, [])
       ~next:(fun ctx for_stmt -> 
-        let last_block = match cond with
+        let last_block = match comp.cond with
           | None -> 
             ctx.block
           | Some expr ->
-            let if_expr = parse ctx expr in
             let if_stmt = Llvm.Stmt.cond () in
+            let if_expr = parse ctx expr in
             let if_block = Llvm.Stmt.Block.elseif if_stmt if_expr in
             ignore @@ S.finalize_stmt ctx if_stmt pos;
             if_block
         in
-        let expr = match next with
+        let ctx = { ctx with block = last_block } in
+        let expr = match comp.next with
           | None -> 
-            finally ctx for_stmt
+            finally ctx
           | Some next ->   
-            let ctx = { ctx with block = last_block } in
             ignore @@ comprehension_helper ~add:true ~finally ctx next
         in
-        S.finalize_stmt ~add ctx for_stmt pos)
+        ignore @@ S.finalize_stmt ~add ctx for_stmt pos)
 
   (** Gets a [Llvm.type] from type signature. 
       Raises error if signature does not exist. *)
