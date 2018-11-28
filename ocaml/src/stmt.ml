@@ -37,6 +37,7 @@ struct
       | Pass     p -> parse_pass     ctx pos p
       | Try      p -> parse_try      ctx pos p
       | Throw    p -> parse_throw    ctx pos p
+      | Global   p -> parse_global   ctx pos p
       | Generic 
         Function p -> parse_function ctx pos p
       | Generic 
@@ -97,13 +98,14 @@ struct
     match lhs with
     | Id var ->
       begin match Hashtbl.find ctx.map var with
-      | Some (Ctx.Assignable.Var v :: _) when not shadow ->
+      | Some (Ctx.Assignable.Var (v, { base; global; _ }) :: _) 
+        when (not shadow) && ((ctx.base = base) || global) -> 
         Llvm.Stmt.assign v rh_expr
       | Some (Ctx.Assignable.(Type _ | Func _) :: _) ->
         serr ~pos "cannot assign functions or types"
       | _ ->
         let var_stmt = Llvm.Stmt.var rh_expr in
-        Ctx.add ctx var (Ctx.Assignable.Var (Llvm.Var.var_of_stmt var_stmt));
+        Ctx.add ctx var @@ Ctx.var ctx (Llvm.Var.var_of_stmt var_stmt);
         var_stmt
       end
     | Dot(lh_lhs, lh_rhs) -> (* a.x = b *)
@@ -206,7 +208,7 @@ struct
     let var = Llvm.Var.loop for_stmt in
     begin match for_vars with
       | [name] ->
-        Ctx.add for_ctx name (Ctx.Assignable.Var var)
+        Ctx.add for_ctx name (Ctx.var ctx var)
       | for_vars -> 
         let var_expr = Llvm.Expr.var var in
         List.iteri for_vars ~f:(fun idx var_name ->
@@ -214,7 +216,7 @@ struct
           let var_stmt = Llvm.Stmt.var expr in
           ignore @@ finalize_stmt for_ctx var_stmt pos;
           let var = Llvm.Var.var_of_stmt var_stmt in
-          Ctx.add for_ctx var_name (Ctx.Assignable.Var var))
+          Ctx.add for_ctx var_name (Ctx.var ctx var))
     end;
     let _ = match next with 
       | Some next -> 
@@ -259,7 +261,7 @@ struct
       let block = Llvm.Stmt.Block.case match_stmt pat in
       add_block { ctx with block } stmts ~preprocess:(fun ctx ->
         match var with 
-        | Some(n, v) -> Ctx.add ctx n (Ctx.Assignable.Var v) 
+        | Some(n, v) -> Ctx.add ctx n (Ctx.var ctx v) 
         | None -> ()));
     match_stmt
   
@@ -288,11 +290,7 @@ struct
       | Some (Ctx.Assignable.Type t) -> t
       | _ -> serr ~pos "cannot extend non-existing class %s" name
     in
-    let new_ctx = 
-      { ctx with 
-        map = Hashtbl.filter ctx.map
-          ~f:(function Ctx.Assignable.Var _ :: _ -> false | _ -> true) } 
-    in
+    let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
     ignore @@ List.map stmts ~f:(function
       | pos, Function f -> parse_function new_ctx pos f ~cls:typ
       | _ -> failwith "classes only support functions as members");
@@ -305,13 +303,13 @@ struct
       match Sys.file_exists file with
       | `Yes -> 
         ctx.parse_file ctx file
-      | _ -> 
+      | `No | `Unknown -> 
         let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
         let file = sprintf "%s/%s.%s" seqpath what ext in
         match Sys.file_exists file with
         | `Yes -> 
           ctx.parse_file ctx file
-        | _ -> 
+        | `No | `Unknown -> 
           serr ~pos "cannot locate module %s" what);
     Llvm.Stmt.pass ()
 
@@ -331,11 +329,10 @@ struct
 
     let new_ctx = 
       { ctx with 
-        map = Hashtbl.filter ctx.map
-          ~f:(function Ctx.Assignable.Var _ :: _ -> false | _ -> true);
         base = fn; 
         stack = Stack.create ();
-        block = Llvm.Stmt.Block.func fn } 
+        block = Llvm.Stmt.Block.func fn;
+        map = Hashtbl.copy ctx.map } 
     in
     Ctx.add_block new_ctx;
     let names, types = parse_generics 
@@ -351,7 +348,7 @@ struct
     add_block new_ctx stmts 
       ~preprocess:(fun ctx ->
         List.iter names ~f:(fun name ->
-          let var = Ctx.Assignable.Var (Llvm.Func.get_arg fn name) in
+          let var = Ctx.var ctx (Llvm.Func.get_arg fn name) in
           Ctx.add ctx name var));
     Llvm.Stmt.func fn
   
@@ -367,8 +364,7 @@ struct
 
     let new_ctx = 
       { ctx with 
-        map = Hashtbl.filter ctx.map
-          ~f:(function Ctx.Assignable.Var _ :: _ -> false | _ -> true);
+        map = Hashtbl.copy ctx.map;
         stack = Stack.create () } 
     in
     Ctx.add_block new_ctx;
@@ -402,7 +398,7 @@ struct
           Option.value_map var 
             ~f:(fun var ->
               let v = Llvm.Var.catch try_stmt idx in
-              Ctx.add ctx var (Ctx.Assignable.Var v))
+              Ctx.add ctx var (Ctx.var ctx v))
             ~default: ());
     );
 
@@ -446,6 +442,22 @@ struct
       - I only allow throwing/catching reference types. I think this is a fine rule, and it makes things easier on the backend. 
       - I need to do a bit more refactoring to get this to work with magic methods. Shouldn’t be particularly hard, just need to change some stuff around.
     *)
+
+  and parse_global ctx _ vars =
+    List.iter vars ~f:(fun (pos, var) -> 
+      match Hashtbl.find ctx.map var with
+      | Some (Ctx.Assignable.Var (v, { base; global; toplevel }) :: rest) ->
+        if (ctx.base = base) || global then 
+          serr ~pos "symbol '%s' either local or already set as global" var;
+        Llvm.Var.set_global v;
+        let new_var = Ctx.Assignable.Var 
+          (v, Ctx.Assignable.{ base; global = true; toplevel }) 
+        in
+        Hashtbl.set ctx.map ~key:var ~data:(new_var :: rest)
+      | _ ->
+        serr ~pos "symbol '%s' not found or not a variable" var
+    );
+    Llvm.Stmt.pass ()
 
   (* ***************************************************************
      Helper functions
@@ -492,7 +504,7 @@ struct
       let pat = Llvm.Stmt.Pattern.wildcard () in
       if is_some wild then begin
         let var = Llvm.Var.bound_pattern pat in
-        Ctx.add ctx (Option.value_exn wild) (Ctx.Assignable.Var var)
+        Ctx.add ctx (Option.value_exn wild) (Ctx.var ctx var)
       end;
       pat
     | GuardedPattern (pat, expr) ->

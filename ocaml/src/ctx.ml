@@ -8,9 +8,16 @@ struct
   type t = 
     (string, elt list) Hashtbl.t
   and elt = 
-    | Var  of Llvm.Types.var_t
+    | Var  of Llvm.Types.var_t * annotation
     | Func of Llvm.Types.func_t
     | Type of Llvm.Types.typ_t
+  and annotation = 
+    { base: Llvm.Types.func_t;
+      toplevel: bool;
+      global: bool }
+
+  (* let default =  *)
+    (* { toplevel = false; global = false } *)
 end
 
 type t = {
@@ -79,11 +86,10 @@ let dump ctx =
   in
   let ind x = String.make x ' ' in
   let prn_assignable _ ass = 
-    let open Assignable in
     match ass with
-    | Var _ -> sprintf "(*var*)", ""
-    | Func _ -> sprintf "(*fun*)", ""
-    | Type _ -> sprintf "(*typ*)", ""
+    | Assignable.Var _  -> sprintf "(*var*)", ""
+    | Assignable.Func _ -> sprintf "(*fun*)", ""
+    | Assignable.Type _ -> sprintf "(*typ*)", ""
   in
   let sorted = 
     Hashtbl.to_alist ctx.map |>
@@ -93,6 +99,9 @@ let dump ctx =
   List.iter sorted ~f:(fun (key, data) -> 
     let pre, pos = prn_assignable 3 data in
     dbg "   %s %s %s" pre key pos)
+
+let var (ctx: t) ?(toplevel=false) var =
+  Assignable.Var (var, { base = ctx.base; global = false; toplevel })
 
 let add ctx key var =
   begin match Hashtbl.find ctx.map key with
@@ -106,7 +115,7 @@ let add ctx key var =
 let clear_block ctx =
   Hash_set.iter (Stack.pop_exn ctx.stack) ~f:(fun key ->
     match Hashtbl.find ctx.map key with
-    | Some [item] -> 
+    | Some [_] -> 
       Hashtbl.remove ctx.map key
     | Some (_ :: items) -> 
       Hashtbl.set ctx.map ~key ~data:items

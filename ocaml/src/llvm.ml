@@ -449,6 +449,9 @@ module Var = struct
 
   let bound_pattern = foreign "get_bound_pattern_var" 
     (Types.pattern @-> returning t)
+
+  let set_global = foreign "set_global"
+    (t @-> returning void)
 end
 
 module Func = struct

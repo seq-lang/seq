@@ -27,6 +27,11 @@ FOREIGN types::Type *str_seq_type()     { return types::Seq; }
 FOREIGN types::Type *source_type()      { return types::Raw; }
 FOREIGN types::Type *generic_type()     { return types::GenericType::get(); }
 
+FOREIGN void set_global(Var *v)
+{
+	v->setGlobal();
+}
+
 FOREIGN types::Type *array_type(types::Type *base)
 {
 	return types::ArrayType::get(base);
@@ -642,10 +647,10 @@ FOREIGN struct seq_srcinfo {
 	int len;
 };
 
-FOREIGN void set_pos(SrcObject *obj, char *f, int l, int c)
+FOREIGN void set_pos(SrcObject *obj, char *f, int l, int c, int len)
 {
 	if (!obj) return;
-	obj->setSrcInfo(SrcInfo(string(f), l, c, 1));
+	obj->setSrcInfo(SrcInfo(string(f), l, c, len));
 	free(f);
 }
 
@@ -655,7 +660,7 @@ FOREIGN seq_srcinfo get_pos(SrcObject *obj)
 		return seq_srcinfo { (char *)"", 0, 0, 0 };
 	}
 	auto info = obj->getSrcInfo();
-	return seq_srcinfo { strdup(info.file.c_str()), info.line, info.col, 0 };
+	return seq_srcinfo { strdup(info.file.c_str()), info.line, info.col, info.len };
 }
 
 FOREIGN Var *get_for_var(For *f)
@@ -721,7 +726,7 @@ FOREIGN bool exec_module(
 		(*srcInfo)->line = info.line;
 		(*srcInfo)->col = info.col;
 		(*srcInfo)->file = strdup(info.file.c_str());
-		(*srcInfo)->len = 0;
+		(*srcInfo)->len = info.len;
 
 		return false;
 	}

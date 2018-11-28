@@ -368,7 +368,8 @@ small_statement: // Simple one-line statements: 5+3, print x
       pos, 
       Yield expr }
   | GLOBAL separated_nonempty_list(COMMA, ID) 
-    { noimp "Global" }
+    { pos $1 (fst @@ List.last_exn $2),
+      Global $2 }
 
 param_type:
   | COLON test 

@@ -50,7 +50,7 @@ let init file error_handler =
   in
   try
     let args = Llvm.Module.get_args mdl in
-    Ctx.add ctx "__argv__" (Ctx.Assignable.Var args);
+    Ctx.add ctx "__argv__" (Ctx.var ctx args);
 
     let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
     let stdlib_path = sprintf "%s/stdlib.seq" seqpath in

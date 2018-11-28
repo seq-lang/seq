@@ -88,13 +88,14 @@ struct
   and parse_id ?map ctx pos var = 
     let map = Option.value map ~default:ctx.map in
     match Hashtbl.find map var with
-    | Some (Ctx.Assignable.Var v :: _) -> 
+    | Some (Ctx.Assignable.Var (v, { base; global; _ }) :: _) 
+      when (ctx.base = base) || global -> 
       Llvm.Expr.var v
     | Some (Ctx.Assignable.Type t :: _) -> 
       Llvm.Expr.typ t
     | Some (Ctx.Assignable.Func t :: _) -> 
       Llvm.Expr.func t
-    | Some [] | None ->
+    | _ ->
       serr ~pos "symbol '%s' not found or realized" var
 
   and parse_tuple ctx _ args =
@@ -255,6 +256,6 @@ struct
       Raises error if signature does not exist. *)
   and get_internal_type (ctx: Ctx.t) typ_str = 
     match Hashtbl.find ctx.map typ_str with
-    | Some (Ctx.Assignable.Type (typ) :: _) -> typ
+    | Some (Ctx.Assignable.Type typ :: _) -> typ
     | _ -> failwith (sprintf "can't find internal type %s" typ_str)
 end

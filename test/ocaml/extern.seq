@@ -1,14 +1,34 @@
 # 786
 
-class Exc(msg: str):
-    def yodel(self):
-        print 'Yodel-oh-ee-dee-ay-dee', self.msg
-    pass
-try:
-    print 'try'
-    raise Exc('suisse')
-except Exc:
-    print 'ooops'
+a = 5
+b = 3
+print a, b
+
+def foo(x):
+    # print a, b
+    global a
+    a = 6
+    if True:
+        c = 7
+    print a, x
+
+def bar(x):
+    global a
+    print a
+
+foo(100)
+bar(1)
+print a, b
+
+# class Exc(msg: str):
+#     def yodel(self):
+#         print 'Yodel-oh-ee-dee-ay-dee', self.msg
+#     pass
+# try:
+#     print 'try'
+#     raise Exc('suisse')
+# except Exc:
+#     print 'ooops'
 
 
 # for i in [1,2,3,4,5]:

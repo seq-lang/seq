@@ -36,6 +36,10 @@ let wrap style str =
   sprintf "\027[%sm%s" 
     (List.map style ~f:style_to_string |> String.concat ~sep:";") str
 
+let sci lst ?sep fn =
+  let sep = Option.value sep ~default:", " in
+  String.concat ~sep @@ List.map ~f:fn lst
+
 let dbg ?style fmt =
   let fn, fno = match Sys.getenv "SEQ_DEBUG" with 
     | Some _ -> Caml.Printf.kfprintf, Caml.Printf.fprintf
