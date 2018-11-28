@@ -29,6 +29,7 @@ struct
       | List           p -> parse_list     ctx pos p
       | Set            p -> parse_list     ctx pos p ~kind:"set"
       | Dict           p -> parse_dict     ctx pos p
+      | Generator      p -> parse_gen      ctx pos p
       | ListGenerator  p -> parse_list_gen ctx pos p
       | SetGenerator   p -> parse_list_gen ctx pos p ~kind:"set"
       | DictGenerator  p -> parse_dict_gen ctx pos p
@@ -45,9 +46,9 @@ struct
       | Lambda _ -> failwith "todo: expr/lambda"
     in
     Llvm.Expr.set_pos expr pos; 
-    Util.dbg "%s -> %nx" 
+    (* Util.dbg "%s -> %nx" 
       (ExprNode.sexp_of_node node |> Sexp.to_string_hum)
-      (Ctypes.raw_address_of_ptr ctx.trycatch);
+      (Ctypes.raw_address_of_ptr ctx.trycatch); *)
     Llvm.Expr.set_trycatch expr ctx.trycatch;
     expr
   
@@ -114,6 +115,29 @@ struct
     let typ = get_internal_type ctx "dict" in
     let args = List.map (flatten args) ~f:(parse ctx) in
     Llvm.Expr.list ~kind:"dict" typ args
+
+  and parse_gen ctx _ (expr, gen) = 
+    Util.dbg "here";
+    let captures = String.Table.create () in
+    walk ctx expr ~f:(fun (ctx: Ctx.t) var ->
+      match Hashtbl.find ctx.map var with
+      | Some (Ctx.Assignable.Var (v, { base; global; _ }) :: _) 
+        when (ctx.base = base) || global -> 
+        Hashtbl.set captures ~key:var ~data:v
+      | _ -> ());
+    Hashtbl.iter_keys captures ~f:(fun key ->
+      Util.dbg "captured %s" key);
+
+    let final_expr = ref Ctypes.null in 
+    let body = comprehension_helper ctx gen 
+      ~finally:(fun ctx ->
+        let expr = parse ctx expr in
+        let captures = Hashtbl.data captures in
+        final_expr := Llvm.Expr.gen_comprehension expr captures)
+    in
+    assert (not (Ctypes.is_null !final_expr));
+    Llvm.Expr.set_comprehension_body ~kind:"gen" !final_expr body;
+    !final_expr
 
   and parse_list_gen ?(kind="list") ctx _ (expr, gen) = 
     let typ = get_internal_type ctx kind in
@@ -258,4 +282,23 @@ struct
     match Hashtbl.find ctx.map typ_str with
     | Some (Ctx.Assignable.Type typ :: _) -> typ
     | _ -> failwith (sprintf "can't find internal type %s" typ_str)
+
+  and walk (ctx: Ctx.t) ~f (pos, node) =
+    match node with
+    | Generic p | Id p -> 
+      f ctx p
+    | Tuple l | List l | Set l | Pipe l -> 
+      List.iter l ~f:(walk ctx ~f)
+    | Dict l -> 
+      List.iter l ~f:(fun (x, y) -> 
+        walk ctx ~f x; walk ctx ~f y)
+    | IfExpr (a, b, c) ->
+      walk ctx ~f a; walk ctx ~f b; walk ctx ~f c
+    | Unary (_, e) | Dot (e, _) | TypeOf e -> 
+      walk ctx ~f e
+    | Binary (e1, _, e2) -> 
+      walk ctx ~f e1; walk ctx ~f e2
+    | Index (a, l) | Call (a, l) -> 
+      walk ctx ~f a; List.iter l ~f:(walk ctx ~f)
+    | _ -> ()
 end

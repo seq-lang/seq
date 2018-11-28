@@ -5,15 +5,7 @@ using namespace seq;
 
 #define FOREIGN extern "C"
 
-#ifdef IBRAHIM_DEBUG
-#define FMT_HEADER_ONLY
-#include "format.h"
-#define E(f, ...) fmt::print(stderr, f "\n", ##__VA_ARGS__)
-#else
-#define E(...)
-#endif
-
-#define free(x) ;
+#include <caml/fail.h>
 
 /***** Types *****/
 
@@ -295,9 +287,14 @@ FOREIGN void set_dict_comp_body (DictCompExpr *e, For * body)
 	e->setBody(body);
 }
 
-FOREIGN Expr *gen_expr(Expr *val, For *body, Var **captures, size_t len)
+FOREIGN void set_gen_comp_body (GenExpr *e, For * body) 
 {
-	return new GenExpr(val, body, vector<Var *>(captures, captures + len));
+	e->setBody(body);
+}
+
+FOREIGN Expr *gen_comp_expr(Expr *val, Var **captures, size_t len)
+{
+	return new GenExpr(val, nullptr, vector<Var *>(captures, captures + len));
 }
 
 /***** Statements *****/
@@ -504,19 +501,6 @@ FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, char *name)
 	free(name);
 }
 
-FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types, size_t sz)
-{
-	if (sz == 0) return t;
-	return t->realize(vector<types::Type *>(types, types + sz));
-}
-
-FOREIGN BaseFunc *realize_func(FuncExpr *e, types::Type **types, size_t sz)
-{
-	auto *fn = dynamic_cast<Func *>(e->getFunc());
-	if (sz == 0) return fn;
-	return fn->realize(vector<types::Type *>(types, types + sz));
-}
-
 FOREIGN Stmt *match_stmt(Expr *cond)
 {
 	auto m = new Match();
@@ -605,22 +589,44 @@ FOREIGN void set_pattern_trycatch(Pattern *p, TryCatch *tc)
 
 /***** Block utils *****/
 
-FOREIGN Block *get_module_block(SeqModule *st)  { return st->getBlock(); }
-FOREIGN Block *get_while_block(While *st)       { return st->getBlock(); }
-FOREIGN Block *get_for_block(For *st)           { return st->getBlock(); }
-FOREIGN Block *get_else_block(If *st)           { E("else_block"); return st->addElse(); }
-FOREIGN Block *get_elif_block(If *st, Expr *ex) { E("cond_block"); return st->addCond(ex); }
-FOREIGN Block *get_trycatch_block(TryCatch *tc) { return tc->getBlock(); }
+FOREIGN Block *get_module_block(SeqModule *st)  
+{ 
+	return st->getBlock(); 
+}
+
+FOREIGN Block *get_while_block(While *st)       
+{ 
+	return st->getBlock(); 
+}
+
+FOREIGN Block *get_for_block(For *st)           
+{ 
+	return st->getBlock(); 
+}
+
+
+FOREIGN Block *get_else_block(If *st)           
+{ 
+	return st->addElse(); 
+}
+
+FOREIGN Block *get_elif_block(If *st, Expr *ex) 
+{ 
+	return st->addCond(ex); 
+}
+
+FOREIGN Block *get_trycatch_block(TryCatch *tc) 
+{ 
+	return tc->getBlock(); 
+}
 
 FOREIGN Block *get_trycatch_catch(TryCatch *tc, types::Type *t)
 {
-	E("catch_block");
 	return tc->addCatch(t);
 }
 
 FOREIGN Block *get_trycatch_finally(TryCatch *tc)
 {
-	E("finally_block");
 	return tc->getFinally();
 }
 
@@ -638,7 +644,6 @@ FOREIGN char type_eq(types::Type *a, types::Type *b)
 {
 	return types::is(a, b);
 }
-
 
 FOREIGN struct seq_srcinfo {
 	char *file;
@@ -703,31 +708,52 @@ FOREIGN void *init_module()
 	return new SeqModule();
 }
 
-FOREIGN bool exec_module(
-	SeqModule *sm, char **args, size_t arg_len,
-	char debug, char **error, seq_srcinfo **srcInfo)
+/// Anythong below throws exceptions
+
+#define CATCH(er) \
+	auto info = e.getSrcInfo(); \
+	asprintf(er, "%s\b%s\b%d\b%d\b%d", \
+		e.what(), \
+		info.file.c_str(), info.line, info.col, info.len );
+
+FOREIGN types::Type *realize_type
+	(types::RefType *t, types::Type **types, size_t sz, char **error)
+{
+	*error = nullptr;
+	if (sz == 0) return t;
+	try {
+		return t->realize(vector<types::Type *>(types, types + sz));
+	} catch (exc::SeqException &e) {
+		CATCH (error);
+		return nullptr;
+	}
+}
+
+FOREIGN BaseFunc *realize_func
+	(FuncExpr *e, types::Type **types, size_t sz, char **error)
+{
+	*error = nullptr;
+	auto *fn = dynamic_cast<Func *>(e->getFunc());
+	if (sz == 0) return fn;
+	try {
+		return fn->realize(vector<types::Type *>(types, types + sz));
+	} catch (exc::SeqException &e) {
+		CATCH (error);
+		return nullptr;
+	}
+}
+
+FOREIGN void exec_module
+	(SeqModule *sm, char **args, size_t alen, char debug, char **error)
 {
 	try {
 		vector<string> s;
-		for (size_t i = 0; i < arg_len; i++) {
+		for (size_t i = 0; i < alen; i++) {
 			s.emplace_back(string(args[i]));
 			free(args[i]);
 		}
 		sm->execute(s, {}, debug);
-		*error = nullptr;
-		*srcInfo = nullptr;
-		return true;
 	} catch (exc::SeqException &e) {
-		string msg = e.what();
-		*error = strdup(msg.c_str());
-
-		auto info = e.getSrcInfo();
-		*srcInfo = new seq_srcinfo;
-		(*srcInfo)->line = info.line;
-		(*srcInfo)->col = info.col;
-		(*srcInfo)->file = strdup(info.file.c_str());
-		(*srcInfo)->len = info.len;
-
-		return false;
+		CATCH (error);
 	}
 }

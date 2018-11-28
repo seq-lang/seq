@@ -38,6 +38,7 @@ struct
     | List           of t list
     | Set            of t list
     | Dict           of (t * t) list
+    | Generator      of (t * comprehension tt)
     | ListGenerator  of (t * comprehension tt)
     | SetGenerator   of (t * comprehension tt)
     | DictGenerator  of ((t * t) * comprehension tt)

@@ -590,6 +590,11 @@ GenExpr::GenExpr(Expr *val, For *body, std::vector<Var *> captures) :
 {
 }
 
+void GenExpr::setBody(For *body)
+{
+	this->body = body;
+}
+
 void GenExpr::resolveTypes()
 {
 	body->resolveTypes();

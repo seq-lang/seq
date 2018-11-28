@@ -183,6 +183,13 @@ module Expr = struct
     in
     fn typ expr
 
+  let gen_comprehension expr captures = 
+    let fn = foreign ("gen_comp_expr")
+      (t @-> ptr (Types.var) @-> size_t @-> returning t)
+    in
+    let arr, len = list_to_carr Types.var captures in
+    fn expr arr len
+
   let dict_comprehension typ expr1 expr2 = 
     let fn = foreign "dict_comp_expr"
       (Types.typ @-> t @-> t @-> returning t)
@@ -504,9 +511,17 @@ module Generics = struct
     
     let realize fn_expr typs =
       let arr, len = list_to_carr Types.typ typs in
-      foreign "realize_func"
-        (Types.expr @-> ptr Types.typ @-> size_t @-> returning Types.func)
-        fn_expr arr len
+      let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
+      let t = foreign "realize_func"
+        (Types.expr @-> ptr Types.typ @-> size_t @-> ptr (ptr char) @-> 
+         returning Types.func)
+        fn_expr arr len err_addr
+      in
+      if not (Ctypes.is_null (!@ err_addr)) then
+        let msg = coerce (ptr char) string (!@ err_addr) in
+        Err.split_error msg 
+      else 
+        t
   end
 
   module Type = struct
@@ -522,9 +537,17 @@ module Generics = struct
 
     let realize typ typs =
       let arr, len = list_to_carr Types.typ typs in
-      foreign "realize_type"
-        (Types.typ @-> ptr Types.typ @-> size_t @-> returning Types.typ)
-        typ arr len
+      let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
+      let t = foreign "realize_type"
+        (Types.typ @-> ptr Types.typ @-> size_t @-> ptr (ptr char) @->
+         returning Types.typ)
+        typ arr len err_addr
+      in 
+      if not (Ctypes.is_null (!@ err_addr)) then
+        let msg = coerce (ptr char) string (!@ err_addr) in
+        Err.split_error msg 
+      else
+        t
   end
 end
 
@@ -544,19 +567,16 @@ module Module = struct
     let fn = foreign "exec_module" 
       (t @-> ptr cstring @-> size_t 
          @-> bool @-> ptr (ptr char) 
-         @-> ptr (ptr pos) 
-         @-> returning bool)
+         @-> returning void)
     in
     let aarr = array_of_string_list args in
     let alen = Unsigned.Size_t.of_int (CArray.length aarr) in
     let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
-    let src_addr = Ctypes.allocate (ptr pos) (from_voidp pos null) in
-    let ret = fn mdl (CArray.start aarr) alen debug err_addr src_addr in
+    fn mdl (CArray.start aarr) alen debug err_addr;
 
-    if not ret then
+    if not (Ctypes.is_null (!@ err_addr)) then
       let msg = coerce (ptr char) string (!@ err_addr) in
-      let pos = get_pos_t_from_srcinfo (!@ !@ src_addr) in
-      raise (Err.SeqCError (msg, pos))
+      Err.split_error msg 
 end
 
 

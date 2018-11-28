@@ -19,6 +19,9 @@ def bar(x):
 foo(100)
 bar(1)
 print a, b
+# print a+"x"
+
+y = (a + 1 + i for i in [1,2,3,4,5])
 
 # class Exc(msg: str):
 #     def yodel(self):
@@ -27,8 +30,9 @@ print a, b
 # try:
 #     print 'try'
 #     raise Exc('suisse')
-# except Exc:
-#     print 'ooops'
+# except Exc as e:
+#     print 'ooops', e.msg
+# raise Exc('woof')
 
 
 # for i in [1,2,3,4,5]:

@@ -111,6 +111,7 @@ atom: // Basic structures: identifiers, nums/strings, tuples/list/dicts
   | set        { fst $1, Set (snd $1) }
   | generic    { fst $1, Generic (snd $1) } 
   | LP test RP { $2 }
+  | tuple_gen  { $1 }
   | dict_gen   { $1 }
   | list_gen   { $1 }
   | set_gen    { $1 }
@@ -126,14 +127,16 @@ tuple: // Tuples: (1, 2, 3)
   | LP RP
     { pos $1 $2, 
       [] }
-  | LP test comprehension RP
-    { noimp "Generator" (* Generator ($2, $3)  *) }
   | LP test COMMA RP
     { pos $1 $4, 
       [$2] }
   | LP test COMMA test_list RP
     { pos $1 $5, 
       $2 :: $4 }
+tuple_gen:
+  | LP test comprehension RP
+    { pos $1 $4,
+      Generator ($2, $3) }
 lists: // Lists: [1, 2, 3] 
   // TODO needs trailing comma support 
   | LS RS

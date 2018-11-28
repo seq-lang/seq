@@ -197,6 +197,7 @@ namespace seq {
 		std::vector<Var *> captures;
 	public:
 		GenExpr(Expr *val, For *body, std::vector<Var *> captures);
+		void setBody(For *body);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
