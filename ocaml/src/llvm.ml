@@ -198,7 +198,7 @@ module Expr = struct
 
   let binary lh bop rh = 
     let fn = match bop with
-      | "is" | "is not" | "in" | "in not" ->
+      | "is" | "is not" | "in" | "not in" ->
         let prefix = 
           String.tr bop ~target:' ' ~replacement:'_' 
         in
