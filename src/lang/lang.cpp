@@ -416,6 +416,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 
 	// entry block:
 	BasicBlock *entryBlock = BasicBlock::Create(context, "entry", func);
+	BasicBlock *entryBlock0 = entryBlock;
 
 	// unwind block for invoke
 	exceptionBlock = BasicBlock::Create(context, "exception", func);
@@ -482,8 +483,8 @@ void TryCatch::codegen0(BasicBlock*& block)
 			throw exc::SeqException("cannot catch non-reference type '" + catchType->getName() + "'");
 
 		const std::string typeVarName = catchType ? ("seq.typeidx." + catchType->getName()) : "";
-		Value *tidx = catchType ? (Value *)module->getGlobalVariable(typeVarName) :
-		                          ConstantPointerNull::get(PointerType::get(typeInfoType, 0));
+		Constant *tidx = catchType ? (Constant *)module->getGlobalVariable(typeVarName) :
+		                             ConstantPointerNull::get(PointerType::get(typeInfoType, 0));
 		int idx = catchType ? catchType->getID() : 0;
 		if (!tidx)
 			tidx = new GlobalVariable(*module,
@@ -496,7 +497,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 			                                                               true)),
 			                          typeVarName);
 		typeIndices.push_back(tidx);
-		caughtResult->addClause(ConstantInt::get(seqIntLLVM(context), (uint64_t)catchType->getID()));
+		caughtResult->addClause(tidx);
 	}
 
 	Value *unwindException = builder.CreateExtractValue(caughtResult, 0);
@@ -522,6 +523,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 		// TODO: just failing now, but can actually handle this
 		BoolExpr b(false);
 		Assert fail(&b);
+		fail.setBase(base);
 		fail.codegen(externalExceptionBlock);
 	}
 	builder.SetInsertPoint(externalExceptionBlock);
@@ -533,7 +535,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 	                  builder.CreateConstGEP1_64(unwindException, (uint64_t)seq_exc_offset()),
 	                  excType->getPointerTo());
 	//Value *typeInfoThrown = builder.CreateStructGEP(excType, excVal, 0);
-	Value *objPtr = builder.CreateStructGEP(excType, excVal, 1);
+	Value *objPtr = builder.CreateExtractValue(builder.CreateLoad(excVal), 1);
 	//Value *typeInfoThrownType = builder.CreateStructGEP(builder.getInt8PtrTy(), typeInfoThrown, 0);
 
 	SwitchInst *switchToCatchBlock = builder.CreateSwitch(retTypeInfoIndex,
@@ -561,7 +563,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 
 	// link in our new blocks, and update the caller's block:
 	builder.SetInsertPoint(block);
-	builder.CreateBr(entryBlock);
+	builder.CreateBr(entryBlock0);
 	block = endBlock;
 }
 
@@ -622,12 +624,27 @@ void Throw::codegen0(BasicBlock*& block)
 	Value *exc = builder.CreateCall(excAllocFunc,
 	                                {ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)type->getID(), true),
 	                                 obj});
-	builder.CreateCall(throwFunc, exc);
+
+	if (getTryCatch()) {
+		Function *parent = block->getParent();
+		BasicBlock *unwind = getTryCatch()->getExceptionBlock();
+		BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
+		builder.CreateInvoke(throwFunc, normal, unwind, exc);
+		block = normal;
+	} else {
+		builder.CreateCall(throwFunc, exc);
+	}
 }
 
 Throw *Throw::clone(Generic *ref)
 {
-	SEQ_RETURN_CLONE(new Throw(expr->clone(ref)));
+	if (ref->seenClone(this))
+		return (Throw *)ref->getClone(this);
+
+	auto *x = new Throw(expr->clone(ref));
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	SEQ_RETURN_CLONE(x);
 }
 
 Match::Match() :

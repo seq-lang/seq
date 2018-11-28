@@ -178,7 +178,7 @@ namespace seq {
 	do { \
 		auto *__x = (e); \
 		__x->setSrcInfo(getSrcInfo()); \
-		__x->setTryCatch(getTryCatch()); \
+		if (getTryCatch()) __x->setTryCatch(getTryCatch()->clone(ref)); \
 		return __x; \
 	} while (0)
 

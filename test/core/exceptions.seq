@@ -1,0 +1,78 @@
+class Exc1(msg: str):
+    def show(self):
+        print self.msg
+
+class Exc2(msg: str):
+    def show(self):
+        print self.msg
+
+def foo1(x):
+    if x:
+        raise Exc1('e1')
+    else:
+        raise Exc2('e2')
+
+def foo2(x):
+    foo1(x)
+
+def foo(x):
+    foo2(x)
+
+def square(x):
+    return x * x
+
+def bar(x):
+    try:
+        print 'try'
+        foo(x)
+        print 'error'
+    except Exc1 as e:
+        print 'catch Exc1 1'
+        print e.msg
+        print 'catch Exc1 2'
+    except Exc2 as e:
+        print 'catch Exc2 1'
+        print e.msg
+        print 'catch Exc2 2'
+    finally:
+        print 'finally'
+    print 'done'
+
+def baz(x):
+    try:
+        print 'try 1'
+        square(x)
+        print 'try 2'
+    except Exc1 as e:
+        print 'catch Exc1 1'
+        print e.msg
+        print 'catch Exc1 2'
+    except Exc2 as e:
+        print 'catch Exc2 1'
+        print e.msg
+        print 'catch Exc2 2'
+    finally:
+        print 'finally'
+    print 'done'
+
+# EXPECT: try
+# EXPECT: catch Exc1 1
+# EXPECT: e1
+# EXPECT: catch Exc1 2
+# EXPECT: finally
+# EXPECT: done
+bar(True)
+
+# EXPECT: try
+# EXPECT: catch Exc2 1
+# EXPECT: e2
+# EXPECT: catch Exc2 2
+# EXPECT: finally
+# EXPECT: done
+bar(0)
+
+# EXPECT: try 1
+# EXPECT: try 2
+# EXPECT: finally
+# EXPECT: done
+baz(3.14)
