@@ -106,6 +106,10 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
     def __len__(self: dict[`k,`v]):
         return self.size
 
+    def iteritems(self: dict[`k, `v]):
+        for i in self._entry_iter():
+            yield i.k, i.v
+
     def __print__(self: dict[`k, `v]):
         n = len(self)
         if n == 0:

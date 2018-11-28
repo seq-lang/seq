@@ -19,7 +19,7 @@ sig
       Ctx.t -> Ast.t -> 
       unit
    val parse_for:
-      ?next: (Ctx.t -> Llvm.Types.stmt_t -> unit) ->
+      ?next: (Ctx.t -> Ctx.t -> Llvm.Types.stmt_t -> unit) ->
       Ctx.t -> Ast.Pos.t -> 
       string list * Ast.StmtNode.et * Ast.StmtNode.t list ->
       Llvm.Types.stmt_t

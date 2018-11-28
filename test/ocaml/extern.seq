@@ -28,7 +28,12 @@ for i in [1,2,3,4,5]:
             print 'init', i*j
 
 print [i for i in [1,2,3]]
-# print [kj for i in [1,2,3,4,5] for kj in [5,4,3,2,1] if i == kj]
+print [i+j for i in [1,2,3,4,5] for j in [5,4,3,2,1] if i==j]
+
+for i, j in d.iteritems():
+    print i, j
+
+print {a*10+i:b for a,b in d.iteritems() for i in [1,2,3,4,5]}
 
 # class A():
 #     def foo[`s](s: `s):

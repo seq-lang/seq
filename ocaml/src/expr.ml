@@ -115,14 +115,10 @@ struct
     let final_expr = ref Ctypes.null in 
     let body = comprehension_helper ctx gen 
       ~finally:(fun ctx ->
-        Util.dbg "final block: %nx" 
-          (Ctypes.raw_address_of_ptr Ctx.(ctx.block));
         let expr = parse ctx expr in
         final_expr := Llvm.Expr.list_comprehension ~kind typ expr)
     in
     assert (not (Ctypes.is_null !final_expr));
-    Util.dbg "final for: %nx" 
-          (Ctypes.raw_address_of_ptr body);
     Llvm.Expr.set_comprehension_body ~kind !final_expr body;
     !final_expr
 
@@ -179,7 +175,7 @@ struct
       Llvm.Expr.typ @@ Llvm.Type.func ret args
     | _ -> 
       let lh_expr = parse ctx lh_expr in
-      Util.dbg "---> %s" (Llvm.Expr.get_name lh_expr);
+      (* Util.dbg "---> %s" (Llvm.Expr.get_name lh_expr); *)
       if Llvm.Expr.is_type lh_expr then
         let indices = List.map indices ~f:(parse_type ctx) in
         let typ = Llvm.Type.expr_type lh_expr in
@@ -225,8 +221,8 @@ struct
       the finalization function [finalize context for_stmt].  *)
   and comprehension_helper ?(add=false) ~finally (ctx: Ctx.t) (pos, comp) =
     S.parse_for ctx pos (comp.var, comp.gen, [])
-      ~next:(fun ctx for_stmt -> 
-        let last_block = match comp.cond with
+      ~next:(fun orig_ctx ctx for_stmt -> 
+        let block = match comp.cond with
           | None -> 
             ctx.block
           | Some expr ->
@@ -236,14 +232,14 @@ struct
             ignore @@ S.finalize_stmt ctx if_stmt pos;
             if_block
         in
-        let ctx = { ctx with block = last_block } in
+        let ctx = { ctx with block } in
         let expr = match comp.next with
           | None -> 
             finally ctx
           | Some next ->   
-            ignore @@ comprehension_helper ~add:true ~finally ctx next
+            ignore @@ comprehension_helper ~add:true ~finally ctx next 
         in
-        ignore @@ S.finalize_stmt ~add ctx for_stmt pos)
+        ignore @@ S.finalize_stmt ~add orig_ctx for_stmt pos)
 
   (** Gets a [Llvm.type] from type signature. 
       Raises error if signature does not exist. *)
