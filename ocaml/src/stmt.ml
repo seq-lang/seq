@@ -199,10 +199,12 @@ struct
     let for_stmt = Llvm.Stmt.loop gen_expr in
     let block = Llvm.Stmt.Block.loop for_stmt in
     let for_ctx = { ctx with block } in
+    Util.dbg "stmt: %nx ; block: %nx" 
+      (Ctypes.raw_address_of_ptr for_stmt)
+      (Ctypes.raw_address_of_ptr ctx.block);
 
     Ctx.add_block for_ctx;
     let var = Llvm.Var.loop for_stmt in
-    let t = Llvm.Type.expr_type (Llvm.Expr.var var) in
     begin match for_vars with
       | [name] ->
         Ctx.add for_ctx name (Ctx.Assignable.Var var)

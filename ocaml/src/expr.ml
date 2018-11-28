@@ -115,10 +115,14 @@ struct
     let final_expr = ref Ctypes.null in 
     let body = comprehension_helper ctx gen 
       ~finally:(fun ctx ->
+        Util.dbg "final block: %nx" 
+          (Ctypes.raw_address_of_ptr Ctx.(ctx.block));
         let expr = parse ctx expr in
         final_expr := Llvm.Expr.list_comprehension ~kind typ expr)
     in
     assert (not (Ctypes.is_null !final_expr));
+    Util.dbg "final for: %nx" 
+          (Ctypes.raw_address_of_ptr body);
     Llvm.Expr.set_comprehension_body ~kind !final_expr body;
     !final_expr
 
@@ -175,6 +179,7 @@ struct
       Llvm.Expr.typ @@ Llvm.Type.func ret args
     | _ -> 
       let lh_expr = parse ctx lh_expr in
+      Util.dbg "---> %s" (Llvm.Expr.get_name lh_expr);
       if Llvm.Expr.is_type lh_expr then
         let indices = List.map indices ~f:(parse_type ctx) in
         let typ = Llvm.Type.expr_type lh_expr in

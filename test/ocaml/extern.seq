@@ -26,5 +26,14 @@ for i in [1,2,3,4,5]:
     for j in [1,2,3,4,5]:
         if i==j:
             print 'init', i*j
-print [kj for i in [1,2,3,4,5] for kj in [5,4,3,2,1] if i == kj]
+
+print [i for i in [1,2,3]]
+# print [kj for i in [1,2,3,4,5] for kj in [5,4,3,2,1] if i == kj]
+
+# class A():
+#     def foo[`s](s: `s):
+#         pass
+# A.foo[int](10)  # error: cannot find method '__getitem__' for type 'function[void,`s]' with specified argument types (int)
+# A().foo[int](10)  # similar error
+
 
