@@ -1,43 +1,56 @@
 # 786
 
-for i in [1,2,3,4,5]:
-   print i
+class Exc(msg: str):
+    def yodel(self):
+        print 'Yodel-oh-ee-dee-ay-dee', self.msg
+    pass
+try:
+    print 'try'
+    raise Exc('suisse')
+except Exc:
+    print 'ooops'
 
-print [1<<a for a in [1,2,3,4,5]]
 
-d = {1: "2", 3: "4", 5: "6"}
-print d
+# for i in [1,2,3,4,5]:
+#    print i
 
-j = {a: a+1 for a in d}
-for k, v in j.items():
-   print 'dict', k, v
+# print [1<<a for a in [1,2,3,4,5]]
 
-j := {a: [i for i in range(0, a)] for a in d}
-print j
-# for a in j.items():
-#    print 'dict--', a[0], len(a[1])
-#    for ii in a[1]:
-#       print '   ii', ii
+# d = {1: "2", 3: "4", 5: "6"}
+# print d
 
-e = {1,2,3,4,5, 5}
-print e, {i*2 for i in e}
+# j = {a: a+1 for a in d}
+# for k, v in j.items():
+#    print 'dict', k, v
 
-for i in [1,2,3,4,5]:
-    for j in [1,2,3,4,5]:
-        if i==j:
-            print 'init', i*j
+# j := {a: [i for i in range(0, a)] for a in d}
+# print j
+# # for a in j.items():
+# #    print 'dict--', a[0], len(a[1])
+# #    for ii in a[1]:
+# #       print '   ii', ii
 
-print [i for i in [1,2,3]]
-print [i+j for i in [1,2,3,4,5] for j in [5,4,3,2,1] if i==j]
+# e = {1,2,3,4,5, 5}
+# print e, {i*2 for i in e}
 
-for i, j in d.iteritems():
-    print i, j
+# for i in [1,2,3,4,5]:
+#     for j in [1,2,3,4,5]:
+#         if i==j:
+#             print 'init', i*j
 
-print {a*10+i:b for a,b in d.iteritems() for i in [1,2,3,4,5]}
+# print [i for i in [1,2,3]]
+# print [i+j for i in [1,2,3,4,5] for j in [5,4,3,2,1] if i==j]
+
+# for i, j in d.iteritems():
+#     print i, j
+
+# print {a*10+i:b for a,b in d.iteritems() for i in [1,2,3,4,5]}
+
+
 
 # class A():
 #     def foo[`s](s: `s):
-#         pass
+#         print s
 # A.foo[int](10)  # error: cannot find method '__getitem__' for type 'function[void,`s]' with specified argument types (int)
 # A().foo[int](10)  # similar error
 

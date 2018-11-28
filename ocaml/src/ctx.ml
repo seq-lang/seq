@@ -24,6 +24,8 @@ type t = {
   base: Llvm.Types.func_t;
   (* block pointer *)
   block: Llvm.Types.block_t;
+  (* try-catch pointer *)
+  trycatch: Llvm.Types.stmt_t;
 
   (* stack of blocks and variable hashsets *)
   stack: ((string) Hash_set.t) Stack.t;
@@ -46,7 +48,8 @@ let init filename mdl base block parse_file =
       block;
       stack = Stack.create ();
       map = String.Table.create ();
-      parse_file; }
+      parse_file;
+      trycatch = Ctypes.null }
   in
   add_block ctx;
   

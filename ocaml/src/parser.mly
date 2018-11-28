@@ -56,6 +56,7 @@
 %token <Ast.Pos.t> IMPORT FROM GLOBAL                 // variables 
 %token <Ast.Pos.t> PRINT PASS ASSERT DEL              // keywords 
 %token <Ast.Pos.t> TRUE FALSE NONE                    // booleans 
+%token <Ast.Pos.t> TRY EXCEPT FINALLY THROW           // exceptions
 
 /* operators */
 %token<Ast.Pos.t>          EQ ASSGN_EQ ELLIPSIS
@@ -309,6 +310,7 @@ statement: // Statements: all rules return list of statements
   | MATCH test COLON NL INDENT case_suite DEDENT
     {[ pos $1 $4, 
        Match ($2, $6) ]}
+  | try_statement
   | func_statement
   | class_statement
   | extend_statement
@@ -319,6 +321,8 @@ small_statement: // Simple one-line statements: 5+3, print x
   | import_statement 
     { $1 }
   | type_stmt        
+    { $1 }
+  | throw
     { $1 }
   | PASS     
     { $1, 
@@ -487,6 +491,26 @@ import_as:
     { $1, None }
   | ID AS ID
     { $1, Some (snd $3) } 
+
+try_statement:
+  | TRY COLON suite catch+ finally?
+    { pos $1 $2, 
+      Try ($3, $4, $5) }
+catch:
+  /* TODO: except (RuntimeError, TypeError, NameError) */
+  | EXCEPT ID COLON suite
+    { pos $1 $3, 
+      { exc = snd $2; var = None; stmts = $4 } }
+  | EXCEPT ID AS ID COLON suite
+    { pos $1 $5, 
+      { exc = snd $2; var = Some (snd $4); stmts = $6 } }
+finally:
+  | FINALLY COLON suite
+    { $3 }
+throw:
+  | THROW test
+    { $1,
+      Throw $2 }
 
 /******************************************************************************
  ************                    GENERICS                    ******************

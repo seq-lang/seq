@@ -626,7 +626,7 @@ FOREIGN Var *get_trycatch_var(TryCatch *tc, unsigned idx)
 
 FOREIGN void set_enclosing_trycatch(Expr *e, TryCatch *tc)
 {
-	e->setTryCatch(tc);
+	if (tc) e->setTryCatch(tc);
 }
 
 FOREIGN char type_eq(types::Type *a, types::Type *b)

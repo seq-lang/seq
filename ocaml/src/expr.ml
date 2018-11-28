@@ -45,6 +45,10 @@ struct
       | Lambda _ -> failwith "todo: expr/lambda"
     in
     Llvm.Expr.set_pos expr pos; 
+    Util.dbg "%s -> %nx" 
+      (ExprNode.sexp_of_node node |> Sexp.to_string_hum)
+      (Ctypes.raw_address_of_ptr ctx.trycatch);
+    Llvm.Expr.set_trycatch expr ctx.trycatch;
     expr
   
   (** [parse_type context type] parses [type] AST and ensures that it is a type.
@@ -175,12 +179,18 @@ struct
       Llvm.Expr.typ @@ Llvm.Type.func ret args
     | _ -> 
       let lh_expr = parse ctx lh_expr in
+      (* let indices = List.map indices ~f:(parse ctx) in *)
+      (* let all_types = List.for_all indices ~f:Llvm.Expr.is_type in *)
+
       (* Util.dbg "---> %s" (Llvm.Expr.get_name lh_expr); *)
       if Llvm.Expr.is_type lh_expr then
+        (* let indices = List.map indices ~f:Llvm.Type.expr_type in *)
         let indices = List.map indices ~f:(parse_type ctx) in
         let typ = Llvm.Type.expr_type lh_expr in
         let typ = Llvm.Generics.Type.realize typ indices in
         Llvm.Expr.typ typ
+      (* else if all_types then *)
+        (* let indices = List.map indices ~f:Llvm.Type.expr_type in *)
       else if (Llvm.Expr.get_name lh_expr) = "func" then
         let indices = List.map indices ~f:(parse_type ctx) in
         let typ = Llvm.Generics.Func.realize lh_expr indices in

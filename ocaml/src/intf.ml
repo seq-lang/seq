@@ -21,7 +21,7 @@ sig
    val parse_for:
       ?next: (Ctx.t -> Ctx.t -> Llvm.Types.stmt_t -> unit) ->
       Ctx.t -> Ast.Pos.t -> 
-      string list * Ast.StmtNode.et * Ast.StmtNode.t list ->
+      string list * Ast.ExprNode.t * Ast.StmtNode.t list ->
       Llvm.Types.stmt_t
    val finalize_stmt: 
       ?add:bool -> Ctx.t -> Llvm.Types.stmt_t -> Ast.Pos.t -> 

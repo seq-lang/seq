@@ -35,6 +35,8 @@ struct
       | Extend   p -> parse_extend   ctx pos p
       | Import   p -> parse_import   ctx pos p
       | Pass     p -> parse_pass     ctx pos p
+      | Try      p -> parse_try      ctx pos p
+      | Throw    p -> parse_throw    ctx pos p
       | Generic 
         Function p -> parse_function ctx pos p
       | Generic 
@@ -385,6 +387,65 @@ struct
     Llvm.Type.set_cls_done typ;
 
     Llvm.Stmt.pass ()
+
+  and parse_try ctx pos (stmts, catches, finally) =
+    let try_stmt = Llvm.Stmt.trycatch () in
+
+    let block = Llvm.Stmt.Block.try_block try_stmt in
+    add_block { ctx with block ; trycatch = try_stmt } stmts;
+
+    List.iteri catches ~f:(fun idx (pos, { exc; var; stmts }) ->
+      let typ = E.parse_type ctx (pos, Id(exc)) in
+      let block = Llvm.Stmt.Block.catch try_stmt typ in
+      add_block { ctx with block } stmts
+        ~preprocess:(fun ctx ->
+          Option.value_map var 
+            ~f:(fun var ->
+              let v = Llvm.Var.catch try_stmt idx in
+              Ctx.add ctx var (Ctx.Assignable.Var v))
+            ~default: ());
+    );
+
+    Option.value_map finally 
+      ~f:(fun final ->
+        let block = Llvm.Stmt.Block.finally try_stmt in
+        add_block { ctx with block } final)
+      ~default:();
+
+    try_stmt
+
+  and parse_throw ctx _ expr =
+    let expr = E.parse ctx expr in
+    Llvm.Stmt.throw expr
+
+    (* 
+    Stmt *trycatch_stmt()
+      Creates a new TryCatch statement.
+
+    Block *get_trycatch_block(TryCatch *tc)
+        Returns the “try” block of a try-catch statement.
+
+    Block *get_trycatch_catch(TryCatch *tc, types::Type *t)
+        Creates and returns a new “catch” block for a specified type. For example: try {…} catch (Foo f) {…} — the “catch” block would be obtained by calling get_trycatch_catch(tc, Foo). Use t=nullptr for a catch-all block.
+
+    Block *get_trycatch_finally(TryCatch *tc)
+        Creates and returns the “finally” block.
+
+    Var *get_trycatch_var(TryCatch *tc, unsigned idx)
+        Returns the variable associated with (idx)th catch block.For example: try {…} catch (Foo f) {…} — the variable “f” would be obtained by calling get_trycatch_var(tc, 0). If the (idx)th catch block is a catch-all, returns null.
+
+    void set_enclosing_trycatch(Expr *e, TryCatch *tc)
+        This must be called on every expression present inside a “try” block (i.e. NOT catch / finally blocks). It should be called with the innermost enclosing try-catch as an argument. 
+        Internally, this is so that function calls inside a “try” can be rerouted to an exception block if an exception is thrown by them.
+
+    Stmt *throw_stmt(Expr *expr)
+        Creates a new “throw”/“raise” statement with the gives expression.
+
+    Couple misc. notes:
+      - Only at most one finally block is allowed.
+      - I only allow throwing/catching reference types. I think this is a fine rule, and it makes things easier on the backend. 
+      - I need to do a bit more refactoring to get this to work with magic methods. Shouldn’t be particularly hard, just need to change some stuff around.
+    *)
 
   (* ***************************************************************
      Helper functions

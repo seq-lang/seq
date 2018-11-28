@@ -198,7 +198,7 @@ module Expr = struct
 
   let binary lh bop rh = 
     let fn = match bop with
-      | "is" | "is not" | "in" | "in not" ->
+      | "is" | "is not" | "in" | "not in" ->
         let prefix = 
           String.tr bop ~target:' ' ~replacement:'_' 
         in
@@ -261,6 +261,9 @@ module Expr = struct
     foreign (sprintf "set_%s_comp_body" kind)
       (t @-> Types.stmt @-> returning Ctypes.void)
       expr body
+
+  let set_trycatch = foreign "set_enclosing_trycatch" 
+    (t @-> Types.stmt @-> returning Ctypes.void)
 
   let get_name = foreign "get_expr_name" 
     (t @-> returning string)
@@ -349,6 +352,15 @@ module Stmt = struct
     let func = foreign "get_func_block" 
       (Types.func @-> returning t)
 
+    let try_block = foreign "get_trycatch_block" 
+      (Types.stmt @-> returning t)
+
+    let catch = foreign "get_trycatch_catch" 
+      (Types.func @-> Types.typ @-> returning t)
+
+    let finally = foreign "get_trycatch_finally" 
+      (Types.stmt @-> returning t)
+
     let add_stmt block stmt = foreign "add_stmt"
       (Types.stmt @-> t @-> returning void) 
       stmt block
@@ -409,6 +421,12 @@ module Stmt = struct
   let func = foreign "func_stmt"
     (Types.func @-> returning t)
 
+  let trycatch = foreign "trycatch_stmt"
+    (void @-> returning t)
+
+  let throw = foreign "throw_stmt"
+    (Types.expr @-> returning t)
+
   let set_base = foreign "set_base" 
     (t @-> Types.func @-> returning void)
 
@@ -425,6 +443,9 @@ module Var = struct
 
   let loop = foreign "get_for_var" 
     (Types.stmt @-> returning t)
+
+  let catch = foreign "get_trycatch_var" 
+    (Types.stmt @-> int @-> returning t)
 
   let bound_pattern = foreign "get_bound_pattern_var" 
     (Types.pattern @-> returning t)

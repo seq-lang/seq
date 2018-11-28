@@ -1,6 +1,7 @@
 (* 786 *)
 
 open Core
+open Sexplib.Std
 
 module Pos = 
 struct
@@ -9,6 +10,7 @@ struct
       line: int;
       col: int;
       len: int }
+  [@@deriving sexp]
   
   let dummy =
     { file = ""; line = -1; col = -1; len = 0 }
@@ -61,6 +63,7 @@ struct
       gen: t; 
       cond: t option; 
       next: (comprehension tt) option }
+  [@@deriving sexp]
 
   let rec to_string ?(prn_pos=(fun _ -> "")) (pos, node) = 
     let to_string = to_string ~prn_pos in 
@@ -148,8 +151,6 @@ struct
   (** Each node is a 2-tuple that stores 
       (1) position within a file and
       (2) node data *)
-  type et = ExprNode.t
-
   type 'a tt = 
     Pos.t * 'a
   and t =
@@ -158,36 +159,42 @@ struct
     | Pass     of unit
     | Break    of unit
     | Continue of unit
-    | Expr     of et
-    | Assign   of (et list * et list * bool)
-    | Del      of et list
-    | Print    of et list
-    | Return   of et option
-    | Yield    of et option
-    | Assert   of et list
+    | Expr     of ExprNode.t
+    | Assign   of (ExprNode.t list * ExprNode.t list * bool)
+    | Del      of ExprNode.t list
+    | Print    of ExprNode.t list
+    | Return   of ExprNode.t option
+    | Yield    of ExprNode.t option
+    | Assert   of ExprNode.t list
     | Type     of (string * param tt list)
-    | While    of (et * t list)
-    | For      of (string list * et * t list)
+    | While    of (ExprNode.t * t list)
+    | For      of (string list * ExprNode.t * t list)
     | If       of (if_case tt) list
-    | Match    of (et * (match_case tt) list)
+    | Match    of (ExprNode.t * (match_case tt) list)
     | Extend   of (string * generic tt list)
     | Extern   of (string * string option * param tt * param tt list)
     | Import   of (string tt * string option) list 
     | Generic  of generic 
+    | Try      of (t list * catch tt list * t list option)
+    | Throw    of ExprNode.t
   and generic =
     | Function of 
         (param tt * (ExprNode.generic tt) list * param tt list * t list)
     | Class of 
         (string * (ExprNode.generic tt) list * param tt list * generic tt list)
   and if_case = 
-    { cond: et option; 
+    { cond: ExprNode.t option; 
       stmts: t list }
   and match_case = 
     { pattern: pattern;
       stmts: t list }
   and param = 
     { name: string; 
-      typ: et option; }
+      typ: ExprNode.t option; }
+  and catch = 
+    { exc: string;
+      var: string option;
+      stmts: t list }
   and pattern = 
     | StarPattern
     | IntPattern      of int
@@ -199,8 +206,9 @@ struct
     | ListPattern     of pattern list
     | OrPattern       of pattern list
     | WildcardPattern of string option
-    | GuardedPattern  of (pattern * et)
+    | GuardedPattern  of (pattern * ExprNode.t)
     | BoundPattern    of (string * pattern)
+  [@@deriving sexp]
 
   let rec to_string ?(level=0) ?(prn_pos=(fun _ -> "")) (pos, node) = 
     let pad l = String.make (l * 2) ' ' in
@@ -279,6 +287,19 @@ struct
         sprintf "Import[%s]" @@ sci libraries (fun ((_, a), b) ->
           Option.value_map b ~default:a ~f:(fun b -> a ^ " as " ^ b))
       | Generic gen -> prn_generic (pos, gen)
+      | Try (stmts, catches, finally) ->
+        sprintf "Try[\n%s%s%s; FINALLY %s]" 
+          (sci ~sep:"\n" stmts prn_stmt)
+          (pad level)
+          (sci ~sep:"; " catches (fun (_, x) -> 
+            sprintf "%s AS %s: %s"
+              x.exc 
+              (Option.value x.var ~default:"NONE")
+              (sci x.stmts prn_stmt)))
+          (Option.value_map finally ~default:"" 
+            ~f:(fun x -> sci ~sep:"\n" x prn_stmt))
+      | Throw(expr) -> 
+        sprintf "Throw[%s]" (prn_expr expr)
     in 
     sprintf "%s%s%s" (pad level) (prn_pos pos) repr
   and to_string_pattern = function 
