@@ -606,6 +606,28 @@ static std::string argName(unsigned i)
 	return "arg" + std::to_string(i);
 }
 
+static void setBodyBase(For *body, BaseFunc *base)
+{
+	Block *inner = body->getBlock();
+	body->setBase(base);
+	while (!inner->stmts.empty()) {
+		for (auto *stmt : inner->stmts)
+			stmt->setBase(base);
+
+		Stmt *stmt = inner->stmts.back();
+		auto *next1 = dynamic_cast<For *>(stmt);
+		auto *next2 = dynamic_cast<If *>(stmt);
+
+		if (next1) {
+			inner = next1->getBlock();
+		} else if (next2) {
+			inner = next2->getBlock();
+		} else {
+			break;
+		}
+	}
+}
+
 Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	// find the innermost block, where we'll be yielding
@@ -630,6 +652,9 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	Func implicitGen;
 	implicitGen.setName("seq.implicit_gen." + std::to_string(idx++));
 
+	BaseFunc *oldBase = body->getBase();
+	setBodyBase(body, &implicitGen);
+
 	std::vector<types::Type *> inTypes;
 	std::vector<std::string> names;
 	for (unsigned i = 0; i < captures.size(); i++) {
@@ -639,6 +664,11 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 	implicitGen.setIns(inTypes);
 	implicitGen.setArgNames(names);
+
+	// gather the args:
+	std::vector<Value *> args;
+	for (auto *var : captures)
+		args.push_back(var->load(base, block));
 
 	// make sure we codegen wrt function argument vars:
 	for (unsigned i = 0; i < captures.size(); i++)
@@ -651,10 +681,6 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	// now call the generator:
 	types::FuncType *funcType = implicitGen.getFuncType();
 	Function *func = implicitGen.getFunc();
-	std::vector<Value *> args;
-
-	for (auto *var : captures)
-		args.push_back(var->load(base, block));
 
 	Value *gen;
 	if (getTryCatch()) {
@@ -668,6 +694,7 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		gen = funcType->call(base, func, args, block, nullptr, nullptr);
 	}
 
+	setBodyBase(body, oldBase);
 	inner->stmts.pop_back();
 	for (auto *var : captures)
 		var->unmap();

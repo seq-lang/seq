@@ -16,6 +16,9 @@ Var::Var(types::Type *type) :
 
 void Var::allocaIfNeeded(BaseFunc *base)
 {
+	if (mapped)
+		mapped->allocaIfNeeded(base);
+
 	if (ptr)
 		return;
 
@@ -50,7 +53,7 @@ void Var::setGlobal()
 
 void Var::mapTo(Var *mapped)
 {
-	assert(!mapped);
+	assert(!this->mapped);
 	this->mapped = mapped;
 }
 
