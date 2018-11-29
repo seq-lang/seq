@@ -1,27 +1,33 @@
 # 786
 
-a = 5
-b = 3
-print a, b
+# a = 5
+# b = 3
+# print a, b
 
-def foo(x):
-    # print a, b
-    global a
-    a = 6
-    if True:
-        c = 7
-    print a, x
+# def foo(x):
+#     # print a, b
+#     global a
+#     a = 6
+#     if True:
+#         c = 7
+#     print a, x
 
-def bar(x):
-    global a
-    print a
+# def bar(x):
+#     global a
+#     print a
 
-foo(100)
-bar(1)
-print a, b
+# foo(100)
+# bar(1)
+# print a, b
 # print a+"x"
 
-y = (a + 1 + i for i in [1,2,3,4,5])
+print 'hello'
+
+a = 5
+s = [1,2,3,4,5]
+y = (a + 1 + i for i in s)
+for i in y:
+    print i
 
 # class Exc(msg: str):
 #     def yodel(self):

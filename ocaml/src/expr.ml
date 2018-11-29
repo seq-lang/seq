@@ -116,10 +116,10 @@ struct
     let args = List.map (flatten args) ~f:(parse ctx) in
     Llvm.Expr.list ~kind:"dict" typ args
 
-  and parse_gen ctx _ (expr, gen) = 
+  and parse_gen ctx pos (expr, gen) = 
     Util.dbg "here";
     let captures = String.Table.create () in
-    walk ctx expr ~f:(fun (ctx: Ctx.t) var ->
+    walk ctx (pos, Generator (expr, gen)) ~f:(fun (ctx: Ctx.t) var ->
       match Hashtbl.find ctx.map var with
       | Some (Ctx.Assignable.Var (v, { base; global; _ }) :: _) 
         when (ctx.base = base) || global -> 
@@ -284,6 +284,12 @@ struct
     | _ -> failwith (sprintf "can't find internal type %s" typ_str)
 
   and walk (ctx: Ctx.t) ~f (pos, node) =
+    let rec walk_comp ctx ~f c = 
+      let open ExprNode in
+      walk ctx ~f c.gen;
+      Option.value_map c.cond ~default:() ~f:(walk ctx ~f);
+      Option.value_map c.next ~default:() ~f:(fun x -> walk_comp ctx ~f (snd x))
+    in
     match node with
     | Generic p | Id p -> 
       f ctx p
@@ -300,5 +306,12 @@ struct
       walk ctx ~f e1; walk ctx ~f e2
     | Index (a, l) | Call (a, l) -> 
       walk ctx ~f a; List.iter l ~f:(walk ctx ~f)
+    | ListGenerator (e, c) | SetGenerator (e, c) | Generator (e, c) ->
+      walk ctx ~f e;
+      walk_comp ctx ~f (snd c)
+    | DictGenerator ((e1, e2), c) ->
+      walk ctx ~f e1; walk ctx ~f e2;
+      walk_comp ctx ~f (snd c)
+    (* | Slice | Lambda *)
     | _ -> ()
 end
