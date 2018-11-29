@@ -73,10 +73,8 @@ def baz2(x):
         print 'try 2.1'
         baz1(x)
         print 'try 2.2'
-    except Exc2 as e:
-        print 'catch Exc2 2.1'
-        print e.msg
-        print 'catch Exc2 2.2'
+    except:
+        print 'catch Exc2'
     finally:
         print 'finally 2'
     print 'done 2'
@@ -118,9 +116,7 @@ baz2(1)
 # EXPECT: try 2.1
 # EXPECT: try 1.1
 # EXPECT: finally 1
-# EXPECT: catch Exc2 2.1
-# EXPECT: e2
-# EXPECT: catch Exc2 2.2
+# EXPECT: catch Exc2
 # EXPECT: finally 2
 # EXPECT: done 2
 baz2(0)

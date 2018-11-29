@@ -408,6 +408,9 @@ void TryCatch::codegen0(BasicBlock*& block)
 {
 	assert(catchTypes.size() == catchBlocks.size());
 
+	//if (getTryCatch())
+	//	throw exc::SeqException("nested try-catch is not supported");
+
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
 	Function *func = block->getParent();
@@ -456,9 +459,16 @@ void TryCatch::codegen0(BasicBlock*& block)
 	theSwitch->addCase(excStateThrown, unwindResumeBlock);
 
 	std::vector<BasicBlock *> catches;
+	BasicBlock *catchAll = nullptr;
 	for (unsigned i = 0; i < catchTypes.size(); i++) {
 		BasicBlock *catchBlock = BasicBlock::Create(context, "catch" + std::to_string(i+1), func);
 		catches.push_back(catchBlock);
+
+		if (!catchTypes[i]) {
+			if (catchAll)
+				throw exc::SeqException("can only have at most one catch-all clause");
+			catchAll = catchBlock;
+		}
 	}
 
 	// codegen try:
@@ -482,9 +492,8 @@ void TryCatch::codegen0(BasicBlock*& block)
 		if (catchType && !catchType->asRef())
 			throw exc::SeqException("cannot catch non-reference type '" + catchType->getName() + "'");
 
-		const std::string typeVarName = catchType ? ("seq.typeidx." + catchType->getName()) : "";
-		Constant *tidx = catchType ? (Constant *)module->getGlobalVariable(typeVarName) :
-		                             ConstantPointerNull::get(PointerType::get(typeInfoType, 0));
+		const std::string typeVarName = "seq.typeidx." + (catchType ? catchType->getName() : "<all>");
+		GlobalVariable *tidx = module->getGlobalVariable(typeVarName);
 		int idx = catchType ? catchType->getID() : 0;
 		if (!tidx)
 			tidx = new GlobalVariable(*module,
@@ -539,13 +548,15 @@ void TryCatch::codegen0(BasicBlock*& block)
 	Value *objPtr = builder.CreateExtractValue(loadedExc, 1);
 
 	SwitchInst *switchToCatchBlock = builder.CreateSwitch(objType,
-	                                                      finallyBlock,
+	                                                      catchAll ? catchAll : finallyBlock,
 	                                                      (unsigned)catches.size());
 	for (unsigned i = 0; i < catches.size(); i++) {
 		BasicBlock *catchBlock = catches[i];
-		switchToCatchBlock->addCase(
-		  ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)catchTypes[i]->getID(), true),
-		  catchBlock);
+
+		if (catchTypes[i])
+			switchToCatchBlock->addCase(
+			  ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)catchTypes[i]->getID(), true),
+			  catchBlock);
 
 		builder.SetInsertPoint(catchBlock);
 		Var *var = catchVars[i];
@@ -581,13 +592,13 @@ TryCatch *TryCatch::clone(Generic *ref)
 	std::vector<Var *> catchVarsCloned;
 
 	for (auto *type : catchTypes)
-		catchTypesCloned.push_back(type->clone(ref));
+		catchTypesCloned.push_back(type ? type->clone(ref) : nullptr);
 
 	for (auto *block : catchBlocks)
 		catchBlocksCloned.push_back(block->clone(ref));
 
 	for (auto *var : catchVars)
-		catchVarsCloned.push_back(var->clone(ref));
+		catchVarsCloned.push_back(var ? var->clone(ref) : nullptr);
 
 	x->catchTypes = catchTypesCloned;
 	x->catchBlocks = catchBlocksCloned;

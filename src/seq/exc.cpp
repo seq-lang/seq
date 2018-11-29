@@ -91,7 +91,6 @@ SEQ_FUNC void seq_throw(void *exc)
 	void *obj = base->obj;
 	auto *msg = (seq_str_t *)obj;
 	std::cerr << "error: uncaught exception (" << code << "): ";
-	seq_print_str(*(seq_str_t *)obj);
 	std::cerr.write(msg->str, msg->len);
 	std::cerr << std::endl;
 	std::abort();
@@ -271,7 +270,8 @@ static bool handleActionValue(int64_t *resultAction,
 			const uint8_t *EntryP = ClassInfo - typeOffset * EncSize;
 			uintptr_t P = readEncodedPointer(&EntryP, TTypeEncoding);
 			auto *ThisClassInfo = reinterpret_cast<OurExceptionType_t *>(P);
-			if (ThisClassInfo->type == type) {
+			// type=0 means catch-all
+			if (ThisClassInfo->type == 0 || ThisClassInfo->type == type) {
 				*resultAction = i + 1;
 				ret = true;
 				break;
