@@ -501,8 +501,6 @@ void TryCatch::codegen0(BasicBlock*& block)
 	}
 
 	Value *unwindException = builder.CreateExtractValue(caughtResult, 0);
-	Value *retTypeInfoIndex = builder.CreateExtractValue(caughtResult, 1);
-
 	builder.CreateStore(caughtResult, catchStore);
 	builder.CreateStore(unwindException, excStore);
 	builder.CreateStore(excStateThrown, excFlag);
@@ -527,24 +525,26 @@ void TryCatch::codegen0(BasicBlock*& block)
 		fail.codegen(externalExceptionBlock);
 	}
 	builder.SetInsertPoint(externalExceptionBlock);
-	builder.CreateBr(finallyBlock);
+	builder.CreateUnreachable();
 
 	// reroute Seq exceptions:
 	builder.SetInsertPoint(exceptionRouteBlock);
 	Value *excVal = builder.CreatePointerCast(
 	                  builder.CreateConstGEP1_64(unwindException, (uint64_t)seq_exc_offset()),
 	                  excType->getPointerTo());
-	//Value *typeInfoThrown = builder.CreateStructGEP(excType, excVal, 0);
-	Value *objPtr = builder.CreateExtractValue(builder.CreateLoad(excVal), 1);
-	//Value *typeInfoThrownType = builder.CreateStructGEP(builder.getInt8PtrTy(), typeInfoThrown, 0);
 
-	SwitchInst *switchToCatchBlock = builder.CreateSwitch(retTypeInfoIndex,
+	Value *loadedExc = builder.CreateLoad(excVal);
+	Value *objType = builder.CreateExtractValue(loadedExc, 0);
+	objType = builder.CreateExtractValue(objType, 0);
+	Value *objPtr = builder.CreateExtractValue(loadedExc, 1);
+
+	SwitchInst *switchToCatchBlock = builder.CreateSwitch(objType,
 	                                                      finallyBlock,
 	                                                      (unsigned)catches.size());
 	for (unsigned i = 0; i < catches.size(); i++) {
 		BasicBlock *catchBlock = catches[i];
 		switchToCatchBlock->addCase(
-		  ConstantInt::get(IntegerType::getInt32Ty(context), i + 1),
+		  ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)catchTypes[i]->getID(), true),
 		  catchBlock);
 
 		builder.SetInsertPoint(catchBlock);
@@ -611,8 +611,13 @@ void Throw::resolveTypes()
 void Throw::codegen0(BasicBlock*& block)
 {
 	types::Type *type = expr->getType();
-	if (!type->asRef())
+	types::RefType *refType = type->asRef();
+
+	if (!refType)
 		throw exc::SeqException("cannot throw non-reference type '" + type->getName() + "'");
+
+	if (refType->numBaseTypes() < 1 || !refType->getBaseType(0)->is(types::Str))
+		throw exc::SeqException("first member of thrown exception must be of type 'str'");
 
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
@@ -1066,7 +1071,7 @@ void Assert::codegen0(BasicBlock*& block)
 	                 types::Bool->getLLVMType(context),
 	                 types::Int->getLLVMType(context),
 	                 types::Str->getLLVMType(context)));
-
+	func->setDoesNotThrow();
 	Value *check = expr->codegen(getBase(), block);
 	check = expr->getType()->boolValue(check, block, getTryCatch());
 	Value *file = StrExpr(getSrcInfo().file).codegen(getBase(), block);

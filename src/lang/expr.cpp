@@ -1808,6 +1808,7 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 			                         Type::getVoidTy(context),
 			                         IntegerType::getInt8PtrTy(context),
 			                         finalizeFunc->getType()));
+			registerFunc->setDoesNotThrow();
 
 			builder.SetInsertPoint(block);
 			obj = builder.CreateBitCast(self, IntegerType::getInt8PtrTy(context));

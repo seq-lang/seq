@@ -109,11 +109,13 @@ namespace seq {
 	inline llvm::Function *makeAllocFunc(llvm::Module *module, bool atomic)
 	{
 		llvm::LLVMContext& context = module->getContext();
-		return llvm::cast<llvm::Function>(
-		         module->getOrInsertFunction(
-		           atomic ? "seq_alloc_atomic" : "seq_alloc",
-		           llvm::IntegerType::getInt8PtrTy(context),
-		           seqIntLLVM(context)));
+		auto *f = llvm::cast<llvm::Function>(
+		            module->getOrInsertFunction(
+		              atomic ? "seq_alloc_atomic" : "seq_alloc",
+		              llvm::IntegerType::getInt8PtrTy(context),
+		              seqIntLLVM(context)));
+		f->setDoesNotThrow();
+		return f;
 	}
 
 	inline llvm::Function *makePersonalityFunc(llvm::Module *module)
@@ -133,12 +135,14 @@ namespace seq {
 	inline llvm::Function *makeExcAllocFunc(llvm::Module *module)
 	{
 		llvm::LLVMContext& context = module->getContext();
-		return llvm::cast<llvm::Function>(
-		         module->getOrInsertFunction(
-		           "seq_alloc_exc",
-		           llvm::IntegerType::getInt8PtrTy(context),
-		           llvm::IntegerType::getInt32Ty(context),
-		           llvm::IntegerType::getInt8PtrTy(context)));
+		auto *f = llvm::cast<llvm::Function>(
+		            module->getOrInsertFunction(
+		              "seq_alloc_exc",
+		              llvm::IntegerType::getInt8PtrTy(context),
+		              llvm::IntegerType::getInt32Ty(context),
+		              llvm::IntegerType::getInt8PtrTy(context)));
+		f->setDoesNotThrow();
+		return f;
 	}
 
 	inline llvm::Function *makeThrowFunc(llvm::Module *module)

@@ -178,7 +178,7 @@ void types::SeqType::initOps()
 			                      "seq_print_seq",
 			                      llvm::Type::getVoidTy(context),
 			                      getLLVMType(context)));
-
+			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},
@@ -307,7 +307,7 @@ void types::StrType::initOps()
 			                      "seq_print_str",
 			                      llvm::Type::getVoidTy(context),
 			                      getLLVMType(context)));
-
+			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},

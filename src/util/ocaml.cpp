@@ -272,22 +272,22 @@ FOREIGN Expr *dict_comp_expr(types::Type *ty, Expr *key, Expr *val)
 	return new DictCompExpr(key, val, nullptr, ty);
 }
 
-FOREIGN void set_list_comp_body (ListCompExpr *e, For * body) 
+FOREIGN void set_list_comp_body (ListCompExpr *e, For * body)
 {
 	e->setBody(body);
 }
 
-FOREIGN void set_set_comp_body (SetCompExpr *e, For * body) 
+FOREIGN void set_set_comp_body (SetCompExpr *e, For * body)
 {
 	e->setBody(body);
 }
 
-FOREIGN void set_dict_comp_body (DictCompExpr *e, For * body) 
+FOREIGN void set_dict_comp_body (DictCompExpr *e, For * body)
 {
 	e->setBody(body);
 }
 
-FOREIGN void set_gen_comp_body (GenExpr *e, For * body) 
+FOREIGN void set_gen_comp_body (GenExpr *e, For * body)
 {
 	e->setBody(body);
 }
@@ -589,35 +589,35 @@ FOREIGN void set_pattern_trycatch(Pattern *p, TryCatch *tc)
 
 /***** Block utils *****/
 
-FOREIGN Block *get_module_block(SeqModule *st)  
-{ 
-	return st->getBlock(); 
+FOREIGN Block *get_module_block(SeqModule *st)
+{
+	return st->getBlock();
 }
 
-FOREIGN Block *get_while_block(While *st)       
-{ 
-	return st->getBlock(); 
+FOREIGN Block *get_while_block(While *st)
+{
+	return st->getBlock();
 }
 
-FOREIGN Block *get_for_block(For *st)           
-{ 
-	return st->getBlock(); 
+FOREIGN Block *get_for_block(For *st)
+{
+	return st->getBlock();
 }
 
 
-FOREIGN Block *get_else_block(If *st)           
-{ 
-	return st->addElse(); 
+FOREIGN Block *get_else_block(If *st)
+{
+	return st->addElse();
 }
 
-FOREIGN Block *get_elif_block(If *st, Expr *ex) 
-{ 
-	return st->addCond(ex); 
+FOREIGN Block *get_elif_block(If *st, Expr *ex)
+{
+	return st->addCond(ex);
 }
 
-FOREIGN Block *get_trycatch_block(TryCatch *tc) 
-{ 
-	return tc->getBlock(); 
+FOREIGN Block *get_trycatch_block(TryCatch *tc)
+{
+	return tc->getBlock();
 }
 
 FOREIGN Block *get_trycatch_catch(TryCatch *tc, types::Type *t)

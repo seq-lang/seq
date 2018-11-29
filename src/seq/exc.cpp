@@ -87,7 +87,13 @@ SEQ_FUNC void *seq_alloc_exc(int type, void *obj)
 SEQ_FUNC void seq_throw(void *exc)
 {
 	_Unwind_Reason_Code code = _Unwind_RaiseException((_Unwind_Exception *)exc);
-	std::cerr << "error: uncaught exception (code: " << code << ")" << std::endl;
+	auto *base = (OurBaseException_t *)((char *)exc + seq_exc_offset());
+	void *obj = base->obj;
+	auto *msg = (seq_str_t *)obj;
+	std::cerr << "error: uncaught exception (" << code << "): ";
+	seq_print_str(*(seq_str_t *)obj);
+	std::cerr.write(msg->str, msg->len);
+	std::cerr << std::endl;
 	std::abort();
 }
 

@@ -175,7 +175,7 @@ void types::RefType::initOps()
 			                      "seq_print_ptr",
 			                      llvm::Type::getVoidTy(context),
 			                      IntegerType::getInt8PtrTy(context)));
-
+			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},

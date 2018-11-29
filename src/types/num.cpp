@@ -67,7 +67,7 @@ void types::IntType::initOps()
 			                      "seq_print_int",
 			                      llvm::Type::getVoidTy(context),
 			                      getLLVMType(context)));
-
+			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},
@@ -235,7 +235,7 @@ void types::FloatType::initOps()
 			                      "seq_print_float",
 			                      llvm::Type::getVoidTy(context),
 			                      getLLVMType(context)));
-
+			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},
@@ -375,7 +375,7 @@ void types::BoolType::initOps()
 			                      "seq_print_bool",
 			                      llvm::Type::getVoidTy(context),
 			                      getLLVMType(context)));
-
+			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},
@@ -432,7 +432,7 @@ void types::ByteType::initOps()
 			                      "seq_print_byte",
 			                      llvm::Type::getVoidTy(context),
 			                      getLLVMType(context)));
-
+			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
 		}},
