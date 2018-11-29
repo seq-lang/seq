@@ -391,7 +391,10 @@ struct
     add_block { ctx with block ; trycatch = try_stmt } stmts;
 
     List.iteri catches ~f:(fun idx (pos, { exc; var; stmts }) ->
-      let typ = E.parse_type ctx (pos, Id(exc)) in
+      let typ = match exc with
+        | Some exc -> E.parse_type ctx (pos, Id(exc)) 
+        | None -> Ctypes.null 
+      in
       let block = Llvm.Stmt.Block.catch try_stmt typ in
       add_block { ctx with block } stmts
         ~preprocess:(fun ctx ->
@@ -399,7 +402,7 @@ struct
             ~f:(fun var ->
               let v = Llvm.Var.catch try_stmt idx in
               Ctx.add ctx var (Ctx.var ctx v))
-            ~default: ());
+            ~default: ()) 
     );
 
     Option.value_map finally 

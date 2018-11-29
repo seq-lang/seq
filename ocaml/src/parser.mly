@@ -502,12 +502,15 @@ try_statement:
       Try ($3, $4, $5) }
 catch:
   /* TODO: except (RuntimeError, TypeError, NameError) */
+  | EXCEPT COLON suite
+    { pos $1 $2, 
+      { exc = None; var = None; stmts = $3 } }
   | EXCEPT ID COLON suite
     { pos $1 $3, 
-      { exc = snd $2; var = None; stmts = $4 } }
+      { exc = Some (snd $2); var = None; stmts = $4 } }
   | EXCEPT ID AS ID COLON suite
     { pos $1 $5, 
-      { exc = snd $2; var = Some (snd $4); stmts = $6 } }
+      { exc = Some (snd $2); var = Some (snd $4); stmts = $6 } }
 finally:
   | FINALLY COLON suite
     { $3 }

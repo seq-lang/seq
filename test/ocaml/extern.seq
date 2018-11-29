@@ -29,15 +29,15 @@ y = (a + 1 + i for i in s)
 for i in y:
     print i
 
-# class Exc(msg: str):
-#     def yodel(self):
-#         print 'Yodel-oh-ee-dee-ay-dee', self.msg
-#     pass
-# try:
-#     print 'try'
-#     raise Exc('suisse')
-# except Exc as e:
-#     print 'ooops', e.msg
+class Exc(msg: str):
+    def yodel(self):
+        print 'Yodel-oh-ee-dee-ay-dee', self.msg
+    pass
+try:
+    print 'try'
+    raise Exc('suisse')
+except:
+    print 'ooops'
 # raise Exc('woof')
 
 

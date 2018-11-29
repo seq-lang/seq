@@ -110,7 +110,7 @@ struct
     { name: string; 
       typ: ExprNode.t option; }
   and catch = 
-    { exc: string;
+    { exc: string option;
       var: string option;
       stmts: t list }
   and pattern = 
