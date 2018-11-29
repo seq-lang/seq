@@ -10,14 +10,14 @@ static void ensureNonVoid(types::Type *type)
 }
 
 Var::Var(types::Type *type) :
-    type(type), ptr(nullptr), global(false), mapped(nullptr)
+    type(type), ptr(nullptr), global(false), mapped()
 {
 }
 
 void Var::allocaIfNeeded(BaseFunc *base)
 {
-	if (mapped)
-		mapped->allocaIfNeeded(base);
+	if (!mapped.empty())
+		mapped.top()->allocaIfNeeded(base);
 
 	if (ptr)
 		return;
@@ -38,34 +38,33 @@ void Var::allocaIfNeeded(BaseFunc *base)
 
 bool Var::isGlobal()
 {
-	if (mapped)
-		return mapped->isGlobal();
+	if (!mapped.empty())
+		return mapped.top()->isGlobal();
 	return global;
 }
 
 void Var::setGlobal()
 {
-	if (mapped)
-		mapped->setGlobal();
+	if (!mapped.empty())
+		mapped.top()->setGlobal();
 	else
 		global = true;
 }
 
-void Var::mapTo(Var *mapped)
+void Var::mapTo(Var *other)
 {
-	assert(!this->mapped);
-	this->mapped = mapped;
+	mapped.push(other);
 }
 
 void Var::unmap()
 {
-	mapped = nullptr;
+	mapped.pop();
 }
 
 Value *Var::load(BaseFunc *base, BasicBlock *block)
 {
-	if (mapped)
-		return mapped->load(base, block);
+	if (!mapped.empty())
+		return mapped.top()->load(base, block);
 
 	ensureNonVoid(getType());
 	allocaIfNeeded(base);
@@ -75,8 +74,8 @@ Value *Var::load(BaseFunc *base, BasicBlock *block)
 
 void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
 {
-	if (mapped) {
-		mapped->store(base, val, block);
+	if (!mapped.empty()) {
+		mapped.top()->store(base, val, block);
 		return;
 	}
 
@@ -88,16 +87,16 @@ void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
 
 void Var::setType(types::Type *type)
 {
-	if (mapped)
-		mapped->setType(type);
+	if (!mapped.empty())
+		mapped.top()->setType(type);
 	else
 		this->type = type;
 }
 
 types::Type *Var::getType()
 {
-	if (mapped)
-		return mapped->getType();
+	if (!mapped.empty())
+		return mapped.top()->getType();
 
 	assert(type);
 	return type;
