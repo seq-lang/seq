@@ -378,6 +378,28 @@ DictExpr *DictExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new DictExpr(elemsCloned, dictType->clone(ref)));
 }
 
+static void setBodyBase(For *body, BaseFunc *base)
+{
+	Block *inner = body->getBlock();
+	body->setBase(base);
+	while (!inner->stmts.empty()) {
+		for (auto *stmt : inner->stmts)
+			stmt->setBase(base);
+
+		Stmt *stmt = inner->stmts.back();
+		auto *next1 = dynamic_cast<For *>(stmt);
+		auto *next2 = dynamic_cast<If *>(stmt);
+
+		if (next1) {
+			inner = next1->getBlock();
+		} else if (next2) {
+			inner = next2->getBlock();
+		} else {
+			break;
+		}
+	}
+}
+
 ListCompExpr::ListCompExpr(Expr *val, For *body, types::Type *listType, bool realize) :
     Expr(), val(val), body(body), listType(listType), realize(realize)
 {
@@ -396,6 +418,7 @@ void ListCompExpr::resolveTypes()
 
 Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	setBodyBase(body, base);
 	types::Type *type = getType();
 	ConstructExpr construct(type, {});
 	Value *list = construct.codegen(base, block);
@@ -465,6 +488,7 @@ void SetCompExpr::resolveTypes()
 
 Value *SetCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	setBodyBase(body, base);
 	types::Type *type = getType();
 	ConstructExpr construct(type, {});
 	Value *set = construct.codegen(base, block);
@@ -535,6 +559,7 @@ void DictCompExpr::resolveTypes()
 
 Value *DictCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	setBodyBase(body, base);
 	types::Type *type = getType();
 	ConstructExpr construct(type, {});
 	Value *dict = construct.codegen(base, block);
@@ -604,28 +629,6 @@ void GenExpr::resolveTypes()
 static std::string argName(unsigned i)
 {
 	return "arg" + std::to_string(i);
-}
-
-static void setBodyBase(For *body, BaseFunc *base)
-{
-	Block *inner = body->getBlock();
-	body->setBase(base);
-	while (!inner->stmts.empty()) {
-		for (auto *stmt : inner->stmts)
-			stmt->setBase(base);
-
-		Stmt *stmt = inner->stmts.back();
-		auto *next1 = dynamic_cast<For *>(stmt);
-		auto *next2 = dynamic_cast<If *>(stmt);
-
-		if (next1) {
-			inner = next1->getBlock();
-		} else if (next2) {
-			inner = next2->getBlock();
-		} else {
-			break;
-		}
-	}
 }
 
 Value *GenExpr::codegen0(BaseFunc *base, BasicBlock*& block)
