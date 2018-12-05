@@ -240,6 +240,9 @@ not_test: // General comparison: a, not a, a < 5
 expr_term: // Expression term: 4, a(4), a[5], a.x, p 
   | atom 
     { $1 }
+  | expr_term LP; test comprehension; RP
+    { pos (fst $1) $5, 
+      Call ($1, [ (pos $2 $5, Generator ($3, $4)) ]) }
   | expr_term LP; args = separated_list(COMMA, call_term); RP
     { pos (fst $1) $4, 
       Call ($1, args) }

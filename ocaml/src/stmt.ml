@@ -323,10 +323,6 @@ struct
       | None -> Ctx.add ctx name (Ctx.Assignable.Func fn)
     end;
 
-    Option.value_map typ
-      ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type ctx typ))
-      ~default:();
-
     let new_ctx = 
       { ctx with 
         base = fn; 
@@ -344,6 +340,10 @@ struct
         Llvm.Generics.Func.get fn idx) 
     in
     Llvm.Func.set_args fn names types;
+
+    Option.value_map typ
+      ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type new_ctx typ))
+      ~default:();
 
     add_block new_ctx stmts 
       ~preprocess:(fun ctx ->

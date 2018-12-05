@@ -710,8 +710,12 @@ FOREIGN void *init_module()
 
 /// Anythong below throws exceptions
 
+// Yes, separator character here is \b
+// and yes, it will fail if \b is within filename or message
+//          (although one might wonder what's \b doing in a filename?)
+// and yes, it needs proper escaping.
 #define CATCH(er) \
-	auto info = e.getSrcInfo(); \
+    auto info = e.getSrcInfo(); \
 	asprintf(er, "%s\b%s\b%d\b%d\b%d", \
 		e.what(), \
 		info.file.c_str(), info.line, info.col, info.len );
@@ -733,9 +737,9 @@ FOREIGN BaseFunc *realize_func
 	(FuncExpr *e, types::Type **types, size_t sz, char **error)
 {
 	*error = nullptr;
-	auto *fn = dynamic_cast<Func *>(e->getFunc());
-	if (sz == 0) return fn;
-	try {
+    try {
+        auto *fn = dynamic_cast<Func *>(e->getFunc());
+        if (sz == 0) return fn;
 		return fn->realize(vector<types::Type *>(types, types + sz));
 	} catch (exc::SeqException &e) {
 		CATCH (error);

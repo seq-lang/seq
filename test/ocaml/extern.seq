@@ -21,6 +21,17 @@
 # print a, b
 # print a+"x"
 
+def sum(y):
+    i=0
+    for j in y: i+=j
+    return i
+
+def none[`t]() -> `t:  # right now the `t return type fails -- symbol not found
+    return None
+
+print sum(i*i for i in range(10))    # fails: parsing error
+print sum((i*i for i in range(10)))  # works
+
 print 'hello'
 
 a = 5
@@ -29,15 +40,15 @@ y = (a + 1 + i for i in s)
 for i in y:
     print i
 
-class Exc(msg: str):
-    def yodel(self):
-        print 'Yodel-oh-ee-dee-ay-dee', self.msg
-    pass
-try:
-    print 'try'
-    raise Exc('suisse')
-except:
-    print 'ooops'
+# class Exc(msg: str):
+#     def yodel(self):
+#         print 'Yodel-oh-ee-dee-ay-dee', self.msg
+#     pass
+# try:
+#     print 'try'
+#     raise Exc('suisse')
+# except:
+#     print 'ooops'
 # raise Exc('woof')
 
 
