@@ -1236,8 +1236,10 @@ GetElemExpr *GetElemExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new GetElemExpr(rec->clone(ref), memb));
 }
 
-GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb) :
-    Expr(), type(type), memb(std::move(memb))
+GetStaticElemExpr::GetStaticElemExpr(types::Type *type,
+                                     std::string memb,
+                                     std::vector<types::Type *> types) :
+    Expr(), type(type), memb(std::move(memb)), types(std::move(types))
 {
 }
 
@@ -1258,17 +1260,24 @@ void GetStaticElemExpr::resolveTypes()
 
 Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
-	return type->staticMemb(memb, block);
+	FuncExpr f(type->getMethod(memb), types);
+	f.resolveTypes();
+	return f.codegen(base, block);
 }
 
 types::Type *GetStaticElemExpr::getType0() const
 {
-	return type->staticMembType(memb);
+	FuncExpr f(type->getMethod(memb), types);
+	f.resolveTypes();
+	return f.getType();
 }
 
 GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref)
 {
-	SEQ_RETURN_CLONE(new GetStaticElemExpr(type->clone(ref), memb));
+	std::vector<types::Type *> typesCloned;
+	for (auto *type : types)
+		typesCloned.push_back(type->clone(ref));
+	SEQ_RETURN_CLONE(new GetStaticElemExpr(type->clone(ref), memb, typesCloned));
 }
 
 MethodExpr::MethodExpr(Expr *expr,

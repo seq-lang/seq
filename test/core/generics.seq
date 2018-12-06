@@ -37,8 +37,19 @@ class A[`a,`b,`c](a: `a, b: `b, c: `c):
 def m7[`t,`s]():
     print "works"
 
+class B1[`t](a: `t):
+    def foo[`s](self: `s) -> B1[int]:
+        return B1[int](111)
+
+class B2[`t](a: `t):
+    def foo[`s](self: B2[`s]):
+        return B2[int](222)
+
 a1 = A(42, 3.14, "hello")
 a2 = A(1, 2, 3)
+b1 = B1[bool](True).foo()
+b2 = B2[str]("x").foo()
+
 v1 = array[array[array[str]]](1)
 v2 = array[array[str]](1)
 v3 = array[str](1)
@@ -63,3 +74,5 @@ m7[str,float]()                     # EXPECT: works
 m7[str,float]()                     # EXPECT: works
 m7[float,str]()                     # EXPECT: works
 f(99)                               # EXPECT: 99
+print b1.foo().a                    # EXPECT: 111
+print b2.foo().a                    # EXPECT: 222

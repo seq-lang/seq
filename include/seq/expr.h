@@ -344,8 +344,11 @@ namespace seq {
 	private:
 		types::Type *type;
 		std::string memb;
+		std::vector<types::Type *> types;
 	public:
-		GetStaticElemExpr(types::Type *type, std::string memb);
+		GetStaticElemExpr(types::Type *type,
+		                  std::string memb,
+		                  std::vector<types::Type *> types={});
 		types::Type *getTypeInExpr() const;
 		std::string getMemb() const;
 		void resolveTypes() override;
@@ -363,7 +366,7 @@ namespace seq {
 	public:
 		MethodExpr(Expr *expr,
 		           std::string method,
-		           std::vector<types::Type *> realizedTypes,
+		           std::vector<types::Type *> types,
 		           Expr *orig=nullptr);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;

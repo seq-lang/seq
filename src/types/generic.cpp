@@ -3,20 +3,14 @@
 using namespace seq;
 using namespace llvm;
 
-types::GenericType::GenericType() :
-    Type("generic", types::BaseType::get()), aboutToBeRealized(false),
-    genericName(), type(nullptr)
+types::GenericType::GenericType(types::RefType *pending, std::vector<types::Type *> types) :
+    Type("generic", types::BaseType::get()), genericName(), type(nullptr), pending(pending),
+    types(std::move(types))
 {
 }
 
-void types::GenericType::markAboutToBeRealized()
+types::GenericType::GenericType() : GenericType(nullptr, {})
 {
-	aboutToBeRealized = true;
-}
-
-void types::GenericType::unmarkAboutToBeRealized()
-{
-	aboutToBeRealized = false;
 }
 
 void types::GenericType::setName(std::string name)
@@ -26,8 +20,14 @@ void types::GenericType::setName(std::string name)
 
 void types::GenericType::realize(types::Type *type)
 {
-	assert(!this->type);
+	assert(!this->type && !pending);
 	this->type = type;
+}
+
+void types::GenericType::realize() const
+{
+	if (!type && pending)
+		type = pending->realize(types);
 }
 
 bool types::GenericType::realized() const
@@ -37,6 +37,7 @@ bool types::GenericType::realized() const
 
 void types::GenericType::ensure() const
 {
+	realize();
 	if (!realized())
 		throw exc::SeqException("generic type '" + genericName + "' not yet realized");
 }
@@ -56,6 +57,7 @@ int types::GenericType::getID() const
 
 std::string types::GenericType::getName() const
 {
+	realize();
 	if (!type)
 		return genericName.empty() ? "<Generic>" : genericName;
 	return type->getName();
@@ -204,6 +206,7 @@ bool types::GenericType::isAtomic() const
 
 bool types::GenericType::is(types::Type *type) const
 {
+	realize();
 	if (!realized())
 		return this == type;
 
@@ -229,6 +232,7 @@ bool types::GenericType::isGeneric(types::Type *type) const
 
 unsigned types::GenericType::numBaseTypes() const
 {
+	realize();
 	return realized() ? type->numBaseTypes() : 0;
 }
 
@@ -258,21 +262,25 @@ size_t types::GenericType::size(Module *module) const
 
 types::RecordType *types::GenericType::asRec()
 {
+	realize();
 	return type ? type->asRec() : nullptr;
 }
 
 types::RefType *types::GenericType::asRef()
 {
+	realize();
 	return type ? type->asRef() : nullptr;
 }
 
 types::GenType *types::GenericType::asGen()
 {
+	realize();
 	return type ? type->asGen() : nullptr;
 }
 
 types::OptionalType *types::GenericType::asOpt()
 {
+	realize();
 	return type ? type->asOpt() : nullptr;
 }
 
@@ -281,18 +289,31 @@ types::GenericType *types::GenericType::get()
 	return new GenericType();
 }
 
+types::GenericType *types::GenericType::get(types::RefType *pending, std::vector<types::Type *> types)
+{
+	return new GenericType(pending, std::move(types));
+}
+
 types::GenericType *types::GenericType::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
 		return (types::GenericType *)ref->getClone(this);
 
-	if (!aboutToBeRealized && !realized())
-		return this;
-
 	auto *x = types::GenericType::get();
 	ref->addClone(this, x);
 	x->setName(genericName);
-	if (type) x->realize(type->clone(ref));
+
+	if (type) {
+		x->realize(type->clone(ref));
+	} else if (pending) {
+		std::vector<types::Type *> typesCloned;
+		for (auto *type : types)
+			typesCloned.push_back(type->clone(ref));
+
+		x->pending = pending;
+		x->types = typesCloned;
+	}
+
 	return x;
 }
 
@@ -328,8 +349,7 @@ bool types::GenericType::findInType(types::Type *type, std::vector<unsigned>& pa
 	return findInTypeHelper(this, type, path, seen);
 }
 
-Generic::Generic(bool performCaching) :
-    performCaching(performCaching), root(this), generics(), cloneCache()
+Generic::Generic() : generics(), cloneCache()
 {
 }
 
@@ -355,15 +375,12 @@ bool Generic::is(Generic *other) const
 	return typeMatch<types::GenericType>(generics, other->generics);
 }
 
-Generic *Generic::findCachedRealizedType(std::vector<types::Type *> types) const
+void Generic::clearRealizationCache()
 {
-	for (auto& v : root->realizationCache) {
-		if (typeMatch<>(v.first, types)) {
-			return v.second;
-		}
-	}
+}
 
-	return nullptr;
+void Generic::addCachedRealized(std::vector<types::Type *> types, Generic *x)
+{
 }
 
 void Generic::setCloneBase(Generic *x, Generic *ref)
@@ -373,13 +390,12 @@ void Generic::setCloneBase(Generic *x, Generic *ref)
 		genericsCloned.push_back(generic->clone(ref));
 
 	x->generics = genericsCloned;
-	x->root = root;
 }
 
 void Generic::addGenerics(int count)
 {
 	generics.clear();
-	root->realizationCache.clear();
+	clearRealizationCache();
 
 	for (int i = 0; i < count; i++)
 		generics.push_back(types::GenericType::get());
@@ -388,7 +404,7 @@ void Generic::addGenerics(int count)
 	for (auto *generic : generics)
 		types.push_back(generic);
 
-	root->realizationCache.emplace_back(types, this);
+	addCachedRealized(types, this);
 }
 
 unsigned Generic::numGenerics() const
@@ -426,26 +442,14 @@ Generic *Generic::realizeGeneric(std::vector<types::Type *> types)
 		throw exc::SeqException("expected " + std::to_string(generics.size()) +
 		                        " type parameters, but got " + std::to_string(types.size()));
 
-	if (performCaching) {
-		Generic *cached = findCachedRealizedType(types);
-
-		if (cached)
-			return cached;
-	}
-
-	for (auto *generic : generics)
-		generic->markAboutToBeRealized();
-
+	auto old = cloneCache;
+	cloneCache.clear();
 	Generic *x = clone(this);
-	root->realizationCache.emplace_back(types, x);
 
 	for (unsigned i = 0; i < types.size(); i++)
 		x->generics[i]->realize(types[i]);
 
-	for (auto *generic : generics)
-		generic->unmarkAboutToBeRealized();
-
-	cloneCache.clear();
+	cloneCache = old;
 	return x;
 }
 

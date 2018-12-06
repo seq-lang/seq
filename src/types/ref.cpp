@@ -5,9 +5,9 @@ using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name) :
-    Type(std::move(name), BaseType::get()), Generic(true),
+    Type(std::move(name), BaseType::get()), Generic(),
     done(false), root(this), cache(), pendingRealizations(),
-    contents(types::RecordType::get({}))
+    realizationCache(), contents(types::RecordType::get({}))
 {
 }
 
@@ -15,11 +15,6 @@ void types::RefType::setDone()
 {
 	assert(this == root && !done);
 	done = true;
-
-	for (auto& pair : pendingRealizations)
-		pair.second->realize(realize(pair.first));
-
-	pendingRealizations.clear();
 }
 
 void types::RefType::setContents(types::RecordType *contents)
@@ -54,20 +49,20 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 	if (this != root)
 		return root->realize(types);
 
-	auto *cached = dynamic_cast<types::RefType *>(findCachedRealizedType(types));
+	types::Type *cached = findCachedRealized(types);
 
 	if (cached)
 		return cached;
 
 	if (!done) {
-		types::GenericType *proxy = types::GenericType::get();
-		pendingRealizations.emplace_back(types, proxy);
-		return proxy;
+		types::GenericType *pending = types::GenericType::get(this, types);
+		return pending;
 	}
 
 	Generic *x = realizeGeneric(types);
 	auto *ref = dynamic_cast<types::RefType *>(x);
 	assert(ref);
+	addCachedRealized(types, ref);
 	ref->resolveTypes();
 	return ref;
 }
@@ -268,6 +263,8 @@ types::RefType *types::RefType::get(std::string name)
 
 types::RefType *types::RefType::clone(Generic *ref)
 {
+	assert(done);
+
 	if (ref->seenClone(this))
 		return (types::RefType *)ref->getClone(this);
 
@@ -290,6 +287,26 @@ types::RefType *types::RefType::clone(Generic *ref)
 	x->root = root;
 	x->done = true;
 	return x;
+}
+
+void types::RefType::clearRealizationCache()
+{
+	root->realizationCache.clear();
+}
+
+types::Type *types::RefType::findCachedRealized(std::vector<types::Type *> types) const
+{
+	for (auto& v : root->realizationCache) {
+		if (typeMatch<>(v.first, types))
+			return v.second;
+	}
+
+	return nullptr;
+}
+
+void types::RefType::addCachedRealized(std::vector<types::Type *> types, Generic *x)
+{
+	root->realizationCache.emplace_back(types, dynamic_cast<types::Type *>(x));
 }
 
 types::RefType *types::RefType::none()

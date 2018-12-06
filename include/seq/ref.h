@@ -36,8 +36,9 @@ namespace seq {
 			 * the somewhat hacky trick of returning a generic type and then realizing it with the
 			 * correct reference type later.
 			 */
-			mutable std::vector<std::pair<std::vector<types::Type *>, GenericType *>> pendingRealizations;
+			mutable std::vector<types::GenericType *> pendingRealizations;
 
+			std::vector<std::pair<std::vector<types::Type *>, types::Type *>> realizationCache;
 			RecordType *contents;
 			explicit RefType(std::string name);
 
@@ -81,6 +82,9 @@ namespace seq {
 			static RefType *get(std::string name);
 
 			types::RefType *clone(Generic *ref) override;
+			void clearRealizationCache() override;
+			types::Type *findCachedRealized(std::vector<types::Type *> types) const;
+			void addCachedRealized(std::vector<types::Type *> types, Generic *x) override;
 
 			static RefType *none();
 		};

@@ -10,15 +10,17 @@ namespace seq {
 	namespace types {
 		class GenericType : public Type {
 		private:
-			bool aboutToBeRealized;
 			std::string genericName;
-			Type *type;
+			mutable Type *type;
+
+			RefType *pending;
+			std::vector<types::Type *> types;
 		public:
 			GenericType();
-			void markAboutToBeRealized();
-			void unmarkAboutToBeRealized();
+			GenericType(RefType *pending, std::vector<Type *> types);
 			void setName(std::string name);
 			void realize(Type *type);
+			void realize() const;
 			bool realized() const;
 			void ensure() const;
 			Type *getType() const;
@@ -93,6 +95,7 @@ namespace seq {
 			OptionalType *asOpt() override;
 
 			static GenericType *get();
+			static GenericType *get(RefType *pending, std::vector<Type *> types);
 
 			GenericType *clone(Generic *ref) override;
 			bool findInType(types::Type *type, std::vector<unsigned>& path);
@@ -101,22 +104,18 @@ namespace seq {
 
 	class Generic {
 	private:
-		bool performCaching;
-		Generic *root;
-
 		std::vector<types::GenericType *> generics;
-		std::vector<std::pair<std::vector<types::Type *>, Generic *>> realizationCache;
 		std::map<void *, void *> cloneCache;
 	public:
-		explicit Generic(bool performCaching);
-
+		Generic();
 		virtual std::string genericName()=0;
 		virtual Generic *clone(Generic *ref)=0;
+		virtual void clearRealizationCache();
+		virtual void addCachedRealized(std::vector<types::Type *> types, Generic *x);
 
 		bool unrealized();
 		std::vector<types::Type *> getRealizedTypes() const;
 		bool is(Generic *other) const;
-		Generic *findCachedRealizedType(std::vector<types::Type *> types) const;
 		void setCloneBase(Generic *x, Generic *ref);
 		void addGenerics(int count);
 		unsigned numGenerics() const;

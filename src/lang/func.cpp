@@ -46,7 +46,7 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 }
 
 Func::Func() :
-    BaseFunc(), Generic(false), SrcObject(), external(false), name(), inTypes(), outType(types::Void),
+    BaseFunc(), Generic(), SrcObject(), external(false), name(), inTypes(), outType(types::Void),
     scope(new Block()), argNames(), argVars(), parentFunc(nullptr), ret(nullptr), yield(nullptr),
     resolvingTypes(false), gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
