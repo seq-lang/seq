@@ -353,10 +353,10 @@ Generic::Generic() : generics(), cloneCache()
 {
 }
 
-bool Generic::unrealized()
+bool Generic::realized()
 {
 	for (auto *generic : generics) {
-		if (generic->realized())
+		if (!generic->realized())
 			return false;
 	}
 	return true;
@@ -456,7 +456,7 @@ Generic *Generic::realizeGeneric(std::vector<types::Type *> types)
 std::vector<types::Type *> Generic::deduceTypesFromArgTypes(const std::vector<types::Type *>& inTypes,
                                                             const std::vector<types::Type *>& argTypes)
 {
-	assert(numGenerics() > 0 && unrealized());
+	assert(numGenerics() > 0 && !realized());
 
 	if (argTypes.size() != inTypes.size())
 		throw exc::SeqException("expected " + std::to_string(inTypes.size()) + " arguments, " +

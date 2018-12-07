@@ -31,13 +31,6 @@ namespace seq {
 			 */
 			mutable std::vector<std::pair<std::vector<types::Type *>, llvm::StructType *>> cache;
 
-			/*
-			 * These are for type-instantiations that happen _inside_ the class definition. We employ
-			 * the somewhat hacky trick of returning a generic type and then realizing it with the
-			 * correct reference type later.
-			 */
-			mutable std::vector<types::GenericType *> pendingRealizations;
-
 			std::vector<std::pair<std::vector<types::Type *>, types::Type *>> realizationCache;
 			RecordType *contents;
 			explicit RefType(std::string name);

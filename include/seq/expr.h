@@ -223,6 +223,8 @@ namespace seq {
 		FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types={});
 		explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types={});
 		BaseFunc *getFunc();
+		bool isRealized() const;
+		void setRealizeTypes(std::vector<types::Type *> types);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
@@ -329,11 +331,23 @@ namespace seq {
 	private:
 		Expr *rec;
 		std::string memb;
+		std::vector<types::Type *> types;
+		GetElemExpr *orig;
 	public:
-		GetElemExpr(Expr *rec, std::string memb);
-		GetElemExpr(Expr *rec, seq_int_t idx);
+		GetElemExpr(Expr *rec,
+		            std::string memb,
+		            GetElemExpr *orig,
+		            std::vector<types::Type *> types={});
+		GetElemExpr(Expr *rec,
+		            std::string memb,
+		            std::vector<types::Type *> types={});
+		GetElemExpr(Expr *rec,
+		            unsigned memb,
+		            std::vector<types::Type *> types={});
 		Expr *getRec();
 		std::string getMemb();
+		bool isRealized() const;
+		void setRealizeTypes(std::vector<types::Type *> types);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
@@ -345,33 +359,23 @@ namespace seq {
 		types::Type *type;
 		std::string memb;
 		std::vector<types::Type *> types;
+		GetStaticElemExpr *orig;
 	public:
+		GetStaticElemExpr(types::Type *type,
+		                  std::string memb,
+		                  GetStaticElemExpr *orig,
+		                  std::vector<types::Type *> types={});
 		GetStaticElemExpr(types::Type *type,
 		                  std::string memb,
 		                  std::vector<types::Type *> types={});
 		types::Type *getTypeInExpr() const;
 		std::string getMemb() const;
+		bool isRealized() const;
+		void setRealizeTypes(std::vector<types::Type *> types);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
 		GetStaticElemExpr *clone(Generic *ref) override;
-	};
-
-	class MethodExpr : public Expr {
-	private:
-		Expr *expr;
-		std::string name;
-		std::vector<types::Type *> types;
-		Expr *orig;  // original expression before type deduction, if any
-	public:
-		MethodExpr(Expr *expr,
-		           std::string method,
-		           std::vector<types::Type *> types,
-		           Expr *orig=nullptr);
-		void resolveTypes() override;
-		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
-		types::MethodType *getType0() const override;
-		Expr *clone(Generic *ref) override;
 	};
 
 	class CallExpr : public Expr {

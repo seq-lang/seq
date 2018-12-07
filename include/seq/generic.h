@@ -113,7 +113,7 @@ namespace seq {
 		virtual void clearRealizationCache();
 		virtual void addCachedRealized(std::vector<types::Type *> types, Generic *x);
 
-		bool unrealized();
+		bool realized();
 		std::vector<types::Type *> getRealizedTypes() const;
 		bool is(Generic *other) const;
 		void setCloneBase(Generic *x, Generic *ref);

@@ -6,8 +6,8 @@ using namespace llvm;
 
 types::RefType::RefType(std::string name) :
     Type(std::move(name), BaseType::get()), Generic(),
-    done(false), root(this), cache(), pendingRealizations(),
-    realizationCache(), contents(types::RecordType::get({}))
+    done(false), root(this), cache(), realizationCache(),
+    contents(types::RecordType::get({}))
 {
 }
 

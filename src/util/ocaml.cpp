@@ -235,13 +235,6 @@ FOREIGN Expr *static_expr(types::Type *ty, char *name)
 	return t;
 }
 
-FOREIGN Expr *method_expr(Expr *expr, char *name, types::Type **types, size_t len)
-{
-	auto t = new MethodExpr(expr, name, vector<types::Type *>(types, types + len));
-	free(name);
-	return t;
-}
-
 FOREIGN Expr *list_expr(types::Type *ty, Expr **args, size_t len)
 {
 	return new ListExpr(vector<Expr *>(args, args + len), ty);
@@ -708,7 +701,22 @@ FOREIGN void *init_module()
 	return new SeqModule();
 }
 
-/// Anythong below throws exceptions
+FOREIGN void set_func_realize_types(FuncExpr *e, types::Type **types, size_t sz)
+{
+	e->setRealizeTypes(vector<types::Type *>(types, types + sz));
+}
+
+FOREIGN void set_elem_realize_types(GetElemExpr *e, types::Type **types, size_t sz)
+{
+	e->setRealizeTypes(vector<types::Type *>(types, types + sz));
+}
+
+FOREIGN void set_static_realize_types(GetStaticElemExpr *e, types::Type **types, size_t sz)
+{
+	e->setRealizeTypes(vector<types::Type *>(types, types + sz));
+}
+
+/// Anything below throws exceptions
 
 // Yes, separator character here is \b
 // and yes, it will fail if \b is within filename or message
