@@ -204,24 +204,22 @@ struct
       Llvm.Expr.typ @@ Llvm.Type.func ret args
     | _ -> 
       let lh_expr = parse ctx lh_expr in
-      (* let indices = List.map indices ~f:(parse ctx) in *)
-      (* let all_types = List.for_all indices ~f:Llvm.Expr.is_type in *)
-
-      (* Util.dbg "---> %s" (Llvm.Expr.get_name lh_expr); *)
-      if Llvm.Expr.is_type lh_expr then
-        (* let indices = List.map indices ~f:Llvm.Type.expr_type in *)
-        let indices = List.map indices ~f:(parse_type ctx) in
-        let typ = Llvm.Type.expr_type lh_expr in
-        let typ = Llvm.Generics.Type.realize typ indices in
-        Llvm.Expr.typ typ
-      (* else if all_types then *)
-        (* let indices = List.map indices ~f:Llvm.Type.expr_type in *)
-      else if (Llvm.Expr.get_name lh_expr) = "func" then
-        let indices = List.map indices ~f:(parse_type ctx) in
-        let typ = Llvm.Generics.Func.realize lh_expr indices in
-        Llvm.Expr.func typ
+      let indices = List.map indices ~f:(parse ctx) in
+      let all_types = List.for_all indices ~f:Llvm.Expr.is_type in
+      if all_types then
+        let indices = List.map indices ~f:Llvm.Type.expr_type in
+        match Llvm.Expr.get_name lh_expr with
+        | "type" ->
+          let typ = Llvm.Type.expr_type lh_expr in
+          let typ = Llvm.Generics.Type.realize typ indices in
+          Llvm.Expr.typ typ
+        | ("func" | "elem" | "static") as kind ->
+          Llvm.Generics.set_types ~kind lh_expr indices;
+          (* let typ = Llvm.Generics.Func.realize lh_expr indices in *)
+          lh_expr
+        | _ ->
+          serr ~pos "wrong LHS for type realization"
       else if (List.length indices) = 1 then
-        let indices = List.map indices ~f:(parse ctx) in
         Llvm.Expr.lookup lh_expr (List.hd_exn indices)
       else
         serr ~pos "index requires only one item"

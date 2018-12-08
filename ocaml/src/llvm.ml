@@ -498,6 +498,12 @@ module Func = struct
 end
 
 module Generics = struct
+  let set_types ~kind expr types = 
+    let arr, len = list_to_carr Types.typ types in
+    foreign (sprintf "set_%s_realize_types" kind)
+      (Types.expr @-> ptr Types.typ @-> size_t @-> returning void)
+      expr arr len
+
   module Func = struct
     let set_number = foreign "set_func_generics" 
       (Types.func @-> int @-> returning void)

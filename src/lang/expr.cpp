@@ -1209,6 +1209,7 @@ GetElemExpr::GetElemExpr(Expr *rec,
                          std::vector<types::Type *> types) :
     rec(rec), memb(std::move(memb)), types(std::move(types)), orig(orig)
 {
+	name = "elem";
 }
 
 GetElemExpr::GetElemExpr(Expr *rec,
@@ -1307,6 +1308,7 @@ GetStaticElemExpr::GetStaticElemExpr(types::Type *type,
                                      std::vector<types::Type *> types) :
     Expr(), type(type), memb(std::move(memb)), types(std::move(types)), orig(orig)
 {
+	name = "static";
 }
 
 GetStaticElemExpr::GetStaticElemExpr(types::Type *type,
