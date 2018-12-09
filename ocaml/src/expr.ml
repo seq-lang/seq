@@ -11,10 +11,11 @@ open Core
 open Err
 open Ast
 
-(** This module is an implementation of [Intf.Expr] module that
+(** This module is an implementation of [Intf.ExprIntf] module that
     describes expression AST parser.
-    Requires [Intf.Stmt] for parsing generators ([parse_for] and [finalize]) *)
-module ExprParser (S : Intf.Stmt) : Intf.Expr = 
+    Requires [Intf.StmtIntf] for parsing generators 
+    ([parse_for] and [finalize]) *)
+module ExprParser (S : Intf.StmtIntf) : Intf.ExprIntf = 
 struct
   open ExprNode
 

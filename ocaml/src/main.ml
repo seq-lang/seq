@@ -5,8 +5,8 @@ open Err
 
 module T = ANSITerminal
 
-module rec SeqS: Intf.Stmt = Stmt.StmtParser (SeqE)
-       and SeqE: Intf.Expr = Expr.ExprParser (SeqS) 
+module rec SeqS: Intf.StmtIntf = Stmt.StmtParser (SeqE)
+       and SeqE: Intf.ExprIntf = Expr.ExprParser (SeqS) 
 
 let rec parse_string ?fname ?debug ctx code =
   let fname = Option.value fname ~default:"" in

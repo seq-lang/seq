@@ -8,7 +8,7 @@
  ******************************************************************************)
 
 (** Expression AST parsing interface  *)
-module type Expr =
+module type ExprIntf =
 sig
    (** Parses expression ([Ast.ExprNode.t]) AST *)
    val parse: 
@@ -23,7 +23,7 @@ sig
 end
 
 (** Statement AST parsing interface *)
-module type Stmt =
+module type StmtIntf =
 sig
    (** Parses statement ([Ast.StmtNode.t]) AST *)
    val parse: 
