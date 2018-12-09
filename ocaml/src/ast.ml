@@ -1,8 +1,16 @@
-(* 786 *)
+(******************************************************************************
+ *
+ * Seq OCaml 
+ * ast.ml: AST type definitions
+ *
+ * Author: inumanag
+ *
+ ******************************************************************************)
 
 open Core
 open Sexplib.Std
 
+(** File position descriptor for an AST node. Sexpable. *)
 module Pos = 
 struct
   type t = 
@@ -12,15 +20,18 @@ struct
       len: int }
   [@@deriving sexp]
   
+  (** Creates dummy position for internal classes *)
   let dummy =
     { file = ""; line = -1; col = -1; len = 0 }
 end
 
+(** Expression AST node.
+    Each node [t] is a 2-tuple that stores 
+    (1) position [Pos] within a file, and
+    (2) node data [node].
+    Sexpable. *)
 module ExprNode = 
 struct 
-  (** Each node is a 2-tuple that stores 
-      (1) position within a file and
-      (2) node data *)
   type 'a tt = 
     Pos.t * 'a
   and t = 
@@ -63,11 +74,13 @@ struct
   [@@deriving sexp]
 end 
 
+(** Statement AST node.
+    Each node [t] is a 2-tuple that stores 
+    (1) position [Pos] within a file, and
+    (2) node data [node].
+    Sexpable. *)
 module StmtNode = 
 struct
-  (** Each node is a 2-tuple that stores 
-      (1) position within a file and
-      (2) node data *)
   type 'a tt = 
     Pos.t * 'a
   and t =
@@ -129,5 +142,8 @@ struct
   [@@deriving sexp]
 end
 
-type t = Module of StmtNode.t list
+(** Module AST node.
+    Currently just a list of statements. Sexpable. *)
+type t = 
+  | Module of StmtNode.t list
 [@@deriving sexp]

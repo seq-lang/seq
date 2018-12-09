@@ -1,9 +1,16 @@
-(* 786 *)
+(******************************************************************************
+ *
+ * Seq OCaml 
+ * util.ml: Utility functions and helpers
+ *
+ * Author: inumanag
+ *
+ ******************************************************************************)
 
 open Core
 
-module A = ANSITerminal 
-
+(** Colors a string for terminal printing.
+    TODO: Use Fmt library *)
 let style_to_string s = 
   let open ANSITerminal in
   match s with
@@ -32,30 +39,24 @@ let style_to_string s =
   | Background White -> "47"
   | Background Default -> "49"
 
-let wrap style str =
-  sprintf "\027[%sm%s" 
-    (List.map style ~f:style_to_string |> String.concat ~sep:";") str
+(** [sci ~sep lst str] creates a string formed by concatenating 
+    string representations (via [str]) of elements of [lst] with separator [sep]
+    (default separator is [", "]).
+    TODO: Use Fmt library *)
+let sci lst ?(sep=", ") str =
+  String.concat ~sep @@ List.map ~f:str lst
 
-let sci lst ?sep fn =
-  let sep = Option.value sep ~default:", " in
-  String.concat ~sep @@ List.map ~f:fn lst
-
+(** Output debug information to stderr (with red color or other [style])
+    with sprintf-style format string
+    if [SEQ_DEBUG] enviromental variable is set. *)
 let dbg ?style fmt =
+  let open ANSITerminal in
   let fn, fno = match Sys.getenv "SEQ_DEBUG" with 
     | Some _ -> Caml.Printf.kfprintf, Caml.Printf.fprintf
     | None -> Caml.Printf.ikfprintf, Caml.Printf.ifprintf
   in
-  let style = Option.value ~default:[A.Foreground A.Red] style in 
+  let style = Option.value ~default:[Foreground Red] style in 
   let codes = List.map style ~f:style_to_string |> String.concat ~sep:";" in
   Caml.Printf.fprintf stderr "\027[%sm" codes;
   fn (fun o -> fno o "\027[0m \n%!") stderr fmt 
 
-module Option = 
-struct
-  include Option
-  
-  let unit_map ~f ~default a = 
-    match a with 
-    | Some a -> f a
-    | None -> default ()
-end

@@ -1,18 +1,37 @@
-(* 786 *)
+(******************************************************************************
+ *
+ * Seq OCaml 
+ * err.ml: Error exceptions and helpers
+ *
+ * Author: inumanag
+ *
+ ******************************************************************************)
 
-type error =
+(** Error kind description *)
+type t =
   | Lexer of string
   | Parser
   | Descent of string
   | Compiler of string
 
-exception SeqCError of string * Ast.Pos.t
-exception SeqCamlError of string * Ast.Pos.t list
+(** Unified exception that groups all other exceptions based on their source *)
 exception CompilerError of error * Ast.Pos.t list
+(** LLVM/C++ exception *)
+exception SeqCError of string * Ast.Pos.t
+(** AST-parsing exception  *)
+exception SeqCamlError of string * Ast.Pos.t list
 
+(** [serr ~pos format_string ...] throws an AST-parsing exception 
+    with message formatted via sprintf-style [format_string]
+    that indicates file position [pos] as a culprit. *)
 let serr ?(pos=Ast.Pos.dummy) fmt = 
   Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [pos]))) fmt
 
+(** Helper to parse string exception messages passed from C++ library to 
+    OCaml and to extract [Ast.Pos] information from them. 
+    Currently done in a very primitive way by using '\b' as field separator.
+
+    TODO: pass and parse Sexp-style strings *)
 let split_error msg = 
   let open Core in
   let l = Array.of_list @@ String.split ~on:'\b' msg in

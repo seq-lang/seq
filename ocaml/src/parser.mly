@@ -1,6 +1,10 @@
 (******************************************************************************
-  786
-  Menhir grammar for Seq language
+ *
+ * Seq OCaml 
+ * parser.mly: Menhir grammar description of Seq language 
+ *
+ * Author: inumanag
+ *
  ******************************************************************************)
 
 %{

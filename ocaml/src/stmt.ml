@@ -1,10 +1,20 @@
-(* 786 *)
+(******************************************************************************
+ *
+ * Seq OCaml 
+ * stmt.ml: Statement AST parsing module
+ *
+ * Author: inumanag
+ *
+ ******************************************************************************)
 
 open Core
 open Err
 open Ast
 open Util
 
+(** This module is an implementation of [Intf.Stmt] module that
+    describes statement AST parser.
+    Requires [Intf.Expr] for parsing expressions ([parse] and [parse_type]) *)
 module StmtParser (E : Intf.Expr) : Intf.Stmt =
 struct
   open ExprNode
@@ -14,7 +24,8 @@ struct
      Public interface
      *************************************************************** *)
   
-  (** Dispatch function for [StmtNode.t] *)
+  (** [parse context expr] dispatches statement AST to the proper parser 
+      and finalizes the processed statement. *)
   let rec parse (ctx: Ctx.t) (pos, node) =
     let stmt = match node with
       | Break    p -> parse_break    ctx pos p
@@ -43,9 +54,10 @@ struct
       | Generic 
         Class    p -> parse_class    ctx pos p 
     in
-    finalize_stmt ctx stmt pos
+    finalize ctx stmt pos
 
-  (** Dispatch function for [Ast.t] *)
+  (** [parse_module context module] parses module AST.
+      A module is just a simple list of statements. *)
   and parse_module (ctx: Ctx.t) mdl = 
     match mdl with
     | Module stmts -> 
@@ -86,12 +98,12 @@ struct
     | _, _ ->
       let var_stmts = List.map rh ~f:(fun rhs ->
         let rh_expr = E.parse ctx rhs in
-        finalize_stmt ctx (Llvm.Stmt.var rh_expr) pos) 
+        finalize ctx (Llvm.Stmt.var rh_expr) pos) 
       in
       List.iter (List.zip_exn lh var_stmts) ~f:(fun ((pos, _) as lhs, varst) ->
         let rh_expr = Llvm.Expr.var (Llvm.Var.var_of_stmt varst) in
         let stmt = parse_assign_helper ctx pos (lhs, rh_expr, shadow) in
-        ignore @@ finalize_stmt ctx stmt pos);
+        ignore @@ finalize ctx stmt pos);
       Llvm.Stmt.pass ()
 
   and parse_assign_helper ctx pos ((pos, lhs), rh_expr, shadow) =
@@ -124,7 +136,7 @@ struct
         let lhs_expr = E.parse ctx lhs in
         let rhs_expr = E.parse ctx rhs in
         let stmt = Llvm.Stmt.del_index lhs_expr rhs_expr in
-        ignore @@ finalize_stmt ctx stmt pos
+        ignore @@ finalize ctx stmt pos
       | Id var ->
         failwith "stmt/parse_del -- can't remove variable"
       | _ -> 
@@ -140,10 +152,10 @@ struct
         let stmt = Llvm.Stmt.print 
           (E.parse ctx @@ str_node " ") 
         in
-        ignore @@ finalize_stmt ctx stmt pos
+        ignore @@ finalize ctx stmt pos
       end;
       let stmt = Llvm.Stmt.print (E.parse ctx expr) in
-      ignore @@ finalize_stmt ctx stmt pos);
+      ignore @@ finalize ctx stmt pos);
     Llvm.Stmt.print (E.parse ctx @@ str_node "\n")
 
   and parse_return ctx pos ret =
@@ -170,7 +182,7 @@ struct
     List.iter exprs ~f:(function (pos, _) as expr ->
       let expr = E.parse ctx expr in
       let stmt = Llvm.Stmt.assrt expr in
-      ignore @@ finalize_stmt ctx stmt pos);
+      ignore @@ finalize ctx stmt pos);
     Llvm.Stmt.pass ()
 
   and parse_type ctx pos (name, args) =
@@ -198,6 +210,8 @@ struct
 
     while_stmt
 
+  (** [parse_for ?next context position data] parses for statement AST. 
+      `next` points to the nested for in the generator expression.  *)
   and parse_for ?next ctx pos (for_vars, gen_expr, stmts) =
     let gen_expr = E.parse ctx gen_expr in
     let for_stmt = Llvm.Stmt.loop gen_expr in
@@ -214,7 +228,7 @@ struct
         List.iteri for_vars ~f:(fun idx var_name ->
           let expr = Llvm.Expr.lookup var_expr (Llvm.Expr.int idx) in
           let var_stmt = Llvm.Stmt.var expr in
-          ignore @@ finalize_stmt for_ctx var_stmt pos;
+          ignore @@ finalize for_ctx var_stmt pos;
           let var = Llvm.Var.var_of_stmt var_stmt in
           Ctx.add for_ctx var_name (Ctx.var ctx var))
     end;
@@ -297,6 +311,8 @@ struct
 
     Llvm.Stmt.pass ()
   
+  (** [parse_import ?ext context position data] parses import AST.
+      Import file extension is set via [seq] (default is [".seq"]). *)
   and parse_import ?(ext="seq") ctx pos imports =
     List.iter imports ~f:(fun ((pos, what), _) ->
       let file = sprintf "%s/%s.%s" (Filename.dirname ctx.filename) what ext in
@@ -313,6 +329,9 @@ struct
           serr ~pos "cannot locate module %s" what);
     Llvm.Stmt.pass ()
 
+  (** [parse_function ?cls context position data] parses function AST.
+      Set `cls` to `Llvm.Types.typ` if you want a function to be 
+      a class `cls` method. *)
   and parse_function ?cls ctx pos ((_, { name; typ }), types, args, stmts) =
     if is_some @@ Ctx.in_block ctx name then
       serr ~pos "function %s already exists" name;
@@ -417,35 +436,6 @@ struct
     let expr = E.parse ctx expr in
     Llvm.Stmt.throw expr
 
-    (* 
-    Stmt *trycatch_stmt()
-      Creates a new TryCatch statement.
-
-    Block *get_trycatch_block(TryCatch *tc)
-        Returns the “try” block of a try-catch statement.
-
-    Block *get_trycatch_catch(TryCatch *tc, types::Type *t)
-        Creates and returns a new “catch” block for a specified type. For example: try {…} catch (Foo f) {…} — the “catch” block would be obtained by calling get_trycatch_catch(tc, Foo). Use t=nullptr for a catch-all block.
-
-    Block *get_trycatch_finally(TryCatch *tc)
-        Creates and returns the “finally” block.
-
-    Var *get_trycatch_var(TryCatch *tc, unsigned idx)
-        Returns the variable associated with (idx)th catch block.For example: try {…} catch (Foo f) {…} — the variable “f” would be obtained by calling get_trycatch_var(tc, 0). If the (idx)th catch block is a catch-all, returns null.
-
-    void set_enclosing_trycatch(Expr *e, TryCatch *tc)
-        This must be called on every expression present inside a “try” block (i.e. NOT catch / finally blocks). It should be called with the innermost enclosing try-catch as an argument. 
-        Internally, this is so that function calls inside a “try” can be rerouted to an exception block if an exception is thrown by them.
-
-    Stmt *throw_stmt(Expr *expr)
-        Creates a new “throw”/“raise” statement with the gives expression.
-
-    Couple misc. notes:
-      - Only at most one finally block is allowed.
-      - I only allow throwing/catching reference types. I think this is a fine rule, and it makes things easier on the backend. 
-      - I need to do a bit more refactoring to get this to work with magic methods. Shouldn’t be particularly hard, just need to change some stuff around.
-    *)
-
   and parse_global ctx _ vars =
     List.iter vars ~f:(fun (pos, var) -> 
       match Hashtbl.find ctx.map var with
@@ -466,19 +456,28 @@ struct
      Helper functions
      *************************************************************** *)
 
-  and finalize_stmt ?(add=true) ctx stmt pos =
+  (** [finalize ~add context statement position] finalizes [Llvm.Types.stmt]
+      by setting its base to [context.base], its position to [position]
+      and by adding the [statement] to the current block ([context.block])
+      if [add] is [true]. Returns the finalized statement. *)
+  and finalize ?(add=true) ctx stmt pos =
     Llvm.Stmt.set_base stmt ctx.base;
     Llvm.Stmt.set_pos stmt pos;
     if add then
       Llvm.Stmt.Block.add_stmt ctx.block stmt;
     stmt 
   
+  (** [add_block ?preprocess context statements] creates a new block within
+      [context[ and adds [statements] to that block. 
+      [preprocess context], if provided, is run after the block is created 
+      to initialize the block. *)
   and add_block ctx ?(preprocess=(fun _ -> ())) stmts =
     Ctx.add_block ctx;
     preprocess ctx;
     ignore @@ List.map stmts ~f:(parse ctx);
     Ctx.clear_block ctx
 
+  (** Helper for parsing match patterns *)
   and parse_pattern ctx pos = function
     | StarPattern ->
       Llvm.Stmt.Pattern.star ()
@@ -515,6 +514,10 @@ struct
       let expr = E.parse ctx expr in
       Llvm.Stmt.Pattern.guarded pat expr
 
+  (** Helper for parsing generic parameters. 
+      Parses generic parameters, assigns names to unnamed generics and
+      calls C++ APIs to denote generic functions/classes.
+      Also adds generics types to the context. *)
   and parse_generics ctx generic_types args set_generic_count get_generic =
     let names, types = 
       List.map args ~f:(function

@@ -1,6 +1,13 @@
-(* 786 *)
-(* Heavily inspired and borrowed from 
-   https://github.com/m2ym/ocaml-pythonlib/ *)
+(******************************************************************************
+ *
+ * Seq OCaml 
+ * lexer.mll: Lexing rules 
+ *
+ * Author: inumanag
+ *
+ * Heavily inspired and borrowed from https://github.com/m2ym/ocaml-pythonlib
+ *
+ ******************************************************************************)
 
 {
   module B = Buffer
@@ -11,12 +18,11 @@
   
   exception SyntaxError of string * Ast.Pos.t
 
-  type stack = {
-    stack: int Stack.t;
-    fname: string;
-    mutable offset: int;
-    mutable ignore_newline: int;
-  }
+  type stack = 
+    { stack: int Stack.t;
+      fname: string;
+      mutable offset: int;
+      mutable ignore_newline: int; }
   
   let stack_create fname =
     let stack = Stack.create () in

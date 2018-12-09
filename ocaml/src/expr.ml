@@ -1,11 +1,19 @@
-(* 786 *)
+(******************************************************************************
+ * 
+ * Seq OCaml 
+ * expr.ml: Expression AST parsing module
+ *
+ * Author: inumanag
+ *
+ ******************************************************************************)
 
 open Core
 open Err
 open Ast
 
-let foreign = Foreign.foreign
-
+(** This module is an implementation of [Intf.Expr] module that
+    describes expression AST parser.
+    Requires [Intf.Stmt] for parsing generators ([parse_for] and [finalize]) *)
 module ExprParser (S : Intf.Stmt) : Intf.Expr = 
 struct
   open ExprNode
@@ -14,8 +22,8 @@ struct
      Public interface
      *************************************************************** *)
 
-  (** [parse context expr] dispacths expression AST to the proper parser 
-      and sets the position flag *)
+  (** [parse context expr] dispatches expression AST to the proper parser.
+      Afterwards, a position [pos] is set for [expr] *)
   let rec parse (ctx: Ctx.t) (pos, node) =
     let expr = match node with
       | Empty          p -> parse_none     ctx pos p
@@ -46,14 +54,12 @@ struct
       | Lambda _ -> failwith "todo: expr/lambda"
     in
     Llvm.Expr.set_pos expr pos; 
-    (* Util.dbg "%s -> %nx" 
-      (ExprNode.sexp_of_node node |> Sexp.to_string_hum)
-      (Ctypes.raw_address_of_ptr ctx.trycatch); *)
     Llvm.Expr.set_trycatch expr ctx.trycatch;
     expr
   
-  (** [parse_type context type] parses [type] AST and ensures that it is a type.
-      Raises error if [type] is not type. *)
+  (** [parse_type context expr] parses [expr] AST and ensures that 
+      it is a type expression. Returns a [TypeExpr].
+      Raises error if [expr] does not describe a type. *)
   and parse_type ctx t =
     match parse ctx t with
     | typ_expr when Llvm.Expr.is_type typ_expr ->
@@ -89,6 +95,8 @@ struct
   and parse_id ?map ctx pos var = 
     let map = Option.value map ~default:ctx.map in
     match Hashtbl.find map var with
+    (* Make sure that a variable is either accessible within 
+       the same base (function) or that it is global variable  *)
     | Some (Ctx.Assignable.Var (v, { base; global; _ }) :: _) 
       when (ctx.base = base) || global -> 
       Llvm.Expr.var v
@@ -103,6 +111,7 @@ struct
     let args = List.map args ~f:(parse ctx) in
     Llvm.Expr.tuple args
 
+  (** [kind] can be set or list. Anything else will crash a program. *)
   and parse_list ?(kind="list") ctx _ args =
     let typ = get_internal_type ctx kind in
     let args = List.map args ~f:(parse ctx) in
@@ -117,7 +126,6 @@ struct
     Llvm.Expr.list ~kind:"dict" typ args
 
   and parse_gen ctx pos (expr, gen) = 
-    Util.dbg "here";
     let captures = String.Table.create () in
     walk ctx (pos, Generator (expr, gen)) ~f:(fun (ctx: Ctx.t) var ->
       match Hashtbl.find ctx.map var with
@@ -126,8 +134,9 @@ struct
         Hashtbl.set captures ~key:var ~data:v
       | _ -> ());
     Hashtbl.iter_keys captures ~f:(fun key ->
-      Util.dbg "captured %s" key);
+      Util.dbg "[expr/parse_gen] captured %s" key);
 
+    (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in 
     let body = comprehension_helper ctx gen 
       ~finally:(fun ctx ->
@@ -141,6 +150,7 @@ struct
 
   and parse_list_gen ?(kind="list") ctx _ (expr, gen) = 
     let typ = get_internal_type ctx kind in
+    (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in 
     let body = comprehension_helper ctx gen 
       ~finally:(fun ctx ->
@@ -153,6 +163,7 @@ struct
 
   and parse_dict_gen ctx _ (expr, gen) = 
     let typ = get_internal_type ctx "dict" in
+    (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in 
     let body = comprehension_helper ctx gen 
       ~finally:(fun ctx ->
@@ -183,6 +194,8 @@ struct
     let exprs = List.map exprs ~f:(parse ctx) in
     Llvm.Expr.pipe exprs
 
+  (** Parses index expression which also includes type realization rules.
+      Check GOTCHAS for details. *)
   and parse_index ctx pos (lh_expr, indices) =
     match snd lh_expr, indices with
     | _, [(_, Slice(st, ed, step))] ->
@@ -249,9 +262,14 @@ struct
      Helper functions
      *************************************************************** *)
 
-  (** [comprehension_helper context finalize comprehension] 
-      constructs a [for] statement for [comprehension] and passes it to 
-      the finalization function [finalize context for_stmt].  *)
+  (** [comprehension_helper ~add ~finally context comprehension_expr] 
+      constructs a series of [for] statements that form a [comprehension] 
+      and passes the final context with the loop variables to the finalization 
+      function [finally context]. This function should construct a proper 
+      [CompExpr].
+      Returns topmost [For] statement that is not assigned to the
+      matching block (set [add] to true to allow that). 
+      Other [For] statements are assigned to the matching blocks. *)
   and comprehension_helper ?(add=false) ~finally (ctx: Ctx.t) (pos, comp) =
     S.parse_for ctx pos (comp.var, comp.gen, [])
       ~next:(fun orig_ctx ctx for_stmt -> 
@@ -262,7 +280,7 @@ struct
             let if_stmt = Llvm.Stmt.cond () in
             let if_expr = parse ctx expr in
             let if_block = Llvm.Stmt.Block.elseif if_stmt if_expr in
-            ignore @@ S.finalize_stmt ctx if_stmt pos;
+            ignore @@ S.finalize ctx if_stmt pos;
             if_block
         in
         let ctx = { ctx with block } in
@@ -272,15 +290,20 @@ struct
           | Some next ->   
             ignore @@ comprehension_helper ~add:true ~finally ctx next 
         in
-        ignore @@ S.finalize_stmt ~add orig_ctx for_stmt pos)
+        ignore @@ S.finalize ~add orig_ctx for_stmt pos)
 
-  (** Gets a [Llvm.type] from type signature. 
-      Raises error if signature does not exist. *)
+  (** [get_internal_type context type_string] returns a 
+      [Llvm.Type.typ] that describes type signature [type_string].  
+      Raises error if signature does not exist. 
+      Used to get types for [list], [dict] and other internal classes. *)
   and get_internal_type (ctx: Ctx.t) typ_str = 
     match Hashtbl.find ctx.map typ_str with
     | Some (Ctx.Assignable.Type typ :: _) -> typ
     | _ -> failwith (sprintf "can't find internal type %s" typ_str)
 
+  (** [walk context ~f expr] walks the AST [expr] and calls 
+      function [f context identifier] on each child generic or identifier. 
+      Useful for locating all captured variables within [expr]. *)
   and walk (ctx: Ctx.t) ~f (pos, node) =
     let rec walk_comp ctx ~f c = 
       let open ExprNode in
@@ -310,6 +333,6 @@ struct
     | DictGenerator ((e1, e2), c) ->
       walk ctx ~f e1; walk ctx ~f e2;
       walk_comp ctx ~f (snd c)
-    (* | Slice | Lambda *)
+    (* TODO: | Slice | Lambda *)
     | _ -> ()
 end

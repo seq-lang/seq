@@ -1,72 +1,42 @@
-# Seq — a DSL for processing genomic data
+# Seq/OCaml: lexing and parsing for Seq language
 
 ## Dependencies
 
-```bash
-make install-osx
-# restart shell
-opam switch 4.06.1
-make install-dep
+- Linux or macOS
+- OCaml 4.06+ and OPAM
+- OCaml dependencies:
+  - Jane Street Core and PPXes
+  - Dune
+  - Ctypes
+  - ANSITerminal
+  - Menhir
+  - Install via
+      ```
+      opam install core core_extended dune menhir ctypes ctypes.foreign ansiterminal
+      ```
+
+## Building
+
+Just type `make` and you should be set!
+
+OCaml bindings expect that C++ library is already built. If it is not and if your C++ build directory is `../build` (most likely it is), you should first run:
+```
+make -C ../build
 ```
 
-## Parser/Lexer: Debugging 101
+## Running
 
-To get tokens do:
-
-```bash
-cd src
-corebuild lexer.byte
-echo "blah blah" | ./lexer.byte | perl -pe 's|\(.+?\)||g'
+First set up necessary environment variables:
+```
+export LD_LIBRARY_PATH=$(pwd)
+export SEQ_PATH=../stdlib
 ```
 
-Perl is used to remove arguments (which are kept because they are useful for debugging; however Menhir does not support them in the grammar check mode).
-
-To check the validity of grammar with some tokens do
-
+Then:
 ```
-menhir --interpret --interpret-show-cst -v --trace parser.mly
+./main.exe <seq.file> <args...>
 ```
 
-For example, to test 5-th tokenization in [test/test.seq] do
+## Docs
 
-```
-cat test.seq | grep '^#!' | tail -n+5 | head -n1 | tail -c+4 | menhir --interpret --interpret-show-cst -v --trace parser.mly
-```
-
-## Build
-
-Compile:
-
-```bash
-make
-```
-
-Test:
-
-```bash
-echo "\!load \"seqs.fasta\" |split 32 32 | print" | ./main.byte
-```
-
-Prepend line with `!` to execute it with JIT; otherwise you will just get IR.
-
-## At a glance
-
-```bash
-# version 1 (works)
-load "test.fq" | split 32 32 | print
-
-# version 2 (nope)
-let v = "ACGT\nAACC" |> split 32 32
-v |> print
-
-# version 3
-let revcomp x =
-	if x == "A" then "T" else 
-		(if x == "G" then "C" else 
-			(if x == "C" then G else 
-				(if x == "T" then A else x)))
-let i = load "test.fq" 
-let a = split 32 32
-let b = revcomp |> split 32 32
-i |> a <&> b |> print
-```
+[GOTCHAS & Notes](notes.md)
