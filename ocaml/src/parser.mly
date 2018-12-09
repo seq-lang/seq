@@ -313,10 +313,10 @@ statement: // Statements: all rules return list of statements
        For (List.map $2 ~f:snd, $4, $6) ]}
   | IF test COLON suite
     {[ pos $1 $3, 
-       If ([pos $1 $3, { cond = Some $2; stmts = $4 }]) ]}
+       If ([pos $1 $3, { cond = Some $2; cond_stmts = $4 }]) ]}
   | IF test COLON suite; rest = elif_suite
     {[ pos $1 $3, 
-       If ((pos $1 $3, { cond = Some $2; stmts = $4 }) :: rest) ]}
+       If ((pos $1 $3, { cond = Some $2; cond_stmts = $4 }) :: rest) ]}
   | MATCH test COLON NL INDENT case_suite DEDENT
     {[ pos $1 $4, 
        Match ($2, $6) ]}
@@ -427,16 +427,16 @@ suite: // Indentation blocks
 elif_suite:
   | ELIF test COLON suite
     {[ pos $1 $3, 
-       { cond = Some $2; stmts = $4 } ]}
+       { cond = Some $2; cond_stmts = $4 } ]}
   | ELSE COLON suite
     {[ pos $1 $2, 
-       { cond = None; stmts = $3 } ]}
+       { cond = None; cond_stmts = $3 } ]}
   | ELIF test COLON suite; rest = elif_suite
-    { (pos $1 $3, { cond = Some $2; stmts = $4 }) :: rest }
+    { (pos $1 $3, { cond = Some $2; cond_stmts = $4 }) :: rest }
 case_suite:
   | DEFAULT COLON suite
     {[ pos $1 $2, 
-       { pattern = WildcardPattern None; stmts = $3 } ]}
+       { pattern = WildcardPattern None; case_stmts = $3 } ]}
   | case 
     {[ $1 ]}
   | case; rest = case_suite
@@ -448,21 +448,21 @@ case:
         else OrPattern $2 
       in
       pos $1 $3, 
-      { pattern; stmts = $4 } }
+      { pattern; case_stmts = $4 } }
   | CASE separated_nonempty_list(OR, case_type) IF or_test COLON suite
     { let pattern = 
         if List.length $2 = 1 then List.hd_exn $2
         else OrPattern $2 
       in
       pos $1 $5, 
-      { pattern = GuardedPattern (pattern, $4); stmts = $6 } }
+      { pattern = GuardedPattern (pattern, $4); case_stmts = $6 } }
   | CASE separated_nonempty_list(OR, case_type) AS ID COLON suite
     { let pattern = 
         if List.length $2 = 1 then List.hd_exn $2
         else OrPattern $2 
       in
       pos $1 $5, 
-      { pattern = BoundPattern (snd $4, pattern); stmts = $6 } }
+      { pattern = BoundPattern (snd $4, pattern); case_stmts = $6 } }
 case_type:
   | ELLIPSIS 
     { StarPattern }
@@ -553,13 +553,13 @@ func:
     { let intypes = Option.value intypes ~default:[] in
       pos $1 $8, 
       Generic (Function 
-        ((fst name, {name = snd name; typ}), intypes, params, s)) }
+        ((fst name, { name = snd name; typ }), intypes, params, s)) }
   | EXTERN; lang = ID; dylib = dylib_spec?; name = ID;
     LP params = separated_list(COMMA, typed_param); RP
     typ = func_ret_type; NL
     { pos $1 (fst typ), 
       Extern (snd lang, dylib, 
-        (fst name, {name = snd name; typ = Some(typ)}), params) }
+        (fst name, { name = snd name; typ = Some(typ) }), params) }
 dylib_spec:
   | LP STRING RP 
     { snd $2 }

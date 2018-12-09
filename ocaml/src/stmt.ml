@@ -10,7 +10,6 @@
 open Core
 open Err
 open Ast
-open Util
 
 (** This module is an implementation of [Intf.Stmt] module that
     describes statement AST parser.
@@ -244,7 +243,7 @@ struct
 
   and parse_if ctx pos cases =
     let if_stmt = Llvm.Stmt.cond () in
-    List.iter cases ~f:(function (_, {cond; stmts}) ->
+    List.iter cases ~f:(function (_, { cond; cond_stmts }) ->
       let block = match cond with
         | None ->
           Llvm.Stmt.Block.elseb if_stmt
@@ -252,13 +251,13 @@ struct
           let expr = E.parse ctx cond_expr in
           Llvm.Stmt.Block.elseif if_stmt expr
       in
-      add_block { ctx with block } stmts);
+      add_block { ctx with block } cond_stmts);
     if_stmt
 
   and parse_match ctx pos (what, cases) =
     let what = E.parse ctx what in
     let match_stmt = Llvm.Stmt.matchs what in
-    List.iter cases ~f:(fun (_, {pattern; stmts}) ->
+    List.iter cases ~f:(fun (_, { pattern; case_stmts }) ->
       let pat, var = match pattern with
         | BoundPattern(name, pat) ->
           Ctx.add_block ctx;
@@ -273,20 +272,20 @@ struct
           pat, None
       in
       let block = Llvm.Stmt.Block.case match_stmt pat in
-      add_block { ctx with block } stmts ~preprocess:(fun ctx ->
+      add_block { ctx with block } case_stmts ~preprocess:(fun ctx ->
         match var with 
         | Some(n, v) -> Ctx.add ctx n (Ctx.var ctx v) 
         | None -> ()));
     match_stmt
   
-  and parse_extern ctx pos (lang, dylib, (_, {name; typ}), args) =
+  and parse_extern ctx pos (lang, dylib, (_, { name; typ }), args) =
     if lang <> "c" && lang <> "C" then
       serr ~pos "only C external functions are currently supported";
     if is_some @@ Ctx.in_block ctx name then
       serr ~pos "function %s already exists" name;
     
     let names, types = 
-      List.map args ~f:(fun (_, {name; typ}) ->
+      List.map args ~f:(fun (_, { name; typ }) ->
         name, E.parse_type ctx (Option.value_exn typ))
       |> List.unzip
     in

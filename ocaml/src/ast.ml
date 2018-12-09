@@ -115,10 +115,10 @@ struct
         (string * (ExprNode.generic tt) list * param tt list * generic tt list)
   and if_case = 
     { cond: ExprNode.t option; 
-      stmts: t list }
+      cond_stmts: t list }
   and match_case = 
     { pattern: pattern;
-      stmts: t list }
+      case_stmts: t list }
   and param = 
     { name: string; 
       typ: ExprNode.t option; }

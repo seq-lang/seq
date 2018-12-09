@@ -5,7 +5,6 @@ SEQ_BUILD_DIR=../build
 BUILD_DIR=build
 
 all:
-	#make -j -C ../build
 	ln -s -f $(SEQ_BUILD_DIR)/libseq.dylib .
 	dune build --build-dir $(BUILD_DIR) --profile macos-dev src/main.exe src/main.so
 	ln -s -f $(BUILD_DIR)/default/src/main.exe .

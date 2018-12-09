@@ -15,7 +15,7 @@ type t =
   | Compiler of string
 
 (** Unified exception that groups all other exceptions based on their source *)
-exception CompilerError of error * Ast.Pos.t list
+exception CompilerError of t * Ast.Pos.t list
 (** LLVM/C++ exception *)
 exception SeqCError of string * Ast.Pos.t
 (** AST-parsing exception  *)
