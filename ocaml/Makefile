@@ -23,11 +23,3 @@ cpp:
 clean:
 	dune clean --build-dir $(BUILD_DIR)
 
-
-install-dep:
-	brew install ocaml opam 
-	opam init
-	opam update
-	opam install core core_extended core_bench \
-		dune ctypes ctypes-foreign ansiterminal \
-		menhir ppx_deriving

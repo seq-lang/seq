@@ -7,12 +7,13 @@
 - OCaml dependencies:
   - Jane Street Core and PPXes
   - Dune
+  - Odoc
   - Ctypes
   - ANSITerminal
   - Menhir
   - Install via
       ```
-      opam install core core_extended dune menhir ctypes ctypes.foreign ansiterminal
+      opam install core core_extended dune menhir ctypes ctypes.foreign ansiterminal odoc
       ```
 
 ## Building
@@ -38,5 +39,7 @@ Then:
 ```
 
 ## Docs
+
+All OCaml functions should be documented within corresponding `ml`/`mli` files.
 
 [GOTCHAS & Notes](notes.md)
