@@ -666,7 +666,6 @@ generic_list:
     { $2 }
 // Parameter rule (a, a: type, a = b)
 func_param:
-  // TODO tuple params--- are they really needed? 
   | typed_param 
     { $1 }
   | ID EQ expr

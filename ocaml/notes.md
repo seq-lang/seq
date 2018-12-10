@@ -17,6 +17,29 @@
 Seq grammar is documented in [`parser.mly`](src/parser.mly).
 Lexing rules (tokenization) is described in [`lexer.mll`](src/lexer.mll).
 
+#### Gotchas:
+
+- Indentation detection is more flexible than Python's
+   - Space and tab mixing is allowed
+   - Tab is treated as 8 spaces
+   - Different indent lengths are allowed for no good reason
+- [ ] Collections and tuples cannot have hanging comma 
+      (e.g. `[1, 2,]` is not OK)
+- [ ] Tuples must be explicitely indicated within index
+      (e.g. `foo[(1, 2)]`, not `foo[1, 2]`)
+- [ ] Multi-assignments are not supported
+      (e.g. no `a = b = c`)
+- [ ] Chained comparisons are also not OK
+      (e.g. no `1 < a < 2`)
+- [ ] No tuple unpacking allowed 
+      (e.g. no `a, b = (1, 2)` or `a, b = *y`)
+- [ ] Bit-shifting shortcuts are not implemented
+      (e.g. no `>>=` and  `<<=`)
+- [ ] `except` takes only one exceptin at the time
+      (e.g. no `except (AError, BError)` as in Python)
+- [ ] Named arguments and decorators are **NOT** supported
+- [ ] Classes can only have functions as members 
+- [ ] No `with` statement yet (requires `__finalize__` and other magics)
 
 <!--------------------------------------------------->
 ## Expressions and statements
