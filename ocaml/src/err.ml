@@ -20,6 +20,9 @@ exception CompilerError of t * Ast.Pos.t list
 exception SeqCError of string * Ast.Pos.t
 (** AST-parsing exception  *)
 exception SeqCamlError of string * Ast.Pos.t list
+(** Lexing exception *)
+exception SyntaxError of string * Ast.Pos.t
+
 
 (** [serr ~pos format_string ...] throws an AST-parsing exception 
     with message formatted via sprintf-style [format_string]

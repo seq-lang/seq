@@ -1,42 +1,35 @@
-(* 786 *)
+(******************************************************************************
+ *
+ * Seq OCaml 
+ * llvm.ml: C++ API bindings
+ *
+ * Author: inumanag
+ *
+ ******************************************************************************)
 
 open Core
 open Ctypes
 open Foreign
 
-(** Hack to avoid garbage collecting of C strings *)
+(** Hack type to avoid garbage collecting of C strings by OCaml engine *)
 type cstring = unit ptr
 let cstring: cstring typ = ptr void
-
 let strdup = foreign "strdup" 
   (string @-> returning cstring)
+
+(** [array_of_string_list lst] marshalls OCaml list of strings 
+    to a C list of [cstring]s. Returns [c_list].  *)
 let array_of_string_list l = 
   CArray.of_list cstring (List.map ~f:strdup l)
+
+(** [list_to_carr typ lst] marshalls OCaml list [lst] 
+    to a C list of [typ]s. Returns tuple [c_list, length]. *)
 let list_to_carr typ lst = 
   let c_arr = CArray.of_list typ lst in
   let c_len = Unsigned.Size_t.of_int (CArray.length c_arr) in
   CArray.start c_arr, c_len 
 
-(** C translation of [pos_t] type *)
-type pos
-let pos: pos structure typ = 
-  structure "seq_srcinfo"
-let pos_file = field pos "file" string
-let pos_line = field pos "line" int
-let pos_col = field pos "col" int 
-let pos_len = field pos "len" int 
-;;
-seal pos
-
-let get_pos_t_from_srcinfo src : Ast.Pos.t = 
-  Ast.Pos.
-    { file = getf src pos_file;
-      line = getf src pos_line; 
-      col = getf src pos_col; 
-      len = getf src pos_len }
-
-(** Basic Seq/LLVM types *)
-
+(** Basic LLVM type abstractions *)
 module Types = 
 struct
   type typ_t = unit ptr
@@ -58,6 +51,7 @@ struct
   let pattern : pattern_t typ = ptr void
 end
 
+(** Seq types ([types::Type]) *)
 module Type = struct
   let t = Types.typ
 
@@ -108,15 +102,16 @@ module Type = struct
     (cstring @-> returning t) 
     (strdup name)
 
+  (* Getters & Setters *)
+
+  let expr_type = foreign "get_type" 
+    (Types.expr @-> returning t)
+
   let set_cls_args typ names types = 
     let rt = record names types in
     foreign "set_ref_record"
       (t @-> t @-> returning Ctypes.void) 
       typ rt
-
-  let add_cls_method typ name func = foreign "add_ref_method"
-    (t @-> cstring @-> Types.func @-> returning Ctypes.void)
-    typ (strdup name) func
 
   let set_cls_done = foreign "set_ref_done" 
     (t @-> returning Ctypes.void)
@@ -124,13 +119,17 @@ module Type = struct
   let get_name = foreign "get_type_name" 
     (t @-> returning string)
 
-  let expr_type = foreign "get_type" 
-    (Types.expr @-> returning t)
+  (* Utilities *)
+
+  let add_cls_method typ name func = foreign "add_ref_method"
+    (t @-> cstring @-> Types.func @-> returning Ctypes.void)
+    typ (strdup name) func
 
   let is_equal = foreign "type_eq" 
     (t @-> t @-> returning Ctypes.bool)
 end 
 
+(** Seq expressions ([Expr]) *)
 module Expr = struct
   let t = Types.expr
 
@@ -253,12 +252,7 @@ module Expr = struct
     (Types.typ @-> cstring @-> returning t)
     typ (strdup what)
 
-  let get_pos expr : Ast.Pos.t =
-    let sp = foreign "get_pos" 
-      (t @-> returning pos)
-      expr
-    in
-    get_pos_t_from_srcinfo sp
+  (* Getters & Setters *)
 
   let set_pos expr (pos: Ast.Pos.t) = foreign "set_pos" 
     Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
@@ -275,104 +269,18 @@ module Expr = struct
   let get_name = foreign "get_expr_name" 
     (t @-> returning string)
 
+  (* Utilities *)
+
   let is_type expr = 
     match get_name expr with 
       | "type" -> true 
       | _ -> false
 end
 
+(** Seq statements ([Stmt]) *)
 module Stmt = struct
   let t = Types.stmt
   
-  module Pattern = struct
-    let t = Types.pattern
-
-    let star = foreign "star_pattern" 
-      (void @-> returning t)
-
-    let int = foreign "int_pattern" 
-      (int @-> returning t)
-
-    let bool = foreign "bool_pattern" 
-      (bool @-> returning t)
-
-    let str s = foreign "str_pattern" 
-      (cstring @-> returning t)
-      (strdup s)
-
-    let seq s = foreign "seq_pattern" 
-      (cstring @-> returning t)
-      (strdup s)
-
-    let record pats = 
-      let fn = foreign "record_pattern" 
-        (ptr t @-> size_t @-> returning t)
-      in 
-      let arr, len = list_to_carr t pats in
-      fn arr len
-    
-    let range = foreign "range_pattern" 
-      (Ctypes.int @-> Ctypes.int @-> returning t)
-    
-    let array pats = 
-      let fn = foreign "array_pattern" 
-        (ptr t @-> size_t @-> returning t)
-      in 
-      let arr, len = list_to_carr t pats in
-      fn arr len
-    
-    let orp pats = 
-      let fn = foreign "or_pattern" 
-        (ptr t @-> size_t @-> returning t)
-      in 
-      let arr, len = list_to_carr t pats in
-      fn arr len
-    
-    let wildcard = foreign "wildcard_pattern" 
-      (void @-> returning t)
-    
-    let guarded = foreign "guarded_pattern" 
-      (t @-> Types.expr @-> returning t)
-    
-    let bound = foreign "bound_pattern" 
-      (t @-> returning t)
-  end
-
-  module Block = struct
-    let t = Types.block
-
-    let while_loop = foreign "get_while_block"  
-      (Types.stmt @-> returning t)
-    
-    let loop = foreign "get_for_block"  
-      (Types.stmt @-> returning t)
-
-    let elseb = foreign "get_else_block"   
-      (Types.stmt @-> returning t)
-
-    let elseif = foreign "get_elif_block"   
-      (Types.stmt @-> Types.expr @-> returning t)
-
-    let case = foreign "add_match_case" 
-      (Types.stmt @-> Types.pattern @-> returning t)
-
-    let func = foreign "get_func_block" 
-      (Types.func @-> returning t)
-
-    let try_block = foreign "get_trycatch_block" 
-      (Types.stmt @-> returning t)
-
-    let catch = foreign "get_trycatch_catch" 
-      (Types.func @-> Types.typ @-> returning t)
-
-    let finally = foreign "get_trycatch_finally" 
-      (Types.stmt @-> returning t)
-
-    let add_stmt block stmt = foreign "add_stmt"
-      (Types.stmt @-> t @-> returning void) 
-      stmt block
-  end
-
   let pass = foreign "pass_stmt" 
     (void @-> returning t) 
 
@@ -434,6 +342,8 @@ module Stmt = struct
   let throw = foreign "throw_stmt"
     (Types.expr @-> returning t)
 
+  (* Getters & Setters *)
+
   let set_base = foreign "set_base" 
     (t @-> Types.func @-> returning void)
 
@@ -442,10 +352,104 @@ module Stmt = struct
     stmt (strdup pos.file) pos.line pos.col pos.len
 end
 
+(** Seq patterns ([Pattern]) *)
+module Pattern = struct
+  let t = Types.pattern
+
+  let star = foreign "star_pattern" 
+    (void @-> returning t)
+
+  let int = foreign "int_pattern" 
+    (int @-> returning t)
+
+  let bool = foreign "bool_pattern" 
+    (bool @-> returning t)
+
+  let str s = foreign "str_pattern" 
+    (cstring @-> returning t)
+    (strdup s)
+
+  let seq s = foreign "seq_pattern" 
+    (cstring @-> returning t)
+    (strdup s)
+
+  let record pats = 
+    let fn = foreign "record_pattern" 
+      (ptr t @-> size_t @-> returning t)
+    in 
+    let arr, len = list_to_carr t pats in
+    fn arr len
+  
+  let range = foreign "range_pattern" 
+    (Ctypes.int @-> Ctypes.int @-> returning t)
+  
+  let array pats = 
+    let fn = foreign "array_pattern" 
+      (ptr t @-> size_t @-> returning t)
+    in 
+    let arr, len = list_to_carr t pats in
+    fn arr len
+  
+  let orp pats = 
+    let fn = foreign "or_pattern" 
+      (ptr t @-> size_t @-> returning t)
+    in 
+    let arr, len = list_to_carr t pats in
+    fn arr len
+  
+  let wildcard = foreign "wildcard_pattern" 
+    (void @-> returning t)
+  
+  let guarded = foreign "guarded_pattern" 
+    (t @-> Types.expr @-> returning t)
+  
+  let bound = foreign "bound_pattern" 
+    (t @-> returning t)
+end
+
+(** Seq blocks ([BasicBlock]) *)
+module Block = struct
+  let t = Types.block
+
+  let while_loop = foreign "get_while_block"  
+    (Types.stmt @-> returning t)
+  
+  let loop = foreign "get_for_block"  
+    (Types.stmt @-> returning t)
+
+  let elseb = foreign "get_else_block"   
+    (Types.stmt @-> returning t)
+
+  let elseif = foreign "get_elif_block"   
+    (Types.stmt @-> Types.expr @-> returning t)
+
+  let case = foreign "add_match_case" 
+    (Types.stmt @-> Types.pattern @-> returning t)
+
+  let func = foreign "get_func_block" 
+    (Types.func @-> returning t)
+
+  let try_block = foreign "get_trycatch_block" 
+    (Types.stmt @-> returning t)
+
+  let catch = foreign "get_trycatch_catch" 
+    (Types.func @-> Types.typ @-> returning t)
+
+  let finally = foreign "get_trycatch_finally" 
+    (Types.stmt @-> returning t)
+
+  (* Utilities *)
+
+  let add_stmt block stmt = foreign "add_stmt"
+    (Types.stmt @-> t @-> returning void) 
+    stmt block
+end
+
+(** Seq variables ([Var]) *)
 module Var = struct
   let t = Types.var
 
-  let var_of_stmt = foreign "var_stmt_var"
+  let stmt = foreign "var_stmt_var"
     (Types.stmt @-> returning t)
 
   let loop = foreign "get_for_var" 
@@ -457,16 +461,21 @@ module Var = struct
   let bound_pattern = foreign "get_bound_pattern_var" 
     (Types.pattern @-> returning t)
 
+  (* Getters & setters *)
+
   let set_global = foreign "set_global"
     (t @-> returning void)
 end
 
+(** Seq functions ([BaseFunc]) *)
 module Func = struct
   let t = Types.func
 
   let func name = foreign "func" 
     (cstring @-> returning t) 
     (strdup name)
+
+  (* Getters & Setters *)
 
   let set_args fn names types = 
     assert ((List.length names) = (List.length types));
@@ -497,6 +506,7 @@ module Func = struct
     (t @-> returning void)
 end
 
+(** Seq generic utilities *)
 module Generics = struct
   let set_types ~kind expr types = 
     let arr, len = list_to_carr Types.typ types in
@@ -557,17 +567,12 @@ module Generics = struct
   end
 end
 
+(** Seq modules ([Module]) *)
 module Module = struct
   let t = Types.modul
 
   let init = foreign "init_module"
     (void @-> returning t)
-
-  let block = foreign "get_module_block" 
-    (t @-> returning Stmt.Block.t)
-
-  let get_args = foreign "get_module_arg"
-    (t @-> returning Types.var)
 
   let exec mdl args debug = 
     let fn = foreign "exec_module" 
@@ -583,6 +588,14 @@ module Module = struct
     if not (Ctypes.is_null (!@ err_addr)) then
       let msg = coerce (ptr char) string (!@ err_addr) in
       Err.split_error msg 
+
+  (* Getters & Setters *)
+
+  let block = foreign "get_module_block" 
+    (t @-> returning Types.block)
+
+  let get_args = foreign "get_module_arg"
+    (t @-> returning Types.var)
 end
 
 

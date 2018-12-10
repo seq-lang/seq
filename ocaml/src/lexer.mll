@@ -15,9 +15,8 @@
   module P = Parser
 
   open Core
-  
-  exception SyntaxError of string * Ast.Pos.t
 
+  (* Used for tracking indentation levels *)
   type stack = 
     { stack: int Stack.t;
       fname: string;
@@ -29,11 +28,13 @@
     Stack.push stack 0;
     { stack = stack; offset = 0; ignore_newline = 0; fname }
   
+  (* flags to set should we ignore newlines (e.g. within parentheses) or not *)
   let ignore_nl t =
     t.ignore_newline <- t.ignore_newline + 1
   and aware_nl t =
     t.ignore_newline <- t.ignore_newline - 1
 
+  (* get current file position from lexer *)
   let cur_pos state ?(len=1) (lexbuf: Lexing.lexbuf) = 
     Ast.Pos.
       { file = state.fname;
@@ -44,6 +45,7 @@
   let count_lines s =
     String.fold ~init:0 ~f:(fun acc c -> if c = '\n' then acc + 1 else acc) s
 
+  (* given a (named) string (e.g. s'foo' or 'bar'), decide the proper token *)
   let seq_string pfx u st =
     let escape = Scanf.unescaped in
     match pfx with
@@ -52,7 +54,7 @@
     | _           -> P.STRING (st, escape u)
 }
 
-(* lexer regex expressions *)
+(* Lexer regex expressions *)
 
 let newline = '\n' | "\r\n"
 let white = [' ' '\t']
@@ -76,10 +78,12 @@ let stringprefix = ('s' | 'S')? ('r' | 'R')?
 
 let ident = alpha alphanum*
 
-(* rules *)
+(* Rules *)
 
+(* Main handler *)
 rule token state = parse 
   | "" {
+    (* TODO: Python-style indentation detection (i.e. more strict rules) *)
     let cur = state.offset in
     let last = Stack.top_exn state.stack in
     if cur < last then begin
@@ -93,6 +97,7 @@ rule token state = parse
     else read state lexbuf (* go ahead with parsing *)
   }
 
+(* Token rules *)
 and read state = parse
   | ((white* comment? newline)* white* comment?) newline {
     let lines = count_lines (L.lexeme lexbuf) in
@@ -228,16 +233,16 @@ and read state = parse
   | _ {
     let tok = L.lexeme lexbuf in
     let pos = cur_pos state lexbuf in
-    SyntaxError (Format.sprintf "Unknown token '%s'" tok, pos) |> raise
+    Err.SyntaxError (Format.sprintf "Unknown token '%s'" tok, pos) |> raise
   }
 
-(* parse indentations *)
+(* Indentation rules *)
 and offset state = parse
   | ""   { }
   | ' '  { state.offset <- state.offset + 1; offset state lexbuf }
   | '\t' { state.offset <- state.offset + 8; offset state lexbuf }
 
-(* parse strings *)
+(* String rules *)
 and single_string state prefix = parse
   | (([^ '\\' '\r' '\n' '\''] | escape)* as s) '\'' { 
     let len = (String.length s) + (String.length prefix) in
@@ -265,4 +270,3 @@ and double_docstr state prefix = shortest
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
 
-(* end of lexer specification *)

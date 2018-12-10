@@ -1,45 +1,58 @@
-(* 786 *)
+(******************************************************************************
+ *
+ * Seq OCaml 
+ * main.ml: Main parsing module
+ *
+ * Author: inumanag
+ *
+ ******************************************************************************)
 
 open Core
 open Err
 
-module T = ANSITerminal
+(* As [StmtParser] depends on [ExprParser] and vice versa,
+   we need to instantiate these modules recursively *)
+module rec SeqS : Intf.StmtIntf = Stmt.StmtParser (SeqE)
+       and SeqE : Intf.ExprIntf = Expr.ExprParser (SeqS) 
 
-module rec SeqS: Intf.StmtIntf = Stmt.StmtParser (SeqE)
-       and SeqE: Intf.ExprIntf = Expr.ExprParser (SeqS) 
-
-let rec parse_string ?fname ?debug ctx code =
-  let fname = Option.value fname ~default:"" in
+(** [parse_string ~file ~debug context code] parses a code
+    within string [code] as a module and returns parsed module AST.
+    [file] is code filename used for error reporting. *)
+let rec parse_string ?file ?debug ctx code =
+  let file = Option.value file ~default:"" in
   let lexbuf = Lexing.from_string (code ^ "\n") in
   try
-    let state = Lexer.stack_create fname in
+    let state = Lexer.stack_create file in
     let ast = Parser.program (Lexer.token state) lexbuf in
-    (* dbg "|> AST of \n%s ==> " code; *)
-    (* dbg "%s" @@ Seq_ast.prn_ast ast; *)
     SeqS.parse_module ctx ast
   with
-  | Lexer.SyntaxError(msg, pos) ->
-    raise @@ CompilerError(Lexer(msg), [pos])
+  | SyntaxError (msg, pos) ->
+    raise @@ CompilerError (Lexer(msg), [pos])
   | Parser.Error ->
     let pos = Ast.Pos.
-      { file = fname;
+      { file;
         line = lexbuf.lex_start_p.pos_lnum;
         col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol;
-        len = 0 } 
+        len = 1 } 
     in
-    raise @@ CompilerError(Parser, [pos])
-  | SeqCamlError(msg, pos) ->
+    raise @@ CompilerError (Parser, [pos])
+  | SeqCamlError (msg, pos) ->
     Printexc.print_backtrace stderr;
-    raise @@ CompilerError(Descent(msg), pos)
-  | SeqCError(msg, pos) ->
-    raise @@ CompilerError(Compiler(msg), [pos])
+    raise @@ CompilerError (Descent(msg), pos)
+  | SeqCError (msg, pos) ->
+    raise @@ CompilerError (Compiler(msg), [pos])
 
+(** [parse_file ~debug context file] parses a file [file] as a module 
+    and returns parsed module AST. *)
 and parse_file ?debug ctx file =
   Util.dbg "parsing %s" file;
   let lines = In_channel.read_lines file in
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
-  parse_string ?debug ~fname:(Filename.realpath file) ctx code
+  parse_string ?debug ~file:(Filename.realpath file) ctx code
 
+(** [init file error_handler] initializes Seq session with file [file].
+    [error_handler typ position] is a callback called upon encountering
+    [Err.CompilerError]. Returns [Module] if successful. *)
 let init file error_handler =
   let mdl = Llvm.Module.init () in
   let ctx = Ctx.init 
@@ -49,20 +62,27 @@ let init file error_handler =
     parse_file 
   in
   try
+    (* set __argv__ params *)
     let args = Llvm.Module.get_args mdl in
     Ctx.add ctx "__argv__" (Ctx.var ctx args);
 
+    (* load standard library *)
     let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
     let stdlib_path = sprintf "%s/stdlib.seq" seqpath in
     ctx.parse_file ctx stdlib_path;
 
+    (* parse the file *)
     ctx.parse_file ctx file;
     Some mdl
-  with CompilerError(typ, pos) ->
+  with CompilerError (typ, pos) ->
     Ctx.dump ctx;
     error_handler typ pos;
     None
 
+(** [parse_c file] is a C callback that wraps [init].
+    Error handler relies on [caml_error_callback] C FFI 
+    to pass errors upstream.
+    Returns pointer to [Module] or zero if unsuccessful. *)
 let parse_c fname =
   let error_handler typ (pos: Ast.Pos.t list) =
     let Ast.Pos.{ file; line; col; len } = List.hd_exn pos in
@@ -83,6 +103,7 @@ let parse_c fname =
   | None -> 
     Nativeint.zero
 
+(** Entry point *)
 let () =
   let _ = Callback.register "parse_c" parse_c in
 
@@ -115,22 +136,24 @@ let () =
             None
         else None 
       in
-      let style = [T.Bold; T.red] in
-      eprintf "%s%!" @@ T.sprintf style "[ERROR] %s error: %s\n" kind msg;
+      let style = ANSITerminal.[Bold; red] in
+      eprintf "%s%!" @@ ANSITerminal.sprintf style 
+        "[ERROR] %s error: %s\n" kind msg;
       List.iteri pos_lst ~f:(fun i pos ->
         let Ast.Pos.{ file; line; col; len } = pos in
         match file_line file line with
         | Some file_line  ->
           let pre = if i = 0 then "" else "then in\n        " in 
-          eprintf "%s%!" @@ T.sprintf style "        %s%s: %d,%d\n" 
+          eprintf "%s%!" @@ ANSITerminal.sprintf style "        %s%s: %d,%d\n" 
             pre file line col;
-          eprintf "%s%!" @@ T.sprintf style "   %3d: %s" 
+          eprintf "%s%!" @@ ANSITerminal.sprintf style "   %3d: %s" 
             line (String.prefix file_line col);
-          eprintf "%s%!" @@ T.sprintf [T.Bold; T.white; T.on_red] "%s" 
+          eprintf "%s%!" @@ ANSITerminal.sprintf 
+            ANSITerminal.[Bold; white; on_red] "%s" 
             (String.sub file_line ~pos:col ~len);
-          eprintf "%s%!" @@ T.sprintf style "%s" 
+          eprintf "%s%!" @@ ANSITerminal.sprintf style "%s" 
             (String.drop_prefix file_line (col + len));
-          eprintf "%s%!" @@ T.sprintf [] "\n"
+          eprintf "%s%!" @@ ANSITerminal.sprintf [] "\n"
         | None -> ()
       );
 

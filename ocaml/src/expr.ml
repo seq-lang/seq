@@ -98,12 +98,12 @@ struct
     match Hashtbl.find map var with
     (* Make sure that a variable is either accessible within 
        the same base (function) or that it is global variable  *)
-    | Some (Ctx.Assignable.Var (v, { base; global; _ }) :: _) 
+    | Some (Ctx.VTable.Var (v, { base; global; _ }) :: _) 
       when (ctx.base = base) || global -> 
       Llvm.Expr.var v
-    | Some (Ctx.Assignable.Type t :: _) -> 
+    | Some (Ctx.VTable.Type t :: _) -> 
       Llvm.Expr.typ t
-    | Some (Ctx.Assignable.Func t :: _) -> 
+    | Some (Ctx.VTable.Func t :: _) -> 
       Llvm.Expr.func t
     | _ ->
       serr ~pos "symbol '%s' not found or realized" var
@@ -130,7 +130,7 @@ struct
     let captures = String.Table.create () in
     walk ctx (pos, Generator (expr, gen)) ~f:(fun (ctx: Ctx.t) var ->
       match Hashtbl.find ctx.map var with
-      | Some (Ctx.Assignable.Var (v, { base; global; _ }) :: _) 
+      | Some (Ctx.VTable.Var (v, { base; global; _ }) :: _) 
         when (ctx.base = base) || global -> 
         Hashtbl.set captures ~key:var ~data:v
       | _ -> ());
@@ -280,7 +280,7 @@ struct
           | Some expr ->
             let if_stmt = Llvm.Stmt.cond () in
             let if_expr = parse ctx expr in
-            let if_block = Llvm.Stmt.Block.elseif if_stmt if_expr in
+            let if_block = Llvm.Block.elseif if_stmt if_expr in
             ignore @@ S.finalize ctx if_stmt pos;
             if_block
         in
@@ -299,7 +299,7 @@ struct
       Used to get types for [list], [dict] and other internal classes. *)
   and get_internal_type (ctx: Ctx.t) typ_str = 
     match Hashtbl.find ctx.map typ_str with
-    | Some (Ctx.Assignable.Type typ :: _) -> typ
+    | Some (Ctx.VTable.Type typ :: _) -> typ
     | _ -> failwith (sprintf "can't find internal type %s" typ_str)
 
   (** [walk context ~f expr] walks the AST [expr] and calls 

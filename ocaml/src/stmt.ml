@@ -101,7 +101,7 @@ struct
         finalize ctx (Llvm.Stmt.var rh_expr) pos) 
       in
       List.iter (List.zip_exn lh var_stmts) ~f:(fun ((pos, _) as lhs, varst) ->
-        let rh_expr = Llvm.Expr.var (Llvm.Var.var_of_stmt varst) in
+        let rh_expr = Llvm.Expr.var (Llvm.Var.stmt varst) in
         let stmt = parse_assign_helper ctx pos (lhs, rh_expr, shadow) in
         ignore @@ finalize ctx stmt pos);
       Llvm.Stmt.pass ()
@@ -110,14 +110,14 @@ struct
     match lhs with
     | Id var ->
       begin match Hashtbl.find ctx.map var with
-      | Some (Ctx.Assignable.Var (v, { base; global; _ }) :: _) 
+      | Some (Ctx.VTable.Var (v, { base; global; _ }) :: _) 
         when (not shadow) && ((ctx.base = base) || global) -> 
         Llvm.Stmt.assign v rh_expr
-      | Some (Ctx.Assignable.(Type _ | Func _) :: _) ->
+      | Some (Ctx.VTable.(Type _ | Func _) :: _) ->
         serr ~pos "cannot assign functions or types"
       | _ ->
         let var_stmt = Llvm.Stmt.var rh_expr in
-        Ctx.add ctx var @@ Ctx.var ctx (Llvm.Var.var_of_stmt var_stmt);
+        Ctx.add ctx var @@ Ctx.var ctx (Llvm.Var.stmt var_stmt);
         var_stmt
       end
     | Dot(lh_lhs, lh_rhs) -> (* a.x = b *)
@@ -198,14 +198,14 @@ struct
       serr ~pos "type %s already defined" name;
     let arg_types = List.map arg_types ~f:(E.parse_type ctx) in
     let typ = Llvm.Type.record arg_names arg_types in
-    Ctx.add ctx name (Ctx.Assignable.Type typ);
+    Ctx.add ctx name (Ctx.VTable.Type typ);
     Llvm.Stmt.pass ()
 
   and parse_while ctx pos (cond, stmts) =
     let cond_expr = E.parse ctx cond in
     let while_stmt = Llvm.Stmt.while_loop cond_expr in
 
-    let block = Llvm.Stmt.Block.while_loop while_stmt in
+    let block = Llvm.Block.while_loop while_stmt in
     add_block { ctx with block } stmts;
 
     while_stmt
@@ -215,7 +215,7 @@ struct
   and parse_for ?next ctx pos (for_vars, gen_expr, stmts) =
     let gen_expr = E.parse ctx gen_expr in
     let for_stmt = Llvm.Stmt.loop gen_expr in
-    let block = Llvm.Stmt.Block.loop for_stmt in
+    let block = Llvm.Block.loop for_stmt in
     let for_ctx = { ctx with block } in
 
     Ctx.add_block for_ctx;
@@ -229,7 +229,7 @@ struct
           let expr = Llvm.Expr.lookup var_expr (Llvm.Expr.int idx) in
           let var_stmt = Llvm.Stmt.var expr in
           ignore @@ finalize for_ctx var_stmt pos;
-          let var = Llvm.Var.var_of_stmt var_stmt in
+          let var = Llvm.Var.stmt var_stmt in
           Ctx.add for_ctx var_name (Ctx.var ctx var))
     end;
     let _ = match next with 
@@ -247,10 +247,10 @@ struct
     List.iter cases ~f:(function (_, { cond; cond_stmts }) ->
       let block = match cond with
         | None ->
-          Llvm.Stmt.Block.elseb if_stmt
+          Llvm.Block.elseb if_stmt
         | Some cond_expr ->
           let expr = E.parse ctx cond_expr in
-          Llvm.Stmt.Block.elseif if_stmt expr
+          Llvm.Block.elseif if_stmt expr
       in
       add_block { ctx with block } cond_stmts);
     if_stmt
@@ -263,7 +263,7 @@ struct
         | BoundPattern(name, pat) ->
           Ctx.add_block ctx;
           let pat = parse_pattern ctx pos pat in
-          let pat = Llvm.Stmt.Pattern.bound pat in
+          let pat = Llvm.Pattern.bound pat in
           Ctx.clear_block ctx;
           pat, Some(name, Llvm.Var.bound_pattern pat)
         | _ as pat ->
@@ -272,7 +272,7 @@ struct
           Ctx.clear_block ctx;
           pat, None
       in
-      let block = Llvm.Stmt.Block.case match_stmt pat in
+      let block = Llvm.Block.case match_stmt pat in
       add_block { ctx with block } case_stmts ~preprocess:(fun ctx ->
         match var with 
         | Some(n, v) -> Ctx.add ctx n (Ctx.var ctx v) 
@@ -296,12 +296,12 @@ struct
     let typ = E.parse_type ctx (Option.value_exn typ) in
     Llvm.Func.set_type fn typ;
     
-    Ctx.add ctx name (Ctx.Assignable.Func fn);
+    Ctx.add ctx name (Ctx.VTable.Func fn);
     Llvm.Stmt.func fn
 
   and parse_extend ctx pos (name, stmts) =
     let typ = match Ctx.in_scope ctx name with
-      | Some (Ctx.Assignable.Type t) -> t
+      | Some (Ctx.VTable.Type t) -> t
       | _ -> serr ~pos "cannot extend non-existing class %s" name
     in
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
@@ -339,14 +339,14 @@ struct
     let fn = Llvm.Func.func name in
     begin match cls with 
       | Some cls -> Llvm.Type.add_cls_method cls name fn
-      | None -> Ctx.add ctx name (Ctx.Assignable.Func fn)
+      | None -> Ctx.add ctx name (Ctx.VTable.Func fn)
     end;
 
     let new_ctx = 
       { ctx with 
         base = fn; 
         stack = Stack.create ();
-        block = Llvm.Stmt.Block.func fn;
+        block = Llvm.Block.func fn;
         map = Hashtbl.copy ctx.map } 
     in
     Ctx.add_block new_ctx;
@@ -379,7 +379,7 @@ struct
         serr ~pos "class field %s does not have type" name);
 
     let typ = Llvm.Type.cls name in
-    Ctx.add ctx name (Ctx.Assignable.Type typ);
+    Ctx.add ctx name (Ctx.VTable.Type typ);
 
     let new_ctx = 
       { ctx with 
@@ -406,7 +406,7 @@ struct
   and parse_try ctx pos (stmts, catches, finally) =
     let try_stmt = Llvm.Stmt.trycatch () in
 
-    let block = Llvm.Stmt.Block.try_block try_stmt in
+    let block = Llvm.Block.try_block try_stmt in
     add_block { ctx with block ; trycatch = try_stmt } stmts;
 
     List.iteri catches ~f:(fun idx (pos, { exc; var; stmts }) ->
@@ -414,7 +414,7 @@ struct
         | Some exc -> E.parse_type ctx (pos, Id(exc)) 
         | None -> Ctypes.null 
       in
-      let block = Llvm.Stmt.Block.catch try_stmt typ in
+      let block = Llvm.Block.catch try_stmt typ in
       add_block { ctx with block } stmts
         ~preprocess:(fun ctx ->
           Option.value_map var 
@@ -426,7 +426,7 @@ struct
 
     Option.value_map finally 
       ~f:(fun final ->
-        let block = Llvm.Stmt.Block.finally try_stmt in
+        let block = Llvm.Block.finally try_stmt in
         add_block { ctx with block } final)
       ~default:();
 
@@ -439,12 +439,12 @@ struct
   and parse_global ctx _ vars =
     List.iter vars ~f:(fun (pos, var) -> 
       match Hashtbl.find ctx.map var with
-      | Some (Ctx.Assignable.Var (v, { base; global; toplevel }) :: rest) ->
+      | Some (Ctx.VTable.Var (v, { base; global; toplevel }) :: rest) ->
         if (ctx.base = base) || global then 
           serr ~pos "symbol '%s' either local or already set as global" var;
         Llvm.Var.set_global v;
-        let new_var = Ctx.Assignable.Var 
-          (v, Ctx.Assignable.{ base; global = true; toplevel }) 
+        let new_var = Ctx.VTable.Var 
+          (v, Ctx.VTable.{ base; global = true; toplevel }) 
         in
         Hashtbl.set ctx.map ~key:var ~data:(new_var :: rest)
       | _ ->
@@ -464,7 +464,7 @@ struct
     Llvm.Stmt.set_base stmt ctx.base;
     Llvm.Stmt.set_pos stmt pos;
     if add then
-      Llvm.Stmt.Block.add_stmt ctx.block stmt;
+      Llvm.Block.add_stmt ctx.block stmt;
     stmt 
   
   (** [add_block ?preprocess context statements] creates a new block within
@@ -480,30 +480,30 @@ struct
   (** Helper for parsing match patterns *)
   and parse_pattern ctx pos = function
     | StarPattern ->
-      Llvm.Stmt.Pattern.star ()
+      Llvm.Pattern.star ()
     | BoundPattern _ ->
       serr ~pos "invalid bound pattern"
     | IntPattern i -> 
-      Llvm.Stmt.Pattern.int i
+      Llvm.Pattern.int i
     | BoolPattern b -> 
-      Llvm.Stmt.Pattern.bool b
+      Llvm.Pattern.bool b
     | StrPattern s -> 
-      Llvm.Stmt.Pattern.str s
+      Llvm.Pattern.str s
     | SeqPattern s -> 
-      Llvm.Stmt.Pattern.seq s
+      Llvm.Pattern.seq s
     | TuplePattern tl ->
       let tl = List.map tl ~f:(parse_pattern ctx pos) in
-      Llvm.Stmt.Pattern.record tl
+      Llvm.Pattern.record tl
     | RangePattern (i, j) -> 
-      Llvm.Stmt.Pattern.range i j
+      Llvm.Pattern.range i j
     | ListPattern tl ->
       let tl = List.map tl ~f:(parse_pattern ctx pos) in
-      Llvm.Stmt.Pattern.array tl
+      Llvm.Pattern.array tl
     | OrPattern tl ->
       let tl = List.map tl ~f:(parse_pattern ctx pos) in
-      Llvm.Stmt.Pattern.orp tl
+      Llvm.Pattern.orp tl
     | WildcardPattern wild ->
-      let pat = Llvm.Stmt.Pattern.wildcard () in
+      let pat = Llvm.Pattern.wildcard () in
       if is_some wild then begin
         let var = Llvm.Var.bound_pattern pat in
         Ctx.add ctx (Option.value_exn wild) (Ctx.var ctx var)
@@ -512,7 +512,7 @@ struct
     | GuardedPattern (pat, expr) ->
       let pat = parse_pattern ctx pos pat in
       let expr = E.parse ctx expr in
-      Llvm.Stmt.Pattern.guarded pat expr
+      Llvm.Pattern.guarded pat expr
 
   (** Helper for parsing generic parameters. 
       Parses generic parameters, assigns names to unnamed generics and
@@ -539,7 +539,7 @@ struct
     set_generic_count (List.length generics);
 
     List.iteri generics ~f:(fun cnt key ->
-      Ctx.add ctx key (Ctx.Assignable.Type (get_generic cnt key)));
+      Ctx.add ctx key (Ctx.VTable.Type (get_generic cnt key)));
     let types = List.map types ~f:(E.parse_type ctx) in
     names, types
 end
