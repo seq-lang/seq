@@ -1080,8 +1080,8 @@ void Assert::codegen0(BasicBlock*& block)
 	                 "seq_assert",
 	                 Type::getVoidTy(context),
 	                 types::Bool->getLLVMType(context),
-	                 types::Int->getLLVMType(context),
-	                 types::Str->getLLVMType(context)));
+	                 types::Str->getLLVMType(context),
+	                 types::Int->getLLVMType(context)));
 	func->setDoesNotThrow();
 	Value *check = expr->codegen(getBase(), block);
 	check = expr->getType()->boolValue(check, block, getTryCatch());
@@ -1089,7 +1089,7 @@ void Assert::codegen0(BasicBlock*& block)
 	Value *line = IntExpr(getSrcInfo().line).codegen(getBase(), block);
 
 	IRBuilder<> builder(block);
-	builder.CreateCall(func, {check, line, file});
+	builder.CreateCall(func, {check, file, line});
 }
 
 Assert *Assert::clone(Generic *ref)
