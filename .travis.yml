@@ -46,4 +46,12 @@ script:
   - build/seq test/core/helloworld.seq
 
 notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/24eadbe09c2dbd4f884b
+    on_success: change
+    on_failure: always
+    on_start: never
+    on_cancel: always
+    on_error: always
   email: false
