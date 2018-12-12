@@ -110,7 +110,7 @@ void Stmt::setTryCatch(TryCatch *tc)
 
 TryCatch *Stmt::getTryCatch()
 {
-	Stmt *stmt = this;
+	Stmt *stmt = getPrev();
 
 	while (stmt) {
 		if (auto *s = dynamic_cast<TryCatch *>(stmt))

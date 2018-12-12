@@ -408,8 +408,8 @@ void TryCatch::codegen0(BasicBlock*& block)
 {
 	assert(catchTypes.size() == catchBlocks.size());
 
-	//if (getTryCatch())
-	//	throw exc::SeqException("nested try-catch is not supported");
+	if (getTryCatch())
+		throw exc::SeqException("nested try-catch is not supported");
 
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
