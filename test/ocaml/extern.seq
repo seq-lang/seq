@@ -22,13 +22,13 @@
 # print a+"x"
 
 # import test as xx
-from test import foo, cls
+from test import foo as xoo, cls
 
 # from test import foo
 
 print 'extern'
 ___dump___
-foo(1)
+xoo(1)
 
 y = cls(1)
 y.foo()

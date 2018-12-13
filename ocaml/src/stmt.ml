@@ -316,27 +316,22 @@ struct
   and parse_import ?(ext="seq") ctx pos imports =
     List.iter imports ~f:(fun { from; what; import_as; stdlib } ->
       let from = snd from in
-      let file = 
-        sprintf "%s/%s.%s" (Filename.dirname ctx.filename) from ext 
-      in
-      let new_ctx = 
-        if stdlib then
-          ctx
-        else
-          { (Ctx.init file ctx.mdl ctx.base ctx.block ctx.parse_file)
-            with trycatch = ctx.trycatch }
+      let file = sprintf "%s/%s.%s" (Filename.dirname ctx.filename) from ext in
+      let new_ctx = if stdlib then ctx else
+        { (Ctx.init file ctx.mdl ctx.base ctx.block ctx.parse_file)
+          with trycatch = ctx.trycatch }
       in
       begin match Sys.file_exists file with
-      | `Yes -> 
-        new_ctx.parse_file new_ctx file
-      | `No | `Unknown -> 
-        let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
-        let file = sprintf "%s/%s.%s" seqpath from ext in
-        match Sys.file_exists file with
         | `Yes -> 
           new_ctx.parse_file new_ctx file
         | `No | `Unknown -> 
-          serr ~pos "cannot locate module %s" from
+          let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
+          let file = sprintf "%s/%s.%s" seqpath from ext in
+          match Sys.file_exists file with
+          | `Yes -> 
+            new_ctx.parse_file new_ctx file
+          | `No | `Unknown -> 
+            serr ~pos "cannot locate module %s" from
       end;
       if not stdlib then match what with
         | None -> (* import foo (as bar) *)
@@ -349,7 +344,7 @@ struct
             | _ -> false)
           in
           Ctx.add ctx from (Ctx.Namespace.Import map)
-        | Some [(_, "*")] -> (* from foo import * *)
+        | Some [_, ("*", None)] -> (* from foo import * *)
           Hashtbl.iteri new_ctx.map ~f:(fun ~key ~data ->
             match data with
             | Ctx.Namespace.(Func _ | Type _) as var :: _ ->
@@ -357,9 +352,10 @@ struct
               Ctx.add ctx key var
             | _ -> ());
         | Some lst -> (* from foo import bar *)
-          List.iter lst ~f:(fun (pos, name) ->
+          List.iter lst ~f:(fun (pos, (name, import_as)) ->
             match Ctx.in_scope new_ctx name with
             | Some var -> 
+              let name = Option.value import_as ~default:name in
               Ctx.add ctx name var
             | None ->
               serr ~pos "name %s not found in %s" name from));

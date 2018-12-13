@@ -579,12 +579,15 @@ import_statement:
   // from x import *
   | FROM ID IMPORT MUL
     { pos $1 (fst $4),
-      Import [{ from = $2; what = Some([fst $4, "*"]); 
+      Import [{ from = $2; what = Some([fst $4, ("*", None)]); 
                 import_as = None; stdlib = false }] }
   // from x import y, z
-  | FROM ID IMPORT separated_list(COMMA, ID)
+  | FROM ID IMPORT separated_list(COMMA, import_term)
     { pos $1 (fst @@ List.last_exn $4),
-      Import [{ from = $2; what = Some($4); 
+      let what = List.map $4 ~f:(fun (pos, ((_, what), ias)) -> 
+        pos, (what, ias)) 
+      in
+      Import [{ from = $2; what = Some(what); 
                 import_as = None; stdlib = false }] }
   // import x, y
   | IMPORT separated_list(COMMA, import_term)

@@ -127,8 +127,12 @@ struct
       var: string option;
       stmts: t list }
   and import = 
+    (* import <from> as <import_as> | from <from> import <what> 
+       <what> = [<what> as <import_as>]+
+       import! := import + <stdlib> = true *)
     { from: string tt; 
-      what: string tt list option;
+      (* what:  *)
+      what: (string * string option) tt list option;
       import_as: string option;
       stdlib: bool }
   and pattern = 
