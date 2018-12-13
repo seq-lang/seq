@@ -98,12 +98,12 @@ struct
     match Hashtbl.find map var with
     (* Make sure that a variable is either accessible within 
        the same base (function) or that it is global variable  *)
-    | Some (Ctx.VTable.Var (v, { base; global; _ }) :: _) 
+    | Some (Ctx.Namespace.Var (v, { base; global; _ }) :: _) 
       when (ctx.base = base) || global -> 
       Llvm.Expr.var v
-    | Some (Ctx.VTable.Type t :: _) -> 
+    | Some (Ctx.Namespace.Type t :: _) -> 
       Llvm.Expr.typ t
-    | Some (Ctx.VTable.Func t :: _) -> 
+    | Some (Ctx.Namespace.Func t :: _) -> 
       Llvm.Expr.func t
     | _ ->
       serr ~pos "symbol '%s' not found or realized" var
@@ -130,7 +130,7 @@ struct
     let captures = String.Table.create () in
     walk ctx (pos, Generator (expr, gen)) ~f:(fun (ctx: Ctx.t) var ->
       match Hashtbl.find ctx.map var with
-      | Some (Ctx.VTable.Var (v, { base; global; _ }) :: _) 
+      | Some (Ctx.Namespace.Var (v, { base; global; _ }) :: _) 
         when (ctx.base = base) || global -> 
         Hashtbl.set captures ~key:var ~data:v
       | _ -> ());
@@ -252,13 +252,36 @@ struct
       Llvm.Expr.call ~kind callee_expr args
     
   and parse_dot ctx pos (lh_expr, rhs) =
-    let lh_expr = parse ctx lh_expr in
-    if Llvm.Expr.is_type lh_expr then
-      let typ = Llvm.Type.expr_type lh_expr in
-      Llvm.Expr.static typ rhs 
-    else
-      Llvm.Expr.element lh_expr rhs
-            
+    (* check is import *)
+    let rec imports ictx = function 
+      | _, Id(x) -> 
+        begin match Hashtbl.find ictx x with 
+          | Some (Ctx.Namespace.Import x :: _) -> Some x
+          | _ -> None
+        end
+      | _, Dot(a, x) -> 
+        begin match imports ictx a with 
+          | Some ictx ->
+            begin match Hashtbl.find ictx x with 
+              | Some (Ctx.Namespace.Import x :: _) -> Some x
+              | _ -> None
+            end
+          | _ -> None
+        end
+      | _, _ -> None
+    in 
+    match imports ctx.map lh_expr with
+    | Some ictx ->
+      Util.dbg "import helper...";
+      parse_id ctx ~map:ictx pos rhs
+    | None ->
+      let lh_expr = parse ctx lh_expr in
+      if Llvm.Expr.is_type lh_expr then
+        let typ = Llvm.Type.expr_type lh_expr in
+        Llvm.Expr.static typ rhs 
+      else
+        Llvm.Expr.element lh_expr rhs
+              
   (* ***************************************************************
      Helper functions
      *************************************************************** *)
@@ -299,7 +322,7 @@ struct
       Used to get types for [list], [dict] and other internal classes. *)
   and get_internal_type (ctx: Ctx.t) typ_str = 
     match Hashtbl.find ctx.map typ_str with
-    | Some (Ctx.VTable.Type typ :: _) -> typ
+    | Some (Ctx.Namespace.Type typ :: _) -> typ
     | _ -> failwith (sprintf "can't find internal type %s" typ_str)
 
   (** [walk context ~f expr] walks the AST [expr] and calls 

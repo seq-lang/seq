@@ -10,7 +10,7 @@
 open Core
 
 (** Variable table description  *)
-module VTable = 
+module Namespace = 
 struct
   (** Variable table is a dictionary that maps names to LLVM types *)
   type t = 
@@ -20,6 +20,7 @@ struct
     | Var  of Llvm.Types.var_t * annotation
     | Func of Llvm.Types.func_t
     | Type of Llvm.Types.typ_t
+    | Import of t
   (** Each assignable variable is annotated with 
       [base] function pointer, and flags describing does
       it belong to toplevel or not, and is it global or not  *)
@@ -46,7 +47,7 @@ type t =
         Each block maintains a set of variables on stack. *)
     stack: ((string) Hash_set.t) Stack.t;
     (** Variable lookup table *)
-    map: VTable.t;
+    map: Namespace.t;
 
     (** function that parses a file within current context 
         (used for processing [import] statements) *)
@@ -55,6 +56,17 @@ type t =
 (** [add_block context] pushed a new block to context stack *)
 let add_block ctx = 
   Stack.push ctx.stack (String.Hash_set.create ())
+
+(* Returns the list of native POD types *)
+let pod_types () = 
+  Llvm.Type.(
+    [ "void", void; 
+      "int", int; 
+      "str", str;  
+      "seq", seq;
+      "bool", bool; 
+      "float", float; 
+      "byte", byte ]) 
 
 (** [init ...] initializes an empty context with toplevel block
     and adds internal POD types to the vtable *)
@@ -72,17 +84,8 @@ let init filename mdl base block parse_file =
   add_block ctx;
   
   (* initialize POD types *)
-  let pairs = Llvm.Type.(
-    [ "void", void; 
-      "int", int; 
-      "str", str;  
-      "seq", seq; 
-      "bool", bool; 
-      "float", float; 
-      "byte", byte ]) 
-  in
-  List.iter pairs ~f:(fun (key, fn) -> 
-    let data = [ VTable.Type (fn ()) ] in
+  List.iter (pod_types ()) ~f:(fun (key, fn) -> 
+    let data = [ Namespace.Type (fn ()) ] in
     Hashtbl.set ctx.map ~key ~data);
   ctx
 
@@ -96,26 +99,34 @@ let dump ctx =
   let sortf (xa, xb) (ya, yb) = 
     compare (xb, xa) (yb, ya) 
   in
-  let ind x = String.make x ' ' in
-  let prn_assignable _ ass = 
-    match ass with
-    | VTable.Var _  -> sprintf "(*var*)", ""
-    | VTable.Func _ -> sprintf "(*fun*)", ""
-    | VTable.Type _ -> sprintf "(*typ*)", ""
+  let ind x = 
+    String.make (x * 3) ' ' 
   in
-  let sorted = 
-    Hashtbl.to_alist ctx.map |>
-    List.map ~f:(fun (a, b) -> (a, List.hd_exn b)) |>
-    List.sort ~compare:sortf
-  in
-  List.iter sorted ~f:(fun (key, data) -> 
-    let pre, pos = prn_assignable 3 data in
-    dbg "   %s %s %s" pre key pos)
+  let rec prn ?(depth=1) ctx = 
+    let prn_assignable ass = 
+      match ass with
+      | Namespace.Var _    -> sprintf "(*var*)", ""
+      | Namespace.Func _   -> sprintf "(*fun*)", ""
+      | Namespace.Type _   -> sprintf "(*typ*)", ""
+      | Namespace.Import ctx -> 
+        sprintf "(*imp*)", 
+        " ->\n" ^ (prn ctx ~depth:(depth+1))
+    in
+    let sorted = 
+      Hashtbl.to_alist ctx |>
+      List.map ~f:(fun (a, b) -> (a, List.hd_exn b)) |>
+      List.sort ~compare:sortf
+    in
+    String.concat ~sep:"\n" @@ List.map sorted ~f:(fun (key, data) -> 
+      let pre, pos = prn_assignable data in
+      sprintf "%s%s %s %s" (ind depth) pre key pos)
+  in 
+  dbg "%s" (prn ctx.map)
 
 (** [var ~toplevel context var] is a helper that creates 
     a new assignable non-global variable *)
 let var (ctx: t) ?(toplevel=false) var =
-  VTable.Var (var, 
+  Namespace.Var (var, 
     { base = ctx.base; global = false; toplevel })
 
 (** [add context name var] adds a variable to the current block *)

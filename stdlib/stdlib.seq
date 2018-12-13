@@ -79,6 +79,6 @@ extend seq:
             h = 31*h + int(p[i])
         return h
 
-import list
-import dict
-import set
+import! list
+import! dict 
+import! set 

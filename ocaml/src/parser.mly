@@ -57,7 +57,7 @@
 %token <Ast.Pos.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals 
 %token <Ast.Pos.t> DEF RETURN YIELD EXTERN LAMBDA     // functions 
 %token <Ast.Pos.t> TYPE CLASS TYPEOF EXTEND           // types 
-%token <Ast.Pos.t> IMPORT FROM GLOBAL                 // variables 
+%token <Ast.Pos.t> IMPORT FROM GLOBAL IMPORT_CONTEXT  // variables 
 %token <Ast.Pos.t> PRINT PASS ASSERT DEL              // keywords 
 %token <Ast.Pos.t> TRUE FALSE NONE                    // booleans 
 %token <Ast.Pos.t> TRY EXCEPT FINALLY THROW           // exceptions
@@ -576,20 +576,34 @@ case_type:
 
 // Import statments
 import_statement:
-  | FROM dot_term IMPORT MUL
-    { noimp "Import" (* ImportFrom ($2, None) *) }
-  | FROM dot_term IMPORT separated_list(COMMA, import_term)
-    { noimp "Import"(* ImportFrom ($2, Some $4) *) }
+  // from x import *
+  | FROM ID IMPORT MUL
+    { pos $1 (fst $4),
+      Import [{ from = $2; what = Some([fst $4, "*"]); 
+                import_as = None; stdlib = false }] }
+  // from x import y, z
+  | FROM ID IMPORT separated_list(COMMA, ID)
+    { pos $1 (fst @@ List.last_exn $4),
+      Import [{ from = $2; what = Some($4); 
+                import_as = None; stdlib = false }] }
   // import x, y
   | IMPORT separated_list(COMMA, import_term)
-    { pos $1 (fst @@ fst @@ List.last_exn $2), 
-      Import $2 }
+    { pos $1 (fst @@ List.last_exn $2), 
+      Import (List.map $2 ~f:(fun (_, (from, import_as)) ->
+        { from; what = None; import_as; stdlib = false })) }
+  // import!
+  | IMPORT_CONTEXT ID
+    { pos $1 (fst $2), 
+      Import [{ from = $2; what = None; 
+                import_as = None; stdlib = true }] }
 // Import terms (foo, foo as bar)
 import_term:
   | ID
-    { $1, None }
+    { fst $1, 
+      ($1, None) }
   | ID AS ID
-    { $1, Some (snd $3) } 
+    { pos (fst $1) (fst $3),
+      ($1, Some (snd $3)) } 
 // Dotted identifiers (foo, foo.bar)
 dot_term:
   | ID
@@ -656,8 +670,12 @@ func:
   // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
   | EXTERN; lang = ID; dylib = dylib_spec?; name = ID;
     LP params = separated_list(COMMA, typed_param); RP
-    typ = func_ret_type; NL
-    { pos $1 (fst typ), 
+    typ = func_ret_type?; NL
+    { let typ = match typ with
+        | Some typ -> typ
+        | None -> $7, Id("void")
+      in
+      pos $1 (fst typ), 
       Extern (snd lang, dylib, 
         (fst name, { name = snd name; typ = Some(typ) }), params) }
 // Generic specifiers

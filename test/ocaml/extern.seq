@@ -21,11 +21,23 @@
 # print a, b
 # print a+"x"
 
-class A():
-    def foo[`s](s: `s):
-        print s
-A().foo[int](10)  # similar error
+# import test as xx
+from test import foo, cls
 
+# from test import foo
+
+print 'extern'
+___dump___
+foo(1)
+
+y = cls(1)
+y.foo()
+
+# k = xx.typ(3)
+# print k.i
+
+# a = [1,2,3,45]
+# print a
 
 # class Exc(msg: str):
 #     def yodel(self):

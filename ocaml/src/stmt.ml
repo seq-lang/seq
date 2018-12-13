@@ -110,10 +110,10 @@ struct
     match lhs with
     | Id var ->
       begin match Hashtbl.find ctx.map var with
-      | Some (Ctx.VTable.Var (v, { base; global; _ }) :: _) 
+      | Some (Ctx.Namespace.Var (v, { base; global; _ }) :: _) 
         when (not shadow) && ((ctx.base = base) || global) -> 
         Llvm.Stmt.assign v rh_expr
-      | Some (Ctx.VTable.(Type _ | Func _) :: _) ->
+      | Some (Ctx.Namespace.(Type _ | Func _) :: _) ->
         serr ~pos "cannot assign functions or types"
       | _ ->
         let var_stmt = Llvm.Stmt.var rh_expr in
@@ -198,7 +198,7 @@ struct
       serr ~pos "type %s already defined" name;
     let arg_types = List.map arg_types ~f:(E.parse_type ctx) in
     let typ = Llvm.Type.record arg_names arg_types in
-    Ctx.add ctx name (Ctx.VTable.Type typ);
+    Ctx.add ctx name (Ctx.Namespace.Type typ);
     Llvm.Stmt.pass ()
 
   and parse_while ctx pos (cond, stmts) =
@@ -296,12 +296,12 @@ struct
     let typ = E.parse_type ctx (Option.value_exn typ) in
     Llvm.Func.set_type fn typ;
     
-    Ctx.add ctx name (Ctx.VTable.Func fn);
+    Ctx.add ctx name (Ctx.Namespace.Func fn);
     Llvm.Stmt.func fn
 
   and parse_extend ctx pos (name, stmts) =
     let typ = match Ctx.in_scope ctx name with
-      | Some (Ctx.VTable.Type t) -> t
+      | Some (Ctx.Namespace.Type t) -> t
       | _ -> serr ~pos "cannot extend non-existing class %s" name
     in
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
@@ -314,19 +314,55 @@ struct
   (** [parse_import ?ext context position data] parses import AST.
       Import file extension is set via [seq] (default is [".seq"]). *)
   and parse_import ?(ext="seq") ctx pos imports =
-    List.iter imports ~f:(fun ((pos, what), _) ->
-      let file = sprintf "%s/%s.%s" (Filename.dirname ctx.filename) what ext in
-      match Sys.file_exists file with
+    List.iter imports ~f:(fun { from; what; import_as; stdlib } ->
+      let from = snd from in
+      let file = 
+        sprintf "%s/%s.%s" (Filename.dirname ctx.filename) from ext 
+      in
+      let new_ctx = 
+        if stdlib then
+          ctx
+        else
+          { (Ctx.init file ctx.mdl ctx.base ctx.block ctx.parse_file)
+            with trycatch = ctx.trycatch }
+      in
+      begin match Sys.file_exists file with
       | `Yes -> 
-        ctx.parse_file ctx file
+        new_ctx.parse_file new_ctx file
       | `No | `Unknown -> 
         let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
-        let file = sprintf "%s/%s.%s" seqpath what ext in
+        let file = sprintf "%s/%s.%s" seqpath from ext in
         match Sys.file_exists file with
         | `Yes -> 
-          ctx.parse_file ctx file
+          new_ctx.parse_file new_ctx file
         | `No | `Unknown -> 
-          serr ~pos "cannot locate module %s" what);
+          serr ~pos "cannot locate module %s" from
+      end;
+      if not stdlib then match what with
+        | None -> (* import foo (as bar) *)
+          let from = Option.value import_as ~default:from in
+          let pods = List.map (Ctx.pod_types ()) ~f:fst in
+          let map = Hashtbl.filteri new_ctx.map ~f:(fun ~key ~data ->
+            match data with
+            | Ctx.Namespace.(Type _ | Func _) :: _ -> 
+              not (List.exists pods ~f:((=)key))
+            | _ -> false)
+          in
+          Ctx.add ctx from (Ctx.Namespace.Import map)
+        | Some [(_, "*")] -> (* from foo import * *)
+          Hashtbl.iteri new_ctx.map ~f:(fun ~key ~data ->
+            match data with
+            | Ctx.Namespace.(Func _ | Type _) as var :: _ ->
+              Util.dbg "[import] adding %s::%s" from key;
+              Ctx.add ctx key var
+            | _ -> ());
+        | Some lst -> (* from foo import bar *)
+          List.iter lst ~f:(fun (pos, name) ->
+            match Ctx.in_scope new_ctx name with
+            | Some var -> 
+              Ctx.add ctx name var
+            | None ->
+              serr ~pos "name %s not found in %s" name from));
     Llvm.Stmt.pass ()
 
   (** [parse_function ?cls context position data] parses function AST.
@@ -339,7 +375,7 @@ struct
     let fn = Llvm.Func.func name in
     begin match cls with 
       | Some cls -> Llvm.Type.add_cls_method cls name fn
-      | None -> Ctx.add ctx name (Ctx.VTable.Func fn)
+      | None -> Ctx.add ctx name (Ctx.Namespace.Func fn)
     end;
 
     let new_ctx = 
@@ -379,7 +415,7 @@ struct
         serr ~pos "class field %s does not have type" name);
 
     let typ = Llvm.Type.cls name in
-    Ctx.add ctx name (Ctx.VTable.Type typ);
+    Ctx.add ctx name (Ctx.Namespace.Type typ);
 
     let new_ctx = 
       { ctx with 
@@ -439,12 +475,12 @@ struct
   and parse_global ctx _ vars =
     List.iter vars ~f:(fun (pos, var) -> 
       match Hashtbl.find ctx.map var with
-      | Some (Ctx.VTable.Var (v, { base; global; toplevel }) :: rest) ->
+      | Some (Ctx.Namespace.Var (v, { base; global; toplevel }) :: rest) ->
         if (ctx.base = base) || global then 
           serr ~pos "symbol '%s' either local or already set as global" var;
         Llvm.Var.set_global v;
-        let new_var = Ctx.VTable.Var 
-          (v, Ctx.VTable.{ base; global = true; toplevel }) 
+        let new_var = Ctx.Namespace.Var 
+          (v, Ctx.Namespace.{ base; global = true; toplevel }) 
         in
         Hashtbl.set ctx.map ~key:var ~data:(new_var :: rest)
       | _ ->
@@ -539,7 +575,7 @@ struct
     set_generic_count (List.length generics);
 
     List.iteri generics ~f:(fun cnt key ->
-      Ctx.add ctx key (Ctx.VTable.Type (get_generic cnt key)));
+      Ctx.add ctx key (Ctx.Namespace.Type (get_generic cnt key)));
     let types = List.map types ~f:(E.parse_type ctx) in
     names, types
 end
