@@ -92,7 +92,7 @@ if foo:
     - `<func_expr | elem_expr | static_expr>[type+]` for realization parameter setting
     - Any other `lhs` will throw an error
   - [ ] **Only one index expression is allowed** unless all indices are types (e.g. `a[b, c]` is not allowed)
-  
+
 ### Statement ASTs (`stmt.ml`)
 
 #### Gotchas:
@@ -160,12 +160,16 @@ if foo:
   - allows `"catch" type`, `"catch" type "as" var` and `"catch"`
   - all expressions within `try` get set with `expr->setTryCatch(try)`
     - [ ] **If multiple `try` statements are nested, each expression will be set to closest (i.e. deepest) `try` statement**
+    - **Statements do not call setTryCatch**
 - `parse_import`: parses `"import" name`
   - Everything is imported into the current scope as/is
   - `name` resolution:
     - parse `name.seq` in the directory of the running script
     - if it fails, parse `${SEQ_PATH}/name.seq`
-  - [ ] **Currently only supports simple imports** 
-
+  - each import starts with empty context/namespace 
+    - `import!` inherits current context: **SHOULD BE USED ONLY IN STDLIB**
+  - recursive imports work 
+    (`a: from x import *; b: from a import *` will import `x.*` to `b`)
+  - [ ] **Recursive imports are not tested and most likely fail miserably**
 
 
