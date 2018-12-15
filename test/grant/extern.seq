@@ -1,7 +1,0 @@
-# 786
-
-import seqlib 
-
-f = File('README.md')
-for i in f:
-   print i
