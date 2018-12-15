@@ -69,7 +69,7 @@ let pod_types () =
       "byte", byte ]) 
 
 (** [init ...] initializes an empty context with toplevel block
-    and adds internal POD types to the vtable *)
+    and adds internal POD types to the namespace *)
 let init filename mdl base block parse_file =
   let ctx = 
     { filename;
@@ -88,40 +88,6 @@ let init filename mdl base block parse_file =
     let data = [ Namespace.Type (fn ()) ] in
     Hashtbl.set ctx.map ~key ~data);
   ctx
-
-(** [dump context] dumps [context] vtable to debug output  *)
-let dump ctx =
-  let open Util in
-  dbg "=== == - CONTEXT DUMP - == ===";
-  dbg "-> Filename: %s" ctx.filename;
-  dbg "-> Keys:";
-
-  let sortf (xa, xb) (ya, yb) = 
-    compare (xb, xa) (yb, ya) 
-  in
-  let ind x = 
-    String.make (x * 3) ' ' 
-  in
-  let rec prn ?(depth=1) ctx = 
-    let prn_assignable ass = 
-      match ass with
-      | Namespace.Var _    -> sprintf "(*var*)", ""
-      | Namespace.Func _   -> sprintf "(*fun*)", ""
-      | Namespace.Type _   -> sprintf "(*typ*)", ""
-      | Namespace.Import ctx -> 
-        sprintf "(*imp*)", 
-        " ->\n" ^ (prn ctx ~depth:(depth+1))
-    in
-    let sorted = 
-      Hashtbl.to_alist ctx |>
-      List.map ~f:(fun (a, b) -> (a, List.hd_exn b)) |>
-      List.sort ~compare:sortf
-    in
-    String.concat ~sep:"\n" @@ List.map sorted ~f:(fun (key, data) -> 
-      let pre, pos = prn_assignable data in
-      sprintf "%s%s %s %s" (ind depth) pre key pos)
-  in 
-  dbg "%s" (prn ctx.map)
 
 (** [var ~toplevel context var] is a helper that creates 
     a new assignable non-global variable *)
@@ -167,3 +133,38 @@ let in_block ctx key =
     Some (List.hd_exn @@ Hashtbl.find_exn ctx.map key)
   else 
     None
+
+(** [dump context] dumps [context] vtable to debug output  *)
+let dump ctx =
+  let open Util in
+  dbg "=== == - CONTEXT DUMP - == ===";
+  dbg "-> Filename: %s" ctx.filename;
+  dbg "-> Keys:";
+
+  let sortf (xa, xb) (ya, yb) = 
+    compare (xb, xa) (yb, ya) 
+  in
+  let ind x = 
+    String.make (x * 3) ' ' 
+  in
+  let rec prn ?(depth=1) ctx = 
+    let prn_assignable ass = 
+      match ass with
+      | Namespace.Var _    -> sprintf "(*var*)", ""
+      | Namespace.Func _   -> sprintf "(*fun*)", ""
+      | Namespace.Type _   -> sprintf "(*typ*)", ""
+      | Namespace.Import ctx -> 
+        sprintf "(*imp*)", 
+        " ->\n" ^ (prn ctx ~depth:(depth+1))
+    in
+    let sorted = 
+      Hashtbl.to_alist ctx |>
+      List.map ~f:(fun (a, b) -> (a, List.hd_exn b)) |>
+      List.sort ~compare:sortf
+    in
+    String.concat ~sep:"\n" @@ List.map sorted ~f:(fun (key, data) -> 
+      let pre, pos = prn_assignable data in
+      sprintf "%s%s %s %s" (ind depth) pre key pos)
+  in 
+  dbg "%s" (prn ctx.map)
+

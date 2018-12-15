@@ -113,7 +113,7 @@ struct
       | Some (Ctx.Namespace.Var (v, { base; global; _ }) :: _) 
         when (not shadow) && ((ctx.base = base) || global) -> 
         Llvm.Stmt.assign v rh_expr
-      | Some (Ctx.Namespace.(Type _ | Func _) :: _) ->
+      | Some (Ctx.Namespace.(Type _ | Func _ | Import _) :: _) ->
         serr ~pos "cannot assign functions or types"
       | _ ->
         let var_stmt = Llvm.Stmt.var rh_expr in

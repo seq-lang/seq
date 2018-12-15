@@ -39,13 +39,6 @@ let style_to_string s =
   | Background White -> "47"
   | Background Default -> "49"
 
-(** [sci ~sep lst str] creates a string formed by concatenating 
-    string representations (via [str]) of elements of [lst] with separator [sep]
-    (default separator is [", "]).
-    TODO: Use Fmt library *)
-let sci lst ?(sep=", ") str =
-  String.concat ~sep @@ List.map ~f:str lst
-
 (** Output debug information to stderr (with red color or other [style])
     with sprintf-style format string
     if [SEQ_DEBUG] enviromental variable is set. *)
