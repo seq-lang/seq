@@ -102,12 +102,12 @@ if(NOT OPAM)
 endif()
 
 add_custom_command(OUTPUT ${LIB_SEQPARSE}
-                   COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} src/main.exe src/main.so
-                   COMMAND cp ${DUNE_BUILD_DIR}/default/src/main.so ${LIB_SEQPARSE}
-                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ocaml"
-                   DEPENDS ocaml/src/dune
-                           ocaml/src/main.ml
-                           ocaml/dune-project
+                   COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} main.exe main.so
+                   COMMAND cp ${DUNE_BUILD_DIR}/default/main.so ${LIB_SEQPARSE}
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/parser"
+                   DEPENDS src/parser/dune
+                           src/parser/main.ml
+                           src/parser/dune-project
                    COMMENT "Compiling Seq's OCaml components"
                    VERBATIM)
 add_custom_target(seqparse_target DEPENDS ${LIB_SEQPARSE})

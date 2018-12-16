@@ -1,9 +1,9 @@
 (env
-   (dev 
+   (dev
       (flags (:standard
          -w @a-4-29-40-41-42-44-45-48-58-59-60-40-26-27
          -warn-error -A)))
-   (macos-dev 
+   (macos-dev
       (flags (:standard
          -w @a-4-29-40-41-42-44-45-48-58-59-60-40-26-27
          -strict-sequence
@@ -14,18 +14,18 @@
          -cclib -Wl,-install_name,@rpath/libseqparser.so))))
 
 (ocamllex lexer)
-(menhir 
+(menhir
    (modules parser))
 
 (executable
    (name main)
-   (libraries 
+   (libraries
       base core ANSITerminal ctypes ctypes.foreign ctypes.stubs sexplib)
-   (link_flags 
-      (-cclib -L%{project_root}/.. -cclib -lseq))
-   (modes 
+   (link_flags
+      (-cclib -L%{project_root}/../.. -cclib -lseq))
+   (modes
       shared_object exe)
-   (modules_without_implementation 
+   (modules_without_implementation
       intf)
-   (preprocess 
+   (preprocess
       (pps ppx_sexp_conv)))
