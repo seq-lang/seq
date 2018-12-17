@@ -3,8 +3,8 @@ project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pedantic -Wall -Wno-return-type-c-linkage")
-include_directories(src/)
-include_directories(include/)
+include_directories(compiler/include/)
+include_directories(runtime/)
 
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -12,63 +12,63 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 
 # Seq runtime library
-add_library(seqrt SHARED include/seq/lib.h
-                         src/seq/lib.cpp
-                         src/seq/exc.cpp)
+add_library(seqrt SHARED runtime/lib.h
+                         runtime/lib.cpp
+                         runtime/exc.cpp)
 target_link_libraries(seqrt gc)
 
 
 # Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-add_library(seq SHARED include/seq/any.h
-                       include/seq/array.h
-                       include/seq/base.h
-                       include/seq/common.h
-                       include/seq/expr.h
-                       include/seq/func.h
-                       include/seq/funct.h
-                       include/seq/generic.h
-                       include/seq/lang.h
-                       include/seq/llvm.h
-                       include/seq/num.h
-                       include/seq/ops.h
-                       include/seq/optional.h
-                       include/seq/parser.h
-                       include/seq/patterns.h
-                       include/seq/ptr.h
-                       include/seq/record.h
-                       include/seq/ref.h
-                       include/seq/seq.h
-                       include/seq/seqt.h
-                       include/seq/source.h
-                       include/seq/stmt.h
-                       include/seq/types.h
-                       include/seq/void.h
-                       include/seq/var.h
-                       src/lang/expr.cpp
-                       src/lang/func.cpp
-                       src/lang/lang.cpp
-                       src/lang/ops.cpp
-                       src/lang/patterns.cpp
-                       src/lang/seq.cpp
-                       src/lang/stmt.cpp
-                       src/lang/var.cpp
-                       src/types/any.cpp
-                       src/types/array.cpp
-                       src/types/base.cpp
-                       src/types/funct.cpp
-                       src/types/generic.cpp
-                       src/types/num.cpp
-                       src/types/optional.cpp
-                       src/types/ptr.cpp
-                       src/types/record.cpp
-                       src/types/ref.cpp
-                       src/types/seqt.cpp
-                       src/types/source.cpp
-                       src/types/types.cpp
-                       src/types/void.cpp
-                       src/util/ocaml.cpp)
+add_library(seq SHARED compiler/include/seq/any.h
+                       compiler/include/seq/array.h
+                       compiler/include/seq/base.h
+                       compiler/include/seq/common.h
+                       compiler/include/seq/expr.h
+                       compiler/include/seq/func.h
+                       compiler/include/seq/funct.h
+                       compiler/include/seq/generic.h
+                       compiler/include/seq/lang.h
+                       compiler/include/seq/llvm.h
+                       compiler/include/seq/num.h
+                       compiler/include/seq/ops.h
+                       compiler/include/seq/optional.h
+                       compiler/include/seq/parser.h
+                       compiler/include/seq/patterns.h
+                       compiler/include/seq/ptr.h
+                       compiler/include/seq/record.h
+                       compiler/include/seq/ref.h
+                       compiler/include/seq/seq.h
+                       compiler/include/seq/seqt.h
+                       compiler/include/seq/source.h
+                       compiler/include/seq/stmt.h
+                       compiler/include/seq/types.h
+                       compiler/include/seq/void.h
+                       compiler/include/seq/var.h
+                       compiler/lang/expr.cpp
+                       compiler/lang/func.cpp
+                       compiler/lang/lang.cpp
+                       compiler/lang/ops.cpp
+                       compiler/lang/patterns.cpp
+                       compiler/lang/seq.cpp
+                       compiler/lang/stmt.cpp
+                       compiler/lang/var.cpp
+                       compiler/types/any.cpp
+                       compiler/types/array.cpp
+                       compiler/types/base.cpp
+                       compiler/types/funct.cpp
+                       compiler/types/generic.cpp
+                       compiler/types/num.cpp
+                       compiler/types/optional.cpp
+                       compiler/types/ptr.cpp
+                       compiler/types/record.cpp
+                       compiler/types/ref.cpp
+                       compiler/types/seqt.cpp
+                       compiler/types/source.cpp
+                       compiler/types/types.cpp
+                       compiler/types/void.cpp
+                       compiler/util/ocaml.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} seqrt)
 
@@ -104,10 +104,10 @@ endif()
 add_custom_command(OUTPUT ${LIB_SEQPARSE}
                    COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} main.exe main.so
                    COMMAND cp ${DUNE_BUILD_DIR}/default/main.so ${LIB_SEQPARSE}
-                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/parser"
-                   DEPENDS src/parser/dune
-                           src/parser/main.ml
-                           src/parser/dune-project
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
+                   DEPENDS parser/dune
+                           parser/main.ml
+                           parser/dune-project
                    COMMENT "Compiling Seq's OCaml components"
                    VERBATIM)
 add_custom_target(seqparse_target DEPENDS ${LIB_SEQPARSE})
@@ -118,7 +118,7 @@ set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
 
 
 # Seq command-line tool
-add_executable(seqc src/seq/main.cpp)
+add_executable(seqc runtime/main.cpp)
 target_link_libraries(seqc seq seqparse asmrun)
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 

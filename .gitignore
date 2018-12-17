@@ -11,6 +11,7 @@
 *.o
 *.obj
 *.so
+build/
 
 # Packages #
 ############
@@ -46,12 +47,12 @@ Thumbs.db
 .idea
 .mypy_cache
 
-# Doxygen
+# Doxygen #
+###########
 dox
 
-# Ocaml
-ocaml/_build
-ocaml/build
+# Ocaml #
+#########
 *.cm[iot]
 *.byte
 *.native

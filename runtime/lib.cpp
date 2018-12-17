@@ -10,7 +10,7 @@
 #include <cassert>
 #include <unwind.h>
 #include <gc.h>
-#include "seq/lib.h"
+#include "lib.h"
 
 using namespace std;
 

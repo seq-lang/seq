@@ -6,7 +6,7 @@
 #include <cassert>
 #include <gc.h>
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "seq/lib.h"
+#include "lib.h"
 
 /*
  * All of this is largely based on
