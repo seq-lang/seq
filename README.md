@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.com/seq-lang/seq.svg?token=QGRVvAxcSasMm4MgJvYL&branch=master)](https://travis-ci.com/seq-lang/seq)
 
+
 ## Dependencies
 
 - C++11
@@ -10,28 +11,27 @@
 - Boehm GC
 - OCaml
 
+
 ## Build
 
-Compile:
+Make sure the `LLVM_DIR` environment variable is set (to the result of `llvm-config --cmakedir`). Then:
 
 ```bash
-cd seq/build
-LLVM_DIR=/path/to/llvm/version/lib/cmake cmake ..
+mkdir seq/build
+cd seq/builld
+cmake ..
 cmake --build .
 ```
 
-Test:
+This will produce a `seq` executable for compiling/running Seq progrms, and a `seqtest` executable for running the test suite.
 
-```bash
-./seqtest
-```
 
 ## Documentation
 
 [Sphinx](http://www.sphinx-doc.org) is used for all documentation. To compile, install Sphinx and then:
 
 ```bash
-cd seq/docs
+cd seq/doc
 make html
 ```
 
