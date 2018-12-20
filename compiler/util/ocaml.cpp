@@ -327,6 +327,11 @@ FOREIGN Var *var_stmt_var(VarStmt *v)
 	return v->getVar();
 }
 
+FOREIGN void var_stmt_set_type(VarStmt *v, types::Type *t)
+{
+	v->setType(t);
+}
+
 FOREIGN Stmt *assign_stmt(Var *v, Expr *rhs)
 {
 	return new Assign(v, rhs);

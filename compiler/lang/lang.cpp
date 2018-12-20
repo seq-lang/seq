@@ -57,13 +57,19 @@ ExprStmt *ExprStmt::clone(Generic *ref)
 }
 
 VarStmt::VarStmt(Expr *init) :
-    Stmt("var"), init(init), var(new Var())
+    Stmt("var"), init(init), var(new Var()), type(nullptr)
 {
 }
 
 Var *VarStmt::getVar()
 {
 	return var;
+}
+
+void VarStmt::setType(types::Type *type)
+{
+	assert(!this->type);
+	this->type = type;
 }
 
 void VarStmt::resolveTypes()
@@ -74,6 +80,12 @@ void VarStmt::resolveTypes()
 
 void VarStmt::codegen0(BasicBlock*& block)
 {
+	if (type) {
+		types::Type *got = init->getType();
+		if (!types::is(type, got))
+			throw exc::SeqException("expected var type '" + type->getName() + "', but got '" + got->getName() + "'");
+	}
+
 	Value *val = init->codegen(getBase(), block);
 	var->store(getBase(), val, block);
 }
@@ -86,6 +98,7 @@ VarStmt *VarStmt::clone(Generic *ref)
 	auto *x = new VarStmt(init->clone(ref));
 	ref->addClone(this, x);
 	x->var = var->clone(ref);
+	x->type = type ? type->clone(ref) : nullptr;
 	Stmt::setCloneBase(x, ref);
 	SEQ_RETURN_CLONE(x);
 }
