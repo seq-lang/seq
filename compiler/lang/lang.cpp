@@ -193,6 +193,27 @@ AssignIndex *AssignIndex::clone(Generic *ref)
 	SEQ_RETURN_CLONE(x);
 }
 
+Del::Del(Var *var) : Stmt("del"), var(var)
+{
+}
+
+void Del::codegen0(BasicBlock*& block)
+{
+	Value *empty = var->getType()->defaultValue(block);
+	var->store(getBase(), empty, block);
+}
+
+Del *Del::clone(Generic *ref)
+{
+	if (ref->seenClone(this))
+		return (Del *)ref->getClone(this);
+
+	auto *x = new Del(var->clone(ref));
+	ref->addClone(this, x);
+	Stmt::setCloneBase(x, ref);
+	SEQ_RETURN_CLONE(x);
+}
+
 DelIndex::DelIndex(Expr *array, Expr *idx) :
     Stmt("del []"), array(array), idx(idx)
 {

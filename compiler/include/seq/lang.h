@@ -75,6 +75,15 @@ namespace seq {
 		AssignIndex *clone(Generic *ref) override;
 	};
 
+	class Del : public Stmt {
+	private:
+		Var *var;
+	public:
+		explicit Del(Var *var);
+		void codegen0(llvm::BasicBlock*& block) override;
+		Del *clone(Generic *ref) override;
+	};
+
 	class DelIndex : public Stmt {
 	private:
 		Expr *array;

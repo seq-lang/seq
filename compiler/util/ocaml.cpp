@@ -349,6 +349,11 @@ FOREIGN Stmt *assign_index_stmt(Expr *lh, Expr *rh, Expr *rhs)
 	return new AssignIndex(lh, rh, rhs);
 }
 
+FOREIGN Stmt *del_stmt(Var *v)
+{
+	return new Del(v);
+}
+
 FOREIGN Stmt *del_index_stmt(Expr *lh, Expr *rh)
 {
 	return new DelIndex(lh, rh);
