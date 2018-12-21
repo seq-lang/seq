@@ -20,8 +20,8 @@
 (executable
    (name main)
    (libraries
-      base core 
-      ANSITerminal 
+      base core
+      ANSITerminal
       ctypes ctypes.foreign ctypes.stubs)
    (link_flags
       (-cclib -L%{project_root}/../.. -cclib -lseq))

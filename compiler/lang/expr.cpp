@@ -1089,14 +1089,29 @@ void ArrayLookupExpr::resolveTypes()
 	idx->resolveTypes();
 }
 
+static void tupleIndexOutOfBounds(seq_int_t idx, seq_int_t len)
+{
+	throw exc::SeqException("tuple index " + std::to_string(idx) + " out of bounds (len: " + std::to_string(len) + ")");
+}
+
 Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	types::Type *type = arr->getType();
+	types::RecordType *rec = type->asRec();
 	auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
 	// check if this is a record lookup
-	if (type->asRec() && idxLit) {
-		GetElemExpr e(arr, idxLit->value() + 1);
+	if (rec && idxLit) {
+		seq_int_t len = rec->numBaseTypes();
+		seq_int_t idx = idxLit->value();
+
+		if (idx < 0)
+			idx += len;
+
+		if (idx < 0 || idx >= len)
+			tupleIndexOutOfBounds(idx, len);
+
+		GetElemExpr e(arr, (unsigned)(idx + 1));  // GetElemExpr is 1-based
 		return e.codegen0(base, block);
 	}
 
@@ -1108,11 +1123,23 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 types::Type *ArrayLookupExpr::getType0() const
 {
 	types::Type *type = arr->getType();
+	types::RecordType *rec = type->asRec();
 	auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
 	// check if this is a record lookup
-	if (type->asRec() && idxLit)
-		return type->getBaseType((unsigned)idxLit->value());
+	if (rec && idxLit) {
+		seq_int_t len = rec->numBaseTypes();
+		seq_int_t idx = idxLit->value();
+
+		if (idx < 0)
+			idx += len;
+
+		if (idx < 0 || idx >= len)
+			tupleIndexOutOfBounds(idx, len);
+
+		GetElemExpr e(arr, (unsigned)(idx + 1));  // GetElemExpr is 1-based
+		return e.getType();
+	}
 
 	return type->magicOut("__getitem__", {idx->getType()});
 }

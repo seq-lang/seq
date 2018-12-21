@@ -86,6 +86,10 @@ void types::RecordType::initOps()
 				val = setMemb(val, std::to_string(i+1), args[i], b.GetInsertBlock());
 			return val;
 		}},
+
+		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
+			return ConstantInt::get(seqIntLLVM(b.getContext()), types.size(), true);
+		}},
 	};
 }
 
