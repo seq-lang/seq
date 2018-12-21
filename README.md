@@ -28,7 +28,7 @@ This will produce a `seq` executable for compiling/running Seq progrms, and a `s
 
 ## Documentation
 
-[Sphinx](http://www.sphinx-doc.org) is used for all documentation. To compile, install Sphinx and then:
+[Sphinx](http://www.sphinx-doc.org), [Breathe](https://breathe.readthedocs.io/en/latest/) and [Exhale](https://exhale.readthedocs.io/en/latest/index.html) are required to compile the documentation. Once these are installed, just:
 
 ```bash
 cd seq/doc

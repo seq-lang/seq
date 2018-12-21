@@ -1,5 +1,5 @@
-**Seq**: a language for computational genomics applications
-===========================================================
+**Seq**: a language for computational genomics
+==============================================
 
 Contents
 --------
@@ -9,6 +9,7 @@ Contents
 
    intro
    internals
+   api/doxygen
 
 Indices and tables
 ------------------

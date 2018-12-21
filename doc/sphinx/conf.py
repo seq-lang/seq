@@ -43,7 +43,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
     'sphinx.ext.intersphinx',
-    'breathe'
+    'breathe',
+    'exhale'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -161,9 +162,31 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+breathe_projects = {
+    'Seq': '../doxygen/xml'
+}
 
-breathe_projects = {'seq': '../doxygen/xml'}
-breathe_default_project = 'seq'
+breathe_default_project = 'Seq'
+
+exhale_args = {
+    # These arguments are required
+    'containmentFolder':     './api',
+    'rootFileName':          'doxygen.rst',
+    'rootFileTitle':         'Seq Compiler API',
+    'doxygenStripFromPath':  '..',
+    # Suggested optional arguments
+    'createTreeView':        True,
+    # TIP: if using the sphinx-bootstrap-theme, you need
+    # 'treeViewIsBootstrap': True,
+    'exhaleExecutesDoxygen': True,
+    'exhaleDoxygenStdin':    'INPUT = ../../compiler/include ../../compiler/lang ../../compiler/types ../../compiler/util ../../runtime'
+}
+
+# Tell sphinx what the primary language being documented is.
+primary_domain = 'cpp'
+
+# Tell sphinx what the pygments highlight language should be.
+highlight_language = 'cpp'
 
 
 # -- Options for todo extension ----------------------------------------------

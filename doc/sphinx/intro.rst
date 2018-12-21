@@ -1,25 +1,28 @@
-Getting started
+Getting Started
 ===============
 
 Dependencies
 ------------
 
 - C++11
-- CMake & Make
+- CMake 3.9+
 - LLVM 5+
+- Boehm GC
+- OCaml
 
 Compile & Test
 --------------
 
-In a nutshell:
+Make sure the ``LLVM_DIR`` environment variable is set (to the result of ``llvm-config --cmakedir``). Then:
 
 .. code-block:: bash
 
-    cd seq/build
-    LLVM_DIR=/path/to/llvm/version/lib/cmake cmake ..
+    mkdir seq/build
+    cd seq/builld
+    cmake ..
     cmake --build .
 
-To run the test program:
+This will produce a ``seq`` executable for compiling/running Seq progrms, and a ``seqtest`` executable for running the test suite.
 
 .. code-block:: bash
 
