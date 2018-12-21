@@ -1089,9 +1089,15 @@ void ArrayLookupExpr::resolveTypes()
 	idx->resolveTypes();
 }
 
-static void tupleIndexOutOfBounds(seq_int_t idx, seq_int_t len)
+static seq_int_t translateIndex(seq_int_t idx, seq_int_t len)
 {
-	throw exc::SeqException("tuple index " + std::to_string(idx) + " out of bounds (len: " + std::to_string(len) + ")");
+	if (idx < 0)
+		idx += len;
+
+	if (idx < 0 || idx >= len)
+		throw exc::SeqException("tuple index " + std::to_string(idx) + " out of bounds (len: " + std::to_string(len) + ")");
+
+	return idx;
 }
 
 Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
@@ -1102,15 +1108,7 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 	// check if this is a record lookup
 	if (rec && idxLit) {
-		seq_int_t len = rec->numBaseTypes();
-		seq_int_t idx = idxLit->value();
-
-		if (idx < 0)
-			idx += len;
-
-		if (idx < 0 || idx >= len)
-			tupleIndexOutOfBounds(idx, len);
-
+		seq_int_t idx = translateIndex(idxLit->value(), rec->numBaseTypes());
 		GetElemExpr e(arr, (unsigned)(idx + 1));  // GetElemExpr is 1-based
 		return e.codegen0(base, block);
 	}
@@ -1128,15 +1126,7 @@ types::Type *ArrayLookupExpr::getType0() const
 
 	// check if this is a record lookup
 	if (rec && idxLit) {
-		seq_int_t len = rec->numBaseTypes();
-		seq_int_t idx = idxLit->value();
-
-		if (idx < 0)
-			idx += len;
-
-		if (idx < 0 || idx >= len)
-			tupleIndexOutOfBounds(idx, len);
-
+		seq_int_t idx = translateIndex(idxLit->value(), rec->numBaseTypes());
 		GetElemExpr e(arr, (unsigned)(idx + 1));  // GetElemExpr is 1-based
 		return e.getType();
 	}
@@ -1164,6 +1154,24 @@ void ArraySliceExpr::resolveTypes()
 Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	types::Type *type = arr->getType();
+	types::RecordType *rec = type->asRec();
+	auto *fromLit = dynamic_cast<IntExpr *>(from);
+	auto *toLit = dynamic_cast<IntExpr *>(to);
+
+	// check if this is a record lookup
+	if (rec && fromLit && toLit) {
+		seq_int_t len = rec->numBaseTypes();
+		seq_int_t from = translateIndex(fromLit->value(), len);
+		seq_int_t to = translateIndex(toLit->value(), len);
+		std::vector<Expr *> values;
+
+		for (seq_int_t i = from; i < to; i++)
+			values.push_back(new GetElemExpr(arr, (unsigned)(i + 1)));
+
+		RecordExpr e(values);
+		return e.codegen(base, block);
+	}
+
 	Value *arr = this->arr->codegen(base, block);
 
 	if (!from && !to)
@@ -1186,7 +1194,25 @@ Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 types::Type *ArraySliceExpr::getType0() const
 {
-	return arr->getType();
+	types::Type *type = arr->getType();
+	types::RecordType *rec = type->asRec();
+	auto *fromLit = dynamic_cast<IntExpr *>(from);
+	auto *toLit = dynamic_cast<IntExpr *>(to);
+
+	// check if this is a record lookup
+	if (rec && fromLit && toLit) {
+		seq_int_t len = rec->numBaseTypes();
+		seq_int_t from = translateIndex(fromLit->value(), len);
+		seq_int_t to = translateIndex(toLit->value(), len);
+
+		if (to <= from)
+			return types::RecordType::get({});
+
+		std::vector<types::Type *> types = rec->getTypes();
+		return types::RecordType::get(std::vector<types::Type *>(types.begin() + from, types.begin() + to));
+	}
+
+	return type;
 }
 
 ArraySliceExpr *ArraySliceExpr::clone(Generic *ref)
