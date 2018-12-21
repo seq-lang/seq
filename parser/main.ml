@@ -24,6 +24,7 @@ let rec parse_string ?file ?debug ctx code =
   try
     let state = Lexer.stack_create file in
     let ast = Parser.program (Lexer.token state) lexbuf in
+    Util.dbg "%s" (Ast.to_string ast);
     SeqS.parse_module ctx ast
   with
   | SyntaxError (msg, pos) ->

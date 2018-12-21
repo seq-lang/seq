@@ -88,27 +88,10 @@ struct
       let expr = E.parse ctx expr in
       Llvm.Stmt.expr expr
 
-  and parse_assign ctx pos (lh, rh, shadow) =
-    match lh, rh with
-    | [lhs], [rhs] ->
-      let rh_expr = E.parse ctx rhs in
-      parse_assign_helper ctx pos (lhs, rh_expr, shadow)
-    | lh, rh when List.length lh <> List.length rh ->
-      serr ~pos "RHS length must match LHS";
-    | _, _ ->
-      let var_stmts = List.map rh ~f:(fun rhs ->
-        let rh_expr = E.parse ctx rhs in
-        finalize ctx (Llvm.Stmt.var rh_expr) pos) 
-      in
-      List.iter (List.zip_exn lh var_stmts) ~f:(fun ((pos, _) as lhs, varst) ->
-        let rh_expr = Llvm.Expr.var (Llvm.Var.stmt varst) in
-        let stmt = parse_assign_helper ctx pos (lhs, rh_expr, shadow) in
-        ignore @@ finalize ctx stmt pos);
-      Llvm.Stmt.pass ()
-
-  and parse_assign_helper ctx pos ((pos, lhs), rh_expr, shadow) =
+  and parse_assign ctx pos (lhs, rhs, shadow) =
+    let rh_expr = E.parse ctx rhs in
     match lhs with
-    | Id var ->
+    | pos, Id var ->
       begin match Hashtbl.find ctx.map var with
       | Some (Ctx.Namespace.Var (v, { base; global; _ }) :: _) 
         when (not shadow) && ((ctx.base = base) || global) -> 
@@ -120,43 +103,35 @@ struct
         Ctx.add ctx var @@ Ctx.var ctx (Llvm.Var.stmt var_stmt);
         var_stmt
       end
-    | Dot(lh_lhs, lh_rhs) -> (* a.x = b *)
+    | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)
       Llvm.Stmt.assign_member (E.parse ctx lh_lhs) lh_rhs rh_expr
-    | Index(var_expr, [index_expr]) -> (* a[x] = b *)
+    | pos, Index (var_expr, [index_expr]) -> (* a[x] = b *)
       let var_expr = E.parse ctx var_expr in
       let index_expr = E.parse ctx index_expr in
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
     | _ ->
       serr ~pos "assignment requires Id / Dot / Index on LHS"
     
-  and parse_del ctx pos exprs =
-    List.iter exprs ~f:(fun (pos, node) ->
-      match node with
-      | Index(lhs, [rhs]) ->
-        let lhs_expr = E.parse ctx lhs in
-        let rhs_expr = E.parse ctx rhs in
-        let stmt = Llvm.Stmt.del_index lhs_expr rhs_expr in
-        ignore @@ finalize ctx stmt pos
-      | Id var ->
-        failwith "stmt/parse_del -- can't remove variable"
-      | _ -> 
-        serr ~pos "cannot del non-index expression");
-    Llvm.Stmt.pass ()
+  and parse_del ctx pos expr =
+    match expr with
+    | pos, Index (lhs, [rhs]) ->
+      let lhs_expr = E.parse ctx lhs in
+      let rhs_expr = E.parse ctx rhs in
+      Llvm.Stmt.del_index lhs_expr rhs_expr
+    | pos, Id var ->
+      begin match Ctx.in_scope ctx var with
+        | Some (Ctx.Namespace.Var (v, _)) ->
+          Ctx.remove ctx var;
+          Llvm.Stmt.del v
+        | _ ->
+          serr ~pos "cannot find variable %s" var
+      end
+    | _ -> 
+      serr ~pos "cannot del non-index expression"
 
-  and parse_print ctx pos exprs =
-    let str_node s = 
-      (pos, ExprNode.String(s))
-    in
-    List.iteri exprs ~f:(fun i ((pos, _) as expr) ->
-      if i > 0 then begin
-        let stmt = Llvm.Stmt.print 
-          (E.parse ctx @@ str_node " ") 
-        in
-        ignore @@ finalize ctx stmt pos
-      end;
-      let stmt = Llvm.Stmt.print (E.parse ctx expr) in
-      ignore @@ finalize ctx stmt pos);
-    Llvm.Stmt.print (E.parse ctx @@ str_node "\n")
+  and parse_print ctx _ expr =    
+    let expr = E.parse ctx expr in
+    Llvm.Stmt.print expr
 
   and parse_return ctx pos ret =
     match ret with
@@ -178,12 +153,9 @@ struct
       Llvm.Func.set_yield ctx.base yield_stmt;
       yield_stmt
 
-  and parse_assert ctx pos exprs =
-    List.iter exprs ~f:(function (pos, _) as expr ->
-      let expr = E.parse ctx expr in
-      let stmt = Llvm.Stmt.assrt expr in
-      ignore @@ finalize ctx stmt pos);
-    Llvm.Stmt.pass ()
+  and parse_assert ctx _ expr =
+    let expr = E.parse ctx expr in
+    Llvm.Stmt.assrt expr 
 
   and parse_type ctx pos (name, args) =
     let arg_names, arg_types =  
@@ -468,21 +440,19 @@ struct
     let expr = E.parse ctx expr in
     Llvm.Stmt.throw expr
 
-  and parse_global ctx _ vars =
-    List.iter vars ~f:(fun (pos, var) -> 
-      match Hashtbl.find ctx.map var with
-      | Some (Ctx.Namespace.Var (v, { base; global; toplevel }) :: rest) ->
-        if (ctx.base = base) || global then 
-          serr ~pos "symbol '%s' either local or already set as global" var;
-        Llvm.Var.set_global v;
-        let new_var = Ctx.Namespace.Var 
-          (v, Ctx.Namespace.{ base; global = true; toplevel }) 
-        in
-        Hashtbl.set ctx.map ~key:var ~data:(new_var :: rest)
-      | _ ->
-        serr ~pos "symbol '%s' not found or not a variable" var
-    );
-    Llvm.Stmt.pass ()
+  and parse_global ctx pos var =
+    match Hashtbl.find ctx.map var with
+    | Some (Ctx.Namespace.Var (v, { base; global; toplevel }) :: rest) ->
+      if (ctx.base = base) || global then 
+        serr ~pos "symbol '%s' either local or already set as global" var;
+      Llvm.Var.set_global v;
+      let new_var = Ctx.Namespace.Var 
+        (v, Ctx.Namespace.{ base; global = true; toplevel }) 
+      in
+      Hashtbl.set ctx.map ~key:var ~data:(new_var :: rest);
+      Llvm.Stmt.pass ()
+    | _ ->
+      serr ~pos "symbol '%s' not found or not a variable" var
 
   (* ***************************************************************
      Helper functions

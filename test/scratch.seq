@@ -1,8 +1,42 @@
 # 786
 
-# a = 5
-# b = 3
+a = 5
+b = 3
+print a, b
+
+def foo(x):
+    print x
+
+foo(1)
+foo(x=2)
+
+y = 1
+___dump___
+del y
+___dump___
+# print y
+
+# a, b = 1, 2
 # print a, b
+
+# (a, b) = 1, 2
+# print a, b
+
+# a, b = (c, d) = 5, 10
+# print a, b, c, d
+
+# a, (b, c) = (1, (2, 3))
+# print a, b, c
+
+# a * b + c * d
+# a or b and c or d
+
+
+# a, *b, c = [1, 2, 3, 4, 5]
+# print a, b, c
+
+#y = (1, 2, 3, 4, 5)
+#print y[0], y[-1], y[1:-1]
 
 # def foo(x):
 #     # print a, b
@@ -22,16 +56,11 @@
 # print a+"x"
 
 # import test as xx
-from test import foo as xoo, cls
+# from test import foo as xoo, cls
 
 # from test import foo
 
-print 'extern'
-___dump___
-xoo(1)
-
-y = cls(1)
-y.foo()
+# print 'extern'
 
 # k = xx.typ(3)
 # print k.i

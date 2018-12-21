@@ -189,6 +189,8 @@ and read state = parse
   | "{" { ignore_nl state; P.LB (cur_pos state lexbuf) }
   | "}" { aware_nl state;  P.RB (cur_pos state lexbuf) }
 
+  | "<<=" as op { P.LSHEQ (cur_pos state lexbuf ~len:3, op) }
+  | ">>=" as op { P.RSHEQ (cur_pos state lexbuf ~len:3, op) }
   | "<<"  as op { P.B_LSH (cur_pos state lexbuf ~len:2, op) }
   | ">>"  as op { P.B_RSH (cur_pos state lexbuf ~len:2, op) }
   | "&"   as op { P.B_AND (cur_pos state lexbuf, Char.to_string op) }
@@ -196,15 +198,15 @@ and read state = parse
   | "~"   as op { P.B_NOT (cur_pos state lexbuf, Char.to_string op) }
   | "|>"  as op { P.PIPE  (cur_pos state lexbuf ~len:2, op) }
   | "|"   as op { P.B_OR  (cur_pos state lexbuf, Char.to_string op) }
+  | ":="  as op { P.ASSGN_EQ  (cur_pos state lexbuf ~len:2, op) }
+  | "="   as op { P.EQ        (cur_pos state lexbuf, Char.to_string op) }
+  | "..." as op { P.ELLIPSIS  (cur_pos state lexbuf ~len:3, op) }
   
-  | ":="  { P.ASSGN_EQ  (cur_pos state lexbuf ~len:2) }
-  | "="   { P.EQ        (cur_pos state lexbuf) }
   | "->"  { P.OF        (cur_pos state lexbuf ~len:2) }
   | ":"   { P.COLON     (cur_pos state lexbuf) }
   | ";"   { P.SEMICOLON (cur_pos state lexbuf) }
   | "@"   { P.AT        (cur_pos state lexbuf) }
   | ","   { P.COMMA     (cur_pos state lexbuf) }
-  | "..." { P.ELLIPSIS  (cur_pos state lexbuf ~len:3) }
   | "."   { P.DOT       (cur_pos state lexbuf) }
 
   | "+="  as op { P.PLUSEQ (cur_pos state lexbuf ~len:2, op) }

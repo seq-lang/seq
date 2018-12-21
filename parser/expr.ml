@@ -51,6 +51,7 @@ struct
       | Dot            p -> parse_dot      ctx pos p
       | Ellipsis       p -> Ctypes.null
       | Slice  _ -> serr  ~pos "slice is only valid within an index"
+      | Unpack _ -> serr  ~pos "unpack is not valid here"
       | TypeOf _ -> failwith "todo: expr/typeof"
       | Lambda _ -> failwith "todo: expr/lambda"
     in
@@ -240,7 +241,9 @@ struct
   
   and parse_call ctx pos (callee_expr, args) =
     let callee_expr = parse ctx callee_expr in
-    let args = List.map args ~f:(parse ctx) in
+    let args = List.mapi args ~f:(fun i (_, { name; value }) ->
+      parse ctx value) 
+    in
     if Llvm.Expr.is_type callee_expr then
       let typ = Llvm.Type.expr_type callee_expr in
       Llvm.Expr.construct typ args
@@ -349,8 +352,11 @@ struct
       walk ctx ~f e
     | Binary (e1, _, e2) -> 
       walk ctx ~f e1; walk ctx ~f e2
-    | Index (a, l) | Call (a, l) -> 
+    | Index (a, l) ->
       walk ctx ~f a; List.iter l ~f:(walk ctx ~f)
+    | Call (a, l) -> 
+      walk ctx ~f a; 
+      List.iter l ~f:(fun (_, { value; _ }) -> walk ctx ~f value)
     | ListGenerator (e, c) | SetGenerator (e, c) | Generator (e, c) ->
       walk ctx ~f e;
       walk_comp ctx ~f (snd c)

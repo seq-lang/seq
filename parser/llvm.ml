@@ -306,6 +306,9 @@ module Stmt = struct
   let assign_index = foreign "assign_index_stmt" 
     (Types.expr @-> Types.expr @-> Types.expr @-> returning t)
 
+  let del = foreign "del_stmt"
+    (Types.var @-> returning t)
+
   let del_index = foreign "del_index_stmt"
     (Types.expr @-> Types.expr @-> returning t)
 

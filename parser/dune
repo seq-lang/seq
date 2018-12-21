@@ -20,7 +20,9 @@
 (executable
    (name main)
    (libraries
-      base core ANSITerminal ctypes ctypes.foreign ctypes.stubs sexplib)
+      base core 
+      ANSITerminal 
+      ctypes ctypes.foreign ctypes.stubs)
    (link_flags
       (-cclib -L%{project_root}/../.. -cclib -lseq))
    (modes
@@ -28,4 +30,4 @@
    (modules_without_implementation
       intf)
    (preprocess
-      (pps ppx_sexp_conv)))
+      (pps ppx_sexp_conv ppx_deriving.show)))

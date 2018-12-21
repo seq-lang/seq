@@ -22,11 +22,31 @@
     Ast.Pos.{ st with len = (ed.col + ed.len) - st.col }
 
   (* Converts list of expressions into the pipeline AST node *)
-  let flat x = 
+  let flat_pipe x = 
     match x with
-    | _, []      -> failwith "empty pipeline expression"
-    | _, h::[]   -> h
-    | pos, h::el -> pos, Pipe (h::el)
+    | _, []        -> failwith "empty pipeline expression"
+    | _, h :: []   -> h
+    | pos, h :: el -> pos, Pipe (h :: el)
+
+  (* Converts list of conditionals into the AND AST node 
+     (used for chained conditionals such as 
+      0 < x < y < 10 that becomes (0 < x) AND (x < y) AND (y < 10)) *)
+  type cond_t = 
+    | Cond of ExprNode.node
+    | CondBinary of (ExprNode.t * string * cond_t ExprNode.tt)
+  let rec flat_cond x = 
+    let expr = match snd x with
+      | CondBinary (lhs, op, (_, CondBinary (next_lhs, _, _) as rhs)) ->
+        Binary (
+          (fst lhs, Binary (lhs, op, next_lhs)), 
+          "&&", 
+          flat_cond rhs)
+      | CondBinary (lhs, op, (pos, Cond (rhs))) -> 
+        Binary (lhs, op, (pos, rhs))
+      | Cond n -> 
+        n
+    in 
+    fst x, expr
 %}
 
 /* constants */
@@ -63,11 +83,12 @@
 %token <Ast.Pos.t> TRY EXCEPT FINALLY THROW           // exceptions
 
 /* operators */
-%token<Ast.Pos.t>          EQ ASSGN_EQ ELLIPSIS // =, :=, ...
+%token<Ast.Pos.t * string> EQ ASSGN_EQ ELLIPSIS // =, :=, ...
 %token<Ast.Pos.t * string> ADD SUB MUL DIV // +, -, *, /
 %token<Ast.Pos.t * string> FDIV POW MOD  // //, **, %
 %token<Ast.Pos.t * string> PLUSEQ MINEQ MULEQ DIVEQ  // +=, -=, *=, /=
-%token<Ast.Pos.t * string> FDIVEQ POWEQ MODEQ // //=, **=, %=
+%token<Ast.Pos.t * string> FDIVEQ POWEQ MODEQ // //=, **=, %=, 
+%token<Ast.Pos.t * string> LSHEQ RSHEQ // <<=, >>=
 %token<Ast.Pos.t * string> AND OR NOT // and, or, not
 %token<Ast.Pos.t * string> IS ISNOT IN NOTIN // is, is not, in, not in
 %token<Ast.Pos.t * string> EEQ NEQ LESS LEQ GREAT GEQ // ==, !=, <, <=, >, >=
@@ -76,8 +97,6 @@
 %token<Ast.Pos.t * string> B_LSH B_RSH // <<, >>
 
 /* operator precedence */
-%left OR
-%left AND
 %left B_OR
 %left B_XOR
 %left B_AND
@@ -135,6 +154,7 @@ atom:
   | dict_gen   { $1 }
   | list_gen   { $1 }
   | set_gen    { $1 }
+  | MUL ID     { pos (fst $1) (fst $2), Unpack (snd $2) }
   | REGEX      { noimp "Regex" }
 
 // Types
@@ -203,10 +223,13 @@ comprehension:
         | None, None, (p, _) -> p
       in
       pos $1 last, 
-      ExprNode.{ var = List.map $2 ~f:snd; gen = flat $4; cond = $5; next = $6 } }
+      ExprNode.
+        { var = List.map $2 ~f:snd; 
+          gen = flat_pipe $4;
+          cond = $5; next = $6 } }
 comprehension_if:
   | IF pipe_expr
-    { let exp = flat $2 in 
+    { let exp = flat_pipe $2 in 
       pos $1 (fst exp), 
       snd exp }
 
@@ -217,10 +240,10 @@ comprehension_if:
 // General expression
 expr:
   | pipe_expr // Pipes and other expressions
-    { flat $1 }
+    { flat_pipe $1 }
   | ifc = pipe_expr; IF cnd = pipe_expr; ELSE elc = expr // Inline ifs
     { pos (fst ifc) (fst elc), 
-      IfExpr (flat cnd, flat ifc, elc) }
+      IfExpr (flat_pipe cnd, flat_pipe ifc, elc) }
   | TYPEOF LP expr RP // TypeOf call
     { pos $1 $4, 
       TypeOf $3 }
@@ -245,28 +268,32 @@ pipe_expr:
 // Bool expressions 
 // (binary: and, or)
 bool_expr:
-  | cond_expr 
+  | bool_and_expr
     { $1 }
-  | cond_expr bool_op bool_expr
+  | bool_and_expr OR bool_expr 
     { pos (fst $1) (fst $3), 
       Binary ($1, snd $2, $3) }
-%inline bool_op:
-  | AND | OR 
-  { $1 }
+bool_and_expr:
+  | cond_expr 
+    { flat_cond $1 }
+  | cond_expr AND bool_and_expr 
+    { let cond = flat_cond $1 in
+      pos (fst $1) (fst $3), 
+      Binary (cond, snd $2, $3) }
 
 // Conditional operators 
 // (unary: not; binary: <, <=, >, >=, ==, !=, is, is not, in, not in)
 cond_expr: 
   | arith_expr 
-    { $1 }
+    { fst $1, Cond (snd $1) }
   // Unary condition
   | NOT cond_expr
     { pos (fst $1) (fst $2), 
-      Unary ("!", $2) }
+      Cond (Unary ("!", flat_cond $2)) }
   // Binary condition
-  | arith_expr cond_op cond_expr
+  | arith_expr cond_op cond_expr 
     { pos (fst $1) (fst $3), 
-      Binary ($1, snd $2, $3) }
+      CondBinary ($1, snd $2, $3) } 
 %inline cond_op:
   | LESS | LEQ | GREAT | GEQ | EEQ | NEQ | IS | ISNOT | IN | NOTIN
   { $1 }
@@ -277,11 +304,15 @@ arith_expr:
   | arith_term 
     { $1 }
   // Unary operator
-  | ADD arith_term
   | SUB arith_term
+    { pos (fst $1) (fst $2),
+      match snd $2 with
+      | Int f -> Int (-f)
+      | _ -> Unary(snd $1, $2) }
+  | ADD arith_term
   | B_NOT arith_term
     { pos (fst $1) (fst $2), 
-      Unary(snd $1, $2) }
+      Unary (snd $1, $2) }
   // Binary operator
   | arith_expr arith_op arith_expr
     { pos (fst $1) (fst $3), 
@@ -303,7 +334,8 @@ arith_term:
   // (foo(x for x in y))
   | arith_term LP; expr comprehension; RP
     { pos (fst $1) $5, 
-      Call ($1, [ (pos $2 $5, Generator ($3, $4)) ]) }
+      Call ($1, [pos $2 $5, 
+                 { name = None; value = (pos $2 $5, Generator ($3, $4)) }]) }
   // Index (foo[bar])
   | arith_term LS separated_nonempty_list(COMMA, index_term) RS
     // TODO: tuple index
@@ -316,10 +348,17 @@ arith_term:
 // Call arguments
 call_term:
   | ELLIPSIS // For partial functions 
-    { $1, 
-      Ellipsis () }
+    { fst $1, 
+      { name = None; value = (fst $1, Ellipsis ()) } }
   | expr 
-    { $1 }
+    { fst $1, 
+      { name = None; value = $1 } }
+  | ID EQ expr
+    { pos (fst $1) (fst $3),
+      { name = Some (snd $1); value = $3 } }
+  | ID EQ ELLIPSIS
+    { pos (fst $1) (fst $3),
+      { name = Some (snd $1); value = (fst $3, Ellipsis ()) } }
 // Index subscripts
 index_term: 
   // Normal expression
@@ -346,7 +385,7 @@ index_term:
 statement: 
   // List of small statements optionally separated by ;
   | separated_nonempty_list(SEMICOLON, small_statement) NL
-    { $1 }
+    { List.concat $1 }
   // Empty statement
   | NL
     {[ $1, 
@@ -378,42 +417,50 @@ statement:
 
 // Simple one-line statements
 small_statement: 
-  // Single expression or assignment
-  | expr_statement   
+  // Single expression 
+  | expr_list
+    { List.map $1 ~f:(fun expr ->
+        fst expr, Expr expr) }
+  // Assignment
+  | assign_statement   
     { $1 }
   // Imports
   | import_statement 
-    { $1 }
+    {[ $1 ]}
   // Type definitions
   | type_stmt        
-    { $1 }
+    {[ $1 ]}
   // throw statement
   | throw
-    { $1 }
+    {[ $1 ]}
   // pass statement
   | PASS     
-    { $1, 
-      Pass () }
+    {[ $1, 
+       Pass () ]}
   // loop control statements
   | BREAK    
-    { $1, 
-      Break () }
+    {[ $1, 
+       Break () ]}
   | CONTINUE 
-    { $1, 
-      Continue () }
+    {[ $1, 
+       Continue () ]}
   // del statement
   | DEL separated_nonempty_list(COMMA, expr)
-    { pos $1 (fst @@ List.last_exn $2), 
-      Del $2 }
+    { List.map $2 ~f:(fun expr ->
+        fst expr, Del expr) }
   // print statement
   | PRINT separated_list(COMMA, expr)
-    { let l = Option.value_map (List.last $2) ~f:fst ~default:$1 in
-      pos $1 l, 
-      Print $2 }
+    { let stmts = List.mapi $2 ~f:(fun i expr ->
+        let delim = if i < ((List.length $2) - 1) then " " else "\n" in
+        let pos = fst expr in
+        [ pos, Print expr; 
+          pos, Print (pos, String delim) ] )
+      in 
+      List.concat stmts }
   // assert statement
   | ASSERT expr_list
-    { pos $1 (fst @@ List.last_exn $2), 
-      Assert $2 }
+    { List.map $2 ~f:(fun expr -> 
+        fst expr, Assert expr) }
   // return and yield statements
   | RETURN separated_list(COMMA, expr)
     { let pos, expr = match List.length $2 with
@@ -425,8 +472,8 @@ small_statement:
                Some (pos (fst @@ List.hd_exn $2) (fst @@ List.last_exn $2), 
                      Tuple $2)
       in 
-      pos, 
-      Return expr }
+      [ pos, 
+        Return expr ]}
   | YIELD separated_list(COMMA, expr)
     { let pos, expr = match List.length $2 with
         | 0 -> $1, 
@@ -437,12 +484,12 @@ small_statement:
                Some (pos (fst @@ List.hd_exn $2) (fst @@ List.last_exn $2), 
                      Tuple $2)
       in 
-      pos, 
-      Yield expr }
+      [ pos, 
+        Yield expr ]}
   // global statement
   | GLOBAL separated_nonempty_list(COMMA, ID) 
-    { pos $1 (fst @@ List.last_exn $2),
-      Global $2 }
+    { List.map $2 ~f:(fun expr -> 
+        fst expr, Global (snd expr)) }
 
 // Type definitions
 type_stmt:
@@ -460,45 +507,103 @@ param_type:
   | COLON expr 
     { $2 }
 
+
 // Expressions and assignments
-// TODO: tuple assignment: https://www.python.org/dev/peps/pep-3132/ 
-// TODO: a = b = c = d = ... separated_nonempty_list(EQ, expr_list) 
-expr_statement: 
-  // List of expressions
-  // TODO: currently only one expression is allowed 
-  // (so statement "expr1, expr2" is not allowed)
-  | expr_list
-    { assert ((List.length $1) = 1);
-      let expr = List.hd_exn $1 in
-      fst expr, 
-      Expr expr }
+assign_statement: 
   // Assignment for modifying operators
   // (+=, -=, *=, /=, %=, **=, //=)
-  | expr aug_eq expr_list
-    { let op = String.sub (snd $2) ~pos:0 ~len:(String.length (snd $2) - 1) in
-      pos (fst $1) (fst @@ List.last_exn $3), 
-      Assign ([$1], 
-              [pos (fst $1) (fst @@ List.last_exn $3), 
-               Binary($1, op, List.hd_exn $3)], 
-              false) }
+  | expr aug_eq expr
+    { let op = String.sub (snd $2) 
+        ~pos:0 ~len:(String.length (snd $2) - 1) 
+      in
+      let rhs = 
+        pos (fst $1) (fst $3), 
+        Binary ($1, op, $3) 
+      in
+      [ fst rhs, 
+        Assign ($1, rhs, false) ]}
   // Assignment (a, b = x, y)
-  | expr_list EQ expr_list
-    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $3), 
-      Assign ($1, $3, false) }
-  // Forced assignment (a, b := x, y)
-  | expr_list ASSGN_EQ expr_list
-    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $3), 
-      Assign ($1, $3, true) }
+  | expr_list ASSGN_EQ separated_nonempty_list(ASSGN_EQ, expr_list) 
+  | expr_list EQ separated_nonempty_list(EQ, expr_list) 
+    { 
+      let sides = $1 :: $3 in
+      let p = pos (fst @@ List.hd_exn @@ List.hd_exn sides) 
+                  (fst @@ List.last_exn @@ List.last_exn sides) 
+      in
+      let shadow = ((snd $2) = ":=") in
+      let rec parse_assign lhs rhs = 
+        (* wrap RHS in tuple for consistency (e.g. x, y -> (x, y)) *)
+        let init_exprs, rhs =         
+          if List.length rhs > 1 then begin
+            let var = p, Id "$assign" in
+            [ p, Assign (var, (p, Tuple rhs), true) ], var
+          end else if List.length lhs > 1 then begin
+            let var = p, Id "$assign" in
+            [ p, Assign (var, List.hd_exn rhs, true) ], var
+          end else
+            [], List.hd_exn rhs
+        in
+        (* wrap LHS in tuple as well (e.g. x, y -> (x, y)) *)
+        let lhs = match lhs with
+          | [_, Tuple(lhs)]
+          | [_, List(lhs)] ->
+            lhs
+          | lhs -> lhs
+        in
+        let exprs = match lhs with
+          | [lhs] ->
+            [ p, Assign (lhs, rhs, shadow) ]
+          | lhs ->
+            let len = List.length lhs in
+            let unpack_i = ref (-1) in
+            let lst = List.concat @@ List.mapi lhs ~f:(fun i expr -> 
+              match expr with
+              | _, Unpack var when !unpack_i = -1 ->
+                unpack_i := i;
+                let start = Some (p, Int i) in
+                let eend = Some (p, Int (i + 1 - len)) in
+                let slice = Slice (start, eend, None) in
+                let rhs = p, Index (rhs, [p, slice]) in
+                [p, Assign ((p, Id var), rhs, shadow)]
+              | pos, Unpack var when !unpack_i > -1 ->
+                Err.serr ~pos "cannot have two tuple unpackings on LHS"
+              | _ when !unpack_i = -1 ->
+                (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
+                let rhs = p, Index (rhs, [p, Int i]) in
+                parse_assign [expr] [rhs]
+                (*p, Assign (expr, rhs, shadow) *)
+              | _ ->
+                (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
+                let rhs = p, Index (rhs, [p, Int (i - len)]) in
+                parse_assign [expr] [rhs])
+            in
+            let len = if !unpack_i > -1 then len - 1 else len in
+            let assert_stmt = p, Assert (p, Binary (
+                (p, Call ((p, Id "len"), 
+                          [p, { name = None; value = rhs }])), 
+                ">=", 
+                (p, Int (len))))
+            in
+            assert_stmt :: lst
+        in
+        init_exprs @ exprs
+      in
+      let sides = List.rev sides in
+      List.concat @@ List.folding_map (List.tl_exn sides)
+        ~init:(List.hd_exn sides) (* rhs *)
+        ~f:(fun rhs lhs ->
+            let result = parse_assign lhs rhs in
+            rhs, result) }
 %inline aug_eq:
-  // TODO: bit shift ops 
-  | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ 
+  | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ | LSHEQ | RSHEQ
     { $1 }
+
 
 // Suites (indented blocks of code)
 suite: 
   // Same-line suite (if foo: suite)
   | separated_nonempty_list(SEMICOLON, small_statement) NL
-    { $1 }
+    { List.concat $1 }
   // Indented suites
   | NL INDENT statement+ DEDENT
     { List.concat $3 }
@@ -645,6 +750,31 @@ throw:
   | THROW expr
     { $1,
       Throw $2 }
+
+
+/* with EXPR as VAR:
+    BLOCK
+translates to
+
+mgr = (EXPR)
+exit = type(mgr).__exit__  # Not calling it yet
+value = type(mgr).__enter__(mgr)
+exc = True
+try:
+    try:
+        VAR = value  # Only if "as VAR" is present
+        BLOCK
+    except:
+        # The exceptional case is handled here
+        exc = False
+        if not exit(mgr, *sys.exc_info()):
+            raise
+        # The exception is swallowed if exit() returns true
+finally:
+    # The normal and non-local-goto cases are handled here
+    if exc:
+        exit(mgr, None, None, None)
+ */
 
 
 /******************************************************************************

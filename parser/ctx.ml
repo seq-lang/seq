@@ -134,6 +134,23 @@ let in_block ctx key =
   else 
     None
 
+(* [remove context name] removes a varable from current scope *)
+let remove ctx key =
+  match Hashtbl.find ctx.map key with
+  | Some (hd :: tl) -> 
+    begin match tl with 
+      | [] -> Hashtbl.remove ctx.map key
+      | tl -> Hashtbl.set ctx.map ~key ~data:tl
+    end;
+    ignore @@ Stack.find ctx.stack ~f:(fun set ->
+      match Hash_set.find set ~f:((=)key) with
+      | Some _ ->  
+        Hash_set.remove set key;
+        true
+      | None -> false);
+  | _ -> ()
+
+
 (** [dump context] dumps [context] vtable to debug output  *)
 let dump ctx =
   let open Util in
