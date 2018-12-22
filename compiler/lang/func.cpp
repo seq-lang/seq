@@ -111,7 +111,8 @@ void Func::sawYield(Yield *yield)
  */
 std::string Func::getMangledFuncName()
 {
-	if (external)
+	// don't mangle external or built-in ("seq."-prefixed) function names:
+	if (external || name.rfind("seq.", 0) == 0)
 		return name;
 
 	// a nested function can't be a class method:

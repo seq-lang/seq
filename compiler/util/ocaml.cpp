@@ -436,16 +436,16 @@ FOREIGN Var *get_func_arg(Func *f, char *arg)
 	return t;
 }
 
-FOREIGN char* get_func_names(Expr *e)
+FOREIGN char *get_func_names(Expr *e)
 {
-    FuncExpr *fn = dynamic_cast<FuncExpr *>(e);
-    if (!fn) return "";
+	auto *fn = dynamic_cast<FuncExpr *>(e);
+	if (!fn) return (char *)"";
 
-    auto f = dynamic_cast<Func*>(fn->getFunc());
-    if (!f) return "";
-    auto an = f->getArgNames();
+	auto f = dynamic_cast<Func*>(fn->getFunc());
+	if (!f) return (char *)"";
+	auto an = f->getArgNames();
 	string r;
-	for (auto s: an) 
+	for (const auto& s : an)
 		r += s + "\b";
 	char *res = strdup(r.c_str());
 	return res;
@@ -748,13 +748,13 @@ FOREIGN void set_static_realize_types(GetStaticElemExpr *e, types::Type **types,
 //          (although one might wonder what's \b doing in a filename?)
 // and yes, it needs proper escaping.
 #define CATCH(er) \
-    auto info = e.getSrcInfo(); \
+	auto info = e.getSrcInfo(); \
 	asprintf(er, "%s\b%s\b%d\b%d\b%d", \
-		e.what(), \
-		info.file.c_str(), info.line, info.col, info.len );
+	         e.what(), \
+	         info.file.c_str(), info.line, info.col, info.len );
 
 FOREIGN types::Type *realize_type
-	(types::RefType *t, types::Type **types, size_t sz, char **error)
+    (types::RefType *t, types::Type **types, size_t sz, char **error)
 {
 	*error = nullptr;
 	if (sz == 0) return t;
@@ -767,7 +767,7 @@ FOREIGN types::Type *realize_type
 }
 
 FOREIGN BaseFunc *realize_func
-	(FuncExpr *e, types::Type **types, size_t sz, char **error)
+    (FuncExpr *e, types::Type **types, size_t sz, char **error)
 {
 	*error = nullptr;
     try {
@@ -781,7 +781,7 @@ FOREIGN BaseFunc *realize_func
 }
 
 FOREIGN void exec_module
-	(SeqModule *sm, char **args, size_t alen, char debug, char **error)
+    (SeqModule *sm, char **args, size_t alen, char debug, char **error)
 {
 	try {
 		vector<string> s;

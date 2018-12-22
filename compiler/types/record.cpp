@@ -157,6 +157,46 @@ void types::RecordType::initOps()
 #undef COMMA
 		}},
 
+		{"__iter__", {}, GenType::get(types.empty() ? Void : types[0]), SEQ_MAGIC_CAPT(self, args, b) {
+			if (types.empty())
+				throw exc::SeqException("cannot iterate over empty tuple");
+
+			for (auto *type : types) {
+				if (!types::is(type, types[0]))
+					throw exc::SeqException("cannot iterate over heterogeneous tuple");
+			}
+
+			BasicBlock *block = b.GetInsertBlock();
+			Module *module = block->getModule();
+
+			const std::string iterName = "seq." + getName() + ".__iter__";
+			Function *iter = module->getFunction(iterName);
+
+			if (!iter) {
+				Func iterFunc;
+				iterFunc.setName(iterName);
+				iterFunc.setIns({this});
+				iterFunc.setOut(types[0]);
+				iterFunc.setArgNames({"self"});
+
+				VarExpr arg(iterFunc.getArgVar("self"));
+				Block *body = iterFunc.getBlock();
+				for (unsigned i = 0; i < types.size(); i++) {
+					auto *yield = new Yield(new GetElemExpr(&arg, i + 1));
+					yield->setBase(&iterFunc);
+					body->add(yield);
+					if (i == 0)
+						iterFunc.sawYield(yield);
+				}
+
+				iterFunc.resolveTypes();
+				iterFunc.codegen(module);
+				iter = iterFunc.getFunc();
+			}
+
+			return b.CreateCall(iter, self);
+		}},
+
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return ConstantInt::get(seqIntLLVM(b.getContext()), types.size(), true);
 		}},
