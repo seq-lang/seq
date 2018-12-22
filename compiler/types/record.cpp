@@ -87,6 +87,76 @@ void types::RecordType::initOps()
 			return val;
 		}},
 
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+#define PAREN_OPEN   "seq.tuple.paren_open"
+#define PAREN_CLOSED "seq.tuple.paren_close"
+#define COMMA        "seq.tuple.comma"
+			LLVMContext& context = b.getContext();
+			BasicBlock *block = b.GetInsertBlock();
+			Module *module = block->getModule();
+
+			GlobalVariable *parenOpen = module->getGlobalVariable(PAREN_OPEN);
+			GlobalVariable *parenClosed = module->getGlobalVariable(PAREN_CLOSED);
+			GlobalVariable *comma = module->getGlobalVariable(COMMA);
+
+			if (!parenOpen)
+				parenOpen = new GlobalVariable(*module,
+				                               llvm::ArrayType::get(IntegerType::getInt8Ty(context), 2),
+				                               true,
+				                               GlobalValue::PrivateLinkage,
+				                               ConstantDataArray::getString(context, "("),
+				                               PAREN_OPEN);
+
+			if (!parenClosed)
+				parenClosed = new GlobalVariable(*module,
+				                                 llvm::ArrayType::get(IntegerType::getInt8Ty(context), 2),
+				                                 true,
+				                                 GlobalValue::PrivateLinkage,
+				                                 ConstantDataArray::getString(context, ")"),
+				                                 PAREN_CLOSED);
+
+			if (!comma)
+				comma = new GlobalVariable(*module,
+				                           llvm::ArrayType::get(IntegerType::getInt8Ty(context), 3),
+				                           true,
+				                           GlobalValue::PrivateLinkage,
+				                           ConstantDataArray::getString(context, ", "),
+				                           COMMA);
+
+			auto *printFunc = cast<Function>(
+			        module->getOrInsertFunction(
+			          "seq_print_str",
+			          llvm::Type::getVoidTy(context),
+			          Str->getLLVMType(context)));
+			printFunc->setDoesNotThrow();
+
+			Value *parenOpenVal = Str->make(b.CreateBitCast(parenOpen, IntegerType::getInt8PtrTy(context)),
+			                                oneLLVM(context), block);
+			Value *parenClosedVal = Str->make(b.CreateBitCast(parenClosed, IntegerType::getInt8PtrTy(context)),
+			                                  oneLLVM(context), block);
+			Value *commaVal = Str->make(b.CreateBitCast(comma, IntegerType::getInt8PtrTy(context)),
+			                            ConstantInt::get(seqIntLLVM(context), 2), block);
+
+			b.CreateCall(printFunc, parenOpenVal);
+
+			for (unsigned i = 0; i < types.size(); i++) {
+				Value *val = memb(self, std::to_string(i+1), block);
+				ValueExpr v(types[i], val);
+				Print p(&v);
+				p.codegen(block);
+
+				if (i < types.size() - 1)
+					b.CreateCall(printFunc, commaVal);
+			}
+
+			b.CreateCall(printFunc, parenClosedVal);
+
+			return (Value *)nullptr;
+#undef PAREN_OPEN
+#undef PAREN_CLOSED
+#undef COMMA
+		}},
+
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return ConstantInt::get(seqIntLLVM(b.getContext()), types.size(), true);
 		}},
