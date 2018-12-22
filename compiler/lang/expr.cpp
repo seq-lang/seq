@@ -1159,10 +1159,10 @@ Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	auto *toLit = dynamic_cast<IntExpr *>(to);
 
 	// check if this is a record lookup
-	if (rec && fromLit && toLit) {
+	if (rec && (!from || fromLit) && (!to || toLit)) {
 		seq_int_t len = rec->numBaseTypes();
-		seq_int_t from = translateIndex(fromLit->value(), len);
-		seq_int_t to = translateIndex(toLit->value(), len);
+		seq_int_t from = fromLit ? translateIndex(fromLit->value(), len) : 0;
+		seq_int_t to = toLit ? translateIndex(toLit->value(), len) : len;
 		std::vector<Expr *> values;
 
 		for (seq_int_t i = from; i < to; i++)
@@ -1200,10 +1200,10 @@ types::Type *ArraySliceExpr::getType0() const
 	auto *toLit = dynamic_cast<IntExpr *>(to);
 
 	// check if this is a record lookup
-	if (rec && fromLit && toLit) {
+	if (rec && (!from || fromLit) && (!to || toLit)) {
 		seq_int_t len = rec->numBaseTypes();
-		seq_int_t from = translateIndex(fromLit->value(), len);
-		seq_int_t to = translateIndex(toLit->value(), len);
+		seq_int_t from = fromLit ? translateIndex(fromLit->value(), len) : 0;
+		seq_int_t to = toLit ? translateIndex(toLit->value(), len) : len;
 
 		if (to <= from)
 			return types::RecordType::get({});
