@@ -84,6 +84,7 @@ namespace seq {
 		void setIns(std::vector<types::Type *> inTypes);
 		void setOut(types::Type *outType);
 		void setName(std::string name);
+		std::vector<std::string> getArgNames(void);
 		void setArgNames(std::vector<std::string> argNames);
 
 		Func *clone(Generic *ref) override;

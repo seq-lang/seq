@@ -561,7 +561,10 @@ assign_statement:
               | _, Unpack var when !unpack_i = -1 ->
                 unpack_i := i;
                 let start = Some (p, Int i) in
-                let eend = Some (p, Int (i + 1 - len)) in
+                let eend = 
+                  if i = len - 1 then None
+                  else Some (p, Int (i +  1 - len))
+                in
                 let slice = Slice (start, eend, None) in
                 let rhs = p, Index (rhs, [p, slice]) in
                 [p, Assign ((p, Id var), rhs, shadow)]
@@ -577,11 +580,16 @@ assign_statement:
                 let rhs = p, Index (rhs, [p, Int (i - len)]) in
                 parse_assign [expr] [rhs])
             in
-            let len = if !unpack_i > -1 then len - 1 else len in
+            let len, op = 
+              if !unpack_i > -1 then 
+                len - 1, ">=" 
+              else 
+                len, "==" 
+            in
             let assert_stmt = p, Assert (p, Binary (
                 (p, Call ((p, Id "len"), 
                           [p, { name = None; value = rhs }])), 
-                ">=", 
+                op, 
                 (p, Int (len))))
             in
             assert_stmt :: lst

@@ -39,6 +39,10 @@ let style_to_string s =
   | Background White -> "47"
   | Background Default -> "49"
 
+(** Pretty-prints list [l] to string via [f] *)
+let ppl ?(sep=", ") ~f l = 
+  String.concat ~sep (List.map ~f l)
+
 (** Output debug information to stderr (with red color or other [style])
     with sprintf-style format string
     if [SEQ_DEBUG] enviromental variable is set. *)

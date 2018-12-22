@@ -8,6 +8,7 @@
  ******************************************************************************)
 
 open Core
+open Util
 
 (** File position descriptor for an AST node. Sexpable. *)
 module Pos = 
@@ -22,9 +23,6 @@ struct
   let dummy =
     { file = ""; line = -1; col = -1; len = 0 }
 end
-
-let ppl ?(sep=", ") ~f l = 
-  String.concat ~sep (List.map ~f l)
 
 (** Expression AST node.
     Each node [t] is a 2-tuple that stores 

@@ -268,7 +268,8 @@ struct
     let typ = E.parse_type ctx (Option.value_exn typ) in
     Llvm.Func.set_type fn typ;
     
-    Ctx.add ctx name (Ctx.Namespace.Func fn);
+    let names = List.map args ~f:(fun (_, x) -> x.name) in
+    Ctx.add ctx name (Ctx.Namespace.Func (fn, names));
     Llvm.Stmt.func fn
 
   and parse_extend ctx pos (name, stmts) =
@@ -343,7 +344,9 @@ struct
     let fn = Llvm.Func.func name in
     begin match cls with 
       | Some cls -> Llvm.Type.add_cls_method cls name fn
-      | None -> Ctx.add ctx name (Ctx.Namespace.Func fn)
+      | None -> 
+        let names = List.map args ~f:(fun (_, x) -> x.name) in
+        Ctx.add ctx name (Ctx.Namespace.Func (fn, names))
     end;
 
     let new_ctx = 
@@ -362,6 +365,7 @@ struct
         Llvm.Generics.Func.set_name fn idx name;
         Llvm.Generics.Func.get fn idx) 
     in
+    Util.dbg "--> %s" @@ Util.ppl names ~f:Fn.id;
     Llvm.Func.set_args fn names types;
 
     Option.value_map typ

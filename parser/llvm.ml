@@ -496,6 +496,15 @@ module Func = struct
       fn 
       (strdup name)
 
+  let get_arg_names expr = 
+    let s = 
+      foreign "get_func_names" 
+        (Types.expr @-> returning string)
+        expr
+    in
+    let names = String.split ~on:'\b' s in
+    List.rev names |> List.tl_exn |> List.rev
+
   let set_return = foreign "set_func_return" 
     (t @-> Types.expr @-> returning void)
 

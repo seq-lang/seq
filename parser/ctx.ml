@@ -17,8 +17,8 @@ struct
     (string, elt list) Hashtbl.t
   (** Describes potential kinf of variable *)
   and elt = 
-    | Var  of Llvm.Types.var_t * annotation
-    | Func of Llvm.Types.func_t
+    | Var  of (Llvm.Types.var_t * annotation)
+    | Func of (Llvm.Types.func_t * string list)
     | Type of Llvm.Types.typ_t
     | Import of t
   (** Each assignable variable is annotated with 

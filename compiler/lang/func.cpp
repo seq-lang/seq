@@ -405,6 +405,11 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	}
 }
 
+std::vector<std::string> Func::getArgNames(void)
+{
+	return this->argNames;
+}
+
 Var *Func::getArgVar(std::string name)
 {
 	auto iter = argVars.find(name);

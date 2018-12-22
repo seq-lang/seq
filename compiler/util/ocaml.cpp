@@ -436,6 +436,21 @@ FOREIGN Var *get_func_arg(Func *f, char *arg)
 	return t;
 }
 
+FOREIGN char* get_func_names(Expr *e)
+{
+    FuncExpr *fn = dynamic_cast<FuncExpr *>(e);
+    if (!fn) return "";
+
+    auto f = dynamic_cast<Func*>(fn->getFunc());
+    if (!f) return "";
+    auto an = f->getArgNames();
+	string r;
+	for (auto s: an) 
+		r += s + "\b";
+	char *res = strdup(r.c_str());
+	return res;
+}
+
 FOREIGN void set_func_enclosing(Func *f, Func *outer)
 {
 	f->setEnclosingFunc(outer);
