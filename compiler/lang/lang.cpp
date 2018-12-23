@@ -262,6 +262,14 @@ void AssignMember::resolveTypes()
 {
 	expr->resolveTypes();
 	value->resolveTypes();
+
+	// auto-deduce class member types:
+	try {
+		if (types::RefType *ref = expr->getType()->asRef())
+			ref->addMember(memb, value->getType());
+	} catch (exc::SeqException&) {
+		// if we fail, no big deal, just carry on...
+	}
 }
 
 void AssignMember::codegen0(BasicBlock*& block)

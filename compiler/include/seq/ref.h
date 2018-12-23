@@ -33,6 +33,10 @@ namespace seq {
 
 			std::vector<std::pair<std::vector<types::Type *>, types::Type *>> realizationCache;
 			RecordType *contents;
+
+			std::vector<std::string> membNamesDeduced;
+			std::vector<Type *> membTypesDeduced;
+
 			explicit RefType(std::string name);
 
 			llvm::Type *getStructPointerType(llvm::LLVMContext& context) const;
@@ -41,6 +45,7 @@ namespace seq {
 			void operator=(RefType const&)=delete;
 			void setDone();
 			void setContents(RecordType *contents);
+			void addMember(std::string name, Type *type);
 			std::string getName() const override;
 			std::string genericName() override;
 			types::Type *realize(std::vector<types::Type *> types);

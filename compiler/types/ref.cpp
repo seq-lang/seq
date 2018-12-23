@@ -5,21 +5,38 @@ using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name) :
-    Type(std::move(name), BaseType::get()), Generic(),
-    done(false), root(this), cache(), realizationCache(),
-    contents(types::RecordType::get({}))
+    Type(std::move(name), BaseType::get()), Generic(), done(false),
+    root(this), cache(), realizationCache(), contents(nullptr),
+    membNamesDeduced(), membTypesDeduced()
 {
 }
 
 void types::RefType::setDone()
 {
 	assert(this == root && !done);
+
+	if (!contents) {
+		resolveTypes();
+		contents = types::RecordType::get(membTypesDeduced, membNamesDeduced);
+	}
+
 	done = true;
 }
 
 void types::RefType::setContents(types::RecordType *contents)
 {
 	this->contents = contents;
+}
+
+void types::RefType::addMember(std::string name, types::Type *type)
+{
+	if (done ||
+	    contents ||
+	    std::find(membNamesDeduced.begin(), membNamesDeduced.end(), name) != membNamesDeduced.end())
+		return;
+
+	membNamesDeduced.push_back(name);
+	membTypesDeduced.push_back(type);
 }
 
 std::string types::RefType::getName() const
@@ -150,14 +167,6 @@ void types::RefType::initOps()
 			return self;
 		}},
 
-		{"__init__", contents->getTypes(), this, SEQ_MAGIC_CAPT(self, args, b) {
-			self = b.CreateBitCast(self, getStructPointerType(b.getContext()));
-			for (unsigned i = 0; i < args.size(); i++)
-				self = setMemb(self, std::to_string(i+1), args[i], b.GetInsertBlock());
-			self = b.CreateBitCast(self, getLLVMType(b.getContext()));
-			return self;
-		}},
-
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateIsNotNull(self), Bool->getLLVMType(b.getContext()));
 		}},
@@ -175,6 +184,16 @@ void types::RefType::initOps()
 			return (Value *)nullptr;
 		}},
 	};
+
+	if (contents) {
+		vtable.magic.push_back({"__init__", contents->getTypes(), this, SEQ_MAGIC_CAPT(self, args, b) {
+			self = b.CreateBitCast(self, getStructPointerType(b.getContext()));
+			for (unsigned i = 0; i < args.size(); i++)
+				self = setMemb(self, std::to_string(i+1), args[i], b.GetInsertBlock());
+			self = b.CreateBitCast(self, getLLVMType(b.getContext()));
+			return self;
+		}});
+	}
 }
 
 void types::RefType::initFields()
@@ -263,7 +282,7 @@ types::RefType *types::RefType::get(std::string name)
 
 types::RefType *types::RefType::clone(Generic *ref)
 {
-	assert(done);
+	assert(done && contents);
 
 	if (ref->seenClone(this))
 		return (types::RefType *)ref->getClone(this);
@@ -272,7 +291,7 @@ types::RefType *types::RefType::clone(Generic *ref)
 	ref->addClone(this, x);
 	setCloneBase(x, ref);
 
-	x->setContents(contents->clone(ref));
+	x->contents = contents->clone(ref);
 
 	std::vector<MagicOverload> overloadsCloned;
 	for (auto& magic : getVTable().overloads)
