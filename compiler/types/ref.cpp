@@ -7,7 +7,7 @@ using namespace llvm;
 types::RefType::RefType(std::string name) :
     Type(std::move(name), BaseType::get()), Generic(), done(false),
     root(this), cache(), realizationCache(), contents(nullptr),
-    membNamesDeduced(), membTypesDeduced()
+    membNamesDeduced(), membExprsDeduced()
 {
 }
 
@@ -17,7 +17,12 @@ void types::RefType::setDone()
 
 	if (!contents) {
 		resolveTypes();
-		contents = types::RecordType::get(membTypesDeduced, membNamesDeduced);
+		try {
+			setDeducedContents();
+		} catch (exc::SeqException&) {
+			// this can fail if e.g. types are not known due to generics
+			// in this case, hope that types get resolved later...
+		}
 	}
 
 	done = true;
@@ -28,7 +33,23 @@ void types::RefType::setContents(types::RecordType *contents)
 	this->contents = contents;
 }
 
-void types::RefType::addMember(std::string name, types::Type *type)
+void types::RefType::setDeducedContents()
+{
+	assert(membExprsDeduced.size() == membNamesDeduced.size());
+	std::vector<types::Type *> membTypesDeduced;
+	for (unsigned i = 0; i < membExprsDeduced.size(); i++) {
+		Expr *expr = membExprsDeduced[i];
+		expr->resolveTypes();
+		membTypesDeduced.push_back(expr->getType());
+		if (membTypesDeduced.back()->is(Void)) {
+			contents = types::RecordType::get({});
+			throw exc::SeqException("member '" + membNamesDeduced[i] + "' of class '" + getName() + "' is void");
+		}
+	}
+	contents = types::RecordType::get(membTypesDeduced, membNamesDeduced);
+}
+
+void types::RefType::addMember(std::string name, Expr *expr)
 {
 	if (done ||
 	    contents ||
@@ -36,7 +57,7 @@ void types::RefType::addMember(std::string name, types::Type *type)
 		return;
 
 	membNamesDeduced.push_back(name);
-	membTypesDeduced.push_back(type);
+	membExprsDeduced.push_back(expr);
 }
 
 std::string types::RefType::getName() const
@@ -79,6 +100,10 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 	Generic *x = realizeGeneric(types);
 	auto *ref = dynamic_cast<types::RefType *>(x);
 	assert(ref);
+
+	if (!ref->contents || !ref->membNamesDeduced.empty())
+		ref->setDeducedContents();
+
 	addCachedRealized(types, ref);
 	ref->resolveTypes();
 	return ref;
@@ -162,6 +187,7 @@ void types::RefType::initOps()
 
 	vtable.magic = {
 		{"__new__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			assert(contents);
 			self = contents->alloc(nullptr, b.GetInsertBlock());
 			self = b.CreateBitCast(self, getLLVMType(b.getContext()));
 			return self;
@@ -303,6 +329,14 @@ types::RefType *types::RefType::clone(Generic *ref)
 
 	x->getVTable().overloads = overloadsCloned;
 	x->getVTable().methods = methodsCloned;
+
+	std::vector<Expr *> membExprsDeducedCloned;
+	for (auto *expr : membExprsDeduced)
+		membExprsDeducedCloned.push_back(expr->clone(ref));
+
+	x->membNamesDeduced = membNamesDeduced;
+	x->membExprsDeduced = membExprsDeducedCloned;
+
 	x->root = root;
 	x->done = true;
 	return x;

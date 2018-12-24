@@ -266,7 +266,7 @@ void AssignMember::resolveTypes()
 	// auto-deduce class member types:
 	try {
 		if (types::RefType *ref = expr->getType()->asRef())
-			ref->addMember(memb, value->getType());
+			ref->addMember(memb, value);
 	} catch (exc::SeqException&) {
 		// if we fail, no big deal, just carry on...
 	}

@@ -35,17 +35,18 @@ namespace seq {
 			RecordType *contents;
 
 			std::vector<std::string> membNamesDeduced;
-			std::vector<Type *> membTypesDeduced;
+			std::vector<Expr *> membExprsDeduced;
 
 			explicit RefType(std::string name);
 
 			llvm::Type *getStructPointerType(llvm::LLVMContext& context) const;
+			void setDeducedContents();
 		public:
 			RefType(RefType const&)=delete;
 			void operator=(RefType const&)=delete;
 			void setDone();
 			void setContents(RecordType *contents);
-			void addMember(std::string name, Type *type);
+			void addMember(std::string name, Expr *expr);
 			std::string getName() const override;
 			std::string genericName() override;
 			types::Type *realize(std::vector<types::Type *> types);
