@@ -72,14 +72,14 @@ extend str:
         return h
 
     def __add__(self: str, other: str):
-        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
-        l1 = self.len
-        l2 = other.len
-        l3 = l1 + l2
-        p = ptr[byte](l3)
-        memcpy(p, self.ptr, l1)
-        memcpy(p + l1, other.ptr, l2)
-        return str(p, l3)
+        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int) -> ptr[byte]
+        len1 = self.len
+        len2 = other.len
+        len3 = len1 + len2
+        p = ptr[byte](len3)
+        memcpy(p, self.ptr, len1)
+        memcpy(p + len1, other.ptr, len2)
+        return str(p, len3)
 
 extend seq:
     def __hash__(self: seq):
