@@ -864,14 +864,26 @@ class_statement:
 // Classes
 cls:
   // class name [ [type+] ] (param+)
-  | CLASS ; n = ID;
-    intypes = generic_list?
-    LP; mems = separated_list(COMMA, typed_param) RP;
-    COLON NL; 
-    INDENT fns = class_member+ DEDENT
-    { let intypes = Option.value intypes ~default:[] in
+  | CLASS ID generics = generic_list? 
+    LP args = separated_list(COMMA, typed_param) RP COLON NL
+    INDENT members = class_member+ DEDENT
+    { let generics = Option.value generics ~default:[] in
       pos $1 $7, 
-      Generic (Class (snd n, intypes, mems, List.filter_opt fns)) }
+      Generic (Class 
+        { class_name = snd $2; 
+          generics; 
+          args = Some args; 
+          members = List.filter_opt members }) }
+  // class name [ [type+] ] (param+)
+  | CLASS ID COLON NL
+    INDENT members = class_member+ DEDENT
+    { pos $1 $4, 
+      Generic (Class 
+        { class_name = snd $2; 
+          generics = []; 
+          args = None; 
+          members = List.filter_opt members }) }
+
 // Class extensions (extend name)
 extend:
   | EXTEND ; n = ID; COLON NL; 

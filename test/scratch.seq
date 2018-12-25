@@ -1,5 +1,23 @@
 # 786
 
+class fox:
+    def __init__(self: fox):
+        self.a = 5
+        self.b = 'wololo'
+    def hai(self: fox):
+        self.x = 3.14
+        return 0
+    def __print__(self: fox):
+        self.a.__print__()
+        ' <> '.__print__()
+        self.b.__print__()
+        ' <> '.__print__()
+        self.x.__print__()
+
+x = fox()
+print x.hai()
+print x
+
 a = 5
 b = 3
 print a, b

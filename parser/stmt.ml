@@ -379,32 +379,38 @@ struct
           Ctx.add ctx name var));
     Llvm.Stmt.func fn
   
-  and parse_class ctx pos ((name, types, args, stmts) as stmt) =
-    if is_some @@ Ctx.in_scope ctx name then
-      serr ~pos "class %s already exists" name;
-    List.iter args ~f:(fun (pos, { name; typ }) ->
-      if is_none typ then 
-        serr ~pos "class field %s does not have type" name);
-
-    let typ = Llvm.Type.cls name in
-    Ctx.add ctx name (Ctx.Namespace.Type typ);
-
+  and parse_class ctx pos cls =
+    (* ((name, types, args, stmts) as stmt) *)
+    if is_some @@ Ctx.in_scope ctx cls.class_name then
+      serr ~pos "class %s already exists" cls.class_name;
+    
+    let typ = Llvm.Type.cls cls.class_name in
+    Ctx.add ctx cls.class_name (Ctx.Namespace.Type typ);
     let new_ctx = 
       { ctx with 
         map = Hashtbl.copy ctx.map;
         stack = Stack.create () } 
     in
     Ctx.add_block new_ctx;
-    let names, types = parse_generics 
-      new_ctx 
-      types args
-      (Llvm.Generics.Type.set_number typ)
-      (fun idx name ->
-        Llvm.Generics.Type.set_name typ idx name;
-        Llvm.Generics.Type.get typ idx) 
-    in
-    Llvm.Type.set_cls_args typ names types;
-    ignore @@ List.map stmts ~f:(function
+    
+    begin match cls.args with
+      | None -> ()
+      | Some args ->
+        List.iter args ~f:(fun (pos, { name; typ }) ->
+          if is_none typ then 
+            serr ~pos "class field %s does not have type" name);
+        let names, types = parse_generics 
+          new_ctx 
+          cls.generics args
+          (Llvm.Generics.Type.set_number typ)
+          (fun idx name ->
+            Llvm.Generics.Type.set_name typ idx name;
+            Llvm.Generics.Type.get typ idx) 
+        in
+        Llvm.Type.set_cls_args typ names types;
+    end;
+
+    ignore @@ List.map cls.members ~f:(function
       | pos, Function f -> parse_function new_ctx pos f ~cls:typ
       | _ -> failwith "classes only support functions as members");
     Llvm.Type.set_cls_done typ;

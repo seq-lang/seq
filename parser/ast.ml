@@ -165,8 +165,7 @@ struct
   and generic =
     | Function of 
         (param tt * (ExprNode.generic tt) list * param tt list * t list)
-    | Class of 
-        (string * (ExprNode.generic tt) list * param tt list * generic tt list)
+    | Class of class_t 
   and if_case = 
     { cond: ExprNode.t option; 
       cond_stmts: t list }
@@ -180,6 +179,11 @@ struct
     { exc: string option;
       var: string option;
       stmts: t list }
+  and class_t = 
+    { class_name: string;
+      generics: (ExprNode.generic tt) list;
+      args: param tt list option;
+      members: generic tt list }
   and import = 
     (* import <from> as <import_as> | from <from> import <what> 
        <what> = [<what> as <import_as>]+
