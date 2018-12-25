@@ -9,7 +9,7 @@ def foo(x, y, z):
 
 foo(1, 2, 3)
 foo(y=3, x=2, z = 1)
-foo(3, y=2, x=1)
+foo(3, y=2, z=1)
 
 # a, b = 1, 2
 # print a, b
@@ -20,20 +20,31 @@ foo(3, y=2, x=1)
 # a, b = (c, d) = 5, 10
 # print a, b, c, d
 
-# [a, (b, [c]), d] = -1, (20, 30), 11
-# print a, b, c, d
+[a, (b, [c]), d] = -1, (20, 30), 11
+print a, b, c, d
 
 # # a * b + c * d
 # # a or b and c or d
 
-# # a, *b := (1, 2, 3, 4, 5)
-# # print a, b[0], b[1], b[2], b[3]
+a, *b := (1, 2, 3, 4, 5)
+print a, b
 
-# y = (1, 2, 3, 4, 5)
-# # print y[0], y[-1], iter(y[1:-1])
+y = (1, 2, 3, 4, 5)
+print y[0], y[-1], y[1:-1]
 
-# a, b, *c := 'abcd'
-# print a, b, c
+a, b, *c := 'abcd'
+print a, b, c,
+print 'hehe'
+
+y := [1, 2, 3,]
+print y
+
+y := (1, 2, 3,)
+print y
+
+y := (1 )
+print y
+
 
 # a, b, *c, d, e := 'abcde'
 # print a, b, d, e

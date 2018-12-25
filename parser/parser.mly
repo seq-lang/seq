@@ -109,6 +109,12 @@
 %start <Ast.t> program
 %%
 
+%public separated_nonempty_trailing_list(separator, X):
+  | x = X separator
+    { [ x ] }
+  | x = X; separator; xs = separated_nonempty_trailing_list(separator, X)
+    { x :: xs }
+
 /******************************************************************************
   Notes:
   - Each rule returns a tuple (position, node)
@@ -179,17 +185,19 @@ lists: // Lists: [1, 2, 3]
   | LS RS
     { pos $1 $2, 
       [] }
+
   | LS expr_list RS
     { pos $1 $3, 
       $2 }
 set:
-  | LB separated_nonempty_list(COMMA, expr) RB
+  | LB expr_list RB
     { pos $1 $3, 
       $2 }
 dict: // Dictionaries: {1: 2, 3: 4} 
   | LB RB
     { pos $1 $2, [] }
   | LB separated_nonempty_list(COMMA, dictitem) RB
+  | LB separated_nonempty_trailing_list(COMMA, dictitem) RB
     { pos $1 $3, 
       $2 }
 dictitem:
@@ -252,6 +260,7 @@ expr:
       Lambda ($2, $4) }
 expr_list:
   | separated_nonempty_list(COMMA, expr) 
+  | separated_nonempty_trailing_list(COMMA, expr)
     { $1 }
 
 // The following rules are defined in the order of operator precedence:
@@ -455,6 +464,13 @@ small_statement:
         let pos = fst expr in
         [ pos, Print expr; 
           pos, Print (pos, String delim) ] )
+      in 
+      List.concat stmts }
+  | PRINT separated_nonempty_trailing_list(COMMA, expr)
+    { let stmts = List.mapi $2 ~f:(fun i expr ->
+        let pos = fst expr in
+        [ pos, Print expr; 
+          pos, Print (pos, String " ") ] )
       in 
       List.concat stmts }
   // assert statement
