@@ -71,6 +71,16 @@ extend str:
             h = 31*h + int(p[i])
         return h
 
+    def __add__(self: str, other: str):
+        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
+        l1 = self.len
+        l2 = other.len
+        l3 = l1 + l2
+        p = ptr[byte](l3)
+        memcpy(p, self.ptr, l1)
+        memcpy(p + l1, other.ptr, l2)
+        return str(p, l3)
+
 extend seq:
     def __hash__(self: seq):
         h = 0
@@ -80,5 +90,5 @@ extend seq:
         return h
 
 import! list
-import! dict 
-import! set 
+import! dict
+import! set
