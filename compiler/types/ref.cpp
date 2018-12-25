@@ -127,10 +127,9 @@ Value *types::RefType::memb(Value *self,
 	initFields();
 	initOps();
 
-	if (Type::hasMethod(name))
+	if (!contents || Type::hasMethod(name))
 		return Type::memb(self, name, block);
 
-	assert(contents);
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
 	self = builder.CreateBitCast(self, getStructPointerType(context));
@@ -150,14 +149,17 @@ types::Type *types::RefType::membType(const std::string& name)
 
 	try {
 		return Type::membType(name);
-	} catch (exc::SeqException& e) {
+	} catch (exc::SeqException&) {
 	}
 
-	try {
-		return contents->membType(name);
-	} catch (exc::SeqException& e) {
-		throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
+	if (contents) {
+		try {
+			return contents->membType(name);
+		} catch (exc::SeqException&) {
+		}
 	}
+
+	throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 }
 
 Value *types::RefType::setMemb(Value *self,
@@ -224,8 +226,8 @@ void types::RefType::initOps()
 
 void types::RefType::initFields()
 {
-	assert(contents);
-	contents->initFields();
+	if (contents)
+		contents->initFields();
 }
 
 bool types::RefType::isAtomic() const
@@ -241,14 +243,12 @@ bool types::RefType::is(types::Type *type) const
 
 unsigned types::RefType::numBaseTypes() const
 {
-	assert(contents);
-	return contents->numBaseTypes();
+	return contents ? contents->numBaseTypes() : 0;
 }
 
 types::Type *types::RefType::getBaseType(unsigned idx) const
 {
-	assert(contents);
-	return contents->getBaseType(idx);
+	return contents ? contents->getBaseType(idx) : nullptr;
 }
 
 Type *types::RefType::getStructPointerType(LLVMContext& context) const
@@ -261,6 +261,7 @@ Type *types::RefType::getStructPointerType(LLVMContext& context) const
 		}
 	}
 
+	assert(contents);
 	StructType *structType = StructType::create(context, name);
 	root->cache.emplace_back(types, structType);
 	contents->addLLVMTypesToStruct(structType);
