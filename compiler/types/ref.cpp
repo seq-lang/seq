@@ -112,10 +112,31 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 std::vector<types::Type *> types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes)
 {
 	// deal with custom __init__s:
+	bool foundInit = false;
 	for (auto& magic : vtable.overloads) {
-		if (magic.name == "__init__")
-			throw exc::SeqException("cannot deduce type parameters with custom __init__ methods");
+		if (magic.name != "__init__")
+			continue;
+
+		foundInit = true;
+		magic.func->resolveTypes();
+		types::FuncType *funcType = magic.func->getFuncType();
+
+		if (funcType->numBaseTypes() - 2 != argTypes.size())
+			continue;
+
+		std::vector<types::Type *> types;
+		// start loop from 2 since 0th base type is return type and 1st is self
+		for (unsigned i = 2; i < funcType->numBaseTypes(); i++)
+			types.push_back(funcType->getBaseType(i));
+
+		try {
+			return Generic::deduceTypesFromArgTypes(types, argTypes);
+		} catch (exc::SeqException&) {
+		}
 	}
+
+	if (foundInit)
+		throw exc::SeqException("could not deduce type parameters of class '" + name + "'");
 
 	return Generic::deduceTypesFromArgTypes(contents->getTypes(), argTypes);
 }

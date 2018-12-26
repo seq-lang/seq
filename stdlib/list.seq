@@ -11,6 +11,18 @@ class list[`t](arr: array[`t], len: int):
         self.arr = array[`t](10)
         self.len = 0
 
+    def __init__(self: list[`t], it: generator[`t]):
+        self.arr = array[`t](10)
+        self.len = 0
+        for i in it:
+            self.append(i)
+
+    def __init__(self: list[`t], other: list[`t]):
+        self.arr = array[`t](other.len)
+        self.len = 0
+        for i in other:
+            self.append(i)
+
     def __len__(self: list[`t]):
         return self.len
 

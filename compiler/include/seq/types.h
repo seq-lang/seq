@@ -280,7 +280,7 @@ namespace seq {
 		};
 
 		/// Convenience method for checking if two types are equal.
-		/// internally checks "\p type1 is \p type2" _or_ "\p type2
+		/// Internally checks "\p type1 is \p type2" _or_ "\p type2
 		/// is \p type1".
 		bool is(Type *type1, Type *type2);
 	}
