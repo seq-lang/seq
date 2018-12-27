@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 #include "expr.h"
 #include "func.h"
@@ -72,6 +73,39 @@ namespace seq {
 		void execute(const std::vector<std::string>& args={},
 		             const std::vector<std::string>& libs={},
 		             bool debug=false);
+	};
+
+	class SeqJIT {
+	private:
+		llvm::orc::ExecutionSession es;
+		std::map<llvm::orc::VModuleKey, std::shared_ptr<llvm::orc::SymbolResolver>> resolvers;
+		std::unique_ptr<llvm::TargetMachine> target;
+		const llvm::DataLayout layout;
+		llvm::orc::RTDyldObjectLinkingLayer objLayer;
+		llvm::orc::IRCompileLayer<decltype(objLayer), llvm::orc::SimpleCompiler> comLayer;
+
+		using OptimizeFunction =
+		    std::function<std::unique_ptr<llvm::Module>(std::unique_ptr<llvm::Module>)>;
+
+		llvm::orc::IRTransformLayer<decltype(comLayer), OptimizeFunction> optLayer;
+		std::unique_ptr<llvm::orc::JITCompileCallbackManager> callbackManager;
+		llvm::orc::CompileOnDemandLayer<decltype(optLayer)> codLayer;
+		std::vector<Var *> globals;
+		int inputNum;
+
+		std::unique_ptr<llvm::Module> makeModule();
+		llvm::orc::VModuleKey addModule(std::unique_ptr<llvm::Module> module);
+		llvm::JITSymbol findSymbol(std::string name);
+		void removeModule(llvm::orc::VModuleKey key);
+		Func makeFunc();
+		void exec(Func *func, std::unique_ptr<llvm::Module> module);
+	public:
+		SeqJIT();
+		static void init();
+		void addFunc(Func *func);
+		void addExpr(Expr *expr, bool print=true);
+		Var *addVar(Expr *expr);
+		void delVar(Var *var);
 	};
 
 }

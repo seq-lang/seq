@@ -1,16 +1,19 @@
 #include <iostream>
+#include <memory>
 #include <system_error>
 #include <cassert>
 #include "seq/seq.h"
 
 using namespace seq;
 using namespace llvm;
+using namespace llvm::orc;
+
+static LLVMContext context;
 
 SeqModule::SeqModule() :
     BaseFunc(), scope(new Block()), argVar(new Var(types::ArrayType::get(types::Str))),
     initFunc(nullptr), strlenFunc(nullptr), flags(SEQ_FLAG_FASTIO)
 {
-	static LLVMContext context;
 	InitializeNativeTarget();
 	InitializeNativeTargetAsmPrinter();
 
@@ -167,7 +170,7 @@ void SeqModule::verify()
 	}
 }
 
-void SeqModule::optimize(bool debug)
+static void optimizeModule(Module *module, bool debug)
 {
 	std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
 	std::unique_ptr<legacy::FunctionPassManager> fpm(new legacy::FunctionPassManager(module));
@@ -196,6 +199,17 @@ void SeqModule::optimize(bool debug)
 		fpm->run(f);
 	fpm->doFinalization();
 	pm->run(*module);
+}
+
+static std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> module, bool debug)
+{
+	optimizeModule(module.get(), debug);
+	return module;
+}
+
+void SeqModule::optimize(bool debug)
+{
+	optimizeModule(module, debug);
 }
 
 void SeqModule::compile(const std::string& out, bool debug)
@@ -258,4 +272,166 @@ void SeqModule::execute(const std::vector<std::string>& args,
 	}
 
 	eng->runFunctionAsMain(func, args, nullptr);
+}
+
+
+/*
+ * JIT
+ */
+
+SeqJIT::SeqJIT() :
+    target(EngineBuilder().selectTarget()), layout(target->createDataLayout()),
+    objLayer(es, [this](VModuleKey K) {
+        return RTDyldObjectLinkingLayer::Resources{ std::make_shared<SectionMemoryManager>(), resolvers[K]}; }),
+    comLayer(objLayer, SimpleCompiler(*target)),
+    optLayer(comLayer, [](std::unique_ptr<Module> M) { return optimizeModule(std::move(M), false); }),
+    callbackManager(orc::createLocalCompileCallbackManager(target->getTargetTriple(), es, 0)),
+    codLayer(es, optLayer,
+        [&](orc::VModuleKey K) { return resolvers[K]; },
+        [&](orc::VModuleKey K, std::shared_ptr<SymbolResolver> R) { resolvers[K] = std::move(R); },
+        [](Function &F) { return std::set<Function *>({&F}); },
+        *callbackManager,
+        orc::createLocalIndirectStubsManagerBuilder(
+        target->getTargetTriple())),
+    globals(),
+    inputNum(0)
+{
+	sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+}
+
+void SeqJIT::init()
+{
+	InitializeNativeTarget();
+	InitializeNativeTargetAsmPrinter();
+}
+
+std::unique_ptr<Module> SeqJIT::makeModule()
+{
+	auto module = make_unique<Module>("seq." + std::to_string(inputNum), context);
+
+	module->setTargetTriple(target->getTargetTriple().str());
+	module->setDataLayout(target->createDataLayout());
+	return module;
+}
+
+VModuleKey SeqJIT::addModule(std::unique_ptr<Module> M)
+{
+	// create a new VModuleKey:
+	VModuleKey K = es.allocateVModule();
+
+	// build a resolver and associate it with the new key:
+	resolvers[K] = createLegacyLookupResolver(es,
+	    [this](const std::string& name) -> JITSymbol {
+	        if (auto sym = comLayer.findSymbol(name, false))
+	            return sym;
+	        else if (auto err = sym.takeError())
+	            return std::move(err);
+	        if (auto symAddr = RTDyldMemoryManager::getSymbolAddressInProcess(name))
+	            return JITSymbol(symAddr, JITSymbolFlags::Exported);
+	        return nullptr;
+	    },
+	    [](Error err) { cantFail(std::move(err), "lookupFlags failed"); });
+
+	// add the module to the JIT with the new key:
+	cantFail(codLayer.addModule(K, std::move(M)));
+	return K;
+}
+
+JITSymbol SeqJIT::findSymbol(std::string name)
+{
+	std::string mangledName;
+	raw_string_ostream mangledNameStream(mangledName);
+	Mangler::getNameWithPrefix(mangledNameStream, name, layout);
+	return codLayer.findSymbol(mangledNameStream.str(), false);
+}
+
+void SeqJIT::removeModule(VModuleKey key)
+{
+	cantFail(codLayer.removeModule(key));
+}
+
+Func SeqJIT::makeFunc()
+{
+	Func func;
+	func.setName("seq.repl.input." + std::to_string(inputNum));
+	func.setIns({});
+	func.setOut(types::Void);
+	return func;
+}
+
+void SeqJIT::exec(Func *func, std::unique_ptr<Module> module)
+{
+	func->resolveTypes();
+	func->codegen(module.get());
+	func->getFunc()->setLinkage(GlobalValue::ExternalLinkage);
+
+	// expose globals to the new function:
+	IRBuilder<> builder(context);
+	builder.SetInsertPoint(&*(*func->getFunc()->getBasicBlockList().begin()).begin());
+	for (auto *var : globals) {
+		Value *ptr = var->getPtr(func);
+		auto sym = findSymbol(var->getName());
+		auto addr = (uint64_t)cantFail(sym.getAddress());
+		Value *addrVal = ConstantInt::get(seqIntLLVM(context), addr);
+		Value *ptrVal = builder.CreateIntToPtr(addrVal, var->getType()->getLLVMType(context)->getPointerTo());
+		builder.CreateStore(ptrVal, ptr);
+	}
+
+	addModule(std::move(module));
+	auto sym = findSymbol(func->genericName());
+	void (*fn)() = (void(*)())cantFail(sym.getAddress());
+	fn();
+}
+
+void SeqJIT::addFunc(Func *func)
+{
+	auto module = makeModule();
+	func->setName("seq.repl.input." + std::to_string(inputNum));
+	exec(func, std::move(module));
+	++inputNum;
+}
+
+void SeqJIT::addExpr(Expr *expr, bool print)
+{
+	auto module = makeModule();
+	Func func = makeFunc();
+	if (print) {
+		auto *p1 = new Print(expr);
+		auto *p2 = new Print(new StrExpr("\n"));
+		p1->setBase(&func);
+		p2->setBase(&func);
+		func.getBlock()->add(p1);
+		func.getBlock()->add(p2);
+	} else {
+		auto *e = new ExprStmt(expr);
+		e->setBase(&func);
+		func.getBlock()->add(e);
+	}
+
+	exec(&func, std::move(module));
+	++inputNum;
+}
+
+Var *SeqJIT::addVar(Expr *expr)
+{
+	auto module = makeModule();
+	Func func = makeFunc();
+	auto *v = new VarStmt(expr);
+	Var *var = v->getVar();
+	var->setGlobal();
+	v->setBase(&func);
+	func.getBlock()->add(v);
+
+	exec(&func, std::move(module));
+	var->setREPL();
+	globals.push_back(var);
+	++inputNum;
+	return var;
+}
+
+void SeqJIT::delVar(Var *var)
+{
+	auto it = std::find(globals.begin(), globals.end(), var);
+	if (it != globals.end())
+		globals.erase(it);
 }

@@ -9,9 +9,22 @@ static void ensureNonVoid(types::Type *type)
 		throw exc::SeqException("cannot load or store void variable");
 }
 
+static int nameIdx = 0;
+
 Var::Var(types::Type *type) :
-    type(type), ptr(nullptr), global(false), mapped()
+     name("seq.var." + std::to_string(nameIdx++)), type(type), ptr(nullptr),
+     module(nullptr), global(false), repl(false), mapped()
 {
+}
+
+std::string Var::getName()
+{
+	return name;
+}
+
+void Var::setName(std::string name)
+{
+	this->name = std::move(name);
 }
 
 void Var::allocaIfNeeded(BaseFunc *base)
@@ -19,18 +32,27 @@ void Var::allocaIfNeeded(BaseFunc *base)
 	if (!mapped.empty())
 		mapped.top()->allocaIfNeeded(base);
 
+	if (module != base->getPreamble()->getModule()) {
+		ptr = nullptr;
+		module = base->getPreamble()->getModule();
+	}
+
 	if (ptr)
 		return;
 
 	LLVMContext& context = base->getContext();
 	if (global) {
 		Type *llvmType = getType()->getLLVMType(context);
-		ptr = new GlobalVariable(*base->getPreamble()->getModule(),
+
+		if (repl)
+			llvmType = llvmType->getPointerTo();
+
+		ptr = new GlobalVariable(*module,
 		                         llvmType,
 		                         false,
-		                         GlobalValue::PrivateLinkage,
+		                         GlobalValue::ExternalLinkage,
 		                         Constant::getNullValue(llvmType),
-		                         "var");
+		                         name);
 	} else {
 		ptr = makeAlloca(getType()->getLLVMType(context), base->getPreamble());
 	}
@@ -51,6 +73,16 @@ void Var::setGlobal()
 		global = true;
 }
 
+void Var::setREPL()
+{
+	if (!mapped.empty())
+		mapped.top()->setGlobal();
+	else {
+		global = true;
+		repl = true;
+	}
+}
+
 void Var::mapTo(Var *other)
 {
 	mapped.push(other);
@@ -61,6 +93,16 @@ void Var::unmap()
 	mapped.pop();
 }
 
+Value *Var::getPtr(BaseFunc *base)
+{
+	if (!mapped.empty())
+		return mapped.top()->getPtr(base);
+
+	allocaIfNeeded(base);
+	assert(ptr);
+	return ptr;
+}
+
 Value *Var::load(BaseFunc *base, BasicBlock *block)
 {
 	if (!mapped.empty())
@@ -69,7 +111,12 @@ Value *Var::load(BaseFunc *base, BasicBlock *block)
 	ensureNonVoid(getType());
 	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
-	return builder.CreateLoad(ptr);
+	Value *val = builder.CreateLoad(ptr);
+
+	if (repl)
+		val = builder.CreateLoad(val);
+
+	return val;
 }
 
 void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
@@ -82,7 +129,8 @@ void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
 	ensureNonVoid(getType());
 	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
-	builder.CreateStore(val, ptr);
+	Value *dest = repl ? builder.CreateLoad(ptr) : ptr;
+	builder.CreateStore(val, dest);
 }
 
 void Var::setType(types::Type *type)

@@ -378,6 +378,11 @@ DictExpr *DictExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new DictExpr(elemsCloned, dictType->clone(ref)));
 }
 
+/*
+ * Assumes that comprehension bodies are structured so that `if` or `for`
+ * parts are always the last statements in the blocks. This should really
+ * always be the case though.
+ */
 static void setBodyBase(For *body, BaseFunc *base)
 {
 	Block *inner = body->getBlock();
@@ -443,6 +448,7 @@ Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	GetElemExpr append(&v, "append");
 	CallExpr call(&append, {val});
 	ExprStmt callStmt(&call);
+	callStmt.setBase(base);
 	callStmt.resolveTypes();
 
 	inner->stmts.push_back(&callStmt);
@@ -513,6 +519,7 @@ Value *SetCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	GetElemExpr append(&v, "add");
 	CallExpr call(&append, {val});
 	ExprStmt callStmt(&call);
+	callStmt.setBase(base);
 	callStmt.resolveTypes();
 
 	inner->stmts.push_back(&callStmt);
@@ -582,6 +589,7 @@ Value *DictCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	}
 
 	AssignIndex assignStmt(&v, key, val);
+	assignStmt.setBase(base);
 	assignStmt.resolveTypes();
 
 	inner->stmts.push_back(&assignStmt);
