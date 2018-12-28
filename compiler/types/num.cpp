@@ -51,6 +51,10 @@ void types::IntType::initOps()
 		return;
 
 	vtable.magic = {
+		{"__init__", {Int}, Int, SEQ_MAGIC(self, args, b) {
+			return args[0];
+		}},
+
 		{"__init__", {Float}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateFPToSI(args[0], Int->getLLVMType(b.getContext()));
 		}},
@@ -223,6 +227,10 @@ void types::FloatType::initOps()
 		return;
 
 	vtable.magic = {
+		{"__init__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			return args[0];
+		}},
+
 		{"__init__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 		}},
@@ -420,6 +428,10 @@ void types::ByteType::initOps()
 		return;
 
 	vtable.magic = {
+		{"__init__", {Byte}, Byte, SEQ_MAGIC(self, args, b) {
+			return args[0];
+		}},
+
 		{"__init__", {Int}, Byte, SEQ_MAGIC(self, args, b) {
 			return b.CreateTrunc(args[0], Byte->getLLVMType(b.getContext()));
 		}},
