@@ -1,23 +1,157 @@
 # 786
 
-import os
-os.system('ls')
+class fox:
+    def __init__(self: fox):
+        self.a = 5
+        self.b = 'wololo'
+    def hai(self: fox):
+        self.x = 3.14
+        return 0
+    def __print__(self: fox):
+        self.a.__print__()
+        ' <> '.__print__()
+        self.b.__print__()
+        ' <> '.__print__()
+        self.x.__print__()
 
-import math
-print math.log(14.0)
-print math.exp(14.0)
-print math.erf(14.0)
-print math.sqrt(14.0)
-print math.factorial(2)
+x = fox()
+print x.hai()
+print x
 
-import bisect
-print bisect.bisect_left([1,2,3], 2)
-print bisect.bisect_left([1], 2)
+a = 5
+b = 3
+print a, b
 
-w = list[int](range(4).__iter__())
-print w
+def foo(x, y, z):
+    print 'foo', 'x', x, 'y', y, 'z', z
 
-import itertools
-print list(itertools.combinations('ABCD', 2))
-print [i for i in itertools.combinations('ABCD', 2)]
+foo(1, 2, 3)
+foo(y=3, x=2, z = 1)
+foo(3, y=2, z=1)
+
+# a, b = 1, 2
+# print a, b
+
+# (a, b) = 1, 2
+# print a, b
+
+# a, b = (c, d) = 5, 10
+# print a, b, c, d
+
+[a, (b, [c]), d] = -1, (20, 30), 11
+print a, b, c, d
+
+# # a * b + c * d
+# # a or b and c or d
+
+a, *b := (1, 2, 3, 4, 5)
+print a, b
+
+y = (1, 2, 3, 4, 5)
+print y[0], y[-1], y[1:-1]
+
+a, b, *c := 'abcd'
+print a, b, c,
+print 'hehe'
+
+y := [1, 2, 3,]
+print y
+
+y := (1, 2, 3,)
+print y
+
+y := (1 )
+print y
+
+
+# a, b, *c, d, e := 'abcde'
+# print a, b, d, e
+# print 'abcde'[-1]
+
+
+# def foo(x):
+#     # print a, b
+#     global a
+#     a = 6
+#     if True:
+#         c = 7
+#     print a, x
+
+# def bar(x):
+#     global a
+#     print a
+
+# foo(100)
+# bar(1)
+# print a, b
+# print a+"x"
+
+# import test as xx
+# from test import foo as xoo, cls
+
+# from test import foo
+
+# print 'extern'
+
+# k = xx.typ(3)
+# print k.i
+
+# a = [1,2,3,45]
+# print a
+
+# class Exc(msg: str):
+#     def yodel(self):
+#         print 'Yodel-oh-ee-dee-ay-dee', self.msg
+#     pass
+# try:
+#     print 'try'
+#     raise Exc('suisse')
+# except:
+#     print 'ooops'
+# raise Exc('woof')
+
+
+# for i in [1,2,3,4,5]:
+#    print i
+
+# print [1<<a for a in [1,2,3,4,5]]
+
+# d = {1: "2", 3: "4", 5: "6"}
+# print d
+
+# j = {a: a+1 for a in d}
+# for k, v in j.items():
+#    print 'dict', k, v
+
+# j := {a: [i for i in range(0, a)] for a in d}
+# print j
+# # for a in j.items():
+# #    print 'dict--', a[0], len(a[1])
+# #    for ii in a[1]:
+# #       print '   ii', ii
+
+# e = {1,2,3,4,5, 5}
+# print e, {i*2 for i in e}
+
+# for i in [1,2,3,4,5]:
+#     for j in [1,2,3,4,5]:
+#         if i==j:
+#             print 'init', i*j
+
+# print [i for i in [1,2,3]]
+# print [i+j for i in [1,2,3,4,5] for j in [5,4,3,2,1] if i==j]
+
+# for i, j in d.iteritems():
+#     print i, j
+
+# print {a*10+i:b for a,b in d.iteritems() for i in [1,2,3,4,5]}
+
+
+
+# class A():
+#     def foo[`s](s: `s):
+#         print s
+# A.foo[int](10)  # error: cannot find method '__getitem__' for type 'function[void,`s]' with specified argument types (int)
+# A().foo[int](10)  # similar error
+
 
