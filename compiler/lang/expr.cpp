@@ -2010,6 +2010,26 @@ DefaultExpr *DefaultExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new DefaultExpr(getType()->clone(ref)));
 }
 
+TypeOfExpr::TypeOfExpr(Expr *val) : Expr(types::Str), val(val)
+{
+}
+
+void TypeOfExpr::resolveTypes()
+{
+	val->resolveTypes();
+}
+
+Value *TypeOfExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	StrExpr s(val->getType()->getName());
+	return s.codegen(base, block);
+}
+
+TypeOfExpr *TypeOfExpr::clone(Generic *ref)
+{
+	SEQ_RETURN_CLONE(new TypeOfExpr(val->clone(ref)));
+}
+
 PipeExpr::PipeExpr(std::vector<seq::Expr *> stages) :
     Expr(), stages(std::move(stages))
 {

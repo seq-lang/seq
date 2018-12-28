@@ -464,6 +464,16 @@ namespace seq {
 		DefaultExpr *clone(Generic *ref) override;
 	};
 
+	class TypeOfExpr : public Expr {
+	private:
+		Expr *val;
+	public:
+		explicit TypeOfExpr(Expr *val);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		TypeOfExpr *clone(Generic *ref) override;
+	};
+
 	class PipeExpr : public Expr {
 	private:
 		std::vector<Expr *> stages;

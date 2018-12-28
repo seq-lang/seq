@@ -290,6 +290,11 @@ FOREIGN Expr *gen_comp_expr(Expr *val, Var **captures, size_t len)
 	return new GenExpr(val, nullptr, vector<Var *>(captures, captures + len));
 }
 
+FOREIGN Expr *typeof_expr(Expr *val)
+{
+	return new TypeOfExpr(val);
+}
+
 /***** Statements *****/
 
 FOREIGN Stmt *pass_stmt()
