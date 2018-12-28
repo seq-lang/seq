@@ -1,16 +1,23 @@
 # 786
 
-y = [1,2,3]
-print y[2]
+import os
+os.system('ls')
 
-# import bisect
-# print bisect.bisect_left([1,2,3], 2)
-# print bisect.bisect_left([1], 2)
+import math
+print math.log(14.0)
+print math.exp(14.0)
+print math.erf(14.0)
+print math.sqrt(14.0)
+print math.factorial(2)
 
-# # w = list[int](range(4).__iter__())
-# # print w
+import bisect
+print bisect.bisect_left([1,2,3], 2)
+print bisect.bisect_left([1], 2)
 
-# import itertools
-# print list(itertools.combinations('ABCD', 2))
-# print [i for i in itertools.combinations('ABCD', 2)]
+w = list[int](range(4).__iter__())
+print w
+
+import itertools
+print list(itertools.combinations('ABCD', 2))
+print [i for i in itertools.combinations('ABCD', 2)]
 
