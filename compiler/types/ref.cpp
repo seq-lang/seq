@@ -219,19 +219,6 @@ void types::RefType::initOps()
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateIsNotNull(self), Bool->getLLVMType(b.getContext()));
 		}},
-
-		{"__print__", {}, Void, SEQ_MAGIC(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_ptr",
-			                      llvm::Type::getVoidTy(context),
-			                      IntegerType::getInt8PtrTy(context)));
-			printFunc->setDoesNotThrow();
-			b.CreateCall(printFunc, self);
-			return (Value *)nullptr;
-		}},
 	};
 
 	if (contents) {

@@ -226,6 +226,8 @@ Value *types::Type::setMemb(Value *self,
 
 bool types::Type::hasMethod(const std::string& name)
 {
+	initOps();
+
 	for (auto& magic : getVTable().overloads) {
 		if (name == magic.name)
 			return true;
@@ -298,6 +300,14 @@ Value *types::Type::boolValue(Value *self, BasicBlock*& block, TryCatch *tc)
 		throw exc::SeqException("the output type of __bool__ is not boolean");
 
 	return callMagic("__bool__", {}, self, {}, block, tc);
+}
+
+Value *types::Type::strValue(Value *self, BasicBlock*& block, TryCatch *tc)
+{
+	if (!magicOut("__str__", {})->is(types::Str))
+		throw exc::SeqException("the output type of __str__ is not string");
+
+	return callMagic("__str__", {}, self, {}, block, tc);
 }
 
 void types::Type::initOps()

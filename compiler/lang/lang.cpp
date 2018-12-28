@@ -15,8 +15,17 @@ void Print::resolveTypes()
 
 void Print::codegen0(BasicBlock*& block)
 {
+	types::Type *type = expr->getType();
 	Value *val = expr->codegen(getBase(), block);
-	expr->getType()->callMagic("__print__", {}, val, {}, block, getTryCatch());
+
+	if (type->hasMethod("__print__")) {
+		type->callMagic("__print__", {}, val, {}, block, getTryCatch());
+	} else if (type->hasMethod("__str__")) {
+		Value *str = type->strValue(val, block, getTryCatch());
+		types::Str->callMagic("__print__", {}, str, {}, block, getTryCatch());
+	} else {
+		throw exc::SeqException("cannot print type '" + type->getName() + "': no __str__ or __print__ method found");
+	}
 }
 
 Print *Print::clone(Generic *ref)

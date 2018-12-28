@@ -163,6 +163,12 @@ Value *types::GenericType::boolValue(Value *self, BasicBlock*& block, TryCatch *
 	return type->boolValue(self, block, tc);
 }
 
+Value *types::GenericType::strValue(Value *self, BasicBlock*& block, TryCatch *tc)
+{
+	ensure();
+	return type->strValue(self, block, tc);
+}
+
 void types::GenericType::initOps()
 {
 	ensure();
