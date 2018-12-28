@@ -59,6 +59,10 @@ def map(f, x):
 def echo(x):
     print x
 
+import! list
+import! dict
+import! set
+
 extend int:
     def __hash__(self: int):
         return self
@@ -81,6 +85,18 @@ extend str:
         memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
 
+    def cat(v: list[str]):
+        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int) -> ptr[byte]
+        total = 0
+        for s in v:
+            total += len(s)
+        p = ptr[byte](total)
+        n = 0
+        for s in v:
+            memcpy(p + n, s.ptr, s.len)
+            n += s.len
+        return str(p, total)
+
 extend seq:
     def __hash__(self: seq):
         h = 0
@@ -88,7 +104,3 @@ extend seq:
         for i in range(n):
             h = 31*h + int(p[i])
         return h
-
-import! list
-import! dict
-import! set
