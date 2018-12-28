@@ -17,9 +17,11 @@ struct
     (string, elt list) Hashtbl.t
   (** Describes potential kinf of variable *)
   and elt = 
-    | Var  of (Llvm.Types.var_t * annotation)
-    | Func of (Llvm.Types.func_t * string list)
+    el * annotation
+  and el = 
+    | Var  of Llvm.Types.var_t
     | Type of Llvm.Types.typ_t
+    | Func of (Llvm.Types.func_t * string list)
     | Import of t
   (** Each assignable variable is annotated with 
       [base] function pointer, and flags describing does
@@ -27,7 +29,8 @@ struct
   and annotation = 
     { base: Llvm.Types.func_t;
       toplevel: bool;
-      global: bool }
+      global: bool;
+      internal: bool }
 end
 
 (** Context type *)
@@ -68,9 +71,22 @@ let pod_types () =
       "float", float; 
       "byte", byte ]) 
 
+(** [add context name var] adds a variable to the current block *)
+let add (ctx: t) ?(toplevel=false) ?(global=false) ?(internal=false) key var =
+  let annot = Namespace.
+    { base = ctx.base; global; toplevel; internal } in
+  let var = (var, annot) in
+  begin match Hashtbl.find ctx.map key with
+    | None -> 
+      Hashtbl.set ctx.map ~key ~data:[var]
+    | Some lst -> 
+      Hashtbl.set ctx.map ~key ~data:(var :: lst)
+  end;
+  Hash_set.add (Stack.top_exn ctx.stack) key
+
 (** [init ...] initializes an empty context with toplevel block
     and adds internal POD types to the namespace *)
-let init filename mdl base block parse_file =
+let init ?(stdlib=true) ?(argv=true) filename mdl base block parse_file =
   let ctx = 
     { filename;
       mdl;
@@ -82,28 +98,31 @@ let init filename mdl base block parse_file =
       trycatch = Ctypes.null }
   in
   add_block ctx;
-  
+
+  (* default flags for internal arguments *)
+  let toplevel = true in
+  let global = true in
+  let internal = true in 
+
   (* initialize POD types *)
   List.iter (pod_types ()) ~f:(fun (key, fn) -> 
-    let data = [ Namespace.Type (fn ()) ] in
-    Hashtbl.set ctx.map ~key ~data);
-  ctx
-
-(** [var ~toplevel context var] is a helper that creates 
-    a new assignable non-global variable *)
-let var (ctx: t) ?(toplevel=false) var =
-  Namespace.Var (var, 
-    { base = ctx.base; global = false; toplevel })
-
-(** [add context name var] adds a variable to the current block *)
-let add ctx key var =
-  begin match Hashtbl.find ctx.map key with
-    | None -> 
-      Hashtbl.set ctx.map ~key ~data:[var]
-    | Some lst -> 
-      Hashtbl.set ctx.map ~key ~data:(var :: lst)
+    add ctx ~toplevel ~global ~internal
+      key @@ Namespace.Type (fn ()));
+  
+  (* set __argv__ params *)
+  if argv then begin
+    let args = Llvm.Module.get_args mdl in
+    add ctx ~internal ~global ~toplevel 
+      "__argv__" (Namespace.Var args)
   end;
-  Hash_set.add (Stack.top_exn ctx.stack) key
+
+  (* load standard library *)
+  if stdlib then begin
+    let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
+    let stdlib_path = sprintf "%s/stdlib.seq" seqpath in
+    ctx.parse_file ctx stdlib_path
+  end;
+  ctx
 
 (** [clear_block context] pops the current block 
     and removes all block variables from vtable *)
@@ -150,7 +169,6 @@ let remove ctx key =
       | None -> false);
   | _ -> ()
 
-
 (** [dump context] dumps [context] vtable to debug output  *)
 let dump ctx =
   let open Util in
@@ -180,7 +198,7 @@ let dump ctx =
       List.sort ~compare:sortf
     in
     String.concat ~sep:"\n" @@ List.map sorted ~f:(fun (key, data) -> 
-      let pre, pos = prn_assignable data in
+      let pre, pos = prn_assignable (fst data) in
       sprintf "%s%s %s %s" (ind depth) pre key pos)
   in 
   dbg "%s" (prn ctx.map)

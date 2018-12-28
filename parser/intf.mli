@@ -27,11 +27,13 @@ module type StmtIntf =
 sig
    (** Parses statement ([Ast.StmtNode.t]) AST *)
    val parse: 
-      Ctx.t -> Ast.StmtNode.t -> 
+      ?toplevel : bool -> ?jit : bool ->
+      Ctx.t -> Ast.StmtNode.t ->
       Llvm.Types.stmt_t
    
    (** Parses module ([Ast.t]) AST *)
    val parse_module: 
+      ?jit : bool ->
       Ctx.t -> Ast.t -> 
       unit
    

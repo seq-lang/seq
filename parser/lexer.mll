@@ -12,7 +12,7 @@
 {
   module B = Buffer
   module L = Lexing
-  module P = Parser
+  module P = Grammar
 
   open Core
 

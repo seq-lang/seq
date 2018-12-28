@@ -99,12 +99,12 @@ struct
     match Hashtbl.find map var with
     (* Make sure that a variable is either accessible within 
        the same base (function) or that it is global variable  *)
-    | Some (Ctx.Namespace.Var (v, { base; global; _ }) :: _) 
+    | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
       when (ctx.base = base) || global -> 
       Llvm.Expr.var v
-    | Some (Ctx.Namespace.Type t :: _) -> 
+    | Some ((Ctx.Namespace.Type t, _) :: _) -> 
       Llvm.Expr.typ t
-    | Some (Ctx.Namespace.Func (t, _) :: _) -> 
+    | Some ((Ctx.Namespace.Func (t, _), _) :: _) -> 
       Llvm.Expr.func t
     | _ ->
       serr ~pos "symbol '%s' not found or realized" var
@@ -131,7 +131,7 @@ struct
     let captures = String.Table.create () in
     walk ctx (pos, Generator (expr, gen)) ~f:(fun (ctx: Ctx.t) var ->
       match Hashtbl.find ctx.map var with
-      | Some (Ctx.Namespace.Var (v, { base; global; _ }) :: _) 
+      | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
         when (ctx.base = base) || global -> 
         Hashtbl.set captures ~key:var ~data:v
       | _ -> ());
@@ -290,14 +290,14 @@ struct
     let rec imports ictx = function 
       | _, Id x -> 
         begin match Hashtbl.find ictx x with 
-          | Some (Ctx.Namespace.Import x :: _) -> Some x
+          | Some ((Ctx.Namespace.Import x, _) :: _) -> Some x
           | _ -> None
         end
       | _, Dot (a, x) -> 
         begin match imports ictx a with 
           | Some ictx ->
             begin match Hashtbl.find ictx x with 
-              | Some (Ctx.Namespace.Import x :: _) -> Some x
+              | Some ((Ctx.Namespace.Import x, _) :: _) -> Some x
               | _ -> None
             end
           | _ -> None
@@ -356,7 +356,7 @@ struct
       Used to get types for [list], [dict] and other internal classes. *)
   and get_internal_type (ctx: Ctx.t) typ_str = 
     match Hashtbl.find ctx.map typ_str with
-    | Some (Ctx.Namespace.Type typ :: _) -> typ
+    | Some ((Ctx.Namespace.Type typ, _) :: _) -> typ
     | _ -> failwith (sprintf "can't find internal type %s" typ_str)
 
   (** [walk context ~f expr] walks the AST [expr] and calls 

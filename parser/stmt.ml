@@ -26,42 +26,42 @@ struct
   
   (** [parse context expr] dispatches statement AST to the proper parser 
       and finalizes the processed statement. *)
-  let rec parse (ctx: Ctx.t) (pos, node) =
+  let rec parse ?(toplevel=false) ?(jit=false) (ctx: Ctx.t) (pos, node) =
     let stmt = match node with
       | Break    p -> parse_break    ctx pos p
       | Continue p -> parse_continue ctx pos p
       | Expr     p -> parse_expr     ctx pos p
-      | Assign   p -> parse_assign   ctx pos p
+      | Assign   p -> parse_assign   ctx pos p ~toplevel ~jit
       | Del      p -> parse_del      ctx pos p
       | Print    p -> parse_print    ctx pos p
       | Return   p -> parse_return   ctx pos p
       | Yield    p -> parse_yield    ctx pos p
       | Assert   p -> parse_assert   ctx pos p
-      | Type     p -> parse_type     ctx pos p
+      | Type     p -> parse_type     ctx pos p ~toplevel
       | If       p -> parse_if       ctx pos p
       | While    p -> parse_while    ctx pos p
       | For      p -> parse_for      ctx pos p
       | Match    p -> parse_match    ctx pos p
-      | Extern   p -> parse_extern   ctx pos p
-      | Extend   p -> parse_extend   ctx pos p
+      | Extern   p -> parse_extern   ctx pos p ~toplevel
+      | Extend   p -> parse_extend   ctx pos p ~toplevel
       | Import   p -> parse_import   ctx pos p
       | Pass     p -> parse_pass     ctx pos p
       | Try      p -> parse_try      ctx pos p
       | Throw    p -> parse_throw    ctx pos p
       | Global   p -> parse_global   ctx pos p
       | Generic 
-        Function p -> parse_function ctx pos p
+        Function p -> parse_function ctx pos p ~toplevel
       | Generic 
-        Class    p -> parse_class    ctx pos p 
+        Class    p -> parse_class    ctx pos p ~toplevel
     in
     finalize ctx stmt pos
 
   (** [parse_module context module] parses module AST.
       A module is just a simple list of statements. *)
-  and parse_module (ctx: Ctx.t) mdl = 
+  and parse_module ?(jit=false) (ctx: Ctx.t) mdl = 
     match mdl with
     | Module stmts -> 
-      ignore @@ List.map stmts ~f:(parse ctx)
+      ignore @@ List.map stmts ~f:(parse ctx ~toplevel:true ~jit)
 
   (* ***************************************************************
      Node parsers
@@ -88,19 +88,25 @@ struct
       let expr = E.parse ctx expr in
       Llvm.Stmt.expr expr
 
-  and parse_assign ctx pos (lhs, rhs, shadow) =
+  and parse_assign ctx pos ~toplevel ~jit (lhs, rhs, shadow) =
     let rh_expr = E.parse ctx rhs in
     match lhs with
     | pos, Id var ->
       begin match Hashtbl.find ctx.map var with
-      | Some (Ctx.Namespace.Var (v, { base; global; _ }) :: _) 
-        when (not shadow) && ((ctx.base = base) || global) -> 
+      | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
+        when (not shadow) 
+          && (global || (ctx.base = base)) ->
         Llvm.Stmt.assign v rh_expr
-      | Some (Ctx.Namespace.(Type _ | Func _ | Import _) :: _) ->
+      | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
         serr ~pos "cannot assign functions or types"
+      | _ when jit && toplevel ->
+        let var_stmt = Llvm.JIT.var ctx.mdl rh_expr in
+        let v = Ctx.Namespace.Var (Llvm.Var.stmt var_stmt) in
+        Ctx.add ctx ~toplevel ~global:true var v;
+        var_stmt
       | _ ->
         let var_stmt = Llvm.Stmt.var rh_expr in
-        Ctx.add ctx var @@ Ctx.var ctx (Llvm.Var.stmt var_stmt);
+        Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
         var_stmt
       end
     | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)
@@ -120,7 +126,7 @@ struct
       Llvm.Stmt.del_index lhs_expr rhs_expr
     | pos, Id var ->
       begin match Ctx.in_scope ctx var with
-        | Some (Ctx.Namespace.Var (v, _)) ->
+        | Some (Ctx.Namespace.Var v, _) ->
           Ctx.remove ctx var;
           Llvm.Stmt.del v
         | _ ->
@@ -157,7 +163,7 @@ struct
     let expr = E.parse ctx expr in
     Llvm.Stmt.assrt expr 
 
-  and parse_type ctx pos (name, args) =
+  and parse_type ctx pos ~toplevel (name, args) =
     let arg_names, arg_types =  
       List.map args ~f:(function
         | (pos, { name; typ = None }) ->
@@ -170,7 +176,7 @@ struct
       serr ~pos "type %s already defined" name;
     let arg_types = List.map arg_types ~f:(E.parse_type ctx) in
     let typ = Llvm.Type.record arg_names arg_types in
-    Ctx.add ctx name (Ctx.Namespace.Type typ);
+    Ctx.add ctx ~toplevel ~global:toplevel name (Ctx.Namespace.Type typ);
     Llvm.Stmt.pass ()
 
   and parse_while ctx pos (cond, stmts) =
@@ -194,7 +200,7 @@ struct
     let var = Llvm.Var.loop for_stmt in
     begin match for_vars with
       | [name] ->
-        Ctx.add for_ctx name (Ctx.var ctx var)
+        Ctx.add for_ctx name (Ctx.Namespace.Var var)
       | for_vars -> 
         let var_expr = Llvm.Expr.var var in
         List.iteri for_vars ~f:(fun idx var_name ->
@@ -202,13 +208,13 @@ struct
           let var_stmt = Llvm.Stmt.var expr in
           ignore @@ finalize for_ctx var_stmt pos;
           let var = Llvm.Var.stmt var_stmt in
-          Ctx.add for_ctx var_name (Ctx.var ctx var))
+          Ctx.add for_ctx var_name (Ctx.Namespace.Var var))
     end;
     let _ = match next with 
       | Some next -> 
         next ctx for_ctx for_stmt
       | None -> 
-        ignore @@ List.map stmts ~f:(parse for_ctx)
+        ignore @@ List.map stmts ~f:(parse for_ctx ~toplevel:false)
     in
     Ctx.clear_block for_ctx;
 
@@ -247,11 +253,13 @@ struct
       let block = Llvm.Block.case match_stmt pat in
       add_block { ctx with block } case_stmts ~preprocess:(fun ctx ->
         match var with 
-        | Some(n, v) -> Ctx.add ctx n (Ctx.var ctx v) 
+        | Some (n, v) -> Ctx.add ctx n (Ctx.Namespace.Var v) 
         | None -> ()));
     match_stmt
   
-  and parse_extern ctx pos (lang, dylib, (_, { name; typ }), args) =
+  and parse_extern ctx pos ~toplevel 
+    (lang, dylib, (_, { name; typ }), args) =
+
     if lang <> "c" && lang <> "C" then
       serr ~pos "only C external functions are currently supported";
     if is_some @@ Ctx.in_block ctx name then
@@ -269,12 +277,16 @@ struct
     Llvm.Func.set_type fn typ;
     
     let names = List.map args ~f:(fun (_, x) -> x.name) in
-    Ctx.add ctx name (Ctx.Namespace.Func (fn, names));
+    Ctx.add ctx ~toplevel ~global:toplevel 
+      name (Ctx.Namespace.Func (fn, names));
     Llvm.Stmt.func fn
 
-  and parse_extend ctx pos (name, stmts) =
+  and parse_extend ctx pos ~toplevel (name, stmts) =
+    if not toplevel then
+      serr ~pos "extends must be declared at toplevel";
+
     let typ = match Ctx.in_scope ctx name with
-      | Some (Ctx.Namespace.Type t) -> t
+      | Some (Ctx.Namespace.Type t, _) -> t
       | _ -> serr ~pos "cannot extend non-existing class %s" name
     in
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
@@ -309,44 +321,48 @@ struct
       if not stdlib then match what with
         | None -> (* import foo (as bar) *)
           let from = Option.value import_as ~default:from in
-          let pods = List.map (Ctx.pod_types ()) ~f:fst in
           let map = Hashtbl.filteri new_ctx.map ~f:(fun ~key ~data ->
             match data with
-            | Ctx.Namespace.(Type _ | Func _) :: _ -> 
-              not (List.exists pods ~f:((=)key))
-            | _ -> false)
+            | [] -> false 
+            | (_, { global; internal; _ }) :: _ -> global && (not internal))
           in
           Ctx.add ctx from (Ctx.Namespace.Import map)
         | Some [_, ("*", None)] -> (* from foo import * *)
           Hashtbl.iteri new_ctx.map ~f:(fun ~key ~data ->
             match data with
-            | Ctx.Namespace.(Func _ | Type _) as var :: _ ->
+            | (var, { global = true; internal = false; _ }) :: _ ->
               Util.dbg "[import] adding %s::%s" from key;
               Ctx.add ctx key var
             | _ -> ());
         | Some lst -> (* from foo import bar *)
           List.iter lst ~f:(fun (pos, (name, import_as)) ->
             match Ctx.in_scope new_ctx name with
-            | Some var -> 
+            | Some (var, ({ global = true; internal = false; _ } as ann)) -> 
               let name = Option.value import_as ~default:name in
-              Ctx.add ctx name var
-            | None ->
+              Ctx.add ctx 
+                ~global:true ~toplevel:ann.toplevel
+                name var
+            | _ ->
               serr ~pos "name %s not found in %s" name from));
     Llvm.Stmt.pass ()
 
   (** [parse_function ?cls context position data] parses function AST.
       Set `cls` to `Llvm.Types.typ` if you want a function to be 
       a class `cls` method. *)
-  and parse_function ?cls ctx pos ((_, { name; typ }), types, args, stmts) =
+  and parse_function ctx pos ?cls ~toplevel 
+    ((_, { name; typ }), types, args, stmts) =
+
     if is_some @@ Ctx.in_block ctx name then
       serr ~pos "function %s already exists" name;
 
     let fn = Llvm.Func.func name in
     begin match cls with 
-      | Some cls -> Llvm.Type.add_cls_method cls name fn
+      | Some cls -> 
+        Llvm.Type.add_cls_method cls name fn
       | None -> 
         let names = List.map args ~f:(fun (_, x) -> x.name) in
-        Ctx.add ctx name (Ctx.Namespace.Func (fn, names))
+        Ctx.add ctx  ~toplevel ~global:toplevel 
+          name (Ctx.Namespace.Func (fn, names))
     end;
 
     let new_ctx = 
@@ -375,17 +391,21 @@ struct
     add_block new_ctx stmts 
       ~preprocess:(fun ctx ->
         List.iter names ~f:(fun name ->
-          let var = Ctx.var ctx (Llvm.Func.get_arg fn name) in
+          let var = Ctx.Namespace.Var (Llvm.Func.get_arg fn name) in
           Ctx.add ctx name var));
     Llvm.Stmt.func fn
   
-  and parse_class ctx pos cls =
+  and parse_class ctx pos ~toplevel cls =
     (* ((name, types, args, stmts) as stmt) *)
     if is_some @@ Ctx.in_scope ctx cls.class_name then
       serr ~pos "class %s already exists" cls.class_name;
+
+    if not toplevel then
+      serr ~pos "classes must be declared at toplevel";
     
     let typ = Llvm.Type.cls cls.class_name in
-    Ctx.add ctx cls.class_name (Ctx.Namespace.Type typ);
+    Ctx.add ctx ~toplevel ~global:toplevel
+      cls.class_name (Ctx.Namespace.Type typ);
     let new_ctx = 
       { ctx with 
         map = Hashtbl.copy ctx.map;
@@ -434,7 +454,7 @@ struct
           Option.value_map var 
             ~f:(fun var ->
               let v = Llvm.Var.catch try_stmt idx in
-              Ctx.add ctx var (Ctx.var ctx v))
+              Ctx.add ctx var (Ctx.Namespace.Var v))
             ~default: ()) 
     );
 
@@ -452,13 +472,11 @@ struct
 
   and parse_global ctx pos var =
     match Hashtbl.find ctx.map var with
-    | Some (Ctx.Namespace.Var (v, { base; global; toplevel }) :: rest) ->
-      if (ctx.base = base) || global then 
+    | Some ((Ctx.Namespace.Var v, ({ internal = false; _ } as ann)) :: rest) ->
+      if (ctx.base = ann.base) || ann.global then 
         serr ~pos "symbol '%s' either local or already set as global" var;
       Llvm.Var.set_global v;
-      let new_var = Ctx.Namespace.Var 
-        (v, Ctx.Namespace.{ base; global = true; toplevel }) 
-      in
+      let new_var = Ctx.Namespace.(Var v, { ann with global = true }) in
       Hashtbl.set ctx.map ~key:var ~data:(new_var :: rest);
       Llvm.Stmt.pass ()
     | _ ->
@@ -486,7 +504,7 @@ struct
   and add_block ctx ?(preprocess=(fun _ -> ())) stmts =
     Ctx.add_block ctx;
     preprocess ctx;
-    ignore @@ List.map stmts ~f:(parse ctx);
+    ignore @@ List.map stmts ~f:(parse ctx ~toplevel:false);
     Ctx.clear_block ctx
 
   (** Helper for parsing match patterns *)
@@ -518,7 +536,7 @@ struct
       let pat = Llvm.Pattern.wildcard () in
       if is_some wild then begin
         let var = Llvm.Var.bound_pattern pat in
-        Ctx.add ctx (Option.value_exn wild) (Ctx.var ctx var)
+        Ctx.add ctx (Option.value_exn wild) (Ctx.Namespace.Var var)
       end;
       pat
     | GuardedPattern (pat, expr) ->
@@ -542,7 +560,7 @@ struct
     let type_args = List.map generic_types ~f:snd in
     let generic_args = List.filter_map types ~f:(fun x ->
       match snd x with
-      | Generic(g) when String.is_prefix g ~prefix:"``" -> Some g
+      | Generic g when String.is_prefix g ~prefix:"``" -> Some g
       | _ -> None)
     in
     let generics = 

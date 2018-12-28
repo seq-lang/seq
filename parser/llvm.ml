@@ -40,6 +40,7 @@ struct
   type modul_t = unit ptr
   type block_t = unit ptr
   type pattern_t = unit ptr
+  type jit_t = unit ptr
 
   let typ : typ_t typ = ptr void
   let expr : expr_t typ = ptr void
@@ -49,6 +50,7 @@ struct
   let modul : modul_t typ = ptr void
   let block : block_t typ = ptr void
   let pattern : pattern_t typ = ptr void
+  let jit : jit_t typ = ptr void
 end
 
 (** Seq types ([types::Type]) *)
@@ -610,6 +612,19 @@ module Module = struct
     (t @-> returning Types.var)
 end
 
+(** Seq JIT engine ([SeqJIT]) *)
+module JIT = struct
+  let t = Types.jit
+
+  let init = foreign "jit_init"
+    (void @-> returning t)
+
+  let var = foreign "jit_var"
+    (t @-> Types.expr @-> returning Types.var)
+
+  let func = foreign "jit_func"
+    (t @-> Types.func @-> returning void)
+end
 
 
 
