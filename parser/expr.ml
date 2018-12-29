@@ -356,8 +356,10 @@ struct
       Used to get types for [list], [dict] and other internal classes. *)
   and get_internal_type (ctx: Ctx.t) typ_str = 
     match Hashtbl.find ctx.map typ_str with
-    | Some ((Ctx.Namespace.Type typ, _) :: _) -> typ
-    | _ -> failwith (sprintf "can't find internal type %s" typ_str)
+    | Some ((Ctx.Namespace.Type typ, _) :: _) -> 
+      typ
+    | _ -> 
+      failwith (sprintf "can't find internal type %s" typ_str)
 
   (** [walk context ~f expr] walks the AST [expr] and calls 
       function [f context identifier] on each child generic or identifier. 

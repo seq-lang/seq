@@ -22,9 +22,10 @@ let jit_code (ctx: Ctx.t) cnt code =
   Parser.parse_string ~file:"<jit>" ~jit:true anon_ctx code;
 
   Hash_set.iter (Stack.pop_exn anon_ctx.stack) ~f:(fun key ->
-    match Hashtbl.find ctx.map key with
+    match Hashtbl.find anon_ctx.map key with
     | Some ((v, ann) :: items) -> 
       if ann.toplevel && ann.global && (not ann.internal) then 
+        Util.dbg "++ adding %s" key;
         Ctx.add ctx ~toplevel:true ~global:true key v;
     | _ -> ());
   Llvm.JIT.func ctx.mdl anon_fn

@@ -100,10 +100,10 @@ struct
       | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
         serr ~pos "cannot assign functions or types"
       | _ when jit && toplevel ->
-        let var_stmt = Llvm.JIT.var ctx.mdl rh_expr in
-        let v = Ctx.Namespace.Var (Llvm.Var.stmt var_stmt) in
+        Util.dbg "oyha! %b %b" toplevel jit;
+        let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
         Ctx.add ctx ~toplevel ~global:true var v;
-        var_stmt
+        Llvm.Stmt.pass ()
       | _ ->
         let var_stmt = Llvm.Stmt.var rh_expr in
         Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
@@ -291,8 +291,10 @@ struct
     in
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
     ignore @@ List.map stmts ~f:(function
-      | pos, Function f -> parse_function new_ctx pos f ~cls:typ
-      | _ -> failwith "classes only support functions as members");
+      | pos, Function f -> 
+        parse_function new_ctx pos f ~cls:typ
+      | _ -> 
+        failwith "classes only support functions as members");
 
     Llvm.Stmt.pass ()
   
@@ -349,7 +351,7 @@ struct
   (** [parse_function ?cls context position data] parses function AST.
       Set `cls` to `Llvm.Types.typ` if you want a function to be 
       a class `cls` method. *)
-  and parse_function ctx pos ?cls ~toplevel 
+  and parse_function ctx pos ?cls ?(toplevel=false)
     ((_, { name; typ }), types, args, stmts) =
 
     if is_some @@ Ctx.in_block ctx name then
@@ -430,7 +432,8 @@ struct
     end;
 
     ignore @@ List.map cls.members ~f:(function
-      | pos, Function f -> parse_function new_ctx pos f ~cls:typ
+      | pos, Function f -> 
+        parse_function new_ctx pos f ~cls:typ
       | _ -> failwith "classes only support functions as members");
     Llvm.Type.set_cls_done typ;
 
