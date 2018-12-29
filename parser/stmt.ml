@@ -60,7 +60,15 @@ struct
       A module is just a simple list of statements. *)
   and parse_module ?(jit=false) (ctx: Ctx.t) mdl = 
     match mdl with
-    | Module stmts -> 
+    | Module stmts ->
+      let stmts = 
+        if jit then 
+          List.rev @@ match List.rev stmts with
+            | (pos, Expr e) :: tl -> 
+              (pos, Print (pos, String "\n")) :: (pos, Print e) :: tl
+            | l -> l
+        else stmts 
+      in
       ignore @@ List.map stmts ~f:(parse ctx ~toplevel:true ~jit)
 
   (* ***************************************************************
@@ -100,7 +108,6 @@ struct
       | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
         serr ~pos "cannot assign functions or types"
       | _ when jit && toplevel ->
-        Util.dbg "oyha! %b %b" toplevel jit;
         let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
         Ctx.add ctx ~toplevel ~global:true var v;
         Llvm.Stmt.pass ()
