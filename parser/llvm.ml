@@ -78,14 +78,14 @@ module Type = struct
   let seq = foreign "str_seq_type"
     (Ctypes.void @-> returning t)
 
-  let record names types = 
-    let fn = foreign "record_type" 
-      (ptr cstring @-> ptr t @-> size_t @-> returning t)
+  let record names types name = 
+    let fn = foreign "record_type_named" 
+      (ptr cstring @-> ptr t @-> size_t @-> cstring @-> returning t)
     in
     assert ((List.length names) = (List.length types));
     let narr = array_of_string_list names in 
     let tarr, tlen = list_to_carr t types in
-    fn (CArray.start narr) tarr tlen
+    fn (CArray.start narr) tarr tlen (strdup name)
 
   let func typ args = 
     let fn = foreign "func_type" 
@@ -110,7 +110,7 @@ module Type = struct
     (Types.expr @-> returning t)
 
   let set_cls_args typ names types = 
-    let rt = record names types in
+    let rt = record names types "" in
     foreign "set_ref_record"
       (t @-> t @-> returning Ctypes.void) 
       typ rt
@@ -315,6 +315,9 @@ module Stmt = struct
     (Types.expr @-> Types.expr @-> returning t)
 
   let print = foreign "print_stmt" 
+    (Types.expr @-> returning t)
+
+  let print_jit = foreign "print_stmt_repl" 
     (Types.expr @-> returning t)
 
   let return = foreign "return_stmt" 

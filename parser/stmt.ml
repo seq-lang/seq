@@ -33,7 +33,7 @@ struct
       | Expr     p -> parse_expr     ctx pos p
       | Assign   p -> parse_assign   ctx pos p ~toplevel ~jit
       | Del      p -> parse_del      ctx pos p
-      | Print    p -> parse_print    ctx pos p
+      | Print    p -> parse_print    ctx pos p ~jit
       | Return   p -> parse_return   ctx pos p
       | Yield    p -> parse_yield    ctx pos p
       | Assert   p -> parse_assert   ctx pos p
@@ -142,9 +142,12 @@ struct
     | _ -> 
       serr ~pos "cannot del non-index expression"
 
-  and parse_print ctx _ expr =    
+  and parse_print ctx _ ~jit expr =    
     let expr = E.parse ctx expr in
-    Llvm.Stmt.print expr
+    if jit then 
+      Llvm.Stmt.print expr
+    else
+      Llvm.Stmt.print_jit expr
 
   and parse_return ctx pos ret =
     match ret with
@@ -182,7 +185,7 @@ struct
     if is_some @@ Ctx.in_scope ctx name then
       serr ~pos "type %s already defined" name;
     let arg_types = List.map arg_types ~f:(E.parse_type ctx) in
-    let typ = Llvm.Type.record arg_names arg_types in
+    let typ = Llvm.Type.record arg_names arg_types name in
     Ctx.add ctx ~toplevel ~global:toplevel name (Ctx.Namespace.Type typ);
     Llvm.Stmt.pass ()
 
@@ -265,12 +268,12 @@ struct
     match_stmt
   
   and parse_extern ctx pos ~toplevel 
-    (lang, dylib, (_, { name; typ }), args) =
+    (lang, dylib, ctx_name, (_, { name; typ }), args) =
 
     if lang <> "c" && lang <> "C" then
       serr ~pos "only C external functions are currently supported";
-    if is_some @@ Ctx.in_block ctx name then
-      serr ~pos "function %s already exists" name;
+    if is_some @@ Ctx.in_block ctx ctx_name then
+      serr ~pos "function %s already exists" ctx_name;
     
     let names, types = 
       List.map args ~f:(fun (_, { name; typ }) ->
@@ -285,7 +288,7 @@ struct
     
     let names = List.map args ~f:(fun (_, x) -> x.name) in
     Ctx.add ctx ~toplevel ~global:toplevel 
-      name (Ctx.Namespace.Func (fn, names));
+      ctx_name (Ctx.Namespace.Func (fn, names));
     Llvm.Stmt.func fn
 
   and parse_extend ctx pos ~toplevel (name, stmts) =

@@ -34,7 +34,7 @@ FOREIGN char *get_type_name(types::Type *ex)
 	return strdup(ex->getName().c_str());
 }
 
-FOREIGN types::Type *record_type_named(char **names, types::Type **ty, size_t sz, const char *name)
+FOREIGN types::Type *record_type_named(char **names, types::Type **ty, size_t sz, char *name)
 {
 	vector<string> s;
 	for (size_t i = 0; i < sz; i++) {
@@ -42,13 +42,8 @@ FOREIGN types::Type *record_type_named(char **names, types::Type **ty, size_t sz
 		free(names[i]);
 	}
 	auto t = types::RecordType::get(vector<types::Type *>(ty, ty + sz), s, string(name));
-	// free(name);
+	free(name);
 	return t;
-}
-
-FOREIGN types::Type *record_type(char **names, types::Type **ty, size_t sz)
-{
-	return record_type_named(names, ty, sz, "");
 }
 
 FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)

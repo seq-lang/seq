@@ -156,7 +156,7 @@ struct
     | If         of (if_case tt) list
     | Match      of (ExprNode.t * (match_case tt) list)
     | Extend     of (string * generic tt list)
-    | Extern     of (string * string option * param tt * param tt list)
+    | Extern     of (string * string option * string * param tt * param tt list)
     | Import     of import list 
     | Generic    of generic 
     | Try        of (t list * catch tt list * t list option)

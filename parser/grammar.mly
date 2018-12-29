@@ -826,15 +826,34 @@ func:
         ((fst name, { name = snd name; typ }), intypes, params, s)) }
   // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
   | EXTERN; lang = ID; dylib = dylib_spec?; name = ID;
-    LP params = separated_list(COMMA, typed_param); RP
+    LP params = separated_list(COMMA, extern_param); RP
     typ = func_ret_type?; NL
     { let typ = match typ with
         | Some typ -> typ
         | None -> $7, Id("void")
       in
       pos $1 (fst typ), 
-      Extern (snd lang, dylib, 
+      Extern (snd lang, dylib, snd name,
         (fst name, { name = snd name; typ = Some(typ) }), params) }
+  | EXTERN; lang = ID; dylib = dylib_spec?; name = ID; AS alt_name = ID
+    LP params = separated_list(COMMA, extern_param); RP
+    typ = func_ret_type?; NL
+    { let typ = match typ with
+        | Some typ -> typ
+        | None -> $7, Id("void")
+      in
+      pos $1 (fst typ), 
+      Extern (snd lang, dylib, snd name,
+        (fst name, { name = snd alt_name; typ = Some(typ) }), params) }
+
+// Extern paramerers
+extern_param:
+  | expr 
+    { fst $1,
+      { name = ""; typ = Some $1 } }
+  | ID param_type
+    { pos (fst $1) (fst $2), 
+      { name = snd $1; typ = Some $2 } }
 // Generic specifiers
 generic_list:
   | LS; separated_nonempty_list(COMMA, generic); RS 
