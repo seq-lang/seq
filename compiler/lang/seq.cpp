@@ -162,17 +162,17 @@ void SeqModule::codegen(Module *module)
 	func = makeCanonicalMainFunc(func, strlenFunc);
 }
 
-static void verifyModule(Module *module)
+static void verifyModuleFailFast(Module& module)
 {
-	if (verifyModule(*module, &errs())) {
-		errs() << *module;
+	if (verifyModule(module, &errs())) {
+		errs() << module;
 		assert(0);
 	}
 }
 
 void SeqModule::verify()
 {
-	verifyModule(*module);
+	verifyModuleFailFast(*module);
 }
 
 static void optimizeModule(Module *module, bool debug)
@@ -291,7 +291,7 @@ SeqJIT::SeqJIT() :
     comLayer(objLayer, SimpleCompiler(*target)),
     optLayer(comLayer, [](std::unique_ptr<Module> M) {
         auto module = optimizeModule(std::move(M), true);
-        verifyModule(*module);
+        verifyModuleFailFast(*module);
         return module;
     }),
     callbackManager(orc::createLocalCompileCallbackManager(target->getTargetTriple(), es, 0)),
@@ -386,7 +386,7 @@ void SeqJIT::exec(Func *func, std::unique_ptr<Module> module)
 		builder.CreateStore(ptrVal, ptr);
 	}
 
-	verifyModule(*module);
+	verifyModuleFailFast(*module);
 	addModule(std::move(module));
 	auto sym = findSymbol(func->genericName());
 	void (*fn)() = (void(*)())cantFail(sym.getAddress());

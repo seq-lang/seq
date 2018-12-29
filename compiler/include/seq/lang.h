@@ -11,8 +11,9 @@ namespace seq {
 	class Print : public Stmt {
 	private:
 		Expr *expr;
+		bool nopOnVoid;  // for REPL top-level print wraps
 	public:
-		explicit Print(Expr *expr);
+		explicit Print(Expr *expr, bool nopOnVoid=false);
 		void resolveTypes() override;
 		void codegen0(llvm::BasicBlock*& block) override;
 		Print *clone(Generic *ref) override;

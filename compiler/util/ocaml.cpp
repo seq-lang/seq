@@ -369,6 +369,11 @@ FOREIGN Stmt *print_stmt(Expr *e)
 	return new Print(e);
 }
 
+FOREIGN Stmt *print_stmt_repl(Expr *e)
+{
+	return new Print(e, true);
+}
+
 FOREIGN Stmt *if_stmt()
 {
 	return new If();

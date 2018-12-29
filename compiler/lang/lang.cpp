@@ -3,8 +3,8 @@
 using namespace seq;
 using namespace llvm;
 
-Print::Print(Expr *expr) :
-    Stmt("print"), expr(expr)
+Print::Print(Expr *expr, bool nopOnVoid) :
+    Stmt("print"), expr(expr), nopOnVoid(nopOnVoid)
 {
 }
 
@@ -17,6 +17,9 @@ void Print::codegen0(BasicBlock*& block)
 {
 	types::Type *type = expr->getType();
 	Value *val = expr->codegen(getBase(), block);
+
+	if (nopOnVoid && type->is(types::Void))
+		return;
 
 	if (type->hasMethod("__print__")) {
 		type->callMagic("__print__", {}, val, {}, block, getTryCatch());
@@ -33,7 +36,7 @@ Print *Print::clone(Generic *ref)
 	if (ref->seenClone(this))
 		return (Print *)ref->getClone(this);
 
-	auto *x = new Print(expr->clone(ref));
+	auto *x = new Print(expr->clone(ref), nopOnVoid);
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
 	SEQ_RETURN_CLONE(x);
