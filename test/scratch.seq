@@ -3,6 +3,6 @@
 import itertools
 print [i for i in itertools.combinations('ABCD', 2)]
 # print list(iter(itertools.combinations('ABCD', 2))) # <- fails
-print list(itertools.combinations('ABCD', 2)) # <- fails
+# print list(itertools.combinations('ABCD', 2)) # <- fails
 
 

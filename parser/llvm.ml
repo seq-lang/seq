@@ -521,6 +521,9 @@ module Func = struct
 
   let set_extern = foreign "set_func_extern" 
     (t @-> returning void)
+
+  let set_enclosing = foreign "set_func_enclosing"
+    (t @-> t @-> returning void)
 end
 
 (** Seq generic utilities *)

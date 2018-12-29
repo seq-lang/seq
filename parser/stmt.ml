@@ -373,8 +373,10 @@ struct
         Llvm.Type.add_cls_method cls name fn
       | None -> 
         let names = List.map args ~f:(fun (_, x) -> x.name) in
-        Ctx.add ctx  ~toplevel ~global:toplevel 
-          name (Ctx.Namespace.Func (fn, names))
+        Ctx.add ctx ~toplevel ~global:toplevel 
+          name (Ctx.Namespace.Func (fn, names));
+        if not toplevel then
+          Llvm.Func.set_enclosing fn ctx.base;
     end;
 
     let new_ctx = 
