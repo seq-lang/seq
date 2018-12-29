@@ -12,7 +12,7 @@ using namespace llvm::cl;
 
 int main(int argc, char **argv)
 {
-	opt<string> input(Positional, desc("<input file>"), Required);
+	opt<string> input(Positional, desc("<input file>"), NumOccurrencesFlag::Optional);
 	opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; print LLVM IR)"));
 	opt<string> output("o", desc("Write LLVM bitcode to specified file instead of running with JIT"));
 	cl::list<string> libs("L", desc("Load and link the specified library"));
@@ -21,6 +21,11 @@ int main(int argc, char **argv)
 	ParseCommandLineOptions(argc, argv);
 	vector<string> libsVec(libs);
 	vector<string> argsVec(args);
+
+	if (input.empty()) {
+		repl();
+		return EXIT_SUCCESS;
+	}
 
 	SeqModule *s = parse(input.c_str());
 
