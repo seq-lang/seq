@@ -511,6 +511,7 @@ BaseFunc *MagicMethod::asFunc(types::Type *type) const
 		static int idx = 1;
 		auto *func = cast<Function>(module->getOrInsertFunction("seq.magic." + name + "." + std::to_string(idx++),
 		                                                        FunctionType::get(out->getLLVMType(context), types, false)));
+		func->setLinkage(GlobalValue::PrivateLinkage);
 
 		BasicBlock *entry = BasicBlock::Create(context, "entry", func);
 
