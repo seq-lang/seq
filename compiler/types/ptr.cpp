@@ -28,6 +28,12 @@ void types::PtrType::initOps()
 			return getBaseType(0)->alloc(args[0], b.GetInsertBlock());
 		}},
 
+		{"__init__", {getBaseType(0)}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *p = getBaseType(0)->alloc(nullptr, b.GetInsertBlock());
+			b.CreateStore(args[0], p);
+			return p;
+		}},
+
 		{"__init__", {PtrType::get(Base)}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
 		}},
