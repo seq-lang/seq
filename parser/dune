@@ -15,7 +15,7 @@
 
 (ocamllex lexer)
 (menhir
-   (modules parser))
+   (modules grammar))
 
 (executable
    (name main)

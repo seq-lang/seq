@@ -799,3 +799,19 @@ FOREIGN void exec_module
 		CATCH (error);
 	}
 }
+
+FOREIGN SeqJIT *jit_init() 
+{
+	SeqJIT::init();
+	return new SeqJIT();
+}
+
+FOREIGN Var *jit_var(SeqJIT *jit, Expr *expr) 
+{
+	return jit->addVar(expr);
+}
+
+FOREIGN void jit_func(SeqJIT *jit, Func *func) 
+{
+	jit->addFunc(func);
+}

@@ -6,6 +6,14 @@ extend range:
     def __init__(self: range, hi: int) -> range:
         return (0, hi)
 
+    def __getitem__(self: range, i: int) -> int:
+        if i < 0:
+            assert self.hi + i >= self.lo
+            return self.hi + i
+
+        assert self.lo + i < self.hi
+        return self.lo + i
+
     def __iter__(self: range):
         lo = self.lo
         hi = self.hi
@@ -58,6 +66,12 @@ def map(f, x):
 
 def echo(x):
     print x
+
+def reversed(x):
+    i = len(x)
+    while i > 0:
+        i -= 1
+        yield x[i]
 
 import! list
 import! dict

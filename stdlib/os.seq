@@ -1,0 +1,3 @@
+def system(cmd: str) -> int:
+    extern c system(cmd: ptr[byte]) -> int
+    return system(cmd.ptr)

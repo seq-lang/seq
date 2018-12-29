@@ -1,0 +1,3 @@
+def time():
+    extern c _time(ptr int) -> int
+    return _time(0)

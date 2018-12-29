@@ -1,0 +1,10 @@
+extern c log(x: float) -> float
+extern c exp(x: float) -> float
+extern c erf(x: float) -> float
+extern c sqrt(x: float) -> float
+
+def factorial(x: int) -> int:
+    r = 1
+    for i in range(2, x + 1):
+        r *= i
+    return r
