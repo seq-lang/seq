@@ -20,6 +20,10 @@ void types::PtrType::initOps()
 		return;
 
 	vtable.magic = {
+		{"__init__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return ConstantPointerNull::get(getBaseType(0)->getLLVMType(b.getContext())->getPointerTo(0));
+		}},
+
 		{"__init__", {Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return getBaseType(0)->alloc(args[0], b.GetInsertBlock());
 		}},
