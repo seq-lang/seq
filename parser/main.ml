@@ -72,6 +72,8 @@ let () =
 
   if Array.length Sys.argv < 2 then
     jit_repl ()
+  else if (Array.length Sys.argv = 2) && (Sys.argv.(1) = "--parse") then
+    () 
   else
     try
       let err_handler = fun a b -> raise (CompilerError (a, b)) in
