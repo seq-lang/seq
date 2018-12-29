@@ -10,7 +10,6 @@
 open Core
 open Err
 
-
 let jit_code (ctx: Ctx.t) cnt code = 
   let anon_fn = Llvm.Func.func (sprintf "<anon_%d>" cnt) in
   let anon_ctx = 
@@ -32,32 +31,39 @@ let jit_code (ctx: Ctx.t) cnt code =
 
 let jit_repl () = 
   let style = ANSITerminal.[Bold; green] in
-  let banner = "====================================" in
+  let banner = String.make 60 '=' in
   eprintf "%s\n%!" @@ ANSITerminal.sprintf style "%s" banner;
   eprintf "%s\n%!" @@ ANSITerminal.sprintf style "Seq JIT";
   eprintf "%s\n%!" @@ ANSITerminal.sprintf style "%s" banner;
 
-  let jit = Llvm.JIT.init () in
+  let anon_fn = Llvm.Func.func "<anon_init>" in
   let ctx = Ctx.init "<jit>"
     ~argv:false
-    jit Ctypes.null Ctypes.null
+    (Llvm.JIT.init ())
+    anon_fn (Llvm.Block.func anon_fn)
     Parser.parse_file 
   in
+  Llvm.JIT.func ctx.mdl anon_fn;
   let code = ref "" in
   let cnt = ref 1 in 
+  let width = ref 7 in
+  eprintf "%s%!" @@ ANSITerminal.sprintf style "in[1]> ";
   try while true do 
-    eprintf "%s %!" @@ ANSITerminal.sprintf style "in[%d]>" !cnt;
     begin match In_channel.(input_line_exn stdin) with
-    | ";;" ->
+    | "" ->
       jit_code ctx !cnt !code;
       code := "";
+      cnt := !cnt + 1;
+      let s = sprintf "in[%d]> " !cnt in
+      width := String.length s;
+      eprintf "%s%!" @@ ANSITerminal.sprintf style "%s" s;
     | s ->
       code := (!code ^ s ^ "\n");
+      eprintf "%s%!" (String.make !width ' ')
     end;
-    cnt := !cnt + 1;
   done with End_of_file ->
-    eprintf "%s\n%!" @@ 
-      ANSITerminal.sprintf style "end (%d queries processed)" !cnt
+    let style = ANSITerminal.[Bold; yellow] in
+    eprintf "\n%s\n%!" @@ ANSITerminal.sprintf style "bye (%d)" !cnt
 
 (** Entry point *)
 let () =

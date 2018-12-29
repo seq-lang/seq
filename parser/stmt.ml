@@ -381,7 +381,6 @@ struct
         Llvm.Generics.Func.set_name fn idx name;
         Llvm.Generics.Func.get fn idx) 
     in
-    Util.dbg "--> %s" @@ Util.ppl names ~f:Fn.id;
     Llvm.Func.set_args fn names types;
 
     Option.value_map typ
