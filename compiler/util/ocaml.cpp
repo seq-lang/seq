@@ -290,6 +290,11 @@ FOREIGN Expr *typeof_expr(Expr *val)
 	return new TypeOfExpr(val);
 }
 
+FOREIGN Expr *ptr_expr(Var *val)
+{
+	return new VarPtrExpr(val);
+}
+
 /***** Statements *****/
 
 FOREIGN Stmt *pass_stmt()

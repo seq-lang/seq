@@ -49,10 +49,11 @@ struct
       | Index          p -> parse_index    ctx pos p
       | Call           p -> parse_call     ctx pos p
       | Dot            p -> parse_dot      ctx pos p
+      | TypeOf         p -> parse_typeof   ctx pos p
+      | Ptr            p -> parse_ptr      ctx pos p
       | Ellipsis       p -> Ctypes.null
       | Slice  _ -> serr  ~pos "slice is only valid within an index"
       | Unpack _ -> serr  ~pos "unpack is not valid here"
-      | TypeOf _ -> failwith "todo: expr/typeof"
       | Lambda _ -> failwith "todo: expr/lambda"
     in
     Llvm.Expr.set_pos expr pos; 
@@ -315,7 +316,22 @@ struct
         Llvm.Expr.static typ rhs 
       else
         Llvm.Expr.element lh_expr rhs
-              
+        
+    and parse_typeof ctx _ expr =
+      let expr = parse ctx expr in 
+      Llvm.Expr.typeof expr
+
+    and parse_ptr ctx pos = function
+      | _, Id var ->
+        begin match Hashtbl.find ctx.map var with
+          | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
+            when (ctx.base = base) || global -> 
+            Llvm.Expr.ptr v
+          | _ -> serr ~pos "symbol '%s' not found" var
+        end
+      | _ -> serr ~pos "must be an identifier"
+
+
   (* ***************************************************************
      Helper functions
      *************************************************************** *)

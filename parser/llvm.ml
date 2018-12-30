@@ -254,6 +254,12 @@ module Expr = struct
     (Types.typ @-> cstring @-> returning t)
     typ (strdup what)
 
+  let typeof = foreign "typeof_expr"
+    (t @-> returning t)
+
+  let ptr = foreign "ptr_expr"
+    (Types.var @-> returning t)
+
   (* Getters & Setters *)
 
   let set_pos expr (pos: Ast.Pos.t) = foreign "set_pos" 

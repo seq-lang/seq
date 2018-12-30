@@ -63,6 +63,7 @@ struct
     | Dot            of (t * string)
     | Ellipsis       of unit
     | TypeOf         of t
+    | Ptr            of t
     | Lambda         of (string tt list * t)
   and generic = 
     string

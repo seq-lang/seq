@@ -18,17 +18,18 @@ module rec SeqS : Intf.StmtIntf = Stmt.StmtParser (SeqE)
 (** [parse_string ~file ~debug context code] parses a code
     within string [code] as a module and returns parsed module AST.
     [file] is code filename used for error reporting. *)
-let rec parse_string ?file ?debug ?(jit=false) ctx code =
+let rec parse_string ?file ?(debug=false) ?(jit=false) ctx code =
   let file = Option.value file ~default:"" in
   let lexbuf = Lexing.from_string (code ^ "\n") in
   try
     let state = Lexer.stack_create file in
     let ast = Grammar.program (Lexer.token state) lexbuf in
-    Util.dbg "%s" (Ast.to_string ast);
+    if debug then 
+      Util.dbg "%s" (Ast.to_string ast);
     SeqS.parse_module ~jit ctx ast
   with
   | SyntaxError (msg, pos) ->
-    raise @@ CompilerError (Lexer(msg), [pos])
+    raise @@ CompilerError (Lexer msg, [pos])
   | Grammar.Error ->
     let pos = Ast.Pos.
       { file;
@@ -38,10 +39,10 @@ let rec parse_string ?file ?debug ?(jit=false) ctx code =
     in
     raise @@ CompilerError (Parser, [pos])
   | SeqCamlError (msg, pos) ->
-    Printexc.print_backtrace stderr;
-    raise @@ CompilerError (Descent(msg), pos)
+    (* Printexc.print_backtrace stderr; *)
+    raise @@ CompilerError (Descent msg, pos)
   | SeqCError (msg, pos) ->
-    raise @@ CompilerError (Compiler(msg), [pos])
+    raise @@ CompilerError (Compiler msg, [pos])
 
 (** [parse_file ~debug context file] parses a file [file] as a module 
     and returns parsed module AST. *)
