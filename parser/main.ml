@@ -10,25 +10,33 @@
 open Core
 open Err
 
-let print_error typ pos_lst =
+let asp = ANSITerminal.sprintf
+
+let print_error ?file typ pos_lst =
   let kind, msg = match typ with
     | Lexer s -> "lexer", s
     | Parser -> "parser", "Parsing error"
     | Descent s -> "descent", s
     | Compiler s -> "compiler", s 
   in
-  let file_line file line =
-    if String.length file > 0 && file.[0] <> '<' then
+  let file_line file_name line =
+    if String.length file_name > 0 && file_name.[0] <> '<' then
       try
-        let lines = In_channel.read_lines file in 
+        let lines = In_channel.read_lines file_name in 
         List.nth lines (line - 1)
       with _ -> 
         None
-    else None 
+    else if (file_name = "<jit>") && (is_some file) then 
+      try 
+        let lines = String.split ~on:'\n' (Option.value_exn file) in
+        List.nth lines (line - 1)
+      with _ -> 
+        None
+    else 
+      None
   in
   let style = ANSITerminal.[Bold; red] in
-  eprintf "%s%!" @@ ANSITerminal.sprintf style 
-    "[ERROR] %s error: %s\n" kind msg;
+  eprintf "%s%!" @@ asp style "[ERROR] %s error: %s\n" kind msg;
   List.iteri pos_lst ~f:(fun i pos ->
     let Ast.Pos.{ file; line; col; len } = pos in
     match file_line file line with
@@ -67,10 +75,10 @@ let jit_code (ctx: Ctx.t) cnt code =
 
 let jit_repl () = 
   let style = ANSITerminal.[Bold; green] in
-  let banner = String.make 60 '=' in
-  eprintf "%s\n%!" @@ ANSITerminal.sprintf style "%s" banner;
-  eprintf "%s\n%!" @@ ANSITerminal.sprintf style "Seq JIT";
-  eprintf "%s\n%!" @@ ANSITerminal.sprintf style "%s" banner;
+  let banner = String.make 78 '=' in
+  eprintf "%s\n%!" @@ asp style "%s" banner;
+  eprintf "%s\n%!" @@ asp style "Seq JIT";
+  eprintf "%s\n%!" @@ asp style "%s" banner;
 
   let anon_fn = Llvm.Func.func "<anon_init>" in
   let ctx = Ctx.init "<jit>"
@@ -85,7 +93,7 @@ let jit_repl () =
   let start = ref true in
   try while true do 
     if !start then begin
-      eprintf "%s%!" @@ ANSITerminal.sprintf style "in[%d]>\n" !cnt;
+      eprintf "%s%!" @@ asp style "in[%d]>\n" !cnt;
       start := false;
     end else ();
     let s = In_channel.(input_line_exn stdin) in
@@ -97,13 +105,13 @@ let jit_repl () =
       start := true;
     end else ()    
     with CompilerError (typ, pos_lst) as err ->
-      print_error typ pos_lst;
+      print_error typ pos_lst ~file:!code;
       code := "";
       cnt := !cnt + 1;
       start := true;
   done with End_of_file ->
     let style = ANSITerminal.[Bold; yellow] in
-    eprintf "\n%s\n%!" @@ ANSITerminal.sprintf style "bye (%d)" !cnt
+    eprintf "\n%s\n%!" @@ asp style "bye (%d)" !cnt
 
 (** Entry point *)
 let () =

@@ -44,7 +44,7 @@ struct
       | Match    p -> parse_match    ctx pos p
       | Extern   p -> parse_extern   ctx pos p ~toplevel
       | Extend   p -> parse_extend   ctx pos p ~toplevel
-      | Import   p -> parse_import   ctx pos p
+      | Import   p -> parse_import   ctx pos p ~toplevel
       | Pass     p -> parse_pass     ctx pos p
       | Try      p -> parse_try      ctx pos p
       | Throw    p -> parse_throw    ctx pos p
@@ -310,7 +310,7 @@ struct
   
   (** [parse_import ?ext context position data] parses import AST.
       Import file extension is set via [seq] (default is [".seq"]). *)
-  and parse_import ?(ext="seq") ctx pos imports =
+  and parse_import ctx pos ?(ext="seq") ~toplevel imports =
     List.iter imports ~f:(fun { from; what; import_as; stdlib } ->
       let from = snd from in
       let file = sprintf "%s/%s.%s" (Filename.dirname ctx.filename) from ext in
@@ -338,13 +338,15 @@ struct
             | [] -> false 
             | (_, { global; internal; _ }) :: _ -> global && (not internal))
           in
-          Ctx.add ctx from (Ctx.Namespace.Import map)
+          Ctx.add ctx ~toplevel ~global:toplevel  
+            from (Ctx.Namespace.Import map)
         | Some [_, ("*", None)] -> (* from foo import * *)
           Hashtbl.iteri new_ctx.map ~f:(fun ~key ~data ->
             match data with
             | (var, { global = true; internal = false; _ }) :: _ ->
               Util.dbg "[import] adding %s::%s" from key;
-              Ctx.add ctx key var
+              Ctx.add ctx ~toplevel ~global:toplevel 
+                key var
             | _ -> ());
         | Some lst -> (* from foo import bar *)
           List.iter lst ~f:(fun (pos, (name, import_as)) ->
@@ -352,7 +354,7 @@ struct
             | Some (var, ({ global = true; internal = false; _ } as ann)) -> 
               let name = Option.value import_as ~default:name in
               Ctx.add ctx 
-                ~global:true ~toplevel:ann.toplevel
+                ~toplevel ~global:toplevel 
                 name var
             | _ ->
               serr ~pos "name %s not found in %s" name from));

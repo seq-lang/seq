@@ -156,6 +156,7 @@ and read state = parse
       | "from"     -> P.FROM       (cur_pos state lexbuf ~len)
       | "class"    -> P.CLASS      (cur_pos state lexbuf ~len)
       | "typeof"   -> P.TYPEOF     (cur_pos state lexbuf ~len)
+      | "__ptr__"  -> P.PTR        (cur_pos state lexbuf ~len)
       | "extend"   -> P.EXTEND     (cur_pos state lexbuf ~len)
       | "extern"   -> P.EXTERN     (cur_pos state lexbuf ~len)
       | "del"      -> P.DEL        (cur_pos state lexbuf ~len)

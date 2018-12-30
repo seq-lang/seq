@@ -76,7 +76,7 @@
 %token <Ast.Pos.t> FOR WHILE CONTINUE BREAK           // loops 
 %token <Ast.Pos.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals 
 %token <Ast.Pos.t> DEF RETURN YIELD EXTERN LAMBDA     // functions 
-%token <Ast.Pos.t> TYPE CLASS TYPEOF EXTEND           // types 
+%token <Ast.Pos.t> TYPE CLASS TYPEOF EXTEND PTR       // types 
 %token <Ast.Pos.t> IMPORT FROM GLOBAL IMPORT_CONTEXT  // variables 
 %token <Ast.Pos.t> PRINT PASS ASSERT DEL              // keywords 
 %token <Ast.Pos.t> TRUE FALSE NONE                    // booleans 
@@ -255,6 +255,9 @@ expr:
   | TYPEOF LP expr RP // TypeOf call
     { pos $1 $4, 
       TypeOf $3 }
+  | PTR LP expr RP // Ptr call
+    { pos $1 $4, 
+      Ptr $3 }
   | LAMBDA separated_list(COMMA, ID) COLON expr // Lambdas
     { pos $1 (fst $4), 
       Lambda ($2, $4) }
