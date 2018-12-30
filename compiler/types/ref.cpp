@@ -251,11 +251,15 @@ bool types::RefType::is(types::Type *type) const
 
 unsigned types::RefType::numBaseTypes() const
 {
+	if (numGenerics() > 0)
+		return numGenerics();
 	return contents ? contents->numBaseTypes() : 0;
 }
 
 types::Type *types::RefType::getBaseType(unsigned idx) const
 {
+	if (numGenerics() > 0)
+		return getGeneric(idx);
 	return contents ? contents->getBaseType(idx) : nullptr;
 }
 

@@ -681,6 +681,9 @@ void Throw::codegen0(BasicBlock*& block)
 	if (!refType)
 		throw exc::SeqException("cannot throw non-reference type '" + type->getName() + "'");
 
+	if (refType->numGenerics() > 0)
+		throw exc::SeqException("cannot throw generic type '" + type->getName() + "'");
+
 	if (refType->numBaseTypes() < 1 || !refType->getBaseType(0)->is(types::Str))
 		throw exc::SeqException("first member of thrown exception must be of type 'str'");
 
