@@ -69,6 +69,21 @@ struct
             | l -> l
         else stmts 
       in
+      List.iter stmts ~f:(function 
+        | pos, Generic Function ((_, { name; typ }), types, args, stmts) ->
+          if is_some @@ Ctx.in_block ctx name then
+            serr ~pos "function %s already exists" name;
+          let fn = Llvm.Func.func name in
+          let names = List.map args ~f:(fun (_, x) -> x.name) in
+          Ctx.add ctx ~toplevel:true ~global:true
+            name (Ctx.Namespace.Func (fn, names))
+        | pos, Generic Class cls ->
+          if is_some @@ Ctx.in_scope ctx cls.class_name then
+            serr ~pos "class %s already exists" cls.class_name;
+          let typ = Llvm.Type.cls cls.class_name in
+          Ctx.add ctx ~toplevel:true ~global:true
+            cls.class_name (Ctx.Namespace.Type typ)
+        | _ -> ());
       ignore @@ List.map stmts ~f:(parse ctx ~toplevel:true ~jit)
 
   (* ***************************************************************
@@ -366,19 +381,26 @@ struct
   and parse_function ctx pos ?cls ?(toplevel=false)
     ((_, { name; typ }), types, args, stmts) =
 
-    if is_some @@ Ctx.in_block ctx name then
-      serr ~pos "function %s already exists" name;
-
-    let fn = Llvm.Func.func name in
+    let fn = match Ctx.in_block ctx name with
+      | Some (Ctx.Namespace.Func (fn, _), _) when toplevel ->
+        fn 
+      | Some _ ->
+        serr ~pos "function %s already exists" name;
+      | None when not toplevel ->
+        Llvm.Func.func name
+      | None ->
+        failwith "function pre-register failed"
+    in
     begin match cls with 
       | Some cls -> 
         Llvm.Type.add_cls_method cls name fn
       | None -> 
         let names = List.map args ~f:(fun (_, x) -> x.name) in
-        Ctx.add ctx ~toplevel ~global:toplevel 
-          name (Ctx.Namespace.Func (fn, names));
-        if not toplevel then
-          Llvm.Func.set_enclosing fn ctx.base;
+        if not toplevel then begin
+          Ctx.add ctx ~toplevel ~global:toplevel 
+            name (Ctx.Namespace.Func (fn, names));
+          Llvm.Func.set_enclosing fn ctx.base
+        end
     end;
 
     let new_ctx = 
@@ -412,15 +434,14 @@ struct
   
   and parse_class ctx pos ~toplevel cls =
     (* ((name, types, args, stmts) as stmt) *)
-    if is_some @@ Ctx.in_scope ctx cls.class_name then
-      serr ~pos "class %s already exists" cls.class_name;
-
     if not toplevel then
       serr ~pos "classes must be declared at toplevel";
-    
-    let typ = Llvm.Type.cls cls.class_name in
-    Ctx.add ctx ~toplevel ~global:toplevel
-      cls.class_name (Ctx.Namespace.Type typ);
+    let typ = match Ctx.in_block ctx cls.class_name with
+      | Some (Ctx.Namespace.Type typ, _) ->
+        typ
+      | Some _ | None ->
+        failwith "class pre-register failed"
+    in
     let new_ctx = 
       { ctx with 
         map = Hashtbl.copy ctx.map;

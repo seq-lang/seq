@@ -73,6 +73,12 @@ def reversed(x):
         i -= 1
         yield x[i]
 
+def round(x, n) -> float:
+    extern c round(float) -> float
+    extern c pow(float, float) -> float
+    n := pow(10.0, float(n))
+    return round(float(x * n)) / n
+
 import! list
 import! dict
 import! set
@@ -122,6 +128,9 @@ extend str:
             n += s.len
         return str(p, total)
 
+    # def split(self):
+
+
 extend seq:
     def __hash__(self: seq):
         h = 0
@@ -129,3 +138,36 @@ extend seq:
         for i in range(n):
             h = 31*h + int(p[i])
         return h
+
+class File(fp: ptr[byte], buf: ptr[ptr[byte]], sz: ptr[int]):
+    def __init__(self: File, path: str, mode: str):
+        extern c fopen(ptr[byte], ptr[byte]) -> ptr[byte]
+        self.fp = fopen(path.ptr, mode.ptr)
+
+        self.buf = ptr[ptr[byte]](1)
+        self.sz = ptr[int](1)
+
+    def close(self):
+        extern c fclose(ptr[byte]) -> int
+        extern c free(ptr[byte]) -> void
+        if self.fp:
+            fclose(self.fp)
+        if self.buf:
+            free(self.buf[0])
+
+    def __iter__(self: File):
+        extern c getline(ptr[ptr[byte]], n: ptr[int], file: ptr[byte]) -> int
+        while True:
+            rd = getline(self.buf, self.sz, self.fp)
+            if rd != -1:
+                if self.buf[0][rd - 1] == byte(10):
+                    rd -= 1
+                yield seq(self.buf[0], rd)
+            else:
+                break
+
+    def readlines(self):
+        return [l for l in self.__iter__()]
+
+def open(path: str, mode: str) -> File:
+    return File(path, mode)
