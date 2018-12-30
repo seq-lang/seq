@@ -81,6 +81,17 @@ extend int:
     def __hash__(self: int):
         return self
 
+    def __pow__(self: int, exp: int):
+        result = 1
+        while True:
+            if exp & 1:
+                result *= self
+            exp >>= 1
+            if not exp:
+                break
+            self *= self
+        return result
+
 extend str:
     def __hash__(self: str):
         h = 0
