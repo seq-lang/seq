@@ -214,6 +214,16 @@ namespace seq {
 		VarExpr *clone(Generic *ref) override;
 	};
 
+	class VarPtrExpr : public Expr {
+	private:
+		Var *var;
+	public:
+		explicit VarPtrExpr(Var *var);
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::Type *getType0() const override;
+		VarPtrExpr *clone(Generic *ref) override;
+	};
+
 	class FuncExpr : public Expr {
 	private:
 		BaseFunc *func;

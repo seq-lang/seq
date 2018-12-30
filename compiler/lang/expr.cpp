@@ -745,6 +745,25 @@ VarExpr *VarExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new VarExpr(var->clone(ref)));
 }
 
+VarPtrExpr::VarPtrExpr(Var *var) : var(var)
+{
+}
+
+Value *VarPtrExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	return var->getPtr(base);
+}
+
+types::Type *VarPtrExpr::getType0() const
+{
+	return types::PtrType::get(var->getType());
+}
+
+VarPtrExpr *VarPtrExpr::clone(Generic *ref)
+{
+	SEQ_RETURN_CLONE(new VarPtrExpr(var->clone(ref)));
+}
+
 FuncExpr::FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types) :
     func(func), types(std::move(types)), orig(orig)
 {
