@@ -287,6 +287,13 @@ void types::FloatType::initOps()
 			return b.CreateFRem(self, args[0]);
 		}},
 
+		{"__pow__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			Function *pow = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+			                                          Intrinsic::pow,
+			                                          {Float->getLLVMType(b.getContext())});
+			return b.CreateCall(pow, {self, args[0]});
+		}},
+
 		{"__eq__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateFCmpOEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
@@ -335,6 +342,14 @@ void types::FloatType::initOps()
 		{"__mod__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFRem(self, args[0]);
+		}},
+
+		{"__pow__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			Function *pow = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+			                                          Intrinsic::pow,
+			                                          {Float->getLLVMType(b.getContext())});
+			return b.CreateCall(pow, {self, args[0]});
 		}},
 
 		{"__eq__", {Int}, Bool, SEQ_MAGIC(self, args, b) {

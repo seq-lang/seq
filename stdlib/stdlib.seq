@@ -98,6 +98,9 @@ extend int:
             self *= self
         return result
 
+    def __pow__(self: int, exp: float):
+        return float(self) ** exp
+
 extend str:
     def __hash__(self: str):
         h = 0
