@@ -45,3 +45,48 @@ let split_error msg =
   let col = Int.of_string l.(3) in
   let len = Int.of_string l.(4) in 
   raise @@ SeqCError (msg, Ast.Pos.{ file; line; col; len })
+
+let print_error ?file typ pos_lst =
+  let open Core in
+  let asp = ANSITerminal.sprintf in
+
+  let kind, msg = match typ with
+    | Lexer s -> "lexer", s
+    | Parser -> "parser", "Parsing error"
+    | Descent s -> "descent", s
+    | Compiler s -> "compiler", s 
+  in
+  let file_line file_name line =
+    if String.length file_name > 0 && file_name.[0] <> '<' then
+      try
+        let lines = In_channel.read_lines file_name in 
+        List.nth lines (line - 1)
+      with _ -> 
+        None
+    else if (file_name = "<jit>") && (is_some file) then 
+      try 
+        let lines = String.split ~on:'\n' (Option.value_exn file) in
+        List.nth lines (line - 1)
+      with _ -> 
+        None
+    else 
+      None
+  in
+  let style = ANSITerminal.[Bold; red] in
+  eprintf "%s%!" @@ asp style "[ERROR] %s error: %s\n" kind msg;
+  List.iteri pos_lst ~f:(fun i pos ->
+    let Ast.Pos.{ file; line; col; len } = pos in
+    match file_line file line with
+    | Some file_line  ->
+      let pre = if i = 0 then "" else "then in\n        " in 
+      eprintf "%s%!" @@ asp style "        %s%s: %d,%d\n" 
+        pre file line col;
+      eprintf "%s%!" @@ asp style "   %3d: %s" 
+        line (String.prefix file_line col);
+      eprintf "%s%!" @@ asp 
+        ANSITerminal.[Bold; white; on_red] "%s" 
+        (String.sub file_line ~pos:col ~len);
+      eprintf "%s%!" @@ asp style "%s" 
+        (String.drop_prefix file_line (col + len));
+      eprintf "%s%!" @@ asp [] "\n"
+    | None -> ())
