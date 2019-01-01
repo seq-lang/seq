@@ -92,23 +92,25 @@ let jit_repl () =
   let cnt = ref 1 in 
   let start = ref true in
   try while true do 
-    if !start then begin
-      eprintf "%s%!" @@ asp style "in[%d]>\n" !cnt;
-      start := false;
-    end else ();
-    let s = In_channel.(input_line_exn stdin) in
-    code := (!code ^ s ^ "\n");
-    try if (String.suffix s 2) = ";;" then begin
-      jit_code ctx !cnt (String.prefix !code ((String.length !code) - 3));
-      code := "";
-      cnt := !cnt + 1;
-      start := true;
-    end else ()    
-    with CompilerError (typ, pos_lst) as err ->
-      print_error typ pos_lst ~file:!code;
-      code := "";
-      cnt := !cnt + 1;
-      start := true;
+    try 
+      if !start then begin
+        eprintf "%s%!" @@ asp style "in[%d]>\n" !cnt;
+        start := false;
+      end;
+      let s = In_channel.(input_line_exn stdin) in
+      code := (!code ^ s ^ "\n")
+    with End_of_file ->
+      begin try 
+        jit_code ctx !cnt !code
+      with CompilerError (typ, pos_lst) ->
+        print_error typ pos_lst ~file:!code
+      end;
+      if !code = "" then 
+        raise End_of_file
+      else 
+        code := "";
+        cnt := !cnt + 1;
+        start := true
   done with End_of_file ->
     let style = ANSITerminal.[Bold; yellow] in
     eprintf "\n%s\n%!" @@ asp style "bye (%d)" !cnt
