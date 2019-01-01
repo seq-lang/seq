@@ -160,9 +160,9 @@ struct
   and parse_print ctx _ ~jit expr =    
     let expr = E.parse ctx expr in
     if jit then 
-      Llvm.Stmt.print expr
-    else
       Llvm.Stmt.print_jit expr
+    else
+      Llvm.Stmt.print expr
 
   and parse_return ctx pos ret =
     match ret with
