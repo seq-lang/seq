@@ -107,10 +107,11 @@ let jit_repl () =
       end;
       if !code = "" then 
         raise Exit
-      else 
+      else begin
         code := "";
         cnt := !cnt + 1;
         start := true
+      end
   done with Exit ->
     let style = ANSITerminal.[Bold; yellow] in
     eprintf "\n%s\n%!" @@ asp style "bye (%d)" !cnt
