@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names, std::string name) :
-    Type(std::move(name), BaseType::get()), types(std::move(types)), names(std::move(names))
+    Type(name, BaseType::get(), false, !name.empty()), types(std::move(types)), names(std::move(names))
 {
 	assert(this->names.empty() || this->names.size() == this->types.size());
 }

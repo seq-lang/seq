@@ -5,8 +5,8 @@ using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name) :
-    Type(std::move(name), BaseType::get()), Generic(), done(false),
-    root(this), cache(), realizationCache(), contents(nullptr),
+    Type(std::move(name), BaseType::get(), false, true), Generic(),
+    done(false), root(this), cache(), realizationCache(), contents(nullptr),
     membNamesDeduced(), membExprsDeduced()
 {
 }

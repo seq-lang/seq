@@ -5,7 +5,7 @@ using namespace seq;
 using namespace llvm;
 
 types::BaseSeqType::BaseSeqType(std::string name) :
-    Type(std::move(name), BaseType::get())
+    Type(std::move(name), BaseType::get(), false, true)
 {
 }
 
