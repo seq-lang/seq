@@ -634,8 +634,14 @@ module JIT = struct
   let var = foreign "jit_var"
     (t @-> Types.expr @-> returning Types.var)
 
-  let func = foreign "jit_func"
-    (t @-> Types.func @-> returning void)
+  let func jit fn = 
+    let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
+    foreign "jit_func"
+      (t @-> Types.func @-> ptr (ptr char) @-> returning void)
+      jit fn err_addr;
+    if not (Ctypes.is_null (!@ err_addr)) then
+      let msg = coerce (ptr char) string (!@ err_addr) in
+      Err.split_error msg 
 end
 
 

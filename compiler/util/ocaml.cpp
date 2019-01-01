@@ -816,7 +816,11 @@ FOREIGN Var *jit_var(SeqJIT *jit, Expr *expr)
 	return jit->addVar(expr);
 }
 
-FOREIGN void jit_func(SeqJIT *jit, Func *func)
+FOREIGN void jit_func(SeqJIT *jit, Func *func, char **error)
 {
-	jit->addFunc(func);
+	try {
+		jit->addFunc(func);
+	} catch (exc::SeqException &e) {
+		CATCH (error);
+	}
 }

@@ -29,7 +29,10 @@ let jit_code (ctx: Ctx.t) cnt code =
       if ann.toplevel && ann.global && (not ann.internal) then 
         Ctx.add ctx ~toplevel:true ~global:true key v;
     | _ -> ());
-  Llvm.JIT.func ctx.mdl anon_fn
+  try 
+    Llvm.JIT.func ctx.mdl anon_fn
+  with SeqCError (msg, pos) -> 
+    raise @@ CompilerError (Compiler msg, [pos])
 
 let jit_repl () = 
   let style = ANSITerminal.[Bold; green] in
