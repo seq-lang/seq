@@ -106,12 +106,12 @@ let jit_repl () =
         print_error typ pos_lst ~file:!code
       end;
       if !code = "" then 
-        raise End_of_file
+        raise Exit
       else 
         code := "";
         cnt := !cnt + 1;
         start := true
-  done with End_of_file ->
+  done with Exit ->
     let style = ANSITerminal.[Bold; yellow] in
     eprintf "\n%s\n%!" @@ asp style "bye (%d)" !cnt
 
