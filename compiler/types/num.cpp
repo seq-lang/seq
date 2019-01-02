@@ -5,23 +5,23 @@
 using namespace seq;
 using namespace llvm;
 
-types::NumberType::NumberType() : Type("num", BaseType::get())
+types::NumberType::NumberType() : Type("num", BaseType::get(), true)
 {
 }
 
-types::IntType::IntType() : Type("int", NumberType::get())
+types::IntType::IntType() : Type("int", NumberType::get(), false, true)
 {
 }
 
-types::FloatType::FloatType() : Type("float", NumberType::get())
+types::FloatType::FloatType() : Type("float", NumberType::get(), false, true)
 {
 }
 
-types::BoolType::BoolType() : Type("bool", NumberType::get())
+types::BoolType::BoolType() : Type("bool", NumberType::get(), false, true)
 {
 }
 
-types::ByteType::ByteType() : Type("byte", NumberType::get())
+types::ByteType::ByteType() : Type("byte", NumberType::get(), false, true)
 {
 }
 

@@ -75,7 +75,7 @@ FOREIGN void set_ref_record(types::RefType *f, types::RecordType *rec)
 
 FOREIGN void add_ref_method(types::Type *ref, char *name, Func *fn)
 {
-	ref->addMethod(name, fn, true);
+	ref->addMethod(name, fn, false);
 	free(name);
 }
 

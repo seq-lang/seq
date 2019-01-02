@@ -59,15 +59,18 @@ namespace seq {
 			/// Parent type, or null if there is none
 			Type *parent;
 
-			/// Whether this class is abstract (e.g. void)
+			/// Whether this type is abstract (e.g. void)
 			bool abstract;
+
+			/// Whether this type can be extended via `extend`
+			bool extendable;
 
 			/// Fields and methods for this type
 			VTable vtable;
 
 			bool resolving;
 		public:
-			Type(std::string name, Type *parent, bool abstract=false);
+			Type(std::string name, Type *parent, bool abstract=false, bool extendable=false);
 
 			/// Returns a unique identifier for this type, based on Type::getName()
 			virtual int getID() const;

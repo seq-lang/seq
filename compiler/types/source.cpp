@@ -77,7 +77,7 @@ static inline Function *seqSourceDeallocFunc(Module *module)
 	return f;
 }
 
-types::SourceType::SourceType() : Type("source", BaseType::get())
+types::SourceType::SourceType() : Type("source", BaseType::get(), false, true)
 {
 	addMethod("read", new BaseFuncLite({this}, types::IntType::get(), [](Module *module) {
 		return seqSourceReadFunc(module);
@@ -185,7 +185,7 @@ static inline Function *seqRawDeallocFunc(Module *module)
 	return f;
 }
 
-types::RawType::RawType() : Type("file", BaseType::get())
+types::RawType::RawType() : Type("file", BaseType::get(), false, true)
 {
 	addMethod("read", new BaseFuncLite({this}, types::SeqType::get(), [](Module *module) {
 		return seqRawReadFunc(module);

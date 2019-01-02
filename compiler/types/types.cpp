@@ -7,8 +7,12 @@
 using namespace seq;
 using namespace llvm;
 
-types::Type::Type(std::string name, types::Type *parent, bool abstract) :
-    name(std::move(name)), parent(parent), abstract(abstract), resolving(false)
+types::Type::Type(std::string name,
+                  types::Type *parent,
+                  bool abstract,
+                  bool extendable) :
+    name(std::move(name)), parent(parent), abstract(abstract),
+    extendable(extendable), resolving(false)
 {
 }
 
@@ -252,6 +256,9 @@ static bool isMagic(const std::string& name)
 
 void types::Type::addMethod(std::string name, BaseFunc *func, bool force)
 {
+	if (!force && !extendable)
+		throw exc::SeqException("cannot extend type '" + getName() + "'");
+
 	if (isMagic(name)) {
 		if (name == "__new__")
 			throw exc::SeqException("cannot override __new__");
@@ -263,13 +270,9 @@ void types::Type::addMethod(std::string name, BaseFunc *func, bool force)
 	}
 
 	if (hasMethod(name)) {
-		if (force) {
-			func->setEnclosingClass(this);
-			getVTable().methods[name] = func;
-			return;
-		} else {
-			throw exc::SeqException("duplicate method '" + name + "'");
-		}
+		func->setEnclosingClass(this);
+		getVTable().methods[name] = func;
+		return;
 	}
 
 	if (getVTable().fields.find(name) != getVTable().fields.end())
