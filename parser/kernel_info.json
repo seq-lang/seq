@@ -1,0 +1,19 @@
+{
+    "protocol_version" : "5.0",
+    "ipython_version" : [1, 1, 0, ""],
+    "language_version" : [1, 0, 0],
+    "language" : "Seq",
+    "banner" : "P. Sequs",
+    "implementation" : "Ibrahim Numanagić",
+    "implementation_version" : "0.1",
+    "language_info": 
+    { 
+        "name" : "Seq",
+        "version" : "1.0",
+        "mimetype" : "",
+        "file_extension": ".seq",
+        "pygments_lexer" : "Python",
+        "codemirror_mode" : "",
+        "nbconvert_exporter" : ""
+    } 
+}

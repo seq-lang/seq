@@ -820,6 +820,7 @@ FOREIGN void jit_func(SeqJIT *jit, Func *func, char **error)
 {
 	try {
 		jit->addFunc(func);
+		fflush(stdout);
 	} catch (exc::SeqException &e) {
 		CATCH (error);
 	}

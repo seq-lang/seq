@@ -102,6 +102,7 @@ struct
     | Dot (x, s) -> sprintf "%s.%s" (to_string x) s
     | Call (x, l) -> sprintf "%s(%s)" (to_string x) (ppl l ~f:call_to_string)
     | TypeOf x -> sprintf "TYPEOF(%s)" (to_string x)
+    | Ptr x -> sprintf "PTR(%s)" (to_string x)
     | Slice (a, b, c) ->
       let l = List.map [a; b; c] ~f:(Option.value_map ~default:"" ~f:to_string)
       in
