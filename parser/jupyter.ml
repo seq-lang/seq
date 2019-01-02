@@ -10,63 +10,11 @@
 
 open Core
 
-module J  = Yojson.Basic
+module J = Yojson.Basic
 module JU = Yojson.Basic.Util
-
 module Z = ZMQ
 
-let json fields = 
-  J.(to_string @@ `Assoc fields)
-
-let wrap_capture callback f =
-  let open Unix in
-  
-  let flush_all () =
-    Core.flush_all ()
-    [@@ocaml.warning "-3"]
-  in
-  
-  let fd = openfile "capture" 
-    ~mode:[ O_RDWR; O_TRUNC; O_CREAT ] 
-    ~perm:0o600 
-  in
-  let tmp_cout, tmp_cerr = dup Unix.stdout, dup Unix.stderr in
-  dup2 ~src:fd ~dst:stdout;
-  dup2 ~src:fd ~dst:stderr;
-  let reset () =
-    flush_all ();
-    dup2 ~src:tmp_cout ~dst:Unix.stdout;
-    dup2 ~src:tmp_cerr ~dst:Unix.stderr;
-  in
-  let result = 
-    try f () 
-    with ex -> begin
-      reset (); 
-      close fd; 
-      print_endline "(kernel) wrap_capture exception here";
-      flush_all ();
-      raise ex
-    end 
-  in
-  reset ();
-  let sz = Int64.to_int_exn @@ (fstat fd).st_size in
-  let buffer = Bytes.create sz in
-  let _ = lseek fd 0L ~mode:SEEK_SET in
-  let _ = read fd ~buf:buffer ~pos:0 ~len:sz in
-  close fd;
-  callback @@ Bytes.to_string buffer;
-  result 
-
-let exec jit code callback =
-  let r = wrap_capture callback (fun () -> 
-    begin try 
-      Jit.exec jit code
-    with Err.CompilerError (typ, pos_lst) ->
-      Err.print_error typ pos_lst ~file:code
-    end;
-    "") 
-  in
-  callback r
+let json fields = J.(to_string @@ `Assoc fields)
 
 module WireIO = struct
   type t = 
@@ -142,7 +90,55 @@ module WireIO = struct
     Z.Socket.send_all socket (zmqids @ lmsg)
 end
 
-let counter = ref 0 ;;
+let wrap_capture callback f =
+  let open Unix in
+  
+  let flush_all () =
+    Core.flush_all ()
+    [@@ocaml.warning "-3"]
+  in
+  
+  let fd = openfile "capture" 
+    ~mode:[ O_RDWR; O_TRUNC; O_CREAT ] 
+    ~perm:0o600 
+  in
+  let tmp_cout, tmp_cerr = dup Unix.stdout, dup Unix.stderr in
+  dup2 ~src:fd ~dst:stdout;
+  dup2 ~src:fd ~dst:stderr;
+  let reset () =
+    flush_all ();
+    dup2 ~src:tmp_cout ~dst:Unix.stdout;
+    dup2 ~src:tmp_cerr ~dst:Unix.stderr;
+  in
+  let result = 
+    try f () 
+    with ex -> begin
+      reset (); 
+      close fd; 
+      print_endline "(kernel) wrap_capture exception here";
+      flush_all ();
+      raise ex
+    end 
+  in
+  reset ();
+  let sz = Int64.to_int_exn @@ (fstat fd).st_size in
+  let buffer = Bytes.create sz in
+  let _ = lseek fd 0L ~mode:SEEK_SET in
+  let _ = read fd ~buf:buffer ~pos:0 ~len:sz in
+  close fd;
+  callback @@ Bytes.to_string buffer;
+  result 
+
+let exec jit code callback =
+  let r = wrap_capture callback (fun () -> 
+    begin try 
+      Jit.exec jit code
+    with Err.CompilerError (typ, pos_lst) ->
+      Err.print_error typ pos_lst ~file:code
+    end;
+    "") 
+  in
+  callback r
 
 let handler jit wireio iopub mtype = 
   let content msg key = 
@@ -172,12 +168,11 @@ let handler jit wireio iopub mtype =
     "data", `Assoc []]  
   in
   let reply_execute msg =
-    counter := !counter + 1;
     let code = content msg "code" in
     exec jit code @@ send_to_iopub msg;
     json [ 
       "status", `String "ok"; 
-      "execution_count", `Int !counter]
+      "execution_count", `Int jit.cnt]
   in
   print_endline @@ sprintf "received %s" mtype;
   match mtype with
