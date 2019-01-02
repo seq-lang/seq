@@ -11,6 +11,7 @@
   - Ctypes
   - ANSITerminal
   - Menhir
+  - (jupyter) ZMQ, Nocrypto, Hex, YoJSON and CStruct
   - Install via
       ```
       opam install core core_extended dune menhir ctypes ctypes.foreign ansiterminal odoc
@@ -37,6 +38,26 @@ Then:
 ```
 ./main.exe <seq.file> <args...>
 ```
+
+## Jupyter
+
+To add kernel do:
+
+```
+mkdir -p ~/.ipython/kernels/seq
+cat > ~/.ipython/kernels/seq/kernel.json <<<EOF
+{
+    "argv": ["./main.exe", "--jupyter", "{connection_file}"],
+    "display_name": "Seq",
+    "language": "Seq"
+}
+EOF
+```
+
+Then run `jupyter notebook .` from the directory that contains `main.exe`.
+
+> TODO
+> `jupyter console --kernel seq` is bit flaky right now--- requires `C-c` after each command (probably needs some ZMQ reply).
 
 ## Docs
 
