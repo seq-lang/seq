@@ -12,7 +12,7 @@ open Core
 
 module J = Yojson.Basic
 module JU = Yojson.Basic.Util
-module Z = ZMQ
+module Z = Zmq
 
 let json fields = J.(to_string @@ `Assoc fields)
 
