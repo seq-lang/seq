@@ -21,7 +21,7 @@
    (name main)
    (libraries
       base core
-      ansiterminal
+      ANSITerminal
       ctypes ctypes.foreign ctypes.stubs
       zmq nocrypto yojson cstruct hex)
    (link_flags
