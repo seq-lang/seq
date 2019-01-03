@@ -16,7 +16,7 @@ matrix:
 addons:
   apt:
     packages:
-      - libzmq-dev
+      - libzmq3-dev
       - libgc-dev
   homebrew:
     packages:
