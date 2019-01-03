@@ -13,24 +13,32 @@ matrix:
         - CONDA_OS_NAME=MacOSX
         - OCAML_VERSION=4.07
 
-install:
-  # apt's LLVM does not have RTTI enabled, but conda's does:
-  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-${CONDA_OS_NAME}-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda install -c anaconda zeromq
-  - conda install -c conda-forge cmake llvmdev clangdev bdw-gc
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CC=clang CXX=clang++; fi
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew install bdw-gc zmq; fi
+addons:
+  apt:
+    packages:
+      - libzmq-dev
+      - libgc-dev
+  homebrew:
+    packages:
+      - zmq
+      - libgc
 
+install:
   # install OCaml:
   - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
   - bash -ex .travis-ocaml.sh
   - opam update
   - opam install -y ocamlfind core core_extended core_bench dune ctypes ctypes-foreign ansiterminal menhir ppx_deriving zmq nocrypto yojson cstruct hex
   - eval $(opam env)
+
+  # apt's LLVM does not have RTTI enabled, but conda's does:
+  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-${CONDA_OS_NAME}-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda install -c conda-forge cmake llvmdev clangdev
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CC=clang CXX=clang++; fi
 
 before_script:
   - ${CXX} --version
