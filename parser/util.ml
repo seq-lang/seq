@@ -57,3 +57,8 @@ let dbg ?style fmt =
   Caml.Printf.fprintf stderr "\027[%sm" codes;
   fn (fun o -> fno o "\027[0m \n%!") stderr fmt 
 
+let get_from_stdlib ?(ext=".seq") res =
+  let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
+  let paths = String.split seqpath ~on:':' in
+  List.map paths ~f:(fun dir -> sprintf "%s/%s%s" dir res ext)
+   |> List.find ~f:Caml.Sys.file_exists

@@ -118,9 +118,11 @@ let init ?(stdlib=true) ?(argv=true) filename mdl base block parse_file =
 
   (* load standard library *)
   if stdlib then begin
-    let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
-    let stdlib_path = sprintf "%s/stdlib.seq" seqpath in
-    ctx.parse_file ctx stdlib_path
+    match Util.get_from_stdlib "stdlib" with
+    | Some file ->
+      ctx.parse_file ctx file
+    | None ->
+      failwith "cannot locate stdlib.seq"
   end;
   ctx
 

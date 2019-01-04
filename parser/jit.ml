@@ -17,17 +17,21 @@ type t =
     ctx: Ctx.t }
 
 let init () : t =
-  let anon_fn = Llvm.Func.func "<anon_init>" in
-  let ctx = Ctx.init "<jit>"
-    ~argv:false
-    (Llvm.JIT.init ())
-    anon_fn (Llvm.Block.func anon_fn)
-    Parser.parse_file 
-  in
-  let jit = { cnt = 1; ctx } in
-  (* load stdlib *)
-  Llvm.JIT.func ctx.mdl anon_fn;
-  jit
+  try 
+    let anon_fn = Llvm.Func.func "<anon_init>" in
+    let ctx = Ctx.init "<jit>"
+      ~argv:false
+      (Llvm.JIT.init ())
+      anon_fn (Llvm.Block.func anon_fn)
+      Parser.parse_file 
+    in
+    let jit = { cnt = 1; ctx } in
+    (* load stdlib *)
+    Llvm.JIT.func ctx.mdl anon_fn;
+    jit
+  with CompilerError (typ, pos_lst) ->
+    print_error typ pos_lst;
+    exit 1
 
 let exec (jit: t) code = 
   let anon_fn = Llvm.Func.func (sprintf "<anon_%d>" jit.cnt) in

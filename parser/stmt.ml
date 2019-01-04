@@ -325,10 +325,10 @@ struct
   
   (** [parse_import ?ext context position data] parses import AST.
       Import file extension is set via [seq] (default is [".seq"]). *)
-  and parse_import ctx pos ?(ext="seq") ~toplevel imports =
+  and parse_import ctx pos ?(ext=".seq") ~toplevel imports =
     List.iter imports ~f:(fun { from; what; import_as; stdlib } ->
       let from = snd from in
-      let file = sprintf "%s/%s.%s" (Filename.dirname ctx.filename) from ext in
+      let file = sprintf "%s/%s%s" (Filename.dirname ctx.filename) from ext in
       let new_ctx = if stdlib then ctx else
         { (Ctx.init file ctx.mdl ctx.base ctx.block ctx.parse_file)
           with trycatch = ctx.trycatch }
@@ -337,13 +337,12 @@ struct
         | `Yes -> 
           new_ctx.parse_file new_ctx file
         | `No | `Unknown -> 
-          let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
-          let file = sprintf "%s/%s.%s" seqpath from ext in
-          match Sys.file_exists file with
-          | `Yes -> 
+          begin match Util.get_from_stdlib ~ext from with
+          | Some file ->
             new_ctx.parse_file new_ctx file
-          | `No | `Unknown -> 
+          | None -> 
             serr ~pos "cannot locate module %s" from
+          end
       end;
       if not stdlib then match what with
         | None -> (* import foo (as bar) *)

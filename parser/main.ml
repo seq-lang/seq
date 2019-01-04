@@ -24,7 +24,9 @@ let () =
     Jupyter.jupyter kerneldir settings_json
   | Some fn when Caml.Sys.file_exists fn ->
     begin try
-      let err_handler = fun a b -> raise (CompilerError (a, b)) in
+      let err_handler = fun a b -> 
+        raise (CompilerError (a, b)) 
+      in
       let m = Parser.init fn err_handler in
       match m with
       | Some m -> 
