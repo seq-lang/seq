@@ -1942,7 +1942,7 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 			Value *obj = finalizeFunc->arg_begin();
 			IRBuilder<> builder(entry);
 			obj = builder.CreateBitCast(obj, type->getLLVMType(context));
-			type->callMagic("__del__", {}, obj, {}, entry, getTryCatch());
+			type->callMagic("__del__", {}, obj, {}, entry, nullptr);
 			builder.SetInsertPoint(entry);
 			builder.CreateRetVoid();
 
