@@ -131,9 +131,6 @@ extend str:
             n += s.len
         return str(p, total)
 
-    # def split(self):
-
-
 extend seq:
     def __hash__(self: seq):
         h = 0
@@ -141,6 +138,12 @@ extend seq:
         for i in range(n):
             h = 31*h + int(p[i])
         return h
+
+    def split(self: seq, k: int, step: int):
+        i = 0
+        while i + k <= len(self):
+            yield self[i:i+k]
+            i += step
 
 class File(fp: ptr[byte], buf: ptr[ptr[byte]], sz: ptr[int]):
     def __init__(self: File, path: str, mode: str):

@@ -16,16 +16,10 @@ class Pair[`t](a: `t, b: `t):
 
 class X[`t](t: `t):
     def main[`s](args: `s):
-        def split(s, k, step):
-            i = 0
-            while i + k <= s.len:
-                yield s[i:i + k]
-                i += step
-
         def f(s: seq):
             v = array[seq](s.len / 32)
             i = 0
-            for t in split(s, 32, 32):
+            for t in s.split(32, 32):
                 v[i] = t
                 i += 1
             return v
@@ -68,10 +62,10 @@ class X[`t](t: `t):
                 default:
                     print 'default'
 
-            for v1 in split(input, 64, 64):
+            for v1 in input.split(64,64):
                 print v1
-                for v2 in split(v1, 32, 32):
-                    for v3 in split(v2, 16, 16):
+                for v2 in v1.split(32, 32):
+                    for v3 in v2.split(16, 16):
                         print v3
                     print v2
                 print v1
