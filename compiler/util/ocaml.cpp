@@ -19,9 +19,9 @@ FOREIGN types::Type *str_seq_type()     { return types::Seq; }
 FOREIGN types::Type *source_type()      { return types::Raw; }
 FOREIGN types::Type *generic_type()     { return types::GenericType::get(); }
 
-FOREIGN void set_global(Var *v)
+FOREIGN types::Type *kmer_type(unsigned k)
 {
-	v->setGlobal();
+	return types::KMer::get(k);
 }
 
 FOREIGN types::Type *array_type(types::Type *base)
@@ -666,6 +666,11 @@ FOREIGN Var *get_trycatch_var(TryCatch *tc, unsigned idx)
 FOREIGN void set_enclosing_trycatch(Expr *e, TryCatch *tc)
 {
 	if (tc) e->setTryCatch(tc);
+}
+
+FOREIGN void set_global(Var *v)
+{
+	v->setGlobal();
 }
 
 FOREIGN char type_eq(types::Type *a, types::Type *b)

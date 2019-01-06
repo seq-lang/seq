@@ -493,6 +493,11 @@ types::OptionalType *types::Type::asOpt()
 	return nullptr;
 }
 
+types::KMer *types::Type::asKMer()
+{
+	return nullptr;
+}
+
 types::Type *types::Type::clone(Generic *ref)
 {
 	return this;

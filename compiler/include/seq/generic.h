@@ -97,6 +97,7 @@ namespace seq {
 			RefType *asRef() override;
 			GenType *asGen() override;
 			OptionalType *asOpt() override;
+			KMer *asKMer() override;
 
 			static GenericType *get();
 			static GenericType *get(RefType *pending, std::vector<Type *> types);

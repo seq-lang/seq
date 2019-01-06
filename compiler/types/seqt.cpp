@@ -379,3 +379,291 @@ types::StrType *types::StrType::get() noexcept
 	static types::StrType instance;
 	return &instance;
 }
+
+
+/*
+ * k-mer types (fixed-length short sequences)
+ */
+
+#define KMER_MAX_LEN 128
+
+types::KMer::KMer(unsigned k) :
+    Type("k-mer", BaseType::get(), false, false), k(k)
+{
+	if (k == 0 || k > KMER_MAX_LEN)
+		throw exc::SeqException("k-mer length must be between 1 and " + std::to_string(KMER_MAX_LEN));
+}
+
+unsigned types::KMer::getK()
+{
+	return k;
+}
+
+std::string types::KMer::getName() const
+{
+	return std::to_string(k) + "-mer";
+}
+
+Value *types::KMer::defaultValue(BasicBlock *block)
+{
+	return ConstantInt::get(getLLVMType(block->getContext()), 0);
+}
+
+static GlobalVariable *get2bitTable(Module *module, const std::string& name="seq.2bit_table")
+{
+	LLVMContext& context = module->getContext();
+	Type *ty = IntegerType::getIntNTy(context, 2);
+
+	GlobalVariable *table = module->getGlobalVariable(name);
+
+	if (!table) {
+		std::vector<Constant *> v(256, ConstantInt::get(ty, 0));
+		v['A'] = v['a'] = ConstantInt::get(ty, 0);
+		v['C'] = v['c'] = ConstantInt::get(ty, 1);
+		v['G'] = v['g'] = ConstantInt::get(ty, 2);
+		v['T'] = v['t'] = ConstantInt::get(ty, 3);
+
+		auto *arrTy = llvm::ArrayType::get(IntegerType::getIntNTy(context, 2), 256);
+		table = new GlobalVariable(*module,
+		                           arrTy,
+		                           true,
+		                           GlobalValue::PrivateLinkage,
+		                           ConstantArray::get(arrTy, v),
+		                           name);
+	}
+
+	return table;
+}
+
+/*
+ * Here we create functions for k-mer sliding window shifts. For example, if some
+ * k-mer represents a portion of a longer read, we can "shift in" the next base
+ * of the sequence via `kmer >> read[i]`, or equivalently in the other direction.
+ *
+ * dir=false for left; dir=true for right
+ */
+static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
+{
+	const std::string name = "seq." + kmerType->getName() + ".sh" + (dir ? "r" : "l");
+	LLVMContext& context = module->getContext();
+	Function *func = module->getFunction(name);
+
+	if (!func) {
+		GlobalVariable *table = get2bitTable(module);
+
+		func = cast<Function>(
+		         module->getOrInsertFunction(name,
+		                                     kmerType->getLLVMType(context),
+		                                     kmerType->getLLVMType(context),
+		                                     types::Seq->getLLVMType(context)));
+		func->setDoesNotThrow();
+		func->setLinkage(GlobalValue::PrivateLinkage);
+		AttributeList v;
+		v.addAttribute(context, 0, Attribute::AlwaysInline);
+		func->setAttributes(v);
+
+		auto iter = func->arg_begin();
+		Value *kmer = iter++;
+		Value *seq = iter;
+
+		/*
+		 * The following function is just a for-loop that continually shifts in
+		 * new bases from the given sequences into the k-mer, then returns it.
+		 */
+		BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+		Value *ptr = types::Seq->memb(seq, "ptr", entry);
+		Value *len = types::Seq->memb(seq, "len", entry);
+		IRBuilder<> builder(entry);
+
+		BasicBlock *loop = BasicBlock::Create(context, "while", func);
+		builder.CreateBr(loop);
+
+		PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2);
+		PHINode *result = builder.CreatePHI(kmerType->getLLVMType(context), 2);
+		control->addIncoming(zeroLLVM(context), entry);
+		result->addIncoming(kmer, entry);
+		Value *cond = builder.CreateICmpSLT(control, len);
+		builder.SetInsertPoint(loop);
+
+		BasicBlock *body = BasicBlock::Create(context, "body", func);
+		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
+
+		builder.SetInsertPoint(body);
+		Value *kmerMod = nullptr;
+
+		if (dir) {
+			// right slide -- update low bits
+			kmerMod = builder.CreateShl(result, 2);
+			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, control));
+			base = builder.CreateZExt(base, builder.getInt64Ty());
+			Value *bits = builder.CreateLoad(builder.CreateGEP(table, {builder.getInt64(0), base}));
+			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
+			kmerMod = builder.CreateOr(kmerMod, bits);
+		} else {
+			// left slide -- update high bits
+			kmerMod = builder.CreateLShr(result, 2);
+			Value *idx = builder.CreateSub(len, oneLLVM(context));
+			idx = builder.CreateSub(idx, control);
+
+			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+			base = builder.CreateZExt(base, builder.getInt64Ty());
+			Value *bits = builder.CreateLoad(builder.CreateGEP(table, {builder.getInt64(0), base}));
+			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
+			bits = builder.CreateShl(bits, 2*(kmerType->getK() - 1));
+			kmerMod = builder.CreateOr(kmerMod, bits);
+		}
+
+		Value *next = builder.CreateAdd(control, oneLLVM(context));
+		control->addIncoming(next, body);
+		result->addIncoming(kmerMod, body);
+		builder.CreateBr(loop);
+
+		BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+		branch->setSuccessor(1, exit);
+		builder.SetInsertPoint(exit);
+		builder.CreateRet(result);
+	}
+
+	return func;
+}
+
+void types::KMer::initOps()
+{
+	if (!vtable.magic.empty())
+		return;
+
+	vtable.magic = {
+		{"__init__", {Seq}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			BasicBlock *block = b.GetInsertBlock();
+			Module *module = block->getModule();
+
+			GlobalVariable *table = get2bitTable(module);
+			Value *ptr  = Seq->memb(args[0], "ptr", block);
+			Value *kmer = defaultValue(block);
+
+			for (unsigned i = 0; i < k; i++) {
+				Value *base = b.CreateLoad(b.CreateGEP(ptr, b.getInt64(i)));
+				base = b.CreateZExt(base, b.getInt64Ty());
+				Value *bits = b.CreateLoad(b.CreateGEP(table, {b.getInt64(0), base}));
+				bits = b.CreateZExt(bits, getLLVMType(context));
+
+				Value *shift = b.CreateShl(bits, 2*i);
+				kmer = b.CreateOr(kmer, shift);
+			}
+
+			return kmer;
+		}},
+
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_base_2bit",
+			                      llvm::Type::getVoidTy(context),
+			                      b.getInt8Ty()));
+			printFunc->setDoesNotThrow();
+
+			for (unsigned i = 0; i < k; i++) {
+				Value *mask = ConstantInt::get(getLLVMType(context), 3);
+				mask = b.CreateShl(mask, 2*i);
+				mask = b.CreateAnd(self, mask);
+				mask = b.CreateLShr(mask, 2*i);
+				mask = b.CreateTrunc(mask, b.getInt8Ty());
+				b.CreateCall(printFunc, mask);
+			}
+			return (Value *)nullptr;
+		}},
+
+		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
+		// reversal
+		/* TODO -- use lookup table or some bit hack
+		{"__neg__", {}, this, SEQ_MAGIC(self, args, b) {
+		}},
+		 */
+
+		// complement
+		{"__invert__", {}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateNot(self);
+		}},
+
+		// slide window left
+		{"__lshift__", {Seq}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			Module *module = b.GetInsertBlock()->getModule();
+			return b.CreateCall(getShiftFunc(this, module, false), {self, args[0]});
+		}},
+
+		// slide window right
+		{"__rshift__", {Seq}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			Module *module = b.GetInsertBlock()->getModule();
+			return b.CreateCall(getShiftFunc(this, module, true), {self, args[0]});
+		}},
+
+		{"__hash__", {}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
+		}},
+
+		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
+			return ConstantInt::get(seqIntLLVM(b.getContext()), k, true);
+		}},
+
+		{"__eq__", {this}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__ne__", {this}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__lt__", {this}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpULT(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__gt__", {this}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpUGT(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__le__", {this}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpULE(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__ge__", {this}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpUGE(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+	};
+}
+
+bool types::KMer::isAtomic() const
+{
+	return true;
+}
+
+bool types::KMer::is(seq::types::Type *type) const
+{
+	types::KMer *kmer = type->asKMer();
+	return kmer && k == kmer->k;
+}
+
+Type *types::KMer::getLLVMType(LLVMContext& context) const
+{
+	return IntegerType::getIntNTy(context, 2*k);
+}
+
+size_t types::KMer::size(Module *module) const
+{
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
+}
+
+types::KMer *types::KMer::asKMer()
+{
+	return this;
+}
+
+types::KMer *types::KMer::get(unsigned k)
+{
+	return new KMer(k);
+}

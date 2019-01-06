@@ -290,6 +290,12 @@ types::OptionalType *types::GenericType::asOpt()
 	return type ? type->asOpt() : nullptr;
 }
 
+types::KMer *types::GenericType::asKMer()
+{
+	realize();
+	return type ? type->asKMer() : nullptr;
+}
+
 types::GenericType *types::GenericType::get()
 {
 	return new GenericType();

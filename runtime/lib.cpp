@@ -109,6 +109,12 @@ SEQ_FUNC void seq_print_ptr(void *p)
 		cout << "None";
 }
 
+SEQ_FUNC void seq_print_base_2bit(uint8_t base)
+{
+	static const char table[] = {'A','C','G','T'};
+	cout << table[base];
+}
+
 
 /*
  * General I/O

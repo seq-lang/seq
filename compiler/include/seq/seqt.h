@@ -64,6 +64,28 @@ namespace seq {
 			static StrType *get() noexcept;
 		};
 
+		class KMer : public Type {
+		protected:
+			unsigned k;
+			explicit KMer(unsigned k);
+		public:
+			KMer(KMer const&)=delete;
+			void operator=(KMer const&)=delete;
+			unsigned getK();
+
+			std::string getName() const override;
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+
+			void initOps() override;
+			bool isAtomic() const override;
+			bool is(Type *type) const override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			size_t size(llvm::Module *module) const override;
+
+			KMer *asKMer() override;
+			static KMer *get(unsigned k);
+		};
+
 	}
 }
 

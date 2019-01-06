@@ -25,6 +25,7 @@ namespace seq {
 		class RefType;
 		class GenType;
 		class OptionalType;
+		class KMer;
 
 		/**
 		 * VTable structure
@@ -282,6 +283,12 @@ namespace seq {
 			/// RTTI/dynamic_cast so that generic types can be converted
 			/// to their actual types.
 			virtual OptionalType *asOpt();
+
+			/// Returns this type as a k-mer type, or null if it isn't
+			/// a k-mer type. This is basically for overriding C++'s
+			/// RTTI/dynamic_cast so that generic types can be converted
+			/// to their actual types.
+			virtual KMer *asKMer();
 
 			/// Clones this type and all of its methods. \p ref is used
 			/// internally to keep track of cloned objects, and to make
