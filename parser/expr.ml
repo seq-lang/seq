@@ -25,7 +25,7 @@ struct
 
   (** [parse context expr] dispatches expression AST to the proper parser.
       Afterwards, a position [pos] is set for [expr] *)
-  let rec parse (ctx: Ctx.t) (pos, node) =
+  let rec parse ?(set_trycatch=true) (ctx: Ctx.t) (pos, node) =
     let expr = match node with
       | Empty          p -> parse_none     ctx pos p
       | Bool           p -> parse_bool     ctx pos p
@@ -57,7 +57,8 @@ struct
       | Lambda _ -> failwith "todo: expr/lambda"
     in
     Llvm.Expr.set_pos expr pos; 
-    Llvm.Expr.set_trycatch expr ctx.trycatch;
+    if set_trycatch then 
+      Llvm.Expr.set_trycatch expr ctx.trycatch;
     expr
   
   (** [parse_type context expr] parses [expr] AST and ensures that 
@@ -97,7 +98,13 @@ struct
 
   and parse_id ?map ctx pos var = 
     let map = Option.value map ~default:ctx.map in
-    match Hashtbl.find map var with
+
+    let pref = String.prefix var 1 in
+    let suf = String.suffix var ((String.length var) - 1) in
+    match pref, int_of_string_opt suf with
+    | "k", Some n ->
+      Llvm.Expr.typ @@ Llvm.Type.kmer n
+    | _ -> match Hashtbl.find map var with
     (* Make sure that a variable is either accessible within 
        the same base (function) or that it is global variable  *)
     | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
@@ -143,7 +150,7 @@ struct
     let final_expr = ref Ctypes.null in 
     let body = comprehension_helper ctx gen 
       ~finally:(fun ctx ->
-        let expr = parse ctx expr in
+        let expr = parse ~set_trycatch:false ctx expr in
         let captures = Hashtbl.data captures in
         final_expr := Llvm.Expr.gen_comprehension expr captures)
     in
@@ -201,7 +208,7 @@ struct
       Check GOTCHAS for details. *)
   and parse_index ctx pos (lh_expr, indices) =
     match snd lh_expr, indices with
-    | _, [(_, Slice(st, ed, step))] ->
+    | _, [(_, Slice (st, ed, step))] ->
       if is_some step then 
         failwith "todo: expr/step";
       let unpack st = 
@@ -209,12 +216,12 @@ struct
       in
       let lh_expr = parse ctx lh_expr in
       Llvm.Expr.slice lh_expr (unpack st) (unpack ed)
-    | Id("array" | "ptr" | "generator" as name), _ ->
+    | Id ("array" | "ptr" | "generator" as name), _ ->
       if List.length indices <> 1 then
         serr ~pos "%s requires one type" name;
       let typ = parse_type ctx (List.hd_exn indices) in
       Llvm.Expr.typ @@ Llvm.Type.param ~name typ
-    | Id("function"), _ ->
+    | Id "function", _ ->
       let indices = List.map indices ~f:(parse_type ctx) in
       let ret, args = List.hd_exn indices, List.tl_exn indices in
       Llvm.Expr.typ @@ Llvm.Type.func ret args

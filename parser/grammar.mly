@@ -750,7 +750,7 @@ dot_term:
 
 // Try/catch statements
 try_statement:
-  | TRY COLON suite catch+ finally?
+  | TRY COLON suite catch* finally?
     { pos $1 $2, 
       Try ($3, $4, $5) }
 // Catch rules

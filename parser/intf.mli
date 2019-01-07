@@ -12,6 +12,7 @@ module type ExprIntf =
 sig
    (** Parses expression ([Ast.ExprNode.t]) AST *)
    val parse: 
+      ?set_trycatch: bool ->
       Ctx.t -> Ast.ExprNode.t -> 
       Llvm.Types.expr_t
    

@@ -78,6 +78,9 @@ module Type = struct
   let seq = foreign "str_seq_type"
     (Ctypes.void @-> returning t)
 
+  let kmer = foreign "kmer_type"
+    (Ctypes.int @-> returning t)
+
   let record names types name = 
     let fn = foreign "record_type_named" 
       (ptr cstring @-> ptr t @-> size_t @-> cstring @-> returning t)

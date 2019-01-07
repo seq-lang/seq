@@ -9,4 +9,8 @@ print time.time()-y
 # print list(iter(itertools.combinations('ABCD', 2))) # <- fails
 # print list(itertools.combinations('ABCD', 2)) # <- fails
 
+try:
+	print 'hohoi'
+finally:
+	print 'fin'
 
