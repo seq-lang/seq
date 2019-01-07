@@ -25,7 +25,7 @@ struct
 
   (** [parse context expr] dispatches expression AST to the proper parser.
       Afterwards, a position [pos] is set for [expr] *)
-  let rec parse ?(set_trycatch=true) (ctx: Ctx.t) (pos, node) =
+  let rec parse (ctx: Ctx.t) (pos, node) =
     let expr = match node with
       | Empty          p -> parse_none     ctx pos p
       | Bool           p -> parse_bool     ctx pos p
@@ -57,8 +57,7 @@ struct
       | Lambda _ -> failwith "todo: expr/lambda"
     in
     Llvm.Expr.set_pos expr pos; 
-    if set_trycatch then 
-      Llvm.Expr.set_trycatch expr ctx.trycatch;
+    Llvm.Expr.set_trycatch expr ctx.trycatch;
     expr
   
   (** [parse_type context expr] parses [expr] AST and ensures that 
@@ -148,9 +147,10 @@ struct
 
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in 
+    let ctx = { ctx with trycatch = Ctypes.null } in
     let body = comprehension_helper ctx gen 
       ~finally:(fun ctx ->
-        let expr = parse ~set_trycatch:false ctx expr in
+        let expr = parse ctx expr in
         let captures = Hashtbl.data captures in
         final_expr := Llvm.Expr.gen_comprehension expr captures)
     in

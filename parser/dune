@@ -23,7 +23,8 @@
       base core
       ANSITerminal
       ctypes ctypes.foreign ctypes.stubs
-      zmq nocrypto yojson cstruct hex)
+      zmq nocrypto yojson cstruct hex
+      pyml)
    (link_flags
       (-cclib -L%{project_root}/../.. -cclib -lseq))
    (modes
