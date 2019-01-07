@@ -200,6 +200,41 @@ void types::RecordType::initOps()
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return ConstantInt::get(seqIntLLVM(b.getContext()), types.size(), true);
 		}},
+
+		{"__eq__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			BasicBlock *block = b.GetInsertBlock();
+			Value *result = b.getInt8(1);
+			for (unsigned i = 0; i < types.size(); i++) {
+				Value *val1 = memb(self, std::to_string(i+1), block);
+				Value *val2 = memb(args[0], std::to_string(i+1), block);
+				types::Type *eqType = types[i]->magicOut("__eq__", {types[i]});
+				Value *eq = types[i]->callMagic("__eq__", {types[i]}, val1, {val2}, block, nullptr);
+				eq = eqType->boolValue(eq, block, nullptr);
+				result = b.CreateAnd(result, eq);
+			};
+			return result;
+		}},
+
+		{"__hash__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
+			// hash_combine combine algorithm used in boost
+			LLVMContext& context = b.getContext();
+			BasicBlock *block = b.GetInsertBlock();
+			Value *seed = zeroLLVM(context);
+			Value *phi = ConstantInt::get(seqIntLLVM(context), 0x9e3779b9);
+			for (unsigned i = 0; i < types.size(); i++) {
+				Value *val = memb(self, std::to_string(i+1), block);
+				if (!types[i]->magicOut("__hash__", {})->is(Int))
+					throw exc::SeqException("__hash__ for type '" + types[i]->getName() + "' does return an 'int'");
+				Value *hash = types[i]->callMagic("__hash__", {}, val, {}, block, nullptr);
+				Value *p1 = b.CreateShl(seed, 6);
+				Value *p2 = b.CreateLShr(seed, 2);
+				hash = b.CreateAdd(hash, phi);
+				hash = b.CreateAdd(hash, p1);
+				hash = b.CreateAdd(hash, p2);
+				seed = b.CreateXor(seed, hash);
+			};
+			return seed;
+		}},
 	};
 }
 
