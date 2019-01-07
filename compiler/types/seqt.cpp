@@ -392,6 +392,26 @@ types::KMer::KMer(unsigned k) :
 {
 	if (k == 0 || k > KMER_MAX_LEN)
 		throw exc::SeqException("k-mer length must be between 1 and " + std::to_string(KMER_MAX_LEN));
+
+	addMethod("len", new BaseFuncLite({}, types::IntType::get(), [this](Module *module) {
+		const std::string name = "seq." + getName() + ".len";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext& context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name, seqIntLLVM(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			AttributeList v;
+			v.addAttribute(context, 0, Attribute::AlwaysInline);
+			func->setAttributes(v);
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			IRBuilder<> builder(block);
+			builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->k));
+		}
+
+		return func;
+	}), true);
 }
 
 unsigned types::KMer::getK()
@@ -477,13 +497,13 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
 
 		BasicBlock *loop = BasicBlock::Create(context, "while", func);
 		builder.CreateBr(loop);
+		builder.SetInsertPoint(loop);
 
 		PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2);
 		PHINode *result = builder.CreatePHI(kmerType->getLLVMType(context), 2);
 		control->addIncoming(zeroLLVM(context), entry);
 		result->addIncoming(kmer, entry);
 		Value *cond = builder.CreateICmpSLT(control, len);
-		builder.SetInsertPoint(loop);
 
 		BasicBlock *body = BasicBlock::Create(context, "body", func);
 		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set false-branch below
@@ -492,24 +512,23 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
 		Value *kmerMod = nullptr;
 
 		if (dir) {
-			// right slide -- update low bits
-			kmerMod = builder.CreateShl(result, 2);
+			// right slide
+			kmerMod = builder.CreateLShr(result, 2);
 			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, control));
 			base = builder.CreateZExt(base, builder.getInt64Ty());
 			Value *bits = builder.CreateLoad(builder.CreateGEP(table, {builder.getInt64(0), base}));
 			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
+			bits = builder.CreateShl(bits, 2*(kmerType->getK() - 1));
 			kmerMod = builder.CreateOr(kmerMod, bits);
 		} else {
-			// left slide -- update high bits
-			kmerMod = builder.CreateLShr(result, 2);
+			// left slide
 			Value *idx = builder.CreateSub(len, oneLLVM(context));
 			idx = builder.CreateSub(idx, control);
-
+			kmerMod = builder.CreateShl(result, 2);
 			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, idx));
 			base = builder.CreateZExt(base, builder.getInt64Ty());
 			Value *bits = builder.CreateLoad(builder.CreateGEP(table, {builder.getInt64(0), base}));
 			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
-			bits = builder.CreateShl(bits, 2*(kmerType->getK() - 1));
 			kmerMod = builder.CreateOr(kmerMod, bits);
 		}
 

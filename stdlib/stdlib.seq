@@ -145,6 +145,27 @@ extend seq:
             yield self[i:i+k]
             i += step
 
+    def kmers[`k](self: seq, step: int):
+        k = `k.len()
+        n = len(self)
+
+        if step >= k:
+            # naive
+            i = 0
+            while i + k <= n:
+                yield `k(self[i:i+k])
+                i += step
+        elif n >= k:
+            # sliding encoding
+            kmer = `k(self[:k])
+            yield kmer
+            i = 0
+            while i + k + step <= n:
+                j = i + k
+                kmer >>= self[j:j+step]
+                i += step
+                yield kmer
+
 class File(fp: ptr[byte], buf: ptr[ptr[byte]], sz: ptr[int]):
     def __init__(self: File, path: str, mode: str):
         extern c fopen(ptr[byte], ptr[byte]) -> ptr[byte]
