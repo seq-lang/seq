@@ -6,6 +6,28 @@ using namespace llvm;
 types::FuncType::FuncType(std::vector<types::Type *> inTypes, types::Type *outType) :
     Type("function", BaseType::get()), inTypes(std::move(inTypes)), outType(outType)
 {
+	addMethod("from_ptr", new BaseFuncLite({PtrType::get(Byte)}, this, [this](Module *module) {
+		const std::string name = "seq." + getName() + ".from_ptr";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext& context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  getLLVMType(context),
+			                                                  IntegerType::getInt8PtrTy(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			AttributeList v;
+			v.addAttribute(context, 0, Attribute::AlwaysInline);
+			func->setAttributes(v);
+			Value *arg = func->arg_begin();
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			IRBuilder<> builder(block);
+			builder.CreateRet(builder.CreateBitCast(arg, getLLVMType(context)));
+		}
+
+		return func;
+	}), true);
 }
 
 unsigned types::FuncType::argCount() const
