@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pedantic -Wall -Wno-return-type-c-linkage")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pedantic -Wall -Wno-return-type-c-linkage -maes")
 include_directories(compiler/include/)
 include_directories(runtime/)
 
@@ -10,12 +10,21 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
+find_package(OpenSSL REQUIRED)
+
 
 # Seq runtime library
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
-                         runtime/exc.cpp)
-target_link_libraries(seqrt gc)
+                         runtime/exc.cpp
+                         runtime/secure/aes.h
+                         runtime/secure/aesstream.cpp
+                         runtime/secure/aesstream.h
+                         runtime/secure/crypto.cpp
+                         runtime/secure/crypto.h
+                         runtime/secure/errors.h
+                         runtime/secure/socket.h)
+target_link_libraries(seqrt gc crypto ntl OpenSSL::SSL)
 
 
 # Seq compiler library

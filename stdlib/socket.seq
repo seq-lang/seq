@@ -1,0 +1,77 @@
+type Socket(p: ptr[byte])
+extend Socket:
+    def __init__(self: Socket) -> Socket:
+        extern c seq_socket_new() -> ptr[byte]
+        return (seq_socket_new(),)
+
+    def socket(self: Socket):
+        extern c seq_socket_socket(ptr[byte]) -> bool
+        return seq_socket_socket(self.p)
+
+    def close(self: Socket):
+        extern c seq_socket_close(ptr[byte]) -> bool
+        return seq_socket_close(self.p)
+
+    def attach_from(self: Socket, other: Socket):
+        extern c seq_socket_attach_from(ptr[byte], ptr[byte])
+        seq_socket_attach_from(self.p, other.p)
+
+    def detach(self: Socket):
+        extern c seq_socket_detach(ptr[byte])
+        seq_socket_detach(self.p)
+
+    def get_ip(self: Socket):
+        extern c seq_socket_get_ip(ptr[byte]) -> str
+        return seq_socket_get_ip(self.p)
+
+    def get_port(self: Socket):
+        extern c seq_socket_get_port(ptr[byte]) -> int
+        return seq_socket_get_port(self.p)
+
+    def bind(self: Socket, ip: str, port: int):
+        extern c seq_socket_bind(ptr[byte], str, int) -> int
+        return seq_socket_bind(self.p, ip, port)
+
+    def listen(self: Socket, q: int):
+        extern c seq_socket_listen(ptr[byte], int) -> bool
+        return seq_socket_listen(self.p, q)
+
+    def accept(self: Socket, other: Socket):
+        extern c seq_socket_accept(ptr[byte], ptr[byte]) -> bool
+        return seq_socket_accept(self.p, other.p)
+
+    def connect(self: Socket, ip: str, port: int, timeout: int):
+        extern c seq_socket_connect(ptr[byte], str, int, int) -> bool
+        return seq_socket_connect(self.p, ip, port, timeout)
+
+    def receive(self: Socket, buf: ptr[byte], len: int, flags: int):
+        extern c seq_socket_receive(ptr[byte], ptr[byte], int, int) -> int
+        return seq_socket_receive(self.p, buf, len, flags)
+
+    def send(self: Socket, buf: ptr[byte], len: int, flags: int):
+        extern c seq_socket_send(ptr[byte], ptr[byte], int, int) -> int
+        return seq_socket_send(self.p, buf, len, flags)
+
+    def receive_secure(self: Socket, buf: ptr[byte], len: int, flags: int):
+        extern c seq_socket_receive_secure(ptr[byte], ptr[byte], int, int) -> int
+        return seq_socket_receive_secure(self.p, buf, len, flags)
+
+    def send_secure(self: Socket, buf: ptr[byte], len: int, flags: int):
+        extern c seq_socket_send_secure(ptr[byte], ptr[byte], int, int) -> int
+        return seq_socket_send_secure(self.p, buf, len, flags)
+
+    def bytes_received(self: Socket):
+        extern c seq_socket_get_bytes_received(ptr[byte]) -> int
+        return seq_socket_get_bytes_received(self.p)
+
+    def bytes_sent(self: Socket):
+        extern c seq_socket_get_bytes_sent(ptr[byte]) -> int
+        return seq_socket_get_bytes_sent(self.p)
+
+    def reset_stats(self: Socket):
+        extern c seq_socket_reset_stats(ptr[byte])
+        seq_socket_reset_stats(self.p)
+
+    def set_key(self: Socket, keyfile: str):
+        extern c seq_socket_set_key(ptr[byte], str) -> bool
+        return seq_socket_set_key(self.p, keyfile)
