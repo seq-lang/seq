@@ -289,6 +289,18 @@ struct
       serr ~pos "only C external functions are currently supported";
     if is_some @@ Ctx.in_block ctx ctx_name then
       serr ~pos "function %s already exists" ctx_name;
+
+    (* match dylib with
+    | Some dylib ->
+      let code = sprintf 
+        "%s = function[%s](dlsym(dylib('%s'), '%s'))"
+        ctx_name 
+        ... 
+        dylib
+        name
+      in 
+      parse
+    | None -> *)
     
     let names, types = 
       List.map args ~f:(fun (_, { name; typ }) ->

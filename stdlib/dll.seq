@@ -1,0 +1,28 @@
+
+class DLError(msg: str):
+    pass
+
+class DL:
+    def dlerror():
+        extern dlerror() -> ptr[byte]
+        return dlerror()
+
+    def dlopen(lib: str) -> ptr[void]:
+        extern dlopen(ptr[byte], int) -> ptr[void]
+        RTLD_LAZY = 1
+        lib = dlopen(lib.ptr, RTLD_LAZY)
+        if not lib:
+            raise DLError(c.ptr2str(dlerror()))
+        return lib
+
+    def dlsym(handle: ptr[void], symbol: str):
+        dlerror()
+
+        extern dlsym(ptr[void], ptr[byte]) -> ptr[void]
+        fn = dlsym(handle, symbol.ptr)
+
+        err = dlerror()
+        if err:
+            raise DLError(c.ptr2str(err))
+        else:
+            return fn

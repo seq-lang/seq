@@ -39,7 +39,9 @@ struct
     | Empty          of unit
     | Bool           of bool
     | Int            of int
+    | IntS           of (int * string)
     | Float          of float
+    | FloatS         of (float * string)
     | String         of string
     | Seq            of string
     | Generic        of generic
@@ -82,7 +84,9 @@ struct
     | Ellipsis _ -> "..."
     | Bool x -> sprintf "bool(%b)" x
     | Int x -> sprintf "%d" x
+    | IntS (x, k) -> sprintf "%d%s" x k
     | Float x -> sprintf "%.2f" x
+    | FloatS (x, k) -> sprintf "%.2f%s" x k
     | String x -> sprintf "'%s'" (String.escaped x)
     | Seq x -> sprintf "seq('%s')" x
     | Id x -> sprintf "%s" x

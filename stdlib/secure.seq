@@ -1,0 +1,56 @@
+
+class ss:
+
+class manager():
+    def sample(self: manager):
+        # _foo_ 
+
+    def other(cp):
+        return 1 if cp == 2 else 2
+
+    # Protocol 1: called from SP/CP0
+    def share(self: manager, x: int, cp):
+        r = self.sample()
+        if cp == 1:
+            return sint(r, self)
+        elif cp == 2:
+            return sint(x - r, self)
+
+    # Protocol 2
+    def get(self: manager, x: sint, cp):
+        self.send(x.share, other(cp))
+        # How to do this properly?
+        self.expect(lambda z: x.share + y)
+
+    # Protocol 6
+    def triple(self: manager, cp):
+        A, B = self.sample(), self.sample()
+        @parallel:
+            a = self.share(A, cp)
+            b = self.share(B, cp)
+            c = self.share(A * B, cp)
+        return (a, b, c)
+
+class sint(share: int, M: manager):
+    # Protocol 3
+    def __add__(x: sint, y: sint, cp):
+        return x.share + y.share
+
+    # Protocol 4
+    def __add__(x: sint, y: int, cp):
+        if cp == 1:
+            return x.share + y
+        else:
+            return x.share
+
+    # Protocol 5
+    def __mul__(x: sint, y: int, cp):
+        return x.share * y
+
+    # Protocol 7
+    def __mul__(x: sint, y: sint, cp):
+        a, b, c = M.triple()
+        @parallel:
+            x_a = M.get(x - a)
+            y_b = M.get(y - b)
+        return x_a * y_b + x_a * b.share + y_b * a.share + c.share

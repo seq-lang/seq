@@ -3,14 +3,19 @@
 import itertools
 import time
 
-y = time.time()
-print [i for i in itertools.combinations('ABCD', 2)]
-print time.time()-y
-# print list(iter(itertools.combinations('ABCD', 2))) # <- fails
-# print list(itertools.combinations('ABCD', 2)) # <- fails
-
 try:
 	print 'hohoi'
 finally:
 	print 'fin'
+
+import ntl
+
+
+z = ntl.ZZ(10)
+print z
+
+y = ntl.ZZ(20)
+print y
+
+print z+y
 
