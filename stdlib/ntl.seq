@@ -13,19 +13,19 @@ class ZZ(p: ptr[void]):
     ZZ_free(self.p)
 
   def __add__(a: ZZ, b: ZZ):
-    extern c ZZ_O_add(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_O_add(ptr[void], ptr[void]) -> ptr[void]
     return ZZ(ZZ_O_add(a.p, b.p))
   def __sub__(a: ZZ, b: ZZ):
-    extern c ZZ_O_sub(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_O_sub(ptr[void], ptr[void]) -> ptr[void]
     return ZZ(ZZ_O_sub(a.p, b.p))
   def __mul__(a: ZZ, b: ZZ):
-    extern c ZZ_O_mul(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_O_mul(ptr[void], ptr[void]) -> ptr[void]
     return ZZ(ZZ_O_mul(a.p, b.p))
   def __truediv__(a: ZZ, b: ZZ):
-    extern c ZZ_O_truediv(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_O_truediv(ptr[void], ptr[void]) -> ptr[void]
     return ZZ(ZZ_O_truediv(a.p, b.p))
   def __mod__(a: ZZ, b: ZZ):
-    extern c ZZ_O_mod(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_O_mod(ptr[void], ptr[void]) -> ptr[void]
     return ZZ(ZZ_O_mod(a.p, b.p))
 
   def __eq__(a: ZZ, b: ZZ):
@@ -64,18 +64,18 @@ class ZZ_p(p: ptr[void]):
     ZZ_p_free(self.p)
 
   def __add__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_add(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_p_O_add(ptr[void], ptr[void]) -> ptr[void]
     return ZZ_p(ZZ_p_O_add(a.p, b.p))
   def __sub__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_sub(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_p_O_sub(ptr[void], ptr[void]) -> ptr[void]
     return ZZ_p(ZZ_p_O_sub(a.p, b.p))
   def __mul__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_mul(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_p_O_mul(ptr[void], ptr[void]) -> ptr[void]
     return ZZ_p(ZZ_p_O_mul(a.p, b.p))
   def __truediv__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_truediv(ptr[void], ptr[void]) -> ptr[void] 
+    extern c ZZ_p_O_truediv(ptr[void], ptr[void]) -> ptr[void]
     return ZZ_p(ZZ_p_O_truediv(a.p, b.p))
-  
+
   def __eq__(a: ZZ_p, b: ZZ_p):
     extern c ZZ_p_O_eq(ptr[void], ptr[void]) -> bool
     return ZZ_p_O_eq(a.p, b.p)
@@ -87,7 +87,7 @@ class ZZ_p(p: ptr[void]):
     extern c ZZ_p_O_str(ptr[void]) -> ptr[byte]
     p = ZZ_p_O_str(a.p)
     return str(p, strlen(p))
-  
+
   def init(a: ZZ):
     extern c ZZ_p_init_p(ptr[void])
     ZZ_p_init_p(a.p)
@@ -112,9 +112,9 @@ class VecZZ(p: ptr[void]):
   def __ne__(a: VecZZ, b: VecZZ):
     extern c VecZZ_O_ne(ptr[void], ptr[void]) -> bool
     return VecZZ_O_ne(a.p, b.p)
-  
+
   def __getitem__(a: VecZZ, b: int):
-    extern c VecZZ_O_getitem(ptr[void], int) -> ptr[void] 
+    extern c VecZZ_O_getitem(ptr[void], int) -> ptr[void]
     return ZZ(VecZZ_O_getitem(a.p, b.p))
   def __setitem__(a: VecZZ, b: int, z: ZZ):
     extern c VecZZ_O_setitem(ptr[void], int, ptr[void]) -> void
@@ -142,9 +142,9 @@ class VecZZ_p(p: ptr[void]):
   def __ne__(a: VecZZ_p, b: VecZZ_p):
     extern c VecZZ_p_O_ne(ptr[void], ptr[void]) -> bool
     return VecZZ_p_O_ne(a.p, b.p)
-  
+
   def __getitem__(a: VecZZ_p, b: int):
-    extern c VecZZ_p_O_getitem(ptr[void], int) -> ptr[void] 
+    extern c VecZZ_p_O_getitem(ptr[void], int) -> ptr[void]
     return ZZ_p(VecZZ_p_O_getitem(a.p, b.p))
   def __setitem__(a: VecZZ_p, b: int, z: ZZ_p):
     extern c VecZZ_p_O_setitem(ptr[void], int, ptr[void]) -> void
