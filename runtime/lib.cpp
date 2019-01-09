@@ -710,3 +710,8 @@ SEQ_FUNC bool seq_socket_set_key(void *sock, seq_str_t keyfile)
 {
 	return ((CSocket *)sock)->SetKey(string(keyfile.str, (size_t)keyfile.len));
 }
+
+SEQ_FUNC void seq_usleep(seq_int_t time)
+{
+	usleep((useconds_t)time);
+}

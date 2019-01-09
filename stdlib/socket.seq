@@ -75,3 +75,50 @@ extend Socket:
     def set_key(self: Socket, keyfile: str):
         extern c seq_socket_set_key(ptr[byte], str) -> bool
         return seq_socket_set_key(self.p, keyfile)
+
+def _connect(socket: Socket, ip: str, port: int):
+    extern c seq_usleep(int)
+    RETRY_CONNECT = 100
+    TIMEOUT_MS = 10000
+    success = False
+
+    for i in range(RETRY_CONNECT):
+        if not socket.socket():
+            break
+
+        if socket.connect(ip, port, TIMEOUT_MS):
+            success = True
+            break
+
+        print "Connection failed, retrying.."
+        seq_usleep(200 << 10)
+
+    return success
+
+def _connect_local(socket: Socket, port: int):
+    return _connect(socket, "127.0.0.1", port)
+
+def _listen(socket: Socket, port: int):
+    if not socket.socket():
+        return False
+
+    if not socket.bind("", port):
+        return False
+
+    if not socket.listen(5):
+        return False
+
+    sock = Socket()
+    if not socket.accept(sock):
+        return False
+
+    socket.attach_from(sock)
+    sock.detach()
+    return True
+
+def open_chan(socket: Socket, port: int):
+    print "Starting to listen on port", port
+    return _listen(socket, port)
+
+def close_chan(socket: Socket):
+    socket.close()
