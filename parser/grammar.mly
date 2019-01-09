@@ -50,8 +50,10 @@
 %}
 
 /* constants */
-%token <Ast.Pos.t * int>    INT
-%token <Ast.Pos.t * float>  FLOAT
+%token <Ast.Pos.t * int>   INT
+%token <Ast.Pos.t * float> FLOAT
+%token <Ast.Pos.t * (int * string)>   INT_S
+%token <Ast.Pos.t * (float * string)> FLOAT_S
 %token <Ast.Pos.t * string> STRING ID GENERIC
 %token <Ast.Pos.t * string> REGEX SEQ
 
@@ -147,6 +149,8 @@ atom:
   | ID         { fst $1, Id (snd $1) }
   | INT        { fst $1, Int (snd $1) }
   | FLOAT      { fst $1, Float (snd $1) }
+  | INT_S      { fst $1, IntS (snd $1) }
+  | FLOAT_S    { fst $1, FloatS (snd $1) }
   | STRING     { fst $1, String (snd $1) }
   | SEQ        { fst $1, Seq (snd $1) }
   | bool       { fst $1, Bool (snd $1) }
@@ -320,6 +324,9 @@ arith_expr:
     { pos (fst $1) (fst $2),
       match snd $2 with
       | Int f -> Int (-f)
+      | IntS (f, k) -> IntS (-f, k)
+      | Float f -> Float (-.f)
+      | FloatS (f, k) -> FloatS (-.f, k)
       | _ -> Unary(snd $1, $2) }
   | ADD arith_term
   | B_NOT arith_term
@@ -609,7 +616,7 @@ assign_statement:
                 (p, Call ((p, Id "len"), 
                           [p, { name = None; value = rhs }])), 
                 op, 
-                (p, Int (len))))
+                (p, Int len)))
             in
             assert_stmt :: lst
         in
@@ -778,32 +785,6 @@ throw:
     { $1,
       Throw $2 }
 
-
-/* with EXPR as VAR:
-    BLOCK
-translates to
-
-mgr = (EXPR)
-exit = type(mgr).__exit__  # Not calling it yet
-value = type(mgr).__enter__(mgr)
-exc = True
-try:
-    try:
-        VAR = value  # Only if "as VAR" is present
-        BLOCK
-    except:
-        # The exceptional case is handled here
-        exc = False
-        if not exit(mgr, *sys.exc_info()):
-            raise
-        # The exception is swallowed if exit() returns true
-finally:
-    # The normal and non-local-goto cases are handled here
-    if exc:
-        exit(mgr, None, None, None)
- */
-
-
 /******************************************************************************
  ************                      UNITS                     ******************
  ******************************************************************************/
@@ -835,7 +816,7 @@ func:
         | Some typ -> typ
         | None -> $7, Id("void")
       in
-      pos $1 (fst typ), 
+      pos $1 (fst typ),
       Extern (snd lang, dylib, snd name,
         (fst name, { name = snd name; typ = Some(typ) }), params) }
   | EXTERN; lang = ID; dylib = dylib_spec?; name = ID; AS alt_name = ID
