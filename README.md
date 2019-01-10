@@ -10,6 +10,7 @@
 - LLVM 5+
 - Boehm GC
 - OCaml
+- OpenSSL
 
 
 ## Build
@@ -19,7 +20,8 @@ Make sure the `LLVM_DIR` environment variable is set (to the result of `llvm-con
 ```bash
 mkdir seq/build
 cd seq/builld
-cmake ..
+# For macOS brew w/ any version of OpenSSL and LLVM
+LLVM_DIR=/usr/local/opt/llvm/lib/cmake OPENSSL_ROOT_DIR=/usr/local/opt/openssl cmake ..
 cmake --build .
 ```
 
