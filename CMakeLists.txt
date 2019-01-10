@@ -14,12 +14,14 @@ find_package(OpenSSL REQUIRED)
 
 
 # NTL
-set(NTL_NAME "libntl.so")
+set(NTL_NAME "ntl.a")
 set(LIB_NTL "${CMAKE_CURRENT_BINARY_DIR}/${NTL_NAME}")
 add_custom_command(OUTPUT ${LIB_NTL}
+                   COMMAND ./configure
                    COMMAND make
                    COMMAND cp ${NTL_NAME} ${LIB_NTL}
-                   WORKING_DIRECTORY "../ntl"
+                   COMMAND make clean
+                   WORKING_DIRECTORY "../ntl/src"
                    COMMENT "Compiling NTL library"
                    VERBATIM)
 add_custom_target(ntl_target DEPENDS ${LIB_NTL})
@@ -38,8 +40,10 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/secure/crypto.cpp
                          runtime/secure/crypto.h
                          runtime/secure/errors.h
+                         runtime/secure/ntl.cpp
+                         runtime/secure/socket.cpp
                          runtime/secure/socket.h)
-target_link_libraries(seqrt gc crypto ntl OpenSSL::SSL)
+target_link_libraries(seqrt gc crypto gmp ntl OpenSSL::SSL)
 target_include_directories(seqrt PRIVATE ntl/include/)
 
 
