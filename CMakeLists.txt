@@ -13,6 +13,21 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 find_package(OpenSSL REQUIRED)
 
 
+# NTL
+set(NTL_NAME "libntl.so")
+set(LIB_NTL "${CMAKE_CURRENT_BINARY_DIR}/${NTL_NAME}")
+add_custom_command(OUTPUT ${LIB_NTL}
+                   COMMAND make
+                   COMMAND cp ${NTL_NAME} ${LIB_NTL}
+                   WORKING_DIRECTORY "../ntl"
+                   COMMENT "Compiling NTL library"
+                   VERBATIM)
+add_custom_target(ntl_target DEPENDS ${LIB_NTL})
+add_library(ntl SHARED IMPORTED)
+add_dependencies(ntl ntl_target)
+set_target_properties(ntl PROPERTIES IMPORTED_LOCATION ${LIB_NTL})
+
+
 # Seq runtime library
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
@@ -25,6 +40,7 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/secure/errors.h
                          runtime/secure/socket.h)
 target_link_libraries(seqrt gc crypto ntl OpenSSL::SSL)
+target_include_directories(seqrt PRIVATE ntl/include/)
 
 
 # Seq compiler library
