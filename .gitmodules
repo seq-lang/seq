@@ -1,3 +1,3 @@
 [submodule "ntl"]
 	path = ntl
-	url = https://github.com/seq-lang/ntl
+	url = git@github.com:seq-lang/ntl
