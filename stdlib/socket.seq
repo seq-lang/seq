@@ -98,7 +98,7 @@ def _connect(socket: Socket, ip: str, port: int):
 def _connect_local(socket: Socket, port: int):
     return _connect(socket, "127.0.0.1", port)
 
-def _listen(socket: Socket, port: int):
+def listen(socket: Socket, port: int):
     if not socket.socket():
         return False
 
@@ -118,7 +118,7 @@ def _listen(socket: Socket, port: int):
 
 def open_chan(socket: Socket, port: int):
     print "Starting to listen on port", port
-    return _listen(socket, port)
+    return listen(socket, port)
 
 def close_chan(socket: Socket):
     socket.close()

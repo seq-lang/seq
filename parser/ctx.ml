@@ -33,6 +33,8 @@ struct
       internal: bool }
 end
 
+let stdlib: Namespace.t = String.Table.create ()
+
 (** Context type *)
 type t = 
   { (** context filename *)
@@ -51,25 +53,16 @@ type t =
     stack: ((string) Hash_set.t) Stack.t;
     (** Variable lookup table *)
     map: Namespace.t;
+    (** Imported symbols lookup table *)
+    imported: (string, Namespace.t) Hashtbl.t;
 
     (** function that parses a file within current context 
         (used for processing [import] statements) *)
-    parse_file: (t -> string -> unit) }
+    parser: (t -> string -> unit) }
 
 (** [add_block context] pushed a new block to context stack *)
 let add_block ctx = 
   Stack.push ctx.stack (String.Hash_set.create ())
-
-(* Returns the list of native POD types *)
-let pod_types () = 
-  Llvm.Type.(
-    [ "void", void; 
-      "int", int; 
-      "str", str;  
-      "seq", seq;
-      "bool", bool; 
-      "float", float; 
-      "byte", byte ]) 
 
 (** [add context name var] adds a variable to the current block *)
 let add (ctx: t) ?(toplevel=false) ?(global=false) ?(internal=false) key var =
@@ -86,15 +79,12 @@ let add (ctx: t) ?(toplevel=false) ?(global=false) ?(internal=false) key var =
 
 (** [init ...] initializes an empty context with toplevel block
     and adds internal POD types to the namespace *)
-let init ?(stdlib=true) ?(argv=true) filename mdl base block parse_file =
+let init_module ?(argv = true) ~filename ~mdl ~base ~block parser = 
   let ctx = 
-    { filename;
-      mdl;
-      base;
-      block;
+    { filename; mdl; base; block; parser;
       stack = Stack.create ();
       map = String.Table.create ();
-      parse_file;
+      imported = String.Table.create ();
       trycatch = Ctypes.null }
   in
   add_block ctx;
@@ -104,26 +94,67 @@ let init ?(stdlib=true) ?(argv=true) filename mdl base block parse_file =
   let global = true in
   let internal = true in 
 
-  (* initialize POD types *)
-  List.iter (pod_types ()) ~f:(fun (key, fn) -> 
-    add ctx ~toplevel ~global ~internal
-      key @@ Namespace.Type (fn ()));
-  
-  (* set __argv__ params *)
-  if argv then begin
-    let args = Llvm.Module.get_args mdl in
-    add ctx ~internal ~global ~toplevel 
-      "__argv__" (Namespace.Var args)
-  end;
+  if (Hashtbl.length stdlib) = 0 then begin
+    let ctx = { ctx with map = stdlib } in
+    (* initialize POD types *)
+    let pod_types = Llvm.Type.(
+      [ "void", void; 
+        "int", int; 
+        "str", str;  
+        "seq", seq;
+        "bool", bool; 
+        "float", float; 
+        "byte", byte ]) 
+    in
+    List.iter pod_types ~f:(fun (key, fn) -> 
+      add ctx ~toplevel ~global ~internal
+        key @@ Namespace.Type (fn ()));
+    
+    (* set __argv__ params *)
+    if argv then begin
+      let args = Llvm.Module.get_args mdl in
+      add ctx ~internal ~global ~toplevel 
+        "__argv__" (Namespace.Var args)
+    end;
 
-  (* load standard library *)
-  if stdlib then begin
-    match Util.get_from_stdlib "stdlib" with
+    (* set __cp__ *)
+    let cp = Option.value (Sys.getenv "SEQ_MPC_CP") ~default:"0" in
+    begin match int_of_string cp with 
+      | (0 | 1 | 2) as cp ->
+        let value = Llvm.Expr.int cp in
+        let stmt = Llvm.Stmt.var value in
+        Llvm.Stmt.set_base stmt ctx.base;
+        Llvm.Block.add_stmt ctx.block stmt;
+        add ctx ~internal ~global ~toplevel 
+          "__cp__" (Namespace.Var (Llvm.Var.stmt stmt))
+      | _ -> 
+        failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
+    end;
+
+    begin match Util.get_from_stdlib "stdlib" with
     | Some file ->
-      ctx.parse_file ctx file
+      ctx.parser ctx file
     | None ->
       failwith "cannot locate stdlib.seq"
+    end;
   end;
+  Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
+    add ctx ~internal ~global ~toplevel 
+    key (fst @@ List.hd_exn data));
+  ctx
+
+(** [init ...] initializes an empty context with toplevel block
+    and adds internal POD types to the namespace *)
+let init_empty ctx = 
+  let ctx = 
+    { ctx with 
+      stack = Stack.create ();
+      map = String.Table.create () }
+  in 
+  add_block ctx;
+  Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
+    add ctx ~internal:true ~global:true ~toplevel:true 
+    key (fst @@ List.hd_exn data));
   ctx
 
 (** [clear_block context] pops the current block 
@@ -172,26 +203,30 @@ let remove ctx key =
   | _ -> ()
 
 (** [dump context] dumps [context] vtable to debug output  *)
-let dump ctx =
-  let open Util in
-  dbg "=== == - CONTEXT DUMP - == ===";
-  dbg "-> Filename: %s" ctx.filename;
-  dbg "-> Keys:";
 
-  let sortf (xa, xb) (ya, yb) = 
+let dump_map ?(depth=1) ?(internal=false) map = 
+  let open Util in
+
+  let sortf (xa, (xb, _)) (ya, (yb, _)) = 
     compare (xb, xa) (yb, ya) 
   in
   let ind x = 
     String.make (x * 3) ' ' 
   in
-  let rec prn ?(depth=1) ctx = 
-    let prn_assignable ass = 
+  let rec prn ~depth ctx = 
+    let prn_assignable (ass, (ant: Namespace.annotation)) = 
+      let ib b = if b then 1 else 0 in
+      let ant = sprintf "%c%c%c"
+        (if ant.toplevel then 't' else ' ') 
+        (if ant.global   then 'g' else ' ') 
+        (if ant.internal then 'i' else ' ')
+      in
       match ass with
-      | Namespace.Var _    -> sprintf "(*var*)", ""
-      | Namespace.Func _   -> sprintf "(*fun*)", ""
-      | Namespace.Type _   -> sprintf "(*typ*)", ""
+      | Namespace.Var _    -> sprintf "(*var/%s*)" ant, ""
+      | Namespace.Func _   -> sprintf "(*fun/%s*)" ant, ""
+      | Namespace.Type _   -> sprintf "(*typ/%s*)" ant, ""
       | Namespace.Import ctx -> 
-        sprintf "(*imp*)", 
+        sprintf "(*imp/%s*)" ant, 
         " ->\n" ^ (prn ctx ~depth:(depth+1))
     in
     let sorted = 
@@ -199,9 +234,23 @@ let dump ctx =
       List.map ~f:(fun (a, b) -> (a, List.hd_exn b)) |>
       List.sort ~compare:sortf
     in
-    String.concat ~sep:"\n" @@ List.map sorted ~f:(fun (key, data) -> 
-      let pre, pos = prn_assignable (fst data) in
-      sprintf "%s%s %s %s" (ind depth) pre key pos)
+    String.concat ~sep:"\n" @@ List.filter_map sorted ~f:(fun (key, data) ->
+      if (not internal) && ((snd data).internal) then 
+        None 
+      else 
+        let pre, pos = prn_assignable data in
+        Some (sprintf "%s%s %s %s" (ind depth) pre key pos))
   in 
-  dbg "%s" (prn ctx.map)
+  dbg "%s" (prn ~depth map)
+
+let dump ctx =
+  let open Util in
+  dbg "=== == - CONTEXT DUMP - == ===";
+  dbg "-> Filename: %s" ctx.filename;
+  dbg "-> Keys:";
+  dump_map ctx.map;
+  dbg "-> Imports:";
+  Hashtbl.iteri ctx.imported ~f:(fun ~key ~data ->  
+    dbg "   %s:" key;
+    dump_map ~depth:2 data);
 

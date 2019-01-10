@@ -47,6 +47,11 @@
         n
     in 
     fst x, expr
+  let rec flatten_dot ~sep = function
+    | pos, Id s -> pos, s
+    | pos, Dot (d, s) ->
+      pos, sprintf "%s%s%s" (snd @@ flatten_dot ~sep d) sep s
+    | _ -> failwith "Invalid import Dot"
 %}
 
 /* constants */
@@ -716,34 +721,35 @@ case_type:
 // Import statments
 import_statement:
   // from x import *
-  | FROM ID IMPORT MUL
-    { pos $1 (fst $4),
-      Import [{ from = $2; what = Some([fst $4, ("*", None)]); 
-                import_as = None; stdlib = false }] }
+  | FROM dot_term IMPORT MUL
+    { let from = flatten_dot ~sep:"/" $2 in
+      pos $1 (fst $4),
+      Import [{ from; what = Some([fst $4, ("*", None)]); 
+                import_as = None }] }
   // from x import y, z
-  | FROM ID IMPORT separated_list(COMMA, import_term)
-    { pos $1 (fst @@ List.last_exn $4),
-      let what = List.map $4 ~f:(fun (pos, ((_, what), ias)) -> 
-        pos, (what, ias)) 
+  | FROM dot_term IMPORT separated_list(COMMA, import_term)
+    { let from = flatten_dot ~sep:"/" $2 in
+      let what = List.map $4 ~f:(fun (pos, (what, ias)) -> 
+        pos, (snd @@ flatten_dot ~sep:"/" what, ias)) 
       in
-      Import [{ from = $2; what = Some(what); 
-                import_as = None; stdlib = false }] }
+      pos $1 (fst @@ List.last_exn $4),
+      Import [{ from; what = Some what; import_as = None }] }
   // import x, y
   | IMPORT separated_list(COMMA, import_term)
     { pos $1 (fst @@ List.last_exn $2), 
       Import (List.map $2 ~f:(fun (_, (from, import_as)) ->
-        { from; what = None; import_as; stdlib = false })) }
+        let from = flatten_dot ~sep:"/" from in
+        { from; what = None; import_as })) }
   // import!
   | IMPORT_CONTEXT ID
     { pos $1 (fst $2), 
-      Import [{ from = $2; what = None; 
-                import_as = None; stdlib = true }] }
+      ImportPaste (snd $2) }
 // Import terms (foo, foo as bar)
 import_term:
-  | ID
+  | dot_term
     { fst $1, 
       ($1, None) }
-  | ID AS ID
+  | dot_term AS ID
     { pos (fst $1) (fst $3),
       ($1, Some (snd $3)) } 
 // Dotted identifiers (foo, foo.bar)

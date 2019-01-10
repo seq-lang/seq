@@ -146,28 +146,29 @@ struct
   and t =
     node tt
   and node = 
-    | Pass       of unit
-    | Break      of unit
-    | Continue   of unit
-    | Expr       of ExprNode.t
-    | Assign     of (ExprNode.t * ExprNode.t * bool)
-    | Del        of ExprNode.t
-    | Print      of ExprNode.t
-    | Return     of ExprNode.t option
-    | Yield      of ExprNode.t option
-    | Assert     of ExprNode.t
-    | Type       of (string * param tt list)
-    | While      of (ExprNode.t * t list)
-    | For        of (string list * ExprNode.t * t list)
-    | If         of (if_case tt) list
-    | Match      of (ExprNode.t * (match_case tt) list)
-    | Extend     of (string * generic tt list)
-    | Extern     of (string * string option * string * param tt * param tt list)
-    | Import     of import list 
-    | Generic    of generic 
-    | Try        of (t list * catch tt list * t list option)
-    | Global     of string
-    | Throw      of ExprNode.t
+    | Pass        of unit
+    | Break       of unit
+    | Continue    of unit
+    | Expr        of ExprNode.t
+    | Assign      of (ExprNode.t * ExprNode.t * bool)
+    | Del         of ExprNode.t
+    | Print       of ExprNode.t
+    | Return      of ExprNode.t option
+    | Yield       of ExprNode.t option
+    | Assert      of ExprNode.t
+    | Type        of (string * param tt list)
+    | While       of (ExprNode.t * t list)
+    | For         of (string list * ExprNode.t * t list)
+    | If          of (if_case tt) list
+    | Match       of (ExprNode.t * (match_case tt) list)
+    | Extend      of (string * generic tt list)
+    | Extern      of (string * string option * string * param tt * param tt list)
+    | Import      of import list 
+    | ImportPaste of string
+    | Generic     of generic 
+    | Try         of (t list * catch tt list * t list option)
+    | Global      of string
+    | Throw       of ExprNode.t
   and generic =
     | Function of 
         (param tt * (ExprNode.generic tt) list * param tt list * t list)
@@ -197,8 +198,7 @@ struct
     { from: string tt; 
       (* what:  *)
       what: (string * string option) tt list option;
-      import_as: string option;
-      stdlib: bool }
+      import_as: string option }
   and pattern = 
     | StarPattern
     | IntPattern      of int
