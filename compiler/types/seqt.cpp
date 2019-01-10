@@ -388,7 +388,7 @@ types::StrType *types::StrType::get() noexcept
 #define KMER_MAX_LEN 128
 
 types::KMer::KMer(unsigned k) :
-    Type("k-mer", BaseType::get(), false, false), k(k)
+    Type("k-mer", BaseType::get(), false, true), k(k)
 {
 	if (k == 0 || k > KMER_MAX_LEN)
 		throw exc::SeqException("k-mer length must be between 1 and " + std::to_string(KMER_MAX_LEN));
@@ -684,5 +684,12 @@ types::KMer *types::KMer::asKMer()
 
 types::KMer *types::KMer::get(unsigned k)
 {
-	return new KMer(k);
+	static std::map<unsigned, KMer *> cache;
+
+	if (cache.find(k) != cache.end())
+		return cache.find(k)->second;
+
+	auto *kmerType = new KMer(k);
+	cache.insert({k, kmerType});
+	return kmerType;
 }
