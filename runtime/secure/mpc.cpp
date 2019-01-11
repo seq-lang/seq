@@ -2570,3 +2570,8 @@ SEQ_FUNC seq_int_t seq_mpc_zz_per_buf(void *mpc, seq_int_t fid)
 {
 	return (seq_int_t)((MPCEnv *)mpc)->ZZ_per_buf[fid];
 }
+
+SEQ_FUNC void *seq_mpc_socket(void *mpc, seq_int_t from_pid)
+{
+	return (void *)&((MPCEnv *)mpc)->sockets.find((int)from_pid)->second;
+}

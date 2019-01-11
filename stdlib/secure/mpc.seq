@@ -1,3 +1,14 @@
+import secure.socket as sock
+import secure.ntl as ntl
+
+def bytes_from_zz(buf: ptr[byte], zz: ntl.ZZ_p, n: int):
+    extern c ZZ_ToBytes(ptr[byte], ptr[byte], int)
+    ZZ_ToBytes(buf, zz.p, n)
+
+def zz_from_bytes(buf: ptr[byte], n: int):
+    extern c ZZ_FromBytes(ptr[byte], int) -> ptr[byte]
+    return ntl.ZZ(ZZ_FromBytes(buf, n))
+
 type MPCEnv(p: ptr[byte])
 extend MPCEnv:
     def __init__(self: MPCEnv, pairs: list[tuple[int,int]], pid: int) -> MPCEnv:
@@ -10,12 +21,26 @@ extend MPCEnv:
 
     def zz_bytes(self: MPCEnv, fid: int):
         extern c seq_mpc_zz_bytes(ptr[byte], int) -> int
-        return seq_mpc_zz_bytes(fid)
+        return seq_mpc_zz_bytes(self.p, fid)
 
     def zz_bits(self: MPCEnv, fid: int):
         extern c seq_mpc_zz_bits(ptr[byte], int) -> int
-        return seq_mpc_zz_bits(fid)
+        return seq_mpc_zz_bits(self.p, fid)
 
     def zz_bytes(self: MPCEnv, fid: int):
         extern c seq_mpc_zz_per_buf(ptr[byte], int) -> int
-        return seq_mpc_zz_per_buf(fid)
+        return seq_mpc_zz_per_buf(self.p, fid)
+
+    def socket(self: MPCEnv, from_pid: int) -> sock.Socket:
+        extern c seq_mpc_socket(ptr[byte], int) -> ptr[byte]
+        return (seq_mpc_socket(self.p, from_pid),)
+
+    def receive_elem(self: MPCEnv, from_pid: int, fid: int):
+        s = self.socket(from_pid)
+        s.receive_secure(self.buf(), self.zz_bytes(fid), 0)
+        return zz_from_bytes(self.buf(), self.zz_bytes(fid))
+
+    def send_elem(self: MPCEnv, zz: ntl.ZZ, to_pid: int, fid: int):
+        s = self.socket(to_pid)
+        bytes_from_zz(self.buf(), zz, self.zz_bytes(fid))
+        s.send_secure(self.buf(), self.zz_bytes(fid), 0)

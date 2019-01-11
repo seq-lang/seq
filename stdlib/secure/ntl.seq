@@ -1,159 +1,159 @@
 
-extern c free(ptr[void])
+extern c free(ptr[byte])
 extern c strlen(ptr[byte]) -> int
 
-class ZZ(p: ptr[void]):
-  def __init__(self: ZZ, p: ptr[void]):
+class ZZ(p: ptr[byte]):
+  def __init__(self: ZZ, p: ptr[byte]):
     self.p = p
   def __init__(self: ZZ, v: int):
-    extern c ZZ_init(int) -> ptr[void]
+    extern c ZZ_init(int) -> ptr[byte]
     self.p = ZZ_init(v)
   def __del__(self: ZZ):
-    extern c ZZ_free(ptr[void])
+    extern c ZZ_free(ptr[byte])
     ZZ_free(self.p)
 
   def __add__(a: ZZ, b: ZZ):
-    extern c ZZ_O_add(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_O_add(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ(ZZ_O_add(a.p, b.p))
   def __sub__(a: ZZ, b: ZZ):
-    extern c ZZ_O_sub(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_O_sub(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ(ZZ_O_sub(a.p, b.p))
   def __mul__(a: ZZ, b: ZZ):
-    extern c ZZ_O_mul(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ(ZZ_O_mul(a.p, b.p))
   def __truediv__(a: ZZ, b: ZZ):
-    extern c ZZ_O_truediv(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ(ZZ_O_truediv(a.p, b.p))
   def __mod__(a: ZZ, b: ZZ):
-    extern c ZZ_O_mod(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_O_mod(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ(ZZ_O_mod(a.p, b.p))
 
   def __eq__(a: ZZ, b: ZZ):
-    extern c ZZ_O_eq(ptr[void], ptr[void]) -> bool
+    extern c ZZ_O_eq(ptr[byte], ptr[byte]) -> bool
     return ZZ_O_eq(a.p, b.p)
   def __ne__(a: ZZ, b: ZZ):
-    extern c ZZ_O_ne(ptr[void], ptr[void]) -> bool
+    extern c ZZ_O_ne(ptr[byte], ptr[byte]) -> bool
     return ZZ_O_ne(a.p, b.p)
   def __lt__(a: ZZ, b: ZZ):
-    extern c ZZ_O_lt(ptr[void], ptr[void]) -> bool
+    extern c ZZ_O_lt(ptr[byte], ptr[byte]) -> bool
     return ZZ_O_lt(a.p, b.p)
   def __le__(a: ZZ, b: ZZ):
-    extern c ZZ_O_le(ptr[void], ptr[void]) -> bool
+    extern c ZZ_O_le(ptr[byte], ptr[byte]) -> bool
     return ZZ_O_le(a.p, b.p)
   def __gt__(a: ZZ, b: ZZ):
-    extern c ZZ_O_gt(ptr[void], ptr[void]) -> bool
+    extern c ZZ_O_gt(ptr[byte], ptr[byte]) -> bool
     return ZZ_O_gt(a.p, b.p)
   def __ge__(a: ZZ, b: ZZ):
-    extern c ZZ_O_ge(ptr[void], ptr[void]) -> bool
+    extern c ZZ_O_ge(ptr[byte], ptr[byte]) -> bool
     return ZZ_O_ge(a.p, b.p)
 
   def __str__(a: ZZ):
-    extern c ZZ_O_str(ptr[void]) -> ptr[byte]
+    extern c ZZ_O_str(ptr[byte]) -> ptr[byte]
     p = ZZ_O_str(a.p)
     return str(p, strlen(p))
 
 
-class ZZ_p(p: ptr[void]):
-  def __init__(self: ZZ_p, p: ptr[void]):
+class ZZ_p(p: ptr[byte]):
+  def __init__(self: ZZ_p, p: ptr[byte]):
     self.p = p
   def __init__(self: ZZ_p, v: int):
-    extern c ZZ_p_init(int) -> ptr[void]
+    extern c ZZ_p_init(int) -> ptr[byte]
     self.p = ZZ_p_init(v)
   def __del__(self: ZZ_p):
-    extern c ZZ_p_free(ptr[void])
+    extern c ZZ_p_free(ptr[byte])
     ZZ_p_free(self.p)
 
   def __add__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_add(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_p_O_add(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ_p(ZZ_p_O_add(a.p, b.p))
   def __sub__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_sub(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_p_O_sub(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ_p(ZZ_p_O_sub(a.p, b.p))
   def __mul__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_mul(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_p_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ_p(ZZ_p_O_mul(a.p, b.p))
   def __truediv__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_truediv(ptr[void], ptr[void]) -> ptr[void]
+    extern c ZZ_p_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
     return ZZ_p(ZZ_p_O_truediv(a.p, b.p))
 
   def __eq__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_eq(ptr[void], ptr[void]) -> bool
+    extern c ZZ_p_O_eq(ptr[byte], ptr[byte]) -> bool
     return ZZ_p_O_eq(a.p, b.p)
   def __ne__(a: ZZ_p, b: ZZ_p):
-    extern c ZZ_p_O_ne(ptr[void], ptr[void]) -> bool
+    extern c ZZ_p_O_ne(ptr[byte], ptr[byte]) -> bool
     return ZZ_p_O_ne(a.p, b.p)
 
   def __str__(a: ZZ):
-    extern c ZZ_p_O_str(ptr[void]) -> ptr[byte]
+    extern c ZZ_p_O_str(ptr[byte]) -> ptr[byte]
     p = ZZ_p_O_str(a.p)
     return str(p, strlen(p))
 
   def init(a: ZZ):
-    extern c ZZ_p_init_p(ptr[void])
+    extern c ZZ_p_init_p(ptr[byte])
     ZZ_p_init_p(a.p)
   def modulus():
-    extern c ZZ_p_modulus() -> ptr[void]
+    extern c ZZ_p_modulus() -> ptr[byte]
     return ZZ(ZZ_p_modulus())
 
 
 
 
-class VecZZ(p: ptr[void]):
+class VecZZ(p: ptr[byte]):
   def __init__(self: VecZZ):
-    extern c VecZZ_init() -> ptr[void]
+    extern c VecZZ_init() -> ptr[byte]
     self.p = VecZZ_init()
   def __del__(self: VecZZ):
-    extern c VecZZ_free(ptr[void])
+    extern c VecZZ_free(ptr[byte])
     VecZZ_free(self.p)
 
   def __eq__(a: VecZZ, b: VecZZ):
-    extern c VecZZ_O_eq(ptr[void], ptr[void]) -> bool
+    extern c VecZZ_O_eq(ptr[byte], ptr[byte]) -> bool
     return VecZZ_O_eq(a.p, b.p)
   def __ne__(a: VecZZ, b: VecZZ):
-    extern c VecZZ_O_ne(ptr[void], ptr[void]) -> bool
+    extern c VecZZ_O_ne(ptr[byte], ptr[byte]) -> bool
     return VecZZ_O_ne(a.p, b.p)
 
   def __getitem__(a: VecZZ, b: int):
-    extern c VecZZ_O_getitem(ptr[void], int) -> ptr[void]
+    extern c VecZZ_O_getitem(ptr[byte], int) -> ptr[byte]
     return ZZ(VecZZ_O_getitem(a.p, b.p))
   def __setitem__(a: VecZZ, b: int, z: ZZ):
-    extern c VecZZ_O_setitem(ptr[void], int, ptr[void]) -> void
+    extern c VecZZ_O_setitem(ptr[byte], int, ptr[byte]) -> void
     VecZZ_O_setitem(a.p, b, z.p)
 
   def length(a: VecZZ):
-    extern c VecZZ_length(ptr[void]) -> int
+    extern c VecZZ_length(ptr[byte]) -> int
     return VecZZ_length(a.p)
   def setLength(a: VecZZ, b: int):
-    extern c VecZZ_SetLength(ptr[void], b: int) -> void
+    extern c VecZZ_SetLength(ptr[byte], b: int) -> void
     VecZZ_SetLength(a.p, b)
 
 
-class VecZZ_p(p: ptr[void]):
+class VecZZ_p(p: ptr[byte]):
   def __init__(self: VecZZ_p):
-    extern c VecZZ_p_init() -> ptr[void]
+    extern c VecZZ_p_init() -> ptr[byte]
     self.p = VecZZ_p_init()
   def __del__(self: VecZZ_p):
-    extern c VecZZ_p_free(ptr[void])
+    extern c VecZZ_p_free(ptr[byte])
     VecZZ_p_free(self.p)
 
   def __eq__(a: VecZZ_p, b: VecZZ_p):
-    extern c VecZZ_p_O_eq(ptr[void], ptr[void]) -> bool
+    extern c VecZZ_p_O_eq(ptr[byte], ptr[byte]) -> bool
     return VecZZ_p_O_eq(a.p, b.p)
   def __ne__(a: VecZZ_p, b: VecZZ_p):
-    extern c VecZZ_p_O_ne(ptr[void], ptr[void]) -> bool
+    extern c VecZZ_p_O_ne(ptr[byte], ptr[byte]) -> bool
     return VecZZ_p_O_ne(a.p, b.p)
 
   def __getitem__(a: VecZZ_p, b: int):
-    extern c VecZZ_p_O_getitem(ptr[void], int) -> ptr[void]
+    extern c VecZZ_p_O_getitem(ptr[byte], int) -> ptr[byte]
     return ZZ_p(VecZZ_p_O_getitem(a.p, b.p))
   def __setitem__(a: VecZZ_p, b: int, z: ZZ_p):
-    extern c VecZZ_p_O_setitem(ptr[void], int, ptr[void]) -> void
+    extern c VecZZ_p_O_setitem(ptr[byte], int, ptr[byte]) -> void
     VecZZ_p_O_setitem(a.p, b, z.p)
 
   def length(a: VecZZ_p):
-    extern c VecZZ_p_length(ptr[void]) -> int
+    extern c VecZZ_p_length(ptr[byte]) -> int
     return VecZZ_p_length(a.p)
   def setLength(a: VecZZ_p, b: int):
-    extern c VecZZ_p_SetLength(ptr[void], b: int) -> void
+    extern c VecZZ_p_SetLength(ptr[byte], b: int) -> void
     VecZZ_p_SetLength(a.p, b)
 
