@@ -229,6 +229,10 @@ struct
       let indices = List.map indices ~f:(parse_type ctx) in
       let ret, args = List.hd_exn indices, List.tl_exn indices in
       Llvm.Expr.typ @@ Llvm.Type.func ret args
+    | Id "tuple", _ ->
+      let indices = List.map indices ~f:(parse_type ctx) in
+      let names = List.map indices ~f:(fun _ -> "") in
+      Llvm.Expr.typ @@ Llvm.Type.record names indices ""
     | _ -> 
       let lh_expr = parse ctx lh_expr in
       let indices = List.map indices ~f:(parse ctx) in

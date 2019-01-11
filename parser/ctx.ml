@@ -128,8 +128,9 @@ let init_module ?(argv = true) ~filename ~mdl ~base ~block parser =
         Llvm.Block.add_stmt ctx.block stmt;
         add ctx ~internal ~global ~toplevel 
           "__cp__" @@ Namespace.Var (Llvm.Var.stmt stmt)
-      | _ -> 
+      | Some _ -> 
         failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
+      | None -> ()
     end;
 
     begin match Util.get_from_stdlib "stdlib" with
