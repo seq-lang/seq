@@ -75,6 +75,7 @@ let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
 
 let stringprefix = ('s' | 'S')? ('r' | 'R')?
+let intsuffix = ('s' | 'S')
 
 let ident = alpha alphanum*
 
@@ -231,11 +232,20 @@ and read state = parse
   | "/"   as op { P.DIV    (cur_pos state lexbuf, Char.to_string op) }
   | "%"   as op { P.MOD    (cur_pos state lexbuf, Char.to_string op) }
 
-  | int as i   
-    { P.INT   (cur_pos state lexbuf ~len:(String.length i), int_of_string i) }   
-  | float as f 
-    { P.FLOAT (cur_pos state lexbuf ~len:(String.length f), float_of_string f) }
-  
+  | int as i
+    { P.INT (cur_pos state lexbuf ~len:(String.length i),
+        int_of_string i) }
+  | float as f
+    { P.FLOAT (cur_pos state lexbuf ~len:(String.length f),
+        float_of_string f) }
+
+  | (int as i) (intsuffix as k)
+    { P.INT_S (cur_pos state lexbuf ~len:(String.length i),
+        (int_of_string i, Char.to_string k)) }
+  | (float as f) (intsuffix as k)
+    { P.FLOAT_S (cur_pos state lexbuf ~len:(String.length f),
+        (float_of_string f, Char.to_string k)) }
+
   | eof { P.EOF (cur_pos state lexbuf) }
   | _ {
     let tok = L.lexeme lexbuf in

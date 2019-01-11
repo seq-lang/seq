@@ -19,11 +19,13 @@ type t =
 let init () : t =
   try 
     let anon_fn = Llvm.Func.func "<anon_init>" in
-    let ctx = Ctx.init "<jit>"
+    let ctx = Ctx.init_module 
       ~argv:false
-      (Llvm.JIT.init ())
-      anon_fn (Llvm.Block.func anon_fn)
-      Parser.parse_file 
+      ~filename: "<jit>"
+      ~mdl:(Llvm.JIT.init ())
+      ~base:anon_fn 
+      ~block:(Llvm.Block.func anon_fn)
+      Parser.parse_file
     in
     let jit = { cnt = 1; ctx } in
     (* load stdlib *)
