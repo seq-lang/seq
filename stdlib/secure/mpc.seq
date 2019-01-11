@@ -1,0 +1,21 @@
+type MPCEnv(p: ptr[byte])
+extend MPCEnv:
+    def __init__(self: MPCEnv, pairs: list[tuple[int,int]], pid: int) -> MPCEnv:
+        extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
+        return (seq_mpc_new(pid, array[tuple[int,int]](pairs.array.ptr, pairs.len)),)
+
+    def buf(self: MPCEnv):
+        extern c seq_mpc_get_buf(ptr[byte]) -> ptr[byte]
+        return seq_mpc_get_buf(self.p)
+
+    def zz_bytes(self: MPCEnv, fid: int):
+        extern c seq_mpc_zz_bytes(ptr[byte], int) -> int
+        return seq_mpc_zz_bytes(fid)
+
+    def zz_bits(self: MPCEnv, fid: int):
+        extern c seq_mpc_zz_bits(ptr[byte], int) -> int
+        return seq_mpc_zz_bits(fid)
+
+    def zz_bytes(self: MPCEnv, fid: int):
+        extern c seq_mpc_zz_per_buf(ptr[byte], int) -> int
+        return seq_mpc_zz_per_buf(fid)
