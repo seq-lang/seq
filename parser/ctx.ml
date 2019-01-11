@@ -118,15 +118,16 @@ let init_module ?(argv = true) ~filename ~mdl ~base ~block parser =
     end;
 
     (* set __cp__ *)
-    let cp = Option.value (Sys.getenv "SEQ_MPC_CP") ~default:"0" in
-    begin match int_of_string cp with 
-      | (0 | 1 | 2) as cp ->
+    let cp = Option.map ~f:int_of_string @@ Sys.getenv "SEQ_MPC_CP" in
+    begin match cp with
+      | Some ((0 | 1 | 2) as cp) ->
+        Util.dbg "cp is %d" cp;
         let value = Llvm.Expr.int cp in
         let stmt = Llvm.Stmt.var value in
         Llvm.Stmt.set_base stmt ctx.base;
         Llvm.Block.add_stmt ctx.block stmt;
         add ctx ~internal ~global ~toplevel 
-          "__cp__" (Namespace.Var (Llvm.Var.stmt stmt))
+          "__cp__" @@ Namespace.Var (Llvm.Var.stmt stmt)
       | _ -> 
         failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
     end;

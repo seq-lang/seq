@@ -117,20 +117,20 @@ struct
     match lhs with
     | pos, Id var ->
       begin match Hashtbl.find ctx.map var with
-      | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
-        when (not shadow) 
-          && (global || (ctx.base = base)) ->
-        Llvm.Stmt.assign v rh_expr
-      | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
-        serr ~pos "cannot assign functions or types"
-      | _ when jit && toplevel ->
-        let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
-        Ctx.add ctx ~toplevel ~global:true var v;
-        Llvm.Stmt.pass ()
-      | _ ->
-        let var_stmt = Llvm.Stmt.var rh_expr in
-        Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
-        var_stmt
+        | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
+          when (not shadow) 
+            && (global || (ctx.base = base)) ->
+          Llvm.Stmt.assign v rh_expr
+        | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
+          serr ~pos "cannot assign functions or types"
+        | _ when jit && toplevel ->
+          let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
+          Ctx.add ctx ~toplevel ~global:true var v;
+          Llvm.Stmt.pass ()
+        | _ ->
+          let var_stmt = Llvm.Stmt.var rh_expr in
+          Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
+          var_stmt
       end
     | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)
       Llvm.Stmt.assign_member (E.parse ctx lh_lhs) lh_rhs rh_expr
