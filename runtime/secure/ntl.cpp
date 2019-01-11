@@ -37,6 +37,15 @@ EX bool ZZ_O_ge (ZZ* a, ZZ* b) { return ((*a) >= (*b)); }
 
 EX char* ZZ_O_str (ZZ* a) { return to_string(*a); }
 
+EX ZZ* ZZ_FromBytes (const unsigned char *c, int n) { return new ZZ(ZZFromBytes(c, n)); }
+EX int ZZ_ToBytes   (ZZ *z, unsigned char **c) 
+{ 
+    long n = NumBytes(*z);
+    *c = new unsigned char[n + 1];
+    BytesFromZZ(*c, *z, n); 
+    return n;
+}
+
 /****************** ZZ_p ******************/
 
 EX ZZ_p* ZZ_p_init (int val) { return new ZZ_p(val); }
