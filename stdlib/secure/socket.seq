@@ -76,7 +76,7 @@ extend Socket:
         extern c seq_socket_set_key(ptr[byte], str) -> bool
         return seq_socket_set_key(self.p, keyfile)
 
-def _connect(socket: Socket, ip: str, port: int):
+def connect(socket: Socket, ip: str, port: int):
     extern c seq_usleep(int)
     RETRY_CONNECT = 100
     TIMEOUT_MS = 10000
@@ -95,8 +95,8 @@ def _connect(socket: Socket, ip: str, port: int):
 
     return success
 
-def _connect_local(socket: Socket, port: int):
-    return _connect(socket, "127.0.0.1", port)
+def connect_local(socket: Socket, port: int):
+    return connect(socket, "127.0.0.1", port)
 
 def listen(socket: Socket, port: int):
     if not socket.socket():
