@@ -2095,12 +2095,21 @@ static Value *codegenPipe(BaseFunc *base,
 		IRBuilder<> builder(block);
 
 		BasicBlock *loop = BasicBlock::Create(context, "pipe", func);
+		BasicBlock *loop0 = loop;
 		builder.CreateBr(loop);
 
-		builder.SetInsertPoint(loop);
-		genType->resume(gen, loop);
+		if (tc) {
+			BasicBlock *normal = BasicBlock::Create(context, "normal", func);
+			BasicBlock *unwind = tc->getExceptionBlock();
+			genType->resume(gen, loop, normal, unwind);
+			loop = normal;
+		} else {
+			genType->resume(gen, loop, nullptr, nullptr);
+		}
+
 		Value *cond = genType->done(gen, loop);
 		BasicBlock *body = BasicBlock::Create(context, "body", func);
+		builder.SetInsertPoint(loop);
 		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set true-branch below
 
 		block = body;
@@ -2110,7 +2119,7 @@ static Value *codegenPipe(BaseFunc *base,
 		codegenPipe(base, val, type, block, stages, tc);
 
 		builder.SetInsertPoint(block);
-		builder.CreateBr(loop);
+		builder.CreateBr(loop0);
 
 		BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
 		branch->setSuccessor(0, cleanup);
