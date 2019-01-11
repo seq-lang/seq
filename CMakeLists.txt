@@ -37,12 +37,20 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/secure/aes.h
                          runtime/secure/aesstream.cpp
                          runtime/secure/aesstream.h
+                         runtime/secure/connect.cpp
+                         runtime/secure/connect.h
                          runtime/secure/crypto.cpp
                          runtime/secure/crypto.h
                          runtime/secure/errors.h
+                         runtime/secure/mpc.cpp
+                         runtime/secure/mpc.h
                          runtime/secure/ntl.cpp
+                         runtime/secure/param.h
+                         runtime/secure/param.cpp
+                         runtime/secure/primes.h
                          runtime/secure/socket.cpp
-                         runtime/secure/socket.h)
+                         runtime/secure/socket.h
+                         runtime/secure/util.h)
 target_link_libraries(seqrt gc crypto gmp ntl OpenSSL::SSL)
 target_include_directories(seqrt PRIVATE ntl/include/)
 
