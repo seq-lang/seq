@@ -52,3 +52,6 @@ extend MPCEnv:
     def restore_seed(self: MPCEnv):
         extern c seq_mpc_switch_seed(ptr[byte])
         seq_mpc_switch_seed()
+
+    def rand_elem(self: MPCEnv):
+        return ntl.ZZ_p.random()

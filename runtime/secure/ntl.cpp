@@ -58,6 +58,8 @@ SEQ_FUNC ZZ*  ZZ_p_modulus (void)  { return new ZZ(ZZ_p::modulus()); }
 
 SEQ_FUNC char* ZZ_p_O_str (ZZ_p* a) { return to_string(*a); }
 
+SEQ_FUNC ZZ_p* ZZ_p_rand() { auto *z = new ZZ_p(); random(*z); return z; }
+
 /****************** VecZZ ******************/
 
 SEQ_FUNC VecZZ* VecZZ_init (void)     { return new VecZZ(); }
