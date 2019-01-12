@@ -1,13 +1,23 @@
 
-import secure.mpc as mpc
-import secure.ntl as ntl
+from secure.mpc import MPCEnv
+from secure.ntl import ZZ
 
 #extend list:
 #    def __mod__: # per element
     # needs elem +, *
     # needs sendElem
 
-class Manager[`t](env: mpc.MPCEnv):
+extend list:
+    def __mod__(self, y):
+        return [i % y for i in self]
+
+    def __add__(self, y):
+        return [i + y for i in self]
+
+    def __mul__(self, y):
+        return [i + y for i in self]
+
+class Manager[`t](env: MPCEnv):
 # TODO:
     def rand_elem(self, fid) -> `t: 
         pass
@@ -78,7 +88,8 @@ class Manager[`t](env: mpc.MPCEnv):
                 ambm = self.cp_rand(0, fid)
                 return self.mod(ab + ambm, fid)
 
-class SInt(share: ntl.ZZ, M: Manager[ntl.ZZ]):
+# template over list[ZZ] as well
+class SInt(share: ZZ, M: Manager[ZZ]):
     # Protocol 3
     def __add__(x: SInt, y: SInt):
         return x.share + y.share
