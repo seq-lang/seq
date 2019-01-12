@@ -126,6 +126,7 @@ let init_module ?(argv = true) ~filename ~mdl ~base ~block parser =
         let stmt = Llvm.Stmt.var value in
         Llvm.Stmt.set_base stmt ctx.base;
         Llvm.Block.add_stmt ctx.block stmt;
+        Llvm.Stmt.resolve stmt;
         add ctx ~internal ~global ~toplevel 
           "__cp__" @@ Namespace.Var (Llvm.Var.stmt stmt)
       | Some _ -> 

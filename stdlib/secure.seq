@@ -1,46 +1,21 @@
 
 from secure.mpc import MPCEnv
-from secure.ntl import ZZ
-
-#extend list:
-#    def __mod__: # per element
-    # needs elem +, *
-    # needs sendElem
-
-extend list:
-    def __mod__(self, y):
-        return [i % y for i in self]
-
-    def __add__(self, y):
-        return [i + y for i in self]
-
-    def __mul__(self, y):
-        return [i + y for i in self]
+from secure.ntl import ZZ, ZZ_p
 
 class Manager[`t](env: MPCEnv):
 # TODO:
-    def rand_elem(self, fid) -> `t:
-        pass
-        # return ZZ/vec/etc...
     def prime(fid) -> int:
         pass
         # return primes[fid]
-    def switch_seed(self, pid):
-        pass
-        #prg.find(cur_prg_pid)->second = GetCurrentRandomStream();
-        #SetSeed(prg.find(pid)->second);
-        #cur_prg_pid = pid;
-    def restore_seed(self):
-        self.switch_seed(__cp__)
 
 # FINISHED
     def mod(self, x: `t, fid) -> `t:
         return x % self.prime(fid)
 
     def cp_rand(self, i: int, fid) -> `t:
-        self.switch_seed(i)
-        x = self.rand_elem(fid)
-        self.restore_seed()
+        self.env.switch_seed(i)
+        x = self.env.rand_elem()
+        self.switch_seed(__cp__)
         return x
 
     def reveal(self, a: `t, fid) -> `t:
@@ -89,7 +64,7 @@ class Manager[`t](env: MPCEnv):
                 return self.mod(ab + ambm, fid)
 
 # template over list[ZZ] as well
-class SInt(share: ZZ, M: Manager[ZZ]):
+class SInt(share: ZZ):
     # Protocol 3
     def __add__(x: SInt, y: SInt):
         return x.share + y.share
@@ -107,7 +82,7 @@ class SInt(share: ZZ, M: Manager[ZZ]):
 
     # Protocol 7
     def __mul__(a: SInt, b: SInt, fid):
-        ar, am = self.M.beaver_partition(a.share, fid)
-        br, bm = self.M.beaver_partition(b.share, fid)
-        c = self.M.beaver_mult_elem(ar, am, br, bm, fid)
-        return SInt(self.M.beaver_reconstruct(c, fid), self.M)
+        ar, am = __mpc_env__.beaver_partition(a.share, fid)
+        br, bm = __mpc_env__.beaver_partition(b.share, fid)
+        c = __mpc_env__.beaver_mult_elem(ar, am, br, bm, fid)
+        return SInt(__mpc_env__.beaver_reconstruct(c, fid), self.M)

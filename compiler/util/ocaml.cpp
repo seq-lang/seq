@@ -476,6 +476,11 @@ FOREIGN void set_func_yield(Func *f, Yield *ret)
 	f->sawYield(ret);
 }
 
+FOREIGN void resolve_types (Stmt *s)
+{
+	s->resolveTypes();
+}
+
 FOREIGN void set_func_params(Func *f, char **names, types::Type **types, size_t len)
 {
 	vector<string> s;
