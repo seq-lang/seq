@@ -19,7 +19,7 @@ extend list:
 
 class Manager[`t](env: MPCEnv):
 # TODO:
-    def rand_elem(self, fid) -> `t: 
+    def rand_elem(self, fid) -> `t:
         pass
         # return ZZ/vec/etc...
     def prime(fid) -> int:
@@ -47,7 +47,7 @@ class Manager[`t](env: MPCEnv):
         b = `t()
         next_cp = 3 - __cp__
         match __cp__:
-            case 0: 
+            case 0:
                 return
             case 1:
                 self.env.send_elem(a, next_cp, fid)

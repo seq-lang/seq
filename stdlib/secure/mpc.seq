@@ -44,3 +44,11 @@ extend MPCEnv:
         s = self.socket(to_pid)
         bytes_from_zz(self.buf(), zz, self.zz_bytes(fid))
         s.send_secure(self.buf(), self.zz_bytes(fid), 0)
+
+    def switch_seed(self: MPCEnv, pid: int):
+        extern c seq_mpc_switch_seed(ptr[byte], int)
+        seq_mpc_switch_seed(pid)
+
+    def restore_seed(self: MPCEnv):
+        extern c seq_mpc_switch_seed(ptr[byte])
+        seq_mpc_switch_seed()

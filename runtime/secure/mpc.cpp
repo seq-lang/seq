@@ -2575,3 +2575,13 @@ SEQ_FUNC void *seq_mpc_socket(void *mpc, seq_int_t from_pid)
 {
 	return (void *)&((MPCEnv *)mpc)->sockets.find((int)from_pid)->second;
 }
+
+SEQ_FUNC void seq_mpc_switch_seed(void *mpc, seq_int_t pid)
+{
+	((MPCEnv *)mpc)->SwitchSeed((int)pid);
+}
+
+SEQ_FUNC void seq_mpc_restore_seed(void *mpc)
+{
+	((MPCEnv *)mpc)->RestoreSeed();
+}
