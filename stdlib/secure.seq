@@ -1,56 +1,102 @@
 
-class ss:
+import secure.mpc as mpc
+import secure.ntl as ntl
 
-class manager():
-    def sample(self: manager):
-        # _foo_ 
+#extend list:
+#    def __mod__: # per element
+    # needs elem +, *
+    # needs sendElem
 
-    def other(cp):
-        return 1 if cp == 2 else 2
+class Manager[`t](env: mpc.MPCEnv):
+# TODO:
+    def rand_elem(self, fid) -> `t: 
+        pass
+        # return ZZ/vec/etc...
+    def prime(fid) -> int:
+        pass
+        # return primes[fid]
+    def switch_seed(self, pid):
+        pass
+        #prg.find(cur_prg_pid)->second = GetCurrentRandomStream();
+        #SetSeed(prg.find(pid)->second);
+        #cur_prg_pid = pid;
+    def restore_seed(self):
+        self.switch_seed(__cp__)
 
-    # Protocol 1: called from SP/CP0
-    def share(self: manager, x: int, cp):
-        r = self.sample()
-        if cp == 1:
-            return sint(r, self)
-        elif cp == 2:
-            return sint(x - r, self)
+# FINISHED
+    def mod(self, x: `t, fid) -> `t:
+        return x % self.prime(fid)
 
-    # Protocol 2
-    def get(self: manager, x: sint, cp):
-        self.send(x.share, other(cp))
-        # How to do this properly?
-        self.expect(lambda z: x.share + y)
+    def cp_rand(self, i: int, fid) -> `t:
+        self.switch_seed(i)
+        x = self.rand_elem(fid)
+        self.restore_seed()
+        return x
 
-    # Protocol 6
-    def triple(self: manager, cp):
-        A, B = self.sample(), self.sample()
-        @parallel:
-            a = self.share(A, cp)
-            b = self.share(B, cp)
-            c = self.share(A * B, cp)
-        return (a, b, c)
+    def reveal(self, a: `t, fid) -> `t:
+        b = `t()
+        next_cp = 3 - __cp__
+        match __cp__:
+            case 0: 
+                return
+            case 1:
+                self.env.send_elem(a, next_cp, fid)
+                b = self.env.receive_elem(next_cp, fid)
+            case 2:
+                b = self.env.receive_elem(next_cp, fid)
+                self.env.send_elem(a, next_cp, fid)
+        return self.mod(a + b, fid)
 
-class sint(share: int, M: manager):
+    def beaver_partition(self, a: `t, fid) -> tuple[`t, `t]:
+        if __cp__ == 0:
+            am = self.mod(sum(self.cp_rand(i, fid) for i in (1, 2)), fid)
+            return (`t(), am)
+        else:
+            am = self.cp_rand(0, fid)
+            ar = self.reveal(self.mod(a - am, fid), fid)
+            return (ar, am)
+
+    def beaver_mult(self, ar: `t, am: `t, br: `t, bm: `t, fid) -> `t:
+        match __cp__:
+            case 0:
+                return self.mod(am * bm, fid)
+            case 1:
+                return self.mod(ar * bm + am * br + ar * br, fid)
+            case 2:
+                return self.mod(ar * bm + am * br, fid)
+
+    def beaver_reconstruct(self, ab: `t, fid) -> `t:
+        match __cp__:
+            case 0:
+                ab -= self.cp_rand(1)
+                self.env.send_elem(self.mod(ab, fid), 2, fid)
+                return ab
+            case 1:
+                ambm = self.env.receive_elem(0, fid)
+                return self.mod(ab + ambm, fid)
+            case 2:
+                ambm = self.cp_rand(0, fid)
+                return self.mod(ab + ambm, fid)
+
+class SInt(share: ntl.ZZ, M: Manager[ntl.ZZ]):
     # Protocol 3
-    def __add__(x: sint, y: sint, cp):
+    def __add__(x: SInt, y: SInt):
         return x.share + y.share
 
     # Protocol 4
-    def __add__(x: sint, y: int, cp):
-        if cp == 1:
+    def __add__(x: SInt, y: int):
+        if __cp__ == 1:
             return x.share + y
         else:
             return x.share
 
     # Protocol 5
-    def __mul__(x: sint, y: int, cp):
+    def __mul__(x: SInt, y: int):
         return x.share * y
 
     # Protocol 7
-    def __mul__(x: sint, y: sint, cp):
-        a, b, c = M.triple()
-        @parallel:
-            x_a = M.get(x - a)
-            y_b = M.get(y - b)
-        return x_a * y_b + x_a * b.share + y_b * a.share + c.share
+    def __mul__(a: SInt, b: SInt, fid):
+        ar, am = self.M.beaver_partition(a.share, fid)
+        br, bm = self.M.beaver_partition(b.share, fid)
+        c = self.M.beaver_mult_elem(ar, am, br, bm, fid)
+        return SInt(self.M.beaver_reconstruct(c, fid), self.M)

@@ -37,6 +37,12 @@ def abs(x):
 def hash(x):
     return x.__hash__()
 
+def sum[`t](x) -> `t:
+    s = `t()
+    for i in iter(x):
+        s += i
+    return s
+
 def any(x):
     for a in x:
         if a:

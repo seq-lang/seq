@@ -85,13 +85,21 @@ struct
   and parse_bool _ _ b =
     Llvm.Expr.bool b
 
-  and parse_int _ _ ?(kind="") i = 
+  and parse_int ctx _ ?(kind="") i = 
     let i = Llvm.Expr.int i in
-    i
+    match kind with 
+    | ("s" | "S") ->
+      let t = get_internal_type ctx "SInt" in
+      Llvm.Expr.construct t [i]
+    | _ -> i
 
-  and parse_float _ _ ?(kind="") f = 
+  and parse_float ctx _ ?(kind="") f = 
     let f = Llvm.Expr.float f in
-    f
+    match kind with 
+    | ("s" | "S") ->
+      let t = get_internal_type ctx "SFloat" in
+      Llvm.Expr.construct t [f]
+    | _ -> f
 
   and parse_str _ _ s = 
     Llvm.Expr.str s
