@@ -345,7 +345,7 @@ struct
         | Some t -> t
         | None ->
           let new_ctx = Ctx.init_empty ctx in
-          new_ctx.parser new_ctx file;
+          Ctx.parse_file new_ctx file;
 
           let map = Hashtbl.filteri new_ctx.map ~f:(fun ~key ~data ->
             match data with
@@ -404,7 +404,7 @@ struct
   and parse_impaste ctx pos ?(ext=".seq") from =
     match Util.get_from_stdlib ~ext from with
     | Some file -> 
-      ctx.parser ctx file;
+      Ctx.parse_file ctx file;
       Llvm.Stmt.pass ()
     | None -> 
       serr ~pos "cannot locate module %s" from

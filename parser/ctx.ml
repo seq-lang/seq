@@ -58,7 +58,7 @@ type t =
 
     (** function that parses a file within current context 
         (used for processing [import] statements) *)
-    parser: (t -> string -> unit) }
+    parser: (t -> ?file: string -> string -> unit) }
 
 (** [add_block context] pushed a new block to context stack *)
 let add_block ctx = 
@@ -77,9 +77,24 @@ let add (ctx: t) ?(toplevel=false) ?(global=false) ?(internal=false) key var =
   end;
   Hash_set.add (Stack.top_exn ctx.stack) key
 
+(** [in_scope context name] checks is a variable [name] present 
+    in the current scope and returns it if so *)
+let in_scope ctx key =
+  match Hashtbl.find ctx.map key with
+  | Some (hd :: _) -> Some hd
+  | _ -> None
+
+(** [parse_file ~debug context file] parses a file [file] as a module 
+    and returns parsed module AST. *)
+let parse_file ctx file =
+  Util.dbg "parsing %s" file;
+  let lines = In_channel.read_lines file in
+  let code = (String.concat ~sep:"\n" lines) ^ "\n" in
+  ctx.parser ~file:(Filename.realpath file) ctx code
+
 (** [init ...] initializes an empty context with toplevel block
     and adds internal POD types to the namespace *)
-let init_module ?(argv = true) ~filename ~mdl ~base ~block parser = 
+let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser = 
   let ctx = 
     { filename; mdl; base; block; parser;
       stack = Stack.create ();
@@ -117,29 +132,41 @@ let init_module ?(argv = true) ~filename ~mdl ~base ~block parser =
         "__argv__" (Namespace.Var args)
     end;
 
-    (* set __cp__ *)
-    let cp = Option.map ~f:int_of_string @@ Sys.getenv "SEQ_MPC_CP" in
-    begin match cp with
-      | Some ((0 | 1 | 2) as cp) ->
-        Util.dbg "cp is %d" cp;
-        let value = Llvm.Expr.int cp in
-        let stmt = Llvm.Stmt.var value in
-        Llvm.Stmt.set_base stmt ctx.base;
-        Llvm.Block.add_stmt ctx.block stmt;
-        Llvm.Stmt.resolve stmt;
-        add ctx ~internal ~global ~toplevel 
-          "__cp__" @@ Namespace.Var (Llvm.Var.stmt stmt)
-      | Some _ -> 
-        failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
-      | None -> ()
-    end;
-
     begin match Util.get_from_stdlib "stdlib" with
     | Some file ->
-      ctx.parser ctx file
+      parse_file ctx file
     | None ->
       failwith "cannot locate stdlib.seq"
     end;
+
+    (* set __cp__ *)
+    if not jit then begin
+      let cp = Option.map ~f:int_of_string @@ Sys.getenv "SEQ_MPC_CP" in
+      begin match cp with
+        | Some ((0 | 1 | 2) as cp) ->
+          Util.dbg "cp is %d" cp;
+          let value = Llvm.Expr.int cp in
+          let stmt = Llvm.Stmt.var value in
+          Llvm.Stmt.set_base stmt ctx.base;
+          Llvm.Block.add_stmt ctx.block stmt;
+          Llvm.Stmt.resolve stmt;
+          let var = Llvm.Var.stmt stmt in
+          Llvm.Var.set_global var;
+          add ctx ~internal ~global ~toplevel 
+            "__cp__" @@ Namespace.Var var
+        | Some _ -> 
+          failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
+        | None -> ()
+      end;
+
+      ctx.parser ~file:"<mpc>" ctx 
+        ("import secure.mpc as __mpc__\n" ^
+         "__mpc_env__ = __mpc__.MPCEnv([(0,1),(0,2),(1,2)], __cp__)");
+      match in_scope ctx "__mpc_env__" with
+      | Some (Namespace.Var var, _) ->
+        Llvm.Var.set_global var
+      | _ -> failwith "cannot initialize __mpc_env__"
+    end
   end;
   Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
     add ctx ~internal ~global ~toplevel 
@@ -171,13 +198,6 @@ let clear_block ctx =
       Hashtbl.set ctx.map ~key ~data:items
     | Some [] | None ->
       failwith (sprintf "can't find context variable %s" key))
-
-(** [in_scope context name] checks is a variable [name] present 
-    in the current scope and returns it if so *)
-let in_scope ctx key =
-  match Hashtbl.find ctx.map key with
-  | Some (hd :: _) -> Some hd
-  | _ -> None
 
 (** [in_block context name] checks is a variable [name] present 
     in the current block and returns it if so *)

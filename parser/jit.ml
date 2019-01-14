@@ -25,7 +25,8 @@ let init () : t =
       ~mdl:(Llvm.JIT.init ())
       ~base:anon_fn 
       ~block:(Llvm.Block.func anon_fn)
-      Parser.parse_file
+      ~jit:true
+      (Parser.parse_string ~debug:false ~jit:true)
     in
     let jit = { cnt = 1; ctx } in
     (* load stdlib *)
