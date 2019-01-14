@@ -21,7 +21,7 @@ class ZZ(p: ptr[byte]):
     def __mul__(a: ZZ, b: ZZ):
         extern c ZZ_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
         return ZZ(ZZ_O_mul(a.p, b.p))
-    def __truediv__(a: ZZ, b: ZZ):
+    def __div__(a: ZZ, b: ZZ):
         extern c ZZ_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
         return ZZ(ZZ_O_truediv(a.p, b.p))
     def __mod__(a: ZZ, b: ZZ):
@@ -71,7 +71,7 @@ class ZZ_p(p: ptr[byte]):
     def __mul__(a: ZZ_p, b: ZZ_p):
         extern c ZZ_p_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
         return ZZ_p(ZZ_p_O_mul(a.p, b.p))
-    def __truediv__(a: ZZ_p, b: ZZ_p):
+    def __div__(a: ZZ_p, b: ZZ_p):
         extern c ZZ_p_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
         return ZZ_p(ZZ_p_O_truediv(a.p, b.p))
 
@@ -97,6 +97,14 @@ class ZZ_p(p: ptr[byte]):
     def random():
         extern c ZZ_p_rand() -> ptr[byte]
         return ZZ_p(ZZ_p_rand())
+
+def zz2zzp(x: ZZ):
+    extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
+    return ZZ_p(ZZ_to_ZZ_p(x.p))
+
+def zzp2zz(x: ZZ_p):
+    extern c ZZ_p_to_ZZ(ptr[byte]) -> ptr[byte]
+    return ZZ(ZZ_p_to_ZZ(x.p))
 
 class VecZZ(p: ptr[byte]):
     def __init__(self: VecZZ):

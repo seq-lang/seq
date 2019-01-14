@@ -1,4 +1,3 @@
-
 from secure.mpc import MPCEnv
 from secure.ntl import ZZ, ZZ_p
 
@@ -30,6 +29,8 @@ class Manager[`t](env: MPCEnv):
             case 2:
                 b = self.env.receive_elem(next_cp, fid)
                 self.env.send_elem(a, next_cp, fid)
+            default:
+                assert False
         return self.mod(a + b, fid)
 
     def beaver_partition(self, a: `t, fid) -> tuple[`t, `t]:
@@ -49,6 +50,8 @@ class Manager[`t](env: MPCEnv):
                 return self.mod(ar * bm + am * br + ar * br, fid)
             case 2:
                 return self.mod(ar * bm + am * br, fid)
+            default:
+                assert False
 
     def beaver_reconstruct(self, ab: `t, fid) -> `t:
         match __cp__:
@@ -62,9 +65,27 @@ class Manager[`t](env: MPCEnv):
             case 2:
                 ambm = self.cp_rand(0, fid)
                 return self.mod(ab + ambm, fid)
+            default:
+                assert False
 
 # template over list[ZZ] as well
-class SInt(share: ZZ):
+class SInt(share: ZZ_p):
+    def __init__(self: SInt, share: ZZ_p):
+        match __cp__:
+            case 0:
+                r = __mpc_env__.rand_elem()
+                self.share = share
+                share2 = zzp2zz(r - share)
+                __mpc_env__.send_elem(share2, 2, 0)
+            case 1:
+                __mpc_env__.switch_seed(0)
+                self.share = __mpc_env__.rand_elem()
+                __mpc_env__.restore_seed()
+            case 2:
+                self.share = zz2zzp(__mpc_env__.receive_elem(0, 0))
+            default:
+                assert False
+
     # Protocol 3
     def __add__(x: SInt, y: SInt):
         return x.share + y.share
