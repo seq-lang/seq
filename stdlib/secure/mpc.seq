@@ -55,3 +55,63 @@ extend MPCEnv:
 
     def rand_elem(self: MPCEnv):
         return ZZ_p.random()
+
+    def mod[`t](self, x: `t, fid) -> `t:
+        return x % prime(fid)
+
+    def cp_rand[`t](self, i: int, fid) -> `t:
+        self.switch_seed(i)
+        x = self.rand_elem()
+        self.switch_seed(__cp__)
+        return x
+
+    def reveal[`t](self, a: `t, fid) -> `t:
+        b = `t()
+        next_cp = 3 - __cp__
+        match __cp__:
+            case 0:
+                return
+            case 1:
+                self.send_elem(a, next_cp, fid)
+                b = self.receive_elem(next_cp, fid)
+            case 2:
+                b = self.receive_elem(next_cp, fid)
+                self.send_elem(a, next_cp, fid)
+            default:
+                assert False
+        return self.mod(a + b, fid)
+
+    def beaver_partition[`t](self, a: `t, fid) -> tuple[`t, `t]:
+        if __cp__ == 0:
+            am = self.mod(sum(self.cp_rand(i, fid) for i in (1, 2)), fid)
+            return (`t(), am)
+        else:
+            am = self.cp_rand(0, fid)
+            ar = self.reveal(self.mod(a - am, fid), fid)
+            return (ar, am)
+
+    def beaver_mult[`t](self, ar: `t, am: `t, br: `t, bm: `t, fid) -> `t:
+        match __cp__:
+            case 0:
+                return self.mod(am * bm, fid)
+            case 1:
+                return self.mod(ar * bm + am * br + ar * br, fid)
+            case 2:
+                return self.mod(ar * bm + am * br, fid)
+            default:
+                assert False
+
+    def beaver_reconstruct[`t](self, ab: `t, fid) -> `t:
+        match __cp__:
+            case 0:
+                ab -= self.cp_rand(1)
+                self.send_elem(self.mod(ab, fid), 2, fid)
+                return ab
+            case 1:
+                ambm = self.receive_elem(0, fid)
+                return self.mod(ab + ambm, fid)
+            case 2:
+                ambm = self.cp_rand(0, fid)
+                return self.mod(ab + ambm, fid)
+            default:
+                assert False
