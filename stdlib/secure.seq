@@ -2,7 +2,7 @@ from secure.mpc import MPCEnv
 from secure.ntl import ZZ, ZZ_p, zzp2zz, zz2zzp
 
 class SInt(share: ZZ_p):
-    def __init__(self: SInt, share: ZZ_p):
+    def _init(self: SInt, share: ZZ_p):
         match __cp__:
             case 0:
                 r = __mpc_env__.rand_elem()
@@ -17,6 +17,12 @@ class SInt(share: ZZ_p):
                 self.share = zz2zzp(__mpc_env__.receive_elem(0, 0))
             default:
                 assert False
+
+    def __init__(self: SInt, share: ZZ_p):
+        self._init(share)
+
+    def __init__(self: SInt, share: int):
+        self._init(ZZ_p(share))
 
     # Protocol 3
     def __add__(x: SInt, y: SInt):
@@ -41,4 +47,4 @@ class SInt(share: ZZ_p):
         return SInt(__mpc_env__.beaver_reconstruct(c, fid))
 
     def __print__(self: SInt):
-        print self.share
+        print __cp__, ':', self.share

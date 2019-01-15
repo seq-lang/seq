@@ -3,7 +3,7 @@ from secure.ntl import ZZ, ZZ_p
 
 def bytes_from_zz(buf: ptr[byte], zz: ZZ, n: int):
     extern c ZZ_ToBytes(ptr[byte], ptr[byte], int)
-    ZZ_ToBytes(buf, zz.p, n)
+    ZZ_ToBytes(zz.p, buf, n)
 
 def zz_from_bytes(buf: ptr[byte], n: int):
     extern c ZZ_FromBytes(ptr[byte], int) -> ptr[byte]

@@ -1,6 +1,6 @@
 from secure import *
 from secure.ntl import ZZ_p
 
-y = SInt(ZZ_p(42))
-z = SInt(ZZ_p(15))
-y + z
+y = 42s
+z = 15s
+print y + z
