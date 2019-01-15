@@ -49,6 +49,7 @@ class ZZ(p: ptr[byte]):
 
     def __str__(a: ZZ):
         extern c ZZ_O_str(ptr[byte]) -> ptr[byte]
+        extern c strlen(ptr[byte]) -> int
         p = ZZ_O_str(a.p)
         return str(p, strlen(p))
 
@@ -82,8 +83,9 @@ class ZZ_p(p: ptr[byte]):
         extern c ZZ_p_O_ne(ptr[byte], ptr[byte]) -> bool
         return ZZ_p_O_ne(a.p, b.p)
 
-    def __str__(a: ZZ):
+    def __str__(a: ZZ_p):
         extern c ZZ_p_O_str(ptr[byte]) -> ptr[byte]
+        extern c strlen(ptr[byte]) -> int
         p = ZZ_p_O_str(a.p)
         return str(p, strlen(p))
 

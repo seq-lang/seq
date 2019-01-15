@@ -39,3 +39,6 @@ class SInt(share: ZZ_p):
         br, bm = __mpc_env__.beaver_partition(b.share, fid)
         c = __mpc_env__.beaver_mult_elem(ar, am, br, bm, fid)
         return SInt(__mpc_env__.beaver_reconstruct(c, fid))
+
+    def __print__(self: SInt):
+        print self.share
