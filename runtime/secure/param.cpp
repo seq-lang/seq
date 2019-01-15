@@ -128,15 +128,15 @@ bool Param::ParseFile(const char *param_file) {
 
 int Param::PORT_P0_P1 = 8000;
 int Param::PORT_P0_P2 = 8001;
-int Param::PORT_P1_P2 = 8000;
-int Param::PORT_P1_P3 = 8001;
-int Param::PORT_P2_P3 = 8000;
+int Param::PORT_P1_P2 = 8002;
+int Param::PORT_P1_P3 = 8003;
+int Param::PORT_P2_P3 = 8004;
 
-string Param::IP_ADDR_P0 = "128.00.00.101";
-string Param::IP_ADDR_P1 = "128.00.00.102";
-string Param::IP_ADDR_P2 = "128.00.00.103";
+string Param::IP_ADDR_P0 = "127.0.0.1";
+string Param::IP_ADDR_P1 = "127.0.0.2";
+string Param::IP_ADDR_P2 = "127.0.0.3";
 
-string Param::KEY_PATH = "../key/";
+string Param::KEY_PATH = "../stdlib/secure/key/";
 
 int Param::NBIT_K = 60;
 int Param::NBIT_F = 45;
