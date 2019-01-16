@@ -47,11 +47,18 @@
         n
     in 
     fst x, expr
+  let rec flatten_dot ~sep = function
+    | pos, Id s -> pos, s
+    | pos, Dot (d, s) ->
+      pos, sprintf "%s%s%s" (snd @@ flatten_dot ~sep d) sep s
+    | _ -> failwith "Invalid import Dot"
 %}
 
 /* constants */
-%token <Ast.Pos.t * int>    INT
-%token <Ast.Pos.t * float>  FLOAT
+%token <Ast.Pos.t * int>   INT
+%token <Ast.Pos.t * float> FLOAT
+%token <Ast.Pos.t * (int * string)>   INT_S
+%token <Ast.Pos.t * (float * string)> FLOAT_S
 %token <Ast.Pos.t * string> STRING ID GENERIC
 %token <Ast.Pos.t * string> REGEX SEQ
 
@@ -147,6 +154,8 @@ atom:
   | ID         { fst $1, Id (snd $1) }
   | INT        { fst $1, Int (snd $1) }
   | FLOAT      { fst $1, Float (snd $1) }
+  | INT_S      { fst $1, IntS (snd $1) }
+  | FLOAT_S    { fst $1, FloatS (snd $1) }
   | STRING     { fst $1, String (snd $1) }
   | SEQ        { fst $1, Seq (snd $1) }
   | bool       { fst $1, Bool (snd $1) }
@@ -320,6 +329,9 @@ arith_expr:
     { pos (fst $1) (fst $2),
       match snd $2 with
       | Int f -> Int (-f)
+      | IntS (f, k) -> IntS (-f, k)
+      | Float f -> Float (-.f)
+      | FloatS (f, k) -> FloatS (-.f, k)
       | _ -> Unary(snd $1, $2) }
   | ADD arith_term
   | B_NOT arith_term
@@ -609,7 +621,7 @@ assign_statement:
                 (p, Call ((p, Id "len"), 
                           [p, { name = None; value = rhs }])), 
                 op, 
-                (p, Int (len))))
+                (p, Int len)))
             in
             assert_stmt :: lst
         in
@@ -709,34 +721,35 @@ case_type:
 // Import statments
 import_statement:
   // from x import *
-  | FROM ID IMPORT MUL
-    { pos $1 (fst $4),
-      Import [{ from = $2; what = Some([fst $4, ("*", None)]); 
-                import_as = None; stdlib = false }] }
+  | FROM dot_term IMPORT MUL
+    { let from = flatten_dot ~sep:"/" $2 in
+      pos $1 (fst $4),
+      Import [{ from; what = Some([fst $4, ("*", None)]); 
+                import_as = None }] }
   // from x import y, z
-  | FROM ID IMPORT separated_list(COMMA, import_term)
-    { pos $1 (fst @@ List.last_exn $4),
-      let what = List.map $4 ~f:(fun (pos, ((_, what), ias)) -> 
-        pos, (what, ias)) 
+  | FROM dot_term IMPORT separated_list(COMMA, import_term)
+    { let from = flatten_dot ~sep:"/" $2 in
+      let what = List.map $4 ~f:(fun (pos, (what, ias)) -> 
+        pos, (snd @@ flatten_dot ~sep:"/" what, ias)) 
       in
-      Import [{ from = $2; what = Some(what); 
-                import_as = None; stdlib = false }] }
+      pos $1 (fst @@ List.last_exn $4),
+      Import [{ from; what = Some what; import_as = None }] }
   // import x, y
   | IMPORT separated_list(COMMA, import_term)
     { pos $1 (fst @@ List.last_exn $2), 
       Import (List.map $2 ~f:(fun (_, (from, import_as)) ->
-        { from; what = None; import_as; stdlib = false })) }
+        let from = flatten_dot ~sep:"/" from in
+        { from; what = None; import_as })) }
   // import!
   | IMPORT_CONTEXT ID
     { pos $1 (fst $2), 
-      Import [{ from = $2; what = None; 
-                import_as = None; stdlib = true }] }
+      ImportPaste (snd $2) }
 // Import terms (foo, foo as bar)
 import_term:
-  | ID
+  | dot_term
     { fst $1, 
       ($1, None) }
-  | ID AS ID
+  | dot_term AS ID
     { pos (fst $1) (fst $3),
       ($1, Some (snd $3)) } 
 // Dotted identifiers (foo, foo.bar)
@@ -778,32 +791,6 @@ throw:
     { $1,
       Throw $2 }
 
-
-/* with EXPR as VAR:
-    BLOCK
-translates to
-
-mgr = (EXPR)
-exit = type(mgr).__exit__  # Not calling it yet
-value = type(mgr).__enter__(mgr)
-exc = True
-try:
-    try:
-        VAR = value  # Only if "as VAR" is present
-        BLOCK
-    except:
-        # The exceptional case is handled here
-        exc = False
-        if not exit(mgr, *sys.exc_info()):
-            raise
-        # The exception is swallowed if exit() returns true
-finally:
-    # The normal and non-local-goto cases are handled here
-    if exc:
-        exit(mgr, None, None, None)
- */
-
-
 /******************************************************************************
  ************                      UNITS                     ******************
  ******************************************************************************/
@@ -835,7 +822,7 @@ func:
         | Some typ -> typ
         | None -> $7, Id("void")
       in
-      pos $1 (fst typ), 
+      pos $1 (fst typ),
       Extern (snd lang, dylib, snd name,
         (fst name, { name = snd name; typ = Some(typ) }), params) }
   | EXTERN; lang = ID; dylib = dylib_spec?; name = ID; AS alt_name = ID

@@ -30,7 +30,9 @@ struct
       | Empty          p -> parse_none     ctx pos p
       | Bool           p -> parse_bool     ctx pos p
       | Int            p -> parse_int      ctx pos p
+      | IntS           p -> parse_int      ctx pos (fst p) ~kind:(snd p)
       | Float          p -> parse_float    ctx pos p
+      | FloatS         p -> parse_float    ctx pos (fst p) ~kind:(snd p)
       | String         p -> parse_str      ctx pos p
       | Seq            p -> parse_seq      ctx pos p
       | Generic p | Id p -> parse_id       ctx pos p
@@ -83,11 +85,13 @@ struct
   and parse_bool _ _ b =
     Llvm.Expr.bool b
 
-  and parse_int _ _ i = 
-    Llvm.Expr.int i
+  and parse_int _ _ ?(kind="") i = 
+    let i = Llvm.Expr.int i in
+    i
 
-  and parse_float _ _ f = 
-    Llvm.Expr.float f
+  and parse_float _ _ ?(kind="") f = 
+    let f = Llvm.Expr.float f in
+    f
 
   and parse_str _ _ s = 
     Llvm.Expr.str s
@@ -225,6 +229,10 @@ struct
       let indices = List.map indices ~f:(parse_type ctx) in
       let ret, args = List.hd_exn indices, List.tl_exn indices in
       Llvm.Expr.typ @@ Llvm.Type.func ret args
+    | Id "tuple", _ ->
+      let indices = List.map indices ~f:(parse_type ctx) in
+      let names = List.map indices ~f:(fun _ -> "") in
+      Llvm.Expr.typ @@ Llvm.Type.record names indices ""
     | _ -> 
       let lh_expr = parse ctx lh_expr in
       let indices = List.map indices ~f:(parse ctx) in
