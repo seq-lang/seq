@@ -75,6 +75,7 @@ namespace seq {
 		             bool debug=false);
 	};
 
+#if LLVM_VERSION_MAJOR >= 7
 	class SeqJIT {
 	private:
 		llvm::orc::ExecutionSession es;
@@ -107,6 +108,7 @@ namespace seq {
 		Var *addVar(Expr *expr);
 		void delVar(Var *var);
 	};
+#endif
 
 }
 

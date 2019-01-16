@@ -283,7 +283,7 @@ void SeqModule::execute(const std::vector<std::string>& args,
 /*
  * JIT
  */
-
+#if LLVM_VERSION_MAJOR >= 7
 SeqJIT::SeqJIT() :
     target(EngineBuilder().selectTarget()), layout(target->createDataLayout()),
     objLayer(es, [this](VModuleKey K) {
@@ -445,3 +445,4 @@ void SeqJIT::delVar(Var *var)
 	if (it != globals.end())
 		globals.erase(it);
 }
+#endif

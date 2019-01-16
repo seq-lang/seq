@@ -8,6 +8,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
+#if LLVM_VERSION_MAJOR >= 7
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -17,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
+#endif
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"

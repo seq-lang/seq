@@ -476,7 +476,7 @@ FOREIGN void set_func_yield(Func *f, Yield *ret)
 	f->sawYield(ret);
 }
 
-FOREIGN void resolve_types (Stmt *s)
+FOREIGN void resolve_types(Stmt *s)
 {
 	s->resolveTypes();
 }

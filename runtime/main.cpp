@@ -23,8 +23,13 @@ int main(int argc, char **argv)
 	vector<string> argsVec(args);
 
 	if (input.empty()) {
+#if LLVM_VERSION_MAJOR >= 7
 		repl();
 		return EXIT_SUCCESS;
+#else
+		std::cerr << "Seq REPL requires LLVM 7+" << std::endl;
+		return EXIT_FAILURE;
+#endif
 	}
 
 	SeqModule *s = parse(input.c_str());
