@@ -28,31 +28,32 @@ struct
       and finalizes the processed statement. *)
   let rec parse ?(toplevel=false) ?(jit=false) (ctx: Ctx.t) (pos, node) =
     let stmt = match node with
-      | Break    p -> parse_break    ctx pos p
-      | Continue p -> parse_continue ctx pos p
-      | Expr     p -> parse_expr     ctx pos p
-      | Assign   p -> parse_assign   ctx pos p ~toplevel ~jit
-      | Del      p -> parse_del      ctx pos p
-      | Print    p -> parse_print    ctx pos p ~jit
-      | Return   p -> parse_return   ctx pos p
-      | Yield    p -> parse_yield    ctx pos p
-      | Assert   p -> parse_assert   ctx pos p
-      | Type     p -> parse_type     ctx pos p ~toplevel
-      | If       p -> parse_if       ctx pos p
-      | While    p -> parse_while    ctx pos p
-      | For      p -> parse_for      ctx pos p
-      | Match    p -> parse_match    ctx pos p
-      | Extern   p -> parse_extern   ctx pos p ~toplevel
-      | Extend   p -> parse_extend   ctx pos p ~toplevel
-      | Import   p -> parse_import   ctx pos p ~toplevel
-      | Pass     p -> parse_pass     ctx pos p
-      | Try      p -> parse_try      ctx pos p
-      | Throw    p -> parse_throw    ctx pos p
-      | Global   p -> parse_global   ctx pos p
+      | Break       p -> parse_break    ctx pos p
+      | Continue    p -> parse_continue ctx pos p
+      | Expr        p -> parse_expr     ctx pos p
+      | Assign      p -> parse_assign   ctx pos p ~toplevel ~jit
+      | Del         p -> parse_del      ctx pos p
+      | Print       p -> parse_print    ctx pos p ~jit
+      | Return      p -> parse_return   ctx pos p
+      | Yield       p -> parse_yield    ctx pos p
+      | Assert      p -> parse_assert   ctx pos p
+      | Type        p -> parse_type     ctx pos p ~toplevel
+      | If          p -> parse_if       ctx pos p
+      | While       p -> parse_while    ctx pos p
+      | For         p -> parse_for      ctx pos p
+      | Match       p -> parse_match    ctx pos p
+      | Extern      p -> parse_extern   ctx pos p ~toplevel
+      | Extend      p -> parse_extend   ctx pos p ~toplevel
+      | Import      p -> parse_import   ctx pos p ~toplevel
+      | ImportPaste p -> parse_impaste  ctx pos p
+      | Pass        p -> parse_pass     ctx pos p
+      | Try         p -> parse_try      ctx pos p
+      | Throw       p -> parse_throw    ctx pos p
+      | Global      p -> parse_global   ctx pos p
+      | Generic    
+        Function    p -> parse_function ctx pos p ~toplevel
       | Generic 
-        Function p -> parse_function ctx pos p ~toplevel
-      | Generic 
-        Class    p -> parse_class    ctx pos p ~toplevel
+        Class       p -> parse_class    ctx pos p ~toplevel
     in
     finalize ctx stmt pos
 
@@ -116,20 +117,20 @@ struct
     match lhs with
     | pos, Id var ->
       begin match Hashtbl.find ctx.map var with
-      | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
-        when (not shadow) 
-          && (global || (ctx.base = base)) ->
-        Llvm.Stmt.assign v rh_expr
-      | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
-        serr ~pos "cannot assign functions or types"
-      | _ when jit && toplevel ->
-        let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
-        Ctx.add ctx ~toplevel ~global:true var v;
-        Llvm.Stmt.pass ()
-      | _ ->
-        let var_stmt = Llvm.Stmt.var rh_expr in
-        Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
-        var_stmt
+        | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
+          when (not shadow) 
+            && (global || (ctx.base = base)) ->
+          Llvm.Stmt.assign v rh_expr
+        | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
+          serr ~pos "cannot assign functions or types"
+        | _ when jit && toplevel ->
+          let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
+          Ctx.add ctx ~toplevel ~global:true var v;
+          Llvm.Stmt.pass ()
+        | _ ->
+          let var_stmt = Llvm.Stmt.var rh_expr in
+          Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
+          var_stmt
       end
     | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)
       Llvm.Stmt.assign_member (E.parse ctx lh_lhs) lh_rhs rh_expr
@@ -289,6 +290,18 @@ struct
       serr ~pos "only C external functions are currently supported";
     if is_some @@ Ctx.in_block ctx ctx_name then
       serr ~pos "function %s already exists" ctx_name;
+
+    (* match dylib with
+    | Some dylib ->
+      let code = sprintf 
+        "%s = function[%s](dlsym(dylib('%s'), '%s'))"
+        ctx_name 
+        ... 
+        dylib
+        name
+      in 
+      parse
+    | None -> *)
     
     let names, types = 
       List.map args ~f:(fun (_, { name; typ }) ->
@@ -326,53 +339,75 @@ struct
   (** [parse_import ?ext context position data] parses import AST.
       Import file extension is set via [seq] (default is [".seq"]). *)
   and parse_import ctx pos ?(ext=".seq") ~toplevel imports =
-    List.iter imports ~f:(fun { from; what; import_as; stdlib } ->
+    let import (ctx: Ctx.t) file { from; what; import_as } = 
       let from = snd from in
-      let file = sprintf "%s/%s%s" (Filename.dirname ctx.filename) from ext in
-      let new_ctx = if stdlib then ctx else
-        { (Ctx.init file ctx.mdl ctx.base ctx.block ctx.parse_file)
-          with trycatch = ctx.trycatch }
-      in
-      begin match Sys.file_exists file with
-        | `Yes -> 
-          new_ctx.parse_file new_ctx file
-        | `No | `Unknown -> 
-          begin match Util.get_from_stdlib ~ext from with
-          | Some file ->
-            new_ctx.parse_file new_ctx file
-          | None -> 
-            serr ~pos "cannot locate module %s" from
-          end
-      end;
-      if not stdlib then match what with
-        | None -> (* import foo (as bar) *)
-          let from = Option.value import_as ~default:from in
+      let vtable = match Hashtbl.find ctx.imported file with
+        | Some t -> t
+        | None ->
+          let new_ctx = Ctx.init_empty ctx in
+          Ctx.parse_file new_ctx file;
+
           let map = Hashtbl.filteri new_ctx.map ~f:(fun ~key ~data ->
             match data with
             | [] -> false 
             | (_, { global; internal; _ }) :: _ -> global && (not internal))
           in
-          Ctx.add ctx ~toplevel ~global:toplevel  
-            from (Ctx.Namespace.Import map)
-        | Some [_, ("*", None)] -> (* from foo import * *)
-          Hashtbl.iteri new_ctx.map ~f:(fun ~key ~data ->
-            match data with
-            | (var, { global = true; internal = false; _ }) :: _ ->
-              Util.dbg "[import] adding %s::%s" from key;
-              Ctx.add ctx ~toplevel ~global:toplevel 
-                key var
-            | _ -> ());
-        | Some lst -> (* from foo import bar *)
-          List.iter lst ~f:(fun (pos, (name, import_as)) ->
-            match Ctx.in_scope new_ctx name with
-            | Some (var, ({ global = true; internal = false; _ } as ann)) -> 
-              let name = Option.value import_as ~default:name in
-              Ctx.add ctx 
-                ~toplevel ~global:toplevel 
-                name var
-            | _ ->
-              serr ~pos "name %s not found in %s" name from));
+          Hashtbl.set ctx.imported ~key:file ~data:map;
+          
+          Util.dbg "importing %s <%s>" file from;
+          Ctx.dump { new_ctx with map };
+          map
+      in 
+      match what with
+      | None -> (* import foo (as bar) *)
+        let from = Option.value import_as ~default:from in
+        let map = Hashtbl.filteri vtable ~f:(fun ~key ~data ->
+          match data with
+          | [] -> false 
+          | (_, { global; internal; _ }) :: _ -> global && (not internal))
+        in
+        Ctx.add ctx ~toplevel ~global:toplevel  
+          from (Ctx.Namespace.Import map)
+      | Some [_, ("*", None)] -> (* from foo import * *)
+        Hashtbl.iteri vtable ~f:(fun ~key ~data ->
+          match data with
+          | (var, { global = true; internal = false; _ }) :: _ ->
+            Util.dbg "[import] adding %s::%s" from key;
+            Ctx.add ctx ~toplevel ~global:toplevel 
+              key var
+          | _ -> ());
+      | Some lst -> (* from foo import bar *)
+        List.iter lst ~f:(fun (pos, (name, import_as)) ->
+          match Hashtbl.find vtable name with
+          | Some ((var, ({ global = true; internal = false; _ } as ann)) :: _) -> 
+            let name = Option.value import_as ~default:name in
+            Ctx.add ctx 
+              ~toplevel ~global:toplevel 
+              name var
+          | _ ->
+            serr ~pos "name %s not found in %s" name from)
+    in
+    List.iter imports ~f:(fun i ->
+      let from = snd i.from in
+      let file = sprintf "%s/%s%s" (Filename.dirname ctx.filename) from ext in
+      let file = match Sys.file_exists file with
+        | `Yes -> file 
+        | `No | `Unknown -> 
+          match Util.get_from_stdlib ~ext from with
+          | Some file -> file
+          | None -> serr ~pos "cannot locate module %s" from
+      in
+      import ctx file i);
+
     Llvm.Stmt.pass ()
+
+  and parse_impaste ctx pos ?(ext=".seq") from =
+    match Util.get_from_stdlib ~ext from with
+    | Some file -> 
+      Ctx.parse_file ctx file;
+      Llvm.Stmt.pass ()
+    | None -> 
+      serr ~pos "cannot locate module %s" from
 
   (** [parse_function ?cls context position data] parses function AST.
       Set `cls` to `Llvm.Types.typ` if you want a function to be 
@@ -380,28 +415,27 @@ struct
   and parse_function ctx pos ?cls ?(toplevel=false)
     ((_, { name; typ }), types, args, stmts) =
 
-    let fn = match Ctx.in_block ctx name with
-      | Some (Ctx.Namespace.Func (fn, _), _) when toplevel ->
+    let fn = match cls, Ctx.in_block ctx name with
+      | Some cls, _ ->
+        let fn = Llvm.Func.func name in
+        Llvm.Type.add_cls_method cls name fn;
+        fn
+      | None, Some (Ctx.Namespace.Func (fn, _), _) when toplevel ->
         fn 
-      | Some _ ->
+      | None, Some _ ->
+        Ctx.dump ctx;
         serr ~pos "function %s already exists" name;
-      | None when not toplevel ->
-        Llvm.Func.func name
-      | None ->
+      | None, None when not toplevel ->
+        let fn = Llvm.Func.func name in
+        let names = List.map args ~f:(fun (_, x) -> x.name) in
+        Ctx.add ctx ~toplevel ~global:toplevel 
+          name (Ctx.Namespace.Func (fn, names));
+        Llvm.Func.set_enclosing fn ctx.base;
+        fn
+      | None, None ->
         failwith "function pre-register failed"
     in
-    begin match cls with 
-      | Some cls -> 
-        Llvm.Type.add_cls_method cls name fn
-      | None -> 
-        let names = List.map args ~f:(fun (_, x) -> x.name) in
-        if not toplevel then begin
-          Ctx.add ctx ~toplevel ~global:toplevel 
-            name (Ctx.Namespace.Func (fn, names));
-          Llvm.Func.set_enclosing fn ctx.base
-        end
-    end;
-
+    
     let new_ctx = 
       { ctx with 
         base = fn; 
@@ -477,7 +511,7 @@ struct
     let try_stmt = Llvm.Stmt.trycatch () in
 
     let block = Llvm.Block.try_block try_stmt in
-    add_block { ctx with block ; trycatch = try_stmt } stmts;
+    add_block { ctx with block; trycatch = try_stmt } stmts;
 
     List.iteri catches ~f:(fun idx (pos, { exc; var; stmts }) ->
       let typ = match exc with

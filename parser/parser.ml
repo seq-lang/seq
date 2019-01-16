@@ -18,7 +18,7 @@ module rec SeqS : Intf.StmtIntf = Stmt.StmtParser (SeqE)
 (** [parse_string ~file ~debug context code] parses a code
     within string [code] as a module and returns parsed module AST.
     [file] is code filename used for error reporting. *)
-let rec parse_string ?file ?(debug=false) ?(jit=false) ctx code =
+let parse_string ctx ?file ?(debug=false) ?(jit=false) code =
   let file = Option.value file ~default:"" in
   let lexbuf = Lexing.from_string (code ^ "\n") in
   try
@@ -44,29 +44,22 @@ let rec parse_string ?file ?(debug=false) ?(jit=false) ctx code =
   | SeqCError (msg, pos) ->
     raise @@ CompilerError (Compiler msg, [pos])
 
-(** [parse_file ~debug context file] parses a file [file] as a module 
-    and returns parsed module AST. *)
-and parse_file ?debug ctx file =
-  Util.dbg "parsing %s" file;
-  let lines = In_channel.read_lines file in
-  let code = (String.concat ~sep:"\n" lines) ^ "\n" in
-  parse_string ?debug ~file:(Filename.realpath file) ctx code
-
 (** [init file error_handler] initializes Seq session with file [file].
     [error_handler typ position] is a callback called upon encountering
     [Err.CompilerError]. Returns [Module] if successful. *)
 let init file error_handler =
   let mdl = Llvm.Module.init () in
-  let ctx = Ctx.init 
-    (Filename.realpath file) 
-    mdl mdl 
-    (Llvm.Module.block mdl) 
-    parse_file 
-  in
+  let ctx = Ctx.init_module
+    ~filename:file
+    ~mdl
+    ~base:mdl
+    ~block:(Llvm.Module.block mdl)
+    (parse_string ~debug:false ~jit:false)
+  in 
   try
     (* parse the file *)
-    ctx.parse_file ctx file;
-    Some mdl
+    Ctx.parse_file ctx file;
+    Some ctx.mdl
   with CompilerError (typ, pos) ->
     Ctx.dump ctx;
     error_handler typ pos;

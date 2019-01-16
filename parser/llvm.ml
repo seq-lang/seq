@@ -367,6 +367,9 @@ module Stmt = struct
   let set_pos stmt (pos: Ast.Pos.t) = foreign "set_pos" 
     Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
     stmt (strdup pos.file) pos.line pos.col pos.len
+
+  let resolve = foreign "resolve_types"
+    (t @-> returning void)
 end
 
 (** Seq patterns ([Pattern]) *)
