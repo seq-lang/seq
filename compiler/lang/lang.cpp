@@ -506,7 +506,6 @@ void TryCatch::codegen0(BasicBlock*& block)
 
 	// finally:
 	BasicBlock *finallyBlock = BasicBlock::Create(context, "finally", func);
-	BasicBlock *finallyBlock0 = finallyBlock;
 	finally->codegen(finallyBlock);
 	IRBuilder<> builder(finallyBlock);
 	SwitchInst *theSwitch = builder.CreateSwitch(builder.CreateLoad(excFlag), endBlock, 2);
@@ -531,7 +530,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 
 	// make sure we always get to finally block:
 	builder.SetInsertPoint(entryBlock);
-	builder.CreateBr(finallyBlock0);
+	builder.CreateBr(finallyBlock);
 
 	// rethrow if uncaught:
 	builder.SetInsertPoint(unwindResumeBlock);
@@ -603,7 +602,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 	Value *objPtr = builder.CreateExtractValue(loadedExc, 1);
 
 	SwitchInst *switchToCatchBlock = builder.CreateSwitch(objType,
-	                                                      catchAll ? catchAll : finallyBlock0,
+	                                                      catchAll ? catchAll : finallyBlock,
 	                                                      (unsigned)catches.size());
 	for (unsigned i = 0; i < catches.size(); i++) {
 		BasicBlock *catchBlock = catches[i];
@@ -624,7 +623,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 		catchBlocks[i]->codegen(catchBlock);
 		builder.SetInsertPoint(catchBlock);
 		builder.CreateStore(excStateCaught, excFlag);
-		builder.CreateBr(finallyBlock0);
+		builder.CreateBr(finallyBlock);
 	}
 
 	// link in our new blocks, and update the caller's block:
@@ -949,25 +948,15 @@ void For::codegen0(BasicBlock*& block)
 	IRBuilder<> builder(entry);
 	BasicBlock *loopCont = BasicBlock::Create(context, "for_cont", func);
 	BasicBlock *loop = BasicBlock::Create(context, "for", func);
-	BasicBlock *loop0 = loop;
 	builder.CreateBr(loop);
 
 	builder.SetInsertPoint(loopCont);
 	builder.CreateBr(loop);
 
-	TryCatch *tc = getTryCatch();
-	if (tc) {
-		BasicBlock *normal = BasicBlock::Create(context, "normal", func);
-		BasicBlock *unwind = tc->getExceptionBlock();
-		genType->resume(gen, loop, normal, unwind);
-		loop = normal;
-	} else {
-		genType->resume(gen, loop, nullptr, nullptr);
-	}
-
+	builder.SetInsertPoint(loop);
+	genType->resume(gen, loop);
 	Value *cond = genType->done(gen, loop);
 	BasicBlock *body = BasicBlock::Create(context, "body", func);
-	builder.SetInsertPoint(loop);
 	BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set true-branch below
 
 	block = body;
@@ -979,7 +968,7 @@ void For::codegen0(BasicBlock*& block)
 	scope->codegen(block);
 
 	builder.SetInsertPoint(block);
-	builder.CreateBr(loop0);
+	builder.CreateBr(loop);
 
 	BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
 	branch->setSuccessor(0, cleanup);

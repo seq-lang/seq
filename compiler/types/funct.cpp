@@ -115,7 +115,7 @@ types::GenType::GenType(Type *outType) :
 		BasicBlock *b = BasicBlock::Create(context, "return", f);
 
 		IRBuilder<> builder(entry);
-		resume(arg, entry, nullptr, nullptr);
+		resume(arg, entry);
 		Value *d = done(arg, entry);
 		builder.CreateCondBr(d, a, b);
 
@@ -150,17 +150,11 @@ Value *types::GenType::done(Value *self, BasicBlock *block)
 	return builder.CreateCall(doneFn, self);
 }
 
-void types::GenType::resume(Value *self,
-                            BasicBlock *block,
-                            BasicBlock *normal,
-                            BasicBlock *unwind)
+void types::GenType::resume(Value *self, BasicBlock *block)
 {
 	Function *resFn = Intrinsic::getDeclaration(block->getModule(), Intrinsic::coro_resume);
 	IRBuilder<> builder(block);
-	if (normal || unwind)
-		builder.CreateInvoke(resFn, normal, unwind, self);
-	else
-		builder.CreateCall(resFn, self);
+	builder.CreateCall(resFn, self);
 }
 
 Value *types::GenType::promise(Value *self, BasicBlock *block)

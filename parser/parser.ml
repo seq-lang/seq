@@ -46,7 +46,7 @@ let rec parse_string ?file ?(debug=false) ?(jit=false) ctx code =
 
 (** [parse_file ~debug context file] parses a file [file] as a module 
     and returns parsed module AST. *)
-and parse_file ?debug (ctx: Ctx.t) file =
+and parse_file ?debug ctx file =
   Util.dbg "parsing %s" file;
   let lines = In_channel.read_lines file in
   let code = (String.concat ~sep:"\n" lines) ^ "\n" in
@@ -57,17 +57,16 @@ and parse_file ?debug (ctx: Ctx.t) file =
     [Err.CompilerError]. Returns [Module] if successful. *)
 let init file error_handler =
   let mdl = Llvm.Module.init () in
-  let ctx = Ctx.init_module
-    ~filename:file
-    ~mdl
-    ~base:mdl
-    ~block:(Llvm.Module.block mdl)
-    (parse_file ~debug:false)
-  in 
+  let ctx = Ctx.init 
+    (Filename.realpath file) 
+    mdl mdl 
+    (Llvm.Module.block mdl) 
+    parse_file 
+  in
   try
     (* parse the file *)
-    ctx.parser ctx file;
-    Some ctx.mdl
+    ctx.parse_file ctx file;
+    Some mdl
   with CompilerError (typ, pos) ->
     Ctx.dump ctx;
     error_handler typ pos;
