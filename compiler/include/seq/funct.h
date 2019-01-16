@@ -49,7 +49,10 @@ namespace seq {
 
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 			llvm::Value *done(llvm::Value *self, llvm::BasicBlock *block);
-			void resume(llvm::Value *self, llvm::BasicBlock *block);
+			void resume(llvm::Value *self,
+			            llvm::BasicBlock *block,
+			            llvm::BasicBlock *normal,
+			            llvm::BasicBlock *unwind);
 			llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block);
 			void destroy(llvm::Value *self, llvm::BasicBlock *block);
 
