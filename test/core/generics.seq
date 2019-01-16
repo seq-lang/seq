@@ -65,8 +65,8 @@ print a1.m3(a2)                     # EXPECT: 42
 print a1.m3(a2)                     # EXPECT: 42
 print a2.m3(a1)                     # EXPECT: 1
 a1.m4(True)                         # EXPECT: 42 3.14 hello True True
-a1.m4(False)                        # EXPECT: 42 3.14 hello False False
-a2.m4(True)                         # EXPECT: 1 2 3 True True
+a1.m4([1])                           # EXPECT: 42 3.14 hello [1] [1]
+a2.m4("x")                          # EXPECT: 1 2 3 x x
 a1.m5()                             # EXPECT: 42 3.14 hello
 a2.m5()                             # EXPECT: 1 2 3
 print A.m6(v1)                      # EXPECT: world

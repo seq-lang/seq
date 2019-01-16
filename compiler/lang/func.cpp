@@ -24,8 +24,9 @@ BasicBlock *BaseFunc::getPreamble() const
 	return preambleBlock;
 }
 
-types::FuncType *BaseFunc::getFuncType() const
+types::FuncType *BaseFunc::getFuncType()
 {
+	resolveTypes();
 	return types::FuncType::get({}, types::Void);
 }
 
@@ -48,7 +49,7 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 Func::Func() :
     BaseFunc(), Generic(), SrcObject(), external(false), name(), inTypes(), outType(types::Void),
     scope(new Block()), argNames(), argVars(), parentFunc(nullptr), ret(nullptr), yield(nullptr),
-    resolvingTypes(false), gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
+    resolved(false), gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
 		assert(this->argNames.size() == this->inTypes.size());
@@ -145,10 +146,10 @@ std::string Func::getMangledFuncName()
 
 void Func::resolveTypes()
 {
-	if (external || resolvingTypes)
+	if (external || resolved)
 		return;
 
-	resolvingTypes = true;
+	resolved = true;
 
 	try {
 		scope->resolveTypes();
@@ -169,9 +170,8 @@ void Func::resolveTypes()
 		 * though, since these will be resolved whenever the generics are instantiated, so we
 		 * catch this exception and ignore it.
 		 */
+		resolved = false;
 	}
-
-	resolvingTypes = false;
 }
 
 void Func::codegen(Module *module)
@@ -406,9 +406,9 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	}
 }
 
-std::vector<std::string> Func::getArgNames(void)
+std::vector<std::string> Func::getArgNames()
 {
-	return this->argNames;
+	return argNames;
 }
 
 Var *Func::getArgVar(std::string name)
@@ -418,8 +418,9 @@ Var *Func::getArgVar(std::string name)
 	return iter->second;
 }
 
-types::FuncType *Func::getFuncType() const
+types::FuncType *Func::getFuncType()
 {
+	resolveTypes();
 	return types::FuncType::get(inTypes, outType);
 }
 
@@ -509,8 +510,9 @@ void BaseFuncLite::codegen(Module *module)
 	preambleBlock = &*func->getBasicBlockList().begin();
 }
 
-types::FuncType *BaseFuncLite::getFuncType() const
+types::FuncType *BaseFuncLite::getFuncType()
 {
+	resolveTypes();
 	return types::FuncType::get(inTypes, outType);
 }
 

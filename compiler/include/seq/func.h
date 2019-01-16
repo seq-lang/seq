@@ -26,7 +26,7 @@ namespace seq {
 		virtual void codegen(llvm::Module *module)=0;
 		llvm::LLVMContext& getContext();
 		llvm::BasicBlock *getPreamble() const;
-		virtual types::FuncType *getFuncType() const;
+		virtual types::FuncType *getFuncType();
 		virtual llvm::Function *getFunc();
 		virtual void setEnclosingClass(types::Type *parentType);
 		virtual BaseFunc *clone(Generic *ref);
@@ -46,7 +46,7 @@ namespace seq {
 		Func *parentFunc;
 		Return *ret;
 		Yield *yield;
-		bool resolvingTypes;  // make sure we don't keep resolving recursively
+		bool resolved;
 
 		bool gen;
 		llvm::Value *promise;
@@ -78,13 +78,13 @@ namespace seq {
 		                  llvm::BasicBlock*& block);
 
 		Var *getArgVar(std::string name);
-		types::FuncType *getFuncType() const override;
+		types::FuncType *getFuncType() override;
 
 		void setExternal();
 		void setIns(std::vector<types::Type *> inTypes);
 		void setOut(types::Type *outType);
 		void setName(std::string name);
-		std::vector<std::string> getArgNames(void);
+		std::vector<std::string> getArgNames();
 		void setArgNames(std::vector<std::string> argNames);
 
 		Func *clone(Generic *ref) override;
@@ -100,7 +100,7 @@ namespace seq {
 		             types::Type *outType,
 		             std::function<llvm::Function *(llvm::Module *)> codegenLambda);
 		void codegen(llvm::Module *module) override;
-		types::FuncType *getFuncType() const override;
+		types::FuncType *getFuncType() override;
 		BaseFuncLite *clone(Generic *ref) override;
 	};
 

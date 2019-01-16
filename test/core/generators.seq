@@ -1,4 +1,4 @@
-def perms(elements):
+def perms[`t](elements: list[`t]) -> list[`t]:
     if len(elements) <=1:
         yield elements
     else:
