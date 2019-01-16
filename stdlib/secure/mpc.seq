@@ -15,6 +15,10 @@ extend MPCEnv:
         extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
         return (seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len)),)
 
+    def cleanup(self: MPCEnv):
+        extern c seq_mpcenv_cleanup(ptr[byte]) -> ptr[byte]
+        self.p = seq_mpcenv_cleanup(self.p)
+
     def buf(self: MPCEnv):
         extern c seq_mpc_get_buf(ptr[byte]) -> ptr[byte]
         return seq_mpc_get_buf(self.p)

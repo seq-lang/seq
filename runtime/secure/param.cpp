@@ -133,8 +133,8 @@ int Param::PORT_P1_P3 = 8003;
 int Param::PORT_P2_P3 = 8004;
 
 string Param::IP_ADDR_P0 = "127.0.0.1";
-string Param::IP_ADDR_P1 = "127.0.0.2";
-string Param::IP_ADDR_P2 = "127.0.0.3";
+string Param::IP_ADDR_P1 = "127.0.0.1";
+string Param::IP_ADDR_P2 = "127.0.0.1";
 
 string Param::KEY_PATH = "../stdlib/secure/key/";
 

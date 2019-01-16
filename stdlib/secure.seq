@@ -5,9 +5,12 @@ class SInt(share: ZZ_p):
     def _init(self: SInt, share: ZZ_p):
         match __cp__:
             case 0:
+                __mpc_env__.switch_seed(1)
                 r = __mpc_env__.rand_elem()
+                __mpc_env__.restore_seed()
+
                 self.share = share
-                share2 = zzp2zz(r - share)
+                share2 = zzp2zz(share - r)
                 __mpc_env__.send_elem(share2, 2, 0)
             case 1:
                 __mpc_env__.switch_seed(0)

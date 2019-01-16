@@ -2522,19 +2522,18 @@ void MPCEnv::BeaverMult(Mat<ZZ>& ab, Mat<ZZ>& ar, Mat<ZZ>& am, Mat<ZZ>& br, Mat<
 
 #include "lib.h"
 
-SEQ_FUNC void seq_mpcenv_del(void *mpc, void *unused)
+SEQ_FUNC void *seq_mpcenv_cleanup(void *mpc)
 {
 	((MPCEnv *)mpc)->CleanUp();
-	((MPCEnv *)mpc)->~MPCEnv();
+	delete (MPCEnv *)mpc;
+	return nullptr;
 }
 
 typedef struct { seq_int_t p1; seq_int_t p2; } IntPair;
 
 SEQ_FUNC void *seq_mpc_new(seq_int_t pid, seq_arr_t<IntPair> pairs)
 {
-	void *mpcMem = seq_alloc(sizeof(MPCEnv));
-	seq_register_finalizer(mpcMem, seq_mpcenv_del);
-	auto *mpc = (new (mpcMem) MPCEnv());
+	auto *mpc = new MPCEnv();
 
 	std::vector<std::pair<int, int>> pairsVec;
 	for (seq_int_t i = 0; i < pairs.len; i++) {
