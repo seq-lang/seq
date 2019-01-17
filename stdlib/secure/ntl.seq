@@ -54,6 +54,9 @@ class ZZ(p: ptr[byte]):
         return str(p, strlen(p))
 
 class ZZ_p(p: ptr[byte]):
+    def __init__(self: ZZ_p):
+        extern c ZZ_p_init(int) -> ptr[byte]
+        self.p = ZZ_p_init(0)
     def __init__(self: ZZ_p, p: ptr[byte]):
         self.p = p
     def __init__(self: ZZ_p, v: int):
