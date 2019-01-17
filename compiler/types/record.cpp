@@ -295,7 +295,7 @@ types::RecordType *types::RecordType::clone(Generic *ref)
 	if (ref->seenClone(this))
 		return (types::RecordType *)ref->getClone(this);
 
-	auto *x = types::RecordType::get({}, {});
+	auto *x = types::RecordType::get({}, {}, name);
 	ref->addClone(this, x);
 
 	std::vector<Type *> typesCloned;
