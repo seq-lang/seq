@@ -1,16 +1,14 @@
 from secure import *
 from secure.ntl import ZZ_p
 
-a = 42s
-b = 15s
+a = 3s
+b = 7s
+print a
+print b
 print a + b
-print a * b, 42 * 15
+# print a * b, 42 * 15
 
-# fid = 0
-# ar, am = __mpc_env__.beaver_partition(a.share, fid)
-# br, bm = __mpc_env__.beaver_partition(b.share, fid)
-# c = __mpc_env__.beaver_mult(ar, am, br, bm, fid)
-# print SInt(__mpc_env__.beaver_reconstruct(c, fid))
-
+# z = a * b
+# print '>>', z, __mpc_env__.reveal(z.share, 0)
 
 __mpc_env__.cleanup()

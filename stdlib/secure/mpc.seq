@@ -71,8 +71,32 @@ extend MPCEnv:
         self.switch_seed(__cp__)
         return x
 
+    def share[`t](self: MPCEnv, x: `t, fid):
+        """
+        Protocol 1: ShareSecret (p.7)
+        Out: (r, x - r)
+        """
+        
+        match __cp__:
+            case 0:
+                r = self.cp_rand(1, fid)
+                self.send_elem(x - r, 2, fid)
+                return x
+            case 1:
+                r = self.cp_rand(0, fid)
+                return r
+            case 2:
+                xr = self.receive_elem(0, fid)
+                return xr
+            default:
+                assert False
+
     def reveal[`t](self: MPCEnv, a: `t, fid: int) -> `t:
-        b = `t()
+        """
+        Protocol 2: ReconstructSecret (p.8)
+        Out: (x, x)
+        """
+
         next_cp = 3 - __cp__
         match __cp__:
             case 0:
@@ -80,45 +104,51 @@ extend MPCEnv:
             case 1:
                 self.send_elem(a, next_cp, fid)
                 b = self.receive_elem(next_cp, fid)
+                return a + b
             case 2:
                 b = self.receive_elem(next_cp, fid)
                 self.send_elem(a, next_cp, fid)
+                return a + b
             default:
                 assert False
-        return self.mod(a + b, fid)
 
+    # Send/Rcv need length
     def beaver_partition[`t](self: MPCEnv, a: `t, fid: int) -> tuple[`t, `t]:
         if __cp__ == 0:
-            am = self.mod(self.cp_rand(1, fid) + self.cp_rand(2, fid), fid)
+            am = self.cp_rand(1, fid) + self.cp_rand(2, fid)
             return (`t(), am)
         else:
             am = self.cp_rand(0, fid)
-            ar = self.reveal(self.mod(a - am, fid), fid)
+            ar = a - am
+            ar = self.reveal(ar, fid)
             return (ar, am)
 
+    # Same for vec / mat
     def beaver_mult[`t](self: MPCEnv, ar: `t, am: `t, br: `t, bm: `t, fid: int) -> `t:
         match __cp__:
             case 0:
-                return self.mod(am * bm, fid)
+                return am * bm
             case 1:
-                return self.mod(ar * bm + am * br + ar * br, fid)
+                return ar * bm + am * br + ar * br
             case 2:
-                return self.mod(ar * bm + am * br, fid)
+                return ar * bm + am * br
             default:
                 assert False
 
+    # Send/Rcv need length
     def beaver_reconstruct[`t](self: MPCEnv, ab: `t, fid: int) -> `t:
         match __cp__:
             case 0:
-                ab -= self.cp_rand(1, fid)
-                self.send_elem(self.mod(ab, fid), 2, fid)
+                mask = self.cp_rand(1, fid)
+                ab -= mask
+                self.send_elem(ab, 2, fid)
                 return ab
             case 1:
-                ambm = self.receive_elem(0, fid)
-                return self.mod(ab + ambm, fid)
-            case 2:
                 ambm = self.cp_rand(0, fid)
-                return self.mod(ab + ambm, fid)
+                return ab + ambm
+            case 2:
+                ambm = self.receive_elem(0, fid)
+                return ab + ambm
             default:
                 assert False
 

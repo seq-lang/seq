@@ -18,6 +18,7 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
 
   /* Set base prime for the finite field */
   ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+  cerr << "Base prime is " << base_p << endl;
   ZZ_p::init(base_p);
 
   this->pid = pid;
