@@ -941,17 +941,6 @@ IsExpr *IsExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new IsExpr(lhs->clone(ref), rhs->clone(ref)));
 }
 
-static void uopError(const std::string& sym, types::Type *t)
-{
-	throw exc::SeqException("operator '" + sym + "' cannot be applied to type '" + t->getName() + "'");
-}
-
-static void bopError(const std::string& sym, types::Type *t1, types::Type *t2)
-{
-	throw exc::SeqException("operator '" + sym + "' cannot be applied to types '" +
-	                        t1->getName() + "' and '" + t2->getName() + "'");
-}
-
 UOpExpr::UOpExpr(Op op, Expr *lhs) :
     Expr(), op(std::move(op)), lhs(lhs)
 {
@@ -971,13 +960,15 @@ Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		Value *b = lhsType->boolValue(self, block, getTryCatch());
 		return types::Bool->callMagic("__invert__", {}, b, {}, block, getTryCatch());
 	} else {
+		exc::SeqException exc("");
+
 		try {
 			return lhsType->callMagic(op.magic, {}, self, {}, block, getTryCatch());
-		} catch (exc::SeqException&) {
+		} catch (exc::SeqException& e) {
+			exc = exc::SeqException(e);
 		}
 
-		uopError(op.symbol, lhsType);
-		return nullptr;
+		throw exc::SeqException(exc);
 	}
 }
 
@@ -988,13 +979,15 @@ types::Type *UOpExpr::getType0() const
 	if (op == uop("!")) {
 		return types::Bool;
 	} else {
+		exc::SeqException exc("");
+
 		try {
 			return lhsType->magicOut(op.magic, {});
-		} catch (exc::SeqException&) {
+		} catch (exc::SeqException& e) {
+			exc = exc::SeqException(e);
 		}
 
-		uopError(op.symbol, lhsType);
-		return nullptr;
+		throw exc::SeqException(exc);
 	}
 }
 
@@ -1057,10 +1050,12 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		types::Type *rhsType = rhs->getType();
 		Value *self = lhs->codegen(base, block);
 		Value *arg = rhs->codegen(base, block);
+		exc::SeqException exc("");
 
 		try {
 			return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block, getTryCatch());
-		} catch (exc::SeqException&) {
+		} catch (exc::SeqException& e) {
+			exc = exc::SeqException(e);
 		}
 
 		if (!op.magicReflected.empty()) {
@@ -1070,8 +1065,7 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 			}
 		}
 
-		bopError(op.symbol, lhsType, rhsType);
-		return nullptr;
+		throw exc::SeqException(exc);
 	}
 }
 
@@ -1082,10 +1076,12 @@ types::Type *BOpExpr::getType0() const
 	} else {
 		types::Type *lhsType = lhs->getType();
 		types::Type *rhsType = rhs->getType();
+		exc::SeqException exc("");
 
 		try {
 			return lhsType->magicOut(op.magic, {rhsType});
-		} catch (exc::SeqException&) {
+		} catch (exc::SeqException& e) {
+			exc = exc::SeqException(e);
 		}
 
 		if (!op.magicReflected.empty()) {
@@ -1095,8 +1091,7 @@ types::Type *BOpExpr::getType0() const
 			}
 		}
 
-		bopError(op.symbol, lhsType, rhsType);
-		return nullptr;
+		throw exc::SeqException(exc);
 	}
 }
 
