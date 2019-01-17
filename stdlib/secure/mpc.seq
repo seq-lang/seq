@@ -76,7 +76,7 @@ extend MPCEnv:
         next_cp = 3 - __cp__
         match __cp__:
             case 0:
-                return
+                return a
             case 1:
                 self.send_elem(a, next_cp, fid)
                 b = self.receive_elem(next_cp, fid)
