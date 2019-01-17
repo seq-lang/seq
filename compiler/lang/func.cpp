@@ -336,7 +336,7 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 	if (gen && val)
 		throw exc::SeqException("cannot return value from generator");
 
-	if (val && type && !types::is(type, outType))
+	if ((val && type && !types::is(type, outType)) || (!val && !outType->is(types::Void)))
 		throw exc::SeqException(
 		  "cannot return '" + type->getName() + "' from function returning '" +
 		  outType->getName() + "'");
