@@ -4,6 +4,7 @@ sudo: required
 matrix:
   include:
     - os: linux
+      dist: xenial
       env:
         - CONDA_OS_NAME=Linux
         - OCAML_VERSION=4.07
