@@ -2104,7 +2104,7 @@ static Value *codegenPipe(BaseFunc *base,
 
 		Value *cond = genType->done(gen, loop);
 		BasicBlock *body = BasicBlock::Create(context, "body", func);
-		builder.SetInsertPoint(loop0);
+		builder.SetInsertPoint(loop);
 		BranchInst *branch = builder.CreateCondBr(cond, body, body);  // we set true-branch below
 
 		block = body;
