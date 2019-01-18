@@ -106,7 +106,14 @@ public:
 
     sockAddr.sin_port = htons(nPort);
 
-    return bind(m_hSock, (const sockaddr *) &sockAddr, (socklen_t)sizeof(sockaddr_in)) >= 0;
+    int ret = bind(m_hSock, (const sockaddr *) &sockAddr, (socklen_t)sizeof(sockaddr_in));
+    if (ret < 0) {
+      fprintf(stderr, "Error when binding! port %d -- %s\n", nPort, strerror(errno)); 
+      return false;
+    } else {
+      fprintf(stderr, "Listening on port %d\n", nPort); 
+      return true;
+    }
   }
 
   bool Listen(int nQLen = 5) {
@@ -147,6 +154,11 @@ public:
     }
 
     int ret = connect(m_hSock, (sockaddr*)&sockAddr, sizeof(sockAddr));
+    if (ret < 0) {
+      fprintf(stderr, "Error when connecting! port %d -- %s\n", port, strerror(errno)); 
+    } else {
+      fprintf(stderr, "Connected to port %d\n", port); 
+    }
 
     if( ret >= 0 && lTOSMilisec > 0 ) {
       tv.tv_sec = 100000;

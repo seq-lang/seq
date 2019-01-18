@@ -135,7 +135,7 @@ extend MPCEnv:
             am = self.rand_at(1, fid) + self.rand_at(2, fid)
             return (`t(), am)
         else:
-            am = self.rand_at(0, fid)
+            am = self.rand_at(__cp__, fid)
             ar = a - am
             ar = self.reveal(ar, fid)
             return (ar, am)
