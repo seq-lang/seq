@@ -20,7 +20,7 @@ pid1=$!
 pid2=$!
 
 SEQ_MPC_CP=0 ./main.exe $1 2>&1 | sed "s/^/[CP0] /"
-echo "Done!"
+echo "Done! $?" 
 
 trap "kill ${pid1} ${pid2}; exit 1" INT
 wait

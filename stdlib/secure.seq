@@ -3,26 +3,22 @@ from secure.ntl import ZZ_p, zzp2zz, zz2zzp
 
 class SInt(share: ZZ_p):
     # Protocol 1
-    def _init(self: SInt, share: ZZ_p):
-        s = __mpc_env__.share(share, 0)
+    def __init__(self: SInt, share: ZZ_p):
+        self.share = share
+
+    def __init__(self: SInt, share: int):
+        s = __mpc_env__.share(ZZ_p(share), 0)
         if __cp__ == 0:
             self.share = ZZ_p(0)
         else:
             self.share = s
-
-    def __init__(self: SInt, share: ZZ_p):
-        self._init(share)
-
-    def __init__(self: SInt, share: int):
-        self._init(ZZ_p(share))
 
     def __add__(x: SInt, y: SInt):
         """
         Protocol 3: Add (p.8)
         """
 
-        if __cp__ != 0:
-            return x.share + y.share
+        return SInt(x.share + y.share)
 
     def __add__(x: SInt, y: int):
         """
@@ -30,9 +26,26 @@ class SInt(share: ZZ_p):
         """
 
         if __cp__ == 1:
-            return x.share + y
-        elif __cp__ == 2:
-            return x.share
+            return SInt(x.share + ZZ_p(y))
+        else:
+            return SInt(copy(x.share))
+
+    def __sub__(x: SInt, y: SInt):
+        """
+        Protocol 3: Add (p.8)
+        """
+
+        return SInt(x.share - y.share)
+
+    def __sub__(x: SInt, y: int):
+        """
+        Protocol 4: AddPublic (p.8)
+        """
+
+        if __cp__ == 1:
+            return SInt(x.share - ZZ_p(y))
+        else:
+            return SInt(copy(x.share))
 
     def __mul__(x: SInt, y: int):
         """
@@ -40,11 +53,14 @@ class SInt(share: ZZ_p):
         """
 
         if __cp__ != 0:
-            return x.share * y
+            return SInt(x.share * ZZ_p(y))
+        else:
+            return SInt(copy(x.share))
 
     def __mul__(a: SInt, b: SInt):
         """
-        Protocol 7: Multiply (p.9)
+        Protocol 9: EvaluatePolynomial (p.12)
+        restricted to f := xy
         """
 
         fid = 0
@@ -53,15 +69,13 @@ class SInt(share: ZZ_p):
         c = __mpc_env__.beaver_mult(ar, am, br, bm, fid)
         return SInt(__mpc_env__.beaver_reconstruct(c, fid))
 
-    def __print__(self: SInt):
+    def __str__(self: SInt) -> str:
         if __cp__ != 0:
-            self.share.__str__().__print__()
-            ' -> '.__print__()
+            print 'prn share', self.share
             r = __mpc_env__.reveal(self.share, 0)
-            'revealed: '.__print__()
-            r.__str__().__print__()
+            return self.share.__str__() + ' -> revealed: ' + r.__str__()
         else:
-            'Cannot print on CP0 yet'.__print__()
+            return 'Cannot print on CP0 yet'
 
 # p = 1461501637330902918203684832716283019655932542929
 

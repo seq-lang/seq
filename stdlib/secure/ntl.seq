@@ -65,6 +65,10 @@ class ZZ_p(p: ptr[byte]):
     def __del__(self: ZZ_p):
         extern c ZZ_p_free(ptr[byte])
         ZZ_p_free(self.p)
+    def __copy__(self: ZZ_p):
+        extern c ZZ_p_copy(ptr[byte]) -> ptr[byte]
+        # return ZZ_p(ZZ_p_copy(self.p))
+        return ZZ_p(self.p)
 
     def __add__(a: ZZ_p, b: ZZ_p):
         extern c ZZ_p_O_add(ptr[byte], ptr[byte]) -> ptr[byte]
@@ -111,60 +115,3 @@ def zzp2zz(x: ZZ_p):
     extern c ZZ_p_to_ZZ(ptr[byte]) -> ptr[byte]
     return ZZ(ZZ_p_to_ZZ(x.p))
 
-class VecZZ(p: ptr[byte]):
-    def __init__(self: VecZZ):
-        extern c VecZZ_init() -> ptr[byte]
-        self.p = VecZZ_init()
-    def __del__(self: VecZZ):
-        extern c VecZZ_free(ptr[byte])
-        VecZZ_free(self.p)
-
-    def __eq__(a: VecZZ, b: VecZZ):
-        extern c VecZZ_O_eq(ptr[byte], ptr[byte]) -> bool
-        return VecZZ_O_eq(a.p, b.p)
-    def __ne__(a: VecZZ, b: VecZZ):
-        extern c VecZZ_O_ne(ptr[byte], ptr[byte]) -> bool
-        return VecZZ_O_ne(a.p, b.p)
-
-    def __getitem__(a: VecZZ, b: int):
-        extern c VecZZ_O_getitem(ptr[byte], int) -> ptr[byte]
-        return ZZ(VecZZ_O_getitem(a.p, b.p))
-    def __setitem__(a: VecZZ, b: int, z: ZZ):
-        extern c VecZZ_O_setitem(ptr[byte], int, ptr[byte]) -> void
-        VecZZ_O_setitem(a.p, b, z.p)
-
-    def length(a: VecZZ):
-        extern c VecZZ_length(ptr[byte]) -> int
-        return VecZZ_length(a.p)
-    def setLength(a: VecZZ, b: int):
-        extern c VecZZ_SetLength(ptr[byte], b: int) -> void
-        VecZZ_SetLength(a.p, b)
-
-class VecZZ_p(p: ptr[byte]):
-    def __init__(self: VecZZ_p):
-        extern c VecZZ_p_init() -> ptr[byte]
-        self.p = VecZZ_p_init()
-    def __del__(self: VecZZ_p):
-        extern c VecZZ_p_free(ptr[byte])
-        VecZZ_p_free(self.p)
-
-    def __eq__(a: VecZZ_p, b: VecZZ_p):
-        extern c VecZZ_p_O_eq(ptr[byte], ptr[byte]) -> bool
-        return VecZZ_p_O_eq(a.p, b.p)
-    def __ne__(a: VecZZ_p, b: VecZZ_p):
-        extern c VecZZ_p_O_ne(ptr[byte], ptr[byte]) -> bool
-        return VecZZ_p_O_ne(a.p, b.p)
-
-    def __getitem__(a: VecZZ_p, b: int):
-        extern c VecZZ_p_O_getitem(ptr[byte], int) -> ptr[byte]
-        return ZZ_p(VecZZ_p_O_getitem(a.p, b.p))
-    def __setitem__(a: VecZZ_p, b: int, z: ZZ_p):
-        extern c VecZZ_p_O_setitem(ptr[byte], int, ptr[byte]) -> void
-        VecZZ_p_O_setitem(a.p, b, z.p)
-
-    def length(a: VecZZ_p):
-        extern c VecZZ_p_length(ptr[byte]) -> int
-        return VecZZ_p_length(a.p)
-    def setLength(a: VecZZ_p, b: int):
-        extern c VecZZ_p_SetLength(ptr[byte], b: int) -> void
-        VecZZ_p_SetLength(a.p, b)

@@ -25,9 +25,9 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
   this->clock_start = chrono::steady_clock::now();
   debug = false;
 
-  if (!SetupChannels(pairs)) {
+  while (!SetupChannels(pairs)) {
     cout << "MPCEnv::Initialize: failed to initialize communication channels" << endl;
-    return false;
+    sleep(3);
   }
 
   if (!SetupPRGs(pairs)) {

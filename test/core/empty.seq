@@ -1,14 +1,25 @@
 from secure import *
 from secure.ntl import ZZ_p
 
+print 'HI FROM', __cp__
+
 a = 3s
-b = 7s
 print a
+b = 7s
 print b
+print '=== sum_p ==='
+print a + 5
+print '=== prod_p ==='
+print a * 5
+
+print '=== sum ==='
 print a + b
-# print a * b, 42 * 15
+
+print '=== prod ==='
+print a * b
 
 # z = a * b
 # print '>>', z, __mpc_env__.reveal(z.share, 0)
 
 __mpc_env__.cleanup()
+

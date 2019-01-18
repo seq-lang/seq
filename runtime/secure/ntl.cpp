@@ -42,6 +42,8 @@ SEQ_FUNC void ZZ_ToBytes  (ZZ* a, unsigned char *c, seq_int_t n) { BytesFromZZ(c
 
 SEQ_FUNC ZZ_p* ZZ_to_ZZ_p (ZZ* a) { return new ZZ_p(conv<ZZ_p>(*a)); }
 
+SEQ_FUNC ZZ* ZZ_copy (ZZ* a) { return new ZZ(*a); }
+
 /****************** ZZ_p ******************/
 
 SEQ_FUNC ZZ_p* ZZ_p_init (seq_int_t val) { return new ZZ_p(val); }
@@ -63,6 +65,9 @@ SEQ_FUNC char* ZZ_p_O_str (ZZ_p* a) { return to_string(*a); }
 SEQ_FUNC ZZ_p* ZZ_p_rand() { auto *z = new ZZ_p(); random(*z); return z; }
 
 SEQ_FUNC ZZ* ZZ_p_to_ZZ (ZZ_p* a) { return new ZZ(rep(*a)); }
+
+SEQ_FUNC ZZ_p* ZZ_p_copy (ZZ_p* a) { return new ZZ_p(*a); }
+
 
 /****************** VecZZ ******************/
 
