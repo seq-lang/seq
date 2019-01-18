@@ -815,6 +815,7 @@ FOREIGN void exec_module
 	}
 }
 
+#if LLVM_VERSION_MAJOR >= 7
 FOREIGN SeqJIT *jit_init()
 {
 	SeqJIT::init();
@@ -835,3 +836,11 @@ FOREIGN void jit_func(SeqJIT *jit, Func *func, char **error)
 		CATCH (error);
 	}
 }
+#else
+FOREIGN void *jit_init() { return 0; }
+FOREIGN Var *jit_var(void *jit, Expr *expr) { return 0; }
+FOREIGN void jit_func(void *jit, Func *func, char **error)
+{
+	*error = strdup("JIT is not supported with LLVM < 7");
+}
+#endif
