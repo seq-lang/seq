@@ -51,7 +51,7 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/secure/socket.cpp
                          runtime/secure/socket.h
                          runtime/secure/util.h)
-target_link_libraries(seqrt gc crypto gmp ntl OpenSSL::SSL)
+target_link_libraries(seqrt gc OpenSSL::SSL gmp ntl)
 target_include_directories(seqrt PRIVATE ntl/include/)
 
 

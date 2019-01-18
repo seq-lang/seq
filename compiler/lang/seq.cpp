@@ -6,7 +6,10 @@
 
 using namespace seq;
 using namespace llvm;
+
+#if LLVM_VERSION_MAJOR >= 7
 using namespace llvm::orc;
+#endif
 
 static LLVMContext context;
 
