@@ -1,5 +1,5 @@
 from secure.socket import Socket
-from secure.ntl import ZZ, ZZ_p
+# from secure.ntl import 
 
 type MPCEnv(p: ptr[byte], fid: int)
 extend MPCEnv:
@@ -31,16 +31,6 @@ extend MPCEnv:
         extern c seq_mpc_socket(ptr[byte], int) -> ptr[byte]
         return (seq_mpc_socket(self.p, from_pid), )
 
-    def receive_elem(self: MPCEnv, from_pid: int):
-        s = self.socket(from_pid)
-        s.receive_secure(self.buf(), self.zz_bytes(), 0)
-        return ZZ.from_bytes(self.buf(), self.zz_bytes()).zz_p()
-
-    def send_elem(self: MPCEnv, zzp: ZZ_p, to_pid: int):
-        s = self.socket(to_pid)
-        zzp.zz().bytes(self.buf(), self.zz_bytes())
-        s.send_secure(self.buf(), self.zz_bytes(), 0)
-
     def switch_seed(self: MPCEnv, pid: int):
         extern c seq_mpc_switch_seed(ptr[byte], int)
         seq_mpc_switch_seed(self.p, pid)
@@ -51,9 +41,17 @@ extend MPCEnv:
 
     ######################################################################
 
-    def rand_at[`t](self: MPCEnv, i: int, sz: `t) -> `t:
-        self.switch_seed(i)
-        x = `t.random(len(sz))
+    def send[`t](self: MPCEnv, to_pid: int, what: `t):
+        s = self.socket(to_pid)
+        what.send(s, self.buf(), self.zz_bytes(), self.zz_per_buf())
+        
+    def receive[`t](self: MPCEnv, from_pid: int, what: `t) -> `t:
+        s = self.socket(from_pid)
+        return `t.receive(len(what), s, self.buf(), self.zz_bytes(), self.zz_per_buf())
+
+    def rand_at[`t](self: MPCEnv, at: int, what: `t) -> `t:
+        self.switch_seed(at)
+        x = `t.random(len(what))
         self.restore_seed()
         return x
 
@@ -65,13 +63,13 @@ extend MPCEnv:
         match __cp__:
             case 0:
                 r = self.rand_at[`t](1, x)
-                self.send_elem(x - r, 2)
+                self.send(2, x - r)
                 return x
             case 1:
                 r = self.rand_at[`t](0, x)
                 return r
             case 2:
-                xr = self.receive_elem(0)
+                xr = self.receive[`t](0, x)
                 return xr
             default:
                 assert False
@@ -86,12 +84,12 @@ extend MPCEnv:
             case 0:
                 return copy(a)
             case 1:
-                self.send_elem(a, next_cp)
-                b = self.receive_elem(next_cp)
+                self.send(next_cp, a)
+                b = self.receive[`t](next_cp, a)
                 return a + b
             case 2:
-                b = self.receive_elem(next_cp)
-                self.send_elem(a, next_cp)
+                b = self.receive[`t](next_cp, a)
+                self.send(next_cp, a)
                 return a + b
             default:
                 assert False
@@ -110,7 +108,6 @@ extend MPCEnv:
             ar = self.reveal(ar)
             return (ar, am)
 
-    # Same for vec / mat
     def beaver_mult[`t](self: MPCEnv, ar: `t, am: `t, br: `t, bm: `t) -> `t:
         match __cp__:
             case 0:
@@ -122,19 +119,18 @@ extend MPCEnv:
             default:
                 assert False
 
-    # Send/Rcv need length
     def beaver_reconstruct[`t](self: MPCEnv, ab: `t) -> `t:
         match __cp__:
             case 0:
                 mask = self.rand_at[`t](1, ab)
                 ab -= mask
-                self.send_elem(ab, 2)
+                self.send(2, ab)
                 return ab
             case 1:
                 ambm = self.rand_at[`t](0, ab)
                 return ab + ambm
             case 2:
-                ambm = self.receive_elem(0)
+                ambm = self.receive[`t](0, ab)
                 return ab + ambm
             default:
                 assert False

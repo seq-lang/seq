@@ -1,3 +1,4 @@
+from secure.socket import Socket
 
 class ZZ(p: ptr[byte]):
     def __init__(self: ZZ, p: ptr[byte]):
@@ -50,88 +51,93 @@ class ZZ(p: ptr[byte]):
         p = ZZ_O_str(a.p)
         return str(p, strlen(p))
 
-    def zz_p(x: ZZ) -> ZZ_p:
+    def zz_p(x: ZZ) -> ModInt:
         extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
-        return ZZ_p(ZZ_to_ZZ_p(x.p))
+        return ModInt(ZZ_to_ZZ_p(x.p))
 
-    def bytes(zz: ZZ, buf: ptr[byte], n: int):
-        extern c ZZ_ToBytes(ptr[byte], ptr[byte], int)
-        ZZ_ToBytes(zz.p, buf, n)
-
-    def from_bytes(buf: ptr[byte], n: int):
-        extern c ZZ_FromBytes(ptr[byte], int) -> ptr[byte]
-        return ZZ(ZZ_FromBytes(buf, n))
-
-class ZZ_p(p: ptr[byte]):
-    def __init__(self: ZZ_p):
+class ModInt(p: ptr[byte]):
+    def __init__(self: ModInt):
         extern c ZZ_p_init(int) -> ptr[byte]
         self.p = ZZ_p_init(0)
-    def __init__(self: ZZ_p, p: ptr[byte]):
+    def __init__(self: ModInt, p: ptr[byte]):
         self.p = p
-    def __init__(self: ZZ_p, v: int):
+    def __init__(self: ModInt, v: int):
         extern c ZZ_p_init(int) -> ptr[byte]
         self.p = ZZ_p_init(v)
-    def __del__(self: ZZ_p):
+    def __del__(self: ModInt):
         extern c ZZ_p_free(ptr[byte])
         ZZ_p_free(self.p)
-    def __copy__(self: ZZ_p):
+    def __copy__(self: ModInt):
         extern c ZZ_p_copy(ptr[byte]) -> ptr[byte]
-        return ZZ_p(self.p)
+        return ModInt(self.p)
 
-    def __add__(a: ZZ_p, b: ZZ_p):
+    def __add__(a: ModInt, b: ModInt):
         extern c ZZ_p_O_add(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ_p(ZZ_p_O_add(a.p, b.p))
-    def __sub__(a: ZZ_p, b: ZZ_p):
+        return ModInt(ZZ_p_O_add(a.p, b.p))
+    def __sub__(a: ModInt, b: ModInt):
         extern c ZZ_p_O_sub(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ_p(ZZ_p_O_sub(a.p, b.p))
-    def __mul__(a: ZZ_p, b: ZZ_p):
+        return ModInt(ZZ_p_O_sub(a.p, b.p))
+    def __mul__(a: ModInt, b: ModInt):
         extern c ZZ_p_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ_p(ZZ_p_O_mul(a.p, b.p))
-    def __div__(a: ZZ_p, b: ZZ_p):
+        return ModInt(ZZ_p_O_mul(a.p, b.p))
+    def __div__(a: ModInt, b: ModInt):
         extern c ZZ_p_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ_p(ZZ_p_O_truediv(a.p, b.p))
+        return ModInt(ZZ_p_O_truediv(a.p, b.p))
 
-    def __eq__(a: ZZ_p, b: ZZ_p):
+    def __eq__(a: ModInt, b: ModInt):
         extern c ZZ_p_O_eq(ptr[byte], ptr[byte]) -> bool
         return ZZ_p_O_eq(a.p, b.p)
-    def __ne__(a: ZZ_p, b: ZZ_p):
+    def __ne__(a: ModInt, b: ModInt):
         extern c ZZ_p_O_ne(ptr[byte], ptr[byte]) -> bool
         return ZZ_p_O_ne(a.p, b.p)
 
-    def __str__(a: ZZ_p):
+    def __str__(a: ModInt):
         extern c ZZ_p_O_str(ptr[byte]) -> ptr[byte]
         extern c strlen(ptr[byte]) -> int
         p = ZZ_p_O_str(a.p)
         return str(p, strlen(p))
 
-    def __len__(self: ZZ_p) -> int:
+    def __len__(self: ModInt) -> int:
         return 0
 
-    def init(a: ZZ):
-        extern c ZZ_p_init_p(ptr[byte])
-        ZZ_p_init_p(a.p)
-
+    #@static
     def modulus():
         extern c ZZ_p_modulus() -> ptr[byte]
         return ZZ(ZZ_p_modulus())
 
+    #@static
     def random(sz: int):
         extern c ZZ_p_rand() -> ptr[byte]
-        return ZZ_p(ZZ_p_rand())
+        return ModInt(ZZ_p_rand())
 
-    def zz(x: ZZ_p) -> ZZ:
+    def to_bytes(self: ModInt, buf: ptr[byte], n: int):
+        extern c ZZ_ToBytes(ptr[byte], ptr[byte], int)
         extern c ZZ_p_to_ZZ(ptr[byte]) -> ptr[byte]
-        return ZZ(ZZ_p_to_ZZ(x.p))
+        ZZ_ToBytes(ZZ_p_to_ZZ(self.p), buf, n)
+
+    #@static
+    def from_bytes(buf: ptr[byte], n: int) -> ModInt:
+        extern c ZZ_FromBytes(ptr[byte], int) -> ptr[byte]
+        extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
+        return ModInt(ZZ_to_ZZ_p(ZZ_FromBytes(buf, n)))
+
+    def send(self: ModInt, s: Socket, buf: ptr[byte], bytes: int, per_buf: int):
+        self.to_bytes(buf, bytes)
+        s.send_secure(buf, bytes, 0)
+
+    def receive(sz: int, s: Socket, buf: ptr[byte], bytes: int, per_buf: int) -> ModInt:
+        s.receive_secure(buf, bytes, 0)
+        return ModInt.from_bytes(buf, bytes)
 
 
-class Vec(items: list[ZZ_p]):
-    def __add__(a: Vec, b: ZZ_p):
+class Vec(items: list[ModInt]):
+    def __add__(a: Vec, b: ModInt):
         return Vec([i + b for i in a.items])
-    def __sub__(a: Vec, b: ZZ_p):
+    def __sub__(a: Vec, b: ModInt):
         return Vec([i - b for i in a.items])
-    def __mul__(a: Vec, b: ZZ_p):
+    def __mul__(a: Vec, b: ModInt):
         return Vec([i * b for i in a.items])
-    def __div__(a: Vec, b: ZZ_p):
+    def __div__(a: Vec, b: ModInt):
         return Vec([i / b for i in a.items])
 
     def __add__(a: Vec, b: Vec):
@@ -139,9 +145,7 @@ class Vec(items: list[ZZ_p]):
     def __sub__(a: Vec, b: Vec):
         return Vec([i - j for i, j in zip(a.items, b.items)])
     def __mul__(a: Vec, b: Vec):
-        return Vec([i * j for i, j in zip(a.items, b.items)])
-    def __div__(a: Vec, b: Vec):
-        return Vec([i / j for i, j in zip(a.items, b.items)])
+        return sum(i * j for i, j in zip(a.items, b.items))
 
     def __eq__(a: Vec, b: Vec):
         if len(a) == len(b):
@@ -164,16 +168,47 @@ class Vec(items: list[ZZ_p]):
         return self.items.__copy__()
 
     def random(sz: int):
-        return Vec([ZZ_p.random(0) for i in range(sz)])
+        return Vec([ModInt.random(0) for i in range(sz)])
 
-class Mat(items: list[list[ZZ_p]]):
-    def __add__(a: Mat, b: ZZ_p):
+    def send(self: Vec, s: Socket, buf: ptr[byte], bytes: int, per_buf: int):
+        stored_in_buf = 0
+        buf_ptr = buf
+        for i in len(self):
+            if stored_in_buf == per_buf:
+                s.send_secure(buf, stored_in_buf * bytes, 0)
+                stored_in_buf, buf_ptr = 0, buf
+            self[i].to_bytes(buf_ptr, bytes)
+            stored_in_buf += 1
+            buf_ptr += bytes
+        if stored_in_buf > 0:
+            s.send_secure(buf, bytes * stored_in_buf, 0)
+
+    def receive(sz: int, s: Socket, buf: ptr[byte], bytes: int, per_buf: int) -> Vec:
+        items = list[ModInt](sz)
+        stored_in_buf = 0
+        buf_ptr = buf
+        remaining = sz
+        for i in range(sz):
+            if stored_in_buf == 0:
+                count = remaining if remaining < per_buf else per_buf
+                s.receive_secure(buf, count * bytes, 0)
+                stored_in_buf += count
+                remaining -= count
+                buf_ptr = buf
+            items[i] = ModInt.from_bytes(buf_ptr, bytes)
+            buf_ptr += bytes
+            stored_in_buf -= 1  
+        return Vec(items)
+
+
+class Mat(items: list[list[ModInt]]):
+    def __add__(a: Mat, b: ModInt):
         return Mat([[c + b for c in r] for r in a.items])
-    def __sub__(a: Mat, b: ZZ_p):
+    def __sub__(a: Mat, b: ModInt):
         return Mat([[c - b for c in r] for r in a.items])
-    def __mul__(a: Mat, b: ZZ_p):
+    def __mul__(a: Mat, b: ModInt):
         return Mat([[c * b for c in r] for r in a.items])
-    def __div__(a: Mat, b: ZZ_p):
+    def __div__(a: Mat, b: ModInt):
         return Mat([[c / b for c in r] for r in a.items])
 
     def __add__(a: Mat, b: Mat):
@@ -211,6 +246,6 @@ class Mat(items: list[list[ZZ_p]]):
     def random(sz: tuple[int, int]):
         nr, nc = sz
         return Mat([
-            [ZZ_p.random(0) for c in range(nc)] 
+            [ModInt.random(0) for c in range(nc)] 
             for r in range(nr)])
 

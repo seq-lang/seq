@@ -1,61 +1,62 @@
 from secure.mpc import MPCEnv
 
-class Secure[`t](share: `t):
-    # Protocol 1
-    def __init__(self: Secure[`t], share: `t):
-        self.share = __mpc_env__.share(share)
-
+class Secure[`t](sh: `t):
     def __add__(x: Secure[`t], y: Secure[`t]):
         """
         Protocol 3: Add (p.8)
         """
-        return Secure[`t](x.share + y.share)
+        return Secure[`t](x.sh + y.sh)
 
     def __add__(x: Secure[`t], y: `t):
         """
         Protocol 4: AddPublic (p.8)
         """
-        if __cp__ != 2:
-            return Secure[`t](x.share + y)
-        else:
-            return Secure[`t](copy(x.share))
-
-    def __sub__(x: Secure[`t], y: Secure[`t]):
+        if __cp__ != 2: return Secure[`t](x.sh + y)
+        else: return Secure[`t](copy(x.sh))
+    def __add__(x: Secure[`t], y: Secure[`t]):
         """
         Protocol 3: Add (p.8)
         """
-        return Secure[`t](x.share - y.share)
+        return Secure[`t](x.sh + y.sh)
 
     def __sub__(x: Secure[`t], y: `t):
         """
         Protocol 4: AddPublic (p.8)
         """
-        if __cp__ != 2:
-            return Secure[`t](x.share - y)
-        else:
-            return Secure[`t](copy(x.share))
+        if __cp__ != 2: return Secure[`t](x.sh - y)
+        else: return Secure[`t](copy(x.sh))
+    def __sub__(x: Secure[`t], y: Secure[`t]):
+        """
+        Protocol 3: Add (p.8)
+        """
+        return Secure[`t](x.sh - y.sh)
+
 
     def __mul__(x: Secure[`t], y: `t):
         """
         Protocol 5: MultiplyPublic (p.8)
         """
-        return Secure[`t](x.share * y)
-
+        return Secure[`t](x.sh * y)
     def __mul__(a: Secure[`t], b: Secure[`t]):
         """
         Protocol 9: EvaluatePolynomial (p.12)
         restricted to f := xy
         """
-        ar, am = __mpc_env__.beaver_partition(a.share)
-        br, bm = __mpc_env__.beaver_partition(b.share)
+        ar, am = __mpc_env__.beaver_partition(a.sh)
+        br, bm = __mpc_env__.beaver_partition(b.sh)
         c = __mpc_env__.beaver_mult(ar, am, br, bm)
         return Secure[`t](__mpc_env__.beaver_reconstruct(c))
 
     def __str__(self: Secure[`t]) -> str:
         if __cp__ != 0:
             return \
-                '[' + self.share.__str__() + '] ' + \
-                '<' + __mpc_env__.reveal(self.share).__str__() + '>'
+                '[' + self.sh.__str__() + ']' + \
+                '<r:' + __mpc_env__.reveal(self.sh).__str__() + '>'
         else:
-            return self.share.__str__()
+            return self.sh.__str__()
+
+    #@static
+    def share(item: `t) -> Secure[`t]:
+        sh = __mpc_env__.share(item)
+        return Secure[`t](sh)
 

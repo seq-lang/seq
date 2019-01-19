@@ -130,9 +130,7 @@ struct
         | _ ->
           let var_stmt = Llvm.Stmt.var rh_expr in
           Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
-(*           if var = "__mpc_env__" then 
-            Llvm.Stmt.resolve var_stmt;
- *)          var_stmt
+          var_stmt
       end
     | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)
       Llvm.Stmt.assign_member (E.parse ctx lh_lhs) lh_rhs rh_expr
