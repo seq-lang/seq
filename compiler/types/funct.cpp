@@ -119,45 +119,6 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 types::GenType::GenType(Type *outType) :
     Type("generator", BaseType::get()), outType(outType)
 {
-	types::VoidType *voidType = types::VoidType::get();
-	types::Type *type = this->outType->is(voidType) ? (types::Type *)voidType :
-	                                                  types::OptionalType::get(outType);
-
-	addMethod("next", new BaseFuncLite({this}, type, [this, type](Module *module) {
-		auto *optType = dynamic_cast<types::OptionalType *>(type);
-		LLVMContext& context = module->getContext();
-		auto *f = cast<Function>(module->getOrInsertFunction("seq.gen.next",
-		                                                     type->getLLVMType(context),
-		                                                     getLLVMType(context)));
-		f->setLinkage(GlobalValue::PrivateLinkage);
-		Value *arg = f->arg_begin();
-
-		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
-		BasicBlock *a = BasicBlock::Create(context, "done", f);
-		BasicBlock *b = BasicBlock::Create(context, "return", f);
-
-		IRBuilder<> builder(entry);
-		resume(arg, entry, nullptr, nullptr);
-		Value *d = done(arg, entry);
-		builder.CreateCondBr(d, a, b);
-
-		builder.SetInsertPoint(a);
-		destroy(arg, a);
-		if (optType)
-			builder.CreateRet(optType->make(nullptr, a));
-		else
-			builder.CreateRetVoid();
-
-		builder.SetInsertPoint(b);
-		if (optType) {
-			Value *val = promise(arg, b);
-			builder.CreateRet(optType->make(val, b));
-		} else {
-			builder.CreateRetVoid();
-		}
-
-		return f;
-	}), true);
 }
 
 Value *types::GenType::defaultValue(BasicBlock *block)
@@ -221,6 +182,46 @@ void types::GenType::initOps()
 			return self;
 		}},
 	};
+
+	types::VoidType *voidType = types::VoidType::get();
+	types::Type *type = this->outType->is(voidType) ? (types::Type *)voidType :
+	                                                  types::OptionalType::get(outType);
+
+	addMethod("next", new BaseFuncLite({this}, type, [this, type](Module *module) {
+		auto *optType = dynamic_cast<types::OptionalType *>(type);
+		LLVMContext& context = module->getContext();
+		auto *f = cast<Function>(module->getOrInsertFunction("seq.gen.next",
+		                                                     type->getLLVMType(context),
+		                                                     getLLVMType(context)));
+		f->setLinkage(GlobalValue::PrivateLinkage);
+		Value *arg = f->arg_begin();
+
+		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
+		BasicBlock *a = BasicBlock::Create(context, "done", f);
+		BasicBlock *b = BasicBlock::Create(context, "return", f);
+
+		IRBuilder<> builder(entry);
+		resume(arg, entry, nullptr, nullptr);
+		Value *d = done(arg, entry);
+		builder.CreateCondBr(d, a, b);
+
+		builder.SetInsertPoint(a);
+		destroy(arg, a);
+		if (optType)
+			builder.CreateRet(optType->make(nullptr, a));
+		else
+			builder.CreateRetVoid();
+
+		builder.SetInsertPoint(b);
+		if (optType) {
+			Value *val = promise(arg, b);
+			builder.CreateRet(optType->make(val, b));
+		} else {
+			builder.CreateRetVoid();
+		}
+
+		return f;
+	}), true);
 }
 
 bool types::GenType::is(Type *type) const

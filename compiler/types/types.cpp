@@ -11,8 +11,7 @@ types::Type::Type(std::string name,
                   types::Type *parent,
                   bool abstract,
                   bool extendable) :
-    name(std::move(name)), parent(parent), abstract(abstract),
-    extendable(extendable), resolving(false)
+    name(std::move(name)), parent(parent), abstract(abstract), extendable(extendable)
 {
 }
 
@@ -415,22 +414,6 @@ Value *types::Type::callMagic(const std::string& name,
 	}
 
 	throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() + "' with specified argument types " + argsVecToStr(argTypes));
-}
-
-void types::Type::resolveTypes()
-{
-	if (resolving)
-		return;
-
-	resolving = true;
-
-	for (auto& magic : vtable.overloads)
-		magic.func->resolveTypes();
-
-	for (auto& e : vtable.methods)
-		e.second->resolveTypes();
-
-	resolving = false;
 }
 
 bool types::Type::isAtomic() const

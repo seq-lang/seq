@@ -50,7 +50,7 @@ extend MPCEnv:
     def rand_at[`t](self: MPCEnv, i: int, sz: `t) -> `t:
         self.switch_seed(i)
         x = `t.random(len(sz))
-        self.restore_seed() 
+        self.restore_seed()
         return x
 
     def share[`t](self: MPCEnv, x: `t) -> `t:

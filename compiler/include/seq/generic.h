@@ -83,7 +83,6 @@ namespace seq {
 			                       std::vector<llvm::Value *> args,
 			                       llvm::BasicBlock*& block,
 			                       TryCatch *tc) override;
-			void resolveTypes() override;
 
 			bool is(Type *type) const override;
 			bool isGeneric(Type *type) const override;
