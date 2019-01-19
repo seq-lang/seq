@@ -1324,7 +1324,6 @@ void GetElemExpr::setRealizeTypes(std::vector<types::Type *> types)
 void GetElemExpr::resolveTypes()
 {
 	rec->resolveTypes();
-	rec->getType()->resolveTypes();
 }
 
 Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock*& block)
@@ -1415,7 +1414,6 @@ void GetStaticElemExpr::setRealizeTypes(std::vector<types::Type *> types)
 
 void GetStaticElemExpr::resolveTypes()
 {
-	type->resolveTypes();
 }
 
 Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock*& block)
@@ -1898,7 +1896,6 @@ ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args) :
 
 void ConstructExpr::resolveTypes()
 {
-	type->resolveTypes();
 	for (auto *arg : args)
 		arg->resolveTypes();
 }

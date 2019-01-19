@@ -16,7 +16,12 @@ void types::RefType::setDone()
 	assert(this == root && !done);
 
 	if (!contents) {
-		resolveTypes();
+		for (auto& magic : vtable.overloads)
+			magic.func->resolveTypes();
+
+		for (auto& e : vtable.methods)
+			e.second->resolveTypes();
+
 		try {
 			setDeducedContents();
 		} catch (exc::SeqException&) {
@@ -105,7 +110,6 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 		ref->setDeducedContents();
 
 	addCachedRealized(types, ref);
-	ref->resolveTypes();
 	return ref;
 }
 

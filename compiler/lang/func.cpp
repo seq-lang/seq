@@ -119,6 +119,7 @@ std::string Func::getMangledFuncName()
 	// a nested function can't be a class method:
 	assert(!(parentType && parentFunc));
 
+	resolveTypes();
 	std::string mangled = name;
 
 	if (numGenerics() > 0) {
@@ -506,6 +507,7 @@ void BaseFuncLite::codegen(Module *module)
 	if (func)
 		return;
 
+	resolveTypes();
 	func = codegenLambda(module);
 	preambleBlock = &*func->getBasicBlockList().begin();
 }

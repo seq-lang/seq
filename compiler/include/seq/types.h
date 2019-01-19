@@ -68,8 +68,6 @@ namespace seq {
 
 			/// Fields and methods for this type
 			VTable vtable;
-
-			bool resolving;
 		public:
 			Type(std::string name, Type *parent, bool abstract=false, bool extendable=false);
 
@@ -227,9 +225,6 @@ namespace seq {
 			                               std::vector<llvm::Value *> args,
 			                               llvm::BasicBlock*& block,
 			                               TryCatch *tc);
-
-			/// Performs type resolution on all of this type's methods.
-			virtual void resolveTypes();
 
 			/// Checks whether this type "is" another type.
 			virtual bool is(Type *type) const;
