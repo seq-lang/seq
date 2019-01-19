@@ -3,19 +3,13 @@ from secure.ntl import ZZ_p
 
 print 'HI FROM', __cp__
 
-a = 3s
-print a
-b = 7s
-print b
-print '=== sum_p ==='
-print a + 5
-print '=== prod_p ==='
-print a * 5
+a = Secure[ZZ_p](7)
+b = Secure[ZZ_p](3)
 
-print '=== sum ==='
-print a + b
+print a, b
+# print a + 5, a * 5
 
-print '=== prod ==='
+print a + b, a - b
 print a * b
 
 # z = a * b

@@ -1,19 +1,11 @@
 from secure.socket import Socket
-from secure.ntl import ZZ, ZZ_p, zzp2zz, zz2zzp
+from secure.ntl import ZZ, ZZ_p
 
-def bytes_from_zz(buf: ptr[byte], zz: ZZ, n: int):
-    extern c ZZ_ToBytes(ptr[byte], ptr[byte], int)
-    ZZ_ToBytes(zz.p, buf, n)
-
-def zz_from_bytes(buf: ptr[byte], n: int):
-    extern c ZZ_FromBytes(ptr[byte], int) -> ptr[byte]
-    return ZZ(ZZ_FromBytes(buf, n))
-
-type MPCEnv(p: ptr[byte])
+type MPCEnv(p: ptr[byte], fid: int)
 extend MPCEnv:
     def __init__(self: MPCEnv, pairs: list[tuple[int,int]], pid: int) -> MPCEnv:
         extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
-        return (seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len)),)
+        return (seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len)), 0)
 
     def cleanup(self: MPCEnv):
         extern c seq_mpcenv_cleanup(ptr[byte]) -> ptr[byte]
@@ -23,125 +15,103 @@ extend MPCEnv:
         extern c seq_mpc_get_buf(ptr[byte]) -> ptr[byte]
         return seq_mpc_get_buf(self.p)
 
-    def zz_bytes(self: MPCEnv, fid: int):
+    def zz_bytes(self: MPCEnv):
         extern c seq_mpc_zz_bytes(ptr[byte], int) -> int
-        return seq_mpc_zz_bytes(self.p, fid)
+        return seq_mpc_zz_bytes(self.p, self.fid)
 
-    def zz_bits(self: MPCEnv, fid: int):
+    def zz_bits(self: MPCEnv):
         extern c seq_mpc_zz_bits(ptr[byte], int) -> int
-        return seq_mpc_zz_bits(self.p, fid)
+        return seq_mpc_zz_bits(self.p, self.fid)
 
-    def zz_bytes(self: MPCEnv, fid: int):
+    def zz_bytes(self: MPCEnv):
         extern c seq_mpc_zz_per_buf(ptr[byte], int) -> int
-        return seq_mpc_zz_per_buf(self.p, fid)
+        return seq_mpc_zz_per_buf(self.p, self.fid)
 
     def socket(self: MPCEnv, from_pid: int) -> Socket:
         extern c seq_mpc_socket(ptr[byte], int) -> ptr[byte]
-        return (seq_mpc_socket(self.p, from_pid),)
+        return (seq_mpc_socket(self.p, from_pid), )
 
-    def receive_elem(self: MPCEnv, from_pid: int, fid: int):
+    def receive_elem(self: MPCEnv, from_pid: int):
         s = self.socket(from_pid)
-        s.receive_secure(self.buf(), self.zz_bytes(fid), 0)
-        return zz2zzp(zz_from_bytes(self.buf(), self.zz_bytes(fid)))
+        s.receive_secure(self.buf(), self.zz_bytes(), 0)
+        return ZZ.from_bytes(self.buf(), self.zz_bytes()).zz_p()
 
-    def send_elem(self: MPCEnv, zzp: ZZ_p, to_pid: int, fid: int):
+    def send_elem(self: MPCEnv, zzp: ZZ_p, to_pid: int):
         s = self.socket(to_pid)
-        zz = zzp2zz(zzp)
-        bytes_from_zz(self.buf(), zz, self.zz_bytes(fid))
-        s.send_secure(self.buf(), self.zz_bytes(fid), 0)
+        zzp.zz().bytes(self.buf(), self.zz_bytes())
+        s.send_secure(self.buf(), self.zz_bytes(), 0)
 
     def switch_seed(self: MPCEnv, pid: int):
         extern c seq_mpc_switch_seed(ptr[byte], int)
-        seq_mpc_switch_seed(pid)
+        seq_mpc_switch_seed(self.p, pid)
 
     def restore_seed(self: MPCEnv):
-        extern c seq_mpc_switch_seed(ptr[byte])
-        seq_mpc_switch_seed()
-
-    def rand_elem(self: MPCEnv) -> ZZ_p:
-        return ZZ_p.random()
-        # return ZZ_p(37)
+        extern c seq_mpc_restore_seed(ptr[byte])
+        seq_mpc_restore_seed(self.p)
 
     ######################################################################
 
-    def rand_at(self: MPCEnv, i: int, fid: int) -> ZZ_p:
-        match i:
-            case 0: return ZZ_p(37) 
-            case 1: return ZZ_p(39) 
-            case 2: return ZZ_p(41) 
-            default: assert False
+    def rand_at[`t](self: MPCEnv, i: int, sz) -> `t:
+        self.switch_seed(i)
+        x = `t.random(sz)
+        self.restore_seed() 
+        return x
 
-        if __cp__ == i:
-            return self.rand_elem()
-        else:
-            self.switch_seed(i)
-            x = self.rand_elem()
-            self.restore_seed() 
-            return x
-
-    def share[`t](self: MPCEnv, x: `t, fid):
+    def share[`t](self: MPCEnv, x: `t) -> `t:
         """
         Protocol 1: ShareSecret (p.7)
         Out: (r, x - r)
         """
-        
         match __cp__:
             case 0:
-                r = self.rand_at(1, fid)
-                # print 'x, r, x-r is', x, r, x - r
-                # self.send_elem(r, 1, fid)
-                self.send_elem(x - r, 2, fid)
+                r = self.rand_at[`t](1, len(x))
+                self.send_elem(x - r, 2)
                 return x
             case 1:
-                # r = self.receive_elem(0, fid)
-                r = self.rand_at(1, fid)
-                # print 'got as r', r
+                r = self.rand_at[`t](0, len(x))
                 return r
             case 2:
-                xr = self.receive_elem(0, fid)
-                # print 'got as x-r', xr
+                xr = self.receive_elem(0)
                 return xr
             default:
                 assert False
 
-    def reveal[`t](self: MPCEnv, a: `t, fid: int) -> `t:
+    def reveal[`t](self: MPCEnv, a: `t) -> `t:
         """
         Protocol 2: ReconstructSecret (p.8)
         Out: (x, x)
         """
-
         next_cp = 3 - __cp__
         match __cp__:
             case 0:
                 return copy(a)
             case 1:
-                self.send_elem(a, next_cp, fid)
-                b = self.receive_elem(next_cp, fid)
+                self.send_elem(a, next_cp)
+                b = self.receive_elem(next_cp)
                 return a + b
             case 2:
-                b = self.receive_elem(next_cp, fid)
-                self.send_elem(a, next_cp, fid)
+                b = self.receive_elem(next_cp)
+                self.send_elem(a, next_cp)
                 return a + b
             default:
                 assert False
 
-    def beaver_partition[`t](self: MPCEnv, a: `t, fid: int) -> tuple[`t, `t]:
+    def beaver_partition[`t](self: MPCEnv, a: `t) -> tuple[`t, `t]:
         """
         Protocol 8: BeaverPartition (p.11)
         """
-
         if __cp__ == 0:
             # essentially sum of 2 random numbers...
-            am = self.rand_at(1, fid) + self.rand_at(2, fid)
+            am = self.rand_at[`t](1, len(a)) + self.rand_at[`t](2, len(a))
             return (`t(), am)
         else:
-            am = self.rand_at(__cp__, fid)
+            am = self.rand_at[`t](0, len(a))
             ar = a - am
-            ar = self.reveal(ar, fid)
+            ar = self.reveal(ar)
             return (ar, am)
 
     # Same for vec / mat
-    def beaver_mult[`t](self: MPCEnv, ar: `t, am: `t, br: `t, bm: `t, fid: int) -> `t:
+    def beaver_mult[`t](self: MPCEnv, ar: `t, am: `t, br: `t, bm: `t) -> `t:
         match __cp__:
             case 0:
                 return am * bm
@@ -153,18 +123,18 @@ extend MPCEnv:
                 assert False
 
     # Send/Rcv need length
-    def beaver_reconstruct[`t](self: MPCEnv, ab: `t, fid: int) -> `t:
+    def beaver_reconstruct[`t](self: MPCEnv, ab: `t) -> `t:
         match __cp__:
             case 0:
-                mask = self.rand_at(1, fid)
+                mask = self.rand_at[`t](1, len(ab))
                 ab -= mask
-                self.send_elem(ab, 2, fid)
+                self.send_elem(ab, 2)
                 return ab
             case 1:
-                ambm = self.rand_at(0, fid)
+                ambm = self.rand_at[`t](0, len(ab))
                 return ab + ambm
             case 2:
-                ambm = self.receive_elem(0, fid)
+                ambm = self.receive_elem(0)
                 return ab + ambm
             default:
                 assert False

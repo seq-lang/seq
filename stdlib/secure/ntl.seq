@@ -1,7 +1,4 @@
 
-extern c free(ptr[byte])
-extern c strlen(ptr[byte]) -> int
-
 class ZZ(p: ptr[byte]):
     def __init__(self: ZZ, p: ptr[byte]):
         self.p = p
@@ -53,6 +50,18 @@ class ZZ(p: ptr[byte]):
         p = ZZ_O_str(a.p)
         return str(p, strlen(p))
 
+    def zz_p(x: ZZ) -> ZZ_p:
+        extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
+        return ZZ_p(ZZ_to_ZZ_p(x.p))
+
+    def bytes(zz: ZZ, buf: ptr[byte], n: int):
+        extern c ZZ_ToBytes(ptr[byte], ptr[byte], int)
+        ZZ_ToBytes(zz.p, buf, n)
+
+    def from_bytes(buf: ptr[byte], n: int):
+        extern c ZZ_FromBytes(ptr[byte], int) -> ptr[byte]
+        return ZZ(ZZ_FromBytes(buf, n))
+
 class ZZ_p(p: ptr[byte]):
     def __init__(self: ZZ_p):
         extern c ZZ_p_init(int) -> ptr[byte]
@@ -67,7 +76,6 @@ class ZZ_p(p: ptr[byte]):
         ZZ_p_free(self.p)
     def __copy__(self: ZZ_p):
         extern c ZZ_p_copy(ptr[byte]) -> ptr[byte]
-        # return ZZ_p(ZZ_p_copy(self.p))
         return ZZ_p(self.p)
 
     def __add__(a: ZZ_p, b: ZZ_p):
@@ -96,22 +104,57 @@ class ZZ_p(p: ptr[byte]):
         p = ZZ_p_O_str(a.p)
         return str(p, strlen(p))
 
+    def __len__(self: ZZ_p) -> int:
+        return 0
+
     def init(a: ZZ):
         extern c ZZ_p_init_p(ptr[byte])
         ZZ_p_init_p(a.p)
+
     def modulus():
         extern c ZZ_p_modulus() -> ptr[byte]
         return ZZ(ZZ_p_modulus())
 
-    def random():
+    def random(sz: int):
         extern c ZZ_p_rand() -> ptr[byte]
         return ZZ_p(ZZ_p_rand())
 
-def zz2zzp(x: ZZ):
-    extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
-    return ZZ_p(ZZ_to_ZZ_p(x.p))
+    def zz(x: ZZ_p) -> ZZ:
+        extern c ZZ_p_to_ZZ(ptr[byte]) -> ptr[byte]
+        return ZZ(ZZ_p_to_ZZ(x.p))
 
-def zzp2zz(x: ZZ_p):
-    extern c ZZ_p_to_ZZ(ptr[byte]) -> ptr[byte]
-    return ZZ(ZZ_p_to_ZZ(x.p))
+
+class Vec(items: list[ZZ_p]):
+    def __add__(a: Vec, b: Vec):
+        return Vec([i + j for i, j in zip(a.items, b.items)])
+    def __sub__(a: Vec, b: Vec):
+        return Vec([i - j for i, j in zip(a.items, b.items)])
+    def __mul__(a: Vec, b: Vec):
+        return Vec([i * j for i, j in zip(a.items, b.items)])
+    def __div__(a: Vec, b: Vec):
+        return Vec([i / j for i, j in zip(a.items, b.items)])
+
+    def __eq__(a: Vec, b: Vec):
+        if len(a) == len(b):
+            for i in len(a):
+                if a.items[i] != b.items[i]:
+                    return False
+            return True
+        else: 
+            return False
+        return Vec([i + j for i, j in zip(a.items, b.items)])
+    def __ne__(a: Vec, b: Vec):
+        return not a.__eq__(b)
+
+    def __str__(a: Vec):
+        return a.items.__str__()
+    
+    def __len__(self: Vec) -> int:
+        return self.items.__len__()
+
+    def __copy__(self: Vec):
+        return self.items.__copy__()
+
+    def random(sz: int):
+        return Vec([ZZ_p.random(0) for i in range(sz)])
 

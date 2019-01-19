@@ -1322,6 +1322,7 @@ public:
 
   void SwitchSeed(int pid);
   void RestoreSeed() {
+    // cerr << "[restore] ";
     SwitchSeed(pid);
   }
 

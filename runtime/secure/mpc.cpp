@@ -2319,7 +2319,9 @@ bool MPCEnv::ReceiveBool(int from_pid) {
 void MPCEnv::SwitchSeed(int pid) {
   prg.find(cur_prg_pid)->second = GetCurrentRandomStream();
   SetSeed(prg.find(pid)->second);
+  // cerr << "[switch] from " << cur_prg_pid;
   cur_prg_pid = pid;
+  // cerr << " to " << cur_prg_pid << endl;
 }
 
 void MPCEnv::ExportSeed(fstream& ofs, int pid) {

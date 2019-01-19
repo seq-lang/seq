@@ -37,6 +37,11 @@ def abs(x):
 def hash(x):
     return x.__hash__()
 
+def zip(a, b):
+    assert len(a) == len(b)
+    for i in range(len(a)):
+        yield (a[i], b[i])
+
 def sum[`t](x) -> `t:
     s = `t()
     for i in iter(x):

@@ -14,9 +14,9 @@ do
 	fi
 done
 
-(SEQ_MPC_CP=1 ./main.exe $1 2>&1 | sed "s/^/[CP1] /") &
+(SEQ_MPC_CP=1 ./main.exe $1 2>&1 | sed "s/^/[CP1] /" | sed "s,.*,$(tput setaf 1)&$(tput sgr0),") &
 pid1=$!
-(SEQ_MPC_CP=2 ./main.exe $1 2>&1 | sed "s/^/[CP2] /") &
+(SEQ_MPC_CP=2 ./main.exe $1 2>&1 | sed "s/^/[CP2] /" | sed "s,.*,$(tput setaf 2)&$(tput sgr0),") &
 pid2=$!
 
 SEQ_MPC_CP=0 ./main.exe $1 2>&1 | sed "s/^/[CP0] /"

@@ -142,8 +142,8 @@ int Param::NBIT_K = 60;
 int Param::NBIT_F = 45;
 int Param::NBIT_V = 64;
 
-string Param::BASE_P = "101";
-// string Param::BASE_P = "1461501637330902918203684832716283019655932542929";
+// string Param::BASE_P = "101";
+string Param::BASE_P = "1461501637330902918203684832716283019655932542929";
 
 uint64_t Param::MPC_BUF_SIZE = 1000000;
 
