@@ -779,7 +779,8 @@ FOREIGN types::Type *realize_type
 	*error = nullptr;
 	if (sz == 0) return t;
 	try {
-		return t->realize(vector<types::Type *>(types, types + sz));
+		// actual realization is deferred until needed via GenericType:
+		return types::GenericType::get(t, vector<types::Type *>(types, types + sz));
 	} catch (exc::SeqException &e) {
 		CATCH (error);
 		return nullptr;
