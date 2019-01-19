@@ -1903,8 +1903,20 @@ void ConstructExpr::resolveTypes()
 Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
 
+	// special-case bool catch-all constructor:
+	if (type->is(types::Bool) && args.size() == 1) {
+		Value *val = args[0]->codegen(base, block);
+		return args[0]->getType()->boolValue(val, block, getTryCatch());
+	}
+
+	// special-case str catch-all constructor:
+	if (type->is(types::Str) && args.size() == 1) {
+		Value *val = args[0]->codegen(base, block);
+		return args[0]->getType()->strValue(val, block, getTryCatch());
+	}
+
+	Module *module = block->getModule();
 	getType();  // validates construction
 
 	std::vector<types::Type *> types;
@@ -1961,6 +1973,14 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 types::Type *ConstructExpr::getType0() const
 {
+	// special-case bool catch-all constructor:
+	if (type->is(types::Bool) && args.size() == 1)
+		return types::Bool;
+
+	// special-case str catch-all constructor:
+	if (type->is(types::Str) && args.size() == 1)
+		return types::Str;
+
 	std::vector<types::Type *> types;
 	for (auto *arg : args)
 		types.push_back(arg->getType());
