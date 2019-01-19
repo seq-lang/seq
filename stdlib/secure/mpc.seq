@@ -15,10 +15,6 @@ extend MPCEnv:
         extern c seq_mpc_get_buf(ptr[byte]) -> ptr[byte]
         return seq_mpc_get_buf(self.p)
 
-    def zz_bytes(self: MPCEnv):
-        extern c seq_mpc_zz_bytes(ptr[byte], int) -> int
-        return seq_mpc_zz_bytes(self.p, self.fid)
-
     def zz_bits(self: MPCEnv):
         extern c seq_mpc_zz_bits(ptr[byte], int) -> int
         return seq_mpc_zz_bits(self.p, self.fid)
@@ -51,9 +47,9 @@ extend MPCEnv:
 
     ######################################################################
 
-    def rand_at[`t](self: MPCEnv, i: int, sz) -> `t:
+    def rand_at[`t](self: MPCEnv, i: int, sz: `t) -> `t:
         self.switch_seed(i)
-        x = `t.random(sz)
+        x = `t.random(len(sz))
         self.restore_seed() 
         return x
 
@@ -64,11 +60,11 @@ extend MPCEnv:
         """
         match __cp__:
             case 0:
-                r = self.rand_at[`t](1, len(x))
+                r = self.rand_at[`t](1, x)
                 self.send_elem(x - r, 2)
                 return x
             case 1:
-                r = self.rand_at[`t](0, len(x))
+                r = self.rand_at[`t](0, x)
                 return r
             case 2:
                 xr = self.receive_elem(0)
@@ -102,10 +98,10 @@ extend MPCEnv:
         """
         if __cp__ == 0:
             # essentially sum of 2 random numbers...
-            am = self.rand_at[`t](1, len(a)) + self.rand_at[`t](2, len(a))
+            am = self.rand_at[`t](1, a) + self.rand_at[`t](2, a)
             return (`t(), am)
         else:
-            am = self.rand_at[`t](0, len(a))
+            am = self.rand_at[`t](0, a)
             ar = a - am
             ar = self.reveal(ar)
             return (ar, am)
@@ -126,12 +122,12 @@ extend MPCEnv:
     def beaver_reconstruct[`t](self: MPCEnv, ab: `t) -> `t:
         match __cp__:
             case 0:
-                mask = self.rand_at[`t](1, len(ab))
+                mask = self.rand_at[`t](1, ab)
                 ab -= mask
                 self.send_elem(ab, 2)
                 return ab
             case 1:
-                ambm = self.rand_at[`t](0, len(ab))
+                ambm = self.rand_at[`t](0, ab)
                 return ab + ambm
             case 2:
                 ambm = self.receive_elem(0)

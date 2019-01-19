@@ -125,6 +125,15 @@ class ZZ_p(p: ptr[byte]):
 
 
 class Vec(items: list[ZZ_p]):
+    def __add__(a: Vec, b: ZZ_p):
+        return Vec([i + b for i in a.items])
+    def __sub__(a: Vec, b: ZZ_p):
+        return Vec([i - b for i in a.items])
+    def __mul__(a: Vec, b: ZZ_p):
+        return Vec([i * b for i in a.items])
+    def __div__(a: Vec, b: ZZ_p):
+        return Vec([i / b for i in a.items])
+
     def __add__(a: Vec, b: Vec):
         return Vec([i + j for i, j in zip(a.items, b.items)])
     def __sub__(a: Vec, b: Vec):
@@ -142,12 +151,11 @@ class Vec(items: list[ZZ_p]):
             return True
         else: 
             return False
-        return Vec([i + j for i, j in zip(a.items, b.items)])
     def __ne__(a: Vec, b: Vec):
         return not a.__eq__(b)
 
-    def __str__(a: Vec):
-        return a.items.__str__()
+    def __str__(self: Vec):
+        return self.items.__str__()
     
     def __len__(self: Vec) -> int:
         return self.items.__len__()
@@ -157,4 +165,52 @@ class Vec(items: list[ZZ_p]):
 
     def random(sz: int):
         return Vec([ZZ_p.random(0) for i in range(sz)])
+
+class Mat(items: list[list[ZZ_p]]):
+    def __add__(a: Mat, b: ZZ_p):
+        return Mat([[c + b for c in r] for r in a.items])
+    def __sub__(a: Mat, b: ZZ_p):
+        return Mat([[c - b for c in r] for r in a.items])
+    def __mul__(a: Mat, b: ZZ_p):
+        return Mat([[c * b for c in r] for r in a.items])
+    def __div__(a: Mat, b: ZZ_p):
+        return Mat([[c / b for c in r] for r in a.items])
+
+    def __add__(a: Mat, b: Mat):
+        return Mat([
+            [ci + cj for ci, cj in zip(ri, rj)]
+            for ri, rj in zip(a.items, b.items)])
+    def __sub__(a: Mat, b: Mat):
+        return Mat([
+            [ci - cj for ci, cj in zip(ri, rj)]
+            for ri, rj in zip(a.items, b.items)])
+
+    def __eq__(a: Mat, b: Mat):
+        if len(a) == len(b):
+            nr, nc = len(a)
+            for r in nr:
+                for c in nc:
+                    if a.items[r][c] != b.items[r][c]:
+                        return False
+            return True
+        else: 
+            return False
+    def __ne__(a: Mat, b: Mat):
+        return not a.__eq__(b)
+
+    def __str__(self: Mat):
+        return self.items.__str__()
+    
+    def __len__(self: Mat) -> tuple[int, int]:
+        return (len(self.items), 
+            0 if len(self.items) == 0 else len(self.items[0]))
+
+    def __copy__(self: Mat):
+        return self.items.__copy__()
+
+    def random(sz: tuple[int, int]):
+        nr, nc = sz
+        return Mat([
+            [ZZ_p.random(0) for c in range(nc)] 
+            for r in range(nr)])
 

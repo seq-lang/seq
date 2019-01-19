@@ -3,8 +3,8 @@ from secure.ntl import ZZ_p
 
 print 'HI FROM', __cp__
 
-a = Secure[ZZ_p](7)
-b = Secure[ZZ_p](3)
+a = Secure[ZZ_p](ZZ_p(7))
+b = Secure[ZZ_p](ZZ_p(3))
 
 print a, b
 # print a + 5, a * 5
