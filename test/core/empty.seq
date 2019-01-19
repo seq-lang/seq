@@ -7,13 +7,13 @@ a = Secure[ZZ_p](ZZ_p(7))
 b = Secure[ZZ_p](ZZ_p(3))
 
 print a, b
-# print a + 5, a * 5
+print a + 5, a * 5
 
 print a + b, a - b
 print a * b
 
-# z = a * b
-# print '>>', z, __mpc_env__.reveal(z.share, 0)
+z = a * b
+print '>>', z, __mpc_env__.reveal(z.share)
 
 __mpc_env__.cleanup()
 
