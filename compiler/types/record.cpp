@@ -9,10 +9,10 @@ types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string
 	assert(this->names.empty() || this->names.size() == this->types.size());
 }
 
-void types::RecordType::setContents(std::vector<Type *> types, std::vector<std::string> names) 
+void types::RecordType::setContents(std::vector<Type *> types, std::vector<std::string> names)
 {
-	this->names = names;
-	this->types = types;
+	this->types = std::move(types);
+	this->names = std::move(names);
 	assert(this->names.empty() || this->names.size() == this->types.size());
 }
 
