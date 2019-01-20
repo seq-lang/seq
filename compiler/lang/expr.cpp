@@ -244,11 +244,9 @@ types::Type *ListExpr::getType0() const
 		throw exc::SeqException("cannot infer type of empty list");
 
 	types::Type *elemType = elems[0]->getType();
-	auto *generic = dynamic_cast<Generic *>(listType);
-	assert(generic);
-	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({elemType}));
-	assert(realized);
-	return realized;
+	auto *ref = dynamic_cast<types::RefType *>(listType);
+	assert(ref);
+	return ref->realize({elemType});
 }
 
 ListExpr *ListExpr::clone(Generic *ref)
@@ -301,11 +299,9 @@ types::Type *SetExpr::getType0() const
 		throw exc::SeqException("cannot infer type of empty set");
 
 	types::Type *elemType = elems[0]->getType();
-	auto *generic = dynamic_cast<Generic *>(setType);
-	assert(generic);
-	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({elemType}));
-	assert(realized);
-	return realized;
+	auto *ref = dynamic_cast<types::RefType *>(setType);
+	assert(ref);
+	return ref->realize({elemType});
 }
 
 SetExpr *SetExpr::clone(Generic *ref)
@@ -363,11 +359,9 @@ types::Type *DictExpr::getType0() const
 	assert(elems.size() % 2 == 0);
 	types::Type *keyType = elems[0]->getType();
 	types::Type *valType = elems[1]->getType();
-	auto *generic = dynamic_cast<Generic *>(dictType);
-	assert(generic);
-	auto *realized = dynamic_cast<types::Type *>(generic->realizeGeneric({keyType, valType}));
-	assert(realized);
-	return realized;
+	auto *ref = dynamic_cast<types::RefType *>(dictType);
+	assert(ref);
+	return ref->realize({keyType, valType});
 }
 
 DictExpr *DictExpr::clone(Generic *ref)
