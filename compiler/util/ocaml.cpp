@@ -56,7 +56,6 @@ FOREIGN void set_record_names(types::RecordType *t, char **names, types::Type **
 	t->setContents(vector<types::Type *>(ty, ty + sz), s);
 }
 
-
 FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
 {
 	return types::FuncType::get(vector<types::Type *>(ty, ty + sz), ret);
@@ -647,7 +646,6 @@ FOREIGN Block *get_for_block(For *st)
 {
 	return st->getBlock();
 }
-
 
 FOREIGN Block *get_else_block(If *st)
 {
