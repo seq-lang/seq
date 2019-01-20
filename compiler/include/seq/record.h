@@ -18,13 +18,12 @@ namespace seq {
 			RecordType(RecordType const&)=delete;
 			void operator=(RecordType const&)=delete;
 
+			void setContents(std::vector<Type *> types, std::vector<std::string> names);
 			bool empty() const;
 			std::vector<Type *> getTypes();
 
 			std::string getName() const override;
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
-
-			void setContents(std::vector<Type *> types, std::vector<std::string> names);
 
 			void initOps() override;
 			void initFields() override;
