@@ -1,4 +1,4 @@
-from secure import *
+from secure.types import *
 from secure.ntl import ModInt
 
 print 'HI FROM', __cp__
