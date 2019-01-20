@@ -1,7 +1,7 @@
 # Seq — a language for computational genomics
 
 [![Build Status](https://travis-ci.com/seq-lang/seq.svg?token=QGRVvAxcSasMm4MgJvYL&branch=master)](https://travis-ci.com/seq-lang/seq)
-
+[![Chat](https://img.shields.io/gitter/room/seq-lang/Development.svg)](https://gitter.im/seq-lang/Development)
 
 ## Dependencies
 

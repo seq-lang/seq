@@ -46,6 +46,17 @@ FOREIGN types::Type *record_type_named(char **names, types::Type **ty, size_t sz
 	return t;
 }
 
+FOREIGN void set_record_names(types::RecordType *t, char **names, types::Type **ty, size_t sz)
+{
+	vector<string> s;
+	for (size_t i = 0; i < sz; i++) {
+		s.emplace_back(names[i]);
+		free(names[i]);
+	}
+	t->setContents(vector<types::Type *>(ty, ty + sz), s);
+}
+
+
 FOREIGN types::Type *func_type(types::Type *ret, types::Type **ty, size_t sz)
 {
 	return types::FuncType::get(vector<types::Type *>(ty, ty + sz), ret);

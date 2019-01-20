@@ -118,6 +118,15 @@ module Type = struct
       (t @-> t @-> returning Ctypes.void) 
       typ rt
 
+  let set_record_names typ names types = 
+    let fn = foreign "set_record_names" 
+      (t @-> ptr cstring @-> ptr t @-> size_t @-> returning Ctypes.void)
+    in
+    assert ((List.length names) = (List.length types));
+    let narr = array_of_string_list names in 
+    let tarr, tlen = list_to_carr t types in
+    fn typ (CArray.start narr) tarr tlen
+
   let set_cls_done = foreign "set_ref_done" 
     (t @-> returning Ctypes.void)
 

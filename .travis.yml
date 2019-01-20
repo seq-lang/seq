@@ -4,6 +4,7 @@ sudo: required
 matrix:
   include:
     - os: linux
+      dist: xenial
       env:
         - CONDA_OS_NAME=Linux
         - OCAML_VERSION=4.07
@@ -58,7 +59,7 @@ script:
 notifications:
   webhooks:
     urls:
-      - https://webhooks.gitter.im/e/24eadbe09c2dbd4f884b
+      - https://webhooks.gitter.im/e/8bcb19a2bb1bab2a3b1b
     on_success: change
     on_failure: always
     on_start: never

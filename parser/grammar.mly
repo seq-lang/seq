@@ -451,8 +451,8 @@ small_statement:
   // Imports
   | import_statement 
     {[ $1 ]}
-  // Type definitions
-  | type_stmt        
+  // Type aliases
+  | type_alias       
     {[ $1 ]}
   // throw statement
   | throw
@@ -523,10 +523,10 @@ small_statement:
         fst expr, Global (snd expr)) }
 
 // Type definitions
-type_stmt:
-  | TYPE ID LP separated_list(COMMA, typed_param) RP 
-    { pos $1 $5, 
-      Type (snd $2, $4) }
+type_alias:
+  | TYPE ID EQ expr
+    { pos $1 (fst $4),
+      TypeAlias (snd $2, $4) }
 // Typed argument rule where type is optional (name [ : type])
 typed_param:
   | ID param_type? 
@@ -537,7 +537,6 @@ typed_param:
 param_type:
   | COLON expr 
     { $2 }
-
 
 // Expressions and assignments
 assign_statement: 
@@ -868,6 +867,7 @@ dylib_spec:
 class_statement:
   | cls
   | extend 
+  | typ
     { $1 }
 
 // Classes
@@ -892,6 +892,23 @@ cls:
           generics = []; 
           args = None; 
           members = List.filter_opt members }) }
+
+// Type definitions
+typ:
+  | type_head NL
+    { pos (fst $1) $2, 
+      Generic (Type (snd $1)) }
+  | type_head COLON NL 
+    INDENT members = class_member+ DEDENT
+    { pos (fst $1) $2,
+      Generic (Type { (snd $1) with members = List.filter_opt members }) }
+type_head:
+  | TYPE ID LP separated_list(COMMA, typed_param) RP 
+    { pos $1 $5,
+      { class_name = snd $2;
+        generics = [];
+        args = Some $4;
+        members = [] } }
 
 // Class extensions (extend name)
 extend:

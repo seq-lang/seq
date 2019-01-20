@@ -3,19 +3,29 @@
 import itertools
 import time
 
-try:
-	print 'hohoi'
-finally:
-	print 'fin'
+type Foo(x: int)
 
-import ntl
+type Hai(a: int):
+	def wololo(self):
+		print 'wololo', self.a
 
+a = Foo(4)
+print a
 
-z = ntl.ZZ(10)
-print z
+a := Hai(5)
+print a
+a.wololo()
 
-y = ntl.ZZ(20)
-print y
+class Abe[`t](l: `t):
+	def hai(self):
+		print 'Abe', self.l
 
-print z+y
+b = Abe(1)
+b.hai()
 
+type AbF = Abe[float]
+
+c = AbF(1.1)
+c.hai()
+
+c = AbF(10)

@@ -156,7 +156,7 @@ struct
     | Return      of ExprNode.t option
     | Yield       of ExprNode.t option
     | Assert      of ExprNode.t
-    | Type        of (string * param tt list)
+    | TypeAlias   of (string * ExprNode.t)
     | While       of (ExprNode.t * t list)
     | For         of (string list * ExprNode.t * t list)
     | If          of (if_case tt) list
@@ -173,6 +173,7 @@ struct
     | Function of 
         (param tt * (ExprNode.generic tt) list * param tt list * t list)
     | Class of class_t 
+    | Type  of class_t
   and if_case = 
     { cond: ExprNode.t option; 
       cond_stmts: t list }
@@ -230,8 +231,8 @@ struct
         (Option.value_map x ~default:"" ~f:ExprNode.to_string)
     | Return x -> sprintf "RETURN %s"
         (Option.value_map x ~default:"" ~f:ExprNode.to_string)
-    | Type (x, l) -> 
-      sprintf "TYPE %s (%s)" x (ppl l ~f:param_to_string)
+    | TypeAlias (x, l) -> 
+      sprintf "TYPE %s = %s" x (ExprNode.to_string l)
     | While (x, l) ->
       sprintf "WHILE %s:\n%s" 
         (ExprNode.to_string x) 

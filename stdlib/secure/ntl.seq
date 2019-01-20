@@ -1,60 +1,5 @@
 from secure.socket import Socket
 
-class ZZ(p: ptr[byte]):
-    def __init__(self: ZZ, p: ptr[byte]):
-        self.p = p
-    def __init__(self: ZZ, v: int):
-        extern c ZZ_init(int) -> ptr[byte]
-        self.p = ZZ_init(v)
-    def __del__(self: ZZ):
-        extern c ZZ_free(ptr[byte])
-        ZZ_free(self.p)
-
-    def __add__(a: ZZ, b: ZZ):
-        extern c ZZ_O_add(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ(ZZ_O_add(a.p, b.p))
-    def __sub__(a: ZZ, b: ZZ):
-        extern c ZZ_O_sub(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ(ZZ_O_sub(a.p, b.p))
-    def __mul__(a: ZZ, b: ZZ):
-        extern c ZZ_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ(ZZ_O_mul(a.p, b.p))
-    def __div__(a: ZZ, b: ZZ):
-        extern c ZZ_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ(ZZ_O_truediv(a.p, b.p))
-    def __mod__(a: ZZ, b: ZZ):
-        extern c ZZ_O_mod(ptr[byte], ptr[byte]) -> ptr[byte]
-        return ZZ(ZZ_O_mod(a.p, b.p))
-
-    def __eq__(a: ZZ, b: ZZ):
-        extern c ZZ_O_eq(ptr[byte], ptr[byte]) -> bool
-        return ZZ_O_eq(a.p, b.p)
-    def __ne__(a: ZZ, b: ZZ):
-        extern c ZZ_O_ne(ptr[byte], ptr[byte]) -> bool
-        return ZZ_O_ne(a.p, b.p)
-    def __lt__(a: ZZ, b: ZZ):
-        extern c ZZ_O_lt(ptr[byte], ptr[byte]) -> bool
-        return ZZ_O_lt(a.p, b.p)
-    def __le__(a: ZZ, b: ZZ):
-        extern c ZZ_O_le(ptr[byte], ptr[byte]) -> bool
-        return ZZ_O_le(a.p, b.p)
-    def __gt__(a: ZZ, b: ZZ):
-        extern c ZZ_O_gt(ptr[byte], ptr[byte]) -> bool
-        return ZZ_O_gt(a.p, b.p)
-    def __ge__(a: ZZ, b: ZZ):
-        extern c ZZ_O_ge(ptr[byte], ptr[byte]) -> bool
-        return ZZ_O_ge(a.p, b.p)
-
-    def __str__(a: ZZ):
-        extern c ZZ_O_str(ptr[byte]) -> ptr[byte]
-        extern c strlen(ptr[byte]) -> int
-        p = ZZ_O_str(a.p)
-        return str(p, strlen(p))
-
-    def zz_p(x: ZZ) -> ModInt:
-        extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
-        return ModInt(ZZ_to_ZZ_p(x.p))
-
 class ModInt(p: ptr[byte]):
     def __init__(self: ModInt):
         extern c ZZ_p_init(int) -> ptr[byte]
@@ -171,8 +116,7 @@ class Vec(items: list[ModInt]):
         return Vec([ModInt.random(0) for i in range(sz)])
 
     def send(self: Vec, s: Socket, buf: ptr[byte], bytes: int, per_buf: int):
-        stored_in_buf = 0
-        buf_ptr = buf
+        stored_in_buf, buf_ptr = 0, buf
         for i in len(self):
             if stored_in_buf == per_buf:
                 s.send_secure(buf, stored_in_buf * bytes, 0)
@@ -185,9 +129,8 @@ class Vec(items: list[ModInt]):
 
     def receive(sz: int, s: Socket, buf: ptr[byte], bytes: int, per_buf: int) -> Vec:
         items = list[ModInt](sz)
-        stored_in_buf = 0
-        buf_ptr = buf
         remaining = sz
+        stored_in_buf, buf_ptr = 0, buf
         for i in range(sz):
             if stored_in_buf == 0:
                 count = remaining if remaining < per_buf else per_buf
@@ -249,3 +192,59 @@ class Mat(items: list[list[ModInt]]):
             [ModInt.random(0) for c in range(nc)] 
             for r in range(nr)])
 
+########################################################################
+
+class ZZ(p: ptr[byte]):
+    def __init__(self: ZZ, p: ptr[byte]):
+        self.p = p
+    def __init__(self: ZZ, v: int):
+        extern c ZZ_init(int) -> ptr[byte]
+        self.p = ZZ_init(v)
+    def __del__(self: ZZ):
+        extern c ZZ_free(ptr[byte])
+        ZZ_free(self.p)
+
+    def __add__(a: ZZ, b: ZZ):
+        extern c ZZ_O_add(ptr[byte], ptr[byte]) -> ptr[byte]
+        return ZZ(ZZ_O_add(a.p, b.p))
+    def __sub__(a: ZZ, b: ZZ):
+        extern c ZZ_O_sub(ptr[byte], ptr[byte]) -> ptr[byte]
+        return ZZ(ZZ_O_sub(a.p, b.p))
+    def __mul__(a: ZZ, b: ZZ):
+        extern c ZZ_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
+        return ZZ(ZZ_O_mul(a.p, b.p))
+    def __div__(a: ZZ, b: ZZ):
+        extern c ZZ_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
+        return ZZ(ZZ_O_truediv(a.p, b.p))
+    def __mod__(a: ZZ, b: ZZ):
+        extern c ZZ_O_mod(ptr[byte], ptr[byte]) -> ptr[byte]
+        return ZZ(ZZ_O_mod(a.p, b.p))
+
+    def __eq__(a: ZZ, b: ZZ):
+        extern c ZZ_O_eq(ptr[byte], ptr[byte]) -> bool
+        return ZZ_O_eq(a.p, b.p)
+    def __ne__(a: ZZ, b: ZZ):
+        extern c ZZ_O_ne(ptr[byte], ptr[byte]) -> bool
+        return ZZ_O_ne(a.p, b.p)
+    def __lt__(a: ZZ, b: ZZ):
+        extern c ZZ_O_lt(ptr[byte], ptr[byte]) -> bool
+        return ZZ_O_lt(a.p, b.p)
+    def __le__(a: ZZ, b: ZZ):
+        extern c ZZ_O_le(ptr[byte], ptr[byte]) -> bool
+        return ZZ_O_le(a.p, b.p)
+    def __gt__(a: ZZ, b: ZZ):
+        extern c ZZ_O_gt(ptr[byte], ptr[byte]) -> bool
+        return ZZ_O_gt(a.p, b.p)
+    def __ge__(a: ZZ, b: ZZ):
+        extern c ZZ_O_ge(ptr[byte], ptr[byte]) -> bool
+        return ZZ_O_ge(a.p, b.p)
+
+    def __str__(a: ZZ):
+        extern c ZZ_O_str(ptr[byte]) -> ptr[byte]
+        extern c strlen(ptr[byte]) -> int
+        p = ZZ_O_str(a.p)
+        return str(p, strlen(p))
+
+    def zz_p(x: ZZ) -> ModInt:
+        extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
+        return ModInt(ZZ_to_ZZ_p(x.p))
