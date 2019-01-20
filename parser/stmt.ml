@@ -28,32 +28,34 @@ struct
       and finalizes the processed statement. *)
   let rec parse ?(toplevel=false) ?(jit=false) (ctx: Ctx.t) (pos, node) =
     let stmt = match node with
-      | Break       p -> parse_break    ctx pos p
-      | Continue    p -> parse_continue ctx pos p
-      | Expr        p -> parse_expr     ctx pos p
-      | Assign      p -> parse_assign   ctx pos p ~toplevel ~jit
-      | Del         p -> parse_del      ctx pos p
-      | Print       p -> parse_print    ctx pos p ~jit
-      | Return      p -> parse_return   ctx pos p
-      | Yield       p -> parse_yield    ctx pos p
-      | Assert      p -> parse_assert   ctx pos p
-      | Type        p -> parse_type     ctx pos p ~toplevel
-      | If          p -> parse_if       ctx pos p
-      | While       p -> parse_while    ctx pos p
-      | For         p -> parse_for      ctx pos p
-      | Match       p -> parse_match    ctx pos p
-      | Extern      p -> parse_extern   ctx pos p ~toplevel
-      | Extend      p -> parse_extend   ctx pos p ~toplevel
-      | Import      p -> parse_import   ctx pos p ~toplevel
-      | ImportPaste p -> parse_impaste  ctx pos p
-      | Pass        p -> parse_pass     ctx pos p
-      | Try         p -> parse_try      ctx pos p
-      | Throw       p -> parse_throw    ctx pos p
-      | Global      p -> parse_global   ctx pos p
+      | Break       p -> parse_break      ctx pos p
+      | Continue    p -> parse_continue   ctx pos p
+      | Expr        p -> parse_expr       ctx pos p
+      | Assign      p -> parse_assign     ctx pos p ~toplevel ~jit
+      | Del         p -> parse_del        ctx pos p
+      | Print       p -> parse_print      ctx pos p ~jit
+      | Return      p -> parse_return     ctx pos p
+      | Yield       p -> parse_yield      ctx pos p
+      | Assert      p -> parse_assert     ctx pos p
+      | TypeAlias   p -> parse_type_alias ctx pos p ~toplevel
+      | If          p -> parse_if         ctx pos p
+      | While       p -> parse_while      ctx pos p
+      | For         p -> parse_for        ctx pos p
+      | Match       p -> parse_match      ctx pos p
+      | Extern      p -> parse_extern     ctx pos p ~toplevel
+      | Extend      p -> parse_extend     ctx pos p ~toplevel
+      | Import      p -> parse_import     ctx pos p ~toplevel
+      | ImportPaste p -> parse_impaste    ctx pos p
+      | Pass        p -> parse_pass       ctx pos p
+      | Try         p -> parse_try        ctx pos p
+      | Throw       p -> parse_throw      ctx pos p
+      | Global      p -> parse_global     ctx pos p
       | Generic    
-        Function    p -> parse_function ctx pos p ~toplevel
+        Function    p -> parse_function   ctx pos p ~toplevel
       | Generic 
-        Class       p -> parse_class    ctx pos p ~toplevel
+        Class       p -> parse_class      ctx pos p ~toplevel
+      | Generic 
+        Type        p -> parse_class      ctx pos p ~toplevel ~is_type:true
     in
     finalize ctx stmt pos
 
@@ -82,6 +84,12 @@ struct
           if is_some @@ Ctx.in_scope ctx cls.class_name then
             serr ~pos "class %s already exists" cls.class_name;
           let typ = Llvm.Type.cls cls.class_name in
+          Ctx.add ctx ~toplevel:true ~global:true
+            cls.class_name (Ctx.Namespace.Type typ)
+        | pos, Generic Type cls ->
+          if is_some @@ Ctx.in_scope ctx cls.class_name then
+            serr ~pos "type %s already exists" cls.class_name;
+          let typ = Llvm.Type.record [] [] cls.class_name in
           Ctx.add ctx ~toplevel:true ~global:true
             cls.class_name (Ctx.Namespace.Type typ)
         | _ -> ());
@@ -189,19 +197,10 @@ struct
     let expr = E.parse ctx expr in
     Llvm.Stmt.assrt expr 
 
-  and parse_type ctx pos ~toplevel (name, args) =
-    let arg_names, arg_types =  
-      List.map args ~f:(function
-        | (pos, { name; typ = None }) ->
-          serr ~pos "type member %s must have type specification" name
-        | (_,   { name; typ = Some t }) -> 
-          (name, t)) 
-      |> List.unzip
-    in
+  and parse_type_alias ctx pos ~toplevel (name, expr) =
     if is_some @@ Ctx.in_scope ctx name then
-      serr ~pos "type %s already defined" name;
-    let arg_types = List.map arg_types ~f:(E.parse_type ctx) in
-    let typ = Llvm.Type.record arg_names arg_types name in
+      serr ~pos "%s already defined" name;
+    let typ = E.parse_type ctx expr in
     Ctx.add ctx ~toplevel ~global:toplevel name (Ctx.Namespace.Type typ);
     Llvm.Stmt.pass ()
 
@@ -464,16 +463,30 @@ struct
           let var = Ctx.Namespace.Var (Llvm.Func.get_arg fn name) in
           Ctx.add ctx name var));
     Llvm.Stmt.func fn
-  
-  and parse_class ctx pos ~toplevel cls =
+
+  and parse_class ctx pos ~toplevel ?(is_type=false) cls =
     (* ((name, types, args, stmts) as stmt) *)
-    if not toplevel then
-      serr ~pos "classes must be declared at toplevel";
-    let typ = match Ctx.in_block ctx cls.class_name with
-      | Some (Ctx.Namespace.Type typ, _) ->
-        typ
-      | Some _ | None ->
-        failwith "class pre-register failed"
+    let typ = 
+      if toplevel then 
+        (* classes and types are pre-registered *)
+        match Ctx.in_block ctx cls.class_name with
+        | Some (Ctx.Namespace.Type typ, _) ->
+          typ
+        | Some _ | None ->
+          failwith "class pre-register failed"
+      else begin
+        if is_some @@ Ctx.in_scope ctx cls.class_name then
+          serr ~pos "%s already defined" cls.class_name
+        else 
+          let typ = if is_type then
+            Llvm.Type.record [] [] cls.class_name
+          else 
+            Llvm.Type.cls cls.class_name
+          in 
+          Ctx.add ctx ~toplevel ~global:toplevel
+            cls.class_name (Ctx.Namespace.Type typ);
+          typ
+      end
     in
     let new_ctx = 
       { ctx with 
@@ -483,27 +496,40 @@ struct
     Ctx.add_block new_ctx;
     
     begin match cls.args with
+      | None when is_type -> 
+        failwith "types require arguments"
       | None -> ()
       | Some args ->
         List.iter args ~f:(fun (pos, { name; typ }) ->
           if is_none typ then 
             serr ~pos "class field %s does not have type" name);
-        let names, types = parse_generics 
-          new_ctx 
-          cls.generics args
-          (Llvm.Generics.Type.set_number typ)
-          (fun idx name ->
-            Llvm.Generics.Type.set_name typ idx name;
-            Llvm.Generics.Type.get typ idx) 
+        let names, types = 
+          if is_type then 
+            List.unzip @@ List.map args ~f:(function
+              | (pos, { name; typ = None }) ->
+                serr ~pos "type member %s must have type specification" name
+              | (_,   { name; typ = Some t }) -> 
+                (name, E.parse_type ctx t)) 
+          else parse_generics 
+            new_ctx 
+            cls.generics args
+            (Llvm.Generics.Type.set_number typ)
+            (fun idx name ->
+              Llvm.Generics.Type.set_name typ idx name;
+              Llvm.Generics.Type.get typ idx) 
         in
-        Llvm.Type.set_cls_args typ names types;
+        if is_type then
+          Llvm.Type.set_record_names typ names types
+        else
+          Llvm.Type.set_cls_args typ names types
     end;
 
     ignore @@ List.map cls.members ~f:(function
       | pos, Function f -> 
         parse_function new_ctx pos f ~cls:typ
       | _ -> failwith "classes only support functions as members");
-    Llvm.Type.set_cls_done typ;
+    if not is_type then
+      Llvm.Type.set_cls_done typ;
 
     Llvm.Stmt.pass ()
 

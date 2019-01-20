@@ -24,6 +24,8 @@ namespace seq {
 			std::string getName() const override;
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
+			void setContents(std::vector<Type *> types, std::vector<std::string> names);
+
 			void initOps() override;
 			void initFields() override;
 			bool isAtomic() const override;

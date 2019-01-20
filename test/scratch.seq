@@ -3,14 +3,29 @@
 import itertools
 import time
 
-y = time.time()
-print [i for i in itertools.combinations('ABCD', 2)]
-print time.time()-y
-# print list(iter(itertools.combinations('ABCD', 2))) # <- fails
-# print list(itertools.combinations('ABCD', 2)) # <- fails
+type Foo(x: int)
 
-try:
-	print 'hohoi'
-finally:
-	print 'fin'
+type Hai(a: int):
+	def wololo(self):
+		print 'wololo', self.a
 
+a = Foo(4)
+print a
+
+a := Hai(5)
+print a
+a.wololo()
+
+class Abe[`t](l: `t):
+	def hai(self):
+		print 'Abe', self.l
+
+b = Abe(1)
+b.hai()
+
+type AbF = Abe[float]
+
+c = AbF(1.1)
+c.hai()
+
+c = AbF(10)
