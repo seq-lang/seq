@@ -1,5 +1,4 @@
-type Socket(p: ptr[byte])
-extend Socket:
+type Socket(p: ptr[byte]):
     def __init__(self: Socket) -> Socket:
         extern c seq_socket_new() -> ptr[byte]
         return (seq_socket_new(),)

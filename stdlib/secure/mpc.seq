@@ -1,8 +1,7 @@
 from secure.socket import Socket
 # from secure.ntl import 
 
-type MPCEnv(p: ptr[byte], fid: int)
-extend MPCEnv:
+type MPCEnv(p: ptr[byte], fid: int):
     def __init__(self: MPCEnv, pairs: list[tuple[int,int]], pid: int) -> MPCEnv:
         extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
         return (seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len)), 0)
