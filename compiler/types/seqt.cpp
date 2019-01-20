@@ -183,6 +183,10 @@ void types::SeqType::initOps()
 			return (Value *)nullptr;
 		}},
 
+		{"__str__", {}, Str, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
 		{"__copy__", {}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
 			BasicBlock *block = b.GetInsertBlock();
 			Module *module = block->getModule();
@@ -310,6 +314,10 @@ void types::StrType::initOps()
 			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
+		}},
+
+		{"__str__", {}, Str, SEQ_MAGIC(self, args, b) {
+			return self;
 		}},
 
 		{"__copy__", {}, Str, SEQ_MAGIC(self, args, b) {
