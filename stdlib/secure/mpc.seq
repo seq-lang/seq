@@ -55,10 +55,7 @@ type MPCEnv(p: ptr[byte], fid: int):
         return x
 
     def share[`t](self: MPCEnv, x: `t) -> `t:
-        """
-        Protocol 1: ShareSecret (p.7)
-        Out: (r, x - r)
-        """
+        """Protocol 1: ShareSecret (p.7)"""
         match __cp__:
             case 0:
                 r = self.rand_at[`t](1, x)
@@ -74,10 +71,7 @@ type MPCEnv(p: ptr[byte], fid: int):
                 assert False
 
     def reveal[`t](self: MPCEnv, a: `t) -> `t:
-        """
-        Protocol 2: ReconstructSecret (p.8)
-        Out: (x, x)
-        """
+        """Protocol 2: ReconstructSecret (p.8)"""
         next_cp = 3 - __cp__
         match __cp__:
             case 0:
@@ -94,20 +88,19 @@ type MPCEnv(p: ptr[byte], fid: int):
                 assert False
 
     def beaver_partition[`t](self: MPCEnv, a: `t) -> tuple[`t, `t]:
-        """
-        Protocol 8: BeaverPartition (p.11)
-        """
+        """Protocol 8: BeaverPartition (p.11) """
         if __cp__ == 0:
             # essentially sum of 2 random numbers...
             am = self.rand_at[`t](1, a) + self.rand_at[`t](2, a)
-            return (`t(), am)
+            return (`t(len(am)), am)
         else:
             am = self.rand_at[`t](0, a)
             ar = a - am
             ar = self.reveal(ar)
             return (ar, am)
 
-    def beaver_mult[`t](self: MPCEnv, ar: `t, am: `t, br: `t, bm: `t) -> `t:
+    def beaver_mult[`t](self: MPCEnv, ar: `t, am: `t, br: `t, bm: `t):
+        """Protocol 9: part of EvaluatePolynomial (p.12)"""
         match __cp__:
             case 0:
                 return am * bm
@@ -119,6 +112,7 @@ type MPCEnv(p: ptr[byte], fid: int):
                 assert False
 
     def beaver_reconstruct[`t](self: MPCEnv, ab: `t) -> `t:
+        """Protocol 9: part of EvaluatePolynomial (p.12)"""
         match __cp__:
             case 0:
                 mask = self.rand_at[`t](1, ab)

@@ -88,16 +88,16 @@ struct
   and parse_int ctx _ ?(kind="") i = 
     let i = Llvm.Expr.int i in
     match kind with 
-    | ("s" | "S") ->
-      let t = get_internal_type ctx "SInt" in
+    | ("z" | "Z") ->
+      let t = get_internal_type ctx "ModInt" in
       Llvm.Expr.construct t [i]
     | _ -> i
 
   and parse_float ctx _ ?(kind="") f = 
     let f = Llvm.Expr.float f in
     match kind with 
-    | ("s" | "S") ->
-      let t = get_internal_type ctx "SFloat" in
+    | ("z" | "Z") ->
+      let t = get_internal_type ctx "ModFloat" in
       Llvm.Expr.construct t [f]
     | _ -> f
 

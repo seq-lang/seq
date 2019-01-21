@@ -76,20 +76,20 @@ class ModInt(p: ptr[byte]):
 
 
 class Vec(items: list[ModInt]):
-    def __add__(a: Vec, b: ModInt):
-        return Vec([i + b for i in a.items])
-    def __sub__(a: Vec, b: ModInt):
-        return Vec([i - b for i in a.items])
-    def __mul__(a: Vec, b: ModInt):
-        return Vec([i * b for i in a.items])
-    def __div__(a: Vec, b: ModInt):
-        return Vec([i / b for i in a.items])
+    def __init__(self: Vec, sz: int): 
+        items = [ModInt(0) for _ in range(sz)]
 
-    def __add__(a: Vec, b: Vec):
-        return Vec([i + j for i, j in zip(a.items, b.items)])
-    def __sub__(a: Vec, b: Vec):
-        return Vec([i - j for i, j in zip(a.items, b.items)])
-    def __mul__(a: Vec, b: Vec):
+    def __add__(a: Vec, b: ModInt): return Vec([i + b for i in a.items])
+    def __sub__(a: Vec, b: ModInt): return Vec([i - b for i in a.items])
+    def __mul__(a: Vec, b: ModInt): return Vec([i * b for i in a.items])
+    def __div__(a: Vec, b: ModInt): return Vec([i / b for i in a.items])
+
+    def __add__(a: Vec, b: Vec): return Vec([i + j for i, j in zip(a.items, b.items)])
+    def __sub__(a: Vec, b: Vec): return Vec([i - j for i, j in zip(a.items, b.items)])
+    
+    # def __mul__(a: Vec, b: Vec): return Vec([i * j for i, j in zip(a.items, b.items)])
+    
+    def __mul__(a: Vec, b: Vec) -> ModInt:
         return sum(i * j for i, j in zip(a.items, b.items))
 
     def __eq__(a: Vec, b: Vec):
@@ -103,29 +103,29 @@ class Vec(items: list[ModInt]):
     def __ne__(a: Vec, b: Vec):
         return not a.__eq__(b)
 
-    def __str__(self: Vec):
+    def __str__(self: Vec) -> str:
         return self.items.__str__()
     
     def __len__(self: Vec) -> int:
         return self.items.__len__()
 
     def __copy__(self: Vec):
-        return self.items.__copy__()
+        return Vec(self.items.__copy__())
 
     def random(sz: int):
         return Vec([ModInt.random(0) for i in range(sz)])
 
     def send(self: Vec, s: Socket, buf: ptr[byte], bytes: int, per_buf: int):
         stored_in_buf, buf_ptr = 0, buf
-        for i in len(self):
+        for i in self.items:
             if stored_in_buf == per_buf:
                 s.send_secure(buf, stored_in_buf * bytes, 0)
                 stored_in_buf, buf_ptr = 0, buf
-            self[i].to_bytes(buf_ptr, bytes)
+            i.to_bytes(buf_ptr, bytes)
             stored_in_buf += 1
             buf_ptr += bytes
         if stored_in_buf > 0:
-            s.send_secure(buf, bytes * stored_in_buf, 0)
+            s.send_secure(buf, stored_in_buf * bytes, 0)
 
     def receive(sz: int, s: Socket, buf: ptr[byte], bytes: int, per_buf: int) -> Vec:
         items = list[ModInt](sz)
@@ -138,7 +138,7 @@ class Vec(items: list[ModInt]):
                 stored_in_buf += count
                 remaining -= count
                 buf_ptr = buf
-            items[i] = ModInt.from_bytes(buf_ptr, bytes)
+            items.append(ModInt.from_bytes(buf_ptr, bytes))
             buf_ptr += bytes
             stored_in_buf -= 1  
         return Vec(items)

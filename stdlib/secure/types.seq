@@ -1,57 +1,12 @@
 from secure.mpc import MPCEnv
+from secure.ntl import *
 
 class Secure[`t](sh: `t):
-    def __add__(x: Secure[`t], y: Secure[`t]):
-        """
-        Protocol 3: Add (p.8)
-        """
-        return Secure[`t](x.sh + y.sh)
-
-    def __add__(x: Secure[`t], y: `t):
-        """
-        Protocol 4: AddPublic (p.8)
-        """
-        if __cp__ != 2: return Secure[`t](x.sh + y)
-        else: return Secure[`t](copy(x.sh))
-    def __add__(x: Secure[`t], y: Secure[`t]):
-        """
-        Protocol 3: Add (p.8)
-        """
-        return Secure[`t](x.sh + y.sh)
-
-    def __sub__(x: Secure[`t], y: `t):
-        """
-        Protocol 4: AddPublic (p.8)
-        """
-        if __cp__ != 2: return Secure[`t](x.sh - y)
-        else: return Secure[`t](copy(x.sh))
-    def __sub__(x: Secure[`t], y: Secure[`t]):
-        """
-        Protocol 3: Add (p.8)
-        """
-        return Secure[`t](x.sh - y.sh)
-
-
-    def __mul__(x: Secure[`t], y: `t):
-        """
-        Protocol 5: MultiplyPublic (p.8)
-        """
-        return Secure[`t](x.sh * y)
-    def __mul__(a: Secure[`t], b: Secure[`t]):
-        """
-        Protocol 9: EvaluatePolynomial (p.12)
-        restricted to f := xy
-        """
-        ar, am = __mpc_env__.beaver_partition(a.sh)
-        br, bm = __mpc_env__.beaver_partition(b.sh)
-        c = __mpc_env__.beaver_mult(ar, am, br, bm)
-        return Secure[`t](__mpc_env__.beaver_reconstruct(c))
-
     def __str__(self: Secure[`t]) -> str:
         if __cp__ != 0:
             return \
-                '[' + self.sh.__str__() + ']' + \
-                '<r:' + __mpc_env__.reveal(self.sh).__str__() + '>'
+                '{' + self.sh.__str__() + '; ' + \
+                'r:' + __mpc_env__.reveal(self.sh).__str__() + '}'
         else:
             return self.sh.__str__()
 
@@ -59,4 +14,70 @@ class Secure[`t](sh: `t):
     def share(item: `t) -> Secure[`t]:
         sh = __mpc_env__.share(item)
         return Secure[`t](sh)
+
+    # Operators
+
+    def add_public(x: Secure[`t], y):
+        """Protocol 4: AddPublic (p.8) """
+        if __cp__ != 2: return Secure[`t](x.sh + y)
+        else: return Secure[`t](copy(x.sh))
+    def __add__(x: Secure[`t], y: ModInt): return x.add_public(y)
+    def __add__(x: Secure[`t], y: Vec):    return x.add_public(y)
+    def __add__(x: Secure[`t], y: Mat):    return x.add_public(y)
+    
+    def add_secure(x: Secure[`t], y: Secure[`t]):
+        """Protocol 3: Add (p.8) """
+        return Secure[`t](x.sh + y.sh)
+    def __add__(x: Secure[`t], y: Secure[`t]):
+        return x.add_secure(y)
+    
+
+    def sub_public(x: Secure[`t], y):
+        """Protocol 4: AddPublic (p.8) """
+        if __cp__ != 2: return Secure[`t](x.sh - y)
+        else: return Secure[`t](copy(x.sh))
+    def __sub__(x: Secure[`t], y: ModInt): return x.sub_public(y)
+    def __sub__(x: Secure[`t], y: Vec):    return x.sub_public(y)
+    def __sub__(x: Secure[`t], y: Mat):    return x.sub_public(y)
+    
+    def sub_secure(x: Secure[`t], y: Secure[`t]):
+        """Protocol 3: Add (p.8) """
+        return Secure[`t](x.sh - y.sh)
+    def __sub__(x: Secure[`t], y: Secure[`t]):
+        return x.sub_secure(y)
+
+
+    def mul_public(x: Secure[`t], y):
+        """Protocol 5: MultiplyPublic (p.8) """
+        return Secure[`t](x.sh * y)
+    def __mul__(x: Secure[`t], y: ModInt): return x.mul_public(y)
+    def __mul__(x: Secure[`t], y: Vec):    return x.mul_public(y)
+    def __mul__(x: Secure[`t], y: Mat):    return x.mul_public(y)
+
+    def mul_secure(a: Secure[`t], b: Secure[`t]):
+        """Protocol 9: EvaluatePolynomial (p.12) restricted to f := xy"""
+        ar, am = __mpc_env__.beaver_partition(a.sh)
+        br, bm = __mpc_env__.beaver_partition(b.sh)
+        c = __mpc_env__.beaver_mult(ar, am, br, bm)
+        
+        r = __mpc_env__.beaver_reconstruct(c)
+        return Secure(r)
+    def __mul__(a: Secure[`t], b: Secure[`t]):
+        return a.mul_secure(b)
+
+
+    def matmul_public(x: Secure[`t], y):
+        return Secure[`t](x.sh - y)
+    def __matmul__(x: Secure[`t], y: ModInt): return x.matmul_public(y)
+    def __matmul__(x: Secure[`t], y: Vec):    return x.matmul_public(y)
+    def __matmul__(x: Secure[`t], y: Mat):    return x.matmul_public(y)
+
+    def matmul_secure(a: Secure[`t], b: Secure[`t]):
+        """Protocol 9: EvaluatePolynomial (p.12) restricted to f := xy"""
+        ar, am = __mpc_env__.beaver_partition(a.sh)
+        br, bm = __mpc_env__.beaver_partition(b.sh)
+        c = __mpc_env__.beaver_mult(ar, am, br, bm)
+        return Secure[`t](__mpc_env__.beaver_reconstruct(c))
+    def __matmul__(a: Secure[`t], b: Secure[`t]):
+        return a.matmul_secure(b)
 

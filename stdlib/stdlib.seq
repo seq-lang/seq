@@ -41,12 +41,6 @@ def zip(a, b):
     for i in range(len(a)):
         yield (a[i], b[i])
 
-def sum[`t](x) -> `t:
-    s = `t()
-    for i in iter(x):
-        s += i
-    return s
-
 def any(x):
     for a in x:
         if a:
@@ -92,6 +86,25 @@ def round(x, n) -> float:
 import! list
 import! dict
 import! set
+
+def sum(x):
+    g = iter(x)
+    i = g.next()
+    if i:
+        s = i.get()
+        i = g.next()
+        while i:
+            s += i.get()
+            i = g.next()
+        return s
+    else:
+        return 0
+
+def sum[`t](x: generator[`t]) -> `t:
+    s = `t()
+    for i in x:
+        s += i
+    return s
 
 extend int:
     def __hash__(self: int):

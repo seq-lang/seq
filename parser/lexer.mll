@@ -75,7 +75,7 @@ let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
 
 let stringprefix = ('s' | 'S')? ('r' | 'R')?
-let intsuffix = ('s' | 'S')
+let intsuffix = ('s' | 'S' | 'z' | 'Z')
 
 let ident = alpha alphanum*
 

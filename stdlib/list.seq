@@ -127,14 +127,16 @@ class list[`t](arr: array[`t], len: int):
             self[j] = x
             i += 1
 
-    def __print__(self: list[`t]):
+    def __str__(self: list[`t]) -> str:
         n = len(self)
         if n == 0:
-            "[]".__print__()
+            return "[]"
         else:
-            "[".__print__()
-            self[0].__print__()
+            y = list[str]()
+            y.append("["),
+            y.append(str(self[0]))
             for i in range(1, n):
-                ", ".__print__()
-                self[i].__print__()
-            "]".__print__()
+                y.append(", ")
+                y.append(str(self[i]))
+            y.append("]")
+            return str.cat(y) 
