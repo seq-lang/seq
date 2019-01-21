@@ -19,7 +19,7 @@ namespace seq {
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
 			void initFields() override;
-
+			void initOps() override;
 			bool isAtomic() const override;
 			bool is(Type *type) const override;
 			unsigned numBaseTypes() const override;
