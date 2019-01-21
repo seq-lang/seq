@@ -32,6 +32,41 @@ void types::OptionalType::initFields()
 	};
 }
 
+void types::OptionalType::initOps()
+{
+	if (!vtable.magic.empty())
+		return;
+
+	vtable.magic = {
+		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			return has(self, b.GetInsertBlock());
+		}},
+	};
+
+	addMethod("get", new BaseFuncLite({this}, getBaseType(0), [this](Module *module) {
+		const std::string name = "seq." + getName() + ".get";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext& context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  getBaseType(0)->getLLVMType(context),
+			                                                  getLLVMType(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			AttributeList v;
+			v.addAttribute(context, 0, Attribute::AlwaysInline);
+			func->setAttributes(v);
+			Value *self = func->arg_begin();
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			IRBuilder<> builder(block);
+			builder.CreateRet(val(self, block));
+		}
+
+		return func;
+	}), true);
+}
+
 bool types::OptionalType::isAtomic() const
 {
 	return baseType->isAtomic();
