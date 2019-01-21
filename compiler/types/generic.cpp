@@ -3,13 +3,16 @@
 using namespace seq;
 using namespace llvm;
 
-types::GenericType::GenericType(types::RefType *pending, std::vector<types::Type *> types) :
-    Type("generic", types::BaseType::get()), genericName(), type(nullptr), pending(pending),
-    types(std::move(types))
+types::GenericType::GenericType(types::RefType *pending,
+                                std::vector<types::Type *> types,
+                                Expr *expr) :
+    Type("generic", types::BaseType::get()), genericName(), type(nullptr),
+    pending(pending), types(std::move(types)), expr(expr)
 {
+	assert(!(pending && expr));
 }
 
-types::GenericType::GenericType() : GenericType(nullptr, {})
+types::GenericType::GenericType() : GenericType(nullptr, {}, nullptr)
 {
 }
 
@@ -20,14 +23,15 @@ void types::GenericType::setName(std::string name)
 
 void types::GenericType::realize(types::Type *type)
 {
-	assert(!this->type && !pending);
+	assert(!this->type && !pending && !expr);
 	this->type = type;
 }
 
 void types::GenericType::realize() const
 {
-	if (!type && pending)
-		type = pending->realize(types);
+	assert(!(pending && expr));
+	if (!type && (pending || expr))
+		type = pending ? pending->realize(types) : expr->getType();
 }
 
 bool types::GenericType::realized() const
@@ -297,7 +301,12 @@ types::GenericType *types::GenericType::get()
 
 types::GenericType *types::GenericType::get(types::RefType *pending, std::vector<types::Type *> types)
 {
-	return new GenericType(pending, std::move(types));
+	return new GenericType(pending, std::move(types), nullptr);
+}
+
+types::GenericType *types::GenericType::get(Expr *expr)
+{
+	return new GenericType(nullptr, {}, expr);
 }
 
 types::GenericType *types::GenericType::clone(Generic *ref)
@@ -318,6 +327,8 @@ types::GenericType *types::GenericType::clone(Generic *ref)
 
 		x->pending = pending;
 		x->types = typesCloned;
+	} else if (expr) {
+		x->expr = expr->clone(ref);
 	}
 
 	return x;

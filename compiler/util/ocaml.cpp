@@ -94,6 +94,11 @@ FOREIGN void set_ref_done(types::RefType *ref)
 	ref->setDone();
 }
 
+FOREIGN types::Type *type_of_expr(Expr *expr)
+{
+	return types::GenericType::get(expr);
+}
+
 /***** Expressions *****/
 
 FOREIGN Expr *none_expr()
