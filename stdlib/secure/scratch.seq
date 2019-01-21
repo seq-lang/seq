@@ -1,0 +1,911 @@
+__mpc_env__.beaver_partition -> BP
+__mpc_env__.beaver_inner -> BI
+__mpc_env__.beaver_reconstruct -> BR
+
+def inner_prod(c: ModInt, a: Vec):
+	ar, am = BP(a)
+	c = BI(ar, am)
+	return BR(c)
+def inner_prod(c: Vec, a: Mat):
+	ar, am = BP(a)
+	nr, nc = len(a)
+	c = [BI(ar[i], am[i]) for i in range(nr)]
+	return BR(c)
+
+def orthonormal_basis(A: Secure[Mat]) -> Secure[Mat]:
+	c, n = len(A.sh)
+
+	v_list = list[Vec](c)
+	Ap = Mat(c, n) if __cp__ == 0 else A
+	one = 1.0z # TODO: potential optimization
+
+	for i in range(c):
+		v = Mat(1, Ap.cols)
+		HH(v[0], Ap[0])
+
+		v_list[i] = Vec(Ap.cols) if __cp__ == 0 else v[0]
+		vt = Mat(Ap.cols, 1) if __cp__ == 0 else v.transpose()
+
+		Apv = trunc(Ap @ vt)
+		B = trunc(Apv @ v)
+		if __cp__ != 0:
+			B *= 2
+			B += Ap
+
+		Ap.setDim(B.rows - 1, B.cols - 1)
+		if __cp__ != 0:
+			for j in range(Ap.rows):
+				for k in range(Ap.cols):
+					Ap[j][k] = B[j + 1][k + 1]
+
+	# TODO clear matrix at initialization
+	Q = Mat(c, n) 
+	if __cp__ == 1:
+		for i in range(c): 
+			Q[i][i] = one
+
+	# TODO check range
+	for i in range(c - 1, 0, -1):
+		v = Mat(1, len(v_list[i]))
+		if __cp__ > 0: v[0] = v_list[i]
+
+		vt = Mat(v.cols, 1) if __cp__ == 0 else v.transpose()
+		Qsub = Mat(c, n - i)
+		if __cp__ > 0:
+			for j in range(c): 
+				for k in range(n - i):
+					Qsub[j][k] = Q[j][k + i]
+
+		Qv = trunc(Qsub @ vt)
+		Qvv = Qv @ v
+		if __cp__ != 0:
+			Qvv *= -2
+			for j in range(c): 
+				for k in range(n - i):
+					Q[j][k + i] += Qvv[j][k]
+	return Q
+
+def tridiag(A):
+	n = A.rows
+	one = 1.0z
+
+  	Q = Mat(n, n)
+  	T = Mat(n, n)
+  	if __cp__ == 1:
+  		for i in range(n):
+  			Q[i][i] = one
+
+	Ap = Mat(n, n) if __cp__ == 0 else A
+
+	for i in range(n - 2):
+		x = Vec(Ap.cols - 1) if __cp__ == 0
+			else [Ap[0][j + 1] for j in range(Ap.cols - 1)]
+
+		v = Mat(1, len(x))
+		HH(v[0], x)
+
+		vt = Mat(len(x), 1) if __cp__ == 0 else v.transpose()
+		vv = trunc(vt @ v)
+
+		P = Mat(Ap.cols, Ap.cols)
+		if __cp__ > 0:
+			P[0][0] = one if __cp__ == 1 else 0z
+			for j in range(1, Ap.cols):
+				for k in range(1, Ap.cols):
+					P[j][k] = -2 * vv[j - 1][k - 1]
+          			if __cp__ == 1 and j == k:
+            			P[j][k] += one
+
+        PAp = trunc(P @ Ap)
+        B = trunc(PAp @ P)
+        Qsub = Mat(n, n - i)
+		if __cp__ > 0:
+			for j in range(n): 
+				for k in range(n - i):
+					Qsub[j][k] = Q[j][k + i]
+		Qsub = trunc(Qsub @ P)
+		if __cp__ != 0:
+			for j in range(c): 
+				for k in range(n - i):
+					Q[j][k + i] += Qsub[j][k]
+
+			for x, y in ((0, 0), (1, 0), (0, 1)):
+				T[i + x][i + y] = B[x][y]
+	        if i == n - 3:
+	        	for x, y in ((1, 1), (1, 2), (2, 1), (2, 2)):
+	        		T[i + x][i + y] = B[x][y]
+
+	    Ap.setDim(B.rows - 1, B.cols - 1)
+	    if __cp__ > 0:
+	    	for j in range(Ap.rows):
+				for k in range(Ap.cols):
+					Ap[j][k] = B[j + 1][k + 1]
+
+	return T, Q
+
+def eigen_decomposition(A):
+	n = A.rows
+	L = Vec(n)
+
+	Ap, Q = tridiag(A)
+	V = Mat(n, n) if __cp__ == 0 else Q.transpose()
+
+	for i in range(n - 1, 1, -1):
+		for it in range(ITER_PER_EVAL):
+			shift = Ap[i][i]
+			if __cp__ > 0:
+				for j in range(Ap.cols):
+					Ap[j][j] -= shift
+			R = qr_factor_square(Q, Ap)
+			Ap = trunc(Q @ R)
+			if __cp__ > 0: 
+				for j in range(Ap.cols):
+					Ap[j][j] += shift
+
+			Vsub = Mat(i + 1, n) 
+			if __cp__ > 0:
+				for j in range(i + 1):
+					Vsub[j] = V[j]
+			Vsub = trunc(Q @ Vsub)
+
+			if __cp__ > 0:
+				for j in range(i + 1):
+					V[j] = Vsub[j]
+
+		L[i] = Ap[i][i]
+		if i == 1:
+			L[0] = Ap[0][0]
+
+		Ap_copy = Ap
+		Ap.setDim(i, i)
+		if __cp__ > 0:
+			for j in range(i):
+				for k in range(i):
+					Ap[j][k] = Ap_copy[j][k]
+	return V, L
+
+
+def less_than_bits_aux(a: MatZZ, b: MatZZ, public: int):
+	n, L = a.rows, a.cols
+
+ 	# Calculate XOR 
+ 	x = MatZZ(n, L)
+  	if public == 0:
+  		x = a * b
+  		if __cp__ > 0:
+  			x = mod(a + b - 2 * x)
+  	elif __cp__ > 0:
+  		x = a * b <@non_secure>
+  		x = a + b - 2 * x
+  		if __cp__ == 2:
+  			x -= a if public == 1 else b
+  		x = mod(x)
+  	
+  	f = prefix_or(x)
+  	del x
+  	if __cp__ > 0:
+  		for i in range(n):
+  			for j in range(L - 1, 1, -1):
+  				f[i][j] -= f[i][j - 1]		
+  		f = mod(f)
+
+  	if public == 2:
+  		c = VecZZ(n)
+  		if __cp__ > 0:
+			for i in range(n):
+				c[i] = 0
+				for j in range(L):
+					c[i] += f[i][j] * b[i][j]
+		c = mod(c)
+	else:
+		f_arr, b_arr = VecMatZZ(n), VecMatZZ(n)
+    	for i in range(n):
+    		f_arr[i].setDim(1, L)
+      		b_arr[i].setDim(L, 1)
+    	
+    	if __cp__ > 0:
+    		for i in range(n):
+    			f_arr[i][0] = f[i];
+        		for j in range(L):
+          			b_arr[i][j][0] = b[i][j]
+
+        c_arr = f_arr @ b_arr
+    	c = VecZZ(n)
+    	if __cp__ > 0:
+      		for i in range(n):
+        		c[i] = c_arr[i][0][0]
+
+        return c
+
+def less_than(a: Vec, b: Vec):
+	ac = a - b
+	return ac.is_positive().flip_bit()
+
+def less_than_public(a: Vec, b: ModInt):
+	ac = Vec(len(a))
+	if __cp__ > 0:
+		ac = copy(a)
+		if __cp__ == 1: 
+			ac -= b
+	return ac.is_positive().flip_bit()
+
+def is_positive(a: Vec):
+	n = len(a)
+	nbits = self.zz_bits()[0]
+
+	self.fid = 2
+
+	r, r_bits = Vec(), MatZZ(n, nbits)
+	match __cp__:
+		case 0:
+			r = self.random(a)
+			r_bits = r.num_to_bits(nbits) # ZZ
+
+			self.switch_seed(1)
+			r_mask, r_bits_mask = self.random(a), self.random(r_bits)
+			self.restore_seed()
+
+			r -= r_mask
+			r_bits = mod(r_bits - r_bits_mask)
+			
+			self.send(r, 2)
+			self.send(r_bits, 2)
+		case 1:
+			r, r_bits = self.receive(0, a), self.receive(0, r_bits)
+		case 2:
+			self.switch_seed(0)
+			r, r_bits = self.random(a), self.random(r_bits)
+			self.restore_seed()
+	
+	c = Vec(n) if __cp__ == 0 else 2 * a + r
+	c = self.reveal(c)
+
+	c_bits = Mat(n, nbits) if __cp__ == 0 else c.num_to_bits(nbits)
+  	
+
+	# Incorrect result if r = 0, which happens with probaility 1 / BASE_P
+  	no_overflow = less_than_bits_public(r_bits, c_bits)
+
+	c_xor_r = VecZZ(n)
+	if __cp__ > 0:
+		for i in range(n):
+			c_xor_r[i] = \
+				r_bits[i][nbits - 1] - 2 * c_bits[i][nbits - 1] * \
+				r_bits[i][nbits - 1]
+			if __cp__ == 1: c_xor_r[i] += c_bits[i][nbits - 1]
+		c_xor_r = mod(c_xor_r)
+
+	lsb = c_xor_r * no_overflow
+	if __cp__ > 0:
+		lsb *= 2
+		for i in range(n):
+      		lsb[i] -= no_overflow[i] + c_xor_r[i]
+      	if __cp__ == 1: lsb[i] += 1
+    	lsb = mod(lsb)
+
+    if __cp__ == 1:
+    	for i in range(n):
+    		lsb[i] += 1
+    	lsb = mod(lsb)
+  
+    b_mat = table_lookup(lsb, 0)
+  	return b_mat[0]
+
+def flip_bit(a: Vec):
+	b = Vec(len(a)) if __cp__ == 0 else -1 * a
+	if __cp__ == 1:
+		b += 1 # @non_secure
+	return b
+
+## FROM HERE START THINKING ABOUT SHARED VALS ACTUALLY
+
+def sqrt(a: Shared[Vec]) -> Shared[Vec]:
+	n = len(a)
+	if n > DIV_MAX_N:
+	    nbatch = math.ceil(n / float(DIV_MAX_N))
+	    b, b_inv = Vec(n), Vec(n)
+	    for i in range(nbatch):
+	    	start = DIV_MAX_N * i
+	      	end = start + DIV_MAX_N
+	      	if end > n: end = n
+	      
+	      	batch_size = end - start
+	      	a_copy = Vec(batch_size)
+	      	for j in range(batch_size):
+	      		a_copy[j] = a[start + j]
+	      	b_copy, b_inv_copy = sqrt(Shared(a_copy))
+	      	for j in range(batch_size):
+	      		b[start + j], b_inv[start + j] = b_copy.sh[j], b_inv_copy.sh[j]
+	    return Shared(b), Shared(b_inv)
+	
+	niter = 2 * math.ceil(math.log2(NBIT_K / 3.5))
+
+	# Initial approximation: 1 / sqrt(a_scaled) ~= 
+	# 	~= 2.9581 - 4 * a_scaled + 2 * a_scaled^2 */
+	s, s_sqrt = a.normalize_even_exp()
+	a_scaled = (a * s).trunc(NBIT_K, NBIT_K - NBIT_F)
+	a_scaled_sq = (a_scaled * a_scaled).trunc()
+
+	scaled_est = Vec(n)
+	if __cp__ > 0:
+		scaled_est.sh = -4 * a_scaled.sh + 2 * a_scaled_sq.sh
+		if __cp__ == 1:
+			coeff = ModFloat(2.9581, NBIT_K, NBIT_F)
+			scaled_est.sh += coeff
+
+	h, g = Shared(Mat(1, n)), Shared(Mat(1, n))
+	h.sh[0] = scaled_est.sh * s_sqrt.sh
+	# Our scaled initial approximation (scaled_est) 
+	# has bit length <= NBIT_F + 2 and s_sqrt is at most NBIT_K/2 bits, 
+	# so their product is at most NBIT_K/2 + NBIT_F + 2
+	h.trunc(NBIT_K / 2 + NBIT_F + 2, ((NBIT_K - NBIT_F) / 2) + 1)
+
+	g[0].sh = h[0].sh * 2
+	g[0] = g[0] * a
+	g.trunc()
+
+	onepointfive = ModFloat(1.5, NBIT_K, NBIT_F)
+	for it in range(niter):
+		r = - trunc(h * g)
+		if __cp__ == 1:
+			for i in range(n):
+				r[0][i] = onepointfive
+		h, g = trunc(h * r), trunc(g * r)
+
+	return g[0], 2 * h[0]
+  			
+def div(a: Shared[Vec], b: Shared[Vec]) -> Shared[Vec]:
+	n = len(a)
+	if n > DIV_MAX_N:	
+		nbatch = ceil(n / float(DIV_MAX_N))
+    	c = Vec(n)	
+    	for i in range(nbatch):
+    		start = DIV_MAX_N * i
+      		end = min(start + DIV_MAX_N, n)
+      		batch_size = end - start
+
+      		a_copy = a.sh[start:start + batch_size]
+      		b_copy = b.sh[start:start + batch_size]
+      		c_copy = Shared(a_copy).div(Shared(b_copy))
+      		# TODO: add to stdlib
+      		c.update(start, start + batch_size, c_copy.sh[0:batch_size])
+    	return Shared(c)
+
+	niter = 2 * math.ceil(math.log2((NBIT_K) / 3.5)) + 1
+
+  	# Initial approximation: 1 / x_scaled ~= 
+  	# 	~= 5.9430 - 10 * x_scaled + 5 * x_scaled^2 
+  	s, s_sqrt = b.normalizer_even_exp()
+  	b_scaled = (b * s).trunc(NBIT_K, NBIT_K - NBIT_F)
+  	b_scaled_eq = (b_scaled * b_scaled).trunc()
+
+  	scaled_est = Shared(Vec(n))
+  	if __cp__ > 0:
+  		scaled_est.sh = -10 * b_scaled.sh + 5 * b_scaled_sq.sh
+  		if __cp__ == 1:
+  			scaled_est += ModFloat(5.9430, Param::NBIT_K, Param::NBIT_F)
+
+  	# scaled_est has bit length <= NBIT_F + 2, and s has bit length <= NBIT_K
+  	# so the bit length of w is at most NBIT_K + NBIT_F + 2
+  	w = (scaled_est * s).trunc(NBIT_K + NBIT_F + 2, NBIT_K - NBIT_F)
+  	x = (w * b).trunc()
+  	
+  	one = ModFloat(1.0, NBIT_K, NBIT_F)
+  	x *= -1
+  	if __cp__ == 1:
+  		x.sh *= one
+  	
+  	y = (a * w).trunc()
+
+  	for i in range(niter):
+  		xr, xm = BP(x)
+  		yr, ym = BP(y)
+
+  		xpr = xr
+  		if __cp__ > 0: xpr += one
+
+  		x.sh, y.sh = Vec(n), Vec(n)
+  		y = BME(yr, ym, xpr, xm)
+  		x = BME(xr, xm, xr,  xm)
+  		x, y = BR(x).trunc(), BR(y).trunc()
+
+  	if __cp__ == 1:
+  		x.sh += one
+
+  	return (y * x).trunc()
+
+  
+void MPCEnv::Trunc(Mat<ZZ_p>& a, int k, int m) {
+  if (debug) cout << "Trunc: " << a.NumRows() << ", " << a.NumCols() << endl;
+
+  Mat<ZZ_p> r;
+  Mat<ZZ_p> r_low;
+  if (pid == 0) {
+    RandMatBits(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
+
+    r_low.SetDims(a.NumRows(), a.NumCols());
+    for (int i = 0; i < a.NumRows(); i++) {
+      for (int j = 0; j < a.NumCols(); j++) {
+        r_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(r[i][j]), m));
+      }
+    }
+
+    Mat<ZZ_p> r_mask;
+    Mat<ZZ_p> r_low_mask;
+    SwitchSeed(1);
+    RandMat(r_mask, a.NumRows(), a.NumCols());
+    RandMat(r_low_mask, a.NumRows(), a.NumCols());
+    RestoreSeed();
+
+    r -= r_mask;
+    r_low -= r_low_mask;
+
+    SendMat(r, 2);
+    SendMat(r_low, 2);
+  } else if (pid == 2) {
+    ReceiveMat(r, 0, a.NumRows(), a.NumCols());
+    ReceiveMat(r_low, 0, a.NumRows(), a.NumCols());
+  } else {
+    SwitchSeed(0);
+    RandMat(r, a.NumRows(), a.NumCols());
+    RandMat(r_low, a.NumRows(), a.NumCols());
+    RestoreSeed();
+  }
+
+  Mat<ZZ_p> c;
+  if (pid > 0) {
+    c = a + r;
+  } else {
+    c.SetDims(a.NumRows(), a.NumCols());
+  }
+
+  RevealSym(c);
+
+  Mat<ZZ_p> c_low;
+  c_low.SetDims(a.NumRows(), a.NumCols());
+  if (pid > 0) {
+    for (int i = 0; i < a.NumRows(); i++) {
+      for (int j = 0; j < a.NumCols(); j++) {
+        c_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(c[i][j]), m));
+      }
+    }
+  }
+
+  if (pid > 0) {
+    a += r_low;
+    if (pid == 1) {
+      a -= c_low;
+    }
+
+    ZZ_p twoinvm;
+    map<int, ZZ_p>::iterator it = invpow_cache.find(m);
+    if (it == invpow_cache.end()) {
+      ZZ_p two(2);
+      ZZ_p twoinv;
+      inv(twoinv, two);
+      power(twoinvm, twoinv, m);
+      invpow_cache[m] = twoinvm;
+    } else {
+      twoinvm = it->second;
+    }
+
+    a *= twoinvm;
+  }
+}
+
+void MPCEnv::PrefixOr(Mat<ZZ>& b, Mat<ZZ>& a, int fid) {
+  if (debug) cout << "PrefixOr: " << a.NumRows() << ", " << a.NumCols() << endl;
+
+  int n = a.NumRows();
+
+  /* Find next largest squared integer */
+  int L = (int) ceil(sqrt((double) a.NumCols()));
+  int L2 = L * L;
+
+  assert(primes[fid] > L + 1);
+
+  /* Zero-pad to L2 bits */
+  Mat<ZZ> a_padded;
+  a_padded.SetDims(n, L2);
+
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < L2; j++) {
+        if (j < L2 - a.NumCols())
+          a_padded[i][j] = 0;
+        else
+          a_padded[i][j] = a[i][j - L2 + a.NumCols()];
+      }
+    }
+  }
+
+  Reshape(a_padded, n * L, L);
+
+  Vec<ZZ> x;
+  FanInOr(x, a_padded, fid);
+
+  Mat<ZZ> xpre;
+  xpre.SetDims(n * L, L);
+
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < L; j++) {
+        int xpi = L * i + j;
+        for (int k = 0; k < L; k++) {
+          xpre[xpi][k] = (k <= j) ? x[L * i + k] : ZZ(0);
+        }
+      }
+    }
+  }
+
+  Vec<ZZ> y;
+  FanInOr(y, xpre, fid);
+  xpre.kill();
+
+  Vec< Mat<ZZ> > f; // f is a concatenation of n 1-by-L matrices
+  f.SetLength(n);
+  for (int i = 0; i < n; i++) {
+    f[i].SetDims(1, L);
+  }
+
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < L; j++) {
+        if (j == 0) {
+          f[i][0][j] = x[L * i];
+        } else {
+          f[i][0][j] = y[L * i + j] - y[L * i + j - 1];
+        }
+      }
+      Mod(f[i], fid);
+    }
+  }
+  x.kill();
+
+  Vec< Mat<ZZ> > tmp;
+  tmp.SetLength(n);
+  for (int i = 0; i < n; i++) {
+    tmp[i].SetDims(L, L);
+  }
+
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < L; j++) {
+        tmp[i][j] = a_padded[L * i + j];
+      }
+    }
+  }
+  a_padded.kill();
+
+  Vec< Mat<ZZ> > c;
+  MultMatParallel(c, f, tmp, fid); // c is a concatenation of n 1-by-L matrices
+  tmp.kill();
+
+  Mat<ZZ> cpre;
+  cpre.SetDims(n * L, L);
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < L; j++) {
+        int cpi = L * i + j;
+        for (int k = 0; k < L; k++) {
+          cpre[cpi][k] = (k <= j) ? c[i][0][k] : ZZ(0);
+        }
+      }
+    }
+  }
+  c.kill();
+
+  Vec<ZZ> bdot_vec;
+  FanInOr(bdot_vec, cpre, fid);
+  cpre.kill();
+
+  Vec< Mat<ZZ> > bdot;
+  bdot.SetLength(n);
+  for (int i = 0; i < n; i++) {
+    bdot[i].SetDims(1, L);
+  }
+
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < L; j++) {
+        bdot[i][0][j] = bdot_vec[L * i + j];
+      }
+    }
+  }
+  bdot_vec.kill();
+
+  for (int i = 0; i < n; i++) {
+    Reshape(f[i], L, 1);
+  }
+
+  Vec< Mat<ZZ> > s;
+  MultMatParallel(s, f, bdot, fid);
+  bdot.kill();
+
+  b.SetDims(n, a.NumCols());
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < a.NumCols(); j++) {
+        int j_pad = L2 - a.NumCols() + j;
+
+        int il = (int) (j_pad / L);
+        int jl = j_pad - il * L;
+
+        b[i][j] = s[i][il][jl] + y[L * i + il] - f[i][il][0];
+      }
+    }
+  }
+  Mod(b, fid);
+  s.kill();
+  y.kill();
+  f.kill();
+}
+
+void MPCEnv::FanInOr(Vec<ZZ>& b, Mat<ZZ>& a, int fid) {
+  if (debug) cout << "FanInOr: " << a.NumRows() << ", " << a.NumCols() << endl;
+
+  int n = a.NumRows();
+  int d = a.NumCols();
+
+  Vec<ZZ> a_sum;
+  a_sum.SetLength(n);
+
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      a_sum[i] = (pid == 1) ? 1 : 0;
+      for (int j = 0; j < d; j++) {
+        a_sum[i] += a[i][j];
+      }
+    }
+    Mod(a_sum, fid);
+  }
+
+  Mat<ZZ> coeff;
+  coeff.SetDims(1, d + 1);
+  pair<int, int> key = make_pair(d + 1, fid);
+  if (or_lagrange_cache.find(key) != or_lagrange_cache.end()) {
+    coeff[0] = or_lagrange_cache[key];
+  } else {
+    Vec<ZZ> y;
+    y.SetLength(d + 1);
+    for (int i = 0; i < d + 1; i++) {
+      y[i] = (i == 0) ? 0 : 1;
+    }
+    lagrange_interp_simple(coeff[0], y, fid); // OR function
+    or_lagrange_cache[key] = coeff[0];
+  }
+
+  Mat<ZZ> bmat;
+  EvaluatePoly(bmat, a_sum, coeff, fid);
+  b = bmat[0];
+}
+
+void MPCEnv::ShareRandomBits(Vec<ZZ_p>& r, Mat<ZZ>& rbits, int k, int n, int fid) {
+  if (debug) cout << "ShareRandomBits: " << n << endl;
+
+  if (pid == 0) {
+    RandVecBits(r, n, k + Param::NBIT_V);
+    NumToBits(rbits, r, k);
+
+    Vec<ZZ_p> r_mask;
+    Mat<ZZ> rbits_mask;
+
+    SwitchSeed(1);
+    RandVec(r_mask, n);
+    RandMat(rbits_mask, n, k, fid);
+    RestoreSeed();
+
+    r -= r_mask;
+    rbits -= rbits_mask;
+    Mod(rbits, fid);
+
+    SendVec(r, 2);
+    SendMat(rbits, 2, fid);
+  } else if (pid == 2) {
+    ReceiveVec(r, 0, n);
+    ReceiveMat(rbits, 0, n, k, fid);
+  } else {
+    SwitchSeed(0);
+    RandVec(r, n);
+    RandMat(rbits, n, k, fid);
+    RestoreSeed();
+  }
+}
+
+void MPCEnv::TableLookup(Mat<ZZ_p>& b, Vec<ZZ_p>& a, int table_id) {
+  if (debug) cout << "TableLookup: " << a.length() << endl;
+
+  assert(!table_type_ZZ[table_id]);
+
+  EvaluatePoly(b, a, lagrange_cache[table_id]);
+}
+
+void MPCEnv::TableLookup(Mat<ZZ_p>& b, Vec<ZZ>& a, int table_id, int fid) {
+  if (debug) cout << "TableLookup: " << a.length() << endl;
+
+  assert(table_type_ZZ[table_id]);
+  assert(table_field_index[table_id] == fid);
+
+  int s = table_cache[table_id].NumCols();
+  int n = a.length();
+
+  Vec<ZZ_p> a_exp;
+  a_exp.SetLength(n);
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      a_exp[i] = conv<ZZ_p>(a[i]);
+    }
+  }
+
+  if (debug) cout << "Evaluating polynomial" << endl;
+  if (debug) cout << s << ", " << lagrange_cache[table_id].NumCols() << endl;
+
+  EvaluatePoly(b, a_exp, lagrange_cache[table_id]);
+}
+
+// Base field index 1
+void MPCEnv::NormalizerEvenExp(Vec<ZZ_p>& b, Vec<ZZ_p>& b_sqrt, Vec<ZZ_p>& a) {
+  if (debug) cout << "NormalizerEvenExp: " << a.length() << endl;
+
+  int n = a.length();
+  int fid = 1;
+
+  Vec<ZZ_p> r;
+  Mat<ZZ> rbits;
+  ShareRandomBits(r, rbits, Param::NBIT_K, n, fid);
+
+  Vec<ZZ_p> e;
+  if (pid == 0) {
+    e.SetLength(n);
+  } else {
+    e = a + r;
+  }
+  r.kill();
+
+  RevealSym(e);
+
+  Mat<ZZ> ebits;
+  if (pid == 0) {
+    ebits.SetDims(n, Param::NBIT_K);
+  } else {
+    NumToBits(ebits, e, Param::NBIT_K);
+  }
+  e.kill();
+
+  Vec<ZZ> c;
+  LessThanBitsPublic(c, rbits, ebits, fid);
+  if (pid > 0) {
+    c = -c;
+    if (pid == 1) {
+      for (int i = 0; i < n; i++) {
+        c[i] += 1;
+      }
+    }
+    Mod(c, fid);
+  }
+
+  Mat<ZZ> ep;
+  ep.SetDims(n, Param::NBIT_K + 1);
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      ep[i][0] = c[i];
+      for (int j = 1; j < Param::NBIT_K + 1; j++) {
+        ep[i][j] = (1 - 2 * ebits[i][j-1]) * rbits[i][j-1];
+        if (pid == 1) {
+          ep[i][j] += ebits[i][j-1];
+        }
+      }
+    }
+    Mod(ep, fid);
+  }
+  c.kill();
+
+  Mat<ZZ> E;
+  PrefixOr(E, ep, fid);
+  ep.kill();
+
+  Mat<ZZ> tpneg;
+  tpneg.SetDims(n, Param::NBIT_K);
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < Param::NBIT_K; j++) {
+        tpneg[i][j] = E[i][j] - rbits[i][j] * (1 - ebits[i][j]);
+      }
+    }
+    Mod(tpneg, fid);
+  }
+  E.kill();
+
+  Mat<ZZ> Tneg;
+  PrefixOr(Tneg, tpneg, fid);
+  tpneg.kill();
+
+  int half_len = Param::NBIT_K / 2;
+
+  Mat<ZZ> efir, rfir;
+  efir.SetDims(n, Param::NBIT_K);
+  rfir.SetDims(n, Param::NBIT_K);
+  if (pid > 0) {
+    mul_elem(efir, ebits, Tneg);
+    Mod(efir, fid);
+  }
+  MultElem(rfir, rbits, Tneg, fid);
+  ebits.kill();
+  rbits.kill();
+
+  Vec<ZZ> double_flag;
+  LessThanBits(double_flag, efir, rfir, fid);
+  efir.kill();
+  rfir.kill();
+
+  Mat<ZZ> odd_bits, even_bits;
+  odd_bits.SetDims(n, half_len);
+  even_bits.SetDims(n, half_len);
+  if (pid > 0) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < half_len; j++) {
+        odd_bits[i][j] = (pid == 1) ? (1 - Tneg[i][2*j+1]) : -Tneg[i][2*j+1];
+        if ((2 * j + 2) < Param::NBIT_K) {
+          even_bits[i][j] = (pid == 1) ? (1 - Tneg[i][2*j+2]) : -Tneg[i][2*j+2];
+        } else {
+          even_bits[i][j] = 0;
+        }
+      }
+    }
+    Mod(odd_bits, fid);
+    Mod(even_bits, fid);
+  }
+  Tneg.kill();
+
+  Vec<ZZ> odd_bit_sum, even_bit_sum;
+  Init(odd_bit_sum, n);
+  Init(even_bit_sum, n);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < half_len; j++) {
+      odd_bit_sum[i] += odd_bits[i][j];
+      even_bit_sum[i] += even_bits[i][j];
+    }
+    if (pid == 1) {
+      odd_bit_sum[i] += 1;
+      even_bit_sum[i] += 1;
+    }
+  }
+  Mod(odd_bit_sum, fid);
+  Mod(even_bit_sum, fid);
+  odd_bits.kill();
+  even_bits.kill();
+
+  // If double_flag = true, then use odd_bits, otherwise use even_bits
+
+  Vec<ZZ> diff;
+  if (pid == 0) {
+    diff.SetLength(n);
+  } else {
+    diff = odd_bit_sum - even_bit_sum;
+    Mod(diff, fid);
+  }
+  MultElem(diff, double_flag, diff, fid);
+  double_flag.kill();
+
+  Vec<ZZ> chosen_bit_sum;
+  if (pid == 0) {
+    chosen_bit_sum.SetLength(n);
+  } else {
+    chosen_bit_sum = even_bit_sum + diff;
+    Mod(chosen_bit_sum, fid);
+  }
+  odd_bit_sum.kill();
+  even_bit_sum.kill();
+  diff.kill();
+
+  Mat<ZZ_p> b_mat;
+  TableLookup(b_mat, chosen_bit_sum, 1, fid);
+
+  if (pid > 0) {
+    b_sqrt = b_mat[0];
+    b = b_mat[1];
+  } else {
+    b_sqrt.SetLength(n);
+    b.SetLength(n);
+  }
+}

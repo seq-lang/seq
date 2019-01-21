@@ -61,7 +61,7 @@ class Secure[`t](sh: `t):
         c = __mpc_env__.beaver_mult(ar, am, br, bm)
         
         r = __mpc_env__.beaver_reconstruct(c)
-        return Secure(r)
+        return Secure[`t](r)
     def __mul__(a: Secure[`t], b: Secure[`t]):
         return a.mul_secure(b)
 
@@ -77,7 +77,8 @@ class Secure[`t](sh: `t):
         ar, am = __mpc_env__.beaver_partition(a.sh)
         br, bm = __mpc_env__.beaver_partition(b.sh)
         c = __mpc_env__.beaver_mult(ar, am, br, bm)
-        return Secure[`t](__mpc_env__.beaver_reconstruct(c))
+        r = __mpc_env__.beaver_reconstruct(c)
+        return Secure[typeof(r)](r)
     def __matmul__(a: Secure[`t], b: Secure[`t]):
         return a.matmul_secure(b)
 

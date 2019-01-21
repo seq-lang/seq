@@ -437,6 +437,9 @@ void MPCEnv::ProfilerWriteToFile() {
   logfs.close();
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+
+// No need
 void MPCEnv::ParallelLogisticRegression(Vec<ZZ_p>& b0, Mat<ZZ_p>& bv, Vec<ZZ_p>& bx,
                                 Mat<ZZ_p>& xr, Mat<ZZ_p>& xm,
                                 Mat<ZZ_p>& vr, Mat<ZZ_p>& vm,
@@ -615,6 +618,7 @@ void MPCEnv::ParallelLogisticRegression(Vec<ZZ_p>& b0, Mat<ZZ_p>& bv, Vec<ZZ_p>&
   }
 }
 
+// No need
 void MPCEnv::NegLogSigmoid(Vec<ZZ_p>& b, Vec<ZZ_p>& b_grad, Vec<ZZ_p>& a) {
   size_t n = a.length();
 
@@ -678,6 +682,7 @@ void MPCEnv::NegLogSigmoid(Vec<ZZ_p>& b, Vec<ZZ_p>& b_grad, Vec<ZZ_p>& a) {
   b_grad = param[1];
 }
 
+// OK
 void MPCEnv::InnerProd(Vec<ZZ_p>& c, Mat<ZZ_p>& a) {
   if (debug) cout << "InnerProd: " << a.NumRows() << ", " << a.NumCols() << endl;
 
@@ -691,6 +696,7 @@ void MPCEnv::InnerProd(Vec<ZZ_p>& c, Mat<ZZ_p>& a) {
 
   BeaverReconstruct(c);
 }
+// OK
 void MPCEnv::InnerProd(ZZ_p& c, Vec<ZZ_p>& a) {
   if (debug) cout << "InnerProd: " << a.length() << endl;
 
@@ -700,6 +706,7 @@ void MPCEnv::InnerProd(ZZ_p& c, Vec<ZZ_p>& a) {
   BeaverReconstruct(c);
 }
 
+// No need
 void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   if (debug) cout << "Householder: " << x.length() << endl;
 
@@ -768,6 +775,7 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   Trunc(v);
 }
 
+// No need
 void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
   if (debug) cout << "QRFactSquare: " << A.NumRows() << ", " << A.NumCols() << endl;
 
@@ -872,6 +880,7 @@ void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
   }
 }
 
+// Done
 void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   if (debug) cout << "OrthonormalBasis: " << A.NumRows() << ", " << A.NumCols() << endl;
 
@@ -988,6 +997,7 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   }
 }
 
+// Done
 void MPCEnv::Tridiag(Mat<ZZ_p>& T, Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   if (debug) cout << "Tridiag: " << A.NumRows() << ", " << A.NumCols() << endl;
 
@@ -1108,6 +1118,7 @@ void MPCEnv::Tridiag(Mat<ZZ_p>& T, Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   }
 }
 
+// Done
 void MPCEnv::EigenDecomp(Mat<ZZ_p>& V, Vec<ZZ_p>& L, Mat<ZZ_p>& A) {
   if (debug) cout << "EigenDecomp: " << A.NumRows() << ", " << A.NumCols() << endl;
 
@@ -1184,6 +1195,7 @@ void MPCEnv::EigenDecomp(Mat<ZZ_p>& V, Vec<ZZ_p>& L, Mat<ZZ_p>& A) {
   cout << "EigenDecomp: complete" << endl;
 }
 
+// Done
 void MPCEnv::LessThanBitsAux(Vec<ZZ>& c, Mat<ZZ>& a, Mat<ZZ>& b, int public_flag, int fid) {
   if (debug) cout << "LessThanBitsAux: " << a.NumRows() << ", " << a.NumCols() << endl;
 
@@ -1267,7 +1279,7 @@ void MPCEnv::LessThanBitsAux(Vec<ZZ>& c, Mat<ZZ>& a, Mat<ZZ>& b, int public_flag
     }
   }
 }
-
+// Done
 void MPCEnv::LessThan(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   Vec<ZZ_p> a_cpy;
   a_cpy.SetLength(a.length());
@@ -1281,7 +1293,7 @@ void MPCEnv::LessThan(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   IsPositive(c, a_cpy);
   FlipBit(c);
 }
-
+// Done
 void MPCEnv::LessThanPublic(Vec<ZZ_p>& c, Vec<ZZ_p>& a, ZZ_p bpub) {
   Vec<ZZ_p> a_cpy;
   a_cpy.SetLength(a.length());
@@ -1298,7 +1310,7 @@ void MPCEnv::LessThanPublic(Vec<ZZ_p>& c, Vec<ZZ_p>& a, ZZ_p bpub) {
   IsPositive(c, a_cpy);
   FlipBit(c);
 }
-
+// Done
 // Failure probability of 1 / BASE_P
 // Base field index 2
 void MPCEnv::IsPositive(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {

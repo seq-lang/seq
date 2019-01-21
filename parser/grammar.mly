@@ -70,7 +70,6 @@
 %token <Ast.Pos.t> DOT       // . 
 %token <Ast.Pos.t> COLON     // : 
 %token <Ast.Pos.t> SEMICOLON // ; 
-%token <Ast.Pos.t> AT        // @ 
 %token <Ast.Pos.t> COMMA     // , 
 %token <Ast.Pos.t> OF        // -> 
 
@@ -92,7 +91,7 @@
 /* operators */
 %token<Ast.Pos.t * string> EQ ASSGN_EQ ELLIPSIS // =, :=, ...
 %token<Ast.Pos.t * string> ADD SUB MUL DIV // +, -, *, /
-%token<Ast.Pos.t * string> FDIV POW MOD  // //, **, %
+%token<Ast.Pos.t * string> FDIV POW MOD AT // //, **, %, @
 %token<Ast.Pos.t * string> PLUSEQ MINEQ MULEQ DIVEQ  // +=, -=, *=, /=
 %token<Ast.Pos.t * string> FDIVEQ POWEQ MODEQ // //=, **=, %=, 
 %token<Ast.Pos.t * string> LSHEQ RSHEQ // <<=, >>=
@@ -109,7 +108,7 @@
 %left B_AND
 %left B_LSH B_RSH
 %left ADD SUB
-%left MUL DIV FDIV MOD
+%left AT MUL DIV FDIV MOD
 %left POW
 
 /* entry rule for module */
@@ -342,7 +341,7 @@ arith_expr:
     { pos (fst $1) (fst $3), 
       Binary ($1, snd $2, $3) }
 %inline arith_op:
-  | ADD | SUB | MUL | DIV | FDIV | MOD | POW 
+  | ADD | SUB | MUL | DIV | FDIV | MOD | POW | AT 
   | B_AND | B_OR | B_XOR | B_LSH | B_RSH
     { $1 }
 

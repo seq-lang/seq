@@ -266,8 +266,8 @@ module Expr = struct
     (Types.typ @-> cstring @-> returning t)
     typ (strdup what)
 
-  let typeof = foreign "typeof_expr"
-    (t @-> returning t)
+  let typeof = foreign "type_of_expr"
+    (t @-> returning Types.typ)
 
   let ptr = foreign "ptr_expr"
     (Types.var @-> returning t)

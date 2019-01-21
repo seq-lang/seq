@@ -203,11 +203,11 @@ and read state = parse
   | ":="  as op { P.ASSGN_EQ  (cur_pos state lexbuf ~len:2, op) }
   | "="   as op { P.EQ        (cur_pos state lexbuf, Char.to_string op) }
   | "..." as op { P.ELLIPSIS  (cur_pos state lexbuf ~len:3, op) }
+  | "@"   as op { P.AT        (cur_pos state lexbuf, Char.to_string op) }
   
   | "->"  { P.OF        (cur_pos state lexbuf ~len:2) }
   | ":"   { P.COLON     (cur_pos state lexbuf) }
   | ";"   { P.SEMICOLON (cur_pos state lexbuf) }
-  | "@"   { P.AT        (cur_pos state lexbuf) }
   | ","   { P.COMMA     (cur_pos state lexbuf) }
   | "."   { P.DOT       (cur_pos state lexbuf) }
 

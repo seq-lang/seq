@@ -243,7 +243,11 @@ struct
       Llvm.Expr.typ @@ Llvm.Type.record names indices ""
     | _ -> 
       let lh_expr = parse ctx lh_expr in
-      let indices = List.map indices ~f:(parse ctx) in
+      let indices = List.map indices ~f:(function 
+        | _, TypeOf(e) ->
+          eprintf "here yay!\n%!";
+          Llvm.Expr.typeof @@ parse ctx e
+        | e -> parse ctx e) in
       let all_types = List.for_all indices ~f:Llvm.Expr.is_type in
       if all_types then
         let indices = List.map indices ~f:Llvm.Type.expr_type in
@@ -342,7 +346,7 @@ struct
         
     and parse_typeof ctx _ expr =
       let expr = parse ctx expr in 
-      Llvm.Expr.typeof expr
+      Llvm.Type.expr_type @@ Llvm.Expr.typeof expr
 
     and parse_ptr ctx pos = function
       | _, Id var ->

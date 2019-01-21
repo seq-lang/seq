@@ -12,14 +12,14 @@ y = Vec([9z, 8z, 7z, 6z, 5z]) # 95
 x := Secure[Vec].share(x)
 y := Secure[Vec].share(y)
 
-print a, b
-print a + 5z, a * 5z
+# print a, b
+# print a + 5z, a * 5z
 
-print a + b, a - b
-print a * b
+# print a + b, a - b
+# print a * b
 
-print x, y
-print x * 5z, x * y
+# print x, y
+# print x * 5z, x * y
 
 print x.matmul_secure(y)
 # print x.sh, y.sh
