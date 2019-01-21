@@ -30,8 +30,14 @@ void types::GenericType::realize(types::Type *type)
 void types::GenericType::realize() const
 {
 	assert(!(pending && expr));
-	if (!type && (pending || expr))
-		type = pending ? pending->realize(types) : expr->getType();
+	if (!type) {
+		if (pending) {
+			type = pending->realize(types);
+		} else if (expr) {
+			expr->resolveTypes();
+			type = expr->getType();
+		}
+	}
 }
 
 bool types::GenericType::realized() const
