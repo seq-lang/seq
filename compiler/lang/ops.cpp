@@ -14,6 +14,7 @@ static void init()
 			{"+",  false, "__pos__"},
 			{"**", true,  "__pow__", "__rpow__"},
 			{"*",  true,  "__mul__", "__rmul__"},
+			{"@",  true,  "__matmul__", "__rmatmul__"},
 			{"/",  true,  "__div__", "__rdiv__"},
 			{"%",  true,  "__mod__", "__rmod__"},
 			{"+",  true,  "__add__", "__radd__"},
