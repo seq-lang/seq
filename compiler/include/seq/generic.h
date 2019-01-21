@@ -7,17 +7,26 @@
 #include "seq/types.h"
 
 namespace seq {
+	class Expr;
+
 	namespace types {
 		class GenericType : public Type {
 		private:
+			/* standard generic type parameter */
 			std::string genericName;
 			mutable Type *type;
 
+			/* realized type (e.g. A[int]) */
 			RefType *pending;
 			std::vector<types::Type *> types;
+
+			/* typeof expression */
+			Expr *expr;
 		public:
 			GenericType();
-			GenericType(RefType *pending, std::vector<Type *> types);
+			GenericType(RefType *pending,
+			            std::vector<Type *> types,
+			            Expr *expr);
 			void setName(std::string name);
 			void realize(Type *type);
 			void realize() const;
@@ -100,6 +109,7 @@ namespace seq {
 
 			static GenericType *get();
 			static GenericType *get(RefType *pending, std::vector<Type *> types);
+			static GenericType *get(Expr *expr);
 
 			GenericType *clone(Generic *ref) override;
 			bool findInType(types::Type *type, std::vector<unsigned>& path);
