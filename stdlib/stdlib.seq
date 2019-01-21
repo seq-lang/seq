@@ -87,18 +87,18 @@ import! list
 import! dict
 import! set
 
-def sum(x):
-    g = iter(x)
-    i = g.next()
-    if i:
-        s = i.get()
-        i = g.next()
-        while i:
-            s += i.get()
-            i = g.next()
-        return s
-    else:
-        return 0
+# def sum(x):
+#     g = iter(x)
+#     i = g.next()
+#     if i:
+#         s = i.get()
+#         i = g.next()
+#         while i:
+#             s += i.get()
+#             i = g.next()
+#         return s
+#     else:
+#         return 0
 
 def sum[`t](x: generator[`t]) -> `t:
     s = `t()
