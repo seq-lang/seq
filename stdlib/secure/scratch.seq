@@ -1,911 +1,652 @@
-__mpc_env__.beaver_partition -> BP
-__mpc_env__.beaver_inner -> BI
-__mpc_env__.beaver_reconstruct -> BR
+__mpc_env__.beaver_partition => BP (T -> S, S)
+__mpc_env__.beaver_inner => BI (S, S -> S)
+__mpc_env__.beaver_reconstruct => BR (S -> S)
 
-def inner_prod(c: ModInt, a: Vec):
-	ar, am = BP(a)
-	c = BI(ar, am)
-	return BR(c)
-def inner_prod(c: Vec, a: Mat):
-	ar, am = BP(a)
-	nr, nc = len(a)
-	c = [BI(ar[i], am[i]) for i in range(nr)]
-	return BR(c)
+from secure import Secure as S
 
-def orthonormal_basis(A: Secure[Mat]) -> Secure[Mat]:
-	c, n = len(A.sh)
+# __mul__ [elem], __matmul__ [normal]
+# TODO: check VecMat manually
+
+DoubleToFP(one, 1, Param::NBIT_K, Param::NBIT_F)
+
+def inner_prod(a):
+  ar, am = BP(a)
+  c = BI(ar, am) # for Vec/Mat this iterates
+  return BR(c)
+
+def householder(x: Vec) -> Vec:
+  xr, xm = BP(x)
+
+  xdot = Vec([BI(xr, xm)])
+  xdot = S.trunc(BR(xdot))
+  xnorm, _ = S.sqrt(xdot)
+
+  x1 = Vec([x[0]])
+  x1sign = S.is_positive(x_1)
+  x1sign *= 2
+  if CP1: x1sign[0] -= 1
+  shift = S.mul(xnorm, x1sign)
+  sr, sm = BP(shift[0])
+  dot_shift = BM(xr[0], xm[0], sr, sm)
+  dot_shift = S.trunc(BR(dot_shift))
+
+  vdot = Vec(1)
+  if CP: vdot[0] = 2 * (xdot[0] + dot_shift)
+  _, vnorm_inv = S.sqrt(vdot)
+  invr, invm = BP(vnorm_inv[0])
+  
+  vr = xr if CP else Vec(n)
+  if CP: vr[0] += sr 
+  vm = xm
+  vm[0] += sm
+
+  v = BM(vr, vm, invr, invm)
+  return S.trunc(BR(v))
+
+def qr_factor_square(A: Mat) -> tuple[Mat, Mat]:
+  n = A.rows
+  R = Mat(n, n)
+  Ap = A if CP else Mat(n, n)
+  Q = Mat()
+
+  for i in range(n - 1):
+    v = Mat(1, Ap.cols)
+    v[0] = S.householder(Ap[0])
+    vt = S.transpose(v) if CP else Mat(Ap.cols, 1)
+    P = S.trunc(S.matmul(vt, v))
+    if CP:
+      P *= -2
+      if CP1:
+        for j in range(P.cols): 
+          P[j][j] += Float.cache(1, NBIT_K, NBIT_F)
+    if i == 0:
+      Q = P
+      B = S.trunc((S(Ap) @ S(P)).sh)
+    else:
+      Qsub = Mat(n - i, n)
+      if CP: 
+        Qsub.update(0, n - i, Q[i:n])
+
+      l0, l1 = P, Ap
+      r0, r1 = Qsub, P
+      p0, p1 = S.trunc(S.matmul(l0, r0)), S.trunc(S.matmul(l1, r1))
+
+      B = Mat(n - i, n - i)
+      if CP: 
+        Q.update(i, n, p0[0:n - i])
+        B = p1
+    
+    Ap = Mat(n - 1 - i, n - 1 - i)
+    if CP:
+      for j in range(n - i): 
+        R[i + j][i] = B[j][0]
+      if i == n - 2: 
+        R[n-1][n-1] = B[1][1]
+      for j in range (n - 1 - i): 
+        for k in range(n - 1 - i):
+          Ap[j][k] = B[j + 1][k + 1]
+  return Q, R
+      
+def orthonormal_basis(A: Mat) -> Mat:
+	c, n = len(A)
 
 	v_list = list[Vec](c)
-	Ap = Mat(c, n) if __cp__ == 0 else A
-	one = 1.0z # TODO: potential optimization
+	Ap = A if CP else Mat(c, n)
 
 	for i in range(c):
 		v = Mat(1, Ap.cols)
-		HH(v[0], Ap[0])
+		v[0] = S.householder(Ap[0])
 
-		v_list[i] = Vec(Ap.cols) if __cp__ == 0 else v[0]
-		vt = Mat(Ap.cols, 1) if __cp__ == 0 else v.transpose()
+		v_list[i] = v[0] if CP else Vec(Ap.cols)
+		vt = S.transpose(v) if CP else Mat(Ap.cols, 1)
 
-		Apv = trunc(Ap @ vt)
-		B = trunc(Apv @ v)
-		if __cp__ != 0:
+		Apv = S.trunc(S.matmul(Ap, vt))
+		B = S.trunc(S.matmul(Apv, v))
+		if CP:
 			B *= 2
 			B += Ap
 
-		Ap.setDim(B.rows - 1, B.cols - 1)
-		if __cp__ != 0:
+		Ap = Mat(B.rows - 1, B.cols - 1)
+		if CP:
 			for j in range(Ap.rows):
 				for k in range(Ap.cols):
 					Ap[j][k] = B[j + 1][k + 1]
 
 	# TODO clear matrix at initialization
 	Q = Mat(c, n) 
-	if __cp__ == 1:
-		for i in range(c): 
-			Q[i][i] = one
+	if CP1:
+		for i in range(c):
+			Q[i][i] = Float.cache(1.0)
 
 	# TODO check range
-	for i in range(c - 1, 0, -1):
+	for i in range(c - 1, -1, -1):
 		v = Mat(1, len(v_list[i]))
-		if __cp__ > 0: v[0] = v_list[i]
+		if CP: v[0] = v_list[i]
 
-		vt = Mat(v.cols, 1) if __cp__ == 0 else v.transpose()
+		vt = S.transpose(v) if CP else Mat(v.cols, 1)
 		Qsub = Mat(c, n - i)
-		if __cp__ > 0:
+		if CP:
 			for j in range(c): 
 				for k in range(n - i):
 					Qsub[j][k] = Q[j][k + i]
 
-		Qv = trunc(Qsub @ vt)
-		Qvv = Qv @ v
-		if __cp__ != 0:
+		Qv = S.trunc(S.matmul(Qsub, vt))
+		Qvv = S.trunc(S.matmul(Qv, v))
+		if CP:
 			Qvv *= -2
 			for j in range(c): 
 				for k in range(n - i):
 					Q[j][k + i] += Qvv[j][k]
 	return Q
 
-def tridiag(A):
+def tridiag(A: Mat) -> tuple[Mat, Mat]:
 	n = A.rows
-	one = 1.0z
+  Q, T = Mat(n, n), Mat(n, n)
+	if CP1:
+		for i in range(n):
+			Q[i][i] = Float.cache(1.0, NBIT_K, NBIT_F)
 
-  	Q = Mat(n, n)
-  	T = Mat(n, n)
-  	if __cp__ == 1:
-  		for i in range(n):
-  			Q[i][i] = one
-
-	Ap = Mat(n, n) if __cp__ == 0 else A
-
+	Ap = A if CP else Mat(n, n)
 	for i in range(n - 2):
-		x = Vec(Ap.cols - 1) if __cp__ == 0
-			else [Ap[0][j + 1] for j in range(Ap.cols - 1)]
-
+		x = Ap[0][1:] if CP else Vec(Ap.cols - 1)
 		v = Mat(1, len(x))
-		HH(v[0], x)
+		v[0] = S.householder(x)
 
-		vt = Mat(len(x), 1) if __cp__ == 0 else v.transpose()
-		vv = trunc(vt @ v)
-
+		vt = S.transpose(v) if CP else Mat(len(x), 1)
+		vv = S.trunc(S.matmul(vt, v))
 		P = Mat(Ap.cols, Ap.cols)
-		if __cp__ > 0:
-			P[0][0] = one if __cp__ == 1 else 0z
+		if CP:
+			P[0][0] = Float.cache(1.0, NBIT_K, NBIT_F) if CP1 else 0z
 			for j in range(1, Ap.cols):
 				for k in range(1, Ap.cols):
 					P[j][k] = -2 * vv[j - 1][k - 1]
-          			if __cp__ == 1 and j == k:
-            			P[j][k] += one
+          if CP1 and j == k:
+            P[j][k] += Float.cache(1.0, NBIT_K, NBIT_F)
 
-        PAp = trunc(P @ Ap)
-        B = trunc(PAp @ P)
-        Qsub = Mat(n, n - i)
-		if __cp__ > 0:
+    PAp = S.trunc(S.matmul(P, Ap))
+    B = S.trunc(S.matmul(PAp, P))
+    Qsub = Mat(n, n - i)
+		if CP:
 			for j in range(n): 
 				for k in range(n - i):
 					Qsub[j][k] = Q[j][k + i]
-		Qsub = trunc(Qsub @ P)
-		if __cp__ != 0:
+		Qsub = S.trunc(S.matmul(Qsub, P))
+    Ap = Mat(B.rows - 1, B.cols - 1)
+		if CP:
 			for j in range(c): 
 				for k in range(n - i):
 					Q[j][k + i] += Qsub[j][k]
 
-			for x, y in ((0, 0), (1, 0), (0, 1)):
-				T[i + x][i + y] = B[x][y]
-	        if i == n - 3:
-	        	for x, y in ((1, 1), (1, 2), (2, 1), (2, 2)):
-	        		T[i + x][i + y] = B[x][y]
+      indices = [(0, 0), (1, 0), (0, 1)]
+      if i == n - 3:
+        indices += [(1, 1), (1, 2), (2, 1), (2, 2)]
+			for x, y in indices:
+		    T[i + x][i + y] = B[x][y]
 
-	    Ap.setDim(B.rows - 1, B.cols - 1)
-	    if __cp__ > 0:
-	    	for j in range(Ap.rows):
+    	for j in range(Ap.rows):
 				for k in range(Ap.cols):
 					Ap[j][k] = B[j + 1][k + 1]
 
 	return T, Q
 
-def eigen_decomposition(A):
+def eigen_decomposition(A: Mat) -> tuple[Mat, Vec]:
 	n = A.rows
 	L = Vec(n)
 
-	Ap, Q = tridiag(A)
-	V = Mat(n, n) if __cp__ == 0 else Q.transpose()
-
-	for i in range(n - 1, 1, -1):
+	Ap, Q = S.tridiag(A)
+	V = S.transpose(Q) if CP else Mat(n, n)
+	for i in range(n - 1, 0, -1):
 		for it in range(ITER_PER_EVAL):
 			shift = Ap[i][i]
-			if __cp__ > 0:
+			if CP:
 				for j in range(Ap.cols):
 					Ap[j][j] -= shift
-			R = qr_factor_square(Q, Ap)
-			Ap = trunc(Q @ R)
-			if __cp__ > 0: 
+			Q, R = S.qr_factor_square(Ap)
+			Ap = S.trunc(S.matmul(Q, R))
+			if CP: 
 				for j in range(Ap.cols):
 					Ap[j][j] += shift
 
 			Vsub = Mat(i + 1, n) 
-			if __cp__ > 0:
-				for j in range(i + 1):
-					Vsub[j] = V[j]
-			Vsub = trunc(Q @ Vsub)
+			if CP:
+        Vsub.update(0, i + 1, V[0:i + 1])
+			Vsub = S.trunc(S.matmul(Q, Vsub))
 
-			if __cp__ > 0:
-				for j in range(i + 1):
-					V[j] = Vsub[j]
+			if CP:
+        V.update(0, i + 1, Vsub[0:i + 1])
 
 		L[i] = Ap[i][i]
 		if i == 1:
 			L[0] = Ap[0][0]
 
-		Ap_copy = Ap
-		Ap.setDim(i, i)
-		if __cp__ > 0:
-			for j in range(i):
-				for k in range(i):
-					Ap[j][k] = Ap_copy[j][k]
+		Ap_copy = [r[:i] for r in Ap[:i]]
 	return V, L
 
+# Bit operations
 
-def less_than_bits_aux(a: MatZZ, b: MatZZ, public: int):
+def less_than_bits_aux(a: ZMat, b: ZMat, public: int) -> ZVec:
 	n, L = a.rows, a.cols
 
  	# Calculate XOR 
- 	x = MatZZ(n, L)
-  	if public == 0:
-  		x = a * b
-  		if __cp__ > 0:
-  			x = mod(a + b - 2 * x)
-  	elif __cp__ > 0:
-  		x = a * b <@non_secure>
-  		x = a + b - 2 * x
-  		if __cp__ == 2:
-  			x -= a if public == 1 else b
-  		x = mod(x)
+ 	x = ZMat(n, L)
+	if public == 0:
+		x = S.mul(a, b)
+  	if CP: 
+      x = S.mod(a + b - 2 * x)
+	elif CP:
+		x = a + b - 2 * (a * b)
+		if CP2:
+			x -= a if public == 1 else b
+		x = S.mod(x)
   	
-  	f = prefix_or(x)
-  	del x
-  	if __cp__ > 0:
-  		for i in range(n):
-  			for j in range(L - 1, 1, -1):
-  				f[i][j] -= f[i][j - 1]		
-  		f = mod(f)
+	f = S.prefix_or(x)
+	del x
+	if CP:
+		for i in range(n):
+			for j in range(L - 1, 0, -1):
+				f[i][j] -= f[i][j - 1]
+		f = S.mod(f)
 
-  	if public == 2:
-  		c = VecZZ(n)
-  		if __cp__ > 0:
-			for i in range(n):
-				c[i] = 0
-				for j in range(L):
-					c[i] += f[i][j] * b[i][j]
-		c = mod(c)
+	if public == 2:
+		c = ZVec([sum(f[i][j] * b[i][j] for j in range(L)) for i in range(n)]) if CP 
+        else ZVec(n)
+  	return mod(c)
 	else:
-		f_arr, b_arr = VecMatZZ(n), VecMatZZ(n)
-    	for i in range(n):
-    		f_arr[i].setDim(1, L)
-      		b_arr[i].setDim(L, 1)
-    	
-    	if __cp__ > 0:
-    		for i in range(n):
-    			f_arr[i][0] = f[i];
-        		for j in range(L):
-          			b_arr[i][j][0] = b[i][j]
+		f_arr = [ZMat(1, L) for i in range(n)] 
+    b_arr = [ZMat(L, 1) for i in range(n)]
+  	if CP:
+  		for i in range(n):
+  			f_arr[i][0] = f[i];
+      	for j in range(L):
+    			b_arr[i][j][0] = b[i][j]
+    c_arr = [S.matmul(f_arr[i], b_arr[i]) for i in range(n)]    	
+    return ZVec([c_arr[i][0][0] for i in range(n)]) if CP else ZVec(n)
 
-        c_arr = f_arr @ b_arr
-    	c = VecZZ(n)
-    	if __cp__ > 0:
-      		for i in range(n):
-        		c[i] = c_arr[i][0][0]
+def less_than(a: Vec, b: Vec) -> Vec:
+	ac = a - b if CP else Vec(len(a))
+	return S.flip_bit(S.is_positive(ac))
 
-        return c
-
-def less_than(a: Vec, b: Vec):
-	ac = a - b
-	return ac.is_positive().flip_bit()
-
-def less_than_public(a: Vec, b: ModInt):
-	ac = Vec(len(a))
-	if __cp__ > 0:
-		ac = copy(a)
-		if __cp__ == 1: 
-			ac -= b
-	return ac.is_positive().flip_bit()
-
-def is_positive(a: Vec):
+def less_than_public(a: Vec, b) -> Vec:
+	ac = a if CP else Vec(len(a))
+  if CP1: ac -= b
+  return S.flip_bit(S.is_positive(ac))
+	
+def is_positive(a: Vec) -> Vec:
 	n = len(a)
 	nbits = self.zz_bits()[0]
-
 	self.fid = 2
 
-	r, r_bits = Vec(), MatZZ(n, nbits)
-	match __cp__:
-		case 0:
-			r = self.random(a)
-			r_bits = r.num_to_bits(nbits) # ZZ
+	r, r_bits = Vec(), ZMat(n, nbits)
+  if CP0:
+    r = self.random(a)
+		r_bits = r.num_to_bits(nbits) 
 
-			self.switch_seed(1)
-			r_mask, r_bits_mask = self.random(a), self.random(r_bits)
-			self.restore_seed()
+		self.switch_seed(1)
+		r_mask, r_bits_mask = self.random(a), self.random(r_bits)
+		self.restore_seed()
 
-			r -= r_mask
-			r_bits = mod(r_bits - r_bits_mask)
+		r -= r_mask  
+		r_bits = mod(r_bits - r_bits_mask)
 			
-			self.send(r, 2)
-			self.send(r_bits, 2)
-		case 1:
-			r, r_bits = self.receive(0, a), self.receive(0, r_bits)
-		case 2:
-			self.switch_seed(0)
-			r, r_bits = self.random(a), self.random(r_bits)
-			self.restore_seed()
+		self.send(r, 2)
+		self.send(r_bits, 2)
+  elif CP1:
+		r, r_bits = self.receive(0, a), self.receive(0, r_bits)
+	elif CP2:
+		self.switch_seed(0)
+		r, r_bits = self.random(a), self.random(r_bits)
+		self.restore_seed()
 	
-	c = Vec(n) if __cp__ == 0 else 2 * a + r
+	c = 2 * a + r if CP else Vec(n)
 	c = self.reveal(c)
-
-	c_bits = Mat(n, nbits) if __cp__ == 0 else c.num_to_bits(nbits)
+	c_bits = c.num_to_bits(nbits) if CP else ZMat(n, nbits)
   	
-
 	# Incorrect result if r = 0, which happens with probaility 1 / BASE_P
-  	no_overflow = less_than_bits_public(r_bits, c_bits)
+	no_overflow = S.less_than_bits_public(r_bits, c_bits)
 
-	c_xor_r = VecZZ(n)
-	if __cp__ > 0:
+	c_xor_r = ZVec(n)
+	if CP:
 		for i in range(n):
-			c_xor_r[i] = \
-				r_bits[i][nbits - 1] - 2 * c_bits[i][nbits - 1] * \
-				r_bits[i][nbits - 1]
-			if __cp__ == 1: c_xor_r[i] += c_bits[i][nbits - 1]
-		c_xor_r = mod(c_xor_r)
+			c_xor_r[i] = r_bits[i][nbits - 1] - 2 * c_bits[i][nbits - 1] * \
+				           r_bits[i][nbits - 1]
+			if CP1: c_xor_r[i] += c_bits[i][nbits - 1]
+		c_xor_r = S.mod(c_xor_r)
 
-	lsb = c_xor_r * no_overflow
-	if __cp__ > 0:
+	lsb = S.mul(c_xor_r * no_overflow)
+	if CP:
 		lsb *= 2
 		for i in range(n):
-      		lsb[i] -= no_overflow[i] + c_xor_r[i]
-      	if __cp__ == 1: lsb[i] += 1
-    	lsb = mod(lsb)
+      lsb[i] -= no_overflow[i] + c_xor_r[i]
+  	if CP1: lsb += 1
+  	lsb = S.mod(lsb)
 
-    if __cp__ == 1:
-    	for i in range(n):
-    		lsb[i] += 1
-    	lsb = mod(lsb)
-  
-    b_mat = table_lookup(lsb, 0)
-  	return b_mat[0]
+  if CP1:
+    lsb = mod(lsb + 1)
+  return S.table_lookup(lsb, 0)[0]
 
-def flip_bit(a: Vec):
-	b = Vec(len(a)) if __cp__ == 0 else -1 * a
-	if __cp__ == 1:
-		b += 1 # @non_secure
+def flip_bit(a: Vec) -> Vec:
+	b = -1 * a if CP else Vec(len(a))
+	if CP1: b += 1
 	return b
 
-## FROM HERE START THINKING ABOUT SHARED VALS ACTUALLY
-
-def sqrt(a: Shared[Vec]) -> Shared[Vec]:
+#@batch
+def sqrt(a: Vec) -> tuple[Vec, Vec]:
 	n = len(a)
 	if n > DIV_MAX_N:
-	    nbatch = math.ceil(n / float(DIV_MAX_N))
-	    b, b_inv = Vec(n), Vec(n)
-	    for i in range(nbatch):
-	    	start = DIV_MAX_N * i
-	      	end = start + DIV_MAX_N
-	      	if end > n: end = n
-	      
-	      	batch_size = end - start
-	      	a_copy = Vec(batch_size)
-	      	for j in range(batch_size):
-	      		a_copy[j] = a[start + j]
-	      	b_copy, b_inv_copy = sqrt(Shared(a_copy))
-	      	for j in range(batch_size):
-	      		b[start + j], b_inv[start + j] = b_copy.sh[j], b_inv_copy.sh[j]
-	    return Shared(b), Shared(b_inv)
+    nbatch = math.ceil(n / float(DIV_MAX_N))
+    b, b_inv = Vec(n), Vec(n)
+    for i in range(nbatch):
+    	start = DIV_MAX_N * i
+      end = min(start + DIV_MAX_N, n)
+      batch_size = end - start
+
+    	a_copy = [a[start + j] for j in range(batch_size)]
+  		b_copy, b_inv_copy = S.sqrt(Vec(a_copy))
+      b.update(start, start + batch_size, b_copy)
+      b_inv.update(start, start + batch_size, b_inv_copy)
+    return b, b_inv
 	
 	niter = 2 * math.ceil(math.log2(NBIT_K / 3.5))
 
 	# Initial approximation: 1 / sqrt(a_scaled) ~= 
 	# 	~= 2.9581 - 4 * a_scaled + 2 * a_scaled^2 */
-	s, s_sqrt = a.normalize_even_exp()
-	a_scaled = (a * s).trunc(NBIT_K, NBIT_K - NBIT_F)
-	a_scaled_sq = (a_scaled * a_scaled).trunc()
+	s, s_sqrt = S.normalize_even_exp(a)
+	a_scaled = S.trunc(S.mul(a, s), NBIT_K, NBIT_K - NBIT_F)
+	a_scaled_sq = S.truct(S.mul(a_scaled * a_scaled))
 
 	scaled_est = Vec(n)
-	if __cp__ > 0:
-		scaled_est.sh = -4 * a_scaled.sh + 2 * a_scaled_sq.sh
-		if __cp__ == 1:
-			coeff = ModFloat(2.9581, NBIT_K, NBIT_F)
-			scaled_est.sh += coeff
+	if CP:
+		scaled_est = -4 * a_scaled + 2 * a_scaled_sq
+		if CP1:
+			scaled_est += Float.cache(2.9581, NBIT_K, NBIT_F)
 
-	h, g = Shared(Mat(1, n)), Shared(Mat(1, n))
-	h.sh[0] = scaled_est.sh * s_sqrt.sh
+	h, g = Mat(1, n), Mat(1, n)
+	h[0] = S.mul(scaled_est, s_sqrt)
+  h = S.trunc(h, NBIT_K / 2 + NBIT_F + 2, ((NBIT_K - NBIT_F) / 2) + 1)
 	# Our scaled initial approximation (scaled_est) 
 	# has bit length <= NBIT_F + 2 and s_sqrt is at most NBIT_K/2 bits, 
 	# so their product is at most NBIT_K/2 + NBIT_F + 2
-	h.trunc(NBIT_K / 2 + NBIT_F + 2, ((NBIT_K - NBIT_F) / 2) + 1)
+	g[0] = S.trunc(S.mul(h[0] * 2, a))
 
-	g[0].sh = h[0].sh * 2
-	g[0] = g[0] * a
-	g.trunc()
-
-	onepointfive = ModFloat(1.5, NBIT_K, NBIT_F)
 	for it in range(niter):
-		r = - trunc(h * g)
-		if __cp__ == 1:
+		r = - S.trunc(S.mul(h, g))
+		if CP1:
 			for i in range(n):
-				r[0][i] = onepointfive
-		h, g = trunc(h * r), trunc(g * r)
+				r[0][i] += Float.cache(1.5, NBIT_K, NBIT_F)
+		h, g = S.trunc(S.mul(h, r)), S.trunc(S.mul(g, r))
 
 	return g[0], 2 * h[0]
-  			
+ 
+#@batch 			
 def div(a: Shared[Vec], b: Shared[Vec]) -> Shared[Vec]:
 	n = len(a)
 	if n > DIV_MAX_N:	
 		nbatch = ceil(n / float(DIV_MAX_N))
-    	c = Vec(n)	
-    	for i in range(nbatch):
-    		start = DIV_MAX_N * i
-      		end = min(start + DIV_MAX_N, n)
-      		batch_size = end - start
-
-      		a_copy = a.sh[start:start + batch_size]
-      		b_copy = b.sh[start:start + batch_size]
-      		c_copy = Shared(a_copy).div(Shared(b_copy))
-      		# TODO: add to stdlib
-      		c.update(start, start + batch_size, c_copy.sh[0:batch_size])
-    	return Shared(c)
+  	c = Vec(n)	
+  	for i in range(nbatch):
+  		start = DIV_MAX_N * i
+  		end = min(start + DIV_MAX_N, n)
+  		batch_size = end - start
+  		c_copy = div(a[start:start + batch_size], b_copy[start:start + batch_size])
+  		c.update(start, start + batch_size, c_copy)
+  	return c
 
 	niter = 2 * math.ceil(math.log2((NBIT_K) / 3.5)) + 1
 
-  	# Initial approximation: 1 / x_scaled ~= 
-  	# 	~= 5.9430 - 10 * x_scaled + 5 * x_scaled^2 
-  	s, s_sqrt = b.normalizer_even_exp()
-  	b_scaled = (b * s).trunc(NBIT_K, NBIT_K - NBIT_F)
-  	b_scaled_eq = (b_scaled * b_scaled).trunc()
+	# Initial approximation: 1 / x_scaled ~= 
+	# 	~= 5.9430 - 10 * x_scaled + 5 * x_scaled^2 
+	s, s_sqrt = S.normalizer_even_exp(b)
+	b_scaled = S.trunc(S.mul(b, s), NBIT_K, NBIT_K - NBIT_F)
+	b_scaled_eq = S.trunc(S.mul(b_scaled, b_scaled))
 
-  	scaled_est = Shared(Vec(n))
-  	if __cp__ > 0:
-  		scaled_est.sh = -10 * b_scaled.sh + 5 * b_scaled_sq.sh
-  		if __cp__ == 1:
-  			scaled_est += ModFloat(5.9430, Param::NBIT_K, Param::NBIT_F)
+	scaled_est = -10 * b_scaled + 5 * b_scaled_sq if CP else Vec(n)
+	if CP1:
+		scaled_est += Float.cache(5.9430, NBIT_K, NBIT_F)
 
-  	# scaled_est has bit length <= NBIT_F + 2, and s has bit length <= NBIT_K
-  	# so the bit length of w is at most NBIT_K + NBIT_F + 2
-  	w = (scaled_est * s).trunc(NBIT_K + NBIT_F + 2, NBIT_K - NBIT_F)
-  	x = (w * b).trunc()
+  # scaled_est has bit length <= NBIT_F + 2, and s has bit length <= NBIT_K
+	# so the bit length of w is at most NBIT_K + NBIT_F + 2
+	w = S.trunc(S.mul(scaled_est, s), NBIT_K + NBIT_F + 2, NBIT_K - NBIT_F)
+	x = S.trunc(S.mul(w, b))
   	
-  	one = ModFloat(1.0, NBIT_K, NBIT_F)
-  	x *= -1
-  	if __cp__ == 1:
-  		x.sh *= one
-  	
-  	y = (a * w).trunc()
+	x *= -1
+	if CP1: x += Float.cache(1, NBIT_K, NBIT_F)
+	y = S.trunc(S.mul(a, w))
+	for i in range(niter):
+		(xr, xm), (yr, ym) = BP(x), BP(y)
+		xpr = xr
+		if CP: xpr += Float.cache(1, NBIT_K, NBIT_F)
+		y = BME(yr, ym, xpr, xm)
+		x = BME(xr, xm, xr,  xm)
+  	x, y = S.trunc(BR(x)), S.trunc(BR(y))
 
-  	for i in range(niter):
-  		xr, xm = BP(x)
-  		yr, ym = BP(y)
+	if CP1: x += Float.cache(1, NBIT_K, NBIT_F)
+  return S.trunc(S.mul(y, x))
+ 
+def trunc(a: Mat, k: int, m: int) -> Mat:
+  r, r_low = Mat(), Mat()
+  if CP0:
+    r = self.rand_mat_bits(a, k + NBIT_V)
+    r_low = [[ZZ.trunc(rep(cl), m) for cl in rw] for rw in r]
 
-  		xpr = xr
-  		if __cp__ > 0: xpr += one
+    self.switch_seed(1)
+    r_mask, r_low_mask = self.random(a), self.random(a)
+    self.restore_seed()
 
-  		x.sh, y.sh = Vec(n), Vec(n)
-  		y = BME(yr, ym, xpr, xm)
-  		x = BME(xr, xm, xr,  xm)
-  		x, y = BR(x).trunc(), BR(y).trunc()
-
-  	if __cp__ == 1:
-  		x.sh += one
-
-  	return (y * x).trunc()
-
+    r -= r_mask 
+    r_low -= r_low_mask
+    self.send(2, r)
+    self.send(2, r_low)
+  elif CP1:
+    self.switch_seed(0)
+    r, r_low = self.random(a), self.random(a)  
+    self.restore_seed()
+  elif CP2:
+    r, r_low = self.receive(0, a), self.receive(0, a)
   
-void MPCEnv::Trunc(Mat<ZZ_p>& a, int k, int m) {
-  if (debug) cout << "Trunc: " << a.NumRows() << ", " << a.NumCols() << endl;
-
-  Mat<ZZ_p> r;
-  Mat<ZZ_p> r_low;
-  if (pid == 0) {
-    RandMatBits(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
-
-    r_low.SetDims(a.NumRows(), a.NumCols());
-    for (int i = 0; i < a.NumRows(); i++) {
-      for (int j = 0; j < a.NumCols(); j++) {
-        r_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(r[i][j]), m));
-      }
-    }
-
-    Mat<ZZ_p> r_mask;
-    Mat<ZZ_p> r_low_mask;
-    SwitchSeed(1);
-    RandMat(r_mask, a.NumRows(), a.NumCols());
-    RandMat(r_low_mask, a.NumRows(), a.NumCols());
-    RestoreSeed();
-
-    r -= r_mask;
-    r_low -= r_low_mask;
-
-    SendMat(r, 2);
-    SendMat(r_low, 2);
-  } else if (pid == 2) {
-    ReceiveMat(r, 0, a.NumRows(), a.NumCols());
-    ReceiveMat(r_low, 0, a.NumRows(), a.NumCols());
-  } else {
-    SwitchSeed(0);
-    RandMat(r, a.NumRows(), a.NumCols());
-    RandMat(r_low, a.NumRows(), a.NumCols());
-    RestoreSeed();
-  }
-
-  Mat<ZZ_p> c;
-  if (pid > 0) {
-    c = a + r;
-  } else {
-    c.SetDims(a.NumRows(), a.NumCols());
-  }
-
-  RevealSym(c);
-
-  Mat<ZZ_p> c_low;
-  c_low.SetDims(a.NumRows(), a.NumCols());
-  if (pid > 0) {
-    for (int i = 0; i < a.NumRows(); i++) {
-      for (int j = 0; j < a.NumCols(); j++) {
-        c_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(c[i][j]), m));
-      }
-    }
-  }
-
-  if (pid > 0) {
-    a += r_low;
-    if (pid == 1) {
-      a -= c_low;
-    }
-
-    ZZ_p twoinvm;
-    map<int, ZZ_p>::iterator it = invpow_cache.find(m);
-    if (it == invpow_cache.end()) {
-      ZZ_p two(2);
-      ZZ_p twoinv;
-      inv(twoinv, two);
-      power(twoinvm, twoinv, m);
-      invpow_cache[m] = twoinvm;
-    } else {
-      twoinvm = it->second;
-    }
-
-    a *= twoinvm;
-  }
-}
-
-void MPCEnv::PrefixOr(Mat<ZZ>& b, Mat<ZZ>& a, int fid) {
-  if (debug) cout << "PrefixOr: " << a.NumRows() << ", " << a.NumCols() << endl;
-
-  int n = a.NumRows();
-
-  /* Find next largest squared integer */
-  int L = (int) ceil(sqrt((double) a.NumCols()));
-  int L2 = L * L;
-
-  assert(primes[fid] > L + 1);
-
-  /* Zero-pad to L2 bits */
-  Mat<ZZ> a_padded;
-  a_padded.SetDims(n, L2);
-
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < L2; j++) {
-        if (j < L2 - a.NumCols())
-          a_padded[i][j] = 0;
-        else
-          a_padded[i][j] = a[i][j - L2 + a.NumCols()];
-      }
-    }
-  }
-
-  Reshape(a_padded, n * L, L);
-
-  Vec<ZZ> x;
-  FanInOr(x, a_padded, fid);
-
-  Mat<ZZ> xpre;
-  xpre.SetDims(n * L, L);
-
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < L; j++) {
-        int xpi = L * i + j;
-        for (int k = 0; k < L; k++) {
-          xpre[xpi][k] = (k <= j) ? x[L * i + k] : ZZ(0);
-        }
-      }
-    }
-  }
-
-  Vec<ZZ> y;
-  FanInOr(y, xpre, fid);
-  xpre.kill();
-
-  Vec< Mat<ZZ> > f; // f is a concatenation of n 1-by-L matrices
-  f.SetLength(n);
-  for (int i = 0; i < n; i++) {
-    f[i].SetDims(1, L);
-  }
-
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < L; j++) {
-        if (j == 0) {
-          f[i][0][j] = x[L * i];
-        } else {
-          f[i][0][j] = y[L * i + j] - y[L * i + j - 1];
-        }
-      }
-      Mod(f[i], fid);
-    }
-  }
-  x.kill();
-
-  Vec< Mat<ZZ> > tmp;
-  tmp.SetLength(n);
-  for (int i = 0; i < n; i++) {
-    tmp[i].SetDims(L, L);
-  }
-
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < L; j++) {
-        tmp[i][j] = a_padded[L * i + j];
-      }
-    }
-  }
-  a_padded.kill();
-
-  Vec< Mat<ZZ> > c;
-  MultMatParallel(c, f, tmp, fid); // c is a concatenation of n 1-by-L matrices
-  tmp.kill();
-
-  Mat<ZZ> cpre;
-  cpre.SetDims(n * L, L);
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < L; j++) {
-        int cpi = L * i + j;
-        for (int k = 0; k < L; k++) {
-          cpre[cpi][k] = (k <= j) ? c[i][0][k] : ZZ(0);
-        }
-      }
-    }
-  }
-  c.kill();
-
-  Vec<ZZ> bdot_vec;
-  FanInOr(bdot_vec, cpre, fid);
-  cpre.kill();
-
-  Vec< Mat<ZZ> > bdot;
-  bdot.SetLength(n);
-  for (int i = 0; i < n; i++) {
-    bdot[i].SetDims(1, L);
-  }
-
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < L; j++) {
-        bdot[i][0][j] = bdot_vec[L * i + j];
-      }
-    }
-  }
-  bdot_vec.kill();
-
-  for (int i = 0; i < n; i++) {
-    Reshape(f[i], L, 1);
-  }
-
-  Vec< Mat<ZZ> > s;
-  MultMatParallel(s, f, bdot, fid);
-  bdot.kill();
-
-  b.SetDims(n, a.NumCols());
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < a.NumCols(); j++) {
-        int j_pad = L2 - a.NumCols() + j;
-
-        int il = (int) (j_pad / L);
-        int jl = j_pad - il * L;
-
-        b[i][j] = s[i][il][jl] + y[L * i + il] - f[i][il][0];
-      }
-    }
-  }
-  Mod(b, fid);
-  s.kill();
-  y.kill();
-  f.kill();
-}
-
-void MPCEnv::FanInOr(Vec<ZZ>& b, Mat<ZZ>& a, int fid) {
-  if (debug) cout << "FanInOr: " << a.NumRows() << ", " << a.NumCols() << endl;
-
-  int n = a.NumRows();
-  int d = a.NumCols();
-
-  Vec<ZZ> a_sum;
-  a_sum.SetLength(n);
-
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      a_sum[i] = (pid == 1) ? 1 : 0;
-      for (int j = 0; j < d; j++) {
-        a_sum[i] += a[i][j];
-      }
-    }
-    Mod(a_sum, fid);
-  }
-
-  Mat<ZZ> coeff;
-  coeff.SetDims(1, d + 1);
-  pair<int, int> key = make_pair(d + 1, fid);
-  if (or_lagrange_cache.find(key) != or_lagrange_cache.end()) {
-    coeff[0] = or_lagrange_cache[key];
-  } else {
-    Vec<ZZ> y;
-    y.SetLength(d + 1);
-    for (int i = 0; i < d + 1; i++) {
-      y[i] = (i == 0) ? 0 : 1;
-    }
-    lagrange_interp_simple(coeff[0], y, fid); // OR function
-    or_lagrange_cache[key] = coeff[0];
-  }
-
-  Mat<ZZ> bmat;
-  EvaluatePoly(bmat, a_sum, coeff, fid);
-  b = bmat[0];
-}
-
-void MPCEnv::ShareRandomBits(Vec<ZZ_p>& r, Mat<ZZ>& rbits, int k, int n, int fid) {
-  if (debug) cout << "ShareRandomBits: " << n << endl;
-
-  if (pid == 0) {
-    RandVecBits(r, n, k + Param::NBIT_V);
-    NumToBits(rbits, r, k);
-
-    Vec<ZZ_p> r_mask;
-    Mat<ZZ> rbits_mask;
-
-    SwitchSeed(1);
-    RandVec(r_mask, n);
-    RandMat(rbits_mask, n, k, fid);
-    RestoreSeed();
-
-    r -= r_mask;
-    rbits -= rbits_mask;
-    Mod(rbits, fid);
-
-    SendVec(r, 2);
-    SendMat(rbits, 2, fid);
-  } else if (pid == 2) {
-    ReceiveVec(r, 0, n);
-    ReceiveMat(rbits, 0, n, k, fid);
-  } else {
-    SwitchSeed(0);
-    RandVec(r, n);
-    RandMat(rbits, n, k, fid);
-    RestoreSeed();
-  }
-}
-
-void MPCEnv::TableLookup(Mat<ZZ_p>& b, Vec<ZZ_p>& a, int table_id) {
-  if (debug) cout << "TableLookup: " << a.length() << endl;
-
-  assert(!table_type_ZZ[table_id]);
-
-  EvaluatePoly(b, a, lagrange_cache[table_id]);
-}
-
-void MPCEnv::TableLookup(Mat<ZZ_p>& b, Vec<ZZ>& a, int table_id, int fid) {
-  if (debug) cout << "TableLookup: " << a.length() << endl;
-
-  assert(table_type_ZZ[table_id]);
-  assert(table_field_index[table_id] == fid);
-
-  int s = table_cache[table_id].NumCols();
-  int n = a.length();
-
-  Vec<ZZ_p> a_exp;
-  a_exp.SetLength(n);
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      a_exp[i] = conv<ZZ_p>(a[i]);
-    }
-  }
-
-  if (debug) cout << "Evaluating polynomial" << endl;
-  if (debug) cout << s << ", " << lagrange_cache[table_id].NumCols() << endl;
-
-  EvaluatePoly(b, a_exp, lagrange_cache[table_id]);
-}
-
-// Base field index 1
-void MPCEnv::NormalizerEvenExp(Vec<ZZ_p>& b, Vec<ZZ_p>& b_sqrt, Vec<ZZ_p>& a) {
-  if (debug) cout << "NormalizerEvenExp: " << a.length() << endl;
-
-  int n = a.length();
-  int fid = 1;
-
-  Vec<ZZ_p> r;
-  Mat<ZZ> rbits;
-  ShareRandomBits(r, rbits, Param::NBIT_K, n, fid);
-
-  Vec<ZZ_p> e;
-  if (pid == 0) {
-    e.SetLength(n);
-  } else {
-    e = a + r;
-  }
-  r.kill();
-
-  RevealSym(e);
-
-  Mat<ZZ> ebits;
-  if (pid == 0) {
-    ebits.SetDims(n, Param::NBIT_K);
-  } else {
-    NumToBits(ebits, e, Param::NBIT_K);
-  }
-  e.kill();
-
-  Vec<ZZ> c;
-  LessThanBitsPublic(c, rbits, ebits, fid);
-  if (pid > 0) {
-    c = -c;
-    if (pid == 1) {
-      for (int i = 0; i < n; i++) {
-        c[i] += 1;
-      }
-    }
-    Mod(c, fid);
-  }
-
-  Mat<ZZ> ep;
-  ep.SetDims(n, Param::NBIT_K + 1);
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      ep[i][0] = c[i];
-      for (int j = 1; j < Param::NBIT_K + 1; j++) {
-        ep[i][j] = (1 - 2 * ebits[i][j-1]) * rbits[i][j-1];
-        if (pid == 1) {
-          ep[i][j] += ebits[i][j-1];
-        }
-      }
-    }
-    Mod(ep, fid);
-  }
-  c.kill();
-
-  Mat<ZZ> E;
-  PrefixOr(E, ep, fid);
-  ep.kill();
-
-  Mat<ZZ> tpneg;
-  tpneg.SetDims(n, Param::NBIT_K);
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < Param::NBIT_K; j++) {
-        tpneg[i][j] = E[i][j] - rbits[i][j] * (1 - ebits[i][j]);
-      }
-    }
-    Mod(tpneg, fid);
-  }
-  E.kill();
-
-  Mat<ZZ> Tneg;
-  PrefixOr(Tneg, tpneg, fid);
-  tpneg.kill();
-
-  int half_len = Param::NBIT_K / 2;
-
-  Mat<ZZ> efir, rfir;
-  efir.SetDims(n, Param::NBIT_K);
-  rfir.SetDims(n, Param::NBIT_K);
-  if (pid > 0) {
-    mul_elem(efir, ebits, Tneg);
-    Mod(efir, fid);
-  }
-  MultElem(rfir, rbits, Tneg, fid);
-  ebits.kill();
-  rbits.kill();
-
-  Vec<ZZ> double_flag;
-  LessThanBits(double_flag, efir, rfir, fid);
-  efir.kill();
-  rfir.kill();
-
-  Mat<ZZ> odd_bits, even_bits;
-  odd_bits.SetDims(n, half_len);
-  even_bits.SetDims(n, half_len);
-  if (pid > 0) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < half_len; j++) {
-        odd_bits[i][j] = (pid == 1) ? (1 - Tneg[i][2*j+1]) : -Tneg[i][2*j+1];
-        if ((2 * j + 2) < Param::NBIT_K) {
-          even_bits[i][j] = (pid == 1) ? (1 - Tneg[i][2*j+2]) : -Tneg[i][2*j+2];
-        } else {
-          even_bits[i][j] = 0;
-        }
-      }
-    }
-    Mod(odd_bits, fid);
-    Mod(even_bits, fid);
-  }
-  Tneg.kill();
-
-  Vec<ZZ> odd_bit_sum, even_bit_sum;
-  Init(odd_bit_sum, n);
-  Init(even_bit_sum, n);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < half_len; j++) {
-      odd_bit_sum[i] += odd_bits[i][j];
-      even_bit_sum[i] += even_bits[i][j];
-    }
-    if (pid == 1) {
-      odd_bit_sum[i] += 1;
-      even_bit_sum[i] += 1;
-    }
-  }
-  Mod(odd_bit_sum, fid);
-  Mod(even_bit_sum, fid);
-  odd_bits.kill();
-  even_bits.kill();
-
-  // If double_flag = true, then use odd_bits, otherwise use even_bits
-
-  Vec<ZZ> diff;
-  if (pid == 0) {
-    diff.SetLength(n);
-  } else {
-    diff = odd_bit_sum - even_bit_sum;
-    Mod(diff, fid);
-  }
-  MultElem(diff, double_flag, diff, fid);
-  double_flag.kill();
-
-  Vec<ZZ> chosen_bit_sum;
-  if (pid == 0) {
-    chosen_bit_sum.SetLength(n);
-  } else {
-    chosen_bit_sum = even_bit_sum + diff;
-    Mod(chosen_bit_sum, fid);
-  }
-  odd_bit_sum.kill();
-  even_bit_sum.kill();
-  diff.kill();
-
-  Mat<ZZ_p> b_mat;
-  TableLookup(b_mat, chosen_bit_sum, 1, fid);
-
-  if (pid > 0) {
-    b_sqrt = b_mat[0];
-    b = b_mat[1];
-  } else {
-    b_sqrt.SetLength(n);
-    b.SetLength(n);
-  }
-}
+  c = a + r if CP else Mat(a.rows, a.cols)
+  c = self.reveal(c)
+
+  if CP: 
+    c_low = Mat([[ZZ.trunc(rep(cl), m) for cl in rw] for rw in c]) 
+    a += r_low
+    if CP1: a -= c_low
+
+    # TODO caching here
+    twoinv = 2z.inv().power(m)
+    a = a * twoinv
+  return a
+
+def prefix_or(a: ZMat) -> ZMat:
+  n = a.rows
+  L = int(math.ceil(math.sqrt(float(a.cols))))
+  L2 = L * L
+
+  a_padded = ZMat(n, L2) if not CP 
+    else ZMat([
+      [0 if j < L2 - a.cols else a[i][j - L2 + a.cols] for j in range(L2)]
+      for i in range(n)])
+  a_padded = S.reshape(a_padded, n * L, L)
+  x = S.fan_in_or(a_padded)
+  xpre = ZMat(n * L, L)
+  if CP:
+    for i in range(n): 
+      for j in range(L):
+        xpi = L * i + j
+        for k in range(L):
+          xpre[xpi][k] = x[L * i + k] if k <= j else ZZ(0)
+
+  y = S.fan_in_or(xpre)
+  del xpre
+  
+  f = [ZMat(1, l) for _ in range(n)]
+  if CP:
+    for i in range(n):
+      for j in range(L):
+        f[i][0][j] = x[L * i] if j == 0 else y[L * i + j] - y[L * i + j - 1]
+      f[i] = S.mod(f[i])
+  del x
+  
+  tmp = [ZMat(L, L) for _ in range(n)]
+  if CP:
+    for i in range(n):
+      for j in range(L):
+        tmp[i][j] = a_padded[L * i + j]
+  del a_padded
+
+  c = [S.matmul(f[i], tmp[i]) for i in range(n)]
+  del tmp
+
+  cpre = ZMat(n * L, L)
+  if CP:
+    for i in range(n):
+      for j in range(L):
+        cpi = L * i + j
+        for k in range(L):
+          cpre[cpi][k] = c[i][0][k] if k <= j else ZZ(0)
+  del c
+    
+  bdot_vec = S.fan_in_or(cpre)
+  del cpre
+
+  bdot = [ZMat(1, L) for _ in range(n)]
+  if CP:
+    for i in range(n):
+      for j in range(L):
+        bdot[i][0][j] = bdot_vec[L * i + j]
+  del bdot_vec
+  f = [S.reshape(m, L, 1) for m in f]
+  s = [S.matmul(f[i], bdot[i]) for i in range(n)]
+  del bdot
+
+  b = ZMat(n, a.cols)
+  if CP:
+    for i in range(n):
+      for j in range(a.cols):
+        j_pad = L2 - a.cols + j;
+        il = int(j_pad / L)
+        jl = j_pad - il * L
+        b[i][j] = s[i][il][jl] + y[L * i + il] - f[i][il][0]
+  del s, y, f
+  return S.mod(b);
+
+def fan_in_or(a: ZMat) -> ZVec:
+  n, d = a.rows, a.cols
+  a_sum = ZVec(n)
+  if CP:
+    for i in range(n):
+      a_sum[i] = 1 if pid == 1 else 0
+      for j in range(d):
+        a_sum[i] += a[i][j]
+    a_sum = S.mod(a_sum)
+
+  # TODO caching
+  coeff = MatZZ(1, d + 1)
+  y = ZVec([0 if i == 0 else 1 for i in range(d + 1)])
+  coeff[0] = S.lagrange_interp_simple(y)
+  return S.evaluate_poly(a_sum, coeff)[0]
+
+def share_random_bits(k: int, n: int) -> tuple[Vec, ZMat]:
+  if CP0:
+    r = RandVecBits(n, k + NBIT_V)
+    rbits = NumToBits(r, k)
+
+    self.switch_seed(1)
+    # TODO slow [refactor it]
+    r_mask, rbits_mask = self.random(Vec(n)), self.random(Mat(n, k))
+    self.restore_seed();
+
+    r -= r_mask
+    rbits = self.mod(rbits - rbits_mask)
+    
+    self.send(2, r)
+    self.send(2, rbits)
+    return r, rbits
+  elif CP1:
+    self.switch_seed(0);
+    r_mask, rbits_mask = self.random(Vec(n)), self.random(Mat(n, k))
+    self.restore_seed()
+    return r, rbits
+  elif CP2:
+    r, r_bits = self.receive(0, Vec(n)), self.receive(0, Mat(n, k))
+    return r, rbits
+
+# TODO Needs ZVec -> Vec conversion implemented
+def table_lookup(a, id: int) -> Mat:
+  return S.evaluate_poly(Vec(a), cache[id])
+
+def normalizer_even_exp(a: Vec) -> tuple[Vec, Vec]:
+  # Base field index 1
+  n = len(a)
+  self.fid = 1
+  
+  r, r_bits = self.share_random_bits(NBIT_K, n)
+  e = a + r if CP else Vec(n)
+  del r
+  e = S.reveal(e)
+
+  ebits = S.num_to_bits(e, NBIT_K) if CP else ZMat(n, NBIT_K)
+  del e
+  
+  c = S.less_than_bits_public(rbits, ebits)
+  if CP:
+    c = -c
+    if CP1: c += 1
+    c = S.mod(c)
+
+  ep = ZMat(n, NBIT_K + 1)
+  if CP:
+    for i in range(n):
+      ep[i][0] = c[i]
+      for j in range(1, NBIT_K + 1):
+        ep[i][j] = (1 - 2 * ebits[i][j - 1]) * rbits[i][j - 1]
+        if CP1: ep[i][j] += ebits[i][j - 1]
+    ep = S.mod(ep)
+  del c
+
+  E = S.prefix_or(ep)
+  del ep
+  
+  tpneg = ZMat(n, NBIT_K)
+  if CP:
+    tpneg = S.mod(ZMat([
+      [E[i][j] - rbits[i][j] * (1 - ebits[i][j]) for j in range(NBIT_K)]
+      for i in range(n)]))
+  Tneg = S.prefix_or(tpneg)
+  del E, tpneg
+
+  efir = S.mod(ebits * Tneg) if CP else ZMat(n, NBIT_K)
+  rfir = S.mul(rbits, Tneg)
+  double_flag = S.less_than_bits(efir, rfir)
+  del ebits, rbits, efir, rfir
+
+  half_len = NBIT_K / 2
+  odd_bits, even_bits = ZMat(n, half_len), ZMat(n, half_len)
+  if CP:
+    for i in range(n):
+      for j in range(half_len):
+        odd_bits[i][j] = 1 - Tneg[i][2*j+1] if CP1 else -Tneg[i][2*j+1]
+        even_bits[i][j] = (1 - Tneg[i][2*j+2] if CP1 else -Tneg[i][2*j+2]) \
+          if 2 * j + 2 < NBIT_K else 0
+    odd_bits, even_bits = S.mod(odd_bits), S.mod(even_bits)
+  del Tneg
+
+  odd_bit_sum, even_bit_sum = ZVec(n), ZVec(n)
+  for i in range(n):
+    odd_bit_sum[i] += sum(odd_bits[i])
+    even_bit_sum[i] += sum(even_bits[i])
+    if CP0: 
+      odd_bit_sum[i] += 1
+      even_bit_sum[i] += 1
+  odd_bit_sum, even_bit_sum = S.mod(odd_bit_sum), S.mod(even_bit_sum)
+  del odd_bits, even_bits
+
+  # If double_flag = true, then use odd_bits, otherwise use even_bits
+  diff = S.mod(odd_bit_sum - even_bit_sum) if CP else ZVec(n)
+  diff = S.mul(double_flag, diff)
+  del double_flag
+
+  chosen_bit_sum = S.mod(even_bits_sum + diff) if CP else ZVec(n)
+  del odd_bit_sum, even_bit_sum, diff
+  b_mat = S.table_lookup(chosen_bit_sum, 1)
+  return b_mat[1], b_mat[0] if CP else ZVec(n), ZVec(n)
+
