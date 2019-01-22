@@ -776,10 +776,13 @@ def add_public(x, y):
   if CP1: return x + y
   else: return x
 
+def add(x: `t, y: `t) -> `t:
+  return x + y
+
 def mul_public(x, y):
   return x.sh * y
 
-def matmul[`t, `u](a: `t, b: `u):
+def mul[`t, `u](a: `t, b: `u):
   ar, am = BP(a.sh)
   br, bm = BP(b.sh)
   c = BM(ar, am, br, bm, `t.__mul__)
@@ -790,7 +793,6 @@ def matmul[`t, `u](a: `t, b: `u):
   br, bm = BP(b.sh)
   c = BM(ar, am, br, bm, `t.__matmul__)
   return BR(c)
-
 
 #################
 
