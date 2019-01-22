@@ -6,6 +6,8 @@ from secure import Secure as S
 
 # __mul__ [elem], __matmul__ [normal]
 # TODO: check VecMat manually
+# TODO: Add "Mod" automatically to Zx ones... 
+# todo check add/addsclalar
 
 DoubleToFP(one, 1, Param::NBIT_K, Param::NBIT_F)
 
@@ -224,6 +226,7 @@ def eigen_decomposition(A: Mat) -> tuple[Mat, Vec]:
 
 # Bit operations
 
+# less_than_bits: 0 for private, 2 for publuic
 def less_than_bits_aux(a: ZMat, b: ZMat, public: int) -> ZVec:
 	n, L = a.rows, a.cols
 
@@ -262,10 +265,12 @@ def less_than_bits_aux(a: ZMat, b: ZMat, public: int) -> ZVec:
     c_arr = [S.matmul(f_arr[i], b_arr[i]) for i in range(n)]    	
     return ZVec([c_arr[i][0][0] for i in range(n)]) if CP else ZVec(n)
 
+# not_less_than: this + flib_bit
 def less_than(a: Vec, b: Vec) -> Vec:
 	ac = a - b if CP else Vec(len(a))
 	return S.flip_bit(S.is_positive(ac))
 
+# not_less_than_public: this + flib_bit
 def less_than_public(a: Vec, b) -> Vec:
 	ac = a if CP else Vec(len(a))
   if CP1: ac -= b
@@ -324,6 +329,7 @@ def is_positive(a: Vec) -> Vec:
     lsb = mod(lsb + 1)
   return S.table_lookup(lsb, 0)[0]
 
+# __not__ (a = flip(a) )
 def flip_bit(a: Vec) -> Vec:
 	b = -1 * a if CP else Vec(len(a))
 	if CP1: b += 1
@@ -422,6 +428,9 @@ def div(a: Shared[Vec], b: Shared[Vec]) -> Shared[Vec]:
 	if CP1: x += Float.cache(1, NBIT_K, NBIT_F)
   return S.trunc(S.mul(y, x))
  
+# for vector... S.trunc(Mat([a]), k, m)[0]
+# for int... S.trunc(Mat([[i]]), k, m)[0][0]
+# k_def = NBIT_K + NBIT_F ; m = NBIT_F
 def trunc(a: Mat, k: int, m: int) -> Mat:
   r, r_low = Mat(), Mat()
   if CP0:
@@ -649,4 +658,215 @@ def normalizer_even_exp(a: Vec) -> tuple[Vec, Vec]:
   del odd_bit_sum, even_bit_sum, diff
   b_mat = S.table_lookup(chosen_bit_sum, 1)
   return b_mat[1], b_mat[0] if CP else ZVec(n), ZVec(n)
+
+def beaver_partition[`t](self: MPCEnv, a: `t) -> tuple[`t, `t]:
+  """Protocol 8: BeaverPartition (p.11) """
+  if CP0:
+    # essentially sum of 2 random numbers...
+    am = self.rand_at[`t](1, a) + self.rand_at[`t](2, a)
+    return (`t(len(am)), am)
+  else:
+    am = self.rand_at[`t](0, a)
+    ar = a - am
+    ar = self.reveal(ar)
+    return (ar, am)
+
+# same for inner, pass __mul__; otherwise... pass __matmul__
+def beaver_mult[`t](self: MPCEnv, ar: `t, am: `t, br: `t, bm: `t, mul):
+  """Protocol 9: part of EvaluatePolynomial (p.12)"""
+  if CP0:
+    return S.mod(mul(am, bm))
+  elif CP1:
+    return S.mod(mul(ar, bm) + mul(am, br) + mul(ar, br))
+  elif CP2:
+    return S.mod(mul(ar, bm) + mul(am, br))
+
+def beaver_reconstruct[`t](self: MPCEnv, ab: `t) -> `t:
+  """Protocol 9: part of EvaluatePolynomial (p.12)"""
+  if CP0:
+    mask = self.rand_at[`t](1, ab)
+    ab = S.mod(ab - mask)
+    self.send(2, ab)
+    return ab
+  elif CP1:
+    ambm = self.rand_at[`t](0, ab)
+    return S.mod(ab + ambm)
+  elif CP2:
+    ambm = self.receive[`t](0, ab)
+    return S.mod(ab + ambm)
+ 
+
+def beaver_flip[`t](a: Vec[`t], a_mask: Vec[`t]) -> tuple[Vec[`t], Vec[`t]]:
+  if CP:
+    return -a + 1, -a_mask
+  else:
+    return a, -a_mask
+  
+
+################################################################################
+
+# Vec[] -> Mat[t] ... should be for ZZ as well
+def powers(a: Vec[`t], pow: int) -> Mat[`t]:
+  n = len(a)
+  if pow == 1:
+    b = Mat[`t](2, n)
+    if CP:
+      if CP1: S.add_scalar(b[0], `t(1))
+      b[1] = a
+    return b
+  else:
+    ar, am = BP(a)
+    if CP0:
+      ampow = am * am
+      for p in range(1, ampow.rows):
+        ampow[p] = S.mod(ampow[p - 1] * am)
+      
+      self.switch_seed(1)
+      ampow = S.mod(ampow - self.random(ampow))
+      self.restore_seed()
+      self.send(2, ampow)
+      return Mat[`t](pow + 1, n)
+    else:
+      ampow = Mat[`t](pow - 1, n)
+      ampow = self.rand_at(0, ampow) if CP1 else self.receive(0, ampow)
+      arpow = ar * ar
+      for p in range(1, ampow.rows):
+        arpow[p] = S.mod(arpow[p - 1] * ar)
+      t = S.get_pascal_matrix(pow)
+
+      b = Mat[`t](pow + 1, n)
+      if CP1: S.add_scalar(b[0], `t(1))
+      b[1] = a
+      for p in range(2, pow + 1):
+        if CP1: 
+          b[p] = arpow[p - 2]
+        if CP2:
+          b[p] += t[p][1] * (ar * am)
+        else:
+          b[p] += t[p][1] * (arpow[p - 3] * am)
+          for j in range(2, p - 1):
+            b[p] += t[p][j] * (arpow[p - 2 - j] * ampow[j - 2])
+          b[p] += t[p][p - 1] * (ar * ampow[p - 3])
+        b[p] += ampow[p - 2]
+      return S.mod(b)
+
+def evaluate_poly[`t](a: Vec[`t], coeff: Mat[`t]) -> Mat[`t]:
+  n, npoly, deg = len(a), coeff.rows, coeff.cols - 1
+  apow = S.powers(a, deg)
+  if CP: 
+    return S.mod(coeff * apow)
+  else:
+    return Mat[`t](npoly, n)
+
+def reveal[`t](a: `t) -> `t:
+"""Protocol 2: ReconstructSecret (p.8)"""
+  next_cp = 3 - __cp__
+  if CP0:
+    return `t(len(a))
+  elif CP1:
+    self.send(next_cp, a)
+    b = self.receive(next_cp, a)
+    return S.mod(a + b)
+  elif CP2:
+    b = self.receive(next_cp, a)
+    self.send(next_cp, a)
+    return S.mod(a + b)
+
+def add_public(x, y):
+  if CP1: return x + y
+  else: return x
+
+def mul_public(x, y):
+  return x.sh * y
+
+def matmul[`t, `u](a: `t, b: `u):
+  ar, am = BP(a.sh)
+  br, bm = BP(b.sh)
+  c = BM(ar, am, br, bm, `t.__mul__)
+  return BR(c)
+
+def matmul[`t, `u](a: `t, b: `u):
+  ar, am = BP(a.sh)
+  br, bm = BP(b.sh)
+  c = BM(ar, am, br, bm, `t.__matmul__)
+  return BR(c)
+
+
+#################
+
+def reshape[`t](a: `t) -> Mat[`t]:
+  return Mat([[a]])
+def reshape[`t](a: Mat[`t]) -> Vec[`t]:
+  # diagonal
+  if CP:
+    return Vec([[c for c in r] for r in a])
+  else:
+    return Vec[`t](a.rows, a.cols)
+def reshape(a: Mat[`t], nrows: int, ncols: int):
+  if CP0:
+    assert a.rows * a.cols == nrows * ncols
+    a.setDim(nrows, ncols)
+  else:
+    a.reshape(nrows, ncols)
+def reshape[`t](a: Vec[`t], nrows, ncols) -> Mat[`t]:
+  if CP0:
+    assert len(a) == nrows * ncols
+    return Mat[`t](nrows, ncols)
+  else:
+    return Mat([[a[r * ncols + c] for c in range(ncols)] for r in range(nrows)])
+
+def transpose(a: Mat[`t]):
+  if CP0:
+    return Mat[`t](a.cols, a.rows)
+  else:
+    return Mat([[a[r][c] for r in range(a.rows)] for c in range(a.cols)])
+# TODO!
+def inverse(a: Mat[`t]):
+  assert False
+
+def num_to_bits[`t](a: Vec, bitlen: int) -> Mat[`t]:
+  return Mat([
+    [bit(rep(el), bitlen - 1 - j) for c in range(bitlen)] 
+    for el in a])
+
+def rand_mat_bits(nr: int, nc: int, bitlen: int) -> ZMat:
+  return ZMat([[ZZ.rand_bits(bitlen) for j in range(nc)] for i in range(nr)])
+def rand_vec_bits(n: int, bitlen: int) -> ZVec:
+  return ZVec([ZZ.rand_bits(bitlen) for j in range(n)])
+
+# DEF: Caching!
+def pascal_matrix[`t](pow: int) -> Mat[`t]:
+  t = Mat[`t](pow + 1, pow + 1)
+  for i in range(pow + 1):
+    for j in range(pow + 1):
+      if j < i: t[i][j] = 0
+      elif j == 0 or j == i: t[i][j] = 1
+      else:
+        t[i][j] = S.mod(t[i - 1][j - 1] + t[i - 1][j])
+  return r
+
+def lagrange_interpolation(x: Vec[int], y: Vec[`t]) -> Vec[`t]:
+  n = len(y)
+  inv_table = dict[int, `t]()
+  for i in range(n):
+    for j in range(n):
+      if i == j: continue
+      key = abs(x[i] - x[j])
+      if key not in inv_table:
+        inv_table[key] = `t(key).inverse()
+
+  numer = Mat([y if i == 0 else Vec[`t](n, 0) for i in range(n)])
+  denom_inv = Vec[`t](n, 1)
+  for i in range(n):
+    for j in range(n):
+      if i == j: continue
+      for k in range(n - 1, -1, -1):
+        numer[k][j] = S.mod(
+          (`t(0) if k == 0 else numer[k - 1][j]) - x[i] * numer[k][j])
+      denom_inv[i] = S.mod(
+        denom_inv[i] * (1 if x[i] > x[j] else -1) * inv_table[abs(x[i] - x[j])])
+  return S.mod(numer @ denom_inv)  
+  
+def lagrange_interpolation_simple(y: ZVec) -> Vec[`t]:
+  return lagrange_interpolation(Vec(list(range(1, n + 1))), y)
 
