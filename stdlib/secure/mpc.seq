@@ -1,131 +1,929 @@
 from secure.socket import Socket
-# from secure.ntl import 
+from secure.types import *
 
-type MPCEnv(p: ptr[byte], fid: int):
-    def __init__(self: MPCEnv, pairs: list[tuple[int,int]], pid: int) -> MPCEnv:
-        extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
-        return (seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len)), 0)
+type Vec = Vector[MInt]
+type Mat = Matrix[MInt]
 
-    def cleanup(self: MPCEnv):
-        extern c seq_mpcenv_cleanup(ptr[byte]) -> ptr[byte]
-        self.p = seq_mpcenv_cleanup(self.p)
+NBIT_K = 60
+NBIT_F = 45
+NBIT_V = 64
 
-    def buf(self: MPCEnv):
-        extern c seq_mpc_get_buf(ptr[byte]) -> ptr[byte]
-        return seq_mpc_get_buf(self.p)
+class MPC(
+  p: ptr[byte], 
+  fid: int, 
+  float_cache: dict[tuple(int, int, int), MInt]
+):
+  def __init__(self: MPC, pairs: list[tuple[int,int]], pid: int) -> MPC:
+    extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
+    self.p = seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len))
+    self.fid = 0
 
-    def zz_bytes(self: MPCEnv):
-        extern c seq_mpc_zz_bytes(ptr[byte], int) -> int
-        return seq_mpc_zz_bytes(self.p, self.fid)
+  def __exit__(self: MPC):
+    extern c seq_mpcenv_cleanup(ptr[byte]) -> ptr[byte]
+    self.p = seq_mpcenv_cleanup(self.p)
 
-    def zz_bits(self: MPCEnv):
-        extern c seq_mpc_zz_bits(ptr[byte], int) -> int
-        return seq_mpc_zz_bits(self.p, self.fid)
+  ######################################################################
+  # C++ Calls
+  ######################################################################
 
-    def zz_per_buf(self: MPCEnv):
-        extern c seq_mpc_zz_per_buf(ptr[byte], int) -> int
-        return seq_mpc_zz_per_buf(self.p, self.fid)
+  def buf(S: MPC):
+    extern c seq_mpc_get_buf(ptr[byte]) -> ptr[byte]
+    return seq_mpc_get_buf(S.p)
 
-    def socket(self: MPCEnv, from_pid: int) -> Socket:
-        extern c seq_mpc_socket(ptr[byte], int) -> ptr[byte]
-        return (seq_mpc_socket(self.p, from_pid), )
+  def zz_bytes(S: MPC):
+    extern c seq_mpc_zz_bytes(ptr[byte], int) -> int
+    return seq_mpc_zz_bytes(S.p, S.fid)
 
-    def switch_seed(self: MPCEnv, pid: int):
-        extern c seq_mpc_switch_seed(ptr[byte], int)
-        seq_mpc_switch_seed(self.p, pid)
+  def zz_bits(S: MPC):
+    extern c seq_mpc_zz_bits(ptr[byte], int) -> int
+    return seq_mpc_zz_bits(S.p, S.fid)
 
-    def restore_seed(self: MPCEnv):
-        extern c seq_mpc_restore_seed(ptr[byte])
-        seq_mpc_restore_seed(self.p)
+  def zz_per_buf(S: MPC):
+    extern c seq_mpc_zz_per_buf(ptr[byte], int) -> int
+    return seq_mpc_zz_per_buf(S.p, S.fid)
 
-    ######################################################################
+  def socket(S: MPC, from_pid: int) -> Socket:
+    extern c seq_mpc_socket(ptr[byte], int) -> ptr[byte]
+    return (seq_mpc_socket(S.p, from_pid), )
 
-    def send[`t](self: MPCEnv, to_pid: int, what: `t):
-        s = self.socket(to_pid)
-        what.send(s, self.buf(), self.zz_bytes(), self.zz_per_buf())
+  def switch_seed(S: MPC, pid: int):
+    extern c seq_mpc_switch_seed(ptr[byte], int)
+    seq_mpc_switch_seed(S.p, pid)
+
+  def restore_seed(S: MPC):
+    extern c seq_mpc_restore_seed(ptr[byte])
+    seq_mpc_restore_seed(S.p)
+
+  ######################################################################
+  # Communication
+  ######################################################################
+
+  @secure
+  def send[`t](S: MPC, to_pid: int, what: `t):
+    s = S.socket(to_pid)
+    what.send(s, S.buf(), S.zz_bytes(), S.zz_per_buf())
+  
+  @secure  
+  def receive[`t](S: MPC, from_pid: int, what: `t) -> `t:
+    s = S.socket(from_pid)
+    return `t.receive(len(what), s, S.buf(), S.zz_bytes(), S.zz_per_buf())
+
+  ######################################################################
+  # MPC building blocks
+  ######################################################################
+
+  @secure
+  def share[`t](S: MPC, x: `t) -> `t:
+    if CP0:
+      S.switch_seed(1)
+      r = S.random(x)
+      S.restore_seed()
+      S.send(2, x - r)
+      return x
+    elif CP1:
+      S.switch_seed(0)
+      r = S.random(x)
+      S.restore_seed()
+      return r
+    elif CP2:
+      return S.receive(0, x)
+
+  @secure
+  @mutable # a
+  def reveal[`t](S: MPC, a: `t) -> `t:
+    next_cp = 3 - __cp__
+    if CP0:
+      return `t(len(a))
+    
+    if CP1:
+      S.send(next_cp, a)
+      b = S.receive(next_cp, a)
+      a += b
+    elif CP2:
+      b = S.receive(next_cp, a)
+      S.send(next_cp, a)
+      a += b
+    a = S.mod(a)
+    return a
+      
+  ######################################################################
+  # Beavers and other fauna
+  ######################################################################
+
+  @secure
+  def BP[`t](S: MPC, a: `t) -> tuple[`t, `t]:
+    if CP0:
+      # essentially sum of 2 random numbers...
+      S.switch_seed(1)
+      am = S.random(a)
+      S.restore_seed()
+      S.switch_seed(2)
+      am += S.random(a)
+      S.restore_seed()
+      return (`t(len(am)), am)
+    else:
+      S.switch_seed(0)
+      am = S.random(a)
+      S.restore_seed()
+      ar = S.reveal(a - am)
+      return (ar, am)
+
+  @secure
+  def BM[`t](S: MPCEnv, ar: `t, am: `t, br: `t, bm: `t, mul):
+    if CP0:
+      return S.mod(mul(am, bm))
+    elif CP1:
+      return S.mod(mul(ar, bm) + mul(am, br) + mul(ar, br))
+    elif CP2:
+      return S.mod(mul(ar, bm) + mul(am, br))
+
+  @secure
+  @mutable # ab
+  def BR[`t](S: MPC, ab: `t) -> `t:
+    if CP0:
+      S.switch_seed(1)
+      ab -= S.random(ab)
+      S.restore_seed()
+      ab = S.mod(ab)
+      self.send(2, ab)
+      return ab
+
+    if CP1:
+      S.switch_seed(0)
+      ab += S.random(ab)
+      S.restore_seed()
+    elif CP2:
+      ab += self.receive(0, ab)
+    ab = S.mod(ab)
+    return ab
+      
+  @secure
+  def BF[`t](S: MPC, a: `t, a_mask: `t) -> tuple[`t, `t]:
+    if CP:
+      return -a + 1, -a_mask
+    else:
+      return a, -a_mask
+
+  ######################################################################
+  # Math
+  ######################################################################
+  
+  @secure
+  def add_public(S: MPC, x, y):
+    if CP1: return x + y
+    else: return x
+
+  @secure
+  def add(S: MPC, x, y):
+    return x + y
+
+  @secure
+  def mul_public(S: MPC, x, y):
+    return x * y
+
+  @secure
+  @beaver
+  def mul[`t, `u](S: MPC, a: `t, b: `u):
+    ar, am = S.BP(a)
+    br, bm = S.BP(b)
+    c = S.BM(ar, am, br, bm, `t.__mul__)
+    return S.BR(c)
+
+  @secure
+  @beaver
+  def matmul[`t, `u](S: MPC, a: `t, b: `u):
+    ar, am = S.BP(a)
+    br, bm = S.BP(b)
+    c = S.BM(ar, am, br, bm, `t.__matmul__)
+    return S.BR(c)
+
+  @secure
+  @batch 
+  @beaver      
+  def div(S: MPC, a: Vec, b: Vec) -> Vec:
+    n = len(a)
+    if n > DIV_MAX_N: 
+      nbatch = math.ceil(n / float(DIV_MAX_N))
+      c = Vec(n)  
+      for i in range(nbatch):
+        start = DIV_MAX_N * i
+        end = min(start + DIV_MAX_N, n)
+        batch_size = end - start
+        c_copy = S.div(a[start:start + batch_size], 
+          b_copy[start:start + batch_size])
+        c.update(start, start + batch_size, c_copy)
+      return c
+
+    niter = 2 * (math.log2(NBIT_K / 3.5) |> math.ceil) +  1
+
+    # Initial approximation: 1 / x_scaled ~= 
+    #   ~= 5.9430 - 10 * x_scaled + 5 * x_scaled^2 
+    s, s_sqrt = S.normalizer_even_exp(b)
+    b_scaled = S.mul(b, s) |> S.trunc(..., NBIT_K, NBIT_K - NBIT_F)
+    b_scaled_eq = S.mul(b_scaled, b_scaled) |> S.trunc
+
+    scaled_est = -10 * b_scaled + 5 * b_scaled_sq if CP else Vec(n)
+    if CP1:
+      scaled_est += S.get_float(5.943, NBIT_K, NBIT_F)
+
+    # scaled_est has bit length <= NBIT_F + 2, and s has bit length <= NBIT_K
+    # so the bit length of w is at most NBIT_K + NBIT_F + 2
+    w = S.mul(scaled_est, s) |> S.trunc(..., NBIT_K + NBIT_F + 2, NBIT_K - NBIT_F)
+    x = S.mul(w, b) |> S.trunc
+      
+    x *= -1
+    if CP1: 
+      x += S.get_float(1, NBIT_K, NBIT_F)
+    y = S.mul(a, w) |> S.trunc
+    for i in range(niter):
+      (xr, xm), (yr, ym) = S.BP(x), S.BP(y)
+      xpr = xr
+      if CP: xpr += S.get_float(1, NBIT_K, NBIT_F)
+      y = S.BM(yr, ym, xpr, xm, Vec.__mul__)
+      x = S.BM(xr, xm, xr,  xm, Vec.__mul__)
+      x = S.BR(x) |> S.trunc,
+      y = S.BR(y) |> S.trunc
+
+    if CP1: x += S.get_float(1, NBIT_K, NBIT_F)
+    return S.mul(y, x) |> S.trunc
+   
+  @secure
+  def less_than(S: MPC, a: Vec, b: Vec) -> Vec:
+    ac = a - b if CP else Vec(len(a))
+    return S.is_positive(ac) |> S.flib_bit
+
+  @secure
+  def less_than_public(S: MPC, a: Vec, b) -> Vec:
+    ac = a if CP else Vec(len(a))
+    if CP1: ac -= b
+    return S.is_positive(ac) |> S.flib_bit
+    
+  @secure
+  def is_positive(S: MPC, a: Vec) -> Vec:
+    n = len(a)
+    self.fid = 0
+    nbits = self.zz_bits()
+    self.fid = 2
+
+    r, r_bits = Vec(), Matrix[Int](n, nbits)
+    if CP0:
+      r = self.random(a)
+      r_bits = r.num_to_bits(nbits) 
+
+      self.switch_seed(1)
+      r_mask, r_bits_mask = self.random(a), self.random(r_bits)
+      self.restore_seed()
+
+      r -= r_mask  
+      r_bits = S.mod(r_bits - r_bits_mask)
         
-    def receive[`t](self: MPCEnv, from_pid: int, what: `t) -> `t:
-        s = self.socket(from_pid)
-        return `t.receive(len(what), s, self.buf(), self.zz_bytes(), self.zz_per_buf())
+      self.send(2, r)
+      self.send(2, r_bits)
+    elif CP1:
+      self.switch_seed(0)
+      r, r_bits = self.random(a), self.random(r_bits)
+      self.restore_seed()
+    elif CP2:
+      r, r_bits = self.receive(0, a), self.receive(0, r_bits)
+    
+    c = (2 * a + r if CP else Vec(n)) |> S.reveal
+    c_bits = c.num_to_bits(nbits) if CP else Matrix[Int](n, nbits)
+      
+    # Incorrect result if r = 0, which happens with probaility 1 / BASE_P
+    no_overflow = S.less_than_bits(r_bits, c_bits, pub=2)
 
-    def rand_at[`t](self: MPCEnv, at: int, what: `t) -> `t:
-        self.switch_seed(at)
-        x = `t.random(len(what))
-        self.restore_seed()
-        return x
+    c_xor_r = Vector[Int](n)
+    if CP:
+      for i in range(n):
+        c_xor_r[i] = r_bits[i][nbits - 1] - 2 * c_bits[i][nbits - 1] * \
+                     r_bits[i][nbits - 1]
+        if CP1: c_xor_r[i] += c_bits[i][nbits - 1]
+      c_xor_r = S.mod(c_xor_r)
 
-    def share[`t](self: MPCEnv, x: `t) -> `t:
-        """Protocol 1: ShareSecret (p.7)"""
-        match __cp__:
-            case 0:
-                r = self.rand_at[`t](1, x)
-                self.send(2, x - r)
-                return x
-            case 1:
-                r = self.rand_at[`t](0, x)
-                return r
-            case 2:
-                xr = self.receive[`t](0, x)
-                return xr
-            default:
-                assert False
+    lsb = S.mul(c_xor_r, no_overflow)
+    if CP:
+      lsb *= 2
+      for i in range(n):
+        lsb[i] -= no_overflow[i] + c_xor_r[i]
+      if CP1: lsb += 1
+      lsb = S.mod(lsb)
+    if CP1:
+      lsb += 1 
+      lsb = S.mod(lsb)
+    return S.table_lookup(lsb, 0)[0]
 
-    def reveal[`t](self: MPCEnv, a: `t) -> `t:
-        """Protocol 2: ReconstructSecret (p.8)"""
-        next_cp = 3 - __cp__
-        match __cp__:
-            case 0:
-                return copy(a)
-            case 1:
-                self.send(next_cp, a)
-                b = self.receive[`t](next_cp, a)
-                return a + b
-            case 2:
-                b = self.receive[`t](next_cp, a)
-                self.send(next_cp, a)
-                return a + b
-            default:
-                assert False
+  @secure
+  def flip_bit(S: MPC, a: Vec) -> Vec:
+    b = -1 * a if CP else Vec(len(a))
+    if CP1: b += 1
+    return b
 
-    def beaver_partition[`t](self: MPCEnv, a: `t) -> tuple[`t, `t]:
-        """Protocol 8: BeaverPartition (p.11) """
-        if __cp__ == 0:
-            # essentially sum of 2 random numbers...
-            am = self.rand_at[`t](1, a) + self.rand_at[`t](2, a)
-            return (`t(len(am)), am)
+  @secure
+  @batch
+  def sqrt(S: MPC, a: Vec) -> tuple[Vec, Vec]:
+    n = len(a)
+    if n > DIV_MAX_N:
+      nbatch = math.ceil(n / float(DIV_MAX_N))
+      b, b_inv = Vec(n), Vec(n)
+      for i in range(nbatch):
+        start = DIV_MAX_N * i
+        end = min(start + DIV_MAX_N, n)
+        batch_size = end - start
+
+        b_copy, b_inv_copy = a[start:start + batch_size] |> S.sqrt
+        b.update(start, start + batch_size, b_copy)
+        b_inv.update(start, start + batch_size, b_inv_copy)
+      return b, b_inv
+    
+    niter = 2 * (math.log2(NBIT_K / 3.5) |> math.ceil)
+
+    # Initial approximation: 1 / sqrt(a_scaled) ~= 
+    #   ~= 2.9581 - 4 * a_scaled + 2 * a_scaled^2 */
+    s, s_sqrt = S.normalize_even_exp(a)
+    a_scaled = S.mul(a, s) |> S.trunc(..., NBIT_K, NBIT_K - NBIT_F)
+    a_scaled_sq = S.mul(a_scaled, a_scaled) |> S.trunc
+
+    scaled_est = Vec(n)
+    if CP:
+      scaled_est = -4 * a_scaled + 2 * a_scaled_sq
+      if CP1:
+        scaled_est += S.get_float(2.9581, NBIT_K, NBIT_F)
+
+    # Our scaled initial approximation (scaled_est) 
+    # has bit length <= NBIT_F + 2 and s_sqrt is at most NBIT_K/2 bits, 
+    # so their product is at most NBIT_K/2 + NBIT_F + 2
+    h = [S.mul(scaled_est, s_sqrt)] \
+      |> S.trunc(..., NBIT_K / 2 + NBIT_F + 2, ((NBIT_K - NBIT_F) / 2) + 1)
+    g = [S.mul(h[0] * 2, a)] |> S.trunc
+
+    for it in range(niter):
+      r = -1 * (S.mul(h, g) |> S.trunc)
+      if CP1:
+        for i in range(n):
+          r[0][i] += S.get_float(1.5, NBIT_K, NBIT_F)
+      h, g = S.mul(h, r) |> S.trunc, S.mul(g, r) |> S.trunc
+
+    return g[0], 2 * h[0]
+   
+  @secure
+  @optimize_memory
+  def normalizer_even_exp(S: MPC, a: Vec) -> tuple[Vec, Vec]:
+    # Base field index 1
+    n = len(a)
+    S.fid = 1
+    
+    r, r_bits = S.share_random_bits(NBIT_K, n)
+    e = a + r if CP else Vec(n)
+    e = S.reveal(e)
+    ebits = e.num_to_bits(NBIT_K) if CP else Matrix[Int](n, NBIT_K)
+    
+    c = S.less_than_bits_public(rbits, ebits)
+    if CP:
+      c *= -1
+      if CP1: c += 1
+      c = S.mod(c)
+
+    ep = Matrix[Int](n, NBIT_K + 1)
+    if CP:
+      for i in range(n):
+        ep[i][0] = c[i]
+        for j in range(1, NBIT_K + 1):
+          ep[i][j] = (1 - 2 * ebits[i][j - 1]) * rbits[i][j - 1]
+          if CP1: ep[i][j] += ebits[i][j - 1]
+      ep = S.mod(ep)
+    E = S.prefix_or(ep)
+    
+    tpneg = Matrix[Int](n, NBIT_K)
+    if CP:
+      tpneg = Matrix(
+        [E[i][j] - rbits[i][j] * (1 - ebits[i][j]) for j in range(NBIT_K)]
+        for i in range(n)) |> S.mod
+    Tneg = S.prefix_or(tpneg)
+    efir = S.mod(ebits, Tneg) if CP else Matrix[Int](n, NBIT_K)
+    rfir = S.mul(rbits, Tneg)
+    double_flag = S.less_than_bits(efir, rfir)
+
+    half_len = NBIT_K / 2
+    odd_bits, even_bits = Matrix[Int](n, half_len), Matrix[Int](n, half_len)
+    if CP:
+      for i, j in iproduct(n, half_len):
+        odd_bits[i][j] = 1 - Tneg[i][2 * j + 1] if CP1 else -Tneg[i][2 * j + 1]
+        even_bits[i][j] = \
+          (1 - Tneg[i][2 * j + 2] if CP1 else - Tneg[i][2 * j + 2]) \
+          if 2 * j + 2 < NBIT_K else 0
+      odd_bits, even_bits = S.mod(odd_bits), S.mod(even_bits)
+    odd_bit_sum, even_bit_sum = Vector[Int](n), Vector[Int](n)
+    for i in range(n):
+      odd_bit_sum[i] += sum(odd_bits[i])
+      even_bit_sum[i] += sum(even_bits[i])
+      if CP0: 
+        odd_bit_sum[i] += 1
+        even_bit_sum[i] += 1
+    odd_bit_sum, even_bit_sum = S.mod(odd_bit_sum), S.mod(even_bit_sum)
+
+    # If double_flag = true, then use odd_bits, otherwise use even_bits
+    diff = S.mod(odd_bit_sum - even_bit_sum) if CP else Vector[Int](n)
+    diff = S.mul(double_flag, diff)
+
+    b_mat = \
+      S.mod(even_bits_sum + diff) if CP else Vector[Int](n) \
+      |> S.table_lookup(..., 1)
+    return (b_mat[1], b_mat[0]) if CP else (Vector[Int](n), Vector[Int](n))
+
+  @secure
+  @beaver
+  def powers[`t](S: MPC, a: Vector[`t], pow: int) -> Matrix[`t]:
+    n = len(a)
+    if pow == 1:
+      b = Matrix[`t](2, n)
+      if CP:
+        if CP1: b[0] = S.add_scalar(b[0], `t(1))
+        b[1] = copy(a)
+      return b
+    else:
+      ar, am = S.BP(a)
+      if CP0:
+        ampow = am * am
+        for p in range(1, ampow.rows()):
+          ampow[p] = S.mod(ampow[p - 1] * am)
+        
+        S.switch_seed(1)
+        ampow = S.mod(ampow - S.random(ampow))
+        S.restore_seed()
+        S.send(2, ampow)
+        return Matrix[`t](pow + 1, n)
+      else:
+        ampow = Matrix[`t](pow - 1, n)
+        if CP1:
+          S.switch_seed(0)
+          ampow = S.random(ampow)
+          S.restore_seed()
         else:
-            am = self.rand_at[`t](0, a)
-            ar = a - am
-            ar = self.reveal(ar)
-            return (ar, am)
+          ampow = S.receive(0, ampow)
+        arpow = ar * ar
+        for p in range(1, apow.rows()):
+          arpow[p] = S.mod(arpow[p - 1] * ar)
+        t = S.get_pascal_matrix(pow)
+        b = Matrix[`t](pow + 1, n)
+        if CP1: b[0] = S.add_scalar(b[0], `t(1))
+        b[1] = copy(a)
+        for p in range(2, pow + 1):
+          if CP1: 
+            b[p] = arpow[p - 2]
+          if CP2:
+            b[p] += t[p][1] * (ar * am)
+          else:
+            b[p] += t[p][1] * (arpow[p - 3] * am)
+            for j in range(2, p - 1):
+              b[p] += t[p][j] * (arpow[p - 2 - j] * ampow[j - 2])
+            b[p] += t[p][p - 1] * (ar * ampow[p - 3])
+          b[p] += ampow[p - 2]
+        return S.mod(b)
 
-    def beaver_mult[`t](self: MPCEnv, ar: `t, am: `t, br: `t, bm: `t):
-        """Protocol 9: part of EvaluatePolynomial (p.12)"""
-        match __cp__:
-            case 0:
-                return am * bm
-            case 1:
-                return ar * bm + am * br + ar * br
-            case 2:
-                return ar * bm + am * br
-            default:
-                assert False
+  @secure
+  def evaluate_poly[`t](S: MPC, a: Vec[`t], coeff: Matrix[`t]) -> Matrix[`t]:
+    n, npoly, deg = len(a), coeff.rows(), coeff.cols() - 1
+    apow = S.powers(a, deg)
+    if CP: 
+      return S.mod(coeff * apow)
+    else:
+      return Mat[`t](npoly, n)
 
-    def beaver_reconstruct[`t](self: MPCEnv, ab: `t) -> `t:
-        """Protocol 9: part of EvaluatePolynomial (p.12)"""
-        match __cp__:
-            case 0:
-                mask = self.rand_at[`t](1, ab)
-                ab -= mask
-                self.send(2, ab)
-                return ab
-            case 1:
-                ambm = self.rand_at[`t](0, ab)
-                return ab + ambm
-            case 2:
-                ambm = self.receive[`t](0, ab)
-                return ab + ambm
-            default:
-                assert False
+  @secure
+  def table_lookup(S: MPC, a, id: int) -> Mat:
+    return S.evaluate_poly(Vec(a), cache[id])
+
+  ######################################################################
+  # Bits
+  ######################################################################
+
+  # less_than_bits: 0 for private, 2 for public
+  @secure
+  @optimize_memory
+  def less_than_bits(S: MPC, a: Matrix[Int], b: Matrix[Int], pub: int) -> Vector[Int]:
+    n, L = len(a)
+
+    # Calculate XOR 
+    x = Matrix[Int](n, L)
+    if pub == 0:
+      x = S.mul(a, b)
+      if CP: 
+        x = (a + b - 2 * x) |> S.mod
+    elif CP:
+      x = a + b - 2 * (a * b)
+      if CP2:
+        x -= a if pub == 1 else b
+      x = S.mod(x)
+      
+    f = S.prefix_or(x)
+    if CP:
+      for i, j in product(range(n), range(L - 1, 0, -1)):
+        f[i][j] -= f[i][j - 1]
+      f = S.mod(f)
+
+    if pub == 2:
+      if CP0: return Vector[Int](n)
+      return \
+        Vector(sum(f[i][j] * b[i][j] for j in range(L)) for i in range(n)) \
+        |> S.mod
+    else:
+      f_arr = [Matrix[Int](1, L) for i in range(n)] 
+      b_arr = [Matrix[Int](L, 1) for i in range(n)]
+      if CP:
+        for i in range(n):
+          f_arr[i][0] = f[i]
+          for j in range(L):
+            b_arr[i][j][0] = b[i][j]
+      c_arr = [S.matmul(f_arr[i], b_arr[i]) for i in range(n)]      
+      return Vector(c_arr[i][0][0] for i in range(n)) if CP else Vector[int](n)
+
+  @secure
+  @optimize_memory
+  def prefix_or(S: MPC, a: Matrix[Int]) -> Matrix[Int]:
+    n = a.rows()
+    L = a.cols() |> math.sqrt |> math.ceil |> int
+    L2 = L * L
+
+    a_padded = Matrix[Int](n, L2) if not CP \ 
+      else Matrix[Int]([
+        [0 if j < L2 - a.cols() else a[i][j - L2 + a.cols()]
+          for j in range(L2)]
+        for i in range(n)])
+    a_padded = a_padded.reshape(n * L, L) if CP else Matrix[Int](n * L, L)
+
+    x = S.fan_in_or(a_padded)
+    xpre = Matrix[Int](n * L, L)
+    if CP:
+      for i in range(n): 
+        for j, k in iproduct(L, L):
+          xpre[L * i + j][k] = x[L * i + k] if k <= j else Int(0)
+    y = S.fan_in_or(xpre)
+    
+    f = [Matrix[Int](1, l) for _ in range(n)]
+    if CP:
+      for i, j in iproduct(n, L):
+        f[i][0][j] = x[L * i] if j == 0 else y[L * i + j] - y[L * i + j - 1]
+      f = [S.mod(ff) for ff in f]
+    tmp = [Matrix[Int](L, L) for _ in range(n)]
+    if CP:
+      for i, j in iproduct(n, L):
+        tmp[i][j] = a_padded[L * i + j]
+    c = [S.matmul(f[i], tmp[i]) for i in range(n)]
+    
+    cpre = Matrix[Int](n * L, L)
+    if CP:
+      for i, j in iproduct(n, L):
+        for k in range(L):
+          cpre[L * i + j][k] = c[i][0][k] if k <= j else Int(0)  
+    bdot_vec = S.fan_in_or(cpre)
+    
+    bdot = [Matrix[Int](1, L) for _ in range(n)]
+    if CP:
+      for i, j in iproduct(n, L):
+        bdot[i][0][j] = bdot_vec[L * i + j]
+    f = [m.reshape(L, 1) if CP else Matrix[Int](L, 1) for m in f]
+    s = [S.matmul(f[i], bdot[i]) for i in range(n)]
+
+    b = Matrix[Int](n, a.cols())
+    if CP:
+      for i, j in iproduct(n, a.cols()):
+        j_pad = L2 - a.cols() + j
+        il = int(j_pad / L)
+        jl = j_pad - il * L
+        b[i][j] = s[i][il][jl] + y[L * i + il] - f[i][il][0]
+    return S.mod(b)
+
+  @secure
+  def fan_in_or(S: MPC, a: Matrix[Int]) -> Vector[Int]:
+    n, d = len(a)
+    a_sum = Vector[Int](n)
+    if CP:
+      for i, j in iproduct(n, d):
+        a_sum[i] = S.mod(a[i][j] + CP1)
+        
+    # TODO caching
+    y = Vector(Int(0) if i == 0 else Int(1) for i in range(d + 1))
+    return y \
+      |> [S.lagrange_interp_simple] \
+      |> Matrix[Int] \
+      |> S.evaluate_poly(a_sum, ...)[0]
+
+  @secure
+  def share_random_bits(S: MPC, k: int, n: int) -> tuple[Vec, Matrix[Int]]:
+    if CP0:
+      r = Vec.rand_bits(n, k + NBIT_V)
+      rbits = r.num_to_bits(k)
+
+      S.switch_seed(1)
+      r_mask, rbits_mask = S.random(Vec(n)), S.random(Mat(n, k))
+      S.restore_seed();
+
+      r -= r_mask
+      rbits = S.mod(rbits - rbits_mask)
+      
+      S.send(2, r)
+      S.send(2, rbits)
+      return r, rbits
+    elif CP1:
+      S.switch_seed(0);
+      r_mask, rbits_mask = S.random(Vec(n)), S.random(Mat(n, k))
+      S.restore_seed()
+      return r, rbits
+    elif CP2:
+      r, r_bits = S.receive(0, Vec(n)), S.receive(0, Mat(n, k))
+      return r, rbits
+
+  @secure
+  def lagrange_interpolation_simple(S: MPC, y: Vector[Int]) -> Vec:
+    return S.lagrange_interpolation(Vec(range(1, n + 1)), y)
+
+  ######################################################################
+  # Linear algebra
+  ######################################################################
+
+  @secure
+  @beaver
+  def householder(S: MPC, x: Vec) -> Vec:
+    xr, xm = S.BP(x)
+    xdot = [S.mul(xr, xm)] |> Vec |> S.BR |> S.trunc
+    xnorm, _ = S.sqrt(xdot)
+
+    x1sign = [x[0]] |> Vec |> S.is_positive
+    x1sign *= 2
+    if CP1: x1sign[0] -= 1
+    shift = S.mul(xnorm, x1sign)
+    sr, sm = S.BP(shift[0])
+    dot_shift = S.BM(xr[0], xm[0], sr, sm) |> S.BR |> S.trunc
+
+    vdot = Vec(1)
+    if CP: vdot[0] = 2 * (xdot[0] + dot_shift)
+    invr, invm = S.sqrt(vdot)[1] |> S.BP
+    
+    vr = xr if CP else Vec(n)
+    if CP: vr[0] += sr 
+    vm = xm
+    vm[0] += sm
+
+    return S.BM(vr, vm, invr, invm) |> S.BR |> S.trunc
+
+  @secure
+  def qr_factor_square(S: MPC, A: Mat) -> tuple[Mat, Mat]:
+    n = A.rows()
+    R = Mat(n, n)
+    if CP: R = Mat(n, n, 0)
+    Ap = A if CP else Mat(n, n)
+    Q = Mat()
+
+    for i in range(n - 1):
+      v = [S.householder(Ap[0])] |> Mat
+      vt = S.transpose(v) if CP else Mat(Ap.cols(), 1)
+      P = S.matmul(vt, v) |> S.trunc
+      if CP:
+        P *= -2
+        if CP1:
+          for j in range(P.cols()): 
+            P[j][j] += S.get_float(1, NBIT_K, NBIT_F)
+      if i == 0:
+        Q, B = P, S.matmul(Ap, P) |> S.trunc
+      else:
+        Qsub = Mat(n - i, n)
+        if CP: 
+          Qsub.update(0, n - i, Q[i:n])
+
+        p0 = S.matmul(P, Qsub) |> S.trunc
+        p1 = S.matmul(Ap, P) |> S.trunc
+        B = Mat(n - i, n - i)
+        if CP: 
+          Q.update(i, n, p0[0:n - i])
+          B = p1
+      
+      Ap = Mat(n - 1 - i, n - 1 - i)
+      if CP:
+        for j in range(n - i): 
+          R[i + j][i] = B[j][0]
+        if i == n - 2: 
+          R[n - 1][n - 1] = B[1][1]
+        for j, k in iproduct(n - 1 - i, n - 1 - i):
+          Ap[j][k] = B[j + 1][k + 1]
+    return Q, R
+
+  @secure
+  def orthonormal_basis(S: MPC, A: Mat) -> Mat:
+    c, n = len(A)
+    v_list = list[Vec](c)
+    Ap = A if CP else Mat(c, n)
+    for i in range(c):
+      v = [S.householder(Ap[0])] |> Mat
+      v_list[i] = v[0] if CP else Vec(Ap.cols())
+      vt = S.transpose(v) if CP else Mat(Ap.cols(), 1)
+
+      B = S.matmul(Ap, vt) |> S.trunc |> S.matmul(..., v) |> S.trunc
+      if CP:
+        B *= 2; B += Ap
+
+      Ap = Mat(B.rows() - 1, B.cols() - 1)
+      if CP:
+        for j, k in iproduct(Ap.rows(), Ap.cols()):
+          Ap[j][k] = B[j + 1][k + 1]
+
+    # TODO clear matrix at initialization
+    Q = Mat(c, n) 
+    if CP1:
+      Q = Mat(c, n, 0)
+      for i in range(c):
+        Q[i][i] = S.get_float(1.0)
+
+    # TODO check range
+    for i in range(c - 1, -1, -1):
+      v = Mat(1, len(v_list[i]))
+      if CP: v[0] = v_list[i]
+
+      vt = S.transpose(v) if CP else Mat(v.cols(), 1)
+      Qsub = Mat(c, n - i)
+      if CP:
+        for j, k in iproduct(c, n - i): 
+          Qsub[j][k] = Q[j][k + i]
+
+      Qvv = S.matmul(Qsub, vt) |> S.trunc |> S.matmul(..., v) |> S.trunc
+      if CP:
+        Qvv *= -2
+        for j, k in iproduct(c, n - 1): 
+          Q[j][k + i] += Qvv[j][k]
+    return Q
+
+  @secure
+  def tridiag(S: MPC, A: Mat) -> tuple[Mat, Mat]:
+    n = A.rows()
+    Q, T = (Mat(n, n, 0), Mat(n, n, 0)) if CP else (Mat(n, n), Mat(n, n))
+    if CP1:
+      for i in range(n):
+        Q[i][i] = S.get_float(1, NBIT_K, NBIT_F)
+
+    Ap = A if CP else Mat(n, n)
+    for i in range(n - 2):
+      x = Ap[0][1:] if CP else Vec(Ap.cols() - 1)
+      v = [S.householder(x)] |> Mat
+
+      vt = S.transpose(v) if CP else Mat(len(x), 1)
+      vv = S.matmul(vt, v) |> S.trunc
+      P = Mat(Ap.cols(), Ap.cols())
+      if CP:
+        P[0][0] = S.get_float(1, NBIT_K, NBIT_F) if CP1 else 0z
+        for j, k in product(range(1, Ap.cols()), range(1, Ap.cols())):
+          P[j][k] = -2 * vv[j - 1][k - 1]
+          if CP1 and j == k:
+            P[j][k] += S.get_float(1, NBIT_K, NBIT_F)
+
+      B = S.matmul(P, Ap) |> S.trunc |> S.matmul(..., P) |> S.trunc
+      Qsub = Mat(n, n - i)
+      if CP:
+        for j, k in iproduct(n, n - i): 
+          Qsub[j][k] = Q[j][k + i]
+      Qsub = S.matmul(Qsub, P) |> S.trunc
+      Ap = Mat(B.rows() - 1, B.cols() - 1)
+      if CP:
+        for j, k in iproduct(c, n - i): 
+          Q[j][k + i] += Qsub[j][k]
+
+        indices = [(0, 0), (1, 0), (0, 1)]
+        if i == n - 3:
+          indices += [(1, 1), (1, 2), (2, 1), (2, 2)]
+        for x, y in indices:
+          T[i + x][i + y] = B[x][y]
+        for j, k in iproduct(Ap.rows(), Ap.cols()):
+          Ap[j][k] = B[j + 1][k + 1]
+    return T, Q
+
+  @secure
+  def eigen_decomposition(S: MPC, A: Mat) -> tuple[Mat, Vec]:
+    n = A.rows()
+    L = Vec(n, 0)
+    Ap, Q = S.tridiag(A)
+    V = S.transpose(Q) if CP else Mat(n, n)
+    for i in range(n - 1, 0, -1):
+      for it in range(ITER_PER_EVAL):
+        shift = Ap[i][i]
+        if CP:
+          for j in range(Ap.cols()):
+            Ap[j][j] -= shift
+        Q, R = S.qr_factor_square(Ap)
+        Ap = S.matmul(Q, R) |> S.trunc
+        if CP: 
+          for j in range(Ap.cols()):
+            Ap[j][j] += shift
+        Vsub = Mat(i + 1, n) 
+        if CP:
+          Vsub.update(0, i + 1, V[0:i + 1])
+        Vsub = S.matmul(Q, Vsub) |> S.trunc
+
+        if CP:
+          V.update(0, i + 1, Vsub[0:i + 1])
+
+      L[i] = Ap[i][i]
+      if i == 1: L[0] = Ap[0][0]
+      Ap = Mat([[c for c in r[:i]] for r in A[:i]])
+    return V, L
+
+  @secure
+  def pascal_matrix[`t](S: MPC, pow: int) -> Matrix[`t]:
+    t = Matrix[`t](pow + 1, pow + 1)
+    for i, j in iproduct(pow + 1, pow + 1):
+      if j < i: 
+        t[i][j] = 0
+      elif j == 0 or j == i: 
+        t[i][j] = 1
+      else:
+        t[i][j] = S.mod(t[i - 1][j - 1] + t[i - 1][j])
+    return r
+
+  @secure
+  def lagrange_interpolation[`t](S: MPC, x: Vector[int], y: Vector[`t]) -> Vector[`t]:
+    n = len(y)
+    inv_table = dict[int, `t]()
+    for i, j in iproduct(n, n):
+      if i == j: continue
+      key = abs(x[i] - x[j])
+      if key not in inv_table:
+        inv_table[key] = `t(key).inverse()
+
+    numer = Mat(y if i == 0 else Vector[`t](n, 0) for i in range(n))
+    denom_inv = Vector[`t](n, 1)
+    for i, j in iproduct(n, n):
+      if i == j: continue
+      for k in range(n - 1, -1, -1):
+        numer[k][j] = S.mod(
+          (`t(0) if k == 0 else numer[k - 1][j]) - x[i] * numer[k][j])
+      denom_inv[i] = S.mod(
+        denom_inv[i] * (1 if x[i] > x[j] else -1) * inv_table[abs(x[i] - x[j])])
+    return S.mod(numer @ denom_inv)  
+
+  ######################################################################
+  # Utils
+  ######################################################################
+
+  @secure
+  @mutable # a
+  def trunc(S: MPC, a: Mat, k: int, m: int) -> Mat:
+    r, r_low = Mat(), Mat()
+    if CP0:
+      r = Mat.rand_bits(len(a), k + NBIT_V)
+      r_low = [[Int.trunc(rep(cl), m) for cl in rw] for rw in r]
+
+      S.switch_seed(1)
+      r_mask, r_low_mask = S.random(a), S.random(a)
+      S.restore_seed()
+
+      r -= r_mask 
+      r_low -= r_low_mask
+      S.send(2, r)
+      S.send(2, r_low)
+    elif CP1:
+      S.switch_seed(0)
+      r, r_low = S.random(a), S.random(a)  
+      S.restore_seed()
+    elif CP2:
+      r, r_low = S.receive(0, a), S.receive(0, a)
+    
+    c = a + r if CP else Mat(*len(a))
+    c = S.reveal(c)
+
+    if CP: 
+      c_low = Mat([[ZZ.trunc(rep(cl), m) for cl in rw] for rw in c]) 
+      a += r_low
+      if CP1: a -= c_low
+
+      # TODO caching here
+      a *= Int(2).inv().power(m)
+    return a
+
+  @secure
+  @mutable # x
+  def mod[`t](S: MPC, x: `t) -> `t:
+    x %= primes[S.fid]
+    return x
+  
+  @secure
+  def transpose[`t](S: MPC, a: Matrix[`t]) -> Matrix[`t]:
+    if CP0:
+      return Matrix[`t](a.cols(), a.rows())
+    else:
+      return Matrix([a[r][c] for r in range(a.rows())] for c in range(a.cols()))
+  
+  @secure
+  def inverse[`t](S: MPC, a: Matrix[`t]) -> Matrix[`t]:
+    assert False
+
+  ######################################################################
+  # Caches
+  ######################################################################
+
+  def get_float(S: MPC, x: float, k: int, f: int) -> MInt:
+    xx = int(x * 10000)
+    if (xx, k, f) in S.float_cache:
+      return S.float_cache[(xx, k, f)]
+    r = Float(x, k, int)
+    S.float_cache[(xx, k, f)] = r
+    return r
+
 
 

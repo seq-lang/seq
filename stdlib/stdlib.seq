@@ -1,9 +1,13 @@
-type range(lo: int, hi: int):
+type range(lo: int, hi: int, step: int):
+    def __init__(self: range, lo: int, hi: int, step: int) -> range:
+        assert step != 0
+        return (lo, hi, step)
+
     def __init__(self: range, lo: int, hi: int) -> range:
         return (lo, hi)
 
     def __init__(self: range, hi: int) -> range:
-        return (0, hi)
+        return (0, hi, 1)
 
     def __getitem__(self: range, i: int) -> int:
         if i < 0:
@@ -14,12 +18,16 @@ type range(lo: int, hi: int):
         return self.lo + i
 
     def __iter__(self: range):
-        lo = self.lo
-        hi = self.hi
+        lo, hi, step = self
         i = lo
-        while i < hi:
-            yield i
-            i += 1
+        if self.step > 0:
+            while i < hi:
+                yield i
+                i += step
+        else:
+            while i > hi:
+                yield i
+                i += step
 
 def len(x):
     return x.__len__()
@@ -82,6 +90,16 @@ def round(x, n) -> float:
     extern c pow(float, float) -> float
     n := pow(10.0, float(n))
     return round(float(x * n)) / n
+
+def product(x, y):
+    for i in iter(x):
+        for j in iter(y):
+            yield i, j
+
+def iproduct(x: int, y: int):
+    for i in range(x):
+        for j in range(y):
+            yield i, j
 
 import! list
 import! dict
