@@ -15,7 +15,6 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
     MAF_LB = 0.4
     MAF_UB = 0.6
 
-
     n0 = NUM_INDS
     m0 = NUM_SNPS
     k = NUM_DIM_TO_REMOVE
@@ -205,12 +204,9 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
             gkeep3[j] = selected[ind] == 1
             ind += 1
 
-    # ImportSeed ?
     ifs.open("input_geno")
-
+    # ImportSeed ?
     bsize = n1 / 10
-    #fs.open("pca_input")
-
     ind = -1
     for i in range(n1):
         ind += 1
@@ -260,6 +256,7 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
 
         dosage = g[1] + g[2]*2
         dosage_mask = g_mask[1] + g_mask[2]*2
+    ifs.close()
 
     g_mean_pca = S.filter(g_mean, selected)
     g_stdinv_pca = S.filter(g_std_bern_inv, selected)
@@ -559,9 +556,7 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
     B = Mat(k + NUM_COVS, m2)
 
     ifs.open("input_geno")
-
     # ImportSeed ?
-
     bsize = PITER_BATCH_SIZE
 
     dosage = Mat(bsize, m2)
