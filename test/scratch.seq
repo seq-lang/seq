@@ -3,29 +3,15 @@
 import itertools
 import time
 
-type Foo(x: int)
+type h_t(l: int)
 
-type Hai(a: int):
-	def wololo(self):
-		print 'wololo', self.a
+@secure
+def hai(self):
+	print 'Abe', self.l
+	return 2
 
-a = Foo(4)
-print a
+___dump___
 
-a := Hai(5)
-print a
-a.wololo()
 
-class Abe[`t](l: `t):
-	def hai(self):
-		print 'Abe', self.l
+print hai(h_t(1))
 
-b = Abe(1)
-b.hai()
-
-type AbF = Abe[float]
-
-c = AbF(1.1)
-c.hai()
-
-c = AbF(10)

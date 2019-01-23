@@ -1,5 +1,4 @@
-from secure.mpc import MPCEnv
-from secure.ntl import *
+from secure.socket import Socket
 
 # Otherwise COPY
 # Vec(n) RESERVES; Mat(x, y) RESERVES?!
@@ -146,14 +145,14 @@ class Float(i: MInt):
     az_trunc = az_shift.trunc(k - 1)
 
     xf = a - int(a)
-    for i in range(f - 1, -1, -1):
+    for fbit in range(f - 1, -1, -1):
       xf *= 2
       if xf >= 1:
         xf -= int(xf)
         az_trunc.set_bit(fbit)
     self.i = Int.to_mint(az_trunc * sn)
 
-  def to_float(self: Float, int k, int f) -> float:
+  def to_float(self: Float, k: int, f: int) -> float:
     one = Int(1)
     twokm1 = one.left_shift(k - 1)
 
@@ -175,8 +174,8 @@ class Float(i: MInt):
 class Vector[`t](items: list[`t]):
   def __init__(self: Vector[`t], sz: int): 
     self.items = list[`t](sz)
-  def __init__(self: Vector[`t], sz: int, def: `t): 
-    self.items = [copy(def) for _ in range(sz)]
+  def __init__(self: Vector[`t], sz: int, d: `t): 
+    self.items = [copy(d) for _ in range(sz)]
   def __init__(self: Vector[`t], l: list[`t]): 
     self.items = list(l)
   def __init__(self: Vector[`t], l: generator[`t]): 
@@ -307,8 +306,8 @@ class Vector[`t](items: list[`t]):
 class Matrix[`t](items: list[Vector[`t]]):
   def __init__(self: Matrix[`t], rw: int, cl: int): 
     self.items = [Vector[`t](cl) for _ in range(rw)]
-  def __init__(self: Matrix[`t], rw: int, cl: int, def: `t): 
-    self.items = [Vector[`t](cl, def) for _ in range(rw)]
+  def __init__(self: Matrix[`t], rw: int, cl: int, d: `t): 
+    self.items = [Vector[`t](cl, d) for _ in range(rw)]
   def __init__(self: Matrix[`t], l: list[Vector[`t]]): 
     self.items = list(l)
     for i in self.items:

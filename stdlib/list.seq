@@ -49,11 +49,11 @@ class list[`t](arr: array[`t], len: int):
         return list[`t](self.arr[a:b], b - a)
 
     def __slice_left__(self: list[`t], b: int):
-        assert 0 <= a <= b < len(self)
+        assert 0 <= b < len(self)
         return list[`t](self.arr[:b], b)
 
     def __slice_right__(self: list[`t], a: int):
-        assert 0 <= a <= b < len(self)
+        assert 0 <= a < len(self)
         return list[`t](self.arr[a:], self.len - a)
 
     def __copy__(self: list[`t]):

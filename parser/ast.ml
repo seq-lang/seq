@@ -170,8 +170,7 @@ struct
     | Global      of string
     | Throw       of ExprNode.t
   and generic =
-    | Function of 
-        (param tt * (ExprNode.generic tt) list * param tt list * t list)
+    | Function of fn_t
     | Class of class_t 
     | Type  of class_t
   and if_case = 
@@ -192,6 +191,12 @@ struct
       generics: (ExprNode.generic tt) list;
       args: param tt list option;
       members: generic tt list }
+  and fn_t = 
+    { fn_name: param;
+      fn_generics: (ExprNode.generic tt) list;
+      fn_args: param tt list;
+      fn_stmts: t list;
+      fn_attrs: string tt list }
   and import = 
     (* import <from> as <import_as> | from <from> import <what> 
        <what> = [<what> as <import_as>]+

@@ -544,8 +544,7 @@ class MPC(
     L = a.cols() |> math.sqrt |> math.ceil |> int
     L2 = L * L
 
-    a_padded = Matrix[Int](n, L2) if not CP \ 
-      else Matrix[Int]([
+    a_padded = Matrix[Int](n, L2) if not CP else Matrix[Int]([
         [0 if j < L2 - a.cols() else a[i][j - L2 + a.cols()]
           for j in range(L2)]
         for i in range(n)])
@@ -616,7 +615,7 @@ class MPC(
 
       S.switch_seed(1)
       r_mask, rbits_mask = S.random(Vec(n)), S.random(Mat(n, k))
-      S.restore_seed();
+      S.restore_seed()
 
       r -= r_mask
       rbits = S.mod(rbits - rbits_mask)
@@ -625,7 +624,7 @@ class MPC(
       S.send(2, rbits)
       return r, rbits
     elif CP1:
-      S.switch_seed(0);
+      S.switch_seed(0)
       r_mask, rbits_mask = S.random(Vec(n)), S.random(Mat(n, k))
       S.restore_seed()
       return r, rbits

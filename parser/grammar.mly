@@ -797,21 +797,32 @@ throw:
 func_statement:
   | func { $1 }
   | decorator+ func
-    { noimp "decorator"(* DecoratedFunction ($1, $2) *) }
+    { 
+      let fn = match snd $2 with 
+        | Generic Function f -> f 
+        | _ -> failwith "match failure"
+      in
+      fst $2,
+      Generic (Function { fn with fn_attrs = $1 })
+    }
 
 // Function definition
 func:
   // Seq function (def foo [ [type+] ] (param+) [ -> return ])
   | DEF; name = ID;
     intypes = generic_list?;
-    LP params = separated_list(COMMA, func_param); RP
+    LP fn_args = separated_list(COMMA, func_param); RP
     typ = func_ret_type?;
     COLON;
     s = suite
-    { let intypes = Option.value intypes ~default:[] in
+    { let fn_generics = Option.value intypes ~default:[] in
       pos $1 $8, 
       Generic (Function 
-        ((fst name, { name = snd name; typ }), intypes, params, s)) }
+        { fn_name = { name = snd name; typ }; 
+          fn_generics; 
+          fn_args; 
+          fn_stmts = s;
+          fn_attrs = [] }) }
   // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
   | EXTERN; lang = ID; dylib = dylib_spec?; name = ID;
     LP params = separated_list(COMMA, extern_param); RP
@@ -928,7 +939,9 @@ class_member:
 // Decorators 
 decorator:
   | AT dot_term NL
-    { noimp "decorator" (* Decorator ($2, []) *) }
+    { match $2 with 
+      | pos, Id s -> pos, s
+      | _ -> noimp "decorator dot" }
   | AT dot_term LP separated_list(COMMA, expr) RP NL
     { noimp "decorator" (* Decorator ($2, $4) *) }
 

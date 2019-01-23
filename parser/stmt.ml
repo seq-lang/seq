@@ -73,11 +73,12 @@ struct
         else stmts 
       in
       List.iter stmts ~f:(function 
-        | pos, Generic Function ((_, { name; typ }), types, args, stmts) ->
+        | pos, Generic Function f ->
+          let name = f.fn_name.name in
           if is_some @@ Ctx.in_block ctx name then
             serr ~pos "function %s already exists" name;
           let fn = Llvm.Func.func name in
-          let names = List.map args ~f:(fun (_, x) -> x.name) in
+          let names = List.map f.fn_args ~f:(fun (_, x) -> x.name) in
           Ctx.add ctx ~toplevel:true ~global:true
             name (Ctx.Namespace.Func (fn, names))
         | pos, Generic Class cls ->
@@ -344,6 +345,7 @@ struct
         | Some t -> t
         | None ->
           let new_ctx = Ctx.init_empty ctx in
+          
           Ctx.parse_file new_ctx file;
 
           let map = Hashtbl.filteri new_ctx.map ~f:(fun ~key ~data ->
@@ -412,8 +414,8 @@ struct
       Set `cls` to `Llvm.Types.typ` if you want a function to be 
       a class `cls` method. *)
   and parse_function ctx pos ?cls ?(toplevel=false)
-    ((_, { name; typ }), types, args, stmts) =
-
+    { fn_name = { name; typ }; fn_generics; fn_args; fn_stmts; fn_attrs } =
+    
     let fn = match cls, Ctx.in_block ctx name with
       | Some cls, _ ->
         let fn = Llvm.Func.func name in
@@ -426,7 +428,7 @@ struct
         serr ~pos "function %s already exists" name;
       | None, None when not toplevel ->
         let fn = Llvm.Func.func name in
-        let names = List.map args ~f:(fun (_, x) -> x.name) in
+        let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         Ctx.add ctx ~toplevel ~global:toplevel 
           name (Ctx.Namespace.Func (fn, names));
         Llvm.Func.set_enclosing fn ctx.base;
@@ -435,6 +437,11 @@ struct
         failwith "function pre-register failed"
     in
     
+    if is_none cls then begin
+      let fnp = Option.value_exn (Ctx.in_scope ctx name) in
+      List.iter fn_attrs ~f:(fun (_, x) -> Hash_set.add (snd fnp).attrs x)
+    end;
+
     let new_ctx = 
       { ctx with 
         base = fn; 
@@ -445,7 +452,7 @@ struct
     Ctx.add_block new_ctx;
     let names, types = parse_generics 
       new_ctx 
-      types args
+      fn_generics fn_args
       (Llvm.Generics.Func.set_number fn)
       (fun idx name ->
         Llvm.Generics.Func.set_name fn idx name;
@@ -457,7 +464,7 @@ struct
       ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type new_ctx typ))
       ~default:();
 
-    add_block new_ctx stmts 
+    add_block new_ctx fn_stmts 
       ~preprocess:(fun ctx ->
         List.iter names ~f:(fun name ->
           let var = Ctx.Namespace.Var (Llvm.Func.get_arg fn name) in

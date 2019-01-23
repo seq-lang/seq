@@ -30,7 +30,8 @@ struct
     { base: Llvm.Types.func_t;
       toplevel: bool;
       global: bool;
-      internal: bool }
+      internal: bool;
+      attrs: string Hash_set.t }
 end
 
 let stdlib: Namespace.t = String.Table.create ()
@@ -67,7 +68,9 @@ let add_block ctx =
 (** [add context name var] adds a variable to the current block *)
 let add (ctx: t) ?(toplevel=false) ?(global=false) ?(internal=false) key var =
   let annot = Namespace.
-    { base = ctx.base; global; toplevel; internal } in
+    { base = ctx.base; global; toplevel; internal; 
+      attrs = String.Hash_set.create () } 
+  in
   let var = (var, annot) in
   begin match Hashtbl.find ctx.map key with
     | None -> 
@@ -153,19 +156,20 @@ let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser =
           let var = Llvm.Var.stmt stmt in
           Llvm.Var.set_global var;
           add ctx ~internal ~global ~toplevel 
-            "__cp__" @@ Namespace.Var var
+            "__cp__" @@ Namespace.Var var;
+
+          ctx.parser ~file:"<mpc>" ctx 
+            ("import secure.mpc as __mpc__\n" ^
+             "__mpc_env__ = __mpc__.MPCEnv([(0,1),(0,2),(1,2)], __cp__)");
+          begin match in_scope ctx "__mpc_env__" with
+            | Some (Namespace.Var var, _) ->
+              Llvm.Var.set_global var
+            | _ -> failwith "cannot initialize __mpc_env__"
+          end
         | Some _ -> 
           failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
         | None -> ()
-      end;
-
-      ctx.parser ~file:"<mpc>" ctx 
-        ("import secure.mpc as __mpc__\n" ^
-         "__mpc_env__ = __mpc__.MPCEnv([(0,1),(0,2),(1,2)], __cp__)");
-      match in_scope ctx "__mpc_env__" with
-      | Some (Namespace.Var var, _) ->
-        Llvm.Var.set_global var
-      | _ -> failwith "cannot initialize __mpc_env__"
+      end
     end
   end;
   Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
@@ -239,6 +243,8 @@ let dump_map ?(depth=1) ?(internal=false) map =
   let rec prn ~depth ctx = 
     let prn_assignable (ass, (ant: Namespace.annotation)) = 
       let ib b = if b then 1 else 0 in
+      let att = sprintf "<%s>" @@ String.concat ~sep: ", " @@
+        Hash_set.to_list ant.attrs in
       let ant = sprintf "%c%c%c"
         (if ant.toplevel then 't' else ' ') 
         (if ant.global   then 'g' else ' ') 
@@ -246,7 +252,7 @@ let dump_map ?(depth=1) ?(internal=false) map =
       in
       match ass with
       | Namespace.Var _    -> sprintf "(*var/%s*)" ant, ""
-      | Namespace.Func _   -> sprintf "(*fun/%s*)" ant, ""
+      | Namespace.Func _   -> sprintf "(*fun/%s*)" ant, sprintf "%s" att
       | Namespace.Type _   -> sprintf "(*typ/%s*)" ant, ""
       | Namespace.Import ctx -> 
         sprintf "(*imp/%s*)" ant, 
