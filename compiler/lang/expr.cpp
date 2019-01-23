@@ -990,8 +990,8 @@ UOpExpr *UOpExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new UOpExpr(op, lhs->clone(ref)));
 }
 
-BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs) :
-    Expr(), op(std::move(op)), lhs(lhs), rhs(rhs)
+BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs, bool inPlace) :
+    Expr(), op(std::move(op)), lhs(lhs), rhs(rhs), inPlace(inPlace)
 {
 }
 
@@ -1046,6 +1046,14 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		Value *arg = rhs->codegen(base, block);
 		exc::SeqException exc("");
 
+		if (inPlace) {
+			assert(!op.magicInPlace.empty());
+			try {
+				return lhsType->callMagic(op.magicInPlace, {rhsType}, self, {arg}, block, getTryCatch());
+			} catch (exc::SeqException& e) {
+			}
+		}
+
 		try {
 			return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block, getTryCatch());
 		} catch (exc::SeqException& e) {
@@ -1072,6 +1080,14 @@ types::Type *BOpExpr::getType0() const
 		types::Type *rhsType = rhs->getType();
 		exc::SeqException exc("");
 
+		if (inPlace) {
+			assert(!op.magicInPlace.empty());
+			try {
+				return lhsType->magicOut(op.magicInPlace, {rhsType});
+			} catch (exc::SeqException& e) {
+			}
+		}
+
 		try {
 			return lhsType->magicOut(op.magic, {rhsType});
 		} catch (exc::SeqException& e) {
@@ -1091,7 +1107,7 @@ types::Type *BOpExpr::getType0() const
 
 BOpExpr *BOpExpr::clone(Generic *ref)
 {
-	SEQ_RETURN_CLONE(new BOpExpr(op, lhs->clone(ref), rhs->clone(ref)));
+	SEQ_RETURN_CLONE(new BOpExpr(op, lhs->clone(ref), rhs->clone(ref), inPlace));
 }
 
 ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :

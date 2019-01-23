@@ -292,8 +292,9 @@ namespace seq {
 		Op op;
 		Expr *lhs;
 		Expr *rhs;
+		bool inPlace;
 	public:
-		BOpExpr(Op op, Expr *lhs, Expr *rhs);
+		BOpExpr(Op op, Expr *lhs, Expr *rhs, bool inPlace=false);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;

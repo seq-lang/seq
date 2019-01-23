@@ -11,10 +11,15 @@ namespace seq {
 		bool binary;
 		std::string magic;
 		std::string magicReflected;
+		std::string magicInPlace;
 
-		Op(std::string symbol, bool binary, std::string magic="", std::string magicReflected="") :
-		    symbol(std::move(symbol)), binary(std::move(binary)), magic(std::move(magic)),
-		    magicReflected(std::move(magicReflected))
+		Op(std::string symbol,
+		   bool binary,
+		   std::string magic="",
+		   std::string magicReflected="",
+		   std::string magicInPlace="") :
+		    symbol(std::move(symbol)), binary(binary), magic(std::move(magic)),
+		    magicReflected(std::move(magicReflected)), magicInPlace(std::move(magicInPlace))
 		{
 		}
 

@@ -179,6 +179,13 @@ FOREIGN Expr *bop_expr(char *op, Expr *lhs, Expr *rhs)
 	return t;
 }
 
+FOREIGN Expr *bop_expr_in_place(char *op, Expr *lhs, Expr *rhs)
+{
+	auto t = new BOpExpr(bop(string(op)), lhs, rhs, true);
+	free(op);
+	return t;
+}
+
 FOREIGN Expr *call_expr(Expr *fn, Expr **args, size_t size)
 {
 	return new CallExpr(fn, vector<Expr *>(args, args + size));
