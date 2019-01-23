@@ -1,5 +1,4 @@
 from secure.types import *
-from secure.ntl import *
 
 def gwas_protocol(pheno: Vec, cov: Mat, ifs):
     S = __mpc_env__
@@ -14,7 +13,6 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
 
     MAF_LB = 0.4
     MAF_UB = 0.6
-
 
     n0 = NUM_INDS
     m0 = NUM_SNPS
@@ -120,7 +118,7 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
         if i % bsize == bsize - 1 or i == n1 - 1:
             if i % bsize < bsize - 1:
                 new_bsize = (i % bsize) + 1
-                for k in range(3)
+                for k in range(3):
                     g[k] = Mat(new_bsize, m1)
                     g_mask[k] = Mat(new_bsize, m1)
 
@@ -205,12 +203,9 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
             gkeep3[j] = selected[ind] == 1
             ind += 1
 
-    # ImportSeed ?
     ifs.open("input_geno")
-
+    # ImportSeed ?
     bsize = n1 / 10
-    #fs.open("pca_input")
-
     ind = -1
     for i in range(n1):
         ind += 1
@@ -260,6 +255,7 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
 
         dosage = g[1] + g[2]*2
         dosage_mask = g_mask[1] + g_mask[2]*2
+    ifs.close()
 
     g_mean_pca = S.filter(g_mean, selected)
     g_stdinv_pca = S.filter(g_std_bern_inv, selected)
@@ -531,7 +527,7 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
     VVp_mask = Vec(1)  # ?
     VVp_mask, VVp = S.beaver_reconstruct(VVp, VVp_mask, VVp)
 
-    p_hat = pheno*1.0 - VVp;
+    p_hat = pheno*1.0 - VVp
     p_hat_mask = fp_one*pheno_mask - VVp_mask
 
     V_sum = Vec(k + NUM_COVS)
@@ -559,9 +555,7 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
     B = Mat(k + NUM_COVS, m2)
 
     ifs.open("input_geno")
-
     # ImportSeed ?
-
     bsize = PITER_BATCH_SIZE
 
     dosage = Mat(bsize, m2)
