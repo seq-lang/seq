@@ -107,6 +107,8 @@ class MInt(p: ptr[byte]):
   def __div__(a: MInt, b: MInt):
     extern c ZZ_p_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
     return MInt(ZZ_p_O_truediv(a.p, b.p))
+  def __mod__(a: Int, b):
+    return a
 
   def __eq__(a: MInt, b: MInt):
     extern c ZZ_p_O_eq(ptr[byte], ptr[byte]) -> bool
