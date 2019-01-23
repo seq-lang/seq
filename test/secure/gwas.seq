@@ -1,0 +1,773 @@
+from secure.types import *
+from secure.ntl import *
+
+def gwas_protocol(pheno: Vec, cov: Mat, ifs):
+    S = __mpc_env__
+
+    NUM_INDS = 1000
+    NUM_SNPS = 1000
+    NUM_DIM_TO_REMOVE = 5
+    NUM_OVERSAMPLE = 10
+    PITER_BATCH_SIZE = 100
+    LD_DIST_THRES = 1000000
+    NUM_POWER_ITER = 5
+
+    MAF_LB = 0.4
+    MAF_UB = 0.6
+
+
+    n0 = NUM_INDS
+    m0 = NUM_SNPS
+    k = NUM_DIM_TO_REMOVE
+    kp = k + NUM_OVERSAMPLE
+
+    # skip QC:
+    gkeep1 = Vec([1] * m0)
+    m1 = m0
+    ikeep1 = Vec([1] * n0)
+    n1 = n0
+
+    ctrl = ~pheno  # FlipBit
+    ctrl_mask, ctrl = S.beaver_partition(ctrl, ctrl_mask, ctrl)
+
+    gmiss = Vec(m1)
+    gmiss_ctrl = Vec(m1)
+    dosage_sum = Vec(m1)
+    dosage_sum_ctrl = Vec(m1)
+    g_count_ctrl = Mat(3, m1)
+    n1_ctrl = Int(0)
+
+    # ImportSeed ?
+
+    ifs.open("input_geno")
+
+    report_bsize = n1 / 10
+    bsize = PITER_BATCH_SIZE
+
+    g = [Mat(bsize, m1) for _ in range(3)]
+    g_mask = [Mat(bsize, m1) for _ in range(3)]
+    dosage = Mat(bsize, m1)
+    dosage_mask = Mat(bsize, m1)
+    miss = Mat(bsize, m1)
+    miss_mask = Mat(bsize, m1)
+    ctrl_vec = Vec(bsize)
+    ctrl_mask_vec = Vec(bsize)
+
+    ind = -1
+    for i in range(n1):
+        ind += 1
+
+        g0 = Mat(3, m0)
+        g0_mask = Mat(3, m0)
+        miss0 = Vec(m0)
+        miss0_mask = Vec(m0)
+
+        while ikeep[ind] != 1:
+            if __cp__ > 0:
+                S.skip_data(ifs, 3, m0)
+                S.skip_data(ifs, 1, m0)
+
+                g0_mask = S.rand_at(10, g0_mask)
+                miss0_mask = S.rand_at(10, miss0_mask)
+            else:
+                for p in range(1,3):
+                    g0_mask = S.rand_at(10 + p, g0_mask)
+                    miss0_mask = S.rand_at(10 + p, miss0_mask)
+
+            ind += 1
+
+        if __cp__ > 0:
+            g0 = S.read_from_file(ifs, 3, m0)
+            miss0 = S.read_from_file(ifs, 1, m0)
+
+            g0_mask = S.rand_at(10, g0_mask)
+            miss0_mask = S.rand_at(10, miss0_mask)
+        else:
+            for p in range(1,3):
+                tmp_mat = S.rand_at(10 + p, g0_mask)
+                tmp_vec = S.rand_at(10 + p, miss0_mask)
+
+                g0_mask += tmp_mat
+                miss0_mask += tmp_vec
+
+        ind2 = 0
+        for j in range(m0):
+            if gkeep1[j] == 1:
+                for k in range(3):
+                    g[k][i % bsize][ind2] = g0[k][j]
+                    g_mask[k][i % bsize][ind2] = g0_mask[k][j]
+
+                miss[i % bsize][ind2] = miss0[j]
+                miss_mask[i % bsize][ind2] = miss_mask[j]
+                ind2 += 1
+
+        dosage[i % bsize] = g[1][i % bsize] + 2*g[2][i % bsize]
+        dosage_mask[i % bsize] = g_mask[1][i % bsize] + 2*g_mask[2][i % bsize]
+
+        ctrl_vec[i % bsize] = ctrl[i]
+        ctrl_mask_vec[i % bsize] = ctrl_mask[i]
+
+        if __cp__ > 0:
+            n1_ctrl += ctrl_mask[i]
+            gmiss += miss_mask[i]
+            dosage_sum += dosage_mask[i % bsize]
+
+            if __cp__ == 1:
+                n1_ctrl += ctrl[i]
+                gmiss += miss[i % bsize]
+                dosage_sum += dosage[i % bsize]
+
+        if i % bsize == bsize - 1 or i == n1 - 1:
+            if i % bsize < bsize - 1:
+                new_bsize = (i % bsize) + 1
+                for k in range(3)
+                    g[k] = Mat(new_bsize, m1)
+                    g_mask[k] = Mat(new_bsize, m1)
+
+                dosage = Mat(new_bsize, m1)
+                dosage_mask = Mat(new_bsize, m1)
+                miss = Mat(new_bsize, m1)
+                miss_mask = Mat(new_bsize, m1)
+                ctrl_vec = Vec(new_bsize)
+                ctrl_mask_vec = Vec(new_bsize)
+
+            gmiss_ctrl = S.beaver_mult(ctrl_vec, ctrl_mask_vec, miss, miss_mask)
+            dosage_sum_ctrl = S.beaver_mult(ctrl_vec, ctrl_mask_vec, dosage, dosage_mask)
+            for k in range(3):
+                g_count_ctrl[k] = S.beaver_mult(ctrl_vec, ctrl_mask_vec, g[k], g_mask[k])
+
+    ifs.close()
+
+    gmiss_ctrl = S.beaver_reconstruct(gmiss_ctrl)
+    dosage_sum_ctrl = S.beaver_reconstruct(dosage_sum_ctrl)
+    g_count_ctrl = S.beaver_reconstruct(g_count_ctrl)
+
+    # SNP MAF filter
+    maf_lb = S.double_to_fp(MAF_LB)
+    maf_ub = S.double_to_fp(MAF_UB)
+
+    # if __cp__ > 0:
+    dosage_tot = -gmiss
+    dosage_tot_ctrl = -gmiss_ctrl
+    dosage_tot += n1
+    dosage_tot_ctrl += n1_ctrl
+    dosage_tot *= 2
+    dosage_tot_ctrl *= 2
+
+    maf = dosage_sum / dosage_tot
+    maf_ctrl = dosage_sum_ctrl / dosage_tot_ctrl
+
+    # if __cp__ > 0:
+    Maf = -maf
+    Maf_ctrl = -maf_ctrl
+    Maf += 1.0
+    Maf_ctrl += 1.0
+
+    # Variance based on Bernoulli distribution over each allele
+    g_var_bern = S.mult_elem(maf, Maf)
+    g_var_bern = S.trunc(g_var_bern)
+
+    gkeep2 = Vec([1] * m1)
+    m2 = m1
+
+    tmp_vec, g_std_bern_inv = S.sqrt(g_var_bern)
+
+    # if __cp__ > 0:
+    g_mean = maf * 2
+
+    selected = [-1] * m2
+    to_process = [False] * m2
+
+    dist_thres = Int(LD_DIST_THRES)
+    prev = Int(-1)
+    for i in range(m2):
+        selected[i] = 0
+        if prev < 0 or snp_pos[i] - prev > dist_thres:
+            selected[i] = 1
+            prev = snp_pos[i]
+
+    m3 = 0
+    for sel in selected:
+        if sel == 1:
+            m3 += 1
+
+    gkeep3 = [gkeep[j] == 1 for j in range(m0)]
+
+    ind = 0
+    for j in range(m0):
+        if gkeep3[j]:
+            gkeep3[j] = gkeep2[ind] == 1
+            ind += 1
+
+    ind = 0
+    for j in range(m0):
+        if gkeep3[j]:
+            gkeep3[j] = selected[ind] == 1
+            ind += 1
+
+    # ImportSeed ?
+    ifs.open("input_geno")
+
+    bsize = n1 / 10
+    #fs.open("pca_input")
+
+    ind = -1
+    for i in range(n1):
+        ind += 1
+
+        while ikeep[ind] != 1:
+            if __cp__ > 0:
+                S.skip_data(ifs, 3, m0)
+                S.skip_data(ifs, 1, m0)
+
+                g0_mask = S.rand_at(10, g0_mask)
+                miss0_mask = S.rand_at(10, miss0_mask)
+            else:
+                for p in range(1,3):
+                    g0_mask = S.rand_at(10 + p, g0_mask)
+                    miss0_mask = S.rand_at(10 + p, miss0_mask)
+
+            ind += 1
+
+        if __cp__ > 0:
+            g0 = S.read_from_file(ifs, 3, m0)
+            miss0 = S.read_from_file(ifs, 1, m0)
+
+            g0_mask = S.rand_at(10, g0_mask)
+            miss0_mask = S.rand_at(10, miss0_mask)
+        else:
+            for p in range(1,3):
+                tmp_mat = S.rand_at(10 + p, g0_mask)
+                tmp_vec = S.rand_at(10 + p, miss0_mask)
+
+                g0_mask += tmp_mat
+                miss0_mask += tmp_vec
+
+        g = Mat(3, m3)
+        g_mask = Mat(3, m3)
+        miss = Vec(m3)
+        miss_mask = Vec(m3)
+        ind2 = 0
+        for j in range(m0):
+            if gkeep3[j]:
+                for k in range(3):
+                    g[k][ind2] = g0[k][j]
+                    g_mask[k][ind2] = g0_mask[k][j]
+
+                miss[ind2] = miss0[j]
+                miss_mask[ind2] = miss0_mask[j]
+                ind2 += 1
+
+        dosage = g[1] + g[2]*2
+        dosage_mask = g_mask[1] + g_mask[2]*2
+
+    g_mean_pca = S.filter(g_mean, selected)
+    g_stdinv_pca = S.filter(g_std_bern_inv, selected)
+    g_mean_pca_mask = S.beaver_partition(g_mean_pca, g_mean_pca_mask, g_mean_pca)
+    g_stdinv_pca_mask = S.beaver_partition(g_stdinv_pca, g_stdinv_pca_mask, g_stdinv_pca)
+
+    # Pass 2: Random sketch
+    Y_cur = Mat(kp, m3)
+    Y_cur_adj = Mat(kp, m3)
+    bucket_count = [0] * kp
+
+    ifs.open("pca_input")
+    for cur in range(n1):
+        S.switch_seed(-1)
+        bucket_index = S.random_bnd(kp)
+        rand_sign = S.random_bnd(2)*2 - 1
+        S.restore_seed()
+
+        g, g_mask = S.beaver_read_from_file(ifs, m3)
+        miss, miss_mask = S.beaver_read_from_file(ifs, m3)
+        miss, miss_mask = S.beaver_flip_bit(miss, miss_mask)
+
+        if __cp__ > 0:
+            Y_cur[bucket_index] += rand_sign * g_mask
+            if __cp__ == 1:
+                Y_cur[bucket_index] += rand_sign * g
+
+        miss *= rand_sign
+        miss_mask *= rand_sign
+        Y_cur_adj[bucket_index] = S.beaver_mult_elem(miss, miss_mask, g_mean_pca, g_mean_pca_mask)
+
+        bucket_count[bucket_index] += 1
+    ifs.close()
+
+    Y_cur_adj = S.beaver_reconstruct(Y_cur_adj)
+    # if __cp__ > 0:
+    Y_cur = Y_cur*1.0 - Y_cur_adj
+
+    # Get rid of empty buckets and normalize nonempty ones
+    empty_slot = 0
+    for i in range(kp):
+        if bucket_count[i] > 0:
+            fp_count_inv = S.double_to_fp(1 / float(bucket_count[i]))
+            Y_cur[empty_slot] = Y_cur[i] * fp_count_inv
+            empty_slot += 1
+
+    kp = empty_slot
+    #Y_cur.SetDims(kp, m3);
+    Y_cur = S.trunc(Y_cur)
+
+    Y_cur_mask, Y_cur = S.beaver_partition(Y_cur, Y_cur_mask, Y_cur)
+    Y = Mat(kp, m3)
+    for i in range(kp):
+        Y[i] = S.beaver_mult_elem(Y_cur[i], Y_cur_mask[i], g_stdinv_pca, g_stdinv_pca_mask)
+
+    Y = S.beaver_reconstruct(Y)
+    Y = S.trunc(Y)
+    Q = S.orthonormal_basis(Y)
+    Q_mask = Mat(1, 1)  # ?
+
+    for pit in range(NUM_POWER_ITER + 1):
+        Q_mask, Q = S.beaver_partition(Q, Q_mask, Q)
+        Q_scaled = Mat(kp, m3)
+
+        for i in range(kp):
+            Q_scaled[i] = S.beaver_mult_elem(Q[i], Q_mask[i], g_stdinv_pca, g_stdinv_pca_mask)
+
+        Q_scaled = S.beaver_reconstruct(Q_scaled)
+        Q_scaled = S.trunc(Q_scaled)
+
+        Q_scaled_mask, Q_scaled = S.beaver_partition(Q_scaled, Q_scaled_mask, Q_scaled)
+
+        Q_scaled_gmean = Mat(kp, m3)
+
+        for i in range(kp):
+            Q_scaled_gmean[i] = S.beaver_mult_elem(Q_scaled[i], Q_scaled_mask[i], g_mean_pca, g_mean_pca_mask)
+
+        Q_scaled_gmean = S.beaver_reconstruct(Q_scaled_gmean)
+        Q_scaled_gmean = S.trunc(Q_scaled_gmean)
+
+        Q_scaled = S.transpose(Q_scaled)
+        # transpose(Q_scaled_mask, Q_scaled_mask); // m3-by-kp, unlike mpc.Transpose, P0 also transposes
+        Q_scaled_gmean = S.transpose(Q_scaled_gmean)
+        Q_scaled_gmean_mask, Q_scaled_gmean = S.beaver_partition(Q_scaled_gmean, Q_scaled_gmean_mask, Q_scaled_gmean)
+
+        bsize = PITER_BATCH_SIZE
+        g = Mat(bsize, m3)
+        g_mask = Mat(bsize, m3)
+        miss = Mat(bsize, m3)
+        miss_mask = Mat(bsize, m3)
+
+        # pass 1
+        gQ = Mat(n1, kp)
+        gQ_adj = Mat(n1, kp)
+
+        ifs.open("pca_input")
+        for cur in range(n1):
+            g[cur % bsize], g_mask[cur % bsize] = S.beaver_read_from_file(ifs, m3)
+            miss[cur % bsize], miss_mask[cur % bsize] = S.beaver_read_from_file(ifs, m3)
+            miss[cur % bsize], miss_mask[cur % bsize] = S.beaver_flip_bit(miss[cur % bsize], miss_mask[cur % bsize])
+
+            if cur % bsize == bsize - 1:
+                tmp_mat = S.beaver_mult(g, g_mask, Q_scaled, Q_scaled_mask)
+                for i in range(bsize):
+                    gQ[cur-(bsize-1)+i] = tmp_mat[i]
+
+                tmp_mat = S.beaver_mult(miss, miss_mask, Q_scaled_gmean, Q_scaled_gmean_mask)
+                for i in range(bsize):
+                    gQ_adj[cur-(bsize-1)+i] = tmp_mat[i]
+        ifs.close()
+
+        remainder = n1 % bsize
+        if remainder > 0:
+            #g.SetDims(remainder, m3);
+            #g_mask.SetDims(remainder, m3);
+            #miss.SetDims(remainder, m3);
+            #miss_mask.SetDims(remainder, m3);
+
+            tmp_mat = S.beaver_mult(g, g_mask, Q_scaled, Q_scaled_mask)
+            for i in range(remainder):
+                gQ[n1-remainder+i] = tmp_mat[i]
+
+            tmp_mat = S.beaver_mult(miss, miss_mask, Q_scaled_gmean, Q_scaled_gmean_mask)
+            for i in range(remainder):
+                gQ_adj[n1-remainder+i] = tmp_mat[i]
+
+        gQ = S.beaver_reconstruct(gQ)
+        gQ_adj = S.beaver_reconstruct(gQ_adj)
+
+        #if __cp__ > 0:
+        gQ -= gQ_adj
+
+        if pit == NUM_POWER_ITER:
+            break
+
+        gQ = S.transpose(gQ)
+        Q = S.orthonormal_basis(gQ)
+        Q = Q.transpose(Q)
+
+        Q_mask, Q = S.beaver_partition(Q, Q_mask, Q)
+
+        gQ = Mat(kp, m3)
+        gQ_adj = Mat(kp, m3)
+        g = Mat(bsize, m3)
+        miss = Mat(bsize, m3)
+        miss_mask = Mat(bsize, m3)
+
+        Qsub = Mat(bsize, kp)
+        Qsub_mask = Mat(bsize, kp)
+
+        # pass 2
+        ifs.open("pca_input")
+        for cur in range(n1):
+            g[cur % bsize], g_mask[cur % bsize] = S.beaver_read_from_file(ifs, m3)
+            miss[cur % bsize], miss_mask[cur % bsize] = S.beaver_read_from_file(ifs, m3)
+            miss[cur % bsize], miss_mask[cur % bsize] = S.beaver_flip_bit(miss[cur % bsize], miss_mask[cur % bsize])
+
+            Qsub[cur % bsize] = Q[cur]
+            Qsub_mask[cur % bsize] = Q_mask[cur]
+
+            if cur % bsize == bsize - 1:
+                Qsub = S.transpose(Qsub)
+                #transpose(Qsub_mask, Qsub_mask);
+
+                gQ = S.beaver_mult(Qsub, Qsub_mask, g, g_mask)
+                gQ_adj = S.beaver_mult(Qsub, Qsub_mask, miss, miss_mask)
+
+                #Qsub.SetDims(bsize, kp);
+                #Qsub_mask.SetDims(bsize, kp);
+        ifs.close()
+
+        remainder = n1 % bsize
+        if remainder > 0:
+            #g.SetDims(remainder, m3);
+            #g_mask.SetDims(remainder, m3);
+            #miss.SetDims(remainder, m3);
+            #miss_mask.SetDims(remainder, m3);
+            #Qsub.SetDims(remainder, kp);
+            #Qsub_mask.SetDims(remainder, kp);
+
+            Qsub = S.transpose(Qsub)
+            #transpose(Qsub_mask, Qsub_mask);
+
+            gQ = S.beaver_mult(Qsub, Qsub_mask, g, g_mask)
+            gQ_adj = S.beaver_mult(Qsub, Qsub_mask, miss, miss_mask)
+
+        gQ = S.beaver_reconstruct(gQ)
+        gQ_adj = S.beaver_reconstruct(gQ_adj)
+
+        gQ_adj_mask, gQ_adj = S.beaver_partition(gQ_adj, gQ_adj_mask, gQ_adj)
+
+        gQ_adj_gmean = Mat(kp, m3)
+        for i in range(kp):
+            gQ_adj_gmean[i] = S.beaver_mult_elem(gQ_adj[i], gQ_adj_mask[i], g_mean_pca, g_mean_pca_mask)
+        gQ_adj_gmean = S.beaver_reconstruct(gQ_adj_gmean)
+        gQ_adj_gmean = S.trunc(gQ_adj_gmean)
+
+        # if __cp__ > 0:
+        gQ -= gQ_adj_gmean
+
+        gQ_mask = Mat(1,1)  # ?
+        gQ_mask, gQ = S.beaver_partition(gQ, gQ_mask, gQ)
+
+        gQ_scaled = Mat(kp, m3)
+        for i in range(kp):
+            gQ_scaled[i] = S.beaver_mult_elem(gQ[i], gQ_mask[i], g_stdinv_pca, g_stdinv_pca_mask)
+
+        gQ_scaled = S.beaver_reconstruct(gQ_scaled)
+        gQ_scaled = S.trunc(gQ_scaled)
+        Q = S.orthonormal_basis(gQ_scaled)
+
+    V = Mat(k, n1)
+
+    # Eigendecomposition
+    fp_m2_inv = S.double_to_fp(1 / float(m2))
+    Z *= fp_m2_inv
+    Z = S.trunc(Z)
+
+    Z = S.transpose(Z)
+
+    Z_mask = Mat(1,1)  # ?
+    Z_mask, Z = S.beaver_partition(Z, Z_mask, Z)
+
+    Z_gram = Mat(kp, kp)
+    for i in range(kp):
+        Z_gram[i] = S.beaver_mult_elem(Z, Z_mask, Z[i], Z_mask[i])
+
+    Z_gram = S.beaver_reconstruct(Z_gram)
+    Z_gram = S.trunc(Z_gram)
+
+    U, L = S.eigen_decomp(Z_gram)
+
+    #// Select top eigenvectors and eigenvalues
+    #U.SetDims(k, kp);
+    #L.SetLength(k);
+
+    U_mask = Mat(1,1)  # ?
+    U_mask, U = S.beaver_partition(U, U_mask, U)
+    V = S.beaver_mult_mat(U, U_mask, Z, Z_mask)
+    V = S.beaver_reconstruct(V)
+    V = S.trunc(V)
+
+    # Concatenate covariate matrix and jointly orthogonalize
+    cov = S.transpose(cov)
+    #V.SetDims(k + Param::NUM_COVS, n1);
+    # if __cp__ > 0:
+    for i in range(NUM_COVS):
+        V[k + i] = cov[i] * 1.0
+
+    V = S.orthonormal_basis(V)
+
+    V_mask = Mat(1,1)  # ?
+    V_mask, V = S.beaver_partition(V, V_mask, V)
+
+    # Pass 4: Calculate GWAS statistics
+    pheno_mask = Vec(1)  # ?
+    pheno_mask, pheno = S.beaver_partition(pheno, pheno_mask, pheno)
+
+    Vp = S.beaver_mult(V_mask, pheno, pheno_mask)
+    Vp = S.beaver_reconstruct(Vp)
+
+    pheno_mask = Vec(1)  # ?
+    Vp_mask, Vp = S.beaver_partition(Vp, Vp_mask, Vp)
+
+    VVp = S.beaver_mult(Vp, Vp_mask, V, V_mask)
+    VVp = S.beaver_reconstruct(VVp)
+    VVp = S.trunc(VVp)
+
+    VVp_mask = Vec(1)  # ?
+    VVp_mask, VVp = S.beaver_reconstruct(VVp, VVp_mask, VVp)
+
+    p_hat = pheno*1.0 - VVp;
+    p_hat_mask = fp_one*pheno_mask - VVp_mask
+
+    V_sum = Vec(k + NUM_COVS)
+    V_sum_mask = Vec(k + NUM_COVS)
+
+    for i in range(k + NUM_COVS):
+        for j in range(n1):
+            V_sum[i] += V[i][j]
+            V_sum_mask[i] += V_mask[i][j]
+
+    u = S.beaver_mult(V_sum, V_sum_mask, V, V_mask)
+    u = S.beaver_reconstruct(u)
+    u = S.trunc(u)
+
+    # if __cp__ > 0:
+    u *= -1
+    u += 1.0  # mpc.AddPublic(u, fp_one);
+
+    u_mask = Vec(1)  # ?
+    u_mask, u = S.beaver_partition(u, u_mask, u)
+
+    sx = Vec(m2)
+    sxx = Vec(m2)
+    sxp = Vec(m2)
+    B = Mat(k + NUM_COVS, m2)
+
+    ifs.open("input_geno")
+
+    # ImportSeed ?
+
+    bsize = PITER_BATCH_SIZE
+
+    dosage = Mat(bsize, m2)
+    dosage_mask = Mat(bsize, m2)
+
+    u_vec = Vec(bsize)
+    u_mask_vec = Vec(bsize)
+    p_hat_vec = Vec(bsize)
+    p_hat_mask_vec = Vec(bsize)
+
+    V = S.transpose(V)
+    #transpose(V_mask, V_mask);
+
+    V_sub = Mat(bsize, k + NUM_COVS)
+    V_mask_sub = Mat(bsize, k + NUM_COVS)
+
+    gkeep3 = [gkeep[j] == 1 for j in range(m0)]
+
+    ind = 0
+    for j in range(m0):
+        gkeep3[j] = gkeep1[j] == 1
+
+    ind = 0
+    for j in range(m0):
+        if gkeep3[j]:
+            gkeep3[j] = gkeep2[ind] == 1
+            ind += 1
+
+    ind = -1
+    for cur in range(n1):
+        ind += 1
+
+        while ikeep[ind] != 1:
+            if __cp__ > 0:
+                S.skip_data(ifs, 3, m0)
+                S.skip_data(ifs, 1, m0)
+
+                g0_mask = S.rand_at(10, g0_mask)
+                miss0_mask = S.rand_at(10, miss0_mask)
+            else:
+                for p in range(1,3):
+                    g0_mask = S.rand_at(10 + p, g0_mask)
+                    miss0_mask = S.rand_at(10 + p, miss0_mask)
+
+            ind += 1
+
+        if __cp__ > 0:
+            g0 = S.read_from_file(ifs, 3, m0)
+            miss0 = S.read_from_file(ifs, 1, m0)
+
+            g0_mask = S.rand_at(10, g0_mask)
+            miss0_mask = S.rand_at(10, miss0_mask)
+        else:
+            g0 = Mat(3, m0)
+            g0_mask = Mat(3, m0)
+            miss0 = Vec(m0)
+            miss0_mask = Vec(m0)
+
+            for p in range(1,3):
+                tmp_mat = S.rand_at(10 + p, g0_mask)
+                tmp_vec = S.rand_at(10 + p, miss0_mask)
+
+                g0_mask += tmp_mat
+                miss0_mask += tmp_vec
+
+        g = Mat(3, m2)
+        miss = Vec(m2)
+        g_mask = Mat(3, m2)
+        miss_mask = Vec(m2)
+
+        ind2 = 0
+        for j in range(m0):
+            if gkeep3[j]:
+                for k in range(3):
+                    g[k][ind2] = g0[k][j]
+                    g_mask[k][ind2] = g0_mask[k][j]
+
+                miss[ind2] = miss0[j]
+                miss_mask[ind2] = miss0_mask[j]
+                ind2 += 1
+
+        dosage[cur % bsize] = g[1] + 2 * g[2]
+        dosage_mask[cur % bsize] = g_mask[1] + 2 * g_mask[2]
+
+        u_vec[cur % bsize] = u[cur]
+        u_mask_vec[cur % bsize] = u_mask[cur]
+        p_hat_vec[cur % bsize] = p_hat[cur]
+        p_hat_mask_vec[cur % bsize] = p_hat_mask[cur]
+
+        V_sub[cur % bsize] = V[cur]
+        V_mask_sub[cur % bsize] = V_mask[cur]
+
+        if cur % bsize == bsize - 1:
+            sx = S.beaver_mult(u_vec, u_mask_vec, dosage, dosage_mask)
+            sxp = S.beaver_mult(p_hat_vec, p_hat_mask_vec, dosage, dosage_mask)
+
+            sxx_tmp = S.beaver_mult_elem(dosage, dosage_mask, dosage, dosage_mask)
+            for b in range(bsize):
+                sxx += sxx_tmp[b]
+
+            V_sub = S.transpose(V_sub)
+            #transpose(V_mask_sub, V_mask_sub);
+
+            B = S.beaver_mult(V_sub, V_mask_sub, dosage, dosage_mask)
+
+            dosage = Mat(bsize, m2)
+            dosage_mask = Mat(bsize, m2)
+            V_sub = Mat(bsize, k + NUM_COVS)
+            V_mask_sub = Mat(bsize, k + NUM_COVS)
+
+    ifs.close()
+
+    remainder = n1 % bsize
+    if remainder > 0:
+        #dosage.SetDims(remainder, m2);
+        #dosage_mask.SetDims(remainder, m2);
+        #u_vec.SetLength(remainder);
+        #u_mask_vec.SetLength(remainder);
+        #p_hat_vec.SetLength(remainder);
+        #p_hat_mask_vec.SetLength(remainder);
+        #V_sub.SetDims(remainder, k + Param::NUM_COVS);
+        #V_mask_sub.SetDims(remainder, k + Param::NUM_COVS);
+
+        sx = S.beaver_mult(u_vec, u_mask_vec, dosage, dosage_mask)
+        sxp = S.beaver_mult(p_hat_vec, p_hat_mask_vec, dosage, dosage_mask)
+
+        sxx_tmp = S.beaver_mult_elem(dosage, dosage_mask, dosage, dosage_mask)
+        for b in range(remainder):
+            sxx += sxx_tmp[b]
+
+        V_sub = S.transpose(V_sub)
+        # transpose(V_mask_sub, V_mask_sub);
+
+        B = S.beaver_mult(V_sub, V_mask_sub, dosage, dosage_mask)
+
+    sx = S.beaver_reconstruct(sx)
+    sxp = S.beaver_reconstruct(sxp)
+    sxx = S.beaver_reconstruct(sxx)
+    B = S.beaver_reconstruct(B)
+    sxx *= 1.0
+
+    B = S.transpose(B)
+
+    BB = S.inner_prod(B)
+
+    sp = ModInt(0)
+    # if __cp__ > 0:
+    for i in range(n1):
+        sp += p_hat_mask[i]
+
+        if __cp__ == 1:
+            sp ++ p_hat[i]
+
+    spp = S.beaver_inner_prod(p_hat, p_hat_mask)
+    spp = S.beaver_reconstruct(spp)
+
+    fp_n1_inv = S.double_to_fp(1 / float(n1))
+    sx *= fp_n1_inv
+    sp *= fp_n1_inv
+
+    sx = S.trunc(sx)
+    sp = S.trunc(sp)
+    spp = S.trunc(spp)
+
+    sx_mask = Vec(1)  # ?
+    sx_mask, sx = S.beaver_partition(sx, sx_mask, sx)
+
+    sp_mask = ModInt(0)  # ?
+    sp_mask, sp = S.beaver_partition(sp, sp_mask, sp)
+
+    spsx = S.beaver_mult(sx, sx_mask, sp, sp_mask)
+    sp2 = S.beaver_mult(sp, sp_mask, sp, sp_mask)
+    sx2 = S.beaver_mult_elem(sx, sx_mask, sx, sx_mask)
+
+    spsx = S.beaver_reconstruct(spsx)
+    sp2 = S.beaver_reconstruct(sp2)
+    sx2 = S.beaver_reconstruct(sx2)
+
+    spsx *= n1
+    sp2 *= n1
+    sx2 *= n1
+
+    spsx = S.trunc(spsx)
+    sp2 = S.trunc(sp2)
+    sx2 = S.trunc(sx2)
+
+    # if __cp__ > 0:
+    numer = sxp - spsx
+    for i in range(m2):
+        denom[i] = sxx[i] - sx2[i]
+    denom[m2] = spp - sp2
+
+    tmp_vec, denom1_sqrt_inv = S.sqrt(denom)
+
+    denom2_sqrt_inv = denom1_sqrt_inv[m2]
+    #denom1_sqrt_inv.SetLength(m2);
+
+    z = S.mult_elem(numer, denom1_sqrt_inv)
+    z = S.trunc(z)
+
+    z = S.mult_mat(z, denom2_sqrt_inv)
+    z = S.trunc(z)
+
+    z = S.reveal(z)  # mpc.RevealSym(z);
+
+    if __cp__ == 2:
+        z_double = S.fp_to_double(z)
+        for a in z_double:
+            print a
