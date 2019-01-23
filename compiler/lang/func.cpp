@@ -48,7 +48,7 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 
 Func::Func() :
     BaseFunc(), Generic(), SrcObject(), external(false), name(), inTypes(), outType(types::Void),
-    scope(new Block()), argNames(), argVars(), parentFunc(nullptr), ret(nullptr), yield(nullptr),
+    scope(new Block()), argNames(), argVars(), attributes(), parentFunc(nullptr), ret(nullptr), yield(nullptr),
     resolved(false), gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
@@ -100,6 +100,16 @@ void Func::sawYield(Yield *yield)
 	this->yield = yield;
 	gen = true;
 	outType = types::GenType::get(outType);
+}
+
+void Func::addAttribute(std::string attr)
+{
+	attributes.push_back(attr);
+}
+
+std::vector<std::string> Func::getAttributes()
+{
+	return attributes;
 }
 
 /*
