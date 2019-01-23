@@ -65,6 +65,20 @@ class Int(p: ptr[byte]):
     extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
     return MInt(ZZ_to_ZZ_p(x.p))
 
+  def bit(self: Int, n: int) -> byte:
+    extern c ZZ_bit(ptr[byte], int) -> byte
+    return ZZ_bit(self, n)
+  def bit_rep(self: Int, n: int) -> byte:
+    extern c ZZ_bit_rep(ptr[byte], int) -> byte
+    return ZZ_bit_rep(self, n)
+  def set_bit(self: Int, n: int):
+    extern c ZZ_set_bit(ptr[byte], int)
+    ZZ_set_bit(self, n)
+  def trunc(self: Int, n: int):
+    # NEEDS trunc(rep())
+    extern c ZZ_trunc(ptr[byte], int) -> ptr[byte]
+    return Int(ZZ_trunc(self, n))
+
 class MInt(p: ptr[byte]):
   def __init__(self: MInt):
     extern c ZZ_p_init(int) -> ptr[byte]
@@ -159,7 +173,7 @@ class Float(i: MInt):
     x = self.i.rep()
     sn = 1.0
     if x > twokm1:
-      x = MInt.modulis() - x
+      x = MInt.modulus() - x
       sn -= 1
     x_trunc = x.trunc(k - 1)
     x_int = x_trunc.right_shift(f)
@@ -273,7 +287,7 @@ class Vector[`t](items: list[`t]):
 
   def num_to_bits[`t](a: Vector[`t], bitlen: int) -> Matrix[`t]:
     return Matrix(
-      [bit(rep(el), bitlen - 1 - j) for c in range(bitlen)] for el in a)
+      [el.bit_rep(bitlen - 1 - c) for c in range(bitlen)] for el in a)
 
   def send(self: Vector[`t], s: Socket, buf: ptr[byte], bytes: int, per_buf: int):
     stored_in_buf, buf_ptr = 0, buf
@@ -425,7 +439,7 @@ class Matrix[`t](items: list[Vector[`t]]):
 
   def random[`t](sz: tuple[int, int]) -> Matrix[`t]:
     nr, nc = sz
-    return Mat(
+    return Matrix(
       [`t.random(0) for c in range(nc)] 
       for r in range(nr))
 

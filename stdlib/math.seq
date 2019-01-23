@@ -2,6 +2,8 @@ extern c log(x: float) -> float
 extern c exp(x: float) -> float
 extern c erf(x: float) -> float
 extern c sqrt(x: float) -> float
+extern c ceil(x: float) -> float
+extern c log2(x: float) -> float
 
 def factorial(x: int) -> int:
     r = 1

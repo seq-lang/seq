@@ -1,5 +1,6 @@
 from secure.socket import Socket
 from secure.types import *
+import math
 
 type Vec = Vector[MInt]
 type Mat = Matrix[MInt]
@@ -7,16 +8,26 @@ type Mat = Matrix[MInt]
 NBIT_K = 60
 NBIT_F = 45
 NBIT_V = 64
+DIV_MAX_N = 100000
+ITER_PER_EVAL = 5
+
+CP0 = __cp__ == 0
+CP1 = __cp__ == 1 
+CP2 = __cp__ == 2 
+CP  = CP1 or CP2
 
 class MPC(
   p: ptr[byte], 
   fid: int, 
-  float_cache: dict[tuple(int, int, int), MInt]
+  float_cache: dict[tuple[int, int, int], MInt],
+  lagrange_cache: list[Mat]
 ):
   def __init__(self: MPC, pairs: list[tuple[int,int]], pid: int) -> MPC:
     extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
     self.p = seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len))
     self.fid = 0
+
+    # TODO: init lagrange cache
 
   def __exit__(self: MPC):
     extern c seq_mpcenv_cleanup(ptr[byte]) -> ptr[byte]
@@ -53,6 +64,10 @@ class MPC(
   def restore_seed(S: MPC):
     extern c seq_mpc_restore_seed(ptr[byte])
     seq_mpc_restore_seed(S.p)
+
+  def primes(S: MPC, fid: int) -> Int:
+    extern c seq_mpc_get_prime(ptr[byte], int) -> ptr[byte]
+    return Int(seq_mpc_get_prime(S.p, fid))
 
   ######################################################################
   # Communication
@@ -129,7 +144,7 @@ class MPC(
       return (ar, am)
 
   @secure
-  def BM[`t](S: MPCEnv, ar: `t, am: `t, br: `t, bm: `t, mul):
+  def BM[`t](S: MPC, ar: `t, am: `t, br: `t, bm: `t, mul):
     if CP0:
       return S.mod(mul(am, bm))
     elif CP1:
@@ -145,7 +160,7 @@ class MPC(
       ab -= S.random(ab)
       S.restore_seed()
       ab = S.mod(ab)
-      self.send(2, ab)
+      S.send(2, ab)
       return ab
 
     if CP1:
@@ -153,7 +168,7 @@ class MPC(
       ab += S.random(ab)
       S.restore_seed()
     elif CP2:
-      ab += self.receive(0, ab)
+      ab += S.receive(0, ab)
     ab = S.mod(ab)
     return ab
       
@@ -210,7 +225,7 @@ class MPC(
         end = min(start + DIV_MAX_N, n)
         batch_size = end - start
         c_copy = S.div(a[start:start + batch_size], 
-          b_copy[start:start + batch_size])
+          b[start:start + batch_size])
         c.update(start, start + batch_size, c_copy)
       return c
 
@@ -222,7 +237,7 @@ class MPC(
     b_scaled = S.mul(b, s) |> S.trunc(..., NBIT_K, NBIT_K - NBIT_F)
     b_scaled_eq = S.mul(b_scaled, b_scaled) |> S.trunc
 
-    scaled_est = -10 * b_scaled + 5 * b_scaled_sq if CP else Vec(n)
+    scaled_est = -10 * b_scaled + 5 * b_scaled_eq if CP else Vec(n)
     if CP1:
       scaled_est += S.get_float(5.943, NBIT_K, NBIT_F)
 
@@ -261,36 +276,36 @@ class MPC(
   @secure
   def is_positive(S: MPC, a: Vec) -> Vec:
     n = len(a)
-    self.fid = 0
-    nbits = self.zz_bits()
-    self.fid = 2
+    S.fid = 0
+    nbits = S.zz_bits()
+    S.fid = 2
 
     r, r_bits = Vec(), Matrix[Int](n, nbits)
     if CP0:
-      r = self.random(a)
+      r = S.random(a)
       r_bits = r.num_to_bits(nbits) 
 
-      self.switch_seed(1)
-      r_mask, r_bits_mask = self.random(a), self.random(r_bits)
-      self.restore_seed()
+      S.switch_seed(1)
+      r_mask, r_bits_mask = S.random(a), S.random(r_bits)
+      S.restore_seed()
 
       r -= r_mask  
       r_bits = S.mod(r_bits - r_bits_mask)
         
-      self.send(2, r)
-      self.send(2, r_bits)
+      S.send(2, r)
+      S.send(2, r_bits)
     elif CP1:
-      self.switch_seed(0)
-      r, r_bits = self.random(a), self.random(r_bits)
-      self.restore_seed()
+      S.switch_seed(0)
+      r, r_bits = S.random(a), S.random(r_bits)
+      S.restore_seed()
     elif CP2:
-      r, r_bits = self.receive(0, a), self.receive(0, r_bits)
+      r, r_bits = S.receive(0, a), S.receive(0, r_bits)
     
     c = (2 * a + r if CP else Vec(n)) |> S.reveal
     c_bits = c.num_to_bits(nbits) if CP else Matrix[Int](n, nbits)
       
     # Incorrect result if r = 0, which happens with probaility 1 / BASE_P
-    no_overflow = S.less_than_bits(r_bits, c_bits, pub=2)
+    no_overflow = S.less_than_bits(r_bits, c_bits, 2)
 
     c_xor_r = Vector[Int](n)
     if CP:
@@ -372,12 +387,12 @@ class MPC(
     n = len(a)
     S.fid = 1
     
-    r, r_bits = S.share_random_bits(NBIT_K, n)
+    r, rbits = S.share_random_bits(NBIT_K, n)
     e = a + r if CP else Vec(n)
     e = S.reveal(e)
     ebits = e.num_to_bits(NBIT_K) if CP else Matrix[Int](n, NBIT_K)
     
-    c = S.less_than_bits_public(rbits, ebits)
+    c = S.less_than_bits(rbits, ebits, 2)
     if CP:
       c *= -1
       if CP1: c += 1
@@ -401,7 +416,7 @@ class MPC(
     Tneg = S.prefix_or(tpneg)
     efir = S.mod(ebits, Tneg) if CP else Matrix[Int](n, NBIT_K)
     rfir = S.mul(rbits, Tneg)
-    double_flag = S.less_than_bits(efir, rfir)
+    double_flag = S.less_than_bits(efir, rfir, 0)
 
     half_len = NBIT_K / 2
     odd_bits, even_bits = Matrix[Int](n, half_len), Matrix[Int](n, half_len)
@@ -426,7 +441,7 @@ class MPC(
     diff = S.mul(double_flag, diff)
 
     b_mat = \
-      S.mod(even_bits_sum + diff) if CP else Vector[Int](n) \
+      S.mod(even_bit_sum + diff) if CP else Vector[Int](n) \
       |> S.table_lookup(..., 1)
     return (b_mat[1], b_mat[0]) if CP else (Vector[Int](n), Vector[Int](n))
 
@@ -461,7 +476,7 @@ class MPC(
         else:
           ampow = S.receive(0, ampow)
         arpow = ar * ar
-        for p in range(1, apow.rows()):
+        for p in range(1, arpow.rows()):
           arpow[p] = S.mod(arpow[p - 1] * ar)
         t = S.get_pascal_matrix(pow)
         b = Matrix[`t](pow + 1, n)
@@ -491,7 +506,7 @@ class MPC(
 
   @secure
   def table_lookup(S: MPC, a, id: int) -> Mat:
-    return S.evaluate_poly(Vec(a), cache[id])
+    return S.evaluate_poly(Vec(a), S.lagrange_cache[id])
 
   ######################################################################
   # Bits
@@ -558,7 +573,7 @@ class MPC(
           xpre[L * i + j][k] = x[L * i + k] if k <= j else Int(0)
     y = S.fan_in_or(xpre)
     
-    f = [Matrix[Int](1, l) for _ in range(n)]
+    f = [Matrix[Int](1, L) for _ in range(n)]
     if CP:
       for i, j in iproduct(n, L):
         f[i][0][j] = x[L * i] if j == 0 else y[L * i + j] - y[L * i + j - 1]
@@ -627,14 +642,14 @@ class MPC(
       S.switch_seed(0)
       r_mask, rbits_mask = S.random(Vec(n)), S.random(Mat(n, k))
       S.restore_seed()
-      return r, rbits
+      return r_mask, rbits_mask
     elif CP2:
-      r, r_bits = S.receive(0, Vec(n)), S.receive(0, Mat(n, k))
+      r, rbits = S.receive(0, Vec(n)), S.receive(0, Mat(n, k))
       return r, rbits
 
   @secure
   def lagrange_interpolation_simple(S: MPC, y: Vector[Int]) -> Vec:
-    return S.lagrange_interpolation(Vec(range(1, n + 1)), y)
+    return S.lagrange_interpolation(Vec(range(1, len(y) + 1)), y)
 
   ######################################################################
   # Linear algebra
@@ -658,7 +673,7 @@ class MPC(
     if CP: vdot[0] = 2 * (xdot[0] + dot_shift)
     invr, invm = S.sqrt(vdot)[1] |> S.BP
     
-    vr = xr if CP else Vec(n)
+    vr = xr if CP else Vec(len(x))
     if CP: vr[0] += sr 
     vm = xm
     vm[0] += sm
@@ -672,7 +687,6 @@ class MPC(
     if CP: R = Mat(n, n, 0)
     Ap = A if CP else Mat(n, n)
     Q = Mat()
-
     for i in range(n - 1):
       v = [S.householder(Ap[0])] |> Mat
       vt = S.transpose(v) if CP else Mat(Ap.cols(), 1)
@@ -682,6 +696,7 @@ class MPC(
         if CP1:
           for j in range(P.cols()): 
             P[j][j] += S.get_float(1, NBIT_K, NBIT_F)
+      B = Mat()
       if i == 0:
         Q, B = P, S.matmul(Ap, P) |> S.trunc
       else:
@@ -767,7 +782,7 @@ class MPC(
       vv = S.matmul(vt, v) |> S.trunc
       P = Mat(Ap.cols(), Ap.cols())
       if CP:
-        P[0][0] = S.get_float(1, NBIT_K, NBIT_F) if CP1 else 0z
+        P[0][0] = S.get_float(1, NBIT_K, NBIT_F) if CP1 else MInt(0)
         for j, k in product(range(1, Ap.cols()), range(1, Ap.cols())):
           P[j][k] = -2 * vv[j - 1][k - 1]
           if CP1 and j == k:
@@ -781,7 +796,7 @@ class MPC(
       Qsub = S.matmul(Qsub, P) |> S.trunc
       Ap = Mat(B.rows() - 1, B.cols() - 1)
       if CP:
-        for j, k in iproduct(c, n - i): 
+        for j, k in iproduct(n, n - i): 
           Q[j][k + i] += Qsub[j][k]
 
         indices = [(0, 0), (1, 0), (0, 1)]
@@ -833,7 +848,7 @@ class MPC(
         t[i][j] = 1
       else:
         t[i][j] = S.mod(t[i - 1][j - 1] + t[i - 1][j])
-    return r
+    return t
 
   @secure
   def lagrange_interpolation[`t](S: MPC, x: Vector[int], y: Vector[`t]) -> Vector[`t]:
@@ -866,7 +881,7 @@ class MPC(
     r, r_low = Mat(), Mat()
     if CP0:
       r = Mat.rand_bits(len(a), k + NBIT_V)
-      r_low = [[Int.trunc(rep(cl), m) for cl in rw] for rw in r]
+      r_low = Matrix([cl.trunc(m) for cl in rw] for rw in r)
 
       S.switch_seed(1)
       r_mask, r_low_mask = S.random(a), S.random(a)
@@ -883,11 +898,11 @@ class MPC(
     elif CP2:
       r, r_low = S.receive(0, a), S.receive(0, a)
     
-    c = a + r if CP else Mat(*len(a))
+    c = a + r if CP else Mat(a.rows(), a.cols())
     c = S.reveal(c)
 
     if CP: 
-      c_low = Mat([[ZZ.trunc(rep(cl), m) for cl in rw] for rw in c]) 
+      c_low = Mat([[cl.trunc(m) for cl in rw] for rw in c]) 
       a += r_low
       if CP1: a -= c_low
 
@@ -898,7 +913,7 @@ class MPC(
   @secure
   @mutable # x
   def mod[`t](S: MPC, x: `t) -> `t:
-    x %= primes[S.fid]
+    x %= S.primes(S.fid)
     return x
   
   @secure
@@ -923,6 +938,4 @@ class MPC(
     r = Float(x, k, int)
     S.float_cache[(xx, k, f)] = r
     return r
-
-
 

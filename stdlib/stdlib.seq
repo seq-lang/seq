@@ -101,6 +101,12 @@ def iproduct(x: int, y: int):
         for j in range(y):
             yield i, j
 
+def min(a, b):
+    return a if a < b else b
+
+def max(a, b):
+    return a if a > b else b
+
 import! list
 import! dict
 import! set

@@ -138,7 +138,8 @@ struct
           Llvm.Stmt.pass ()
         | _ ->
           let var_stmt = Llvm.Stmt.var rh_expr in
-          Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
+          Ctx.add ctx ~toplevel ~global:toplevel 
+            var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
           var_stmt
       end
     | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)

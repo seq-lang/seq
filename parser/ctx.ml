@@ -160,7 +160,7 @@ let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser =
 
           ctx.parser ~file:"<mpc>" ctx 
             ("import secure.mpc as __mpc__\n" ^
-             "__mpc_env__ = __mpc__.MPCEnv([(0,1),(0,2),(1,2)], __cp__)");
+             "__mpc_env__ = __mpc__.MPC([(0,1),(0,2),(1,2)], __cp__)");
           begin match in_scope ctx "__mpc_env__" with
             | Some (Namespace.Var var, _) ->
               Llvm.Var.set_global var
