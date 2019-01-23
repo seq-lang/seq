@@ -1,5 +1,4 @@
 from secure.types import *
-from secure.ntl import *
 
 def gwas_protocol(pheno: Vec, cov: Mat, ifs):
     S = __mpc_env__
@@ -119,7 +118,7 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
         if i % bsize == bsize - 1 or i == n1 - 1:
             if i % bsize < bsize - 1:
                 new_bsize = (i % bsize) + 1
-                for k in range(3)
+                for k in range(3):
                     g[k] = Mat(new_bsize, m1)
                     g_mask[k] = Mat(new_bsize, m1)
 
@@ -528,7 +527,7 @@ def gwas_protocol(pheno: Vec, cov: Mat, ifs):
     VVp_mask = Vec(1)  # ?
     VVp_mask, VVp = S.beaver_reconstruct(VVp, VVp_mask, VVp)
 
-    p_hat = pheno*1.0 - VVp;
+    p_hat = pheno*1.0 - VVp
     p_hat_mask = fp_one*pheno_mask - VVp_mask
 
     V_sum = Vec(k + NUM_COVS)
