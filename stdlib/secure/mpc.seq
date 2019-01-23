@@ -22,16 +22,15 @@ class MPC(
   float_cache: dict[tuple[int, int, int], MInt],
   lagrange_cache: list[Mat]
 ):
-  def __init__(self: MPC, pairs: list[tuple[int,int]], pid: int) -> MPC:
+  def __init__(S: MPC, pairs: list[tuple[int,int]], pid: int) -> MPC:
     extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
-    self.p = seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len))
-    self.fid = 0
-
+    S.p = seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len))
+    S.fid = 0
     # TODO: init lagrange cache
 
-  def __exit__(self: MPC):
+  def __exit__(S: MPC):
     extern c seq_mpcenv_cleanup(ptr[byte]) -> ptr[byte]
-    self.p = seq_mpcenv_cleanup(self.p)
+    S.p = seq_mpcenv_cleanup(S.p)
 
   ######################################################################
   # C++ Calls
@@ -740,14 +739,12 @@ class MPC(
         for j, k in iproduct(Ap.rows(), Ap.cols()):
           Ap[j][k] = B[j + 1][k + 1]
 
-    # TODO clear matrix at initialization
     Q = Mat(c, n) 
     if CP1:
       Q = Mat(c, n, 0)
       for i in range(c):
         Q[i][i] = S.get_float(1.0)
 
-    # TODO check range
     for i in range(c - 1, -1, -1):
       v = Mat(1, len(v_list[i]))
       if CP: v[0] = v_list[i]

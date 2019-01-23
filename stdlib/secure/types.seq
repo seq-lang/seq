@@ -1,7 +1,6 @@
 from secure.socket import Socket
 
-# Otherwise COPY
-# Vec(n) RESERVES; Mat(x, y) RESERVES?!
+# TODO: Vec(n) RESERVES; Mat(x, y) RESERVES?!
 
 class Int(p: ptr[byte]):
   def __init__(self: Int):
