@@ -330,6 +330,7 @@ types::GenericType *types::GenericType::clone(Generic *ref)
 	auto *x = types::GenericType::get();
 	ref->addClone(this, x);
 	x->setName(genericName);
+	x->extensions = extensions;  // no need to clone these
 
 	if (type) {
 		x->realize(type->clone(ref));
@@ -405,10 +406,6 @@ bool Generic::is(Generic *other) const
 	return typeMatch<types::GenericType>(generics, other->generics);
 }
 
-void Generic::clearRealizationCache()
-{
-}
-
 void Generic::addCachedRealized(std::vector<types::Type *> types, Generic *x)
 {
 }
@@ -424,8 +421,7 @@ void Generic::setCloneBase(Generic *x, Generic *ref)
 
 void Generic::addGenerics(int count)
 {
-	generics.clear();
-	clearRealizationCache();
+	assert(generics.empty());
 
 	for (int i = 0; i < count; i++)
 		generics.push_back(types::GenericType::get());
