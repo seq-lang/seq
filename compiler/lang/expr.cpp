@@ -716,7 +716,7 @@ GenExpr *GenExpr::clone(Generic *ref)
 {
 	std::vector<Var *> capturesCloned;
 	for (auto *var : captures)
-		capturesCloned.push_back(var);
+		capturesCloned.push_back(var->clone(ref));
 	SEQ_RETURN_CLONE(new GenExpr(val->clone(ref), body->clone(ref), capturesCloned));
 }
 
