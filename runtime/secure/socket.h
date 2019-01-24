@@ -111,7 +111,7 @@ public:
       fprintf(stderr, "Error when binding! port %d -- %s\n", nPort, strerror(errno)); 
       return false;
     } else {
-      fprintf(stderr, "Listening on port %d\n", nPort); 
+      // fprintf(stderr, "Listening on port %d\n", nPort); 
       return true;
     }
   }
@@ -155,9 +155,9 @@ public:
 
     int ret = connect(m_hSock, (sockaddr*)&sockAddr, sizeof(sockAddr));
     if (ret < 0) {
-      fprintf(stderr, "Error when connecting! port %d -- %s\n", port, strerror(errno)); 
+      // fprintf(stderr, "Error when connecting! port %d -- %s\n", port, strerror(errno)); 
     } else {
-      fprintf(stderr, "Connected to port %d\n", port); 
+      // fprintf(stderr, "Connected to port %d\n", port); 
     }
 
     if( ret >= 0 && lTOSMilisec > 0 ) {

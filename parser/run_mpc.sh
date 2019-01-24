@@ -2,7 +2,8 @@
 
 export LD_LIBRARY_PATH=. 
 export SEQ_PATH=../stdlib 
-unset SEQ_DEBUG
+# unset SEQ_DEBUG
+export SEQ_DEBUG=1
 
 for PORT in 8000 8001 8002 8003 8004
 do
@@ -19,6 +20,7 @@ pid1=$!
 (SEQ_MPC_CP=2 ./main.exe $1 2>&1 | sed "s/^/[CP2] /" | sed "s,.*,$(tput setaf 2)&$(tput sgr0),") &
 pid2=$!
 
+# SEQ_MPC_CP=0 lldb -o run ./main.exe -- $1
 SEQ_MPC_CP=0 ./main.exe $1 2>&1 | sed "s/^/[CP0] /"
 echo "Done! $?" 
 

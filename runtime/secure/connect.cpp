@@ -53,7 +53,7 @@ bool Listen(CSocket& socket, int port) {
 }
 
 bool OpenChannel(CSocket& socket, int port) {
-  cout << "Starting to listen on port " << port << endl;
+  // cout << "Starting to listen on port " << port << endl;
   return Listen(socket, port);
 }
 

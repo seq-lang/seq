@@ -37,9 +37,9 @@ let parse_string ctx ?file ?(debug=false) ?(jit=false) code =
         col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol;
         len = 1 } 
     in
+    (* Printexc.print_backtrace stderr; *)
     raise @@ CompilerError (Parser, [pos])
   | SeqCamlError (msg, pos) ->
-    (* Printexc.print_backtrace stderr; *)
     raise @@ CompilerError (Descent msg, pos)
   | SeqCError (msg, pos) ->
     raise @@ CompilerError (Compiler msg, [pos])

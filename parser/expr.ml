@@ -89,7 +89,7 @@ struct
     let i = Llvm.Expr.int i in
     match kind with 
     | ("z" | "Z") ->
-      let t = get_internal_type ctx "ModInt" in
+      let t = get_internal_type ctx "MInt" in
       Llvm.Expr.construct t [i]
     | _ -> i
 

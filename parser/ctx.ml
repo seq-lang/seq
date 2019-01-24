@@ -158,14 +158,14 @@ let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser =
           add ctx ~internal ~global ~toplevel 
             "__cp__" @@ Namespace.Var var;
 
-          ctx.parser ~file:"<mpc>" ctx 
-            ("import secure.mpc as __mpc__\n" ^
-             "__mpc_env__ = __mpc__.MPC([(0,1),(0,2),(1,2)], __cp__)");
-          begin match in_scope ctx "__mpc_env__" with
+          (* ctx.parser ~file:"<mpc>" ctx 
+            ("from secure.mpc import MPC as __MPC__\n" ^
+             "__mpc__ = __MPC__([(0,1),(0,2),(1,2)], __cp__)");
+          begin match in_scope ctx "__mpc__" with
             | Some (Namespace.Var var, _) ->
               Llvm.Var.set_global var
-            | _ -> failwith "cannot initialize __mpc_env__"
-          end
+            | _ -> failwith "cannot initialize __mpc__"
+          end *)
         | Some _ -> 
           failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
         | None -> ()

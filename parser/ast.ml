@@ -169,6 +169,7 @@ struct
     | Try         of (t list * catch tt list * t list option)
     | Global      of string
     | Throw       of ExprNode.t
+    | Special     of (string * t list)
   and generic =
     | Function of fn_t
     | Class of class_t 

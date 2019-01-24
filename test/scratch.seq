@@ -1,17 +1,13 @@
 # 786
 
-import itertools
-import time
+X = 1
+A = True if X == 1 else False
 
-type h_t(l: int)
+class Foo[`t]():
+	def mew(s: Foo[`t], x: `t):
+		print A
+		return x + 5
 
-@secure
-def hai(self):
-	print 'Abe', self.l
-	return 2
-
-___dump___
-
-
-print hai(h_t(1))
+f = Foo[int]()
+print f.mew(3)
 

@@ -11,10 +11,16 @@ NBIT_V = 64
 DIV_MAX_N = 100000
 ITER_PER_EVAL = 5
 
-CP0 = __cp__ == 0
-CP1 = __cp__ == 1 
-CP2 = __cp__ == 2 
-CP  = CP1 or CP2
+print 'HERE', __cp__
+CP0 = True if __cp__ == 0 else False
+CP1 = True if __cp__ == 1 else False 
+CP2 = True if __cp__ == 2 else False 
+CP  = True if CP1 or CP2  else False
+
+print CP0, True if __cp__ == 0 else False
+print CP1, True if __cp__ == 1 else False 
+print CP2, True if __cp__ == 2 else False 
+print CP , True if CP1 or CP2  else False
 
 class MPC(
   p: ptr[byte], 
@@ -22,15 +28,16 @@ class MPC(
   float_cache: dict[tuple[int, int, int], MInt],
   lagrange_cache: list[Mat]
 ):
-  def __init__(S: MPC, pairs: list[tuple[int,int]], pid: int) -> MPC:
+  def __init__(S: MPC, pairs: list[tuple[int,int]], pid: int):
     extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
     S.p = seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len))
     S.fid = 0
     # TODO: init lagrange cache
 
-  def __exit__(S: MPC):
-    extern c seq_mpcenv_cleanup(ptr[byte]) -> ptr[byte]
-    S.p = seq_mpcenv_cleanup(S.p)
+  def cleanup(S: MPC):
+    extern c seq_mpcenv_cleanup(ptr[byte])
+    seq_mpcenv_cleanup(S.p)
+    # S.p = 0
 
   ######################################################################
   # C++ Calls
@@ -64,9 +71,9 @@ class MPC(
     extern c seq_mpc_restore_seed(ptr[byte])
     seq_mpc_restore_seed(S.p)
 
-  def primes(S: MPC, fid: int) -> Int:
+  def prime(S: MPC, fid: int) -> Int:
     extern c seq_mpc_get_prime(ptr[byte], int) -> ptr[byte]
-    return Int(seq_mpc_get_prime(S.p, fid))
+    return Int(seq_mpc_get_prime(S.p, S.fid))
 
   ######################################################################
   # Communication
@@ -88,19 +95,29 @@ class MPC(
 
   @secure
   def share[`t](S: MPC, x: `t) -> `t:
+    # global CP, CP0, CP1, CP2
+    print 'entering', __cp__, CP0, CP1, CP2
     if CP0:
+      print 'a'
       S.switch_seed(1)
-      r = S.random(x)
+      print 'b'
+      r = `t.random(len(x))
+      print 'c'
+      print r
       S.restore_seed()
+      print '```', x, r, x - r
       S.send(2, x - r)
       return x
     elif CP1:
       S.switch_seed(0)
-      r = S.random(x)
+      r = `t.random(len(x))
+      print '```', r
       S.restore_seed()
       return r
     elif CP2:
-      return S.receive(0, x)
+      xr = S.receive(0, x)
+      print '```', xr
+      return xr
 
   @secure
   @mutable # a
@@ -129,15 +146,15 @@ class MPC(
     if CP0:
       # essentially sum of 2 random numbers...
       S.switch_seed(1)
-      am = S.random(a)
+      am = `t.random(len(a))
       S.restore_seed()
       S.switch_seed(2)
-      am += S.random(a)
+      am += `t.random(len(a))
       S.restore_seed()
       return (`t(len(am)), am)
     else:
       S.switch_seed(0)
-      am = S.random(a)
+      am = `t.random(len(a))
       S.restore_seed()
       ar = S.reveal(a - am)
       return (ar, am)
@@ -156,7 +173,7 @@ class MPC(
   def BR[`t](S: MPC, ab: `t) -> `t:
     if CP0:
       S.switch_seed(1)
-      ab -= S.random(ab)
+      ab -= `t.random(len(ab))
       S.restore_seed()
       ab = S.mod(ab)
       S.send(2, ab)
@@ -164,7 +181,7 @@ class MPC(
 
     if CP1:
       S.switch_seed(0)
-      ab += S.random(ab)
+      ab += `t.random(len(ab))
       S.restore_seed()
     elif CP2:
       ab += S.receive(0, ab)
@@ -281,11 +298,11 @@ class MPC(
 
     r, r_bits = Vec(), Matrix[Int](n, nbits)
     if CP0:
-      r = S.random(a)
+      r = Vec.random(n)
       r_bits = r.num_to_bits(nbits) 
 
       S.switch_seed(1)
-      r_mask, r_bits_mask = S.random(a), S.random(r_bits)
+      r_mask, r_bits_mask = Vec.random(n), Vec.random(n)
       S.restore_seed()
 
       r -= r_mask  
@@ -295,7 +312,7 @@ class MPC(
       S.send(2, r_bits)
     elif CP1:
       S.switch_seed(0)
-      r, r_bits = S.random(a), S.random(r_bits)
+      r, r_bits = Vec.random(n), Vec.random(n)
       S.restore_seed()
     elif CP2:
       r, r_bits = S.receive(0, a), S.receive(0, r_bits)
@@ -462,7 +479,7 @@ class MPC(
           ampow[p] = S.mod(ampow[p - 1] * am)
         
         S.switch_seed(1)
-        ampow = S.mod(ampow - S.random(ampow))
+        ampow = S.mod(ampow - Vector[`t].random(len(ampow)))
         S.restore_seed()
         S.send(2, ampow)
         return Matrix[`t](pow + 1, n)
@@ -470,7 +487,7 @@ class MPC(
         ampow = Matrix[`t](pow - 1, n)
         if CP1:
           S.switch_seed(0)
-          ampow = S.random(ampow)
+          ampow = Vector[`t].random(len(ampow))
           S.restore_seed()
         else:
           ampow = S.receive(0, ampow)
@@ -628,7 +645,7 @@ class MPC(
       rbits = r.num_to_bits(k)
 
       S.switch_seed(1)
-      r_mask, rbits_mask = S.random(Vec(n)), S.random(Mat(n, k))
+      r_mask, rbits_mask = Vec.random(n), Mat.random((n, k))
       S.restore_seed()
 
       r -= r_mask
@@ -639,7 +656,7 @@ class MPC(
       return r, rbits
     elif CP1:
       S.switch_seed(0)
-      r_mask, rbits_mask = S.random(Vec(n)), S.random(Mat(n, k))
+      r_mask, rbits_mask = Vec.random(n), Mat.random((n, k))
       S.restore_seed()
       return r_mask, rbits_mask
     elif CP2:
@@ -881,7 +898,7 @@ class MPC(
       r_low = Matrix([cl.trunc(m) for cl in rw] for rw in r)
 
       S.switch_seed(1)
-      r_mask, r_low_mask = S.random(a), S.random(a)
+      r_mask, r_low_mask = Mat.random(len(a)), Mat.random(len(a))
       S.restore_seed()
 
       r -= r_mask 
@@ -890,7 +907,7 @@ class MPC(
       S.send(2, r_low)
     elif CP1:
       S.switch_seed(0)
-      r, r_low = S.random(a), S.random(a)  
+      r, r_low = Mat.random(len(a)), Mat.random(len(a))
       S.restore_seed()
     elif CP2:
       r, r_low = S.receive(0, a), S.receive(0, a)
@@ -910,7 +927,7 @@ class MPC(
   @secure
   @mutable # x
   def mod[`t](S: MPC, x: `t) -> `t:
-    x %= S.primes(S.fid)
+    x %= S.prime()
     return x
   
   @secure

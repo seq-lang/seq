@@ -13,25 +13,27 @@
 using namespace NTL;
 using namespace std;
 
+// bool debug=false;
+
 bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
-  cout << "Initializing MPC environment" << endl;
+  debug = false;
+  if (debug) cerr << "Initializing MPC environment" << endl;
 
   /* Set base prime for the finite field */
   ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-  cerr << "Base prime is " << base_p << endl;
+  // cerr << "Base prime is " << base_p << endl;
   ZZ_p::init(base_p);
 
   this->pid = pid;
   this->clock_start = chrono::steady_clock::now();
-  debug = false;
 
   while (!SetupChannels(pairs)) {
-    cout << "MPCEnv::Initialize: failed to initialize communication channels" << endl;
+    if (debug) cerr << "MPCEnv::Initialize: failed to initialize communication channels" << endl;
     sleep(3);
   }
 
   if (!SetupPRGs(pairs)) {
-    cout << "MPCEnv::Initialize: failed to initialize PRGs" << endl;
+    cerr << "MPCEnv::Initialize: failed to initialize PRGs" << endl;
     return false;
   }
 
@@ -61,11 +63,11 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
   }
 
   if (!found1 || !found2) {
-    cout << "Failed to find suitable small primes" << endl;
+    cerr << "Failed to find suitable small primes" << endl;
     return false;
   }
 
-  cout << "Small base primes selected: " << primes[1] << "(>" << thres1 << ") and "
+  if (debug) cerr << "Small base primes selected: " << primes[1] << "(>" << thres1 << ") and "
        << primes[2] << "(>" << thres2 << ")" << endl;
 
   ZZ_bytes.SetLength(primes.length());
@@ -83,15 +85,15 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
 
   buf = (unsigned char *) malloc(Param::MPC_BUF_SIZE + GCM_AUTH_TAG_LEN);
   if (buf == NULL) {
-    cout << "Fail to allocate MPC buffer" << endl;
+    cerr << "Fail to allocate MPC buffer" << endl;
     exit(1);
   } else {
-    cout << "Allocated MPC buffer of size " << Param::MPC_BUF_SIZE << endl;
+    if (debug)  cerr << "Allocated MPC buffer of size " << Param::MPC_BUF_SIZE << endl;
   }
 
-  cout << "Number of bytes per ZZ_p: " << ZZ_bytes[0] << endl;
+  if (debug) cerr << "Number of bytes per ZZ_p: " << ZZ_bytes[0] << endl;
 
-  cout << "Setting up lookup tables" << endl;
+  if (debug) cerr << "Setting up lookup tables" << endl;
 
   table_cache.SetLength(3);
   table_type_ZZ.SetLength(3);
@@ -136,7 +138,7 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
     ifstream ifs;
     ifs.open("sigmoid_approx.txt");
     if (!ifs.is_open()) {
-      cout << "Error opening sigmoid_approx.txt" << endl;
+      cerr << "Error opening sigmoid_approx.txt" << endl;
       clear(table);
     }
     for (int i = 0; i < table.NumCols(); i++) {
@@ -156,7 +158,7 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
   table_cache[2] = table;
   table_field_index[2] = 0;
 
-  cout << "Generating lagrange cache" << endl;
+  if (debug) cerr << "Generating lagrange cache" << endl;
 
   for (int cid = 0; cid < table_cache.length(); cid++) {
     long nrow = table_cache[cid].NumRows();
@@ -169,7 +171,7 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
     }
 
     if (pid > 0) {
-      cout << "Lagrange interpolation for Table " << cid << " ... ";
+      if (debug) cerr << "Lagrange interpolation for Table " << cid << " ... ";
       for (int i = 0; i < nrow; i++) {
         Vec<long> x;
         Vec<ZZ_p> y;
@@ -191,10 +193,11 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
 
         lagrange_interp(lagrange_cache[cid][i], x, y);
       }
-      cout << "done" << endl;
+      if (debug) cerr << "done" << endl;
     }
   }
 
+  cerr << "MPC Initialized" << endl;
   return true;
 }
 
@@ -229,7 +232,7 @@ bool MPCEnv::SetupChannels(vector< pair<int, int> > &pairs) {
 
     if (p1 == pid) {
       if (!OpenChannel(sockets[pother], port)) {
-        cout << "Failed to connect with P" << pother << endl;
+        if (debug) cerr << "Failed to connect with P" << pother << endl;
         return false;
       }
     } else {
@@ -243,20 +246,20 @@ bool MPCEnv::SetupChannels(vector< pair<int, int> > &pairs) {
       }
 
       if (!Connect(sockets[pother], ip_addr.c_str(), port)) {
-        cout << "Failed to connect with P" << pother << endl;
+        if (debug) cerr << "Failed to connect with P" << pother << endl;
         return false;
       }
     }
 
     if (!sockets[pother].SetKey(key_file)) {
-      cout << "Failed to establish a secure channel with P" << pother << endl;
+      if (debug) cerr << "Failed to establish a secure channel with P" << pother << endl;
       return false;
     }
 
-    cout << "Established a secure channel with P" << pother << endl;
+    if (debug) cerr << "Established a secure channel with P" << pother << endl;
   }
 
-  cout << "Network setup complete" << endl;
+  if (debug) cerr << "Network setup complete" << endl;
   return true;
 }
 
@@ -267,7 +270,7 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
   /* Internal PRG */
   int bytes = randread(key, key_len);
   if (bytes != key_len) {
-    cout << "Failed to generate an internal PRG key" << endl;
+    cerr << "Failed to generate an internal PRG key" << endl;
     return false;
   }
 
@@ -278,13 +281,13 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
   string key_file = Param::KEY_PATH + "global.key";
   ifs.open(key_file.c_str(), ios::binary);
   if (!ifs.is_open()) {
-    cout << "Failed to open global PRG key file: " << key_file << endl;
+    cerr << "Failed to open global PRG key file: " << key_file << endl;
     return false;
   }
 
   ifs.read((char *)key, PRF_KEY_BYTES);
   if (ifs.gcount() != PRF_KEY_BYTES) {
-    cout << "Failed to read " << PRF_KEY_BYTES << " bytes from global key file: " << key_file << endl;
+    cerr << "Failed to read " << PRF_KEY_BYTES << " bytes from global key file: " << key_file << endl;
     return false;
   }
   ifs.close();
@@ -308,7 +311,7 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
     if (p1 == pid) {
       bytes = randread(key, key_len);
       if (bytes != key_len) {
-        cout << "Failed to generate a shared PRG key" << endl;
+        cerr << "Failed to generate a shared PRG key" << endl;
         return false;
       }
 
@@ -319,20 +322,20 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
       prg.insert(map<int, RandomStream>::value_type(pother, NewRandomStream(key)));
     }
 
-    cout << "Shared PRG with P" << pother << " initialized" << endl;
+    if (debug) cerr << "Shared PRG with P" << pother << " initialized" << endl;
   }
 
-  cout << "PRG setup complete" << endl;
+  if (debug) cerr << "PRG setup complete" << endl;
   return true;
 }
 
 
 void MPCEnv::CleanUp() {
-  cout << "Closing sockets ... ";
+  if (debug) cerr << "Closing sockets ... ";
   for (map<int, CSocket>::iterator it = sockets.begin(); it != sockets.end(); ++it) {
     CloseChannel(it->second);
   }
-  cout << "done." << endl;
+  cerr << "Clean-up done." << endl;
 }
 
 void MPCEnv::ProfilerResetTimer() {
@@ -409,7 +412,7 @@ void MPCEnv::ProfilerWriteToFile() {
   // Open log file
   logfs.open(Param::LOG_FILE.c_str());
   if (!logfs.is_open()) {
-    cout << "Fail to open the log file: " << Param::LOG_FILE << endl;
+    cerr << "Fail to open the log file: " << Param::LOG_FILE << endl;
     exit(1);
   }
 
@@ -445,7 +448,7 @@ void MPCEnv::ParallelLogisticRegression(Vec<ZZ_p>& b0, Mat<ZZ_p>& bv, Vec<ZZ_p>&
                                 Mat<ZZ_p>& vr, Mat<ZZ_p>& vm,
                                 Vec<ZZ_p>& yr, Vec<ZZ_p>& ym,
                                 int max_iter) {
-  cout << "ParallelLogisticRegression" << endl;
+  if (debug) cerr << "ParallelLogisticRegression" << endl;
 
   size_t n = vr.NumCols();
   size_t p = vr.NumRows();
@@ -504,7 +507,7 @@ void MPCEnv::ParallelLogisticRegression(Vec<ZZ_p>& b0, Mat<ZZ_p>& bv, Vec<ZZ_p>&
 
   // Gradient descent (with momentum)
   for (int it = 0; it < max_iter; it++) {
-    cout << "Iter " << it << endl;
+    if (debug) cerr << "Iter " << it << endl;
 
     int batch_index = it % nbatch;
     int start_ind = batch_size * batch_index;
@@ -684,7 +687,7 @@ void MPCEnv::NegLogSigmoid(Vec<ZZ_p>& b, Vec<ZZ_p>& b_grad, Vec<ZZ_p>& a) {
 
 // OK
 void MPCEnv::InnerProd(Vec<ZZ_p>& c, Mat<ZZ_p>& a) {
-  if (debug) cout << "InnerProd: " << a.NumRows() << ", " << a.NumCols() << endl;
+  if (debug) cerr << "InnerProd: " << a.NumRows() << ", " << a.NumCols() << endl;
 
   Mat<ZZ_p> ar, am;
   BeaverPartition(ar, am, a);
@@ -698,7 +701,7 @@ void MPCEnv::InnerProd(Vec<ZZ_p>& c, Mat<ZZ_p>& a) {
 }
 // OK
 void MPCEnv::InnerProd(ZZ_p& c, Vec<ZZ_p>& a) {
-  if (debug) cout << "InnerProd: " << a.length() << endl;
+  if (debug) cerr << "InnerProd: " << a.length() << endl;
 
   Vec<ZZ_p> ar, am;
   BeaverPartition(ar, am, a);
@@ -708,7 +711,7 @@ void MPCEnv::InnerProd(ZZ_p& c, Vec<ZZ_p>& a) {
 
 // No need
 void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
-  if (debug) cout << "Householder: " << x.length() << endl;
+  if (debug) cerr << "Householder: " << x.length() << endl;
 
   int n = x.length();
 
@@ -777,7 +780,7 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
 
 // No need
 void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
-  if (debug) cout << "QRFactSquare: " << A.NumRows() << ", " << A.NumCols() << endl;
+  if (debug) cerr << "QRFactSquare: " << A.NumRows() << ", " << A.NumCols() << endl;
 
   assert(A.NumRows() == A.NumCols());
 
@@ -882,7 +885,7 @@ void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
 
 // Done
 void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
-  if (debug) cout << "OrthonormalBasis: " << A.NumRows() << ", " << A.NumCols() << endl;
+  if (debug) cerr << "OrthonormalBasis: " << A.NumRows() << ", " << A.NumCols() << endl;
 
   assert(A.NumCols() >= A.NumRows());
 
@@ -999,7 +1002,7 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
 
 // Done
 void MPCEnv::Tridiag(Mat<ZZ_p>& T, Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
-  if (debug) cout << "Tridiag: " << A.NumRows() << ", " << A.NumCols() << endl;
+  if (debug) cerr << "Tridiag: " << A.NumRows() << ", " << A.NumCols() << endl;
 
   assert(A.NumRows() == A.NumCols());
   assert(A.NumRows() > 2);
@@ -1120,7 +1123,7 @@ void MPCEnv::Tridiag(Mat<ZZ_p>& T, Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
 
 // Done
 void MPCEnv::EigenDecomp(Mat<ZZ_p>& V, Vec<ZZ_p>& L, Mat<ZZ_p>& A) {
-  if (debug) cout << "EigenDecomp: " << A.NumRows() << ", " << A.NumCols() << endl;
+  if (debug) cerr << "EigenDecomp: " << A.NumRows() << ", " << A.NumCols() << endl;
 
   assert(A.NumRows() == A.NumCols());
   int n = A.NumRows();
@@ -1138,7 +1141,7 @@ void MPCEnv::EigenDecomp(Mat<ZZ_p>& V, Vec<ZZ_p>& L, Mat<ZZ_p>& A) {
   }
 
   for (int i = n - 1; i >= 1; i--) {
-    cout << "EigenDecomp: " << i << "-th eigenvalue" << endl;
+    if (debug) cerr << "EigenDecomp: " << i << "-th eigenvalue" << endl;
     for (int it = 0; it < Param::ITER_PER_EVAL; it++) {
       ZZ_p shift = Ap[i][i];
       if (pid > 0) {
@@ -1192,12 +1195,12 @@ void MPCEnv::EigenDecomp(Mat<ZZ_p>& V, Vec<ZZ_p>& L, Mat<ZZ_p>& A) {
       }
     }
   }
-  cout << "EigenDecomp: complete" << endl;
+  // cout << "EigenDecomp: complete" << endl;
 }
 
 // Done
 void MPCEnv::LessThanBitsAux(Vec<ZZ>& c, Mat<ZZ>& a, Mat<ZZ>& b, int public_flag, int fid) {
-  if (debug) cout << "LessThanBitsAux: " << a.NumRows() << ", " << a.NumCols() << endl;
+  if (debug) cerr << "LessThanBitsAux: " << a.NumRows() << ", " << a.NumCols() << endl;
 
   assert(a.NumRows() == b.NumRows());
   assert(a.NumCols() == b.NumCols());
@@ -1314,7 +1317,7 @@ void MPCEnv::LessThanPublic(Vec<ZZ_p>& c, Vec<ZZ_p>& a, ZZ_p bpub) {
 // Failure probability of 1 / BASE_P
 // Base field index 2
 void MPCEnv::IsPositive(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
-  if (debug) cout << "IsPositive: " << a.length() << endl;
+  if (debug) cerr << "IsPositive: " << a.length() << endl;
 
   int n = a.length();
   int nbits = ZZ_bits[0];
@@ -1409,7 +1412,7 @@ void MPCEnv::IsPositive(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
 }
 
 void MPCEnv::FlipBit(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
-  if (debug) cout << "FlipBit: " << a.length() << endl;
+  if (debug) cerr << "FlipBit: " << a.length() << endl;
   if (pid == 0) {
     b.SetLength(a.length());
   } else {
@@ -1425,7 +1428,7 @@ void MPCEnv::FlipBit(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
 
 // Assumes Param::NBIT_K - NBIT_F is even
 void MPCEnv::FPSqrt(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
-  if (debug) cout << "FPSqrt: " << a.length() << endl;
+  if (debug) cerr << "FPSqrt: " << a.length() << endl;
 
   int n = a.length();
 
@@ -1434,7 +1437,7 @@ void MPCEnv::FPSqrt(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
     b.SetLength(n);
     b_inv.SetLength(n);
     for (int i = 0; i < nbatch; i++) {
-      cout << "FPSqrt on large vector: " << i + 1 << "/" << nbatch << endl;
+      cerr << "FPSqrt on large vector: " << i + 1 << "/" << nbatch << endl;
       int start = Param::DIV_MAX_N * i;
       int end = start + Param::DIV_MAX_N;
       if (end > n) {
@@ -1529,7 +1532,7 @@ void MPCEnv::FPSqrt(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
 }
 
 void MPCEnv::FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
-  if (debug) cout << "FPDiv: " << a.length() << endl;
+  if (debug) cerr << "FPDiv: " << a.length() << endl;
 
   assert(a.length() == b.length());
 
@@ -1545,7 +1548,7 @@ void MPCEnv::FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
       }
       int batch_size = end - start;
 
-      cout << "FPDiv on large vector: " << i + 1 << "/" << nbatch << ", n = " << batch_size << endl;
+      // cout << "FPDiv on large vector: " << i + 1 << "/" << nbatch << ", n = " << batch_size << endl;
 
       Vec<ZZ_p> a_copy, b_copy;
       a_copy.SetLength(batch_size);
@@ -1646,7 +1649,7 @@ void MPCEnv::FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
 }
 
 void MPCEnv::Trunc(Mat<ZZ_p>& a, int k, int m) {
-  if (debug) cout << "Trunc: " << a.NumRows() << ", " << a.NumCols() << endl;
+  if (debug) cerr << "Trunc: " << a.NumRows() << ", " << a.NumCols() << endl;
 
   Mat<ZZ_p> r;
   Mat<ZZ_p> r_low;
@@ -1724,7 +1727,7 @@ void MPCEnv::Trunc(Mat<ZZ_p>& a, int k, int m) {
 }
 
 void MPCEnv::PrefixOr(Mat<ZZ>& b, Mat<ZZ>& a, int fid) {
-  if (debug) cout << "PrefixOr: " << a.NumRows() << ", " << a.NumCols() << endl;
+  if (debug) cerr << "PrefixOr: " << a.NumRows() << ", " << a.NumCols() << endl;
 
   int n = a.NumRows();
 
@@ -1872,7 +1875,7 @@ void MPCEnv::PrefixOr(Mat<ZZ>& b, Mat<ZZ>& a, int fid) {
 }
 
 void MPCEnv::FanInOr(Vec<ZZ>& b, Mat<ZZ>& a, int fid) {
-  if (debug) cout << "FanInOr: " << a.NumRows() << ", " << a.NumCols() << endl;
+  if (debug) cerr << "FanInOr: " << a.NumRows() << ", " << a.NumCols() << endl;
 
   int n = a.NumRows();
   int d = a.NumCols();
@@ -1911,7 +1914,7 @@ void MPCEnv::FanInOr(Vec<ZZ>& b, Mat<ZZ>& a, int fid) {
 }
 
 void MPCEnv::ShareRandomBits(Vec<ZZ_p>& r, Mat<ZZ>& rbits, int k, int n, int fid) {
-  if (debug) cout << "ShareRandomBits: " << n << endl;
+  if (debug) cerr << "ShareRandomBits: " << n << endl;
 
   if (pid == 0) {
     RandVecBits(r, n, k + Param::NBIT_V);
@@ -1943,7 +1946,7 @@ void MPCEnv::ShareRandomBits(Vec<ZZ_p>& r, Mat<ZZ>& rbits, int k, int n, int fid
 }
 
 void MPCEnv::TableLookup(Mat<ZZ_p>& b, Vec<ZZ_p>& a, int table_id) {
-  if (debug) cout << "TableLookup: " << a.length() << endl;
+  if (debug) cerr << "TableLookup: " << a.length() << endl;
 
   assert(!table_type_ZZ[table_id]);
 
@@ -1951,7 +1954,7 @@ void MPCEnv::TableLookup(Mat<ZZ_p>& b, Vec<ZZ_p>& a, int table_id) {
 }
 
 void MPCEnv::TableLookup(Mat<ZZ_p>& b, Vec<ZZ>& a, int table_id, int fid) {
-  if (debug) cout << "TableLookup: " << a.length() << endl;
+  if (debug) cerr << "TableLookup: " << a.length() << endl;
 
   assert(table_type_ZZ[table_id]);
   assert(table_field_index[table_id] == fid);
@@ -1967,15 +1970,15 @@ void MPCEnv::TableLookup(Mat<ZZ_p>& b, Vec<ZZ>& a, int table_id, int fid) {
     }
   }
 
-  if (debug) cout << "Evaluating polynomial" << endl;
-  if (debug) cout << s << ", " << lagrange_cache[table_id].NumCols() << endl;
+  if (debug) cerr << "Evaluating polynomial" << endl;
+  if (debug) cerr << s << ", " << lagrange_cache[table_id].NumCols() << endl;
 
   EvaluatePoly(b, a_exp, lagrange_cache[table_id]);
 }
 
 // Base field index 1
 void MPCEnv::NormalizerEvenExp(Vec<ZZ_p>& b, Vec<ZZ_p>& b_sqrt, Vec<ZZ_p>& a) {
-  if (debug) cout << "NormalizerEvenExp: " << a.length() << endl;
+  if (debug) cerr << "NormalizerEvenExp: " << a.length() << endl;
 
   int n = a.length();
   int fid = 1;
@@ -2305,25 +2308,25 @@ void MPCEnv::Read(Mat<ZZ_p>& a, ifstream& ifs, int nrows, int ncols) {
 }
 
 void MPCEnv::SendInt(int num, int to_pid) {
-  cout << "SendInt called: num(" << num << "), to_pid(" << to_pid << ")" << endl;
+  if (debug) cerr << "SendInt called: num(" << num << "), to_pid(" << to_pid << ")" << endl;
   *((int *)buf) = num;
   sockets.find(to_pid)->second.Send(buf, sizeof(int));
 }
 
 int MPCEnv::ReceiveInt(int from_pid) {
-  cout << "ReceiveInt called: from_pid(" << from_pid << ")" << endl;
+  if (debug) cerr << "ReceiveInt called: from_pid(" << from_pid << ")" << endl;
   sockets.find(from_pid)->second.Receive(buf, sizeof(int));
   return *((int *)buf);
 }
 
 void MPCEnv::SendBool(bool flag, int to_pid) {
-  cout << "SendBool called: flag(" << flag << "), to_pid(" << to_pid << ")" << endl;
+  if (debug) cerr << "SendBool called: flag(" << flag << "), to_pid(" << to_pid << ")" << endl;
   *((bool *)buf) = flag;
   sockets.find(to_pid)->second.Send(buf, sizeof(bool));
 }
 
 bool MPCEnv::ReceiveBool(int from_pid) {
-  cout << "ReceiveBool called: from_pid(" << from_pid << ")" << endl;
+  if (debug) cerr << "ReceiveBool called: from_pid(" << from_pid << ")" << endl;
   sockets.find(from_pid)->second.Receive(buf, sizeof(bool));
   return *((bool *)buf);
 }
@@ -2537,18 +2540,19 @@ void MPCEnv::BeaverMult(Mat<ZZ>& ab, Mat<ZZ>& ar, Mat<ZZ>& am, Mat<ZZ>& br, Mat<
 
 #include "lib.h"
 
-SEQ_FUNC void *seq_mpcenv_cleanup(void *mpc)
-{
-	((MPCEnv *)mpc)->CleanUp();
-	delete (MPCEnv *)mpc;
-	return nullptr;
+SEQ_FUNC void seq_mpcenv_cleanup(void *mpc)
+{  
+  ((MPCEnv *)mpc)->CleanUp();
+  delete ((MPCEnv *)mpc);
+  fprintf(stderr, "cleaned up\n");
 }
 
 typedef struct { seq_int_t p1; seq_int_t p2; } IntPair;
 
 SEQ_FUNC void *seq_mpc_new(seq_int_t pid, seq_arr_t<IntPair> pairs)
 {
-	auto *mpc = new MPCEnv();
+  // void *sock = seq_alloc(sizeof(MPCEnv));
+  auto *mpc = new MPCEnv();
 
 	std::vector<std::pair<int, int>> pairsVec;
 	for (seq_int_t i = 0; i < pairs.len; i++) {
@@ -2598,4 +2602,9 @@ SEQ_FUNC void seq_mpc_switch_seed(void *mpc, seq_int_t pid)
 SEQ_FUNC void seq_mpc_restore_seed(void *mpc)
 {
 	((MPCEnv *)mpc)->RestoreSeed();
+}
+
+SEQ_FUNC ZZ* seq_mpc_get_prime(void *mpc, seq_int_t id)
+{
+  return s_alloc<ZZ>(((MPCEnv *)mpc)->primes[id]);
 }

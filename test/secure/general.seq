@@ -1,16 +1,32 @@
 from secure.types import *
-from secure.ntl import *
+from secure.mpc import *
 
-print 'HI FROM', __cp__
+S = MPC([(0,1),(0,2),(1,2)], __cp__)
 
-a = Secure[ModInt].share(7z)
-b = Secure[ModInt].share(3z)
+# extern c ZP_setup()
+# ZP_setup()
+
+a, b = 7z, 3z
+print a, b
 
 x = Vec([1z, 2z, 3z, 4z, 5z])
-y = Vec([9z, 8z, 7z, 6z, 5z]) # 95
+y = Vec([9z, 8z, 7z, 6z, 5z]) 
+print x, y
 
-x := Secure[Vec].share(x)
-y := Secure[Vec].share(y)
+print 'START SECRET SHARING'
+
+print MInt.random(0)
+print CP0, CP1, CP2, CP
+
+q = S.share(a)
+# b = S.share(b)
+# S.switch_seed(1 if CP0 else 0)
+# r = MInt.random(len(a))
+# S.restore_seed()
+# print r
+
+# secure:
+# 	print a, b
 
 # print a, b
 # print a + 5z, a * 5z
@@ -21,11 +37,11 @@ y := Secure[Vec].share(y)
 # print x, y
 # print x * 5z, x * y
 
-print x.matmul_secure(y)
+# print x.matmul_secure(y)
 # print x.sh, y.sh
 
 # z = a * b
 # print '>>', z, __mpc_env__.reveal(z.share)
 
-__mpc_env__.cleanup()
+# __mpc__.cleanup()
 

@@ -56,6 +56,7 @@ struct
         Class       p -> parse_class      ctx pos p ~toplevel
       | Generic 
         Type        p -> parse_class      ctx pos p ~toplevel ~is_type:true
+      | Special     p -> parse_special    ctx pos p
     in
     finalize ctx stmt pos
 
@@ -585,6 +586,14 @@ struct
       Llvm.Stmt.pass ()
     | _ ->
       serr ~pos "symbol '%s' not found or not a variable" var
+
+  and parse_special ctx pos (kind, stmts) =
+    begin match kind with
+      | "secure" ->
+        add_block ctx stmts
+      | _ -> serr ~pos "unknown special statement"
+    end;
+    Llvm.Stmt.pass ()
 
   (* ***************************************************************
      Helper functions

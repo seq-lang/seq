@@ -73,46 +73,46 @@ SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data))
 
 SEQ_FUNC void seq_print_int(seq_int_t n)
 {
-	cout << n;
+	cerr << n;
 }
 
 SEQ_FUNC void seq_print_float(double f)
 {
-	cout << f;
+	cerr << f;
 }
 
 SEQ_FUNC void seq_print_bool(bool b)
 {
-	cout << (b ? "True" : "False");
+	cerr << (b ? "True" : "False");
 }
 
 SEQ_FUNC void seq_print_byte(char c)
 {
-	cout << c;
+	cerr << c;
 }
 
 SEQ_FUNC void seq_print_str(seq_str_t str)
 {
-	cout.write(str.str, str.len);
+	cerr.write(str.str, str.len);
 }
 
 SEQ_FUNC void seq_print_seq(seq_t seq)
 {
-	cout.write(seq.seq, seq.len);
+	cerr.write(seq.seq, seq.len);
 }
 
 SEQ_FUNC void seq_print_ptr(void *p)
 {
 	if (p)
-		cout << p;
+		cerr << p;
 	else
-		cout << "None";
+		cerr << "None";
 }
 
 SEQ_FUNC void seq_print_base_2bit(uint8_t base)
 {
 	static const char table[] = {'A','C','G','T'};
-	cout << table[base];
+	cerr << table[base];
 }
 
 

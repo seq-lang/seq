@@ -436,6 +436,7 @@ statement:
   // Function and clas definitions
   | func_statement
   | class_statement
+  | special_statement
     {[ $1 ]}
 
 // Simple one-line statements
@@ -935,7 +936,6 @@ class_member:
   | func_statement 
     { Some (fst $1, match snd $1 with Generic c -> c | _ -> assert false) }
 
-
 // Decorators 
 decorator:
   | AT dot_term NL
@@ -944,4 +944,14 @@ decorator:
       | _ -> noimp "decorator dot" }
   | AT dot_term LP separated_list(COMMA, expr) RP NL
     { noimp "decorator" (* Decorator ($2, $4) *) }
+
+/******************************************************************************/
+
+special_statement:
+  | ID COLON suite
+    { match snd $1 with
+      | "secure" ->
+        pos (fst $1) $2,
+        Special (snd $1, $3)
+      | _ -> noimp "invalid special" }
 

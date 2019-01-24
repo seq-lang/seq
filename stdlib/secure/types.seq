@@ -3,181 +3,163 @@ from secure.socket import Socket
 # TODO: Vec(n) RESERVES; Mat(x, y) RESERVES?!
 
 class Int(p: ptr[byte]):
-  def __init__(self: Int):
-    extern c ZZ_init(int) -> ptr[byte]
-    self.p = ZZ_init(0)
   def __init__(self: Int, v: int):
     extern c ZZ_init(int) -> ptr[byte]
     self.p = ZZ_init(v)
-  def __del__(self: Int):
-    extern c ZZ_free(ptr[byte])
-    ZZ_free(self.p)
+  def __init__(self: Int, v: MInt):
+    extern c ZP_to_ZZ(ptr[byte]) -> ptr[byte]
+    self.p = ZP_to_ZZ(v.p)
+  def __init__(self: Int):
+    extern c ZZ_init(int) -> ptr[byte]
+    self.p = ZZ_init(0)
   def __copy__(self: Int) -> Int:
     extern c ZZ_copy(ptr[byte]) -> ptr[byte]
     return Int(self.p)
+  def __str__(a: Int) -> str:
+    extern c ZZ_str(ptr[byte]) -> str
+    return ZZ_str(a.p)
+  def __len__(self: Int) -> int:
+    return 0
 
   def __add__(a: Int, b: Int):
-    extern c ZZ_O_add(ptr[byte], ptr[byte]) -> ptr[byte]
-    return Int(ZZ_O_add(a.p, b.p))
+    extern c ZZ_add(ptr[byte], ptr[byte]) -> ptr[byte]
+    return Int(ZZ_add(a.p, b.p))
   def __sub__(a: Int, b: Int):
-    extern c ZZ_O_sub(ptr[byte], ptr[byte]) -> ptr[byte]
-    return Int(ZZ_O_sub(a.p, b.p))
+    extern c ZZ_sub(ptr[byte], ptr[byte]) -> ptr[byte]
+    return Int(ZZ_sub(a.p, b.p))
   def __mul__(a: Int, b: Int):
-    extern c ZZ_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
-    return Int(ZZ_O_mul(a.p, b.p))
+    extern c ZZ_mul(ptr[byte], ptr[byte]) -> ptr[byte]
+    return Int(ZZ_mul(a.p, b.p))
   def __div__(a: Int, b: Int):
-    extern c ZZ_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
-    return Int(ZZ_O_truediv(a.p, b.p))
+    extern c ZZ_div(ptr[byte], ptr[byte]) -> ptr[byte]
+    return Int(ZZ_div(a.p, b.p))
   def __mod__(a: Int, b: Int):
-    extern c ZZ_O_mod(ptr[byte], ptr[byte]) -> ptr[byte]
-    return Int(ZZ_O_mod(a.p, b.p))
-
+    extern c ZZ_mod(ptr[byte], ptr[byte]) -> ptr[byte]
+    return Int(ZZ_mod(a.p, b.p))
+  def __lshift__(a: Int, b: int):
+    extern c ZZ_lsh(ptr[byte], int) -> ptr[byte]
+    return Int(ZZ_lsh(a.p, b.p))
+  def __rshift__(a: Int, b: int):
+    extern c ZZ_rsh(ptr[byte], int) -> ptr[byte]
+    return Int(ZZ_rsh(a.p, b.p))
   def __eq__(a: Int, b: Int):
-    extern c ZZ_O_eq(ptr[byte], ptr[byte]) -> bool
-    return ZZ_O_eq(a.p, b.p)
+    extern c ZZ_eq(ptr[byte], ptr[byte]) -> bool
+    return ZZ_eq(a.p, b.p)
   def __ne__(a: Int, b: Int):
-    extern c ZZ_O_ne(ptr[byte], ptr[byte]) -> bool
-    return ZZ_O_ne(a.p, b.p)
+    extern c ZZ_ne(ptr[byte], ptr[byte]) -> bool
+    return ZZ_ne(a.p, b.p)
   def __lt__(a: Int, b: Int):
-    extern c ZZ_O_lt(ptr[byte], ptr[byte]) -> bool
-    return ZZ_O_lt(a.p, b.p)
+    extern c ZZ_lt(ptr[byte], ptr[byte]) -> bool
+    return ZZ_lt(a.p, b.p)
   def __le__(a: Int, b: Int):
-    extern c ZZ_O_le(ptr[byte], ptr[byte]) -> bool
-    return ZZ_O_le(a.p, b.p)
+    extern c ZZ_le(ptr[byte], ptr[byte]) -> bool
+    return ZZ_le(a.p, b.p)
   def __gt__(a: Int, b: Int):
-    extern c ZZ_O_gt(ptr[byte], ptr[byte]) -> bool
-    return ZZ_O_gt(a.p, b.p)
+    extern c ZZ_gt(ptr[byte], ptr[byte]) -> bool
+    return ZZ_gt(a.p, b.p)
   def __ge__(a: Int, b: Int):
-    extern c ZZ_O_ge(ptr[byte], ptr[byte]) -> bool
-    return ZZ_O_ge(a.p, b.p)
-
-  def __str__(a: Int):
-    extern c ZZ_O_str(ptr[byte]) -> ptr[byte]
-    extern c strlen(ptr[byte]) -> int
-    p = ZZ_O_str(a.p)
-    return str(p, strlen(p))
-
-  def __len__(self: MInt) -> int:
-    return 0
+    extern c ZZ_ge(ptr[byte], ptr[byte]) -> bool
+    return ZZ_ge(a.p, b.p)
   
-  def to_mint(x: Int) -> MInt:
-    extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
-    return MInt(ZZ_to_ZZ_p(x.p))
-
-  def bit(self: Int, n: int) -> byte:
-    extern c ZZ_bit(ptr[byte], int) -> byte
-    return ZZ_bit(self, n)
-  def bit_rep(self: Int, n: int) -> byte:
-    extern c ZZ_bit_rep(ptr[byte], int) -> byte
-    return ZZ_bit_rep(self, n)
-  def set_bit(self: Int, n: int):
-    extern c ZZ_set_bit(ptr[byte], int)
-    ZZ_set_bit(self, n)
-  def trunc(self: Int, n: int):
-    # NEEDS trunc(rep())
-    extern c ZZ_trunc(ptr[byte], int) -> ptr[byte]
-    return Int(ZZ_trunc(self, n))
+  def bit(self: Int, n: int) -> int:
+    extern c ZZ_bit(ptr[byte], int) -> int
+    return ZZ_bit(self.p, n)
+  def set_bit(self: Int, n: int) -> Int:
+    extern c ZZ_setbit(ptr[byte], int) -> ptr[byte]
+    return Int(ZZ_setbit(self.p, n))
+  def from_bytes(buf: ptr[byte], n: int) -> Int:
+    extern c ZZ_frombytes(ptr[byte], int) -> ptr[byte]
+    return Int(ZZ_frombytes(buf, n))
+  def to_bytes(self: Int, buf: ptr[byte], n: int):
+    extern c ZZ_tobytes(ptr[byte], ptr[byte], int)
+    ZZ_tobytes(self.p, buf, n)
 
 class MInt(p: ptr[byte]):
-  def __init__(self: MInt):
-    extern c ZZ_p_init(int) -> ptr[byte]
-    self.p = ZZ_p_init(0)
   def __init__(self: MInt, v: int):
-    extern c ZZ_p_init(int) -> ptr[byte]
-    self.p = ZZ_p_init(v)
-  def __del__(self: MInt):
-    extern c ZZ_p_free(ptr[byte])
-    ZZ_p_free(self.p)
-
-  # TODO: force this on assignment?
+    extern c ZP_init(int) -> ptr[byte]
+    self.p = ZP_init(v)
+  def __init__(self: MInt, v: Int):
+    extern c ZZ_to_ZP(ptr[byte]) -> ptr[byte]
+    self.p = ZZ_to_ZP(v.p)
+  def __init__(self: MInt):
+    extern c ZP_init(int) -> ptr[byte]
+    self.p = ZP_init(0)
   def __copy__(self: MInt) -> MInt:
-    extern c ZZ_p_copy(ptr[byte]) -> ptr[byte]
+    extern c ZP_copy(ptr[byte]) -> ptr[byte]
     return MInt(self.p)
-
-  def __add__(a: MInt, b: MInt):
-    extern c ZZ_p_O_add(ptr[byte], ptr[byte]) -> ptr[byte]
-    return MInt(ZZ_p_O_add(a.p, b.p))
-  def __sub__(a: MInt, b: MInt):
-    extern c ZZ_p_O_sub(ptr[byte], ptr[byte]) -> ptr[byte]
-    return MInt(ZZ_p_O_sub(a.p, b.p))
-  def __mul__(a: MInt, b: MInt):
-    extern c ZZ_p_O_mul(ptr[byte], ptr[byte]) -> ptr[byte]
-    return MInt(ZZ_p_O_mul(a.p, b.p))
-  def __div__(a: MInt, b: MInt):
-    extern c ZZ_p_O_truediv(ptr[byte], ptr[byte]) -> ptr[byte]
-    return MInt(ZZ_p_O_truediv(a.p, b.p))
-  def __mod__(a: Int, b):
-    return a
-
-  def __eq__(a: MInt, b: MInt):
-    extern c ZZ_p_O_eq(ptr[byte], ptr[byte]) -> bool
-    return ZZ_p_O_eq(a.p, b.p)
-  def __ne__(a: MInt, b: MInt):
-    extern c ZZ_p_O_ne(ptr[byte], ptr[byte]) -> bool
-    return ZZ_p_O_ne(a.p, b.p)
-
-  def __str__(a: MInt):
-    extern c ZZ_p_O_str(ptr[byte]) -> ptr[byte]
-    extern c strlen(ptr[byte]) -> int
-    p = ZZ_p_O_str(a.p)
-    return str(p, strlen(p))
-
+  def __str__(a: MInt) -> str:
+    extern c ZP_str(ptr[byte]) -> str
+    return ZP_str(a.p)
   def __len__(self: MInt) -> int:
     return 0
 
+  def __add__(a: MInt, b: MInt):
+    extern c ZP_add(ptr[byte], ptr[byte]) -> ptr[byte]
+    return MInt(ZP_add(a.p, b.p))
+  def __sub__(a: MInt, b: MInt):
+    extern c ZP_sub(ptr[byte], ptr[byte]) -> ptr[byte]
+    return MInt(ZP_sub(a.p, b.p))
+  def __mul__(a: MInt, b: MInt):
+    extern c ZP_mul(ptr[byte], ptr[byte]) -> ptr[byte]
+    return MInt(ZP_mul(a.p, b.p))
+  def __div__(a: MInt, b: MInt):
+    extern c ZP_div(ptr[byte], ptr[byte]) -> ptr[byte]
+    return MInt(ZP_div(a.p, b.p))
+  def __mod__(a: MInt, b):
+    return a
+  def __eq__(a: MInt, b: MInt):
+    extern c ZP_eq(ptr[byte], ptr[byte]) -> bool
+    return ZP_eq(a.p, b.p)
+  def __ne__(a: MInt, b: MInt):
+    extern c ZP_ne(ptr[byte], ptr[byte]) -> bool
+    return ZP_ne(a.p, b.p)
+
   def random(sz: int):
-    extern c ZZ_p_rand() -> ptr[byte]
-    return MInt(ZZ_p_rand())
-
-  def to_bytes(self: MInt, buf: ptr[byte], n: int):
-    extern c ZZ_ToBytes(ptr[byte], ptr[byte], int)
-    extern c ZZ_p_to_ZZ(ptr[byte]) -> ptr[byte]
-    ZZ_ToBytes(ZZ_p_to_ZZ(self.p), buf, n)
-
-  def from_bytes(buf: ptr[byte], n: int) -> MInt:
-    extern c ZZ_FromBytes(ptr[byte], int) -> ptr[byte]
-    extern c ZZ_to_ZZ_p(ptr[byte]) -> ptr[byte]
-    return MInt(ZZ_to_ZZ_p(ZZ_FromBytes(buf, n)))
+    extern c ZP_rand() -> ptr[byte]
+    return MInt(ZP_rand())
+  def trunc(self: MInt, n: int) -> Int:
+    extern c ZP_trunc(ptr[byte], int) -> ptr[byte]
+    return Int(ZP_trunc(self.p, n))
+  def modulus() -> Int:
+    extern c ZP_modulus() -> ptr[byte]
+    return Int(ZP_modulus())
 
   def send(self: MInt, s: Socket, buf: ptr[byte], bytes: int, per_buf: int):
-    self.to_bytes(buf, bytes)
+    Int(self).to_bytes(buf, bytes)
     s.send_secure(buf, bytes, 0)
-
   def receive(sz: int, s: Socket, buf: ptr[byte], bytes: int, per_buf: int) -> MInt:
     s.receive_secure(buf, bytes, 0)
-    return MInt.from_bytes(buf, bytes)
+    return MInt(Int.from_bytes(buf, bytes))
 
-class Float(i: MInt):
-  def __init__(self: Float, a: int, k: int, f: int):
+class Float:
+  def of_int(a: int, k: int, f: int) -> MInt:
     sn = 1 if a >= 0 else -1
-    az_shift = Int(a).left_shift(f)
-    az_trunc = az_shift.trunc(k - 1)
-    self.i = Int.to_mint(az_trunc * sn)
-
-  def __init__(self: Float, a: float, k: int, f: int):
+    az_shift = Int(a) << f
+    az_trunc = MInt(az_shift).trunc(k - 1)
+    return MInt(az_trunc * sn)
+  def of_float(self: Float, a: float, k: int, f: int) -> MInt:
     a, sn = (a, 1) if a >= 0 else (-a, -1)
-    az_shift = Int(int(a)).left_shift(f)
-    az_trunc = az_shift.trunc(k - 1)
+    az_shift = Int(int(a)) << f
+    az_trunc = MInt(az_shift).trunc(k - 1)
 
     xf = a - int(a)
     for fbit in range(f - 1, -1, -1):
       xf *= 2
       if xf >= 1:
         xf -= int(xf)
-        az_trunc.set_bit(fbit)
-    self.i = Int.to_mint(az_trunc * sn)
+        az_trunc = az_trunc.set_bit(fbit)
+    return MInt(az_trunc * sn)
 
-  def to_float(self: Float, k: int, f: int) -> float:
-    one = Int(1)
-    twokm1 = one.left_shift(k - 1)
+  def to_float(a: MInt, k: int, f: int) -> float:
+    twokm1 = Int(1) << (k - 1)
 
-    x = self.i.rep()
+    x = Int(a)
     sn = 1.0
     if x > twokm1:
       x = MInt.modulus() - x
       sn -= 1
-    x_trunc = x.trunc(k - 1)
-    x_int = x_trunc.right_shift(f)
+    x_trunc = MInt(x).trunc(k - 1)
+    x_int = x_trunc >> f
 
     x_frac = 0
     for bi in range(f):
@@ -195,12 +177,17 @@ class Vector[`t](items: list[`t]):
     self.items = list(l)
   def __init__(self: Vector[`t], l: generator[`t]): 
     self.items = list(l)
+  def __copy__(self: Vector[`t]):
+    return Vector[`t](self.items.__copy__())
+  def __str__(self: Vector[`t]) -> str:
+    return self.items.__str__()
+  def __len__(self: Vector[`t]) -> int:
+    return self.items.__len__()
 
   def __add__(a: Vector[`t], b: `t): return Vector(i + b for i in a.items)
   def __sub__(a: Vector[`t], b: `t): return Vector(i - b for i in a.items)
   def __mul__(a: Vector[`t], b: `t): return Vector(i * b for i in a.items)
   def __div__(a: Vector[`t], b: `t): return Vector(i / b for i in a.items)
-  
   def __add__(a: Vector[`t], b: Vector[`t]): 
     return Vector(i + j for i, j in zip(a.items, b.items))
   def __sub__(a: Vector[`t], b: Vector[`t]): 
@@ -224,7 +211,6 @@ class Vector[`t](items: list[`t]):
   def __idiv__(a: Vector[`t], b: `t): 
     for i in range(len(a)): a.items[i] /= b
     return a
-  
   def __iadd__(a: Vector[`t], b: Vector[`t]): 
     assert len(a) == len(b)
     for i in range(len(a)): a.items[i] += b[i]
@@ -253,21 +239,10 @@ class Vector[`t](items: list[`t]):
   def __ne__(a: Vector[`t], b: Vector[`t]):
     return not a.__eq__(b)
 
-  def __str__(self: Vector[`t]) -> str:
-    return self.items.__str__()
-  
-  def __len__(self: Vector[`t]) -> int:
-    return self.items.__len__()
-
-  def __copy__(self: Vector[`t]):
-    return Vector[`t](self.items.__copy__())
-
   def __getitem__(a: Vector[`t], r: int) -> `t:
     return a.items[r]
-
   def __setitem__(a: Vector[`t], r: int, v: `t):
     a.items[r] = v
-
   def __iter__(self: Vector[`t]):
     return self.items.__iter__()
   
@@ -280,13 +255,11 @@ class Vector[`t](items: list[`t]):
       i += 1
     assert i == ed
 
-  def random[`t](sz: int) -> Vector[`t]:
-    return Vector(`t.random(0) for i in range(sz))
-
-  def rand_vec_bits[`t](n: int, bitlen: int) -> Vector[`t]:
+  def random(sz: int) -> Vector[`t]:
+    return Vector(`t.random(0) for i in range(len(sz)))
+  def rand_vec_bits(n: int, bitlen: int) -> Vector[`t]:
     return Vector(`t.rand_bits(bitlen) for j in range(n))
-
-  def num_to_bits[`t](a: Vector[`t], bitlen: int) -> Matrix[`t]:
+  def num_to_bits(a: Vector[`t], bitlen: int) -> Matrix[`t]:
     return Matrix(
       [el.bit_rep(bitlen - 1 - c) for c in range(bitlen)] for el in a)
 
@@ -296,13 +269,12 @@ class Vector[`t](items: list[`t]):
       if stored_in_buf == per_buf:
         s.send_secure(buf, stored_in_buf * bytes, 0)
         stored_in_buf, buf_ptr = 0, buf
-      i.to_bytes(buf_ptr, bytes)
+      Int(i).to_bytes(buf_ptr, bytes)
       stored_in_buf += 1
       buf_ptr += bytes
     if stored_in_buf > 0:
       s.send_secure(buf, stored_in_buf * bytes, 0)
-
-  def receive[`t](sz: int, s: Socket, buf: ptr[byte], bytes: int, per_buf: int) -> Vector[`t]:
+  def receive(sz: int, s: Socket, buf: ptr[byte], bytes: int, per_buf: int) -> Vector[`t]:
     items = list[`t](sz)
     remaining = sz
     stored_in_buf, buf_ptr = 0, buf
@@ -313,7 +285,7 @@ class Vector[`t](items: list[`t]):
         stored_in_buf += count
         remaining -= count
         buf_ptr = buf
-      items.append(`t.from_bytes(buf_ptr, bytes))
+      items.append(`t(Int.from_bytes(buf_ptr, bytes)))
       buf_ptr += bytes
       stored_in_buf -= 1  
     return Vector(items)
@@ -331,12 +303,31 @@ class Matrix[`t](items: list[Vector[`t]]):
     self.items = list(l)
     for i in self.items:
       assert len(self.items[0]) == len(i)
+  def __copy__(self: Matrix[`t]):
+    return self.items.__copy__()
+  def __str__(self: Matrix[`t]):
+    return self.items.__str__()
+  def __len__(self: Matrix[`t]) -> tuple[int, int]:
+    return (len(self.items), 
+      0 if len(self.items) == 0 else len(self.items[0]))
+
+  def __eq__(a: Matrix[`t], b: Matrix[`t]):
+    if len(a) == len(b):
+      nr, nc = len(a)
+      for r in nr:
+        for c in nc:
+          if a.items[r][c] != b.items[r][c]:
+            return False
+      return True
+    else: 
+      return False
+  def __ne__(a: Matrix[`t], b: Matrix[`t]):
+    return not a.__eq__(b)
 
   def __add__(a: Matrix[`t], b: `t): return Matrix(i + b for i in a.items)
   def __sub__(a: Matrix[`t], b: `t): return Matrix(i - b for i in a.items)
   def __mul__(a: Matrix[`t], b: `t): return Matrix(i * b for i in a.items)
-  def __div__(a: Matrix[`t], b: `t): return Matrix(i / b for i in a.items)
-  
+  def __div__(a: Matrix[`t], b: `t): return Matrix(i / b for i in a.items)  
   def __add__(a: Matrix[`t], b: Matrix[`t]): 
     return Matrix(i + j for i, j in zip(a.items, b.items))
   def __sub__(a: Matrix[`t], b: Matrix[`t]): 
@@ -363,7 +354,6 @@ class Matrix[`t](items: list[Vector[`t]]):
   def __idiv__(a: Matrix[`t], b: `t): 
     for i, j in iproduct(a.rows(), a.cols()): a.items[i][j] /= b
     return a
-  
   def __iadd__(a: Matrix[`t], b: Matrix[`t]): 
     assert len(a) == len(b)
     for i, j in iproduct(a.rows(), a.cols()): a.items[i][j] += b[i][j]
@@ -383,10 +373,8 @@ class Matrix[`t](items: list[Vector[`t]]):
 
   def __getitem__(a: Matrix[`t], r: int) -> Vector[`t]:
     return a.items[r]
-
   def __setitem__(a: Matrix[`t], r: int, w: Vector[`t]):
     a.items[r] = copy(w)
-
   def __iter__(self: Matrix[`t]):
     return self.items.__iter__()
   
@@ -397,30 +385,7 @@ class Matrix[`t](items: list[Vector[`t]]):
       assert i < ed
       self.items[i] = copy(w)
       i += 1
-    assert i == ed
-
-  def __eq__(a: Matrix[`t], b: Matrix[`t]):
-    if len(a) == len(b):
-      nr, nc = len(a)
-      for r in nr:
-        for c in nc:
-          if a.items[r][c] != b.items[r][c]:
-            return False
-      return True
-    else: 
-      return False
-  def __ne__(a: Matrix[`t], b: Matrix[`t]):
-    return not a.__eq__(b)
-
-  def __str__(self: Matrix[`t]):
-    return self.items.__str__()
-  
-  def __len__(self: Matrix[`t]) -> tuple[int, int]:
-    return (len(self.items), 
-      0 if len(self.items) == 0 else len(self.items[0]))
-
-  def __copy__(self: Matrix[`t]):
-    return self.items.__copy__()
+    assert i == ed  
 
   def rows(self: Matrix[`t]) -> int:
     return len(self)[0]
@@ -438,12 +403,12 @@ class Matrix[`t](items: list[Vector[`t]]):
         ai, aj = ai + 1, 0
     return b
 
-  def random[`t](sz: tuple[int, int]) -> Matrix[`t]:
+  def random(sz: tuple[int, int]) -> Matrix[`t]:
     nr, nc = sz
     return Matrix(
       [`t.random(0) for c in range(nc)] 
       for r in range(nr))
 
-  def rand_bits[`t](nr: int, nc: int, bitlen: int) -> Matrix[`t]:
+  def rand_bits(nr: int, nc: int, bitlen: int) -> Matrix[`t]:
     return Matrix([`t.rand_bits(bitlen) for j in range(nc)] for i in range(nr))
 

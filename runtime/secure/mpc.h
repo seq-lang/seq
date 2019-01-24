@@ -114,7 +114,7 @@ public:
   // The i-th column of b contains 0,1,...,pow powers of a[i]
   template<class T>
   void Powers(Mat<T>& b, Vec<T>& a, int pow, int fid = 0) {
-    if (debug) cout << "Powers: " << a.length() << ", power = " << pow << endl;
+    if (debug) cerr << "Powers: " << a.length() << ", power = " << pow << endl;
 
     assert(pow >= 1);
 
@@ -213,7 +213,7 @@ public:
 
   template<class T>
   void EvaluatePoly(Mat<T>& b, Vec<T>& a, Mat<T>& coeff, int fid = 0) {
-    if (debug) cout << "EvaluatePoly: " << a.length() << ", deg = " << coeff.NumCols() - 1 << endl;
+    if (debug) cerr << "EvaluatePoly: " << a.length() << ", deg = " << coeff.NumCols() - 1 << endl;
 
     int n = a.length();
     int npoly = coeff.NumRows();
@@ -258,7 +258,7 @@ public:
 
   template<class T>
   void RevealSym(Vec<T>& a, int fid = 0) {
-    if (debug) cout << "RevealSym: " << a.length() << endl;
+    if (debug) cerr << "RevealSym: " << a.length() << endl;
 
     if (pid == 0) {
       return;
@@ -279,7 +279,7 @@ public:
 
   template<class T>
   void RevealSym(Mat<T>& a, int fid = 0) {
-    if (debug) cout << "RevealSym: " << a.NumRows() << ", " << a.NumCols() << endl;
+    if (debug) cerr << "RevealSym: " << a.NumRows() << ", " << a.NumCols() << endl;
 
     if (pid == 0) {
       return;
@@ -301,7 +301,7 @@ public:
   template<class T>
   void RevealSym(Vec< Mat<T> >& a, int fid = 0) {
     if (debug) {
-      cout << "RevealSym" << endl;
+      cerr << "RevealSym" << endl;
     }
 
     if (pid == 0) {
