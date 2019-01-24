@@ -283,9 +283,16 @@ void types::Type::addMethod(std::string name, BaseFunc *func, bool force)
 
 BaseFunc *types::Type::getMethod(const std::string& name)
 {
+	initOps();
+
 	for (auto& magic : getVTable().overloads) {
 		if (name == magic.name)
 			return magic.func;
+	}
+
+	for (auto& magic : getVTable().magic) {
+		if (name == magic.name)
+			return magic.asFunc(this);
 	}
 
 	auto iter = getVTable().methods.find(name);
