@@ -427,3 +427,30 @@ class Matrix[`t](items: list[Vector[`t]]):
   def rand_bits(nr: int, nc: int, bitlen: int) -> Matrix[`t]:
     return Matrix([`t.rand_bits(bitlen) for j in range(nc)] for i in range(nr))
 
+  def send(self: Matrix[`t], s: Socket, buf: ptr[byte], bytes: int, per_buf: int):
+    stored_in_buf, buf_ptr = 0, buf
+    for i, j in iproduct(self.rows(), self.cols()):
+      if stored_in_buf == per_buf:
+        s.send_secure(buf, stored_in_buf * bytes, 0)
+        stored_in_buf, buf_ptr = 0, buf
+      Int(self[i][j]).to_bytes(buf_ptr, bytes)
+      stored_in_buf += 1
+      buf_ptr += bytes
+    if stored_in_buf > 0:
+      s.send_secure(buf, stored_in_buf * bytes, 0)
+  def receive(sz: tuple[int, int], s: Socket, buf: ptr[byte], bytes: int, per_buf: int) -> Matrix[`t]:
+    mat = Matrix[`t](sz[0], sz[1])
+    remaining = sz[0] * sz[1]
+    stored_in_buf, buf_ptr = 0, buf
+    for i, j in iproduct(sz[0], sz[1]):
+      if stored_in_buf == 0:
+        count = remaining if remaining < per_buf else per_buf
+        s.receive_secure(buf, count * bytes, 0)
+        stored_in_buf += count
+        remaining -= count
+        buf_ptr = buf
+      mat[i][j] = `t(Int.from_bytes(buf_ptr, bytes))
+      buf_ptr += bytes
+      stored_in_buf -= 1  
+    return mat
+
