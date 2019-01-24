@@ -283,8 +283,12 @@ void types::Type::addMethod(std::string name, BaseFunc *func, bool force)
 
 BaseFunc *types::Type::getMethod(const std::string& name)
 {
-	auto iter = getVTable().methods.find(name);
+	for (auto& magic : getVTable().overloads) {
+		if (name == magic.name)
+			return magic.func;
+	}
 
+	auto iter = getVTable().methods.find(name);
 	if (iter == getVTable().methods.end())
 		throw exc::SeqException("type '" + getName() + "' has no method '" + name + "'");
 
