@@ -186,11 +186,14 @@ class Vector[`t](items: list[`t]):
   def __len__(self: Vector[`t]) -> int:
     return self.items.__len__()
 
-  def __add__(a: Vector[`t], b: `t): return Vector(i + b for i in a.items)
-  def __sub__(a: Vector[`t], b: `t): return Vector(i - b for i in a.items)
-  def __mul__(a: Vector[`t], b: `t): return Vector(i * b for i in a.items)
-  def __div__(a: Vector[`t], b: `t): return Vector(i / b for i in a.items)
+  def __add__(a: Vector[`t], b: `t): return Vector([i + b for i in a.items])
+  def __sub__(a: Vector[`t], b: `t): return Vector([i - b for i in a.items])
+  def __mul__(a: Vector[`t], b: `t): return Vector([i * b for i in a.items])
+  def __div__(a: Vector[`t], b: `t): return Vector([i / b for i in a.items])
+  
+  def __mod__(a: Vector[MInt], b: Int): return a
   def __mod__(a: Vector[`t], b: `t): return Vector(i % b for i in a.items)
+
   def __add__(a: Vector[`t], b: Vector[`t]): 
     return Vector(i + j for i, j in zip(a.items, b.items))
   def __sub__(a: Vector[`t], b: Vector[`t]): 
@@ -291,11 +294,7 @@ class Vector[`t](items: list[`t]):
       items.append(`t(Int.from_bytes(buf_ptr, bytes)))
       buf_ptr += bytes
       stored_in_buf -= 1  
-    return Vector(items)
-
-extend Vector[MInt]:
-  def __mod__(a: Vector[MInt], b: Int): return a
-
+    return Vector(items)  
 
 class Matrix[`t](items: list[Vector[`t]]):
   def __init__(self: Matrix[`t], rw: int, cl: int): 
