@@ -190,7 +190,7 @@ class Vector[`t](items: list[`t]):
   def __sub__(a: Vector[`t], b: `t): return Vector([i - b for i in a.items])
   def __mul__(a: Vector[`t], b: `t): return Vector([i * b for i in a.items])
   def __div__(a: Vector[`t], b: `t): return Vector([i / b for i in a.items])
-  
+
   def __mod__(a: Vector[MInt], b: Int): return a
   def __mod__(a: Vector[`t], b: `t): return Vector(i % b for i in a.items)
 
@@ -305,8 +305,16 @@ class Matrix[`t](items: list[Vector[`t]]):
     self.items = list(l)
     for i in self.items:
       assert len(self.items[0]) == len(i)
+  def __init__(self: Matrix[`t], l: list[list[`t]]): 
+    self.items = [Vector(c for c in r) for r in l]
+    for i in self.items:
+      assert len(self.items[0]) == len(i)
   def __init__(self: Matrix[`t], l: generator[Vector[`t]]): 
     self.items = list(l)
+    for i in self.items:
+      assert len(self.items[0]) == len(i)
+  def __init__(self: Matrix[`t], l: generator[list[`t]]): 
+    self.items = [Vector(c for c in r) for r in l]
     for i in self.items:
       assert len(self.items[0]) == len(i)
   def __copy__(self: Matrix[`t]):

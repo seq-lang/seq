@@ -145,13 +145,13 @@ class MPC(
       return (ar, am)
 
   @secure
-  def BME[`t, `u](S: MPC, ar: `t, am: `t, br: `u, bm: `u):
+  def BME[`t, `u, `m](S: MPC, ar: `t, am: `t, br: `u, bm: `u, mul: `m):
     if CP0:
-      return S.mod(am * bm)
+      return S.mod(mul(am, bm))
     elif CP1:
-      return S.mod(ar * bm + am * br + ar * br)
+      return S.mod(mul(ar, bm) + mul(am, br) + mul(ar, br))
     elif CP2:
-      return S.mod(ar * bm + am * br)
+      return S.mod(mul(ar, bm) + mul(am, br))
 
   @secure
   def BMM[`t, `u](S: MPC, ar: `t, am: `t, br: `u, bm: `u):
@@ -211,7 +211,7 @@ class MPC(
   def mul[`t, `u](S: MPC, a: `t, b: `u):
     ar, am = S.BP(a)
     br, bm = S.BP(b)
-    c = S.BME(ar, am, br, bm)
+    c = S.BME(ar, am, br, bm, `t.__mul__)
     return S.BR(c)
 
   @secure
@@ -219,7 +219,7 @@ class MPC(
   def matmul[`t, `u](S: MPC, a: `t, b: `u):
     ar, am = S.BP(a)
     br, bm = S.BP(b)
-    c = S.BMM(ar, am, br, bm)
+    c = S.BME(ar, am, br, bm, `t.__matmul__)
     return S.BR(c)
 
   @secure

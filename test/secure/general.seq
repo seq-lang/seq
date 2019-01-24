@@ -6,14 +6,19 @@ S = MPC([(0,1),(0,2),(1,2)], __cp__)
 # extern c ZP_setup()
 # ZP_setup()
 
-a, b = 7z, 3z
-print a, b
-print a * b
-print a.__mul__(b)
+x, y = 7z, 3z
 
-x = Vec([1z, 2z, 3z, 4z, 5z])
-y = Vec([9z, 8z, 7z, 6z, 5z]) 
-print x, y
+x := Vec([1z, 2z, 3z, 4z, 5z])
+y := Vec([9z, 8z, 7z, 6z, 5z]) 
+
+x := Mat([
+	[1z, 2z],
+	[3z, 4z]
+	])
+y := Mat([
+	[2z, 0z],
+	[1z, 2z]
+	])
 
 print 'START SECRET SHARING'
 
@@ -32,23 +37,11 @@ secure:
 	w = S.add(a, b)
 	print 'A', S.str(w)
 
-	w := S.mul(a, b)
+	w = S.mul(a, b)
 	print 'M', S.str(w)
 
-# print a, b
-# print a + 5z, a * 5z
-
-# print a + b, a - b
-# print a * b
-
-# print x, y
-# print x * 5z, x * y
-
-# print x.matmul_secure(y)
-# print x.sh, y.sh
-
-# z = a * b
-# print '>>', z, __mpc_env__.reveal(z.share)
+	w := S.matmul(a, b)
+	print 'MM', S.str(w)
 
 S.cleanup()
 
