@@ -6,8 +6,8 @@ using namespace llvm;
 
 types::RefType::RefType(std::string name) :
     Type(std::move(name), BaseType::get(), false, true), Generic(),
-    done(false), root(this), cache(), realizationCache(), contents(nullptr),
-    membNamesDeduced(), membExprsDeduced()
+    done(false), root(this), llvmCache(), realizationCache(), parentCache(),
+    contents(nullptr), membNamesDeduced(), membExprsDeduced()
 {
 }
 
@@ -92,7 +92,7 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types)
 	if (this != root)
 		return root->realize(types);
 
-	types::Type *cached = findCachedRealized(types);
+	types::Type *cached = root->realizationCache.find(types);
 
 	if (cached)
 		return cached;
@@ -270,16 +270,14 @@ types::Type *types::RefType::getBaseType(unsigned idx) const
 Type *types::RefType::getStructPointerType(LLVMContext& context) const
 {
 	std::vector<types::Type *> types = getRealizedTypes();
+	StructType *structType = root->llvmCache.find(types);
 
-	for (auto& v : root->cache) {
-		if (typeMatch<>(v.first, types)) {
-			return PointerType::get(v.second, 0);
-		}
-	}
+	if (structType)
+		return PointerType::get(structType, 0);
 
 	assert(contents);
-	StructType *structType = StructType::create(context, name);
-	root->cache.emplace_back(types, structType);
+	structType = StructType::create(context, name);
+	root->llvmCache.add(types, structType);
 	contents->addLLVMTypesToStruct(structType);
 	return PointerType::get(structType, 0);
 }
@@ -359,24 +357,17 @@ types::RefType *types::RefType::clone(Generic *ref)
 	return x;
 }
 
-void types::RefType::clearRealizationCache()
-{
-	root->realizationCache.clear();
-}
-
-types::Type *types::RefType::findCachedRealized(std::vector<types::Type *> types) const
-{
-	for (auto& v : root->realizationCache) {
-		if (typeMatch<>(v.first, types))
-			return v.second;
-	}
-
-	return nullptr;
-}
-
 void types::RefType::addCachedRealized(std::vector<types::Type *> types, Generic *x)
 {
-	root->realizationCache.emplace_back(types, dynamic_cast<types::Type *>(x));
+	root->realizationCache.add(types, dynamic_cast<types::Type *>(x));
+}
+
+RCache<Func>& types::RefType::cacheFor(Func *func)
+{
+	if (parentCache.find(func) == parentCache.end())
+		parentCache.emplace(func, RCache<Func>());
+
+	return parentCache.find(func)->second;
 }
 
 types::RefType *types::RefType::none()

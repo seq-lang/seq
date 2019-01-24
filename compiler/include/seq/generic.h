@@ -4,11 +4,49 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <utility>
 #include <cassert>
 #include "seq/types.h"
 
 namespace seq {
 	class Expr;
+
+	template<typename T = types::Type>
+	static bool typeMatch(const std::vector<T*>& v1, const std::vector<T*>& v2)
+	{
+		if (v1.size() != v2.size())
+			return false;
+
+		for (unsigned i = 0; i < v1.size(); i++) {
+			if (!types::is(v1[i], v2[i]))
+				return false;
+		}
+
+		return true;
+	}
+
+	// Generic realization cache:
+	template<typename T>
+	class RCache {
+	private:
+		std::vector<std::pair<std::vector<types::Type *>, T *>> cache;
+	public:
+		RCache() : cache() {}
+
+		void add(std::vector<types::Type *> types, T *t)
+		{
+			cache.emplace_back(std::move(types), t);
+		}
+
+		T *find(const std::vector<types::Type *>& types)
+		{
+			for (auto& v : cache) {
+				if (typeMatch<>(v.first, types))
+					return v.second;
+			}
+			return nullptr;
+		}
+	};
 
 	namespace types {
 		struct ExtInfo {
@@ -132,7 +170,6 @@ namespace seq {
 		Generic();
 		virtual std::string genericName()=0;
 		virtual Generic *clone(Generic *ref)=0;
-		virtual void clearRealizationCache();
 		virtual void addCachedRealized(std::vector<types::Type *> types, Generic *x);
 
 		bool realized();
@@ -149,20 +186,6 @@ namespace seq {
 		std::vector<types::Type *> deduceTypesFromArgTypes(const std::vector<types::Type *>& inTypes,
 		                                                   const std::vector<types::Type *>& argTypes);
 	};
-
-	template<typename T = types::Type>
-	static bool typeMatch(const std::vector<T*>& v1, const std::vector<T*>& v2)
-	{
-		if (v1.size() != v2.size())
-			return false;
-
-		for (unsigned i = 0; i < v1.size(); i++) {
-			if (!types::is(v1[i], v2[i]))
-				return false;
-		}
-
-		return true;
-	}
 }
 
 #endif /* SEQ_GENERIC_H */

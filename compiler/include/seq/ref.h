@@ -27,11 +27,20 @@ namespace seq {
 			RefType *root;
 
 			/*
-			 * Cache type-instantiations to avoid duplicate LLVM types
+			 * Cache for LLVM types
 			 */
-			mutable std::vector<std::pair<std::vector<types::Type *>, llvm::StructType *>> cache;
+			RCache<llvm::StructType> llvmCache;
 
-			std::vector<std::pair<std::vector<types::Type *>, types::Type *>> realizationCache;
+			/*
+			 * Our own realization cache
+			 */
+			RCache<types::Type> realizationCache;
+
+			/*
+			 * Cache for methods
+			 */
+			std::map<Func *, RCache<Func>> parentCache;
+
 			RecordType *contents;
 
 			std::vector<std::string> membNamesDeduced;
@@ -81,9 +90,8 @@ namespace seq {
 			static RefType *get(std::string name);
 
 			types::RefType *clone(Generic *ref) override;
-			void clearRealizationCache() override;
-			types::Type *findCachedRealized(std::vector<types::Type *> types) const;
 			void addCachedRealized(std::vector<types::Type *> types, Generic *x) override;
+			RCache<Func>& cacheFor(Func *func);
 
 			static RefType *none();
 		};
