@@ -42,6 +42,7 @@ namespace seq {
 
 		std::vector<std::string> argNames;
 		std::map<std::string, Var *> argVars;
+		std::vector<std::string> attributes;
 
 		Func *parentFunc;
 		Return *ret;
@@ -67,6 +68,8 @@ namespace seq {
 		void setEnclosingFunc(Func *parentFunc);
 		void sawReturn(Return *ret);
 		void sawYield(Yield *yield);
+		void addAttribute(std::string attr);
+		std::vector<std::string> getAttributes();
 
 		void resolveTypes() override;
 		void codegen(llvm::Module *module) override;
