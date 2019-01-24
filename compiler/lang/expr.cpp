@@ -417,6 +417,7 @@ void ListCompExpr::resolveTypes()
 
 Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	BaseFunc *oldBase = body->getBase();
 	setBodyBase(body, base);
 	types::Type *type = getType();
 	ConstructExpr construct(type, {});
@@ -448,6 +449,7 @@ Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	inner->stmts.push_back(&callStmt);
 	body->codegen(block);
 	inner->stmts.pop_back();
+	setBodyBase(body, oldBase);
 
 	return list;
 }
@@ -488,6 +490,7 @@ void SetCompExpr::resolveTypes()
 
 Value *SetCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	BaseFunc *oldBase = body->getBase();
 	setBodyBase(body, base);
 	types::Type *type = getType();
 	ConstructExpr construct(type, {});
@@ -519,6 +522,7 @@ Value *SetCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	inner->stmts.push_back(&callStmt);
 	body->codegen(block);
 	inner->stmts.pop_back();
+	setBodyBase(body, oldBase);
 
 	return set;
 }
@@ -560,6 +564,7 @@ void DictCompExpr::resolveTypes()
 
 Value *DictCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	BaseFunc *oldBase = body->getBase();
 	setBodyBase(body, base);
 	types::Type *type = getType();
 	ConstructExpr construct(type, {});
@@ -589,6 +594,7 @@ Value *DictCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	inner->stmts.push_back(&assignStmt);
 	body->codegen(block);
 	inner->stmts.pop_back();
+	setBodyBase(body, oldBase);
 
 	return dict;
 }
