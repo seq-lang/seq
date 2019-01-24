@@ -7,7 +7,7 @@ types::GenericType::GenericType(types::RefType *pending,
                                 std::vector<types::Type *> types,
                                 Expr *expr) :
     Type("generic", types::BaseType::get()), genericName(), type(nullptr),
-    pending(pending), types(std::move(types)), expr(expr)
+    pending(pending), types(std::move(types)), extensions(), expr(expr)
 {
 	assert(!(pending && expr));
 }
@@ -36,6 +36,11 @@ void types::GenericType::realize() const
 		} else if (expr) {
 			expr->resolveTypes();
 			type = expr->getType();
+		}
+
+		if (type) {
+			for (auto& e : extensions)
+				type->addMethod(e.name, e.func, e.force);
 		}
 	}
 }
@@ -139,8 +144,10 @@ bool types::GenericType::hasMethod(const std::string& name)
 
 void types::GenericType::addMethod(std::string name, BaseFunc *func, bool force)
 {
-	ensure();
-	type->addMethod(name, func, force);
+	if (type)
+		type->addMethod(name, func, force);
+	else
+		extensions.push_back({name, func, force});
 }
 
 BaseFunc *types::GenericType::getMethod(const std::string& name)

@@ -1,15 +1,22 @@
 #ifndef SEQ_GENERIC_H
 #define SEQ_GENERIC_H
 
-#include <cassert>
+#include <string>
 #include <vector>
 #include <map>
+#include <cassert>
 #include "seq/types.h"
 
 namespace seq {
 	class Expr;
 
 	namespace types {
+		struct ExtInfo {
+			std::string name;
+			BaseFunc *func;
+			bool force;
+		};
+
 		class GenericType : public Type {
 		private:
 			/* standard generic type parameter */
@@ -19,6 +26,7 @@ namespace seq {
 			/* realized type (e.g. A[int]) */
 			RefType *pending;
 			std::vector<types::Type *> types;
+			std::vector<ExtInfo> extensions;
 
 			/* typeof expression */
 			Expr *expr;
