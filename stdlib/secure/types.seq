@@ -105,7 +105,9 @@ class MInt(p: ptr[byte]):
   def __div__(a: MInt, b: MInt):
     extern c ZP_div(ptr[byte], ptr[byte]) -> ptr[byte]
     return MInt(ZP_div(a.p, b.p))
-  def __mod__(a: MInt, b):
+  def __mod__(a: MInt, b: MInt):
+    return a
+  def __mod__(a: MInt, b: Int):
     return a
   def __eq__(a: MInt, b: MInt):
     extern c ZP_eq(ptr[byte], ptr[byte]) -> bool
@@ -188,6 +190,7 @@ class Vector[`t](items: list[`t]):
   def __sub__(a: Vector[`t], b: `t): return Vector(i - b for i in a.items)
   def __mul__(a: Vector[`t], b: `t): return Vector(i * b for i in a.items)
   def __div__(a: Vector[`t], b: `t): return Vector(i / b for i in a.items)
+  def __mod__(a: Vector[`t], b: `t): return Vector(i % b for i in a.items)
   def __add__(a: Vector[`t], b: Vector[`t]): 
     return Vector(i + j for i, j in zip(a.items, b.items))
   def __sub__(a: Vector[`t], b: Vector[`t]): 
@@ -256,7 +259,7 @@ class Vector[`t](items: list[`t]):
     assert i == ed
 
   def random(sz: int) -> Vector[`t]:
-    return Vector(`t.random(0) for i in range(len(sz)))
+    return Vector(`t.random(0) for i in range(sz))
   def rand_vec_bits(n: int, bitlen: int) -> Vector[`t]:
     return Vector(`t.rand_bits(bitlen) for j in range(n))
   def num_to_bits(a: Vector[`t], bitlen: int) -> Matrix[`t]:
@@ -289,6 +292,10 @@ class Vector[`t](items: list[`t]):
       buf_ptr += bytes
       stored_in_buf -= 1  
     return Vector(items)
+
+extend Vector[MInt]:
+  def __mod__(a: Vector[MInt], b: Int): return a
+
 
 class Matrix[`t](items: list[Vector[`t]]):
   def __init__(self: Matrix[`t], rw: int, cl: int): 
@@ -328,6 +335,7 @@ class Matrix[`t](items: list[Vector[`t]]):
   def __sub__(a: Matrix[`t], b: `t): return Matrix(i - b for i in a.items)
   def __mul__(a: Matrix[`t], b: `t): return Matrix(i * b for i in a.items)
   def __div__(a: Matrix[`t], b: `t): return Matrix(i / b for i in a.items)  
+  def __mod__(a: Matrix[`t], b: `t): return Matrix(i % b for i in a.items)  
   def __add__(a: Matrix[`t], b: Matrix[`t]): 
     return Matrix(i + j for i, j in zip(a.items, b.items))
   def __sub__(a: Matrix[`t], b: Matrix[`t]): 

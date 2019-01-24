@@ -2544,7 +2544,7 @@ SEQ_FUNC void seq_mpcenv_cleanup(void *mpc)
 {  
   ((MPCEnv *)mpc)->CleanUp();
   delete ((MPCEnv *)mpc);
-  fprintf(stderr, "cleaned up\n");
+  // fprintf(stderr, "cleaned up\n");
 }
 
 typedef struct { seq_int_t p1; seq_int_t p2; } IntPair;

@@ -2,8 +2,8 @@
 
 export LD_LIBRARY_PATH=. 
 export SEQ_PATH=../stdlib 
-# unset SEQ_DEBUG
-export SEQ_DEBUG=1
+unset SEQ_DEBUG
+# export SEQ_DEBUG=1
 
 for PORT in 8000 8001 8002 8003 8004
 do

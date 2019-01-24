@@ -923,10 +923,10 @@ type_head:
 
 // Class extensions (extend name)
 extend:
-  | EXTEND ; n = ID; COLON NL; 
+  | EXTEND ; n = expr; COLON NL; 
     INDENT fns = class_member+ DEDENT
     { pos $1 $3, 
-      Extend (snd n, List.filter_opt fns) }
+      Extend (n, List.filter_opt fns) }
 // Class suite members
 class_member:
   // Empty statements

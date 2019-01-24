@@ -161,7 +161,7 @@ struct
     | For         of (string list * ExprNode.t * t list)
     | If          of (if_case tt) list
     | Match       of (ExprNode.t * (match_case tt) list)
-    | Extend      of (string * generic tt list)
+    | Extend      of (ExprNode.t * generic tt list)
     | Extern      of (string * string option * string * param tt * param tt list)
     | Import      of import list 
     | ImportPaste of string

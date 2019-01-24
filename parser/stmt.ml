@@ -140,7 +140,8 @@ struct
         | _ ->
           let var_stmt = Llvm.Stmt.var rh_expr in
           let v = Llvm.Var.stmt var_stmt in
-          Llvm.Var.set_global v;
+          if toplevel then 
+            Llvm.Var.set_global v;
           Ctx.add ctx ~toplevel ~global:toplevel 
             var (Ctx.Namespace.Var v);
           var_stmt
@@ -327,10 +328,11 @@ struct
     if not toplevel then
       serr ~pos "extends must be declared at toplevel";
 
-    let typ = match Ctx.in_scope ctx name with
+    let typ = E.parse_type ctx name in
+    (* let typ = match Ctx.in_scope ctx name with
       | Some (Ctx.Namespace.Type t, _) -> t
       | _ -> serr ~pos "cannot extend non-existing class %s" name
-    in
+    in *)
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
     ignore @@ List.map stmts ~f:(function
       | pos, Function f -> 

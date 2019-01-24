@@ -11,23 +11,17 @@ NBIT_V = 64
 DIV_MAX_N = 100000
 ITER_PER_EVAL = 5
 
-print 'HERE', __cp__
-CP0 = True if __cp__ == 0 else False
-CP1 = True if __cp__ == 1 else False 
-CP2 = True if __cp__ == 2 else False 
-CP  = True if CP1 or CP2  else False
-
-print CP0, True if __cp__ == 0 else False
-print CP1, True if __cp__ == 1 else False 
-print CP2, True if __cp__ == 2 else False 
-print CP , True if CP1 or CP2  else False
+CP0 = __cp__ == 0
+CP1 = __cp__ == 1
+CP2 = __cp__ == 2
+CP  = CP1 or CP2
 
 class MPC(
   p: ptr[byte], 
   fid: int, 
   float_cache: dict[tuple[int, int, int], MInt],
-  lagrange_cache: list[Mat]
-):
+  lagrange_cache: list[Mat]):
+
   def __init__(S: MPC, pairs: list[tuple[int,int]], pid: int):
     extern c seq_mpc_new(int, array[tuple[int,int]]) -> ptr[byte]
     S.p = seq_mpc_new(pid, array[tuple[int,int]](pairs.arr.ptr, pairs.len))
@@ -71,7 +65,7 @@ class MPC(
     extern c seq_mpc_restore_seed(ptr[byte])
     seq_mpc_restore_seed(S.p)
 
-  def prime(S: MPC, fid: int) -> Int:
+  def prime(S: MPC) -> Int:
     extern c seq_mpc_get_prime(ptr[byte], int) -> ptr[byte]
     return Int(seq_mpc_get_prime(S.p, S.fid))
 
@@ -95,28 +89,19 @@ class MPC(
 
   @secure
   def share[`t](S: MPC, x: `t) -> `t:
-    # global CP, CP0, CP1, CP2
-    print 'entering', __cp__, CP0, CP1, CP2
     if CP0:
-      print 'a'
       S.switch_seed(1)
-      print 'b'
       r = `t.random(len(x))
-      print 'c'
-      print r
       S.restore_seed()
-      print '```', x, r, x - r
       S.send(2, x - r)
       return x
     elif CP1:
       S.switch_seed(0)
       r = `t.random(len(x))
-      print '```', r
       S.restore_seed()
       return r
     elif CP2:
       xr = S.receive(0, x)
-      print '```', xr
       return xr
 
   @secure
@@ -160,13 +145,22 @@ class MPC(
       return (ar, am)
 
   @secure
-  def BM[`t](S: MPC, ar: `t, am: `t, br: `t, bm: `t, mul):
+  def BME[`t, `u](S: MPC, ar: `t, am: `t, br: `u, bm: `u):
     if CP0:
-      return S.mod(mul(am, bm))
+      return S.mod(am * bm)
     elif CP1:
-      return S.mod(mul(ar, bm) + mul(am, br) + mul(ar, br))
+      return S.mod(ar * bm + am * br + ar * br)
     elif CP2:
-      return S.mod(mul(ar, bm) + mul(am, br))
+      return S.mod(ar * bm + am * br)
+
+  @secure
+  def BMM[`t, `u](S: MPC, ar: `t, am: `t, br: `u, bm: `u):
+    if CP0:
+      return S.mod(am @ bm)
+    elif CP1:
+      return S.mod(ar @ bm + am @ br + ar @ br)
+    elif CP2:
+      return S.mod(ar @ bm + am @ br)
 
   @secure
   @mutable # ab
@@ -217,7 +211,7 @@ class MPC(
   def mul[`t, `u](S: MPC, a: `t, b: `u):
     ar, am = S.BP(a)
     br, bm = S.BP(b)
-    c = S.BM(ar, am, br, bm, `t.__mul__)
+    c = S.BME(ar, am, br, bm)
     return S.BR(c)
 
   @secure
@@ -225,8 +219,13 @@ class MPC(
   def matmul[`t, `u](S: MPC, a: `t, b: `u):
     ar, am = S.BP(a)
     br, bm = S.BP(b)
-    c = S.BM(ar, am, br, bm, `t.__matmul__)
+    c = S.BMM(ar, am, br, bm)
     return S.BR(c)
+
+  @secure
+  def str[`t](S: MPC, x: `t) -> str:
+    y = copy(x) |> S.reveal 
+    return str.cat(['<', str(x), '; r:', str(y), '>'])
 
   @secure
   @batch 
@@ -404,8 +403,7 @@ class MPC(
     S.fid = 1
     
     r, rbits = S.share_random_bits(NBIT_K, n)
-    e = a + r if CP else Vec(n)
-    e = S.reveal(e)
+    e = (a + r if CP else Vec(n)) |> S.reveal
     ebits = e.num_to_bits(NBIT_K) if CP else Matrix[Int](n, NBIT_K)
     
     c = S.less_than_bits(rbits, ebits, 2)
@@ -912,8 +910,7 @@ class MPC(
     elif CP2:
       r, r_low = S.receive(0, a), S.receive(0, a)
     
-    c = a + r if CP else Mat(a.rows(), a.cols())
-    c = S.reveal(c)
+    c = (a + r if CP else Mat(a.rows(), a.cols())) |> S.reveal
 
     if CP: 
       c_low = Mat([[cl.trunc(m) for cl in rw] for rw in c]) 

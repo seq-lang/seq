@@ -8,6 +8,8 @@ S = MPC([(0,1),(0,2),(1,2)], __cp__)
 
 a, b = 7z, 3z
 print a, b
+print a * b
+print a.__mul__(b)
 
 x = Vec([1z, 2z, 3z, 4z, 5z])
 y = Vec([9z, 8z, 7z, 6z, 5z]) 
@@ -15,18 +17,23 @@ print x, y
 
 print 'START SECRET SHARING'
 
-print MInt.random(0)
-print CP0, CP1, CP2, CP
+a := S.share(x)
+b := S.share(y)
 
-# q = S.share(a)
-# b = S.share(b)
-# S.switch_seed(1 if CP0 else 0)
-# r = MInt.random(len(a))
-# S.restore_seed()
-# print r
+secure:
+	print S.str(a), S.str(b)
 
-# secure:
-# 	print a, b
+	w = S.add_public(a, 5z)
+	print 'AP', S.str(w)
+
+	w = S.mul_public(a, 5z)
+	print 'MP', S.str(w)
+
+	w = S.add(a, b)
+	print 'A', S.str(w)
+
+	w := S.mul(a, b)
+	print 'M', S.str(w)
 
 # print a, b
 # print a + 5z, a * 5z
@@ -43,5 +50,5 @@ print CP0, CP1, CP2, CP
 # z = a * b
 # print '>>', z, __mpc_env__.reveal(z.share)
 
-# __mpc__.cleanup()
+S.cleanup()
 
