@@ -18,7 +18,7 @@ print 'START SECRET SHARING'
 print MInt.random(0)
 print CP0, CP1, CP2, CP
 
-q = S.share(a)
+# q = S.share(a)
 # b = S.share(b)
 # S.switch_seed(1 if CP0 else 0)
 # r = MInt.random(len(a))
