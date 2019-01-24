@@ -172,7 +172,8 @@ class Float:
 
 class Vector[`t](items: list[`t]):
   def __init__(self: Vector[`t], sz: int): 
-    self.items = list[`t](sz)
+    self.items = [`t(0) for _ in range(sz)]
+    #list[`t](sz,)
   def __init__(self: Vector[`t], sz: int, d: `t): 
     self.items = [copy(d) for _ in range(sz)]
   def __init__(self: Vector[`t], l: list[`t]): 
@@ -184,12 +185,12 @@ class Vector[`t](items: list[`t]):
   def __str__(self: Vector[`t]) -> str:
     return self.items.__str__()
   def __len__(self: Vector[`t]) -> int:
-    return self.items.__len__()
+    return self.items.__len__() 
 
-  def __add__(a: Vector[`t], b: `t): return Vector([i + b for i in a.items])
-  def __sub__(a: Vector[`t], b: `t): return Vector([i - b for i in a.items])
-  def __mul__(a: Vector[`t], b: `t): return Vector([i * b for i in a.items])
-  def __div__(a: Vector[`t], b: `t): return Vector([i / b for i in a.items])
+  def __add__(a: Vector[`t], b: `t): return Vector([i + b for i in a])
+  def __sub__(a: Vector[`t], b: `t): return Vector([i - b for i in a])
+  def __mul__(a: Vector[`t], b: `t): return Vector([i * b for i in a])
+  def __div__(a: Vector[`t], b: `t): return Vector([i / b for i in a])
 
   def __mod__(a: Vector[MInt], b: Int): return a
   def __mod__(a: Vector[`t], b: `t): return Vector(i % b for i in a.items)
