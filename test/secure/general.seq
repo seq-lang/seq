@@ -20,30 +20,28 @@ y := Mat([
 	[1z, 2z]
 	])
 
-print x, y
-
 print 'START SECRET SHARING'
 
 a := S.share(x)
-# b := S.share(y)
+b := S.share(y)
 
-# secure:
-# 	print S.str(a), S.str(b)
+secure:
+	print S.str(a), S.str(b)
 
-# 	w = S.add_public(a, 5z)
-# 	print 'AP', S.str(w)
+	w = S.add_public(a, 5z)
+	print 'AP', S.str(w)
 
-	# w = S.mul_public(a, 5z)
-	# print 'MP', S.str(w)
+	w = S.mul_public(a, 5z)
+	print 'MP', S.str(w)
 
-	# w = S.add(a, b)
-	# print 'A', S.str(w)
+	w = S.add(a, b)
+	print 'A', S.str(w)
 
-	# w = S.mul(a, b)
-	# print 'M', S.str(w)
+	w = S.mul(a, b)
+	print 'M', S.str(w)
 
-	# w := S.matmul(a, b)
-	# print 'MM', S.str(w)
+	w := S.matmul(a, b)
+	print 'MM', S.str(w)
 
 S.cleanup()
 

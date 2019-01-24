@@ -299,6 +299,9 @@ class Vector[`t](items: list[`t]):
 class Matrix[`t](items: list[Vector[`t]]):
   def __init__(self: Matrix[`t], rw: int, cl: int): 
     self.items = [Vector[`t](cl) for _ in range(rw)]
+  def __init__(self: Matrix[`t], sz: tuple[int, int]): 
+    rw, cl = sz
+    self.items = [Vector[`t](cl) for _ in range(rw)]
   def __init__(self: Matrix[`t], rw: int, cl: int, d: `t): 
     self.items = [Vector[`t](cl, d) for _ in range(rw)]
   def __init__(self: Matrix[`t], l: list[Vector[`t]]): 
@@ -317,8 +320,8 @@ class Matrix[`t](items: list[Vector[`t]]):
     self.items = [Vector(c for c in r) for r in l]
     for i in self.items:
       assert len(self.items[0]) == len(i)
-  def __copy__(self: Matrix[`t]):
-    return self.items.__copy__()
+  def __copy__(self: Matrix[`t]) -> Matrix[`t]:
+    return Matrix(self.items.__copy__())
   def __str__(self: Matrix[`t]):
     return self.items.__str__()
   def __len__(self: Matrix[`t]) -> tuple[int, int]:
@@ -351,7 +354,7 @@ class Matrix[`t](items: list[Vector[`t]]):
     return Matrix(i * j for i, j in zip(a.items, b.items))
   def __div__(a: Matrix[`t], b: Matrix[`t]): 
     return Matrix(i / j for i, j in zip(a.items, b.items))
-  def __matmul__(a: Matrix[`t], b: Matrix[`t]) -> `t:
+  def __matmul__(a: Matrix[`t], b: Matrix[`t]) -> Matrix[`t]:
     assert a.cols() == b.rows()
     return Matrix(
       [sum(a[i][k] * b[k][j] for k in range(a.cols())) for j in range(b.cols())]
@@ -454,3 +457,6 @@ class Matrix[`t](items: list[Vector[`t]]):
       stored_in_buf -= 1  
     return mat
 
+extend Matrix[MInt]:
+  def __mod__(self: Matrix[MInt], i: Int):
+    return self
