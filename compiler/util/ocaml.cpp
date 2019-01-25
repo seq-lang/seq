@@ -704,6 +704,20 @@ FOREIGN char type_eq(types::Type *a, types::Type *b)
 	return types::is(a, b);
 }
 
+FOREIGN char *get_func_attrs(Func *f)
+{
+	string r;
+	for (auto s : f->getAttributes())
+		r += s + "\b";
+	return strdup(r.substr(0, r.size() - 1).c_str());
+}
+
+FOREIGN void set_func_attr(Func *f, char *c)
+{
+	f->addAttribute(string(c));
+	free(c);
+}
+
 FOREIGN struct seq_srcinfo {
 	char *file;
 	int line;
