@@ -49,9 +49,8 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 Func::Func() :
     BaseFunc(), Generic(), SrcObject(), external(false), name(), inTypes(),
     outType(types::Void), scope(new Block()), argNames(), argVars(), attributes(),
-    parentFunc(nullptr), ret(nullptr), yield(nullptr), resolved(false), root(this),
-    cache(), parentCache(), gen(false), promise(nullptr), handle(nullptr),
-    cleanup(nullptr), suspend(nullptr)
+    parentFunc(nullptr), ret(nullptr), yield(nullptr), resolved(false), cache(),
+    gen(false), promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
 		assert(this->argNames.size() == this->inTypes.size());
@@ -67,26 +66,14 @@ std::string Func::genericName()
 	return name;
 }
 
-RCache<Func>& Func::getCache()
-{
-	assert(!(parentType && parentFunc));
-	if (auto *ref = dynamic_cast<types::RefType *>(parentType)) {
-		return ref->cacheFor(this);
-	} else if (parentFunc) {
-		return parentFunc->cacheFor(this);
-	} else {
-		return root->cache;
-	}
-}
-
 void Func::addCachedRealized(std::vector<types::Type *> types, seq::Generic *x)
 {
-	getCache().add(types, dynamic_cast<Func *>(x));
+	cache.add(types, dynamic_cast<Func *>(x));
 }
 
 Func *Func::realize(std::vector<types::Type *> types)
 {
-	Func *cached = getCache().find(types);
+	Func *cached = cache.find(types);
 
 	if (cached)
 		return cached;
@@ -490,14 +477,6 @@ void Func::setArgNames(std::vector<std::string> argNames)
 		argVars.insert({this->argNames[i], new Var(inTypes[i])});
 }
 
-RCache<Func>& Func::cacheFor(Func *func)
-{
-	if (parentCache.find(func) == parentCache.end())
-		parentCache.emplace(func, RCache<Func>());
-
-	return parentCache.find(func)->second;
-}
-
 Func *Func::clone(Generic *ref)
 {
 	if (ref->seenClone(this))
@@ -528,7 +507,6 @@ Func *Func::clone(Generic *ref)
 	if (ret) x->ret = ret->clone(ref);
 	if (yield) x->yield = yield->clone(ref);
 	x->gen = gen;
-	x->root = root;
 	x->setSrcInfo(getSrcInfo());
 	return x;
 }

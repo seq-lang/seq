@@ -6,7 +6,7 @@ using namespace llvm;
 
 types::RefType::RefType(std::string name) :
     Type(std::move(name), BaseType::get(), false, true), Generic(),
-    done(false), root(this), llvmCache(), realizationCache(), parentCache(),
+    done(false), root(this), llvmCache(), realizationCache(),
     contents(nullptr), membNamesDeduced(), membExprsDeduced()
 {
 }
@@ -360,14 +360,6 @@ types::RefType *types::RefType::clone(Generic *ref)
 void types::RefType::addCachedRealized(std::vector<types::Type *> types, Generic *x)
 {
 	root->realizationCache.add(types, dynamic_cast<types::Type *>(x));
-}
-
-RCache<Func>& types::RefType::cacheFor(Func *func)
-{
-	if (parentCache.find(func) == parentCache.end())
-		parentCache.emplace(func, RCache<Func>());
-
-	return parentCache.find(func)->second;
 }
 
 types::RefType *types::RefType::none()

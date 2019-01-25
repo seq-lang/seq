@@ -782,6 +782,11 @@ FOREIGN void set_static_realize_types(GetStaticElemExpr *e, types::Type **types,
 	e->setRealizeTypes(vector<types::Type *>(types, types + sz));
 }
 
+FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types, size_t sz, char **error)
+{
+	return types::GenericType::get(t, vector<types::Type *>(types, types + sz));
+}
+
 /// Anything below throws exceptions
 
 // Yes, separator character here is \b
@@ -793,34 +798,6 @@ FOREIGN void set_static_realize_types(GetStaticElemExpr *e, types::Type **types,
 	asprintf(er, "%s\b%s\b%d\b%d\b%d", \
 	         e.what(), \
 	         info.file.c_str(), info.line, info.col, info.len );
-
-FOREIGN types::Type *realize_type
-    (types::RefType *t, types::Type **types, size_t sz, char **error)
-{
-	*error = nullptr;
-	if (sz == 0) return t;
-	try {
-		// actual realization is deferred until needed via GenericType:
-		return types::GenericType::get(t, vector<types::Type *>(types, types + sz));
-	} catch (exc::SeqException &e) {
-		CATCH (error);
-		return nullptr;
-	}
-}
-
-FOREIGN BaseFunc *realize_func
-    (FuncExpr *e, types::Type **types, size_t sz, char **error)
-{
-	*error = nullptr;
-    try {
-        auto *fn = dynamic_cast<Func *>(e->getFunc());
-        if (sz == 0) return fn;
-		return fn->realize(vector<types::Type *>(types, types + sz));
-	} catch (exc::SeqException &e) {
-		CATCH (error);
-		return nullptr;
-	}
-}
 
 FOREIGN void exec_module
     (SeqModule *sm, char **args, size_t alen, char debug, char **error)
