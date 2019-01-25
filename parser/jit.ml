@@ -26,7 +26,7 @@ let init () : t =
       ~base:anon_fn 
       ~block:(Llvm.Block.func anon_fn)
       ~jit:true
-      (Parser.parse_string ~debug:false ~jit:true)
+      (Runner.exec_string ~debug:false ~jit:true)
     in
     let jit = { cnt = 1; ctx } in
     (* load stdlib *)
@@ -46,7 +46,7 @@ let exec (jit: t) code =
   in 
   Ctx.add_block anon_ctx;
   jit.cnt <- jit.cnt + 1;
-  Parser.parse_string ~file:"<jit>" ~jit:true anon_ctx code;
+  Runner.exec_string ~file:"<jit>" ~jit:true anon_ctx code;
   try 
     Llvm.JIT.func jit.ctx.mdl anon_fn;
     Hash_set.iter (Stack.pop_exn anon_ctx.stack) ~f:(fun key ->

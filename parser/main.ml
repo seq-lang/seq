@@ -12,7 +12,7 @@ open Err
 
 (** Entry point *)
 let () =
-  Callback.register "parse_c" Parser.parse_c;
+  Callback.register "parse_c" Runner.parse_c;
   match List.nth (Array.to_list Sys.argv) 1 with
   | None ->
     Jit.repl ()
@@ -27,7 +27,7 @@ let () =
       let err_handler = fun a b -> 
         raise (CompilerError (a, b)) 
       in
-      let m = Parser.init fn err_handler in
+      let m = Runner.init fn err_handler in
       match m with
       | Some m -> 
         begin try

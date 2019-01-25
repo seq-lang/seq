@@ -2,6 +2,8 @@ from secure.socket import Socket
 from secure.types import *
 import math
 
+__cp__ = 0
+
 type Vec = Vector[MInt]
 type Mat = Matrix[MInt]
 
@@ -145,16 +147,18 @@ class MPC(
       return (ar, am)
 
   @secure
-  def BME[`t, `u, `m](S: MPC, ar: `t, am: `t, br: `u, bm: `u, mul: `m):
+  def BME[`t, `u, `m](S: MPC, a: tuple[`t, `t], b: tuple[`u, `u]):
+    (ar, am), (br, bm) = a, b
     if CP0:
-      return S.mod(mul(am, bm))
+      return S.mod(am * bm)
     elif CP1:
-      return S.mod(mul(ar, bm) + mul(am, br) + mul(ar, br))
+      return S.mod(ar * bm + am * br + ar * br)
     elif CP2:
-      return S.mod(mul(ar, bm) + mul(am, br))
+      return S.mod(ar * bm + am * br)
 
   @secure
-  def BMM[`t, `u](S: MPC, ar: `t, am: `t, br: `u, bm: `u):
+  def BMM[`t, `u, `m](S: MPC, a: tuple[`t, `t], b: tuple[`u, `u]):
+    (ar, am), (br, bm) = a, b
     if CP0:
       return S.mod(am @ bm)
     elif CP1:
@@ -209,17 +213,15 @@ class MPC(
   @secure
   @beaver
   def mul[`t, `u](S: MPC, a: `t, b: `u):
-    ar, am = S.BP(a)
-    br, bm = S.BP(b)
-    c = S.BME(ar, am, br, bm, `t.__mul__)
+    aa, bb = S.BP(a), S.BP(b)
+    c = S.BME(aa, bb)
     return S.BR(c)
 
   @secure
   @beaver
   def matmul[`t, `u](S: MPC, a: `t, b: `u):
-    ar, am = S.BP(a)
-    br, bm = S.BP(b)
-    c = S.BME(ar, am, br, bm, `t.__matmul__)
+    aa, bb = S.BP(a), S.BP(b)
+    c = S.BMM(aa, bb)
     return S.BR(c)
 
   @secure

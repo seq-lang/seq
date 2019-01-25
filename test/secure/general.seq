@@ -24,24 +24,31 @@ print 'START SECRET SHARING'
 
 a := S.share(x)
 b := S.share(y)
+c = 4z
 
 secure:
-	print S.str(a), S.str(b)
-	
-	w = S.add_public(a, 5z)
-	print 'AP', S.str(w)
+	print a, b
 
-	w = S.mul_public(a, 5z)
-	print 'MP', S.str(w)
+	w = a + 5z
+	print 'AP', w
 
-	w = S.add(a, b)
-	print 'A', S.str(w)
+	w = a * 5z
+	print 'MP', w
 
-	w = S.mul(a, b)
-	print 'M', S.str(w)
+	w = a + b
+	print 'A', w
 
-	w := S.matmul(a, b)
-	print 'MM', S.str(w)
+	w = a * b
+	print 'M', w
+	print w
+
+	w := a @ b
+	print 'MM', w
+
+	print '-------------------------------------'
+	w = w + 5z
+	w := w @ b + b @ a + foo(a * b) + c
+	print 'MM', w
 
 S.cleanup()
 

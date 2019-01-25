@@ -108,8 +108,8 @@
 %left B_AND
 %left B_LSH B_RSH
 %left ADD SUB
-%left AT MUL DIV FDIV MOD
-%left POW
+%left MUL DIV FDIV MOD
+%left POW AT
 
 /* entry rule for module */
 %start <Ast.t> program

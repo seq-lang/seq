@@ -594,7 +594,11 @@ struct
   and parse_special ctx pos (kind, stmts) =
     begin match kind with
       | "secure" ->
-        add_block ctx stmts
+        Ctx.add_block ctx;
+        Pass.parse_secure stmts 
+        |> List.map ~f:(parse ctx ~toplevel:false)
+        |> ignore;
+        Ctx.clear_block ctx
       | _ -> serr ~pos "unknown special statement"
     end;
     Llvm.Stmt.pass ()
