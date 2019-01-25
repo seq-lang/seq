@@ -187,13 +187,12 @@ class Vector[`t](items: list[`t]):
   def __len__(self: Vector[`t]) -> int:
     return self.items.__len__() 
 
-  def __add__(a: Vector[`t], b: `t): return Vector([i + b for i in a])
-  def __sub__(a: Vector[`t], b: `t): return Vector([i - b for i in a])
-  def __mul__(a: Vector[`t], b: `t): return Vector([i * b for i in a])
-  def __div__(a: Vector[`t], b: `t): return Vector([i / b for i in a])
-
-  def __mod__(a: Vector[MInt], b: Int): return a
+  def __add__(a: Vector[`t], b: `t): return Vector(i + b for i in a)
+  def __sub__(a: Vector[`t], b: `t): return Vector(i - b for i in a)
+  def __mul__(a: Vector[`t], b: `t): return Vector(i * b for i in a)
+  def __div__(a: Vector[`t], b: `t): return Vector(i / b for i in a)
   def __mod__(a: Vector[`t], b: `t): return Vector(i % b for i in a.items)
+  def __mod__(a: Vector[MInt], b: Int): return a
 
   def __add__(a: Vector[`t], b: Vector[`t]): 
     return Vector(i + j for i, j in zip(a.items, b.items))
@@ -347,6 +346,8 @@ class Matrix[`t](items: list[Vector[`t]]):
   def __mul__(a: Matrix[`t], b: `t): return Matrix(i * b for i in a.items)
   def __div__(a: Matrix[`t], b: `t): return Matrix(i / b for i in a.items)  
   def __mod__(a: Matrix[`t], b: `t): return Matrix(i % b for i in a.items)  
+  def __mod__(a: Matrix[MInt], i: Int):
+    return a
   def __add__(a: Matrix[`t], b: Matrix[`t]): 
     return Matrix(i + j for i, j in zip(a.items, b.items))
   def __sub__(a: Matrix[`t], b: Matrix[`t]): 
@@ -360,7 +361,6 @@ class Matrix[`t](items: list[Vector[`t]]):
     return Matrix(
       [sum(a[i][k] * b[k][j] for k in range(a.cols())) for j in range(b.cols())]
       for i in range(a.rows()))
-
   def __iadd__(a: Matrix[`t], b: `t): 
     for i, j in iproduct(a.rows(), a.cols()): a.items[i][j] += b
     return a
@@ -458,6 +458,3 @@ class Matrix[`t](items: list[Vector[`t]]):
       stored_in_buf -= 1  
     return mat
 
-extend Matrix[MInt]:
-  def __mod__(self: Matrix[MInt], i: Int):
-    return self

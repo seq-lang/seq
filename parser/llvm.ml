@@ -216,7 +216,7 @@ module Expr = struct
     (cstring @-> t @-> returning t)
     (strdup op) exp
 
-  let binary lh bop rh = 
+  let binary ?(inplace=false) lh bop rh = 
     let fn = match bop with
       | "is" | "is not" | "in" | "not in" ->
         let prefix = 
@@ -225,7 +225,7 @@ module Expr = struct
         foreign (prefix ^ "_expr")
           (t @-> t @-> returning t) 
       | bop ->
-        foreign ("bop_expr")
+        foreign ("bop_expr" ^ (if inplace then "_in_place" else ""))
           (cstring @-> t @-> t @-> returning t) 
           (strdup bop)
     in

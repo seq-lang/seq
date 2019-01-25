@@ -210,7 +210,13 @@ struct
   and parse_binary ctx _ (lh_expr, bop, rh_expr) =
     let lh_expr = parse ctx lh_expr in
     let rh_expr = parse ctx rh_expr in
-    Llvm.Expr.binary lh_expr bop rh_expr
+
+    let inplace, bop = 
+      if (String.prefix bop 8) = "inplace_" then
+        true, String.drop_prefix bop 8
+      else false, bop
+    in
+    Llvm.Expr.binary ~inplace lh_expr bop rh_expr
 
   and parse_pipe ctx _ exprs =
     let exprs = List.map exprs ~f:(parse ctx) in

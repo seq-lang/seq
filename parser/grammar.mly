@@ -548,7 +548,7 @@ assign_statement:
       in
       let rhs = 
         pos (fst $1) (fst $3), 
-        Binary ($1, op, $3) 
+        Binary ($1, "inplace_" ^ op, $3) 
       in
       [ fst rhs, 
         Assign ($1, rhs, false) ]}
