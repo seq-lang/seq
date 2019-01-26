@@ -38,6 +38,7 @@ namespace seq {
 		std::string name;
 		std::vector<types::Type *> inTypes;
 		types::Type *outType;
+		types::Type *outType0;  // original output type, before deduction
 		Block *scope;
 
 		std::vector<std::string> argNames;
