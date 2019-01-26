@@ -36,18 +36,11 @@ namespace seq {
 			 */
 			RCache<types::Type> realizationCache;
 
-			/*
-			 * Cache for methods
-			 */
-			std::map<Func *, RCache<Func>> parentCache;
-
 			RecordType *contents;
-
 			std::vector<std::string> membNamesDeduced;
 			std::vector<Expr *> membExprsDeduced;
 
 			explicit RefType(std::string name);
-
 			llvm::Type *getStructPointerType(llvm::LLVMContext& context) const;
 			void setDeducedContents();
 		public:
@@ -91,7 +84,6 @@ namespace seq {
 
 			types::RefType *clone(Generic *ref) override;
 			void addCachedRealized(std::vector<types::Type *> types, Generic *x) override;
-			RCache<Func>& cacheFor(Func *func);
 
 			static RefType *none();
 		};

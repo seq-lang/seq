@@ -38,6 +38,7 @@ namespace seq {
 		std::string name;
 		std::vector<types::Type *> inTypes;
 		types::Type *outType;
+		types::Type *outType0;  // original output type, before deduction
 		Block *scope;
 
 		std::vector<std::string> argNames;
@@ -48,21 +49,7 @@ namespace seq {
 		Return *ret;
 		Yield *yield;
 		bool resolved;
-
-		/*
-		 * Original function, if generic
-		 */
-		Func *root;
-
-		/*
-		 * Realization cache for this function, if not nested/member
-		 */
 		RCache<Func> cache;
-
-		/*
-		 * Realization cache for nested functions
-		 */
-		std::map<Func *, RCache<Func>> parentCache;
 
 		bool gen;
 		llvm::Value *promise;
@@ -72,7 +59,6 @@ namespace seq {
 		llvm::BasicBlock *exit;
 
 		std::string getMangledFuncName();
-		RCache<Func>& getCache();
 	public:
 		Func();
 		Block *getBlock();
@@ -106,8 +92,6 @@ namespace seq {
 		void setName(std::string name);
 		std::vector<std::string> getArgNames();
 		void setArgNames(std::vector<std::string> argNames);
-
-		RCache<Func>& cacheFor(Func *func);
 
 		Func *clone(Generic *ref) override;
 	};
