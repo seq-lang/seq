@@ -1523,7 +1523,7 @@ static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types
 	 * Important note: If we're able to deduce type parameters, we change the structure
 	 * of the AST by replacing functions etc. However, in order for generics/cloning to
 	 * work properly, we need to preserve the original AST. For this reason, FuncExpr and
-	 * Get(Static?)ElemExpr take an optional 'orig' argument representing the original Expr
+	 * Get(Static)ElemExpr take an optional 'orig' argument representing the original Expr
 	 * to be returned when cloning.
 	 */
 
@@ -1543,14 +1543,14 @@ static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types
 			auto *partialExpr = dynamic_cast<PartialCallExpr *>(func);
 			if (partialExpr) {
 				auto *parType = dynamic_cast<types::PartialFuncType *>(partialExpr->getType());
-				auto *funcExpr = dynamic_cast<FuncExpr *>(func);
-				if (!funcExpr->isRealized()) {
+				auto *funcExpr = dynamic_cast<FuncExpr *>(partialExpr->getFuncExpr());
+				if (funcExpr && !funcExpr->isRealized()) {
 					Func *f = getFuncFromFuncExpr(partialExpr->getFuncExpr());
 					std::vector<types::Type *> typesFull;
 					if (getFullCallTypesForPartial(f, parType, argTypes, typesFull))
 						partialExpr->setFuncExpr(
 						    new FuncExpr(f->realize(f->deduceTypesFromArgTypes(typesFull)),
-							             partialExpr->getFuncExpr()));
+						                 partialExpr->getFuncExpr()));
 				}
 			}
 		}
@@ -1560,14 +1560,14 @@ static void deduceTypeParametersIfNecessary(Expr*& func, const std::vector<types
 			auto *callExpr = dynamic_cast<CallExpr *>(func);
 			if (callExpr) {
 				auto *parType = dynamic_cast<types::PartialFuncType *>(callExpr->getType());
-				auto *funcExpr = dynamic_cast<FuncExpr *>(func);
-				if (!funcExpr->isRealized()) {
+				auto *funcExpr = dynamic_cast<FuncExpr *>(callExpr->getFuncExpr());
+				if (funcExpr && !funcExpr->isRealized()) {
 					Func *f = getFuncFromFuncExpr(callExpr->getFuncExpr());
 					std::vector<types::Type *> typesFull;
 					if (getFullCallTypesForPartial(f, parType, argTypes, typesFull))
 						callExpr->setFuncExpr(
-								new FuncExpr(f->realize(f->deduceTypesFromArgTypes(typesFull)),
-								             callExpr->getFuncExpr()));
+						    new FuncExpr(f->realize(f->deduceTypesFromArgTypes(typesFull)),
+						                 callExpr->getFuncExpr()));
 				}
 			}
 		}
