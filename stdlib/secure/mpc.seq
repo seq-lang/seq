@@ -2,7 +2,7 @@ from secure.socket import Socket
 from secure.types import *
 import math
 
-__cp__ = 0
+# __cp__ = 0
 
 type Vec = Vector[MInt]
 type Mat = Matrix[MInt]
@@ -147,7 +147,7 @@ class MPC(
       return (ar, am)
 
   @secure
-  def BME[`t, `u, `m](S: MPC, a: tuple[`t, `t], b: tuple[`u, `u]):
+  def BME[`t, `u](S: MPC, a: tuple[`t, `t], b: tuple[`u, `u]):
     (ar, am), (br, bm) = a, b
     if CP0:
       return S.mod(am * bm)
@@ -157,7 +157,7 @@ class MPC(
       return S.mod(ar * bm + am * br)
 
   @secure
-  def BMM[`t, `u, `m](S: MPC, a: tuple[`t, `t], b: tuple[`u, `u]):
+  def BMM[`t, `u](S: MPC, a: tuple[`t, `t], b: tuple[`u, `u]):
     (ar, am), (br, bm) = a, b
     if CP0:
       return S.mod(am @ bm)

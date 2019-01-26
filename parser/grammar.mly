@@ -473,21 +473,15 @@ small_statement:
     { List.map $2 ~f:(fun expr ->
         fst expr, Del expr) }
   // print statement
-  | PRINT separated_list(COMMA, expr)
-    { let stmts = List.mapi $2 ~f:(fun i expr ->
-        let delim = if i < ((List.length $2) - 1) then " " else "\n" in
-        let pos = fst expr in
-        [ pos, Print expr; 
-          pos, Print (pos, String delim) ] )
-      in 
-      List.concat stmts }
+  | PRINT
+    {[ $1, 
+       Print ([], "\n") ]}
+  | PRINT separated_nonempty_list(COMMA, expr)
+    {[ pos $1 (fst @@ List.last_exn $2),
+       Print ($2, "\n") ]}
   | PRINT separated_nonempty_trailing_list(COMMA, expr)
-    { let stmts = List.mapi $2 ~f:(fun i expr ->
-        let pos = fst expr in
-        [ pos, Print expr; 
-          pos, Print (pos, String " ") ] )
-      in 
-      List.concat stmts }
+    {[ pos $1 (fst @@ List.last_exn $2),
+       Print ($2, " ") ]}
   // assert statement
   | ASSERT expr_list
     { List.map $2 ~f:(fun expr -> 
@@ -948,10 +942,10 @@ decorator:
 /******************************************************************************/
 
 special_statement:
-  | ID COLON suite
-    { match snd $1 with
-      | "secure" ->
-        pos (fst $1) $2,
-        Special (snd $1, $3)
+  | ID ID separated_nonempty_list(COMMA, ID) COLON suite
+    { match snd $1, snd $2 with
+      | "secure", "on" ->
+        pos (fst $1) $4,
+        Special (snd $1, $5, List.map $3 ~f:(fun (p,i) -> i))
       | _ -> noimp "invalid special" }
 

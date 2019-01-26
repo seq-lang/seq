@@ -178,6 +178,8 @@ and read state = parse
   | stringprefix '"'      { double_string state (L.lexeme lexbuf) lexbuf }
   | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
   | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
+  
+  | "$" { escaped_id state lexbuf }
 
   | '`' (ident as gen) { 
     let len = 1 + (String.length gen) in
@@ -285,5 +287,11 @@ and double_docstr state prefix = shortest
       { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines };
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
+  }
+
+and escaped_id state = parse
+  | (([^ '\r' '\n' '$' ])* as s) '$' { 
+    let len = (String.length s) in
+    P.ID (cur_pos state lexbuf ~len, s)
   }
 

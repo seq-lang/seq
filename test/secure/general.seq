@@ -2,6 +2,7 @@ from secure.types import *
 from secure.mpc import *
 
 S = MPC([(0,1),(0,2),(1,2)], __cp__)
+# S = 4
 
 # extern c ZP_setup()
 # ZP_setup()
@@ -11,44 +12,47 @@ x, y = 7z, 3z
 x := Vec([1z, 2z, 3z, 4z, 5z])
 y := Vec([9z, 8z, 7z, 6z, 5z]) 
 
-x := Mat([
+a := Mat([
 	[1z, 2z],
 	[3z, 4z]
 	])
-y := Mat([
+b := Mat([
 	[2z, 0z],
 	[1z, 2z]
 	])
 
 print 'START SECRET SHARING'
 
-a := S.share(x)
-b := S.share(y)
 c = 4z
-
-secure:
+secure on a, b:
 	print a, b
 
-	w = a + 5z
-	print 'AP', w
+	w = a + 5z 
+	print 'AP', w ## [[6, 7], [8, 9]]
 
 	w = a * 5z
-	print 'MP', w
+	print 'MP', w ## [[5, 10], [15, 20]]
 
 	w = a + b
-	print 'A', w
+	print 'A', w  ## [[3, 2], [4, 6]]
 
 	w = a * b
-	print 'M', w
+	print 'M', w  ## [[2, 0], [3, 8]]
 	print w
 
 	w := a @ b
-	print 'MM', w
+	# print 'MM', w ## [[4, 4], [10, 8]]
 
-	print '-------------------------------------'
+	print '--------------------------------------------------------'
+
+	
+	# def foo(x):
+	# 	return x + 2z
+	# print 'foo', a*b, foo(a*b)
+
 	w = w + 5z
-	w := w @ b + b @ a + foo(a * b) + c
-	print 'MM', w
+	w := w @ b + b @ a + (a * b + 2z) + c
+	print 'MM', w # [[37, 28], [59, 50]]
 
 S.cleanup()
 

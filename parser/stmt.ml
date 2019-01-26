@@ -69,7 +69,7 @@ struct
         if jit then 
           List.rev @@ match List.rev stmts with
             | (pos, Expr e) :: tl -> 
-              (pos, Print (pos, String "\n")) :: (pos, Print e) :: tl
+              (pos, Print ([e], "\n")) :: tl
             | l -> l
         else stmts 
       in
@@ -172,12 +172,17 @@ struct
     | _ -> 
       serr ~pos "cannot del non-index expression"
 
-  and parse_print ctx _ ~jit expr =    
-    let expr = E.parse ctx expr in
-    if jit then 
-      Llvm.Stmt.print_jit expr
-    else
-      Llvm.Stmt.print expr
+  and parse_print ctx pos ~jit (exprs, ed) =
+    let ll = if jit then Llvm.Stmt.print_jit else Llvm.Stmt.print in
+    List.iteri exprs ~f:(fun i expr ->
+      let expr = E.parse ctx expr in
+      ignore @@ finalize ctx (ll expr) pos;
+      if i < List.length exprs then
+        ignore @@ finalize ctx (ll @@ E.parse ctx (pos, String " ")) pos);
+    if ed <> "" then
+      ll @@ E.parse ctx (pos, String ed)
+    else 
+      Llvm.Stmt.pass ()
 
   and parse_return ctx pos ret =
     match ret with
@@ -591,11 +596,12 @@ struct
     | _ ->
       serr ~pos "symbol '%s' not found or not a variable" var
 
-  and parse_special ctx pos (kind, stmts) =
+  and parse_special ctx pos (kind, stmts, inputs) =
     begin match kind with
       | "secure" ->
         Ctx.add_block ctx;
-        Pass.parse_secure stmts 
+        Pass.parse_secure 
+        stmts inputs
         |> List.map ~f:(parse ctx ~toplevel:false)
         |> ignore;
         Ctx.clear_block ctx

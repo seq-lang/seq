@@ -152,7 +152,7 @@ struct
     | Expr        of ExprNode.t
     | Assign      of (ExprNode.t * ExprNode.t * bool)
     | Del         of ExprNode.t
-    | Print       of ExprNode.t
+    | Print       of (ExprNode.t list * string)
     | Return      of ExprNode.t option
     | Yield       of ExprNode.t option
     | Assert      of ExprNode.t
@@ -169,7 +169,7 @@ struct
     | Try         of (t list * catch tt list * t list option)
     | Global      of string
     | Throw       of ExprNode.t
-    | Special     of (string * t list)
+    | Special     of (string * t list * string list)
   and generic =
     | Function of fn_t
     | Class of class_t 
@@ -230,7 +230,9 @@ struct
     | Assign (l, r, s) -> 
       sprintf "%s %s %s" 
         (ExprNode.to_string l) (if s then ":=" else "=") (ExprNode.to_string r)
-    | Print x -> sprintf "PRINT %s" (ExprNode.to_string x)
+    | Print (x, n) -> sprintf "PRINT %s, %s" 
+        (ppl x ~f:ExprNode.to_string) 
+        (String.escaped n)
     | Del x -> sprintf "DEL %s" (ExprNode.to_string x)
     | Assert x -> sprintf "ASSERT %s" (ExprNode.to_string x)
     | Yield x -> sprintf "YIELD %s"

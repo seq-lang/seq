@@ -181,7 +181,7 @@ class Vector[`t](items: list[`t]):
   def __init__(self: Vector[`t], l: generator[`t]): 
     self.items = list(l)
   def __copy__(self: Vector[`t]):
-    return Vector[`t](self.items.__copy__())
+    return Vector(copy(i) for i in self)
   def __str__(self: Vector[`t]) -> str:
     return self.items.__str__()
   def __len__(self: Vector[`t]) -> int:
@@ -321,7 +321,7 @@ class Matrix[`t](items: list[Vector[`t]]):
     for i in self.items:
       assert len(self.items[0]) == len(i)
   def __copy__(self: Matrix[`t]) -> Matrix[`t]:
-    return Matrix(self.items.__copy__())
+    return Matrix([copy(c) for c in r] for r in self)
   def __str__(self: Matrix[`t]):
     return self.items.__str__()
   def __len__(self: Matrix[`t]) -> tuple[int, int]:

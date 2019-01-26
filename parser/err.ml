@@ -57,7 +57,11 @@ let print_error ?file typ pos_lst =
     | Compiler s -> "compiler", s 
   in
   let file_line file_name line =
-    if String.length file_name > 0 && file_name.[0] <> '<' then
+    if String.length file_name > 0 && file_name.[0] = '\t' then 
+      let lines = String.split ~on:'\n' @@ String.drop_prefix file_name 1 in
+      List.nth lines (line - 1)
+    (* read file *)
+    else if String.length file_name > 0 && file_name.[0] <> '<' then
       try
         let lines = In_channel.read_lines file_name in 
         List.nth lines (line - 1)

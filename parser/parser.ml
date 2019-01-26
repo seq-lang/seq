@@ -10,8 +10,9 @@
 open Core
 open Err
 
-let parse_ast ?fn ?(file="<internal>") code = 
+let parse_ast ?fn ?(file="") code = 
   let lexbuf = Lexing.from_string (code ^ "\n") in
+  let file = if file = "" then "\t" ^ code else file in
   try
     let state = Lexer.stack_create file in
     let ast = Grammar.program (Lexer.token state) lexbuf in
