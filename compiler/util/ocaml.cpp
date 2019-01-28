@@ -19,6 +19,16 @@ FOREIGN types::Type *str_seq_type()     { return types::Seq; }
 FOREIGN types::Type *source_type()      { return types::Raw; }
 FOREIGN types::Type *generic_type()     { return types::GenericType::get(); }
 
+FOREIGN types::Type *iN_type(unsigned len)
+{
+	return types::IntNType::get(len, true);
+}
+
+FOREIGN types::Type *uN_type(unsigned len)
+{
+	return types::IntNType::get(len, false);
+}
+
 FOREIGN types::Type *kmer_type(unsigned k)
 {
 	return types::KMer::get(k);

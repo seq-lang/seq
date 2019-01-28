@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cstdio>
+#include <string>
 #include "seq/seq.h"
 
 using namespace seq;
@@ -11,6 +11,14 @@ types::NumberType::NumberType() : Type("num", BaseType::get(), true)
 
 types::IntType::IntType() : Type("int", NumberType::get(), false, true)
 {
+}
+
+types::IntNType::IntNType(unsigned len, bool sign) :
+    Type(std::string(sign ? "i" : "u") + std::to_string(len), NumberType::get(), false, true),
+    len(len), sign(sign)
+{
+	if (len == 0 || len > MAX_LEN)
+		throw exc::SeqException("integer bit width must be between 1 and " + std::to_string(MAX_LEN));
 }
 
 types::FloatType::FloatType() : Type("float", NumberType::get(), false, true)
@@ -28,6 +36,11 @@ types::ByteType::ByteType() : Type("byte", NumberType::get(), false, true)
 Value *types::IntType::defaultValue(BasicBlock *block)
 {
 	return ConstantInt::get(getLLVMType(block->getContext()), 0);
+}
+
+Value *types::IntNType::defaultValue(BasicBlock *block)
+{
+	return ConstantInt::get(getLLVMType(block->getContext()), 0, sign);
 }
 
 Value *types::FloatType::defaultValue(BasicBlock *block)
@@ -50,7 +63,25 @@ void types::IntType::initOps()
 	if (!vtable.magic.empty())
 		return;
 
+	for (unsigned i = 1; i <= IntNType::MAX_LEN; i++) {
+		vtable.magic.push_back(
+			{"__init__", {IntNType::get(i, true)}, Int, SEQ_MAGIC(self, args, b) {
+				return b.CreateSExtOrTrunc(args[0], Int->getLLVMType(b.getContext()));
+			}}
+		);
+
+		vtable.magic.push_back(
+			{"__init__", {IntNType::get(i, false)}, Int, SEQ_MAGIC(self, args, b) {
+				return b.CreateZExtOrTrunc(args[0], Int->getLLVMType(b.getContext()));
+			}}
+		);
+	}
+
 	vtable.magic = {
+		{"__init__", {}, Int, SEQ_MAGIC(self, args, b) {
+			return Int->defaultValue(b.GetInsertBlock());
+		}},
+
 		{"__init__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return args[0];
 		}},
@@ -221,12 +252,143 @@ void types::IntType::initOps()
 	};
 }
 
+void types::IntNType::initOps()
+{
+	if (!vtable.magic.empty())
+		return;
+
+	vtable.magic = {
+		{"__init__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return defaultValue(b.GetInsertBlock());
+		}},
+
+		{"__init__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return args[0];
+		}},
+
+		{"__init__", {Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return sign ? b.CreateSExtOrTrunc(args[0], getLLVMType(b.getContext())) :
+			              b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
+		}},
+
+		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *printFunc = cast<Function>(
+			                    module->getOrInsertFunction(
+			                      "seq_print_int",
+			                      llvm::Type::getVoidTy(context),
+			                      getLLVMType(context)));
+			printFunc->setDoesNotThrow();
+			Value *ext = sign ? b.CreateSExtOrTrunc(self, seqIntLLVM(context)) :
+			                    b.CreateZExtOrTrunc(self, seqIntLLVM(context));
+			b.CreateCall(printFunc, ext);
+			return (Value *)nullptr;
+		}},
+
+		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
+		// int unary
+		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *zero = defaultValue(b.GetInsertBlock());
+			return b.CreateZExt(b.CreateICmpNE(self, zero), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__pos__", {}, this, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
+		{"__neg__", {}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateNeg(self);
+		}},
+
+		{"__invert__", {}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateNot(self);
+		}},
+
+		// int,int binary
+		{"__add__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateAdd(self, args[0]);
+		}},
+
+		{"__sub__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateSub(self, args[0]);
+		}},
+
+		{"__mul__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateMul(self, args[0]);
+		}},
+
+		{"__div__", {this}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return sign ? b.CreateSDiv(self, args[0]) : b.CreateUDiv(self, args[0]);
+		}},
+
+		{"__mod__", {this}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return sign ? b.CreateSRem(self, args[0]) : b.CreateURem(self, args[0]);
+		}},
+
+		{"__lshift__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateShl(self, args[0]);
+		}},
+
+		{"__rshift__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateAShr(self, args[0]);
+		}},
+
+		{"__eq__", {this}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__ne__", {this}, Bool, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__lt__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *cmp = sign ? b.CreateICmpSLT(self, args[0]) : b.CreateICmpULT(self, args[0]);
+			return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__gt__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *cmp = sign ? b.CreateICmpSGT(self, args[0]) : b.CreateICmpUGT(self, args[0]);
+			return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__le__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *cmp = sign ? b.CreateICmpSLE(self, args[0]) : b.CreateICmpULE(self, args[0]);
+			return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__ge__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
+			Value *cmp = sign ? b.CreateICmpSGE(self, args[0]) : b.CreateICmpUGE(self, args[0]);
+			return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
+		}},
+
+		{"__and__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateAnd(self, args[0]);
+		}},
+
+		{"__or__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateOr(self, args[0]);
+		}},
+
+		{"__xor__", {this}, this, SEQ_MAGIC(self, args, b) {
+			return b.CreateXor(self, args[0]);
+		}},
+	};
+}
+
 void types::FloatType::initOps()
 {
 	if (!vtable.magic.empty())
 		return;
 
 	vtable.magic = {
+		{"__init__", {}, Float, SEQ_MAGIC(self, args, b) {
+			return Float->defaultValue(b.GetInsertBlock());
+		}},
+
 		{"__init__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			return args[0];
 		}},
@@ -390,6 +552,10 @@ void types::BoolType::initOps()
 		return;
 
 	vtable.magic = {
+		{"__init__", {}, Bool, SEQ_MAGIC(self, args, b) {
+			return Bool->defaultValue(b.GetInsertBlock());
+		}},
+
 		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			Module *module = b.GetInsertBlock()->getModule();
@@ -443,6 +609,10 @@ void types::ByteType::initOps()
 		return;
 
 	vtable.magic = {
+		{"__init__", {}, Byte, SEQ_MAGIC(self, args, b) {
+			return Byte->defaultValue(b.GetInsertBlock());
+		}},
+
 		{"__init__", {Byte}, Byte, SEQ_MAGIC(self, args, b) {
 			return args[0];
 		}},
@@ -488,6 +658,11 @@ Type *types::IntType::getLLVMType(LLVMContext& context) const
 	return seqIntLLVM(context);
 }
 
+Type *types::IntNType::getLLVMType(LLVMContext& context) const
+{
+	return IntegerType::getIntNTy(context, len);
+}
+
 Type *types::FloatType::getLLVMType(LLVMContext& context) const
 {
 	return llvm::Type::getDoubleTy(context);
@@ -506,6 +681,11 @@ Type *types::ByteType::getLLVMType(LLVMContext& context) const
 size_t types::IntType::size(Module *module) const
 {
 	return sizeof(seq_int_t);
+}
+
+size_t types::IntNType::size(Module *module) const
+{
+	return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 size_t types::FloatType::size(Module *module) const
@@ -535,6 +715,11 @@ types::IntType *types::IntType::get() noexcept
 	return &instance;
 }
 
+types::IntNType *types::IntNType::get(unsigned len, bool sign)
+{
+	return new IntNType(len, sign);
+}
+
 types::FloatType *types::FloatType::get() noexcept
 {
 	static FloatType instance;
@@ -551,4 +736,10 @@ types::ByteType *types::ByteType::get() noexcept
 {
 	static ByteType instance;
 	return &instance;
+}
+
+bool types::IntNType::is(types::Type *type) const
+{
+	auto *iN = dynamic_cast<types::IntNType *>(type);
+	return iN && (len == iN->len && sign == iN->sign);
 }

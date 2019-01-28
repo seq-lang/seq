@@ -30,6 +30,26 @@ namespace seq {
 			static IntType *get() noexcept;
 		};
 
+		class IntNType : public Type {
+		private:
+			unsigned len;
+			bool sign;
+			IntNType(unsigned len, bool sign);
+		public:
+			static const unsigned MAX_LEN = 256;
+
+			IntNType(IntNType const&)=delete;
+			void operator=(IntNType const&)=delete;
+
+			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+
+			bool is(Type *type) const override;
+			void initOps() override;
+			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
+			size_t size(llvm::Module *module) const override;
+			static IntNType *get(unsigned len=32, bool sign=true);
+		};
+
 		class FloatType : public Type {
 		private:
 			FloatType();
