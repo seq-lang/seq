@@ -94,13 +94,13 @@
 %token<Ast.Pos.t * string> FDIV POW MOD AT // //, **, %, @
 %token<Ast.Pos.t * string> PLUSEQ MINEQ MULEQ DIVEQ  // +=, -=, *=, /=
 %token<Ast.Pos.t * string> FDIVEQ POWEQ MODEQ // //=, **=, %=, 
-%token<Ast.Pos.t * string> LSHEQ RSHEQ // <<=, >>=
 %token<Ast.Pos.t * string> AND OR NOT // and, or, not
 %token<Ast.Pos.t * string> IS ISNOT IN NOTIN // is, is not, in, not in
 %token<Ast.Pos.t * string> EEQ NEQ LESS LEQ GREAT GEQ // ==, !=, <, <=, >, >=
 %token<Ast.Pos.t * string> PIPE // |>
 %token<Ast.Pos.t * string> B_AND B_OR B_XOR B_NOT // &, |, ^, ~
 %token<Ast.Pos.t * string> B_LSH B_RSH // <<, >>
+%token<Ast.Pos.t * string> LSHEQ RSHEQ ANDEQ OREQ XOREQ // <<=, >>= &= |= ^=
 
 /* operator precedence */
 %left B_OR
@@ -627,7 +627,8 @@ assign_statement:
             let result = parse_assign lhs rhs in
             rhs, result) }
 %inline aug_eq:
-  | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ | LSHEQ | RSHEQ
+  | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ 
+  | LSHEQ | RSHEQ | ANDEQ | OREQ | XOREQ
     { $1 }
 
 

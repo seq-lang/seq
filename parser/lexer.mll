@@ -193,6 +193,9 @@ and read state = parse
   | "{" { ignore_nl state; P.LB (cur_pos state lexbuf) }
   | "}" { aware_nl state;  P.RB (cur_pos state lexbuf) }
 
+  | "|="  as op { P.OREQ   (cur_pos state lexbuf ~len:2, op) }
+  | "&="  as op { P.ANDEQ  (cur_pos state lexbuf ~len:2, op) }
+  | "^="  as op { P.XOREQ  (cur_pos state lexbuf ~len:2, op) } 
   | "<<=" as op { P.LSHEQ (cur_pos state lexbuf ~len:3, op) }
   | ">>=" as op { P.RSHEQ (cur_pos state lexbuf ~len:3, op) }
   | "<<"  as op { P.B_LSH (cur_pos state lexbuf ~len:2, op) }

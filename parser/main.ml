@@ -21,7 +21,8 @@ let () =
   | Some "--jupyter" ->
     let kerneldir = Filename.dirname Sys.argv.(0) in
     let settings_json = Sys.argv.(2) in
-    Jupyter.jupyter kerneldir settings_json
+    ()
+    (* Jupyter.jupyter kerneldir settings_json *)
   | Some fn when Caml.Sys.file_exists fn ->
     begin try
       let err_handler = fun a b -> 
