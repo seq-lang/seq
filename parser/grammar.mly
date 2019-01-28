@@ -70,7 +70,6 @@
 %token <Ast.Pos.t> DOT       // . 
 %token <Ast.Pos.t> COLON     // : 
 %token <Ast.Pos.t> SEMICOLON // ; 
-%token <Ast.Pos.t> AT        // @ 
 %token <Ast.Pos.t> COMMA     // , 
 %token <Ast.Pos.t> OF        // -> 
 
@@ -92,7 +91,7 @@
 /* operators */
 %token<Ast.Pos.t * string> EQ ASSGN_EQ ELLIPSIS // =, :=, ...
 %token<Ast.Pos.t * string> ADD SUB MUL DIV // +, -, *, /
-%token<Ast.Pos.t * string> FDIV POW MOD  // //, **, %
+%token<Ast.Pos.t * string> FDIV POW MOD AT // //, **, %, @
 %token<Ast.Pos.t * string> PLUSEQ MINEQ MULEQ DIVEQ  // +=, -=, *=, /=
 %token<Ast.Pos.t * string> FDIVEQ POWEQ MODEQ // //=, **=, %=, 
 %token<Ast.Pos.t * string> LSHEQ RSHEQ // <<=, >>=
@@ -110,7 +109,7 @@
 %left B_LSH B_RSH
 %left ADD SUB
 %left MUL DIV FDIV MOD
-%left POW
+%left POW AT
 
 /* entry rule for module */
 %start <Ast.t> program
@@ -342,7 +341,7 @@ arith_expr:
     { pos (fst $1) (fst $3), 
       Binary ($1, snd $2, $3) }
 %inline arith_op:
-  | ADD | SUB | MUL | DIV | FDIV | MOD | POW 
+  | ADD | SUB | MUL | DIV | FDIV | MOD | POW | AT 
   | B_AND | B_OR | B_XOR | B_LSH | B_RSH
     { $1 }
 
@@ -437,6 +436,7 @@ statement:
   // Function and clas definitions
   | func_statement
   | class_statement
+  /* | special_statement */
     {[ $1 ]}
 
 // Simple one-line statements
@@ -473,21 +473,15 @@ small_statement:
     { List.map $2 ~f:(fun expr ->
         fst expr, Del expr) }
   // print statement
-  | PRINT separated_list(COMMA, expr)
-    { let stmts = List.mapi $2 ~f:(fun i expr ->
-        let delim = if i < ((List.length $2) - 1) then " " else "\n" in
-        let pos = fst expr in
-        [ pos, Print expr; 
-          pos, Print (pos, String delim) ] )
-      in 
-      List.concat stmts }
+  | PRINT
+    {[ $1, 
+       Print ([], "\n") ]}
+  | PRINT separated_nonempty_list(COMMA, expr)
+    {[ pos $1 (fst @@ List.last_exn $2),
+       Print ($2, "\n") ]}
   | PRINT separated_nonempty_trailing_list(COMMA, expr)
-    { let stmts = List.mapi $2 ~f:(fun i expr ->
-        let pos = fst expr in
-        [ pos, Print expr; 
-          pos, Print (pos, String " ") ] )
-      in 
-      List.concat stmts }
+    {[ pos $1 (fst @@ List.last_exn $2),
+       Print ($2, " ") ]}
   // assert statement
   | ASSERT expr_list
     { List.map $2 ~f:(fun expr -> 
@@ -548,7 +542,7 @@ assign_statement:
       in
       let rhs = 
         pos (fst $1) (fst $3), 
-        Binary ($1, op, $3) 
+        Binary ($1, "inplace_" ^ op, $3) 
       in
       [ fst rhs, 
         Assign ($1, rhs, false) ]}
@@ -798,21 +792,32 @@ throw:
 func_statement:
   | func { $1 }
   | decorator+ func
-    { noimp "decorator"(* DecoratedFunction ($1, $2) *) }
+    { 
+      let fn = match snd $2 with 
+        | Generic Function f -> f 
+        | _ -> failwith "match failure"
+      in
+      fst $2,
+      Generic (Function { fn with fn_attrs = $1 })
+    }
 
 // Function definition
 func:
   // Seq function (def foo [ [type+] ] (param+) [ -> return ])
   | DEF; name = ID;
     intypes = generic_list?;
-    LP params = separated_list(COMMA, func_param); RP
+    LP fn_args = separated_list(COMMA, func_param); RP
     typ = func_ret_type?;
     COLON;
     s = suite
-    { let intypes = Option.value intypes ~default:[] in
+    { let fn_generics = Option.value intypes ~default:[] in
       pos $1 $8, 
       Generic (Function 
-        ((fst name, { name = snd name; typ }), intypes, params, s)) }
+        { fn_name = { name = snd name; typ }; 
+          fn_generics; 
+          fn_args; 
+          fn_stmts = s;
+          fn_attrs = [] }) }
   // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
   | EXTERN; lang = ID; dylib = dylib_spec?; name = ID;
     LP params = separated_list(COMMA, extern_param); RP
@@ -912,10 +917,10 @@ type_head:
 
 // Class extensions (extend name)
 extend:
-  | EXTEND ; n = ID; COLON NL; 
+  | EXTEND ; n = expr; COLON NL; 
     INDENT fns = class_member+ DEDENT
     { pos $1 $3, 
-      Extend (snd n, List.filter_opt fns) }
+      Extend (n, List.filter_opt fns) }
 // Class suite members
 class_member:
   // Empty statements
@@ -925,11 +930,12 @@ class_member:
   | func_statement 
     { Some (fst $1, match snd $1 with Generic c -> c | _ -> assert false) }
 
-
 // Decorators 
 decorator:
   | AT dot_term NL
-    { noimp "decorator" (* Decorator ($2, []) *) }
+    { match $2 with 
+      | pos, Id s -> pos, s
+      | _ -> noimp "decorator dot" }
   | AT dot_term LP separated_list(COMMA, expr) RP NL
     { noimp "decorator" (* Decorator ($2, $4) *) }
 

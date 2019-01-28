@@ -216,7 +216,7 @@ module Expr = struct
     (cstring @-> t @-> returning t)
     (strdup op) exp
 
-  let binary lh bop rh = 
+  let binary ?(inplace=false) lh bop rh = 
     let fn = match bop with
       | "is" | "is not" | "in" | "not in" ->
         let prefix = 
@@ -225,7 +225,7 @@ module Expr = struct
         foreign (prefix ^ "_expr")
           (t @-> t @-> returning t) 
       | bop ->
-        foreign ("bop_expr")
+        foreign ("bop_expr" ^ (if inplace then "_in_place" else ""))
           (cstring @-> t @-> t @-> returning t) 
           (strdup bop)
     in
@@ -266,8 +266,8 @@ module Expr = struct
     (Types.typ @-> cstring @-> returning t)
     typ (strdup what)
 
-  let typeof = foreign "typeof_expr"
-    (t @-> returning t)
+  let typeof = foreign "type_of_expr"
+    (t @-> returning Types.typ)
 
   let ptr = foreign "ptr_expr"
     (Types.var @-> returning t)
@@ -530,6 +530,17 @@ module Func = struct
     in
     let names = String.split ~on:'\b' s in
     List.rev names |> List.tl_exn |> List.rev
+
+  let get_attrs f = 
+    let s = foreign "get_func_attrs" 
+      (t @-> returning string)
+      f
+    in
+    String.split ~on:'\b' s
+
+  let set_attr f at = foreign "set_func_attr" 
+    (t @-> cstring @-> returning void)
+    f (strdup at)
 
   let set_return = foreign "set_func_return" 
     (t @-> Types.expr @-> returning void)

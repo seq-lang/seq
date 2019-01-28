@@ -56,6 +56,7 @@ struct
         Class       p -> parse_class      ctx pos p ~toplevel
       | Generic 
         Type        p -> parse_class      ctx pos p ~toplevel ~is_type:true
+      | Special     p -> parse_special    ctx pos p
     in
     finalize ctx stmt pos
 
@@ -68,16 +69,17 @@ struct
         if jit then 
           List.rev @@ match List.rev stmts with
             | (pos, Expr e) :: tl -> 
-              (pos, Print (pos, String "\n")) :: (pos, Print e) :: tl
+              (pos, Print ([e], "\n")) :: tl
             | l -> l
         else stmts 
       in
       List.iter stmts ~f:(function 
-        | pos, Generic Function ((_, { name; typ }), types, args, stmts) ->
+        | pos, Generic Function f ->
+          let name = f.fn_name.name in
           if is_some @@ Ctx.in_block ctx name then
             serr ~pos "function %s already exists" name;
           let fn = Llvm.Func.func name in
-          let names = List.map args ~f:(fun (_, x) -> x.name) in
+          let names = List.map f.fn_args ~f:(fun (_, x) -> x.name) in
           Ctx.add ctx ~toplevel:true ~global:true
             name (Ctx.Namespace.Func (fn, names))
         | pos, Generic Class cls ->
@@ -137,7 +139,11 @@ struct
           Llvm.Stmt.pass ()
         | _ ->
           let var_stmt = Llvm.Stmt.var rh_expr in
-          Ctx.add ctx ~toplevel var (Ctx.Namespace.Var (Llvm.Var.stmt var_stmt));
+          let v = Llvm.Var.stmt var_stmt in
+          if toplevel then 
+            Llvm.Var.set_global v;
+          Ctx.add ctx ~toplevel ~global:toplevel 
+            var (Ctx.Namespace.Var v);
           var_stmt
       end
     | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)
@@ -166,12 +172,17 @@ struct
     | _ -> 
       serr ~pos "cannot del non-index expression"
 
-  and parse_print ctx _ ~jit expr =    
-    let expr = E.parse ctx expr in
-    if jit then 
-      Llvm.Stmt.print_jit expr
-    else
-      Llvm.Stmt.print expr
+  and parse_print ctx pos ~jit (exprs, ed) =
+    let ll = if jit then Llvm.Stmt.print_jit else Llvm.Stmt.print in
+    List.iteri exprs ~f:(fun i expr ->
+      let expr = E.parse ctx expr in
+      ignore @@ finalize ctx (ll expr) pos;
+      if i < List.length exprs then
+        ignore @@ finalize ctx (ll @@ E.parse ctx (pos, String " ")) pos);
+    if ed <> "" then
+      ll @@ E.parse ctx (pos, String ed)
+    else 
+      Llvm.Stmt.pass ()
 
   and parse_return ctx pos ret =
     match ret with
@@ -322,10 +333,11 @@ struct
     if not toplevel then
       serr ~pos "extends must be declared at toplevel";
 
-    let typ = match Ctx.in_scope ctx name with
+    let typ = E.parse_type ctx name in
+    (* let typ = match Ctx.in_scope ctx name with
       | Some (Ctx.Namespace.Type t, _) -> t
       | _ -> serr ~pos "cannot extend non-existing class %s" name
-    in
+    in *)
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
     ignore @@ List.map stmts ~f:(function
       | pos, Function f -> 
@@ -344,6 +356,7 @@ struct
         | Some t -> t
         | None ->
           let new_ctx = Ctx.init_empty ctx in
+          
           Ctx.parse_file new_ctx file;
 
           let map = Hashtbl.filteri new_ctx.map ~f:(fun ~key ~data ->
@@ -412,8 +425,8 @@ struct
       Set `cls` to `Llvm.Types.typ` if you want a function to be 
       a class `cls` method. *)
   and parse_function ctx pos ?cls ?(toplevel=false)
-    ((_, { name; typ }), types, args, stmts) =
-
+    { fn_name = { name; typ }; fn_generics; fn_args; fn_stmts; fn_attrs } =
+    
     let fn = match cls, Ctx.in_block ctx name with
       | Some cls, _ ->
         let fn = Llvm.Func.func name in
@@ -426,7 +439,7 @@ struct
         serr ~pos "function %s already exists" name;
       | None, None when not toplevel ->
         let fn = Llvm.Func.func name in
-        let names = List.map args ~f:(fun (_, x) -> x.name) in
+        let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         Ctx.add ctx ~toplevel ~global:toplevel 
           name (Ctx.Namespace.Func (fn, names));
         Llvm.Func.set_enclosing fn ctx.base;
@@ -435,6 +448,11 @@ struct
         failwith "function pre-register failed"
     in
     
+    if is_none cls then begin
+      let fnp = Option.value_exn (Ctx.in_scope ctx name) in
+      List.iter fn_attrs ~f:(fun (_, x) -> Hash_set.add (snd fnp).attrs x)
+    end;
+
     let new_ctx = 
       { ctx with 
         base = fn; 
@@ -445,7 +463,7 @@ struct
     Ctx.add_block new_ctx;
     let names, types = parse_generics 
       new_ctx 
-      types args
+      fn_generics fn_args
       (Llvm.Generics.Func.set_number fn)
       (fun idx name ->
         Llvm.Generics.Func.set_name fn idx name;
@@ -457,7 +475,7 @@ struct
       ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type new_ctx typ))
       ~default:();
 
-    add_block new_ctx stmts 
+    add_block new_ctx fn_stmts 
       ~preprocess:(fun ctx ->
         List.iter names ~f:(fun name ->
           let var = Ctx.Namespace.Var (Llvm.Func.get_arg fn name) in
@@ -578,6 +596,9 @@ struct
     | _ ->
       serr ~pos "symbol '%s' not found or not a variable" var
 
+  and parse_special ctx pos (kind, stmts, inputs) =
+  	serr ~pos "not applicable"
+    
   (* ***************************************************************
      Helper functions
      *************************************************************** *)

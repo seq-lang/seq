@@ -82,22 +82,22 @@ struct
     match el with 
     | Empty _ -> ""
     | Ellipsis _ -> "..."
-    | Bool x -> sprintf "bool(%b)" x
+    | Bool x -> if x then "True" else "False"
     | Int x -> sprintf "%d" x
     | IntS (x, k) -> sprintf "%d%s" x k
-    | Float x -> sprintf "%.2f" x
-    | FloatS (x, k) -> sprintf "%.2f%s" x k
+    | Float x -> sprintf "%f" x
+    | FloatS (x, k) -> sprintf "%f%s" x k
     | String x -> sprintf "'%s'" (String.escaped x)
-    | Seq x -> sprintf "seq('%s')" x
+    | Seq x -> sprintf "s'%s'" x
     | Id x -> sprintf "%s" x
     | Generic x -> sprintf "`%s" x
     | Unpack x -> sprintf "*%s" x
-    | Tuple l -> sprintf "tuple(%s)" (ppl l ~f:to_string)
-    | List l -> sprintf "list(%s)" (ppl l ~f:to_string)
-    | Set l -> sprintf "set(%s)" (ppl l ~f:to_string)
-    | Dict l -> sprintf "dict(%s)" @@ ppl l 
+    | Tuple l -> sprintf "(%s)" (ppl l ~f:to_string)
+    | List l -> sprintf "[%s]" (ppl l ~f:to_string)
+    | Set l -> sprintf "{%s}" (ppl l ~f:to_string)
+    | Dict l -> sprintf "{%s}" @@ ppl l 
         ~f:(fun (a, b) -> sprintf "%s: %s" (to_string a) (to_string b))
-    | IfExpr (x, i, e) -> sprintf "%s IF %s ELSE %s" 
+    | IfExpr (x, i, e) -> sprintf "%s if %s else %s" 
         (to_string x) (to_string i) (to_string e)
     | Pipe l -> sprintf "%s" (ppl l ~sep:" |> " ~f:to_string)
     | Binary (l, o, r) -> sprintf "(%s %s %s)" (to_string l) o (to_string r)
@@ -105,12 +105,12 @@ struct
     | Index (x, l) -> sprintf "%s[%s]" (to_string x) (ppl l ~f:to_string)
     | Dot (x, s) -> sprintf "%s.%s" (to_string x) s
     | Call (x, l) -> sprintf "%s(%s)" (to_string x) (ppl l ~f:call_to_string)
-    | TypeOf x -> sprintf "TYPEOF(%s)" (to_string x)
-    | Ptr x -> sprintf "PTR(%s)" (to_string x)
+    | TypeOf x -> sprintf "typeof(%s)" (to_string x)
+    | Ptr x -> sprintf "ptr(%s)" (to_string x)
     | Slice (a, b, c) ->
       let l = List.map [a; b; c] ~f:(Option.value_map ~default:"" ~f:to_string)
       in
-      sprintf "slice(%s)" (ppl l ~f:Fn.id)
+      sprintf "%s" (ppl l ~sep:":" ~f:Fn.id)
     | Generator (x, c) -> 
       sprintf "(%s %s)" (to_string x) (comprehension_to_string c)
     | ListGenerator (x, c) ->
@@ -126,10 +126,10 @@ struct
       (Option.value_map name ~default:"" ~f:(fun x -> x ^ " = "))
       (to_string value)
   and comprehension_to_string (_, { var; gen; cond; next }) =
-    sprintf "FOR %s IN %s%s%s" (ppl var ~f:Fn.id) 
+    sprintf "for %s in %s%s%s" (ppl var ~f:Fn.id) 
       (to_string gen)
       (Option.value_map cond ~default:"" ~f:(fun x -> 
-        sprintf "IF %s" (to_string x)))
+        sprintf "if %s" (to_string x)))
       (Option.value_map next ~default:"" ~f:(fun x ->
         " " ^ (comprehension_to_string x)))
 end 
@@ -152,7 +152,7 @@ struct
     | Expr        of ExprNode.t
     | Assign      of (ExprNode.t * ExprNode.t * bool)
     | Del         of ExprNode.t
-    | Print       of ExprNode.t
+    | Print       of (ExprNode.t list * string)
     | Return      of ExprNode.t option
     | Yield       of ExprNode.t option
     | Assert      of ExprNode.t
@@ -161,7 +161,7 @@ struct
     | For         of (string list * ExprNode.t * t list)
     | If          of (if_case tt) list
     | Match       of (ExprNode.t * (match_case tt) list)
-    | Extend      of (string * generic tt list)
+    | Extend      of (ExprNode.t * generic tt list)
     | Extern      of (string * string option * string * param tt * param tt list)
     | Import      of import list 
     | ImportPaste of string
@@ -169,9 +169,9 @@ struct
     | Try         of (t list * catch tt list * t list option)
     | Global      of string
     | Throw       of ExprNode.t
+    | Special     of (string * t list * string list)
   and generic =
-    | Function of 
-        (param tt * (ExprNode.generic tt) list * param tt list * t list)
+    | Function of fn_t
     | Class of class_t 
     | Type  of class_t
   and if_case = 
@@ -192,6 +192,12 @@ struct
       generics: (ExprNode.generic tt) list;
       args: param tt list option;
       members: generic tt list }
+  and fn_t = 
+    { fn_name: param;
+      fn_generics: (ExprNode.generic tt) list;
+      fn_args: param tt list;
+      fn_stmts: t list;
+      fn_attrs: string tt list }
   and import = 
     (* import <from> as <import_as> | from <from> import <what> 
        <what> = [<what> as <import_as>]+
@@ -224,7 +230,9 @@ struct
     | Assign (l, r, s) -> 
       sprintf "%s %s %s" 
         (ExprNode.to_string l) (if s then ":=" else "=") (ExprNode.to_string r)
-    | Print x -> sprintf "PRINT %s" (ExprNode.to_string x)
+    | Print (x, n) -> sprintf "PRINT %s, %s" 
+        (ppl x ~f:ExprNode.to_string) 
+        (String.escaped n)
     | Del x -> sprintf "DEL %s" (ExprNode.to_string x)
     | Assert x -> sprintf "ASSERT %s" (ExprNode.to_string x)
     | Yield x -> sprintf "YIELD %s"

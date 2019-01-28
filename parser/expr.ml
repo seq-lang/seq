@@ -88,16 +88,16 @@ struct
   and parse_int ctx _ ?(kind="") i = 
     let i = Llvm.Expr.int i in
     match kind with 
-    | ("s" | "S") ->
-      let t = get_internal_type ctx "SInt" in
+    | ("z" | "Z") ->
+      let t = get_internal_type ctx "MInt" in
       Llvm.Expr.construct t [i]
     | _ -> i
 
   and parse_float ctx _ ?(kind="") f = 
     let f = Llvm.Expr.float f in
     match kind with 
-    | ("s" | "S") ->
-      let t = get_internal_type ctx "SFloat" in
+    | ("z" | "Z") ->
+      let t = get_internal_type ctx "ModFloat" in
       Llvm.Expr.construct t [f]
     | _ -> f
 
@@ -210,7 +210,13 @@ struct
   and parse_binary ctx _ (lh_expr, bop, rh_expr) =
     let lh_expr = parse ctx lh_expr in
     let rh_expr = parse ctx rh_expr in
-    Llvm.Expr.binary lh_expr bop rh_expr
+
+    let inplace, bop = 
+      if (String.prefix bop 8) = "inplace_" then
+        true, String.drop_prefix bop 8
+      else false, bop
+    in
+    Llvm.Expr.binary ~inplace lh_expr bop rh_expr
 
   and parse_pipe ctx _ exprs =
     let exprs = List.map exprs ~f:(parse ctx) in
@@ -340,19 +346,19 @@ struct
       else
         Llvm.Expr.element lh_expr rhs
         
-    and parse_typeof ctx _ expr =
-      let expr = parse ctx expr in 
-      Llvm.Expr.typeof expr
+  and parse_typeof ctx _ expr =
+    let expr = parse ctx expr in 
+    Llvm.Expr.typ @@ Llvm.Expr.typeof expr
 
-    and parse_ptr ctx pos = function
-      | _, Id var ->
-        begin match Hashtbl.find ctx.map var with
-          | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
-            when (ctx.base = base) || global -> 
-            Llvm.Expr.ptr v
-          | _ -> serr ~pos "symbol '%s' not found" var
-        end
-      | _ -> serr ~pos "must be an identifier"
+  and parse_ptr ctx pos = function
+    | _, Id var ->
+      begin match Hashtbl.find ctx.map var with
+        | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
+          when (ctx.base = base) || global -> 
+          Llvm.Expr.ptr v
+        | _ -> serr ~pos "symbol '%s' not found" var
+      end
+    | _ -> serr ~pos "must be an identifier"
 
 
   (* ***************************************************************
@@ -438,3 +444,4 @@ struct
     (* TODO: | Slice | Lambda *)
     | _ -> ()
 end
+

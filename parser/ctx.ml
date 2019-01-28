@@ -30,7 +30,8 @@ struct
     { base: Llvm.Types.func_t;
       toplevel: bool;
       global: bool;
-      internal: bool }
+      internal: bool;
+      attrs: string Hash_set.t }
 end
 
 let stdlib: Namespace.t = String.Table.create ()
@@ -67,7 +68,9 @@ let add_block ctx =
 (** [add context name var] adds a variable to the current block *)
 let add (ctx: t) ?(toplevel=false) ?(global=false) ?(internal=false) key var =
   let annot = Namespace.
-    { base = ctx.base; global; toplevel; internal } in
+    { base = ctx.base; global; toplevel; internal; 
+      attrs = String.Hash_set.create () }
+  in
   let var = (var, annot) in
   begin match Hashtbl.find ctx.map key with
     | None -> 
@@ -138,6 +141,27 @@ let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser =
     | None ->
       failwith "cannot locate stdlib.seq"
     end;
+
+    (* set __cp__ *)
+    if not jit then begin
+      let cp = Option.map ~f:int_of_string @@ Sys.getenv "SEQ_MPC_CP" in
+      begin match cp with
+        | Some ((0 | 1 | 2) as cp) ->
+          Util.dbg "cp is %d" cp;
+          let value = Llvm.Expr.int cp in
+          let stmt = Llvm.Stmt.var value in
+          Llvm.Stmt.set_base stmt ctx.base;
+          Llvm.Block.add_stmt ctx.block stmt;
+          Llvm.Stmt.resolve stmt;
+          let var = Llvm.Var.stmt stmt in
+          Llvm.Var.set_global var;
+          add ctx ~internal ~global ~toplevel 
+            "__cp__" @@ Namespace.Var var;
+        | Some _ -> 
+          failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
+        | None -> ()
+      end
+    end
   end;
   Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
     add ctx ~internal ~global ~toplevel 
@@ -210,14 +234,16 @@ let dump_map ?(depth=1) ?(internal=false) map =
   let rec prn ~depth ctx = 
     let prn_assignable (ass, (ant: Namespace.annotation)) = 
       let ib b = if b then 1 else 0 in
+      let att = sprintf "<%s>" @@ String.concat ~sep: ", " @@
+        Hash_set.to_list ant.attrs in
       let ant = sprintf "%c%c%c"
         (if ant.toplevel then 't' else ' ') 
-        (if ant.global   then 'g' else ' ') 
+        (if ant.global then 'g' else ' ') 
         (if ant.internal then 'i' else ' ')
       in
       match ass with
       | Namespace.Var _    -> sprintf "(*var/%s*)" ant, ""
-      | Namespace.Func _   -> sprintf "(*fun/%s*)" ant, ""
+      | Namespace.Func _   -> sprintf "(*fun/%s*)" ant, sprintf "%s" att
       | Namespace.Type _   -> sprintf "(*typ/%s*)" ant, ""
       | Namespace.Import ctx -> 
         sprintf "(*imp/%s*)" ant, 

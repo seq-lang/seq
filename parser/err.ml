@@ -57,7 +57,11 @@ let print_error ?file typ pos_lst =
     | Compiler s -> "compiler", s 
   in
   let file_line file_name line =
-    if String.length file_name > 0 && file_name.[0] <> '<' then
+    if String.length file_name > 0 && file_name.[0] = '\t' then 
+      let lines = String.split ~on:'\n' @@ String.drop_prefix file_name 1 in
+      List.nth lines (line - 1)
+    (* read file *)
+    else if String.length file_name > 0 && file_name.[0] <> '<' then
       try
         let lines = In_channel.read_lines file_name in 
         List.nth lines (line - 1)
@@ -78,6 +82,14 @@ let print_error ?file typ pos_lst =
     let Ast.Pos.{ file; line; col; len } = pos in
     match file_line file line with
     | Some file_line  ->
+      let col = 
+        if col < (String.length file_line) then col
+        else String.length file_line
+      in
+      let len = 
+        if col + len < (String.length file_line) then len
+        else (String.length file_line) - col
+      in
       let pre = if i = 0 then "" else "then in\n        " in 
       eprintf "%s%!" @@ asp style "        %s%s: %d,%d\n" 
         pre file line col;

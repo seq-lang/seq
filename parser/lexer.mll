@@ -75,7 +75,7 @@ let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
 
 let stringprefix = ('s' | 'S')? ('r' | 'R')?
-let intsuffix = ('s' | 'S')
+let intsuffix = ('s' | 'S' | 'z' | 'Z')
 
 let ident = alpha alphanum*
 
@@ -178,6 +178,8 @@ and read state = parse
   | stringprefix '"'      { double_string state (L.lexeme lexbuf) lexbuf }
   | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
   | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
+  
+  | "$" { escaped_id state lexbuf }
 
   | '`' (ident as gen) { 
     let len = 1 + (String.length gen) in
@@ -203,11 +205,11 @@ and read state = parse
   | ":="  as op { P.ASSGN_EQ  (cur_pos state lexbuf ~len:2, op) }
   | "="   as op { P.EQ        (cur_pos state lexbuf, Char.to_string op) }
   | "..." as op { P.ELLIPSIS  (cur_pos state lexbuf ~len:3, op) }
+  | "@"   as op { P.AT        (cur_pos state lexbuf, Char.to_string op) }
   
   | "->"  { P.OF        (cur_pos state lexbuf ~len:2) }
   | ":"   { P.COLON     (cur_pos state lexbuf) }
   | ";"   { P.SEMICOLON (cur_pos state lexbuf) }
-  | "@"   { P.AT        (cur_pos state lexbuf) }
   | ","   { P.COMMA     (cur_pos state lexbuf) }
   | "."   { P.DOT       (cur_pos state lexbuf) }
 
@@ -285,5 +287,11 @@ and double_docstr state prefix = shortest
       { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines };
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
+  }
+
+and escaped_id state = parse
+  | (([^ '\r' '\n' '$' ])* as s) '$' { 
+    let len = (String.length s) in
+    P.ID (cur_pos state lexbuf ~len, s)
   }
 
