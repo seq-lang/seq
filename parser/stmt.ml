@@ -128,8 +128,7 @@ struct
     | pos, Id var ->
       begin match Hashtbl.find ctx.map var with
         | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
-          when (not shadow) 
-            && (global || (ctx.base = base)) ->
+            when (not shadow) && (ctx.base = base) ->
           Llvm.Stmt.assign v rh_expr
         | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
           serr ~pos "cannot assign functions or types"
@@ -589,11 +588,10 @@ struct
   and parse_global ctx pos var =
     match Hashtbl.find ctx.map var with
     | Some ((Ctx.Namespace.Var v, ({ internal = false; _ } as ann)) :: rest) ->
-      if (ctx.base = ann.base) || ann.global then 
-        serr ~pos "symbol '%s' either local or already set as global" var;
-      Llvm.Var.set_global v;
-      let new_var = Ctx.Namespace.(Var v, { ann with global = true }) in
-      Hashtbl.set ctx.map ~key:var ~data:(new_var :: rest);
+      if not ann.global then 
+        serr ~pos "symbol must be toplevel (global) to be set as local global";
+      if ann.base <> ctx.base then
+        Ctx.add ctx var ~global:true (Ctx.Namespace.Var v);
       Llvm.Stmt.pass ()
     | _ ->
       serr ~pos "symbol '%s' not found or not a variable" var

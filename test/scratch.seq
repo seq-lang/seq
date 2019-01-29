@@ -3,7 +3,16 @@
 import itertools
 import time
 
-a = 18397679294719823053u
-b = 0xff
+x = 5
+Y = 20
 
-print a, b
+def foo():
+	x = 10
+	print Y
+
+print x
+foo()
+print x
+
+c = u8(265)
+print c
