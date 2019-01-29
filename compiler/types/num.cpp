@@ -111,6 +111,10 @@ void types::IntType::initOps()
 			return self;
 		}},
 
+		{"__hash__", {}, Int, SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
+
 		// int unary
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
@@ -288,6 +292,11 @@ void types::IntNType::initOps()
 
 		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
 			return self;
+		}},
+
+		{"__hash__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
+			return sign ? b.CreateSExtOrTrunc(self, seqIntLLVM(b.getContext())) :
+			              b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
 		}},
 
 		// int unary

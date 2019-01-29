@@ -1,0 +1,2 @@
+import hashtable
+hashtable._test()

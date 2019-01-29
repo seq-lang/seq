@@ -1,0 +1,79 @@
+# Implementation of SNAP aligner's hash table
+# https://github.com/amplab/snap/blob/master/SNAPLib/HashTable.{cpp,h}
+
+QUADRATIC_CHAINING_DEPTH = 5
+
+class SNAPHashTable[`k,`v](table: array[tuple[`k,`v]], invalid_val: `v):
+    def _hash(k: `k):
+        key = hash(k)
+        key ^= key >> 33
+        key *= 0xff51afd7ed558ccd
+        key ^= key >> 33
+        key *= 0xc4ceb9fe1a85ec53
+        key ^= key >> 33
+        return key
+
+    def __init__(self: SNAPHashTable[`k,`v], size: int, invalid_val: `v):
+        self.table = array[tuple[`k,`v]](size)
+        self.invalid_val = invalid_val
+
+        for i in range(size):
+            self.table[i] = (`k(), invalid_val)
+
+    def _get_entry_index_for_key(self: SNAPHashTable[`k,`v], k: `k):
+        table = self.table
+        table_size = table.len
+        table_index = SNAPHashTable[`k,`v]._hash(k) % table_size
+        wrapped = False
+        n_probes = 1
+        invalid_val = self.invalid_val
+
+        while table[table_index][0] != k and table[table_index][1] != invalid_val:
+            table_index += (n_probes ** 2) if n_probes < QUADRATIC_CHAINING_DEPTH else 1
+            n_probes += 1
+
+            if table_index >=table_size:
+                if wrapped:
+                    return -1
+
+                wrapped = True
+                table_index %= table_size
+
+        return table_index
+
+    def get_first_value_for_key(self: SNAPHashTable[`k,`v], k: `k):
+        table = self.table
+        table_size = table.len
+        table_index = SNAPHashTable[`k,`v]._hash(k) % table_size
+
+        if table[table_index][0] == k and table[table_index][1] >= 0:
+            return table[table_index][1]
+        else:
+            n_probes = 0
+            while table[table_index][0] != k and table[table_index][1] >= 0:
+                n_probes += 1
+
+                if n_probes > table_size + QUADRATIC_CHAINING_DEPTH:
+                    return self.invalid_val
+
+                diff = n_probes**2 if n_probes < QUADRATIC_CHAINING_DEPTH else 1
+                table_index = (table_index + diff) % table_size
+
+            return table[table_index][1]
+
+    def __getitem__(self: SNAPHashTable[`k,`v], k: `k):
+        entry = self._get_entry_index_for_key(k)
+        return self.table[entry][1] if entry >= 0 else self.invalid_val
+
+    def __setitem__(self: SNAPHashTable[`k,`v], k: `k, v: `v):
+        entry = self._get_entry_index_for_key(k)
+        if entry >= 0:
+            self.table[entry] = (k, v)
+
+def _test():
+    h = SNAPHashTable[i32,i32](100, i32(-1))
+    for i in range(10):
+        h[i32(42 + i*100)] = i32(i)
+
+    for i in range(100):
+        print h[i32(42 + i*100)]
