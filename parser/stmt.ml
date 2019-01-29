@@ -176,7 +176,7 @@ struct
     List.iteri exprs ~f:(fun i expr ->
       let expr = E.parse ctx expr in
       ignore @@ finalize ctx (ll expr) pos;
-      if i < List.length exprs then
+      if (i + 1) < List.length exprs then
         ignore @@ finalize ctx (ll @@ E.parse ctx (pos, String " ")) pos);
     if ed <> "" then
       ll @@ E.parse ctx (pos, String ed)
