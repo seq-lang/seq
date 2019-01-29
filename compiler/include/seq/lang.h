@@ -32,12 +32,11 @@ namespace seq {
 	class VarStmt : public Stmt {
 	private:
 		Expr *init;
-		Var *var;
 		types::Type *type;
+		Var *var;
 	public:
-		explicit VarStmt(Expr *init);
+		explicit VarStmt(Expr *init, types::Type *type=nullptr);
 		Var *getVar();
-		void setType(types::Type *type);
 		void resolveTypes() override;
 		void codegen0(llvm::BasicBlock*& block) override;
 		VarStmt *clone(Generic *ref) override;

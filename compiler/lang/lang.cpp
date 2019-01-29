@@ -68,8 +68,8 @@ ExprStmt *ExprStmt::clone(Generic *ref)
 	SEQ_RETURN_CLONE(x);
 }
 
-VarStmt::VarStmt(Expr *init) :
-    Stmt("var"), init(init), var(new Var()), type(nullptr)
+VarStmt::VarStmt(Expr *init, types::Type *type) :
+    Stmt("var"), init(init), type(type), var(new Var())
 {
 }
 
@@ -78,16 +78,10 @@ Var *VarStmt::getVar()
 	return var;
 }
 
-void VarStmt::setType(types::Type *type)
-{
-	assert(!this->type);
-	this->type = type;
-}
-
 void VarStmt::resolveTypes()
 {
 	init->resolveTypes();
-	var->setType(init->getType());
+	var->setType(type ? type : init->getType());
 }
 
 void VarStmt::codegen0(BasicBlock*& block)
