@@ -121,9 +121,15 @@ FOREIGN Expr *bool_expr(char b)
 	return new BoolExpr(b);
 }
 
-FOREIGN Expr *int_expr(int i)
+FOREIGN Expr *int_expr(int64_t i)
 {
 	return new IntExpr(i);
+}
+
+FOREIGN Expr *bigint_expr(char *i)
+{
+	throw exc::SeqException("not yet supported");
+	free(i);
 }
 
 FOREIGN Expr *float_expr(double f)

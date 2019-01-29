@@ -140,27 +140,6 @@ let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser =
       parse_file ctx file
     | None ->
       failwith "cannot locate stdlib.seq"
-    end;
-
-    (* set __cp__ *)
-    if not jit then begin
-      let cp = Option.map ~f:int_of_string @@ Sys.getenv "SEQ_MPC_CP" in
-      begin match cp with
-        | Some ((0 | 1 | 2) as cp) ->
-          Util.dbg "cp is %d" cp;
-          let value = Llvm.Expr.int cp in
-          let stmt = Llvm.Stmt.var value in
-          Llvm.Stmt.set_base stmt ctx.base;
-          Llvm.Block.add_stmt ctx.block stmt;
-          Llvm.Stmt.resolve stmt;
-          let var = Llvm.Var.stmt stmt in
-          Llvm.Var.set_global var;
-          add ctx ~internal ~global ~toplevel 
-            "__cp__" @@ Namespace.Var var;
-        | Some _ -> 
-          failwith "SEQ_MPC_CP must be 0, 1 or 2 (default is 0)"
-        | None -> ()
-      end
     end
   end;
   Hashtbl.iteri stdlib ~f:(fun ~key ~data ->

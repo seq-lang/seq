@@ -38,8 +38,8 @@ struct
   and node =
     | Empty          of unit
     | Bool           of bool
-    | Int            of int
-    | IntS           of (int * string)
+    | Int            of string
+    | IntS           of (string * string)
     | Float          of float
     | FloatS         of (float * string)
     | String         of string
@@ -83,8 +83,8 @@ struct
     | Empty _ -> ""
     | Ellipsis _ -> "..."
     | Bool x -> if x then "True" else "False"
-    | Int x -> sprintf "%d" x
-    | IntS (x, k) -> sprintf "%d%s" x k
+    | Int x -> sprintf "%s" x
+    | IntS (x, k) -> sprintf "%s%s" x k
     | Float x -> sprintf "%f" x
     | FloatS (x, k) -> sprintf "%f%s" x k
     | String x -> sprintf "'%s'" (String.escaped x)
@@ -208,11 +208,11 @@ struct
       import_as: string option }
   and pattern = 
     | StarPattern
-    | IntPattern      of int
+    | IntPattern      of int64
     | BoolPattern     of bool
     | StrPattern      of string
     | SeqPattern      of string
-    | RangePattern    of (int * int)
+    | RangePattern    of (int64 * int64)
     | TuplePattern    of pattern list
     | ListPattern     of pattern list
     | OrPattern       of pattern list

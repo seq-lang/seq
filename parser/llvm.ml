@@ -78,7 +78,13 @@ module Type = struct
   let seq = foreign "str_seq_type"
     (Ctypes.void @-> returning t)
 
-  let kmer = foreign "kmer_type"
+  let kmerN = foreign "kmer_type"
+    (Ctypes.int @-> returning t)
+
+  let intN = foreign "iN_type"
+    (Ctypes.int @-> returning t)
+
+  let uintN = foreign "uN_type"
     (Ctypes.int @-> returning t)
 
   let record names types name = 
@@ -154,7 +160,11 @@ module Expr = struct
     (bool @-> returning t)
 
   let int = foreign "int_expr" 
-    (int @-> returning t)
+    (int64_t @-> returning t)
+
+  let bigint i = foreign "bigint_expr" 
+    (cstring @-> returning t)
+    (strdup i)
 
   let float = foreign "float_expr" 
     (double @-> returning t)
@@ -389,7 +399,7 @@ module Pattern = struct
     (void @-> returning t)
 
   let int = foreign "int_pattern" 
-    (int @-> returning t)
+    (int64_t @-> returning t)
 
   let bool = foreign "bool_pattern" 
     (bool @-> returning t)
@@ -410,7 +420,7 @@ module Pattern = struct
     fn arr len
   
   let range = foreign "range_pattern" 
-    (Ctypes.int @-> Ctypes.int @-> returning t)
+    (Ctypes.int64_t @-> Ctypes.int64_t @-> returning t)
   
   let array pats = 
     let fn = foreign "array_pattern" 

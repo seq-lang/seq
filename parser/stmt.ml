@@ -240,7 +240,9 @@ struct
       | for_vars -> 
         let var_expr = Llvm.Expr.var var in
         List.iteri for_vars ~f:(fun idx var_name ->
-          let expr = Llvm.Expr.lookup var_expr (Llvm.Expr.int idx) in
+          let expr = Llvm.Expr.lookup var_expr 
+          	(Llvm.Expr.int @@ Int64.of_int idx) 
+          in
           let var_stmt = Llvm.Stmt.var expr in
           ignore @@ finalize for_ctx var_stmt pos;
           let var = Llvm.Var.stmt var_stmt in

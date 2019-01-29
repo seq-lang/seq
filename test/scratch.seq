@@ -3,29 +3,7 @@
 import itertools
 import time
 
-type Foo(x: int)
+a = 18397679294719823053u
+b = 0xff
 
-type Hai(a: int):
-	def wololo(self):
-		print 'wololo', self.a
-
-a = Foo(4)
-print a
-
-a := Hai(5)
-print a
-a.wololo()
-
-class Abe[`t](l: `t):
-	def hai(self):
-		print 'Abe', self.l
-
-b = Abe(1)
-b.hai()
-
-type AbF = Abe[float]
-
-c = AbF(1.1)
-c.hai()
-
-c = AbF(10)
+print a, b

@@ -55,9 +55,9 @@
 %}
 
 /* constants */
-%token <Ast.Pos.t * int>   INT
+%token <Ast.Pos.t * string> INT
 %token <Ast.Pos.t * float> FLOAT
-%token <Ast.Pos.t * (int * string)>   INT_S
+%token <Ast.Pos.t * (string * string)> INT_S
 %token <Ast.Pos.t * (float * string)> FLOAT_S
 %token <Ast.Pos.t * string> STRING ID GENERIC
 %token <Ast.Pos.t * string> REGEX SEQ
@@ -327,8 +327,8 @@ arith_expr:
   | SUB arith_term
     { pos (fst $1) (fst $2),
       match snd $2 with
-      | Int f -> Int (-f)
-      | IntS (f, k) -> IntS (-f, k)
+      | Int f -> Int ("-" ^ f)
+      | IntS (f, k) -> IntS ("-" ^ f, k)
       | Float f -> Float (-.f)
       | FloatS (f, k) -> FloatS (-.f, k)
       | _ -> Unary(snd $1, $2) }
@@ -584,10 +584,10 @@ assign_statement:
               match expr with
               | _, Unpack var when !unpack_i = -1 ->
                 unpack_i := i;
-                let start = Some (p, Int i) in
+                let start = Some (p, Int (string_of_int i)) in
                 let eend = 
                   if i = len - 1 then None
-                  else Some (p, Int (i +  1 - len))
+                  else Some (p, Int (string_of_int @@ i +  1 - len))
                 in
                 let slice = Slice (start, eend, None) in
                 let rhs = p, Index (rhs, [p, slice]) in
@@ -596,12 +596,12 @@ assign_statement:
                 Err.serr ~pos "cannot have two tuple unpackings on LHS"
               | _ when !unpack_i = -1 ->
                 (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
-                let rhs = p, Index (rhs, [p, Int i]) in
+                let rhs = p, Index (rhs, [p, Int (string_of_int i)]) in
                 parse_assign [expr] [rhs]
                 (*p, Assign (expr, rhs, shadow) *)
               | _ ->
                 (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
-                let rhs = p, Index (rhs, [p, Int (i - len)]) in
+                let rhs = p, Index (rhs, [p, Int (string_of_int @@ i - len)]) in
                 parse_assign [expr] [rhs])
             in
             let len, op = 
@@ -614,7 +614,7 @@ assign_statement:
                 (p, Call ((p, Id "len"), 
                           [p, { name = None; value = rhs }])), 
                 op, 
-                (p, Int len)))
+                (p, Int (string_of_int len))))
             in
             assert_stmt :: lst
         in
@@ -696,7 +696,7 @@ case_type:
   | ID       
     { WildcardPattern (Some (snd $1)) }
   | INT      
-    { IntPattern (snd $1) }
+    { IntPattern (Int64.of_string @@ snd $1) }
   | bool     
     { BoolPattern (snd $1) }
   | STRING   
@@ -710,7 +710,7 @@ case_type:
     { ListPattern ($2) }
   // Ranges
   | INT ELLIPSIS INT
-    { RangePattern(snd $1, snd $3) }
+    { RangePattern(Int64.of_string @@ snd $1, Int64.of_string @@ snd $3) }
 
 // Import statments
 import_statement:

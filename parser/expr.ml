@@ -85,8 +85,17 @@ struct
   and parse_bool _ _ b =
     Llvm.Expr.bool b
 
-  and parse_int ctx _ ?(kind="") i = 
-    let i = Llvm.Expr.int i in
+  and parse_int ctx pos ?(kind="") i =  
+    let u = 
+      if (String.prefix i 1) <> "-" then Caml.Int64.of_string_opt ("0u" ^ i)
+      else None
+    in
+    let i = match kind, Caml.Int64.of_string_opt i with
+      | _, Some i -> Llvm.Expr.int i
+      | ("u" | "U"), None when is_some u ->
+        Llvm.Expr.int (Option.value_exn u)
+      | _ -> serr ~pos "too large integer to parse"
+    in
     match kind with 
     | ("z" | "Z") ->
       let t = get_internal_type ctx "MInt" in
@@ -114,7 +123,11 @@ struct
     let suf = String.suffix var ((String.length var) - 1) in
     match pref, int_of_string_opt suf with
     | "k", Some n ->
-      Llvm.Expr.typ @@ Llvm.Type.kmer n
+      Llvm.Expr.typ @@ Llvm.Type.kmerN n
+    | "i", Some n ->
+      Llvm.Expr.typ @@ Llvm.Type.intN n
+    | "u", Some n ->
+      Llvm.Expr.typ @@ Llvm.Type.uintN n
     | _ -> match Hashtbl.find map var with
     (* Make sure that a variable is either accessible within 
        the same base (function) or that it is global variable  *)
