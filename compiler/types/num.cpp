@@ -278,7 +278,7 @@ void types::IntNType::initOps()
 			                    module->getOrInsertFunction(
 			                      "seq_print_int",
 			                      llvm::Type::getVoidTy(context),
-			                      getLLVMType(context)));
+			                      Int->getLLVMType(context)));
 			printFunc->setDoesNotThrow();
 			Value *ext = sign ? b.CreateSExtOrTrunc(self, seqIntLLVM(context)) :
 			                    b.CreateZExtOrTrunc(self, seqIntLLVM(context));

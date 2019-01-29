@@ -50,7 +50,7 @@ void Var::allocaIfNeeded(BaseFunc *base)
 		ptr = new GlobalVariable(*module,
 		                         llvmType,
 		                         false,
-		                         GlobalValue::ExternalLinkage,
+		                         repl ? GlobalValue::ExternalLinkage : GlobalValue::PrivateLinkage,
 		                         Constant::getNullValue(llvmType),
 		                         name);
 	} else {

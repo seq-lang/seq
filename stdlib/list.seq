@@ -45,15 +45,15 @@ class list[`t](arr: array[`t], len: int):
         self.len -= 1
 
     def __slice__(self: list[`t], a: int, b: int):
-        assert 0 <= a <= b < len(self)
+        assert 0 <= a <= b <= len(self)
         return list[`t](self.arr[a:b], b - a)
 
     def __slice_left__(self: list[`t], b: int):
-        assert 0 <= b < len(self)
+        assert 0 <= b <= len(self)
         return list[`t](self.arr[:b], b)
 
     def __slice_right__(self: list[`t], a: int):
-        assert 0 <= a < len(self)
+        assert 0 <= a <= len(self)
         return list[`t](self.arr[a:], self.len - a)
 
     def __copy__(self: list[`t]):
@@ -144,3 +144,15 @@ class list[`t](arr: array[`t], len: int):
                 y.append(str(self[i]))
             y.append("]")
             return str.cat(y)
+
+    def __print__(self: list[`t]):
+        n = len(self)
+        if n == 0:
+            "[]".__print__()
+        else:
+            "[".__print__()
+            self[0].__print__()
+            for i in range(1, n):
+                ", ".__print__()
+                self[i].__print__()
+            "]".__print__()
