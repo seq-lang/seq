@@ -151,6 +151,12 @@ void types::IntType::initOps()
 			return b.CreateSDiv(self, args[0]);
 		}},
 
+		{"__truediv__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateFDiv(self, args[0]);
+		}},
+
 		{"__mod__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateSRem(self, args[0]);
 		}},
@@ -216,6 +222,15 @@ void types::IntType::initOps()
 		}},
 
 		{"__div__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
+			Value *v = b.CreateFDiv(self, args[0]);
+			Function *floor = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+			                                    Intrinsic::floor,
+			                                    {Float->getLLVMType(b.getContext())});
+			return b.CreateCall(floor, v);
+		}},
+
+		{"__truediv__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateFDiv(self, args[0]);
 		}},
@@ -335,6 +350,14 @@ void types::IntNType::initOps()
 			return sign ? b.CreateSDiv(self, args[0]) : b.CreateUDiv(self, args[0]);
 		}},
 
+		{"__truediv__", {this}, Float, SEQ_MAGIC_CAPT(self, args, b) {
+			self = sign ? b.CreateSIToFP(self, Float->getLLVMType(b.getContext())) :
+			              b.CreateUIToFP(self, Float->getLLVMType(b.getContext()));
+			args[0] = sign ? b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext())) :
+			                 b.CreateUIToFP(args[0], Float->getLLVMType(b.getContext()));
+			return b.CreateFDiv(self, args[0]);
+		}},
+
 		{"__mod__", {this}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return sign ? b.CreateSRem(self, args[0]) : b.CreateURem(self, args[0]);
 		}},
@@ -452,6 +475,14 @@ void types::FloatType::initOps()
 		}},
 
 		{"__div__", {Float}, Float, SEQ_MAGIC(self, args, b) {
+			Value *v = b.CreateFDiv(self, args[0]);
+			Function *floor = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+			                                    Intrinsic::floor,
+			                                    {Float->getLLVMType(b.getContext())});
+			return b.CreateCall(floor, v);
+		}},
+
+		{"__truediv__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateFDiv(self, args[0]);
 		}},
 
@@ -507,6 +538,15 @@ void types::FloatType::initOps()
 		}},
 
 		{"__div__", {Int}, Float, SEQ_MAGIC(self, args, b) {
+			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
+			Value *v = b.CreateFDiv(self, args[0]);
+			Function *floor = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+			                                            Intrinsic::floor,
+			                                            {Float->getLLVMType(b.getContext())});
+			return b.CreateCall(floor, v);
+		}},
+
+		{"__truediv__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFDiv(self, args[0]);
 		}},

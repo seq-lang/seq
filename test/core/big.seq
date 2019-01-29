@@ -17,7 +17,7 @@ class Pair[`t](a: `t, b: `t):
 class X[`t](t: `t):
     def main[`s](args: `s):
         def f(s: seq):
-            v = array[seq](s.len / 32)
+            v = array[seq](s.len//32)
             i = 0
             for t in s.split(32, 32):
                 v[i] = t
