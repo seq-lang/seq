@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <map>
 #include "seq/seq.h"
 
 using namespace seq;
@@ -726,7 +727,15 @@ types::IntType *types::IntType::get() noexcept
 
 types::IntNType *types::IntNType::get(unsigned len, bool sign)
 {
-	return new IntNType(len, sign);
+	static std::map<int, IntNType *> cache;
+
+	int key = (sign ? 1 : -1) * (int)len;
+	if (cache.find(key) != cache.end())
+		return cache.find(key)->second;
+
+	auto *intNType = new IntNType(len, sign);
+	cache.insert({key, intNType});
+	return intNType;
 }
 
 types::FloatType *types::FloatType::get() noexcept
