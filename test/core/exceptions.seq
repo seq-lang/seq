@@ -1,8 +1,10 @@
-class Exc1(msg: str):
+class Exc1:
+    msg: str
     def show(self):
         print self.msg
 
-class Exc2(msg: str):
+class Exc2:
+    msg: str
     def show(self):
         print self.msg
 

@@ -3,7 +3,10 @@
 
 QUADRATIC_CHAINING_DEPTH = 5
 
-class SNAPHashTable[`k,`v](table: array[tuple[`k,`v]], invalid_val: `v):
+class SNAPHashTable[`k,`v]:
+    table: array[tuple[`k,`v]]
+    invalid_val: `v
+
     def _hash(k: `k):
         key = hash(k)
         key ^= key >> 33

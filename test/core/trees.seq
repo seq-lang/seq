@@ -1,9 +1,11 @@
-class AVLNode[`k,`v](key: `k,
-                     value: `v,
-                     parent: AVLNode[`k,`v],
-                     left: AVLNode[`k,`v],
-                     right: AVLNode[`k,`v],
-                     height: int):
+class AVLNode[`k,`v]:
+    key: `k
+    value: `v
+    parent: AVLNode[`k,`v]
+    left: AVLNode[`k,`v]
+    right: AVLNode[`k,`v]
+    height: int
+
     def __init__(self: AVLNode[`k,`v], parent: AVLNode[`k,`v], k: `k, v: `v):
         self.key = k
         self.value = v
@@ -95,7 +97,9 @@ def update_height(node):
 
 extern c exit(code: int) -> void
 
-class AVL[`k,`v](root: AVLNode[`k,`v]):
+class AVL[`k,`v]:
+    root: AVLNode[`k,`v]
+
     def __init__(self: AVL[`k,`v]):
         self.root = None
 

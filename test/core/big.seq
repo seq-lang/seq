@@ -1,4 +1,7 @@
-class Pair[`t](a: `t, b: `t):
+class Pair[`t]:
+    a: `t
+    b: `t
+
     def sum(self, c):
         return self.a + self.b + c
 
@@ -14,7 +17,9 @@ class Pair[`t](a: `t, b: `t):
         yield self.a
         yield self.b
 
-class X[`t](t: `t):
+class X[`t]:
+    t: `t
+
     def main[`s](args: `s):
         def f(s: seq):
             v = array[seq](s.len//32)
