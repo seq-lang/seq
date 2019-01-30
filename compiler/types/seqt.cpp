@@ -564,6 +564,10 @@ void types::KMer::initOps()
 			return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
 		}},
 
+		{"__init__", {Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
+		}},
+
 		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			Module *module = b.GetInsertBlock()->getModule();

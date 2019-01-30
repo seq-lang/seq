@@ -64,20 +64,6 @@ void types::IntType::initOps()
 	if (!vtable.magic.empty())
 		return;
 
-	for (unsigned i = 1; i <= IntNType::MAX_LEN; i++) {
-		vtable.magic.push_back(
-			{"__init__", {IntNType::get(i, true)}, Int, SEQ_MAGIC(self, args, b) {
-				return b.CreateSExtOrTrunc(args[0], Int->getLLVMType(b.getContext()));
-			}}
-		);
-
-		vtable.magic.push_back(
-			{"__init__", {IntNType::get(i, false)}, Int, SEQ_MAGIC(self, args, b) {
-				return b.CreateZExtOrTrunc(args[0], Int->getLLVMType(b.getContext()));
-			}}
-		);
-	}
-
 	vtable.magic = {
 		{"__init__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return Int->defaultValue(b.GetInsertBlock());
@@ -270,20 +256,26 @@ void types::IntType::initOps()
 			return b.CreateZExt(b.CreateFCmpOGE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 	};
+
+	for (unsigned i = 1; i <= IntNType::MAX_LEN; i++) {
+		vtable.magic.push_back(
+			{"__init__", {IntNType::get(i, true)}, Int, SEQ_MAGIC(self, args, b) {
+				return b.CreateSExtOrTrunc(args[0], Int->getLLVMType(b.getContext()));
+			}}
+		);
+
+		vtable.magic.push_back(
+			{"__init__", {IntNType::get(i, false)}, Int, SEQ_MAGIC(self, args, b) {
+				return b.CreateZExtOrTrunc(args[0], Int->getLLVMType(b.getContext()));
+			}}
+		);
+	}
 }
 
 void types::IntNType::initOps()
 {
 	if (!vtable.magic.empty())
 		return;
-
-	if (!sign && len % 2 == 0) {
-		vtable.magic.push_back(
-			{"__init__", {KMer::get(len/2)}, this, SEQ_MAGIC_CAPT(self, args, b) {
-				return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
-			}}
-		);
-	}
 
 	vtable.magic = {
 		{"__init__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
@@ -418,6 +410,14 @@ void types::IntNType::initOps()
 			return b.CreateXor(self, args[0]);
 		}},
 	};
+
+	if (!sign && len % 2 == 0) {
+		vtable.magic.push_back(
+			{"__init__", {KMer::get(len/2)}, this, SEQ_MAGIC_CAPT(self, args, b) {
+				return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+			}}
+		);
+	}
 
 	addMethod("len", new BaseFuncLite({}, types::IntType::get(), [this](Module *module) {
 		const std::string name = "seq." + getName() + ".len";
