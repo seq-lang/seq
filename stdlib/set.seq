@@ -1,4 +1,8 @@
-class _set_entry[`k](k: `k, hash: int, next: _set_entry[`k]):
+class _set_entry[`k]:
+    k: `k
+    hash: int
+    next: _set_entry[`k]
+    
     def __init__(self: _set_entry[`k], k: `k, hash: int):
         self.k = k
         self.hash = hash
@@ -7,7 +11,10 @@ class _set_entry[`k](k: `k, hash: int, next: _set_entry[`k]):
     def eq(self: _set_entry[`k], k: `k, hash: int):
         return self.hash == hash and self.k == k
 
-class set[`k](table: array[_set_entry[`k]], size: int):
+class set[`k]:
+    table: array[_set_entry[`k]]
+    size: int
+
     def _make_table(len: int):
         table = array[_set_entry[`k]](len)
         for i in range(len):
@@ -82,16 +89,19 @@ class set[`k](table: array[_set_entry[`k]], size: int):
     def __len__(self: set[`k]):
         return self.size
 
-    def __print__(self: set[`k]):
+    def __str__(self: set[`k]) -> str:
         n = len(self)
         if n == 0:
-            "{}".__print__()
+            return "{}"
         else:
-            "{".__print__()
+            lst = list[str]()
+            lst.append("{")
             first = True
-            for i in self.__iter__():
-                if first: first = False
-                else: ", ".__print__()
-                i.__print__()
-            "}".__print__()
-
+            for e in self.__iter__():
+                if not first:
+                    lst.append(", ")
+                else:
+                    first = False
+                lst.append(e.__str__())
+            lst.append("}")
+            return str.cat(lst)

@@ -360,9 +360,9 @@ FOREIGN Stmt *expr_stmt(Expr *e)
 	return new ExprStmt(e);
 }
 
-FOREIGN Stmt *var_stmt(Expr *v)
+FOREIGN Stmt *var_stmt(Expr *v, types::Type *t)
 {
-	return new VarStmt(v);
+	return new VarStmt(v, t);
 }
 
 FOREIGN Var *var_stmt_var(VarStmt *v)

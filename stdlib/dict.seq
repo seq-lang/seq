@@ -1,4 +1,9 @@
-class _dict_entry[`k,`v](k: `k, v: `v, hash: int, next: _dict_entry[`k,`v]):
+class _dict_entry[`k,`v]:
+    k: `k 
+    v: `v
+    hash: int 
+    next: _dict_entry[`k,`v]
+
     def __init__(self: _dict_entry[`k,`v], k: `k, v: `v, hash: int):
         self.k = k
         self.v = v
@@ -8,7 +13,10 @@ class _dict_entry[`k,`v](k: `k, v: `v, hash: int, next: _dict_entry[`k,`v]):
     def eq(self: _dict_entry[`k,`v], k: `k, hash: int):
         return self.hash == hash and self.k == k
 
-class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
+class dict[`k,`v]:
+    table: array[_dict_entry[`k,`v]] 
+    size: int
+
     def _make_table(len: int):
         table = array[_dict_entry[`k,`v]](len)
         for i in range(len):
@@ -110,20 +118,22 @@ class dict[`k,`v](table: array[_dict_entry[`k,`v]], size: int):
         for i in self._entry_iter():
             yield i.k, i.v
 
-    def __print__(self: dict[`k, `v]):
+    def __str__(self: dict[`k, `v]) -> str:
         n = len(self)
         if n == 0:
-            "{}".__print__()
+            return "{}"
         else:
-            "{".__print__()
+            lst = list[str]()
+            lst.append("{")
             first = True
             for e in self._entry_iter():
                 if not first:
-                    ", ".__print__()
+                    lst.append(", ")
                 else:
                     first = False
-                e.k.__print__()
-                ": ".__print__()
-                e.v.__print__()
-            "}".__print__()
+                lst.append(str(e.k))
+                lst.append(":")
+                lst.append(str(e.v))
+            lst.append("}")
+            return str.cat(lst)
 

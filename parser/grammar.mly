@@ -436,6 +436,7 @@ statement:
   // Function and clas definitions
   | func_statement
   | class_statement
+  | decl_statement
   /* | special_statement */
     {[ $1 ]}
 
@@ -446,7 +447,7 @@ small_statement:
     { List.map $1 ~f:(fun expr ->
         fst expr, Expr expr) }
   // Assignment
-  | assign_statement   
+  | assign_statement  
     { $1 }
   // Imports
   | import_statement 
@@ -533,6 +534,10 @@ param_type:
     { $2 }
 
 // Expressions and assignments
+decl_statement:
+  | ID COLON expr NL
+    { pos (fst $1) (fst $3),
+      Generic (Declare { name = snd $1; typ = Some($3) }) }
 assign_statement: 
   // Assignment for modifying operators
   // (+=, -=, *=, /=, %=, **=, //=)
@@ -545,7 +550,12 @@ assign_statement:
         Binary ($1, "inplace_" ^ op, $3) 
       in
       [ fst rhs, 
-        Assign ($1, rhs, false) ]}
+        Assign ($1, rhs, false, None) ]}
+  // Type assignment
+  | ID COLON expr EQ expr
+  | ID COLON expr ASSGN_EQ expr
+    {[ pos (fst $1) (fst $5),
+       Assign ((fst $1, Id (snd $1)), $5, ((snd $4) = ":="), Some $3) ]}
   // Assignment (a, b = x, y)
   | expr_list ASSGN_EQ separated_nonempty_list(ASSGN_EQ, expr_list) 
   | expr_list EQ separated_nonempty_list(EQ, expr_list) 
@@ -560,10 +570,10 @@ assign_statement:
         let init_exprs, rhs =         
           if List.length rhs > 1 then begin
             let var = p, Id "$assign" in
-            [ p, Assign (var, (p, Tuple rhs), true) ], var
+            [ p, Assign (var, (p, Tuple rhs), true, None) ], var
           end else if List.length lhs > 1 then begin
             let var = p, Id "$assign" in
-            [ p, Assign (var, List.hd_exn rhs, true) ], var
+            [ p, Assign (var, List.hd_exn rhs, true, None) ], var
           end else
             [], List.hd_exn rhs
         in
@@ -576,7 +586,7 @@ assign_statement:
         in
         let exprs = match lhs with
           | [lhs] ->
-            [ p, Assign (lhs, rhs, shadow) ]
+            [ p, Assign (lhs, rhs, shadow, None) ]
           | lhs ->
             let len = List.length lhs in
             let unpack_i = ref (-1) in
@@ -591,7 +601,7 @@ assign_statement:
                 in
                 let slice = Slice (start, eend, None) in
                 let rhs = p, Index (rhs, [p, slice]) in
-                [p, Assign ((p, Id var), rhs, shadow)]
+                [p, Assign ((p, Id var), rhs, shadow, None)]
               | pos, Unpack var when !unpack_i > -1 ->
                 Err.serr ~pos "cannot have two tuple unpackings on LHS"
               | _ when !unpack_i = -1 ->
@@ -879,25 +889,27 @@ class_statement:
 // Classes
 cls:
   // class name [ [type+] ] (param+)
-  | CLASS ID generics = generic_list? 
-    LP args = separated_list(COMMA, typed_param) RP COLON NL
-    INDENT members = class_member+ DEDENT
-    { let generics = Option.value generics ~default:[] in
-      pos $1 $7, 
+  | CLASS ID generics = generic_list? COLON NL
+    INDENT members = dataclass_member+ DEDENT
+    { let args = List.filter_map members ~f:(function 
+        | Some(p, Declare d) -> Some(p, d)
+        | _ -> None)
+      in
+      let members = List.filter_map members ~f:(function 
+        | Some(p, Declare d) -> None
+        | p -> p)
+      in
+      let args = if (List.length args) <> 0 then Some(args) else None in
+      let generics = Option.value generics ~default:[] in
+      pos $1 $5, 
       Generic (Class 
         { class_name = snd $2; 
-          generics; 
-          args = Some args; 
-          members = List.filter_opt members }) }
-  // class name [ [type+] ] (param+)
-  | CLASS ID COLON NL
-    INDENT members = class_member+ DEDENT
-    { pos $1 $4, 
-      Generic (Class 
-        { class_name = snd $2; 
-          generics = []; 
-          args = None; 
-          members = List.filter_opt members }) }
+          generics; args; members }) }
+dataclass_member:
+  | class_member { $1 }
+  | decl_statement 
+    { Some (fst $1, match snd $1 with Generic c -> c | _ -> assert false) }
+
 
 // Type definitions
 typ:

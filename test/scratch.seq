@@ -16,3 +16,12 @@ print x
 
 c = u8(265)
 print c
+
+d: str = '3'
+print d
+
+e: int
+print e
+
+y = {1, 2, 3}
+print y

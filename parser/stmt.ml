@@ -55,6 +55,8 @@ struct
       | Generic 
         Class       p -> parse_class      ctx pos p ~toplevel
       | Generic 
+        Declare     p -> parse_declare    ctx pos p ~toplevel ~jit
+      | Generic 
         Type        p -> parse_class      ctx pos p ~toplevel ~is_type:true
       | Special     p -> parse_special    ctx pos p
     in
@@ -122,22 +124,31 @@ struct
       let expr = E.parse ctx expr in
       Llvm.Stmt.expr expr
 
-  and parse_assign ctx pos ~toplevel ~jit (lhs, rhs, shadow) =
+  and parse_assign ctx pos ~toplevel ~jit (lhs, rhs, shadow, typ) =
     let rh_expr = E.parse ctx rhs in
     match lhs with
     | pos, Id var ->
       begin match Hashtbl.find ctx.map var with
         | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
             when (not shadow) && (ctx.base = base) ->
+          if is_some typ then 
+            serr ~pos:(fst @@ Option.value_exn typ) 
+              "type annotation is invalid here as %s is already defined" var;
           Llvm.Stmt.assign v rh_expr
         | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
           serr ~pos "cannot assign functions or types"
         | _ when jit && toplevel ->
+          if is_some typ then 
+            serr ~pos:(fst @@ Option.value_exn typ) 
+              "type annotation is invalid in JIT mode here";
           let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
           Ctx.add ctx ~toplevel ~global:true var v;
           Llvm.Stmt.pass ()
         | _ ->
-          let var_stmt = Llvm.Stmt.var rh_expr in
+          let typ = Option.value_map typ 
+            ~f:(E.parse_type ctx) ~default:Ctypes.null 
+          in
+          let var_stmt = Llvm.Stmt.var ~typ rh_expr in
           let v = Llvm.Var.stmt var_stmt in
           if toplevel then 
             Llvm.Var.set_global v;
@@ -153,7 +164,24 @@ struct
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
     | _ ->
       serr ~pos "assignment requires Id / Dot / Index on LHS"
-    
+   
+  and parse_declare ctx pos ~toplevel ~jit { name; typ } = 
+    if jit then serr ~pos "JIT does not support this yet";
+    match Hashtbl.find ctx.map name with
+    | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
+      serr ~pos "cannot assign functions or types"
+    | Some ((Ctx.Namespace.Var _, { base; global; toplevel; _ }) :: _) 
+        when ctx.base = base ->
+      serr ~pos:(fst @@ Option.value_exn typ) "%s is already defined" name
+    | _ ->
+      let typ = E.parse_type ctx @@ Option.value_exn typ in
+      let var_stmt = Llvm.Stmt.var ~typ Ctypes.null in
+      let v = Llvm.Var.stmt var_stmt in
+      if toplevel then 
+        Llvm.Var.set_global v;
+      Ctx.add ctx ~toplevel ~global:toplevel name (Ctx.Namespace.Var v);
+      var_stmt
+
   and parse_del ctx pos expr =
     match expr with
     | pos, Index (lhs, [rhs]) ->

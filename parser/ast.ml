@@ -150,7 +150,8 @@ struct
     | Break       of unit
     | Continue    of unit
     | Expr        of ExprNode.t
-    | Assign      of (ExprNode.t * ExprNode.t * bool)
+    (* lhs, rhs, type*)
+    | Assign      of (ExprNode.t * ExprNode.t * bool * ExprNode.t option) 
     | Del         of ExprNode.t
     | Print       of (ExprNode.t list * string)
     | Return      of ExprNode.t option
@@ -172,8 +173,9 @@ struct
     | Special     of (string * t list * string list)
   and generic =
     | Function of fn_t
-    | Class of class_t 
-    | Type  of class_t
+    | Class    of class_t 
+    | Type     of class_t
+    | Declare  of param
   and if_case = 
     { cond: ExprNode.t option; 
       cond_stmts: t list }
@@ -227,10 +229,17 @@ struct
     | Continue _ -> sprintf "CONTINUE"
     | Expr x -> 
       ExprNode.to_string x
-    | Assign (l, r, s) -> 
-      sprintf "%s %s %s" 
-        (ExprNode.to_string l) (if s then ":=" else "=") (ExprNode.to_string r)
-    | Print (x, n) -> sprintf "PRINT %s, %s" 
+    | Assign(l, r, s, q) -> 
+      begin match q with 
+        | Some q ->
+          sprintf "%s : %s %s %s"
+            (ExprNode.to_string l) (ExprNode.to_string q) 
+            (if s then ":=" else "=") (ExprNode.to_string r)
+        | None -> 
+          sprintf "%s %s %s"
+            (ExprNode.to_string l) (if s then ":=" else "=") (ExprNode.to_string r)
+      end
+    | Print(x, n) -> sprintf "PRINT %s, %s" 
         (ppl x ~f:ExprNode.to_string) 
         (String.escaped n)
     | Del x -> sprintf "DEL %s" (ExprNode.to_string x)

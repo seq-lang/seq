@@ -323,8 +323,9 @@ module Stmt = struct
   let expr = foreign "expr_stmt" 
     (Types.expr @-> returning t)
 
-  let var = foreign "var_stmt" 
-    (Types.var @-> returning t)
+  let var ?(typ=Ctypes.null) v = foreign "var_stmt" 
+    (Types.var @-> Types.typ @-> returning t)
+    v typ
 
   let assign = foreign "assign_stmt" 
     (Types.var @-> Types.expr @-> returning t)

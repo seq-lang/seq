@@ -1,4 +1,7 @@
-class list[`t](arr: array[`t], len: int):
+class list[`t]:
+    arr: array[`t] 
+    len: int
+    
     def __init__(self: list[`t], arr: array[`t], len: int):
         self.arr = arr
         self.len = len

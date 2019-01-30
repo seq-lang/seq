@@ -1,10 +1,13 @@
-type range(lo: int, hi: int)
-extend range:
+type range(lo: int, hi: int, step: int):
+    def __init__(self: range, lo: int, hi: int, step: int) -> range:
+        assert step != 0
+        return (lo, hi, step)
+
     def __init__(self: range, lo: int, hi: int) -> range:
-        return (lo, hi)
+        return (lo, hi, 1)
 
     def __init__(self: range, hi: int) -> range:
-        return (0, hi)
+        return (0, hi, 1)
 
     def __getitem__(self: range, i: int) -> int:
         if i < 0:
@@ -15,12 +18,17 @@ extend range:
         return self.lo + i
 
     def __iter__(self: range):
-        lo = self.lo
-        hi = self.hi
+        lo, hi, step = self
         i = lo
-        while i < hi:
-            yield i
-            i += 1
+        if self.step > 0:
+            while i < hi:
+                yield i
+                i += step
+        else:
+            while i > hi:
+                yield i
+                i += step
+
 
 def len(x):
     return x.__len__()
@@ -163,7 +171,11 @@ extend seq:
                 i += step
                 yield kmer
 
-class File(fp: ptr[byte], buf: ptr[ptr[byte]], sz: ptr[int]):
+class File:
+    fp: ptr[byte]
+    buf: ptr[ptr[byte]]
+    sz: ptr[int]
+
     def __init__(self: File, path: str, mode: str):
         extern c fopen(ptr[byte], ptr[byte]) -> ptr[byte]
         self.fp = fopen(path.ptr, mode.ptr)
