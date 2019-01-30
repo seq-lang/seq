@@ -1,0 +1,60 @@
+# Implementation of SNAP aligner's genome index
+# https://github.com/amplab/snap/blob/master/SNAPLib/GenomeIndex.{cpp,h}
+
+from hashtable import SNAPHashTable
+
+class GenomeIndex[`k]:
+    hash_tables: array[SNAPHashTable[k16,u32]]
+    overflow_table: array[u32]
+    count_of_bases: int
+
+    def _partition(k: `k):
+        n = int(k.as_int())
+        shift = 2 * (`k.len() - 16)
+        mask1 = 0x00000000ffffffff << shift
+        mask2 = (1 << shift) - 1
+        return (k16((n & mask1) >> shift), n & mask2)
+
+    def __init__(self: GenomeIndex[`k], count_of_bases: int, slack: float):
+        assert k16.len() <= `k.len() <= k32.len()
+        num_tables = 4 ** (`k.len - k16.len())
+        hash_tables = array[SNAPHashTable[k16,u32]](num_tables)
+        hash_table_size = int(count_of_bases * (slack + 1.0) / num_tables)
+
+        for i in range(num_tables):
+            bias = 1.0  # TODO
+            biased_size = int(hash_table_size * bias)
+            if biased_size < 100:
+                biased_size = 100
+            hash_tables[i] = SNAPHashTable[k16,u32](biased_size, u32(0xffffffff))
+
+        self.hash_tables = hash_tables
+        self.overflow_table = array[u32](1)  # TODO
+        self.count_of_bases = count_of_bases
+
+    def lookup(self: GenomeIndex[`k], seed: `k, hits: ptr[ptr[u32]], rc_hits: ptr[ptr[u32]]):
+        FWD, REV = 0, 1
+        n_hits, n_rc_hits = 0, 0
+
+        for dir in (FWD, REV):
+            kmer, which = GenomeIndex[`k]._partition(seed)
+            table = self.hash_tables[which]
+            v = table.get_value_for_key(kmer)
+            if v != table.invalid_val:
+                if dir == FWD:
+                    n_hits = self._fill_in_lookup_results(v, hits)
+                else:
+                    n_rc_hits = self._fill_in_lookup_results(v, rc_hits)
+            seed = ~seed  # rev comp
+
+        return (n_hits, n_rc_hits)
+
+    def _fill_in_lookup_results(self: GenomeIndex[`k], value: u32, hits: ptr[ptr[u32]]):
+        if int(value) < self.count_of_bases:
+            hits[0][0] = value
+            return 1
+        else:
+            overflow_table_offset = int(value) - self.count_of_bases
+            hit_count = int(self.overflow_table[overflow_table_offset])
+            hits[0] = self.overflow_table.ptr + overflow_table_offset + 1
+            return hit_count

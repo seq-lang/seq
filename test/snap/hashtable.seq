@@ -44,16 +44,17 @@ class SNAPHashTable[`k,`v]:
 
         return table_index
 
-    def get_first_value_for_key(self: SNAPHashTable[`k,`v], k: `k):
+    def get_value_for_key(self: SNAPHashTable[`k,`v], k: `k):
         table = self.table
         table_size = table.len
         table_index = SNAPHashTable[`k,`v]._hash(k) % table_size
+        invalid_val = self.invalid_val
 
-        if table[table_index][0] == k and table[table_index][1] >= 0:
+        if table[table_index][0] == k and table[table_index][1] != invalid_val:
             return table[table_index][1]
         else:
             n_probes = 0
-            while table[table_index][0] != k and table[table_index][1] >= 0:
+            while True:
                 n_probes += 1
 
                 if n_probes > table_size + QUADRATIC_CHAINING_DEPTH:
@@ -62,11 +63,17 @@ class SNAPHashTable[`k,`v]:
                 diff = n_probes**2 if n_probes < QUADRATIC_CHAINING_DEPTH else 1
                 table_index = (table_index + diff) % table_size
 
+                if not (table[table_index][0] != k and table[table_index][1] != invalid_val):
+                    break
+
             return table[table_index][1]
 
-    def __getitem__(self: SNAPHashTable[`k,`v], k: `k):
+    def lookup_slow(self: SNAPHashTable[`k,`v], k: `k):
         entry = self._get_entry_index_for_key(k)
         return self.table[entry][1] if entry >= 0 else self.invalid_val
+
+    def __getitem__(self: SNAPHashTable[`k,`v], k: `k):
+        return self.get_value_for_key(k)
 
     def __setitem__(self: SNAPHashTable[`k,`v], k: `k, v: `v):
         entry = self._get_entry_index_for_key(k)
