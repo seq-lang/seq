@@ -277,6 +277,14 @@ void types::IntNType::initOps()
 	if (!vtable.magic.empty())
 		return;
 
+	if (!sign && len % 2 == 0) {
+		vtable.magic.push_back(
+			{"__init__", {KMer::get(len/2)}, this, SEQ_MAGIC_CAPT(self, args, b) {
+				return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+			}}
+		);
+	}
+
 	vtable.magic = {
 		{"__init__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return defaultValue(b.GetInsertBlock());
@@ -410,6 +418,52 @@ void types::IntNType::initOps()
 			return b.CreateXor(self, args[0]);
 		}},
 	};
+
+	addMethod("len", new BaseFuncLite({}, types::IntType::get(), [this](Module *module) {
+		const std::string name = "seq." + getName() + ".len";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext& context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name, seqIntLLVM(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			AttributeList v;
+			v.addAttribute(context, 0, Attribute::AlwaysInline);
+			func->setAttributes(v);
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			IRBuilder<> builder(block);
+			builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->len));
+		}
+
+		return func;
+	}), true);
+
+	if (!sign && len % 2 == 0) {
+		types::KMer *kType = types::KMer::get(len/2);
+		addMethod("as_kmer", new BaseFuncLite({this}, kType, [this, kType](Module *module) {
+			const std::string name = "seq." + getName() + ".as_kmer";
+			Function *func = module->getFunction(name);
+
+			if (!func) {
+				LLVMContext &context = module->getContext();
+				func = cast<Function>(module->getOrInsertFunction(name,
+				                                                  kType->getLLVMType(context),
+				                                                  getLLVMType(context)));
+				func->setDoesNotThrow();
+				func->setLinkage(GlobalValue::PrivateLinkage);
+				AttributeList v;
+				v.addAttribute(context, 0, Attribute::AlwaysInline);
+				func->setAttributes(v);
+				Value *arg = func->arg_begin();
+				BasicBlock *block = BasicBlock::Create(context, "entry", func);
+				IRBuilder<> builder(block);
+				builder.CreateRet(builder.CreateBitCast(arg, kType->getLLVMType(context)));
+			}
+
+			return func;
+		}), true);
+	}
 }
 
 void types::FloatType::initOps()

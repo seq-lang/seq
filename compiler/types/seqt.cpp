@@ -393,33 +393,11 @@ types::StrType *types::StrType::get() noexcept
  * k-mer types (fixed-length short sequences)
  */
 
-#define KMER_MAX_LEN 128
-
 types::KMer::KMer(unsigned k) :
     Type("k-mer", BaseType::get(), false, true), k(k)
 {
-	if (k == 0 || k > KMER_MAX_LEN)
-		throw exc::SeqException("k-mer length must be between 1 and " + std::to_string(KMER_MAX_LEN));
-
-	addMethod("len", new BaseFuncLite({}, types::IntType::get(), [this](Module *module) {
-		const std::string name = "seq." + getName() + ".len";
-		Function *func = module->getFunction(name);
-
-		if (!func) {
-			LLVMContext& context = module->getContext();
-			func = cast<Function>(module->getOrInsertFunction(name, seqIntLLVM(context)));
-			func->setDoesNotThrow();
-			func->setLinkage(GlobalValue::PrivateLinkage);
-			AttributeList v;
-			v.addAttribute(context, 0, Attribute::AlwaysInline);
-			func->setAttributes(v);
-			BasicBlock *block = BasicBlock::Create(context, "entry", func);
-			IRBuilder<> builder(block);
-			builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->k));
-		}
-
-		return func;
-	}), true);
+	if (k == 0 || k > MAX_LEN)
+		throw exc::SeqException("k-mer length must be between 1 and " + std::to_string(MAX_LEN));
 }
 
 unsigned types::KMer::getK()
@@ -582,6 +560,10 @@ void types::KMer::initOps()
 			return kmer;
 		}},
 
+		{"__init__", {IntNType::get(2*k, false)}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+		}},
+
 		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			Module *module = b.GetInsertBlock()->getModule();
@@ -597,7 +579,7 @@ void types::KMer::initOps()
 				mask = b.CreateShl(mask, 2*i);
 				mask = b.CreateAnd(self, mask);
 				mask = b.CreateLShr(mask, 2*i);
-				mask = b.CreateTrunc(mask, b.getInt8Ty());
+				mask = b.CreateZExtOrTrunc(mask, b.getInt8Ty());
 				b.CreateCall(printFunc, mask);
 			}
 			return (Value *)nullptr;
@@ -662,6 +644,50 @@ void types::KMer::initOps()
 			return b.CreateZExt(b.CreateICmpUGE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 	};
+
+	addMethod("len", new BaseFuncLite({}, types::IntType::get(), [this](Module *module) {
+		const std::string name = "seq." + getName() + ".len";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext& context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name, seqIntLLVM(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			AttributeList v;
+			v.addAttribute(context, 0, Attribute::AlwaysInline);
+			func->setAttributes(v);
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			IRBuilder<> builder(block);
+			builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->k));
+		}
+
+		return func;
+	}), true);
+
+	types::IntNType *iType = types::IntNType::get(2*k, false);
+	addMethod("as_int", new BaseFuncLite({this}, iType, [this,iType](Module *module) {
+		const std::string name = "seq." + getName() + ".as_int";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext& context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  iType->getLLVMType(context),
+			                                                  getLLVMType(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			AttributeList v;
+			v.addAttribute(context, 0, Attribute::AlwaysInline);
+			func->setAttributes(v);
+			Value *arg = func->arg_begin();
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			IRBuilder<> builder(block);
+			builder.CreateRet(builder.CreateBitCast(arg, iType->getLLVMType(context)));
+		}
+
+		return func;
+	}), true);
 }
 
 bool types::KMer::isAtomic() const
