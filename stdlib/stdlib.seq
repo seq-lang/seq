@@ -124,6 +124,15 @@ extend str:
         memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
 
+    def c_str(self: str):
+        n = len(self)
+        assert n >= 0
+        p = ptr[byte](n + 1)
+        for i in range(n):
+            p[i] = self.ptr[i]
+        p[n] = byte(0)
+        return p
+
     def cat(v: list[str]):
         extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int) -> ptr[byte]
         total = 0
