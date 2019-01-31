@@ -77,8 +77,9 @@ static seq_str_t string_conv(const char *fmt, const size_t size, T t)
 	auto *p = (char *)seq_alloc_atomic(size);
 	int n = snprintf(p, size, fmt, t);
 	if (n >= size) {
-		p = (char *)seq_realloc((void *)p, (size_t)n + 1);
-		n = snprintf(p, size, fmt, t);
+		auto n2 = (size_t)n + 1;
+		p = (char *)seq_realloc((void *)p, n2);
+		n = snprintf(p, n2, fmt, t);
 	}
 	return {(seq_int_t)n, p};
 }
