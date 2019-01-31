@@ -4,13 +4,13 @@ print 2 + 3*2   # EXPECT: 8
 print 1.0/0     # EXPECT: inf
 print 0.0/0     # EXPECT: nan
 
-print 5 // 2              # EXPECT: 2
-print 5 / 2               # EXPECT: 2.5
-print 5.0 // 2.0          # EXPECT: 2
-print 5.0 / 2.0           # EXPECT: 2.5
-print 5 // 2.0            # EXPECT: 2
-print 5 / 2.0             # EXPECT: 2.5
-print 5.0 // 2            # EXPECT: 2
-print 5.0 / 2             # EXPECT: 2.5
-print i128(5) // i128(2)  # EXPECT: 2
-print i128(5) / i128(2)   # EXPECT: 2.5
+print 5 // 2                   # EXPECT: 2
+print 5 / 2                    # EXPECT: 2.5
+print 5.0 // 2.0               # EXPECT: 2
+print 5.0 / 2.0                # EXPECT: 2.5
+print 5 // 2.0                 # EXPECT: 2
+print 5 / 2.0                  # EXPECT: 2.5
+print 5.0 // 2                 # EXPECT: 2
+print 5.0 / 2                  # EXPECT: 2.5
+print int(i128(5) // i128(2))  # EXPECT: 2
+print i128(5) / i128(2)        # EXPECT: 2.5

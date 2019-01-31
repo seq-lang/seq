@@ -1,7 +1,7 @@
 class list[`t]:
-    arr: array[`t] 
+    arr: array[`t]
     len: int
-    
+
     def __init__(self: list[`t], arr: array[`t], len: int):
         self.arr = arr
         self.len = len
@@ -147,15 +147,3 @@ class list[`t]:
                 y.append(str(self[i]))
             y.append("]")
             return str.cat(y)
-
-    def __print__(self: list[`t]):
-        n = len(self)
-        if n == 0:
-            "[]".__print__()
-        else:
-            "[".__print__()
-            self[0].__print__()
-            for i in range(1, n):
-                ", ".__print__()
-                self[i].__print__()
-            "]".__print__()

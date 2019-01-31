@@ -94,6 +94,18 @@ void types::IntType::initOps()
 			return (Value *)nullptr;
 		}},
 
+		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *strFunc = cast<Function>(
+			                  module->getOrInsertFunction(
+			                    "seq_str_int",
+			                    Str->getLLVMType(context),
+			                    getLLVMType(context)));
+			strFunc->setDoesNotThrow();
+			return b.CreateCall(strFunc, self);
+		}},
+
 		{"__copy__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -291,21 +303,6 @@ void types::IntNType::initOps()
 			              b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
 		}},
 
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_int",
-			                      llvm::Type::getVoidTy(context),
-			                      Int->getLLVMType(context)));
-			printFunc->setDoesNotThrow();
-			Value *ext = sign ? b.CreateSExtOrTrunc(self, seqIntLLVM(context)) :
-			                    b.CreateZExtOrTrunc(self, seqIntLLVM(context));
-			b.CreateCall(printFunc, ext);
-			return (Value *)nullptr;
-		}},
-
 		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -497,6 +494,18 @@ void types::FloatType::initOps()
 			return (Value *)nullptr;
 		}},
 
+		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *strFunc = cast<Function>(
+			                  module->getOrInsertFunction(
+			                    "seq_str_float",
+			                    Str->getLLVMType(context),
+			                    getLLVMType(context)));
+			strFunc->setDoesNotThrow();
+			return b.CreateCall(strFunc, self);
+		}},
+
 		{"__copy__", {}, Float, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -673,6 +682,18 @@ void types::BoolType::initOps()
 			return (Value *)nullptr;
 		}},
 
+		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *strFunc = cast<Function>(
+			                  module->getOrInsertFunction(
+			                    "seq_str_bool",
+			                    Str->getLLVMType(context),
+			                    getLLVMType(context)));
+			strFunc->setDoesNotThrow();
+			return b.CreateCall(strFunc, self);
+		}},
+
 		{"__copy__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -736,6 +757,18 @@ void types::ByteType::initOps()
 			printFunc->setDoesNotThrow();
 			b.CreateCall(printFunc, self);
 			return (Value *)nullptr;
+		}},
+
+		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			auto *strFunc = cast<Function>(
+			                  module->getOrInsertFunction(
+			                    "seq_str_byte",
+			                    Str->getLLVMType(context),
+			                    getLLVMType(context)));
+			strFunc->setDoesNotThrow();
+			return b.CreateCall(strFunc, self);
 		}},
 
 		{"__copy__", {}, Byte, SEQ_MAGIC(self, args, b) {

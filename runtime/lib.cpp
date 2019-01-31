@@ -68,6 +68,48 @@ SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data))
 
 
 /*
+ * String conversion
+ */
+
+template<typename T>
+static seq_str_t string_conv(const char *fmt, const size_t size, T t)
+{
+	auto *p = (char *)seq_alloc_atomic(size);
+	int n = snprintf(p, size, fmt, t);
+	if (n >= size) {
+		p = (char *)seq_realloc((void *)p, (size_t)n + 1);
+		n = snprintf(p, size, fmt, t);
+	}
+	return {(seq_int_t)n, p};
+}
+
+SEQ_FUNC seq_str_t seq_str_int(seq_int_t n)
+{
+	return string_conv("%ld", 22, n);
+}
+
+SEQ_FUNC seq_str_t seq_str_float(double f)
+{
+	return string_conv("%f", 16, f);
+}
+
+SEQ_FUNC seq_str_t seq_str_bool(bool b)
+{
+	return string_conv("%s", 6, b ? "True" : "False");
+}
+
+SEQ_FUNC seq_str_t seq_str_byte(char c)
+{
+	return string_conv("%c", 5, c);
+}
+
+SEQ_FUNC seq_str_t seq_str_ptr(void *p)
+{
+	return string_conv("%p", 19, p);
+}
+
+
+/*
  * Printing
  */
 

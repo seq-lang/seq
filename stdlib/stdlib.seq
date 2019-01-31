@@ -134,7 +134,7 @@ extend str:
         return p
 
     def cat(v: list[str]):
-        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int) -> ptr[byte]
+        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
         total = 0
         for s in v:
             total += len(s)

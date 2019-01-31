@@ -47,6 +47,12 @@ SEQ_FUNC _Unwind_Reason_Code seq_personality(int version,
 SEQ_FUNC int64_t seq_exc_offset();
 SEQ_FUNC uint64_t seq_exc_class();
 
+SEQ_FUNC seq_str_t seq_str_int(seq_int_t n);
+SEQ_FUNC seq_str_t seq_str_float(double f);
+SEQ_FUNC seq_str_t seq_str_bool(bool b);
+SEQ_FUNC seq_str_t seq_str_byte(char c);
+SEQ_FUNC seq_str_t seq_str_ptr(void *p);
+
 SEQ_FUNC void seq_print_int(seq_int_t n);
 SEQ_FUNC void seq_print_float(double f);
 SEQ_FUNC void seq_print_bool(bool b);
