@@ -81,19 +81,6 @@ void types::IntType::initOps()
 			return b.CreateZExt(args[0], Int->getLLVMType(b.getContext()));
 		}},
 
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_int",
-			                      llvm::Type::getVoidTy(context),
-			                      getLLVMType(context)));
-			printFunc->setDoesNotThrow();
-			b.CreateCall(printFunc, self);
-			return (Value *)nullptr;
-		}},
-
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			Module *module = b.GetInsertBlock()->getModule();
@@ -481,19 +468,6 @@ void types::FloatType::initOps()
 			return b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 		}},
 
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_float",
-			                      llvm::Type::getVoidTy(context),
-			                      getLLVMType(context)));
-			printFunc->setDoesNotThrow();
-			b.CreateCall(printFunc, self);
-			return (Value *)nullptr;
-		}},
-
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			Module *module = b.GetInsertBlock()->getModule();
@@ -669,19 +643,6 @@ void types::BoolType::initOps()
 			return Bool->defaultValue(b.GetInsertBlock());
 		}},
 
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_bool",
-			                      llvm::Type::getVoidTy(context),
-			                      getLLVMType(context)));
-			printFunc->setDoesNotThrow();
-			b.CreateCall(printFunc, self);
-			return (Value *)nullptr;
-		}},
-
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			Module *module = b.GetInsertBlock()->getModule();
@@ -744,19 +705,6 @@ void types::ByteType::initOps()
 
 		{"__init__", {Int}, Byte, SEQ_MAGIC(self, args, b) {
 			return b.CreateTrunc(args[0], Byte->getLLVMType(b.getContext()));
-		}},
-
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_byte",
-			                      llvm::Type::getVoidTy(context),
-			                      getLLVMType(context)));
-			printFunc->setDoesNotThrow();
-			b.CreateCall(printFunc, self);
-			return (Value *)nullptr;
 		}},
 
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {

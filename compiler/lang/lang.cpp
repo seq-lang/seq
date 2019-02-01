@@ -15,20 +15,23 @@ void Print::resolveTypes()
 
 void Print::codegen0(BasicBlock*& block)
 {
+	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
 	types::Type *type = expr->getType();
 	Value *val = expr->codegen(getBase(), block);
 
 	if (nopOnVoid && type->is(types::Void))
 		return;
 
-	if (type->hasMethod("__print__")) {
-		type->callMagic("__print__", {}, val, {}, block, getTryCatch());
-	} else if (type->hasMethod("__str__")) {
-		Value *str = type->strValue(val, block, getTryCatch());
-		types::Str->callMagic("__print__", {}, str, {}, block, getTryCatch());
-	} else {
-		throw exc::SeqException("cannot print type '" + type->getName() + "': no __str__ or __print__ method found");
-	}
+	Value *str = type->strValue(val, block, getTryCatch());
+	auto *printFunc = cast<Function>(
+	                    module->getOrInsertFunction(
+	                      "seq_print",
+	                      Type::getVoidTy(context),
+	                      types::Str->getLLVMType(context)));
+	printFunc->setDoesNotThrow();
+	IRBuilder<> builder(block);
+	builder.CreateCall(printFunc, str);
 }
 
 Print *Print::clone(Generic *ref)

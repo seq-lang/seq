@@ -170,19 +170,6 @@ void types::SeqType::initOps()
 			return make(args[0], args[1], b.GetInsertBlock());
 		}},
 
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_seq",
-			                      llvm::Type::getVoidTy(context),
-			                      getLLVMType(context)));
-			printFunc->setDoesNotThrow();
-			b.CreateCall(printFunc, self);
-			return (Value *)nullptr;
-		}},
-
 		{"__str__", {}, Str, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -303,19 +290,6 @@ void types::StrType::initOps()
 			return make(args[0], args[1], b.GetInsertBlock());
 		}},
 
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_str",
-			                      llvm::Type::getVoidTy(context),
-			                      getLLVMType(context)));
-			printFunc->setDoesNotThrow();
-			b.CreateCall(printFunc, self);
-			return (Value *)nullptr;
-		}},
-
 		{"__str__", {}, Str, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -419,7 +393,6 @@ static GlobalVariable *get2bitTable(Module *module, const std::string& name="seq
 {
 	LLVMContext& context = module->getContext();
 	Type *ty = IntegerType::getIntNTy(context, 2);
-
 	GlobalVariable *table = module->getGlobalVariable(name);
 
 	if (!table) {
@@ -435,6 +408,23 @@ static GlobalVariable *get2bitTable(Module *module, const std::string& name="seq
 		                           true,
 		                           GlobalValue::PrivateLinkage,
 		                           ConstantArray::get(arrTy, v),
+		                           name);
+	}
+
+	return table;
+}
+
+static GlobalVariable *get2bitTableInv(Module *module, const std::string& name="seq.2bit_table_inv")
+{
+	LLVMContext& context = module->getContext();
+	GlobalVariable *table = module->getGlobalVariable(name);
+
+	if (!table) {
+		table = new GlobalVariable(*module,
+		                           llvm::ArrayType::get(IntegerType::getInt8Ty(context), 4),
+		                           true,
+		                           GlobalValue::PrivateLinkage,
+		                           ConstantDataArray::getString(context, "ACGT", false),
 		                           name);
 	}
 
@@ -568,25 +558,24 @@ void types::KMer::initOps()
 			return b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
 		}},
 
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
+		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			Module *module = b.GetInsertBlock()->getModule();
-			auto *printFunc = cast<Function>(
-			                    module->getOrInsertFunction(
-			                      "seq_print_base_2bit",
-			                      llvm::Type::getVoidTy(context),
-			                      b.getInt8Ty()));
-			printFunc->setDoesNotThrow();
-
+			Value *table = get2bitTableInv(module);
+			Value *len = ConstantInt::get(seqIntLLVM(context), k);
+			Value *buf = Byte->alloc(len, b.GetInsertBlock());
 			for (unsigned i = 0; i < k; i++) {
 				Value *mask = ConstantInt::get(getLLVMType(context), 3);
 				mask = b.CreateShl(mask, 2*i);
 				mask = b.CreateAnd(self, mask);
 				mask = b.CreateLShr(mask, 2*i);
-				mask = b.CreateZExtOrTrunc(mask, b.getInt8Ty());
-				b.CreateCall(printFunc, mask);
+				mask = b.CreateZExtOrTrunc(mask, b.getInt64Ty());
+				Value *base = b.CreateGEP(table, {zeroLLVM(context), mask});
+				base = b.CreateLoad(base);
+				Value *dest = b.CreateGEP(buf, b.getInt32(i));
+				b.CreateStore(base, dest);
 			}
-			return (Value *)nullptr;
+			return Str->make(buf, len, b.GetInsertBlock());
 		}},
 
 		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {

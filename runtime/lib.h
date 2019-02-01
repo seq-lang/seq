@@ -52,15 +52,9 @@ SEQ_FUNC seq_str_t seq_str_float(double f);
 SEQ_FUNC seq_str_t seq_str_bool(bool b);
 SEQ_FUNC seq_str_t seq_str_byte(char c);
 SEQ_FUNC seq_str_t seq_str_ptr(void *p);
+SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n);
 
-SEQ_FUNC void seq_print_int(seq_int_t n);
-SEQ_FUNC void seq_print_float(double f);
-SEQ_FUNC void seq_print_bool(bool b);
-SEQ_FUNC void seq_print_byte(char c);
-SEQ_FUNC void seq_print_str(seq_str_t str);
-SEQ_FUNC void seq_print_seq(seq_t seq);
-SEQ_FUNC void seq_print_ptr(void *p);
-SEQ_FUNC void seq_print_base_2bit(uint8_t base);
+SEQ_FUNC void seq_print(seq_str_t str);
 
 SEQ_FUNC void *seq_io_openr(const char *filename);
 SEQ_FUNC void *seq_io_openw(const char *filename);

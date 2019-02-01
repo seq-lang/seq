@@ -31,7 +31,7 @@ std::string types::RecordType::getName() const
 	if (!name.empty())
 		return name;
 
-	std::string name = "(";
+	std::string name = "tuple[";
 
 	for (unsigned i = 0; i < types.size(); i++) {
 		name += types[i]->getName();
@@ -94,74 +94,47 @@ void types::RecordType::initOps()
 			return val;
 		}},
 
-		{"__print__", {}, Void, SEQ_MAGIC_CAPT(self, args, b) {
-#define PAREN_OPEN   "seq.tuple.paren_open"
-#define PAREN_CLOSED "seq.tuple.paren_close"
-#define COMMA        "seq.tuple.comma"
+		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
 			BasicBlock *block = b.GetInsertBlock();
 			Module *module = block->getModule();
+			const std::string strName = "seq." + getName() + ".__str__";
+			Function *str = module->getFunction(strName);
 
-			GlobalVariable *parenOpen = module->getGlobalVariable(PAREN_OPEN);
-			GlobalVariable *parenClosed = module->getGlobalVariable(PAREN_CLOSED);
-			GlobalVariable *comma = module->getGlobalVariable(COMMA);
+			if (!str) {
+				str = cast<Function>(module->getOrInsertFunction(strName,
+				                                                 Str->getLLVMType(context),
+				                                                 getLLVMType(context)));
+				str->setLinkage(GlobalValue::PrivateLinkage);
+				str->setPersonalityFn(makePersonalityFunc(module));
 
-			if (!parenOpen)
-				parenOpen = new GlobalVariable(*module,
-				                               llvm::ArrayType::get(IntegerType::getInt8Ty(context), 2),
-				                               true,
-				                               GlobalValue::PrivateLinkage,
-				                               ConstantDataArray::getString(context, "("),
-				                               PAREN_OPEN);
+				Value *arg = str->arg_begin();
+				BasicBlock *entry = BasicBlock::Create(context, "entry", str);
+				b.SetInsertPoint(entry);
+				Value *len = ConstantInt::get(seqIntLLVM(context), types.size());
+				Value *strs = b.CreateAlloca(Str->getLLVMType(context), len);
 
-			if (!parenClosed)
-				parenClosed = new GlobalVariable(*module,
-				                                 llvm::ArrayType::get(IntegerType::getInt8Ty(context), 2),
-				                                 true,
-				                                 GlobalValue::PrivateLinkage,
-				                                 ConstantDataArray::getString(context, ")"),
-				                                 PAREN_CLOSED);
+				for (unsigned i = 0; i < types.size(); i++) {
+					Value *v = memb(arg, std::to_string(i+1), entry);
+					// won't create new block since no try-catch:
+					Value *s = types[i]->strValue(v, entry, nullptr);
+					Value *dest = b.CreateGEP(strs, b.getInt32(i));
+					b.CreateStore(s, dest);
+				};
 
-			if (!comma)
-				comma = new GlobalVariable(*module,
-				                           llvm::ArrayType::get(IntegerType::getInt8Ty(context), 3),
-				                           true,
-				                           GlobalValue::PrivateLinkage,
-				                           ConstantDataArray::getString(context, ", "),
-				                           COMMA);
-
-			auto *printFunc = cast<Function>(
-			        module->getOrInsertFunction(
-			          "seq_print_str",
-			          llvm::Type::getVoidTy(context),
-			          Str->getLLVMType(context)));
-			printFunc->setDoesNotThrow();
-
-			Value *parenOpenVal = Str->make(b.CreateBitCast(parenOpen, IntegerType::getInt8PtrTy(context)),
-			                                oneLLVM(context), block);
-			Value *parenClosedVal = Str->make(b.CreateBitCast(parenClosed, IntegerType::getInt8PtrTy(context)),
-			                                  oneLLVM(context), block);
-			Value *commaVal = Str->make(b.CreateBitCast(comma, IntegerType::getInt8PtrTy(context)),
-			                            ConstantInt::get(seqIntLLVM(context), 2), block);
-
-			b.CreateCall(printFunc, parenOpenVal);
-
-			for (unsigned i = 0; i < types.size(); i++) {
-				Value *val = memb(self, std::to_string(i+1), block);
-				ValueExpr v(types[i], val);
-				Print p(&v);
-				p.codegen(block);
-
-				if (i < types.size() - 1)
-					b.CreateCall(printFunc, commaVal);
+				auto *strReal = cast<Function>(
+				                  module->getOrInsertFunction(
+				                    "seq_str_tuple",
+				                    Str->getLLVMType(context),
+				                    Str->getLLVMType(context)->getPointerTo(),
+				                    seqIntLLVM(context)));
+				strReal->setDoesNotThrow();
+				Value *res = b.CreateCall(strReal, {strs, len});
+				b.CreateRet(res);
 			}
 
-			b.CreateCall(printFunc, parenClosedVal);
-
-			return (Value *)nullptr;
-#undef PAREN_OPEN
-#undef PAREN_CLOSED
-#undef COMMA
+			b.SetInsertPoint(block);
+			return b.CreateCall(str, self);
 		}},
 
 		{"__iter__", {}, GenType::get(types.empty() ? Void : types[0]), SEQ_MAGIC_CAPT(self, args, b) {
@@ -175,7 +148,6 @@ void types::RecordType::initOps()
 
 			BasicBlock *block = b.GetInsertBlock();
 			Module *module = block->getModule();
-
 			const std::string iterName = "seq." + getName() + ".__iter__";
 			Function *iter = module->getFunction(iterName);
 

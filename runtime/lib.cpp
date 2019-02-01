@@ -91,7 +91,7 @@ SEQ_FUNC seq_str_t seq_str_int(seq_int_t n)
 
 SEQ_FUNC seq_str_t seq_str_float(double f)
 {
-	return string_conv("%f", 16, f);
+	return string_conv("%g", 16, f);
 }
 
 SEQ_FUNC seq_str_t seq_str_bool(bool b)
@@ -109,59 +109,42 @@ SEQ_FUNC seq_str_t seq_str_ptr(void *p)
 	return string_conv("%p", 19, p);
 }
 
-
-/*
- * Printing
- */
-
-SEQ_FUNC void seq_print_int(seq_int_t n)
+SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n)
 {
-	cout << n;
-}
+	size_t total = 2;  // one for each of '(' and ')'
+	for (seq_int_t i = 0; i < n; i++) {
+		total += strs[i].len;
+		if (i < n - 1)
+			total += 2;  // ", "
+	}
 
-SEQ_FUNC void seq_print_float(double f)
-{
-	cout << f;
-}
+	auto *buf = (char *)seq_alloc_atomic(total);
+	size_t where = 0;
+	buf[where++] = '(';
+	for (seq_int_t i = 0; i < n; i++) {
+		seq_str_t str = strs[i];
+		auto len = (size_t)str.len;
+		memcpy(&buf[where], str.str, len);
+		where += len;
+		if (i < n - 1) {
+			buf[where++] = ',';
+			buf[where++] = ' ';
+		}
+	}
+	buf[where] = ')';
 
-SEQ_FUNC void seq_print_bool(bool b)
-{
-	cout << (b ? "True" : "False");
-}
-
-SEQ_FUNC void seq_print_byte(char c)
-{
-	cout << c;
-}
-
-SEQ_FUNC void seq_print_str(seq_str_t str)
-{
-	cout.write(str.str, str.len);
-}
-
-SEQ_FUNC void seq_print_seq(seq_t seq)
-{
-	cout.write(seq.seq, seq.len);
-}
-
-SEQ_FUNC void seq_print_ptr(void *p)
-{
-	if (p)
-		cout << p;
-	else
-		cout << "None";
-}
-
-SEQ_FUNC void seq_print_base_2bit(uint8_t base)
-{
-	static const char table[] = {'A','C','G','T'};
-	cout << table[base];
+	return {(seq_int_t)total, buf};
 }
 
 
 /*
  * General I/O
  */
+
+SEQ_FUNC void seq_print(seq_str_t str)
+{
+	cout.write(str.str, str.len);
+}
 
 void error(const string& msg)
 {
