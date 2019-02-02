@@ -1,6 +1,14 @@
 # Implementation of SNAP aligner's genome index
 # https://github.com/amplab/snap/blob/master/SNAPLib/GenomeIndex.{cpp,h}
 
+# Need the following hooks linked to convert C++ GenomeIndex to Seq object:
+# snap_index_from_dir(ptr[byte]) -> ptr[byte]     --  read object from specified directory
+# snap_index_ht_count(ptr[byte]) -> int           --  extract hash table count
+# snap_index_ht_get(ptr[byte], int) -> ptr[byte]  --  extract specified (0-indexed) hash table
+# snap_index_overflow_ptr(ptr[byte]) -> ptr[u32]  --  extract overflow table pointer
+# snap_index_overflow_len(ptr[byte]) -> int       --  extract overflow table length
+# snap_index_count_of_bases(ptr[byte]) -> int     --  extract count of genome bases
+
 from hashtable import SNAPHashTable
 
 class GenomeIndex[`k]:
@@ -15,22 +23,23 @@ class GenomeIndex[`k]:
         mask2 = (1 << shift) - 1
         return (k16((n & mask1) >> shift), n & mask2)
 
-    def __init__(self: GenomeIndex[`k], count_of_bases: int, slack: float):
+    def __init__(self: GenomeIndex[`k], dir: str):
         assert k16.len() <= `k.len() <= k32.len()
-        num_tables = 4 ** (`k.len - k16.len())
-        hash_tables = array[SNAPHashTable[k16,u32]](num_tables)
-        hash_table_size = int(count_of_bases * (slack + 1.0) / num_tables)
+        extern c snap_index_from_dir(ptr[byte]) -> ptr[byte]
+        extern c snap_index_ht_count(ptr[byte]) -> int
+        extern c snap_index_ht_get(ptr[byte], int) -> ptr[byte]
+        extern c snap_index_overflow_ptr(ptr[byte]) -> ptr[u32]
+        extern c snap_index_overflow_len(ptr[byte]) -> int
+        extern c snap_index_count_of_bases(ptr[byte]) -> int
 
-        for i in range(num_tables):
-            bias = 1.0  # TODO
-            biased_size = int(hash_table_size * bias)
-            if biased_size < 100:
-                biased_size = 100
-            hash_tables[i] = SNAPHashTable[k16,u32](biased_size, u32(0xffffffff))
+        p = snap_index_from_dir(dir.c_str())
+        hash_tables = array[SNAPHashTable[k16,u32]](snap_index_ht_count(p))
+        for i in range(len(hash_tables)):
+            hash_tables[i] = SNAPHashTable[k16,u32](snap_index_ht_get(p, i))
 
         self.hash_tables = hash_tables
-        self.overflow_table = array[u32](1)  # TODO
-        self.count_of_bases = count_of_bases
+        self.overflow_table = array[u32](snap_index_overflow_ptr(p), snap_index_overflow_len(p))
+        self.count_of_bases = snap_index_count_of_bases(p)
 
     def lookup(self: GenomeIndex[`k], seed: `k, hits: ptr[ptr[u32]], rc_hits: ptr[ptr[u32]]):
         FWD, REV = 0, 1

@@ -1,6 +1,11 @@
 # Implementation of SNAP aligner's hash table
 # https://github.com/amplab/snap/blob/master/SNAPLib/HashTable.{cpp,h}
 
+# Need the following hooks linked to convert C++ SNAPHashTable to Seq object:
+# snap_hashtable_ptr(ptr[byte]) -> ptr[tuple[`k,`v]]  --  extract table pointer
+# snap_hashtable_len(ptr[byte]) -> int                --  extract table length
+# snap_hashtable_invalid_val(ptr[byte]) -> `v         --  extract "invalid" value
+
 QUADRATIC_CHAINING_DEPTH = 5
 
 class SNAPHashTable[`k,`v]:
@@ -22,6 +27,13 @@ class SNAPHashTable[`k,`v]:
 
         for i in range(size):
             self.table[i] = (`k(), invalid_val)
+
+    def __init__(self: SNAPHashTable[`k,`v], p: ptr[byte]):
+        extern c snap_hashtable_ptr(ptr[byte]) -> ptr[tuple[`k,`v]]
+        extern c snap_hashtable_len(ptr[byte]) -> int
+        extern c snap_hashtable_invalid_val(ptr[byte]) -> `v
+        self.table = array[tuple[`k,`v]](snap_hashtable_ptr(p), snap_hashtable_len(p))
+        self.invalid_val = snap_hashtable_invalid_val(p)
 
     def _get_entry_index_for_key(self: SNAPHashTable[`k,`v], k: `k):
         table = self.table
@@ -86,4 +98,4 @@ def _test():
         h[i32(42 + i*100)] = i32(i)
 
     for i in range(100):
-        print h[i32(42 + i*100)]
+        print int(h[i32(42 + i*100)])
