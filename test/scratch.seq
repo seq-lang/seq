@@ -13,5 +13,9 @@ b = s'ac'
 c = 'hi'
 d = "hi"
 
-print a, b, c, d
+e = s"""s"""
+f = "hi"
+
+
+print a, b, c, d, e, f
 

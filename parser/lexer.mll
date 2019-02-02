@@ -48,9 +48,9 @@
   (* given a (named) string (e.g. s'foo' or 'bar'), decide the proper token *)
   let seq_string pfx u st =
     let escape = Scanf.unescaped in
-    match pfx with
-    | "r'" | "R'" | "r\"" | "R\"" -> P.REGEX (st, escape u)
-    | "s'" | "S'" | "s\"" | "S\"" -> P.SEQ   (st, escape u)
+    match String.prefix pfx 1 with
+    | "r" | "R" -> P.REGEX (st, escape u)
+    | "s" | "S" -> P.SEQ   (st, escape u)
     | _ -> P.STRING (st, escape u)
 }
 
