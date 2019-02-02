@@ -119,6 +119,12 @@ void types::IntType::initOps()
 			return b.CreateNot(self);
 		}},
 
+		{"__abs__", {}, Int, SEQ_MAGIC(self, args, b) {
+			Value *pos = b.CreateICmpSGT(self, zeroLLVM(b.getContext()));
+			Value *neg = b.CreateNeg(self);
+			return b.CreateSelect(pos, self, neg);
+		}},
+
 		// int,int binary
 		{"__add__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateAdd(self, args[0]);
@@ -496,6 +502,13 @@ void types::FloatType::initOps()
 
 		{"__neg__", {}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateFNeg(self);
+		}},
+
+		{"__abs__", {}, Float, SEQ_MAGIC(self, args, b) {
+			Function *abs = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+			                                          Intrinsic::fabs,
+			                                          {Float->getLLVMType(b.getContext())});
+			return b.CreateCall(abs, self);
 		}},
 
 		// float,float binary

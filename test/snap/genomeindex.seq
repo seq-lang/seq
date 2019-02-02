@@ -18,10 +18,7 @@ class GenomeIndex[`k]:
 
     def _partition(k: `k):
         n = int(k.as_int())
-        shift = 2 * (`k.len() - 16)
-        mask1 = 0x00000000ffffffff << shift
-        mask2 = (1 << shift) - 1
-        return (k16((n & mask1) >> shift), n & mask2)
+        return (k16(n & ((1 << 32) - 1)), n >> 32)
 
     def __init__(self: GenomeIndex[`k], dir: str):
         assert k16.len() <= `k.len() <= k32.len()

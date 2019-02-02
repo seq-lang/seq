@@ -389,6 +389,7 @@ Value *types::KMer::defaultValue(BasicBlock *block)
 	return ConstantInt::get(getLLVMType(block->getContext()), 0);
 }
 
+// table mapping ASCII characters to 2-bit encodings
 static GlobalVariable *get2bitTable(Module *module, const std::string& name="seq.2bit_table")
 {
 	LLVMContext& context = module->getContext();
@@ -398,11 +399,11 @@ static GlobalVariable *get2bitTable(Module *module, const std::string& name="seq
 	if (!table) {
 		std::vector<Constant *> v(256, ConstantInt::get(ty, 0));
 		v['A'] = v['a'] = ConstantInt::get(ty, 0);
-		v['C'] = v['c'] = ConstantInt::get(ty, 1);
-		v['G'] = v['g'] = ConstantInt::get(ty, 2);
+		v['G'] = v['g'] = ConstantInt::get(ty, 1);
+		v['C'] = v['c'] = ConstantInt::get(ty, 2);
 		v['T'] = v['t'] = ConstantInt::get(ty, 3);
 
-		auto *arrTy = llvm::ArrayType::get(IntegerType::getIntNTy(context, 2), 256);
+		auto *arrTy = llvm::ArrayType::get(IntegerType::getIntNTy(context, 2), v.size());
 		table = new GlobalVariable(*module,
 		                           arrTy,
 		                           true,
@@ -414,6 +415,7 @@ static GlobalVariable *get2bitTable(Module *module, const std::string& name="seq
 	return table;
 }
 
+// table mapping 2-bit encodings to ASCII characters
 static GlobalVariable *get2bitTableInv(Module *module, const std::string& name="seq.2bit_table_inv")
 {
 	LLVMContext& context = module->getContext();
@@ -424,7 +426,40 @@ static GlobalVariable *get2bitTableInv(Module *module, const std::string& name="
 		                           llvm::ArrayType::get(IntegerType::getInt8Ty(context), 4),
 		                           true,
 		                           GlobalValue::PrivateLinkage,
-		                           ConstantDataArray::getString(context, "ACGT", false),
+		                           ConstantDataArray::getString(context, "AGCT", false),
+		                           name);
+	}
+
+	return table;
+}
+
+static unsigned revcompBits(unsigned n)
+{
+	unsigned c1 = (n & (3u << 0u)) << 6u;
+	unsigned c2 = (n & (3u << 2u)) << 2u;
+	unsigned c3 = (n & (3u << 4u)) >> 2u;
+	unsigned c4 = (n & (3u << 6u)) >> 6u;
+	return ~(c1 | c2 | c3 | c4) & 0xffu;
+}
+
+// table mapping 8-bit encoded 4-mers to reverse complement encoded 4-mers
+static GlobalVariable *getRevCompTable(Module *module, const std::string& name="seq.revcomp_table")
+{
+	LLVMContext& context = module->getContext();
+	Type *ty = IntegerType::getInt8Ty(context);
+	GlobalVariable *table = module->getGlobalVariable(name);
+
+	if (!table) {
+		std::vector<Constant *> v(256, ConstantInt::get(ty, 0));
+		for (unsigned i = 0; i < v.size(); i++)
+			v[i] = ConstantInt::get(ty, revcompBits(i));
+
+		auto *arrTy = llvm::ArrayType::get(IntegerType::getInt8Ty(context), v.size());
+		table = new GlobalVariable(*module,
+		                           arrTy,
+		                           true,
+		                           GlobalValue::PrivateLinkage,
+		                           ConstantArray::get(arrTy, v),
 		                           name);
 	}
 
@@ -489,8 +524,10 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
 
 		if (dir) {
 			// right slide
+			Value *idx = builder.CreateSub(len, oneLLVM(context));
+			idx = builder.CreateSub(idx, control);
 			kmerMod = builder.CreateLShr(result, 2);
-			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, control));
+			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, idx));
 			base = builder.CreateZExt(base, builder.getInt64Ty());
 			Value *bits = builder.CreateLoad(builder.CreateGEP(table, {builder.getInt64(0), base}));
 			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
@@ -498,10 +535,8 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
 			kmerMod = builder.CreateOr(kmerMod, bits);
 		} else {
 			// left slide
-			Value *idx = builder.CreateSub(len, oneLLVM(context));
-			idx = builder.CreateSub(idx, control);
 			kmerMod = builder.CreateShl(result, 2);
-			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, control));
 			base = builder.CreateZExt(base, builder.getInt64Ty());
 			Value *bits = builder.CreateLoad(builder.CreateGEP(table, {builder.getInt64(0), base}));
 			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
@@ -543,7 +578,7 @@ void types::KMer::initOps()
 				Value *bits = b.CreateLoad(b.CreateGEP(table, {b.getInt64(0), base}));
 				bits = b.CreateZExt(bits, getLLVMType(context));
 
-				Value *shift = b.CreateShl(bits, 2*i);
+				Value *shift = b.CreateShl(bits, (k - i - 1)*2);
 				kmer = b.CreateOr(kmer, shift);
 			}
 
@@ -566,9 +601,10 @@ void types::KMer::initOps()
 			Value *buf = Byte->alloc(len, b.GetInsertBlock());
 			for (unsigned i = 0; i < k; i++) {
 				Value *mask = ConstantInt::get(getLLVMType(context), 3);
-				mask = b.CreateShl(mask, 2*i);
+				unsigned shift = (k - i - 1)*2;
+				mask = b.CreateShl(mask, shift);
 				mask = b.CreateAnd(self, mask);
-				mask = b.CreateLShr(mask, 2*i);
+				mask = b.CreateLShr(mask, shift);
 				mask = b.CreateZExtOrTrunc(mask, b.getInt64Ty());
 				Value *base = b.CreateGEP(table, {zeroLLVM(context), mask});
 				base = b.CreateLoad(base);
@@ -582,15 +618,46 @@ void types::KMer::initOps()
 			return self;
 		}},
 
-		// reversal
-		/* TODO -- use lookup table or some bit hack
-		{"__neg__", {}, this, SEQ_MAGIC(self, args, b) {
-		}},
-		 */
+		// reverse complement
+		{"__invert__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			Module *module = b.GetInsertBlock()->getModule();
+			Value *table = getRevCompTable(module);
+			Value *mask = ConstantInt::get(getLLVMType(context), 0xffu);
+			Value *result = ConstantInt::get(getLLVMType(context), 0);
 
-		// complement
-		{"__invert__", {}, this, SEQ_MAGIC(self, args, b) {
-			return b.CreateNot(self);
+			// deal with 8-bit chunks:
+			for (unsigned i = 0; i < k/4; i++) {
+				Value *slice = b.CreateShl(mask, i*8);
+				slice = b.CreateAnd(self, slice);
+				slice = b.CreateLShr(slice, i*8);
+				slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
+
+				Value *sliceRC = b.CreateGEP(table, {b.getInt64(0), slice});
+				sliceRC = b.CreateLoad(sliceRC);
+				sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
+				sliceRC = b.CreateShl(sliceRC, (k - 4*(i+1))*2);
+				result = b.CreateOr(result, sliceRC);
+			}
+
+			// deal with remaining high bits:
+			unsigned rem = k % 4;
+			if (rem > 0) {
+				mask = ConstantInt::get(getLLVMType(context), (1u << (rem*2)) - 1);
+				Value *slice = b.CreateShl(mask, (k - rem)*2);
+				slice = b.CreateAnd(self, slice);
+				slice = b.CreateLShr(slice, (k - rem)*2);
+				slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
+
+				Value *sliceRC = b.CreateGEP(table, {b.getInt64(0), slice});
+				sliceRC = b.CreateLoad(sliceRC);
+				sliceRC = b.CreateAShr(sliceRC, (4 - rem)*2);  // slice isn't full 8-bits, so shift out junk
+				sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
+				sliceRC = b.CreateAnd(sliceRC, mask);
+				result = b.CreateOr(result, sliceRC);
+			}
+
+			return result;
 		}},
 
 		// slide window left

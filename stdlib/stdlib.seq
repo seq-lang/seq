@@ -176,7 +176,7 @@ extend seq:
             i = 0
             while i + k + step <= n:
                 j = i + k
-                kmer >>= self[j:j+step]
+                kmer <<= self[j:j+step]
                 i += step
                 yield kmer
 
