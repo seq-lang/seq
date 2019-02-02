@@ -3,25 +3,15 @@
 import itertools
 import time
 
-x = 5
-Y = 20
+extend seq:
+	def __print__(self: seq):
+		'->'.__print__()
+		# return 'xx -> ' + self.__str__()
 
-def foo():
-	x = 10
-	print Y
+a = s"ac"
+b = s'ac'
+c = 'hi'
+d = "hi"
 
-print x
-foo()
-print x
+print a, b, c, d
 
-c = u8(265)
-print c
-
-d: str = '3'
-print d
-
-e: int
-print e
-
-y = {1, 2, 3}
-print y
