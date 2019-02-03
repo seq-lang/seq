@@ -9,34 +9,34 @@
 QUADRATIC_CHAINING_DEPTH = 5
 
 class SNAPHashTable[`k,`v]:
-    table: array[tuple[`k,`v]]
+    table: array[tuple[`v,`k]]  # this order is consistent with SNAP
     invalid_val: `v
 
-    def _hash(k: `k):
+    def _hash(k):
         key = hash(k)
-        key ^= key >> 33
+        key ^= int(u64(key) >> u64(33))
         key *= 0xff51afd7ed558ccd
-        key ^= key >> 33
+        key ^= int(u64(key) >> u64(33))
         key *= 0xc4ceb9fe1a85ec53
-        key ^= key >> 33
+        key ^= int(u64(key) >> u64(33))
         return key
 
     def __init__(self: SNAPHashTable[`k,`v], size: int, invalid_val: `v):
-        self.table = array[tuple[`k,`v]](size)
+        self.table = array[tuple[`v,`k]](size)
         self.invalid_val = invalid_val
 
         for i in range(size):
-            self.table[i] = (`k(), invalid_val)
+            self.table[i] = (invalid_val, `k())
 
     def __init__(self: SNAPHashTable[`k,`v], p: ptr[byte]):
-        extern c snap_hashtable_ptr(ptr[byte]) -> ptr[tuple[`k,`v]]
+        extern c snap_hashtable_ptr(ptr[byte]) -> ptr[tuple[`v,`k]]
         extern c snap_hashtable_len(ptr[byte]) -> int
         extern c snap_hashtable_invalid_val(ptr[byte]) -> `v
-        self.table = array[tuple[`k,`v]](snap_hashtable_ptr(p), snap_hashtable_len(p))
+        self.table = array[tuple[`v,`k]](snap_hashtable_ptr(p), snap_hashtable_len(p))
         self.invalid_val = snap_hashtable_invalid_val(p)
 
     def _get_index(self: SNAPHashTable[`k,`v], where: int):
-        return abs(where % len(self.table))
+        return int(u64(where) % u64(len(self.table)))
 
     def _get_entry_index_for_key(self: SNAPHashTable[`k,`v], k: `k):
         table = self.table
@@ -46,7 +46,7 @@ class SNAPHashTable[`k,`v]:
         n_probes = 1
         invalid_val = self.invalid_val
 
-        while table[table_index][0] != k and table[table_index][1] != invalid_val:
+        while table[table_index][1] != k and table[table_index][0] != invalid_val:
             table_index += (n_probes ** 2) if n_probes < QUADRATIC_CHAINING_DEPTH else 1
             n_probes += 1
 
@@ -65,8 +65,8 @@ class SNAPHashTable[`k,`v]:
         table_index = self._get_index(SNAPHashTable[`k,`v]._hash(k))
         invalid_val = self.invalid_val
 
-        if table[table_index][0] == k and table[table_index][1] != invalid_val:
-            return table[table_index][1]
+        if table[table_index][1] == k and table[table_index][0] != invalid_val:
+            return table[table_index][0]
         else:
             n_probes = 0
             while True:
@@ -78,14 +78,14 @@ class SNAPHashTable[`k,`v]:
                 diff = n_probes**2 if n_probes < QUADRATIC_CHAINING_DEPTH else 1
                 table_index = self._get_index(table_index + diff)
 
-                if not (table[table_index][0] != k and table[table_index][1] != invalid_val):
+                if not (table[table_index][1] != k and table[table_index][0] != invalid_val):
                     break
 
-            return table[table_index][1]
+            return table[table_index][0]
 
     def lookup_slow(self: SNAPHashTable[`k,`v], k: `k):
         entry = self._get_entry_index_for_key(k)
-        return self.table[entry][1] if entry >= 0 else self.invalid_val
+        return self.table[entry][0] if entry >= 0 else self.invalid_val
 
     def __getitem__(self: SNAPHashTable[`k,`v], k: `k):
         return self.get_value_for_key(k)
@@ -93,7 +93,7 @@ class SNAPHashTable[`k,`v]:
     def __setitem__(self: SNAPHashTable[`k,`v], k: `k, v: `v):
         entry = self._get_entry_index_for_key(k)
         if entry >= 0:
-            self.table[entry] = (k, v)
+            self.table[entry] = (v, k)
 
 def _test():
     h = SNAPHashTable[i32,i32](100, i32(-1))

@@ -356,8 +356,8 @@ void types::IntNType::initOps()
 			return b.CreateShl(self, args[0]);
 		}},
 
-		{"__rshift__", {this}, this, SEQ_MAGIC(self, args, b) {
-			return b.CreateAShr(self, args[0]);
+		{"__rshift__", {this}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return sign ? b.CreateAShr(self, args[0]) : b.CreateLShr(self, args[0]);
 		}},
 
 		{"__eq__", {this}, Bool, SEQ_MAGIC(self, args, b) {
