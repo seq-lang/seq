@@ -293,7 +293,7 @@ static map<string, Format> makeExtConvMap() noexcept
 	        {"fa",    Format::FASTA},
 	        {"sam",   Format::SAM},
 	        {"bam",   Format::FASTQ}};
-};
+}
 
 const map<string, Format> EXT_CONV = makeExtConvMap();
 

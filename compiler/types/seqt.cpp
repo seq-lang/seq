@@ -529,7 +529,7 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
 			kmerMod = builder.CreateLShr(result, 2);
 			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, idx));
 			base = builder.CreateZExt(base, builder.getInt64Ty());
-			Value *bits = builder.CreateLoad(builder.CreateGEP(table, {builder.getInt64(0), base}));
+			Value *bits = builder.CreateLoad(builder.CreateInBoundsGEP(table, {builder.getInt64(0), base}));
 			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
 			bits = builder.CreateShl(bits, 2*(kmerType->getK() - 1));
 			kmerMod = builder.CreateOr(kmerMod, bits);
@@ -538,7 +538,7 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
 			kmerMod = builder.CreateShl(result, 2);
 			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, control));
 			base = builder.CreateZExt(base, builder.getInt64Ty());
-			Value *bits = builder.CreateLoad(builder.CreateGEP(table, {builder.getInt64(0), base}));
+			Value *bits = builder.CreateLoad(builder.CreateInBoundsGEP(table, {builder.getInt64(0), base}));
 			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
 			kmerMod = builder.CreateOr(kmerMod, bits);
 		}
@@ -575,7 +575,7 @@ void types::KMer::initOps()
 			for (unsigned i = 0; i < k; i++) {
 				Value *base = b.CreateLoad(b.CreateGEP(ptr, b.getInt64(i)));
 				base = b.CreateZExt(base, b.getInt64Ty());
-				Value *bits = b.CreateLoad(b.CreateGEP(table, {b.getInt64(0), base}));
+				Value *bits = b.CreateLoad(b.CreateInBoundsGEP(table, {b.getInt64(0), base}));
 				bits = b.CreateZExt(bits, getLLVMType(context));
 
 				Value *shift = b.CreateShl(bits, (k - i - 1)*2);
@@ -606,7 +606,7 @@ void types::KMer::initOps()
 				mask = b.CreateAnd(self, mask);
 				mask = b.CreateLShr(mask, shift);
 				mask = b.CreateZExtOrTrunc(mask, b.getInt64Ty());
-				Value *base = b.CreateGEP(table, {zeroLLVM(context), mask});
+				Value *base = b.CreateInBoundsGEP(table, {b.getInt64(0), mask});
 				base = b.CreateLoad(base);
 				Value *dest = b.CreateGEP(buf, b.getInt32(i));
 				b.CreateStore(base, dest);
@@ -633,7 +633,7 @@ void types::KMer::initOps()
 				slice = b.CreateLShr(slice, i*8);
 				slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
 
-				Value *sliceRC = b.CreateGEP(table, {b.getInt64(0), slice});
+				Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
 				sliceRC = b.CreateLoad(sliceRC);
 				sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
 				sliceRC = b.CreateShl(sliceRC, (k - 4*(i+1))*2);
@@ -649,7 +649,7 @@ void types::KMer::initOps()
 				slice = b.CreateLShr(slice, (k - rem)*2);
 				slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
 
-				Value *sliceRC = b.CreateGEP(table, {b.getInt64(0), slice});
+				Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
 				sliceRC = b.CreateLoad(sliceRC);
 				sliceRC = b.CreateAShr(sliceRC, (4 - rem)*2);  // slice isn't full 8-bits, so shift out junk
 				sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
