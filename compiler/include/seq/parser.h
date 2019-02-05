@@ -6,15 +6,10 @@
 #include <caml/mlvalues.h>
 #include <caml/callback.h>
 #include <caml/alloc.h>
+#include "seq/seq.h"
 
 namespace seq {
 	class SeqModule;
-
-	void compilationError(const std::string& msg, const std::string& file, int line, int col)
-	{
-		std::cerr << file.substr(file.rfind('/') + 1) << ":" << line << ":" << col << ": error: " << msg << std::endl;
-		exit(EXIT_FAILURE);
-	}
 
 	value *init(bool repl)
 	{
@@ -65,11 +60,6 @@ namespace seq {
 			compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line, e.getSrcInfo().col);
 		}
 	}
-}
-
-extern "C" void caml_error_callback(char *msg, int line, int col, char *file)
-{
-	seq::compilationError(std::string(msg), std::string(file), line, col);
 }
 
 #endif /* SEQ_PARSER_H */

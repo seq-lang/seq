@@ -868,3 +868,8 @@ FOREIGN void jit_func(void *jit, Func *func, char **error)
 	*error = strdup("JIT is not supported with LLVM < 7");
 }
 #endif
+
+extern "C" void caml_error_callback(char *msg, int line, int col, char *file)
+{
+	seq::compilationError(std::string(msg), std::string(file), line, col);
+}

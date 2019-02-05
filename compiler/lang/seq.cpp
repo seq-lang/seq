@@ -23,6 +23,7 @@ SeqModule::SeqModule() :
 	module = new Module("seq", context);
 	module->setTargetTriple(EngineBuilder().selectTarget()->getTargetTriple().str());
 	module->setDataLayout(EngineBuilder().selectTarget()->createDataLayout());
+	argVar->setGlobal();
 }
 
 Block *SeqModule::getBlock()
@@ -449,3 +450,9 @@ void SeqJIT::delVar(Var *var)
 		globals.erase(it);
 }
 #endif
+
+void seq::compilationError(const std::string& msg, const std::string& file, int line, int col)
+{
+	std::cerr << file.substr(file.rfind('/') + 1) << ":" << line << ":" << col << ": error: " << msg << std::endl;
+	exit(EXIT_FAILURE);
+}
