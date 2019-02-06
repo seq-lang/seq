@@ -20,7 +20,7 @@ type range(lo: int, hi: int, step: int):
     def __iter__(self: range):
         lo, hi, step = self
         i = lo
-        if self.step > 0:
+        if step > 0:
             while i < hi:
                 yield i
                 i += step
@@ -28,7 +28,6 @@ type range(lo: int, hi: int, step: int):
             while i > hi:
                 yield i
                 i += step
-
 
 def len(x):
     return x.__len__()

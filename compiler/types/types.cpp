@@ -66,7 +66,7 @@ Value *types::Type::alloc(Value *count, BasicBlock *block)
 	IRBuilder<> builder(block);
 	Value *elemSize = ConstantInt::get(seqIntLLVM(context), size(block->getModule()));
 	Value *fullSize = builder.CreateMul(count, elemSize);
-	Value *mem = builder.CreateCall(allocFunc, {fullSize});
+	Value *mem = builder.CreateCall(allocFunc, fullSize);
 	return builder.CreatePointerCast(mem, PointerType::get(getLLVMType(context), 0));
 }
 

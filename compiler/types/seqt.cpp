@@ -489,9 +489,7 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
 		                                     types::Seq->getLLVMType(context)));
 		func->setDoesNotThrow();
 		func->setLinkage(GlobalValue::PrivateLinkage);
-		AttributeList v;
-		v.addAttribute(context, 0, Attribute::AlwaysInline);
-		func->setAttributes(v);
+		func->addFnAttr(Attribute::AlwaysInline);
 
 		auto iter = func->arg_begin();
 		Value *kmer = iter++;
@@ -714,9 +712,7 @@ void types::KMer::initOps()
 			func = cast<Function>(module->getOrInsertFunction(name, seqIntLLVM(context)));
 			func->setDoesNotThrow();
 			func->setLinkage(GlobalValue::PrivateLinkage);
-			AttributeList v;
-			v.addAttribute(context, 0, Attribute::AlwaysInline);
-			func->setAttributes(v);
+			func->addFnAttr(Attribute::AlwaysInline);
 			BasicBlock *block = BasicBlock::Create(context, "entry", func);
 			IRBuilder<> builder(block);
 			builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->k));
@@ -737,9 +733,7 @@ void types::KMer::initOps()
 			                                                  getLLVMType(context)));
 			func->setDoesNotThrow();
 			func->setLinkage(GlobalValue::PrivateLinkage);
-			AttributeList v;
-			v.addAttribute(context, 0, Attribute::AlwaysInline);
-			func->setAttributes(v);
+			func->addFnAttr(Attribute::AlwaysInline);
 			Value *arg = func->arg_begin();
 			BasicBlock *block = BasicBlock::Create(context, "entry", func);
 			IRBuilder<> builder(block);

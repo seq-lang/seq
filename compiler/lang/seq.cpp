@@ -227,6 +227,8 @@ void SeqModule::compile(const std::string& out, bool debug)
 	verify();
 	optimize(debug);
 	verify();
+	optimize(debug);
+	verify();
 
 	if (debug)
 		errs() << *module;
@@ -253,6 +255,8 @@ void SeqModule::execute(const std::vector<std::string>& args,
                         bool debug)
 {
 	codegen(module);
+	verify();
+	optimize(debug);
 	verify();
 	optimize(debug);
 	verify();

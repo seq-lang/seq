@@ -275,12 +275,13 @@ void Func::codegen(Module *module)
 		builder.SetInsertPoint(allocBlock);
 		Function *sizeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_size, {seqIntLLVM(context)});
 		Value *size = builder.CreateCall(sizeFn);
-		auto *allocFunc = makeAllocFunc(module, false);
+		auto *allocFunc = makeMallocFunc(module);
 		alloc = builder.CreateCall(allocFunc, size);
 	}
 
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
 	BasicBlock *entryActual = entry;
+	BasicBlock *dynFree = nullptr;
 
 	if (gen) {
 		builder.CreateBr(entry);
@@ -297,14 +298,21 @@ void Func::codegen(Module *module)
 		 * Cleanup code
 		 */
 		cleanup = BasicBlock::Create(context, "cleanup", func);
+		dynFree = BasicBlock::Create(context, "dyn.free", func);
 		builder.SetInsertPoint(cleanup);
 		Function *freeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_free);
-		builder.CreateCall(freeFn, {id, handle});
+		Value *mem = builder.CreateCall(freeFn, {id, handle});
+		Value *needDynFree = builder.CreateIsNotNull(mem);
 
 		suspend = BasicBlock::Create(context, "suspend", func);
-		builder.CreateBr(suspend);
-		builder.SetInsertPoint(suspend);
+		builder.CreateCondBr(needDynFree, dynFree, suspend);
 
+		builder.SetInsertPoint(dynFree);
+		auto *sysFreeFn = makeFreeFunc(module);
+		builder.CreateCall(sysFreeFn, mem);
+		builder.CreateBr(suspend);
+
+		builder.SetInsertPoint(suspend);
 		Function *endFn = Intrinsic::getDeclaration(module, Intrinsic::coro_end);
 		builder.CreateCall(endFn, {handle, ConstantInt::get(IntegerType::getInt1Ty(context), 0)});
 		builder.CreateRet(handle);
@@ -349,7 +357,8 @@ void Func::codegen(Module *module)
 
 		exit->moveAfter(&func->getBasicBlockList().back());
 		cleanup->moveAfter(exit);
-		suspend->moveAfter(cleanup);
+		dynFree->moveAfter(cleanup);
+		suspend->moveAfter(dynFree);
 	} else {
 		builder.CreateBr(entry);
 	}

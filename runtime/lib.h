@@ -30,7 +30,7 @@ struct seq_arr_t {
 #define SEQ_FLAG_FASTIO (1UL << 0UL)
 
 SEQ_FUNC void seq_init(seq_int_t flags);
-SEQ_FUNC void seq_assert(bool check, seq_str_t file, seq_int_t line);
+SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line);
 
 SEQ_FUNC void *seq_alloc(size_t n);
 SEQ_FUNC void *seq_alloc_atomic(size_t n);

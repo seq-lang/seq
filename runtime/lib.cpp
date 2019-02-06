@@ -33,12 +33,10 @@ SEQ_FUNC void seq_init(seq_int_t flags)
 	}
 }
 
-SEQ_FUNC void seq_assert(bool check, seq_str_t file, seq_int_t line)
+SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line)
 {
-	if (!check) {
-		std::cerr << "assertion failed on line " << line << " (" << file.str << ")" << std::endl;
-		exit(EXIT_FAILURE);
-	}
+	std::cerr << "assertion failed on line " << line << " (" << file.str << ")" << std::endl;
+	exit(EXIT_FAILURE);
 }
 
 

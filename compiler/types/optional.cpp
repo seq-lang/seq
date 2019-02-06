@@ -54,9 +54,7 @@ void types::OptionalType::initOps()
 			                                                  getLLVMType(context)));
 			func->setDoesNotThrow();
 			func->setLinkage(GlobalValue::PrivateLinkage);
-			AttributeList v;
-			v.addAttribute(context, 0, Attribute::AlwaysInline);
-			func->setAttributes(v);
+			func->addFnAttr(Attribute::AlwaysInline);
 			Value *self = func->arg_begin();
 			BasicBlock *block = BasicBlock::Create(context, "entry", func);
 			IRBuilder<> builder(block);

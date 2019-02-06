@@ -106,6 +106,7 @@ namespace seq {
 #endif
 	}
 
+	// Our custom GC allocators:
 	inline llvm::Function *makeAllocFunc(llvm::Module *module, bool atomic)
 	{
 		llvm::LLVMContext& context = module->getContext();
@@ -114,6 +115,36 @@ namespace seq {
 		              atomic ? "seq_alloc_atomic" : "seq_alloc",
 		              llvm::IntegerType::getInt8PtrTy(context),
 		              seqIntLLVM(context)));
+		f->setDoesNotThrow();
+		f->setReturnDoesNotAlias();
+		f->setOnlyAccessesInaccessibleMemory();
+		return f;
+	}
+
+	// Standard malloc:
+	inline llvm::Function *makeMallocFunc(llvm::Module *module)
+	{
+		llvm::LLVMContext& context = module->getContext();
+		auto *f = llvm::cast<llvm::Function>(
+		            module->getOrInsertFunction(
+		              "malloc",
+		              llvm::IntegerType::getInt8PtrTy(context),
+		              seqIntLLVM(context)));
+		f->setDoesNotThrow();
+		f->setReturnDoesNotAlias();
+		f->setOnlyAccessesInaccessibleMemory();
+		return f;
+	}
+
+	// Standard free:
+	inline llvm::Function *makeFreeFunc(llvm::Module *module)
+	{
+		llvm::LLVMContext& context = module->getContext();
+		auto *f = llvm::cast<llvm::Function>(
+		            module->getOrInsertFunction(
+		              "free",
+		              llvm::Type::getVoidTy(context),
+		              llvm::IntegerType::getInt8PtrTy(context)));
 		f->setDoesNotThrow();
 		return f;
 	}

@@ -1141,22 +1141,33 @@ void Assert::codegen0(BasicBlock*& block)
 {
 	LLVMContext& context = block->getContext();
 	Module *module = block->getModule();
+	Function *func = block->getParent();
 
-	auto *func = cast<Function>(
-	               module->getOrInsertFunction(
-	                 "seq_assert",
-	                 Type::getVoidTy(context),
-	                 types::Bool->getLLVMType(context),
-	                 types::Str->getLLVMType(context),
-	                 types::Int->getLLVMType(context)));
-	func->setDoesNotThrow();
+	auto *assertFail = cast<Function>(
+	                     module->getOrInsertFunction(
+	                       "seq_assert_failed",
+	                       Type::getVoidTy(context),
+	                       types::Str->getLLVMType(context),
+	                       types::Int->getLLVMType(context)));
+	assertFail->setDoesNotThrow();
+	assertFail->setDoesNotReturn();
 	Value *check = expr->codegen(getBase(), block);
 	check = expr->getType()->boolValue(check, block, getTryCatch());
 	Value *file = StrExpr(getSrcInfo().file).codegen(getBase(), block);
 	Value *line = IntExpr(getSrcInfo().line).codegen(getBase(), block);
 
+	BasicBlock *fail = BasicBlock::Create(context, "assert_fail", func);
+	BasicBlock *pass = BasicBlock::Create(context, "assert_pass", func);
+
 	IRBuilder<> builder(block);
-	builder.CreateCall(func, {check, file, line});
+	check = builder.CreateTrunc(check, builder.getInt1Ty());
+	builder.CreateCondBr(check, pass, fail);
+
+	builder.SetInsertPoint(fail);
+	builder.CreateCall(assertFail, {file, line});
+	builder.CreateUnreachable();
+
+	block = pass;
 }
 
 Assert *Assert::clone(Generic *ref)
