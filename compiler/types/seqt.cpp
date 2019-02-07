@@ -555,6 +555,94 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir)
 	return func;
 }
 
+/*
+ * Seq-to-KMer initialization function
+ */
+static Function *getInitFunc(types::KMer *kmerType, Module *module)
+{
+	const std::string name = "seq." + kmerType->getName() + ".init";
+	LLVMContext& context = module->getContext();
+	Function *func = module->getFunction(name);
+
+	if (!func) {
+		func = cast<Function>(
+		         module->getOrInsertFunction(name,
+		                                     kmerType->getLLVMType(context),
+		                                     types::Seq->getLLVMType(context)));
+		func->setDoesNotThrow();
+		func->setLinkage(GlobalValue::PrivateLinkage);
+
+		Value *seq = func->arg_begin();
+		BasicBlock *block = BasicBlock::Create(context, "entry", func);
+		IRBuilder<> builder(block);
+
+		const unsigned k = kmerType->getK();
+		GlobalVariable *table = get2bitTable(module);
+		Value *ptr  = types::Seq->memb(seq, "ptr", block);
+		Value *kmer = kmerType->defaultValue(block);
+
+		for (unsigned i = 0; i < k; i++) {
+			Value *base = builder.CreateLoad(builder.CreateGEP(ptr, builder.getInt64(i)));
+			base = builder.CreateZExt(base, builder.getInt64Ty());
+			Value *bits = builder.CreateLoad(
+			                builder.CreateInBoundsGEP(table, {builder.getInt64(0), base}));
+			bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
+
+			Value *shift = builder.CreateShl(bits, (k - i - 1)*2);
+			kmer = builder.CreateOr(kmer, shift);
+		}
+
+		builder.CreateRet(kmer);
+	}
+
+	return func;
+}
+
+/*
+ * KMer-to-Str conversion function
+ */
+static Function *getStrFunc(types::KMer *kmerType, Module *module)
+{
+	const std::string name = "seq." + kmerType->getName() + ".str";
+	LLVMContext& context = module->getContext();
+	Function *func = module->getFunction(name);
+
+	if (!func) {
+		func = cast<Function>(
+		         module->getOrInsertFunction(name,
+		                                     types::Str->getLLVMType(context),
+		                                     kmerType->getLLVMType(context)));
+		func->setDoesNotThrow();
+		func->setLinkage(GlobalValue::PrivateLinkage);
+
+		Value *kmer = func->arg_begin();
+		BasicBlock *block = BasicBlock::Create(context, "entry", func);
+		IRBuilder<> builder(block);
+
+		const unsigned k = kmerType->getK();
+		GlobalVariable *table = get2bitTableInv(module);
+		Value *len = ConstantInt::get(seqIntLLVM(context), k);
+		Value *buf = types::Byte->alloc(len, block);
+
+		for (unsigned i = 0; i < k; i++) {
+			Value *mask = ConstantInt::get(kmerType->getLLVMType(context), 3);
+			unsigned shift = (k - i - 1)*2;
+			mask = builder.CreateShl(mask, shift);
+			mask = builder.CreateAnd(kmer, mask);
+			mask = builder.CreateLShr(mask, shift);
+			mask = builder.CreateZExtOrTrunc(mask, builder.getInt64Ty());
+			Value *base = builder.CreateInBoundsGEP(table, {builder.getInt64(0), mask});
+			base = builder.CreateLoad(base);
+			Value *dest = builder.CreateGEP(buf, builder.getInt32(i));
+			builder.CreateStore(base, dest);
+		}
+
+		builder.CreateRet(types::Str->make(buf, len, block));
+	}
+
+	return func;
+}
+
 void types::KMer::initOps()
 {
 	if (!vtable.magic.empty())
@@ -562,25 +650,8 @@ void types::KMer::initOps()
 
 	vtable.magic = {
 		{"__init__", {Seq}, this, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			BasicBlock *block = b.GetInsertBlock();
-			Module *module = block->getModule();
-
-			GlobalVariable *table = get2bitTable(module);
-			Value *ptr  = Seq->memb(args[0], "ptr", block);
-			Value *kmer = defaultValue(block);
-
-			for (unsigned i = 0; i < k; i++) {
-				Value *base = b.CreateLoad(b.CreateGEP(ptr, b.getInt64(i)));
-				base = b.CreateZExt(base, b.getInt64Ty());
-				Value *bits = b.CreateLoad(b.CreateInBoundsGEP(table, {b.getInt64(0), base}));
-				bits = b.CreateZExt(bits, getLLVMType(context));
-
-				Value *shift = b.CreateShl(bits, (k - i - 1)*2);
-				kmer = b.CreateOr(kmer, shift);
-			}
-
-			return kmer;
+			Function *initFunc = getInitFunc(this, b.GetInsertBlock()->getModule());
+			return b.CreateCall(initFunc, args[0]);
 		}},
 
 		{"__init__", {IntNType::get(2*k, false)}, this, SEQ_MAGIC_CAPT(self, args, b) {
@@ -592,24 +663,8 @@ void types::KMer::initOps()
 		}},
 
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
-			LLVMContext& context = b.getContext();
-			Module *module = b.GetInsertBlock()->getModule();
-			Value *table = get2bitTableInv(module);
-			Value *len = ConstantInt::get(seqIntLLVM(context), k);
-			Value *buf = Byte->alloc(len, b.GetInsertBlock());
-			for (unsigned i = 0; i < k; i++) {
-				Value *mask = ConstantInt::get(getLLVMType(context), 3);
-				unsigned shift = (k - i - 1)*2;
-				mask = b.CreateShl(mask, shift);
-				mask = b.CreateAnd(self, mask);
-				mask = b.CreateLShr(mask, shift);
-				mask = b.CreateZExtOrTrunc(mask, b.getInt64Ty());
-				Value *base = b.CreateInBoundsGEP(table, {b.getInt64(0), mask});
-				base = b.CreateLoad(base);
-				Value *dest = b.CreateGEP(buf, b.getInt32(i));
-				b.CreateStore(base, dest);
-			}
-			return Str->make(buf, len, b.GetInsertBlock());
+			Function *strFunc = getStrFunc(this, b.GetInsertBlock()->getModule());
+			return b.CreateCall(strFunc, self);
 		}},
 
 		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
