@@ -275,7 +275,7 @@ void Func::codegen(Module *module)
 		builder.SetInsertPoint(allocBlock);
 		Function *sizeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_size, {seqIntLLVM(context)});
 		Value *size = builder.CreateCall(sizeFn);
-		auto *allocFunc = makeMallocFunc(module);
+		auto *allocFunc = makeAllocFunc(module, false);
 		alloc = builder.CreateCall(allocFunc, size);
 	}
 
@@ -308,8 +308,6 @@ void Func::codegen(Module *module)
 		builder.CreateCondBr(needDynFree, dynFree, suspend);
 
 		builder.SetInsertPoint(dynFree);
-		auto *sysFreeFn = makeFreeFunc(module);
-		builder.CreateCall(sysFreeFn, mem);
 		builder.CreateBr(suspend);
 
 		builder.SetInsertPoint(suspend);

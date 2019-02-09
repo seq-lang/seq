@@ -2,15 +2,13 @@ from genomeindex import *
 type K = k20
 
 def has_N(s: seq):
-    i = 0
-    while i < len(s):
+    for i in range(len(s)):
         if s[i] == s'N':
             return True
-        i += 1
     return False
 
 def main(args: array[str]):
-    index = GenomeIndex[k20](args[0])
+    index = GenomeIndex[K](args[0])
     hits0 = ptr[u32](1)
     rc_hits0 = ptr[u32](1)
     hits = ptr[ptr[u32]](hits0)
@@ -18,7 +16,7 @@ def main(args: array[str]):
 
     f = File(args[1], "r")
     line = -1
-    checksum = 0
+    checksum = u32(0)
 
     for s in f:
         line += 1
@@ -33,15 +31,16 @@ def main(args: array[str]):
             n_hits, n_rc_hits = index.lookup(kmer, hits, rc_hits)
             p1, p2 = hits[0], rc_hits[0]
 
-            if n_hits > 0:
-                checksum ^= (n_hits ^ int(p1[0]))
+            for i in range(n_hits):
+                checksum ^= p1[0]
 
-            if n_rc_hits > 0:
-                checksum ^= (n_rc_hits ^ int(p2[0]))
+            for i in range(n_rc_hits):
+                checksum ^= p2[0]
 
             hits[0] = hits0
             rc_hits[0] = rc_hits0
 
-    print 'CHECKSUM:', checksum
+    print 'CHECKSUM:', int(checksum)
 
-main(__argv__)
+if len(__argv__) > 0:
+    main(__argv__)

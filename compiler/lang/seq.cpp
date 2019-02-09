@@ -4,6 +4,8 @@
 #include <cassert>
 #include "seq/seq.h"
 
+#include "llvm/CodeGen/CommandFlags.def"
+
 using namespace seq;
 using namespace llvm;
 
@@ -179,10 +181,50 @@ void SeqModule::verify()
 	verifyModuleFailFast(*module);
 }
 
+static TargetMachine *getTargetMachine(const Triple& triple,
+                                       StringRef cpuStr,
+                                       StringRef featuresStr,
+                                       const TargetOptions& options)
+{
+	std::string err;
+	const Target *target = TargetRegistry::lookupTarget(triple.str(), err);
+
+	if (!target)
+		return nullptr;
+
+	return target->createTargetMachine(triple.getTriple(), cpuStr,
+	                                   featuresStr, options, getRelocModel(),
+	                                   getCodeModel(), CodeGenOpt::Aggressive);
+}
+
 static void optimizeModule(Module *module, bool debug)
 {
 	std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
 	std::unique_ptr<legacy::FunctionPassManager> fpm(new legacy::FunctionPassManager(module));
+
+	Triple moduleTriple(module->getTargetTriple());
+	std::string cpuStr, featuresStr;
+	TargetMachine *machine = nullptr;
+	const TargetOptions options = InitTargetOptionsFromCodeGenFlags();
+	TargetLibraryInfoImpl tlii(moduleTriple);
+	pm->add(new TargetLibraryInfoWrapperPass(tlii));
+
+	if (moduleTriple.getArch()) {
+		cpuStr = getCPUStr();
+		featuresStr = getFeaturesStr();
+		machine = getTargetMachine(moduleTriple, cpuStr, featuresStr, options);
+	}
+
+	std::unique_ptr<TargetMachine> tm(machine);
+	setFunctionAttributes(cpuStr, featuresStr, *module);
+	pm->add(createTargetTransformInfoWrapperPass(tm ? tm->getTargetIRAnalysis() : TargetIRAnalysis()));
+	fpm->add(createTargetTransformInfoWrapperPass(tm ? tm->getTargetIRAnalysis() : TargetIRAnalysis()));
+
+	if (tm) {
+		auto& ltm = dynamic_cast<LLVMTargetMachine&>(*tm);
+		Pass *tpc = ltm.createPassConfig(*pm);
+		pm->add(tpc);
+	}
 
 	unsigned optLevel = 3;
 	unsigned sizeLevel = 0;
@@ -198,7 +240,9 @@ static void optimizeModule(Module *module, bool debug)
 		builder.SLPVectorize = true;
 	}
 
-	builder.MergeFunctions = true;
+	if (tm)
+		tm->adjustPassManager(builder);
+
 	addCoroutinePassesToExtensionPoints(builder);
 	builder.populateModulePassManager(*pm);
 	builder.populateFunctionPassManager(*fpm);
@@ -208,12 +252,6 @@ static void optimizeModule(Module *module, bool debug)
 		fpm->run(f);
 	fpm->doFinalization();
 	pm->run(*module);
-}
-
-static std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> module, bool debug)
-{
-	optimizeModule(module.get(), debug);
-	return module;
 }
 
 void SeqModule::optimize(bool debug)
@@ -292,6 +330,12 @@ void SeqModule::execute(const std::vector<std::string>& args,
  * JIT
  */
 #if LLVM_VERSION_MAJOR >= 7
+static std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> module, bool debug)
+{
+	optimizeModule(module.get(), debug);
+	return module;
+}
+
 SeqJIT::SeqJIT() :
     target(EngineBuilder().selectTarget()), layout(target->createDataLayout()),
     objLayer(es, [this](VModuleKey K) {
