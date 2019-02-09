@@ -4,13 +4,14 @@
 #include <cassert>
 #include "seq/seq.h"
 
-#include "llvm/CodeGen/CommandFlags.def"
-
 using namespace seq;
 using namespace llvm;
 
 #if LLVM_VERSION_MAJOR >= 7
 using namespace llvm::orc;
+#include "llvm/CodeGen/CommandFlags.inc"
+#else
+#include "llvm/CodeGen/CommandFlags.def"
 #endif
 
 static LLVMContext context;
