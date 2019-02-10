@@ -161,44 +161,75 @@ void types::GenType::initOps()
 		}},
 	};
 
-	types::VoidType *voidType = types::VoidType::get();
-	types::Type *type = this->outType->is(voidType) ? (types::Type *)voidType :
-	                                                  types::OptionalType::get(outType);
+	addMethod("next", new BaseFuncLite({this}, outType, [this](Module *module) {
+		const std::string name = "seq." + getName() + ".next";
+		Function *func = module->getFunction(name);
 
-	addMethod("next", new BaseFuncLite({this}, type, [this, type](Module *module) {
-		auto *optType = dynamic_cast<types::OptionalType *>(type);
-		LLVMContext& context = module->getContext();
-		auto *f = cast<Function>(module->getOrInsertFunction("seq.gen.next",
-		                                                     type->getLLVMType(context),
-		                                                     getLLVMType(context)));
-		f->setLinkage(GlobalValue::PrivateLinkage);
-		Value *arg = f->arg_begin();
+		if (!func) {
+			LLVMContext &context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  outType->getLLVMType(context),
+			                                                  getLLVMType(context)));
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			func->setPersonalityFn(makePersonalityFunc(module));
+			func->addFnAttr(Attribute::AlwaysInline);
 
-		BasicBlock *entry = BasicBlock::Create(context, "entry", f);
-		BasicBlock *a = BasicBlock::Create(context, "done", f);
-		BasicBlock *b = BasicBlock::Create(context, "return", f);
+			Value *arg = func->arg_begin();
+			BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+			resume(arg, entry, nullptr, nullptr);
+			Value *val = promise(arg, entry);
+			IRBuilder<> builder(entry);
+			builder.CreateRet(val);
+		}
 
-		IRBuilder<> builder(entry);
-		resume(arg, entry, nullptr, nullptr);
-		Value *d = done(arg, entry);
-		builder.CreateCondBr(d, a, b);
+		return func;
+	}), true);
 
-		builder.SetInsertPoint(a);
-		destroy(arg, a);
-		if (optType)
-			builder.CreateRet(optType->make(nullptr, a));
-		else
-			builder.CreateRetVoid();
+	addMethod("done", new BaseFuncLite({this}, Bool, [this](Module *module) {
+		const std::string name = "seq." + getName() + ".done";
+		Function *func = module->getFunction(name);
 
-		builder.SetInsertPoint(b);
-		if (optType) {
-			Value *val = promise(arg, b);
-			builder.CreateRet(optType->make(val, b));
-		} else {
+		if (!func) {
+			LLVMContext &context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  Bool->getLLVMType(context),
+			                                                  getLLVMType(context)));
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			func->setDoesNotThrow();
+			func->addFnAttr(Attribute::AlwaysInline);
+
+			Value *arg = func->arg_begin();
+			BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+			Value *val = done(arg, entry);
+			IRBuilder<> builder(entry);
+			val = builder.CreateZExt(val, Bool->getLLVMType(context));
+			builder.CreateRet(val);
+		}
+
+		return func;
+	}), true);
+
+	addMethod("destroy", new BaseFuncLite({this}, Void, [this](Module *module) {
+		const std::string name = "seq." + getName() + ".destroy";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext &context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  llvm::Type::getVoidTy(context),
+			                                                  getLLVMType(context)));
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			func->setDoesNotThrow();
+			func->addFnAttr(Attribute::AlwaysInline);
+
+			Value *arg = func->arg_begin();
+			BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+			destroy(arg, entry);
+			IRBuilder<> builder(entry);
 			builder.CreateRetVoid();
 		}
 
-		return f;
+		return func;
 	}), true);
 }
 

@@ -88,6 +88,68 @@ void types::PtrType::initOps()
 		{"__ge__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpSGE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
+
+		/*
+		 * Prefetch magics are labeled [rw][0123] representing read/write and locality.
+		 * Instruction cache prefetch is not supported.
+		 * https://llvm.org/docs/LangRef.html#llvm-prefetch-intrinsic
+		 */
+
+		{"__prefetch_r0__", {}, Void, SEQ_MAGIC(self, args, b) {
+			self = b.CreateBitCast(self, b.getInt8PtrTy());
+			Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
+			b.CreateCall(prefetch, {self, b.getInt32(0), b.getInt32(0), b.getInt32(1)});
+			return (Value *)nullptr;
+		}},
+
+		{"__prefetch_r1__", {}, Void, SEQ_MAGIC(self, args, b) {
+			self = b.CreateBitCast(self, b.getInt8PtrTy());
+			Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
+			b.CreateCall(prefetch, {self, b.getInt32(0), b.getInt32(1), b.getInt32(1)});
+			return (Value *)nullptr;
+		}},
+
+		{"__prefetch_r2__", {}, Void, SEQ_MAGIC(self, args, b) {
+			self = b.CreateBitCast(self, b.getInt8PtrTy());
+			Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
+			b.CreateCall(prefetch, {self, b.getInt32(0), b.getInt32(2), b.getInt32(1)});
+			return (Value *)nullptr;
+		}},
+
+		{"__prefetch_r3__", {}, Void, SEQ_MAGIC(self, args, b) {
+			self = b.CreateBitCast(self, b.getInt8PtrTy());
+			Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
+			b.CreateCall(prefetch, {self, b.getInt32(0), b.getInt32(3), b.getInt32(1)});
+			return (Value *)nullptr;
+		}},
+
+		{"__prefetch_w0__", {}, Void, SEQ_MAGIC(self, args, b) {
+			self = b.CreateBitCast(self, b.getInt8PtrTy());
+			Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
+			b.CreateCall(prefetch, {self, b.getInt32(1), b.getInt32(0), b.getInt32(1)});
+			return (Value *)nullptr;
+		}},
+
+		{"__prefetch_w1__", {}, Void, SEQ_MAGIC(self, args, b) {
+			self = b.CreateBitCast(self, b.getInt8PtrTy());
+			Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
+			b.CreateCall(prefetch, {self, b.getInt32(1), b.getInt32(1), b.getInt32(1)});
+			return (Value *)nullptr;
+		}},
+
+		{"__prefetch_w2__", {}, Void, SEQ_MAGIC(self, args, b) {
+			self = b.CreateBitCast(self, b.getInt8PtrTy());
+			Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
+			b.CreateCall(prefetch, {self, b.getInt32(1), b.getInt32(2), b.getInt32(1)});
+			return (Value *)nullptr;
+		}},
+
+		{"__prefetch_w3__", {}, Void, SEQ_MAGIC(self, args, b) {
+			self = b.CreateBitCast(self, b.getInt8PtrTy());
+			Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
+			b.CreateCall(prefetch, {self, b.getInt32(1), b.getInt32(3), b.getInt32(1)});
+			return (Value *)nullptr;
+		}},
 	};
 }
 
