@@ -47,6 +47,8 @@ namespace seq {
 			GenType(GenType const&)=delete;
 			void operator=(FuncType const&)=delete;
 
+			bool isAtomic() const override;
+
 			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 			llvm::Value *done(llvm::Value *self, llvm::BasicBlock *block);
 			void resume(llvm::Value *self,

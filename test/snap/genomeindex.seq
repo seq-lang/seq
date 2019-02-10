@@ -55,6 +55,16 @@ class GenomeIndex[`k]:
 
         return (n_hits, n_rc_hits)
 
+    def __prefetch__(self: GenomeIndex[`k], seed: `k):
+        FWD, REV = 0, 1
+        n_hits, n_rc_hits = 0, 0
+
+        for dir in (FWD, REV):
+            kmer, which = GenomeIndex[`k]._partition(seed)
+            table = self.hash_tables[which]
+            table.__prefetch__(kmer)
+            seed = ~seed  # rev comp
+
     def _fill_in_lookup_results(self: GenomeIndex[`k], value: u32, hits: ptr[ptr[u32]]):
         if int(value) < self.count_of_bases:
             hits[0][0] = value

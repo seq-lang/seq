@@ -83,6 +83,11 @@ class SNAPHashTable[`k,`v]:
 
             return table[table_index][0]
 
+    def __prefetch__(self: SNAPHashTable[`k,`v], k: `k):
+        table = self.table
+        table_index = self._get_index(SNAPHashTable[`k,`v]._hash(k))
+        (self.table.ptr + table_index).__prefetch_r3__()
+
     def lookup_slow(self: SNAPHashTable[`k,`v], k: `k):
         entry = self._get_entry_index_for_key(k)
         return self.table[entry][0] if entry >= 0 else self.invalid_val

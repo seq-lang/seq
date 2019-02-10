@@ -99,6 +99,11 @@ types::GenType::GenType(Type *outType) :
 {
 }
 
+bool types::GenType::isAtomic() const
+{
+	return false;
+}
+
 Value *types::GenType::defaultValue(BasicBlock *block)
 {
 	return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
