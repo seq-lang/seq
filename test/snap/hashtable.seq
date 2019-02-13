@@ -59,29 +59,31 @@ class SNAPHashTable[`k,`v]:
 
         return table_index
 
-    def get_value_for_key(self: SNAPHashTable[`k,`v], k: `k):
+    def get_value_ptr_for_key(self: SNAPHashTable[`k,`v], k: `k):
         table = self.table
         table_size = table.len
         table_index = self._get_index(SNAPHashTable[`k,`v]._hash(k))
         invalid_val = self.invalid_val
+        entry = table[table_index]
 
-        if table[table_index][1] == k and table[table_index][0] != invalid_val:
-            return table[table_index][0]
+        if entry[1] == k and entry[0] != invalid_val:
+            return ptr[`v](table.ptr + table_index)
         else:
             n_probes = 0
             while True:
                 n_probes += 1
 
                 if n_probes > table_size + QUADRATIC_CHAINING_DEPTH:
-                    return self.invalid_val
+                    return ptr[`v]()
 
-                diff = n_probes**2 if n_probes < QUADRATIC_CHAINING_DEPTH else 1
-                table_index = self._get_index(table_index + diff)
+                diff = (n_probes**2) if n_probes < QUADRATIC_CHAINING_DEPTH else 1
+                table_index = (table_index + diff) % table_size
 
-                if not (table[table_index][1] != k and table[table_index][0] != invalid_val):
+                entry = table[table_index]
+                if not (entry[1] != k and entry[0] != invalid_val):
                     break
 
-            return table[table_index][0]
+            return ptr[`v](table.ptr + table_index)
 
     def __prefetch__(self: SNAPHashTable[`k,`v], k: `k):
         table = self.table
@@ -93,7 +95,8 @@ class SNAPHashTable[`k,`v]:
         return self.table[entry][0] if entry >= 0 else self.invalid_val
 
     def __getitem__(self: SNAPHashTable[`k,`v], k: `k):
-        return self.get_value_for_key(k)
+        p = self.get_value_ptr_for_key(k)
+        return p[0] if p else self.invalid_val
 
     def __setitem__(self: SNAPHashTable[`k,`v], k: `k, v: `v):
         entry = self._get_entry_index_for_key(k)
