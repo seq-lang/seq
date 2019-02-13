@@ -38,6 +38,10 @@ void types::PtrType::initOps()
 			return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
 		}},
 
+		{"__init__", {PtrType::get(Byte)}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+		}},
+
 		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
 			return self;
 		}},
@@ -151,6 +155,29 @@ void types::PtrType::initOps()
 			return (Value *)nullptr;
 		}},
 	};
+
+	addMethod("raw", new BaseFuncLite({this}, PtrType::get(Byte), [this](Module *module) {
+		const std::string name = "seq." + getName() + ".raw";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext& context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  IntegerType::getInt8PtrTy(context),
+			                                                  getLLVMType(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			func->addFnAttr(Attribute::AlwaysInline);
+			Value *self = func->arg_begin();
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			IRBuilder<> builder(block);
+			Value *raw = builder.CreateBitCast(self, builder.getInt8PtrTy());
+			builder.CreateRet(raw);
+		}
+
+		return func;
+	}), true);
+
 }
 
 bool types::PtrType::isAtomic() const

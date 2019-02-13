@@ -7,14 +7,14 @@ matrix:
       dist: xenial
       env:
         - LLVM_VERSION=6.0.1
-        - CONDA_OS_NAME=Linux
         - OCAML_VERSION=4.07
+        - CONDA_OS_NAME=Linux
 
     - os: osx
       env:
         - LLVM_VERSION=6.0.1
-        - CONDA_OS_NAME=MacOSX
         - OCAML_VERSION=4.07
+        - CONDA_OS_NAME=MacOSX
 
 addons:
   apt:
