@@ -182,13 +182,13 @@ void SeqModule::verify()
 	verifyModuleFailFast(*module);
 }
 
-static TargetMachine *getTargetMachine(const Triple& triple,
+static TargetMachine *getTargetMachine(Triple triple,
                                        StringRef cpuStr,
                                        StringRef featuresStr,
                                        const TargetOptions& options)
 {
 	std::string err;
-	const Target *target = TargetRegistry::lookupTarget(triple.str(), err);
+	const Target *target = TargetRegistry::lookupTarget(MArch, triple, err);
 
 	if (!target)
 		return nullptr;

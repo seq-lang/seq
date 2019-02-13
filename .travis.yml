@@ -6,11 +6,13 @@ matrix:
     - os: linux
       dist: xenial
       env:
+        - LLVM_VERSION=6.0.1
         - CONDA_OS_NAME=Linux
         - OCAML_VERSION=4.07
 
     - os: osx
       env:
+        - LLVM_VERSION=6.0.1
         - CONDA_OS_NAME=MacOSX
         - OCAML_VERSION=4.07
 
@@ -38,7 +40,7 @@ install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  - conda install -c conda-forge cmake llvmdev clangdev
+  - conda install -c conda-forge cmake llvmdev=${LLVM_VERSION} clangdev=${LLVM_VERSION}
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CC=clang CXX=clang++; fi
 
 before_script:
