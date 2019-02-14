@@ -71,6 +71,12 @@ def map(f, x):
     for a in x:
         yield f(a)
 
+def enumerate(x):
+    i = 0
+    for a in x:
+        yield (i,a)
+        i += 1
+
 def echo(x):
     print x
 

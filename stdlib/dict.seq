@@ -1,7 +1,7 @@
 class _dict_entry[`k,`v]:
-    k: `k 
+    k: `k
     v: `v
-    hash: int 
+    hash: int
     next: _dict_entry[`k,`v]
 
     def __init__(self: _dict_entry[`k,`v], k: `k, v: `v, hash: int):
@@ -14,7 +14,7 @@ class _dict_entry[`k,`v]:
         return self.hash == hash and self.k == k
 
 class dict[`k,`v]:
-    table: array[_dict_entry[`k,`v]] 
+    table: array[_dict_entry[`k,`v]]
     size: int
 
     def _make_table(len: int):
@@ -37,8 +37,9 @@ class dict[`k,`v]:
         for i in range(table.len):
             e = table[i]
             while e:
+                next = e.next
                 yield e
-                e = e.next
+                e = next
 
     def _insert(self: dict[`k,`v], table: array[_dict_entry[`k,`v]], e: _dict_entry[`k,`v]):
         idx = e.hash & (table.len - 1)

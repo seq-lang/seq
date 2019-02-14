@@ -2,29 +2,33 @@ from sys import argv
 from genomeindex import *
 type K = k20
 
-def process(index: GenomeIndex[K], kmer: K):
-    checksum = u32(0)
-    hits = index[kmer]
-    hits_rev = index[~kmer]
-
-    for i in range(len(hits)):
-        checksum ^= hits[i]
-
-    for i in range(len(hits_rev)):
-        checksum ^= hits_rev[i]
-
-    return checksum
+def update(counts: dict[int,int], pos: int, max_pos: int, max_count: int):
+    count = counts.get(pos, 0) + 1
+    counts[pos] = count
+    return (pos, count) if count > max_count else (max_pos, max_count)
 
 def main(args: array[str]):
     index = GenomeIndex[K](args[0])
     step = K.len()
-    checksum = u32(0)
 
     for read in FASTQ(args[1]):
-        for kmer in read.kmers[K](step):
-            checksum ^= process(index, kmer)
+        counts = dict[int,int]()
+        max_pos, max_count = 0, 0
 
-    print 'CHECKSUM:', int(checksum)
+        for i,kmer in enumerate(read.kmers[K](step)):
+            offset = i * step
+            hits = index[kmer]
+            hits_rev = index[~kmer]
+
+            for i in range(len(hits)):
+                pos = int(hits[i]) - offset
+                max_pos, max_count = update(counts, pos, max_pos, max_count)
+
+            for i in range(len(hits_rev)):
+                pos = int(hits_rev[i]) - offset
+                max_pos, max_count = update(counts, pos, max_pos, max_count)
+
+        print read, max_pos
 
 if len(argv) > 0:
     main(argv)
