@@ -626,7 +626,8 @@ assign_statement:
                 op, 
                 (p, Int (string_of_int len))))
             in
-            assert_stmt :: lst
+            (*assert_stmt :: *)
+            lst
         in
         init_exprs @ exprs
       in
