@@ -39,7 +39,7 @@ std::string types::RecordType::getName() const
 			name += ",";
 	}
 
-	name += ")";
+	name += "]";
 	return name;
 }
 
