@@ -9,7 +9,7 @@
 - [Boehm GC](https://github.com/ivmai/bdwgc)
 - [OCaml](http://www.ocaml.org)
 
-Note: LLVM 6 or greater is required. However, due to a LLVM 7 [bug](https://bugs.llvm.org/show_bug.cgi?id=40656) with coroutines (which are used extensively in Seq), we highly recommend building with LLVM 6.
+Note: LLVM 6.0.1 or greater is required. However, due to a LLVM 7 [bug](https://bugs.llvm.org/show_bug.cgi?id=40656) with coroutines (which are used extensively in Seq), we highly recommend building with LLVM 6.
 
 ## Build
 
