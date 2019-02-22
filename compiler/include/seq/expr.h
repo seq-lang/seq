@@ -244,8 +244,9 @@ namespace seq {
 	class ArrayExpr : public Expr {
 	private:
 		Expr *count;
+		bool doAlloca;
 	public:
-		ArrayExpr(types::Type *type, Expr *count);
+		ArrayExpr(types::Type *type, Expr *count, bool doAlloca=false);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		ArrayExpr *clone(Generic *ref) override;

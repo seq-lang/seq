@@ -832,8 +832,8 @@ Expr *FuncExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new FuncExpr(func->clone(ref), typesCloned));
 }
 
-ArrayExpr::ArrayExpr(types::Type *type, Expr *count) :
-    Expr(types::ArrayType::get(type)), count(count)
+ArrayExpr::ArrayExpr(types::Type *type, Expr *count, bool doAlloca) :
+    Expr(types::ArrayType::get(type)), count(count), doAlloca(doAlloca)
 {
 }
 
@@ -848,15 +848,34 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	assert(type != nullptr);
 	count->ensure(types::Int);
 
-	Value *len = count->codegen(base, block);
-	Value *ptr = type->getBaseType(0)->alloc(len, block);
+	LLVMContext& context = block->getContext();
+	Value *ptr = nullptr;
+	Value *len = nullptr;
+
+	if (doAlloca) {
+		uint64_t lenLit = 0;
+		if (auto *intExpr = dynamic_cast<IntExpr *>(count)) {
+			lenLit = (uint64_t)intExpr->value();
+		} else {
+			throw exc::SeqException("alloca'd arrays require constant length");
+		}
+
+		BasicBlock *preambleBlock = base->getPreamble();
+		IRBuilder<> builder(preambleBlock);
+		len = ConstantInt::get(seqIntLLVM(context), lenLit);
+		ptr = builder.CreateAlloca(type->getBaseType(0)->getLLVMType(context), lenLit);
+	} else {
+		len = count->codegen(base, block);
+		ptr = type->getBaseType(0)->alloc(len, block);
+	}
+
 	Value *arr = type->make(ptr, len, block);
 	return arr;
 }
 
 ArrayExpr *ArrayExpr::clone(Generic *ref)
 {
-	SEQ_RETURN_CLONE(new ArrayExpr(getType()->clone(ref)->getBaseType(0), count->clone(ref)));
+	SEQ_RETURN_CLONE(new ArrayExpr(getType()->clone(ref)->getBaseType(0), count->clone(ref), doAlloca));
 }
 
 RecordExpr::RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names) :

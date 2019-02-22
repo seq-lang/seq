@@ -229,6 +229,11 @@ FOREIGN Expr *array_expr(types::Type *ty, Expr *cnt)
 	return new ArrayExpr(ty, cnt);
 }
 
+FOREIGN Expr *array_expr_alloca(types::Type *ty, Expr *cnt)
+{
+	return new ArrayExpr(ty, cnt, true);
+}
+
 FOREIGN Expr *construct_expr(types::Type *ty, Expr **args, size_t len)
 {
 	return new ConstructExpr(ty, vector<Expr *>(args, args + len));
