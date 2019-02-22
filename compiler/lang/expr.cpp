@@ -863,7 +863,7 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		BasicBlock *preambleBlock = base->getPreamble();
 		IRBuilder<> builder(preambleBlock);
 		len = ConstantInt::get(seqIntLLVM(context), lenLit);
-		ptr = builder.CreateAlloca(type->getBaseType(0)->getLLVMType(context), lenLit);
+		ptr = builder.CreateAlloca(type->getBaseType(0)->getLLVMType(context), len);
 	} else {
 		len = count->codegen(base, block);
 		ptr = type->getBaseType(0)->alloc(len, block);
