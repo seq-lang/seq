@@ -254,6 +254,9 @@ module Expr = struct
   let lookup = foreign "array_lookup_expr" 
     (t @-> t @-> returning t)
 
+  let alloc_array = foreign "array_expr_alloca"
+    (Types.typ @-> t @-> returning t)
+
   let construct typ args = 
     let fn = foreign "construct_expr"  
       (Types.typ @-> ptr t @-> size_t @-> returning t)

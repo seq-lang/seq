@@ -283,6 +283,15 @@ struct
         serr ~pos "index requires only one item"
   
   and parse_call ctx pos (callee_expr, args) =
+    match snd callee_expr, args with
+    | Index ((_, Id "__array__"), [t]), [_, { name = _; value }] ->
+      let t = parse_type ctx t in
+      let arg = parse ctx value in
+      Llvm.Expr.alloc_array t arg
+    | _ -> 
+      parse_call_real ctx pos (callee_expr, args)
+
+  and parse_call_real ctx pos (callee_expr, args) =
     let callee_expr = parse ctx callee_expr in
     let names = Llvm.Func.get_arg_names callee_expr in
     let args = 

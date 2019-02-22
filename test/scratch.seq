@@ -3,19 +3,5 @@
 import itertools
 import time
 
-extend seq:
-	def __print__(self: seq):
-		'->'.__print__()
-		# return 'xx -> ' + self.__str__()
-
-a = s"ac"
-b = s'ac'
-c = 'hi'
-d = "hi"
-
-e = s"""s"""
-f = "hi"
-
-
-print a, b, c, d, e, f
+e = __array__[int](10)
 
