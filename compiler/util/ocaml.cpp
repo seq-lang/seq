@@ -303,22 +303,22 @@ FOREIGN Expr *dict_comp_expr(types::Type *ty, Expr *key, Expr *val)
 	return new DictCompExpr(key, val, nullptr, ty);
 }
 
-FOREIGN void set_list_comp_body (ListCompExpr *e, For * body)
+FOREIGN void set_list_comp_body(ListCompExpr *e, For * body)
 {
 	e->setBody(body);
 }
 
-FOREIGN void set_set_comp_body (SetCompExpr *e, For * body)
+FOREIGN void set_set_comp_body(SetCompExpr *e, For * body)
 {
 	e->setBody(body);
 }
 
-FOREIGN void set_dict_comp_body (DictCompExpr *e, For * body)
+FOREIGN void set_dict_comp_body(DictCompExpr *e, For * body)
 {
 	e->setBody(body);
 }
 
-FOREIGN void set_gen_comp_body (GenExpr *e, For * body)
+FOREIGN void set_gen_comp_body(GenExpr *e, For * body)
 {
 	e->setBody(body);
 }
@@ -447,6 +447,11 @@ FOREIGN Stmt *yield_stmt(Expr *e)
 	return new Yield(e);
 }
 
+FOREIGN Stmt *prefetch_stmt(Expr **keys, Expr **where, size_t len)
+{
+	return new Prefetch(vector<Expr *>(keys, keys + len), vector<Expr *>(where, where + len));
+}
+
 FOREIGN Stmt *func_stmt(Func *f)
 {
 	return new FuncStmt(f);
@@ -509,9 +514,14 @@ FOREIGN void set_func_return(Func *f, Return *ret)
 	f->sawReturn(ret);
 }
 
-FOREIGN void set_func_yield(Func *f, Yield *ret)
+FOREIGN void set_func_yield(Func *f, Yield *yield)
 {
-	f->sawYield(ret);
+	f->sawYield(yield);
+}
+
+FOREIGN void set_func_prefetch(Func *f, Prefetch *pre)
+{
+	f->sawPrefetch(pre);
 }
 
 FOREIGN void resolve_types(Stmt *s)

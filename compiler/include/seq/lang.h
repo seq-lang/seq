@@ -239,6 +239,17 @@ namespace seq {
 		Assert *clone(Generic *ref) override;
 	};
 
+	class Prefetch : public Stmt {
+	private:
+		std::vector<Expr *> keys;
+		std::vector<Expr *> where;
+	public:
+		Prefetch(std::vector<Expr *> keys, std::vector<Expr *> where);
+		void resolveTypes() override;
+		void codegen0(llvm::BasicBlock*& block) override;
+		Prefetch *clone(Generic *ref) override;
+	};
+
 }
 
 #endif /* SEQ_LANG_H */

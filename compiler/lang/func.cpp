@@ -49,8 +49,8 @@ BaseFunc *BaseFunc::clone(Generic *ref)
 Func::Func() :
     BaseFunc(), Generic(), SrcObject(), external(false), name(), inTypes(),outType(types::Void),
     outType0(types::Void), scope(new Block()), argNames(), argVars(), attributes(), parentFunc(nullptr),
-    ret(nullptr), yield(nullptr), resolved(false), cache(), gen(false), promise(nullptr), handle(nullptr),
-    cleanup(nullptr), suspend(nullptr)
+    ret(nullptr), yield(nullptr), prefetch(false), resolved(false), cache(), gen(false), promise(nullptr),
+    handle(nullptr), cleanup(nullptr), suspend(nullptr)
 {
 	if (!this->argNames.empty())
 		assert(this->argNames.size() == this->inTypes.size());
@@ -113,6 +113,12 @@ void Func::sawYield(Yield *yield)
 	gen = true;
 	outType = types::GenType::get(outType);
 	outType0 = types::GenType::get(outType0);
+}
+
+void Func::sawPrefetch(Prefetch *prefetch)
+{
+	this->prefetch = true;
+	gen = true;
 }
 
 void Func::addAttribute(std::string attr)
@@ -394,18 +400,18 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 	block = BasicBlock::Create(block->getContext(), "", block->getParent());
 }
 
-// type = nullptr means final yield
-void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
+// type = nullptr means final yield; empty yields used internally only in prefetch transformations
+void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block, bool empty)
 {
 	if (!gen)
 		throw exc::SeqException("cannot yield from a non-generator");
 
-	if (type && !types::is(type, outType->getBaseType(0)))
+	if (!empty && type && !types::is(type, outType->getBaseType(0)))
 		throw exc::SeqException(
 		  "cannot yield '" + type->getName() + "' from generator yielding '" +
 		  outType->getBaseType(0)->getName() + "'");
 
-	if (val && type && type->is(types::Void))
+	if (!empty && val && type && type->is(types::Void))
 		throw exc::SeqException("cannot yield void value from generator");
 
 	LLVMContext& context = block->getContext();
@@ -418,7 +424,7 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 
 	Function *suspFn = Intrinsic::getDeclaration(module, Intrinsic::coro_suspend);
 	Value *tok = ConstantTokenNone::get(context);
-	Value *final = ConstantInt::get(IntegerType::getInt1Ty(context), type ? 0 : 1);
+	Value *final = ConstantInt::get(IntegerType::getInt1Ty(context), (empty || type) ? 0 : 1);
 	Value *susp = builder.CreateCall(suspFn, {tok, final});
 
 	/*
@@ -431,7 +437,7 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block)
 	inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 0), block);
 	inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 1), cleanup);
 
-	if (!type) {
+	if (!empty && !type) {
 		builder.SetInsertPoint(block);
 		builder.CreateUnreachable();
 	}

@@ -13,6 +13,7 @@ namespace seq {
 	class Var;
 	class Return;
 	class Yield;
+	class Prefetch;
 
 	class BaseFunc {
 	protected:
@@ -48,6 +49,7 @@ namespace seq {
 		Func *parentFunc;
 		Return *ret;
 		Yield *yield;
+		bool prefetch;
 		bool resolved;
 		RCache<Func> cache;
 
@@ -71,6 +73,7 @@ namespace seq {
 		void setEnclosingFunc(Func *parentFunc);
 		void sawReturn(Return *ret);
 		void sawYield(Yield *yield);
+		void sawPrefetch(Prefetch *prefetch);
 		void addAttribute(std::string attr);
 		std::vector<std::string> getAttributes();
 
@@ -81,7 +84,8 @@ namespace seq {
 		                   llvm::BasicBlock*& block);
 		void codegenYield(llvm::Value *val,
 		                  types::Type *type,
-		                  llvm::BasicBlock*& block);
+		                  llvm::BasicBlock*& block,
+		                  bool empty=false);
 
 		Var *getArgVar(std::string name);
 		types::FuncType *getFuncType() override;
