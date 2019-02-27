@@ -167,6 +167,7 @@ and read state = parse
       | "try"      -> P.TRY        (cur_pos state lexbuf ~len)
       | "except"   -> P.EXCEPT     (cur_pos state lexbuf ~len)
       | "finally"  -> P.FINALLY    (cur_pos state lexbuf ~len)
+      | "prefetch" -> P.PREFETCH   (cur_pos state lexbuf ~len)
       | "raise"    -> P.THROW      (cur_pos state lexbuf ~len)
       | "is"       -> P.IS         (cur_pos state lexbuf ~len, "is")
       | "in"       -> P.IN         (cur_pos state lexbuf ~len, "in")

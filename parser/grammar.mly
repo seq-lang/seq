@@ -87,6 +87,7 @@
 %token <Ast.Pos.t> PRINT PASS ASSERT DEL              // keywords 
 %token <Ast.Pos.t> TRUE FALSE NONE                    // booleans 
 %token <Ast.Pos.t> TRY EXCEPT FINALLY THROW           // exceptions
+%token <Ast.Pos.t> PREFETCH                           // prefetch
 
 /* operators */
 %token<Ast.Pos.t * string> EQ ASSGN_EQ ELLIPSIS // =, :=, ...
@@ -516,6 +517,13 @@ small_statement:
   | GLOBAL separated_nonempty_list(COMMA, ID) 
     { List.map $2 ~f:(fun expr -> 
         fst expr, Global (snd expr)) }
+  | PREFETCH separated_nonempty_list(COMMA, prefetch_item)
+    {[ pos $1 (fst @@ snd @@ List.last_exn $2), 
+       Prefetch $2 ]}
+
+prefetch_item:
+  | expr IN expr
+    { $1, $3 }
 
 // Type definitions
 type_alias:

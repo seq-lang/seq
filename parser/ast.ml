@@ -170,6 +170,7 @@ struct
     | Try         of (t list * catch tt list * t list option)
     | Global      of string
     | Throw       of ExprNode.t
+    | Prefetch    of (ExprNode.t * ExprNode.t) list
     | Special     of (string * t list * string list)
   and generic =
     | Function of fn_t

@@ -382,6 +382,15 @@ module Stmt = struct
   let throw = foreign "throw_stmt"
     (Types.expr @-> returning t)
 
+  let prefetch k w =
+    let fn = foreign "prefetch_stmt"
+      (ptr Types.expr @-> ptr Types.expr @-> size_t @-> returning t)
+    in 
+    assert List.(length k = length w);
+    let ks, kl = list_to_carr Types.expr k in
+    let ws, wl = list_to_carr Types.expr w in
+    fn ks ws kl
+
   (* Getters & Setters *)
 
   let set_base = foreign "set_base" 
@@ -558,6 +567,9 @@ module Func = struct
 
   let set_return = foreign "set_func_return" 
     (t @-> Types.expr @-> returning void)
+
+  let set_prefetch = foreign "set_func_prefetch" 
+    (t @-> Types.stmt @-> returning void)
 
   let set_yield = foreign "set_func_yield" 
     (t @-> Types.expr @-> returning void)

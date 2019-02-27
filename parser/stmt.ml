@@ -59,6 +59,7 @@ struct
       | Generic 
         Type        p -> parse_class      ctx pos p ~toplevel ~is_type:true
       | Special     p -> parse_special    ctx pos p
+      | Prefetch    p -> parse_prefetch   ctx pos p
     in
     finalize ctx stmt pos
 
@@ -626,6 +627,16 @@ struct
 
   and parse_special ctx pos (kind, stmts, inputs) =
   	serr ~pos "not applicable"
+
+  and parse_prefetch ctx pos pfs =
+    let keys, wheres = List.unzip @@ List.map pfs ~f:(fun (e1, e2) ->
+      let e1 = E.parse ctx e1 in
+      let e2 = E.parse ctx e2 in
+      e1, e2)
+    in
+    let s = Llvm.Stmt.prefetch keys wheres in
+    Llvm.Func.set_prefetch ctx.base s;
+    s
     
   (* ***************************************************************
      Helper functions
