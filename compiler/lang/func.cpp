@@ -119,6 +119,8 @@ void Func::sawPrefetch(Prefetch *prefetch)
 {
 	this->prefetch = true;
 	gen = true;
+	outType = types::GenType::get(outType);
+	outType0 = types::GenType::get(outType0);
 }
 
 void Func::addAttribute(std::string attr)
@@ -176,6 +178,9 @@ std::string Func::getMangledFuncName()
 
 void Func::resolveTypes()
 {
+	if (prefetch && yield)
+		throw exc::SeqException("prefetch statement cannot be used in generator");
+
 	if (external || resolved)
 		return;
 
@@ -190,6 +195,9 @@ void Func::resolveTypes()
 				outType = types::GenType::get(yield->getExpr() ? yield->getExpr()->getType() : types::Void);
 			} else if (ret) {
 				outType = ret->getExpr() ? ret->getExpr()->getType() : types::Void;
+
+				if (prefetch)
+					outType = types::GenType::get(outType);
 			} else {
 				assert(0);
 			}
@@ -370,6 +378,11 @@ void Func::codegen(Module *module)
 
 void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
+	if (prefetch) {
+		codegenYield(val, type, block);
+		return;
+	}
+
 	if (gen && val)
 		throw exc::SeqException("cannot return value from generator");
 
@@ -520,6 +533,7 @@ Func *Func::clone(Generic *ref)
 	if (parentFunc) x->parentFunc = parentFunc->clone(ref);
 	if (ret) x->ret = ret->clone(ref);
 	if (yield) x->yield = yield->clone(ref);
+	x->prefetch = prefetch;
 	x->gen = gen;
 	x->setSrcInfo(getSrcInfo());
 	return x;
