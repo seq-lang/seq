@@ -204,6 +204,9 @@ extend seq:
             i += 1
         return 0
 
+def kmers[`k](self: seq, step: int):
+    return seq.kmers[`k](step)
+
 class File:
     fp: ptr[byte]
     buf: ptr[ptr[byte]]
@@ -252,3 +255,6 @@ type FASTQ(file: File):
                 yield seq(s.ptr, s.len)
             line += 1
         self.file.close()
+
+def fastq(path: str):
+    return iter(FASTQ(path))

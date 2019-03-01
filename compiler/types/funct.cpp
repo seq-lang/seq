@@ -94,8 +94,8 @@ types::FuncType *types::FuncType::clone(Generic *ref)
 	return get(inTypesCloned, outType->clone(ref));
 }
 
-types::GenType::GenType(Type *outType) :
-    Type("generator", BaseType::get()), outType(outType)
+types::GenType::GenType(Type *outType, bool prefetch) :
+    Type("generator", BaseType::get()), outType(outType), prefetch(prefetch)
 {
 }
 
@@ -153,6 +153,11 @@ void types::GenType::destroy(Value *self, BasicBlock *block)
 	Function *destFn = Intrinsic::getDeclaration(block->getModule(), Intrinsic::coro_destroy);
 	IRBuilder<> builder(block);
 	builder.CreateCall(destFn, self);
+}
+
+bool types::GenType::fromPrefetch()
+{
+	return prefetch;
 }
 
 void types::GenType::initOps()
@@ -269,19 +274,19 @@ types::GenType *types::GenType::asGen()
 	return this;
 }
 
-types::GenType *types::GenType::get(Type *outType) noexcept
+types::GenType *types::GenType::get(Type *outType, bool prefetch) noexcept
 {
-	return new GenType(outType);
+	return new GenType(outType, prefetch);
 }
 
-types::GenType *types::GenType::get() noexcept
+types::GenType *types::GenType::get(bool prefetch) noexcept
 {
-	return get(types::BaseType::get());
+	return get(types::BaseType::get(), prefetch);
 }
 
 types::GenType *types::GenType::clone(Generic *ref)
 {
-	return get(outType->clone(ref));
+	return get(outType->clone(ref), prefetch);
 }
 
 types::PartialFuncType::PartialFuncType(types::Type *callee, std::vector<types::Type *> callTypes) :

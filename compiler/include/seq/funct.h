@@ -42,7 +42,8 @@ namespace seq {
 		class GenType : public Type {
 		private:
 			Type *outType;
-			explicit GenType(Type *outType);
+			bool prefetch;  // does this generator represent a prefetch function?
+			explicit GenType(Type *outType, bool prefetch=false);
 		public:
 			GenType(GenType const&)=delete;
 			void operator=(FuncType const&)=delete;
@@ -57,6 +58,7 @@ namespace seq {
 			            llvm::BasicBlock *unwind);
 			llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block);
 			void destroy(llvm::Value *self, llvm::BasicBlock *block);
+			bool fromPrefetch();
 
 			void initOps() override;
 			bool is(Type *type) const override;
@@ -67,8 +69,8 @@ namespace seq {
 
 			GenType *asGen() override;
 
-			static GenType *get(Type *outType) noexcept;
-			static GenType *get() noexcept;
+			static GenType *get(Type *outType, bool prefetch=false) noexcept;
+			static GenType *get(bool prefetch=false) noexcept;
 
 			GenType *clone(Generic *ref) override;
 		};

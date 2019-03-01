@@ -119,8 +119,8 @@ void Func::sawPrefetch(Prefetch *prefetch)
 {
 	this->prefetch = true;
 	gen = true;
-	outType = types::GenType::get(outType);
-	outType0 = types::GenType::get(outType0);
+	outType = types::GenType::get(outType, true);
+	outType0 = types::GenType::get(outType0, true);
 }
 
 void Func::addAttribute(std::string attr)
@@ -197,7 +197,7 @@ void Func::resolveTypes()
 				outType = ret->getExpr() ? ret->getExpr()->getType() : types::Void;
 
 				if (prefetch)
-					outType = types::GenType::get(outType);
+					outType = types::GenType::get(outType, true);
 			} else {
 				assert(0);
 			}
@@ -380,19 +380,18 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 {
 	if (prefetch) {
 		codegenYield(val, type, block);
-		return;
+	} else {
+		if (gen && val)
+			throw exc::SeqException("cannot return value from generator");
+
+		if ((val && type && !types::is(type, outType)) || (!val && !outType->is(types::Void)))
+			throw exc::SeqException(
+			        "cannot return '" + type->getName() + "' from function returning '" +
+			        outType->getName() + "'");
+
+		if (val && type && type->is(types::Void))
+			throw exc::SeqException("cannot return void value from function");
 	}
-
-	if (gen && val)
-		throw exc::SeqException("cannot return value from generator");
-
-	if ((val && type && !types::is(type, outType)) || (!val && !outType->is(types::Void)))
-		throw exc::SeqException(
-		  "cannot return '" + type->getName() + "' from function returning '" +
-		  outType->getName() + "'");
-
-	if (val && type && type->is(types::Void))
-		throw exc::SeqException("cannot return void value from function");
 
 	IRBuilder<> builder(block);
 

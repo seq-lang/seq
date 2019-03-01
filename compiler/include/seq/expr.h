@@ -490,6 +490,7 @@ namespace seq {
 	private:
 		std::vector<Expr *> stages;
 	public:
+		static const unsigned SCHED_WIDTH = 16;
 		explicit PipeExpr(std::vector<Expr *> stages);
 		void resolveTypes() override;
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;

@@ -58,6 +58,10 @@ script:
   - build/seqtest
   - build/seq test/core/helloworld.seq
 
+branches:
+  only:
+    - master
+
 notifications:
   webhooks:
     urls:

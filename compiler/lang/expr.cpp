@@ -2107,12 +2107,21 @@ void PipeExpr::resolveTypes()
 		stage->resolveTypes();
 }
 
+struct DrainState {
+	Value *states;              // coroutine states buffer
+	Value *filled;              // how many coroutines have been added (alloca'd)
+	types::GenType *type;       // type of prefetch generator
+	std::queue<Expr *> stages;  // remaining pipeline stages
+};
+
 static Value *codegenPipe(BaseFunc *base,
-                          Value *val,
-                          types::Type *type,
-                          BasicBlock*& block,
+                          Value *val,          // value of current pipeline output
+                          types::Type *type,   // type of current pipeline output
+                          BasicBlock *entry,   // block before pipeline start
+                          BasicBlock*& block,  // current codegen block
                           std::queue<Expr *>& stages,
-                          TryCatch *tc)
+                          TryCatch *tc,
+                          DrainState *drain)
 {
 	if (stages.empty())
 		return val;
@@ -2122,6 +2131,9 @@ static Value *codegenPipe(BaseFunc *base,
 
 	Expr *stage = stages.front();
 	stages.pop();
+
+	Value *val0 = val;
+	types::Type *type0 = type;
 
 	if (!val) {
 		assert(!type);
@@ -2133,11 +2145,124 @@ static Value *codegenPipe(BaseFunc *base,
 		CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
 		call.setTryCatch(tc);
 		type = call.getType();
-		val = call.codegen(base, block);
+		types::GenType *genType = type->asGen();
+
+		if (!(genType && genType->fromPrefetch())) {
+			val = call.codegen(base, block);
+		} else if (drain->states) {
+			throw exc::SeqException("cannot have multiple prefetch functions in single pipeline");
+		}
 	}
 
 	types::GenType *genType = type->asGen();
-	if (genType && stage != stages.back()) {
+	if (genType && genType->fromPrefetch()) {
+		/*
+		 * Function has a prefetch statement
+		 *
+		 * We need to batch calls so that we can yield after prefetch,
+		 * execute a step of each call, then repeat until all calls are
+		 * done. This entails codegen'ing a simple dynamic scheduler at
+		 * this point in the pipeline, as well as a "drain" loop after
+		 * the pipeline to complete any remaining calls.
+		 */
+
+		BasicBlock *preamble = base->getPreamble();
+		IRBuilder<> builder(preamble);
+		Value *states = makeAlloca(builder.getInt8PtrTy(), preamble, PipeExpr::SCHED_WIDTH);
+		Value *next = makeAlloca(seqIntLLVM(context), preamble);
+		Value *filled = makeAlloca(seqIntLLVM(context), preamble);
+
+		builder.SetInsertPoint(entry);
+		builder.CreateStore(zeroLLVM(context), next);
+		builder.CreateStore(zeroLLVM(context), filled);
+
+		if (!types::is(type0->magicOut("__copy__", {}), type0))
+			throw exc::SeqException("__copy__ for " + type0->getName() + " returns a different type");
+
+		val0 = type0->callMagic("__copy__", {}, val0, {}, block, tc);
+
+		BasicBlock *notFull = BasicBlock::Create(context, "not_full", func);
+		BasicBlock *full = BasicBlock::Create(context, "full", func);
+		BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+
+		builder.SetInsertPoint(block);
+		Value *N = builder.CreateLoad(filled);
+		Value *M = ConstantInt::get(seqIntLLVM(context), PipeExpr::SCHED_WIDTH);
+		Value *cond = builder.CreateICmpSLT(N, M);
+		builder.CreateCondBr(cond, notFull, full);
+
+		Value *task = nullptr;
+		{
+			ValueExpr arg(type0, val0);
+			CallExpr call(stage, {&arg});
+			call.setTryCatch(tc);
+			task = call.codegen(base, notFull);
+		}
+
+		builder.SetInsertPoint(notFull);
+		Value *slot = builder.CreateGEP(states, N);
+		builder.CreateStore(task, slot);
+		N = builder.CreateAdd(N, oneLLVM(context));
+		builder.CreateStore(N, filled);
+		builder.CreateBr(exit);
+
+		BasicBlock *full0 = full;
+		builder.SetInsertPoint(full);
+		Value *nextVal = builder.CreateLoad(next);
+		slot = builder.CreateGEP(states, nextVal);
+		Value *gen = builder.CreateLoad(slot);
+
+		if (tc) {
+			BasicBlock *normal = BasicBlock::Create(context, "normal", func);
+			BasicBlock *unwind = tc->getExceptionBlock();
+			genType->resume(gen, full, normal, unwind);
+			full = normal;
+		} else {
+			genType->resume(gen, full, nullptr, nullptr);
+		}
+
+		Value *done = genType->done(gen, full);
+		BasicBlock *genDone = BasicBlock::Create(context, "done", func);
+		BasicBlock *genNotDone = BasicBlock::Create(context, "not_done", func);
+		builder.SetInsertPoint(full);
+		builder.CreateCondBr(done, genDone, genNotDone);
+
+		type = genType->getBaseType(0);
+		val = type->is(types::Void) ? nullptr : genType->promise(gen, genDone);
+
+		// store the current state for the drain step:
+		drain->states = states;
+		drain->filled = filled;
+		drain->type = genType;
+		drain->stages = stages;
+
+		codegenPipe(base, val, type, entry, genDone, stages, tc, drain);
+		genType->destroy(gen, genDone);
+
+		{
+			ValueExpr arg(type0, val0);
+			CallExpr call(stage, {&arg});
+			call.setTryCatch(tc);
+			task = call.codegen(base, notFull);
+		}
+
+		builder.SetInsertPoint(genDone);
+		builder.CreateStore(task, slot);
+		builder.CreateBr(exit);
+
+		builder.SetInsertPoint(genNotDone);
+		nextVal = builder.CreateAdd(nextVal, oneLLVM(context));
+		nextVal = builder.CreateAnd(nextVal,
+		                            ConstantInt::get(seqIntLLVM(context), PipeExpr::SCHED_WIDTH - 1));
+		builder.CreateStore(nextVal, next);
+		builder.CreateBr(full0);
+
+		block = exit;
+		return nullptr;
+	} else if (genType && stage != stages.back()) {
+		/*
+		 * Plain generator -- create implicit for-loop
+		 */
 		Value *gen = val;
 		IRBuilder<> builder(block);
 
@@ -2163,7 +2288,7 @@ static Value *codegenPipe(BaseFunc *base,
 		type = genType->getBaseType(0);
 		val = type->is(types::Void) ? nullptr : genType->promise(gen, block);
 
-		codegenPipe(base, val, type, block, stages, tc);
+		codegenPipe(base, val, type, entry, block, stages, tc, drain);
 
 		builder.SetInsertPoint(block);
 		builder.CreateBr(loop0);
@@ -2178,17 +2303,95 @@ static Value *codegenPipe(BaseFunc *base,
 		block = exit;
 		return nullptr;
 	} else {
-		return codegenPipe(base, val, type, block, stages, tc);
+		/*
+		 * Simple function -- just a plain call
+		 */
+		return codegenPipe(base, val, type, entry, block, stages, tc, drain);
 	}
 }
 
 Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
+	LLVMContext& context = block->getContext();
+	Function *func = block->getParent();
+
 	std::queue<Expr *> queue;
 	for (auto *stage : stages)
 		queue.push(stage);
 
-	return codegenPipe(base, nullptr, nullptr, block, queue, getTryCatch());
+	BasicBlock *entry = block;
+	BasicBlock *start = BasicBlock::Create(context, "pipe_start", func);
+	block = start;
+
+	TryCatch *tc = getTryCatch();
+	DrainState drain = {nullptr, nullptr, nullptr, {}};
+	Value *result = codegenPipe(base, nullptr, nullptr, entry, block, queue, tc, &drain);
+	IRBuilder<> builder(block);
+
+	if (drain.states) {
+		// drain step:
+		types::GenType *genType = drain.type;
+		Value *states = drain.states;
+		Value *filled = drain.filled;
+		Value *N = builder.CreateLoad(filled);
+
+		BasicBlock *loop = BasicBlock::Create(context, "pipe", func);
+		BasicBlock *loop0 = loop;
+		builder.CreateBr(loop);
+
+		builder.SetInsertPoint(loop);
+		PHINode *control = builder.CreatePHI(seqIntLLVM(context), 3);
+		control->addIncoming(zeroLLVM(context), block);
+		Value *cond = builder.CreateICmpSLT(control, N);
+		BasicBlock *body = BasicBlock::Create(context, "body", func);
+		BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+		builder.CreateCondBr(cond, body, exit);
+
+		builder.SetInsertPoint(body);
+		Value *genSlot = builder.CreateGEP(states, control);
+		Value *gen = builder.CreateLoad(genSlot);
+		Value *done = genType->done(gen, body);
+		Value *next = builder.CreateAdd(control, oneLLVM(context));
+
+		BasicBlock *notDone = BasicBlock::Create(context, "not_done", func);
+		builder.CreateCondBr(done, loop0, notDone);
+		control->addIncoming(next, body);
+
+		BasicBlock *notDoneLoop = BasicBlock::Create(context, "not_done_loop", func);
+		BasicBlock *notDoneLoop0 = notDoneLoop;
+
+		builder.SetInsertPoint(notDone);
+		builder.CreateBr(notDoneLoop);
+
+		if (tc) {
+			BasicBlock *normal = BasicBlock::Create(context, "normal", func);
+			BasicBlock *unwind = tc->getExceptionBlock();
+			genType->resume(gen, notDoneLoop, normal, unwind);
+			notDoneLoop = normal;
+		} else {
+			genType->resume(gen, notDoneLoop, nullptr, nullptr);
+		}
+
+		BasicBlock *finalize = BasicBlock::Create(context, "finalize_gen", func);
+		done = genType->done(gen, notDoneLoop);
+		builder.SetInsertPoint(notDoneLoop);
+		builder.CreateCondBr(done, finalize, notDoneLoop0);
+
+		Value *val = genType->promise(gen, finalize);
+		codegenPipe(base, val, genType->getBaseType(0), entry, finalize, drain.stages, tc, &drain);
+		genType->destroy(gen, finalize);
+		builder.SetInsertPoint(finalize);
+		builder.CreateBr(loop0);
+		control->addIncoming(next, finalize);
+
+		block = exit;
+	}
+
+	// connect entry block:
+	builder.SetInsertPoint(entry);
+	builder.CreateBr(start);
+
+	return result;
 }
 
 types::Type *PipeExpr::getType0() const
@@ -2203,8 +2406,9 @@ types::Type *PipeExpr::getType0() const
 		ValueExpr arg(type, nullptr);
 		CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
 		type = call.getType();
+		types::GenType *genType = type->asGen();
 
-		if (stage != stages.back() && type->asGen())
+		if (genType && (genType->fromPrefetch() || stage != stages.back()))
 			return types::Void;
 	}
 	assert(type);
