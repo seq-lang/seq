@@ -2243,7 +2243,7 @@ static Value *codegenPipe(BaseFunc *base,
 			ValueExpr arg(type0, val0);
 			CallExpr call(stage, {&arg});
 			call.setTryCatch(tc);
-			task = call.codegen(base, notFull);
+			task = call.codegen(base, genDone);
 		}
 
 		builder.SetInsertPoint(genDone);
@@ -2335,7 +2335,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		Value *filled = drain.filled;
 		Value *N = builder.CreateLoad(filled);
 
-		BasicBlock *loop = BasicBlock::Create(context, "pipe", func);
+		BasicBlock *loop = BasicBlock::Create(context, "drain", func);
 		BasicBlock *loop0 = loop;
 		builder.CreateBr(loop);
 

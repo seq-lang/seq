@@ -447,7 +447,7 @@ FOREIGN Stmt *yield_stmt(Expr *e)
 	return new Yield(e);
 }
 
-FOREIGN Stmt *prefetch_stmt(Expr **keys, Expr **where, size_t len)
+FOREIGN Stmt *prefetch_stmt(Expr **where, Expr **keys, size_t len)
 {
 	return new Prefetch(vector<Expr *>(keys, keys + len), vector<Expr *>(where, where + len));
 }
