@@ -629,10 +629,12 @@ struct
   	serr ~pos "not applicable"
 
   and parse_prefetch ctx pos pfs =
-    let keys, wheres = List.unzip @@ List.map pfs ~f:(fun (e1, e2) ->
-      let e1 = E.parse ctx e1 in
-      let e2 = E.parse ctx e2 in
-      e1, e2)
+    let keys, wheres = List.unzip @@ List.map pfs ~f:(function
+      | _, Index (e1, [e2]) ->
+        let e1 = E.parse ctx e1 in
+        let e2 = E.parse ctx e2 in
+        e1, e2
+      | _ -> serr ~pos "bad prefetch expression (only a[b] allowed)")
     in
     let s = Llvm.Stmt.prefetch keys wheres in
     Llvm.Func.set_prefetch ctx.base s;
