@@ -502,6 +502,9 @@ void SeqJIT::delVar(Var *var)
 
 void seq::compilationError(const std::string& msg, const std::string& file, int line, int col)
 {
-	std::cerr << file.substr(file.rfind('/') + 1) << ":" << line << ":" << col << ": error: " << msg << std::endl;
+	std::cerr << "\033[1m"
+	          << file.substr(file.rfind('/') + 1)
+	          << ":" << line << ":" << col
+	          << ": \033[1;31merror:\033[0m\033[1m " << msg << "\033[0m" << std::endl;
 	exit(EXIT_FAILURE);
 }

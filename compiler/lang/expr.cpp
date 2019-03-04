@@ -2112,6 +2112,10 @@ struct DrainState {
 	Value *filled;              // how many coroutines have been added (alloca'd)
 	types::GenType *type;       // type of prefetch generator
 	std::queue<Expr *> stages;  // remaining pipeline stages
+
+	DrainState() : states(nullptr), filled(nullptr), type(nullptr), stages()
+	{
+	}
 };
 
 static Value *codegenPipe(BaseFunc *base,
@@ -2324,7 +2328,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	block = start;
 
 	TryCatch *tc = getTryCatch();
-	DrainState drain = {nullptr, nullptr, nullptr, {}};
+	DrainState drain;
 	Value *result = codegenPipe(base, nullptr, nullptr, entry, block, queue, tc, &drain);
 	IRBuilder<> builder(block);
 

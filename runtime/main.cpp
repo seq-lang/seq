@@ -1,14 +1,28 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstdlib>
+#include <cstdio>
 #include "llvm/Support/CommandLine.h"
 #include "seq/seq.h"
 #include "seq/parser.h"
+
+#define SEQ_PATH_ENV_VAR "SEQ_PATH"
 
 using namespace std;
 using namespace seq;
 using namespace llvm;
 using namespace llvm::cl;
+
+static void errMsg(const string& msg)
+{
+	cerr << "\033[1;31merror:\033[0m " << msg << endl;
+}
+
+static void warnMsg(const string& msg)
+{
+	cerr << "\033[1;33mwarning:\033[0m " << msg << endl;
+}
 
 int main(int argc, char **argv)
 {
@@ -27,9 +41,20 @@ int main(int argc, char **argv)
 		repl();
 		return EXIT_SUCCESS;
 #else
-		std::cerr << "Seq REPL requires LLVM 7+" << std::endl;
+		errMsg("Seq REPL requires LLVM 7+");
 		return EXIT_FAILURE;
 #endif
+	} else if (FILE *file = fopen(input.c_str(), "r")) {
+		fclose(file);
+	} else {
+		errMsg("could not open '" + input + "' for reading");
+		return EXIT_FAILURE;
+	}
+
+	// make sure path is set
+	if (!getenv(SEQ_PATH_ENV_VAR)) {
+		errMsg(SEQ_PATH_ENV_VAR " environment variable is not set");
+		return EXIT_FAILURE;
 	}
 
 	SeqModule *s = parse(input.c_str());
@@ -38,10 +63,10 @@ int main(int argc, char **argv)
 		execute(s, argsVec, libsVec, debug.getValue());
 	} else {
 		if (!libsVec.empty())
-			std::cerr << "warning: ignoring libraries during compilation" << std::endl;
+			warnMsg("ignoring libraries during compilation");
 
 		if (!argsVec.empty())
-			std::cerr << "warning: ignoring arguments during compilation" << std::endl;
+			warnMsg("ignoring libraries during compilation");
 
 		compile(s, output.getValue(), debug.getValue());
 	}
