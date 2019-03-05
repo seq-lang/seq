@@ -204,8 +204,11 @@ extend seq:
             i += 1
         return 0
 
+def split(self: seq, k: int, step: int):
+    return self.split(k, step)
+
 def kmers[`k](self: seq, step: int):
-    return seq.kmers[`k](step)
+    return self.kmers[`k](step)
 
 class File:
     fp: ptr[byte]
