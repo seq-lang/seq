@@ -124,11 +124,11 @@ and read state = parse
   }
   | white+ { read state lexbuf }
   
-  | "is" white+ "not" 
+  | "is" white+ "not" white+
     { P.ISNOT (cur_pos state lexbuf ~len:6, "is not") }
-  | "not" white+ "in" 
+  | "not" white+ "in" white+
     { P.NOTIN (cur_pos state lexbuf ~len:6, "not in") }
-  | "import!" as id 
+  | ("import!" as id) white+
     { P.IMPORT_CONTEXT (cur_pos state lexbuf ~len:(String.length id)) }
   | ident as id {
     let len = String.length id in

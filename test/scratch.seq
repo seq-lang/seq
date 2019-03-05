@@ -1,7 +1,10 @@
 # 786
 
-import itertools
-import time
 
-e = __array__[int](10)
+inta = 5
+if not inta:
+	print inta
+else:
+	print 'hoi'
 
+not inta
