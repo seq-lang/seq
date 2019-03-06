@@ -58,7 +58,7 @@ struct
     | IfExpr         of (t * t * t)
     | Unary          of (string * t)
     | Binary         of (t * string * t)
-    | Pipe           of t list
+    | Pipe           of (string * t) list
     | Index          of (t * t list)
     | Call           of (t * call tt list)
     | Slice          of (t option * t option * t option)
@@ -99,7 +99,8 @@ struct
         ~f:(fun (a, b) -> sprintf "%s: %s" (to_string a) (to_string b))
     | IfExpr (x, i, e) -> sprintf "%s if %s else %s" 
         (to_string x) (to_string i) (to_string e)
-    | Pipe l -> sprintf "%s" (ppl l ~sep:" |> " ~f:to_string)
+    | Pipe l -> sprintf "%s" (ppl l ~sep:"" ~f:(fun (p, e) -> 
+        sprintf "%s %s" p @@ to_string e))
     | Binary (l, o, r) -> sprintf "(%s %s %s)" (to_string l) o (to_string r)
     | Unary (o, x) -> sprintf "(%s %s)" o (to_string x)
     | Index (x, l) -> sprintf "%s[%s]" (to_string x) (ppl l ~f:to_string)

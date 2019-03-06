@@ -232,7 +232,11 @@ struct
     Llvm.Expr.binary ~inplace lh_expr bop rh_expr
 
   and parse_pipe ctx _ exprs =
-    let exprs = List.map exprs ~f:(parse ctx) in
+    let exprs = List.mapi exprs ~f:(fun i (pipe, expr) ->
+      let expr = parse ctx expr in 
+      if pipe = "||>" then
+        Llvm.Expr.set_parallel expr i;
+      expr) in
     Llvm.Expr.pipe exprs
 
   (** Parses index expression which also includes type realization rules.
@@ -441,8 +445,10 @@ struct
     match node with
     | Generic p | Id p -> 
       f ctx p
-    | Tuple l | List l | Set l | Pipe l -> 
+    | Tuple l | List l | Set l -> 
       List.iter l ~f:(walk ctx ~f)
+    | Pipe l ->
+      List.iter l ~f:(fun (_, e) -> walk ctx ~f e)
     | Dict l -> 
       List.iter l ~f:(fun (x, y) -> 
         walk ctx ~f x; walk ctx ~f y)

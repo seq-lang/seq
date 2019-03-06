@@ -24,9 +24,9 @@
   (* Converts list of expressions into the pipeline AST node *)
   let flat_pipe x = 
     match x with
-    | _, []        -> failwith "empty pipeline expression"
-    | _, h :: []   -> h
-    | pos, h :: el -> pos, Pipe (h :: el)
+    | _, []  -> failwith "empty pipeline expression"
+    | _, [h] -> snd h
+    | pos, l -> pos, Pipe l
 
   (* Converts list of conditionals into the AND AST node 
      (used for chained conditionals such as 
@@ -98,7 +98,7 @@
 %token<Ast.Pos.t * string> AND OR NOT // and, or, not
 %token<Ast.Pos.t * string> IS ISNOT IN NOTIN // is, is not, in, not in
 %token<Ast.Pos.t * string> EEQ NEQ LESS LEQ GREAT GEQ // ==, !=, <, <=, >, >=
-%token<Ast.Pos.t * string> PIPE // |>
+%token<Ast.Pos.t * string> PIPE PPIPE SPIPE // |> ||> >|
 %token<Ast.Pos.t * string> B_AND B_OR B_XOR B_NOT // &, |, ^, ~
 %token<Ast.Pos.t * string> B_LSH B_RSH // <<, >>
 %token<Ast.Pos.t * string> LSHEQ RSHEQ ANDEQ OREQ XOREQ // <<=, >>= &= |= ^=
@@ -281,11 +281,13 @@ expr_list:
 // Pipes (|>)
 pipe_expr: 
   | o = bool_expr 
-    { fst o, [o] }
-  | bool_expr PIPE pipe_expr 
+    { fst o, ["", o] }
+  | bool_expr PIPE  pipe_expr 
+  | bool_expr PPIPE pipe_expr
+  | bool_expr SPIPE pipe_expr 
     { pos (fst $1) (fst $3), 
-      $1 :: (snd $3) }
-
+      (snd $2, $1) :: (snd $3) }
+    
 // Bool expressions 
 // (binary: and, or)
 bool_expr:

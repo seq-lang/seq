@@ -1,7 +1,9 @@
 # 786
 
-import itertools
-import time
-
-e = __array__[int](10)
+def lookup(index):
+    intv = 0
+    intv = index[intv]
+    return intv
+index = [1, 2]
+print lookup(index)
 

@@ -206,6 +206,8 @@ and read state = parse
   | "&"   as op { P.B_AND (cur_pos state lexbuf, Char.to_string op) }
   | "^"   as op { P.B_XOR (cur_pos state lexbuf, Char.to_string op) }
   | "~"   as op { P.B_NOT (cur_pos state lexbuf, Char.to_string op) }
+  | "||>" as op { P.PPIPE (cur_pos state lexbuf ~len:2, op) }
+  | ">|"  as op { P.SPIPE (cur_pos state lexbuf ~len:2, op) }
   | "|>"  as op { P.PIPE  (cur_pos state lexbuf ~len:2, op) }
   | "|"   as op { P.B_OR  (cur_pos state lexbuf, Char.to_string op) }
   | ":="  as op { P.ASSGN_EQ  (cur_pos state lexbuf ~len:2, op) }

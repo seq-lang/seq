@@ -291,6 +291,9 @@ module Expr = struct
     Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
     expr (strdup pos.file) pos.line pos.col pos.len
 
+  let set_parallel = foreign "pipe_expr_set_parallel" 
+    Ctypes.(t @-> int @-> returning void)
+
   let set_comprehension_body ~kind expr body = 
     foreign (sprintf "set_%s_comp_body" kind)
       (t @-> Types.stmt @-> returning Ctypes.void)
