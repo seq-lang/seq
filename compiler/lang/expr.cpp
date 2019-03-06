@@ -2096,9 +2096,17 @@ TypeOfExpr *TypeOfExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new TypeOfExpr(val->clone(ref)));
 }
 
-PipeExpr::PipeExpr(std::vector<seq::Expr *> stages) :
-    Expr(), stages(std::move(stages))
+PipeExpr::PipeExpr(std::vector<seq::Expr *> stages, std::vector<bool> parallel) :
+    Expr(), stages(std::move(stages)), parallel(std::move(parallel))
 {
+	if (this->parallel.empty())
+		this->parallel = std::vector<bool>(this->stages.size(), false);
+}
+
+void PipeExpr::setParallel(unsigned which)
+{
+	assert(which < parallel.size());
+	parallel[which] = true;
 }
 
 void PipeExpr::resolveTypes()
@@ -2112,8 +2120,10 @@ struct DrainState {
 	Value *filled;              // how many coroutines have been added (alloca'd)
 	types::GenType *type;       // type of prefetch generator
 	std::queue<Expr *> stages;  // remaining pipeline stages
+	std::queue<bool> parallel;
 
-	DrainState() : states(nullptr), filled(nullptr), type(nullptr), stages()
+	DrainState() :
+	    states(nullptr), filled(nullptr), type(nullptr), stages(), parallel()
 	{
 	}
 };
@@ -2124,9 +2134,11 @@ static Value *codegenPipe(BaseFunc *base,
                           BasicBlock *entry,   // block before pipeline start
                           BasicBlock*& block,  // current codegen block
                           std::queue<Expr *>& stages,
+                          std::queue<bool>& parallel,
                           TryCatch *tc,
                           DrainState *drain)
 {
+	assert(stages.size() == parallel.size());
 	if (stages.empty())
 		return val;
 
@@ -2134,7 +2146,12 @@ static Value *codegenPipe(BaseFunc *base,
 	Function *func = block->getParent();
 
 	Expr *stage = stages.front();
+	bool parallelize = parallel.front();
 	stages.pop();
+	parallel.pop();
+
+	if (parallelize)
+		throw exc::SeqException("this build of Seq does not support parallelism");
 
 	Value *val0 = val;
 	types::Type *type0 = type;
@@ -2239,8 +2256,9 @@ static Value *codegenPipe(BaseFunc *base,
 		drain->filled = filled;
 		drain->type = genType;
 		drain->stages = stages;
+		drain->parallel = parallel;
 
-		codegenPipe(base, val, type, entry, genDone, stages, tc, drain);
+		codegenPipe(base, val, type, entry, genDone, stages, parallel, tc, drain);
 		genType->destroy(gen, genDone);
 
 		{
@@ -2292,7 +2310,7 @@ static Value *codegenPipe(BaseFunc *base,
 		type = genType->getBaseType(0);
 		val = type->is(types::Void) ? nullptr : genType->promise(gen, block);
 
-		codegenPipe(base, val, type, entry, block, stages, tc, drain);
+		codegenPipe(base, val, type, entry, block, stages, parallel, tc, drain);
 
 		builder.SetInsertPoint(block);
 		builder.CreateBr(loop0);
@@ -2310,7 +2328,7 @@ static Value *codegenPipe(BaseFunc *base,
 		/*
 		 * Simple function -- just a plain call
 		 */
-		return codegenPipe(base, val, type, entry, block, stages, tc, drain);
+		return codegenPipe(base, val, type, entry, block, stages, parallel, tc, drain);
 	}
 }
 
@@ -2320,8 +2338,13 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	Function *func = block->getParent();
 
 	std::queue<Expr *> queue;
+	std::queue<bool> parallelQueue;
+
 	for (auto *stage : stages)
 		queue.push(stage);
+
+	for (bool parallelize : parallel)
+		parallelQueue.push(parallelize);
 
 	BasicBlock *entry = block;
 	BasicBlock *start = BasicBlock::Create(context, "pipe_start", func);
@@ -2329,7 +2352,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 	TryCatch *tc = getTryCatch();
 	DrainState drain;
-	Value *result = codegenPipe(base, nullptr, nullptr, entry, block, queue, tc, &drain);
+	Value *result = codegenPipe(base, nullptr, nullptr, entry, block, queue, parallelQueue, tc, &drain);
 	IRBuilder<> builder(block);
 
 	if (drain.states) {
@@ -2382,7 +2405,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		builder.CreateCondBr(done, finalize, notDoneLoop0);
 
 		Value *val = genType->promise(gen, finalize);
-		codegenPipe(base, val, genType->getBaseType(0), entry, finalize, drain.stages, tc, &drain);
+		codegenPipe(base, val, genType->getBaseType(0), entry, finalize, drain.stages, drain.parallel, tc, &drain);
 		genType->destroy(gen, finalize);
 		builder.SetInsertPoint(finalize);
 		builder.CreateBr(loop0);
@@ -2424,5 +2447,5 @@ PipeExpr *PipeExpr::clone(Generic *ref)
 	std::vector<Expr *> stagesCloned;
 	for (auto *stage : stages)
 		stagesCloned.push_back(stage->clone(ref));
-	SEQ_RETURN_CLONE(new PipeExpr(stagesCloned));
+	SEQ_RETURN_CLONE(new PipeExpr(stagesCloned, parallel));
 }
