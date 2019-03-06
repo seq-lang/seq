@@ -217,6 +217,11 @@ FOREIGN Expr *pipe_expr(Expr **args, size_t size)
 	return new PipeExpr(vector<Expr *>(args, args + size));
 }
 
+FOREIGN void pipe_expr_set_parallel(PipeExpr *pipe, unsigned which)
+{
+	pipe->setParallel(which);
+}
+
 FOREIGN Expr *get_elem_expr(Expr *lhs, char *rhs)
 {
 	auto t = new GetElemExpr(lhs, string(rhs));
