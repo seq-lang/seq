@@ -232,12 +232,11 @@ struct
     Llvm.Expr.binary ~inplace lh_expr bop rh_expr
 
   and parse_pipe ctx _ exprs =
-    let exprs = List.mapi exprs ~f:(fun i (pipe, expr) ->
-      let expr = parse ctx expr in 
-      if pipe = "||>" then
-        Llvm.Expr.set_parallel expr i;
-      expr) in
-    Llvm.Expr.pipe exprs
+    let exprs' = List.map exprs ~f:(fun (_, e) -> parse ctx e) in
+    let ret = Llvm.Expr.pipe exprs' in
+    List.iteri exprs ~f:(fun i (pipe, _) ->
+      if pipe = "||>" then Llvm.Expr.set_parallel ret i);
+    ret
 
   (** Parses index expression which also includes type realization rules.
       Check GOTCHAS for details. *)
