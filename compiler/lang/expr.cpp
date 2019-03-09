@@ -2136,22 +2136,21 @@ static Value *codegenPipe(BaseFunc *base,
                           std::queue<Expr *>& stages,
                           std::queue<bool>& parallel,
                           TryCatch *tc,
-                          DrainState *drain)
+                          DrainState *drain,
+                          bool inParallel)
 {
 	assert(stages.size() == parallel.size());
 	if (stages.empty())
 		return val;
 
 	LLVMContext& context = block->getContext();
+	Module *module = block->getModule();
 	Function *func = block->getParent();
 
 	Expr *stage = stages.front();
 	bool parallelize = parallel.front();
 	stages.pop();
 	parallel.pop();
-
-	if (parallelize)
-		throw exc::SeqException("this build of Seq does not support parallelism");
 
 	Value *val0 = val;
 	types::Type *type0 = type;
@@ -2186,6 +2185,8 @@ static Value *codegenPipe(BaseFunc *base,
 		 * this point in the pipeline, as well as a "drain" loop after
 		 * the pipeline to complete any remaining calls.
 		 */
+		if (parallelize || inParallel)
+			throw exc::SeqException("parallel prefetch transformation currently not supported");
 
 		BasicBlock *preamble = base->getPreamble();
 		IRBuilder<> builder(preamble);
@@ -2258,7 +2259,7 @@ static Value *codegenPipe(BaseFunc *base,
 		drain->stages = stages;
 		drain->parallel = parallel;
 
-		codegenPipe(base, val, type, entry, genDone, stages, parallel, tc, drain);
+		codegenPipe(base, val, type, entry, genDone, stages, parallel, tc, drain, inParallel);
 		genType->destroy(gen, genDone);
 
 		{
@@ -2292,6 +2293,15 @@ static Value *codegenPipe(BaseFunc *base,
 		BasicBlock *loop0 = loop;
 		builder.CreateBr(loop);
 
+#if SEQ_HAS_TAPIR
+		Value *syncReg = nullptr;
+		if (parallelize) {
+			builder.SetInsertPoint(loop);
+			Function *syncStart = Intrinsic::getDeclaration(module, Intrinsic::syncregion_start);
+			syncReg = builder.CreateCall(syncStart);
+		}
+#endif
+
 		if (tc) {
 			BasicBlock *normal = BasicBlock::Create(context, "normal", func);
 			BasicBlock *unwind = tc->getExceptionBlock();
@@ -2310,17 +2320,52 @@ static Value *codegenPipe(BaseFunc *base,
 		type = genType->getBaseType(0);
 		val = type->is(types::Void) ? nullptr : genType->promise(gen, block);
 
-		codegenPipe(base, val, type, entry, block, stages, parallel, tc, drain);
+#if SEQ_HAS_TAPIR
+		if (parallelize) {
+			BasicBlock *unwind = tc ? tc->getExceptionBlock() : nullptr;
+			BasicBlock *detach = BasicBlock::Create(context, "detach", func);
+			builder.SetInsertPoint(block);
+			if (unwind)
+				builder.CreateDetach(detach, loop0, unwind, syncReg);
+			else
+				builder.CreateDetach(detach, loop0, syncReg);
+			block = detach;
+		}
+#endif
+
+		if (parallelize)
+			inParallel = true;
+
+		codegenPipe(base, val, type, entry, block, stages, parallel, tc, drain, inParallel);
 
 		builder.SetInsertPoint(block);
-		builder.CreateBr(loop0);
+
+#if SEQ_HAS_TAPIR
+		if (parallelize) {
+			builder.CreateReattach(loop0, syncReg);
+		} else {
+#endif
+			builder.CreateBr(loop0);
+#if SEQ_HAS_TAPIR
+		}
+#endif
 
 		BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
 		branch->setSuccessor(0, cleanup);
+
+#if SEQ_HAS_TAPIR
+		if (parallelize) {
+			BasicBlock *cleanupReal = BasicBlock::Create(context, "cleanup_real", func);
+			builder.SetInsertPoint(cleanup);
+			builder.CreateSync(cleanupReal, syncReg);
+			cleanup = cleanupReal;
+		}
+#endif
+
 		genType->destroy(gen, cleanup);
 
-		builder.SetInsertPoint(cleanup);
 		BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+		builder.SetInsertPoint(cleanup);
 		builder.CreateBr(exit);
 		block = exit;
 		return nullptr;
@@ -2328,7 +2373,10 @@ static Value *codegenPipe(BaseFunc *base,
 		/*
 		 * Simple function -- just a plain call
 		 */
-		return codegenPipe(base, val, type, entry, block, stages, parallel, tc, drain);
+		if (parallelize)
+			throw exc::SeqException("function pipeline stage cannot be marked parallel");
+
+		return codegenPipe(base, val, type, entry, block, stages, parallel, tc, drain, inParallel);
 	}
 }
 
@@ -2352,7 +2400,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 
 	TryCatch *tc = getTryCatch();
 	DrainState drain;
-	Value *result = codegenPipe(base, nullptr, nullptr, entry, block, queue, parallelQueue, tc, &drain);
+	Value *result = codegenPipe(base, nullptr, nullptr, entry, block, queue, parallelQueue, tc, &drain, false);
 	IRBuilder<> builder(block);
 
 	if (drain.states) {
@@ -2405,7 +2453,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 		builder.CreateCondBr(done, finalize, notDoneLoop0);
 
 		Value *val = genType->promise(gen, finalize);
-		codegenPipe(base, val, genType->getBaseType(0), entry, finalize, drain.stages, drain.parallel, tc, &drain);
+		codegenPipe(base, val, genType->getBaseType(0), entry, finalize, drain.stages, drain.parallel, tc, &drain, false);
 		genType->destroy(gen, finalize);
 		builder.SetInsertPoint(finalize);
 		builder.CreateBr(loop0);

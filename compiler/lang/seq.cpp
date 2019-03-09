@@ -198,6 +198,11 @@ static TargetMachine *getTargetMachine(Triple triple,
 	                                   getCodeModel(), CodeGenOpt::Aggressive);
 }
 
+#if SEQ_HAS_TAPIR
+#include "llvm/Transforms/Tapir/CilkABI.h"
+#include "llvm/Transforms/Tapir/OpenMPABI.h"
+#endif
+
 static void optimizeModule(Module *module, bool debug)
 {
 	std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
@@ -230,6 +235,10 @@ static void optimizeModule(Module *module, bool debug)
 	unsigned optLevel = 3;
 	unsigned sizeLevel = 0;
 	PassManagerBuilder builder;
+
+#if SEQ_HAS_TAPIR
+	builder.tapirTarget = new CilkABI();
+#endif
 
 	if (!debug) {
 		builder.OptLevel = optLevel;

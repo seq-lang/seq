@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
-#include <gc.h>
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "lib.h"
 

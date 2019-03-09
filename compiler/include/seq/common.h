@@ -217,4 +217,10 @@ namespace seq {
 		return __x; \
 	} while (0)
 
+#if defined(TAPIR_VERSION_MAJOR)
+#define SEQ_HAS_TAPIR 1
+#else
+#define SEQ_HAS_TAPIR 0
+#endif
+
 #endif /* SEQ_COMMON_H */
