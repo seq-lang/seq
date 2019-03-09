@@ -2037,6 +2037,35 @@ ConstructExpr *ConstructExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new ConstructExpr(type->clone(ref), argsCloned));
 }
 
+MethodExpr::MethodExpr(Expr *self, Func *func) :
+    Expr(), self(self), func(func)
+{
+}
+
+void MethodExpr::resolveTypes()
+{
+	self->resolveTypes();
+	func->resolveTypes();
+}
+
+Value *MethodExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	types::MethodType *type = getType0();
+	Value *self = this->self->codegen(base, block);
+	Value *func = this->func->getFunc();
+	return type->make(self, func, block);
+}
+
+types::MethodType *MethodExpr::getType0() const
+{
+	return types::MethodType::get(self->getType(), func->getFuncType());
+}
+
+MethodExpr *MethodExpr::clone(Generic *ref)
+{
+	SEQ_RETURN_CLONE(new MethodExpr(self->clone(ref), func->clone(ref)));
+}
+
 OptExpr::OptExpr(Expr *val) : Expr(), val(val)
 {
 }

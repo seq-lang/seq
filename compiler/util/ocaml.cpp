@@ -333,6 +333,11 @@ FOREIGN Expr *gen_comp_expr(Expr *val, Var **captures, size_t len)
 	return new GenExpr(val, nullptr, vector<Var *>(captures, captures + len));
 }
 
+FOREIGN Expr *method_expr(Expr *self, Func *func)
+{
+	return new MethodExpr(self, func);
+}
+
 FOREIGN Expr *typeof_expr(Expr *val)
 {
 	return new TypeOfExpr(val);

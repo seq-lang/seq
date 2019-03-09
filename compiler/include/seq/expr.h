@@ -458,6 +458,18 @@ namespace seq {
 		ConstructExpr *clone(Generic *ref) override;
 	};
 
+	class MethodExpr : public Expr {
+	private:
+		Expr *self;
+		Func *func;
+	public:
+		MethodExpr(Expr *self, Func *method);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		types::MethodType *getType0() const override;
+		MethodExpr *clone(Generic *ref) override;
+	};
+
 	class OptExpr : public Expr {
 	private:
 		Expr *val;
