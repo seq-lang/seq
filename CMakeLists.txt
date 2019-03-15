@@ -12,10 +12,20 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 
 # Seq runtime library
+option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
                          runtime/exc.cpp)
+target_compile_options(seqrt PRIVATE -O3)
 target_link_libraries(seqrt gc)
+
+if(SEQ_THREADED)
+  target_compile_options(seqrt PRIVATE -fopenmp)
+  target_link_libraries(seqrt omp)
+  target_compile_definitions(seqrt PRIVATE THREADED=1)
+else()
+  target_compile_definitions(seqrt PRIVATE THREADED=0)
+endif()
 
 
 # Seq compiler library

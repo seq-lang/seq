@@ -4,12 +4,17 @@
 #include <vector>
 #include <array>
 #include <map>
-#include <mutex>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <cassert>
 #include <unwind.h>
+
+#if THREADED
+#include <omp.h>
+#define GC_THREADS
+#endif
+
 #include <gc.h>
 #include "lib.h"
 
@@ -25,6 +30,18 @@ void seq_exc_init();
 SEQ_FUNC void seq_init(seq_int_t flags)
 {
 	GC_INIT();
+
+#if THREADED
+	GC_allow_register_threads();
+
+	#pragma omp parallel
+	{
+		GC_stack_base sb;
+		GC_get_stack_base(&sb);
+		GC_register_my_thread(&sb);
+	}
+#endif
+
 	seq_exc_init();
 
 	if ((uint64_t)flags & SEQ_FLAG_FASTIO) {
@@ -44,34 +61,23 @@ SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line)
  * GC
  */
 
-#ifdef SEQ_THREADED
-static mutex _gc_lock;
-#define GC_LOCK() std::lock_guard<mutex> lock(_gc_lock)
-#else
-#define GC_LOCK()
-#endif
-
 SEQ_FUNC void *seq_alloc(size_t n)
 {
-	GC_LOCK();
 	return GC_MALLOC(n);
 }
 
 SEQ_FUNC void *seq_alloc_atomic(size_t n)
 {
-	GC_LOCK();
 	return GC_MALLOC_ATOMIC(n);
 }
 
 SEQ_FUNC void *seq_realloc(void *p, size_t n)
 {
-	GC_LOCK();
 	return GC_REALLOC(p, n);
 }
 
 SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data))
 {
-	GC_LOCK();
 	GC_REGISTER_FINALIZER(p, f, nullptr, nullptr, nullptr);
 }
 

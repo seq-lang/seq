@@ -237,7 +237,8 @@ static void optimizeModule(Module *module, bool debug)
 	PassManagerBuilder builder;
 
 #if SEQ_HAS_TAPIR
-	builder.tapirTarget = new CilkABI();
+	static OpenMPABI abi;
+	builder.tapirTarget = &abi;
 #endif
 
 	if (!debug) {
