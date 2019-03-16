@@ -58,6 +58,7 @@ namespace seq {
 		llvm::Function *initFunc;
 		llvm::Function *strlenFunc;
 		int flags;
+		llvm::Function *makeCanonicalMainFunc(llvm::Function *realMain);
 	public:
 		SeqModule();
 		Block *getBlock();

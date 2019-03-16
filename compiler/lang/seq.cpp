@@ -54,20 +54,53 @@ void SeqModule::resolveTypes()
 	scope->resolveTypes();
 }
 
-static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
+#if SEQ_HAS_TAPIR
+/*
+ * Adapted from Tapir OpenMP backend source
+ */
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Tapir/OpenMPABI.h"
+
+static OpenMPABI omp;
+
+extern StructType *IdentTy;
+extern FunctionType *Kmpc_MicroTy;
+extern Constant *DefaultOpenMPPSource;
+extern Constant *DefaultOpenMPLocation;
+extern PointerType *KmpRoutineEntryPtrTy;
+
+extern Type *getOrCreateIdentTy(Module *module);
+extern Value *getOrCreateDefaultLocation(Module *M);
+extern PointerType *getIdentTyPointerTy();
+extern FunctionType *getOrCreateKmpc_MicroTy(LLVMContext& context);
+extern PointerType *getKmpc_MicroPointerTy(LLVMContext& context);
+
+extern cl::opt<bool> fastOpenMP;
+
+static void resetOMPABI()
+{
+	IdentTy = nullptr;
+	Kmpc_MicroTy = nullptr;
+	DefaultOpenMPPSource = nullptr;
+	DefaultOpenMPLocation = nullptr;
+	KmpRoutineEntryPtrTy = nullptr;
+}
+#endif
+
+Function *SeqModule::makeCanonicalMainFunc(Function *realMain)
 {
 #define LLVM_I32() IntegerType::getInt32Ty(context)
-	LLVMContext& context = realMain->getContext();
+	LLVMContext &context = realMain->getContext();
 	Module *module = realMain->getParent();
 
 	types::ArrayType *arrType = types::ArrayType::get(types::Str);
 
 	auto *func = cast<Function>(
-	               module->getOrInsertFunction(
-	                 "main",
-	                 LLVM_I32(),
-	                 LLVM_I32(),
-	                 PointerType::get(IntegerType::getInt8PtrTy(context), 0)));
+			module->getOrInsertFunction(
+					"main",
+					LLVM_I32(),
+					LLVM_I32(),
+					PointerType::get(IntegerType::getInt8PtrTy(context), 0)));
 
 	func->setPersonalityFn(makePersonalityFunc(module));
 	auto argiter = func->arg_begin();
@@ -95,7 +128,7 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 
 	builder.SetInsertPoint(body);
 	Value *arg = builder.CreateLoad(builder.CreateGEP(argv, control));
-	Value *argLen = builder.CreateZExtOrTrunc(builder.CreateCall(strlen, arg), seqIntLLVM(context));
+	Value *argLen = builder.CreateZExtOrTrunc(builder.CreateCall(strlenFunc, arg), seqIntLLVM(context));
 	Value *str = types::Str->make(arg, argLen, body);
 	Value *idx = builder.CreateZExt(control, types::Int->getLLVMType(context));
 	arrType->callMagic("__setitem__", {types::Int, types::Str}, arr, {idx, str}, body, nullptr);
@@ -106,9 +139,73 @@ static Function *makeCanonicalMainFunc(Function *realMain, Function *strlen)
 
 	BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 	branch->setSuccessor(1, exit);
+	getArgVar()->store(this, arr, exit);
+	builder.SetInsertPoint(exit);
+	builder.CreateCall(initFunc, ConstantInt::get(seqIntLLVM(context), (uint64_t) flags));
+
+#if SEQ_HAS_TAPIR
+	/*
+	 * Put the entire program in a parallel+single region
+	 */
+	{
+	    getOrCreateKmpc_MicroTy(context);
+		getOrCreateIdentTy(module);
+		getOrCreateDefaultLocation(module);
+
+		auto *IdentTyPtrTy = getIdentTyPointerTy();
+
+		Type *forkParams[] = {IdentTyPtrTy, LLVM_I32(),
+		                      getKmpc_MicroPointerTy(module->getContext())};
+		FunctionType *forkFnTy = FunctionType::get(Type::getVoidTy(context), forkParams, true);
+		auto *forkFunc = cast<Function>(module->getOrInsertFunction("__kmpc_fork_call", forkFnTy));
+
+		Type *singleParams[] = {IdentTyPtrTy, LLVM_I32()};
+		FunctionType *singleFnTy = FunctionType::get(LLVM_I32(), singleParams, false);
+		auto *singleFunc = cast<Function>(module->getOrInsertFunction("__kmpc_single", singleFnTy));
+
+		Type *singleEndParams[] = {IdentTyPtrTy, LLVM_I32()};
+		FunctionType *singleEndFnTy = FunctionType::get(Type::getVoidTy(context), singleEndParams, false);
+		auto *singleEndFunc = cast<Function>(module->getOrInsertFunction("__kmpc_end_single", singleEndFnTy));
+
+		// make the proxy main function that will be called by __kmpc_fork_call:
+		std::vector<Type *> proxyArgs = {PointerType::get(LLVM_I32(), 0), PointerType::get(LLVM_I32(), 0)};
+		auto *proxyMainTy = FunctionType::get(Type::getVoidTy(context), proxyArgs, false);
+		auto *proxyMain = cast<Function>(module->getOrInsertFunction("seq.proxy_main", proxyMainTy));
+		proxyMain->setLinkage(GlobalValue::PrivateLinkage);
+		proxyMain->setPersonalityFn(makePersonalityFunc(module));
+		BasicBlock *proxyBlockEntry = BasicBlock::Create(context, "entry", proxyMain);
+		BasicBlock *proxyBlockMain = BasicBlock::Create(context, "main", proxyMain);
+		BasicBlock *proxyBlockExit = BasicBlock::Create(context, "exit", proxyMain);
+		builder.SetInsertPoint(proxyBlockEntry);
+
+		Value *tid = proxyMain->arg_begin();
+		tid = builder.CreateLoad(tid);
+		Value *singleCall = builder.CreateCall(singleFunc, {DefaultOpenMPLocation, tid});
+		Value *shouldExit = builder.CreateICmpEQ(singleCall, builder.getInt32(0));
+		builder.CreateCondBr(shouldExit, proxyBlockExit, proxyBlockMain);
+
+		builder.SetInsertPoint(proxyBlockExit);
+		builder.CreateRetVoid();
+
+		builder.SetInsertPoint(proxyBlockMain);
+		builder.CreateCall(realMain);
+		builder.CreateCall(singleEndFunc, {DefaultOpenMPLocation, tid});
+		builder.CreateRetVoid();
+
+		// actually make the fork call:
+		std::vector<Value *> forkArgs = {DefaultOpenMPLocation, builder.getInt32(0),
+		                                 builder.CreateBitCast(proxyMain, getKmpc_MicroPointerTy(context))};
+		builder.SetInsertPoint(exit);
+		builder.CreateCall(forkFunc, forkArgs);
+
+		// finally, tell Tapir to NOT create its own parallel regions, as we've done it here:
+		fastOpenMP.setValue(true);
+	}
+#else
+	builder.CreateCall(realMain);
+#endif
 
 	builder.SetInsertPoint(exit);
-	builder.CreateCall(realMain, {arr});
 	builder.CreateRet(ConstantInt::get(LLVM_I32(), 0));
 
 	return func;
@@ -126,20 +223,13 @@ void SeqModule::codegen(Module *module)
 	LLVMContext& context = module->getContext();
 	this->module = module;
 
-	types::Type *argsType = nullptr;
-	Value *args = nullptr;
-	argsType = types::ArrayType::get(types::Str);
-
 	func = cast<Function>(
 	         module->getOrInsertFunction(
 	           "seq.main",
-	           Type::getVoidTy(context),
-	           argsType->getLLVMType(context)));
+	           Type::getVoidTy(context)));
 
 	func->setLinkage(GlobalValue::PrivateLinkage);
 	func->setPersonalityFn(makePersonalityFunc(module));
-	auto argiter = func->arg_begin();
-	args = argiter;
 
 	/* preamble */
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
@@ -147,13 +237,9 @@ void SeqModule::codegen(Module *module)
 
 	initFunc = cast<Function>(module->getOrInsertFunction("seq_init", Type::getVoidTy(context), seqIntLLVM(context)));
 	initFunc->setCallingConv(CallingConv::C);
-	builder.CreateCall(initFunc, ConstantInt::get(seqIntLLVM(context), (uint64_t)flags));
 
 	strlenFunc = cast<Function>(module->getOrInsertFunction("strlen", seqIntLLVM(context), IntegerType::getInt8PtrTy(context)));
 	strlenFunc->setCallingConv(CallingConv::C);
-
-	assert(argsType != nullptr);
-	argVar->store(this, args, preambleBlock);
 
 	BasicBlock *entry = BasicBlock::Create(context, "entry", func);
 	BasicBlock *block = entry;
@@ -166,7 +252,7 @@ void SeqModule::codegen(Module *module)
 	builder.SetInsertPoint(preambleBlock);
 	builder.CreateBr(entry);
 
-	func = makeCanonicalMainFunc(func, strlenFunc);
+	func = makeCanonicalMainFunc(func);
 }
 
 static void verifyModuleFailFast(Module& module)
@@ -197,11 +283,6 @@ static TargetMachine *getTargetMachine(Triple triple,
 	                                   featuresStr, options, getRelocModel(),
 	                                   getCodeModel(), CodeGenOpt::Aggressive);
 }
-
-#if SEQ_HAS_TAPIR
-#include "llvm/Transforms/Tapir/CilkABI.h"
-#include "llvm/Transforms/Tapir/OpenMPABI.h"
-#endif
 
 static void optimizeModule(Module *module, bool debug)
 {
@@ -237,8 +318,7 @@ static void optimizeModule(Module *module, bool debug)
 	PassManagerBuilder builder;
 
 #if SEQ_HAS_TAPIR
-	static OpenMPABI abi;
-	builder.tapirTarget = &abi;
+	builder.tapirTarget = &omp;
 #endif
 
 	if (!debug) {
@@ -282,6 +362,10 @@ void SeqModule::compile(const std::string& out, bool debug)
 	if (debug)
 		errs() << *module;
 
+#if SEQ_HAS_TAPIR
+	resetOMPABI();
+#endif
+
 	std::error_code err;
 	raw_fd_ostream stream(out, err, llvm::sys::fs::F_None);
 
@@ -312,6 +396,10 @@ void SeqModule::execute(const std::vector<std::string>& args,
 
 	if (debug)
 		errs() << *module;
+
+#if SEQ_HAS_TAPIR
+	resetOMPABI();
+#endif
 
 	std::unique_ptr<Module> owner(module);
 	module = nullptr;
