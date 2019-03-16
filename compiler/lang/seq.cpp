@@ -90,17 +90,17 @@ static void resetOMPABI()
 Function *SeqModule::makeCanonicalMainFunc(Function *realMain)
 {
 #define LLVM_I32() IntegerType::getInt32Ty(context)
-	LLVMContext &context = realMain->getContext();
+	LLVMContext& context = realMain->getContext();
 	Module *module = realMain->getParent();
 
 	types::ArrayType *arrType = types::ArrayType::get(types::Str);
 
 	auto *func = cast<Function>(
-			module->getOrInsertFunction(
-					"main",
-					LLVM_I32(),
-					LLVM_I32(),
-					PointerType::get(IntegerType::getInt8PtrTy(context), 0)));
+	               module->getOrInsertFunction(
+	                 "main",
+	                 LLVM_I32(),
+	                 LLVM_I32(),
+	                 PointerType::get(IntegerType::getInt8PtrTy(context), 0)));
 
 	func->setPersonalityFn(makePersonalityFunc(module));
 	auto argiter = func->arg_begin();
@@ -148,7 +148,7 @@ Function *SeqModule::makeCanonicalMainFunc(Function *realMain)
 	 * Put the entire program in a parallel+single region
 	 */
 	{
-	    getOrCreateKmpc_MicroTy(context);
+		getOrCreateKmpc_MicroTy(context);
 		getOrCreateIdentTy(module);
 		getOrCreateDefaultLocation(module);
 
