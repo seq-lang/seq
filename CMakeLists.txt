@@ -51,7 +51,6 @@ add_library(seq SHARED compiler/include/seq/any.h
                        compiler/include/seq/ref.h
                        compiler/include/seq/seq.h
                        compiler/include/seq/seqt.h
-                       compiler/include/seq/source.h
                        compiler/include/seq/stmt.h
                        compiler/include/seq/types.h
                        compiler/include/seq/void.h
@@ -75,7 +74,6 @@ add_library(seq SHARED compiler/include/seq/any.h
                        compiler/types/record.cpp
                        compiler/types/ref.cpp
                        compiler/types/seqt.cpp
-                       compiler/types/source.cpp
                        compiler/types/types.cpp
                        compiler/types/void.cpp
                        compiler/util/ocaml.cpp)

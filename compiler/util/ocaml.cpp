@@ -16,7 +16,6 @@ FOREIGN types::Type *int_type()         { return types::Int; }
 FOREIGN types::Type *float_type()       { return types::Float; }
 FOREIGN types::Type *str_type()         { return types::Str; }
 FOREIGN types::Type *str_seq_type()     { return types::Seq; }
-FOREIGN types::Type *source_type()      { return types::Raw; }
 FOREIGN types::Type *generic_type()     { return types::GenericType::get(); }
 
 FOREIGN types::Type *iN_type(unsigned len)
