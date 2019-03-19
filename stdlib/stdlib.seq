@@ -62,6 +62,12 @@ def enum(x):
         yield (i,a)
         i += 1
 
+def zip(a, b):
+    bi = iter(b)
+    for i in a:
+        if bi.done(): break
+        yield (i, bi.next())
+
 def filter(f, x):
     for a in x:
         if f(a):
@@ -129,6 +135,12 @@ extend str:
         memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
 
+    def __slice_right__(self: str, a: int):
+        if a < 0:
+            a = len(self) + a
+        assert 0 <= a <= len(self)
+        return str(self.ptr + a, len(self) - a)
+
     def c_str(self: str):
         n = len(self)
         assert n >= 0
@@ -138,6 +150,21 @@ extend str:
         p[n] = byte(0)
         return p
 
+    def __iter__(self: str):
+        n = len(self)
+        for i in range(n):
+            yield self[i]
+
+    def __mul__(self: str, x: int):
+        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
+        total = x * self.len
+        p = ptr[byte](total)
+        n = 0
+        for _ in range(x):
+            memcpy(p + n, self.ptr, self.len)
+            n += self.len
+        return str(p, total)
+        
     def cat(v: list[str]):
         extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
         total = 0
@@ -149,6 +176,21 @@ extend str:
             memcpy(p + n, s.ptr, s.len)
             n += s.len
         return str(p, total)
+
+    def cati(v: generator[str], total: int):
+        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
+        p = ptr[byte](total)
+        n = 0
+        for s in v:
+            memcpy(p + n, s.ptr, s.len)
+            n += s.len
+        return str(p, total)
+
+
+    def join(self: str, l: list[str]):
+        if self == "":
+            return str.cat(l)
+        assert False
 
 extend seq:
     def __hash__(self: seq):
