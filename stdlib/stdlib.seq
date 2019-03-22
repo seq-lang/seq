@@ -85,6 +85,7 @@ def enumerate(x):
 
 def echo(x):
     print x
+    return x
 
 def reversed(x):
     i = len(x)
@@ -224,7 +225,7 @@ extend seq:
         if idx < 0:
             idx += len(self)
         assert 0 <= idx <= len(self)
-        return str(self.ptr + idx, 1)
+        return seq(self.ptr + idx, 1)
 
     def __slice__(self: seq, a: int, b: int):
         if a < 0:
@@ -232,19 +233,19 @@ extend seq:
         if b < 0:
             b += len(self)
         assert 0 <= a <= b <= len(self)
-        return str(self.ptr + a, b - a)
+        return seq(self.ptr + a, b - a)
 
     def __slice_left__(self: seq, b: int):
         if b < 0:
             b += len(self)
         assert 0 <= b <= len(self)
-        return str(self.ptr, b)
+        return seq(self.ptr, b)
 
     def __slice_right__(self: seq, a: int):
         if a < 0:
             a += len(self)
         assert 0 <= a <= len(self)
-        return str(self.ptr + a, len(self) - a)
+        return seq(self.ptr + a, len(self) - a)
 
     def split(self: seq, k: int, step: int):
         i = 0
