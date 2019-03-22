@@ -135,9 +135,29 @@ extend str:
         memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
 
+    def __getitem__(self: str, idx: int):
+        if idx < 0:
+            idx += len(self)
+        assert 0 <= idx <= len(self)
+        return str(self.ptr + idx, 1)
+
+    def __slice__(self: str, a: int, b: int):
+        if a < 0:
+            a += len(self)
+        if b < 0:
+            b += len(self)
+        assert 0 <= a <= b <= len(self)
+        return str(self.ptr + a, b - a)
+
+    def __slice_left__(self: str, b: int):
+        if b < 0:
+            b += len(self)
+        assert 0 <= b <= len(self)
+        return str(self.ptr, b)
+
     def __slice_right__(self: str, a: int):
         if a < 0:
-            a = len(self) + a
+            a += len(self)
         assert 0 <= a <= len(self)
         return str(self.ptr + a, len(self) - a)
 
@@ -199,6 +219,32 @@ extend seq:
         for i in range(n):
             h = 31*h + int(p[i])
         return h
+
+    def __getitem__(self: seq, idx: int):
+        if idx < 0:
+            idx += len(self)
+        assert 0 <= idx <= len(self)
+        return str(self.ptr + idx, 1)
+
+    def __slice__(self: seq, a: int, b: int):
+        if a < 0:
+            a += len(self)
+        if b < 0:
+            b += len(self)
+        assert 0 <= a <= b <= len(self)
+        return str(self.ptr + a, b - a)
+
+    def __slice_left__(self: seq, b: int):
+        if b < 0:
+            b += len(self)
+        assert 0 <= b <= len(self)
+        return str(self.ptr, b)
+
+    def __slice_right__(self: seq, a: int):
+        if a < 0:
+            a += len(self)
+        assert 0 <= a <= len(self)
+        return str(self.ptr + a, len(self) - a)
 
     def split(self: seq, k: int, step: int):
         i = 0

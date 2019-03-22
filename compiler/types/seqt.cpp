@@ -196,32 +196,6 @@ void types::SeqType::initOps()
 			return b.CreateZExt(b.CreateICmpNE(len, zero), Bool->getLLVMType(b.getContext()));
 		}},
 
-		{"__getitem__", {Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
-			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-			ptr = b.CreateGEP(ptr, args[0]);
-			return make(ptr, oneLLVM(b.getContext()), b.GetInsertBlock());
-		}},
-
-		{"__slice__", {Int, Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
-			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-			ptr = b.CreateGEP(ptr, args[0]);
-			Value *len = b.CreateSub(args[1], args[0]);
-			return make(ptr, len, b.GetInsertBlock());
-		}},
-
-		{"__slice_left__", {Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
-			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-			return make(ptr, args[0], b.GetInsertBlock());
-		}},
-
-		{"__slice_right__", {Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
-			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-			Value *to = memb(self, "len", b.GetInsertBlock());
-			ptr = b.CreateGEP(ptr, args[0]);
-			Value *len = b.CreateSub(to, args[0]);
-			return make(ptr, len, b.GetInsertBlock());
-		}},
-
 		{"__setitem__", {Int, Seq}, Void, SEQ_MAGIC_CAPT(self, args, b) {
 			BasicBlock *block = b.GetInsertBlock();
 			Value *dest = memb(self, "ptr", block);
@@ -306,32 +280,6 @@ void types::StrType::initOps()
 			Value *len = memb(self, "len", b.GetInsertBlock());
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
 			return b.CreateZExt(b.CreateICmpNE(len, zero), Bool->getLLVMType(b.getContext()));
-		}},
-
-		{"__getitem__", {Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
-			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-			ptr = b.CreateGEP(ptr, args[0]);
-			return make(ptr, oneLLVM(b.getContext()), b.GetInsertBlock());
-		}},
-
-		{"__slice__", {Int, Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
-			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-			ptr = b.CreateGEP(ptr, args[0]);
-			Value *len = b.CreateSub(args[1], args[0]);
-			return make(ptr, len, b.GetInsertBlock());
-		}},
-
-		{"__slice_left__", {Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
-			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-			return make(ptr, args[0], b.GetInsertBlock());
-		}},
-
-		{"__slice_right__", {Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
-			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-			Value *to = memb(self, "len", b.GetInsertBlock());
-			ptr = b.CreateGEP(ptr, args[0]);
-			Value *len = b.CreateSub(to, args[0]);
-			return make(ptr, len, b.GetInsertBlock());
 		}},
 
 		{"__eq__", {Str}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
