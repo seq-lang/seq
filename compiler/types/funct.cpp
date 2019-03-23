@@ -186,7 +186,6 @@ void types::GenType::initOps()
 
 			Value *arg = func->arg_begin();
 			BasicBlock *entry = BasicBlock::Create(context, "entry", func);
-			resume(arg, entry, nullptr, nullptr);
 			Value *val = promise(arg, entry);
 			IRBuilder<> builder(entry);
 			builder.CreateRet(val);
@@ -210,6 +209,7 @@ void types::GenType::initOps()
 
 			Value *arg = func->arg_begin();
 			BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+			resume(arg, entry, nullptr, nullptr);
 			Value *val = done(arg, entry);
 			IRBuilder<> builder(entry);
 			val = builder.CreateZExt(val, Bool->getLLVMType(context));
