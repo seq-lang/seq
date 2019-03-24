@@ -293,6 +293,35 @@ void types::StrType::initOps()
 			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
 		}},
 	};
+
+	addMethod("memcpy", new BaseFuncLite({PtrType::get(Byte), PtrType::get(Byte), Int},
+	                                     Void,
+	                                     [](Module *module) {
+		const std::string name = "seq.memcpy";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			LLVMContext& context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  llvm::Type::getVoidTy(context),
+			                                                  IntegerType::getInt8PtrTy(context),
+			                                                  IntegerType::getInt8PtrTy(context),
+			                                                  seqIntLLVM(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			func->addFnAttr(Attribute::AlwaysInline);
+			auto iter = func->arg_begin();
+			Value *dst = iter++;
+			Value *src = iter++;
+			Value *len = iter;
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			makeMemCpy(dst, src, len, block);
+			IRBuilder<> builder(block);
+			builder.CreateRetVoid();
+		}
+
+		return func;
+	}), true);
 }
 
 Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block)
