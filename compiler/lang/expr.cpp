@@ -2227,11 +2227,6 @@ static Value *codegenPipe(BaseFunc *base,
 		builder.CreateStore(zeroLLVM(context), next);
 		builder.CreateStore(zeroLLVM(context), filled);
 
-		if (!types::is(type0->magicOut("__copy__", {}), type0))
-			throw exc::SeqException("__copy__ for " + type0->getName() + " returns a different type");
-
-		val0 = type0->callMagic("__copy__", {}, val0, {}, block, tc);
-
 		BasicBlock *notFull = BasicBlock::Create(context, "not_full", func);
 		BasicBlock *full = BasicBlock::Create(context, "full", func);
 		BasicBlock *exit = BasicBlock::Create(context, "exit", func);
