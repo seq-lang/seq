@@ -35,9 +35,9 @@ class set[`k]:
         for i in range(table.len):
             e = table[i]
             while e:
-                next = e.next
+                n = e.next
                 yield e
-                e = next
+                e = n
 
     def _insert(self: set[`k], table: array[_set_entry[`k]], e: _set_entry[`k]):
         idx = e.hash & (table.len - 1)

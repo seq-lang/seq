@@ -26,19 +26,19 @@ let exec_string ctx ?(file="<internal>") ?(debug=false) ?(jit=false) code =
     [Err.CompilerError]. Returns [Module] if successful. *)
 let init file error_handler =
   let mdl = Llvm.Module.init () in
-  let ctx = Ctx.init_module
-    ~filename:file
-    ~mdl
-    ~base:mdl
-    ~block:(Llvm.Module.block mdl)
-    (exec_string ~debug:false ~jit:false)
-  in 
   try
+    let ctx = Ctx.init_module
+      ~filename:file
+      ~mdl
+      ~base:mdl
+      ~block:(Llvm.Module.block mdl)
+      (exec_string ~debug:false ~jit:false)
+    in 
     (* parse the file *)
     Ctx.parse_file ctx file;
     Some ctx.mdl
   with CompilerError (typ, pos) ->
-    Ctx.dump ctx;
+    (* Ctx.dump ctx; *)
     error_handler typ pos;
     None
 

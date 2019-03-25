@@ -1,10 +1,12 @@
 def time():
-    type timeval(tv_sec: int, tv_usec: int)
-    extern c gettimeofday(ptr[timeval], ptr[void]) -> int
+		extern c seq_time() -> int
+		return seq_time()
+    # type timeval(tv_sec: int, tv_usec: int)
+    # extern c gettimeofday(ptr[timeval], ptr[void]) -> int
 
-    ts = timeval(-1, -1)
-    ret = gettimeofday(__ptr__(ts), ptr[void]())
-    assert ret == 0
+    # ts = timeval(-1, -1)
+    # ret = gettimeofday(__ptr__(ts), ptr[void]())
+    # assert ret == 0
 
-    time_ms = (ts.tv_sec * 1000000 + ts.tv_usec) / 1000.0
-    return time_ms
+    # time_ms = (ts.tv_sec * 1000000 + ts.tv_usec) / 1000.0
+    # return time_ms

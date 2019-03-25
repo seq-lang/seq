@@ -15,6 +15,7 @@
 #define GC_THREADS
 #endif
 
+#include <sys/time.h>
 #include <gc.h>
 #include "lib.h"
 
@@ -158,5 +159,29 @@ SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n)
 
 SEQ_FUNC void seq_print(seq_str_t str)
 {
-	cout.write(str.str, str.len);
+	fwrite(str.str, 1, str.len, stdout);
+	//cout.write(str.str, str.len);
+}
+
+SEQ_FUNC void *seq_stdin()
+{
+	return stdin;
+}
+
+SEQ_FUNC void *seq_stdout()
+{
+	return stdout;
+}
+
+SEQ_FUNC void *seq_stderr()
+{
+	return stderr;
+}
+
+SEQ_FUNC int seq_time()
+{
+	  struct timeval ts;
+  	gettimeofday(&ts, NULL);
+    int time_ms = (ts.tv_sec * 1000000 + ts.tv_usec) / 1000;
+    return time_ms;
 }

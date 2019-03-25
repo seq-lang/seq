@@ -37,9 +37,9 @@ class dict[`k,`v]:
         for i in range(table.len):
             e = table[i]
             while e:
-                next = e.next
+                n = e.next
                 yield e
-                e = next
+                e = n
 
     def _insert(self: dict[`k,`v], table: array[_dict_entry[`k,`v]], e: _dict_entry[`k,`v]):
         idx = e.hash & (table.len - 1)

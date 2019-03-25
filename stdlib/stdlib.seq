@@ -29,6 +29,12 @@ type range(lo: int, hi: int, step: int):
                 yield i
                 i += step
 
+def min(a, b):
+    return a if a < b else b
+
+def max(a, b):
+    return a if a > b else b
+
 def len(x):
     return x.__len__()
 
@@ -99,9 +105,33 @@ def round(x, n) -> float:
     n := pow(10.0, float(n))
     return round(float(x * n)) / n
 
+def sum(xi):
+    x = iter(xi)
+    if not x.done():
+        s = x.next()
+        while not x.done():
+            s += x.next()
+        x.destroy()
+        return s
+    else:
+        x.destroy()
+
 import! list
 import! dict
 import! set
+
+def sorted_cmp[`T](xi: list[`T], cmp):
+    x = copy(xi)
+    for i in range(0, len(x)):
+        for j in range(i + 1, len(x)):
+            if cmp(x[j], x[i]):
+                x[j], x[i] = x[i], x[j]
+    return x
+
+def sorted[`T](x: list[`T]):
+    def cmp(x: `T, y: `T):
+        return x < y
+    return sorted_cmp(x, cmp)
 
 extend int:
     def __pow__(self: int, exp: int):
@@ -118,6 +148,10 @@ extend int:
     def __pow__(self: int, exp: float):
         return float(self) ** exp
 
+    def __init__(self: int, s: str) -> int:
+        extern c atoi(p: ptr[byte]) -> int
+        return atoi(s.ptr)
+
 extend str:
     def __hash__(self: str):
         h = 0
@@ -127,13 +161,12 @@ extend str:
         return h
 
     def __add__(self: str, other: str):
-        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int) -> ptr[byte]
         len1 = self.len
         len2 = other.len
         len3 = len1 + len2
         p = ptr[byte](len3)
-        memcpy(p, self.ptr, len1)
-        memcpy(p + len1, other.ptr, len2)
+        str.memcpy(p, self.ptr, len1)
+        str.memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
 
     def __getitem__(self: str, idx: int):
@@ -153,13 +186,15 @@ extend str:
     def __slice_left__(self: str, b: int):
         if b < 0:
             b += len(self)
-        assert 0 <= b <= len(self)
+        if b > len(self):
+            b = len(self)
         return str(self.ptr, b)
 
     def __slice_right__(self: str, a: int):
         if a < 0:
             a += len(self)
-        assert 0 <= a <= len(self)
+        if a > len(self):
+            a = len(self)
         return str(self.ptr + a, len(self) - a)
 
     def c_str(self: str):
@@ -177,43 +212,68 @@ extend str:
             yield self[i]
 
     def __mul__(self: str, x: int):
-        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
         total = x * self.len
         p = ptr[byte](total)
         n = 0
         for _ in range(x):
-            memcpy(p + n, self.ptr, self.len)
+            str.memcpy(p + n, self.ptr, self.len)
             n += self.len
         return str(p, total)
 
     def cat(v: list[str]):
-        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
         total = 0
         for s in v:
             total += len(s)
         p = ptr[byte](total)
         n = 0
         for s in v:
-            memcpy(p + n, s.ptr, s.len)
+            str.memcpy(p + n, s.ptr, s.len)
             n += s.len
         return str(p, total)
 
     def cati(v: generator[str], total: int):
-        extern c memcpy(dst: ptr[byte], src: ptr[byte], num: int)
         p = ptr[byte](total)
         n = 0
         for s in v:
-            memcpy(p + n, s.ptr, s.len)
+            str.memcpy(p + n, s.ptr, s.len)
             n += s.len
         return str(p, total)
-
 
     def join(self: str, l: list[str]):
         if self == "":
             return str.cat(l)
         assert False
 
+    def copy(s: str) -> str:
+        t = seq(s.ptr, s.len).__copy__
+        return str(t.ptr, t.len)
+
+    def split(self: str, pat: str):
+        if len(pat) == 0:
+            for i in self: yield i
+        elif len(pat) == 1:
+            prev = 0
+            for i, s in enumerate(self):
+                if s == pat[0]:
+                    yield self[prev:i]
+                    prev = i + 1
+            yield self[prev:len(self)]
+        else:
+            i, l = 0, len(pat)
+            prev = 0
+            while i < len(self) - l + 1:
+                if self[i:i + l] == pat:
+                    yield self[prev:i]
+                    prev = i + l
+                    i += l
+                else:
+                    i += 1
+            yield self[prev:len(self)]
+
 extend seq:
+    def __init__(self: seq, s: str):
+        return seq(s.ptr, s.len)
+
     def __hash__(self: seq):
         h = 0
         p, n = self.ptr, self.len
@@ -304,6 +364,11 @@ class File:
     buf: ptr[ptr[byte]]
     sz: ptr[int]
 
+    def __init__(self: File, fp: ptr[byte]):
+        self.fp = fp
+        self.buf = ptr[ptr[byte]](1)
+        self.sz = ptr[int](1)
+
     def __init__(self: File, path: str, mode: str):
         extern c fopen(ptr[byte], ptr[byte]) -> ptr[byte]
         self.fp = fopen(path.ptr, mode.ptr)
@@ -326,12 +391,22 @@ class File:
             if rd != -1:
                 if self.buf[0][rd - 1] == byte(10):
                     rd -= 1
-                yield seq(self.buf[0], rd)
+                t = seq(self.buf[0], rd).__copy__()
+                yield str(t.ptr, t.len)
+                #yield str(self.buf[0], rd).copy()
             else:
                 break
 
     def readlines(self):
         return [l for l in self.__iter__()]
+
+    def write(self, s: str):
+        extern c fwrite(ptr[byte], int, int, ptr[byte]) -> int
+        fwrite(s.ptr, 1, s.len, self.fp)
+
+    def write_gen[`T](self, g: generator[`T]):
+        for s in g: 
+            self.write(str(s))
 
 def open(path: str, mode: str) -> File:
     return File(path, mode)
@@ -350,3 +425,15 @@ type FASTQ(file: File):
 
 def fastq(path: str):
     return iter(FASTQ(path))
+
+def ord(s: str):
+    return int(s.ptr[0])
+
+def chr(i: int):
+    p = ptr[byte](1) 
+    p[0] = byte(i)
+    return str(p, 1)
+
+def next(g):
+    g.done()
+    return g.next()
