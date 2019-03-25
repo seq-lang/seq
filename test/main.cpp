@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <unistd.h>
 #include <dirent.h>
 #include <seq/seq.h>
 #include <seq/parser.h>
@@ -54,15 +55,26 @@ static vector<string> findExpects(const string& filename)
 
 static bool runTest(const string& filename, bool debug)
 {
+	char buf[10000];
+	memset(buf, '\0', sizeof(buf));
 	cout << "TEST: " << filename << endl;
 	vector<string> expects = findExpects(filename);
-	stringstream buffer;
-	streambuf *old = cout.rdbuf(buffer.rdbuf());
+
+	/* redirect output to `buf` */
+	fflush(stdout);
+	int save = dup(STDOUT_FILENO);
+	freopen("NUL", "a", stdout);
+	setvbuf(stdout, buf, _IOFBF, sizeof(buf));
+
 	SeqModule *module = parse(filename);
-	module->setFlags(SEQ_FLAG_NONE);
 	execute(module, {}, {}, debug);
-	cout.rdbuf(old);
-	vector<string> results = splitlines(buffer.str());
+
+	/* redirect it back */
+	freopen("NUL", "a", stdout);
+	dup2(save, STDOUT_FILENO);
+	setvbuf(stdout, nullptr, _IONBF, 1024);
+
+	vector<string> results = splitlines(string(buf));
 
 	bool pass = true;
 	if (results.size() != expects.size()) {

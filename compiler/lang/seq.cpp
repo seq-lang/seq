@@ -18,7 +18,7 @@ static LLVMContext context;
 
 SeqModule::SeqModule() :
     BaseFunc(), scope(new Block()), argVar(new Var(types::ArrayType::get(types::Str))),
-    initFunc(nullptr), strlenFunc(nullptr), flags(SEQ_FLAG_FASTIO)
+    initFunc(nullptr), strlenFunc(nullptr)
 {
 	InitializeNativeTarget();
 	InitializeNativeTargetAsmPrinter();
@@ -42,11 +42,6 @@ Var *SeqModule::getArgVar()
 void SeqModule::setFileName(std::string file)
 {
 	module->setSourceFileName(file);
-}
-
-void SeqModule::setFlags(int flags)
-{
-	this->flags = flags;
 }
 
 void SeqModule::resolveTypes()
@@ -141,7 +136,7 @@ Function *SeqModule::makeCanonicalMainFunc(Function *realMain)
 	branch->setSuccessor(1, exit);
 	getArgVar()->store(this, arr, exit);
 	builder.SetInsertPoint(exit);
-	builder.CreateCall(initFunc, ConstantInt::get(seqIntLLVM(context), (uint64_t) flags));
+	builder.CreateCall(initFunc);
 
 #if SEQ_HAS_TAPIR
 	/*
@@ -235,7 +230,7 @@ void SeqModule::codegen(Module *module)
 	preambleBlock = BasicBlock::Create(context, "preamble", func);
 	IRBuilder<> builder(preambleBlock);
 
-	initFunc = cast<Function>(module->getOrInsertFunction("seq_init", Type::getVoidTy(context), seqIntLLVM(context)));
+	initFunc = cast<Function>(module->getOrInsertFunction("seq_init", Type::getVoidTy(context)));
 	initFunc->setCallingConv(CallingConv::C);
 
 	strlenFunc = cast<Function>(module->getOrInsertFunction("strlen", seqIntLLVM(context), IntegerType::getInt8PtrTy(context)));

@@ -54,14 +54,12 @@ namespace seq {
 		Var *argVar;
 		llvm::Function *initFunc;
 		llvm::Function *strlenFunc;
-		int flags;
 		llvm::Function *makeCanonicalMainFunc(llvm::Function *realMain);
 	public:
 		SeqModule();
 		Block *getBlock();
 		Var *getArgVar();
 		void setFileName(std::string file);
-		void setFlags(int flags);
 
 		void resolveTypes() override;
 		void codegen(llvm::Module *module) override;

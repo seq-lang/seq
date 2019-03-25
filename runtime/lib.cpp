@@ -28,7 +28,7 @@ using namespace std;
 
 void seq_exc_init();
 
-SEQ_FUNC void seq_init(seq_int_t flags)
+SEQ_FUNC void seq_init()
 {
 	GC_INIT();
 
@@ -44,11 +44,6 @@ SEQ_FUNC void seq_init(seq_int_t flags)
 #endif
 
 	seq_exc_init();
-
-	if ((uint64_t)flags & SEQ_FLAG_FASTIO) {
-		ios_base::sync_with_stdio(false);
-		cin.tie(nullptr);
-	}
 }
 
 SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line)
@@ -159,8 +154,7 @@ SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n)
 
 SEQ_FUNC void seq_print(seq_str_t str)
 {
-	fwrite(str.str, 1, str.len, stdout);
-	//cout.write(str.str, str.len);
+	fwrite(str.str, 1, (size_t)str.len, stdout);
 }
 
 SEQ_FUNC void *seq_stdin()
@@ -180,8 +174,8 @@ SEQ_FUNC void *seq_stderr()
 
 SEQ_FUNC int seq_time()
 {
-	  struct timeval ts;
-  	gettimeofday(&ts, NULL);
-    int time_ms = (ts.tv_sec * 1000000 + ts.tv_usec) / 1000;
-    return time_ms;
+	timeval ts;
+	gettimeofday(&ts, nullptr);
+	auto time_ms = (int)((ts.tv_sec * 1000000 + ts.tv_usec) / 1000);
+	return time_ms;
 }

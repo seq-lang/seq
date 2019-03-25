@@ -83,9 +83,6 @@ class AVLNode[`k,`v]:
             for i in self.right:
                 yield i
 
-def max(x, y):
-    return x if x > y else y
-
 def height(node):
     if node is None:
         return -1

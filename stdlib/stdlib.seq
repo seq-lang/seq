@@ -405,7 +405,7 @@ class File:
         fwrite(s.ptr, 1, s.len, self.fp)
 
     def write_gen[`T](self, g: generator[`T]):
-        for s in g: 
+        for s in g:
             self.write(str(s))
 
 def open(path: str, mode: str) -> File:
@@ -430,7 +430,7 @@ def ord(s: str):
     return int(s.ptr[0])
 
 def chr(i: int):
-    p = ptr[byte](1) 
+    p = ptr[byte](1)
     p[0] = byte(i)
     return str(p, 1)
 
