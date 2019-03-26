@@ -2173,7 +2173,6 @@ static Value *codegenPipe(BaseFunc *base,
 		return val;
 
 	LLVMContext& context = block->getContext();
-	Module *module = block->getModule();
 	Function *func = block->getParent();
 
 	Expr *stage = stages.front();
@@ -2318,6 +2317,7 @@ static Value *codegenPipe(BaseFunc *base,
 		builder.CreateBr(loop);
 
 #if SEQ_HAS_TAPIR
+		Module *module = block->getModule();
 		Value *syncReg = nullptr;
 		if (parallelize) {
 			builder.SetInsertPoint(loop);
