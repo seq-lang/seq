@@ -1,3 +1,5 @@
+import sys 
+
 class AVLNode[K,V]:
     key: K
     value: V
@@ -91,8 +93,6 @@ def height(node):
 
 def update_height(node):
     node.height = max(height(node.left), height(node.right)) + 1
-
-extern c exit(code: int) -> void
 
 class AVL[K,V]:
     root: AVLNode[K,V]
@@ -201,7 +201,7 @@ class AVL[K,V]:
         nd = self.find(k)
         if not nd:
             print 'whoops', k, 'not found'
-            exit(1)
+            sys.exit(1)
         return nd.value
 
     def __delitem__(self: AVL[K,V], k: K):

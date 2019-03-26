@@ -476,7 +476,8 @@ struct
         let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         Ctx.add ctx ~toplevel ~global:toplevel 
           name (Ctx.Namespace.Func (fn, names));
-        Llvm.Func.set_enclosing fn ctx.base;
+        if not toplevel then 
+          Llvm.Func.set_enclosing fn ctx.base;
         fn
     in
     
