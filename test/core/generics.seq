@@ -1,21 +1,21 @@
-class A[`a,`b,`c]:
-    a: `a
-    b: `b
-    c: `c
+class A[TA,TB,TC]:
+    a: TA
+    b: TB
+    c: TC
 
     def dump(a, b, c):
         print a, b, c
 
     # non-generic method:
-    def m0(self: A[`a,`b,`c], a: int):
+    def m0(self: A[TA,TB,TC], a: int):
         print a
 
     # basic generics:
-    def m1[`x](self: A[`a,`b,`c], other: A[`x,`x,`x]):
+    def m1[X](self: A[TA,TB,TC], other: A[X,X,X]):
         print other.a, other.b, other.c
 
     # non-generic method referencing outer generics:
-    def m2(a: `a, b: `b, c: `c):
+    def m2(a: TA, b: TB, c: TC):
         A.dump(a, b, c)
 
     # generic args:
@@ -23,8 +23,8 @@ class A[`a,`b,`c]:
         return self.a
 
     # lots of nesting:
-    def m4[`d](self: A[`a,`b,`c], d: `d):
-        def m5[`e](a: `a, b: `b, c: `c, d: `d, e: `e):
+    def m4[TD](self: A[TA,TB,TC], d: TD):
+        def m5[TE](a: TA, b: TB, c: TC, d: TD, e: TE):
             print a, b, c, d, e
         m5(self.a, self.b, self.c, d, d)
 
@@ -34,21 +34,21 @@ class A[`a,`b,`c]:
         A.dump(x.a, x.b, x.c)
 
     # deeply nested generic type:
-    def m6[`t](v: array[array[array[`t]]]):
+    def m6[T](v: array[array[array[T]]]):
         return v[0][0][0]
 
 # explicit realization:
-def m7[`t,`s]():
+def m7[T,S]():
     print "works"
 
-class B1[`t]:
-    a: `t
-    def foo[`s](self: `s) -> B1[int]:
+class B1[T]:
+    a: T
+    def foo[S](self: S) -> B1[int]:
         return B1[int](111)
 
-class B2[`t]:
-    a: `t
-    def foo[`s](self: B2[`s]):
+class B2[T]:
+    a: T
+    def foo[S](self: B2[S]):
         return B2[int](222)
 
 a1 = A(42, 3.14, "hello")

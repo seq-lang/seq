@@ -1,12 +1,12 @@
-class AVLNode[`k,`v]:
-    key: `k
-    value: `v
-    parent: AVLNode[`k,`v]
-    left: AVLNode[`k,`v]
-    right: AVLNode[`k,`v]
+class AVLNode[K,V]:
+    key: K
+    value: V
+    parent: AVLNode[K,V]
+    left: AVLNode[K,V]
+    right: AVLNode[K,V]
     height: int
 
-    def __init__(self: AVLNode[`k,`v], parent: AVLNode[`k,`v], k: `k, v: `v):
+    def __init__(self: AVLNode[K,V], parent: AVLNode[K,V], k: K, v: V):
         self.key = k
         self.value = v
         self.parent = parent
@@ -14,7 +14,7 @@ class AVLNode[`k,`v]:
         self.right = None
         self.height = -1
 
-    def find(self, k) -> AVLNode[`k,`v]:
+    def find(self, k) -> AVLNode[K,V]:
         if k == self.key:
             return self
         elif k < self.key:
@@ -74,7 +74,7 @@ class AVLNode[`k,`v]:
             self.key, s.key = s.key, self.key
             return s.delete()
 
-    def __iter__(self: AVLNode[`k,`v]) -> AVLNode[`k,`v]:
+    def __iter__(self: AVLNode[K,V]) -> AVLNode[K,V]:
         if self.left:
             for i in self.left:
                 yield i
@@ -94,18 +94,18 @@ def update_height(node):
 
 extern c exit(code: int) -> void
 
-class AVL[`k,`v]:
-    root: AVLNode[`k,`v]
+class AVL[K,V]:
+    root: AVLNode[K,V]
 
-    def __init__(self: AVL[`k,`v]):
+    def __init__(self: AVL[K,V]):
         self.root = None
 
-    def find(self, k) -> AVLNode[`k,`v]:
+    def find(self, k) -> AVLNode[K,V]:
         if not self.root:
             return None
         return self.root.find(k)
 
-    def find_min(self) -> AVLNode[`k,`v]:
+    def find_min(self) -> AVLNode[K,V]:
         if not self.root:
             return None
         return self.root.find_min()
@@ -168,7 +168,7 @@ class AVL[`k,`v]:
             node = node.parent
 
     def insert(self, k, v):
-        node = AVLNode[`k,`v](None, k, v)
+        node = AVLNode[K,V](None, k, v)
         if self.root is None:
             # The root's parent is None.
             self.root = node
@@ -176,14 +176,14 @@ class AVL[`k,`v]:
             self.root.insert(node)
         self.rebalance(node)
 
-    def delete(self, k) -> AVLNode[`k,`v]:
+    def delete(self, k) -> AVLNode[K,V]:
         node = self.find(k)
         if node is None:
             return None
         deleted = node  # make sure `deleted` has the right type
         deleted = None
         if node is self.root:
-            pseudoroot = AVLNode[`k,`v](None, 0, 0)
+            pseudoroot = AVLNode[K,V](None, 0, 0)
             pseudoroot.left = self.root
             self.root.parent = pseudoroot
             deleted = self.root.delete()
@@ -194,23 +194,23 @@ class AVL[`k,`v]:
             deleted = node.delete()
         self.rebalance(deleted.parent)
 
-    def __setitem__(self: AVL[`k,`v], k: `k, v: `v):
+    def __setitem__(self: AVL[K,V], k: K, v: V):
         self.insert(k, v)
 
-    def __getitem__(self: AVL[`k,`v], k: `k):
+    def __getitem__(self: AVL[K,V], k: K):
         nd = self.find(k)
         if not nd:
             print 'whoops', k, 'not found'
             exit(1)
         return nd.value
 
-    def __delitem__(self: AVL[`k,`v], k: `k):
+    def __delitem__(self: AVL[K,V], k: K):
         self.delete(k)
 
-    def __contains__(self: AVL[`k,`v], k: `k):
+    def __contains__(self: AVL[K,V], k: K):
         return self.find(k) is not None
 
-    def __iter__(self: AVL[`k,`v]):
+    def __iter__(self: AVL[K,V]):
         if self.root:
             for i in self.root:
                 yield i.key, i.value
