@@ -161,7 +161,7 @@ and read state = parse
       | "typeof"   -> P.TYPEOF     (cur_pos state lexbuf ~len)
       | "__ptr__"  -> P.PTR        (cur_pos state lexbuf ~len)
       | "extend"   -> P.EXTEND     (cur_pos state lexbuf ~len)
-      | "extern"   -> P.EXTERN     (cur_pos state lexbuf ~len)
+      | "cdef"     -> P.EXTERN     (cur_pos state lexbuf ~len)
       | "del"      -> P.DEL        (cur_pos state lexbuf ~len)
       | "None"     -> P.NONE       (cur_pos state lexbuf ~len)
       | "try"      -> P.TRY        (cur_pos state lexbuf ~len)
@@ -183,12 +183,6 @@ and read state = parse
   | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
   
   | "$" { escaped_id state lexbuf }
-
-  | '`' (ident as gen) { 
-    let len = 1 + (String.length gen) in
-    P.GENERIC (cur_pos state lexbuf ~len, "`" ^ gen) 
-  }
-
   | "(" { ignore_nl state; P.LP (cur_pos state lexbuf) }
   | ")" { aware_nl state;  P.RP (cur_pos state lexbuf) }
   | "[" { ignore_nl state; P.LS (cur_pos state lexbuf) }

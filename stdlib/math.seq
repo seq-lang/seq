@@ -1,7 +1,7 @@
-extern c log(x: float) -> float
-extern c exp(x: float) -> float
-extern c erf(x: float) -> float
-extern c sqrt(x: float) -> float
+cdef log(x: float) -> float
+cdef exp(x: float) -> float
+cdef erf(x: float) -> float
+cdef sqrt(x: float) -> float
 
 def factorial(x: int) -> int:
     r = 1

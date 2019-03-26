@@ -1,29 +1,29 @@
-class _dict_entry[`k,`v]:
-    k: `k
-    v: `v
+class _dict_entry[K,V]:
+    k: K
+    v: V
     hash: int
-    next: _dict_entry[`k,`v]
+    next: _dict_entry[K,V]
 
-    def __init__(self: _dict_entry[`k,`v], k: `k, v: `v, hash: int):
+    def __init__(self: _dict_entry[K,V], k: K, v: V, hash: int):
         self.k = k
         self.v = v
         self.hash = hash
         self.next = None
 
-    def eq(self: _dict_entry[`k,`v], k: `k, hash: int):
+    def eq(self: _dict_entry[K,V], k: K, hash: int):
         return self.hash == hash and self.k == k
 
-class dict[`k,`v]:
-    table: array[_dict_entry[`k,`v]]
+class dict[K,V]:
+    table: array[_dict_entry[K,V]]
     size: int
 
     def _make_table(len: int):
-        table = array[_dict_entry[`k,`v]](len)
+        table = array[_dict_entry[K,V]](len)
         for i in range(len):
             table[i] = None
         return table
 
-    def _find(self: dict[`k,`v], k: `k, h: int):
+    def _find(self: dict[K,V], k: K, h: int):
         idx = h & (self.table.len - 1)
         e = self.table[idx]
         while e:
@@ -32,7 +32,7 @@ class dict[`k,`v]:
             e = e.next
         return e
 
-    def _entry_iter(self: dict[`k,`v]):
+    def _entry_iter(self: dict[K,V]):
         table = self.table
         for i in range(table.len):
             e = table[i]
@@ -41,35 +41,35 @@ class dict[`k,`v]:
                 yield e
                 e = n
 
-    def _insert(self: dict[`k,`v], table: array[_dict_entry[`k,`v]], e: _dict_entry[`k,`v]):
+    def _insert(self: dict[K,V], table: array[_dict_entry[K,V]], e: _dict_entry[K,V]):
         idx = e.hash & (table.len - 1)
         e.next = table[idx]
         table[idx] = e
         self.size += 1
 
-    def _resize(self: dict[`k,`v]):
-        table = dict[`k,`v]._make_table(2 * self.table.len)
+    def _resize(self: dict[K,V]):
+        table = dict[K,V]._make_table(2 * self.table.len)
         for e in self._entry_iter():
             self._insert(table, e)
         self.table = table
 
-    def __init__(self: dict[`k,`v]):
-        self.table = dict[`k,`v]._make_table(16)
+    def __init__(self: dict[K,V]):
+        self.table = dict[K,V]._make_table(16)
         self.size = 0
 
-    def get(self: dict[`k,`v], k: `k, s: `v):
+    def get(self: dict[K,V], k: K, s: V):
         e = self._find(k, hash(k))
         return e.v if e else s
 
-    def __contains__(self: dict[`k,`v], k: `k):
+    def __contains__(self: dict[K,V], k: K):
         return self._find(k, hash(k)).__bool__()
 
-    def __getitem__(self: dict[`k,`v], k: `k):
+    def __getitem__(self: dict[K,V], k: K):
         e = self._find(k, hash(k))
         if e:
             return e.v
 
-    def __setitem__(self: dict[`k,`v], k: `k, v: `v):
+    def __setitem__(self: dict[K,V], k: K, v: V):
         h = hash(k)
         e = self._find(k, h)
         if e:
@@ -77,9 +77,9 @@ class dict[`k,`v]:
         else:
             if self.size*2 >= self.table.len:
                 self._resize()
-            self._insert(self.table, _dict_entry[`k,`v](k, v, h))
+            self._insert(self.table, _dict_entry[K,V](k, v, h))
 
-    def __delitem__(self: dict[`k,`v], k: `k):
+    def __delitem__(self: dict[K,V], k: K):
         h = hash(k)
         idx = h & (self.table.len - 1)
         e = self.table[idx]
@@ -97,29 +97,29 @@ class dict[`k,`v]:
             prev = e
             e = e.next
 
-    def keys(self: dict[`k,`v]):
+    def keys(self: dict[K,V]):
         for e in self._entry_iter():
             yield e.k
 
-    def values(self: dict[`k,`v]):
+    def values(self: dict[K,V]):
         for e in self._entry_iter():
             yield e.v
 
-    def items(self: dict[`k,`v]):
+    def items(self: dict[K,V]):
         for e in self._entry_iter():
             yield (e.k, e.v)
 
-    def __iter__(self: dict[`k,`v]):
+    def __iter__(self: dict[K,V]):
         return self.keys()
 
-    def __len__(self: dict[`k,`v]):
+    def __len__(self: dict[K,V]):
         return self.size
 
-    def iteritems(self: dict[`k, `v]):
+    def iteritems(self: dict[K, V]):
         for i in self._entry_iter():
             yield i.k, i.v
 
-    def __str__(self: dict[`k, `v]) -> str:
+    def __str__(self: dict[K, V]) -> str:
         n = len(self)
         if n == 0:
             return "{}"

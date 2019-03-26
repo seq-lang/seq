@@ -1,84 +1,84 @@
-class list[`t]:
-    arr: array[`t]
+class list[T]:
+    arr: array[T]
     len: int
 
-    def __init__(self: list[`t], arr: array[`t], len: int):
+    def __init__(self: list[T], arr: array[T], len: int):
         self.arr = arr
         self.len = len
 
-    def __init__(self: list[`t], cap: int):
-        self.arr = array[`t](cap)
+    def __init__(self: list[T], cap: int):
+        self.arr = array[T](cap)
         self.len = 0
 
-    def __init__(self: list[`t]):
-        self.arr = array[`t](10)
+    def __init__(self: list[T]):
+        self.arr = array[T](10)
         self.len = 0
 
-    def __init__(self: list[`t], it: generator[`t]):
-        self.arr = array[`t](10)
+    def __init__(self: list[T], it: generator[T]):
+        self.arr = array[T](10)
         self.len = 0
         for i in it:
             self.append(i)
 
-    def __init__(self: list[`t], other: list[`t]):
-        self.arr = array[`t](other.len)
+    def __init__(self: list[T], other: list[T]):
+        self.arr = array[T](other.len)
         self.len = 0
         for i in other:
             self.append(i)
 
-    def __len__(self: list[`t]):
+    def __len__(self: list[T]):
         return self.len
 
-    def __bool__(self: list[`t]):
+    def __bool__(self: list[T]):
         return self.len > 0
 
-    def __getitem__(self: list[`t], idx: int):
+    def __getitem__(self: list[T], idx: int):
         assert idx < len(self)
         return self.arr[idx]
 
-    def __setitem__(self: list[`t], idx: int, val: `t):
+    def __setitem__(self: list[T], idx: int, val: T):
         assert idx < len(self)
         self.arr[idx] = val
 
-    def __delitem__(self: list[`t], idx: int):
+    def __delitem__(self: list[T], idx: int):
         assert idx < len(self)
         while idx < self.len - 1:
             self.arr[idx] = self.arr[idx + 1]
             idx += 1
         self.len -= 1
 
-    def __slice__(self: list[`t], a: int, b: int):
+    def __slice__(self: list[T], a: int, b: int):
         assert 0 <= a <= b <= len(self)
-        return list[`t](self.arr[a:b], b - a)
+        return list[T](self.arr[a:b], b - a)
 
-    def __slice_left__(self: list[`t], b: int):
+    def __slice_left__(self: list[T], b: int):
         assert 0 <= b <= len(self)
-        return list[`t](self.arr[:b], b)
+        return list[T](self.arr[:b], b)
 
-    def __slice_right__(self: list[`t], a: int):
+    def __slice_right__(self: list[T], a: int):
         assert 0 <= a <= len(self)
-        return list[`t](self.arr[a:], self.len - a)
+        return list[T](self.arr[a:], self.len - a)
 
-    def __copy__(self: list[`t]):
-        return list[`t](self.arr.__copy__(), self.len)
+    def __copy__(self: list[T]):
+        return list[T](self.arr.__copy__(), self.len)
 
-    def __iter__(self: list[`t]):
+    def __iter__(self: list[T]):
         i = 0
         while i < self.len:
             yield self.arr[i]
             i += 1
 
-    def __add__(self: list[`t], other: list[`t]):
-        v = list[`t](self.len + other.len)
+    def __add__(self: list[T], other: list[T]):
+        v = list[T](self.len + other.len)
         for a in self:
             v.append(a)
         for a in other:
             v.append(a)
         return v
 
-    def __mul__(self: list[`t], n: int):
+    def __mul__(self: list[T], n: int):
         new_len = self.len * n
-        v = list[`t](new_len)
+        v = list[T](new_len)
         i = 0
         while i < n:
             j = 0
@@ -88,22 +88,22 @@ class list[`t]:
             i += 1
         return v
 
-    def _resize_if_full(self: list[`t]):
+    def _resize_if_full(self: list[T]):
         if self.len == self.arr.len:
             triple = 1 + 3*self.len
-            new_arr = array[`t](triple//2)
+            new_arr = array[T](triple//2)
             i = 0
             while i < self.len:
                 new_arr[i] = self.arr[i]
                 i += 1
             self.arr = new_arr
 
-    def append(self: list[`t], x: `t):
+    def append(self: list[T], x: T):
         self._resize_if_full()
         self.arr[self.len] = x
         self.len += 1
 
-    def insert(self: list[`t], idx: int, x: `t):
+    def insert(self: list[T], idx: int, x: T):
         self._resize_if_full()
         i = self.len
         while i > idx:
@@ -112,22 +112,22 @@ class list[`t]:
         self.arr[idx] = x
         self.len += 1
 
-    def pop(self: list[`t]):
+    def pop(self: list[T]):
         x = self[self.len - 1]
         self.len -= 1
         return x
 
-    def clear(self: list[`t]):
+    def clear(self: list[T]):
         self.len = 0
 
-    def count(self: list[`t], x: `t):
+    def count(self: list[T], x: T):
         count = 0
         for a in self:
             if a == x:
                 count += 1
         return count
 
-    def reverse(self: list[`t]):
+    def reverse(self: list[T]):
         i = 0
         while i < self.len//2:
             j = self.len - i - 1
@@ -136,7 +136,7 @@ class list[`t]:
             self[j] = x
             i += 1
 
-    def __str__(self: list[`t]) -> str:
+    def __str__(self: list[T]) -> str:
         n = len(self)
         if n == 0:
             return "[]"

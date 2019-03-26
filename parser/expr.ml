@@ -35,7 +35,7 @@ struct
       | FloatS         p -> parse_float    ctx pos (fst p) ~kind:(snd p)
       | String         p -> parse_str      ctx pos p
       | Seq            p -> parse_seq      ctx pos p
-      | Generic p | Id p -> parse_id       ctx pos p
+      | Id             p -> parse_id       ctx pos p
       | Tuple          p -> parse_tuple    ctx pos p
       | List           p -> parse_list     ctx pos p
       | Set            p -> parse_list     ctx pos p ~kind:"set"
@@ -276,7 +276,6 @@ struct
           Llvm.Expr.typ typ
         | ("func" | "elem" | "static") as kind ->
           Llvm.Generics.set_types ~kind lh_expr indices;
-          (* let typ = Llvm.Generics.Func.realize lh_expr indices in *)
           lh_expr
         | _ ->
           serr ~pos "wrong LHS for type realization"
@@ -442,7 +441,7 @@ struct
       Option.value_map c.next ~default:() ~f:(fun x -> walk_comp ctx ~f (snd x))
     in
     match node with
-    | Generic p | Id p -> 
+    | Id p -> 
       f ctx p
     | Tuple l | List l | Set l -> 
       List.iter l ~f:(walk ctx ~f)

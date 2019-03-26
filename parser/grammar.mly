@@ -59,7 +59,7 @@
 %token <Ast.Pos.t * float> FLOAT
 %token <Ast.Pos.t * (string * string)> INT_S
 %token <Ast.Pos.t * (float * string)> FLOAT_S
-%token <Ast.Pos.t * string> STRING ID GENERIC
+%token <Ast.Pos.t * string> STRING ID
 %token <Ast.Pos.t * string> REGEX SEQ
 
 /* blocks */
@@ -163,7 +163,6 @@ atom:
   | lists      { fst $1, List (snd $1) }
   | dict       { fst $1, Dict (snd $1) }
   | set        { fst $1, Set (snd $1) }
-  | generic    { fst $1, Generic (snd $1) } 
   | LP expr RP { $2 }
   | tuple_gen  { $1 }
   | dict_gen   { $1 }
@@ -176,9 +175,6 @@ atom:
 bool:
   | TRUE  { $1, true  }
   | FALSE { $1, false }
-generic:
-  | GENERIC 
-    { $1 }
 tuple: // Tuples: (1, 2, 3) 
   | LP RP
     { pos $1 $2, 
@@ -838,25 +834,25 @@ func:
           fn_stmts = s;
           fn_attrs = [] }) }
   // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
-  | EXTERN; lang = ID; dylib = dylib_spec?; name = ID;
+  | EXTERN; dylib = dylib_spec?; name = ID;
     LP params = separated_list(COMMA, extern_param); RP
     typ = func_ret_type?; NL
     { let typ = match typ with
         | Some typ -> typ
-        | None -> $7, Id("void")
+        | None -> $6, Id("void")
       in
       pos $1 (fst typ),
-      Extern (snd lang, dylib, snd name,
+      Extern ("c", dylib, snd name,
         (fst name, { name = snd name; typ = Some(typ) }), params) }
-  | EXTERN; lang = ID; dylib = dylib_spec?; name = ID; AS alt_name = ID
+  | EXTERN; dylib = dylib_spec?; name = ID; AS alt_name = ID
     LP params = separated_list(COMMA, extern_param); RP
     typ = func_ret_type?; NL
     { let typ = match typ with
         | Some typ -> typ
-        | None -> $7, Id("void")
+        | None -> $6, Id("void")
       in
       pos $1 (fst typ), 
-      Extern (snd lang, dylib, snd name,
+      Extern ("c", dylib, snd name,
         (fst name, { name = snd alt_name; typ = Some(typ) }), params) }
 
 // Extern paramerers
@@ -869,7 +865,7 @@ extern_param:
       { name = snd $1; typ = Some $2 } }
 // Generic specifiers
 generic_list:
-  | LS; separated_nonempty_list(COMMA, generic); RS 
+  | LS; separated_nonempty_list(COMMA, ID); RS 
     { $2 }
 // Parameter rule (a, a: type, a = b)
 func_param:

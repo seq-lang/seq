@@ -1,4 +1,4 @@
-extern c rand() -> int
+cdef rand() -> int
 
 def randint(a: int, b: int) -> int:
     return a + rand() % (b - a + 1)
@@ -8,5 +8,3 @@ def choice(iter):
     i = randint(0, l - 1)
     return iter[i]
 
-#extern c srand(what: int) -> void
-#srand(0)

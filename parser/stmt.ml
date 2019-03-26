@@ -76,28 +76,41 @@ struct
             | l -> l
         else stmts 
       in
-      List.iter stmts ~f:(function 
+      (* Pre-define NON-CONFLICTING FUNCTIONS!!! *)
+      (* List.iter stmts ~f:(function 
         | pos, Generic Function f ->
           let name = f.fn_name.name in
           if is_some @@ Ctx.in_block ctx name then
-            serr ~pos "function %s already exists" name;
-          let fn = Llvm.Func.func name in
-          let names = List.map f.fn_args ~f:(fun (_, x) -> x.name) in
-          Ctx.add ctx ~toplevel:true ~global:true
-            name (Ctx.Namespace.Func (fn, names))
+            Err.warn ~pos 
+              "function %s already defined: this definition applies below only" 
+              name
+          else begin 
+            let fn = Llvm.Func.func name in
+            let names = List.map f.fn_args ~f:(fun (_, x) -> x.name) in
+            Ctx.add ctx ~toplevel:true ~global:true
+              name (Ctx.Namespace.Func (fn, names))
+          end
         | pos, Generic Class cls ->
           if is_some @@ Ctx.in_scope ctx cls.class_name then
-            serr ~pos "class %s already exists" cls.class_name;
-          let typ = Llvm.Type.cls cls.class_name in
-          Ctx.add ctx ~toplevel:true ~global:true
-            cls.class_name (Ctx.Namespace.Type typ)
+            Err.warn ~pos 
+              "class %s already defined: this definition applies below only" 
+              cls.class_name
+          else begin 
+            let typ = Llvm.Type.cls cls.class_name in
+            Ctx.add ctx ~toplevel:true ~global:true
+              cls.class_name (Ctx.Namespace.Type typ)
+          end
         | pos, Generic Type cls ->
           if is_some @@ Ctx.in_scope ctx cls.class_name then
-            serr ~pos "type %s already exists" cls.class_name;
-          let typ = Llvm.Type.record [] [] cls.class_name in
-          Ctx.add ctx ~toplevel:true ~global:true
-            cls.class_name (Ctx.Namespace.Type typ)
-        | _ -> ());
+            Err.warn ~pos 
+              "class %s already defined: this definition applies below only" 
+              cls.class_name
+          else begin
+            let typ = Llvm.Type.record [] [] cls.class_name in
+            Ctx.add ctx ~toplevel:true ~global:true
+              cls.class_name (Ctx.Namespace.Type typ)
+          end
+        | _ -> ()); *)
       ignore @@ List.map stmts ~f:(parse ctx ~toplevel:true ~jit)
 
   (* ***************************************************************
@@ -131,13 +144,11 @@ struct
     | pos, Id var ->
       begin match Hashtbl.find ctx.map var with
         | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
-            when (not shadow) && (ctx.base = base) ->
+          when (not shadow) && (ctx.base = base) ->
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
               "type annotation is invalid here as %s is already defined" var;
           Llvm.Stmt.assign v rh_expr
-        | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
-          serr ~pos "cannot assign functions or types"
         | _ when jit && toplevel ->
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
@@ -145,7 +156,12 @@ struct
           let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
           Ctx.add ctx ~toplevel ~global:true var v;
           Llvm.Stmt.pass ()
-        | _ ->
+        | r ->
+          begin match r with 
+            | Some ((Ctx.Namespace.(Type _ | Func _ | Import _) as v, _) :: _) ->
+              Err.warn ~pos "shadowing type/function %s" var
+            | _ -> ()
+          end;
           let typ = Option.value_map typ 
             ~f:(E.parse_type ctx) ~default:Ctypes.null 
           in
@@ -169,12 +185,15 @@ struct
   and parse_declare ctx pos ~toplevel ~jit { name; typ } = 
     if jit then serr ~pos "JIT does not support this yet";
     match Hashtbl.find ctx.map name with
-    | Some ((Ctx.Namespace.(Type _ | Func _ | Import _), _) :: _) ->
-      serr ~pos "cannot assign functions or types"
     | Some ((Ctx.Namespace.Var _, { base; global; toplevel; _ }) :: _) 
         when ctx.base = base ->
       serr ~pos:(fst @@ Option.value_exn typ) "%s is already defined" name
-    | _ ->
+    | r ->
+      begin match r with 
+        | Some ((Ctx.Namespace.(Type _ | Func _ | Import _) as v, _) :: _) ->
+          Err.warn ~pos "shadowing type/function %s" name
+        | _ -> ()
+      end;
       let typ = E.parse_type ctx @@ Option.value_exn typ in
       let var_stmt = Llvm.Stmt.var ~typ Ctypes.null in
       let v = Llvm.Var.stmt var_stmt in
@@ -238,7 +257,7 @@ struct
 
   and parse_type_alias ctx pos ~toplevel (name, expr) =
     if is_some @@ Ctx.in_scope ctx name then
-      serr ~pos "%s already defined" name;
+      Err.warn ~pos "shadowing existing %s" name;
     let typ = E.parse_type ctx expr in
     Ctx.add ctx ~toplevel ~global:toplevel name (Ctx.Namespace.Type typ);
     Llvm.Stmt.pass ()
@@ -326,22 +345,10 @@ struct
   and parse_extern ctx pos ~toplevel 
     (lang, dylib, ctx_name, (_, { name; typ }), args) =
 
-    if lang <> "c" && lang <> "C" then
+    if lang <> "c" then
       serr ~pos "only C external functions are currently supported";
     if is_some @@ Ctx.in_block ctx ctx_name then
-      serr ~pos "function %s already exists" ctx_name;
-
-    (* match dylib with
-    | Some dylib ->
-      let code = sprintf 
-        "%s = function[%s](dlsym(dylib('%s'), '%s'))"
-        ctx_name 
-        ... 
-        dylib
-        name
-      in 
-      parse
-    | None -> *)
+      Err.warn ~pos "shadowing type/function %s" ctx_name;
     
     let names, types = 
       List.map args ~f:(fun (_, { name; typ }) ->
@@ -457,25 +464,20 @@ struct
   and parse_function ctx pos ?cls ?(toplevel=false)
     { fn_name = { name; typ }; fn_generics; fn_args; fn_stmts; fn_attrs } =
     
-    let fn = match cls, Ctx.in_block ctx name with
-      | Some cls, _ ->
+    let fn = match cls with
+      | Some cls ->
         let fn = Llvm.Func.func name in
         Llvm.Type.add_cls_method cls name fn;
         fn
-      | None, Some (Ctx.Namespace.Func (fn, _), _) when toplevel ->
-        fn 
-      | None, Some _ ->
-        Ctx.dump ctx;
-        serr ~pos "function %s already exists" name;
-      | None, None when not toplevel ->
+      | None ->
+        if is_some @@ Ctx.in_block ctx name then 
+          Err.warn ~pos "shadowing %s" name;
         let fn = Llvm.Func.func name in
         let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         Ctx.add ctx ~toplevel ~global:toplevel 
           name (Ctx.Namespace.Func (fn, names));
         Llvm.Func.set_enclosing fn ctx.base;
         fn
-      | None, None ->
-        failwith "function pre-register failed"
     in
     
     if is_none cls then begin
@@ -515,26 +517,16 @@ struct
   and parse_class ctx pos ~toplevel ?(is_type=false) cls =
     (* ((name, types, args, stmts) as stmt) *)
     let typ = 
-      if toplevel then 
-        (* classes and types are pre-registered *)
-        match Ctx.in_block ctx cls.class_name with
-        | Some (Ctx.Namespace.Type typ, _) ->
-          typ
-        | Some _ | None ->
-          failwith "class pre-register failed"
-      else begin
-        if is_some @@ Ctx.in_scope ctx cls.class_name then
-          serr ~pos "%s already defined" cls.class_name
-        else 
-          let typ = if is_type then
-            Llvm.Type.record [] [] cls.class_name
-          else 
-            Llvm.Type.cls cls.class_name
-          in 
-          Ctx.add ctx ~toplevel ~global:toplevel
-            cls.class_name (Ctx.Namespace.Type typ);
-          typ
-      end
+      if is_some @@ Ctx.in_scope ctx cls.class_name then
+        Err.warn ~pos "shadowing %s" cls.class_name;
+      let typ = if is_type then
+        Llvm.Type.record [] [] cls.class_name
+      else 
+        Llvm.Type.cls cls.class_name
+      in 
+      Ctx.add ctx ~toplevel ~global:toplevel
+        cls.class_name (Ctx.Namespace.Type typ);
+      typ
     in
     let new_ctx = 
       { ctx with 
@@ -712,13 +704,13 @@ struct
         | _, { name; typ = Some (typ) } -> 
           name, typ
         | pos, { name; typ = None }-> 
-          name, (pos, ExprNode.Generic (sprintf "``%s" name)))
+          name, (pos, ExprNode.Id (sprintf "'%s" name)))
       |> List.unzip
     in
     let type_args = List.map generic_types ~f:snd in
     let generic_args = List.filter_map types ~f:(fun x ->
       match snd x with
-      | Generic g when String.is_prefix g ~prefix:"``" -> Some g
+      | Id g when String.is_prefix g ~prefix:"'" -> Some g
       | _ -> None)
     in
     let generics = 

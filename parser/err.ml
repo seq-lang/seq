@@ -30,6 +30,19 @@ exception SyntaxError of string * Ast.Pos.t
 let serr ?(pos=Ast.Pos.dummy) fmt = 
   Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [pos]))) fmt
 
+
+let warn ?pos fmt =
+  let open Core in
+  let style = ANSITerminal.[Background Yellow; Bold; Foreground Black] in 
+  let codes = List.map style ~f:Util.style_to_string |> String.concat ~sep:";" in
+  let pos = Option.value_map pos 
+    ~f:(fun p -> sprintf " (%s:%d)" p.Ast.Pos.file p.Ast.Pos.line) 
+    ~default:""
+  in
+  Caml.Printf.fprintf stderr "\027[%sm Warning%s: " codes pos;
+  let fn, fno = Caml.Printf.kfprintf, Caml.Printf.fprintf in
+  fn (fun o -> fno o "\027[0m \n%!") stderr fmt 
+
 (** Helper to parse string exception messages passed from C++ library to 
     OCaml and to extract [Ast.Pos] information from them. 
     Currently done in a very primitive way by using '\b' as field separator.

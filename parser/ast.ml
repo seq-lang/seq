@@ -18,7 +18,6 @@ struct
       line: int;
       col: int;
       len: int }
-
   (** Creates dummy position for internal classes *)
   let dummy =
     { file = ""; line = -1; col = -1; len = 0 }
@@ -44,7 +43,6 @@ struct
     | FloatS         of (float * string)
     | String         of string
     | Seq            of string
-    | Generic        of generic
     | Id             of string
     | Unpack         of string
     | Tuple          of t list
@@ -67,8 +65,6 @@ struct
     | TypeOf         of t
     | Ptr            of t
     | Lambda         of (string tt list * t)
-  and generic = 
-    string
   and call =
     { name: string option;
       value: t }
@@ -90,7 +86,6 @@ struct
     | String x -> sprintf "'%s'" (String.escaped x)
     | Seq x -> sprintf "s'%s'" x
     | Id x -> sprintf "%s" x
-    | Generic x -> sprintf "`%s" x
     | Unpack x -> sprintf "*%s" x
     | Tuple l -> sprintf "(%s)" (ppl l ~f:to_string)
     | List l -> sprintf "[%s]" (ppl l ~f:to_string)
@@ -193,12 +188,12 @@ struct
       stmts: t list }
   and class_t = 
     { class_name: string;
-      generics: (ExprNode.generic tt) list;
+      generics: (string tt) list;
       args: param tt list option;
       members: generic tt list }
   and fn_t = 
     { fn_name: param;
-      fn_generics: (ExprNode.generic tt) list;
+      fn_generics: (string tt) list;
       fn_args: param tt list;
       fn_stmts: t list;
       fn_attrs: string tt list }
@@ -286,20 +281,6 @@ struct
       " : " ^ (ExprNode.to_string x))
     in
     sprintf "%s%s" name typ
-    (* | `Function(name, generics, params, stmts) -> 
-      sprintf "Def<%s>[%s; %s;\n%s]" (ppl generics ExprNode.to_string) (prn_vararg name) (ppl params prn_vararg) 
-                                     (ppl ~sep:"\n" stmts prn_stmt)
-    | `Extern(lang, dylib, name, params) -> 
-      let dylib = Option.value_map dylib ~default:"" ~f:(fun s -> ", " ^ s) in
-      sprintf "Extern<%s%s>[%s; %s]" lang dylib (prn_vararg name) (ppl params prn_vararg)
-    | `Class((name, _), generics, params, stmts) -> 
-      sprintf "Class<%s>[%s; %s;\n%s]" (ppl generics ExprNode.to_string ) name (ppl params prn_vararg) 
-                                       (ppl ~sep:"\n" stmts prn_stmt)
-    | `Extend((name, _), stmts) -> 
-      sprintf "Extend[%s;\n%s]" name (ppl ~sep:"\n" stmts prn_stmt)
-    | `Import(libraries) -> 
-      sprintf "Import[%s]" @@ ppl libraries (fun ((a, _), b) ->
-        Option.value_map b ~default:a ~f:(fun (b, _) -> a ^ " as " ^ b)) *)
 end
 
 (** Module AST node.

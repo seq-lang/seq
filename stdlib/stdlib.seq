@@ -100,8 +100,8 @@ def reversed(x):
         yield x[i]
 
 def round(x, n) -> float:
-    extern c round(float) -> float
-    extern c pow(float, float) -> float
+    cdef round(float) -> float
+    cdef pow(float, float) -> float
     n := pow(10.0, float(n))
     return round(float(x * n)) / n
 
@@ -120,7 +120,7 @@ import! list
 import! dict
 import! set
 
-def sorted_cmp[`T](xi: list[`T], cmp):
+def sorted_cmp[T](xi: list[T], cmp):
     x = copy(xi)
     for i in range(0, len(x)):
         for j in range(i + 1, len(x)):
@@ -128,8 +128,8 @@ def sorted_cmp[`T](xi: list[`T], cmp):
                 x[j], x[i] = x[i], x[j]
     return x
 
-def sorted[`T](x: list[`T]):
-    def cmp(x: `T, y: `T):
+def sorted[T](x: list[T]):
+    def cmp(x: T, y: T):
         return x < y
     return sorted_cmp(x, cmp)
 
@@ -149,7 +149,7 @@ extend int:
         return float(self) ** exp
 
     def __init__(self: int, s: str) -> int:
-        extern c atoi(p: ptr[byte]) -> int
+        cdef atoi(p: ptr[byte]) -> int
         return atoi(s.ptr)
 
 extend str:
@@ -313,19 +313,19 @@ extend seq:
             yield self[i:i+k]
             i += step
 
-    def kmersx[`k](self: seq, step: int):
-        k = `k.len()
+    def kmersx[K](self: seq, step: int):
+        k = K.len()
         n = len(self)
 
         if step >= k:
             # naive
             i = 0
             while i + k <= n:
-                yield `k(self[i:i+k])
+                yield K(self[i:i+k])
                 i += step
         elif n >= k:
             # sliding encoding
-            kmer = `k(self[:k])
+            kmer = K(self[:k])
             yield kmer
             i = 0
             while i + k + step <= n:
@@ -334,14 +334,14 @@ extend seq:
                 i += step
                 yield kmer
 
-    def kmers[`k](self: seq, step: int):
-        k = `k.len()
+    def kmers[K](self: seq, step: int):
+        k = K.len()
         n = len(self)
         i = 0
         while i + k <= n:
             sub = self[i:i+k]
             if not sub.N():
-                yield `k(sub)
+                yield K(sub)
             i += step
 
     def N(self: seq):
@@ -356,8 +356,8 @@ extend seq:
 def split(self: seq, k: int, step: int):
     return self.split(k, step)
 
-def kmers[`k](self: seq, step: int):
-    return self.kmers[`k](step)
+def kmers[K](self: seq, step: int):
+    return self.kmers[K](step)
 
 class File:
     fp: ptr[byte]
@@ -370,22 +370,22 @@ class File:
         self.sz = ptr[int](1)
 
     def __init__(self: File, path: str, mode: str):
-        extern c fopen(ptr[byte], ptr[byte]) -> ptr[byte]
+        cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
         self.fp = fopen(path.ptr, mode.ptr)
 
         self.buf = ptr[ptr[byte]](1)
         self.sz = ptr[int](1)
 
     def close(self):
-        extern c fclose(ptr[byte]) -> int
-        extern c free(ptr[byte]) -> void
+        cdef fclose(ptr[byte]) -> int
+        cdef free(ptr[byte]) -> void
         if self.fp:
             fclose(self.fp)
         if self.buf:
             free(self.buf[0])
 
     def __iter__(self: File):
-        extern c getline(ptr[ptr[byte]], n: ptr[int], file: ptr[byte]) -> int
+        cdef getline(ptr[ptr[byte]], n: ptr[int], file: ptr[byte]) -> int
         while True:
             rd = getline(self.buf, self.sz, self.fp)
             if rd != -1:
@@ -401,10 +401,10 @@ class File:
         return [l for l in self.__iter__()]
 
     def write(self, s: str):
-        extern c fwrite(ptr[byte], int, int, ptr[byte]) -> int
+        cdef fwrite(ptr[byte], int, int, ptr[byte]) -> int
         fwrite(s.ptr, 1, s.len, self.fp)
 
-    def write_gen[`T](self, g: generator[`T]):
+    def write_gen[T](self, g: generator[T]):
         for s in g:
             self.write(str(s))
 

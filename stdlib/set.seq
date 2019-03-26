@@ -1,27 +1,27 @@
-class _set_entry[`k]:
-    k: `k
+class _set_entry[T]:
+    k: T
     hash: int
-    next: _set_entry[`k]
+    next: _set_entry[T]
 
-    def __init__(self: _set_entry[`k], k: `k, hash: int):
+    def __init__(self: _set_entry[T], k: T, hash: int):
         self.k = k
         self.hash = hash
         self.next = None
 
-    def eq(self: _set_entry[`k], k: `k, hash: int):
+    def eq(self: _set_entry[T], k: T, hash: int):
         return self.hash == hash and self.k == k
 
-class set[`k]:
-    table: array[_set_entry[`k]]
+class set[T]:
+    table: array[_set_entry[T]]
     size: int
 
     def _make_table(len: int):
-        table = array[_set_entry[`k]](len)
+        table = array[_set_entry[T]](len)
         for i in range(len):
             table[i] = None
         return table
 
-    def _find(self: set[`k], k: `k, h: int):
+    def _find(self: set[T], k: T, h: int):
         idx = h & (self.table.len - 1)
         e = self.table[idx]
         while e:
@@ -30,7 +30,7 @@ class set[`k]:
             e = e.next
         return e
 
-    def _entry_iter(self: set[`k]) -> _set_entry[`k]:
+    def _entry_iter(self: set[T]) -> _set_entry[T]:
         table = self.table
         for i in range(table.len):
             e = table[i]
@@ -39,33 +39,33 @@ class set[`k]:
                 yield e
                 e = n
 
-    def _insert(self: set[`k], table: array[_set_entry[`k]], e: _set_entry[`k]):
+    def _insert(self: set[T], table: array[_set_entry[T]], e: _set_entry[T]):
         idx = e.hash & (table.len - 1)
         e.next = table[idx]
         table[idx] = e
         self.size += 1
 
-    def _resize(self: set[`k]):
-        table = set[`k]._make_table(2 * self.table.len)
+    def _resize(self: set[T]):
+        table = set[T]._make_table(2 * self.table.len)
         for e in self._entry_iter():
             self._insert(table, e)
         self.table = table
 
-    def __init__(self: set[`k]):
-        self.table = set[`k]._make_table(16)
+    def __init__(self: set[T]):
+        self.table = set[T]._make_table(16)
         self.size = 0
 
-    def __contains__(self: set[`k], k: `k):
+    def __contains__(self: set[T], k: T):
         return self._find(k, hash(k)).__bool__()
 
-    def add(self: set[`k], k: `k):
+    def add(self: set[T], k: T):
         h = hash(k)
         if not self._find(k, h):
             if self.size*2 >= self.table.len:
                 self._resize()
-            self._insert(self.table, _set_entry[`k](k, h))
+            self._insert(self.table, _set_entry[T](k, h))
 
-    def remove(self: set[`k], k: `k):
+    def remove(self: set[T], k: T):
         h = hash(k)
         idx = h & (self.table.len - 1)
         e = self.table[idx]
@@ -83,14 +83,14 @@ class set[`k]:
             prev = e
             e = e.next
 
-    def __iter__(self: set[`k]):
+    def __iter__(self: set[T]):
         for e in self._entry_iter():
             yield e.k
 
-    def __len__(self: set[`k]):
+    def __len__(self: set[T]):
         return self.size
 
-    def __str__(self: set[`k]) -> str:
+    def __str__(self: set[T]) -> str:
         n = len(self)
         if n == 0:
             return "{}"
