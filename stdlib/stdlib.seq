@@ -353,6 +353,15 @@ extend seq:
             i += 1
         return 0
 
+    def revcomp(self: seq):
+        p = self.ptr
+        a = 0
+        b = self.len - 1
+        while a < b:
+            p[a], p[b] = p[b].comp(), p[a].comp()
+            a += 1
+            b -= 1
+
 def split(self: seq, k: int, step: int):
     return self.split(k, step)
 

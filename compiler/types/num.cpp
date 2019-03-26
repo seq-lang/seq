@@ -698,6 +698,40 @@ void types::BoolType::initOps()
 	};
 }
 
+// ASCII complement table
+static GlobalVariable *getByteCompTable(Module *module, const std::string& name="seq.byte_comp_table")
+{
+	LLVMContext& context = module->getContext();
+	Type *ty = IntegerType::getInt8Ty(context);
+	GlobalVariable *table = module->getGlobalVariable(name);
+
+	if (!table) {
+		std::vector<Constant *> v(256, ConstantInt::get(ty, 0));
+
+		for (auto& a : v)
+			a = ConstantInt::get(ty, 'N');
+
+		v['A'] = ConstantInt::get(ty, 'T');
+		v['C'] = ConstantInt::get(ty, 'G');
+		v['G'] = ConstantInt::get(ty, 'C');
+		v['T'] = ConstantInt::get(ty, 'A');
+		v['a'] = ConstantInt::get(ty, 't');
+		v['c'] = ConstantInt::get(ty, 'g');
+		v['g'] = ConstantInt::get(ty, 'c');
+		v['t'] = ConstantInt::get(ty, 'a');
+
+		auto *arrTy = llvm::ArrayType::get(ty, v.size());
+		table = new GlobalVariable(*module,
+		                           arrTy,
+		                           true,
+		                           GlobalValue::PrivateLinkage,
+		                           ConstantArray::get(arrTy, v),
+		                           name);
+	}
+
+	return table;
+}
+
 void types::ByteType::initOps()
 {
 	if (!vtable.magic.empty())
@@ -745,6 +779,32 @@ void types::ByteType::initOps()
 			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
 		}},
 	};
+
+	addMethod("comp", new BaseFuncLite({Byte}, Byte, [](Module *module) {
+		const std::string name = "seq.byte_comp";
+		Function *func = module->getFunction(name);
+
+		if (!func) {
+			GlobalVariable *table = getByteCompTable(module);
+
+			LLVMContext &context = module->getContext();
+			func = cast<Function>(module->getOrInsertFunction(name,
+			                                                  Byte->getLLVMType(context),
+			                                                  Byte->getLLVMType(context)));
+			func->setDoesNotThrow();
+			func->setLinkage(GlobalValue::PrivateLinkage);
+			func->addFnAttr(Attribute::AlwaysInline);
+			Value *arg = func->arg_begin();
+			BasicBlock *block = BasicBlock::Create(context, "entry", func);
+			IRBuilder<> builder(block);
+			arg = builder.CreateZExt(arg, builder.getInt64Ty());
+			arg = builder.CreateInBoundsGEP(table, {builder.getInt64(0), arg});
+			arg = builder.CreateLoad(arg);
+			builder.CreateRet(arg);
+		}
+
+		return func;
+	}), true);
 }
 
 Type *types::IntType::getLLVMType(LLVMContext& context) const
