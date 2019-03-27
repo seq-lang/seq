@@ -711,14 +711,11 @@ static GlobalVariable *getByteCompTable(Module *module, const std::string& name=
 		for (auto& a : v)
 			a = ConstantInt::get(ty, 'N');
 
-		v['A'] = ConstantInt::get(ty, 'T');
-		v['C'] = ConstantInt::get(ty, 'G');
-		v['G'] = ConstantInt::get(ty, 'C');
-		v['T'] = ConstantInt::get(ty, 'A');
-		v['a'] = ConstantInt::get(ty, 't');
-		v['c'] = ConstantInt::get(ty, 'g');
-		v['g'] = ConstantInt::get(ty, 'c');
-		v['t'] = ConstantInt::get(ty, 'a');
+		std::string from = "ACBDGHKMNSRUTWVYacbdghkmnsrutwvy";
+		std::string to   = "TGVHCDMKNSYAAWBRTGVHCDMKNSYAAWBR";
+
+		for (unsigned i = 0; i < from.size(); i++)
+			v[from[i]] = ConstantInt::get(ty, (uint64_t)to[i]);
 
 		auto *arrTy = llvm::ArrayType::get(ty, v.size());
 		table = new GlobalVariable(*module,
