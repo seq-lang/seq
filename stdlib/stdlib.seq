@@ -176,25 +176,21 @@ extend str:
         return str(self.ptr + idx, 1)
 
     def __slice__(self: str, a: int, b: int):
-        if a < 0:
-            a += len(self)
-        if b < 0:
-            b += len(self)
+        if a < 0: a += len(self)
+        if b < 0: b += len(self)
+        if a > len(self): a = len(self)
+        if b > len(self): b = len(self)
         assert 0 <= a <= b <= len(self)
         return str(self.ptr + a, b - a)
 
     def __slice_left__(self: str, b: int):
-        if b < 0:
-            b += len(self)
-        if b > len(self):
-            b = len(self)
+        if b < 0: b += len(self)
+        if b > len(self): b = len(self)
         return str(self.ptr, b)
 
     def __slice_right__(self: str, a: int):
-        if a < 0:
-            a += len(self)
-        if a > len(self):
-            a = len(self)
+        if a < 0: a += len(self)
+        if a > len(self): a = len(self)
         return str(self.ptr + a, len(self) - a)
 
     def c_str(self: str):
@@ -288,23 +284,20 @@ extend seq:
         return seq(self.ptr + idx, 1)
 
     def __slice__(self: seq, a: int, b: int):
-        if a < 0:
-            a += len(self)
-        if b < 0:
-            b += len(self)
-        assert 0 <= a <= b <= len(self)
+        if a < 0: a += len(self)
+        if b < 0: b += len(self)
+        if a > len(self): a = len(self)
+        if b > len(self): b = len(self)
         return seq(self.ptr + a, b - a)
 
     def __slice_left__(self: seq, b: int):
-        if b < 0:
-            b += len(self)
-        assert 0 <= b <= len(self)
+        if b < 0: b += len(self)
+        if b > len(self): b = len(self)
         return seq(self.ptr, b)
 
     def __slice_right__(self: seq, a: int):
-        if a < 0:
-            a += len(self)
-        assert 0 <= a <= len(self)
+        if a < 0: a += len(self)
+        if a > len(self): a = len(self)
         return seq(self.ptr + a, len(self) - a)
 
     def split(self: seq, k: int, step: int):
@@ -362,11 +355,23 @@ extend seq:
             a += 1
             b -= 1
 
+def revcomp(s):
+    sp = s.__copy__()
+    sp.revcomp()
+    return sp
+
+def revcomp_inplace(sp):
+    sp.revcomp()
+    return sp
+
 def split(self: seq, k: int, step: int):
     return self.split(k, step)
 
 def kmers[K](self: seq, step: int):
     return self.kmers[K](step)
+
+class OSError:
+    msg: str
 
 class File:
     fp: ptr[byte]
@@ -381,7 +386,8 @@ class File:
     def __init__(self: File, path: str, mode: str):
         cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
         self.fp = fopen(path.ptr, mode.ptr)
-
+        if not self.fp:
+            raise OSError("File cannot be opened!")
         self.buf = ptr[ptr[byte]](1)
         self.sz = ptr[int](1)
 
@@ -393,19 +399,22 @@ class File:
         if self.buf:
             free(self.buf[0])
 
-    def __iter__(self: File):
+    def _iter(self: File):
         cdef getline(ptr[ptr[byte]], n: ptr[int], file: ptr[byte]) -> int
         while True:
             rd = getline(self.buf, self.sz, self.fp)
             if rd != -1:
                 if self.buf[0][rd - 1] == byte(10):
                     rd -= 1
-                t = seq(self.buf[0], rd).__copy__()
-                yield str(t.ptr, t.len)
-                #yield str(self.buf[0], rd).copy()
+                yield str(self.buf[0], rd)
             else:
                 break
 
+    def __iter__(self: File):
+        for i in self._iter():
+            t = seq(i.ptr, i.len).__copy__()
+            yield str(t.ptr, t.len)
+        
     def readlines(self):
         return [l for l in self.__iter__()]
 
@@ -426,14 +435,18 @@ type FASTQ(file: File):
 
     def __iter__(self: FASTQ):
         line = 0
-        for s in self.file:
+        for i in self.file._iter():
             if line % 4 == 1:
-                yield seq(s.ptr, s.len)
+                yield seq(i.ptr, i.len).__copy__()
             line += 1
         self.file.close()
 
 def fastq(path: str):
     return iter(FASTQ(path))
+
+def seqs(path: str):
+    for i in iter(File(path, 'r')):
+        yield seq(i.ptr, i.len)
 
 def ord(s: str):
     return int(s.ptr[0])

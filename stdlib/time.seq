@@ -1,1 +1,1 @@
-cdef seq_time as time () -> int
+cdef time as seq_time () -> int
