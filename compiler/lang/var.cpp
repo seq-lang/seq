@@ -12,8 +12,8 @@ static void ensureNonVoid(types::Type *type)
 static int nameIdx = 0;
 
 Var::Var(types::Type *type) :
-     name("seq.var." + std::to_string(nameIdx++)), type(type), ptr(nullptr),
-     module(nullptr), global(false), repl(false), mapped()
+    name("seq.var." + std::to_string(nameIdx++)), type(type), ptr(nullptr),
+    module(nullptr), global(false), repl(false), mapped()
 {
 }
 

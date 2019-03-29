@@ -2499,14 +2499,13 @@ types::Type *PipeExpr::getType0() const
 	for (auto *stage : stages) {
 		if (!type) {
 			type = stage->getType();
-			continue;
+		} else {
+			ValueExpr arg(type, nullptr);
+			CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
+			type = call.getType();
 		}
 
-		ValueExpr arg(type, nullptr);
-		CallExpr call(stage, {&arg});  // do this through CallExpr for type-parameter deduction
-		type = call.getType();
 		types::GenType *genType = type->asGen();
-
 		if (genType && (genType->fromPrefetch() || stage != stages.back()))
 			return types::Void;
 	}
