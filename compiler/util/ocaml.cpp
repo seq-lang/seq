@@ -347,6 +347,16 @@ FOREIGN Expr *ptr_expr(Var *val)
 	return new VarPtrExpr(val);
 }
 
+FOREIGN Expr *atomic_xchg_expr(Var *lhs, Expr *rhs) { return new AtomicExpr(AtomicExpr::Op::XCHG, lhs, rhs); }
+FOREIGN Expr *atomic_add_expr(Var *lhs, Expr *rhs)  { return new AtomicExpr(AtomicExpr::Op::ADD,  lhs, rhs); }
+FOREIGN Expr *atomic_sub_expr(Var *lhs, Expr *rhs)  { return new AtomicExpr(AtomicExpr::Op::SUB,  lhs, rhs); }
+FOREIGN Expr *atomic_and_expr(Var *lhs, Expr *rhs)  { return new AtomicExpr(AtomicExpr::Op::AND,  lhs, rhs); }
+FOREIGN Expr *atomic_nand_expr(Var *lhs, Expr *rhs) { return new AtomicExpr(AtomicExpr::Op::NAND, lhs, rhs); }
+FOREIGN Expr *atomic_or_expr(Var *lhs, Expr *rhs)   { return new AtomicExpr(AtomicExpr::Op::OR,   lhs, rhs); }
+FOREIGN Expr *atomic_xor_expr(Var *lhs, Expr *rhs)  { return new AtomicExpr(AtomicExpr::Op::XOR,  lhs, rhs); }
+FOREIGN Expr *atomic_max_expr(Var *lhs, Expr *rhs)  { return new AtomicExpr(AtomicExpr::Op::MAX,  lhs, rhs); }
+FOREIGN Expr *atomic_min_expr(Var *lhs, Expr *rhs)  { return new AtomicExpr(AtomicExpr::Op::MIN,  lhs, rhs); }
+
 /***** Statements *****/
 
 FOREIGN Stmt *pass_stmt()

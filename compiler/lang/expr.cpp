@@ -1135,6 +1135,57 @@ BOpExpr *BOpExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new BOpExpr(op, lhs->clone(ref), rhs->clone(ref), inPlace));
 }
 
+AtomicExpr::AtomicExpr(AtomicExpr::Op op, Var *lhs, Expr *rhs) :
+    Expr(types::Int), op(op), lhs(lhs), rhs(rhs)
+{
+}
+
+void AtomicExpr::resolveTypes()
+{
+	rhs->resolveTypes();
+}
+
+Value *AtomicExpr::codegen0(BaseFunc *base, BasicBlock*& block)
+{
+	if (!lhs->getType()->is(types::Int) || !rhs->getType()->is(types::Int))
+		throw exc::SeqException("atomic operations can only be done on ints");
+
+	const auto ord = AtomicOrdering::SequentiallyConsistent;
+	Value *ptr = lhs->getPtr(base);
+	Value *val = rhs->codegen(base, block);
+	IRBuilder<> builder(block);
+
+	switch (op) {
+		case XCHG:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::Xchg, ptr, val, ord);
+		case ADD:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::Add, ptr, val, ord);
+		case SUB:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::Sub, ptr, val, ord);
+		case AND:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::And, ptr, val, ord);
+		case NAND:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::Nand, ptr, val, ord);
+		case OR:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::Or, ptr, val, ord);
+		case XOR:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::Xor, ptr, val, ord);
+		case MAX:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::Max, ptr, val, ord);
+		case MIN:
+			return builder.CreateAtomicRMW(AtomicRMWInst::BinOp::Min, ptr, val, ord);
+		default:
+			assert(0);
+	}
+
+	return nullptr;
+}
+
+AtomicExpr *AtomicExpr::clone(Generic *ref)
+{
+	SEQ_RETURN_CLONE(new AtomicExpr(op, lhs->clone(ref), rhs->clone(ref)));
+}
+
 ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) :
     arr(arr), idx(idx)
 {

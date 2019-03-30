@@ -302,6 +302,30 @@ namespace seq {
 		BOpExpr *clone(Generic *ref) override;
 	};
 
+	class AtomicExpr : public Expr {
+	public:
+		enum Op {
+			XCHG,
+			ADD,
+			SUB,
+			AND,
+			NAND,
+			OR,
+			XOR,
+			MAX,
+			MIN,
+		};
+	private:
+		AtomicExpr::Op op;
+		Var *lhs;
+		Expr *rhs;
+	public:
+		AtomicExpr(AtomicExpr::Op op, Var *lhs, Expr *rhs);
+		void resolveTypes() override;
+		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
+		AtomicExpr *clone(Generic *ref) override;
+	};
+
 	class ArrayLookupExpr : public Expr {
 	private:
 		Expr *arr;
