@@ -122,11 +122,9 @@ struct
           then begin match shadow, snd rhs with
             | Update, _ -> 
               Llvm.Stmt.expr @@ E.parse ctx rhs
-            | _, Call ((_, Id ("min" as bop)), 
+            | _, Call ((_, Id bop), 
                        [_, { value = _, Id v; _ }; _, { value = e; _ }]) 
-            | _, Call ((_, Id ("max" as bop)), 
-                       [_, { value = _, Id v; _ }; _, { value = e; _ }]) 
-              when var = v ->
+              when var = v && (bop = "min" || bop = "max") ->
               Llvm.Stmt.expr @@ E.parse ctx 
                 (fst rhs, Binary (lhs, "inplace_" ^ bop, e)) 
             | _ -> 
