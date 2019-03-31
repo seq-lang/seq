@@ -119,9 +119,9 @@ struct
             serr ~pos:(fst @@ Option.value_exn typ) 
               "type annotation is invalid here as %s is already defined" var;
           let s = Llvm.Stmt.assign v rh_expr in
-          if global && ctx.base = base && Stack.exists ctx.flags ~f:((=) "atomic") then
+          if shadow <> Update && global && ctx.base = base && Stack.exists ctx.flags ~f:((=) "atomic") then
           begin
-            Err.warn ~pos "atomic load %s" var;
+            Err.warn ~pos "atomic store %s" var;
             Llvm.Stmt.set_atomic_assign s
           end;
           s
