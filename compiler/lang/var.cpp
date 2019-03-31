@@ -103,7 +103,7 @@ Value *Var::getPtr(BaseFunc *base)
 	return ptr;
 }
 
-Value *Var::load(BaseFunc *base, BasicBlock *block)
+Value *Var::load(BaseFunc *base, BasicBlock *block, bool atomic)
 {
 	if (!mapped.empty())
 		return mapped.top()->load(base, block);
@@ -111,15 +111,21 @@ Value *Var::load(BaseFunc *base, BasicBlock *block)
 	ensureNonVoid(getType());
 	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
-	Value *val = builder.CreateLoad(ptr);
+	auto *inst = builder.CreateLoad(ptr);
+	Value *val = inst;
 
-	if (repl)
-		val = builder.CreateLoad(val);
+	if (repl) {
+		inst = builder.CreateLoad(val);
+		val = inst;
+	}
+
+	if (atomic)
+		inst->setAtomic(AtomicOrdering::SequentiallyConsistent);
 
 	return val;
 }
 
-void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
+void Var::store(BaseFunc *base, Value *val, BasicBlock *block, bool atomic)
 {
 	if (!mapped.empty()) {
 		mapped.top()->store(base, val, block);
@@ -130,7 +136,9 @@ void Var::store(BaseFunc *base, Value *val, BasicBlock *block)
 	allocaIfNeeded(base);
 	IRBuilder<> builder(block);
 	Value *dest = repl ? builder.CreateLoad(ptr) : ptr;
-	builder.CreateStore(val, dest);
+	auto *inst = builder.CreateStore(val, dest);
+	if (atomic)
+		inst->setAtomic(AtomicOrdering::SequentiallyConsistent);
 }
 
 void Var::setType(types::Type *type)

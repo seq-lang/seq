@@ -160,6 +160,11 @@ FOREIGN Expr *var_expr(Var *v)
 	return new VarExpr(v);
 }
 
+FOREIGN void var_expr_set_atomic(VarExpr *ve)
+{
+	ve->setAtomic();
+}
+
 FOREIGN Expr *type_expr(types::Type *t)
 {
 	return new TypeExpr(t);
@@ -397,6 +402,11 @@ FOREIGN Var *var_stmt_var(VarStmt *v)
 FOREIGN Stmt *assign_stmt(Var *v, Expr *rhs)
 {
 	return new Assign(v, rhs);
+}
+
+FOREIGN void assign_stmt_set_atomic(Assign *a)
+{
+	a->setAtomic();
 }
 
 FOREIGN Stmt *assign_member_stmt(Expr *lh, char *name, Expr *rh)

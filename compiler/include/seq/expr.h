@@ -207,8 +207,10 @@ namespace seq {
 	class VarExpr : public Expr {
 	private:
 		Var *var;
+		bool atomic;
 	public:
-		explicit VarExpr(Var *var);
+		explicit VarExpr(Var *var, bool atomic=false);
+		void setAtomic();
 		llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block) override;
 		types::Type *getType0() const override;
 		VarExpr *clone(Generic *ref) override;

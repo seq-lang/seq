@@ -140,9 +140,14 @@ FuncStmt *FuncStmt::clone(Generic *ref)
 	SEQ_RETURN_CLONE(x);
 }
 
-Assign::Assign(Var *var, Expr *value) :
-    Stmt("(=)"), var(var), value(value)
+Assign::Assign(Var *var, Expr *value, bool atomic) :
+    Stmt("(=)"), var(var), value(value), atomic(atomic)
 {
+}
+
+void Assign::setAtomic()
+{
+	atomic = true;
 }
 
 void Assign::resolveTypes()
@@ -154,7 +159,7 @@ void Assign::codegen0(BasicBlock*& block)
 {
 	value->ensure(var->getType());
 	Value *val = value->codegen(getBase(), block);
-	var->store(getBase(), val, block);
+	var->store(getBase(), val, block, atomic);
 }
 
 Assign *Assign::clone(Generic *ref)
@@ -162,7 +167,7 @@ Assign *Assign::clone(Generic *ref)
 	if (ref->seenClone(this))
 		return (Assign *)ref->getClone(this);
 
-	auto *x = new Assign(var->clone(ref), value->clone(ref));
+	auto *x = new Assign(var->clone(ref), value->clone(ref), atomic);
 	ref->addClone(this, x);
 	Stmt::setCloneBase(x, ref);
 	SEQ_RETURN_CLONE(x);

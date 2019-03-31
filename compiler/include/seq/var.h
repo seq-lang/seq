@@ -27,8 +27,13 @@ namespace seq {
 		void mapTo(Var *other);
 		void unmap();
 		llvm::Value *getPtr(BaseFunc *base);
-		llvm::Value *load(BaseFunc *base, llvm::BasicBlock *block);
-		void store(BaseFunc *base, llvm::Value *val, llvm::BasicBlock *block);
+		llvm::Value *load(BaseFunc *base,
+		                  llvm::BasicBlock *block,
+		                  bool atomic=false);
+		void store(BaseFunc *base,
+		           llvm::Value *val,
+		           llvm::BasicBlock *block,
+		           bool atomic=false);
 		void setType(types::Type *type);
 		types::Type *getType();
 		Var *clone(Generic *ref);

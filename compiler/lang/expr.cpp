@@ -726,13 +726,18 @@ GenExpr *GenExpr::clone(Generic *ref)
 	SEQ_RETURN_CLONE(new GenExpr(val->clone(ref), body->clone(ref), capturesCloned));
 }
 
-VarExpr::VarExpr(Var *var) : var(var)
+VarExpr::VarExpr(Var *var, bool atomic) : var(var), atomic(atomic)
 {
+}
+
+void VarExpr::setAtomic()
+{
+	atomic = true;
 }
 
 Value *VarExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
-	return var->load(base, block);
+	return var->load(base, block, atomic);
 }
 
 types::Type *VarExpr::getType0() const
@@ -742,7 +747,7 @@ types::Type *VarExpr::getType0() const
 
 VarExpr *VarExpr::clone(Generic *ref)
 {
-	SEQ_RETURN_CLONE(new VarExpr(var->clone(ref)));
+	SEQ_RETURN_CLONE(new VarExpr(var->clone(ref), atomic));
 }
 
 VarPtrExpr::VarPtrExpr(Var *var) : var(var)

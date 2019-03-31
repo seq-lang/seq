@@ -56,8 +56,10 @@ namespace seq {
 	private:
 		Var *var;
 		Expr *value;
+		bool atomic;
 	public:
-		Assign(Var *var, Expr *value);
+		Assign(Var *var, Expr *value, bool atomic=false);
+		void setAtomic();
 		void resolveTypes() override;
 		void codegen0(llvm::BasicBlock*& block) override;
 		Assign *clone(Generic *ref) override;
