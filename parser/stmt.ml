@@ -120,16 +120,15 @@ struct
           if global && ctx.base = base 
                     && Stack.exists ctx.flags ~f:((=) "atomic") 
           then begin match shadow, snd rhs with
-            | Update, _ -> Llvm.Stmt.pass ()
-            | _, Call ((_, Dot ((_, Id "atomic"), ("min" as bop))), 
+            | Update, _ -> 
+              Llvm.Stmt.expr @@ E.parse ctx rhs
+            | _, Call ((_, Id ("min" as bop)), 
                        [_, { value = _, Id v; _ }; _, { value = e; _ }]) 
-            | _, Call ((_, Dot ((_, Id "atomic"), ("max" as bop))), 
+            | _, Call ((_, Id ("max" as bop)), 
                        [_, { value = _, Id v; _ }; _, { value = e; _ }]) 
               when var = v ->
-              let _ = E.parse ctx 
+              Llvm.Stmt.expr @@ E.parse ctx 
                 (fst rhs, Binary (lhs, "inplace_" ^ bop, e)) 
-              in
-              Llvm.Stmt.pass ()
             | _ -> 
               Err.warn ~pos "atomic store %s" var;
               let rh_expr = E.parse ctx rhs in
@@ -137,8 +136,7 @@ struct
               Llvm.Stmt.set_atomic_assign s;
               s
           end else
-            let rh_expr = E.parse ctx rhs in
-            Llvm.Stmt.assign v rh_expr
+            Llvm.Stmt.assign v @@ E.parse ctx rhs
         | _ when jit && toplevel ->
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
