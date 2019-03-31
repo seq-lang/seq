@@ -248,6 +248,8 @@ module Expr = struct
       | "&" -> "atomic_and_expr"
       | "|" -> "atomic_or_expr"
       | "^" -> "atomic_xor_expr"
+      | "min" -> "atomic_min_expr"
+      | "max" -> "atomic_max_expr"
       | _ -> failwith "atomic not supported"
     in
     foreign fn (Types.var @-> t @-> returning t) var rh

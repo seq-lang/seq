@@ -104,7 +104,6 @@ struct
       Llvm.Stmt.expr expr
 
   and parse_assign ctx pos ~toplevel ~jit (lhs, rhs, shadow, typ) =
-    let rh_expr = E.parse ctx rhs in
     match lhs with
     | pos, Id var ->
       begin match Hashtbl.find ctx.map var, shadow with
@@ -118,19 +117,33 @@ struct
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
               "type annotation is invalid here as %s is already defined" var;
-          (* let s = Llvm.Stmt.assign v rh_expr in *)
-          if global && ctx.base = base && Stack.exists ctx.flags ~f:((=) "atomic") then
-            if shadow <> Update then begin
+          if global && ctx.base = base 
+                    && Stack.exists ctx.flags ~f:((=) "atomic") 
+          then begin match shadow, snd rhs with
+            | Update, _ -> Llvm.Stmt.pass ()
+            | _, Call ((_, Dot ((_, Id "atomic"), ("min" as bop))), 
+                       [_, { value = _, Id v; _ }; _, { value = e; _ }]) 
+            | _, Call ((_, Dot ((_, Id "atomic"), ("max" as bop))), 
+                       [_, { value = _, Id v; _ }; _, { value = e; _ }]) 
+              when var = v ->
+              let _ = E.parse ctx 
+                (fst rhs, Binary (lhs, "inplace_" ^ bop, e)) 
+              in
+              Llvm.Stmt.pass ()
+            | _ -> 
               Err.warn ~pos "atomic store %s" var;
+              let rh_expr = E.parse ctx rhs in
               let s = Llvm.Stmt.assign v rh_expr in
               Llvm.Stmt.set_atomic_assign s;
               s
-            end else Llvm.Stmt.pass ()
-          else Llvm.Stmt.assign v rh_expr
+          end else
+            let rh_expr = E.parse ctx rhs in
+            Llvm.Stmt.assign v rh_expr
         | _ when jit && toplevel ->
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
               "type annotation is invalid in JIT mode here";
+          let rh_expr = E.parse ctx rhs in
           let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
           Ctx.add ctx ~toplevel ~global:true var v;
           Llvm.Stmt.pass ()
@@ -143,6 +156,7 @@ struct
           let typ = Option.value_map typ 
             ~f:(E.parse_type ctx) ~default:Ctypes.null 
           in
+          let rh_expr = E.parse ctx rhs in
           let var_stmt = Llvm.Stmt.var ~typ rh_expr in
           let v = Llvm.Var.stmt var_stmt in
           if toplevel then 
@@ -152,10 +166,12 @@ struct
           var_stmt
       end
     | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)
+      let rh_expr = E.parse ctx rhs in
       Llvm.Stmt.assign_member (E.parse ctx lh_lhs) lh_rhs rh_expr
     | pos, Index (var_expr, index_expr) -> (* a[x] = b *)
       let var_expr = E.parse ctx var_expr in
       let index_expr = E.parse ctx index_expr in
+      let rh_expr = E.parse ctx rhs in
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
     | _ ->
       serr ~pos "assignment requires Id / Dot / Index on LHS"

@@ -16,6 +16,7 @@ def f():
     global x, y
     x += 5  
     y = y + 5
+    x = atomic.min(x, 5)
     print 'in', x, y
 
 print x

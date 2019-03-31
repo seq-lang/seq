@@ -238,7 +238,7 @@ struct
       Llvm.Expr.binary ~inplace lh_expr bop rh_expr
     in
     match lh_expr, inplace, bop with
-    | (_, Id var), true, ("+" | "-" | "&" | "|" | "^")
+    | (_, Id var), true, ("+" | "-" | "&" | "|" | "^" | "min" | "max")
       when Stack.exists ctx.flags ~f:((=) "atomic") ->
       begin match Hashtbl.find ctx.map var with
       | Some ((Ctx.Namespace.Var v, { global; base; _ }) :: _) 
