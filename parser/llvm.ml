@@ -241,7 +241,7 @@ module Expr = struct
     in
     fn lh rh
 
-  let atomic_binary lh bop rh = 
+  let atomic_binary var bop rh = 
     let fn = match bop with 
       | "+" -> "atomic_add_expr"
       | "-" -> "atomic_sub_expr"
@@ -250,7 +250,7 @@ module Expr = struct
       | "^" -> "atomic_xor_expr"
       | _ -> failwith "atomic not supported"
     in
-    foreign fn (Types.var @-> t @-> returning t) lh rh
+    foreign fn (Types.var @-> t @-> returning t) var rh
 
   let pipe exprs = 
     let fn = foreign "pipe_expr" 
@@ -346,6 +346,9 @@ module Stmt = struct
 
   let assign = foreign "assign_stmt" 
     (Types.var @-> Types.expr @-> returning t)
+
+  let set_atomic_assign = foreign "assign_stmt_set_atomic"
+    (t @-> returning Ctypes.void)
 
   let assign_member cls memb what = foreign "assign_member_stmt" 
     (Types.expr @-> cstring @-> Types.expr @-> returning t)
@@ -531,6 +534,9 @@ module Var = struct
 
   let set_global = foreign "set_global"
     (t @-> returning void)
+
+  let set_atomic = foreign "var_expr_set_atomic"
+    (Types.expr @-> returning Ctypes.void)
 end
 
 (** Seq functions ([BaseFunc]) *)

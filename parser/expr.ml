@@ -133,7 +133,13 @@ struct
        the same base (function) or that it is global variable  *)
     | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
       when (ctx.base = base) || global -> 
-      Llvm.Expr.var v
+      let e = Llvm.Expr.var v in
+      if global && ctx.base = base && Stack.exists ctx.flags ~f:((=) "atomic") then
+      begin
+        Err.warn ~pos "atomic load %s" var;
+        Llvm.Var.set_atomic e
+      end;
+      e
     | Some ((Ctx.Namespace.Type t, _) :: _) -> 
       Llvm.Expr.typ t
     | Some ((Ctx.Namespace.Func (t, _), _) :: _) -> 
@@ -231,8 +237,8 @@ struct
       let rh_expr = parse ctx rh_expr in
       Llvm.Expr.binary ~inplace lh_expr bop rh_expr
     in
-    match lh_expr, bop with
-    | (_, Id var), ("+" | "-" | "&" | "|" | "^")
+    match lh_expr, inplace, bop with
+    | (_, Id var), true, ("+" | "-" | "&" | "|" | "^")
       when Stack.exists ctx.flags ~f:((=) "atomic") ->
       begin match Hashtbl.find ctx.map var with
       | Some ((Ctx.Namespace.Var v, { global; base; _ }) :: _) 

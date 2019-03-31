@@ -118,7 +118,13 @@ struct
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
               "type annotation is invalid here as %s is already defined" var;
-          Llvm.Stmt.assign v rh_expr
+          let s = Llvm.Stmt.assign v rh_expr in
+          if global && ctx.base = base && Stack.exists ctx.flags ~f:((=) "atomic") then
+          begin
+            Err.warn ~pos "atomic load %s" var;
+            Llvm.Stmt.set_atomic_assign s
+          end;
+          s
         | _ when jit && toplevel ->
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
