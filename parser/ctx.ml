@@ -48,6 +48,7 @@ type t =
     block: Llvm.Types.block_t;
     (** try-catch pointer for expressions *)
     trycatch: Llvm.Types.stmt_t;
+    flags: string Stack.t;
 
     (** stack of blocks. Top of stack is the current (deepest) block.
         Each block maintains a set of variables on stack. *)
@@ -100,7 +101,7 @@ let parse_file ctx file =
 let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser = 
   let ctx = 
     { filename; mdl; base; block; parser;
-      stack = Stack.create ();
+      stack = Stack.create (); flags = Stack.create ();
       map = String.Table.create ();
       imported = String.Table.create ();
       trycatch = Ctypes.null }

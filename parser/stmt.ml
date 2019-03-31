@@ -76,41 +76,6 @@ struct
             | l -> l
         else stmts 
       in
-      (* Pre-define NON-CONFLICTING FUNCTIONS!!! *)
-      (* List.iter stmts ~f:(function 
-        | pos, Generic Function f ->
-          let name = f.fn_name.name in
-          if is_some @@ Ctx.in_block ctx name then
-            Err.warn ~pos 
-              "function %s already defined: this definition applies below only" 
-              name
-          else begin 
-            let fn = Llvm.Func.func name in
-            let names = List.map f.fn_args ~f:(fun (_, x) -> x.name) in
-            Ctx.add ctx ~toplevel:true ~global:true
-              name (Ctx.Namespace.Func (fn, names))
-          end
-        | pos, Generic Class cls ->
-          if is_some @@ Ctx.in_scope ctx cls.class_name then
-            Err.warn ~pos 
-              "class %s already defined: this definition applies below only" 
-              cls.class_name
-          else begin 
-            let typ = Llvm.Type.cls cls.class_name in
-            Ctx.add ctx ~toplevel:true ~global:true
-              cls.class_name (Ctx.Namespace.Type typ)
-          end
-        | pos, Generic Type cls ->
-          if is_some @@ Ctx.in_scope ctx cls.class_name then
-            Err.warn ~pos 
-              "class %s already defined: this definition applies below only" 
-              cls.class_name
-          else begin
-            let typ = Llvm.Type.record [] [] cls.class_name in
-            Ctx.add ctx ~toplevel:true ~global:true
-              cls.class_name (Ctx.Namespace.Type typ)
-          end
-        | _ -> ()); *)
       ignore @@ List.map stmts ~f:(parse ctx ~toplevel:true ~jit)
 
   (* ***************************************************************
@@ -163,7 +128,7 @@ struct
           Llvm.Stmt.pass ()
         | r, _ ->
           begin match r with 
-            | Some ((Ctx.Namespace.(Type _ | Func _ | Import _) as v, _) :: _) ->
+            | Some (_ :: _) ->
               Err.warn ~pos "shadowing type/function %s" var
             | _ -> ()
           end;
@@ -486,15 +451,19 @@ struct
         fn
     in
     
+    let flags = Stack.create () in
     if is_none cls then begin
       let fnp = Option.value_exn (Ctx.in_scope ctx name) in
-      List.iter fn_attrs ~f:(fun (_, x) -> Hash_set.add (snd fnp).attrs x)
+      List.iter fn_attrs ~f:(fun (_, x) -> 
+        Hash_set.add (snd fnp).attrs x;
+        if x = "atomic" then Stack.push flags "atomic")
     end;
 
     let new_ctx = 
       { ctx with 
         base = fn; 
         stack = Stack.create ();
+        flags;
         block = Llvm.Block.func fn;
         map = Hashtbl.copy ctx.map } 
     in
@@ -597,8 +566,7 @@ struct
             ~f:(fun var ->
               let v = Llvm.Var.catch try_stmt idx in
               Ctx.add ctx var (Ctx.Namespace.Var v))
-            ~default: ()) 
-    );
+            ~default: ()));
 
     Option.value_map finally 
       ~f:(fun final ->

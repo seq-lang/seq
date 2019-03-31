@@ -11,10 +11,12 @@ print a[5, 7]
 
 x = 0
 y = 0
+@atomic
 def f():
-    global  y
-    x += 5  # should error here
-    y = 3
+    global x
+    x += 5  
+    y = y + 5
+    print 'in', x, y
 
 print x
 f()

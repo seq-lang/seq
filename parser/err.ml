@@ -39,7 +39,7 @@ let warn ?pos fmt =
     ~f:(fun p -> sprintf " (%s:%d)" p.Ast.Pos.file p.Ast.Pos.line) 
     ~default:""
   in
-  Caml.Printf.fprintf stderr "\027[%sm Warning%s: " codes pos;
+  Caml.Printf.fprintf stderr "\027[%smWarning%s: " codes pos;
   let fn, fno = Caml.Printf.kfprintf, Caml.Printf.fprintf in
   fn (fun o -> fno o "\027[0m \n%!") stderr fmt 
 

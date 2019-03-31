@@ -220,16 +220,30 @@ struct
     let expr = parse ctx expr in
     Llvm.Expr.unary op expr
 
-  and parse_binary ctx _ (lh_expr, bop, rh_expr) =
-    let lh_expr = parse ctx lh_expr in
-    let rh_expr = parse ctx rh_expr in
-
+  and parse_binary ctx pos (lh_expr, bop, rh_expr) =
     let inplace, bop = 
       if (String.prefix bop 8) = "inplace_" then
         true, String.drop_prefix bop 8
       else false, bop
     in
-    Llvm.Expr.binary ~inplace lh_expr bop rh_expr
+    let bop_expr () = 
+      let lh_expr = parse ctx lh_expr in
+      let rh_expr = parse ctx rh_expr in
+      Llvm.Expr.binary ~inplace lh_expr bop rh_expr
+    in
+    match lh_expr, bop with
+    | (_, Id var), ("+" | "-" | "&" | "|" | "^")
+      when Stack.exists ctx.flags ~f:((=) "atomic") ->
+      begin match Hashtbl.find ctx.map var with
+      | Some ((Ctx.Namespace.Var v, { global; base; _ }) :: _) 
+        when global && ctx.base = base ->
+        let rh_expr = parse ctx rh_expr in
+        Err.warn ~pos "using atomic %s on %s" bop var;
+        Llvm.Expr.atomic_binary v bop rh_expr
+      | _ -> bop_expr ()
+      end
+    | _ -> bop_expr ()
+      
 
   and parse_pipe ctx _ exprs =
     let exprs' = List.map exprs ~f:(fun (_, e) -> parse ctx e) in

@@ -241,6 +241,17 @@ module Expr = struct
     in
     fn lh rh
 
+  let atomic_binary lh bop rh = 
+    let fn = match bop with 
+      | "+" -> "atomic_add_expr"
+      | "-" -> "atomic_sub_expr"
+      | "&" -> "atomic_and_expr"
+      | "|" -> "atomic_or_expr"
+      | "^" -> "atomic_xor_expr"
+      | _ -> failwith "atomic not supported"
+    in
+    foreign fn (Types.var @-> t @-> returning t) lh rh
+
   let pipe exprs = 
     let fn = foreign "pipe_expr" 
       (ptr t @-> size_t @-> returning t)
