@@ -119,8 +119,10 @@ Value *Var::load(BaseFunc *base, BasicBlock *block, bool atomic)
 		val = inst;
 	}
 
-	if (atomic)
+	if (atomic) {
 		inst->setAtomic(AtomicOrdering::SequentiallyConsistent);
+		inst->setAlignment((unsigned)getType()->size(block->getModule()));
+	}
 
 	return val;
 }
@@ -137,8 +139,11 @@ void Var::store(BaseFunc *base, Value *val, BasicBlock *block, bool atomic)
 	IRBuilder<> builder(block);
 	Value *dest = repl ? builder.CreateLoad(ptr) : ptr;
 	auto *inst = builder.CreateStore(val, dest);
-	if (atomic)
+
+	if (atomic) {
 		inst->setAtomic(AtomicOrdering::SequentiallyConsistent);
+		inst->setAlignment((unsigned)getType()->size(block->getModule()));
+	}
 }
 
 void Var::setType(types::Type *type)
