@@ -141,13 +141,17 @@ struct
     Pos.t * 'a
   and t =
     node tt
+  and tassign = 
+    | Normal
+    | Shadow
+    | Update
   and node = 
     | Pass        of unit
     | Break       of unit
     | Continue    of unit
     | Expr        of ExprNode.t
     (* lhs, rhs, type*)
-    | Assign      of (ExprNode.t * ExprNode.t * bool * ExprNode.t option) 
+    | Assign      of (ExprNode.t * ExprNode.t * tassign * ExprNode.t option) 
     | Del         of ExprNode.t
     | Print       of (ExprNode.t list * string)
     | Return      of ExprNode.t option
@@ -231,10 +235,11 @@ struct
         | Some q ->
           sprintf "%s : %s %s %s"
             (ExprNode.to_string l) (ExprNode.to_string q) 
-            (if s then ":=" else "=") (ExprNode.to_string r)
+            (match s with Shadow -> ":=" | _ -> "=") (ExprNode.to_string r)
         | None -> 
           sprintf "%s %s %s"
-            (ExprNode.to_string l) (if s then ":=" else "=") (ExprNode.to_string r)
+            (ExprNode.to_string l) (match s with Shadow -> ":=" | _ -> "=") 
+            (ExprNode.to_string r)
       end
     | Print(x, n) -> sprintf "PRINT %s, %s" 
         (ppl x ~f:ExprNode.to_string) 

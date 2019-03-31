@@ -554,12 +554,13 @@ assign_statement:
         Binary ($1, "inplace_" ^ op, $3) 
       in
       [ fst rhs, 
-        Assign ($1, rhs, false, None) ]}
+        Assign ($1, rhs, Update, None) ]}
   // Type assignment
   | ID COLON expr EQ expr
   | ID COLON expr ASSGN_EQ expr
     {[ pos (fst $1) (fst $5),
-       Assign ((fst $1, Id (snd $1)), $5, ((snd $4) = ":="), Some $3) ]}
+       Assign ((fst $1, Id (snd $1)), $5, 
+          (if (snd $4) = ":=" then Shadow else Normal), Some $3) ]}
   // Assignment (a, b = x, y)
   | expr_list ASSGN_EQ separated_nonempty_list(ASSGN_EQ, expr_list) 
   | expr_list EQ separated_nonempty_list(EQ, expr_list) 
@@ -568,16 +569,16 @@ assign_statement:
       let p = pos (fst @@ List.hd_exn @@ List.hd_exn sides) 
                   (fst @@ List.last_exn @@ List.last_exn sides) 
       in
-      let shadow = ((snd $2) = ":=") in
+      let shadow = if (snd $2) = ":=" then Shadow else Normal in
       let rec parse_assign lhs rhs = 
         (* wrap RHS in tuple for consistency (e.g. x, y -> (x, y)) *)
         let init_exprs, rhs =         
           if List.length rhs > 1 then begin
             let var = p, Id "$assign" in
-            [ p, Assign (var, (p, Tuple rhs), true, None) ], var
+            [ p, Assign (var, (p, Tuple rhs), Shadow, None) ], var
           end else if List.length lhs > 1 then begin
             let var = p, Id "$assign" in
-            [ p, Assign (var, List.hd_exn rhs, true, None) ], var
+            [ p, Assign (var, List.hd_exn rhs, Shadow, None) ], var
           end else
             [], List.hd_exn rhs
         in

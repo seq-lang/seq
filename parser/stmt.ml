@@ -142,9 +142,14 @@ struct
     let rh_expr = E.parse ctx rhs in
     match lhs with
     | pos, Id var ->
-      begin match Hashtbl.find ctx.map var with
-        | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _) 
-          when (not shadow) && (ctx.base = base) ->
+      begin match Hashtbl.find ctx.map var, shadow with
+        | None, Update ->
+          serr ~pos "%s not found" var
+        | Some ((Ctx.Namespace.Var _, { base; _ }) :: _), Update
+          when ctx.base <> base  ->
+          serr ~pos "%s not found" var
+        | Some ((Ctx.Namespace.Var v, { base; global; toplevel; _ }) :: _), _
+          when ctx.base = base ->
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
               "type annotation is invalid here as %s is already defined" var;
@@ -156,7 +161,7 @@ struct
           let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
           Ctx.add ctx ~toplevel ~global:true var v;
           Llvm.Stmt.pass ()
-        | r ->
+        | r, _ ->
           begin match r with 
             | Some ((Ctx.Namespace.(Type _ | Func _ | Import _) as v, _) :: _) ->
               Err.warn ~pos "shadowing type/function %s" var
