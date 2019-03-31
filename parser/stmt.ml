@@ -175,7 +175,7 @@ struct
       end
     | pos, Dot (lh_lhs, lh_rhs) -> (* a.x = b *)
       Llvm.Stmt.assign_member (E.parse ctx lh_lhs) lh_rhs rh_expr
-    | pos, Index (var_expr, [index_expr]) -> (* a[x] = b *)
+    | pos, Index (var_expr, index_expr) -> (* a[x] = b *)
       let var_expr = E.parse ctx var_expr in
       let index_expr = E.parse ctx index_expr in
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
@@ -204,7 +204,7 @@ struct
 
   and parse_del ctx pos expr =
     match expr with
-    | pos, Index (lhs, [rhs]) ->
+    | pos, Index (lhs, rhs) ->
       let lhs_expr = E.parse ctx lhs in
       let rhs_expr = E.parse ctx rhs in
       Llvm.Stmt.del_index lhs_expr rhs_expr
@@ -623,7 +623,7 @@ struct
 
   and parse_prefetch ctx pos pfs =
     let keys, wheres = List.unzip @@ List.map pfs ~f:(function
-      | _, Index (e1, [e2]) ->
+      | _, Index (e1, e2) ->
         let e1 = E.parse ctx e1 in
         let e2 = E.parse ctx e2 in
         e1, e2

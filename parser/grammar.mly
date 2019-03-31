@@ -278,12 +278,12 @@ expr_list:
 pipe_expr: 
   | o = bool_expr 
     { fst o, ["", o] }
-  | bool_expr PIPE  pipe_expr 
-  | bool_expr PPIPE pipe_expr
-  | bool_expr SPIPE pipe_expr 
-    { pos (fst $1) (fst $3), 
-      (snd $2, $1) :: (snd $3) }
-    
+  | l = bool_expr; p = PIPE; r = pipe_expr
+  | l = bool_expr; p = PPIPE; r = pipe_expr
+  | l = bool_expr; p = SPIPE; r = pipe_expr
+    { pos (fst l) (fst r), 
+      (snd p, l) :: (snd r) }
+
 // Bool expressions 
 // (binary: and, or)
 bool_expr:
@@ -360,9 +360,10 @@ arith_term:
                  { name = None; value = (pos $2 $5, Generator ($3, $4)) }]) }
   // Index (foo[bar])
   | arith_term LS separated_nonempty_list(COMMA, index_term) RS
-    // TODO: tuple index
-    { pos (fst $1) $4, 
-      Index ($1, $3) }
+    { pos (fst $1) $4,
+      if List.length $3 = 1 then Index ($1, List.hd_exn $3)
+      else Index ($1, 
+        (pos (fst @@ List.hd_exn $3) (fst @@ List.last_exn $3), Tuple $3)) }
   // Access (foo.bar)
   | arith_term DOT ID
     { pos (fst $1) (fst $3), 
@@ -603,18 +604,18 @@ assign_statement:
                   else Some (p, Int (string_of_int @@ i +  1 - len))
                 in
                 let slice = Slice (start, eend, None) in
-                let rhs = p, Index (rhs, [p, slice]) in
+                let rhs = p, Index (rhs, (p, slice)) in
                 [p, Assign ((p, Id var), rhs, shadow, None)]
               | pos, Unpack var when !unpack_i > -1 ->
                 Err.serr ~pos "cannot have two tuple unpackings on LHS"
               | _ when !unpack_i = -1 ->
                 (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
-                let rhs = p, Index (rhs, [p, Int (string_of_int i)]) in
+                let rhs = p, Index (rhs, (p, Int (string_of_int i))) in
                 parse_assign [expr] [rhs]
                 (*p, Assign (expr, rhs, shadow) *)
               | _ ->
                 (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
-                let rhs = p, Index (rhs, [p, Int (string_of_int @@ i - len)]) in
+                let rhs = p, Index (rhs, (p, Int (string_of_int @@ i - len))) in
                 parse_assign [expr] [rhs])
             in
             let len, op = 

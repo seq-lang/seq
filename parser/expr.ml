@@ -241,8 +241,8 @@ struct
   (** Parses index expression which also includes type realization rules.
       Check GOTCHAS for details. *)
   and parse_index ctx pos (lh_expr, indices) =
-    match snd lh_expr, indices with
-    | _, [(_, Slice (st, ed, step))] ->
+    match snd lh_expr, snd indices with
+    | _, Slice (st, ed, step) ->
       if is_some step then 
         failwith "todo: expr/step";
       let unpack st = 
@@ -250,22 +250,30 @@ struct
       in
       let lh_expr = parse ctx lh_expr in
       Llvm.Expr.slice lh_expr (unpack st) (unpack ed)
+    | Id ("array" | "ptr" | "generator" as name), Tuple _ ->
+      serr ~pos "%s requires one type" name
     | Id ("array" | "ptr" | "generator" as name), _ ->
-      if List.length indices <> 1 then
-        serr ~pos "%s requires one type" name;
-      let typ = parse_type ctx (List.hd_exn indices) in
+      let typ = parse_type ctx indices in
       Llvm.Expr.typ @@ Llvm.Type.param ~name typ
-    | Id "function", _ ->
+    | Id "function", Tuple indices ->
       let indices = List.map indices ~f:(parse_type ctx) in
       let ret, args = List.hd_exn indices, List.tl_exn indices in
       Llvm.Expr.typ @@ Llvm.Type.func ret args
-    | Id "tuple", _ ->
+    | Id "function", _ ->
+      let ret, args = parse_type ctx indices, [] in
+      Llvm.Expr.typ @@ Llvm.Type.func ret args
+    | Id "tuple", Tuple indices ->
       let indices = List.map indices ~f:(parse_type ctx) in
       let names = List.map indices ~f:(fun _ -> "") in
       Llvm.Expr.typ @@ Llvm.Type.record names indices ""
+    | Id "tuple", _ ->
+      Llvm.Expr.typ @@ Llvm.Type.record [""] [parse_type ctx indices] ""
     | _ -> 
       let lh_expr = parse ctx lh_expr in
-      let indices = List.map indices ~f:(parse ctx) in
+      let indices = match snd indices with
+        | Tuple indices -> List.map indices ~f:(parse ctx) 
+        | _ -> [parse ctx indices]
+      in
       let all_types = List.for_all indices ~f:Llvm.Expr.is_type in
       if all_types then
         let indices = List.map indices ~f:Llvm.Type.expr_type in
@@ -279,14 +287,16 @@ struct
           lh_expr
         | _ ->
           serr ~pos "wrong LHS for type realization"
-      else if (List.length indices) = 1 then
-        Llvm.Expr.lookup lh_expr (List.hd_exn indices)
-      else
-        serr ~pos "index requires only one item"
-  
+      else 
+        let t = match indices with 
+          | [t] -> t
+          | l -> Llvm.Expr.tuple l 
+        in
+        Llvm.Expr.lookup lh_expr t
+      
   and parse_call ctx pos (callee_expr, args) =
     match snd callee_expr, args with
-    | Index ((_, Id "__array__"), [t]), [_, { name = _; value }] ->
+    | Index ((_, Id "__array__"), t), [_, { name = _; value }] ->
       let t = parse_type ctx t in
       let arg = parse ctx value in
       Llvm.Expr.alloc_array t arg
@@ -457,7 +467,7 @@ struct
     | Binary (e1, _, e2) -> 
       walk ctx ~f e1; walk ctx ~f e2
     | Index (a, l) ->
-      walk ctx ~f a; List.iter l ~f:(walk ctx ~f)
+      walk ctx ~f a; walk ctx ~f l
     | Call (a, l) -> 
       walk ctx ~f a; 
       List.iter l ~f:(fun (_, { value; _ }) -> walk ctx ~f value)
