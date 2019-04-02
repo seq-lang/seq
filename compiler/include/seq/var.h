@@ -14,6 +14,7 @@ namespace seq {
 		llvm::Value *ptr;
 		llvm::Module *module;
 		bool global;
+		bool tls;
 		bool repl;
 		std::stack<Var *> mapped;
 		void allocaIfNeeded(BaseFunc *base);
@@ -23,6 +24,7 @@ namespace seq {
 		void setName(std::string name);
 		bool isGlobal();
 		void setGlobal();
+		void setThreadLocal();
 		void setREPL();
 		void mapTo(Var *other);
 		void unmap();

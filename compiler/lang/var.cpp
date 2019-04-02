@@ -13,7 +13,7 @@ static int nameIdx = 0;
 
 Var::Var(types::Type *type) :
     name("seq.var." + std::to_string(nameIdx++)), type(type), ptr(nullptr),
-    module(nullptr), global(false), repl(false), mapped()
+    module(nullptr), global(false), tls(false), repl(false), mapped()
 {
 }
 
@@ -47,12 +47,16 @@ void Var::allocaIfNeeded(BaseFunc *base)
 		if (repl)
 			llvmType = llvmType->getPointerTo();
 
-		ptr = new GlobalVariable(*module,
-		                         llvmType,
-		                         false,
-		                         repl ? GlobalValue::ExternalLinkage : GlobalValue::PrivateLinkage,
-		                         Constant::getNullValue(llvmType),
-		                         name);
+		auto *g = new GlobalVariable(*module,
+		                             llvmType,
+		                             false,
+		                             repl ? GlobalValue::ExternalLinkage : GlobalValue::PrivateLinkage,
+		                             Constant::getNullValue(llvmType),
+		                             name);
+
+		if (tls)
+			g->setThreadLocalMode(GlobalVariable::ThreadLocalMode::LocalExecTLSModel);
+		ptr = g;
 	} else {
 		ptr = makeAlloca(getType()->getLLVMType(context), base->getPreamble());
 	}
@@ -73,10 +77,20 @@ void Var::setGlobal()
 		global = true;
 }
 
+void Var::setThreadLocal()
+{
+	if (!mapped.empty())
+		mapped.top()->setThreadLocal();
+	else {
+		global = true;
+		tls = true;
+	}
+}
+
 void Var::setREPL()
 {
 	if (!mapped.empty())
-		mapped.top()->setGlobal();
+		mapped.top()->setREPL();
 	else {
 		global = true;
 		repl = true;

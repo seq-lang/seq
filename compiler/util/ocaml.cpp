@@ -754,6 +754,11 @@ FOREIGN void set_global(Var *v)
 	v->setGlobal();
 }
 
+FOREIGN void set_thread_local(Var *v)
+{
+	v->setThreadLocal();
+}
+
 FOREIGN char type_eq(types::Type *a, types::Type *b)
 {
 	return types::is(a, b);
