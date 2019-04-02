@@ -77,6 +77,10 @@ void types::IntType::initOps()
 			return b.CreateFPToSI(args[0], Int->getLLVMType(b.getContext()));
 		}},
 
+		{"__init__", {Bool}, Int, SEQ_MAGIC(self, args, b) {
+			return b.CreateZExt(args[0], Int->getLLVMType(b.getContext()));
+		}},
+
 		{"__init__", {Byte}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(args[0], Int->getLLVMType(b.getContext()));
 		}},
