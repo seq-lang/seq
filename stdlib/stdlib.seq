@@ -382,7 +382,7 @@ class File:
         cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
         self.fp = fopen(path.ptr, mode.ptr)
         if not self.fp:
-            raise OSError("File cannot be opened!")
+            raise OSError("file could not be opened")
         self.buf = ptr[ptr[byte]](1)
         self.sz = ptr[int](1)
 
@@ -409,7 +409,7 @@ class File:
         for i in self._iter():
             t = seq(i.ptr, i.len).__copy__()
             yield str(t.ptr, t.len)
-        
+
     def readlines(self):
         return [l for l in self.__iter__()]
 
@@ -454,3 +454,56 @@ def chr(i: int):
 def next(g):
     g.done()
     return g.next()
+
+type Block(p: ptr[byte], seq_len: int, num_seqs: int):
+    def __iter__(self: Block):
+        p, seq_len, num_seqs = self.p, self.seq_len, self.num_seqs
+        for i in range(num_seqs):
+            yield seq(p + i*seq_len, seq_len)
+
+def blocks(name: str, size: int):
+    cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
+    cdef fclose(ptr[byte]) -> int
+    cdef getline(ptr[ptr[byte]], n: ptr[int], file: ptr[byte]) -> int
+    cdef fgets(ptr[byte], int, ptr[byte]) -> ptr[byte]
+    cdef free(ptr[byte])
+
+    fp = fopen(name.c_str(), "r".ptr)
+
+    if not fp:
+        raise OSError("file could not be opened")
+
+    buf = ptr[byte]()
+    sz = 0
+    rd = getline(__ptr__(buf), __ptr__(sz), fp)
+
+    if rd != -1:
+        if buf[rd - 1] == byte(10):
+            rd -= 1
+
+        done = False
+        while not done:
+            idx = 0
+            block = ptr[byte](size*rd + 2)  # one for '\n', one for '\0'
+            if buf:
+                str.memcpy(block, buf, rd)
+                free(buf)
+                buf = ptr[byte]()
+                idx += 1
+
+            while idx < size:
+                off = idx * rd
+                p = fgets(block + off, rd + 2, fp)
+
+                if not p:
+                    done = True
+                    break
+
+                if block[off + rd] != byte(10):
+                    raise OSError("all sequences must be of same length for blocking")
+
+                idx += 1
+
+            yield Block(block, rd, idx)
+
+    fclose(fp)
