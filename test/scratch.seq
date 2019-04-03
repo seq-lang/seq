@@ -23,18 +23,34 @@
 # f()
 # print x, y
 
-s, m, M = 0, 99999, 0
-@atomic
-def f(i):
-	global s, m, M
+# s, m, M = 0, 99999, 0
+# @atomic
+# def f(i):
+# 	global s, m, M
+# 	s += i
+# 	m = min(m, i)
+# 	M = max(M, i)
+
+# cdef sleep(int)
+# def process(i):
+# 	print i
+# 	f(i)
+
+#range(20) |> iter ||> process
+#print s, m, M
+
+def hai(p):
+	cnt = 0
+	for i in p:
+		cnt += len(i)
+	yield cnt
+
+s = 0
+def sum(i):
+	global s
 	s += i
-	m = min(m, i)
-	M = max(M, i)
 
-cdef sleep(int)
-def process(i):
-	print i
-	f(i)
-
-range(20) |> iter ||> process
-print s, m, M
+(blocks(fastq('../test/data/multiple/seqs.fastq'), 2)
+ ||> hai
+  |> sum)
+print s
