@@ -481,13 +481,17 @@ def next(g):
     g.done()
     return g.next()
 
+class Box[T]:
+    val: T
+
 type Block(p: ptr[byte], seq_len: int, num_seqs: int):
     def __iter__(self: Block):
         p, seq_len, num_seqs = self.p, self.seq_len, self.num_seqs
         for i in range(num_seqs):
             yield seq(p + i*seq_len, seq_len)
 
-def blocks(g, sz: int):
+def blocks(gg, sz: int):
+    g = iter(gg)
     if not g.done():
         s = g.next()
         n = l = s.len
@@ -503,9 +507,10 @@ def blocks(g, sz: int):
             i += 1
             if i == sz:
                 yield Block(buf, l, i)
-                i = 0
-        if i:
-            yield Block(buf, l, i)
+                buf = ptr[byte](l * sz)
+                n, i = 0, 0
+        if i > 0:
+            yield Block(buf, l, i+1)
         g.destroy()
     else:
         g.destroy()
