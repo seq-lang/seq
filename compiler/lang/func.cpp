@@ -381,16 +381,18 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 	if (prefetch) {
 		codegenYield(val, type, block);
 	} else {
-		if (gen && val)
-			throw exc::SeqException("cannot return value from generator");
+		if (gen) {
+			if (val)
+				throw exc::SeqException("cannot return value from generator");
+		} else {
+			if ((val && type && !types::is(type, outType)) || (!val && !outType->is(types::Void)))
+				throw exc::SeqException(
+				        "cannot return '" + type->getName() + "' from function returning '" +
+				        outType->getName() + "'");
 
-		if ((val && type && !types::is(type, outType)) || (!val && !outType->is(types::Void)))
-			throw exc::SeqException(
-			        "cannot return '" + type->getName() + "' from function returning '" +
-			        outType->getName() + "'");
-
-		if (val && type && type->is(types::Void))
-			throw exc::SeqException("cannot return void value from function");
+			if (val && type && type->is(types::Void))
+				throw exc::SeqException("cannot return void value from function");
+		}
 	}
 
 	IRBuilder<> builder(block);
