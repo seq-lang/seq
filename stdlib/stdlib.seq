@@ -491,30 +491,24 @@ type Block(p: ptr[byte], seq_len: int, num_seqs: int):
             yield seq(p + i*seq_len, seq_len)
 
 def blocks(gg, sz: int):
-    g = iter(gg)
-    if not g.done():
-        s = g.next()
-        n = l = s.len
-        i = 0
-        buf = ptr[byte](l * sz)
-        str.memcpy(buf, s.ptr, s.len)
-        while not g.done():
-            s = g.next()
-            if s.len != l:
-                raise ArgumentError("blocks requires identical line lengths")
-            str.memcpy(buf + n, s.ptr, l)
-            n += l
-            i += 1
-            if i == sz:
-                yield Block(buf, l, i)
-                buf = ptr[byte](l * sz)
-                n, i = 0, 0
-        if i > 0:
+    buf = ptr[byte]()
+    n = l = i = 0
+    for s in iter(gg):
+        if l == 0:
+            l = s.len
+            i = 0
+            buf = ptr[byte](l * sz)
+        if s.len != l:
+            raise ArgumentError("blocks requires identical line lengths")
+        str.memcpy(buf + n, s.ptr, l)
+        n += l
+        i += 1
+        if i == sz:
             yield Block(buf, l, i)
-        g.destroy()
-    else:
-        g.destroy()
-
+            buf = ptr[byte](l * sz)
+            n, i = 0, 0
+    if i > 0:
+        yield Block(buf, l, i)
 
 def blocks2(name: str, size: int):
     cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
