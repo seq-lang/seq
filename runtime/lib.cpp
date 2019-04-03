@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <climits>
 #include <cassert>
 #include <unwind.h>
 
@@ -19,12 +20,8 @@
 #include <gc.h>
 #include "lib.h"
 
-using namespace std;
-
-
+#ifdef __GLIBC__
 #include <malloc.h>
-
-
 
 static void *my_malloc_hook(size_t size, const void *caller)
 {
@@ -39,6 +36,9 @@ static void *my_realloc_hook(void *ptr, size_t size, const void *caller)
 static void my_free_hook(void *ptr, const void *caller)
 {
 }
+#endif
+
+using namespace std;
 
 /*
  * General
@@ -49,15 +49,15 @@ void seq_exc_init();
 SEQ_FUNC void seq_init()
 {
 	GC_INIT();
-	
+
 #if THREADED
 	GC_allow_register_threads();
-	
+
+#ifdef __GLIBC__
 	__malloc_hook = my_malloc_hook;
 	__realloc_hook = my_realloc_hook;
 	__free_hook = my_free_hook;
-
-
+#endif
 
 	#pragma omp parallel
 	{
