@@ -244,6 +244,29 @@ extend str:
         t = seq(s.ptr, s.len).__copy__
         return str(t.ptr, t.len)
 
+    def _isspace(b: byte):
+        return b == byte(32) or b == byte(9) or b == byte(10) or \
+               b == byte(11) or b == byte(12) or b == byte(13)
+
+    def lstrip(self: str):
+        i = 0
+        while i < self.len:
+            if not str._isspace(self.ptr[i]):
+                break
+            i += 1
+        return str(self.ptr + i, self.len - i)
+
+    def rstrip(self: str):
+        i = self.len - 1
+        while i >= 0:
+            if not str._isspace(self.ptr[i]):
+                break
+            i -= 1
+        return '' if i < 0 else str(self.ptr, i + 1)
+
+    def strip(self: str):
+        return self.lstrip().rstrip()
+
     def split(self: str, pat: str):
         if len(pat) == 0:
             for i in self: yield i
