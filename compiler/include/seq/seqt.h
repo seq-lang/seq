@@ -69,7 +69,7 @@ namespace seq {
 			unsigned k;
 			explicit KMer(unsigned k);
 		public:
-			static const unsigned MAX_LEN = 128;
+			static const unsigned MAX_LEN = 256;
 
 			KMer(KMer const&)=delete;
 			void operator=(KMer const&)=delete;
