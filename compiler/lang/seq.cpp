@@ -8,9 +8,9 @@ using namespace seq;
 using namespace llvm;
 
 #if LLVM_VERSION_MAJOR >= 7
-using namespace llvm::orc;
 #include "llvm/CodeGen/CommandFlags.inc"
 #else
+using namespace llvm::orc;
 #include "llvm/CodeGen/CommandFlags.def"
 #endif
 
@@ -423,31 +423,26 @@ void SeqModule::execute(const std::vector<std::string>& args,
 /*
  * JIT
  */
-#if LLVM_VERSION_MAJOR >= 7
-static std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> module, bool debug)
+#if LLVM_VERSION_MAJOR == 6
+static std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> module, bool debug)
 {
 	optimizeModule(module.get(), debug);
+	verifyModuleFailFast(*module);
 	return module;
 }
 
 SeqJIT::SeqJIT() :
     target(EngineBuilder().selectTarget()), layout(target->createDataLayout()),
-    objLayer(es, [this](VModuleKey K) {
-        return RTDyldObjectLinkingLayer::Resources{ std::make_shared<SectionMemoryManager>(), resolvers[K]}; }),
+    objLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
     comLayer(objLayer, SimpleCompiler(*target)),
-    optLayer(comLayer, [](std::unique_ptr<Module> M) {
-        auto module = optimizeModule(std::move(M), true);
-        verifyModuleFailFast(*module);
-        return module;
+    optLayer(comLayer, [](std::shared_ptr<Module> M) {
+        return optimizeModule(std::move(M), true);
     }),
-    callbackManager(orc::createLocalCompileCallbackManager(target->getTargetTriple(), es, 0)),
-    codLayer(es, optLayer,
-        [&](orc::VModuleKey K) { return resolvers[K]; },
-        [&](orc::VModuleKey K, std::shared_ptr<SymbolResolver> R) { resolvers[K] = std::move(R); },
-        [](Function &F) { return std::set<Function *>({&F}); },
-        *callbackManager,
-        orc::createLocalIndirectStubsManagerBuilder(
-        target->getTargetTriple())),
+    callbackManager(orc::createLocalCompileCallbackManager(target->getTargetTriple(), 0)),
+    codLayer(optLayer,
+             [](Function &F) { return std::set<Function*>({&F}); },
+             *callbackManager,
+             orc::createLocalIndirectStubsManagerBuilder(target->getTargetTriple())),
     globals(),
     inputNum(0)
 {
@@ -463,33 +458,26 @@ void SeqJIT::init()
 std::unique_ptr<Module> SeqJIT::makeModule()
 {
 	auto module = make_unique<Module>("seq." + std::to_string(inputNum), context);
-
 	module->setTargetTriple(target->getTargetTriple().str());
 	module->setDataLayout(target->createDataLayout());
 	return module;
 }
 
-VModuleKey SeqJIT::addModule(std::unique_ptr<Module> M)
+SeqJIT::ModuleHandle SeqJIT::addModule(std::unique_ptr<Module> module)
 {
-	// create a new VModuleKey:
-	VModuleKey K = es.allocateVModule();
-
-	// build a resolver and associate it with the new key:
-	resolvers[K] = createLegacyLookupResolver(es,
-	    [this](const std::string& name) -> JITSymbol {
-	        if (auto sym = comLayer.findSymbol(name, false))
-	            return sym;
-	        else if (auto err = sym.takeError())
-	            return std::move(err);
-	        if (auto symAddr = RTDyldMemoryManager::getSymbolAddressInProcess(name))
-	            return JITSymbol(symAddr, JITSymbolFlags::Exported);
-	        return nullptr;
-	    },
-	    [](Error err) { cantFail(std::move(err), "lookupFlags failed"); });
-
-	// add the module to the JIT with the new key:
-	cantFail(codLayer.addModule(K, std::move(M)));
-	return K;
+	auto resolver = createLambdaResolver(
+		[&](const std::string& name) {
+			if (auto sym = codLayer.findSymbol(name, false))
+				return sym;
+			return JITSymbol(nullptr);
+		},
+		[](const std::string& name) {
+			if (auto symAddr = RTDyldMemoryManager::getSymbolAddressInProcess(name))
+				return JITSymbol(symAddr, JITSymbolFlags::Exported);
+			return JITSymbol(nullptr);
+		}
+	);
+	return cantFail(codLayer.addModule(std::move(module), std::move(resolver)));
 }
 
 JITSymbol SeqJIT::findSymbol(std::string name)
@@ -500,9 +488,9 @@ JITSymbol SeqJIT::findSymbol(std::string name)
 	return codLayer.findSymbol(mangledNameStream.str(), false);
 }
 
-void SeqJIT::removeModule(VModuleKey key)
+void SeqJIT::removeModule(SeqJIT::ModuleHandle handle)
 {
-	cantFail(codLayer.removeModule(key));
+	cantFail(codLayer.removeModule(handle));
 }
 
 Func SeqJIT::makeFunc()

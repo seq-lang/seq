@@ -75,18 +75,16 @@ namespace seq {
 		             bool debug=false);
 	};
 
-#if LLVM_VERSION_MAJOR >= 7
+#if LLVM_VERSION_MAJOR == 6
 	class SeqJIT {
 	private:
-		llvm::orc::ExecutionSession es;
-		std::map<llvm::orc::VModuleKey, std::shared_ptr<llvm::orc::SymbolResolver>> resolvers;
 		std::unique_ptr<llvm::TargetMachine> target;
 		const llvm::DataLayout layout;
 		llvm::orc::RTDyldObjectLinkingLayer objLayer;
 		llvm::orc::IRCompileLayer<decltype(objLayer), llvm::orc::SimpleCompiler> comLayer;
 
 		using OptimizeFunction =
-		    std::function<std::unique_ptr<llvm::Module>(std::unique_ptr<llvm::Module>)>;
+		    std::function<std::shared_ptr<llvm::Module>(std::shared_ptr<llvm::Module>)>;
 
 		llvm::orc::IRTransformLayer<decltype(comLayer), OptimizeFunction> optLayer;
 		std::unique_ptr<llvm::orc::JITCompileCallbackManager> callbackManager;
@@ -94,10 +92,11 @@ namespace seq {
 		std::vector<Var *> globals;
 		int inputNum;
 
+		using ModuleHandle = decltype(codLayer)::ModuleHandleT;
 		std::unique_ptr<llvm::Module> makeModule();
-		llvm::orc::VModuleKey addModule(std::unique_ptr<llvm::Module> module);
+		ModuleHandle addModule(std::unique_ptr<llvm::Module> module);
 		llvm::JITSymbol findSymbol(std::string name);
-		void removeModule(llvm::orc::VModuleKey key);
+		void removeModule(ModuleHandle key);
 		Func makeFunc();
 		void exec(Func *func, std::unique_ptr<llvm::Module> module);
 	public:

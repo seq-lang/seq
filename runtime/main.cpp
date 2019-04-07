@@ -45,11 +45,12 @@ int main(int argc, char **argv)
 	vector<string> argsVec(args);
 
 	if (input.empty()) {
-#if LLVM_VERSION_MAJOR >= 7
+#if LLVM_VERSION_MAJOR == 6
+		warnMsg("Seq REPL is currently experimental");
 		repl();
 		return EXIT_SUCCESS;
 #else
-		errMsg("Seq REPL requires LLVM 7+");
+		errMsg("Seq REPL requires LLVM 6");
 		return EXIT_FAILURE;
 #endif
 	} else if (FILE *file = fopen(input.c_str(), "r")) {

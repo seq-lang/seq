@@ -888,7 +888,7 @@ FOREIGN void exec_module
 	}
 }
 
-#if LLVM_VERSION_MAJOR >= 7
+#if LLVM_VERSION_MAJOR == 6
 FOREIGN SeqJIT *jit_init()
 {
 	SeqJIT::init();
