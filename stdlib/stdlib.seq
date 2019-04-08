@@ -29,6 +29,9 @@ type range(lo: int, hi: int, step: int):
                 yield i
                 i += step
 
+class Box[T]:
+    val: T
+
 def min(a, b):
     return a if a < b else b
 
@@ -49,6 +52,18 @@ def abs(x):
 
 def hash(x):
     return x.__hash__()
+
+def ord(s: str):
+    return int(s.ptr[0])
+
+def chr(i: int):
+    p = ptr[byte](1)
+    p[0] = byte(i)
+    return str(p, 1)
+
+def next(g):
+    g.done()
+    return g.next()
 
 def any(x):
     for a in x:
@@ -150,7 +165,7 @@ extend int:
 
     def __init__(self: int, s: str) -> int:
         cdef atoi(p: ptr[byte]) -> int
-        return atoi(s.ptr)
+        return atoi(s.c_str())
 
 extend str:
     def __hash__(self: str):
@@ -197,8 +212,7 @@ extend str:
         n = len(self)
         assert n >= 0
         p = ptr[byte](n + 1)
-        for i in range(n):
-            p[i] = self.ptr[i]
+        str.memcpy(p, self.ptr, n)
         p[n] = byte(0)
         return p
 
@@ -215,6 +229,12 @@ extend str:
             str.memcpy(p + n, self.ptr, self.len)
             n += self.len
         return str(p, total)
+
+    def __copy__(self: str):
+        n = len(self)
+        p = ptr[byte](n)
+        str.memcpy(p, self.ptr, n)
+        return str(p, n)
 
     def cat(v: list[str]):
         total = 0
@@ -239,10 +259,6 @@ extend str:
         if self == "":
             return str.cat(l)
         assert False
-
-    def copy(s: str) -> str:
-        t = seq(s.ptr, s.len).__copy__
-        return str(t.ptr, t.len)
 
     def _isspace(b: byte):
         return b == byte(32) or b == byte(9) or b == byte(10) or \
@@ -395,49 +411,52 @@ class ArgumentError:
     msg: str
 
 class File:
+    sz: int
+    buf: ptr[byte]
     fp: ptr[byte]
-    buf: ptr[ptr[byte]]
-    sz: ptr[int]
+
+    def _reset(self: File):
+        self.buf = ptr[byte]()
+        self.sz = 0
 
     def __init__(self: File, fp: ptr[byte]):
         self.fp = fp
-        self.buf = ptr[ptr[byte]](1)
-        self.sz = ptr[int](1)
+        self._reset()
 
     def __init__(self: File, path: str, mode: str):
         cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
-        self.fp = fopen(path.ptr, mode.ptr)
+        self.fp = fopen(path.c_str(), mode.c_str())
         if not self.fp:
             raise OSError("file could not be opened")
-        self.buf = ptr[ptr[byte]](1)
-        self.sz = ptr[int](1)
+        self._reset()
 
     def close(self):
         cdef fclose(ptr[byte]) -> int
-        cdef free(ptr[byte]) -> void
+        cdef free(ptr[byte])
         if self.fp:
             fclose(self.fp)
         if self.buf:
-            free(self.buf[0])
+            free(self.buf)
+            self._reset()
 
     def _iter(self: File):
         cdef getline(ptr[ptr[byte]], n: ptr[int], file: ptr[byte]) -> int
         while True:
-            rd = getline(self.buf, self.sz, self.fp)
+            # pass pointers to individual class fields:
+            rd = getline(ptr[ptr[byte]](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
             if rd != -1:
-                if self.buf[0][rd - 1] == byte(10):
+                if self.buf[rd - 1] == byte(10):
                     rd -= 1
-                yield str(self.buf[0], rd)
+                yield str(self.buf, rd)
             else:
                 break
 
     def __iter__(self: File):
-        for i in self._iter():
-            t = seq(i.ptr, i.len).__copy__()
-            yield str(t.ptr, t.len)
+        for a in self._iter():
+            yield copy(a)
 
     def readlines(self):
-        return [l for l in self.__iter__()]
+        return [l for l in self]
 
     def write(self, s: str):
         cdef fwrite(ptr[byte], int, int, ptr[byte]) -> int
@@ -456,9 +475,9 @@ type FASTQ(file: File):
 
     def __iter__(self: FASTQ):
         line = 0
-        for i in self.file._iter():
+        for a in self.file._iter():
             if line % 4 == 1:
-                yield seq(i.ptr, i.len).__copy__()
+                yield copy(seq(a.ptr, a.len))
             line += 1
         self.file.close()
 
@@ -466,23 +485,10 @@ def fastq(path: str):
     return iter(FASTQ(path))
 
 def seqs(path: str):
-    for i in iter(File(path, 'r')):
+    f = File(path, 'r')
+    for i in f:
         yield seq(i.ptr, i.len)
-
-def ord(s: str):
-    return int(s.ptr[0])
-
-def chr(i: int):
-    p = ptr[byte](1)
-    p[0] = byte(i)
-    return str(p, 1)
-
-def next(g):
-    g.done()
-    return g.next()
-
-class Box[T]:
-    val: T
+    f.close()
 
 type Block(p: ptr[byte], seq_len: int, num_seqs: int):
     def __iter__(self: Block):

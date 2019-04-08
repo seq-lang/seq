@@ -223,6 +223,10 @@ void types::RefType::initOps()
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateIsNotNull(self), Bool->getLLVMType(b.getContext()));
 		}},
+
+		{"__raw__", {}, PtrType::get(Byte), SEQ_MAGIC(self, args, b) {
+			return self;
+		}},
 	};
 
 	if (contents) {
