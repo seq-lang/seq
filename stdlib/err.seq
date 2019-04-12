@@ -1,0 +1,8 @@
+class OSError:
+    msg: str
+
+class IOError:
+    msg: str
+
+class ArgumentError:
+    msg: str

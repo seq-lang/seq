@@ -25,7 +25,7 @@ cmake ..
 cmake --build .
 ```
 
-This will produce a `seq` executable for compiling/running Seq progrms, and a `seqtest` executable for running the test suite.
+This will produce a `seq` executable for compiling/running Seq programs, and a `seqtest` executable for running the test suite.
 
 
 ## Documentation

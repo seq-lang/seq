@@ -73,6 +73,13 @@ bool types::RecordType::is(types::Type *type) const
 	if (!isGeneric(type) || b != type->numBaseTypes())
 		return false;
 
+	if (!name.empty()) {
+		auto *rec = dynamic_cast<types::RecordType *>(type);
+		assert(rec);
+		if (name != rec->name)
+			return false;
+	}
+
 	for (unsigned i = 0; i < b; i++) {
 		if (!types::is(getBaseType(i), type->getBaseType(i)))
 			return false;

@@ -3,9 +3,9 @@
 
 #include <iostream>
 #include <string>
-#include <caml/mlvalues.h>
-#include <caml/callback.h>
-#include <caml/alloc.h>
+#include <mlvalues.h>
+#include <callback.h>
+#include <alloc.h>
 #include "seq/seq.h"
 
 namespace seq {

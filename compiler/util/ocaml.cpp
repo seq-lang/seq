@@ -5,7 +5,7 @@ using namespace seq;
 
 #define FOREIGN extern "C"
 
-#include <caml/fail.h>
+#include <fail.h>
 
 /***** Types *****/
 
@@ -914,7 +914,7 @@ FOREIGN void *jit_init() { return 0; }
 FOREIGN Var *jit_var(void *jit, Expr *expr) { return 0; }
 FOREIGN void jit_func(void *jit, Func *func, char **error)
 {
-	*error = strdup("JIT is not supported with LLVM < 7");
+	*error = strdup("JIT is not supported without LLVM 6");
 }
 #endif
 

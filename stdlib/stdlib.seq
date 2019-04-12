@@ -131,6 +131,25 @@ def sum(xi):
     else:
         x.destroy()
 
+extend int:
+    def __pow__(self: int, exp: int):
+        result = 1
+        while True:
+            if exp & 1:
+                result *= self
+            exp >>= 1
+            if not exp:
+                break
+            self *= self
+        return result
+
+    def __pow__(self: int, exp: float):
+        return float(self) ** exp
+
+    def __init__(self: int, s: str):
+        cdef atoi(p: ptr[byte]) -> int
+        return atoi(s.c_str())
+
 import! list
 import! dict
 import! set
@@ -147,25 +166,6 @@ def sorted[T](x: list[T]):
     def cmp(x: T, y: T):
         return x < y
     return sorted_cmp(x, cmp)
-
-extend int:
-    def __pow__(self: int, exp: int):
-        result = 1
-        while True:
-            if exp & 1:
-                result *= self
-            exp >>= 1
-            if not exp:
-                break
-            self *= self
-        return result
-
-    def __pow__(self: int, exp: float):
-        return float(self) ** exp
-
-    def __init__(self: int, s: str) -> int:
-        cdef atoi(p: ptr[byte]) -> int
-        return atoi(s.c_str())
 
 extend str:
     def __hash__(self: str):
@@ -305,260 +305,4 @@ extend str:
                     i += 1
             yield self[prev:len(self)]
 
-extend seq:
-    def __init__(self: seq, s: str):
-        return seq(s.ptr, s.len)
-
-    def __hash__(self: seq):
-        h = 0
-        p, n = self.ptr, self.len
-        for i in range(n):
-            h = 31*h + int(p[i])
-        return h
-
-    def __getitem__(self: seq, idx: int):
-        if idx < 0:
-            idx += len(self)
-        assert 0 <= idx <= len(self)
-        return seq(self.ptr + idx, 1)
-
-    def __slice__(self: seq, a: int, b: int):
-        if a < 0: a += len(self)
-        if b < 0: b += len(self)
-        if a > len(self): a = len(self)
-        if b > len(self): b = len(self)
-        return seq(self.ptr + a, b - a)
-
-    def __slice_left__(self: seq, b: int):
-        if b < 0: b += len(self)
-        if b > len(self): b = len(self)
-        return seq(self.ptr, b)
-
-    def __slice_right__(self: seq, a: int):
-        if a < 0: a += len(self)
-        if a > len(self): a = len(self)
-        return seq(self.ptr + a, len(self) - a)
-
-    def split(self: seq, k: int, step: int):
-        i = 0
-        while i + k <= len(self):
-            yield self[i:i+k]
-            i += step
-
-    def kmersx[K](self: seq, step: int):
-        k = K.len()
-        n = len(self)
-
-        if step >= k:
-            # naive
-            i = 0
-            while i + k <= n:
-                yield K(self[i:i+k])
-                i += step
-        elif n >= k:
-            # sliding encoding
-            kmer = K(self[:k])
-            yield kmer
-            i = 0
-            while i + k + step <= n:
-                j = i + k
-                kmer <<= self[j:j+step]
-                i += step
-                yield kmer
-
-    def kmers[K](self: seq, step: int):
-        k = K.len()
-        n = len(self)
-        i = 0
-        while i + k <= n:
-            sub = self[i:i+k]
-            if not sub.N():
-                yield K(sub)
-            i += step
-
-    def N(self: seq):
-        i = 0
-        n = len(self)
-        while i < n:
-            if self[i] == s'N':
-                return i + 1
-            i += 1
-        return 0
-
-    def __invert__(self: seq) -> seq:
-        return self.__copy__().revcomp()
-
-    def revcomp(self: seq) -> seq:
-        p = self.ptr
-        a = 0
-        b = self.len - 1
-        while a < b:
-            p[a], p[b] = p[b].comp(), p[a].comp()
-            a += 1
-            b -= 1
-        return self
-
-def split(self: seq, k: int, step: int):
-    return self.split(k, step)
-
-def kmers[K](self: seq, step: int):
-    return self.kmers[K](step)
-
-class OSError:
-    msg: str
-
-class ArgumentError:
-    msg: str
-
-class File:
-    sz: int
-    buf: ptr[byte]
-    fp: ptr[byte]
-
-    def _reset(self: File):
-        self.buf = ptr[byte]()
-        self.sz = 0
-
-    def __init__(self: File, fp: ptr[byte]):
-        self.fp = fp
-        self._reset()
-
-    def __init__(self: File, path: str, mode: str):
-        cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
-        self.fp = fopen(path.c_str(), mode.c_str())
-        if not self.fp:
-            raise OSError("file could not be opened")
-        self._reset()
-
-    def close(self):
-        cdef fclose(ptr[byte]) -> int
-        cdef free(ptr[byte])
-        if self.fp:
-            fclose(self.fp)
-        if self.buf:
-            free(self.buf)
-            self._reset()
-
-    def _iter(self: File):
-        cdef getline(ptr[ptr[byte]], n: ptr[int], file: ptr[byte]) -> int
-        while True:
-            # pass pointers to individual class fields:
-            rd = getline(ptr[ptr[byte]](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
-            if rd != -1:
-                if self.buf[rd - 1] == byte(10):
-                    rd -= 1
-                yield str(self.buf, rd)
-            else:
-                break
-
-    def __iter__(self: File):
-        for a in self._iter():
-            yield copy(a)
-
-    def readlines(self):
-        return [l for l in self]
-
-    def write(self, s: str):
-        cdef fwrite(ptr[byte], int, int, ptr[byte]) -> int
-        fwrite(s.ptr, 1, s.len, self.fp)
-
-    def write_gen[T](self, g: generator[T]):
-        for s in g:
-            self.write(str(s))
-
-def open(path: str, mode: str) -> File:
-    return File(path, mode)
-
-type FASTQ(file: File):
-    def __init__(self: FASTQ, path: str) -> FASTQ:
-        return (open(path, "r"),)
-
-    def __iter__(self: FASTQ):
-        line = 0
-        for a in self.file._iter():
-            if line % 4 == 1:
-                yield copy(seq(a.ptr, a.len))
-            line += 1
-        self.file.close()
-
-def fastq(path: str):
-    return iter(FASTQ(path))
-
-def seqs(path: str):
-    f = File(path, 'r')
-    for i in f:
-        yield seq(i.ptr, i.len)
-    f.close()
-
-type Block(p: ptr[byte], seq_len: int, num_seqs: int):
-    def __iter__(self: Block):
-        p, seq_len, num_seqs = self.p, self.seq_len, self.num_seqs
-        for i in range(num_seqs):
-            yield seq(p + i*seq_len, seq_len)
-
-def blocks(gg, sz: int):
-    buf = ptr[byte]()
-    n = l = i = 0
-    for s in iter(gg):
-        if l == 0:
-            l = s.len
-            i = 0
-            buf = ptr[byte](l * sz)
-        if s.len != l:
-            raise ArgumentError("blocks requires identical line lengths")
-        str.memcpy(buf + n, s.ptr, l)
-        n += l
-        i += 1
-        if i == sz:
-            yield Block(buf, l, i)
-            buf = ptr[byte](l * sz)
-            n, i = 0, 0
-    if i > 0:
-        yield Block(buf, l, i)
-
-def blocks2(name: str, size: int):
-    cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
-    cdef fclose(ptr[byte]) -> int
-    cdef getline(ptr[ptr[byte]], n: ptr[int], file: ptr[byte]) -> int
-    cdef fgets(ptr[byte], int, ptr[byte]) -> ptr[byte]
-    cdef free(ptr[byte])
-
-    fp = fopen(name.c_str(), "r".ptr)
-
-    if not fp:
-        raise OSError("file could not be opened")
-
-    buf = ptr[byte]()
-    sz = 0
-    rd = getline(__ptr__(buf), __ptr__(sz), fp)
-
-    if rd != -1:
-        if buf[rd - 1] == byte(10):
-            rd -= 1
-
-        done = False
-        while not done:
-            idx = 0
-            block = ptr[byte](size*rd + 2)  # one for '\n', one for '\0'
-            if buf:
-                str.memcpy(block, buf, rd)
-                free(buf)
-                buf = ptr[byte]()
-                idx += 1
-
-            while idx < size:
-                off = idx * rd
-                p = fgets(block + off, rd + 2, fp)
-
-                if not p:
-                    done = True
-                    break
-
-                if block[off + rd] != byte(10):
-                    raise OSError("all sequences must be of same length for blocking")
-
-                idx += 1
-
-            yield Block(block, rd, idx)
-
-    fclose(fp)
+import! bio

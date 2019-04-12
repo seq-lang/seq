@@ -11,6 +11,7 @@
 *.o
 *.obj
 *.so
+*.pyc
 build/
 
 # Packages #
