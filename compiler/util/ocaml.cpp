@@ -5,7 +5,7 @@ using namespace seq;
 
 #define FOREIGN extern "C"
 
-#include <fail.h>
+#include <caml/fail.h>
 
 /***** Types *****/
 

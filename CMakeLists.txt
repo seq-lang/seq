@@ -92,7 +92,7 @@ if (result)
 endif()
 
 message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
-include_directories(${OCAML_STDLIB_PATH}/caml)
+include_directories(${OCAML_STDLIB_PATH})
 link_directories(${OCAML_STDLIB_PATH})
 
 if(APPLE)
