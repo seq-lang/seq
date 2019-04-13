@@ -12,21 +12,25 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+
+def setup(sphinx):
+    sys.path.insert(0, os.path.abspath('.'))
+    from seqlex import SeqLexer
+    sphinx.add_lexer("seq", SeqLexer())
 
 
 # -- Project information -----------------------------------------------------
 
 project = u'Seq'
-copyright = u'2018, arshajii'
+copyright = u'2019, SeqLang'
 author = u'arshajii'
 
 # The short X.Y version
-version = u''
+version = u'0.1'
 # The full version, including alpha/beta/rc tags
-release = u'0.0.1'
+release = u'0.1.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -144,7 +148,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'seq', u'seq Documentation',
+    (master_doc, 'seq', u'Seq Documentation',
      [author], 1)
 ]
 
@@ -155,8 +159,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'seq', u'seq Documentation',
-     author, 'seq', 'One line description of project.',
+    (master_doc, 'seq', u'Seq Documentation',
+     author, 'seq', 'A language for computational genomics',
      'Miscellaneous'),
 ]
 

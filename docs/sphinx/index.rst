@@ -8,6 +8,7 @@ Contents
    :maxdepth: 2
 
    intro
+   tutorial
    internals
    api/doxygen
 

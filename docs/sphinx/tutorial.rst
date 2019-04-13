@@ -1,0 +1,323 @@
+Tutorial
+========
+
+Introduction
+------------
+
+Seq is a subset of Python, with additional general-purpose and genomics-oriented language features, types and constructs. As a result, a lot of existing Python code will run as-is under Seq (but *much* faster), and if you know Python you're 95% of the way to knowing Seq.
+
+Limitations and key differences with Python
+-------------------------------------------
+
+Seq is statically typed, and performs most of Python's duck typing strictly at compile time. For this reason, it has the following limitations:
+
+- Collections (list, set, dict, etc.) cannot contain objects of different types. For example, ``[42, 3.14, "hello"]`` is not allowed.
+- Variables cannot be assigned to objects of different types, and functions can only return objects of a single type.
+- Methods of an object cannot be modified/patched at runtime (although they can at compile time, which we discuss below).
+- Tuple indices must be constants, and iteration over a tuple is allowed only if its elements all have the same type.
+- Inheritance and polymorphism are currently not supported.
+- Seq enforces slightly stricter scoping rules than Python. In particular, a variable cannot be first assigned in a block then used *after* for the first time in the enclosing block. This restriction avoids the problem of unitialized variables.
+- A few other esoteric Python features like `loop-else <https://stackoverflow.com/questions/9979970/why-does-python-use-else-after-for-and-while-loops>`_ are also not supported.
+
+We have found that these features are rarely needed in bioinformatics/genomics software, and omitting them is what allows Seq to attain C-like performance.
+
+Finally, the following features are not supported by the *current* version of Seq, but we have plans of implementing them in the near future:
+
+- Named and default function arguments
+- Empty collection literals: ``[]`` and ``{}`` (these must be replaced with ``list[T]()`` and ``dict[K,V]()``, respectively)
+- ``lambda``
+- ``with``
+- Various Python standard modules, methods or built-ins (although many built-in functions are already supported, some do not have the full flexibility of Python's)
+
+Types
+-----
+
+Seq allows standard Python type-less functions (on which it performs type deduction), but also supports type annotations using `mypy <http://www.mypy-lang.org>`_ syntax. For example:
+
+.. code-block:: seq
+
+    def hypot(a: float, b: float) -> float:
+        return (a**2 + b**2) ** 0.5
+
+Seq also supports explicit generic type parameters, such as:
+
+.. code-block:: seq
+
+    def hypot[T](a: T, b: T) -> T:
+        return T((a**2 + b**2) ** 0.5)
+
+In this example, ``a`` and ``b`` must have the same type, which is also the function's return type. Calls to this function can then be type-parameterized (such as ``hypot[int](3,4)``) or can be unparameterized, in which case type parameters will be deduced if possible.
+
+Seq ``class`` constructs have a syntax similar to Python `dataclasses <https://docs.python.org/3/library/dataclasses.html>`_, and can similarly be generic. Here's a generic linked-list node class, for instance:
+
+.. code-block:: seq
+
+    class Node[T]:
+        data: T
+        link: Node[T]
+
+        def __init__(self: Node[T], data: T):
+            self.data = data
+            self.link = None
+
+        def __iter__(self: Node[T]):
+            while self is not None:
+                yield self.data
+                self = self.link
+
+Now ``Node`` can be used as such:
+
+.. code-block:: seq
+
+    a = Node[int](1)  # explicit type parameter
+    b = Node(2)       # type parameter deduction
+    c = Node(3)
+
+    a.link = b
+    b.link = c
+
+    for i in a:
+        print i  # 1, 2, 3
+
+Seq also supports a ``type`` construct for declaring named tuples (which are compatible with structs in C):
+
+.. code-block:: seq
+
+    type Vec(x: float, y: float):
+        def __abs__(self: Vec) -> float:
+            return (self.x**2 + self.y**2) ** 0.5
+
+Genomics-specific features
+--------------------------
+
+Genomic types
+^^^^^^^^^^^^^
+
+Seq's namesake type is indeed the sequence type: ``seq``. A ``seq`` object represents a DNA sequence of any length and---on top of general-purpose string functionality---provides methods for performing common sequence operations such as splitting into subsequences, reverse complementation and :math:`k`-mer extraction. Alongside the ``seq`` type are :math:`k`-mer types, where e.g. ``k1`` represents a 1-mer, ``k2`` a 2-mer and so on, up to ``k256``.
+
+Sequences can be seamlessly converted between these various types:
+
+.. code-block:: seq
+
+    dna = s'ACGTACGTACGT'  # sequence literal
+
+    # (a) split into subsequences of length 3
+    #     with a stride of 2
+    for sub in dna.split(3, 2):
+        print sub
+
+    # (b) split into 5-mers with stride 1
+    for kmer in dna.kmers[k5](1):
+        print kmer
+        print ~kmer  # reverse complement
+
+    # (c) convert entire sequence to 12-mer
+    kmer = k12(dna)
+
+In practice, reads would be inputted from e.g. a FASTQ file:
+
+.. code-block:: seq
+
+    for read in fastq('input.fastq'):
+        process(read)
+
+Common formats like FASTQ, FASTA (``fasta``) and plain txt-files (``seqs``) are supported.
+
+Sequences can be reverse complemented in-place using the ``revcomp()`` method; both sequence and :math:`k`-mer types also support the ``~`` operator for reverse complementation, as shown above.
+
+Sequence matching
+^^^^^^^^^^^^^^^^^
+
+Seq provides the conventional ``match`` construct, which works on integers, lists, strings and tuples. Here's a simple example:
+
+.. code-block:: seq
+
+    def describe(n: int):
+        match n:
+            case m if m < 0:
+                print 'negative'
+            case 0:
+                print 'zero'
+            case m if 0 < m < 10:
+                print 'small'
+            default:
+                print 'large'
+
+A novel aspect of Seq's ``match`` statement is that it also works on sequences, and allows for concise recursive representations of several sequence operations such as subsequence search, reverse complementation tests and base counting, as shown in this example:
+
+.. code-block:: seq
+
+    # (a)
+    def has_spaced_acgt(s: seq) -> bool:
+        match s:
+            case s'A_C_G_T...':
+                return True
+            case t if len(t) >= 8:
+                return has_spaced_acgt(s[1:])
+            default:
+                return False
+
+    # (b)
+    def is_own_revcomp(s: seq) -> bool:
+        match s:
+            case s'A...T' or s'T...A' or s'C...G' or s'G...C':
+                return is_own_revcomp(s[1:-1])
+            case s'':
+                return True
+            default:
+                return False
+
+    # (c)
+    type BaseCount(A: int, C: int, G: int, T: int):
+        def __add__(self: BaseCount, other: BaseCount):
+            a1, c1, g1, t1 = self
+            a2, c2, g2, t2 = other
+            return (a1 + a2, c1 + c2, g1 + g2, t1 + t2)
+
+    def count_bases(s: seq) -> BaseCount:
+        match s:
+            case s'A...': return count_bases(s[1:]) + (1,0,0,0)
+            case s'C...': return count_bases(s[1:]) + (0,1,0,0)
+            case s'G...': return count_bases(s[1:]) + (0,0,1,0)
+            case s'T...': return count_bases(s[1:]) + (0,0,0,1)
+            default: return BaseCount(0,0,0,0)
+
+- Example (a) checks if a given sequence contains the subsequence ``A_C_G_T``, where ``_`` is a wildcard base.
+- Example (b) checks if the given sequence is its own reverse complement.
+- Example (c) counts how many times each base appears in the given sequence.
+
+Sequence patterns consist of literal ``ACGT`` characters, single-base wildcards (``_``) or "zero or more" wildcards (``...``) that match zero or more of any base.
+
+Pipelines
+^^^^^^^^^
+
+Pipelining is a natural model for thinking about processing genomic data, as sequences are typically processed in stages (e.g. read from input file, split into :math:`k`-mers, query :math:`k`-mers in index, perform full dynamic programming alignment, output results to file), and are almost always independent of one another as far as this processing is concerned. Because of this, Seq supports a pipe operator: ``|>``, similar to F#'s pipe and R's ``magrittr`` (``%>%``).
+
+Pipeline stages in Seq can be regular functions or generators. In the case of standard functions, the function is simply applied to the input data and the result is carried to the remainder of the pipeline, akin to F#'s functional piping. If, on the other hand, a stage is a generator, the values yielded by the generator are passed lazily to the remainder of the pipeline, which in many ways mirrors how piping is implemented in Bash. Note that Seq ensures that generator pipelines do not collect any data unless explicitly requested, thus allowing the processing of terabytes of data in a streaming fashion with no memory and minimal CPU overhead.
+
+Here's an example of pipeline usage, which shows the same two loops from above, but as pipelines:
+
+.. code-block:: seq
+
+    dna = s'ACGTACGTACGT'  # sequence literal
+
+    # (a) split into subsequences of length 3
+    #     with a stride of 2
+    dna |> split(..., 3, 2) |> echo
+
+    # (b) split into 5-mers with stride 1
+    def f(kmer):
+        print kmer
+        print ~kmer
+
+    dna |> kmers[k5](1) |> f
+
+First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers[k5](..., 1)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
+
+Genomic index prefetching
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Large genomic indices---ranging from several to tens or even hundreds of gigabytes---used in many applications result in extremely poor cache performance and, ultimately, a substantial fraction of stalled memory-bound cycles. For this reason, Seq performs pipeline optimizations to enable data prefetching and to hide memory latencies. You, the user, must provide just:
+
+- a ``__prefetch__`` magic method definition in the index class, which is logically similar to ``__getitem__`` (indexing construct) but performs a prefetch instead of actually loading the requested value (and can simply delegate to ``__prefetch__`` methods of built-in types);
+- a one-line ``prefetch`` hint indicating where a software prefetch should be performed, which can typically be just before the actual load.
+
+In particular, a typical prefetch-friendly index class would look like this:
+
+.. code-block:: seq
+
+    class MyIndex:  # abstract k-mer index
+        ...
+        def __getitem__(self: MyIndex, kmer: k20):
+            # standard __getitem__
+        def __prefetch__(self: MyIndex, kmer: k20):
+            # similar to __getitem__, but performs prefetch
+
+Now, if we were to process data in a pipeline as such:
+
+.. code-block:: seq
+
+    def process(read: seq, index: MyIndex):
+        ...
+        for kmer in read.kmers[k20](step):
+            prefetch index[kmer], index[~kmer]
+            hits = index[kmer]
+            hits_rev = index[~kmer]
+            ...
+        return x
+
+    fastq("reads.fq") |> process(index) |> postprocess
+
+The Seq compiler will perform pipeline transformations to overlap cache misses in ``MyIndex`` with other useful work, increasing overall throughput. In our benchmarks, we often find these transformations to improve performance by 50% to 2×. However, the improvement is dataset- and application-dependent (and can potentially even decrease performance, although we rarely observed this), so users are encouraged to experiment with it for their own use case.
+
+Other features
+--------------
+
+Parallelism
+^^^^^^^^^^^
+
+CPython and many other implementations alike cannot take advantage of parallelism due to the infamous global interpreter lock, a mutex that protects accesses to Python objects, preventing multiple threads from executing Python bytecode at once. Unlike CPython, Seq has no such restriction and supports full multithreading. To this end, Seq supports a *parallel* pipe operator ``||>``, which is semantically similar to the standard pipe operator except that it allows the elements sent through it to be processed in parallel by the remainder of the pipeline. Hence, turning a serial program into a parallel one often requires the addition of just a single character in Seq. Further, a single pipeline can contain multiple parallel pipes, resulting in nested parallelism. As an example, here are the same two pipelines as above, but parallelized:
+
+.. code-block:: seq
+
+    dna = s'ACGTACGTACGT'  # sequence literal
+
+    # (a) split into subsequences of length 3
+    #     with a stride of 2
+    dna |> split(..., 3, 2) ||> echo
+
+    # (b) split into 5-mers with stride 1
+    def f(kmer):
+        print kmer
+        print ~kmer
+
+    dna |> kmers[k5](1) ||> f
+
+Internally, the Seq compiler uses `Tapir <http://cilk.mit.edu/tapir/>`_ with an OpenMP task backend to generate code for parallel pipelines. Logically, parallel pipe operators are similar to parallel-for loops: the portion of the pipeline after the parallel pipe is outlined into a new function that is called by the OpenMP runtime task spawning routines (as in ``#pragma omp task`` in C++), and a synchronization point (``#pragma omp taskwait``) is added after the outlined segment. Lastly, the entire program is implicitly placed in an OpenMP parallel region (``#pragma omp parallel``) that is guarded by a "single" directive (``#pragma omp single``) so that the serial portions are still executed by one thread (this is required by OpenMP as tasks must be bound to an enclosing parallel region).
+
+Type extensions
+^^^^^^^^^^^^^^^
+
+Seq provides an ``extend`` keyword that allows programmers to add and modify methods of various types at compile time, including built-in types like ``int`` or ``str``. This actually allows much of the functionality of built-in types to be implemented in Seq as type extensions in the standard library. Here is an example where the ``int`` type is extended to include a ``to`` method that generates integers in a specified range, as well as to override the ``__mul__`` magic method to "intercept" integer multiplications:
+
+.. code-block:: seq
+
+    extend int:
+        def to(self: int, other: int):
+            for i in range(self, other + 1):
+                yield i
+
+        def __mul__(self: int, other: int):
+            print 'caught int mul!'
+            return 42
+
+    for i in (5).to(10):
+        print i  # 5, 6, ..., 10
+
+    # prints 'caught int mul!' then '42'
+    print 2 * 3
+
+Note that all type extensions are performed strictly at compile time and incur no runtime overhead.
+
+Other types
+^^^^^^^^^^^
+
+Seq provides arbitrary-width signed and unsigned integers up to ``i512`` and ``u512``, respectively (note that ``int`` is an ``i64``).
+
+The ``ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``ptr[byte]`` is equivalent to ``char*`` in C). The ``array[T]`` type represents a fixed-length array (essentially a pointer with a length).
+
+Seq also provides ``__ptr__`` for obtaining a pointer to a variable (as in ``__ptr__(myvar)``) and ``__array__`` for declaring stack-allocated arrays (as in ``__array__[int](10)``).
+
+C/C++ interoperability
+^^^^^^^^^^^^^^^^^^^^^^
+
+Seq enables seamless interoperability with C and C++ via ``cdef`` functions as such:
+
+.. code-block:: seq
+
+    cdef sqrt(float) -> float
+    cdef puts(ptr[byte])
+    print sqrt(100.0)
+    puts("hello world".c_str())
+
+Primitive types like ``int``, ``float``, ``bool`` etc. are directly interoperable with the corresponding types in C/C++, while compound types like tuples are interoperable with the corresponding struct types. Other built-in types like ``str`` provide methods to convert to C analogs, such as ``c_str()`` as shown above.
