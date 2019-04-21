@@ -127,3 +127,24 @@ Code generation is done in two passes:
 1. **Type resolution:** Traverse the AST and set types of variables, and deduce function return types. Note that type resolution on functions can potentially fail if generic types are involved (e.g. how can we resolve the type of ``a`` in ``for a in x`` if ``x`` is generic?); in this case, we fail silently in the hope of being able to resolve types fully when the function is realized.
 2. **Code generation:** At this stage, all types should be fixed, so we re-traverse the AST and do the actual codegen.
 
+Adding new statements and expressions
+-------------------------------------
+
+Looking at how some existing statements/expressions are implemented is probably the easiest way to understand what goes into them. Nevertheless, statements require the following:
+
+- Inherit from ``Stmt`` class
+- Override ``resolveTypes()``: This method should perform any required type resolution and recursively call ``resolveTypes()`` on any internal ``Stmt``/``Expr``/``Func``/``Pattern`` object.
+- Override ``codegen0()``: This method takes an LLVM basic block reference as an argument, and performs code generation for the statement. By the time it returns, the argument basic block reference should point to a basic block where subsequent code generation can resume.
+- Override ``clone()``: This method should perform a deep copy of the given statement, and recursively call ``clone()`` on any internal Seq objects contained in the statement. The method takes a ``Generic`` object as an argument, which keeps track of which objects have already been cloned; implementations should generally check if a clone of the given statement already exists before actually cloning (check source for examples). Returns in this function should be done with the ``SEQ_RETURN_CLONE`` macro, which internally sets some other clone fields for source information etc.
+
+Expressions are very similar:
+
+- Inherit from ``Expr`` class
+- Override ``resolveTypes()``: Same as above
+- Override ``codegen0()``: Same as above, except this method returns an LLVM value representing the result of the expression (can possibly be null if type is void).
+- Override ``getType0()``: Returns the expression's type. You can assume this gets called *after* ``resolveTypes()``. Note that if the expression type is fixed, it can alternatively be passed to the ``Expr`` constructor directly and this method need not be overriden.
+- Override ``clone()``: Same as above
+
+Of course, the lexer/parser must also be updated to create any new statement/expression objects: ``compiler/util/ocaml.cpp`` provides C stubs that get called from the OCaml lexer/parser to interface with the C++ objects; new statements/expressions should generally provide wrappers there as well.
+
+If an error (be it a type error or something else) occurs in any of these methods, a ``SeqException`` with an appropriate error message can be thrown.

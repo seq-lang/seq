@@ -10,6 +10,9 @@ namespace seq {
 
 	class TryCatch;
 
+	/**
+	 * Pattern class representing patterns used in `match` statements.
+	 */
 	class Pattern : public SrcObject {
 	private:
 		types::Type *type;

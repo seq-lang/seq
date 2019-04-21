@@ -25,7 +25,11 @@ namespace seq {
 		return true;
 	}
 
-	// Generic realization cache:
+	/**
+	 * Generic realization cache for caching instantiations of generic
+	 * functions, methods, classes, etc.
+	 * @tparam T type being realized
+	 */
 	template<typename T>
 	class RCache {
 	private:
@@ -55,6 +59,18 @@ namespace seq {
 			bool force;
 		};
 
+		/**
+		 * A generic type simply delegates all of its functionality to some other type,
+		 * which is determined later during type resolution. However, this class is also
+		 * reused for two other scenarios:
+		 *
+		 *   - Realized generic types like `A[int]`: Realization is deferred until
+		 *     absolutely necessary by this class.
+		 *   - `typeof` expressions: This class can hold an expression object whose
+		 *     type will not be checked until (again) absolutely necessary.
+		 *
+		 * This deferral allows some type-checking corner-cases to work properly.
+		 */
 		class GenericType : public Type {
 		private:
 			/* standard generic type parameter */
@@ -162,6 +178,10 @@ namespace seq {
 		};
 	}
 
+	/**
+	 * Generic object abstraction for representing generic functions, methods,
+	 * classes, etc.
+	 */
 	class Generic {
 	private:
 		std::vector<types::GenericType *> generics;

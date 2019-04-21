@@ -52,6 +52,10 @@ namespace seq {
 		static GenType    *Gen    = GenType::get();
 	}
 
+	/**
+	 * Top-level module representation for programs. All parsing, type checking
+	 * and code generation is initiated from this class.
+	 */
 	class SeqModule : public BaseFunc {
 	private:
 		Block *scope;
@@ -75,6 +79,7 @@ namespace seq {
 		             bool debug=false);
 	};
 
+	// following is largely from LLVM docs
 #if LLVM_VERSION_MAJOR == 6
 	class SeqJIT {
 	private:

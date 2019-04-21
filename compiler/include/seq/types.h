@@ -69,6 +69,12 @@ namespace seq {
 			/// Fields and methods for this type
 			VTable vtable;
 		public:
+			/// Base type constructor
+			/// @param name base name of this type
+			/// @param parent parent type
+			/// @param abstract whether this type can be instantiated
+			/// @param extendable whether this type can be extended via an
+			///                   `extend` statement
 			Type(std::string name, Type *parent, bool abstract=false, bool extendable=false);
 
 			/// Returns a unique identifier for this type, based on Type::getName()
@@ -77,8 +83,13 @@ namespace seq {
 			/// Returns the full name (e.g. array[int], Foo[str,bool]) of this type
 			virtual std::string getName() const;
 
+			/// Returns this type's parent type.
 			virtual Type *getParent() const;
+
+			/// Returns whether this type is abstract (i.e. cannot be instantiated).
 			virtual bool isAbstract() const;
+
+			/// Returns a reference to this type's VTable
 			virtual VTable& getVTable();
 
 			/// Returns whether this type is "atomic". A type is defined to be
@@ -198,7 +209,11 @@ namespace seq {
 			                              llvm::BasicBlock*& block,
 			                              TryCatch *tc);
 
+			/// Performs a one-time initialization of this type's methods,
+			/// including magic methods.
 			virtual void initOps();
+
+			/// Performs a one-time initialization of this type's fields.
 			virtual void initFields();
 
 			/// Returns the output type of the specified magic method

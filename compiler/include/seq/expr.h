@@ -12,27 +12,74 @@ namespace seq {
 	/**
 	 * Class from which all Seq expressions derive.
 	 *
-	 * An "expression" can be thought of as an AST, potentially
-	 * containing subexpressions. Every expression has a type.
+	 * An "expression" can be thought of as an AST node,
+	 * potentially containing sub-expressions. Every
+	 * expression has a type.
 	 */
 	class Expr : public SrcObject {
 	private:
+		/// Expression type if fixed, or null if not
 		types::Type *type;
+
+		/// Enclosing try-catch, or null of none
 		TryCatch *tc;
 	protected:
+		/// Human-readable name for this expression,
+		/// mainly for debugging
 		std::string name;
 	public:
+		/// Constructs an expression of fixed type.
+		/// @param type fixed type of expression
 		explicit Expr(types::Type *type);
+
+		/// Constructs an expression without a fixed type.
 		Expr();
+
+		/// Sets the enclosing try-catch statement.
 		void setTryCatch(TryCatch *tc);
+
+		/// Returns the enclosing try-catch statement.
 		TryCatch *getTryCatch();
+
+		/// Delegates to \ref codegen0() "codegen0()"; catches
+		/// exceptions and fills in source information.
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block);
+
+		/// Returns the type of this expression. This function is
+		/// a wrapper around \ref getType0() "getType0()", and
+		/// fills in source info if an exception is thrown.
 		types::Type *getType() const;
+
+		/// Returns the given name of this expression.
 		std::string getName() const;
+
+		/// Performs type resolution on this expression and all
+		/// sub-expressions/statements/etc. This is called prior
+		/// to \ref getType() "getType()".
 		virtual void resolveTypes();
+
+		/// Performs code generation for this expression.
+		/// @param base the function containing this expression
+		/// @param block reference to block where code should be
+		///              generated; possibly modified to point
+		///              to a new block where codegen should resume
+		/// @return value representing expression result; possibly
+		///         null if type is void
 		virtual llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock*& block)=0;
+
+		/// Determines and returns the type of this expression
 		virtual types::Type *getType0() const;
+
+		/// Ensures that this expression has the specified type.
+		/// Throws an exception if this is not the case.
+		/// @param type required type of this expression
 		virtual void ensure(types::Type *type);
+
+		/// Clones this expression. \p ref is used internally to
+		/// keep track of cloned objects, and to make sure we
+		/// don't clone certain objects twice.
+		/// @param ref generic object that is being cloned
+		/// @return cloned expression
 		virtual Expr *clone(Generic *ref);
 	};
 
