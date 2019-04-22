@@ -77,10 +77,11 @@ namespace seq {
 			///                   `extend` statement
 			Type(std::string name, Type *parent, bool abstract=false, bool extendable=false);
 
-			/// Returns a unique identifier for this type, based on Type::getName()
+			/// Returns a unique identifier for this type, based on
+			/// \ref getName() "getName()".
 			virtual int getID() const;
 
-			/// Returns the full name (e.g. array[int], Foo[str,bool]) of this type
+			/// Returns the full name (e.g. `array[int]`, `Foo[str,bool]`) of this type.
 			virtual std::string getName() const;
 
 			/// Returns this type's parent type.
@@ -89,7 +90,7 @@ namespace seq {
 			/// Returns whether this type is abstract (i.e. cannot be instantiated).
 			virtual bool isAbstract() const;
 
-			/// Returns a reference to this type's VTable
+			/// Returns a reference to this type's VTable.
 			virtual VTable& getVTable();
 
 			/// Returns whether this type is "atomic". A type is defined to be
@@ -106,9 +107,9 @@ namespace seq {
 			virtual llvm::Value *alloc(llvm::Value *count, llvm::BasicBlock *block);
 
 			/// Calls this type. Usually a call to this method should be preceded
-			/// by a call to Type::getCallType() to validate types and determine
-			/// the output type.
-			/// @param base the BaseFunc enclosing \p block
+			/// by a call to \ref getCallType() "getCallType()" to validate types
+			/// and determine the output type.
+			/// @param base the function containing \p block
 			/// @param self a value of this type
 			/// @param args vector of argument values
 			/// @param block where to codegen this call in
@@ -191,7 +192,7 @@ namespace seq {
 			/// @return value of the default value
 			virtual llvm::Value *defaultValue(llvm::BasicBlock *block);
 
-			/// Convenience method for calling type.__bool__.
+			/// Convenience method for calling `type.__bool__`.
 			/// @param self value of this type
 			/// @param block where to codegen the bool value
 			/// @param tc enclosing try-catch statement, or null if none
@@ -200,7 +201,7 @@ namespace seq {
 			                               llvm::BasicBlock*& block,
 			                               TryCatch *tc);
 
-			/// Convenience method for calling type.__str__.
+			/// Convenience method for calling `type.__str__`.
 			/// @param self value of this type
 			/// @param block where to codegen the bool value
 			/// @param tc enclosing try-catch statement, or null if none
@@ -245,18 +246,18 @@ namespace seq {
 			virtual bool is(Type *type) const;
 
 			/// Checks whether this type "is" another type, excluding
-			/// base types. E.g., "array[int].is(array[float])"
+			/// base types. E.g., `array[int].is(array[float])`
 			/// would return true.
 			virtual bool isGeneric(Type *type) const;
 
 			/// Returns the number of "base types" of this type. E.g.,
-			/// "int.numBaseTypes()" would return 0, whereas
-			/// "array[str].numBaseTypes()" would return 1, and
-			/// "(int,float,str).numBaseTypes()" would return 3.
+			/// `int.numBaseTypes()` would return 0, whereas
+			/// `array[str].numBaseTypes()` would return 1, and
+			/// `(int,float,str).numBaseTypes()` would return 3.
 			virtual unsigned numBaseTypes() const;
 
 			/// Obtain the base type at index \p idx. \p idx should be
-			/// less than Type::numBaseTypes().
+			/// less than \ref numBaseTypes() "numBaseTypes()".
 			virtual Type *getBaseType(unsigned idx) const;
 
 			/// Returns the result of calling this type with the given
@@ -272,31 +273,31 @@ namespace seq {
 
 			/// Returns this type as a record type, or null if it isn't
 			/// a record type. This is basically for overriding C++'s
-			/// RTTI/dynamic_cast so that generic types can be converted
+			/// RTTI/`dynamic_cast` so that generic types can be converted
 			/// to their actual types.
 			virtual RecordType *asRec();
 
 			/// Returns this type as a reference type, or null if it isn't
 			/// a reference type. This is basically for overriding C++'s
-			/// RTTI/dynamic_cast so that generic types can be converted
+			/// RTTI/`dynamic_cast` so that generic types can be converted
 			/// to their actual types.
 			virtual RefType *asRef();
 
 			/// Returns this type as a generator type, or null if it isn't
 			/// a generator type. This is basically for overriding C++'s
-			/// RTTI/dynamic_cast so that generic types can be converted
+			/// RTTI/`dynamic_cast` so that generic types can be converted
 			/// to their actual types.
 			virtual GenType *asGen();
 
 			/// Returns this type as an optional type, or null if it isn't
 			/// an optional type. This is basically for overriding C++'s
-			/// RTTI/dynamic_cast so that generic types can be converted
+			/// RTTI/`dynamic_cast` so that generic types can be converted
 			/// to their actual types.
 			virtual OptionalType *asOpt();
 
 			/// Returns this type as a k-mer type, or null if it isn't
 			/// a k-mer type. This is basically for overriding C++'s
-			/// RTTI/dynamic_cast so that generic types can be converted
+			/// RTTI/`dynamic_cast` so that generic types can be converted
 			/// to their actual types.
 			virtual KMer *asKMer();
 
@@ -315,30 +316,30 @@ namespace seq {
 	}
 
 	/**
-	 * Intrinsic magic methods (such as int.__add__).
+	 * Intrinsic magic methods (such as `int.__add__`).
 	 *
 	 * Magic methods defined within the compiler are basically lambdas
 	 * that indicate how to perform code generation, with a few other
-	 * bits information such as input/output types and a name.
+	 * bits of information such as input/output types and a name.
 	 */
 	struct MagicMethod {
 		/// Full magic method name
 		std::string name;
 
-		/// Magic method argument types, excluding 'self'
+		/// Magic method argument types, excluding `self`
 		std::vector<types::Type *> args;
 
 		/// Magic method output type
 		types::Type *out;
 
-		/// Code generation function. First argument is 'self', second
+		/// Code generation function. First argument is `self`, second
 		/// is a vector of method arguments, third is an IRBuilder in
 		/// the target BasicBlock.
 		std::function<llvm::Value *(llvm::Value *,
 		                            std::vector<llvm::Value *>,
 		                            llvm::IRBuilder<>&)> codegen;
 
-		/// Converts magic method to a BaseFunc
+		/// Converts magic method to a \ref BaseFunc "BaseFunc"
 		/// @param type 'self' type
 		BaseFunc *asFunc(types::Type *type) const;
 	};
@@ -350,7 +351,7 @@ namespace seq {
 		/// Full magic method name
 		std::string name;
 
-		/// BaseFunc holding the method
+		/// Function representing the method
 		BaseFunc *func;
 	};
 

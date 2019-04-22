@@ -174,16 +174,16 @@ breathe_default_project = 'Seq'
 
 exhale_args = {
     # These arguments are required
-    'containmentFolder':     './api',
+    'containmentFolder':     'api',
     'rootFileName':          'doxygen.rst',
-    'rootFileTitle':         'Seq Compiler API',
+    'rootFileTitle':         'Compiler API',
     'doxygenStripFromPath':  '..',
     # Suggested optional arguments
     'createTreeView':        True,
     # TIP: if using the sphinx-bootstrap-theme, you need
     # 'treeViewIsBootstrap': True,
     'exhaleExecutesDoxygen': True,
-    'exhaleDoxygenStdin':    'INPUT = ../../compiler/include ../../compiler/lang ../../compiler/types ../../compiler/util ../../runtime'
+    'exhaleDoxygenStdin':    'INPUT = ../../compiler/include ../../compiler/lang ../../compiler/types ../../compiler/util',
 }
 
 # Tell sphinx what the primary language being documented is.

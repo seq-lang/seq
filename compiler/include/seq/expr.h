@@ -45,9 +45,8 @@ namespace seq {
 		/// exceptions and fills in source information.
 		llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock*& block);
 
-		/// Returns the type of this expression. This function is
-		/// a wrapper around \ref getType0() "getType0()", and
-		/// fills in source info if an exception is thrown.
+		/// Delegates to \ref getType0() "getType0()"; catches
+		/// exceptions and fills in source information.
 		types::Type *getType() const;
 
 		/// Returns the given name of this expression.
@@ -55,7 +54,7 @@ namespace seq {
 
 		/// Performs type resolution on this expression and all
 		/// sub-expressions/statements/etc. This is called prior
-		/// to \ref getType() "getType()".
+		/// to \ref Expr::getType() "Expr::getType()".
 		virtual void resolveTypes();
 
 		/// Performs code generation for this expression.

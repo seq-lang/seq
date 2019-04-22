@@ -84,7 +84,8 @@ namespace seq {
 		/// Returns the given name of this statement.
 		std::string getName() const;
 
-		/// Returns the statement enclosing this statement.
+		/// Returns the statement enclosing this statement,
+		/// or null if none.
 		Stmt *getPrev() const;
 
 		/// Sets the parent (i.e. enclosing) block of this
@@ -143,11 +144,10 @@ namespace seq {
 
 		/// Performs type resolution on this statement and all
 		/// sub-expressions/statements/etc. This is called prior
-		/// to \ref getType() "getType()".
+		/// to \ref Expr::getType() "Expr::getType()".
 		virtual void resolveTypes();
 
 		/// Performs code generation for this statement.
-		/// @param base the function containing this expression
 		/// @param block reference to block where code should be
 		///              generated; possibly modified to point
 		///              to a new block where codegen should resume
@@ -160,7 +160,7 @@ namespace seq {
 		/// @return cloned statement
 		virtual Stmt *clone(Generic *ref)=0;
 
-		/// Copies this statement's fields to a cloned statement.
+		/// Copies this statement's fields to a cloned statement's.
 		/// @param stmt object to copy fields to
 		/// @param ref generic object that is being cloned
 		virtual void setCloneBase(Stmt *stmt, Generic *ref);

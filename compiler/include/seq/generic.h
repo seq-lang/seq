@@ -62,7 +62,7 @@ namespace seq {
 		/**
 		 * A generic type simply delegates all of its functionality to some other type,
 		 * which is determined later during type resolution. However, this class is also
-		 * reused for two other scenarios:
+		 * reused for two other purposes:
 		 *
 		 *   - Realized generic types like `A[int]`: Realization is deferred until
 		 *     absolutely necessary by this class.
