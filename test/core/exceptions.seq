@@ -8,6 +8,21 @@ class Exc2:
     def show(self):
         print self.msg
 
+class A:
+	msg: str
+
+class B:
+	msg: str
+
+class C:
+	msg: str
+
+class D:
+	msg: str
+
+class E:
+	msg: str
+
 def foo1(x):
     if x:
         raise Exc1('e1')
@@ -81,6 +96,43 @@ def baz2(x):
         print 'finally 2'
     print 'done 2'
 
+def nest1(b):
+    if b:
+        raise C('C')
+    else:
+        raise E('E')
+
+def nest2(b):
+    try:
+        try:
+            try:
+                try:
+                    nest1(b)
+                except A:
+                    print 'A'
+                finally:
+                    print 'f A'
+            except B:
+                print 'B'
+            finally:
+                print 'f B'
+        except C as c:
+            print c.msg
+        finally:
+            print 'f C'
+    except D:
+        print 'D'
+    finally:
+        print 'f D'
+
+def nest3(b):
+    try:
+        nest2(b)
+    except:
+        print 'except'
+    finally:
+        print 'done'
+
 # EXPECT: try
 # EXPECT: catch Exc1 1
 # EXPECT: e1
@@ -122,3 +174,19 @@ baz2(1)
 # EXPECT: finally 2
 # EXPECT: done 2
 baz2(0)
+
+# EXPECT: f A
+# EXPECT: f B
+# EXPECT: C
+# EXPECT: f C
+# EXPECT: f D
+# EXPECT: done
+nest3(True)
+
+# EXPECT: f A
+# EXPECT: f B
+# EXPECT: f C
+# EXPECT: f D
+# EXPECT: except
+# EXPECT: done
+nest3(0)

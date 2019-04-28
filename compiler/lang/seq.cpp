@@ -82,6 +82,28 @@ static void resetOMPABI()
 }
 #endif
 
+static void invokeMain(Function *main, BasicBlock*& block)
+{
+	LLVMContext& context = block->getContext();
+	Function *func = block->getParent();
+	Module *module = func->getParent();
+	BasicBlock *normal = BasicBlock::Create(context, "normal", func);
+	BasicBlock *unwind = BasicBlock::Create(context, "unwind", func);
+	IRBuilder<> builder(block);
+	builder.CreateInvoke(main, normal, unwind);
+
+	builder.SetInsertPoint(unwind);
+	Function *term = makeTerminateFunc(module);
+	LandingPadInst *caughtResult = builder.CreateLandingPad(TryCatch::getPadType(context), 1);
+	caughtResult->setCleanup(true);
+	caughtResult->addClause(TryCatch::getTypeIdxVar(module, nullptr));
+	Value *unwindException = builder.CreateExtractValue(caughtResult, 0);
+	builder.CreateCall(term, unwindException);
+	builder.CreateUnreachable();
+
+	block = normal;
+}
+
 Function *SeqModule::makeCanonicalMainFunc(Function *realMain)
 {
 #define LLVM_I32() IntegerType::getInt32Ty(context)
@@ -182,8 +204,8 @@ Function *SeqModule::makeCanonicalMainFunc(Function *realMain)
 		builder.SetInsertPoint(proxyBlockExit);
 		builder.CreateRetVoid();
 
+		invokeMain(realMain, proxyBlockMain);
 		builder.SetInsertPoint(proxyBlockMain);
-		builder.CreateCall(realMain);
 		builder.CreateCall(singleEndFunc, {DefaultOpenMPLocation, tid});
 		builder.CreateRetVoid();
 
@@ -197,12 +219,11 @@ Function *SeqModule::makeCanonicalMainFunc(Function *realMain)
 		fastOpenMP.setValue(true);
 	}
 #else
-	builder.CreateCall(realMain);
+	invokeMain(realMain, exit);
 #endif
 
 	builder.SetInsertPoint(exit);
 	builder.CreateRet(ConstantInt::get(LLVM_I32(), 0));
-
 	return func;
 #undef LLVM_I32
 }

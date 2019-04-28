@@ -133,6 +133,12 @@ namespace seq {
 		std::vector<Var *> catchVars;
 		Block *finally;
 		llvm::BasicBlock *exceptionBlock;
+		llvm::BasicBlock *exceptionRouteBlock;
+		llvm::BasicBlock *finallyStart;
+		std::vector<llvm::BasicBlock *> handlers;
+		llvm::Value *excFlag;
+		llvm::Value *catchStore;
+		llvm::Value *delegateDepth;
 	public:
 		TryCatch();
 		Block *getBlock();
@@ -143,6 +149,9 @@ namespace seq {
 		void resolveTypes() override;
 		void codegen0(llvm::BasicBlock*& block) override;
 		TryCatch *clone(Generic *ref) override;
+		static llvm::StructType *getPadType(llvm::LLVMContext& context);
+		static llvm::StructType *getExcType(llvm::LLVMContext& context);
+		static llvm::GlobalVariable *getTypeIdxVar(llvm::Module *module, types::Type *catchType);
 	};
 
 	class Throw : public Stmt {

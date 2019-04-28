@@ -188,6 +188,18 @@ namespace seq {
 		return f;
 	}
 
+	inline llvm::Function *makeTerminateFunc(llvm::Module *module)
+	{
+		llvm::LLVMContext& context = module->getContext();
+		auto *f = llvm::cast<llvm::Function>(
+		             module->getOrInsertFunction(
+		               "seq_terminate",
+		               llvm::Type::getVoidTy(context),
+		               llvm::IntegerType::getInt8PtrTy(context)));
+		f->setDoesNotReturn();
+		return f;
+	}
+
 	namespace exc {
 		class SeqException : public SrcObject, public std::runtime_error {
 		public:

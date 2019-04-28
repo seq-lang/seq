@@ -83,16 +83,22 @@ SEQ_FUNC void *seq_alloc_exc(int type, void *obj)
 	return &(e->unwindException);
 }
 
-SEQ_FUNC void seq_throw(void *exc)
+SEQ_FUNC void seq_terminate(void *exc)
 {
-	_Unwind_Reason_Code code = _Unwind_RaiseException((_Unwind_Exception *)exc);
 	auto *base = (OurBaseException_t *)((char *)exc + seq_exc_offset());
 	void *obj = base->obj;
 	auto *msg = (seq_str_t *)obj;
-	std::cerr << "error: uncaught exception (" << code << "): ";
+	std::cerr << "terminating with exception: ";
 	std::cerr.write(msg->str, msg->len);
 	std::cerr << std::endl;
 	std::abort();
+}
+
+SEQ_FUNC void seq_throw(void *exc)
+{
+	_Unwind_Reason_Code code = _Unwind_RaiseException((_Unwind_Exception *)exc);
+	(void)code;
+	seq_terminate(exc);
 }
 
 static uintptr_t readULEB128(const uint8_t **data)

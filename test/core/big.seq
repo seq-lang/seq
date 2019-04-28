@@ -76,8 +76,8 @@ class X[T]:
                 print v1
             print ident(input)
             print v[1]
-            a = (v[1], ((v)[2]), (v[1], 4.2))
-            print a[2][1]
+            b = (v[1], ((v)[2]), (v[1], 4.2))
+            print b[2][1]
         myiter(args) |> process_input
 
     def main2():
