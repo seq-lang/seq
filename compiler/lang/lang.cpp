@@ -544,13 +544,13 @@ void TryCatch::codegen0(BasicBlock*& block)
 	exceptionBlock = BasicBlock::Create(context, "exception", func);
 
 	// block which routes exception to correct catch handler block
-	exceptionRouteBlock = BasicBlock::Create(context, "exceptionRoute", func);
+	exceptionRouteBlock = BasicBlock::Create(context, "exception_route", func);
 
 	// foreign exception handler
-	BasicBlock *externalExceptionBlock = BasicBlock::Create(context, "externalException", func);
+	BasicBlock *externalExceptionBlock = BasicBlock::Create(context, "external_exception", func);
 
 	// block which calls _Unwind_Resume
-	BasicBlock *unwindResumeBlock = BasicBlock::Create(context, "unwindResume", func);
+	BasicBlock *unwindResumeBlock = BasicBlock::Create(context, "unwind_resume", func);
 
 	// clean up block which delete exception if needed
 	BasicBlock *endBlock = BasicBlock::Create(context, "end", func);

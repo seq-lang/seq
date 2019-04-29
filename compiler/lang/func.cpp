@@ -312,7 +312,7 @@ void Func::codegen(Module *module)
 		 * Cleanup code
 		 */
 		cleanup = BasicBlock::Create(context, "cleanup", func);
-		dynFree = BasicBlock::Create(context, "dyn.free", func);
+		dynFree = BasicBlock::Create(context, "dyn_free", func);
 		builder.SetInsertPoint(cleanup);
 		Function *freeFn = Intrinsic::getDeclaration(module, Intrinsic::coro_free);
 		Value *mem = builder.CreateCall(freeFn, {id, handle});

@@ -111,10 +111,16 @@ void Stmt::setTryCatch(TryCatch *tc)
 TryCatch *Stmt::getTryCatch()
 {
 	Stmt *stmt = getPrev();
+	Stmt *last = this;
 
 	while (stmt) {
-		if (auto *s = dynamic_cast<TryCatch *>(stmt))
-			return s;
+		if (auto *s = dynamic_cast<TryCatch *>(stmt)) {
+			// make sure we're not enclosed by except or finally
+			if (last->parent == s->getBlock())
+				return s;
+		}
+
+		last = stmt;
 		stmt = stmt->getPrev();
 	}
 
