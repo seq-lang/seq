@@ -127,6 +127,15 @@ namespace seq {
 
 	class TryCatch : public Stmt {
 	private:
+		enum State {
+			NOT_THROWN = 0,
+			THROWN,
+			CAUGHT,
+			RETURN,
+			BREAK,
+			CONTINUE
+		};
+
 		Block *scope;
 		std::vector<types::Type *> catchTypes;
 		std::vector<Block *> catchBlocks;
@@ -139,6 +148,9 @@ namespace seq {
 		llvm::Value *excFlag;
 		llvm::Value *catchStore;
 		llvm::Value *delegateDepth;
+		llvm::Value *retStore;
+
+		llvm::ConstantInt *state(llvm::LLVMContext& context, State s);
 	public:
 		TryCatch();
 		Block *getBlock();
@@ -146,6 +158,9 @@ namespace seq {
 		Block *addCatch(types::Type *type);
 		Block *getFinally();
 		llvm::BasicBlock *getExceptionBlock();
+		void codegenReturn(Expr *expr, llvm::BasicBlock*& block);
+		void codegenBreak(llvm::BasicBlock*& block);
+		void codegenContinue(llvm::BasicBlock*& block);
 		void resolveTypes() override;
 		void codegen0(llvm::BasicBlock*& block) override;
 		TryCatch *clone(Generic *ref) override;

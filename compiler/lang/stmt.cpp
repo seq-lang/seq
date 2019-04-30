@@ -62,6 +62,11 @@ Stmt *Stmt::getPrev() const
 	return parent->parent;
 }
 
+Block *Stmt::getParent()
+{
+	return parent;
+}
+
 void Stmt::setParent(Block *parent)
 {
 	assert(!this->parent);

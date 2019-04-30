@@ -36,6 +36,7 @@ namespace seq {
 
 		BaseFunc();
 	public:
+		virtual bool isGen();
 		virtual void resolveTypes();
 		virtual void codegen(llvm::Module *module)=0;
 		llvm::LLVMContext& getContext();
@@ -145,12 +146,15 @@ namespace seq {
 		void codegen(llvm::Module *module) override;
 		void codegenReturn(llvm::Value *val,
 		                   types::Type *type,
-		                   llvm::BasicBlock*& block);
+		                   llvm::BasicBlock*& block,
+		                   bool dryrun=false);
 		void codegenYield(llvm::Value *val,
 		                  types::Type *type,
 		                  llvm::BasicBlock*& block,
-		                  bool empty=false);
+		                  bool empty=false,
+		                  bool dryrun=false);
 
+		bool isGen() override;
 		Var *getArgVar(std::string name);
 		types::FuncType *getFuncType() override;
 

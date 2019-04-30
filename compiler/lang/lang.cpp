@@ -415,8 +415,14 @@ TryCatch::TryCatch() :
     Stmt("try"), scope(new Block(this)), catchTypes(), catchBlocks(),
     catchVars(), finally(new Block(this)), exceptionBlock(nullptr),
     exceptionRouteBlock(nullptr), finallyStart(nullptr), handlers(),
-    excFlag(nullptr), catchStore(nullptr), delegateDepth(nullptr)
+    excFlag(nullptr), catchStore(nullptr), delegateDepth(nullptr),
+    retStore(nullptr)
 {
+}
+
+ConstantInt *TryCatch::state(LLVMContext& context, State s)
+{
+	return ConstantInt::get(Type::getInt8Ty(context), s);
 }
 
 Block *TryCatch::getBlock()
@@ -448,6 +454,47 @@ BasicBlock *TryCatch::getExceptionBlock()
 {
 	assert(exceptionBlock);
 	return exceptionBlock;
+}
+
+void TryCatch::codegenReturn(Expr *expr, BasicBlock*& block)
+{
+	assert(excFlag && finallyStart);
+	auto *func = dynamic_cast<Func *>(getBase());
+	assert(func);
+	LLVMContext& context = block->getContext();
+	types::Type *type = expr ? expr->getType() : types::Void;
+	Value *val = expr ? expr->codegen(func, block) : nullptr;
+
+	// dryrun=true -- just do type checking
+	func->codegenReturn(val, type, block, true);
+	IRBuilder<> builder(block);
+
+	if (retStore) {
+		assert(val);
+		builder.CreateStore(val, retStore);
+	}
+
+	builder.CreateStore(state(context, RETURN), excFlag);
+	builder.CreateBr(finallyStart);
+	block = BasicBlock::Create(context, "", block->getParent());
+}
+
+void TryCatch::codegenBreak(BasicBlock*& block)
+{
+	LLVMContext& context = block->getContext();
+	IRBuilder<> builder(block);
+	builder.CreateStore(state(context, BREAK), excFlag);
+	builder.CreateBr(finallyStart);
+	block = BasicBlock::Create(context, "", block->getParent());
+}
+
+void TryCatch::codegenContinue(BasicBlock*& block)
+{
+	LLVMContext& context = block->getContext();
+	IRBuilder<> builder(block);
+	builder.CreateStore(state(context, CONTINUE), excFlag);
+	builder.CreateBr(finallyStart);
+	block = BasicBlock::Create(context, "", block->getParent());
 }
 
 static StructType *getTypeInfoType(LLVMContext& context)
@@ -511,6 +558,38 @@ static bool anyMatch(types::Type *type, std::vector<types::Type *> types)
 	return false;
 }
 
+static bool inLoop(Stmt *stmt)
+{
+	while (stmt) {
+		if (stmt->isLoop())
+			return true;
+		stmt = stmt->getPrev();
+	}
+	return false;
+}
+
+static TryCatch *getInnermostTryCatchBeforeLoop(Stmt *x)
+{
+	Stmt *stmt = x->getPrev();
+	Stmt *last = x;
+
+	while (stmt) {
+		if (auto *s = dynamic_cast<TryCatch *>(stmt)) {
+			// make sure we're not enclosed by except or finally
+			if (last->getParent() == s->getBlock())
+				return s;
+		}
+
+		if (stmt->isLoop())
+			return nullptr;
+
+		last = stmt;
+		stmt = stmt->getPrev();
+	}
+
+	return nullptr;
+}
+
 void TryCatch::codegen0(BasicBlock*& block)
 {
 	assert(catchTypes.size() == catchBlocks.size());
@@ -535,6 +614,7 @@ void TryCatch::codegen0(BasicBlock*& block)
 	Function *func = block->getParent();
 	BaseFunc *base = getBase();
 	BasicBlock *preambleBlock = base->getPreamble();
+	types::Type *retType = base->getFuncType()->getBaseType(0);
 
 	// entry block:
 	BasicBlock *entryBlock = BasicBlock::Create(context, "entry", func);
@@ -560,19 +640,25 @@ void TryCatch::codegen0(BasicBlock*& block)
 	StructType *excType = getExcType(context);
 
 	// exception storage/state:
-	ConstantInt *excStateNotThrown = ConstantInt::get(Type::getInt8Ty(context), 0);
-	ConstantInt *excStateThrown    = ConstantInt::get(Type::getInt8Ty(context), 1);
-	ConstantInt *excStateCaught    = ConstantInt::get(Type::getInt8Ty(context), 2);
+	ConstantInt *excStateNotThrown = state(context, NOT_THROWN);
+	ConstantInt *excStateThrown    = state(context, THROWN);
+	ConstantInt *excStateCaught    = state(context, CAUGHT);
+	ConstantInt *excStateReturn    = state(context, RETURN);
+	ConstantInt *excStateBreak     = state(context, BREAK);
+	ConstantInt *excStateContinue  = state(context, CONTINUE);
 
 	IRBuilder<> builder(entryBlock);
 	if (this == root) {
 		excFlag = makeAlloca(excStateNotThrown, preambleBlock);
 		catchStore = makeAlloca(ConstantAggregateZero::get(padType), preambleBlock);
 		delegateDepth = makeAlloca(zeroLLVM(context), preambleBlock);
+		if (!retType->is(types::Void) && !base->isGen())
+			retStore = makeAlloca(retType->getLLVMType(context), preambleBlock);
 	} else {
 		excFlag = root->excFlag;
 		catchStore = root->catchStore;
 		delegateDepth = root->delegateDepth;
+		retStore = root->retStore;
 	}
 
 	// initialize state:
@@ -606,9 +692,54 @@ void TryCatch::codegen0(BasicBlock*& block)
 	}
 
 	builder.SetInsertPoint(finallyBlock);
-	SwitchInst *theSwitch = builder.CreateSwitch(excFlagRead, endBlock, 2);
+	const bool supportBreakAndContinue = inLoop(this);
+	SwitchInst *theSwitch = builder.CreateSwitch(excFlagRead, endBlock, supportBreakAndContinue ? 5 : 3);
 	theSwitch->addCase(excStateCaught, endBlock);
 	theSwitch->addCase(excStateThrown, unwindResumeBlock);
+
+	if (this == root) {
+		BasicBlock *finallyReturn = BasicBlock::Create(context, "finally_return", func);
+		theSwitch->addCase(excStateReturn, finallyReturn);
+		auto *f = dynamic_cast<Func *>(base);
+		assert(f);
+
+		Value *ret = nullptr;
+		builder.SetInsertPoint(finallyReturn);
+		if (retStore)
+			ret = builder.CreateLoad(retStore);
+		f->codegenReturn(ret, retType, finallyReturn);
+
+		// mark new block returned by `codegenReturn` as unreachable:
+		builder.SetInsertPoint(finallyReturn);
+		builder.CreateUnreachable();
+	} else {
+		theSwitch->addCase(excStateReturn, parents.front()->finallyStart);
+	}
+
+	if (supportBreakAndContinue) {
+		const bool outer = (getInnermostTryCatchBeforeLoop(this) == nullptr);
+
+		if (outer) {
+			BasicBlock *finallyBreak = BasicBlock::Create(context, "finally_break", func);
+			BasicBlock *finallyContinue = BasicBlock::Create(context, "finally_continue", func);
+			theSwitch->addCase(excStateBreak, finallyBreak);
+			theSwitch->addCase(excStateContinue, finallyContinue);
+
+			builder.SetInsertPoint(finallyBreak);
+			builder.CreateStore(excStateNotThrown, excFlag);
+			BranchInst *instBreak = builder.CreateBr(block);  // destination will be fixed by `setBreaks`
+			addBreakToEnclosingLoop(instBreak);
+
+			builder.SetInsertPoint(finallyContinue);
+			builder.CreateStore(excStateNotThrown, excFlag);
+			BranchInst *instContinue = builder.CreateBr(block);  // destination will be fixed by `setContinues`
+			addContinueToEnclosingLoop(instContinue);
+		} else {
+			assert(this != root);
+			theSwitch->addCase(excStateBreak, parents.front()->finallyStart);
+			theSwitch->addCase(excStateContinue, parents.front()->finallyStart);
+		}
+	}
 
 	BasicBlock *catchAll = nullptr;
 	unsigned catchAllDepth = 0;
@@ -1158,11 +1289,16 @@ void Return::resolveTypes()
 
 void Return::codegen0(BasicBlock*& block)
 {
-	types::Type *type = expr ? expr->getType() : types::Void;
-	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
-	auto *func = dynamic_cast<Func *>(getBase());
-	assert(func);
-	func->codegenReturn(val, type, block);
+	if (TryCatch *tc = getTryCatch()) {
+		// make sure we branch to finally block
+		tc->codegenReturn(expr, block);
+	} else {
+		types::Type *type = expr ? expr->getType() : types::Void;
+		Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
+		auto *func = dynamic_cast<Func *>(getBase());
+		assert(func);
+		func->codegenReturn(val, type, block);
+	}
 }
 
 Return *Return::clone(Generic *ref)
@@ -1218,11 +1354,16 @@ Break::Break() :
 
 void Break::codegen0(BasicBlock*& block)
 {
-	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
-	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by `setBreaks`
-	addBreakToEnclosingLoop(inst);
-	block = BasicBlock::Create(context, "", block->getParent());
+	if (TryCatch *tc = getInnermostTryCatchBeforeLoop(this)) {
+		// make sure we branch to finally block
+		tc->codegenBreak(block);
+	} else {
+		LLVMContext &context = block->getContext();
+		IRBuilder<> builder(block);
+		BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by `setBreaks`
+		addBreakToEnclosingLoop(inst);
+		block = BasicBlock::Create(context, "", block->getParent());
+	}
 }
 
 Break *Break::clone(Generic *ref)
@@ -1243,11 +1384,16 @@ Continue::Continue() :
 
 void Continue::codegen0(BasicBlock*& block)
 {
-	LLVMContext& context = block->getContext();
-	IRBuilder<> builder(block);
-	BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by `setContinues`
-	addContinueToEnclosingLoop(inst);
-	block = BasicBlock::Create(context, "", block->getParent());
+	if (TryCatch *tc = getInnermostTryCatchBeforeLoop(this)) {
+		// make sure we branch to finally block
+		tc->codegenContinue(block);
+	} else {
+		LLVMContext &context = block->getContext();
+		IRBuilder<> builder(block);
+		BranchInst *inst = builder.CreateBr(block);  // destination will be fixed by `setContinues`
+		addContinueToEnclosingLoop(inst);
+		block = BasicBlock::Create(context, "", block->getParent());
+	}
 }
 
 Continue *Continue::clone(Generic *ref)

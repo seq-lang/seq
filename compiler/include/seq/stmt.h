@@ -88,6 +88,10 @@ namespace seq {
 		/// or null if none.
 		Stmt *getPrev() const;
 
+		/// Returns the parent (i.e. enclosing) block of this
+		/// statement.
+		Block *getParent();
+
 		/// Sets the parent (i.e. enclosing) block of this
 		/// statement.
 		void setParent(Block *parent);

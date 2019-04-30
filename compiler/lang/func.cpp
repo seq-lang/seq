@@ -8,6 +8,11 @@ BaseFunc::BaseFunc() :
 {
 }
 
+bool BaseFunc::isGen()
+{
+	return false;
+}
+
 void BaseFunc::resolveTypes()
 {
 }
@@ -376,10 +381,13 @@ void Func::codegen(Module *module)
 	}
 }
 
-void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
+void Func::codegenReturn(Value *val,
+                         types::Type *type,
+                         BasicBlock*& block,
+                         bool dryrun)
 {
 	if (prefetch) {
-		codegenYield(val, type, block);
+		codegenYield(val, type, block, false, dryrun);
 	} else {
 		if (gen) {
 			if (val)
@@ -394,6 +402,9 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 				throw exc::SeqException("cannot return void value from function");
 		}
 	}
+
+	if (dryrun)
+		return;
 
 	IRBuilder<> builder(block);
 
@@ -415,7 +426,11 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock*& block)
 }
 
 // type = nullptr means final yield; empty yields used internally only in prefetch transformations
-void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block, bool empty)
+void Func::codegenYield(Value *val,
+                        types::Type *type,
+                        BasicBlock*& block,
+                        bool empty,
+                        bool dryrun)
 {
 	if (!gen)
 		throw exc::SeqException("cannot yield from a non-generator");
@@ -427,6 +442,9 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block, bool 
 
 	if (!empty && val && type && type->is(types::Void))
 		throw exc::SeqException("cannot yield void value from generator");
+
+	if (dryrun)
+		return;
 
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
@@ -455,6 +473,11 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock*& block, bool 
 		builder.SetInsertPoint(block);
 		builder.CreateUnreachable();
 	}
+}
+
+bool Func::isGen()
+{
+	return yield != nullptr;
 }
 
 std::vector<std::string> Func::getArgNames()

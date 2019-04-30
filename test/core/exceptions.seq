@@ -133,6 +133,66 @@ def nest3(b):
     finally:
         print 'done'
 
+def finally_return(x):
+    try:
+        try:
+            return 'A'
+        finally:
+            if x < 5:
+                return 'B'
+    finally:
+        if x > 10:
+            return 'C'
+
+def finally_return_void():
+    try:
+        try:
+            print 'A'
+            return
+        finally:
+            print 'B'
+            return
+    finally:
+        print 'C'
+
+def finally_break_continue1():
+    try:
+        for i in range(3):
+            try:
+                continue
+            finally:
+                print i
+                continue
+            print 'X'
+    finally:
+        print 'f'
+
+def finally_break_continue2():
+    try:
+        for i in range(5):
+            try:
+                if i == 4:
+                    continue
+
+                for j in range(i):
+                    try:
+                        try:
+                            if j == 3:
+                                break
+                            elif j == 1:
+                                continue
+                            print j
+                        finally:
+                            print 'f1'
+                    finally:
+                        print 'f2'
+                        if j == 4:
+                            break
+            finally:
+                print 'f3'
+    finally:
+        print 'f4'
+
 # EXPECT: try
 # EXPECT: catch Exc1 1
 # EXPECT: e1
@@ -190,3 +250,42 @@ nest3(True)
 # EXPECT: except
 # EXPECT: done
 nest3(0)
+
+print finally_return(3.14)  # EXPECT: B
+print finally_return(7)     # EXPECT: A
+print finally_return(11)    # EXPECT: C
+
+# EXPECT: A
+# EXPECT: B
+# EXPECT: C
+finally_return_void()
+
+# EXPECT: 0
+# EXPECT: 1
+# EXPECT: 2
+# EXPECT: f
+finally_break_continue1()
+
+# EXPECT: f3
+# EXPECT: 0
+# EXPECT: f1
+# EXPECT: f2
+# EXPECT: f3
+# EXPECT: 0
+# EXPECT: f1
+# EXPECT: f2
+# EXPECT: f1
+# EXPECT: f2
+# EXPECT: f3
+# EXPECT: 0
+# EXPECT: f1
+# EXPECT: f2
+# EXPECT: f1
+# EXPECT: f2
+# EXPECT: 2
+# EXPECT: f1
+# EXPECT: f2
+# EXPECT: f3
+# EXPECT: f3
+# EXPECT: f4
+finally_break_continue2()
