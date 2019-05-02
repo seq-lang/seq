@@ -103,14 +103,14 @@ Functions and classes can be generic. General "generics" functionality, includin
 
 The core operation when realizing a generic object is "cloning", which is essentially deep copying. For example, to realize a generic function, the entire function is cloned, and the cloned type parameters are realized. Here is a concrete example:
 
-.. code-block:: python
+.. code-block:: seq
 
     def f[T](x: T):
         return x + 1
 
 Now if we call ``f[int](42)``, the entire function will be cloned to create a new function ``f2``:
 
-.. code-block:: python
+.. code-block:: seq
 
     def f2[T2](x2: T2):
         return x2 + 1
@@ -148,3 +148,70 @@ Expressions are very similar:
 Of course, the lexer/parser must also be updated to create any new statement/expression objects: ``compiler/util/ocaml.cpp`` provides C stubs that get called from the OCaml lexer/parser to interface with the C++ objects; new statements/expressions should generally provide wrappers there as well.
 
 If an error (be it a type error or something else) occurs in any of these methods, a ``SeqException`` with an appropriate error message can be thrown.
+
+``try``-``except``-``finally``
+------------------------------
+
+Exception handling in Seq is implemented using `Itanium ABI zero-cost exception handling <https://www.llvm.org/docs/ExceptionHandling.html#itanium-abi-zero-cost-exception-handling>`_. The implementation is fairly similar to how Clang compiles ``try``-``catch`` constructs in C++. However, Seq also supports explicit ``finally`` blocks, which greatly complicates the exception handling logic.
+
+The first complicated case occurs when ``try``-``except``-``finally`` statements are nested. Consider the following example:
+
+.. code-block:: seq
+
+    def foo():
+        try:
+            try:
+                try:
+                    try:
+                        bar()  # raises C
+                    except A:
+                        print 'A'
+                    finally:
+                        print 'f A'
+                except B:
+                    print 'B'
+                finally:
+                    print 'f B'
+            except C:
+                print 'C'
+            finally:
+                print 'f C'
+        except D:
+            print 'D'
+        finally:
+            print 'f D'
+
+The output is:
+
+.. code-block:: none
+
+    f A
+    f B
+    C
+    f C
+    f D
+
+The call to ``bar()`` raises an exception of type ``C``, which is handled by the ``except C`` block. However, all prior ``finally`` blocks must be executed, so the exception really must be caught by the innermost ``except``, whereupon some logic needs to be applied to determine that the next two ``finally`` blocks need to be executed, then the ``except C`` handler, then the last two ``finally`` blocks.
+
+To handle this case, the compiler uses the concept of a handler's "depth": when an exception is caught, the depth of its handler is determined based on the exception type (e.g. when ``C`` is caught by ``except A``, its handler depth is 2; if the exception had type ``A`` then the depth would be 0). Then, a total of that many ``finally`` blocks are executed, after which the appropriate handler is executed, which in turn branches to latter ``finally`` blocks. Internally, this is coordinated by storing a depth state for each nested ``try``-``except``-``finally`` statement, which is set before reaching the ``finally`` block.
+
+Another nontrivial case is as follows:
+
+.. code-block:: seq
+
+    def foo():
+        try:
+            return 1
+        finally:
+            return 2
+
+Surprisingly to some, this function should actually return ``2``, not ``1``. This means that ``return`` statements in ``try``-``except``-``finally`` cannot just directly return, but must instead first execute the appropriate ``finally`` block(s). An analogous situation arises with ``break`` and ``continue``, which similarly cannot terminate the current loop iteration without executing the necessary ``finally`` blocks. (This is *not* the case with ``yield`` however, since it does not transfer control out of the block in the same way.) To handle this, nested ``try``-``except``-``finally`` statements share a "state" that can be one of the following:
+
+- ``NOT_THROWN``: Nothing unusual has happened; execute as normal
+- ``THROWN``: An exception has been thrown and not caught; execute ``finally`` then resume exception
+- ``CAUGHT``: An exception has been caught here; execute handler then ``finally``
+- ``RETURN``: A ``return`` statement was executed; store return value for later, execute all necessary ``finally`` blocks, and only then return
+- ``BREAK``: A ``break`` statement was executed; execute all necessary ``finally`` blocks within the enclosing loop, and only then break
+- ``CONTINUE``: A ``continue`` statement was executed; execute all necessary ``finally`` blocks within the enclosing, and only then continue
+
+``finally`` blocks use this state to determine what block to branch to next. Note that "depth" takes precedence here: if the depth is positive then the next ``finally`` block must be executed before considering the state.
