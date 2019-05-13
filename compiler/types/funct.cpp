@@ -168,7 +168,7 @@ void types::GenType::initOps()
 	vtable.magic = {
 		{"__iter__", {}, this, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 	};
 
 	addMethod("next", new BaseFuncLite({this}, outType, [this](Module *module) {

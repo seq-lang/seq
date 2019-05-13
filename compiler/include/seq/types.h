@@ -221,7 +221,8 @@ namespace seq {
 			/// with specified argument types. Throws an exception if
 			/// the specified magic method does not exist.
 			/// @param name full magic method name
-			/// @param args vector of argument types (excluding 'self')
+			/// @param args vector of argument types (excluding 'self');
+			///             last element being null indicates static.
 			/// @return output type of specified magic method
 			virtual Type *magicOut(const std::string& name, std::vector<Type *> args);
 
@@ -230,7 +231,7 @@ namespace seq {
 			/// exist.
 			/// @param name full magic method name
 			/// @param argTypes vector of argument types (exclusing self)
-			/// @param self value of this type
+			/// @param self value of this type; null if magic is static
 			/// @param args vector of argument values (same size as \p argTypes)
 			/// @param block where to codegen the call
 			/// @param tc enclosing try-catch statement, or null if none
@@ -338,6 +339,9 @@ namespace seq {
 		std::function<llvm::Value *(llvm::Value *,
 		                            std::vector<llvm::Value *>,
 		                            llvm::IRBuilder<>&)> codegen;
+
+		/// Whether this magic method is static
+		bool isStatic;
 
 		/// Converts magic method to a \ref BaseFunc "BaseFunc"
 		/// @param type 'self' type

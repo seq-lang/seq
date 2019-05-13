@@ -1,3 +1,5 @@
+import python as py
+
 class list[T]:
     arr: array[T]
     len: int
@@ -147,3 +149,25 @@ class list[T]:
                 y.append(str(self[i]))
             y.append("]")
             return str.cat(y)
+
+    def __to_py__(self: list[T]):
+        cdef seq_py_list_new(int) -> ptr[byte]
+        cdef seq_py_list_setitem(ptr[byte], int, ptr[byte])
+
+        pylist = seq_py_list_new(len(self))
+        idx = 0
+        for a in self:
+            seq_py_list_setitem(pylist, idx, py.to_py(a).p)
+            idx += 1
+        return py.PyObject(pylist)
+
+    def __from_py__(v: py.PyObject):
+        cdef seq_py_list_len(ptr[byte]) -> int
+        cdef seq_py_list_getitem(ptr[byte], int) -> ptr[byte]
+
+        n = seq_py_list_len(v.p)
+        t = list[T](n)
+        for i in range(n):
+            elem = py.PyObject(seq_py_list_getitem(v.p, i))
+            t.append(py.from_py[T](elem))
+        return t

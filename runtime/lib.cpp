@@ -45,6 +45,7 @@ using namespace std;
  */
 
 void seq_exc_init();
+void seq_py_init();
 
 SEQ_FUNC void seq_init()
 {
@@ -68,11 +69,12 @@ SEQ_FUNC void seq_init()
 #endif
 
 	seq_exc_init();
+	seq_py_init();
 }
 
 SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line)
 {
-	std::cerr << "assertion failed on line " << line << " (" << file.str << ")" << std::endl;
+	fprintf(stderr, "assertion failed on line %lld (%s)\n", line, file.str);
 	exit(EXIT_FAILURE);
 }
 

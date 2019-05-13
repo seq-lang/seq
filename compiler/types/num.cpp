@@ -67,23 +67,23 @@ void types::IntType::initOps()
 	vtable.magic = {
 		{"__init__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return Int->defaultValue(b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__init__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return args[0];
-		}},
+		}, false},
 
 		{"__init__", {Float}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateFPToSI(args[0], Int->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__init__", {Bool}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(args[0], Int->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__init__", {Byte}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(args[0], Int->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
@@ -95,126 +95,126 @@ void types::IntType::initOps()
 			                    getLLVMType(context)));
 			strFunc->setDoesNotThrow();
 			return b.CreateCall(strFunc, self);
-		}},
+		}, false},
 
 		{"__copy__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__hash__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		// int unary
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
 			return b.CreateZExt(b.CreateICmpNE(self, zero), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__pos__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__neg__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateNeg(self);
-		}},
+		}, false},
 
 		{"__invert__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateNot(self);
-		}},
+		}, false},
 
 		{"__abs__", {}, Int, SEQ_MAGIC(self, args, b) {
 			Value *pos = b.CreateICmpSGT(self, zeroLLVM(b.getContext()));
 			Value *neg = b.CreateNeg(self);
 			return b.CreateSelect(pos, self, neg);
-		}},
+		}, false},
 
 		// int,int binary
 		{"__add__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateAdd(self, args[0]);
-		}},
+		}, false},
 
 		{"__sub__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateSub(self, args[0]);
-		}},
+		}, false},
 
 		{"__mul__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateMul(self, args[0]);
-		}},
+		}, false},
 
 		{"__div__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateSDiv(self, args[0]);
-		}},
+		}, false},
 
 		{"__truediv__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFDiv(self, args[0]);
-		}},
+		}, false},
 
 		{"__mod__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateSRem(self, args[0]);
-		}},
+		}, false},
 
 		{"__lshift__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateShl(self, args[0]);
-		}},
+		}, false},
 
 		{"__rshift__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateAShr(self, args[0]);
-		}},
+		}, false},
 
 		{"__eq__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__lt__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpSLT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__gt__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpSGT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__le__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpSLE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ge__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpSGE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__and__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateAnd(self, args[0]);
-		}},
+		}, false},
 
 		{"__or__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateOr(self, args[0]);
-		}},
+		}, false},
 
 		{"__xor__", {Int}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateXor(self, args[0]);
-		}},
+		}, false},
 
 		// int,float binary
 		{"__add__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateFAdd(self, args[0]);
-		}},
+		}, false},
 
 		{"__sub__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateFSub(self, args[0]);
-		}},
+		}, false},
 
 		{"__mul__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateFMul(self, args[0]);
-		}},
+		}, false},
 
 		{"__div__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
@@ -223,47 +223,47 @@ void types::IntType::initOps()
 			                                    Intrinsic::floor,
 			                                    {Float->getLLVMType(b.getContext())});
 			return b.CreateCall(floor, v);
-		}},
+		}, false},
 
 		{"__truediv__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateFDiv(self, args[0]);
-		}},
+		}, false},
 
 		{"__mod__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateFRem(self, args[0]);
-		}},
+		}, false},
 
 		{"__eq__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpONE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__lt__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOLT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__gt__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOGT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__le__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOLE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ge__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			self = b.CreateSIToFP(self, Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOGE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 	};
 
 	for (unsigned i = 1; i <= IntNType::MAX_LEN; i++) {
@@ -289,60 +289,60 @@ void types::IntNType::initOps()
 	vtable.magic = {
 		{"__init__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return defaultValue(b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__init__", {this}, this, SEQ_MAGIC(self, args, b) {
 			return args[0];
-		}},
+		}, false},
 
 		{"__init__", {Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return sign ? b.CreateSExtOrTrunc(args[0], getLLVMType(b.getContext())) :
 			              b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__hash__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return sign ? b.CreateSExtOrTrunc(self, seqIntLLVM(b.getContext())) :
 			              b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
-		}},
+		}, false},
 
 		// int unary
 		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *zero = defaultValue(b.GetInsertBlock());
 			return b.CreateZExt(b.CreateICmpNE(self, zero), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__pos__", {}, this, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__neg__", {}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateNeg(self);
-		}},
+		}, false},
 
 		{"__invert__", {}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateNot(self);
-		}},
+		}, false},
 
 		// int,int binary
 		{"__add__", {this}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateAdd(self, args[0]);
-		}},
+		}, false},
 
 		{"__sub__", {this}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateSub(self, args[0]);
-		}},
+		}, false},
 
 		{"__mul__", {this}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateMul(self, args[0]);
-		}},
+		}, false},
 
 		{"__div__", {this}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return sign ? b.CreateSDiv(self, args[0]) : b.CreateUDiv(self, args[0]);
-		}},
+		}, false},
 
 		{"__truediv__", {this}, Float, SEQ_MAGIC_CAPT(self, args, b) {
 			self = sign ? b.CreateSIToFP(self, Float->getLLVMType(b.getContext())) :
@@ -350,59 +350,59 @@ void types::IntNType::initOps()
 			args[0] = sign ? b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext())) :
 			                 b.CreateUIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFDiv(self, args[0]);
-		}},
+		}, false},
 
 		{"__mod__", {this}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return sign ? b.CreateSRem(self, args[0]) : b.CreateURem(self, args[0]);
-		}},
+		}, false},
 
 		{"__lshift__", {this}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateShl(self, args[0]);
-		}},
+		}, false},
 
 		{"__rshift__", {this}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return sign ? b.CreateAShr(self, args[0]) : b.CreateLShr(self, args[0]);
-		}},
+		}, false},
 
 		{"__eq__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__lt__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *cmp = sign ? b.CreateICmpSLT(self, args[0]) : b.CreateICmpULT(self, args[0]);
 			return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__gt__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *cmp = sign ? b.CreateICmpSGT(self, args[0]) : b.CreateICmpUGT(self, args[0]);
 			return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__le__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *cmp = sign ? b.CreateICmpSLE(self, args[0]) : b.CreateICmpULE(self, args[0]);
 			return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ge__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *cmp = sign ? b.CreateICmpSGE(self, args[0]) : b.CreateICmpUGE(self, args[0]);
 			return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__and__", {this}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateAnd(self, args[0]);
-		}},
+		}, false},
 
 		{"__or__", {this}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateOr(self, args[0]);
-		}},
+		}, false},
 
 		{"__xor__", {this}, this, SEQ_MAGIC(self, args, b) {
 			return b.CreateXor(self, args[0]);
-		}},
+		}, false},
 	};
 
 	if (!sign && len % 2 == 0) {
@@ -464,15 +464,15 @@ void types::FloatType::initOps()
 	vtable.magic = {
 		{"__init__", {}, Float, SEQ_MAGIC(self, args, b) {
 			return Float->defaultValue(b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__init__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			return args[0];
-		}},
+		}, false},
 
 		{"__init__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
@@ -484,45 +484,45 @@ void types::FloatType::initOps()
 			                    getLLVMType(context)));
 			strFunc->setDoesNotThrow();
 			return b.CreateCall(strFunc, self);
-		}},
+		}, false},
 
 		{"__copy__", {}, Float, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		// float unary
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantFP::get(Float->getLLVMType(b.getContext()), 0.0);
 			return b.CreateZExt(b.CreateFCmpONE(self, zero), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__pos__", {}, Float, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__neg__", {}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateFNeg(self);
-		}},
+		}, false},
 
 		{"__abs__", {}, Float, SEQ_MAGIC(self, args, b) {
 			Function *abs = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
 			                                          Intrinsic::fabs,
 			                                          {Float->getLLVMType(b.getContext())});
 			return b.CreateCall(abs, self);
-		}},
+		}, false},
 
 		// float,float binary
 		{"__add__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateFAdd(self, args[0]);
-		}},
+		}, false},
 
 		{"__sub__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateFSub(self, args[0]);
-		}},
+		}, false},
 
 		{"__mul__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateFMul(self, args[0]);
-		}},
+		}, false},
 
 		{"__div__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			Value *v = b.CreateFDiv(self, args[0]);
@@ -530,62 +530,62 @@ void types::FloatType::initOps()
 			                                    Intrinsic::floor,
 			                                    {Float->getLLVMType(b.getContext())});
 			return b.CreateCall(floor, v);
-		}},
+		}, false},
 
 		{"__truediv__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateFDiv(self, args[0]);
-		}},
+		}, false},
 
 		{"__mod__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			return b.CreateFRem(self, args[0]);
-		}},
+		}, false},
 
 		{"__pow__", {Float}, Float, SEQ_MAGIC(self, args, b) {
 			Function *pow = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
 			                                          Intrinsic::pow,
 			                                          {Float->getLLVMType(b.getContext())});
 			return b.CreateCall(pow, {self, args[0]});
-		}},
+		}, false},
 
 		{"__eq__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateFCmpOEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateFCmpONE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__lt__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateFCmpOLT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__gt__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateFCmpOGT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__le__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateFCmpOLE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ge__", {Float}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateFCmpOGE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		// float,int binary
 		{"__add__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFAdd(self, args[0]);
-		}},
+		}, false},
 
 		{"__sub__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFSub(self, args[0]);
-		}},
+		}, false},
 
 		{"__mul__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFMul(self, args[0]);
-		}},
+		}, false},
 
 		{"__div__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
@@ -594,17 +594,17 @@ void types::FloatType::initOps()
 			                                            Intrinsic::floor,
 			                                            {Float->getLLVMType(b.getContext())});
 			return b.CreateCall(floor, v);
-		}},
+		}, false},
 
 		{"__truediv__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFDiv(self, args[0]);
-		}},
+		}, false},
 
 		{"__mod__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateFRem(self, args[0]);
-		}},
+		}, false},
 
 		{"__pow__", {Int}, Float, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
@@ -612,37 +612,37 @@ void types::FloatType::initOps()
 			                                          Intrinsic::pow,
 			                                          {Float->getLLVMType(b.getContext())});
 			return b.CreateCall(pow, {self, args[0]});
-		}},
+		}, false},
 
 		{"__eq__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpONE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__lt__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOLT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__gt__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOGT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__le__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOLE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ge__", {Int}, Bool, SEQ_MAGIC(self, args, b) {
 			args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
 			return b.CreateZExt(b.CreateFCmpOGE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 	};
 }
 
@@ -654,7 +654,7 @@ void types::BoolType::initOps()
 	vtable.magic = {
 		{"__init__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return Bool->defaultValue(b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
@@ -666,39 +666,39 @@ void types::BoolType::initOps()
 			                    getLLVMType(context)));
 			strFunc->setDoesNotThrow();
 			return b.CreateCall(strFunc, self);
-		}},
+		}, false},
 
 		{"__copy__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__invert__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateNot(b.CreateTrunc(self, IntegerType::getInt1Ty(b.getContext()))), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__eq__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__and__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateAnd(self, args[0]);
-		}},
+		}, false},
 
 		{"__or__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateOr(self, args[0]);
-		}},
+		}, false},
 
 		{"__xor__", {Bool}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateXor(self, args[0]);
-		}},
+		}, false},
 	};
 }
 
@@ -741,15 +741,15 @@ void types::ByteType::initOps()
 	vtable.magic = {
 		{"__init__", {}, Byte, SEQ_MAGIC(self, args, b) {
 			return Byte->defaultValue(b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__init__", {Byte}, Byte, SEQ_MAGIC(self, args, b) {
 			return args[0];
-		}},
+		}, false},
 
 		{"__init__", {Int}, Byte, SEQ_MAGIC(self, args, b) {
 			return b.CreateTrunc(args[0], Byte->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
@@ -761,24 +761,24 @@ void types::ByteType::initOps()
 			                    getLLVMType(context)));
 			strFunc->setDoesNotThrow();
 			return b.CreateCall(strFunc, self);
-		}},
+		}, false},
 
 		{"__copy__", {}, Byte, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			Value *zero = ConstantInt::get(Byte->getLLVMType(b.getContext()), 0);
 			return b.CreateZExt(b.CreateICmpNE(self, zero), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__eq__", {Byte}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {Byte}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 	};
 
 	addMethod("comp", new BaseFuncLite({Byte}, Byte, [](Module *module) {

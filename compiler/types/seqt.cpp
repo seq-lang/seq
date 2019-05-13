@@ -168,11 +168,11 @@ void types::SeqType::initOps()
 	vtable.magic = {
 		{"__init__", {PtrType::get(Byte), Int}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
 			return make(args[0], args[1], b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__str__", {}, Str, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__copy__", {}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
 			BasicBlock *block = b.GetInsertBlock();
@@ -184,17 +184,17 @@ void types::SeqType::initOps()
 			makeMemCpy(ptrCopy, ptr, len, block, 1);
 			Value *copy = make(ptrCopy, len, block);
 			return copy;
-		}},
+		}, false},
 
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return memb(self, "len", b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *len = memb(self, "len", b.GetInsertBlock());
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
 			return b.CreateZExt(b.CreateICmpNE(len, zero), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__setitem__", {Int, Seq}, Void, SEQ_MAGIC_CAPT(self, args, b) {
 			BasicBlock *block = b.GetInsertBlock();
@@ -204,18 +204,18 @@ void types::SeqType::initOps()
 			dest = b.CreateGEP(dest, args[0]);
 			makeMemMove(dest, source, len, block, 1);
 			return (Value *)nullptr;
-		}},
+		}, false},
 
 		{"__eq__", {Seq}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *x = eq(self, args[0], b.GetInsertBlock());
 			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {Seq}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *x = eq(self, args[0], b.GetInsertBlock());
 			x = b.CreateNot(x);
 			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 	};
 }
 
@@ -262,36 +262,36 @@ void types::StrType::initOps()
 	vtable.magic = {
 		{"__init__", {PtrType::get(Byte), Int}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			return make(args[0], args[1], b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__str__", {}, Str, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__copy__", {}, Str, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return memb(self, "len", b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *len = memb(self, "len", b.GetInsertBlock());
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
 			return b.CreateZExt(b.CreateICmpNE(len, zero), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__eq__", {Str}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *x = eq(self, args[0], b.GetInsertBlock());
 			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {Str}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *x = eq(self, args[0], b.GetInsertBlock());
 			x = b.CreateNot(x);
 			return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 	};
 
 	addMethod("memcpy", new BaseFuncLite({PtrType::get(Byte), PtrType::get(Byte), Int},
@@ -629,24 +629,24 @@ void types::KMer::initOps()
 		{"__init__", {Seq}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			Function *initFunc = getInitFunc(this, b.GetInsertBlock()->getModule());
 			return b.CreateCall(initFunc, args[0]);
-		}},
+		}, false},
 
 		{"__init__", {IntNType::get(2*k, false)}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__init__", {Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			Function *strFunc = getStrFunc(this, b.GetInsertBlock()->getModule());
 			return b.CreateCall(strFunc, self);
-		}},
+		}, false},
 
 		{"__copy__", {}, this, SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 
 		// reverse complement
 		{"__invert__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
@@ -688,51 +688,51 @@ void types::KMer::initOps()
 			}
 
 			return result;
-		}},
+		}, false},
 
 		// slide window left
 		{"__lshift__", {Seq}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			Module *module = b.GetInsertBlock()->getModule();
 			return b.CreateCall(getShiftFunc(this, module, false), {self, args[0]});
-		}},
+		}, false},
 
 		// slide window right
 		{"__rshift__", {Seq}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			Module *module = b.GetInsertBlock()->getModule();
 			return b.CreateCall(getShiftFunc(this, module, true), {self, args[0]});
-		}},
+		}, false},
 
 		{"__hash__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
-		}},
+		}, false},
 
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return ConstantInt::get(seqIntLLVM(b.getContext()), k, true);
-		}},
+		}, false},
 
 		{"__eq__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ne__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__lt__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpULT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__gt__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpUGT(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__le__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpULE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__ge__", {this}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateICmpUGE(self, args[0]), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 	};
 
 	addMethod("len", new BaseFuncLite({}, types::IntType::get(), [this](Module *module) {

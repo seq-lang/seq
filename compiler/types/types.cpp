@@ -366,7 +366,12 @@ types::Type *types::Type::magicOut(const std::string& name, std::vector<types::T
 {
 	initOps();
 
-	args.insert(args.begin(), this);
+	const bool isStatic = (!args.empty() && args.back() == nullptr);
+	if (isStatic)
+		args.pop_back();
+	else
+		args.insert(args.begin(), this);
+
 	for (auto& magic : vtable.overloads) {
 		if (magic.name != name)
 			continue;
@@ -376,7 +381,9 @@ types::Type *types::Type::magicOut(const std::string& name, std::vector<types::T
 		if (type)
 			return type;
 	}
-	args.erase(args.begin());
+
+	if (!isStatic)
+		args.erase(args.begin());
 
 	for (auto& magic : vtable.magic) {
 		if (name == magic.name && typeMatch<>(args, magic.args))
@@ -395,8 +402,11 @@ Value *types::Type::callMagic(const std::string& name,
 {
 	initOps();
 
-	argTypes.insert(argTypes.begin(), this);
-	args.insert(args.begin(), self);
+	if (self) {
+		argTypes.insert(argTypes.begin(), this);
+		args.insert(args.begin(), self);
+	}
+
 	for (auto& magic : vtable.overloads) {
 		if (magic.name != name)
 			continue;
@@ -414,8 +424,11 @@ Value *types::Type::callMagic(const std::string& name,
 			return call.codegen(nullptr, block);
 		}
 	}
-	argTypes.erase(argTypes.begin());
-	args.erase(args.begin());
+
+	if (self) {
+		argTypes.erase(argTypes.begin());
+		args.erase(args.begin());
+	}
 
 	for (auto& magic : vtable.magic) {
 		if (name == magic.name && typeMatch<>(argTypes, magic.args)) {
@@ -500,14 +513,13 @@ types::Type *types::Type::clone(Generic *ref)
 BaseFunc *MagicMethod::asFunc(types::Type *type) const
 {
 	std::vector<types::Type *> argsFull(args);
-	argsFull.insert(argsFull.begin(), type);
+	if (!isStatic)
+		argsFull.insert(argsFull.begin(), type);
 
-	return new BaseFuncLite(argsFull, out, [this,type](Module *module) {
+	return new BaseFuncLite(argsFull, out, [this,argsFull](Module *module) {
 		LLVMContext& context = module->getContext();
 		std::vector<Type *> types;
-		types.push_back(type->getLLVMType(context));
-
-		for (auto *arg : args)
+		for (auto *arg : argsFull)
 			types.push_back(arg->getLLVMType(context));
 
 		static int idx = 1;
@@ -522,7 +534,7 @@ BaseFunc *MagicMethod::asFunc(types::Type *type) const
 			args.push_back(&arg);
 
 		Value *self = nullptr;
-		if (!args.empty()) {
+		if (!isStatic && !args.empty()) {
 			self = args[0];
 			args.erase(args.begin());
 		}

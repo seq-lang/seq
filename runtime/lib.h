@@ -53,28 +53,4 @@ SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n);
 
 SEQ_FUNC void seq_print(seq_str_t str);
 
-SEQ_FUNC void *seq_io_openr(const char *filename);
-SEQ_FUNC void *seq_io_openw(const char *filename);
-SEQ_FUNC void seq_io_close(void *fp);
-SEQ_FUNC void seq_io_read(void *ptr,
-                          seq_int_t size,
-                          seq_int_t nmemb,
-                          void *fp);
-SEQ_FUNC void seq_io_write(const void *ptr,
-                           seq_int_t size,
-                           seq_int_t nmemb,
-                           void *fp);
-
-SEQ_FUNC void *seq_source_new();
-SEQ_FUNC void seq_source_init(void *state, seq_str_t source);
-SEQ_FUNC seq_int_t seq_source_read(void *state);
-SEQ_FUNC seq_arr_t<seq_t> seq_source_get(void *state, seq_int_t idx);
-SEQ_FUNC seq_t seq_source_get_single(void *state, seq_int_t idx);
-SEQ_FUNC void seq_source_dealloc(void *state);
-
-SEQ_FUNC void *seq_raw_new();
-SEQ_FUNC void seq_raw_init(void *st, seq_str_t source);
-SEQ_FUNC seq_t seq_raw_read(void *st);
-SEQ_FUNC void seq_raw_dealloc(void *st);
-
 #endif /* SEQ_LIB_H */

@@ -35,11 +35,11 @@ void types::ArrayType::initOps()
 		{"__init__", {Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *ptr = getBaseType(0)->alloc(args[0], b.GetInsertBlock());
 			return make(ptr, args[0], b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__init__", {PtrType::get(getBaseType(0)), Int}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			return make(args[0], args[1], b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__copy__", {}, this, SEQ_MAGIC_CAPT(self, args, b) {
 			BasicBlock *block = b.GetInsertBlock();
@@ -56,35 +56,35 @@ void types::ArrayType::initOps()
 			ptrCopy = b.CreateBitCast(ptrCopy, membType("ptr")->getLLVMType(context));
 			Value *copy = make(ptrCopy, len, block);
 			return copy;
-		}},
+		}, false},
 
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return memb(self, "len", b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *len = memb(self, "len", b.GetInsertBlock());
 			Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
 			return b.CreateZExt(b.CreateICmpNE(len, zero), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__getitem__", {Int}, getBaseType(0), SEQ_MAGIC_CAPT(self, args, b) {
 			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
 			ptr = b.CreateGEP(ptr, args[0]);
 			return b.CreateLoad(ptr);
-		}},
+		}, false},
 
 		{"__slice__", {Int, Int}, getBaseType(0), SEQ_MAGIC_CAPT(self, args, b) {
 			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
 			ptr = b.CreateGEP(ptr, args[0]);
 			Value *len = b.CreateSub(args[1], args[0]);
 			return make(ptr, len, b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__slice_left__", {Int}, getBaseType(0), SEQ_MAGIC_CAPT(self, args, b) {
 			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
 			return make(ptr, args[0], b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__slice_right__", {Int}, getBaseType(0), SEQ_MAGIC_CAPT(self, args, b) {
 			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
@@ -92,14 +92,14 @@ void types::ArrayType::initOps()
 			ptr = b.CreateGEP(ptr, args[0]);
 			Value *len = b.CreateSub(to, args[0]);
 			return make(ptr, len, b.GetInsertBlock());
-		}},
+		}, false},
 
 		{"__setitem__", {Int, getBaseType(0)}, Void, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *ptr = memb(self, "ptr", b.GetInsertBlock());
 			ptr = b.CreateGEP(ptr, args[0]);
 			b.CreateStore(args[1], ptr);
 			return (Value *)nullptr;
-		}},
+		}, false},
 	};
 }
 

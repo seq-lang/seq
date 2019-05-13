@@ -523,7 +523,7 @@ FOREIGN char *get_func_names(Expr *e)
 	auto *fn = dynamic_cast<FuncExpr *>(e);
 	if (!fn) return (char *)"";
 
-	auto f = dynamic_cast<Func*>(fn->getFunc());
+	auto f = dynamic_cast<Func *>(fn->getFunc());
 	if (!f) return (char *)"";
 	auto an = f->getArgNames();
 	string r;

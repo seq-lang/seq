@@ -460,7 +460,9 @@ void TryCatch::codegenReturn(Expr *expr, BasicBlock*& block)
 {
 	assert(excFlag && finallyStart);
 	auto *func = dynamic_cast<Func *>(getBase());
-	assert(func);
+	if (!func)
+		throw exc::SeqException("misplaced return");
+
 	LLVMContext& context = block->getContext();
 	types::Type *type = expr ? expr->getType() : types::Void;
 	Value *val = expr ? expr->codegen(func, block) : nullptr;
@@ -481,6 +483,7 @@ void TryCatch::codegenReturn(Expr *expr, BasicBlock*& block)
 
 void TryCatch::codegenBreak(BasicBlock*& block)
 {
+	findEnclosingLoop();  // error check
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
 	builder.CreateStore(state(context, BREAK), excFlag);
@@ -490,6 +493,7 @@ void TryCatch::codegenBreak(BasicBlock*& block)
 
 void TryCatch::codegenContinue(BasicBlock*& block)
 {
+	findEnclosingLoop();  // error check
 	LLVMContext& context = block->getContext();
 	IRBuilder<> builder(block);
 	builder.CreateStore(state(context, CONTINUE), excFlag);
@@ -701,13 +705,14 @@ void TryCatch::codegen0(BasicBlock*& block)
 		BasicBlock *finallyReturn = BasicBlock::Create(context, "finally_return", func);
 		theSwitch->addCase(excStateReturn, finallyReturn);
 		auto *f = dynamic_cast<Func *>(base);
-		assert(f);
 
-		Value *ret = nullptr;
-		builder.SetInsertPoint(finallyReturn);
-		if (retStore)
-			ret = builder.CreateLoad(retStore);
-		f->codegenReturn(ret, retType, finallyReturn);
+		if (f) {  // f could also be a SeqModule, which can't have returns
+			Value *ret = nullptr;
+			builder.SetInsertPoint(finallyReturn);
+			if (retStore)
+				ret = builder.CreateLoad(retStore);
+			f->codegenReturn(ret, retType, finallyReturn);
+		}
 
 		// mark new block returned by `codegenReturn` as unreachable:
 		builder.SetInsertPoint(finallyReturn);
@@ -1296,7 +1301,8 @@ void Return::codegen0(BasicBlock*& block)
 		types::Type *type = expr ? expr->getType() : types::Void;
 		Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
 		auto *func = dynamic_cast<Func *>(getBase());
-		assert(func);
+		if (!func)
+			throw exc::SeqException("misplaced return");
 		func->codegenReturn(val, type, block);
 	}
 }
@@ -1332,7 +1338,8 @@ void Yield::codegen0(BasicBlock*& block)
 	types::Type *type = expr ? expr->getType() : types::Void;
 	Value *val = expr ? expr->codegen(getBase(), block) : nullptr;
 	auto *func = dynamic_cast<Func *>(getBase());
-	assert(func);
+	if (!func)
+		throw exc::SeqException("misplaced yield");
 	func->codegenYield(val, type, block);
 }
 
@@ -1493,7 +1500,8 @@ void Prefetch::codegen0(BasicBlock*& block)
 
 	// empty yield:
 	auto *func = dynamic_cast<Func *>(base);
-	assert(func);
+	if (!func)
+		throw exc::SeqException("misplaced prefetch");
 	func->codegenYield(nullptr, nullptr, block, true);
 }
 

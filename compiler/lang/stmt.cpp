@@ -86,8 +86,9 @@ void Stmt::setBase(BaseFunc *base)
 	this->base = base;
 }
 
-static Stmt *findEnclosingLoop(Stmt *stmt)
+Stmt *Stmt::findEnclosingLoop()
 {
+	Stmt *stmt = this;
 	Stmt *orig = stmt;
 
 	while (stmt) {
@@ -101,12 +102,12 @@ static Stmt *findEnclosingLoop(Stmt *stmt)
 
 void Stmt::addBreakToEnclosingLoop(BranchInst *inst)
 {
-	findEnclosingLoop(this)->addBreak(inst);
+	findEnclosingLoop()->addBreak(inst);
 }
 
 void Stmt::addContinueToEnclosingLoop(BranchInst *inst)
 {
-	findEnclosingLoop(this)->addContinue(inst);
+	findEnclosingLoop()->addContinue(inst);
 }
 
 void Stmt::setTryCatch(TryCatch *tc)

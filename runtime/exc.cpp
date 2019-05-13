@@ -88,9 +88,9 @@ SEQ_FUNC void seq_terminate(void *exc)
 	auto *base = (OurBaseException_t *)((char *)exc + seq_exc_offset());
 	void *obj = base->obj;
 	auto *msg = (seq_str_t *)obj;
-	std::cerr << "terminating with exception: ";
-	std::cerr.write(msg->str, msg->len);
-	std::cerr << std::endl;
+	fputs("terminating with exception: ", stderr);
+	fwrite(msg->str, 1, (size_t)msg->len, stderr);
+	fputs("\n", stderr);
 	std::abort();
 }
 

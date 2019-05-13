@@ -102,6 +102,9 @@ namespace seq {
 		/// Sets the function containing this statement.
 		void setBase(BaseFunc *base);
 
+		/// Returns the innermost enclosing loop statement.
+		Stmt *findEnclosingLoop();
+
 		/// Adds the given branch instruction as a "break"
 		/// to the loop enclosing this statement.
 		void addBreakToEnclosingLoop(llvm::BranchInst *inst);

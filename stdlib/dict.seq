@@ -1,3 +1,5 @@
+import python as py
+
 class _dict_entry[K,V]:
     k: K
     v: V
@@ -109,17 +111,17 @@ class dict[K,V]:
         for e in self._entry_iter():
             yield (e.k, e.v)
 
+    def iteritems(self: dict[K,V]):
+        for i in self._entry_iter():
+            yield i.k, i.v
+
     def __iter__(self: dict[K,V]):
         return self.keys()
 
     def __len__(self: dict[K,V]):
         return self.size
 
-    def iteritems(self: dict[K, V]):
-        for i in self._entry_iter():
-            yield i.k, i.v
-
-    def __str__(self: dict[K, V]) -> str:
+    def __str__(self: dict[K,V]) -> str:
         n = len(self)
         if n == 0:
             return "{}"
@@ -138,3 +140,24 @@ class dict[K,V]:
             lst.append("}")
             return str.cat(lst)
 
+    def __to_py__(self: dict[K,V]):
+        cdef seq_py_dict_new() -> ptr[byte]
+        cdef seq_py_dict_setitem(ptr[byte], ptr[byte], ptr[byte])
+
+        pydict = seq_py_dict_new()
+        for k,v in self.iteritems():
+            seq_py_dict_setitem(pydict, py.to_py(k).p, py.to_py(v).p)
+        return py.PyObject(pydict)
+
+    def __from_py__(d: py.PyObject):
+        cdef seq_py_dict_next(ptr[byte], ptr[int], ptr[ptr[byte]], ptr[ptr[byte]]) -> bool
+
+        b = dict[K,V]()
+        pos = 0
+        k_ptr = ptr[byte]()
+        v_ptr = ptr[byte]()
+        while seq_py_dict_next(d.p, __ptr__(pos), __ptr__(k_ptr), __ptr__(v_ptr)):
+            k = py.from_py[K](py.PyObject(k_ptr))
+            v = py.from_py[V](py.PyObject(v_ptr))
+            b[k] = v
+        return b

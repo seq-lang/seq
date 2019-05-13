@@ -93,13 +93,15 @@ void types::RecordType::initOps()
 	if (!vtable.magic.empty())
 		return;
 
+	static RecordType *pyObjType = RecordType::get({PtrType::get(Byte)}, {"p"}, "PyObject");
+
 	vtable.magic = {
 		{"__init__", types, this, SEQ_MAGIC_CAPT(self, args, b) {
 			Value *val = defaultValue(b.GetInsertBlock());
 			for (unsigned i = 0; i < args.size(); i++)
 				val = setMemb(val, std::to_string(i+1), args[i], b.GetInsertBlock());
 			return val;
-		}},
+		}, false},
 
 		{"__str__", {}, Str, SEQ_MAGIC_CAPT(self, args, b) {
 			LLVMContext& context = b.getContext();
@@ -142,7 +144,7 @@ void types::RecordType::initOps()
 
 			b.SetInsertPoint(block);
 			return b.CreateCall(str, self);
-		}},
+		}, false},
 
 		{"__iter__", {}, GenType::get(types.empty() ? Void : types[0]), SEQ_MAGIC_CAPT(self, args, b) {
 			if (types.empty())
@@ -181,11 +183,11 @@ void types::RecordType::initOps()
 			}
 
 			return b.CreateCall(iter, self);
-		}},
+		}, false},
 
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return ConstantInt::get(seqIntLLVM(b.getContext()), types.size(), true);
-		}},
+		}, false},
 
 		{"__eq__", {this}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			BasicBlock *block = b.GetInsertBlock();
@@ -199,7 +201,7 @@ void types::RecordType::initOps()
 				result = b.CreateAnd(result, eq);
 			};
 			return result;
-		}},
+		}, false},
 
 		{"__hash__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			// hash_combine combine algorithm used in boost
@@ -220,7 +222,72 @@ void types::RecordType::initOps()
 				seed = b.CreateXor(seed, hash);
 			};
 			return seed;
-		}},
+		}, false},
+
+		{"__to_py__", {}, pyObjType, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			BasicBlock *block = b.GetInsertBlock();
+			Module *module = block->getModule();
+
+			auto *pyTupNew = cast<Function>(
+			                   module->getOrInsertFunction(
+			                     "seq_py_tuple_new",
+			                     PtrType::get(Byte)->getLLVMType(context),
+			                     seqIntLLVM(context)));
+
+			auto *pyTupSet = cast<Function>(
+			                   module->getOrInsertFunction(
+			                     "seq_py_tuple_setitem",
+			                     llvm::Type::getVoidTy(context),
+			                     PtrType::get(Byte)->getLLVMType(context),
+			                     seqIntLLVM(context),
+			                     PtrType::get(Byte)->getLLVMType(context)));
+
+			pyTupNew->setDoesNotThrow();
+			pyTupSet->setDoesNotThrow();
+
+			Value *pyTup = b.CreateCall(pyTupNew, ConstantInt::get(seqIntLLVM(context), types.size()));
+			for (unsigned i = 0; i < types.size(); i++) {
+				Value *val = memb(self, std::to_string(i+1), block);
+				if (!types[i]->magicOut("__to_py__", {})->is(pyObjType))
+					throw exc::SeqException("__to_py__ for type '" + types[i]->getName() + "' does return a 'PyObject'");
+				Value *pyVal = types[i]->callMagic("__to_py__", {}, val,{}, block, nullptr);
+				Value *ptr = pyObjType->memb(pyVal, "p", block);
+				b.CreateCall(pyTupSet, {pyTup, ConstantInt::get(seqIntLLVM(context), i), ptr});
+			};
+
+			Value *result = pyObjType->defaultValue(block);
+			result = pyObjType->setMemb(result, "p", pyTup, block);
+			return result;
+		}, false},
+
+		{"__from_py__", {pyObjType}, this, SEQ_MAGIC_CAPT(self, args, b) {
+			LLVMContext& context = b.getContext();
+			BasicBlock *block = b.GetInsertBlock();
+			Module *module = block->getModule();
+
+			auto *pyTupGet = cast<Function>(
+			                   module->getOrInsertFunction(
+			                     "seq_py_tuple_getitem",
+			                     PtrType::get(Byte)->getLLVMType(context),
+			                     PtrType::get(Byte)->getLLVMType(context),
+			                     seqIntLLVM(context)));
+			pyTupGet->setDoesNotThrow();
+
+			Value *pyTup = pyObjType->memb(args[0], "p", block);
+			Value *result = defaultValue(block);
+			for (unsigned i = 0; i < types.size(); i++) {
+				// last arg type being null means static magic:
+				if (!types::is(types[i]->magicOut("__from_py__", {pyObjType, nullptr}), types[i]))
+					throw exc::SeqException("__from_py__ for type '" + types[i]->getName() + "' returns a different type");
+				Value *valPtr = b.CreateCall(pyTupGet, {pyTup, ConstantInt::get(seqIntLLVM(context), i)});
+				Value *val = pyObjType->defaultValue(block);
+				val = pyObjType->setMemb(val, "p", valPtr, block);
+				val = types[i]->callMagic("__from_py__", {pyObjType}, nullptr, {val}, block, nullptr);
+				result = setMemb(result, std::to_string(i+1), val, block);
+			}
+			return result;
+		}, true},
 	};
 }
 

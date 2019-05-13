@@ -1,3 +1,5 @@
+import python as py
+
 class _set_entry[T]:
     k: T
     hash: int
@@ -106,3 +108,12 @@ class set[T]:
                 lst.append(e.__str__())
             lst.append("}")
             return str.cat(lst)
+
+    def __to_py__(self: set[T]):
+        cdef seq_py_set_new() -> ptr[byte]
+        cdef seq_py_set_add(ptr[byte], ptr[byte])
+
+        pyset = seq_py_set_new()
+        for a in self:
+            seq_py_set_add(pyset, py.to_py(a).p)
+        return py.PyObject(pyset)

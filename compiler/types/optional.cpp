@@ -40,7 +40,7 @@ void types::OptionalType::initOps()
 	vtable.magic = {
 		{"__bool__", {}, Bool, SEQ_MAGIC_CAPT(self, args, b) {
 			return has(self, b.GetInsertBlock());
-		}},
+		}, false},
 	};
 
 	addMethod("get", new BaseFuncLite({this}, getBaseType(0), [this](Module *module) {

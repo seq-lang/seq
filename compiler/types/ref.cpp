@@ -218,15 +218,15 @@ void types::RefType::initOps()
 			self = contents->alloc(nullptr, b.GetInsertBlock());
 			self = b.CreateBitCast(self, getLLVMType(b.getContext()));
 			return self;
-		}},
+		}, false},
 
 		{"__bool__", {}, Bool, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExt(b.CreateIsNotNull(self), Bool->getLLVMType(b.getContext()));
-		}},
+		}, false},
 
 		{"__raw__", {}, PtrType::get(Byte), SEQ_MAGIC(self, args, b) {
 			return self;
-		}},
+		}, false},
 	};
 
 	if (contents) {
