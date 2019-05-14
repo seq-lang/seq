@@ -7,15 +7,21 @@ type PyObject(p: ptr[byte]):
         cdef seq_py_decref(ptr[byte])
         seq_py_decref(self.p)
 
-type PyFunc(p: ptr[byte]):
-    def call(self: PyFunc, args: PyObject):
+    def call(self: PyObject, args):
         cdef seq_py_call(ptr[byte], ptr[byte]) -> ptr[byte]
-        return PyObject(seq_py_call(self.p, args.p))
+        args_py: PyObject = args.__to_py__()
+        return PyObject(seq_py_call(self.p, args_py.p))
 
-type PyModule(p: ptr[byte]):
-    def __getitem__(self: PyModule, name: str):
-        cdef seq_py_get_func(ptr[byte], ptr[byte]) -> ptr[byte]
-        return PyFunc(seq_py_get_func(self.p, name.c_str()))
+    def __getitem__(self: PyObject, name: str):
+        cdef seq_py_get_attr(ptr[byte], ptr[byte]) -> ptr[byte]
+        return PyObject(seq_py_get_attr(self.p, name.c_str()))
+
+    def __setitem__(self: PyObject, name: str, val: PyObject):
+        cdef seq_py_set_attr(ptr[byte], ptr[byte], ptr[byte])
+        seq_py_set_attr(self.p, name.c_str(), val.p)
+
+    def __to_py__(self: PyObject):
+        return self
 
 class PyException:
     msg: str
@@ -23,15 +29,19 @@ class PyException:
 
 def import_module(name: str):
     cdef seq_py_import(ptr[byte]) -> ptr[byte]
-    return PyModule(seq_py_import(name.c_str()))
+    return PyObject(seq_py_import(name.c_str()))
+
+def none():
+    cdef seq_py_none() -> ptr[byte]
+    return PyObject(seq_py_none())
 
 
 # conversions
 
-def to_py(x):
+def py(x) -> PyObject:
     return x.__to_py__()
 
-def from_py[T](x: PyObject) -> T:
+def get[T](x: PyObject) -> T:
     return T.__from_py__(x)
 
 extend int:

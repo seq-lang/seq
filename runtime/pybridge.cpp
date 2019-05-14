@@ -43,77 +43,66 @@ static seq_str_t seq_strdup(const char *s)
 	return {(seq_int_t)len, s2};
 }
 
+static void seq_py_exc_check()
+{
+	// if an exception occurs, transform it into a Seq exception:
+	PyObject *ptype, *pvalue, *ptraceback;
+	PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+
+	if (ptype) {
+		PyObject *pmsg = pvalue ? PyObject_Str(pvalue) : nullptr;
+		const char *msg = pmsg ? PyString_AsString(pmsg) : "<empty Python message>";
+		const char *type = ((PyTypeObject *)ptype)->tp_name;
+		auto *seqExc = (PyException *) seq_alloc(sizeof(PyException));
+		seqExc->msg = seq_strdup(msg);
+		seqExc->type = seq_strdup(type);
+
+		Py_DECREF(ptype);
+		Py_XDECREF(pvalue);
+		Py_XDECREF(ptraceback);
+		Py_XDECREF(pmsg);
+
+		const int seqExcType = (int)std::hash<std::string>()("PyException");
+		seq_throw(seq_alloc_exc(seqExcType, seqExc));
+		assert(0);
+	}
+}
+
 SEQ_FUNC PyObject *seq_py_import(char *name)
 {
-	PyObject *pName = c_str_to_py(name);
-	PyObject *module = PyImport_Import(pName);
-	Py_DECREF(pName);
-
-	if (!module) {
-		fprintf(stderr, "could not import Python module '%s'", name);
-		exit(EXIT_FAILURE);
-	}
-
+	PyObject *module = PyImport_ImportModule(name);
+	seq_py_exc_check();
 	return module;
 }
 
-SEQ_FUNC PyObject *seq_py_get_func(PyObject *module, char *name)
+SEQ_FUNC PyObject *seq_py_get_attr(PyObject *obj, char *name)
 {
-	PyObject *func = PyObject_GetAttrString(module, name);
+	PyObject *attr = PyObject_GetAttrString(obj, name);
+	seq_py_exc_check();
+	return attr;
+}
 
-	if (!func) {
-		fprintf(stderr, "could not find function '%s' in module '%s'", name, PyModule_GetName(module));
-		exit(EXIT_FAILURE);
-	}
-
-	if (!PyCallable_Check(func)) {
-		fprintf(stderr, "object '%s' in Python module '%s' is not callable", name, PyModule_GetName(module));
-		exit(EXIT_FAILURE);
-	}
-
-	return func;
+SEQ_FUNC void seq_py_set_attr(PyObject *obj, char *name, PyObject *val)
+{
+	PyObject_SetAttrString(obj, name, val);
+	seq_py_exc_check();
 }
 
 SEQ_FUNC PyObject *seq_py_call(PyObject *func, PyObject *args)
 {
 	PyObject *value = PyObject_CallObject(func, args);
-	if (!value) {
-		// if an exception occurs, transform it into a Seq exception:
-		PyObject *ptype, *pvalue, *ptraceback;
-		PyErr_Fetch(&ptype, &pvalue, &ptraceback);
-
-		if (pvalue) {
-			PyObject *pmsg = PyObject_Str(pvalue);
-			const char *msg = PyString_AsString(pmsg);
-			const char *type = ((PyTypeObject *)ptype)->tp_name;
-			auto *seqExc = (PyException *) seq_alloc(sizeof(PyException));
-			seqExc->msg = seq_strdup(msg);
-			seqExc->type = seq_strdup(type);
-
-			Py_DECREF(ptype);
-			Py_DECREF(pvalue);
-			Py_XDECREF(ptraceback);
-			Py_DECREF(pmsg);
-
-			const int seqExcType = (int)std::hash<std::string>()("PyException");
-			seq_throw(seq_alloc_exc(seqExcType, seqExc));
-			assert(0);
-		}
-
-		fprintf(stderr, "call to Python function failed");
-		exit(EXIT_FAILURE);
-	}
+	seq_py_exc_check();
 	return value;
 }
 
 SEQ_FUNC void seq_py_incref(PyObject *obj)
 {
-	Py_INCREF(obj);
+	Py_XINCREF(obj);
 }
 
 SEQ_FUNC void seq_py_decref(PyObject *obj)
 {
-	Py_DECREF(obj);
+	Py_XDECREF(obj);
 }
 
 
@@ -242,6 +231,11 @@ SEQ_FUNC PyObject *seq_py_tuple_getitem(PyObject *tuple, seq_int_t n)
 SEQ_FUNC void seq_py_tuple_setitem(PyObject *tuple, seq_int_t n, PyObject *val)
 {
 	PyTuple_SetItem(tuple, (Py_ssize_t)n, val);
+}
+
+SEQ_FUNC PyObject *seq_py_none()
+{
+	return Py_None;
 }
 
 #endif /* PYBRIDGE */

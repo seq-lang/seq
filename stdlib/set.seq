@@ -115,5 +115,5 @@ class set[T]:
 
         pyset = seq_py_set_new()
         for a in self:
-            seq_py_set_add(pyset, py.to_py(a).p)
+            seq_py_set_add(pyset, py.py(a).p)
         return py.PyObject(pyset)

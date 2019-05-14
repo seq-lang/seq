@@ -157,7 +157,7 @@ class list[T]:
         pylist = seq_py_list_new(len(self))
         idx = 0
         for a in self:
-            seq_py_list_setitem(pylist, idx, py.to_py(a).p)
+            seq_py_list_setitem(pylist, idx, py.py(a).p)
             idx += 1
         return py.PyObject(pylist)
 
@@ -169,5 +169,5 @@ class list[T]:
         t = list[T](n)
         for i in range(n):
             elem = py.PyObject(seq_py_list_getitem(v.p, i))
-            t.append(py.from_py[T](elem))
+            t.append(py.get[T](elem))
         return t

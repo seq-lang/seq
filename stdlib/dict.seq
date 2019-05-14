@@ -146,7 +146,7 @@ class dict[K,V]:
 
         pydict = seq_py_dict_new()
         for k,v in self.iteritems():
-            seq_py_dict_setitem(pydict, py.to_py(k).p, py.to_py(v).p)
+            seq_py_dict_setitem(pydict, py.py(k).p, py.py(v).p)
         return py.PyObject(pydict)
 
     def __from_py__(d: py.PyObject):
@@ -157,7 +157,7 @@ class dict[K,V]:
         k_ptr = ptr[byte]()
         v_ptr = ptr[byte]()
         while seq_py_dict_next(d.p, __ptr__(pos), __ptr__(k_ptr), __ptr__(v_ptr)):
-            k = py.from_py[K](py.PyObject(k_ptr))
-            v = py.from_py[V](py.PyObject(v_ptr))
+            k = py.get[K](py.PyObject(k_ptr))
+            v = py.get[V](py.PyObject(v_ptr))
             b[k] = v
         return b
