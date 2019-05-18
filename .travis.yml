@@ -50,6 +50,7 @@ before_script:
   - llvm-config --has-rtti
   - export LLVM_DIR=`llvm-config --cmakedir`
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
+  - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
 
 script:
   - mkdir build

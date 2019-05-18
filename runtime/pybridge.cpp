@@ -68,18 +68,21 @@ static void seq_py_exc_check()
 	}
 }
 
+#define SEQ_PY_RETURN(x) \
+	do { \
+		auto __retval = (x); \
+		seq_py_exc_check(); \
+		return __retval; \
+	} while (0)
+
 SEQ_FUNC PyObject *seq_py_import(char *name)
 {
-	PyObject *module = PyImport_ImportModule(name);
-	seq_py_exc_check();
-	return module;
+	SEQ_PY_RETURN(PyImport_ImportModule(name));
 }
 
 SEQ_FUNC PyObject *seq_py_get_attr(PyObject *obj, char *name)
 {
-	PyObject *attr = PyObject_GetAttrString(obj, name);
-	seq_py_exc_check();
-	return attr;
+	SEQ_PY_RETURN(PyObject_GetAttrString(obj, name));
 }
 
 SEQ_FUNC void seq_py_set_attr(PyObject *obj, char *name, PyObject *val)
@@ -90,9 +93,7 @@ SEQ_FUNC void seq_py_set_attr(PyObject *obj, char *name, PyObject *val)
 
 SEQ_FUNC PyObject *seq_py_call(PyObject *func, PyObject *args)
 {
-	PyObject *value = PyObject_CallObject(func, args);
-	seq_py_exc_check();
-	return value;
+	SEQ_PY_RETURN(PyObject_CallObject(func, args));
 }
 
 SEQ_FUNC void seq_py_incref(PyObject *obj)
@@ -120,9 +121,9 @@ SEQ_FUNC PyObject *seq_int_to_py(seq_int_t n)
 SEQ_FUNC seq_int_t seq_int_from_py(PyObject *n)
 {
 #if PY_MAJOR_VERSION == 2
-	return PyInt_AsLong(n);
+	SEQ_PY_RETURN(PyInt_AsLong(n));
 #else
-	return PyLong_AsLong(n);
+	SEQ_PY_RETURN(PyLong_AsLong(n));
 #endif
 }
 
@@ -133,7 +134,7 @@ SEQ_FUNC PyObject *seq_float_to_py(double f)
 
 SEQ_FUNC double seq_float_from_py(PyObject *f)
 {
-	return PyFloat_AsDouble(f);
+	SEQ_PY_RETURN(PyFloat_AsDouble(f));
 }
 
 SEQ_FUNC PyObject *seq_bool_to_py(bool b)
@@ -143,21 +144,21 @@ SEQ_FUNC PyObject *seq_bool_to_py(bool b)
 
 SEQ_FUNC bool seq_bool_from_py(PyObject *b)
 {
-	return PyObject_IsTrue(b) != 0;
+	SEQ_PY_RETURN(PyObject_IsTrue(b) != 0);
 }
 
 SEQ_FUNC PyObject *seq_str_to_py(seq_str_t s)
 {
 #if PY_MAJOR_VERSION == 2
-	return PyString_FromStringAndSize(s.str, (Py_ssize_t)s.len);
+	SEQ_PY_RETURN(PyString_FromStringAndSize(s.str, (Py_ssize_t)s.len));
 #else
-	return PyUnicode_DecodeFSDefaultAndSize(s.str, (Py_ssize_t)s.len);
+	SEQ_PY_RETURN(PyUnicode_DecodeFSDefaultAndSize(s.str, (Py_ssize_t)s.len));
 #endif
 }
 
 SEQ_FUNC seq_str_t seq_str_from_py(PyObject *s)
 {
-	return seq_strdup(PyString_AsString(s));
+	SEQ_PY_RETURN(seq_strdup(PyString_AsString(s)));
 }
 
 SEQ_FUNC PyObject *seq_byte_to_py(char c)
@@ -167,27 +168,30 @@ SEQ_FUNC PyObject *seq_byte_to_py(char c)
 
 SEQ_FUNC char seq_byte_from_py(PyObject *c)
 {
-	return PyString_AsString(c)[0];
+	auto *s = PyString_AsString(c);
+	seq_py_exc_check();
+	return s[0];
 }
 
 SEQ_FUNC PyObject *seq_py_list_new(seq_int_t n)
 {
-	return PyList_New((Py_ssize_t)n);
+	SEQ_PY_RETURN(PyList_New((Py_ssize_t)n));
 }
 
 SEQ_FUNC seq_int_t seq_py_list_len(PyObject *list)
 {
-	return (seq_int_t)PyObject_Length(list);
+	SEQ_PY_RETURN((seq_int_t)PyObject_Length(list));
 }
 
 SEQ_FUNC PyObject *seq_py_list_getitem(PyObject *list, seq_int_t idx)
 {
-	return PyList_GetItem(list, (Py_ssize_t)idx);
+	SEQ_PY_RETURN(PyList_GetItem(list, (Py_ssize_t)idx));
 }
 
 SEQ_FUNC void seq_py_list_setitem(PyObject *list, seq_int_t idx, PyObject *item)
 {
 	PyList_SetItem(list, (Py_ssize_t)idx, item);
+	seq_py_exc_check();
 }
 
 SEQ_FUNC PyObject *seq_py_dict_new()
@@ -198,6 +202,7 @@ SEQ_FUNC PyObject *seq_py_dict_new()
 SEQ_FUNC void seq_py_dict_setitem(PyObject *dict, PyObject *key, PyObject *val)
 {
 	PyDict_SetItem(dict, key, val);
+	seq_py_exc_check();
 }
 
 SEQ_FUNC bool seq_py_dict_next(PyObject *dict, seq_int_t *pos, PyObject **key, PyObject **val)
@@ -205,7 +210,7 @@ SEQ_FUNC bool seq_py_dict_next(PyObject *dict, seq_int_t *pos, PyObject **key, P
 	auto pos2 = (Py_ssize_t)*pos;
 	bool b = (PyDict_Next(dict, &pos2, key, val) != 0);
 	*pos = (seq_int_t)pos2;
-	return b;
+	SEQ_PY_RETURN(b);
 }
 
 SEQ_FUNC PyObject *seq_py_set_new()
@@ -216,21 +221,23 @@ SEQ_FUNC PyObject *seq_py_set_new()
 SEQ_FUNC void seq_py_set_add(PyObject *set, PyObject *key)
 {
 	PySet_Add(set, key);
+	seq_py_exc_check();
 }
 
 SEQ_FUNC PyObject *seq_py_tuple_new(seq_int_t n)
 {
-	return PyTuple_New((Py_ssize_t)n);
+	SEQ_PY_RETURN(PyTuple_New((Py_ssize_t)n));
 }
 
 SEQ_FUNC PyObject *seq_py_tuple_getitem(PyObject *tuple, seq_int_t n)
 {
-	return PyTuple_GetItem(tuple, (Py_ssize_t)n);
+	SEQ_PY_RETURN(PyTuple_GetItem(tuple, (Py_ssize_t)n));
 }
 
 SEQ_FUNC void seq_py_tuple_setitem(PyObject *tuple, seq_int_t n, PyObject *val)
 {
 	PyTuple_SetItem(tuple, (Py_ssize_t)n, val);
+	seq_py_exc_check();
 }
 
 SEQ_FUNC PyObject *seq_py_none()

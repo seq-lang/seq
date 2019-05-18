@@ -12,6 +12,10 @@ type PyObject(p: ptr[byte]):
         args_py: PyObject = args.__to_py__()
         return PyObject(seq_py_call(self.p, args_py.p))
 
+    def call_void(self: PyObject):
+        cdef seq_py_call(ptr[byte], ptr[byte]) -> ptr[byte]
+        return PyObject(seq_py_call(self.p, ptr[byte]()))
+
     def __getitem__(self: PyObject, name: str):
         cdef seq_py_get_attr(ptr[byte], ptr[byte]) -> ptr[byte]
         return PyObject(seq_py_get_attr(self.p, name.c_str()))

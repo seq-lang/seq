@@ -13,7 +13,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
-option(SEQ_PYBRIDGE "support Python interoperability" OFF)
+option(SEQ_PYBRIDGE "support Python interoperability" ON)
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
                          runtime/exc.cpp
