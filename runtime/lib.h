@@ -32,6 +32,7 @@ SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line);
 SEQ_FUNC void *seq_alloc(size_t n);
 SEQ_FUNC void *seq_alloc_atomic(size_t n);
 SEQ_FUNC void *seq_realloc(void *p, size_t n);
+SEQ_FUNC void seq_free(void *p);
 SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data));
 
 SEQ_FUNC void *seq_alloc_exc(int type, void *obj);

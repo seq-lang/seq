@@ -174,18 +174,6 @@ void types::SeqType::initOps()
 			return self;
 		}, false},
 
-		{"__copy__", {}, Seq, SEQ_MAGIC_CAPT(self, args, b) {
-			BasicBlock *block = b.GetInsertBlock();
-			Module *module = block->getModule();
-			auto *allocFunc = makeAllocFunc(module, true);
-			Value *ptr = memb(self, "ptr", block);
-			Value *len = memb(self, "len", block);
-			Value *ptrCopy = b.CreateCall(allocFunc, len);
-			makeMemCpy(ptrCopy, ptr, len, block, 1);
-			Value *copy = make(ptrCopy, len, block);
-			return copy;
-		}, false},
-
 		{"__len__", {}, Int, SEQ_MAGIC_CAPT(self, args, b) {
 			return memb(self, "len", b.GetInsertBlock());
 		}, false},

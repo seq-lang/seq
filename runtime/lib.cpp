@@ -18,6 +18,7 @@
 
 #include <sys/time.h>
 #include <gc.h>
+#include "ksw2/ksw2.h"
 #include "lib.h"
 
 #ifdef __GLIBC__
@@ -96,6 +97,11 @@ SEQ_FUNC void *seq_alloc_atomic(size_t n)
 SEQ_FUNC void *seq_realloc(void *p, size_t n)
 {
 	return GC_REALLOC(p, n);
+}
+
+SEQ_FUNC void seq_free(void *p)
+{
+	GC_FREE(p);
 }
 
 SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data))
@@ -204,4 +210,184 @@ SEQ_FUNC int seq_time()
 	gettimeofday(&ts, nullptr);
 	auto time_ms = (int)((ts.tv_sec * 1000000 + ts.tv_usec) / 1000);
 	return time_ms;
+}
+
+
+/*
+ * Alignment
+ *
+ * Adapted from ksw2
+ * seq_nt4_table is consistent with k-mer encoding
+ */
+unsigned char seq_nt4_table[256] = {
+    0, 1, 2, 3,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 0, 4, 2,  4, 4, 4, 1,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  3, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 0, 4, 2,  4, 4, 4, 1,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  3, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
+};
+
+static void encode(seq_t s)
+{
+	for (seq_int_t i = 0; i < s.len; i++)
+		s.seq[i] = seq_nt4_table[(int)s.seq[i]];
+}
+
+static void decode(seq_t s)
+{
+	for (seq_int_t i = 0; i < s.len; i++)
+		s.seq[i] = "AGCTN"[(int)s.seq[i]];
+}
+
+struct CIGAR {
+	uint32_t *value;
+	seq_int_t len;
+};
+
+struct Alignment {
+	CIGAR cigar;
+	seq_int_t score;
+};
+
+SEQ_FUNC void seq_align(seq_t query,
+                        seq_t target,
+                        int8_t *mat,
+                        int8_t gapo,
+                        int8_t gape,
+                        seq_int_t bandwidth,
+                        seq_int_t zdrop,
+                        seq_int_t flags,
+                        Alignment *out)
+{
+	ksw_extz_t ez;
+	encode(query);
+	encode(target);
+	ksw_extz2_sse(nullptr,
+	              (int)query.len,
+	              (uint8_t *)query.seq,
+	              (int)target.len,
+	              (uint8_t *)target.seq,
+	              5,
+	              mat,
+	              gapo,
+	              gape,
+	              (int)bandwidth,
+	              (int)zdrop,
+	              /* end_bonus */ 0,
+	              (int)flags,
+	              &ez);
+	decode(query);
+	decode(target);
+	*out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_align_dual(seq_t query,
+                             seq_t target,
+                             int8_t *mat,
+                             int8_t gapo1,
+                             int8_t gape1,
+                             int8_t gapo2,
+                             int8_t gape2,
+                             seq_int_t bandwidth,
+                             seq_int_t zdrop,
+                             seq_int_t flags,
+                             Alignment *out)
+{
+	ksw_extz_t ez;
+	encode(query);
+	encode(target);
+	ksw_extd2_sse(nullptr,
+	              (int)query.len,
+	              (uint8_t *)query.seq,
+	              (int)target.len,
+	              (uint8_t *)target.seq,
+	              5,
+	              mat,
+	              gapo1,
+	              gape1,
+	              gapo2,
+	              gape2,
+	              (int)bandwidth,
+	              (int)zdrop,
+	              /* end_bonus */ 0,
+	              (int)flags,
+	              &ez);
+	decode(query);
+	decode(target);
+	*out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_align_splice(seq_t query,
+                               seq_t target,
+                               int8_t *mat,
+                               int8_t gapo1,
+                               int8_t gape1,
+                               int8_t gapo2,
+                               int8_t noncan,
+                               seq_int_t zdrop,
+                               seq_int_t flags,
+                               Alignment *out)
+{
+	ksw_extz_t ez;
+	encode(query);
+	encode(target);
+	ksw_exts2_sse(nullptr,
+	              (int)query.len,
+	              (uint8_t *)query.seq,
+	              (int)target.len,
+	              (uint8_t *)target.seq,
+	              5,
+	              mat,
+	              gapo1,
+	              gape1,
+	              gapo2,
+	              noncan,
+	              (int)zdrop,
+	              (int)flags,
+	              &ez);
+	decode(query);
+	decode(target);
+	*out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_align_global(seq_t query,
+                               seq_t target,
+                               int8_t *mat,
+                               int8_t gapo,
+                               int8_t gape,
+                               seq_int_t bandwidth,
+                               Alignment *out)
+{
+	int m_cigar = 0;
+	int n_cigar = 0;
+	uint32_t *cigar = nullptr;
+	encode(query);
+	encode(target);
+	int score = ksw_gg2_sse(nullptr,
+	                       (int)query.len,
+	                       (uint8_t *)query.seq,
+	                       (int)target.len,
+	                       (uint8_t *)target.seq,
+	                       5,
+	                       mat,
+	                       gapo,
+	                       gape,
+	                       (int)bandwidth,
+	                       &m_cigar,
+	                       &n_cigar,
+	                       &cigar);
+	decode(query);
+	decode(target);
+	*out = {{cigar, n_cigar}, score};
 }

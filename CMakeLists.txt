@@ -17,6 +17,11 @@ option(SEQ_PYBRIDGE "support Python interoperability" ON)
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
                          runtime/exc.cpp
+                         runtime/ksw2/ksw2.h
+                         runtime/ksw2/ksw2_extd2_sse.cpp
+                         runtime/ksw2/ksw2_exts2_sse.cpp
+                         runtime/ksw2/ksw2_extz2_sse.cpp
+                         runtime/ksw2/ksw2_gg2_sse.cpp
                          runtime/pybridge.cpp)
 target_compile_options(seqrt PRIVATE -O3)
 target_link_libraries(seqrt gc)

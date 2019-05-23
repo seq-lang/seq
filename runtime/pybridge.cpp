@@ -20,15 +20,6 @@ void seq_py_init()
 #error "Only Python major versions 2 and 3 are supported."
 #endif
 
-static PyObject *c_str_to_py(const char *s)
-{
-#if PY_MAJOR_VERSION == 2
-	return PyString_FromString(s);
-#else
-	return PyUnicode_DecodeFSDefault(s);
-#endif
-}
-
 // caution: this type must be consistent with PyException as defined in Seq
 struct PyException {
 	seq_str_t msg;

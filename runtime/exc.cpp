@@ -91,7 +91,7 @@ SEQ_FUNC void seq_terminate(void *exc)
 	fputs("terminating with exception: ", stderr);
 	fwrite(msg->str, 1, (size_t)msg->len, stderr);
 	fputs("\n", stderr);
-	std::abort();
+	abort();
 }
 
 SEQ_FUNC void seq_throw(void *exc)
