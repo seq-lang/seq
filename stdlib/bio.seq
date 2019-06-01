@@ -321,8 +321,6 @@ type AlignConfig(mat: ptr[i8], gap1: tuple[int,int], gap2: tuple[int,int], bandw
         mat, gap1, gap2, bandwidth, zdrop, flags = self
         return (mat, gap1, gap2, bandwidth, zdrop, f)
 
-_default_config = AlignConfig(2, 4)
-
 type CIGAR(value: ptr[u32], len: int):
     def __init__(self: CIGAR) -> CIGAR:
         return (ptr[u32](), 0)
@@ -378,4 +376,7 @@ extend seq:
         return out
 
     def __matmul__(self: seq, other: seq):
-        return self.align(other, _default_config)
+        cdef seq_align_default(seq, seq, ptr[Alignment])
+        out = Alignment()
+        seq_align_default(self, other, __ptr__(out))
+        return out

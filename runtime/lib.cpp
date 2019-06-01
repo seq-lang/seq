@@ -292,6 +292,39 @@ SEQ_FUNC void seq_align(seq_t query,
 	*out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
 
+SEQ_FUNC void seq_align_default(seq_t query,
+                                seq_t target,
+                                Alignment *out)
+{
+	static int8_t mat[] = { 2 ,-4,-4,-4,0,
+	                        -4,2 ,-4,-4,0,
+	                        -4,-4,2 ,-4,0,
+	                        -4,-4,-4,2 ,0,
+	                        0 ,0 ,0 ,0 ,0 };
+	ksw_extz_t ez;
+	encode(query);
+	encode(target);
+	ksw_extd2_sse(nullptr,
+	              (int)query.len,
+	              (uint8_t *)query.seq,
+	              (int)target.len,
+	              (uint8_t *)target.seq,
+	              5,
+	              mat,
+	              4,
+	              2,
+	              13,
+	              1,
+	              -1,
+	              -1,
+	              /* end_bonus */ 0,
+	              0,
+	              &ez);
+	decode(query);
+	decode(target);
+	*out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
 SEQ_FUNC void seq_align_dual(seq_t query,
                              seq_t target,
                              int8_t *mat,
@@ -342,6 +375,7 @@ SEQ_FUNC void seq_align_splice(seq_t query,
 	ksw_extz_t ez;
 	encode(query);
 	encode(target);
+
 	ksw_exts2_sse(nullptr,
 	              (int)query.len,
 	              (uint8_t *)query.seq,

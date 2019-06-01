@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 #include <unistd.h>
 #include <dirent.h>
 #include <seq/seq.h>
@@ -124,16 +125,21 @@ static bool runTestsFromDir(const string& path, bool debug)
 	DIR *dir;
 	struct dirent *ent;
 	bool pass = true;
+	vector<string> filesToRun;
 
 	if ((dir = opendir(path.c_str()))) {
 		while ((ent = readdir(dir))) {
-			if (isSeqFile(string(ent->d_name)) &&
-			    !runTest(path + "/" + ent->d_name, debug)) {
-				pass = false;
-			}
+			if (isSeqFile(string(ent->d_name)))
+				filesToRun.push_back(path + "/" + ent->d_name);
 		}
 
 		closedir(dir);
+		sort(filesToRun.begin(), filesToRun.end());
+
+		for (auto& file : filesToRun) {
+			if (!runTest(file, debug))
+				pass = false;
+		}
 	} else {
 		cerr << "error: could not open " << path << endl;
 		exit(EXIT_FAILURE);
