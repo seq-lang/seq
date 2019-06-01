@@ -4,7 +4,7 @@
 
 def main():
     ALIGN_SPLICE_FOR = 0x100  # TODO: globals from imported modules don't work in tests
-    Q,T = ['../test/data/' + a for a in ('MT-orang.fa','MT-human.fa')]
+    Q,T = ['test/data/' + a for a in ('MT-orang.fa','MT-human.fa')]
     config = AlignConfig(2, 4).gap1(4, 2).gap2(13, 1)
     config_splice = AlignConfig(1, 2).gap1(2, 1).gap2(32, 4).flags(ALIGN_SPLICE_FOR)
 
