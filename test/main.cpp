@@ -6,11 +6,44 @@
 #include <algorithm>
 #include <unistd.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <seq/seq.h>
 #include <seq/parser.h>
 
 using namespace seq;
 using namespace std;
+
+template <size_t N>
+struct CaptureStdout {
+	char buf[N];
+	int out_pipe[2];
+	int save;
+
+	CaptureStdout() :
+	    buf(), out_pipe(), save()
+	{
+		memset(buf, '\0', N);
+		save = dup(STDOUT_FILENO);
+		assert(pipe(out_pipe) == 0);
+		long flags = fcntl(out_pipe[0], F_GETFL);
+		flags |= O_NONBLOCK;
+		fcntl(out_pipe[0], F_SETFL, flags);
+		dup2(out_pipe[1], STDOUT_FILENO);
+		close(out_pipe[1]);
+	}
+
+	~CaptureStdout()
+	{
+		dup2(save, STDOUT_FILENO);
+	}
+
+	string result()
+	{
+		fflush(stdout);
+		read(out_pipe[0], buf, sizeof(buf) - 1);
+		return string(buf);
+	}
+};
 
 vector<string> splitlines(const string &output)
 {
@@ -56,26 +89,16 @@ static vector<string> findExpects(const string& filename)
 
 static bool runTest(const string& filename, bool debug)
 {
-	char buf[10000];
-	memset(buf, '\0', sizeof(buf));
 	cout << "TEST: " << filename << endl;
 	vector<string> expects = findExpects(filename);
+	vector<string> results;
 
-	/* redirect output to `buf` */
-	fflush(stdout);
-	int save = dup(STDOUT_FILENO);
-	freopen("NUL", "a", stdout);
-	setvbuf(stdout, buf, _IOFBF, sizeof(buf));
-
-	SeqModule *module = parse(filename);
-	execute(module, {}, {}, debug);
-
-	/* redirect it back */
-	freopen("NUL", "a", stdout);
-	dup2(save, STDOUT_FILENO);
-	setvbuf(stdout, nullptr, _IONBF, 1024);
-
-	vector<string> results = splitlines(string(buf));
+	{
+		CaptureStdout<10000> capture;
+		SeqModule *module = parse(filename);
+		execute(module, {}, {}, debug);
+		results = splitlines(capture.result());
+	}
 
 	bool pass = true;
 	if (results.size() != expects.size()) {

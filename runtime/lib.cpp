@@ -114,7 +114,7 @@ SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data))
  * String conversion
  */
 
-template<typename T>
+template <typename T>
 static seq_str_t string_conv(const char *fmt, const size_t size, T t)
 {
 	auto *p = (char *)seq_alloc_atomic(size);
