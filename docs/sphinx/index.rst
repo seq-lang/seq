@@ -9,6 +9,7 @@ Contents
 
    intro
    tutorial
+   cookbook
    internals
    api/doxygen
 
