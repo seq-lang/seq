@@ -109,6 +109,10 @@ SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data))
 	GC_REGISTER_FINALIZER(p, f, nullptr, nullptr, nullptr);
 }
 
+SEQ_FUNC void seq_gc_add_roots(void *start, void *end) {
+	GC_add_roots(start, end);
+}
+
 
 /*
  * String conversion

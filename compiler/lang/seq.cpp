@@ -399,6 +399,24 @@ void SeqModule::compile(const std::string& out, bool debug)
 	}
 }
 
+extern "C" void seq_gc_add_roots(void *start, void *end);
+class BoehmGCMemoryManager : public SectionMemoryManager {
+	uint8_t *allocateDataSection(uintptr_t size,
+	                             unsigned alignment,
+	                             unsigned sectionID,
+	                             StringRef sectionName,
+	                             bool isReadOnly) override
+	{
+		uint8_t *result = SectionMemoryManager::allocateDataSection(size,
+		                                                            alignment,
+		                                                            sectionID,
+		                                                            sectionName,
+		                                                            isReadOnly);
+		seq_gc_add_roots(result, result + size);
+		return result;
+	}
+};
+
 void SeqModule::execute(const std::vector<std::string>& args,
                         const std::vector<std::string>& libs,
                         bool debug)
@@ -420,7 +438,7 @@ void SeqModule::execute(const std::vector<std::string>& args,
 	std::unique_ptr<Module> owner(module);
 	module = nullptr;
 	EngineBuilder EB(std::move(owner));
-	EB.setMCJITMemoryManager(make_unique<SectionMemoryManager>());
+	EB.setMCJITMemoryManager(make_unique<BoehmGCMemoryManager>());
 	EB.setUseOrcMCJITReplacement(true);
 	ExecutionEngine *eng = EB.create();
 
