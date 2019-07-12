@@ -13,7 +13,7 @@
 
 <sup>1</sup> LLVM 6 or greater is required. However, due to a LLVM 7 [bug](https://bugs.llvm.org/show_bug.cgi?id=40656) with coroutines (which are used extensively in Seq), we highly recommend building with LLVM 6.
 
-<sup>2</sup> The following packages must be installed with `opam`: ocamlfind, core, core_extended, core_bench, dune, ctypes, ctypes-foreign, ANSITerminal, menhir, ppx_deriving, zmq, nocrypto, yojson, cstruct, hex
+<sup>2</sup> The following packages must be installed with `opam`: core, dune, ctypes, ctypes-foreign, ANSITerminal, menhir, ppx_deriving
 
 ## Build
 

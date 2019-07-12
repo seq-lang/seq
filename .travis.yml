@@ -16,14 +16,6 @@ matrix:
         - OCAML_VERSION=4.07
         - CONDA_OS_NAME=MacOSX
 
-addons:
-  apt:
-    packages:
-      - libgc-dev
-  homebrew:
-    packages:
-      - libgc
-
 install:
   # install OCaml:
   - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
@@ -38,7 +30,7 @@ install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  - conda install -c conda-forge cmake llvmdev=${LLVM_VERSION} clangdev=${LLVM_VERSION}
+  - conda install -c conda-forge cmake llvmdev=${LLVM_VERSION} clangdev=${LLVM_VERSION} bdw-gc
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CC=clang CXX=clang++; fi
 
 before_script:
