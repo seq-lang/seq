@@ -113,6 +113,18 @@ SEQ_FUNC void seq_gc_add_roots(void *start, void *end) {
 	GC_add_roots(start, end);
 }
 
+SEQ_FUNC void seq_gc_remove_roots(void *start, void *end) {
+	GC_remove_roots(start, end);
+}
+
+SEQ_FUNC void seq_gc_clear_roots() {
+	GC_clear_roots();
+}
+
+SEQ_FUNC void seq_gc_exclude_static_roots(void *start, void *end) {
+	GC_exclude_static_roots(start, end);
+}
+
 
 /*
  * String conversion

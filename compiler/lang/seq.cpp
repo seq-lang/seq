@@ -400,7 +400,17 @@ void SeqModule::compile(const std::string& out, bool debug)
 }
 
 extern "C" void seq_gc_add_roots(void *start, void *end);
+extern "C" void seq_gc_remove_roots(void *start, void *end);
+/**
+ * Simple extension of LLVM's SectionMemoryManager which catches data section
+ * allocations and registers them with the GC. This allows the GC to know not
+ * to collect globals even in JIT mode.
+ */
 class BoehmGCMemoryManager : public SectionMemoryManager {
+private:
+	/// Vector of (start, end) address pairs registered with GC.
+	std::vector<std::pair<void *, void *>> roots;
+
 	uint8_t *allocateDataSection(uintptr_t size,
 	                             unsigned alignment,
 	                             unsigned sectionID,
@@ -412,8 +422,20 @@ class BoehmGCMemoryManager : public SectionMemoryManager {
 		                                                            sectionID,
 		                                                            sectionName,
 		                                                            isReadOnly);
-		seq_gc_add_roots(result, result + size);
+		void *start = result;
+		void *end = result + size;
+		seq_gc_add_roots(start, end);
+		roots.emplace_back(start, end);
 		return result;
+	}
+
+public:
+	BoehmGCMemoryManager() : SectionMemoryManager(), roots() {}
+
+	~BoehmGCMemoryManager() override {
+		for (const auto& root : roots) {
+			seq_gc_remove_roots(root.first, root.second);
+		}
 	}
 };
 
@@ -472,7 +494,7 @@ static std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> module, bo
 
 SeqJIT::SeqJIT() :
     target(EngineBuilder().selectTarget()), layout(target->createDataLayout()),
-    objLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
+    objLayer([]() { return std::make_shared<BoehmGCMemoryManager>(); }),
     comLayer(objLayer, SimpleCompiler(*target)),
     optLayer(comLayer, [](std::shared_ptr<Module> M) {
         return optimizeModule(std::move(M), true);
