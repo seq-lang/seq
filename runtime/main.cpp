@@ -69,13 +69,14 @@ int main(int argc, char **argv)
 	SeqModule *s = parse(input.c_str());
 
 	if (output.getValue().empty()) {
+		argsVec.insert(argsVec.begin(), input);
 		execute(s, argsVec, libsVec, debug.getValue());
 	} else {
 		if (!libsVec.empty())
 			warnMsg("ignoring libraries during compilation");
 
 		if (!argsVec.empty())
-			warnMsg("ignoring libraries during compilation");
+			warnMsg("ignoring arguments during compilation");
 
 		compile(s, output.getValue(), debug.getValue());
 	}
