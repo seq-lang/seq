@@ -11,7 +11,6 @@ matrix:
         - CONDA_OS_NAME=Linux
 
     - os: osx
-      osx_image: xcode11
       env:
         - LLVM_VERSION=6.0.1
         - OCAML_VERSION=4.07

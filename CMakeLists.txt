@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.12)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -14,6 +14,8 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_PYBRIDGE "support Python interoperability" ON)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GC REQUIRED bdw-gc)
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
                          runtime/exc.cpp
@@ -23,22 +25,23 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/ksw2/ksw2_extz2_sse.cpp
                          runtime/ksw2/ksw2_gg2_sse.cpp
                          runtime/pybridge.cpp)
-target_compile_options(seqrt PRIVATE -O3)
-target_link_libraries(seqrt gc)
+target_link_libraries(seqrt PUBLIC ${GC_LINK_LIBRARIES})
+target_include_directories(seqrt PRIVATE ${GC_INCLUDE_DIRS})
+target_compile_options(seqrt PRIVATE ${GC_CFLAGS_OTHER} -O3)
 
 if(SEQ_THREADED)
-  target_compile_options(seqrt PRIVATE -fopenmp)
-  target_link_libraries(seqrt omp)
+  find_package(OpenMP REQUIRED)
+  target_link_libraries(seqrt PUBLIC OpenMP::OpenMP_CXX)
   target_compile_definitions(seqrt PRIVATE THREADED=1)
 else()
   target_compile_definitions(seqrt PRIVATE THREADED=0)
 endif()
 
-if (SEQ_PYBRIDGE)
+if(SEQ_PYBRIDGE)
   find_package(PythonInterp REQUIRED)
   find_package(PythonLibs REQUIRED)
   include_directories(${PYTHON_INCLUDE_DIRS})
-  target_link_libraries(seqrt ${PYTHON_LIBRARIES})
+  target_link_libraries(seqrt PUBLIC ${PYTHON_LIBRARIES})
   target_compile_definitions(seqrt PRIVATE PYBRIDGE=1)
 else()
   target_compile_definitions(seqrt PRIVATE PYBRIDGE=0)
@@ -104,7 +107,7 @@ execute_process(COMMAND ${OCAMLFIND} ocamlc -where
                 RESULT_VARIABLE result
                 OUTPUT_VARIABLE OCAML_STDLIB_PATH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-if (result)
+if(result)
   message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
 endif()
 
