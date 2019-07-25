@@ -18,9 +18,11 @@ matrix:
 
 addons:
   apt:
+    update: true
     packages:
       - libgc-dev
   homebrew:
+    update: true
     packages:
       - libgc
 
