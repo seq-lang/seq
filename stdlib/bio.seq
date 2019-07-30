@@ -274,18 +274,18 @@ def _validate_match(m: int):
     if m < 0 or m >= 128:
         raise ArgumentError("match/mismatch penalty for alignment must be in range [0, 127]")
 
-type AlignConfig(mat: ptr[i8], gap1: tuple[int,int], gap2: tuple[int,int], bandwidth: int, zdrop: int, flags: int):
+type AlignConfig(mat: ptr[Int[8]], gap1: tuple[int,int], gap2: tuple[int,int], bandwidth: int, zdrop: int, flags: int):
     def _gen_mat(a: int, b: int):
         _validate_match(a)
         _validate_match(b)
         m = 5
-        mat = ptr[i8](m * m)
+        mat = ptr[Int[8]](m * m)
         for i in range(m - 1):
             for j in range(m - 1):
-                mat[i*m + j] = i8(a if i == j else -b)
-            mat[i*m + m-1] = i8(0)
+                mat[i*m + j] = Int[8](a if i == j else -b)
+            mat[i*m + m-1] = Int[8](0)
         for j in range(m):
-            mat[(m-1)*m + j] = i8(0)
+            mat[(m-1)*m + j] = Int[8](0)
         return mat
 
     def __init__(self: AlignConfig, match_score: int, mismatch_score: int) -> AlignConfig:
@@ -321,9 +321,9 @@ type AlignConfig(mat: ptr[i8], gap1: tuple[int,int], gap2: tuple[int,int], bandw
         mat, gap1, gap2, bandwidth, zdrop, flags = self
         return (mat, gap1, gap2, bandwidth, zdrop, f)
 
-type CIGAR(value: ptr[u32], len: int):
+type CIGAR(value: ptr[UInt[32]], len: int):
     def __init__(self: CIGAR) -> CIGAR:
-        return (ptr[u32](), 0)
+        return (ptr[UInt[32]](), 0)
 
     def __len__(self: CIGAR):
         return self.len
@@ -348,31 +348,31 @@ type Alignment(cigar: CIGAR, score: int):
 
 extend seq:
     def align(self: seq, other: seq, config: AlignConfig):
-        cdef seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
+        cdef seq_align(seq, seq, ptr[Int[8]], Int[8], Int[8], int, int, int, ptr[Alignment])
         mat, gap1, gap2, bandwidth, zdrop, flags = config
         out = Alignment()
-        seq_align(self, other, mat, i8(gap1[0]), i8(gap1[1]), bandwidth, zdrop, flags, __ptr__(out))
+        seq_align(self, other, mat, Int[8](gap1[0]), Int[8](gap1[1]), bandwidth, zdrop, flags, __ptr__(out))
         return out
 
     def align_dual(self: seq, other: seq, config: AlignConfig):
-        cdef seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
+        cdef seq_align_dual(seq, seq, ptr[Int[8]], Int[8], Int[8], Int[8], Int[8], int, int, int, ptr[Alignment])
         mat, gap1, gap2, bandwidth, zdrop, flags = config
         out = Alignment()
-        seq_align_dual(self, other, mat, i8(gap1[0]), i8(gap1[1]), i8(gap2[0]), i8(gap2[1]), bandwidth, zdrop, flags, __ptr__(out))
+        seq_align_dual(self, other, mat, Int[8](gap1[0]), Int[8](gap1[1]), Int[8](gap2[0]), Int[8](gap2[1]), bandwidth, zdrop, flags, __ptr__(out))
         return out
 
     def align_splice(self: seq, other: seq, config: AlignConfig):
-        cdef seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
+        cdef seq_align_splice(seq, seq, ptr[Int[8]], Int[8], Int[8], Int[8], Int[8], int, int, ptr[Alignment])
         mat, gap1, gap2, bandwidth, zdrop, flags = config
         out = Alignment()
-        seq_align_splice(self, other, mat, i8(gap1[0]), i8(gap1[1]), i8(gap2[0]), i8(gap2[1]), zdrop, flags, __ptr__(out))
+        seq_align_splice(self, other, mat, Int[8](gap1[0]), Int[8](gap1[1]), Int[8](gap2[0]), Int[8](gap2[1]), zdrop, flags, __ptr__(out))
         return out
 
     def align_global(self: seq, other: seq, config: AlignConfig):
-        cdef seq_align_global(seq, seq, ptr[i8], i8, i8, int, ptr[Alignment])
+        cdef seq_align_global(seq, seq, ptr[Int[8]], Int[8], Int[8], int, ptr[Alignment])
         mat, gap1, gap2, bandwidth, zdrop, flags = config
         out = Alignment()
-        seq_align_global(self, other, mat, i8(gap1[0]), i8(gap1[1]), bandwidth, __ptr__(out))
+        seq_align_global(self, other, mat, Int[8](gap1[0]), Int[8](gap1[1]), bandwidth, __ptr__(out))
         return out
 
     def __matmul__(self: seq, other: seq):

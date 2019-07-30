@@ -5,38 +5,38 @@
 # snap_index_from_dir(ptr[byte]) -> ptr[byte]     --  read object from specified directory
 # snap_index_ht_count(ptr[byte]) -> int           --  extract hash table count
 # snap_index_ht_get(ptr[byte], int) -> ptr[byte]  --  extract specified (0-indexed) hash table
-# snap_index_overflow_ptr(ptr[byte]) -> ptr[u32]  --  extract overflow table pointer
+# snap_index_overflow_ptr(ptr[byte]) -> ptr[UInt[32]]  --  extract overflow table pointer
 # snap_index_overflow_len(ptr[byte]) -> int       --  extract overflow table length
 # snap_index_count_of_bases(ptr[byte]) -> int     --  extract count of genome bases
 
 from hashtable import SNAPHashTable
 
 class GenomeIndex[K]:
-    hash_tables: array[SNAPHashTable[k16,u32]]
-    overflow_table: array[u32]
+    hash_tables: array[SNAPHashTable[Kmer[16],UInt[32]]]
+    overflow_table: array[UInt[32]]
     count_of_bases: int
 
     def _partition(k: K):
         n = int(k.as_int())
-        return (k16(n & ((1 << 32) - 1)), n >> 32)
+        return (Kmer[16](n & ((1 << 32) - 1)), n >> 32)
 
     def __init__(self: GenomeIndex[K], dir: str):
-        assert k16.len() <= K.len() <= k32.len()
+        assert Kmer[16].len() <= K.len() <= Kmer[32].len()
         cdef snap_index_from_dir(ptr[byte]) -> ptr[byte]
         cdef snap_index_ht_count(ptr[byte]) -> int
         cdef snap_index_ht_get(ptr[byte], int) -> ptr[byte]
-        cdef snap_index_overflow_ptr(ptr[byte]) -> ptr[u32]
+        cdef snap_index_overflow_ptr(ptr[byte]) -> ptr[UInt[32]]
         cdef snap_index_overflow_len(ptr[byte]) -> int
         cdef snap_index_count_of_bases(ptr[byte]) -> int
 
         p = snap_index_from_dir(dir.c_str())
         assert p
-        hash_tables = array[SNAPHashTable[k16,u32]](snap_index_ht_count(p))
+        hash_tables = array[SNAPHashTable[Kmer[16],UInt[32]]](snap_index_ht_count(p))
         for i in range(len(hash_tables)):
-            hash_tables[i] = SNAPHashTable[k16,u32](snap_index_ht_get(p, i))
+            hash_tables[i] = SNAPHashTable[Kmer[16],UInt[32]](snap_index_ht_get(p, i))
 
         self.hash_tables = hash_tables
-        self.overflow_table = array[u32](snap_index_overflow_ptr(p), snap_index_overflow_len(p))
+        self.overflow_table = array[UInt[32]](snap_index_overflow_ptr(p), snap_index_overflow_len(p))
         self.count_of_bases = snap_index_count_of_bases(p)
 
     def __getitem__(self: GenomeIndex[K], seed: K):
@@ -45,16 +45,16 @@ class GenomeIndex[K]:
         value_ptr = table.get_value_ptr_for_key(kmer)
 
         if not value_ptr or value_ptr[0] == table.invalid_val:
-            return array[u32](value_ptr, 0)
+            return array[UInt[32]](value_ptr, 0)
 
         value = value_ptr[0]
 
         if int(value) < self.count_of_bases:
-            return array[u32](value_ptr, 1)
+            return array[UInt[32]](value_ptr, 1)
         else:
             overflow_table_offset = int(value) - self.count_of_bases
             hit_count = int(self.overflow_table[overflow_table_offset])
-            return array[u32](self.overflow_table.ptr + overflow_table_offset + 1, hit_count)
+            return array[UInt[32]](self.overflow_table.ptr + overflow_table_offset + 1, hit_count)
 
     def __prefetch__(self: GenomeIndex[K], seed: K):
         kmer, which = GenomeIndex[K]._partition(seed)

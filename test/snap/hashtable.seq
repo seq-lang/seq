@@ -14,11 +14,11 @@ class SNAPHashTable[K,V]:
 
     def _hash(k):
         key = hash(k)
-        key ^= int(u64(key) >> u64(33))
+        key ^= int(UInt[64](key) >> UInt[64](33))
         key *= 0xff51afd7ed558ccd
-        key ^= int(u64(key) >> u64(33))
+        key ^= int(UInt[64](key) >> UInt[64](33))
         key *= 0xc4ceb9fe1a85ec53
-        key ^= int(u64(key) >> u64(33))
+        key ^= int(UInt[64](key) >> UInt[64](33))
         return key
 
     def __init__(self: SNAPHashTable[K,V], size: int, invalid_val: V):
@@ -36,7 +36,7 @@ class SNAPHashTable[K,V]:
         self.invalid_val = snap_hashtable_invalid_val(p)
 
     def _get_index(self: SNAPHashTable[K,V], where: int):
-        return int(u64(where) % u64(len(self.table)))
+        return int(UInt[64](where) % UInt[64](len(self.table)))
 
     def _get_entry_index_for_key(self: SNAPHashTable[K,V], k: K):
         table = self.table
@@ -104,9 +104,9 @@ class SNAPHashTable[K,V]:
             self.table[entry] = (v, k)
 
 def _test():
-    h = SNAPHashTable[i32,i32](100, i32(-1))
+    h = SNAPHashTable[Int[32],Int[32]](100, Int[32](-1))
     for i in range(10):
-        h[i32(42 + i*100)] = i32(i)
+        h[Int[32](42 + i*100)] = Int[32](i)
 
     for i in range(100):
-        print int(h[i32(42 + i*100)])
+        print int(h[Int[32](42 + i*100)])

@@ -12,5 +12,5 @@ print 5 // 2.0                 # EXPECT: 2
 print 5 / 2.0                  # EXPECT: 2.5
 print 5.0 // 2                 # EXPECT: 2
 print 5.0 / 2                  # EXPECT: 2.5
-print int(i128(5) // i128(2))  # EXPECT: 2
-print i128(5) / i128(2)        # EXPECT: 2.5
+print int(Int[128](5) // Int[128](2))  # EXPECT: 2
+print Int[128](5) / Int[128](2)        # EXPECT: 2.5

@@ -65,12 +65,18 @@ struct
   (** [parse_type context expr] parses [expr] AST and ensures that 
       it is a type expression. Returns a [TypeExpr].
       Raises error if [expr] does not describe a type. *)
-  and parse_type ctx t =
-    match parse ctx t with
-    | typ_expr when Llvm.Expr.is_type typ_expr ->
-      Llvm.Type.expr_type typ_expr
-    | _ ->
-      serr ~pos:(fst t) "not a type"
+  and parse_type ctx (pos, node) =
+    let expr = match node with
+      | Id     p -> parse_id       ctx pos p ~is_type:true
+      | Index  p -> parse_index    ctx pos p ~is_type:true
+      | Dot    p -> parse_dot      ctx pos p
+      | TypeOf p -> parse_typeof   ctx pos p
+      | _ -> serr ~pos "not a type"
+    in
+    Llvm.Expr.set_pos expr pos; 
+    Llvm.Expr.set_trycatch expr ctx.trycatch;
+    if Llvm.Expr.is_type expr then Llvm.Type.expr_type expr
+    else serr ~pos "not a type"
 
   (* ***************************************************************
      Node parsers
@@ -116,22 +122,19 @@ struct
   and parse_seq _ _ s = 
     Llvm.Expr.seq s
 
-  and parse_id ?map ctx pos var = 
+  and parse_id ?map ?(is_type=false) ctx pos var = 
     let map = Option.value map ~default:ctx.map in
 
     let pref = String.prefix var 1 in
     let suf = String.suffix var ((String.length var) - 1) in
-    match pref, int_of_string_opt suf with
-    | "k", Some n ->
-      Llvm.Expr.typ @@ Llvm.Type.kmerN n
-    | "i", Some n ->
-      Llvm.Expr.typ @@ Llvm.Type.intN n
-    | "u", Some n ->
-      Llvm.Expr.typ @@ Llvm.Type.uintN n
-    | _ -> match Hashtbl.find map var with
+    match is_type, Hashtbl.find map var with
     (* Make sure that a variable is either accessible within 
-       the same base (function) or that it is global variable  *)
-    | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
+      the same base (function) or that it is global variable  *)
+    | _, Some ((Ctx.Namespace.Type t, _) :: _) -> 
+      Llvm.Expr.typ t
+    | true, _ ->
+      serr ~pos "type '%s' not found or realized" var
+    | false, Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
       when (ctx.base = base) || global -> 
       let e = Llvm.Expr.var v in
       if global && ctx.base = base && Stack.exists ctx.flags ~f:((=) "atomic") then
@@ -140,12 +143,10 @@ struct
         Llvm.Var.set_atomic e
       end;
       e
-    | Some ((Ctx.Namespace.Type t, _) :: _) -> 
-      Llvm.Expr.typ t
-    | Some ((Ctx.Namespace.Func (t, _), _) :: _) -> 
+    | false, Some ((Ctx.Namespace.Func (t, _), _) :: _) -> 
       Llvm.Expr.func t
     | _ ->
-      serr ~pos "symbol '%s' not found or realized" var
+      serr ~pos "identifier '%s' not found or realized" var
 
   and parse_tuple ctx _ args =
     let args = List.map args ~f:(parse ctx) in
@@ -260,9 +261,33 @@ struct
 
   (** Parses index expression which also includes type realization rules.
       Check GOTCHAS for details. *)
-  and parse_index ctx pos (lh_expr, indices) =
-    match snd lh_expr, snd indices with
-    | _, Slice (st, ed, step) ->
+  and parse_index ?(is_type=false) ctx pos (lh_expr, indices) =
+    match is_type, snd lh_expr, snd indices with
+    | _, Id ("array" | "ptr" | "generator" as name), Tuple _ ->
+      serr ~pos "%s requires one type" name
+    | _, Id ("array" | "ptr" | "generator" as name), _ ->
+      let typ = parse_type ctx indices in
+      Llvm.Expr.typ @@ Llvm.Type.param ~name typ
+    | _, Id "Kmer", Int n ->
+      Llvm.Expr.typ @@ Llvm.Type.kmerN (int_of_string n)
+    | _, Id "Int", Int n ->
+      Llvm.Expr.typ @@ Llvm.Type.intN (int_of_string n)
+    | _, Id "UInt", Int n ->
+      Llvm.Expr.typ @@ Llvm.Type.uintN (int_of_string n)
+    | true, Id "function", Tuple indices ->
+      let indices = List.map indices ~f:(parse_type ctx) in
+      let ret, args = List.hd_exn indices, List.tl_exn indices in
+      Llvm.Expr.typ @@ Llvm.Type.func ret args
+    | true, Id "function", _ ->
+      let ret, args = parse_type ctx indices, [] in
+      Llvm.Expr.typ @@ Llvm.Type.func ret args
+    | _, Id "tuple", Tuple indices ->
+      let indices = List.map indices ~f:(parse_type ctx) in
+      let names = List.map indices ~f:(fun _ -> "") in
+      Llvm.Expr.typ @@ Llvm.Type.record names indices ""
+    | _, Id "tuple", _ ->
+      Llvm.Expr.typ @@ Llvm.Type.record [""] [parse_type ctx indices] ""
+    | false, _, Slice (st, ed, step) ->
       if is_some step then 
         failwith "todo: expr/step";
       let unpack st = 
@@ -270,24 +295,6 @@ struct
       in
       let lh_expr = parse ctx lh_expr in
       Llvm.Expr.slice lh_expr (unpack st) (unpack ed)
-    | Id ("array" | "ptr" | "generator" as name), Tuple _ ->
-      serr ~pos "%s requires one type" name
-    | Id ("array" | "ptr" | "generator" as name), _ ->
-      let typ = parse_type ctx indices in
-      Llvm.Expr.typ @@ Llvm.Type.param ~name typ
-    | Id "function", Tuple indices ->
-      let indices = List.map indices ~f:(parse_type ctx) in
-      let ret, args = List.hd_exn indices, List.tl_exn indices in
-      Llvm.Expr.typ @@ Llvm.Type.func ret args
-    | Id "function", _ ->
-      let ret, args = parse_type ctx indices, [] in
-      Llvm.Expr.typ @@ Llvm.Type.func ret args
-    | Id "tuple", Tuple indices ->
-      let indices = List.map indices ~f:(parse_type ctx) in
-      let names = List.map indices ~f:(fun _ -> "") in
-      Llvm.Expr.typ @@ Llvm.Type.record names indices ""
-    | Id "tuple", _ ->
-      Llvm.Expr.typ @@ Llvm.Type.record [""] [parse_type ctx indices] ""
     | _ -> 
       let lh_expr = parse ctx lh_expr in
       let indices = match snd indices with
@@ -295,7 +302,7 @@ struct
         | _ -> [parse ctx indices]
       in
       let all_types = List.for_all indices ~f:Llvm.Expr.is_type in
-      if all_types then
+      if all_types then begin
         let indices = List.map indices ~f:Llvm.Type.expr_type in
         match Llvm.Expr.get_name lh_expr with
         | "type" ->
@@ -307,7 +314,7 @@ struct
           lh_expr
         | _ ->
           serr ~pos "wrong LHS for type realization"
-      else 
+      end else 
         let t = match indices with 
           | [t] -> t
           | l -> Llvm.Expr.tuple l 
