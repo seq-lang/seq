@@ -93,7 +93,7 @@ Genomics-specific features
 Genomic types
 ^^^^^^^^^^^^^
 
-Seq's namesake type is indeed the sequence type: ``seq``. A ``seq`` object represents a DNA sequence of any length and---on top of general-purpose string functionality---provides methods for performing common sequence operations such as splitting into subsequences, reverse complementation and :math:`k`-mer extraction. Alongside the ``seq`` type are :math:`k`-mer types, where e.g. ``k1`` represents a 1-mer, ``k2`` a 2-mer and so on, up to ``k256``.
+Seq's namesake type is indeed the sequence type: ``seq``. A ``seq`` object represents a DNA sequence of any length and---on top of general-purpose string functionality---provides methods for performing common sequence operations such as splitting into subsequences, reverse complementation and :math:`k`-mer extraction. Alongside the ``seq`` type are :math:`k`-mer types, where e.g. ``Kmer[1]`` represents a 1-mer, ``Kmer[2]`` a 2-mer and so on, up to ``Kmer[256]``.
 
 Sequences can be seamlessly converted between these various types:
 
@@ -107,12 +107,12 @@ Sequences can be seamlessly converted between these various types:
         print sub
 
     # (b) split into 5-mers with stride 1
-    for kmer in dna.kmers[k5](1):
+    for kmer in dna.kmers[Kmer[5]](1):
         print kmer
         print ~kmer  # reverse complement
 
     # (c) convert entire sequence to 12-mer
-    kmer = k12(dna)
+    kmer = Kmer[12](dna)
 
 In practice, reads would be inputted from e.g. a FASTQ file:
 
@@ -210,9 +210,9 @@ Here's an example of pipeline usage, which shows the same two loops from above, 
         print kmer
         print ~kmer
 
-    dna |> kmers[k5](1) |> f
+    dna |> kmers[Kmer[5]](1) |> f
 
-First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers[k5](..., 1)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
+First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers[Kmer[5]](..., 1)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
 
 Genomic index prefetching
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -228,9 +228,9 @@ In particular, a typical prefetch-friendly index class would look like this:
 
     class MyIndex:  # abstract k-mer index
         ...
-        def __getitem__(self: MyIndex, kmer: k20):
+        def __getitem__(self: MyIndex, kmer: Kmer[20]):
             # standard __getitem__
-        def __prefetch__(self: MyIndex, kmer: k20):
+        def __prefetch__(self: MyIndex, kmer: Kmer[20]):
             # similar to __getitem__, but performs prefetch
 
 Now, if we were to process data in a pipeline as such:
@@ -239,7 +239,7 @@ Now, if we were to process data in a pipeline as such:
 
     def process(read: seq, index: MyIndex):
         ...
-        for kmer in read.kmers[k20](step):
+        for kmer in read.kmers[Kmer[20]](step):
             prefetch index[kmer], index[~kmer]
             hits = index[kmer]
             hits_rev = index[~kmer]
@@ -271,7 +271,7 @@ CPython and many other implementations alike cannot take advantage of parallelis
         print kmer
         print ~kmer
 
-    dna |> kmers[k5](1) ||> f
+    dna |> kmers[Kmer[5]](1) ||> f
 
 Internally, the Seq compiler uses `Tapir <http://cilk.mit.edu/tapir/>`_ with an OpenMP task backend to generate code for parallel pipelines. Logically, parallel pipe operators are similar to parallel-for loops: the portion of the pipeline after the parallel pipe is outlined into a new function that is called by the OpenMP runtime task spawning routines (as in ``#pragma omp task`` in C++), and a synchronization point (``#pragma omp taskwait``) is added after the outlined segment. Lastly, the entire program is implicitly placed in an OpenMP parallel region (``#pragma omp parallel``) that is guarded by a "single" directive (``#pragma omp single``) so that the serial portions are still executed by one thread (this is required by OpenMP as tasks must be bound to an enclosing parallel region).
 
@@ -302,7 +302,7 @@ Note that all type extensions are performed strictly at compile time and incur n
 Other types
 ^^^^^^^^^^^
 
-Seq provides arbitrary-width signed and unsigned integers up to ``i512`` and ``u512``, respectively (note that ``int`` is an ``i64``).
+Seq provides arbitrary-width signed and unsigned integers up to ``Int[512]`` and ``UInt[512]``, respectively (note that ``int`` is an ``Int[64]``). Typedefs for common bit widths are provided in the standard library, such as ``i8``, ``i16``, ``u32``, ``u64`` etc.
 
 The ``ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``ptr[byte]`` is equivalent to ``char*`` in C). The ``array[T]`` type represents a fixed-length array (essentially a pointer with a length).
 
