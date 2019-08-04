@@ -1171,6 +1171,11 @@ For::For(Expr *gen) :
 	loop = true;
 }
 
+Expr *For::getGen()
+{
+	return gen;
+}
+
 Block *For::getBlock()
 {
 	return scope;
@@ -1179,6 +1184,11 @@ Block *For::getBlock()
 Var *For::getVar()
 {
 	return var;
+}
+
+void For::setGen(Expr *gen)
+{
+	this->gen = gen;
 }
 
 void For::resolveTypes()

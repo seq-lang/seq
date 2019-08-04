@@ -212,8 +212,10 @@ namespace seq {
 		Var *var;
 	public:
 		explicit For(Expr *gen);
+		Expr *getGen();
 		Block *getBlock();
 		Var *getVar();
+		void setGen(Expr *gen);
 		void resolveTypes() override;
 		void codegen0(llvm::BasicBlock*& block) override;
 		For *clone(Generic *ref) override;

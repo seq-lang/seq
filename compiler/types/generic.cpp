@@ -186,6 +186,12 @@ Value *types::GenericType::strValue(Value *self, BasicBlock*& block, TryCatch *t
 	return type->strValue(self, block, tc);
 }
 
+Value *types::GenericType::lenValue(Value *self, BasicBlock*& block, TryCatch *tc)
+{
+	ensure();
+	return type->lenValue(self, block, tc);
+}
+
 void types::GenericType::initOps()
 {
 	ensure();

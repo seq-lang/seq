@@ -29,6 +29,10 @@ type range(lo: int, hi: int, step: int):
                 yield i
                 i += step
 
+    def __len__(self: range):
+        l = self.hi - self.lo
+        return (l // self.step) + (1 if l % self.step > 0 else 0)
+
 class Box[T]:
     val: T
 

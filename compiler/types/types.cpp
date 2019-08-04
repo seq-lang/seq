@@ -323,6 +323,14 @@ Value *types::Type::strValue(Value *self, BasicBlock*& block, TryCatch *tc)
 	return callMagic("__str__", {}, self, {}, block, tc);
 }
 
+Value *types::Type::lenValue(Value *self, BasicBlock*& block, TryCatch *tc)
+{
+	if (!magicOut("__len__", {})->is(types::Int))
+		throw exc::SeqException("the output type of __len__ is not int");
+
+	return callMagic("__len__", {}, self, {}, block, tc);
+}
+
 void types::Type::initOps()
 {
 }

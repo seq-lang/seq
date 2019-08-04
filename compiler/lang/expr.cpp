@@ -419,8 +419,33 @@ Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 {
 	BaseFunc *oldBase = body->getBase();
 	setBodyBase(body, base);
+
+	/*
+	 * If single-level and generator supports __len__, we want to call that method and
+	 * allocate a list of the correct length beforehand.
+	 */
+	Expr *oldGen = nullptr;
+	Expr *listLen = nullptr;
+	if (body->getBlock()->stmts.empty()) {
+		Expr *gen = body->getGen();
+		types::Type *genType = gen->getType();
+		if (genType->hasMethod("__len__")) {
+			// codegen gen here:
+			Value *genVal = gen->codegen(base, block);
+			Value *lenVal = genType->lenValue(genVal, block, getTryCatch());
+			listLen = new ValueExpr(types::Int, lenVal);
+
+			// make sure we don't codegen gen twice, so swap out body's gen:
+			oldGen = gen;
+			body->setGen(new ValueExpr(genType, genVal));
+		}
+	}
+
 	types::Type *type = getType();
-	ConstructExpr construct(type, {});
+	std::vector<Expr *> constructArgs;
+	if (listLen)
+		constructArgs.push_back(listLen);
+	ConstructExpr construct(type, constructArgs);
 	Value *list = construct.codegen(base, block);
 	ValueExpr v(type, list);
 
@@ -450,6 +475,8 @@ Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock*& block)
 	body->codegen(block);
 	inner->stmts.pop_back();
 	setBodyBase(body, oldBase);
+	if (oldGen)
+		body->setGen(oldGen);
 
 	return list;
 }

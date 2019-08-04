@@ -203,10 +203,19 @@ namespace seq {
 
 			/// Convenience method for calling `type.__str__`.
 			/// @param self value of this type
-			/// @param block where to codegen the bool value
+			/// @param block where to codegen the str value
 			/// @param tc enclosing try-catch statement, or null if none
 			/// @return str value of this type
 			virtual llvm::Value *strValue(llvm::Value *self,
+			                              llvm::BasicBlock*& block,
+			                              TryCatch *tc);
+
+			/// Convenience method for calling `type.__len__`.
+			/// @param self value of this type
+			/// @param block where to codegen the len value
+			/// @param tc enclosing try-catch statement, or null if none
+			/// @return len value of this type
+			virtual llvm::Value *lenValue(llvm::Value *self,
 			                              llvm::BasicBlock*& block,
 			                              TryCatch *tc);
 

@@ -145,6 +145,10 @@ namespace seq {
 			                      llvm::BasicBlock*& block,
 			                      TryCatch *tc) override;
 
+			llvm::Value *lenValue(llvm::Value *self,
+			                      llvm::BasicBlock*& block,
+			                      TryCatch *tc) override;
+
 			void initOps() override;
 			void initFields() override;
 			Type *magicOut(const std::string& name, std::vector<Type *> args) override;
