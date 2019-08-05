@@ -30,8 +30,9 @@ type range(lo: int, hi: int, step: int):
                 i += step
 
     def __len__(self: range):
-        l = self.hi - self.lo
-        return (l // self.step) + (1 if l % self.step > 0 else 0)
+        l = (self.hi - self.lo).__abs__()
+        s = (self.step).__abs__()
+        return (l // s) + (1 if l % s > 0 else 0)
 
 class Box[T]:
     val: T
@@ -258,6 +259,21 @@ extend str:
             str.memcpy(p + n, s.ptr, s.len)
             n += s.len
         return str(p, total)
+
+    def cati_ext(v: generator[str]):
+        sz = 10
+        p = ptr[byte](sz)
+        n = 0
+        for s in v:
+            if n + s.len > sz:
+                sz = 1 + 3 * (n + s.len) // 2
+                pp = ptr[byte](sz)
+                str.memcpy(pp, p, n)
+                p = pp
+            str.memcpy(p + n, s.ptr, s.len)
+            n += s.len
+        # TODO: realloc extra space
+        return str(p, n)
 
     def join(self: str, l: list[str]):
         if self == "":

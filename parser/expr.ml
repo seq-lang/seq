@@ -327,6 +327,20 @@ struct
       let t = parse_type ctx t in
       let arg = parse ctx value in
       Llvm.Expr.alloc_array t arg
+    (* fast ''.join optimization *)
+    | Dot ((_, Id "str"), "join"), 
+      [_, { name = _; value = _, String ""};
+       _, { name = _; value = pos_g, ListGenerator (_, (_, { gen; cond = None; next = None; _ }) as g)}]
+    | Dot ((_, Id "str"), "join"), 
+      [_, { name = _; value = _, String ""};
+       _, { name = _; value = pos_g, Generator (_, (_, { gen; cond = None; next = None; _ }) as g)}]
+    | Dot ((_, String ""), "join"), 
+      [_, { name = _; value = pos_g, ListGenerator (_, (_, { gen; cond = None; next = None; _ }) as g)}]
+    | Dot ((_, String ""), "join"), 
+      [_, { name = _; value = pos_g, Generator (_, (_, { gen; cond = None; next = None; _ }) as g)}] ->
+      parse_call_real ctx pos (
+        (pos, Dot ((pos, Id "str"), "cati_ext")),
+        [pos_g,   { name = None; value = pos_g, Generator g}])
     | _ -> 
       parse_call_real ctx pos (callee_expr, args)
 
