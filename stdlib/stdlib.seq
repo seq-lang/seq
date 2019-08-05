@@ -261,19 +261,18 @@ extend str:
         return str(p, total)
 
     def cati_ext(v: generator[str]):
+        cdef seq_realloc(ptr[byte], int) -> ptr[byte]
         sz = 10
         p = ptr[byte](sz)
         n = 0
         for s in v:
             if n + s.len > sz:
                 sz = 1 + 3 * (n + s.len) // 2
-                pp = ptr[byte](sz)
-                str.memcpy(pp, p, n)
-                p = pp
+                p = seq_realloc(p, sz)
             str.memcpy(p + n, s.ptr, s.len)
             n += s.len
         # TODO: realloc extra space
-        return str(p, n)
+        return str(seq_realloc(p, n), n)
 
     def join(self: str, l: list[str]):
         if self == "":
