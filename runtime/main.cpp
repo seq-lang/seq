@@ -14,16 +14,6 @@ using namespace seq;
 using namespace llvm;
 using namespace llvm::cl;
 
-static void errMsg(const string& msg)
-{
-	cerr << "\033[1;31merror:\033[0m " << msg << endl;
-}
-
-static void warnMsg(const string& msg)
-{
-	cerr << "\033[1;33mwarning:\033[0m " << msg << endl;
-}
-
 static void versMsg(raw_ostream& out)
 {
 	out << "Seq " << SEQ_VERSION_MAJOR << "."
@@ -46,7 +36,7 @@ int main(int argc, char **argv)
 
 	if (input.empty()) {
 #if LLVM_VERSION_MAJOR == 6
-		warnMsg("Seq REPL is currently experimental");
+		compilationWarning("Seq REPL is currently experimental");
 		repl();
 		return EXIT_SUCCESS;
 #else
@@ -56,13 +46,13 @@ int main(int argc, char **argv)
 	} else if (FILE *file = fopen(input.c_str(), "r")) {
 		fclose(file);
 	} else {
-		errMsg("could not open '" + input + "' for reading");
+		compilationError("could not open '" + input + "' for reading");
 		return EXIT_FAILURE;
 	}
 
 	// make sure path is set
 	if (!getenv(SEQ_PATH_ENV_VAR)) {
-		errMsg(SEQ_PATH_ENV_VAR " environment variable is not set");
+		compilationError(SEQ_PATH_ENV_VAR " environment variable is not set");
 		return EXIT_FAILURE;
 	}
 
@@ -73,10 +63,10 @@ int main(int argc, char **argv)
 		execute(s, argsVec, libsVec, debug.getValue());
 	} else {
 		if (!libsVec.empty())
-			warnMsg("ignoring libraries during compilation");
+			compilationWarning("ignoring libraries during compilation");
 
 		if (!argsVec.empty())
-			warnMsg("ignoring arguments during compilation");
+			compilationWarning("ignoring arguments during compilation");
 
 		compile(s, output.getValue(), debug.getValue());
 	}

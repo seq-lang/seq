@@ -114,7 +114,13 @@ namespace seq {
 	};
 #endif
 
-	void compilationError(const std::string& msg, const std::string& file, int line, int col);
+	void compilationError(const std::string& msg,
+	                      const std::string& file="",
+	                      int line=0, int col=0);
+
+	void compilationWarning(const std::string& msg,
+	                        const std::string& file="",
+	                        int line=0, int col=0);
 
 }
 
