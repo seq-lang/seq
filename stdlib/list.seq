@@ -119,6 +119,15 @@ class list[T]:
         self.len -= 1
         return x
 
+    def remove(self: list[T], x: T):
+        i = 0
+        for a in self:
+            if a == x:
+                del self[i]
+                return True
+            i += 1
+        return False
+
     def clear(self: list[T]):
         self.len = 0
 

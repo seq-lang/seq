@@ -26,6 +26,12 @@ del l1[1]
 for a in l1[0:3]:
     print a
 
+l3 = [1, 2, 3]
+print l3.remove(2)           # EXPECT: True
+print l3.remove(2)           # EXPECT: False
+print l3                     # EXPECT: [1, 3]
+print list[int]().remove(0)  # EXPECT: False
+
 
 # sets:
 s1 = {a%8 for a in range(100)}
