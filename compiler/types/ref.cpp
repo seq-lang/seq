@@ -152,7 +152,8 @@ Value *types::RefType::memb(Value *self,
 	initFields();
 	initOps();
 
-	if (!contents || Type::hasMethod(name))
+	// Defer to contained tuple, unless this is a method reference.
+	if (!contents || contents->hasMethod(name) || Type::hasMethod(name))
 		return Type::memb(self, name, block);
 
 	LLVMContext& context = block->getContext();
@@ -177,7 +178,8 @@ types::Type *types::RefType::membType(const std::string& name)
 	} catch (exc::SeqException&) {
 	}
 
-	if (contents) {
+	// Defer to contained tuple, unless this is a method reference.
+	if (contents && !contents->hasMethod(name)) {
 		try {
 			return contents->membType(name);
 		} catch (exc::SeqException&) {
