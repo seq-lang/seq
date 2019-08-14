@@ -36,7 +36,7 @@ namespace seq {
 			bool sign;
 			IntNType(unsigned len, bool sign);
 		public:
-			static const unsigned MAX_LEN = 512;
+			static const unsigned MAX_LEN = 2048;
 
 			IntNType(IntNType const&)=delete;
 			void operator=(IntNType const&)=delete;
