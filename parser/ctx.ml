@@ -140,7 +140,7 @@ let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser =
     | Some file ->
       parse_file ctx file
     | None ->
-      failwith "cannot locate stdlib.seq"
+      Err.ierr "cannot locate stdlib.seq"
     end
   end;
   Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
@@ -172,7 +172,7 @@ let clear_block ctx =
     | Some (_ :: items) -> 
       Hashtbl.set ctx.map ~key ~data:items
     | Some [] | None ->
-      failwith (sprintf "can't find context variable %s" key))
+      Err.ierr "cannot find variable %s (clear_block)" key)
 
 (** [in_block context name] checks is a variable [name] present 
     in the current block and returns it if so *)

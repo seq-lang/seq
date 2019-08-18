@@ -250,7 +250,7 @@ module Expr = struct
       | "^" -> "atomic_xor_expr"
       | "min" -> "atomic_min_expr"
       | "max" -> "atomic_max_expr"
-      | _ -> failwith "atomic not supported"
+      | _ -> Err.ierr "atomic %s is not supported" bop
     in
     foreign fn (Types.var @-> t @-> returning t) var rh
 
@@ -696,6 +696,12 @@ module Module = struct
 
   let get_args = foreign "get_module_arg"
     (t @-> returning Types.var)
+
+  let warn ?(pos=Ast.Pos.dummy) fmt = 
+    let f = foreign "caml_warning_callback"
+      (cstring @-> int @-> int @-> cstring @-> returning void)
+    in
+    Core.ksprintf (fun msg -> f (strdup msg) pos.line pos.col (strdup pos.file)) fmt
 end
 
 (** Seq JIT engine ([SeqJIT]) *)

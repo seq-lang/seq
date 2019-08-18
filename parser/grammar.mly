@@ -12,9 +12,10 @@
   open Ast
   open Ast.ExprNode
   open Ast.StmtNode
+  open Err
 
   let noimp s =
-    failwith (sprintf "not yet implemented: %s" s)
+    ierr "cannot parse %s yet (grammar)" s
 
   (* Calculates the total span of a region 
      bounded by [st] and [ed] *)
@@ -24,7 +25,7 @@
   (* Converts list of expressions into the pipeline AST node *)
   let flat_pipe x = 
     match x with
-    | _, []  -> failwith "empty pipeline expression"
+    | _, []  -> ierr "empty pipeline expression (grammar)"
     | _, [h] -> snd h
     | pos, l -> pos, Pipe l
 
@@ -51,7 +52,7 @@
     | pos, Id s -> pos, s
     | pos, Dot (d, s) ->
       pos, sprintf "%s%s%s" (snd @@ flatten_dot ~sep d) sep s
-    | _ -> failwith "Invalid import Dot"
+    | _ -> ierr "invalid import construct (grammar)"
 %}
 
 /* constants */
@@ -812,7 +813,7 @@ func_statement:
     { 
       let fn = match snd $2 with 
         | Generic Function f -> f 
-        | _ -> failwith "match failure"
+        | _ -> ierr "decorator parsing failure (grammar)"
       in
       fst $2,
       Generic (Function { fn with fn_attrs = $1 })

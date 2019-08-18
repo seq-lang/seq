@@ -10,8 +10,6 @@
 open Core
 open Err
 
-let asp = ANSITerminal.sprintf
-
 type t = 
   { mutable cnt: int;
     ctx: Ctx.t }
@@ -59,12 +57,10 @@ let exec (jit: t) code =
     raise @@ CompilerError (Compiler msg, [pos])
 
 let repl () = 
-  let asp = ANSITerminal.sprintf in
-  let style = ANSITerminal.[Bold; green] in
   let banner = String.make 78 '=' in
-  eprintf "%s\n%!" @@ asp style "%s" banner;
-  eprintf "%s\n%!" @@ asp style "Seq JIT";
-  eprintf "%s\n%!" @@ asp style "%s" banner;
+  eprintf "\027[102m%s\n" banner;
+  eprintf "Seq JIT\n";
+  eprintf "%s\027[0m \n" banner;
 
   let jit = init () in
   let start = ref true in
@@ -72,7 +68,7 @@ let repl () =
   try while true do 
     try 
       if !start then begin
-        eprintf "%s%!" @@ asp style "in[%d]>\n" jit.cnt;
+        eprintf "\027[92min[%d]>\027[0m \n" jit.cnt;
         start := false;
       end;
       let s = In_channel.(input_line_exn stdin) in
@@ -90,5 +86,4 @@ let repl () =
         start := true
       end
   done with Exit ->
-    let style = ANSITerminal.[Bold; yellow] in
-    eprintf "\n%s\n%!" @@ asp style "bye (%d)" jit.cnt
+    eprintf "\n\027[31mbye (%d) \027[0m\n%!" jit.cnt

@@ -54,9 +54,9 @@ struct
       | TypeOf         p -> parse_typeof   ctx pos p
       | Ptr            p -> parse_ptr      ctx pos p
       | Ellipsis       p -> Ctypes.null
-      | Slice  _ -> serr  ~pos "slice is only valid within an index"
-      | Unpack _ -> serr  ~pos "unpack is not valid here"
-      | Lambda _ -> failwith "todo: expr/lambda"
+      | Slice  _ -> serr ~pos "slice is currently only valid within an index expression"
+      | Unpack _ -> serr ~pos "invalid unpacking expression"
+      | Lambda _ -> serr ~pos "lambdas not yet supported (parse)"
     in
     Llvm.Expr.set_pos expr pos; 
     Llvm.Expr.set_trycatch expr ctx.trycatch;
@@ -71,12 +71,12 @@ struct
       | Index  p -> parse_index    ctx pos p ~is_type:true
       | Dot    p -> parse_dot      ctx pos p
       | TypeOf p -> parse_typeof   ctx pos p
-      | _ -> serr ~pos "not a type"
+      | _ -> serr ~pos "must refer to type"
     in
     Llvm.Expr.set_pos expr pos; 
     Llvm.Expr.set_trycatch expr ctx.trycatch;
     if Llvm.Expr.is_type expr then Llvm.Type.expr_type expr
-    else serr ~pos "not a type"
+    else serr ~pos "must refer to type"
 
   (* ***************************************************************
      Node parsers
@@ -100,19 +100,19 @@ struct
       | _, Some i -> Llvm.Expr.int i
       | ("u" | "U"), None when is_some u ->
         Llvm.Expr.int (Option.value_exn u)
-      | _ -> serr ~pos "too large integer to parse"
+      | _ -> serr ~pos "integer too large"
     in
     match kind with 
     | ("z" | "Z") ->
-      let t = get_internal_type ctx "MInt" in
+      let t = get_internal_type ~pos ctx "MInt" in
       Llvm.Expr.construct t [i]
     | _ -> i
 
-  and parse_float ctx _ ?(kind="") f = 
+  and parse_float ctx pos ?(kind="") f = 
     let f = Llvm.Expr.float f in
     match kind with 
     | ("z" | "Z") ->
-      let t = get_internal_type ctx "ModFloat" in
+      let t = get_internal_type ~pos ctx "ModFloat" in
       Llvm.Expr.construct t [f]
     | _ -> f
 
@@ -133,36 +133,36 @@ struct
     | _, Some ((Ctx.Namespace.Type t, _) :: _) -> 
       Llvm.Expr.typ t
     | true, _ ->
-      serr ~pos "type '%s' not found or realized" var
+      serr ~pos "type %s not found or realized" var
     | false, Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
       when (ctx.base = base) || global -> 
       let e = Llvm.Expr.var v in
       if global && ctx.base = base && Stack.exists ctx.flags ~f:((=) "atomic") then
       begin
-        Err.warn ~pos "atomic load %s" var;
+        Llvm.Module.warn ~pos "atomic load %s" var;
         Llvm.Var.set_atomic e
       end;
       e
     | false, Some ((Ctx.Namespace.Func (t, _), _) :: _) -> 
       Llvm.Expr.func t
     | _ ->
-      serr ~pos "identifier '%s' not found or realized" var
+      serr ~pos "identifier %s not found or realized" var
 
   and parse_tuple ctx _ args =
     let args = List.map args ~f:(parse ctx) in
     Llvm.Expr.tuple args
 
   (** [kind] can be set or list. Anything else will crash a program. *)
-  and parse_list ?(kind="list") ctx _ args =
-    let typ = get_internal_type ctx kind in
+  and parse_list ?(kind="list") ctx pos args =
+    let typ = get_internal_type ~pos ctx kind in
     let args = List.map args ~f:(parse ctx) in
     Llvm.Expr.list ~kind typ args
 
-  and parse_dict ctx _ args =
+  and parse_dict ctx pos args =
     let flatten l = 
       List.fold ~init:[] ~f:(fun acc (x, y) -> y::x::acc) l |> List.rev
     in
-    let typ = get_internal_type ctx "dict" in
+    let typ = get_internal_type ~pos ctx "dict" in
     let args = List.map (flatten args) ~f:(parse ctx) in
     Llvm.Expr.list ~kind:"dict" typ args
 
@@ -190,8 +190,8 @@ struct
     Llvm.Expr.set_comprehension_body ~kind:"gen" !final_expr body;
     !final_expr
 
-  and parse_list_gen ?(kind="list") ctx _ (expr, gen) = 
-    let typ = get_internal_type ctx kind in
+  and parse_list_gen ?(kind="list") ctx pos (expr, gen) = 
+    let typ = get_internal_type ~pos ctx kind in
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in 
     let body = comprehension_helper ctx gen 
@@ -203,8 +203,8 @@ struct
     Llvm.Expr.set_comprehension_body ~kind !final_expr body;
     !final_expr
 
-  and parse_dict_gen ctx _ (expr, gen) = 
-    let typ = get_internal_type ctx "dict" in
+  and parse_dict_gen ctx pos (expr, gen) = 
+    let typ = get_internal_type ~pos ctx "dict" in
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in 
     let body = comprehension_helper ctx gen 
@@ -245,7 +245,7 @@ struct
       | Some ((Ctx.Namespace.Var v, { global; base; _ }) :: _) 
         when global && ctx.base = base ->
         let rh_expr = parse ctx rh_expr in
-        Err.warn ~pos "using atomic %s on %s" bop var;
+        Llvm.Module.warn ~pos " atomic %s on %s" bop var;
         Llvm.Expr.atomic_binary v bop rh_expr
       | _ -> bop_expr ()
       end
@@ -264,7 +264,7 @@ struct
   and parse_index ?(is_type=false) ctx pos (lh_expr, indices) =
     match is_type, snd lh_expr, snd indices with
     | _, Id ("array" | "ptr" | "generator" as name), Tuple _ ->
-      serr ~pos "%s requires one type" name
+      serr ~pos "%s requires a single type" name
     | _, Id ("array" | "ptr" | "generator" as name), _ ->
       let typ = parse_type ctx indices in
       Llvm.Expr.typ @@ Llvm.Type.param ~name typ
@@ -289,7 +289,7 @@ struct
       Llvm.Expr.typ @@ Llvm.Type.record [""] [parse_type ctx indices] ""
     | false, _, Slice (st, ed, step) ->
       if is_some step then 
-        failwith "todo: expr/step";
+        serr ~pos "slices with stepping parameter are not yet supported";
       let unpack st = 
         Option.value_map st ~f:(parse ctx) ~default:Ctypes.null 
       in
@@ -313,7 +313,7 @@ struct
           Llvm.Generics.set_types ~kind lh_expr indices;
           lh_expr
         | _ ->
-          serr ~pos "wrong LHS for type realization"
+          serr ~pos "expression is not realizable (make sure that it is a generic type)"
       end else 
         let t = match indices with 
           | [t] -> t
@@ -352,14 +352,14 @@ struct
         List.mapi args ~f:(fun i (pos, { name; value }) -> 
           match name with 
           | None -> parse ctx value
-          | Some _ -> serr ~pos "cannot use named parameters here")
+          | Some _ -> serr ~pos "cannot use named arguments here")
       else begin
         (* Check names *)
         let has_named_args = List.fold args ~init:false 
           ~f:(fun acc (pos, { name; _ }) ->
             match name with
               | None when acc ->
-                serr ~pos "cannot have unnamed argument after named one"
+                serr ~pos "unnamed argument cannot follow a named argument"
               | None -> false
               | Some _ -> true)
         in
@@ -375,7 +375,7 @@ struct
               | Some (_, { value; _ }) ->
                 parse ctx value
               | None ->
-                serr ~pos "cannot find argument %s" n)
+                serr ~pos "cannot find an argument %s" n)
         else 
           List.map args ~f:(fun x -> parse ctx (snd x).value)
       end
@@ -431,9 +431,9 @@ struct
         | Some ((Ctx.Namespace.Var v, { base; global; _ }) :: _) 
           when (ctx.base = base) || global -> 
           Llvm.Expr.ptr v
-        | _ -> serr ~pos "symbol '%s' not found" var
+        | _ -> serr ~pos "symbol %s not found" var
       end
-    | _ -> serr ~pos "must be an identifier"
+    | _ -> serr ~pos "ptr requires an identifier as a parameter"
 
 
   (* ***************************************************************
@@ -474,12 +474,12 @@ struct
       [Llvm.Type.typ] that describes type signature [type_string].  
       Raises error if signature does not exist. 
       Used to get types for [list], [dict] and other internal classes. *)
-  and get_internal_type (ctx: Ctx.t) typ_str = 
+  and get_internal_type ~pos (ctx: Ctx.t) typ_str = 
     match Hashtbl.find ctx.map typ_str with
     | Some ((Ctx.Namespace.Type typ, _) :: _) -> 
       typ
     | _ -> 
-      failwith (sprintf "can't find internal type %s" typ_str)
+      ierr ~pos "cannot find base type %s (get_internal_type)" typ_str
 
   (** [walk context ~f expr] walks the AST [expr] and calls 
       function [f context identifier] on each child generic or identifier. 

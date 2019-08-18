@@ -13,6 +13,7 @@ type t =
   | Parser
   | Descent of string
   | Compiler of string
+  | Internal of string
 
 (** Unified exception that groups all other exceptions based on their source *)
 exception CompilerError of t * Ast.Pos.t list
@@ -22,7 +23,8 @@ exception SeqCError of string * Ast.Pos.t
 exception SeqCamlError of string * Ast.Pos.t list
 (** Lexing exception *)
 exception SyntaxError of string * Ast.Pos.t
-
+(** Internal exception *)
+exception InternalError of string * Ast.Pos.t
 
 (** [serr ~pos format_string ...] throws an AST-parsing exception 
     with message formatted via sprintf-style [format_string]
@@ -30,18 +32,9 @@ exception SyntaxError of string * Ast.Pos.t
 let serr ?(pos=Ast.Pos.dummy) fmt = 
   Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [pos]))) fmt
 
+let ierr ?(pos=Ast.Pos.dummy) fmt = 
+  Core.ksprintf (fun msg -> raise (InternalError (msg, pos))) fmt
 
-let warn ?pos fmt =
-  let open Core in
-  let style = ANSITerminal.[Background Yellow; Bold; Foreground Black] in 
-  let codes = List.map style ~f:Util.style_to_string |> String.concat ~sep:";" in
-  let pos = Option.value_map pos 
-    ~f:(fun p -> sprintf " (%s:%d)" p.Ast.Pos.file p.Ast.Pos.line) 
-    ~default:""
-  in
-  Caml.Printf.fprintf stderr "\027[%smWarning%s: " codes pos;
-  let fn, fno = Caml.Printf.kfprintf, Caml.Printf.fprintf in
-  fn (fun o -> fno o "\027[0m \n%!") stderr fmt 
 
 (** Helper to parse string exception messages passed from C++ library to 
     OCaml and to extract [Ast.Pos] information from them. 
@@ -61,13 +54,12 @@ let split_error msg =
 
 let print_error ?file typ pos_lst =
   let open Core in
-  let asp = ANSITerminal.sprintf in
-
   let kind, msg = match typ with
     | Lexer s -> "lexer", s
     | Parser -> "parser", "Parsing error"
     | Descent s -> "descent", s
     | Compiler s -> "compiler", s 
+    | Internal s -> "internal", s 
   in
   let file_line file_name line =
     if String.length file_name > 0 && file_name.[0] = '\t' then 
@@ -89,8 +81,7 @@ let print_error ?file typ pos_lst =
     else 
       None
   in
-  let style = ANSITerminal.[Bold; red] in
-  eprintf "%s%!" @@ asp style "[ERROR] %s error: %s\n" kind msg;
+  eprintf "[ERROR] %s error: %s\n" kind msg;
   List.iteri pos_lst ~f:(fun i pos ->
     let Ast.Pos.{ file; line; col; len } = pos in
     match file_line file line with
@@ -104,14 +95,8 @@ let print_error ?file typ pos_lst =
         else (String.length file_line) - col
       in
       let pre = if i = 0 then "" else "then in\n        " in 
-      eprintf "%s%!" @@ asp style "        %s%s: %d,%d\n" 
-        pre file line col;
-      eprintf "%s%!" @@ asp style "   %3d: %s" 
-        line (String.prefix file_line col);
-      eprintf "%s%!" @@ asp 
-        ANSITerminal.[Bold; white; on_red] "%s" 
-        (String.sub file_line ~pos:col ~len);
-      eprintf "%s%!" @@ asp style "%s" 
-        (String.drop_prefix file_line (col + len));
-      eprintf "%s%!" @@ asp [] "\n"
+      eprintf "        %s%s: %d,%d\n" pre file line col;
+      eprintf "   %3d: %s" line (String.prefix file_line col);
+      eprintf "%s" (String.sub file_line ~pos:col ~len);
+      eprintf "%s\n" (String.drop_prefix file_line (col + len));
     | None -> ())

@@ -116,7 +116,7 @@ struct
           when ctx.base = base ->
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
-              "type annotation is invalid here as %s is already defined" var;
+              "invalid type annotation (%s already defined)" var;
           if global && ctx.base = base 
                     && Stack.exists ctx.flags ~f:((=) "atomic") 
           then begin match shadow, snd rhs with
@@ -128,7 +128,7 @@ struct
               Llvm.Stmt.expr @@ E.parse ctx 
                 (fst rhs, Binary (lhs, "inplace_" ^ bop, e)) 
             | _ -> 
-              Err.warn ~pos "atomic store %s" var;
+              Llvm.Module.warn ~pos "atomic store %s" var;
               let rh_expr = E.parse ctx rhs in
               let s = Llvm.Stmt.assign v rh_expr in
               Llvm.Stmt.set_atomic_assign s;
@@ -138,7 +138,7 @@ struct
         | _ when jit && toplevel ->
           if is_some typ then 
             serr ~pos:(fst @@ Option.value_exn typ) 
-              "type annotation is invalid in JIT mode here";
+              "invalid type annotation (JIT mode)";
           let rh_expr = E.parse ctx rhs in
           let v = Ctx.Namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
           Ctx.add ctx ~toplevel ~global:true var v;
@@ -146,7 +146,7 @@ struct
         | r, _ ->
           begin match r with 
             | Some (_ :: _) ->
-              Err.warn ~pos "shadowing type/function %s" var
+              Llvm.Module.warn ~pos "shadowing %s" var
             | _ -> ()
           end;
           let typ = Option.value_map typ 
@@ -170,18 +170,18 @@ struct
       let rh_expr = E.parse ctx rhs in
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
     | _ ->
-      serr ~pos "assignment requires Id / Dot / Index on LHS"
+      serr ~pos "invalid assignment statement"
    
   and parse_declare ctx pos ~toplevel ~jit { name; typ } = 
-    if jit then serr ~pos "JIT does not support this yet";
+    if jit then serr ~pos "declarations not yet supported in JIT mode";
     match Hashtbl.find ctx.map name with
     | Some ((Ctx.Namespace.Var _, { base; global; toplevel; _ }) :: _) 
         when ctx.base = base ->
-      serr ~pos:(fst @@ Option.value_exn typ) "%s is already defined" name
+      serr ~pos:(fst @@ Option.value_exn typ) "%s already defined" name
     | r ->
       begin match r with 
         | Some ((Ctx.Namespace.(Type _ | Func _ | Import _) as v, _) :: _) ->
-          Err.warn ~pos "shadowing type/function %s" name
+          Llvm.Module.warn ~pos "shadowing %s" name
         | _ -> ()
       end;
       let typ = E.parse_type ctx @@ Option.value_exn typ in
@@ -204,10 +204,10 @@ struct
           Ctx.remove ctx var;
           Llvm.Stmt.del v
         | _ ->
-          serr ~pos "cannot find variable %s" var
+          serr ~pos "cannot find %s" var
       end
     | _ -> 
-      serr ~pos "cannot del non-index expression"
+      serr ~pos "cannot delete a non-index expression"
 
   and parse_print ctx pos ~jit (exprs, ed) =
     let ll = if jit then Llvm.Stmt.print_jit else Llvm.Stmt.print in
@@ -247,7 +247,7 @@ struct
 
   and parse_type_alias ctx pos ~toplevel (name, expr) =
     if is_some @@ Ctx.in_scope ctx name then
-      Err.warn ~pos "shadowing existing %s" name;
+      Llvm.Module.warn ~pos "shadowing existing %s" name;
     let typ = E.parse_type ctx expr in
     Ctx.add ctx ~toplevel ~global:toplevel name (Ctx.Namespace.Type typ);
     Llvm.Stmt.pass ()
@@ -336,9 +336,9 @@ struct
     (lang, dylib, ctx_name, (_, { name; typ }), args) =
 
     if lang <> "c" then
-      serr ~pos "only C external functions are currently supported";
+      serr ~pos "only cdef externs are currently supported";
     if is_some @@ Ctx.in_block ctx ctx_name then
-      Err.warn ~pos "shadowing type/function %s" ctx_name;
+      Llvm.Module.warn ~pos "shadowing %s" ctx_name;
     
     let names, types = 
       List.map args ~f:(fun (_, { name; typ }) ->
@@ -358,7 +358,7 @@ struct
 
   and parse_extend ctx pos ~toplevel (name, stmts) =
     if not toplevel then
-      serr ~pos "extends must be declared at toplevel";
+      serr ~pos "extensions must be declared at the toplevel";
 
     let typ = E.parse_type ctx name in
     (* let typ = match Ctx.in_scope ctx name with
@@ -369,8 +369,8 @@ struct
     ignore @@ List.map stmts ~f:(function
       | pos, Function f -> 
         parse_function new_ctx pos f ~cls:typ
-      | _ -> 
-        failwith "classes only support functions as members");
+      | pos, _ -> 
+        serr ~pos "type extensions can only specify functions");
 
     Llvm.Stmt.pass ()
   
@@ -461,7 +461,7 @@ struct
         fn
       | None ->
         if is_some @@ Ctx.in_block ctx name then 
-          Err.warn ~pos "shadowing %s" name;
+          Llvm.Module.warn ~pos "shadowing %s" name;
         let fn = Llvm.Func.func name in
         let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         Ctx.add ctx ~toplevel ~global:toplevel 
@@ -513,7 +513,7 @@ struct
     (* ((name, types, args, stmts) as stmt) *)
     let typ = 
       if is_some @@ Ctx.in_scope ctx cls.class_name then
-        Err.warn ~pos "shadowing %s" cls.class_name;
+        Llvm.Module.warn ~pos "shadowing %s" cls.class_name;
       let typ = if is_type then
         Llvm.Type.record [] [] cls.class_name
       else 
@@ -532,17 +532,17 @@ struct
     
     begin match cls.args with
       | None when is_type -> 
-        failwith "types require arguments"
+        serr ~pos "type definitions must have at least one member"
       | None -> ()
       | Some args ->
         List.iter args ~f:(fun (pos, { name; typ }) ->
           if is_none typ then 
-            serr ~pos "class field %s does not have type" name);
+            serr ~pos "class member %s needs type specification" name);
         let names, types = 
           if is_type then 
             List.unzip @@ List.map args ~f:(function
               | (pos, { name; typ = None }) ->
-                serr ~pos "type member %s must have type specification" name
+                serr ~pos "type member %s needs type specification" name
               | (_,   { name; typ = Some t }) -> 
                 (name, E.parse_type ctx t)) 
           else parse_generics 
@@ -562,7 +562,7 @@ struct
     ignore @@ List.map cls.members ~f:(function
       | pos, Function f -> 
         parse_function new_ctx pos f ~cls:typ
-      | _ -> failwith "classes only support functions as members");
+      | _ -> serr ~pos "only function can be defined within a class definition");
     if not is_type then
       Llvm.Type.set_cls_done typ;
 
@@ -604,15 +604,15 @@ struct
     match Hashtbl.find ctx.map var with
     | Some ((Ctx.Namespace.Var v, ({ internal = false; _ } as ann)) :: rest) ->
       if not ann.global then 
-        serr ~pos "symbol must be toplevel (global) to be set as local global";
+        serr ~pos "only toplevel symbols can be set as a local global";
       if ann.base <> ctx.base then
         Ctx.add ctx var ~global:true (Ctx.Namespace.Var v);
       Llvm.Stmt.pass ()
     | _ ->
-      serr ~pos "symbol '%s' not found or not a variable" var
+      serr ~pos "variable %s not found" var
 
   and parse_special ctx pos (kind, stmts, inputs) =
-  	serr ~pos "not applicable"
+  	ierr ~pos "not yet implemented (parse_special)"
 
   and parse_prefetch ctx pos pfs =
     let keys, wheres = List.unzip @@ List.map pfs ~f:(function
@@ -620,7 +620,7 @@ struct
         let e1 = E.parse ctx e1 in
         let e2 = E.parse ctx e2 in
         e1, e2
-      | _ -> serr ~pos "bad prefetch expression (only a[b] allowed)")
+      | _ -> serr ~pos "invalid prefetch expression (only a[b] allowed)")
     in
     let s = Llvm.Stmt.prefetch keys wheres in
     Llvm.Func.set_prefetch ctx.base s;

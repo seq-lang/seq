@@ -50,10 +50,8 @@ let parse_c fname =
   let error_handler typ (pos: Ast.Pos.t list) =
     let Ast.Pos.{ file; line; col; len } = List.hd_exn pos in
     let msg = match typ with
-      | Lexer s -> s
       | Parser -> "parsing error"
-      | Descent s -> s
-      | Compiler s -> s 
+      | Lexer s | Descent s | Compiler s | Internal s -> s
     in
     Ctypes.(Foreign.foreign "caml_error_callback"
       (string @-> int @-> int @-> string @-> returning void)) 

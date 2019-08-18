@@ -34,3 +34,5 @@ let parse_ast ?fn ?(file="") code =
     raise @@ CompilerError (Descent msg, pos)
   | SeqCError (msg, pos) ->
     raise @@ CompilerError (Compiler msg, [pos])
+  | InternalError (msg, pos) ->
+    raise @@ CompilerError (Internal msg, [pos])

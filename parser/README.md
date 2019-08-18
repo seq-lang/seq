@@ -7,14 +7,11 @@
 - OCaml dependencies:
   - Jane Street Core and PPXes
   - Dune
-  - Odoc
   - Ctypes
-  - ANSITerminal
   - Menhir
-  - (jupyter) ZMQ, Nocrypto, Hex, YoJSON and CStruct
   - Install via
       ```
-      opam install core core_extended dune menhir ctypes ctypes.foreign ansiterminal odoc
+      opam install core dune menhir ctypes ctypes.foreign
       ```
 
 ## Building
