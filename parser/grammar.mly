@@ -17,6 +17,12 @@
   let noimp s =
     ierr "cannot parse %s yet (grammar)" s
 
+  let assign_cnt = ref 0
+
+  let new_assign () = 
+    incr assign_cnt;
+    sprintf "$A%d" @@ pred !assign_cnt
+
   (* Calculates the total span of a region 
      bounded by [st] and [ed] *)
   let pos st ed =
@@ -575,10 +581,10 @@ assign_statement:
         (* wrap RHS in tuple for consistency (e.g. x, y -> (x, y)) *)
         let init_exprs, rhs =         
           if List.length rhs > 1 then begin
-            let var = p, Id "$assign" in
+            let var = p, Id (new_assign ()) in
             [ p, Assign (var, (p, Tuple rhs), Shadow, None) ], var
           end else if List.length lhs > 1 then begin
-            let var = p, Id "$assign" in
+            let var = p, Id (new_assign ()) in
             [ p, Assign (var, List.hd_exn rhs, Shadow, None) ], var
           end else
             [], List.hd_exn rhs

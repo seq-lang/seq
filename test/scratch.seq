@@ -39,18 +39,7 @@
 #range(20) |> iter ||> process
 #print s, m, M
 
-def hai(p):
-	cnt = 0
-	for i in p:
-		cnt += len(i)
-	yield cnt
+a, b = 0, s'AC'
+x, y, z = 'f', 1.2, False
 
-s = 0
-def sum(i):
-	global s
-	s += i
-
-(blocks(fastq('../test/data/multiple/seqs.fastq'), 2)
- ||> hai
-  |> sum)
-print s
+print a, b, x, y, z
