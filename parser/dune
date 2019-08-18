@@ -25,7 +25,7 @@
    (link_flags
       (-cclib -L%{project_root}/../.. -cclib -lseq))
    (modes
-      shared_object exe)
+      (native shared_object))
    (modules_without_implementation
       intf)
    (preprocess

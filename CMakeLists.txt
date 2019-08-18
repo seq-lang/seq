@@ -129,8 +129,13 @@ if(NOT OPAM)
   message(FATAL_ERROR "opam command not found")
 endif()
 
-add_custom_command(OUTPUT ${LIB_SEQPARSE}
-                   COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} main.exe main.so
+# Hack to run dune rebuild every time
+add_custom_target(
+    always_runs ALL
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy
+)
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy ${LIB_SEQPARSE}
+                   COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} main.so
                    COMMAND cp ${DUNE_BUILD_DIR}/default/main.so ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
                    DEPENDS parser/dune
