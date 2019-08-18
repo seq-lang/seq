@@ -269,11 +269,17 @@ struct
       let typ = parse_type ctx indices in
       Llvm.Expr.typ @@ Llvm.Type.param ~name typ
     | _, Id "Kmer", Int n ->
-      Llvm.Expr.typ @@ Llvm.Type.kmerN (int_of_string n)
+      let n = int_of_string n in
+      if n < 1 || n > 1024 then serr ~pos "invalid Kmer parameter (must be an integer in 1..1024)";
+      Llvm.Expr.typ @@ Llvm.Type.kmerN n
     | _, Id "Int", Int n ->
-      Llvm.Expr.typ @@ Llvm.Type.intN (int_of_string n)
+      let n = int_of_string n in
+      if n < 1 || n > 2048 then serr ~pos "invalid Int parameter (must be an integer in 1..2048)";
+      Llvm.Expr.typ @@ Llvm.Type.intN n
     | _, Id "UInt", Int n ->
-      Llvm.Expr.typ @@ Llvm.Type.uintN (int_of_string n)
+      let n = int_of_string n in
+      if n < 1 || n > 2048 then serr ~pos "invalid UInt parameter (must be an integer in 1..2048)";
+      Llvm.Expr.typ @@ Llvm.Type.uintN n
     | true, Id "function", Tuple indices ->
       let indices = List.map indices ~f:(parse_type ctx) in
       let ret, args = List.hd_exn indices, List.tl_exn indices in
