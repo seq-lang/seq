@@ -8,6 +8,7 @@
  ******************************************************************************)
 
 open Core
+open Parser__
 
 (** Variable table description  *)
 module Namespace = 

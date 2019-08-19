@@ -7,6 +7,8 @@
  *
  ******************************************************************************)
 
+open Parser__
+
 (** Expression AST parsing interface  *)
 module type ExprIntf =
 sig

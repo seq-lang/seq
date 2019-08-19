@@ -13,20 +13,12 @@
          -warn-error -A
          -cclib -Wl,-install_name,@rpath/libseqparser.so))))
 
-(ocamllex lexer)
-(menhir
-   (modules grammar))
-
 (executable
    (name main)
    (libraries
-      base core
-      ctypes ctypes.foreign ctypes.stubs)
-   (link_flags
-      (-cclib -L%{project_root}/../.. -cclib -lseq))
-   (modes
-      (native shared_object))
-   (modules_without_implementation
-      intf)
-   (preprocess
-      (pps ppx_sexp_conv ppx_deriving.show)))
+      base core ctypes ctypes.foreign ctypes.stubs
+      parser)
+   ;(link_flags
+   ;   (-cclib -L%{project_root}/../.. -cclib -lseq))
+   (modes shared_object)
+   (preprocess (pps ppx_sexp_conv ppx_deriving.show)))

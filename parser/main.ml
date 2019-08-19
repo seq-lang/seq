@@ -8,7 +8,7 @@
  ******************************************************************************)
 
 open Core
-open Err
+open Parser__
 
 (** Entry point *)
 let () =
@@ -26,20 +26,20 @@ let () =
   | Some fn when Caml.Sys.file_exists fn ->
     begin try
       let err_handler = fun a b -> 
-        raise (CompilerError (a, b)) 
+        raise (Err.CompilerError (a, b)) 
       in
       let m = Runner.init fn err_handler in
       match m with
       | Some m -> 
         begin try
           Llvm.Module.exec m (Array.to_list Sys.argv) false
-        with SeqCError (msg, pos) -> 
-          raise @@ CompilerError (Compiler msg, [pos])
+        with Err.SeqCError (msg, pos) -> 
+          raise @@ Err.CompilerError (Compiler msg, [pos])
         end
       | None -> 
         raise Caml.Not_found
-    with CompilerError (typ, pos_lst) as err ->
-      print_error typ pos_lst;
+    with Err.CompilerError (typ, pos_lst) as err ->
+      Err.print_error typ pos_lst;
       exit 1
     end
   | Some fn ->

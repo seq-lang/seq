@@ -8,8 +8,8 @@
  ******************************************************************************)
 
 open Core
-open Err
-open Ast
+open Parser__.Err
+open Parser__.Ast
 
 (** This module is an implementation of [Intf.ExprIntf] module that
     describes expression AST parser.

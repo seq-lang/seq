@@ -1,0 +1,10 @@
+(ocamllex lexer)
+(menhir (modules grammar))
+
+(library
+   (name parser)
+   (libraries
+      base core ctypes ctypes.foreign ctypes.stubs)
+   (modules_without_implementation intf)
+   (preprocess (pps ppx_sexp_conv ppx_deriving.show)))
+

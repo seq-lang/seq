@@ -8,7 +8,7 @@
  ******************************************************************************)
 
 open Core
-open Err
+open Parser__
 
 type t = 
   { mutable cnt: int;
@@ -30,8 +30,8 @@ let init () : t =
     (* load stdlib *)
     Llvm.JIT.func ctx.mdl anon_fn;
     jit
-  with CompilerError (typ, pos_lst) ->
-    print_error typ pos_lst;
+  with Err.CompilerError (typ, pos_lst) ->
+    Err.print_error typ pos_lst;
     exit 1
 
 let exec (jit: t) code = 
@@ -53,8 +53,8 @@ let exec (jit: t) code =
         if ann.toplevel && ann.global && (not ann.internal) then 
           Ctx.add jit.ctx ~toplevel:true ~global:true key v;
       | _ -> ())
-  with SeqCError (msg, pos) -> 
-    raise @@ CompilerError (Compiler msg, [pos])
+  with Err.SeqCError (msg, pos) -> 
+    raise @@ Err.CompilerError (Compiler msg, [pos])
 
 let repl () = 
   let banner = String.make 78 '=' in
@@ -76,8 +76,8 @@ let repl () =
     with End_of_file ->
       begin try 
         exec jit !code
-      with CompilerError (typ, pos_lst) ->
-        print_error typ pos_lst ~file:!code
+      with Err.CompilerError (typ, pos_lst) ->
+        Err.print_error typ pos_lst ~file:!code
       end;
       if !code = "" then 
         raise Exit

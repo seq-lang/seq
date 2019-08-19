@@ -8,18 +8,13 @@
  ******************************************************************************)
 
 open Core
-open Err
-
-(* As [StmtParser] depends on [ExprParser] and vice versa,
-   we need to instantiate these modules recursively *)
-module rec SeqS : Intf.StmtIntf = Stmt.StmtParser (SeqE)
-       and SeqE : Intf.ExprIntf = Expr.ExprParser (SeqS) 
+open Parser__
 
 (** [parse_string ~file ~debug context code] parses a code
     within string [code] as a module and returns parsed module AST.
     [file] is code filename used for error reporting. *)
 let exec_string ctx ?(file="<internal>") ?(debug=false) ?(jit=false) code =
-  ignore @@ Parser.parse_ast ~file code ~fn:(SeqS.parse_module ~jit ctx)
+  ignore @@ Parser.parse_ast ~file code ~fn:(Generator.SeqS.parse_module ~jit ctx)
 
 (** [init file error_handler] initializes Seq session with file [file].
     [error_handler typ position] is a callback called upon encountering
@@ -37,7 +32,7 @@ let init file error_handler =
     (* parse the file *)
     Ctx.parse_file ctx file;
     Some ctx.mdl
-  with CompilerError (typ, pos) ->
+  with Err.CompilerError (typ, pos) ->
     (* Ctx.dump ctx; *)
     error_handler typ pos;
     None
@@ -50,7 +45,7 @@ let parse_c fname =
   let error_handler typ (pos: Ast.Pos.t list) =
     let Ast.Pos.{ file; line; col; len } = List.hd_exn pos in
     let msg = match typ with
-      | Parser -> "parsing error"
+      | Err.Parser -> "parsing error"
       | Lexer s | Descent s | Compiler s | Internal s -> s
     in
     Ctypes.(Foreign.foreign "caml_error_callback"

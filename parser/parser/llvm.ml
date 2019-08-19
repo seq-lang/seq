@@ -11,6 +11,8 @@ open Core
 open Ctypes
 open Foreign
 
+open Parser__
+
 (** Hack type to avoid garbage collecting of C strings by OCaml engine *)
 type cstring = unit ptr
 let cstring: cstring typ = ptr void

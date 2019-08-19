@@ -8,8 +8,8 @@
  ******************************************************************************)
 
 open Core
-open Err
-open Ast
+open Parser__.Err
+open Parser__.Ast
 
 (** This module is an implementation of [Intf.StmtIntf] module that
     describes statement AST parser.
