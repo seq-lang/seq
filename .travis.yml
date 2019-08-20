@@ -56,7 +56,7 @@ script:
   - mkdir build
   - (cd build && cmake ..)
   - cmake --build build
-  - build/seqtest
+  - build/seqtest 2> /dev/null
   - build/seq test/core/helloworld.seq
 
 branches:

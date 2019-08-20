@@ -3,8 +3,8 @@ project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pedantic -Wall -Wno-return-type-c-linkage")
-include_directories(compiler/include/)
-include_directories(runtime/)
+include_directories(compiler/include)
+include_directories(runtime)
 
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -131,8 +131,8 @@ endif()
 
 # Hack to run dune rebuild every time
 add_custom_target(
-    always_runs ALL
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy
+  always_runs ALL
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy
 )
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy ${LIB_SEQPARSE}
                    COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} main.so
@@ -157,6 +157,31 @@ set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
 # Seq test
+# Download and unpack googletest at configure time
+configure_file(test/CMakeLists.txt.in googletest-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+                RESULT_VARIABLE result
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+if(result)
+  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+                RESULT_VARIABLE result
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download )
+if(result)
+  message(FATAL_ERROR "Build step for googletest failed: ${result}")
+endif()
+
+# Prevent overriding the parent project's compiler/linker
+# settings on Windows
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+# Add googletest directly to our build. This defines
+# the gtest and gtest_main targets.
+add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
+                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
+                 EXCLUDE_FROM_ALL)
+
 add_executable(seqtest test/main.cpp)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
-target_link_libraries(seqtest seq seqparse asmrun)
+target_link_libraries(seqtest seq seqparse asmrun gtest_main)

@@ -104,9 +104,9 @@ class SNAPHashTable[K,V]:
             self.table[entry] = (v, k)
 
 def _test():
-    h = SNAPHashTable[Int[32],Int[32]](100, Int[32](-1))
+    h = SNAPHashTable[i32,i32](100, i32(-1))
     for i in range(10):
-        h[Int[32](42 + i*100)] = Int[32](i)
+        h[i32(42 + i*100)] = i32(i)
 
     for i in range(100):
-        print int(h[Int[32](42 + i*100)])
+        print int(h[i32(42 + i*100)])

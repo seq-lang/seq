@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <tuple>
 #include <algorithm>
 #include <unistd.h>
 #include <dirent.h>
@@ -10,8 +11,43 @@
 #include <seq/seq.h>
 #include <seq/parser.h>
 
+#include "gtest/gtest.h"
+
 using namespace seq;
 using namespace std;
+
+class SeqTest : public testing::TestWithParam<tuple<const char */*filename*/, bool/*debug*/>> {
+protected:
+	char buf[10000];
+	int out_pipe[2];
+	int save;
+
+	SeqTest() : buf(), out_pipe(), save() {}
+
+	void SetUp() override
+	{
+		memset(buf, '\0', sizeof(buf));
+		save = dup(STDOUT_FILENO);
+		assert(pipe(out_pipe) == 0);
+		long flags = fcntl(out_pipe[0], F_GETFL);
+		flags |= O_NONBLOCK;
+		fcntl(out_pipe[0], F_SETFL, flags);
+		dup2(out_pipe[1], STDOUT_FILENO);
+		close(out_pipe[1]);
+	}
+
+	void TearDown() override
+	{
+		dup2(save, STDOUT_FILENO);
+	}
+
+	string result()
+	{
+		fflush(stdout);
+		read(out_pipe[0], buf, sizeof(buf) - 1);
+		return string(buf);
+	}
+};
 
 template <size_t N>
 struct CaptureStdout {
@@ -45,7 +81,7 @@ struct CaptureStdout {
 	}
 };
 
-vector<string> splitlines(const string &output)
+vector<string> splitLines(const string &output)
 {
 	vector<string> result;
 	string line;
@@ -87,92 +123,58 @@ static vector<string> findExpects(const string& filename)
 	return result;
 }
 
-static bool runTest(const string& filename, bool debug)
+static string getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType>& info)
 {
-	cout << "TEST: " << filename << endl;
+	const string basename = get<0>(info.param);
+	const bool debug = get<1>(info.param);
+
+	// normalize basename
+	size_t found1 = basename.find('/');
+	size_t found2 = basename.find('.');
+	assert(found1 != string::npos);
+	assert(found2 != string::npos);
+	assert(found2 > found1);
+	string normname = basename.substr(found1 + 1, found2 - found1 - 1);
+
+	return normname + (debug ? "_debug" : "");
+}
+
+TEST_P(SeqTest, Run)
+{
+	const string basename = get<0>(GetParam());
+	const bool debug = get<1>(GetParam());
+	string filename = string(TEST_DIR) + "/" + basename;
+	SeqModule *module = parse(filename);
+	execute(module, {}, {}, debug);
 	vector<string> expects = findExpects(filename);
-	vector<string> results;
-
-	{
-		CaptureStdout<10000> capture;
-		SeqModule *module = parse(filename);
-		execute(module, {}, {}, debug);
-		results = splitlines(capture.result());
-	}
-
-	bool pass = true;
-	if (results.size() != expects.size()) {
-		cout << "  GOT:" << endl;
-		for (auto& line : results)
-			cout << "    " << line << endl;
-
-		cout << "  EXP:" << endl;
-		for (auto& line : expects)
-			cout << "    " << line << endl;
-
-		cout << "FAIL: output size mismatch" << endl;
-		pass = false;
-	} else {
-		for (unsigned i = 0; i < results.size(); i++) {
-			bool casePass = (results[i] == expects[i]);
-			cout << "  Case " << (i + 1) << ": " << (casePass ? "PASS" : "FAIL") << endl;
-			cout << "    GOT: " << results[i] << endl;
-			cout << "    EXP: " << expects[i] << endl;
-
-			if (!casePass)
-				pass = false;
+	vector<string> results = splitLines(result());
+	EXPECT_EQ(results.size(), expects.size());
+	if (expects.size() == results.size()) {
+		for (unsigned i = 0; i < expects.size(); i++) {
+			EXPECT_EQ(results[i], expects[i]);
 		}
-
-		if (!pass)
-			cout << "FAIL: output mismatch" << endl;
 	}
-
-	if (pass)
-		cout << "PASS" << endl;
-	cout << endl;
-
-	return pass;
 }
 
-static bool isSeqFile(const string& filename)
-{
-	static const string ext = ".seq";
-	if (filename.length() >= ext.length())
-		return (filename.compare(filename.length() - ext.length(), ext.length(), ext) == 0);
-	else
-		return false;
-}
-
-static bool runTestsFromDir(const string& path, bool debug)
-{
-	DIR *dir;
-	struct dirent *ent;
-	bool pass = true;
-	vector<string> filesToRun;
-
-	if ((dir = opendir(path.c_str()))) {
-		while ((ent = readdir(dir))) {
-			if (isSeqFile(string(ent->d_name)))
-				filesToRun.push_back(path + "/" + ent->d_name);
-		}
-
-		closedir(dir);
-		sort(filesToRun.begin(), filesToRun.end());
-
-		for (auto& file : filesToRun) {
-			if (!runTest(file, debug))
-				pass = false;
-		}
-	} else {
-		cerr << "error: could not open " << path << endl;
-		exit(EXIT_FAILURE);
-	}
-
-	return pass;
-}
+INSTANTIATE_TEST_SUITE_P(CoreTests,
+                         SeqTest,
+                         testing::Combine(
+                             testing::Values("core/align.seq",
+                                             "core/arithmetic.seq",
+                                             "core/big.seq",
+                                             "core/collections.seq",
+                                             "core/empty.seq",
+                                             "core/exceptions.seq",
+                                             "core/generators.seq",
+                                             "core/generics.seq",
+                                             "core/helloworld.seq",
+                                             "core/pybridge.seq",
+                                             "core/trees.seq"),
+                             testing::Values(true, false)),
+                         getTestNameFromParam);
 
 int main(int argc, char *argv[])
 {
-	bool pass = runTestsFromDir(TEST_DIR "/core", false);
-	return pass ? EXIT_SUCCESS : EXIT_FAILURE;
+	testing::InitGoogleTest(&argc, argv);
+	return RUN_ALL_TESTS();
 }

@@ -160,6 +160,7 @@ void Stmt::setBreaks(BasicBlock *block)
 	ensureLoop();
 	for (auto *inst : breaks)
 		inst->setSuccessor(0, block);
+	breaks.clear();
 }
 
 void Stmt::setContinues(BasicBlock *block)
@@ -167,6 +168,7 @@ void Stmt::setContinues(BasicBlock *block)
 	ensureLoop();
 	for (auto *inst : continues)
 		inst->setSuccessor(0, block);
+	continues.clear();
 }
 
 void Stmt::codegen(BasicBlock*& block)
