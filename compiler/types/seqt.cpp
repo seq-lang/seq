@@ -690,6 +690,39 @@ void types::KMer::initOps()
 			return b.CreateCall(getShiftFunc(this, module, true), {self, args[0]});
 		}, false},
 
+		// Hamming distance
+		{"__sub__", {this}, Int, SEQ_MAGIC_CAPT(self, args, b) {
+			/*
+			 * Hamming distance algorithm:
+			 *   input: kmer1, kmer2
+			 *   mask1 = 0101...0101  (same bit width as encoded kmer)
+			 *   mask2 = 1010...1010  (same bit width as encoded kmer)
+			 *   popcnt(
+			 *     (((kmer1 & mask1) ^ (kmer2 & mask1)) << 1) |
+			 *     ((kmer1 & mask2) ^ (kmer2 & mask2))
+			 *   )
+			 */
+			LLVMContext& context = b.getContext();
+			Value *mask1 = ConstantInt::get(getLLVMType(context), 0);
+			for (unsigned i = 0; i < getK(); i++) {
+				Value *shift = b.CreateShl(oneLLVM(context), 2 * i);
+				mask1 = b.CreateOr(mask1, shift);
+			}
+			Value *mask2 = b.CreateShl(mask1, 1);
+
+			Value *k1m1 = b.CreateAnd(self, mask1);
+			Value *k1m2 = b.CreateAnd(self, mask2);
+			Value *k2m1 = b.CreateAnd(args[0], mask1);
+			Value *k2m2 = b.CreateAnd(args[0], mask2);
+			Value *xor1 = b.CreateShl(b.CreateXor(k1m1, k2m1), 1);
+			Value *xor2 = b.CreateXor(k1m2, k2m2);
+			Value *diff = b.CreateOr(xor1, xor2);
+
+			Function *popcnt = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::ctpop, {getLLVMType(context)});
+			Value *result = b.CreateCall(popcnt, diff);
+			return b.CreateZExtOrTrunc(result, seqIntLLVM(context));
+		}, false},
+
 		{"__hash__", {}, Int, SEQ_MAGIC(self, args, b) {
 			return b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
 		}, false},

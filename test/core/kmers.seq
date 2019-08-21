@@ -1,0 +1,14 @@
+type K = Kmer[5]
+
+k1 = K(s'ACGTA')
+k2 = K(s'ATGTT')
+print k1 - k2  # EXPECT: 2
+print k2 - k1  # EXPECT: 2
+
+k1 = K(s'ACGTA')
+k2 = K(s'ACGTA')
+print k1 - k2  # EXPECT: 0
+print k2 - k1  # EXPECT: 0
+
+print k1 << s'G'  # EXPECT: CGTAG
+print k1 >> s'G'  # EXPECT: GACGT
