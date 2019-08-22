@@ -115,6 +115,9 @@ type Seqs(file: File):
             yield copy(seq(a.ptr, a.len))
         self.file.close()
 
+type FASTQRecord(name: str, read: seq, qual: str):
+    pass
+
 type FASTQ(file: File):
     def __init__(self: FASTQ, path: str) -> FASTQ:
         return (open(path, "r"),)
@@ -127,20 +130,51 @@ type FASTQ(file: File):
             line += 1
         self.file.close()
 
-type FASTA(file: File, fai: list[int]):
+    def all(self: FASTQ) -> FASTQRecord:
+        line = 0
+        name, read, qual = "", s"", ""
+        for a in self.file._iter():
+            match line % 4:
+                case 0:
+                    name = copy(a)
+                case 1:
+                    read = copy(seq(a.ptr, a.len))
+                case 2:
+                    pass  # separator
+                case 3:
+                    qual = copy(a)
+                    yield (name, read, qual)
+                default:
+                    assert False
+            line += 1
+        self.file.close()
+
+type FASTARecord(name: str, seq: seq):
+    pass
+
+type FASTA(file: File, fai: list[int], names: list[str]):
     def __init__(self: FASTA, path: str) -> FASTA:
         cdef atoi(ptr[byte]) -> int
         fai_file = open(path + ".fai", "r")
         fai = list[int]()
+        names = list[str]()
         for line in fai_file:
             assert line
-            while line[0] != "\t":
-                line = line[1:]
+            cut = 0
+            while line[cut] != "\t":
+                cut += 1
+            name = line[:cut]
+            line = line[cut:]
             fai.append(atoi(line.ptr))
+            names.append(name)
         fai_file.close()
-        return (open(path, "r"), fai)
+        return (open(path, "r"), fai, names)
 
     def __iter__(self: FASTA):
+        for rec in self.all():
+            yield rec.seq
+
+    def all(self: FASTA) -> FASTARecord:
         idx = 0
         p = ptr[byte]()
         n = 0
@@ -150,7 +184,7 @@ type FASTA(file: File, fai: list[int]):
             if a[0] == ">":
                 if n > 0:
                     assert m == n
-                    yield seq(p, n)
+                    yield (self.names[idx - 1], seq(p, n))
 
                 n = self.fai[idx]
                 p = ptr[byte](n)
@@ -163,7 +197,7 @@ type FASTA(file: File, fai: list[int]):
 
         if n > 0:
             assert m == n
-            yield seq(p, n)
+            yield (self.names[-1], seq(p, n))
 
         self.file.close()
 

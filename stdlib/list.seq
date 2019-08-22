@@ -35,29 +35,43 @@ class list[T]:
         return self.len > 0
 
     def __getitem__(self: list[T], idx: int):
-        assert idx < len(self)
+        if idx < 0:
+            idx += len(self)
+        assert 0 <= idx < len(self)
         return self.arr[idx]
 
     def __setitem__(self: list[T], idx: int, val: T):
-        assert idx < len(self)
+        if idx < 0:
+            idx += len(self)
+        assert 0 <= idx < len(self)
         self.arr[idx] = val
 
     def __delitem__(self: list[T], idx: int):
-        assert idx < len(self)
+        if idx < 0:
+            idx += len(self)
+        assert 0 <= idx < len(self)
         while idx < self.len - 1:
             self.arr[idx] = self.arr[idx + 1]
             idx += 1
         self.len -= 1
 
     def __slice__(self: list[T], a: int, b: int):
+        if a < 0:
+            a += len(self)
+        if b < 0:
+            b += len(self)
         assert 0 <= a <= b <= len(self)
         return list[T](self.arr[a:b], b - a)
 
     def __slice_left__(self: list[T], b: int):
+        if b < 0:
+            b += len(self)
         assert 0 <= b <= len(self)
         return list[T](self.arr[:b], b)
 
     def __slice_right__(self: list[T], a: int):
+        if a < 0:
+            a += len(self)
         assert 0 <= a <= len(self)
         return list[T](self.arr[a:], self.len - a)
 
