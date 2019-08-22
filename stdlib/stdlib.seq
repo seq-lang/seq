@@ -93,6 +93,7 @@ def zip(a, b):
     for i in a:
         if bi.done(): break
         yield (i, bi.next())
+    bi.destroy()
 
 def filter(f, x):
     for a in x:
