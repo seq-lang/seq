@@ -1,13 +1,11 @@
-(******************************************************************************
- *
- * Seq OCaml 
- * lexer.mll: Lexing rules 
+(* *****************************************************************************
+ * Seqaml.Lexer: Lexing module 
  *
  * Author: inumanag
- *
+ * License: see LICENSE
+ * 
  * Heavily inspired and borrowed from https://github.com/m2ym/ocaml-pythonlib
- *
- ******************************************************************************)
+ * *****************************************************************************)
 
 {
   module B = Buffer
@@ -36,7 +34,7 @@
 
   (* get current file position from lexer *)
   let cur_pos state ?(len=1) (lexbuf: Lexing.lexbuf) = 
-    Ast.Pos.
+    Ast.Ann.
       { file = state.fname;
         line = lexbuf.lex_start_p.pos_lnum;
         col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol; 

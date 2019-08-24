@@ -17,8 +17,6 @@
    (name main)
    (libraries
       base core ctypes ctypes.foreign ctypes.stubs
-      parser)
-   ;(link_flags
-   ;   (-cclib -L%{project_root}/../.. -cclib -lseq))
+      seqaml)
    (modes shared_object)
    (preprocess (pps ppx_sexp_conv ppx_deriving.show)))

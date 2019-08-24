@@ -1,17 +1,14 @@
-(******************************************************************************
- *
- * Seq OCaml 
- * parser.mly: Menhir grammar description of Seq language 
+(* *****************************************************************************
+ * Seqaml.Parser: Menhir grammar description of Seq language 
  *
  * Author: inumanag
- *
- ******************************************************************************)
+ * License: see LICENSE
+ * *****************************************************************************)
 
 %{
   open Core
-  open Ast
-  open Ast.ExprNode
-  open Ast.StmtNode
+  open Ast.Expr
+  open Ast.Stmt
   open Err
 
   let noimp s =
@@ -26,7 +23,7 @@
   (* Calculates the total span of a region 
      bounded by [st] and [ed] *)
   let pos st ed =
-    Ast.Pos.{ st with len = (ed.col + ed.len) - st.col }
+    Ast.Ann.{ st with len = (ed.col + ed.len) - st.col }
 
   (* Converts list of expressions into the pipeline AST node *)
   let flat_pipe x = 
@@ -39,8 +36,8 @@
      (used for chained conditionals such as 
       0 < x < y < 10 that becomes (0 < x) AND (x < y) AND (y < 10)) *)
   type cond_t = 
-    | Cond of ExprNode.node
-    | CondBinary of (ExprNode.t * string * cond_t ExprNode.tt)
+    | Cond of Ast.Expr.t
+    | CondBinary of (Ast.Expr.t Ast.Ann.ann * string * cond_t Ast.Ann.ann)
   let rec flat_cond x = 
     let expr = match snd x with
       | CondBinary (lhs, op, (_, CondBinary (next_lhs, _, _) as rhs)) ->
@@ -62,53 +59,53 @@
 %}
 
 /* constants */
-%token <Ast.Pos.t * string> INT
-%token <Ast.Pos.t * float> FLOAT
-%token <Ast.Pos.t * (string * string)> INT_S
-%token <Ast.Pos.t * (float * string)> FLOAT_S
-%token <Ast.Pos.t * string> STRING ID
-%token <Ast.Pos.t * string> REGEX SEQ
+%token <Ast.Ann.t * string> INT
+%token <Ast.Ann.t * float> FLOAT
+%token <Ast.Ann.t * (string * string)> INT_S
+%token <Ast.Ann.t * (float * string)> FLOAT_S
+%token <Ast.Ann.t * string> STRING ID
+%token <Ast.Ann.t * string> REGEX SEQ
 
 /* blocks */
-%token <Ast.Pos.t> INDENT 
-%token <Ast.Pos.t> DEDENT
-%token <Ast.Pos.t> EOF
-%token <Ast.Pos.t> NL        // \n 
-%token <Ast.Pos.t> DOT       // . 
-%token <Ast.Pos.t> COLON     // : 
-%token <Ast.Pos.t> SEMICOLON // ; 
-%token <Ast.Pos.t> COMMA     // , 
-%token <Ast.Pos.t> OF        // -> 
+%token <Ast.Ann.t> INDENT 
+%token <Ast.Ann.t> DEDENT
+%token <Ast.Ann.t> EOF
+%token <Ast.Ann.t> NL        // \n 
+%token <Ast.Ann.t> DOT       // . 
+%token <Ast.Ann.t> COLON     // : 
+%token <Ast.Ann.t> SEMICOLON // ; 
+%token <Ast.Ann.t> COMMA     // , 
+%token <Ast.Ann.t> OF        // -> 
 
 /* parentheses */
-%token <Ast.Pos.t> LP RP     // ( ) parentheses 
-%token <Ast.Pos.t> LS RS     // [ ] squares 
-%token <Ast.Pos.t> LB RB     // { } braces 
+%token <Ast.Ann.t> LP RP     // ( ) parentheses 
+%token <Ast.Ann.t> LS RS     // [ ] squares 
+%token <Ast.Ann.t> LB RB     // { } braces 
 
 /* keywords */
-%token <Ast.Pos.t> FOR WHILE CONTINUE BREAK           // loops 
-%token <Ast.Pos.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals 
-%token <Ast.Pos.t> DEF RETURN YIELD EXTERN LAMBDA     // functions 
-%token <Ast.Pos.t> TYPE CLASS TYPEOF EXTEND PTR       // types 
-%token <Ast.Pos.t> IMPORT FROM GLOBAL IMPORT_CONTEXT  // variables 
-%token <Ast.Pos.t> PRINT PASS ASSERT DEL              // keywords 
-%token <Ast.Pos.t> TRUE FALSE NONE                    // booleans 
-%token <Ast.Pos.t> TRY EXCEPT FINALLY THROW           // exceptions
-%token <Ast.Pos.t> PREFETCH                           // prefetch
+%token <Ast.Ann.t> FOR WHILE CONTINUE BREAK           // loops 
+%token <Ast.Ann.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals 
+%token <Ast.Ann.t> DEF RETURN YIELD EXTERN LAMBDA     // functions 
+%token <Ast.Ann.t> TYPE CLASS TYPEOF EXTEND PTR       // types 
+%token <Ast.Ann.t> IMPORT FROM GLOBAL IMPORT_CONTEXT  // variables 
+%token <Ast.Ann.t> PRINT PASS ASSERT DEL              // keywords 
+%token <Ast.Ann.t> TRUE FALSE NONE                    // booleans 
+%token <Ast.Ann.t> TRY EXCEPT FINALLY THROW           // exceptions
+%token <Ast.Ann.t> PREFETCH                           // prefetch
 
 /* operators */
-%token<Ast.Pos.t * string> EQ ASSGN_EQ ELLIPSIS // =, :=, ...
-%token<Ast.Pos.t * string> ADD SUB MUL DIV // +, -, *, /
-%token<Ast.Pos.t * string> FDIV POW MOD AT // //, **, %, @
-%token<Ast.Pos.t * string> PLUSEQ MINEQ MULEQ DIVEQ  // +=, -=, *=, /=
-%token<Ast.Pos.t * string> FDIVEQ POWEQ MODEQ // //=, **=, %=, 
-%token<Ast.Pos.t * string> AND OR NOT // and, or, not
-%token<Ast.Pos.t * string> IS ISNOT IN NOTIN // is, is not, in, not in
-%token<Ast.Pos.t * string> EEQ NEQ LESS LEQ GREAT GEQ // ==, !=, <, <=, >, >=
-%token<Ast.Pos.t * string> PIPE PPIPE SPIPE // |> ||> >|
-%token<Ast.Pos.t * string> B_AND B_OR B_XOR B_NOT // &, |, ^, ~
-%token<Ast.Pos.t * string> B_LSH B_RSH // <<, >>
-%token<Ast.Pos.t * string> LSHEQ RSHEQ ANDEQ OREQ XOREQ // <<=, >>= &= |= ^=
+%token<Ast.Ann.t * string> EQ ASSGN_EQ ELLIPSIS // =, :=, ...
+%token<Ast.Ann.t * string> ADD SUB MUL DIV // +, -, *, /
+%token<Ast.Ann.t * string> FDIV POW MOD AT // //, **, %, @
+%token<Ast.Ann.t * string> PLUSEQ MINEQ MULEQ DIVEQ  // +=, -=, *=, /=
+%token<Ast.Ann.t * string> FDIVEQ POWEQ MODEQ // //=, **=, %=, 
+%token<Ast.Ann.t * string> AND OR NOT // and, or, not
+%token<Ast.Ann.t * string> IS ISNOT IN NOTIN // is, is not, in, not in
+%token<Ast.Ann.t * string> EEQ NEQ LESS LEQ GREAT GEQ // ==, !=, <, <=, >, >=
+%token<Ast.Ann.t * string> PIPE PPIPE SPIPE // |> ||> >|
+%token<Ast.Ann.t * string> B_AND B_OR B_XOR B_NOT // &, |, ^, ~
+%token<Ast.Ann.t * string> B_LSH B_RSH // <<, >>
+%token<Ast.Ann.t * string> LSHEQ RSHEQ ANDEQ OREQ XOREQ // <<=, >>= &= |= ^=
 
 /* operator precedence */
 %left B_OR
@@ -120,7 +117,7 @@
 %left POW AT
 
 /* entry rule for module */
-%start <Ast.t> program
+%start <Ast.Stmt.t Ast.Ann.ann list> program
 %%
 
 %public separated_nonempty_trailing_list(separator, X):
@@ -141,7 +138,7 @@
 
 program: // Entry point 
   | statement+ EOF 
-    { Module (List.concat $1) }
+    { List.concat $1 }
 
 /******************************************************************************
   Rule groupings (least to most complex):
@@ -243,7 +240,7 @@ comprehension:
         | None, None, (p, _) -> p
       in
       pos $1 last, 
-      ExprNode.
+      Ast.Expr.
         { var = List.map $2 ~f:snd; 
           gen = flat_pipe $4;
           cond = $5; next = $6 } }
