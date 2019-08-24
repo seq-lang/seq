@@ -1,5 +1,5 @@
-**Seq**: a language for computational genomics
-==============================================
+**Seq** — a language for bioinformatics
+=======================================
 
 Contents
 --------

@@ -25,13 +25,15 @@ def setup(sphinx):
 
 project = u'Seq'
 copyright = u'2019, SeqLang'
-author = u'arshajii'
+author = u'seq-lang'
 
 # The short X.Y version
-version = u'0.1'
+version = u'0.8'
 # The full version, including alpha/beta/rc tags
-release = u'0.1.0'
+release = u'0.8.0'
 
+# Logo path
+html_logo = '../images/logo.png'
 
 # -- General configuration ---------------------------------------------------
 
@@ -84,13 +86,15 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'style_nav_header_background': '#333131',
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -160,7 +164,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'seq', u'Seq Documentation',
-     author, 'seq', 'A language for computational genomics',
+     author, 'seq', 'a language for bioinformatics',
      'Miscellaneous'),
 ]
 
