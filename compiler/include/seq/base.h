@@ -4,18 +4,18 @@
 #include "types.h"
 
 namespace seq {
-	namespace types {
+namespace types {
+class BaseType : public Type {
+private:
+  BaseType();
 
-		class BaseType : public Type {
-		private:
-			BaseType();
-		public:
-			BaseType(BaseType const&)=delete;
-			void operator=(BaseType const&)=delete;
-			static BaseType *get() noexcept;
-		};
+public:
+  BaseType(BaseType const &) = delete;
+  void operator=(BaseType const &) = delete;
+  static BaseType *get() noexcept;
+};
 
-	}
-}
+} // namespace types
+} // namespace seq
 
 #endif /* SEQ_BASE_H */

@@ -1,9 +1,9 @@
 #ifndef SEQ_LIB_H
 #define SEQ_LIB_H
 
-#include <cstdlib>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <unwind.h>
 
 #define SEQ_FUNC extern "C"
@@ -11,19 +11,18 @@
 typedef int64_t seq_int_t;
 
 struct seq_t {
-	seq_int_t len;
-	char *seq;
+  seq_int_t len;
+  char *seq;
 };
 
 struct seq_str_t {
-	seq_int_t len;
-	char *str;
+  seq_int_t len;
+  char *str;
 };
 
-template<typename T = void>
-struct seq_arr_t {
-	seq_int_t len;
-	T *arr;
+template <typename T = void> struct seq_arr_t {
+  seq_int_t len;
+  T *arr;
 };
 
 SEQ_FUNC void seq_init();
