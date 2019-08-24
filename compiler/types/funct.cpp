@@ -149,101 +149,98 @@ void types::GenType::initOps() {
   if (!vtable.magic.empty())
     return;
 
-  vtable.magic = {{"__iter__", {}, this, SEQ_MAGIC(self, args, b){return self;
-}
-, false
-}
-,
-}
-;
+  vtable.magic = {
+      {"__iter__",
+       {},
+       this,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
+  };
 
-addMethod("next",
-          new BaseFuncLite({this}, outType,
-                           [this](Module *module) {
-                             const std::string name =
-                                 "seq." + getName() + ".next";
-                             Function *func = module->getFunction(name);
+  addMethod(
+      "next",
+      new BaseFuncLite(
+          {this}, outType,
+          [this](Module *module) {
+            const std::string name = "seq." + getName() + ".next";
+            Function *func = module->getFunction(name);
 
-                             if (!func) {
-                               LLVMContext &context = module->getContext();
-                               func =
-                                   cast<Function>(module->getOrInsertFunction(
-                                       name, outType->getLLVMType(context),
-                                       getLLVMType(context)));
-                               func->setLinkage(GlobalValue::PrivateLinkage);
-                               func->setPersonalityFn(
-                                   makePersonalityFunc(module));
-                               func->addFnAttr(Attribute::AlwaysInline);
+            if (!func) {
+              LLVMContext &context = module->getContext();
+              func = cast<Function>(module->getOrInsertFunction(
+                  name, outType->getLLVMType(context), getLLVMType(context)));
+              func->setLinkage(GlobalValue::PrivateLinkage);
+              func->setPersonalityFn(makePersonalityFunc(module));
+              func->addFnAttr(Attribute::AlwaysInline);
 
-                               Value *arg = func->arg_begin();
-                               BasicBlock *entry =
-                                   BasicBlock::Create(context, "entry", func);
-                               Value *val = promise(arg, entry);
-                               IRBuilder<> builder(entry);
-                               builder.CreateRet(val);
-                             }
+              Value *arg = func->arg_begin();
+              BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+              Value *val = promise(arg, entry);
+              IRBuilder<> builder(entry);
+              builder.CreateRet(val);
+            }
 
-                             return func;
-                           }),
-          true);
+            return func;
+          }),
+      true);
 
-addMethod("done",
-          new BaseFuncLite(
-              {this}, Bool,
-              [this](Module *module) {
-                const std::string name = "seq." + getName() + ".done";
-                Function *func = module->getFunction(name);
+  addMethod(
+      "done",
+      new BaseFuncLite(
+          {this}, Bool,
+          [this](Module *module) {
+            const std::string name = "seq." + getName() + ".done";
+            Function *func = module->getFunction(name);
 
-                if (!func) {
-                  LLVMContext &context = module->getContext();
-                  func = cast<Function>(module->getOrInsertFunction(
-                      name, Bool->getLLVMType(context), getLLVMType(context)));
-                  func->setLinkage(GlobalValue::PrivateLinkage);
-                  func->setDoesNotThrow();
-                  func->addFnAttr(Attribute::AlwaysInline);
+            if (!func) {
+              LLVMContext &context = module->getContext();
+              func = cast<Function>(module->getOrInsertFunction(
+                  name, Bool->getLLVMType(context), getLLVMType(context)));
+              func->setLinkage(GlobalValue::PrivateLinkage);
+              func->setDoesNotThrow();
+              func->addFnAttr(Attribute::AlwaysInline);
 
-                  Value *arg = func->arg_begin();
-                  BasicBlock *entry =
-                      BasicBlock::Create(context, "entry", func);
-                  resume(arg, entry, nullptr, nullptr);
-                  Value *val = done(arg, entry);
-                  IRBuilder<> builder(entry);
-                  val = builder.CreateZExt(val, Bool->getLLVMType(context));
-                  builder.CreateRet(val);
-                }
+              Value *arg = func->arg_begin();
+              BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+              resume(arg, entry, nullptr, nullptr);
+              Value *val = done(arg, entry);
+              IRBuilder<> builder(entry);
+              val = builder.CreateZExt(val, Bool->getLLVMType(context));
+              builder.CreateRet(val);
+            }
 
-                return func;
-              }),
-          true);
+            return func;
+          }),
+      true);
 
-addMethod("destroy",
-          new BaseFuncLite({this}, Void,
-                           [this](Module *module) {
-                             const std::string name =
-                                 "seq." + getName() + ".destroy";
-                             Function *func = module->getFunction(name);
+  addMethod(
+      "destroy",
+      new BaseFuncLite(
+          {this}, Void,
+          [this](Module *module) {
+            const std::string name = "seq." + getName() + ".destroy";
+            Function *func = module->getFunction(name);
 
-                             if (!func) {
-                               LLVMContext &context = module->getContext();
-                               func =
-                                   cast<Function>(module->getOrInsertFunction(
-                                       name, llvm::Type::getVoidTy(context),
-                                       getLLVMType(context)));
-                               func->setLinkage(GlobalValue::PrivateLinkage);
-                               func->setDoesNotThrow();
-                               func->addFnAttr(Attribute::AlwaysInline);
+            if (!func) {
+              LLVMContext &context = module->getContext();
+              func = cast<Function>(module->getOrInsertFunction(
+                  name, llvm::Type::getVoidTy(context), getLLVMType(context)));
+              func->setLinkage(GlobalValue::PrivateLinkage);
+              func->setDoesNotThrow();
+              func->addFnAttr(Attribute::AlwaysInline);
 
-                               Value *arg = func->arg_begin();
-                               BasicBlock *entry =
-                                   BasicBlock::Create(context, "entry", func);
-                               destroy(arg, entry);
-                               IRBuilder<> builder(entry);
-                               builder.CreateRetVoid();
-                             }
+              Value *arg = func->arg_begin();
+              BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+              destroy(arg, entry);
+              IRBuilder<> builder(entry);
+              builder.CreateRetVoid();
+            }
 
-                             return func;
-                           }),
-          true);
+            return func;
+          }),
+      true);
 }
 
 bool types::GenType::is(Type *type) const {

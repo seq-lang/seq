@@ -25,115 +25,117 @@ void types::ArrayType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__", {Int}, this,
-       SEQ_MAGIC_CAPT(self, args, b){
-           Value *ptr = getBaseType(0)->alloc(args[0], b.GetInsertBlock());
-  return make(ptr, args[0], b.GetInsertBlock());
-}
-, false
-}
-,
+      {"__init__",
+       {Int},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *ptr = getBaseType(0)->alloc(args[0], b.GetInsertBlock());
+         return make(ptr, args[0], b.GetInsertBlock());
+       },
+       false},
 
-    {"__init__", {PtrType::get(getBaseType(0)), Int}, this,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){return make(args[0], args[1], b.GetInsertBlock());
-}
-, false
-}
-,
+      {"__init__",
+       {PtrType::get(getBaseType(0)), Int},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return make(args[0], args[1], b.GetInsertBlock());
+       },
+       false},
 
-    {"__copy__", {}, this,
-     SEQ_MAGIC_CAPT(self, args, b){BasicBlock *block = b.GetInsertBlock();
-Module *module = block->getModule();
-LLVMContext &context = module->getContext();
+      {"__copy__",
+       {},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         BasicBlock *block = b.GetInsertBlock();
+         Module *module = block->getModule();
+         LLVMContext &context = module->getContext();
 
-auto *allocFunc = makeAllocFunc(module, getBaseType(0)->isAtomic());
-Value *ptr = memb(self, "ptr", block);
-Value *len = memb(self, "len", block);
-Value *elemSize = ConstantInt::get(seqIntLLVM(context), size(module));
-Value *numBytes = b.CreateMul(len, elemSize);
-Value *ptrCopy = b.CreateCall(allocFunc, numBytes);
-makeMemCpy(ptrCopy, ptr, numBytes, block);
-ptrCopy = b.CreateBitCast(ptrCopy, membType("ptr")->getLLVMType(context));
-Value *copy = make(ptrCopy, len, block);
-return copy;
-}
-, false
-}
-,
+         auto *allocFunc = makeAllocFunc(module, getBaseType(0)->isAtomic());
+         Value *ptr = memb(self, "ptr", block);
+         Value *len = memb(self, "len", block);
+         Value *elemSize = ConstantInt::get(seqIntLLVM(context), size(module));
+         Value *numBytes = b.CreateMul(len, elemSize);
+         Value *ptrCopy = b.CreateCall(allocFunc, numBytes);
+         makeMemCpy(ptrCopy, ptr, numBytes, block);
+         ptrCopy =
+             b.CreateBitCast(ptrCopy, membType("ptr")->getLLVMType(context));
+         Value *copy = make(ptrCopy, len, block);
+         return copy;
+       },
+       false},
 
-    {"__len__", {}, Int,
-     SEQ_MAGIC_CAPT(self, args, b){return memb(self, "len", b.GetInsertBlock());
-}
-, false
-}
-,
+      {"__len__",
+       {},
+       Int,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return memb(self, "len", b.GetInsertBlock());
+       },
+       false},
 
-    {"__bool__", {}, Bool,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *len = memb(self, "len", b.GetInsertBlock());
-Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
-return b.CreateZExt(b.CreateICmpNE(len, zero),
-                    Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__bool__",
+       {},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *len = memb(self, "len", b.GetInsertBlock());
+         Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
+         return b.CreateZExt(b.CreateICmpNE(len, zero),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__getitem__", {Int}, getBaseType(0),
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-ptr = b.CreateGEP(ptr, args[0]);
-return b.CreateLoad(ptr);
-}
-, false
-}
-,
+      {"__getitem__",
+       {Int},
+       getBaseType(0),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+         ptr = b.CreateGEP(ptr, args[0]);
+         return b.CreateLoad(ptr);
+       },
+       false},
 
-    {"__slice__", {Int, Int}, getBaseType(0),
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-ptr = b.CreateGEP(ptr, args[0]);
-Value *len = b.CreateSub(args[1], args[0]);
-return make(ptr, len, b.GetInsertBlock());
-}
-, false
-}
-,
+      {"__slice__",
+       {Int, Int},
+       getBaseType(0),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+         ptr = b.CreateGEP(ptr, args[0]);
+         Value *len = b.CreateSub(args[1], args[0]);
+         return make(ptr, len, b.GetInsertBlock());
+       },
+       false},
 
-    {"__slice_left__", {Int}, getBaseType(0),
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-return make(ptr, args[0], b.GetInsertBlock());
-}
-, false
-}
-,
+      {"__slice_left__",
+       {Int},
+       getBaseType(0),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+         return make(ptr, args[0], b.GetInsertBlock());
+       },
+       false},
 
-    {"__slice_right__", {Int}, getBaseType(0),
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-Value *to = memb(self, "len", b.GetInsertBlock());
-ptr = b.CreateGEP(ptr, args[0]);
-Value *len = b.CreateSub(to, args[0]);
-return make(ptr, len, b.GetInsertBlock());
-}
-, false
-}
-,
+      {"__slice_right__",
+       {Int},
+       getBaseType(0),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+         Value *to = memb(self, "len", b.GetInsertBlock());
+         ptr = b.CreateGEP(ptr, args[0]);
+         Value *len = b.CreateSub(to, args[0]);
+         return make(ptr, len, b.GetInsertBlock());
+       },
+       false},
 
-    {"__setitem__", {Int, getBaseType(0)}, Void,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *ptr = memb(self, "ptr", b.GetInsertBlock());
-ptr = b.CreateGEP(ptr, args[0]);
-b.CreateStore(args[1], ptr);
-return (Value *)nullptr;
-}
-, false
-}
-,
-}
-;
+      {"__setitem__",
+       {Int, getBaseType(0)},
+       Void,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *ptr = memb(self, "ptr", b.GetInsertBlock());
+         ptr = b.CreateGEP(ptr, args[0]);
+         b.CreateStore(args[1], ptr);
+         return (Value *)nullptr;
+       },
+       false},
+  };
 }
 
 void types::ArrayType::initFields() {

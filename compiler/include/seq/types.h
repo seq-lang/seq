@@ -360,12 +360,4 @@ struct MagicOverload {
 
 } // namespace seq
 
-#define SEQ_MAGIC(self, args, builder)                                         \
-  [](llvm::Value * (self), std::vector<llvm::Value *>(args),                   \
-     llvm::IRBuilder<> & (builder))
-
-#define SEQ_MAGIC_CAPT(self, args, builder)                                    \
-  [this](llvm::Value * (self), std::vector<llvm::Value *>(args),               \
-         llvm::IRBuilder<> & (builder))
-
 #endif /* SEQ_TYPES_H */

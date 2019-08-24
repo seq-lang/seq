@@ -201,41 +201,47 @@ void types::RefType::initOps() {
     return;
 
   vtable.magic = {
-      {"__new__", {}, this, SEQ_MAGIC_CAPT(self, args, b){assert(contents);
-  self = contents->alloc(nullptr, b.GetInsertBlock());
-  self = b.CreateBitCast(self, getLLVMType(b.getContext()));
-  return self;
-}
-, false
-}
-,
+      {"__new__",
+       {},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         assert(contents);
+         self = contents->alloc(nullptr, b.GetInsertBlock());
+         self = b.CreateBitCast(self, getLLVMType(b.getContext()));
+         return self;
+       },
+       false},
 
-    {"__bool__", {}, Bool,
-     SEQ_MAGIC(self, args, b){return b.CreateZExt(
-         b.CreateIsNotNull(self), Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__bool__",
+       {},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateIsNotNull(self),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__raw__", {}, PtrType::get(Byte), SEQ_MAGIC(self, args, b){return self;
-}
-, false
-}
-,
-}
-;
+      {"__raw__",
+       {},
+       PtrType::get(Byte),
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
+  };
 
-if (contents) {
-                vtable.magic.push_back({"__init__", contents->getTypes(), this, SEQ_MAGIC_CAPT(self, args, b) {
-			self = b.CreateBitCast(self, getStructPointerType(b.getContext()));
-			for (unsigned i = 0; i < args.size(); i++)
-				self = setMemb(self, std::to_string(i+1), args[i], b.GetInsertBlock());
-			self = b.CreateBitCast(self, getLLVMType(b.getContext()));
-			return self;
-}
-});
-}
+  if (contents) {
+    vtable.magic.push_back(
+        {"__init__", contents->getTypes(), this,
+         [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+           self = b.CreateBitCast(self, getStructPointerType(b.getContext()));
+           for (unsigned i = 0; i < args.size(); i++)
+             self = setMemb(self, std::to_string(i + 1), args[i],
+                            b.GetInsertBlock());
+           self = b.CreateBitCast(self, getLLVMType(b.getContext()));
+           return self;
+         }});
+  }
 }
 
 void types::RefType::initFields() {

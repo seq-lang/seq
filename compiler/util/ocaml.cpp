@@ -656,11 +656,10 @@ FOREIGN void jit_func(void *jit, Func *func, char **error) {
 }
 #endif
 
-extern "C" void caml_error_callback(char *msg, int line, int col, char *file) {
+FOREIGN void caml_error_callback(char *msg, int line, int col, char *file) {
   seq::compilationError(std::string(msg), std::string(file), line, col);
 }
 
-extern "C" void caml_warning_callback(char *msg, int line, int col,
-                                      char *file) {
+FOREIGN void caml_warning_callback(char *msg, int line, int col, char *file) {
   seq::compilationWarning(std::string(msg), std::string(file), line, col);
 }

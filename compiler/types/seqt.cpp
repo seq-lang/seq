@@ -135,71 +135,75 @@ void types::SeqType::initOps() {
   if (!vtable.magic.empty())
     return;
 
-  vtable.magic = {{"__init__", {PtrType::get(Byte), Int}, Seq,
-                   SEQ_MAGIC_CAPT(self, args, b){
-                       return make(args[0], args[1], b.GetInsertBlock());
-}
-, false
-}
-,
+  vtable.magic = {
+      {"__init__",
+       {PtrType::get(Byte), Int},
+       Seq,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return make(args[0], args[1], b.GetInsertBlock());
+       },
+       false},
 
-    {"__str__", {}, Str, SEQ_MAGIC(self, args, b){return self;
-}
-, false
-}
-,
+      {"__str__",
+       {},
+       Str,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
 
-    {"__len__", {}, Int,
-     SEQ_MAGIC_CAPT(self, args, b){return memb(self, "len", b.GetInsertBlock());
-}
-, false
-}
-,
+      {"__len__",
+       {},
+       Int,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return memb(self, "len", b.GetInsertBlock());
+       },
+       false},
 
-    {"__bool__", {}, Bool,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *len = memb(self, "len", b.GetInsertBlock());
-Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
-return b.CreateZExt(b.CreateICmpNE(len, zero),
-                    Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__bool__",
+       {},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *len = memb(self, "len", b.GetInsertBlock());
+         Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
+         return b.CreateZExt(b.CreateICmpNE(len, zero),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__setitem__", {Int, Seq}, Void,
-     SEQ_MAGIC_CAPT(self, args, b){BasicBlock *block = b.GetInsertBlock();
-Value *dest = memb(self, "ptr", block);
-Value *source = memb(args[1], "ptr", block);
-Value *len = memb(args[1], "len", block);
-dest = b.CreateGEP(dest, args[0]);
-makeMemMove(dest, source, len, block, 1);
-return (Value *)nullptr;
-}
-, false
-}
-,
+      {"__setitem__",
+       {Int, Seq},
+       Void,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         BasicBlock *block = b.GetInsertBlock();
+         Value *dest = memb(self, "ptr", block);
+         Value *source = memb(args[1], "ptr", block);
+         Value *len = memb(args[1], "len", block);
+         dest = b.CreateGEP(dest, args[0]);
+         makeMemMove(dest, source, len, block, 1);
+         return (Value *)nullptr;
+       },
+       false},
 
-    {"__eq__", {Seq}, Bool,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *x = eq(self, args[0], b.GetInsertBlock());
-return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__eq__",
+       {Seq},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *x = eq(self, args[0], b.GetInsertBlock());
+         return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__ne__", {Seq}, Bool,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *x = eq(self, args[0], b.GetInsertBlock());
-x = b.CreateNot(x);
-return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
-}
-;
+      {"__ne__",
+       {Seq},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *x = eq(self, args[0], b.GetInsertBlock());
+         x = b.CreateNot(x);
+         return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
+       },
+       false},
+  };
 }
 
 Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block) {
@@ -232,96 +236,100 @@ void types::StrType::initOps() {
   if (!vtable.magic.empty())
     return;
 
-  vtable.magic = {{"__init__", {PtrType::get(Byte), Int}, Str,
-                   SEQ_MAGIC_CAPT(self, args, b){
-                       return make(args[0], args[1], b.GetInsertBlock());
-}
-, false
-}
-,
+  vtable.magic = {
+      {"__init__",
+       {PtrType::get(Byte), Int},
+       Str,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return make(args[0], args[1], b.GetInsertBlock());
+       },
+       false},
 
-    {"__str__", {}, Str, SEQ_MAGIC(self, args, b){return self;
-}
-, false
-}
-,
+      {"__str__",
+       {},
+       Str,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
 
-    {"__copy__", {}, Str, SEQ_MAGIC(self, args, b){return self;
-}
-, false
-}
-,
+      {"__copy__",
+       {},
+       Str,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
 
-    {"__len__", {}, Int,
-     SEQ_MAGIC_CAPT(self, args, b){return memb(self, "len", b.GetInsertBlock());
-}
-, false
-}
-,
+      {"__len__",
+       {},
+       Int,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return memb(self, "len", b.GetInsertBlock());
+       },
+       false},
 
-    {"__bool__", {}, Bool,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *len = memb(self, "len", b.GetInsertBlock());
-Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
-return b.CreateZExt(b.CreateICmpNE(len, zero),
-                    Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__bool__",
+       {},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *len = memb(self, "len", b.GetInsertBlock());
+         Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
+         return b.CreateZExt(b.CreateICmpNE(len, zero),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__eq__", {Str}, Bool,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *x = eq(self, args[0], b.GetInsertBlock());
-return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__eq__",
+       {Str},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *x = eq(self, args[0], b.GetInsertBlock());
+         return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__ne__", {Str}, Bool,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Value *x = eq(self, args[0], b.GetInsertBlock());
-x = b.CreateNot(x);
-return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
-}
-;
+      {"__ne__",
+       {Str},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *x = eq(self, args[0], b.GetInsertBlock());
+         x = b.CreateNot(x);
+         return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
+       },
+       false},
+  };
 
-addMethod("memcpy",
-          new BaseFuncLite({PtrType::get(Byte), PtrType::get(Byte), Int}, Void,
-                           [](Module *module) {
-                             const std::string name = "seq.memcpy";
-                             Function *func = module->getFunction(name);
+  addMethod(
+      "memcpy",
+      new BaseFuncLite(
+          {PtrType::get(Byte), PtrType::get(Byte), Int}, Void,
+          [](Module *module) {
+            const std::string name = "seq.memcpy";
+            Function *func = module->getFunction(name);
 
-                             if (!func) {
-                               LLVMContext &context = module->getContext();
-                               func =
-                                   cast<Function>(module->getOrInsertFunction(
-                                       name, llvm::Type::getVoidTy(context),
-                                       IntegerType::getInt8PtrTy(context),
-                                       IntegerType::getInt8PtrTy(context),
-                                       seqIntLLVM(context)));
-                               func->setDoesNotThrow();
-                               func->setLinkage(GlobalValue::PrivateLinkage);
-                               func->addFnAttr(Attribute::AlwaysInline);
-                               auto iter = func->arg_begin();
-                               Value *dst = iter++;
-                               Value *src = iter++;
-                               Value *len = iter;
-                               BasicBlock *block =
-                                   BasicBlock::Create(context, "entry", func);
-                               makeMemCpy(dst, src, len, block);
-                               IRBuilder<> builder(block);
-                               builder.CreateRetVoid();
-                             }
+            if (!func) {
+              LLVMContext &context = module->getContext();
+              func = cast<Function>(module->getOrInsertFunction(
+                  name, llvm::Type::getVoidTy(context),
+                  IntegerType::getInt8PtrTy(context),
+                  IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
+              func->setDoesNotThrow();
+              func->setLinkage(GlobalValue::PrivateLinkage);
+              func->addFnAttr(Attribute::AlwaysInline);
+              auto iter = func->arg_begin();
+              Value *dst = iter++;
+              Value *src = iter++;
+              Value *len = iter;
+              BasicBlock *block = BasicBlock::Create(context, "entry", func);
+              makeMemCpy(dst, src, len, block);
+              IRBuilder<> builder(block);
+              builder.CreateRetVoid();
+            }
 
-                             return func;
-                           }),
-          true);
+            return func;
+          }),
+      true);
 }
 
 Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block) {
@@ -609,271 +617,278 @@ void types::KMer::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__", {Seq}, this,
-       SEQ_MAGIC_CAPT(self, args, b){Function *initFunc = getInitFunc(
-                                         this, b.GetInsertBlock()->getModule());
-  return b.CreateCall(initFunc, args[0]);
-}
-, false
-}
-,
+      {"__init__",
+       {Seq},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *initFunc =
+             getInitFunc(this, b.GetInsertBlock()->getModule());
+         return b.CreateCall(initFunc, args[0]);
+       },
+       false},
 
-    {"__init__", {IntNType::get(2 * k, false)}, this,
-     SEQ_MAGIC_CAPT(self, args, b){
+      {"__init__",
+       {IntNType::get(2 * k, false)},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
-}
-, false
-}
-,
+       },
+       false},
 
-    {"__init__", {Int}, this,
-     SEQ_MAGIC_CAPT(self, args, b){
+      {"__init__",
+       {Int},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
-}
-, false
-}
-,
+       },
+       false},
 
-    {"__str__", {}, Str,
-     SEQ_MAGIC_CAPT(self, args, b){
+      {"__str__",
+       {},
+       Str,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          Function *strFunc = getStrFunc(this, b.GetInsertBlock()->getModule());
-return b.CreateCall(strFunc, self);
-}
-, false
-}
-,
+         return b.CreateCall(strFunc, self);
+       },
+       false},
 
-    {"__copy__", {}, this, SEQ_MAGIC(self, args, b){return self;
-}
-, false
-}
-,
+      {"__copy__",
+       {},
+       this,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
 
-    // reverse complement
-    {"__invert__", {}, this,
-     SEQ_MAGIC_CAPT(self, args, b){LLVMContext &context = b.getContext();
-Module *module = b.GetInsertBlock()->getModule();
-Value *table = getRevCompTable(module);
-Value *mask = ConstantInt::get(getLLVMType(context), 0xffu);
-Value *result = ConstantInt::get(getLLVMType(context), 0);
+      // reverse complement
+      {"__invert__",
+       {},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         LLVMContext &context = b.getContext();
+         Module *module = b.GetInsertBlock()->getModule();
+         Value *table = getRevCompTable(module);
+         Value *mask = ConstantInt::get(getLLVMType(context), 0xffu);
+         Value *result = ConstantInt::get(getLLVMType(context), 0);
 
-// deal with 8-bit chunks:
-for (unsigned i = 0; i < k / 4; i++) {
-  Value *slice = b.CreateShl(mask, i * 8);
-  slice = b.CreateAnd(self, slice);
-  slice = b.CreateLShr(slice, i * 8);
-  slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
+         // deal with 8-bit chunks:
+         for (unsigned i = 0; i < k / 4; i++) {
+           Value *slice = b.CreateShl(mask, i * 8);
+           slice = b.CreateAnd(self, slice);
+           slice = b.CreateLShr(slice, i * 8);
+           slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
 
-  Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
-  sliceRC = b.CreateLoad(sliceRC);
-  sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
-  sliceRC = b.CreateShl(sliceRC, (k - 4 * (i + 1)) * 2);
-  result = b.CreateOr(result, sliceRC);
-}
+           Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
+           sliceRC = b.CreateLoad(sliceRC);
+           sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
+           sliceRC = b.CreateShl(sliceRC, (k - 4 * (i + 1)) * 2);
+           result = b.CreateOr(result, sliceRC);
+         }
 
-// deal with remaining high bits:
-unsigned rem = k % 4;
-if (rem > 0) {
-  mask = ConstantInt::get(getLLVMType(context), (1u << (rem * 2)) - 1);
-  Value *slice = b.CreateShl(mask, (k - rem) * 2);
-  slice = b.CreateAnd(self, slice);
-  slice = b.CreateLShr(slice, (k - rem) * 2);
-  slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
+         // deal with remaining high bits:
+         unsigned rem = k % 4;
+         if (rem > 0) {
+           mask = ConstantInt::get(getLLVMType(context), (1u << (rem * 2)) - 1);
+           Value *slice = b.CreateShl(mask, (k - rem) * 2);
+           slice = b.CreateAnd(self, slice);
+           slice = b.CreateLShr(slice, (k - rem) * 2);
+           slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
 
-  Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
-  sliceRC = b.CreateLoad(sliceRC);
-  sliceRC =
-      b.CreateAShr(sliceRC,
-                   (4 - rem) * 2); // slice isn't full 8-bits, so shift out junk
-  sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
-  sliceRC = b.CreateAnd(sliceRC, mask);
-  result = b.CreateOr(result, sliceRC);
-}
+           Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
+           sliceRC = b.CreateLoad(sliceRC);
+           sliceRC = b.CreateAShr(
+               sliceRC,
+               (4 - rem) * 2); // slice isn't full 8-bits, so shift out junk
+           sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
+           sliceRC = b.CreateAnd(sliceRC, mask);
+           result = b.CreateOr(result, sliceRC);
+         }
 
-return result;
-}
-, false
-}
-,
+         return result;
+       },
+       false},
 
-    // slide window left
-    {"__lshift__", {Seq}, this,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Module *module = b.GetInsertBlock()->getModule();
-return b.CreateCall(getShiftFunc(this, module, false), {self, args[0]});
-}
-, false
-}
-,
+      // slide window left
+      {"__lshift__",
+       {Seq},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Module *module = b.GetInsertBlock()->getModule();
+         return b.CreateCall(getShiftFunc(this, module, false),
+                             {self, args[0]});
+       },
+       false},
 
-    // slide window right
-    {"__rshift__", {Seq}, this,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){Module *module = b.GetInsertBlock()->getModule();
-return b.CreateCall(getShiftFunc(this, module, true), {self, args[0]});
-}
-, false
-}
-,
+      // slide window right
+      {"__rshift__",
+       {Seq},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Module *module = b.GetInsertBlock()->getModule();
+         return b.CreateCall(getShiftFunc(this, module, true), {self, args[0]});
+       },
+       false},
 
-    // Hamming distance
-    {"__sub__", {this}, Int,
-     SEQ_MAGIC_CAPT(self, args,
-                    b){/*
-                        * Hamming distance algorithm:
-                        *   input: kmer1, kmer2
-                        *   mask1 = 0101...0101  (same bit width as encoded
-                        * kmer) mask2 = 1010...1010  (same bit width as encoded
-                        * kmer) popcnt(
-                        *     (((kmer1 & mask1) ^ (kmer2 & mask1)) << 1) |
-                        *     ((kmer1 & mask2) ^ (kmer2 & mask2))
-                        *   )
-                        */
-                       LLVMContext &context = b.getContext();
-Value *mask1 = ConstantInt::get(getLLVMType(context), 0);
-for (unsigned i = 0; i < getK(); i++) {
-  Value *shift = b.CreateShl(oneLLVM(context), 2 * i);
-  mask1 = b.CreateOr(mask1, shift);
-}
-Value *mask2 = b.CreateShl(mask1, 1);
+      // Hamming distance
+      {"__sub__",
+       {this},
+       Int,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         /*
+          * Hamming distance algorithm:
+          *   input: kmer1, kmer2
+          *   mask1 = 0101...0101  (same bit width as encoded kmer)
+          *   mask2 = 1010...1010  (same bit width as encoded kmer)
+          *   popcnt(
+          *     (((kmer1 & mask1) ^ (kmer2 & mask1)) << 1) |
+          *     ((kmer1 & mask2) ^ (kmer2 & mask2))
+          *   )
+          */
+         LLVMContext &context = b.getContext();
+         Value *mask1 = ConstantInt::get(getLLVMType(context), 0);
+         for (unsigned i = 0; i < getK(); i++) {
+           Value *shift = b.CreateShl(oneLLVM(context), 2 * i);
+           mask1 = b.CreateOr(mask1, shift);
+         }
+         Value *mask2 = b.CreateShl(mask1, 1);
 
-Value *k1m1 = b.CreateAnd(self, mask1);
-Value *k1m2 = b.CreateAnd(self, mask2);
-Value *k2m1 = b.CreateAnd(args[0], mask1);
-Value *k2m2 = b.CreateAnd(args[0], mask2);
-Value *xor1 = b.CreateShl(b.CreateXor(k1m1, k2m1), 1);
-Value *xor2 = b.CreateXor(k1m2, k2m2);
-Value *diff = b.CreateOr(xor1, xor2);
+         Value *k1m1 = b.CreateAnd(self, mask1);
+         Value *k1m2 = b.CreateAnd(self, mask2);
+         Value *k2m1 = b.CreateAnd(args[0], mask1);
+         Value *k2m2 = b.CreateAnd(args[0], mask2);
+         Value *xor1 = b.CreateShl(b.CreateXor(k1m1, k2m1), 1);
+         Value *xor2 = b.CreateXor(k1m2, k2m2);
+         Value *diff = b.CreateOr(xor1, xor2);
 
-Function *popcnt = Intrinsic::getDeclaration(
-    b.GetInsertBlock()->getModule(), Intrinsic::ctpop, {getLLVMType(context)});
-Value *result = b.CreateCall(popcnt, diff);
-return b.CreateZExtOrTrunc(result, seqIntLLVM(context));
-}
-, false
-}
-,
+         Function *popcnt = Intrinsic::getDeclaration(
+             b.GetInsertBlock()->getModule(), Intrinsic::ctpop,
+             {getLLVMType(context)});
+         Value *result = b.CreateCall(popcnt, diff);
+         return b.CreateZExtOrTrunc(result, seqIntLLVM(context));
+       },
+       false},
 
-    {"__hash__", {}, Int,
-     SEQ_MAGIC(self, args,
-               b){return b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
-}
-, false
-}
-,
+      {"__hash__",
+       {},
+       Int,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
+       },
+       false},
 
-    {"__len__", {}, Int,
-     SEQ_MAGIC_CAPT(self, args, b){
+      {"__len__",
+       {},
+       Int,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return ConstantInt::get(seqIntLLVM(b.getContext()), k, true);
-}
-, false
-}
-,
+       },
+       false},
 
-    {"__eq__", {this}, Bool,
-     SEQ_MAGIC(self, args, b){return b.CreateZExt(
-         b.CreateICmpEQ(self, args[0]), Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__eq__",
+       {this},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpEQ(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__ne__", {this}, Bool,
-     SEQ_MAGIC(self, args, b){return b.CreateZExt(
-         b.CreateICmpNE(self, args[0]), Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__ne__",
+       {this},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpNE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__lt__", {this}, Bool,
-     SEQ_MAGIC(self, args, b){return b.CreateZExt(
-         b.CreateICmpULT(self, args[0]), Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__lt__",
+       {this},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpULT(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__gt__", {this}, Bool,
-     SEQ_MAGIC(self, args, b){return b.CreateZExt(
-         b.CreateICmpUGT(self, args[0]), Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__gt__",
+       {this},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpUGT(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__le__", {this}, Bool,
-     SEQ_MAGIC(self, args, b){return b.CreateZExt(
-         b.CreateICmpULE(self, args[0]), Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
+      {"__le__",
+       {this},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpULE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
 
-    {"__ge__", {this}, Bool,
-     SEQ_MAGIC(self, args, b){return b.CreateZExt(
-         b.CreateICmpUGE(self, args[0]), Bool->getLLVMType(b.getContext()));
-}
-, false
-}
-,
-}
-;
+      {"__ge__",
+       {this},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpUGE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+  };
 
-addMethod("len",
-          new BaseFuncLite({}, types::IntType::get(),
-                           [this](Module *module) {
-                             const std::string name =
-                                 "seq." + getName() + ".len";
-                             Function *func = module->getFunction(name);
+  addMethod(
+      "len",
+      new BaseFuncLite(
+          {}, types::IntType::get(),
+          [this](Module *module) {
+            const std::string name = "seq." + getName() + ".len";
+            Function *func = module->getFunction(name);
 
-                             if (!func) {
-                               LLVMContext &context = module->getContext();
-                               func =
-                                   cast<Function>(module->getOrInsertFunction(
-                                       name, seqIntLLVM(context)));
-                               func->setDoesNotThrow();
-                               func->setLinkage(GlobalValue::PrivateLinkage);
-                               func->addFnAttr(Attribute::AlwaysInline);
-                               BasicBlock *block =
-                                   BasicBlock::Create(context, "entry", func);
-                               IRBuilder<> builder(block);
-                               builder.CreateRet(ConstantInt::get(
-                                   seqIntLLVM(context), this->k));
-                             }
+            if (!func) {
+              LLVMContext &context = module->getContext();
+              func = cast<Function>(
+                  module->getOrInsertFunction(name, seqIntLLVM(context)));
+              func->setDoesNotThrow();
+              func->setLinkage(GlobalValue::PrivateLinkage);
+              func->addFnAttr(Attribute::AlwaysInline);
+              BasicBlock *block = BasicBlock::Create(context, "entry", func);
+              IRBuilder<> builder(block);
+              builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->k));
+            }
 
-                             return func;
-                           }),
-          true);
+            return func;
+          }),
+      true);
 
-types::IntNType *iType = types::IntNType::get(2 * k, false);
-addMethod("as_int",
-          new BaseFuncLite({this}, iType,
-                           [this, iType](Module *module) {
-                             const std::string name =
-                                 "seq." + getName() + ".as_int";
-                             Function *func = module->getFunction(name);
+  types::IntNType *iType = types::IntNType::get(2 * k, false);
+  addMethod(
+      "as_int",
+      new BaseFuncLite(
+          {this}, iType,
+          [this, iType](Module *module) {
+            const std::string name = "seq." + getName() + ".as_int";
+            Function *func = module->getFunction(name);
 
-                             if (!func) {
-                               LLVMContext &context = module->getContext();
-                               func =
-                                   cast<Function>(module->getOrInsertFunction(
-                                       name, iType->getLLVMType(context),
-                                       getLLVMType(context)));
-                               func->setDoesNotThrow();
-                               func->setLinkage(GlobalValue::PrivateLinkage);
-                               func->addFnAttr(Attribute::AlwaysInline);
-                               Value *arg = func->arg_begin();
-                               BasicBlock *block =
-                                   BasicBlock::Create(context, "entry", func);
-                               IRBuilder<> builder(block);
-                               builder.CreateRet(builder.CreateBitCast(
-                                   arg, iType->getLLVMType(context)));
-                             }
+            if (!func) {
+              LLVMContext &context = module->getContext();
+              func = cast<Function>(module->getOrInsertFunction(
+                  name, iType->getLLVMType(context), getLLVMType(context)));
+              func->setDoesNotThrow();
+              func->setLinkage(GlobalValue::PrivateLinkage);
+              func->addFnAttr(Attribute::AlwaysInline);
+              Value *arg = func->arg_begin();
+              BasicBlock *block = BasicBlock::Create(context, "entry", func);
+              IRBuilder<> builder(block);
+              builder.CreateRet(
+                  builder.CreateBitCast(arg, iType->getLLVMType(context)));
+            }
 
-                             return func;
-                           }),
-          true);
+            return func;
+          }),
+      true);
 }
 
 bool types::KMer::isAtomic() const { return true; }
