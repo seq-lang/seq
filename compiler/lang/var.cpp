@@ -3,191 +3,165 @@
 using namespace seq;
 using namespace llvm;
 
-static void ensureNonVoid(types::Type *type)
-{
-	if (type->is(types::Void))
-		throw exc::SeqException("cannot load or store void variable");
+static void ensureNonVoid(types::Type *type) {
+  if (type->is(types::Void))
+    throw exc::SeqException("cannot load or store void variable");
 }
 
 static int nameIdx = 0;
 
-Var::Var(types::Type *type) :
-    name("seq.var." + std::to_string(nameIdx++)), type(type), ptr(nullptr),
-    module(nullptr), global(false), tls(false), repl(false), mapped()
-{
+Var::Var(types::Type *type)
+    : name("seq.var." + std::to_string(nameIdx++)), type(type), ptr(nullptr),
+      module(nullptr), global(false), tls(false), repl(false), mapped() {}
+
+std::string Var::getName() { return name; }
+
+void Var::setName(std::string name) { this->name = std::move(name); }
+
+void Var::allocaIfNeeded(BaseFunc *base) {
+  if (!mapped.empty())
+    mapped.top()->allocaIfNeeded(base);
+
+  if (module != base->getPreamble()->getModule()) {
+    ptr = nullptr;
+    module = base->getPreamble()->getModule();
+  }
+
+  if (ptr)
+    return;
+
+  LLVMContext &context = base->getContext();
+  if (global) {
+    Type *llvmType = getType()->getLLVMType(context);
+
+    if (repl)
+      llvmType = llvmType->getPointerTo();
+
+    auto *g = new GlobalVariable(*module, llvmType, false,
+                                 repl ? GlobalValue::ExternalLinkage
+                                      : GlobalValue::PrivateLinkage,
+                                 Constant::getNullValue(llvmType), name);
+
+    if (tls)
+      g->setThreadLocalMode(GlobalVariable::ThreadLocalMode::LocalExecTLSModel);
+    ptr = g;
+  } else {
+    ptr = makeAlloca(getType()->getLLVMType(context), base->getPreamble());
+  }
 }
 
-std::string Var::getName()
-{
-	return name;
+bool Var::isGlobal() {
+  if (!mapped.empty())
+    return mapped.top()->isGlobal();
+  return global;
 }
 
-void Var::setName(std::string name)
-{
-	this->name = std::move(name);
+void Var::setGlobal() {
+  if (!mapped.empty())
+    mapped.top()->setGlobal();
+  else
+    global = true;
 }
 
-void Var::allocaIfNeeded(BaseFunc *base)
-{
-	if (!mapped.empty())
-		mapped.top()->allocaIfNeeded(base);
-
-	if (module != base->getPreamble()->getModule()) {
-		ptr = nullptr;
-		module = base->getPreamble()->getModule();
-	}
-
-	if (ptr)
-		return;
-
-	LLVMContext& context = base->getContext();
-	if (global) {
-		Type *llvmType = getType()->getLLVMType(context);
-
-		if (repl)
-			llvmType = llvmType->getPointerTo();
-
-		auto *g = new GlobalVariable(*module,
-		                             llvmType,
-		                             false,
-		                             repl ? GlobalValue::ExternalLinkage : GlobalValue::PrivateLinkage,
-		                             Constant::getNullValue(llvmType),
-		                             name);
-
-		if (tls)
-			g->setThreadLocalMode(GlobalVariable::ThreadLocalMode::LocalExecTLSModel);
-		ptr = g;
-	} else {
-		ptr = makeAlloca(getType()->getLLVMType(context), base->getPreamble());
-	}
+void Var::setThreadLocal() {
+  if (!mapped.empty())
+    mapped.top()->setThreadLocal();
+  else {
+    global = true;
+    tls = true;
+  }
 }
 
-bool Var::isGlobal()
-{
-	if (!mapped.empty())
-		return mapped.top()->isGlobal();
-	return global;
+void Var::setREPL() {
+  if (!mapped.empty())
+    mapped.top()->setREPL();
+  else {
+    global = true;
+    repl = true;
+  }
 }
 
-void Var::setGlobal()
-{
-	if (!mapped.empty())
-		mapped.top()->setGlobal();
-	else
-		global = true;
+void Var::mapTo(Var *other) { mapped.push(other); }
+
+void Var::unmap() { mapped.pop(); }
+
+Value *Var::getPtr(BaseFunc *base) {
+  if (!mapped.empty())
+    return mapped.top()->getPtr(base);
+
+  allocaIfNeeded(base);
+  assert(ptr);
+  return ptr;
 }
 
-void Var::setThreadLocal()
-{
-	if (!mapped.empty())
-		mapped.top()->setThreadLocal();
-	else {
-		global = true;
-		tls = true;
-	}
+Value *Var::load(BaseFunc *base, BasicBlock *block, bool atomic) {
+  if (!mapped.empty())
+    return mapped.top()->load(base, block);
+
+  ensureNonVoid(getType());
+  allocaIfNeeded(base);
+  IRBuilder<> builder(block);
+  auto *inst = builder.CreateLoad(ptr);
+  Value *val = inst;
+
+  if (repl) {
+    inst = builder.CreateLoad(val);
+    val = inst;
+  }
+
+  if (atomic) {
+    inst->setAtomic(AtomicOrdering::SequentiallyConsistent);
+    inst->setAlignment((unsigned)getType()->size(block->getModule()));
+  }
+
+  return val;
 }
 
-void Var::setREPL()
-{
-	if (!mapped.empty())
-		mapped.top()->setREPL();
-	else {
-		global = true;
-		repl = true;
-	}
+void Var::store(BaseFunc *base, Value *val, BasicBlock *block, bool atomic) {
+  if (!mapped.empty()) {
+    mapped.top()->store(base, val, block);
+    return;
+  }
+
+  ensureNonVoid(getType());
+  allocaIfNeeded(base);
+  IRBuilder<> builder(block);
+  Value *dest = repl ? builder.CreateLoad(ptr) : ptr;
+  auto *inst = builder.CreateStore(val, dest);
+
+  if (atomic) {
+    inst->setAtomic(AtomicOrdering::SequentiallyConsistent);
+    inst->setAlignment((unsigned)getType()->size(block->getModule()));
+  }
 }
 
-void Var::mapTo(Var *other)
-{
-	mapped.push(other);
+void Var::setType(types::Type *type) {
+  if (!mapped.empty())
+    mapped.top()->setType(type);
+  else
+    this->type = type;
 }
 
-void Var::unmap()
-{
-	mapped.pop();
+types::Type *Var::getType() {
+  if (!mapped.empty())
+    return mapped.top()->getType();
+
+  assert(type);
+  return type;
 }
 
-Value *Var::getPtr(BaseFunc *base)
-{
-	if (!mapped.empty())
-		return mapped.top()->getPtr(base);
+Var *Var::clone(Generic *ref) {
+  if (isGlobal())
+    return this;
 
-	allocaIfNeeded(base);
-	assert(ptr);
-	return ptr;
-}
+  if (ref->seenClone(this))
+    return (Var *)ref->getClone(this);
 
-Value *Var::load(BaseFunc *base, BasicBlock *block, bool atomic)
-{
-	if (!mapped.empty())
-		return mapped.top()->load(base, block);
-
-	ensureNonVoid(getType());
-	allocaIfNeeded(base);
-	IRBuilder<> builder(block);
-	auto *inst = builder.CreateLoad(ptr);
-	Value *val = inst;
-
-	if (repl) {
-		inst = builder.CreateLoad(val);
-		val = inst;
-	}
-
-	if (atomic) {
-		inst->setAtomic(AtomicOrdering::SequentiallyConsistent);
-		inst->setAlignment((unsigned)getType()->size(block->getModule()));
-	}
-
-	return val;
-}
-
-void Var::store(BaseFunc *base, Value *val, BasicBlock *block, bool atomic)
-{
-	if (!mapped.empty()) {
-		mapped.top()->store(base, val, block);
-		return;
-	}
-
-	ensureNonVoid(getType());
-	allocaIfNeeded(base);
-	IRBuilder<> builder(block);
-	Value *dest = repl ? builder.CreateLoad(ptr) : ptr;
-	auto *inst = builder.CreateStore(val, dest);
-
-	if (atomic) {
-		inst->setAtomic(AtomicOrdering::SequentiallyConsistent);
-		inst->setAlignment((unsigned)getType()->size(block->getModule()));
-	}
-}
-
-void Var::setType(types::Type *type)
-{
-	if (!mapped.empty())
-		mapped.top()->setType(type);
-	else
-		this->type = type;
-}
-
-types::Type *Var::getType()
-{
-	if (!mapped.empty())
-		return mapped.top()->getType();
-
-	assert(type);
-	return type;
-}
-
-Var *Var::clone(Generic *ref)
-{
-	if (isGlobal())
-		return this;
-
-	if (ref->seenClone(this))
-		return (Var *)ref->getClone(this);
-
-	// we intentionally don't clone this->mapped; should be set in codegen if needed
-	auto *x = new Var();
-	ref->addClone(this, x);
-	if (type) x->setType(type->clone(ref));
-	return x;
+  // we intentionally don't clone this->mapped; should be set in codegen if
+  // needed
+  auto *x = new Var();
+  ref->addClone(this, x);
+  if (type)
+    x->setType(type->clone(ref));
+  return x;
 }

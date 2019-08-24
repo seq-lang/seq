@@ -4,40 +4,40 @@
 #include "types.h"
 
 namespace seq {
-	namespace types {
+namespace types {
+class OptionalType : public Type {
+private:
+  Type *baseType;
+  explicit OptionalType(Type *baseType);
 
-		class OptionalType : public Type {
-		private:
-			Type *baseType;
-			explicit OptionalType(Type *baseType);
+  bool isRefOpt() const;
 
-			bool isRefOpt() const;
-		public:
-			OptionalType(OptionalType const&)=delete;
-			void operator=(OptionalType const&)=delete;
+public:
+  OptionalType(OptionalType const &) = delete;
+  void operator=(OptionalType const &) = delete;
 
-			llvm::Value *defaultValue(llvm::BasicBlock *block) override;
+  llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
-			void initFields() override;
-			void initOps() override;
-			bool isAtomic() const override;
-			bool is(Type *type) const override;
-			unsigned numBaseTypes() const override;
-			Type *getBaseType(unsigned idx) const override;
-			llvm::Type *getLLVMType(llvm::LLVMContext& context) const override;
-			size_t size(llvm::Module *module) const override;
+  void initFields() override;
+  void initOps() override;
+  bool isAtomic() const override;
+  bool is(Type *type) const override;
+  unsigned numBaseTypes() const override;
+  Type *getBaseType(unsigned idx) const override;
+  llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
+  size_t size(llvm::Module *module) const override;
 
-			OptionalType *asOpt() override;
+  OptionalType *asOpt() override;
 
-			llvm::Value *make(llvm::Value *val, llvm::BasicBlock *block);
-			llvm::Value *has(llvm::Value *self, llvm::BasicBlock *block);
-			llvm::Value *val(llvm::Value *self, llvm::BasicBlock *block);
-			static OptionalType *get(Type *baseType) noexcept;
-			static OptionalType *get();
-			OptionalType *clone(Generic *ref) override;
-		};
+  llvm::Value *make(llvm::Value *val, llvm::BasicBlock *block);
+  llvm::Value *has(llvm::Value *self, llvm::BasicBlock *block);
+  llvm::Value *val(llvm::Value *self, llvm::BasicBlock *block);
+  static OptionalType *get(Type *baseType) noexcept;
+  static OptionalType *get();
+  OptionalType *clone(Generic *ref) override;
+};
 
-	}
-}
+} // namespace types
+} // namespace seq
 
 #endif /* SEQ_OPTIONAL_H */

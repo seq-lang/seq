@@ -4,17 +4,17 @@
 #include "types.h"
 
 namespace seq {
-	namespace types {
+namespace types {
+class AnyType : public Type {
+  AnyType();
 
-		class AnyType : public Type {
-			AnyType();
-		public:
-			AnyType(AnyType const&)=delete;
-			void operator=(AnyType const&)=delete;
-			static AnyType *get() noexcept;
-		};
+public:
+  AnyType(AnyType const &) = delete;
+  void operator=(AnyType const &) = delete;
+  static AnyType *get() noexcept;
+};
 
-	}
-}
+} // namespace types
+} // namespace seq
 
 #endif /* SEQ_ANY_H */
