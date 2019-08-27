@@ -91,10 +91,10 @@ This will produce a `seq` executable for compiling/running Seq programs, and a `
 
 ## Documentation
 
-[Sphinx](http://www.sphinx-doc.org), [Breathe](https://breathe.readthedocs.io/en/latest/) and [Exhale](https://exhale.readthedocs.io/en/latest/index.html) are required to compile the documentation. Once these are installed, just:
+[Sphinx](https://www.sphinx-doc.org) (with the [RTD theme](https://sphinx-rtd-theme.readthedocs.io/en/stable/)), [Breathe](https://breathe.readthedocs.io/en/latest/) and [Exhale](https://exhale.readthedocs.io/en/latest/index.html) are required to compile the documentation. Once these are installed, just:
 
 ```bash
-cd seq/docs
+cd seq/docs/sphinx
 make html
 ```
 

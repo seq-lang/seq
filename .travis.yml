@@ -21,10 +21,32 @@ addons:
     update: true
     packages:
       - libgc-dev
+      - libsnappy-dev
+      - binutils-dev
   homebrew:
     update: true
     packages:
       - libgc
+      - snappy
+      - binutils
+
+before_install: |
+  if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
+    git clone -b release_60-release https://github.com/wsmoses/Tapir-LLVM ${TRAVIS_BUILD_DIR}/Tapir-LLVM
+    mkdir ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
+    cd ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      export LLVM_BINUTILS_INCDIR=/usr/include
+    elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      export LLVM_BINUTILS_INCDIR=/usr/local/opt/binutils/include
+    fi
+    cmake .. -DLLVM_INCLUDE_TESTS=OFF \
+             -DLLVM_ENABLE_RTTI=ON \
+             -DCMAKE_BUILD_TYPE=Release \
+             -DLLVM_TARGETS_TO_BUILD=host
+    cmake --build .
+    cd -
+  fi
 
 install:
   # install OCaml:
@@ -34,7 +56,7 @@ install:
   - opam install -y ocamlfind core dune ctypes ctypes-foreign menhir ppx_deriving
   - eval $(opam env)
 
-  # apt's LLVM does not have RTTI enabled, but conda's does:
+  # install clang:
   - wget https://repo.continuum.io/miniconda/Miniconda2-latest-${CONDA_OS_NAME}-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -45,19 +67,21 @@ install:
 
 before_script:
   - ${CXX} --version
-  - llvm-config --version
-  - llvm-config --prefix
-  - llvm-config --has-rtti
-  - export LLVM_DIR=`llvm-config --cmakedir`
+  - export LLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir`
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
 
 script:
   - mkdir build
-  - (cd build && cmake ..)
+  - (cd build && cmake .. -DSEQ_THREADED=ON)
   - cmake --build build
   - build/seqtest 2> /dev/null
   - build/seq test/core/helloworld.seq
+
+cache:
+  timeout: 1000
+  directories:
+    - Tapir-LLVM
 
 branches:
   only:

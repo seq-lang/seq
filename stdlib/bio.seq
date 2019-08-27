@@ -201,6 +201,21 @@ type FASTA(file: File, fai: list[int], names: list[str]):
 
         self.file.close()
 
+    def write(seqs_iter, path):
+        LINE_LIMIT = 60
+        f = open(path, "w")
+        for i, s in enumerate(seqs_iter):
+            f.write(">sequence")
+            f.write(str(i))
+            f.write("\n")
+            n = 0
+            while n < len(s):
+                end = min(len(s), n + LINE_LIMIT)
+                f.write(str(s[n:end]))
+                f.write("\n")
+                n += LINE_LIMIT
+        f.close()
+
 def seqs(path: str):
     return iter(Seqs(path))
 
