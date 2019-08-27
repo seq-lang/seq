@@ -23,12 +23,14 @@ addons:
       - libgc-dev
       - libsnappy-dev
       - binutils-dev
+      - libomp-dev
   homebrew:
     update: true
     packages:
       - libgc
       - snappy
       - binutils
+      - libomp
 
 before_install: |
   if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
