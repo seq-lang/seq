@@ -31,8 +31,8 @@ addons:
       - binutils
 
 before_install: |
-  if [[ ! -d "${TRAVIS_BUILD_DIR}/Tapir-LLVM" ]]; then
-    git clone -b release_60-release https://github.com/wsmoses/Tapir-LLVM
+  if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
+    git clone -b release_60-release https://github.com/wsmoses/Tapir-LLVM ${TRAVIS_BUILD_DIR}/Tapir-LLVM
     mkdir ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
     cd ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
