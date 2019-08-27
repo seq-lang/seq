@@ -5,16 +5,7 @@ matrix:
   include:
     - os: linux
       dist: xenial
-      env:
-        - LLVM_VERSION=6.0.1
-        - OCAML_VERSION=4.07
-        - CONDA_OS_NAME=Linux
-
     - os: osx
-      env:
-        - LLVM_VERSION=6.0.1
-        - OCAML_VERSION=4.07
-        - CONDA_OS_NAME=MacOSX
 
 addons:
   apt:
@@ -32,39 +23,35 @@ addons:
       - binutils
       - libomp
 
-before_install: |
-  if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
-    git clone -b release_60-release https://github.com/wsmoses/Tapir-LLVM ${TRAVIS_BUILD_DIR}/Tapir-LLVM
-    mkdir ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
-    cd ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      export LLVM_BINUTILS_INCDIR=/usr/include
-    elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      export LLVM_BINUTILS_INCDIR=/usr/local/opt/binutils/include
+before_install:
+  # build and cache LLVM/Tapir:
+  - |
+    if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
+      git clone -b release_60-release https://github.com/wsmoses/Tapir-LLVM ${TRAVIS_BUILD_DIR}/Tapir-LLVM
+      mkdir ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
+      cd ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
+      if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+        export LLVM_BINUTILS_INCDIR=/usr/include
+      elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+        export LLVM_BINUTILS_INCDIR=/usr/local/opt/binutils/include
+      fi
+      cmake .. -DLLVM_INCLUDE_TESTS=OFF \
+               -DLLVM_ENABLE_RTTI=ON \
+               -DCMAKE_BUILD_TYPE=Release \
+               -DLLVM_TARGETS_TO_BUILD=host
+      cmake --build .
+      cd -
     fi
-    cmake .. -DLLVM_INCLUDE_TESTS=OFF \
-             -DLLVM_ENABLE_RTTI=ON \
-             -DCMAKE_BUILD_TYPE=Release \
-             -DLLVM_TARGETS_TO_BUILD=host
-    cmake --build .
-    cd -
-  fi
 
 install:
   # install OCaml:
+  - export OCAML_VERSION=4.07
   - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
   - bash -ex .travis-ocaml.sh
   - opam update
   - opam install -y ocamlfind core dune ctypes ctypes-foreign menhir ppx_deriving
   - eval $(opam env)
-
-  # install clang:
-  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-${CONDA_OS_NAME}-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda install -c conda-forge cmake llvmdev=${LLVM_VERSION} clangdev=${LLVM_VERSION}
+  # compile with clang on Ubuntu:
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CC=clang CXX=clang++; fi
 
 before_script:
