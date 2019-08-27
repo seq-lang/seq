@@ -223,7 +223,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     add_block { ctx with block } stmts;
     while_stmt
 
-  (** [parse_for ?next context position data] parses for statement AST. 
+  (** [parse_for ?next context position data] parses for statement AST.
       `next` points to the nested for in the generator expression.  *)
   and parse_for ?next ~ctx pos (for_vars, gen_expr, stmts) =
     let gen_expr = E.parse ~ctx gen_expr in
@@ -245,7 +245,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let _ =
       match next with
       | Some next -> next ctx for_ctx for_stmt
-      | None -> ignore @@ List.map stmts ~f:(parse ~ctx:for_ctx ~toplevel:false ~jit:false)
+      | None ->
+        ignore @@ List.map stmts ~f:(parse ~ctx:for_ctx ~toplevel:false ~jit:false)
     in
     Ctx.clear_block for_ctx;
     for_stmt
@@ -395,7 +396,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     | None -> serr ~pos "cannot locate module %s" from
 
   (** [parse_function ?cls context position data] parses function AST.
-      Set `cls` to `Llvm.Types.typ` if you want a function to be 
+      Set `cls` to `Llvm.Types.typ` if you want a function to be
       a class `cls` method. *)
   and parse_function
       ctx
@@ -561,8 +562,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let s = Llvm.Stmt.prefetch keys wheres in
     Llvm.Func.set_prefetch ctx.base s;
     s
-  
-  (* ***************************************************************
+    (* ***************************************************************
      Helper functions
      *************************************************************** *)
 
@@ -576,9 +576,9 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     if add then Llvm.Block.add_stmt ctx.block stmt;
     stmt
 
-  (** [add_block ?preprocess context statements] creates a new block within the [context] 
-      and adds [statements] to that block. 
-      [preprocess context], if provided, is run after the block is created 
+  (** [add_block ?preprocess context statements] creates a new block within the [context]
+      and adds [statements] to that block.
+      [preprocess context], if provided, is run after the block is created
       to initialize the block. *)
   and add_block ctx ?(preprocess = fun _ -> ()) stmts =
     Ctx.add_block ctx;
@@ -616,7 +616,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let expr = E.parse ~ctx expr in
       Llvm.Pattern.guarded pat expr
 
-  (** Helper for parsing generic parameters. 
+  (** Helper for parsing generic parameters.
       Parses generic parameters, assigns names to unnamed generics and calls C++ APIs to denote generic functions/classes.
       Also adds generics types to the context. *)
   and parse_generics ctx generic_types args set_generic_count get_generic =

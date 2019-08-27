@@ -14,7 +14,7 @@ type t =
   }
 
 (** Annotated type specification. *)
-type 'a ann = t * 'a 
+type 'a ann = t * 'a
 
 (** A default [t] placeholder for internal use. *)
 let default : t = { file = ""; line = -1; col = -1; len = 0 }

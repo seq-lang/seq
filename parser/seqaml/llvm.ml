@@ -449,7 +449,6 @@ module Generics = struct
         idx
         (strdup n)
 
-
     let realize fn_expr typs =
       let arr, len = list_to_carr Types.typ typs in
       let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
@@ -471,7 +470,6 @@ module Generics = struct
         let msg = coerce (ptr char) string !@err_addr in
         Err.split_error msg)
       else t
-
   end
 
   module Type = struct
@@ -485,7 +483,6 @@ module Generics = struct
         f
         idx
         (strdup n)
-
 
     let realize typ typs =
       let arr, len = list_to_carr Types.typ typs in
@@ -508,7 +505,6 @@ module Generics = struct
         let msg = coerce (ptr char) string !@err_addr in
         Err.split_error msg)
       else t
-
   end
 end
 

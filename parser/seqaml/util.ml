@@ -8,8 +8,7 @@
 open Core
 
 (** [ppl ~sep ~f l] concatenates a list of strings [List.map ~f l] with a separator [sep]. *)
-let ppl ?(sep = ", ") ~f l = 
-  String.concat ~sep (List.map ~f l)
+let ppl ?(sep = ", ") ~f l = String.concat ~sep (List.map ~f l)
 
 (** [dbg fmt ...] output a [fmt] format string to stderr if [SEQ_DEBUG] environmental variable is set. *)
 let dbg fmt =

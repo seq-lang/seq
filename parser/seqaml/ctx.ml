@@ -1,5 +1,5 @@
 (* ****************************************************************************
- * Seqaml.Ctx: Context (variable table) definitions 
+ * Seqaml.Ctx: Context (variable table) definitions
  *
  * Author: inumanag
  * License: see LICENSE
@@ -9,41 +9,34 @@ open Core
 
 (** Main parsing context. *)
 type t =
-  { (** The file that is being parsed. *)
-    filename : string
-  ; (** A module LLVM handle. *)
-    mdl : Llvm.Types.func_t
-  ; (** Current base function LLVM handle. *)
-    base : Llvm.Types.func_t
-  ; (** Current block LLVM handle. *)
-    block : Llvm.Types.block_t
-  ; (** Current try-catch LLVM handle ([Ctypes.null] if not present). *)
-    trycatch : Llvm.Types.stmt_t
-  ; (** Currently active decorators (flags). *)
-    flags : string Stack.t
-  ; (** A stack of currently active code blocks. 
-        Each block holds a [Hash_set] of the block-defined identifiers. 
+  { filename : string (** The file that is being parsed. *)
+  ; mdl : Llvm.Types.func_t (** A module LLVM handle. *)
+  ; base : Llvm.Types.func_t (** Current base function LLVM handle. *)
+  ; block : Llvm.Types.block_t (** Current block LLVM handle. *)
+  ; trycatch : Llvm.Types.stmt_t
+        (** Current try-catch LLVM handle ([Ctypes.null] if not present). *)
+  ; flags : string Stack.t (** Currently active decorators (flags). *)
+  ; stack : string Hash_set.t Stack.t
+        (** A stack of currently active code blocks.
+        Each block holds a [Hash_set] of the block-defined identifiers.
         The most recent block is located at the top of the stack. *)
-    stack : string Hash_set.t Stack.t
-  ; (** Current context namespace [Ctx_namespace.t]. *)
-    map : Ctx_namespace.t
-  ; (** A hash table that maps an import name to a corresponding namespace [Ctx_namespace.t]. *)
-    imported : (string, Ctx_namespace.t) Hashtbl.t
-  ; (** A callback that is used to parse a Seq code string to AST (via Menhir).
+  ; map : Ctx_namespace.t (** Current context namespace [Ctx_namespace.t]. *)
+  ; imported : (string, Ctx_namespace.t) Hashtbl.t
+        (** A hash table that maps an import name to a corresponding namespace [Ctx_namespace.t]. *)
+  ; parser : t -> ?file:string -> string -> unit
+        (** A callback that is used to parse a Seq code string to AST (via Menhir).
         Needed for parsing [import] statements.
         Usage: [parses ctx ?file code], where [file] is an optional file name that is used
         to populate [Ast.Ann] annotations. *)
-    parser : t -> ?file:string -> string -> unit
   }
 
 (** A context that holds the internal Seq objects and libraries. *)
 let stdlib : Ctx_namespace.t = String.Table.create ()
 
 (** [add_block context] adds a new block to the context stack. *)
-let add_block ctx = 
-  Stack.push ctx.stack (String.Hash_set.create ())
+let add_block ctx = Stack.push ctx.stack (String.Hash_set.create ())
 
-(** [clear_block ctx] removes the most recent block 
+(** [clear_block ctx] removes the most recent block
     and removes all corresponding variables from the namespace. *)
 let clear_block ctx =
   Hash_set.iter (Stack.pop_exn ctx.stack) ~f:(fun key ->
@@ -53,8 +46,10 @@ let clear_block ctx =
       | Some [] | None -> Err.ierr "cannot find variable %s (clear_block)" key)
 
 (** [add ~ctx name var] adds a variable [name] with the handle [var] to the context [ctx]. *)
-let add ~(ctx : t) ?(toplevel=false) ?(global=false) ?(internal=false) key var =
-  let annot = Ctx_namespace.{ base = ctx.base; global; toplevel; internal; attrs = String.Hash_set.create () }
+let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) key var =
+  let annot =
+    Ctx_namespace.
+      { base = ctx.base; global; toplevel; internal; attrs = String.Hash_set.create () }
   in
   let var = var, annot in
   (match Hashtbl.find ctx.map key with
@@ -86,7 +81,7 @@ let parse_file ~ctx file =
   ctx.parser ~file:(Filename.realpath file) ctx code
 
 (** [init ...] returns an empty context with a toplevel block that contains internal Seq types. *)
-let init_module ?(argv=true) ?(jit=false) ~filename ~mdl ~base ~block parser =
+let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser =
   let ctx =
     { filename
     ; mdl
@@ -143,8 +138,7 @@ let init_empty ctx =
       add ~ctx ~internal:true ~global:true ~toplevel:true key (fst @@ List.hd_exn data));
   ctx
 
-
-(** [in_block ~ctx name] returns the most recent variable handle 
+(** [in_block ~ctx name] returns the most recent variable handle
     if a variable [name] is present in the most recent block [ctx] *)
 let in_block ~ctx key =
   if Stack.length ctx.stack = 0
@@ -153,7 +147,7 @@ let in_block ~ctx key =
   then Some (List.hd_exn @@ Hashtbl.find_exn ctx.map key)
   else None
 
-(** [in_scope ~ctx name] returns the most recent variable handle 
+(** [in_scope ~ctx name] returns the most recent variable handle
     if a variable [name] is present in the context [ctx]. *)
 let in_scope ~ctx key =
   match Hashtbl.find ctx.map key with
@@ -163,8 +157,7 @@ let in_scope ~ctx key =
 (** [to_dbg_output ctx] outputs the current [ctx] to the debug output. *)
 let to_dbg_output ctx =
   let open Util in
-
-  let dump_map ?(depth = 1) ?(internal =false) map =
+  let dump_map ?(depth = 1) ?(internal = false) map =
     let sortf (xa, (xb, _)) (ya, (yb, _)) = compare (xb, xa) (yb, ya) in
     let ind x = String.make (x * 3) ' ' in
     let rec prn ~depth ctx =
@@ -184,8 +177,7 @@ let to_dbg_output ctx =
         | Ctx_namespace.Var _ -> sprintf "(*var/%s*)" ant, ""
         | Func _ -> sprintf "(*fun/%s*)" ant, sprintf "%s" att
         | Type _ -> sprintf "(*typ/%s*)" ant, ""
-        | Import ctx ->
-          sprintf "(*imp/%s*)" ant, " ->\n" ^ prn ctx ~depth:(depth + 1)
+        | Import ctx -> sprintf "(*imp/%s*)" ant, " ->\n" ^ prn ctx ~depth:(depth + 1)
       in
       let sorted =
         Hashtbl.to_alist ctx
@@ -194,15 +186,14 @@ let to_dbg_output ctx =
       in
       String.concat ~sep:"\n"
       @@ List.filter_map sorted ~f:(fun (key, data) ->
-            if (not internal) && (snd data).internal
-            then None
-            else (
-              let pre, pos = prn_assignable data in
-              Some (sprintf "%s%s %s %s" (ind depth) pre key pos)))
+             if (not internal) && (snd data).internal
+             then None
+             else (
+               let pre, pos = prn_assignable data in
+               Some (sprintf "%s%s %s %s" (ind depth) pre key pos)))
     in
     dbg "%s" (prn ~depth map)
   in
-
   dbg "=== == - CONTEXT DUMP - == ===";
   dbg "-> Filename: %s" ctx.filename;
   dbg "-> Keys:";
@@ -211,4 +202,3 @@ let to_dbg_output ctx =
   Hashtbl.iteri ctx.imported ~f:(fun ~key ~data ->
       dbg "   %s:" key;
       dump_map ~depth:2 data)
-

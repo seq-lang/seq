@@ -19,43 +19,42 @@ type t =
   | Pass of unit
   | Break of unit
   | Continue of unit
-  | Expr of (texpr ann)
-  (** Assignment statement. [lhs : typ assign_op rhs] parses to [(lhs, rsh, assign_op, typ)].
+  | Expr of texpr ann
+  | Assign of (texpr ann * texpr ann * tassign * texpr ann option)
+      (** Assignment statement. [lhs : typ assign_op rhs] parses to [(lhs, rsh, assign_op, typ)].
       [assign_op] is of type [tassign]. Type specifier is optional. *)
-  | Assign of ((texpr ann) * (texpr ann) * tassign * (texpr ann) option)
-  | Del of (texpr ann)
-  (** [Print] statement consists of expression list and the final print character (defaults to newline). *)
-  | Print of ((texpr ann) list * string)
-  | Return of (texpr ann) option
-  | Yield of (texpr ann) option
-  | Assert of (texpr ann)
-  (** [TypeAlias] handles Seq type aliases (e.g. [type ty = some_type]) *)
-  | TypeAlias of (string * (texpr ann))
-  | While of ((texpr ann) * (t ann) list)
-  | For of (string list * (texpr ann) * (t ann) list)
-  | If of (if_case ann) list
-  | Match of ((texpr ann) * (match_case ann) list)
-  | Extend of ((texpr ann) * (generic ann) list)
-  (** [Extern] consists of:
+  | Del of texpr ann
+  | Print of (texpr ann list * string)
+      (** [Print] statement consists of expression list and the final print character (defaults to newline). *)
+  | Return of texpr ann option
+  | Yield of texpr ann option
+  | Assert of texpr ann
+  | TypeAlias of (string * texpr ann)
+      (** [TypeAlias] handles Seq type aliases (e.g. [type ty = some_type]) *)
+  | While of (texpr ann * t ann list)
+  | For of (string list * texpr ann * t ann list)
+  | If of if_case ann list
+  | Match of (texpr ann * match_case ann list)
+  | Extend of (texpr ann * generic ann list)
+  | Extern of (string * string option * string * param ann * param ann list)
+      (** [Extern] consists of:
       - external language name (right now, only ["c"] is supported via [cdef]),
       - external library name (not supported; defaults to [None]),
       - desired function name (either same as the external name, or modified through [as] operator in Seq),
-      - return function type (includes the external function name) , and 
+      - return function type (includes the external function name) , and
       - list of function arguments. *)
-  | Extern of (string * string option * string * param ann * (param ann) list)
   | Import of import list
-  (** [ImportPaste] is currently Seq's [import!]. _Deprecated_. *)
   | ImportPaste of string
-  (** TODO: REMOVE  *)
+      (** [ImportPaste] is currently Seq's [import!]. _Deprecated_. *)
   | Generic of generic
-  (** [Try(stmts, catch, finally_stmts)] corresponds to
+  | Try of (t ann list * catch ann list * t ann list option)
+      (** [Try(stmts, catch, finally_stmts)] corresponds to
       [try: stmts ... ; (catch1: ... ; catch2: ... ;) finally: finally_stmts ] *)
-  | Try of ((t ann) list * (catch ann) list * (t ann) list option)
   | Global of string
-  | Throw of (texpr ann)
-  | Prefetch of (texpr ann) list
-  (** [Special] encodes custom syntax extensions used for developing new ideas. Currently not supported. *)
-  | Special of (string * (t ann) list * string list)
+  | Throw of texpr ann
+  | Prefetch of texpr ann list
+  | Special of (string * t ann list * string list)
+      (** [Special] encodes custom syntax extensions used for developing new ideas. Currently not supported. *)
 
 (** Generic type encodes all constructs that can become generic. *)
 and generic =
@@ -65,58 +64,58 @@ and generic =
   | Declare of param
 
 and if_case =
-  { cond : (texpr ann) option
-  ; cond_stmts : (t ann) list
+  { cond : texpr ann option
+  ; cond_stmts : t ann list
   }
 
 and match_case =
   { pattern : pattern
-  ; case_stmts : (t ann) list
+  ; case_stmts : t ann list
   }
 
 and param =
   { name : string
-  ; typ : (texpr ann) option
+  ; typ : texpr ann option
   }
 
 and catch =
   { exc : string option
   ; var : string option
-  ; stmts : (t ann) list
+  ; stmts : t ann list
   }
 
 (** [class_t] encodes classes and types in Seq.
-    [args] represents for class/type arguments (object members), 
+    [args] represents for class/type arguments (object members),
     while [members] represents object methods. *)
 and class_t =
   { class_name : string
-  ; generics : (string ann) list
-  ; args : (param ann) list option
-  ; members : (generic ann) list
+  ; generics : string ann list
+  ; args : param ann list option
+  ; members : generic ann list
   }
 
 (** [fn_t] encodes classes and types in Seq.
     [fn_attrs] reprensets function decorators (attributes). *)
 and fn_t =
   { fn_name : param
-  ; fn_generics : (string ann) list
-  ; fn_args : (param ann) list
-  ; fn_stmts : (t ann) list
-  ; fn_attrs : (string ann) list
+  ; fn_generics : string ann list
+  ; fn_args : param ann list
+  ; fn_stmts : t ann list
+  ; fn_attrs : string ann list
   }
 
-(** [Import] encodes Seq's import statement. [from] specifies the import source, 
-    [what] is the list of identifiers and their local aliases that are to be imported, 
+(** [Import] encodes Seq's import statement. [from] specifies the import source,
+    [what] is the list of identifiers and their local aliases that are to be imported,
     and optional [import_as] is the local alias for the particular import.
     Examples:
     - [import from]: [{from = "from", what = [], import_as = None}]
-    - [import from as import_as]: [{from = "from", what = [], import_as = "import_as"}] 
+    - [import from as import_as]: [{from = "from", what = [], import_as = "import_as"}]
     - [from from import what]: [{from = "from", what = [("what", None)], import_as = None}]
-    - [from from import what1, what2 as name]: 
+    - [from from import what1, what2 as name]:
       [{from = "from", what = [("what", None), ("what2", "name")], import_as = None}] *)
 and import =
   { from : string ann
-  ; what : ((string * string option) ann) list option
+  ; what : (string * string option) ann list option
   ; import_as : string option
   }
 
@@ -131,10 +130,10 @@ and pattern =
   | ListPattern of pattern list
   | OrPattern of pattern list
   | WildcardPattern of string option
-  | GuardedPattern of (pattern * (texpr ann))
+  | GuardedPattern of (pattern * texpr ann)
   | BoundPattern of (string * pattern)
 
-(** Specifies the kind of assign statement: 
+(** Specifies the kind of assign statement:
     - [Normal] is the default [=] assignment.
     - [Shadow] is the [:=] assignment operator.
     - TODO *)

@@ -9,14 +9,14 @@ open Core
 open Util
 open Ast_ann
 
-(** This module unifies all AST modules and extends them with 
+(** This module unifies all AST modules and extends them with
     various utility functions. *)
 
 (** Alias for [Ast_ann]. Adds [to_string]. *)
 module Ann = struct
-  include Ast_ann 
+  include Ast_ann
 
-  let to_string { file; line; col; _ } = 
+  let to_string { file; line; col; _ } =
     sprintf "%s:%d:%d" (Filename.basename file) line col
 end
 
@@ -83,66 +83,77 @@ end
 module Stmt = struct
   include Ast_stmt
 
-  let rec to_string ?(indent=0) (snode: t ann) = 
-    let s = match snd snode with
-    | Pass _ -> sprintf "PASS"
-    | Break _ -> sprintf "BREAK"
-    | Continue _ -> sprintf "CONTINUE"
-    | Expr x -> Expr.to_string x
-    | Assign(l, r, s, q) -> 
-    begin match q with 
+  let rec to_string ?(indent = 0) (snode : t ann) =
+    let s =
+      match snd snode with
+      | Pass _ -> sprintf "PASS"
+      | Break _ -> sprintf "BREAK"
+      | Continue _ -> sprintf "CONTINUE"
+      | Expr x -> Expr.to_string x
+      | Assign (l, r, s, q) ->
+        (match q with
         | Some q ->
-          sprintf "%s : %s %s %s"
-          (Expr.to_string l) (Expr.to_string q) 
-          (match s with Shadow -> ":=" | _ -> "=") (Expr.to_string r)
-        | None -> 
-          sprintf "%s %s %s"
-          (Expr.to_string l) (match s with Shadow -> ":=" | _ -> "=") 
-          (Expr.to_string r)
-    end
-    | Print(x, n) -> sprintf "PRINT %s, %s" 
-        (ppl x ~f:Expr.to_string) 
-        (String.escaped n)
-    | Del x -> sprintf "DEL %s" (Expr.to_string x)
-    | Assert x -> sprintf "ASSERT %s" (Expr.to_string x)
-    | Yield x -> sprintf "YIELD %s"
-        (Option.value_map x ~default:"" ~f:Expr.to_string)
-    | Return x -> sprintf "RETURN %s"
-        (Option.value_map x ~default:"" ~f:Expr.to_string)
-    | TypeAlias (x, l) -> 
-    sprintf "TYPE %s = %s" x (Expr.to_string l)
-    | While (x, l) ->
-    sprintf "WHILE %s:\n%s" 
-        (Expr.to_string x) 
-        (ppl l ~sep:"\n" ~f:(to_string ~indent:(indent + 1)))
-    | For (v, x, l) -> 
-    sprintf "FOR %s IN %s:\n%s" 
-        (ppl v ~f:Fn.id) 
-        (Expr.to_string x) 
-        (ppl l ~sep:"\n" ~f:(to_string ~indent:(indent + 1)))
-    | If l -> 
-    String.concat ~sep:"\n" @@ List.mapi l 
-        ~f:(fun i (_, { cond; cond_stmts }) ->
-          let cond = Option.value_map cond ~default:"" ~f:Expr.to_string in
-          let case = 
-          if i = 0 then "IF " else if cond = "" then "ELSE" else "ELIF " 
-          in
-          sprintf "%s%s:\n%s"
-          case cond
-          (ppl cond_stmts ~sep:"\n" ~f:(to_string ~indent:(indent + 1))))
-    | Match (x, l) -> 
-    sprintf "MATCH %s:\n%s" 
-        (Expr.to_string x) 
-        (ppl l ~sep:"\n" ~f:(fun (_, { pattern; case_stmts }) -> 
-          sprintf "case <?>:\n%s" 
-          (ppl case_stmts ~sep:"\n" ~f:(to_string ~indent:(indent + 1)))))
-    | _ -> "?"
+          sprintf
+            "%s : %s %s %s"
+            (Expr.to_string l)
+            (Expr.to_string q)
+            (match s with
+            | Shadow -> ":="
+            | _ -> "=")
+            (Expr.to_string r)
+        | None ->
+          sprintf
+            "%s %s %s"
+            (Expr.to_string l)
+            (match s with
+            | Shadow -> ":="
+            | _ -> "=")
+            (Expr.to_string r))
+      | Print (x, n) ->
+        sprintf "PRINT %s, %s" (ppl x ~f:Expr.to_string) (String.escaped n)
+      | Del x -> sprintf "DEL %s" (Expr.to_string x)
+      | Assert x -> sprintf "ASSERT %s" (Expr.to_string x)
+      | Yield x -> sprintf "YIELD %s" (Option.value_map x ~default:"" ~f:Expr.to_string)
+      | Return x ->
+        sprintf "RETURN %s" (Option.value_map x ~default:"" ~f:Expr.to_string)
+      | TypeAlias (x, l) -> sprintf "TYPE %s = %s" x (Expr.to_string l)
+      | While (x, l) ->
+        sprintf
+          "WHILE %s:\n%s"
+          (Expr.to_string x)
+          (ppl l ~sep:"\n" ~f:(to_string ~indent:(indent + 1)))
+      | For (v, x, l) ->
+        sprintf
+          "FOR %s IN %s:\n%s"
+          (ppl v ~f:Fn.id)
+          (Expr.to_string x)
+          (ppl l ~sep:"\n" ~f:(to_string ~indent:(indent + 1)))
+      | If l ->
+        String.concat ~sep:"\n"
+        @@ List.mapi l ~f:(fun i (_, { cond; cond_stmts }) ->
+               let cond = Option.value_map cond ~default:"" ~f:Expr.to_string in
+               let case =
+                 if i = 0 then "IF " else if cond = "" then "ELSE" else "ELIF "
+               in
+               sprintf
+                 "%s%s:\n%s"
+                 case
+                 cond
+                 (ppl cond_stmts ~sep:"\n" ~f:(to_string ~indent:(indent + 1))))
+      | Match (x, l) ->
+        sprintf
+          "MATCH %s:\n%s"
+          (Expr.to_string x)
+          (ppl l ~sep:"\n" ~f:(fun (_, { pattern; case_stmts }) ->
+               sprintf
+                 "case <?>:\n%s"
+                 (ppl case_stmts ~sep:"\n" ~f:(to_string ~indent:(indent + 1)))))
+      | _ -> "?"
     in
     let pad l = String.make (l * 2) ' ' in
     sprintf "%s%s" (pad indent) s
+
   and param_to_string (_, { name; typ }) =
-    let typ = Option.value_map typ ~default:"" ~f:(fun x ->
-    " : " ^ (Expr.to_string x))
-    in
+    let typ = Option.value_map typ ~default:"" ~f:(fun x -> " : " ^ Expr.to_string x) in
     sprintf "%s%s" name typ
 end

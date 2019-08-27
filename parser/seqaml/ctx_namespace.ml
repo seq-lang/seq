@@ -1,5 +1,5 @@
 (* ****************************************************************************
- * Seqaml.Ctx_namespace: Context (variable table) definitions 
+ * Seqaml.Ctx_namespace: Context (variable table) definitions
  *
  * Author: inumanag
  * License: see LICENSE
@@ -7,17 +7,17 @@
 
 open Core
 
-(** This module defines a data structure that maps 
+(** This module defines a data structure that maps
     identifiers to the corresponding Seq LLVM handles. *)
 
-(** Alias for a [Hashtbl] that maps identifiers ([string]) to a list of namespace object [tel]. 
+(** Alias for a [Hashtbl] that maps identifiers ([string]) to a list of namespace object [tel].
     The head of such list is the most recent (and the currently active) Seq object. *)
 type t = (string, (tel * tann) list) Hashtbl.t
 
-(** A namespace object can be either: 
+(** A namespace object can be either:
     - a variable (LLVM handle)
     - a type / class (LLVM handle)
-    - a function (LLVM handle and the list of attributes), or 
+    - a function (LLVM handle and the list of attributes), or
     - an import context (that maps to another namespace [t]) *)
 and tel =
   | Var of Llvm.Types.var_t

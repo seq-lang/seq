@@ -15,19 +15,19 @@ type t =
   | Compiler of string
   | Internal of string
 
-(** Default exception that includes the source of the error and the location where it occured. *)
+(** Default exception that includes the source of the error and the location where it occurred. *)
 exception CompilerError of t * Ast.Ann.t list
 
 (** LLVM/C++ exception. *)
 exception SeqCError of string * Ast.Ann.t
 
-(* Seqaml exception. *)
+(** Seqaml exception. *)
 exception SeqCamlError of string * Ast.Ann.t list
 
 (** Lexer exception. *)
 exception SyntaxError of string * Ast.Ann.t
 
-(** Internal exception that should never reach an user. 
+(** Internal exception that should never reach an user.
     Indicates either a bug or non-implement functionality. *)
 exception InternalError of string * Ast.Ann.t
 
@@ -40,11 +40,10 @@ let serr ?(pos = Ast.Ann.default) fmt =
     with message formatted via sprintf-style [format_string]. *)
 let ierr ?(pos = Ast.Ann.default) fmt =
   Core.ksprintf (fun msg -> raise (InternalError (msg, pos))) fmt
-;;
 
 (** Helper function that parses string exception messages raised from C++
-    and extracts [Ast.Ann] information from them. 
-    Currently done in a very primitive way (C++ library serializes messages 
+    and extracts [Ast.Ann] information from them.
+    Currently done in a very primitive way (C++ library serializes messages
     by using '\b' as a field separator).*)
 let split_error msg =
   let l = Array.of_list @@ String.split ~on:'\b' msg in
@@ -56,8 +55,8 @@ let split_error msg =
   let len = Int.of_string l.(4) in
   raise @@ SeqCError (msg, Ast.Ann.{ file; line; col; len })
 
-(** [to_string ?file ~pos_lst err] returns a nicely formatted error string 
-    that contains the problematic soruce line(s) (specified in [pos_lst]) from the source [file].
+(** [to_string ?file ~pos_lst err] returns a nicely formatted error string
+    that contains the problematic source line(s) (specified in [pos_lst]) from the source [file].
     If the [file] is not given, no source code will be returned. *)
 let to_string ?file ~pos_lst err =
   let kind, msg =
@@ -89,24 +88,25 @@ let to_string ?file ~pos_lst err =
       | _ -> None)
     else None
   in
-  let lines = List.mapi pos_lst ~f:(fun i pos ->
-      let Ast.Ann.{ file; line; col; len } = pos in
-      match file_line file line with
-      | Some file_line ->
-        let col =
-          if col < String.length file_line then col else String.length file_line
-        in
-        let len =
-          if col + len < String.length file_line
-          then len
-          else String.length file_line - col
-        in
-        let pre = if i = 0 then "" else "then in\n        " in
-        [ sprintf "        %s%s: %d,%d\n" pre file line col;
-          sprintf "   %3d: %s" line (String.prefix file_line col);
-          sprintf "%s" (String.sub file_line ~pos:col ~len);
-          sprintf "%s\n" (String.drop_prefix file_line (col + len)) ]
-      | None -> [])
-  in 
-  String.concat ~sep:"" ((sprintf "[ERROR] %s error: %s\n" kind msg) :: List.concat lines)
-
+  let lines =
+    List.mapi pos_lst ~f:(fun i pos ->
+        let Ast.Ann.{ file; line; col; len } = pos in
+        match file_line file line with
+        | Some file_line ->
+          let col =
+            if col < String.length file_line then col else String.length file_line
+          in
+          let len =
+            if col + len < String.length file_line
+            then len
+            else String.length file_line - col
+          in
+          let pre = if i = 0 then "" else "then in\n        " in
+          [ sprintf "        %s%s: %d,%d\n" pre file line col
+          ; sprintf "   %3d: %s" line (String.prefix file_line col)
+          ; sprintf "%s" (String.sub file_line ~pos:col ~len)
+          ; sprintf "%s\n" (String.drop_prefix file_line (col + len))
+          ]
+        | None -> [])
+  in
+  String.concat ~sep:"" (sprintf "[ERROR] %s error: %s\n" kind msg :: List.concat lines)

@@ -57,7 +57,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     Llvm.Expr.set_trycatch expr ctx.trycatch;
     expr
 
-  (** [parse_type ~ctx expr] parses an [expr] AST and ensures that it compiles to a type. 
+  (** [parse_type ~ctx expr] parses an [expr] AST and ensures that it compiles to a type.
       Returns a [Llvm.TypeExpr] handle.  Raises error if [expr] does not compile to a type. *)
   and parse_type ~ctx (pos, node) =
     let expr =
@@ -80,7 +80,6 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
      Each AST node is dispatched to the proper codegen function.
      Each codegen function [f] is called as [f context position data]
      where [data] is a node-specific type defined in [Ast_expr]. *)
-  
   and parse_none _ _ _ = Llvm.Expr.none ()
   and parse_bool _ _ b = Llvm.Expr.bool b
 
@@ -91,7 +90,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     let i =
       match kind, Caml.Int64.of_string_opt i with
       | _, Some i -> Llvm.Expr.int i
-      | ("u" | "U"), None when is_some is_unsigned -> Llvm.Expr.int (Option.value_exn is_unsigned)
+      | ("u" | "U"), None when is_some is_unsigned ->
+        Llvm.Expr.int (Option.value_exn is_unsigned)
       | _ -> serr ~pos "integer too large"
     in
     match kind with
@@ -318,7 +318,6 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
 
   and parse_call ctx pos (callee_expr, args) =
     (* [@@@ocamlformat.disable] *)
-
     match snd callee_expr, args with
     | Index ((_, Id "__array__"), t), [ (_, { name = _; value }) ] ->
       let t = parse_type ~ctx t in
@@ -445,8 +444,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         Llvm.Expr.ptr v
       | _ -> serr ~pos "symbol %s not found" var)
     | _ -> serr ~pos "ptr requires an identifier as a parameter"
-
-  (* ***************************************************************
+    (* ***************************************************************
      Helper functions
      *************************************************************** *)
 
@@ -525,5 +523,4 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       walk_comp ~ctx ~f (snd c)
     (* TODO: | Slice | Lambda *)
     | _ -> ()
-  ;;
 end

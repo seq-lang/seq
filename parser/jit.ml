@@ -10,10 +10,8 @@ open Seqaml
 
 (** JIT context. *)
 type t =
-  { (** Execution counter. Used for displaying the prompt. *)
-    mutable cnt : int
-  ; (** Execution context. *)
-    ctx : Ctx.t
+  { mutable cnt : int (** Execution counter. Used for displaying the prompt. *)
+  ; ctx : Ctx.t (** Execution context. *)
   }
 
 (** Initialize a JIT context. *)
@@ -84,7 +82,8 @@ let repl () =
       with
       | End_of_file ->
         (try exec jit !code with
-        | Err.CompilerError (typ, pos_lst) -> eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:!code typ);
+        | Err.CompilerError (typ, pos_lst) ->
+          eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:!code typ);
         if !code = ""
         then raise Exit
         else (

@@ -7,7 +7,7 @@
 
 open Core
 
-(** [parse ?f ?file str] parses a string [str] and optionally applies [f] to the resulting AST. 
+(** [parse ?f ?file str] parses a string [str] and optionally applies [f] to the resulting AST.
     [file] is used only to populate corresponding [Ast.Ann] annotations. *)
 let parse ?f ?(file = "") code =
   let lexbuf = Lexing.from_string (code ^ "\n") in
@@ -33,7 +33,6 @@ let parse ?f ?(file = "") code =
   | Err.SeqCamlError (msg, pos) -> raise @@ Err.CompilerError (Descent msg, pos)
   | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])
   | Err.InternalError (msg, pos) -> raise @@ Err.CompilerError (Internal msg, [ pos ])
-
 
 (** Main code generation modules.
     As [Codegen_stmt] depends on [Codegen_expr] and vice versa, we need to instantiate these modules recursively. *)

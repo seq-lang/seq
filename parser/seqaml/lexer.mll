@@ -1,9 +1,9 @@
 (* *****************************************************************************
- * Seqaml.Lexer: Lexing module 
+ * Seqaml.Lexer: Lexing module
  *
  * Author: inumanag
  * License: see LICENSE
- * 
+ *
  * Heavily inspired and borrowed from https://github.com/m2ym/ocaml-pythonlib
  * *****************************************************************************)
 
@@ -15,17 +15,17 @@
   open Core
 
   (* Used for tracking indentation levels *)
-  type stack = 
+  type stack =
     { stack: int Stack.t;
       fname: string;
       mutable offset: int;
       mutable ignore_newline: int; }
-  
+
   let stack_create fname =
     let stack = Stack.create () in
     Stack.push stack 0;
     { stack = stack; offset = 0; ignore_newline = 0; fname }
-  
+
   (* flags to set should we ignore newlines (e.g. within parentheses) or not *)
   let ignore_nl t =
     t.ignore_newline <- t.ignore_newline + 1
@@ -33,11 +33,11 @@
     t.ignore_newline <- t.ignore_newline - 1
 
   (* get current file position from lexer *)
-  let cur_pos state ?(len=1) (lexbuf: Lexing.lexbuf) = 
+  let cur_pos state ?(len=1) (lexbuf: Lexing.lexbuf) =
     Ast.Ann.
       { file = state.fname;
         line = lexbuf.lex_start_p.pos_lnum;
-        col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol; 
+        col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol;
         len }
 
   let count_lines s =
@@ -82,7 +82,7 @@ let ident = alpha alphanum*
 (* Rules *)
 
 (* Main handler *)
-rule token state = parse 
+rule token state = parse
   | "" {
     (* TODO: Python-style indentation detection (i.e. more strict rules) *)
     let cur = state.offset in
@@ -102,7 +102,7 @@ rule token state = parse
 and read state = parse
   | ((white* comment? newline)* white* comment?) newline {
     let lines = count_lines (L.lexeme lexbuf) in
-    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with 
+    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with
       pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines;
       pos_bol = lexbuf.lex_curr_p.pos_cnum
     };
@@ -110,18 +110,18 @@ and read state = parse
       state.offset <- 0;
       offset state lexbuf;
       P.NL (cur_pos state lexbuf)
-    end 
-    else read state lexbuf 
+    end
+    else read state lexbuf
   }
   | '\\' newline white* {
-    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with 
+    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with
       pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1;
       pos_bol = lexbuf.lex_curr_p.pos_cnum
     };
     read state lexbuf
   }
   | white+ { read state lexbuf }
-  
+
   | "is" white+ "not" white+
     { P.ISNOT (cur_pos state lexbuf ~len:6, "is not") }
   | "not" white+ "in" white+
@@ -179,7 +179,7 @@ and read state = parse
   | stringprefix '"'      { double_string state (L.lexeme lexbuf) lexbuf }
   | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
   | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
-  
+
   | "$" { escaped_id state lexbuf }
   | "(" { ignore_nl state; P.LP (cur_pos state lexbuf) }
   | ")" { aware_nl state;  P.RP (cur_pos state lexbuf) }
@@ -190,7 +190,7 @@ and read state = parse
 
   | "|="  as op { P.OREQ   (cur_pos state lexbuf ~len:2, op) }
   | "&="  as op { P.ANDEQ  (cur_pos state lexbuf ~len:2, op) }
-  | "^="  as op { P.XOREQ  (cur_pos state lexbuf ~len:2, op) } 
+  | "^="  as op { P.XOREQ  (cur_pos state lexbuf ~len:2, op) }
   | "<<=" as op { P.LSHEQ (cur_pos state lexbuf ~len:3, op) }
   | ">>=" as op { P.RSHEQ (cur_pos state lexbuf ~len:3, op) }
   | "<<"  as op { P.B_LSH (cur_pos state lexbuf ~len:2, op) }
@@ -206,7 +206,7 @@ and read state = parse
   | "="   as op { P.EQ        (cur_pos state lexbuf, Char.to_string op) }
   | "..." as op { P.ELLIPSIS  (cur_pos state lexbuf ~len:3, op) }
   | "@"   as op { P.AT        (cur_pos state lexbuf, Char.to_string op) }
-  
+
   | "->"  { P.OF        (cur_pos state lexbuf ~len:2) }
   | ":"   { P.COLON     (cur_pos state lexbuf) }
   | ";"   { P.SEMICOLON (cur_pos state lexbuf) }
@@ -262,34 +262,34 @@ and offset state = parse
 
 (* String rules *)
 and single_string state prefix = parse
-  | (([^ '\\' '\r' '\n' '\''] | escape)* as s) '\'' { 
+  | (([^ '\\' '\r' '\n' '\''] | escape)* as s) '\'' {
     let len = (String.length s) + (String.length prefix) in
-    seq_string prefix s (cur_pos state lexbuf ~len) 
+    seq_string prefix s (cur_pos state lexbuf ~len)
   }
 and single_docstr state prefix = shortest
-  | (([^ '\\'] | escape)* as s) "'''" { 
-    let lines = count_lines s in  
-    lexbuf.lex_curr_p <- 
+  | (([^ '\\'] | escape)* as s) "'''" {
+    let lines = count_lines s in
+    lexbuf.lex_curr_p <-
       { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines };
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
 and double_string state prefix = parse
-  | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) '"' { 
+  | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) '"' {
     let len = (String.length s) + (String.length prefix) in
-    seq_string prefix s (cur_pos state lexbuf ~len) 
+    seq_string prefix s (cur_pos state lexbuf ~len)
   }
 and double_docstr state prefix = shortest
-  | (([^ '\\'] | escape)* as s) "\"\"\"" { 
+  | (([^ '\\'] | escape)* as s) "\"\"\"" {
     let lines = count_lines s in
-    lexbuf.lex_curr_p <- 
+    lexbuf.lex_curr_p <-
       { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines };
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
 
 and escaped_id state = parse
-  | (([^ '\r' '\n' '$' ])* as s) '$' { 
+  | (([^ '\r' '\n' '$' ])* as s) '$' {
     let len = (String.length s) in
     P.ID (cur_pos state lexbuf ~len, s)
   }
