@@ -1,22 +1,22 @@
 language: cpp
-sudo: required
 
 matrix:
   include:
     - os: linux
-      dist: xenial
     - os: osx
 
 addons:
   apt:
     update: true
     packages:
+      - libgc-dev
       - libsnappy-dev
       - binutils-dev
       - libomp-dev
   homebrew:
     update: true
     packages:
+      - libgc
       - snappy
       - binutils
       - libomp
@@ -51,20 +51,6 @@ install:
   - opam install -y ocamlfind core dune ctypes ctypes-foreign menhir ppx_deriving
   - eval $(opam env)
 
-  # build Boehm GC:
-  - git clone -b release-7_6 https://github.com/ivmai/bdwgc
-  - cd bdwgc
-  - git clone -b release-7_6 https://github.com/ivmai/libatomic_ops
-  - ./autogen.sh
-  - ./configure --enable-threads=posix --enable-cplusplus --enable-thread-local-alloc --enable-large-config LDFLAGS="-static"
-  - make
-  - make check
-  - export PKG_CONFIG_PATH="${TRAVIS_BUILD_DIR}/bdwgc"
-  - cd -
-
-  # compile with clang on Ubuntu:
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then export CC=clang CXX=clang++; fi
-
 before_script:
   - ${CXX} --version
   - export LLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir`
@@ -73,7 +59,7 @@ before_script:
 
 script:
   - mkdir build
-  - (cd build && cmake .. -DSEQ_THREADED=ON)
+  - (cd build && cmake .. -DSEQ_THREADED=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++)
   - cmake --build build
   - build/seqtest 2> /dev/null
   - build/seq test/core/helloworld.seq
