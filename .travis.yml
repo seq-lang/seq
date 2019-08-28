@@ -59,7 +59,7 @@ install:
   - ./configure --enable-threads=posix --enable-cplusplus --enable-thread-local-alloc --enable-large-config LDFLAGS="-static"
   - make
   - make check
-  - export PKG_CONFIG_PATH=`pwd`
+  - export PKG_CONFIG_PATH="${TRAVIS_BUILD_DIR}/bdwgc"
   - cd -
 
   # compile with clang on Ubuntu:
