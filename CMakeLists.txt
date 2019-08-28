@@ -122,7 +122,7 @@ else()
 endif()
 
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
-set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/libseqparser.so")
+set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/seqparser.o")
 
 find_program(OPAM NAMES opam)
 if(NOT OPAM)
@@ -135,8 +135,8 @@ add_custom_target(
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy
 )
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy ${LIB_SEQPARSE}
-                   COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} main.so
-                   COMMAND cp ${DUNE_BUILD_DIR}/default/main.so ${LIB_SEQPARSE}
+                   COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} main.exe.o
+                   COMMAND cp ${DUNE_BUILD_DIR}/default/main.exe.o ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
                    DEPENDS parser/dune
                            parser/main.ml
@@ -151,8 +151,8 @@ set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
 
 
 # Seq command-line tool
-add_executable(seqc runtime/main.cpp)
-target_link_libraries(seqc seq seqparse asmrun)
+add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
+target_link_libraries(seqc seq ffi)
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
@@ -182,6 +182,6 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
                  ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
                  EXCLUDE_FROM_ALL)
 
-add_executable(seqtest test/main.cpp)
+add_executable(seqtest test/main.cpp ${LIB_SEQPARSE})
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
-target_link_libraries(seqtest seq seqparse asmrun gtest_main)
+target_link_libraries(seqtest seq ffi gtest_main)

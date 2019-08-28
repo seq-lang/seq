@@ -6,17 +6,14 @@
    (macos-dev
       (flags (:standard
          -w @a-4-29-40-41-42-44-45-48-58-59-60-40-26-27
-         -strict-sequence
-         -strict-formats
-         -short-paths
-         -keep-locs
          -warn-error -A
-         -cclib -Wl,-install_name,@rpath/libseqparser.so))))
+         ;-cclib -Wl,-install_name,@rpath/libseqparser.so
+         ))))
 
 (executable
    (name main)
    (libraries
       base core ctypes ctypes.foreign ctypes.stubs
       seqaml)
-   (modes shared_object)
+   (modes (native object))
    (preprocess (pps ppx_sexp_conv ppx_deriving.show)))
