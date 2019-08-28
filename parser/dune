@@ -2,13 +2,7 @@
    (dev
       (flags (:standard
          -w @a-4-29-40-41-42-44-45-48-58-59-60-40-26-27
-         -warn-error -A)))
-   (macos-dev
-      (flags (:standard
-         -w @a-4-29-40-41-42-44-45-48-58-59-60-40-26-27
-         -warn-error -A
-         ;-cclib -Wl,-install_name,@rpath/libseqparser.so
-         ))))
+         -warn-error -A))))
 
 (executable
    (name main)

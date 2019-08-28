@@ -115,12 +115,6 @@ message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
 include_directories(${OCAML_STDLIB_PATH})
 link_directories(${OCAML_STDLIB_PATH})
 
-if(APPLE)
-  set(DUNE_PROFILE "macos-dev")
-else()
-  set(DUNE_PROFILE "dev")
-endif()
-
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/seqparser.o")
 
@@ -135,7 +129,7 @@ add_custom_target(
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy
 )
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy ${LIB_SEQPARSE}
-                   COMMAND ${OPAM} exec -- dune build --profile=${DUNE_PROFILE} --build-dir=${DUNE_BUILD_DIR} main.exe.o
+                   COMMAND ${OPAM} exec -- dune build --profile=dev --build-dir=${DUNE_BUILD_DIR} main.exe.o
                    COMMAND cp ${DUNE_BUILD_DIR}/default/main.exe.o ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
                    DEPENDS parser/dune
