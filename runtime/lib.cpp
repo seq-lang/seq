@@ -21,20 +21,6 @@
 #include <gc.h>
 #include <sys/time.h>
 
-#ifdef __GLIBC__
-#include <malloc.h>
-
-static void *my_malloc_hook(size_t size, const void *caller) {
-  return seq_alloc(size);
-}
-
-static void *my_realloc_hook(void *ptr, size_t size, const void *caller) {
-  return seq_realloc(ptr, size);
-}
-
-static void my_free_hook(void *ptr, const void *caller) {}
-#endif
-
 using namespace std;
 
 /*
@@ -50,12 +36,6 @@ SEQ_FUNC void seq_init() {
 #if THREADED
   GC_allow_register_threads();
 
-#ifdef __GLIBC__
-  __malloc_hook = my_malloc_hook;
-  __realloc_hook = my_realloc_hook;
-  __free_hook = my_free_hook;
-#endif
-
 #pragma omp parallel
   {
     GC_stack_base sb;
@@ -69,7 +49,7 @@ SEQ_FUNC void seq_init() {
 }
 
 SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line) {
-  fprintf(stderr, "assertion failed on line %lld (%s)\n", line, file.str);
+  fprintf(stderr, "assertion failed on line %d (%s)\n", (int)line, file.str);
   exit(EXIT_FAILURE);
 }
 
