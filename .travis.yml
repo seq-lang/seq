@@ -47,7 +47,8 @@ install:
   - cd bdwgc
   - git clone -b release-7_6 https://github.com/ivmai/libatomic_ops
   - ./autogen.sh
-  - ./configure CFLAGS="-fPIC" --enable-threads=posix \
+  - |
+    ./configure CFLAGS="-fPIC" --enable-threads=posix \
                                --enable-cplusplus \
                                --enable-thread-local-alloc \
                                --enable-large-config
@@ -70,7 +71,8 @@ before_script:
 
 script:
   - mkdir build
-  - (cd build && cmake .. -DSEQ_THREADED=ON \
+  - |
+    (cd build && cmake .. -DSEQ_THREADED=ON \
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
                           -DCMAKE_C_COMPILER=clang \
                           -DCMAKE_CXX_COMPILER=clang++)
