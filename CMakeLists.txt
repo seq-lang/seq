@@ -155,7 +155,6 @@ add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
 target_link_libraries(seqc seq ffi)
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
-	
 
 # Seq test
 # Download and unpack googletest at configure time
