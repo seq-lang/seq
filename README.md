@@ -1,5 +1,5 @@
 <p align="center">
- <img src="https://raw.githubusercontent.com/seq-lang/seq/master/docs/images/logo.png?token=AASLWCFONKC7XVZRJ3KAABS5NAU4Q" width="200" alt="Seq"/>
+ <img src="docs/images/logo.png?raw=true" width="200" alt="Seq"/>
 </p>
 
 <h1 align="center"> Seq — a language for bioinformatics </h1>
