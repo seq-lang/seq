@@ -43,9 +43,6 @@ before_install:
       cd -
     fi
 
-  # link libffi:
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --force libffi; fi
-
 install:
   # install Boehm GC:
   - git clone -b release-7_6 https://github.com/ivmai/bdwgc
@@ -73,6 +70,8 @@ install:
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
+  # make sure we don't link against older system libffi:
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then export LDFLAGS="-L/usr/local/opt/libffi/lib"; fi
 
 script:
   - mkdir build
