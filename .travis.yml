@@ -12,12 +12,14 @@ addons:
     packages:
       - libsnappy-dev
       - binutils-dev
+      - libffi-dev
       - libomp-dev
   homebrew:
     update: true
     packages:
       - snappy
       - binutils
+      - libffi
       - libomp
       - cmake
 
@@ -40,6 +42,9 @@ before_install:
       cmake --build .
       cd -
     fi
+
+  # link libffi:
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --force libffi; fi
 
 install:
   # install Boehm GC:
