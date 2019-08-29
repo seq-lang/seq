@@ -128,6 +128,12 @@ add_custom_target(
   always_runs ALL
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy
 )
+# OCaml does not look for system libraries; these have to be explicitly passed on
+if(APPLE)
+  set(ENV{DUNE_LIBRARY_PATH} "/usr/local/lib")
+else()
+  set(ENV{DUNE_LIBRARY_PATH} "/usr/lib/x86_64-linux-gnu")
+endif()
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy ${LIB_SEQPARSE}
                    COMMAND ${OPAM} exec -- dune build --profile=dev --build-dir=${DUNE_BUILD_DIR} main.exe.o
                    COMMAND cp ${DUNE_BUILD_DIR}/default/main.exe.o ${LIB_SEQPARSE}
@@ -149,6 +155,7 @@ add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
 target_link_libraries(seqc seq ffi)
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
+	
 
 # Seq test
 # Download and unpack googletest at configure time
