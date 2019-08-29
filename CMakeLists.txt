@@ -130,12 +130,12 @@ add_custom_target(
 )
 # OCaml does not look for system libraries; these have to be explicitly passed on
 if(APPLE)
-  set(ENV{DUNE_LIBRARY_PATH} "/usr/local/lib")
+  set(DUNE_LIBRARY_PATH "/usr/local/lib")
 else()
-  set(ENV{DUNE_LIBRARY_PATH} "/usr/lib/x86_64-linux-gnu")
+  set(DUNE_LIBRARY_PATH "/usr/lib/x86_64-linux-gnu")
 endif()
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy ${LIB_SEQPARSE}
-                   COMMAND ${OPAM} exec -- dune build --profile=dev --build-dir=${DUNE_BUILD_DIR} main.exe.o
+                   COMMAND DUNE_LIBRARY_PATH=${DUNE_LIBRARY_PATH} ${OPAM} exec -- dune build --profile=dev --build-dir=${DUNE_BUILD_DIR} main.exe.o
                    COMMAND cp ${DUNE_BUILD_DIR}/default/main.exe.o ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
                    DEPENDS parser/dune
