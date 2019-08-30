@@ -59,7 +59,7 @@ k-mer Hamming distance
     k1 = K(s'ACGTC')
     k2 = K(s'ACTTA')
     #          ^ ^
-    print k1 - k2  # Hamming distance = 2
+    print abs(k1 - k2)  # Hamming distance = 2
 
 Count bases
 -----------

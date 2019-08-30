@@ -2,8 +2,23 @@ type K = Kmer[5]
 
 k1 = K(s'ACGTA')
 k2 = K(s'ATGTT')
-print k1 - k2  # EXPECT: 2
-print k2 - k1  # EXPECT: 2
+print abs(k1 - k2)  # EXPECT: 2
+print abs(k2 - k1)  # EXPECT: 2
+
+if k1 > k2:
+    print k2 - k1   # EXPECT: -2
+    print k1 - k2   # EXPECT: 2
+else:
+    print k1 - k2
+    print k2 - k1
+
+k1, k2 = k2, k1
+if k1 > k2:
+    print k2 - k1   # EXPECT: -2
+    print k1 - k2   # EXPECT: 2
+else:
+    print k1 - k2
+    print k2 - k1
 
 k1 = K(s'ACGTA')
 k2 = K(s'ACGTA')

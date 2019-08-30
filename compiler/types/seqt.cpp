@@ -764,7 +764,10 @@ void types::KMer::initOps() {
              b.GetInsertBlock()->getModule(), Intrinsic::ctpop,
              {getLLVMType(context)});
          Value *result = b.CreateCall(popcnt, diff);
-         return b.CreateZExtOrTrunc(result, seqIntLLVM(context));
+         result = b.CreateZExtOrTrunc(result, seqIntLLVM(context));
+         Value *resultNeg = b.CreateNeg(result);
+         Value *order = b.CreateICmpUGE(self, args[0]);
+         return b.CreateSelect(order, result, resultNeg);
        },
        false},
 
