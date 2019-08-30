@@ -9,19 +9,19 @@ class Exc2:
         print self.msg
 
 class A:
-	msg: str
+    msg: str
 
 class B:
-	msg: str
+    msg: str
 
 class C:
-	msg: str
+    msg: str
 
 class D:
-	msg: str
+    msg: str
 
 class E:
-	msg: str
+    msg: str
 
 def foo1(x):
     if x:
