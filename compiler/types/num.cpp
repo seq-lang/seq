@@ -481,6 +481,14 @@ void types::IntNType::initOps() {
        },
        false},
 
+      {"__init__",
+       {IntNType::get(len, !sign)},
+       this,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return args[0];
+       },
+       false},
+
       {"__copy__",
        {},
        this,
