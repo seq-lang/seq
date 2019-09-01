@@ -75,6 +75,11 @@ before_script:
 
 script:
   - mkdir build
+  # prevent OCaml from statically linking libpthread:
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      ln -s /usr/lib/x86_64-linux-gnu/libpthread_nonshared.a build/libpthread.a
+    fi
   - |
     (cd build && cmake .. -DSEQ_THREADED=ON \
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
