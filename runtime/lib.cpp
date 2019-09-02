@@ -299,6 +299,11 @@ struct seq_cigar_t {
   seq_int_t len;
 };
 
+struct seq_sam_hdr_target_t {
+  seq_str_t name;
+  seq_int_t len;
+};
+
 SEQ_FUNC seq_int_t seq_hts_sam_itr_next(htsFile *htsfp, hts_itr_t *itr,
                                         bam1_t *r) {
   return sam_itr_next(htsfp, itr, r);
@@ -354,4 +359,18 @@ SEQ_FUNC uint8_t *seq_hts_aux_get(seq_str_t aux, seq_str_t tag) {
   aln.l_data = aln.m_data = aux.len;
   char tag_arr[] = {tag.str[0], tag.str[1]};
   return bam_aux_get(&aln, tag_arr);
+}
+
+SEQ_FUNC seq_arr_t<seq_sam_hdr_target_t> seq_hts_get_targets(bam_hdr_t *hdr) {
+  const int len = hdr->n_targets;
+  auto *arr =
+      (seq_sam_hdr_target_t *)seq_alloc(len * sizeof(seq_sam_hdr_target_t *));
+  for (int i = 0; i < len; i++) {
+    const int name_len = strlen(hdr->target_name[i]);
+    auto *buf = (char *)seq_alloc_atomic(name_len);
+    memcpy(buf, hdr->target_name[i], name_len);
+    const int target_len = hdr->target_len[i];
+    arr[i] = {{name_len, buf}, target_len};
+  }
+  return {len, arr};
 }

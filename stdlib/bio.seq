@@ -115,8 +115,15 @@ type Seqs(file: File):
             yield copy(seq(a.ptr, a.len))
         self.file.close()
 
-type FASTQRecord(name: str, read: seq, qual: str):
-    pass
+type FASTQRecord(_name: str, _read: seq, _qual: str):
+    def name(self: FASTQRecord):
+        return self._name
+
+    def read(self: FASTQRecord):
+        return self._read
+
+    def qual(self: FASTQRecord):
+        return self._qual
 
 type FASTQ(file: File):
     def __init__(self: FASTQ, path: str) -> FASTQ:
@@ -149,8 +156,12 @@ type FASTQ(file: File):
             line += 1
         self.file.close()
 
-type FASTARecord(name: str, seq: seq):
-    pass
+type FASTARecord(_name: str, _seq: seq):
+    def name(self: FASTARecord):
+        return self._name
+
+    def seq(self: FASTARecord):
+        return self._seq
 
 type FASTA(file: File, fai: list[int], names: list[str]):
     def __init__(self: FASTA, path: str) -> FASTA:
@@ -172,7 +183,7 @@ type FASTA(file: File, fai: list[int], names: list[str]):
 
     def __iter__(self: FASTA):
         for rec in self.all():
-            yield rec.seq
+            yield rec.seq()
 
     def all(self: FASTA) -> FASTARecord:
         idx = 0
@@ -534,11 +545,59 @@ type SAMRecord(name: str, read: seq, qual: str, cigar: CIGAR, core: SAMCore, _au
         core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
         return (name, read, qual, cigar, core, aux)
 
-    def rev(self: SAMRecord):
+    def tid(self: SAMRecord):
+        return self.core.tid()
+
+    def pos(self: SAMRecord):
+        return self.core.pos()
+
+    def mate_tid(self: SAMRecord):
+        return self.core.mtid()
+
+    def mate_pos(self: SAMRecord):
+        return self.core.mpos()
+
+    def mapq(self: SAMRecord):
+        return self.core.mapq()
+
+    def insert_size(self: SAMRecord):
+        return self.core.isize()
+
+    def paired(self: SAMRecord):
         return self.core.flag() & BAM_FREVERSE != 0
 
-    def mate_rev(self: SAMRecord):
+    def proper_pair(self: SAMRecord):
+        return self.core.flag() & BAM_FPROPER_PAIR != 0
+
+    def unmapped(self: SAMRecord):
+        return self.core.flag() & BAM_FUNMAP != 0
+
+    def mate_unmapped(self: SAMRecord):
+        return self.core.flag() & BAM_FMUNMAP != 0
+
+    def reversed(self: SAMRecord):
+        return self.core.flag() & BAM_FREVERSE != 0
+
+    def mate_reversed(self: SAMRecord):
         return self.core.flag() & BAM_FMREVERSE != 0
+
+    def read1(self: SAMRecord):
+        return self.core.flag() & BAM_FREAD1 != 0
+
+    def read2(self: SAMRecord):
+        return self.core.flag() & BAM_FREAD2 != 0
+
+    def secondary(self: SAMRecord):
+        return self.core.flag() & BAM_FSECONDARY != 0
+
+    def qc_fail(self: SAMRecord):
+        return self.core.flag() & BAM_FQCFAIL != 0
+
+    def duplicate(self: SAMRecord):
+        return self.core.flag() & BAM_FDUP != 0
+
+    def supplementary(self: SAMRecord):
+        return self.core.flag() & BAM_FSUPPLEMENTARY != 0
 
     def aux(self: SAMRecord, tag: str):
         cdef seq_hts_aux_get(str, str) -> ptr[u8]
@@ -546,12 +605,20 @@ type SAMRecord(name: str, read: seq, qual: str, cigar: CIGAR, core: SAMCore, _au
             raise ArgumentError("SAM aux tags are two characters (got: " + tag + ")")
         return SAMAux(seq_hts_aux_get(self._aux, tag))
 
+type SAMHeaderTarget(_name: str, _len: int):
+    def __str__(self: SAMHeaderTarget):
+        return self._name
+
+    def __len__(self: SAMHeaderTarget):
+        return self._len
+
 class SAM:
     file: ptr[byte]
     idx: ptr[byte]
     hdr: ptr[byte]
     itr: ptr[byte]
     aln: ptr[byte]
+    targets: list[SAMHeaderTarget]
 
     def _init(self: SAM, path: str, region: str):
         cdef hts_open(ptr[byte], ptr[byte]) -> ptr[byte]
@@ -560,6 +627,7 @@ class SAM:
         cdef sam_itr_querys(ptr[byte], ptr[byte], ptr[byte]) -> ptr[byte]
         cdef bam_init1() -> ptr[byte]
         cdef hts_close(ptr[byte])
+        cdef seq_hts_get_targets(ptr[byte]) -> array[SAMHeaderTarget]
 
         path_c_str, region_c_str = path.c_str(), region.c_str()
 
@@ -580,11 +648,15 @@ class SAM:
             raise IOError("unable to seek to region " + region + " in " + path)
 
         aln = bam_init1()
+        targets_array = seq_hts_get_targets(hdr)
+        targets = list[SAMHeaderTarget](targets_array, len(targets_array))
+
         self.file = file
         self.idx = idx
         self.hdr = hdr
         self.itr = itr
         self.aln = aln
+        self.targets = targets
 
     def __init__(self: SAM, path: str):
         self._init(path, ".")
