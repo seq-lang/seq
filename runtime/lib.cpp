@@ -311,7 +311,7 @@ SEQ_FUNC seq_int_t seq_hts_sam_itr_next(htsFile *htsfp, hts_itr_t *itr,
 
 SEQ_FUNC seq_str_t seq_hts_get_name(bam1_t *aln) {
   char *name = bam_get_qname(aln);
-  const int len = aln->core.l_qname;
+  const int len = aln->core.l_qname - aln->core.l_extranul - 1;
   auto *buf = (char *)seq_alloc_atomic(len);
   memcpy(buf, name, len);
   return {len, buf};
@@ -364,7 +364,7 @@ SEQ_FUNC uint8_t *seq_hts_aux_get(seq_str_t aux, seq_str_t tag) {
 SEQ_FUNC seq_arr_t<seq_sam_hdr_target_t> seq_hts_get_targets(bam_hdr_t *hdr) {
   const int len = hdr->n_targets;
   auto *arr =
-      (seq_sam_hdr_target_t *)seq_alloc(len * sizeof(seq_sam_hdr_target_t *));
+      (seq_sam_hdr_target_t *)seq_alloc(len * sizeof(seq_sam_hdr_target_t));
   for (int i = 0; i < len; i++) {
     const int name_len = strlen(hdr->target_name[i]);
     auto *buf = (char *)seq_alloc_atomic(name_len);

@@ -528,7 +528,7 @@ type SAMAux(s: ptr[u8]):
         cdef bam_auxB2f(ptr[u8], idx: u32) -> float
         return bam_auxB2f(self.s, u32(idx))
 
-type SAMRecord(name: str, read: seq, qual: str, cigar: CIGAR, core: SAMCore, _aux: str):
+type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore, _aux: str):
     def __init__(self: SAMRecord, aln: ptr[byte]) -> SAMRecord:
         cdef seq_hts_get_name(ptr[byte]) -> str
         cdef seq_hts_get_seq(ptr[byte]) -> seq
@@ -545,59 +545,71 @@ type SAMRecord(name: str, read: seq, qual: str, cigar: CIGAR, core: SAMCore, _au
         core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
         return (name, read, qual, cigar, core, aux)
 
+    def name(self: SAMRecord):
+        return self._name
+
+    def read(self: SAMRecord):
+        return self._read
+
+    def qual(self: SAMRecord):
+        return self._qual
+
+    def cigar(self: SAMRecord):
+        return self._cigar
+
     def tid(self: SAMRecord):
-        return self.core.tid()
+        return self._core.tid()
 
     def pos(self: SAMRecord):
-        return self.core.pos()
+        return self._core.pos()
 
     def mate_tid(self: SAMRecord):
-        return self.core.mtid()
+        return self._core.mtid()
 
     def mate_pos(self: SAMRecord):
-        return self.core.mpos()
+        return self._core.mpos()
 
     def mapq(self: SAMRecord):
-        return self.core.mapq()
+        return self._core.mapq()
 
     def insert_size(self: SAMRecord):
-        return self.core.isize()
+        return self._core.isize()
 
     def paired(self: SAMRecord):
-        return self.core.flag() & BAM_FREVERSE != 0
+        return self._core.flag() & BAM_FREVERSE != 0
 
     def proper_pair(self: SAMRecord):
-        return self.core.flag() & BAM_FPROPER_PAIR != 0
+        return self._core.flag() & BAM_FPROPER_PAIR != 0
 
     def unmapped(self: SAMRecord):
-        return self.core.flag() & BAM_FUNMAP != 0
+        return self._core.flag() & BAM_FUNMAP != 0
 
     def mate_unmapped(self: SAMRecord):
-        return self.core.flag() & BAM_FMUNMAP != 0
+        return self._core.flag() & BAM_FMUNMAP != 0
 
     def reversed(self: SAMRecord):
-        return self.core.flag() & BAM_FREVERSE != 0
+        return self._core.flag() & BAM_FREVERSE != 0
 
     def mate_reversed(self: SAMRecord):
-        return self.core.flag() & BAM_FMREVERSE != 0
+        return self._core.flag() & BAM_FMREVERSE != 0
 
     def read1(self: SAMRecord):
-        return self.core.flag() & BAM_FREAD1 != 0
+        return self._core.flag() & BAM_FREAD1 != 0
 
     def read2(self: SAMRecord):
-        return self.core.flag() & BAM_FREAD2 != 0
+        return self._core.flag() & BAM_FREAD2 != 0
 
     def secondary(self: SAMRecord):
-        return self.core.flag() & BAM_FSECONDARY != 0
+        return self._core.flag() & BAM_FSECONDARY != 0
 
     def qc_fail(self: SAMRecord):
-        return self.core.flag() & BAM_FQCFAIL != 0
+        return self._core.flag() & BAM_FQCFAIL != 0
 
     def duplicate(self: SAMRecord):
-        return self.core.flag() & BAM_FDUP != 0
+        return self._core.flag() & BAM_FDUP != 0
 
     def supplementary(self: SAMRecord):
-        return self.core.flag() & BAM_FSUPPLEMENTARY != 0
+        return self._core.flag() & BAM_FSUPPLEMENTARY != 0
 
     def aux(self: SAMRecord, tag: str):
         cdef seq_hts_aux_get(str, str) -> ptr[u8]
@@ -612,7 +624,7 @@ type SAMHeaderTarget(_name: str, _len: int):
     def __len__(self: SAMHeaderTarget):
         return self._len
 
-class SAM:
+class BAM:
     file: ptr[byte]
     idx: ptr[byte]
     hdr: ptr[byte]
@@ -620,7 +632,7 @@ class SAM:
     aln: ptr[byte]
     targets: list[SAMHeaderTarget]
 
-    def _init(self: SAM, path: str, region: str):
+    def _init(self: BAM, path: str, region: str):
         cdef hts_open(ptr[byte], ptr[byte]) -> ptr[byte]
         cdef sam_index_load(ptr[byte], ptr[byte]) -> ptr[byte]
         cdef sam_hdr_read(ptr[byte]) -> ptr[byte]
@@ -631,14 +643,14 @@ class SAM:
 
         path_c_str, region_c_str = path.c_str(), region.c_str()
 
-        file = hts_open(path_c_str, "r".ptr)
+        file = hts_open(path_c_str, "rb".c_str())
         if not file:
             raise IOError("file " + path + " could not be opened")
 
         idx = sam_index_load(file, path_c_str)
         if not idx:
             hts_close(file)
-            raise IOError("unable to open SAM/BAM index for " + path)
+            raise IOError("unable to open BAM/CRAM index for " + path)
 
         hdr = sam_hdr_read(file)
         itr = sam_itr_querys(idx, hdr, region_c_str)
@@ -658,13 +670,13 @@ class SAM:
         self.aln = aln
         self.targets = targets
 
-    def __init__(self: SAM, path: str):
+    def __init__(self: BAM, path: str):
         self._init(path, ".")
 
-    def __init__(self: SAM, path: str, region: str):
+    def __init__(self: BAM, path: str, region: str):
         self._init(path, region)
 
-    def _iter(self: SAM):
+    def _iter(self: BAM):
         cdef seq_hts_sam_itr_next(ptr[byte], ptr[byte], ptr[byte]) -> int
         cdef hts_idx_destroy(ptr[byte])
         cdef bam_hdr_destroy(ptr[byte])
@@ -675,28 +687,18 @@ class SAM:
         while seq_hts_sam_itr_next(self.file, self.itr, self.aln) >= 0:
             yield self.aln
 
-        hts_itr_destroy(self.itr)
-        hts_idx_destroy(self.idx)
-        bam_destroy1(self.aln)
-        bam_hdr_destroy(self.hdr)
-        hts_close(self.file)
+        self.close()
 
-        self.file = ptr[byte]()
-        self.idx = ptr[byte]()
-        self.hdr = ptr[byte]()
-        self.itr = ptr[byte]()
-        self.aln = ptr[byte]()
-
-    def __iter__(self: SAM):
+    def __iter__(self: BAM):
         cdef seq_hts_get_seq(ptr[byte]) -> seq
         for aln in self._iter():
             yield seq_hts_get_seq(aln)
 
-    def all(self: SAM):
+    def all(self: BAM):
         for aln in self._iter():
             yield SAMRecord(aln)
 
-    def __del__(self: SAM):
+    def close(self: BAM):
         cdef hts_idx_destroy(ptr[byte])
         cdef bam_hdr_destroy(ptr[byte])
         cdef hts_itr_destroy(ptr[byte])
@@ -718,10 +720,87 @@ class SAM:
         if self.file:
             hts_close(self.file)
 
-type BAM = SAM
+class SAM:
+    file: ptr[byte]
+    hdr: ptr[byte]
+    aln: ptr[byte]
+    targets: list[SAMHeaderTarget]
+
+    def __init__(self: SAM, path: str):
+        cdef hts_open(ptr[byte], ptr[byte]) -> ptr[byte]
+        cdef sam_hdr_read(ptr[byte]) -> ptr[byte]
+        cdef sam_itr_querys(ptr[byte], ptr[byte], ptr[byte]) -> ptr[byte]
+        cdef bam_init1() -> ptr[byte]
+        cdef hts_close(ptr[byte])
+        cdef seq_hts_get_targets(ptr[byte]) -> array[SAMHeaderTarget]
+
+        path_c_str = path.c_str()
+
+        file = hts_open(path_c_str, "r".c_str())
+        if not file:
+            raise IOError("file " + path + " could not be opened")
+
+        hdr = sam_hdr_read(file)
+        aln = bam_init1()
+        targets_array = seq_hts_get_targets(hdr)
+        targets = list[SAMHeaderTarget](targets_array, len(targets_array))
+
+        self.file = file
+        self.hdr = hdr
+        self.aln = aln
+        self.targets = targets
+
+    def _iter(self: SAM):
+        cdef sam_read1(ptr[byte], ptr[byte], ptr[byte]) -> i32
+        cdef bam_hdr_destroy(ptr[byte])
+        cdef bam_destroy1(ptr[byte])
+        cdef hts_close(ptr[byte])
+
+        while True:
+            status = int(sam_read1(self.file, self.hdr, self.aln))
+            if status >= 0:
+                yield self.aln
+            elif status == -1:
+                break
+            else:
+                raise IOError("SAM read failed with status: " + str(status))
+
+        self.close()
+
+    def __iter__(self: SAM):
+        cdef seq_hts_get_seq(ptr[byte]) -> seq
+        for aln in self._iter():
+            yield seq_hts_get_seq(aln)
+
+    def all(self: SAM):
+        for aln in self._iter():
+            yield SAMRecord(aln)
+
+    def close(self: SAM):
+        cdef bam_hdr_destroy(ptr[byte])
+        cdef bam_destroy1(ptr[byte])
+        cdef hts_close(ptr[byte])
+
+        if self.aln:
+            bam_destroy1(self.aln)
+
+        if self.hdr:
+            bam_hdr_destroy(self.hdr)
+
+        if self.file:
+            hts_close(self.file)
+
+        self.file = ptr[byte]()
+        self.hdr = ptr[byte]()
+        self.aln = ptr[byte]()
+
+type CRAM = BAM
 
 def sam(path: str):
     return iter(SAM(path))
 
 def bam(path: str):
     return iter(BAM(path))
+
+def cram(path: str):
+    return iter(CRAM(path))

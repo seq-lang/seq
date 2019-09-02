@@ -17,3 +17,8 @@
 *.woff binary
 *.pyc binary
 *.pdf binary
+
+*.bam binary
+*.bam.bai binary
+*.cram binary
+*.cram.crai binary

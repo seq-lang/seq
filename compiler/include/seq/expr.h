@@ -143,7 +143,6 @@ public:
 class StrExpr : public Expr {
 private:
   std::string s;
-  llvm::GlobalVariable *strVar;
 
 public:
   explicit StrExpr(std::string s);
