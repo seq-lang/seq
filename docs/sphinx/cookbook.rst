@@ -160,3 +160,34 @@ Parallel FASTQ processing
     # Sometimes batching reads into blocks can improve performance,
     # especially if each is quick to process.
     fastq('reads.fq') |> block(1000) ||> process
+
+Reading SAM/BAM/CRAM
+--------------------
+
+.. code-block:: seq
+
+    # iterate over sequences:
+    for s in SAM('alignments.sam'):
+        print s
+
+    for s in BAM('alignments.bam'):
+        print s
+
+    for s in CRAM('alignments.cram'):
+        print s
+
+    # iterate over everything:
+    for r in SAM('alignments.sam').all():
+        print r.name()
+        print r.read()
+        print r.pos()
+        print r.mapq()
+        print r.cigar()
+        print r.reversed()
+        # etc.
+
+    for r in BAM('alignments.bam').all():
+        # ...
+
+    for r in CRAM('alignments.cram').all():
+        # ...
