@@ -1,5 +1,6 @@
 #include <array>
 #include <cassert>
+#include <cerrno>
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
@@ -19,6 +20,7 @@
 #include "ksw2/ksw2.h"
 #include "lib.h"
 #include <gc.h>
+#include <htslib/sam.h>
 #include <sys/time.h>
 
 using namespace std;
@@ -144,6 +146,16 @@ SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n) {
  * General I/O
  */
 
+SEQ_FUNC seq_str_t seq_check_errno() {
+  if (errno) {
+    string msg = strerror(errno);
+    auto *buf = (char *)seq_alloc_atomic(msg.size());
+    memcpy(buf, msg.data(), msg.size());
+    return {(seq_int_t)msg.size(), buf};
+  }
+  return {0, nullptr};
+}
+
 SEQ_FUNC void seq_print(seq_str_t str) {
   fwrite(str.str, 1, (size_t)str.len, stdout);
 }
@@ -167,6 +179,7 @@ SEQ_FUNC int seq_time() {
  * Adapted from ksw2
  * seq_nt4_table is consistent with k-mer encoding
  */
+
 unsigned char seq_nt4_table[256] = {
     0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -275,4 +288,70 @@ SEQ_FUNC void seq_align_global(seq_t query, seq_t target, int8_t *mat,
   decode(query);
   decode(target);
   *out = {{cigar, n_cigar}, score};
+}
+
+/*
+ * htslib
+ */
+
+struct seq_cigar_t {
+  uint32_t *value;
+  seq_int_t len;
+};
+
+SEQ_FUNC seq_int_t seq_hts_sam_itr_next(htsFile *htsfp, hts_itr_t *itr,
+                                        bam1_t *r) {
+  return sam_itr_next(htsfp, itr, r);
+}
+
+SEQ_FUNC seq_str_t seq_hts_get_name(bam1_t *aln) {
+  char *name = bam_get_qname(aln);
+  const int len = aln->core.l_qname;
+  auto *buf = (char *)seq_alloc_atomic(len);
+  memcpy(buf, name, len);
+  return {len, buf};
+}
+
+SEQ_FUNC seq_t seq_hts_get_seq(bam1_t *aln) {
+  uint8_t *seqi = bam_get_seq(aln);
+  const int len = aln->core.l_qseq;
+  auto *buf = (char *)seq_alloc_atomic(len);
+  for (int i = 0; i < len; i++) {
+    buf[i] = seq_nt16_str[bam_seqi(seqi, i)];
+  }
+  return {len, buf};
+}
+
+SEQ_FUNC seq_str_t seq_hts_get_qual(bam1_t *aln) {
+  uint8_t *quali = bam_get_qual(aln);
+  const int len = aln->core.l_qseq;
+  auto *buf = (char *)seq_alloc_atomic(len);
+  for (int i = 0; i < len; i++) {
+    buf[i] = 33 + quali[i];
+  }
+  return {len, buf};
+}
+
+SEQ_FUNC seq_cigar_t seq_hts_get_cigar(bam1_t *aln) {
+  uint32_t *cigar = bam_get_cigar(aln);
+  const int len = aln->core.n_cigar;
+  auto *buf = (uint32_t *)seq_alloc_atomic(len * sizeof(uint32_t));
+  memcpy(buf, cigar, len * sizeof(uint32_t));
+  return {buf, len};
+}
+
+SEQ_FUNC seq_str_t seq_hts_get_aux(bam1_t *aln) {
+  auto *aux = (char *)bam_get_aux(aln);
+  const int len = bam_get_l_aux(aln);
+  auto *buf = (char *)seq_alloc_atomic(len);
+  memcpy(buf, aux, len);
+  return {len, buf};
+}
+
+SEQ_FUNC uint8_t *seq_hts_aux_get(seq_str_t aux, seq_str_t tag) {
+  bam1_t aln = {};
+  aln.data = (uint8_t *)aux.str;
+  aln.l_data = aln.m_data = aux.len;
+  char tag_arr[] = {tag.str[0], tag.str[1]};
+  return bam_aux_get(&aln, tag_arr);
 }

@@ -25,7 +25,7 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/ksw2/ksw2_extz2_sse.cpp
                          runtime/ksw2/ksw2_gg2_sse.cpp
                          runtime/pybridge.cpp)
-target_link_libraries(seqrt PUBLIC ${GC_LINK_LIBRARIES})
+target_link_libraries(seqrt PUBLIC ${GC_LINK_LIBRARIES} hts)
 target_include_directories(seqrt PRIVATE ${GC_INCLUDE_DIRS})
 target_compile_options(seqrt PRIVATE ${GC_CFLAGS_OTHER} -O3)
 
