@@ -119,8 +119,8 @@ Reading FASTA/FASTQ
 
     # iterate over everything:
     for r in FASTA('genome.fa').all():
-        print r.name
-        print r.seq
+        print r.name()
+        print r.seq()
 
     # iterate over sequences:
     for s in FASTQ('reads.fq'):
@@ -128,9 +128,9 @@ Reading FASTA/FASTQ
 
     # iterate over everything:
     for r in FASTQ('reads.fq').all():
-        print r.name
-        print r.read
-        print r.qual
+        print r.name()
+        print r.read()
+        print r.qual()
 
 Reading paired-end FASTQ
 ------------------------
@@ -143,9 +143,9 @@ Reading paired-end FASTQ
 
     # iterate over everything:
     for r1, r2 in zip(FASTQ('reads_1.fq').all(), FASTQ('reads_2.fq').all()):
-        print r1.name, r2.name
-        print r1.read, r2.read
-        print r1.qual, r2.qual
+        print r1.name(), r2.name()
+        print r1.read(), r2.read()
+        print r1.qual(), r2.qual()
 
 Parallel FASTQ processing
 -------------------------
@@ -160,3 +160,34 @@ Parallel FASTQ processing
     # Sometimes batching reads into blocks can improve performance,
     # especially if each is quick to process.
     fastq('reads.fq') |> block(1000) ||> process
+
+Reading SAM/BAM/CRAM
+--------------------
+
+.. code-block:: seq
+
+    # iterate over sequences:
+    for s in SAM('alignments.sam'):
+        print s
+
+    for s in BAM('alignments.bam'):
+        print s
+
+    for s in CRAM('alignments.cram'):
+        print s
+
+    # iterate over everything:
+    for r in SAM('alignments.sam').all():
+        print r.name()
+        print r.read()
+        print r.pos()
+        print r.mapq()
+        print r.cigar()
+        print r.reversed()
+        # etc.
+
+    for r in BAM('alignments.bam').all():
+        # ...
+
+    for r in CRAM('alignments.cram').all():
+        # ...

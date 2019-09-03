@@ -115,8 +115,15 @@ type Seqs(file: File):
             yield copy(seq(a.ptr, a.len))
         self.file.close()
 
-type FASTQRecord(name: str, read: seq, qual: str):
-    pass
+type FASTQRecord(_name: str, _read: seq, _qual: str):
+    def name(self: FASTQRecord):
+        return self._name
+
+    def read(self: FASTQRecord):
+        return self._read
+
+    def qual(self: FASTQRecord):
+        return self._qual
 
 type FASTQ(file: File):
     def __init__(self: FASTQ, path: str) -> FASTQ:
@@ -149,8 +156,12 @@ type FASTQ(file: File):
             line += 1
         self.file.close()
 
-type FASTARecord(name: str, seq: seq):
-    pass
+type FASTARecord(_name: str, _seq: seq):
+    def name(self: FASTARecord):
+        return self._name
+
+    def seq(self: FASTARecord):
+        return self._seq
 
 type FASTA(file: File, fai: list[int], names: list[str]):
     def __init__(self: FASTA, path: str) -> FASTA:
@@ -172,7 +183,7 @@ type FASTA(file: File, fai: list[int], names: list[str]):
 
     def __iter__(self: FASTA):
         for rec in self.all():
-            yield rec.seq
+            yield rec.seq()
 
     def all(self: FASTA) -> FASTARecord:
         idx = 0
@@ -323,18 +334,18 @@ def _validate_match(m: int):
     if m < 0 or m >= 128:
         raise ArgumentError("match/mismatch penalty for alignment must be in range [0, 127]")
 
-type AlignConfig(mat: ptr[Int[8]], gap1: tuple[int,int], gap2: tuple[int,int], bandwidth: int, zdrop: int, flags: int):
+type AlignConfig(mat: ptr[i8], gap1: tuple[int,int], gap2: tuple[int,int], bandwidth: int, zdrop: int, flags: int):
     def _gen_mat(a: int, b: int):
         _validate_match(a)
         _validate_match(b)
         m = 5
-        mat = ptr[Int[8]](m * m)
+        mat = ptr[i8](m * m)
         for i in range(m - 1):
             for j in range(m - 1):
-                mat[i*m + j] = Int[8](a if i == j else -b)
-            mat[i*m + m-1] = Int[8](0)
+                mat[i*m + j] = i8(a if i == j else -b)
+            mat[i*m + m-1] = i8(0)
         for j in range(m):
-            mat[(m-1)*m + j] = Int[8](0)
+            mat[(m-1)*m + j] = i8(0)
         return mat
 
     def __init__(self: AlignConfig, match_score: int, mismatch_score: int) -> AlignConfig:
@@ -370,17 +381,25 @@ type AlignConfig(mat: ptr[Int[8]], gap1: tuple[int,int], gap2: tuple[int,int], b
         mat, gap1, gap2, bandwidth, zdrop, flags = self
         return (mat, gap1, gap2, bandwidth, zdrop, f)
 
-type CIGAR(value: ptr[UInt[32]], len: int):
+type CIGAR(value: ptr[u32], len: int):
     def __init__(self: CIGAR) -> CIGAR:
-        return (ptr[UInt[32]](), 0)
+        return (ptr[u32](), 0)
 
     def __len__(self: CIGAR):
         return self.len
 
+    def qlen(self: CIGAR):
+        cdef bam_cigar2qlen(int, ptr[u32]) -> int
+        return bam_cigar2qlen(self.len, self.value)
+
+    def rlen(self: CIGAR):
+        cdef bam_cigar2rlen(int, ptr[u32]) -> int
+        return bam_cigar2rlen(self.len, self.value)
+
     def __getitem__(self: CIGAR, idx: int):
         assert idx < len(self)
         v = self.value[idx]
-        return (int(v) >> 4, "MIDNSHP=X"[int(v) & 0xf])
+        return (int(v) >> 4, "MIDNSHP=XB"[int(v) & 0xf])
 
     def __iter__(self: CIGAR):
         for i in range(len(self)):
@@ -397,31 +416,31 @@ type Alignment(cigar: CIGAR, score: int):
 
 extend seq:
     def align(self: seq, other: seq, config: AlignConfig):
-        cdef seq_align(seq, seq, ptr[Int[8]], Int[8], Int[8], int, int, int, ptr[Alignment])
+        cdef seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
         mat, gap1, gap2, bandwidth, zdrop, flags = config
         out = Alignment()
-        seq_align(self, other, mat, Int[8](gap1[0]), Int[8](gap1[1]), bandwidth, zdrop, flags, __ptr__(out))
+        seq_align(self, other, mat, i8(gap1[0]), i8(gap1[1]), bandwidth, zdrop, flags, __ptr__(out))
         return out
 
     def align_dual(self: seq, other: seq, config: AlignConfig):
-        cdef seq_align_dual(seq, seq, ptr[Int[8]], Int[8], Int[8], Int[8], Int[8], int, int, int, ptr[Alignment])
+        cdef seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
         mat, gap1, gap2, bandwidth, zdrop, flags = config
         out = Alignment()
-        seq_align_dual(self, other, mat, Int[8](gap1[0]), Int[8](gap1[1]), Int[8](gap2[0]), Int[8](gap2[1]), bandwidth, zdrop, flags, __ptr__(out))
+        seq_align_dual(self, other, mat, i8(gap1[0]), i8(gap1[1]), i8(gap2[0]), i8(gap2[1]), bandwidth, zdrop, flags, __ptr__(out))
         return out
 
     def align_splice(self: seq, other: seq, config: AlignConfig):
-        cdef seq_align_splice(seq, seq, ptr[Int[8]], Int[8], Int[8], Int[8], Int[8], int, int, ptr[Alignment])
+        cdef seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
         mat, gap1, gap2, bandwidth, zdrop, flags = config
         out = Alignment()
-        seq_align_splice(self, other, mat, Int[8](gap1[0]), Int[8](gap1[1]), Int[8](gap2[0]), Int[8](gap2[1]), zdrop, flags, __ptr__(out))
+        seq_align_splice(self, other, mat, i8(gap1[0]), i8(gap1[1]), i8(gap2[0]), i8(gap2[1]), zdrop, flags, __ptr__(out))
         return out
 
     def align_global(self: seq, other: seq, config: AlignConfig):
-        cdef seq_align_global(seq, seq, ptr[Int[8]], Int[8], Int[8], int, ptr[Alignment])
+        cdef seq_align_global(seq, seq, ptr[i8], i8, i8, int, ptr[Alignment])
         mat, gap1, gap2, bandwidth, zdrop, flags = config
         out = Alignment()
-        seq_align_global(self, other, mat, Int[8](gap1[0]), Int[8](gap1[1]), bandwidth, __ptr__(out))
+        seq_align_global(self, other, mat, i8(gap1[0]), i8(gap1[1]), bandwidth, __ptr__(out))
         return out
 
     def __matmul__(self: seq, other: seq):
@@ -429,3 +448,359 @@ extend seq:
         out = Alignment()
         seq_align_default(self, other, __ptr__(out))
         return out
+
+# htslib integration
+BAM_FPAIRED        =    1
+BAM_FPROPER_PAIR   =    2
+BAM_FUNMAP         =    4
+BAM_FMUNMAP        =    8
+BAM_FREVERSE       =   16
+BAM_FMREVERSE      =   32
+BAM_FREAD1         =   64
+BAM_FREAD2         =  128
+BAM_FSECONDARY     =  256
+BAM_FQCFAIL        =  512
+BAM_FDUP           = 1024
+BAM_FSUPPLEMENTARY = 2048
+
+# This type must be consistent with htslib:
+type _bam_core_t(tid: i32,
+                 pos: i32,
+                 bin: u16,
+                 qual: u8,
+                 l_extranul: u8,
+                 flag: u16,
+                 l_qname: u16,
+                 n_cigar: u32,
+                 l_qseq: i32,
+                 mtid: i32,
+                 mpos: i32,
+                 isize: i32):
+    pass
+
+type SAMCore(_tid: i32, _pos: i32, _mapq: u8, _flag: u16, _mtid: i32, _mpos: i32, _isize: i32):
+    def tid(self: SAMCore):
+        return int(self._tid)
+
+    def pos(self: SAMCore):
+        return int(self._pos)
+
+    def mapq(self: SAMCore):
+        return int(self._mapq)
+
+    def flag(self: SAMCore):
+        return int(self._flag)
+
+    def mtid(self: SAMCore):
+        return int(self._mtid)
+
+    def mpos(self: SAMCore):
+        return int(self._mtid)
+
+    def isize(self: SAMCore):
+        return int(self._isize)
+
+type SAMAux(s: ptr[u8]):
+    def __bool__(self: SAMAux):
+        return bool(self.s)
+
+    def i(self: SAMAux):
+        cdef bam_aux2i(ptr[u8]) -> int
+        return bam_aux2i(self.s)
+
+    def f(self: SAMAux):
+        cdef bam_aux2f(ptr[u8]) -> float
+        return bam_aux2f(self.s)
+
+    def A(self: SAMAux):
+        cdef bam_aux2A(ptr[u8]) -> byte
+        return bam_aux2A(self.s)
+
+    def B_len(self: SAMAux):
+        cdef bam_auxB_len(ptr[u8]) -> u32
+        return int(bam_auxB_len(self.s))
+
+    def B2i(self: SAMAux, idx: int):
+        cdef bam_auxB2i(ptr[u8], idx: u32) -> int
+        return bam_auxB2i(self.s, u32(idx))
+
+    def B2f(self: SAMAux, idx: int):
+        cdef bam_auxB2f(ptr[u8], idx: u32) -> float
+        return bam_auxB2f(self.s, u32(idx))
+
+type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore, _aux: str):
+    def __init__(self: SAMRecord, aln: ptr[byte]) -> SAMRecord:
+        cdef seq_hts_get_name(ptr[byte]) -> str
+        cdef seq_hts_get_seq(ptr[byte]) -> seq
+        cdef seq_hts_get_qual(ptr[byte]) -> str
+        cdef seq_hts_get_cigar(ptr[byte]) -> CIGAR
+        cdef seq_hts_get_aux(ptr[byte]) -> str
+
+        name = seq_hts_get_name(aln)
+        read = seq_hts_get_seq(aln)
+        qual = seq_hts_get_qual(aln)
+        cigar = seq_hts_get_cigar(aln)
+        aux = seq_hts_get_aux(aln)
+        hts_core = ptr[_bam_core_t](aln)[0]
+        core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
+        return (name, read, qual, cigar, core, aux)
+
+    def name(self: SAMRecord):
+        return self._name
+
+    def read(self: SAMRecord):
+        return self._read
+
+    def qual(self: SAMRecord):
+        return self._qual
+
+    def cigar(self: SAMRecord):
+        return self._cigar
+
+    def tid(self: SAMRecord):
+        return self._core.tid()
+
+    def pos(self: SAMRecord):
+        return self._core.pos()
+
+    def mate_tid(self: SAMRecord):
+        return self._core.mtid()
+
+    def mate_pos(self: SAMRecord):
+        return self._core.mpos()
+
+    def mapq(self: SAMRecord):
+        return self._core.mapq()
+
+    def insert_size(self: SAMRecord):
+        return self._core.isize()
+
+    def paired(self: SAMRecord):
+        return self._core.flag() & BAM_FREVERSE != 0
+
+    def proper_pair(self: SAMRecord):
+        return self._core.flag() & BAM_FPROPER_PAIR != 0
+
+    def unmapped(self: SAMRecord):
+        return self._core.flag() & BAM_FUNMAP != 0
+
+    def mate_unmapped(self: SAMRecord):
+        return self._core.flag() & BAM_FMUNMAP != 0
+
+    def reversed(self: SAMRecord):
+        return self._core.flag() & BAM_FREVERSE != 0
+
+    def mate_reversed(self: SAMRecord):
+        return self._core.flag() & BAM_FMREVERSE != 0
+
+    def read1(self: SAMRecord):
+        return self._core.flag() & BAM_FREAD1 != 0
+
+    def read2(self: SAMRecord):
+        return self._core.flag() & BAM_FREAD2 != 0
+
+    def secondary(self: SAMRecord):
+        return self._core.flag() & BAM_FSECONDARY != 0
+
+    def qc_fail(self: SAMRecord):
+        return self._core.flag() & BAM_FQCFAIL != 0
+
+    def duplicate(self: SAMRecord):
+        return self._core.flag() & BAM_FDUP != 0
+
+    def supplementary(self: SAMRecord):
+        return self._core.flag() & BAM_FSUPPLEMENTARY != 0
+
+    def aux(self: SAMRecord, tag: str):
+        cdef seq_hts_aux_get(str, str) -> ptr[u8]
+        if len(tag) != 2:
+            raise ArgumentError("SAM aux tags are two characters (got: " + tag + ")")
+        return SAMAux(seq_hts_aux_get(self._aux, tag))
+
+type SAMHeaderTarget(_name: str, _len: int):
+    def __str__(self: SAMHeaderTarget):
+        return self._name
+
+    def __len__(self: SAMHeaderTarget):
+        return self._len
+
+class BAM:
+    file: ptr[byte]
+    idx: ptr[byte]
+    hdr: ptr[byte]
+    itr: ptr[byte]
+    aln: ptr[byte]
+    targets: list[SAMHeaderTarget]
+
+    def _init(self: BAM, path: str, region: str):
+        cdef hts_open(ptr[byte], ptr[byte]) -> ptr[byte]
+        cdef sam_index_load(ptr[byte], ptr[byte]) -> ptr[byte]
+        cdef sam_hdr_read(ptr[byte]) -> ptr[byte]
+        cdef sam_itr_querys(ptr[byte], ptr[byte], ptr[byte]) -> ptr[byte]
+        cdef bam_init1() -> ptr[byte]
+        cdef hts_close(ptr[byte])
+        cdef seq_hts_get_targets(ptr[byte]) -> array[SAMHeaderTarget]
+
+        path_c_str, region_c_str = path.c_str(), region.c_str()
+
+        file = hts_open(path_c_str, "rb".c_str())
+        if not file:
+            raise IOError("file " + path + " could not be opened")
+
+        idx = sam_index_load(file, path_c_str)
+        if not idx:
+            hts_close(file)
+            raise IOError("unable to open BAM/CRAM index for " + path)
+
+        hdr = sam_hdr_read(file)
+        itr = sam_itr_querys(idx, hdr, region_c_str)
+
+        if not hdr or not itr:
+            hts_close(file)
+            raise IOError("unable to seek to region " + region + " in " + path)
+
+        aln = bam_init1()
+        targets_array = seq_hts_get_targets(hdr)
+        targets = list[SAMHeaderTarget](targets_array, len(targets_array))
+
+        self.file = file
+        self.idx = idx
+        self.hdr = hdr
+        self.itr = itr
+        self.aln = aln
+        self.targets = targets
+
+    def __init__(self: BAM, path: str):
+        self._init(path, ".")
+
+    def __init__(self: BAM, path: str, region: str):
+        self._init(path, region)
+
+    def _iter(self: BAM):
+        cdef seq_hts_sam_itr_next(ptr[byte], ptr[byte], ptr[byte]) -> int
+        cdef hts_idx_destroy(ptr[byte])
+        cdef bam_hdr_destroy(ptr[byte])
+        cdef hts_itr_destroy(ptr[byte])
+        cdef bam_destroy1(ptr[byte])
+        cdef hts_close(ptr[byte])
+
+        while seq_hts_sam_itr_next(self.file, self.itr, self.aln) >= 0:
+            yield self.aln
+
+        self.close()
+
+    def __iter__(self: BAM):
+        cdef seq_hts_get_seq(ptr[byte]) -> seq
+        for aln in self._iter():
+            yield seq_hts_get_seq(aln)
+
+    def all(self: BAM):
+        for aln in self._iter():
+            yield SAMRecord(aln)
+
+    def close(self: BAM):
+        cdef hts_idx_destroy(ptr[byte])
+        cdef bam_hdr_destroy(ptr[byte])
+        cdef hts_itr_destroy(ptr[byte])
+        cdef bam_destroy1(ptr[byte])
+        cdef hts_close(ptr[byte])
+
+        if self.itr:
+            hts_itr_destroy(self.itr)
+
+        if self.idx:
+            hts_idx_destroy(self.idx)
+
+        if self.aln:
+            bam_destroy1(self.aln)
+
+        if self.hdr:
+            bam_hdr_destroy(self.hdr)
+
+        if self.file:
+            hts_close(self.file)
+
+class SAM:
+    file: ptr[byte]
+    hdr: ptr[byte]
+    aln: ptr[byte]
+    targets: list[SAMHeaderTarget]
+
+    def __init__(self: SAM, path: str):
+        cdef hts_open(ptr[byte], ptr[byte]) -> ptr[byte]
+        cdef sam_hdr_read(ptr[byte]) -> ptr[byte]
+        cdef sam_itr_querys(ptr[byte], ptr[byte], ptr[byte]) -> ptr[byte]
+        cdef bam_init1() -> ptr[byte]
+        cdef hts_close(ptr[byte])
+        cdef seq_hts_get_targets(ptr[byte]) -> array[SAMHeaderTarget]
+
+        path_c_str = path.c_str()
+
+        file = hts_open(path_c_str, "r".c_str())
+        if not file:
+            raise IOError("file " + path + " could not be opened")
+
+        hdr = sam_hdr_read(file)
+        aln = bam_init1()
+        targets_array = seq_hts_get_targets(hdr)
+        targets = list[SAMHeaderTarget](targets_array, len(targets_array))
+
+        self.file = file
+        self.hdr = hdr
+        self.aln = aln
+        self.targets = targets
+
+    def _iter(self: SAM):
+        cdef sam_read1(ptr[byte], ptr[byte], ptr[byte]) -> i32
+        cdef bam_hdr_destroy(ptr[byte])
+        cdef bam_destroy1(ptr[byte])
+        cdef hts_close(ptr[byte])
+
+        while True:
+            status = int(sam_read1(self.file, self.hdr, self.aln))
+            if status >= 0:
+                yield self.aln
+            elif status == -1:
+                break
+            else:
+                raise IOError("SAM read failed with status: " + str(status))
+
+        self.close()
+
+    def __iter__(self: SAM):
+        cdef seq_hts_get_seq(ptr[byte]) -> seq
+        for aln in self._iter():
+            yield seq_hts_get_seq(aln)
+
+    def all(self: SAM):
+        for aln in self._iter():
+            yield SAMRecord(aln)
+
+    def close(self: SAM):
+        cdef bam_hdr_destroy(ptr[byte])
+        cdef bam_destroy1(ptr[byte])
+        cdef hts_close(ptr[byte])
+
+        if self.aln:
+            bam_destroy1(self.aln)
+
+        if self.hdr:
+            bam_hdr_destroy(self.hdr)
+
+        if self.file:
+            hts_close(self.file)
+
+        self.file = ptr[byte]()
+        self.hdr = ptr[byte]()
+        self.aln = ptr[byte]()
+
+type CRAM = BAM
+
+def sam(path: str):
+    return iter(SAM(path))
+
+def bam(path: str):
+    return iter(BAM(path))
+
+def cram(path: str):
+    return iter(CRAM(path))

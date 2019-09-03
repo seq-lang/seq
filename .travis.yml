@@ -59,6 +59,14 @@ install:
   - sudo make install
   - cd -
 
+  # install htslib:
+  - wget -c wget https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 -O - | tar -xj
+  - cd htslib-1.9
+  - ./configure
+  - make
+  - sudo make install
+  - cd -
+
   # install OCaml:
   - export OCAML_VERSION=4.07
   - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
@@ -70,7 +78,9 @@ install:
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
-  # make sure we don't link against older system libffi:
+  # ldconfig on linux:
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
+  # make sure we don't link against older system libffi on macOS:
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then export LDFLAGS="-L/usr/local/opt/libffi/lib"; fi
 
 script:
