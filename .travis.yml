@@ -78,7 +78,9 @@ install:
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
-  # make sure we don't link against older system libffi:
+  # ldconfig on linux:
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
+  # make sure we don't link against older system libffi on macOS:
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then export LDFLAGS="-L/usr/local/opt/libffi/lib"; fi
 
 script:
