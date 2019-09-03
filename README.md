@@ -70,6 +70,7 @@ For a concrete example of `genomeindex`, check out our [re-implementation of SNA
 - [LLVM](https://llvm.org)<sup>1</sup>
 - [OCaml](https://ocaml.org)<sup>2</sup>
 - [Boehm GC](https://github.com/ivmai/bdwgc)
+- [HTSlib](https://htslib.org)
 
 <sup>1</sup> LLVM 6 or greater is required. However, due to a LLVM 7 [bug](https://bugs.llvm.org/show_bug.cgi?id=40656) with coroutines (which are used extensively in Seq), we highly recommend building with LLVM 6.
 
