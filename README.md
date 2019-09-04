@@ -49,7 +49,8 @@ index = GenomeIndex[K](argv[1])
 stride = 10
 
 # sequence-processing pipeline
-(fastq(argv[2])
+(FASTQ(argv[2])
+  |> seqs
   |> kmers[K](stride)
   |> process(index))
 ```
@@ -58,7 +59,7 @@ A few notable aspects of this code:
 
 - Seq provides native k-mer types, e.g. a 20-mer is represented by `Kmer[20]` as above.
 - k-mers can be reverse-complemented with `~`.
-- Seq provides easy iteration over common formats like FASTQ (`fastq` above).
+- Seq provides easy iteration over common formats like FASTQ (`FASTQ` above).
 - Complex pipelines are easily expressible in Seq (via the `|>` syntax).
 - Seq can perform pipeline transformations to make genomic index lookups faster via `prefetch`.
 
@@ -88,7 +89,6 @@ cmake --build .
 ```
 
 This will produce a `seq` executable for compiling/running Seq programs, and a `seqtest` executable for running the test suite.
-
 
 ## Documentation
 

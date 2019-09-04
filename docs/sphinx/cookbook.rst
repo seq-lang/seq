@@ -113,36 +113,31 @@ Reading FASTA/FASTQ
 
 .. code-block:: seq
 
-    # iterate over sequences:
-    for s in FASTA('genome.fa'):
-        print s
-
     # iterate over everything:
-    for r in FASTA('genome.fa').all():
+    for r in FASTA('genome.fa'):
         print r.name()
         print r.seq()
 
     # iterate over sequences:
-    for s in FASTQ('reads.fq'):
+    for s in FASTA('genome.fa') |> seqs:
         print s
 
     # iterate over everything:
-    for r in FASTQ('reads.fq').all():
+    for r in FASTQ('reads.fq'):
         print r.name()
         print r.read()
         print r.qual()
+
+    # iterate over sequences:
+    for s in FASTQ('reads.fq') |> seqs:
+        print s
 
 Reading paired-end FASTQ
 ------------------------
 
 .. code-block:: seq
 
-    # iterate over sequences:
-    for s1, s2 in zip(FASTQ('reads_1.fq'), FASTQ('reads_2.fq')):
-        print s1, s2
-
-    # iterate over everything:
-    for r1, r2 in zip(FASTQ('reads_1.fq').all(), FASTQ('reads_2.fq').all()):
+    for r1, r2 in zip(FASTQ('reads_1.fq'), FASTQ('reads_2.fq')):
         print r1.name(), r2.name()
         print r1.read(), r2.read()
         print r1.qual(), r2.qual()
@@ -155,29 +150,19 @@ Parallel FASTQ processing
     def process(s: seq):
         ...
     # OMP_NUM_THREADS environment variable controls threads
-    fastq('reads.fq') ||> process
+    FASTQ('reads.fq') |> iter ||> process
 
     # Sometimes batching reads into blocks can improve performance,
     # especially if each is quick to process.
-    fastq('reads.fq') |> block(1000) ||> process
+    FASTQ('reads.fq') |> iter |> block(1000) ||> process
 
 Reading SAM/BAM/CRAM
 --------------------
 
 .. code-block:: seq
 
-    # iterate over sequences:
-    for s in SAM('alignments.sam'):
-        print s
-
-    for s in BAM('alignments.bam'):
-        print s
-
-    for s in CRAM('alignments.cram'):
-        print s
-
     # iterate over everything:
-    for r in SAM('alignments.sam').all():
+    for r in SAM('alignments.sam'):
         print r.name()
         print r.read()
         print r.pos()
@@ -186,8 +171,18 @@ Reading SAM/BAM/CRAM
         print r.reversed()
         # etc.
 
-    for r in BAM('alignments.bam').all():
+    for r in BAM('alignments.bam'):
         # ...
 
-    for r in CRAM('alignments.cram').all():
+    for r in CRAM('alignments.cram'):
         # ...
+
+    # iterate over sequences:
+    for s in SAM('alignments.sam') |> seqs:
+        print s
+
+    for s in BAM('alignments.bam') |> seqs:
+        print s
+
+    for s in CRAM('alignments.cram') |> seqs:
+        print s
