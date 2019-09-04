@@ -33,7 +33,7 @@
 #include "llvm.h"
 
 #define SEQ_VERSION_MAJOR 0
-#define SEQ_VERSION_MINOR 1
+#define SEQ_VERSION_MINOR 7
 #define SEQ_VERSION_PATCH 0
 
 namespace seq {

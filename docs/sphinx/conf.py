@@ -24,13 +24,13 @@ def setup(sphinx):
 # -- Project information -----------------------------------------------------
 
 project = u'Seq'
-copyright = u'2019, SeqLang'
+copyright = u'2019, seq-lang'
 author = u'seq-lang'
 
 # The short X.Y version
-version = u'0.8'
+version = u'0.7'
 # The full version, including alpha/beta/rc tags
-release = u'0.8.0'
+release = u'0.7.0'
 
 # Logo path
 html_logo = '../images/logo.png'
