@@ -144,7 +144,7 @@ TEST_P(SeqTest, Run) {
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,
     testing::Combine(testing::Values("core/align.seq", "core/arithmetic.seq",
-                                     "core/big.seq", "core/collections.seq",
+                                     "core/big.seq", "core/containers.seq",
                                      "core/empty.seq", "core/exceptions.seq",
                                      "core/formats.seq", "core/generators.seq",
                                      "core/generics.seq", "core/helloworld.seq",

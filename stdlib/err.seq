@@ -7,6 +7,9 @@ class IOError:
 class ArgumentError:
     msg: str
 
+class IndexError:
+    msg: str
+
 def check_errno(prefix: str):
     cdef seq_check_errno() -> str
     msg = seq_check_errno()
