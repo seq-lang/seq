@@ -61,6 +61,21 @@ k-mer Hamming distance
     #          ^ ^
     print abs(k1 - k2)  # Hamming distance = 2
 
+k-mer minimizer
+---------------
+
+.. code-block:: seq
+
+    def minimizer[K](s: seq):
+        assert len(s) >= K.len()
+        kmer_min = K(s)
+        for kmer in s[1:].kmers[K](1):
+            kmer = min(kmer, ~kmer)
+            if kmer < kmer_min: kmer_min = kmer
+        return kmer_min
+
+    print minimizer[Kmer[10]](s)
+
 Count bases
 -----------
 
