@@ -118,10 +118,10 @@ In practice, reads would be inputted from e.g. a FASTQ file:
 
 .. code-block:: seq
 
-    for read in fastq('input.fastq'):
+    for read in FASTQ('input.fq'):
         process(read)
 
-Common formats like FASTQ, FASTA (``fasta``) and plain txt-files (``seqs``) are supported.
+Common formats like FASTQ, FASTA, SAM, BAM and CRAM are supported.
 
 Sequences can be reverse complemented in-place using the ``revcomp()`` method; both sequence and :math:`k`-mer types also support the ``~`` operator for reverse complementation, as shown above.
 
@@ -246,7 +246,7 @@ Now, if we were to process data in a pipeline as such:
             ...
         return x
 
-    fastq("reads.fq") |> process(index) |> postprocess
+    FASTQ("reads.fq") |> seqs |> process(index) |> postprocess
 
 The Seq compiler will perform pipeline transformations to overlap cache misses in ``MyIndex`` with other useful work, increasing overall throughput. In our benchmarks, we often find these transformations to improve performance by 50% to 2×. However, the improvement is dataset- and application-dependent (and can potentially even decrease performance, although we rarely observed this), so users are encouraged to experiment with it for their own use case.
 

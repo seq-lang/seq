@@ -106,6 +106,11 @@ def split(self: seq, k: int, step: int):
 def kmers[K](self: seq, step: int):
     return self.kmers[K](step)
 
+# Interface for iterating over sequences in some format
+# (e.g. FASTA, FASTQ, SAM, etc.).
+def seqs(x):
+    return x.__seqs__()
+
 type Seqs(file: File):
     def __init__(self: Seqs, path: str) -> Seqs:
         return (open(path, "r"),)
@@ -114,6 +119,10 @@ type Seqs(file: File):
         for a in self.file._iter():
             yield copy(seq(a.ptr, a.len))
         self.file.close()
+
+extend str:
+    def __seqs__(self: str):
+        return iter(Seqs(self))
 
 type FASTQRecord(_name: str, _read: seq, _qual: str):
     def name(self: FASTQRecord):
@@ -129,7 +138,7 @@ type FASTQ(file: File):
     def __init__(self: FASTQ, path: str) -> FASTQ:
         return (open(path, "r"),)
 
-    def __iter__(self: FASTQ):
+    def __seqs__(self: FASTQ):
         line = 0
         for a in self.file._iter():
             if line % 4 == 1:
@@ -137,7 +146,7 @@ type FASTQ(file: File):
             line += 1
         self.file.close()
 
-    def all(self: FASTQ) -> FASTQRecord:
+    def __iter__(self: FASTQ) -> FASTQRecord:
         line = 0
         name, read, qual = "", s"", ""
         for a in self.file._iter():
@@ -181,11 +190,11 @@ type FASTA(file: File, fai: list[int], names: list[str]):
         fai_file.close()
         return (open(path, "r"), fai, names)
 
-    def __iter__(self: FASTA):
-        for rec in self.all():
+    def __seqs__(self: FASTA):
+        for rec in self:
             yield rec.seq()
 
-    def all(self: FASTA) -> FASTARecord:
+    def __iter__(self: FASTA) -> FASTARecord:
         idx = 0
         p = ptr[byte]()
         n = 0
@@ -226,15 +235,6 @@ type FASTA(file: File, fai: list[int], names: list[str]):
                 f.write("\n")
                 n += LINE_LIMIT
         f.close()
-
-def seqs(path: str):
-    return iter(Seqs(path))
-
-def fastq(path: str):
-    return iter(FASTQ(path))
-
-def fasta(path: str):
-    return iter(FASTA(path))
 
 type Block(p: ptr[byte], seq_len: int, num_seqs: int):
     def __iter__(self: Block):
@@ -689,12 +689,12 @@ class BAM:
 
         self.close()
 
-    def __iter__(self: BAM):
+    def __seqs__(self: BAM):
         cdef seq_hts_get_seq(ptr[byte]) -> seq
         for aln in self._iter():
             yield seq_hts_get_seq(aln)
 
-    def all(self: BAM):
+    def __iter__(self: BAM):
         for aln in self._iter():
             yield SAMRecord(aln)
 
@@ -767,12 +767,12 @@ class SAM:
 
         self.close()
 
-    def __iter__(self: SAM):
+    def __seqs__(self: SAM):
         cdef seq_hts_get_seq(ptr[byte]) -> seq
         for aln in self._iter():
             yield seq_hts_get_seq(aln)
 
-    def all(self: SAM):
+    def __iter__(self: SAM):
         for aln in self._iter():
             yield SAMRecord(aln)
 
@@ -795,12 +795,3 @@ class SAM:
         self.aln = ptr[byte]()
 
 type CRAM = BAM
-
-def sam(path: str):
-    return iter(SAM(path))
-
-def bam(path: str):
-    return iter(BAM(path))
-
-def cram(path: str):
-    return iter(CRAM(path))
