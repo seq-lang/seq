@@ -2,6 +2,13 @@ type K = Kmer[5]
 
 k1 = K(s'ACGTA')
 k2 = K(s'ATGTT')
+
+print [k1[i] for i in range(len(k1))]  # EXPECT: [A, C, G, T, A]
+print [k2[i] for i in range(len(k2))]  # EXPECT: [A, T, G, T, T]
+
+print ~k1  # EXPECT: TACGT
+print ~k2  # EXPECT: AACAT
+
 print abs(k1 - k2)  # EXPECT: 2
 print abs(k2 - k1)  # EXPECT: 2
 
@@ -27,3 +34,8 @@ print k2 - k1  # EXPECT: 0
 
 print k1 << s'G'  # EXPECT: CGTAG
 print k1 >> s'G'  # EXPECT: GACGT
+
+type K100 = Kmer[100]
+type K1 = Kmer[1]
+print K100() |> base(99, K1(s'C')) |> base(98, s'G') |> base(0, K1(s'T'))
+# EXPECT: TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGC

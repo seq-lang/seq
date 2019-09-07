@@ -618,6 +618,22 @@ void types::KMer::initOps() {
 
   vtable.magic = {
       {"__init__",
+       {},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return ConstantInt::get(getLLVMType(b.getContext()), 0);
+       },
+       false},
+
+      {"__init__",
+       {this},
+       this,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return args[0];
+       },
+       false},
+
+      {"__init__",
        {Seq},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
@@ -657,6 +673,25 @@ void types::KMer::initOps() {
        this,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return self;
+       },
+       false},
+
+      {"__getitem__",
+       {Int},
+       KMer::get(1),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         LLVMContext &context = b.getContext();
+         llvm::Type *type = getLLVMType(context);
+         Value *mask = ConstantInt::get(type, 3);
+         Value *shift =
+             b.CreateSub(ConstantInt::get(seqIntLLVM(context), k - 1), args[0]);
+         shift = b.CreateShl(shift, 1); // 2 bits per base
+         shift = b.CreateZExtOrTrunc(shift, type);
+
+         mask = b.CreateShl(mask, shift);
+         Value *result = b.CreateAnd(self, mask);
+         result = b.CreateAShr(result, shift);
+         return b.CreateZExtOrTrunc(result, KMer::get(1)->getLLVMType(context));
        },
        false},
 
