@@ -285,48 +285,35 @@ ArrayPattern *ArrayPattern::clone(Generic *ref) {
 }
 
 SeqPattern::SeqPattern(std::string pattern)
-    : Pattern(types::Seq), pattern(std::move(pattern)) {}
+    : Pattern(types::Any), pattern(std::move(pattern)) {}
 
-Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
-                           BasicBlock *&block) {
-  LLVMContext &context = block->getContext();
+void SeqPattern::resolveTypes(types::Type *type) {
+  if (!type->is(types::Seq) && !type->asKMer())
+    throw exc::SeqException(
+        "sequence pattern must be used with sequence or k-mer type",
+        getSrcInfo());
+}
 
-  std::vector<char> patterns;
-
-  bool hasStar = false;
+static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
+                                    BaseFunc *base, types::Type *type,
+                                    Value *val, BasicBlock *&block) {
   unsigned star = 0;
-
-  for (char c : pattern) {
-    if (isspace(c))
-      continue;
-
-    switch (c) {
-    case 'A':
-    case 'C':
-    case 'G':
-    case 'T':
-    case 'N':
-    case '_':
-      patterns.push_back(c);
-      break;
-    case '.':
-      if (!hasStar) {
-        star = (unsigned)patterns.size();
-        hasStar = true;
-        patterns.push_back('\0');
-      }
-      break;
-    default:
-      assert(0);
+  bool hasStar = false;
+  for (unsigned i = 0; i < patterns.size(); i++) {
+    if (patterns[i] == '\0') {
+      star = i;
+      hasStar = true;
     }
   }
 
+  LLVMContext &context = block->getContext();
   Value *ptr = type->memb(val, "ptr", block);
   Value *len = type->memb(val, "len", block);
   Value *lenMatch = nullptr;
   BasicBlock *startBlock = block;
   IRBuilder<> builder(block);
 
+  // check lengths:
   if (hasStar) {
     Value *minLen = ConstantInt::get(seqIntLLVM(context), patterns.size() - 1);
     lenMatch = builder.CreateICmpSGE(len, minLen);
@@ -403,6 +390,207 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                            checkBlock); // result of checking array elements
 
   return resultFinal;
+}
+
+static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
+                                     BaseFunc *base, types::KMer *type,
+                                     Value *val, BasicBlock *&block) {
+  LLVMContext &context = block->getContext();
+  Value *fail = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
+  Value *succ = ConstantInt::get(IntegerType::getInt1Ty(context), 1);
+
+  if (patterns.empty())
+    return fail; // k-mer length must be at least 1
+
+  const unsigned k = type->getK();
+  std::vector<unsigned> wildcardsLeft;  // left of star
+  std::vector<unsigned> wildcardsRight; // right of star
+  std::vector<unsigned> *wildcards = &wildcardsLeft;
+  unsigned star = 0;
+  bool hasStar = false;
+  for (unsigned i = 0; i < patterns.size(); i++) {
+    if (patterns[i] == '\0') {
+      star = i;
+      hasStar = true;
+      wildcards = &wildcardsRight;
+    } else if (patterns[i] == '_') {
+      wildcards->push_back(i);
+    } else if (patterns[i] == 'N') {
+      return fail; // k-mers can't contain N
+    }
+  }
+  bool hasWildcard = !(wildcardsLeft.empty() && wildcardsRight.empty());
+
+  // check lengths:
+  if (hasStar) {
+    const unsigned minLen = patterns.size() - 1;
+    if (k < minLen)
+      return fail;
+  } else {
+    const unsigned expectedLen = patterns.size();
+    if (k != expectedLen)
+      return fail;
+  }
+
+  Type *llvmType = type->getLLVMType(context);
+  if (!hasStar) {
+    SeqExpr s(std::string(patterns.begin(), patterns.end()));
+    Value *expectedSeq = s.codegen(base, block);
+    Value *expectedKmer = type->callMagic("__init__", {types::Seq}, nullptr,
+                                          {expectedSeq}, block, nullptr);
+    IRBuilder<> builder(block);
+
+    if (!hasWildcard) {
+      // just build the k-mer and compare
+      return builder.CreateICmpEQ(val, expectedKmer);
+    } else {
+      // similar to above, but zero out wildcard bases with a mask
+      Value *mask = ConstantInt::get(llvmType, 0);
+      for (unsigned pos : wildcardsLeft) {
+        Value *shift = ConstantInt::get(llvmType, 3);
+        shift = builder.CreateShl(shift, 2 * (k - pos - 1));
+        mask = builder.CreateOr(mask, shift);
+      }
+      mask = builder.CreateNot(mask);
+      return builder.CreateICmpEQ(builder.CreateAnd(val, mask),
+                                  builder.CreateAnd(expectedKmer, mask));
+    }
+  } else {
+    // handle left and right separately
+    std::string leftString(patterns.begin(), patterns.begin() + star);
+    std::string rightString(patterns.begin() + star + 1, patterns.end());
+
+    types::KMer *typeLeft = nullptr;
+    types::KMer *typeRight = nullptr;
+
+    Value *expectedKmerLeft = nullptr;
+    Value *expectedKmerRight = nullptr;
+
+    if (!leftString.empty()) {
+      SeqExpr sLeft(leftString);
+      Value *expectedSeqLeft = sLeft.codegen(base, block);
+      typeLeft = types::KMer::get(leftString.size());
+      expectedKmerLeft = typeLeft->callMagic("__init__", {types::Seq}, nullptr,
+                                             {expectedSeqLeft}, block, nullptr);
+    }
+
+    if (!rightString.empty()) {
+      SeqExpr sRight(rightString);
+      Value *expectedSeqRight = sRight.codegen(base, block);
+      typeRight = types::KMer::get(rightString.size());
+      expectedKmerRight =
+          typeRight->callMagic("__init__", {types::Seq}, nullptr,
+                               {expectedSeqRight}, block, nullptr);
+    }
+
+    IRBuilder<> builder(block);
+
+    if (expectedKmerLeft) {
+      expectedKmerLeft = builder.CreateZExt(expectedKmerLeft, llvmType);
+      expectedKmerLeft =
+          builder.CreateShl(expectedKmerLeft, 2 * (k - typeLeft->getK()));
+    }
+    if (expectedKmerRight) {
+      expectedKmerRight = builder.CreateZExt(expectedKmerRight, llvmType);
+    }
+
+    // left and right masks for comparing correct bases:
+    Value *maskLeft = ConstantInt::get(llvmType, 1);
+    if (typeLeft) {
+      maskLeft = builder.CreateShl(maskLeft, 2 * typeLeft->getK());
+      maskLeft = builder.CreateSub(maskLeft, ConstantInt::get(llvmType, 1));
+      maskLeft = builder.CreateShl(maskLeft, 2 * (k - typeLeft->getK()));
+    }
+
+    Value *maskRight = ConstantInt::get(llvmType, 1);
+    if (typeRight) {
+      maskRight = builder.CreateShl(maskRight, 2 * typeRight->getK());
+      maskRight = builder.CreateSub(maskRight, ConstantInt::get(llvmType, 1));
+    }
+
+    if (hasWildcard) {
+      // zero out wildcard bases:
+      for (unsigned pos : wildcardsLeft) {
+        Value *shift = ConstantInt::get(llvmType, 3);
+        shift = builder.CreateShl(shift, 2 * (typeLeft->getK() - pos - 1));
+        shift = builder.CreateShl(shift, 2 * (k - typeLeft->getK()));
+        shift = builder.CreateNot(shift);
+        maskLeft = builder.CreateAnd(maskLeft, shift);
+      }
+
+      for (unsigned pos : wildcardsRight) {
+        // fix pos to be relative to right side:
+        pos = (pos - 1) - star;
+        Value *shift = ConstantInt::get(llvmType, 3);
+        shift = builder.CreateShl(shift, 2 * (typeRight->getK() - pos - 1));
+        shift = builder.CreateNot(shift);
+        maskRight = builder.CreateAnd(maskRight, shift);
+      }
+    }
+
+    Value *lhsEq = expectedKmerLeft
+                       ? builder.CreateICmpEQ(
+                             builder.CreateAnd(val, maskLeft),
+                             builder.CreateAnd(expectedKmerLeft, maskLeft))
+                       : succ;
+    Value *rhsEq = expectedKmerRight
+                       ? builder.CreateICmpEQ(
+                             builder.CreateAnd(val, maskRight),
+                             builder.CreateAnd(expectedKmerRight, maskRight))
+                       : succ;
+    return builder.CreateAnd(lhsEq, rhsEq);
+  }
+
+  assert(0);
+  return nullptr;
+}
+
+Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
+                           BasicBlock *&block) {
+  std::vector<char> patterns;
+  bool hasStar = false;
+
+  // parse pattern:
+  unsigned i = 0;
+  while (i < pattern.size()) {
+    const char c = pattern[i];
+    if (isspace(c))
+      continue;
+
+    switch (c) {
+    case 'A':
+    case 'C':
+    case 'G':
+    case 'T':
+    case 'N':
+    case '_':
+      patterns.push_back(c);
+      break;
+    case '.':
+      if (hasStar)
+        throw exc::SeqException(
+            "at most one '...' allowed in sequence pattern");
+      if (!(i < pattern.size() - 2 && pattern[i + 1] == '.' &&
+            pattern[i + 2] == '.'))
+        throw exc::SeqException("invalid sequence pattern: '" + pattern + "'");
+      i += 2;
+      patterns.push_back('\0');
+      hasStar = true;
+      break;
+    default:
+      throw exc::SeqException("invalid character in sequence pattern: '" +
+                              std::string(1, c) + "'");
+    }
+    ++i;
+  }
+
+  if (type->is(types::Seq)) {
+    return codegenSeqMatchForSeq(patterns, base, type, val, block);
+  } else if (types::KMer *kmerType = type->asKMer()) {
+    return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);
+  } else {
+    assert(0);
+  }
 }
 
 OptPattern::OptPattern(Pattern *pattern)

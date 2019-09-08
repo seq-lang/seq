@@ -123,6 +123,7 @@ class SeqPattern : public Pattern {
 
 public:
   explicit SeqPattern(std::string pattern);
+  void resolveTypes(types::Type *type) override;
   llvm::Value *codegen(BaseFunc *base, types::Type *type, llvm::Value *val,
                        llvm::BasicBlock *&block) override;
 };
