@@ -5,6 +5,51 @@ extend seq:
     def __init__(self: seq, s: str):
         return seq(s.ptr, s.len)
 
+    def __eq__(self: seq, other: seq):
+        if len(self) != len(other):
+            return False
+        i = 0
+        while i < len(self):
+            if self.ptr[i] != other.ptr[i]:
+                return False
+            i += 1
+        return True
+
+    def __ne__(self: seq, other: seq):
+        return not (self == other)
+
+    def _cmp(self: seq, other: seq):
+        n = min(self.len, other.len)
+        i = 0
+        while i < n:
+            c1 = self.ptr[i]
+            c2 = other.ptr[i]
+            if c1 != c2:
+                return int(c1) - int(c2)
+            i += 1
+        return self.len - other.len
+
+    def __lt__(self: seq, other: seq):
+        return self._cmp(other) < 0
+
+    def __le__(self: seq, other: seq):
+        return self._cmp(other) <= 0
+
+    def __gt__(self: seq, other: seq):
+        return self._cmp(other) > 0
+
+    def __ge__(self: seq, other: seq):
+        return self._cmp(other) >= 0
+
+    def __str__(self: seq):
+        return str(self.ptr, self.len)
+
+    def __len__(self: seq):
+        return self.len
+
+    def __bool__(self: seq):
+        return self.len != 0
+
     def __hash__(self: seq):
         h = 0
         p, n = self.ptr, self.len
@@ -17,6 +62,9 @@ extend seq:
             idx += len(self)
         assert 0 <= idx <= len(self)
         return seq(self.ptr + idx, 1)
+
+    def __setitem__(self: seq, idx: int, other: seq):
+        str.memmove(self.ptr + idx, other.ptr, len(other))
 
     def __slice__(self: seq, a: int, b: int):
         if a < 0: a += len(self)

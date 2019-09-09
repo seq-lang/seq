@@ -7,91 +7,6 @@ using namespace llvm;
 types::BaseSeqType::BaseSeqType(std::string name)
     : Type(std::move(name), BaseType::get(), false, true) {}
 
-static inline std::string eqFuncName() { return "seq.baseseq.eq"; }
-
-static Function *buildSeqEqFunc(Module *module) {
-  LLVMContext &context = module->getContext();
-
-  auto *eq = cast<Function>(module->getOrInsertFunction(
-      eqFuncName(), IntegerType::getInt1Ty(context),
-      IntegerType::getInt8PtrTy(context), seqIntLLVM(context),
-      IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
-
-  eq->setLinkage(GlobalValue::PrivateLinkage);
-  auto args = eq->arg_begin();
-  Value *seq1 = args++;
-  Value *len1 = args++;
-  Value *seq2 = args++;
-  Value *len2 = args;
-  seq1->setName("seq1");
-  len1->setName("len1");
-  seq2->setName("seq2");
-  len2->setName("len2");
-
-  BasicBlock *entry = BasicBlock::Create(context, "entry", eq);
-  BasicBlock *exitEarly = BasicBlock::Create(context, "exit_early", eq);
-  BasicBlock *compareSeqs = BasicBlock::Create(context, "compare_seqs", eq);
-  BasicBlock *breakBlock = BasicBlock::Create(context, "break", eq);
-  BasicBlock *continueBlock = BasicBlock::Create(context, "continue", eq);
-  BasicBlock *exit = BasicBlock::Create(context, "exit", eq);
-
-  IRBuilder<> builder(entry);
-
-  /* entry */
-  Value *lenEq = builder.CreateICmpEQ(len1, len2);
-  builder.CreateCondBr(lenEq, compareSeqs, exitEarly);
-
-  /* exit early (different lengths) */
-  builder.SetInsertPoint(exitEarly);
-  builder.CreateRet(ConstantInt::get(IntegerType::getInt1Ty(context), 0));
-
-  /* sequence comparison loop */
-  builder.SetInsertPoint(compareSeqs);
-  PHINode *control = builder.CreatePHI(seqIntLLVM(context), 2, "i");
-  control->addIncoming(ConstantInt::get(seqIntLLVM(context), 0), entry);
-
-  Value *seqPtr1 = builder.CreateGEP(seq1, control);
-  Value *seqPtr2 = builder.CreateGEP(seq2, control);
-  Value *char1 = builder.CreateLoad(seqPtr1);
-  Value *char2 = builder.CreateLoad(seqPtr2);
-  Value *charEq = builder.CreateICmpEQ(char1, char2);
-  builder.CreateCondBr(charEq, continueBlock, breakBlock);
-
-  /* break (unequal characters) */
-  builder.SetInsertPoint(breakBlock);
-  builder.CreateRet(ConstantInt::get(IntegerType::getInt1Ty(context), 0));
-
-  /* continue (equal characters) */
-  builder.SetInsertPoint(continueBlock);
-  Value *next = builder.CreateAdd(
-      control, ConstantInt::get(seqIntLLVM(context), 1), "next");
-  Value *cond = builder.CreateICmpSLT(next, len1);
-  builder.CreateCondBr(cond, compareSeqs, exit);
-  control->addIncoming(next, continueBlock);
-
-  /* exit (loop finished; return 1) */
-  builder.SetInsertPoint(exit);
-  builder.CreateRet(ConstantInt::get(IntegerType::getInt1Ty(context), 1));
-
-  return eq;
-}
-
-Value *types::BaseSeqType::eq(Value *self, Value *other, BasicBlock *block) {
-  Module *module = block->getModule();
-  Value *seq1 = memb(self, "ptr", block);
-  Value *len1 = memb(self, "len", block);
-  Value *seq2 = memb(other, "ptr", block);
-  Value *len2 = memb(other, "len", block);
-
-  Function *eq = module->getFunction(eqFuncName());
-
-  if (!eq)
-    eq = buildSeqEqFunc(module);
-
-  IRBuilder<> builder(block);
-  return builder.CreateCall(eq, {seq1, len1, seq2, len2});
-}
-
 Value *types::BaseSeqType::defaultValue(BasicBlock *block) {
   LLVMContext &context = block->getContext();
   Value *ptr = ConstantPointerNull::get(IntegerType::getInt8PtrTy(context));
@@ -143,66 +58,6 @@ void types::SeqType::initOps() {
          return make(args[0], args[1], b.GetInsertBlock());
        },
        false},
-
-      {"__str__",
-       {},
-       Str,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
-       false},
-
-      {"__len__",
-       {},
-       Int,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return memb(self, "len", b.GetInsertBlock());
-       },
-       false},
-
-      {"__bool__",
-       {},
-       Bool,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *len = memb(self, "len", b.GetInsertBlock());
-         Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
-         return b.CreateZExt(b.CreateICmpNE(len, zero),
-                             Bool->getLLVMType(b.getContext()));
-       },
-       false},
-
-      {"__setitem__",
-       {Int, Seq},
-       Void,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         BasicBlock *block = b.GetInsertBlock();
-         Value *dest = memb(self, "ptr", block);
-         Value *source = memb(args[1], "ptr", block);
-         Value *len = memb(args[1], "len", block);
-         dest = b.CreateGEP(dest, args[0]);
-         makeMemMove(dest, source, len, block, 1);
-         return (Value *)nullptr;
-       },
-       false},
-
-      {"__eq__",
-       {Seq},
-       Bool,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *x = eq(self, args[0], b.GetInsertBlock());
-         return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-       },
-       false},
-
-      {"__ne__",
-       {Seq},
-       Bool,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *x = eq(self, args[0], b.GetInsertBlock());
-         x = b.CreateNot(x);
-         return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-       },
-       false},
   };
 }
 
@@ -244,60 +99,6 @@ void types::StrType::initOps() {
          return make(args[0], args[1], b.GetInsertBlock());
        },
        false},
-
-      {"__str__",
-       {},
-       Str,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
-       false},
-
-      {"__copy__",
-       {},
-       Str,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
-       false},
-
-      {"__len__",
-       {},
-       Int,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return memb(self, "len", b.GetInsertBlock());
-       },
-       false},
-
-      {"__bool__",
-       {},
-       Bool,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *len = memb(self, "len", b.GetInsertBlock());
-         Value *zero = ConstantInt::get(Int->getLLVMType(b.getContext()), 0);
-         return b.CreateZExt(b.CreateICmpNE(len, zero),
-                             Bool->getLLVMType(b.getContext()));
-       },
-       false},
-
-      {"__eq__",
-       {Str},
-       Bool,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *x = eq(self, args[0], b.GetInsertBlock());
-         return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-       },
-       false},
-
-      {"__ne__",
-       {Str},
-       Bool,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *x = eq(self, args[0], b.GetInsertBlock());
-         x = b.CreateNot(x);
-         return b.CreateZExt(x, Bool->getLLVMType(b.getContext()));
-       },
-       false},
   };
 
   addMethod(
@@ -323,6 +124,37 @@ void types::StrType::initOps() {
               Value *len = iter;
               BasicBlock *block = BasicBlock::Create(context, "entry", func);
               makeMemCpy(dst, src, len, block);
+              IRBuilder<> builder(block);
+              builder.CreateRetVoid();
+            }
+
+            return func;
+          }),
+      true);
+
+  addMethod(
+      "memmove",
+      new BaseFuncLite(
+          {PtrType::get(Byte), PtrType::get(Byte), Int}, Void,
+          [](Module *module) {
+            const std::string name = "seq.memmove";
+            Function *func = module->getFunction(name);
+
+            if (!func) {
+              LLVMContext &context = module->getContext();
+              func = cast<Function>(module->getOrInsertFunction(
+                  name, llvm::Type::getVoidTy(context),
+                  IntegerType::getInt8PtrTy(context),
+                  IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
+              func->setDoesNotThrow();
+              func->setLinkage(GlobalValue::PrivateLinkage);
+              func->addFnAttr(Attribute::AlwaysInline);
+              auto iter = func->arg_begin();
+              Value *dst = iter++;
+              Value *src = iter++;
+              Value *len = iter;
+              BasicBlock *block = BasicBlock::Create(context, "entry", func);
+              makeMemMove(dst, src, len, block);
               IRBuilder<> builder(block);
               builder.CreateRetVoid();
             }

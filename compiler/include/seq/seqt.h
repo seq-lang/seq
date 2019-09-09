@@ -14,9 +14,6 @@ public:
   BaseSeqType(BaseSeqType const &) = delete;
   void operator=(BaseSeqType const &) = delete;
 
-  llvm::Value *eq(llvm::Value *self, llvm::Value *other,
-                  llvm::BasicBlock *block);
-
   llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
   void initFields() override;

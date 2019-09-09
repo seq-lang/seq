@@ -181,6 +181,54 @@ extend str:
             h = 31*h + int(p[i])
         return h
 
+    def __eq__(self: str, other: str):
+        if len(self) != len(other):
+            return False
+        i = 0
+        while i < len(self):
+            if self.ptr[i] != other.ptr[i]:
+                return False
+            i += 1
+        return True
+
+    def __ne__(self: str, other: str):
+        return not (self == other)
+
+    def _cmp(self: str, other: str):
+        n = min(self.len, other.len)
+        i = 0
+        while i < n:
+            c1 = self.ptr[i]
+            c2 = other.ptr[i]
+            if c1 != c2:
+                return int(c1) - int(c2)
+            i += 1
+        return self.len - other.len
+
+    def __lt__(self: str, other: str):
+        return self._cmp(other) < 0
+
+    def __le__(self: str, other: str):
+        return self._cmp(other) <= 0
+
+    def __gt__(self: str, other: str):
+        return self._cmp(other) > 0
+
+    def __ge__(self: str, other: str):
+        return self._cmp(other) >= 0
+
+    def __str__(self: str):
+        return self
+
+    def __len__(self: str):
+        return self.len
+
+    def __bool__(self: str):
+        return self.len != 0
+
+    def __copy__(self: str):
+        return self
+
     def __add__(self: str, other: str):
         len1 = self.len
         len2 = other.len
