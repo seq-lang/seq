@@ -19,14 +19,13 @@ using namespace std;
 class SeqTest : public testing::TestWithParam<
                     tuple<const char * /*filename*/, bool /*debug*/>> {
 protected:
-  char buf[10000];
+  vector<char> buf;
   int out_pipe[2];
   int save;
 
-  SeqTest() : buf(), out_pipe(), save() {}
+  SeqTest() : buf(65536), out_pipe(), save() {}
 
   void SetUp() override {
-    memset(buf, '\0', sizeof(buf));
     save = dup(STDOUT_FILENO);
     assert(pipe(out_pipe) == 0);
     long flags = fcntl(out_pipe[0], F_GETFL);
@@ -40,33 +39,8 @@ protected:
 
   string result() {
     fflush(stdout);
-    read(out_pipe[0], buf, sizeof(buf) - 1);
-    return string(buf);
-  }
-};
-
-template <size_t N> struct CaptureStdout {
-  char buf[N];
-  int out_pipe[2];
-  int save;
-
-  CaptureStdout() : buf(), out_pipe(), save() {
-    memset(buf, '\0', N);
-    save = dup(STDOUT_FILENO);
-    assert(pipe(out_pipe) == 0);
-    long flags = fcntl(out_pipe[0], F_GETFL);
-    flags |= O_NONBLOCK;
-    fcntl(out_pipe[0], F_SETFL, flags);
-    dup2(out_pipe[1], STDOUT_FILENO);
-    close(out_pipe[1]);
-  }
-
-  ~CaptureStdout() { dup2(save, STDOUT_FILENO); }
-
-  string result() {
-    fflush(stdout);
-    read(out_pipe[0], buf, sizeof(buf) - 1);
-    return string(buf);
+    read(out_pipe[0], buf.data(), buf.size() - 1);
+    return string(buf.data());
   }
 };
 

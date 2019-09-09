@@ -18,6 +18,8 @@
 *.pyc binary
 *.pdf binary
 
+*.gz binary
+
 *.bam binary
 *.bam.bai binary
 *.cram binary
