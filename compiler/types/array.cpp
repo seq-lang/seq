@@ -25,6 +25,16 @@ void types::ArrayType::initOps() {
     return;
 
   vtable.magic = {
+      {"__elemsize__",
+       {},
+       Int,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         const size_t size =
+             getBaseType(0)->size(b.GetInsertBlock()->getModule());
+         return ConstantInt::get(seqIntLLVM(b.getContext()), size);
+       },
+       true},
+
       {"__init__",
        {Int},
        this,

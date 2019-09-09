@@ -1,4 +1,5 @@
 from err import *
+import gc
 
 def _getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
     def getc(stream: ptr[byte]):
@@ -18,7 +19,7 @@ def _getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
     if not lineptr[0]:
         N = 128
         n[0] = N
-        lineptr[0] = ptr[byte](N)
+        lineptr[0] = gc.alloc_atomic(N)
 
     cur_pos = lineptr[0]
     while True:
@@ -32,9 +33,8 @@ def _getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
                 break
 
         if (lineptr[0] + n[0]) - cur_pos < 2:
-            cdef seq_realloc(ptr[byte], int) -> ptr[byte]
             new_lineptr_len = 2 * n[0]
-            new_lineptr = seq_realloc(lineptr[0], new_lineptr_len)
+            new_lineptr = gc.realloc(lineptr[0], new_lineptr_len)
             cur_pos = new_lineptr + (cur_pos - lineptr[0])
             lineptr[0] = new_lineptr
             n[0] = new_lineptr_len
@@ -69,11 +69,10 @@ class File:
 
     def close(self):
         cdef gzclose(ptr[byte]) -> int
-        cdef seq_free(ptr[byte])
         if self.fp:
             gzclose(self.fp)
         if self.buf:
-            seq_free(self.buf)
+            gc.free(self.buf)
             self._reset()
 
     def _iter(self: File):
