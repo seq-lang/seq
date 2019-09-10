@@ -1,0 +1,11 @@
+import str
+
+def test_isdigit():
+    assert '0'.isdigit() == True
+    assert ''.isdigit() == False
+    assert 'a'.isdigit() == False
+    assert '2829357'.isdigit() == True
+    assert 'kshfkjhe'.isdigit() == False
+    assert '9735g385497'.isdigit() == False
+
+test_isdigit()

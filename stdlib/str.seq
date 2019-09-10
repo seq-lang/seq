@@ -1,0 +1,18 @@
+
+extend str:
+    def isdigit(self: str) -> bool:
+        """
+        str.isdigit() -> bool
+
+        Return True if all characters in S are digits
+        and there is at least one character in S, False otherwise.
+        """
+        cdef isdigit(int) -> int
+        if len(self) == 0:
+            return False
+        if len(self) == 1:
+            return isdigit(int(self.ptr[0])) > 0
+        for i in range(len(self)):
+            if isdigit(int(self.ptr[i])) == 0:
+                return False
+        return True
