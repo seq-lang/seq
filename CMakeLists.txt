@@ -103,6 +103,7 @@ target_link_libraries(seq ${LLVM_LIBS} seqrt)
 
 
 # Seq parsing library
+option(SEQ_DYN_PARSELIB "use dynamic instead of static linking for OCaml parsing library" OFF)
 find_program(OCAMLFIND NAMES ocamlfind)
 execute_process(COMMAND ${OCAMLFIND} ocamlc -where
                 RESULT_VARIABLE result
@@ -118,30 +119,27 @@ link_directories(${OCAML_STDLIB_PATH})
 
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/seqparser.o")
+set(DUNE_OUTPUT_NAME "main.exe.o")
+if(SEQ_DYN_PARSELIB)
+  set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/libseqparser.so")
+  set(DUNE_OUTPUT_NAME "main.so")
+endif()
 
 find_program(OPAM NAMES opam)
 if(NOT OPAM)
   message(FATAL_ERROR "opam command not found")
 endif()
 
-# Hack to run dune rebuild every time
-add_custom_target(
-  always_runs ALL
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy
-)
 # OCaml does not look for system libraries; these have to be explicitly passed on
 if(APPLE)
   set(DUNE_LIBRARY_PATH "/usr/local/lib")
 else()
   set(DUNE_LIBRARY_PATH "/usr/lib/x86_64-linux-gnu")
 endif()
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy ${LIB_SEQPARSE}
-                   COMMAND DUNE_LIBRARY_PATH=${DUNE_LIBRARY_PATH} ${OPAM} exec -- dune build --profile=dev --build-dir=${DUNE_BUILD_DIR} main.exe.o
-                   COMMAND cp ${DUNE_BUILD_DIR}/default/main.exe.o ${LIB_SEQPARSE}
+add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
+                   COMMAND DUNE_LIBRARY_PATH=${DUNE_LIBRARY_PATH} ${OPAM} exec -- dune build --profile=dev --build-dir=${DUNE_BUILD_DIR} ${DUNE_OUTPUT_NAME}
+                   COMMAND cp ${DUNE_BUILD_DIR}/default/${DUNE_OUTPUT_NAME} ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
-                   DEPENDS parser/dune
-                           parser/main.ml
-                           parser/dune-project
                    COMMENT "Compiling Seq's OCaml components"
                    VERBATIM)
 add_custom_target(seqparse_target DEPENDS ${LIB_SEQPARSE})
@@ -152,8 +150,14 @@ set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
 
 
 # Seq command-line tool
-add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
-target_link_libraries(seqc seq ffi)
+if(SEQ_DYN_PARSELIB)
+  add_executable(seqc runtime/main.cpp)
+  target_link_libraries(seqc seq seqparse asmrun)
+else()
+  add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
+  target_link_libraries(seqc seq ffi)
+endif()
+
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
@@ -183,6 +187,11 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
                  ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
                  EXCLUDE_FROM_ALL)
 
-add_executable(seqtest test/main.cpp ${LIB_SEQPARSE})
+if(SEQ_DYN_PARSELIB)
+  add_executable(seqtest test/main.cpp)
+  target_link_libraries(seqtest seq seqparse asmrun gtest_main)
+else()
+  add_executable(seqtest test/main.cpp ${LIB_SEQPARSE})
+  target_link_libraries(seqtest seq ffi gtest_main)
+endif()
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
-target_link_libraries(seqtest seq ffi gtest_main)
