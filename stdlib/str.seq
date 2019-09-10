@@ -37,3 +37,24 @@ extend str:
             elif cased == False and islower(int(self.ptr[i])):
                 cased = True
         return cased
+
+    def isupper(self: str) -> bool:
+        """
+        str.isupper() -> bool
+
+        Return True if all cased characters in str are uppercase and there is
+        at least one cased character in str, False otherwise.
+        """
+        cased = False
+        cdef isupper(int) -> int
+        cdef islower(int) -> int
+        if len(self) == 0:
+            return False
+        if len(self) == 1:
+            return isupper(int(self.ptr[0])) > 0
+        for i in range(len(self)):
+            if islower(int(self.ptr[i])) > 0:
+                return False
+            elif cased == False and isupper(int(self.ptr[i])):
+                cased = True
+        return cased
