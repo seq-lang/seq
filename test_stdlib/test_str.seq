@@ -8,8 +8,6 @@ def test_isdigit():
     assert 'kshfkjhe'.isdigit() == False
     assert '9735g385497'.isdigit() == False
 
-test_isdigit()
-
 def test_islower():
     assert ''.islower() == False
     assert 'a'.islower() == True
@@ -20,4 +18,17 @@ def test_islower():
     assert '9735g385497'.islower() == True
     assert '9735G385497'.islower() == False
 
+def test_isupper():
+    assert ''.isupper() == False
+    assert 'a'.isupper() == False
+    assert 'A'.isupper() == True
+    assert '5'.isupper() == False
+    assert '.J, U-I'.isupper() == True
+    assert 'AHUIUEJ'.isupper() == True
+    assert 'AhUiUeJ'.isupper() == False
+    assert '9735g385497'.isupper() == False
+    assert '9735G385497'.isupper() == True
+
+test_isdigit()
 test_islower()
+test_isupper()
