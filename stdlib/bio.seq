@@ -6,11 +6,12 @@ extend seq:
         return seq(s.ptr, s.len)
 
     def __eq__(self: seq, other: seq):
-        if len(self) != len(other):
+        n = len(self)
+        if n != len(other):
             return False
         i = 0
-        while i < len(self):
-            if self.ptr[i] != other.ptr[i]:
+        while i < n:
+            if self._at(i) != other._at(i):
                 return False
             i += 1
         return True
@@ -19,15 +20,17 @@ extend seq:
         return not (self == other)
 
     def _cmp(self: seq, other: seq):
-        n = min(self.len, other.len)
+        self_len = len(self)
+        other_len = len(other)
+        n = min(self_len, other_len)
         i = 0
         while i < n:
-            c1 = self.ptr[i]
-            c2 = other.ptr[i]
+            c1 = self._at(i)
+            c2 = other._at(i)
             if c1 != c2:
                 return int(c1) - int(c2)
             i += 1
-        return self.len - other.len
+        return self_len - other_len
 
     def __lt__(self: seq, other: seq):
         return self._cmp(other) < 0
