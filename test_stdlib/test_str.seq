@@ -29,6 +29,19 @@ def test_isupper():
     assert '9735g385497'.isupper() == False
     assert '9735G385497'.isupper() == True
 
+def test_isalnum():
+    assert ''.isalnum() == False
+    assert 'a'.isalnum() == True
+    assert '5'.isalnum() == True
+    assert ','.isalnum() == False
+    assert 'H6'.isalnum() == True
+    assert '.J, U-I'.isalnum() == False
+    assert 'A4kki83UE'.isalnum() == True
+    assert 'AhUiUeJ'.isalnum() == True
+    assert '973 g38597'.isalnum() == False
+    assert '9735G3-5497'.isalnum() == False
+
 test_isdigit()
 test_islower()
 test_isupper()
+test_isalnum()
