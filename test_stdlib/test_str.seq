@@ -9,3 +9,15 @@ def test_isdigit():
     assert '9735g385497'.isdigit() == False
 
 test_isdigit()
+
+def test_islower():
+    assert ''.islower() == False
+    assert 'a'.islower() == True
+    assert 'A'.islower() == False
+    assert '5'.islower() == False
+    assert 'ahuiuej'.islower() == True
+    assert 'AhUiUeJ'.islower() == False
+    assert '9735g385497'.islower() == True
+    assert '9735G385497'.islower() == False
+
+test_islower()
