@@ -42,51 +42,79 @@ extend seq:
         return self._cmp(other) >= 0
 
     def __str__(self: seq):
-        return str(self.ptr, self.len)
+        n = len(self)
+        p = ptr[byte](n)
+        for i in range(n):
+            p[i] = self._at(i)
+        return str(p, n)
 
     def __len__(self: seq):
-        return self.len
+        return abs(self.len)
 
     def __bool__(self: seq):
         return self.len != 0
 
     def __hash__(self: seq):
         h = 0
-        p, n = self.ptr, self.len
-        for i in range(n):
-            h = 31*h + int(p[i])
+        for i in range(len(self)):
+            h = 31*h + int(self._at(i))
         return h
 
     def __getitem__(self: seq, idx: int):
+        n = len(self)
         if idx < 0:
-            idx += len(self)
-        assert 0 <= idx <= len(self)
-        return seq(self.ptr + idx, 1)
+            idx += n
+        assert 0 <= idx <= n
+        if self.len > 0:
+            return seq(self.ptr + idx, 1)
+        else:
+            return seq(self.ptr + (n - idx - 1), -1)
 
-    def __setitem__(self: seq, idx: int, other: seq):
-        str.memmove(self.ptr + idx, other.ptr, len(other))
+    def _at(self: seq, idx: int):
+        b = self.ptr[(-self.len - idx - 1) if (self.len < 0) else idx]
+        return b.comp() if self.len < 0 else b
 
     def __slice__(self: seq, a: int, b: int):
-        if a < 0: a += len(self)
-        if b < 0: b += len(self)
-        if a > len(self): a = len(self)
-        if b > len(self): b = len(self)
-        return seq(self.ptr + a, b - a)
+        n = len(self)
+        if a < 0: a += n
+        if b < 0: b += n
+        if a > n: a = n
+        if b > n: b = n
+        if self.len > 0:
+            return seq(self.ptr + a, b - a)
+        else:
+            return seq(self.ptr + (n - b), -(b - a))
 
     def __slice_left__(self: seq, b: int):
-        if b < 0: b += len(self)
-        if b > len(self): b = len(self)
-        return seq(self.ptr, b)
+        n = len(self)
+        if b < 0: b += n
+        if b > n: b = n
+        if self.len > 0:
+            return seq(self.ptr, b)
+        else:
+            return seq(self.ptr + (n - b), -b)
 
     def __slice_right__(self: seq, a: int):
-        if a < 0: a += len(self)
-        if a > len(self): a = len(self)
-        return seq(self.ptr + a, len(self) - a)
+        n = len(self)
+        if a < 0: a += n
+        if a > n: a = n
+        if self.len > 0:
+            return seq(self.ptr + a, n - a)
+        else:
+            return seq(self.ptr, -(n - a))
+
+    def _copy_to(self: seq, p: ptr[byte]):
+        if self.len >= 0:
+            str.memcpy(p, self.ptr, self.len)
+        else:
+            n = -self.len
+            for i in range(n):
+                p[i] = self.ptr[n - i - 1]
 
     def __copy__(self: seq):
-        n = self.len
+        n = len(self)
         p = ptr[byte](n)
-        str.memcpy(p, self.ptr, n)
+        self._copy_to(p)
         return seq(p, n)
 
     def split(self: seq, k: int, step: int):
@@ -94,6 +122,9 @@ extend seq:
         while i + k <= len(self):
             yield self[i:i+k]
             i += step
+
+    def __iter__(self: seq):
+        return self.split(1, 1)
 
     def kmersx[K](self: seq, step: int):
         k = K.len()
@@ -135,18 +166,8 @@ extend seq:
             i += 1
         return 0
 
-    def __invert__(self: seq) -> seq:
-        return self.__copy__().revcomp()
-
-    def revcomp(self: seq) -> seq:
-        p = self.ptr
-        a = 0
-        b = self.len - 1
-        while a < b:
-            p[a], p[b] = p[b].comp(), p[a].comp()
-            a += 1
-            b -= 1
-        return self
+    def __invert__(self: seq):
+        return seq(self.ptr, -self.len)
 
 def split(self: seq, k: int, step: int):
     return self.split(k, step)
@@ -306,12 +327,12 @@ def blocks(gg, sz: int):
     n = l = i = 0
     for s in iter(gg):
         if l == 0:
-            l = s.len
+            l = len(s)
             i = 0
             buf = ptr[byte](l * sz)
-        if s.len != l:
+        if len(s) != l:
             _blocks_diff_line_lens()
-        str.memcpy(buf + n, s.ptr, l)
+        s._copy_to(buf + n)
         n += l
         i += 1
         if i == sz:

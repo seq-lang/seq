@@ -303,6 +303,8 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir) {
     Value *ptr = types::Seq->memb(seq, "ptr", entry);
     Value *len = types::Seq->memb(seq, "len", entry);
     IRBuilder<> builder(entry);
+    Value *rc = builder.CreateICmpSLT(len, zeroLLVM(context));
+    len = builder.CreateSelect(rc, builder.CreateNeg(len), len);
 
     BasicBlock *loop = BasicBlock::Create(context, "while", func);
     builder.CreateBr(loop);
@@ -325,21 +327,33 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir) {
       // right slide
       Value *idx = builder.CreateSub(len, oneLLVM(context));
       idx = builder.CreateSub(idx, control);
+      // true index if sequence reverse complemented:
+      Value *idxBack =
+          builder.CreateSub(builder.CreateSub(len, oneLLVM(context)), idx);
+      idx = builder.CreateSelect(rc, idxBack, idx);
+
       kmerMod = builder.CreateLShr(result, 2);
       Value *base = builder.CreateLoad(builder.CreateGEP(ptr, idx));
       base = builder.CreateZExt(base, builder.getInt64Ty());
       Value *bits = builder.CreateLoad(
           builder.CreateInBoundsGEP(table, {builder.getInt64(0), base}));
+      bits = builder.CreateSelect(rc, builder.CreateNot(bits), bits);
       bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
       bits = builder.CreateShl(bits, 2 * (kmerType->getK() - 1));
       kmerMod = builder.CreateOr(kmerMod, bits);
     } else {
       // left slide
+      // true index if sequence reverse complemented:
+      Value *idxBack =
+          builder.CreateSub(builder.CreateSub(len, oneLLVM(context)), control);
+      Value *idx = builder.CreateSelect(rc, idxBack, control);
+
       kmerMod = builder.CreateShl(result, 2);
-      Value *base = builder.CreateLoad(builder.CreateGEP(ptr, control));
+      Value *base = builder.CreateLoad(builder.CreateGEP(ptr, idx));
       base = builder.CreateZExt(base, builder.getInt64Ty());
       Value *bits = builder.CreateLoad(
           builder.CreateInBoundsGEP(table, {builder.getInt64(0), base}));
+      bits = builder.CreateSelect(rc, builder.CreateNot(bits), bits);
       bits = builder.CreateZExt(bits, kmerType->getLLVMType(context));
       kmerMod = builder.CreateOr(kmerMod, bits);
     }
@@ -394,7 +408,11 @@ static Function *getInitFunc(types::KMer *kmerType, Module *module) {
       kmer = builder.CreateOr(kmer, shift);
     }
 
-    builder.CreateRet(kmer);
+    Value *kmerRC =
+        kmerType->callMagic("__invert__", {}, kmer, {}, block, nullptr);
+    Value *len = types::Seq->memb(seq, "len", block);
+    Value *rc = builder.CreateICmpSLT(len, zeroLLVM(context));
+    builder.CreateRet(builder.CreateSelect(rc, kmerRC, kmer));
   }
 
   return func;
