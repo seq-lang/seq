@@ -41,7 +41,20 @@ def test_isalnum():
     assert '973 g38597'.isalnum() == False
     assert '9735G3-5497'.isalnum() == False
 
+def test_isalpha():
+    assert ''.isalpha() == False
+    assert 'a'.isalpha() == True
+    assert '5'.isalpha() == False
+    assert ','.isalpha() == False
+    assert 'Hh'.isalpha() == True
+    assert '.J, U-I'.isalpha() == False
+    assert 'A4kki83UE'.isalpha() == False
+    assert 'AhUiUeJ'.isalpha() == True
+    assert '973 g38597'.isalpha() == False
+    assert '9735G3-5497'.isalpha() == False
+
 test_isdigit()
 test_islower()
 test_isupper()
 test_isalnum()
+test_isalpha()
