@@ -1,0 +1,8 @@
+import str
+
+print '0'.isdigit()
+print ''.isdigit()
+print 'a'.isdigit()
+print '2829357'.isdigit()
+print 'kshfkjhe'.isdigit()
+print '9735g385497'.isdigit()
