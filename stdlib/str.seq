@@ -75,3 +75,20 @@ extend str:
             if isalnum(int(self.ptr[i])) == 0:
                 return False
         return True
+
+    def isalpha(self: str) -> bool:
+        """
+        str.isalpha() -> bool
+
+        Return True if all characters in str are alphabetic
+        and there is at least one character in str, False otherwise.
+        """
+        cdef isalpha(int) -> int
+        if len(self) == 0:
+            return False
+        if len(self) == 1:
+            return isalpha(int(self.ptr[0])) > 0
+        for i in range(len(self)):
+            if isalpha(int(self.ptr[i])) == 0:
+                return False
+        return True
