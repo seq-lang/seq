@@ -53,6 +53,15 @@ def test_isalpha():
     assert '973 g38597'.isalpha() == False
     assert '9735G3-5497'.isalpha() == False
 
+def test_isspace():
+    assert ''.isspace() == False
+    assert ' '.isspace() == True
+    assert '5 '.isspace() == False
+    assert '\t\n\r '.isspace() == True
+    assert '\t '.isspace() == True
+    assert '\t\ngh\r '.isspace() == False
+    assert 'A4kki 3UE'.isspace() == False
+
 test_isdigit()
 test_islower()
 test_isupper()
