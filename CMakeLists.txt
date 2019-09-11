@@ -103,7 +103,6 @@ target_link_libraries(seq ${LLVM_LIBS} seqrt)
 
 
 # Seq parsing library
-option(SEQ_DYN_PARSELIB "use dynamic instead of static linking for OCaml parsing library" OFF)
 find_program(OCAMLFIND NAMES ocamlfind)
 execute_process(COMMAND ${OCAMLFIND} ocamlc -where
                 RESULT_VARIABLE result
@@ -120,19 +119,14 @@ link_directories(${OCAML_STDLIB_PATH})
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/seqparser.o")
 set(DUNE_OUTPUT_NAME "main.exe.o")
-if(SEQ_DYN_PARSELIB)
-  set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/libseqparser.so")
-  set(DUNE_OUTPUT_NAME "main.so")
-endif()
 
 find_program(OPAM NAMES opam)
 if(NOT OPAM)
   message(FATAL_ERROR "opam command not found")
 endif()
 
-# OCaml does not look for system libraries; these have to be explicitly passed on
 add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
-                   COMMAND DUNE_LIBRARY_PATH=${DUNE_LIBRARY_PATH} ${OPAM} exec -- dune build --profile=dev --build-dir=${DUNE_BUILD_DIR} ${DUNE_OUTPUT_NAME}
+                   COMMAND ${OPAM} exec -- dune build --build-dir=${DUNE_BUILD_DIR} ${DUNE_OUTPUT_NAME}
                    COMMAND cp ${DUNE_BUILD_DIR}/default/${DUNE_OUTPUT_NAME} ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
                    COMMENT "Compiling Seq's OCaml components"
@@ -169,14 +163,8 @@ foreach(OCAML_STUB IN ITEMS
 endforeach(OCAML_STUB)
 
 # Seq command-line tool
-if(SEQ_DYN_PARSELIB)
-  add_executable(seqc runtime/main.cpp)
-  target_link_libraries(seqc seq seqparse asmrun)
-else()
-  add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
-  target_link_libraries(seqc seq ${OCAML_STATIC} ffi)
-endif()
-
+add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
+target_link_libraries(seqc seq ${OCAML_STATIC} ffi)
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
@@ -206,11 +194,6 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
                  ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
                  EXCLUDE_FROM_ALL)
 
-if(SEQ_DYN_PARSELIB)
-  add_executable(seqtest test/main.cpp)
-  target_link_libraries(seqtest seq seqparse asmrun gtest_main)
-else()
-  add_executable(seqtest test/main.cpp ${LIB_SEQPARSE})
-  target_link_libraries(seqtest seq ${OCAML_STATIC} ffi gtest_main)
-endif()
+add_executable(seqtest test/main.cpp ${LIB_SEQPARSE})
+target_link_libraries(seqtest seq ${OCAML_STATIC} ffi gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
