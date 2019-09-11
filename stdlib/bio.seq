@@ -68,7 +68,7 @@ extend seq:
         if idx < 0:
             idx += n
         assert 0 <= idx <= n
-        if self.len > 0:
+        if self.len >= 0:
             return seq(self.ptr + idx, 1)
         else:
             return seq(self.ptr + (n - idx - 1), -1)
@@ -77,22 +77,25 @@ extend seq:
         b = self.ptr[(-self.len - idx - 1) if (self.len < 0) else idx]
         return b.comp() if self.len < 0 else b
 
+    def _slice_direct(self: seq, a: int, b: int):
+        if self.len >= 0:
+            return seq(self.ptr + a, b - a)
+        else:
+            return seq(self.ptr + (-self.len - b), -(b - a))
+
     def __slice__(self: seq, a: int, b: int):
         n = len(self)
         if a < 0: a += n
         if b < 0: b += n
         if a > n: a = n
         if b > n: b = n
-        if self.len > 0:
-            return seq(self.ptr + a, b - a)
-        else:
-            return seq(self.ptr + (n - b), -(b - a))
+        return self._slice_direct(a, b)
 
     def __slice_left__(self: seq, b: int):
         n = len(self)
         if b < 0: b += n
         if b > n: b = n
-        if self.len > 0:
+        if self.len >= 0:
             return seq(self.ptr, b)
         else:
             return seq(self.ptr + (n - b), -b)
@@ -101,7 +104,7 @@ extend seq:
         n = len(self)
         if a < 0: a += n
         if a > n: a = n
-        if self.len > 0:
+        if self.len >= 0:
             return seq(self.ptr + a, n - a)
         else:
             return seq(self.ptr, -(n - a))
@@ -123,7 +126,7 @@ extend seq:
     def split(self: seq, k: int, step: int):
         i = 0
         while i + k <= len(self):
-            yield self[i:i+k]
+            yield self._slice_direct(i,i+k)
             i += step
 
     def __iter__(self: seq):
@@ -131,22 +134,22 @@ extend seq:
 
     def kmersx[K](self: seq, step: int):
         k = K.len()
-        if self.len > 0:
+        if self.len >= 0:
             n = self.len
             if step >= k:
                 # naive
                 i = 0
                 while i + k <= n:
-                    yield K(self[i:i+k], False)
+                    yield K(self._slice_direct(i,i+k), False)
                     i += step
             elif n >= k:
                 # sliding encoding
-                kmer = K(self[:k])
+                kmer = K(self._slice_direct(0,k))
                 yield kmer
                 i = 0
                 while i + k + step <= n:
                     j = i + k
-                    kmer <<= self[j:j+step]
+                    kmer <<= self._slice_direct(j,j+step)
                     i += step
                     yield kmer
         else:
@@ -155,26 +158,26 @@ extend seq:
                 # naive
                 i = 0
                 while i + k <= n:
-                    yield K(self[i:i+k], True)
+                    yield K(self._slice_direct(i,i+k), True)
                     i += step
             elif n >= k:
                 # sliding encoding
-                kmer = K(self[:k])
+                kmer = K(self._slice_direct(0,k))
                 yield kmer
                 i = 0
                 while i + k + step <= n:
                     j = i + k
-                    kmer <<= self[j:j+step]
+                    kmer <<= self._slice_direct(j,j+step)
                     i += step
                     yield kmer
 
     def kmers[K](self: seq, step: int):
         k = K.len()
-        if self.len > 0:
+        if self.len >= 0:
             n = self.len
             i = 0
             while i + k <= n:
-                sub = self[i:i+k]
+                sub = self._slice_direct(i,i+k)
                 if not sub.N():
                     yield K(sub, False)
                 i += step
@@ -182,7 +185,7 @@ extend seq:
             n = -self.len
             i = 0
             while i + k <= n:
-                sub = self[i:i+k]
+                sub = self._slice_direct(i,i+k)
                 if not sub.N():
                     yield K(sub, True)
                 i += step
@@ -191,7 +194,7 @@ extend seq:
         i = 0
         n = len(self)
         while i < n:
-            if self[i] == s"N":
+            if self.ptr[i] == byte(78):  # 'N'
                 return i + 1
             i += 1
         return 0
@@ -224,6 +227,7 @@ type Seqs(file: File):
 
     def __iter__(self: Seqs):
         for a in self.file._iter():
+            assert a.len >= 0
             yield copy(seq(a.ptr, a.len))
         self.file.close()
 
@@ -266,6 +270,7 @@ type FASTQ(file: File):
                     pass  # separator
                 case 3:
                     qual = copy(a)
+                    assert read.len >= 0
                     yield (name, read, qual)
                 default:
                     assert False

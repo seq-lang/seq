@@ -1,5 +1,13 @@
 type K = Kmer[5]
 
+s = s'ACGTAACGTA'
+print s                       # EXPECT: ACGTAACGTA
+print list(s.kmers[K](1))     # EXPECT: [ACGTA, CGTAA, GTAAC, TAACG, AACGT, ACGTA]
+print list(s.split(5, 1))     # EXPECT: [ACGTA, CGTAA, GTAAC, TAACG, AACGT, ACGTA]
+print ~s                      # EXPECT: TACGTTACGT
+print list((~s).kmers[K](1))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
+print list((~s).split(5, 1))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
+
 k1 = K(s'ACGTA')
 k2 = K(s'ATGTT')
 
@@ -32,8 +40,10 @@ k2 = K(s'ACGTA')
 print k1 - k2  # EXPECT: 0
 print k2 - k1  # EXPECT: 0
 
-print k1 << s'G'  # EXPECT: CGTAG
-print k1 >> s'G'  # EXPECT: GACGT
+print k1 << s'G'   # EXPECT: CGTAG
+print k1 >> s'G'   # EXPECT: GACGT
+print k1 << ~s'G'  # EXPECT: CGTAC
+print k1 >> ~s'G'  # EXPECT: CACGT
 
 type K100 = Kmer[100]
 type K1 = Kmer[1]
