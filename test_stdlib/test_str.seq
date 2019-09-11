@@ -62,8 +62,19 @@ def test_isspace():
     assert '\t\ngh\r '.isspace() == False
     assert 'A4kki 3UE'.isspace() == False
 
+def test_istitle():
+    assert ''.istitle() == False
+    assert ' '.istitle() == False
+    assert 'I '.istitle() == True
+    assert 'IH'.istitle() == False
+    assert 'Ih'.istitle() == True
+    assert 'Hter Hewri'.istitle() == True
+    assert 'Kweiur oiejf'.istitle() == False
+
 test_isdigit()
 test_islower()
 test_isupper()
 test_isalnum()
 test_isalpha()
+test_isspace()
+test_istitle()
