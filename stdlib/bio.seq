@@ -131,34 +131,61 @@ extend seq:
 
     def kmersx[K](self: seq, step: int):
         k = K.len()
-        n = len(self)
-
-        if step >= k:
-            # naive
-            i = 0
-            while i + k <= n:
-                yield K(self[i:i+k])
-                i += step
-        elif n >= k:
-            # sliding encoding
-            kmer = K(self[:k])
-            yield kmer
-            i = 0
-            while i + k + step <= n:
-                j = i + k
-                kmer <<= self[j:j+step]
-                i += step
+        if self.len > 0:
+            n = self.len
+            if step >= k:
+                # naive
+                i = 0
+                while i + k <= n:
+                    yield K(self[i:i+k], False)
+                    i += step
+            elif n >= k:
+                # sliding encoding
+                kmer = K(self[:k])
                 yield kmer
+                i = 0
+                while i + k + step <= n:
+                    j = i + k
+                    kmer <<= self[j:j+step]
+                    i += step
+                    yield kmer
+        else:
+            n = -self.len
+            if step >= k:
+                # naive
+                i = 0
+                while i + k <= n:
+                    yield K(self[i:i+k], True)
+                    i += step
+            elif n >= k:
+                # sliding encoding
+                kmer = K(self[:k])
+                yield kmer
+                i = 0
+                while i + k + step <= n:
+                    j = i + k
+                    kmer <<= self[j:j+step]
+                    i += step
+                    yield kmer
 
     def kmers[K](self: seq, step: int):
         k = K.len()
-        n = len(self)
-        i = 0
-        while i + k <= n:
-            sub = self[i:i+k]
-            if not sub.N():
-                yield K(sub)
-            i += step
+        if self.len > 0:
+            n = self.len
+            i = 0
+            while i + k <= n:
+                sub = self[i:i+k]
+                if not sub.N():
+                    yield K(sub, False)
+                i += step
+        else:
+            n = -self.len
+            i = 0
+            while i + k <= n:
+                sub = self[i:i+k]
+                if not sub.N():
+                    yield K(sub, True)
+                i += step
 
     def N(self: seq):
         i = 0

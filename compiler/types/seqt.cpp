@@ -375,19 +375,26 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir) {
 /*
  * Seq-to-KMer initialization function
  */
-static Function *getInitFunc(types::KMer *kmerType, Module *module) {
-  const std::string name = "seq." + kmerType->getName() + ".init";
+static Function *getInitFunc(types::KMer *kmerType, Module *module,
+                             bool rc = false) {
+  const std::string name =
+      "seq." + kmerType->getName() + ".init" + (rc ? ".rc" : "");
   LLVMContext &context = module->getContext();
   Function *func = module->getFunction(name);
 
   if (!func) {
     func = cast<Function>(
-        module->getOrInsertFunction(name, kmerType->getLLVMType(context),
-                                    types::Seq->getLLVMType(context)));
+        rc ? module->getOrInsertFunction(name, kmerType->getLLVMType(context),
+                                         types::Seq->getLLVMType(context),
+                                         types::Bool->getLLVMType(context))
+           : module->getOrInsertFunction(name, kmerType->getLLVMType(context),
+                                         types::Seq->getLLVMType(context)));
     func->setDoesNotThrow();
     func->setLinkage(GlobalValue::PrivateLinkage);
 
-    Value *seq = func->arg_begin();
+    auto iter = func->arg_begin();
+    Value *seq = iter++;
+    Value *rcVal = rc ? iter : nullptr;
     BasicBlock *block = BasicBlock::Create(context, "entry", func);
     IRBuilder<> builder(block);
 
@@ -410,9 +417,13 @@ static Function *getInitFunc(types::KMer *kmerType, Module *module) {
 
     Value *kmerRC =
         kmerType->callMagic("__invert__", {}, kmer, {}, block, nullptr);
-    Value *len = types::Seq->memb(seq, "len", block);
-    Value *rc = builder.CreateICmpSLT(len, zeroLLVM(context));
-    builder.CreateRet(builder.CreateSelect(rc, kmerRC, kmer));
+    if (!rcVal) {
+      Value *len = types::Seq->memb(seq, "len", block);
+      rcVal = builder.CreateICmpSLT(len, zeroLLVM(context));
+    } else {
+      rcVal = builder.CreateZExtOrTrunc(rcVal, IntegerType::getInt1Ty(context));
+    }
+    builder.CreateRet(builder.CreateSelect(rcVal, kmerRC, kmer));
   }
 
   return func;
@@ -490,6 +501,16 @@ void types::KMer::initOps() {
          Function *initFunc =
              getInitFunc(this, b.GetInsertBlock()->getModule());
          return b.CreateCall(initFunc, args[0]);
+       },
+       false},
+
+      {"__init__",
+       {Seq, Bool},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *initFunc =
+             getInitFunc(this, b.GetInsertBlock()->getModule(), true);
+         return b.CreateCall(initFunc, {args[0], args[1]});
        },
        false},
 
