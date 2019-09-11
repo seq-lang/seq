@@ -144,27 +144,27 @@ add_dependencies(seqparse seqparse_target)
 set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
 list(APPEND OCAML_STATIC "")
 foreach(OCAML_STUB IN ITEMS
-    ${OCAML_STDLIB_PATH}/../ctypes/libctypes-foreign-threaded_stubs.a
-    ${OCAML_STDLIB_PATH}/../ctypes/libctypes-foreign-base_stubs.a
-    ${OCAML_STDLIB_PATH}/../ctypes/libctypes_stubs.a
-    ${OCAML_STDLIB_PATH}/../core/libcore_stubs.a
-    ${OCAML_STDLIB_PATH}/../spawn/libspawn_stubs.a
-    ${OCAML_STDLIB_PATH}/../core_kernel/libcore_kernel_stubs.a
-    ${OCAML_STDLIB_PATH}/../base_bigstring/libbase_bigstring_stubs.a
-    ${OCAML_STDLIB_PATH}/../time_now/libtime_now_stubs.a
-    ${OCAML_STDLIB_PATH}/../ppx_expect/collector/libexpect_test_collector_stubs.a
-    ${OCAML_STDLIB_PATH}/../bin_prot/libbin_prot_stubs.a
-    ${OCAML_STDLIB_PATH}/../base/libbase_stubs.a
-    ${OCAML_STDLIB_PATH}/../integers/libintegers_stubs.a
-    ${OCAML_STDLIB_PATH}/../integers/libintegers.a
-    ${OCAML_STDLIB_PATH}/libcamlstr.a
-    ${OCAML_STDLIB_PATH}/libbigarray.a
-    ${OCAML_STDLIB_PATH}/libthreadsnat.a
-    ${OCAML_STDLIB_PATH}/libthreads.a
-    ${OCAML_STDLIB_PATH}/libunix.a)
-  if(EXISTS ${OCAML_STUB})
-    list(APPEND OCAML_STATIC ${OCAML_STUB})
-    message("Found ${OCAML_STUB}")
+    ctypes/libctypes-foreign-threaded_stubs.a
+    ctypes/libctypes-foreign-base_stubs.a
+    ctypes/libctypes_stubs.a
+    core/libcore_stubs.a
+    core_kernel/libcore_kernel_stubs.a
+    spawn/libspawn_stubs.a
+    time_now/libtime_now_stubs.a
+    ppx_expect/collector/libexpect_test_collector_stubs.a
+    bin_prot/libbin_prot_stubs.a
+    base_bigstring/libbase_bigstring_stubs.a
+    base/libbase_stubs.a
+    integers/libintegers_stubs.a
+    integers/libintegers.a
+    ocaml/libcamlstr.a
+    ocaml/libbigarray.a
+    ocaml/libthreadsnat.a
+    ocaml/libthreads.a
+    ocaml/libunix.a)
+  set(OCAML_STUB_PATH "${OCAML_STDLIB_PATH}/../${OCAML_STUB}")
+  if(EXISTS ${OCAML_STUB_PATH})
+    list(APPEND OCAML_STATIC ${OCAML_STUB_PATH})
   endif()
 endforeach(OCAML_STUB)
 
