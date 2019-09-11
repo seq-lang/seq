@@ -103,7 +103,6 @@ target_link_libraries(seq ${LLVM_LIBS} seqrt)
 
 
 # Seq parsing library
-option(SEQ_DYN_PARSELIB "use dynamic instead of static linking for OCaml parsing library" OFF)
 find_program(OCAMLFIND NAMES ocamlfind)
 execute_process(COMMAND ${OCAMLFIND} ocamlc -where
                 RESULT_VARIABLE result
@@ -120,24 +119,14 @@ link_directories(${OCAML_STDLIB_PATH})
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/seqparser.o")
 set(DUNE_OUTPUT_NAME "main.exe.o")
-if(SEQ_DYN_PARSELIB)
-  set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/libseqparser.so")
-  set(DUNE_OUTPUT_NAME "main.so")
-endif()
 
 find_program(OPAM NAMES opam)
 if(NOT OPAM)
   message(FATAL_ERROR "opam command not found")
 endif()
 
-# OCaml does not look for system libraries; these have to be explicitly passed on
-if(APPLE)
-  set(DUNE_LIBRARY_PATH "/usr/local/lib")
-else()
-  set(DUNE_LIBRARY_PATH "/usr/lib/x86_64-linux-gnu")
-endif()
 add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
-                   COMMAND DUNE_LIBRARY_PATH=${DUNE_LIBRARY_PATH} ${OPAM} exec -- dune build --profile=dev --build-dir=${DUNE_BUILD_DIR} ${DUNE_OUTPUT_NAME}
+                   COMMAND ${OPAM} exec -- dune build --build-dir=${DUNE_BUILD_DIR} ${DUNE_OUTPUT_NAME}
                    COMMAND cp ${DUNE_BUILD_DIR}/default/${DUNE_OUTPUT_NAME} ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
                    COMMENT "Compiling Seq's OCaml components"
@@ -147,17 +136,35 @@ add_dependencies(seqparse_target seq)
 add_library(seqparse SHARED IMPORTED)
 add_dependencies(seqparse seqparse_target)
 set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
-
+list(APPEND OCAML_STATIC "")
+foreach(OCAML_STUB IN ITEMS
+    ctypes/libctypes-foreign-threaded_stubs.a
+    ctypes/libctypes-foreign-base_stubs.a
+    ctypes/libctypes_stubs.a
+    core/libcore_stubs.a
+    core_kernel/libcore_kernel_stubs.a
+    spawn/libspawn_stubs.a
+    time_now/libtime_now_stubs.a
+    ppx_expect/collector/libexpect_test_collector_stubs.a
+    bin_prot/libbin_prot_stubs.a
+    base_bigstring/libbase_bigstring_stubs.a
+    base/libbase_stubs.a
+    integers/libintegers_stubs.a
+    integers/libintegers.a
+    ocaml/libcamlstr.a
+    ocaml/libbigarray.a
+    ocaml/libthreadsnat.a
+    ocaml/libthreads.a
+    ocaml/libunix.a)
+  set(OCAML_STUB_PATH "${OCAML_STDLIB_PATH}/../${OCAML_STUB}")
+  if(EXISTS ${OCAML_STUB_PATH})
+    list(APPEND OCAML_STATIC ${OCAML_STUB_PATH})
+  endif()
+endforeach(OCAML_STUB)
 
 # Seq command-line tool
-if(SEQ_DYN_PARSELIB)
-  add_executable(seqc runtime/main.cpp)
-  target_link_libraries(seqc seq seqparse asmrun)
-else()
-  add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
-  target_link_libraries(seqc seq ffi)
-endif()
-
+add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
+target_link_libraries(seqc seq ${OCAML_STATIC} ffi)
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
@@ -187,11 +194,6 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
                  ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
                  EXCLUDE_FROM_ALL)
 
-if(SEQ_DYN_PARSELIB)
-  add_executable(seqtest test/main.cpp)
-  target_link_libraries(seqtest seq seqparse asmrun gtest_main)
-else()
-  add_executable(seqtest test/main.cpp ${LIB_SEQPARSE})
-  target_link_libraries(seqtest seq ffi gtest_main)
-endif()
+add_executable(seqtest test/main.cpp ${LIB_SEQPARSE})
+target_link_libraries(seqtest seq ${OCAML_STATIC} ffi gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")

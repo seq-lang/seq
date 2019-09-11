@@ -43,6 +43,20 @@ before_install:
       cd -
     fi
 
+  # install OCaml:
+  - export OCAML_VERSION=4.07
+  - |
+    if [[ -z "$(ls -A ${HOME}/.opam)" ]]; then
+      wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
+      bash -ex .travis-ocaml.sh
+      opam update
+      opam install -y ocamlfind core dune ctypes ctypes-foreign menhir ppx_deriving
+      sudo cp /usr/local/bin/opam ${HOME}/.opam/
+    else
+      sudo cp ${HOME}/.opam/opam /usr/local/bin/
+    fi
+  - eval $(opam env)
+
 install:
   # install Boehm GC:
   - git clone -b release-7_6 https://github.com/ivmai/bdwgc
@@ -67,14 +81,6 @@ install:
   - sudo make install
   - cd -
 
-  # install OCaml:
-  - export OCAML_VERSION=4.07
-  - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
-  - bash -ex .travis-ocaml.sh
-  - opam update
-  - opam install -y ocamlfind core dune ctypes ctypes-foreign menhir ppx_deriving
-  - eval $(opam env)
-
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
@@ -85,11 +91,6 @@ before_script:
 
 script:
   - mkdir build
-  # prevent OCaml from statically linking libpthread:
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      ln -s /usr/lib/x86_64-linux-gnu/libpthread_nonshared.a build/libpthread.a
-    fi
   - |
     (cd build && cmake .. -DSEQ_THREADED=ON \
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
@@ -103,6 +104,7 @@ cache:
   timeout: 1000
   directories:
     - Tapir-LLVM
+    - ${HOME}/.opam
 
 branches:
   only:
