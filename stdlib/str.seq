@@ -92,3 +92,20 @@ extend str:
             if isalpha(int(self.ptr[i])) == 0:
                 return False
         return True
+
+    def isspace(self: str) -> bool:
+        """
+        str.isspace() -> bool
+
+        Return True if all characters in str are whitespace
+        and there is at least one character in str, False otherwise.
+        """
+        cdef isspace(int) -> int
+        if len(self) == 0:
+            return False
+        if len(self) == 1:
+            return isspace(int(self.ptr[0])) > 0
+        for i in range(len(self)):
+            if isspace(int(self.ptr[i])) == 0:
+                return False
+        return True
