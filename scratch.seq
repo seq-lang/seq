@@ -1,9 +1,9 @@
 import str
 
-print ''.isspace()
-print ' '.isspace()
-print '5 '.isspace()
-print '\t\n\r '.isspace()
-print '\t '.isspace()
-print '\t\ngh\r '.isspace()
-print 'A4kki 3UE'.isspace()
+print ''.istitle()
+print ' '.istitle()
+print 'I '.istitle()
+print 'IH'.istitle()
+print 'Ih'.istitle()
+print 'Hter Hewri'.istitle()
+print 'Kweiur oiejf'.istitle()

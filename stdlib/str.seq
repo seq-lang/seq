@@ -109,3 +109,37 @@ extend str:
             if isspace(int(self.ptr[i])) == 0:
                 return False
         return True
+
+    def istitle(self: str) -> bool:
+        """
+        str.istitle() -> bool
+
+        Return True if str is a titlecased string and there is at least one
+        character in str, i.e. uppercase characters may only follow uncased
+        characters and lowercase characters only cased ones. Return False
+        otherwise.
+        """
+        cdef istitle(int) -> int
+        cdef isupper(int) -> int
+        cdef islower(int) -> int
+        if len(self) == 0:
+            return False
+        if len(self) == 1:
+            return isupper(int(self.ptr[0])) > 0
+
+        cased = False
+        prev_is_cased = False
+        for i in range(len(self)):
+            if isupper(int(self.ptr[i])) > 0:
+                if prev_is_cased:
+                    return False
+                prev_is_cased = True
+                cased = True
+            elif islower(int(self.ptr[i])) > 0:
+                if not prev_is_cased:
+                    return False
+                prev_is_cased = True
+                cased = True
+            else:
+                prev_is_cased = False
+        return cased
