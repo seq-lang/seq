@@ -1,3 +1,15 @@
+class TypeError:
+    msg: str
+
+def ord(s: str) -> byte:
+    if len(s) != 1:
+        raise TypeError("TypeError: ord() expected a character, but string of length " + str(len(s)) + " found")
+    return s.ptr[0]
+
+def chr(b: int) -> str:
+    p = ptr[byte](1)
+    p[0] = byte(b)
+    return str(p, 1)
 
 extend str:
     def isdigit(self: str) -> bool:
@@ -8,10 +20,15 @@ extend str:
         and there is at least one character in str, False otherwise.
         """
         cdef isdigit(int) -> int
+
+        # For empty strings
         if len(self) == 0:
             return False
+
+        # For single character strings
         if len(self) == 1:
             return isdigit(int(self.ptr[0])) > 0
+
         for i in range(len(self)):
             if isdigit(int(self.ptr[i])) == 0:
                 return False
@@ -27,10 +44,15 @@ extend str:
         cased = False
         cdef islower(int) -> int
         cdef isupper(int) -> int
+
+        # For empty strings
         if len(self) == 0:
             return False
+
+        # For single character strings
         if len(self) == 1:
             return islower(int(self.ptr[0])) > 0
+
         for i in range(len(self)):
             if isupper(int(self.ptr[i])) > 0:
                 return False
@@ -48,10 +70,15 @@ extend str:
         cased = False
         cdef isupper(int) -> int
         cdef islower(int) -> int
+
+        # For empty strings
         if len(self) == 0:
             return False
+
+        # For single character strings
         if len(self) == 1:
             return isupper(int(self.ptr[0])) > 0
+
         for i in range(len(self)):
             if islower(int(self.ptr[i])) > 0:
                 return False
@@ -67,10 +94,15 @@ extend str:
         and there is at least one character in str, False otherwise.
         """
         cdef isalnum(int) -> int
+
+        # For empty strings
         if len(self) == 0:
             return False
+
+        # For single character strings
         if len(self) == 1:
             return isalnum(int(self.ptr[0])) > 0
+
         for i in range(len(self)):
             if isalnum(int(self.ptr[i])) == 0:
                 return False
@@ -84,10 +116,15 @@ extend str:
         and there is at least one character in str, False otherwise.
         """
         cdef isalpha(int) -> int
+
+        # For empty strings
         if len(self) == 0:
             return False
+
+        # For single character strings
         if len(self) == 1:
             return isalpha(int(self.ptr[0])) > 0
+
         for i in range(len(self)):
             if isalpha(int(self.ptr[i])) == 0:
                 return False
@@ -101,10 +138,15 @@ extend str:
         and there is at least one character in str, False otherwise.
         """
         cdef isspace(int) -> int
+
+        # For empty strings
         if len(self) == 0:
             return False
+
+        # For single character strings
         if len(self) == 1:
             return isspace(int(self.ptr[0])) > 0
+
         for i in range(len(self)):
             if isspace(int(self.ptr[i])) == 0:
                 return False
@@ -122,8 +164,12 @@ extend str:
         cdef istitle(int) -> int
         cdef isupper(int) -> int
         cdef islower(int) -> int
+
+        # For empty strings
         if len(self) == 0:
             return False
+
+        # For single character strings
         if len(self) == 1:
             return isupper(int(self.ptr[0])) > 0
 
@@ -143,3 +189,29 @@ extend str:
             else:
                 prev_is_cased = False
         return cased
+
+    def capitalize(self: str) -> str:
+        """
+        str.capitalize() -> copy of str
+
+        Return a copy of str with only its first character capitalized (ASCII)
+        and the rest lower-cased.
+        """
+        cdef toupper(int) -> int
+        cdef tolower(int) -> int
+        cdef isupper(int) -> int
+
+        if len(self) > 0:
+            # Capitalize first letter
+            s = str(chr(toupper(int(self.ptr[0]))))
+
+            # Make any following char lowercase
+            for i in range(1, len(self)):
+                if isupper(int(self.ptr[i])):
+                    s = s + str(chr(tolower(int(self.ptr[i]))))
+                else:
+                    s = s + self[i]
+            return s
+
+        # Empty string
+        return ''

@@ -1,9 +1,7 @@
 import str
 
-print ''.istitle()
-print ' '.istitle()
-print 'I '.istitle()
-print 'IH'.istitle()
-print 'Ih'.istitle()
-print 'Hter Hewri'.istitle()
-print 'Kweiur oiejf'.istitle()
+print ' hello '.capitalize()
+print 'Hello '.capitalize()
+print 'hello '.capitalize()
+print 'aaaa'.capitalize()
+print 'AaAa'.capitalize()
