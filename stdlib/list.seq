@@ -55,6 +55,17 @@ class list[T]:
             idx += 1
         self.len -= 1
 
+    def __eq__(self: list[T], other: list[T]):
+        if len(self) != len(other):
+            return False
+        for i in range(len(self)):
+            if self.arr[i] != other.arr[i]:
+                return False
+        return True
+
+    def __ne__(self: list[T], other: list[T]):
+        return not (self == other)
+
     def __slice__(self: list[T], a: int, b: int):
         if a < 0:
             a += len(self)
@@ -191,3 +202,16 @@ class list[T]:
             elem = py.PyObject(seq_py_list_getitem(v.p, i))
             t.append(py.get[T](elem))
         return t
+
+    def __pickle__(self: list[T], jar: Jar):
+        n = len(self)
+        pickle(n, jar)
+        for i in range(n):
+            pickle(self.arr[i], jar)
+
+    def __unpickle__(jar: Jar):
+        n = unpickle[int](jar)
+        arr = array[T](n)
+        for i in range(n):
+            arr[i] = unpickle[T](jar)
+        return list[T](arr, n)

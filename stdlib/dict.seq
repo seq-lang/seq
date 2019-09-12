@@ -55,6 +55,13 @@ class dict[K,V]:
             self._insert(table, e)
         self.table = table
 
+    def __init__(self: dict[K,V], cap: int):
+        cap_actual = 1
+        while cap_actual < cap:
+            cap_actual *= 2
+        self.table = dict[K,V]._make_table(cap_actual)
+        self.size = 0
+
     def __init__(self: dict[K,V]):
         self.table = dict[K,V]._make_table(16)
         self.size = 0
@@ -99,6 +106,18 @@ class dict[K,V]:
             prev = e
             e = e.next
 
+    def __eq__(self: dict[K,V], other: dict[K,V]):
+        if len(self) != len(other):
+            return False
+        for k,v in self.items():
+            e = self._find(k, hash(k))
+            if not e or v != e.v:
+                return False
+        return True
+
+    def __ne__(self: dict[K,V], other: dict[K,V]):
+        return not (self == other)
+
     def keys(self: dict[K,V]):
         for e in self._entry_iter():
             yield e.k
@@ -135,7 +154,7 @@ class dict[K,V]:
                 else:
                     first = False
                 lst.append(str(e.k))
-                lst.append(":")
+                lst.append(": ")
                 lst.append(str(e.v))
             lst.append("}")
             return str.cat(lst)
@@ -161,3 +180,24 @@ class dict[K,V]:
             v = py.get[V](py.PyObject(v_ptr))
             b[k] = v
         return b
+
+    def __pickle__(self: dict[K,V], jar: Jar):
+        n = len(self)
+        pickle(n, jar)
+
+        cap = len(self.table)
+        pickle(cap, jar)
+
+        for k,v in self.items():
+            pickle(k, jar)
+            pickle(v, jar)
+
+    def __unpickle__(jar: Jar):
+        n = unpickle[int](jar)
+        cap = unpickle[int](jar)
+        d = dict[K,V](cap)
+        for i in range(n):
+            k = unpickle[K](jar)
+            v = unpickle[V](jar)
+            d[k] = v
+        return d

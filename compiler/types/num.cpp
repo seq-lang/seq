@@ -450,6 +450,73 @@ void types::IntType::initOps() {
   }
 }
 
+static Function *getIntNPickleFunc(types::IntNType *type, Module *module) {
+  const std::string name = "seq." + type->getName() + ".pickle";
+  LLVMContext &context = module->getContext();
+  Function *func = module->getFunction(name);
+
+  if (!func) {
+    func = cast<Function>(module->getOrInsertFunction(
+        name, Type::getVoidTy(context), type->getLLVMType(context),
+        IntegerType::getInt8PtrTy(context)));
+    func->setDoesNotThrow();
+    func->setLinkage(GlobalValue::PrivateLinkage);
+
+    auto *gzWrite = cast<Function>(module->getOrInsertFunction(
+        "gzwrite", IntegerType::getInt32Ty(context),
+        IntegerType::getInt8PtrTy(context), IntegerType::getInt8PtrTy(context),
+        IntegerType::getInt32Ty(context)));
+    gzWrite->setDoesNotThrow();
+
+    auto iter = func->arg_begin();
+    Value *num = iter++;
+    Value *fp = iter;
+    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+    IRBuilder<> builder(block);
+    Value *buf = builder.CreateAlloca(type->getLLVMType(context));
+    builder.CreateStore(num, buf);
+    Value *ptr = builder.CreateBitCast(buf, IntegerType::getInt8PtrTy(context));
+    Value *size =
+        ConstantInt::get(IntegerType::getInt32Ty(context), type->size(module));
+    builder.CreateCall(gzWrite, {fp, ptr, size});
+    builder.CreateRetVoid();
+  }
+
+  return func;
+}
+
+static Function *getIntNUnpickleFunc(types::IntNType *type, Module *module) {
+  const std::string name = "seq." + type->getName() + ".unpickle";
+  LLVMContext &context = module->getContext();
+  Function *func = module->getFunction(name);
+
+  if (!func) {
+    func = cast<Function>(module->getOrInsertFunction(
+        name, type->getLLVMType(context), IntegerType::getInt8PtrTy(context)));
+    func->setDoesNotThrow();
+    func->setLinkage(GlobalValue::PrivateLinkage);
+
+    auto *gzRead = cast<Function>(module->getOrInsertFunction(
+        "gzread", IntegerType::getInt32Ty(context),
+        IntegerType::getInt8PtrTy(context), IntegerType::getInt8PtrTy(context),
+        IntegerType::getInt32Ty(context)));
+    gzRead->setDoesNotThrow();
+
+    Value *fp = func->arg_begin();
+    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+    IRBuilder<> builder(block);
+    Value *buf = builder.CreateAlloca(type->getLLVMType(context));
+    Value *ptr = builder.CreateBitCast(buf, IntegerType::getInt8PtrTy(context));
+    Value *size =
+        ConstantInt::get(IntegerType::getInt32Ty(context), type->size(module));
+    builder.CreateCall(gzRead, {fp, ptr, size});
+    Value *num = builder.CreateLoad(buf);
+    builder.CreateRet(num);
+  }
+
+  return func;
+}
+
 void types::IntNType::initOps() {
   if (!vtable.magic.empty())
     return;
@@ -695,6 +762,27 @@ void types::IntNType::initOps() {
          return b.CreateXor(self, args[0]);
        },
        false},
+
+      {"__pickle__",
+       {PtrType::get(Byte)},
+       Void,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *pickleFunc =
+             getIntNPickleFunc(this, b.GetInsertBlock()->getModule());
+         b.CreateCall(pickleFunc, {self, args[0]});
+         return (Value *)nullptr;
+       },
+       false},
+
+      {"__unpickle__",
+       {PtrType::get(Byte)},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *unpickleFunc =
+             getIntNUnpickleFunc(this, b.GetInsertBlock()->getModule());
+         return b.CreateCall(unpickleFunc, args[0]);
+       },
+       true},
   };
 
   if (!sign && len % 2 == 0) {

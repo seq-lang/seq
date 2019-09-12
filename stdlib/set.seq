@@ -53,12 +53,30 @@ class set[T]:
             self._insert(table, e)
         self.table = table
 
+    def __init__(self: set[T], cap: int):
+        cap_actual = 1
+        while cap_actual < cap:
+            cap_actual *= 2
+        self.table = set[T]._make_table(cap_actual)
+        self.size = 0
+
     def __init__(self: set[T]):
         self.table = set[T]._make_table(16)
         self.size = 0
 
     def __contains__(self: set[T], k: T):
         return self._find(k, hash(k)).__bool__()
+
+    def __eq__(self: set[T], other: set[T]):
+        if len(self) != len(other):
+            return False
+        for x in self:
+            if x not in other:
+                return False
+        return True
+
+    def __ne__(self: set[T], other: set[T]):
+        return not (self == other)
 
     def add(self: set[T], k: T):
         h = hash(k)
@@ -117,3 +135,22 @@ class set[T]:
         for a in self:
             seq_py_set_add(pyset, py.py(a).p)
         return py.PyObject(pyset)
+
+    def __pickle__(self: set[T], jar: Jar):
+        n = len(self)
+        pickle(n, jar)
+
+        cap = len(self.table)
+        pickle(cap, jar)
+
+        for x in self:
+            pickle(x, jar)
+
+    def __unpickle__(jar: Jar):
+        n = unpickle[int](jar)
+        cap = unpickle[int](jar)
+        s = set[T](cap)
+        for i in range(n):
+            x = unpickle[T](jar)
+            s.add(x)
+        return s

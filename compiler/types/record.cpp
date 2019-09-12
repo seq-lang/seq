@@ -314,6 +314,36 @@ void types::RecordType::initOps() {
          return result;
        },
        true},
+
+      {"__pickle__",
+       {PtrType::get(Byte)},
+       Void,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         BasicBlock *block = b.GetInsertBlock();
+         for (unsigned i = 0; i < types.size(); i++) {
+           Value *val = memb(self, std::to_string(i + 1), block);
+           types[i]->callMagic("__pickle__", {PtrType::get(Byte)}, val,
+                               {args[0]}, block, nullptr);
+         };
+         return (Value *)nullptr;
+       },
+       false},
+
+      {"__unpickle__",
+       {PtrType::get(Byte)},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         BasicBlock *block = b.GetInsertBlock();
+         Value *result = defaultValue(block);
+         for (unsigned i = 0; i < types.size(); i++) {
+           Value *val =
+               types[i]->callMagic("__unpickle__", {PtrType::get(Byte)},
+                                   nullptr, {args[0]}, block, nullptr);
+           result = setMemb(result, std::to_string(i + 1), val, block);
+         }
+         return result;
+       },
+       true},
   };
 }
 
