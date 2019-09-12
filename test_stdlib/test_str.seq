@@ -71,6 +71,13 @@ def test_istitle():
     assert 'Hter Hewri'.istitle() == True
     assert 'Kweiur oiejf'.istitle() == False
 
+def test_capitalize():
+    assert ' hello '.capitalize() == ' hello '
+    assert 'Hello '.capitalize() == 'Hello '
+    assert 'hello '.capitalize() == 'Hello '
+    assert 'aaaa'.capitalize() == 'Aaaa'
+    assert 'AaAa'.capitalize() == 'Aaaa'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -78,3 +85,4 @@ test_isalnum()
 test_isalpha()
 test_isspace()
 test_istitle()
+test_capitalize()
