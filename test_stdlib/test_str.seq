@@ -98,6 +98,15 @@ def test_upper():
     assert 'HELLO'.upper() == 'HELLO'
     assert 'HEL _ LO'.upper() == 'HEL _ LO'
 
+def test_isascii():
+    assert ''.isascii() == True
+    assert '\x00'.isascii() == True
+    assert '\x7f'.isascii() == True
+    assert '\x00\x7f'.isascii() == True
+    assert '\x80'.isascii() == False
+    assert 'строка'.isascii() == False
+    assert '\xe9'.isascii() == False
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -109,3 +118,4 @@ test_capitalize()
 test_isdecimal()
 test_lower()
 test_upper()
+test_isascii()
