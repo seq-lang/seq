@@ -107,6 +107,13 @@ def test_isascii():
     assert 'строка'.isascii() == False
     assert '\xe9'.isascii() == False
 
+def test_casefold():
+    assert ''.casefold() == ''
+    assert 'HeLLo'.casefold() == 'hello'
+    assert 'hello'.casefold() == 'hello'
+    assert 'HELLO'.casefold() == 'hello'
+    assert 'HEL _ LO'.casefold() == 'hel _ lo'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -119,3 +126,4 @@ test_isdecimal()
 test_lower()
 test_upper()
 test_isascii()
+test_casefold()

@@ -1,9 +1,7 @@
 import str
 
-print ''.isascii()
-print '\x00'.isascii()
-print '\x7f'.isascii()
-print '\x00\x7f'.isascii()
-print '\x80'.isascii()
-print 'строка'.isascii()
-print '\xe9'.isascii()
+print ''.casefold()
+print 'HeLLo'.casefold()
+print 'hello'.casefold()
+print 'HELLO'.casefold()
+print 'HEL _ LO'.casefold()
