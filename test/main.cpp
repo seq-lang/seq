@@ -123,7 +123,9 @@ INSTANTIATE_TEST_SUITE_P(
                                      "core/formats.seq", "core/generators.seq",
                                      "core/generics.seq", "core/helloworld.seq",
                                      "core/kmers.seq", "core/match.seq",
-                                     "core/pybridge.seq", "core/trees.seq"),
+                                     "core/pybridge.seq",
+                                     "core/serialization.seq",
+                                     "core/trees.seq"),
                      testing::Values(true, false)),
     getTestNameFromParam);
 

@@ -1,0 +1,48 @@
+import pickle
+
+def test_pickle[T](x: T):
+    path = 'build/testjar.bin'
+    jar = open(path, 'wb')
+    pickle.dump(x, jar)
+    jar.close()
+
+    jar = open(path, 'rb')
+    y = pickle.load[T](jar)
+    jar.close()
+
+    print x == y
+
+type MyType(a: i32, b: str, c: float):
+    pass
+
+class A:
+    a: int
+    v: list[str]
+
+    def __eq__(self: A, other: A):
+        return self.a == other.a and self.v == other.v
+
+type K = Kmer[8]
+test_pickle(42)  # EXPECT: True
+test_pickle(3.14)  # EXPECT: True
+test_pickle(True)  # EXPECT: True
+test_pickle(byte(90))  # EXPECT: True
+test_pickle(UInt[123](123123123))  # EXPECT: True
+test_pickle(Int[123](-123123123))  # EXPECT: True
+test_pickle('hello world')  # EXPECT: True
+test_pickle('')  # EXPECT: True
+test_pickle(s'ACGTAAGG')  # EXPECT: True
+test_pickle(~s'ACGTAAGG')  # EXPECT: True
+test_pickle(K(s'ACGTAAGG'))  # EXPECT: True
+test_pickle(MyType(i32(-1001), 'xyz', 5.55))  # EXPECT: True
+test_pickle((A(1, ['x', 'abc', '1.1.1.1']), 42, A(1000, ['foo'])))  # EXPECT: True
+test_pickle([K(s'ACGTAAGG'), K(s'TATCTGTT')])  # EXPECT: True
+test_pickle(list[K]())  # EXPECT: True
+test_pickle({K(s'ACGTAAGG'), K(s'CATTTTTA')})  # EXPECT: True
+test_pickle(set[K]())  # EXPECT: True
+test_pickle({K(s'ACGTAAGG'), K(s'TTTTGGTT')})  # EXPECT: True
+test_pickle(set[K]())  # EXPECT: True
+test_pickle({K(s'ACGTAAGG'): 99, K(s'TTATTCTT'): 42})  # EXPECT: True
+test_pickle(dict[K,K]())  # EXPECT: True
+test_pickle((42, 3.14, True, byte(90), s'ACGTAAGG', K(s'ACGTAAGG')))  # EXPECT: True
+test_pickle({i32(42): [[{s'ACG', s'ACGTAGCG', ~s'ACGTAGCG'}, {s'ACG', s'ACGTAGCG', ~s'ACGTAGCG'}], list[set[seq]](), [set[seq]()], [{~s''}, {s'', s'GCGC'}]]})  # EXPECT: True

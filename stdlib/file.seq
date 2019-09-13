@@ -1,20 +1,20 @@
 from err import *
 import gc
 
+def _gz_errcheck(stream: ptr[byte]):
+    cdef gzerror(ptr[byte], ptr[i32]) -> ptr[byte]
+    errnum = i32(0)
+    msg = gzerror(stream, __ptr__(errnum))
+    if msg and msg[0]:
+        l = 1
+        while msg[l]:
+            l += 1
+        raise IOError("zlib error: " + str(msg, l))
+
 def _getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
     def getc(stream: ptr[byte]):
         cdef gzgetc(ptr[byte]) -> i32
         return int(gzgetc(stream))
-
-    def errcheck(stream: ptr[byte]):
-        cdef gzerror(ptr[byte], ptr[i32]) -> ptr[byte]
-        errnum = i32(0)
-        msg = gzerror(stream, __ptr__(errnum))
-        if msg:
-            l = 0
-            while msg[l]:
-                l += 1
-            raise IOError(str(msg, l))
 
     if not lineptr[0]:
         N = 128
@@ -24,9 +24,8 @@ def _getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
     cur_pos = lineptr[0]
     while True:
         c = getc(stream)
-        errcheck()
-
         if c == -1:
+            _gz_errcheck(stream)
             if cur_pos == lineptr[0]:
                 return -1
             else:

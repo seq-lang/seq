@@ -156,6 +156,15 @@ extend int:
         cdef atoi(p: ptr[byte]) -> int
         return atoi(s.c_str())
 
+# pickle
+type Jar = ptr[byte]
+
+def pickle[T](x: T, jar: Jar):
+    x.__pickle__(jar)
+
+def unpickle[T](jar: Jar):
+    return T.__unpickle__(jar)
+
 import! list
 import! dict
 import! set

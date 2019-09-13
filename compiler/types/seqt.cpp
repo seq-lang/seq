@@ -477,6 +477,7 @@ void types::KMer::initOps() {
   if (!vtable.magic.empty())
     return;
 
+  types::IntNType *iType = types::IntNType::get(2 * k, false);
   vtable.magic = {
       {"__init__",
        {},
@@ -746,6 +747,27 @@ void types::KMer::initOps() {
                              Bool->getLLVMType(b.getContext()));
        },
        false},
+
+      {"__pickle__",
+       {PtrType::get(Byte)},
+       Void,
+       [iType](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         BasicBlock *block = b.GetInsertBlock();
+         iType->callMagic("__pickle__", {PtrType::get(Byte)}, self, {args[0]},
+                          block, nullptr);
+         return (Value *)nullptr;
+       },
+       false},
+
+      {"__unpickle__",
+       {PtrType::get(Byte)},
+       this,
+       [iType](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         BasicBlock *block = b.GetInsertBlock();
+         return iType->callMagic("__unpickle__", {PtrType::get(Byte)}, nullptr,
+                                 {args[0]}, block, nullptr);
+       },
+       true},
   };
 
   addMethod(
@@ -772,7 +794,6 @@ void types::KMer::initOps() {
           }),
       true);
 
-  types::IntNType *iType = types::IntNType::get(2 * k, false);
   addMethod(
       "as_int",
       new BaseFuncLite(

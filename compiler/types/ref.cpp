@@ -221,6 +221,37 @@ void types::RefType::initOps() {
        },
        false},
 
+      {"__pickle__",
+       {PtrType::get(Byte)},
+       Void,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         assert(contents);
+         Value *tuple = b.CreateBitCast(
+             self, contents->getLLVMType(b.getContext())->getPointerTo());
+         tuple = b.CreateLoad(tuple);
+         BasicBlock *block = b.GetInsertBlock();
+         contents->callMagic("__pickle__", {PtrType::get(Byte)}, tuple,
+                             {args[0]}, block, nullptr);
+         return (Value *)nullptr;
+       },
+       false},
+
+      {"__unpickle__",
+       {PtrType::get(Byte)},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         assert(contents);
+         BasicBlock *block = b.GetInsertBlock();
+         Value *tuple =
+             contents->callMagic("__unpickle__", {PtrType::get(Byte)}, nullptr,
+                                 {args[0]}, block, nullptr);
+         self = contents->alloc(nullptr, block);
+         b.CreateStore(tuple, self);
+         self = b.CreateBitCast(self, getLLVMType(b.getContext()));
+         return self;
+       },
+       true},
+
       {"__raw__",
        {},
        PtrType::get(Byte),
