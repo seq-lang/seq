@@ -23,6 +23,7 @@ type t =
   | Float of float
   | FloatS of (float * string)
   | String of string
+  | Kmer of string
   | Seq of string
   | Id of string
   | Unpack of string (** [Unpack(x)] corresponds to [**x] in Seq. *)

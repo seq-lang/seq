@@ -64,7 +64,7 @@
 %token <Ast.Ann.t * (string * string)> INT_S
 %token <Ast.Ann.t * (float * string)> FLOAT_S
 %token <Ast.Ann.t * string> STRING ID
-%token <Ast.Ann.t * string> REGEX SEQ
+%token <Ast.Ann.t * string> SEQ KMER
 
 /* blocks */
 %token <Ast.Ann.t> INDENT
@@ -162,6 +162,7 @@ atom:
   | FLOAT_S    { fst $1, FloatS (snd $1) }
   | STRING     { fst $1, String (snd $1) }
   | SEQ        { fst $1, Seq (snd $1) }
+  | KMER       { fst $1, Kmer (snd $1) }
   | bool       { fst $1, Bool (snd $1) }
   | tuple      { fst $1, Tuple (snd $1) }
   | lists      { fst $1, List (snd $1) }
@@ -173,7 +174,6 @@ atom:
   | list_gen   { $1 }
   | set_gen    { $1 }
   | MUL ID     { pos (fst $1) (fst $2), Unpack (snd $2) }
-  | REGEX      { noimp "Regex" }
 
 // Types
 bool:
@@ -329,12 +329,7 @@ arith_expr:
   // Unary operator
   | SUB arith_expr
     { pos (fst $1) (fst $2),
-      match snd $2 with
-      | Int f -> Int ("-" ^ f)
-      | IntS (f, k) -> IntS ("-" ^ f, k)
-      | Float f -> Float (-.f)
-      | FloatS (f, k) -> FloatS (-.f, k)
-      | _ -> Unary(snd $1, $2) }
+      Unary(snd $1, $2) }
   | ADD arith_expr
     { pos (fst $1) (fst $2),
       Unary (snd $1, $2) }

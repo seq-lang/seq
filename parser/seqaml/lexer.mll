@@ -98,10 +98,9 @@
     in
     match String.prefix pfx 1 with
     | "r" | "R" -> P.STRING (st, fix_literals ~is_raw:true u)
-    | "s" | "S" -> P.SEQ   (st, fix_literals u)
+    | "s" | "S" -> P.SEQ (st, fix_literals u)
+    | "k" | "K" -> P.KMER (st, fix_literals u)
     | _ -> P.STRING (st, fix_literals u)
-
-
 }
 
 (* Lexer regex expressions *)
@@ -126,7 +125,7 @@ let escape = '\\' _
 let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
 
-let stringprefix = ('s' | 'S')? ('r' | 'R')?
+let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')?
 let intsuffix = ('s' | 'S' | 'z' | 'Z' | 'u' | 'U')
 
 let ident = alpha alphanum*
