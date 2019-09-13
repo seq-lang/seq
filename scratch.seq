@@ -1,5 +1,9 @@
 import str
 
-print ''.swapcase()
-print 'HeLLo cOmpUteRs'.swapcase()
-print 'H.e_L,L-o cOmpUteRs'.swapcase()
+print ''.title()
+print ' hello '.title()
+print 'hello '.title()
+print 'Hello '.title()
+print 'fOrMaT thIs aS titLe String'.title()
+print 'fOrMaT,thIs-aS*titLe;String'.title()
+print 'getInt'.title()
