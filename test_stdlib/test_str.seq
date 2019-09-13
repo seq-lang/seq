@@ -119,6 +119,15 @@ def test_swapcase():
     assert 'HeLLo cOmpUteRs'.swapcase() == 'hEllO CoMPuTErS'
     assert 'H.e_L,L-o cOmpUteRs'.swapcase() == 'h.E_l,l-O CoMPuTErS'
 
+def test_title():
+    assert ''.title() == ''
+    assert ' hello '.title() == ' Hello '
+    assert 'hello '.title() == 'Hello '
+    assert 'Hello '.title() == 'Hello '
+    assert 'fOrMaT thIs aS titLe String'.title() == 'Format This As Title String'
+    assert 'fOrMaT,thIs-aS*titLe;String'.title() == 'Format,This-As*Title;String'
+    assert 'getInt'.title() == 'Getint'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -133,3 +142,4 @@ test_upper()
 test_isascii()
 test_casefold()
 test_swapcase()
+test_title()
