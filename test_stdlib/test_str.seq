@@ -78,6 +78,14 @@ def test_capitalize():
     assert 'aaaa'.capitalize() == 'Aaaa'
     assert 'AaAa'.capitalize() == 'Aaaa'
 
+def test_isdecimal():
+    assert ''.isdecimal() == False
+    assert 'a'.isdecimal() == False
+    assert '0'.isdecimal() == True
+    assert '\xbc'.isdecimal() == False
+    assert '0123456789'.isdecimal() == True
+    assert '0123456789a'.isdecimal() == False
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -86,3 +94,4 @@ test_isalpha()
 test_isspace()
 test_istitle()
 test_capitalize()
+test_isdecimal()
