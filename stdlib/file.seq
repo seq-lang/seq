@@ -24,9 +24,8 @@ def _getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
     cur_pos = lineptr[0]
     while True:
         c = getc(stream)
-        _gz_errcheck(stream)
-
         if c == -1:
+            _gz_errcheck(stream)
             if cur_pos == lineptr[0]:
                 return -1
             else:
