@@ -15,6 +15,13 @@ def test_pickle[T](x: T):
 type MyType(a: i32, b: str, c: float):
     pass
 
+class A:
+    a: int
+    v: list[str]
+
+    def __eq__(self: A, other: A):
+        return self.a == other.a and self.v == other.v
+
 type K = Kmer[8]
 test_pickle(42)  # EXPECT: True
 test_pickle(3.14)  # EXPECT: True
@@ -28,6 +35,7 @@ test_pickle(s'ACGTAAGG')  # EXPECT: True
 test_pickle(~s'ACGTAAGG')  # EXPECT: True
 test_pickle(K(s'ACGTAAGG'))  # EXPECT: True
 test_pickle(MyType(i32(-1001), 'xyz', 5.55))  # EXPECT: True
+test_pickle((A(1, ['x', 'abc', '1.1.1.1']), 42, A(1000, ['foo'])))  # EXPECT: True
 test_pickle([K(s'ACGTAAGG'), K(s'TATCTGTT')])  # EXPECT: True
 test_pickle(list[K]())  # EXPECT: True
 test_pickle({K(s'ACGTAAGG'), K(s'CATTTTTA')})  # EXPECT: True
