@@ -86,6 +86,12 @@ def test_isdecimal():
     assert '0123456789'.isdecimal() == True
     assert '0123456789a'.isdecimal() == False
 
+def test_lower():
+    assert 'HeLLo'.lower() == 'hello'
+    assert 'hello'.lower() == 'hello'
+    assert 'HELLO'.lower() == 'hello'
+    assert 'HEL _ LO'.lower() == 'hel _ lo'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -95,3 +101,4 @@ test_isspace()
 test_istitle()
 test_capitalize()
 test_isdecimal()
+test_lower()

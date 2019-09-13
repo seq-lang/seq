@@ -1,8 +1,6 @@
 import str
 
-print ''.isdecimal()
-print 'a'.isdecimal()
-print '0'.isdecimal()
-print '\xbc'.isdecimal()
-print '0123456789'.isdecimal()
-print '0123456789a'.isdecimal()
+print 'HeLLo'.lower()
+print 'hello'.lower()
+print 'HELLO'.lower()
+print 'HEL _ LO'.lower()
