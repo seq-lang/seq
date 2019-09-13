@@ -215,3 +215,21 @@ extend str:
 
         # Empty string
         return ''
+
+    def isdecimal(self: str) -> bool:
+        """
+        str.isdecimal() -> bool
+
+        Return True if str is a decimal string, False otherwise.
+        str is a decimal string if all characters in str are decimal and
+        there is at least one character in str.
+        """
+        # Empty string
+        if len(self) == 0:
+            return False
+
+        for i in range(len(self)):
+            # Between ascii values 48-57 == 0-9
+            if not (48 <= int(self.ptr[i]) <= 57):
+                return False
+        return True

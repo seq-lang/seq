@@ -1,7 +1,8 @@
 import str
 
-print ' hello '.capitalize()
-print 'Hello '.capitalize()
-print 'hello '.capitalize()
-print 'aaaa'.capitalize()
-print 'AaAa'.capitalize()
+print ''.isdecimal()
+print 'a'.isdecimal()
+print '0'.isdecimal()
+print '\xbc'.isdecimal()
+print '0123456789'.isdecimal()
+print '0123456789a'.isdecimal()
