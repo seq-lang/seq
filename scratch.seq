@@ -1,6 +1,6 @@
 import str
 
-print 'HeLLo'.lower()
-print 'hello'.lower()
-print 'HELLO'.lower()
-print 'HEL _ LO'.lower()
+print 'HeLLo'.upper()
+print 'hello'.upper()
+print 'HELLO'.upper()
+print 'HEL _ LO'.upper()

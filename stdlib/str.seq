@@ -253,3 +253,23 @@ extend str:
             else:
                 s = s + str(self.ptr[i])
         return s
+
+    def upper(self: str) -> str:
+        """
+        str.upper() -> copy of str
+
+        Return a copy of str with all ASCII characters converted to uppercase.
+        """
+        cdef toupper(int) -> int
+        cdef islower(int) -> int
+        s = ''
+        # Empty string
+        if len(self) == 0:
+            return s
+
+        for i in range(len(self)):
+            if islower(int(self.ptr[i])):
+                s = s + str(chr(toupper(int(self.ptr[i]))))
+            else:
+                s = s + str(self.ptr[i])
+        return s

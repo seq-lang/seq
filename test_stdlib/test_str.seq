@@ -92,6 +92,12 @@ def test_lower():
     assert 'HELLO'.lower() == 'hello'
     assert 'HEL _ LO'.lower() == 'hel _ lo'
 
+def test_upper():
+    assert 'HeLLo'.upper() == 'HELLO'
+    assert 'hello'.upper() == 'HELLO'
+    assert 'HELLO'.upper() == 'HELLO'
+    assert 'HEL _ LO'.upper() == 'HEL _ LO'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -102,3 +108,4 @@ test_istitle()
 test_capitalize()
 test_isdecimal()
 test_lower()
+test_upper()
