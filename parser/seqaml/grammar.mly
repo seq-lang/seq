@@ -327,7 +327,7 @@ arith_expr:
   | arith_term
     { $1 }
   // Unary operator
-  | SUB arith_term
+  | SUB arith_expr
     { pos (fst $1) (fst $2),
       match snd $2 with
       | Int f -> Int ("-" ^ f)
@@ -335,10 +335,14 @@ arith_expr:
       | Float f -> Float (-.f)
       | FloatS (f, k) -> FloatS (-.f, k)
       | _ -> Unary(snd $1, $2) }
-  | ADD arith_term
-  | B_NOT arith_term
+  | ADD arith_expr
     { pos (fst $1) (fst $2),
       Unary (snd $1, $2) }
+  | B_NOT+ arith_term
+    { let cnt = List.length $1 in
+      pos (fst (List.hd_exn $1)) (fst $2),
+      if cnt % 2 = 1 then Unary ((snd @@ List.hd_exn $1), $2)
+      else snd $2 }
   // Binary operator
   | arith_expr arith_op arith_expr
     { pos (fst $1) (fst $3),
