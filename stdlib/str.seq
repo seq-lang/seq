@@ -229,7 +229,27 @@ extend str:
             return False
 
         for i in range(len(self)):
-            # Between ascii values 48-57 == 0-9
+            # test ascii values 48-57 == 0-9
             if not (48 <= int(self.ptr[i]) <= 57):
                 return False
         return True
+
+    def lower(self: str) -> str:
+        """
+        str.lower() -> copy of str
+
+        Return a copy of str with all ASCII characters converted to lowercase.
+        """
+        cdef tolower(int) -> int
+        cdef isupper(int) -> int
+        s = ''
+        # Empty string
+        if len(self) == 0:
+            return s
+
+        for i in range(len(self)):
+            if isupper(int(self.ptr[i])):
+                s = s + str(chr(tolower(int(self.ptr[i]))))
+            else:
+                s = s + str(self.ptr[i])
+        return s
