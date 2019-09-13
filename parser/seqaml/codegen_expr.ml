@@ -28,6 +28,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Float p -> parse_float ctx pos p
       | FloatS p -> parse_float ctx pos (fst p) ~kind:(snd p)
       | String p -> parse_str ctx pos p
+      | Kmer p -> parse_kmer ctx pos p
       | Seq p -> parse_seq ctx pos p
       | Id p -> parse_id ctx pos p
       | Tuple p -> parse_tuple ctx pos p
@@ -111,6 +112,14 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
 
   and parse_str _ _ s = Llvm.Expr.str s
   and parse_seq _ _ s = Llvm.Expr.seq s
+
+  and parse_kmer ctx pos s =
+    let n = sprintf "%d" @@ String.length s in
+    parse ~ctx
+    @@ ( pos
+       , Call
+           ( (pos, Index ((pos, Id "Kmer"), (pos, Int n)))
+           , [ pos, { name = None; value = pos, Seq s } ] ) )
 
   and parse_id ?map ?(is_type = false) ctx pos var =
     let map = Option.value map ~default:ctx.map in

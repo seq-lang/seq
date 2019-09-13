@@ -22,7 +22,7 @@ let init file error_handler =
   try
     let ctx =
       Ctx.init_module
-        ~filename:file
+        ~filename:(Filename.realpath file)
         ~mdl
         ~base:mdl
         ~block:(Llvm.Module.block mdl)
