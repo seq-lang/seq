@@ -273,3 +273,12 @@ extend str:
             else:
                 s = s + str(self.ptr[i])
         return s
+
+    def isascii(self: str) -> bool:
+        """
+        str.isascii() -> bool
+
+        Return True if str is empty or all characters in str are ASCII,
+        False otherwise.
+        """
+        return all(int(ord(char)) < 128 for char in self)
