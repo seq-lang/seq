@@ -45,11 +45,63 @@
 
   (* given a (named) string (e.g. s'foo' or 'bar'), decide the proper token *)
   let seq_string pfx u st =
-    let escape = Scanf.unescaped in
+    let fix_literals ?(is_raw=false) s =
+      let buf = Buffer.create (String.length s) in
+      let rec scan i = 
+        let l = String.length s in
+        let is_octal c = 
+          (Char.to_int c) >= (Char.to_int '0') && (Char.to_int c) <= (Char.to_int '7')
+        in
+        if i >= l then ()
+        else if i < (l - 1) && s.[i] = '\\' && (not is_raw) then begin
+          let skip, c = match s.[i + 1] with
+            | '\\' -> 1, '\\'
+            | '\'' -> 1, '\''
+            | '"' -> 1, '"'
+            | 'a' -> 1, Char.of_int_exn 7
+            | 'b' -> 1, '\b'
+            | 'f' -> 1, Char.of_int_exn 12
+            | 'n' -> 1, '\n'
+            | 'r' -> 1, '\r'
+            | 't' -> 1, '\t'
+            | 'v' -> 1, Char.of_int_exn 11
+            | 'x' ->
+              let n = 
+                if i < (l - 3) then 
+                  int_of_string_opt ("0x" ^ (String.sub s ~pos:(i + 2) ~len:2))
+                else
+                  None
+              in
+              begin match n with 
+              | Some n -> 3, Char.of_int_exn n
+              | None -> Err.SyntaxError ("Invalid \\x escape", st) |> raise
+              end
+            | c when is_octal c ->
+              let n = 
+                if i < (l - 3) && (is_octal s.[i + 2]) && (is_octal s.[i + 3]) then 3
+                else if i < (l - 2) && (is_octal s.[i + 2]) then 2
+                else 1
+              in 
+              n, Char.of_int_exn 
+                 @@ int_of_string ("0o" ^ (String.sub s ~pos:(i + 1) ~len:n))
+            | _ -> 0, s.[i]
+          in
+          Buffer.add_char buf c;
+          scan (i + 1 + skip)
+        end else begin 
+          Buffer.add_char buf s.[i];
+          scan (i + 1)
+        end
+      in
+      scan 0;
+      Buffer.contents buf
+    in
     match String.prefix pfx 1 with
-    | "r" | "R" -> P.REGEX (st, escape u)
-    | "s" | "S" -> P.SEQ   (st, escape u)
-    | _ -> P.STRING (st, escape u)
+    | "r" | "R" -> P.STRING (st, fix_literals ~is_raw:true u)
+    | "s" | "S" -> P.SEQ   (st, fix_literals u)
+    | _ -> P.STRING (st, fix_literals u)
+
+
 }
 
 (* Lexer regex expressions *)
