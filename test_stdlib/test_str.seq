@@ -114,6 +114,11 @@ def test_casefold():
     assert 'HELLO'.casefold() == 'hello'
     assert 'HEL _ LO'.casefold() == 'hel _ lo'
 
+def test_swapcase():
+    assert ''.swapcase() == ''
+    assert 'HeLLo cOmpUteRs'.swapcase() == 'hEllO CoMPuTErS'
+    assert 'H.e_L,L-o cOmpUteRs'.swapcase() == 'h.E_l,l-O CoMPuTErS'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -127,3 +132,4 @@ test_lower()
 test_upper()
 test_isascii()
 test_casefold()
+test_swapcase()
