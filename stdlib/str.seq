@@ -293,12 +293,39 @@ extend str:
         cdef tolower(int) -> int
         cdef isupper(int) -> int
         s = ''
+
         # Empty string
         if len(self) == 0:
             return s
 
         for i in range(len(self)):
             if isupper(int(self.ptr[i])):
+                s = s + str(chr(tolower(int(self.ptr[i]))))
+            else:
+                s = s + str(self.ptr[i])
+        return s
+
+    def swapcase(self: str) -> str:
+        """
+        str.swapcase() -> copy of str
+
+        Return a copy of str with uppercase ASCII characters converted
+        to lowercase ASCII and vice versa.
+        """
+        cdef toupper(int) -> int
+        cdef isupper(int) -> int
+        cdef tolower(int) -> int
+        cdef islower(int) -> int
+        s = ''
+
+        # Empty string
+        if len(self) == 0:
+            return s
+
+        for i in range(len(self)):
+            if islower(int(self.ptr[i])):
+                s = s + str(chr(toupper(int(self.ptr[i]))))
+            elif isupper(int(self.ptr[i])):
                 s = s + str(chr(tolower(int(self.ptr[i]))))
             else:
                 s = s + str(self.ptr[i])

@@ -1,7 +1,5 @@
 import str
 
-print ''.casefold()
-print 'HeLLo'.casefold()
-print 'hello'.casefold()
-print 'HELLO'.casefold()
-print 'HEL _ LO'.casefold()
+print ''.swapcase()
+print 'HeLLo cOmpUteRs'.swapcase()
+print 'H.e_L,L-o cOmpUteRs'.swapcase()
