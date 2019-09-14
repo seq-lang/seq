@@ -347,7 +347,7 @@ extend str:
 
     def ljust(self: str, width: int, fillchar: str) -> str:
         """
-        ljust(width, fillchar)
+        ljust(width[, fillchar]) -> string
 
         Return a left-justified string of length width.
 
@@ -365,7 +365,7 @@ extend str:
 
     def rjust(self: str, width: int, fillchar: str) -> str:
         """
-        rjust(width, fillchar)
+        rjust(width[, fillchar]) -> string
 
         Return a right-justified string of length width.
 
@@ -384,6 +384,10 @@ extend str:
 
     def center(self: str, width: int, fillchar: str) -> str:
         """
+        str.center(width[, fillchar]) -> string
+
+        Return str centered in a string of length width. Padding is
+        done using the specified fill character (default is a space)
         """
         s = ''
 
@@ -399,4 +403,33 @@ extend str:
         s = s + self
         for i in range(right_pad):
             s = s + fillchar
+        return s
+
+    def zfill(self: str, width: int) -> str:
+        """
+        str.zfill(width) -> string
+
+        Pad a numeric string str with zeros on the left, to fill a field
+        of the specified width.  The string str is never truncated.
+        """
+        s = ''
+        sign = False
+
+        if width <= len(self):
+            return self
+
+        if self[0] == '+' or self[0] == '-':
+            # move sign to beginning of string
+            s = s + self[0]
+            sign = True
+
+        fill = width - len(self)
+
+        for i in range(fill):
+            s = s + '0'
+
+        if sign:
+            s = s + self[1:]
+        else:
+            s = s + self
         return s
