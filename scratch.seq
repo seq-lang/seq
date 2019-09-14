@@ -1,7 +1,7 @@
 import str
 
-print 'abc'.ljust(10, ' ')
-print 'abc'.ljust(6, ' ')
-print 'abc'.ljust(3, ' ')
-print 'abc'.ljust(2, ' ')
-print 'abc'.ljust(10, '*')
+print 'abc'.rjust(10, ' ')
+print 'abc'.rjust(6, ' ')
+print 'abc'.rjust(3, ' ')
+print 'abc'.rjust(2, ' ')
+print 'abc'.rjust(10, '*')

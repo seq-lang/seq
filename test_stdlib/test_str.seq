@@ -143,6 +143,13 @@ def test_ljust():
     assert 'abc'.ljust(2, ' ') == 'abc'
     assert 'abc'.ljust(10, '*') == 'abc*******'
 
+def test_rjust():
+    assert 'abc'.rjust(10, ' ') == '       abc'
+    assert 'abc'.rjust(6, ' ') == '   abc'
+    assert 'abc'.rjust(3, ' ') == 'abc'
+    assert 'abc'.rjust(2, ' ') == 'abc'
+    assert 'abc'.rjust(10, '*') == '*******abc'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -160,3 +167,4 @@ test_swapcase()
 test_title()
 test_isnumeric()
 test_ljust()
+test_rjust()
