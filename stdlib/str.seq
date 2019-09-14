@@ -360,8 +360,24 @@ extend str:
             return self
 
         for i in range(width - len(self)):
-            try:
-                s = s + fillchar
-            except:
-                s = s + ' '
+            s = s + fillchar
+        return s
+
+    def rjust(self: str, width: int, fillchar: str) -> str:
+        """
+        rjust(width, fillchar)
+
+        Return a right-justified string of length width.
+
+        Padding is done using the specified fill character (default is a space).
+        """
+        s = ''
+
+        if width <= len(self):
+            return self
+
+        for i in range(width - len(self)):
+            s = s + fillchar
+
+        s = s + self
         return s
