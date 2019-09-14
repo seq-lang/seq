@@ -1,3 +1,5 @@
+import C
+
 class TypeError:
     msg: str
 
@@ -19,7 +21,6 @@ extend str:
         Return True if all characters in str are digits
         and there is at least one character in str, False otherwise.
         """
-        cdef isdigit(int) -> int
 
         # For empty strings
         if len(self) == 0:
@@ -27,10 +28,10 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return isdigit(int(self.ptr[0])) > 0
+            return C.isdigit(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if isdigit(int(self.ptr[i])) == 0:
+            if C.isdigit(int(self.ptr[i])) == 0:
                 return False
         return True
 
@@ -42,8 +43,6 @@ extend str:
         at least one cased character in str, False otherwise.
         """
         cased = False
-        cdef islower(int) -> int
-        cdef isupper(int) -> int
 
         # For empty strings
         if len(self) == 0:
@@ -51,12 +50,12 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return islower(int(self.ptr[0])) > 0
+            return C.islower(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if isupper(int(self.ptr[i])) > 0:
+            if C.isupper(int(self.ptr[i])) > 0:
                 return False
-            elif cased == False and islower(int(self.ptr[i])):
+            elif cased == False and C.islower(int(self.ptr[i])):
                 cased = True
         return cased
 
@@ -68,8 +67,6 @@ extend str:
         at least one cased character in str, False otherwise.
         """
         cased = False
-        cdef isupper(int) -> int
-        cdef islower(int) -> int
 
         # For empty strings
         if len(self) == 0:
@@ -77,12 +74,12 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return isupper(int(self.ptr[0])) > 0
+            return C.isupper(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if islower(int(self.ptr[i])) > 0:
+            if C.islower(int(self.ptr[i])) > 0:
                 return False
-            elif cased == False and isupper(int(self.ptr[i])):
+            elif cased == False and C.isupper(int(self.ptr[i])):
                 cased = True
         return cased
 
@@ -93,7 +90,6 @@ extend str:
         Return True if all characters in str are alphanumeric
         and there is at least one character in str, False otherwise.
         """
-        cdef isalnum(int) -> int
 
         # For empty strings
         if len(self) == 0:
@@ -101,10 +97,10 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return isalnum(int(self.ptr[0])) > 0
+            return C.isalnum(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if isalnum(int(self.ptr[i])) == 0:
+            if C.isalnum(int(self.ptr[i])) == 0:
                 return False
         return True
 
@@ -115,7 +111,6 @@ extend str:
         Return True if all characters in str are alphabetic
         and there is at least one character in str, False otherwise.
         """
-        cdef isalpha(int) -> int
 
         # For empty strings
         if len(self) == 0:
@@ -123,10 +118,10 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return isalpha(int(self.ptr[0])) > 0
+            return C.isalpha(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if isalpha(int(self.ptr[i])) == 0:
+            if C.isalpha(int(self.ptr[i])) == 0:
                 return False
         return True
 
@@ -137,7 +132,6 @@ extend str:
         Return True if all characters in str are whitespace
         and there is at least one character in str, False otherwise.
         """
-        cdef isspace(int) -> int
 
         # For empty strings
         if len(self) == 0:
@@ -145,10 +139,10 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return isspace(int(self.ptr[0])) > 0
+            return C.isspace(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if isspace(int(self.ptr[i])) == 0:
+            if C.isspace(int(self.ptr[i])) == 0:
                 return False
         return True
 
@@ -161,9 +155,6 @@ extend str:
         characters and lowercase characters only cased ones. Return False
         otherwise.
         """
-        cdef istitle(int) -> int
-        cdef isupper(int) -> int
-        cdef islower(int) -> int
 
         # For empty strings
         if len(self) == 0:
@@ -171,17 +162,17 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return isupper(int(self.ptr[0])) > 0
+            return C.isupper(int(self.ptr[0])) > 0
 
         cased = False
         prev_is_cased = False
         for i in range(len(self)):
-            if isupper(int(self.ptr[i])) > 0:
+            if C.isupper(int(self.ptr[i])) > 0:
                 if prev_is_cased:
                     return False
                 prev_is_cased = True
                 cased = True
-            elif islower(int(self.ptr[i])) > 0:
+            elif C.islower(int(self.ptr[i])) > 0:
                 if not prev_is_cased:
                     return False
                 prev_is_cased = True
@@ -197,18 +188,15 @@ extend str:
         Return a copy of str with only its first character capitalized (ASCII)
         and the rest lower-cased.
         """
-        cdef toupper(int) -> int
-        cdef tolower(int) -> int
-        cdef isupper(int) -> int
 
         if len(self) > 0:
             # Capitalize first letter
-            s = str(chr(toupper(int(self.ptr[0]))))
+            s = str(chr(C.toupper(int(self.ptr[0]))))
 
             # Make any following char lowercase
             for i in range(1, len(self)):
-                if isupper(int(self.ptr[i])):
-                    s = s + str(chr(tolower(int(self.ptr[i]))))
+                if C.isupper(int(self.ptr[i])):
+                    s = s + str(chr(C.tolower(int(self.ptr[i]))))
                 else:
                     s = s + self[i]
             return s
@@ -240,16 +228,14 @@ extend str:
 
         Return a copy of str with all ASCII characters converted to lowercase.
         """
-        cdef tolower(int) -> int
-        cdef isupper(int) -> int
         s = ''
         # Empty string
         if len(self) == 0:
             return s
 
         for i in range(len(self)):
-            if isupper(int(self.ptr[i])):
-                s = s + str(chr(tolower(int(self.ptr[i]))))
+            if C.isupper(int(self.ptr[i])):
+                s = s + str(chr(C.tolower(int(self.ptr[i]))))
             else:
                 s = s + str(self.ptr[i])
         return s
@@ -260,16 +246,14 @@ extend str:
 
         Return a copy of str with all ASCII characters converted to uppercase.
         """
-        cdef toupper(int) -> int
-        cdef islower(int) -> int
         s = ''
         # Empty string
         if len(self) == 0:
             return s
 
         for i in range(len(self)):
-            if islower(int(self.ptr[i])):
-                s = s + str(chr(toupper(int(self.ptr[i]))))
+            if C.islower(int(self.ptr[i])):
+                s = s + str(chr(C.toupper(int(self.ptr[i]))))
             else:
                 s = s + str(self.ptr[i])
         return s
@@ -290,8 +274,6 @@ extend str:
         Return a version of the string suitable for caseless comparisons using
         the English language.
         """
-        cdef tolower(int) -> int
-        cdef isupper(int) -> int
         s = ''
 
         # Empty string
@@ -299,8 +281,8 @@ extend str:
             return s
 
         for i in range(len(self)):
-            if isupper(int(self.ptr[i])):
-                s = s + str(chr(tolower(int(self.ptr[i]))))
+            if C.isupper(int(self.ptr[i])):
+                s = s + str(chr(C.tolower(int(self.ptr[i]))))
             else:
                 s = s + str(self.ptr[i])
         return s
@@ -312,10 +294,6 @@ extend str:
         Return a copy of str with uppercase ASCII characters converted
         to lowercase ASCII and vice versa.
         """
-        cdef toupper(int) -> int
-        cdef isupper(int) -> int
-        cdef tolower(int) -> int
-        cdef islower(int) -> int
         s = ''
 
         # Empty string
@@ -323,10 +301,44 @@ extend str:
             return s
 
         for i in range(len(self)):
-            if islower(int(self.ptr[i])):
-                s = s + str(chr(toupper(int(self.ptr[i]))))
-            elif isupper(int(self.ptr[i])):
-                s = s + str(chr(tolower(int(self.ptr[i]))))
+            if C.islower(int(self.ptr[i])):
+                s = s + str(chr(C.toupper(int(self.ptr[i]))))
+            elif C.isupper(int(self.ptr[i])):
+                s = s + str(chr(C.tolower(int(self.ptr[i]))))
             else:
                 s = s + str(self.ptr[i])
+        return s
+
+    def title(self: str) -> str:
+        """
+        str.title() -> copy of str
+
+        Return a titlecased version of str, i.e. ASCII words start with uppercase
+        characters, all remaining cased characters have lowercase.
+        """
+        s = ''
+        prev_is_cased = False
+
+        # Empty string
+        if len(self) == 0:
+            return s
+
+        for i in range(len(self)):
+            if C.islower(int(self.ptr[i])):
+                # lowercase to uppercase
+                if not prev_is_cased:
+                    s = s + str(chr(C.toupper(int(self.ptr[i]))))
+                else:
+                    s = s + str(self.ptr[i])
+                prev_is_cased = True
+            elif C.isupper(int(self.ptr[i])):
+                # uppercase to lowercase
+                if prev_is_cased:
+                    s = s + str(chr(C.tolower(int(self.ptr[i]))))
+                else:
+                    s = s + str(self.ptr[i])
+                prev_is_cased = True
+            else:
+                s = s + str(self.ptr[i])
+                prev_is_cased = False
         return s
