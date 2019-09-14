@@ -271,21 +271,11 @@ extend str:
         """
         str.casefold() -> copy of str
 
-        Return a version of the string suitable for caseless comparisons using
-        the English language.
+        Return a version of the string suitable for caseless comparisons.
+
+        Unlike Python, casefold() deals with just ASCII characters.
         """
-        s = ''
-
-        # Empty string
-        if len(self) == 0:
-            return s
-
-        for i in range(len(self)):
-            if C.isupper(int(self.ptr[i])):
-                s = s + str(chr(C.tolower(int(self.ptr[i]))))
-            else:
-                s = s + str(self.ptr[i])
-        return s
+        return self.lower()
 
     def swapcase(self: str) -> str:
         """
@@ -342,3 +332,15 @@ extend str:
                 s = s + str(self.ptr[i])
                 prev_is_cased = False
         return s
+
+    def isnumeric(self: str) -> bool:
+        """
+        str.isdecimal() -> bool
+
+        Return True if the string is a numeric string, False otherwise.
+        A string is numeric if all characters in the string are numeric
+        and there is at least one character in the string.
+
+        Unlike Python, isnumeric() deals with just ASCII characters.
+        """
+        return self.isdecimal()

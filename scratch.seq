@@ -1,9 +1,8 @@
 import str
 
-print ''.title()
-print ' hello '.title()
-print 'hello '.title()
-print 'Hello '.title()
-print 'fOrMaT thIs aS titLe String'.title()
-print 'fOrMaT,thIs-aS*titLe;String'.title()
-print 'getInt'.title()
+print ''.isnumeric()
+print 'a'.isnumeric()
+print '0'.isnumeric()
+print '\xbc'.isnumeric()
+print '0123456789'.isnumeric()
+print '0123456789a'.isnumeric()
