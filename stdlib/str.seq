@@ -344,3 +344,24 @@ extend str:
         Unlike Python, isnumeric() deals with just ASCII characters.
         """
         return self.isdecimal()
+
+    def ljust(self: str, width: int, fillchar: str) -> str:
+        """
+        ljust(width, fillchar)
+
+        Return a left-justified string of length width.
+
+        Padding is done using the specified fill character (default is a space).
+        """
+        s = ''
+        s = s + self
+
+        if width <= len(self):
+            return self
+
+        for i in range(width - len(self)):
+            try:
+                s = s + fillchar
+            except:
+                s = s + ' '
+        return s

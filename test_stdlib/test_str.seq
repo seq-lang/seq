@@ -136,6 +136,13 @@ def test_isnumeric():
     assert '0123456789'.isdecimal() == True
     assert '0123456789a'.isdecimal() == False
 
+def test_ljust():
+    assert 'abc'.ljust(10, ' ') == 'abc       '
+    assert 'abc'.ljust(6, ' ') == 'abc   '
+    assert 'abc'.ljust(3, ' ') == 'abc'
+    assert 'abc'.ljust(2, ' ') == 'abc'
+    assert 'abc'.ljust(10, '*') == 'abc*******'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -152,3 +159,4 @@ test_casefold()
 test_swapcase()
 test_title()
 test_isnumeric()
+test_ljust()

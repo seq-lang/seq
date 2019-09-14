@@ -1,8 +1,7 @@
 import str
 
-print ''.isnumeric()
-print 'a'.isnumeric()
-print '0'.isnumeric()
-print '\xbc'.isnumeric()
-print '0123456789'.isnumeric()
-print '0123456789a'.isnumeric()
+print 'abc'.ljust(10, ' ')
+print 'abc'.ljust(6, ' ')
+print 'abc'.ljust(3, ' ')
+print 'abc'.ljust(2, ' ')
+print 'abc'.ljust(10, '*')
