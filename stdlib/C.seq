@@ -1,0 +1,10 @@
+
+cdef isdigit(int) -> int
+cdef isspace(int) -> int
+cdef isupper(int) -> int
+cdef islower(int) -> int
+cdef toupper(int) -> int
+cdef tolower(int) -> int
+cdef isalnum(int) -> int
+cdef isalpha(int) -> int
+cdef istitle(int) -> int
