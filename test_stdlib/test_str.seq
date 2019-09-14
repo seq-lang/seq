@@ -150,6 +150,13 @@ def test_rjust():
     assert 'abc'.rjust(2, ' ') == 'abc'
     assert 'abc'.rjust(10, '*') == '*******abc'
 
+def test_center():
+    assert 'abc'.center(10, ' ') == '   abc    '
+    assert 'abc'.center(6, ' ') == ' abc  '
+    assert 'abc'.center(3, ' ') == 'abc'
+    assert 'abc'.center(2, ' ') == 'abc'
+    assert 'abc'.center(10, '*') == '***abc****'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -168,3 +175,4 @@ test_title()
 test_isnumeric()
 test_ljust()
 test_rjust()
+test_center()
