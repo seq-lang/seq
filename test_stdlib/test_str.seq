@@ -128,6 +128,14 @@ def test_title():
     assert 'fOrMaT,thIs-aS*titLe;String'.title() == 'Format,This-As*Title;String'
     assert 'getInt'.title() == 'Getint'
 
+def test_isnumeric():
+    assert ''.isdecimal() == False
+    assert 'a'.isdecimal() == False
+    assert '0'.isdecimal() == True
+    assert '\xbc'.isdecimal() == False
+    assert '0123456789'.isdecimal() == True
+    assert '0123456789a'.isdecimal() == False
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -143,3 +151,4 @@ test_isascii()
 test_casefold()
 test_swapcase()
 test_title()
+test_isnumeric()
