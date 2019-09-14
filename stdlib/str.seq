@@ -381,3 +381,22 @@ extend str:
 
         s = s + self
         return s
+
+    def center(self: str, width: int, fillchar: str) -> str:
+        """
+        """
+        s = ''
+
+        if width <= len(self):
+            return self
+
+        pad = width - len(self)
+        left_pad = pad // 2
+        right_pad = width - len(self) - left_pad
+
+        for i in range(left_pad):
+            s = s + fillchar
+        s = s + self
+        for i in range(right_pad):
+            s = s + fillchar
+        return s
