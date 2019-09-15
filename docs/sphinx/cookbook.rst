@@ -12,11 +12,11 @@ Subsequence extraction
     sublen = 5
     stride = 2
 
-    # explicit for-loop:
+    # explicit for-loop
     for subseq in myseq.split(sublen, stride):
         print subseq
 
-    # pipelined:
+    # pipelined
     myseq |> split(sublen, stride) |> echo
 
 k-mer extraction
@@ -28,11 +28,11 @@ k-mer extraction
     type K = Kmer[5]
     stride = 2
 
-    # explicit for-loop:
+    # explicit for-loop
     for subseq in myseq.kmers[K](stride):
         print subseq
 
-    # pipelined:
+    # pipelined
     myseq |> kmers[K](stride) |> echo
 
 Reverse complementation
@@ -40,14 +40,12 @@ Reverse complementation
 
 .. code-block:: seq
 
-    # sequences:
+    # sequences
     s = s'GGATC'
     print ~s     # GATCC
-    s.revcomp()  # in-place rev. comp.
-    print s      # GATCC
 
     # k-mers
-    k = Kmer[5](s'GGATC')
+    k = k'GGATC'
     print ~k     # GATCC
 
 k-mer Hamming distance
@@ -55,11 +53,23 @@ k-mer Hamming distance
 
 .. code-block:: seq
 
-    type K = Kmer[5]
-    k1 = K(s'ACGTC')
-    k2 = K(s'ACTTA')
-    #          ^ ^
+    k1 = k'ACGTC'
+    k2 = k'ACTTA'
+    #        ^ ^
     print abs(k1 - k2)  # Hamming distance = 2
+
+k-mer Hamming neighbors
+-----------------------
+
+.. code-block:: seq
+
+    def neighbors(kmer):
+        for i in range(len(kmer)):
+            for b in (k'A', k'C', k'G', k'T'):
+                if kmer[i] != b:
+                    yield kmer |> base(i, b)
+
+    print list(neighbors(k'AGC'))  # CGC, GGC, etc.
 
 k-mer minimizer
 ---------------
@@ -109,8 +119,8 @@ Spaced seed search
             default:
                 return False
 
-Reverse-complement palindrome test
-----------------------------------
+Reverse-complement palindrome
+-----------------------------
 
 .. code-block:: seq
 
@@ -128,22 +138,22 @@ Reading FASTA/FASTQ
 
 .. code-block:: seq
 
-    # iterate over everything:
+    # iterate over everything
     for r in FASTA('genome.fa'):
         print r.name()
         print r.seq()
 
-    # iterate over sequences:
+    # iterate over sequences
     for s in FASTA('genome.fa') |> seqs:
         print s
 
-    # iterate over everything:
+    # iterate over everything
     for r in FASTQ('reads.fq'):
         print r.name()
         print r.read()
         print r.qual()
 
-    # iterate over sequences:
+    # iterate over sequences
     for s in FASTQ('reads.fq') |> seqs:
         print s
 
@@ -176,7 +186,7 @@ Reading SAM/BAM/CRAM
 
 .. code-block:: seq
 
-    # iterate over everything:
+    # iterate over everything
     for r in SAM('alignments.sam'):
         print r.name()
         print r.read()
@@ -192,7 +202,7 @@ Reading SAM/BAM/CRAM
     for r in CRAM('alignments.cram'):
         # ...
 
-    # iterate over sequences:
+    # iterate over sequences
     for s in SAM('alignments.sam') |> seqs:
         print s
 

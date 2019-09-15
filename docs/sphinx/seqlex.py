@@ -69,13 +69,13 @@ class SeqLexer(RegexLexer):
             include('magicfuncs'),
             include('magicvars'),
             include('backtick'),
-            ('([srR]|[uUbB][rR]|[rR][uUbB])(""")',
+            ('([skrR]|[uUbB][rR]|[rR][uUbB])(""")',
              bygroups(String.Affix, String.Double), 'tdqs'),
-            ("([srR]|[uUbB][rR]|[rR][uUbB])(''')",
+            ("([skrR]|[uUbB][rR]|[rR][uUbB])(''')",
              bygroups(String.Affix, String.Single), 'tsqs'),
-            ('([srR]|[uUbB][rR]|[rR][uUbB])(")',
+            ('([skrR]|[uUbB][rR]|[rR][uUbB])(")',
              bygroups(String.Affix, String.Double), 'dqs'),
-            ("([srR]|[uUbB][rR]|[rR][uUbB])(')",
+            ("([skrR]|[uUbB][rR]|[rR][uUbB])(')",
              bygroups(String.Affix, String.Single), 'sqs'),
             ('([uUbB]?)(""")', bygroups(String.Affix, String.Double),
              combined('stringescape', 'tdqs')),
@@ -126,7 +126,8 @@ class SeqLexer(RegexLexer):
             'assert', 'async', 'await', 'break', 'continue', 'del', 'elif',
             'else', 'except', 'finally', 'for', 'global', 'if', 'lambda', 'pass',
             'raise', 'nonlocal', 'return', 'try', 'while', 'yield', 'yield from',
-            'as', 'with', 'match', 'case', 'default', 'cdef', 'extern', 'prefetch', 'type', 'extend', 'print'), suffix=r'\b'),
+            'as', 'with', 'match', 'case', 'default', 'cdef', 'extern', 'prefetch',
+            'type', 'extend', 'print'), suffix=r'\b'),
          Keyword),
         (words((
             'True', 'False', 'None'), suffix=r'\b'),
@@ -141,14 +142,8 @@ class SeqLexer(RegexLexer):
                 'locals', 'map', 'max', 'memoryview', 'min', 'object', 'oct',
                 'open', 'ord', 'pow', 'property', 'range', 'repr', 'reversed',
                 'round', 'set', 'setattr', 'slice', 'sorted', 'staticmethod', 'str',
-                'sum', 'super', 'tuple', 'vars', 'zip', 'seq', 'byte', 'ptr', 'array']
-
-    for i in range(1,513):
-        s = str(i)
-        if i % 2 == 0:
-            seqwords += ['k' + str(i/2)]
-        seqwords += ['i' + s, 'u' + s]
-    seqwords = tuple(seqwords)
+                'sum', 'super', 'tuple', 'vars', 'zip', 'seq', 'byte', 'ptr', 'array',
+                'Kmer', 'Int', 'UInt']
 
     tokens['builtins'] = [
         (words(seqwords, prefix=r'(?<!\.)', suffix=r'\b'),
@@ -198,7 +193,7 @@ class SeqLexer(RegexLexer):
             '__ror__', '__round__', '__rpow__', '__rrshift__', '__rshift__',
             '__rsub__', '__rtruediv__', '__rxor__', '__set__', '__setattr__',
             '__setitem__', '__str__', '__sub__', '__subclasscheck__', '__truediv__',
-            '__xor__'), suffix=r'\b'),
+            '__xor__', '__prefetch__'), suffix=r'\b'),
          Name.Function.Magic),
     ]
     tokens['magicvars'] = [

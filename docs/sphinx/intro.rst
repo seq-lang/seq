@@ -8,6 +8,7 @@ Dependencies
 - `LLVM <https://llvm.org>`_ [#]_
 - `OCaml <https://ocaml.org>`_ [#]_
 - `Boehm GC <https://github.com/ivmai/bdwgc>`_
+- `HTSlib <https://htslib.org>`_
 
 .. [#] LLVM 6 or greater is required. However, due to a LLVM 7 `bug <https://bugs.llvm.org/show_bug.cgi?id=40656>`_ with coroutines (which are used extensively in Seq), we highly recommend building with LLVM 6.
 
