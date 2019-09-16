@@ -289,3 +289,49 @@ finally_break_continue1()
 # EXPECT: f3
 # EXPECT: f4
 finally_break_continue2()
+
+
+class Foo:
+    i: int
+    def __enter__(self: Foo):
+        print '> foo! ' + str(self.i)
+    def __exit__(self: Foo):
+        print '< foo! ' + str(self.i)
+    def foo(self: Foo):
+        print 'woof'
+
+class Bar:
+    s: str
+    def __enter__(self: Bar):
+        print '> bar! ' + self.s
+    def __exit__(self: Bar):
+        print '< bar! ' + self.s
+    def bar(self: Bar):
+        print 'meow'
+
+def test_with():
+    with Foo(0) as f:
+        f.foo()
+    with Foo(1) as f, Bar('s') as b:
+        f.foo()
+        b.bar()
+    with Foo(2), Bar('t') as q:
+        print 'eeh'
+        q.bar()
+
+# EXPECT: > foo! 0
+# EXPECT: woof
+# EXPECT: < foo! 0
+# EXPECT: > foo! 1
+# EXPECT: > bar! s
+# EXPECT: woof
+# EXPECT: meow
+# EXPECT: < bar! s
+# EXPECT: < foo! 1
+# EXPECT: > foo! 2
+# EXPECT: > bar! t
+# EXPECT: eeh
+# EXPECT: meow
+# EXPECT: < bar! t
+# EXPECT: < foo! 2
+test_with()
