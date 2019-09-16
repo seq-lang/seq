@@ -1,0 +1,129 @@
+
+def string_search_slow(text: str, pattern: str) -> list[int]:
+    """
+    string_search_slow(text, pattern) -> list
+
+    Return a list containing the position of each index
+    the pattern is found.
+    """
+    li = list[int]()
+
+    max_search = len(text) - len(pattern) + 1
+    for i in range(max_search):
+        if text[i:i + len(pattern)] == pattern:
+            li.append(i)
+
+    return li
+
+def string_search_rabin_karp(text: str, pattern: str, prime: int) -> list[int]:
+    """
+    string_search_rabin_karp(text, pattern, prime) -> list
+
+    Return a list containing the position of each index
+    the pattern is found.
+    """
+    d = 256
+    len_pat = len(pattern)
+    len_txt = len(text)
+    p = 0   # hash value for pattern
+    t = 0   # hash value for text
+    hash = 1
+    max_search = len_txt - len_pat + 1
+    li = list[int]()
+
+    # hash formula
+    for i in range(len_pat - 1):
+        hash = (hash * d)% prime
+
+    # calculate hash value of the pattern and the hash value of the
+    # first section of text
+    for i in range(len_pat):
+        p = (d * p + ord(pattern[i])) % prime
+        t = (d * t + ord(text[i])) % prime
+
+    # shift pattern over text one bye one
+    for i in range(max_search):
+        # check the hash values of current position of text and
+        # pattern if the hash values are equal then compare
+        # characters one by one
+        if p == t:
+            # check characters one by one
+            j = 0
+            for k in range(len_pat):
+                j = k
+                if text[i+j] != pattern[j]:
+                    break
+            j += 1
+            if j == len_pat:
+                li.append(i)
+
+        # calculate hash value for next position of text.
+        # the leading digit is removed while trailing digit is added
+        if i < (len_txt-len_pat):
+            t = (d*(t-ord(text[i])*hash) + ord(text[i + len_pat])) % prime
+
+            # make t positive if it turns negative
+            if t < 0:
+                t = t + prime
+    return li
+
+def computeLPArray(pattern: str, len_pat: int) -> list[int]:
+    """
+    computeLPArray(pattern, len_pat) -> list
+
+    Return a list containing the length of the maximum matching
+    proper prefix of the pattern[0, 1, ..., i]
+    """
+    len = 0 # length of the previous longest prefix
+    lp = list[int]()    # longest proper prefix will hold the longest prefix values for pattern
+    lp.append(0)
+    i = 1
+
+    while i < len_pat:
+        if pattern[i] == pattern[len]:
+            len += 1
+            lp.append(len)
+            i += 1
+        else:
+            if len != 0:
+                len = lp[len-1]
+            else:
+                lp.append(0)
+                i += 1
+    return lp
+
+def string_search_KMP(text: str, pattern: str) -> list[int]:
+    """
+    string_search_KMP(text, pattern) -> list
+
+    Knuth-Morris-Pratt algorithm
+    Return a list containing the position of each index
+    the pattern is found.
+    """
+    len_pat = len(pattern)
+    len_txt = len(text)
+    li = list[int]()
+    j = 0   # index for pattern
+
+
+    lp_array = computeLPArray(pattern, len_pat)
+
+    i = 0   # index for text
+    while i < len_txt:
+        if pattern[j] == text[i]:
+            i += 1
+            j += 1
+
+        if j == len_pat:
+            li.append(i-j)
+            j = lp_array[j-1]
+
+        # mismatch after j matches
+        elif i < len_txt and pattern[j] != text[i]:
+            # do not match lp[0...lp[j-1]] characters,
+            # they will match anyways
+            if j != 0:
+                j = lp_array[j-1]
+            else:
+                i += 1
+    return li

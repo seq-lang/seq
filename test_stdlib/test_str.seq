@@ -171,6 +171,16 @@ def test_zfill():
     assert '34'.zfill(1) == '34'
     assert '34'.zfill(4) == '0034'
 
+def test_count():
+    assert 'aaa'.count('a', 0, len('aaa')) == 3
+    assert 'aaa'.count('b', 0, len('aaa')) == 0
+    assert 'aaa'.count('a', 1, len('aaa')) == 2
+    assert 'aaa'.count('a', 10, len('aaa')) == 0
+    assert 'aaa'.count('a', -1, len('aaa')) == 1
+    assert 'aaa'.count('a', 0, 1) == 1
+    assert 'aaa'.count('a', 0, 10) == 3
+    assert 'aaa'.count('a', 0, -1) == 2
+
 test_isdigit()
 test_islower()
 test_isupper()
