@@ -49,59 +49,6 @@ else()
 endif()
 
 
-# Seq compiler library
-include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
-add_library(seq SHARED compiler/include/seq/any.h
-                       compiler/include/seq/array.h
-                       compiler/include/seq/base.h
-                       compiler/include/seq/common.h
-                       compiler/include/seq/expr.h
-                       compiler/include/seq/func.h
-                       compiler/include/seq/funct.h
-                       compiler/include/seq/generic.h
-                       compiler/include/seq/lang.h
-                       compiler/include/seq/llvm.h
-                       compiler/include/seq/num.h
-                       compiler/include/seq/ops.h
-                       compiler/include/seq/optional.h
-                       compiler/include/seq/parser.h
-                       compiler/include/seq/patterns.h
-                       compiler/include/seq/ptr.h
-                       compiler/include/seq/record.h
-                       compiler/include/seq/ref.h
-                       compiler/include/seq/seq.h
-                       compiler/include/seq/seqt.h
-                       compiler/include/seq/stmt.h
-                       compiler/include/seq/types.h
-                       compiler/include/seq/void.h
-                       compiler/include/seq/var.h
-                       compiler/lang/expr.cpp
-                       compiler/lang/func.cpp
-                       compiler/lang/lang.cpp
-                       compiler/lang/ops.cpp
-                       compiler/lang/patterns.cpp
-                       compiler/lang/seq.cpp
-                       compiler/lang/stmt.cpp
-                       compiler/lang/var.cpp
-                       compiler/types/any.cpp
-                       compiler/types/array.cpp
-                       compiler/types/base.cpp
-                       compiler/types/funct.cpp
-                       compiler/types/generic.cpp
-                       compiler/types/num.cpp
-                       compiler/types/optional.cpp
-                       compiler/types/ptr.cpp
-                       compiler/types/record.cpp
-                       compiler/types/ref.cpp
-                       compiler/types/seqt.cpp
-                       compiler/types/types.cpp
-                       compiler/types/void.cpp
-                       compiler/util/ocaml.cpp)
-llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} seqrt)
-
-
 # Seq parsing library
 find_program(OCAMLFIND NAMES ocamlfind)
 execute_process(COMMAND ${OCAMLFIND} ocamlc -where
@@ -162,9 +109,64 @@ foreach(OCAML_STUB IN ITEMS
   endif()
 endforeach(OCAML_STUB)
 
+
+# Seq compiler library
+include_directories(${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
+add_library(seq SHARED compiler/include/seq/any.h
+                       compiler/include/seq/array.h
+                       compiler/include/seq/base.h
+                       compiler/include/seq/common.h
+                       compiler/include/seq/expr.h
+                       compiler/include/seq/func.h
+                       compiler/include/seq/funct.h
+                       compiler/include/seq/generic.h
+                       compiler/include/seq/lang.h
+                       compiler/include/seq/llvm.h
+                       compiler/include/seq/num.h
+                       compiler/include/seq/ops.h
+                       compiler/include/seq/optional.h
+                       compiler/include/seq/parser.h
+                       compiler/include/seq/patterns.h
+                       compiler/include/seq/ptr.h
+                       compiler/include/seq/record.h
+                       compiler/include/seq/ref.h
+                       compiler/include/seq/seq.h
+                       compiler/include/seq/seqt.h
+                       compiler/include/seq/stmt.h
+                       compiler/include/seq/types.h
+                       compiler/include/seq/void.h
+                       compiler/include/seq/var.h
+                       compiler/lang/expr.cpp
+                       compiler/lang/func.cpp
+                       compiler/lang/lang.cpp
+                       compiler/lang/ops.cpp
+                       compiler/lang/patterns.cpp
+                       compiler/lang/seq.cpp
+                       compiler/lang/stmt.cpp
+                       compiler/lang/var.cpp
+                       compiler/types/any.cpp
+                       compiler/types/array.cpp
+                       compiler/types/base.cpp
+                       compiler/types/funct.cpp
+                       compiler/types/generic.cpp
+                       compiler/types/num.cpp
+                       compiler/types/optional.cpp
+                       compiler/types/ptr.cpp
+                       compiler/types/record.cpp
+                       compiler/types/ref.cpp
+                       compiler/types/seqt.cpp
+                       compiler/types/types.cpp
+                       compiler/types/void.cpp
+                       compiler/util/ocaml.cpp
+                       ${LIB_SEQPARSE})
+llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
+target_link_libraries(seq ${LLVM_LIBS} ${OCAML_STATIC} ffi seqrt)
+
+
 # Seq command-line tool
-add_executable(seqc runtime/main.cpp ${LIB_SEQPARSE})
-target_link_libraries(seqc seq ${OCAML_STATIC} ffi)
+add_executable(seqc runtime/main.cpp)
+target_link_libraries(seqc seq)
 set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
@@ -194,6 +196,6 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
                  ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
                  EXCLUDE_FROM_ALL)
 
-add_executable(seqtest test/main.cpp ${LIB_SEQPARSE})
-target_link_libraries(seqtest seq ${OCAML_STATIC} ffi gtest_main)
+add_executable(seqtest test/main.cpp)
+target_link_libraries(seqtest seq gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")

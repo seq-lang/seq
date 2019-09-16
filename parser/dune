@@ -6,6 +6,6 @@
    (libraries
       base core ctypes ctypes.foreign ctypes.stubs
       seqaml)
-   (modes (native object) (native shared_object))
-   (link_flags (:standard -I ../../../build -noautolink))
+   (modes (native object))
+   (link_flags (:standard -noautolink))
    (preprocess (pps ppx_sexp_conv ppx_deriving.show)))
