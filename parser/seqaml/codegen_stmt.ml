@@ -334,7 +334,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         | Some t -> t
         | None ->
           let new_ctx = Ctx.init_empty ctx in
-          if file = ctx.filename then 
+          if file = ctx.filename then
             serr ~pos "recursive import";
           Ctx.parse_file ~ctx:new_ctx file;
           let map =
