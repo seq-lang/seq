@@ -1,4 +1,5 @@
 import C
+import algorithms
 
 class TypeError:
     msg: str
@@ -12,6 +13,9 @@ def chr(b: int) -> str:
     p = ptr[byte](1)
     p[0] = byte(b)
     return str(p, 1)
+
+def search(text: str, pattern: str) -> list[int]:
+    return algorithms.string_search_slow(text, pattern)
 
 extend str:
     def isdigit(self: str) -> bool:
@@ -433,3 +437,14 @@ extend str:
         else:
             s = s + self
         return s
+
+    def count(self: str, sub: str, start: int, end: int) -> int:
+        """
+        str.count(sub[, start[, end]]) -> int
+
+        Return the number of occurrences of subsection sub in
+        bytes str[start:end].  Optional arguments start and end are interpreted
+        as in slice notation.
+        """
+
+        return len(search(self[start:end], sub))
