@@ -1,10 +1,8 @@
 import str
 
-print 'aaa'.count('a', 0, len('aaa'))
-print 'aaa'.count('b', 0, len('aaa'))
-print 'aaa'.count('a', 1, len('aaa'))
-print 'aaa'.count('a', 10, len('aaa'))
-print 'aaa'.count('a', -1, len('aaa'))
-print 'aaa'.count('a', 0, 1)
-print 'aaa'.count('a', 0, 10)
-print 'aaa'.count('a', 0, -1)
+print 'abcdefghiabc'.find('abc', 0, len('abcdefghiabc'))
+print 'abcdefghiabc'.find('abc', 1, len('abcdefghiabc'))
+print 'abcdefghiabc'.find('def', 4, len('abcdefghiabc'))
+print 'rrarrrrrrrrra'.find('a', 0, len('rrarrrrrrrrra'))
+print 'rrarrrrrrrrra'.find('a', 4, len('rrarrrrrrrrra'))
+print 'rrarrrrrrrrra'.find('a', 4, 6)

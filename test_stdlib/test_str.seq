@@ -181,6 +181,14 @@ def test_count():
     assert 'aaa'.count('a', 0, 10) == 3
     assert 'aaa'.count('a', 0, -1) == 2
 
+def test_find():
+    assert 'abcdefghiabc'.find('abc', 0, len('abcdefghiabc')) == 0
+    assert 'abcdefghiabc'.find('abc', 1, len('abcdefghiabc')) == 9
+    assert 'abcdefghiabc'.find('def', 4, len('abcdefghiabc')) == -1
+    assert 'rrarrrrrrrrra'.find('a', 0, len('rrarrrrrrrrra')) == 2
+    assert 'rrarrrrrrrrra'.find('a', 4, len('rrarrrrrrrrra')) == 12
+    assert 'rrarrrrrrrrra'.find('a', 4, 6) == -1
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -200,3 +208,5 @@ test_isnumeric()
 test_ljust()
 test_rjust()
 test_center()
+test_count()
+test_find()
