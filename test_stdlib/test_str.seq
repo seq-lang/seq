@@ -188,6 +188,21 @@ def test_find():
     assert 'rrarrrrrrrrra'.find('a', 0, len('rrarrrrrrrrra')) == 2
     assert 'rrarrrrrrrrra'.find('a', 4, len('rrarrrrrrrrra')) == 12
     assert 'rrarrrrrrrrra'.find('a', 4, 6) == -1
+    assert 'abc'.find('', 0, len('abc')) == 0
+    assert 'abc'.find('', 3, len('abc')) == 3
+    assert 'abc'.find('', 4, len('abc')) == -1
+
+def test_rfind():
+    assert 'abcdefghiabc'.rfind('abc', 0, len('abcdefghiabc')) == 9
+    assert 'abcdefghiabc'.rfind('', 0, len('abcdefghiabc')) == 12
+    assert 'abcdefghiabc'.rfind('abcd', 0, len('abcdefghiabc')) == 0
+    assert 'abcdefghiabc'.rfind('abcz', 0, len('abcdefghiabc')) == -1
+    assert 'rrarrrrrrrrra'.rfind('a', 0, len('rrarrrrrrrrra')) == 12
+    assert 'rrarrrrrrrrra'.rfind('a', 4, len('rrarrrrrrrrra')) == 12
+    assert 'rrarrrrrrrrra'.rfind('a', 4, 6) == -1
+    assert 'abc'.rfind('', 0, len('abc')) == 3
+    assert 'abc'.rfind('', 3, len('abc')) == 3
+    assert 'abc'.rfind('', 4, len('abc')) == -1
 
 test_isdigit()
 test_islower()
@@ -210,3 +225,4 @@ test_rjust()
 test_center()
 test_count()
 test_find()
+test_rfind()
