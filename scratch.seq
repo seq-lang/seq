@@ -1,8 +1,12 @@
 import str
 
-print 'abcdefghiabc'.find('abc', 0, len('abcdefghiabc'))
-print 'abcdefghiabc'.find('abc', 1, len('abcdefghiabc'))
-print 'abcdefghiabc'.find('def', 4, len('abcdefghiabc'))
-print 'rrarrrrrrrrra'.find('a', 0, len('rrarrrrrrrrra'))
-print 'rrarrrrrrrrra'.find('a', 4, len('rrarrrrrrrrra'))
-print 'rrarrrrrrrrra'.find('a', 4, 6)
+print 'abcdefghiabc'.rfind('abc', 0, len('abcdefghiabc'))
+print 'abcdefghiabc'.rfind('', 0, len('abcdefghiabc'))
+print 'abcdefghiabc'.rfind('abcd', 0, len('abcdefghiabc'))
+print 'abcdefghiabc'.rfind('abcz', 0, len('abcdefghiabc'))
+print 'rrarrrrrrrrra'.rfind('a', 0, len('rrarrrrrrrrra'))
+print 'rrarrrrrrrrra'.rfind('a', 4, len('rrarrrrrrrrra'))
+print 'rrarrrrrrrrra'.rfind('a', 4, 6)
+print 'abc'.rfind('', 0, len('abc'))
+print 'abc'.rfind('', 3, len('abc'))
+print 'abc'.rfind('', 4, len('abc'))
