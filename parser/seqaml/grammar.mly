@@ -441,10 +441,9 @@ statement:
   | func_statement
   | class_statement
   | decl_statement
+  | with_statement
   /* | special_statement */
     {[ $1 ]}
-  | with_statement
-    { $1 }
 
 // Simple one-line statements
 small_statement:
@@ -818,12 +817,13 @@ with_statement:
         in
         let within = match lst with
           | [] -> $4
-          | hd :: tl -> traverse hd tl
+          | hd :: tl -> [traverse hd tl]
         in
         let s3 = fst expr, Try(within, [], Some [
           fst expr, Expr (fst expr, Call((fst expr, Dot(var, "__exit__")), []))])
         in
-        [s1; s2; s3]
+        fst expr, If [fst expr,
+          { cond = Some (fst expr, Bool true); cond_stmts = [s1; s2; s3] }]
       in
       traverse (List.hd_exn $2) (List.tl_exn $2)
     }
