@@ -47,9 +47,9 @@
   let seq_string pfx u st =
     let fix_literals ?(is_raw=false) s =
       let buf = Buffer.create (String.length s) in
-      let rec scan i = 
+      let rec scan i =
         let l = String.length s in
-        let is_octal c = 
+        let is_octal c =
           (Char.to_int c) >= (Char.to_int '0') && (Char.to_int c) <= (Char.to_int '7')
         in
         if i >= l then ()
@@ -66,29 +66,29 @@
             | 't' -> 1, '\t'
             | 'v' -> 1, Char.of_int_exn 11
             | 'x' ->
-              let n = 
-                if i < (l - 3) then 
+              let n =
+                if i < (l - 3) then
                   int_of_string_opt ("0x" ^ (String.sub s ~pos:(i + 2) ~len:2))
                 else
                   None
               in
-              begin match n with 
+              begin match n with
               | Some n -> 3, Char.of_int_exn n
               | None -> Err.SyntaxError ("Invalid \\x escape", st) |> raise
               end
             | c when is_octal c ->
-              let n = 
+              let n =
                 if i < (l - 3) && (is_octal s.[i + 2]) && (is_octal s.[i + 3]) then 3
                 else if i < (l - 2) && (is_octal s.[i + 2]) then 2
                 else 1
-              in 
-              n, Char.of_int_exn 
+              in
+              n, Char.of_int_exn
                  @@ int_of_string ("0o" ^ (String.sub s ~pos:(i + 1) ~len:n))
             | _ -> 0, s.[i]
           in
           Buffer.add_char buf c;
           scan (i + 1 + skip)
-        end else begin 
+        end else begin
           Buffer.add_char buf s.[i];
           scan (i + 1)
         end
@@ -217,6 +217,7 @@ and read state = parse
       | "except"   -> P.EXCEPT     (cur_pos state lexbuf ~len)
       | "finally"  -> P.FINALLY    (cur_pos state lexbuf ~len)
       | "prefetch" -> P.PREFETCH   (cur_pos state lexbuf ~len)
+      | "with"     -> P.WITH       (cur_pos state lexbuf ~len)
       | "raise"    -> P.THROW      (cur_pos state lexbuf ~len)
       | "is"       -> P.IS         (cur_pos state lexbuf ~len, "is")
       | "in"       -> P.IN         (cur_pos state lexbuf ~len, "in")

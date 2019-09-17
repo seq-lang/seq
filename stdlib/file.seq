@@ -51,6 +51,10 @@ class File:
     buf: ptr[byte]
     fp: ptr[byte]
 
+    def _ensure_open(self: File):
+        if not self.fp:
+            raise IOError("I/O operation on closed file")
+
     def _reset(self: File):
         self.buf = ptr[byte]()
         self.sz = 0
@@ -70,11 +74,13 @@ class File:
         cdef gzclose(ptr[byte]) -> int
         if self.fp:
             gzclose(self.fp)
+            self.fp = ptr[byte]()
         if self.buf:
             gc.free(self.buf)
             self._reset()
 
     def _iter(self: File):
+        self._ensure_open()
         while True:
             # pass pointers to individual class fields:
             rd = _getline(ptr[ptr[byte]](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
@@ -89,16 +95,24 @@ class File:
         for a in self._iter():
             yield copy(a)
 
-    def readlines(self):
+    def readlines(self: File):
         return [l for l in self]
 
-    def write(self, s: str):
-        cdef fwrite(ptr[byte], int, int, ptr[byte]) -> int
-        fwrite(s.ptr, 1, s.len, self.fp)
+    def write(self: File, s: str):
+        cdef gzwrite(ptr[byte], ptr[byte], i32) -> i32
+        self._ensure_open()
+        gzwrite(self.fp, s.ptr, i32(len(s)))
+        _gz_errcheck(self.fp)
 
-    def write_gen[T](self, g: generator[T]):
+    def write_gen[T](self: File, g: generator[T]):
         for s in g:
             self.write(str(s))
+
+    def __enter__(self: File):
+        pass
+
+    def __exit__(self: File):
+        self.close()
 
 def open(path: str, mode: str):
     return File(path, mode)

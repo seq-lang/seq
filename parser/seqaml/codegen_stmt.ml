@@ -334,7 +334,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         | Some t -> t
         | None ->
           let new_ctx = Ctx.init_empty ctx in
-          if file = ctx.filename then 
+          if file = ctx.filename then
             serr ~pos "recursive import";
           Ctx.parse_file ~ctx:new_ctx file;
           let map =
@@ -423,12 +423,14 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         fn
     in
     let flags = Stack.create () in
-    if is_none cls
-    then (
-      let fnp = Option.value_exn (Ctx.in_scope ~ctx name) in
-      List.iter fn_attrs ~f:(fun (_, x) ->
-          Hash_set.add (snd fnp).attrs x;
-          if x = "atomic" then Stack.push flags "atomic"));
+    List.iter fn_attrs ~f:(fun (_, x) ->
+      if is_none cls
+      then (
+        let fnp = Option.value_exn (Ctx.in_scope ~ctx name) in
+        Hash_set.add (snd fnp).attrs x;
+        if x = "atomic" then Stack.push flags "atomic");
+      Llvm.Func.set_attr fn x;
+    );
     let new_ctx =
       { ctx with
         base = fn
