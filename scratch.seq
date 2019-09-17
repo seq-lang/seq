@@ -1,8 +1,8 @@
 import str
 
-print '   hello   '.strip('')
-print ' \t\n\rabc \t\n\r'.strip('')
-print 'xyzzyhelloxyzzy'.strip('xyz')
-print 'hello'.strip('xyz')
-print 'mississippi'.strip('mississippi')
-print 'mississippi'.strip('i')
+print 'hello'.partition('l')
+print 'this is the partition method'.partition('ti')
+print 'http://www.seq.org'.partition('://')
+print 'http://www.seq.org'.partition('?')
+print 'http://www.seq.org'.partition('http://')
+print 'http://www.seq.org'.partition('org')
