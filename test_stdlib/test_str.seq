@@ -250,9 +250,16 @@ def test_partition():
     assert 'this is the partition method'.partition('ti') == ('this is the par', 'ti', 'tion method')
     assert 'http://www.seq.org'.partition('://') == ('http', '://', 'www.seq.org')
     assert 'http://www.seq.org'.partition('?') == ('http://www.seq.org', '', '')
-    # assert 'http://www.seq.org'.partition('http://') == ('', 'http://', 'www.seq.org')
+    assert 'http://www.seq.org'.partition('http://') == ('', 'http://', 'www.seq.org')
     assert 'http://www.seq.org'.partition('org') == ('http://www.seq.', 'org', '')
 
+def test_rpartition():
+    assert 'hello'.rpartition('l') == ('hel', 'l', 'o')
+    assert 'this is the rpartition method'.rpartition('ti') == ('this is the rparti', 'ti', 'on method')
+    assert 'http://www.seq.org'.rpartition('://') == ('http', '://', 'www.seq.org')
+    assert 'http://www.seq.org'.rpartition('?') == ('', '', 'http://www.seq.org')
+    assert 'http://www.seq.org'.rpartition('http://') == ('', 'http://', 'www.seq.org')
+    assert 'http://www.seq.org'.rpartition('org') == ('http://www.seq.', 'org', '')
 
 test_isdigit()
 test_islower()
@@ -282,3 +289,4 @@ test_lstrip()
 test_rstrip()
 test_strip()
 test_partition()
+test_rpartition()
