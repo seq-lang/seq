@@ -232,7 +232,10 @@ def test_lstrip():
     assert ' \t\n\rabc \t\n\r'.lstrip('') == 'abc \t\n\r'
     assert "xyzzyhelloxyzzy".lstrip('xyz') == 'helloxyzzy'
 
-
+def test_rstrip():
+    assert '   hello   '.rstrip('') == '   hello'
+    assert ' \t\n\rabc \t\n\r'.rstrip('') == ' \t\n\rabc'
+    assert "xyzzyhelloxyzzy".rstrip('xyz') == 'xyzzyhello'
 
 test_isdigit()
 test_islower()
@@ -259,3 +262,4 @@ test_rfind()
 test_isidentifier()
 test_isprintable()
 test_lstrip()
+test_rstrip()

@@ -530,13 +530,12 @@ extend str:
 
     def lstrip(self: str, chars: str) -> str:
         """
-        str.lstrip([chars]) -> string or unicode
+        str.lstrip([chars]) -> string
 
         Return a copy of the string str with leading whitespace removed.
-        If chars is given and not None, remove characters in chars instead.
+        If chars is given, remove characters in chars instead.
         Unlike Python, lstrip() deals with just ASCII characters.
         """
-
         # no chars to strip
         if chars == '':
             i = 0
@@ -565,3 +564,42 @@ extend str:
                 return self
 
             return self[i:]
+
+    def rstrip(self: str, chars: str) -> str:
+        """
+        str.rstrip([chars]) -> string
+
+        Return a copy of the string str with trailing whitespace removed.
+        If chars is given, remove characters in chars instead.
+        Unlike Python, lstrip() deals with just ASCII characters.
+        """
+        # no chars to strip
+        if chars == '':
+            i = len(self)-1
+            # rstrip
+            while i < len(self) and self[i].isspace():
+                i -= 1
+
+            i += 1
+            if i == len(self):
+                return self
+
+            return self[:i]
+
+        # with chars to strip
+        else:
+            i = len(self)-1
+            # rstrip
+            for k in range(len(self)):
+                l = 0
+                for l in range(len(chars)):
+                    if chars[l] == self[i]:
+                        i -= 1
+                if l == len(chars) - 1:
+                    break
+
+            i += 1
+            if i == 0:
+                return self
+
+            return self[:i]
