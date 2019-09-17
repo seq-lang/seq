@@ -527,3 +527,41 @@ extend str:
         Unlike Python, isprintable() deals with just ASCII characters.
         """
         return all(31 < int(ord(char)) < 128 for char in self)
+
+    def lstrip(self: str, chars: str) -> str:
+        """
+        str.lstrip([chars]) -> string or unicode
+
+        Return a copy of the string str with leading whitespace removed.
+        If chars is given and not None, remove characters in chars instead.
+        Unlike Python, lstrip() deals with just ASCII characters.
+        """
+
+        # no chars to strip
+        if chars == '':
+            i = 0
+            # lstrip
+            while i < len(self) and self[i].isspace():
+                i += 1
+
+            if i == 0:
+                return self
+
+            return self[i:]
+
+        # with chars to strip
+        else:
+            i = 0
+            # lstrip
+            for k in range(len(self)):
+                l = 0
+                for l in range(len(chars)):
+                    if chars[l] == self[i]:
+                        i += 1
+                if l == len(chars) - 1:
+                    break
+
+            if i == 0:
+                return self
+
+            return self[i:]

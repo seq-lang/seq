@@ -1,12 +1,5 @@
 import str
 
-print ''.isprintable()
-print '\"'.isprintable()
-print "\'".isprintable()
-print ' '.isprintable()
-print 'abcdef'.isprintable()
-print '0123456789'.isprintable()
-print 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.isprintable()
-print 'abcdefghijklmnopqrstuvwxyz'.isprintable()
-print '!#$%&()*+,-./:;?@[\\]^_`{|}~'.isprintable()
-print 'abcdef\n'.isprintable()
+print '   hello   '.lstrip('')
+print ' \t\n\rabc \t\n\r'.lstrip('')
+print "xyzzyhelloxyzzy".lstrip('xyz')
