@@ -478,7 +478,7 @@ extend str:
         Return the highest index in str where substring sub is found,
         such that sub is contained within str[start:end].  Optional
         arguments start and end are interpreted as in slice notation.
-        
+
         Return -1 on failure.
         """
         sub_list = search(self[start:end], sub)
@@ -490,3 +490,28 @@ extend str:
             return -1
 
         return sub_list[len(sub_list)-1] + start  # add start position because of truncation
+
+    def isidentifier(self: str) -> bool:
+        """
+        str.isidentifier() -> bool
+
+        Return True if the string is a valid identifier, False otherwise.
+        Unlike Python, isidentifier() deals with just ASCII characters.
+        """
+        # empty string
+        if len(self) == 0:
+            return False
+
+        # is not a letter or _
+        if not self[0].isalpha():
+            if self[0] != '_':
+                return False
+
+        if self[0].isalpha() or self[0] == '_':
+            for i in range(1, len(self)):
+                if not self[i].isalpha():
+                    if not self[i].isdecimal():
+                        if self[i] != '_':
+                            return False
+
+        return True

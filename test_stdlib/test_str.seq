@@ -204,6 +204,17 @@ def test_rfind():
     assert 'abc'.rfind('', 3, len('abc')) == 3
     assert 'abc'.rfind('', 4, len('abc')) == -1
 
+def test_isidentifier():
+    assert 'a'.isidentifier() == True
+    assert 'Z'.isidentifier() == True
+    assert '_'.isidentifier() == True
+    assert 'b0'.isidentifier() == True
+    assert 'bc'.isidentifier() == True
+    assert 'b_'.isidentifier() == True
+    assert ' '.isidentifier() == False
+    assert '3t'.isidentifier() == False
+    assert '_gth_45'.isidentifier() == True
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -226,3 +237,4 @@ test_center()
 test_count()
 test_find()
 test_rfind()
+test_isidentifier()
