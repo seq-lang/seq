@@ -7,5 +7,5 @@
       base core ctypes ctypes.foreign ctypes.stubs
       seqaml)
    (modes (native object))
-   (link_flags (:standard -noautolink))
+   (link_flags (:standard -noautolink -runtime-variant _pic))
    (preprocess (pps ppx_sexp_conv ppx_deriving.show)))
