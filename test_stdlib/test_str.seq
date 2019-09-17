@@ -245,6 +245,14 @@ def test_strip():
     assert 'mississippi'.strip('mississippi') == ''
     assert 'mississippi'.strip('i') == 'mississipp'
 
+def test_partition():
+    assert 'hello'.partition('l') == ('he', 'l', 'lo')
+    assert 'this is the partition method'.partition('ti') == ('this is the par', 'ti', 'tion method')
+    assert 'http://www.seq.org'.partition('://') == ('http', '://', 'www.seq.org')
+    assert 'http://www.seq.org'.partition('?') == ('http://www.seq.org', '', '')
+    # assert 'http://www.seq.org'.partition('http://') == ('', 'http://', 'www.seq.org')
+    assert 'http://www.seq.org'.partition('org') == ('http://www.seq.', 'org', '')
+
 
 test_isdigit()
 test_islower()
@@ -273,3 +281,4 @@ test_isprintable()
 test_lstrip()
 test_rstrip()
 test_strip()
+test_partition()

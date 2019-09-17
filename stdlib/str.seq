@@ -616,3 +616,13 @@ extend str:
         lstr = self.lstrip(chars)
         rstr = lstr.rstrip(chars)
         return rstr
+
+    def partition(self: str, sep: str) -> tuple[str, str, str]:
+        """
+        """
+        li = search(self, sep)
+
+        if len(li) == 0:
+            return self,'',''
+
+        return self[:li[0]],sep,self[li[0]+len(sep):]
