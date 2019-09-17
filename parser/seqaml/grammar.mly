@@ -810,15 +810,15 @@ throw:
 with_statement:
   | WITH separated_nonempty_list(COMMA, with_clause) COLON suite
     {
-      let rec traverse (expr, var) lst = 
+      let rec traverse (expr, var) lst =
         let var = Option.value var ~default:(fst expr, Id (new_assign ())) in
         let s1 = fst expr, Assign(var, expr, Shadow, None) in
         let s2 = fst expr, Expr (
-          fst expr, Call((fst expr, Dot(var, "__enter__")), [])) 
+          fst expr, Call((fst expr, Dot(var, "__enter__")), []))
         in
         let within = match lst with
-          | [] -> $4 
-          | hd :: tl -> traverse hd tl 
+          | [] -> $4
+          | hd :: tl -> traverse hd tl
         in
         let s3 = fst expr, Try(within, [], Some [
           fst expr, Expr (fst expr, Call((fst expr, Dot(var, "__exit__")), []))])
