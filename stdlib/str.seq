@@ -4,6 +4,9 @@ import algorithms
 class TypeError:
     msg: str
 
+class ValueError:
+    msg: str
+
 def ord(s: str) -> byte:
     if len(s) != 1:
         raise TypeError("TypeError: ord() expected a character, but string of length " + str(len(s)) + " found")
@@ -515,3 +518,12 @@ extend str:
                             return False
 
         return True
+
+    def isprintable(self: str) -> bool:
+        """
+        str.isprintable() -> bool
+
+        Return True if the string is printable or empty, False otherwise.
+        Unlike Python, isprintable() deals with just ASCII characters.
+        """
+        return all(31 < int(ord(char)) < 128 for char in self)
