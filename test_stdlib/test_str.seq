@@ -215,6 +215,20 @@ def test_isidentifier():
     assert '3t'.isidentifier() == False
     assert '_gth_45'.isidentifier() == True
 
+def test_isprintable():
+    assert ''.isprintable() == True
+    assert '\"'.isprintable() == True
+    assert "\'".isprintable() == True
+    assert ' '.isprintable() == True
+    assert 'abcdef'.isprintable() == True
+    assert '0123456789'.isprintable() == True
+    assert 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.isprintable() == True
+    assert 'abcdefghijklmnopqrstuvwxyz'.isprintable() == True
+    assert '!#$%&()*+,-./:;?@[\\]^_`{|}~'.isprintable() == True
+    assert 'abcdef\n'.isprintable() == False
+
+
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -238,3 +252,4 @@ test_count()
 test_find()
 test_rfind()
 test_isidentifier()
+test_isprintable()
