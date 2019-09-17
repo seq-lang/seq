@@ -229,7 +229,16 @@ type Seqs(file: File):
         for a in self.file._iter():
             assert a.len >= 0
             yield copy(seq(a.ptr, a.len))
+        self.close()
+
+    def close(self: Seqs):
         self.file.close()
+
+    def __enter__(self: Seqs):
+        pass
+
+    def __exit__(self: Seqs):
+        self.close()
 
 extend str:
     def __seqs__(self: str):
@@ -275,7 +284,16 @@ type FASTQ(file: File):
                 default:
                     assert False
             line += 1
+        self.close()
+
+    def close(self: FASTQ):
         self.file.close()
+
+    def __enter__(self: FASTQ):
+        pass
+
+    def __exit__(self: FASTQ):
+        self.close()
 
 type FASTARecord(_name: str, _seq: seq):
     def name(self: FASTARecord):
@@ -287,19 +305,18 @@ type FASTARecord(_name: str, _seq: seq):
 type FASTA(file: File, fai: list[int], names: list[str]):
     def __init__(self: FASTA, path: str) -> FASTA:
         cdef atoi(ptr[byte]) -> int
-        fai_file = open(path + ".fai", "r")
         fai = list[int]()
         names = list[str]()
-        for line in fai_file:
-            assert line
-            cut = 0
-            while line[cut] != "\t":
-                cut += 1
-            name = line[:cut]
-            line = line[cut:]
-            fai.append(atoi(line.ptr))
-            names.append(name)
-        fai_file.close()
+        with open(path + ".fai", "r") as fai_file:
+            for line in fai_file:
+                assert line
+                cut = 0
+                while line[cut] != "\t":
+                    cut += 1
+                name = line[:cut]
+                line = line[cut:]
+                fai.append(atoi(line.ptr))
+                names.append(name)
         return (open(path, "r"), fai, names)
 
     def __seqs__(self: FASTA):
@@ -331,22 +348,30 @@ type FASTA(file: File, fai: list[int], names: list[str]):
             assert m == n
             yield (self.names[-1], seq(p, n))
 
+        self.close()
+
+    def close(self: FASTA):
         self.file.close()
+
+    def __enter__(self: FASTA):
+        pass
+
+    def __exit__(self: FASTA):
+        self.close()
 
     def write(seqs_iter, path):
         LINE_LIMIT = 60
-        f = open(path, "w")
-        for i, s in enumerate(seqs_iter):
-            f.write(">sequence")
-            f.write(str(i))
-            f.write("\n")
-            n = 0
-            while n < len(s):
-                end = min(len(s), n + LINE_LIMIT)
-                f.write(str(s[n:end]))
+        with open(path, "w") as f:
+            for i, s in enumerate(seqs_iter):
+                f.write(">sequence")
+                f.write(str(i))
                 f.write("\n")
-                n += LINE_LIMIT
-        f.close()
+                n = 0
+                while n < len(s):
+                    end = min(len(s), n + LINE_LIMIT)
+                    f.write(str(s[n:end]))
+                    f.write("\n")
+                    n += LINE_LIMIT
 
 type Block(p: ptr[byte], seq_len: int, num_seqs: int):
     def __iter__(self: Block):
@@ -788,6 +813,10 @@ class BAM:
     def __init__(self: BAM, path: str, region: str):
         self._init(path, region)
 
+    def _ensure_open(self: BAM):
+        if not self.file:
+            raise IOError("I/O operation on closed BAM/CRAM file")
+
     def _iter(self: BAM):
         cdef seq_hts_sam_itr_next(ptr[byte], ptr[byte], ptr[byte]) -> int
         cdef hts_idx_destroy(ptr[byte])
@@ -796,6 +825,7 @@ class BAM:
         cdef bam_destroy1(ptr[byte])
         cdef hts_close(ptr[byte])
 
+        self._ensure_open()
         while seq_hts_sam_itr_next(self.file, self.itr, self.aln) >= 0:
             yield self.aln
 
@@ -832,6 +862,12 @@ class BAM:
         if self.file:
             hts_close(self.file)
 
+    def __enter__(self: BAM):
+        pass
+
+    def __exit__(self: BAM):
+        self.close()
+
 class SAM:
     file: ptr[byte]
     hdr: ptr[byte]
@@ -862,12 +898,17 @@ class SAM:
         self.aln = aln
         self.targets = targets
 
+    def _ensure_open(self: SAM):
+        if not self.file:
+            raise IOError("I/O operation on closed SAM file")
+
     def _iter(self: SAM):
         cdef sam_read1(ptr[byte], ptr[byte], ptr[byte]) -> i32
         cdef bam_hdr_destroy(ptr[byte])
         cdef bam_destroy1(ptr[byte])
         cdef hts_close(ptr[byte])
 
+        self._ensure_open()
         while True:
             status = int(sam_read1(self.file, self.hdr, self.aln))
             if status >= 0:
@@ -905,5 +946,11 @@ class SAM:
         self.file = ptr[byte]()
         self.hdr = ptr[byte]()
         self.aln = ptr[byte]()
+
+    def __enter__(self: SAM):
+        pass
+
+    def __exit__(self: SAM):
+        self.close()
 
 type CRAM = BAM
