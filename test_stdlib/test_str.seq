@@ -237,6 +237,15 @@ def test_rstrip():
     assert ' \t\n\rabc \t\n\r'.rstrip('') == ' \t\n\rabc'
     assert "xyzzyhelloxyzzy".rstrip('xyz') == 'xyzzyhello'
 
+def test_strip():
+    assert '   hello   '.strip('') == 'hello'
+    assert ' \t\n\rabc \t\n\r'.strip('') == 'abc'
+    assert "xyzzyhelloxyzzy".strip('xyz') == 'hello'
+    assert 'hello'.strip('xyz') == 'hello'
+    assert 'mississippi'.strip('mississippi') == ''
+    assert 'mississippi'.strip('i') == 'mississipp'
+
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -263,3 +272,4 @@ test_isidentifier()
 test_isprintable()
 test_lstrip()
 test_rstrip()
+test_strip()
