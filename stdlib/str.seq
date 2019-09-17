@@ -603,3 +603,16 @@ extend str:
                 return self
 
             return self[:i]
+
+    def strip(self: str, chars: str) -> str:
+        """
+        str.strip([chars]) -> string
+
+        Return a copy of the string str with leading and trailing
+        whitespace removed.
+        If chars is given, remove characters in chars instead.
+        Unlike Python, lstrip() deals with just ASCII characters.
+        """
+        lstr = self.lstrip(chars)
+        rstr = lstr.rstrip(chars)
+        return rstr

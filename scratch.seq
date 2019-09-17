@@ -1,5 +1,8 @@
 import str
 
-print '   hello   '.rstrip('')
-print ' \t\n\rabc \t\n\r'.rstrip('')
-print "xyzzyhelloxyzzy".rstrip('xyz')
+print '   hello   '.strip('')
+print ' \t\n\rabc \t\n\r'.strip('')
+print 'xyzzyhelloxyzzy'.strip('xyz')
+print 'hello'.strip('xyz')
+print 'mississippi'.strip('mississippi')
+print 'mississippi'.strip('i')
