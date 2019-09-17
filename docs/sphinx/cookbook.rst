@@ -140,8 +140,8 @@ Reading FASTA/FASTQ
 
     # iterate over everything
     for r in FASTA('genome.fa'):
-        print r.name()
-        print r.seq()
+        print r.name
+        print r.seq
 
     # iterate over sequences
     for s in FASTA('genome.fa') |> seqs:
@@ -149,9 +149,9 @@ Reading FASTA/FASTQ
 
     # iterate over everything
     for r in FASTQ('reads.fq'):
-        print r.name()
-        print r.read()
-        print r.qual()
+        print r.name
+        print r.read
+        print r.qual
 
     # iterate over sequences
     for s in FASTQ('reads.fq') |> seqs:
@@ -163,9 +163,9 @@ Reading paired-end FASTQ
 .. code-block:: seq
 
     for r1, r2 in zip(FASTQ('reads_1.fq'), FASTQ('reads_2.fq')):
-        print r1.name(), r2.name()
-        print r1.read(), r2.read()
-        print r1.qual(), r2.qual()
+        print r1.name, r2.name
+        print r1.read, r2.read
+        print r1.qual, r2.qual
 
 Parallel FASTQ processing
 -------------------------
@@ -174,6 +174,7 @@ Parallel FASTQ processing
 
     def process(s: seq):
         ...
+
     # OMP_NUM_THREADS environment variable controls threads
     FASTQ('reads.fq') |> iter ||> process
 
@@ -188,12 +189,12 @@ Reading SAM/BAM/CRAM
 
     # iterate over everything
     for r in SAM('alignments.sam'):
-        print r.name()
-        print r.read()
-        print r.pos()
-        print r.mapq()
-        print r.cigar()
-        print r.reversed()
+        print r.name
+        print r.read
+        print r.pos
+        print r.mapq
+        print r.cigar
+        print r.reversed
         # etc.
 
     for r in BAM('alignments.bam'):

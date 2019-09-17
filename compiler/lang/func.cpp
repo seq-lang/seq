@@ -105,6 +105,14 @@ void Func::addAttribute(std::string attr) { attributes.push_back(attr); }
 
 std::vector<std::string> Func::getAttributes() { return attributes; }
 
+bool Func::hasAttribute(const std::string &attr) {
+  for (const std::string &a : attributes) {
+    if (a == attr)
+      return true;
+  }
+  return false;
+}
+
 /*
  * Mangling rules:
  *   - Base function name is mangled as "<name>[<generic type 1>,<generic type
@@ -500,6 +508,7 @@ Func *Func::clone(Generic *ref) {
   x->inTypes = inTypesCloned;
   x->outType = x->outType0 = outType0->clone(ref);
   x->scope = scope->clone(ref);
+  x->attributes = attributes;
 
   std::map<std::string, Var *> argVarsCloned;
   for (auto &e : argVars)

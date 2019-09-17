@@ -245,12 +245,15 @@ extend str:
         return iter(Seqs(self))
 
 type FASTQRecord(_name: str, _read: seq, _qual: str):
+    @property
     def name(self: FASTQRecord):
         return self._name
 
+    @property
     def read(self: FASTQRecord):
         return self._read
 
+    @property
     def qual(self: FASTQRecord):
         return self._qual
 
@@ -296,9 +299,11 @@ type FASTQ(file: File):
         self.close()
 
 type FASTARecord(_name: str, _seq: seq):
+    @property
     def name(self: FASTARecord):
         return self._name
 
+    @property
     def seq(self: FASTARecord):
         return self._seq
 
@@ -321,7 +326,7 @@ type FASTA(file: File, fai: list[int], names: list[str]):
 
     def __seqs__(self: FASTA):
         for rec in self:
-            yield rec.seq()
+            yield rec.seq
 
     def __iter__(self: FASTA) -> FASTARecord:
         idx = 0
@@ -525,10 +530,12 @@ type CIGAR(value: ptr[u32], len: int):
     def __len__(self: CIGAR):
         return self.len
 
+    @property
     def qlen(self: CIGAR):
         cdef bam_cigar2qlen(int, ptr[u32]) -> int
         return bam_cigar2qlen(self.len, self.value)
 
+    @property
     def rlen(self: CIGAR):
         cdef bam_cigar2rlen(int, ptr[u32]) -> int
         return bam_cigar2rlen(self.len, self.value)
@@ -547,9 +554,17 @@ type CIGAR(value: ptr[u32], len: int):
             return str(op[0]) + str(op[1])
         return str.cat([op_to_str(op) for op in self])
 
-type Alignment(cigar: CIGAR, score: int):
+type Alignment(_cigar: CIGAR, _score: int):
     def __init__(self: Alignment) -> Alignment:
         return (CIGAR(), 0)
+
+    @property
+    def cigar(self: Alignment):
+        return self._cigar
+
+    @property
+    def score(self: Alignment):
+        return self._score
 
 extend seq:
     def align(self: seq, other: seq, config: AlignConfig):
@@ -641,18 +656,22 @@ type SAMAux(s: ptr[u8]):
     def __bool__(self: SAMAux):
         return bool(self.s)
 
+    @property
     def i(self: SAMAux):
         cdef bam_aux2i(ptr[u8]) -> int
         return bam_aux2i(self.s)
 
+    @property
     def f(self: SAMAux):
         cdef bam_aux2f(ptr[u8]) -> float
         return bam_aux2f(self.s)
 
+    @property
     def A(self: SAMAux):
         cdef bam_aux2A(ptr[u8]) -> byte
         return bam_aux2A(self.s)
 
+    @property
     def B_len(self: SAMAux):
         cdef bam_auxB_len(ptr[u8]) -> u32
         return int(bam_auxB_len(self.s))
@@ -682,69 +701,91 @@ type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore
         core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
         return (name, read, qual, cigar, core, aux)
 
+    @property
     def name(self: SAMRecord):
         return self._name
 
+    @property
     def read(self: SAMRecord):
         return self._read
 
+    @property
     def qual(self: SAMRecord):
         return self._qual
 
+    @property
     def cigar(self: SAMRecord):
         return self._cigar
 
+    @property
     def tid(self: SAMRecord):
         return self._core.tid()
 
+    @property
     def pos(self: SAMRecord):
         return self._core.pos()
 
+    @property
     def mate_tid(self: SAMRecord):
         return self._core.mtid()
 
+    @property
     def mate_pos(self: SAMRecord):
         return self._core.mpos()
 
+    @property
     def mapq(self: SAMRecord):
         return self._core.mapq()
 
+    @property
     def insert_size(self: SAMRecord):
         return self._core.isize()
 
+    @property
     def paired(self: SAMRecord):
         return self._core.flag() & BAM_FREVERSE != 0
 
+    @property
     def proper_pair(self: SAMRecord):
         return self._core.flag() & BAM_FPROPER_PAIR != 0
 
+    @property
     def unmapped(self: SAMRecord):
         return self._core.flag() & BAM_FUNMAP != 0
 
+    @property
     def mate_unmapped(self: SAMRecord):
         return self._core.flag() & BAM_FMUNMAP != 0
 
+    @property
     def reversed(self: SAMRecord):
         return self._core.flag() & BAM_FREVERSE != 0
 
+    @property
     def mate_reversed(self: SAMRecord):
         return self._core.flag() & BAM_FMREVERSE != 0
 
+    @property
     def read1(self: SAMRecord):
         return self._core.flag() & BAM_FREAD1 != 0
 
+    @property
     def read2(self: SAMRecord):
         return self._core.flag() & BAM_FREAD2 != 0
 
+    @property
     def secondary(self: SAMRecord):
         return self._core.flag() & BAM_FSECONDARY != 0
 
+    @property
     def qc_fail(self: SAMRecord):
         return self._core.flag() & BAM_FQCFAIL != 0
 
+    @property
     def duplicate(self: SAMRecord):
         return self._core.flag() & BAM_FDUP != 0
 
+    @property
     def supplementary(self: SAMRecord):
         return self._core.flag() & BAM_FSUPPLEMENTARY != 0
 

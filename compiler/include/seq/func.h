@@ -143,6 +143,7 @@ public:
   void sawPrefetch(Prefetch *prefetch);
   void addAttribute(std::string attr);
   std::vector<std::string> getAttributes();
+  bool hasAttribute(const std::string &attr);
 
   void resolveTypes() override;
   void codegen(llvm::Module *module) override;

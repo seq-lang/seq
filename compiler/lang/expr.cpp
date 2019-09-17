@@ -1248,41 +1248,60 @@ void GetElemExpr::setRealizeTypes(std::vector<types::Type *> types) {
 
 void GetElemExpr::resolveTypes() { rec->resolveTypes(); }
 
+static void noGenericMethodError(const std::string &typeName,
+                                 const std::string &methodName) {
+  throw exc::SeqException("generic method '" + methodName + "' of type '" +
+                          typeName + "' does not exist");
+}
+
 Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = rec->getType();
+  types::Type *outType = getType0();
+  auto *func = type->hasMethod(memb)
+                   ? dynamic_cast<Func *>(type->getMethod(memb))
+                   : nullptr;
+  Value *self = rec->codegen(base, block);
+  ;
 
   if (!types.empty()) {
-    auto *func = dynamic_cast<Func *>(type->getMethod(memb));
-
     if (!func)
-      throw exc::SeqException("method '" + memb + "' of type '" +
-                              type->getName() + "' is not generic");
-
-    Value *self = rec->codegen(base, block);
+      noGenericMethodError(type->getName(), memb);
     func = func->realize(types);
+  }
+
+  if (func && func->hasAttribute("property")) {
+    func->codegen(block->getModule());
+    IRBuilder<> builder(block);
+    return builder.CreateCall(func->getFunc(), self);
+  }
+
+  if (!types.empty()) {
     Value *method = FuncExpr(func).codegen(base, block);
-    auto *methodType = dynamic_cast<types::MethodType *>(getType0());
+    auto *methodType = dynamic_cast<types::MethodType *>(outType);
     assert(methodType);
     return methodType->make(self, method, block);
   }
 
-  Value *rec = this->rec->codegen(base, block);
-  return type->memb(rec, memb, block);
+  return type->memb(self, memb, block);
 }
 
 types::Type *GetElemExpr::getType0() const {
   types::Type *type = rec->getType();
+  auto *func = type->hasMethod(memb)
+                   ? dynamic_cast<Func *>(type->getMethod(memb))
+                   : nullptr;
 
   if (!types.empty()) {
-    auto *func = dynamic_cast<Func *>(type->getMethod(memb));
-
     if (!func)
-      throw exc::SeqException("method '" + memb + "' of type '" +
-                              type->getName() + "' is not generic");
-
+      noGenericMethodError(type->getName(), memb);
     func = func->realize(types);
-    return types::MethodType::get(rec->getType(), func->getFuncType());
   }
+
+  if (func && func->hasAttribute("property"))
+    return func->getFuncType()->getCallType({type});
+
+  if (!types.empty())
+    return types::MethodType::get(rec->getType(), func->getFuncType());
 
   return type->membType(memb);
 }

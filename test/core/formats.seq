@@ -78,9 +78,9 @@ CRAM('test/data/toy.cram') |> seqs |> echo
 # EXPECT: TAATTAAGTCTACAGAGCAACTA
 
 def print1(r):
-    print r.name()
-    print r.read()
-    print r.qual()
+    print r.name
+    print r.read
+    print r.qual
 
 print '-'  # EXPECT: -
 FASTQ('test/data/seqs.fastq') |> iter |> print1
@@ -113,8 +113,8 @@ FASTQ('test/data/seqs.fastq.gz') |> iter |> print1
 # EXPECT: AAFFFKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKFKKKKFKKKKKKFKKK7AFFKAFKKKKK,FKKFKAFFA7<<,FFAFKFAF7FKK77<,,,,,,,,,,<F7A,<AK,AFFK<<KKF<,AA7<F,,7
 
 def print2(r):
-    print r.name()
-    print r.seq()
+    print r.name
+    print r.seq
 
 print '-'  # EXPECT: -
 FASTA('test/data/seqs.fasta') |> iter |> print2
@@ -128,10 +128,10 @@ FASTA('test/data/seqs.fasta') |> iter |> print2
 # EXPECT: TGCCGTGACCACCCCGCGAGAATCTCATAATGATATCTCCAATCGAGTA
 
 def print3(r):
-    print r.tid(), r.pos(), r.name(), r.read(), r.cigar()
+    print r.tid, r.pos, r.name, r.read, r.cigar
     aux = r.aux('XX')
     if aux:
-        print [aux.B2i(i) for i in range(aux.B_len())]
+        print [aux.B2i(i) for i in range(aux.B_len)]
 
 print '-'  # EXPECT: -
 SAM('test/data/toy.sam') |> iter |> print3
