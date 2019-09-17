@@ -619,10 +619,37 @@ extend str:
 
     def partition(self: str, sep: str) -> tuple[str, str, str]:
         """
+        str.partition(sep) -> (head, sep, tail)
+
+        Search for the separator sep in str, and return the part before it,
+        the separator itself, and the part after it.  If the separator is not
+        found, return str and two empty strings.
         """
         li = search(self, sep)
 
         if len(li) == 0:
             return self,'',''
 
+        if not li[0]:
+            return '',  sep, self[li[0]+len(sep):]
+
         return self[:li[0]],sep,self[li[0]+len(sep):]
+
+    def rpartition(self: str, sep: str) -> tuple[str, str, str]:
+        """
+        str.rpartition(sep) -> (head, sep, tail)
+
+        Search for the separator sep in str, starting at the end of str, and return
+        the part before it, the separator itself, and the part after it.  If the
+        separator is not found, return two empty strings and str.
+        """
+        li = search(self, sep)
+        i = len(li)-1
+
+        if len(li) == 0:
+            return '', '', self
+
+        if not li[0]:
+            return '',  sep, self[li[i]+len(sep):]
+
+        return self[:li[i]], sep, self[li[i]+len(sep):]

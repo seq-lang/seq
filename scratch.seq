@@ -1,8 +1,8 @@
 import str
 
-print 'hello'.partition('l')
-print 'this is the partition method'.partition('ti')
-print 'http://www.seq.org'.partition('://')
-print 'http://www.seq.org'.partition('?')
-print 'http://www.seq.org'.partition('http://')
-print 'http://www.seq.org'.partition('org')
+print 'hello'.rpartition('l')
+print 'this is the rpartition method'.rpartition('ti')
+print 'http://www.seq.org'.rpartition('://')
+print 'http://www.seq.org'.rpartition('?')
+print 'http://www.seq.org'.rpartition('http://')
+print 'http://www.seq.org'.rpartition('org')
