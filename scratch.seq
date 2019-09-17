@@ -1,5 +1,5 @@
 import str
 
-print '   hello   '.lstrip('')
-print ' \t\n\rabc \t\n\r'.lstrip('')
-print "xyzzyhelloxyzzy".lstrip('xyz')
+print '   hello   '.rstrip('')
+print ' \t\n\rabc \t\n\r'.rstrip('')
+print "xyzzyhelloxyzzy".rstrip('xyz')
