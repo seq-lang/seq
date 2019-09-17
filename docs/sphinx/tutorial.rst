@@ -26,7 +26,6 @@ Finally, the following features are not supported by the *current* version of Se
 - Named and default function arguments
 - Empty collection literals: ``[]`` and ``{}`` (these must be replaced with ``list[T]()`` and ``dict[K,V]()``, respectively)
 - ``lambda``
-- ``with``
 - Various Python standard modules, methods or built-ins (although many built-in functions are already supported, some do not have the full flexibility of Python's)
 
 Types
