@@ -227,6 +227,11 @@ def test_isprintable():
     assert '!#$%&()*+,-./:;?@[\\]^_`{|}~'.isprintable() == True
     assert 'abcdef\n'.isprintable() == False
 
+def test_lstrip():
+    assert '   hello   '.lstrip('') == 'hello   '
+    assert ' \t\n\rabc \t\n\r'.lstrip('') == 'abc \t\n\r'
+    assert "xyzzyhelloxyzzy".lstrip('xyz') == 'helloxyzzy'
+
 
 
 test_isdigit()
@@ -253,3 +258,4 @@ test_find()
 test_rfind()
 test_isidentifier()
 test_isprintable()
+test_lstrip()
