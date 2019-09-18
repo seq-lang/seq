@@ -311,6 +311,37 @@ def test_startswith():
     assert 'hello'.startswith('', -3, -3) == True
     assert 'hello'.startswith('o', -1, len('hello')) == True
 
+def test_endswith():
+    assert 'hello'.endswith('lo', 0, len('hello')) == True
+    assert 'hello'.endswith('he', 0, len('hello')) == False
+    assert 'hello'.endswith('', 0, len('hello')) == True
+    assert 'hello'.endswith('hello world', 0, len('hello')) == False
+    assert 'helloworld'.endswith('worl', 0, len('hello')) == False
+    assert 'helloworld'.endswith('worl', 3, 9) == True
+    assert 'helloworld'.endswith('world', 3, 12) == True
+    assert 'helloworld'.endswith('lowo', 1, 7) == True
+    assert 'helloworld'.endswith('lowo', 2, 7) == True
+    assert 'helloworld'.endswith('lowo', 3, 7) == True
+    assert 'helloworld'.endswith('lowo', 4, 7) == False
+    assert 'helloworld'.endswith('lowo', 3, 8) == False
+    assert 'ab'.endswith('ab', 0, 1) == False
+    assert 'ab'.endswith('ab', 0, 0) == False
+    assert ''.endswith('', 0, 1) == True
+    assert ''.endswith('', 0, 0) == True
+    assert ''.endswith('', 1, 0) == False
+    assert 'hello'.endswith('lo', -2, len('hello')) == True
+    assert 'hello'.endswith('he', -2, len('hello')) == False
+    assert 'hello'.endswith('', -3, -3) == True
+    assert 'helloworld'.endswith('worl', -6, len('helloworld')) == False
+    assert 'helloworld'.endswith('worl', -5, -1) == True
+    assert 'helloworld'.endswith('worl', -5, 9) == True
+    assert 'helloworld'.endswith('world', -7, 12) == True
+    assert 'helloworld'.endswith('lowo', -99, -3) == True
+    assert 'helloworld'.endswith('lowo', -8, -3) == True
+    assert 'helloworld'.endswith('lowo', -7, -3) == True
+    assert 'helloworld'.endswith('lowo', 3, -4) == False
+    assert 'helloworld'.endswith('lowo', -8, -2) == False
+
 # test_isdigit()
 # test_islower()
 # test_isupper()
@@ -341,4 +372,5 @@ def test_startswith():
 # test_partition()
 # test_rpartition()
 # test_split()
-test_startswith()
+# test_startswith()
+test_endswith()

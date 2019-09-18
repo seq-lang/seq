@@ -728,3 +728,35 @@ extend str:
             return True
 
         return prefix == self[start:start + len(prefix)]
+
+    def endswith(self: str, suffix: str, start: int, end: int) -> bool:
+        """
+        str.endswith(prefix[, start[, end]]) -> bool
+
+        Return True if str ends with the specified suffix, False otherwise.
+        With optional start, test str beginning at that position.
+        With optional end, stop comparing str at that position.
+        """
+        if end < 0:
+            end += len(self)
+        elif start < 0:
+            start += len(self)
+        if end > len(self):
+            end = len(self)
+
+        # length prefix is longer than range of string being compared to
+        if end - start < len(suffix) or start > len(self):
+            return False
+
+        if end - len(suffix) > start:
+            start = end - len(suffix)
+
+        # length of prefix is longer than range of string[start:end]
+        if end - start < len(suffix):
+            return False
+
+        # prefix is an empty string
+        if suffix == '':
+            return True
+
+        return suffix == self[start:start + len(suffix)]
