@@ -224,10 +224,10 @@ module Expr = struct
       "set_pos"
       Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
       expr
-      (strdup ann.pos.file)
-      ann.pos.line
-      ann.pos.col
-      ann.pos.len
+      (strdup ann.file)
+      ann.line
+      ann.col
+      ann.len
 
   let set_parallel =
     foreign "pipe_expr_set_parallel" Ctypes.(t @-> int @-> returning void)
@@ -312,10 +312,10 @@ module Stmt = struct
       "set_pos"
       Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
       stmt
-      (strdup ann.pos.file)
-      ann.pos.line
-      ann.pos.col
-      ann.pos.len
+      (strdup ann.file)
+      ann.line
+      ann.col
+      ann.len
 
   let resolve = foreign "resolve_types" (t @-> returning void)
 end
@@ -540,7 +540,7 @@ module Module = struct
         (cstring @-> int @-> int @-> cstring @-> returning void)
     in
     Core.ksprintf (fun msg ->
-      f (strdup msg) ann.pos.line ann.pos.col (strdup ann.pos.file)) fmt
+      f (strdup msg) ann.line ann.col (strdup ann.file)) fmt
 end
 
 (** [JIT] wraps Seq SeqJIT methods and helpers. *)

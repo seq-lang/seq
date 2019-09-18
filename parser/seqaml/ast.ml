@@ -16,15 +16,15 @@ open Ast_ann
 module Ann = struct
   include Ast_ann
 
-  let pos_to_string { file; line; col; _ } =
-    sprintf "%s:%d:%d" (Filename.basename file) line col
+  let pos_to_string t =
+    sprintf "%s:%d:%d" (Filename.basename t.file) t.line t.col
 
-  let rec typ_to_string ?(generics = Int.Table.create ()) typ =
+  let rec typ_to_string ?(generics = Int.Table.create ()) t =
     let to_string = typ_to_string ~generics in
     let gen2str g =
       ppl ~sep:"," g ~f:(fun (_, (g, t)) -> sprintf "%s" (to_string t))
     in
-    match typ.kind with
+    match t.typ with
     | Unknown ->
       "?"
     | Import s ->
@@ -56,8 +56,11 @@ module Ann = struct
           Hashtbl.set generics ~key:u ~data:w;
           w)
 
-  let to_sring { pos; typ } =
-    sprintf "<%s |= %s>" (pos_to_string pos) (typ_to_string typ)
+  let to_string t =
+    sprintf "<%s |= %s>" (pos_to_string t) (typ_to_string t)
+
+  let create ?(file="") ?(line=(-1)) ?(col=(-1)) ?(len=0) ?(typ=Unknown) () =
+    { file; line; col; len; typ; history = [||] }
 end
 
 

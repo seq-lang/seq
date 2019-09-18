@@ -23,10 +23,7 @@
   (* Calculates the total span of a region
      bounded by [st] and [ed] *)
   let pos st ed =
-    Ast.Ann.
-    { typ = st.typ
-    ; pos = { st.pos with len = (ed.pos.col + ed.pos.len) - st.pos.col }
-    }
+    Ast.Ann.{ st with len = (ed.col + ed.len) - st.col }
 
   (* Converts list of expressions into the pipeline AST node *)
   let flat_pipe x =

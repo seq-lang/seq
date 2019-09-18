@@ -6,64 +6,57 @@
  * *****************************************************************************)
 
 (** File position annotation for an AST node. *)
-type tpos =
+type t =
   { file : string
   ; line : int
   ; col : int
   ; len : int
+  ; typ : ttyp
+  ; history: t array
   }
-
-(** A default [tpos] placeholder for internal use. *)
-let default_pos : tpos = { file = ""; line = -1; col = -1; len = 0 }
 
 (** Each identifier is uniquely identified by its name and its location *)
-type tlookup =
-  (string * tpos)
+and tlookup =
+  (string * t)
 
 (** Type annotation for an AST node. *)
-type ttyp =
-  { kind: ttypkind
-  ; positions: tpos array
-  }
-
-and ttypkind =
+and ttyp =
   | Unknown
   | Import of string
-  | Tuple of ttyp list
+  | Tuple of t list
   | Func of tfunc
   | Class of tcls
   | TypeVar of ttypvar ref
 
 and tfunc =
-  { f_generics : (string * (int * ttyp)) list
+  { f_generics : (string * (int * t)) list
   ; f_name : string
   ; f_cache : tlookup
-  ; f_parent : (tlookup * (ttyp option))
-  ; f_args : (string * ttyp) list
-  ; f_ret : ttyp
+  ; f_parent : (tlookup * (t option))
+  ; f_args : (string * t) list
+  ; f_ret : t
   }
 
 and tcls =
-  { c_generics : (string * (int * ttyp)) list
+  { c_generics : (string * (int * t)) list
   ; c_name : string
   ; c_cache : tlookup
-  ; c_parent : (tlookup * (ttyp option))
-  ; c_args : (string * ttyp) list
-  ; c_type : (ttyp list) option
+  ; c_parent : (tlookup * (t option))
+  ; c_args : (string * t) list
+  ; c_type : (t list) option
   }
 
 and ttypvar =
   | Unbound of (int * int * bool) (*id, level, is_generic*)
-  | Bound of ttyp
+  | Bound of t
   | Generic of int
 
-let default_typ : ttyp = { kind = Unknown; positions = [||] }
-
-type t =
-  { pos: tpos
-  ; typ: ttyp
-  }
-
-let default : t = { pos = default_pos; typ = default_typ }
+let default : t =
+  { file = ""
+  ; line = -1
+  ; col = -1
+  ; len = 0
+  ; typ = Unknown
+  ; history = [||] }
 
 type 'a ann = t * 'a
