@@ -285,6 +285,31 @@ def test_split():
     assert 'a|b|c|d'.split('|', 4) == ['a', 'b', 'c', 'd']
     assert 'a||b||c||d'.split('|', 2) == ['a', '', 'b||c||d']
 
+def test_startswith():
+    assert 'hello'.startswith('he', 0, len('hello')) == True
+    assert 'hello'.startswith('hello', 0, len('hello')) == True
+    assert 'hello'.startswith('hello world', 0, len('hello')) == False
+    assert 'hello'.startswith('', 0, len('hello')) == True
+    assert 'hello'.startswith('ello', 0, len('hello')) == False
+    assert 'hello'.startswith('ello', 1, len('hello')) == True
+    assert 'hello'.startswith('o', 4, len('hello')) == True
+    assert 'hello'.startswith('o', 5, len('hello')) == False
+    assert 'hello'.startswith('lo', 3, len('hello')) == True
+    assert 'hello'.startswith('', 5, len('hello')) == True
+    assert 'hello'.startswith('lo', 6, len('hello')) == False
+    assert 'helloworld'.startswith('lowo', 3, len('helloworld')) == True
+    assert 'helloworld'.startswith('lowo', 3, 7) == True
+    assert 'helloworld'.startswith('lowo', 3, 6) == False
+    assert ''.startswith('', 0, 1) == True
+    assert ''.startswith('', 0, 0) == True
+    assert ''.startswith('', 1, 0) == False
+    assert 'hello'.startswith('he', 0, -1) == True
+    assert 'hello'.startswith('hello', 0, -1) == False
+    assert 'hello'.startswith('he', 0, -3) == True
+    assert 'hello'.startswith('ello', -4, len('hello')) == True
+    assert 'hello'.startswith('ello', -5, len('hello')) == False
+    assert 'hello'.startswith('', -3, -3) == True
+    assert 'hello'.startswith('o', -1, len('hello')) == True
 
 # test_isdigit()
 # test_islower()
@@ -315,4 +340,5 @@ def test_split():
 # test_strip()
 # test_partition()
 # test_rpartition()
-test_split()
+# test_split()
+test_startswith()
