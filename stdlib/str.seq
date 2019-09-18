@@ -654,7 +654,6 @@ extend str:
 
         return self[:li[i]], sep, self[li[i]+len(sep):]
 
-
     def split(self: str, sep: str, maxsplit: int) -> list[str]:
         """
         str.split([sep [,maxsplit]]) -> list of strings
@@ -702,3 +701,30 @@ extend str:
             return str_split
         else:
             return  str_split
+
+    def startswith(self: str, prefix: str, start: int, end: int) -> bool:
+        """
+        str.startswith(prefix[, start[, end]]) -> bool
+
+        Return True if str starts with the specified prefix, False otherwise.
+        With optional start, test str beginning at that position.
+        With optional end, stop comparing str at that position.
+        """
+        if end < 0:
+            end += len(self)
+        elif start < 0:
+            start += len(self)
+
+        # length prefix is longer than range of string being compared to
+        if start + len(prefix) > len(self):
+            return False
+
+        # length of prefix is longer than range of string[start:end]
+        if end - start < len(prefix):
+            return False
+
+        # prefix is an empty string
+        if prefix == '':
+            return True
+
+        return prefix == self[start:start + len(prefix)]
