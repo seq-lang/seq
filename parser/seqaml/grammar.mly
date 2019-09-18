@@ -23,7 +23,10 @@
   (* Calculates the total span of a region
      bounded by [st] and [ed] *)
   let pos st ed =
-    Ast.Ann.{ st with len = (ed.col + ed.len) - st.col }
+    Ast.Ann.
+    { typ = st.typ
+    ; pos = { st.pos with len = (ed.pos.col + ed.pos.len) - st.pos.col }
+    }
 
   (* Converts list of expressions into the pipeline AST node *)
   let flat_pipe x =
@@ -612,8 +615,8 @@ assign_statement:
                 let slice = Slice (start, eend, None) in
                 let rhs = p, Index (rhs, (p, slice)) in
                 [p, Assign ((p, Id var), rhs, shadow, None)]
-              | pos, Unpack var when !unpack_i > -1 ->
-                Err.serr ~pos "cannot have two tuple unpackings on LHS"
+              | ann, Unpack var when !unpack_i > -1 ->
+                Err.serr ~ann "cannot have two tuple unpackings on LHS"
               | _ when !unpack_i = -1 ->
                 (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
                 let rhs = p, Index (rhs, (p, Int (string_of_int i))) in

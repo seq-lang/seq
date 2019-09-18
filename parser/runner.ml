@@ -42,7 +42,7 @@ let init file error_handler =
     to pass errors upstream.
     Returns pointer to [Module] or zero if unsuccessful. *)
 let parse_c fname =
-  let error_handler typ (pos : Ast.Ann.t list) =
+  let error_handler typ (pos : Ast.Ann.tpos list) =
     let Ast.Ann.{ file; line; col; len } = List.hd_exn pos in
     let msg =
       match typ with

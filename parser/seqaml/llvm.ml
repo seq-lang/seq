@@ -219,15 +219,15 @@ module Expr = struct
 
   (* Getters & Setters *)
 
-  let set_pos expr (pos : Ast.Ann.t) =
+  let set_pos expr (ann : Ast.Ann.t) =
     foreign
       "set_pos"
       Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
       expr
-      (strdup pos.file)
-      pos.line
-      pos.col
-      pos.len
+      (strdup ann.pos.file)
+      ann.pos.line
+      ann.pos.col
+      ann.pos.len
 
   let set_parallel =
     foreign "pipe_expr_set_parallel" Ctypes.(t @-> int @-> returning void)
@@ -307,15 +307,15 @@ module Stmt = struct
 
   let set_base = foreign "set_base" (t @-> Types.func @-> returning void)
 
-  let set_pos stmt (pos : Ast.Ann.t) =
+  let set_pos stmt (ann : Ast.Ann.t) =
     foreign
       "set_pos"
       Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
       stmt
-      (strdup pos.file)
-      pos.line
-      pos.col
-      pos.len
+      (strdup ann.pos.file)
+      ann.pos.line
+      ann.pos.col
+      ann.pos.len
 
   let resolve = foreign "resolve_types" (t @-> returning void)
 end
@@ -533,13 +533,14 @@ module Module = struct
   let block = foreign "get_module_block" (t @-> returning Types.block)
   let get_args = foreign "get_module_arg" (t @-> returning Types.var)
 
-  let warn ?(pos = Ast.Ann.default) fmt =
+  let warn ?(ann = Ast.Ann.default) fmt =
     let f =
       foreign
         "caml_warning_callback"
         (cstring @-> int @-> int @-> cstring @-> returning void)
     in
-    Core.ksprintf (fun msg -> f (strdup msg) pos.line pos.col (strdup pos.file)) fmt
+    Core.ksprintf (fun msg ->
+      f (strdup msg) ann.pos.line ann.pos.col (strdup ann.pos.file)) fmt
 end
 
 (** [JIT] wraps Seq SeqJIT methods and helpers. *)

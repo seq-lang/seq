@@ -33,12 +33,16 @@
     t.ignore_newline <- t.ignore_newline - 1
 
   (* get current file position from lexer *)
-  let cur_pos state ?(len=1) (lexbuf: Lexing.lexbuf) =
-    Ast.Ann.
-      { file = state.fname;
-        line = lexbuf.lex_start_p.pos_lnum;
-        col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol;
-        len }
+  let cur_pos state ?(len  =1) (lexbuf: Lexing.lexbuf) =
+    let open Ast.Ann in
+    { typ = default_typ
+    ; pos =
+      { file = state.fname
+      ; line = lexbuf.lex_start_p.pos_lnum
+      ; col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol
+      ; len
+      }
+    }
 
   let count_lines s =
     String.fold ~init:0 ~f:(fun acc c -> if c = '\n' then acc + 1 else acc) s
@@ -74,7 +78,7 @@
               in
               begin match n with
               | Some n -> 3, Char.of_int_exn n
-              | None -> Err.SyntaxError ("Invalid \\x escape", st) |> raise
+              | None -> Err.SyntaxError ("Invalid \\x escape", st.Ast.Ann.pos) |> raise
               end
             | c when is_octal c ->
               let n =
@@ -302,7 +306,7 @@ and read state = parse
   | eof { P.EOF (cur_pos state lexbuf) }
   | _ {
     let tok = L.lexeme lexbuf in
-    let pos = cur_pos state lexbuf in
+    let pos = (cur_pos state lexbuf).pos in
     Err.SyntaxError (Format.sprintf "Unknown token '%s'" tok, pos) |> raise
   }
 

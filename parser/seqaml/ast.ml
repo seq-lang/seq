@@ -16,9 +16,50 @@ open Ast_ann
 module Ann = struct
   include Ast_ann
 
-  let to_string { file; line; col; _ } =
+  let pos_to_string { file; line; col; _ } =
     sprintf "%s:%d:%d" (Filename.basename file) line col
+
+  let rec typ_to_string ?(generics = Int.Table.create ()) typ =
+    let to_string = typ_to_string ~generics in
+    let gen2str g =
+      ppl ~sep:"," g ~f:(fun (_, (g, t)) -> sprintf "%s" (to_string t))
+    in
+    match typ.kind with
+    | Unknown ->
+      "?"
+    | Import s ->
+      sprintf "<%s>" s
+    | Tuple args ->
+      sprintf "tuple[%s]" (ppl ~sep:"," args ~f:to_string)
+    | Func { f_generics; f_args; f_ret; _ } ->
+      let g = gen2str f_generics in
+      sprintf
+        "function%s((%s),%s)"
+        (if g = "" then "" else sprintf "[%s]" g)
+        (ppl ~sep:"," f_args ~f:(fun (_, t) -> to_string t))
+        (to_string f_ret)
+    | Class { c_name; c_generics; _ } ->
+      let g = gen2str c_generics in
+      sprintf "%s%s" c_name @@
+        if g = "" then "" else sprintf "[%s]" g
+    | TypeVar { contents = Unbound (u, _, _) } ->
+      sprintf "'%d" u
+    | TypeVar { contents = Bound t } ->
+      to_string t
+    | TypeVar { contents = Generic u } ->
+      sprintf
+        "T%d"
+        (match Hashtbl.find generics u with
+        | Some s -> s
+        | None ->
+          let w = succ @@ Hashtbl.length generics in
+          Hashtbl.set generics ~key:u ~data:w;
+          w)
+
+  let to_sring { pos; typ } =
+    sprintf "<%s |= %s>" (pos_to_string pos) (typ_to_string typ)
 end
+
 
 (** Alias for [Ast_expr]. Adds [to_string]. *)
 module Expr = struct

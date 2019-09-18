@@ -16,30 +16,30 @@ type t =
   | Internal of string
 
 (** Default exception that includes the source of the error and the location where it occurred. *)
-exception CompilerError of t * Ast.Ann.t list
+exception CompilerError of t * Ast.Ann.tpos list
 
 (** LLVM/C++ exception. *)
-exception SeqCError of string * Ast.Ann.t
+exception SeqCError of string * Ast.Ann.tpos
 
 (** Seqaml exception. *)
-exception SeqCamlError of string * Ast.Ann.t list
+exception SeqCamlError of string * Ast.Ann.tpos list
 
 (** Lexer exception. *)
-exception SyntaxError of string * Ast.Ann.t
+exception SyntaxError of string * Ast.Ann.tpos
 
 (** Internal exception that should never reach an user.
     Indicates either a bug or non-implement functionality. *)
-exception InternalError of string * Ast.Ann.t
+exception InternalError of string * Ast.Ann.tpos
 
-(** [serr ~pos format_string ...] raises an Seqaml error at file location [pos]
+(** [serr ~ann format_string ...] raises an Seqaml error at file location [pos]
     with message formatted via sprintf-style [format_string]. *)
-let serr ?(pos = Ast.Ann.default) fmt =
-  Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [ pos ]))) fmt
+let serr ?(ann = Ast.Ann.default) fmt =
+  Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [ ann.pos ]))) fmt
 
-(** [ierr ~pos format_string ...] raises an internal error at file location [pos]
+(** [ierr ~ann format_string ...] raises an internal error at file location [pos]
     with message formatted via sprintf-style [format_string]. *)
-let ierr ?(pos = Ast.Ann.default) fmt =
-  Core.ksprintf (fun msg -> raise (InternalError (msg, pos))) fmt
+let ierr ?(ann = Ast.Ann.default) fmt =
+  Core.ksprintf (fun msg -> raise (InternalError (msg, ann.pos))) fmt
 
 (** Helper function that parses string exception messages raised from C++
     and extracts [Ast.Ann] information from them.

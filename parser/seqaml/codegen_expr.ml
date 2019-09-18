@@ -18,62 +18,62 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
      *************************************************************** *)
 
   (** [parse ~ctx expr] dispatches an expression AST node [expr] to the proper code generation function. *)
-  let rec parse ~(ctx : Ctx.t) (pos, node) =
+  let rec parse ~(ctx : Ctx.t) (ann, node) =
     let expr =
       match node with
-      | Empty p -> parse_none ctx pos p
-      | Bool p -> parse_bool ctx pos p
-      | Int p -> parse_int ctx pos p
-      | IntS p -> parse_int ctx pos (fst p) ~kind:(snd p)
-      | Float p -> parse_float ctx pos p
-      | FloatS p -> parse_float ctx pos (fst p) ~kind:(snd p)
-      | String p -> parse_str ctx pos p
-      | Kmer p -> parse_kmer ctx pos p
-      | Seq p -> parse_seq ctx pos p
-      | Id p -> parse_id ctx pos p
-      | Tuple p -> parse_tuple ctx pos p
-      | List p -> parse_list ctx pos p
-      | Set p -> parse_list ctx pos p ~kind:"set"
-      | Dict p -> parse_dict ctx pos p
-      | Generator p -> parse_gen ctx pos p
-      | ListGenerator p -> parse_list_gen ctx pos p
-      | SetGenerator p -> parse_list_gen ctx pos p ~kind:"set"
-      | DictGenerator p -> parse_dict_gen ctx pos p
-      | IfExpr p -> parse_if ctx pos p
-      | Unary p -> parse_unary ctx pos p
-      | Binary p -> parse_binary ctx pos p
-      | Pipe p -> parse_pipe ctx pos p
-      | Index p -> parse_index ctx pos p
-      | Call p -> parse_call ctx pos p
-      | Dot p -> parse_dot ctx pos p
-      | TypeOf p -> parse_typeof ctx pos p
-      | Ptr p -> parse_ptr ctx pos p
+      | Empty p -> parse_none ctx ann p
+      | Bool p -> parse_bool ctx ann p
+      | Int p -> parse_int ctx ann p
+      | IntS p -> parse_int ctx ann (fst p) ~kind:(snd p)
+      | Float p -> parse_float ctx ann p
+      | FloatS p -> parse_float ctx ann (fst p) ~kind:(snd p)
+      | String p -> parse_str ctx ann p
+      | Kmer p -> parse_kmer ctx ann p
+      | Seq p -> parse_seq ctx ann p
+      | Id p -> parse_id ctx ann p
+      | Tuple p -> parse_tuple ctx ann p
+      | List p -> parse_list ctx ann p
+      | Set p -> parse_list ctx ann p ~kind:"set"
+      | Dict p -> parse_dict ctx ann p
+      | Generator p -> parse_gen ctx ann p
+      | ListGenerator p -> parse_list_gen ctx ann p
+      | SetGenerator p -> parse_list_gen ctx ann p ~kind:"set"
+      | DictGenerator p -> parse_dict_gen ctx ann p
+      | IfExpr p -> parse_if ctx ann p
+      | Unary p -> parse_unary ctx ann p
+      | Binary p -> parse_binary ctx ann p
+      | Pipe p -> parse_pipe ctx ann p
+      | Index p -> parse_index ctx ann p
+      | Call p -> parse_call ctx ann p
+      | Dot p -> parse_dot ctx ann p
+      | TypeOf p -> parse_typeof ctx ann p
+      | Ptr p -> parse_ptr ctx ann p
       | Ellipsis p -> Ctypes.null
-      | Slice _ -> serr ~pos "slice is currently only valid within an index expression"
-      | Unpack _ -> serr ~pos "invalid unpacking expression"
-      | Lambda _ -> serr ~pos "lambdas not yet supported (parse)"
+      | Slice _ -> serr ~ann "slice is currently only valid within an index expression"
+      | Unpack _ -> serr ~ann "invalid unpacking expression"
+      | Lambda _ -> serr ~ann "lambdas not yet supported (parse)"
     in
     (* Update C++ bookkeeping members *)
-    Llvm.Expr.set_pos expr pos;
+    Llvm.Expr.set_pos expr ann;
     Llvm.Expr.set_trycatch expr ctx.trycatch;
     expr
 
   (** [parse_type ~ctx expr] parses an [expr] AST and ensures that it compiles to a type.
       Returns a [Llvm.TypeExpr] handle.  Raises error if [expr] does not compile to a type. *)
-  and parse_type ~ctx (pos, node) =
+  and parse_type ~ctx (ann, node) =
     let expr =
       match node with
-      | Id p -> parse_id ctx pos p ~is_type:true
-      | Index p -> parse_index ctx pos p ~is_type:true
-      | Dot p -> parse_dot ctx pos p
-      | TypeOf p -> parse_typeof ctx pos p
-      | _ -> serr ~pos "must refer to type"
+      | Id p -> parse_id ctx ann p ~is_type:true
+      | Index p -> parse_index ctx ann p ~is_type:true
+      | Dot p -> parse_dot ctx ann p
+      | TypeOf p -> parse_typeof ctx ann p
+      | _ -> serr ~ann "must refer to type"
     in
-    Llvm.Expr.set_pos expr pos;
+    Llvm.Expr.set_pos expr ann;
     Llvm.Expr.set_trycatch expr ctx.trycatch;
     if Llvm.Expr.is_type expr
     then Llvm.Type.expr_type expr
-    else serr ~pos "must refer to type"
+    else serr ~ann "must refer to type"
 
   (* ***************************************************************
      Node code generators
@@ -84,7 +84,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
   and parse_none _ _ _ = Llvm.Expr.none ()
   and parse_bool _ _ b = Llvm.Expr.bool b
 
-  and parse_int ctx pos ?(kind = "") i =
+  and parse_int ctx ann ?(kind = "") i =
     let is_unsigned =
       if String.prefix i 1 <> "-" then Caml.Int64.of_string_opt ("0u" ^ i) else None
     in
@@ -93,35 +93,35 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | _, Some i -> Llvm.Expr.int i
       | ("u" | "U"), None when is_some is_unsigned ->
         Llvm.Expr.int (Option.value_exn is_unsigned)
-      | _ -> serr ~pos "integer too large"
+      | _ -> serr ~ann "integer too large"
     in
     match kind with
     | "z" | "Z" ->
       (* z-variables are used in Sequre and are syntactic sugar for [MInt] class. *)
-      let t = get_internal_type ~pos ~ctx "MInt" in
+      let t = get_internal_type ~ann ~ctx "MInt" in
       Llvm.Expr.construct t [ i ]
     | _ -> i
 
-  and parse_float ctx pos ?(kind = "") f =
+  and parse_float ctx ann ?(kind = "") f =
     let f = Llvm.Expr.float f in
     match kind with
     | "z" | "Z" ->
-      let t = get_internal_type ~pos ~ctx "ModFloat" in
+      let t = get_internal_type ~ann ~ctx "ModFloat" in
       Llvm.Expr.construct t [ f ]
     | _ -> f
 
   and parse_str _ _ s = Llvm.Expr.str s
   and parse_seq _ _ s = Llvm.Expr.seq s
 
-  and parse_kmer ctx pos s =
+  and parse_kmer ctx ann s =
     let n = sprintf "%d" @@ String.length s in
     parse ~ctx
-    @@ ( pos
+    @@ ( ann
        , Call
-           ( (pos, Index ((pos, Id "Kmer"), (pos, Int n)))
-           , [ pos, { name = None; value = pos, Seq s } ] ) )
+           ( (ann, Index ((ann, Id "Kmer"), (ann, Int n)))
+           , [ ann, { name = None; value = ann, Seq s } ] ) )
 
-  and parse_id ?map ?(is_type = false) ctx pos var =
+  and parse_id ?map ?(is_type = false) ctx ann var =
     let map = Option.value map ~default:ctx.map in
     let pref = String.prefix var 1 in
     let suf = String.suffix var (String.length var - 1) in
@@ -129,41 +129,41 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     (* Make sure that a variable is either accessible within
       the same base (function) or that it is global variable  *)
     | _, Some ((Ctx_namespace.Type t, _) :: _) -> Llvm.Expr.typ t
-    | true, _ -> serr ~pos "type %s not found or realized" var
+    | true, _ -> serr ~ann "type %s not found or realized" var
     | false, Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
       when ctx.base = base || global ->
       let e = Llvm.Expr.var v in
       if global && ctx.base = base && Stack.exists ctx.flags ~f:(( = ) "atomic")
       then (
-        Llvm.Module.warn ~pos "atomic load %s" var;
+        Llvm.Module.warn ~ann "atomic load %s" var;
         Llvm.Var.set_atomic e);
       e
     | false, Some ((Ctx_namespace.Func (t, _), _) :: _) -> Llvm.Expr.func t
-    | _ -> serr ~pos "identifier %s not found or realized" var
+    | _ -> serr ~ann "identifier %s not found or realized" var
 
   and parse_tuple ctx _ args =
     let args = List.map args ~f:(parse ~ctx) in
     Llvm.Expr.tuple args
 
   (* [kind] is either "set" or "list". Anything else will crash a program. *)
-  and parse_list ?(kind = "list") ctx pos args =
-    let typ = get_internal_type ~pos ~ctx kind in
+  and parse_list ?(kind = "list") ctx ann args =
+    let typ = get_internal_type ~ann ~ctx kind in
     let args = List.map args ~f:(parse ~ctx) in
     Llvm.Expr.list ~kind typ args
 
-  and parse_dict ctx pos args =
+  and parse_dict ctx ann args =
     let flatten l =
       List.fold ~init:[] ~f:(fun acc (x, y) -> y :: x :: acc) l |> List.rev
     in
-    let typ = get_internal_type ~pos ~ctx "dict" in
+    let typ = get_internal_type ~ann ~ctx "dict" in
     let args = List.map (flatten args) ~f:(parse ~ctx) in
     Llvm.Expr.list ~kind:"dict" typ args
 
-  and parse_gen ctx pos (expr, gen) =
+  and parse_gen ctx ann (expr, gen) =
     let captures = String.Table.create () in
     walk
       ~ctx
-      (pos, Generator (expr, gen))
+      (ann, Generator (expr, gen))
       ~f:(fun (ctx : Ctx.t) var ->
         match Hashtbl.find ctx.map var with
         | Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
@@ -184,8 +184,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     Llvm.Expr.set_comprehension_body ~kind:"gen" !final_expr body;
     !final_expr
 
-  and parse_list_gen ?(kind = "list") ctx pos (expr, gen) =
-    let typ = get_internal_type ~pos ~ctx kind in
+  and parse_list_gen ?(kind = "list") ctx ann (expr, gen) =
+    let typ = get_internal_type ~ann ~ctx kind in
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in
     let body =
@@ -197,8 +197,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     Llvm.Expr.set_comprehension_body ~kind !final_expr body;
     !final_expr
 
-  and parse_dict_gen ctx pos (expr, gen) =
-    let typ = get_internal_type ~pos ~ctx "dict" in
+  and parse_dict_gen ctx ann (expr, gen) =
+    let typ = get_internal_type ~ann ~ctx "dict" in
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in
     let body =
@@ -221,7 +221,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     let expr = parse ~ctx expr in
     Llvm.Expr.unary op expr
 
-  and parse_binary ctx pos (lh_expr, bop, rh_expr) =
+  and parse_binary ctx ann (lh_expr, bop, rh_expr) =
     (* in-place expressions are specified via +=, -= and similar operators *)
     let inplace, bop =
       if String.prefix bop 8 = "inplace_"
@@ -241,7 +241,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Some ((Ctx_namespace.Var v, { global; base; _ }) :: _)
         when global && ctx.base = base ->
         let rh_expr = parse ~ctx rh_expr in
-        Llvm.Module.warn ~pos " atomic %s on %s" bop var;
+        Llvm.Module.warn ~ann " atomic %s on %s" bop var;
         Llvm.Expr.atomic_binary v bop rh_expr
       | _ -> bop_expr ())
     | _ -> bop_expr ()
@@ -255,27 +255,27 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
 
   (* Parses index expression which also includes type realization rules.
      Check GOTCHAS for details. *)
-  and parse_index ?(is_type = false) ctx pos (lh_expr, indices) =
+  and parse_index ?(is_type = false) ctx ann (lh_expr, indices) =
     match is_type, snd lh_expr, snd indices with
     | _, Id (("array" | "ptr" | "generator") as name), Tuple _ ->
-      serr ~pos "%s requires a single type" name
+      serr ~ann "%s requires a single type" name
     | _, Id (("array" | "ptr" | "generator") as name), _ ->
       let typ = parse_type ~ctx indices in
       Llvm.Expr.typ @@ Llvm.Type.param ~name typ
     | _, Id "Kmer", Int n ->
       let n = int_of_string n in
       if n < 1 || n > 1024
-      then serr ~pos "invalid Kmer parameter (must be an integer in 1..1024)";
+      then serr ~ann "invalid Kmer parameter (must be an integer in 1..1024)";
       Llvm.Expr.typ @@ Llvm.Type.kmerN n
     | _, Id "Int", Int n ->
       let n = int_of_string n in
       if n < 1 || n > 2048
-      then serr ~pos "invalid Int parameter (must be an integer in 1..2048)";
+      then serr ~ann "invalid Int parameter (must be an integer in 1..2048)";
       Llvm.Expr.typ @@ Llvm.Type.intN n
     | _, Id "UInt", Int n ->
       let n = int_of_string n in
       if n < 1 || n > 2048
-      then serr ~pos "invalid UInt parameter (must be an integer in 1..2048)";
+      then serr ~ann "invalid UInt parameter (must be an integer in 1..2048)";
       Llvm.Expr.typ @@ Llvm.Type.uintN n
     | true, Id "function", Tuple indices ->
       let indices = List.map indices ~f:(parse_type ~ctx) in
@@ -292,7 +292,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       Llvm.Expr.typ @@ Llvm.Type.record [ "" ] [ parse_type ~ctx indices ] ""
     | false, _, Slice (st, ed, step) ->
       if is_some step
-      then serr ~pos "slices with stepping parameter are not yet supported";
+      then serr ~ann "slices with stepping parameter are not yet supported";
       let unpack st = Option.value_map st ~f:(parse ~ctx) ~default:Ctypes.null in
       let lh_expr = parse ~ctx lh_expr in
       Llvm.Expr.slice lh_expr (unpack st) (unpack ed)
@@ -316,7 +316,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
           Llvm.Generics.set_types ~kind lh_expr indices;
           lh_expr
         | _ ->
-          serr ~pos "expression is not realizable (make sure that it is a generic type)")
+          serr ~ann "expression is not realizable (make sure that it is a generic type)")
       else (
         let t =
           match indices with
@@ -325,7 +325,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         in
         Llvm.Expr.lookup lh_expr t)
 
-  and parse_call ctx pos (callee_expr, args) =
+  and parse_call ctx ann (callee_expr, args) =
     (* [@@@ocamlformat.disable] *)
     match snd callee_expr, args with
     | Index ((_, Id "__array__"), t), [ (_, { name = _; value }) ] ->
@@ -338,7 +338,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         ; ( _
           , { name = _
             ; value =
-                ( pos_g
+                ( ann_g
                 , ListGenerator ((_, (_, { gen; cond = None; next = None; _ })) as g) )
             } )
         ] )
@@ -347,14 +347,14 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         ; ( _
           , { name = _
             ; value =
-                pos_g, Generator ((_, (_, { gen; cond = None; next = None; _ })) as g)
+                ann_g, Generator ((_, (_, { gen; cond = None; next = None; _ })) as g)
             } )
         ] )
     | ( Dot ((_, String ""), "join")
       , [ ( _
           , { name = _
             ; value =
-                ( pos_g
+                ( ann_g
                 , ListGenerator ((_, (_, { gen; cond = None; next = None; _ })) as g) )
             } )
         ] )
@@ -362,17 +362,17 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       , [ ( _
           , { name = _
             ; value =
-                pos_g, Generator ((_, (_, { gen; cond = None; next = None; _ })) as g)
+                ann_g, Generator ((_, (_, { gen; cond = None; next = None; _ })) as g)
             } )
         ] ) ->
       parse_call_real
         ctx
-        pos
-        ( (pos, Dot ((pos, Id "str"), "cati_ext"))
-        , [ pos_g, { name = None; value = pos_g, Generator g } ] )
-    | _ -> parse_call_real ctx pos (callee_expr, args)
+        ann
+        ( (ann, Dot ((ann, Id "str"), "cati_ext"))
+        , [ ann_g, { name = None; value = ann_g, Generator g } ] )
+    | _ -> parse_call_real ctx ann (callee_expr, args)
 
-  and parse_call_real ctx pos (callee_expr, args) =
+  and parse_call_real ctx ann (callee_expr, args) =
     let callee_expr = parse ~ctx callee_expr in
     let names = Llvm.Func.get_arg_names callee_expr in
     let args =
@@ -381,14 +381,14 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         List.mapi args ~f:(fun i (pos, { name; value }) ->
             match name with
             | None -> parse ~ctx value
-            | Some _ -> serr ~pos "cannot use named arguments here")
+            | Some _ -> serr ~ann "cannot use named arguments here")
       else (
         (* Check names *)
         let has_named_args =
           List.fold args ~init:false ~f:(fun acc (pos, { name; _ }) ->
               match name with
               | None when acc ->
-                serr ~pos "unnamed argument cannot follow a named argument"
+                serr ~ann "unnamed argument cannot follow a named argument"
               | None -> false
               | Some _ -> true)
         in
@@ -400,9 +400,9 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
               | None ->
                 (match List.nth args i with
                 | Some (pos, { name; _ }) when is_some name ->
-                  serr ~pos "argument %s expected here" n
+                  serr ~ann "argument %s expected here" n
                 | Some (_, { value; _ }) -> parse ~ctx value
-                | None -> serr ~pos "cannot find an argument %s" n))
+                | None -> serr ~ann "cannot find an argument %s" n))
         else List.map args ~f:(fun x -> parse ~ctx (snd x).value))
     in
     if Llvm.Expr.is_type callee_expr
@@ -413,7 +413,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       let kind = if List.exists args ~f:(( = ) Ctypes.null) then "partial" else "call" in
       Llvm.Expr.call ~kind callee_expr args)
 
-  and parse_dot ctx pos (lh_expr, rhs) =
+  and parse_dot ctx ann (lh_expr, rhs) =
     (* checks whether [lh_expr.rhs] refers to an import *)
     let rec imports ictx = function
       | _, Id x ->
@@ -432,7 +432,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     match imports ctx.map lh_expr with
     | Some ictx ->
       Util.dbg "import helper...";
-      parse_id ctx ~map:ictx pos rhs
+      parse_id ctx ~map:ictx ann rhs
     | None ->
       let lh_expr = parse ~ctx lh_expr in
       if Llvm.Expr.is_type lh_expr
@@ -445,14 +445,14 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     let expr = parse ~ctx expr in
     Llvm.Expr.typ @@ Llvm.Expr.typeof expr
 
-  and parse_ptr ctx pos = function
+  and parse_ptr ctx ann = function
     | _, Id var ->
       (match Hashtbl.find ctx.map var with
       | Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
         when ctx.base = base || global ->
         Llvm.Expr.ptr v
-      | _ -> serr ~pos "symbol %s not found" var)
-    | _ -> serr ~pos "ptr requires an identifier as a parameter"
+      | _ -> serr ~ann "symbol %s not found" var)
+    | _ -> serr ~ann "ptr requires an identifier as a parameter"
     (* ***************************************************************
      Helper functions
      *************************************************************** *)
@@ -487,10 +487,10 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       corresponding [Llvm.Type.typ] for type identifier [typ_str].
       Raises error if [typ_str] does not exist within [ctx].
       Useful for getting types for [list], [dict] and other internal classes. *)
-  and get_internal_type ~pos ~(ctx : Ctx.t) typ_str =
+  and get_internal_type ~ann ~(ctx : Ctx.t) typ_str =
     match Hashtbl.find ctx.map typ_str with
     | Some ((Ctx_namespace.Type typ, _) :: _) -> typ
-    | _ -> ierr ~pos "cannot find base type %s (get_internal_type)" typ_str
+    | _ -> ierr ~ann "cannot find base type %s (get_internal_type)" typ_str
 
   (** [walk ~ctx ~f expr] walks through an AST node [expr] and calls
       [f ctx identifier] on each child that potentially contains an identifier [Id].
