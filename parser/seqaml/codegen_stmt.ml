@@ -90,12 +90,13 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   and parse_assign ctx pos ~toplevel ~jit (lhs, rhs, shadow, typ) =
     match lhs with
     | pos, Id var ->
-      (match Hashtbl.find ctx.map var, shadow with
-      | None, Update -> serr ~pos "%s not found" var
-      | Some ((Ctx_namespace.Var _, { base; _ }) :: _), Update when ctx.base <> base ->
+      (match jit && toplevel, Hashtbl.find ctx.map var, shadow with
+      | _, None, Update -> serr ~pos "%s not found" var
+      | false, Some ((Ctx_namespace.Var _, { base; global; _ }) :: _), Update
+        when ctx.base <> base && not global ->
         serr ~pos "%s not found" var
-      | Some ((Ctx_namespace.Var v, { base; global; toplevel; _ }) :: _), _
-        when ctx.base = base ->
+      | _, Some ((Ctx_namespace.Var v, { base; global; toplevel; _ }) :: _), _
+        when ctx.base = base || global ->
         if is_some typ
         then
           serr
@@ -116,14 +117,16 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             Llvm.Stmt.set_atomic_assign s;
             s)
         else Llvm.Stmt.assign v @@ E.parse ~ctx rhs
-      | _ when jit && toplevel ->
+      | true, _, _ ->
+        eprintf "using here for %s = %s\n%!" (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs);
         if is_some typ
-        then serr ~pos:(fst @@ Option.value_exn typ) "invalid type annotation (JIT mode)";
+        then serr ~pos:(fst @@ Option.value_exn typ) "type annotations not supported in JIT mode";
         let rh_expr = E.parse ~ctx rhs in
-        let v = Ctx_namespace.Var (Llvm.JIT.var ctx.mdl rh_expr) in
-        Ctx.add ~ctx ~toplevel ~global:true var v;
+        let v = Llvm.JIT.var ctx.mdl rh_expr in
+        Ctx.add ~ctx ~toplevel ~global:true var (Ctx_namespace.Var v);
         Llvm.Stmt.pass ()
-      | r, _ ->
+        (* assign v @@ rh_expr *)
+      | false, r, _ ->
         (match r with
         | Some (_ :: _) -> Llvm.Module.warn ~pos "shadowing %s" var
         | _ -> ());

@@ -55,6 +55,7 @@ let exec (jit : t) code =
     Hash_set.iter (Stack.pop_exn anon_ctx.stack) ~f:(fun key ->
         match Hashtbl.find anon_ctx.map key with
         | Some ((v, ann) :: items) ->
+          (* eprintf "%s: %b %b %b\n%!" key ann.toplevel ann.global ann.internal; *)
           if ann.toplevel && ann.global && not ann.internal
           then Ctx.add ~ctx:jit.ctx ~toplevel:true ~global:true key v
         | _ -> ())
@@ -92,3 +93,29 @@ let repl () =
     done
   with
   | Exit -> eprintf "\n\027[31mbye (%d) \027[0m\n%!" jit.cnt
+
+
+let jits: (nativeint, t) Hashtbl.t = Hashtbl.Poly.create ()
+
+let c_init () =
+  let hnd = init () in
+  let p = Ctypes.raw_address_of_ptr hnd.ctx.mdl in
+  Hashtbl.set jits ~key:p ~data:hnd;
+  (* eprintf "[lib] %nx\n%!" p; *)
+  p
+
+let c_exec hnd code =
+  (* eprintf "[lib] looking for %nx ... \n%!" hnd; *)
+  let jit = Hashtbl.find_exn jits hnd in
+  (* Hashtbl.iter_keys jit.ctx.map ~f:(fun k ->
+    eprintf "[lib] keys: %s ... \n%!" k); *)
+  try
+    exec jit code
+  with
+  | Err.CompilerError (typ, pos_lst) ->
+    eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:code typ
+
+let c_close hnd =
+  let jit = Hashtbl.find_exn jits hnd in
+  eprintf "Closing JIT handle, %d commands executed\n%!" jit.cnt;
+  ()

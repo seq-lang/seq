@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pedantic -Wall -Wno-return-type-c-linkage")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -g -pedantic -Wall -Wno-return-type-c-linkage")
+# set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--whole-archive -Wl,-export_dynamic")
 include_directories(compiler/include)
 include_directories(runtime)
 
@@ -14,6 +15,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_PYBRIDGE "support Python interoperability" ON)
+option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GC REQUIRED bdw-gc)
@@ -109,8 +111,9 @@ foreach(OCAML_STUB IN ITEMS
   endif()
 endforeach(OCAML_STUB)
 
-
 # Seq compiler library
+pkg_check_modules(FFI REQUIRED libffi)
+message("Found FFI library in ${FFI_LIBRARY_DIRS}")
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 add_library(seq SHARED compiler/include/seq/any.h
@@ -161,8 +164,14 @@ add_library(seq SHARED compiler/include/seq/any.h
                        compiler/util/ocaml.cpp
                        ${LIB_SEQPARSE})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} ${OCAML_STATIC} ffi seqrt)
+target_link_libraries(seq ${LLVM_LIBS} ${OCAML_STATIC} ${FFI_LINK_LIBRARIES} seqrt)
 
+if(SEQ_JITBRIDGE)
+  add_library(seqjit SHARED compiler/util/jit.cpp)
+  # include_directories(${OCAML_STDLIB_PATH})
+  # link_directories(${OCAML_STDLIB_PATH})
+  target_link_libraries(seqjit seq)
+endif()
 
 # Seq command-line tool
 add_executable(seqc runtime/main.cpp)
