@@ -364,6 +364,25 @@ FOREIGN Func *func(char *name) {
   return f;
 }
 
+FOREIGN size_t get_methods(types::Type *base, char **names, BaseFunc ***funs)
+{
+  auto fns = base->methods();
+  string n = "";
+  BaseFunc **f = (BaseFunc**) malloc(sizeof(BaseFunc*) * fns.size());
+  for (int i = 0; i < fns.size(); i++) {
+    n += fns[i].first + "\b";
+    f[i] = fns[i].second;
+  }
+  *names = strdup(n.c_str());
+  *funs = f;
+  return fns.size();
+}
+
+FOREIGN bool get_func_yield(Func *f)
+{
+  return f->isGen();
+}
+
 FOREIGN void set_func_out(Func *f, types::Type *typ) { f->setOut(typ); }
 
 FOREIGN Block *get_func_block(Func *st) { return st->getBlock(); }
@@ -535,6 +554,11 @@ FOREIGN char *get_func_attrs(Func *f) {
   return strdup(r.substr(0, r.size() - 1).c_str());
 }
 
+FOREIGN types::Type *builtin_magic_out(types::Type *ty, char *name, types::Type **args, size_t sz)
+{
+  return ty->magicOut(name, vector<types::Type *>(args, args + sz));
+}
+
 FOREIGN void set_func_attr(Func *f, char *c) {
   f->addAttribute(string(c));
   free(c);
@@ -605,6 +629,10 @@ FOREIGN void set_static_realize_types(GetStaticElemExpr *e, types::Type **types,
 FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types,
                                   size_t sz, char **error) {
   return types::GenericType::get(t, vector<types::Type *>(types, types + sz));
+}
+
+FOREIGN Expr *default_expr(types::Type *ty) {
+  return new DefaultExpr(ty);
 }
 
 /// Anything below throws exceptions

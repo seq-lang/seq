@@ -410,6 +410,24 @@ Value *types::Type::callMagic(const std::string &name,
                           argsVecToStr(argTypes));
 }
 
+std::vector<std::pair<std::string, BaseFunc *> > types::Type::methods()
+{
+  initOps();
+  std::vector<std::pair<std::string, BaseFunc *>> result;
+
+  for (auto& magic : getVTable().overloads) {
+    result.push_back(make_pair(magic.name, magic.func));
+  }
+  for (auto& magic : getVTable().magic) {
+    result.push_back(make_pair(magic.name, magic.asFunc(this)));
+  }
+  for (auto& kv : getVTable().methods) {
+    result.push_back(kv);
+  }
+
+  return result;
+}
+
 bool types::Type::isAtomic() const { return true; }
 
 bool types::Type::is(types::Type *type) const { return isGeneric(type); }

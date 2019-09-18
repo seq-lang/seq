@@ -186,6 +186,13 @@ Value *types::GenericType::callMagic(const std::string &name,
   return type->callMagic(name, argTypes, self, args, block, tc);
 }
 
+
+std::vector<std::pair<std::string, BaseFunc *> > types::GenericType::methods()
+{
+  ensure();
+  return type->methods();
+}
+
 bool types::GenericType::isAtomic() const {
   ensure();
   return type->isAtomic();

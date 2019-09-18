@@ -143,6 +143,7 @@ public:
                          llvm::Value *self, std::vector<llvm::Value *> args,
                          llvm::BasicBlock *&block, TryCatch *tc) override;
 
+  std::vector<std::pair<std::string, BaseFunc *> > methods() override;
   bool is(Type *type) const override;
   bool isGeneric(Type *type) const override;
   unsigned numBaseTypes() const override;

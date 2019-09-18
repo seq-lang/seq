@@ -152,19 +152,13 @@ void ListExpr::resolveTypes() {
 
 Value *ListExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = getType();
-  assert(!elems.empty());
-  types::Type *elemType = elems[0]->getType();
 
   ConstructExpr construct(type, {});
   Value *list = construct.codegen(base, block);
   ValueExpr v(type, list);
 
   for (auto *elem : elems) {
-    if (!types::is(elemType, elem->getType()))
-      throw exc::SeqException("inconsistent list element types '" +
-                              elemType->getName() + "' and '" +
-                              elem->getType()->getName() + "'");
-
+    types::Type *elemType = elem->getType();
     Value *x = elem->codegen(base, block);
     GetElemExpr append(&v, "append");
     ValueExpr arg(elemType, x);
@@ -177,13 +171,7 @@ Value *ListExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 }
 
 types::Type *ListExpr::getType0() const {
-  if (elems.empty())
-    throw exc::SeqException("cannot infer type of empty list");
-
-  types::Type *elemType = elems[0]->getType();
-  auto *ref = dynamic_cast<types::RefType *>(listType);
-  assert(ref);
-  return ref->realize({elemType});
+  return listType;
 }
 
 ListExpr *ListExpr::clone(Generic *ref) {
@@ -203,20 +191,14 @@ void SetExpr::resolveTypes() {
 
 Value *SetExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = getType();
-  assert(!elems.empty());
-  types::Type *elemType = elems[0]->getType();
 
   ConstructExpr construct(type, {});
   Value *set = construct.codegen(base, block);
   ValueExpr v(type, set);
 
   for (auto *elem : elems) {
-    if (!types::is(elemType, elem->getType()))
-      throw exc::SeqException("inconsistent set element types '" +
-                              elemType->getName() + "' and '" +
-                              elem->getType()->getName() + "'");
-
     Value *x = elem->codegen(base, block);
+    types::Type *elemType = elem->getType();
     GetElemExpr append(&v, "add");
     ValueExpr arg(elemType, x);
     CallExpr call(&append, {&arg});
@@ -228,13 +210,7 @@ Value *SetExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 }
 
 types::Type *SetExpr::getType0() const {
-  if (elems.empty())
-    throw exc::SeqException("cannot infer type of empty set");
-
-  types::Type *elemType = elems[0]->getType();
-  auto *ref = dynamic_cast<types::RefType *>(setType);
-  assert(ref);
-  return ref->realize({elemType});
+  return setType;
 }
 
 SetExpr *SetExpr::clone(Generic *ref) {
@@ -254,9 +230,6 @@ void DictExpr::resolveTypes() {
 
 Value *DictExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = getType();
-  assert(!elems.empty() && elems.size() % 2 == 0);
-  types::Type *keyType = elems[0]->getType();
-  types::Type *valType = elems[1]->getType();
 
   ConstructExpr construct(type, {});
   Value *dict = construct.codegen(base, block);
@@ -265,15 +238,8 @@ Value *DictExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
     Expr *key = elems[i];
     Expr *val = elems[i + 1];
 
-    if (!types::is(keyType, key->getType()))
-      throw exc::SeqException("inconsistent dict key types '" +
-                              keyType->getName() + "' and '" +
-                              key->getType()->getName() + "'");
-
-    if (!types::is(valType, val->getType()))
-      throw exc::SeqException("inconsistent dict value types '" +
-                              valType->getName() + "' and '" +
-                              val->getType()->getName() + "'");
+    types::Type *keyType = key->getType();
+    types::Type *valType = val->getType();
 
     Value *k = key->codegen(base, block);
     Value *v = val->codegen(base, block);
@@ -285,15 +251,7 @@ Value *DictExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 }
 
 types::Type *DictExpr::getType0() const {
-  if (elems.empty())
-    throw exc::SeqException("cannot infer type of empty dict");
-
-  assert(elems.size() % 2 == 0);
-  types::Type *keyType = elems[0]->getType();
-  types::Type *valType = elems[1]->getType();
-  auto *ref = dynamic_cast<types::RefType *>(dictType);
-  assert(ref);
-  return ref->realize({keyType, valType});
+  return dictType;
 }
 
 DictExpr *DictExpr::clone(Generic *ref) {

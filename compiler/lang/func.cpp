@@ -125,6 +125,9 @@ bool Func::hasAttribute(const std::string &attr) {
  * the name.
  */
 std::string Func::getMangledFuncName() {
+  return name;
+  // Ignore the rest in the types branch; ocaml side does the mangling
+
   // don't mangle external or built-in ("seq."-prefixed) function names:
   if (external || name.rfind("seq.", 0) == 0)
     return name;

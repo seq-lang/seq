@@ -242,6 +242,9 @@ public:
                                  std::vector<llvm::Value *> args,
                                  llvm::BasicBlock *&block, TryCatch *tc);
 
+  /// Returns a vector of all methods known to this type.
+  virtual std::vector<std::pair<std::string, BaseFunc *> > methods();
+
   /// Checks whether this type "is" another type.
   virtual bool is(Type *type) const;
 
