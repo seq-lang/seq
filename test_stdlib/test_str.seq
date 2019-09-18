@@ -261,32 +261,58 @@ def test_rpartition():
     assert 'http://www.seq.org'.rpartition('http://') == ('', 'http://', 'www.seq.org')
     assert 'http://www.seq.org'.rpartition('org') == ('http://www.seq.', 'org', '')
 
-test_isdigit()
-test_islower()
-test_isupper()
-test_isalnum()
-test_isalpha()
-test_isspace()
-test_istitle()
-test_capitalize()
-test_isdecimal()
-test_lower()
-test_upper()
-test_isascii()
-test_casefold()
-test_swapcase()
-test_title()
-test_isnumeric()
-test_ljust()
-test_rjust()
-test_center()
-test_count()
-test_find()
-test_rfind()
-test_isidentifier()
-test_isprintable()
-test_lstrip()
-test_rstrip()
-test_strip()
-test_partition()
-test_rpartition()
+def test_split():
+    assert 'h l l o'.split(' ', -1) == ['h', 'l', 'l', 'o']
+    assert 'a|b|c|d'.split('|', -1) == ['a', 'b', 'c', 'd']
+    assert 'a|b|c|d'.split('|', 0) == ['a|b|c|d']
+    assert 'abcd'.split('|', -1) == ['abcd']
+    assert ''.split('|', -1) == ['']
+    assert 'endcase |'.split('|', -1) == ['endcase ', '']
+    assert '| startcase'.split('|', -1) == ['', ' startcase']
+    assert '|bothcase|'.split('|', -1) == ['', 'bothcase', '']
+    assert 'abbbc'.split('bb', -1) == ['a', 'bc']
+    assert 'aaa'.split('aaa', -1) == ['', '']
+    assert 'aaa'.split('aaa', 0) == ['aaa']
+    assert 'abbaab'.split('ba', -1) == ['ab', 'ab']
+    assert 'aa'.split('aaa', -1) == ['aa']
+    assert 'Abbobbbobb'.split('bbobb', -1) == ['A', 'bobb']
+    assert 'AbbobbBbbobb'.split('bbobb', -1) == ['A', 'B', '']
+    assert ('a|'*20)[:-1].split('|', -1) == ['a']*20
+    assert ('a|'*20)[:-1].split('|', 15) == ['a']*15 +['a|a|a|a|a']
+    assert 'a|b|c|d'.split('|', 1) == ['a', 'b|c|d']
+    assert 'a|b|c|d'.split('|', 2) == ['a', 'b', 'c|d']
+    assert 'a|b|c|d'.split('|', 3) == ['a', 'b', 'c', 'd']
+    assert 'a|b|c|d'.split('|', 4) == ['a', 'b', 'c', 'd']
+    assert 'a||b||c||d'.split('|', 2) == ['a', '', 'b||c||d']
+
+
+# test_isdigit()
+# test_islower()
+# test_isupper()
+# test_isalnum()
+# test_isalpha()
+# test_isspace()
+# test_istitle()
+# test_capitalize()
+# test_isdecimal()
+# test_lower()
+# test_upper()
+# test_isascii()
+# test_casefold()
+# test_swapcase()
+# test_title()
+# test_isnumeric()
+# test_ljust()
+# test_rjust()
+# test_center()
+# test_count()
+# test_find()
+# test_rfind()
+# test_isidentifier()
+# test_isprintable()
+# test_lstrip()
+# test_rstrip()
+# test_strip()
+# test_partition()
+# test_rpartition()
+test_split()

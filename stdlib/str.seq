@@ -653,3 +653,52 @@ extend str:
             return '',  sep, self[li[i]+len(sep):]
 
         return self[:li[i]], sep, self[li[i]+len(sep):]
+
+
+    def split(self: str, sep: str, maxsplit: int) -> list[str]:
+        """
+        str.split([sep [,maxsplit]]) -> list of strings
+
+        Return a list of the words in the string str, using sep as the
+        delimiter string.  If maxsplit is given, at most maxsplit
+        splits are done. If sep is not specified, any
+        whitespace string is a separator and empty strings are removed
+        from the result.
+        """
+        li = search(self, sep)
+        str_split = list[str]()
+
+        if len(li) == 0:
+            return [self]
+        if len(sep) > len(self):
+            return [self]
+        if maxsplit == 0:
+            return [self]
+
+        if maxsplit == -1 or maxsplit > len(li):
+            maxsplit = len(li)
+
+        prev = li[0]
+        # append first part of string
+        # if sep is found in index 0, add '' to separate
+        if li[0] == 0:
+            str_split.append('')
+        else:
+            str_split.append(self[:li[0]])
+
+        # split the rest of the string according to separator
+        if len(li) > 1 and maxsplit > 1:
+            for j in range(1, maxsplit):
+                # when separators are beside each other, append '' to list
+                if li[j] - 1 == prev:
+                    str_split.append('')
+                    prev = li[j]
+                else:
+                    str_split.append(self[prev+len(sep):li[j]])
+                    prev = li[j]
+
+        if prev != len(self):
+            str_split.append(self[prev+len(sep):])
+            return str_split
+        else:
+            return  str_split
