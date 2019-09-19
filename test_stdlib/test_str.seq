@@ -351,6 +351,15 @@ def test_index():
     assert 'rrarrrrrrrrra'.index('a', 4, len('rrarrrrrrrrra')) == 12
     assert 'abcdefghiabc'.index('def', 4, len('abcdefghiabc')) == -1
 
+def test_rindex():
+    assert 'abcdefghiabc'.rindex('', 0, len('abcdefghiabc')) == 12
+    assert 'abcdefghiabc'.rindex('def', 0, len('abcdefghiabc')) == 3
+    assert 'abcdefghiabc'.rindex('abc', 0, len('abcdefghiabc')) == 9
+    assert 'abcdefghiabc'.rindex('abc', 0, -1) == 0
+    assert 'rrarrrrrrrrra'.rindex('a', 0, len('rrarrrrrrrrra')) == 12
+    assert 'rrarrrrrrrrra'.rindex('a', 4, len('rrarrrrrrrrra')) == 12
+    assert 'rrarrrrrrrrra'.rindex('a', 4, 6) == -1
+
 # test_isdigit()
 # test_islower()
 # test_isupper()
@@ -383,4 +392,5 @@ def test_index():
 # test_split()
 # test_startswith()
 # test_endswith()
-test_index()
+# test_index()
+test_rindex()
