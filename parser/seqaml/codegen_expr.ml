@@ -18,7 +18,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
      *************************************************************** *)
 
   (** [parse ~ctx expr] dispatches an expression AST node [expr] to the proper code generation function. *)
-  let rec parse ~(ctx : Ctx.t) (ann, node) =
+  let rec parse ~(ctx : Codegen_ctx.t) (ann, node) =
     let expr =
       match node with
       | Empty p -> parse_none ctx ann p
@@ -55,7 +55,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     in
     (* Update C++ bookkeeping members *)
     Llvm.Expr.set_pos expr ann;
-    Llvm.Expr.set_trycatch expr ctx.trycatch;
+    Llvm.Expr.set_trycatch expr ctx.env.trycatch;
     expr
 
   (** [parse_type ~ctx expr] parses an [expr] AST and ensures that it compiles to a type.
@@ -70,7 +70,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | _ -> serr ~ann "must refer to type"
     in
     Llvm.Expr.set_pos expr ann;
-    Llvm.Expr.set_trycatch expr ctx.trycatch;
+    Llvm.Expr.set_trycatch expr ctx.env.trycatch;
     if Llvm.Expr.is_type expr
     then Llvm.Type.expr_type expr
     else serr ~ann "must refer to type"
@@ -119,7 +119,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     @@ ( ann
        , Call
            ( (ann, Index ((ann, Id "Kmer"), (ann, Int n)))
-           , [ ann, { name = None; value = ann, Seq s } ] ) )
+           , [ { name = None; value = ann, Seq s } ] ) )
 
   and parse_id ?map ?(is_type = false) ctx ann var =
     let map = Option.value map ~default:ctx.map in
@@ -128,17 +128,17 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     match is_type, Hashtbl.find map var with
     (* Make sure that a variable is either accessible within
       the same base (function) or that it is global variable  *)
-    | _, Some ((Ctx_namespace.Type t, _) :: _) -> Llvm.Expr.typ t
+    | _, Some ((Codegen_ctx.Type t, _) :: _) -> Llvm.Expr.typ t
     | true, _ -> serr ~ann "type %s not found or realized" var
-    | false, Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
-      when ctx.base = base || global ->
+    | false, Some ((Codegen_ctx.Var v, { base; global; _ }) :: _)
+      when ctx.env.base = base || global ->
       let e = Llvm.Expr.var v in
-      if global && ctx.base = base && Stack.exists ctx.flags ~f:(( = ) "atomic")
+      if global && ctx.env.base = base && Stack.exists ctx.env.flags ~f:(( = ) "atomic")
       then (
         Llvm.Module.warn ~ann "atomic load %s" var;
         Llvm.Var.set_atomic e);
       e
-    | false, Some ((Ctx_namespace.Func (t, _), _) :: _) -> Llvm.Expr.func t
+    | false, Some ((Codegen_ctx.Func (t, _), _) :: _) -> Llvm.Expr.func t
     | _ -> serr ~ann "identifier %s not found or realized" var
 
   and parse_tuple ctx _ args =
@@ -164,18 +164,18 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     walk
       ~ctx
       (ann, Generator (expr, gen))
-      ~f:(fun (ctx : Ctx.t) var ->
+      ~f:(fun (ctx : Codegen_ctx.t) var ->
         match Hashtbl.find ctx.map var with
-        | Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
-          when ctx.base = base || global ->
+        | Some ((Codegen_ctx.Var v, { base; global; _ }) :: _)
+          when ctx.env.base = base || global ->
           Hashtbl.set captures ~key:var ~data:v
         | _ -> ());
     Hashtbl.iter_keys captures ~f:(fun key -> Util.dbg "[expr/parse_gen] captured %s" key);
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in
-    let ctx = { ctx with trycatch = Ctypes.null } in
+    let ctx = { ctx with env = { ctx.env with trycatch = Ctypes.null } } in
     let body =
-      comprehension_helper ~ctx gen ~finally:(fun ctx ->
+      comprehension_helper ~ctx ann gen ~finally:(fun ctx ->
           let expr = parse ~ctx expr in
           let captures = Hashtbl.data captures in
           final_expr := Llvm.Expr.gen_comprehension expr captures)
@@ -189,7 +189,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in
     let body =
-      comprehension_helper ~ctx gen ~finally:(fun ctx ->
+      comprehension_helper ~ctx ann gen ~finally:(fun ctx ->
           let expr = parse ~ctx expr in
           final_expr := Llvm.Expr.list_comprehension ~kind typ expr)
     in
@@ -202,7 +202,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in
     let body =
-      comprehension_helper ~ctx gen ~finally:(fun ctx ->
+      comprehension_helper ~ctx ann gen ~finally:(fun ctx ->
           let e1 = parse ~ctx (fst expr) in
           let e2 = parse ~ctx (snd expr) in
           final_expr := Llvm.Expr.dict_comprehension typ e1 e2)
@@ -236,10 +236,10 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     match lh_expr, inplace, bop with
     (* ensure that atomic operators are properly handled *)
     | (_, Id var), true, ("+" | "-" | "&" | "|" | "^" | "min" | "max")
-      when Stack.exists ctx.flags ~f:(( = ) "atomic") ->
+      when Stack.exists ctx.env.flags ~f:(( = ) "atomic") ->
       (match Hashtbl.find ctx.map var with
-      | Some ((Ctx_namespace.Var v, { global; base; _ }) :: _)
-        when global && ctx.base = base ->
+      | Some ((Codegen_ctx.Var v, { global; base; _ }) :: _)
+        when global && ctx.env.base = base ->
         let rh_expr = parse ~ctx rh_expr in
         Llvm.Module.warn ~ann " atomic %s on %s" bop var;
         Llvm.Expr.atomic_binary v bop rh_expr
@@ -328,48 +328,38 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
   and parse_call ctx ann (callee_expr, args) =
     (* [@@@ocamlformat.disable] *)
     match snd callee_expr, args with
-    | Index ((_, Id "__array__"), t), [ (_, { name = _; value }) ] ->
+    | Index ((_, Id "__array__"), t), [ { name = _; value } ] ->
       let t = parse_type ~ctx t in
       let arg = parse ~ctx value in
       Llvm.Expr.alloc_array t arg
     (* fast ''.join optimization *)
     | ( Dot ((_, Id "str"), "join")
-      , [ (_, { name = _; value = _, String "" })
-        ; ( _
-          , { name = _
-            ; value =
-                ( ann_g
-                , ListGenerator ((_, (_, { gen; cond = None; next = None; _ })) as g) )
-            } )
+      , [ { name = _; value = _, String "" }
+        ; { name = _
+          ; value = ann_g, ListGenerator ((_, { gen; cond = None; next = None; _ }) as g)
+          }
         ] )
     | ( Dot ((_, Id "str"), "join")
-      , [ (_, { name = _; value = _, String "" })
-        ; ( _
-          , { name = _
-            ; value =
-                ann_g, Generator ((_, (_, { gen; cond = None; next = None; _ })) as g)
-            } )
+      , [ { name = _; value = _, String "" }
+        ; { name = _
+          ; value = ann_g, Generator ((_, { gen; cond = None; next = None; _ }) as g)
+          }
         ] )
     | ( Dot ((_, String ""), "join")
-      , [ ( _
-          , { name = _
-            ; value =
-                ( ann_g
-                , ListGenerator ((_, (_, { gen; cond = None; next = None; _ })) as g) )
-            } )
+      , [ { name = _
+          ; value = ann_g, ListGenerator ((_, { gen; cond = None; next = None; _ }) as g)
+          }
         ] )
     | ( Dot ((_, String ""), "join")
-      , [ ( _
-          , { name = _
-            ; value =
-                ann_g, Generator ((_, (_, { gen; cond = None; next = None; _ })) as g)
-            } )
+      , [ { name = _
+          ; value = ann_g, Generator ((_, { gen; cond = None; next = None; _ }) as g)
+          }
         ] ) ->
       parse_call_real
         ctx
         ann
         ( (ann, Dot ((ann, Id "str"), "cati_ext"))
-        , [ ann_g, { name = None; value = ann_g, Generator g } ] )
+        , [ { name = None; value = ann_g, Generator g } ] )
     | _ -> parse_call_real ctx ann (callee_expr, args)
 
   and parse_call_real ctx ann (callee_expr, args) =
@@ -378,14 +368,14 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     let args =
       if List.length names = 0
       then
-        List.mapi args ~f:(fun i (pos, { name; value }) ->
+        List.mapi args ~f:(fun i { name; value } ->
             match name with
             | None -> parse ~ctx value
             | Some _ -> serr ~ann "cannot use named arguments here")
       else (
         (* Check names *)
         let has_named_args =
-          List.fold args ~init:false ~f:(fun acc (pos, { name; _ }) ->
+          List.fold args ~init:false ~f:(fun acc { name; _ } ->
               match name with
               | None when acc ->
                 serr ~ann "unnamed argument cannot follow a named argument"
@@ -395,15 +385,15 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         if has_named_args
         then
           List.mapi names ~f:(fun i n ->
-              match List.findi args ~f:(fun _ x -> (snd x).name = Some n) with
-              | Some (idx, x) -> parse ~ctx (snd x).value
+              match List.findi args ~f:(fun _ x -> x.name = Some n) with
+              | Some (idx, x) -> parse ~ctx x.value
               | None ->
                 (match List.nth args i with
-                | Some (pos, { name; _ }) when is_some name ->
+                | Some { name; _ } when is_some name ->
                   serr ~ann "argument %s expected here" n
-                | Some (_, { value; _ }) -> parse ~ctx value
+                | Some { value; _ } -> parse ~ctx value
                 | None -> serr ~ann "cannot find an argument %s" n))
-        else List.map args ~f:(fun x -> parse ~ctx (snd x).value))
+        else List.map args ~f:(fun x -> parse ~ctx x.value))
     in
     if Llvm.Expr.is_type callee_expr
     then (
@@ -415,24 +405,24 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
 
   and parse_dot ctx ann (lh_expr, rhs) =
     (* checks whether [lh_expr.rhs] refers to an import *)
-    let rec imports ictx = function
+    let rec imports (ictx : Codegen_ctx.t) = function
       | _, Id x ->
-        (match Hashtbl.find ictx x with
-        | Some ((Ctx_namespace.Import x, _) :: _) -> Some x
+        (match Hashtbl.find ictx.map x with
+        | Some ((Codegen_ctx.Import x, _) :: _) -> Hashtbl.find ictx.imported x
         | _ -> None)
       | _, Dot (a, x) ->
         (match imports ictx a with
         | Some ictx ->
-          (match Hashtbl.find ictx x with
-          | Some ((Ctx_namespace.Import x, _) :: _) -> Some x
+          (match Hashtbl.find ictx.map x with
+          | Some ((Codegen_ctx.Import x, _) :: _) -> Hashtbl.find ictx.imported x
           | _ -> None)
         | _ -> None)
       | _, _ -> None
     in
-    match imports ctx.map lh_expr with
+    match imports ctx lh_expr with
     | Some ictx ->
       Util.dbg "import helper...";
-      parse_id ctx ~map:ictx ann rhs
+      parse_id ctx ~map:ictx.map ann rhs
     | None ->
       let lh_expr = parse ~ctx lh_expr in
       if Llvm.Expr.is_type lh_expr
@@ -448,8 +438,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
   and parse_ptr ctx ann = function
     | _, Id var ->
       (match Hashtbl.find ctx.map var with
-      | Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
-        when ctx.base = base || global ->
+      | Some ((Codegen_ctx.Var v, { base; global; _ }) :: _)
+        when ctx.env.base = base || global ->
         Llvm.Expr.ptr v
       | _ -> serr ~ann "symbol %s not found" var)
     | _ -> serr ~ann "ptr requires an identifier as a parameter"
@@ -463,11 +453,11 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       function [finally context]. This function typically constructs [CompExpr] handle.
       Returns topmost [For] statement that is not assigned to the matching block (set [add] to true to allow that).
       Other [For] statements are assigned to the matching blocks. *)
-  and comprehension_helper ?(add = false) ~finally ~(ctx : Ctx.t) (pos, comp) =
+  and comprehension_helper ?(add = false) ~finally ~(ctx : Codegen_ctx.t) pos comp =
     S.parse_for ~ctx pos (comp.var, comp.gen, []) ~next:(fun orig_ctx ctx for_stmt ->
         let block =
           match comp.cond with
-          | None -> ctx.block
+          | None -> ctx.env.block
           | Some expr ->
             let if_stmt = Llvm.Stmt.cond () in
             let if_expr = parse ~ctx expr in
@@ -475,11 +465,11 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
             ignore @@ S.finalize ~ctx if_stmt pos;
             if_block
         in
-        let ctx = { ctx with block } in
+        let ctx = { ctx with env = { ctx.env with block } } in
         let expr =
           match comp.next with
           | None -> finally ctx
-          | Some next -> ignore @@ comprehension_helper ~add:true ~finally ~ctx next
+          | Some next -> ignore @@ comprehension_helper ~add:true ~finally ~ctx pos next
         in
         ignore @@ S.finalize ~add ~ctx:orig_ctx for_stmt pos)
 
@@ -487,19 +477,19 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       corresponding [Llvm.Type.typ] for type identifier [typ_str].
       Raises error if [typ_str] does not exist within [ctx].
       Useful for getting types for [list], [dict] and other internal classes. *)
-  and get_internal_type ~ann ~(ctx : Ctx.t) typ_str =
+  and get_internal_type ~ann ~(ctx : Codegen_ctx.t) typ_str =
     match Hashtbl.find ctx.map typ_str with
-    | Some ((Ctx_namespace.Type typ, _) :: _) -> typ
+    | Some ((Codegen_ctx.Type typ, _) :: _) -> typ
     | _ -> ierr ~ann "cannot find base type %s (get_internal_type)" typ_str
 
   (** [walk ~ctx ~f expr] walks through an AST node [expr] and calls
       [f ctx identifier] on each child that potentially contains an identifier [Id].
       Useful for locating all captured variables within [expr]. *)
-  and walk ~(ctx : Ctx.t) ~f (pos, node) =
+  and walk ~(ctx : Codegen_ctx.t) ~f (pos, node) =
     let rec walk_comp ~ctx ~f c =
       walk ~ctx ~f c.gen;
       Option.value_map c.cond ~default:() ~f:(walk ~ctx ~f);
-      Option.value_map c.next ~default:() ~f:(fun x -> walk_comp ~ctx ~f (snd x))
+      Option.value_map c.next ~default:() ~f:(fun x -> walk_comp ~ctx ~f x)
     in
     match node with
     | Id p -> f ctx p
@@ -522,14 +512,14 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       walk ~ctx ~f l
     | Call (a, l) ->
       walk ~ctx ~f a;
-      List.iter l ~f:(fun (_, { value; _ }) -> walk ~ctx ~f value)
+      List.iter l ~f:(fun { value; _ } -> walk ~ctx ~f value)
     | ListGenerator (e, c) | SetGenerator (e, c) | Generator (e, c) ->
       walk ~ctx ~f e;
-      walk_comp ~ctx ~f (snd c)
+      walk_comp ~ctx ~f c
     | DictGenerator ((e1, e2), c) ->
       walk ~ctx ~f e1;
       walk ~ctx ~f e2;
-      walk_comp ~ctx ~f (snd c)
+      walk_comp ~ctx ~f c
     (* TODO: | Slice | Lambda *)
     | _ -> ()
 end

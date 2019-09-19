@@ -33,10 +33,10 @@ type t =
       (** [TypeAlias] handles Seq type aliases (e.g. [type ty = some_type]) *)
   | While of (texpr ann * t ann list)
   | For of (string list * texpr ann * t ann list)
-  | If of if_case ann list
-  | Match of (texpr ann * match_case ann list)
-  | Extend of (texpr ann * generic ann list)
-  | Extern of (string * string option * string * param ann * param ann list)
+  | If of if_case list
+  | Match of (texpr ann * match_case list)
+  | Extend of (texpr ann * t ann list)
+  | Extern of (string * string option * string * param * param list)
       (** [Extern] consists of:
       - external language name (right now, only ["c"] is supported via [cdef]),
       - external library name (not supported; defaults to [None]),
@@ -46,8 +46,11 @@ type t =
   | Import of import list
   | ImportPaste of string
       (** [ImportPaste] is currently Seq's [import!]. _Deprecated_. *)
-  | Generic of generic
-  | Try of (t ann list * catch ann list * t ann list option)
+  | Function of fn_t
+  | Class of class_t
+  | Type of class_t
+  | Declare of param
+  | Try of (t ann list * catch list * t ann list option)
       (** [Try(stmts, catch, finally_stmts)] corresponds to
       [try: stmts ... ; (catch1: ... ; catch2: ... ;) finally: finally_stmts ] *)
   | Global of string
@@ -55,13 +58,6 @@ type t =
   | Prefetch of texpr ann list
   | Special of (string * t ann list * string list)
       (** [Special] encodes custom syntax extensions used for developing new ideas. Currently not supported. *)
-
-(** Generic type encodes all constructs that can become generic. *)
-and generic =
-  | Function of fn_t
-  | Class of class_t
-  | Type of class_t
-  | Declare of param
 
 and if_case =
   { cond : texpr ann option
@@ -89,19 +85,19 @@ and catch =
     while [members] represents object methods. *)
 and class_t =
   { class_name : string
-  ; generics : string ann list
-  ; args : param ann list option
-  ; members : generic ann list
+  ; generics : string list
+  ; args : param list option
+  ; members : t ann list
   }
 
 (** [fn_t] encodes classes and types in Seq.
     [fn_attrs] reprensets function decorators (attributes). *)
 and fn_t =
   { fn_name : param
-  ; fn_generics : string ann list
-  ; fn_args : param ann list
+  ; fn_generics : string list
+  ; fn_args : param list
   ; fn_stmts : t ann list
-  ; fn_attrs : string ann list
+  ; fn_attrs : string list
   }
 
 (** [Import] encodes Seq's import statement. [from] specifies the import source,
@@ -114,8 +110,8 @@ and fn_t =
     - [from from import what1, what2 as name]:
       [{from = "from", what = [("what", None), ("what2", "name")], import_as = None}] *)
 and import =
-  { from : string ann
-  ; what : (string * string option) ann list option
+  { from : string
+  ; what : (string * string option) list option
   ; import_as : string option
   }
 

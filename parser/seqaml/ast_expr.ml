@@ -31,10 +31,10 @@ type t =
   | List of t ann list
   | Set of t ann list
   | Dict of (t ann * t ann) list
-  | Generator of (t ann * tcomprehension ann)
-  | ListGenerator of (t ann * tcomprehension ann)
-  | SetGenerator of (t ann * tcomprehension ann)
-  | DictGenerator of ((t ann * t ann) * tcomprehension ann)
+  | Generator of (t ann * tcomprehension)
+  | ListGenerator of (t ann * tcomprehension)
+  | SetGenerator of (t ann * tcomprehension)
+  | DictGenerator of ((t ann * t ann) * tcomprehension)
   | IfExpr of (t ann * t ann * t ann)
   | Unary of (string * t ann)
   | Binary of (t ann * string * t ann)
@@ -42,7 +42,7 @@ type t =
       (** Pipelines are represented as a list of pipe members and their preceding pipeline operators
       (e.g. [a |> b ||> c] is [("", a), ("|>", b), ("||>", c)]). *)
   | Index of (t ann * t ann)
-  | Call of (t ann * tcall ann list)
+  | Call of (t ann * tcall list)
       (** Each call arguments is of type [tcall] to account for argument names. *)
   | Slice of (t ann option * t ann option * t ann option)
   | Dot of (t ann * string)
@@ -50,7 +50,7 @@ type t =
       (** [Ellipsis] is currently used only for partial function definitions. *)
   | TypeOf of t ann
   | Ptr of t ann (** [Ptr(x)] corresponds to [__ptr__[x]]. *)
-  | Lambda of (string ann list * t ann)
+  | Lambda of (string list * t ann)
       (** {b NOTE} : Lambdas are currently not supported. *)
 
 and tcall =
@@ -73,5 +73,5 @@ and tcomprehension =
   { var : string list
   ; gen : t ann
   ; cond : t ann option
-  ; next : tcomprehension ann option
+  ; next : tcomprehension option
   }

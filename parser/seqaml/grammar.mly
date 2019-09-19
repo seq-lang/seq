@@ -52,9 +52,9 @@
     in
     fst x, expr
   let rec flatten_dot ~sep = function
-    | pos, Id s -> pos, s
+    | pos, Id s -> s
     | pos, Dot (d, s) ->
-      pos, sprintf "%s%s%s" (snd @@ flatten_dot ~sep d) sep s
+      sprintf "%s%s%s" (flatten_dot ~sep d) sep s
     | _ -> ierr "invalid import construct (grammar)"
 %}
 
@@ -234,13 +234,7 @@ dict_gen:
 // Comprehensions
 comprehension:
   | FOR separated_list(COMMA, ID) IN pipe_expr comprehension_if? comprehension?
-    { let last = match $6, $5, $4 with
-        | Some (p, _), _, _
-        | None, Some (p, _), _
-        | None, None, (p, _) -> p
-      in
-      pos $1 last,
-      Ast.Expr.
+    { Ast.Expr.
         { var = List.map $2 ~f:snd;
           gen = flat_pipe $4;
           cond = $5; next = $6 } }
@@ -269,7 +263,7 @@ expr:
       Ptr $3 }
   | LAMBDA separated_list(COMMA, ID) COLON expr // Lambdas
     { pos $1 (fst $4),
-      Lambda ($2, $4) }
+      Lambda (List.map ~f:snd $2, $4) }
 expr_list:
   | separated_nonempty_list(COMMA, expr)
   | separated_nonempty_trailing_list(COMMA, expr)
@@ -360,8 +354,7 @@ arith_term:
   // (foo(x for x in y))
   | arith_term LP; expr comprehension; RP
     { pos (fst $1) $5,
-      Call ($1, [pos $2 $5,
-                 { name = None; value = (pos $2 $5, Generator ($3, $4)) }]) }
+      Call ($1, [{ name = None; value = (pos $2 $5, Generator ($3, $4)) }]) }
   // Index (foo[bar])
   | arith_term LS separated_nonempty_list(COMMA, index_term) RS
     { pos (fst $1) $4,
@@ -375,17 +368,13 @@ arith_term:
 // Call arguments
 call_term:
   | ELLIPSIS // For partial functions
-    { fst $1,
-      { name = None; value = (fst $1, Ellipsis ()) } }
+    { { name = None; value = (fst $1, Ellipsis ()) } }
   | expr
-    { fst $1,
-      { name = None; value = $1 } }
+    { { name = None; value = $1 } }
   | ID EQ expr
-    { pos (fst $1) (fst $3),
-      { name = Some (snd $1); value = $3 } }
+    { { name = Some (snd $1); value = $3 } }
   | ID EQ ELLIPSIS
-    { pos (fst $1) (fst $3),
-      { name = Some (snd $1); value = (fst $3, Ellipsis ()) } }
+    { { name = Some (snd $1); value = (fst $3, Ellipsis ()) } }
 // Index subscripts
 index_term:
   // Normal expression
@@ -427,10 +416,10 @@ statement:
   // Conditionals if and if-else
   | IF expr COLON suite
     {[ pos $1 $3,
-       If ([pos $1 $3, { cond = Some $2; cond_stmts = $4 }]) ]}
+       If [{ cond = Some $2; cond_stmts = $4 }] ]}
   | IF expr COLON suite; rest = elif_suite
     {[ pos $1 $3,
-       If ((pos $1 $3, { cond = Some $2; cond_stmts = $4 }) :: rest) ]}
+       If ({ cond = Some $2; cond_stmts = $4 } :: rest) ]}
   // Pattern matching
   | MATCH expr COLON NL INDENT case_suite DEDENT
     {[ pos $1 $4,
@@ -535,7 +524,6 @@ type_alias:
 typed_param:
   | ID param_type?
     { let last = Option.value_map $2 ~f:fst ~default:(fst $1) in
-      pos (fst $1) last,
       { name = snd $1; typ = $2 } }
 // Type parameter rule (: type)
 param_type:
@@ -546,7 +534,7 @@ param_type:
 decl_statement:
   | ID COLON expr NL
     { pos (fst $1) (fst $3),
-      Generic (Declare { name = snd $1; typ = Some($3) }) }
+      Declare { name = snd $1; typ = Some($3) } }
 assign_statement:
   // Assignment for modifying operators
   // (+=, -=, *=, /=, %=, **=, //=)
@@ -632,7 +620,7 @@ assign_statement:
             in
             let assert_stmt = p, Assert (p, Binary (
                 (p, Call ((p, Id "len"),
-                          [p, { name = None; value = rhs }])),
+                          [{ name = None; value = rhs }])),
                 op,
                 (p, Int (string_of_int len))))
             in
@@ -665,20 +653,17 @@ suite:
 elif_suite:
   // elif foo:
   | ELIF expr COLON suite
-    {[ pos $1 $3,
-       { cond = Some $2; cond_stmts = $4 } ]}
+    {[ { cond = Some $2; cond_stmts = $4 } ]}
   // else:
   | ELSE COLON suite
-    {[ pos $1 $2,
-       { cond = None; cond_stmts = $3 } ]}
+    {[ { cond = None; cond_stmts = $3 } ]}
   | ELIF expr COLON suite; rest = elif_suite
-    { (pos $1 $3, { cond = Some $2; cond_stmts = $4 }) :: rest }
+    { { cond = Some $2; cond_stmts = $4 } :: rest }
 // Pattern case suites
 case_suite:
   // default:
   | DEFAULT COLON suite
-    {[ pos $1 $2,
-       { pattern = WildcardPattern None; case_stmts = $3 } ]}
+    {[ { pattern = WildcardPattern None; case_stmts = $3 } ]}
   // case ...:
   | case
     {[ $1 ]}
@@ -692,7 +677,6 @@ case:
         if List.length $2 = 1 then List.hd_exn $2
         else OrPattern $2
       in
-      pos $1 $3,
       { pattern; case_stmts = $4 } }
   // guarded: case pattern if foo
   | CASE separated_nonempty_list(OR, case_type) IF bool_expr COLON suite
@@ -700,7 +684,6 @@ case:
         if List.length $2 = 1 then List.hd_exn $2
         else OrPattern $2
       in
-      pos $1 $5,
       { pattern = GuardedPattern (pattern, $4); case_stmts = $6 } }
   // bounded: case pattern as id:
   | CASE separated_nonempty_list(OR, case_type) AS ID COLON suite
@@ -708,7 +691,6 @@ case:
         if List.length $2 = 1 then List.hd_exn $2
         else OrPattern $2
       in
-      pos $1 $5,
       { pattern = BoundPattern (snd $4, pattern); case_stmts = $6 } }
 // Pattern rules
 case_type:
@@ -739,13 +721,12 @@ import_statement:
   | FROM dot_term IMPORT MUL
     { let from = flatten_dot ~sep:"/" $2 in
       pos $1 (fst $4),
-      Import [{ from; what = Some([fst $4, ("*", None)]);
-                import_as = None }] }
+      Import [{ from; what = Some ["*", None]; import_as = None }] }
   // from x import y, z
   | FROM dot_term IMPORT separated_list(COMMA, import_term)
     { let from = flatten_dot ~sep:"/" $2 in
-      let what = List.map $4 ~f:(fun (pos, (what, ias)) ->
-        pos, (snd @@ flatten_dot ~sep:"/" what, ias))
+      let what = List.map $4 ~f:(fun (_, (what, ias)) ->
+        flatten_dot ~sep:"/" what, ias)
       in
       pos $1 (fst @@ List.last_exn $4),
       Import [{ from; what = Some what; import_as = None }] }
@@ -786,16 +767,13 @@ catch:
   /* TODO: except (RuntimeError, TypeError, NameError) */
   // any: except
   | EXCEPT COLON suite
-    { pos $1 $2,
-      { exc = None; var = None; stmts = $3 } }
+    { { exc = None; var = None; stmts = $3 } }
   // specific: except foo
   | EXCEPT ID COLON suite
-    { pos $1 $3,
-      { exc = Some (snd $2); var = None; stmts = $4 } }
+    { { exc = Some (snd $2); var = None; stmts = $4 } }
   // named: except foo as bar
   | EXCEPT ID AS ID COLON suite
-    { pos $1 $5,
-      { exc = Some (snd $2); var = Some (snd $4); stmts = $6 } }
+    { { exc = Some (snd $2); var = Some (snd $4); stmts = $6 } }
 // Finally rule
 finally:
   | FINALLY COLON suite
@@ -811,19 +789,18 @@ with_statement:
     {
       let rec traverse (expr, var) lst =
         let var = Option.value var ~default:(fst expr, Id (new_assign ())) in
-        let s1 = fst expr, Assign(var, expr, Shadow, None) in
+        let s1 = fst expr, Assign (var, expr, Shadow, None) in
         let s2 = fst expr, Expr (
-          fst expr, Call((fst expr, Dot(var, "__enter__")), []))
+          fst expr, Call ((fst expr, Dot (var, "__enter__")), []))
         in
         let within = match lst with
           | [] -> $4
           | hd :: tl -> [traverse hd tl]
         in
-        let s3 = fst expr, Try(within, [], Some [
-          fst expr, Expr (fst expr, Call((fst expr, Dot(var, "__exit__")), []))])
+        let s3 = fst expr, Try (within, [], Some [
+          fst expr, Expr (fst expr, Call ((fst expr, Dot(var, "__exit__")), []))])
         in
-        fst expr, If [fst expr,
-          { cond = Some (fst expr, Bool true); cond_stmts = [s1; s2; s3] }]
+        fst expr, If [{ cond = Some (fst expr, Bool true); cond_stmts = [s1; s2; s3] }]
       in
       traverse (List.hd_exn $2) (List.tl_exn $2)
     }
@@ -843,11 +820,11 @@ func_statement:
   | decorator+ func
     {
       let fn = match snd $2 with
-        | Generic Function f -> f
+        | Function f -> f
         | _ -> ierr "decorator parsing failure (grammar)"
       in
       fst $2,
-      Generic (Function { fn with fn_attrs = $1 })
+      Function { fn with fn_attrs = List.map ~f:snd $1 }
     }
 
 // Function definition
@@ -861,12 +838,12 @@ func:
     s = suite
     { let fn_generics = Option.value intypes ~default:[] in
       pos $1 $8,
-      Generic (Function
+      Function
         { fn_name = { name = snd name; typ };
           fn_generics;
           fn_args;
           fn_stmts = s;
-          fn_attrs = [] }) }
+          fn_attrs = [] } }
   // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
   | EXTERN; dylib = dylib_spec?; name = ID;
     LP params = separated_list(COMMA, extern_param); RP
@@ -876,8 +853,7 @@ func:
         | None -> $6, Id("void")
       in
       pos $1 (fst typ),
-      Extern ("c", dylib, snd name,
-        (fst name, { name = snd name; typ = Some(typ) }), params) }
+      Extern ("c", dylib, snd name, { name = snd name; typ = Some typ }, params) }
   | EXTERN; dylib = dylib_spec?; name = ID; AS alt_name = ID
     LP params = separated_list(COMMA, extern_param); RP
     typ = func_ret_type?; NL
@@ -886,21 +862,18 @@ func:
         | None -> $6, Id("void")
       in
       pos $1 (fst typ),
-      Extern ("c", dylib, snd name,
-        (fst name, { name = snd alt_name; typ = Some(typ) }), params) }
+      Extern ("c", dylib, snd name, { name = snd alt_name; typ = Some typ }, params) }
 
 // Extern paramerers
 extern_param:
   | expr
-    { fst $1,
-      { name = ""; typ = Some $1 } }
+    { { name = ""; typ = Some $1 } }
   | ID param_type
-    { pos (fst $1) (fst $2),
-      { name = snd $1; typ = Some $2 } }
+    { { name = snd $1; typ = Some $2 } }
 // Generic specifiers
 generic_list:
   | LS; separated_nonempty_list(COMMA, ID); RS
-    { $2 }
+    { List.map ~f:snd $2 }
 // Parameter rule (a, a: type, a = b)
 func_param:
   | typed_param
@@ -930,34 +903,33 @@ cls:
   | CLASS ID generics = generic_list? COLON NL
     INDENT members = dataclass_member+ DEDENT
     { let args = List.filter_map members ~f:(function
-        | Some(p, Declare d) -> Some(p, d)
+        | Some (_, Declare d) -> Some d
         | _ -> None)
       in
       let members = List.filter_map members ~f:(function
-        | Some(p, Declare d) -> None
+        | Some (_, Declare _) -> None
         | p -> p)
       in
-      let args = if (List.length args) <> 0 then Some(args) else None in
+      let args = if (List.length args) <> 0 then Some args else None in
       let generics = Option.value generics ~default:[] in
       pos $1 $5,
-      Generic (Class
+      Class
         { class_name = snd $2;
-          generics; args; members }) }
+          generics; args; members } }
 dataclass_member:
   | class_member { $1 }
-  | decl_statement
-    { Some (fst $1, match snd $1 with Generic c -> c | _ -> assert false) }
+  | decl_statement { Some $1 }
 
 
 // Type definitions
 typ:
   | type_head NL
     { pos (fst $1) $2,
-      Generic (Type (snd $1)) }
+      Type (snd $1) }
   | type_head COLON NL
     INDENT members = class_member+ DEDENT
     { pos (fst $1) $2,
-      Generic (Type { (snd $1) with members = List.filter_opt members }) }
+      Type { (snd $1) with members = List.filter_opt members } }
 type_head:
   | TYPE ID LP separated_list(COMMA, typed_param) RP
     { pos $1 $5,
@@ -979,7 +951,7 @@ class_member:
   // TODO later: | class_statement
   // Functions
   | func_statement
-    { Some (fst $1, match snd $1 with Generic c -> c | _ -> assert false) }
+    { Some $1 }
 
 // Decorators
 decorator:

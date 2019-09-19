@@ -11,7 +11,7 @@ open Seqaml
 (** JIT context. *)
 type t =
   { mutable cnt : int (** Execution counter. Used for displaying the prompt. *)
-  ; ctx : Ctx.t (** Execution context. *)
+  ; ctx : Codegen_ctx.t (** Execution context. *)
   }
 
 (** Initialize a JIT context. *)
@@ -19,7 +19,7 @@ let init () : t =
   try
     let anon_fn = Llvm.Func.func "<anon_init>" in
     let ctx =
-      Ctx.init_module
+      Codegen_ctx.init_module
         ~argv:false
         ~filename:"<jit>"
         ~mdl:(Llvm.JIT.init ())
@@ -30,7 +30,7 @@ let init () : t =
     in
     let jit = { cnt = 1; ctx } in
     (* load stdlib *)
-    Llvm.JIT.func ctx.mdl anon_fn;
+    Llvm.JIT.func ctx.env.mdl anon_fn;
     jit
   with
   | Err.CompilerError (typ, pos_lst) ->
@@ -41,22 +41,20 @@ let init () : t =
 let exec (jit : t) code =
   let anon_fn = Llvm.Func.func (sprintf "<anon_%d>" jit.cnt) in
   let anon_ctx =
-    { jit.ctx with
-      base = anon_fn
-    ; block = Llvm.Block.func anon_fn
-    ; map = Hashtbl.copy jit.ctx.map
+    { jit.ctx with map = Hashtbl.copy jit.ctx.map
+    ; env = { jit.ctx.env with base = anon_fn; block = Llvm.Block.func anon_fn }
     }
   in
-  Ctx.add_block anon_ctx;
+  Ctx.add_block ~ctx:anon_ctx;
   jit.cnt <- jit.cnt + 1;
   Runner.exec_string ~file:"<jit>" ~jit:true anon_ctx code;
   try
-    Llvm.JIT.func jit.ctx.mdl anon_fn;
+    Llvm.JIT.func jit.ctx.env.mdl anon_fn;
     Hash_set.iter (Stack.pop_exn anon_ctx.stack) ~f:(fun key ->
         match Hashtbl.find anon_ctx.map key with
         | Some ((v, ann) :: items) ->
           if ann.toplevel && ann.global && not ann.internal
-          then Ctx.add ~ctx:jit.ctx ~toplevel:true ~global:true key v
+          then Codegen_ctx.add ~ctx:jit.ctx ~toplevel:true ~global:true key v
         | _ -> ())
   with
   | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])

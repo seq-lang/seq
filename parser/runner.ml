@@ -21,7 +21,7 @@ let init file error_handler =
   let mdl = Llvm.Module.init () in
   try
     let ctx =
-      Ctx.init_module
+      Codegen_ctx.init_module
         ~filename:(Filename.realpath file)
         ~mdl
         ~base:mdl
@@ -29,11 +29,10 @@ let init file error_handler =
         (exec_string ~debug:false ~jit:false)
     in
     (* parse the file *)
-    Ctx.parse_file ~ctx file;
-    Some ctx.mdl
+    Codegen_ctx.parse_file ~ctx file;
+    Some ctx.env.mdl
   with
   | Err.CompilerError (typ, pos) ->
-    (* Ctx.dump ctx; *)
     error_handler typ pos;
     None
 
@@ -42,8 +41,8 @@ let init file error_handler =
     to pass errors upstream.
     Returns pointer to [Module] or zero if unsuccessful. *)
 let parse_c fname =
-  let error_handler typ (pos : Ast.Ann.tpos list) =
-    let Ast.Ann.{ file; line; col; len } = List.hd_exn pos in
+  let error_handler typ (pos : Ast.Ann.t list) =
+    let Ast.Ann.{ file; line; col; len; _ } = List.hd_exn pos in
     let msg =
       match typ with
       | Err.Parser -> "parsing error"

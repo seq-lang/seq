@@ -14,6 +14,7 @@ type t =
   ; typ : ttyp
   ; history: t array
   }
+[@@deriving fields]
 
 (** Each identifier is uniquely identified by its name and its location *)
 and tlookup =
