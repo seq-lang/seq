@@ -9,7 +9,7 @@ def string_search_slow(text: str, pattern: str) -> list[int]:
     li = list[int]()
 
     if pattern == '':
-        for i in range(len(text)+1):
+        for i in range(len(text) + 1):
             li.append(i)
         return li
 

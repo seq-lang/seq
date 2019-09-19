@@ -1,9 +1,9 @@
 import str
 
-print 'abcdefghiabc'.index('abc', 0, len('abcdefghiabc'))
-print 'abcdefghiabc'.index('abc', 1, len('abcdefghiabc'))
-print 'abc'.index('', 0, len('abc'))
-print 'abc'.index('', 3, len('abc'))
-print 'rrarrrrrrrrra'.index('a', 0, len('rrarrrrrrrrra'))
-print 'rrarrrrrrrrra'.index('a', 4, len('rrarrrrrrrrra'))
-print 'abcdefghiabc'.index('def', 4, len('abcdefghiabc'))
+print 'abcdefghiabc'.rindex('', 0, len('abcdefghiabc'))
+print 'abcdefghiabc'.rindex('def', 0, len('abcdefghiabc'))
+print 'abcdefghiabc'.rindex('abc', 0, len('abcdefghiabc'))
+print 'abcdefghiabc'.rindex('abc', 0, -1)
+print 'rrarrrrrrrrra'.rindex('a', 0, len('rrarrrrrrrrra'))
+print 'rrarrrrrrrrra'.rindex('a', 4, len('rrarrrrrrrrra'))
+print 'rrarrrrrrrrra'.rindex('a', 4, 6)
