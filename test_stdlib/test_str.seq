@@ -342,6 +342,15 @@ def test_endswith():
     assert 'helloworld'.endswith('lowo', 3, -4) == False
     assert 'helloworld'.endswith('lowo', -8, -2) == False
 
+def test_index():
+    assert 'abcdefghiabc'.index('abc', 0, len('abcdefghiabc')) == 0
+    assert 'abcdefghiabc'.index('abc', 1, len('abcdefghiabc')) == 9
+    assert 'abc'.index('', 0, len('abc')) == 0
+    assert 'abc'.index('', 3, len('abc')) == 3
+    assert 'rrarrrrrrrrra'.index('a', 0, len('rrarrrrrrrrra')) == 2
+    assert 'rrarrrrrrrrra'.index('a', 4, len('rrarrrrrrrrra')) == 12
+    assert 'abcdefghiabc'.index('def', 4, len('abcdefghiabc')) == -1
+
 # test_isdigit()
 # test_islower()
 # test_isupper()
@@ -373,4 +382,5 @@ def test_endswith():
 # test_rpartition()
 # test_split()
 # test_startswith()
-test_endswith()
+# test_endswith()
+test_index()

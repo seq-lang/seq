@@ -3,15 +3,24 @@ def string_search_slow(text: str, pattern: str) -> list[int]:
     """
     string_search_slow(text, pattern) -> list
 
-    Return a list containing the position of each index
+    Return a list containing the non-overlapping position of each index
     the pattern is found.
     """
     li = list[int]()
 
+    if pattern == '':
+        for i in range(len(text)+1):
+            li.append(i)
+        return li
+
     max_search = len(text) - len(pattern) + 1
-    for i in range(max_search):
+    i = 0
+    while i < max_search:
         if text[i:i + len(pattern)] == pattern:
             li.append(i)
+            i += len(pattern)
+        else:
+            i += 1
 
     return li
 
@@ -127,3 +136,24 @@ def string_search_KMP(text: str, pattern: str) -> list[int]:
             else:
                 i += 1
     return li
+
+
+# should get [0, 2, 4, 6]
+# print string_search_slow('aaaaaaaa', 'aa')
+
+# print string_search_slow('abbba', 'bb')
+
+# should get [0, 9, 11, 14]
+# print string_search_slow('1214313141212 12', '12')
+# print string_search_rabin_karp('1214313141212 12', '12', 1001)
+# print string_search_KMP('1214313141212 12', '12')
+#
+# # should get [0, 9]
+# print string_search_slow('AABAACAADAABAABA', 'AABA')
+# print string_search_rabin_karp('AABAACAADAABAABA', 'AABA', 1001)
+# print string_search_KMP('AABAACAADAABAABA', 'AABA')
+#
+# # should get [10]
+# print string_search_slow('ABABDABACDABABCABAB', 'ABABCABAB')
+# print string_search_rabin_karp('ABABDABACDABABCABAB', 'ABABCABAB', 101)
+# print string_search_KMP('ABABDABACDABABCABAB', 'ABABCABAB')
