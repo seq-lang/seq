@@ -760,3 +760,16 @@ extend str:
             return True
 
         return suffix == self[start:start + len(suffix)]
+
+    def index(self: str, sub: str, start: int, end: int) -> int:
+      """
+      str.index(sub [,start [,end]]) -> int
+
+      Like str.find() but raise ValueError when the substring is not found.
+      """
+      i = self.find(sub, start, end)
+      if i == -1:
+          raise ValueError("ValueError: substring not found")
+          return -1
+      else:
+          return i
