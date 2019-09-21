@@ -47,7 +47,6 @@ class dict[K,V]:
         idx = e.hash & (table.len - 1)
         e.next = table[idx]
         table[idx] = e
-        self.size += 1
 
     def _resize(self: dict[K,V]):
         table = dict[K,V]._make_table(2 * self.table.len)
@@ -87,6 +86,7 @@ class dict[K,V]:
             if self.size*2 >= self.table.len:
                 self._resize()
             self._insert(self.table, _dict_entry[K,V](k, v, h))
+            self.size += 1
 
     def __delitem__(self: dict[K,V], k: K):
         h = hash(k)

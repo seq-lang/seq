@@ -1,5 +1,6 @@
 # lists:
 l1 = [i+1 for i in range(100)]
+print len(l1)  # EXPECT: 100
 l1 = l1[98:]
 l2 = [1, 2] * 2
 
@@ -34,6 +35,8 @@ print list[int]().remove(0)  # EXPECT: False
 
 
 # sets:
+s1 = {a for a in range(100)}
+print len(s1)  # EXPECT: 100
 s1 = {a%8 for a in range(100)}
 for a in range(8):
     if a not in s1:
@@ -50,6 +53,8 @@ print len(s1)  # EXPECT: 7
 
 
 # dicts:
+d1 = {a: a*a for a in range(100)}
+print len(d1)  # EXPECT: 100
 d1 = {a: a*a for a in range(5)}
 
 # EXPECT: 0

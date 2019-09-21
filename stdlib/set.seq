@@ -45,7 +45,6 @@ class set[T]:
         idx = e.hash & (table.len - 1)
         e.next = table[idx]
         table[idx] = e
-        self.size += 1
 
     def _resize(self: set[T]):
         table = set[T]._make_table(2 * self.table.len)
@@ -84,6 +83,7 @@ class set[T]:
             if self.size*2 >= self.table.len:
                 self._resize()
             self._insert(self.table, _set_entry[T](k, h))
+            self.size += 1
 
     def remove(self: set[T], k: T):
         h = hash(k)
