@@ -1,11 +1,9 @@
 import str
 
-print '\n\nasdf\nsadf\nsdf\n'.splitlines(False)
-print 'abc\ndef\n\rghi'.splitlines(False)
-print 'abc\ndef\n\r\nghi'.splitlines(False)
-print 'abc\ndef\r\nghi'.splitlines(False)
-print 'abc\ndef\r\nghi\n'.splitlines(False)
-print 'abc\ndef\r\nghi\n\r'.splitlines(False)
-print '\nabc\ndef\r\nghi\n\r'.splitlines(False)
-print '\nabc\ndef\r\nghi\n\r'.splitlines(True)
-print 'abc\ndef\r\nghi\n'.splitlines(True)
+print 'abc\rab\tdef\ng\thi'.expandtabs(8) == 'abc\rab      def\ng       hi'
+print 'abc\rab\tdef\ng\thi'.expandtabs(4) == 'abc\rab  def\ng   hi'
+print 'abc\r\nab\tdef\ng\thi'.expandtabs(8) == 'abc\r\nab      def\ng       hi'
+print 'abc\r\nab\tdef\ng\thi'.expandtabs(4) == 'abc\r\nab  def\ng   hi'
+print 'abc\r\nab\r\ndef\ng\r\nhi'.expandtabs(4) == 'abc\r\nab\r\ndef\ng\r\nhi'
+print ' \ta\n\tb'.expandtabs(1) == '  a\n b'
+print '\tdndhd\ty\ty\tyu\t'.expandtabs(3) == '   dndhd y  y  yu '

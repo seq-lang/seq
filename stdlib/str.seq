@@ -1,5 +1,6 @@
 import C
 import algorithms
+import sys
 
 class TypeError:
     msg: str
@@ -905,3 +906,34 @@ extend str:
 
         # delete all occurances of old in self
         return algorithms.replace_delete_substring(self, old, new, maxcount)
+
+    def expandtabs(self: str, tabsize: int) -> str:
+        """
+        str.expandtabs([tabsize]) -> string
+
+        Return a copy of str where all tab characters are expanded using spaces.
+        If tabsize is not given, a tab size of 8 characters is assumed.
+
+        tabsize is required for now.
+        """
+        incr = 0
+        i = 0   # chars up to and including most recent \n or \r
+        j = 0   # chars since most recent \n or \r (use in tab calculations)
+        u = ''
+        j = 0   # same as first pass
+        
+        # create output string and fill it
+        for p in range(len(self)):
+            if self[p] == '\t':
+                if tabsize > 0:
+                    i = tabsize - (j % tabsize)
+                    j += i
+                    while i != 0:
+                        u = u + ' '
+                        i -= 1
+            else:
+                u = u + self[p]
+                j += 1
+                if self[p] == '\n' or self[p] == '\r':
+                    j = 0
+        return u

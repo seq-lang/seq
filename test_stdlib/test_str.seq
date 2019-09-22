@@ -453,6 +453,14 @@ def test_replace():
     assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 1) == 'ham, spam, eggs and spam'
     assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 0) == 'spam, spam, eggs and spam'
 
+def test_expandtabs():
+    assert 'abc\rab\tdef\ng\thi'.expandtabs(8) == 'abc\rab      def\ng       hi'
+    assert 'abc\rab\tdef\ng\thi'.expandtabs(4) == 'abc\rab  def\ng   hi'
+    assert 'abc\r\nab\tdef\ng\thi'.expandtabs(8) == 'abc\r\nab      def\ng       hi'
+    assert 'abc\r\nab\tdef\ng\thi'.expandtabs(4) == 'abc\r\nab  def\ng   hi'
+    assert 'abc\r\nab\r\ndef\ng\r\nhi'.expandtabs(4) == 'abc\r\nab\r\ndef\ng\r\nhi'
+    assert ' \ta\n\tb'.expandtabs(1) == '  a\n b'
+    assert '\tdndhd\ty\ty\tyu\t'.expandtabs(3) == '   dndhd y  y  yu '
 
 # test_isdigit()
 # test_islower()
@@ -489,4 +497,5 @@ def test_replace():
 # test_index()
 # test_rindex()
 # test_replace()
-test_splitlines()
+# test_splitlines()
+test_expandtabs()
