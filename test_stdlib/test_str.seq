@@ -285,6 +285,17 @@ def test_split():
     assert 'a|b|c|d'.split('|', 4) == ['a', 'b', 'c', 'd']
     assert 'a||b||c||d'.split('|', 2) == ['a', '', 'b||c||d']
 
+def test_splitlines():
+    assert '\n\nasdf\nsadf\nsdf\n'.splitlines(False) == ['', '', 'asdf', 'sadf', 'sdf']
+    assert 'abc\ndef\n\rghi'.splitlines(False) == ['abc', 'def', '', 'ghi']
+    assert 'abc\ndef\n\r\nghi'.splitlines(False) == ['abc', 'def', '', 'ghi']
+    assert 'abc\ndef\r\nghi'.splitlines(False) == ['abc', 'def', 'ghi']
+    assert 'abc\ndef\r\nghi\n'.splitlines(False) == ['abc', 'def', 'ghi']
+    assert 'abc\ndef\r\nghi\n\r'.splitlines(False) == ['abc', 'def', 'ghi', '']
+    assert '\nabc\ndef\r\nghi\n\r'.splitlines(False) == ['', 'abc', 'def', 'ghi', '']
+    assert '\nabc\ndef\r\nghi\n\r'.splitlines(True) == ['\n', 'abc\n', 'def\r\n', 'ghi\n', '\r']
+    assert 'abc\ndef\r\nghi\n'.splitlines(True) == ['abc\n', 'def\r\n', 'ghi\n']
+
 def test_startswith():
     assert 'hello'.startswith('he', 0, len('hello')) == True
     assert 'hello'.startswith('hello', 0, len('hello')) == True
@@ -477,4 +488,5 @@ def test_replace():
 # test_endswith()
 # test_index()
 # test_rindex()
-test_replace()
+# test_replace()
+test_splitlines()
