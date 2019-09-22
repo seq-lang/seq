@@ -51,6 +51,40 @@ s1.remove(5)
 print 5 in s1  # EXPECT: False
 print len(s1)  # EXPECT: 7
 
+s1 = {1,2,3,4}
+s2 = {2,3,4,5}
+s3 = set[int]()
+
+print s1 | s2       # EXPECT: {1, 2, 3, 4, 5}
+print s1 & s2       # EXPECT: {4, 2, 3}
+print s1 ^ s2       # EXPECT: {1, 5}
+print s1 | s3       # EXPECT: {1, 2, 3, 4}
+print s1 & s3       # EXPECT: {}
+print s1 ^ s3       # EXPECT: {1, 2, 3, 4}
+print s1 - s2       # EXPECT: {1}
+print s2 - s1       # EXPECT: {5}
+print s3 - s1 - s2  # EXPECT: {}
+print s1 > s2       # EXPECT: False
+print s1 < s2       # EXPECT: False
+print s3 <= s1      # EXPECT: True
+print s2 >= s1      # EXPECT: False
+print (s1 | s2) > s1  # EXPECT: True
+
+s1c = copy(s1)
+s2c = copy(s2)
+s3c = copy(s3)
+
+print s1c  # EXPECT: {1, 2, 3, 4}
+s1c &= s2c
+print s1c  # EXPECT: {2, 3, 4}
+s1c -= s3c
+print s1c  # EXPECT: {2, 3, 4}
+s1c ^= s1c
+print s1c  # EXPECT: {}
+s1c |= s2c
+print s1c  # EXPECT: {2, 3, 4, 5}
+print s1   # EXPECT: {1, 2, 3, 4}
+
 
 # dicts:
 d1 = {a: a*a for a in range(100)}
