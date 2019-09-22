@@ -360,6 +360,89 @@ def test_rindex():
     assert 'rrarrrrrrrrra'.rindex('a', 4, len('rrarrrrrrrrra')) == 12
     assert 'rrarrrrrrrrra'.rindex('a', 4, 6) == -1
 
+def test_replace():
+    # interleave-- default will be len(str) + 1
+    assert 'A'.replace('', '', len('A')+1) == 'A'
+    assert 'A'.replace('', '*', len('A')+1) == '*A*'
+    assert 'A'.replace('', '*1', len('A')+1) == '*1A*1'
+    assert 'A'.replace('', '*-#', len('A')+1) == '*-#A*-#'
+    assert 'AA'.replace('', '*-', len('AA')+1) == '*-A*-A*-'
+    assert 'AA'.replace('', '*-', -1) == '*-A*-A*-'
+    assert 'AA'.replace('', '*-', 4) == '*-A*-A*-'
+    assert 'AA'.replace('', '*-', 3) == '*-A*-A*-'
+    assert 'AA'.replace('', '*-', 2) == '*-A*-A'
+    assert 'AA'.replace('', '*-', 1) == '*-AA'
+    assert 'AA'.replace('', '*-', 0) == 'AA'
+
+    # substring deletion
+    assert 'A'.replace('A', '', len('A')+1) == ''
+    assert 'AAA'.replace('A', '', len('AAA')+1) == ''
+    assert 'AAA'.replace('A', '', -1) == ''
+    assert 'AAA'.replace('A', '', 4) == ''
+    assert 'AAA'.replace('A', '', 3) == ''
+    assert 'AAA'.replace('A', '', 2) == 'A'
+    assert 'AAA'.replace('A', '', 1) == 'AA'
+    assert 'AAA'.replace('A', '', 0) == 'AAA'
+    assert 'ABACADA'.replace('A', '', len('ABACADA')+1) == 'BCD'
+    assert 'ABACADA'.replace('A', '', -1) == 'BCD'
+    assert 'ABACADA'.replace('A', '', 5) == 'BCD'
+    assert 'ABACADA'.replace('A', '', 4) == 'BCD'
+    assert 'ABACADA'.replace('A', '', 3) == 'BCDA'
+    assert 'ABACADA'.replace('A', '', 2) == 'BCADA'
+    assert 'ABACADA'.replace('A', '', 1) == 'BACADA'
+    assert 'ABACADA'.replace('A', '', 0) == 'ABACADA'
+    assert 'ABCAD'.replace('A', '', len('ABCAD')+1) == 'BCD'
+    assert 'ABCADAA'.replace('A', '', len('ABCADAA')+1) == 'BCD'
+    assert 'BCD'.replace('A', '', len('BCD')+1) == 'BCD'
+    assert ('^'+('A'*1000)+'^').replace('A', '', 999) == '^A^'
+    assert 'the'.replace('the', '', len('the')+1) == ''
+    assert 'theater'.replace('the', '', len('theater')+1) == 'ater'
+    assert 'thethe'.replace('the', '', len('thethe')+1) == ''
+    assert 'thethethethe'.replace('the', '', len('thethethethe')+1) == ''
+    assert 'theatheatheathea'.replace('the', '', len('theatheatheathea')+1) == 'aaaa'
+    assert 'that'.replace('the', '', len('that')+1) == 'that'
+    assert 'here and there'.replace('the', '', len('here and there')+1) == 'here and re'
+    assert 'here and there and there'.replace('the', '', len('here and there and there')+1) == 'here and re and re'
+    assert 'here and there and there'.replace('the', '', -1) == 'here and re and re'
+    assert 'here and there and there'.replace('the', '', 3) == 'here and re and re'
+    assert 'here and there and there'.replace('the', '', 2) == 'here and re and re'
+    assert 'here and there and there'.replace('the', '', 1) == 'here and re and there'
+    assert 'here and there and there'.replace('the', '', 0) == 'here and there and there'
+
+    # substring replace in place
+    assert 'Who goes there?'.replace('o', 'o', len('Who goes there?') + 1) == 'Who goes there?'
+    assert 'Who goes there?'.replace('o', 'O', len('Who goes there?') + 1) == 'WhO gOes there?'
+    assert 'Who goes there?'.replace('o', 'O', -1) == 'WhO gOes there?'
+    assert 'Who goes there?'.replace('o', 'O', 3) == 'WhO gOes there?'
+    assert 'Who goes there?'.replace('o', 'O', 2) == 'WhO gOes there?'
+    assert 'Who goes there?'.replace('o', 'O', 1) == 'WhO goes there?'
+    assert 'Who goes there?'.replace('o', 'O', 0) == 'Who goes there?'
+    assert 'Who goes there?'.replace('a', 'q', len('Who goes there?') + 1) == 'Who goes there?'
+    assert 'Who goes there?'.replace('W', 'w', len('Who goes there?') + 1) == 'who goes there?'
+    assert 'WWho goes there?WW'.replace('W', 'w', len('WWho goes there?WW') + 1) == 'wwho goes there?ww'
+    assert 'Who goes there?'.replace('?', '!', len('Who goes there?') + 1) == 'Who goes there!'
+    assert 'This is a tissue'.replace('is', '**', len('This is a tissue') + 1) == 'Th** ** a t**sue'
+    assert 'This is a tissue'.replace('is', '**', -1) == 'Th** ** a t**sue'
+    assert 'This is a tissue'.replace('is', '**', 4) == 'Th** ** a t**sue'
+    assert 'This is a tissue'.replace('is', '**', 3) == 'Th** ** a t**sue'
+    assert 'This is a tissue'.replace('is', '**', 2) == 'Th** ** a tissue'
+    assert 'This is a tissue'.replace('is', '**', 1) == 'Th** is a tissue'
+    assert 'This is a tissue'.replace('is', '**', 0) == 'This is a tissue'
+    assert 'Reykjavik'.replace('k', 'KK', len('Reykjavik') +1) == 'ReyKKjaviKK'
+    assert 'Reykjavik'.replace('k', 'KK', -1) == 'ReyKKjaviKK'
+    assert 'Reykjavik'.replace('k', 'KK', 2) == 'ReyKKjaviKK'
+    assert 'Reykjavik'.replace('k', 'KK', 1) == 'ReyKKjavik'
+    assert 'Reykjavik'.replace('k', 'KK', 0) == 'Reykjavik'
+    assert 'A.B.C.'.replace('.', '----', len('A.B.C.') + 1) == 'A----B----C----'
+    assert 'spam, spam, eggs and spam'.replace('spam', 'ham', len('spam, spam, eggs and spam')+1) == 'ham, ham, eggs and ham'
+    assert 'spam, spam, eggs and spam'.replace('spam', 'ham', -1) == 'ham, ham, eggs and ham'
+    assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 4) == 'ham, ham, eggs and ham'
+    assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 3) == 'ham, ham, eggs and ham'
+    assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 2) == 'ham, ham, eggs and spam'
+    assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 1) == 'ham, spam, eggs and spam'
+    assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 0) == 'spam, spam, eggs and spam'
+
+
 # test_isdigit()
 # test_islower()
 # test_isupper()
@@ -393,4 +476,5 @@ def test_rindex():
 # test_startswith()
 # test_endswith()
 # test_index()
-test_rindex()
+# test_rindex()
+test_replace()

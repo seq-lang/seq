@@ -654,7 +654,7 @@ extend str:
 
         return self[:li[i]], sep, self[li[i]+len(sep):]
 
-    def split(self: str, sep: str, maxsplit: int) -> list[str]:
+    def split(self, sep: str, maxsplit: int) -> list[str]:
         """
         str.split([sep [,maxsplit]]) -> list of strings
 
@@ -667,10 +667,13 @@ extend str:
         li = search(self, sep)
         str_split = list[str]()
 
+        # no delimiter found
         if len(li) == 0:
             return [self]
+
         if len(sep) > len(self):
             return [self]
+
         if maxsplit == 0:
             return [self]
 
@@ -679,7 +682,7 @@ extend str:
 
         prev = li[0]
         # append first part of string
-        # if sep is found in index 0, add '' to separate
+        # if sep is found at index 0, add '' to separate
         if li[0] == 0:
             str_split.append('')
         else:
@@ -762,27 +765,62 @@ extend str:
         return suffix == self[start:start + len(suffix)]
 
     def index(self: str, sub: str, start: int, end: int) -> int:
-      """
-      str.index(sub [,start [,end]]) -> int
+        """
+        str.index(sub [,start [,end]]) -> int
 
-      Like str.find() but raise ValueError when the substring is not found.
-      """
-      i = self.find(sub, start, end)
-      if i == -1:
-          raise ValueError("ValueError: substring not found")
-          return -1
-      else:
-          return i
+        Like str.find() but raise ValueError when the substring is not found.
+        """
+        i = self.find(sub, start, end)
+        if i == -1:
+            raise ValueError("ValueError: substring not found")
+        else:
+            return i
 
-    def rindex(self: str, sub: str, start: int, end: int) -> int:
-      """
-      str.index(sub [,start [,end]]) -> int
+    def rindex(self: str, sub: str, start, end) -> int:
+        """
+        str.index(sub [,start [,end]]) -> int
 
-      Like str.find() but raise ValueError when the substring is not found.
-      """
-      i = self.rfind(sub, start, end)
-      if i == -1:
-          raise ValueError("ValueError: substring not found")
-          return -1
-      else:
-          return i
+        Like str.find() but raise ValueError when the substring is not found.
+        """
+
+        i = self.rfind(sub, start, end)
+        if i == -1:
+            raise ValueError("ValueError: substring not found")
+            return -1
+        else:
+            return i
+
+    def replace(self: str, old: str, new: str, maxcount: int) -> str:
+        """
+        str.replace(old, new[, count]) -> string
+
+        Return a copy of string str with all occurrences of substring
+        old replaced by new.  If the optional argument maxcount is
+        given, only the first maxcount occurrences are replaced.
+
+        For now, maxcount is required.
+        """
+
+        if maxcount < 0:
+            maxcount = len(self) + 1
+        # replace zero matches or length of self is 0
+        elif maxcount == 0 or len(self) == 0:
+            return self
+
+        # replace zero matches or there is nothing to replace
+        if maxcount == 0 or len(new) == 0 and len(old) == 0:
+            return self
+
+        # Handle zero-length special cases
+
+        # insert the 'new' string everywhere.
+        if len(old) == 0:
+            return algorithms.replace_interleave(self, new, maxcount)
+
+        # No way for an empty string to generate a non-empty string.
+        # except ''.replace('', 'A') == 'A' which is handled above.
+        if len(self) == 0:
+            return self
+
+        # delete all occurances of old in self
+        return algorithms.replace_delete_substring(self, old, new, maxcount)

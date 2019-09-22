@@ -137,6 +137,65 @@ def string_search_KMP(text: str, pattern: str) -> list[int]:
                 i += 1
     return li
 
+def replace_interleave(self: str, new: str, maxcount: int) -> str:
+    """
+    replace_interleave(self, new, maxcount) -> str
+
+    Returns a string inserting the 'new' string everywhere.
+    """
+    s = ''
+
+    j = 0
+    # insert the new string for maxcount <= len(self) times.
+    for i in range(len(self)):
+        if i+1 > maxcount:
+            break
+        s += new
+        s += self[i]
+        j = i
+    if maxcount-1 == len(self) or maxcount > len(self) or maxcount < 0:
+        s += new
+    else:
+        s += self[j+1:]
+    return s
+
+def replace_delete_substring(self: str, old: str, new: str, maxcount: int) -> str:
+    """
+    replace_delete_substring(self, old, maxcount) -> str
+
+    Returns a string deleting any instances of the 'old' string in self and
+    replaceing it with the 'new' string.
+    """
+    s = ''
+    li = string_search_slow(self, old)
+
+    # no matches
+    if len(li) == 0:
+        return self
+
+    # when the whole string is replaced by ''
+    if len(li)*len(old) == len(self) and maxcount >= len(self):
+        return ''
+
+    if maxcount > len(li):
+        maxcount = len(li)
+
+    result_len = len(self) - (maxcount * len(old))
+    assert result_len >= 0
+
+    j = li[0]
+    s += self[0:j]
+
+    # replace the old substring with the new substring
+    for i in range(1, maxcount):
+        s += new
+        s += self[j+len(old): li[i]]
+        j = li[i]
+    s += new
+    s += self[j+len(old):]
+    return s
+
+
 
 # should get [0, 2, 4, 6]
 # print string_search_slow('aaaaaaaa', 'aa')
