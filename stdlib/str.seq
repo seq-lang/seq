@@ -705,6 +705,87 @@ extend str:
         else:
             return  str_split
 
+    def splitlines(self: str, keepends: bool) -> list[str]:
+        """
+        str.splitlines([keepends]) -> list of strings
+
+        Return a list of the lines in str, breaking at line boundaries.
+        Line breaks are not included in the resulting list unless keepends
+        is given and true.
+
+        keepends is required for now.
+        """
+        line_split = list[str]()
+
+        prev = 0
+        for i in range(len(self)):
+            # finding '\n' by itself and dealing with '\r\n'
+            if i != 0:
+                # not equal to '\r\n'
+                if self[i] == '\n' and self[i-1] != '\r':
+                    if keepends:
+                        line_split.append(self[prev:i+1])
+                    else:
+                        # empty string
+                        if len(self[prev:i]) == 0:
+                            line_split.append('')
+                        else:
+                            line_split.append(self[prev:i])
+                    prev = i+1
+                    continue
+                # equal to '\r\n'
+                elif self[i] == '\n' and self[i-1] == '\r':
+                    if keepends:
+                        line_split.append(self[prev:i+1])
+
+                    else:
+                        # empty string
+                        if len(self[prev:i-1]) == 0:
+                            line_split.append('')
+                        else:
+                            line_split.append(self[prev:i-1])
+                    prev = i+1
+                    continue
+            # '\n' exisits at the beginning of string
+            elif self[i] == '\n':
+                if keepends:
+                    line_split.append(self[i])
+                else:
+                    line_split.append('')
+                prev = i+1
+                continue
+
+            # finding '\r' by itself
+            if i != len(self)-1:
+                # not equal to '\r\n'
+                if self[i] == '\r' and self[i+1] != '\n':
+                    if keepends:
+                        line_split.append(self[prev:i+1])
+                    else:
+                        # empty string
+                        if len(self[prev:i]) == 0:
+                            line_split.append('')
+                        else:
+                            line_split.append(self[prev:i])
+                    prev = i+1
+                    continue
+            # '\r' exisits at the end of string
+            elif self[i] == '\r':
+                if self[i-1] == '\n' or self[i-1] == '\r':
+                    if keepends:
+                        line_split.append(self[i])
+                    else:
+                        line_split.append('')
+                    prev = i+1
+                    break
+                prev = i+1
+                break
+        if prev < len(self):
+            line_split.append(self[prev:])
+
+        return line_split
+
+
     def startswith(self: str, prefix: str, start: int, end: int) -> bool:
         """
         str.startswith(prefix[, start[, end]]) -> bool
