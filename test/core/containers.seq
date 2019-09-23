@@ -1,3 +1,50 @@
+# tuples:
+def test_cmp[T](a: T, b: T):
+    print a, b
+    print 'EQ', a == b
+    print 'NE', a != b
+    print 'LT', a < b
+    print 'GT', a > b
+    print 'LE', a <= b
+    print 'GE', a >= b
+
+# EXPECT: (1, 2) (1, 2)
+# EXPECT: EQ True
+# EXPECT: NE False
+# EXPECT: LT False
+# EXPECT: GT False
+# EXPECT: LE True
+# EXPECT: GE True
+test_cmp((1,2), (1,2))
+
+# EXPECT: (1, 2, 2) (1, 2, 3)
+# EXPECT: EQ False
+# EXPECT: NE True
+# EXPECT: LT True
+# EXPECT: GT False
+# EXPECT: LE True
+# EXPECT: GE False
+test_cmp((1,2,2), (1,2,3))
+
+# EXPECT: (1, 2, -1) (1, 0, 1)
+# EXPECT: EQ False
+# EXPECT: NE True
+# EXPECT: LT False
+# EXPECT: GT True
+# EXPECT: LE False
+# EXPECT: GE True
+test_cmp((1,2,-1), (1,0,1))
+
+# EXPECT: () ()
+# EXPECT: EQ True
+# EXPECT: NE False
+# EXPECT: LT False
+# EXPECT: GT False
+# EXPECT: LE True
+# EXPECT: GE True
+test_cmp((), ())
+
+
 # lists:
 l1 = [i+1 for i in range(100)]
 print len(l1)  # EXPECT: 100
