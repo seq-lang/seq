@@ -358,9 +358,7 @@ arith_term:
   // Index (foo[bar])
   | arith_term LS separated_nonempty_list(COMMA, index_term) RS
     { pos (fst $1) $4,
-      if List.length $3 = 1 then Index ($1, List.hd_exn $3)
-      else Index ($1,
-        (pos (fst @@ List.hd_exn $3) (fst @@ List.last_exn $3), Tuple $3)) }
+      Index ($1, $3) }
   // Access (foo.bar)
   | arith_term DOT ID
     { pos (fst $1) (fst $3),
@@ -598,18 +596,18 @@ assign_statement:
                   else Some (p, Int (string_of_int @@ i +  1 - len))
                 in
                 let slice = Slice (start, eend, None) in
-                let rhs = p, Index (rhs, (p, slice)) in
+                let rhs = p, Index (rhs, [p, slice]) in
                 [p, Assign ((p, Id var), rhs, shadow, None)]
               | ann, Unpack var when !unpack_i > -1 ->
                 Err.serr ~ann "cannot have two tuple unpackings on LHS"
               | _ when !unpack_i = -1 ->
                 (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
-                let rhs = p, Index (rhs, (p, Int (string_of_int i))) in
+                let rhs = p, Index (rhs, [p, Int (string_of_int i)]) in
                 parse_assign [expr] [rhs]
                 (*p, Assign (expr, rhs, shadow) *)
               | _ ->
                 (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
-                let rhs = p, Index (rhs, (p, Int (string_of_int @@ i - len))) in
+                let rhs = p, Index (rhs, [p, Int (string_of_int @@ i - len)]) in
                 parse_assign [expr] [rhs])
             in
             let len, op =
@@ -769,11 +767,11 @@ catch:
   | EXCEPT COLON suite
     { { exc = None; var = None; stmts = $3 } }
   // specific: except foo
-  | EXCEPT ID COLON suite
-    { { exc = Some (snd $2); var = None; stmts = $4 } }
+  | EXCEPT expr COLON suite
+    { { exc = Some $2; var = None; stmts = $4 } }
   // named: except foo as bar
-  | EXCEPT ID AS ID COLON suite
-    { { exc = Some (snd $2); var = Some (snd $4); stmts = $6 } }
+  | EXCEPT expr AS ID COLON suite
+    { { exc = Some $2; var = Some (snd $4); stmts = $6 } }
 // Finally rule
 finally:
   | FINALLY COLON suite

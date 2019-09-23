@@ -47,7 +47,7 @@ let exec (jit : t) code =
   in
   Ctx.add_block ~ctx:anon_ctx;
   jit.cnt <- jit.cnt + 1;
-  Runner.exec_string ~file:"<jit>" ~jit:true anon_ctx code;
+  Runner.exec_string ~file:"<jit>" ~jit:true ~ctx:anon_ctx code;
   try
     Llvm.JIT.func jit.ctx.env.mdl anon_fn;
     Hash_set.iter (Stack.pop_exn anon_ctx.stack) ~f:(fun key ->

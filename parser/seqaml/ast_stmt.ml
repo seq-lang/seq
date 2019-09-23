@@ -75,7 +75,7 @@ and param =
   }
 
 and catch =
-  { exc : string option
+  { exc : texpr ann option
   ; var : string option
   ; stmts : t ann list
   }

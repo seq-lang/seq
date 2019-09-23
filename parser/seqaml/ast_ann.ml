@@ -12,7 +12,7 @@ type t =
   ; col : int
   ; len : int
   ; typ : ttyp
-  ; history: t array
+  ; is_type_ast: bool
   }
 [@@deriving fields]
 
@@ -58,6 +58,6 @@ let default : t =
   ; col = -1
   ; len = 0
   ; typ = Unknown
-  ; history = [||] }
+  ; is_type_ast = false }
 
 type 'a ann = t * 'a

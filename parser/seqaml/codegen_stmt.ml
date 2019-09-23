@@ -138,7 +138,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       (* a.x = b *)
       let rh_expr = E.parse ~ctx rhs in
       Llvm.Stmt.assign_member (E.parse ~ctx lh_lhs) lh_rhs rh_expr
-    | ann, Index (var_expr, index_expr) ->
+    | ann, Index (var_expr, [index_expr]) ->
       (* a[x] = b *)
       let var_expr = E.parse ~ctx var_expr in
       let index_expr = E.parse ~ctx index_expr in
@@ -166,7 +166,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   and parse_del ctx ann expr =
     match expr with
-    | ann, Index (lhs, rhs) ->
+    | ann, Index (lhs, [rhs]) ->
       let lhs_expr = E.parse ~ctx lhs in
       let rhs_expr = E.parse ~ctx rhs in
       Llvm.Stmt.del_index lhs_expr rhs_expr
@@ -329,7 +329,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   and parse_import ctx ann ?(ext = ".seq") ~toplevel imports =
     let import (ctx : Codegen_ctx.t) file { from; what; import_as } =
       let vtable =
-        match Hashtbl.find ctx.imported file with
+        match Hashtbl.find ctx.globals.imported file with
         | Some t -> t
         | None ->
           let new_ctx = Codegen_ctx.init_empty ~ctx in
@@ -342,7 +342,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
                 | (_, { global; internal; _ }) :: _ ->
                 global && not internal) }
           in
-          Hashtbl.set ctx.imported ~key:file ~data:new_ctx;
+          Hashtbl.set ctx.globals.imported ~key:file ~data:new_ctx;
           Util.dbg "importing %s <%s>" file from;
           Codegen_ctx.to_dbg_output ~ctx:new_ctx;
           new_ctx
@@ -508,7 +508,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     List.iteri catches ~f:(fun idx { exc; var; stmts } ->
         let typ =
           match exc with
-          | Some exc -> E.parse_type ~ctx (ann, Id exc)
+          | Some exc -> E.parse_type ~ctx exc
           | None -> Ctypes.null
         in
         let block = Llvm.Block.catch try_stmt typ in
@@ -547,7 +547,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let keys, wheres =
       List.unzip
       @@ List.map pfs ~f:(function
-             | _, Index (e1, e2) ->
+             | _, Index (e1, [e2]) ->
                let e1 = E.parse ~ctx e1 in
                let e2 = E.parse ~ctx e2 in
                e1, e2

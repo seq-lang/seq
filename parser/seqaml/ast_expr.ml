@@ -41,7 +41,7 @@ type t =
   | Pipe of (string * t ann) list
       (** Pipelines are represented as a list of pipe members and their preceding pipeline operators
       (e.g. [a |> b ||> c] is [("", a), ("|>", b), ("||>", c)]). *)
-  | Index of (t ann * t ann)
+  | Index of (t ann * t ann list)
   | Call of (t ann * tcall list)
       (** Each call arguments is of type [tcall] to account for argument names. *)
   | Slice of (t ann option * t ann option * t ann option)

@@ -61,7 +61,87 @@ module Ann = struct
     sprintf "<%s |= %s>" (pos_to_string t) (typ_to_string t)
 
   let create ?(file="") ?(line=(-1)) ?(col=(-1)) ?(len=0) ?(typ=Unknown) () =
-    { file; line; col; len; typ; history = [||] }
+    { file; line; col; len; typ; is_type_ast = false }
+
+  let rec real_type = function
+    | { typ = TypeVar { contents = Bound t }; _ } ->
+      real_type t
+    | t -> t
+
+  let assign_ref t t' =
+    match t.typ, t'.typ with
+    | TypeVar tv, TypeVar { contents = tv' } ->
+      tv := tv';
+      t
+    | _ ->
+      t
+
+  let func t =
+    match t.typ with
+    | Func f -> f
+    | _ -> failwith "expected a function"
+
+  let cls t =
+    match t.typ with
+    | Class f -> f
+    | _ -> failwith "expected a class"
+
+  let rec has_unbound ?(count_generics=false) t =
+    let f = has_unbound ~count_generics in
+    match t.typ with
+    | TypeVar { contents = Unbound _ } ->
+      true
+    | Unknown | Import _ ->
+      false
+    | TypeVar { contents = Generic _ } ->
+      count_generics
+    | Tuple el ->
+      List.exists el ~f
+    | Class { c_generics; _ } ->
+      List.exists c_generics ~f:(fun (_, (_, t)) -> f t)
+    | Func { f_generics; f_args; f_ret; _ } ->
+      (List.exists f_generics ~f:(fun (_, (_, t)) -> f t)) ||
+      (List.exists f_args ~f:(fun (_, t) -> f t)) ||
+      f f_ret
+    | TypeVar { contents = Bound t } ->
+      f t
+
+  let is_realizable t =
+    let f = has_unbound ~count_generics:true in
+    not (match (real_type t).typ with
+      | Func { f_generics; f_args; f_ret; _ } ->
+        (List.exists f_generics ~f:(fun (_, (_, t)) -> f t)) ||
+        (List.exists f_args ~f:(fun (_, t) -> f t)) ||
+        (f f_ret)
+      | Class { c_generics; _ } -> List.exists c_generics ~f:(fun (_, (_, t)) -> f t)
+      | Tuple el -> List.exists el ~f
+      | _ -> true)
+
+  let get_parent t =
+    match (real_type t).typ with
+    | Class { c_parent = (_, pt); _ }
+    | Func  { f_parent = (_, pt); _ } -> pt
+    | _ -> None
+
+  let get_cache t =
+    match (real_type t).typ with
+    | Func { f_cache; _ } -> Some f_cache
+    | Class { c_cache; _ } -> Some c_cache
+    | _ -> None
+
+  let get_parent_str t =
+    Option.value_map (get_parent t) ~f:typ_to_string ~default:""
+
+  let link_to_parent ~parent t =
+    let t = real_type t in
+    let typ = match t.typ, parent >>= get_cache with
+      | Class ({ c_parent = (p, pt); _ } as c), Some pc when pc = p ->
+        Class { c with c_parent = p, parent }
+      | Func ({ f_parent = (p, pt); _ } as f), Some pc when pc = p ->
+        Func  { f with f_parent = p, parent }
+      | t, _ -> t
+    in
+    { t with typ }
 end
 
 
@@ -95,7 +175,7 @@ module Expr = struct
       sprintf "%s" (ppl l ~sep:"" ~f:(fun (p, e) -> sprintf "%s %s" p @@ to_string e))
     | Binary (l, o, r) -> sprintf "(%s %s %s)" (to_string l) o (to_string r)
     | Unary (o, x) -> sprintf "(%s %s)" o (to_string x)
-    | Index (x, l) -> sprintf "%s[%s]" (to_string x) (to_string l)
+    | Index (x, l) -> sprintf "%s[%s]" (to_string x) (ppl l ~f:to_string)
     | Dot (x, s) -> sprintf "%s.%s" (to_string x) s
     | Call (x, l) -> sprintf "%s(%s)" (to_string x) (ppl l ~f:call_to_string)
     | TypeOf x -> sprintf "typeof(%s)" (to_string x)
@@ -148,7 +228,7 @@ module Expr = struct
       | Unary (s, e) -> Unary (s, walk e)
       | Binary (e1, s, e2) -> Binary (walk e1, s, walk e2)
       | Pipe l -> Pipe (List.map l ~f:(fun (s, e) -> s, walk e))
-      | Index (l, r) -> Index (walk l, walk r)
+      | Index (l, r) -> Index (walk l, List.map r ~f:walk)
       | Call (t, l) -> Call (walk t, List.map l
           ~f:(fun { name; value } -> { name; value = walk value }))
       | Slice (a, b, c) -> Slice (a >>| walk, b >>| walk, c >>| walk)
@@ -283,7 +363,8 @@ module Stmt = struct
       | Try (tl, cl, fl) ->
        (* of (t ann list * catch ann list * t ann list option) *)
         Try (List.map tl ~f:walk, List.map cl ~f:(fun e ->
-          { e with stmts = List.map e.stmts ~f:walk}), fl >>| List.map ~f:walk)
+          { e with exc = e.exc >>| ewalk
+          ; stmts = List.map e.stmts ~f:walk}), fl >>| List.map ~f:walk)
       (** [Try(stmts, catch, finally_stmts)] corresponds to
       [try: stmts ... ; (catch1: ... ; catch2: ... ;) finally: finally_stmts ] *)
       | Throw e -> Throw (ewalk e)
@@ -295,9 +376,21 @@ end
 let e_id ?(ann=default) n =
   ann, Expr.Id n
 
+let e_int ?(ann=default) n =
+  ann, Expr.Int (sprintf "%d" n)
+
+let e_ellipsis ?(ann=default) () =
+  ann, Expr.Ellipsis ()
+
+let e_tuple ?(ann=default) args =
+  ann, Expr.Tuple args
+
 let e_call ?(ann=default) callee args =
   ann, Expr.(Call (callee,
     List.map args ~f:(fun value -> { name = None; value })))
+
+let e_index ?(ann=default) collection args =
+  ann, Expr.Index (collection, args)
 
 let e_dot ?(ann=default) left what =
   ann, Expr.Dot (left, what)
@@ -314,10 +407,11 @@ let s_if ?(ann=default) cond stmts =
 let s_for ?(ann=default) vars iter stmts =
   ann, Stmt.For (vars, iter, stmts)
 
-let annotate ann s =
-  let patch a =
-    { a with file = ann.file; line = ann.line; col = ann.col; len = ann.len }
-  in
-  Stmt.walk s
-    ~fe:(fun (a, e) -> patch a, e)
-    ~f:(fun (a, s) -> patch a, s)
+let s_extern ?(ann=default) ?(lang="c") name ret params =
+  ann, Stmt.Extern
+    ( lang
+    , None
+    , name
+    , { name = name; typ = Some ret }
+    , List.map params ~f:(fun (name, typ) -> Stmt.{ name; typ = Some typ })
+    )

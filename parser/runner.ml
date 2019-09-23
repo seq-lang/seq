@@ -11,7 +11,7 @@ open Seqaml
 (** [exec_string ~file ~debug context code] parses a code
     within string [code] as a module and returns parsed module AST.
     [file] is code filename used for error reporting. *)
-let exec_string ctx ?(file = "<internal>") ?(debug = false) ?(jit = false) code =
+let exec_string ~ctx ?(file = "<internal>") ?(debug = false) ?(jit = false) code =
   ignore @@ Codegen.parse ~file code ~f:(Codegen.Stmt.parse_module ~jit ~ctx)
 
 (** [init file error_handler] initializes Seq session with file [file].

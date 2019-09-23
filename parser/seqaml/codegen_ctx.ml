@@ -47,10 +47,19 @@ type tann =
 
 type tel = tkind * tann
 
-type t = (tel, tenv) Ctx.t
+type tglobal =
+  { imported: (string, t) Hashtbl.t
+  ; parser: ctx:t -> ?file:string -> string -> unit
+    (** A callback that is used to parse a Seq code string to AST (via Menhir).
+    Needed for parsing [import] statements.
+    Usage: [parses ctx ?file code], where [file] is an optional file name that is used
+    to populate [Ast.Ann] annotations. *)
+  ; stdlib: (string, tel list) Hashtbl.t
+    (** A context that holds the internal Seq objects and libraries. *)
+  }
 
-(** A context that holds the internal Seq objects and libraries. *)
-let stdlib = String.Table.create ()
+and t = (tel, tenv, tglobal) Ctx.t
+
 
 (** [add ~ctx name var] adds a variable [name] with the handle [var] to the context [ctx]. *)
 let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) key var =
@@ -65,28 +74,22 @@ let parse_file ~(ctx : t) file =
   Util.dbg "parsing %s" file;
   let lines = In_channel.read_lines file in
   let code = String.concat ~sep:"\n" lines ^ "\n" in
-  ctx.parser ~file:(Filename.realpath file) ctx code
+  ctx.globals.parser ~ctx ~file:(Filename.realpath file) code
 
 (** [init ...] returns an empty context with a toplevel block that contains internal Seq types. *)
 let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser =
-  let ctx = Ctx.init ~parser
-    { filename
-    ; mdl
-    ; base
-    ; block
-    ; flags = Stack.create ()
-    ; trycatch = Ctypes.null
-    }
+  let ctx = Ctx.init
+    { imported = String.Table.create (); stdlib = String.Table.create (); parser }
+    { filename ; mdl ; base ; block ; flags = Stack.create () ; trycatch = Ctypes.null }
   in
-  let ctx = { ctx with parser } in
   Ctx.add_block ~ctx;
   (* default flags for internal arguments *)
   let toplevel = true in
   let global = true in
   let internal = true in
-  if Hashtbl.length stdlib = 0
+  if Hashtbl.length ctx.globals.stdlib = 0
   then (
-    let ctx = { ctx with map = stdlib } in
+    let ctx = { ctx with map = ctx.globals.stdlib } in
     (* initialize POD types *)
     let pod_types =
       Llvm.Type.
@@ -109,16 +112,16 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser
     match Util.get_from_stdlib "stdlib" with
     | Some file -> parse_file ~ctx file
     | None -> Err.ierr "cannot locate stdlib.seq");
-  Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
+  Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
       add ~ctx ~internal ~global ~toplevel key (fst @@ List.hd_exn data));
   ctx
 
 (** [init_empty ctx] returns an empty context with a toplevel block that contains internal Seq types.
     Unlike [init], this function reuses all handles from [ctx]. *)
 let init_empty ~(ctx : t) =
-  let ctx = Ctx.init ~parser:ctx.parser ctx.env in
+  let ctx = Ctx.init ctx.globals ctx.env in
   Ctx.add_block ~ctx;
-  Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
+  Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
       add ~ctx ~internal:true ~global:true ~toplevel:true key (fst @@ List.hd_exn data));
   ctx
 
@@ -146,7 +149,7 @@ let to_dbg_output ~(ctx : t) =
         | Func _ -> sprintf "(*fun/%s*)" ant, sprintf "%s" att
         | Type _ -> sprintf "(*typ/%s*)" ant, ""
         | Import s ->
-          let ctx = Hashtbl.find_exn ctx.imported s in
+          let ctx = Hashtbl.find_exn ctx.globals.imported s in
           sprintf "(*imp/%s*)" ant, " ->\n" ^ prn ctx ~depth:(depth + 1)
       in
       let sorted =
@@ -169,6 +172,6 @@ let to_dbg_output ~(ctx : t) =
   dbg "-> Keys:";
   dump_map ctx;
   dbg "-> Imports:";
-  Hashtbl.iteri ctx.imported ~f:(fun ~key ~data ->
+  Hashtbl.iteri ctx.globals.imported ~f:(fun ~key ~data ->
       dbg "   %s:" key;
       dump_map ~depth:2 data)

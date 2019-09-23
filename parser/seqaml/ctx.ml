@@ -9,27 +9,20 @@ open Core
 
 (** Alias for a [Hashtbl] that maps identifiers ([string]) to a list of namespace object [tel].
     The head of such list is the most recent (and the currently active) Seq object. *)
-type ('tel, 'tenv) t =
+type ('tel, 'tenv, 'tglobal) t =
   { stack: string Hash_set.t Stack.t
       (** A stack of currently active code blocks.
         Each block holds a [Hash_set] of the block-defined identifiers.
         The most recent block is located at the top of the stack. *)
   ; map: (string, 'tel list) Hashtbl.t
           (** A hash table that maps an import name to a corresponding namespace [Codegen_ctx.t]. *)
-  ; imported: (string, ('tel, 'tenv) t) Hashtbl.t
-  ; parser: ('tel, 'tenv) t -> ?file:string -> string -> unit
-    (** A callback that is used to parse a Seq code string to AST (via Menhir).
-    Needed for parsing [import] statements.
-    Usage: [parses ctx ?file code], where [file] is an optional file name that is used
-    to populate [Ast.Ann] annotations. *)
-  ; env: 'tenv }
+  ; env: 'tenv
+  ; globals: 'tglobal }
 
-let init ?parser env =
-  let parser = Option.value parser ~default:(fun _ ?file _ -> ()) in
+let init globals env =
   { stack = Stack.create ()
   ; map = String.Table.create ()
-  ; imported = String.Table.create ()
-  ; parser
+  ; globals
   ; env }
 
 (** [add_block context] adds a new block to the context stack. *)

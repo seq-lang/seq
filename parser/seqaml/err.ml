@@ -36,6 +36,11 @@ exception InternalError of string * Ast.Ann.t
 let serr ?(ann = Ast.Ann.default) fmt =
   Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [ ann ]))) fmt
 
+(** [serr ~ann format_string ...] raises an Seqaml error at file location [pos]
+    with message formatted via sprintf-style [format_string]. *)
+(* let terr ?(ann = Ast.Ann.default) fmt =
+  Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [ ann ]))) fmt *)
+
 (** [ierr ~ann format_string ...] raises an internal error at file location [pos]
     with message formatted via sprintf-style [format_string]. *)
 let ierr ?(ann = Ast.Ann.default) fmt =

@@ -118,7 +118,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     parse ~ctx
     @@ ( ann
        , Call
-           ( (ann, Index ((ann, Id "Kmer"), (ann, Int n)))
+           ( (ann, Index ((ann, Id "Kmer"), [ann, Int n]))
            , [ { name = None; value = ann, Seq s } ] ) )
 
   and parse_id ?map ?(is_type = false) ctx ann var =
@@ -256,6 +256,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
   (* Parses index expression which also includes type realization rules.
      Check GOTCHAS for details. *)
   and parse_index ?(is_type = false) ctx ann (lh_expr, indices) =
+    let indices = List.hd_exn indices in
     match is_type, snd lh_expr, snd indices with
     | _, Id (("array" | "ptr" | "generator") as name), Tuple _ ->
       serr ~ann "%s requires a single type" name
@@ -328,7 +329,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
   and parse_call ctx ann (callee_expr, args) =
     (* [@@@ocamlformat.disable] *)
     match snd callee_expr, args with
-    | Index ((_, Id "__array__"), t), [ { name = _; value } ] ->
+    | Index ((_, Id "__array__"), [t]), [ { name = _; value } ] ->
       let t = parse_type ~ctx t in
       let arg = parse ~ctx value in
       Llvm.Expr.alloc_array t arg
@@ -408,13 +409,13 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     let rec imports (ictx : Codegen_ctx.t) = function
       | _, Id x ->
         (match Hashtbl.find ictx.map x with
-        | Some ((Codegen_ctx.Import x, _) :: _) -> Hashtbl.find ictx.imported x
+        | Some ((Codegen_ctx.Import x, _) :: _) -> Hashtbl.find ictx.globals.imported x
         | _ -> None)
       | _, Dot (a, x) ->
         (match imports ictx a with
         | Some ictx ->
           (match Hashtbl.find ictx.map x with
-          | Some ((Codegen_ctx.Import x, _) :: _) -> Hashtbl.find ictx.imported x
+          | Some ((Codegen_ctx.Import x, _) :: _) -> Hashtbl.find ictx.globals.imported x
           | _ -> None)
         | _ -> None)
       | _, _ -> None
@@ -509,7 +510,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       walk ~ctx ~f e2
     | Index (a, l) ->
       walk ~ctx ~f a;
-      walk ~ctx ~f l
+      List.iter l ~f:(walk ~ctx ~f)
     | Call (a, l) ->
       walk ~ctx ~f a;
       List.iter l ~f:(fun { value; _ } -> walk ~ctx ~f value)
