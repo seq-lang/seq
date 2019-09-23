@@ -487,6 +487,14 @@ def test_expandtabs():
     assert ' \ta\n\tb'.expandtabs(1) == '  a\n b'
     assert '\tdndhd\ty\ty\tyu\t'.expandtabs(3) == '   dndhd y  y  yu '
 
+def test_translate():
+    assert 'I yor ge'.translate({'g': 'w', 'y': 'f'}) == 'I for we'
+    assert 'abababc'.translate({'a': ''}) == 'bbbc'
+    assert 'abababc'.translate({'a': '', 'b': 'i'}) == 'iiic'
+    assert 'abababc'.translate({'a': '', 'b': 'i', 'c': 'x'}) == 'iiix'
+    assert 'abababc'.translate({'a': '', 'b': ''}) == 'c'
+    assert 'xzx'.translate({'z': 'yy'}) == 'xyyx'
+
 # test_isdigit()
 # test_islower()
 # test_isupper()
@@ -517,7 +525,7 @@ def test_expandtabs():
 # test_partition()
 # test_rpartition()
 # test_split()
-test_rsplit()
+# test_rsplit()
 # test_splitlines()
 # test_startswith()
 # test_endswith()
@@ -525,3 +533,4 @@ test_rsplit()
 # test_rindex()
 # test_replace()
 # test_expandtabs()
+test_translate()

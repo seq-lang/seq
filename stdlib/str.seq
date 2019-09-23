@@ -1002,3 +1002,23 @@ extend str:
                 if self[p] == '\n' or self[p] == '\r':
                     j = 0
         return u
+
+    def translate(self: str, table) -> str:
+        """
+        translate(self, table)
+
+        Return a copy with each character mapped by the given translation table.
+
+        Unlike Python, translate() currently does not allow the translation
+        table to be a bytes object of length 256.
+
+        As well, None implemented yet until None and be placed inside the table
+        with other strings. Use: {'a': ''} to replace a string for now
+        """
+        li = list(iter(self))
+        for i in range(len(li)):
+            if li[i] in table:
+                li[i] = table[li[i]]
+
+        translate_str = ''.join(li)
+        return translate_str
