@@ -1,0 +1,5 @@
+def compare(x: int, y: int) -> bool:
+    return x < y
+
+print timsort([1, 2, 3], compare)
+print pdqsort([1, 2, 3], compare)

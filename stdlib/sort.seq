@@ -76,3 +76,9 @@ def _qsort[T](arr: array[T], frm: int, cnt: int):
 
 def qsort[T](v: array[T]):
     _qsort(v, 0, len(v))
+
+def timsort(collection, compare):
+    return collection
+
+def pdqsort(collection, compare):
+    return collection
