@@ -33,6 +33,12 @@ print l3.remove(2)           # EXPECT: False
 print l3                     # EXPECT: [1, 3]
 print list[int]().remove(0)  # EXPECT: False
 
+l4 = [5, 1, 4, 2, 1, -10, 10, 100, -100]
+print sorted(l4)  # EXPECT: [-100, -10, 1, 1, 2, 4, 5, 10, 100]
+l4.sort()
+print l4  # EXPECT: [-100, -10, 1, 1, 2, 4, 5, 10, 100]
+print sorted(list[int]())  # EXPECT: []
+
 
 # sets:
 s1 = {a for a in range(100)}

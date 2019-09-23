@@ -169,6 +169,9 @@ class list[T]:
             self[j] = x
             i += 1
 
+    def sort(self: list[T]):
+        qsort(self.arr[0:len(self)])
+
     def __str__(self: list[T]) -> str:
         n = len(self)
         if n == 0:

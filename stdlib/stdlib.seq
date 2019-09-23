@@ -175,7 +175,6 @@ type u32 = UInt[32]
 type u64 = UInt[64]
 
 import! err
-import! list
 
 # khash utils
 def __ac_isempty(flag: ptr[u32], i: int):
@@ -202,21 +201,15 @@ def __ac_set_isdel_true(flag: ptr[u32], i: int):
 def __ac_fsize(m):
     return 1 if m < 16 else m >> 4
 
+import! sort
+import! list
 import! dict
 import! set
 
-def sorted_cmp[T](xi: list[T], cmp):
-    x = copy(xi)
-    for i in range(0, len(x)):
-        for j in range(i + 1, len(x)):
-            if cmp(x[j], x[i]):
-                x[j], x[i] = x[i], x[j]
-    return x
-
-def sorted[T](x: list[T]):
-    def cmp(x: T, y: T):
-        return x < y
-    return sorted_cmp(x, cmp)
+def sorted(v):
+    u = [a for a in v]
+    qsort(u.arr[0:len(u)])
+    return u
 
 extend str:
     def __hash__(self: str):
