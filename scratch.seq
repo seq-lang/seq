@@ -1,25 +1,8 @@
 import str
 
-print 'a|b|c|d'.rsplit('|', -1) == ['a', 'b', 'c', 'd']
-print 'a|b|c|d'.rsplit('|', 1) == ['a|b|c', 'd']
-print 'a|b|c|d'.rsplit('|', 2) == ['a|b', 'c', 'd']
-print 'a|b|c|d'.rsplit('|', 3) == ['a', 'b', 'c', 'd']
-print 'a|b|c|d'.rsplit('|', 4) == ['a', 'b', 'c', 'd']
-print 'a|b|c|d'.rsplit('|', 0) == ['a|b|c|d']
-print 'a||b||c||d'.rsplit('|', 2) == ['a||b||c', '', 'd']
-print 'abcd'.rsplit('|', -1) == ['abcd']
-print ''.rsplit('|', -1) == ['']
-print 'endcase |'.rsplit('|', -1) == ['endcase ', '']
-print '| startcase'.rsplit('|', -1) == ['', ' startcase']
-print '|bothcase|'.rsplit('|', -1) == ['', 'bothcase', '']
-# print 'a\x00\x00b\x00c\x00d'.rsplit('\x00', -1)
-print 'abbbc'.rsplit('bb', -1) == ['ab', 'c']
-print 'aaa'.rsplit('aaa', -1) == ['', '']
-print 'aaa'.rsplit('aaa', 0) == ['aaa']
-print 'abbaab'.rsplit('ba', -1) == ['ab', 'ab']
-print 'aa'.rsplit('aaa', -1) == ['aa']
-print 'bbobbbobbA'.rsplit('bbobb', -1) == ['bbob', 'A']
-print 'bbobbBbbobbA'.rsplit('bbobb', -1) == ['', 'B', 'A']
-print ('aBLAH'*20)[:-4].rsplit('BLAH', -1) == ['a']*20
-print ('a|'*20)[:-1].rsplit('|', 15) == ['a|a|a|a|a'] + ['a']*15
-print 'a||b||c||d'.rsplit('|', 2) == ['a||b||c', '', 'd']
+print 'I yor ge'.translate({'g': 'w', 'y': 'f'}) == 'I for we'
+print 'abababc'.translate({'a': ''}) == 'bbbc'
+print 'abababc'.translate({'a': '', 'b': 'i'}) == 'iiic'
+print 'abababc'.translate({'a': '', 'b': 'i', 'c': 'x'}) == 'iiix'
+print 'abababc'.translate({'a': '', 'b': ''}) == 'c'
+print 'xzx'.translate({'z': 'yy'}) == 'xyyx'
