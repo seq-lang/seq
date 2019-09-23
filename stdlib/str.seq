@@ -21,6 +21,9 @@ def chr(b: int) -> str:
 def search(text: str, pattern: str) -> list[int]:
     return algorithms.string_search_slow(text, pattern)
 
+def rsearch(text: str, pattern: str) -> list[int]:
+    return algorithms.rstring_search_slow(text, pattern)
+
 extend str:
     def isdigit(self: str) -> bool:
         """
@@ -706,6 +709,68 @@ extend str:
         else:
             return  str_split
 
+    def rsplit(self: str, sep: str, maxsplit: int) -> list[str]:
+        """
+        str.rsplit([sep [,maxsplit]]) -> list of strings
+
+        Return a list of the words in the string str, using sep as the
+        delimiter string, starting at the end of the string and working
+        to the front.  If maxsplit is given, at most maxsplit splits are
+        done. If sep is not specified, any whitespace string
+        is a separator.
+        """
+        li = rsearch(self, sep)
+        str_split = list[str]()
+        end_of_li = len(li)-1
+
+        if len(li) == 0:
+            return [self]
+        if len(sep) > len(self):
+            return [self]
+        if maxsplit == 0:
+            return [self]
+
+        if maxsplit == -1 or maxsplit > len(li):
+            maxsplit = len(li)
+
+        prev = li[end_of_li]
+        # append first part of string
+        # if sep is found in the last index, add '' to separate
+        if prev == len(self)- len(sep):
+            str_split.append('')
+        else:
+            str_split.append(self[prev+len(sep):])
+
+        # split the rest of the string according to separator
+        if len(li) > 1 and maxsplit > 1:
+            for j in range(1, maxsplit):
+                # when separators are beside each other, append '' to list
+                if li[end_of_li-j] + 1 == prev:
+                    str_split.append('')
+                    prev = li[end_of_li-j]
+                else:
+                    str_split.append(self[li[end_of_li-j]+len(sep):prev])
+                    prev = li[end_of_li-j]
+
+        if prev != 0:
+            str_split.append(self[:prev])
+            # reverse list
+            final_string = list[str]()
+            for i in range(1, len(str_split)+1):
+                final_string.append(str_split[len(str_split)-i])
+            return final_string
+        else:
+            # NOT PICKING UP '' at start of string so manually putting it in
+            if li[0] == 0:
+                str_split.append('')
+            else:
+                str_split.append(self[:li[0]])
+            # reverse list
+            final_string = list[str]()
+            for i in range(1, len(str_split)+1):
+                final_string.append(str_split[len(str_split)-i])
+            return final_string
+
     def splitlines(self: str, keepends: bool) -> list[str]:
         """
         str.splitlines([keepends]) -> list of strings
@@ -921,7 +986,7 @@ extend str:
         j = 0   # chars since most recent \n or \r (use in tab calculations)
         u = ''
         j = 0   # same as first pass
-        
+
         # create output string and fill it
         for p in range(len(self)):
             if self[p] == '\t':

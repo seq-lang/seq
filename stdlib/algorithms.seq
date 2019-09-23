@@ -24,6 +24,39 @@ def string_search_slow(text: str, pattern: str) -> list[int]:
 
     return li
 
+def rstring_search_slow(text: str, pattern: str) -> list[int]:
+    """
+    rstring_search_slow(text, pattern) -> list
+
+    Return a list containing the non-overlapping position of each index
+    the pattern is found from right to left.
+    """
+    li = list[int]()
+
+    if pattern == '':
+        for i in range(len(text) + 1):
+            li.append(i)
+        return li
+
+    max_search = len(text) - len(pattern) + 1
+    i = len(text)
+    j = 0   # counting number of searches
+
+    while j < max_search and i-len(pattern)+1 > 0:
+        if text[i-len(pattern):i] == pattern:
+            i -= len(pattern)
+            li.append(i)
+        else:
+            i -= 1
+        j += 1
+
+    reverse_li = list[int]()
+
+    # reverse list
+    for i in range(1, len(li)+1):
+        reverse_li.append(li[len(li)-i])
+    return reverse_li
+
 def string_search_rabin_karp(text: str, pattern: str, prime: int) -> list[int]:
     """
     string_search_rabin_karp(text, pattern, prime) -> list
@@ -197,8 +230,8 @@ def replace_delete_substring(self: str, old: str, new: str, maxcount: int) -> st
 
 
 
-# should get [0, 2, 4, 6]
-# print string_search_slow('aaaaaaaa', 'aa')
+# should get [2]
+# print rstring_search_slow('abbbc', 'bb')
 
 # print string_search_slow('abbba', 'bb')
 
