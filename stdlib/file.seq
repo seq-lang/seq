@@ -1,4 +1,3 @@
-from err import *
 import gc
 
 def _gz_errcheck(stream: ptr[byte]):
