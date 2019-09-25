@@ -5,7 +5,7 @@ class SeqWrapper:
       import ctypes
       import ctypes.util
 
-      lib = ctypes.util.find_library("libseqjit")
+      lib = ctypes.util.find_library("seqjit")
       self._lib = ctypes.CDLL(lib)
       self._init_fn = self._lib.caml_jit_init
       self._init_fn.restype = ctypes.c_void_p
@@ -16,15 +16,14 @@ class SeqWrapper:
    def exec(self, code):
       self._exec_fn(self.handle, code.encode('utf-8'))
 
-
 s = SeqWrapper()
 
 s.exec("""
 print 'hello'
 x = 1
 print x
-#y = 2
-#print x, y #, x + y
+y = 2
+print x, y, x + y
 """)
 
 s.exec("""

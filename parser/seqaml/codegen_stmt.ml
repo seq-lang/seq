@@ -123,8 +123,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         let rh_expr = E.parse ~ctx rhs in
         let v = Llvm.JIT.var ctx.mdl rh_expr in
         let var_expr = Llvm.Expr.var v in
-        eprintf ">> jit_var %s := %s\n%!"
-          (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs);
+        (* eprintf ">> jit_var %s := %s\n%!" (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs); *)
         (* finalize ~ctx stmt pos; *)
         Ctx.add ~ctx ~toplevel ~global:true var (Ctx_namespace.Var v);
         (* Llvm.Stmt.expr var_expr *)

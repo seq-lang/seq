@@ -65,9 +65,10 @@ let exec (jit : t) code =
 (** JIT entry point. *)
 let repl () =
   let banner = String.make 78 '=' in
-  eprintf "\027[102m%s\n" banner;
-  eprintf "Seq JIT\n";
-  eprintf "%s\027[0m \n%!" banner;
+  eprintf "\027[102m%s\027[0m \n" banner;
+  eprintf "\027[102m=%s%s%s=\027[0m \n"
+    (String.make 34 ' ') "Seq REPL" (String.make 34 ' ');
+  eprintf "\027[102m%s\027[0m \n%!" banner;
   let jit = init () in
   let start = ref true in
   let code = ref "" in
