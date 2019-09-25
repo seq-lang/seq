@@ -49,3 +49,11 @@ def exp(x: float) -> float:
     Returns the value of e raised to the xth power.
     """
     return C.exp(x)
+
+def log(x: float) -> float:
+    """
+    log(float) -> float
+
+    Returns the natural logarithm (base-e logarithm) of x.
+    """
+    return C.log(x)

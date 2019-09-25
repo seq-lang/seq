@@ -1,5 +1,5 @@
 import math
 
-print math.exp(0.0) == 1
-print math.exp(-1.0) == 1/math.e
-print math.exp(1.0) == math.e
+print math.log(1.0/math.e) == -1
+print math.log(1.0) == 0
+print math.log(math.e) == 1
