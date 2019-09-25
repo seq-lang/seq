@@ -4,19 +4,11 @@ import sys
 class ValueError:
     msg: str
 
-def factorial(x: int) -> int:
+def ceil(x: float) -> float:
     """
-    math.factorial(int) -> int
+    ceil(float) -> float
 
-    Return x! if x is an integer >= 0.
-    Raise a ValueError if x is negative.
+    Return the ceiling of x as an Integral.
+    This is the smallest integer >= x.
     """
-    if x < 0:
-        raise ValueError("ValueError: factorial() not defined for negative values")
-    if x == 0:
-        return 1
-        
-    r = 1
-    for i in range(2, x + 1):
-        r *= i
-    return r
+    return C.ceil(x)
