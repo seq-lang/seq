@@ -1,9 +1,5 @@
 import math
 
-print math.floor(3.3) == 3
-print math.floor(0.5) == 0
-print math.floor(1.0) == 1
-print math.floor(1.5) == 1
-print math.floor(-0.5) == -1
-print math.floor(-1.0) == -1
-print math.floor(-1.5) == -2
+print math.fabs(-1.0) == 1
+print math.fabs(0.0) == 0
+print math.fabs(1.0) == 1
