@@ -1,4 +1,5 @@
 
+# For str.seq
 cdef isdigit(int) -> int
 cdef isspace(int) -> int
 cdef isupper(int) -> int
@@ -8,3 +9,10 @@ cdef tolower(int) -> int
 cdef isalnum(int) -> int
 cdef isalpha(int) -> int
 cdef istitle(int) -> int
+
+# For math.seq
+cdef log(x: float) -> float
+cdef exp(x: float) -> float
+cdef erf(x: float) -> float
+cdef sqrt(x: float) -> float
+cdef factorial(int) -> int

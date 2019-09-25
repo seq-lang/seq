@@ -1,9 +1,21 @@
-cdef log(x: float) -> float
-cdef exp(x: float) -> float
-cdef erf(x: float) -> float
-cdef sqrt(x: float) -> float
+import C
+import sys
+
+class ValueError:
+    msg: str
 
 def factorial(x: int) -> int:
+    """
+    math.factorial(int) -> int
+
+    Return x! if x is an integer >= 0.
+    Raise a ValueError if x is negative.
+    """
+    if x < 0:
+        raise ValueError("ValueError: factorial() not defined for negative values")
+    if x == 0:
+        return 1
+        
     r = 1
     for i in range(2, x + 1):
         r *= i
