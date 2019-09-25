@@ -1,8 +1,7 @@
-import str
+import math
 
-print 'I yor ge'.translate({'g': 'w', 'y': 'f'}) == 'I for we'
-print 'abababc'.translate({'a': ''}) == 'bbbc'
-print 'abababc'.translate({'a': '', 'b': 'i'}) == 'iiic'
-print 'abababc'.translate({'a': '', 'b': 'i', 'c': 'x'}) == 'iiix'
-print 'abababc'.translate({'a': '', 'b': ''}) == 'c'
-print 'xzx'.translate({'z': 'yy'}) == 'xyyx'
+print math.factorial(3) == 6
+print math.factorial(0) == 1
+print math.factorial(4) == 24
+print math.factorial(20) == 2432902008176640000
+print math.factorial(-9) == 0
