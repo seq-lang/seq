@@ -602,6 +602,7 @@ Var *SeqJIT::addVar(Expr *expr) {
   auto *v = new VarStmt(expr);
   Var *var = v->getVar();
   var->setGlobal();
+  var->setExternal();
   v->setBase(&func);
   func.getBlock()->add(v);
 

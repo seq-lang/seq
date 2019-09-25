@@ -12,7 +12,8 @@ static int nameIdx = 0;
 
 Var::Var(types::Type *type)
     : name("seq.var." + std::to_string(nameIdx++)), type(type), ptr(nullptr),
-      module(nullptr), global(false), tls(false), repl(false), mapped() {}
+      module(nullptr), global(false), tls(false), repl(false), external(false),
+      mapped() {}
 
 std::string Var::getName() { return name; }
 
@@ -38,8 +39,8 @@ void Var::allocaIfNeeded(BaseFunc *base) {
       llvmType = llvmType->getPointerTo();
 
     auto *g = new GlobalVariable(*module, llvmType, false,
-                                 repl ? GlobalValue::ExternalLinkage
-                                      : GlobalValue::PrivateLinkage,
+                                 external ? GlobalValue::ExternalLinkage
+                                          : GlobalValue::PrivateLinkage,
                                  Constant::getNullValue(llvmType), name);
 
     if (tls)
@@ -78,6 +79,15 @@ void Var::setREPL() {
   else {
     global = true;
     repl = true;
+  }
+}
+
+void Var::setExternal() {
+  if (!mapped.empty())
+    mapped.top()->setExternal();
+  else {
+    global = true;
+    external = true;
   }
 }
 

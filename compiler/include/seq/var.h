@@ -35,6 +35,9 @@ private:
   /// Whether this variable is global in the REPL
   bool repl;
 
+  /// Whether this variable is externally visible or private
+  bool external;
+
   /// Stack of variables to which this variable is "mapped".
   /// Mapped variables delegate all of their actions to the
   /// variable they are mapped to.
@@ -54,6 +57,7 @@ public:
   void setGlobal();
   void setThreadLocal();
   void setREPL();
+  void setExternal();
 
   /// Map this variable to another variable. This can be necessary
   /// to implement e.g. generator expressions, which need to be
