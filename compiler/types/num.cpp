@@ -785,6 +785,19 @@ void types::IntNType::initOps() {
        true},
   };
 
+  if (len <= 64) {
+    vtable.magic.push_back(
+        {"__str__",
+         {},
+         Str,
+         [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+           BasicBlock *block = b.GetInsertBlock();
+           self = sign ? b.CreateSExt(self, seqIntLLVM(b.getContext()))
+                       : b.CreateZExt(self, seqIntLLVM(b.getContext()));
+           return Int->strValue(self, block, nullptr);
+         }});
+  }
+
   if (!sign && len % 2 == 0) {
     vtable.magic.push_back(
         {"__init__",

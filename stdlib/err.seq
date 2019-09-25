@@ -10,6 +10,9 @@ class ArgumentError:
 class IndexError:
     msg: str
 
+class KeyError:
+    msg: str
+
 def check_errno(prefix: str):
     cdef seq_check_errno() -> str
     msg = seq_check_errno()

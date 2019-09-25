@@ -1,5 +1,4 @@
 from file import *
-from err import *
 
 extend seq:
     def __init__(self: seq, s: str):
