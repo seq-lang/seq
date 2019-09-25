@@ -11,10 +11,6 @@ cdef isalpha(int) -> int
 cdef istitle(int) -> int
 
 # For math.seq
-# cdef log(x: float) -> float
-# cdef exp(x: float) -> float
-# cdef erf(x: float) -> float
-# cdef sqrt(x: float) -> float
-
 cdef ceil(float) -> float
 cdef floor(float) -> float
+cdef fabs(float) -> float
