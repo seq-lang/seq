@@ -1,9 +1,9 @@
 import math
 
-print math.ceil(3.3) == 4
-print math.ceil(0.5) == 1
-print math.ceil(1.0) == 1
-print math.ceil(1.5) == 2
-print math.ceil(-0.5) == 0
-print math.ceil(-1.0) == -1
-print math.ceil(-1.5) == -1
+print math.floor(3.3) == 3
+print math.floor(0.5) == 0
+print math.floor(1.0) == 1
+print math.floor(1.5) == 1
+print math.floor(-0.5) == -1
+print math.floor(-1.0) == -1
+print math.floor(-1.5) == -2
