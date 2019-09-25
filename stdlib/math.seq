@@ -29,3 +29,11 @@ def fabs(x: float) -> float:
     Returns the absolute value of a floating point number.
     """
     return C.fabs(x)
+
+def fmod(x: float, y: float) -> float:
+    """
+    fmod(float, float) -> float
+
+    Returns the remainder of x divided by y.
+    """
+    return C.fmod(x, y)
