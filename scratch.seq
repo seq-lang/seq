@@ -1,5 +1,8 @@
 import math
 
-print math.fabs(-1.0) == 1
-print math.fabs(0.0) == 0
-print math.fabs(1.0) == 1
+print math.fmod(10.0, 1.0) == 0.0
+print math.fmod(10.0, 0.5) == 0.0
+print math.fmod(10.0, 1.5) == 1.0
+print math.fmod(-10.0, 1.0) == -0.0
+print math.fmod(-10.0, 0.5) == -0.0
+print math.fmod(-10.0, 1.5) == -1.0

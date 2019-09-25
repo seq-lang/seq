@@ -14,3 +14,4 @@ cdef istitle(int) -> int
 cdef ceil(float) -> float
 cdef floor(float) -> float
 cdef fabs(float) -> float
+cdef fmod(float, float) -> float
