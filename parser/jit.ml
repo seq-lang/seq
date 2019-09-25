@@ -67,7 +67,7 @@ let repl () =
   let banner = String.make 78 '=' in
   eprintf "\027[102m%s\n" banner;
   eprintf "Seq JIT\n";
-  eprintf "%s\027[0m \n" banner;
+  eprintf "%s\027[0m \n%!" banner;
   let jit = init () in
   let start = ref true in
   let code = ref "" in
@@ -76,12 +76,13 @@ let repl () =
       try
         if !start
         then (
-          eprintf "\027[92min[%d]>\027[0m \n" jit.cnt;
+          eprintf "\027[92min[%d]>\027[0m \n%!" jit.cnt;
           start := false);
         let s = In_channel.(input_line_exn stdin) in
         code := !code ^ s ^ "\n"
       with
       | End_of_file ->
+        eprintf "      \r%!";
         (try exec jit !code with
         | Err.CompilerError (typ, pos_lst) ->
           eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:!code typ);

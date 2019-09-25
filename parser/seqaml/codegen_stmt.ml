@@ -118,12 +118,17 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             s)
         else Llvm.Stmt.assign v @@ E.parse ~ctx rhs
       | true, _, _ ->
-        eprintf "using here for %s = %s\n%!" (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs);
         if is_some typ
         then serr ~pos:(fst @@ Option.value_exn typ) "type annotations not supported in JIT mode";
         let rh_expr = E.parse ~ctx rhs in
         let v = Llvm.JIT.var ctx.mdl rh_expr in
+        let var_expr = Llvm.Expr.var v in
+        eprintf ">> jit_var %s := %s\n%!"
+          (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs);
+        (* finalize ~ctx stmt pos; *)
         Ctx.add ~ctx ~toplevel ~global:true var (Ctx_namespace.Var v);
+        (* Llvm.Stmt.expr var_expr *)
+        (* Llvm.Stmt.assign v rh_expr *)
         Llvm.Stmt.pass ()
         (* assign v @@ rh_expr *)
       | false, r, _ ->

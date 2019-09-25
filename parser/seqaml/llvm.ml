@@ -15,6 +15,8 @@ type cstring = unit ptr
 
 let cstring : cstring typ = ptr void
 let strdup = foreign "strdup" (string @-> returning cstring)
+let strxdup s i =
+  foreign "strxdup" (string @-> size_t @-> returning cstring) s (Unsigned.Size_t.of_int i)
 
 (** [array_of_string_list lst] marshalls OCaml list of strings
     to a C list of [cstring]s. Returns a [c_list]. *)
@@ -129,8 +131,10 @@ module Expr = struct
   let int = foreign "int_expr" (int64_t @-> returning t)
   let bigint i = foreign "bigint_expr" (cstring @-> returning t) (strdup i)
   let float = foreign "float_expr" (double @-> returning t)
-  let str s = foreign "str_expr" (cstring @-> returning t) (strdup s)
-  let seq s = foreign "str_seq_expr" (cstring @-> returning t) (strdup s)
+  let str s = foreign "str_expr" (cstring @-> size_t @-> returning t)
+    (strxdup s (String.length s)) (Unsigned.Size_t.of_int @@ String.length s)
+  let seq s = foreign "str_seq_expr" (cstring @-> size_t @-> returning t)
+    (strxdup s (String.length s)) (Unsigned.Size_t.of_int @@ String.length s)
   let var = foreign "var_expr" (Types.var @-> returning t)
   let typ = foreign "type_expr" (Types.typ @-> returning t)
   let func = foreign "func_expr" (Types.func @-> returning t)
@@ -261,7 +265,7 @@ module Stmt = struct
   let expr = foreign "expr_stmt" (Types.expr @-> returning t)
 
   let var ?(typ = Ctypes.null) v =
-    foreign "var_stmt" (Types.var @-> Types.typ @-> returning t) v typ
+    foreign "var_stmt" (Types.expr @-> Types.typ @-> returning t) v typ
 
   let assign = foreign "assign_stmt" (Types.var @-> Types.expr @-> returning t)
   let set_atomic_assign = foreign "assign_stmt_set_atomic" (t @-> returning Ctypes.void)
@@ -326,8 +330,10 @@ module Pattern = struct
   let star = foreign "star_pattern" (void @-> returning t)
   let int = foreign "int_pattern" (int64_t @-> returning t)
   let bool = foreign "bool_pattern" (bool @-> returning t)
-  let str s = foreign "str_pattern" (cstring @-> returning t) (strdup s)
-  let seq s = foreign "seq_pattern" (cstring @-> returning t) (strdup s)
+  let str s = foreign "str_pattern" (cstring @-> size_t @-> returning t)
+    (strxdup s (String.length s)) (Unsigned.Size_t.of_int @@ String.length s)
+  let seq s = foreign "seq_pattern" (cstring @-> size_t @-> returning t)
+    (strxdup s (String.length s)) (Unsigned.Size_t.of_int @@ String.length s)
 
   let record pats =
     let fn = foreign "record_pattern" (ptr t @-> size_t @-> returning t) in
