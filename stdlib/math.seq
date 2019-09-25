@@ -57,3 +57,11 @@ def log(x: float) -> float:
     Returns the natural logarithm (base-e logarithm) of x.
     """
     return C.log(x)
+
+def log10(x: float) -> float:
+    """
+    log10(float) -> float
+
+    Returns the common logarithm (base-10 logarithm) of x.
+    """
+    return C.log10(x)
