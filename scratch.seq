@@ -1,5 +1,6 @@
 import math
 
-print math.log(1.0/math.e) == -1
-print math.log(1.0) == 0
-print math.log(math.e) == 1
+print math.log10(0.1) == -1
+print math.log10(1.0) == 0
+print math.log10(10.0) == 1
+print math.log10(10000.0) == 4
