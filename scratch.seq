@@ -1,7 +1,9 @@
 import math
 
-print math.factorial(3) == 6
-print math.factorial(0) == 1
-print math.factorial(4) == 24
-print math.factorial(20) == 2432902008176640000
-print math.factorial(-9) == 0
+print math.ceil(3.3) == 4
+print math.ceil(0.5) == 1
+print math.ceil(1.0) == 1
+print math.ceil(1.5) == 2
+print math.ceil(-0.5) == 0
+print math.ceil(-1.0) == -1
+print math.ceil(-1.5) == -1
