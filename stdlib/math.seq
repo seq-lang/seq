@@ -4,6 +4,10 @@ import sys
 class ValueError:
     msg: str
 
+e = 2.718281828459045
+pi = 3.141592653589793
+tau = 6.283185307179586
+
 def ceil(x: float) -> float:
     """
     ceil(float) -> float
@@ -37,3 +41,11 @@ def fmod(x: float, y: float) -> float:
     Returns the remainder of x divided by y.
     """
     return C.fmod(x, y)
+
+def exp(x: float) -> float:
+    """
+    exp(float) -> float
+
+    Returns the value of e raised to the xth power.
+    """
+    return C.exp(x)
