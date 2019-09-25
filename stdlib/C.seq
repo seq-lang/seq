@@ -17,3 +17,4 @@ cdef istitle(int) -> int
 # cdef sqrt(x: float) -> float
 
 cdef ceil(float) -> float
+cdef floor(float) -> float

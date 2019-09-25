@@ -12,3 +12,12 @@ def ceil(x: float) -> float:
     This is the smallest integer >= x.
     """
     return C.ceil(x)
+
+def floor(x: float) -> float:
+    """
+    floor(float) -> float
+
+    Return the floor of x as an Integral.
+    This is the largest integer <= x.
+    """
+    return C.floor(x)
