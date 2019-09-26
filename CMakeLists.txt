@@ -173,7 +173,6 @@ endif()
 # Seq command-line tool
 add_executable(seqc runtime/main.cpp)
 target_link_libraries(seqc seq)
-set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
 # Seq test
