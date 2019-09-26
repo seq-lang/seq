@@ -498,3 +498,4 @@ extend str:
             yield self[prev:len(self)]
 
 import! bio
+import! pdqsort
