@@ -9,6 +9,13 @@ using namespace seq;
 
 /***** Types *****/
 
+FOREIGN char *strxdup(const char *c, size_t s) {
+  auto *d = (char *)malloc(s + 1);
+  memcpy(d, c, s);
+  d[s] = '\0';
+  return d;
+}
+
 FOREIGN types::Type *void_type() { return types::Void; }
 FOREIGN types::Type *bool_type() { return types::Bool; }
 FOREIGN types::Type *byte_type() { return types::Byte; }
@@ -107,14 +114,14 @@ FOREIGN Expr *bigint_expr(char *i) {
 
 FOREIGN Expr *float_expr(double f) { return new FloatExpr(f); }
 
-FOREIGN Expr *str_expr(char *s) {
-  Expr *t = new StrExpr(string(s));
+FOREIGN Expr *str_expr(char *s, size_t len) {
+  Expr *t = new StrExpr(string(s, len));
   free(s);
   return t;
 }
 
-FOREIGN Expr *str_seq_expr(char *s) {
-  Expr *t = new SeqExpr(string(s));
+FOREIGN Expr *str_seq_expr(char *s, size_t len) {
+  Expr *t = new SeqExpr(string(s, len));
   free(s);
   return t;
 }
@@ -459,8 +466,8 @@ FOREIGN Pattern *wildcard_pattern(void) { return new Wildcard(); }
 
 FOREIGN Pattern *int_pattern(int i) { return new IntPattern(i); }
 
-FOREIGN Pattern *str_pattern(char *c) {
-  auto t = new StrPattern(string(c));
+FOREIGN Pattern *str_pattern(char *c, size_t len) {
+  auto t = new StrPattern(string(c, len));
   free(c);
   return t;
 }
@@ -479,8 +486,8 @@ FOREIGN Pattern *array_pattern(Pattern **p, size_t size) {
   return new ArrayPattern(vector<Pattern *>(p, p + size));
 }
 
-FOREIGN Pattern *seq_pattern(char *c) {
-  auto t = new SeqPattern(string(c));
+FOREIGN Pattern *seq_pattern(char *c, size_t len) {
+  auto t = new SeqPattern(string(c, len));
   free(c);
   return t;
 }
