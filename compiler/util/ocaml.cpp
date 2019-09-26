@@ -9,10 +9,10 @@ using namespace seq;
 
 /***** Types *****/
 
-FOREIGN char* strxdup (const char *c, size_t s) {
-  char *d = (char*)malloc((s + 1) * sizeof(char));
+FOREIGN char *strxdup(const char *c, size_t s) {
+  auto *d = (char *)malloc(s + 1);
   memcpy(d, c, s);
-  d[s] = 0;
+  d[s] = '\0';
   return d;
 }
 
@@ -645,9 +645,7 @@ FOREIGN SeqJIT *jit_init() {
   return new SeqJIT();
 }
 
-FOREIGN Var *jit_var(SeqJIT *jit, Expr *expr) {
-  return jit->addVar(expr);
-}
+FOREIGN Var *jit_var(SeqJIT *jit, Expr *expr) { return jit->addVar(expr); }
 
 FOREIGN void jit_func(SeqJIT *jit, Func *func, char **error) {
   try {
