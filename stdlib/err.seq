@@ -7,6 +7,9 @@ class IOError:
 class ArgumentError:
     msg: str
 
+class ValueError:
+    msg: str
+
 class IndexError:
     msg: str
 
