@@ -1,0 +1,63 @@
+import math
+
+def test_ceil():
+    assert math.ceil(3.3) == 4
+    assert math.ceil(0.5) == 1
+    assert math.ceil(1.0) == 1
+    assert math.ceil(1.5) == 2
+    assert math.ceil(-0.5) == 0
+    assert math.ceil(-1.0) == -1
+    assert math.ceil(-1.5) == -1
+
+def test_floor():
+    assert math.floor(3.3) == 3
+    assert math.floor(0.5) == 0
+    assert math.floor(1.0) == 1
+    assert math.floor(1.5) == 1
+    assert math.floor(-0.5) == -1
+    assert math.floor(-1.0) == -1
+    assert math.floor(-1.5) == -2
+
+def test_fabs():
+    assert math.fabs(-1.0) == 1
+    assert math.fabs(0.0) == 0
+    assert math.fabs(1.0) == 1
+
+def test_fmod():
+    assert math.fmod(10.0, 1.0) == 0.0
+    assert math.fmod(10.0, 0.5) == 0.0
+    assert math.fmod(10.0, 1.5) == 1.0
+    assert math.fmod(-10.0, 1.0) == -0.0
+    assert math.fmod(-10.0, 0.5) == -0.0
+    assert math.fmod(-10.0, 1.5) == -1.0
+
+def test_exp():
+    assert math.exp(0.0) == 1
+    assert math.exp(-1.0) == 1/math.e
+    assert math.exp(1.0) == math.e
+
+def test_log():
+    assert math.log(1.0/math.e) == -1
+    assert math.log(1.0) == 0
+    assert math.log(math.e) == 1
+
+def test_log10():
+    assert math.log10(0.1) == -1
+    assert math.log10(1.0) == 0
+    assert math.log10(10.0) == 1
+    assert math.log10(10000.0) == 4
+
+def test_degrees():
+    assert math.degrees(math.pi) == 180.0
+    assert math.degrees(math.pi/2) == 90.0
+    assert math.degrees(-math.pi/4) == -45.0
+    assert math.degrees(0.0) == 0.0
+
+test_ceil()
+test_floor()
+test_fabs()
+test_fmod()
+test_exp()
+test_log()
+test_log10()
+test_degrees()
