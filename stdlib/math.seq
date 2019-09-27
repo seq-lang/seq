@@ -7,6 +7,8 @@ class ValueError:
 e = 2.718281828459045
 pi = 3.141592653589793
 tau = 6.283185307179586
+# inf = float('inf')
+# nan = float('nan')
 
 def ceil(x: float) -> float:
     """
@@ -65,3 +67,21 @@ def log10(x: float) -> float:
     Returns the common logarithm (base-10 logarithm) of x.
     """
     return C.log10(x)
+
+def degrees(x: float) -> float:
+    """
+    degrees(float) -> float
+
+    Convert angle x from radians to degrees.
+    """
+    radToDeg = 180.0/pi
+    return x * radToDeg
+
+def radians(x: float) -> float:
+    """
+    radians(float) -> float
+
+    Convert angle x from degrees to radians.
+    """
+    degToRad = pi/180.0
+    return x * degToRad

@@ -53,6 +53,12 @@ def test_degrees():
     assert math.degrees(-math.pi/4) == -45.0
     assert math.degrees(0.0) == 0.0
 
+def test_radians():
+    assert math.radians(180.0) == math.pi
+    assert math.radians(90.0) == math.pi/2
+    assert math.radians(-45.0) == -math.pi/4
+    assert math.radians(0.0) == 0.0
+
 test_ceil()
 test_floor()
 test_fabs()
@@ -61,3 +67,4 @@ test_exp()
 test_log()
 test_log10()
 test_degrees()
+test_radians()
