@@ -1,23 +1,55 @@
-def compare_less(x: int, y: int) -> bool:
-    return x < y
+### Comparison Functions ###
 
-def compare_str(x: str, y: str) -> bool:
+def compare_less(x: int, y: int) -> bool:
     return x < y
 
 def compare_greater(x: int, y: int) -> bool:
     return x > y
 
-data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
-data2 = [9, 19, 12, 64, 1, 73, 2, 5, 28, 72, 84, 90, 35, 39, 75, 76, 67, 92, 17, 44, 15, 94, 21, 95, 0, 59, 69, 13, 31, 11, 91, 45, 86, 81, 52, 74, 50, 58, 82, 10, 47, 32, 16, 96, 71, 80, 98, 37, 53, 24, 46, 54, 20, 38, 49, 14, 26, 41, 8, 87, 85, 3, 63, 48, 62, 93, 6, 36, 40, 99, 34, 43, 61, 60, 25, 42, 66, 33, 27, 65, 78, 77, 18, 23, 97, 88, 89, 55, 83, 7, 57, 30, 70, 79, 4, 56, 22, 51, 29, 68]
+def compare_string(x: str, y: str) -> bool:
+    return x < y
 
-print(data == pdqsort(data2, compare_less)) # EXPECT: True
-print(data == data2) # EXPECT: False
+def compare_dict(x: dict[str,int], y: dict[str,int]) -> bool:
+    return x["key"] < y["key"]
 
-data.reverse()
-data2 = [73, 45, 23, 6, 37, 52, 0, 63, 90, 25, 71, 40, 7, 36, 89, 75, 50, 56, 33, 96, 78, 27, 9, 80, 32, 43, 65, 82, 38, 84, 5, 21, 39, 4, 72, 11, 88, 95, 92, 46, 48, 19, 81, 53, 58, 31, 54, 77, 44, 68, 10, 16, 1, 26, 8, 62, 64, 61, 99, 30, 97, 17, 69, 34, 98, 15, 28, 93, 85, 79, 87, 70, 29, 42, 14, 22, 91, 51, 2, 35, 66, 67, 57, 47, 74, 86, 76, 41, 49, 59, 94, 83, 13, 12, 20, 60, 55, 3, 24, 18]
-print(data == pdqsort(data2, compare_greater)) # EXPECT: True
-print(data == data2) # EXPECT: False
+### Basic Sort Tests ###
+print(insertion_sort(list[int](), compare_less)) # EXPECT: []
+print(insertion_sort([1, 2, 3], compare_less)) # EXPECT: [1, 2, 3]
+print(insertion_sort([3, 2, 1], compare_less)) # EXPECT: [1, 2, 3]
+print(insertion_sort([3, 2, 1], compare_greater)) # EXPECT: [3, 2, 1]
+print(insertion_sort([1, 2, 3], compare_greater)) # EXPECT: [3, 2, 1]
 
-datawrd = ['The', 'quick', 'Brown', 'fox', 'Jumped', 'over', 'The', 'lazy', 'Dog']
+print(heap_sort(list[int](), compare_less)) # EXPECT: []
+print(heap_sort([1, 2, 3], compare_less)) # EXPECT: [1, 2, 3]
+print(heap_sort([3, 2, 1], compare_less)) # EXPECT: [1, 2, 3]
+print(heap_sort([3, 2, 1], compare_greater)) # EXPECT: [3, 2, 1]
+print(heap_sort([1, 2, 3], compare_greater)) # EXPECT: [3, 2, 1]
 
-print(pdqsort(datawrd, compare_str) == ['Brown', 'Dog', 'Jumped', 'The', 'The', 'fox', 'lazy', 'over', 'quick']) # EXPECT: True
+print(pdq_sort(list[int](), compare_less)) # EXPECT: []
+print(pdq_sort([1, 2, 3], compare_less)) # EXPECT: [1, 2, 3]
+print(pdq_sort([3, 2, 1], compare_less)) # EXPECT: [1, 2, 3]
+print(pdq_sort([3, 2, 1], compare_greater)) # EXPECT: [3, 2, 1]
+print(pdq_sort([1, 2, 3], compare_greater)) # EXPECT: [3, 2, 1]
+
+words = ['The', 'quick', 'Brown', 'fox', 'Jumped', 'over', 'The', 'lazy', 'Dog']
+dicts = [{"key": 5}, {"key": 9}, {"key": 1}]
+
+print(insertion_sort(list[str](), compare_string)) # EXPECT: []
+print(insertion_sort(words, compare_string)) # EXPECT: ['Brown', 'Dog', 'Jumped', 'The', 'The', 'fox', 'lazy', 'over', 'quick']
+print(insertion_sort(dicts, compare_dict)) # EXPECT: [{"key": 1}, {"key": 5}, {"key": 9}]
+
+print(heap_sort(list[str](), compare_string)) # EXPECT: []
+print(heap_sort(words, compare_string)) # EXPECT: ['Brown', 'Dog', 'Jumped', 'The', 'The', 'fox', 'lazy', 'over', 'quick']
+print(heap_sort(dicts, compare_dict)) # EXPECT: [{"key": 1}, {"key": 5}, {"key": 9}]
+
+print(pdq_sort(list[str](), compare_string)) # EXPECT: []
+print(pdq_sort(words, compare_string)) # EXPECT: ['Brown', 'Dog', 'Jumped', 'The', 'The', 'fox', 'lazy', 'over', 'quick']
+print(pdq_sort(dicts, compare_dict)) # EXPECT: [{"key": 1}, {"key": 5}, {"key": 9}]
+
+ordered = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
+ordered_r = [100, 99, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83, 82, 81, 80, 79, 78, 77, 76, 75, 74, 73, 72, 71, 70, 69, 68, 67, 66, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+unordered = [98, 57, 39, 5, 70, 80, 93, 65, 96, 43, 99, 18, 26, 1, 46, 94, 55, 37, 95, 32, 49, 2, 24, 14, 9, 53, 64, 62, 16, 33, 77, 35, 69, 19, 44, 51, 76, 66, 52, 83, 38, 3, 20, 54, 100, 7, 6, 17, 84, 73, 58, 10, 11, 40, 15, 12, 68, 45, 81, 78, 30, 97, 13, 82, 79, 27, 22, 90, 74, 41, 29, 56, 50, 92, 71, 89, 72, 8, 91, 88, 23, 4, 59, 63, 36, 47, 86, 61, 25, 67, 34, 75, 85, 87, 31, 60, 42, 21, 28, 48]
+
+print(pdq_sort(ordered, compare_greater)) # EXPECT: [100, 99, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83, 82, 81, 80, 79, 78, 77, 76, 75, 74, 73, 72, 71, 70, 69, 68, 67, 66, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+print(pdq_sort(ordered_r, compare_less)) # EXPECT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
+print(pdq_sort(unordered, compare_less)) # EXPECT: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
