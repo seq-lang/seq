@@ -1,6 +1,6 @@
 import math
 
-print math.degrees(math.pi) == 180.0
-print math.degrees(math.pi/2) == 90.0
-print math.degrees(-math.pi/4) == -45.0
-print math.degrees(0.0) == 0.0
+print math.radians(180.0) == math.pi
+print math.radians(90.0) == math.pi/2
+print math.radians(-45.0) == -math.pi/4
+print math.radians(0.0) == 0.0
