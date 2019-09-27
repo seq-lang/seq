@@ -1,6 +1,6 @@
 import math
 
-print math.log10(0.1) == -1
-print math.log10(1.0) == 0
-print math.log10(10.0) == 1
-print math.log10(10000.0) == 4
+print math.degrees(math.pi) == 180.0
+print math.degrees(math.pi/2) == 90.0
+print math.degrees(-math.pi/4) == -45.0
+print math.degrees(0.0) == 0.0
