@@ -63,7 +63,7 @@
 %token <Ast.Ann.t * float> FLOAT
 %token <Ast.Ann.t * (string * string)> INT_S
 %token <Ast.Ann.t * (float * string)> FLOAT_S
-%token <Ast.Ann.t * string> STRING ID
+%token <Ast.Ann.t * string> STRING ID INTERNAL
 %token <Ast.Ann.t * string> SEQ KMER
 
 /* blocks */
@@ -429,7 +429,7 @@ statement:
   | class_statement
   | decl_statement
   | with_statement
-  /* | special_statement */
+  | special_statement
     {[ $1 ]}
 
 // Simple one-line statements
@@ -904,16 +904,17 @@ cls:
         | Some (_, Declare d) -> Some d
         | _ -> None)
       in
-      let members = List.filter_map members ~f:(function
+      let args = [] in
+      let members = List.filter_map members ~f:Fn.id in
+      (*function
         | Some (_, Declare _) -> None
         | p -> p)
-      in
+      in *)
       let args = if (List.length args) <> 0 then Some args else None in
       let generics = Option.value generics ~default:[] in
       pos $1 $5,
       Class
-        { class_name = snd $2;
-          generics; args; members } }
+        { class_name = snd $2; generics; args; members } }
 dataclass_member:
   | class_member { $1 }
   | decl_statement { Some $1 }
@@ -946,10 +947,11 @@ extend:
 class_member:
   // Empty statements
   | PASS NL { None }
-  // TODO later: | class_statement
   // Functions
   | func_statement
+  | class_statement
     { Some $1 }
+
 
 // Decorators
 decorator:
@@ -959,4 +961,18 @@ decorator:
       | _ -> noimp "decorator dot" }
   | AT dot_term LP separated_list(COMMA, expr) RP NL
     { noimp "decorator" (* Decorator ($2, $4) *) }
+
+special_statement:
+  | INTERNAL expr STRING NL
+    { match snd $1 with
+      | "%typ" | "%err" ->
+        pos (fst $1) $4,
+        Special (snd $1, [ fst $2, Expr $2 ], [snd $3])
+      | _ -> noimp "invalid special" }
+  | INTERNAL ID COLON suite
+    { match snd $1 with
+      | "%test" ->
+        pos (fst $1) $3,
+        Special (snd $1, $4, [snd $2])
+      | _ -> noimp "invalid special" }
 

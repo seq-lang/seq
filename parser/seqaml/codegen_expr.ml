@@ -118,7 +118,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     parse ~ctx
     @@ ( ann
        , Call
-           ( (ann, Index ((ann, Id "Kmer"), [ann, Int n]))
+           ( (ann, Index ((ann, Id "Kmer"), [ ann, Int n ]))
            , [ { name = None; value = ann, Seq s } ] ) )
 
   and parse_id ?map ?(is_type = false) ctx ann var =
@@ -133,7 +133,9 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     | false, Some ((Codegen_ctx.Var v, { base; global; _ }) :: _)
       when ctx.env.base = base || global ->
       let e = Llvm.Expr.var v in
-      if global && ctx.env.base = base && Stack.exists ctx.env.flags ~f:(( = ) "atomic")
+      if global
+         && ctx.env.base = base
+         && Stack.exists ctx.env.flags ~f:(( = ) "atomic")
       then (
         Llvm.Module.warn ~ann "atomic load %s" var;
         Llvm.Var.set_atomic e);
@@ -170,7 +172,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
           when ctx.env.base = base || global ->
           Hashtbl.set captures ~key:var ~data:v
         | _ -> ());
-    Hashtbl.iter_keys captures ~f:(fun key -> Util.dbg "[expr/parse_gen] captured %s" key);
+    Hashtbl.iter_keys captures ~f:(fun key ->
+        Util.dbg "[expr/parse_gen] captured %s" key);
     (* [final_expr] will be set later during the recursion *)
     let final_expr = ref Ctypes.null in
     let ctx = { ctx with env = { ctx.env with trycatch = Ctypes.null } } in
@@ -317,7 +320,9 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
           Llvm.Generics.set_types ~kind lh_expr indices;
           lh_expr
         | _ ->
-          serr ~ann "expression is not realizable (make sure that it is a generic type)")
+          serr
+            ~ann
+            "expression is not realizable (make sure that it is a generic type)")
       else (
         let t =
           match indices with
@@ -329,7 +334,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
   and parse_call ctx ann (callee_expr, args) =
     (* [@@@ocamlformat.disable] *)
     match snd callee_expr, args with
-    | Index ((_, Id "__array__"), [t]), [ { name = _; value } ] ->
+    | Index ((_, Id "__array__"), [ t ]), [ { name = _; value } ] ->
       let t = parse_type ~ctx t in
       let arg = parse ~ctx value in
       Llvm.Expr.alloc_array t arg
@@ -337,7 +342,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     | ( Dot ((_, Id "str"), "join")
       , [ { name = _; value = _, String "" }
         ; { name = _
-          ; value = ann_g, ListGenerator ((_, { gen; cond = None; next = None; _ }) as g)
+          ; value =
+              ann_g, ListGenerator ((_, { gen; cond = None; next = None; _ }) as g)
           }
         ] )
     | ( Dot ((_, Id "str"), "join")
@@ -348,7 +354,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         ] )
     | ( Dot ((_, String ""), "join")
       , [ { name = _
-          ; value = ann_g, ListGenerator ((_, { gen; cond = None; next = None; _ }) as g)
+          ; value =
+              ann_g, ListGenerator ((_, { gen; cond = None; next = None; _ }) as g)
           }
         ] )
     | ( Dot ((_, String ""), "join")
@@ -401,7 +408,9 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       let typ = Llvm.Type.expr_type callee_expr in
       Llvm.Expr.construct typ args)
     else (
-      let kind = if List.exists args ~f:(( = ) Ctypes.null) then "partial" else "call" in
+      let kind =
+        if List.exists args ~f:(( = ) Ctypes.null) then "partial" else "call"
+      in
       Llvm.Expr.call ~kind callee_expr args)
 
   and parse_dot ctx ann (lh_expr, rhs) =
@@ -415,7 +424,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         (match imports ictx a with
         | Some ictx ->
           (match Hashtbl.find ictx.map x with
-          | Some ((Codegen_ctx.Import x, _) :: _) -> Hashtbl.find ictx.globals.imported x
+          | Some ((Codegen_ctx.Import x, _) :: _) ->
+            Hashtbl.find ictx.globals.imported x
           | _ -> None)
         | _ -> None)
       | _, _ -> None
@@ -470,7 +480,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         let expr =
           match comp.next with
           | None -> finally ctx
-          | Some next -> ignore @@ comprehension_helper ~add:true ~finally ~ctx pos next
+          | Some next ->
+            ignore @@ comprehension_helper ~add:true ~finally ~ctx pos next
         in
         ignore @@ S.finalize ~add ~ctx:orig_ctx for_stmt pos)
 

@@ -48,23 +48,27 @@ type tann =
 type tel = tkind * tann
 
 type tglobal =
-  { imported: (string, t) Hashtbl.t
-  ; parser: ctx:t -> ?file:string -> string -> unit
-    (** A callback that is used to parse a Seq code string to AST (via Menhir).
+  { imported : (string, t) Hashtbl.t
+  ; parser : ctx:t -> ?file:string -> string -> unit
+        (** A callback that is used to parse a Seq code string to AST (via Menhir).
     Needed for parsing [import] statements.
     Usage: [parses ctx ?file code], where [file] is an optional file name that is used
     to populate [Ast.Ann] annotations. *)
-  ; stdlib: (string, tel list) Hashtbl.t
-    (** A context that holds the internal Seq objects and libraries. *)
+  ; stdlib : (string, tel list) Hashtbl.t
+        (** A context that holds the internal Seq objects and libraries. *)
   }
 
 and t = (tel, tenv, tglobal) Ctx.t
 
-
 (** [add ~ctx name var] adds a variable [name] with the handle [var] to the context [ctx]. *)
 let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) key var =
   let annot =
-    { base = ctx.env.base; global; toplevel; internal; attrs = String.Hash_set.create () }
+    { base = ctx.env.base
+    ; global
+    ; toplevel
+    ; internal
+    ; attrs = String.Hash_set.create ()
+    }
   in
   let var = var, annot in
   Ctx.add ~ctx key var
@@ -78,9 +82,10 @@ let parse_file ~(ctx : t) file =
 
 (** [init ...] returns an empty context with a toplevel block that contains internal Seq types. *)
 let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser =
-  let ctx = Ctx.init
-    { imported = String.Table.create (); stdlib = String.Table.create (); parser }
-    { filename ; mdl ; base ; block ; flags = Stack.create () ; trycatch = Ctypes.null }
+  let ctx =
+    Ctx.init
+      { imported = String.Table.create (); stdlib = String.Table.create (); parser }
+      { filename; mdl; base; block; flags = Stack.create (); trycatch = Ctypes.null }
   in
   Ctx.add_block ~ctx;
   (* default flags for internal arguments *)
@@ -122,7 +127,8 @@ let init_empty ~(ctx : t) =
   let ctx = Ctx.init ctx.globals ctx.env in
   Ctx.add_block ~ctx;
   Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
-      add ~ctx ~internal:true ~global:true ~toplevel:true key (fst @@ List.hd_exn data));
+      add ~ctx ~internal:true ~global:true ~toplevel:true key (fst @@ List.hd_exn data)
+  );
   ctx
 
 (** [to_dbg_output ctx] outputs the current [ctx] to the debug output. *)

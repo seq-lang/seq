@@ -38,6 +38,7 @@ let serr ?(ann = Ast.Ann.default) fmt =
 
 (** [serr ~ann format_string ...] raises an Seqaml error at file location [pos]
     with message formatted via sprintf-style [format_string]. *)
+
 (* let terr ?(ann = Ast.Ann.default) fmt =
   Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [ ann ]))) fmt *)
 

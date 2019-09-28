@@ -4,8 +4,9 @@
 (executable
    (name main)
    (libraries
-      base core ctypes ctypes.foreign ctypes.stubs
+      base core ctypes ctypes.foreign ctypes.stubs ANSITerminal
       seqaml)
-   (modes (native object))
-   (link_flags (:standard -noautolink -runtime-variant _pic))
+   (modes (native object) (native exe))
+   ; (link_flags (:standard -noautolink -runtime-variant _pic))
+   (link_flags (:standard -I ../../../build -ccopt -lseq))
    (preprocess (pps ppx_sexp_conv ppx_deriving.show)))

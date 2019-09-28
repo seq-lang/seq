@@ -41,7 +41,8 @@ let init () : t =
 let exec (jit : t) code =
   let anon_fn = Llvm.Func.func (sprintf "<anon_%d>" jit.cnt) in
   let anon_ctx =
-    { jit.ctx with map = Hashtbl.copy jit.ctx.map
+    { jit.ctx with
+      map = Hashtbl.copy jit.ctx.map
     ; env = { jit.ctx.env with base = anon_fn; block = Llvm.Block.func anon_fn }
     }
   in

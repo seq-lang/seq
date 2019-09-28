@@ -119,6 +119,25 @@ module Type = struct
       func
 
   let is_equal = foreign "type_eq" (t @-> t @-> returning Ctypes.bool)
+
+  let get_methods typ =
+    let f =
+      foreign
+        "get_methods"
+        (t @-> ptr (ptr char) @-> ptr (ptr Types.func) @-> returning size_t)
+    in
+    let fns_addr = Ctypes.allocate (ptr Types.func) (from_voidp Types.func null) in
+    let names_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
+    let sz = Unsigned.Size_t.to_int (f typ names_addr fns_addr) in
+    if sz = 0
+    then []
+    else (
+      assert (not (Ctypes.is_null !@fns_addr));
+      assert (not (Ctypes.is_null !@names_addr));
+      let msg = coerce (ptr char) string !@names_addr in
+      let names = String.split ~on:'\b' msg |> List.rev |> List.tl_exn |> List.rev in
+      let fa = !@fns_addr in
+      List.mapi names ~f:(fun i n -> n, !@(fa +@ i)))
 end
 
 (** [Expr] wraps Seq Expr methods and helpers. *)
@@ -141,7 +160,9 @@ module Expr = struct
     fn arr len
 
   let list ~kind typ args =
-    let fn = foreign (kind ^ "_expr") (Types.typ @-> ptr t @-> size_t @-> returning t) in
+    let fn =
+      foreign (kind ^ "_expr") (Types.typ @-> ptr t @-> size_t @-> returning t)
+    in
     let arr, len = list_to_carr t args in
     fn typ arr len
 
@@ -150,7 +171,9 @@ module Expr = struct
     fn typ expr
 
   let gen_comprehension expr captures =
-    let fn = foreign "gen_comp_expr" (t @-> ptr Types.var @-> size_t @-> returning t) in
+    let fn =
+      foreign "gen_comp_expr" (t @-> ptr Types.var @-> size_t @-> returning t)
+    in
     let arr, len = list_to_carr Types.var captures in
     fn expr arr len
 
@@ -199,7 +222,9 @@ module Expr = struct
   let alloc_array = foreign "array_expr_alloca" (Types.typ @-> t @-> returning t)
 
   let construct typ args =
-    let fn = foreign "construct_expr" (Types.typ @-> ptr t @-> size_t @-> returning t) in
+    let fn =
+      foreign "construct_expr" (Types.typ @-> ptr t @-> size_t @-> returning t)
+    in
     let arr, len = list_to_carr t args in
     fn typ arr len
 
@@ -275,7 +300,9 @@ module Stmt = struct
       what
 
   let assign_index =
-    foreign "assign_index_stmt" (Types.expr @-> Types.expr @-> Types.expr @-> returning t)
+    foreign
+      "assign_index_stmt"
+      (Types.expr @-> Types.expr @-> Types.expr @-> returning t)
 
   let del = foreign "del_stmt" (Types.var @-> returning t)
   let del_index = foreign "del_index_stmt" (Types.expr @-> Types.expr @-> returning t)
@@ -334,7 +361,8 @@ module Pattern = struct
     let arr, len = list_to_carr t pats in
     fn arr len
 
-  let range = foreign "range_pattern" (Ctypes.int64_t @-> Ctypes.int64_t @-> returning t)
+  let range =
+    foreign "range_pattern" (Ctypes.int64_t @-> Ctypes.int64_t @-> returning t)
 
   let array pats =
     let fn = foreign "array_pattern" (ptr t @-> size_t @-> returning t) in
@@ -539,8 +567,7 @@ module Module = struct
         "caml_warning_callback"
         (cstring @-> int @-> int @-> cstring @-> returning void)
     in
-    Core.ksprintf (fun msg ->
-      f (strdup msg) ann.line ann.col (strdup ann.file)) fmt
+    Core.ksprintf (fun msg -> f (strdup msg) ann.line ann.col (strdup ann.file)) fmt
 end
 
 (** [JIT] wraps Seq SeqJIT methods and helpers. *)

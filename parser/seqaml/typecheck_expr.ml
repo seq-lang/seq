@@ -25,13 +25,14 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
   (** [parse ~ctx expr] dispatches an expression AST node [expr] to the proper code generation function. *)
   let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
     C.push_ann ~ctx ann;
+    (* Util.A.dr ">>= %s" (Expr.to_string (ann, node)); *)
     let expr : Expr.t Ann.ann =
       match node with
       | Empty          _ -> parse_none     ctx node
       | Bool           _ -> parse_internal ctx node ~name:"bool"
       | Int            _ -> parse_internal ctx node ~name:"int"
       | Float          _ -> parse_internal ctx node ~name:"float"
-      | String         _ -> parse_internal ctx node ~name:"string"
+      | String         _ -> parse_internal ctx node ~name:"str"
       | Seq            _ -> parse_internal ctx node ~name:"seq"
       | Id             p -> parse_id       ctx p
       | Tuple          p -> parse_tuple    ctx p
@@ -55,9 +56,11 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
       | Ellipsis       _ -> parse_ellipsis ctx node
       | Slice  _ -> C.err ~ctx "slice is only valid within an index"
       | Unpack _ -> C.err ~ctx "unpack is not valid here"
-      | _        -> C.err ~ctx "expr cant %s" (Expr.to_string (ann, node))
+      | IntS _ | FloatS _ | Kmer _ -> C.err ~ctx "expr not supported :/"
     in
     C.pop_ann ~ctx |> ignore;
+    (* Util.A.dr "%s -> %s |= %s"
+      (Expr.to_string (ann, node)) (Expr.to_string expr) (Ann.to_string (fst expr)); *)
     expr
 
   and parse_none ctx n =
@@ -188,7 +191,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
     ierr "Not yet there"
 
   and parse_if ctx (cond, if_expr, else_expr) =
-    let cond = parse ~ctx @@ C.eannotate ~ctx (e_call (e_dot cond "__bool__") []) in
+    let cond = C.magic_call parse ~ctx ~magic:"__bool__" cond in
 
     let if_expr = parse ~ctx if_expr in
     let else_expr = parse ~ctx else_expr in
@@ -197,19 +200,18 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
     C.ann ~typ:(fst if_expr) ctx, IfExpr (cond, if_expr, else_expr)
 
   and parse_unary ctx (op, expr) =
-    let magic = uop2magic op in
-    parse ~ctx @@ C.eannotate ~ctx (e_call (e_dot expr magic) [])
+    C.magic_call parse ~ctx ~magic:(uop2magic op) expr
 
   and parse_binary ctx (lh, bop, rh) =
     match bop with
     | "&&" | "||" -> (* these have no magics *)
-      let lh = parse ~ctx @@ C.eannotate ~ctx (e_call (e_dot lh "__bool__") []) in
-      let rh = parse ~ctx @@ C.eannotate ~ctx (e_call (e_dot rh "__bool__") []) in
+      let lh = C.magic_call parse ~ctx ~magic:"__bool__" lh in
+      let rh = C.magic_call parse ~ctx ~magic:"__bool__" rh in
       C.ann ~typ:(fst rh) ctx, Binary (lh, bop, rh)
     | bop when (String.prefix bop 8) = "inplace_" ->
       let magic = bop2magic ~prefix:"i" bop in
       let bop = String.drop_prefix bop 8 in
-      parse ~ctx @@ C.eannotate ~ctx (e_call (e_dot lh magic) [rh])
+      C.magic_call parse ~ctx ~magic lh ~args:[rh]
     | bop ->
       let magic = bop2magic bop in
       let lh = parse ~ctx lh in
@@ -218,10 +220,11 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
       let typ = match typ with
         | Some t -> t
         | None ->
-          let typ = R.magic ~ctx ~args:[fst lh] (fst rh) (bop2magic ~prefix:"r" bop) in
+          let rmagic = bop2magic ~prefix:"r" bop in
+          let typ = R.magic ~ctx ~args:[fst lh] (fst rh) rmagic in
           match typ with
           | Some t -> t
-          | None -> C.err ~ctx "cannot locate appropriate %s or r%s" magic magic
+          | None -> C.err ~ctx "cannot locate appropriate %s or %s" magic rmagic
       in
       C.ann ~typ ctx, Binary (lh, bop, rh)
 
@@ -232,9 +235,11 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
     | (_, Id ("int" as name)), [arg]
     | (_, Id ("bool" as name)), [arg] ->
       let magic = sprintf "__%s__" name in
-      parse ~ctx @@ C.eannotate ~ctx (e_call (e_dot arg.value magic) [])
+      C.magic_call parse ~ctx ~magic arg.value
     | _ ->
+      (* Util.A.dg "[in] %s : %s" (Ann.to_string (fst expr)) (Expr.to_string (expr)); *)
       let expr = parse ~ctx expr in
+      (* Util.A.dg "[out] %s : %s" (Ann.to_string (fst expr)) (Expr.to_string (expr)); *)
       let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
       let typ = Ann.real_type (fst expr) in
       match typ.typ with
@@ -250,6 +255,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
             if (Option.value name ~default:t_name) <> t_name then
               C.err ~ctx "names do not match";
             T.unify_inplace ~ctx (fst value) t);
+        Util.A.dg "[will_realize] %s " (Ann.to_string { typ with typ = Func f });
         let typ = R.realize ~ctx { typ with typ = Func f } in
         let expr = typ, snd expr in
         C.ann ~typ:f.f_ret ctx, Call (expr, args)
@@ -298,10 +304,12 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
             let typ =
               if Ann.is_realizable typ then R.realize ~ctx typ else typ
             in
-            if not ctx.env.realizing then
+            if not ctx.env.realizing then (
               C.ann ~typ ~is_type_ast ctx, Index (lh_expr, indices)
-            else (* remove type info: e.g. T[t,u] -> T *)
+            )
+            else (* remove type info: e.g. T[t,u] -> T *) (
               C.ann ~typ ~is_type_ast ctx, snd lh_expr
+            )
           (* Recursive class instantiation (e.g. class A[T]: y:A[T]) *)
           | TypeVar { contents = Unbound _ } as t when not ctx.env.realizing ->
             assert is_type_ast;

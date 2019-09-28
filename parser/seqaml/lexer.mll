@@ -130,6 +130,7 @@ let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')?
 let intsuffix = ('s' | 'S' | 'z' | 'Z' | 'u' | 'U')
 
 let ident = alpha alphanum*
+let internal_ident = '%' ident
 
 (* Rules *)
 
@@ -180,6 +181,8 @@ and read state = parse
     { P.NOTIN (cur_pos state lexbuf ~len:6, "not in") }
   | ("import!" as id) white+
     { P.IMPORT_CONTEXT (cur_pos state lexbuf ~len:(String.length id)) }
+  | internal_ident as id
+    { P.INTERNAL (cur_pos state lexbuf ~len:(String.length id), id) }
   | ident as id {
     let len = String.length id in
     match id with

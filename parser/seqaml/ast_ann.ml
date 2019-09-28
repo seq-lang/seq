@@ -12,28 +12,28 @@ type t =
   ; col : int
   ; len : int
   ; typ : ttyp
-  ; is_type_ast: bool
+  ; is_type_ast : bool
   }
 [@@deriving fields]
 
 (** Each identifier is uniquely identified by its name and its location *)
-and tlookup =
-  (string * t)
+and tlookup = string * t
 
 (** Type annotation for an AST node. *)
 and ttyp =
   | Unknown
   | Import of string
+  | TypeVar of ttypvar ref
+  (* | Type of ttypvar ref *)
   | Tuple of t list
   | Func of tfunc
   | Class of tcls
-  | TypeVar of ttypvar ref
 
 and tfunc =
   { f_generics : (string * (int * t)) list
   ; f_name : string
   ; f_cache : tlookup
-  ; f_parent : (tlookup * (t option))
+  ; f_parent : tlookup * t option
   ; f_args : (string * t) list
   ; f_ret : t
   }
@@ -42,9 +42,9 @@ and tcls =
   { c_generics : (string * (int * t)) list
   ; c_name : string
   ; c_cache : tlookup
-  ; c_parent : (tlookup * (t option))
+  ; c_parent : tlookup * t option
   ; c_args : (string * t) list
-  ; c_type : (t list) option
+  ; c_type : t list option
   }
 
 and ttypvar =
@@ -53,11 +53,6 @@ and ttypvar =
   | Generic of int
 
 let default : t =
-  { file = ""
-  ; line = -1
-  ; col = -1
-  ; len = 0
-  ; typ = Unknown
-  ; is_type_ast = false }
+  { file = ""; line = -1; col = -1; len = 0; typ = Unknown; is_type_ast = false }
 
 type 'a ann = t * 'a

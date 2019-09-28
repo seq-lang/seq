@@ -20,16 +20,16 @@ module Ann = struct
   let pos_to_string t =
     sprintf "%s:%d:%d" (Filename.basename t.file) t.line t.col
 
-  let rec typ_to_string ?(generics = Int.Table.create ()) t =
-    let to_string = typ_to_string ~generics in
+  let rec typ_to_string ?(generics = Int.Table.create ()) ?(full=false) t =
+    let to_string = typ_to_string ~generics ~full in
     let gen2str g =
       ppl ~sep:"," g ~f:(fun (_, (g, t)) -> sprintf "%s" (to_string t))
     in
     match t.typ with
     | Unknown ->
-      "?"
+      "_"
     | Import s ->
-      sprintf "<%s>" s
+      sprintf "<import: %s>" s
     | Tuple args ->
       sprintf "tuple[%s]" (ppl ~sep:"," args ~f:to_string)
     | Func { f_generics; f_args; f_ret; _ } ->
@@ -44,7 +44,7 @@ module Ann = struct
       sprintf "%s%s" c_name @@
         if g = "" then "" else sprintf "[%s]" g
     | TypeVar { contents = Unbound (u, _, _) } ->
-      sprintf "'%d" u
+      if full then sprintf "'%d" u else "?"
     | TypeVar { contents = Bound t } ->
       to_string t
     | TypeVar { contents = Generic u } ->
@@ -60,8 +60,8 @@ module Ann = struct
   let to_string t =
     sprintf "<%s |= %s>" (pos_to_string t) (typ_to_string t)
 
-  let create ?(file="") ?(line=(-1)) ?(col=(-1)) ?(len=0) ?(typ=Unknown) () =
-    { file; line; col; len; typ; is_type_ast = false }
+  let create ?(file="") ?(line=(-1)) ?(col=(-1)) ?(len=0) ?(typ=Unknown) ?(is_type_ast=false) () =
+    { file; line; col; len; typ; is_type_ast }
 
   let rec real_type = function
     | { typ = TypeVar { contents = Bound t }; _ } ->
@@ -333,6 +333,7 @@ module Stmt = struct
       | p -> p
     in
     f (pos, match node with
+      | Expr s -> Expr (ewalk s)
       | Assign (l, r, a, t) -> Assign (ewalk l, ewalk r, a, t >>| ewalk)
       | Del t -> Del (ewalk t)
       | Print (l, s) -> Print (List.map l ~f:ewalk, s)
@@ -370,7 +371,8 @@ module Stmt = struct
       | Throw e -> Throw (ewalk e)
       | Prefetch l -> Prefetch (List.map l ~f:ewalk)
       | Special (s, l, sl) -> Special (s, List.map l ~f:walk, sl)
-      | node -> node)
+      | Pass _ | Break _ | Continue _ | Import _ | ImportPaste _ | Global _ -> node
+      )
 end
 
 let e_id ?(ann=default) n =

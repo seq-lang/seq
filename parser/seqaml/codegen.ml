@@ -21,9 +21,12 @@ let parse ?f ?(file = "") code =
   | Err.SyntaxError (msg, pos) -> raise @@ Err.CompilerError (Lexer msg, [ pos ])
   | Grammar.Error ->
     let pos =
-      Ast.Ann.create ~file ~line:lexbuf.lex_start_p.pos_lnum
+      Ast.Ann.create
+        ~file
+        ~line:lexbuf.lex_start_p.pos_lnum
         ~col:(lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol)
-        ~len:1 ()
+        ~len:1
+        ()
     in
     (* Printexc.print_backtrace stderr; *)
     raise @@ Err.CompilerError (Parser, [ pos ])
