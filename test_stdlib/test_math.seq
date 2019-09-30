@@ -96,6 +96,27 @@ def test_sqrt():
     assert math.sqrt(1.0) == 1
     assert math.isnan(math.sqrt(-1.0)) == True
 
+def test_pow():
+    assert math.pow(0.0, 1.0) == 0
+    assert math.pow(1.0, 0.0) == 1
+    assert math.pow(2.0, 1.0) == 2
+    assert math.pow(2.0, -1.0) == 0.5
+    assert math.pow(-0.0, 3.0) == -0.0
+    assert math.pow(-0.0, 2.3) == 0.0
+    assert math.pow(-0.0, 0.0) == 1
+    assert math.pow(-0.0, -0.0) == 1
+    assert math.pow(-2.0, 2.0) == 4.0
+    assert math.pow(-2.0, 3.0) == -8.0
+    assert math.pow(-2.0, -3.0) == -0.125
+    assert math.pow(INF, 1.0) == INF
+    assert math.pow(NINF, 1.0) == NINF
+    assert math.pow(1.0, INF) == 1
+    assert math.pow(1.0, NINF) == 1
+    assert math.isnan(math.pow(NAN, 1.0)) == True
+    assert math.isnan(math.pow(2.0, NAN)) == True
+    assert math.isnan(math.pow(0.0, NAN)) == True
+    assert math.pow(1.0, NAN) == 1
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -110,3 +131,4 @@ test_log10()
 test_degrees()
 test_radians()
 test_sqrt()
+test_pow()

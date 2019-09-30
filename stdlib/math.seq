@@ -133,3 +133,11 @@ def sqrt(x: float) -> float:
     Returns the square root of x.
     """
     return C.sqrt(x)
+
+def pow(x: float, y: float) -> float:
+    """
+    pow(float, float) -> float
+
+    Returns x raised to the power of y.
+    """
+    return C.pow(x, y)
