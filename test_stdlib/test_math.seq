@@ -129,6 +129,14 @@ def test_asin():
     assert math.asin(1.0) == math.pi/2
     assert math.isnan(math.asin(NAN)) == True
 
+def test_atan():
+    assert math.atan(-1.0) == -math.pi/4
+    assert math.atan(0.0) == 0
+    assert math.atan(1.0) == math.pi/4
+    assert math.atan(INF) == math.pi/2
+    assert math.atan(NINF) == -math.pi/2
+    assert math.isnan(math.atan(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -146,3 +154,4 @@ test_sqrt()
 test_pow()
 test_acos()
 test_asin()
+test_atan()

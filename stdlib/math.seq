@@ -157,3 +157,11 @@ def asin(x: float) -> float:
     Returns the arc sine of x in radians.
     """
     return C.asin(x)
+
+def atan(x: float) -> float:
+    """
+    atan(float) -> float
+
+    Returns the arc tangent of x in radians.
+    """
+    return C.atan(x)
