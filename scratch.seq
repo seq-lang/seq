@@ -4,9 +4,8 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.sin(0.0) == 0
-print math.sin(math.pi/2) == 1
-print math.sin(-math.pi/2) == -1
-print math.isnan(math.sin(INF)) == True
-print math.isnan(math.sin(NINF)) == True
-print math.isnan(math.sin(NAN)) == True
+print math.hypot(12.0, 5.0) == 13
+print math.hypot(12.0/32.0, 5.0/32) == 13/32
+print math.hypot(0.0, 0.0) == 0
+print math.hypot(-3.0, 4.0) == 5
+print math.hypot(3.0, 4.0) == 5

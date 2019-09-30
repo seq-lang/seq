@@ -167,6 +167,13 @@ def test_sin():
     assert math.isnan(math.sin(NINF)) == True
     assert math.isnan(math.sin(NAN)) == True
 
+def test_hypot():
+    assert math.hypot(12.0, 5.0) == 13
+    assert math.hypot(12.0/32.0, 5.0/32) == 13/32
+    assert math.hypot(0.0, 0.0) == 0
+    assert math.hypot(-3.0, 4.0) == 5
+    assert math.hypot(3.0, 4.0) == 5
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -188,3 +195,4 @@ test_atan()
 test_atan2()
 test_cos()
 test_sin()
+test_hypot()

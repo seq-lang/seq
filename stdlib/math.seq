@@ -191,3 +191,13 @@ def sin(x: float) -> float:
     Returns the sine of a radian angle x.
     """
     return C.sin(x)
+
+def hypot(x: float, y: float) -> float:
+    """
+    hypot(float, float) -> float
+
+    Return the Euclidean norm.
+    This is the length of the vector from the
+    origin to point (x, y).
+    """
+    return sqrt(x*x + y*y)
