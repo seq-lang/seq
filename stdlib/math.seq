@@ -8,13 +8,14 @@ e = 2.718281828459045
 pi = 3.141592653589793
 tau = 6.283185307179586
 inf = float('inf')
+ninf = -inf
 nan = float('nan')
 
 def isnan(x: float) -> bool:
     """
     isnan(float) -> bool
 
-    Returns True if float arg is a NaN, else False.
+    Return True if float arg is a NaN, else False.
     """
     test = x == x
     # if it is true then it is a number
@@ -26,10 +27,20 @@ def isinf(x: float) -> bool:
     """
     isinf(float) -> bool:
 
-    Returns True if float arg is an inf, else False.
+    Return True if float arg is an inf, else False.
     """
-    return x == inf
+    return x == inf or x == ninf
 
+def isfinite(x: float) -> bool:
+    """
+    isfinite(float) -> bool
+
+    Return True if x is neither an infinity nor a NaN,
+    and False otherwise.
+    """
+    if isnan(x) or isinf(x):
+        return False
+    return True
 
 def ceil(x: float) -> float:
     """

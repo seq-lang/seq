@@ -4,13 +4,8 @@ NAN = math.nan
 INF = math.inf
 NINF = -math.inf
 
-print math.ldexp(0.0, 1) == 0.0
-print math.ldexp(1.0, 1) == 2.0
-print math.ldexp(1.0, -1) == 0.5
-print math.ldexp(-1.0, 1) == -2.0
-print math.ldexp(0.0, 1) == 0.0
-print math.ldexp(1.0, -1000000) == 0.0
-print math.ldexp(-1.0, -1000000) == -0.0
-print math.ldexp(INF, 30) == INF
-print math.ldexp(NINF, -213) == NINF
-print math.isnan(math.ldexp(NAN, 0))
+print math.isfinite(1.4) == True
+print math.isfinite(0.0) == True
+print math.isfinite(NAN) == False
+print math.isfinite(INF) == False
+print math.isfinite(NINF) == False

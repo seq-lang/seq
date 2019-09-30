@@ -12,6 +12,13 @@ def test_isinf():
     assert math.isinf(float('inf')) == True
     assert math.isinf(7.0) == False
 
+def test_isfinite():
+    assert math.isfinite(1.4) == True
+    assert math.isfinite(0.0) == True
+    assert math.isfinite(NAN) == False
+    assert math.isfinite(INF) == False
+    assert math.isfinite(NINF) == False
+
 def test_ceil():
     assert math.ceil(3.3) == 4
     assert math.ceil(0.5) == 1
@@ -58,7 +65,7 @@ def test_ldexp():
     assert math.ldexp(-1.0, -1000000) == -0.0
     assert math.ldexp(INF, 30) == INF
     assert math.ldexp(NINF, -213) == NINF
-    assert math.ldexp(NAN, 0) == NAN
+    assert math.isnan(math.ldexp(NAN, 0)) == True
 
 def test_log():
     assert math.log(1.0/math.e) == -1
@@ -89,6 +96,9 @@ def test_sqrt():
     assert math.sqrt(1.0) == 1
     assert math.isnan(math.sqrt(-1.0)) == True
 
+test_isnan()
+test_isinf()
+test_isfinite()
 test_ceil()
 test_floor()
 test_fabs()
@@ -99,6 +109,4 @@ test_log()
 test_log10()
 test_degrees()
 test_radians()
-test_isnan()
-test_isinf()
 test_sqrt()
