@@ -7,8 +7,16 @@ class ValueError:
 e = 2.718281828459045
 pi = 3.141592653589793
 tau = 6.283185307179586
-# inf = float('inf')
-# nan = float('nan')
+inf = float('inf')
+nan = float('nan')
+
+def isnan(x: float) -> bool:
+    """
+    isnan(float) -> bool
+
+    Returns True is float arg is a NaN, else False.
+    """
+    return x != x
 
 def ceil(x: float) -> float:
     """
