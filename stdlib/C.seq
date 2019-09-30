@@ -22,3 +22,4 @@ cdef log10(float) -> float
 cdef sqrt(float) -> float
 cdef pow(float, float) -> float
 cdef acos(float) -> float
+cdef asin(float) -> float

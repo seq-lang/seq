@@ -123,6 +123,12 @@ def test_acos():
     assert math.acos(1.0) == 0
     assert math.isnan(math.acos(NAN)) == True
 
+def test_asin():
+    assert math.asin(-1.0) == -math.pi/2
+    assert math.asin(0.0) == 0
+    assert math.asin(1.0) == math.pi/2
+    assert math.isnan(math.asin(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -139,3 +145,4 @@ test_radians()
 test_sqrt()
 test_pow()
 test_acos()
+test_asin()

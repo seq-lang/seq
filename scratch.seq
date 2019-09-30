@@ -4,7 +4,7 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.acos(-1.0) == math.pi
-print math.acos(0.0) == math.pi/2
-print math.acos(1.0) == 0
-print math.isnan(math.acos(NAN)) == True
+print math.asin(-1.0) == -math.pi/2
+print math.asin(0.0) == 0
+print math.asin(1.0) == math.pi/2
+print math.isnan(math.asin(NAN)) == True

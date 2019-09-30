@@ -149,3 +149,11 @@ def acos(x: float) -> float:
     Returns the arc cosine of x in radians.
     """
     return C.acos(x)
+
+def asin(x: float) -> float:
+    """
+    asin(float) -> float
+
+    Returns the arc sine of x in radians.
+    """
+    return C.asin(x)
