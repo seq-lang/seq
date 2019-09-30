@@ -4,14 +4,10 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.atan2(-1.0, 0.0) == -math.pi/2
-print math.atan2(-1.0,1.0) == -math.pi/4
-print math.atan2(0.0, 1.0) == 0
-print math.atan2(1.0, 1.0) == math.pi/4
-print math.atan2(1.0, 0.0) == math.pi/2
-print math.atan2(-0.0, 0.0) == -0
-print math.atan2(-0.0, 2.3) == -0
-print math.atan2(0.0, -2.3) == math.pi
-print math.atan2(INF, NINF) == math.pi*3/4
-print math.atan2(INF, 2.3) == math.pi/2
-print math.isnan(math.atan2(NAN, 0.0)) == True
+print math.cos(0.0) == 1
+print math.cos(math.pi/2) == 6.123233995736766e-17
+print math.cos(-math.pi/2) == 6.123233995736766e-17
+print math.cos(math.pi) == -1
+print math.isnan(math.cos(INF)) == True
+print math.isnan(math.cos(NINF)) == True
+print math.isnan(math.cos(NAN)) == True

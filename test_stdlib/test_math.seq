@@ -150,6 +150,15 @@ def test_atan2():
     assert math.atan2(INF, 2.3) == math.pi/2
     assert math.isnan(math.atan2(NAN, 0.0)) == True
 
+def test_cos():
+    assert math.cos(0.0) == 1
+    assert math.cos(math.pi/2) == 6.123233995736766e-17
+    assert math.cos(-math.pi/2) == 6.123233995736766e-17
+    assert math.cos(math.pi) == -1
+    assert math.isnan(math.cos(INF)) == True
+    assert math.isnan(math.cos(NINF)) == True
+    assert math.isnan(math.cos(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -169,3 +178,4 @@ test_acos()
 test_asin()
 test_atan()
 test_atan2()
+test_cos()

@@ -175,3 +175,11 @@ def atan2(y: float, x: float) -> float:
     correct quadrant.
     """
     return C.atan2(y, x)
+
+def cos(x: float) -> float:
+    """
+    cos(float) -> float
+
+    Returns the cosine of a radian angle x.
+    """
+    return C.cos(x)

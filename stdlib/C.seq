@@ -25,3 +25,4 @@ cdef acos(float) -> float
 cdef asin(float) -> float
 cdef atan(float) -> float
 cdef atan2(float, float) -> float
+cdef cos(float) -> float
