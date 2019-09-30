@@ -4,22 +4,7 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.pow(0.0, 1.0) == 0
-print math.pow(1.0, 0.0) == 1
-print math.pow(2.0, 1.0) == 2
-print math.pow(2.0, -1.0) == 0.5
-print math.pow(-0.0, 3.0) == -0.0
-print math.pow(-0.0, 2.3) == 0.0
-print math.pow(-0.0, 0.0) == 1
-print math.pow(-0.0, -0.0) == 1
-print math.pow(-2.0, 2.0) == 4.0
-print math.pow(-2.0, 3.0) == -8.0
-print math.pow(-2.0, -3.0) == -0.125
-print math.pow(INF, 1.0) == INF
-print math.pow(NINF, 1.0) == NINF
-print math.pow(1.0, INF) == 1
-print math.pow(1.0, NINF) == 1
-print math.isnan(math.pow(NAN, 1.0)) == True
-print math.isnan(math.pow(2.0, NAN)) == True
-print math.isnan(math.pow(0.0, NAN)) == True
-print math.pow(1.0, NAN) == 1
+print math.acos(-1.0) == math.pi
+print math.acos(0.0) == math.pi/2
+print math.acos(1.0) == 0
+print math.isnan(math.acos(NAN)) == True

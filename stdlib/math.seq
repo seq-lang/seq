@@ -141,3 +141,11 @@ def pow(x: float, y: float) -> float:
     Returns x raised to the power of y.
     """
     return C.pow(x, y)
+
+def acos(x: float) -> float:
+    """
+    acos(float) -> float
+
+    Returns the arc cosine of x in radians.
+    """
+    return C.acos(x)

@@ -117,6 +117,12 @@ def test_pow():
     assert math.isnan(math.pow(0.0, NAN)) == True
     assert math.pow(1.0, NAN) == 1
 
+def test_acos():
+    assert math.acos(-1.0) == math.pi
+    assert math.acos(0.0) == math.pi/2
+    assert math.acos(1.0) == 0
+    assert math.isnan(math.acos(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -132,3 +138,4 @@ test_degrees()
 test_radians()
 test_sqrt()
 test_pow()
+test_acos()
