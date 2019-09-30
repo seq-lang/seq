@@ -1,6 +1,9 @@
 import math
 
-print math.radians(180.0) == math.pi
-print math.radians(90.0) == math.pi/2
-print math.radians(-45.0) == -math.pi/4
-print math.radians(0.0) == 0.0
+NAN = math.nan
+INF = math.inf
+
+print math.isnan(float('nan'))
+print math.isnan(4.0)
+print math.isinf(float('inf'))
+print math.isinf(7.0)

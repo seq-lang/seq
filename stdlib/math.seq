@@ -14,9 +14,22 @@ def isnan(x: float) -> bool:
     """
     isnan(float) -> bool
 
-    Returns True is float arg is a NaN, else False.
+    Returns True if float arg is a NaN, else False.
     """
-    return x != x
+    test = x == x
+    # if it is true then it is a number
+    if test:
+        return False
+    return True
+
+def isinf(x: float) -> bool:
+    """
+    isinf(float) -> bool:
+
+    Returns True if float arg is an inf, else False.
+    """
+    return x == inf
+
 
 def ceil(x: float) -> float:
     """

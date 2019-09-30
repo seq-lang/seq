@@ -1,5 +1,13 @@
 import math
 
+def test_isnan():
+    print math.isnan(float('nan')) == True
+    print math.isnan(4.0) == False
+
+def test_isinf():
+    print math.isinf(float('inf')) == True
+    print math.isinf(7.0) == False
+
 def test_ceil():
     assert math.ceil(3.3) == 4
     assert math.ceil(0.5) == 1
@@ -59,6 +67,7 @@ def test_radians():
     assert math.radians(-45.0) == -math.pi/4
     assert math.radians(0.0) == 0.0
 
+
 test_ceil()
 test_floor()
 test_fabs()
@@ -68,3 +77,5 @@ test_log()
 test_log10()
 test_degrees()
 test_radians()
+test_isnan()
+test_isinf()
