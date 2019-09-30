@@ -1,5 +1,9 @@
 import math
 
+NAN = math.nan
+INF = math.inf
+NINF = -math.inf
+
 def test_isnan():
     assert math.isnan(float('nan')) == True
     assert math.isnan(4.0) == False
@@ -43,6 +47,18 @@ def test_exp():
     assert math.exp(0.0) == 1
     assert math.exp(-1.0) == 1/math.e
     assert math.exp(1.0) == math.e
+
+def test_ldexp():
+    assert math.ldexp(0.0, 1) == 0.0
+    assert math.ldexp(1.0, 1) == 2.0
+    assert math.ldexp(1.0, -1) == 0.5
+    assert math.ldexp(-1.0, 1) == -2.0
+    assert math.ldexp(0.0, 1) == 0.0
+    assert math.ldexp(1.0, -1000000) == 0.0
+    assert math.ldexp(-1.0, -1000000) == -0.0
+    assert math.ldexp(INF, 30) == INF
+    assert math.ldexp(NINF, -213) == NINF
+    assert math.ldexp(NAN, 0) == NAN
 
 def test_log():
     assert math.log(1.0/math.e) == -1

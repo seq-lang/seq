@@ -73,6 +73,14 @@ def exp(x: float) -> float:
     """
     return C.exp(x)
 
+def ldexp(x: float, i: int) -> float:
+    """
+    ldexp(float, int) -> float
+
+    Returns x multiplied by 2 raised to the power of exponent.
+    """
+    return C.ldexp(x, i)
+
 def log(x: float) -> float:
     """
     log(float) -> float

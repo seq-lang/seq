@@ -2,8 +2,15 @@ import math
 
 NAN = math.nan
 INF = math.inf
+NINF = -math.inf
 
-print math.sqrt(4.0) == 2
-print math.sqrt(0.0) == 0
-print math.sqrt(1.0) == 1
-print math.isnan(math.sqrt(-1.0)) == True
+print math.ldexp(0.0, 1) == 0.0
+print math.ldexp(1.0, 1) == 2.0
+print math.ldexp(1.0, -1) == 0.5
+print math.ldexp(-1.0, 1) == -2.0
+print math.ldexp(0.0, 1) == 0.0
+print math.ldexp(1.0, -1000000) == 0.0
+print math.ldexp(-1.0, -1000000) == -0.0
+print math.ldexp(INF, 30) == INF
+print math.ldexp(NINF, -213) == NINF
+print math.isnan(math.ldexp(NAN, 0))
