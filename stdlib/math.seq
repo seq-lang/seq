@@ -165,3 +165,13 @@ def atan(x: float) -> float:
     Returns the arc tangent of x in radians.
     """
     return C.atan(x)
+
+def atan2(y: float, x: float) -> float:
+    """
+    atan2(float, float) -> float
+
+    Returns the arc tangent in radians of y/x based
+    on the signs of both values to determine the
+    correct quadrant.
+    """
+    return C.atan2(y, x)

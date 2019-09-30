@@ -137,6 +137,19 @@ def test_atan():
     assert math.atan(NINF) == -math.pi/2
     assert math.isnan(math.atan(NAN)) == True
 
+def test_atan2():
+    assert math.atan2(-1.0, 0.0) == -math.pi/2
+    assert math.atan2(-1.0,1.0) == -math.pi/4
+    assert math.atan2(0.0, 1.0) == 0
+    assert math.atan2(1.0, 1.0) == math.pi/4
+    assert math.atan2(1.0, 0.0) == math.pi/2
+    assert math.atan2(-0.0, 0.0) == -0
+    assert math.atan2(-0.0, 2.3) == -0
+    assert math.atan2(0.0, -2.3) == math.pi
+    assert math.atan2(INF, NINF) == math.pi*3/4
+    assert math.atan2(INF, 2.3) == math.pi/2
+    assert math.isnan(math.atan2(NAN, 0.0)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -155,3 +168,4 @@ test_pow()
 test_acos()
 test_asin()
 test_atan()
+test_atan2()

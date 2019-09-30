@@ -4,9 +4,14 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.atan(-1.0) == -math.pi/4
-print math.atan(0.0) == 0
-print math.atan(1.0) == math.pi/4
-print math.atan(INF) == math.pi/2
-print math.atan(NINF) == -math.pi/2
-print math.isnan(math.atan(NAN)) == True
+print math.atan2(-1.0, 0.0) == -math.pi/2
+print math.atan2(-1.0,1.0) == -math.pi/4
+print math.atan2(0.0, 1.0) == 0
+print math.atan2(1.0, 1.0) == math.pi/4
+print math.atan2(1.0, 0.0) == math.pi/2
+print math.atan2(-0.0, 0.0) == -0
+print math.atan2(-0.0, 2.3) == -0
+print math.atan2(0.0, -2.3) == math.pi
+print math.atan2(INF, NINF) == math.pi*3/4
+print math.atan2(INF, 2.3) == math.pi/2
+print math.isnan(math.atan2(NAN, 0.0)) == True
