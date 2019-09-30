@@ -3,7 +3,7 @@ import math
 NAN = math.nan
 INF = math.inf
 
-print math.isnan(float('nan'))
-print math.isnan(4.0)
-print math.isinf(float('inf'))
-print math.isinf(7.0)
+print math.sqrt(4.0) == 2
+print math.sqrt(0.0) == 0
+print math.sqrt(1.0) == 1
+print math.isnan(math.sqrt(-1.0)) == True

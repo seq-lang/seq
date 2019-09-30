@@ -106,3 +106,11 @@ def radians(x: float) -> float:
     """
     degToRad = pi/180.0
     return x * degToRad
+
+def sqrt(x: float) -> float:
+    """
+    sqrt(float) -> float
+
+    Returns the square root of x.
+    """
+    return C.sqrt(x)

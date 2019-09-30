@@ -18,3 +18,4 @@ cdef fmod(float, float) -> float
 cdef exp(float) -> float
 cdef log(float) -> float
 cdef log10(float) -> float
+cdef sqrt(float) -> float
