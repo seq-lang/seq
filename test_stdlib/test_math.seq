@@ -159,6 +159,14 @@ def test_cos():
     assert math.isnan(math.cos(NINF)) == True
     assert math.isnan(math.cos(NAN)) == True
 
+def test_sin():
+    assert math.sin(0.0) == 0
+    assert math.sin(math.pi/2) == 1
+    assert math.sin(-math.pi/2) == -1
+    assert math.isnan(math.sin(INF)) == True
+    assert math.isnan(math.sin(NINF)) == True
+    assert math.isnan(math.sin(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -179,3 +187,4 @@ test_asin()
 test_atan()
 test_atan2()
 test_cos()
+test_sin()

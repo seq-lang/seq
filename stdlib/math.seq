@@ -183,3 +183,11 @@ def cos(x: float) -> float:
     Returns the cosine of a radian angle x.
     """
     return C.cos(x)
+
+def sin(x: float) -> float:
+    """
+    sin(float) -> float
+
+    Returns the sine of a radian angle x.
+    """
+    return C.sin(x)

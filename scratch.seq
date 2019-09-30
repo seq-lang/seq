@@ -4,10 +4,9 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.cos(0.0) == 1
-print math.cos(math.pi/2) == 6.123233995736766e-17
-print math.cos(-math.pi/2) == 6.123233995736766e-17
-print math.cos(math.pi) == -1
-print math.isnan(math.cos(INF)) == True
-print math.isnan(math.cos(NINF)) == True
-print math.isnan(math.cos(NAN)) == True
+print math.sin(0.0) == 0
+print math.sin(math.pi/2) == 1
+print math.sin(-math.pi/2) == -1
+print math.isnan(math.sin(INF)) == True
+print math.isnan(math.sin(NINF)) == True
+print math.isnan(math.sin(NAN)) == True
