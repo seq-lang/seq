@@ -246,6 +246,13 @@ def test_copysign():
     assert math.isnan(math.copysign(NAN, NINF)) == True
     assert math.isnan(math.copysign(NAN, NAN)) == True
 
+def test_log1p():
+    assert math.log1p(2.0) == 1.0986122886681098
+    assert math.log1p(2.0**90) == 62.383246250395075
+    assert math.log1p(2.0**300) == 207.94415416798358
+    assert math.log1p(INF) == INF
+    assert math.log1p(-1.0) == NINF
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -276,3 +283,4 @@ test_acosh()
 test_asinh()
 test_atanh()
 test_copysign()
+test_log1p()

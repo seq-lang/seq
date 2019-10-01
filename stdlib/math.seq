@@ -266,3 +266,11 @@ def copysign(x: float, y: float) -> float:
     x but the sign of y.
     """
     return C.copysign(x, y)
+
+def log1p(x: float) -> float:
+    """
+    log1p(float) -> float
+
+    Return the natural logarithm of 1+x (base e).
+    """
+    return C.log1p(x)
