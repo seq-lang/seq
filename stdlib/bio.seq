@@ -131,6 +131,12 @@ extend seq:
     def __iter__(self: seq):
         return self.split(1, 1)
 
+    def __reversed__(self: seq):
+        i = len(self) - 1
+        while i >= 0:
+            yield self._slice_direct(i,i+1)
+            i -= 1
+
     def kmersx[K](self: seq, step: int):
         k = K.len()
         if self.len >= 0:

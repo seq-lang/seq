@@ -126,10 +126,7 @@ def echo(x):
     return x
 
 def reversed(x):
-    i = len(x)
-    while i > 0:
-        i -= 1
-        yield x[i]
+    return x.__reversed__()
 
 def round(x, n) -> float:
     cdef round(float) -> float
@@ -361,9 +358,17 @@ extend str:
         return p
 
     def __iter__(self: str):
+        i = 0
         n = len(self)
-        for i in range(n):
+        while i < n:
             yield self[i]
+            i += 1
+
+    def __reversed__(self: str):
+        i = len(self) - 1
+        while i >= 0:
+            yield self[i]
+            i -= 1
 
     def __mul__(self: str, x: int):
         total = x * self.len

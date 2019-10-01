@@ -95,6 +95,12 @@ class list[T]:
             yield self.arr[i]
             i += 1
 
+    def __reversed__(self: list[T]):
+        i = self.len - 1
+        while i >= 0:
+            yield self.arr[i]
+            i -= 1
+
     def __add__(self: list[T], other: list[T]):
         v = list[T](self.len + other.len)
         for a in self:
