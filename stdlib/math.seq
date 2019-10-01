@@ -201,3 +201,11 @@ def hypot(x: float, y: float) -> float:
     origin to point (x, y).
     """
     return sqrt(x*x + y*y)
+
+def tan(x: float) -> float:
+    """
+    tan(float) -> float
+
+    Return the tangent of a radian angle x.
+    """
+    return C.tan(x)
