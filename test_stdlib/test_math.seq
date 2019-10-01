@@ -182,6 +182,13 @@ def test_tan():
     assert math.isnan(math.tan(NINF)) == True
     assert math.isnan(math.tan(NAN)) == True
 
+def test_cosh():
+    assert math.cosh(0.0) == 1
+    assert math.cosh(2.0)-2*math.cosh(1.0)**2 == -1
+    assert math.cosh(INF) == INF
+    assert math.cosh(NINF) == INF
+    assert math.isnan(math.cosh(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -205,3 +212,4 @@ test_cos()
 test_sin()
 test_hypot()
 test_tan()
+test_cosh()

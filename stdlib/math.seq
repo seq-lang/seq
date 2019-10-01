@@ -209,3 +209,11 @@ def tan(x: float) -> float:
     Return the tangent of a radian angle x.
     """
     return C.tan(x)
+
+def cosh(x: float) -> float:
+    """
+    cosh(float) -> float
+
+    Returns the hyperbolic cosine of x.
+    """
+    return C.cosh(x)

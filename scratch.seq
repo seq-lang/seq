@@ -4,9 +4,8 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.tan(0.0) == 0
-print math.tan(math.pi/4) == 0.9999999999999999
-print math.tan(-math.pi/4) == -0.9999999999999999
-print math.isnan(math.tan(INF)) == True
-print math.isnan(math.tan(NINF)) == True
-print math.isnan(math.tan(NAN)) == True
+print math.cosh(0.0) == 1
+print math.cosh(2.0)-2*math.cosh(1.0)**2 == -1
+print math.cosh(INF) == INF
+print math.cosh(NINF) == INF
+print math.isnan(math.cosh(NAN)) == True

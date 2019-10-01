@@ -28,3 +28,4 @@ cdef atan2(float, float) -> float
 cdef cos(float) -> float
 cdef sin(float) -> float
 cdef tan(float) -> float
+cdef cosh(float) -> float
