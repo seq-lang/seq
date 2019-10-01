@@ -196,6 +196,13 @@ def test_sinh():
     assert math.sinh(NINF) == NINF
     assert math.isnan(math.sinh(NAN)) == True
 
+def test_tanh():
+    assert math.tanh(0.0) == 0
+    assert math.tanh(1.0) + math.tanh(-1.0) == 0
+    assert math.tanh(INF) == 1
+    assert math.tanh(NINF) == -1
+    assert math.isnan(math.tanh(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -221,3 +228,4 @@ test_hypot()
 test_tan()
 test_cosh()
 test_sinh()
+test_tanh()

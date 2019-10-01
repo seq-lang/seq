@@ -225,3 +225,11 @@ def sinh(x: float) -> float:
     Returns the hyperbolic sine of x.
     """
     return C.sinh(x)
+
+def tanh(x: float) -> float:
+    """
+    tanh(float) -> float
+
+    Returns the hyperbolic tangent of x.
+    """
+    return C.tanh(x)

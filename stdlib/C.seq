@@ -30,3 +30,4 @@ cdef sin(float) -> float
 cdef tan(float) -> float
 cdef cosh(float) -> float
 cdef sinh(float) -> float
+cdef tanh(float) -> float

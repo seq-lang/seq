@@ -4,8 +4,8 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.sinh(0.0) == 0
-print math.sinh(1.0) + math.sinh(-1.0) == 0
-print math.sinh(INF) == INF
-print math.sinh(NINF) == NINF
-print math.isnan(math.sinh(NAN)) == True
+print math.tanh(0.0) == 0
+print math.tanh(1.0) + math.tanh(-1.0) == 0
+print math.tanh(INF) == 1
+print math.tanh(NINF) == -1
+print math.isnan(math.tanh(NAN)) == True
