@@ -66,7 +66,8 @@ extend seq:
         n = len(self)
         if idx < 0:
             idx += n
-        assert 0 <= idx <= n
+        if not (0 <= idx < n):
+            raise IndexError("seq index out of range")
         if self.len >= 0:
             return seq(self.ptr + idx, 1)
         else:
@@ -546,7 +547,8 @@ type CIGAR(value: ptr[u32], len: int):
         return bam_cigar2rlen(self.len, self.value)
 
     def __getitem__(self: CIGAR, idx: int):
-        assert idx < len(self)
+        if not (0 <= idx < len(self)):
+            raise IndexError("CIGAR index out of range")
         v = self.value[idx]
         return (int(v) >> 4, "MIDNSHP=XB"[int(v) & 0xf])
 
