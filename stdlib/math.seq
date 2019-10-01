@@ -217,3 +217,11 @@ def cosh(x: float) -> float:
     Returns the hyperbolic cosine of x.
     """
     return C.cosh(x)
+
+def sinh(x: float) -> float:
+    """
+    sinh(float) -> float
+
+    Returns the hyperbolic sine of x.
+    """
+    return C.sinh(x)
