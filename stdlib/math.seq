@@ -241,3 +241,11 @@ def acosh(x: float) -> float:
     Return the inverse hyperbolic cosine of x.
     """
     return C.acosh(x)
+
+def asinh(x: float) -> float:
+    """
+    asinh(float) -> float
+
+    Return the inverse hyperbolic sine of x.
+    """
+    return C.asinh(x)
