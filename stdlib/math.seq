@@ -233,3 +233,11 @@ def tanh(x: float) -> float:
     Returns the hyperbolic tangent of x.
     """
     return C.tanh(x)
+
+def acosh(x: float) -> float:
+    """
+    acosh(float) -> float
+
+    Return the inverse hyperbolic cosine of x.
+    """
+    return C.acosh(x)

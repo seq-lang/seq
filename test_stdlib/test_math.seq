@@ -203,6 +203,13 @@ def test_tanh():
     assert math.tanh(NINF) == -1
     assert math.isnan(math.tanh(NAN)) == True
 
+def test_acosh():
+    assert math.acosh(1.0) == 0
+    assert math.acosh(2.0) == 1.3169578969248166
+    assert math.acosh(INF) == INF
+    assert math.isnan(math.acosh(NAN)) == True
+    assert math.isnan(math.acosh(-1.0)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -229,3 +236,4 @@ test_tan()
 test_cosh()
 test_sinh()
 test_tanh()
+test_acosh()
