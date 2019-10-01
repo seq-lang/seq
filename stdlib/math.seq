@@ -249,3 +249,11 @@ def asinh(x: float) -> float:
     Return the inverse hyperbolic sine of x.
     """
     return C.asinh(x)
+
+def atanh(x: float) -> float:
+    """
+    atanh(float) -> float
+
+    Return the inverse hyperbolic tangent of x.
+    """
+    return C.atanh(x)

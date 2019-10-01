@@ -218,6 +218,14 @@ def test_asinh():
     assert math.isnan(math.asinh(NAN)) == True
     assert math.asinh(NINF) == NINF
 
+def test_atanh():
+    assert math.atanh(0.0) == 0
+    assert math.atanh(0.5) == 0.5493061443340549
+    assert math.atanh(-0.5) == -0.5493061443340549
+    assert math.isnan(math.atanh(INF)) == True
+    assert math.isnan(math.atanh(NAN)) == True
+    assert math.isnan(math.atanh(NINF)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -246,3 +254,4 @@ test_sinh()
 test_tanh()
 test_acosh()
 test_asinh()
+test_atanh()

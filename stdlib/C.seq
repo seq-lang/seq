@@ -33,3 +33,4 @@ cdef sinh(float) -> float
 cdef tanh(float) -> float
 cdef acosh(float) -> float
 cdef asinh(float) -> float
+cdef atanh(float) -> float

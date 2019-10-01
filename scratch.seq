@@ -4,9 +4,9 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.asinh(0.0) == 0
-print math.asinh(1.0) == 0.881373587019543
-print math.asinh(-1.0) == -0.881373587019543
-print math.asinh(INF) == INF
-print math.isnan(math.asinh(NAN)) == True
-print math.asinh(NINF) == NINF
+print math.atanh(0.0) == 0
+print math.atanh(0.5) == 0.5493061443340549
+print math.atanh(-0.5) == -0.5493061443340549
+print math.isnan(math.atanh(INF)) == True
+print math.isnan(math.atanh(NAN)) == True
+print math.isnan(math.atanh(NINF)) == True
