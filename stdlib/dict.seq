@@ -2,6 +2,10 @@
 
 import python as py
 
+def _dict_hash(key):
+    k = hash(key)
+    return (k >> 33) ^ k ^ (k << 11)
+
 class dict[K,V]:
     _n_buckets: int
     _size: int
@@ -35,7 +39,7 @@ class dict[K,V]:
         if self._n_buckets:
             step = 0
             mask = self._n_buckets - 1
-            k = hash(key)
+            k = _dict_hash(key)
             i = k & mask
             last = i
             while not __ac_isempty(self._flags, i) and (__ac_isdel(self._flags, i) or self._keys[i] != key):
@@ -91,7 +95,7 @@ class dict[K,V]:
 
                     while True:
                         step = 0
-                        k = hash(key)
+                        k = _dict_hash(key)
                         i = k & new_mask
 
                         while not __ac_isempty(new_flags, i):
@@ -129,7 +133,7 @@ class dict[K,V]:
         step = 0
         site = self._n_buckets
         x = site
-        k = hash(key)
+        k = _dict_hash(key)
         i = k & mask
         if __ac_isempty(self._flags, i):
             x = i
