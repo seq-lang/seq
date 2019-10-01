@@ -4,9 +4,21 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.atanh(0.0) == 0
-print math.atanh(0.5) == 0.5493061443340549
-print math.atanh(-0.5) == -0.5493061443340549
-print math.isnan(math.atanh(INF)) == True
-print math.isnan(math.atanh(NAN)) == True
-print math.isnan(math.atanh(NINF)) == True
+print math.copysign(1.0, -0.0) == -1
+print math.copysign(1.0, 42.0) == 1
+print math.copysign(1.0, -42.0) == -1
+print math.copysign(3.0, 0.0) == 3
+print math.copysign(INF, 0.0) == INF
+print math.copysign(INF, -0.0) == NINF
+print math.copysign(NINF, 0.0) == INF
+print math.copysign(NINF, -0.0) == NINF
+print math.copysign(1.0, INF) == 1
+print math.copysign(1.0, NINF) == -1
+print math.copysign(INF, INF) == INF
+print math.copysign(INF, NINF) == NINF
+print math.copysign(NINF, INF) == INF
+print math.copysign(NINF, NINF) == NINF
+print math.isnan(math.copysign(NAN, 1.0)) == True
+print math.isnan(math.copysign(NAN, INF)) == True
+print math.isnan(math.copysign(NAN, NINF)) == True
+print math.isnan(math.copysign(NAN, NAN)) == True

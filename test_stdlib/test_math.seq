@@ -226,6 +226,26 @@ def test_atanh():
     assert math.isnan(math.atanh(NAN)) == True
     assert math.isnan(math.atanh(NINF)) == True
 
+def test_copysign():
+    assert math.copysign(1.0, -0.0) == -1
+    assert math.copysign(1.0, 42.0) == 1
+    assert math.copysign(1.0, -42.0) == -1
+    assert math.copysign(3.0, 0.0) == 3
+    assert math.copysign(INF, 0.0) == INF
+    assert math.copysign(INF, -0.0) == NINF
+    assert math.copysign(NINF, 0.0) == INF
+    assert math.copysign(NINF, -0.0) == NINF
+    assert math.copysign(1.0, INF) == 1
+    assert math.copysign(1.0, NINF) == -1
+    assert math.copysign(INF, INF) == INF
+    assert math.copysign(INF, NINF) == NINF
+    assert math.copysign(NINF, INF) == INF
+    assert math.copysign(NINF, NINF) == NINF
+    assert math.isnan(math.copysign(NAN, 1.0)) == True
+    assert math.isnan(math.copysign(NAN, INF)) == True
+    assert math.isnan(math.copysign(NAN, NINF)) == True
+    assert math.isnan(math.copysign(NAN, NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -255,3 +275,4 @@ test_tanh()
 test_acosh()
 test_asinh()
 test_atanh()
+test_copysign()

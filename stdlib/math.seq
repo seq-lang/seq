@@ -257,3 +257,12 @@ def atanh(x: float) -> float:
     Return the inverse hyperbolic tangent of x.
     """
     return C.atanh(x)
+
+def copysign(x: float, y: float) -> float:
+    """
+    copysign(float, float) -> float
+
+    Return a float with the magnitude (absolute value) of
+    x but the sign of y.
+    """
+    return C.copysign(x, y)
