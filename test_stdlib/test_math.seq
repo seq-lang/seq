@@ -290,6 +290,15 @@ def test_erf():
     assert math.erf(NINF) == -1.0
     assert math.isnan(math.erf(NAN)) == True
 
+def test_erfc():
+    assert math.erfc(0.0) == 1.0
+    assert math.erfc(1.0) == 0.15729920705028516
+    assert math.erfc(2.0) == 0.0046777349810472645
+    assert math.erfc(-1.0) == 1.8427007929497148
+    assert math.erfc(INF) == 0.0
+    assert math.erfc(NINF) == 2.0
+    assert math.isnan(math.erfc(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -325,3 +334,4 @@ test_copysign()
 test_log1p()
 test_trunc()
 test_erf()
+test_erfc()

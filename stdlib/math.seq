@@ -308,3 +308,11 @@ def erf(x: float) -> float:
     Return the error function at x.
     """
     return C.erf(x)
+
+def erfc(x: float) -> float:
+    """
+    erfc(float) -> float
+
+    Return the complementary error function at x.
+    """
+    return C.erfc(x)

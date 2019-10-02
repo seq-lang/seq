@@ -4,10 +4,10 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.erf(1.0) == 0.8427007929497148
-print math.erf(0.0) == 0
-print math.erf(3.0) == 0.9999779095030015
-print math.erf(256.0) == 1.0
-print math.erf(INF) == 1.0
-print math.erf(NINF) == -1.0
-print math.isnan(math.erf(NAN)) == True
+print math.erfc(0.0) == 1.0
+print math.erfc(1.0) == 0.15729920705028516
+print math.erfc(2.0) == 0.0046777349810472645
+print math.erfc(-1.0) == 1.8427007929497148
+print math.erfc(INF) == 0.0
+print math.erfc(NINF) == 2.0
+print math.isnan(math.erfc(NAN)) == True
