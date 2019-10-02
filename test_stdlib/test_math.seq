@@ -309,6 +309,14 @@ def test_gamma():
     assert math.isnan(math.gamma(NINF)) == True
     assert math.isnan(math.gamma(NAN)) == True
 
+def test_lgamma():
+    assert math.lgamma(1.0) == 0.0
+    assert math.lgamma(2.0) == 0.0
+    assert math.lgamma(-1.0) == INF
+    assert math.lgamma(INF) == INF
+    assert math.lgamma(NINF) == INF
+    assert math.isnan(math.lgamma(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -346,3 +354,4 @@ test_trunc()
 test_erf()
 test_erfc()
 test_gamma()
+test_lgamma()

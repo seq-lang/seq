@@ -43,3 +43,4 @@ cdef log2(float) -> float
 cdef erf(float) -> float
 cdef erfc(float) -> float
 cdef gamma(float) -> float
+cdef lgamma(float) -> float

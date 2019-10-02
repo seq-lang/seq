@@ -324,3 +324,12 @@ def gamma(x: float) -> float:
     Return the Gamma function at x.
     """
     return C.gamma(x)
+
+def lgamma(x: float) -> float:
+    """
+    lgamma(float) -> float
+
+    Return the natural logarithm of
+    the absolute value of the Gamma function at x.
+    """
+    return C.lgamma(x)
