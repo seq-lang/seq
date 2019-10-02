@@ -16,6 +16,7 @@ cdef floor(float) -> float
 cdef fabs(float) -> float
 cdef fmod(float, float) -> float
 cdef exp(float) -> float
+cdef expm1(float) -> float
 cdef ldexp(float, int) -> float
 cdef log(float) -> float
 cdef log10(float) -> float

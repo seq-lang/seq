@@ -84,6 +84,15 @@ def exp(x: float) -> float:
     """
     return C.exp(x)
 
+def expm1(x: float) -> float:
+    """
+    expm1(float) -> float
+
+    Return e raised to the power x, minus 1. expm1 provides
+    a way to compute this quantity to full precision.
+    """
+    return C.expm1(x)
+
 def ldexp(x: float, i: int) -> float:
     """
     ldexp(float, int) -> float

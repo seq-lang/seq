@@ -55,6 +55,15 @@ def test_exp():
     assert math.exp(-1.0) == 1/math.e
     assert math.exp(1.0) == math.e
 
+def test_expm1():
+    assert math.expm1(0.0) == 0
+    assert math.expm1(1.0) == 1.7182818284590453
+    assert math.expm1(3.0) == 19.085536923187668
+    assert math.expm1(5.0) == 147.4131591025766
+    assert math.expm1(INF) == INF
+    assert math.expm1(NINF) == -1
+    assert math.isnan(math.expm1(NAN)) == True
+
 def test_ldexp():
     assert math.ldexp(0.0, 1) == 0.0
     assert math.ldexp(1.0, 1) == 2.0
@@ -295,3 +304,4 @@ test_atanh()
 test_copysign()
 test_log1p()
 test_trunc()
+test_expm1()
