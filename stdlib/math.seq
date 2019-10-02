@@ -316,3 +316,11 @@ def erfc(x: float) -> float:
     Return the complementary error function at x.
     """
     return C.erfc(x)
+
+def gamma(x: float) -> float:
+    """
+    gamma(float) -> float
+
+    Return the Gamma function at x.
+    """
+    return C.gamma(x)

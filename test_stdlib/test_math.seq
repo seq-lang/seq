@@ -299,6 +299,16 @@ def test_erfc():
     assert math.erfc(NINF) == 2.0
     assert math.isnan(math.erfc(NAN)) == True
 
+def test_gamma():
+    assert math.gamma(6.0) == 120.0
+    assert math.gamma(1.0) == 1.0
+    assert math.gamma(2.0) == 1.0
+    assert math.gamma(3.0) == 2.0
+    assert math.isnan(math.gamma(-1.0)) == True
+    assert math.gamma(INF) == INF
+    assert math.isnan(math.gamma(NINF)) == True
+    assert math.isnan(math.gamma(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -335,3 +345,4 @@ test_log1p()
 test_trunc()
 test_erf()
 test_erfc()
+test_gamma()

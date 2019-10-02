@@ -42,3 +42,4 @@ cdef trunc(float) -> float
 cdef log2(float) -> float
 cdef erf(float) -> float
 cdef erfc(float) -> float
+cdef gamma(float) -> float
