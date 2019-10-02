@@ -253,6 +253,16 @@ def test_log1p():
     assert math.log1p(INF) == INF
     assert math.log1p(-1.0) == NINF
 
+def test_trunc():
+    assert math.trunc(1.0) == 1
+    assert math.trunc(-1.0) == -1
+    assert math.trunc(1.5) == 1
+    assert math.trunc(-1.5) == -1
+    assert math.trunc(1.99999999) == 1
+    assert math.trunc(-1.99999999) == -1
+    assert math.trunc(0.99999999) == 0
+    assert math.trunc(-100.999) == -100
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -284,3 +294,4 @@ test_asinh()
 test_atanh()
 test_copysign()
 test_log1p()
+test_trunc()

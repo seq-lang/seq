@@ -274,3 +274,12 @@ def log1p(x: float) -> float:
     Return the natural logarithm of 1+x (base e).
     """
     return C.log1p(x)
+
+def trunc(x: float) -> float:
+    """
+    trunc(float) -> float
+
+    Return the Real value x truncated to an Integral
+    (usually an integer).
+    """
+    return C.trunc(x)

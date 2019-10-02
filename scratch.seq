@@ -4,8 +4,11 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.log1p(2.0) == 1.0986122886681098
-print math.log1p(2.0**90) == 62.383246250395075
-print math.log1p(2.0**300) == 207.94415416798358
-print math.log1p(INF) == INF
-print math.log1p(-1.0) == NINF
+print math.trunc(1.0) == 1
+print math.trunc(-1.0) == -1
+print math.trunc(1.5) == 1
+print math.trunc(-1.5) == -1
+print math.trunc(1.99999999) == 1
+print math.trunc(-1.99999999) == -1
+print math.trunc(0.99999999) == 0
+print math.trunc(-100.999) == -100

@@ -36,3 +36,4 @@ cdef asinh(float) -> float
 cdef atanh(float) -> float
 cdef copysign(float, float) -> float
 cdef log1p(float) -> float
+cdef trunc(float) -> float
