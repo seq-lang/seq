@@ -300,3 +300,11 @@ def trunc(x: float) -> float:
     (usually an integer).
     """
     return C.trunc(x)
+
+def erf(x: float) -> float:
+    """
+    erf(float) -> float
+
+    Return the error function at x.
+    """
+    return C.erf(x)

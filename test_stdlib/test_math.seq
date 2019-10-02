@@ -281,6 +281,15 @@ def test_trunc():
     assert math.trunc(0.99999999) == 0
     assert math.trunc(-100.999) == -100
 
+def test_erf():
+    assert math.erf(1.0) == 0.8427007929497148
+    assert math.erf(0.0) == 0
+    assert math.erf(3.0) == 0.9999779095030015
+    assert math.erf(256.0) == 1.0
+    assert math.erf(INF) == 1.0
+    assert math.erf(NINF) == -1.0
+    assert math.isnan(math.erf(NAN)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -315,3 +324,4 @@ test_atanh()
 test_copysign()
 test_log1p()
 test_trunc()
+test_erf()

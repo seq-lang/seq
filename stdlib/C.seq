@@ -40,3 +40,4 @@ cdef copysign(float, float) -> float
 cdef log1p(float) -> float
 cdef trunc(float) -> float
 cdef log2(float) -> float
+cdef erf(float) -> float
