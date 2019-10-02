@@ -4,10 +4,10 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.expm1(0.0) == 0
-print math.expm1(1.0) == 1.7182818284590453
-print math.expm1(3.0) == 19.085536923187668
-print math.expm1(5.0) == 147.4131591025766
-print math.expm1(INF) == INF
-print math.expm1(NINF) == -1
-print math.isnan(math.expm1(NAN)) == True
+print math.log2(1.0) == 0.0
+print math.log2(2.0) == 1.0
+print math.log2(4.0) == 2.0
+print math.log2(2.0**1023) == 1023.0
+print math.isnan(math.log2(-1.5)) == True
+print math.isnan(math.log2(NINF)) == True
+print math.isnan(math.log2(NAN)) == True

@@ -81,6 +81,15 @@ def test_log():
     assert math.log(1.0) == 0
     assert math.log(math.e) == 1
 
+def test_log2():
+    assert math.log2(1.0) == 0.0
+    assert math.log2(2.0) == 1.0
+    assert math.log2(4.0) == 2.0
+    assert math.log2(2.0**1023) == 1023.0
+    assert math.isnan(math.log2(-1.5)) == True
+    assert math.isnan(math.log2(NINF)) == True
+    assert math.isnan(math.log2(NAN)) == True
+
 def test_log10():
     assert math.log10(0.1) == -1
     assert math.log10(1.0) == 0
@@ -280,8 +289,10 @@ test_floor()
 test_fabs()
 test_fmod()
 test_exp()
+test_expm1()
 test_ldexp()
 test_log()
+test_log2()
 test_log10()
 test_degrees()
 test_radians()
@@ -304,4 +315,3 @@ test_atanh()
 test_copysign()
 test_log1p()
 test_trunc()
-test_expm1()
