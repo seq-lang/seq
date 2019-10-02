@@ -8,6 +8,10 @@ print ~s                      # EXPECT: TACGTTACGT
 print list((~s).kmers[K](1))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
 print list((~s).split(5, 1))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
 
+s = s'AANGGCCAGTC'
+print list(s.kmers_with_pos[Kmer[2]](1))  # EXPECT: [(0, AA), (3, GG), (4, GC), (5, CC), (6, CA), (7, AG), (8, GT), (9, TC)]
+print list(~s |> kmers_with_pos[Kmer[2]](1))  # EXPECT: [(0, GA), (1, AC), (2, CT), (3, TG), (4, GG), (5, GC), (6, CC), (9, TT)]
+
 k1 = K(s'ACGTA')
 k2 = K(s'ATGTT')
 

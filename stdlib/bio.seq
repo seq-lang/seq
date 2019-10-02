@@ -196,6 +196,25 @@ extend seq:
                     yield K(sub, True)
                 i += step
 
+    def kmers_with_pos[K](self: seq, step: int):
+        k = K.len()
+        if self.len >= 0:
+            n = self.len
+            i = 0
+            while i + k <= n:
+                sub = self._slice_direct(i,i+k)
+                if not sub.N():
+                    yield (i, K(sub, False))
+                i += step
+        else:
+            n = -self.len
+            i = 0
+            while i + k <= n:
+                sub = self._slice_direct(i,i+k)
+                if not sub.N():
+                    yield (i, K(sub, True))
+                i += step
+
     def N(self: seq):
         i = 0
         n = len(self)
@@ -213,6 +232,9 @@ def split(self: seq, k: int, step: int):
 
 def kmers[K](self: seq, step: int):
     return self.kmers[K](step)
+
+def kmers_with_pos[K](self: seq, step: int):
+    return self.kmers_with_pos[K](step)
 
 def base[K,T](kmer: K, idx: int, b: T):
     type U = typeof(kmer.as_int())
