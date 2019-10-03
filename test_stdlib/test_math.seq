@@ -317,6 +317,15 @@ def test_lgamma():
     assert math.lgamma(NINF) == INF
     assert math.isnan(math.lgamma(NAN)) == True
 
+def test_remainder():
+    assert math.remainder(2.0, 2.0) == 0.0
+    assert math.remainder(-4.0, 1.0) == -0.0
+    assert math.remainder(-3.8, 1.0) == 0.20000000000000018
+    assert math.remainder(3.8, 1.0) == -0.20000000000000018
+    assert math.isnan(math.remainder(INF, 1.0)) == True
+    assert math.isnan(math.remainder(NINF, 1.0)) == True
+    assert math.isnan(math.remainder(NAN, 1.0)) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -355,3 +364,4 @@ test_erf()
 test_erfc()
 test_gamma()
 test_lgamma()
+test_remainder()

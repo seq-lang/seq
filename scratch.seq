@@ -4,9 +4,10 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.lgamma(1.0) == 0.0
-print math.lgamma(2.0) == 0.0
-print math.lgamma(-1.0) == INF
-print math.lgamma(INF) == INF
-print math.lgamma(NINF) == INF
-print math.isnan(math.lgamma(NAN)) == True
+print math.remainder(2.0, 2.0) == 0.0
+print math.remainder(-4.0, 1.0) == -0.0
+print math.remainder(-3.8, 1.0) == 0.20000000000000018
+print math.remainder(3.8, 1.0) == -0.20000000000000018
+print math.isnan(math.remainder(INF, 1.0)) == True
+print math.isnan(math.remainder(NINF, 1.0)) == True
+print math.isnan(math.remainder(NAN, 1.0)) == True
