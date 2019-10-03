@@ -346,3 +346,15 @@ def remainder(x: float, y: float) -> float:
     for n.
     """
     return C.remainder(x, y)
+
+def gcd(a: float, b: float) -> float:
+    """
+    gcd(float, float) -> float
+
+    returns greatest common divisor of x and y.
+    """
+    a = abs(a)
+    b = abs(b)
+    while a:
+        a, b = b%a, a
+    return b

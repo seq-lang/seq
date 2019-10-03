@@ -4,10 +4,13 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.remainder(2.0, 2.0) == 0.0
-print math.remainder(-4.0, 1.0) == -0.0
-print math.remainder(-3.8, 1.0) == 0.20000000000000018
-print math.remainder(3.8, 1.0) == -0.20000000000000018
-print math.isnan(math.remainder(INF, 1.0)) == True
-print math.isnan(math.remainder(NINF, 1.0)) == True
-print math.isnan(math.remainder(NAN, 1.0)) == True
+print math.gcd(0.0, 0.0) == 0
+print math.gcd(1.0, 0.0) == 1
+print math.gcd(-1.0, 0.0) == 1
+print math.gcd(0.0, -1.0) == 1
+print math.gcd(0.0, 1.0) == 1
+print math.gcd(7.0, 1.0) == 1
+print math.gcd(7.0, -1.0) == 1
+print math.gcd(-23.0, 15.0) == 1
+print math.gcd(120.0, 84.0) == 12
+print math.gcd(84.0, -120.0) == 12

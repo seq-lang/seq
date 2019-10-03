@@ -326,6 +326,18 @@ def test_remainder():
     assert math.isnan(math.remainder(NINF, 1.0)) == True
     assert math.isnan(math.remainder(NAN, 1.0)) == True
 
+def test_gcd():
+    assert math.gcd(0.0, 0.0) == 0
+    assert math.gcd(1.0, 0.0) == 1
+    assert math.gcd(-1.0, 0.0) == 1
+    assert math.gcd(0.0, -1.0) == 1
+    assert math.gcd(0.0, 1.0) == 1
+    assert math.gcd(7.0, 1.0) == 1
+    assert math.gcd(7.0, -1.0) == 1
+    assert math.gcd(-23.0, 15.0) == 1
+    assert math.gcd(120.0, 84.0) == 12
+    assert math.gcd(84.0, -120.0) == 12
+    
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -365,3 +377,4 @@ test_erfc()
 test_gamma()
 test_lgamma()
 test_remainder()
+test_gcd()
