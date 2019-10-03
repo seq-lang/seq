@@ -1082,8 +1082,9 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::RecordType *rec = type->asRec();
   auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
-  // check if this is a record lookup
-  if (rec && idxLit) {
+  // check if this is a record lookup, and that __getitem__ is not overriden
+  if (rec && idxLit &&
+      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
     seq_int_t idx = translateIndex(idxLit->value(), rec->numBaseTypes());
     GetElemExpr e(arr,
                   (unsigned)(idx + 1)); // GetElemExpr is 1-based
@@ -1101,8 +1102,9 @@ types::Type *ArrayLookupExpr::getType0() const {
   types::RecordType *rec = type->asRec();
   auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
-  // check if this is a record lookup
-  if (rec && idxLit) {
+  // check if this is a record lookup, and that __getitem__ is not overriden
+  if (rec && idxLit &&
+      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
     seq_int_t idx = translateIndex(idxLit->value(), rec->numBaseTypes());
     GetElemExpr e(arr,
                   (unsigned)(idx + 1)); // GetElemExpr is 1-based
