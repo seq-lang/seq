@@ -44,6 +44,6 @@ cdef erf(float) -> float
 cdef erfc(float) -> float
 cdef gamma(float) -> float
 cdef lgamma(float) -> float
-# cdef frexp(float) -> tuple[float, int]
-# cdef modf(float) -> tuple[float, float]
 cdef remainder(float, float) -> float
+cdef frexp(float, ptr[int]) -> float
+# cdef modf(float) -> tuple[float, float]

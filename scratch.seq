@@ -4,13 +4,11 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.gcd(0.0, 0.0) == 0
-print math.gcd(1.0, 0.0) == 1
-print math.gcd(-1.0, 0.0) == 1
-print math.gcd(0.0, -1.0) == 1
-print math.gcd(0.0, 1.0) == 1
-print math.gcd(7.0, 1.0) == 1
-print math.gcd(7.0, -1.0) == 1
-print math.gcd(-23.0, 15.0) == 1
-print math.gcd(120.0, 84.0) == 12
-print math.gcd(84.0, -120.0) == 12
+print math.frexp(-2.0) == (-0.5, 2)
+print math.frexp(-1.0) == (-0.5, 1)
+print math.frexp(0.0) == (0.0, 0)
+print math.frexp(1.0) == (0.5, 1)
+print math.frexp(2.0) == (0.5, 2)
+print math.frexp(INF)[0] == INF
+print math.frexp(NINF)[0] == NINF
+print math.isnan(math.frexp(NAN)[0]) == True

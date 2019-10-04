@@ -358,3 +358,15 @@ def gcd(a: float, b: float) -> float:
     while a:
         a, b = b%a, a
     return b
+
+def frexp(x: float) -> tuple[float, int]:
+    """
+    frexp(float) -> tuple[float, int]
+
+    The returned value is the mantissa and the integer pointed
+    to by exponent is the exponent. The resultant value is
+    x = mantissa * 2 ^ exponent.
+    """
+    tmp = 0
+    res = C.frexp(float(x), __ptr__(tmp))
+    return (res, tmp)

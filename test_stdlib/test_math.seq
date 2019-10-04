@@ -337,7 +337,17 @@ def test_gcd():
     assert math.gcd(-23.0, 15.0) == 1
     assert math.gcd(120.0, 84.0) == 12
     assert math.gcd(84.0, -120.0) == 12
-    
+
+def test_frexp():
+    assert math.frexp(-2.0) == (-0.5, 2)
+    assert math.frexp(-1.0) == (-0.5, 1)
+    assert math.frexp(0.0) == (0.0, 0)
+    assert math.frexp(1.0) == (0.5, 1)
+    assert math.frexp(2.0) == (0.5, 2)
+    assert math.frexp(INF)[0] == INF
+    assert math.frexp(NINF)[0] == NINF
+    assert math.isnan(math.frexp(NAN)[0]) == True
+
 test_isnan()
 test_isinf()
 test_isfinite()
@@ -378,3 +388,4 @@ test_gamma()
 test_lgamma()
 test_remainder()
 test_gcd()
+test_frexp()
