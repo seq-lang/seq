@@ -4,11 +4,10 @@ NAN = math.nan
 INF = math.inf
 NINF = -INF
 
-print math.frexp(-2.0) == (-0.5, 2)
-print math.frexp(-1.0) == (-0.5, 1)
-print math.frexp(0.0) == (0.0, 0)
-print math.frexp(1.0) == (0.5, 1)
-print math.frexp(2.0) == (0.5, 2)
-print math.frexp(INF)[0] == INF
-print math.frexp(NINF)[0] == NINF
-print math.isnan(math.frexp(NAN)[0]) == True
+print math.modf(1.5) == (0.5, 1.0)
+print math.modf(-1.5) == (-0.5, -1.0)
+print math.modf(math.inf) == (0.0, INF)
+print math.modf(-math.inf) == (-0.0, NINF)
+modf_nan = math.modf(NAN)
+print math.isnan(modf_nan[0])
+print math.isnan(modf_nan[1])

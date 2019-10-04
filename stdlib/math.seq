@@ -370,3 +370,14 @@ def frexp(x: float) -> tuple[float, int]:
     tmp = 0
     res = C.frexp(float(x), __ptr__(tmp))
     return (res, tmp)
+
+def modf(x: float) -> tuple[float, float]:
+    """
+    modf(float) -> tuple[float, float]
+
+    The returned value is the fraction component (part after
+    the decimal), and sets integer to the integer component.
+    """
+    tmp = 0.0
+    res = C.modf(float(x), __ptr__(tmp))
+    return (res, tmp)
