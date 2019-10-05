@@ -1272,6 +1272,42 @@ void types::BoolType::initOps() {
        },
        false},
 
+      {"__lt__",
+       {Bool},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpULT(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__gt__",
+       {Bool},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpUGT(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__le__",
+       {Bool},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpULE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__ge__",
+       {Bool},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpUGE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
       {"__and__",
        {Bool},
        Bool,
