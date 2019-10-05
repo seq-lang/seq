@@ -216,10 +216,11 @@ extend seq:
                 i += step
 
     def N(self: seq):
+        invalid = '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x00\x01\x01\x01\x00\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x00\x01\x01\x01\x00\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
         i = 0
         n = len(self)
         while i < n:
-            if self.ptr[i] == byte(78):  # 'N'
+            if invalid.ptr[int(self.ptr[i])]:
                 return i + 1
             i += 1
         return 0
@@ -243,6 +244,37 @@ def base[K,T](kmer: K, idx: int, b: T):
     k = kmer.as_int() & ~(U(3) << U(2*idx))
     k |= n << U(2*idx)
     return K(k)
+
+type Locus(_tid: u32, _pos: u32):
+    def __init__(self: Locus, tid: int, pos: int) -> Locus:
+        return (u32(tid), u32(pos))
+
+    def __lt__(self: Locus, other: Locus):
+        return (self.tid, self.pos) < (other.tid, other.pos)
+
+    def __gt__(self: Locus, other: Locus):
+        return (self.tid, self.pos) > (other.tid, other.pos)
+
+    def __le__(self: Locus, other: Locus):
+        return (self.tid, self.pos) <= (other.tid, other.pos)
+
+    def __ge__(self: Locus, other: Locus):
+        return (self.tid, self.pos) >= (other.tid, other.pos)
+
+    @property
+    def tid(self: Locus):
+        return int(self._tid)
+
+    @property
+    def pos(self: Locus):
+        return abs(int(i32(int(self._pos))))
+
+    @property
+    def reversed(self: Locus):
+        return i32(int(self._pos)) < i32(0)
+
+    def __invert__(self: Locus):
+        return Locus(self.tid, self.pos if self.rev else -self.pos)
 
 # Interface for iterating over sequences in some format
 # (e.g. FASTA, FASTQ, SAM, etc.).
@@ -755,12 +787,22 @@ type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore
         return self._core.pos()
 
     @property
+    def locus(self: SAMRecord):
+        pos = self.pos
+        return Locus(self.tid, -pos if self.reversed else pos)
+
+    @property
     def mate_tid(self: SAMRecord):
         return self._core.mtid()
 
     @property
     def mate_pos(self: SAMRecord):
         return self._core.mpos()
+
+    @property
+    def mate_locus(self: SAMRecord):
+        pos = self.mate_pos
+        return Locus(self.mate_tid, -pos if self.mate_reversed else pos)
 
     @property
     def mapq(self: SAMRecord):

@@ -128,7 +128,7 @@ FASTA('test/data/seqs.fasta') |> iter |> print2
 # EXPECT: TGCCGTGACCACCCCGCGAGAATCTCATAATGATATCTCCAATCGAGTA
 
 def print3(r):
-    print r.tid, r.pos, r.name, r.read, r.cigar
+    print r.tid, r.locus.pos, r.name, r.read, r.cigar
     aux = r.aux('XX')
     if aux:
         print [aux.B2i(i) for i in range(aux.B_len)]
