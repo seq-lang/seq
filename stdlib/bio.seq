@@ -274,7 +274,7 @@ type Locus(_tid: u32, _pos: u32):
         return i32(int(self._pos)) < i32(0)
 
     def __invert__(self: Locus):
-        return Locus(self.tid, self.pos if self.rev else -self.pos)
+        return Locus(self.tid, self.pos if self.reversed else -self.pos)
 
 # Interface for iterating over sequences in some format
 # (e.g. FASTA, FASTQ, SAM, etc.).
