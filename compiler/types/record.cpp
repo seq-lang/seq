@@ -79,6 +79,60 @@ bool types::RecordType::is(types::Type *type) const {
   return true;
 }
 
+Function *types::RecordType::getContainsFunc(Module *module) {
+  // only support __contains__ for homogeneous tuples:
+  assert(types.size() > 0);
+  for (auto *type : types) {
+    assert(types::is(type, types[0]));
+  }
+
+  const std::string name = "seq." + getName() + ".__contains__";
+  LLVMContext &context = module->getContext();
+  Function *func = module->getFunction(name);
+
+  if (!func) {
+    func = cast<Function>(module->getOrInsertFunction(
+        name, types::Bool->getLLVMType(context), getLLVMType(context),
+        types[0]->getLLVMType(context)));
+    func->setLinkage(GlobalValue::PrivateLinkage);
+    func->addFnAttr(Attribute::AlwaysInline);
+
+    auto iter = func->arg_begin();
+    Value *rec = iter++;
+    Value *val = iter;
+
+    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+    BasicBlock *retFalse = BasicBlock::Create(context, "exit_false", func);
+    BasicBlock *retTrue = BasicBlock::Create(context, "exit_true", func);
+    IRBuilder<> builder(block);
+
+    for (unsigned i = 0; i < types.size(); i++) {
+      Value *m = memb(rec, std::to_string(i + 1), block);
+      types::Type *eqType = types[i]->magicOut("__eq__", {types[i]});
+      Value *eq =
+          types[i]->callMagic("__eq__", {types[i]}, m, {val}, block, nullptr);
+      eq = eqType->boolValue(eq, block, nullptr);
+      builder.SetInsertPoint(block);
+      eq = builder.CreateICmpNE(eq, builder.getInt8(0));
+
+      BasicBlock *next = BasicBlock::Create(context, "cmp", func);
+      builder.CreateCondBr(eq, retTrue, next);
+      block = next;
+    }
+
+    builder.SetInsertPoint(block);
+    builder.CreateBr(retFalse);
+
+    builder.SetInsertPoint(retFalse);
+    builder.CreateRet(builder.getInt8(0));
+
+    builder.SetInsertPoint(retTrue);
+    builder.CreateRet(builder.getInt8(1));
+  }
+
+  return func;
+}
+
 enum { EQ, NE, LT, LE, GT, GE };
 Function *types::RecordType::getCmpFunc(Module *module, int kind) {
   std::string magic;
@@ -369,6 +423,23 @@ void types::RecordType::initOps() {
            seed = b.CreateXor(seed, hash);
          }
          return seed;
+       },
+       false},
+
+      {"__contains__",
+       {types.empty() ? Base : types[0]},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         if (types.empty())
+           throw exc::SeqException("cannot use 'in' on empty tuple");
+
+         for (auto *type : types) {
+           if (!types::is(type, types[0]))
+             throw exc::SeqException("cannot use 'in' on heterogeneous tuple");
+         }
+
+         Function *contains = getContainsFunc(b.GetInsertBlock()->getModule());
+         return b.CreateCall(contains, {self, args[0]});
        },
        false},
 
