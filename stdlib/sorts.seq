@@ -157,6 +157,109 @@ def _sort3[T](arr: array[T], i: int, j: int, k: int, comp: function[bool,T,T]):
     _sort2(arr, j, k, comp)
     _sort2(arr, i, j, comp)
 
+def _merge[T](arr: array[T], l: int, m: int, r: int, comp: function[bool,T,T]):
+    len1, len2 = m - l, r - m
+    left, right = list[T](), list[T]()
+    for i in range(len1):
+        left.append(arr[l + i])
+    for i in range(len2):
+        right.append(arr[m + i])
+    
+
+    i, j, k = 0, 0, l
+
+    while i < len1 and j < len2:
+        if comp(left[i], right[j]):
+            arr[k] = left[i]
+            i += 1
+        else:
+            arr[k] = right[j]
+            j += 1
+        k += 1
+    while i < len1:
+        arr[k] = left[i]
+        k += 1
+        i += 1
+    while j < len2:
+        arr[k] = right[j]
+        k += 1
+        j += 1
+
+def _count_run[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]) -> tuple[int,int]:
+    """
+        Returns the # of elements in the next run and if the run is "inorder" or "reversed"
+    """
+
+    inorder = 1
+
+    if end - begin == 1:
+        return 1, inorder
+    
+    n = 2
+    i = begin + 1
+    if not comp(arr[i - 1], arr[i]):
+        inorder = 0
+        i += 1
+        while i < end:
+            if comp(arr[i - 1], arr[i]):
+                break
+            i += 1
+            n += 1
+    
+    else:
+        i += 1
+        while i < end:
+            if not comp(arr[i - 1], arr[i]):
+                break
+            i += 1
+            n += 1
+
+    return n, inorder
+
+def _merge_compute_minrun(n: int) -> int:
+    """
+        Computes the minrun for Timsort
+    """
+    r = 0
+    while n >= 64:
+        r |= n & 1
+        n >>=1
+    return n + r
+
+def _reverse_sortslice[T](arr: array[T], begin: int, end: int):
+    if end - begin < 2:
+        return
+    arr[begin], arr[end - 1] = arr[end - 1], arr[begin]
+    _reverse_sortslice(arr, begin + 1, end - 1)
+
+
+
+def _merge_collapse[T](arr: array[T], stack: list[tuple[int,int]], comp: function[bool,T,T]):
+    
+    while len(stack) > 2:
+        X = stack.pop()
+        Y = stack.pop()
+        Z = stack.pop()
+        if Y[1] > X[1] and Z[1] > Y[1] + X[1]:
+            break
+        if Z[1] < X[1]:
+            _merge(arr, Z[0], Y[0], Y[0] + Y[1], comp)
+            stack.append((Z[0], Z[1] + Y[1]))
+            stack.append(X)
+        else:
+            _merge(arr, Y[0], X[0], X[0] + X[1], comp)
+            stack.append(Z)
+            stack.append((Y[0], Y[1] + X[1]))
+        
+
+def _final_merge[T](arr: array[T], stack: list[tuple[int,int]], comp: function[bool,T,T]):
+    
+    while len(stack) > 1:
+        X = stack.pop()
+        Y = stack.pop()
+        _merge(arr, Y[0], X[0], X[0] + X[1], comp)
+        stack.append((Y[0], Y[1] + X[1]))
+
 ### Private Sorts ###
 
 def _insertion_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]):
@@ -164,7 +267,7 @@ def _insertion_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,
     while i < end:
         x = arr[i]
         j = i - 1
-        while j >= 0 and comp(x, arr[j]):
+        while j >= begin and comp(x, arr[j]):
             arr[j+1] = arr[j]
             j -= 1
         arr[j+1] = x
@@ -244,6 +347,27 @@ def _pdq_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T], 
         begin = pivot_pos + 1
         leftmost = False
 
+def _tim_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]):
+    merge_pending = list[tuple[int,int]]()
+    if end - begin < 2:
+        return
+
+    minrun = _merge_compute_minrun(end - begin)
+    i = begin
+    while i < end:
+        n, inorder = _count_run(arr, i, end, comp)
+        if not inorder:
+            _reverse_sortslice(arr, i, i + n)
+        if n < minrun:
+            force = min(minrun, end)
+            _insertion_sort(arr, i, i + force, comp)
+            n = force
+        merge_pending.append((i, n))
+        _merge_collapse(arr, merge_pending, comp)
+        i += n
+
+    _final_merge(arr, merge_pending, comp)
+
 ### Public Sorts ###
 
 def insertion_sort_array[T](collection: array[T], size: int, compare: function[bool,T,T]):
@@ -319,4 +443,33 @@ def pdq_sort[T](collection: list[T], compare: function[bool,T,T]) -> list[T]:
     """
     newlst = copy(collection)
     pdq_sort_inplace(newlst, compare)
+    return newlst
+
+def tim_sort_array[T](collection: array[T], size: int, compare: function[bool,T,T]):
+    """
+        Timsort
+        By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
+
+        Sorts the array inplace.
+    """
+    _tim_sort(collection, 0, size, compare)
+
+def tim_sort_inplace[T](collection: list[T], compare: function[bool,T,T]):
+    """
+        Timsort
+        By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
+
+        Sorts the list inplace.
+    """
+    tim_sort_array(collection.arr, collection.len, compare)
+
+def tim_sort[T](collection: list[T], compare: function[bool,T,T]) -> list[T]:
+    """
+        Timsort
+        By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
+
+        Returns a sorted list.
+    """
+    newlst = copy(collection)
+    tim_sort_inplace(newlst, compare)
     return newlst
