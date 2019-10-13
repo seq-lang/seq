@@ -555,8 +555,12 @@ void types::KMer::initOps() {
          LLVMContext &context = b.getContext();
          llvm::Type *type = getLLVMType(context);
          Value *mask = ConstantInt::get(type, 3);
+         Value *backIdx =
+             b.CreateAdd(args[0], ConstantInt::get(seqIntLLVM(context), k));
+         Value *negIdx = b.CreateICmpSLT(args[0], zeroLLVM(context));
+         Value *idx = b.CreateSelect(negIdx, backIdx, args[0]);
          Value *shift =
-             b.CreateSub(ConstantInt::get(seqIntLLVM(context), k - 1), args[0]);
+             b.CreateSub(ConstantInt::get(seqIntLLVM(context), k - 1), idx);
          shift = b.CreateShl(shift, 1); // 2 bits per base
          shift = b.CreateZExtOrTrunc(shift, type);
 

@@ -239,6 +239,8 @@ def kmers_with_pos[K](self: seq, step: int):
 
 def base[K,T](kmer: K, idx: int, b: T):
     type U = typeof(kmer.as_int())
+    if idx < 0:
+        idx += len(kmer)
     idx = K.len() - idx - 1
     n = U(int(Kmer[1](b).as_int()))
     k = kmer.as_int() & ~(U(3) << U(2*idx))
