@@ -53,3 +53,16 @@ type K100 = Kmer[100]
 type K1 = Kmer[1]
 print K100() |> base(99, K1(s'C')) |> base(98, s'G') |> base(0, K1(s'T'))
 # EXPECT: TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGC
+
+k3 = K100()
+h1 = hash(k3)
+h2 = hash(k3 |> base(0, k'T'))
+h3 = hash(k3 |> base(99, k'T'))
+h4 = hash(k3 |> base(0, k'T') |> base(99, k'T'))
+# bases on both ends should be involved in k-mer hash:
+print h1 == h2  # EXPECT: False
+print h1 == h3  # EXPECT: False
+print h1 == h4  # EXPECT: False
+print h2 == h3  # EXPECT: False
+print h2 == h4  # EXPECT: False
+print h3 == h4  # EXPECT: False

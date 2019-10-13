@@ -681,8 +681,15 @@ void types::KMer::initOps() {
       {"__hash__",
        {},
        Int,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *hash = b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
+         if (getK() > 32) {
+           // make sure bases on both ends are involved in hash:
+           Value *aux = b.CreateLShr(self, 2 * getK() - 64);
+           aux = b.CreateZExtOrTrunc(aux, seqIntLLVM(b.getContext()));
+           hash = b.CreateXor(hash, aux);
+         }
+         return hash;
        },
        false},
 
