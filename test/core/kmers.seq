@@ -12,6 +12,26 @@ s = s'AANGGCCAGTC'
 print list(s.kmers_with_pos[Kmer[2]](1))  # EXPECT: [(0, AA), (3, GG), (4, GC), (5, CC), (6, CA), (7, AG), (8, GT), (9, TC)]
 print list(~s |> kmers_with_pos[Kmer[2]](1))  # EXPECT: [(0, GA), (1, AC), (2, CT), (3, TG), (4, GG), (5, GC), (6, CC), (9, TT)]
 
+s = s'AGACCTTAGC'
+print s  # EXPECT: AGACCTTAGC
+print list(s.kmers[Kmer[3]](1))  # EXPECT: [AGA, GAC, ACC, CCT, CTT, TTA, TAG, AGC]
+print list(s.kmers[Kmer[3]](2))  # EXPECT: [AGA, ACC, CTT, TAG]
+print list(s.kmers[Kmer[3]](4))  # EXPECT: [AGA, CTT]
+print ~s  # EXPECT: GCTAAGGTCT
+print list((~s).kmers[Kmer[3]](1))  # EXPECT: [GCT, CTA, TAA, AAG, AGG, GGT, GTC, TCT]
+print list((~s).kmers[Kmer[3]](2))  # EXPECT: [GCT, TAA, AGG, GTC]
+print list((~s).kmers[Kmer[3]](4))  # EXPECT: [GCT, AGG]
+
+s = s'AGACCTNTAGNC'
+print s  # EXPECT: AGACCTNTAGNC
+print list(s.kmers_with_pos[Kmer[3]](1))  # EXPECT: [(0, AGA), (1, GAC), (2, ACC), (3, CCT), (7, TAG)]
+print list(s.kmers_with_pos[Kmer[3]](2))  # EXPECT: [(0, AGA), (2, ACC)]
+print list(s.kmers_with_pos[Kmer[3]](4))  # EXPECT: [(0, AGA)]
+print ~s  # EXPECT: GNCTANAGGTCT
+print list((~s).kmers_with_pos[Kmer[3]](1))  # EXPECT: [(2, CTA), (6, AGG), (7, GGT), (8, GTC), (9, TCT)]
+print list((~s).kmers_with_pos[Kmer[3]](2))  # EXPECT: [(2, CTA), (6, AGG), (8, GTC)]
+print list((~s).kmers_with_pos[Kmer[3]](4))  # EXPECT: [(8, GTC)]
+
 k1 = K(s'ACGTA')
 k2 = K(s'ATGTT')
 

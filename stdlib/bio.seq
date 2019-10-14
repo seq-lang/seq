@@ -138,81 +138,53 @@ extend seq:
             yield self._slice_direct(i,i+1)
             i -= 1
 
-    def kmersx[K](self: seq, step: int):
-        k = K.len()
-        if self.len >= 0:
-            n = self.len
-            if step >= k:
-                # naive
-                i = 0
-                while i + k <= n:
-                    yield K(self._slice_direct(i,i+k), False)
-                    i += step
-            elif n >= k:
-                # sliding encoding
-                kmer = K(self._slice_direct(0,k))
-                yield kmer
-                i = 0
-                while i + k + step <= n:
-                    j = i + k
-                    kmer <<= self._slice_direct(j,j+step)
-                    i += step
-                    yield kmer
-        else:
-            n = -self.len
-            if step >= k:
-                # naive
-                i = 0
-                while i + k <= n:
-                    yield K(self._slice_direct(i,i+k), True)
-                    i += step
-            elif n >= k:
-                # sliding encoding
-                kmer = K(self._slice_direct(0,k))
-                yield kmer
-                i = 0
-                while i + k + step <= n:
-                    j = i + k
-                    kmer <<= self._slice_direct(j,j+step)
-                    i += step
-                    yield kmer
-
     def kmers[K](self: seq, step: int):
-        k = K.len()
-        if self.len >= 0:
-            n = self.len
-            i = 0
-            while i + k <= n:
-                sub = self._slice_direct(i,i+k)
-                if not sub.N():
-                    yield K(sub, False)
-                i += step
-        else:
-            n = -self.len
-            i = 0
-            while i + k <= n:
-                sub = self._slice_direct(i,i+k)
-                if not sub.N():
-                    yield K(sub, True)
-                i += step
+        for pos, kmer in self.kmers_with_pos[K](step):
+            yield kmer
 
     def kmers_with_pos[K](self: seq, step: int):
+        # This function is intentionally written this way. It could be simplified,
+        # but this version was found to be the most performant due to inlining etc.
         k = K.len()
         if self.len >= 0:
             n = self.len
             i = 0
+            kmer = K()
+            refresh = True
             while i + k <= n:
-                sub = self._slice_direct(i,i+k)
-                if not sub.N():
-                    yield (i, K(sub, False))
+                if refresh:
+                    sub = self._slice_direct(i,i+k)
+                    if not sub.N():
+                        kmer = K(sub, False)
+                        refresh = step >= k
+                        yield (i, kmer)
+                else:
+                    sub = self._slice_direct(i+k-step,i+k)
+                    if not sub.N():
+                        kmer <<= sub
+                        yield (i, kmer)
+                    else:
+                        refresh = True
                 i += step
         else:
             n = -self.len
             i = 0
+            kmer = K()
+            refresh = True
             while i + k <= n:
-                sub = self._slice_direct(i,i+k)
-                if not sub.N():
-                    yield (i, K(sub, True))
+                if refresh:
+                    sub = self._slice_direct(i,i+k)
+                    if not sub.N():
+                        kmer = K(sub, True)
+                        refresh = step >= k
+                        yield (i, kmer)
+                else:
+                    sub = self._slice_direct(i+k-step,i+k)
+                    if not sub.N():
+                        kmer <<= sub
+                        yield (i, kmer)
+                    else:
+                        refresh = True
                 i += step
 
     def N(self: seq):
