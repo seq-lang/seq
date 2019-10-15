@@ -1,10 +1,246 @@
-cdef rand() -> int
+import C
 
-def randint(a: int, b: int) -> int:
-    return a + rand() % (b - a + 1)
+# cdef rand() -> int
+#
+# def randint(a: int, b: int) -> int:
+#     return a + rand() % (b - a + 1)
+#
+# def choice(iter):
+#     l = len(iter)
+#     i = randint(0, l - 1)
+#     return iter[i]
 
-def choice(iter):
-    l = len(iter)
-    i = randint(0, l - 1)
-    return iter[i]
+N = 624
+M = 397
 
+class Generator:
+    state: array[u64]     # the array for the state vector
+    state_size: int
+    initf: int
+    next: int
+
+    def __init__(self: Generator):
+        self.state = array[u64](N)
+        self.state_size = 0
+        self.initf = 0
+        self.next = 0
+
+    def init_genrand(self: Generator, s: u64):
+        """
+        init_genrand(u64) -> void
+
+        initializes state[N] with a seed
+        """
+        self.state[0] = s & u64(0xffffffff)
+        for i in range(1, N):
+            self.state[i] = u64(1812433253 * (int(self.state[i-1]) ^ (int(self.state[i-1]) >> 30)) + i)
+
+            # for > 32 bit machines
+            self.state[i] &= u64(0xffffffff)
+
+        self.state_size = 1
+        self.initf = 1
+
+    def init_by_array(self: Generator, init_key: array[u64], key_length: int):
+        """
+
+        initialize by an array with array-length
+        init_key is the array for initializing keys
+        key_length is its length
+        """
+
+        self.init_genrand(u64(19650218))
+        i = 1
+        j = 0
+        k: int
+        if N > key_length:
+            k = N
+        else:
+            k = key_length
+
+        for l in reversed(range(0, k)):
+            self.state[i] = u64((int(self.state[i])
+                        ^ ((int(self.state[i-1])
+                        ^ (int(self.state[i-1]) >> 30))
+                        * 1664525))
+                        + int(init_key[j])
+                        + j)
+            # for WORDSIZE > 32 machines
+            self.state[i] &= u64(0xffffffff)
+            i += 1
+            j += 1
+
+            if i >= N:
+                self.state[0] = self.state[N-1]
+                i = 1
+            if j >= key_length:
+                j = 0
+
+        for l in reversed(range(0, N-1)):
+            self.state[i] = u64((int(self.state[i])
+                        ^ ((int(self.state[i-1])
+                        ^ (int(self.state[i-1]) >> 30))
+                        * 1566083941))
+                        - i)
+            # for WORDSIZE > 32 machines
+            self.state[i] &= u64(0xffffffff)
+            i += 1
+            if i >= N:
+                self.state[0] = self.state[N-1]
+                i = 1
+
+        self.state[0] = u64(0x80000000)
+        # print self.state[0]
+        state_size = 1
+        initf = 1
+
+    def next_state(self: Generator):
+        """
+        next_state()
+        """
+
+        def mixbits(u, v):
+            return ((u) & u64(0x80000000)) | ((v) & u64(0x7fffffff))
+
+        def twist(u, v):
+            return (mixbits(u,v) >> 1) ^ (u64(0x9908b0df) if (v)& u64(1) else u64(0))
+
+        # if init_genrand() has not been called, a default initial seed is used
+        if self.initf == 0:
+            self.init_genrand(u64(5489))
+
+        next = 0
+        state_size = N
+        i = 0
+        for j in range(N-M+1, -1, -1):
+            self.state[i] = self.state[M] ^ twist(self.state[i], self.state[i+1])
+            i += 1
+
+        for j in range(M, -1, -1):
+            self.state[i] = self.state[M-N] ^ twist(self.state[i], self.state[i+1])
+            i += 1
+
+        self.state[i] = self.state[M-N] ^ twist(self.state[i], self.state[0])
+
+    def genrand_int32(self: Generator) -> u64:
+        """
+        genrand_int32() -> u64
+
+        generates a random number on [0,0xffffffff]-interval
+        """
+
+        if next == self.state_size:
+            self.next_state()
+
+        y = self.state[next]
+        next += 1
+        # How to do this???
+        # y = *next++
+
+        # Tempering
+        y ^= (y >> 11)
+        y ^= (y << 7) & u64(0x9d2c5680)
+        y ^= (y << 15) & u64(0xefc60000)
+        y ^= (y >> 18)
+
+        return y
+
+    def genrand_res53(self: Generator) -> float:
+        """
+        genrand_res53() -> float
+
+        generates a random number on [0,1) with 53-bit resolution
+        """
+
+        a = self.genrand_int32() >> 5
+        b = self.genrand_int32() >> 6
+
+        return (a * 67108864.0 + b) * (1.0/9007199254740992.0)
+
+    def random_seed_time_pid(self: Generator):
+        """
+        """
+
+        # now = getsystemclock()
+        # key = array[u64](5)
+        # key[0] = u64(now & u64(0xffffffff))
+        # key[1] = u64(now >> 32)
+        # # key[2] = u64(getpid())
+        #
+        # # now = getmonotonicclock()
+        # key[3] = u64(now & u64(0xffffffff))
+        # key[4] = u64(now >> u32)
+        #
+        # self.init_by_array(self, key, len(key))
+        pass
+
+    def seed(self) -> int:
+        """
+
+        For now a is ites default None.
+        """
+        # return self.random_seed_time_pid()
+        return 0
+
+"""Random number generator base class used by bound module functions.
+Used to instantiate instances of Random to get generators that don't
+share state.
+Class Random can also be subclassed if you want to use a different basic
+generator of your own devising: in that case, override the following
+methods:  random(), seed(), getstate(), and setstate().
+Optionally, implement a getrandbits() method so that randrange()
+can cover arbitrarily large ranges.
+"""
+class Random:
+    gen: Generator # comment for another error
+
+    def __init__(self: Random, g: Generator):
+        """Initialize an instance.
+
+        Optional argument x controls seeding, as for Random.seed().
+
+        For now x is set to its default None.
+        """
+        self.gen = g
+        # self.gauss_next = None
+
+    def seed(self):
+        """Initialize internal state from hashable object.
+
+        None or no argument seeds from current time or from an operating
+        system specific randomness source if available.
+
+        If *a* is an int, all bits are used.
+
+        For version 2 (the default), all of the bits are used if *a* is a str,
+        bytes, or bytearray.  For version 1 (provided for reproducing random
+        sequences from older versions of Python), the algorithm for str and
+        bytes generates a narrower range of seeds.
+
+        For now a is set to its defaults a = None
+        """
+        a = None
+
+
+        self.gen.seed(a)
+        # self.gauss_next = None
+        # self.gen.genrand_res53()
+
+
+
+init = array[u64](4)
+init[0] = u64(0x123)
+init[1] = u64(0x234)
+init[2] = u64(0x345)
+init[3] = u64(0x456)
+length = 4
+
+rand_gen = Generator()
+rand_o = Random(rand_gen)
+rand_o.seed()
+
+gauss = rand_o.gauss
+
+# rand_obj = Generator()
+# # rand_obj.init_by_array(init, length)
+# rand_obj.genrand_res53()
