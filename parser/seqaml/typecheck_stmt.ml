@@ -56,7 +56,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
   and parse_realized ~(ctx : C.t) stmts =
     let stmts = List.concat @@ List.map stmts ~f:(parse ~ctx) in
     Stack.iter ctx.env.unbounds ~f:(fun u ->
-        if Ann.has_unbound u
+        if Ann.has_unbound (var_of_node_exn (u, Pass ()))
         then Util.A.dy "unbound %s is not realized" (Ann.to_string u));
     stmts
 
@@ -73,25 +73,35 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     let rhs = E.parse ~ctx:(C.enter_level ~ctx) rhs in
     match snd lhs, dectyp with
     | Id var, _ ->
-      let t = fst rhs in
-      dectyp >>| E.parse ~ctx >>| fst >>| T.unify_inplace ~ctx t |> ignore;
+      let t = var_of_node_exn rhs in
+      dectyp >>| E.parse ~ctx >>| var_of_node_exn >>| T.unify_inplace ~ctx t |> ignore;
       (match Ctx.in_scope ~ctx var with
-      | Some (Var t | Type t) when T.unify t t <> -1 -> T.unify_inplace ~ctx t t
-      | Some (Var t | Type t) ->
+      | Some (Var t' | Type t') when T.unify t t' <> -1 ->
+        T.unify_inplace ~ctx t t'
+      | Some Type t' ->
         Util.dbg
           "shadowing %s : %s with %s"
           var
-          (Ann.typ_to_string t)
-          (Ann.typ_to_string (fst rhs));
-        Ctx.add ~ctx (prefix ^ var) (if t.is_type_ast then Type t else Var t)
-      | None -> Ctx.add ~ctx (prefix ^ var) (if t.is_type_ast then Type t else Var t)
+          (Ann.var_to_string t)
+          (Ann.t_to_string (fst rhs).typ);
+        Ctx.add ~ctx (prefix ^ var) (Type t)
+      | Some Var t' ->
+        Util.dbg "shadowing %s : %s with %s"
+          var
+          (Ann.var_to_string t)
+          (Ann.t_to_string (fst rhs).typ);
+        Ctx.add ~ctx (prefix ^ var) (Var t)
+      | None ->
+       Ctx.add ~ctx (prefix ^ var) (match (fst rhs).typ with
+          | Some (Type t) -> Type t
+          | _ -> Var t)
       | _ -> ierr ~ctx "[parse_assign] invalid assigment");
-      let ann = { (fst lhs) with typ = t.typ } in
+      let ann = { (fst lhs) with typ = (fst rhs).typ } in
       Assign (e_id ~ann var, rhs, shadow, None)
     | Dot d, None ->
       (* a.x = b *)
       let lhs = E.parse ~ctx lhs in
-      T.unify_inplace ~ctx (fst lhs) (fst rhs);
+      T.unify_inplace ~ctx (var_of_node_exn lhs) (var_of_node_exn rhs);
       Assign (lhs, rhs, shadow, None)
     | Index (var_expr, [ idx ]), None ->
       (* a[x] = b *)
@@ -105,9 +115,8 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       | None -> C.err ~ctx "invalid declare"
     in
     if is_some @@ Ctx.in_scope ~ctx name then Util.dbg "shadowing %s" name;
-    let t = { (fst e) with is_type_ast = false } in
-    Ctx.add ~ctx (prefix ^ name) (Var t);
-    Declare { name; typ = Some (t, snd e) }
+    Ctx.add ~ctx (prefix ^ name) (Var (var_of_node_exn e));
+    Declare { name; typ = Some e }
 
   and parse_del ctx expr =
     match snd expr with
@@ -128,11 +137,11 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       | None -> R.internal ~ctx "void", None
       | Some expr ->
         let expr = E.parse ~ctx expr in
-        fst expr, Some expr
+        var_of_node_exn expr, Some expr
     in
     (match !(ctx.env.enclosing_return) with
-    | { typ = Unknown; _ } -> ctx.env.enclosing_return := t
-    | rt -> T.unify_inplace ~ctx rt t);
+    | None -> ctx.env.enclosing_return := Some t
+    | Some rt -> T.unify_inplace ~ctx rt t);
     Return expr
 
   and parse_yield ctx expr =
@@ -141,11 +150,11 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       | None -> R.internal ~ctx ~args:[ R.internal ~ctx "void" ] "generator", None
       | Some expr ->
         let expr = E.parse ~ctx expr in
-        R.internal ~ctx ~args:[ fst expr ] "generator", Some expr
+        R.internal ~ctx ~args:[ var_of_node_exn expr ] "generator", Some expr
     in
     (match !(ctx.env.enclosing_return) with
-    | { typ = Unknown; _ } -> ctx.env.enclosing_return := t
-    | rt -> T.unify_inplace ~ctx rt t);
+    | None -> ctx.env.enclosing_return := Some t
+    | Some rt -> T.unify_inplace ~ctx rt t);
     Yield expr
 
   and parse_while ctx (cond, stmts) =
@@ -158,12 +167,12 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     Ctx.add_block ~ctx;
     (* make sure it is ... ah, generator! *)
     let tvar =
-      match (Ann.real_type (fst gen_expr)).typ with
-      | Class { c_cache = "generator", _; c_generics = [ (_, (_, t)) ]; _ } -> t
-      | TypeVar { contents = Unbound _ } -> C.make_unbound ctx
+      match Ann.real_type (var_of_node_exn gen_expr) with
+      | Class ({ cache = "generator", _; generics = [ (_, (_, t)) ]; _ }, _) -> t
+      | Link { contents = Unbound _ } -> C.make_unbound ctx
       | _ ->
         C.err ~ctx "for expression must be an iterable generator %s"
-        @@ Ann.typ_to_string (fst gen_expr)
+        @@ Ann.t_to_string (fst gen_expr).typ
     in
     let for_var, init_stmts =
       match for_vars with
@@ -199,17 +208,17 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
               match pattern with
               | BoundPattern (name, pat) ->
                 Ctx.add_block ~ctx;
-                let p = parse_pattern ctx (fst what) pat in
+                let p = parse_pattern ctx (var_of_node_exn what) pat in
                 Ctx.clear_block ~ctx;
-                Ctx.add ~ctx name (Var (fst what));
+                Ctx.add ~ctx name (Var (var_of_node_exn what));
                 p
               | _ as pat ->
                 Ctx.add_block ~ctx;
-                let p = parse_pattern ctx (fst what) pat in
+                let p = parse_pattern ctx (var_of_node_exn what) pat in
                 Ctx.clear_block ~ctx;
                 p
             in
-            T.unify_inplace ~ctx (fst what) pat_t;
+            T.unify_inplace ~ctx (var_of_node_exn what) pat_t;
             let case_stmts = parse_block ctx case_stmts in
             Ctx.clear_block ~ctx;
             { pattern; case_stmts }) )
@@ -249,7 +258,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       R.internal ~ctx "list" ~args:[ lt ], ListPattern l
     | TuplePattern l ->
       let l = List.map l ~f:(parse_pattern ctx what_typ) in
-      Ann.create ~typ:(Tuple (List.map l ~f:fst)) (), TuplePattern (List.map l ~f:snd)
+      Tuple (List.map l ~f:fst), TuplePattern (List.map l ~f:snd)
 
   and parse_import (ctx : C.t) ?(ext = ".seq") imports =
     let import (ctx : C.t) file Stmt.{ from; what; import_as } =
@@ -270,7 +279,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
         | None ->
           (* import <from> (as <import as>) *)
           let name = Option.value import_as ~default:from in
-          [ name, C.Import file ]
+          [ name, Ann.Import file ]
         | Some [ ("*", None) ] ->
           (* from <from> import <what := *> *)
           List.filter_map (Hashtbl.to_alist vtable) ~f:(function
@@ -308,7 +317,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
             match exc, var with
             | Some exc, Some var ->
               let exc = E.parse ~ctx exc in
-              Ctx.add ~ctx var (Var (fst exc));
+              Ctx.add ~ctx var (Var (var_of_node_exn exc));
               Some exc
             | Some exc, None -> Some (E.parse ~ctx exc)
             | _ -> ierr "[parse_try] malformed try node"
@@ -327,7 +336,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
           match arg.typ with
           | Some typ ->
             let typ = E.parse ~ctx typ in
-            { arg with typ = Some typ }, (arg.name, fst typ)
+            { arg with typ = Some typ }, (arg.name, var_of_node_exn typ)
           | None -> C.err ~ctx "extern functions must explicitly state parameter types"
       )
     in
@@ -337,22 +346,23 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       | None -> C.err ~ctx "extern functions must explicitly state return type"
     in
     let tf' =
-      Ann.
-        { f_generics = []
-        ; f_name = prefix ^ fn.name
-        ; f_parent = ctx.env.enclosing_name, None
-        ; f_args = List.map args ~f:snd
-        ; f_cache = fn.name, C.ann ctx
-        ; f_ret = fst fret
-        }
+      Ann.(
+        { generics = []
+        ; name = prefix ^ fn.name
+        ; parent = ctx.env.enclosing_name, None
+        ; args = List.map args ~f:snd
+        ; cache = fn.name, (C.ann ctx).pos
+        },
+        { ret = var_of_node_exn fret
+        ; used = String.Hash_set.create () })
     in
-    let typ = C.make_link ~ctx { (C.ann ctx) with typ = Func tf' } in
+    let typ = Ann.(Link (ref (Bound (Func tf')))) in
     Ctx.add ~ctx (prefix ^ fn.name) (Var typ);
     let fn = { fn with typ = Some fret } in
-    let node = C.ann ~typ ctx, Extern (lang, dylib, ctxn, fn, List.map ~f:fst args) in
+    let node = C.ann ~typ:(Var typ) ctx, Extern (lang, dylib, ctxn, fn, List.map ~f:fst args) in
     Hashtbl.set
       ctx.globals.realizations
-      ~key:tf'.f_cache
+      ~key:(fst tf').cache
       ~data:(node, String.Table.create ());
     ignore @@ R.realize ~ctx typ;
     snd node
@@ -363,7 +373,6 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     let explicits =
       List.map f.fn_generics ~f:(fun gen ->
           let typ = C.make_unbound ~is_generic:true ctx in
-          let typ = { typ with is_type_ast = true } in
           let id = !(ctx.globals.unbound_counter) in
           Ctx.add ~ctx gen (Type typ);
           gen, (id, typ))
@@ -371,7 +380,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     let fname = prefix ^ f.fn_name.name in
     let fret =
       Option.value_map f.fn_name.typ ~default:(C.make_unbound ctx) ~f:(fun t ->
-          fst (E.parse ~ctx t))
+          var_of_node_exn (E.parse ~ctx t))
     in
     let fn_name = { name = fname; typ = None } in
     let fn_args, args =
@@ -380,7 +389,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
              let arg_typ = Option.map arg.typ ~f:(fun t -> E.parse ~ctx t) in
              let typ =
                match arg_typ with
-               | Some t -> Ann.real_type (fst t)
+               | Some t -> Ann.real_type (var_of_node_exn t)
                | None when i = 0 && arg.name = "self" && prefix <> "" ->
                  (match Ctx.in_scope ~ctx (String.drop_suffix prefix 1) with
                  | Some (Type t) -> t
@@ -393,20 +402,21 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     in
     (* Add self-refential type for recursive calls *)
     let tf' =
-      Ann.
-        { f_generics =
+      Ann.(
+        { generics =
             List.map explicits ~f:(fun (n, (id, t)) ->
-                n, (id, T.generalize ~ctx ~level:(ctx.env.level - 1) t))
-        ; f_name = fname
-        ; f_parent = ctx.env.enclosing_name, None
-        ; f_args =
+                n, (id, T.generalize ~level:(ctx.env.level - 1) t))
+        ; name = fname
+        ; parent = ctx.env.enclosing_name, None
+        ; args =
             List.map args ~f:(fun (n, t) ->
-                n, T.generalize ~ctx ~level:(ctx.env.level - 1) t)
-        ; f_ret = T.generalize ~ctx ~level:(ctx.env.level - 1) fret
-        ; f_cache = f.fn_name.name, C.ann ctx
-        }
+                n, T.generalize ~level:(ctx.env.level - 1) t)
+        ; cache = f.fn_name.name, (C.ann ctx).pos
+        },
+        { ret = T.generalize ~level:(ctx.env.level - 1) fret
+        ; used = String.Hash_set.create () })
     in
-    let tfun = C.make_link ~ctx { (C.ann ctx) with typ = Func tf' } in
+    let tfun = Ann.(Link (ref (Bound (Func tf')))) in
     let fn_stmts =
       if shalow
       then f.fn_stmts
@@ -416,8 +426,8 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
             env =
               { ctx.env with
                 realizing = false
-              ; enclosing_name = tf'.f_cache
-              ; enclosing_return = ref (Ann.create ())
+              ; enclosing_name = (fst tf').cache
+              ; enclosing_return = ref None
               }
           }
         in
@@ -425,8 +435,8 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
         let fn_stmts = List.concat @@ List.map f.fn_stmts ~f:(parse ~ctx) in
         let ret' =
           match !(ctx.env.C.enclosing_return) with
-          | { typ = Unknown; _ } -> R.internal ~ctx "void"
-          | typ -> typ
+          | None -> R.internal ~ctx "void"
+          | Some typ -> typ
         in
         T.unify_inplace ~ctx ret' fret;
         fn_stmts)
@@ -436,26 +446,22 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     List.iter explicits ~f:(fun (_, (_, t)) -> T.generalize_inplace ~ctx t);
     List.iter args ~f:(fun (_, t) -> T.generalize_inplace ~ctx t);
     T.generalize_inplace ~ctx fret;
-    let tfun =
-      { (C.ann ctx) with
-        typ = Func { tf' with f_generics = explicits; f_args = args; f_ret = fret }
-      }
-    in
+    let tfun = Ann.Func ({ (fst tf') with generics = explicits; args }, { ret = fret; used = String.Hash_set.create () }) in
     (* all functions must be as general as possible: generic unification is not allowed *)
-    let tfun = T.generalize ~ctx ~level:0 tfun in
+    let tfun = T.generalize ~level:0 tfun in
     Ctx.add ~ctx fname (Var tfun);
-    let node = tfun, Function { f with fn_name; fn_args; fn_stmts } in
+    let node = (C.ann ctx ~typ:(Var tfun), Function { f with fn_name; fn_args; fn_stmts }) in
     Hashtbl.set
       ctx.globals.realizations
-      ~key:tf'.f_cache
+      ~key:(fst tf').cache
       ~data:(node, String.Table.create ());
+    Util.dbg "|| [fun] %s |- %s %b" fname (Ann.var_to_string tfun) (Ann.is_realizable tfun);
     let tfun = if Ann.is_realizable tfun then R.realize ~ctx tfun else tfun in
-    Util.dbg "|| [fun] %s |- %s" fname @@ Ann.typ_to_string tfun;
     snd node
 
-  and prn_class ?(generics = Int.Table.create ()) lev (name, typ) =
+  (* and prn_class ?(generics = Int.Table.create ()) lev (name, typ) =
     Util.dbg "|| %s[typ] %s |- %s" (String.make (2 * lev) ' ') name
-    @@ Ann.typ_to_string ~generics typ
+    @@ Ann.var_to_string ~generics typ *)
 
   and parse_extend (ctx : C.t) (name, new_members) =
     let class_name =
@@ -464,17 +470,20 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       | _ -> C.err ~ctx "bad class name"
     in
     let cls, tcls, typ =
-      match Ctx.in_scope ~ctx class_name with
-      | Some (Type t) ->
-        let t = Ann.real_type t in
-        let c = Ann.cls t in
-        fst @@ Hashtbl.find_exn ctx.globals.realizations c.c_cache, c, t
-      | _ -> C.err ~ctx "%s is not a class" class_name
+      let t =
+        Ctx.in_scope ~ctx class_name
+        >>= function Type t -> Some t | _ -> None
+        >>| Ann.real_type
+      in
+      match t with
+        | Some (Class (c, _)) ->
+          fst @@ Hashtbl.find_exn ctx.globals.realizations c.cache, c, t
+        | _ -> C.err ~ctx "%s is not a class" class_name
     in
     Ctx.add_block ~ctx;
     let ctx = C.enter_level ~ctx in
     let explicits =
-      List.map tcls.c_generics ~f:(fun (gen, (id, t)) ->
+      List.map tcls.generics ~f:(fun (gen, (id, t)) ->
           if not (Ann.has_unbound t) then ierr "unbound explicit";
           let t = C.make_unbound ~id ctx in
           Ctx.add ~ctx gen (Type t);
@@ -484,13 +493,13 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       { ctx with
         env =
           { ctx.env with
-            enclosing_name = tcls.c_cache
-          ; enclosing_type = Some tcls.c_cache
+            enclosing_name = tcls.cache
+          ; enclosing_type = Some tcls.cache
           ; realizing = false
           }
       }
     in
-    let members = Hashtbl.find_exn ctx.globals.classes tcls.c_cache in
+    let members = Hashtbl.find_exn ctx.globals.classes tcls.cache in
     List.iter new_members ~f:(fun s ->
         let prefix = sprintf "%s." class_name in
         match snd s with
@@ -508,23 +517,22 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
           Hashtbl.set members ~key:c.class_name ~data:[ Option.value_exn typ ]
         | _ -> ierr "invalid extend member");
     let ctx = C.exit_level ~ctx in
-    List.iter tcls.c_generics ~f:(fun (g, _) -> Ctx.remove ~ctx g);
+    List.iter tcls.generics ~f:(fun (g, _) -> Ctx.remove ~ctx g);
     List.iter explicits ~f:(T.generalize_inplace ~ctx);
     Extend (name, new_members)
 
   and parse_class ctx ?(prefix = "") ?(is_type = false) cls =
     let { class_name; generics; members; _ } = cls in
-    let cache = class_name, C.ann ctx in
+    let cache = class_name, (C.ann ctx).pos in
     (* Ctx.push ctx; *)
     let ctx = C.enter_level ~ctx in
     let old_explicits = List.map generics ~f:(Ctx.in_scope ~ctx) in
     let explicits =
       List.map generics ~f:(fun gen ->
           let t = C.make_unbound ~is_generic:true ctx in
-          let t = { t with is_type_ast = true } in
           let id = !(ctx.globals.unbound_counter) in
-          Util.A.dr "[class %s] generic %s -> %s // %d"
-            class_name gen (Ann.typ_to_string ~full:true t) id;
+          (* Util.A.dr "[class %s] generic %s -> %s // %d"
+            class_name gen (Ann.var_to_string ~full:true t) id; *)
           Ctx.add ~ctx gen (Type t);
           gen, (id, t))
     in
@@ -536,26 +544,25 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
         Some
           (List.filter_map members ~f:(function
               | _, Assign (((_, Id name), _, _, typ) as d) ->
-                typ >>| E.parse ~ctx >>| fst
+                typ >>| E.parse ~ctx >>| var_of_node_exn
               | _ -> None))
     in
     let members = String.Table.create () in
     let tc' =
-      Ann.
-        { c_generics =
+      Ann.(
+        { generics =
             List.map explicits ~f:(fun (n, (id, t)) ->
-                n, (id, T.generalize ~ctx ~level:(pred ctx.env.level) t))
+                n, (id, T.generalize ~level:(pred ctx.env.level) t))
             (* seal for later use; dependents will still use same-numbered unbound while
            dependend recursive realization will reinstantiate it as another number *)
-        ; c_name = class_name
-        ; c_parent = ctx.env.enclosing_name, None
-        ; c_cache = cache
-        ; c_args = []
-        ; c_type = ctyp
-        }
+        ; name = class_name
+        ; parent = ctx.env.enclosing_name, None
+        ; cache
+        ; args = []
+        },
+        { types = ctyp })
     in
-    let tcls =
-      C.make_link ~ctx { (C.ann ctx) with typ = Class tc'; is_type_ast = true }
+    let tcls = Ann.(Link (ref (Bound (Class tc'))))
     in
     let ctx =
       { ctx with
@@ -580,9 +587,9 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       List.map (init :: cls.members) ~f:(fun s ->
           let prefix = sprintf "%s." class_name in
           let typ, node =
-            match snd s with
+           match snd s with
             | Function f ->
-              Util.A.dr "--> f %s %s" prefix (Stmt.to_string s);
+              (* Util.A.dr "--> f %s %s" prefix (Stmt.to_string s); *)
               let stmt = parse_function ctx ~prefix f in
               let typ = Ctx.in_block ~ctx (prefix ^ f.fn_name.name) in
               Hashtbl.add_multi
@@ -605,22 +612,15 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
               let typ = Ctx.in_block ~ctx (prefix ^ name) in
               let typ =
                 match typ with
-                | Some (Var t | Member t | Type t) -> t
+                | Some (Var t | Type t) -> t
                 | _ -> failwith "err"
               in
-              Hashtbl.set members ~key:name ~data:[ Member typ ];
-              Util.A.dr "[class %s] param %s -> %s"
-                  class_name name (Ann.typ_to_string ~full:true typ);
-
-              Some (Member typ), stmt
+              Hashtbl.set members ~key:name ~data:[ Var typ ];
+              (* Util.A.dr "[class %s] param %s -> %s"
+                  class_name name (Ann.var_to_string ~full:true typ); *)
+              Some (Var typ), stmt
             | _ -> ierr "invalid class member"
           in
-          let typ =
-            match typ with
-            | Some (Var t | Member t | Type t) -> t
-            | _ -> failwith "err"
-          in
-          let typ = typ.typ in
           { (fst s) with typ }, node)
     in
     let ctx = C.exit_level ~ctx in
@@ -631,7 +631,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
         | None -> ());
     List.iter explicits ~f:(fun (_, (_, t)) -> T.generalize_inplace ~ctx t);
     let n = { cls with class_name; generics; members = cls_members } in
-    let node = C.ann ~typ:tcls ctx, if is_type then Type n else Class n in
+    let node = C.ann ~typ:(Type tcls) ctx, if is_type then Type n else Class n in
     Hashtbl.set ctx.globals.realizations ~key:cache ~data:(node, String.Table.create ());
     let tcls =
       if Ann.is_realizable tcls

@@ -6,53 +6,65 @@
  * *****************************************************************************)
 
 (** File position annotation for an AST node. *)
-type t =
+type tpos =
   { file : string
   ; line : int
   ; col : int
   ; len : int
-  ; typ : ttyp
-  ; is_type_ast : bool
   }
 [@@deriving fields]
 
 (** Each identifier is uniquely identified by its name and its location *)
-and tlookup = string * t
+type tlookup = string * tpos
 
 (** Type annotation for an AST node. *)
-and ttyp =
-  | Unknown
+type ttyp =
   | Import of string
-  | TypeVar of ttypvar ref
-  (* | Type of ttypvar ref *)
-  | Tuple of t list
-  | Func of tfunc
-  | Class of tcls
+  | Var of tvar
+  | Type of tvar
 
-and tfunc =
-  { f_generics : (string * (int * t)) list
-  ; f_name : string
-  ; f_cache : tlookup
-  ; f_parent : tlookup * t option
-  ; f_args : (string * t) list
-  ; f_ret : t
-  }
+and tvar =
+  | Tuple of tvar list
+  | Func of (tgeneric * tfun) (* f_ret *)
+  | Class of (tgeneric * tclass) (* c_type *)
+  | Link of tvar' ref
 
-and tcls =
-  { c_generics : (string * (int * t)) list
-  ; c_name : string
-  ; c_cache : tlookup
-  ; c_parent : tlookup * t option
-  ; c_args : (string * t) list
-  ; c_type : t list option
-  }
-
-and ttypvar =
+and tvar' =
   | Unbound of (int * int * bool) (*id, level, is_generic*)
-  | Bound of t
   | Generic of int
+  | Bound of tvar
+
+and tgeneric =
+  { generics : (string * (int * tvar)) list
+  ; name : string (**probably not needed *)
+  ; cache : tlookup
+  ; parent : tlookup * tvar option
+  ; args : (string * tvar) list
+  }
+
+and tfun =
+  { ret: tvar
+  ; used: string Core.Hash_set.t
+  }
+
+and tclass =
+  { types: tvar list option } (** unify uses this: needed at all? *)
+
+type t =
+  { pos: tpos
+  ; typ: ttyp option
+  }
+
+let default_pos : tpos =
+  { file = ""
+  ; line = -1
+  ; col = -1
+  ; len = 0
+  }
 
 let default : t =
-  { file = ""; line = -1; col = -1; len = 0; typ = Unknown; is_type_ast = false }
+  { pos = default_pos
+  ; typ = None
+  }
 
 type 'a ann = t * 'a

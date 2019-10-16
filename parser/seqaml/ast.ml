@@ -20,34 +20,29 @@ module Ann = struct
   let pos_to_string t =
     sprintf "%s:%d:%d" (Filename.basename t.file) t.line t.col
 
-  let rec typ_to_string ?(generics = Int.Table.create ()) ?(full=false) t =
-    let to_string = typ_to_string ~generics ~full in
-    let gen2str g =
-      ppl ~sep:"," g ~f:(fun (_, (g, t)) -> sprintf "%s" (to_string t))
-    in
-    match t.typ with
-    | Unknown ->
-      "_"
-    | Import s ->
-      sprintf "<import: %s>" s
+  let rec var_to_string ?(generics = Int.Table.create ()) ?(full=false) t =
+    let f = var_to_string ~generics ~full in
+    let gen2str g = ppl ~sep:"," g ~f:(fun (_, (g, t)) -> sprintf "%s" (f t)) in
+    match t with
     | Tuple args ->
-      sprintf "tuple[%s]" (ppl ~sep:"," args ~f:to_string)
-    | Func { f_generics; f_args; f_ret; _ } ->
-      let g = gen2str f_generics in
+      sprintf "tuple[%s]" (ppl ~sep:"," args ~f)
+    | Func ({ generics; args; _ }, { ret; used }) ->
+      let g = gen2str generics in
       sprintf
         "function%s((%s),%s)"
         (if g = "" then "" else sprintf "[%s]" g)
-        (ppl ~sep:"," f_args ~f:(fun (_, t) -> to_string t))
-        (to_string f_ret)
-    | Class { c_name; c_generics; _ } ->
-      let g = gen2str c_generics in
-      sprintf "%s%s" c_name @@
+        (ppl ~sep:"," (List.filter args ~f:(fun (n, _) -> not (Hash_set.exists used ~f:((=)n)) ))
+          ~f:(fun (_, t) -> f t))
+        (f ret)
+    | Class ({ name; generics; _ }, _) ->
+      let g = gen2str generics in
+      sprintf "%s%s" name @@
         if g = "" then "" else sprintf "[%s]" g
-    | TypeVar { contents = Unbound (u, _, _) } ->
+    | Link { contents = Unbound (u, _, _) } ->
       if full then sprintf "'%d" u else "?"
-    | TypeVar { contents = Bound t } ->
-      to_string t
-    | TypeVar { contents = Generic u } ->
+    | Link { contents = Bound t } ->
+      if full then sprintf "^%s" @@ f t else f t
+    | Link { contents = Generic u } ->
       sprintf
         "T%d"
         (match Hashtbl.find generics u with
@@ -57,91 +52,68 @@ module Ann = struct
           Hashtbl.set generics ~key:u ~data:w;
           w)
 
-  let to_string t =
-    sprintf "<%s |= %s>" (pos_to_string t) (typ_to_string t)
+  let typ_to_string ?(full=false) = function
+    | Import s -> sprintf "<import: %s>" s
+    | Type t
+    | Var t -> var_to_string ~full t
 
-  let create ?(file="") ?(line=(-1)) ?(col=(-1)) ?(len=0) ?(typ=Unknown) ?(is_type_ast=false) () =
-    { file; line; col; len; typ; is_type_ast }
+  let t_to_string ?(full=false) = function
+    | None -> "_"
+    | Some s -> typ_to_string ~full s
+
+  let to_string t =
+    sprintf "<%s |= %s>" (pos_to_string t.pos) (t_to_string t.typ)
+
+  let create ?(file="") ?(line=(-1)) ?(col=(-1)) ?(len=0) ?typ () =
+    { pos = { file; line; col; len } ; typ }
 
   let rec real_type = function
-    | { typ = TypeVar { contents = Bound t }; _ } ->
-      real_type t
+    | Link { contents = Bound t } -> real_type t
     | t -> t
 
-  let assign_ref t t' =
-    match t.typ, t'.typ with
-    | TypeVar tv, TypeVar { contents = tv' } ->
-      tv := tv';
-      t
-    | _ ->
-      t
+  let is_type = function
+    | { typ = Some (Type _) ; _ } -> true
+    | _ -> false
 
-  let func t =
+  let patch t f =
     match t.typ with
-    | Func f -> f
-    | _ -> failwith "expected a function"
-
-  let cls t =
-    match t.typ with
-    | Class f -> f
-    | _ -> failwith "expected a class"
+    | Some (Type _) -> { t with typ = Some (Type f) }
+    | Some (Var _) -> { t with typ = Some (Var f) }
+    | _ -> t
 
   let rec has_unbound ?(count_generics=false) t =
     let f = has_unbound ~count_generics in
-    match t.typ with
-    | TypeVar { contents = Unbound _ } ->
-      true
-    | Unknown | Import _ ->
-      false
-    | TypeVar { contents = Generic _ } ->
-      count_generics
-    | Tuple el ->
-      List.exists el ~f
-    | Class { c_generics; _ } ->
-      List.exists c_generics ~f:(fun (_, (_, t)) -> f t)
-    | Func { f_generics; f_args; f_ret; _ } ->
-      (List.exists f_generics ~f:(fun (_, (_, t)) -> f t)) ||
-      (List.exists f_args ~f:(fun (_, t) -> f t)) ||
-      f f_ret
-    | TypeVar { contents = Bound t } ->
-      f t
+    match t with
+    | Link { contents = Unbound _ } -> true
+    | Link { contents = Bound t } -> f t
+    | Link { contents = Generic _ } -> count_generics
+    | Tuple el -> List.exists el ~f
+    | Class ({ generics; _ }, _) ->
+      List.exists generics ~f:(fun (_, (_, t)) -> f t)
+    | Func ({ generics; args; _ }, { ret; _ }) ->
+      (List.exists generics ~f:(fun (_, (_, t)) -> f t)) ||
+      (List.exists args ~f:(fun (_, t) -> f t)) ||
+      f ret
 
   let is_realizable t =
     let f = has_unbound ~count_generics:true in
-    not (match (real_type t).typ with
-      | Func { f_generics; f_args; f_ret; _ } ->
-        (List.exists f_generics ~f:(fun (_, (_, t)) -> f t)) ||
-        (List.exists f_args ~f:(fun (_, t) -> f t)) ||
-        (f f_ret)
-      | Class { c_generics; _ } -> List.exists c_generics ~f:(fun (_, (_, t)) -> f t)
-      | Tuple el -> List.exists el ~f
-      | _ -> true)
+    not (match t with
+    | Func ({ generics; args; _ }, { ret; _ }) ->
+      (List.exists generics ~f:(fun (_, (_, t)) -> f t)) ||
+      (List.exists args ~f:(fun (_, t) -> f t)) ||
+      f ret
+    | Class ({ generics; _ }, _) ->
+      List.exists generics ~f:(fun (_, (_, t)) -> f t)
+    | Tuple el -> List.exists el ~f
+    | _ -> true)
 
-  let get_parent t =
-    match (real_type t).typ with
-    | Class { c_parent = (_, pt); _ }
-    | Func  { f_parent = (_, pt); _ } -> pt
-    | _ -> None
+  let var_of_typ t =
+    match t with
+    | None | Some (Import _) -> None
+    | Some (Type t | Var t) -> Some t
 
-  let get_cache t =
-    match (real_type t).typ with
-    | Func { f_cache; _ } -> Some f_cache
-    | Class { c_cache; _ } -> Some c_cache
-    | _ -> None
-
-  let get_parent_str t =
-    Option.value_map (get_parent t) ~f:typ_to_string ~default:""
-
-  let link_to_parent ~parent t =
-    let t = real_type t in
-    let typ = match t.typ, parent >>= get_cache with
-      | Class ({ c_parent = (p, pt); _ } as c), Some pc when pc = p ->
-        Class { c with c_parent = p, parent }
-      | Func ({ f_parent = (p, pt); _ } as f), Some pc when pc = p ->
-        Func  { f with f_parent = p, parent }
-      | t, _ -> t
-    in
-    { t with typ }
+  let var_of_typ_exn t =
+    match var_of_typ t with Some s -> s | None -> failwith "invalid type"
 end
 
 
@@ -375,6 +347,12 @@ module Stmt = struct
       )
 end
 
+let var_of_node n =
+  Ann.var_of_typ (fst n).Ann.typ
+
+let var_of_node_exn n =
+  Ann.var_of_typ_exn (fst n).Ann.typ
+
 let e_id ?(ann=default) n =
   ann, Expr.Id n
 
@@ -396,6 +374,9 @@ let e_index ?(ann=default) collection args =
 
 let e_dot ?(ann=default) left what =
   ann, Expr.Dot (left, what)
+
+let e_typeof ?(ann=default) what =
+  ann, Expr.TypeOf what
 
 let s_expr ?(ann=default) expr =
   ann, Stmt.Expr expr

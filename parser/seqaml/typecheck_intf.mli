@@ -23,12 +23,12 @@ end
 
 module type Real = sig
   (** Realizes a type within a context [t] *)
-  val realize: ctx:Typecheck_ctx.t -> Ast.Ann.t -> Ast.Ann.t
+  val realize: ctx:Typecheck_ctx.t -> Ast.Ann.tvar -> Ast.Ann.tvar
   (** Fetches a realized internal type within a context [t]. *)
-  val internal: ctx:Typecheck_ctx.t -> ?args: Ast.Ann.t list -> string -> Ast.Ann.t
+  val internal: ctx:Typecheck_ctx.t -> ?args: Ast.Ann.tvar list -> string -> Ast.Ann.tvar
   (** ??? *)
   val magic: ctx: Typecheck_ctx.t ->
     ?idx:int ->
-    ?args: Ast.Ann.t list ->
-    Ast.Ann.t -> string -> Ast.Ann.t option
+    ?args: Ast.Ann.tvar list ->
+    Ast.Ann.tvar -> string -> Ast.Ann.tvar option
 end

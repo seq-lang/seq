@@ -17,17 +17,17 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
   module C = Typecheck_ctx
   module T = Typecheck_infer
 
-  let rec realize ~(ctx : C.t) (typ : Ann.t) =
-    match ctx.env.realizing, Ann.real_type typ with
-    | true, ({ typ = Func f; _ } as typ) -> realize_function ctx typ f
-    | true, ({ typ = Class c; _ } as typ) -> realize_type ctx typ c
-    | false, _ | true, _ -> typ
+  let rec realize ~(ctx : C.t) (typ : Ann.tvar) =
+    match ctx.env.realizing, typ with
+    | true, Func f -> realize_function ctx typ f
+    | true, Class c -> realize_type ctx typ c
+    | (true | false), t -> t
 
-  and realize_function ctx typ fn =
+  and realize_function ctx typ (fn, f_ret) =
     let real_name, parents = C.get_full_name ~ctx typ in
-    let ast, str2real = Hashtbl.find_exn ctx.globals.realizations fn.f_cache in
+    let ast, str2real = Hashtbl.find_exn ctx.globals.realizations fn.cache in
     let what =
-      Ctx.in_scope ~ctx fn.f_name
+      Ctx.in_scope ~ctx fn.name
       >>= function
       | Var t -> Some (Ann.real_type t)
       | _ -> None
@@ -35,51 +35,54 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
     match Hashtbl.find str2real real_name, what with
     (* Case 1 - already realized *)
     | Some { realized_typ; _ }, _ ->
-      Ann.link_to_parent ~parent:(List.hd parents) realized_typ
+      T.link_to_parent ~parent:(List.hd parents) (Ann.var_of_typ_exn realized_typ.typ)
     (* Case 2 - needs realization *)
-    | None, Some { typ = Func _; _ } ->
+    | None, Some (Func _) ->
       Util.dbg
         "[real] realizing fn %s ==> %s [%s -> %s]"
-        fn.f_name
+        fn.name
         real_name
-        (Option.value_map ~f:Ann.typ_to_string (snd fn.f_parent) ~default:"<n/a>")
-        (Option.value_map ~f:Ann.typ_to_string (List.hd parents) ~default:"<n/a>");
-      let typ =
-        { typ with typ = Func { fn with f_parent = fst fn.f_parent, List.hd parents } }
-      in
+        (Option.value_map ~f:(fun t -> fst @@ C.get_full_name ~ctx t) (snd fn.parent) ~default:"<n/a>")
+        (Option.value_map ~f:(fun t -> fst @@ C.get_full_name ~ctx t) (List.hd parents) ~default:"<n/a>");
+      let tv = Ann.Func ({ fn with parent = fst fn.parent, List.hd parents }, f_ret) in
+      let typ = C.ann ~typ:(Var tv) ctx in
       let fn_stmts =
         match snd ast with
         | Function ast -> ast.fn_stmts
         | _ -> []
       in
       let cache_entry =
-        C.{ realized_ast = None; realized_typ = typ; realized_llvm = Ctypes.null }
+        C.{ realized_ast = None
+          ; realized_typ = typ
+          ; realized_llvm = Ctypes.null }
       in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
-      let enclosing_return = ref fn.f_ret in
+      let enclosing_return = ref (Some f_ret.ret) in
       let env =
         { ctx.env with enclosing_return; realizing = true; unbounds = Stack.create () }
       in
       let fctx = { ctx with env } in
       Ctx.add_block ~ctx:fctx;
-      T.traverse_parents ~ctx:fctx typ ~f:(fun n (_, t) -> Ctx.add ~ctx n (Type t));
+      T.traverse_parents ~ctx:fctx tv ~f:(fun n (_, t) ->
+          Ctx.add ~ctx n (Type t));
       (* Ensure that all arguments of recursive realizations are fully
          specified--- otherwise an infinite recursion will ensue *)
-      let is_being_realized = Hashtbl.find fctx.env.being_realized fn.f_cache in
+      let is_being_realized = Hashtbl.find fctx.env.being_realized fn.cache in
       let fn_args =
-        List.map fn.f_args ~f:(fun (name, fn_t) ->
+        List.map fn.args ~f:(fun (name, fn_t) ->
             if Ann.has_unbound fn_t && is_some is_being_realized
             then
               C.err
                 ~ctx
                 "function arguments must be realized within recursive realizations";
+            (* Util.A.dg "adding %s = %s" name (fst@@C.get_full_name fn_t ~ctx:fctx); *)
             Ctx.add ~ctx:fctx name (Var fn_t);
             Stmt.{ name; typ = None (* no need for this anymore *) })
       in
-      let fn_name = Stmt.{ name = fn.f_name; typ = None } in
-      C.add_realization ~ctx:fctx fn.f_cache typ;
+      let fn_name = Stmt.{ name = fn.name; typ = None } in
+      C.add_realization ~ctx:fctx fn.cache typ;
       let fn_stmts = S.parse_realized ~ctx:(C.enter_level ~ctx:fctx) fn_stmts in
-      C.remove_last_realization ~ctx:fctx fn.f_cache;
+      C.remove_last_realization ~ctx:fctx fn.cache;
       Ctx.clear_block ~ctx:fctx;
       let ast =
         ( typ
@@ -90,16 +93,16 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
       let cache_entry = { cache_entry with realized_ast = Some ast } in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
       (* set another alias in case typ changed during the realization *)
-      let real_name, _ = C.get_full_name ~ctx typ in
+      let real_name, _ = C.get_full_name ~ctx tv in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
-      typ
-    | _ -> C.err ~ctx "impossible realization case for %s" fn.f_name
+      tv
+    | _ -> C.err ~ctx "impossible realization case for %s" fn.name
 
-  and realize_type ctx typ cls =
+  and realize_type ctx typ (cls, cls_t) =
     let real_name, parents = C.get_full_name ~ctx typ in
-    let ast, str2real = Hashtbl.find_exn ctx.globals.realizations cls.c_cache in
+    let ast, str2real = Hashtbl.find_exn ctx.globals.realizations cls.cache in
     let what =
-      Ctx.in_scope ~ctx cls.c_name
+      Ctx.in_scope ~ctx cls.name
       >>= function
       | Type t -> Some (Ann.real_type t)
       | _ -> None
@@ -108,52 +111,46 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
     (* Case 1 - already realized *)
     | Some { realized_typ; _ }, _ ->
       (* ensure that parent pointer is kept correctly *)
-      let t = Ann.link_to_parent ~parent:(List.hd parents) realized_typ in
-      { t with is_type_ast = typ.is_type_ast }
+      T.link_to_parent ~parent:(List.hd parents) (Ann.var_of_typ_exn realized_typ.typ)
     (* Case 2 - needs realization *)
-    | None, Some { typ = Class _; _ } ->
-      Util.dbg "[real] realizing class %s ==> %s" cls.c_name real_name;
+    | None, Some (Class _) ->
+      Util.dbg "[real] realizing class %s ==> %s" cls.name real_name;
       let c_args =
-        Hashtbl.find_exn ctx.globals.classes cls.c_cache
+        Hashtbl.find_exn ctx.globals.classes cls.cache
         |> Hashtbl.to_alist
         |> List.filter_map ~f:(function
-               | (key, [ C.Member _ ]) as c -> Some (c, (key, C.make_unbound ctx))
+               | (key, [Ann.Var (Func _)]) -> None
+               | (key, [Var c]) -> Some (c, (key, C.make_unbound ctx))
                | _ -> None)
       in
-      let typ =
-        { typ with
-          typ =
-            Class
-              { cls with
-                c_parent = fst cls.c_parent, List.hd parents
-              ; c_args = List.map ~f:snd c_args
-              }
-        }
+      let tv = Ann.Class(
+        { cls with parent = fst cls.parent, List.hd parents
+        ; args = List.map ~f:snd c_args
+        }, cls_t)
       in
+      let typ = C.ann ~typ:(Type tv) ctx in
       let cache_entry =
         C.{ realized_ast = None; realized_typ = typ; realized_llvm = Ctypes.null }
       in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
       Ctx.add_block ~ctx;
       let inst = Int.Table.create () in
-      T.traverse_parents ~ctx typ ~f:(fun n (i, t) ->
+      T.traverse_parents ~ctx tv ~f:(fun n (i, t) ->
           Hashtbl.set inst ~key:i ~data:t;
-          Util.A.dr "%s -> %d, %s" n i (Ann.typ_to_string t);
+          (* Util.A.dr "%s -> %d, %s" n i (Ann.var_to_string t); *)
           Ctx.add ~ctx n (Type t));
-      C.add_realization ~ctx cls.c_cache typ;
-      List.iter c_args ~f:(fun ((n, tk), (x, t')) ->
-          match tk with
-          | [ Member t ] ->
-            Util.A.dr ":: [%s] %s -> %s" n (Ann.typ_to_string ~full:true t) (Ann.typ_to_string ~full:true @@ T.instantiate ~ctx ~inst t);
-            T.instantiate ~ctx ~inst t |> realize ~ctx |> T.unify_inplace ~ctx t'
-          | _ -> ());
-      C.remove_last_realization ~ctx cls.c_cache;
+      C.add_realization ~ctx cls.cache typ;
+      List.iter c_args ~f:(fun (c, (x, t')) ->
+          (* Util.A.dr ":: [%s] %s -> %s" n (Ann.typ_to_string ~full:true t) (Ann.typ_to_string ~full:true @@ T.instantiate ~ctx ~inst t); *)
+        T.instantiate ~ctx ~inst c |> realize ~ctx |> T.unify_inplace ~ctx t'
+      );
+      C.remove_last_realization ~ctx cls.cache;
       Ctx.clear_block ~ctx;
       let ast = typ, snd ast in
       let cache_entry = { cache_entry with realized_ast = Some ast } in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
-      typ
-    | _ -> C.err ~ctx "cannot find %s to realize" cls.c_name
+      tv
+    | _ -> C.err ~ctx "cannot find %s to realize" cls.name
 
   and internal ~(ctx : C.t) ?(args = []) name =
     let what =
@@ -163,10 +160,10 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
       | _ -> None
     in
     match what with
-    | Some ({ typ = Class { c_cache; c_generics; _ }; _ } as typ) ->
+    | Some (Class ({ cache; generics; _}, _) as typ) ->
       let inst =
         Int.Table.of_alist_exn
-        @@ List.map2_exn c_generics args ~f:(fun (_, (i, _)) a -> i, a)
+        @@ List.map2_exn generics args ~f:(fun (_, (i, _)) a -> i, a)
       in
       let typ = T.instantiate ~ctx ~inst typ |> realize ~ctx in
       let _ = magic ~ctx typ "__init__" in
@@ -177,22 +174,22 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
   and magic ~(ctx : C.t) ?(idx = 0) ?(args = []) typ name =
     (* Util.A.dy "MAGIC %s.%s :: [%s]" (Ann.typ_to_string typ) name (Util.ppl args ~f:Ann.typ_to_string); *)
     let ret =
-      match (Ann.real_type typ).typ, name with
+      match Ann.real_type typ, name with
       | Tuple el, "__getitem__" -> List.nth el idx
-      | Class { c_cache; _ }, _ ->
-        Hashtbl.find ctx.globals.classes c_cache
+      | Class ({ cache; _ }, _), _ ->
+        Hashtbl.find ctx.globals.classes cache
         >>= fun h ->
         Hashtbl.find h name
         >>| List.filter_map ~f:(function
-                | C.(Type _ | Member _ | Import _) -> C.err ~ctx "wrong magic type"
-                | C.Var t ->
-                  (match Ann.real_type t with
-                  | { typ = Func f; _ } as t ->
-                    let ti = T.instantiate ~ctx t in
-                    let f_args = List.map (Ann.func ti).f_args ~f:snd in
+                | Ann.(Type _ | Import _) ->
+                  C.err ~ctx "wrong magic type"
+                | Var t ->
+                  ( match Ann.real_type t |> T.instantiate ~ctx with
+                  | Func (f, _) as t ->
+                    let f_args = List.map f.args ~f:snd in
                     let s = T.sum_or_neg (typ :: args) f_args ~f:T.unify in
                     (* Util.A.dy "MAGIC ? %s %d" (Ann.typ_to_string t) s; *)
-                    if s = -1 then None else Some ((f.f_cache, ti), s)
+                    if s = -1 then None else Some ((f.cache, t), s)
                   | _ -> None))
         >>| List.fold ~init:(None, -1) ~f:(fun (acc, cnt) cur ->
                 match acc, cur with
@@ -201,20 +198,22 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
                 | Some (_, max), (_, i) when i > max -> Some cur, 1
                 | Some _, _ -> acc, cnt)
         >>= (function
-        | Some ((_, t), _), 1 ->
-          let t = Ann.link_to_parent ~parent:(Some typ) t in
-          let f = Ann.func t in
-          List.iter2_exn (typ :: args) f.f_args ~f:(fun t (_, t') ->
-              T.unify_inplace ~ctx t t');
-          let f = Ann.func (realize ~ctx t) in
-          Some f.f_ret
-        | Some ((_, t), _), j ->
-          (* many choices *)
-          let hasu = Ann.has_unbound typ in
-          let hasu = hasu || List.exists args ~f:Ann.has_unbound in
-          if hasu then Some (C.make_unbound ctx) else None
-        (* C.err ~ctx "many equally optimal magic functions" *)
-        | None, _ -> None (* C.err ~ctx "cannot find fitting magic function") *))
+            | Some ((_, t), _), 1 ->
+              ( match T.link_to_parent ~parent:(Some typ) t with
+              | Func (f, fret) as t ->
+                List.iter2_exn (typ :: args) f.args ~f:(fun t (_, t') ->
+                    T.unify_inplace ~ctx t t');
+                ( match realize_function ctx t (f, fret) with
+                | Func (_, f_ret) -> Some f_ret.ret
+                | _ -> failwith "cannot happen" )
+              | _ -> ierr ~ctx "got non-function" )
+            | Some ((_, t), _), j ->
+              (* many choices *)
+              let hasu = Ann.has_unbound typ in
+              let hasu = hasu || List.exists args ~f:Ann.has_unbound in
+              if hasu then Some (C.make_unbound ctx) else None
+            (* C.err ~ctx "many equally optimal magic functions" *)
+            | None, _ -> None (* C.err ~ctx "cannot find fitting magic function") *))
       | _ -> None
     in
     match ret, ctx.env.realizing with

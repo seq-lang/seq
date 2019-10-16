@@ -34,7 +34,7 @@ let init () : t =
     jit
   with
   | Err.CompilerError (typ, pos_lst) ->
-    eprintf "%s\n%!" @@ Err.to_string ~pos_lst typ;
+    eprintf "%s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) typ;
     exit 1
 
 (** Execute [code] within a JIT context [jit]. *)
@@ -82,7 +82,7 @@ let repl () =
       | End_of_file ->
         (try exec jit !code with
         | Err.CompilerError (typ, pos_lst) ->
-          eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:!code typ);
+          eprintf "%s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) ~file:!code typ);
         if !code = ""
         then raise Exit
         else (

@@ -42,7 +42,7 @@ let init file error_handler =
     Returns pointer to [Module] or zero if unsuccessful. *)
 let parse_c fname =
   let error_handler typ (pos : Ast.Ann.t list) =
-    let Ast.Ann.{ file; line; col; len; _ } = List.hd_exn pos in
+    let Ast.Ann.{ file; line; col; len } = (List.hd_exn pos).pos in
     let msg =
       match typ with
       | Err.Parser -> "parsing error"
