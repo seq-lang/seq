@@ -25,6 +25,18 @@ class Generator:
         self.initf = 0
         self.next = 0
 
+    def gettimeofday(self: Generator):
+        type timeval(tv_sec: int, tv_usec: int)
+        tv = timeval(0, 0)
+
+        cdef gettimeofday(ptr[timeval], ptr[byte]) -> i32
+        err = gettimeofday(__ptr__(tv), ptr[byte]())
+        if int(err) != 0:
+            raise OSError("whoops") # Todo get nice message via seterr
+
+        SEC_TO_NS = 1000 * 1000
+        return tv.tv_sec * SEC_TO_NS + tv.tv_usec
+
     def init_genrand(self: Generator, s: u64):
         """
         init_genrand(u64) -> void
@@ -43,7 +55,6 @@ class Generator:
 
     def init_by_array(self: Generator, init_key: array[u64], key_length: int):
         """
-
         initialize by an array with array-length
         init_key is the array for initializing keys
         key_length is its length
@@ -134,8 +145,6 @@ class Generator:
 
         y = self.state[self.next]
         self.next += 1
-        # How to do this???
-        # y = *next++
 
         # Tempering
         y ^= (y >> u64(11))
@@ -159,28 +168,31 @@ class Generator:
 
     def random_seed_time_pid(self: Generator):
         """
+        helper method for seed()
         """
 
-        # now = getsystemclock()
-        # key = array[u64](5)
-        # key[0] = u64(now & u64(0xffffffff))
-        # key[1] = u64(now >> 32)
-        # # key[2] = u64(getpid())
-        #
-        # # now = getmonotonicclock()
-        # key[3] = u64(now & u64(0xffffffff))
-        # key[4] = u64(now >> u32)
-        #
-        # self.init_by_array(self, key, len(key))
-        pass
+        now = u64(self.gettimeofday())
+        key = array[u64](5)
+        key[0] = u64(now & u64(0xffffffff))
+        key[1] = u64(now >> u64(32))
 
-    def seed(self) -> int:
-        """
+        cdef getpid() -> int
+        key[2] = u64(getpid())
 
-        For now a is ites default None.
+        getmonotonicclock = 12345
+        now = u64(getmonotonicclock)       # = getmonotonicclock()
+        key[3] = u64(now & u64(0xffffffff))
+        key[4] = u64(now >> u64(32))
+
+        self.init_by_array(key, len(key))
+
+
+    def seed(self):
+        """Initialize internal state from hashable object.
+
+        For now a is set to its defaults a = None
         """
-        # return self.random_seed_time_pid()
-        return 0
+        self.random_seed_time_pid()
 
 """Random number generator base class used by bound module functions.
 Used to instantiate instances of Random to get generators that don't
@@ -220,12 +232,8 @@ class Random:
         For now a is set to its defaults a = None
         """
         a = None
-
         self.gen.seed()
         # self.gauss_next = None
-        # self.gen.genrand_res53()
-
-
 
 init = array[u64](4)
 init[0] = u64(0x123)
@@ -236,24 +244,13 @@ length = 4
 
 rand_gen = Generator()
 rand_o = Random(rand_gen)
+
 rand_o.seed()
 print rand_o.gen.genrand_int32()
+print rand_o.gen.gettimeofday()
+print rand_o.gen.gettimeofday()
 
-type timeval(tv_sec: int, tv_usec: int)
 
-def gettimeofday():
-    tv = timeval(0, 0)
-
-    cdef gettimeofday(ptr[timeval], ptr[byte]) -> i32
-    err = gettimeofday(__ptr__(tv), ptr[byte]())
-    if int(err) != 0:
-        raise OSError("whoops") # Todo get nice message via seterr
-
-    SEC_TO_NS = 1000 * 1000
-    return tv.tv_sec * SEC_TO_NS + tv.tv_usec
-
-print gettimeofday()
-print gettimeofday()
 
 
 
