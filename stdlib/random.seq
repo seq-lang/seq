@@ -52,7 +52,7 @@ class Generator:
         self.init_genrand(u64(19650218))
         i = 1
         j = 0
-        k: int
+        k = 0
         if N > key_length:
             k = N
         else:
@@ -91,8 +91,8 @@ class Generator:
 
         self.state[0] = u64(0x80000000)
         # print self.state[0]
-        state_size = 1
-        initf = 1
+        self.state_size = 1
+        self.initf = 1
 
     def next_state(self: Generator):
         """
@@ -103,14 +103,14 @@ class Generator:
             return ((u) & u64(0x80000000)) | ((v) & u64(0x7fffffff))
 
         def twist(u, v):
-            return (mixbits(u,v) >> 1) ^ (u64(0x9908b0df) if (v)& u64(1) else u64(0))
+            return (mixbits(u,v) >> u64(1)) ^ (u64(0x9908b0df) if (v)& u64(1) else u64(0))
 
         # if init_genrand() has not been called, a default initial seed is used
         if self.initf == 0:
             self.init_genrand(u64(5489))
 
-        next = 0
-        state_size = N
+        self.next = 0
+        self.state_size = N
         i = 0
         for j in range(N-M+1, -1, -1):
             self.state[i] = self.state[M] ^ twist(self.state[i], self.state[i+1])
@@ -129,19 +129,19 @@ class Generator:
         generates a random number on [0,0xffffffff]-interval
         """
 
-        if next == self.state_size:
+        if self.next == self.state_size:
             self.next_state()
 
-        y = self.state[next]
-        next += 1
+        y = self.state[self.next]
+        self.next += 1
         # How to do this???
         # y = *next++
 
         # Tempering
-        y ^= (y >> 11)
-        y ^= (y << 7) & u64(0x9d2c5680)
-        y ^= (y << 15) & u64(0xefc60000)
-        y ^= (y >> 18)
+        y ^= (y >> u64(11))
+        y ^= (y << u64(7)) & u64(0x9d2c5680)
+        y ^= (y << u64(15)) & u64(0xefc60000)
+        y ^= (y >> u64(18))
 
         return y
 
@@ -221,8 +221,7 @@ class Random:
         """
         a = None
 
-
-        self.gen.seed(a)
+        self.gen.seed()
         # self.gauss_next = None
         # self.gen.genrand_res53()
 
@@ -238,8 +237,27 @@ length = 4
 rand_gen = Generator()
 rand_o = Random(rand_gen)
 rand_o.seed()
+print rand_o.gen.genrand_int32()
 
-gauss = rand_o.gauss
+type timeval(tv_sec: int, tv_usec: int)
+
+def gettimeofday():
+    tv = timeval(0, 0)
+
+    cdef gettimeofday(ptr[timeval], ptr[byte]) -> i32
+    err = gettimeofday(__ptr__(tv), ptr[byte]())
+    if int(err) != 0:
+        raise OSError("whoops") # Todo get nice message via seterr
+
+    SEC_TO_NS = 1000 * 1000
+    return tv.tv_sec * SEC_TO_NS + tv.tv_usec
+
+print gettimeofday()
+print gettimeofday()
+
+
+
+# gauss = rand_o.gauss
 
 # rand_obj = Generator()
 # # rand_obj.init_by_array(init, length)
