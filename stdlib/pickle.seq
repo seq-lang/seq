@@ -1,9 +1,9 @@
 import file
 
-def dump[T](x: T, f: File):
+def dump[T](x: T, f: gzFile):
     x.__pickle__(f.fp)
 
-def load[T](f: File):
+def load[T](f: gzFile):
     return T.__unpickle__(f.fp)
 
 def _pickle_error(status: int):

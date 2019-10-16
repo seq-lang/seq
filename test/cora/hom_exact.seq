@@ -14,6 +14,7 @@
 
 from sys import argv
 from pickle import dump
+import gzip
 
 type K = Kmer[64]
 
@@ -124,7 +125,7 @@ while i < len(eq_set):
     total += 1
     i += find_block_size(i, eq_set)
 
-with open(argv[2], 'wb') as out:
+with gzip.open(argv[2], 'wb') as out:
     dump(total, out)
     i = 0
     while i < len(eq_set):

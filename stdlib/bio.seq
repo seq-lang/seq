@@ -269,9 +269,9 @@ type Locus(_tid: u32, _pos: u32):
 def seqs(x):
     return x.__seqs__()
 
-type Seqs(file: File):
+type Seqs(file: gzFile):
     def __init__(self: Seqs, path: str) -> Seqs:
-        return (open(path, "r"),)
+        return (gzopen(path, "r"),)
 
     def __iter__(self: Seqs):
         for a in self.file._iter():
@@ -305,9 +305,9 @@ type FASTQRecord(_name: str, _read: seq, _qual: str):
     def qual(self: FASTQRecord):
         return self._qual
 
-type FASTQ(file: File):
+type FASTQ(file: gzFile):
     def __init__(self: FASTQ, path: str) -> FASTQ:
-        return (open(path, "r"),)
+        return (gzopen(path, "r"),)
 
     def __seqs__(self: FASTQ):
         line = 0
@@ -355,12 +355,12 @@ type FASTARecord(_name: str, _seq: seq):
     def seq(self: FASTARecord):
         return self._seq
 
-type FASTA(file: File, fai: list[int], names: list[str]):
+type FASTA(file: gzFile, fai: list[int], names: list[str]):
     def __init__(self: FASTA, path: str) -> FASTA:
         cdef atoi(ptr[byte]) -> int
         fai = list[int]()
         names = list[str]()
-        with open(path + ".fai", "r") as fai_file:
+        with gzopen(path + ".fai", "r") as fai_file:
             for line in fai_file:
                 assert line
                 cut = 0
@@ -370,7 +370,7 @@ type FASTA(file: File, fai: list[int], names: list[str]):
                 line = line[cut:]
                 fai.append(atoi(line.ptr))
                 names.append(name)
-        return (open(path, "r"), fai, names)
+        return (gzopen(path, "r"), fai, names)
 
     def __seqs__(self: FASTA):
         for rec in self:
