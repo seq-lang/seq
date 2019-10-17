@@ -25,7 +25,8 @@ let typecheck_test_block block_id stmts lines_fail lines_ok =
   let set = Hash_set.Poly.create () in
   let parser ~ctx ?(file = "<internal>") code =
     ignore
-    @@ Codegen.parse ~file code
+    @@ Codegen.parse ~file code ~f:(fun stmts ->
+          ignore @@ List.map ~f:(S.parse ~ctx) stmts)
   in
   let rec try_stmts stmts =
     try
@@ -59,8 +60,11 @@ let typecheck_test_block block_id stmts lines_fail lines_ok =
     | TestExcOK ann ->
       Hash_set.add set ann;
       try_stmts stmts
+    | Err.CompilerError (msg, pos) ->
+      (* Printexc.print_backtrace stderr; *)
+      raise @@ Err.CompilerError (msg, pos)
     | Err.SeqCamlError (msg, pos) ->
-      Printexc.print_backtrace stderr;
+      (* Printexc.print_backtrace stderr; *)
       raise @@ Err.SeqCamlError (msg, pos)
   in
   let stmts = try_stmts stmts in

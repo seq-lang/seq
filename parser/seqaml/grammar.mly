@@ -541,99 +541,22 @@ assign_statement:
     { let op = String.sub (snd $2)
         ~pos:0 ~len:(String.length (snd $2) - 1)
       in
-      let rhs =
-        pos (fst $1) (fst $3),
-        Binary ($1, "inplace_" ^ op, $3)
-      in
-      [ fst rhs,
-        Assign ($1, rhs, Update, None) ]}
+      [ pos (fst $1) (fst $3), AssignEq ($1, op, $3) ]}
   // Type assignment
   | ID COLON expr EQ expr
   | ID COLON expr ASSGN_EQ expr
     {[ pos (fst $1) (fst $5),
-       Assign ((fst $1, Id (snd $1)), $5,
+       Assign ([fst $1, Id (snd $1)], [$5],
           (if (snd $4) = ":=" then Shadow else Normal), Some $3) ]}
   // Assignment (a, b = x, y)
   | expr_list ASSGN_EQ separated_nonempty_list(ASSGN_EQ, expr_list)
   | expr_list EQ separated_nonempty_list(EQ, expr_list)
-    {
-      let sides = $1 :: $3 in
-      let p = pos (fst @@ List.hd_exn @@ List.hd_exn sides)
-                  (fst @@ List.last_exn @@ List.last_exn sides)
-      in
-      let shadow = if (snd $2) = ":=" then Shadow else Normal in
-      let rec parse_assign lhs rhs =
-        (* wrap RHS in tuple for consistency (e.g. x, y -> (x, y)) *)
-        let init_exprs, rhs =
-          if List.length rhs > 1 then begin
-            let var = p, Id (new_assign ()) in
-            [ p, Assign (var, (p, Tuple rhs), Shadow, None) ], var
-          end else if List.length lhs > 1 then begin
-            let var = p, Id (new_assign ()) in
-            [ p, Assign (var, List.hd_exn rhs, Shadow, None) ], var
-          end else
-            [], List.hd_exn rhs
-        in
-        (* wrap LHS in tuple as well (e.g. x, y -> (x, y)) *)
-        let lhs = match lhs with
-          | [_, Tuple(lhs)]
-          | [_, List(lhs)] ->
-            lhs
-          | lhs -> lhs
-        in
-        let exprs = match lhs with
-          | [lhs] ->
-            [ p, Assign (lhs, rhs, shadow, None) ]
-          | lhs ->
-            let len = List.length lhs in
-            let unpack_i = ref (-1) in
-            let lst = List.concat @@ List.mapi lhs ~f:(fun i expr ->
-              match expr with
-              | _, Unpack var when !unpack_i = -1 ->
-                unpack_i := i;
-                let start = Some (p, Int (string_of_int i)) in
-                let eend =
-                  if i = len - 1 then None
-                  else Some (p, Int (string_of_int @@ i +  1 - len))
-                in
-                let slice = Slice (start, eend, None) in
-                let rhs = p, Index (rhs, [p, slice]) in
-                [p, Assign ((p, Id var), rhs, shadow, None)]
-              | ann, Unpack var when !unpack_i > -1 ->
-                Err.serr ~ann "cannot have two tuple unpackings on LHS"
-              | _ when !unpack_i = -1 ->
-                (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
-                let rhs = p, Index (rhs, [p, Int (string_of_int i)]) in
-                parse_assign [expr] [rhs]
-                (*p, Assign (expr, rhs, shadow) *)
-              | _ ->
-                (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
-                let rhs = p, Index (rhs, [p, Int (string_of_int @@ i - len)]) in
-                parse_assign [expr] [rhs])
-            in
-            let len, op =
-              if !unpack_i > -1 then
-                len - 1, ">="
-              else
-                len, "=="
-            in
-            let assert_stmt = p, Assert (p, Binary (
-                (p, Call ((p, Id "len"),
-                          [{ name = None; value = rhs }])),
-                op,
-                (p, Int (string_of_int len))))
-            in
-            (*assert_stmt :: *)
-            lst
-        in
-        init_exprs @ exprs
-      in
-      let sides = List.rev sides in
-      List.concat @@ List.folding_map (List.tl_exn sides)
-        ~init:(List.hd_exn sides) (* rhs *)
-        ~f:(fun rhs lhs ->
-            let result = parse_assign lhs rhs in
-            rhs, result) }
+    { let shadow = if (snd $2) = ":=" then Shadow else Normal in
+      let assgns = List.rev ($1 :: $3) in
+      List.folding_map ~init:(List.hd_exn assgns) (List.tl_exn assgns) ~f:(fun acc lhs ->
+        lhs,
+        (pos (fst @@ List.hd_exn lhs) (fst @@ List.last_exn acc),
+          Assign (lhs, acc, shadow, None))) }
 %inline aug_eq:
   | PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ
   | LSHEQ | RSHEQ | ANDEQ | OREQ | XOREQ
@@ -788,7 +711,7 @@ with_statement:
     {
       let rec traverse (expr, var) lst =
         let var = Option.value var ~default:(fst expr, Id (new_assign ())) in
-        let s1 = fst expr, Assign (var, expr, Shadow, None) in
+        let s1 = fst expr, Assign ([var], [expr], Shadow, None) in
         let s2 = fst expr, Expr (
           fst expr, Call ((fst expr, Dot (var, "__enter__")), []))
         in

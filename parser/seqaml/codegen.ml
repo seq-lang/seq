@@ -28,9 +28,8 @@ let parse ?f ?(file = "") code =
         ~len:1
         ()
     in
-    (* Printexc.print_backtrace stderr; *)
     raise @@ Err.CompilerError (Parser, [ pos ])
-  | Err.SeqCamlError (msg, pos) -> raise @@ Err.CompilerError (Descent msg, pos)
+  | Err.SeqCamlError (msg, pos) -> Printexc.print_backtrace stderr; raise @@ Err.CompilerError (Descent msg, pos)
   | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])
   | Err.InternalError (msg, pos) -> raise @@ Err.CompilerError (Internal msg, [ pos ])
 

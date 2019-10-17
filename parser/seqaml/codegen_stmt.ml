@@ -88,8 +88,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Llvm.Stmt.expr expr
 
   and parse_assign ctx ann ~toplevel ~jit (lhs, rhs, shadow, typ) =
-    match lhs with
-    | ann, Id var ->
+    match lhs, rhs with
+    | [(ann, Id var) as lhs], [rhs] ->
       (match Hashtbl.find ctx.map var, shadow with
       | None, Update -> serr ~ann "%s not found" var
       | Some ((Codegen_ctx.Var _, { base; _ }) :: _), Update when ctx.env.base <> base
@@ -138,11 +138,11 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         if toplevel then Llvm.Var.set_global v;
         Codegen_ctx.add ~ctx ~toplevel ~global:toplevel var (Codegen_ctx.Var v);
         var_stmt)
-    | ann, Dot (lh_lhs, lh_rhs) ->
+    | [ann, Dot (lh_lhs, lh_rhs)], [rhs] ->
       (* a.x = b *)
       let rh_expr = E.parse ~ctx rhs in
       Llvm.Stmt.assign_member (E.parse ~ctx lh_lhs) lh_rhs rh_expr
-    | ann, Index (var_expr, [ index_expr ]) ->
+    | [ann, Index (var_expr, [ index_expr ])], [rhs] ->
       (* a[x] = b *)
       let var_expr = E.parse ~ctx var_expr in
       let index_expr = E.parse ~ctx index_expr in
