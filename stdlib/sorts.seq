@@ -169,12 +169,12 @@ def _merge[T](arr: array[T], l: int, m: int, r: int, comp: function[bool,T,T]):
     i, j, k = 0, 0, l
 
     while i < len1 and j < len2:
-        if comp(left[i], right[j]):
-            arr[k] = left[i]
-            i += 1
-        else:
+        if comp(right[j], left[i]):
             arr[k] = right[j]
             j += 1
+        else:
+            arr[k] = left[i]
+            i += 1
         k += 1
     while i < len1:
         arr[k] = left[i]
@@ -231,8 +231,6 @@ def _reverse_sortslice[T](arr: array[T], begin: int, end: int):
         return
     arr[begin], arr[end - 1] = arr[end - 1], arr[begin]
     _reverse_sortslice(arr, begin + 1, end - 1)
-
-
 
 def _merge_collapse[T](arr: array[T], stack: list[tuple[int,int]], comp: function[bool,T,T]):
     
