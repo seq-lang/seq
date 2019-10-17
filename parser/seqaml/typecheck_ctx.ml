@@ -54,6 +54,7 @@ type tglobal =
   ; imports : (string, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; pod_types : (string, Ann.tlookup) Hashtbl.t
   ; parser : ctx:t -> ?file:string -> string -> unit
+  ; stdlib : (string, Ast.Ann.ttyp list) Hashtbl.t
   }
 
 and trealization =
@@ -170,13 +171,13 @@ let parse_file ~(ctx : t) file =
   let code = String.concat ~sep:"\n" lines ^ "\n" in
   ctx.globals.parser ~ctx ~file:(Filename.realpath file) code
 
-let init_module ~filename parser =
+let init_module ?(argv = false) ~filename parser =
   let internal_cnt = ref 0 in
   let next_pos () =
     incr internal_cnt;
     Ann.create ~file:"<internal>" ~line:(!internal_cnt - 1) ~col:0 ()
   in
-  let main_realization = "", (Ann.create ()).pos in
+  let main_realization = "", Ann.default_pos in
   let ctx =
     Ctx.init
       { unbound_counter = ref 0
@@ -186,6 +187,7 @@ let init_module ~filename parser =
       ; pod_types = String.Table.create ()
       ; imports = String.Table.create ()
       ; parser
+      ; stdlib = String.Table.create ()
       }
       { level = 0
       ; unbounds = Stack.create ()
@@ -199,126 +201,120 @@ let init_module ~filename parser =
       ; filename
       }
   in
-  Ctx.add_block ~ctx;
-  (* Import stdlib *)
-  let pod_types =
-    Llvm.Type.
-      [ "void", void
-      ; "int", int
-      ; "str", str
-      ; "seq", seq
-      ; "bool", bool
-      ; "float", float
-      ; "byte", byte
-      ]
-  in
-  List.iter pod_types ~f:(fun (class_name, ll) ->
-      let cls =
-        Stmt.(Class { class_name; generics = []; members = []; args = None })
+  (
+    let ctx = { ctx with map = ctx.globals.stdlib } in
+    Ctx.add_block ~ctx;
+
+    let create_class ?(generic=0) ?(is_type=false) class_name =
+      let cls = Stmt.(Class
+          { class_name
+          ; generics = List.init generic ~f:(fun i -> sprintf "T%d" i)
+          ; members = []
+          ; args = None })
       in
       let cache = class_name, (Ann.create ()).pos in
+      let generics = List.init generic ~f:(fun i ->
+        let id = !(ctx.globals.unbound_counter) in
+        incr ctx.globals.unbound_counter;
+        (sprintf "T%d" i), Ann.(id, Link (ref (Generic id))))
+      in
       let typ =
         Ann.Type (Ann.Class (
-                 { generics = []
-                 ; name = class_name
-                 ; parent = main_realization, None
-                 ; cache = cache
-                 ; args = []
-                 },
-                 { types = None }))
+                  { generics
+                  ; name = class_name
+                  ; parent = main_realization, None
+                  ; cache = cache
+                  ; args = []
+                  },
+                  { types = if is_type then Some [] else None }))
       in
       Ctx.add ~ctx class_name typ;
       Hashtbl.set ctx.globals.classes ~key:cache ~data:(String.Table.create ());
       Hashtbl.set
         ctx.globals.realizations
         ~key:cache
-        ~data:((Ann.create ~typ (), cls), String.Table.create ()));
-  List.iter pod_types ~f:(fun (class_name, ll) ->
-      (* Util.A.dr ">>>> %s" class_name; *)
-      let cache = class_name, (Ann.create ()).pos in
-      let methods = Llvm.Type.get_methods (ll ()) in
-      List.iter methods
-        ~f:(fun (s, t) ->
-          let sg = Llvm.Type.get_name t in
-          assert (String.prefix sg 9 = "function[");
-          assert (String.suffix sg 1 = "]");
-          let sg = String.drop_prefix (String.drop_suffix sg 1) 9 in
-          let args = List.map (String.split ~on:',' sg) ~f:(Ctx.in_scope ~ctx) in
-          if List.for_all args ~f:is_some
-          then (
-            let ret, args =
-              match List.filter_map args ~f:Fn.id with
-              | ret :: args -> ret, args
-              | _ -> failwith "bad type"
-            in
-            (* Util.A.dr "%s.%s ->> %s" class_name s sg; *)
-            let f_cache = s, (Ann.create ()).pos in
-            let typ =
-              Ann.Var (Ann.Func (
-                { generics = []
-                ; name = sprintf "%s.%s" class_name s
-                ; cache = f_cache
-                ; parent = cache, None
-                ; args = List.map args ~f:(fun a -> "", Ann.var_of_typ_exn (Some a))
-                },
-                { ret = Ann.var_of_typ_exn (Some ret)
-                ; used = String.Hash_set.create () }))
-            in
-            Ctx.add ~ctx (sprintf "%s.%s" class_name s) typ;
-            let ast = Stmt.Pass () in
-            Hashtbl.set
-              ctx.globals.realizations
-              ~key:f_cache
-              ~data:((Ann.create ~typ (), ast), String.Table.create ());
-            Hashtbl.find ctx.globals.classes cache
-            >>| (fun h -> Hashtbl.add_multi h ~key:s ~data:typ)
-            |> ignore)
-          else ()));
-
-    let str_arg = Ctx.in_scope ~ctx "str" in
-    let ret, args = str_arg, [str_arg] in
-    let f_cache = "__str__", (Ann.create ()).pos in
-    let typ =
-      Ann.Var (Ann.Func (
-        { generics = []
-        ; name = "str.__str__"
-        ; cache = f_cache
-        ; parent = ("str", (Ann.create ()).pos), None
-        ; args = List.map args ~f:(fun a -> "", Ann.var_of_typ_exn a)
-        },
-        { ret = Ann.var_of_typ_exn ret
-        ; used = String.Hash_set.create () }))
+        ~data:((Ann.create ~typ (), cls), String.Table.create ())
     in
-    Ctx.add ~ctx "str.__str__" typ;
-    let ast = Stmt.Pass () in
-    Hashtbl.set
-      ctx.globals.realizations
-      ~key:f_cache
-      ~data:((Ann.create ~typ (), ast), String.Table.create ());
-    Hashtbl.find ctx.globals.classes ("str", (Ann.create ()).pos)
-    >>| (fun h -> Hashtbl.add_multi h ~key:"__str__" ~data:typ)
-    |> ignore;
 
-  (* let stdlib_stmts = List.iter
-    [ "__init__"
-    ; "stdlib"
-    ; "range"
-    ; "int"
-    ; "str"
-    ; "list"
-    ; "dict"
-    ; "set"
-    ]
-    ~f:(fun res ->
-        let res = sprintf "internal/%s" res in
-        match Util.get_from_stdlib res with
-        | Some file ->
-          parse_file ~ctx file
-        | None ->
-          serr "cannot locate internal module %s" res)
-  in *)
-  (* Hashtbl.set imported
-    ~key:"" ~data:(stdlib_stmts, String.Table.create ()); *)
+    let add_internal_method class_name name signature =
+      assert (String.prefix signature 9 = "function[");
+      assert (String.suffix signature 1 = "]");
+      let signature = String.drop_prefix (String.drop_suffix signature 1) 9 in
+      let args = List.map (String.split ~on:',' signature) ~f:(Ctx.in_scope ~ctx) in
+      if List.for_all args ~f:is_some then (
+        let ret, args =
+          match List.filter_map args ~f:Fn.id with
+          | ret :: args -> ret, args
+          | _ -> failwith "bad type"
+        in
+        Util.A.dr "%s.%s ->> %s" class_name name signature;
+        let f_cache = name, Ann.default_pos in
+        let typ =
+          Ann.Var (Ann.Func (
+            { generics = []
+            ; name = sprintf "%s.%s" class_name name
+            ; cache = f_cache
+            ; parent = (class_name, Ann.default_pos), None
+            ; args = List.map args ~f:(fun a -> "", Ann.var_of_typ_exn (Some a))
+            },
+            { ret = Ann.var_of_typ_exn (Some ret)
+            ; used = String.Hash_set.create () }))
+        in
+        Ctx.add ~ctx (sprintf "%s.%s" class_name name) typ;
+        let ast = Stmt.Pass () in
+        Hashtbl.set
+          ctx.globals.realizations
+          ~key:f_cache
+          ~data:((Ann.create ~typ (), ast), String.Table.create ());
+        Hashtbl.find_and_call ctx.globals.classes (class_name, Ann.default_pos)
+          ~if_found:(Hashtbl.add_multi ~key:name ~data:typ) ~if_not_found:(const ()))
+    in
+
+    (* Initialize C POD types *)
+    let pod_types = Llvm.Type.
+        [ "void", void ; "int", int ; "bool", bool ; "float", float ; "byte", byte ]
+    in
+    List.iter pod_types ~f:(fun (name, _) -> create_class name ~is_type:true);
+    List.iter pod_types ~f:(fun (name, ll) ->
+        let open Llvm.Type in
+        ll ()
+        |> get_methods
+        |> List.iter ~f:(fun (s, t) -> add_internal_method name s (get_name t)));
+
+    (* Initialize internal generics *)
+    create_class ~generic:1 "generator";
+    create_class ~generic:1 "ptr";
+    (* create_class ~generic:1 "Int"; *)
+    (* create_class ~generic:1 "UInt"; *)
+    (* create_class ~generic:1 "Kmer"; *)
+
+    let compound_types = Llvm.Type.["str", str; "seq", seq] in
+    ctx.globals.parser ~ctx
+    (Util.unindent {|
+    class array[T]:
+      ptr: ptr[byte]
+      len: int
+    class str:
+      ptr: ptr[byte]
+      len: int
+    class seq:
+      ptr: ptr[byte]
+      len: int
+    |});
+    List.iter compound_types ~f:(fun (name, ll) ->
+      let open Llvm.Type in
+      ll ()
+      |> get_methods
+      |> List.iter ~f:(fun (s, t) -> add_internal_method name s (get_name t)));
+
+    (* argv! *)
+    match Util.get_from_stdlib "stdlib" with
+    | Some file -> parse_file ~ctx file
+    | None -> Err.ierr "cannot locate stdlib.seq"
+  );
+
+  Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
+    Ctx.add ~ctx key (List.hd_exn data));
   ctx
 
 let init_empty ~(ctx : t) =
@@ -349,8 +345,8 @@ let epatch ~ctx s =
   let patch a = Ann.{ a with pos = ann.pos } in
   Expr.walk s ~f:(fun (a, s) -> patch a, s)
 
-let make_internal_magic ~ctx name ret_typ arg_typ =
-  sannotate ~ctx @@ s_extern ~lang:"llvm" name ret_typ [ "self", arg_typ ]
+let make_internal_magic ~ctx name ret_typ arg_types =
+  sannotate ~ctx @@ s_extern ~lang:"llvm" name ret_typ arg_types
 
 let magic_call ~ctx ?(args=[]) ~magic parse e =
   let e = parse ~ctx e in

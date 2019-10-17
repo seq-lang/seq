@@ -21,11 +21,13 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
   let rec parse ~(ctx : C.t) (s : Stmt.t Ann.ann) : Stmt.t Ann.ann list =
     let ann, node = s in
     C.push_ann ~ctx ann;
+    Util.A.dr "[s] %s" (Stmt.to_string s);
     let (node : Stmt.t) =
       match node with
       | Expr p -> Expr (parse_expr ctx p)
       | Assert p -> Assert (parse_expr ctx p)
       | Throw p -> Throw (parse_expr ctx p)
+      | AssignEq p -> parse_assigneq ctx p
       | Assign p -> parse_assign ctx p
       | Declare p -> parse_declare ctx p
       | Del p -> parse_del ctx p
@@ -42,7 +44,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       | Function p -> parse_function ctx p
       | Extend p -> parse_extend ctx p
       | Class p -> parse_class ctx p
-      | Type p -> parse_class ctx p ~is_type:true
+      | Type p -> parse_class ctx p ~istype:true
       | Special p -> parse_special ctx p
       | Pass _ | Break _ | Continue _ | Global _ -> node
       | TypeAlias _ | Prefetch _ | ImportPaste _ -> C.err ~ctx "not supported :/"
@@ -69,44 +71,97 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
   (* ***************************** *)
   and parse_expr ctx e = E.parse ~ctx e
 
+  and parse_assigneq ctx (lh, op, rh) =
+    let magic = Util.bop2magic ~prefix:"i" op in
+    let lh = E.parse ~ctx lh in
+    let rh = E.parse ~ctx rh in
+    match R.magic ~ctx ~args:[var_of_node_exn rh] (var_of_node_exn lh) magic with
+    | None ->
+      Util.A.dy "hyar";
+      ignore @@ parse ~ctx @@ C.sannotate ~ctx @@ s_assign ~shadow:Shadow lh (e_binary lh op rh);
+      Pass ()
+    | Some t ->
+      Ann.(Util.A.dy "hyar hray... %s %s %s"
+        (t_to_string (fst lh).typ) (t_to_string (fst rh).typ) (var_to_string t));
+      Expr (C.magic_call E.parse ~ctx ~magic lh ~args:[rh])
+
   and parse_assign ctx ?(prefix = "") (lhs, rhs, shadow, dectyp) =
-    let rhs = E.parse ~ctx:(C.enter_level ~ctx) rhs in
-    match snd lhs, dectyp with
-    | Id var, _ ->
-      let t = var_of_node_exn rhs in
-      dectyp >>| E.parse ~ctx >>| var_of_node_exn >>| T.unify_inplace ~ctx t |> ignore;
-      (match Ctx.in_scope ~ctx var with
-      | Some (Var t' | Type t') when T.unify t t' <> -1 ->
-        T.unify_inplace ~ctx t t'
-      | Some Type t' ->
-        Util.dbg
-          "shadowing %s : %s with %s"
-          var
-          (Ann.var_to_string t)
-          (Ann.t_to_string (fst rhs).typ);
-        Ctx.add ~ctx (prefix ^ var) (Type t)
-      | Some Var t' ->
-        Util.dbg "shadowing %s : %s with %s"
-          var
-          (Ann.var_to_string t)
-          (Ann.t_to_string (fst rhs).typ);
-        Ctx.add ~ctx (prefix ^ var) (Var t)
-      | None ->
-       Ctx.add ~ctx (prefix ^ var) (match (fst rhs).typ with
-          | Some (Type t) -> Type t
-          | _ -> Var t)
-      | _ -> ierr ~ctx "[parse_assign] invalid assigment");
-      let ann = { (fst lhs) with typ = (fst rhs).typ } in
-      Assign (e_id ~ann var, rhs, shadow, None)
-    | Dot d, None ->
-      (* a.x = b *)
-      let lhs = E.parse ~ctx lhs in
-      T.unify_inplace ~ctx (var_of_node_exn lhs) (var_of_node_exn rhs);
-      Assign (lhs, rhs, shadow, None)
-    | Index (var_expr, [ idx ]), None ->
-      (* a[x] = b *)
-      Expr (C.magic_call E.parse ~ctx ~magic:"__setitem__" var_expr ~args:[ idx; rhs ])
-    | _ -> C.err ~ctx "invalid assign statement"
+    match lhs, rhs with
+    | [], _ | _, [] -> C.err ~ctx "empty assignment"
+    | _, (_ :: _ :: _) ->
+      parse_assign ctx ~prefix (lhs, [C.ann ctx, Tuple rhs], shadow, dectyp)
+    | [ _, (List l | Tuple l) ], [ rhs ]
+    | (( _ :: _ :: _ ) as l), [ rhs ] ->
+      let len = List.length lhs in
+      let unpack_i = ref (-1) in
+      let lst = List.mapi lhs ~f:(fun i expr ->
+        match expr with
+        | _, Unpack var when !unpack_i = -1 ->
+          unpack_i := i;
+          let slice =
+            if i = len - 1 then e_slice (e_int i)
+            else e_slice (e_int i) ~b:(e_int (i + 1 - len))
+          in
+          s_assign ~shadow (e_id var) (e_index rhs [slice])
+        | ann, Unpack var when !unpack_i > -1 ->
+          C.err ~ctx "cannot have two tuple unpackings on LHS"
+        | _ when !unpack_i = -1 ->
+          let rhs = e_index rhs [e_int i] in
+          s_assign ~shadow expr rhs
+        | _ ->
+          (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
+          let rhs = e_index rhs [e_int (i - len)] in
+          s_assign ~shadow expr rhs)
+      in
+      let len, op = if !unpack_i > -1 then len - 1, ">=" else len, "==" in
+      let assert_stmt = s_assert (e_binary (e_call (e_dot rhs "__len__") []) op (e_int len)) in
+      ignore @@ List.map (assert_stmt :: lst) ~f:(fun s -> parse ~ctx (C.sannotate ~ctx s));
+      Pass ()
+    | [ lhs ], [ rhs ] ->
+      let rhs = E.parse ~ctx:(C.enter_level ~ctx) rhs in
+      match snd lhs, dectyp with
+      | Id var, _ ->
+        let t = var_of_node_exn rhs in
+        dectyp >>| E.parse ~ctx >>| var_of_node_exn >>| T.unify_inplace ~ctx t |> ignore;
+        (match Ctx.in_scope ~ctx var with
+        | Some (Var t' | Type t') when T.unify t t' <> -1 ->
+          T.unify_inplace ~ctx t t'
+        | Some Type t' ->
+          Util.dbg
+            "shadowing %s : %s with %s"
+            var
+            (Ann.var_to_string t)
+            (Ann.t_to_string (fst rhs).typ);
+          Ctx.add ~ctx (prefix ^ var) (Type t)
+        | Some Var t' ->
+          Util.dbg "shadowing %s : %s with %s"
+            var
+            (Ann.var_to_string t)
+            (Ann.t_to_string (fst rhs).typ);
+          Ctx.add ~ctx (prefix ^ var) (Var t)
+        | None ->
+        Ctx.add ~ctx (prefix ^ var) (match (fst rhs).typ with
+            | Some (Type t) -> Type t
+            | _ -> Var t)
+        | _ -> ierr ~ctx "[parse_assign] invalid assigment");
+        let ann = { (fst lhs) with typ = (fst rhs).typ } in
+        Assign ([e_id ~ann var], [rhs], shadow, None)
+      | Dot d, None ->
+        (* a.x = b *)
+        let lhs = E.parse ~ctx lhs in
+        T.unify_inplace ~ctx (var_of_node_exn lhs) (var_of_node_exn rhs);
+        Assign ([lhs], [rhs], shadow, None)
+      | Index (var_expr, [ idx ]), None ->
+        let var_expr = E.parse ~ctx var_expr in
+        ( match var_of_node_exn var_expr |> Ann.real_type with
+          | Class ({ cache = "ptr", p; _ }, _) when p = Ann.default_pos ->
+            (* TODO: T.unify_inplace typ  *)
+            Assign ([ E.parse ~ctx lhs ], [ rhs ], shadow, dectyp)
+            (* Expr (C.magic_call E.parse ~ctx ~magic:"__setitem__" var_expr ~args:[ idx; rhs ]) *)
+          | _ ->
+            (* a[x] = b *)
+            Expr (C.magic_call E.parse ~ctx ~magic:"__setitem__" var_expr ~args:[ idx; rhs ]) )
+      | _ -> C.err ~ctx "invalid assign statement"
 
   and parse_declare ?(prefix = "") ctx { name; typ } =
     let e =
@@ -521,7 +576,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     List.iter explicits ~f:(T.generalize_inplace ~ctx);
     Extend (name, new_members)
 
-  and parse_class ctx ?(prefix = "") ?(is_type = false) cls =
+  and parse_class ctx ?(prefix = "") ?(istype = false) cls =
     let { class_name; generics; members; _ } = cls in
     let cache = class_name, (C.ann ctx).pos in
     (* Ctx.push ctx; *)
@@ -537,17 +592,11 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
           gen, (id, t))
     in
     let class_name = prefix ^ class_name in
-    let ctyp =
-      if not is_type
-      then None
-      else
-        Some
-          (List.filter_map members ~f:(function
-              | _, Assign (((_, Id name), _, _, typ) as d) ->
-                typ >>| E.parse ~ctx >>| var_of_node_exn
-              | _ -> None))
+    let ctyp = List.filter_map members ~f:(function
+              | _, Declare { name; typ } -> typ >>| E.parse ~ctx >>| var_of_node_exn
+              | _ -> None)
     in
-    let members = String.Table.create () in
+    let member_table = String.Table.create () in
     let tc' =
       Ann.(
         { generics =
@@ -560,7 +609,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
         ; cache
         ; args = []
         },
-        { types = ctyp })
+        { types = (if istype then Some ctyp else None) })
     in
     let tcls = Ann.(Link (ref (Bound (Class tc'))))
     in
@@ -575,13 +624,21 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       }
     in
     Ctx.add ~ctx class_name (Type tcls);
-    Hashtbl.set ctx.globals.classes ~key:cache ~data:members;
+    Hashtbl.set ctx.globals.classes ~key:cache ~data:member_table;
     let init =
-      C.make_internal_magic ~ctx "__init__" (e_id "void")
-      @@
-      match cls.generics with
-      | [] -> e_id class_name
-      | l -> e_index (e_id class_name) (List.map cls.generics ~f:e_id)
+      let cls_ast =
+        match cls.generics with
+          | [] -> e_id class_name
+          | l -> e_index (e_id class_name) (List.map cls.generics ~f:e_id)
+      in
+      let args =
+        ("self", cls_ast) :: (List.filter_map members ~f:(function
+          | _, Declare { name; typ = Some typ } -> Some (name, typ)
+          | _ -> None))
+      in
+      if istype
+      then C.make_internal_magic ~ctx "__init__" cls_ast args
+      else C.make_internal_magic ~ctx "__init__" (e_id "void") args
     in
     let cls_members =
       List.map (init :: cls.members) ~f:(fun s ->
@@ -593,19 +650,19 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
               let stmt = parse_function ctx ~prefix f in
               let typ = Ctx.in_block ~ctx (prefix ^ f.fn_name.name) in
               Hashtbl.add_multi
-                members
+                member_table
                 ~key:f.fn_name.name
                 ~data:(Option.value_exn typ);
               typ, stmt
             | Extern ((_, _, _, fn, _) as f) ->
               let stmt = parse_extern ctx ~prefix f in
               let typ = Ctx.in_block ~ctx (prefix ^ fn.name) in
-              Hashtbl.add_multi members ~key:fn.name ~data:(Option.value_exn typ);
+              Hashtbl.add_multi member_table ~key:fn.name ~data:(Option.value_exn typ);
               typ, stmt
             | Class c ->
               let stmt = parse_class ctx ~prefix c in
               let typ = Ctx.in_block ~ctx (prefix ^ c.class_name) in
-              Hashtbl.set members ~key:c.class_name ~data:[ Option.value_exn typ ];
+              Hashtbl.set member_table ~key:c.class_name ~data:[ Option.value_exn typ ];
               typ, stmt
             | Declare ({ name; _ } as d) ->
               let stmt = parse_declare ctx ~prefix d in
@@ -615,7 +672,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
                 | Some (Var t | Type t) -> t
                 | _ -> failwith "err"
               in
-              Hashtbl.set members ~key:name ~data:[ Var typ ];
+              Hashtbl.set member_table ~key:name ~data:[ Var typ ];
               (* Util.A.dr "[class %s] param %s -> %s"
                   class_name name (Ann.var_to_string ~full:true typ); *)
               Some (Var typ), stmt
@@ -631,7 +688,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
         | None -> ());
     List.iter explicits ~f:(fun (_, (_, t)) -> T.generalize_inplace ~ctx t);
     let n = { cls with class_name; generics; members = cls_members } in
-    let node = C.ann ~typ:(Type tcls) ctx, if is_type then Type n else Class n in
+    let node = C.ann ~typ:(Type tcls) ctx, if istype then Type n else Class n in
     Hashtbl.set ctx.globals.realizations ~key:cache ~data:(node, String.Table.create ());
     let tcls =
       if Ann.is_realizable tcls

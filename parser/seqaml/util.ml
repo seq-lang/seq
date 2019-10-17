@@ -84,3 +84,52 @@ module A = struct
   let dy ?(force = false) ?(el = true) fmt =
     dcol ~el ~force ANSITerminal.[ Background Yellow; Foreground Red; Bold ] fmt
 end
+
+let bop2magic ?(prefix = "") op =
+  let op =
+    match op with
+    | "+" -> "add"
+    | "-" -> "sub"
+    | "*" -> "mul"
+    | "/" -> "truediv"
+    | "//" -> "floordiv"
+    | "**" -> "pow"
+    | "%" -> "mod"
+    | "@" -> "mathmul"
+    | "==" -> "eq"
+    | "!=" -> "ne"
+    | "<" -> "lt"
+    | ">" -> "gt"
+    | "<=" -> "le"
+    | ">=" -> "ge"
+    | "&" -> "and"
+    | "|" -> "or"
+    | "^" -> "xor"
+    | "<<" -> "lshift"
+    | ">>" -> "rshift"
+    | "in" -> "contains"
+    (* patches for C++ transform *)
+    (* | "&&" -> "and" *)
+    (* | "||" -> "or" *)
+    | s -> s
+  in
+  sprintf "__%s%s__" prefix op
+
+and uop2magic op =
+  let op =
+    match op with
+    | "+" -> "pos"
+    | "-" -> "neg"
+    | "~" -> "invert"
+    | "not" -> "not"
+    | s -> s
+  in
+  sprintf "__%s__" op
+
+let unindent s =
+  let s = String.split ~on:'\n' s |> List.filter ~f:(fun s -> String.length s > 0) in
+  match s with
+  | a :: l ->
+    let l = String.take_while a ~f:(fun s -> s = ' ') |> String.length in
+    List.map s ~f:(fun s -> String.drop_prefix s l) |> String.concat ~sep:"\n"
+  | [] -> ""

@@ -137,7 +137,7 @@ let unify_inplace ~ctx t1 t2 =
             (* (Ann.typ_to_string lht) *)
             (* (Ann.typ_to_string rht) *)
         | Link ({ contents = Unbound _ } as l) ->
-          Util.dbg "[unify] %s := %s" (Ann.var_to_string ~full:true lht) (Ann.var_to_string ~full:true rht);
+          (* Util.dbg "[unify] %s := %s" (Ann.var_to_string ~full:true lht) (Ann.var_to_string ~full:true rht); *)
           l := Bound rht
         | _ -> ierr "[unify_inplace] cannot unify non-unbound type")
   in

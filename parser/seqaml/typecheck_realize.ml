@@ -188,7 +188,7 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
                   | Func (f, _) as t ->
                     let f_args = List.map f.args ~f:snd in
                     let s = T.sum_or_neg (typ :: args) f_args ~f:T.unify in
-                    (* Util.A.dy "MAGIC ? %s %d" (Ann.typ_to_string t) s; *)
+                    Util.A.dy "MAGIC ? %s %d" (Ann.var_to_string t) s;
                     if s = -1 then None else Some ((f.cache, t), s)
                   | _ -> None))
         >>| List.fold ~init:(None, -1) ~f:(fun (acc, cnt) cur ->
@@ -216,10 +216,6 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
             | None, _ -> None (* C.err ~ctx "cannot find fitting magic function") *))
       | _ -> None
     in
-    match ret, ctx.env.realizing with
-    | Some t, _ -> Some t
-    | None, false -> Some (C.make_unbound ctx)
-    | None, true -> None
-
+    ret
   (* C.err ~ctx "can't find magic %s in %s for args %s" name (Ann.typ_to_string typ) (Util.ppl args ~f:Ann.typ_to_string) *)
 end

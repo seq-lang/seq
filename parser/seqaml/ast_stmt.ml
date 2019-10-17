@@ -20,7 +20,8 @@ type t =
   | Break of unit
   | Continue of unit
   | Expr of texpr ann
-  | Assign of (texpr ann * texpr ann * tassign * texpr ann option)
+  | AssignEq of (texpr ann * string * texpr ann)
+  | Assign of (texpr ann list * texpr ann list * tassign * texpr ann option)
       (** Assignment statement. [lhs : typ assign_op rhs] parses to [(lhs, rsh, assign_op, typ)].
       [assign_op] is of type [tassign]. Type specifier is optional. *)
   | Del of texpr ann

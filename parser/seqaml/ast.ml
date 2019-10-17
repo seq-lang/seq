@@ -135,6 +135,7 @@ module Expr = struct
     | Seq x -> sprintf "s'%s'" x
     | Id x -> sprintf "%s" x
     | Unpack x -> sprintf "*%s" x
+    | Tuple l when List.length l = 1 -> sprintf "(%s, )" (ppl l ~f:to_string)
     | Tuple l -> sprintf "(%s)" (ppl l ~f:to_string)
     | List l -> sprintf "[%s]" (ppl l ~f:to_string)
     | Set l -> sprintf "{%s}" (ppl l ~f:to_string)
@@ -222,25 +223,27 @@ module Stmt = struct
       | Break _ -> sprintf "BREAK"
       | Continue _ -> sprintf "CONTINUE"
       | Expr x -> Expr.to_string x
+      | AssignEq (l, op, r) ->
+        sprintf "%s %s= %s" (Expr.to_string l) op (Expr.to_string r)
       | Assign (l, r, s, q) ->
         (match q with
         | Some q ->
           sprintf
             "%s : %s %s %s"
-            (Expr.to_string l)
+            (ppl ~sep:"," l ~f:Expr.to_string)
             (Expr.to_string q)
             (match s with
             | Shadow -> ":="
             | _ -> "=")
-            (Expr.to_string r)
+            (ppl ~sep:"," r ~f:Expr.to_string)
         | None ->
           sprintf
             "%s %s %s"
-            (Expr.to_string l)
+            (ppl ~sep:"," l ~f:Expr.to_string)
             (match s with
             | Shadow -> ":="
             | _ -> "=")
-            (Expr.to_string r))
+            (ppl ~sep:"," r ~f:Expr.to_string))
       | Print (x, n) ->
         sprintf "PRINT %s, %s" (ppl x ~f:Expr.to_string) (String.escaped n)
       | Del x -> sprintf "DEL %s" (Expr.to_string x)
@@ -306,7 +309,8 @@ module Stmt = struct
     in
     f (pos, match node with
       | Expr s -> Expr (ewalk s)
-      | Assign (l, r, a, t) -> Assign (ewalk l, ewalk r, a, t >>| ewalk)
+      | AssignEq (l, o, r) -> AssignEq (ewalk l, o, ewalk r)
+      | Assign (l, r, a, t) -> Assign (List.map l ~f:ewalk, List.map r ~f:ewalk, a, t >>| ewalk)
       | Del t -> Del (ewalk t)
       | Print (l, s) -> Print (List.map l ~f:ewalk, s)
       | Return e -> Return (e >>| ewalk)
@@ -369,8 +373,14 @@ let e_call ?(ann=default) callee args =
   ann, Expr.(Call (callee,
     List.map args ~f:(fun value -> { name = None; value })))
 
+let e_slice ?(ann=default) ?b ?c a  =
+  ann, Expr.Slice (Some a, b, c)
+
 let e_index ?(ann=default) collection args =
   ann, Expr.Index (collection, args)
+
+let e_binary ?(ann=default) lhs op rhs =
+  ann, Expr.Binary (lhs, op, rhs)
 
 let e_dot ?(ann=default) left what =
   ann, Expr.Dot (left, what)
@@ -381,14 +391,17 @@ let e_typeof ?(ann=default) what =
 let s_expr ?(ann=default) expr =
   ann, Stmt.Expr expr
 
-let s_assign ?(ann=default) lhs rhs =
-  ann, Stmt.(Assign (rhs, rhs, Normal, None))
+let s_assign ?(ann=default) ?(shadow=Stmt.Normal) lhs rhs =
+  ann, Stmt.(Assign ([lhs], [rhs], shadow, None))
 
 let s_if ?(ann=default) cond stmts =
   ann, Stmt.(If [ { cond = Some cond; cond_stmts = stmts } ])
 
 let s_for ?(ann=default) vars iter stmts =
   ann, Stmt.For (vars, iter, stmts)
+
+let s_assert ?(ann=default) expr =
+  ann, Stmt.Assert expr
 
 let s_extern ?(ann=default) ?(lang="c") name ret params =
   ann, Stmt.Extern

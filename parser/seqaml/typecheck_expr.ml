@@ -25,7 +25,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
   (** [parse ~ctx expr] dispatches an expression AST node [expr] to the proper code generation function. *)
   let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
     C.push_ann ~ctx ann;
-    (* Util.A.dr ">>= %s" (Expr.to_string (ann, node)); *)
+    Util.A.db "[e] %s" (Expr.to_string (ann, node));
     let expr : Expr.t Ann.ann =
       match node with
       | Empty          _ -> parse_none     ctx node
@@ -204,7 +204,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
     C.ann ~typ:(Var (var_of_node_exn if_expr)) ctx, IfExpr (cond, if_expr, else_expr)
 
   and parse_unary ctx (op, expr) =
-    C.magic_call parse ~ctx ~magic:(uop2magic op) expr
+    C.magic_call parse ~ctx ~magic:(Util.uop2magic op) expr
 
   and parse_binary ctx (lh, bop, rh) =
     match bop with
@@ -213,22 +213,21 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
       let rh = C.magic_call parse ~ctx ~magic:"__bool__" rh in
       C.ann ~typ:(Var (var_of_node_exn rh)) ctx, Binary (lh, bop, rh)
     | bop when (String.prefix bop 8) = "inplace_" ->
-      let magic = bop2magic ~prefix:"i" bop in
-      let bop = String.drop_prefix bop 8 in
-      C.magic_call parse ~ctx ~magic lh ~args:[rh]
+      ierr ~ctx "inplace should be handled at assignment time"
     | bop ->
-      let magic = bop2magic bop in
+      let magic = Util.bop2magic bop in
       let lh = parse ~ctx lh in
       let rh = parse ~ctx rh in
       let typ = R.magic ~ctx ~args:[var_of_node_exn rh] (var_of_node_exn lh) magic in
       let typ = match typ with
         | Some t -> t
         | None ->
-          let rmagic = bop2magic ~prefix:"r" bop in
+          let rmagic = Util.bop2magic ~prefix:"r" bop in
           let typ = R.magic ~ctx ~args:[var_of_node_exn lh] (var_of_node_exn rh) rmagic in
-          match typ with
-          | Some t -> t
-          | None -> C.err ~ctx "cannot locate appropriate %s or %s for %s and %s"
+          match typ, ctx.env.realizing with
+          | Some t, _ -> t
+          | None, false -> C.make_unbound ctx
+          | None, _ -> C.err ~ctx "cannot locate appropriate %s or %s for %s and %s"
             magic rmagic
             (Ann.var_to_string @@ var_of_node_exn lh)
             (Ann.var_to_string @@ var_of_node_exn rh)
@@ -241,11 +240,11 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
     in
     match expr, args with
     (* Special magics for those : str(...), int(...) etc *)
-    | (_, Id ("str" as name)), [arg]
+    (* | (_, Id ("str" as name)), [arg]
     | (_, Id ("int" as name)), [arg]
     | (_, Id ("bool" as name)), [arg] ->
       let magic = sprintf "__%s__" name in
-      C.magic_call parse ~ctx ~magic arg.value
+      C.magic_call parse ~ctx ~magic arg.value *)
     | _ ->
       let expr = parse ~ctx expr in
       (* Util.A.dg "[out] %s  : %s [%s]"  (Expr.to_string (expr)) (Ann.to_string (fst expr))
@@ -287,9 +286,9 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
             T.unify_inplace ~ctx typ' typ
           | Some (i, typ'), false ->
             Hash_set.add used name;
-            (* Util.A.db "->> inarg %s: def = %s, pass = %s" name
-              (fst @@ C.get_full_name ~ctx typ')
-              (fst @@ C.get_full_name ~ctx (var_of_node_exn arg.value)); *)
+            Util.A.db "->> inarg %s: def = %s, pass = %s" name
+              (Ann.var_to_string typ')
+              (Ann.var_to_string (var_of_node_exn arg.value));
             T.unify_inplace ~ctx (var_of_node_exn arg.value) typ';
             Hashtbl.set arg_table ~key:name ~data:(i, var_of_node_exn arg.value)
                         (* Util.A.db "->< inarg %s: def = %s, pass = %s" name
@@ -297,8 +296,8 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
               (fst @@ C.get_full_name ~ctx (var_of_node_exn arg.value)); *)
           | _ ->
             C.err ~ctx "argument %s does not exist" name);
-        Hashtbl.to_alist arg_table |> List.iter ~f:(fun (n, (_, v)) ->
-             Util.A.dr "[arg] %s= %s" n (Ann.var_to_string ~full:true v));
+        (* Hashtbl.to_alist arg_table |> List.iter ~f:(fun (n, (_, v)) ->
+             Util.A.dr "[arg] %s= %s" n (Ann.var_to_string ~full:true v)); *)
         if has_partials then (
           let new_args =
             Hashtbl.to_alist arg_table
@@ -316,12 +315,31 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
           let typ = R.realize ~ctx typ in
           let expr = (Ann.patch (fst expr) typ), snd expr in
           C.ann ~typ:(Var f.ret) ctx, Call (expr, args))
-      | Class _ ->
-        let tmp = C.make_temp ctx ~prefix:"inst" in
-        let stmt = s_assign (e_id tmp) (e_call (e_dot expr "__new__") []) in
-        Stack.push ctx.env.statements (C.sannotate ~ctx stmt);
-        parse ~ctx
-        @@ C.eannotate ~ctx (Ann.default, Call (e_dot (e_id tmp) "__init__", args))
+      | Class ({ cache = "ptr", p; _ }, _) when p = Ann.default_pos ->
+        let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
+        let typ = match List.map args ~f:(fun p -> var_of_node_exn p.value |> Ann.real_type) with
+          | [ Class ({ cache = "int", p; _ }, _)  ] -> typ
+          | _ -> C.err ~ctx "ptr needs an int initializer"
+        in
+        (* ( match R.magic ~ctx typ "__init__" ~args:arg_typs with
+          | None when ctx.env.realizing ->
+            C.err ~ctx "cannot locate %s.__init__(%s)"
+              (Ann.var_to_string typ) (Util.ppl arg_typs ~f:(Ann.var_to_string))
+          | Some (Func (_, { ret; _ })) when is_some types ->
+            T.unify_inplace ~ctx ret typ
+          | _ -> ()); *)
+        C.ann ~typ:(Var typ) ctx, Call (expr, args)
+      | Class (_, { types }) ->
+        let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
+        let arg_typs = List.map args ~f:(fun p -> var_of_node_exn p.value) in
+        ( match R.magic ~ctx typ "__init__" ~args:arg_typs with
+          | None when ctx.env.realizing ->
+            C.err ~ctx "cannot locate %s.__init__(%s)"
+              (Ann.var_to_string typ) (Util.ppl arg_typs ~f:(Ann.var_to_string))
+          | Some (Func (_, { ret; _ })) when is_some types ->
+            T.unify_inplace ~ctx ret typ
+          | _ -> ());
+        C.ann ~typ:(Var typ) ctx, Call (expr, args)
       | Link { contents = Unbound _ } ->
         let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
         let typ = C.make_unbound ctx in
@@ -381,6 +399,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
         let lh_expr = parse ~ctx lh_expr' in
         let lt = Ann.real_type (var_of_node_exn lh_expr) in
         match lt, indices' with
+        | _, [] -> C.err ~ctx "empty index"
         | Tuple ts, [_, Int i] -> (* tuple static access typecheck *)
           let typ = Caml.Int64.of_string_opt i >>= Int.of_int64 >>= List.nth ts in
           ( match typ with
@@ -388,8 +407,13 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
             | None -> C.err ~ctx "invalid tuple index" )
         | Tuple _, _ ->
           C.err ~ctx "tuple access requires a valid compile-time integer constant"
-        | _ ->
-          let ast = e_call (e_dot lh_expr "__getitem__") [e_tuple indices] in
+        | Class ({ cache = ("ptr", pos); generics = [_, (_, t)]; _ }, _), [v]
+          when pos = Ann.default_pos ->
+          C.ann ~typ:(Var t) ctx, Index (lh_expr, indices)
+        | _, _ ->
+          let ast = e_call (e_dot lh_expr "__getitem__")
+            [match indices with [a] -> a | a -> e_tuple a]
+          in
           parse ~ctx (C.epatch ~ctx ast)
 
   and parse_dot ctx (lh_expr, rhs) =
@@ -433,7 +457,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
         | [a] -> [e_ellipsis ()]
         | a -> List.init (pred @@ List.length args) ~f:(fun _ -> e_ellipsis ())
       in
-      Util.A.dy "<< lhs := %s" (Ann.var_to_string ~full:true lt);
+      (* Util.A.dy "<< lhs := %s" (Ann.var_to_string ~full:true lt); *)
       (* T.unify_inplace ~ctx (T.instantiate ~ctx hd_t) lt; *)
       (*Util.A.dy "[ >>> %s [%s]"
             (fst @@ C.get_full_name ~ctx lt)
@@ -466,7 +490,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
     | _, Some _ ->
       C.err ~ctx "member access requires object"
     | _, None ->
-      Util.A.dy ">> unknown %s.%s" (Ann.var_to_string lt) rhs;
+      (* Util.A.dy ">> unknown %s.%s" (Ann.var_to_string lt) rhs; *)
       let typ = match lt with
         | Link { contents = Unbound _ } -> C.make_unbound ctx
         | Class ({ cache; _ }, _) when Some cache = ctx.env.enclosing_type ->
@@ -547,45 +571,4 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
         args = (args, TU.type_of expr) })
     in
     (t, false), Lambda (List.map args ~f:fst, expr) *)
-
-  and bop2magic ?(prefix = "") op =
-    let op =
-      match op with
-      | "+" -> "add"
-      | "-" -> "sub"
-      | "*" -> "mul"
-      | "/" -> "truediv"
-      | "//" -> "floordiv"
-      | "**" -> "pow"
-      | "%" -> "mod"
-      | "@" -> "mathmul"
-      | "==" -> "eq"
-      | "!=" -> "ne"
-      | "<" -> "lt"
-      | ">" -> "gt"
-      | "<=" -> "le"
-      | ">=" -> "ge"
-      | "&" -> "and"
-      | "|" -> "or"
-      | "^" -> "xor"
-      | "<<" -> "lshift"
-      | ">>" -> "rshift"
-      | "in" -> "contains"
-      (* patches for C++ transform *)
-      (* | "&&" -> "and" *)
-      (* | "||" -> "or" *)
-      | s -> s
-    in
-    sprintf "__%s%s__" prefix op
-
-  and uop2magic op =
-    let op =
-      match op with
-      | "+" -> "pos"
-      | "-" -> "neg"
-      | "~" -> "invert"
-      | "not" -> "not"
-      | s -> s
-    in
-    sprintf "__%s__" op
 end
