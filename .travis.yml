@@ -98,7 +98,7 @@ script:
                           -DCMAKE_CXX_COMPILER=clang++)
   - cmake --build build
   - build/seqtest 2> /dev/null
-  - build/seq test/core/helloworld.seq
+  - build/seqc test/core/helloworld.seq
 
 cache:
   timeout: 1000

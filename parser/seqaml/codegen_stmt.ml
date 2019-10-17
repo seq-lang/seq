@@ -87,16 +87,16 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let expr = E.parse ~ctx expr in
       Llvm.Stmt.expr expr
 
-  and parse_assign ctx ann ~toplevel ~jit (lhs, rhs, shadow, typ) =
+  and parse_assign ctx pos ~toplevel ~jit (lhs, rhs, shadow, typ) =
     match lhs, rhs with
     | [(ann, Id var) as lhs], [rhs] ->
-      (match Hashtbl.find ctx.map var, shadow with
-      | None, Update -> serr ~ann "%s not found" var
-      | Some ((Codegen_ctx.Var _, { base; _ }) :: _), Update when ctx.env.base <> base
-        ->
+      (match jit && toplevel, Hashtbl.find ctx.map var, shadow with
+      | _, None, Update -> serr ~ann "%s not found" var
+      | false, Some ((Codegen_ctx.Var _, { base; global; _ }) :: _), Update
+        when ctx.env.base <> base && not global ->
         serr ~ann "%s not found" var
-      | Some ((Codegen_ctx.Var v, { base; global; toplevel; _ }) :: _), _
-        when ctx.env.base = base ->
+      | _, Some ((Codegen_ctx.Var v, { base; global; toplevel; _ }) :: _), _
+        when ctx.env.base = base || global ->
         if is_some typ
         then
           serr
@@ -119,15 +119,20 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             Llvm.Stmt.set_atomic_assign s;
             s)
         else Llvm.Stmt.assign v @@ E.parse ~ctx rhs
-      | _ when jit && toplevel ->
+      | true, _, _ ->
         if is_some typ
-        then
-          serr ~ann:(fst @@ Option.value_exn typ) "invalid type annotation (JIT mode)";
+        then serr ~pos:(fst @@ Option.value_exn typ) "type annotations not supported in JIT mode";
         let rh_expr = E.parse ~ctx rhs in
-        let v = Codegen_ctx.Var (Llvm.JIT.var ctx.env.mdl rh_expr) in
-        Codegen_ctx.add ~ctx ~toplevel ~global:true var v;
+        let v = Llvm.JIT.var ctx.mdl rh_expr in
+        let var_expr = Llvm.Expr.var v in
+        (* eprintf ">> jit_var %s := %s\n%!" (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs); *)
+        (* finalize ~ctx stmt pos; *)
+        Codegen_ctx.add ~ctx ~toplevel ~global:true var (Codegen_ctx.Var v);
+        (* Llvm.Stmt.expr var_expr *)
+        (* Llvm.Stmt.assign v rh_expr *)
         Llvm.Stmt.pass ()
-      | r, _ ->
+        (* assign v @@ rh_expr *)
+      | false, r, _ ->
         (match r with
         | Some (_ :: _) -> Llvm.Module.warn ~ann "shadowing %s" var
         | _ -> ());

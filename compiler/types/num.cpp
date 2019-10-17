@@ -785,6 +785,19 @@ void types::IntNType::initOps() {
        true},
   };
 
+  if (len <= 64) {
+    vtable.magic.push_back(
+        {"__str__",
+         {},
+         Str,
+         [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+           BasicBlock *block = b.GetInsertBlock();
+           self = sign ? b.CreateSExt(self, seqIntLLVM(b.getContext()))
+                       : b.CreateZExt(self, seqIntLLVM(b.getContext()));
+           return Int->strValue(self, block, nullptr);
+         }});
+  }
+
   if (!sign && len % 2 == 0) {
     vtable.magic.push_back(
         {"__init__",
@@ -1259,6 +1272,42 @@ void types::BoolType::initOps() {
        },
        false},
 
+      {"__lt__",
+       {Bool},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpULT(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__gt__",
+       {Bool},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpUGT(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__le__",
+       {Bool},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpULE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__ge__",
+       {Bool},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpUGE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
       {"__and__",
        {Bool},
        Bool,
@@ -1388,6 +1437,42 @@ void types::ByteType::initOps() {
        Bool,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateZExt(b.CreateICmpNE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__lt__",
+       {Byte},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpULT(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__gt__",
+       {Byte},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpUGT(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__le__",
+       {Byte},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpULE(self, args[0]),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__ge__",
+       {Byte},
+       Bool,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(b.CreateICmpUGE(self, args[0]),
                              Bool->getLLVMType(b.getContext()));
        },
        false},

@@ -138,7 +138,8 @@ public:
 
   void initOps() override;
   void initFields() override;
-  Type *magicOut(const std::string &name, std::vector<Type *> args) override;
+  Type *magicOut(const std::string &name, std::vector<Type *> args,
+                 bool nullOnMissing = false) override;
   llvm::Value *callMagic(const std::string &name, std::vector<Type *> argTypes,
                          llvm::Value *self, std::vector<llvm::Value *> args,
                          llvm::BasicBlock *&block, TryCatch *tc) override;

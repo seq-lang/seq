@@ -332,7 +332,8 @@ static types::Type *callType(BaseFunc *func, std::vector<types::Type *> args) {
 }
 
 types::Type *types::Type::magicOut(const std::string &name,
-                                   std::vector<types::Type *> args) {
+                                   std::vector<types::Type *> args,
+                                   bool nullOnMissing) {
   initOps();
 
   const bool isStatic = (!args.empty() && args.back() == nullptr);
@@ -358,6 +359,9 @@ types::Type *types::Type::magicOut(const std::string &name,
     if (name == magic.name && typeMatch<>(args, magic.args))
       return magic.out;
   }
+
+  if (nullOnMissing)
+    return nullptr;
 
   throw exc::SeqException("cannot find method '" + name + "' for type '" +
                           getName() + "' with specified argument types " +

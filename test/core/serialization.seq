@@ -1,12 +1,13 @@
 import pickle
 
 def test_pickle[T](x: T):
+    import gzip
     path = 'build/testjar.bin'
-    jar = open(path, 'wb')
+    jar = gzip.open(path, 'wb')
     pickle.dump(x, jar)
     jar.close()
 
-    jar = open(path, 'rb')
+    jar = gzopen(path, 'rb')
     y = pickle.load[T](jar)
     jar.close()
 

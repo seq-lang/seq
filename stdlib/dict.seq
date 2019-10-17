@@ -1,146 +1,280 @@
+# dict implementation based on klib's khash
+
 import python as py
 
-class _dict_entry[K,V]:
-    k: K
-    v: V
-    hash: int
-    next: _dict_entry[K,V]
-
-    def __init__(self: _dict_entry[K,V], k: K, v: V, hash: int):
-        self.k = k
-        self.v = v
-        self.hash = hash
-        self.next = None
-
-    def eq(self: _dict_entry[K,V], k: K, hash: int):
-        return self.hash == hash and self.k == k
+def _dict_hash(key):
+    k = hash(key)
+    return (k >> 33) ^ k ^ (k << 11)
 
 class dict[K,V]:
-    table: array[_dict_entry[K,V]]
-    size: int
+    _n_buckets: int
+    _size: int
+    _n_occupied: int
+    _upper_bound: int
 
-    def _make_table(len: int):
-        table = array[_dict_entry[K,V]](len)
-        for i in range(len):
-            table[i] = None
-        return table
-
-    def _find(self: dict[K,V], k: K, h: int):
-        idx = h & (self.table.len - 1)
-        e = self.table[idx]
-        while e:
-            if e.eq(k, h):
-                break
-            e = e.next
-        return e
-
-    def _entry_iter(self: dict[K,V]):
-        table = self.table
-        for i in range(table.len):
-            e = table[i]
-            while e:
-                n = e.next
-                yield e
-                e = n
-
-    def _insert(self: dict[K,V], table: array[_dict_entry[K,V]], e: _dict_entry[K,V]):
-        idx = e.hash & (table.len - 1)
-        e.next = table[idx]
-        table[idx] = e
-        self.size += 1
-
-    def _resize(self: dict[K,V]):
-        table = dict[K,V]._make_table(2 * self.table.len)
-        for e in self._entry_iter():
-            self._insert(table, e)
-        self.table = table
-
-    def __init__(self: dict[K,V], cap: int):
-        cap_actual = 1
-        while cap_actual < cap:
-            cap_actual *= 2
-        self.table = dict[K,V]._make_table(cap_actual)
-        self.size = 0
+    _flags: ptr[u32]
+    _keys: ptr[K]
+    _vals: ptr[V]
 
     def __init__(self: dict[K,V]):
-        self.table = dict[K,V]._make_table(16)
-        self.size = 0
+        self._n_buckets = 0
+        self._size = 0
+        self._n_occupied = 0
+        self._upper_bound = 0
+        self._flags = ptr[u32]()
+        self._keys = ptr[K]()
+        self._vals = ptr[V]()
 
-    def get(self: dict[K,V], k: K, s: V):
-        e = self._find(k, hash(k))
-        return e.v if e else s
+    def _kh_clear(self: dict[K,V]):
+        if self._flags:
+            i = 0
+            n = __ac_fsize(self._n_buckets)
+            while i < n:
+                self._flags[i] = u32(0xaaaaaaaa)
+                i += 1
+            self._size = 0
+            self._n_occupied = 0
 
-    def __contains__(self: dict[K,V], k: K):
-        return self._find(k, hash(k)).__bool__()
-
-    def __getitem__(self: dict[K,V], k: K):
-        e = self._find(k, hash(k))
-        if e:
-            return e.v
-
-    def __setitem__(self: dict[K,V], k: K, v: V):
-        h = hash(k)
-        e = self._find(k, h)
-        if e:
-            e.v = v
+    def _kh_get(self: dict[K,V], key: K):
+        if self._n_buckets:
+            step = 0
+            mask = self._n_buckets - 1
+            k = _dict_hash(key)
+            i = k & mask
+            last = i
+            while not __ac_isempty(self._flags, i) and (__ac_isdel(self._flags, i) or self._keys[i] != key):
+                step += 1
+                i = (i + step) & mask
+                if i == last:
+                    return self._n_buckets
+            return self._n_buckets if __ac_iseither(self._flags, i) else i
         else:
-            if self.size*2 >= self.table.len:
-                self._resize()
-            self._insert(self.table, _dict_entry[K,V](k, v, h))
+            return 0
 
-    def __delitem__(self: dict[K,V], k: K):
-        h = hash(k)
-        idx = h & (self.table.len - 1)
-        e = self.table[idx]
-        prev = e  # hacky way to ensure type of `prev` is correct
-        prev = None
+    def _kh_resize(self: dict[K,V], new_n_buckets: int):
+        import gc
+        HASH_UPPER = 0.77
+        new_flags = ptr[u32]()
+        j = 1
 
-        while e:
-            if e.eq(k, h):
-                if prev:
-                    prev.next = e.next
+        # round up to next power of 2
+        new_n_buckets -= 1
+        new_n_buckets |= new_n_buckets >> 1
+        new_n_buckets |= new_n_buckets >> 2
+        new_n_buckets |= new_n_buckets >> 4
+        new_n_buckets |= new_n_buckets >> 8
+        new_n_buckets |= new_n_buckets >> 16
+        new_n_buckets |= new_n_buckets >> 32
+        new_n_buckets += 1
+
+        if new_n_buckets < 4:
+            new_n_buckets = 4
+
+        if self._size >= int(new_n_buckets*HASH_UPPER + 0.5):
+            j = 0
+        else:
+            fsize = __ac_fsize(new_n_buckets)
+            new_flags = ptr[u32](fsize)
+            i = 0
+            while i < fsize:
+                new_flags[i] = u32(0xaaaaaaaa)
+                i += 1
+
+            if self._n_buckets < new_n_buckets:
+                self._keys = ptr[K](gc.realloc(ptr[byte](self._keys), new_n_buckets * gc.sizeof[K]()))
+                self._vals = ptr[V](gc.realloc(ptr[byte](self._vals), new_n_buckets * gc.sizeof[V]()))
+
+        if j:
+            j = 0
+            while j != self._n_buckets:
+                if __ac_iseither(self._flags, j) == 0:
+                    key = self._keys[j]
+                    val = self._vals[j]
+                    new_mask = new_n_buckets - 1
+                    __ac_set_isdel_true(self._flags, j)
+
+                    while True:
+                        step = 0
+                        k = _dict_hash(key)
+                        i = k & new_mask
+
+                        while not __ac_isempty(new_flags, i):
+                            step += 1
+                            i = (i + step) & new_mask
+
+                        __ac_set_isempty_false(new_flags, i)
+                        if i < self._n_buckets and __ac_iseither(self._flags, i) == 0:
+                            self._keys[i], key = key, self._keys[i]
+                            self._vals[i], val = val, self._vals[i]
+                            __ac_set_isdel_true(self._flags, i)
+                        else:
+                            self._keys[i] = key
+                            self._vals[i] = val
+                            break
+                j += 1
+
+            if self._n_buckets > new_n_buckets:
+                self._keys = ptr[K](gc.realloc(ptr[byte](self._keys), new_n_buckets * gc.sizeof[K]()))
+                self._vals = ptr[V](gc.realloc(ptr[byte](self._vals), new_n_buckets * gc.sizeof[V]()))
+
+            self._flags = new_flags
+            self._n_buckets = new_n_buckets
+            self._n_occupied = self._size
+            self._upper_bound = int(self._n_buckets*HASH_UPPER + 0.5)
+
+    def _kh_put(self: dict[K,V], key: K):
+        if self._n_occupied >= self._upper_bound:
+            if self._n_buckets > (self._size << 1):
+                self._kh_resize(self._n_buckets - 1)
+            else:
+                self._kh_resize(self._n_buckets + 1)
+
+        mask = self._n_buckets - 1
+        step = 0
+        site = self._n_buckets
+        x = site
+        k = _dict_hash(key)
+        i = k & mask
+        if __ac_isempty(self._flags, i):
+            x = i
+        else:
+            last = i
+            while not __ac_isempty(self._flags, i) and (__ac_isdel(self._flags, i) or self._keys[i] != key):
+                if __ac_isdel(self._flags, i):
+                    site = i
+                step += 1
+                i = (i + step) & mask
+                if i == last:
+                    x = site
+                    break
+
+            if x == self._n_buckets:
+                if __ac_isempty(self._flags, i) and site != self._n_buckets:
+                    x = site
                 else:
-                    self.table[idx] = e.next
-                self.size -= 1
-                return
-            prev = e
-            e = e.next
+                    x = i
+
+        ret = 0
+        if __ac_isempty(self._flags, x):
+            self._keys[x] = key
+            __ac_set_isboth_false(self._flags, x)
+            self._size += 1
+            self._n_occupied += 1
+            ret = 1
+        elif __ac_isdel(self._flags, x):
+            self._keys[x] = key
+            __ac_set_isboth_false(self._flags, x)
+            self._size += 1
+            ret = 2
+
+        return (ret, x)
+
+    def _kh_del(self: dict[K,V], x: int):
+        if x != self._n_buckets and not __ac_iseither(self._flags, x):
+            __ac_set_isdel_true(self._flags, x)
+            self._size -= 1
+
+    def _kh_begin(self: dict[K,V]):
+        return 0
+
+    def _kh_end(self: dict[K,V]):
+        return self._n_buckets
+
+    def _kh_exist(self: dict[K,V], x: int):
+        return not __ac_iseither(self._flags, x)
+
+    def resize(self: dict[K,V], new_n_buckets: int):
+        self._kh_resize(new_n_buckets)
+
+    def __getitem__(self: dict[K,V], key: K):
+        x = self._kh_get(key)
+        if x != self._kh_end():
+            return self._vals[x]
+        raise KeyError(str(key))
+
+    def get(self: dict[K,V], key: K, s: V):
+        x = self._kh_get(key)
+        return self._vals[x] if x != self._kh_end() else s
+
+    def __setitem__(self: dict[K,V], key: K, val: V):
+        ret, x = self._kh_put(key)
+        self._vals[x] = val
+
+    def setdefault(self: dict[K,V], key: K, val: V):
+        ret, x = self._kh_put(key)
+        if ret != 0:  # i.e. key present
+            self._vals[x] = val
+            return val
+        return self._vals[x]
+
+    def update(self: dict[K,V], other: dict[K,V]):
+        for k,v in other.items():
+            self[k] = v
+
+    def __delitem__(self: dict[K,V], key: K):
+        x = self._kh_get(key)
+        if x != self._kh_end():
+            self._kh_del(x)
+        else:
+            raise KeyError(str(key))
+
+    def pop(self: dict[K,V], key: K):
+        x = self._kh_get(key)
+        if x != self._kh_end():
+            v = self._vals[x]
+            self._kh_del(x)
+            return v
+        raise KeyError(str(key))
+
+    def __contains__(self: dict[K,V], key: K):
+        return self._kh_get(key) != self._kh_end()
 
     def __eq__(self: dict[K,V], other: dict[K,V]):
         if len(self) != len(other):
             return False
         for k,v in self.items():
-            e = self._find(k, hash(k))
-            if not e or v != e.v:
+            if k not in other or other[k] != v:
                 return False
         return True
 
     def __ne__(self: dict[K,V], other: dict[K,V]):
         return not (self == other)
 
-    def keys(self: dict[K,V]):
-        for e in self._entry_iter():
-            yield e.k
-
-    def values(self: dict[K,V]):
-        for e in self._entry_iter():
-            yield e.v
+    def clear(self: dict[K,V]):
+        self._kh_clear()
 
     def items(self: dict[K,V]):
-        for e in self._entry_iter():
-            yield (e.k, e.v)
+        i = self._kh_begin()
+        while i < self._kh_end():
+            if self._kh_exist(i):
+                yield self._keys[i], self._vals[i]
+            i += 1
 
-    def iteritems(self: dict[K,V]):
-        for i in self._entry_iter():
-            yield i.k, i.v
+    def keys(self: dict[K,V]):
+        for k,v in self.items():
+            yield k
+
+    def values(self: dict[K,V]):
+        for k,v in self.items():
+            yield v
 
     def __iter__(self: dict[K,V]):
         return self.keys()
 
     def __len__(self: dict[K,V]):
-        return self.size
+        return self._size
 
-    def __str__(self: dict[K,V]) -> str:
+    def __copy__(self: dict[K,V]):
+        d = dict[K,V]()
+        d.resize(self.n_buckets)
+        for k,v in self.items():
+            d[k] = v
+        return d
+
+    def copy(self: dict[K,V]):
+        return self.__copy__()
+
+    def __str__(self: dict[K,V]):
         n = len(self)
         if n == 0:
             return "{}"
@@ -148,14 +282,14 @@ class dict[K,V]:
             lst = list[str]()
             lst.append("{")
             first = True
-            for e in self._entry_iter():
+            for k,v in self.items():
                 if not first:
                     lst.append(", ")
                 else:
                     first = False
-                lst.append(str(e.k))
+                lst.append(str(k))
                 lst.append(": ")
-                lst.append(str(e.v))
+                lst.append(str(v))
             lst.append("}")
             return str.cat(lst)
 
@@ -164,13 +298,12 @@ class dict[K,V]:
         cdef seq_py_dict_setitem(ptr[byte], ptr[byte], ptr[byte])
 
         pydict = seq_py_dict_new()
-        for k,v in self.iteritems():
+        for k,v in self.items():
             seq_py_dict_setitem(pydict, py.py(k).p, py.py(v).p)
         return py.PyObject(pydict)
 
     def __from_py__(d: py.PyObject):
         cdef seq_py_dict_next(ptr[byte], ptr[int], ptr[ptr[byte]], ptr[ptr[byte]]) -> bool
-
         b = dict[K,V]()
         pos = 0
         k_ptr = ptr[byte]()
@@ -182,22 +315,27 @@ class dict[K,V]:
         return b
 
     def __pickle__(self: dict[K,V], jar: Jar):
-        n = len(self)
-        pickle(n, jar)
-
-        cap = len(self.table)
-        pickle(cap, jar)
+        n_buckets = self._n_buckets
+        pickle(n_buckets, jar)
+        size = len(self)
+        pickle(size, jar)
 
         for k,v in self.items():
             pickle(k, jar)
             pickle(v, jar)
 
     def __unpickle__(jar: Jar):
-        n = unpickle[int](jar)
-        cap = unpickle[int](jar)
-        d = dict[K,V](cap)
-        for i in range(n):
+        n_buckets = unpickle[int](jar)
+        size = unpickle[int](jar)
+        d = dict[K,V]()
+        d.resize(n_buckets)
+        i = 0
+        while i < size:
             k = unpickle[K](jar)
             v = unpickle[V](jar)
             d[k] = v
+            i += 1
         return d
+
+    def fromkeys[KS,V](ks: KS, v: V):
+        return {k: v for k in ks}

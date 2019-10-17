@@ -42,6 +42,10 @@ public:
   static RecordType *get(std::vector<Type *> types,
                          std::vector<std::string> names = {},
                          std::string name = "");
+
+private:
+  llvm::Function *getContainsFunc(llvm::Module *module);
+  llvm::Function *getCmpFunc(llvm::Module *module, int kind);
 };
 
 } // namespace types

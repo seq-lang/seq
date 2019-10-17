@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -g -pedantic -Wall -Wno-return-type-c-linkage")
 include_directories(compiler/include)
 include_directories(runtime)
 
@@ -14,6 +14,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_PYBRIDGE "support Python interoperability" ON)
+option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GC REQUIRED bdw-gc)
@@ -163,11 +164,15 @@ add_library(seq SHARED compiler/include/seq/any.h
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} ${OCAML_STATIC} ffi seqrt)
 
+if(SEQ_JITBRIDGE)
+  add_library(seqjit SHARED compiler/util/jit.cpp)
+  target_link_libraries(seqjit seq)
+endif()
+
 
 # Seq command-line tool
 add_executable(seqc runtime/main.cpp)
 target_link_libraries(seqc seq)
-set_target_properties(seqc PROPERTIES OUTPUT_NAME seq)
 
 
 # Seq test

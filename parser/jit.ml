@@ -54,6 +54,7 @@ let exec (jit : t) code =
     Hash_set.iter (Stack.pop_exn anon_ctx.stack) ~f:(fun key ->
         match Hashtbl.find anon_ctx.map key with
         | Some ((v, ann) :: items) ->
+          (* eprintf "%s: %b %b %b\n%!" key ann.toplevel ann.global ann.internal; *)
           if ann.toplevel && ann.global && not ann.internal
           then Codegen_ctx.add ~ctx:jit.ctx ~toplevel:true ~global:true key v
         | _ -> ())
@@ -63,9 +64,10 @@ let exec (jit : t) code =
 (** JIT entry point. *)
 let repl () =
   let banner = String.make 78 '=' in
-  eprintf "\027[102m%s\n" banner;
-  eprintf "Seq JIT\n";
-  eprintf "%s\027[0m \n" banner;
+  eprintf "\027[102m%s\027[0m \n" banner;
+  eprintf "\027[102m=%s%s%s=\027[0m \n"
+    (String.make 34 ' ') "Seq REPL" (String.make 34 ' ');
+  eprintf "\027[102m%s\027[0m \n%!" banner;
   let jit = init () in
   let start = ref true in
   let code = ref "" in
@@ -74,12 +76,13 @@ let repl () =
       try
         if !start
         then (
-          eprintf "\027[92min[%d]>\027[0m \n" jit.cnt;
+          eprintf "\027[92min[%d]>\027[0m \n%!" jit.cnt;
           start := false);
         let s = In_channel.(input_line_exn stdin) in
         code := !code ^ s ^ "\n"
       with
       | End_of_file ->
+        eprintf "      \r%!";
         (try exec jit !code with
         | Err.CompilerError (typ, pos_lst) ->
           eprintf "%s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) ~file:!code typ);
@@ -91,3 +94,29 @@ let repl () =
     done
   with
   | Exit -> eprintf "\n\027[31mbye (%d) \027[0m\n%!" jit.cnt
+
+
+let jits: (nativeint, t) Hashtbl.t = Hashtbl.Poly.create ()
+
+let c_init () =
+  let hnd = init () in
+  let p = Ctypes.raw_address_of_ptr hnd.ctx.mdl in
+  Hashtbl.set jits ~key:p ~data:hnd;
+  (* eprintf "[lib] %nx\n%!" p; *)
+  p
+
+let c_exec hnd code =
+  (* eprintf "[lib] looking for %nx ... \n%!" hnd; *)
+  let jit = Hashtbl.find_exn jits hnd in
+  (* Hashtbl.iter_keys jit.ctx.map ~f:(fun k ->
+    eprintf "[lib] keys: %s ... \n%!" k); *)
+  try
+    exec jit code
+  with
+  | Err.CompilerError (typ, pos_lst) ->
+    eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:code typ
+
+let c_close hnd =
+  let jit = Hashtbl.find_exn jits hnd in
+  eprintf "Closing JIT handle, %d commands executed\n%!" jit.cnt;
+  ()

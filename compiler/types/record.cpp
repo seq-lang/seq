@@ -79,6 +79,158 @@ bool types::RecordType::is(types::Type *type) const {
   return true;
 }
 
+Function *types::RecordType::getContainsFunc(Module *module) {
+  // only support __contains__ for homogeneous tuples:
+  assert(types.size() > 0);
+  for (auto *type : types) {
+    assert(types::is(type, types[0]));
+  }
+
+  const std::string name = "seq." + getName() + ".__contains__";
+  LLVMContext &context = module->getContext();
+  Function *func = module->getFunction(name);
+
+  if (!func) {
+    func = cast<Function>(module->getOrInsertFunction(
+        name, types::Bool->getLLVMType(context), getLLVMType(context),
+        types[0]->getLLVMType(context)));
+    func->setLinkage(GlobalValue::PrivateLinkage);
+    func->addFnAttr(Attribute::AlwaysInline);
+
+    auto iter = func->arg_begin();
+    Value *rec = iter++;
+    Value *val = iter;
+
+    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+    BasicBlock *retFalse = BasicBlock::Create(context, "exit_false", func);
+    BasicBlock *retTrue = BasicBlock::Create(context, "exit_true", func);
+    IRBuilder<> builder(block);
+
+    for (unsigned i = 0; i < types.size(); i++) {
+      Value *m = memb(rec, std::to_string(i + 1), block);
+      types::Type *eqType = types[i]->magicOut("__eq__", {types[i]});
+      Value *eq =
+          types[i]->callMagic("__eq__", {types[i]}, m, {val}, block, nullptr);
+      eq = eqType->boolValue(eq, block, nullptr);
+      builder.SetInsertPoint(block);
+      eq = builder.CreateICmpNE(eq, builder.getInt8(0));
+
+      BasicBlock *next = BasicBlock::Create(context, "cmp", func);
+      builder.CreateCondBr(eq, retTrue, next);
+      block = next;
+    }
+
+    builder.SetInsertPoint(block);
+    builder.CreateBr(retFalse);
+
+    builder.SetInsertPoint(retFalse);
+    builder.CreateRet(builder.getInt8(0));
+
+    builder.SetInsertPoint(retTrue);
+    builder.CreateRet(builder.getInt8(1));
+  }
+
+  return func;
+}
+
+enum { EQ, NE, LT, LE, GT, GE };
+Function *types::RecordType::getCmpFunc(Module *module, int kind) {
+  std::string magic;
+  switch (kind) {
+  case EQ:
+    magic = "__eq__";
+    break;
+  case NE:
+    magic = "__ne__";
+    break;
+  case LT:
+    magic = "__lt__";
+    break;
+  case LE:
+    magic = "__le__";
+    break;
+  case GT:
+    magic = "__gt__";
+    break;
+  case GE:
+    magic = "__ge__";
+    break;
+  default:
+    assert(0);
+  }
+
+  const std::string name = "seq." + getName() + "." + magic;
+  LLVMContext &context = module->getContext();
+  Function *func = module->getFunction(name);
+
+  if (!func) {
+    func = cast<Function>(module->getOrInsertFunction(
+        name, types::Bool->getLLVMType(context), getLLVMType(context),
+        getLLVMType(context)));
+    func->setLinkage(GlobalValue::PrivateLinkage);
+    func->addFnAttr(Attribute::AlwaysInline);
+
+    auto iter = func->arg_begin();
+    Value *r1 = iter++;
+    Value *r2 = iter;
+
+    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+    BasicBlock *retFalse = BasicBlock::Create(context, "exit_false", func);
+    BasicBlock *retTrue = BasicBlock::Create(context, "exit_true", func);
+    IRBuilder<> builder(block);
+
+    for (unsigned i = 0; i < types.size(); i++) {
+      Value *val1 = memb(r1, std::to_string(i + 1), block);
+      Value *val2 = memb(r2, std::to_string(i + 1), block);
+
+      types::Type *cmpType = types[i]->magicOut(magic, {types[i]});
+      Value *cmp =
+          types[i]->callMagic(magic, {types[i]}, val1, {val2}, block, nullptr);
+      cmp = cmpType->boolValue(cmp, block, nullptr);
+      builder.SetInsertPoint(block);
+      cmp = builder.CreateICmpNE(cmp, builder.getInt8(0));
+      BasicBlock *next = BasicBlock::Create(context, "cmp", func);
+
+      if (kind == EQ) {
+        builder.CreateCondBr(cmp, next, retFalse);
+      } else if (kind == NE) {
+        builder.CreateCondBr(cmp, retTrue, next);
+      } else {
+        BasicBlock *eqBlock = BasicBlock::Create(context, "eq", func);
+        types::Type *eqType = types[i]->magicOut("__eq__", {types[i]});
+        Value *eq = types[i]->callMagic("__eq__", {types[i]}, val1, {val2},
+                                        eqBlock, nullptr);
+        eq = eqType->boolValue(eq, eqBlock, nullptr);
+        builder.SetInsertPoint(eqBlock);
+        eq = builder.CreateICmpNE(eq, builder.getInt8(0));
+        builder.CreateCondBr(eq, next,
+                             (kind == LT || kind == GT) ? retFalse : retTrue);
+
+        builder.SetInsertPoint(block);
+        if (kind == LT || kind == GT) {
+          builder.CreateCondBr(cmp, retTrue, eqBlock);
+        } else {
+          builder.CreateCondBr(cmp, eqBlock, retFalse);
+        }
+      }
+
+      block = next;
+    }
+
+    builder.SetInsertPoint(block);
+    builder.CreateBr((kind == EQ || kind == LE || kind == GE) ? retTrue
+                                                              : retFalse);
+
+    builder.SetInsertPoint(retFalse);
+    builder.CreateRet(builder.getInt8(0));
+
+    builder.SetInsertPoint(retTrue);
+    builder.CreateRet(builder.getInt8(1));
+  }
+
+  return func;
+}
+
 void types::RecordType::initOps() {
   if (!vtable.magic.empty())
     return;
@@ -125,7 +277,7 @@ void types::RecordType::initOps() {
              Value *s = types[i]->strValue(v, entry, nullptr);
              Value *dest = b.CreateGEP(strs, b.getInt32(i));
              b.CreateStore(s, dest);
-           };
+           }
 
            auto *strReal = cast<Function>(module->getOrInsertFunction(
                "seq_str_tuple", Str->getLLVMType(context),
@@ -196,18 +348,53 @@ void types::RecordType::initOps() {
        {this},
        Bool,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         BasicBlock *block = b.GetInsertBlock();
-         Value *result = b.getInt8(1);
-         for (unsigned i = 0; i < types.size(); i++) {
-           Value *val1 = memb(self, std::to_string(i + 1), block);
-           Value *val2 = memb(args[0], std::to_string(i + 1), block);
-           types::Type *eqType = types[i]->magicOut("__eq__", {types[i]});
-           Value *eq = types[i]->callMagic("__eq__", {types[i]}, val1, {val2},
-                                           block, nullptr);
-           eq = eqType->boolValue(eq, block, nullptr);
-           result = b.CreateAnd(result, eq);
-         };
-         return result;
+         Function *cmp = getCmpFunc(b.GetInsertBlock()->getModule(), EQ);
+         return b.CreateCall(cmp, {self, args[0]});
+       },
+       false},
+
+      {"__ne__",
+       {this},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *cmp = getCmpFunc(b.GetInsertBlock()->getModule(), NE);
+         return b.CreateCall(cmp, {self, args[0]});
+       },
+       false},
+
+      {"__lt__",
+       {this},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *cmp = getCmpFunc(b.GetInsertBlock()->getModule(), LT);
+         return b.CreateCall(cmp, {self, args[0]});
+       },
+       false},
+
+      {"__gt__",
+       {this},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *cmp = getCmpFunc(b.GetInsertBlock()->getModule(), GT);
+         return b.CreateCall(cmp, {self, args[0]});
+       },
+       false},
+
+      {"__le__",
+       {this},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *cmp = getCmpFunc(b.GetInsertBlock()->getModule(), LE);
+         return b.CreateCall(cmp, {self, args[0]});
+       },
+       false},
+
+      {"__ge__",
+       {this},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Function *cmp = getCmpFunc(b.GetInsertBlock()->getModule(), GE);
+         return b.CreateCall(cmp, {self, args[0]});
        },
        false},
 
@@ -234,8 +421,25 @@ void types::RecordType::initOps() {
            hash = b.CreateAdd(hash, p1);
            hash = b.CreateAdd(hash, p2);
            seed = b.CreateXor(seed, hash);
-         };
+         }
          return seed;
+       },
+       false},
+
+      {"__contains__",
+       {types.empty() ? Base : types[0]},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         if (types.empty())
+           throw exc::SeqException("cannot use 'in' on empty tuple");
+
+         for (auto *type : types) {
+           if (!types::is(type, types[0]))
+             throw exc::SeqException("cannot use 'in' on heterogeneous tuple");
+         }
+
+         Function *contains = getContainsFunc(b.GetInsertBlock()->getModule());
+         return b.CreateCall(contains, {self, args[0]});
        },
        false},
 
@@ -272,7 +476,7 @@ void types::RecordType::initOps() {
            Value *ptr = pyObjType->memb(pyVal, "p", block);
            b.CreateCall(pyTupSet,
                         {pyTup, ConstantInt::get(seqIntLLVM(context), i), ptr});
-         };
+         }
 
          Value *result = pyObjType->defaultValue(block);
          result = pyObjType->setMemb(result, "p", pyTup, block);
@@ -324,7 +528,7 @@ void types::RecordType::initOps() {
            Value *val = memb(self, std::to_string(i + 1), block);
            types[i]->callMagic("__pickle__", {PtrType::get(Byte)}, val,
                                {args[0]}, block, nullptr);
-         };
+         }
          return (Value *)nullptr;
        },
        false},

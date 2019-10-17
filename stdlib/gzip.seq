@@ -1,0 +1,2 @@
+def open(path: str, mode: str):
+    return gzFile(path, mode)
