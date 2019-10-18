@@ -148,8 +148,8 @@ class Generator:
         if self.next == self.state_size:
             self.next_state()
 
+        self.next +=1
         y = self.state[self.next]
-        self.next += 1
 
         # Tempering
         y ^= (y >> u64(11))
@@ -406,15 +406,15 @@ print rand_o.random()
 print rand_o.random()
 print rand_o.random()
 print ''
-# print "uniform()"
-# print rand_o.uniform(0, 100)
-# print rand_o.uniform(0, 100)
-# print rand_o.uniform(0, 100)
-# print ''
-# print "triangular()"
-# print rand_o.triangular(0.0, 1.0)
-# print rand_o.triangular(0.0, 1.0)
-# print rand_o.triangular(0.0, 1.0)
+print "uniform()"
+print rand_o.uniform(0, 100)
+print rand_o.uniform(0, 100)
+print rand_o.uniform(0, 100)
+print ''
+print "triangular()"
+print rand_o.triangular(0.0, 1.0)
+print rand_o.triangular(0.0, 1.0)
+print rand_o.triangular(0.0, 1.0)
 # print ''
 # print rand_o.getrandbits(9)
 # print rand_o.from_bytes_big()
