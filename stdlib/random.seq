@@ -1,4 +1,9 @@
 import C
+import sys
+import math
+
+class ZeroDivisionError:
+    msg: str
 
 # cdef rand() -> int
 #
@@ -161,10 +166,10 @@ class Generator:
         generates a random number on [0,1) with 53-bit resolution
         """
 
-        a = self.genrand_int32() >> 5
-        b = self.genrand_int32() >> 6
+        a = self.genrand_int32() >> u64(5)
+        b = self.genrand_int32() >> u64(6)
 
-        return (a * 67108864.0 + b) * (1.0/9007199254740992.0)
+        return float((int(a) * 67108864.0 + int(b)) * (1.0 / 9007199254740992.0))
 
     def random_seed_time_pid(self: Generator):
         """
@@ -235,6 +240,155 @@ class Random:
         self.gen.seed()
         # self.gauss_next = None
 
+    def from_bytes_big(self: Random, b) -> int:
+        """
+        Return the integer represented by the given array of bytes.
+        The argument b must either be a bytes-like object or an iterable
+        producing bytes.
+        """
+        n = 0
+        for x in b:
+            n <<= 8
+            n |= x
+        return n
+
+    def getrandbits(self: Random, k: int) -> int:
+        """
+        getrandbits(k) -> x.  Generates an int with k random bits.
+        """
+        if k <= 0:
+            raise ValueError('number of bits must be greater than zero')
+        numbytes = (k + 7) // 8                       # bits / 8 and rounded up
+        cdef urandom(int) -> int
+        x = self.from_bytes_big(urandom(numbytes))
+        return x >> (numbytes * 8 - k)                # trim excess bits
+
+    # def _randbelow_with_getrandbits(self: Random, n: int) -> int:
+    #     """
+    #     Return a random int in the range [0,n).  Raises ValueError if n==0.
+    #     """
+    #     getrandbits = self.getrandbits
+    #     k = n.bit_length()  # don't use (n-1) here because n can be 1
+    #     r = getrandbits(k)          # 0 <= r < 2**k
+    #     while r >= n:
+    #         r = getrandbits(k)
+    #     return r
+    #
+    # def randrange(self: Random, start: int, stop, step: int) -> int:
+    #     """Choose a random item from range(start, stop[, step]).
+    #
+    #     Return a randomly selected element from range(start, stop, step).
+    #     This is equivalent to choice(range(start, stop, step)), but
+    #     doesn’t actually build a range object.
+    #
+    #     Defaults include: stop = None, step = 1 which for now, are used for
+    #     the testing.
+    #
+    #     for now we will use default values.
+    #     """
+    #
+    #     if stop is None:
+    #         if start > 0:
+    #             return self._randbelow_with_getrandbits(start)
+    #         raise ValueError("empty range for randrange()")
+    #
+    #     # stop argument supplied.
+    #     width = stop - start
+    #     if step == 1 and width > 0:
+    #         return start + self._randbelow_with_getrandbits(width)
+    #     if step == 1:
+    #         raise ValueError("empty range for randrange() (" + start + ", " + stop ", " + width + ")")
+    #
+    #     # Non-unit step argument supplied.
+    #     n = math.inf
+    #     if step > 0:
+    #         n = (width + step - 1) // step
+    #     elif step < 0:
+    #         n = (width + step + 1) // step
+    #     else:
+    #         raise ValueError("zero step for randrange()")
+    #
+    #     if n <= 0:
+    #         raise ValueError("empty range for randrange()")
+    #
+    #     return start + step * self._randbelow_with_getrandbits(n)
+
+    # def randint(self: Random, a: int, b: int):
+    #     """
+    #     Return random integer in range [a, b], including both end points.
+    #     """
+    #     return self.randrange(a, b+1)
+
+    def random(self: Random) -> float:
+        """
+        random(self) -> float
+
+        Return the next random floating point number in the range [0.0, 1.0).
+        """
+        return self.gen.genrand_res53()
+
+    # def choice(self: Random, seq) -> :
+    #     """
+    #     Choose a random element from a non-empty sequence.
+    #     """
+    #     try:
+    #         i = self._randbelow_with_getrandbits(len(seq))
+    #     except ValueError:
+    #         raise IndexError("Cannot choose from an empty sequence") from None
+    #     return seq[i]
+
+    # def shuffle(self: Random, x) -> float:
+    #     """Shuffle list x in place, and return None.
+    #
+    #     Optional argument random is a 0-argument function returning a
+    #     random float in [0.0, 1.0); if it is the default None, the
+    #     standard random.random will be used.
+    #
+    #     For now seq will use random = None (default)
+    #     """
+    #     random = None
+    #     if random is None:
+    #         randbelow = self._randbelow_with_getrandbits
+    #         for i in reversed(range(1, len(x))):
+    #             # pick an element in x[:i+1] with which to exchange x[i]
+    #             j = randbelow(i+1)
+    #             x[i], x[j] = x[j], x[i]
+    #     else:
+    #         for i in reversed(range(1, len(x))):
+    #             # pick an element in x[:i+1] with which to exchange x[i]
+    #             j = int(random() * (i+1))
+    #             x[i], x[j] = x[j], x[i]
+
+    def uniform(self: Random, a: int, b: int) -> float:
+        """
+        Get a random number in the range [a, b) or [a, b] depending on rounding.
+        """
+        return a + (b-a) * self.random()
+
+    def triangular(self: Random, low: float, high: float) -> float:
+        """Triangular distribution.
+
+        Continuous distribution bounded by given lower and upper limits,
+        and having a given mode value in-between.
+
+        http://en.wikipedia.org/wiki/Triangular_distribution
+
+        For now we mode to default: mode = None
+        default for low and high : low = 0.0, high = 1.0
+        """
+        # mode = None
+        u = self.random()
+        c = 0.0
+        try:
+            c = 0.5         # if mode is None else (mode - low) / (high - low)
+        except ZeroDivisionError:
+            return low
+        if u > c:
+            u = 1.0 - u
+            c = 1.0 - c
+            low, high = high, low
+        return low + (high - low) * math.sqrt(u * c)
+
 init = array[u64](4)
 init[0] = u64(0x123)
 init[1] = u64(0x234)
@@ -245,10 +399,28 @@ length = 4
 rand_gen = Generator()
 rand_o = Random(rand_gen)
 
+# rand_o.getrandbits(3)
 rand_o.seed()
-print rand_o.gen.genrand_int32()
-print rand_o.gen.gettimeofday()
-print rand_o.gen.gettimeofday()
+print "random()"
+print rand_o.random()
+print rand_o.random()
+print rand_o.random()
+print ''
+# print "uniform()"
+# print rand_o.uniform(0, 100)
+# print rand_o.uniform(0, 100)
+# print rand_o.uniform(0, 100)
+# print ''
+# print "triangular()"
+# print rand_o.triangular(0.0, 1.0)
+# print rand_o.triangular(0.0, 1.0)
+# print rand_o.triangular(0.0, 1.0)
+# print ''
+# print rand_o.getrandbits(9)
+# print rand_o.from_bytes_big()
+# print rand_o.shuffle([3, 2, 4, 5])
+# print rand_o.gen.gettimeofday()
+# print rand_o.gen.gettimeofday()
 
 
 
