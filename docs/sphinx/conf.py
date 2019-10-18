@@ -181,7 +181,7 @@ exhale_args = {
     'containmentFolder':     'api',
     'rootFileName':          'doxygen.rst',
     'rootFileTitle':         'Compiler API',
-    'doxygenStripFromPath':  '..',
+    'doxygenStripFromPath':  '../..',
     # Suggested optional arguments
     'createTreeView':        True,
     # TIP: if using the sphinx-bootstrap-theme, you need
