@@ -1,8 +1,6 @@
 Getting Started
 ===============
 
-Source code is available `on GitHub <https://github.com/seq-lang/seq>`_.
-
 Dependencies
 ------------
 
