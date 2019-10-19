@@ -339,6 +339,7 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
         cdef __gt__(self: ptr[T], x: ptr[T]) -> bool
         cdef __le__(self: ptr[T], x: ptr[T]) -> bool
         cdef __ge__(self: ptr[T], x: ptr[T]) -> bool
+        cdef __sub__(self: ptr[T], x: ptr[T]) -> int
       type array[T](ptr: ptr[byte], len: int):
         cdef __elemsize__() -> int
         cdef __getitem__(self: array[T], i: int) -> T
@@ -357,21 +358,19 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
    |> List.map ~f:(sannotate Ann.default)
    |> List.map ~f:(ctx.globals.sparse ~ctx)
    |> ignore;
+   List.iter [ "str" ; "seq" ] ~f:(fun s ->
+     let h = Hashtbl.find_exn ctx.globals.classes (s, Ann.default_pos) in
+     Hashtbl.remove h "__init__");
    List.iter
      (pod_types @ Llvm.Type.[ "str", str (); "seq", seq () ])
      ~f:(fun (n, ll) ->
        let open Llvm.Type in
        get_methods ll
-       |> List.iter ~f:(fun (s, t) ->
-              if n = "str" && s = "__init__"
-              then ()
-              else
-                (* && (get_name t) = "function[str,str,ptr[byte],int]" *)
-                add_internal_method n s (get_name t)));
-   (* dump_ctx ctx; *)
+       |> List.iter ~f:(fun (s, t) -> add_internal_method n s (get_name t)));
+   dump_ctx ctx;
 
    (* argv! *)
-   if false
+   if true
    then (
      match Util.get_from_stdlib "stdlib" with
      | Some file ->

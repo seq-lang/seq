@@ -1,5 +1,7 @@
 from file import *
 
+# type k1 = Kmer[1]
+
 extend seq:
     def __init__(self: seq, s: str):
         return seq(s.ptr, s.len)
@@ -228,7 +230,7 @@ def base[K,T](kmer: K, idx: int, b: T):
     if idx < 0:
         idx += len(kmer)
     idx = K.len() - idx - 1
-    n = U(int(Kmer[1](b).as_int()))
+    n = U(int(k1(b).as_int()))
     k = kmer.as_int() & ~(U(3) << U(2*idx))
     k |= n << U(2*idx)
     return K(k)
