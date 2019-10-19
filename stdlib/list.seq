@@ -152,6 +152,7 @@ class list[T]:
         len0 = len(self)
         new_cap = n * len0
         if self.arr.len < new_cap:
+            e = gc.sizeof[T]()
             p = ptr[T](gc.realloc(ptr[byte](self.arr.ptr), new_cap * gc.sizeof[T]()))
             self.arr = array[T](p, new_cap)
 

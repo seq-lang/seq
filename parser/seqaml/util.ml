@@ -14,8 +14,8 @@ let ppl ?(sep = ", ") ~f l = String.concat ~sep (List.map ~f l)
 let dbg fmt =
   let fn, fno =
     match Sys.getenv "SEQ_DEBUG" with
-    | Some _ -> Caml.Printf.kfprintf, Caml.Printf.fprintf
-    | None -> Caml.Printf.ikfprintf, Caml.Printf.ifprintf
+    | Some s when String.length s > 0 -> Caml.Printf.kfprintf, Caml.Printf.fprintf
+    | _ -> Caml.Printf.ikfprintf, Caml.Printf.ifprintf
   in
   fn (fun o -> fno o "\n%!") stderr fmt
 
@@ -64,7 +64,7 @@ module A = struct
     let fn, fno =
       match force, Sys.getenv "SEQ_DEBUG" with
       | true, _ -> Caml.Printf.kfprintf, Caml.Printf.fprintf
-      | false, Some "1" when not empty -> Caml.Printf.kfprintf, Caml.Printf.fprintf
+      | false, Some s when String.length s > 0 && not empty -> Caml.Printf.kfprintf, Caml.Printf.fprintf
       | _ -> Caml.Printf.ikfprintf, Caml.Printf.ifprintf
     in
     let codes = List.map style ~f:style_to_string |> String.concat ~sep:";" in
@@ -116,7 +116,7 @@ and uop2magic op =
     | "+" -> "pos"
     | "-" -> "neg"
     | "~" -> "invert"
-    | "not" -> "not"
+    | "!" | "not" -> "not"
     | s -> s
   in
   sprintf "__%s__" op

@@ -109,8 +109,8 @@ module Ann = struct
     not (match t with
     | Func ({ generics; args; _ }, { ret; _ }) ->
       (List.exists generics ~f:(fun (_, (_, t)) -> f t)) ||
-      (List.exists args ~f:(fun (_, t) -> f t)) ||
-      f ret
+      (List.exists args ~f:(fun (_, t) -> f t))
+      (* NOT THIS: function return is automatic!! || f ret *)
     | Class ({ generics; _ }, _) ->
       List.exists generics ~f:(fun (_, (_, t)) -> f t)
     | Tuple el -> List.exists el ~f

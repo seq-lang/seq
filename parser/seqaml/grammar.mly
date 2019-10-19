@@ -852,7 +852,7 @@ typ:
   | type_head COLON NL
     INDENT members = class_member+ DEDENT
     { pos (fst $1) $2,
-      Type { (snd $1) with members = List.filter_opt members } }
+      Type { (snd $1) with members = (snd $1).members @ List.filter_opt members } }
 type_head:
   | TYPE ID generics = generic_list? LP separated_list(COMMA, typed_param) RP
     { pos $1 $6,

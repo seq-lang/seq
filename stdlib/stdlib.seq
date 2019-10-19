@@ -4,7 +4,7 @@ if base < 0 or base > 36 or base == 1:
     print 'hai!'
 
 extend str:
-    def __bool__(self: strs):
+    def __bool__(self: str):
         return self.len != 0
 
     def __str__(self: str):
@@ -25,6 +25,24 @@ extend str:
         str.memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
 
+    def c_str(self: str):
+        n = self.len
+        assert n >= 0
+        p = ptr[byte](n + 1)
+        str.memcpy(p, self.ptr, n)
+        p[n] = byte(0)
+        return p
+
+    def cat(v):
+        total = 0
+        for s in v:
+            total += s.__len__()
+        p = ptr[byte](total)
+        n = 0
+        for s in v:
+            str.memcpy(p + n, s.ptr, s.len)
+            n += s.len
+        return str(p, total)
 
 import! err
 
@@ -384,14 +402,6 @@ extend str:
             self._slice_error()
         return str(self.ptr + a, len(self) - a)
 
-    def c_str(self: str):
-        n = len(self)
-        assert n >= 0
-        p = ptr[byte](n + 1)
-        str.memcpy(p, self.ptr, n)
-        p[n] = byte(0)
-        return p
-
     def __iter__(self: str):
         i = 0
         n = len(self)
@@ -419,17 +429,6 @@ extend str:
         p = ptr[byte](n)
         str.memcpy(p, self.ptr, n)
         return str(p, n)
-
-    def cat(v: list[str]):
-        total = 0
-        for s in v:
-            total += len(s)
-        p = ptr[byte](total)
-        n = 0
-        for s in v:
-            str.memcpy(p + n, s.ptr, s.len)
-            n += s.len
-        return str(p, total)
 
     def cati(v: generator[str], total: int):
         p = ptr[byte](total)

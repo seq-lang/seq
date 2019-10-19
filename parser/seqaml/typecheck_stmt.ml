@@ -47,7 +47,8 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
       | Special p -> parse_special ctx p
       | ImportPaste s -> parse_impaste ctx s
       | Pass _ | Break _ | Continue _ | Global _ -> node
-      | TypeAlias _ | Prefetch _ -> C.err ~ctx "not supported :/"
+      | TypeAlias s -> parse_alias ctx s
+      | Prefetch _ -> C.err ~ctx "not supported :/"
     in
     let stmts = (ann, node) :: Stack.to_list ctx.env.statements in
     Stack.clear ctx.env.statements;
@@ -71,25 +72,14 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
   (* ***************************** *)
   and parse_expr ctx e = E.parse ~ctx e
 
-  and parse_assigneq ctx (lh, op, rh) =
+  and parse_assigneq ctx (lh', op, rh') =
     let magic = Util.bop2magic ~prefix:"i" op in
-    let lh = E.parse ~ctx lh in
-    let rh = E.parse ~ctx rh in
+    let lh = E.parse ~ctx lh' in
+    let rh = E.parse ~ctx rh' in
     match R.magic ~ctx ~args:[ var_of_node_exn rh ] (var_of_node_exn lh) magic with
     | None ->
-      Util.A.dy "hyar";
-      ignore
-      @@ parse ~ctx
-      @@ C.sannotate (C.ann ctx)
-      @@ s_assign ~shadow:Shadow lh (e_binary lh op rh);
-      Pass ()
+      parse_assign ctx ([lh'], [C.eannotate ~ctx @@ e_binary lh' op rh'], Shadow, None)
     | Some t ->
-      Ann.(
-        Util.A.dy
-          "hyar hray... %s %s %s"
-          (t_to_string (fst lh).typ)
-          (t_to_string (fst rh).typ)
-          (var_to_string t));
       Expr (C.magic_call E.parse ~ctx ~magic lh ~args:[ rh ])
 
   and parse_assign ctx ?(prefix = "") (lhs, rhs, shadow, dectyp) =
@@ -122,7 +112,10 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
       in
       let len, op = if !unpack_i > -1 then len - 1, ">=" else len, "==" in
       let assert_stmt = s_assert (e_binary (e_call (e_dot rhs "__len__") []) op (e_int len)) in
-      ignore @@ List.map (assert_stmt :: lst) ~f:(fun s -> parse ~ctx (C.sannotate (C.ann ctx) s));
+      (assert_stmt :: lst)
+      |> List.map ~f:(fun s -> parse ~ctx (C.sannotate (C.ann ctx) s))
+      |> List.concat
+      |> List.iter ~f:(Stack.push ctx.env.statements);
       Pass ()
     | [ lhs ], [ rhs ] ->
       let rhs = E.parse ~ctx:(C.enter_level ~ctx) rhs in
@@ -163,15 +156,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
         Assign ([ lhs ], [ rhs ], shadow, None)
       | Index (var_expr, [ idx ]), None ->
         let var_expr = E.parse ~ctx var_expr in
-        (* ( match var_of_node_exn var_expr |> Ann.real_type with *)
-        (* | Class ({ cache = "ptr", p; _ }, _) when p = Ann.default_pos ->
-            (* TODO: T.unify_inplace typ  *)
-            Assign ([ E.parse ~ctx lhs ], [ rhs ], shadow, dectyp) *)
-        (* Expr (C.magic_call E.parse ~ctx ~magic:"__setitem__" var_expr ~args:[ idx; rhs ]) *)
-        (* | _ -> *)
-        (* a[x] = b *)
         Expr (C.magic_call E.parse ~ctx ~magic:"__setitem__" var_expr ~args:[ idx; rhs ])
-      (* ) *)
       | _ -> C.err ~ctx "invalid assign statement")
 
   and parse_declare ?(prefix = "") ctx { name; typ } =
@@ -183,6 +168,12 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
     if is_some @@ Ctx.in_scope ~ctx name then Util.dbg "shadowing %s" name;
     Ctx.add ~ctx (prefix ^ name) (Var (var_of_node_exn e));
     Declare { name; typ = Some e }
+
+  and parse_alias ctx (name, expr) =
+    let expr = E.parse ~ctx expr in
+    if is_some @@ Ctx.in_scope ~ctx name then Util.dbg "shadowing %s" name;
+    Ctx.add ~ctx name (Var (var_of_node_exn expr));
+    TypeAlias (name, expr)
 
   and parse_del ctx expr =
     match snd expr with
@@ -660,7 +651,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
       else C.make_internal_magic ~ctx "__init__" (e_id "void") args
     in
     let cls_members =
-      List.map (init :: cls.members) ~f:(fun s ->
+      List.map (init :: members) ~f:(fun s ->
           let prefix = sprintf "%s." class_name in
           let typ, node, name =
             match snd s with
@@ -694,11 +685,11 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
               Some (Var typ), stmt, name
             | _ -> ierr "invalid class member"
           in
-          (* Util.A.dy
+          Util.A.dy
             ">> %s :: adding %s = %s"
             class_name
             name
-            (Ann.typ_to_string @@ Option.value_exn typ); *)
+            (Ann.typ_to_string @@ Option.value_exn typ);
           { (fst s) with typ }, node)
     in
     let ctx = C.exit_level ~ctx in

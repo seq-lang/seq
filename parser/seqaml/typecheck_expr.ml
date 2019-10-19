@@ -168,7 +168,9 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
         s_for var gen [ stmt ]
     in
     let stmts = [ s_assign (e_id temp_var) (C.ann ctx, empty); s_generator (Some comp) ] in
-    List.iter stmts ~f:(fun s -> Stack.push ctx.env.statements (C.sannotate (C.ann ctx) s));
+    List.map stmts ~f:(fun s -> ctx.globals.sparse ~ctx @@ C.sannotate (C.ann ctx) s)
+    |> List.concat
+    |> List.iter ~f:(Stack.push ctx.env.statements);
     parse_id ctx temp_var
 
   and parse_dict_comprehension ctx (expr, comp) =
@@ -181,7 +183,9 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
         s_for var gen [ stmt ]
     in
     let stmts = [ s_assign (e_id temp_var) (C.ann ctx, Dict []); s_generator (Some comp) ] in
-    List.iter stmts ~f:(fun s -> Stack.push ctx.env.statements (C.sannotate (C.ann ctx) s));
+    List.map stmts ~f:(fun s -> ctx.globals.sparse ~ctx @@ C.sannotate (C.ann ctx) s)
+    |> List.concat
+    |> List.iter ~f:(Stack.push ctx.env.statements);
     parse_id ctx temp_var
 
   and parse_generator ctx _ = ierr "Not yet there"
@@ -193,7 +197,12 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
     T.unify_inplace ~ctx (var_of_node_exn if_expr) (var_of_node_exn else_expr);
     C.ann ~typ:(Var (var_of_node_exn if_expr)) ctx, IfExpr (cond, if_expr, else_expr)
 
-  and parse_unary ctx (op, expr) = C.magic_call parse ~ctx ~magic:(Util.uop2magic op) expr
+  and parse_unary ctx (op, expr) =
+    match op with
+    | "!" ->
+      let expr = C.magic_call parse ~ctx ~magic:"__bool__" expr in
+      C.ann ~typ:(Var (var_of_node_exn expr)) ctx, Unary (op, expr)
+    | _ -> C.magic_call parse ~ctx ~magic:(Util.uop2magic op) expr
 
   and parse_binary ctx (lh, bop, rh) =
     match bop with
@@ -236,98 +245,109 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
       | _ -> false
     in
     match expr, args with
-    | (_, Dot ((_, Tuple t), "__len__")), [] ->
-      parse_internal ~name:"int" ctx (Int (string_of_int @@ List.length t))
-    | _ ->
-      let expr = parse ~ctx expr in
-      let typ = Ann.real_type (var_of_node_exn expr) |> T.instantiate ~ctx in
-      (match typ with
-      | Func (g, f) ->
-        let arg_table = String.Table.create () in
-        let def_args =
-          Array.of_list
-          @@ List.filter_mapi g.args ~f:(fun i a ->
-                 Util.A.db "->> defarg %s" @@ (Ann.var_to_string (snd a));
-                 Hashtbl.set arg_table ~key:(fst a) ~data:(i, snd a);
-                 if Hash_set.exists f.used ~f:(( = ) (fst a)) then None else Some a)
-        in
-        let has_partials = List.exists args ~f:is_partial in
-        let args = List.map args ~f:(fun arg -> { arg with value = parse ~ctx arg.value }) in
-        let in_args =
-          if List.length args <> Array.length def_args
-          then
-            if List.length args = Array.length def_args + 1 && is_partial (List.last_exn args)
-            then List.rev args |> List.tl_exn |> List.rev
-            else
-              C.err
-                ~ctx
-                "function argument length mismatch %d vs %d"
-                (List.length args)
-                (Array.length def_args)
-          else args
-        in
-        (* Check ordering *)
-        let names_started = ref false in
-        let used = Hash_set.copy f.used in
-        List.iteri in_args ~f:(fun i arg ->
-            let name =
-              match arg.name, !names_started with
-              | None, false -> fst def_args.(i)
-              | None, true -> C.err ~ctx "named arguments must be followed by named arguments"
-              | Some name, false ->
-                names_started := true;
-                name
-              | Some name, true -> name
-            in
-            match Hashtbl.find arg_table name, is_partial arg with
-            | Some (_, typ'), true ->
-              let typ = C.make_unbound ctx in
-              T.unify_inplace ~ctx typ' typ
-            | Some (i, typ'), false ->
-              Hash_set.add used name;
-              Util.A.db
-                "->> inarg %d %s: def = %s, pass = %s"
-                i
-                name
-                (Ann.var_to_string typ')
-                (Ann.var_to_string (var_of_node_exn arg.value));
-              T.unify_inplace ~ctx (var_of_node_exn arg.value) typ';
-              Hashtbl.set arg_table ~key:name ~data:(i, var_of_node_exn arg.value)
-            | _ -> C.err ~ctx "argument %s does not exist" name);
-        if has_partials
-        then (
-          let new_args =
-            Hashtbl.to_alist arg_table
-            |> List.sort ~compare:(fun (_, (i, _)) (_, (j, _)) -> Int.compare i j)
-            |> List.map ~f:(fun (n, (_, v)) -> n, v)
+    | (_, Dot (e, "__len__")), [] ->
+      ( match Ann.real_type (var_of_node_exn (parse ~ctx e)) with
+        | Tuple t ->
+          parse_internal ~name:"int" ctx (Int (string_of_int @@ List.length t))
+        | _ -> parse_call_real ctx (expr, args) )
+    | _ -> parse_call_real ctx (expr, args)
+
+  and parse_call_real ctx (expr, args) =
+    let is_partial { value; _ } =
+      match value with
+      | _, Expr.Ellipsis _ -> true
+      | _ -> false
+    in
+    let expr = parse ~ctx expr in
+    let typ = Ann.real_type (var_of_node_exn expr) |> T.instantiate ~ctx in
+    (match typ with
+    | Func (g, f) ->
+      let arg_table = String.Table.create () in
+      let def_args =
+        Array.of_list
+        @@ List.filter_mapi g.args ~f:(fun i a ->
+                (* Util.A.db "->> defarg %s" @@ (Ann.var_to_string (snd a)); *)
+                Hashtbl.set arg_table ~key:(fst a) ~data:(i, snd a);
+                if Hash_set.exists f.used ~f:(( = ) (fst a)) then None else Some a)
+      in
+      let has_partials = List.exists args ~f:is_partial in
+      let args = List.map args ~f:(fun arg -> { arg with value = parse ~ctx arg.value }) in
+      let in_args =
+        if List.length args <> Array.length def_args
+        then
+          if List.length args = Array.length def_args + 1 && is_partial (List.last_exn args)
+          then List.rev args |> List.tl_exn |> List.rev
+          else
+            C.err
+              ~ctx
+              "function argument length mismatch %d vs %d"
+              (List.length args)
+              (Array.length def_args)
+        else args
+      in
+      (* Check ordering *)
+      let names_started = ref false in
+      let used = Hash_set.copy f.used in
+      List.iteri in_args ~f:(fun i arg ->
+          let name =
+            match arg.name, !names_started with
+            | None, false -> fst def_args.(i)
+            | None, true -> C.err ~ctx "named arguments must be followed by named arguments"
+            | Some name, false ->
+              names_started := true;
+              name
+            | Some name, true -> name
           in
-          let typ =
-            T.generalize ~level:ctx.env.level
-            @@ Ann.(Func ({ g with args = new_args }, { f with used }))
-          in
-          C.ann ~typ:(Var typ) ctx, Call (expr, args))
-        else (
-          let typ = R.realize ~ctx typ in
-          let expr = Ann.patch (fst expr) typ, snd expr in
-          C.ann ~typ:(Var f.ret) ctx, Call (expr, args))
-      | Class (_, { is_type }) ->
-        let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
-        let arg_typs = List.map args ~f:(fun p -> var_of_node_exn p.value) in
-        (match R.magic ~ctx typ "__init__" ~args:arg_typs with
-        | None when ctx.env.realizing ->
-          C.err
-            ~ctx
-            "cannot locate %s.__init__(%s)"
-            (Ann.var_to_string typ)
-            (Util.ppl arg_typs ~f:Ann.var_to_string)
-        | Some (Func (_, { ret; _ })) when is_type -> T.unify_inplace ~ctx ret typ
-        | _ -> ());
-        C.ann ~typ:(Var typ) ctx, Call (expr, args)
-      | Link { contents = Unbound _ } ->
-        let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
-        let typ = C.make_unbound ctx in
-        C.ann ~typ:(Var typ) ctx, Call (expr, args)
-      | _ -> C.err ~ctx "wrong call type %s" (Ann.var_to_string typ))
+          match Hashtbl.find arg_table name, is_partial arg with
+          | Some (_, typ'), true ->
+            let typ = C.make_unbound ctx in
+            T.unify_inplace ~ctx typ' typ
+          | Some (i, typ'), false ->
+            Hash_set.add used name;
+            (* Util.A.db
+              "->> inarg %d %s: def = %s, pass = %s"
+              i
+              name
+              (Ann.var_to_string typ')
+              (Ann.var_to_string (var_of_node_exn arg.value)); *)
+            T.unify_inplace ~ctx (var_of_node_exn arg.value) typ';
+            Hashtbl.set arg_table ~key:name ~data:(i, var_of_node_exn arg.value)
+          | _ -> C.err ~ctx "argument %s does not exist" name);
+      if has_partials
+      then (
+        let new_args =
+          Hashtbl.to_alist arg_table
+          |> List.sort ~compare:(fun (_, (i, _)) (_, (j, _)) -> Int.compare i j)
+          |> List.map ~f:(fun (n, (_, v)) -> n, v)
+        in
+        let typ =
+          T.generalize ~level:ctx.env.level
+          @@ Ann.(Func ({ g with args = new_args }, { f with used }))
+        in
+        C.ann ~typ:(Var typ) ctx, Call (expr, args))
+      else (
+        let typ = R.realize ~ctx typ in
+        let expr = Ann.patch (fst expr) typ, snd expr in
+        C.ann ~typ:(Var f.ret) ctx, Call (expr, args))
+    | Class (_, { is_type }) ->
+      let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
+      let arg_typs = List.map args ~f:(fun p -> var_of_node_exn p.value) in
+      (match R.magic ~ctx typ "__init__" ~args:arg_typs with
+      | None when ctx.env.realizing ->
+        C.err
+          ~ctx
+          "cannot locate %s.__init__(%s)"
+          (Ann.var_to_string typ)
+          (Util.ppl arg_typs ~f:Ann.var_to_string)
+      | Some (Func (_, { ret; _ })) when is_type -> T.unify_inplace ~ctx ret typ
+      | _ -> ());
+      C.ann ~typ:(Var typ) ctx, Call (expr, args)
+    | Link { contents = Unbound _ } ->
+      let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
+      let typ = C.make_unbound ctx in
+      C.ann ~typ:(Var typ) ctx, Call (expr, args)
+    | _ -> C.err ~ctx "wrong call type %s" (Ann.var_to_string typ))
+
 
   and parse_index ctx (lh_expr', indices') =
     match indices' with
@@ -394,31 +414,32 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
 
   and parse_dot ctx (lh_expr', rhs) =
     let lh_expr = parse ~ctx lh_expr' in
-    let lt, resolved =
+    let resolved =
       match (fst lh_expr).typ with
       | None -> ierr ~ctx "cannot happen"
-      | Some (Import name) -> ierr ~ctx "no imports yet"
-      (* Hashtbl.find C.imported name >>= fun (_, dict) -> Hashtbl.find dict rhs *)
+      | Some (Import name) ->
+        (* lt,  *)
+        Hashtbl.find ctx.globals.imports name
+        >>= fun dict -> Hashtbl.find dict rhs >>= List.hd
+        (* >>= fun (_, dict) -> Hashtbl.find dict rhs *)
       | Some (Type lt | Var lt) ->
         (match Ann.real_type lt with
         | Class (g, _) ->
-          ( lt
-          , Hashtbl.find ctx.globals.classes g.cache
-            >>= fun dict -> Hashtbl.find dict rhs >>= List.hd )
-        | lt -> lt, None)
+          Hashtbl.find ctx.globals.classes g.cache
+          >>= fun dict -> Hashtbl.find dict rhs >>= List.hd
+        | _ -> None)
     in
-    let is_lt_type = Ann.is_type (fst lh_expr) in
-    match is_lt_type, Ann.real_t resolved with
+    match (fst lh_expr).typ, Ann.real_t resolved with
     (* Nested class access--- X.Y or obj.Y *)
-    | _, Some (Type t) ->
+    | Some (Type lt | Var lt), Some (Type t) ->
       let typ = T.link_to_parent ~parent:(Some lt) (T.instantiate ~ctx ~parent:lt t) in
       C.ann ~typ:(Type typ) ctx, Dot (lh_expr, rhs)
     (* Nested function access--- X.fn *)
-    | true, Some (Var (Func (g, _) as t)) ->
+    | Some (Type lt), Some (Var (Func (g, _) as t)) ->
       let typ = T.link_to_parent ~parent:(Some lt) (T.instantiate ~ctx ~parent:lt t) in
       C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)
     (* Object method access--- obj.fn *)
-    | false, Some (Var ((Func _) as t)) ->
+    | Some (Var lt), Some (Var ((Func _) as t)) ->
       let typ = T.link_to_parent ~parent:(Some lt) (T.instantiate ~ctx ~parent:lt t) in
       ( match lt, typ with
         | (Class (lg, _) | Func (lg, _)),
@@ -430,14 +451,20 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
           let typ = Ann.Func ({ g with args = (hd_n, hd_t) :: tl }, { f with used }) in
           C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)
         | _ -> ierr "cannot happen")
-    (* Object member access--- obj.mem *)
-    | false, Some (Var t) ->
+    (* Nested member access: X.member *)
+    | Some (Var lt), Some (Var t) ->
       (* What if there are NO proper parents? *)
       let typ = T.link_to_parent ~parent:(Some lt) (T.instantiate ~ctx ~parent:lt t) in
       C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)
-    (* Nested member access: X.member *)
-    | _, Some _ -> C.err ~ctx "member access requires object"
-    | _, None ->
+
+    (* Imported symbol *)
+    | Some (Import _), Some (Import _ as lt) ->
+      C.ann ~typ:lt ctx, Dot (lh_expr, rhs)
+    | Some (Import _), Some (Type lt) ->
+      C.ann ~typ:(Type (T.instantiate ~ctx lt)) ctx, Dot (lh_expr, rhs)
+    | Some (Import _), Some (Var lt) ->
+      C.ann ~typ:(Var (T.instantiate ~ctx lt)) ctx, Dot (lh_expr, rhs)
+    | Some (Type lt | Var lt), None ->
       let typ =
         match lt with
         | Link { contents = Unbound _ } -> C.make_unbound ctx
@@ -445,6 +472,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
         | t -> C.err ~ctx "cannot find %s in %s" rhs (Ann.var_to_string lt)
       in
       C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)
+    | _ -> C.err ~ctx "member access requires object"
 
   and parse_typeof ctx expr =
     let expr = parse ~ctx expr in

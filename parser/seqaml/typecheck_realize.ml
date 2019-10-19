@@ -93,7 +93,8 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
       let real_name, _ = C.get_full_name ~ctx tv in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
       tv
-    | _ -> C.err ~ctx "impossible realization case for %s" fn.name
+    | None, t -> C.err ~ctx "impossible realization case for %s [%s]" fn.name
+      (Option.value_map t ~default:"_" ~f:(Ann.var_to_string ~full:true))
 
   and realize_type ctx typ (cls, cls_t) =
     let real_name, parents = C.get_full_name ~ctx typ in
@@ -111,7 +112,7 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
       T.link_to_parent ~parent:(List.hd parents) (Ann.var_of_typ_exn realized_typ.typ)
     (* Case 2 - needs realization *)
     | None, Some (Class _) ->
-      (* Util.dbg "[real] realizing class %s ==> %s" cls.name real_name; *)
+      Util.dbg "[real] realizing class %s ==> %s" cls.name real_name;
       let c_args =
         Hashtbl.find_exn ctx.globals.classes cls.cache
         |> Hashtbl.to_alist
@@ -215,7 +216,8 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
           (match T.link_to_parent ~parent:(Some typ) t with
           | Func (f, fret) as t ->
             List.iter2_exn (typ :: args) f.args ~f:(fun t (_, t') -> T.unify_inplace ~ctx t t');
-            (match realize_function ctx t (f, fret) with
+            (match realize ~ctx (Func (f, fret)) with
+            (* (match realize_function ctx t (f, fret) with *)
             | Func (_, f_ret) -> Some f_ret.ret
             | _ -> failwith "cannot happen")
           | _ -> ierr ~ctx "got non-function")

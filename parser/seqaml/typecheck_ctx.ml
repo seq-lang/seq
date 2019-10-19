@@ -322,11 +322,12 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
    List.iter pod_types ~f:(fun (name, _) -> create_class name ~is_type:true);
    ctx.globals.parse
      (Util.unindent
-        {|
+      {|
       class generator[T]:
-        pass
+        cdef __iter__(self: generator[T]) -> generator[T]
       class ptr[T]:
         cdef __init__(self: ptr[T], i: int)
+        cdef __init__(self: ptr[T], other: ptr[T], i: int)
         cdef __bool__(self: ptr[T]) -> bool
         cdef __getitem__(self: ptr[T], i: int) -> T
         cdef __setitem__(self: ptr[T], i: int, j: T) -> void
@@ -338,10 +339,17 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
         cdef __gt__(self: ptr[T], x: ptr[T]) -> bool
         cdef __le__(self: ptr[T], x: ptr[T]) -> bool
         cdef __ge__(self: ptr[T], x: ptr[T]) -> bool
-      class array[T]:
-        ptr: ptr[byte]
-        len: int
+      type array[T](ptr: ptr[byte], len: int):
         cdef __elemsize__() -> int
+        cdef __getitem__(self: array[T], i: int) -> T
+        cdef __setitem__(self: array[T], i: int, j: T) -> void
+        cdef __slice__(self: array[T], i: int, j: int) -> array[T]
+        cdef __slice_left__(self: array[T], i: int) -> array[T]
+        cdef __slice_right__(self: array[T], i: int) -> array[T]
+        cdef __copy__(self: array[T]) -> array[T]
+      type __array__[T](ptr: ptr[byte], len: int):
+        cdef __getitem__(self: __array__[T], i: int) -> T
+        cdef __setitem__(self: __array__[T], i: int, j: T) -> void
       type str(ptr: ptr[byte], len: int):
         cdef __str__(self: str) -> str
       type seq(ptr: ptr[byte], len: int)
