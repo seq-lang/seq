@@ -23,14 +23,18 @@ let typecheck_test_block block_id stmts lines_fail lines_ok =
     Util.A.dcol ~force:true ANSITerminal.[ Background Red; Foreground White; Bold ]
   in
   let set = Hash_set.Poly.create () in
-  let parser ~ctx ?(file = "<internal>") code =
+  (* let parser ~ctx ?(file = "<internal>") ?f code =
     ignore
     @@ Codegen.parse ~file code ~f:(fun stmts ->
-          ignore @@ List.map ~f:(S.parse ~ctx) stmts)
-  in
+          stmts
+          |> List.map ~f:(Option.value f ~default:Fn.id)
+          |> List.map ~f:(S.parse ~ctx)
+          |> ignore)
+  in *)
   let rec try_stmts stmts =
     try
-      let ctx = Typecheck_ctx.init_module ~filename:"test" parser in
+      let parse = Codegen.parse ~f:ignore in
+      let ctx = Typecheck_ctx.init_module ~filename:"test" (parse, E.parse, S.parse) in
       List.map stmts ~f:(function
              | ann, Ast.Stmt.Special ("%typ", [ e ], [ r ]) ->
                 [ ann, Ast.Stmt.Special ("%typ", S.parse ~ctx e, [r]) ]

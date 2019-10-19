@@ -162,10 +162,10 @@ atom:
   | INT_S      { fst $1, IntS (snd $1) }
   | FLOAT_S    { fst $1, FloatS (snd $1) }
   | STRING+
-    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1), 
+    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1),
       String (String.concat @@ List.map $1 ~f:snd) }
   | SEQ+
-    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1), 
+    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1),
       Seq (String.concat @@ List.map $1 ~f:snd) }
   | KMER       { fst $1, Kmer (snd $1) }
   | bool       { fst $1, Bool (snd $1) }
@@ -628,10 +628,10 @@ case_type:
     { IntPattern (Int64.of_string @@ snd $1) }
   | bool
     { BoolPattern (snd $1) }
-  | STRING
-    { StrPattern (snd $1) }
-  | SEQ
-    { SeqPattern (snd $1) }
+  | STRING+
+    { StrPattern (List.map ~f:snd $1 |> String.concat) }
+  | SEQ+
+    { SeqPattern (List.map ~f:snd $1 |> String.concat) }
   // Tuples & lists
   | LP separated_nonempty_list(COMMA, case_type) RP
     { TuplePattern ($2) }
@@ -771,24 +771,24 @@ func:
           fn_stmts = s;
           fn_attrs = [] } }
   // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
-  | EXTERN; dylib = dylib_spec?; name = ID;
+  | EXTERN; name = ID;
     LP params = separated_list(COMMA, extern_param); RP
     typ = func_ret_type?; NL
     { let typ = match typ with
         | Some typ -> typ
-        | None -> $6, Id("void")
+        | None -> $5, Id("void")
       in
       pos $1 (fst typ),
-      Extern ("c", dylib, snd name, { name = snd name; typ = Some typ }, params) }
-  | EXTERN; dylib = dylib_spec?; name = ID; AS alt_name = ID
+      Extern ("c", None, snd name, { name = snd name; typ = Some typ }, params) }
+  | EXTERN; name = ID; AS alt_name = ID
     LP params = separated_list(COMMA, extern_param); RP
     typ = func_ret_type?; NL
     { let typ = match typ with
         | Some typ -> typ
-        | None -> $6, Id("void")
+        | None -> $5, Id("void")
       in
       pos $1 (fst typ),
-      Extern ("c", dylib, snd name, { name = snd alt_name; typ = Some typ }, params) }
+      Extern ("c", None, snd name, { name = snd alt_name; typ = Some typ }, params) }
 
 // Extern paramerers
 extern_param:
@@ -834,15 +834,11 @@ cls:
       in
       let args = [] in
       let members = List.filter_map members ~f:Fn.id in
-      (*function
-        | Some (_, Declare _) -> None
-        | p -> p)
-      in *)
       let args = if (List.length args) <> 0 then Some args else None in
       let generics = Option.value generics ~default:[] in
-      pos $1 $5,
-      Class
-        { class_name = snd $2; generics; args; members } }
+      let g = { class_name = snd $2; generics; args; members } in
+      pos $1 $5, Class g
+    }
 dataclass_member:
   | class_member { $1 }
   | decl_statement { Some $1 }
@@ -858,12 +854,12 @@ typ:
     { pos (fst $1) $2,
       Type { (snd $1) with members = List.filter_opt members } }
 type_head:
-  | TYPE ID LP separated_list(COMMA, typed_param) RP
-    { pos $1 $5,
+  | TYPE ID generics = generic_list? LP separated_list(COMMA, typed_param) RP
+    { pos $1 $6,
       { class_name = snd $2;
-        generics = [];
-        args = Some $4;
-        members = [] } }
+        generics = Option.value generics ~default:[];
+        args = None;
+        members = List.map $5 ~f:(fun x -> pos $4 $6, Declare x) } }
 
 // Class extensions (extend name)
 extend:
@@ -891,11 +887,11 @@ decorator:
     { noimp "decorator" (* Decorator ($2, $4) *) }
 
 special_statement:
-  | INTERNAL expr STRING NL
+  | INTERNAL expr STRING+ NL
     { match snd $1 with
       | "%typ" | "%err" ->
         pos (fst $1) $4,
-        Special (snd $1, [ fst $2, Expr $2 ], [snd $3])
+        Special (snd $1, [ fst $2, Expr $2 ], [List.map $3 ~f:snd |> String.concat])
       | _ -> noimp "invalid special" }
   | INTERNAL ID COLON suite
     { match snd $1 with

@@ -123,7 +123,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         if is_some typ
         then serr ~pos:(fst @@ Option.value_exn typ) "type annotations not supported in JIT mode";
         let rh_expr = E.parse ~ctx rhs in
-        let v = Llvm.JIT.var ctx.mdl rh_expr in
+        let v = Llvm.JIT.var ctx.env.mdl rh_expr in
         let var_expr = Llvm.Expr.var v in
         (* eprintf ">> jit_var %s := %s\n%!" (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs); *)
         (* finalize ~ctx stmt pos; *)
@@ -153,7 +153,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let index_expr = E.parse ~ctx index_expr in
       let rh_expr = E.parse ~ctx rhs in
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
-    | _ -> serr ~ann "invalid assignment statement"
+    | _ -> serr ~ann:pos "invalid assignment statement"
 
   and parse_declare ctx ann ~toplevel ~jit { name; typ } =
     if jit then serr ~ann "declarations not yet supported in JIT mode";

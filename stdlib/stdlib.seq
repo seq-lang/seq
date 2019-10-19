@@ -1,13 +1,41 @@
+
+base = 0
+if base < 0 or base > 36 or base == 1:
+    print 'hai!'
+
+extend str:
+    def __bool__(self: strs):
+        return self.len != 0
+
+    def __str__(self: str):
+        return self
+
+    def __len__(self: str):
+        return self.len
+
+    def __copy__(self: str):
+        return self
+
+    def __add__(self: str, other: str):
+        len1 = self.len
+        len2 = other.len
+        len3 = len1 + len2
+        p = ptr[byte](len3)
+        str.memcpy(p, self.ptr, len1)
+        str.memcpy(p + len1, other.ptr, len2)
+        return str(p, len3)
+
+
 import! err
 
-type i8  = Int[8]
-type i16 = Int[16]
-type i32 = Int[32]
-type i64 = Int[64]
-type u8  = UInt[8]
-type u16 = UInt[16]
-type u32 = UInt[32]
-type u64 = UInt[64]
+# type i8  = Int[8]
+# type i16 = Int[16]
+# type i32 = Int[32]
+# type i64 = Int[64]
+# type u8  = UInt[8]
+# type u16 = UInt[16]
+# type u32 = UInt[32]
+# type u64 = UInt[64]
 
 type range(lo: int, hi: int, step: int):
     def __init__(self: range, lo: int, hi: int, step: int) -> range:
@@ -322,27 +350,6 @@ extend str:
 
     def __ge__(self: str, other: str):
         return self._cmp(other) >= 0
-
-    def __str__(self: str):
-        return self
-
-    def __len__(self: str):
-        return self.len
-
-    def __bool__(self: str):
-        return self.len != 0
-
-    def __copy__(self: str):
-        return self
-
-    def __add__(self: str, other: str):
-        len1 = self.len
-        len2 = other.len
-        len3 = len1 + len2
-        p = ptr[byte](len3)
-        str.memcpy(p, self.ptr, len1)
-        str.memcpy(p + len1, other.ptr, len2)
-        return str(p, len3)
 
     def _slice_error(self: str):
         raise IndexError("string slice index error")

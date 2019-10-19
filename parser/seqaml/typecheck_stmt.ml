@@ -79,7 +79,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     match R.magic ~ctx ~args:[var_of_node_exn rh] (var_of_node_exn lh) magic with
     | None ->
       Util.A.dy "hyar";
-      ignore @@ parse ~ctx @@ C.sannotate ~ctx @@ s_assign ~shadow:Shadow lh (e_binary lh op rh);
+      ignore @@ parse ~ctx @@ C.sannotate (C.ann ctx) @@ s_assign ~shadow:Shadow lh (e_binary lh op rh);
       Pass ()
     | Some t ->
       Ann.(Util.A.dy "hyar hray... %s %s %s"
@@ -116,7 +116,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
       in
       let len, op = if !unpack_i > -1 then len - 1, ">=" else len, "==" in
       let assert_stmt = s_assert (e_binary (e_call (e_dot rhs "__len__") []) op (e_int len)) in
-      ignore @@ List.map (assert_stmt :: lst) ~f:(fun s -> parse ~ctx (C.sannotate ~ctx s));
+      ignore @@ List.map (assert_stmt :: lst) ~f:(fun s -> parse ~ctx (C.sannotate (C.ann ctx) s));
       Pass ()
     | [ lhs ], [ rhs ] ->
       let rhs = E.parse ~ctx:(C.enter_level ~ctx) rhs in
@@ -154,14 +154,15 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
         Assign ([lhs], [rhs], shadow, None)
       | Index (var_expr, [ idx ]), None ->
         let var_expr = E.parse ~ctx var_expr in
-        ( match var_of_node_exn var_expr |> Ann.real_type with
-          | Class ({ cache = "ptr", p; _ }, _) when p = Ann.default_pos ->
+        (* ( match var_of_node_exn var_expr |> Ann.real_type with *)
+          (* | Class ({ cache = "ptr", p; _ }, _) when p = Ann.default_pos ->
             (* TODO: T.unify_inplace typ  *)
-            Assign ([ E.parse ~ctx lhs ], [ rhs ], shadow, dectyp)
+            Assign ([ E.parse ~ctx lhs ], [ rhs ], shadow, dectyp) *)
             (* Expr (C.magic_call E.parse ~ctx ~magic:"__setitem__" var_expr ~args:[ idx; rhs ]) *)
-          | _ ->
+          (* | _ -> *)
             (* a[x] = b *)
-            Expr (C.magic_call E.parse ~ctx ~magic:"__setitem__" var_expr ~args:[ idx; rhs ]) )
+            Expr (C.magic_call E.parse ~ctx ~magic:"__setitem__" var_expr ~args:[ idx; rhs ])
+            (* ) *)
       | _ -> C.err ~ctx "invalid assign statement"
 
   and parse_declare ?(prefix = "") ctx { name; typ } =
@@ -240,7 +241,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
         Ctx.add ~ctx for_var (Var tvar);
         ( for_var
         , List.mapi for_vars ~f:(fun idx v ->
-              C.sannotate ~ctx
+              C.sannotate (C.ann ctx)
               @@ s_assign (e_id v) (e_index (e_id for_var) [ e_int idx ])) )
     in
     let stmts = List.concat @@ List.map (init_stmts @ stmts) ~f:(parse ~ctx) in
@@ -367,7 +368,11 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
   and parse_impaste ctx ?(ext = ".seq") from =
     match Util.get_from_stdlib ~ext from with
     | Some file ->
-      C.parse_file ~ctx file;
+      In_channel.read_lines file
+      |> String.concat ~sep:"\n"
+      |> fun s -> ctx.globals.parse ~file:(Filename.realpath file) (s ^ "\n")
+      |> List.map ~f:(ctx.globals.sparse ~ctx)
+      |> ignore;
       ImportPaste from
     | None -> C.err ~ctx "cannot locate module %s" from
 
@@ -395,11 +400,12 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
   and parse_extern ctx ?(prefix = "") f =
     let lang, dylib, ctxn, fn, args = f in
     let args =
-      List.map args ~f:(fun arg ->
+      List.mapi args ~f:(fun i arg ->
           match arg.typ with
           | Some typ ->
             let typ = E.parse ~ctx typ in
-            { arg with typ = Some typ }, (arg.name, var_of_node_exn typ)
+            let name = if arg.name = "" then sprintf "a%d" i else arg.name in
+            { name; typ = Some typ }, (name, var_of_node_exn typ)
           | None -> C.err ~ctx "extern functions must explicitly state parameter types"
       )
     in
@@ -535,13 +541,15 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     let cls, tcls, typ =
       let t =
         Ctx.in_scope ~ctx class_name
-        >>= function Type t -> Some t | _ -> None
+        >>= (function Type t -> Some t | z -> None)
         >>| Ann.real_type
       in
       match t with
         | Some (Class (c, _)) ->
           fst @@ Hashtbl.find_exn ctx.globals.realizations c.cache, c, t
-        | _ -> C.err ~ctx "%s is not a class" class_name
+        | Some z ->
+          C.err ~ctx "%s is not a class" class_name
+        | None -> C.err ~ctx "%s is not a class" class_name
     in
     Ctx.add_block ~ctx;
     let ctx = C.enter_level ~ctx in
@@ -651,7 +659,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
     let cls_members =
       List.map (init :: cls.members) ~f:(fun s ->
           let prefix = sprintf "%s." class_name in
-          let typ, node =
+          let typ, node, name =
            match snd s with
             | Function f ->
               (* Util.A.dr "--> f %s %s" prefix (Stmt.to_string s); *)
@@ -661,17 +669,17 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
                 member_table
                 ~key:f.fn_name.name
                 ~data:(Option.value_exn typ);
-              typ, stmt
+              typ, stmt, f.fn_name.name
             | Extern ((_, _, _, fn, _) as f) ->
               let stmt = parse_extern ctx ~prefix f in
               let typ = Ctx.in_block ~ctx (prefix ^ fn.name) in
               Hashtbl.add_multi member_table ~key:fn.name ~data:(Option.value_exn typ);
-              typ, stmt
+              typ, stmt, fn.name
             | Class c ->
               let stmt = parse_class ctx ~prefix c in
               let typ = Ctx.in_block ~ctx (prefix ^ c.class_name) in
               Hashtbl.set member_table ~key:c.class_name ~data:[ Option.value_exn typ ];
-              typ, stmt
+              typ, stmt, c.class_name
             | Declare ({ name; _ } as d) ->
               let stmt = parse_declare ctx ~prefix d in
               let typ = Ctx.in_block ~ctx (prefix ^ name) in
@@ -683,9 +691,10 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) :
               Hashtbl.set member_table ~key:name ~data:[ Var typ ];
               (* Util.A.dr "[class %s] param %s -> %s"
                   class_name name (Ann.var_to_string ~full:true typ); *)
-              Some (Var typ), stmt
+              Some (Var typ), stmt, name
             | _ -> ierr "invalid class member"
           in
+          Util.A.dy ">> %s :: adding %s = %s" class_name name (Ann.typ_to_string@@Option.value_exn typ);
           { (fst s) with typ }, node)
     in
     let ctx = C.exit_level ~ctx in

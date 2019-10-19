@@ -18,7 +18,9 @@ module Ann = struct
   include Ast_ann
 
   let pos_to_string t =
-    sprintf "%s:%d:%d" (Filename.basename t.file) t.line t.col
+    match t.file with
+    | "/internal" -> "<internal>"
+    | f -> sprintf "%s:%d:%d" (Filename.basename f) t.line t.col
 
   let rec var_to_string ?(generics = Int.Table.create ()) ?(full=false) t =
     let f = var_to_string ~generics ~full in
@@ -54,7 +56,8 @@ module Ann = struct
 
   let typ_to_string ?(full=false) = function
     | Import s -> sprintf "<import: %s>" s
-    | Type t
+    | Type t ->
+      if full then sprintf "<type: %s>" (var_to_string ~full t) else var_to_string t
     | Var t -> var_to_string ~full t
 
   let t_to_string ?(full=false) = function
@@ -64,12 +67,18 @@ module Ann = struct
   let to_string t =
     sprintf "<%s |= %s>" (pos_to_string t.pos) (t_to_string t.typ)
 
-  let create ?(file="") ?(line=(-1)) ?(col=(-1)) ?(len=0) ?typ () =
+  let create ?(file="/internal") ?(line=(-1)) ?(col=(-1)) ?(len=0) ?typ () =
     { pos = { file; line; col; len } ; typ }
 
   let rec real_type = function
     | Link { contents = Bound t } -> real_type t
     | t -> t
+
+  let rec real_t t =
+    match t with
+    | None | Some (Import _) -> t
+    | Some Type t  -> Some (Type (real_type t))
+    | Some Var t -> Some (Var (real_type t))
 
   let is_type = function
     | { typ = Some (Type _) ; _ } -> true

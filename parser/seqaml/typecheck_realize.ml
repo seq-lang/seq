@@ -114,7 +114,7 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
       T.link_to_parent ~parent:(List.hd parents) (Ann.var_of_typ_exn realized_typ.typ)
     (* Case 2 - needs realization *)
     | None, Some (Class _) ->
-      Util.dbg "[real] realizing class %s ==> %s" cls.name real_name;
+      (* Util.dbg "[real] realizing class %s ==> %s" cls.name real_name; *)
       let c_args =
         Hashtbl.find_exn ctx.globals.classes cls.cache
         |> Hashtbl.to_alist
@@ -149,6 +149,27 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
       let ast = typ, snd ast in
       let cache_entry = { cache_entry with realized_ast = Some ast } in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
+
+      (* if snd cls.cache = Ann.default_pos then (
+        let open Llvm.Type in
+        let name = fst cls.cache in
+        ( match name with
+          | "void" -> void ()
+          | "int" -> int ()
+          | "bool" -> bool ()
+          | "float" -> float ()
+          | "byte" -> byte ()
+          | "str" -> str ()
+          | "seq" -> seq ()
+          | "ptr" -> ptr [typ]
+          | "array" -> ptr [typ]
+          | "KInt" -> kmerN n
+          | "Int" -> intN n
+          | "UInt" -> uintN n
+          | _ -> Ctypes.null )
+        |> get_methods
+        |> List.iter ~f:(fun (s, t) -> add_internal_method name s (get_name t))
+      ); *)
       tv
     | _ -> C.err ~ctx "cannot find %s to realize" cls.name
 
@@ -188,7 +209,6 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
                   | Func (f, _) as t ->
                     let f_args = List.map f.args ~f:snd in
                     let s = T.sum_or_neg (typ :: args) f_args ~f:T.unify in
-                    Util.A.dy "MAGIC ? %s %d" (Ann.var_to_string t) s;
                     if s = -1 then None else Some ((f.cache, t), s)
                   | _ -> None))
         >>| List.fold ~init:(None, -1) ~f:(fun (acc, cnt) cur ->

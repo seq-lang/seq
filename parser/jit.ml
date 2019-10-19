@@ -100,7 +100,7 @@ let jits: (nativeint, t) Hashtbl.t = Hashtbl.Poly.create ()
 
 let c_init () =
   let hnd = init () in
-  let p = Ctypes.raw_address_of_ptr hnd.ctx.mdl in
+  let p = Ctypes.raw_address_of_ptr hnd.ctx.env.mdl in
   Hashtbl.set jits ~key:p ~data:hnd;
   (* eprintf "[lib] %nx\n%!" p; *)
   p
@@ -114,7 +114,7 @@ let c_exec hnd code =
     exec jit code
   with
   | Err.CompilerError (typ, pos_lst) ->
-    eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:code typ
+    eprintf "%s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) ~file:code typ
 
 let c_close hnd =
   let jit = Hashtbl.find_exn jits hnd in

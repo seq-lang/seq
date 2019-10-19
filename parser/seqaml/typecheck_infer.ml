@@ -79,13 +79,17 @@ let sum_or_neg ~f g1 g2 =
 let rec unify ?(on_unify = ignore2) t1 t2 =
   let u = unify ~on_unify in
   match t1, t2 with
-  | t1, t2 when t1 = t2 -> 1
-  | Ann.Class (c1, t1), Ann.Class (c2, t2) when c1.name = c2.name && t1 = t2 ->
+  (* | t1, t2 when t1 = t2 -> 1 *)
+  | Ann.Link { contents = Generic g1 }, Ann.Link { contents = Generic g2 } when g1 = g2 ->
+    1
+  | Link { contents = Unbound g1 }, Link { contents = Unbound g2 } when g1 = g2 ->
+    1
+  | Class (c1, t1), Class (c2, t2) when c1.cache = c2.cache (*&& t1 = t2*) ->
     let s = sum_or_neg c1.generics c2.generics
         ~f:(fun (n1, (_, t1)) (n2, (_, t2)) -> if n1 <> n2 then -1 else u t1 t2)
     in
     if s = -1 then -1 else 1 + s
-  | Func (f1, r1), Func (f2, r2) when f1.name = f2.name ->
+  | Func (f1, r1), Func (f2, r2) when f1.cache = f2.cache ->
     let s1 = sum_or_neg f1.generics f2.generics
         ~f:(fun (n1, (_, t1)) (n2, (_, t2)) -> if n1 <> n2 then -1 else u t1 t2)
     in

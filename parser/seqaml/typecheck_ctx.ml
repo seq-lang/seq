@@ -53,7 +53,9 @@ type tglobal =
   ; classes : (Ann.tlookup, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; imports : (string, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; pod_types : (string, Ann.tlookup) Hashtbl.t
-  ; parser : ctx:t -> ?file:string -> string -> unit
+  ; parse : ?file:string -> string -> Stmt.t Ann.ann list
+  ; eparse : ctx:t -> Expr.t Ann.ann -> Expr.t Ann.ann
+  ; sparse : ctx:t -> Stmt.t Ann.ann -> Stmt.t Ann.ann list
   ; stdlib : (string, Ast.Ann.ttyp list) Hashtbl.t
   }
 
@@ -79,8 +81,7 @@ let ann ?typ (ctx : t) =
   let ann = Stack.top_exn ctx.env.annotations in
   { ann with typ }
 
-let sannotate ~(ctx : t) node =
-  let c = ann ctx in
+let sannotate c node =
   let patch (a, n) = Ann.{ a with pos = c.pos }, n in
   Stmt.walk ~fe:patch ~f:patch node
 
@@ -165,17 +166,43 @@ let get_full_name ?ctx (ann : Ann.tvar) =
   in
   ppl ~sep:":" ~f:Ann.var_to_string (List.rev (ann :: parents)), parents
 
-let parse_file ~(ctx : t) file =
+(* let parse_file ~(ctx : t) file =
   Util.dbg "parsing %s" file;
   let lines = In_channel.read_lines file in
   let code = String.concat ~sep:"\n" lines ^ "\n" in
-  ctx.globals.parser ~ctx ~file:(Filename.realpath file) code
+  ctx.globals.parser ~ctx ~file:(Filename.realpath file) code *)
 
-let init_module ?(argv = false) ~filename parser =
+let dump_ctx (ctx : t) =
+  Stack.iter ctx.stack ~f:(fun map ->
+      Hash_set.to_list map
+      |> List.sort ~compare:String.compare
+      |> List.iter ~f:(fun key ->
+            let printable k =
+              match k.[0], k.[1] with
+              | ('u' | 'i' | 'k'), i ->
+                if  i > '3' then false
+                else if String.length k > 2 && Char.is_digit k.[2] then false
+                else not (String.is_substring key ~substring:"__")
+              | _ -> not (String.is_substring key ~substring:"__")
+            in if printable key
+             then (
+               let t = Option.value_exn (Ctx.in_scope ~ctx key) in
+               match t with
+               | Type t | Var t ->
+                (match Ann.real_type t with
+                | Func (g, _) | Class (g, _) ->
+                  Util.dbg "%10s: %s [%s:%s]" key (Ann.var_to_string ~full:true t) (fst g.cache)
+                    (Ann.pos_to_string (snd g.cache))
+                | _ ->
+                  Util.dbg "%10s: %s" key (Ann.var_to_string ~full:true t) )
+               | t -> Util.dbg "%10s: %s" key (Ann.typ_to_string t))))
+
+
+let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
   let internal_cnt = ref 0 in
   let next_pos () =
     incr internal_cnt;
-    Ann.create ~file:"<internal>" ~line:(!internal_cnt - 1) ~col:0 ()
+    Ann.create ~file:"/internal" ~line:(!internal_cnt - 1) ~col:0 ()
   in
   let main_realization = "", Ann.default_pos in
   let ctx =
@@ -186,7 +213,9 @@ let init_module ?(argv = false) ~filename parser =
       ; classes = Hashtbl.Poly.create ()
       ; pod_types = String.Table.create ()
       ; imports = String.Table.create ()
-      ; parser
+      ; parse
+      ; eparse
+      ; sparse
       ; stdlib = String.Table.create ()
       }
       { level = 0
@@ -212,7 +241,7 @@ let init_module ?(argv = false) ~filename parser =
           ; members = []
           ; args = None })
       in
-      let cache = class_name, (Ann.create ()).pos in
+      let cache = class_name, Ann.default_pos in
       let generics = List.init generic ~f:(fun i ->
         let id = !(ctx.globals.unbound_counter) in
         incr ctx.globals.unbound_counter;
@@ -239,15 +268,22 @@ let init_module ?(argv = false) ~filename parser =
     let add_internal_method class_name name signature =
       assert (String.prefix signature 9 = "function[");
       assert (String.suffix signature 1 = "]");
-      let signature = String.drop_prefix (String.drop_suffix signature 1) 9 in
-      let args = List.map (String.split ~on:',' signature) ~f:(Ctx.in_scope ~ctx) in
-      if List.for_all args ~f:is_some then (
+      try (
+        let signature = String.drop_prefix (String.drop_suffix signature 1) 9 in
+        (* Util.A.dr "%s.%s ->> %s" class_name name signature; *)
+        let args = List.map (String.split ~on:',' signature) ~f:(fun expr ->
+          ctx.globals.parse expr
+          |> (function
+              | [ _, Stmt.Expr e ] ->
+                (* Util.A.dy "%s" @@ (Expr.to_string e); *)
+                (fst (ctx.globals.eparse ~ctx e)).typ
+              | _ -> ierr "parse expected single expression"))
+        in
         let ret, args =
-          match List.filter_map args ~f:Fn.id with
+          match args with
           | ret :: args -> ret, args
           | _ -> failwith "bad type"
         in
-        Util.A.dr "%s.%s ->> %s" class_name name signature;
         let f_cache = name, Ann.default_pos in
         let typ =
           Ann.Var (Ann.Func (
@@ -255,9 +291,9 @@ let init_module ?(argv = false) ~filename parser =
             ; name = sprintf "%s.%s" class_name name
             ; cache = f_cache
             ; parent = (class_name, Ann.default_pos), None
-            ; args = List.map args ~f:(fun a -> "", Ann.var_of_typ_exn (Some a))
+            ; args = List.mapi args ~f:(fun i a -> sprintf "a%d" i, Ann.var_of_typ_exn a)
             },
-            { ret = Ann.var_of_typ_exn (Some ret)
+            { ret = Ann.var_of_typ_exn ret
             ; used = String.Hash_set.create () }))
         in
         Ctx.add ~ctx (sprintf "%s.%s" class_name name) typ;
@@ -267,49 +303,65 @@ let init_module ?(argv = false) ~filename parser =
           ~key:f_cache
           ~data:((Ann.create ~typ (), ast), String.Table.create ());
         Hashtbl.find_and_call ctx.globals.classes (class_name, Ann.default_pos)
-          ~if_found:(Hashtbl.add_multi ~key:name ~data:typ) ~if_not_found:(const ()))
+          ~if_found:(Hashtbl.add_multi ~key:name ~data:typ) ~if_not_found:(const ())
+      ) with SeqCamlError _ ->
+       ()
     in
 
     (* Initialize C POD types *)
-    let pod_types = Llvm.Type.
-        [ "void", void ; "int", int ; "bool", bool ; "float", float ; "byte", byte ]
+    let pod_types = List.concat Llvm.Type.[
+        [ "void", void () ; "int", int () ; "bool", bool () ; "float", float () ; "byte", byte () ] ;
+        (*List.init 2048*) List.map [1;2;4;8;16;32;64;128;256] ~f:(fun n -> sprintf "u%d" n, uintN n) ;
+        (*List.init 2048*) List.map [1;2;4;8;16;32;64;128;256] ~f:(fun n -> sprintf "i%d" n, intN n) ;
+        (*List.init 1024*) List.map [1;2;4;8;16;32;64;128;256] ~f:(fun n -> sprintf "k%d" n, kmerN n)
+      ]
     in
-    List.iter pod_types ~f:(fun (name, _) -> create_class name ~is_type:true);
-    List.iter pod_types ~f:(fun (name, ll) ->
-        let open Llvm.Type in
-        ll ()
-        |> get_methods
-        |> List.iter ~f:(fun (s, t) -> add_internal_method name s (get_name t)));
-
-    (* Initialize internal generics *)
-    create_class ~generic:1 "generator";
-    create_class ~generic:1 "ptr";
-    (* create_class ~generic:1 "Int"; *)
-    (* create_class ~generic:1 "UInt"; *)
     (* create_class ~generic:1 "Kmer"; *)
-
-    let compound_types = Llvm.Type.["str", str; "seq", seq] in
-    ctx.globals.parser ~ctx
-    (Util.unindent {|
-    class array[T]:
-      ptr: ptr[byte]
-      len: int
-    class str:
-      ptr: ptr[byte]
-      len: int
-    class seq:
-      ptr: ptr[byte]
-      len: int
-    |});
-    List.iter compound_types ~f:(fun (name, ll) ->
-      let open Llvm.Type in
-      ll ()
-      |> get_methods
-      |> List.iter ~f:(fun (s, t) -> add_internal_method name s (get_name t)));
+    List.iter pod_types ~f:(fun (name, _) -> create_class name ~is_type:true);
+    ctx.globals.parse
+      (Util.unindent {|
+      class generator[T]:
+        pass
+      class ptr[T]:
+        cdef __init__(self: ptr[T], i: int)
+        cdef __bool__(self: ptr[T]) -> bool
+        cdef __getitem__(self: ptr[T], i: int) -> T
+        cdef __setitem__(self: ptr[T], i: int, j: T) -> void
+        cdef __add__(self: ptr[T], i: int) -> ptr[T]
+        cdef __sub__(self: ptr[T], i: int) -> ptr[T]
+        cdef __eq__(self: ptr[T], x: ptr[T]) -> bool
+        cdef __ne__(self: ptr[T], x: ptr[T]) -> bool
+        cdef __lt__(self: ptr[T], x: ptr[T]) -> bool
+        cdef __gt__(self: ptr[T], x: ptr[T]) -> bool
+        cdef __le__(self: ptr[T], x: ptr[T]) -> bool
+        cdef __ge__(self: ptr[T], x: ptr[T]) -> bool
+      class array[T]:
+        ptr: ptr[byte]
+        len: int
+        cdef __elemsize__() -> int
+      type str(ptr: ptr[byte], len: int)
+      type seq(ptr: ptr[byte], len: int)
+      |})
+    |> List.map ~f:(sannotate Ann.default)
+    |> List.map ~f:(ctx.globals.sparse ~ctx)
+    |> ignore;
+    List.iter (pod_types @ Llvm.Type.["str", str (); "seq", seq ()]) ~f:(fun (n, ll) ->
+        let open Llvm.Type in
+        get_methods ll
+        |> List.iter ~f:(fun (s, t) ->
+          if n = "str" && s = "__init__"  then () else
+          (* && (get_name t) = "function[str,str,ptr[byte],int]" *)
+          add_internal_method n s (get_name t)));
+    (* dump_ctx ctx; *)
 
     (* argv! *)
     match Util.get_from_stdlib "stdlib" with
-    | Some file -> parse_file ~ctx file
+    | Some file ->
+      In_channel.read_lines file
+      |> String.concat ~sep:"\n"
+      |> fun s -> ctx.globals.parse ~file:(Filename.realpath file) (s ^ "\n")
+      |> List.map ~f:(ctx.globals.sparse ~ctx)
+      |> ignore
     | None -> Err.ierr "cannot locate stdlib.seq"
   );
 
@@ -320,20 +372,9 @@ let init_module ?(argv = false) ~filename parser =
 let init_empty ~(ctx : t) =
   let ctx = Ctx.init ctx.globals ctx.env in
   Ctx.add_block ~ctx;
-  (* TODO
   Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
-      add ~ctx ~internal:true ~global:true ~toplevel:true key (fst @@ List.hd_exn data)); *)
+      Ctx.add ~ctx key (List.hd_exn data));
   ctx
-
-let dump_ctx (ctx : t) =
-  Stack.iter ctx.stack ~f:(fun map ->
-      Hash_set.to_list map
-      |> List.sort ~compare:String.compare
-      |> List.iter ~f:(fun key ->
-             if not (String.is_substring key ~substring:"__")
-             then (
-               let t = Option.value_exn (Ctx.in_scope ~ctx key) in
-               Util.dbg "%10s: %s" key (Ann.typ_to_string t))))
 
 let patch ~ctx s =
   let ann = ann ctx in
@@ -346,10 +387,10 @@ let epatch ~ctx s =
   Expr.walk s ~f:(fun (a, s) -> patch a, s)
 
 let make_internal_magic ~ctx name ret_typ arg_types =
-  sannotate ~ctx @@ s_extern ~lang:"llvm" name ret_typ arg_types
+  sannotate (ann ctx) @@ s_extern ~lang:"llvm" name ret_typ arg_types
 
 let magic_call ~ctx ?(args=[]) ~magic parse e =
-  let e = parse ~ctx e in
+  (* let e = parse ~ctx e in *)
   let m = Ann.create () in
   parse ~ctx @@ eannotate ~ctx (e_call (e_dot e magic) args)
 

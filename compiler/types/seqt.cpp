@@ -182,7 +182,7 @@ types::StrType *types::StrType::get() noexcept {
  */
 
 types::KMer::KMer(unsigned k)
-    : Type("k-mer", BaseType::get(), false, true), k(k) {
+    : Type("k", BaseType::get(), false, true), k(k) {
   if (k == 0 || k > MAX_LEN)
     throw exc::SeqException("k-mer length must be between 1 and " +
                             std::to_string(MAX_LEN));
@@ -190,7 +190,7 @@ types::KMer::KMer(unsigned k)
 
 unsigned types::KMer::getK() { return k; }
 
-std::string types::KMer::getName() const { return std::to_string(k) + "-mer"; }
+std::string types::KMer::getName() const { return "k" + std::to_string(k); }
 
 Value *types::KMer::defaultValue(BasicBlock *block) {
   return ConstantInt::get(getLLVMType(block->getContext()), 0);

@@ -56,7 +56,7 @@ type t =
   }
 
 let default_pos : tpos =
-  { file = ""
+  { file = "/internal"
   ; line = -1
   ; col = -1
   ; len = 0
