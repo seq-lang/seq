@@ -247,7 +247,7 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
         let def_args =
           Array.of_list
           @@ List.filter_mapi g.args ~f:(fun i a ->
-                 (* Util.A.db "->> defarg %s" @@ (fst @@ C.get_full_name ~ctx (snd a)); *)
+                 Util.A.db "->> defarg %s" @@ (Ann.var_to_string (snd a));
                  Hashtbl.set arg_table ~key:(fst a) ~data:(i, snd a);
                  if Hash_set.exists f.used ~f:(( = ) (fst a)) then None else Some a)
         in
@@ -418,13 +418,18 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
       let typ = T.link_to_parent ~parent:(Some lt) (T.instantiate ~ctx ~parent:lt t) in
       C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)
     (* Object method access--- obj.fn *)
-    | false, Some (Var (Func ({ args; _ }, _))) ->
-      let trail =
-        match args with
-        | [ a ] -> [ e_ellipsis () ]
-        | a -> List.init (pred @@ List.length args) ~f:(fun _ -> e_ellipsis ())
-      in
-      parse ~ctx @@ C.eannotate ~ctx @@ e_call (e_dot (e_typeof lh_expr') rhs) (lh_expr' :: trail)
+    | false, Some (Var ((Func _) as t)) ->
+      let typ = T.link_to_parent ~parent:(Some lt) (T.instantiate ~ctx ~parent:lt t) in
+      ( match lt, typ with
+        | (Class (lg, _) | Func (lg, _)),
+          Func ({ args = (hd_n, hd_t) :: tl; _ } as g, f) ->
+          T.unify_inplace ~ctx (T.instantiate ~ctx hd_t) lt;
+          let hd_t = T.link_to_parent ~parent:(snd lg.parent) hd_t in
+          let used = Hash_set.copy f.used in
+          Hash_set.add used hd_n;
+          let typ = Ann.Func ({ g with args = (hd_n, hd_t) :: tl }, { f with used }) in
+          C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)
+        | _ -> ierr "cannot happen")
     (* Object member access--- obj.mem *)
     | false, Some (Var t) ->
       (* What if there are NO proper parents? *)
