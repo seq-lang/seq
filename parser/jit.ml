@@ -65,8 +65,7 @@ let exec (jit : t) code =
 let repl () =
   let banner = String.make 78 '=' in
   eprintf "\027[102m%s\027[0m \n" banner;
-  eprintf "\027[102m=%s%s%s=\027[0m \n"
-    (String.make 34 ' ') "Seq REPL" (String.make 34 ' ');
+  eprintf "\027[102m=%s%s%s=\027[0m \n" (String.make 34 ' ') "Seq REPL" (String.make 34 ' ');
   eprintf "\027[102m%s\027[0m \n%!" banner;
   let jit = init () in
   let start = ref true in
@@ -85,7 +84,8 @@ let repl () =
         eprintf "      \r%!";
         (try exec jit !code with
         | Err.CompilerError (typ, pos_lst) ->
-          eprintf "%s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) ~file:!code typ);
+          eprintf "%s\n%!"
+          @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) ~file:!code typ);
         if !code = ""
         then raise Exit
         else (
@@ -95,8 +95,7 @@ let repl () =
   with
   | Exit -> eprintf "\n\027[31mbye (%d) \027[0m\n%!" jit.cnt
 
-
-let jits: (nativeint, t) Hashtbl.t = Hashtbl.Poly.create ()
+let jits : (nativeint, t) Hashtbl.t = Hashtbl.Poly.create ()
 
 let c_init () =
   let hnd = init () in
@@ -110,11 +109,10 @@ let c_exec hnd code =
   let jit = Hashtbl.find_exn jits hnd in
   (* Hashtbl.iter_keys jit.ctx.map ~f:(fun k ->
     eprintf "[lib] keys: %s ... \n%!" k); *)
-  try
-    exec jit code
-  with
+  try exec jit code with
   | Err.CompilerError (typ, pos_lst) ->
-    eprintf "%s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) ~file:code typ
+    eprintf "%s\n%!"
+    @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) ~file:code typ
 
 let c_close hnd =
   let jit = Hashtbl.find_exn jits hnd in

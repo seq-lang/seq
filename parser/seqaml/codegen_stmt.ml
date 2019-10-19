@@ -89,7 +89,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   and parse_assign ctx pos ~toplevel ~jit (lhs, rhs, shadow, typ) =
     match lhs, rhs with
-    | [(ann, Id var) as lhs], [rhs] ->
+    | [ ((ann, Id var) as lhs) ], [ rhs ] ->
       (match jit && toplevel, Hashtbl.find ctx.map var, shadow with
       | _, None, Update -> serr ~ann "%s not found" var
       | false, Some ((Codegen_ctx.Var _, { base; global; _ }) :: _), Update
@@ -103,9 +103,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             ~ann:(fst @@ Option.value_exn typ)
             "invalid type annotation (%s already defined)"
             var;
-        if global
-           && ctx.env.base = base
-           && Stack.exists ctx.env.flags ~f:(( = ) "atomic")
+        if global && ctx.env.base = base && Stack.exists ctx.env.flags ~f:(( = ) "atomic")
         then (
           match shadow, snd rhs with
           | Update, _ -> Llvm.Stmt.expr @@ E.parse ~ctx rhs
@@ -131,7 +129,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         (* Llvm.Stmt.expr var_expr *)
         (* Llvm.Stmt.assign v rh_expr *)
         Llvm.Stmt.pass ()
-        (* assign v @@ rh_expr *)
+      (* assign v @@ rh_expr *)
       | false, r, _ ->
         (match r with
         | Some (_ :: _) -> Llvm.Module.warn ~ann "shadowing %s" var
@@ -143,11 +141,11 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         if toplevel then Llvm.Var.set_global v;
         Codegen_ctx.add ~ctx ~toplevel ~global:toplevel var (Codegen_ctx.Var v);
         var_stmt)
-    | [ann, Dot (lh_lhs, lh_rhs)], [rhs] ->
+    | [ (ann, Dot (lh_lhs, lh_rhs)) ], [ rhs ] ->
       (* a.x = b *)
       let rh_expr = E.parse ~ctx rhs in
       Llvm.Stmt.assign_member (E.parse ~ctx lh_lhs) lh_rhs rh_expr
-    | [ann, Index (var_expr, [ index_expr ])], [rhs] ->
+    | [ (ann, Index (var_expr, [ index_expr ])) ], [ rhs ] ->
       (* a[x] = b *)
       let var_expr = E.parse ~ctx var_expr in
       let index_expr = E.parse ~ctx index_expr in
@@ -158,8 +156,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   and parse_declare ctx ann ~toplevel ~jit { name; typ } =
     if jit then serr ~ann "declarations not yet supported in JIT mode";
     match Hashtbl.find ctx.map name with
-    | Some ((Codegen_ctx.Var _, { base; global; toplevel; _ }) :: _)
-      when ctx.env.base = base ->
+    | Some ((Codegen_ctx.Var _, { base; global; toplevel; _ }) :: _) when ctx.env.base = base ->
       serr ~ann:(fst @@ Option.value_exn typ) "%s already defined" name
     | r ->
       (match r with
@@ -219,8 +216,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     Llvm.Stmt.assrt expr
 
   and parse_type_alias ctx ann ~toplevel (name, expr) =
-    if is_some @@ Ctx.in_scope ~ctx name
-    then Llvm.Module.warn ~ann "shadowing existing %s" name;
+    if is_some @@ Ctx.in_scope ~ctx name then Llvm.Module.warn ~ann "shadowing existing %s" name;
     let typ = E.parse_type ~ctx expr in
     Codegen_ctx.add ~ctx ~toplevel ~global:toplevel name (Codegen_ctx.Type typ);
     Llvm.Stmt.pass ()
@@ -254,8 +250,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let _ =
       match next with
       | Some next -> next ctx for_ctx for_stmt
-      | None ->
-        ignore @@ List.map stmts ~f:(parse ~ctx:for_ctx ~toplevel:false ~jit:false)
+      | None -> ignore @@ List.map stmts ~f:(parse ~ctx:for_ctx ~toplevel:false ~jit:false)
     in
     Ctx.clear_block ~ctx:for_ctx;
     for_stmt
@@ -306,11 +301,9 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
                    ~toplevel
                    (lang, dylib, ctx_name, { name; typ }, args) =
     if lang <> "c" then serr ~ann "only cdef externs are currently supported";
-    if is_some @@ Ctx.in_block ~ctx ctx_name
-    then Llvm.Module.warn ~ann "shadowing %s" ctx_name;
+    if is_some @@ Ctx.in_block ~ctx ctx_name then Llvm.Module.warn ~ann "shadowing %s" ctx_name;
     let names, types =
-      List.map args ~f:(fun { name; typ } ->
-          name, E.parse_type ~ctx (Option.value_exn typ))
+      List.map args ~f:(fun { name; typ } -> name, E.parse_type ~ctx (Option.value_exn typ))
       |> List.unzip
     in
     let fn = Llvm.Func.func name in
@@ -319,12 +312,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let typ = E.parse_type ~ctx (Option.value_exn typ) in
     Llvm.Func.set_type fn typ;
     let names = List.map args ~f:(fun x -> x.name) in
-    Codegen_ctx.add
-      ~ctx
-      ~toplevel
-      ~global:toplevel
-      ctx_name
-      (Codegen_ctx.Func (fn, names));
+    Codegen_ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Codegen_ctx.Func (fn, names));
     Llvm.Stmt.func fn
 
   and parse_extend ctx ann ~toplevel (name, stmts) =
@@ -426,16 +414,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         Llvm.Type.add_cls_method cls name fn;
         fn
       | None ->
-        if is_some @@ Ctx.in_block ~ctx name
-        then Llvm.Module.warn ~ann "shadowing %s" name;
+        if is_some @@ Ctx.in_block ~ctx name then Llvm.Module.warn ~ann "shadowing %s" name;
         let fn = Llvm.Func.func name in
         let names = List.map fn_args ~f:(fun x -> x.name) in
-        Codegen_ctx.add
-          ~ctx
-          ~toplevel
-          ~global:toplevel
-          name
-          (Codegen_ctx.Func (fn, names));
+        Codegen_ctx.add ~ctx ~toplevel ~global:toplevel name (Codegen_ctx.Func (fn, names));
         if not toplevel then Llvm.Func.set_enclosing fn ctx.env.base;
         fn
     in
@@ -482,16 +464,9 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       if is_some @@ Ctx.in_scope ~ctx cls.class_name
       then Llvm.Module.warn ~ann "shadowing %s" cls.class_name;
       let typ =
-        if is_type
-        then Llvm.Type.record [] [] cls.class_name
-        else Llvm.Type.cls cls.class_name
+        if is_type then Llvm.Type.record [] [] cls.class_name else Llvm.Type.cls cls.class_name
       in
-      Codegen_ctx.add
-        ~ctx
-        ~toplevel
-        ~global:toplevel
-        cls.class_name
-        (Codegen_ctx.Type typ);
+      Codegen_ctx.add ~ctx ~toplevel ~global:toplevel cls.class_name (Codegen_ctx.Type typ);
       typ
     in
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map; stack = Stack.create () } in
@@ -501,15 +476,13 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     | None -> ()
     | Some args ->
       List.iter args ~f:(fun { name; typ } ->
-          if is_none typ then serr ~ann "class member %s needs type specification" name
-      );
+          if is_none typ then serr ~ann "class member %s needs type specification" name);
       let names, types =
         if is_type
         then
           List.unzip
           @@ List.map args ~f:(function
-                 | { name; typ = None } ->
-                   serr ~ann "type member %s needs type specification" name
+                 | { name; typ = None } -> serr ~ann "type member %s needs type specification" name
                  | { name; typ = Some t } -> name, E.parse_type ~ctx t)
         else
           parse_generics
@@ -567,15 +540,12 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   and parse_global ctx ann var =
     match Hashtbl.find ctx.map var with
     | Some ((Codegen_ctx.Var v, ({ internal = false; _ } as a)) :: rest) ->
-      if not a.global
-      then serr ~ann "only toplevel symbols can be set as a local global";
-      if a.base <> ctx.env.base
-      then Codegen_ctx.add ~ctx var ~global:true (Codegen_ctx.Var v);
+      if not a.global then serr ~ann "only toplevel symbols can be set as a local global";
+      if a.base <> ctx.env.base then Codegen_ctx.add ~ctx var ~global:true (Codegen_ctx.Var v);
       Llvm.Stmt.pass ()
     | _ -> serr ~ann "variable %s not found" var
 
-  and parse_special ctx ann (kind, stmts, inputs) =
-    ierr ~ann "not yet implemented (parse_special)"
+  and parse_special ctx ann (kind, stmts, inputs) = ierr ~ann "not yet implemented (parse_special)"
 
   and parse_prefetch ctx ann pfs =
     let keys, wheres =
@@ -651,8 +621,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let names, types =
       List.map args ~f:(function
           | { name; typ = Some typ } -> name, typ
-          | { name; typ = None } ->
-            name, (Ast_ann.default, Ast.Expr.Id (sprintf "'%s" name)))
+          | { name; typ = None } -> name, (Ast_ann.default, Ast.Expr.Id (sprintf "'%s" name)))
       |> List.unzip
     in
     let generic_args =
@@ -661,9 +630,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           | Id g when String.is_prefix g ~prefix:"'" -> Some g
           | _ -> None)
     in
-    let generics =
-      List.append generic_types generic_args |> List.dedup_and_sort ~compare
-    in
+    let generics = List.append generic_types generic_args |> List.dedup_and_sort ~compare in
     set_generic_count (List.length generics);
     List.iteri generics ~f:(fun cnt key ->
         Codegen_ctx.add ~ctx key (Codegen_ctx.Type (get_generic cnt key)));

@@ -11,8 +11,7 @@ open Option.Monad_infix
 
 (** This module implements [Typecheck_intf.Expr].
     Parametrized by [Typecheck_intf.Stmt] for parsing generators ([parse_for] and [finalize]) *)
-module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
-  Typecheck_intf.Real = struct
+module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck_intf.Real = struct
   open Ast
   module C = Typecheck_ctx
   module T = Typecheck_infer
@@ -42,8 +41,14 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
         "[real] realizing fn %s ==> %s [%s -> %s]"
         fn.name
         real_name
-        (Option.value_map ~f:(fun t -> fst @@ C.get_full_name ~ctx t) (snd fn.parent) ~default:"<n/a>")
-        (Option.value_map ~f:(fun t -> fst @@ C.get_full_name ~ctx t) (List.hd parents) ~default:"<n/a>");
+        (Option.value_map
+           ~f:(fun t -> fst @@ C.get_full_name ~ctx t)
+           (snd fn.parent)
+           ~default:"<n/a>")
+        (Option.value_map
+           ~f:(fun t -> fst @@ C.get_full_name ~ctx t)
+           (List.hd parents)
+           ~default:"<n/a>");
       let tv = Ann.Func ({ fn with parent = fst fn.parent, List.hd parents }, f_ret) in
       let typ = C.ann ~typ:(Var tv) ctx in
       let fn_stmts =
@@ -52,29 +57,21 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
         | _ -> []
       in
       let cache_entry =
-        C.{ realized_ast = None
-          ; realized_typ = typ
-          ; realized_llvm = Ctypes.null }
+        C.{ realized_ast = None; realized_typ = typ; realized_llvm = Ctypes.null }
       in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
       let enclosing_return = ref (Some f_ret.ret) in
-      let env =
-        { ctx.env with enclosing_return; realizing = true; unbounds = Stack.create () }
-      in
+      let env = { ctx.env with enclosing_return; realizing = true; unbounds = Stack.create () } in
       let fctx = { ctx with env } in
       Ctx.add_block ~ctx:fctx;
-      T.traverse_parents ~ctx:fctx tv ~f:(fun n (_, t) ->
-          Ctx.add ~ctx n (Type t));
+      T.traverse_parents ~ctx:fctx tv ~f:(fun n (_, t) -> Ctx.add ~ctx n (Type t));
       (* Ensure that all arguments of recursive realizations are fully
          specified--- otherwise an infinite recursion will ensue *)
       let is_being_realized = Hashtbl.find fctx.env.being_realized fn.cache in
       let fn_args =
         List.map fn.args ~f:(fun (name, fn_t) ->
             if Ann.has_unbound fn_t && is_some is_being_realized
-            then
-              C.err
-                ~ctx
-                "function arguments must be realized within recursive realizations";
+            then C.err ~ctx "function arguments must be realized within recursive realizations";
             (* Util.A.dg "adding %s = %s" name (fst@@C.get_full_name fn_t ~ctx:fctx); *)
             Ctx.add ~ctx:fctx name (Var fn_t);
             Stmt.{ name; typ = None (* no need for this anymore *) })
@@ -119,14 +116,14 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
         Hashtbl.find_exn ctx.globals.classes cls.cache
         |> Hashtbl.to_alist
         |> List.filter_map ~f:(function
-               | (key, [Ann.Var (Func _)]) -> None
-               | (key, [Var c]) -> Some (c, (key, C.make_unbound ctx))
+               | key, [ Ann.Var (Func _) ] -> None
+               | key, [ Var c ] -> Some (c, (key, C.make_unbound ctx))
                | _ -> None)
       in
-      let tv = Ann.Class(
-        { cls with parent = fst cls.parent, List.hd parents
-        ; args = List.map ~f:snd c_args
-        }, cls_t)
+      let tv =
+        Ann.Class
+          ( { cls with parent = fst cls.parent, List.hd parents; args = List.map ~f:snd c_args }
+          , cls_t )
       in
       let typ = C.ann ~typ:(Type tv) ctx in
       let cache_entry =
@@ -142,14 +139,12 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
       C.add_realization ~ctx cls.cache typ;
       List.iter c_args ~f:(fun (c, (x, t')) ->
           (* Util.A.dr ":: [%s] %s -> %s" n (Ann.typ_to_string ~full:true t) (Ann.typ_to_string ~full:true @@ T.instantiate ~ctx ~inst t); *)
-        T.instantiate ~ctx ~inst c |> realize ~ctx |> T.unify_inplace ~ctx t'
-      );
+          T.instantiate ~ctx ~inst c |> realize ~ctx |> T.unify_inplace ~ctx t');
       C.remove_last_realization ~ctx cls.cache;
       Ctx.clear_block ~ctx;
       let ast = typ, snd ast in
       let cache_entry = { cache_entry with realized_ast = Some ast } in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
-
       (* if snd cls.cache = Ann.default_pos then (
         let open Llvm.Type in
         let name = fst cls.cache in
@@ -181,10 +176,9 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
       | _ -> None
     in
     match what with
-    | Some (Class ({ cache; generics; _}, _) as typ) ->
+    | Some (Class ({ cache; generics; _ }, _) as typ) ->
       let inst =
-        Int.Table.of_alist_exn
-        @@ List.map2_exn generics args ~f:(fun (_, (i, _)) a -> i, a)
+        Int.Table.of_alist_exn @@ List.map2_exn generics args ~f:(fun (_, (i, _)) a -> i, a)
       in
       let typ = T.instantiate ~ctx ~inst typ |> realize ~ctx in
       let _ = magic ~ctx typ "__init__" in
@@ -202,10 +196,9 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
         >>= fun h ->
         Hashtbl.find h name
         >>| List.filter_map ~f:(function
-                | Ann.(Type _ | Import _) ->
-                  C.err ~ctx "wrong magic type"
+                | Ann.(Type _ | Import _) -> C.err ~ctx "wrong magic type"
                 | Var t ->
-                  ( match Ann.real_type t |> T.instantiate ~ctx with
+                  (match Ann.real_type t |> T.instantiate ~ctx with
                   | Func (f, _) as t ->
                     let f_args = List.map f.args ~f:snd in
                     let s = T.sum_or_neg (typ :: args) f_args ~f:T.unify in
@@ -218,24 +211,24 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) :
                 | Some (_, max), (_, i) when i > max -> Some cur, 1
                 | Some _, _ -> acc, cnt)
         >>= (function
-            | Some ((_, t), _), 1 ->
-              ( match T.link_to_parent ~parent:(Some typ) t with
-              | Func (f, fret) as t ->
-                List.iter2_exn (typ :: args) f.args ~f:(fun t (_, t') ->
-                    T.unify_inplace ~ctx t t');
-                ( match realize_function ctx t (f, fret) with
-                | Func (_, f_ret) -> Some f_ret.ret
-                | _ -> failwith "cannot happen" )
-              | _ -> ierr ~ctx "got non-function" )
-            | Some ((_, t), _), j ->
-              (* many choices *)
-              let hasu = Ann.has_unbound typ in
-              let hasu = hasu || List.exists args ~f:Ann.has_unbound in
-              if hasu then Some (C.make_unbound ctx) else None
-            (* C.err ~ctx "many equally optimal magic functions" *)
-            | None, _ -> None (* C.err ~ctx "cannot find fitting magic function") *))
+        | Some ((_, t), _), 1 ->
+          (match T.link_to_parent ~parent:(Some typ) t with
+          | Func (f, fret) as t ->
+            List.iter2_exn (typ :: args) f.args ~f:(fun t (_, t') -> T.unify_inplace ~ctx t t');
+            (match realize_function ctx t (f, fret) with
+            | Func (_, f_ret) -> Some f_ret.ret
+            | _ -> failwith "cannot happen")
+          | _ -> ierr ~ctx "got non-function")
+        | Some ((_, t), _), j ->
+          (* many choices *)
+          let hasu = Ann.has_unbound typ in
+          let hasu = hasu || List.exists args ~f:Ann.has_unbound in
+          if hasu then Some (C.make_unbound ctx) else None
+        (* C.err ~ctx "many equally optimal magic functions" *)
+        | None, _ -> None (* C.err ~ctx "cannot find fitting magic function") *))
       | _ -> None
     in
     ret
+
   (* C.err ~ctx "can't find magic %s in %s for args %s" name (Ann.typ_to_string typ) (Util.ppl args ~f:Ann.typ_to_string) *)
 end

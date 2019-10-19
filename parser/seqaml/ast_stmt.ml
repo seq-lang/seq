@@ -45,8 +45,7 @@ type t =
       - return function type (includes the external function name) , and
       - list of function arguments. *)
   | Import of import list
-  | ImportPaste of string
-      (** [ImportPaste] is currently Seq's [import!]. _Deprecated_. *)
+  | ImportPaste of string (** [ImportPaste] is currently Seq's [import!]. _Deprecated_. *)
   | Function of fn_t
   | Class of class_t
   | Type of class_t

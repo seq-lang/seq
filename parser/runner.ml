@@ -49,9 +49,7 @@ let parse_c fname =
       | Lexer s | Descent s | Compiler s | Internal s -> s
     in
     Ctypes.(
-      Foreign.foreign
-        "caml_error_callback"
-        (string @-> int @-> int @-> string @-> returning void))
+      Foreign.foreign "caml_error_callback" (string @-> int @-> int @-> string @-> returning void))
       msg
       line
       col

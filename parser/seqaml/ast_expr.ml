@@ -46,12 +46,10 @@ type t =
       (** Each call arguments is of type [tcall] to account for argument names. *)
   | Slice of (t ann option * t ann option * t ann option)
   | Dot of (t ann * string)
-  | Ellipsis of unit
-      (** [Ellipsis] is currently used only for partial function definitions. *)
+  | Ellipsis of unit (** [Ellipsis] is currently used only for partial function definitions. *)
   | TypeOf of t ann
   | Ptr of t ann (** [Ptr(x)] corresponds to [__ptr__[x]]. *)
-  | Lambda of (string list * t ann)
-      (** {b NOTE} : Lambdas are currently not supported. *)
+  | Lambda of (string list * t ann) (** {b NOTE} : Lambdas are currently not supported. *)
 
 and tcall =
   { name : string option

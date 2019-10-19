@@ -24,8 +24,7 @@ let dbg fmt =
 let get_from_stdlib ?(ext = ".seq") res =
   let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
   let paths = String.split seqpath ~on:':' in
-  List.map paths ~f:(fun dir -> sprintf "%s/%s%s" dir res ext)
-  |> List.find ~f:Caml.Sys.file_exists
+  List.map paths ~f:(fun dir -> sprintf "%s/%s%s" dir res ext) |> List.find ~f:Caml.Sys.file_exists
 
 let ignore2 _ _ = ()
 let fst3 (f, _, _) = f
@@ -74,12 +73,8 @@ module A = struct
 
   let dr fmt = dcol ANSITerminal.[ Foreground Red ] fmt
   let dbg fmt = dr fmt
-
-  let dg ?(force = false) ?(el = true) fmt =
-    dcol ~el ~force ANSITerminal.[ Foreground Green ] fmt
-
-  let db ?(force = false) ?(el = true) fmt =
-    dcol ~el ~force ANSITerminal.[ Foreground Blue ] fmt
+  let dg ?(force = false) ?(el = true) fmt = dcol ~el ~force ANSITerminal.[ Foreground Green ] fmt
+  let db ?(force = false) ?(el = true) fmt = dcol ~el ~force ANSITerminal.[ Foreground Blue ] fmt
 
   let dy ?(force = false) ?(el = true) fmt =
     dcol ~el ~force ANSITerminal.[ Background Yellow; Foreground Red; Bold ] fmt

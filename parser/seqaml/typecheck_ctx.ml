@@ -14,8 +14,7 @@ open Option.Monad_infix
 (** Type checking environment  *)
 type tenv =
   { level : int (** Type checking level *)
-  ; unbounds : Ast.Ann.t Stack.t
-        (** List of all unbound variables within the environment *)
+  ; unbounds : Ast.Ann.t Stack.t (** List of all unbound variables within the environment *)
   ; enclosing_name : Ast.Ann.tlookup
         (** The name of the enclosing function or class.
       [__main__] is used for the outermost block within a module. *)
@@ -48,8 +47,7 @@ type tenv =
 type tglobal =
   { unbound_counter : int ref
   ; temp_counter : int ref
-  ; realizations :
-      (Ann.tlookup, Stmt.t Ann.ann * (string, trealization) Hashtbl.t) Hashtbl.t
+  ; realizations : (Ann.tlookup, Stmt.t Ann.ann * (string, trealization) Hashtbl.t) Hashtbl.t
   ; classes : (Ann.tlookup, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; imports : (string, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; pod_types : (string, Ann.tlookup) Hashtbl.t
@@ -100,8 +98,7 @@ let err ?(ctx : t option) fmt =
   (* let ann = Option.value ann ~default:(ann ctx) in *)
   Core.ksprintf
     (fun msg ->
-      raise
-      @@ SeqCamlError (msg, [ Option.value_map ctx ~f:ann ~default:(Ann.create ()) ]))
+      raise @@ SeqCamlError (msg, [ Option.value_map ctx ~f:ann ~default:(Ann.create ()) ]))
     fmt
 
 let make_unbound ?id ?(is_generic = false) ?level (ctx : t) =
@@ -118,11 +115,8 @@ let make_temp ?(prefix = "") (ctx : t) =
   let id = next_counter ctx.globals.temp_counter in
   sprintf "$%s_%d" prefix id
 
-let enter_level ~(ctx : t) =
-  { ctx with env = { ctx.env with level = ctx.env.level + 1 } }
-
-let exit_level ~(ctx : t) =
-  { ctx with env = { ctx.env with level = ctx.env.level - 1 } }
+let enter_level ~(ctx : t) = { ctx with env = { ctx.env with level = ctx.env.level + 1 } }
+let exit_level ~(ctx : t) = { ctx with env = { ctx.env with level = ctx.env.level - 1 } }
 
 let add_realization ~(ctx : t) cache real =
   let l = Option.value (Hashtbl.find ctx.env.being_realized cache) ~default:[] in
@@ -138,8 +132,7 @@ let get_full_name ?ctx (ann : Ann.tvar) =
   (* walk through parents in the linked list *)
   let rec iter_parent ann =
     match ann with
-    | Ann.Class ({ parent = _, Some pt; _ }, _)
-    | Func ({ parent = _, Some pt; _ }, _) ->
+    | Ann.Class ({ parent = _, Some pt; _ }, _) | Func ({ parent = _, Some pt; _ }, _) ->
       ann :: iter_parent pt
     | _ -> [ ann ]
   in
@@ -155,14 +148,13 @@ let get_full_name ?ctx (ann : Ann.tvar) =
     | ("", _), None -> []
     | _, None ->
       (* If parent was not set by DotExpr, check if it is being realized *)
-      Option.value ~default:[] (
-        ctx
-        >>= fun x -> Hashtbl.find x.Ctx.env.being_realized (fst parent)
+      Option.value
+        ~default:[]
+        (ctx
+        >>= fun x ->
+        Hashtbl.find x.Ctx.env.being_realized (fst parent)
         >>= List.hd
-        >>= fun x -> Ann.var_of_typ x.typ
-        >>| Ann.real_type
-        >>| iter_parent
-      )
+        >>= fun x -> Ann.var_of_typ x.typ >>| Ann.real_type >>| iter_parent)
   in
   ppl ~sep:":" ~f:Ann.var_to_string (List.rev (ann :: parents)), parents
 
@@ -177,26 +169,31 @@ let dump_ctx (ctx : t) =
       Hash_set.to_list map
       |> List.sort ~compare:String.compare
       |> List.iter ~f:(fun key ->
-            let printable k =
-              match k.[0], k.[1] with
-              | ('u' | 'i' | 'k'), i ->
-                if  i > '3' then false
-                else if String.length k > 2 && Char.is_digit k.[2] then false
-                else not (String.is_substring key ~substring:"__")
-              | _ -> not (String.is_substring key ~substring:"__")
-            in if printable key
+             let printable k =
+               match k.[0], k.[1] with
+               | ('u' | 'i' | 'k'), i ->
+                 if i > '3'
+                 then false
+                 else if String.length k > 2 && Char.is_digit k.[2]
+                 then false
+                 else not (String.is_substring key ~substring:"__")
+               | _ -> not (String.is_substring key ~substring:"__")
+             in
+             if printable key
              then (
                let t = Option.value_exn (Ctx.in_scope ~ctx key) in
                match t with
                | Type t | Var t ->
-                (match Ann.real_type t with
-                | Func (g, _) | Class (g, _) ->
-                  Util.dbg "%10s: %s [%s:%s]" key (Ann.var_to_string ~full:true t) (fst g.cache)
-                    (Ann.pos_to_string (snd g.cache))
-                | _ ->
-                  Util.dbg "%10s: %s" key (Ann.var_to_string ~full:true t) )
+                 (match Ann.real_type t with
+                 | Func (g, _) | Class (g, _) ->
+                   Util.dbg
+                     "%10s: %s [%s:%s]"
+                     key
+                     (Ann.var_to_string ~full:true t)
+                     (fst g.cache)
+                     (Ann.pos_to_string (snd g.cache))
+                 | _ -> Util.dbg "%10s: %s" key (Ann.var_to_string ~full:true t))
                | t -> Util.dbg "%10s: %s" key (Ann.typ_to_string t))))
-
 
 let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
   let internal_cnt = ref 0 in
@@ -230,96 +227,102 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
       ; filename
       }
   in
-  (
-    let ctx = { ctx with map = ctx.globals.stdlib } in
-    Ctx.add_block ~ctx;
-
-    let create_class ?(generic=0) ?(is_type=false) class_name =
-      let cls = Stmt.(Class
-          { class_name
-          ; generics = List.init generic ~f:(fun i -> sprintf "T%d" i)
-          ; members = []
-          ; args = None })
-      in
-      let cache = class_name, Ann.default_pos in
-      let generics = List.init generic ~f:(fun i ->
-        let id = !(ctx.globals.unbound_counter) in
-        incr ctx.globals.unbound_counter;
-        (sprintf "T%d" i), Ann.(id, Link (ref (Generic id))))
-      in
-      let typ =
-        Ann.Type (Ann.Class (
-                  { generics
-                  ; name = class_name
-                  ; parent = main_realization, None
-                  ; cache = cache
-                  ; args = []
-                  },
-                  { types = if is_type then Some [] else None }))
-      in
-      Ctx.add ~ctx class_name typ;
-      Hashtbl.set ctx.globals.classes ~key:cache ~data:(String.Table.create ());
-      Hashtbl.set
-        ctx.globals.realizations
-        ~key:cache
-        ~data:((Ann.create ~typ (), cls), String.Table.create ())
-    in
-
-    let add_internal_method class_name name signature =
-      assert (String.prefix signature 9 = "function[");
-      assert (String.suffix signature 1 = "]");
-      try (
-        let signature = String.drop_prefix (String.drop_suffix signature 1) 9 in
-        (* Util.A.dr "%s.%s ->> %s" class_name name signature; *)
-        let args = List.map (String.split ~on:',' signature) ~f:(fun expr ->
-          ctx.globals.parse expr
-          |> (function
-              | [ _, Stmt.Expr e ] ->
-                (* Util.A.dy "%s" @@ (Expr.to_string e); *)
-                (fst (ctx.globals.eparse ~ctx e)).typ
-              | _ -> ierr "parse expected single expression"))
-        in
-        let ret, args =
-          match args with
-          | ret :: args -> ret, args
-          | _ -> failwith "bad type"
-        in
-        let f_cache = name, Ann.default_pos in
-        let typ =
-          Ann.Var (Ann.Func (
-            { generics = []
-            ; name = sprintf "%s.%s" class_name name
-            ; cache = f_cache
-            ; parent = (class_name, Ann.default_pos), None
-            ; args = List.mapi args ~f:(fun i a -> sprintf "a%d" i, Ann.var_of_typ_exn a)
-            },
-            { ret = Ann.var_of_typ_exn ret
-            ; used = String.Hash_set.create () }))
-        in
-        Ctx.add ~ctx (sprintf "%s.%s" class_name name) typ;
-        let ast = Stmt.Pass () in
-        Hashtbl.set
-          ctx.globals.realizations
-          ~key:f_cache
-          ~data:((Ann.create ~typ (), ast), String.Table.create ());
-        Hashtbl.find_and_call ctx.globals.classes (class_name, Ann.default_pos)
-          ~if_found:(Hashtbl.add_multi ~key:name ~data:typ) ~if_not_found:(const ())
-      ) with SeqCamlError _ ->
-       ()
-    in
-
-    (* Initialize C POD types *)
-    let pod_types = List.concat Llvm.Type.[
-        [ "void", void () ; "int", int () ; "bool", bool () ; "float", float () ; "byte", byte () ] ;
-        (*List.init 2048*) List.map [1;2;4;8;16;32;64;128;256] ~f:(fun n -> sprintf "u%d" n, uintN n) ;
-        (*List.init 2048*) List.map [1;2;4;8;16;32;64;128;256] ~f:(fun n -> sprintf "i%d" n, intN n) ;
-        (*List.init 1024*) List.map [1;2;4;8;16;32;64;128;256] ~f:(fun n -> sprintf "k%d" n, kmerN n)
-      ]
-    in
-    (* create_class ~generic:1 "Kmer"; *)
-    List.iter pod_types ~f:(fun (name, _) -> create_class name ~is_type:true);
-    ctx.globals.parse
-      (Util.unindent {|
+  (let ctx = { ctx with map = ctx.globals.stdlib } in
+   Ctx.add_block ~ctx;
+   let create_class ?(generic = 0) ?(is_type = false) class_name =
+     let cls =
+       Stmt.(
+         Class
+           { class_name
+           ; generics = List.init generic ~f:(fun i -> sprintf "T%d" i)
+           ; members = []
+           ; args = None
+           })
+     in
+     let cache = class_name, Ann.default_pos in
+     let generics =
+       List.init generic ~f:(fun i ->
+           let id = !(ctx.globals.unbound_counter) in
+           incr ctx.globals.unbound_counter;
+           sprintf "T%d" i, Ann.(id, Link (ref (Generic id))))
+     in
+     let typ =
+       Ann.Type
+         (Ann.Class
+            ( { generics; name = class_name; parent = main_realization, None; cache; args = [] }
+            , { is_type } ))
+     in
+     Ctx.add ~ctx class_name typ;
+     Hashtbl.set ctx.globals.classes ~key:cache ~data:(String.Table.create ());
+     Hashtbl.set
+       ctx.globals.realizations
+       ~key:cache
+       ~data:((Ann.create ~typ (), cls), String.Table.create ())
+   in
+   let add_internal_method class_name name signature =
+     assert (String.prefix signature 9 = "function[");
+     assert (String.suffix signature 1 = "]");
+     try
+       let signature = String.drop_prefix (String.drop_suffix signature 1) 9 in
+       (* Util.A.dr "%s.%s ->> %s" class_name name signature; *)
+       let args =
+         List.map (String.split ~on:',' signature) ~f:(fun expr ->
+             ctx.globals.parse expr
+             |> function
+             | [ (_, Stmt.Expr e) ] ->
+               (* Util.A.dy "%s" @@ (Expr.to_string e); *)
+               (fst (ctx.globals.eparse ~ctx e)).typ
+             | _ -> ierr "parse expected single expression")
+       in
+       let ret, args =
+         match args with
+         | ret :: args -> ret, args
+         | _ -> failwith "bad type"
+       in
+       let f_cache = name, Ann.default_pos in
+       let typ =
+         Ann.Var
+           (Ann.Func
+              ( { generics = []
+                ; name = sprintf "%s.%s" class_name name
+                ; cache = f_cache
+                ; parent = (class_name, Ann.default_pos), None
+                ; args = List.mapi args ~f:(fun i a -> sprintf "a%d" i, Ann.var_of_typ_exn a)
+                }
+              , { ret = Ann.var_of_typ_exn ret; used = String.Hash_set.create () } ))
+       in
+       Ctx.add ~ctx (sprintf "%s.%s" class_name name) typ;
+       let ast = Stmt.Pass () in
+       Hashtbl.set
+         ctx.globals.realizations
+         ~key:f_cache
+         ~data:((Ann.create ~typ (), ast), String.Table.create ());
+       Hashtbl.find_and_call
+         ctx.globals.classes
+         (class_name, Ann.default_pos)
+         ~if_found:(Hashtbl.add_multi ~key:name ~data:typ)
+         ~if_not_found:(const ())
+     with
+     | SeqCamlError _ -> ()
+   in
+   (* Initialize C POD types *)
+   let pod_types =
+     List.concat
+       Llvm.Type.
+         [ [ "void", void (); "int", int (); "bool", bool (); "float", float (); "byte", byte () ]
+         ; (*List.init 2048*)
+           List.map [ 1; 2; 4; 8; 16; 32; 64; 128; 256 ] ~f:(fun n -> sprintf "u%d" n, uintN n)
+         ; (*List.init 2048*)
+           List.map [ 1; 2; 4; 8; 16; 32; 64; 128; 256 ] ~f:(fun n -> sprintf "i%d" n, intN n)
+         ; (*List.init 1024*)
+           List.map [ 1; 2; 4; 8; 16; 32; 64; 128; 256 ] ~f:(fun n -> sprintf "k%d" n, kmerN n)
+         ]
+   in
+   (* create_class ~generic:1 "Kmer"; *)
+   List.iter pod_types ~f:(fun (name, _) -> create_class name ~is_type:true);
+   ctx.globals.parse
+     (Util.unindent
+        {|
       class generator[T]:
         pass
       class ptr[T]:
@@ -339,41 +342,45 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
         ptr: ptr[byte]
         len: int
         cdef __elemsize__() -> int
-      type str(ptr: ptr[byte], len: int)
+      type str(ptr: ptr[byte], len: int):
+        cdef __str__(self: str) -> str
       type seq(ptr: ptr[byte], len: int)
       |})
-    |> List.map ~f:(sannotate Ann.default)
-    |> List.map ~f:(ctx.globals.sparse ~ctx)
-    |> ignore;
-    List.iter (pod_types @ Llvm.Type.["str", str (); "seq", seq ()]) ~f:(fun (n, ll) ->
-        let open Llvm.Type in
-        get_methods ll
-        |> List.iter ~f:(fun (s, t) ->
-          if n = "str" && s = "__init__"  then () else
-          (* && (get_name t) = "function[str,str,ptr[byte],int]" *)
-          add_internal_method n s (get_name t)));
-    (* dump_ctx ctx; *)
+   |> List.map ~f:(sannotate Ann.default)
+   |> List.map ~f:(ctx.globals.sparse ~ctx)
+   |> ignore;
+   List.iter
+     (pod_types @ Llvm.Type.[ "str", str (); "seq", seq () ])
+     ~f:(fun (n, ll) ->
+       let open Llvm.Type in
+       get_methods ll
+       |> List.iter ~f:(fun (s, t) ->
+              if n = "str" && s = "__init__"
+              then ()
+              else
+                (* && (get_name t) = "function[str,str,ptr[byte],int]" *)
+                add_internal_method n s (get_name t)));
+   (* dump_ctx ctx; *)
 
-    (* argv! *)
-    match Util.get_from_stdlib "stdlib" with
-    | Some file ->
-      In_channel.read_lines file
-      |> String.concat ~sep:"\n"
-      |> fun s -> ctx.globals.parse ~file:(Filename.realpath file) (s ^ "\n")
-      |> List.map ~f:(ctx.globals.sparse ~ctx)
-      |> ignore
-    | None -> Err.ierr "cannot locate stdlib.seq"
-  );
-
-  Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
-    Ctx.add ~ctx key (List.hd_exn data));
+   (* argv! *)
+   if false
+   then (
+     match Util.get_from_stdlib "stdlib" with
+     | Some file ->
+       In_channel.read_lines file
+       |> String.concat ~sep:"\n"
+       |> fun s ->
+       ctx.globals.parse ~file:(Filename.realpath file) (s ^ "\n")
+       |> List.map ~f:(ctx.globals.sparse ~ctx)
+       |> ignore
+     | None -> Err.ierr "cannot locate stdlib.seq"));
+  Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data -> Ctx.add ~ctx key (List.hd_exn data));
   ctx
 
 let init_empty ~(ctx : t) =
   let ctx = Ctx.init ctx.globals ctx.env in
   Ctx.add_block ~ctx;
-  Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
-      Ctx.add ~ctx key (List.hd_exn data));
+  Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data -> Ctx.add ~ctx key (List.hd_exn data));
   ctx
 
 let patch ~ctx s =
@@ -389,11 +396,11 @@ let epatch ~ctx s =
 let make_internal_magic ~ctx name ret_typ arg_types =
   sannotate (ann ctx) @@ s_extern ~lang:"llvm" name ret_typ arg_types
 
-let magic_call ~ctx ?(args=[]) ~magic parse e =
+let magic_call ~ctx ?(args = []) ~magic parse e =
   (* let e = parse ~ctx e in *)
   let m = Ann.create () in
   parse ~ctx @@ eannotate ~ctx (e_call (e_dot e magic) args)
 
-  (* match Ann.var_of_typ (fst e).Ann.typ >>| Ann.real_type with
+(* match Ann.var_of_typ (fst e).Ann.typ >>| Ann.real_type with
   | Some (Class ({ cache = (p, m); _ }, _)) when magic = (sprintf "__%s__" p) -> e
   | _ ->  *)

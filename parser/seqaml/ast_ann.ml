@@ -43,28 +43,18 @@ and tgeneric =
   }
 
 and tfun =
-  { ret: tvar
-  ; used: string Core.Hash_set.t
+  { ret : tvar
+  ; used : string Core.Hash_set.t
   }
 
-and tclass =
-  { types: tvar list option } (** unify uses this: needed at all? *)
+and tclass = { is_type : bool }
 
 type t =
-  { pos: tpos
-  ; typ: ttyp option
+  { pos : tpos
+  ; typ : ttyp option
   }
 
-let default_pos : tpos =
-  { file = "/internal"
-  ; line = -1
-  ; col = -1
-  ; len = 0
-  }
-
-let default : t =
-  { pos = default_pos
-  ; typ = None
-  }
+let default_pos : tpos = { file = "/internal"; line = -1; col = -1; len = 0 }
+let default : t = { pos = default_pos; typ = None }
 
 type 'a ann = t * 'a

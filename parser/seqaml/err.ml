@@ -99,13 +99,9 @@ let to_string ?file ~pos_lst err =
         let Ast.Ann.{ file; line; col; len; _ } = pos in
         match file_line file line with
         | Some file_line ->
-          let col =
-            if col < String.length file_line then col else String.length file_line
-          in
+          let col = if col < String.length file_line then col else String.length file_line in
           let len =
-            if col + len < String.length file_line
-            then len
-            else String.length file_line - col
+            if col + len < String.length file_line then len else String.length file_line - col
           in
           let pre = if i = 0 then "" else "then in\n        " in
           [ sprintf "        %s%s: %d,%d\n" pre file line col

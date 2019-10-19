@@ -36,29 +36,29 @@ let typecheck_test_block block_id stmts lines_fail lines_ok =
       let parse = Codegen.parse ~f:ignore in
       let ctx = Typecheck_ctx.init_module ~filename:"test" (parse, E.parse, S.parse) in
       List.map stmts ~f:(function
-             | ann, Ast.Stmt.Special ("%typ", [ e ], [ r ]) ->
-                [ ann, Ast.Stmt.Special ("%typ", S.parse ~ctx e, [r]) ]
-             | ann, Special ("%err", [ e ], [ r ]) ->
-               if is_some (Hash_set.find set ~f:(( = ) ann))
-               then [ ann, Special ("%err", [ e ], [ r ]) ]
-               else (
-                 try
-                   let e = S.parse ~ctx e in
-                   raise
-                   @@ TestExcFail
-                        (sprintf
-                           "[FAIL: did not crash, type is '%s']"
-                           (Ast.Ann.t_to_string @@ (fst @@ List.last_exn e).typ))
-                 with
-                 | Err.SeqCamlError (msg, pos) as e ->
-                   if msg = r
-                   then (
-                     test_ok "[OK]";
-                     raise (TestExcOK ann))
-                   else (
-                     test_fail "[FAIL: got '%s' instead]" msg;
-                     raise e))
-             | s -> S.parse ~ctx s)
+          | ann, Ast.Stmt.Special ("%typ", [ e ], [ r ]) ->
+            [ ann, Ast.Stmt.Special ("%typ", S.parse ~ctx e, [ r ]) ]
+          | ann, Special ("%err", [ e ], [ r ]) ->
+            if is_some (Hash_set.find set ~f:(( = ) ann))
+            then [ ann, Special ("%err", [ e ], [ r ]) ]
+            else (
+              try
+                let e = S.parse ~ctx e in
+                raise
+                @@ TestExcFail
+                     (sprintf
+                        "[FAIL: did not crash, type is '%s']"
+                        (Ast.Ann.t_to_string @@ (fst @@ List.last_exn e).typ))
+              with
+              | Err.SeqCamlError (msg, pos) as e ->
+                if msg = r
+                then (
+                  test_ok "[OK]";
+                  raise (TestExcOK ann))
+                else (
+                  test_fail "[FAIL: got '%s' instead]" msg;
+                  raise e))
+          | s -> S.parse ~ctx s)
       |> List.concat
     with
     | TestExcOK ann ->
@@ -74,14 +74,13 @@ let typecheck_test_block block_id stmts lines_fail lines_ok =
   let stmts = try_stmts stmts in
   let result =
     List.for_alli stmts ~f:(fun i -> function
-      | _, Ast.Stmt.Special ("%typ", [ _, Ast.Stmt.Expr (e) ], [ r ]) ->
+      | _, Ast.Stmt.Special ("%typ", [ (_, Ast.Stmt.Expr e) ], [ r ]) ->
         (* let s = Ast.Ann.t_to_string (fst e).typ in *)
-        let typ = match (fst e).typ with
-          | (None | Some Import _) as t -> t
-          | Some (Type t) ->
-            Some (Type (Typecheck_infer.generalize ~level:(-1) t))
-          | Some (Var t) ->
-            Some (Var (Typecheck_infer.generalize ~level:(-1) t))
+        let typ =
+          match (fst e).typ with
+          | (None | Some (Import _)) as t -> t
+          | Some (Type t) -> Some (Type (Typecheck_infer.generalize ~level:(-1) t))
+          | Some (Var t) -> Some (Var (Typecheck_infer.generalize ~level:(-1) t))
         in
         let s = Ast.Ann.t_to_string typ in
         Util.A.db ~force:true ~el:false "%s" s;
@@ -99,11 +98,9 @@ let typecheck_test_block block_id stmts lines_fail lines_ok =
         test_ok "[FAILED OK]";
         incr lines_ok;
         true
-      | ann, Special _ ->
-        Typecheck_ctx.err "wrong special"
+      | ann, Special _ -> Typecheck_ctx.err "wrong special"
       | s ->
-        Util.A.db ~force:true "%s"
-        @@ Ast.Ann.t_to_string (fst s).typ;
+        Util.A.db ~force:true "%s" @@ Ast.Ann.t_to_string (fst s).typ;
         true)
   in
   Util.A.db ~force:true "";
@@ -137,9 +134,7 @@ let huuurduuuur stmts tests =
           | None -> acc)
         | _ -> acc)
   in
-  let back =
-    if f = 0 then ANSITerminal.(Background Green) else ANSITerminal.(Background Red)
-  in
+  let back = if f = 0 then ANSITerminal.(Background Green) else ANSITerminal.(Background Red) in
   Util.A.dcol
     ~force:true
     ANSITerminal.[ back; Foreground White; Bold ]
@@ -162,12 +157,14 @@ let pax file =
   | Err.CompilerError (typ, pos_lst) ->
     Util.dbg ">> %s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) typ
   | Err.SeqCamlError (msg, pos_lst) ->
-    Util.dbg ">> %s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) (Err.Compiler msg));
+    Util.dbg ">> %s\n%!"
+    @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) (Err.Compiler msg));
   exit 0
 
 (** Main entry point. *)
 let () =
-  Callback.register "parse_c"  pax ; (* Runner.parse_c; *)
+  Callback.register "parse_c" pax;
+  (* Runner.parse_c; *)
   Callback.register "jit_init_c" Jit.c_init;
   Callback.register "jit_exec_c" Jit.c_exec;
   match List.nth (Array.to_list Sys.argv) 1 with
@@ -180,8 +177,7 @@ let () =
        match m with
        | Some m ->
          (try Llvm.Module.exec m (Array.to_list Sys.argv) false with
-         | Err.SeqCError (msg, pos) ->
-           raise @@ Err.CompilerError (Compiler msg, [ pos ]))
+         | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ]))
        | None -> raise Caml.Not_found
      with
     | Err.CompilerError (typ, pos_lst) as err ->

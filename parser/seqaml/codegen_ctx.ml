@@ -63,12 +63,7 @@ and t = (tel, tenv, tglobal) Ctx.t
 (** [add ~ctx name var] adds a variable [name] with the handle [var] to the context [ctx]. *)
 let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) key var =
   let annot =
-    { base = ctx.env.base
-    ; global
-    ; toplevel
-    ; internal
-    ; attrs = String.Hash_set.create ()
-    }
+    { base = ctx.env.base; global; toplevel; internal; attrs = String.Hash_set.create () }
   in
   let var = var, annot in
   Ctx.add ~ctx key var
@@ -127,8 +122,7 @@ let init_empty ~(ctx : t) =
   let ctx = Ctx.init ctx.globals ctx.env in
   Ctx.add_block ~ctx;
   Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
-      add ~ctx ~internal:true ~global:true ~toplevel:true key (fst @@ List.hd_exn data)
-  );
+      add ~ctx ~internal:true ~global:true ~toplevel:true key (fst @@ List.hd_exn data));
   ctx
 
 (** [to_dbg_output ctx] outputs the current [ctx] to the debug output. *)
@@ -140,9 +134,7 @@ let to_dbg_output ~(ctx : t) =
     let rec prn ~depth (ctx : t) =
       let prn_assignable (ass, (ant : tann)) =
         let ib b = if b then 1 else 0 in
-        let att =
-          sprintf "<%s>" @@ String.concat ~sep:", " @@ Hash_set.to_list ant.attrs
-        in
+        let att = sprintf "<%s>" @@ String.concat ~sep:", " @@ Hash_set.to_list ant.attrs in
         let ant =
           sprintf
             "%c%c%c"

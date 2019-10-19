@@ -15,6 +15,7 @@ type cstring = unit ptr
 
 let cstring : cstring typ = ptr void
 let strdup = foreign "strdup" (string @-> returning cstring)
+
 let strxdup s i =
   foreign "strxdup" (string @-> size_t @-> returning cstring) s (Unsigned.Size_t.of_int i)
 
@@ -68,9 +69,7 @@ module Type = struct
 
   let record names types name =
     let fn =
-      foreign
-        "record_type_named"
-        (ptr cstring @-> ptr t @-> size_t @-> cstring @-> returning t)
+      foreign "record_type_named" (ptr cstring @-> ptr t @-> size_t @-> cstring @-> returning t)
     in
     assert (List.length names = List.length types);
     let narr = array_of_string_list names in
@@ -98,9 +97,7 @@ module Type = struct
 
   let set_record_names typ names types =
     let fn =
-      foreign
-        "set_record_names"
-        (t @-> ptr cstring @-> ptr t @-> size_t @-> returning Ctypes.void)
+      foreign "set_record_names" (t @-> ptr cstring @-> ptr t @-> size_t @-> returning Ctypes.void)
     in
     assert (List.length names = List.length types);
     let narr = array_of_string_list names in
@@ -124,9 +121,7 @@ module Type = struct
 
   let get_methods typ =
     let f =
-      foreign
-        "get_methods"
-        (t @-> ptr (ptr char) @-> ptr (ptr Types.func) @-> returning size_t)
+      foreign "get_methods" (t @-> ptr (ptr char) @-> ptr (ptr Types.func) @-> returning size_t)
     in
     let fns_addr = Ctypes.allocate (ptr Types.func) (from_voidp Types.func null) in
     let names_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
@@ -150,10 +145,21 @@ module Expr = struct
   let int = foreign "int_expr" (int64_t @-> returning t)
   let bigint i = foreign "bigint_expr" (cstring @-> returning t) (strdup i)
   let float = foreign "float_expr" (double @-> returning t)
-  let str s = foreign "str_expr" (cstring @-> size_t @-> returning t)
-    (strxdup s (String.length s)) (Unsigned.Size_t.of_int @@ String.length s)
-  let seq s = foreign "str_seq_expr" (cstring @-> size_t @-> returning t)
-    (strxdup s (String.length s)) (Unsigned.Size_t.of_int @@ String.length s)
+
+  let str s =
+    foreign
+      "str_expr"
+      (cstring @-> size_t @-> returning t)
+      (strxdup s (String.length s))
+      (Unsigned.Size_t.of_int @@ String.length s)
+
+  let seq s =
+    foreign
+      "str_seq_expr"
+      (cstring @-> size_t @-> returning t)
+      (strxdup s (String.length s))
+      (Unsigned.Size_t.of_int @@ String.length s)
+
   let var = foreign "var_expr" (Types.var @-> returning t)
   let typ = foreign "type_expr" (Types.typ @-> returning t)
   let func = foreign "func_expr" (Types.func @-> returning t)
@@ -164,9 +170,7 @@ module Expr = struct
     fn arr len
 
   let list ~kind typ args =
-    let fn =
-      foreign (kind ^ "_expr") (Types.typ @-> ptr t @-> size_t @-> returning t)
-    in
+    let fn = foreign (kind ^ "_expr") (Types.typ @-> ptr t @-> size_t @-> returning t) in
     let arr, len = list_to_carr t args in
     fn typ arr len
 
@@ -175,9 +179,7 @@ module Expr = struct
     fn typ expr
 
   let gen_comprehension expr captures =
-    let fn =
-      foreign "gen_comp_expr" (t @-> ptr Types.var @-> size_t @-> returning t)
-    in
+    let fn = foreign "gen_comp_expr" (t @-> ptr Types.var @-> size_t @-> returning t) in
     let arr, len = list_to_carr Types.var captures in
     fn expr arr len
 
@@ -226,9 +228,7 @@ module Expr = struct
   let alloc_array = foreign "array_expr_alloca" (Types.typ @-> t @-> returning t)
 
   let construct typ args =
-    let fn =
-      foreign "construct_expr" (Types.typ @-> ptr t @-> size_t @-> returning t)
-    in
+    let fn = foreign "construct_expr" (Types.typ @-> ptr t @-> size_t @-> returning t) in
     let arr, len = list_to_carr t args in
     fn typ arr len
 
@@ -258,8 +258,7 @@ module Expr = struct
       ann.pos.col
       ann.pos.len
 
-  let set_parallel =
-    foreign "pipe_expr_set_parallel" Ctypes.(t @-> int @-> returning void)
+  let set_parallel = foreign "pipe_expr_set_parallel" Ctypes.(t @-> int @-> returning void)
 
   let set_comprehension_body ~kind expr body =
     foreign
@@ -268,9 +267,7 @@ module Expr = struct
       expr
       body
 
-  let set_trycatch =
-    foreign "set_enclosing_trycatch" (t @-> Types.stmt @-> returning Ctypes.void)
-
+  let set_trycatch = foreign "set_enclosing_trycatch" (t @-> Types.stmt @-> returning Ctypes.void)
   let get_name = foreign "get_expr_name" (t @-> returning string)
 
   (* Utilities *)
@@ -304,9 +301,7 @@ module Stmt = struct
       what
 
   let assign_index =
-    foreign
-      "assign_index_stmt"
-      (Types.expr @-> Types.expr @-> Types.expr @-> returning t)
+    foreign "assign_index_stmt" (Types.expr @-> Types.expr @-> Types.expr @-> returning t)
 
   let del = foreign "del_stmt" (Types.var @-> returning t)
   let del_index = foreign "del_index_stmt" (Types.expr @-> Types.expr @-> returning t)
@@ -325,9 +320,7 @@ module Stmt = struct
 
   let prefetch k w =
     let fn =
-      foreign
-        "prefetch_stmt"
-        (ptr Types.expr @-> ptr Types.expr @-> size_t @-> returning t)
+      foreign "prefetch_stmt" (ptr Types.expr @-> ptr Types.expr @-> size_t @-> returning t)
     in
     assert (List.(length k = length w));
     let ks, kl = list_to_carr Types.expr k in
@@ -357,18 +350,27 @@ module Pattern = struct
   let star = foreign "star_pattern" (void @-> returning t)
   let int = foreign "int_pattern" (int64_t @-> returning t)
   let bool = foreign "bool_pattern" (bool @-> returning t)
-  let str s = foreign "str_pattern" (cstring @-> size_t @-> returning t)
-    (strxdup s (String.length s)) (Unsigned.Size_t.of_int @@ String.length s)
-  let seq s = foreign "seq_pattern" (cstring @-> size_t @-> returning t)
-    (strxdup s (String.length s)) (Unsigned.Size_t.of_int @@ String.length s)
+
+  let str s =
+    foreign
+      "str_pattern"
+      (cstring @-> size_t @-> returning t)
+      (strxdup s (String.length s))
+      (Unsigned.Size_t.of_int @@ String.length s)
+
+  let seq s =
+    foreign
+      "seq_pattern"
+      (cstring @-> size_t @-> returning t)
+      (strxdup s (String.length s))
+      (Unsigned.Size_t.of_int @@ String.length s)
 
   let record pats =
     let fn = foreign "record_pattern" (ptr t @-> size_t @-> returning t) in
     let arr, len = list_to_carr t pats in
     fn arr len
 
-  let range =
-    foreign "range_pattern" (Ctypes.int64_t @-> Ctypes.int64_t @-> returning t)
+  let range = foreign "range_pattern" (Ctypes.int64_t @-> Ctypes.int64_t @-> returning t)
 
   let array pats =
     let fn = foreign "array_pattern" (ptr t @-> size_t @-> returning t) in
@@ -400,8 +402,7 @@ module Block = struct
 
   (* Utilities *)
 
-  let add_stmt block stmt =
-    foreign "add_stmt" (Types.stmt @-> t @-> returning void) stmt block
+  let add_stmt block stmt = foreign "add_stmt" (Types.stmt @-> t @-> returning void) stmt block
 end
 
 (** [Var] wraps Seq Var methods and helpers. *)
@@ -449,9 +450,7 @@ module Func = struct
     let s = foreign "get_func_attrs" (t @-> returning string) f in
     String.split ~on:'\b' s
 
-  let set_attr f at =
-    foreign "set_func_attr" (t @-> cstring @-> returning void) f (strdup at)
-
+  let set_attr f at = foreign "set_func_attr" (t @-> cstring @-> returning void) f (strdup at)
   let set_return = foreign "set_func_return" (t @-> Types.expr @-> returning void)
   let set_prefetch = foreign "set_func_prefetch" (t @-> Types.stmt @-> returning void)
   let set_yield = foreign "set_func_yield" (t @-> Types.expr @-> returning void)
@@ -489,11 +488,7 @@ module Generics = struct
       let t =
         foreign
           "realize_func"
-          (Types.expr
-          @-> ptr Types.typ
-          @-> size_t
-          @-> ptr (ptr char)
-          @-> returning Types.func)
+          (Types.expr @-> ptr Types.typ @-> size_t @-> ptr (ptr char) @-> returning Types.func)
           fn_expr
           arr
           len
@@ -524,11 +519,7 @@ module Generics = struct
       let t =
         foreign
           "realize_type"
-          (Types.typ
-          @-> ptr Types.typ
-          @-> size_t
-          @-> ptr (ptr char)
-          @-> returning Types.typ)
+          (Types.typ @-> ptr Types.typ @-> size_t @-> ptr (ptr char) @-> returning Types.typ)
           typ
           arr
           len
@@ -569,9 +560,7 @@ module Module = struct
 
   let warn ?(ann = Ast.Ann.default) fmt =
     let f =
-      foreign
-        "caml_warning_callback"
-        (cstring @-> int @-> int @-> cstring @-> returning void)
+      foreign "caml_warning_callback" (cstring @-> int @-> int @-> cstring @-> returning void)
     in
     Core.ksprintf (fun msg -> f (strdup msg) ann.pos.line ann.pos.col (strdup ann.pos.file)) fmt
 end
@@ -584,12 +573,7 @@ module JIT = struct
 
   let func jit fn =
     let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
-    foreign
-      "jit_func"
-      (t @-> Types.func @-> ptr (ptr char) @-> returning void)
-      jit
-      fn
-      err_addr;
+    foreign "jit_func" (t @-> Types.func @-> ptr (ptr char) @-> returning void) jit fn err_addr;
     if not (Ctypes.is_null !@err_addr)
     then (
       let msg = coerce (ptr char) string !@err_addr in

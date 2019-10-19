@@ -20,8 +20,7 @@ type ('tel, 'tenv, 'tglobal) t =
   ; globals : 'tglobal
   }
 
-let init globals env =
-  { stack = Stack.create (); map = String.Table.create (); globals; env }
+let init globals env = { stack = Stack.create (); map = String.Table.create (); globals; env }
 
 (** [add_block context] adds a new block to the context stack. *)
 let add_block ~ctx = Stack.push ctx.stack (String.Hash_set.create ())
