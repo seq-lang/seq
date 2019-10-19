@@ -25,18 +25,12 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
   and realize_function ctx typ (fn, f_ret) =
     let real_name, parents = C.get_full_name ~ctx typ in
     let ast, str2real = Hashtbl.find_exn ctx.globals.realizations fn.cache in
-    let what =
-      Ctx.in_scope ~ctx fn.name
-      >>= function
-      | Var t -> Some (Ann.real_type t)
-      | _ -> None
-    in
-    match Hashtbl.find str2real real_name, what with
+    match Hashtbl.find str2real real_name with
     (* Case 1 - already realized *)
-    | Some { realized_typ; _ }, _ ->
+    | Some { realized_typ; _ } ->
       T.link_to_parent ~parent:(List.hd parents) (Ann.var_of_typ_exn realized_typ.typ)
     (* Case 2 - needs realization *)
-    | None, Some (Func _) ->
+    | None ->
       Util.dbg
         "[real] realizing fn %s ==> %s [%s -> %s]"
         fn.name
@@ -93,25 +87,17 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
       let real_name, _ = C.get_full_name ~ctx tv in
       Hashtbl.set str2real ~key:real_name ~data:cache_entry;
       tv
-    | None, t -> C.err ~ctx "impossible realization case for %s [%s]" fn.name
-      (Option.value_map t ~default:"_" ~f:(Ann.var_to_string ~full:true))
 
   and realize_type ctx typ (cls, cls_t) =
     let real_name, parents = C.get_full_name ~ctx typ in
     let ast, str2real = Hashtbl.find_exn ctx.globals.realizations cls.cache in
-    let what =
-      Ctx.in_scope ~ctx cls.name
-      >>= function
-      | Type t -> Some (Ann.real_type t)
-      | _ -> None
-    in
-    match Hashtbl.find str2real real_name, what with
+    match Hashtbl.find str2real real_name with
     (* Case 1 - already realized *)
-    | Some { realized_typ; _ }, _ ->
+    | Some { realized_typ; _ } ->
       (* ensure that parent pointer is kept correctly *)
       T.link_to_parent ~parent:(List.hd parents) (Ann.var_of_typ_exn realized_typ.typ)
     (* Case 2 - needs realization *)
-    | None, Some (Class _) ->
+    | None ->
       Util.dbg "[real] realizing class %s ==> %s" cls.name real_name;
       let c_args =
         Hashtbl.find_exn ctx.globals.classes cls.cache
@@ -167,7 +153,6 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
         |> List.iter ~f:(fun (s, t) -> add_internal_method name s (get_name t))
       ); *)
       tv
-    | _ -> C.err ~ctx "cannot find %s to realize" cls.name
 
   and internal ~(ctx : C.t) ?(args = []) name =
     let what =
