@@ -297,6 +297,89 @@ def _gallop[T](arr: array[T], a: tuple[int,int], b: tuple[int,int], comp: functi
 
     return ofs
 
+def _merge_with_gallop[T](arr: array[T], a: tuple[int,int], b: tuple[int,int], comp: function[bool,T,T]):
+    min_gallop = MIN_GALLOP
+    a_copy = list[T]()
+    b_copy = list[T]()
+
+    for i in range(a[0], a[0] + a[1]):
+        a_copy.append(arr[i])
+    for i in range(b[0], b[0] + b[1]):
+        b_copy.append(arr[i])
+
+    combined = a_copy + b_copy
+
+    i, j, k = 0, 0, a[0]
+
+    while i < len(a_copy) and j < len(b_copy):
+        acount, bcount = 0, 0
+
+        while i < len(a_copy) and j < len(b_copy):
+            if comp(b_copy[j], a_copy[i]):
+                arr[k] = b_copy[j]
+                acount = 0
+                bcount += 1
+                j += 1
+                k += 1
+                if bcount >= min_gallop:
+                    break
+            else:
+                arr[k] = a_copy[i]
+                acount += 1
+                bcount = 0
+                i += 1
+                k += 1
+                if acount >= min_gallop:
+                    break
+
+        if i == len(a_copy) or j == len(b_copy):
+            break
+
+        min_gallop += 1
+
+        while i < len(a_copy) and j < len(b_copy):
+            if min_gallop > 1:
+                min_gallop -= 1
+
+            acount = _gallop(combined.arr, (0, len(a_copy)), (len(a_copy), len(b_copy)), comp, i, False)
+            if acount:
+                while i < acount:
+                    arr[k] = a_copy[i]
+                    i += 1
+                    k += 1
+                arr[k] = b_copy[j]
+                j += 1
+                k += 1
+
+            if i == len(a_copy) or j == len(b_copy):
+                break
+
+            b_end = _gallop(combined.arr, (len(a_copy), len(b_copy)), (0, len(a_copy)), comp, j, True)
+            bcount = len(b_copy) - b_end
+            if bcount:
+                while j < b_end:
+                    arr[k] = b_copy[j]
+                    j += 1
+                    k += 1
+                arr[k] = a_copy[i]
+                i += 1
+                k += 1
+
+            if acount < MIN_GALLOP and bcount < MIN_GALLOP:
+                break
+
+        min_gallop += 1
+
+    while i < len(a_copy):
+        arr[k] = a_copy[i]
+        i += 1
+        k += 1
+
+    while j < len(b_copy):
+        arr[k] = b_copy[j]
+        j += 1
+        k += 1
+
 def _merge_at[T](arr: array[T], a: tuple[int,int], b: tuple[int,int], comp: function[bool,T,T]):
     start_a, len_a = a
     start_b, len_b = b
@@ -312,35 +395,57 @@ def _merge_at[T](arr: array[T], a: tuple[int,int], b: tuple[int,int], comp: func
     if len_b == 0:
         return
 
-    _merge(arr, start_a, start_b, start_b + len_b, comp)
+    _merge_with_gallop(arr, (start_a, len_a), (start_b, len_b), comp)
 
 def _merge_collapse[T](arr: array[T], stack: list[tuple[int,int]], comp: function[bool,T,T]):
 
-    while len(stack) > 2:
-        Z = stack.pop()
-        Y = stack.pop()
-        X = stack.pop()
-        if X[1] > Y[1] + Z[1] and Y[1] > Z[1]:
-            stack.append(X)
-            stack.append(Y)
-            stack.append(Z)
-            break
-        if Z[1] < X[1]:
-            _merge_at(arr, Y, Z, comp)
-            stack.append(X)
-            stack.append((Y[0], Y[1] + Z[1]))
-        else:
-            _merge_at(arr, X, Y, comp)
-            stack.append((X[0], X[1] + Y[1]))
-            stack.append(Z)
+    if len(stack) <= 1:
+        return
 
+    while len(stack) > 2:
+        X = stack[-3]
+        Y = stack[-2]
+        Z = stack[-1]
+
+        if X[1] > Y[1] + Z[1] and Y[1] > Z[1]:
+            break
+
+        C = stack.pop()
+        B = stack.pop()
+        A = stack.pop()
+
+        if A[1] <= B[1] + C[1]:
+            if A[1] < C[1]:
+                _merge_at(arr, A, B, comp)
+                stack.append((A[0], A[1] + B[1]))
+                stack.append(C)
+            else:
+                _merge_at(arr, B, C, comp)
+                stack.append(A)
+                stack.append((B[0], B[1] + C[1]))
+
+        else:
+            _merge_at(arr, B, C, comp)
+            stack.append(A)
+            stack.append((B[0], B[1] + C[1]))
+
+    if len(stack) == 2:
+        X = stack[-2]
+        Y = stack[-1]
+
+        if X[1] <= Y[1]:
+            C = stack.pop()
+            B = stack.pop()
+            _merge_at(arr, B, C, comp)
+            stack.append((B[0], B[1] + C[1]))
+            return
 
 def _final_merge[T](arr: array[T], stack: list[tuple[int,int]], comp: function[bool,T,T]):
     while len(stack) > 1:
-        Y = stack.pop()
-        X = stack.pop()
-        _merge_at(arr, X, Y, comp)
-        stack.append((X[0], X[1] + Y[1]))
+        C = stack.pop()
+        B = stack.pop()
+        _merge_at(arr, B, C, comp)
+        stack.append((B[0], B[1] + C[1]))
 
 ### Private Sorts ###
 
