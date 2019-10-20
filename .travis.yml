@@ -106,10 +106,6 @@ cache:
     - Tapir-LLVM
     - ${HOME}/.opam
 
-branches:
-  only:
-    - master
-
 notifications:
   webhooks:
     urls:
