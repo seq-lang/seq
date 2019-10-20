@@ -18,6 +18,12 @@ option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GC REQUIRED bdw-gc)
+find_library(HTS_LIB NAMES libhts.a libhts)
+if(NOT HTS_LIB)
+  message(FATAL_ERROR "HTSlib not found")
+else()
+  message(STATUS "Found HTSlib: ${HTS_LIB}")
+endif()
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
                          runtime/exc.cpp
@@ -27,7 +33,7 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/ksw2/ksw2_extz2_sse.cpp
                          runtime/ksw2/ksw2_gg2_sse.cpp
                          runtime/pybridge.cpp)
-target_link_libraries(seqrt PUBLIC ${ZLIB_LIBRARIES} ${GC_LINK_LIBRARIES} hts)
+target_link_libraries(seqrt PUBLIC curl bz2 lzma ${ZLIB_LIBRARIES} ${GC_LINK_LIBRARIES} ${HTS_LIB})
 target_include_directories(seqrt PRIVATE ${GC_INCLUDE_DIRS})
 target_compile_options(seqrt PRIVATE ${GC_CFLAGS_OTHER} -O3)
 

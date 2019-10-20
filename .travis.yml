@@ -12,15 +12,15 @@ addons:
     packages:
       - libsnappy-dev
       - binutils-dev
-      - libffi-dev
       - libomp-dev
+      - texinfo
   homebrew:
     update: true
     packages:
       - snappy
       - binutils
-      - libffi
       - libomp
+      - texinfo
       - cmake
 
 before_install:
@@ -58,6 +58,15 @@ before_install:
   - eval $(opam env)
 
 install:
+  # install libffi:
+  - wget -c https://github.com/libffi/libffi/archive/v3.2.1.tar.gz -O - | tar -xz
+  - cd libffi-3.2.1
+  - ./autogen.sh
+  - ./configure CFLAGS="-fPIC" --enable-portable-binary --enable-static --disable-shared
+  - make LDFLAGS="-static"
+  - sudo make install
+  - cd -
+
   # install Boehm GC:
   - git clone -b release-7_6 https://github.com/ivmai/bdwgc
   - cd bdwgc
@@ -74,7 +83,7 @@ install:
   - cd -
 
   # install htslib:
-  - wget -c wget https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 -O - | tar -xj
+  - wget -c https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 -O - | tar -xj
   - cd htslib-1.9
   - ./configure
   - make
@@ -84,10 +93,8 @@ install:
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
-  # ldconfig on linux:
+  - export LDFLAGS="-L/usr/local/lib"
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
-  # make sure we don't link against older system libffi on macOS:
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then export LDFLAGS="-L/usr/local/opt/libffi/lib"; fi
 
 script:
   - mkdir build
