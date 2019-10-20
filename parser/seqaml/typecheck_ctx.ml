@@ -323,37 +323,45 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
    ctx.globals.parse
      (Util.unindent
       {|
-      class generator[T]:
-        cdef __iter__(self: generator[T]) -> generator[T]
       class ptr[T]:
+        cdef __init__(self: ptr[T])
         cdef __init__(self: ptr[T], i: int)
-        cdef __init__(self: ptr[T], other: ptr[T], i: int)
+        cdef __init__(self: ptr[T], other: T)
+        cdef __init__(self: ptr[T], other: ptr[T])
+        cdef __copy__(self: ptr[T]) -> ptr[T]
         cdef __bool__(self: ptr[T]) -> bool
         cdef __getitem__(self: ptr[T], i: int) -> T
         cdef __setitem__(self: ptr[T], i: int, j: T) -> void
         cdef __add__(self: ptr[T], i: int) -> ptr[T]
-        cdef __sub__(self: ptr[T], i: int) -> ptr[T]
+        cdef __sub__(self: ptr[T], x: ptr[T]) -> int
         cdef __eq__(self: ptr[T], x: ptr[T]) -> bool
         cdef __ne__(self: ptr[T], x: ptr[T]) -> bool
         cdef __lt__(self: ptr[T], x: ptr[T]) -> bool
         cdef __gt__(self: ptr[T], x: ptr[T]) -> bool
         cdef __le__(self: ptr[T], x: ptr[T]) -> bool
         cdef __ge__(self: ptr[T], x: ptr[T]) -> bool
-        cdef __sub__(self: ptr[T], x: ptr[T]) -> int
+        # TODO: prefetchs
+      class generator[T]:
+        cdef __iter__(self: generator[T]) -> generator[T]
       type array[T](ptr: ptr[byte], len: int):
         cdef __elemsize__() -> int
+        cdef __init__(self: array[T], int)
+        cdef __copy__(self: array[T]) -> array[T]
+        cdef __len__(self: array[T]) -> int
+        cdef __bool__(self: array[T]) -> bool
         cdef __getitem__(self: array[T], i: int) -> T
-        cdef __setitem__(self: array[T], i: int, j: T) -> void
         cdef __slice__(self: array[T], i: int, j: int) -> array[T]
         cdef __slice_left__(self: array[T], i: int) -> array[T]
         cdef __slice_right__(self: array[T], i: int) -> array[T]
-        cdef __copy__(self: array[T]) -> array[T]
+        cdef __setitem__(self: array[T], i: int, j: T) -> void
       type __array__[T](ptr: ptr[byte], len: int):
         cdef __getitem__(self: __array__[T], i: int) -> T
         cdef __setitem__(self: __array__[T], i: int, j: T) -> void
       type str(ptr: ptr[byte], len: int):
         cdef __str__(self: str) -> str
       type seq(ptr: ptr[byte], len: int)
+      # type optional[T](has: void, val: T):
+      #  cdef __bool__(self) -> bool
       |})
    |> List.map ~f:(sannotate Ann.default)
    |> List.map ~f:(ctx.globals.sparse ~ctx)

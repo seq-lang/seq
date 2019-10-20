@@ -448,6 +448,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
           var_of_node_exn (E.parse ~ctx t))
     in
     let fn_name = { name = fname; typ = None } in
+    let is_property = List.exists f.fn_attrs ~f:((=) "property") in
     let fn_args, args =
       List.unzip
       @@ List.mapi f.fn_args ~f:(fun i arg ->
@@ -585,7 +586,7 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
     List.iter explicits ~f:(T.generalize_inplace ~ctx);
     Extend (name, new_members)
 
-  and parse_class ctx ?(prefix = "") ?(istype = false) cls =
+  and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
     let { class_name; generics; members; _ } = cls in
     let cache = class_name, (C.ann ctx).pos in
     (* Ctx.push ctx; *)
@@ -634,29 +635,42 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
     Ctx.add ~ctx class_name (Type tcls);
 
     Hashtbl.set ctx.globals.classes ~key:cache ~data:member_table;
-    let init =
-      let cls_ast =
-        match cls.generics with
-        | [] -> e_id class_name
-        | l -> e_index (e_id class_name) (List.map cls.generics ~f:e_id)
-      in
-      let args =
-        ("self", cls_ast)
-        :: List.filter_map members ~f:(function
-               | _, Declare { name; typ = Some typ } -> Some (name, typ)
-               | _ -> None)
-      in
-      if istype
-      then C.make_internal_magic ~ctx "__init__" cls_ast args
-      else C.make_internal_magic ~ctx "__init__" (e_id "void") args
+    (match member_of with
+    | Some m -> Hashtbl.set m ~key:cls.class_name ~data:[Ann.Type tcls];
+    | None -> ());
+
+    let class_string = sprintf"%s%s"
+      class_name
+      (match generics with [] -> "" | g -> sprintf "[%s]" @@ Util.ppl generics ~f:Fn.id)
+    in
+    let class_members = List.filter_map members ~f:(function
+                | _, Declare { name; typ = Some typ } ->
+                  Some (sprintf "%s: %s" name (Expr.to_string typ))
+                | _ -> None)
+    in
+    let inits = if (snd cache) = Ann.default_pos then [] else
+      [ sprintf "cdef __init__(self: %s) %s"
+        class_string (if istype then sprintf "-> %s" class_string else "")
+      ; sprintf "cdef __bool__(self: %s) -> bool" class_string
+      ; sprintf "cdef __pickle__(self: %s, dest: ptr[byte])" class_string
+      ; sprintf "cdef __unpickle__(self: %s, src: ptr[byte]) -> %s" class_string class_string
+      ; sprintf "cdef __raw__(self: %s) -> ptr[byte]" class_string
+      ; match class_members with [] -> "" | members ->
+        sprintf "cdef __init__(self: %s, %s) %s" class_string
+        ( Util.ppl members ~f:Fn.id )
+        ( if istype then sprintf "-> %s" class_string else "" )
+      ]
+      |> String.concat ~sep:"\n"
+      |> (fun s -> Util.A.db "%s" s; s)
+      |> ctx.globals.parse
+      |> List.map ~f:(C.sannotate Ann.default)
     in
     let cls_members =
-      List.map (init :: members) ~f:(fun s ->
+      List.map (inits @ members) ~f:(fun s ->
           let prefix = sprintf "%s." class_name in
           let typ, node, name =
             match snd s with
             | Function f ->
-              (* Util.A.dr "--> f %s %s" prefix (Stmt.to_string s); *)
               let stmt = parse_function ctx ~prefix f in
               let typ = Ctx.in_block ~ctx (prefix ^ f.fn_name.name) in
               Hashtbl.add_multi member_table ~key:f.fn_name.name ~data:(Option.value_exn typ);
@@ -667,9 +681,8 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
               Hashtbl.add_multi member_table ~key:fn.name ~data:(Option.value_exn typ);
               typ, stmt, fn.name
             | Class c ->
-              let stmt = parse_class ctx ~prefix c in
+              let stmt = parse_class ctx ~prefix ~member_of:member_table c in
               let typ = Ctx.in_block ~ctx (prefix ^ c.class_name) in
-              Hashtbl.set member_table ~key:c.class_name ~data:[ Option.value_exn typ ];
               typ, stmt, c.class_name
             | Declare ({ name; _ } as d) ->
               let stmt = parse_declare ctx ~prefix d in

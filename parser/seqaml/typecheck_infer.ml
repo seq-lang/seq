@@ -124,22 +124,22 @@ let rec unify ?(on_unify = ignore2) t1 t2 =
     else -1
   | _ -> -1
 
+let unify_merge lht rht =
+  match lht with
+  | Ann.Link { contents = Unbound (i, _, true) } ->
+    (* TODO: this is very restricted check: what if unbound->generic->unbound (then it is false?) *)
+    Util.dbg "[WARN] attempting to restrict generic T%d" i
+  (* (Ann.typ_to_string lht) *)
+  (* (Ann.typ_to_string rht) *)
+  | Link ({ contents = Unbound _ } as l) ->
+    (* Util.dbg "[unify] %s := %s" (Ann.var_to_string ~full:true lht) (Ann.var_to_string ~full:true rht); *)
+    l := Bound rht
+  | _ -> ierr "[unify_inplace] cannot unify non-unbound type"
+
 let unify_inplace ~ctx t1 t2 =
   (* Util.A.dr "%s <- %s"
     (Ann.var_to_string ~full:true t1) (Ann.var_to_string ~full:true t2); *)
-  let u =
-    unify t1 t2 ~on_unify:(fun lht rht ->
-        match lht with
-        | Link { contents = Unbound (i, _, true) } ->
-          (* TODO: this is very restricted check: what if unbound->generic->unbound (then it is false?) *)
-          Util.dbg "[WARN] attempting to restrict generic T%d" i
-        (* (Ann.typ_to_string lht) *)
-        (* (Ann.typ_to_string rht) *)
-        | Link ({ contents = Unbound _ } as l) ->
-          (* Util.dbg "[unify] %s := %s" (Ann.var_to_string ~full:true lht) (Ann.var_to_string ~full:true rht); *)
-          l := Bound rht
-        | _ -> ierr "[unify_inplace] cannot unify non-unbound type")
-  in
+  let u = unify t1 t2 ~on_unify:unify_merge in
   if u = -1 then C.err ~ctx "cannot unify %s and %s" (Ann.var_to_string t1) (Ann.var_to_string t2)
 
 (** Quantifies (generalizes) any unbound variable whose rank > [level]:
@@ -210,3 +210,20 @@ let instantiate ~(ctx : C.t) ?(inst = Int.Table.create ()) ?parent t =
   in
   parent >>| traverse_parents ~ctx ~f:(fun n (key, d) -> Hashtbl.set inst ~key ~data:d) |> ignore;
   f t
+
+
+let rec copy = function
+  | Ann.Class (c, t) ->
+    let generics = List.map c.generics ~f:(fun (n, (p, t)) -> n, (p, copy t)) in
+    let args = List.map c.args ~f:(fun (n, t) -> n, copy t) in
+    Ann.Class ({ c with generics; args }, t)
+  | Func (f, r) ->
+    let generics = List.map f.generics ~f:(fun (n, (p, t)) -> n, (p, copy t)) in
+    let args = List.map f.args ~f:(fun (n, t) -> n, copy t) in
+    let ret = copy r.ret in
+    Func ({ f with generics; args }, { ret; used = Hash_set.copy r.used })
+  | Tuple args -> Tuple (List.map args ~f:copy)
+  | Link { contents = Bound t } -> Link (ref (Ann.Bound (copy t)))
+  | Link { contents = Unbound u } -> Link (ref (Ann.Unbound u))
+  | Link { contents = Generic g } -> Link (ref (Ann.Generic g))
+

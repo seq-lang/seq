@@ -185,9 +185,16 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
                 | Ann.(Type _ | Import _) -> C.err ~ctx "wrong magic type"
                 | Var t ->
                   (match Ann.real_type t |> T.instantiate ~ctx with
-                  | Func (f, _) as t ->
-                    let f_args = List.map f.args ~f:snd in
-                    let s = T.sum_or_neg (typ :: args) f_args ~f:T.unify in
+                  | Func (f, _) as t when List.(length f.args = 1 + length args) ->
+                    Util.A.dy "IN: %s.%s [%s] <~> %s" (Ann.var_to_string typ) name
+                       (Util.ppl (typ::args) ~f:Ann.var_to_string)
+                       (Ann.var_to_string ~full:true t);
+                    let f_args = List.map f.args ~f:(fun f -> snd f) in
+                    let in_args = List.map (typ::args) ~f:T.copy in
+                    (* List.iter2_exn in_args f_args ~f:(fun i j ->
+                      Util.A.dy "%s.%s :: %s vs %s" (Ann.var_to_string typ) name (Ann.var_to_string ~full:true i) (Ann.var_to_string ~full:true j)); *)
+                    let s = T.sum_or_neg in_args f_args ~f:(T.unify ~on_unify:T.unify_merge) in
+                    Util.A.dy "RESULT: %s.%s :: %s (%d)" (Ann.var_to_string typ) name (Ann.var_to_string t) s;
                     if s = -1 then None else Some ((f.cache, t), s)
                   | _ -> None))
         >>| List.fold ~init:(None, -1) ~f:(fun (acc, cnt) cur ->
@@ -203,8 +210,8 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
             List.iter2_exn (typ :: args) f.args ~f:(fun t (_, t') -> T.unify_inplace ~ctx t t');
             (match realize ~ctx (Func (f, fret)) with
             (* (match realize_function ctx t (f, fret) with *)
-            | Func (_, f_ret) -> Some f_ret.ret
-            | _ -> failwith "cannot happen")
+              | Func (_, f_ret) -> Some f_ret.ret
+              | _ -> failwith "cannot happen")
           | _ -> ierr ~ctx "got non-function")
         | Some ((_, t), _), j ->
           (* many choices *)
