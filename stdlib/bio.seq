@@ -319,7 +319,7 @@ type FASTQ(file: gzFile):
             line += 1
         self.file.close()
 
-    def __iter__(self: FASTQ) -> FASTQRecord:
+    def __iter__(self: FASTQ) -> generator[FASTQRecord]:
         line = 0
         name, read, qual = "", s"", ""
         for a in self.file._iter():
@@ -378,7 +378,7 @@ type FASTA(file: gzFile, fai: list[int], names: list[str]):
         for rec in self:
             yield rec.seq
 
-    def __iter__(self: FASTA) -> FASTARecord:
+    def __iter__(self: FASTA) -> generator[FASTARecord]:
         idx = 0
         p = ptr[byte]()
         n = 0

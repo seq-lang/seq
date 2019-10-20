@@ -392,25 +392,33 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
       (* Member access case *)
       | false, _ ->
         let lh_expr = parse ~ctx lh_expr' in
+        let getitem_ast = C.epatch ~ctx
+          @@ e_call
+               (e_dot lh_expr' "__getitem__")
+               [ (match indices' with
+                 | [ a ] -> a
+                 | a -> e_tuple a)
+               ]
+        in
         let lt = Ann.real_type (var_of_node_exn lh_expr) in
         (match lt, indices' with
-        | _, [] -> C.err ~ctx "empty index"
-        | Tuple ts, [ (_, Int i) ] ->
+        | Class ({ args = ts; cache; _ }, { is_type = true }), [_, Int i] ->
+          let h = Hashtbl.find_exn ctx.globals.classes cache in
+          (match Hashtbl.find h "__getitem__" with
+          | Some _ -> parse ~ctx getitem_ast
+          | None ->
+            let typ = Caml.Int64.of_string_opt i >>= Int.of_int64 >>= List.nth ts in
+            match typ with
+            | Some (_, typ) -> C.ann ~typ:(Var typ) ctx, Index (lh_expr, indices)
+            | None -> C.err ~ctx "invalid tuple index")
+        | Tuple ts, [_, Int i] ->
           (* tuple static access typecheck *)
           let typ = Caml.Int64.of_string_opt i >>= Int.of_int64 >>= List.nth ts in
           (match typ with
           | Some typ -> C.ann ~typ:(Var typ) ctx, Index (lh_expr, indices)
           | None -> C.err ~ctx "invalid tuple index")
         | Tuple _, _ -> C.err ~ctx "tuple access requires a valid compile-time integer constant"
-        | _, _ ->
-          parse ~ctx
-          @@ C.epatch ~ctx
-          @@ e_call
-               (e_dot lh_expr' "__getitem__")
-               [ (match indices' with
-                 | [ a ] -> a
-                 | a -> e_tuple a)
-               ]))
+        | _, _ -> parse ~ctx getitem_ast))
 
   and parse_dot ctx (lh_expr', rhs) =
     let lh_expr = parse ~ctx lh_expr' in
@@ -439,18 +447,24 @@ module Typecheck (R : Typecheck_intf.Real) : Typecheck_intf.Expr = struct
       let typ = T.link_to_parent ~parent:(Some lt) (T.instantiate ~ctx ~parent:lt t) in
       C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)
     (* Object method access--- obj.fn *)
-    | Some (Var lt), Some (Var ((Func _) as t)) ->
+    | Some (Var lt), Some (Var ((Func (tg, tf)) as t)) ->
+      let ast, _ = Hashtbl.find_exn ctx.globals.realizations tg.cache in
       let typ = T.link_to_parent ~parent:(Some lt) (T.instantiate ~ctx ~parent:lt t) in
-      ( match lt, typ with
-        | (Class (lg, _) | Func (lg, _)),
-          Func ({ args = (hd_n, hd_t) :: tl; _ } as g, f) ->
-          T.unify_inplace ~ctx (T.instantiate ~ctx hd_t) lt;
-          let hd_t = T.link_to_parent ~parent:(snd lg.parent) hd_t in
-          let used = Hash_set.copy f.used in
-          Hash_set.add used hd_n;
-          let typ = Ann.Func ({ g with args = (hd_n, hd_t) :: tl }, { f with used }) in
-          C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)
-        | _ -> ierr "cannot happen")
+      (match lt, typ with
+      | (Class (lg, _) | Func (lg, _)),
+        Func ({ args = (hd_n, hd_t) :: tl; _ } as g, f) ->
+        T.unify_inplace ~ctx (T.instantiate ~ctx hd_t) lt;
+        let hd_t = T.link_to_parent ~parent:(snd lg.parent) hd_t in
+        let used = Hash_set.copy f.used in
+        Hash_set.add used hd_n;
+        let typ = Ann.Func ({ g with args = (hd_n, hd_t) :: tl }, { f with used }) in
+        (match ast with
+        | _, Function { fn_attrs; _ } when List.exists fn_attrs ~f:((=) "property") ->
+          Util.A.db "property! %s" rhs;
+          C.ann ~typ:(Var f.ret) ctx, Call ((C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)), [])
+        | _ ->
+          C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs))
+      | _ -> ierr "cannot happen")
     (* Nested member access: X.member *)
     | Some (Var lt), Some (Var t) ->
       (* What if there are NO proper parents? *)

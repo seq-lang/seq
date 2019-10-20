@@ -448,7 +448,6 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
           var_of_node_exn (E.parse ~ctx t))
     in
     let fn_name = { name = fname; typ = None } in
-    let is_property = List.exists f.fn_attrs ~f:((=) "property") in
     let fn_args, args =
       List.unzip
       @@ List.mapi f.fn_args ~f:(fun i arg ->
@@ -639,27 +638,44 @@ module Typecheck (E : Typecheck_intf.Expr) (R : Typecheck_intf.Real) : Typecheck
     | Some m -> Hashtbl.set m ~key:cls.class_name ~data:[Ann.Type tcls];
     | None -> ());
 
-    let class_string = sprintf"%s%s"
-      class_name
-      (match generics with [] -> "" | g -> sprintf "[%s]" @@ Util.ppl generics ~f:Fn.id)
-    in
     let class_members = List.filter_map members ~f:(function
-                | _, Declare { name; typ = Some typ } ->
-                  Some (sprintf "%s: %s" name (Expr.to_string typ))
-                | _ -> None)
+      | _, Declare { name; typ = Some typ } ->
+        Some (sprintf "%s: %s" name (Expr.to_string typ))
+      | _ -> None)
     in
-    let inits = if (snd cache) = Ann.default_pos then [] else
-      [ sprintf "cdef __init__(self: %s) %s"
-        class_string (if istype then sprintf "-> %s" class_string else "")
-      ; sprintf "cdef __bool__(self: %s) -> bool" class_string
-      ; sprintf "cdef __pickle__(self: %s, dest: ptr[byte])" class_string
-      ; sprintf "cdef __unpickle__(self: %s, src: ptr[byte]) -> %s" class_string class_string
-      ; sprintf "cdef __raw__(self: %s) -> ptr[byte]" class_string
-      ; match class_members with [] -> "" | members ->
-        sprintf "cdef __init__(self: %s, %s) %s" class_string
-        ( Util.ppl members ~f:Fn.id )
-        ( if istype then sprintf "-> %s" class_string else "" )
-      ]
+    let inits = if (snd cache) = Ann.default_pos then [] else (
+      let cls = sprintf"%s%s"
+        class_name
+        (match generics with [] -> "" | g -> sprintf "[%s]" @@ Util.ppl generics ~f:Fn.id)
+      in
+      if istype
+      then
+        [ sprintf "cdef __init__(self: %s) -> %s" cls cls
+        ; sprintf "cdef __str__(self: %s) -> str" cls
+        (* ; sprintf "cdef __iter__(self: %s) -> generator[]" cls *)
+        ; sprintf "cdef __len__(self: %s) -> int" cls
+        ; sprintf "cdef __eq__(self: %s, o: %s) -> bool" cls cls
+        ; sprintf "cdef __ne__(self: %s, o: %s) -> bool" cls cls
+        ; sprintf "cdef __lt__(self: %s, o: %s) -> bool" cls cls
+        ; sprintf "cdef __gt__(self: %s, o: %s) -> bool" cls cls
+        ; sprintf "cdef __le__(self: %s, o: %s) -> bool" cls cls
+        ; sprintf "cdef __ge__(self: %s, o: %s) -> bool" cls cls
+        ; sprintf "cdef __hash__(self: %s) -> int" cls
+        (* ; sprintf "cdef __contains__(self: %s) -> bool" cls *)
+        ; sprintf "cdef __pickle__(self: %s, dest: ptr[byte])" cls
+        ; sprintf "cdef __unpickle__(self: %s, src: ptr[byte]) -> %s" cls cls
+        ; match class_members with [] -> "" | members ->
+          sprintf "cdef __init__(self: %s, %s) -> %s" cls (Util.ppl members ~f:Fn.id) cls
+        ]
+      else
+        [ sprintf "cdef __init__(self: %s)" cls
+        ; sprintf "cdef __bool__(self: %s) -> bool" cls
+        ; sprintf "cdef __pickle__(self: %s, dest: ptr[byte])" cls
+        ; sprintf "cdef __unpickle__(self: %s, src: ptr[byte]) -> %s" cls cls
+        ; sprintf "cdef __raw__(self: %s) -> ptr[byte]" cls
+        ; match class_members with [] -> "" | members ->
+          sprintf "cdef __init__(self: %s, %s)" cls (Util.ppl members ~f:Fn.id)
+        ])
       |> String.concat ~sep:"\n"
       |> (fun s -> Util.A.db "%s" s; s)
       |> ctx.globals.parse

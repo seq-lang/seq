@@ -186,15 +186,15 @@ module Typecheck (E : Typecheck_intf.Expr) (S : Typecheck_intf.Stmt) : Typecheck
                 | Var t ->
                   (match Ann.real_type t |> T.instantiate ~ctx with
                   | Func (f, _) as t when List.(length f.args = 1 + length args) ->
-                    Util.A.dy "IN: %s.%s [%s] <~> %s" (Ann.var_to_string typ) name
+                    (* Util.A.dy "IN: %s.%s [%s] <~> %s" (Ann.var_to_string typ) name
                        (Util.ppl (typ::args) ~f:Ann.var_to_string)
-                       (Ann.var_to_string ~full:true t);
+                       (Ann.var_to_string ~full:true t); *)
                     let f_args = List.map f.args ~f:(fun f -> snd f) in
                     let in_args = List.map (typ::args) ~f:T.copy in
                     (* List.iter2_exn in_args f_args ~f:(fun i j ->
                       Util.A.dy "%s.%s :: %s vs %s" (Ann.var_to_string typ) name (Ann.var_to_string ~full:true i) (Ann.var_to_string ~full:true j)); *)
                     let s = T.sum_or_neg in_args f_args ~f:(T.unify ~on_unify:T.unify_merge) in
-                    Util.A.dy "RESULT: %s.%s :: %s (%d)" (Ann.var_to_string typ) name (Ann.var_to_string t) s;
+                    (* Util.A.dy "RESULT: %s.%s :: %s (%d)" (Ann.var_to_string typ) name (Ann.var_to_string t) s; *)
                     if s = -1 then None else Some ((f.cache, t), s)
                   | _ -> None))
         >>| List.fold ~init:(None, -1) ~f:(fun (acc, cnt) cur ->
