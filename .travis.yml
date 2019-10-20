@@ -12,15 +12,15 @@ addons:
     packages:
       - libsnappy-dev
       - binutils-dev
-      - libffi-dev
       - libomp-dev
+      - texinfo
   homebrew:
     update: true
     packages:
       - snappy
       - binutils
-      - libffi
       - libomp
+      - texinfo
       - cmake
 
 before_install:
@@ -58,6 +58,15 @@ before_install:
   - eval $(opam env)
 
 install:
+  # install libffi:
+  - wget -c https://github.com/libffi/libffi/archive/v3.2.1.tar.gz -O - | tar -xz
+  - cd libffi-3.2.1
+  - ./autogen.sh
+  - ./configure CFLAGS="-fPIC" --enable-portable-binary --enable-static --disable-shared
+  - make LDFLAGS="-static"
+  - sudo make install
+  - cd -
+
   # install Boehm GC:
   - git clone -b release-7_6 https://github.com/ivmai/bdwgc
   - cd bdwgc
@@ -74,9 +83,9 @@ install:
   - cd -
 
   # install htslib:
-  - wget -c wget https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 -O - | tar -xj
+  - wget -c https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 -O - | tar -xj
   - cd htslib-1.9
-  - ./configure
+  - ./configure CFLAGS="-fPIC"
   - make
   - sudo make install
   - cd -
@@ -84,10 +93,8 @@ install:
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
-  # ldconfig on linux:
+  - export LDFLAGS="-L/usr/local/lib"
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
-  # make sure we don't link against older system libffi on macOS:
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then export LDFLAGS="-L/usr/local/opt/libffi/lib"; fi
 
 script:
   - mkdir build
@@ -106,10 +113,6 @@ cache:
     - Tapir-LLVM
     - ${HOME}/.opam
 
-branches:
-  only:
-    - master
-
 notifications:
   webhooks:
     urls:
@@ -120,3 +123,13 @@ notifications:
     on_cancel: always
     on_error: always
   email: false
+
+deploy:
+  provider: releases
+  api_key:
+    secure: k/c1kq5t4gL32Mdl4UJFFQYFGiEV2TyOuhTdALJtnhLBuGgYHQaybnk7zF4Nf123se6bc2r4byfyNh9CiOtcrT6Cp0MUw63p+dh6MfQdWlhIDH8c33oDerpBJwNBIJ3FXb3DCW394uXfTMni6+yT1Jfhhg2j7+RyHvi1yhsMB0Lu3Mdw3YlaYTDg8X8jYo0bfJ2RWmXZ6OkwtUlTdN+JHu6WF4YNIdcX9EpBmGgi8lEtvbs4fuALQWcJG9TapbGoAq++87oh6MlGBUZDP05aVv0JAh+NMO0iyzxt+1PZuCrE1/Y3tuhXJngr5M6+6XOt9rtPhxh50q2Jd6N0zCjpj9EcXbS99DGcPWrLjzT7yM8Yim/2cUoEeYWeRD3+lGG4+rcCnkbRK3HPAxbrzefpPvrPuVYN3QuO3ypHOoWy7SOMClJBwAaIk/1diy2mWAOcus+JVKL58mCo5QcqmbFX320pALDFC/8XMMSg0+82wxlVttaZUv3j3OcCX0fUSb4PLhuakxsysdyJ8T9FCBssjnwco4Kgae1LOL/CPy7bTjtH9vtq8aQ5k9o4ylvwAwQ2iFgX2ZATptESIuFjCYb264GtTP55bZhQkrGjYpT+BghalBiBlwqmbBaML6+vSbYZCbtnyMmJ3pCLjhkIgV8KM99FRFhrW2sTou9WqupxZJg=
+  file: build/seqc
+  skip_cleanup: true
+  on:
+    repo: seq-lang/seq
+    tags: true
