@@ -15,6 +15,7 @@ addons:
       - libomp-dev
       - texinfo
       - python3
+      - python3-pip
       - doxygen
   homebrew:
     update: true
@@ -95,9 +96,8 @@ install:
   - cd -
 
   # install dependencies for docs:
-  - pip3 install --user sphinx-rtd-theme
-  - pip3 install --user breathe
-  - pip3 install --user exhale
+  - pip3 install --upgrade --user pip
+  - pip3 install --user wheel sphinx sphinx-rtd-theme breathe exhale
 
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
