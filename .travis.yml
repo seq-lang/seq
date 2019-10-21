@@ -95,9 +95,9 @@ install:
   - cd -
 
   # install dependencies for docs:
-  - pip install --user sphinx-rtd-theme
-  - pip install --user breathe
-  - pip install --user exhale
+  - pip3 install --user sphinx-rtd-theme
+  - pip3 install --user breathe
+  - pip3 install --user exhale
 
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
