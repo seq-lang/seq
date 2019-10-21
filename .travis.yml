@@ -99,8 +99,8 @@ install:
   - cd -
 
   # install dependencies for docs:
-  - pip3 install --upgrade --user pip
-  - pip3 install --user wheel sphinx-rtd-theme breathe exhale
+  - sudo pip3 install --upgrade pip
+  - sudo pip3 install wheel sphinx sphinx-rtd-theme breathe exhale
 
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
