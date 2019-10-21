@@ -14,6 +14,7 @@ addons:
       - binutils-dev
       - libomp-dev
       - texinfo
+      - doxygen
   homebrew:
     update: true
     packages:
@@ -21,6 +22,7 @@ addons:
       - binutils
       - libomp
       - texinfo
+      - doxygen
       - cmake
 
 before_install:
@@ -90,6 +92,11 @@ install:
   - sudo make install
   - cd -
 
+  # install dependencies for docs:
+  - pip install --user sphinx-rtd-theme
+  - pip install --user breathe
+  - pip install --user exhale
+
 before_script:
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
@@ -106,6 +113,7 @@ script:
   - cmake --build build
   - build/seqtest 2> /dev/null
   - build/seqc test/core/helloworld.seq
+  - (cd docs/sphinx && make html)
 
 before_deploy:
   - export SEQ_BUILD_ARCHIVE=seq-`uname | awk '{print tolower($0)}'`.tar.gz
