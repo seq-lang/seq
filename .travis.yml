@@ -14,6 +14,7 @@ addons:
       - binutils-dev
       - libomp-dev
       - texinfo
+      - python3
       - doxygen
   homebrew:
     update: true
@@ -22,6 +23,7 @@ addons:
       - binutils
       - libomp
       - texinfo
+      - python3
       - doxygen
       - cmake
 
