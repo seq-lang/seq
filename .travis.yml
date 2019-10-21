@@ -16,6 +16,7 @@ addons:
       - texinfo
       - python3
       - python3-pip
+      - python3-setuptools
       - doxygen
   homebrew:
     update: true
@@ -115,7 +116,7 @@ script:
   - cmake --build build
   - build/seqtest 2> /dev/null
   - build/seqc test/core/helloworld.seq
-  - (cd docs/sphinx && make html)
+  - (cd docs/sphinx && make html 2> /dev/null)
 
 before_deploy:
   - export SEQ_BUILD_ARCHIVE=seq-`uname | awk '{print tolower($0)}'`.tar.gz
