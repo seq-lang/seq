@@ -20,7 +20,6 @@ let init () : t =
   try
     let anon_fn = Llvm.Func.func "<anon_init>" in
 
-    let parse = Codegen.parse ~f:ignore in
     let filename = "<jit>" in
     let tctx = Typecheck_ctx.init_module ~filename Typecheck_stmt.parse in
 

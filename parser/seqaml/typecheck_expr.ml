@@ -53,7 +53,7 @@ let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
     | Slice _ -> C.err ~ctx "slice is only valid within an index"
     | Unpack _ -> C.err ~ctx "unpack is not valid here"
   in
-  C.pop_ann ~ctx |> ignore;
+  ignore @@ C.pop_ann ~ctx;
   (* Util.A.db "[e] %s |= %s" (Expr.to_string expr) (Ann.t_to_string (fst expr).typ); *)
   expr
 
@@ -120,15 +120,14 @@ and parse_tuple ctx args =
   C.ann ~typ:(Var typ) ctx, Tuple args
 
 and parse_collection ~kind ctx items =
-  let append =
+  let append, init_args =
     match kind with
-    | "list" -> "append"
-    | "dict" -> "__setitem__"
-    | "set" -> "add"
+    | "list" -> "append", [e_int (List.length items)]
+    | "set" -> "add", []
+    | "dict" -> "__setitem__", []
     | k -> ierr "[parse_comprehension] unknown kind %s" k
   in
   let temp_var = C.make_temp ctx ~prefix:"col" in
-  let init_args = match kind with "list" -> [e_int (List.length items)] | _ -> [] in
   let s_init = s_assign (e_id temp_var) (e_call (e_id kind) init_args) in
   let s_set =
     match kind with
@@ -145,10 +144,11 @@ and parse_collection ~kind ctx items =
   parse_id ctx temp_var
 
 and parse_generator ctx (kind, exprs, comp) =
-  let append, empty =
+  let append, init_args =
     match kind with
-    | "list" -> "append", List []
-    | "set" -> "add", Set []
+    | "list" -> "append", [] (** TODO: do initialize *)
+    | "set" -> "add", []
+    | "dict" -> "__setitem__", []
     | k -> ierr "[parse_comprehension] unknown kind %s" k
   in
   let temp_var = C.make_temp ctx ~prefix:"comp" in
@@ -159,7 +159,7 @@ and parse_generator ctx (kind, exprs, comp) =
       let stmt = Option.value_map cond ~default:stmt ~f:(fun c -> s_if c [ stmt ]) in
       s_for var gen [ stmt ]
   in
-  let stmts = [ s_assign (e_id temp_var) (C.ann ctx, empty); s_generator (Some comp) ] in
+  let stmts = [ s_assign (e_id temp_var) (e_call (e_id kind) init_args); s_generator (Some comp) ] in
   List.map stmts ~f:(fun s -> ctx.globals.sparse ~ctx @@ C.sannotate (C.ann ctx) s)
   |> List.concat
   |> List.iter ~f:(Stack.push ctx.env.statements);
@@ -214,24 +214,22 @@ and parse_binary ctx (lh, bop, rh) =
     C.ann ~typ:(Var typ) ctx, Binary (lh, bop, rh)
 
 and parse_call ctx (expr, args) =
-  let is_partial { value; _ } =
-    match value with
-    | _, Expr.Ellipsis _ -> true
-    | _ -> false
-  in
-  let expr = parse ~ctx expr in
-  let etyp = Ann.real_type (var_of_node_exn expr) in
-  match expr, List.map args ~f:(fun x -> x.value), etyp with
-  | (_, Dot (e, "__len__")), [], Tuple t -> (* Won't catch partial application though... *)
-    parse_int ctx (string_of_int @@ List.length t, "")
-  (* fast ''.join optimization *)
-  | _, [a, Generator (("list" | "tuple"), _, { gen; cond = None; next = None; _ } as g)], Func (f, _)
-    when (fst f.cache = "join") && (fst (fst f.parent) = "str") ->
-    (* TODO: won't catch shadows and extensions! *)
-    parse ~ctx
-    @@ C.eannotate ~ctx
-    @@ e_call (e_dot (e_id "str") "cati_ext") [ a, Generator g ]
-  | _ -> parse_call_real ctx (expr, args)
+  match snd expr, List.map args ~f:(fun x -> x.value) with
+  | Dot (e, "__len__"), [] -> (* Won't catch partial application though... *)
+    let e = parse ~ctx e in
+    (match Ann.real_type (var_of_node_exn e) with
+    | Tuple t -> parse_int ctx (string_of_int @@ List.length t, "")
+    | _ -> parse_call_real ctx (parse ~ctx expr, args))
+  | _, [a, Generator (("list" | "tuple"), _, { gen; cond = None; next = None; _ } as g)] ->
+    let expr = parse ~ctx expr in
+    (match Ann.real_type (var_of_node_exn expr) with
+    | Func (f, _) when (fst f.cache = "join") && (fst (fst f.parent) = "str") ->
+      (* TODO: won't catch shadows and extensions! *)
+      parse ~ctx
+      @@ C.eannotate ~ctx
+      @@ e_call (e_dot (e_id "str") "cati_ext") [ a, Generator g ]
+    | _ -> parse_call_real ctx (expr, args))
+  | _ -> parse_call_real ctx (parse ~ctx expr, args)
 
 and parse_call_real ctx (expr, args) =
   let is_partial { value; _ } =
@@ -286,12 +284,6 @@ and parse_call_real ctx (expr, args) =
           T.unify_inplace ~ctx typ' typ
         | Some (i, typ'), false ->
           Hash_set.add used name;
-          (* Util.A.db
-            "->> inarg %d %s: def = %s, pass = %s"
-            i
-            name
-            (Ann.var_to_string typ')
-            (Ann.var_to_string (var_of_node_exn arg.value)); *)
           T.unify_inplace ~ctx (var_of_node_exn arg.value) typ';
           Hashtbl.set arg_table ~key:name ~data:(i, var_of_node_exn arg.value)
         | _ -> C.err ~ctx "argument %s does not exist" name);

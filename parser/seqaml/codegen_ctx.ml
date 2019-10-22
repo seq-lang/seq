@@ -6,6 +6,8 @@
  * *****************************************************************************)
 
 open Core
+open Util
+
 open Ast
 open Option.Monad_infix
 
@@ -122,12 +124,7 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block sparse
       let args = Llvm.Module.get_args mdl in
       add ~ctx ~internal ~global ~toplevel "__argv__" (Var args));
     match Util.get_from_stdlib "stdlib" with
-    | Some file ->
-      In_channel.read_lines file
-       |> String.concat ~sep:"\n"
-       |> Codegen.parse ~file:(Filename.realpath file)
-       |> List.map ~f:(ctx.globals.sparse ~ctx ~toplevel:true)
-       |> ignore
+    | Some file -> Codegen.parse_file file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx ~toplevel:true)
     | None -> Err.ierr "cannot locate stdlib.seq");
   Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
       add ~ctx ~internal ~global ~toplevel key (fst @@ List.hd_exn data));
@@ -241,7 +238,7 @@ let rec get_realization ~(ctx : t) typ =
       Llvm.Func.set_args ptr names types;
       Llvm.Func.set_type ptr (get_realization ~ctx ret);
       List.iter names ~f:(fun n -> add ~ctx:new_ctx n (Var (Llvm.Func.get_arg ptr n)));
-      ignore @@ List.map f.fn_stmts ~f:(ctx.globals.sparse ~ctx:new_ctx ~toplevel:false);
+      List.ignore_map f.fn_stmts ~f:(ctx.globals.sparse ~ctx:new_ctx ~toplevel:false);
       Ctx.clear_block ~ctx:new_ctx;
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
       ptr

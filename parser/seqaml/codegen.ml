@@ -34,3 +34,11 @@ let parse ?f ?(file = "") code =
     raise @@ Err.CompilerError (Descent msg, pos)
   | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])
   | Err.InternalError (msg, pos) -> raise @@ Err.CompilerError (Internal msg, [ pos ])
+
+let parse_file ?f file =
+  let ast =
+    In_channel.read_lines file
+      |> String.concat ~sep:"\n"
+      |> parse ~file:(Filename.realpath file)
+  in
+  match f with Some f -> List.map ~f ast | None -> ast

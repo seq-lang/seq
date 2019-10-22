@@ -46,7 +46,7 @@ let rec parse ~(ctx : C.t) (ann, node) =
   (* Update C++ bookkeeping members *)
   Llvm.Expr.set_pos expr ann;
   Llvm.Expr.set_trycatch expr ctx.env.trycatch;
-  C.pop_ann ~ctx |> ignore;
+  ignore @@ C.pop_ann ~ctx;
   expr
 
 (* ***************************************************************

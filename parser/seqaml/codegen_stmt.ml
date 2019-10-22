@@ -6,6 +6,7 @@
  * *****************************************************************************)
 
 open Core
+open Util
 
 open Ast.Expr
 open Ast.Stmt
@@ -43,6 +44,7 @@ let rec parse ~(ctx : C.t) ?(toplevel=false) ?(jit = false) (ann, node) =
     | Throw p -> parse_throw ctx p
     | Global p -> parse_global ctx p
     | Prefetch p -> parse_prefetch ctx p
+    | (Function _ | Class _ | Type _ | Extern _) -> Llvm.Stmt.pass ()
     (* | Function p -> parse_function ctx p ~toplevel *)
     (* | Class p -> parse_class ctx p ~toplevel *)
     (* | Type p -> parse_class ctx p ~toplevel ~is_type:true *)
@@ -50,7 +52,7 @@ let rec parse ~(ctx : C.t) ?(toplevel=false) ?(jit = false) (ann, node) =
     (* | Special p -> parse_special ctx p *)
     | _ -> C.err ~ctx "not yet!"
   in
-  C.pop_ann ~ctx |> ignore;
+  ignore @@ C.pop_ann ~ctx;
   Llvm.Stmt.set_base stmt ctx.env.base;
   Llvm.Stmt.set_pos stmt ann;
   Llvm.Block.add_stmt ctx.env.block stmt;
@@ -69,7 +71,7 @@ and parse_module ?(jit = false) ~(ctx : C.t) stmts =
       | l -> l
     else stmts
   in
-  ignore @@ List.map stmts ~f:(parse ~ctx ~toplevel:true ~jit)
+  List.ignore_map stmts ~f:(parse ~ctx ~toplevel:true ~jit)
 
 (* ***************************************************************
     Node code generators
@@ -234,11 +236,7 @@ and parse_import ctx ?(ext = ".seq") ~toplevel imports =
       | None ->
         let new_ctx = C.init_empty ~ctx in
         if file = ctx.env.filename then C.err ~ctx "recursive import";
-        In_channel.read_lines file
-          |> String.concat ~sep:"\n"
-          |> Codegen.parse ~file:(Filename.realpath file)
-          |> List.map ~f:(parse ~ctx:new_ctx ~toplevel:true)
-          |> ignore;
+        Codegen.parse_file file |> List.ignore_map ~f:(parse ~ctx:new_ctx ~toplevel:true);
         let new_ctx =
           { new_ctx with
             map =
@@ -292,11 +290,7 @@ and parse_import ctx ?(ext = ".seq") ~toplevel imports =
 and parse_impaste ctx ?(ext = ".seq") from =
   match Util.get_from_stdlib ~ext from with
   | Some file ->
-    In_channel.read_lines file
-      |> String.concat ~sep:"\n"
-      |> Codegen.parse ~file:(Filename.realpath file)
-      |> List.map ~f:(parse ~ctx ~toplevel:true)
-      |> ignore;
+    Codegen.parse_file file |> List.ignore_map ~f:(parse ~ctx ~toplevel:true);
     Llvm.Stmt.pass ()
   | None -> C.err ~ctx "cannot locate module %s" from
 
@@ -352,5 +346,5 @@ and parse_prefetch ctx pfs =
 and add_block ctx ?(preprocess = fun _ -> ()) stmts =
   Ctx.add_block ~ctx;
   preprocess ctx;
-  ignore @@ List.map stmts ~f:(parse ~ctx ~toplevel:false);
+  List.ignore_map stmts ~f:(parse ~ctx ~toplevel:false);
   Ctx.clear_block ~ctx

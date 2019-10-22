@@ -30,6 +30,13 @@ let ignore2 _ _ = ()
 let fst3 (f, _, _) = f
 let pad l = String.make (l * 2) ' '
 
+module List = struct
+  include List
+
+  let ignore_map ~f t = ignore (map ~f t)
+end
+
+
 (* ANSITerminal codes *)
 module A = struct
   let style_to_string s =

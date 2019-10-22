@@ -6,6 +6,7 @@
  * *****************************************************************************)
 
 open Core
+open Util
 open Err
 open Option.Monad_infix
 
@@ -52,7 +53,7 @@ let rec parse ~(ctx : C.t) (s : Stmt.t Ann.ann) : Stmt.t Ann.ann list =
   in
   let stmts = (ann, node) :: Stack.to_list ctx.env.statements in
   Stack.clear ctx.env.statements;
-  C.pop_ann ~ctx |> ignore;
+  ignore @@ C.pop_ann ~ctx;
   (* Util.A.dr "%s -> %s" (Stmt.to_string s) (Stmt.to_string (ann, node)); *)
   List.rev stmts
 
@@ -332,12 +333,8 @@ and parse_import (ctx : C.t) ?(ext = ".seq") imports =
       | Some t -> t
       | None ->
         let ictx = C.init_empty ~ctx in
-        In_channel.read_lines file
-        |> String.concat ~sep:"\n"
-        |> Codegen.parse ~file
-        |> List.map ~f:(parse ~ctx:ictx)
-        |> List.concat
-        |> ignore;
+        Codegen.parse_file file
+        |> List.ignore_map ~f:(parse ~ctx:ictx);
         Hashtbl.set ctx.globals.imports ~key:file ~data:ictx.map;
         ictx.map
     in
@@ -378,11 +375,7 @@ and parse_import (ctx : C.t) ?(ext = ".seq") imports =
 and parse_impaste ctx ?(ext = ".seq") from =
   match Util.get_from_stdlib ~ext from with
   | Some file ->
-    In_channel.read_lines file
-    |> String.concat ~sep:"\n"
-    |> Codegen.parse ~file:(Filename.realpath file)
-    |> List.map ~f:(ctx.globals.sparse ~ctx)
-    |> ignore;
+    Codegen.parse_file file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx);
     ImportPaste from
   | None -> C.err ~ctx "cannot locate module %s" from
 
@@ -439,8 +432,7 @@ and parse_extern ctx ?(prefix = "") f =
   let node = C.ann ~typ:(Var typ) ctx, Extern (lang, dylib, ctxn, fn, List.map ~f:fst args) in
   Hashtbl.set C.realizations ~key:(fst tf').cache ~data:(node, String.Table.create ());
   ignore @@ R.realize ~ctx typ;
-  (* snd node *)
-  Pass ()
+  snd node
 
 and parse_function ctx ?(prefix = "") ?(shalow = false) f =
   let ctx = C.enter_level ~ctx in
@@ -530,8 +522,7 @@ and parse_function ctx ?(prefix = "") ?(shalow = false) f =
   Hashtbl.set C.realizations ~key:(fst tf').cache ~data:(node, String.Table.create ());
   Util.dbg "|| [fun] %s |- %s %b" fname (Ann.var_to_string tfun) (Ann.is_realizable tfun);
   let tfun = if Ann.is_realizable tfun then R.realize ~ctx tfun else tfun in
-  (* (snd done) *)
-  Pass ()
+  snd node
 
 (* and prn_class ?(generics = Int.Table.create ()) lev (name, typ) =
   Util.dbg "|| %s[typ] %s |- %s" (String.make (2 * lev) ' ') name
@@ -594,8 +585,7 @@ and parse_extend (ctx : C.t) (name, new_members) =
   let ctx = C.exit_level ~ctx in
   List.iter tcls.generics ~f:(fun (g, _) -> Ctx.remove ~ctx g);
   List.iter explicits ~f:(T.generalize_inplace ~ctx);
-  (* Extend (name, new_members) *)
-  Pass ()
+  Extend (name, new_members)
 
 and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
   let { class_name; generics; members; _ } = cls in
@@ -749,18 +739,6 @@ and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
     else tcls
   in
   (* prn_class 0 (cls.class_name, tcls); *)
-  (* snd node *)
-  Pass ()
+  snd node
 
-(* and parse_realize ctx ann (n, real) =
-  let ast, _ = Hashtbl.find_exn G.generics real in
-  let name, typ, is_typ = match snd ast, ann.typ with
-    | Class c, Some t -> c.class_name, t, G.Type
-    | Type c, Some t -> c.class_name, t, G.Type
-    | Function f, Some t -> f.fn_name.name, t, G.Var
-    | Extern (_, _, _, n, _), Some t -> n.name, t, G.Var
-    | _ -> failwith "cant happen [parse_realize]"
-  in
-  Ctx.add ctx name (typ, is_typ);
-  ann.typ, StmtNode.Realize (n, real) *)
 and parse_special ctx (name, exprs, _) = ierr "No specials here"

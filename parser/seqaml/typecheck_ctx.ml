@@ -347,8 +347,7 @@ let init_module ?(argv = false) ~filename sparse =
       #  cdef __bool__(self) -> bool
       |})
    |> List.map ~f:(sannotate Ann.default)
-   |> List.map ~f:(ctx.globals.sparse ~ctx)
-   |> ignore;
+   |> List.ignore_map ~f:(ctx.globals.sparse ~ctx);
    List.iter [ "str" ; "seq" ] ~f:(fun s ->
      let h = Hashtbl.find_exn ctx.globals.classes (s, Ann.default_pos) in
      Hashtbl.remove h "__init__");
@@ -364,12 +363,7 @@ let init_module ?(argv = false) ~filename sparse =
    if true
    then (
      match Util.get_from_stdlib "stdlib" with
-     | Some file ->
-       In_channel.read_lines file
-       |> String.concat ~sep:"\n"
-       |> Codegen.parse ~file:(Filename.realpath file)
-       |> List.map ~f:(ctx.globals.sparse ~ctx)
-       |> ignore
+     | Some file -> Codegen.parse_file file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx)
      | None -> Err.ierr "cannot locate stdlib.seq"));
   Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data -> Ctx.add ~ctx key (List.hd_exn data));
   ctx
