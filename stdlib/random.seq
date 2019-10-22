@@ -247,21 +247,30 @@ class Random:
         producing bytes.
         """
         n = 0
-        for x in b:
+        for x in range(len(b)):
             n <<= 8
-            n |= x
+            n |= int(b[x])
         return n
 
     def getrandbits(self: Random, k: int) -> int:
         """
-        getrandbits(k) -> x.  Generates an int with k random bits.
+        getrandbits(k) -> x
+        Generates an int with k random bits.
         """
-        if k <= 0:
-            raise ValueError('number of bits must be greater than zero')
-        numbytes = (k + 7) // 8                       # bits / 8 and rounded up
-        cdef urandom(int) -> int
-        x = self.from_bytes_big(urandom(numbytes))
-        return x >> (numbytes * 8 - k)                # trim excess bits
+
+        if k <= 32:     # Fast path
+            return int(self.gen.genrand_int32()) >> (32 - k)
+
+        words = (k - 1) // 32 + 1
+        wordarray = array[u64](words)
+        for i in range(words):
+            r = int(self.gen.genrand_int32())
+            if k < 32: r >>= (32 - k)
+            wordarray[i] = u64(r)
+            k -= 32
+
+        return self.from_bytes_big(wordarray)
+
 
     # def _randbelow_with_getrandbits(self: Random, n: int) -> int:
     #     """
@@ -389,35 +398,7 @@ class Random:
             low, high = high, low
         return low + (high - low) * math.sqrt(u * c)
 
-init = array[u64](4)
-init[0] = u64(0x123)
-init[1] = u64(0x234)
-init[2] = u64(0x345)
-init[3] = u64(0x456)
-length = 4
 
-rand_gen = Generator()
-rand_o = Random(rand_gen)
-
-# rand_o.getrandbits(3)
-rand_o.seed()
-print "random()"
-print rand_o.random()
-print rand_o.random()
-print rand_o.random()
-print ''
-print "uniform()"
-print rand_o.uniform(0, 100)
-print rand_o.uniform(0, 100)
-print rand_o.uniform(0, 100)
-print ''
-print "triangular()"
-print rand_o.triangular(0.0, 1.0)
-print rand_o.triangular(0.0, 1.0)
-print rand_o.triangular(0.0, 1.0)
-# print ''
-# print rand_o.getrandbits(9)
-# print rand_o.from_bytes_big()
 # print rand_o.shuffle([3, 2, 4, 5])
 # print rand_o.gen.gettimeofday()
 # print rand_o.gen.gettimeofday()

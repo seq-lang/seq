@@ -1,0 +1,56 @@
+import random
+
+init = array[u64](4)
+init[0] = u64(0x123)
+init[1] = u64(0x234)
+init[2] = u64(0x345)
+init[3] = u64(0x456)
+length = 4
+
+rand_gen = random.Generator()
+rand_o = random.Random(rand_gen)
+
+rand_o.seed()
+print "random()"
+print rand_o.random()
+print rand_o.random()
+print rand_o.random()
+print ''
+
+print "uniform()"
+print rand_o.uniform(0, 100)
+print rand_o.uniform(0, 100)
+print rand_o.uniform(0, 100)
+print ''
+
+print "triangular()"
+print rand_o.triangular(0.0, 1.0)
+print rand_o.triangular(0.0, 1.0)
+print rand_o.triangular(0.0, 1.0)
+print ''
+
+print "from_bytes_big()"
+print rand_o.from_bytes_big([u64(250), u64(0), u64(0)])
+print rand_o.from_bytes_big(init)
+print ''
+
+print "getrandbits()"
+print rand_o.getrandbits(0)
+print rand_o.getrandbits(3)
+print rand_o.getrandbits(9)
+print rand_o.getrandbits(9)
+print rand_o.getrandbits(9)
+print rand_o.getrandbits(33)
+print rand_o.getrandbits(33)
+print rand_o.getrandbits(33)
+
+# print rand_o.shuffle([3, 2, 4, 5])
+# print rand_o.gen.gettimeofday()
+# print rand_o.gen.gettimeofday()
+
+
+# gauss = rand_o.gauss
+#
+# rand_obj = Generator()
+# # rand_obj.init_by_array(init, length)
+# rand_obj.genrand_res53()
