@@ -291,17 +291,14 @@ and read state = parse
   | "%"   as op { P.MOD    (cur_pos state lexbuf, Char.to_string op) }
 
   | (int | hexint) as i
-    { P.INT (cur_pos state lexbuf ~len:(String.length i), i) }
+    { P.INT (cur_pos state lexbuf ~len:(String.length i), (i, "")) }
   | float as f
-    { P.FLOAT (cur_pos state lexbuf ~len:(String.length f),
-        float_of_string f) }
+    { P.FLOAT (cur_pos state lexbuf ~len:(String.length f), (f, "")) }
 
   | ((int | hexint) as i) (intsuffix as k)
-    { P.INT_S (cur_pos state lexbuf ~len:(String.length i),
-        (i, Char.to_string k)) }
+    { P.INT (cur_pos state lexbuf ~len:(String.length i), (i, Char.to_string k)) }
   | (float as f) (intsuffix as k)
-    { P.FLOAT_S (cur_pos state lexbuf ~len:(String.length f),
-        (float_of_string f, Char.to_string k)) }
+    { P.FLOAT (cur_pos state lexbuf ~len:(String.length f), (f, Char.to_string k)) }
 
   | eof { P.EOF (cur_pos state lexbuf) }
   | _ {

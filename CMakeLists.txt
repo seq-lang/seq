@@ -15,6 +15,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_PYBRIDGE "support Python interoperability" ON)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
+option(SEQ_DYN_PARSELIB "use dynamic instead of static linking for OCaml parsing library" OFF)
 find_package(ZLIB REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GC REQUIRED bdw-gc)
@@ -73,6 +74,11 @@ link_directories(${OCAML_STDLIB_PATH})
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/seqparser.o")
 set(DUNE_OUTPUT_NAME "main.exe.o")
+if(SEQ_DYN_PARSELIB)
+  set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/libseqparser.so")
+  set(DUNE_OUTPUT_NAME "main.so")
+endif()
+
 
 find_program(OPAM NAMES opam)
 if(NOT OPAM)
@@ -177,8 +183,14 @@ endif()
 
 
 # Seq command-line tool
-add_executable(seqc runtime/main.cpp)
-target_link_libraries(seqc seq)
+if(SEQ_DYN_PARSELIB)
+  add_executable(seqc runtime/main.cpp)
+  target_link_libraries(seqc seq seqparse asmrun)
+else()
+  add_executable(seqc runtime/main.cpp)
+  target_link_libraries(seqc seq)
+endif()
+
 
 
 # Seq test
@@ -207,6 +219,11 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
                  ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
                  EXCLUDE_FROM_ALL)
 
-add_executable(seqtest test/main.cpp)
-target_link_libraries(seqtest seq gtest_main)
+if(SEQ_DYN_PARSELIB)
+   add_executable(seqtest test/main.cpp)
+   target_link_libraries(seqtest seq seqparse asmrun gtest_main)
+else()
+  add_executable(seqtest test/main.cpp)
+  target_link_libraries(seqtest seq gtest_main)
+endif()
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")

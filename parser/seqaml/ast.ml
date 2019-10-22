@@ -74,7 +74,7 @@ module Ann = struct
     | Link { contents = Bound t } -> real_type t
     | t -> t
 
-  let rec real_t t =
+  let real_t t =
     match t with
     | None | Some (Import _) -> t
     | Some Type t  -> Some (Type (real_type t))
@@ -84,10 +84,10 @@ module Ann = struct
     | { typ = Some (Type _) ; _ } -> true
     | _ -> false
 
-  let patch t f =
+  let patch t ~f =
     match t.typ with
-    | Some (Type _) -> { t with typ = Some (Type f) }
-    | Some (Var _) -> { t with typ = Some (Var f) }
+    | Some (Type v) -> { t with typ = Some (Type (f v)) }
+    | Some (Var v) -> { t with typ = Some (Var (f v)) }
     | _ -> t
 
   let rec has_unbound ?(count_generics=false) t =
@@ -135,10 +135,8 @@ module Expr = struct
     | Empty _ -> ""
     | Ellipsis _ -> "..."
     | Bool x -> if x then "True" else "False"
-    | Int x -> sprintf "%s" x
-    | IntS (x, k) -> sprintf "%s%s" x k
-    | Float x -> sprintf "%f" x
-    | FloatS (x, k) -> sprintf "%f%s" x k
+    | Int (x, k) -> sprintf "%s%s" x k
+    | Float (x, k) -> sprintf "%s%s" x k
     | String x -> sprintf "'%s'" (String.escaped x)
     | Kmer x -> sprintf "k'%s'" x
     | Seq x -> sprintf "s'%s'" x
@@ -149,8 +147,11 @@ module Expr = struct
     | List l -> sprintf "[%s]" (ppl l ~f:to_string)
     | Set l -> sprintf "{%s}" (ppl l ~f:to_string)
     | Dict l ->
-      sprintf "{%s}"
-      @@ ppl l ~f:(fun (a, b) -> sprintf "%s: %s" (to_string a) (to_string b))
+      List.chunks_of l ~length:2
+      |> ppl ~f:(function
+        | [a; b] -> sprintf "%s: %s" (to_string a) (to_string b)
+        | _ -> failwith "cannot happen")
+      |> sprintf "{%s}"
     | IfExpr (x, i, e) ->
       sprintf "%s if %s else %s" (to_string x) (to_string i) (to_string e)
     | Pipe l ->
@@ -165,12 +166,15 @@ module Expr = struct
     | Slice (a, b, c) ->
       let l = List.map [ a; b; c ] ~f:(Option.value_map ~default:"" ~f:to_string) in
       sprintf "%s" (ppl l ~sep:":" ~f:Fn.id)
-    | Generator (x, c) -> sprintf "(%s %s)" (to_string x) (comprehension_to_string c)
-    | ListGenerator (x, c) -> sprintf "[%s %s]" (to_string x) (comprehension_to_string c)
-    | SetGenerator (x, c) -> sprintf "{%s %s}" (to_string x) (comprehension_to_string c)
-    | DictGenerator ((x1, x2), c) ->
-      sprintf "{%s: %s %s}" (to_string x1) (to_string x2) (comprehension_to_string c)
     | Lambda (l, x) -> sprintf "lambda (%s): %s" (ppl l ~f:Fn.id) (to_string x)
+    | Generator (t, x, c) ->
+      let c = comprehension_to_string c in
+      match t, x with
+      | "list", [x] -> sprintf "[%s %s]" (to_string x) c
+      | "set", [x] -> sprintf "{%s %s}" (to_string x) c
+      | "tuple", [x] -> sprintf "(%s %s)" (to_string x) c
+      | "dict", [x; y] -> sprintf "{%s: %s %s}" (to_string x) (to_string y) c
+      | _ -> failwith "invalid generator"
 
   and call_to_string { name; value } =
     sprintf
@@ -201,11 +205,8 @@ module Expr = struct
       | Tuple l -> Tuple (List.map l ~f:walk)
       | List l -> List (List.map l ~f:walk)
       | Set l -> Set (List.map l ~f:walk)
-      | Dict l -> Dict (List.map l ~f:(fun (x, y) -> walk x, walk y))
-      | Generator (g, tc) -> Generator (walk g, fg tc)
-      | ListGenerator (g, tc) -> ListGenerator (walk g, fg tc)
-      | SetGenerator (g, tc) -> SetGenerator (walk g, fg tc)
-      | DictGenerator ((g1, g2), tc) -> DictGenerator (((walk g1), (walk g2)), fg tc)
+      | Dict l -> Dict (List.map l ~f:walk)
+      | Generator (t, g, tc) -> Generator (t, List.map g ~f:walk, fg tc)
       | IfExpr (a, b, c) -> IfExpr (walk a, walk b, walk c)
       | Unary (s, e) -> Unary (s, walk e)
       | Binary (e1, s, e2) -> Binary (walk e1, s, walk e2)
@@ -370,7 +371,10 @@ let e_id ?(ann=default) n =
   ann, Expr.Id n
 
 let e_int ?(ann=default) n =
-  ann, Expr.Int (sprintf "%d" n)
+  ann, Expr.Int (sprintf "%d" n, "")
+
+let e_string ?(ann=default) s =
+  ann, Expr.String s
 
 let e_ellipsis ?(ann=default) () =
   ann, Expr.Ellipsis ()
@@ -411,6 +415,9 @@ let s_for ?(ann=default) vars iter stmts =
 
 let s_assert ?(ann=default) expr =
   ann, Stmt.Assert expr
+
+let s_print ?(ann=default) ?(term="") expr =
+  ann, Stmt.Print ([expr], term)
 
 let s_extern ?(ann=default) ?(lang="c") name ret params =
   ann, Stmt.Extern

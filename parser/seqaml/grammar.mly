@@ -60,10 +60,8 @@
 %}
 
 /* constants */
-%token <Ast.Ann.t * string> INT
-%token <Ast.Ann.t * float> FLOAT
-%token <Ast.Ann.t * (string * string)> INT_S
-%token <Ast.Ann.t * (float * string)> FLOAT_S
+%token <Ast.Ann.t * (string * string)> INT
+%token <Ast.Ann.t * (string * string)> FLOAT
 %token <Ast.Ann.t * string> STRING ID INTERNAL
 %token <Ast.Ann.t * string> SEQ KMER
 
@@ -159,8 +157,6 @@ atom:
   | ID         { fst $1, Id (snd $1) }
   | INT        { fst $1, Int (snd $1) }
   | FLOAT      { fst $1, Float (snd $1) }
-  | INT_S      { fst $1, IntS (snd $1) }
-  | FLOAT_S    { fst $1, FloatS (snd $1) }
   | STRING+
     { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1),
       String (String.concat @@ List.map $1 ~f:snd) }
@@ -213,28 +209,28 @@ dict: // Dictionaries: {1: 2, 3: 4}
   | LB separated_nonempty_list(COMMA, dictitem) RB
   | LB separated_nonempty_trailing_list(COMMA, dictitem) RB
     { pos $1 $3,
-      $2 }
+      List.concat $2 }
 dictitem:
   | expr COLON expr
-    { $1, $3 }
+    { [$1; $3] }
 
 // Generators
 tuple_gen:
   | LP expr comprehension RP
     { pos $1 $4,
-      Generator ($2, $3) }
+      Generator ("tuple", [$2], $3) }
 list_gen:
   | LS expr comprehension RS
     { pos $1 $4,
-      ListGenerator ($2, $3) }
+      Generator ("list", [$2], $3) }
 set_gen:
   | LB expr comprehension RB
     { pos $1 $4,
-      SetGenerator ($2, $3) }
+      Generator ("set", [$2], $3) }
 dict_gen:
   | LB dictitem comprehension RB
     { pos $1 $4,
-      DictGenerator ($2, $3) }
+      Generator ("dict", $2, $3) }
 
 // Comprehensions
 comprehension:
@@ -333,8 +329,8 @@ arith_expr:
       pos (fst (List.hd_exn $1)) (fst $2),
       match cnt % 2, snd (List.hd_exn $1), snd $2 with
       | 1, "~", _ -> Unary ("~", $2)
-      | 1, "-", Int f -> Int ("-" ^ f)
-      | 1, "-", Float f -> Float (-.f)
+      | 1, "-", Int (f, k) -> Int ("-" ^ f, k)
+      | 1, "-", Float (f, k) -> Float ("-" ^ f, k)
       | 1, "-", _ -> Unary ("-", $2)
       | _ -> snd $2
     }
@@ -359,7 +355,7 @@ arith_term:
   // (foo(x for x in y))
   | arith_term LP; expr comprehension; RP
     { pos (fst $1) $5,
-      Call ($1, [{ name = None; value = (pos $2 $5, Generator ($3, $4)) }]) }
+      Call ($1, [{ name = None; value = (pos $2 $5, Generator ("tuple", [$3], $4)) }]) }
   // Index (foo[bar])
   | arith_term LS separated_nonempty_list(COMMA, index_term) RS
     { pos (fst $1) $4,
@@ -625,7 +621,7 @@ case_type:
   | ID
     { WildcardPattern (Some (snd $1)) }
   | INT
-    { IntPattern (Int64.of_string @@ snd $1) }
+    { IntPattern (Int64.of_string @@ fst (snd $1)) }
   | bool
     { BoolPattern (snd $1) }
   | STRING+
@@ -639,7 +635,7 @@ case_type:
     { ListPattern ($2) }
   // Ranges
   | INT ELLIPSIS INT
-    { RangePattern(Int64.of_string @@ snd $1, Int64.of_string @@ snd $3) }
+    { RangePattern(Int64.of_string @@ fst (snd $1), Int64.of_string @@ fst (snd $3)) }
 
 // Import statments
 import_statement:
@@ -811,9 +807,9 @@ func_ret_type:
   | OF; expr
     { $2 }
 // dylib specification
-dylib_spec:
+/* dylib_spec:
   | LP STRING RP
-    { snd $2 }
+    { snd $2 } */
 
 
 // Class statement

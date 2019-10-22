@@ -14,45 +14,35 @@ open Option.Monad_infix
 (** Type checking environment  *)
 type tenv =
   { level : int (** Type checking level *)
-  ; unbounds : Ast.Ann.t Stack.t (** List of all unbound variables within the environment *)
+  ; unbounds : Ast.Ann.t Stack.t
+        (** List of all unbound variables within the environment *)
   ; enclosing_name : Ast.Ann.tlookup
         (** The name of the enclosing function or class.
-      [__main__] is used for the outermost block within a module. *)
+            [__main__] is used for the outermost block within a module. *)
   ; enclosing_type : Ast.Ann.tlookup option
         (** The type of the enclosing class. [None] if there is no such class.
-      Used for dynamically detecting class members. *)
+            Used for dynamically detecting class members. *)
   ; enclosing_return : Ast.Ann.tvar option ref
         (** The return type of the current function. [None] if not within a function.
-      Mutable as it can change during the parsing. *)
+            Mutable as it can change during the parsing. *)
   ; realizing : bool
         (** Are we realizing the current block? By default, [true] unless scanning the
-      class members (those are realized during the explicit realization stage). *)
+            class members (those are realized during the explicit realization stage). *)
   ; being_realized : (Ast.Ann.tlookup, Ast.Ann.t list) Hashtbl.t
         (** A hashtable containing the names of functions/classes that are currently being realized.
-      Used to avoid infinite recursion during the realization of recursive or
-      self-referencing types or functions. *)
+            Used to avoid infinite recursion during the realization of recursive or
+            self-referencing types or functions. *)
   ; annotations : Ann.t Stack.t (** The current annotation *)
   ; statements : Stmt.t Ann.ann Stack.t
   ; filename : string
   }
 
-(* type tel =
-  | Member of Ast.Ann.t
-  | Var of Ast.Ann.t
-  | Type of Ast.Ann.t
-  | Import of string *)
-
-(* | Import of Ast.Ann.t  --> type Import etc *)
-
 type tglobal =
   { unbound_counter : int ref
   ; temp_counter : int ref
-  ; realizations : (Ann.tlookup, Stmt.t Ann.ann * (string, trealization) Hashtbl.t) Hashtbl.t
   ; classes : (Ann.tlookup, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; imports : (string, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; pod_types : (string, Ann.tlookup) Hashtbl.t
-  ; parse : ?file:string -> string -> Stmt.t Ann.ann list
-  ; eparse : ctx:t -> Expr.t Ann.ann -> Expr.t Ann.ann
   ; sparse : ctx:t -> Stmt.t Ann.ann -> Stmt.t Ann.ann list
   ; stdlib : (string, Ast.Ann.ttyp list) Hashtbl.t
   }
@@ -64,6 +54,9 @@ and trealization =
   }
 
 and t = (Ast.Ann.ttyp, tenv, tglobal) Ctx.t
+
+let realizations : (Ann.tlookup, Stmt.t Ann.ann * (string, trealization) Hashtbl.t) Hashtbl.t
+  = Hashtbl.Poly.create ()
 
 (* ****************** Utilities ****************** *)
 
@@ -128,7 +121,7 @@ let remove_last_realization ~(ctx : t) cache =
   | Some (_ :: data) -> Hashtbl.set ctx.env.being_realized ~key:cache ~data
   | Some [] | None -> ierr "[remove_last_realization] cannot find realization"
 
-let get_full_name ?ctx (ann : Ann.tvar) =
+let get_full_name ?being_realized (ann : Ann.tvar) =
   (* walk through parents in the linked list *)
   let rec iter_parent ann =
     match ann with
@@ -150,19 +143,12 @@ let get_full_name ?ctx (ann : Ann.tvar) =
       (* If parent was not set by DotExpr, check if it is being realized *)
       Option.value
         ~default:[]
-        (ctx
-        >>= fun x ->
-        Hashtbl.find x.Ctx.env.being_realized (fst parent)
+        (being_realized
+        >>= fun x -> Hashtbl.find x (fst parent)
         >>= List.hd
-        >>= fun x -> Ann.var_of_typ x.typ >>| Ann.real_type >>| iter_parent)
+        >>= fun x -> Ann.var_of_typ x.Ann.typ >>| Ann.real_type >>| iter_parent)
   in
   ppl ~sep:":" ~f:Ann.var_to_string (List.rev (ann :: parents)), parents
-
-(* let parse_file ~(ctx : t) file =
-  Util.dbg "parsing %s" file;
-  let lines = In_channel.read_lines file in
-  let code = String.concat ~sep:"\n" lines ^ "\n" in
-  ctx.globals.parser ~ctx ~file:(Filename.realpath file) code *)
 
 let dump_ctx (ctx : t) =
   Stack.iter ctx.stack ~f:(fun map ->
@@ -195,7 +181,7 @@ let dump_ctx (ctx : t) =
                  | _ -> Util.dbg "%10s: %s" key (Ann.var_to_string ~full:true t))
                | t -> Util.dbg "%10s: %s" key (Ann.typ_to_string t))))
 
-let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
+let init_module ?(argv = false) ~filename sparse =
   let internal_cnt = ref 0 in
   let next_pos () =
     incr internal_cnt;
@@ -206,12 +192,9 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
     Ctx.init
       { unbound_counter = ref 0
       ; temp_counter = ref 0
-      ; realizations = Hashtbl.Poly.create ()
       ; classes = Hashtbl.Poly.create ()
       ; pod_types = String.Table.create ()
       ; imports = String.Table.create ()
-      ; parse
-      ; eparse
       ; sparse
       ; stdlib = String.Table.create ()
       }
@@ -255,7 +238,7 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
      Ctx.add ~ctx class_name typ;
      Hashtbl.set ctx.globals.classes ~key:cache ~data:(String.Table.create ());
      Hashtbl.set
-       ctx.globals.realizations
+       realizations
        ~key:cache
        ~data:((Ann.create ~typ (), cls), String.Table.create ())
    in
@@ -267,12 +250,12 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
        (* Util.A.dr "%s.%s ->> %s" class_name name signature; *)
        let args =
          List.map (String.split ~on:',' signature) ~f:(fun expr ->
-             ctx.globals.parse expr
-             |> function
-             | [ (_, Stmt.Expr e) ] ->
-               (* Util.A.dy "%s" @@ (Expr.to_string e); *)
-               (fst (ctx.globals.eparse ~ctx e)).typ
-             | _ -> ierr "parse expected single expression")
+             Codegen.parse expr
+             |> List.map ~f:(ctx.globals.sparse ~ctx)
+             |> List.concat
+             |> (function
+                | [ _, Stmt.Expr ({ typ; _ }, _) ] -> typ
+                | _ -> ierr "parse expected single expression"))
        in
        let ret, args =
          match args with
@@ -294,7 +277,7 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
        Ctx.add ~ctx (sprintf "%s.%s" class_name name) typ;
        let ast = Stmt.Pass () in
        Hashtbl.set
-         ctx.globals.realizations
+         realizations
          ~key:f_cache
          ~data:((Ann.create ~typ (), ast), String.Table.create ());
        Hashtbl.find_and_call
@@ -320,7 +303,7 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
    in
    (* create_class ~generic:1 "Kmer"; *)
    List.iter pod_types ~f:(fun (name, _) -> create_class name ~is_type:true);
-   ctx.globals.parse
+   Codegen.parse
      (Util.unindent
       {|
       class ptr[T]:
@@ -384,8 +367,7 @@ let init_module ?(argv = false) ~filename (parse, eparse, sparse) =
      | Some file ->
        In_channel.read_lines file
        |> String.concat ~sep:"\n"
-       |> fun s ->
-       ctx.globals.parse ~file:(Filename.realpath file) (s ^ "\n")
+       |> Codegen.parse ~file:(Filename.realpath file)
        |> List.map ~f:(ctx.globals.sparse ~ctx)
        |> ignore
      | None -> Err.ierr "cannot locate stdlib.seq"));

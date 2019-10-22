@@ -16,12 +16,9 @@ open Ast_ann
 type t =
   | Empty of unit
   | Bool of bool
-  | Int of string
+  | Int of (string * string)
       (** [Int]s are by default stored as strings because the conversion is done during the parsing. *)
-  | IntS of (string * string)
-      (** Second member denotes the suffix (e.g. [10u] -> [IntS("10", "u")]). *)
-  | Float of float
-  | FloatS of (float * string)
+  | Float of (string * string)
   | String of string
   | Kmer of string
   | Seq of string
@@ -30,11 +27,8 @@ type t =
   | Tuple of t ann list
   | List of t ann list
   | Set of t ann list
-  | Dict of (t ann * t ann) list
-  | Generator of (t ann * tcomprehension)
-  | ListGenerator of (t ann * tcomprehension)
-  | SetGenerator of (t ann * tcomprehension)
-  | DictGenerator of ((t ann * t ann) * tcomprehension)
+  | Dict of t ann list
+  | Generator of (string * (t ann list) * tcomprehension)
   | IfExpr of (t ann * t ann * t ann)
   | Unary of (string * t ann)
   | Binary of (t ann * string * t ann)

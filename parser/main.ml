@@ -8,10 +8,6 @@
 open Core
 open Seqaml
 
-module rec S : Typecheck_intf.Stmt = Typecheck_stmt.Typecheck (E) (R)
-and E : Typecheck_intf.Expr = Typecheck_expr.Typecheck (R)
-and R : Typecheck_intf.Real = Typecheck_realize.Typecheck (E) (S)
-
 exception TestExcOK of Ast.Ann.t
 exception TestExcFail of string
 
@@ -34,16 +30,16 @@ let typecheck_test_block block_id stmts lines_fail lines_ok =
   let rec try_stmts stmts =
     try
       let parse = Codegen.parse ~f:ignore in
-      let ctx = Typecheck_ctx.init_module ~filename:"test" (parse, E.parse, S.parse) in
+      let ctx = Typecheck_ctx.init_module ~filename:"test" Typecheck_stmt.parse in
       List.map stmts ~f:(function
           | ann, Ast.Stmt.Special ("%typ", [ e ], [ r ]) ->
-            [ ann, Ast.Stmt.Special ("%typ", S.parse ~ctx e, [ r ]) ]
+            [ ann, Ast.Stmt.Special ("%typ", Typecheck_stmt.parse ~ctx e, [ r ]) ]
           | ann, Special ("%err", [ e ], [ r ]) ->
             if is_some (Hash_set.find set ~f:(( = ) ann))
             then [ ann, Special ("%err", [ e ], [ r ]) ]
             else (
               try
-                let e = S.parse ~ctx e in
+                let e = Typecheck_stmt.parse ~ctx e in
                 raise
                 @@ TestExcFail
                      (sprintf
@@ -58,7 +54,7 @@ let typecheck_test_block block_id stmts lines_fail lines_ok =
                 else (
                   test_fail "[FAIL: got '%s' instead]" msg;
                   raise e))
-          | s -> S.parse ~ctx s)
+          | s -> Typecheck_stmt.parse ~ctx s)
       |> List.concat
     with
     | TestExcOK ann ->
@@ -145,14 +141,15 @@ let huuurduuuur stmts tests =
     (List.length !lines_fail)
   @@ Util.ppl !lines_fail ~f:(fun (x, y) -> sprintf "%s:%d" x y)
 
-let pax file =
+let pax file test =
   (try
      let lines = In_channel.read_lines file in
      let code = String.concat ~sep:"\n" lines ^ "\n" in
      let ast = Codegen.parse ~file:(Filename.realpath file) code in
-     match Sys.getenv "SEQ_TEST" with
-     | Some s -> huuurduuuur ast s
-     | None -> failwith "no SEQ_TEST"
+     huuurduuuur ast test
+     (* match Sys.getenv "SEQ_TEST" with *)
+     (* | Some s -> huuurduuuur ast s *)
+     (* | None -> failwith "no SEQ_TEST" *)
    with
   | Err.CompilerError (typ, pos_lst) ->
     Util.dbg ">> %s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) typ
@@ -163,13 +160,13 @@ let pax file =
 
 (** Main entry point. *)
 let () =
-  Callback.register "parse_c" pax;
-  (* Runner.parse_c; *)
+  Callback.register "parse_c" Runner.parse_c;
   Callback.register "jit_init_c" Jit.c_init;
   Callback.register "jit_exec_c" Jit.c_exec;
   match List.nth (Array.to_list Sys.argv) 1 with
   | None -> Jit.repl ()
   | Some "--parse" -> ()
+  | Some "--type" -> pax Sys.argv.(2) Sys.argv.(3)
   | Some fn when Caml.Sys.file_exists fn ->
     (try
        let err_handler a b = raise (Err.CompilerError (a, b)) in
@@ -184,5 +181,5 @@ let () =
       eprintf "%s\n%!" @@ Err.to_string ~pos_lst:(List.map pos_lst ~f:(fun x -> x.pos)) typ;
       exit 1)
   | Some fn ->
-    eprintf "%s does not exist" fn;
+    eprintf "%s does not exist\n%!" fn;
     exit 1

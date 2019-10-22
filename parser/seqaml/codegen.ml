@@ -34,8 +34,3 @@ let parse ?f ?(file = "") code =
     raise @@ Err.CompilerError (Descent msg, pos)
   | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])
   | Err.InternalError (msg, pos) -> raise @@ Err.CompilerError (Internal msg, [ pos ])
-
-(** Main code generation modules.
-    As [Codegen_stmt] depends on [Codegen_expr] and vice versa, we need to instantiate these modules recursively. *)
-module rec Stmt : Codegen_intf.Stmt = Codegen_stmt.Codegen (Expr)
-and Expr : Codegen_intf.Expr = Codegen_expr.Codegen (Stmt)

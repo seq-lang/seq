@@ -6,6 +6,8 @@
  * *****************************************************************************)
 
 open Core
+open Ast
+open Option.Monad_infix
 
 type tenv =
   { filename : string (** The file that is being parsed. *)
@@ -15,6 +17,7 @@ type tenv =
   ; trycatch : Llvm.Types.stmt_t
         (** Current try-catch LLVM handle ([Ctypes.null] if not present). *)
   ; flags : string Stack.t (** Currently active decorators (flags). *)
+  ; annotations : Ast.Ann.t Stack.t (** The current annotation *)
   }
 
 (** This module defines a data structure that maps
@@ -49,16 +52,32 @@ type tel = tkind * tann
 
 type tglobal =
   { imported : (string, t) Hashtbl.t
-  ; parser : ctx:t -> ?file:string -> string -> unit
-        (** A callback that is used to parse a Seq code string to AST (via Menhir).
-    Needed for parsing [import] statements.
-    Usage: [parses ctx ?file code], where [file] is an optional file name that is used
-    to populate [Ast.Ann] annotations. *)
   ; stdlib : (string, tel list) Hashtbl.t
         (** A context that holds the internal Seq objects and libraries. *)
+  ; sparse : ctx:t -> ?toplevel:bool -> Stmt.t Ann.ann -> Llvm.Types.stmt_t
   }
 
 and t = (tel, tenv, tglobal) Ctx.t
+
+let push_ann ~(ctx : t) ann = Stack.push ctx.env.annotations ann
+let pop_ann ~(ctx : t) = Stack.pop ctx.env.annotations
+
+let ann ?typ (ctx : t) =
+  let ann = Stack.top_exn ctx.env.annotations in
+  { ann with typ }
+
+let var v =
+  v.Ann.typ |> Ann.var_of_typ >>| Ann.real_type
+
+let err ?(ctx : t option) fmt =
+  (* let ann = Option.value ann ~default:(ann ctx) in *)
+  Core.ksprintf
+    (fun msg ->
+      raise @@ Err.SeqCamlError (msg, [ Option.value_map ctx ~f:ann ~default:(Ast.Ann.create ()) ]))
+    fmt
+
+let is_accessible ~(ctx : t) { base; global; _} =
+  ctx.Ctx.env.base = base || global
 
 (** [add ~ctx name var] adds a variable [name] with the handle [var] to the context [ctx]. *)
 let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) key var =
@@ -68,19 +87,12 @@ let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) key
   let var = var, annot in
   Ctx.add ~ctx key var
 
-(** [parse_file ~ctx file] parses a file [file] within the context [ctx]. *)
-let parse_file ~(ctx : t) file =
-  Util.dbg "parsing %s" file;
-  let lines = In_channel.read_lines file in
-  let code = String.concat ~sep:"\n" lines ^ "\n" in
-  ctx.globals.parser ~ctx ~file:(Filename.realpath file) code
-
 (** [init ...] returns an empty context with a toplevel block that contains internal Seq types. *)
-let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser =
+let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block sparse =
   let ctx =
     Ctx.init
-      { imported = String.Table.create (); stdlib = String.Table.create (); parser }
-      { filename; mdl; base; block; flags = Stack.create (); trycatch = Ctypes.null }
+      { imported = String.Table.create (); stdlib = String.Table.create (); sparse }
+      { filename; mdl; base; block; flags = Stack.create (); trycatch = Ctypes.null; annotations = Stack.create () }
   in
   Ctx.add_block ~ctx;
   (* default flags for internal arguments *)
@@ -110,7 +122,12 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser
       let args = Llvm.Module.get_args mdl in
       add ~ctx ~internal ~global ~toplevel "__argv__" (Var args));
     match Util.get_from_stdlib "stdlib" with
-    | Some file -> parse_file ~ctx file
+    | Some file ->
+      In_channel.read_lines file
+       |> String.concat ~sep:"\n"
+       |> Codegen.parse ~file:(Filename.realpath file)
+       |> List.map ~f:(ctx.globals.sparse ~ctx ~toplevel:true)
+       |> ignore
     | None -> Err.ierr "cannot locate stdlib.seq");
   Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
       add ~ctx ~internal ~global ~toplevel key (fst @@ List.hd_exn data));
@@ -173,3 +190,72 @@ let to_dbg_output ~(ctx : t) =
   Hashtbl.iteri ctx.globals.imported ~f:(fun ~key ~data ->
       dbg "   %s:" key;
       dump_map ~depth:2 data)
+
+
+let rec get_realization ~(ctx : t) typ =
+  let open Ast in
+  let open Ann in
+  let module TC = Typecheck_ctx in
+  match typ with
+  | Class (gen, _) | Func (gen, _) ->
+    let real_name, _ = TC.get_full_name typ in
+    let ast, str2real = Hashtbl.find_exn TC.realizations gen.cache in
+    (match Hashtbl.find str2real real_name, typ with
+    | Some { realized_llvm; _ }, _ when realized_llvm <> Ctypes.null  ->
+      (* Case 1 - already realized *)
+      realized_llvm
+    | Some ({ realized_typ; realized_ast = Some (_, Class cls); _ } as data), Class (_, { is_type }) ->
+      let name = sprintf "%s:%s" cls.class_name real_name in
+      let ptr = (if is_type then Llvm.Type.record [] [] else Llvm.Type.cls) name in
+      let new_ctx = { ctx with map = Hashtbl.copy ctx.map; stack = Stack.create () } in
+      Ctx.add_block ~ctx:new_ctx;
+      cls.members
+      |> List.filter_map ~f:(function
+          | { typ; _ }, Stmt.Declare { name; _ } ->
+            Some (name, get_realization ~ctx (real_type (var_of_typ_exn typ)))
+          | _ -> None)
+      |> List.unzip
+      |> (fun (names, types) ->
+          match types, is_type with
+          | [], true when is_type -> err ~ctx "type definitions must have at least one member"
+          | t, true -> Llvm.Type.set_record_names ptr names types
+          | t, false -> Llvm.Type.set_cls_args ptr names types);
+      if not is_type then Llvm.Type.set_cls_done ptr;
+      Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
+      ptr
+    | Some ({ realized_typ; realized_ast = Some (_, Function f); _ } as data), Func (gen, { ret; _ }) ->
+      let name = sprintf "%s:%s" f.fn_name.name real_name in
+      let ptr = Llvm.Func.func name in
+      let block = Llvm.Block.func ptr in
+      (* --> NEED THIS? *)
+      (* if not toplevel then Llvm.Func.set_enclosing ptr ctx.env.base; *)
+      let new_ctx =
+        { ctx with
+          stack = Stack.create ()
+        ; map = Hashtbl.copy ctx.map
+        ; env = { ctx.env with base = ptr; block }
+        }
+      in
+      Ctx.add_block ~ctx:new_ctx;
+      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~ctx t) in
+      Llvm.Func.set_args ptr names types;
+      Llvm.Func.set_type ptr (get_realization ~ctx ret);
+      List.iter names ~f:(fun n -> add ~ctx:new_ctx n (Var (Llvm.Func.get_arg ptr n)));
+      ignore @@ List.map f.fn_stmts ~f:(ctx.globals.sparse ~ctx:new_ctx ~toplevel:false);
+      Ctx.clear_block ~ctx:new_ctx;
+      Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
+      ptr
+    | Some ({ realized_typ; realized_ast = Some (_, Extern f); _ } as data), Func (gen, { ret; _ }) ->
+      let lang, dylib, ctx_name, Stmt.{ name; _ }, _ = f in
+      if lang <> "c"
+      then err ~ctx "only cdef externs are currently supported";
+      let name = sprintf "%s:%s" name real_name in
+      let ptr = Llvm.Func.func name in
+      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~ctx t) in
+      Llvm.Func.set_args ptr names types;
+      Llvm.Func.set_type ptr (get_realization ~ctx ret);
+      Llvm.Func.set_extern ptr;
+      Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
+      ptr
+    | _ -> err ~ctx "%s not realized by a type-checker" (Ann.var_to_string typ))
+  | _ -> err ~ctx "%s not realized by a type-checker" (Ann.var_to_string typ)

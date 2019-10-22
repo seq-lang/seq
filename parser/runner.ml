@@ -8,31 +8,36 @@
 open Core
 open Seqaml
 
-(** [exec_string ~file ~debug context code] parses a code
+(* (** [exec_string ~file ~debug context code] parses a code
     within string [code] as a module and returns parsed module AST.
     [file] is code filename used for error reporting. *)
 let exec_string ~ctx ?(file = "<internal>") ?(debug = false) ?(jit = false) code =
-  ignore @@ Codegen.parse ~file code ~f:(Codegen.Stmt.parse_module ~jit ~ctx)
+  ignore @@ Codegen.parse ~file code ~f:(Codegen.Stmt.parse_module ~jit ~ctx) *)
 
 (** [init file error_handler] initializes Seq session with file [file].
     [error_handler typ position] is a callback called upon encountering
     [Err.CompilerError]. Returns [Module] if successful. *)
 let init file error_handler =
-  let mdl = Llvm.Module.init () in
   try
-    let ctx =
-      Codegen_ctx.init_module
-        ~filename:(Filename.realpath file)
-        ~mdl
-        ~base:mdl
-        ~block:(Llvm.Module.block mdl)
-        (exec_string ~debug:false ~jit:false)
+    let parse = Codegen.parse ~f:ignore in
+    let filename = Filename.realpath file in
+    let tctx = Typecheck_ctx.init_module ~filename Typecheck_stmt.parse in
+
+    let mdl = Llvm.Module.init () in
+    let block = Llvm.Module.block mdl in
+    let lctx = Codegen_ctx.init_module ~filename ~mdl ~base:mdl ~block (Codegen_stmt.parse ~jit:false) in
+
+    let _ =
+      file
+      |> In_channel.read_lines
+      |> String.concat ~sep:"\n"
+      |> parse ~file:filename
+      |> List.map ~f:(Typecheck_stmt.parse ~ctx:tctx)
+      |> List.concat
+      |> List.map ~f:(Codegen_stmt.parse ~ctx:lctx ~toplevel:true)
     in
-    (* parse the file *)
-    Codegen_ctx.parse_file ~ctx file;
-    Some ctx.env.mdl
-  with
-  | Err.CompilerError (typ, pos) ->
+    Some mdl
+  with Err.CompilerError (typ, pos) ->
     error_handler typ pos;
     None
 
@@ -48,12 +53,9 @@ let parse_c fname =
       | Err.Parser -> "parsing error"
       | Lexer s | Descent s | Compiler s | Internal s -> s
     in
-    Ctypes.(
-      Foreign.foreign "caml_error_callback" (string @-> int @-> int @-> string @-> returning void))
-      msg
-      line
-      col
-      file
+    let open Ctypes in
+    let f = Foreign.foreign "caml_error_callback" (string @-> int @-> int @-> string @-> returning void) in
+    f msg line col file
   in
   let seq_module = init fname error_handler in
   match seq_module with
