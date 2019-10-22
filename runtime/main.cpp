@@ -21,7 +21,7 @@ static void versMsg(raw_ostream &out) {
 
 int main(int argc, char **argv) {
   opt<string> input(Positional, desc("<input file>"),
-                    NumOccurrencesFlag::Optional);
+                    NumOccurrencesFlag::Required);
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "
                             "print LLVM IR to stderr)"));
   opt<string> output(
@@ -35,16 +35,7 @@ int main(int argc, char **argv) {
   vector<string> libsVec(libs);
   vector<string> argsVec(args);
 
-  if (input.empty()) {
-#if LLVM_VERSION_MAJOR == 6
-    compilationWarning("Seq REPL is currently experimental");
-    repl();
-    return EXIT_SUCCESS;
-#else
-    errMsg("Seq REPL requires LLVM 6");
-    return EXIT_FAILURE;
-#endif
-  } else if (FILE *file = fopen(input.c_str(), "r")) {
+  if (FILE *file = fopen(input.c_str(), "r")) {
     fclose(file);
   } else {
     compilationError("could not open '" + input + "' for reading");
