@@ -10,44 +10,96 @@ length = 4
 rand_gen = random.Generator()
 rand_o = random.Random(rand_gen)
 
-rand_o.seed()
-print "random()"
-print rand_o.random()
-print rand_o.random()
-print rand_o.random()
-print ''
+# rand_o.seed()
+# print "random()"
+# print rand_o.random()
+# print rand_o.random()
+# print rand_o.random()
+# print ''
+#
+# print "uniform()"
+# print rand_o.uniform(0, 100)
+# print rand_o.uniform(0, 100)
+# print rand_o.uniform(0, 100)
+# print ''
+#
+# print "triangular()"
+# print rand_o.triangular(0.0, 1.0)
+# print rand_o.triangular(0.0, 1.0)
+# print rand_o.triangular(0.0, 1.0)
+# print ''
+#
+# print "from_bytes_big()"
+# print rand_o.from_bytes_big([u64(250), u64(0), u64(0)])
+# print rand_o.from_bytes_big(init)
+# print ''
+#
+# print "getrandbits()"
+# print rand_o.getrandbits(0)
+# print rand_o.getrandbits(3)
+# print rand_o.getrandbits(9)
+# print rand_o.getrandbits(9)
+# print rand_o.getrandbits(9)
+# print rand_o.getrandbits(33)
+# print rand_o.getrandbits(33)
+# print rand_o.getrandbits(33)
+# print ''
+#
+# print "bit_length()"
+# print rand_o.bit_length(u64(7))
+# print rand_o.bit_length(u64(8))
+# print rand_o.bit_length(u64(9))
+# print rand_o.bit_length(u64(16))
+# print rand_o.bit_length(u64(31))
+# print rand_o.bit_length(u64(32))
+# print ''
+#
+# print "_randbelow_with_getrandbits()"
+# print rand_o._randbelow_with_getrandbits(3)
+# print rand_o._randbelow_with_getrandbits(3)
+# print rand_o._randbelow_with_getrandbits(3)
+# print rand_o._randbelow_with_getrandbits(3)
+# print rand_o._randbelow_with_getrandbits(3)
+# print rand_o._randbelow_with_getrandbits(3)
+# print rand_o._randbelow_with_getrandbits(3)
+# print rand_o._randbelow_with_getrandbits(3)
+# print rand_o._randbelow_with_getrandbits(45)
+# print rand_o._randbelow_with_getrandbits(45)
+# print rand_o._randbelow_with_getrandbits(45)
+# print rand_o._randbelow_with_getrandbits(45)
+# print rand_o._randbelow_with_getrandbits(45)
+# print rand_o._randbelow_with_getrandbits(45)
+# print rand_o._randbelow_with_getrandbits(45)
+# print rand_o._randbelow_with_getrandbits(45)
+# print ''
 
-print "uniform()"
-print rand_o.uniform(0, 100)
-print rand_o.uniform(0, 100)
-print rand_o.uniform(0, 100)
-print ''
+print "randrange(stop)"
+print rand_o.randrange(3, 0, 1)
+print rand_o.randrange(3, 0, 1)
+print rand_o.randrange(3, 0, 1)
+print rand_o.randrange(66, 0, 1)
+print rand_o.randrange(66, 0, 1)
+print rand_o.randrange(66, 0, 1)
+print rand_o.randrange(1000, 0, 1)
+print rand_o.randrange(1000, 0, 1)
+print rand_o.randrange(1000, 0, 1)
 
-print "triangular()"
-print rand_o.triangular(0.0, 1.0)
-print rand_o.triangular(0.0, 1.0)
-print rand_o.triangular(0.0, 1.0)
-print ''
-
-print "from_bytes_big()"
-print rand_o.from_bytes_big([u64(250), u64(0), u64(0)])
-print rand_o.from_bytes_big(init)
-print ''
-
-print "getrandbits()"
-print rand_o.getrandbits(0)
-print rand_o.getrandbits(3)
-print rand_o.getrandbits(9)
-print rand_o.getrandbits(9)
-print rand_o.getrandbits(9)
-print rand_o.getrandbits(33)
-print rand_o.getrandbits(33)
-print rand_o.getrandbits(33)
+print "randrange(start, stop[, step])"
+print rand_o.randrange(3, 8, 1)
+print rand_o.randrange(3, 8, 1)
+print rand_o.randrange(3, 8, 1)
+print rand_o.randrange(66, 1000, 1)
+print rand_o.randrange(66, 1000, 1)
+print rand_o.randrange(66, 1000, 1)
+print rand_o.randrange(1000, 2000, 2)
+print rand_o.randrange(1000, 2000, 2)
+print rand_o.randrange(1000, 2000, 2)
+# print rand_gen.genrand_int32()
+# print rand_gen.genrand_int32()
 
 # print rand_o.shuffle([3, 2, 4, 5])
 # print rand_o.gen.gettimeofday()
 # print rand_o.gen.gettimeofday()
-
 
 # gauss = rand_o.gauss
 #

@@ -271,62 +271,68 @@ class Random:
 
         return self.from_bytes_big(wordarray)
 
+    def bit_length(self: Random, n: u64) -> int:
+        """
+        """
+        len = 0
+        while (n != u64(0)):
+            len += 1
+            n >>= u64(1)
+        return len
 
-    # def _randbelow_with_getrandbits(self: Random, n: int) -> int:
-    #     """
-    #     Return a random int in the range [0,n).  Raises ValueError if n==0.
-    #     """
-    #     getrandbits = self.getrandbits
-    #     k = n.bit_length()  # don't use (n-1) here because n can be 1
-    #     r = getrandbits(k)          # 0 <= r < 2**k
-    #     while r >= n:
-    #         r = getrandbits(k)
-    #     return r
-    #
-    # def randrange(self: Random, start: int, stop, step: int) -> int:
-    #     """Choose a random item from range(start, stop[, step]).
-    #
-    #     Return a randomly selected element from range(start, stop, step).
-    #     This is equivalent to choice(range(start, stop, step)), but
-    #     doesn’t actually build a range object.
-    #
-    #     Defaults include: stop = None, step = 1 which for now, are used for
-    #     the testing.
-    #
-    #     for now we will use default values.
-    #     """
-    #
-    #     if stop is None:
-    #         if start > 0:
-    #             return self._randbelow_with_getrandbits(start)
-    #         raise ValueError("empty range for randrange()")
-    #
-    #     # stop argument supplied.
-    #     width = stop - start
-    #     if step == 1 and width > 0:
-    #         return start + self._randbelow_with_getrandbits(width)
-    #     if step == 1:
-    #         raise ValueError("empty range for randrange() (" + start + ", " + stop ", " + width + ")")
-    #
-    #     # Non-unit step argument supplied.
-    #     n = math.inf
-    #     if step > 0:
-    #         n = (width + step - 1) // step
-    #     elif step < 0:
-    #         n = (width + step + 1) // step
-    #     else:
-    #         raise ValueError("zero step for randrange()")
-    #
-    #     if n <= 0:
-    #         raise ValueError("empty range for randrange()")
-    #
-    #     return start + step * self._randbelow_with_getrandbits(n)
+    def _randbelow_with_getrandbits(self: Random, n: int) -> int:
+        """
+        Return a random int in the range [0,n).  Raises ValueError if n==0.
+        """
+        getrandbits = self.getrandbits
+        k = self.bit_length(u64(n))  # don't use (n-1) here because n can be 1
+        r = getrandbits(k)          # 0 <= r < 2**k
+        while r >= n:
+            r = getrandbits(k)
+        return r
+
+    def randrange(self: Random, start: int, stop: int, step: int) -> int:
+        """Choose a random item from range(start, stop[, step]).
+
+        Return a randomly selected element from range(start, stop, step).
+        This is equivalent to choice(range(start, stop, step)), but
+        doesn’t actually build a range object.
+
+        For now stop == 0 for randrange(stop) where start = stop in our parameter.
+        Defaults include: stop = None, step = 1
+        for now we will use default value for step.
+        """
+        if stop == 0:
+            if start > 0:
+                return self._randbelow_with_getrandbits(start)
+            raise ValueError("empty range for randrange()")
+
+        # stop argument supplied.
+        width = stop - start
+        if step == 1 and width > 0:
+            return start + self._randbelow_with_getrandbits(width)
+        if step == 1:
+            raise ValueError("empty range for randrange()")
+
+        # Non-unit step argument supplied.
+        n = math.inf
+        if step > 0:
+            n = float((width + step - 1) // step)
+        elif step < 0:
+            n = float((width + step + 1) // step)
+        else:
+            raise ValueError("zero step for randrange()")
+
+        if n <= 0:
+            raise ValueError("empty range for randrange()")
+
+        return start + step * self._randbelow_with_getrandbits(int(n))
 
     # def randint(self: Random, a: int, b: int):
     #     """
     #     Return random integer in range [a, b], including both end points.
     #     """
-    #     return self.randrange(a, b+1)
+    #     return self.randrange(a, b+1, 1)
 
     def random(self: Random) -> float:
         """
@@ -397,18 +403,3 @@ class Random:
             c = 1.0 - c
             low, high = high, low
         return low + (high - low) * math.sqrt(u * c)
-
-
-# print rand_o.shuffle([3, 2, 4, 5])
-# print rand_o.gen.gettimeofday()
-# print rand_o.gen.gettimeofday()
-
-
-
-
-
-# gauss = rand_o.gauss
-
-# rand_obj = Generator()
-# # rand_obj.init_by_array(init, length)
-# rand_obj.genrand_res53()
