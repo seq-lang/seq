@@ -121,14 +121,18 @@ script:
   - (cd docs/sphinx && make html 2> /dev/null)
 
 before_deploy:
-  - export SEQ_BUILD_ARCHIVE=seq-`uname | awk '{print tolower($0)}'`.tar.gz
+  - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
+  - export SEQ_STDLIB_ARCHIVE=seq-stdlib.tar.gz
   - tar -czf ${SEQ_BUILD_ARCHIVE} build
+  - tar -czf ${SEQ_STDLIB_ARCHIVE} stdlib
 
 deploy:
   - provider: releases
     api_key:
       secure: k/c1kq5t4gL32Mdl4UJFFQYFGiEV2TyOuhTdALJtnhLBuGgYHQaybnk7zF4Nf123se6bc2r4byfyNh9CiOtcrT6Cp0MUw63p+dh6MfQdWlhIDH8c33oDerpBJwNBIJ3FXb3DCW394uXfTMni6+yT1Jfhhg2j7+RyHvi1yhsMB0Lu3Mdw3YlaYTDg8X8jYo0bfJ2RWmXZ6OkwtUlTdN+JHu6WF4YNIdcX9EpBmGgi8lEtvbs4fuALQWcJG9TapbGoAq++87oh6MlGBUZDP05aVv0JAh+NMO0iyzxt+1PZuCrE1/Y3tuhXJngr5M6+6XOt9rtPhxh50q2Jd6N0zCjpj9EcXbS99DGcPWrLjzT7yM8Yim/2cUoEeYWeRD3+lGG4+rcCnkbRK3HPAxbrzefpPvrPuVYN3QuO3ypHOoWy7SOMClJBwAaIk/1diy2mWAOcus+JVKL58mCo5QcqmbFX320pALDFC/8XMMSg0+82wxlVttaZUv3j3OcCX0fUSb4PLhuakxsysdyJ8T9FCBssjnwco4Kgae1LOL/CPy7bTjtH9vtq8aQ5k9o4ylvwAwQ2iFgX2ZATptESIuFjCYb264GtTP55bZhQkrGjYpT+BghalBiBlwqmbBaML6+vSbYZCbtnyMmJ3pCLjhkIgV8KM99FRFhrW2sTou9WqupxZJg=
-    file: ${SEQ_BUILD_ARCHIVE}
+    file:
+      - ${SEQ_BUILD_ARCHIVE}
+      - ${SEQ_STDLIB_ARCHIVE}
     skip_cleanup: true
     on:
       repo: seq-lang/seq
