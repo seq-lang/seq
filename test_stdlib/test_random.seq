@@ -72,28 +72,41 @@ rand_o = random.Random(rand_gen)
 # print rand_o._randbelow_with_getrandbits(45)
 # print rand_o._randbelow_with_getrandbits(45)
 # print ''
+#
+# print "randrange(stop)"
+# print rand_o.randrange(3, 0, 1)
+# print rand_o.randrange(3, 0, 1)
+# print rand_o.randrange(3, 0, 1)
+# print rand_o.randrange(66, 0, 1)
+# print rand_o.randrange(66, 0, 1)
+# print rand_o.randrange(66, 0, 1)
+# print rand_o.randrange(1000, 0, 1)
+# print rand_o.randrange(1000, 0, 1)
+# print rand_o.randrange(1000, 0, 1)
+# print ''
+#
+# print "randrange(start, stop[, step])"
+# print rand_o.randrange(3, 8, 1)
+# print rand_o.randrange(3, 8, 1)
+# print rand_o.randrange(3, 8, 1)
+# print rand_o.randrange(66, 1000, 1)
+# print rand_o.randrange(66, 1000, 1)
+# print rand_o.randrange(66, 1000, 1)
+# print rand_o.randrange(1000, 2000, 2)
+# print rand_o.randrange(1000, 2000, 2)
+# print rand_o.randrange(1000, 2000, 2)
+# print ''
 
-print "randrange(stop)"
-print rand_o.randrange(3, 0, 1)
-print rand_o.randrange(3, 0, 1)
-print rand_o.randrange(3, 0, 1)
-print rand_o.randrange(66, 0, 1)
-print rand_o.randrange(66, 0, 1)
-print rand_o.randrange(66, 0, 1)
-print rand_o.randrange(1000, 0, 1)
-print rand_o.randrange(1000, 0, 1)
-print rand_o.randrange(1000, 0, 1)
+print "randint()"
+print rand_o.randint(2, 200)
+print rand_o.randint(2, 200)
+print rand_o.randint(2, 200)
+print rand_o.randint(2, 200)
+print rand_o.randint(2, 100)
+print rand_o.randint(2, 100)
+print rand_o.randint(2, 100)
+print rand_o.randint(2, 100)
 
-print "randrange(start, stop[, step])"
-print rand_o.randrange(3, 8, 1)
-print rand_o.randrange(3, 8, 1)
-print rand_o.randrange(3, 8, 1)
-print rand_o.randrange(66, 1000, 1)
-print rand_o.randrange(66, 1000, 1)
-print rand_o.randrange(66, 1000, 1)
-print rand_o.randrange(1000, 2000, 2)
-print rand_o.randrange(1000, 2000, 2)
-print rand_o.randrange(1000, 2000, 2)
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()
 

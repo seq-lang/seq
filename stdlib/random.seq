@@ -328,11 +328,11 @@ class Random:
 
         return start + step * self._randbelow_with_getrandbits(int(n))
 
-    # def randint(self: Random, a: int, b: int):
-    #     """
-    #     Return random integer in range [a, b], including both end points.
-    #     """
-    #     return self.randrange(a, b+1, 1)
+    def randint(self: Random, a: int, b: int):
+        """
+        Return random integer in range [a, b], including both end points.
+        """
+        return self.randrange(a, b+1, 1)
 
     def random(self: Random) -> float:
         """
