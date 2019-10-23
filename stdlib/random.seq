@@ -144,11 +144,10 @@ class Generator:
 
         generates a random number on [0,0xffffffff]-interval
         """
-
         if self.next == self.state_size:
             self.next_state()
-
         self.next +=1
+
         y = self.state[self.next]
 
         # Tempering
@@ -353,27 +352,27 @@ class Random:
             raise IndexError("Cannot choose from an empty sequence")
         return seq[i]
 
-    # def shuffle(self: Random, x) -> float:
-    #     """Shuffle list x in place, and return None.
-    #
-    #     Optional argument random is a 0-argument function returning a
-    #     random float in [0.0, 1.0); if it is the default None, the
-    #     standard random.random will be used.
-    #
-    #     For now seq will use random = None (default)
-    #     """
-    #     random = None
-    #     if random is None:
-    #         randbelow = self._randbelow_with_getrandbits
-    #         for i in reversed(range(1, len(x))):
-    #             # pick an element in x[:i+1] with which to exchange x[i]
-    #             j = randbelow(i+1)
-    #             x[i], x[j] = x[j], x[i]
-    #     else:
-    #         for i in reversed(range(1, len(x))):
-    #             # pick an element in x[:i+1] with which to exchange x[i]
-    #             j = int(random() * (i+1))
-    #             x[i], x[j] = x[j], x[i]
+    def shuffle(self: Random, x):
+        """Shuffle list x in place, and return None.
+
+        Optional argument random is a 0-argument function returning a
+        random float in [0.0, 1.0); if it is the default None, the
+        standard random.random will be used.
+
+        For now seq will use random = 0  (None = default)
+        """
+        random = 0
+        if random == 0:
+            randbelow = self._randbelow_with_getrandbits
+            for i in reversed(range(1, len(x))):
+                # pick an element in x[:i+1] with which to exchange x[i]
+                j = randbelow(i+1)
+                x[i], x[j] = x[j], x[i]
+        else:
+            for i in reversed(range(1, len(x))):
+                # pick an element in x[:i+1] with which to exchange x[i]
+                j = int(self.random() * (i+1))
+                x[i], x[j] = x[j], x[i]
 
     def uniform(self: Random, a: int, b: int) -> float:
         """

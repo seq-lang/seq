@@ -107,22 +107,37 @@ rand_o = random.Random(rand_gen)
 # print rand_o.randint(2, 100)
 # print rand_o.randint(2, 100)
 # print ''
+#
+# print "choice()"
+# li1 = ['a', 'b', 'c', 'd', 'e', 'f']
+# li2 = [1, 2, 3, 4, 5, 6]
+# print rand_o.choice(li1)
+# print rand_o.choice(li1)
+# print rand_o.choice(li1)
+# print rand_o.choice(li1)
+# print rand_o.choice(li1)
+# print rand_o.choice(li2)
+# print rand_o.choice(li2)
+# print rand_o.choice(li2)
+# print rand_o.choice(li2)
+# print rand_o.choice(li2)
+# print ''
 
-print "choice()"
+print "shuffle()"
 li1 = ['a', 'b', 'c', 'd', 'e', 'f']
 li2 = [1, 2, 3, 4, 5, 6]
-print rand_o.choice(li1)
-print rand_o.choice(li1)
-print rand_o.choice(li1)
-print rand_o.choice(li1)
-print rand_o.choice(li1)
-print rand_o.choice(li2)
-print rand_o.choice(li2)
-print rand_o.choice(li2)
-print rand_o.choice(li2)
-print rand_o.choice(li2)
-print ''
-
+rand_o.shuffle(li1)
+print li1
+rand_o.shuffle(li1)
+print li1
+rand_o.shuffle(li1)
+print li1
+rand_o.shuffle(li2)
+print li2
+rand_o.shuffle(li2)
+print li2
+rand_o.shuffle(li2)
+print li2
 
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()
