@@ -96,16 +96,33 @@ rand_o = random.Random(rand_gen)
 # print rand_o.randrange(1000, 2000, 2)
 # print rand_o.randrange(1000, 2000, 2)
 # print ''
+#
+# print "randint()"
+# print rand_o.randint(2, 200)
+# print rand_o.randint(2, 200)
+# print rand_o.randint(2, 200)
+# print rand_o.randint(2, 200)
+# print rand_o.randint(2, 100)
+# print rand_o.randint(2, 100)
+# print rand_o.randint(2, 100)
+# print rand_o.randint(2, 100)
+# print ''
 
-print "randint()"
-print rand_o.randint(2, 200)
-print rand_o.randint(2, 200)
-print rand_o.randint(2, 200)
-print rand_o.randint(2, 200)
-print rand_o.randint(2, 100)
-print rand_o.randint(2, 100)
-print rand_o.randint(2, 100)
-print rand_o.randint(2, 100)
+print "choice()"
+li1 = ['a', 'b', 'c', 'd', 'e', 'f']
+li2 = [1, 2, 3, 4, 5, 6]
+print rand_o.choice(li1)
+print rand_o.choice(li1)
+print rand_o.choice(li1)
+print rand_o.choice(li1)
+print rand_o.choice(li1)
+print rand_o.choice(li2)
+print rand_o.choice(li2)
+print rand_o.choice(li2)
+print rand_o.choice(li2)
+print rand_o.choice(li2)
+print ''
+
 
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()

@@ -342,15 +342,16 @@ class Random:
         """
         return self.gen.genrand_res53()
 
-    # def choice(self: Random, seq) -> :
-    #     """
-    #     Choose a random element from a non-empty sequence.
-    #     """
-    #     try:
-    #         i = self._randbelow_with_getrandbits(len(seq))
-    #     except ValueError:
-    #         raise IndexError("Cannot choose from an empty sequence") from None
-    #     return seq[i]
+    def choice(self: Random, seq):
+        """
+        Choose a random element from a non-empty sequence.
+        """
+        i = 0
+        try:
+            i = self._randbelow_with_getrandbits(len(seq))
+        except ValueError:
+            raise IndexError("Cannot choose from an empty sequence")
+        return seq[i]
 
     # def shuffle(self: Random, x) -> float:
     #     """Shuffle list x in place, and return None.
