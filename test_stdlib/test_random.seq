@@ -153,9 +153,18 @@ def gammavariate():
     print rand_o.gammavariate(0.4, 0.3)
     # alpha <= 0
     print rand_o.gammavariate(0.0, 0.0)
-gammavariate()
+# gammavariate()
 
-
+def betavariate():
+    print rand_o.betavariate(2.71828, 3.14159)
+    print rand_o.betavariate(2.71828, 3.14159)
+    print rand_o.betavariate(3.0, 3.0)
+    print rand_o.betavariate(3.0, 3.0)
+    print rand_o.betavariate(1.0, 1.0)
+    print rand_o.betavariate(1.0, 1.0)
+    print rand_o.betavariate(1.0, 1.0)
+    print rand_o.betavariate(0.0, 1.0)
+betavariate()
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()
 

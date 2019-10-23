@@ -462,16 +462,15 @@ class Random:
                     break
             return x * beta
 
-
-    # def betavariate(self: Random, alpha: float, beta: float) -> float:
-    #     """Beta distribution.
-    #     Conditions on the parameters are alpha > 0 and beta > 0.
-    #     Returned values range between 0 and 1.
-    #     """
-    #     # This version due to Janne Sinkkonen, and matches all the std
-    #     # texts (e.g., Knuth Vol 2 Ed 3 pg 134 "the beta distribution").
-    #     y = self.gammavariate(alpha, 1.0)
-    #     if y == 0:
-    #         return 0.0
-    #     else:
-    #         return y / (y + self.gammavariate(beta, 1.0))
+    def betavariate(self: Random, alpha: float, beta: float) -> float:
+        """Beta distribution.
+        Conditions on the parameters are alpha > 0 and beta > 0.
+        Returned values range between 0 and 1.
+        """
+        # This version due to Janne Sinkkonen, and matches all the std
+        # texts (e.g., Knuth Vol 2 Ed 3 pg 134 "the beta distribution").
+        y = self.gammavariate(alpha, 1.0)
+        if y == 0:
+            return 0.0
+        else:
+            return y / (y + self.gammavariate(beta, 1.0))
