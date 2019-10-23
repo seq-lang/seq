@@ -1,22 +1,15 @@
 import C
 import sys
-import math
+from math import inf as INF, sqrt as _sqrt, e as _e
+from math import log as _log, exp as _exp
 
 class ZeroDivisionError:
     msg: str
 
-# cdef rand() -> int
-#
-# def randint(a: int, b: int) -> int:
-#     return a + rand() % (b - a + 1)
-#
-# def choice(iter):
-#     l = len(iter)
-#     i = randint(0, l - 1)
-#     return iter[i]
-
 N = 624
 M = 397
+LOG4 = _log(4.0)
+SG_MAGICCONST = 1.0 + _log(4.5)
 
 class Generator:
     state: array[u64]     # the array for the state vector
@@ -314,7 +307,7 @@ class Random:
             raise ValueError("empty range for randrange()")
 
         # Non-unit step argument supplied.
-        n = math.inf
+        n = INF
         if step > 0:
             n = float((width + step - 1) // step)
         elif step < 0:
@@ -402,4 +395,83 @@ class Random:
             u = 1.0 - u
             c = 1.0 - c
             low, high = high, low
-        return low + (high - low) * math.sqrt(u * c)
+        return low + (high - low) * _sqrt(u * c)
+
+    def gammavariate(self: Random, alpha: float, beta: float) -> float:
+        """Gamma distribution.  Not the gamma function!
+
+        Conditions on the parameters are alpha > 0 and beta > 0.
+
+        The probability distribution function is:
+
+                    x ** (alpha - 1) * math.exp(-x / beta)
+          pdf(x) =  --------------------------------------
+                      math.gamma(alpha) * beta ** alpha
+        """
+        # alpha > 0, beta > 0, mean is alpha*beta, variance is alpha*beta**2
+
+        # Warning: a few older sources define the gamma distribution in terms
+        # of alpha > -1.0
+        if alpha <= 0.0 or beta <= 0.0:
+            raise ValueError('gammavariate: alpha and beta must be > 0.0')
+
+        random = self.random
+        if alpha > 1.0:
+
+            # Uses R.C.H. Cheng, "The generation of Gamma
+            # variables with non-integral shape parameters",
+            # Applied Statistics, (1977), 26, No. 1, p71-74
+
+            ainv = _sqrt(2.0 * alpha - 1.0)
+            bbb = alpha - LOG4
+            ccc = alpha + ainv
+
+            while 1:
+                u1 = self.random()
+                if not 1e-7 < u1 < .9999999:
+                    continue
+                u2 = 1.0 - self.random()
+                v = _log(u1 / (1.0-u1)) / ainv
+                x = alpha * _exp(v)
+                z = u1 * u1 * u2
+                r = bbb + ccc * v - x
+                if r + SG_MAGICCONST - 4.5 * z >= 0.0 or r >= _log(z):
+                    return x * beta
+
+        elif alpha == 1.0:
+            # expovariate(1/beta)
+            return -_log(1.0 - random()) * beta
+
+        else:   # alpha is between 0 and 1 (exclusive)
+
+            # Uses ALGORITHM GS of Statistical Computing - Kennedy & Gentle
+            x = 0.0
+            while 1:
+                u = random()
+                b = (_e + alpha) / _e
+                p = b * u
+                if p <= 1.0:
+                    x = p ** (1.0 / alpha)
+                else:
+                    x = -_log((b - p) / alpha)
+                u1 = random()
+                if p > 1.0:
+                    if u1 <= x ** (alpha - 1.0):
+                        break
+                elif u1 <= _exp(-x):
+                    break
+            return x * beta
+
+
+    # def betavariate(self: Random, alpha: float, beta: float) -> float:
+    #     """Beta distribution.
+    #     Conditions on the parameters are alpha > 0 and beta > 0.
+    #     Returned values range between 0 and 1.
+    #     """
+    #     # This version due to Janne Sinkkonen, and matches all the std
+    #     # texts (e.g., Knuth Vol 2 Ed 3 pg 134 "the beta distribution").
+    #     y = self.gammavariate(alpha, 1.0)
+    #     if y == 0:
+    #         return 0.0
+    #     else:
+    #         return y / (y + self.gammavariate(beta, 1.0))

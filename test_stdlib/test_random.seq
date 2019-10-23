@@ -11,133 +11,150 @@ rand_gen = random.Generator()
 rand_o = random.Random(rand_gen)
 
 # rand_o.seed()
-# print "random()"
-# print rand_o.random()
-# print rand_o.random()
-# print rand_o.random()
-# print ''
-#
-# print "uniform()"
-# print rand_o.uniform(0, 100)
-# print rand_o.uniform(0, 100)
-# print rand_o.uniform(0, 100)
-# print ''
-#
-# print "triangular()"
-# print rand_o.triangular(0.0, 1.0)
-# print rand_o.triangular(0.0, 1.0)
-# print rand_o.triangular(0.0, 1.0)
-# print ''
-#
-# print "from_bytes_big()"
-# print rand_o.from_bytes_big([u64(250), u64(0), u64(0)])
-# print rand_o.from_bytes_big(init)
-# print ''
-#
-# print "getrandbits()"
-# print rand_o.getrandbits(0)
-# print rand_o.getrandbits(3)
-# print rand_o.getrandbits(9)
-# print rand_o.getrandbits(9)
-# print rand_o.getrandbits(9)
-# print rand_o.getrandbits(33)
-# print rand_o.getrandbits(33)
-# print rand_o.getrandbits(33)
-# print ''
-#
-# print "bit_length()"
-# print rand_o.bit_length(u64(7))
-# print rand_o.bit_length(u64(8))
-# print rand_o.bit_length(u64(9))
-# print rand_o.bit_length(u64(16))
-# print rand_o.bit_length(u64(31))
-# print rand_o.bit_length(u64(32))
-# print ''
-#
-# print "_randbelow_with_getrandbits()"
-# print rand_o._randbelow_with_getrandbits(3)
-# print rand_o._randbelow_with_getrandbits(3)
-# print rand_o._randbelow_with_getrandbits(3)
-# print rand_o._randbelow_with_getrandbits(3)
-# print rand_o._randbelow_with_getrandbits(3)
-# print rand_o._randbelow_with_getrandbits(3)
-# print rand_o._randbelow_with_getrandbits(3)
-# print rand_o._randbelow_with_getrandbits(3)
-# print rand_o._randbelow_with_getrandbits(45)
-# print rand_o._randbelow_with_getrandbits(45)
-# print rand_o._randbelow_with_getrandbits(45)
-# print rand_o._randbelow_with_getrandbits(45)
-# print rand_o._randbelow_with_getrandbits(45)
-# print rand_o._randbelow_with_getrandbits(45)
-# print rand_o._randbelow_with_getrandbits(45)
-# print rand_o._randbelow_with_getrandbits(45)
-# print ''
-#
-# print "randrange(stop)"
-# print rand_o.randrange(3, 0, 1)
-# print rand_o.randrange(3, 0, 1)
-# print rand_o.randrange(3, 0, 1)
-# print rand_o.randrange(66, 0, 1)
-# print rand_o.randrange(66, 0, 1)
-# print rand_o.randrange(66, 0, 1)
-# print rand_o.randrange(1000, 0, 1)
-# print rand_o.randrange(1000, 0, 1)
-# print rand_o.randrange(1000, 0, 1)
-# print ''
-#
-# print "randrange(start, stop[, step])"
-# print rand_o.randrange(3, 8, 1)
-# print rand_o.randrange(3, 8, 1)
-# print rand_o.randrange(3, 8, 1)
-# print rand_o.randrange(66, 1000, 1)
-# print rand_o.randrange(66, 1000, 1)
-# print rand_o.randrange(66, 1000, 1)
-# print rand_o.randrange(1000, 2000, 2)
-# print rand_o.randrange(1000, 2000, 2)
-# print rand_o.randrange(1000, 2000, 2)
-# print ''
-#
-# print "randint()"
-# print rand_o.randint(2, 200)
-# print rand_o.randint(2, 200)
-# print rand_o.randint(2, 200)
-# print rand_o.randint(2, 200)
-# print rand_o.randint(2, 100)
-# print rand_o.randint(2, 100)
-# print rand_o.randint(2, 100)
-# print rand_o.randint(2, 100)
-# print ''
-#
-# print "choice()"
-# li1 = ['a', 'b', 'c', 'd', 'e', 'f']
-# li2 = [1, 2, 3, 4, 5, 6]
-# print rand_o.choice(li1)
-# print rand_o.choice(li1)
-# print rand_o.choice(li1)
-# print rand_o.choice(li1)
-# print rand_o.choice(li1)
-# print rand_o.choice(li2)
-# print rand_o.choice(li2)
-# print rand_o.choice(li2)
-# print rand_o.choice(li2)
-# print rand_o.choice(li2)
-# print ''
 
-print "shuffle()"
+def random():
+    print rand_o.random()
+    print rand_o.random()
+    print rand_o.random()
+# random()
+
+def uniform():
+    print rand_o.uniform(0, 100)
+    print rand_o.uniform(0, 100)
+    print rand_o.uniform(0, 100)
+# uniform()
+
+def triangular():
+    print rand_o.triangular(0.0, 1.0)
+    print rand_o.triangular(0.0, 1.0)
+    print rand_o.triangular(0.0, 1.0)
+# triangular()
+
+def from_bytes_big():
+    print rand_o.from_bytes_big([u64(250), u64(0), u64(0)])
+    print rand_o.from_bytes_big(init)
+# from_bytes_big()
+
+def getrandbits():
+    print rand_o.getrandbits(0)
+    print rand_o.getrandbits(3)
+    print rand_o.getrandbits(9)
+    print rand_o.getrandbits(9)
+    print rand_o.getrandbits(9)
+    print rand_o.getrandbits(33)
+    print rand_o.getrandbits(33)
+    print rand_o.getrandbits(33)
+# getrandbits()
+
+def bit_length():
+    print rand_o.bit_length(u64(7))
+    print rand_o.bit_length(u64(8))
+    print rand_o.bit_length(u64(9))
+    print rand_o.bit_length(u64(16))
+    print rand_o.bit_length(u64(31))
+    print rand_o.bit_length(u64(32))
+# bit_length()
+
+def _randbelow_with_getrandbits():
+    print rand_o._randbelow_with_getrandbits(3)
+    print rand_o._randbelow_with_getrandbits(3)
+    print rand_o._randbelow_with_getrandbits(3)
+    print rand_o._randbelow_with_getrandbits(3)
+    print rand_o._randbelow_with_getrandbits(3)
+    print rand_o._randbelow_with_getrandbits(3)
+    print rand_o._randbelow_with_getrandbits(3)
+    print rand_o._randbelow_with_getrandbits(3)
+    print rand_o._randbelow_with_getrandbits(45)
+    print rand_o._randbelow_with_getrandbits(45)
+    print rand_o._randbelow_with_getrandbits(45)
+    print rand_o._randbelow_with_getrandbits(45)
+    print rand_o._randbelow_with_getrandbits(45)
+    print rand_o._randbelow_with_getrandbits(45)
+    print rand_o._randbelow_with_getrandbits(45)
+    print rand_o._randbelow_with_getrandbits(45)
+# _randbelow_with_getrandbits()
+
+def randrange1():
+    #randrange(stop)
+    print rand_o.randrange(3, 0, 1)
+    print rand_o.randrange(3, 0, 1)
+    print rand_o.randrange(3, 0, 1)
+    print rand_o.randrange(66, 0, 1)
+    print rand_o.randrange(66, 0, 1)
+    print rand_o.randrange(66, 0, 1)
+    print rand_o.randrange(1000, 0, 1)
+    print rand_o.randrange(1000, 0, 1)
+    print rand_o.randrange(1000, 0, 1)
+# randrange1()
+
+def randrange2():
+# randrange(start, stop[, step])
+    print rand_o.randrange(3, 8, 1)
+    print rand_o.randrange(3, 8, 1)
+    print rand_o.randrange(3, 8, 1)
+    print rand_o.randrange(66, 1000, 1)
+    print rand_o.randrange(66, 1000, 1)
+    print rand_o.randrange(66, 1000, 1)
+    print rand_o.randrange(1000, 2000, 2)
+    print rand_o.randrange(1000, 2000, 2)
+    print rand_o.randrange(1000, 2000, 2)
+# randrange2()
+
+def randint():
+    print rand_o.randint(2, 200)
+    print rand_o.randint(2, 200)
+    print rand_o.randint(2, 200)
+    print rand_o.randint(2, 200)
+    print rand_o.randint(2, 100)
+    print rand_o.randint(2, 100)
+    print rand_o.randint(2, 100)
+    print rand_o.randint(2, 100)
+# randint()
+
 li1 = ['a', 'b', 'c', 'd', 'e', 'f']
 li2 = [1, 2, 3, 4, 5, 6]
-rand_o.shuffle(li1)
-print li1
-rand_o.shuffle(li1)
-print li1
-rand_o.shuffle(li1)
-print li1
-rand_o.shuffle(li2)
-print li2
-rand_o.shuffle(li2)
-print li2
-rand_o.shuffle(li2)
-print li2
+def choice():
+    print rand_o.choice(li1)
+    print rand_o.choice(li1)
+    print rand_o.choice(li1)
+    print rand_o.choice(li1)
+    print rand_o.choice(li1)
+    print rand_o.choice(li2)
+    print rand_o.choice(li2)
+    print rand_o.choice(li2)
+    print rand_o.choice(li2)
+    print rand_o.choice(li2)
+# choice()
+
+def shuffle():
+    rand_o.shuffle(li1)
+    print li1
+    rand_o.shuffle(li1)
+    print li1
+    rand_o.shuffle(li1)
+    print li1
+    rand_o.shuffle(li2)
+    print li2
+    rand_o.shuffle(li2)
+    print li2
+    rand_o.shuffle(li2)
+    print li2
+# shuffle()
+
+def gammavariate():
+    # alpha > 1
+    print rand_o.gammavariate(3.0, 2.0)
+    print rand_o.gammavariate(3.0, 2.0)
+    # alpha = 1
+    print rand_o.gammavariate(1.0, 1.0)
+    print rand_o.gammavariate(1.0, 1.0)
+    # 0 < alpha < 1
+    print rand_o.gammavariate(0.4, 0.3)
+    print rand_o.gammavariate(0.4, 0.3)
+    # alpha <= 0
+    print rand_o.gammavariate(0.0, 0.0)
+gammavariate()
+
 
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()
