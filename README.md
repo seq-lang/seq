@@ -9,13 +9,17 @@
     <img src="https://travis-ci.com/seq-lang/seq.svg?token=QGRVvAxcSasMm4MgJvYL&branch=master"
          alt="Build Status">
   </a>
-  <a href="https://github.com/seq-lang/seq/blob/master/LICENSE">
-    <img src="https://img.shields.io/badge/license-AGPL-blue.svg"
-         alt="License">
-  </a>
   <a href="https://gitter.im/seq-lang/seq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge">
     <img src="https://badges.gitter.im/Join%20Chat.svg"
          alt="Gitter">
+  </a>
+  <a href="https://github.com/seq-lang/seq/releases/latest">
+    <img src="https://img.shields.io/github/v/release/seq-lang/seq?sort=semver"
+         alt="Version">
+  </a>
+  <a href="https://github.com/seq-lang/seq/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/seq-lang/seq"
+         alt="License">
   </a>
 </p>
 

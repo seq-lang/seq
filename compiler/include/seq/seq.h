@@ -34,7 +34,7 @@
 
 #define SEQ_VERSION_MAJOR 0
 #define SEQ_VERSION_MINOR 8
-#define SEQ_VERSION_PATCH 4
+#define SEQ_VERSION_PATCH 5
 
 namespace seq {
 namespace types {
