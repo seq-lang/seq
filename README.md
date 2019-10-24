@@ -69,7 +69,21 @@ A few notable aspects of this code:
 
 For a concrete example of `genomeindex`, check out our [re-implementation of SNAP's index](test/snap).
 
-## Dependencies
+## Install
+
+### Pre-built binaries
+
+Pre-built binaries for Linux and macOS on x86_64 are available alongside [each release](https://github.com/seq-lang/seq/releases). We also have a script for downloading and installing pre-built versions:
+
+```bash
+wget -O - https://raw.githubusercontent.com/seq-lang/seq/master/install.sh | bash
+```
+
+This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
+
+### Build from source
+
+#### Dependencies
 
 - Linux or macOS
 - [CMake](https://cmake.org) 3.12+
@@ -81,7 +95,7 @@ For a concrete example of `genomeindex`, check out our [re-implementation of SNA
 
 The following packages must be installed with `opam`: core, dune, ctypes, ctypes-foreign, menhir, ppx_deriving
 
-## Build
+#### Build
 
 Make sure the `LLVM_DIR` environment variable is set (to the result of `llvm-config --cmakedir`). Then:
 
@@ -94,7 +108,7 @@ cmake --build .
 
 This will produce a `seqc` executable for compiling/running Seq programs, and a `seqtest` executable for running the test suite.
 
-## Documentation
+#### Documentation
 
 [Sphinx](https://www.sphinx-doc.org) (with the [RTD theme](https://sphinx-rtd-theme.readthedocs.io/en/stable/)), [Breathe](https://breathe.readthedocs.io/en/latest/) and [Exhale](https://exhale.readthedocs.io/en/latest/index.html) are required to compile the documentation. Once these are installed, just:
 
