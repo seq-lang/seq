@@ -1,7 +1,7 @@
 import C
 import sys
-from math import inf as INF, sqrt as _sqrt, e as _e
-from math import log as _log, exp as _exp
+from math import inf as INF, sqrt as _sqrt, e as _e, cos as _cos
+from math import log as _log, exp as _exp, pi as _pi
 
 class ZeroDivisionError:
     msg: str
@@ -10,6 +10,7 @@ N = 624
 M = 397
 LOG4 = _log(4.0)
 SG_MAGICCONST = 1.0 + _log(4.5)
+TWOPI = 2.0 * _pi
 
 class Generator:
     state: array[u64]     # the array for the state vector
@@ -491,3 +492,24 @@ class Random:
         # we use 1-random() instead of random() to preclude the
         # possibility of taking the log of zero.
         return -_log(1.0 - self.random())/lambd
+
+    def gauss(self: Random, mu: float, sigma: float) -> float:
+        """Gaussian distribution.
+
+        mu is the mean, and sigma is the standard deviation.  This is
+        slightly faster than the normalvariate() function.
+        Not thread-safe without a lock around calls.
+
+        for now:
+            z = self.gauss_next
+            self.gauss_next = None
+            if z = None:
+        z is set to be 0.0 in this function
+        """
+        random = self.random
+        z = 0.0
+        x2pi = random() * TWOPI
+        g2rad = _sqrt(-2.0 * _log(1.0 - random()))
+        z = _cos(x2pi) * g2rad
+        # self.gauss_next = _sin(x2pi) * g2rad
+        return mu + z * sigma
