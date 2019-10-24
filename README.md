@@ -5,8 +5,8 @@
 <h1 align="center"> Seq — a language for bioinformatics </h1>
 
 <p align="center">
-  <a href="https://travis-ci.com/seq-lang/seq">
-    <img src="https://travis-ci.com/seq-lang/seq.svg?token=QGRVvAxcSasMm4MgJvYL&branch=master"
+  <a href="https://travis-ci.org/seq-lang/seq">
+    <img src="https://travis-ci.org/seq-lang/seq.svg?branch=master"
          alt="Build Status">
   </a>
   <a href="https://gitter.im/seq-lang/seq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge">
