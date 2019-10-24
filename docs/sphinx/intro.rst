@@ -1,8 +1,25 @@
 Getting Started
 ===============
 
+Install
+-------
+
+Pre-built binaries
+^^^^^^^^^^^^^^^^^^
+
+Pre-built binaries for Linux and macOS on x86_64 are available alongside `each release <https://github.com/seq-lang/seq/releases>`_. We also have a script for downloading and installing pre-built versions:
+
+.. code-block:: bash
+
+    wget -O - https://raw.githubusercontent.com/seq-lang/seq/master/install.sh | bash
+
+This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
+
+Build from source
+^^^^^^^^^^^^^^^^^
+
 Dependencies
-------------
+""""""""""""
 
 - Linux or macOS
 - `CMake <https://cmake.org>`_ 3.12+
@@ -15,7 +32,7 @@ Dependencies
 The following packages must be installed with ``opam``: core, ctypes, ctypes-foreign, menhir, ppx_deriving
 
 Compile & Test
---------------
+""""""""""""""
 
 Make sure the ``LLVM_DIR`` environment variable is set (to the result of ``llvm-config --cmakedir``). Then:
 
