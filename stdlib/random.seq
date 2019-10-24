@@ -513,3 +513,9 @@ class Random:
         z = _cos(x2pi) * g2rad
         # self.gauss_next = _sin(x2pi) * g2rad
         return mu + z * sigma
+
+    def paretovariate(self: Random, alpha: float) -> float:
+        """Pareto distribution.  alpha is the shape parameter."""
+        random = self.random
+        u = 1.0 - random()
+        return 1.0 / u ** (1.0/alpha)

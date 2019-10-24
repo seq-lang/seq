@@ -193,7 +193,16 @@ def gauss():
     print rand_o.gauss(0.0, 1.0)
     assert rand_o.gauss(INF, 1.0) == INF
     assert rand_o.gauss(-INF, 1.0) == -INF
-gauss()
+# gauss()
+
+def paretovariate():
+    print rand_o.paretovariate(1.0)
+    print rand_o.paretovariate(1.0)
+    print rand_o.paretovariate(2.0)
+    print rand_o.paretovariate(2.0)
+    print rand_o.paretovariate(4.0)
+    print rand_o.paretovariate(4.0)
+paretovariate()
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()
 
