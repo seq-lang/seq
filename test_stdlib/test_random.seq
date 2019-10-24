@@ -1,4 +1,5 @@
 import random
+from math import inf as INF
 
 init = array[u64](4)
 init[0] = u64(0x123)
@@ -164,7 +165,23 @@ def betavariate():
     print rand_o.betavariate(1.0, 1.0)
     print rand_o.betavariate(1.0, 1.0)
     print rand_o.betavariate(0.0, 1.0)
-betavariate()
+# betavariate()
+
+def expovariate():
+    print rand_o.expovariate(1.0)
+    print rand_o.expovariate(1.0)
+    print rand_o.expovariate(1.0)
+    print rand_o.expovariate(0.2)
+    print rand_o.expovariate(0.2)
+    print rand_o.expovariate(0.2)
+    print rand_o.expovariate(-0.2)
+    print rand_o.expovariate(-0.2)
+    print rand_o.expovariate(-0.2)
+    assert rand_o.expovariate(INF) == 0
+    assert rand_o.expovariate(-INF) == -0
+    print rand_o.expovariate(0.0)
+expovariate()
+
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()
 

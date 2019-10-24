@@ -474,3 +474,20 @@ class Random:
             return 0.0
         else:
             return y / (y + self.gammavariate(beta, 1.0))
+
+    def expovariate(self: Random, lambd: float) -> float:
+        """Exponential distribution.
+
+        lambd is 1.0 divided by the desired mean.  It should be
+        nonzero.
+
+        Returned values range from 0 to
+        positive infinity if lambd is positive, and from negative
+        infinity to 0 if lambd is negative.
+        """
+        if lambd == 0.0:
+            raise ZeroDivisionError("Cannot divide by zero")
+        # lambd: rate lambd = 1/mean
+        # we use 1-random() instead of random() to preclude the
+        # possibility of taking the log of zero.
+        return -_log(1.0 - self.random())/lambd
