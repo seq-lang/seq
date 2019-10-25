@@ -232,7 +232,15 @@ def lognormvariate():
     assert rand_o.lognormvariate(0.0, 0.0) == 1.0
     assert rand_o.lognormvariate(-INF, 0.0) == 0.0
     assert rand_o.lognormvariate(INF, 0.0) == INF
-lognormvariate()
+# lognormvariate()
+
+def vonmisesvariate():
+    print rand_o.vonmisesvariate(0.0, 1.0)
+    print rand_o.vonmisesvariate(0.0, 1e15)
+    print rand_o.vonmisesvariate(1.0, 1.0)
+    print rand_o.vonmisesvariate(1.23, 0.0)
+    assert rand_o.vonmisesvariate(3.0, INF) == 3.0
+vonmisesvariate()
 
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()

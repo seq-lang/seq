@@ -1,7 +1,7 @@
 import C
 import sys
-from math import inf as INF, sqrt as _sqrt, e as _e, cos as _cos
-from math import log as _log, exp as _exp, pi as _pi
+from math import inf as INF, sqrt as _sqrt, acos as _acos, cos as _cos
+from math import log as _log, exp as _exp, pi as _pi, e as _e
 
 class ZeroDivisionError:
     msg: str
@@ -554,3 +554,40 @@ class Random:
           mu can have any value, and sigma must be greater than zero.
           """
           return _exp(self.normalvariate(mu, sigma))
+
+    def vonmisesvariate(self: Random, mu: float, kappa: float) -> float:
+        """Circular data distribution.
+
+        mu is the mean angle, expressed in radians between 0.0 and 2*pi, and
+        kappa is the concentration parameter, which must be greater than or
+        equal to zero.  If kappa is equal to zero, this distribution reduces
+        to a uniform random angle over the range 0.0 to 2*pi.
+        """
+        z = 0.0
+        theta = 0.0
+        
+        random = self.random
+        if kappa <= 1e-6:
+            return TWOPI * random()
+
+        s = 0.5 / kappa
+        r = s + _sqrt(1.0 + s * s)
+
+        while 1:
+            u1 = random()
+            z = _cos(_pi * u1)
+
+            d = z / (r + z)
+            u2 = random()
+            if u2 < 1.0 - d * d or u2 <= (1.0 - d) * _exp(d):
+                break
+
+        q = 1.0 / r
+        f = (q + z) / (1.0 + q * z)
+        u3 = random()
+        if u3 > 0.5:
+            theta = (mu + _acos(f)) % TWOPI
+        else:
+            theta = (mu - _acos(f)) % TWOPI
+
+        return theta
