@@ -67,19 +67,18 @@ before_install:
 
 install:
   # install libffi:
-  - wget -c https://github.com/libffi/libffi/archive/v3.2.1.tar.gz -O - | tar -xz
+  - wget -c https://sourceware.org/pub/libffi/libffi-3.2.1.tar.gz -O - | tar -xz
   - cd libffi-3.2.1
-  - ./autogen.sh
   - ./configure CFLAGS="-fPIC" --enable-portable-binary --enable-static --disable-shared
   - make LDFLAGS="-static"
   - sudo make install
   - cd -
 
   # install Boehm GC:
-  - git clone -b release-7_6 https://github.com/ivmai/bdwgc
-  - cd bdwgc
-  - git clone -b release-7_6 https://github.com/ivmai/libatomic_ops
-  - ./autogen.sh
+  - wget -c https://github.com/ivmai/bdwgc/releases/download/v7.6.12/gc-7.6.12.tar.gz -O - | tar -xz
+  - cd gc-7.6.12
+  - wget -c https://github.com/ivmai/libatomic_ops/releases/download/v7.6.10/libatomic_ops-7.6.10.tar.gz -O - | tar -xz
+  - mv libatomic_ops-7.6.10 libatomic_ops
   - |
     ./configure CFLAGS="-fPIC" --enable-threads=posix \
                                --enable-cplusplus \
