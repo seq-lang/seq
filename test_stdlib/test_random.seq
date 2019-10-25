@@ -224,7 +224,15 @@ def normalvariate():
     assert rand_o.normalvariate(0.0, -INF) == -INF
     assert rand_o.normalvariate(10.0, 0.0) == 10.0
     assert rand_o.normalvariate(10.0, 0.0) == 10.0
-normalvariate()
+# normalvariate()
+
+def lognormvariate():
+    print rand_o.lognormvariate(0.0, 1.0)
+    print rand_o.lognormvariate(0.0, 1.0)
+    assert rand_o.lognormvariate(0.0, 0.0) == 1.0
+    assert rand_o.lognormvariate(-INF, 0.0) == 0.0
+    assert rand_o.lognormvariate(INF, 0.0) == INF
+lognormvariate()
 
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()
