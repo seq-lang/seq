@@ -9,6 +9,7 @@ class ZeroDivisionError:
 N = 624
 M = 397
 LOG4 = _log(4.0)
+NV_MAGICCONST = 4 * _exp(-0.5) / _sqrt(2.0)
 SG_MAGICCONST = 1.0 + _log(4.5)
 TWOPI = 2.0 * _pi
 
@@ -528,3 +529,19 @@ class Random:
         random = self.random
         u = 1.0 - random()
         return alpha * (-_log(u)) ** (1.0/beta)
+
+    def normalvariate(self: Random, mu: float, sigma: float) -> float:
+        """Normal distribution.
+
+        mu is the mean, and sigma is the standard deviation.
+        """
+        random = self.random
+        z = 0.0
+        while 1:
+            u1 = random()
+            u2 = 1.0 - random()
+            z = NV_MAGICCONST * (u1 - 0.5) / u2
+            zz = z * z / 4.0
+            if zz <= - _log(u2):
+                break
+        return mu + z * sigma
