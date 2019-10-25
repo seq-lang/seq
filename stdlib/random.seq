@@ -519,3 +519,12 @@ class Random:
         random = self.random
         u = 1.0 - random()
         return 1.0 / u ** (1.0/alpha)
+
+    def weibullvariate(self: Random, alpha: float, beta: float) -> float:
+        """Weibull distribution.
+
+        alpha is the scale parameter and beta is the shape parameter.
+        """
+        random = self.random
+        u = 1.0 - random()
+        return alpha * (-_log(u)) ** (1.0/beta)
