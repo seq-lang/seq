@@ -131,9 +131,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         Llvm.Stmt.pass ()
         (* assign v @@ rh_expr *)
       | false, r, _ ->
-        (match r with
-        | Some (_ :: _) -> Llvm.Module.warn ~pos "shadowing %s" var
-        | _ -> ());
         let typ = Option.value_map typ ~f:(E.parse_type ~ctx) ~default:Ctypes.null in
         let rh_expr = E.parse ~ctx rhs in
         let var_stmt = Llvm.Stmt.var ~typ rh_expr in
@@ -160,10 +157,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       when ctx.base = base ->
       serr ~pos:(fst @@ Option.value_exn typ) "%s already defined" name
     | r ->
-      (match r with
-      | Some (((Ctx_namespace.(Type _ | Func _ | Import _) as v), _) :: _) ->
-        Llvm.Module.warn ~pos "shadowing %s" name
-      | _ -> ());
       let typ = E.parse_type ~ctx @@ Option.value_exn typ in
       let var_stmt = Llvm.Stmt.var ~typ Ctypes.null in
       let v = Llvm.Var.stmt var_stmt in
@@ -217,8 +210,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     Llvm.Stmt.assrt expr
 
   and parse_type_alias ctx pos ~toplevel (name, expr) =
-    if is_some @@ Ctx.in_scope ~ctx name
-    then Llvm.Module.warn ~pos "shadowing existing %s" name;
     let typ = E.parse_type ~ctx expr in
     Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Type typ);
     Llvm.Stmt.pass ()
@@ -301,8 +292,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
                    ~toplevel
                    (lang, dylib, ctx_name, (_, { name; typ }), args) =
     if lang <> "c" then serr ~pos "only cdef externs are currently supported";
-    if is_some @@ Ctx.in_block ~ctx ctx_name
-    then Llvm.Module.warn ~pos "shadowing %s" ctx_name;
     let names, types =
       List.map args ~f:(fun (_, { name; typ }) ->
           name, E.parse_type ~ctx (Option.value_exn typ))
@@ -421,8 +410,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         Llvm.Type.add_cls_method cls name fn;
         fn
       | None ->
-        if is_some @@ Ctx.in_block ~ctx name
-        then Llvm.Module.warn ~pos "shadowing %s" name;
         let fn = Llvm.Func.func name in
         let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Func (fn, names));
@@ -472,8 +459,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   and parse_class ctx pos ~toplevel ?(is_type = false) cls =
     (* ((name, types, args, stmts) as stmt) *)
     let typ =
-      if is_some @@ Ctx.in_scope ~ctx cls.class_name
-      then Llvm.Module.warn ~pos "shadowing %s" cls.class_name;
       let typ =
         if is_type
         then Llvm.Type.record [] [] cls.class_name

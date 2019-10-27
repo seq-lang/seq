@@ -114,7 +114,7 @@ script:
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
                           -DCMAKE_C_COMPILER=clang \
                           -DCMAKE_CXX_COMPILER=clang++)
-  - cmake --build build
+  - cmake --build build --config Release
   - build/seqtest 2> /dev/null
   - build/seqc test/core/helloworld.seq
   - (cd docs/sphinx && make html 2> /dev/null)

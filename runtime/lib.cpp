@@ -34,6 +34,7 @@ void seq_py_init();
 
 SEQ_FUNC void seq_init() {
   GC_INIT();
+  GC_set_warn_proc(GC_ignore_warn_proc);
 
 #if THREADED
   GC_allow_register_threads();
