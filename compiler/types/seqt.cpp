@@ -657,8 +657,9 @@ void types::KMer::initOps() {
           */
          LLVMContext &context = b.getContext();
          Value *mask1 = ConstantInt::get(getLLVMType(context), 0);
+         Value *one = ConstantInt::get(getLLVMType(context), 1);
          for (unsigned i = 0; i < getK(); i++) {
-           Value *shift = b.CreateShl(oneLLVM(context), 2 * i);
+           Value *shift = b.CreateShl(one, 2 * i);
            mask1 = b.CreateOr(mask1, shift);
          }
          Value *mask2 = b.CreateShl(mask1, 1);
