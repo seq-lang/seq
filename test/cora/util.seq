@@ -1,0 +1,14 @@
+type K = Kmer[64]
+
+type BitSet(v: list[int]):
+    def __init__(self: BitSet, n: int) -> BitSet:
+        return ([0 for _ in range((n // 64) + 1)],)
+
+    def __getitem__(self: BitSet, idx: int):
+        return (self.v[idx // 64] & (1 << (idx % 64))) != 0
+
+    def __setitem__(self: BitSet, idx: int, b: bool):
+        if b:
+            self.v[idx // 64] |= (1 << (idx % 64))
+        else:
+            self.v[idx // 64] &= ~(1 << (idx % 64))
