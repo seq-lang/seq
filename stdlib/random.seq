@@ -1,7 +1,7 @@
 import C
 import sys
 from math import inf as INF, sqrt as _sqrt, acos as _acos, cos as _cos
-from math import log as _log, exp as _exp, pi as _pi, e as _e
+from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
 
 class ZeroDivisionError:
     msg: str
@@ -565,7 +565,7 @@ class Random:
         """
         z = 0.0
         theta = 0.0
-        
+
         random = self.random
         if kappa <= 1e-6:
             return TWOPI * random()
@@ -591,3 +591,49 @@ class Random:
             theta = (mu - _acos(f)) % TWOPI
 
         return theta
+
+    def sample(self: Random, population, k: int):
+        """Chooses k unique random elements from a population sequence or set.
+
+        Returns a new list containing elements from the population while
+        leaving the original population unchanged.  The resulting list is
+        in selection order so that all sub-slices will also be valid random
+        samples.  This allows raffle winners (the sample) to be partitioned
+        into grand prize and second place winners (the subslices).
+
+        Members of the population need not be hashable or unique.  If the
+        population contains repeats, then each occurrence is a possible
+        selection in the sample.
+
+        To choose a sample in a range of integers, use range as an argument.
+        This is especially fast and space efficient for sampling from a
+        large population:   sample(range(10000000), 60)
+
+        For now seq will deal with only lists.
+        """
+        randbelow = self._randbelow_with_getrandbits
+        n = len(population)
+        if not 0 <= k <= n:
+            raise ValueError("Sample larger than population or is negative")
+        result = [0] * k
+        setsize = 21.0        # size of a small set minus size of an empty list
+        if k > 5:
+            # Should be _log(k * 3, 4)
+            setsize += 4 ** _ceil(_log(float(k * 3))) # table size for big sets
+        if n <= setsize:
+            # An n-length list is smaller than a k-length set
+            pool = list(population)
+            for i in range(k):         # invariant:  non-selected at [0,n-i)
+                j = randbelow(n-i)
+                result[i] = pool[j]
+                pool[j] = pool[n-i-1]   # move non-selected item into vacancy
+        # else:
+            # selected = set()
+            # selected_add = selected.add
+            # for i in range(k):
+            #     j = randbelow(n)
+            #     while j in selected:
+            #         j = randbelow(n)
+            #     selected_add(j)
+            #     result[i] = population[j]
+        return result

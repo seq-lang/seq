@@ -240,7 +240,14 @@ def vonmisesvariate():
     print rand_o.vonmisesvariate(1.0, 1.0)
     print rand_o.vonmisesvariate(1.23, 0.0)
     assert rand_o.vonmisesvariate(3.0, INF) == 3.0
-vonmisesvariate()
+# vonmisesvariate()
+
+def sample():
+    print rand_o.sample([1, 2, 3, 4, 5, 6], 3)
+    print rand_o.sample([1, 2, 3, 4, 5, 6], 3)
+    # print rand_o.sample(['a', 'b', 'c'], 3)
+sample()
+
 
 # print rand_gen.genrand_int32()
 # print rand_gen.genrand_int32()
