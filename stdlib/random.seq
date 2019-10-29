@@ -2,8 +2,12 @@ import C
 import sys
 from math import inf as INF, sqrt as _sqrt, acos as _acos, cos as _cos
 from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
+from bisect import bisect as _bisect
 
 class ZeroDivisionError:
+    msg: str
+
+class TypeError:
     msg: str
 
 N = 624
@@ -637,3 +641,61 @@ class Random:
             #     selected_add(j)
             #     result[i] = population[j]
         return result
+
+    def choices(self: Random, population, weights, cum_weights, k: int) -> list[str]:
+        """Return a k sized list of population elements chosen with replacement.
+
+        If the relative weights or cumulative weights are not specified,
+        the selections are made with equal probability.
+
+        Since weights and cum_weights is assumed to be positive, we will replace None with [-1].
+        """
+        def accumulate(weight: list[int]) -> list[int]:
+            """
+            Calculate cum_weights
+            """
+            n = len(weight)
+            cum_weight = list[int]()
+            accum = 0
+            if n > 0:
+                for i in range(n):
+                    accum += weight[i]
+                    cum_weight.append(accum)
+
+            return cum_weight
+
+        def bisect(a: list[int], x: int, lo: int, hi: int) -> int:
+            """
+            Return the index where to insert item x in list a, assuming a is sorted.
+            """
+            if lo < 0:
+                raise ValueError('lo must be non-negative')
+            if hi < 0 or hi > len(a):
+                hi = len(a)
+            while lo < hi:
+                mid = (lo+hi)//2
+                # Use __lt__ to match the logic in list.sort() and in heapq
+                if x < a[mid]: hi = mid
+                else: lo = mid+1
+            return lo
+
+        random = self.random
+        n = len(population)
+
+        if cum_weights == [-1]:
+            if weights == [-1]:
+                n += 0    # convert to float for a small speed improvement
+                return [population[int(random() * n)] for i in range(k)]
+            cum_weights = accumulate(weights)
+
+        elif weights != [-1]:
+            raise TypeError('Cannot specify both weights and cumulative weights')
+
+        if len(cum_weights) != n:
+            raise ValueError('The number of weights does not match the population')
+
+        total = float(cum_weights[-1])  # convert to float
+        hi = n - 1
+
+        return [population[bisect(cum_weights, int(random() * total), 0, hi)]
+                for i in range(k)]
