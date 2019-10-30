@@ -251,6 +251,8 @@ def sample():
 def choices():
     print rand_o.choices(["apples", "bananas", "cherries"], [-1], [-1], 5)
     print rand_o.choices(["apples", "bananas", "cherries"], [-1], [-1], 5)
+    print rand_o.choices([1, 2, 8], [-1], [-1], 5)
+    print rand_o.choices([1, 2, 8], [-1], [-1], 5)
     print rand_o.choices(["apples", "bananas", "cherries"], [10, 1, 1], [-1], 5)
     print rand_o.choices(["apples", "bananas", "cherries"], [10, 1, 1], [-1], 5)
     print rand_o.choices(["apples", "bananas", "cherries"], [-1], [10, 1, 1], 6)
