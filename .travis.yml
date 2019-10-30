@@ -35,7 +35,7 @@ before_install:
   # build and cache LLVM/Tapir:
   - |
     if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
-      git clone -b release_60-release https://github.com/wsmoses/Tapir-LLVM ${TRAVIS_BUILD_DIR}/Tapir-LLVM
+      git clone -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${TRAVIS_BUILD_DIR}/Tapir-LLVM
       mkdir ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
       cd ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
       if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
