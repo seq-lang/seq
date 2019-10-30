@@ -134,9 +134,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       when ctx.base = base || global ->
       let e = Llvm.Expr.var v in
       if global && ctx.base = base && Stack.exists ctx.flags ~f:(( = ) "atomic")
-      then (
-        Llvm.Module.warn ~pos "atomic load %s" var;
-        Llvm.Var.set_atomic e);
+      then Llvm.Var.set_atomic e;
       e
     | false, Some ((Ctx_namespace.Func (t, _), _) :: _) -> Llvm.Expr.func t
     | _ -> serr ~pos "identifier %s not found or realized" var
@@ -241,7 +239,6 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Some ((Ctx_namespace.Var v, { global; base; _ }) :: _)
         when global && ctx.base = base ->
         let rh_expr = parse ~ctx rh_expr in
-        Llvm.Module.warn ~pos " atomic %s on %s" bop var;
         Llvm.Expr.atomic_binary v bop rh_expr
       | _ -> bop_expr ())
     | _ -> bop_expr ()

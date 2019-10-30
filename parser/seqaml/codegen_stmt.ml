@@ -111,7 +111,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             when var = v && (bop = "min" || bop = "max") ->
             Llvm.Stmt.expr @@ E.parse ~ctx (fst rhs, Binary (lhs, "inplace_" ^ bop, e))
           | _ ->
-            Llvm.Module.warn ~pos "atomic store %s" var;
             let rh_expr = E.parse ~ctx rhs in
             let s = Llvm.Stmt.assign v rh_expr in
             Llvm.Stmt.set_atomic_assign s;
