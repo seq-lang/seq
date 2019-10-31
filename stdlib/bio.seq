@@ -867,6 +867,9 @@ extend seq:
     def translate(self: seq):
         return translate(self)
 
+def as_protein(s: seq):
+    return pseq(s.ptr, abs(s.len))
+
 # htslib integration
 BAM_FPAIRED        =    1
 BAM_FPROPER_PAIR   =    2
