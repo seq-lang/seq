@@ -1,7 +1,7 @@
 # Implementation of CORA's exact homology table construction
 # https://github.com/denizy/cora/blob/master/homTable_setup.cpp
 
-# Usage: seqc hom_exact.seq input_ref.fa output_hom_exact.bin
+# Usage: seqc hom_exact.seq <input_ref.fa> <output_prefix>
 # Output format (gzip'd):
 #   - N = total records [i64]
 #   - N times:
@@ -18,7 +18,7 @@ from util import K, BitSet
 import gzip
 
 if len(argv) != 3:
-    stderr.write('usage: ' + argv[0] + ' <input_ref.fa> <output prefix>\n')
+    stderr.write('usage: ' + argv[0] + ' <input_ref.fa> <output_prefix>\n')
     exit(1)
 
 path = argv[1]
