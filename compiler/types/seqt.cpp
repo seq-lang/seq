@@ -208,7 +208,7 @@ get2bitTable(Module *module, const std::string &name = "seq.2bit_table") {
     v['A'] = v['a'] = ConstantInt::get(ty, 0);
     v['G'] = v['g'] = ConstantInt::get(ty, 1);
     v['C'] = v['c'] = ConstantInt::get(ty, 2);
-    v['T'] = v['t'] = ConstantInt::get(ty, 3);
+    v['T'] = v['t'] = v['U'] = v['u'] = ConstantInt::get(ty, 3);
 
     auto *arrTy =
         llvm::ArrayType::get(IntegerType::getIntNTy(context, 2), v.size());

@@ -196,6 +196,22 @@ unsigned char seq_nt4_table[256] = {
 
 unsigned char seq_nt4_rc_table[5] = {3, 2, 1, 0, 4};
 
+unsigned char seq_aa20_table[256] = {
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 0,  1,  2,  3,  4,  5,  6,  7,  8,  20, 9,
+    10, 11, 12, 20, 13, 14, 15, 16, 17, 20, 18, 19, 20, 21, 22, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20};
+
 static int encode(seq_t s) {
   if (s.len >= 0) {
     for (seq_int_t i = 0; i < s.len; i++)
@@ -234,6 +250,19 @@ static void decode(seq_t s) {
     };
   }
 #undef BASES
+}
+
+static int pencode(seq_t s) {
+  for (seq_int_t i = 0; i < s.len; i++)
+    s.seq[i] = seq_aa20_table[(int)s.seq[i]];
+  return (int)s.len;
+}
+
+static void pdecode(seq_t s) {
+#define AA "ABCDEFGHIKLMNPQRSTVWXYZ"
+  for (seq_int_t i = 0; i < s.len; i++)
+    s.seq[i] = AA[(int)s.seq[i]];
+#undef AA
 }
 
 struct CIGAR {
@@ -319,6 +348,98 @@ SEQ_FUNC void seq_align_global(seq_t query, seq_t target, int8_t *mat,
                           (int)bandwidth, &m_cigar, &n_cigar, &cigar);
   decode(query);
   decode(target);
+  *out = {{cigar, n_cigar}, score};
+}
+
+SEQ_FUNC void seq_palign(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
+                         int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
+                         seq_int_t flags, Alignment *out) {
+  ksw_extz_t ez;
+  const int qlen = pencode(query);
+  const int tlen = pencode(target);
+  ksw_extz2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
+                (uint8_t *)target.seq, 23, mat, gapo, gape, (int)bandwidth,
+                (int)zdrop,
+                /* end_bonus */ 0, (int)flags, &ez);
+  pdecode(query);
+  pdecode(target);
+  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_palign_default(seq_t query, seq_t target, Alignment *out) {
+  // Blosum-62
+  static int8_t mat[] = {
+      4,  -2, 0,  -2, -1, -2, 0,  -2, -1, -1, -1, -1, -2, -1, -1, -1, 1,  0,
+      0,  -3, 0,  -2, -1, -2, 4,  -3, 4,  1,  -3, -1, 0,  -3, 0,  -4, -3, 3,
+      -2, 0,  -1, 0,  -1, -3, -4, -1, -3, 1,  0,  -3, 9,  -3, -4, -2, -3, -3,
+      -1, -3, -1, -1, -3, -3, -3, -3, -1, -1, -1, -2, -2, -2, -3, -2, 4,  -3,
+      6,  2,  -3, -1, -1, -3, -1, -4, -3, 1,  -1, 0,  -2, 0,  -1, -3, -4, -1,
+      -3, 1,  -1, 1,  -4, 2,  5,  -3, -2, 0,  -3, 1,  -3, -2, 0,  -1, 2,  0,
+      0,  -1, -2, -3, -1, -2, 4,  -2, -3, -2, -3, -3, 6,  -3, -1, 0,  -3, 0,
+      0,  -3, -4, -3, -3, -2, -2, -1, 1,  -1, 3,  -3, 0,  -1, -3, -1, -2, -3,
+      6,  -2, -4, -2, -4, -3, 0,  -2, -2, -2, 0,  -2, -3, -2, -1, -3, -2, -2,
+      0,  -3, -1, 0,  -1, -2, 8,  -3, -1, -3, -2, 1,  -2, 0,  0,  -1, -2, -3,
+      -2, -1, 2,  0,  -1, -3, -1, -3, -3, 0,  -4, -3, 4,  -3, 2,  1,  -3, -3,
+      -3, -3, -2, -1, 3,  -3, -1, -1, -3, -1, 0,  -3, -1, 1,  -3, -2, -1, -3,
+      5,  -2, -1, 0,  -1, 1,  2,  0,  -1, -2, -3, -1, -2, 1,  -1, -4, -1, -4,
+      -3, 0,  -4, -3, 2,  -2, 4,  2,  -3, -3, -2, -2, -2, -1, 1,  -2, -1, -1,
+      -3, -1, -3, -1, -3, -2, 0,  -3, -2, 1,  -1, 2,  5,  -2, -2, 0,  -1, -1,
+      -1, 1,  -1, -1, -1, -1, -2, 3,  -3, 1,  0,  -3, 0,  1,  -3, 0,  -3, -2,
+      6,  -2, 0,  0,  1,  0,  -3, -4, -1, -2, 0,  -1, -2, -3, -1, -1, -4, -2,
+      -2, -3, -1, -3, -2, -2, 7,  -1, -2, -1, -1, -2, -4, -2, -3, -1, -1, 0,
+      -3, 0,  2,  -3, -2, 0,  -3, 1,  -2, 0,  0,  -1, 5,  1,  0,  -1, -2, -2,
+      -1, -1, 3,  -1, -1, -3, -2, 0,  -3, -2, 0,  -3, 2,  -2, -1, 0,  -2, 1,
+      5,  -1, -1, -3, -3, -1, -2, 0,  1,  0,  -1, 0,  0,  -2, 0,  -1, -2, 0,
+      -2, -1, 1,  -1, 0,  -1, 4,  1,  -2, -3, 0,  -2, 0,  0,  -1, -1, -1, -1,
+      -2, -2, -2, -1, -1, -1, -1, 0,  -1, -1, -1, 1,  5,  0,  -2, 0,  -2, -1,
+      0,  -3, -1, -3, -2, -1, -3, -3, 3,  -2, 1,  1,  -3, -2, -2, -3, -2, 0,
+      4,  -3, -1, -1, -2, -3, -4, -2, -4, -3, 1,  -2, -2, -3, -3, -2, -1, -4,
+      -4, -2, -3, -3, -2, -3, 11, -2, 2,  -3, 0,  -1, -2, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -2, -1, -1, 0,  0,  -1, -2, -1, -1, -1, -2, -3, -2,
+      -3, -2, 3,  -3, 2,  -1, -2, -1, -1, -2, -3, -1, -2, -2, -2, -1, 2,  -1,
+      7,  -2, -1, 1,  -3, 1,  4,  -3, -2, 0,  -3, 1,  -3, -1, 0,  -1, 3,  0,
+      0,  -1, -2, -3, -1, -2, 4};
+  ksw_extz_t ez;
+  const int qlen = pencode(query);
+  const int tlen = pencode(target);
+  ksw_extz2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
+                (uint8_t *)target.seq, 23, mat, 11, 1, -1, -1,
+                /* end_bonus */ 0, 0, &ez);
+  pdecode(query);
+  pdecode(target);
+  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_palign_dual(seq_t query, seq_t target, int8_t *mat,
+                              int8_t gapo1, int8_t gape1, int8_t gapo2,
+                              int8_t gape2, seq_int_t bandwidth,
+                              seq_int_t zdrop, seq_int_t flags,
+                              Alignment *out) {
+  ksw_extz_t ez;
+  const int qlen = pencode(query);
+  const int tlen = pencode(target);
+  ksw_extd2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
+                (uint8_t *)target.seq, 23, mat, gapo1, gape1, gapo2, gape2,
+                (int)bandwidth, (int)zdrop,
+                /* end_bonus */ 0, (int)flags, &ez);
+  pdecode(query);
+  pdecode(target);
+  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_palign_global(seq_t query, seq_t target, int8_t *mat,
+                                int8_t gapo, int8_t gape, seq_int_t bandwidth,
+                                Alignment *out) {
+  int m_cigar = 0;
+  int n_cigar = 0;
+  uint32_t *cigar = nullptr;
+  const int qlen = pencode(query);
+  const int tlen = pencode(target);
+  int score = ksw_gg2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
+                          (uint8_t *)target.seq, 23, mat, gapo, gape,
+                          (int)bandwidth, &m_cigar, &n_cigar, &cigar);
+  pdecode(query);
+  pdecode(target);
   *out = {{cigar, n_cigar}, score};
 }
 
