@@ -596,7 +596,7 @@ class Random:
 
         return theta
 
-    def sample(self: Random, population, k: int):
+    def sample[T](self: Random, population: list[T], k: int):
         """Chooses k unique random elements from a population sequence or set.
 
         Returns a new list containing elements from the population while
@@ -619,27 +619,29 @@ class Random:
         n = len(population)
         if not 0 <= k <= n:
             raise ValueError("Sample larger than population or is negative")
-        result = [0] * k
+        result = [T()] * k
         setsize = 21.0        # size of a small set minus size of an empty list
         if k > 5:
             # Should be _log(k * 3, 4)
             setsize += 4 ** _ceil(_log(float(k * 3))) # table size for big sets
         if n <= setsize:
+            # print 'here'
             # An n-length list is smaller than a k-length set
             pool = list(population)
             for i in range(k):         # invariant:  non-selected at [0,n-i)
                 j = randbelow(n-i)
                 result[i] = pool[j]
                 pool[j] = pool[n-i-1]   # move non-selected item into vacancy
-        # else:
-            # selected = set()
-            # selected_add = selected.add
-            # for i in range(k):
-            #     j = randbelow(n)
-            #     while j in selected:
-            #         j = randbelow(n)
-            #     selected_add(j)
-            #     result[i] = population[j]
+        else:
+            print 'here'
+            selected = set[int]()
+            selected_add = selected.add
+            for i in range(k):
+                j = randbelow(n)
+                while j in selected:
+                    j = randbelow(n)
+                selected_add(j)
+                result[i] = population[j]
         return result
 
     def choices(self: Random, population, weights, cum_weights, k: int):
@@ -699,3 +701,6 @@ class Random:
 
         return [population[bisect(cum_weights, int(random() * total), 0, hi)]
                 for i in range(k)]
+
+gen = Generator()
+rand = Random(gen)
