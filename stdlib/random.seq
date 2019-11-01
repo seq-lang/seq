@@ -633,7 +633,6 @@ class Random:
                 result[i] = pool[j]
                 pool[j] = pool[n-i-1]   # move non-selected item into vacancy
         else:
-            print 'here'
             selected = set[int]()
             selected_add = selected.add
             for i in range(k):
@@ -666,21 +665,6 @@ class Random:
 
             return cum_weight
 
-        def bisect(a: list[int], x: int, lo: int, hi: int) -> int:
-            """
-            Return the index where to insert item x in list a, assuming a is sorted.
-            """
-            if lo < 0:
-                raise ValueError('lo must be non-negative')
-            if hi < 0 or hi > len(a):
-                hi = len(a)
-            while lo < hi:
-                mid = (lo+hi)//2
-                # Use __lt__ to match the logic in list.sort() and in heapq
-                if x < a[mid]: hi = mid
-                else: lo = mid+1
-            return lo
-
         random = self.random
         n = len(population)
 
@@ -697,9 +681,8 @@ class Random:
             raise ValueError('The number of weights does not match the population')
 
         total = float(cum_weights[-1])  # convert to float
-        hi = n - 1
 
-        return [population[bisect(cum_weights, int(random() * total), 0, hi)]
+        return [population[_bisect(cum_weights, int(random() * total))]
                 for i in range(k)]
 
 gen = Generator()
