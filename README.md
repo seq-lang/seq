@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://travis-ci.org/seq-lang/seq">
-    <img src="https://travis-ci.org/seq-lang/seq.svg?branch=master"
+    <img src="https://travis-ci.com/seq-lang/seq.svg?branch=master"
          alt="Build Status">
   </a>
   <a href="https://gitter.im/seq-lang/seq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge">
