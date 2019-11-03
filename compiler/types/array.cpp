@@ -106,7 +106,7 @@ void types::ArrayType::initOps() {
 
       {"__slice__",
        {Int, Int},
-       getBaseType(0),
+       this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          Value *ptr = memb(self, "ptr", b.GetInsertBlock());
          ptr = b.CreateGEP(ptr, args[0]);
@@ -117,7 +117,7 @@ void types::ArrayType::initOps() {
 
       {"__slice_left__",
        {Int},
-       getBaseType(0),
+       this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          Value *ptr = memb(self, "ptr", b.GetInsertBlock());
          return make(ptr, args[0], b.GetInsertBlock());
@@ -126,7 +126,7 @@ void types::ArrayType::initOps() {
 
       {"__slice_right__",
        {Int},
-       getBaseType(0),
+       this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          Value *ptr = memb(self, "ptr", b.GetInsertBlock());
          Value *to = memb(self, "len", b.GetInsertBlock());

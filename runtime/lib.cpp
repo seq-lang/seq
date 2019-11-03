@@ -34,6 +34,7 @@ void seq_py_init();
 
 SEQ_FUNC void seq_init() {
   GC_INIT();
+  GC_set_warn_proc(GC_ignore_warn_proc);
 
 #if THREADED
   GC_allow_register_threads();
@@ -195,44 +196,43 @@ unsigned char seq_nt4_table[256] = {
 
 unsigned char seq_nt4_rc_table[5] = {3, 2, 1, 0, 4};
 
-static int encode(seq_t s) {
+unsigned char seq_aa20_table[256] = {
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 0,  1,  2,  3,  4,  5,  6,  7,  8,  20, 9,
+    10, 11, 12, 20, 13, 14, 15, 16, 17, 20, 18, 19, 20, 21, 22, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20, 20, 20, 20, 20, 20};
+
+static void encode(seq_t s, uint8_t *buf) {
   if (s.len >= 0) {
     for (seq_int_t i = 0; i < s.len; i++)
-      s.seq[i] = seq_nt4_table[(int)s.seq[i]];
-    return (int)s.len;
+      buf[i] = seq_nt4_table[(int)s.seq[i]];
   } else {
-    char *p1 = &s.seq[0];
-    char *p2 = &s.seq[-s.len - 1];
+    uint8_t *p1 = &buf[0];
+    uint8_t *p2 = &buf[-s.len - 1];
     while (p1 <= p2) {
-      char c1 = seq_nt4_rc_table[seq_nt4_table[(int)*p1]];
-      char c2 = seq_nt4_rc_table[seq_nt4_table[(int)*p2]];
+      uint8_t c1 = seq_nt4_rc_table[seq_nt4_table[(int)*p1]];
+      uint8_t c2 = seq_nt4_rc_table[seq_nt4_table[(int)*p2]];
       *p1 = c2;
       *p2 = c1;
       p1 += 1;
       p2 -= 1;
     }
-    return (int)(-s.len);
   }
 }
 
-static void decode(seq_t s) {
-#define BASES "AGCTN"
-  if (s.len >= 0) {
-    for (seq_int_t i = 0; i < s.len; i++)
-      s.seq[i] = BASES[(int)s.seq[i]];
-  } else {
-    char *p1 = &s.seq[0];
-    char *p2 = &s.seq[-s.len - 1];
-    while (p1 <= p2) {
-      char c1 = BASES[(int)*p1];
-      char c2 = BASES[(int)*p2];
-      *p1 = c2;
-      *p2 = c1;
-      p1 += 1;
-      p2 -= 1;
-    };
-  }
-#undef BASES
+static void pencode(seq_t s, unsigned char *buf) {
+  for (seq_int_t i = 0; i < s.len; i++)
+    buf[i] = seq_aa20_table[(int)s.seq[i]];
 }
 
 struct CIGAR {
@@ -245,32 +245,46 @@ struct Alignment {
   seq_int_t score;
 };
 
+#define ALIGN_ENCODE(enc_func)                                                 \
+  uint8_t static_qbuf[128];                                                    \
+  uint8_t static_tbuf[128];                                                    \
+  const int qlen = abs(query.len);                                             \
+  const int tlen = abs(target.len);                                            \
+  uint8_t *qbuf = qlen <= sizeof(static_qbuf)                                  \
+                      ? &static_qbuf[0]                                        \
+                      : (uint8_t *)seq_alloc_atomic(qlen);                     \
+  uint8_t *tbuf = tlen <= sizeof(static_tbuf)                                  \
+                      ? &static_tbuf[0]                                        \
+                      : (uint8_t *)seq_alloc_atomic(tlen);                     \
+  (enc_func)(query, qbuf);                                                     \
+  (enc_func)(target, tbuf)
+
+#define ALIGN_RELEASE()                                                        \
+  if (qbuf != &static_qbuf[0])                                                 \
+    seq_free(qbuf);                                                            \
+  if (tbuf != &static_tbuf[0])                                                 \
+  seq_free(tbuf)
+
 SEQ_FUNC void seq_align(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
                         int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
                         seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
-  const int qlen = encode(query);
-  const int tlen = encode(target);
-  ksw_extz2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
-                (uint8_t *)target.seq, 5, mat, gapo, gape, (int)bandwidth,
-                (int)zdrop,
+  ALIGN_ENCODE(encode);
+  ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo, gape,
+                (int)bandwidth, (int)zdrop,
                 /* end_bonus */ 0, (int)flags, &ez);
-  decode(query);
-  decode(target);
+  ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
 
 SEQ_FUNC void seq_align_default(seq_t query, seq_t target, Alignment *out) {
-  static int8_t mat[] = {2,  -4, -4, -4, 0,  -4, 2, -4, -4, 0, -4, -4, 2,
-                         -4, 0,  -4, -4, -4, 2,  0, 0,  0,  0, 0,  0};
+  static const int8_t mat[] = {2,  -4, -4, -4, 0,  -4, 2, -4, -4, 0, -4, -4, 2,
+                               -4, 0,  -4, -4, -4, 2,  0, 0,  0,  0, 0,  0};
   ksw_extz_t ez;
-  const int qlen = encode(query);
-  const int tlen = encode(target);
-  ksw_extd2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
-                (uint8_t *)target.seq, 5, mat, 4, 2, 13, 1, -1, -1,
+  ALIGN_ENCODE(encode);
+  ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, 4, 2, 13, 1, -1, -1,
                 /* end_bonus */ 0, 0, &ez);
-  decode(query);
-  decode(target);
+  ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
 
@@ -279,14 +293,11 @@ SEQ_FUNC void seq_align_dual(seq_t query, seq_t target, int8_t *mat,
                              int8_t gape2, seq_int_t bandwidth, seq_int_t zdrop,
                              seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
-  const int qlen = encode(query);
-  const int tlen = encode(target);
-  ksw_extd2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
-                (uint8_t *)target.seq, 5, mat, gapo1, gape1, gapo2, gape2,
-                (int)bandwidth, (int)zdrop,
+  ALIGN_ENCODE(encode);
+  ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo1, gape1, gapo2,
+                gape2, (int)bandwidth, (int)zdrop,
                 /* end_bonus */ 0, (int)flags, &ez);
-  decode(query);
-  decode(target);
+  ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
 
@@ -295,13 +306,10 @@ SEQ_FUNC void seq_align_splice(seq_t query, seq_t target, int8_t *mat,
                                int8_t noncan, seq_int_t zdrop, seq_int_t flags,
                                Alignment *out) {
   ksw_extz_t ez;
-  const int qlen = encode(query);
-  const int tlen = encode(target);
-  ksw_exts2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
-                (uint8_t *)target.seq, 5, mat, gapo1, gape1, gapo2, noncan,
-                (int)zdrop, (int)flags, &ez);
-  decode(query);
-  decode(target);
+  ALIGN_ENCODE(encode);
+  ksw_exts2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo1, gape1, gapo2,
+                noncan, (int)zdrop, (int)flags, &ez);
+  ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
 
@@ -311,13 +319,90 @@ SEQ_FUNC void seq_align_global(seq_t query, seq_t target, int8_t *mat,
   int m_cigar = 0;
   int n_cigar = 0;
   uint32_t *cigar = nullptr;
-  const int qlen = encode(query);
-  const int tlen = encode(target);
-  int score = ksw_gg2_sse(nullptr, qlen, (uint8_t *)query.seq, tlen,
-                          (uint8_t *)target.seq, 5, mat, gapo, gape,
+  ALIGN_ENCODE(encode);
+  int score = ksw_gg2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo, gape,
                           (int)bandwidth, &m_cigar, &n_cigar, &cigar);
-  decode(query);
-  decode(target);
+  ALIGN_RELEASE();
+  *out = {{cigar, n_cigar}, score};
+}
+
+SEQ_FUNC void seq_palign(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
+                         int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
+                         seq_int_t flags, Alignment *out) {
+  ksw_extz_t ez;
+  ALIGN_ENCODE(pencode);
+  ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo, gape,
+                (int)bandwidth, (int)zdrop,
+                /* end_bonus */ 0, (int)flags, &ez);
+  ALIGN_RELEASE();
+  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_palign_default(seq_t query, seq_t target, Alignment *out) {
+  // Blosum-62
+  static const int8_t mat[] = {
+      4,  -2, 0,  -2, -1, -2, 0,  -2, -1, -1, -1, -1, -2, -1, -1, -1, 1,  0,
+      0,  -3, 0,  -2, -1, -2, 4,  -3, 4,  1,  -3, -1, 0,  -3, 0,  -4, -3, 3,
+      -2, 0,  -1, 0,  -1, -3, -4, -1, -3, 1,  0,  -3, 9,  -3, -4, -2, -3, -3,
+      -1, -3, -1, -1, -3, -3, -3, -3, -1, -1, -1, -2, -2, -2, -3, -2, 4,  -3,
+      6,  2,  -3, -1, -1, -3, -1, -4, -3, 1,  -1, 0,  -2, 0,  -1, -3, -4, -1,
+      -3, 1,  -1, 1,  -4, 2,  5,  -3, -2, 0,  -3, 1,  -3, -2, 0,  -1, 2,  0,
+      0,  -1, -2, -3, -1, -2, 4,  -2, -3, -2, -3, -3, 6,  -3, -1, 0,  -3, 0,
+      0,  -3, -4, -3, -3, -2, -2, -1, 1,  -1, 3,  -3, 0,  -1, -3, -1, -2, -3,
+      6,  -2, -4, -2, -4, -3, 0,  -2, -2, -2, 0,  -2, -3, -2, -1, -3, -2, -2,
+      0,  -3, -1, 0,  -1, -2, 8,  -3, -1, -3, -2, 1,  -2, 0,  0,  -1, -2, -3,
+      -2, -1, 2,  0,  -1, -3, -1, -3, -3, 0,  -4, -3, 4,  -3, 2,  1,  -3, -3,
+      -3, -3, -2, -1, 3,  -3, -1, -1, -3, -1, 0,  -3, -1, 1,  -3, -2, -1, -3,
+      5,  -2, -1, 0,  -1, 1,  2,  0,  -1, -2, -3, -1, -2, 1,  -1, -4, -1, -4,
+      -3, 0,  -4, -3, 2,  -2, 4,  2,  -3, -3, -2, -2, -2, -1, 1,  -2, -1, -1,
+      -3, -1, -3, -1, -3, -2, 0,  -3, -2, 1,  -1, 2,  5,  -2, -2, 0,  -1, -1,
+      -1, 1,  -1, -1, -1, -1, -2, 3,  -3, 1,  0,  -3, 0,  1,  -3, 0,  -3, -2,
+      6,  -2, 0,  0,  1,  0,  -3, -4, -1, -2, 0,  -1, -2, -3, -1, -1, -4, -2,
+      -2, -3, -1, -3, -2, -2, 7,  -1, -2, -1, -1, -2, -4, -2, -3, -1, -1, 0,
+      -3, 0,  2,  -3, -2, 0,  -3, 1,  -2, 0,  0,  -1, 5,  1,  0,  -1, -2, -2,
+      -1, -1, 3,  -1, -1, -3, -2, 0,  -3, -2, 0,  -3, 2,  -2, -1, 0,  -2, 1,
+      5,  -1, -1, -3, -3, -1, -2, 0,  1,  0,  -1, 0,  0,  -2, 0,  -1, -2, 0,
+      -2, -1, 1,  -1, 0,  -1, 4,  1,  -2, -3, 0,  -2, 0,  0,  -1, -1, -1, -1,
+      -2, -2, -2, -1, -1, -1, -1, 0,  -1, -1, -1, 1,  5,  0,  -2, 0,  -2, -1,
+      0,  -3, -1, -3, -2, -1, -3, -3, 3,  -2, 1,  1,  -3, -2, -2, -3, -2, 0,
+      4,  -3, -1, -1, -2, -3, -4, -2, -4, -3, 1,  -2, -2, -3, -3, -2, -1, -4,
+      -4, -2, -3, -3, -2, -3, 11, -2, 2,  -3, 0,  -1, -2, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -2, -1, -1, 0,  0,  -1, -2, -1, -1, -1, -2, -3, -2,
+      -3, -2, 3,  -3, 2,  -1, -2, -1, -1, -2, -3, -1, -2, -2, -2, -1, 2,  -1,
+      7,  -2, -1, 1,  -3, 1,  4,  -3, -2, 0,  -3, 1,  -3, -1, 0,  -1, 3,  0,
+      0,  -1, -2, -3, -1, -2, 4};
+  ksw_extz_t ez;
+  ALIGN_ENCODE(pencode);
+  ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, 11, 1, -1, -1,
+                /* end_bonus */ 0, 0, &ez);
+  ALIGN_RELEASE();
+  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_palign_dual(seq_t query, seq_t target, int8_t *mat,
+                              int8_t gapo1, int8_t gape1, int8_t gapo2,
+                              int8_t gape2, seq_int_t bandwidth,
+                              seq_int_t zdrop, seq_int_t flags,
+                              Alignment *out) {
+  ksw_extz_t ez;
+  ALIGN_ENCODE(pencode);
+  ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo1, gape1, gapo2,
+                gape2, (int)bandwidth, (int)zdrop,
+                /* end_bonus */ 0, (int)flags, &ez);
+  ALIGN_RELEASE();
+  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+}
+
+SEQ_FUNC void seq_palign_global(seq_t query, seq_t target, int8_t *mat,
+                                int8_t gapo, int8_t gape, seq_int_t bandwidth,
+                                Alignment *out) {
+  int m_cigar = 0;
+  int n_cigar = 0;
+  uint32_t *cigar = nullptr;
+  ALIGN_ENCODE(pencode);
+  int score = ksw_gg2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo, gape,
+                          (int)bandwidth, &m_cigar, &n_cigar, &cigar);
+  ALIGN_RELEASE();
   *out = {{cigar, n_cigar}, score};
 }
 

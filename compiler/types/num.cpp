@@ -1349,7 +1349,7 @@ getByteCompTable(Module *module,
       a = ConstantInt::get(ty, 'N');
 
     std::string from = "ACBDGHKMNSRUTWVYacbdghkmnsrutwvy";
-    std::string to = "TGVHCDMKNSYAAWBRTGVHCDMKNSYAAWBR";
+    std::string to = "TGVHCDMKNSYAAWBRtgvhcdmknsyaawbr";
 
     for (unsigned i = 0; i < from.size(); i++)
       v[from[i]] = ConstantInt::get(ty, (uint64_t)to[i]);

@@ -64,6 +64,25 @@ k2 = K(s'ACGTA')
 print k1 - k2  # EXPECT: 0
 print k2 - k1  # EXPECT: 0
 
+k1long = Kmer[100]() |> base(0, k'T') |> base(42, k'C') |> base(77, k'G')
+k2long = Kmer[100]() |> base(0, k'T') |> base(43, k'C') |> base(77, k'T')
+print abs(k1long - k2long)  # EXPECT: 3
+
+if k1long > k2long:
+    print k2long - k1long   # EXPECT: -3
+    print k1long - k2long   # EXPECT: 3
+else:
+    print k1long - k2long
+    print k2long - k1long
+
+k1long, k2long = k2long, k1long
+if k1long > k2long:
+    print k2long - k1long   # EXPECT: -3
+    print k1long - k2long   # EXPECT: 3
+else:
+    print k1long - k2long
+    print k2long - k1long
+
 print k1 << s'G'   # EXPECT: CGTAG
 print k1 >> s'G'   # EXPECT: GACGT
 print k1 << ~s'G'  # EXPECT: CGTAC

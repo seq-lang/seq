@@ -229,3 +229,20 @@ Reading SAM/BAM/CRAM
 
     for s in CRAM('alignments.cram') |> seqs:
         print s
+
+DNA to protein translation
+--------------------------
+
+.. code-block:: seq
+
+    dna = s'AGGTCTAACGGC'
+    protein = dna |> translate
+    print protein  # RSNG
+
+Reading protein sequences from FASTA
+------------------------------------
+
+.. code-block:: seq
+
+    for s in FASTA('test/data/seqs.fasta') |> seqs |> as_protein:
+        print s

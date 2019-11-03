@@ -208,7 +208,7 @@ get2bitTable(Module *module, const std::string &name = "seq.2bit_table") {
     v['A'] = v['a'] = ConstantInt::get(ty, 0);
     v['G'] = v['g'] = ConstantInt::get(ty, 1);
     v['C'] = v['c'] = ConstantInt::get(ty, 2);
-    v['T'] = v['t'] = ConstantInt::get(ty, 3);
+    v['T'] = v['t'] = v['U'] = v['u'] = ConstantInt::get(ty, 3);
 
     auto *arrTy =
         llvm::ArrayType::get(IntegerType::getIntNTy(context, 2), v.size());
@@ -657,8 +657,9 @@ void types::KMer::initOps() {
           */
          LLVMContext &context = b.getContext();
          Value *mask1 = ConstantInt::get(getLLVMType(context), 0);
+         Value *one = ConstantInt::get(getLLVMType(context), 1);
          for (unsigned i = 0; i < getK(); i++) {
-           Value *shift = b.CreateShl(oneLLVM(context), 2 * i);
+           Value *shift = b.CreateShl(one, 2 * i);
            mask1 = b.CreateOr(mask1, shift);
          }
          Value *mask2 = b.CreateShl(mask1, 1);
