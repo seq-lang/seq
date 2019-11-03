@@ -123,7 +123,7 @@ You can then open `_build/html/index.html` with your browser.
 
 If you use Seq in your research, please cite:
 
-> Ariya Shajii, Ibrahim Numanagi&cacute;, Riyadh Baghdadi, Bonnie Berger, and Saman Amarasinghe. 2019. Seq: a high-performance language for bioinformatics. Proc. ACM Program. Lang. 3, OOPSLA, Article 125 (October 2019), 29 pages. DOI: https://doi.org/10.1145/3360551
+> Ariya Shajii, Ibrahim Numanagi&cacute;, Riyadh Baghdadi, Bonnie Berger, and Saman Amarasinghe. 2019. Seq: a high-performance language for bioinformatics. *Proc. ACM Program. Lang.* 3, OOPSLA, Article 125 (October 2019), 29 pages. DOI: https://doi.org/10.1145/3360551
 
 BibTeX:
 
