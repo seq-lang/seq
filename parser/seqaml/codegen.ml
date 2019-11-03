@@ -17,9 +17,7 @@ let parse ?f ?(file = "") code =
     let ast = Grammar.program (Lexer.token state) lexbuf in
     Option.call ~f ast;
     ast
-  with
-  | Err.SyntaxError (msg, pos) -> raise @@ Err.CompilerError (Lexer msg, [ pos ])
-  | Grammar.Error ->
+  with Grammar.Error ->
     let pos =
       Ast.Ann.create
         ~file
@@ -28,12 +26,7 @@ let parse ?f ?(file = "") code =
         ~len:1
         ()
     in
-    raise @@ Err.CompilerError (Parser, [ pos ])
-  | Err.SeqCamlError (msg, pos) ->
-    Printexc.print_backtrace stderr;
-    raise @@ Err.CompilerError (Descent msg, pos)
-  | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])
-  | Err.InternalError (msg, pos) -> raise @@ Err.CompilerError (Internal msg, [ pos ])
+    raise @@ Err.CompilerError (Parser, [pos])
 
 let parse_file ?f file =
   let ast =

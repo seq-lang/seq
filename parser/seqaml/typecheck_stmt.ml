@@ -21,7 +21,8 @@ module R = Typecheck_realize
 let rec parse ~(ctx : C.t) (s : Stmt.t Ann.ann) : Stmt.t Ann.ann list =
   let ann, node = s in
   C.push_ann ~ctx ann;
-  Util.A.dr "[s] %s" (Stmt.to_string s);
+  (* Util.A.dr "[s] %s" (Stmt.to_string s); *)
+  Stack.push ctx.env.statements (Stack.create ());
   let (node : Stmt.t) =
     match node with
     | Expr p -> Expr (parse_expr ctx p)
@@ -51,10 +52,9 @@ let rec parse ~(ctx : C.t) (s : Stmt.t Ann.ann) : Stmt.t Ann.ann list =
     | TypeAlias s -> parse_alias ctx s
     | Prefetch _ -> C.err ~ctx "not supported :/"
   in
-  let stmts = (ann, node) :: Stack.to_list ctx.env.statements in
-  Stack.clear ctx.env.statements;
+  let stmts = (ann, node) :: Stack.to_list (Stack.pop_exn ctx.env.statements) in
   ignore @@ C.pop_ann ~ctx;
-  (* Util.A.dr "%s -> %s" (Stmt.to_string s) (Stmt.to_string (ann, node)); *)
+  (* List.iter (List.rev stmts) ~f:(fun s -> Util.A.dr ~force:true ":: %s" (Stmt.to_string s)); *)
   List.rev stmts
 
 and parse_block ctx stmts =
@@ -109,7 +109,7 @@ and parse_assign ctx ?(prefix = "") (lhs, rhs, shadow, dectyp) =
     (assert_stmt :: lst)
     |> List.map ~f:(fun s -> parse ~ctx (C.sannotate (C.ann ctx) s))
     |> List.concat
-    |> List.iter ~f:(Stack.push ctx.env.statements);
+    |> List.iter ~f:(Stack.push (Stack.top_exn ctx.env.statements));
     Pass ()
   | [ lhs ], [ rhs ] ->
     (* TODO: ensure that all shadowing and access rules are resolved here! *)
@@ -121,18 +121,18 @@ and parse_assign ctx ?(prefix = "") (lhs, rhs, shadow, dectyp) =
       (match Ctx.in_scope ~ctx var with
       | Some (Var t' | Type t') when T.unify t t' <> -1 -> T.unify_inplace ~ctx t t'
       | Some (Type t') ->
-        Util.dbg
+        (* Util.dbg
           "shadowing %s : %s with %s"
           var
           (Ann.var_to_string t)
-          (Ann.t_to_string (fst rhs).typ);
+          (Ann.t_to_string (fst rhs).typ); *)
         Ctx.add ~ctx (prefix ^ var) (Type t)
       | Some (Var t') ->
-        Util.dbg
+        (* Util.dbg
           "shadowing %s : %s with %s"
           var
           (Ann.var_to_string t)
-          (Ann.t_to_string (fst rhs).typ);
+          (Ann.t_to_string (fst rhs).typ); *)
         Ctx.add ~ctx (prefix ^ var) (Var t)
       | None ->
         Ctx.add
@@ -160,13 +160,13 @@ and parse_declare ?(prefix = "") ctx { name; typ } =
     | Some typ -> E.parse ~ctx typ
     | None -> C.err ~ctx "invalid declare"
   in
-  if is_some @@ Ctx.in_scope ~ctx name then Util.dbg "shadowing %s" name;
+  (* if is_some @@ Ctx.in_scope ~ctx name then Util.dbg "shadowing %s" name; *)
   Ctx.add ~ctx (prefix ^ name) (Var (var_of_node_exn e));
   Declare { name; typ = Some e }
 
-and parse_alias ctx (name, expr) =
-  let expr = E.parse ~ctx expr in
-  if is_some @@ Ctx.in_scope ~ctx name then Util.dbg "shadowing %s" name;
+and parse_alias ctx (name, expr') =
+  let expr = E.parse ~ctx expr' in
+  (* if is_some @@ Ctx.in_scope ~ctx name then Util.dbg "shadowing %s" name; *)
   Ctx.add ~ctx name (Var (var_of_node_exn expr));
   TypeAlias (name, expr)
 
@@ -194,7 +194,7 @@ and parse_print ctx (exprs, term) =
   | stmts ->
     List.map stmts ~f:(fun s -> ctx.globals.sparse ~ctx @@ C.sannotate (C.ann ctx) s)
       |> List.concat
-      |> List.iter ~f:(Stack.push ctx.env.statements);
+      |> List.iter ~f:(Stack.push (Stack.top_exn ctx.env.statements));
     Pass ()
 
 and parse_return ctx expr =
@@ -333,8 +333,13 @@ and parse_import (ctx : C.t) ?(ext = ".seq") imports =
       | Some t -> t
       | None ->
         let ictx = C.init_empty ~ctx in
-        Codegen.parse_file file
-        |> List.ignore_map ~f:(parse ~ctx:ictx);
+        if file = ctx.env.filename then C.err ~ctx "recursive import";
+        let statements =
+          Codegen.parse_file file
+          |> List.map ~f:(parse ~ctx:ictx)
+          |> List.concat
+        in
+        Hashtbl.set C.imports ~key:file ~data:statements;
         Hashtbl.set ctx.globals.imports ~key:file ~data:ictx.map;
         ictx.map
     in
@@ -356,7 +361,8 @@ and parse_import (ctx : C.t) ?(ext = ".seq") imports =
             | Some (data :: _) -> Option.value import_as ~default:name, data
             | _ -> C.err ~ctx "name %s not found in %s" name from)
     in
-    List.iter additions ~f:(fun (key, data) -> Ctx.add ~ctx key data)
+    List.iter additions ~f:(fun (key, data) -> Ctx.add ~ctx key data);
+    { from = file; what; import_as = Some (Option.value import_as ~default:from) }
   in
   List.iter imports ~f:(fun i ->
       let from = i.from in
@@ -369,14 +375,19 @@ and parse_import (ctx : C.t) ?(ext = ".seq") imports =
           | Some file -> file
           | None -> C.err ~ctx "cannot locate module %s" from)
       in
-      import ctx file i);
-  Import imports
+      Stack.push (Stack.top_exn ctx.env.statements) (C.ann ctx, Import [import ctx file i]));
+  Pass ()
 
 and parse_impaste ctx ?(ext = ".seq") from =
   match Util.get_from_stdlib ~ext from with
   | Some file ->
-    Codegen.parse_file file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx);
-    ImportPaste from
+    let statements =
+      Codegen.parse_file file
+      |> List.map ~f:(ctx.globals.sparse ~ctx)
+      |> List.concat
+    in
+    Hashtbl.set C.imports ~key:file ~data:statements;
+    ImportPaste file
   | None -> C.err ~ctx "cannot locate module %s" from
 
 and parse_try ctx (stmts, catches, finally) =
@@ -520,7 +531,7 @@ and parse_function ctx ?(prefix = "") ?(shalow = false) f =
   Ctx.add ~ctx fname (Var tfun);
   let node = C.ann ctx ~typ:(Var tfun), Function { f with fn_name; fn_args; fn_stmts } in
   Hashtbl.set C.realizations ~key:(fst tf').cache ~data:(node, String.Table.create ());
-  Util.dbg "|| [fun] %s |- %s %b" fname (Ann.var_to_string tfun) (Ann.is_realizable tfun);
+  (* Util.dbg "|| [fun] %s |- %s %b" fname (Ann.var_to_string tfun) (Ann.is_realizable tfun); *)
   let tfun = if Ann.is_realizable tfun then R.realize ~ctx tfun else tfun in
   snd node
 
@@ -679,7 +690,7 @@ and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
         sprintf "cdef __init__(self: %s, %s)" cls (Util.ppl members ~f:Fn.id)
       ])
     |> String.concat ~sep:"\n"
-    |> (fun s -> Util.A.db "%s" s; s)
+    (* |> (fun s -> Util.A.db "%s" s; s) *)
     |> Codegen.parse
     |> List.map ~f:(C.sannotate Ann.default)
   in
@@ -716,11 +727,11 @@ and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
             Some (Var typ), stmt, name
           | _ -> ierr "invalid class member"
         in
-        Util.A.dy
+        (* Util.A.dy
           ">> %s :: adding %s = %s"
           class_name
           name
-          (Ann.typ_to_string @@ Option.value_exn typ);
+          (Ann.typ_to_string @@ Option.value_exn typ); *)
         { (fst s) with typ }, node)
   in
   let ctx = C.exit_level ~ctx in

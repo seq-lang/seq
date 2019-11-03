@@ -71,12 +71,11 @@ let ann ?typ (ctx : t) =
 let var v =
   v.Ann.typ |> Ann.var_of_typ >>| Ann.real_type
 
-let err ?(ctx : t option) fmt =
-  (* let ann = Option.value ann ~default:(ann ctx) in *)
-  Core.ksprintf
-    (fun msg ->
-      raise @@ Err.SeqCamlError (msg, [ Option.value_map ctx ~f:ann ~default:(Ast.Ann.create ()) ]))
-    fmt
+let err ?(pos : Ann.t option option) ?(ctx : t option) fmt =
+  let pos = Option.value_map pos ~f:Option.value_exn ~default:(
+      Option.value_map ctx ~f:ann ~default:(Ast.Ann.create ()))
+  in
+  Core.ksprintf (fun msg -> raise @@ Err.SeqCamlError (msg, [ pos ])) fmt
 
 let is_accessible ~(ctx : t) { base; global; _} =
   ctx.Ctx.env.base = base || global
@@ -124,7 +123,9 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block sparse
       let args = Llvm.Module.get_args mdl in
       add ~ctx ~internal ~global ~toplevel "__argv__" (Var args));
     match Util.get_from_stdlib "stdlib" with
-    | Some file -> Codegen.parse_file file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx ~toplevel:true)
+    | Some file ->
+
+    Hashtbl.find_exn Typecheck_ctx.imports file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx ~toplevel:true)
     | None -> Err.ierr "cannot locate stdlib.seq");
   Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data ->
       add ~ctx ~internal ~global ~toplevel key (fst @@ List.hd_exn data));
@@ -189,7 +190,8 @@ let to_dbg_output ~(ctx : t) =
       dump_map ~depth:2 data)
 
 
-let rec get_realization ~(ctx : t) typ =
+let rec get_realization ~(ctx : t) ?(pos = None) typ =
+  Util.A.dy ~force:true "%% realizing %s" (Ann.var_to_string typ);
   let open Ast in
   let open Ann in
   let module TC = Typecheck_ctx in
@@ -201,16 +203,39 @@ let rec get_realization ~(ctx : t) typ =
     | Some { realized_llvm; _ }, _ when realized_llvm <> Ctypes.null  ->
       (* Case 1 - already realized *)
       realized_llvm
-    | Some ({ realized_typ; realized_ast = Some (_, Class cls); _ } as data), Class (_, { is_type }) ->
+    | Some data, Class ({ cache = p, n; _ }, { is_type }) when n = Ann.default_pos ->
+      let ptr = match p, (String.prefix p 1, int_of_string_opt (String.drop_prefix p 1)) with
+        | "void", _ -> Llvm.Type.void ()
+        | "int", _ -> Llvm.Type.int ()
+        | "float", _ -> Llvm.Type.float ()
+        | "byte", _ -> Llvm.Type.byte ()
+        | "bool", _ -> Llvm.Type.bool ()
+        | "str", _ -> Llvm.Type.str ()
+        | "seq", _ -> Llvm.Type.seq ()
+        | _, ("i", Some n) -> Llvm.Type.intN n
+        | _, ("u", Some n) -> Llvm.Type.uintN n
+        | _, ("k", Some n) -> Llvm.Type.kmerN n
+        | _ ->
+          match gen.generics with
+          | [ _, (_, t) ] ->
+            let arg = get_realization ~ctx ~pos (real_type t) in
+            (match p with
+            | "array" | "generator" | "ptr" ->
+              Llvm.Expr.typ @@ Llvm.Type.param ~name:p arg
+            | "__array__" -> err ~ctx "cannot do __array__ yet"
+            | _ -> err ~ctx ~pos "cannot instantiate internal type %s" p)
+          | _ -> err ~ctx ~pos "cannot instantiate internal type %s" p
+      in
+      Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
+      ptr
+    | Some ({ realized_typ; realized_ast = Some (pos, (Class cls | Type cls)); _ } as data), Class (_, { is_type }) ->
       let name = sprintf "%s:%s" cls.class_name real_name in
       let ptr = (if is_type then Llvm.Type.record [] [] else Llvm.Type.cls) name in
       let new_ctx = { ctx with map = Hashtbl.copy ctx.map; stack = Stack.create () } in
       Ctx.add_block ~ctx:new_ctx;
-      cls.members
-      |> List.filter_map ~f:(function
-          | { typ; _ }, Stmt.Declare { name; _ } ->
-            Some (name, get_realization ~ctx (real_type (var_of_typ_exn typ)))
-          | _ -> None)
+      gen.args
+      |> List.map ~f:(function (name, typ) ->
+          name, get_realization ~ctx ~pos:(Some pos) (real_type typ))
       |> List.unzip
       |> (fun (names, types) ->
           match types, is_type with
@@ -220,7 +245,7 @@ let rec get_realization ~(ctx : t) typ =
       if not is_type then Llvm.Type.set_cls_done ptr;
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
       ptr
-    | Some ({ realized_typ; realized_ast = Some (_, Function f); _ } as data), Func (gen, { ret; _ }) ->
+    | Some ({ realized_typ; realized_ast = Some (pos, Function f); _ } as data), Func (gen, { ret; _ }) ->
       let name = sprintf "%s:%s" f.fn_name.name real_name in
       let ptr = Llvm.Func.func name in
       let block = Llvm.Block.func ptr in
@@ -234,25 +259,28 @@ let rec get_realization ~(ctx : t) typ =
         }
       in
       Ctx.add_block ~ctx:new_ctx;
-      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~ctx t) in
+      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~pos:(Some pos) ~ctx t) in
       Llvm.Func.set_args ptr names types;
-      Llvm.Func.set_type ptr (get_realization ~ctx ret);
+      Llvm.Func.set_type ptr (get_realization ~ctx ~pos:(Some pos) ret);
       List.iter names ~f:(fun n -> add ~ctx:new_ctx n (Var (Llvm.Func.get_arg ptr n)));
       List.ignore_map f.fn_stmts ~f:(ctx.globals.sparse ~ctx:new_ctx ~toplevel:false);
       Ctx.clear_block ~ctx:new_ctx;
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
       ptr
-    | Some ({ realized_typ; realized_ast = Some (_, Extern f); _ } as data), Func (gen, { ret; _ }) ->
+    | Some ({ realized_typ; realized_ast = Some (pos, Extern f); _ } as data), Func (gen, { ret; _ }) ->
       let lang, dylib, ctx_name, Stmt.{ name; _ }, _ = f in
       if lang <> "c"
       then err ~ctx "only cdef externs are currently supported";
       let name = sprintf "%s:%s" name real_name in
       let ptr = Llvm.Func.func name in
-      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~ctx t) in
+      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~pos:(Some pos) ~ctx t) in
       Llvm.Func.set_args ptr names types;
-      Llvm.Func.set_type ptr (get_realization ~ctx ret);
+      Llvm.Func.set_type ptr (get_realization ~pos:(Some pos) ~ctx ret);
       Llvm.Func.set_extern ptr;
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
       ptr
-    | _ -> err ~ctx "%s not realized by a type-checker" (Ann.var_to_string typ))
-  | _ -> err ~ctx "%s not realized by a type-checker" (Ann.var_to_string typ)
+    | p, _ ->
+      err ~pos ~ctx "%s not realized by a type-checker [C/T] %s" (Ann.var_to_string ~full:true typ)
+      (Option.value_map p ~default:"_" ~f:(fun x -> Stmt.to_string @@ Option.value_exn x.realized_ast))
+    )
+  | _ -> err ~pos ~ctx "%s not realized by a type-checker" (Ann.var_to_string ~full:true typ)

@@ -78,7 +78,7 @@ module A = struct
     Caml.Printf.fprintf stderr "\027[%sm" codes;
     fn (fun o -> fno o (if el then "\027[0m \n%!" else "\027[0m %!")) stderr fmt
 
-  let dr fmt = dcol ANSITerminal.[ Foreground Red ] fmt
+  let dr ?(force = false) fmt = dcol ~force ANSITerminal.[ Foreground Red ] fmt
   let dbg fmt = dr fmt
   let dg ?(force = false) ?(el = true) fmt = dcol ~el ~force ANSITerminal.[ Foreground Green ] fmt
   let db ?(force = false) ?(el = true) fmt = dcol ~el ~force ANSITerminal.[ Foreground Blue ] fmt

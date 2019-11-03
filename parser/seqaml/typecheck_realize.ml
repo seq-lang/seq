@@ -14,6 +14,7 @@ module C = Typecheck_ctx
 module T = Typecheck_infer
 
 let rec realize ~(ctx : C.t) (typ : Ann.tvar) =
+  Util.A.db "about to realize %s" (Ann.var_to_string typ);
   match ctx.env.realizing, typ with
   | true, Func f -> realize_function ctx typ f
   | true, Class c -> realize_type ctx typ c
@@ -62,7 +63,9 @@ and realize_function ctx typ (fn, f_ret) =
     let fn_stmts = List.concat @@ List.map fn_stmts ~f:(ctx.globals.sparse ~ctx:(C.enter_level ~ctx:fctx)) in
     Stack.iter ctx.env.unbounds ~f:(fun u ->
         if Ann.has_unbound (Ann.var_of_typ_exn u.typ)
-        then Util.A.dy "unbound %s is not realized" (Ann.to_string u));
+        then ()
+        (* Util.A.dy "unbound %s is not realized" (Ann.to_string u) *)
+        );
 
     C.remove_last_realization ~ctx:fctx fn.cache;
     Ctx.clear_block ~ctx:fctx;
@@ -94,8 +97,10 @@ and realize_type ctx typ (cls, cls_t) =
       Hashtbl.find_exn ctx.globals.classes cls.cache
       |> Hashtbl.to_alist
       |> List.filter_map ~f:(function
-              | key, [ Ann.Var (Func _) ] -> None
-              | key, [ Var c ] -> Some (c, (key, C.make_unbound ctx))
+              | key, [ Ann.Var var ] ->
+                (match Ann.real_type var with
+                | Func _ -> None
+                | c -> Some (c, (key, C.make_unbound ctx)))
               | _ -> None)
     in
     let tv =
@@ -112,37 +117,15 @@ and realize_type ctx typ (cls, cls_t) =
     let inst = Int.Table.create () in
     T.traverse_parents ~ctx tv ~f:(fun n (i, t) ->
         Hashtbl.set inst ~key:i ~data:t;
-        (* Util.A.dr "%s -> %d, %s" n i (Ann.var_to_string t); *)
         Ctx.add ~ctx n (Type t));
     C.add_realization ~ctx cls.cache typ;
     List.iter c_args ~f:(fun (c, (x, t')) ->
-        (* Util.A.dr ":: [%s] %s -> %s" n (Ann.typ_to_string ~full:true t) (Ann.typ_to_string ~full:true @@ T.instantiate ~ctx ~inst t); *)
         T.instantiate ~ctx ~inst c |> realize ~ctx |> T.unify_inplace ~ctx t');
     C.remove_last_realization ~ctx cls.cache;
     Ctx.clear_block ~ctx;
     let ast = typ, snd ast in
     let cache_entry = { cache_entry with realized_ast = Some ast } in
     Hashtbl.set str2real ~key:real_name ~data:cache_entry;
-    (* if snd cls.cache = Ann.default_pos then (
-      let open Llvm.Type in
-      let name = fst cls.cache in
-      ( match name with
-        | "void" -> void ()
-        | "int" -> int ()
-        | "bool" -> bool ()
-        | "float" -> float ()
-        | "byte" -> byte ()
-        | "str" -> str ()
-        | "seq" -> seq ()
-        | "ptr" -> ptr [typ]
-        | "array" -> ptr [typ]
-        | "KInt" -> kmerN n
-        | "Int" -> intN n
-        | "UInt" -> uintN n
-        | _ -> Ctypes.null )
-      |> get_methods
-      |> List.iter ~f:(fun (s, t) -> add_internal_method name s (get_name t))
-    ); *)
     tv
 
 and internal ~(ctx : C.t) ?(args = []) name =

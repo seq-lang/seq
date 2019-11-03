@@ -140,7 +140,7 @@ and parse_collection ~kind ctx items =
   let stmts = s_init :: s_set in
   List.map stmts ~f:(fun s -> ctx.globals.sparse ~ctx @@ C.sannotate (C.ann ctx) s)
   |> List.concat
-  |> List.iter ~f:(Stack.push ctx.env.statements);
+  |> List.iter ~f:(Stack.push (Stack.top_exn ctx.env.statements));
   parse_id ctx temp_var
 
 and parse_generator ctx (kind, exprs, comp) =
@@ -162,7 +162,7 @@ and parse_generator ctx (kind, exprs, comp) =
   let stmts = [ s_assign (e_id temp_var) (e_call (e_id kind) init_args); s_generator (Some comp) ] in
   List.map stmts ~f:(fun s -> ctx.globals.sparse ~ctx @@ C.sannotate (C.ann ctx) s)
   |> List.concat
-  |> List.iter ~f:(Stack.push ctx.env.statements);
+  |> List.iter ~f:(Stack.push (Stack.top_exn ctx.env.statements));
   parse_id ctx temp_var
 
 and parse_if ctx (cond, if_expr, else_expr) =
@@ -435,7 +435,7 @@ and parse_dot ctx (lh_expr', rhs) =
       let typ = Ann.Func ({ g with args = (hd_n, hd_t) :: tl }, { f with used }) in
       (match ast with
       | _, Function { fn_attrs; _ } when List.exists fn_attrs ~f:((=) "property") ->
-        Util.A.db "property! %s" rhs;
+        (* Util.A.db "property! %s" rhs; *)
         C.ann ~typ:(Var f.ret) ctx, Call ((C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)), [])
       | _ ->
         C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs))

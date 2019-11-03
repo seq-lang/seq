@@ -44,13 +44,13 @@ let rec parse ~(ctx : C.t) ?(toplevel=false) ?(jit = false) (ann, node) =
     | Throw p -> parse_throw ctx p
     | Global p -> parse_global ctx p
     | Prefetch p -> parse_prefetch ctx p
-    | (Function _ | Class _ | Type _ | Extern _) -> Llvm.Stmt.pass ()
+    | (Function _ | Class _ | Type _ | Extern _ | Extend _) -> Llvm.Stmt.pass ()
     (* | Function p -> parse_function ctx p ~toplevel *)
     (* | Class p -> parse_class ctx p ~toplevel *)
     (* | Type p -> parse_class ctx p ~toplevel ~is_type:true *)
     (* | Declare p -> parse_declare ctx p ~toplevel ~jit *)
     (* | Special p -> parse_special ctx p *)
-    | _ -> C.err ~ctx "not yet!"
+    | _ -> C.err ~ctx "not yet! %s " @@ (Ast.Stmt.to_string (ann, node))
   in
   ignore @@ C.pop_ann ~ctx;
   Llvm.Stmt.set_base stmt ctx.env.base;
@@ -145,12 +145,9 @@ and parse_assert ctx expr =
   Llvm.Stmt.assrt (E.parse ~ctx expr)
 
 and parse_type_alias ctx ~toplevel (name, expr) =
-  let expr = E.parse ~ctx expr in
-  if Llvm.Expr.is_type expr
-  then (
-    C.add ~ctx ~toplevel ~global:toplevel name (C.Type (Llvm.Type.expr_type expr));
-    Llvm.Stmt.pass ())
-  else C.err ~ctx "must refer to type"
+  C.add ~ctx ~toplevel ~global:toplevel name
+    @@ Type (C.get_realization ~ctx (Ast.var_of_node_exn expr));
+  Llvm.Stmt.pass ()
 
 and parse_while ctx (cond, stmts) =
   let cond_expr = E.parse ~ctx cond in
@@ -229,70 +226,53 @@ and parse_pattern ctx = function
 (** [parse_import ?ext context position data] parses import AST.
     Import file extension is set via [seq] (default is [".seq"]). *)
 and parse_import ctx ?(ext = ".seq") ~toplevel imports =
-  let import (ctx : C.t) file { from; what; import_as } =
-    let vtable =
-      match Hashtbl.find ctx.globals.imported file with
-      | Some t -> t
-      | None ->
-        let new_ctx = C.init_empty ~ctx in
-        if file = ctx.env.filename then C.err ~ctx "recursive import";
-        Codegen.parse_file file |> List.ignore_map ~f:(parse ~ctx:new_ctx ~toplevel:true);
-        let new_ctx =
-          { new_ctx with
-            map =
-              Hashtbl.filteri new_ctx.map ~f:(fun ~key ~data ->
-                  match data with
-                  | [] -> false
-                  | (_, { global; internal; _ }) :: _ -> global && not internal)
-          }
-        in
-        Hashtbl.set ctx.globals.imported ~key:file ~data:new_ctx;
-        Util.dbg "importing %s <%s>" file from;
-        C.to_dbg_output ~ctx:new_ctx;
-        new_ctx
-    in
-    match what with
+  let { from; what; import_as } = List.hd_exn imports in
+  let vtable =
+    match Hashtbl.find ctx.globals.imported from with
+    | Some t -> t
     | None ->
-      (* import foo (as bar) *)
-      let from = Option.value import_as ~default:from in
-      C.add ~ctx ~toplevel ~global:toplevel from (C.Import file)
-    | Some [ ("*", None) ] ->
-      (* from foo import * *)
-      Hashtbl.iteri vtable.map ~f:(fun ~key ~data ->
-          match data with
-          | (var, { global = true; internal = false; _ }) :: _ ->
-            Util.dbg "[import] adding %s::%s" from key;
-            C.add ~ctx ~toplevel ~global:toplevel key var
-          | _ -> ())
-    | Some lst ->
-      (* from foo import bar *)
-      List.iter lst ~f:(fun (name, import_as) ->
-          match Hashtbl.find vtable.map name with
-          | Some ((var, ({ global = true; internal = false; _ } as ann)) :: _) ->
-            let name = Option.value import_as ~default:name in
-            C.add ~ctx ~toplevel ~global:toplevel name var
-          | _ -> C.err ~ctx "name %s not found in %s" name from)
-  in
-  List.iter imports ~f:(fun i ->
-      let from = i.from in
-      let file = sprintf "%s/%s%s" (Filename.dirname ctx.env.filename) from ext in
-      let file =
-        match Sys.file_exists file with
-        | `Yes -> file
-        | `No | `Unknown ->
-          (match Util.get_from_stdlib ~ext from with
-          | Some file -> file
-          | None -> C.err ~ctx "cannot locate module %s" from)
+      let new_ctx = C.init_empty ~ctx in
+      Hashtbl.find_exn Typecheck_ctx.imports from
+      |> List.ignore_map ~f:(parse ~ctx:new_ctx ~toplevel:true);
+      let new_ctx =
+        { new_ctx with
+          map =
+            Hashtbl.filteri new_ctx.map ~f:(fun ~key ~data ->
+                match data with
+                | [] -> false
+                | (_, { global; internal; _ }) :: _ -> global && not internal)
+        }
       in
-      import ctx file i);
+      Hashtbl.set ctx.globals.imported ~key:from ~data:new_ctx;
+      (* C.to_dbg_output ~ctx:new_ctx; *)
+      new_ctx
+  in
+  ( match what with
+  | None ->
+    (* import foo (as bar) *)
+    C.add ~ctx ~toplevel ~global:toplevel (Option.value_exn import_as) (C.Import from)
+  | Some [ ("*", None) ] ->
+    (* from foo import * *)
+    Hashtbl.iteri vtable.map ~f:(fun ~key ~data ->
+        match data with
+        | (var, { global = true; internal = false; _ }) :: _ ->
+          (* Util.dbg "[import] adding %s::%s" from key; *)
+          C.add ~ctx ~toplevel ~global:toplevel key var
+        | _ -> ())
+  | Some lst ->
+    (* from foo import bar *)
+    List.iter lst ~f:(fun (name, import_as) ->
+        match Hashtbl.find vtable.map name with
+        | Some ((var, ({ global = true; internal = false; _ } as ann)) :: _) ->
+          let name = Option.value import_as ~default:name in
+          C.add ~ctx ~toplevel ~global:toplevel name var
+        | _ -> C.err ~ctx "name %s not found in %s" name from) );
   Llvm.Stmt.pass ()
 
-and parse_impaste ctx ?(ext = ".seq") from =
-  match Util.get_from_stdlib ~ext from with
-  | Some file ->
-    Codegen.parse_file file |> List.ignore_map ~f:(parse ~ctx ~toplevel:true);
-    Llvm.Stmt.pass ()
-  | None -> C.err ~ctx "cannot locate module %s" from
+and parse_impaste ctx from =
+  Hashtbl.find_exn Typecheck_ctx.imports from
+  |> List.ignore_map ~f:(parse ~ctx ~toplevel:true);
+  Llvm.Stmt.pass ()
 
 and parse_try ctx (stmts, catches, finally) =
   let try_stmt = Llvm.Stmt.trycatch () in

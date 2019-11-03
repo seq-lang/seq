@@ -27,9 +27,14 @@ let init file error_handler =
       |> List.map ~f:(Codegen_stmt.parse ~ctx:lctx ~toplevel:true)
     in
     Some mdl
-  with Err.CompilerError (typ, pos) ->
-    error_handler typ pos;
-    None
+  with
+  | Err.CompilerError (t, pos) -> error_handler t pos; None
+  | Err.SyntaxError (msg, pos) -> error_handler (Err.Lexer msg) [pos]; None
+  | Err.SeqCamlError (msg, pos) ->
+    Printexc.print_backtrace stderr;
+    error_handler (Err.Descent msg) pos; None
+  | Err.SeqCError (msg, pos) -> error_handler (Err.Compiler msg) [pos]; None
+  | Err.InternalError (msg, pos) -> error_handler (Err.Internal msg) [pos]; None
 
 (** [parse_c file] is a C callback that wraps [init].
     Error handler relies on [caml_error_callback] C FFI

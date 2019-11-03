@@ -33,7 +33,7 @@ type tenv =
             Used to avoid infinite recursion during the realization of recursive or
             self-referencing types or functions. *)
   ; annotations : Ann.t Stack.t (** The current annotation *)
-  ; statements : Stmt.t Ann.ann Stack.t
+  ; statements : Stmt.t Ann.ann Stack.t Stack.t
   ; filename : string
   }
 
@@ -55,8 +55,13 @@ and trealization =
 
 and t = (Ast.Ann.ttyp, tenv, tglobal) Ctx.t
 
+let imports : (string, Stmt.t Ann.ann list) Hashtbl.t
+  = String.Table.create ()
+
+
 let realizations : (Ann.tlookup, Stmt.t Ann.ann * (string, trealization) Hashtbl.t) Hashtbl.t
   = Hashtbl.Poly.create ()
+
 
 (* ****************** Utilities ****************** *)
 
@@ -363,7 +368,13 @@ let init_module ?(argv = false) ~filename sparse =
    if true
    then (
      match Util.get_from_stdlib "stdlib" with
-     | Some file -> Codegen.parse_file file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx)
+     | Some file ->
+        let statements =
+          Codegen.parse_file file
+          |> List.map ~f:(ctx.globals.sparse ~ctx)
+          |> List.concat
+        in
+        Hashtbl.set imports ~key:file ~data:statements
      | None -> Err.ierr "cannot locate stdlib.seq"));
   Hashtbl.iteri ctx.globals.stdlib ~f:(fun ~key ~data -> Ctx.add ~ctx key (List.hd_exn data));
   ctx
@@ -388,10 +399,10 @@ let make_internal_magic ~ctx name ret_typ arg_types =
   sannotate (ann ctx) @@ s_extern ~lang:"llvm" name ret_typ arg_types
 
 let magic_call ~ctx ?(args = []) ~magic parse e =
-  (* let e = parse ~ctx e in *)
-  let m = Ann.create () in
-  parse ~ctx @@ eannotate ~ctx (e_call (e_dot e magic) args)
+  let e = parse ~ctx e in
+  match Ann.var_of_typ (fst e).Ann.typ >>| Ann.real_type with
+  | Some (Class ({ cache = (p, m); _ }, _)) when magic = (sprintf "__%s__" p) && m = Ann.default_pos ->
+    e
+  | _ ->
+    parse ~ctx @@ eannotate ~ctx (e_call (e_dot e magic) args)
 
-(* match Ann.var_of_typ (fst e).Ann.typ >>| Ann.real_type with
-  | Some (Class ({ cache = (p, m); _ }, _)) when magic = (sprintf "__%s__" p) -> e
-  | _ ->  *)

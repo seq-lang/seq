@@ -113,7 +113,7 @@ and parse_index ?(is_type = false) ctx (lh_expr, indices) =
   | Some (Type t), _ -> Llvm.Expr.typ (C.get_realization ~ctx t)
   | Some (Var t), [idx] -> (* tuple expression *)
     Llvm.Expr.lookup (parse ~ctx lh_expr) (parse ~ctx idx)
-  | _, _ -> ierr "invalid index expression"
+  | t, _ -> ierr ~ann:(C.ann ctx) "invalid index expression [%s]" (Ann.t_to_string t)
 
 and parse_call ctx (callee_expr, args) =
   match Ann.real_t (fst callee_expr).typ, args with
@@ -131,7 +131,7 @@ and parse_call ctx (callee_expr, args) =
     then Llvm.Expr.call ~kind:"partial" callee_expr args
     else Llvm.Expr.call ~kind:"call" callee_expr args
   | Some (Import s), _ -> C.err ~ctx "cannot call import %s" s
-  | None, _ -> ierr ~ctx "type not determined"
+  | None, _ -> ierr ~ann:(C.ann ctx) "type not determined"
 
 and parse_dot ctx (lh_expr, rhs) =
   (* Imports should be avoided here... put to assign special checks! *)
@@ -143,12 +143,13 @@ and parse_dot ctx (lh_expr, rhs) =
   | Some (Var t) ->
     let lh_expr = parse ~ctx lh_expr in
     Llvm.Expr.element lh_expr rhs
-  | _ -> ierr ~ctx "bad dot"
+  | _ -> ierr ~ann:(C.ann ctx) "bad dot : %s [%s.%s]" (Ann.t_to_string (C.ann ctx).typ)
+    (Expr.to_string lh_expr) rhs
 
 and parse_typeof ctx expr =
   match Ann.real_t (fst expr).typ with
   | Some (Type t) -> C.get_realization ~ctx t
-  | _ -> ierr ~ctx "not a type"
+  | _ -> ierr ~ann:(C.ann ctx) "not a type"
 
 and parse_ptr ctx expr =
   match snd expr with
