@@ -111,7 +111,14 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     | _ -> f
 
   and parse_str _ _ s = Llvm.Expr.str s
-  and parse_seq _ _ s = Llvm.Expr.seq s
+
+  and parse_seq ctx pos (p, s) =
+    match p with
+    | "p" ->
+      parse_call ctx pos ((pos, Id "pseq"),
+        [pos, {name=None; value=(pos, String s)}])
+    | "s" -> Llvm.Expr.seq s
+    | _ -> serr ~pos "invalid seq prefix"
 
   and parse_kmer ctx pos s =
     let n = sprintf "%d" @@ String.length s in
@@ -119,7 +126,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     @@ ( pos
        , Call
            ( (pos, Index ((pos, Id "Kmer"), (pos, Int n)))
-           , [ pos, { name = None; value = pos, Seq s } ] ) )
+           , [ pos, { name = None; value = pos, Seq ("s", s) } ] ) )
 
   and parse_id ?map ?(is_type = false) ctx pos var =
     let map = Option.value map ~default:ctx.map in

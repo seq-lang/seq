@@ -35,7 +35,7 @@ module Expr = struct
     | FloatS (x, k) -> sprintf "%f%s" x k
     | String x -> sprintf "'%s'" (String.escaped x)
     | Kmer x -> sprintf "k'%s'" x
-    | Seq x -> sprintf "s'%s'" x
+    | Seq (p, x) -> sprintf "%s'%s'" p x
     | Id x -> sprintf "%s" x
     | Unpack x -> sprintf "*%s" x
     | Tuple l -> sprintf "(%s)" (ppl l ~f:to_string)
