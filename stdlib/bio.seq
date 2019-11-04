@@ -66,7 +66,8 @@ extend seq:
         n = len(self)
         if idx < 0:
             idx += n
-        assert 0 <= idx <= n
+        if not (0 <= idx < n):
+            raise IndexError("seq index out of range")
         if self.len >= 0:
             return seq(self.ptr + idx, 1)
         else:
@@ -131,69 +132,81 @@ extend seq:
     def __iter__(self: seq):
         return self.split(1, 1)
 
-    def kmersx[K](self: seq, step: int):
-        k = K.len()
-        if self.len >= 0:
-            n = self.len
-            if step >= k:
-                # naive
-                i = 0
-                while i + k <= n:
-                    yield K(self._slice_direct(i,i+k), False)
-                    i += step
-            elif n >= k:
-                # sliding encoding
-                kmer = K(self._slice_direct(0,k))
-                yield kmer
-                i = 0
-                while i + k + step <= n:
-                    j = i + k
-                    kmer <<= self._slice_direct(j,j+step)
-                    i += step
-                    yield kmer
-        else:
-            n = -self.len
-            if step >= k:
-                # naive
-                i = 0
-                while i + k <= n:
-                    yield K(self._slice_direct(i,i+k), True)
-                    i += step
-            elif n >= k:
-                # sliding encoding
-                kmer = K(self._slice_direct(0,k))
-                yield kmer
-                i = 0
-                while i + k + step <= n:
-                    j = i + k
-                    kmer <<= self._slice_direct(j,j+step)
-                    i += step
-                    yield kmer
+    def __reversed__(self: seq):
+        i = len(self) - 1
+        while i >= 0:
+            yield self._slice_direct(i,i+1)
+            i -= 1
 
     def kmers[K](self: seq, step: int):
+        for pos, kmer in self.kmers_with_pos[K](step):
+            yield kmer
+
+    def kmers_with_pos[K](self: seq, step: int):
+        # This function is intentionally written this way. It could be simplified,
+        # but this version was found to be the most performant due to inlining etc.
         k = K.len()
         if self.len >= 0:
             n = self.len
             i = 0
+            kmer = K()
+            refresh = True
             while i + k <= n:
-                sub = self._slice_direct(i,i+k)
-                if not sub.N():
-                    yield K(sub, False)
+                if refresh:
+                    sub = self._slice_direct(i,i+k)
+                    if not sub.N():
+                        kmer = K(sub, False)
+                        refresh = step >= k
+                        yield (i, kmer)
+                else:
+                    sub = self._slice_direct(i+k-step,i+k)
+                    if not sub.N():
+                        kmer <<= sub
+                        yield (i, kmer)
+                    else:
+                        refresh = True
                 i += step
         else:
             n = -self.len
             i = 0
+            kmer = K()
+            refresh = True
             while i + k <= n:
-                sub = self._slice_direct(i,i+k)
-                if not sub.N():
-                    yield K(sub, True)
+                if refresh:
+                    sub = self._slice_direct(i,i+k)
+                    if not sub.N():
+                        kmer = K(sub, True)
+                        refresh = step >= k
+                        yield (i, kmer)
+                else:
+                    sub = self._slice_direct(i+k-step,i+k)
+                    if not sub.N():
+                        kmer <<= sub
+                        yield (i, kmer)
+                    else:
+                        refresh = True
                 i += step
 
     def N(self: seq):
+        invalid = ('\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x00'
+                   '\x01\x01\x01\x00\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x00\x01\x01'
+                   '\x01\x00\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01')
         i = 0
         n = len(self)
         while i < n:
-            if self.ptr[i] == byte(78):  # 'N'
+            if invalid.ptr[int(self.ptr[i])]:
                 return i + 1
             i += 1
         return 0
@@ -207,22 +220,58 @@ def split(self: seq, k: int, step: int):
 def kmers[K](self: seq, step: int):
     return self.kmers[K](step)
 
+def kmers_with_pos[K](self: seq, step: int):
+    return self.kmers_with_pos[K](step)
+
 def base[K,T](kmer: K, idx: int, b: T):
     type U = typeof(kmer.as_int())
+    if idx < 0:
+        idx += len(kmer)
     idx = K.len() - idx - 1
     n = U(int(Kmer[1](b).as_int()))
     k = kmer.as_int() & ~(U(3) << U(2*idx))
     k |= n << U(2*idx)
     return K(k)
 
+type Locus(_tid: u32, _pos: u32):
+    def __init__(self: Locus, tid: int, pos: int) -> Locus:
+        return (u32(tid), u32(pos))
+
+    def __lt__(self: Locus, other: Locus):
+        return (self.tid, self.pos) < (other.tid, other.pos)
+
+    def __gt__(self: Locus, other: Locus):
+        return (self.tid, self.pos) > (other.tid, other.pos)
+
+    def __le__(self: Locus, other: Locus):
+        return (self.tid, self.pos) <= (other.tid, other.pos)
+
+    def __ge__(self: Locus, other: Locus):
+        return (self.tid, self.pos) >= (other.tid, other.pos)
+
+    @property
+    def tid(self: Locus):
+        return int(self._tid)
+
+    @property
+    def pos(self: Locus):
+        return abs(int(i32(int(self._pos))))
+
+    @property
+    def reversed(self: Locus):
+        return i32(int(self._pos)) < i32(0)
+
+    def __invert__(self: Locus):
+        return Locus(self.tid, self.pos if self.reversed else -self.pos)
+
 # Interface for iterating over sequences in some format
 # (e.g. FASTA, FASTQ, SAM, etc.).
 def seqs(x):
     return x.__seqs__()
 
-type Seqs(file: File):
+type Seqs(file: gzFile):
     def __init__(self: Seqs, path: str) -> Seqs:
-        return (open(path, "r"),)
+        return (gzopen(path, "r"),)
 
     def __iter__(self: Seqs):
         for a in self.file._iter():
@@ -256,9 +305,9 @@ type FASTQRecord(_name: str, _read: seq, _qual: str):
     def qual(self: FASTQRecord):
         return self._qual
 
-type FASTQ(file: File):
+type FASTQ(file: gzFile):
     def __init__(self: FASTQ, path: str) -> FASTQ:
-        return (open(path, "r"),)
+        return (gzopen(path, "r"),)
 
     def __seqs__(self: FASTQ):
         line = 0
@@ -306,12 +355,12 @@ type FASTARecord(_name: str, _seq: seq):
     def seq(self: FASTARecord):
         return self._seq
 
-type FASTA(file: File, fai: list[int], names: list[str]):
+type FASTA(file: gzFile, fai: list[int], names: list[str]):
     def __init__(self: FASTA, path: str) -> FASTA:
         cdef atoi(ptr[byte]) -> int
         fai = list[int]()
         names = list[str]()
-        with open(path + ".fai", "r") as fai_file:
+        with gzopen(path + ".fai", "r") as fai_file:
             for line in fai_file:
                 assert line
                 cut = 0
@@ -321,7 +370,7 @@ type FASTA(file: File, fai: list[int], names: list[str]):
                 line = line[cut:]
                 fai.append(atoi(line.ptr))
                 names.append(name)
-        return (open(path, "r"), fai, names)
+        return (gzopen(path, "r"), fai, names)
 
     def __seqs__(self: FASTA):
         for rec in self:
@@ -540,7 +589,8 @@ type CIGAR(value: ptr[u32], len: int):
         return bam_cigar2rlen(self.len, self.value)
 
     def __getitem__(self: CIGAR, idx: int):
-        assert idx < len(self)
+        if not (0 <= idx < len(self)):
+            raise IndexError("CIGAR index out of range")
         v = self.value[idx]
         return (int(v) >> 4, "MIDNSHP=XB"[int(v) & 0xf])
 
@@ -725,12 +775,22 @@ type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore
         return self._core.pos()
 
     @property
+    def locus(self: SAMRecord):
+        pos = self.pos
+        return Locus(self.tid, -pos if self.reversed else pos)
+
+    @property
     def mate_tid(self: SAMRecord):
         return self._core.mtid()
 
     @property
     def mate_pos(self: SAMRecord):
         return self._core.mpos()
+
+    @property
+    def mate_locus(self: SAMRecord):
+        pos = self.mate_pos
+        return Locus(self.mate_tid, -pos if self.mate_reversed else pos)
 
     @property
     def mapq(self: SAMRecord):

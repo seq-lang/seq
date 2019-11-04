@@ -160,8 +160,12 @@ atom:
   | FLOAT      { fst $1, Float (snd $1) }
   | INT_S      { fst $1, IntS (snd $1) }
   | FLOAT_S    { fst $1, FloatS (snd $1) }
-  | STRING     { fst $1, String (snd $1) }
-  | SEQ        { fst $1, Seq (snd $1) }
+  | STRING+
+    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1), 
+      String (String.concat @@ List.map $1 ~f:snd) }
+  | SEQ+
+    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1), 
+      Seq (String.concat @@ List.map $1 ~f:snd) }
   | KMER       { fst $1, Kmer (snd $1) }
   | bool       { fst $1, Bool (snd $1) }
   | tuple      { fst $1, Tuple (snd $1) }

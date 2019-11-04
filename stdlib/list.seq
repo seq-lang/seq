@@ -28,28 +28,35 @@ class list[T]:
         for i in other:
             self.append(i)
 
+    def _idx_check(self: list[T], idx: int, msg: str):
+        if idx >= self.len or idx < 0:
+            raise IndexError(msg)
+
+    def _slice_error(self: list[T]):
+        raise IndexError("list slice index error")
+
     def __len__(self: list[T]):
         return self.len
 
     def __bool__(self: list[T]):
-        return self.len > 0
+        return len(self) > 0
 
     def __getitem__(self: list[T], idx: int):
         if idx < 0:
             idx += len(self)
-        assert 0 <= idx < len(self)
+        self._idx_check(idx, "list index out of range")
         return self.arr[idx]
 
     def __setitem__(self: list[T], idx: int, val: T):
         if idx < 0:
             idx += len(self)
-        assert 0 <= idx < len(self)
+        self._idx_check(idx, "list assignment index out of range")
         self.arr[idx] = val
 
     def __delitem__(self: list[T], idx: int):
         if idx < 0:
             idx += len(self)
-        assert 0 <= idx < len(self)
+        self._idx_check(idx, "list assignment index out of range")
         while idx < self.len - 1:
             self.arr[idx] = self.arr[idx + 1]
             idx += 1
@@ -71,19 +78,22 @@ class list[T]:
             a += len(self)
         if b < 0:
             b += len(self)
-        assert 0 <= a <= b <= len(self)
+        if not (0 <= a <= b <= len(self)):
+            self._slice_error()
         return list[T](self.arr[a:b], b - a)
 
     def __slice_left__(self: list[T], b: int):
         if b < 0:
             b += len(self)
-        assert 0 <= b <= len(self)
+        if not (0 <= b <= len(self)):
+            self._slice_error()
         return list[T](self.arr[:b], b)
 
     def __slice_right__(self: list[T], a: int):
         if a < 0:
             a += len(self)
-        assert 0 <= a <= len(self)
+        if not (0 <= a <= len(self)):
+            self._slice_error()
         return list[T](self.arr[a:], self.len - a)
 
     def __copy__(self: list[T]):
@@ -95,6 +105,12 @@ class list[T]:
             yield self.arr[i]
             i += 1
 
+    def __reversed__(self: list[T]):
+        i = self.len - 1
+        while i >= 0:
+            yield self.arr[i]
+            i -= 1
+
     def __add__(self: list[T], other: list[T]):
         v = list[T](self.len + other.len)
         for a in self:
@@ -103,7 +119,15 @@ class list[T]:
             v.append(a)
         return v
 
+    def __iadd__(self: list[T], other: list[T]):
+        for a in other:
+            self.append(a)
+        return self
+
     def __mul__(self: list[T], n: int):
+        if n <= 0:
+            return list[T]()
+
         new_len = self.len * n
         v = list[T](new_len)
         i = 0
@@ -114,6 +138,35 @@ class list[T]:
                 j += 1
             i += 1
         return v
+
+    def __imul__(self: list[T], n: int):
+        import gc
+
+        if n == 1:
+            return self
+
+        if n <= 0:
+            self.clear()
+            return self
+
+        len0 = len(self)
+        new_cap = n * len0
+        if self.arr.len < new_cap:
+            p = ptr[T](gc.realloc(ptr[byte](self.arr.ptr), new_cap * gc.sizeof[T]()))
+            self.arr = array[T](p, new_cap)
+
+        idx = len0
+        i = 0
+        while i < n - 1:
+            j = 0
+            while j < len0:
+                self.arr[idx] = self.arr[j]
+                idx += 1
+                j += 1
+            i += 1
+
+        self.len = new_cap
+        return self
 
     def _resize_if_full(self: list[T]):
         import gc
@@ -127,7 +180,15 @@ class list[T]:
         self.arr[self.len] = x
         self.len += 1
 
+    # TODO: can't use "extend" here since it is a keyword!
+    def ext(self: list[T], itr):
+        for a in itr:
+            self.append(a)
+
     def insert(self: list[T], idx: int, x: T):
+        if idx < 0:
+            idx += len(self)
+        self._idx_check(idx, "insert index out of range")
         self._resize_if_full()
         i = self.len
         while i > idx:
@@ -137,6 +198,8 @@ class list[T]:
         self.len += 1
 
     def pop(self: list[T]):
+        if len(self) == 0:
+            raise IndexError("pop from empty list")
         x = self[self.len - 1]
         self.len -= 1
         return x
@@ -152,6 +215,14 @@ class list[T]:
 
     def clear(self: list[T]):
         self.len = 0
+
+    def index(self: list[T], x: T):
+        i = 0
+        for a in self:
+            if a == x:
+                return i
+            i += 1
+        return -1
 
     def count(self: list[T], x: T):
         count = 0

@@ -1,3 +1,7 @@
 def system(cmd: str) -> int:
     cdef system(cmd: ptr[byte]) -> int
     return system(cmd.c_str())
+
+SEEK_SET = 0
+SEEK_CUR = 1
+SEEK_END = 2

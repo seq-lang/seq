@@ -850,6 +850,11 @@ UOpExpr::UOpExpr(Op op, Expr *lhs) : Expr(), op(std::move(op)), lhs(lhs) {}
 
 void UOpExpr::resolveTypes() { lhs->resolveTypes(); }
 
+static void unsupportedUOpError(std::string symbol, types::Type *lhs) {
+  throw exc::SeqException("bad operand type for unary " + symbol + ": '" +
+                          lhs->getName() + "'");
+}
+
 Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *lhsType = lhs->getType();
   Value *self = lhs->codegen(base, block);
@@ -859,15 +864,12 @@ Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
     return types::Bool->callMagic("__invert__", {}, b, {}, block,
                                   getTryCatch());
   } else {
-    exc::SeqException exc("");
-
-    try {
+    types::Type *outType =
+        lhsType->magicOut(op.magic, {}, /*nullOnMissing=*/true);
+    if (outType)
       return lhsType->callMagic(op.magic, {}, self, {}, block, getTryCatch());
-    } catch (exc::SeqException &e) {
-      exc = exc::SeqException(e);
-    }
-
-    throw exc::SeqException(exc);
+    unsupportedUOpError(op.symbol, lhsType);
+    return nullptr;
   }
 }
 
@@ -877,15 +879,12 @@ types::Type *UOpExpr::getType0() const {
   if (op == uop("!")) {
     return types::Bool;
   } else {
-    exc::SeqException exc("");
-
-    try {
-      return lhsType->magicOut(op.magic, {});
-    } catch (exc::SeqException &e) {
-      exc = exc::SeqException(e);
-    }
-
-    throw exc::SeqException(exc);
+    types::Type *outType =
+        lhsType->magicOut(op.magic, {}, /*nullOnMissing=*/true);
+    if (outType)
+      return outType;
+    unsupportedUOpError(op.symbol, lhsType);
+    return nullptr;
   }
 }
 
@@ -899,6 +898,12 @@ BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs, bool inPlace)
 void BOpExpr::resolveTypes() {
   lhs->resolveTypes();
   rhs->resolveTypes();
+}
+
+static void unsupportedBOpError(std::string symbol, types::Type *lhs,
+                                types::Type *rhs) {
+  throw exc::SeqException("unsupported operand type(s) for " + symbol + ": '" +
+                          lhs->getName() + "' and '" + rhs->getName() + "'");
 }
 
 Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
@@ -942,35 +947,34 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   } else {
     types::Type *lhsType = lhs->getType();
     types::Type *rhsType = rhs->getType();
+    types::Type *outType = nullptr;
     Value *self = lhs->codegen(base, block);
     Value *arg = rhs->codegen(base, block);
-    exc::SeqException exc("");
 
     if (inPlace) {
       assert(!op.magicInPlace.empty());
-      try {
+      types::Type *outType =
+          lhsType->magicOut(op.magicInPlace, {rhsType}, /*nullOnMissing=*/true);
+      if (outType && types::is(outType, lhsType))
         return lhsType->callMagic(op.magicInPlace, {rhsType}, self, {arg},
                                   block, getTryCatch());
-      } catch (exc::SeqException &e) {
-      }
     }
 
-    try {
+    outType = lhsType->magicOut(op.magic, {rhsType}, /*nullOnMissing=*/true);
+    if (outType)
       return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block,
                                 getTryCatch());
-    } catch (exc::SeqException &e) {
-      exc = exc::SeqException(e);
-    }
 
     if (!op.magicReflected.empty()) {
-      try {
+      outType = rhsType->magicOut(op.magicReflected, {lhsType},
+                                  /*nullOnMissing=*/true);
+      if (outType)
         return rhsType->callMagic(op.magicReflected, {lhsType}, arg, {self},
                                   block, getTryCatch());
-      } catch (exc::SeqException &) {
-      }
     }
 
-    throw exc::SeqException(exc);
+    unsupportedBOpError(op.symbol, lhsType, rhsType);
+    return nullptr;
   }
 }
 
@@ -980,30 +984,29 @@ types::Type *BOpExpr::getType0() const {
   } else {
     types::Type *lhsType = lhs->getType();
     types::Type *rhsType = rhs->getType();
-    exc::SeqException exc("");
+    types::Type *outType = nullptr;
 
     if (inPlace) {
       assert(!op.magicInPlace.empty());
-      try {
-        return lhsType->magicOut(op.magicInPlace, {rhsType});
-      } catch (exc::SeqException &e) {
-      }
+      outType =
+          lhsType->magicOut(op.magicInPlace, {rhsType}, /*nullOnMissing=*/true);
+      if (outType && types::is(outType, lhsType))
+        return outType;
     }
 
-    try {
-      return lhsType->magicOut(op.magic, {rhsType});
-    } catch (exc::SeqException &e) {
-      exc = exc::SeqException(e);
-    }
+    outType = lhsType->magicOut(op.magic, {rhsType}, /*nullOnMissing=*/true);
+    if (outType)
+      return outType;
 
     if (!op.magicReflected.empty()) {
-      try {
-        return rhsType->magicOut(op.magicReflected, {lhsType});
-      } catch (exc::SeqException &) {
-      }
+      outType = rhsType->magicOut(op.magicReflected, {lhsType},
+                                  /*nullOnMissing=*/true);
+      if (outType)
+        return outType;
     }
 
-    throw exc::SeqException(exc);
+    unsupportedBOpError(op.symbol, lhsType, rhsType);
+    return nullptr;
   }
 }
 
@@ -1079,8 +1082,9 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::RecordType *rec = type->asRec();
   auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
-  // check if this is a record lookup
-  if (rec && idxLit) {
+  // check if this is a record lookup, and that __getitem__ is not overriden
+  if (rec && idxLit &&
+      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
     seq_int_t idx = translateIndex(idxLit->value(), rec->numBaseTypes());
     GetElemExpr e(arr,
                   (unsigned)(idx + 1)); // GetElemExpr is 1-based
@@ -1098,8 +1102,9 @@ types::Type *ArrayLookupExpr::getType0() const {
   types::RecordType *rec = type->asRec();
   auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
-  // check if this is a record lookup
-  if (rec && idxLit) {
+  // check if this is a record lookup, and that __getitem__ is not overriden
+  if (rec && idxLit &&
+      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
     seq_int_t idx = translateIndex(idxLit->value(), rec->numBaseTypes());
     GetElemExpr e(arr,
                   (unsigned)(idx + 1)); // GetElemExpr is 1-based

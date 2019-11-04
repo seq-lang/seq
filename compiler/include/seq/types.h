@@ -219,12 +219,15 @@ public:
 
   /// Returns the output type of the specified magic method
   /// with specified argument types. Throws an exception if
-  /// the specified magic method does not exist.
+  /// the specified magic method does not exist by default.
   /// @param name full magic method name
   /// @param args vector of argument types (excluding 'self');
   ///             last element being null indicates static.
+  /// @param nullOnMissing return null instead of throwing an
+  ///                      exception if magic is missing
   /// @return output type of specified magic method
-  virtual Type *magicOut(const std::string &name, std::vector<Type *> args);
+  virtual Type *magicOut(const std::string &name, std::vector<Type *> args,
+                         bool nullOnMissing = false);
 
   /// Codegens a call to the specified magic method. Throws
   /// an exception if the specified magic method does not
