@@ -96,10 +96,10 @@
       scan 0;
       Buffer.contents buf
     in
-    match String.prefix pfx 1 with
-    | "r" | "R" -> P.STRING (st, fix_literals ~is_raw:true u)
-    | "s" | "S" -> P.SEQ (st, fix_literals u)
-    | "k" | "K" -> P.KMER (st, fix_literals u)
+    match String.lowercase (String.prefix pfx 1) with
+    | "r" -> P.STRING (st, fix_literals ~is_raw:true u)
+    | ("s" | "p") as p -> P.SEQ (st, p, fix_literals u)
+    | "k" -> P.KMER (st, fix_literals u)
     | _ -> P.STRING (st, fix_literals u)
 }
 
@@ -125,7 +125,7 @@ let escape = '\\' _
 let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
 
-let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')?
+let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')? ('p' | 'P')?
 let intsuffix = ('s' | 'S' | 'z' | 'Z' | 'u' | 'U')
 
 let ident = alpha alphanum*

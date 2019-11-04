@@ -133,6 +133,23 @@ Reverse-complement palindrome
             default:
                 return False
 
+Sequence alignment
+------------------
+
+.. code-block:: seq
+
+    # default parameters
+    s1 = s'CGCGAGTCTT'
+    s2 = s'CGCAGAGTT'
+    aln = s1 @ s2
+    print aln.cigar, aln.score
+
+    # custom parameters
+    # match = 2; mismatch = 4; gap1(k) = 4k + 2; gap2(k) = 13k + 1
+    config = AlignConfig(2, 4).gap1(4, 2).gap2(13, 1)
+    aln = s1.align_dual(s2, config)
+    print aln.cigar, aln.score
+
 Reading FASTA/FASTQ
 -------------------
 
@@ -211,4 +228,21 @@ Reading SAM/BAM/CRAM
         print s
 
     for s in CRAM('alignments.cram') |> seqs:
+        print s
+
+DNA to protein translation
+--------------------------
+
+.. code-block:: seq
+
+    dna = s'AGGTCTAACGGC'
+    protein = dna |> translate
+    print protein  # RSNG
+
+Reading protein sequences from FASTA
+------------------------------------
+
+.. code-block:: seq
+
+    for s in FASTA('test/data/seqs.fasta') |> seqs |> as_protein:
         print s

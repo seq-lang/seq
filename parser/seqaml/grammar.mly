@@ -64,7 +64,8 @@
 %token <Ast.Ann.t * (string * string)> INT_S
 %token <Ast.Ann.t * (float * string)> FLOAT_S
 %token <Ast.Ann.t * string> STRING ID
-%token <Ast.Ann.t * string> SEQ KMER
+%token <Ast.Ann.t * string * string> SEQ
+%token <Ast.Ann.t * string> KMER
 
 /* blocks */
 %token <Ast.Ann.t> INDENT
@@ -161,11 +162,17 @@ atom:
   | INT_S      { fst $1, IntS (snd $1) }
   | FLOAT_S    { fst $1, FloatS (snd $1) }
   | STRING+
-    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1), 
+    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1),
       String (String.concat @@ List.map $1 ~f:snd) }
   | SEQ+
-    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1), 
-      Seq (String.concat @@ List.map $1 ~f:snd) }
+    { let f3 (x, _, _) = x in
+      let s3 (_, x, _) = x in
+      let t = s3 @@ List.hd_exn $1 in
+      pos (f3 @@ List.hd_exn $1) (f3 @@ List.last_exn $1),
+      Seq (t, String.concat @@ List.map $1 ~f:(fun (pos, i, j) ->
+        if i <> t
+        then Err.serr ~pos "cannot concatenate sequences with different types"
+        else j)) }
   | KMER       { fst $1, Kmer (snd $1) }
   | bool       { fst $1, Bool (snd $1) }
   | tuple      { fst $1, Tuple (snd $1) }
@@ -727,7 +734,8 @@ case_type:
   | STRING
     { StrPattern (snd $1) }
   | SEQ
-    { SeqPattern (snd $1) }
+    { let pos, p, s = $1 in
+      if p = "s" then SeqPattern s else Err.serr ~pos "cannot match protein sequences" }
   // Tuples & lists
   | LP separated_nonempty_list(COMMA, case_type) RP
     { TuplePattern ($2) }

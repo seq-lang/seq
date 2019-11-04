@@ -6,16 +6,20 @@
 
 <p align="center">
   <a href="https://travis-ci.com/seq-lang/seq">
-    <img src="https://travis-ci.com/seq-lang/seq.svg?token=QGRVvAxcSasMm4MgJvYL&branch=master"
+    <img src="https://travis-ci.com/seq-lang/seq.svg?branch=master"
          alt="Build Status">
-  </a>
-  <a href="https://github.com/seq-lang/seq/blob/master/LICENSE">
-    <img src="https://img.shields.io/badge/license-AGPL-blue.svg"
-         alt="License">
   </a>
   <a href="https://gitter.im/seq-lang/seq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge">
     <img src="https://badges.gitter.im/Join%20Chat.svg"
          alt="Gitter">
+  </a>
+  <a href="https://github.com/seq-lang/seq/releases/latest">
+    <img src="https://img.shields.io/github/v/release/seq-lang/seq?sort=semver"
+         alt="Version">
+  </a>
+  <a href="https://github.com/seq-lang/seq/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/seq-lang/seq"
+         alt="License">
   </a>
 </p>
 
@@ -65,19 +69,33 @@ A few notable aspects of this code:
 
 For a concrete example of `genomeindex`, check out our [re-implementation of SNAP's index](test/snap).
 
-## Dependencies
+## Install
+
+### Pre-built binaries
+
+Pre-built binaries for Linux and macOS on x86_64 are available alongside [each release](https://github.com/seq-lang/seq/releases). We also have a script for downloading and installing pre-built versions:
+
+```bash
+wget -O - https://raw.githubusercontent.com/seq-lang/seq/master/install.sh | bash
+```
+
+This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
+
+### Build from source
+
+#### Dependencies
 
 - Linux or macOS
-- [LLVM](https://llvm.org)<sup>1</sup>
-- [OCaml](https://ocaml.org)<sup>2</sup>
-- [Boehm GC](https://github.com/ivmai/bdwgc)
-- [HTSlib](https://htslib.org)
+- [CMake](https://cmake.org) 3.12+
+- [LLVM](https://llvm.org) 6.0
+- [OCaml](https://ocaml.org) 4.08
+- [Boehm GC](https://github.com/ivmai/bdwgc) 7.6+
+- [HTSlib](https://htslib.org) 1.9+
+- [libffi](https://sourceware.org/libffi) 3.2+
 
-<sup>1</sup> LLVM 6 or greater is required. However, due to a LLVM 7 [bug](https://bugs.llvm.org/show_bug.cgi?id=40656) with coroutines (which are used extensively in Seq), we highly recommend building with LLVM 6.
+The following packages must be installed with `opam`: core, dune, ctypes, ctypes-foreign, menhir, ppx_deriving
 
-<sup>2</sup> The following packages must be installed with `opam`: core, dune, ctypes, ctypes-foreign, menhir, ppx_deriving
-
-## Build
+#### Build
 
 Make sure the `LLVM_DIR` environment variable is set (to the result of `llvm-config --cmakedir`). Then:
 
@@ -90,7 +108,7 @@ cmake --build .
 
 This will produce a `seqc` executable for compiling/running Seq programs, and a `seqtest` executable for running the test suite.
 
-## Documentation
+#### Documentation
 
 [Sphinx](https://www.sphinx-doc.org) (with the [RTD theme](https://sphinx-rtd-theme.readthedocs.io/en/stable/)), [Breathe](https://breathe.readthedocs.io/en/latest/) and [Exhale](https://exhale.readthedocs.io/en/latest/index.html) are required to compile the documentation. Once these are installed, just:
 
@@ -100,3 +118,34 @@ make html
 ```
 
 You can then open `_build/html/index.html` with your browser.
+
+## Citing Seq
+
+If you use Seq in your research, please cite:
+
+> Ariya Shajii, Ibrahim Numanagi&cacute;, Riyadh Baghdadi, Bonnie Berger, and Saman Amarasinghe. 2019. Seq: a high-performance language for bioinformatics. *Proc. ACM Program. Lang.* 3, OOPSLA, Article 125 (October 2019), 29 pages. DOI: https://doi.org/10.1145/3360551
+
+BibTeX:
+
+```
+@article{Shajii:2019:SHL:3366395.3360551,
+ author = {Shajii, Ariya and Numanagi\'{c}, Ibrahim and Baghdadi, Riyadh and Berger, Bonnie and Amarasinghe, Saman},
+ title = {Seq: A High-performance Language for Bioinformatics},
+ journal = {Proc. ACM Program. Lang.},
+ issue_date = {October 2019},
+ volume = {3},
+ number = {OOPSLA},
+ month = oct,
+ year = {2019},
+ issn = {2475-1421},
+ pages = {125:1--125:29},
+ articleno = {125},
+ numpages = {29},
+ url = {http://doi.acm.org/10.1145/3360551},
+ doi = {10.1145/3360551},
+ acmid = {3360551},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {Python, bioinformatics, computational biology, domain-specific language, optimization, programming language},
+}
+```

@@ -1,21 +1,38 @@
 Getting Started
 ===============
 
+Install
+-------
+
+Pre-built binaries
+^^^^^^^^^^^^^^^^^^
+
+Pre-built binaries for Linux and macOS on x86_64 are available alongside `each release <https://github.com/seq-lang/seq/releases>`_. We also have a script for downloading and installing pre-built versions:
+
+.. code-block:: bash
+
+    wget -O - https://raw.githubusercontent.com/seq-lang/seq/master/install.sh | bash
+
+This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
+
+Build from source
+^^^^^^^^^^^^^^^^^
+
 Dependencies
-------------
+""""""""""""
 
 - Linux or macOS
-- `LLVM <https://llvm.org>`_ [#]_
-- `OCaml <https://ocaml.org>`_ [#]_
-- `Boehm GC <https://github.com/ivmai/bdwgc>`_
-- `HTSlib <https://htslib.org>`_
+- `CMake <https://cmake.org>`_ 3.12+
+- `LLVM <https://llvm.org>`_ 6.0
+- `OCaml <https://ocaml.org>`_ 4.08
+- `Boehm GC <https://github.com/ivmai/bdwgc>`_ 7.6+
+- `HTSlib <https://htslib.org>`_ 1.9+
+- `libffi <https://sourceware.org/libffi>`_ 3.2+
 
-.. [#] LLVM 6 or greater is required. However, due to a LLVM 7 `bug <https://bugs.llvm.org/show_bug.cgi?id=40656>`_ with coroutines (which are used extensively in Seq), we highly recommend building with LLVM 6.
-
-.. [#] The following packages must be installed with ``opam``: core, ctypes, ctypes-foreign, menhir, ppx_deriving
+The following packages must be installed with ``opam``: core, ctypes, ctypes-foreign, menhir, ppx_deriving
 
 Compile & Test
---------------
+""""""""""""""
 
 Make sure the ``LLVM_DIR`` environment variable is set (to the result of ``llvm-config --cmakedir``). Then:
 
