@@ -1,3 +1,4 @@
+
 # def combinations(pool, r):
 #     n = len(pool)
 #     if r > n:
@@ -16,14 +17,50 @@
 #         for j in range(b+1, r):
 #             indices[j] = indices[j-1] + 1
 #         yield [pool[i] for i in indices]
+def islice(iterable, start: int, stop: int, step: int):
+    """
+    Make an iterator that returns selected elements from the iterable.
 
-# def count(start = int, step = int):
-#     """
-#     """
-#     n = start
-#     while True:
-#         yield n
-#         n += step
+    unlike python, seq requires start, stop and step for now.
+    default: start = 0, stop = len(iterable), step = 1
+    """
+    if start < 0 or stop < 0:
+        raise ValueError("ValueError: Indices for islice() must be None or an integer: 0 <= x <= maxint")
+    elif step < 0:
+        raise ValueError("ValueError: Step for islice() must be a positive integer or None.")
+
+    it = iter(range(start, stop, step))
+
+    nexti = 0
+    try:
+        nexti = next(it)
+    except StopIteration:
+        # Consume *iterable* up to the *start* position.
+        for i, element in zip(range(start), iterable):
+            pass
+        return
+    b = 0
+    try:
+        for i , element in enumerate(iterable):
+            if i == nexti:
+                yield element
+                nexti = next(it)
+                b = i
+
+    except StopIteration:
+        # Consume to *stop*.
+        for i, element in zip(range(b + 1, stop), iterable):
+            pass
+
+def count(start: float, step: float):
+    """
+
+    default: start = 0.0, step = 1.0
+    """
+    n = start
+    while True:
+        yield n
+        n += step
 
 def repeat(object, times: int):
     """
@@ -35,3 +72,8 @@ def repeat(object, times: int):
     else:
         for i in range(times):
             yield object
+
+# def starmap(function, iterable):
+#     for args in iterable:
+#         # dont know how to unpack...
+#         yield function(*args)
