@@ -1,22 +1,30 @@
 
-# def combinations(pool, r):
-#     n = len(pool)
-#     if r > n:
-#         return
-#     indices = list(range(r).__iter__())
-#     yield [pool[i] for i in indices]
-#     while True:
-#         b = -1
-#         for i in reversed(range(r)):
-#             if indices[i] != i + n - r:
-#                 b = i
-#                 break
-#         if b == -1:
-#             return
-#         indices[b] += 1
-#         for j in range(b+1, r):
-#             indices[j] = indices[j-1] + 1
-#         yield [pool[i] for i in indices]
+def combinations(pool, r):
+    """
+    combinations(iterable, r)
+
+    Return successive r-length combinations of elements in the iterable.
+
+    combinations(range(4), 3) --> (0,1,2), (0,1,3), (0,2,3), (1,2,3)
+    """
+    n = len(pool)
+    if r > n:
+        return
+    indices = list(range(r).__iter__())
+    yield [pool[i] for i in indices]
+    while True:
+        b = -1
+        for i in reversed(range(r)):
+            if indices[i] != i + n - r:
+                b = i
+                break
+        if b == -1:
+            return
+        indices[b] += 1
+        for j in range(b+1, r):
+            indices[j] = indices[j-1] + 1
+        yield [pool[i] for i in indices]
+
 def islice(iterable, start: int, stop: int, step: int):
     """
     Make an iterator that returns selected elements from the iterable.
