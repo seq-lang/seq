@@ -1,18 +1,37 @@
-def combinations(pool, r):
-    n = len(pool)
-    if r > n:
-        return
-    indices = list(range(r).__iter__())
-    yield [pool[i] for i in indices]
-    while True:
-        b = -1
-        for i in reversed(range(r)):
-            if indices[i] != i + n - r:
-                b = i
-                break
-        if b == -1:
-            return
-        indices[b] += 1
-        for j in range(b+1, r):
-            indices[j] = indices[j-1] + 1
-        yield [pool[i] for i in indices]
+# def combinations(pool, r):
+#     n = len(pool)
+#     if r > n:
+#         return
+#     indices = list(range(r).__iter__())
+#     yield [pool[i] for i in indices]
+#     while True:
+#         b = -1
+#         for i in reversed(range(r)):
+#             if indices[i] != i + n - r:
+#                 b = i
+#                 break
+#         if b == -1:
+#             return
+#         indices[b] += 1
+#         for j in range(b+1, r):
+#             indices[j] = indices[j-1] + 1
+#         yield [pool[i] for i in indices]
+
+# def count(start = int, step = int):
+#     """
+#     """
+#     n = start
+#     while True:
+#         yield n
+#         n += step
+
+def repeat(object, times: int):
+    """
+
+    default for times = None, for now seq will use -1
+    """
+    if times == -1:
+        yield object
+    else:
+        for i in range(times):
+            yield object
