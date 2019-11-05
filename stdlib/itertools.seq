@@ -127,6 +127,19 @@ def dropwhile(predicate, iterable):
             break
     for x in it:
         yield x
+
+def takewhile(predicate, iterable):
+    """
+    takewhile(predicate, iterable)
+
+    Return successive entries from an iterable as long as the predicate evaluates to true for each entry.
+    """
+    for x in iterable:
+        if predicate(x):
+            yield x
+        else:
+            break
+
 # def starmap(function, iterable):
 #     for args in iterable:
 #         # dont know how to unpack...
