@@ -4,6 +4,9 @@ from math import pow
 def underten(x: int) -> bool:
     return x < 10
 
+def isEven(x: int) -> int:
+    return x % 2
+
 def take(n, seq):
     """Convenience function for partially consuming a long of infinite iterable"""
     return list(itertools.islice(seq, 0, n, 1))
@@ -20,9 +23,12 @@ def combinations():
 # combinations()
 
 def combinations_with_replacement():
-    # cwr = itertools.combinations_with_replacement
-    print list(itertools.combinations_with_replacement('ABC', 2))
-# combinations_with_replacement()
+    assert list(itertools.combinations_with_replacement(range(3), 3)) == [[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 1], [0, 1, 2], [0, 2, 2], [1, 1, 1], [1, 1, 2], [1, 2, 2], [2, 2, 2]] 
+    assert list(itertools.combinations_with_replacement('ABC', 2)) == [['A', 'A'], ['A', 'B'], ['A', 'C'], ['B', 'B'], ['B', 'C'], ['C', 'C']]
+    test_intermediate = itertools.combinations_with_replacement('ABC', 2)
+    next(test_intermediate)
+    assert list(test_intermediate) == [['A', 'B'], ['A', 'C'], ['B', 'B'], ['B', 'C'], ['C', 'C']]
+combinations_with_replacement()
 
 def islice():
     ra100 = range(100)
@@ -70,7 +76,11 @@ def dropwhile():
 def takewhile():
     data = [1, 3, 5, 20, 2, 4, 6, 8]
     assert list(itertools.takewhile(underten, data)) == [1, 3, 5]
-takewhile()
+# takewhile()
+
+def filterfalse():
+    print list(itertools.filterfalse(isEven, range(10)))
+# filterfalse()
 
 # def starmap():
 #     print list(itertools.starmap(pow, [(2, 5), (3, 2), (10, 3)]))

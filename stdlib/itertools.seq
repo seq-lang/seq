@@ -25,9 +25,15 @@ def combinations(pool, r):
             indices[j] = indices[j-1] + 1
         yield [pool[i] for i in indices]
 
-def combinations_with_replacement(pool, r):
+def combinations_with_replacement(pool, r: int):
     """
+    combinations_with_replacement(iterable, r)
+
+    Return successive r-length combinations of elements in the iterable
+    allowing individual elements to have successive repeats.
     """
+    if r < 0:
+        raise ValueError("ValueError: r must be a positive integer.")
     n = len(pool)
     if not n and r:
         return
@@ -42,8 +48,9 @@ def combinations_with_replacement(pool, r):
         if b == -1:
             return
 
-        # indices[b:] = [indices[b] + 1] * (r - b)
-        yield [pool[i] for i in indices]
+        indices = [indices[i] for i in range(b)] + [indices[b]+1 for i in range(r-b)]
+        yield [pool[indices[i]] for i in range(len(indices))]
+
 
 def islice(iterable, start: int, stop: int, step: int):
     """
@@ -140,6 +147,16 @@ def takewhile(predicate, iterable):
         else:
             break
 
+def filterfalse(predicate, iterable):
+    """
+
+    Unlike python, seq will not allow predicate to equal None for now.
+        if predicate is None:
+            predicate = bool
+    """
+    for x in iterable:
+        if not predicate(x):
+            yield x
 # def starmap(function, iterable):
 #     for args in iterable:
 #         # dont know how to unpack...
