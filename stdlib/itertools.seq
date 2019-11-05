@@ -112,7 +112,21 @@ def compress(data, selectors):
     """
     return [d for d, s in zip(data, selectors) if s]
 
+def dropwhile(predicate, iterable):
+    """
+    dropwhile(predicate, iterable)
 
+    Drop items from the iterable while predicate(item) is true.
+
+    Afterwards, return every element until the iterable is exhausted.
+    """
+    it = iter(iterable)
+    for x in it:
+        if not predicate(x):
+            yield x
+            break
+    for x in it:
+        yield x
 # def starmap(function, iterable):
 #     for args in iterable:
 #         # dont know how to unpack...
