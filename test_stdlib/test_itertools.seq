@@ -17,7 +17,12 @@ def combinations():
     test_intermediat = itertools.combinations(range(4), 3)
     next(test_intermediat)
     assert list(test_intermediat) == [[0, 1, 3], [0, 2, 3], [1, 2, 3]]
-combinations()
+# combinations()
+
+def combinations_with_replacement():
+    # cwr = itertools.combinations_with_replacement
+    print list(itertools.combinations_with_replacement('ABC', 2))
+# combinations_with_replacement()
 
 def islice():
     ra100 = range(100)
@@ -41,14 +46,21 @@ def count():
             break
         print x
     # take(10, itertools.count(1.0, 1.0))
-count()
+# count()
 
 def repeat():
     assert list(itertools.repeat('a', 3)) == ['a', 'a', 'a']
     assert list(itertools.repeat(1, 10)) == [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     assert list(itertools.repeat('a', -1)) == ['a']
     print list(itertools.repeat('a', 0))
-repeat()
+# repeat()
+
+def compress():
+    assert itertools.compress('ABCDEF', [1, 0, 1, 0, 1, 1]) == ['A', 'C', 'E', 'F']
+    assert itertools.compress('ABCDEF', [1, 1, 1, 1, 1, 1]) == ['A', 'B', 'C', 'D', 'E', 'F']
+    assert itertools.compress('ABCDEF', [1, 0, 1]) == ['A', 'C']
+    assert itertools.compress('ABC', [0, 1, 1, 1, 1, 1]) == ['B', 'C']
+compress()
 
 # def starmap():
 #     print list(itertools.starmap(pow, [(2, 5), (3, 2), (10, 3)]))

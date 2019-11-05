@@ -25,6 +25,26 @@ def combinations(pool, r):
             indices[j] = indices[j-1] + 1
         yield [pool[i] for i in indices]
 
+def combinations_with_replacement(pool, r):
+    """
+    """
+    n = len(pool)
+    if not n and r:
+        return
+    indices = [0] * r
+    yield [pool[i] for i in indices]
+    while True:
+        b = -1
+        for i in reversed(range(r)):
+            if indices[i] != n - 1:
+                b = i
+                break
+        if b == -1:
+            return
+
+        # indices[b:] = [indices[b] + 1] * (r - b)
+        yield [pool[i] for i in indices]
+
 def islice(iterable, start: int, stop: int, step: int):
     """
     Make an iterator that returns selected elements from the iterable.
@@ -80,6 +100,18 @@ def repeat(object, times: int):
     else:
         for i in range(times):
             yield object
+
+def compress(data, selectors):
+    """
+    compress(data, selectors)
+
+    Return data elements corresponding to true selector elements.
+
+    Forms a shorter iterator from selected data elements using the selectors to
+    choose the data elements.
+    """
+    return [d for d, s in zip(data, selectors) if s]
+
 
 # def starmap(function, iterable):
 #     for args in iterable:
