@@ -39,6 +39,10 @@ FOREIGN types::Type *array_type(types::Type *base) {
   return types::ArrayType::get(base);
 }
 
+FOREIGN types::Type *optional_type(types::Type *base) {
+  return types::OptionalType::get(base);
+}
+
 FOREIGN char *get_type_name(types::Type *ex) {
   return strdup(ex->getName().c_str());
 }
