@@ -4,8 +4,12 @@ from math import pow
 def underten(x: int) -> bool:
     return x < 10
 
-def isEven(x: int) -> int:
-    return x % 2
+def isEven(x: int) -> bool:
+    return x % 2 == 0
+
+def boolean(x: int) -> bool:
+    if x: return True
+    else: return False
 
 def take(n, seq):
     """Convenience function for partially consuming a long of infinite iterable"""
@@ -23,12 +27,12 @@ def combinations():
 # combinations()
 
 def combinations_with_replacement():
-    assert list(itertools.combinations_with_replacement(range(3), 3)) == [[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 1], [0, 1, 2], [0, 2, 2], [1, 1, 1], [1, 1, 2], [1, 2, 2], [2, 2, 2]] 
+    assert list(itertools.combinations_with_replacement(range(3), 3)) == [[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 1], [0, 1, 2], [0, 2, 2], [1, 1, 1], [1, 1, 2], [1, 2, 2], [2, 2, 2]]
     assert list(itertools.combinations_with_replacement('ABC', 2)) == [['A', 'A'], ['A', 'B'], ['A', 'C'], ['B', 'B'], ['B', 'C'], ['C', 'C']]
     test_intermediate = itertools.combinations_with_replacement('ABC', 2)
     next(test_intermediate)
     assert list(test_intermediate) == [['A', 'B'], ['A', 'C'], ['B', 'B'], ['B', 'C'], ['C', 'C']]
-combinations_with_replacement()
+# combinations_with_replacement()
 
 def islice():
     ra100 = range(100)
@@ -48,10 +52,14 @@ def islice():
 
 def count():
     for x in itertools.count(0.0, 1.0):
-        if x == 3.0:
+        if x == 10.0:
             break
         print x
-    print take(3, itertools.count(3.25, 1.0))
+    for x in itertools.count(3.25, 1.0):
+        if x == 5.25:
+            break
+        print x
+    # print take(3, itertools.count(3.25, 1.0))
 # count()
 
 def repeat():
@@ -60,6 +68,23 @@ def repeat():
     assert list(itertools.repeat('a', -1)) == ['a']
     print list(itertools.repeat('a', 0))
 # repeat()
+
+def cycle():
+    i = 0
+    for x in itertools.cycle('abc'):
+        if i == 10:
+            i = 0
+            break
+        i += 1
+        print x
+    # having troubles with lists...
+    for x in itertools.cycle():
+        if i == 10:
+            i = 0
+            break
+        i += 1
+        print x
+# cycle()
 
 def compress():
     assert itertools.compress('ABCDEF', [1, 0, 1, 0, 1, 1]) == ['A', 'C', 'E', 'F']
@@ -79,8 +104,9 @@ def takewhile():
 # takewhile()
 
 def filterfalse():
-    print list(itertools.filterfalse(isEven, range(10)))
-# filterfalse()
+    assert list(itertools.filterfalse(isEven, range(10))) == [1, 3, 5, 7, 9]
+    assert list(itertools.filterfalse(boolean, [0, 1, 0, 2, 0])) == [0, 0, 0]
+filterfalse()
 
 # def starmap():
 #     print list(itertools.starmap(pow, [(2, 5), (3, 2), (10, 3)]))

@@ -89,7 +89,9 @@ def islice(iterable, start: int, stop: int, step: int):
 
 def count(start: float, step: float):
     """
+    count(start=0, step=1)
 
+    Return a count object whose .__next__() method returns consecutive values.
     default: start = 0.0, step = 1.0
     """
     n = start
@@ -107,6 +109,17 @@ def repeat(object, times: int):
     else:
         for i in range(times):
             yield object
+
+def cycle[T](iterable: T):
+    """
+    """
+    saved = [T()] * 0
+    for element in iterable:
+        yield element
+        saved.append(element)
+    while saved:
+        for element in saved:
+              yield element
 
 def compress(data, selectors):
     """
@@ -157,6 +170,10 @@ def filterfalse(predicate, iterable):
     for x in iterable:
         if not predicate(x):
             yield x
+
+# def accumulate(iterable, )
+
+
 # def starmap(function, iterable):
 #     for args in iterable:
 #         # dont know how to unpack...
