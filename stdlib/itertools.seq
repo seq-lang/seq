@@ -1,5 +1,6 @@
+import math
 
-def combinations(pool, r):
+def combinations(pool, r: int):
     """
     combinations(iterable, r)
 
@@ -162,6 +163,9 @@ def takewhile(predicate, iterable):
 
 def filterfalse(predicate, iterable):
     """
+    filterfalse(function, iterable)
+
+    Return those items of iterable for which function(item) is false.
 
     Unlike python, seq will not allow predicate to equal None for now.
         if predicate is None:
@@ -171,8 +175,56 @@ def filterfalse(predicate, iterable):
         if not predicate(x):
             yield x
 
-# def accumulate(iterable, )
+def permutations(pool, r: int):
+    """
 
+    Unlike python, seq does not use None for now so default for r will be len(pool)
+    """
+    n = len(pool)
+    if r > n:
+        return
+
+    indices = list(iter(range(n)))
+    cycles = list(iter(range(n, n-r, -1)))
+    yield [pool[i] for i in indices[:r]]
+    while n:
+        b = -1
+        for i in reversed(range(r)):
+            cycles[i] -= 1
+            if cycles[i] == 0:
+                indices = indices[:i] + indices[i+1:] + indices[i:i+1]
+                cycles[i] = n - i
+            else:
+                b = i
+                j = cycles[i]
+                indices[i], indices[-j] = indices[-j], indices[i]
+                yield [pool[i] for i in indices[:r]]
+                break
+        if b == -1:
+            return
+
+def accumulate(iterable, func, initial):
+    """
+    accumulate(iterable, func, initial)
+
+    Return series of accumulated sums (or other binary function results).
+
+    Default: func = operator.add, initial = None (seq will use initial=0 for
+    integers, initial=0.0 for floats and initial='' for strings)
+    """
+    it = iter(iterable)
+
+    total = initial
+    if initial == '':
+        try:
+            total = next(it)
+        except StopIteration:
+            return
+
+    yield total
+    for element in it:
+        total = func(total, element)
+        yield total
 
 # def starmap(function, iterable):
 #     for args in iterable:
