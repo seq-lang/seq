@@ -1,6 +1,10 @@
 import itertools
 from math import pow
 
+def lzip(args):
+    return list(zip(args))
+
+
 def underten(x: int) -> bool:
     return x < 10
 
@@ -78,7 +82,7 @@ def cycle():
         i += 1
         print x
     # having troubles with lists...
-    for x in itertools.cycle():
+    for x in itertools.cycle([0, 1, 2]):
         if i == 10:
             i = 0
             break
@@ -119,12 +123,21 @@ def permutations():
                 assert len(result) == 0
             # factorial is not yet implemented in math
             # else: fact(n) / fact(n - r)
-permutations()
+# permutations()
 
 def accumulate():
-    # print list(itertools.accumulate(range(10), int.__add__, 0))# == [0, 1, 3, 6, 10, 15, 21, 28, 36, 45]
-    print list(itertools.accumulate('abc', str.__add__, ''))
-# accumulate()
+    # add
+    assert list(itertools.accumulate(range(10), int.__add__, 0)) == [0, 1, 3, 6, 10, 15, 21, 28, 36, 45]
+    assert list(itertools.accumulate([7], int.__add__, 0)) == [7]       # iterable of length 1
+    assert list(itertools.accumulate('abc', str.__add__, '')) == ['a', 'ab', 'abc']
+    assert list(itertools.accumulate(range(10), int.__mul__, 0)) == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    assert list(itertools.accumulate([1, 2, 3, 4, 5], int.__mul__, 0)) == [1, 2, 6, 24, 120]
+    assert list(itertools.accumulate([7], int.__mul__, 0)) == [7]
+accumulate()
+
+def product():
+    print list(count('ABCD'))
+# product()
 
 # def starmap():
 #     print list(itertools.starmap(pow, [(2, 5), (3, 2), (10, 3)]))

@@ -118,6 +118,7 @@ def cycle[T](iterable: T):
     for element in iterable:
         yield element
         saved.append(element)
+
     while saved:
         for element in saved:
               yield element
@@ -177,6 +178,9 @@ def filterfalse(predicate, iterable):
 
 def permutations(pool, r: int):
     """
+    permutations(iterable, r)
+
+    Return successive r-length permutations of elements in the iterable.
 
     Unlike python, seq does not use None for now so default for r will be len(pool)
     """
@@ -209,22 +213,30 @@ def accumulate(iterable, func, initial):
 
     Return series of accumulated sums (or other binary function results).
 
-    Default: func = operator.add, initial = None (seq will use initial=0 for
-    integers, initial=0.0 for floats and initial='' for strings)
+    Default: func = operator.add, initial = None.
+    For now seq will assume initial is None.
     """
     it = iter(iterable)
-
-    total = initial
-    if initial == '':
-        try:
-            total = next(it)
-        except StopIteration:
-            return
-
-    yield total
-    for element in it:
-        total = func(total, element)
+    if not it.done():
+        total = it.next()
         yield total
+        while not it.done():
+            total = func(total, it.next())
+            yield total
+        it.destroy()
+    else:
+        it.destroy()
+        return
+
+def product[T](iterables: T, repeat):
+
+    pools = [list(pool) for pool in iterables] * repeat
+    # is this right?
+    result = [[T()]]
+    for pool in pools:
+        result = [x+[y] for x in result for y in pool]
+    for prod in result:
+        yield list(prod)
 
 # def starmap(function, iterable):
 #     for args in iterable:
