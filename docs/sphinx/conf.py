@@ -28,9 +28,9 @@ copyright = u'2019, seq-lang'
 author = u'seq-lang'
 
 # The short X.Y version
-version = u'0.7'
+version = u'0.8'
 # The full version, including alpha/beta/rc tags
-release = u'0.7.0'
+release = u'0.8.6'
 
 # Logo path
 html_logo = '../images/logo.png'
@@ -181,7 +181,7 @@ exhale_args = {
     'containmentFolder':     'api',
     'rootFileName':          'doxygen.rst',
     'rootFileTitle':         'Compiler API',
-    'doxygenStripFromPath':  '..',
+    'doxygenStripFromPath':  '../..',
     # Suggested optional arguments
     'createTreeView':        True,
     # TIP: if using the sphinx-bootstrap-theme, you need

@@ -1,3 +1,33 @@
+v = range(5)
+print len(v)  # EXPECT: 5
+print 2 in v  # EXPECT: True
+print 5 in v  # EXPECT: False
+print [a for a in v]  # EXPECT: [0, 1, 2, 3, 4]
+print list(reversed(v))  # EXPECT: [4, 3, 2, 1, 0]
+print bool(v)  # EXPECT: True
+
+v = range(10, 2, -3)
+print len(v)  # EXPECT: 3
+print 13 in v  # EXPECT: False
+print 10 in v  # EXPECT: True
+print 7 in v  # EXPECT: True
+print 4 in v  # EXPECT: True
+print 1 in v  # EXPECT: False
+print [a for a in v]  # EXPECT: [10, 7, 4]
+print list(reversed(v))  # EXPECT: [4, 7, 10]
+print bool(v)  # EXPECT: True
+
+v = range(10, 2, 3)
+print len(v)  # EXPECT: 0
+print 13 in v  # EXPECT: False
+print 10 in v  # EXPECT: False
+print 7 in v  # EXPECT: False
+print 4 in v  # EXPECT: False
+print 1 in v  # EXPECT: False
+print [a for a in v]  # EXPECT: []
+print list(reversed(v))  # EXPECT: []
+print bool(v)  # EXPECT: False
+
 def perms[T](elements: list[T]) -> list[T]:
     if len(elements) <=1:
         yield elements

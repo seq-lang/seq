@@ -8,11 +8,35 @@ print ~s                      # EXPECT: TACGTTACGT
 print list((~s).kmers[K](1))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
 print list((~s).split(5, 1))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
 
+s = s'AANGGCCAGTC'
+print list(s.kmers_with_pos[Kmer[2]](1))  # EXPECT: [(0, AA), (3, GG), (4, GC), (5, CC), (6, CA), (7, AG), (8, GT), (9, TC)]
+print list(~s |> kmers_with_pos[Kmer[2]](1))  # EXPECT: [(0, GA), (1, AC), (2, CT), (3, TG), (4, GG), (5, GC), (6, CC), (9, TT)]
+
+s = s'AGACCTTAGC'
+print s  # EXPECT: AGACCTTAGC
+print list(s.kmers[Kmer[3]](1))  # EXPECT: [AGA, GAC, ACC, CCT, CTT, TTA, TAG, AGC]
+print list(s.kmers[Kmer[3]](2))  # EXPECT: [AGA, ACC, CTT, TAG]
+print list(s.kmers[Kmer[3]](4))  # EXPECT: [AGA, CTT]
+print ~s  # EXPECT: GCTAAGGTCT
+print list((~s).kmers[Kmer[3]](1))  # EXPECT: [GCT, CTA, TAA, AAG, AGG, GGT, GTC, TCT]
+print list((~s).kmers[Kmer[3]](2))  # EXPECT: [GCT, TAA, AGG, GTC]
+print list((~s).kmers[Kmer[3]](4))  # EXPECT: [GCT, AGG]
+
+s = s'AGACCTNTAGNC'
+print s  # EXPECT: AGACCTNTAGNC
+print list(s.kmers_with_pos[Kmer[3]](1))  # EXPECT: [(0, AGA), (1, GAC), (2, ACC), (3, CCT), (7, TAG)]
+print list(s.kmers_with_pos[Kmer[3]](2))  # EXPECT: [(0, AGA), (2, ACC)]
+print list(s.kmers_with_pos[Kmer[3]](4))  # EXPECT: [(0, AGA)]
+print ~s  # EXPECT: GNCTANAGGTCT
+print list((~s).kmers_with_pos[Kmer[3]](1))  # EXPECT: [(2, CTA), (6, AGG), (7, GGT), (8, GTC), (9, TCT)]
+print list((~s).kmers_with_pos[Kmer[3]](2))  # EXPECT: [(2, CTA), (6, AGG), (8, GTC)]
+print list((~s).kmers_with_pos[Kmer[3]](4))  # EXPECT: [(8, GTC)]
+
 k1 = K(s'ACGTA')
 k2 = K(s'ATGTT')
 
 print [k1[i] for i in range(len(k1))]  # EXPECT: [A, C, G, T, A]
-print [k2[i] for i in range(len(k2))]  # EXPECT: [A, T, G, T, T]
+print [k2[-i - 1] for i in range(len(k2))]  # EXPECT: [T, T, G, T, A]
 
 print ~k1  # EXPECT: TACGT
 print ~k2  # EXPECT: AACAT
@@ -40,6 +64,25 @@ k2 = K(s'ACGTA')
 print k1 - k2  # EXPECT: 0
 print k2 - k1  # EXPECT: 0
 
+k1long = Kmer[100]() |> base(0, k'T') |> base(42, k'C') |> base(77, k'G')
+k2long = Kmer[100]() |> base(0, k'T') |> base(43, k'C') |> base(77, k'T')
+print abs(k1long - k2long)  # EXPECT: 3
+
+if k1long > k2long:
+    print k2long - k1long   # EXPECT: -3
+    print k1long - k2long   # EXPECT: 3
+else:
+    print k1long - k2long
+    print k2long - k1long
+
+k1long, k2long = k2long, k1long
+if k1long > k2long:
+    print k2long - k1long   # EXPECT: -3
+    print k1long - k2long   # EXPECT: 3
+else:
+    print k1long - k2long
+    print k2long - k1long
+
 print k1 << s'G'   # EXPECT: CGTAG
 print k1 >> s'G'   # EXPECT: GACGT
 print k1 << ~s'G'  # EXPECT: CGTAC
@@ -47,5 +90,18 @@ print k1 >> ~s'G'  # EXPECT: CACGT
 
 type K100 = Kmer[100]
 type K1 = Kmer[1]
-print K100() |> base(99, K1(s'C')) |> base(98, s'G') |> base(0, K1(s'T'))
+print K100() |> base(-1, K1(s'C')) |> base(98, s'G') |> base(0, K1(s'T'))
 # EXPECT: TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGC
+
+k3 = K100()
+h1 = hash(k3)
+h2 = hash(k3 |> base(0, k'T'))
+h3 = hash(k3 |> base(99, k'T'))
+h4 = hash(k3 |> base(0, k'T') |> base(99, k'T'))
+# bases on both ends should be involved in k-mer hash:
+print h1 == h2  # EXPECT: False
+print h1 == h3  # EXPECT: False
+print h1 == h4  # EXPECT: False
+print h2 == h3  # EXPECT: False
+print h2 == h4  # EXPECT: False
+print h3 == h4  # EXPECT: False

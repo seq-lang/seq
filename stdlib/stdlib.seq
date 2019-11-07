@@ -1,6 +1,18 @@
+import! err
+
+type i8  = Int[8]
+type i16 = Int[16]
+type i32 = Int[32]
+type i64 = Int[64]
+type u8  = UInt[8]
+type u16 = UInt[16]
+type u32 = UInt[32]
+type u64 = UInt[64]
+
 type range(lo: int, hi: int, step: int):
     def __init__(self: range, lo: int, hi: int, step: int) -> range:
-        assert step != 0
+        if step == 0:
+            raise ValueError("range() step argument must not be zero")
         return (lo, hi, step)
 
     def __init__(self: range, lo: int, hi: int) -> range:
@@ -9,16 +21,22 @@ type range(lo: int, hi: int, step: int):
     def __init__(self: range, hi: int) -> range:
         return (0, hi, 1)
 
-    def __getitem__(self: range, i: int) -> int:
-        if i < 0:
-            assert self.hi + i >= self.lo
-            return self.hi + i
+    def __getitem__(self: range, idx: int):
+        n = self.__len__()
+        if idx < 0:
+            idx += n
+        if idx < 0 or idx >= n:
+            raise IndexError("range object index out of range")
+        return self.lo + (idx * self.step)
 
-        assert self.lo + i < self.hi
-        return self.lo + i
+    def __contains__(self: range, idx: int):
+        lo, hi, step = self.lo, self.hi, self.step
+        if (step > 0 and not (lo <= idx < hi)) or (step < 0 and not (hi < idx <= lo)):
+            return False
+        return (idx - lo) % step == 0
 
     def __iter__(self: range):
-        lo, hi, step = self
+        lo, hi, step = self.lo, self.hi, self.step
         i = lo
         if step > 0:
             while i < hi:
@@ -30,9 +48,21 @@ type range(lo: int, hi: int, step: int):
                 i += step
 
     def __len__(self: range):
-        l = (self.hi - self.lo).__abs__()
-        s = (self.step).__abs__()
-        return (l // s) + (1 if l % s > 0 else 0)
+        lo, hi, step = self.lo, self.hi, self.step
+        if step > 0 and lo < hi:
+            return 1 + (hi - 1 - lo) // step
+        elif step < 0 and lo > hi:
+            return 1 + (lo - 1 - hi) // (-step)
+        else:
+            return 0
+
+    def __bool__(self: range):
+        return self.__len__() > 0
+
+    def __reversed__(self: range):
+        lo, hi, step = self.lo, self.hi, self.step
+        n = self.__len__()
+        return range(lo + (n - 1)*step, lo - step, -step).__iter__()
 
 class Box[T]:
     val: T
@@ -115,10 +145,7 @@ def echo(x):
     return x
 
 def reversed(x):
-    i = len(x)
-    while i > 0:
-        i -= 1
-        yield x[i]
+    return x.__reversed__()
 
 def round(x, n) -> float:
     cdef round(float) -> float
@@ -152,9 +179,61 @@ extend int:
     def __pow__(self: int, exp: float):
         return float(self) ** exp
 
+    def _from_str(s: str, base: int):
+        cdef strtoll(ptr[byte], ptr[ptr[byte]], i32) -> int
+        import gc
+
+        if base < 0 or base > 36 or base == 1:
+            raise ValueError("int() base must be >= 2 and <= 36, or 0")
+
+        buf = __array__[byte](32)
+        n = len(s)
+        need_dyn_alloc = (n >= len(buf))
+
+        p = gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+        str.memcpy(p, s.ptr, n)
+        p[n] = byte(0)
+
+        end = ptr[byte]()
+        result = strtoll(p, __ptr__(end), i32(base))
+
+        if need_dyn_alloc:
+            gc.free(p)
+
+        if end != p + n:
+            raise ValueError("invalid literal for int() with base " + str(base) + ": " + s)
+
+        return result
+
     def __init__(self: int, s: str):
-        cdef atoi(p: ptr[byte]) -> int
-        return atoi(s.c_str())
+        return int._from_str(s, 10)
+
+    def __init__(self: int, s: str, base: int):
+        return int._from_str(s, base)
+
+extend float:
+    def __init__(self: float, s: str):
+        cdef strtod(ptr[byte], ptr[ptr[byte]]) -> float
+        import gc
+
+        buf = __array__[byte](32)
+        n = len(s)
+        need_dyn_alloc = (n >= len(buf))
+
+        p = gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+        str.memcpy(p, s.ptr, n)
+        p[n] = byte(0)
+
+        end = ptr[byte]()
+        result = strtod(p, __ptr__(end))
+
+        if need_dyn_alloc:
+            gc.free(p)
+
+        if end != p + n:
+            raise ValueError("could not convert string to float: " + s)
+
+        return result
 
 # pickle
 type Jar = ptr[byte]
@@ -164,17 +243,6 @@ def pickle[T](x: T, jar: Jar):
 
 def unpickle[T](jar: Jar):
     return T.__unpickle__(jar)
-
-type i8  = Int[8]
-type i16 = Int[16]
-type i32 = Int[32]
-type i64 = Int[64]
-type u8  = UInt[8]
-type u16 = UInt[16]
-type u32 = UInt[32]
-type u64 = UInt[64]
-
-import! err
 
 # khash utils
 def __ac_isempty(flag: ptr[u32], i: int):
@@ -276,10 +344,14 @@ extend str:
         str.memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
 
+    def _slice_error(self: str):
+        raise IndexError("string slice index error")
+
     def __getitem__(self: str, idx: int):
         if idx < 0:
             idx += len(self)
-        assert 0 <= idx <= len(self)
+        if not (0 <= idx < len(self)):
+            raise IndexError("string index out of range")
         return str(self.ptr + idx, 1)
 
     def __slice__(self: str, a: int, b: int):
@@ -287,17 +359,22 @@ extend str:
         if b < 0: b += len(self)
         if a > len(self): a = len(self)
         if b > len(self): b = len(self)
-        assert 0 <= a <= b <= len(self)
+        if not (0 <= a <= b <= len(self)):
+            self._slice_error()
         return str(self.ptr + a, b - a)
 
     def __slice_left__(self: str, b: int):
         if b < 0: b += len(self)
         if b > len(self): b = len(self)
+        if not (0 <= b <= len(self)):
+            self._slice_error()
         return str(self.ptr, b)
 
     def __slice_right__(self: str, a: int):
         if a < 0: a += len(self)
         if a > len(self): a = len(self)
+        if not (0 <= a <= len(self)):
+            self._slice_error()
         return str(self.ptr + a, len(self) - a)
 
     def c_str(self: str):
@@ -309,9 +386,17 @@ extend str:
         return p
 
     def __iter__(self: str):
+        i = 0
         n = len(self)
-        for i in range(n):
+        while i < n:
             yield self[i]
+            i += 1
+
+    def __reversed__(self: str):
+        i = len(self) - 1
+        while i >= 0:
+            yield self[i]
+            i -= 1
 
     def __mul__(self: str, x: int):
         total = x * self.len

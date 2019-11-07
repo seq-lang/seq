@@ -1,27 +1,24 @@
 import file
 
-def dump[T](x: T, f: File):
+def dump[T](x: T, f: gzFile):
     x.__pickle__(f.fp)
 
-def load[T](f: File):
+def load[T](f: gzFile):
     return T.__unpickle__(f.fp)
-
-def _pickle_error(status: int):
-    raise IOError("pickle error: gzwrite returned " + str(status))
 
 def _write_raw(jar: Jar, p: ptr[byte], n: int):
     cdef gzwrite(ptr[byte], ptr[byte], u32) -> i32
     status = int(gzwrite(jar, p, u32(n)))
     if status != n:
         _gz_errcheck(jar)
-        _pickle_error(status)
+        raise IOError("pickle error: gzwrite returned " + str(status))
 
 def _read_raw(jar: Jar, p: ptr[byte], n: int):
     cdef gzread(ptr[byte], ptr[byte], u32) -> i32
     status = int(gzread(jar, p, u32(n)))
     if status != n:
         _gz_errcheck(jar)
-        _pickle_error(status)
+        raise IOError("pickle error: gzread returned " + str(status))
 
 def _write[T](jar: Jar, x: T):
     import gc

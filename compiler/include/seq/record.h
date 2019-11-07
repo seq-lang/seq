@@ -44,6 +44,7 @@ public:
                          std::string name = "");
 
 private:
+  llvm::Function *getContainsFunc(llvm::Module *module);
   llvm::Function *getCmpFunc(llvm::Module *module, int kind);
 };
 

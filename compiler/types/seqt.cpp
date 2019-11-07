@@ -208,7 +208,7 @@ get2bitTable(Module *module, const std::string &name = "seq.2bit_table") {
     v['A'] = v['a'] = ConstantInt::get(ty, 0);
     v['G'] = v['g'] = ConstantInt::get(ty, 1);
     v['C'] = v['c'] = ConstantInt::get(ty, 2);
-    v['T'] = v['t'] = ConstantInt::get(ty, 3);
+    v['T'] = v['t'] = v['U'] = v['u'] = ConstantInt::get(ty, 3);
 
     auto *arrTy =
         llvm::ArrayType::get(IntegerType::getIntNTy(context, 2), v.size());
@@ -555,8 +555,12 @@ void types::KMer::initOps() {
          LLVMContext &context = b.getContext();
          llvm::Type *type = getLLVMType(context);
          Value *mask = ConstantInt::get(type, 3);
+         Value *backIdx =
+             b.CreateAdd(args[0], ConstantInt::get(seqIntLLVM(context), k));
+         Value *negIdx = b.CreateICmpSLT(args[0], zeroLLVM(context));
+         Value *idx = b.CreateSelect(negIdx, backIdx, args[0]);
          Value *shift =
-             b.CreateSub(ConstantInt::get(seqIntLLVM(context), k - 1), args[0]);
+             b.CreateSub(ConstantInt::get(seqIntLLVM(context), k - 1), idx);
          shift = b.CreateShl(shift, 1); // 2 bits per base
          shift = b.CreateZExtOrTrunc(shift, type);
 
@@ -653,8 +657,9 @@ void types::KMer::initOps() {
           */
          LLVMContext &context = b.getContext();
          Value *mask1 = ConstantInt::get(getLLVMType(context), 0);
+         Value *one = ConstantInt::get(getLLVMType(context), 1);
          for (unsigned i = 0; i < getK(); i++) {
-           Value *shift = b.CreateShl(oneLLVM(context), 2 * i);
+           Value *shift = b.CreateShl(one, 2 * i);
            mask1 = b.CreateOr(mask1, shift);
          }
          Value *mask2 = b.CreateShl(mask1, 1);
@@ -681,8 +686,15 @@ void types::KMer::initOps() {
       {"__hash__",
        {},
        Int,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         Value *hash = b.CreateZExtOrTrunc(self, seqIntLLVM(b.getContext()));
+         if (getK() > 32) {
+           // make sure bases on both ends are involved in hash:
+           Value *aux = b.CreateLShr(self, 2 * getK() - 64);
+           aux = b.CreateZExtOrTrunc(aux, seqIntLLVM(b.getContext()));
+           hash = b.CreateXor(hash, aux);
+         }
+         return hash;
        },
        false},
 

@@ -24,7 +24,7 @@ type t =
   | FloatS of (float * string)
   | String of string
   | Kmer of string
-  | Seq of string
+  | Seq of (string * string)
   | Id of string
   | Unpack of string (** [Unpack(x)] corresponds to [**x] in Seq. *)
   | Tuple of t ann list

@@ -173,9 +173,10 @@ void types::GenericType::initFields() {
 }
 
 types::Type *types::GenericType::magicOut(const std::string &name,
-                                          std::vector<types::Type *> args) {
+                                          std::vector<types::Type *> args,
+                                          bool nullOnMissing) {
   ensure();
-  return type->magicOut(name, args);
+  return type->magicOut(name, args, nullOnMissing);
 }
 
 Value *types::GenericType::callMagic(const std::string &name,
