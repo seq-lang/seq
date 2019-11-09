@@ -32,9 +32,11 @@ static seq_str_t seq_strdup(const char *s) {
   return {(seq_int_t)len, s2};
 }
 
-static const char *to_str(PyObject *obj) {
-  PyObject *str = PyUnicode_AsEncodedString(obj, "utf-8", "~E~");
-  const char *bytes = strdup(PyBytes_AS_STRING(str));
+static const char *to_str(PyObject *obj, const char *errors) {
+  PyObject *str = PyUnicode_AsEncodedString(obj, "utf-8", errors);
+  if (!str)
+    return nullptr;
+  const char *bytes = PyBytes_AS_STRING(str);
   Py_XDECREF(str);
   return bytes;
 }
@@ -46,7 +48,7 @@ static void seq_py_exc_check() {
 
   if (ptype) {
     PyObject *pmsg = pvalue ? PyObject_Str(pvalue) : nullptr;
-    const char *msg = pmsg ? to_str(pmsg) : "<empty Python message>";
+    const char *msg = pmsg ? to_str(pmsg, "ignore") : "<empty Python message>";
     const char *type = ((PyTypeObject *)ptype)->tp_name;
     auto *seqExc = (PyException *)seq_alloc(sizeof(PyException));
     seqExc->msg = seq_strdup(msg);
@@ -116,15 +118,17 @@ SEQ_FUNC PyObject *seq_str_to_py(seq_str_t s) {
 }
 
 SEQ_FUNC seq_str_t seq_str_from_py(PyObject *s) {
-  SEQ_PY_RETURN(seq_strdup(to_str(s)));
+  auto *buf = to_str(s, "strict");
+  seq_py_exc_check();
+  return seq_strdup(buf);
 }
 
 SEQ_FUNC PyObject *seq_byte_to_py(char c) { return seq_str_to_py({1, &c}); }
 
 SEQ_FUNC char seq_byte_from_py(PyObject *c) {
-  auto *s = to_str(c);
+  auto *buf = to_str(c, "strict");
   seq_py_exc_check();
-  return s[0];
+  return buf[0];
 }
 
 SEQ_FUNC PyObject *seq_py_list_new(seq_int_t n) {
