@@ -7,15 +7,14 @@ try:
 except PyException as e:
     print e.pytype + ":", e.msg
 
-# EXPECT: ((4, 5), {'a': 3.14, 'b': 2.123}, True, set(['ACGT']), [['abc'], ['1.1', '2.2'], []])
-# EXPECT: ({a: 3.14, b: 2.123}, (222, 3.14))
+# EXPECT: ({a: 3.14, b: 2.123}, (4, 1.1))
 try:
     args = ((4,5), {'a': 3.14, 'b': 2.123}, True, {s'ACGT'}, [['abc'], ['1.1', '2.2'], list[str]()])
     print get[tuple[dict[str,float],tuple[int,float]]](module['print_args'].call(args))
 except PyException as e:
     print e.pytype + ":", e.msg
 
-# EXPECT: exceptions.IOError: foo
+# EXPECT: ValueError: foo
 try:
     print get[int](module['throw_exc'].call_void())
 except PyException as e:

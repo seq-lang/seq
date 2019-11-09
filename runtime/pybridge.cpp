@@ -15,8 +15,8 @@ void seq_py_init() {
 }
 
 #if PYBRIDGE
-#if PY_MAJOR_VERSION != 2 && PY_MAJOR_VERSION != 3
-#error "Only Python major versions 2 and 3 are supported."
+#if PY_MAJOR_VERSION != 3
+#error "Only Python 3 is supported."
 #endif
 
 // caution: this type must be consistent with PyException as defined in Seq
@@ -32,6 +32,13 @@ static seq_str_t seq_strdup(const char *s) {
   return {(seq_int_t)len, s2};
 }
 
+static const char *to_str(PyObject *obj) {
+  PyObject *str = PyUnicode_AsEncodedString(obj, "utf-8", "~E~");
+  const char *bytes = strdup(PyBytes_AS_STRING(str));
+  Py_XDECREF(str);
+  return bytes;
+}
+
 static void seq_py_exc_check() {
   // if an exception occurs, transform it into a Seq exception:
   PyObject *ptype, *pvalue, *ptraceback;
@@ -39,7 +46,7 @@ static void seq_py_exc_check() {
 
   if (ptype) {
     PyObject *pmsg = pvalue ? PyObject_Str(pvalue) : nullptr;
-    const char *msg = pmsg ? PyString_AsString(pmsg) : "<empty Python message>";
+    const char *msg = pmsg ? to_str(pmsg) : "<empty Python message>";
     const char *type = ((PyTypeObject *)ptype)->tp_name;
     auto *seqExc = (PyException *)seq_alloc(sizeof(PyException));
     seqExc->msg = seq_strdup(msg);
@@ -86,20 +93,10 @@ SEQ_FUNC void seq_py_decref(PyObject *obj) { Py_XDECREF(obj); }
 
 /* conversions */
 
-SEQ_FUNC PyObject *seq_int_to_py(seq_int_t n) {
-#if PY_MAJOR_VERSION == 2
-  return PyInt_FromLong(n);
-#else
-  return PyLong_FromLong(n);
-#endif
-}
+SEQ_FUNC PyObject *seq_int_to_py(seq_int_t n) { return PyLong_FromLong(n); }
 
 SEQ_FUNC seq_int_t seq_int_from_py(PyObject *n) {
-#if PY_MAJOR_VERSION == 2
-  SEQ_PY_RETURN(PyInt_AsLong(n));
-#else
   SEQ_PY_RETURN(PyLong_AsLong(n));
-#endif
 }
 
 SEQ_FUNC PyObject *seq_float_to_py(double f) { return PyFloat_FromDouble(f); }
@@ -115,21 +112,17 @@ SEQ_FUNC bool seq_bool_from_py(PyObject *b) {
 }
 
 SEQ_FUNC PyObject *seq_str_to_py(seq_str_t s) {
-#if PY_MAJOR_VERSION == 2
-  SEQ_PY_RETURN(PyString_FromStringAndSize(s.str, (Py_ssize_t)s.len));
-#else
   SEQ_PY_RETURN(PyUnicode_DecodeFSDefaultAndSize(s.str, (Py_ssize_t)s.len));
-#endif
 }
 
 SEQ_FUNC seq_str_t seq_str_from_py(PyObject *s) {
-  SEQ_PY_RETURN(seq_strdup(PyString_AsString(s)));
+  SEQ_PY_RETURN(seq_strdup(to_str(s)));
 }
 
 SEQ_FUNC PyObject *seq_byte_to_py(char c) { return seq_str_to_py({1, &c}); }
 
 SEQ_FUNC char seq_byte_from_py(PyObject *c) {
-  auto *s = PyString_AsString(c);
+  auto *s = to_str(c);
   seq_py_exc_check();
   return s[0];
 }
