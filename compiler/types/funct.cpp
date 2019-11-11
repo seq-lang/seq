@@ -10,6 +10,10 @@ types::FuncType::FuncType(std::vector<types::Type *> inTypes,
 
 unsigned types::FuncType::argCount() const { return (unsigned)inTypes.size(); }
 
+static types::OptionalType *asOpt(types::Type *type) {
+  return dynamic_cast<types::OptionalType *>(type);
+}
+
 Value *types::FuncType::call(BaseFunc *base, Value *self,
                              const std::vector<Value *> &args,
                              BasicBlock *block, BasicBlock *normal,
@@ -18,9 +22,9 @@ Value *types::FuncType::call(BaseFunc *base, Value *self,
   assert(args.size() == inTypes.size());
   for (unsigned i = 0; i < args.size(); i++) {
     // implicit optional conversion allows cases like foo(x, y, z, None)
-    if (inTypes[i]->asOpt()) {
+    if (::asOpt(inTypes[i])) {
       Value *arg = dyn_cast<ConstantPointerNull>(args[i]) ? nullptr : args[i];
-      argsFixed.push_back(inTypes[i]->asOpt()->make(arg, block));
+      argsFixed.push_back(::asOpt(inTypes[i])->make(arg, block));
     } else {
       argsFixed.push_back(args[i]);
     }
@@ -57,14 +61,14 @@ types::Type *types::FuncType::getBaseType(unsigned idx) const {
 }
 
 static bool compatibleArgType(types::Type *got, types::Type *exp) {
-  if (exp->asOpt())
+  if (::asOpt(exp))
     return got == types::RefType::none() || types::is(exp->getBaseType(0), got);
   else
     return types::is(got, exp);
 }
 
 static std::string expectedTypeName(types::Type *exp) {
-  if (exp->asOpt())
+  if (::asOpt(exp))
     return exp->getBaseType(0)->getName();
   else
     return exp->getName();
