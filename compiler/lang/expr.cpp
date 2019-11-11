@@ -1417,8 +1417,9 @@ GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref) {
   SEQ_RETURN_CLONE(new GetStaticElemExpr(type->clone(ref), memb, typesCloned));
 }
 
-CallExpr::CallExpr(Expr *func, std::vector<Expr *> args)
-    : func(func), args(std::move(args)) {}
+CallExpr::CallExpr(Expr *func, std::vector<Expr *> args,
+                   std::vector<std::string> names)
+    : func(func), args(std::move(args)), names(std::move(names)) {}
 
 Expr *CallExpr::getFuncExpr() const { return func; }
 
@@ -1568,6 +1569,75 @@ deduceTypeParametersIfNecessary(Expr *&func,
   }
 }
 
+static std::vector<Expr *> rectifyCallArgs(Expr *func, std::vector<Expr *> args,
+                                           std::vector<std::string> names) {
+  {
+    // simple call
+    auto *funcExpr = dynamic_cast<FuncExpr *>(func);
+    if (funcExpr && !funcExpr->isRealized()) {
+      Func *f = getFuncFromFuncExpr(func);
+      if (f)
+        return f->rectifyCallArgs(args, names);
+    }
+  }
+
+  {
+    // partial call I -- known partial
+    auto *partialExpr = dynamic_cast<PartialCallExpr *>(func);
+    if (partialExpr) {
+      auto *funcExpr = dynamic_cast<FuncExpr *>(partialExpr->getFuncExpr());
+      if (funcExpr) {
+        Func *f = getFuncFromFuncExpr(partialExpr->getFuncExpr());
+        if (f)
+          return f->rectifyCallArgs(args, names);
+      }
+    }
+  }
+
+  {
+    // partial call II -- partial masquerading as regular call
+    auto *callExpr = dynamic_cast<CallExpr *>(func);
+    if (callExpr) {
+      auto *funcExpr = dynamic_cast<FuncExpr *>(callExpr->getFuncExpr());
+      if (funcExpr && !funcExpr->isRealized()) {
+        Func *f = getFuncFromFuncExpr(callExpr->getFuncExpr());
+        if (f)
+          return f->rectifyCallArgs(args, names);
+      }
+    }
+  }
+
+  {
+    // method call
+    auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
+    if (elemExpr && !elemExpr->isRealized()) {
+      std::string name = elemExpr->getMemb();
+      types::Type *type = elemExpr->getRec()->getType();
+      if (type->hasMethod(name)) {
+        auto *f = dynamic_cast<Func *>(type->getMethod(name));
+        if (f)
+          return f->rectifyCallArgs(args, names, /*methodCall=*/true);
+      }
+    }
+  }
+
+  {
+    // static method call
+    auto *elemStaticExpr = dynamic_cast<GetStaticElemExpr *>(func);
+    if (elemStaticExpr && !elemStaticExpr->isRealized()) {
+      std::string name = elemStaticExpr->getMemb();
+      types::Type *type = elemStaticExpr->getTypeInExpr();
+      if (type->hasMethod(name)) {
+        auto *f = dynamic_cast<Func *>(type->getMethod(name));
+        if (f)
+          return f->rectifyCallArgs(args, names);
+      }
+    }
+  }
+
+  return args;
+}
+
 Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = getType(); // validates call
   Value *f = func->codegen(base, block);
@@ -1621,11 +1691,12 @@ CallExpr *CallExpr::clone(Generic *ref) {
   std::vector<Expr *> argsCloned;
   for (auto *arg : args)
     argsCloned.push_back(arg->clone(ref));
-  SEQ_RETURN_CLONE(new CallExpr(func->clone(ref), argsCloned));
+  SEQ_RETURN_CLONE(new CallExpr(func->clone(ref), argsCloned, names));
 }
 
-PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args)
-    : func(func), args(std::move(args)) {}
+PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args,
+                                 std::vector<std::string> names)
+    : func(func), args(std::move(args)), names(std::move(names)) {}
 
 Expr *PartialCallExpr::getFuncExpr() const { return func; }
 
@@ -1665,7 +1736,7 @@ PartialCallExpr *PartialCallExpr::clone(seq::Generic *ref) {
   std::vector<Expr *> argsCloned;
   for (auto *arg : args)
     argsCloned.push_back(arg ? arg->clone(ref) : nullptr);
-  SEQ_RETURN_CLONE(new PartialCallExpr(func->clone(ref), argsCloned));
+  SEQ_RETURN_CLONE(new PartialCallExpr(func->clone(ref), argsCloned, names));
 }
 
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse)

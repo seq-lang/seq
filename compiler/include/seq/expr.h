@@ -489,9 +489,11 @@ class CallExpr : public Expr {
 private:
   mutable Expr *func;
   std::vector<Expr *> args;
+  std::vector<std::string> names;
 
 public:
-  CallExpr(Expr *func, std::vector<Expr *> args);
+  CallExpr(Expr *func, std::vector<Expr *> args,
+           std::vector<std::string> names = {});
   Expr *getFuncExpr() const;
   void setFuncExpr(Expr *func);
   void resolveTypes() override;
@@ -504,9 +506,11 @@ class PartialCallExpr : public Expr {
 private:
   mutable Expr *func;
   std::vector<Expr *> args;
+  std::vector<std::string> names;
 
 public:
-  PartialCallExpr(Expr *func, std::vector<Expr *> args);
+  PartialCallExpr(Expr *func, std::vector<Expr *> args,
+                  std::vector<std::string> names = {});
   Expr *getFuncExpr() const;
   void setFuncExpr(Expr *func);
   void resolveTypes() override;

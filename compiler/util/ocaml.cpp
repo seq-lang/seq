@@ -170,8 +170,28 @@ FOREIGN Expr *call_expr(Expr *fn, Expr **args, size_t size) {
   return new CallExpr(fn, vector<Expr *>(args, args + size));
 }
 
+FOREIGN Expr *call_expr_with_names(Expr *fn, Expr **args, char **names,
+                                   size_t size) {
+  vector<string> s;
+  for (size_t i = 0; i < size; i++) {
+    s.emplace_back(names[i]);
+    free(names[i]);
+  }
+  return new CallExpr(fn, vector<Expr *>(args, args + size), s);
+}
+
 FOREIGN Expr *partial_expr(Expr *fn, Expr **args, size_t size) {
   return new PartialCallExpr(fn, vector<Expr *>(args, args + size));
+}
+
+FOREIGN Expr *partial_expr_with_names(Expr *fn, Expr **args, char **names,
+                                      size_t size) {
+  vector<string> s;
+  for (size_t i = 0; i < size; i++) {
+    s.emplace_back(names[i]);
+    free(names[i]);
+  }
+  return new PartialCallExpr(fn, vector<Expr *>(args, args + size), s);
 }
 
 FOREIGN Expr *pipe_expr(Expr **args, size_t size) {
@@ -376,6 +396,10 @@ FOREIGN Func *func(char *name) {
 }
 
 FOREIGN void set_func_out(Func *f, types::Type *typ) { f->setOut(typ); }
+
+FOREIGN void set_func_defaults(Func *f, Expr **defaults, size_t size) {
+  f->setDefaults(vector<Expr *>(defaults, defaults + size));
+}
 
 FOREIGN Block *get_func_block(Func *st) { return st->getBlock(); }
 

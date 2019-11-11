@@ -39,10 +39,11 @@ BaseFunc *BaseFunc::clone(Generic *ref) { return this; }
 
 Func::Func()
     : BaseFunc(), Generic(), SrcObject(), external(false), name(), inTypes(),
-      outType(types::Void), outType0(types::Void), scope(new Block()),
-      argNames(), argVars(), attributes(), parentFunc(nullptr), ret(nullptr),
-      yield(nullptr), prefetch(false), resolved(false), cache(), gen(false),
-      promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr) {
+      outType(types::Void), outType0(types::Void), defaultArgs(),
+      scope(new Block()), argNames(), argVars(), attributes(),
+      parentFunc(nullptr), ret(nullptr), yield(nullptr), prefetch(false),
+      resolved(false), cache(), gen(false), promise(nullptr), handle(nullptr),
+      cleanup(nullptr), suspend(nullptr) {
   if (!this->argNames.empty())
     assert(this->argNames.size() == this->inTypes.size());
 }
@@ -73,6 +74,85 @@ Func *Func::realize(std::vector<types::Type *> types) {
 std::vector<types::Type *>
 Func::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes) {
   return Generic::deduceTypesFromArgTypes(inTypes, argTypes);
+}
+
+std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
+                                          std::vector<std::string> names,
+                                          bool methodCall) {
+  // TODO: handle `methodCall`
+#define ENSURE_NO_DUP(i)                                                       \
+  if (argsFixed[i] || partials[i])                                             \
+  throw exc::SeqException("multiple values given for '" + argNames[i] +        \
+                          "' parameter")
+
+  const unsigned size = inTypes.size();
+  assert(defaultArgs.size() == size);
+  assert(argNames.size() == size);
+  assert(args.size() == names.size());
+
+  bool saw_name = false;
+  for (unsigned i = 0; i < args.size(); i++) {
+    // disallow unnamed args after named args
+    if (names[i].empty()) {
+      assert(!saw_name);
+    } else {
+      saw_name = true;
+    }
+  }
+
+  if (args.size() > size) {
+    throw exc::SeqException("expected " + std::to_string(size) +
+                            " argument(s), but got " +
+                            std::to_string(args.size()));
+  }
+
+  std::vector<Expr *> argsFixed(size, nullptr);
+  // explicit partial args ("...") are given as null arguments; they are denoted
+  // here
+  std::vector<bool> partials(size, false);
+
+  // first, deal with named args:
+  for (unsigned i = 0; i < args.size(); i++) {
+    if (!names[i].empty()) {
+      unsigned name_idx = 0;
+      for (unsigned j = 0; j < size; j++) {
+        if (argNames[j] == names[i]) {
+          name_idx = j;
+          break;
+        }
+      }
+
+      if (argNames[name_idx] == names[i]) {
+        ENSURE_NO_DUP(name_idx);
+        argsFixed[name_idx] = args[i];
+        if (!args[i])
+          partials[name_idx] = true;
+      } else {
+        throw exc::SeqException("no function argument named '" + names[i] +
+                                "'");
+      }
+    }
+  }
+
+  // now fill in left to right:
+  for (unsigned i = 0; i < args.size(); i++) {
+    if (!names[i].empty())
+      break; // assumes no unnamed args after named, as checked above
+    ENSURE_NO_DUP(i);
+    argsFixed[i] = args[i];
+  }
+
+  // fill in defaults:
+  for (unsigned i = 0; i < size; i++) {
+    // the second condition checks for explicit nulls, which indicate a partial
+    // call; we don't want to override these with the default argument
+    if (!argsFixed[i] && !partials[i]) {
+      argsFixed[i] = defaultArgs[i];
+    }
+  }
+
+  return argsFixed;
+#undef ENSURE_NO_DUP
 }
 
 void Func::setEnclosingFunc(Func *parentFunc) { this->parentFunc = parentFunc; }
@@ -479,6 +559,10 @@ void Func::setIns(std::vector<types::Type *> inTypes) {
 
 void Func::setOut(types::Type *outType) { this->outType = outType0 = outType; }
 
+void Func::setDefaults(std::vector<Expr *> defaultArgs) {
+  this->defaultArgs = std::move(defaultArgs);
+}
+
 void Func::setName(std::string name) { this->name = std::move(name); }
 
 void Func::setArgNames(std::vector<std::string> argNames) {
@@ -502,11 +586,16 @@ Func *Func::clone(Generic *ref) {
   for (auto *type : inTypes)
     inTypesCloned.push_back(type->clone(ref));
 
+  std::vector<Expr *> defaultArgsCloned;
+  for (auto *expr : defaultArgs)
+    defaultArgsCloned.push_back(expr->clone(ref));
+
   x->external = external;
   x->name = name;
   x->argNames = argNames;
   x->inTypes = inTypesCloned;
   x->outType = x->outType0 = outType0->clone(ref);
+  x->defaultArgs = defaultArgsCloned;
   x->scope = scope->clone(ref);
   x->attributes = attributes;
 

@@ -67,6 +67,9 @@ private:
   /// Original function return type, before deduction
   types::Type *outType0;
 
+  /// Default arguments, or null if none (corresponds to `inTypes` vector)
+  std::vector<Expr *> defaultArgs;
+
   /// Block representing this function's body
   Block *scope;
 
@@ -136,6 +139,9 @@ public:
   Func *realize(std::vector<types::Type *> types);
   std::vector<types::Type *>
   deduceTypesFromArgTypes(std::vector<types::Type *> argTypes);
+  std::vector<Expr *> rectifyCallArgs(std::vector<Expr *> args,
+                                      std::vector<std::string> names,
+                                      bool methodCall = false);
 
   void setEnclosingFunc(Func *parentFunc);
   void sawReturn(Return *ret);
@@ -160,6 +166,7 @@ public:
   void setExternal();
   void setIns(std::vector<types::Type *> inTypes);
   void setOut(types::Type *outType);
+  void setDefaults(std::vector<Expr *> defaultArgs);
   void setName(std::string name);
   std::vector<std::string> getArgNames();
   void setArgNames(std::vector<std::string> argNames);
