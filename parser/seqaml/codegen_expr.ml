@@ -261,9 +261,9 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
      Check GOTCHAS for details. *)
   and parse_index ?(is_type = false) ctx pos (lh_expr, indices) =
     match is_type, snd lh_expr, snd indices with
-    | _, Id (("array" | "ptr" | "generator") as name), Tuple _ ->
+    | _, Id (("array" | "ptr" | "generator" | "optional") as name), Tuple _ ->
       serr ~pos "%s requires a single type" name
-    | _, Id (("array" | "ptr" | "generator") as name), _ ->
+    | _, Id (("array" | "ptr" | "generator" | "optional") as name), _ ->
       let typ = parse_type ~ctx indices in
       Llvm.Expr.typ @@ Llvm.Type.param ~name typ
     | _, Id "Kmer", Int n ->

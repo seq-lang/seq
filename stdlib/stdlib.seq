@@ -67,6 +67,9 @@ type range(lo: int, hi: int, step: int):
 class Box[T]:
     val: T
 
+def _unwrap[T](opt: optional[T]):
+    return ~opt
+
 def min(a, b):
     return a if a < b else b
 
