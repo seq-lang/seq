@@ -1574,7 +1574,7 @@ static std::vector<Expr *> rectifyCallArgs(Expr *func, std::vector<Expr *> args,
   {
     // simple call
     auto *funcExpr = dynamic_cast<FuncExpr *>(func);
-    if (funcExpr && !funcExpr->isRealized()) {
+    if (funcExpr) {
       Func *f = getFuncFromFuncExpr(func);
       if (f)
         return f->rectifyCallArgs(args, names);
@@ -1582,35 +1582,9 @@ static std::vector<Expr *> rectifyCallArgs(Expr *func, std::vector<Expr *> args,
   }
 
   {
-    // partial call I -- known partial
-    auto *partialExpr = dynamic_cast<PartialCallExpr *>(func);
-    if (partialExpr) {
-      auto *funcExpr = dynamic_cast<FuncExpr *>(partialExpr->getFuncExpr());
-      if (funcExpr) {
-        Func *f = getFuncFromFuncExpr(partialExpr->getFuncExpr());
-        if (f)
-          return f->rectifyCallArgs(args, names);
-      }
-    }
-  }
-
-  {
-    // partial call II -- partial masquerading as regular call
-    auto *callExpr = dynamic_cast<CallExpr *>(func);
-    if (callExpr) {
-      auto *funcExpr = dynamic_cast<FuncExpr *>(callExpr->getFuncExpr());
-      if (funcExpr && !funcExpr->isRealized()) {
-        Func *f = getFuncFromFuncExpr(callExpr->getFuncExpr());
-        if (f)
-          return f->rectifyCallArgs(args, names);
-      }
-    }
-  }
-
-  {
     // method call
     auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
-    if (elemExpr && !elemExpr->isRealized()) {
+    if (elemExpr) {
       std::string name = elemExpr->getMemb();
       types::Type *type = elemExpr->getRec()->getType();
       if (type->hasMethod(name)) {
@@ -1624,7 +1598,7 @@ static std::vector<Expr *> rectifyCallArgs(Expr *func, std::vector<Expr *> args,
   {
     // static method call
     auto *elemStaticExpr = dynamic_cast<GetStaticElemExpr *>(func);
-    if (elemStaticExpr && !elemStaticExpr->isRealized()) {
+    if (elemStaticExpr) {
       std::string name = elemStaticExpr->getMemb();
       types::Type *type = elemStaticExpr->getTypeInExpr();
       if (type->hasMethod(name)) {
@@ -1640,14 +1614,19 @@ static std::vector<Expr *> rectifyCallArgs(Expr *func, std::vector<Expr *> args,
 
 Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = getType(); // validates call
+  std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
   Value *f = func->codegen(base, block);
   std::vector<Value *> x;
-  for (auto *e : args)
-    x.push_back(e->codegen(base, block));
+  bool saw_null = false;
+  for (auto *e : args) {
+    if (e)
+      x.push_back(e->codegen(base, block));
+    else
+      saw_null = true;
+  }
 
   // check if this is really a partial function
-  Func *f0 = getFuncFromFuncExpr(func);
-  if (f0 && f0->getFuncType()->argCount() > x.size()) {
+  if (saw_null) {
     auto *partial = dynamic_cast<types::PartialFuncType *>(type);
     assert(partial);
     return partial->make(f, x, block);
@@ -1667,18 +1646,20 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 }
 
 types::Type *CallExpr::getType0() const {
+  std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
   std::vector<types::Type *> types;
-  for (auto *e : args)
-    types.push_back(e->getType());
+  bool saw_null = false;
+  for (auto *e : args) {
+    if (e) {
+      types.push_back(e->getType());
+    } else {
+      types.push_back(nullptr);
+      saw_null = true;
+    }
+  }
 
   // check if this is really a partial function
-  Func *f = getFuncFromFuncExpr(func);
-  int missingArgs = 0;
-  if (f && (missingArgs =
-                (int)f->getFuncType()->argCount() - (int)types.size()) > 0) {
-    for (int i = 0; i < missingArgs; i++)
-      types.insert(types.begin(), nullptr);
-
+  if (saw_null) {
     deduceTypeParametersIfNecessary(func, types);
     return types::PartialFuncType::get(func->getType(), types);
   }
@@ -1712,6 +1693,7 @@ void PartialCallExpr::resolveTypes() {
 
 Value *PartialCallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::PartialFuncType *par = getType0();
+  std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
 
   Value *f = func->codegen(base, block);
   std::vector<Value *> x;
@@ -1724,6 +1706,7 @@ Value *PartialCallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 }
 
 types::PartialFuncType *PartialCallExpr::getType0() const {
+  std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
   std::vector<types::Type *> types;
   for (auto *e : args)
     types.push_back(e ? e->getType() : nullptr);

@@ -79,15 +79,17 @@ Func::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes) {
 std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
                                           std::vector<std::string> names,
                                           bool methodCall) {
-  // TODO: handle `methodCall`
 #define ENSURE_NO_DUP(i)                                                       \
   if (argsFixed[i] || partials[i])                                             \
   throw exc::SeqException("multiple values given for '" + argNames[i] +        \
                           "' parameter")
 
+  const unsigned offset = methodCall ? 1 : 0; // handle 'self'
   const unsigned size = inTypes.size();
-  assert(defaultArgs.size() == size);
+  assert(defaultArgs.empty() || defaultArgs.size() == size);
   assert(argNames.size() == size);
+  if (names.empty())
+    names = std::vector<std::string>(args.size(), "");
   assert(args.size() == names.size());
 
   bool saw_name = false;
@@ -100,7 +102,7 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
     }
   }
 
-  if (args.size() > size) {
+  if (args.size() + offset > size) {
     throw exc::SeqException("expected " + std::to_string(size) +
                             " argument(s), but got " +
                             std::to_string(args.size()));
@@ -134,22 +136,34 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
     }
   }
 
-  // now fill in left to right:
-  for (unsigned i = 0; i < args.size(); i++) {
-    if (!names[i].empty())
-      break; // assumes no unnamed args after named, as checked above
-    ENSURE_NO_DUP(i);
-    argsFixed[i] = args[i];
-  }
+  // now fill in right to left:
+  int j = (int)args.size() - 1;
+  while (j >= 0 && !names[j].empty())
+    --j;
+  for (int i = (int)argsFixed.size() - 1; i >= 0; i--) {
+    if (j < 0)
+      break;
 
-  // fill in defaults:
-  for (unsigned i = 0; i < size; i++) {
-    // the second condition checks for explicit nulls, which indicate a partial
-    // call; we don't want to override these with the default argument
     if (!argsFixed[i] && !partials[i]) {
-      argsFixed[i] = defaultArgs[i];
+      argsFixed[i] = args[j];
+      --j;
     }
   }
+  assert(j < 0); // i.e. no unused args
+
+  // fill in defaults:
+  if (!defaultArgs.empty()) {
+    for (unsigned i = offset; i < size; i++) {
+      // the second condition checks for explicit nulls, which indicate a
+      // partial call; we don't want to override these with the default argument
+      if (!argsFixed[i] && !partials[i]) {
+        argsFixed[i] = defaultArgs[i];
+      }
+    }
+  }
+
+  if (offset)
+    argsFixed = std::vector<Expr *>(argsFixed.begin() + 1, argsFixed.end());
 
   return argsFixed;
 #undef ENSURE_NO_DUP
@@ -248,6 +262,8 @@ void Func::resolveTypes() {
   resolved = true;
 
   try {
+    for (Expr *defaultArg : defaultArgs)
+      defaultArg->resolveTypes();
     scope->resolveTypes();
 
     // return type deduction
@@ -588,7 +604,7 @@ Func *Func::clone(Generic *ref) {
 
   std::vector<Expr *> defaultArgsCloned;
   for (auto *expr : defaultArgs)
-    defaultArgsCloned.push_back(expr->clone(ref));
+    defaultArgsCloned.push_back(expr ? expr->clone(ref) : nullptr);
 
   x->external = external;
   x->name = name;
