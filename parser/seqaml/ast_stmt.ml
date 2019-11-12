@@ -76,6 +76,7 @@ and match_case =
 and param =
   { name : string
   ; typ : texpr ann option
+  ; default : texpr ann option
   }
 
 and catch =

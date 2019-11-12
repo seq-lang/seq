@@ -263,7 +263,7 @@ void Func::resolveTypes() {
 
   try {
     for (Expr *defaultArg : defaultArgs)
-      defaultArg->resolveTypes();
+      if (defaultArg) defaultArg->resolveTypes();
     scope->resolveTypes();
 
     // return type deduction

@@ -379,42 +379,20 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
   and parse_call_real ctx pos (callee_expr, args) =
     let callee_expr = parse ~ctx callee_expr in
     let names = Llvm.Func.get_arg_names callee_expr in
-    let args =
-      if List.length names = 0
-      then
-        List.mapi args ~f:(fun i (pos, { name; value }) ->
-            match name with
-            | None -> parse ~ctx value
-            | Some _ -> serr ~pos "cannot use named arguments here")
-      else (
-        (* Check names *)
-        let has_named_args =
-          List.fold args ~init:false ~f:(fun acc (pos, { name; _ }) ->
+    let _, args =
+          List.fold_map args ~init:false ~f:(fun acc (pos, { name; value }) ->
               match name with
               | None when acc ->
                 serr ~pos "unnamed argument cannot follow a named argument"
-              | None -> false
-              | Some _ -> true)
+              | None -> false, ("", parse ~ctx value)
+              | Some name -> true, (name, parse ~ctx value))
         in
-        if has_named_args
-        then
-          List.mapi names ~f:(fun i n ->
-              match List.findi args ~f:(fun _ x -> (snd x).name = Some n) with
-              | Some (idx, x) -> parse ~ctx (snd x).value
-              | None ->
-                (match List.nth args i with
-                | Some (pos, { name; _ }) when is_some name ->
-                  serr ~pos "argument %s expected here" n
-                | Some (_, { value; _ }) -> parse ~ctx value
-                | None -> serr ~pos "cannot find an argument %s" n))
-        else List.map args ~f:(fun x -> parse ~ctx (snd x).value))
-    in
     if Llvm.Expr.is_type callee_expr
     then (
       let typ = Llvm.Type.expr_type callee_expr in
-      Llvm.Expr.construct typ args)
+      Llvm.Expr.construct typ (List.map args ~f:snd))
     else (
-      let kind = if List.exists args ~f:(( = ) Ctypes.null) then "partial" else "call" in
+      let kind = if List.exists args ~f:(fun (_, x) -> x = Ctypes.null) then "partial" else "call" in
       Llvm.Expr.call ~kind callee_expr args)
 
   and parse_dot ctx pos (lh_expr, rhs) =

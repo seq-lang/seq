@@ -149,7 +149,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
     | _ -> serr ~pos "invalid assignment statement"
 
-  and parse_declare ctx pos ~toplevel ~jit { name; typ } =
+  and parse_declare ctx pos ~toplevel ~jit { name; typ; _ } =
     if jit then serr ~pos "declarations not yet supported in JIT mode";
     match Hashtbl.find ctx.map name with
     | Some ((Ctx_namespace.Var _, { base; global; toplevel; _ }) :: _)
@@ -289,10 +289,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   and parse_extern ctx
                    pos
                    ~toplevel
-                   (lang, dylib, ctx_name, (_, { name; typ }), args) =
+                   (lang, dylib, ctx_name, (_, { name; typ; _ }), args) =
     if lang <> "c" then serr ~pos "only cdef externs are currently supported";
     let names, types =
-      List.map args ~f:(fun (_, { name; typ }) ->
+      List.map args ~f:(fun (_, { name; typ; _ }) ->
           name, E.parse_type ~ctx (Option.value_exn typ))
       |> List.unzip
     in
@@ -400,7 +400,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       pos
       ?cls
       ?(toplevel = false)
-      { fn_name = { name; typ }; fn_generics; fn_args; fn_stmts; fn_attrs }
+      { fn_name = { name; typ; _ }; fn_generics; fn_args; fn_stmts; fn_attrs }
     =
     let fn =
       match cls with
@@ -434,7 +434,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       }
     in
     Ctx.add_block new_ctx;
-    let names, types =
+    let names, types, defaults =
       parse_generics
         new_ctx
         fn_generics
@@ -445,6 +445,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           Llvm.Generics.Func.get fn idx)
     in
     Llvm.Func.set_args fn names types;
+    Llvm.Func.set_defaults fn defaults;
     Option.value_map
       typ
       ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type ~ctx:new_ctx typ))
@@ -472,16 +473,16 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     | None when is_type -> serr ~pos "type definitions must have at least one member"
     | None -> ()
     | Some args ->
-      List.iter args ~f:(fun (pos, { name; typ }) ->
+      List.iter args ~f:(fun (pos, { name; typ; _ }) ->
           if is_none typ then serr ~pos "class member %s needs type specification" name);
-      let names, types =
+      let names, types, _ =
         if is_type
         then
-          List.unzip
+          List.unzip3
           @@ List.map args ~f:(function
-                 | pos, { name; typ = None } ->
+                 | pos, { name; typ = None; _ } ->
                    serr ~pos "type member %s needs type specification" name
-                 | _, { name; typ = Some t } -> name, E.parse_type ~ctx t)
+                 | _, { name; typ = Some t; _ } -> name, E.parse_type ~ctx t, Ctypes.null)
         else
           parse_generics
             new_ctx
@@ -615,11 +616,11 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Parses generic parameters, assigns names to unnamed generics and calls C++ APIs to denote generic functions/classes.
       Also adds generics types to the context. *)
   and parse_generics ctx generic_types args set_generic_count get_generic =
-    let names, types =
+    let names, types, defaults =
       List.map args ~f:(function
-          | _, { name; typ = Some typ } -> name, typ
-          | pos, { name; typ = None } -> name, (pos, Ast.Expr.Id (sprintf "'%s" name)))
-      |> List.unzip
+          | _, { name; typ = Some typ; default } -> name, typ, default
+          | pos, { name; typ = None; default } -> name, (pos, Ast.Expr.Id (sprintf "'%s" name)), default)
+      |> List.unzip3
     in
     let type_args = List.map generic_types ~f:snd in
     let generic_args =
@@ -633,5 +634,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     List.iteri generics ~f:(fun cnt key ->
         Ctx.add ~ctx key (Ctx_namespace.Type (get_generic cnt key)));
     let types = List.map types ~f:(E.parse_type ~ctx) in
-    names, types
+    let defaults = List.map defaults ~f:(function
+      | None -> Ctypes.null
+      | Some expr -> E.parse ~ctx expr) in
+    names, types, defaults
 end

@@ -544,20 +544,23 @@ type_alias:
       TypeAlias (snd $2, $4) }
 // Typed argument rule where type is optional (name [ : type])
 typed_param:
-  | ID param_type?
+  | ID param_type? default_val?
     { let last = Option.value_map $2 ~f:fst ~default:(fst $1) in
       pos (fst $1) last,
-      { name = snd $1; typ = $2 } }
+      { name = snd $1; typ = $2; default = $3 } }
 // Type parameter rule (: type)
 param_type:
   | COLON expr
+    { $2 }
+default_val:
+  | EQ expr
     { $2 }
 
 // Expressions and assignments
 decl_statement:
   | ID COLON expr NL
     { pos (fst $1) (fst $3),
-      Generic (Declare { name = snd $1; typ = Some($3) }) }
+      Generic (Declare { name = snd $1; typ = Some($3); default = None }) }
 assign_statement:
   // Assignment for modifying operators
   // (+=, -=, *=, /=, %=, **=, //=)
@@ -867,14 +870,14 @@ func:
   // Seq function (def foo [ [type+] ] (param+) [ -> return ])
   | DEF; name = ID;
     intypes = generic_list?;
-    LP fn_args = separated_list(COMMA, func_param); RP
+    LP fn_args = separated_list(COMMA, typed_param); RP
     typ = func_ret_type?;
     COLON;
     s = suite
     { let fn_generics = Option.value intypes ~default:[] in
       pos $1 $8,
       Generic (Function
-        { fn_name = { name = snd name; typ };
+        { fn_name = { name = snd name; typ; default = None };
           fn_generics;
           fn_args;
           fn_stmts = s;
@@ -889,7 +892,7 @@ func:
       in
       pos $1 (fst typ),
       Extern ("c", dylib, snd name,
-        (fst name, { name = snd name; typ = Some(typ) }), params) }
+        (fst name, { name = snd name; typ = Some(typ); default = None }), params) }
   | EXTERN; dylib = dylib_spec?; name = ID; AS alt_name = ID
     LP params = separated_list(COMMA, extern_param); RP
     typ = func_ret_type?; NL
@@ -899,26 +902,20 @@ func:
       in
       pos $1 (fst typ),
       Extern ("c", dylib, snd name,
-        (fst name, { name = snd alt_name; typ = Some(typ) }), params) }
+        (fst name, { name = snd alt_name; typ = Some(typ); default = None }), params) }
 
 // Extern paramerers
 extern_param:
   | expr
     { fst $1,
-      { name = ""; typ = Some $1 } }
+      { name = ""; typ = Some $1; default = None } }
   | ID param_type
     { pos (fst $1) (fst $2),
-      { name = snd $1; typ = Some $2 } }
+      { name = snd $1; typ = Some $2; default = None } }
 // Generic specifiers
 generic_list:
   | LS; separated_nonempty_list(COMMA, ID); RS
     { $2 }
-// Parameter rule (a, a: type, a = b)
-func_param:
-  | typed_param
-    { $1 }
-  | ID EQ expr
-    { noimp "NamedArg"(*NamedArg ($1, $3)*) }
 // Return type rule (-> type)
 func_ret_type:
   | OF; expr
@@ -972,7 +969,9 @@ typ:
       Generic (Type { (snd $1) with members = List.filter_opt members }) }
 type_head:
   | TYPE ID LP separated_list(COMMA, typed_param) RP
-    { pos $1 $5,
+    { List.iter $4 ~f:(fun (_, x) ->
+      if is_some x.default then Err.serr ~pos:(pos $1 $5) "type definitions cannot have default arguments");
+      pos $1 $5,
       { class_name = snd $2;
         generics = [];
         args = Some $4;

@@ -208,9 +208,10 @@ module Expr = struct
     fn typ arr len
 
   let call ?(kind = "call") expr args =
-    let fn = foreign (kind ^ "_expr") (t @-> ptr t @-> size_t @-> returning t) in
-    let arr, len = list_to_carr t args in
-    fn expr arr len
+    let names = array_of_string_list (List.map args ~f:fst) in
+    let arr, len = list_to_carr t (List.map args ~f:snd) in
+    let fn = foreign (kind ^ "_expr_with_names") (t @-> ptr t @-> ptr cstring @-> size_t @-> returning t) in
+    fn expr arr (CArray.start names) len
 
   let element elem what =
     foreign "get_elem_expr" (t @-> cstring @-> returning t) elem (strdup what)
@@ -423,6 +424,12 @@ module Func = struct
 
   let set_attr f at =
     foreign "set_func_attr" (t @-> cstring @-> returning void) f (strdup at)
+
+   let set_defaults f defs =
+      let arr, len = list_to_carr Types.expr defs in
+      foreign "set_func_defaults"
+        (t @-> ptr Types.expr @-> size_t @-> returning void)
+        f arr len
 
   let set_return = foreign "set_func_return" (t @-> Types.expr @-> returning void)
   let set_prefetch = foreign "set_func_prefetch" (t @-> Types.stmt @-> returning void)

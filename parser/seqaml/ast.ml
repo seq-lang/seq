@@ -154,7 +154,8 @@ module Stmt = struct
     let pad l = String.make (l * 2) ' ' in
     sprintf "%s%s" (pad indent) s
 
-  and param_to_string (_, { name; typ }) =
+  and param_to_string (_, { name; typ; default }) =
     let typ = Option.value_map typ ~default:"" ~f:(fun x -> " : " ^ Expr.to_string x) in
-    sprintf "%s%s" name typ
+    let def = Option.value_map default ~default:"" ~f:(fun x -> " = " ^ Expr.to_string x) in
+    sprintf "%s%s%s" name typ def
 end
