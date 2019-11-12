@@ -49,6 +49,21 @@ Value *types::FuncType::defaultValue(BasicBlock *block) {
       cast<PointerType>(getLLVMType(block->getContext())));
 }
 
+void types::FuncType::initOps() {
+  if (!vtable.magic.empty())
+    return;
+
+  vtable.magic = {
+      {"__init__",
+       {PtrType::get(Byte)},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+       },
+       false},
+  };
+}
+
 bool types::FuncType::is(Type *type) const {
   auto *fnType = dynamic_cast<FuncType *>(type);
 
