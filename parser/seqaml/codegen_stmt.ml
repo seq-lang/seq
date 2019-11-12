@@ -617,10 +617,23 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Parses generic parameters, assigns names to unnamed generics and calls C++ APIs to denote generic functions/classes.
       Also adds generics types to the context. *)
   and parse_generics ctx generic_types args set_generic_count get_generic =
+    let names_seen = String.Hash_set.create () in
+    let defaults_started = ref false in
     let names, types, defaults =
-      List.map args ~f:(function
-          | _, { name; typ = Some typ; default } -> name, typ, default
-          | pos, { name; typ = None; default } -> name, (pos, Ast.Expr.Id (sprintf "'%s" name)), default)
+      List.map args ~f:(fun (pos, { name; typ; default }) ->
+          let typ = match typ with 
+            | Some typ -> typ
+            | None -> pos, Ast.Expr.Id (sprintf "'%s" name)
+          in 
+          if Hash_set.mem names_seen name then
+            serr ~pos "argument %s already specified" name;
+          Hash_set.add names_seen name;
+          (match default with
+            | Some x -> defaults_started := true
+            | None when !defaults_started -> serr ~pos "cannot have argument without default value here"
+            | None -> ());
+          name, typ, default
+        )
       |> List.unzip3
     in
     (* Util.dbg "== generics: %s" @@ Util.ppl generic_types ~f:snd ; *)
