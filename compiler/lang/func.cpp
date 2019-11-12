@@ -147,7 +147,7 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
   // now fill in regular args:
   if (hasDefaults) {
     // left to right for functions with defaults
-    unsigned next = 0;
+    unsigned next = offset;
     for (unsigned i = 0; i < args.size(); i++) {
       if (!names[i].empty())
         continue;
