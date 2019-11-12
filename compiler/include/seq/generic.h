@@ -163,7 +163,8 @@ public:
   static GenericType *get(Expr *expr);
 
   GenericType *clone(Generic *ref) override;
-  bool findInType(types::Type *type, std::vector<unsigned> &path);
+  bool findInType(types::Type *type, std::vector<unsigned> &path,
+                  bool unwrapOptionals);
 };
 } // namespace types
 
@@ -195,7 +196,8 @@ public:
   Generic *realizeGeneric(std::vector<types::Type *> types);
   std::vector<types::Type *>
   deduceTypesFromArgTypes(const std::vector<types::Type *> &inTypes,
-                          const std::vector<types::Type *> &argTypes);
+                          const std::vector<types::Type *> &argTypes,
+                          bool unwrapOptionals = true);
 };
 } // namespace seq
 

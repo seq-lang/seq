@@ -18,13 +18,22 @@ Value *types::FuncType::call(BaseFunc *base, Value *self,
                              const std::vector<Value *> &args,
                              BasicBlock *block, BasicBlock *normal,
                              BasicBlock *unwind) {
+  LLVMContext &context = block->getContext();
   std::vector<Value *> argsFixed;
   assert(args.size() == inTypes.size());
   for (unsigned i = 0; i < args.size(); i++) {
     // implicit optional conversion allows cases like foo(x, y, z, None)
-    if (::asOpt(inTypes[i])) {
+    if (types::OptionalType *opt = ::asOpt(inTypes[i])) {
       Value *arg = dyn_cast<ConstantPointerNull>(args[i]) ? nullptr : args[i];
-      argsFixed.push_back(::asOpt(inTypes[i])->make(arg, block));
+      if (arg) {
+        llvm::Type *t1 = opt->getBaseType(0)->getLLVMType(context);
+        llvm::Type *t2 = arg->getType();
+        // this can only happen when passing a variable None as a POD optional,
+        // since the type checker allows 'NoneType' arguments on any optional.
+        if (t1 != t2)
+          arg = nullptr;
+      }
+      argsFixed.push_back(opt->make(arg, block));
     } else {
       argsFixed.push_back(args[i]);
     }
@@ -83,8 +92,8 @@ types::Type *types::FuncType::getCallType(const std::vector<Type *> &inTypes) {
   for (unsigned i = 0; i < inTypes.size(); i++)
     if (!compatibleArgType(inTypes[i], this->inTypes[i]))
       throw exc::SeqException("expected function input type '" +
-                              expectedTypeName(this->inTypes[i]) + "', but got '" +
-                              inTypes[i]->getName() + "'");
+                              expectedTypeName(this->inTypes[i]) +
+                              "', but got '" + inTypes[i]->getName() + "'");
 
   return outType;
 }

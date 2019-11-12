@@ -92,13 +92,13 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
     names = std::vector<std::string>(args.size(), "");
   assert(args.size() == names.size());
 
-  bool saw_name = false;
+  bool sawName = false;
   for (unsigned i = 0; i < args.size(); i++) {
     // disallow unnamed args after named args
     if (names[i].empty()) {
-      assert(!saw_name);
+      assert(!sawName);
     } else {
-      saw_name = true;
+      sawName = true;
     }
   }
 
@@ -106,6 +106,14 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
     throw exc::SeqException("expected " + std::to_string(size) +
                             " argument(s), but got " +
                             std::to_string(args.size()));
+  }
+
+  bool hasDefaults = false;
+  for (auto *e : defaultArgs) {
+    if (e) {
+      hasDefaults = true;
+      break;
+    }
   }
 
   std::vector<Expr *> argsFixed(size, nullptr);
@@ -136,20 +144,32 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
     }
   }
 
-  // now fill in right to left:
-  int j = (int)args.size() - 1;
-  while (j >= 0 && !names[j].empty())
-    --j;
-  for (int i = (int)argsFixed.size() - 1; i >= 0; i--) {
-    if (j < 0)
-      break;
+  // now fill in regular args:
+  if (hasDefaults) {
+    // left to right for functions with defaults
+    unsigned next = 0;
+    for (unsigned i = 0; i < args.size(); i++) {
+      if (!names[i].empty())
+        continue;
 
-    if (!argsFixed[i] && !partials[i]) {
-      argsFixed[i] = args[j];
-      --j;
+      assert(next < argsFixed.size());
+      ENSURE_NO_DUP(next);
+      argsFixed[next++] = args[i];
     }
+  } else {
+    // right to left otherwise, to support implicit partials
+    int j = (int)args.size() - 1;
+    while (j >= 0 && !names[j].empty())
+      --j;
+    for (int i = (int)argsFixed.size() - 1; i >= 0; i--) {
+      if (j < 0)
+        break;
+
+      if (!argsFixed[i] && !partials[i])
+        argsFixed[i] = args[j--];
+    }
+    assert(j < 0); // i.e. no unused args
   }
-  assert(j < 0); // i.e. no unused args
 
   // fill in defaults:
   if (!defaultArgs.empty()) {
@@ -263,7 +283,8 @@ void Func::resolveTypes() {
 
   try {
     for (Expr *defaultArg : defaultArgs)
-      if (defaultArg) defaultArg->resolveTypes();
+      if (defaultArg)
+        defaultArg->resolveTypes();
     scope->resolveTypes();
 
     // return type deduction
