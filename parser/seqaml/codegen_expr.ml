@@ -281,11 +281,11 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       if n < 1 || n > 2048
       then serr ~pos "invalid UInt parameter (must be an integer in 1..2048)";
       Llvm.Expr.typ @@ Llvm.Type.uintN n
-    | true, Id "function", Tuple indices ->
+    | _, Id "function", Tuple indices ->
       let indices = List.map indices ~f:(parse_type ~ctx) in
       let ret, args = List.hd_exn indices, List.tl_exn indices in
       Llvm.Expr.typ @@ Llvm.Type.func ret args
-    | true, Id "function", _ ->
+    | _, Id "function", _ ->
       let ret, args = parse_type ~ctx indices, [] in
       Llvm.Expr.typ @@ Llvm.Type.func ret args
     | _, Id "tuple", Tuple indices ->
