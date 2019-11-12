@@ -243,6 +243,8 @@ def product[T](iterables: T, repeat: int):
 def chain(iterables):
     """
     chain(iterables)
+
+    For now chain() == chain.from_iterable()
     """
     for it in iterables:
         for element in it:

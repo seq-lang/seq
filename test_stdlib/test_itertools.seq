@@ -146,16 +146,9 @@ def chain():
     assert list(itertools.chain(['abc', 'def'])) == ['a', 'b', 'c', 'd', 'e', 'f']
     assert list(itertools.chain(['abc'])) == ['a', 'b', 'c']
     assert list(itertools.chain(['a', 'b', 'c'])) == ['a', 'b', 'c']
-# chain()
-
-def from_iterable():
-    assert list(itertools.chain.from_iterable(['abc', 'def'])) == ['a', 'b', 'c', 'd', 'e', 'f']
-    assert list(itertools.chain.from_iterable(['abc'])) == ['a', 'b', 'c']
-    assert list(itertools.chain.from_iterable(['a', 'b', 'c'])) == ['a', 'b', 'c']
-# from_iterable()
-
+chain()
 
 def starmap():
     assert list(itertools.starmap(math.pow, [(2.0, 5.0), (3.0, 2.0), (10.0, 3.0)])) == [32.0, 9.0,  1000.0]
     assert list(itertools.starmap(math.pow, [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0)])) == [0.0**1.0, 1.0**2.0, 2.0**3.0]
-starmap()
+# starmap()
