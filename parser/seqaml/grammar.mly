@@ -86,13 +86,14 @@
 /* keywords */
 %token <Ast.Ann.t> FOR WHILE CONTINUE BREAK           // loops
 %token <Ast.Ann.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals
-%token <Ast.Ann.t> DEF RETURN YIELD EXTERN LAMBDA     // functions
+%token <Ast.Ann.t> DEF RETURN YIELD LAMBDA            // functions
 %token <Ast.Ann.t> TYPE CLASS TYPEOF EXTEND PTR       // types
 %token <Ast.Ann.t> IMPORT FROM GLOBAL IMPORT_CONTEXT  // variables
 %token <Ast.Ann.t> PRINT PASS ASSERT DEL              // keywords
 %token <Ast.Ann.t> TRUE FALSE NONE                    // booleans
 %token <Ast.Ann.t> TRY EXCEPT FINALLY THROW WITH      // exceptions
 %token <Ast.Ann.t> PREFETCH                           // prefetch
+%token <Ast.Ann.t * string> EXTERN
 
 /* operators */
 %token<Ast.Ann.t * string> EQ ASSGN_EQ ELLIPSIS // =, :=, ...
@@ -882,28 +883,32 @@ func:
           fn_args;
           fn_stmts = s;
           fn_attrs = [] }) }
-  // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
-  | EXTERN; dylib = dylib_spec?; name = ID;
-    LP params = separated_list(COMMA, extern_param); RP
-    typ = func_ret_type?; NL
-    { let typ = match typ with
-        | Some typ -> typ
-        | None -> $6, Id("void")
+  | extern { $1 }
+// Extern function (extern lang [ (dylib) ] foo (param+) -> return)
+extern:
+  | from = extern_from?; lang = EXTERN; eas = extern_as?; name = ID;
+      LP; params = separated_list(COMMA, extern_param); RP; typ = func_ret_type?;
+    NL
+    { let p, dylib = match from with
+        | Some (pos, str) -> pos, Some str
+        | None -> fst lang, None
       in
-      pos $1 (fst typ),
-      Extern ("c", dylib, snd name,
-        (fst name, { name = snd name; typ = Some(typ); default = None }), params) }
-  | EXTERN; dylib = dylib_spec?; name = ID; AS alt_name = ID
-    LP params = separated_list(COMMA, extern_param); RP
-    typ = func_ret_type?; NL
-    { let typ = match typ with
+      let typ = match typ with
         | Some typ -> typ
-        | None -> $6, Id("void")
+        | None -> $7, Id "void"
       in
-      pos $1 (fst typ),
-      Extern ("c", dylib, snd name,
-        (fst name, { name = snd alt_name; typ = Some(typ); default = None }), params) }
-
+      let new_name = match eas with
+        | Some name -> name
+        | None -> name
+      in
+      pos p (fst typ),
+      Extern (snd lang, dylib, snd name,
+        (fst name, { name = snd new_name; typ = Some typ; default = None }), params) }
+extern_from:
+  | FROM STRING
+    { pos $1 (fst $2), snd $2 }
+extern_as:
+  | EQ ID { $2 }
 // Extern paramerers
 extern_param:
   | expr
@@ -920,10 +925,6 @@ generic_list:
 func_ret_type:
   | OF; expr
     { $2 }
-// dylib specification
-dylib_spec:
-  | LP STRING RP
-    { snd $2 }
 
 
 // Class statement

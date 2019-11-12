@@ -469,33 +469,34 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     in
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map; stack = Stack.create () } in
     Ctx.add_block new_ctx;
-    (match cls.args with
-    | None when is_type -> serr ~pos "type definitions must have at least one member"
-    | None -> ()
-    | Some args ->
-      List.iter args ~f:(fun (pos, { name; typ; _ }) ->
-          if is_none typ then serr ~pos "class member %s needs type specification" name);
-      let names, types, _ =
-        if is_type
-        then
-          List.unzip3
-          @@ List.map args ~f:(function
-                 | pos, { name; typ = None; _ } ->
-                   serr ~pos "type member %s needs type specification" name
-                 | _, { name; typ = Some t; _ } -> name, E.parse_type ~ctx t, Ctypes.null)
-        else
-          parse_generics
-            new_ctx
-            cls.generics
-            args
-            (Llvm.Generics.Type.set_number typ)
-            (fun idx name ->
-              Llvm.Generics.Type.set_name typ idx name;
-              Llvm.Generics.Type.get typ idx)
-      in
+    let args = match cls.args with
+      | None when is_type -> serr ~pos "type definitions must have at least one member"
+      | None -> []
+      | Some args -> args
+    in
+    List.iter args ~f:(fun (pos, { name; typ; _ }) ->
+        if is_none typ then serr ~pos "class member %s needs type specification" name);
+    let names, types, _ =
       if is_type
-      then Llvm.Type.set_record_names typ names types
-      else Llvm.Type.set_cls_args typ names types);
+      then
+        List.unzip3
+        @@ List.map args ~f:(function
+                | pos, { name; typ = None; _ } ->
+                  serr ~pos "type member %s needs type specification" name
+                | _, { name; typ = Some t; _ } -> name, E.parse_type ~ctx t, Ctypes.null)
+      else
+        parse_generics
+          new_ctx
+          cls.generics
+          args
+          (Llvm.Generics.Type.set_number typ)
+          (fun idx name ->
+            Llvm.Generics.Type.set_name typ idx name;
+            Llvm.Generics.Type.get typ idx)
+    in
+    if is_type
+    then Llvm.Type.set_record_names typ names types
+    else Llvm.Type.set_cls_args typ names types;
     ignore
     @@ List.map cls.members ~f:(function
            | pos, Function f -> parse_function new_ctx pos f ~cls:typ
@@ -622,6 +623,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           | pos, { name; typ = None; default } -> name, (pos, Ast.Expr.Id (sprintf "'%s" name)), default)
       |> List.unzip3
     in
+    (* Util.dbg "== generics: %s" @@ Util.ppl generic_types ~f:snd ; *)
     let type_args = List.map generic_types ~f:snd in
     let generic_args =
       List.filter_map types ~f:(fun x ->
@@ -632,6 +634,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let generics = List.append type_args generic_args |> List.dedup_and_sort ~compare in
     set_generic_count (List.length generics);
     List.iteri generics ~f:(fun cnt key ->
+        Util.dbg "adding %s ..." key;
         Ctx.add ~ctx key (Ctx_namespace.Type (get_generic cnt key)));
     let types = List.map types ~f:(E.parse_type ~ctx) in
     let defaults = List.map defaults ~f:(function
