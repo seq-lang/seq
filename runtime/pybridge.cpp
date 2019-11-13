@@ -5,10 +5,9 @@
 #include <string>
 #include <unordered_map>
 
-std::unordered_map<std::string, void*> dlopen_handles;
+std::unordered_map<std::string, void *> dlopen_handles;
 
-SEQ_FUNC void *seq_get_handle(const char *c)
-{
+SEQ_FUNC void *seq_get_handle(const char *c) {
   auto it = dlopen_handles.find(std::string(c));
   if (it != dlopen_handles.end())
     return it->second;
@@ -16,8 +15,7 @@ SEQ_FUNC void *seq_get_handle(const char *c)
     return 0;
 }
 
-SEQ_FUNC void seq_set_handle(const char *c, void *h)
-{
+SEQ_FUNC void seq_set_handle(const char *c, void *h) {
   dlopen_handles[std::string(c)] = h;
 }
 
@@ -27,7 +25,6 @@ SEQ_FUNC seq_str_t seq_strdup(const char *s) {
   strcpy(s2, s);
   return {(seq_int_t)len, s2};
 }
-
 
 #if PYBRIDGE
 #include <Python.h>

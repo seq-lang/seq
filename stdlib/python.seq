@@ -98,7 +98,6 @@ type pyobj(p: ptr[byte]):
 
 def init():
     Py_Initialize()
-    print 'python initialized!'
 init()
 
 def import_module(name: str):
