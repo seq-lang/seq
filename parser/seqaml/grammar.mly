@@ -886,29 +886,29 @@ func:
   | extern { $1 }
 // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
 extern:
-  | from = extern_from?; lang = EXTERN; eas = extern_as?; name = ID;
-      LP; params = separated_list(COMMA, extern_param); RP; typ = func_ret_type?;
+  | from = extern_from?;
+    lang = EXTERN; name = ID; LP; p = separated_list(COMMA, extern_param); RP; typ = func_ret_type?;
+    eas = extern_as?;
     NL
-    { let p, dylib = match from with
-        | Some (pos, str) -> pos, Some str
-        | None -> fst lang, None
-      in
-      let typ = match typ with
+    { let typ = match typ with
         | Some typ -> typ
-        | None -> $7, Id "void"
+        | None -> $6, Id "void"
       in
-      let new_name = match eas with
-        | Some name -> name
-        | None -> name
-      in
-      pos p (fst typ),
-      Extern (snd lang, dylib, snd name,
-        (fst name, { name = snd new_name; typ = Some typ; default = None }), params) }
+      pos (match from with Some (p, _) -> p | None -> fst lang) (fst typ),
+      ImportExtern
+        { lang = snd lang
+        ; e_from = from
+        ; e_name = { name = snd name; typ = Some typ; default = None }
+        ; e_args = p
+        ; e_as = Option.map eas ~f:snd
+        }
+     }
 extern_from:
-  | FROM STRING
+  | FROM dot_term
     { pos $1 (fst $2), snd $2 }
 extern_as:
-  | EQ ID { $2 }
+  | AS ID { $2 }
+
 // Extern paramerers
 extern_param:
   | expr

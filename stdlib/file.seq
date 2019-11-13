@@ -1,13 +1,13 @@
 import gc
 
 def _f_errcheck(stream: ptr[byte], msg: str):
-    cdef ferror(ptr[byte]) -> i32
+    cimport ferror(ptr[byte]) -> i32
     err = int(ferror(stream))
     if err:
         raise IOError("file I/O error: " + msg)
 
 def _gz_errcheck(stream: ptr[byte]):
-    cdef gzerror(ptr[byte], ptr[i32]) -> ptr[byte]
+    cimport gzerror(ptr[byte], ptr[i32]) -> ptr[byte]
     errnum = i32(0)
     msg = gzerror(stream, __ptr__(errnum))
     if msg and msg[0]:
@@ -18,7 +18,7 @@ def _gz_errcheck(stream: ptr[byte]):
 
 def _f_getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
     def getc(stream: ptr[byte]):
-        cdef fgetc(ptr[byte]) -> i32
+        cimport fgetc(ptr[byte]) -> i32
         return int(fgetc(stream))
 
     if not lineptr[0]:
@@ -53,7 +53,7 @@ def _f_getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
 
 def _gz_getline(lineptr: ptr[ptr[byte]], n: ptr[int], stream: ptr[byte]):
     def getc(stream: ptr[byte]):
-        cdef gzgetc(ptr[byte]) -> i32
+        cimport gzgetc(ptr[byte]) -> i32
         return int(gzgetc(stream))
 
     if not lineptr[0]:
@@ -104,14 +104,14 @@ class File:
         self._reset()
 
     def __init__(self: File, path: str, mode: str):
-        cdef fopen(ptr[byte], ptr[byte]) -> ptr[byte]
+        cimport fopen(ptr[byte], ptr[byte]) -> ptr[byte]
         self.fp = fopen(path.c_str(), mode.c_str())
         if not self.fp:
             raise IOError("file " + path + " could not be opened")
         self._reset()
 
     def close(self):
-        cdef fclose(ptr[byte]) -> int
+        cimport fclose(ptr[byte]) -> int
         if self.fp:
             fclose(self.fp)
             self.fp = ptr[byte]()
@@ -139,7 +139,7 @@ class File:
         return [l for l in self]
 
     def write(self: File, s: str):
-        cdef fwrite(ptr[byte], int, int, ptr[byte]) -> int
+        cimport fwrite(ptr[byte], int, int, ptr[byte]) -> int
         self._ensure_open()
         fwrite(s.ptr, 1, len(s), self.fp)
         _f_errcheck(self.fp, "error in write")
@@ -149,13 +149,13 @@ class File:
             self.write(str(s))
 
     def tell(self: File):
-        cdef ftell(ptr[byte]) -> int
+        cimport ftell(ptr[byte]) -> int
         ret = ftell(self.fp)
         _f_errcheck(self.fp, "error in tell")
         return ret
 
     def seek(self: File, offset: int, whence: int):
-        cdef fseek(ptr[byte], int, i32) -> i32
+        cimport fseek(ptr[byte], int, i32) -> i32
         fseek(self.fp, offset, i32(whence))
         _f_errcheck(self.fp, "error in seek")
 
@@ -183,14 +183,14 @@ class gzFile:
         self._reset()
 
     def __init__(self: gzFile, path: str, mode: str):
-        cdef gzopen(ptr[byte], ptr[byte]) -> ptr[byte]
+        cimport gzopen(ptr[byte], ptr[byte]) -> ptr[byte]
         self.fp = gzopen(path.c_str(), mode.c_str())
         if not self.fp:
             raise IOError("file " + path + " could not be opened")
         self._reset()
 
     def close(self):
-        cdef gzclose(ptr[byte]) -> int
+        cimport gzclose(ptr[byte]) -> int
         if self.fp:
             gzclose(self.fp)
             self.fp = ptr[byte]()
@@ -218,7 +218,7 @@ class gzFile:
         return [l for l in self]
 
     def write(self: gzFile, s: str):
-        cdef gzwrite(ptr[byte], ptr[byte], i32) -> i32
+        cimport gzwrite(ptr[byte], ptr[byte], i32) -> i32
         self._ensure_open()
         gzwrite(self.fp, s.ptr, i32(len(s)))
         _gz_errcheck(self.fp)
@@ -228,13 +228,13 @@ class gzFile:
             self.write(str(s))
 
     def tell(self: gzFile):
-        cdef gztell(ptr[byte]) -> int
+        cimport gztell(ptr[byte]) -> int
         ret = gztell(self.fp)
         _gz_errcheck(self.fp)
         return ret
 
     def seek(self: gzFile, offset: int, whence: int):
-        cdef gzseek(ptr[byte], int, i32) -> int
+        cimport gzseek(ptr[byte], int, i32) -> int
         gzseek(self.fp, offset, i32(whence))
         _gz_errcheck(self.fp)
 

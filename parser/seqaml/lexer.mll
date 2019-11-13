@@ -210,8 +210,8 @@ and read state = parse
       | "typeof"   -> P.TYPEOF     (cur_pos state lexbuf ~len)
       | "__ptr__"  -> P.PTR        (cur_pos state lexbuf ~len)
       | "extend"   -> P.EXTEND     (cur_pos state lexbuf ~len)
-      | "cdef"     -> P.EXTERN     (cur_pos state lexbuf ~len, "c")
-      | "pydef"     -> P.EXTERN    (cur_pos state lexbuf ~len, "py")
+      | "cimport"  -> P.EXTERN     (cur_pos state lexbuf ~len, "c")
+      | "pyimport" -> P.EXTERN     (cur_pos state lexbuf ~len, "py")
       | "del"      -> P.DEL        (cur_pos state lexbuf ~len)
       | "None"     -> P.NONE       (cur_pos state lexbuf ~len)
       | "try"      -> P.TRY        (cur_pos state lexbuf ~len)
@@ -319,6 +319,7 @@ and single_string state prefix = parse
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
+  | _ { Err.SyntaxError ("Bad string", cur_pos state lexbuf) |> raise }
 and single_docstr state prefix = shortest
   | (([^ '\\'] | escape)* as s) "'''" {
     let lines = count_lines s in
@@ -327,11 +328,13 @@ and single_docstr state prefix = shortest
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
+  | _ { Err.SyntaxError ("Bad string", cur_pos state lexbuf) |> raise }
 and double_string state prefix = parse
   | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) '"' {
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
+  | _ { Err.SyntaxError ("Bad string", cur_pos state lexbuf) |> raise }
 and double_docstr state prefix = shortest
   | (([^ '\\'] | escape)* as s) "\"\"\"" {
     let lines = count_lines s in
@@ -340,10 +343,10 @@ and double_docstr state prefix = shortest
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
-
+  | _ { Err.SyntaxError ("Bad string", cur_pos state lexbuf) |> raise }
 and escaped_id state = parse
   | (([^ '\r' '\n' '$' ])* as s) '$' {
     let len = (String.length s) in
     P.ID (cur_pos state lexbuf ~len, s)
   }
-
+  | _ { Err.SyntaxError ("Bad identifier", cur_pos state lexbuf) |> raise }

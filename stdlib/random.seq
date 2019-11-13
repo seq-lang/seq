@@ -1,4 +1,4 @@
-cdef rand() -> int
+cimport rand() -> int
 
 def randint(a: int, b: int) -> int:
     return a + rand() % (b - a + 1)

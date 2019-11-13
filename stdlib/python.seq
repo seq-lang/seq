@@ -1,27 +1,27 @@
 type PyObject(p: ptr[byte]):
     def incref(self: PyObject):
-        cdef seq_py_incref(ptr[byte])
+        cimport seq_py_incref(ptr[byte])
         seq_py_incref(self.p)
 
     def decref(self: PyObject):
-        cdef seq_py_decref(ptr[byte])
+        cimport seq_py_decref(ptr[byte])
         seq_py_decref(self.p)
 
     def call(self: PyObject, args):
-        cdef seq_py_call(ptr[byte], ptr[byte]) -> ptr[byte]
+        cimport seq_py_call(ptr[byte], ptr[byte]) -> ptr[byte]
         args_py: PyObject = args.__to_py__()
         return PyObject(seq_py_call(self.p, args_py.p))
 
     def call_void(self: PyObject):
-        cdef seq_py_call(ptr[byte], ptr[byte]) -> ptr[byte]
+        cimport seq_py_call(ptr[byte], ptr[byte]) -> ptr[byte]
         return PyObject(seq_py_call(self.p, ptr[byte]()))
 
     def __getitem__(self: PyObject, name: str):
-        cdef seq_py_get_attr(ptr[byte], ptr[byte]) -> ptr[byte]
+        cimport seq_py_get_attr(ptr[byte], ptr[byte]) -> ptr[byte]
         return PyObject(seq_py_get_attr(self.p, name.c_str()))
 
     def __setitem__(self: PyObject, name: str, val: PyObject):
-        cdef seq_py_set_attr(ptr[byte], ptr[byte], ptr[byte])
+        cimport seq_py_set_attr(ptr[byte], ptr[byte], ptr[byte])
         seq_py_set_attr(self.p, name.c_str(), val.p)
 
     def __to_py__(self: PyObject):
@@ -32,11 +32,11 @@ class PyException:
     pytype: str
 
 def import_module(name: str):
-    cdef seq_py_import(ptr[byte]) -> ptr[byte]
+    cimport seq_py_import(ptr[byte]) -> ptr[byte]
     return PyObject(seq_py_import(name.c_str()))
 
 def none():
-    cdef seq_py_none() -> ptr[byte]
+    cimport seq_py_none() -> ptr[byte]
     return PyObject(seq_py_none())
 
 
@@ -50,54 +50,54 @@ def get[T](x: PyObject) -> T:
 
 extend int:
     def __to_py__(self: int):
-        cdef seq_int_to_py(int) -> ptr[byte]
+        cimport seq_int_to_py(int) -> ptr[byte]
         return PyObject(seq_int_to_py(self))
 
     def __from_py__(n: PyObject):
-        cdef seq_int_from_py(ptr[byte]) -> int
+        cimport seq_int_from_py(ptr[byte]) -> int
         return seq_int_from_py(n.p)
 
 extend float:
     def __to_py__(self: float):
-        cdef seq_float_to_py(float) -> ptr[byte]
+        cimport seq_float_to_py(float) -> ptr[byte]
         return PyObject(seq_float_to_py(self))
 
     def __from_py__(f: PyObject):
-        cdef seq_float_from_py(ptr[byte]) -> float
+        cimport seq_float_from_py(ptr[byte]) -> float
         return seq_float_from_py(f.p)
 
 extend bool:
     def __to_py__(self: bool):
-        cdef seq_bool_to_py(bool) -> ptr[byte]
+        cimport seq_bool_to_py(bool) -> ptr[byte]
         return PyObject(seq_bool_to_py(self))
 
     def __from_py__(b: PyObject):
-        cdef seq_bool_from_py(ptr[byte]) -> bool
+        cimport seq_bool_from_py(ptr[byte]) -> bool
         return seq_bool_from_py(b.p)
 
 extend byte:
     def __to_py__(self: byte):
-        cdef seq_byte_to_py(byte) -> ptr[byte]
+        cimport seq_byte_to_py(byte) -> ptr[byte]
         return PyObject(seq_byte_to_py(self))
 
     def __from_py__(c: PyObject):
-        cdef seq_byte_from_py(ptr[byte]) -> byte
+        cimport seq_byte_from_py(ptr[byte]) -> byte
         return seq_byte_from_py(c.p)
 
 extend str:
     def __to_py__(self: str):
-        cdef seq_str_to_py(str) -> ptr[byte]
+        cimport seq_str_to_py(str) -> ptr[byte]
         return PyObject(seq_str_to_py(self))
 
     def __from_py__(s: PyObject):
-        cdef seq_str_from_py(ptr[byte]) -> str
+        cimport seq_str_from_py(ptr[byte]) -> str
         return seq_str_from_py(s.p)
 
 extend seq:
     def __to_py__(self: seq):
-        cdef seq_str_to_py(seq) -> ptr[byte]
+        cimport seq_str_to_py(seq) -> ptr[byte]
         return PyObject(seq_str_to_py(self))
 
     def __from_py__(s: PyObject):
-        cdef seq_str_from_py(ptr[byte]) -> seq
+        cimport seq_str_from_py(ptr[byte]) -> seq
         return seq_str_from_py(s.p)

@@ -36,10 +36,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       | While p -> parse_while ctx pos p
       | For p -> parse_for ~ctx pos p
       | Match p -> parse_match ctx pos p
-      | Extern p -> parse_extern ctx pos p ~toplevel
       | Extend p -> parse_extend ctx pos p ~toplevel
       | Import p -> parse_import ctx pos p ~toplevel
       | ImportPaste p -> parse_impaste ctx pos p
+      | ImportExtern p -> parse_extern ctx pos p ~toplevel
       | Pass p -> parse_pass ctx pos p
       | Try p -> parse_try ctx pos p
       | Throw p -> parse_throw ctx pos p
@@ -286,24 +286,51 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             | None -> ()));
     match_stmt
 
-  and parse_extern ctx
-                   pos
-                   ~toplevel
-                   (lang, dylib, ctx_name, (_, { name; typ; _ }), args) =
-    if lang <> "c" then serr ~pos "only cdef externs are currently supported";
-    let names, types =
-      List.map args ~f:(fun (_, { name; typ; _ }) ->
-          name, E.parse_type ~ctx (Option.value_exn typ))
-      |> List.unzip
-    in
-    let fn = Llvm.Func.func name in
-    Llvm.Func.set_args fn names types;
-    Llvm.Func.set_extern fn;
-    let typ = E.parse_type ~ctx (Option.value_exn typ) in
-    Llvm.Func.set_type fn typ;
-    let names = List.map args ~f:(fun (_, x) -> x.name) in
-    Ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Ctx_namespace.Func (fn, names));
-    Llvm.Stmt.func fn
+  and parse_extern ctx pos ~toplevel ext =
+    if ext.lang <> "c" then serr ~pos "only cdef externs are currently supported";
+    let ctx_name = Option.value ext.e_as ~default:ext.e_name.name in
+    match ext.e_from with
+    | Some from ->
+      let params = pos, Tuple
+        ((Option.value_exn ext.e_name.typ) :: (List.map ext.e_args ~f:(fun (_, t) -> Option.value_exn t.typ)))
+      in
+      let rhs =
+        pos, Call
+          ( (pos, Index ((pos, Id "function"), params))
+          , [ pos,
+              { name = None
+              ; value = pos, Call
+                ( (pos, Dot ((pos, Id "c"), "dlsym"))
+                , [ pos
+                  , { name = None; value = pos, Call
+                      ( (pos, Dot ((pos, Id "c"), "dlopen"))
+                      , [ pos, { name = None; value = from } ]
+                      )
+                    }
+                  ; pos, { name = None; value = pos, String ext.e_name.name }
+                  ]
+                )
+              }
+            ]
+          )
+      in
+      Util.dbg "::: %s = %s" (ctx_name) (Ast.Expr.to_string rhs);
+      parse_assign ctx pos ~toplevel ~jit:false
+        ((pos, Id ctx_name), rhs, Shadow, None)
+    | None ->
+      let names, types =
+        List.map ext.e_args ~f:(fun (_, { name; typ; _ }) ->
+            name, E.parse_type ~ctx (Option.value_exn typ))
+        |> List.unzip
+      in
+      let fn = Llvm.Func.func ext.e_name.name in
+      Llvm.Func.set_args fn names types;
+      Llvm.Func.set_extern fn;
+      let typ = E.parse_type ~ctx (Option.value_exn ext.e_name.typ) in
+      Llvm.Func.set_type fn typ;
+      let names = List.map ext.e_args ~f:(fun (_, x) -> x.name) in
+      Ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Ctx_namespace.Func (fn, names));
+      Llvm.Stmt.func fn
 
   and parse_extend ctx pos ~toplevel (name, stmts) =
     if not toplevel then serr ~pos "extensions must be declared at the toplevel";
@@ -621,10 +648,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let defaults_started = ref false in
     let names, types, defaults =
       List.map args ~f:(fun (pos, { name; typ; default }) ->
-          let typ = match typ with 
+          let typ = match typ with
             | Some typ -> typ
             | None -> pos, Ast.Expr.Id (sprintf "'%s" name)
-          in 
+          in
           if Hash_set.mem names_seen name then
             serr ~pos "argument %s already specified" name;
           Hash_set.add names_seen name;

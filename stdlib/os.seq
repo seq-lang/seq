@@ -1,5 +1,5 @@
 def system(cmd: str) -> int:
-    cdef system(cmd: ptr[byte]) -> int
+    cimport system(cmd: ptr[byte]) -> int
     return system(cmd.c_str())
 
 SEEK_SET = 0

@@ -1,0 +1,35 @@
+
+type cobj = ptr[byte]
+
+HANDLES = dict[str, cobj]()
+
+RTLD_NOW = 2
+RTLD_GLOBAL = 8
+
+def dlerror():
+   cimport dlerror() -> cobj
+   cimport strlen(cobj) -> i32
+   err = dlerror()
+   return str(err, int(strlen(err)))
+
+def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
+   if name in HANDLES:
+      return HANDLES[name]
+   cimport dlopen(cobj, int) -> cobj
+   handle = dlopen(name.c_str(), flag)
+   if handle == cobj():
+      raise ArgumentError('dlsym error: ' + dlerror())
+   HANDLES[name] = handle
+   return handle
+
+def dlsym(handle: cobj, name: str) -> cobj:
+   cimport dlsym(cobj, cobj) -> cobj
+   fn = dlsym(handle, name.c_str())
+   if fn == cobj():
+      raise ArgumentError('dlsym error: ' + dlerror())
+   return fn
+
+def dlclose(handle: cobj):
+   cimport dlclose(cobj) -> i32
+   if dlclose(handle) != i32(0):
+      raise ArgumentError('dlsym error: ' + dlerror())

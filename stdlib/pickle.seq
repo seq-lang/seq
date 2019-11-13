@@ -7,14 +7,14 @@ def load[T](f: gzFile):
     return T.__unpickle__(f.fp)
 
 def _write_raw(jar: Jar, p: ptr[byte], n: int):
-    cdef gzwrite(ptr[byte], ptr[byte], u32) -> i32
+    cimport gzwrite(ptr[byte], ptr[byte], u32) -> i32
     status = int(gzwrite(jar, p, u32(n)))
     if status != n:
         _gz_errcheck(jar)
         raise IOError("pickle error: gzwrite returned " + str(status))
 
 def _read_raw(jar: Jar, p: ptr[byte], n: int):
-    cdef gzread(ptr[byte], ptr[byte], u32) -> i32
+    cimport gzread(ptr[byte], ptr[byte], u32) -> i32
     status = int(gzread(jar, p, u32(n)))
     if status != n:
         _gz_errcheck(jar)
@@ -26,7 +26,7 @@ def _write[T](jar: Jar, x: T):
 
 def _read[T](jar: Jar):
     import gc
-    cdef gzread(ptr[byte], ptr[byte], u32) -> i32
+    cimport gzread(ptr[byte], ptr[byte], u32) -> i32
     x = T()
     _read_raw(jar, ptr[byte](__ptr__(x)), gc.sizeof[T]())
     return x

@@ -153,8 +153,8 @@ def reversed(x):
     return x.__reversed__()
 
 def round(x, n) -> float:
-    cdef round(float) -> float
-    cdef pow(float, float) -> float
+    cimport round(float) -> float
+    cimport pow(float, float) -> float
     n := pow(10.0, float(n))
     return round(float(x * n)) / n
 
@@ -185,7 +185,7 @@ extend int:
         return float(self) ** exp
 
     def _from_str(s: str, base: int):
-        cdef strtoll(ptr[byte], ptr[ptr[byte]], i32) -> int
+        cimport strtoll(ptr[byte], ptr[ptr[byte]], i32) -> int
         import gc
 
         if base < 0 or base > 36 or base == 1:
@@ -218,7 +218,7 @@ extend int:
 
 extend float:
     def __init__(self: float, s: str):
-        cdef strtod(ptr[byte], ptr[ptr[byte]]) -> float
+        cimport strtod(ptr[byte], ptr[ptr[byte]]) -> float
         import gc
 
         buf = __array__[byte](32)
@@ -278,6 +278,9 @@ import! sort
 import! list
 import! dict
 import! set
+
+type cobj = ptr[byte]
+import c
 
 def sorted(v):
     u = [a for a in v]

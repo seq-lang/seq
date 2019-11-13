@@ -294,8 +294,8 @@ class dict[K,V]:
             return str.cat(lst)
 
     def __to_py__(self: dict[K,V]):
-        cdef seq_py_dict_new() -> ptr[byte]
-        cdef seq_py_dict_setitem(ptr[byte], ptr[byte], ptr[byte])
+        cimport seq_py_dict_new() -> ptr[byte]
+        cimport seq_py_dict_setitem(ptr[byte], ptr[byte], ptr[byte])
 
         pydict = seq_py_dict_new()
         for k,v in self.items():
@@ -303,7 +303,7 @@ class dict[K,V]:
         return py.PyObject(pydict)
 
     def __from_py__(d: py.PyObject):
-        cdef seq_py_dict_next(ptr[byte], ptr[int], ptr[ptr[byte]], ptr[ptr[byte]]) -> bool
+        cimport seq_py_dict_next(ptr[byte], ptr[int], ptr[ptr[byte]], ptr[ptr[byte]]) -> bool
         b = dict[K,V]()
         pos = 0
         k_ptr = ptr[byte]()

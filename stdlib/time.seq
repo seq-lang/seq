@@ -1,1 +1,1 @@
-cdef time as seq_time () -> int
+cimport seq_time () -> int as time

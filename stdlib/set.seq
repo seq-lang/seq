@@ -365,8 +365,8 @@ class set[K]:
             return str.cat(lst)
 
     def __to_py__(self: set[K]):
-        cdef seq_py_set_new() -> ptr[byte]
-        cdef seq_py_set_add(ptr[byte], ptr[byte])
+        cimport seq_py_set_new() -> ptr[byte]
+        cimport seq_py_set_add(ptr[byte], ptr[byte])
 
         pyset = seq_py_set_new()
         for a in self:

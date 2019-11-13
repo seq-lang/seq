@@ -1,13 +1,13 @@
 argv = list(__argv__, len(__argv__))
 
 
-cdef seq_stdin() -> ptr[byte]
+cimport seq_stdin() -> ptr[byte]
 stdin = File(seq_stdin())
 
-cdef seq_stdout() -> ptr[byte]
+cimport seq_stdout() -> ptr[byte]
 stdout = File(seq_stdout())
 
-cdef seq_stderr() -> ptr[byte]
+cimport seq_stderr() -> ptr[byte]
 stderr = File(seq_stderr())
 
-cdef exit(int)
+cimport exit(int)
