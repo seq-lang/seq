@@ -294,24 +294,19 @@ class dict[K,V]:
             return str.cat(lst)
 
     def __to_py__(self: dict[K,V]):
-        from py.PY_LIB cimport PyDict_New(int) -> cobj
-        from py.PY_LIB cimport PyDict_SetItem(cobj, cobj, cobj) -> cobj
-
-        pydict = PyDict_New()
+        pydict = py.PyDict_New()
         py.pyobj.exc_check()
         for k,v in self.items():
-            PyDict_SetItem(pydict, py.py(k).p, py.py(v).p)
+            py.PyDict_SetItem(pydict, py.py(k).p, py.py(v).p)
             py.pyobj.exc_check()
         return py.pyobj(pydict)
 
     def __from_py__(d: py.pyobj):
-        from py.PY_LIB cimport PyDict_Next(cobj, ptr[int], ptr[cobj], ptr[cobj]) 
-
         b = dict[K,V]()
         pos = 0
-        k_ptr = ptr[byte]()
-        v_ptr = ptr[byte]()
-        while PyDict_Next(d.p, __ptr__(pos), __ptr__(k_ptr), __ptr__(v_ptr)):
+        k_ptr = cobj()
+        v_ptr = cobj()
+        while py.PyDict_Next(d.p, __ptr__(pos), __ptr__(k_ptr), __ptr__(v_ptr)):
             py.pyobj.exc_check()
             k = py.get[K](py.pyobj(k_ptr))
             v = py.get[V](py.pyobj(v_ptr))

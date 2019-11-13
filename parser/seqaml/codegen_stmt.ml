@@ -300,10 +300,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           , [ pos,
               { name = None
               ; value = pos, Call
-                ( (pos, Dot ((pos, Id "c"), "dlsym"))
+                ( (pos, Dot ((pos, Id "C"), "dlsym"))
                 , [ pos
                   , { name = None; value = pos, Call
-                      ( (pos, Dot ((pos, Id "c"), "dlopen"))
+                      ( (pos, Dot ((pos, Id "C"), "dlopen"))
                       , [ pos, { name = None; value = from } ]
                       )
                     }

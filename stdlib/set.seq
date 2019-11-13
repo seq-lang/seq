@@ -365,13 +365,10 @@ class set[K]:
             return str.cat(lst)
 
     def __to_py__(self: set[K]):
-        from py.PY_LIB cimport PySet_New(int) -> cobj
-        from py.PY_LIB cimport PySet_Add(cobj, cobj) -> cobj
-
-        pyset = PySet_New()
+        pyset = py.PySet_New()
         py.pyobj.exc_check()
         for a in self:
-            PySet_Add(pyset, py.py(a).p)
+            py.PySet_Add(pyset, py.py(a).p)
             py.pyobj.exc_check()
         return py.pyobj(pyset)
 

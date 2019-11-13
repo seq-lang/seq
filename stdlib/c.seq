@@ -1,13 +1,17 @@
 RTLD_NOW = 2
 RTLD_GLOBAL = 8
 
+class DLException:
+   msg: str
+
 def dlerror():
     cimport dlerror() -> cobj
-    cimport strlen(cobj) -> i32
-    err = dlerror()
-    return str(err, int(strlen(err)))
+    return str.from_ptr(dlerror())
 
 def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
+    if name.__len__() > 0 and name[0] == "\0":
+       raise DLException(name[1:] + " is not available and thus is disabled.")
+
     cimport seq_get_handle(cobj) -> cobj
     h = seq_get_handle(name.ptr)
     if h != cobj():
@@ -16,7 +20,7 @@ def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
     cimport dlopen(cobj, int) -> cobj
     h = dlopen(name.c_str(), flag)
     if h == cobj():
-        raise ArgumentError('dlsym error: ' + dlerror())
+        raise DLException(dlerror())
     
     cimport seq_set_handle(cobj, cobj)
     seq_set_handle(name.ptr, h)
@@ -27,10 +31,10 @@ def dlsym(handle: cobj, name: str) -> cobj:
     cimport dlsym(cobj, cobj) -> cobj
     fn = dlsym(handle, name.c_str())
     if fn == cobj():
-        raise ArgumentError('dlsym error: ' + dlerror())
+        raise DLException(dlerror())
     return fn
 
 def dlclose(handle: cobj):
     cimport dlclose(cobj) -> i32
     if dlclose(handle) != i32(0):
-        raise ArgumentError('dlsym error: ' + dlerror())
+        raise DLException(dlerror())

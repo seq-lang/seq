@@ -1,5 +1,10 @@
 import! err
 
+type cobj = ptr[byte]
+extend str:
+    def from_ptr(t: cobj) -> str:
+        cimport seq_strdup(cobj) -> str
+        return seq_strdup(t)
 
 type i8  = Int[8]
 type i16 = Int[16]
@@ -9,8 +14,7 @@ type u8  = UInt[8]
 type u16 = UInt[16]
 type u32 = UInt[32]
 type u64 = UInt[64]
-type cobj = ptr[byte]
-import c
+import C
 
 type range(lo: int, hi: int, step: int):
     def __init__(self: range, lo: int, hi: int, step: int) -> range:
@@ -287,7 +291,7 @@ def sorted(v):
     qsort(u.arr[0:len(u)])
     return u
 
-extend str:
+extend str:        
     def __hash__(self: str):
         h = 0
         p, n = self.ptr, self.len
