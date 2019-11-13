@@ -365,13 +365,15 @@ class set[K]:
             return str.cat(lst)
 
     def __to_py__(self: set[K]):
-        cimport seq_py_set_new() -> ptr[byte]
-        cimport seq_py_set_add(ptr[byte], ptr[byte])
+        from py.PY_LIB cimport PySet_New(int) -> cobj
+        from py.PY_LIB cimport PySet_Add(cobj, cobj) -> cobj
 
-        pyset = seq_py_set_new()
+        pyset = PySet_New()
+        py.pyobj.exc_check()
         for a in self:
-            seq_py_set_add(pyset, py.py(a).p)
-        return py.PyObject(pyset)
+            PySet_Add(pyset, py.py(a).p)
+            py.pyobj.exc_check()
+        return py.pyobj(pyset)
 
     def __pickle__(self: set[K], jar: Jar):
         n_buckets = self._n_buckets

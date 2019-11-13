@@ -294,23 +294,27 @@ class dict[K,V]:
             return str.cat(lst)
 
     def __to_py__(self: dict[K,V]):
-        cimport seq_py_dict_new() -> ptr[byte]
-        cimport seq_py_dict_setitem(ptr[byte], ptr[byte], ptr[byte])
+        from py.PY_LIB cimport PyDict_New(int) -> cobj
+        from py.PY_LIB cimport PyDict_SetItem(cobj, cobj, cobj) -> cobj
 
-        pydict = seq_py_dict_new()
+        pydict = PyDict_New()
+        py.pyobj.exc_check()
         for k,v in self.items():
-            seq_py_dict_setitem(pydict, py.py(k).p, py.py(v).p)
-        return py.PyObject(pydict)
+            PyDict_SetItem(pydict, py.py(k).p, py.py(v).p)
+            py.pyobj.exc_check()
+        return py.pyobj(pydict)
 
-    def __from_py__(d: py.PyObject):
-        cimport seq_py_dict_next(ptr[byte], ptr[int], ptr[ptr[byte]], ptr[ptr[byte]]) -> bool
+    def __from_py__(d: py.pyobj):
+        from py.PY_LIB cimport PyDict_Next(cobj, ptr[int], ptr[cobj], ptr[cobj]) 
+
         b = dict[K,V]()
         pos = 0
         k_ptr = ptr[byte]()
         v_ptr = ptr[byte]()
-        while seq_py_dict_next(d.p, __ptr__(pos), __ptr__(k_ptr), __ptr__(v_ptr)):
-            k = py.get[K](py.PyObject(k_ptr))
-            v = py.get[V](py.PyObject(v_ptr))
+        while PyDict_Next(d.p, __ptr__(pos), __ptr__(k_ptr), __ptr__(v_ptr)):
+            py.pyobj.exc_check()
+            k = py.get[K](py.pyobj(k_ptr))
+            v = py.get[V](py.pyobj(v_ptr))
             b[k] = v
         return b
 

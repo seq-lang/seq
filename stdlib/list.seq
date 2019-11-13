@@ -256,24 +256,26 @@ class list[T]:
             return str.cat(y)
 
     def __to_py__(self: list[T]):
-        cimport seq_py_list_new(int) -> ptr[byte]
-        cimport seq_py_list_setitem(ptr[byte], int, ptr[byte])
+        from py.PY_LIB cimport PyList_New(int) -> cobj
+        from py.PY_LIB cimport PyList_SetItem(cobj, int, cobj) -> cobj
 
-        pylist = seq_py_list_new(len(self))
+        pylist = PyList_New(len(self))
+        py.pyobj.exc_check()
         idx = 0
         for a in self:
-            seq_py_list_setitem(pylist, idx, py.py(a).p)
+            PyList_SetItem(pylist, idx, py.py(a).p)
+            py.pyobj.exc_check()
             idx += 1
-        return py.PyObject(pylist)
+        return py.pyobj(pylist)
 
-    def __from_py__(v: py.PyObject):
-        cimport seq_py_list_len(ptr[byte]) -> int
-        cimport seq_py_list_getitem(ptr[byte], int) -> ptr[byte]
-
-        n = seq_py_list_len(v.p)
+    def __from_py__(v: py.pyobj):
+        from py.PY_LIB cimport PyList_GetItem(cobj, int) -> cobj
+        
+        n = v.__len__()
         t = list[T](n)
         for i in range(n):
-            elem = py.PyObject(seq_py_list_getitem(v.p, i))
+            elem = py.pyobj(PyList_GetItem(v.p, i))
+            py.pyobj.exc_check()
             t.append(py.get[T](elem))
         return t
 

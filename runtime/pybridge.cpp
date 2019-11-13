@@ -3,6 +3,31 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <unordered_map>
+
+std::unordered_map<std::string, void*> dlopen_handles;
+
+SEQ_FUNC void *seq_get_handle(const char *c)
+{
+  auto it = dlopen_handles.find(std::string(c));
+  if (it != dlopen_handles.end())
+    return it->second;
+  else
+    return 0;
+}
+
+SEQ_FUNC void seq_set_handle(const char *c, void *h)
+{
+  dlopen_handles[std::string(c)] = h;
+}
+
+SEQ_FUNC seq_str_t seq_strdup(const char *s) {
+  size_t len = strlen(s);
+  auto *s2 = (char *)seq_alloc_atomic(len + 1);
+  strcpy(s2, s);
+  return {(seq_int_t)len, s2};
+}
+
 
 #if PYBRIDGE
 #include <Python.h>
@@ -24,13 +49,6 @@ struct PyException {
   seq_str_t msg;
   seq_str_t type;
 };
-
-static seq_str_t seq_strdup(const char *s) {
-  size_t len = strlen(s);
-  auto *s2 = (char *)seq_alloc_atomic(len + 1);
-  strcpy(s2, s);
-  return {(seq_int_t)len, s2};
-}
 
 static void seq_py_exc_check() {
   // if an exception occurs, transform it into a Seq exception:

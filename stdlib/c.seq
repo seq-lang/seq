@@ -1,8 +1,4 @@
 
-type cobj = ptr[byte]
-
-HANDLES = dict[str, cobj]()
-
 RTLD_NOW = 2
 RTLD_GLOBAL = 8
 
@@ -13,14 +9,20 @@ def dlerror():
    return str(err, int(strlen(err)))
 
 def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
-   if name in HANDLES:
-      return HANDLES[name]
+   cimport seq_get_handle(cobj) -> cobj
+   h = seq_get_handle(name.ptr)
+   if h != cobj():
+      return h
+
    cimport dlopen(cobj, int) -> cobj
-   handle = dlopen(name.c_str(), flag)
-   if handle == cobj():
+   h = dlopen(name.c_str(), flag)
+   if h == cobj():
       raise ArgumentError('dlsym error: ' + dlerror())
-   HANDLES[name] = handle
-   return handle
+   
+   cimport seq_set_handle(cobj, cobj)
+   seq_set_handle(name.ptr, h)
+
+   return h
 
 def dlsym(handle: cobj, name: str) -> cobj:
    cimport dlsym(cobj, cobj) -> cobj

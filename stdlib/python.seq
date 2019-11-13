@@ -1,103 +1,155 @@
-type PyObject(p: ptr[byte]):
-    def incref(self: PyObject):
-        cimport seq_py_incref(ptr[byte])
-        seq_py_incref(self.p)
-
-    def decref(self: PyObject):
-        cimport seq_py_decref(ptr[byte])
-        seq_py_decref(self.p)
-
-    def call(self: PyObject, args):
-        cimport seq_py_call(ptr[byte], ptr[byte]) -> ptr[byte]
-        args_py: PyObject = args.__to_py__()
-        return PyObject(seq_py_call(self.p, args_py.p))
-
-    def call_void(self: PyObject):
-        cimport seq_py_call(ptr[byte], ptr[byte]) -> ptr[byte]
-        return PyObject(seq_py_call(self.p, ptr[byte]()))
-
-    def __getitem__(self: PyObject, name: str):
-        cimport seq_py_get_attr(ptr[byte], ptr[byte]) -> ptr[byte]
-        return PyObject(seq_py_get_attr(self.p, name.c_str()))
-
-    def __setitem__(self: PyObject, name: str, val: PyObject):
-        cimport seq_py_set_attr(ptr[byte], ptr[byte], ptr[byte])
-        seq_py_set_attr(self.p, name.c_str(), val.p)
-
-    def __to_py__(self: PyObject):
-        return self
+PY_LIB = "/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib"
 
 class PyException:
     msg: str
     pytype: str
 
+cimport seq_strdup(cobj) -> str
+
+type pyobj(p: ptr[byte]):
+    def exc_check():
+        ptype, pvalue, ptraceback = cobj(), cobj(), cobj()
+        
+        from PY_LIB cimport PyErr_Fetch(ptr[cobj], ptr[cobj], ptr[cobj])
+        PyErr_Fetch(__ptr__(ptype), __ptr__(pvalue), __ptr__(ptraceback))
+
+        if ptype != cobj():
+            from PY_LIB cimport PyObject_Str(cobj) -> cobj
+            py_msg = PyObject_Str(pvalue) if pvalue != cobj() else pvalue 
+            
+            from PY_LIB cimport PyString_AsString(cobj) -> cobj
+            msg = seq_strdup(PyString_AsString(py_msg)) if py_msg != cobj() else "<empty Python message>"
+            typ =  "N/A"
+            #seq_strdup(ptype + 8) # TODO: UGLY!!!!!! Does a manual move to tp_name
+
+            pyobj(ptype).decref()
+            pyobj(pvalue).decref()
+            pyobj(ptraceback).decref()
+            pyobj(py_msg).decref()
+
+            raise PyException(msg, typ)
+
+    def _wrap(_retval):
+        pyobj.exc_check()
+        return _retval
+
+    def incref(self: pyobj):
+        from PY_LIB cimport Py_IncRef(cobj) as f
+        f(self.p)
+
+    def decref(self: pyobj):
+        from PY_LIB cimport Py_DecRef(cobj) as f
+        f(self.p)
+
+    def call(self: pyobj, args : optional[pyobj] = None):
+        from PY_LIB cimport PyObject_CallObject(cobj, cobj) -> cobj as f
+        args_py = (~args).p if args else cobj()
+        #return pyobj._wrap(
+        return pyobj(f(self.p, args_py))
+
+    def __getitem__(self: pyobj, name: str):
+        from PY_LIB cimport PyObject_GetAttrString(cobj, cobj) -> cobj as f
+        return pyobj._wrap(pyobj(f(self.p, name.c_str())))
+
+    def __setitem__(self: pyobj, name: str, val: pyobj):
+        from PY_LIB cimport PyObject_SetAttrString(cobj, cobj, cobj) -> cobj as f
+        return pyobj._wrap(pyobj(f(self.p, name.c_str(), val.p)))
+
+    def __len__(self: pyobj):
+        from PY_LIB cimport PyObject_Length(cobj) -> int as f
+        return pyobj._wrap(f(self.p))
+
+    def __to_py__(self: pyobj):
+        return self
+
+def init(): 
+    from PY_LIB cimport Py_Initialize()
+    Py_Initialize()
+    print 'python initialized!'
+init()
+
 def import_module(name: str):
-    cimport seq_py_import(ptr[byte]) -> ptr[byte]
-    return PyObject(seq_py_import(name.c_str()))
+    from PY_LIB cimport PyImport_ImportModule(cobj) -> cobj as f
+    return pyobj._wrap(pyobj(f(name.c_str())))
 
 def none():
-    cimport seq_py_none() -> ptr[byte]
-    return PyObject(seq_py_none())
-
+    #cimport seq_py_none() -> ptr[byte]
+    #return pyobj(seq_py_none())
+    raise PyException("not yet done", "n/a")
 
 # conversions
 
-def py(x) -> PyObject:
+def py(x) -> pyobj:
     return x.__to_py__()
 
-def get[T](x: PyObject) -> T:
+def get[T](x: pyobj) -> T:
     return T.__from_py__(x)
 
 extend int:
     def __to_py__(self: int):
-        cimport seq_int_to_py(int) -> ptr[byte]
-        return PyObject(seq_int_to_py(self))
-
-    def __from_py__(n: PyObject):
-        cimport seq_int_from_py(ptr[byte]) -> int
-        return seq_int_from_py(n.p)
+        from PY_LIB cimport PyLong_FromLong(int) -> cobj as f
+        return pyobj._wrap(pyobj(f(self)))
+    
+    def __from_py__(i: pyobj):
+        from PY_LIB cimport PyLong_AsLong(cobj) -> int as f
+        return pyobj._wrap(f(i.p))
 
 extend float:
     def __to_py__(self: float):
-        cimport seq_float_to_py(float) -> ptr[byte]
-        return PyObject(seq_float_to_py(self))
+        from PY_LIB cimport PyFloat_FromDouble(float) -> cobj as f
+        return pyobj._wrap(pyobj(f(self)))
 
-    def __from_py__(f: PyObject):
-        cimport seq_float_from_py(ptr[byte]) -> float
-        return seq_float_from_py(f.p)
+    def __from_py__(f: pyobj):
+        from PY_LIB cimport PyFloat_AsDouble(cobj) -> float as f
+        return pyobj._wrap(f(f.p))
 
 extend bool:
     def __to_py__(self: bool):
-        cimport seq_bool_to_py(bool) -> ptr[byte]
-        return PyObject(seq_bool_to_py(self))
+        from PY_LIB cimport PyBool_FromLong(int) -> cobj as f
+        return pyobj._wrap(pyobj(f(self)))
 
-    def __from_py__(b: PyObject):
-        cimport seq_bool_from_py(ptr[byte]) -> bool
-        return seq_bool_from_py(b.p)
+    def __from_py__(b: pyobj):
+        from PY_LIB cimport PyObject_IsTrue(cobj) -> int as f
+        return pyobj._wrap(f(b.p)) != 0
 
 extend byte:
     def __to_py__(self: byte):
-        cimport seq_byte_to_py(byte) -> ptr[byte]
-        return PyObject(seq_byte_to_py(self))
-
-    def __from_py__(c: PyObject):
-        cimport seq_byte_from_py(ptr[byte]) -> byte
-        return seq_byte_from_py(c.p)
-
+        return str.__to_py__(str(__ptr__(self), 1))
+        
+    def __from_py__(c: pyobj):
+        return str.__from_py__(c).p[0]
+        
 extend str:
     def __to_py__(self: str):
-        cimport seq_str_to_py(str) -> ptr[byte]
-        return PyObject(seq_str_to_py(self))
+        from PY_LIB cimport PyUnicode_DecodeFSDefaultAndSize(cobj, int) -> cobj as f
+        return pyobj._wrap(f(self.p, self.len))
 
-    def __from_py__(s: PyObject):
-        cimport seq_str_from_py(ptr[byte]) -> str
-        return seq_str_from_py(s.p)
+    def __from_py__(s: pyobj):
+        from PY_LIB cimport PyString_AsString(cobj) -> cobj as f
+        return pyobj._wrap(seq_strdup(f(s.p)))
 
 extend seq:
     def __to_py__(self: seq):
-        cimport seq_str_to_py(seq) -> ptr[byte]
-        return PyObject(seq_str_to_py(self))
+        from PY_LIB cimport PyUnicode_DecodeFSDefaultAndSize(cobj, int) -> cobj as f
+        return pyobj._wrap(f(self.p, self.len))
 
-    def __from_py__(s: PyObject):
-        cimport seq_str_from_py(ptr[byte]) -> seq
-        return seq_str_from_py(s.p)
+    def __from_py__(s: pyobj) -> seq:
+        from PY_LIB cimport PyString_AsString(cobj) -> cobj as f
+        cimport seq_strdup(cobj) -> str
+        return pyobj._wrap(seq(seq_strdup(f(s.p))))
+
+def tuple_to_py(t):
+    from PY_LIB cimport PyTuple_New(int) -> cobj
+    obj = pyobj._wrap(pyobj(PyTuple_New(len(t))))
+    from PY_LIB cimport PyTuple_SetItem(cobj, int, cobj)
+    idx = 0
+    for i in t:
+        val = i.__to_py__()
+        PyTuple_SetItem(obj.p, idx, val.p)
+        pyobj.exc_check()
+        idx += 1
+    return obj
+
+def tuple_getitem(self: pyobj, idx: int):
+    from PY_LIB cimport PyTuple_GetItem(cobj, int) -> cobj as f
+    return pyobj._wrap(pyobj(f(self.p, idx)))
