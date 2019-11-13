@@ -987,7 +987,7 @@ extend:
 // Class suite members
 class_member:
   // Empty statements
-  | PASS NL { None }
+  | PASS NL | STRING NL { None }
   // TODO later: | class_statement
   // Functions
   | func_statement
