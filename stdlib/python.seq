@@ -1,42 +1,42 @@
-PY_LIB = "/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib"
+LD = "/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib"
 
 from C import dlopen, DLException
 try:
-    dlopen(PY_LIB)
+    dlopen(LD)
 except DLException:
-    PY_LIB = "\0" + PY_LIB
+    LD = "\0" + LD
 
-from PY_LIB cimport PyUnicode_AsEncodedString(cobj, cobj, cobj) -> cobj
-from PY_LIB cimport PyBytes_AsString(cobj) -> cobj
-from PY_LIB cimport PyErr_Fetch(ptr[cobj], ptr[cobj], ptr[cobj])
-from PY_LIB cimport PyObject_GetAttrString(cobj, cobj) -> cobj
-from PY_LIB cimport PyObject_Str(cobj) -> cobj
-from PY_LIB cimport PyRun_SimpleString(cobj)
-from PY_LIB cimport Py_IncRef(cobj)
-from PY_LIB cimport Py_DecRef(cobj)
-from PY_LIB cimport PyObject_CallObject(cobj, cobj) -> cobj
-from PY_LIB cimport PyObject_SetAttrString(cobj, cobj, cobj) -> cobj
-from PY_LIB cimport PyObject_Length(cobj) -> int
-from PY_LIB cimport Py_Initialize()
-from PY_LIB cimport PyImport_ImportModule(cobj) -> cobj
-from PY_LIB cimport PyLong_FromLong(int) -> cobj
-from PY_LIB cimport PyLong_AsLong(cobj) -> int
-from PY_LIB cimport PyFloat_FromDouble(float) -> cobj
-from PY_LIB cimport PyFloat_AsDouble(cobj) -> float
-from PY_LIB cimport PyBool_FromLong(int) -> cobj
-from PY_LIB cimport PyObject_IsTrue(cobj) -> int
-from PY_LIB cimport PyUnicode_DecodeFSDefaultAndSize(cobj, int) -> cobj
-from PY_LIB cimport PyTuple_New(int) -> cobj
-from PY_LIB cimport PyTuple_SetItem(cobj, int, cobj)
-from PY_LIB cimport PyTuple_GetItem(cobj, int, cobj)
-from PY_LIB cimport PyList_New(int) -> cobj
-from PY_LIB cimport PyList_SetItem(cobj, int, cobj) -> cobj
-from PY_LIB cimport PyList_GetItem(cobj, int) -> cobj
-from PY_LIB cimport PySet_New(int) -> cobj
-from PY_LIB cimport PySet_Add(cobj, cobj) -> cobj
-from PY_LIB cimport PyDict_New(int) -> cobj
-from PY_LIB cimport PyDict_SetItem(cobj, cobj, cobj) -> cobj
-from PY_LIB cimport PyDict_Next(cobj, ptr[int], ptr[cobj], ptr[cobj]) -> int
+from LD cimport PyUnicode_AsEncodedString(cobj, cobj, cobj) -> cobj
+from LD cimport PyBytes_AsString(cobj) -> cobj
+from LD cimport PyErr_Fetch(ptr[cobj], ptr[cobj], ptr[cobj])
+from LD cimport PyObject_GetAttrString(cobj, cobj) -> cobj
+from LD cimport PyObject_Str(cobj) -> cobj
+from LD cimport PyRun_SimpleString(cobj)
+from LD cimport Py_IncRef(cobj)
+from LD cimport Py_DecRef(cobj)
+from LD cimport PyObject_CallObject(cobj, cobj) -> cobj
+from LD cimport PyObject_SetAttrString(cobj, cobj, cobj) -> cobj
+from LD cimport PyObject_Length(cobj) -> int
+from LD cimport Py_Initialize()
+from LD cimport PyImport_ImportModule(cobj) -> cobj
+from LD cimport PyLong_FromLong(int) -> cobj
+from LD cimport PyLong_AsLong(cobj) -> int
+from LD cimport PyFloat_FromDouble(float) -> cobj
+from LD cimport PyFloat_AsDouble(cobj) -> float
+from LD cimport PyBool_FromLong(int) -> cobj
+from LD cimport PyObject_IsTrue(cobj) -> int
+from LD cimport PyUnicode_DecodeFSDefaultAndSize(cobj, int) -> cobj
+from LD cimport PyTuple_New(int) -> cobj
+from LD cimport PyTuple_SetItem(cobj, int, cobj)
+from LD cimport PyTuple_GetItem(cobj, int) -> cobj
+from LD cimport PyList_New(int) -> cobj
+from LD cimport PyList_SetItem(cobj, int, cobj) -> cobj
+from LD cimport PyList_GetItem(cobj, int) -> cobj
+from LD cimport PySet_New(cobj) -> cobj
+from LD cimport PySet_Add(cobj, cobj) -> cobj
+from LD cimport PyDict_New() -> cobj
+from LD cimport PyDict_SetItem(cobj, cobj, cobj) -> cobj
+from LD cimport PyDict_Next(cobj, ptr[int], ptr[cobj], ptr[cobj]) -> int
 
 class PyException:
     msg: str
@@ -47,7 +47,6 @@ type pyobj(p: ptr[byte]):
         obj = PyUnicode_AsEncodedString(self.p, "utf-8".c_str(), errors.c_str())
         if obj == cobj():
             return empty
-        
         bts = PyBytes_AsString(obj)
         pyobj(obj).decref()
         return str.from_ptr(bts)
@@ -99,10 +98,9 @@ type pyobj(p: ptr[byte]):
 def init():
     Py_Initialize()
     print 'python initialized!'
-init()
 
-def import_module(name: str):
-    return pyobj.exc_wrap(pyobj(PyImport_ImportModule(name.c_str())))
+if LD.__len__() == 0 or LD[0] != "\0":
+    init()
 
 def none():
     #cimport seq_py_none() -> ptr[byte]
@@ -118,36 +116,36 @@ def get[T](x: pyobj) -> T:
     return T.__from_py__(x)
 
 extend int:
-    def __to_py__(self: int):
+    def __to_py__(self: int) -> pyobj:
         return pyobj.exc_wrap(pyobj(PyLong_FromLong(self)))
     
     def __from_py__(i: pyobj):
         return pyobj.exc_wrap(PyLong_AsLong(i.p))
 
 extend float:
-    def __to_py__(self: float):
+    def __to_py__(self: float) -> pyobj:
         return pyobj.exc_wrap(pyobj(PyFloat_FromDouble(self)))
 
     def __from_py__(d: pyobj):
         return pyobj.exc_wrap(PyFloat_AsDouble(d.p))
 
 extend bool:
-    def __to_py__(self: bool):
-        return pyobj.exc_wrap(pyobj(PyBool_FromLong(self)))
+    def __to_py__(self: bool) -> pyobj:
+        return pyobj.exc_wrap(pyobj(PyBool_FromLong(int(self))))
 
     def __from_py__(b: pyobj):
         return pyobj.exc_wrap(PyObject_IsTrue(b.p)) != 0
 
 extend byte:
-    def __to_py__(self: byte):
+    def __to_py__(self: byte) -> pyobj:
         return str.__to_py__(str(__ptr__(self), 1))
         
     def __from_py__(c: pyobj):
         return str.__from_py__(c).p[0]
         
 extend str:
-    def __to_py__(self: str):
-        return pyobj.exc_wrap(PyUnicode_DecodeFSDefaultAndSize(self.p, self.len))
+    def __to_py__(self: str) -> pyobj:
+        return pyobj.exc_wrap(pyobj(PyUnicode_DecodeFSDefaultAndSize(self.ptr, self.len)))
 
     def __from_py__(s: pyobj):
         r = s.to_str("strict")
@@ -155,31 +153,27 @@ extend str:
         return r
 
 extend seq:
-    def __to_py__(self: seq):
+    def __to_py__(self: seq) -> pyobj:
         return str(self).__to_py__()
         
     def __from_py__(s: pyobj) -> seq:
         return seq(str.__from_py__(s))
 
-def py_tuple_new(len: int) -> pyobj:
-    return pyobj.exc_wrap(pyobj(PyTuple_New(len)))
+# We need cobjs here for LLVM to access them easily
 
-def py_tuple_setitem(obj: pyobj, idx: int, val: pyobj):
-    PyTuple_SetItem(obj.p, idx, val.p)
+def py_tuple_new(len: int) -> cobj:
+    t = PyTuple_New(len)
     pyobj.exc_check()
+    return t
+_force_py_tuple_new = py_tuple_new
 
-def py_tuple_getitem(obj: pyobj, idx: int) -> pyobj:
-    return pyobj.exc_wrap(pyobj(PyTuple_GetItem(obj.p, idx)))
+def py_tuple_setitem(obj: cobj, idx: int, val: cobj):
+    PyTuple_SetItem(obj, idx, val)
+    pyobj.exc_check()
+_force_py_tuple_setitem = py_tuple_setitem
 
-def tuple_to_py(t):
-    obj = pyobj.exc_wrap(pyobj(PyTuple_New(len(t))))
-    idx = 0
-    for i in t:
-        val = i.__to_py__()
-        PyTuple_SetItem(obj.p, idx, val.p)
-        pyobj.exc_check()
-        idx += 1
-    return obj
-
-def tuple_getitem(self: pyobj, idx: int):
-    return pyobj.exc_wrap(pyobj(PyTuple_GetItem(self.p, idx)))
+def py_tuple_getitem(obj: cobj, idx: int) -> cobj:
+    t = PyTuple_GetItem(obj, idx)
+    pyobj.exc_check()
+    return t
+_force_py_tuple_getitem = py_tuple_getitem

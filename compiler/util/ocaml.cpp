@@ -563,7 +563,15 @@ FOREIGN void set_thread_local(Var *v) { v->setThreadLocal(); }
 
 FOREIGN char type_eq(types::Type *a, types::Type *b) { return types::is(a, b); }
 
-FOREIGN char *get_func_attrs(Func *f) {
+FOREIGN char *get_func_attrs(Expr *e) {
+  auto *fn = dynamic_cast<FuncExpr *>(e);
+  if (!fn)
+    return (char *)"";
+
+  auto f = dynamic_cast<Func *>(fn->getFunc());
+  if (!f)
+    return (char *)"";
+
   string r;
   for (auto s : f->getAttributes())
     r += s + "\b";

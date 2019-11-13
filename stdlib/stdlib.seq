@@ -510,3 +510,12 @@ extend str:
             yield self[prev:len(self)]
 
 import! bio
+
+PY_MODULES = dict[str, py.pyobj]()
+def py_import(name: str):
+    if name in PY_MODULES:
+        return PY_MODULES[name]
+
+    m = py.pyobj.exc_wrap(py.pyobj(py.PyImport_ImportModule(name.c_str())))
+    PY_MODULES[name] = m
+    return m

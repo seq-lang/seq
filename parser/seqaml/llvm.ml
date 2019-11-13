@@ -419,7 +419,7 @@ module Func = struct
     List.rev names |> List.tl_exn |> List.rev
 
   let get_attrs f =
-    let s = foreign "get_func_attrs" (t @-> returning string) f in
+    let s = foreign "get_func_attrs" (Expr.t @-> returning string) f in
     String.split ~on:'\b' s
 
   let set_attr f at =

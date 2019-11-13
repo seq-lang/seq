@@ -364,8 +364,8 @@ class set[K]:
             lst.append("}")
             return str.cat(lst)
 
-    def __to_py__(self: set[K]):
-        pyset = py.PySet_New()
+    def __to_py__(self: set[K]) -> py.pyobj:
+        pyset = py.PySet_New(cobj())
         py.pyobj.exc_check()
         for a in self:
             py.PySet_Add(pyset, py.py(a).p)

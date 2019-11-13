@@ -255,7 +255,7 @@ class list[T]:
             y.append("]")
             return str.cat(y)
 
-    def __to_py__(self: list[T]):
+    def __to_py__(self: list[T]) -> py.pyobj:
         pylist = py.PyList_New(len(self))
         py.pyobj.exc_check()
         idx = 0

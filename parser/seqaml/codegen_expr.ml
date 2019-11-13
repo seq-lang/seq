@@ -378,6 +378,16 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
 
   and parse_call_real ctx pos (callee_expr, args) =
     let callee_expr = parse ~ctx callee_expr in
+    let attrs = Llvm.Func.get_attrs callee_expr in
+    let args =
+      (* foo(a, b, c) -> foo( (a, b, c) ) *)
+      if List.exists attrs ~f:((=) "pyhandle")
+      then (
+        Util.dbg "woohoo!";
+        [ pos, { name = None ; value = pos, Tuple (List.map args ~f:(fun (_, x) -> x.value)) } ]
+      )
+      else args
+    in
     let names = Llvm.Func.get_arg_names callee_expr in
     let _, args =
           List.fold_map args ~init:false ~f:(fun acc (pos, { name; value }) ->

@@ -293,7 +293,7 @@ class dict[K,V]:
             lst.append("}")
             return str.cat(lst)
 
-    def __to_py__(self: dict[K,V]):
+    def __to_py__(self: dict[K,V]) -> py.pyobj:
         pydict = py.PyDict_New()
         py.pyobj.exc_check()
         for k,v in self.items():

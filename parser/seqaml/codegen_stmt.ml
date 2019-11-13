@@ -287,10 +287,45 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     match_stmt
 
   and parse_extern ctx pos ~toplevel ext =
-    if ext.lang <> "c" then serr ~pos "only cdef externs are currently supported";
     let ctx_name = Option.value ext.e_as ~default:ext.e_name.name in
-    match ext.e_from with
-    | Some from ->
+    match ext.lang, ext.e_from with
+    | "py", Some from ->
+      (* from lib pyimport fn () -> typ as y ->
+         @pyhandle
+         def y ( x : [tuple] ) -> typ:
+           return typ.__from_py__ (
+             py_import(lib)[fn].call( x.__to_py__() )
+           )
+       *)
+      let rhs =
+        pos, Call (
+          (pos, Dot (
+            (pos, Index (
+              (pos, Call (
+                (pos, Id "py_import"), [ pos, { name = None ; value = from } ]) ),
+              (pos, String ext.e_name.name) )),
+            "call"
+          )),
+          [pos, { name = None; value = pos, Call (
+            (pos, Dot ((pos, Id "x"), "__to_py__")), [] )  }]
+        )
+      in
+      let rhs =
+        pos, Call (
+          (pos, Dot (Option.value_exn ext.e_name.typ, "__from_py__")),
+          [ pos, { name = None; value = rhs }]
+        )
+      in
+      Util.dbg ":::[py] %s" (Ast.Expr.to_string rhs);
+      parse_function ctx pos ~toplevel
+        { fn_name = { ext.e_name with name = ctx_name }
+        ; fn_generics = []
+        ; fn_args = [ pos, { name = "x"; typ = None; default = None } ]
+        ; fn_stmts = [ pos, Return (Some rhs) ]
+        ; fn_attrs = [ pos, "pyhandle" ]
+        }
+    | "py", None -> serr ~pos "pyimport requires from"
+    | "c", Some from ->
       let params = pos, Tuple
         ((Option.value_exn ext.e_name.typ) :: (List.map ext.e_args ~f:(fun (_, t) -> Option.value_exn t.typ)))
       in
@@ -314,10 +349,9 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             ]
           )
       in
-      Util.dbg "::: %s = %s" (ctx_name) (Ast.Expr.to_string rhs);
       parse_assign ctx pos ~toplevel ~jit:false
         ((pos, Id ctx_name), rhs, Shadow, None)
-    | None ->
+    | "c", None ->
       let names, types =
         List.map ext.e_args ~f:(fun (_, { name; typ; _ }) ->
             name, E.parse_type ~ctx (Option.value_exn typ))
@@ -331,6 +365,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let names = List.map ext.e_args ~f:(fun (_, x) -> x.name) in
       Ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Ctx_namespace.Func (fn, names));
       Llvm.Stmt.func fn
+    | l, _ -> serr ~pos "language %s not supported" l
 
   and parse_extend ctx pos ~toplevel (name, stmts) =
     if not toplevel then serr ~pos "extensions must be declared at the toplevel";
