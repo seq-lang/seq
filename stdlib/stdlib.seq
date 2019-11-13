@@ -291,7 +291,7 @@ def sorted(v):
     qsort(u.arr[0:len(u)])
     return u
 
-extend str:        
+extend str:
     def __hash__(self: str):
         h = 0
         p, n = self.ptr, self.len

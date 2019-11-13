@@ -444,6 +444,9 @@ Generic::deduceTypesFromArgTypes(const std::vector<types::Type *> &inTypes,
 
       if (getGeneric(i)->findInType(inType, path, unwrapOptionals)) {
         types::Type *argType = argTypes[j];
+        if (inType->asGen() &&
+            argType->hasMethod("__iter__")) // implicit generator conversion
+          argType = argType->magicOut("__iter__", {});
 
         /*
          * OK, we found the generic type nested in `inType`;
