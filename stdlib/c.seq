@@ -16,15 +16,15 @@ def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
     h = seq_get_handle(name.ptr)
     if h != cobj():
         return h
- 
+
     cimport dlopen(cobj, int) -> cobj
     h = dlopen(name.c_str(), flag)
     if h == cobj():
         raise DLException(dlerror())
-    
+
     cimport seq_set_handle(cobj, cobj)
     seq_set_handle(name.ptr, h)
- 
+
     return h
 
 def dlsym(handle: cobj, name: str) -> cobj:
