@@ -152,7 +152,7 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
       if (!names[i].empty())
         continue;
 
-      assert(next < argsFixed.size());
+      assert(next < size);
       ENSURE_NO_DUP(next);
       argsFixed[next++] = args[i];
     }
@@ -161,7 +161,7 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
     int j = (int)args.size() - 1;
     while (j >= 0 && !names[j].empty())
       --j;
-    for (int i = (int)argsFixed.size() - 1; i >= 0; i--) {
+    for (int i = (int)size - 1; i >= 0; i--) {
       if (j < 0)
         break;
 
@@ -180,6 +180,14 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
         argsFixed[i] = defaultArgs[i];
       }
     }
+  }
+
+  // implicitly convert generator arguments:
+  for (unsigned i = 0; i < size; i++) {
+    if (argsFixed[i] && inTypes[i]->asGen() &&
+        argsFixed[i]->getType()->hasMethod("__iter__"))
+      argsFixed[i] =
+          new CallExpr(new GetElemExpr(argsFixed[i], "__iter__"), {});
   }
 
   if (offset)

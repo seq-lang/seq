@@ -59,3 +59,19 @@ A().bar(77, 99)  # EXPECT: 77 99 None
 1 |> foo(77, ..., None)  # EXPECT: 77 1 None
 None |> foo(-5, -1, ...)  # EXPECT: -5 -1 None
 [1.23] |> foo(-5, -1, ...)  # EXPECT: -5 -1 [1.23]
+
+# test auto-iter
+print list('abc')  # EXPECT: [a, b, c]
+
+def it1[T](v: generator[T]):
+    return list(v)
+
+def it2[T](v: T):
+    return list(v)
+
+def it3[T](v: generator[T] = 'xyz'):
+    return list(v)
+
+print it1([1, 2, 3])  # EXPECT: [1, 2, 3]
+print it2(iter([1.1, 2.2, 3.3]))  # EXPECT: [1.1, 2.2, 3.3]
+print it3()  # EXPECT: [x, y, z]
