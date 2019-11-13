@@ -48,7 +48,13 @@ This will produce a ``seqc`` executable for compiling/running Seq progrms, and a
 Usage
 -----
 
-The ``seqc`` program can either directly run Seq source in JIT mode, or produce an LLVM bitcode file if a ``-o <out.bc>`` argument is provided. In the latter case, `llc <https://llvm.org/docs/CommandGuide/llc.html>`_ and the system compiler can be used to convert the bitcode file to an object file and link it to produce an executable, respectively:
+The ``seqc`` program can either directly run Seq source in JIT mode:
+
+.. code-block:: bash
+
+    seqc myprogram.seq
+
+or produce an LLVM bitcode file if a ``-o <out.bc>`` argument is provided. In the latter case, `llc <https://llvm.org/docs/CommandGuide/llc.html>`_ and the system compiler can be used to convert the bitcode file to an object file and link it to produce an executable, respectively:
 
 .. code-block:: bash
 

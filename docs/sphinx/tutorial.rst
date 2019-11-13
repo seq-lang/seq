@@ -310,12 +310,12 @@ Seq also provides ``__ptr__`` for obtaining a pointer to a variable (as in ``__p
 C/C++ interoperability
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Seq enables seamless interoperability with C and C++ via ``cdef`` functions as such:
+Seq enables seamless interoperability with C and C++ via ``cimport`` functions as such:
 
 .. code-block:: seq
 
-    cdef sqrt(float) -> float
-    cdef puts(ptr[byte])
+    cimport sqrt(float) -> float
+    cimport puts(ptr[byte])
     print sqrt(100.0)
     puts("hello world".c_str())
 
