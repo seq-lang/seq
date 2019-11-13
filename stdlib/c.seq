@@ -1,37 +1,36 @@
-
 RTLD_NOW = 2
 RTLD_GLOBAL = 8
 
 def dlerror():
-   cimport dlerror() -> cobj
-   cimport strlen(cobj) -> i32
-   err = dlerror()
-   return str(err, int(strlen(err)))
+    cimport dlerror() -> cobj
+    cimport strlen(cobj) -> i32
+    err = dlerror()
+    return str(err, int(strlen(err)))
 
 def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
-   cimport seq_get_handle(cobj) -> cobj
-   h = seq_get_handle(name.ptr)
-   if h != cobj():
-      return h
-
-   cimport dlopen(cobj, int) -> cobj
-   h = dlopen(name.c_str(), flag)
-   if h == cobj():
-      raise ArgumentError('dlsym error: ' + dlerror())
-   
-   cimport seq_set_handle(cobj, cobj)
-   seq_set_handle(name.ptr, h)
-
-   return h
+    cimport seq_get_handle(cobj) -> cobj
+    h = seq_get_handle(name.ptr)
+    if h != cobj():
+        return h
+ 
+    cimport dlopen(cobj, int) -> cobj
+    h = dlopen(name.c_str(), flag)
+    if h == cobj():
+        raise ArgumentError('dlsym error: ' + dlerror())
+    
+    cimport seq_set_handle(cobj, cobj)
+    seq_set_handle(name.ptr, h)
+ 
+    return h
 
 def dlsym(handle: cobj, name: str) -> cobj:
-   cimport dlsym(cobj, cobj) -> cobj
-   fn = dlsym(handle, name.c_str())
-   if fn == cobj():
-      raise ArgumentError('dlsym error: ' + dlerror())
-   return fn
+    cimport dlsym(cobj, cobj) -> cobj
+    fn = dlsym(handle, name.c_str())
+    if fn == cobj():
+        raise ArgumentError('dlsym error: ' + dlerror())
+    return fn
 
 def dlclose(handle: cobj):
-   cimport dlclose(cobj) -> i32
-   if dlclose(handle) != i32(0):
-      raise ArgumentError('dlsym error: ' + dlerror())
+    cimport dlclose(cobj) -> i32
+    if dlclose(handle) != i32(0):
+        raise ArgumentError('dlsym error: ' + dlerror())
