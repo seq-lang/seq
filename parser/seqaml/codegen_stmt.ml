@@ -302,7 +302,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           (pos, Dot (
             (pos, Index (
               (pos, Call (
-                (pos, Id "py_import"), [ pos, { name = None ; value = from } ]) ),
+                (pos, Id "py_import"), [ pos, { name = None ; value = pos, String (Ast.Expr.to_string from) } ]) ),
               (pos, String ext.e_name.name) )),
             "call"
           )),
