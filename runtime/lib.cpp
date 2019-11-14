@@ -56,6 +56,9 @@ SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line) {
   exit(EXIT_FAILURE);
 }
 
+extern char **environ;
+SEQ_FUNC char **seq_env() { return environ; }
+
 /*
  * GC
  */
