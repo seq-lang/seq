@@ -452,11 +452,12 @@ void types::RecordType::initOps() {
          Module *module = block->getModule();
 
          auto *pyTupNew = cast<Function>(module->getOrInsertFunction(
-             "py_tuple_new.ptr[byte].int", PtrType::get(Byte)->getLLVMType(context),
-             seqIntLLVM(context)));
+             "py_tuple_new.ptr[byte].int",
+             PtrType::get(Byte)->getLLVMType(context), seqIntLLVM(context)));
 
          auto *pyTupSet = cast<Function>(module->getOrInsertFunction(
-             "py_tuple_setitem.void.ptr[byte].int.ptr[byte]", llvm::Type::getVoidTy(context),
+             "py_tuple_setitem.void.ptr[byte].int.ptr[byte]",
+             llvm::Type::getVoidTy(context),
              PtrType::get(Byte)->getLLVMType(context), seqIntLLVM(context),
              PtrType::get(Byte)->getLLVMType(context)));
 
@@ -493,7 +494,8 @@ void types::RecordType::initOps() {
          Module *module = block->getModule();
 
          auto *pyTupGet = cast<Function>(module->getOrInsertFunction(
-             "py_tuple_getitem.ptr[byte].ptr[byte].int", PtrType::get(Byte)->getLLVMType(context),
+             "py_tuple_getitem.ptr[byte].ptr[byte].int",
+             PtrType::get(Byte)->getLLVMType(context),
              PtrType::get(Byte)->getLLVMType(context), seqIntLLVM(context)));
          pyTupGet->setDoesNotThrow();
 
