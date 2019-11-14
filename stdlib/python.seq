@@ -70,9 +70,6 @@ type pyobj(p: ptr[byte]):
         pyobj.exc_check()
         return _retval
 
-    def run(code: str):
-        PyRun_SimpleString(code.c_str())
-
     def incref(self: pyobj):
         Py_IncRef(self.p)
 
@@ -104,6 +101,12 @@ def none():
     #cimport seq_py_none() -> ptr[byte]
     #return pyobj(seq_py_none())
     raise PyException("not yet done", "n/a")
+
+def imp(name: str) -> pyobj:
+    return pyobj.exc_wrap(pyobj(PyImport_ImportModule(name.c_str())))
+
+def exec(code: str):
+    PyRun_SimpleString(code.c_str())
 
 # conversions
 

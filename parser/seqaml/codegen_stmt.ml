@@ -56,6 +56,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   (** [parse_module ~ctx stmts] parses a module.
       A module is just a simple list [stmts] of statements. *)
   and parse_module ?(jit = false) ~(ctx : Ctx.t) stmts =
+    Util.dbg "%s\n" @@ Util.ppl ~sep:"\n" stmts ~f:Ast.Stmt.to_string;
     let stmts =
       if jit
       then
@@ -302,7 +303,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           (pos, Dot (
             (pos, Index (
               (pos, Call (
-                (pos, Id "py_import"), [ pos, { name = None ; value = pos, String (Ast.Expr.to_string from) } ]) ),
+                (pos, Id "_py_import"), [ pos, { name = None ; value = pos, String (Ast.Expr.to_string from) } ]) ),
               (pos, String ext.e_name.name) )),
             "call"
           )),
@@ -311,10 +312,12 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         )
       in
       let rhs =
-        pos, Call (
-          (pos, Dot (Option.value_exn ext.e_name.typ, "__from_py__")),
-          [ pos, { name = None; value = rhs }]
-        )
+        match Ast.Expr.to_string (Option.value_exn ext.e_name.typ) with
+        | "void" -> rhs
+        | _ -> pos, Call (
+            (pos, Dot (Option.value_exn ext.e_name.typ, "__from_py__")),
+            [ pos, { name = None; value = rhs }]
+          )
       in
       Util.dbg ":::[py] %s" (Ast.Expr.to_string rhs);
       parse_function ctx pos ~toplevel

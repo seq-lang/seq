@@ -86,7 +86,7 @@
 /* keywords */
 %token <Ast.Ann.t> FOR WHILE CONTINUE BREAK           // loops
 %token <Ast.Ann.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals
-%token <Ast.Ann.t> DEF RETURN YIELD LAMBDA            // functions
+%token <Ast.Ann.t> DEF RETURN YIELD LAMBDA PYDEF      // functions
 %token <Ast.Ann.t> TYPE CLASS TYPEOF EXTEND PTR       // types
 %token <Ast.Ann.t> IMPORT FROM GLOBAL IMPORT_CONTEXT  // variables
 %token <Ast.Ann.t> PRINT PASS ASSERT DEL              // keywords
@@ -447,10 +447,11 @@ statement:
   | MATCH expr COLON NL INDENT case_suite DEDENT
     {[ pos $1 $4,
        Match ($2, $6) ]}
-  // Try statement
-  | try_statement
   // Function and clas definitions
   | func_statement
+    { $1 }
+  // Try statement
+  | try_statement
   | class_statement
   | decl_statement
   | with_statement
@@ -855,15 +856,16 @@ with_clause:
 
 // Function statement
 func_statement:
-  | func { $1 }
+  | func { [$1] }
+  | pyfunc { $1 }
   | decorator+ func
     {
       let fn = match snd $2 with
         | Generic Function f -> f
         | _ -> ierr "decorator parsing failure (grammar)"
       in
-      fst $2,
-      Generic (Function { fn with fn_attrs = $1 })
+      [ fst $2,
+       Generic (Function { fn with fn_attrs = $1 }) ]
     }
 
 // Function definition
@@ -926,6 +928,36 @@ func_ret_type:
   | OF; expr
     { $2 }
 
+
+pyfunc:
+  // Seq function (def foo [ [type+] ] (param+) [ -> return ])
+  | PYDEF; name = ID;
+    LP fn_args = separated_list(COMMA, typed_param); RP
+    typ = func_ret_type?;
+    COLON;
+    s = suite
+    { let str = Util.ppl ~sep:"\n" s ~f:(Ast.Stmt.to_string ~pythonic:true ~indent:1) in
+      let p = $7 in
+      (* py.exec ("""def foo(): [ind] ... """) *)
+      (* from __main__ pyimport foo () -> ret *)
+      let v = p, String
+        (sprintf "def %s(%s):\n%s\n"
+          (snd name)
+          (Util.ppl fn_args ~f:(fun (_, { name; _ }) -> name))
+          str) in
+      let s = p, Call (
+        (p, Id "_py_exec"),
+        [p, { name = None; value = v }]) in
+      let typ = Option.value typ ~default:($5, Id "pyobj") in
+      let s' = p, ImportExtern
+        { lang = "py"
+        ; e_name = { name = snd name; typ = Some typ; default = None }
+        ; e_args = []
+        ; e_as = None
+        ; e_from = Some (p, Id "__main__") }
+      in
+      [ p, Expr s; s' ]
+    }
 
 // Class statement
 class_statement:
@@ -991,7 +1023,9 @@ class_member:
   // TODO later: | class_statement
   // Functions
   | func_statement
-    { Some (fst $1, match snd $1 with Generic c -> c | _ -> assert false) }
+    { match $1 with
+      | [l] -> Some (fst l, match snd l with Generic c -> c | _ -> assert false)
+      | l -> Err.serr ~pos:(fst @@ List.hd_exn l) "no pydefs allowed in classes" }
 
 // Decorators
 decorator:

@@ -212,6 +212,7 @@ and read state = parse
       | "extend"   -> P.EXTEND     (cur_pos state lexbuf ~len)
       | "cimport"  -> P.EXTERN     (cur_pos state lexbuf ~len, "c")
       | "pyimport" -> P.EXTERN     (cur_pos state lexbuf ~len, "py")
+      | "pydef"    -> P.PYDEF      (cur_pos state lexbuf ~len)
       | "del"      -> P.DEL        (cur_pos state lexbuf ~len)
       | "None"     -> P.NONE       (cur_pos state lexbuf ~len)
       | "try"      -> P.TRY        (cur_pos state lexbuf ~len)
