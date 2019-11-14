@@ -521,3 +521,12 @@ def _py_import(name: str):
 
 def _py_exec(s: str):
     py.exec(s)
+
+_DLSYM_PTRS = dict[str, cobj]()
+def _get_dlsym_ptr(lib, fun) -> cobj:
+    key = lib + "/" + fun
+    if key in _DLSYM_PTRS:
+        return _DLSYM_PTRS[key]
+    val = C.dlsym(C.dlopen(lib), fun)
+    _DLSYM_PTRS[key] = val
+    return val

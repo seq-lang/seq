@@ -283,3 +283,80 @@ module Stmt = struct
     let def = Option.value_map default ~default:"" ~f:(fun x -> " = " ^ Expr.to_string ~pythonic x) in
     sprintf "%s%s%s" name typ def
 end
+
+
+let rec e_apply ~f (pos, node) =
+  let f = e_apply ~f in
+  let rec fg (p, c) = p, Expr.{ c with gen = f c.gen; cond = Option.map c.cond ~f; next = Option.map c.next ~f:fg } in
+  f (pos, match node with
+    | Expr.Tuple l -> Expr.Tuple (List.map l ~f)
+    | List l -> List (List.map l ~f)
+    | Set l -> Set (List.map l ~f)
+    | Pipe l -> Pipe (List.map l ~f:(fun (x, y) -> x, f y))
+    | Dict l -> Dict (List.map l ~f:(fun (x, y) -> f x, f y))
+    | IfExpr (a, b, c) -> IfExpr (f a, f b, f c)
+    | Unary (o, e) -> Unary (o, f e) 
+    | Binary (l, o, r) -> Binary (f l, o, f l)
+    | Dot (e, d) -> Dot (f e, d) 
+    | TypeOf e -> TypeOf (f e)
+    | Index (a, l) -> Index (f a, f l)
+    | Call (a, l) -> Call (f a, List.map l ~f:(fun (p, v) -> p, { v with value = f v.value }))
+    | ListGenerator (e, c) -> ListGenerator (f e, fg c)
+    | SetGenerator (e, c) -> SetGenerator (f e, fg c)
+    | Generator (e, c) -> Generator (f e, fg c)
+    | DictGenerator ((e1, e2), c) -> DictGenerator ((f e1, f e2), fg c)
+    | Slice (a, b, c) -> Slice (Option.map a ~f, Option.map b ~f, Option.map c ~f)
+    | Lambda (s, a) -> Lambda (s, f a)
+    | Ptr x -> Ptr (f x)
+    | t -> t)
+
+let e_annotate ~pos = e_apply ~f:(fun (p, t) -> pos, t)
+
+let e_id ?(pos=Ann.default) n =
+  pos, Expr.Id n
+
+let e_int ?(pos=Ann.default) n =
+  pos, Expr.Int n
+
+let e_string ?(pos=Ann.default) s =
+  pos, Expr.String s
+
+let e_ellipsis ?(pos=Ann.default) () =
+  pos, Expr.Ellipsis ()
+
+let e_tuple ?(pos=Ann.default) args =
+  pos, Expr.Tuple args
+
+let e_call ?(pos=Ann.default) callee args =
+  pos, Expr.(Call (callee,
+    List.map args ~f:(fun value -> pos, { name = None; value })))
+
+let e_slice ?(pos=Ann.default) ?b ?c a  =
+  pos, Expr.Slice (Some a, b, c)
+
+let e_index ?(pos=Ann.default) collection args =
+  pos, Expr.Index (collection, args)
+
+let e_binary ?(pos=Ann.default) lhs op rhs =
+  pos, Expr.Binary (lhs, op, rhs)
+
+let e_dot ?(pos=Ann.default) left what =
+  pos, Expr.Dot (left, what)
+
+let e_typeof ?(pos=Ann.default) what =
+  pos, Expr.TypeOf what
+
+let s_expr ?(pos=Ann.default) expr =
+  pos, Stmt.Expr expr
+
+let s_assign ?(pos=Ann.default) ?(shadow=Stmt.Normal) lhs rhs =
+  pos, Stmt.(Assign (lhs, rhs, shadow, None))
+
+let s_return ?(pos=Ann.default) what =
+  pos, Stmt.Return what
+
+let s_if ?(pos=Ann.default) cond stmts =
+  pos, Stmt.(If [ pos, { cond = Some cond; cond_stmts = stmts } ])
+
+let s_for ?(pos=Ann.default) vars iter stmts =
+  pos, Stmt.For (vars, iter, stmts)

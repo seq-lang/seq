@@ -289,71 +289,59 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   and parse_extern ctx pos ~toplevel ext =
     let ctx_name = Option.value ext.e_as ~default:ext.e_name.name in
+    let open Ast in
     match ext.lang, ext.e_from with
     | "py", Some from ->
-      (* from lib pyimport fn () -> typ as y ->
-         @pyhandle
-         def y ( x : [tuple] ) -> typ:
-           return typ.__from_py__ (
-             py_import(lib)[fn].call( x.__to_py__() )
-           )
-       *)
-      let rhs =
-        pos, Call (
-          (pos, Dot (
-            (pos, Index (
-              (pos, Call (
-                (pos, Id "_py_import"), [ pos, { name = None ; value = pos, String (Ast.Expr.to_string from) } ]) ),
-              (pos, String ext.e_name.name) )),
-            "call"
-          )),
-          [pos, { name = None; value = pos, Call (
-            (pos, Dot ((pos, Id "x"), "__to_py__")), [] )  }]
-        )
+      let rhs = e_annotate ~pos @@
+        e_call (* py_import(lib)[fn].call( x.__to_py__() ) *)
+          ( e_dot
+            ( e_index 
+              (e_call (e_id "_py_import") [e_string (Ast.Expr.to_string from)]) 
+              (e_string ext.e_name.name) ) 
+            "call" ) 
+          [e_call (e_dot (e_id "x") "__to_py__") []] 
       in
       let rhs =
         match Ast.Expr.to_string (Option.value_exn ext.e_name.typ) with
         | "void" -> rhs
-        | _ -> pos, Call (
-            (pos, Dot (Option.value_exn ext.e_name.typ, "__from_py__")),
-            [ pos, { name = None; value = rhs }]
-          )
+        | _ -> (* return typ.__from_py__ (rhs) *)
+          e_call (e_dot (Option.value_exn ext.e_name.typ) "__from_py__") [rhs]
       in
-      Util.dbg ":::[py] %s" (Ast.Expr.to_string rhs);
+      (* @pyhandle def y ( x : [tuple] ) -> typ: return rhs *)
       parse_function ctx pos ~toplevel
         { fn_name = { ext.e_name with name = ctx_name }
         ; fn_generics = []
         ; fn_args = [ pos, { name = "x"; typ = None; default = None } ]
-        ; fn_stmts = [ pos, Return (Some rhs) ]
+        ; fn_stmts = [ s_return ~pos (Some rhs) ]
         ; fn_attrs = [ pos, "pyhandle" ]
         }
     | "py", None -> serr ~pos "pyimport requires from"
     | "c", Some from ->
-      let params = pos, Tuple
-        ((Option.value_exn ext.e_name.typ) :: (List.map ext.e_args ~f:(fun (_, t) -> Option.value_exn t.typ)))
+      let params = e_tuple ((Option.value_exn ext.e_name.typ) :: (List.map ext.e_args ~f:(fun (_, t) -> Option.value_exn t.typ))) in
+      let rhs = e_annotate ~pos @@
+        e_call (* function[tuple[types]]( C.dlsym(C.dlopen(lib), name) ) *)
+          (e_index (e_id "function") params) 
+          [ e_call (e_dot (e_id "C") "dlsym") [ e_call (e_dot (e_id "C") "dlopen") [from]; e_string ext.e_name.name ] ]
       in
-      let rhs =
-        pos, Call
-          ( (pos, Index ((pos, Id "function"), params))
-          , [ pos,
-              { name = None
-              ; value = pos, Call
-                ( (pos, Dot ((pos, Id "C"), "dlsym"))
-                , [ pos
-                  , { name = None; value = pos, Call
-                      ( (pos, Dot ((pos, Id "C"), "dlopen"))
-                      , [ pos, { name = None; value = from } ]
-                      )
-                    }
-                  ; pos, { name = None; value = pos, String ext.e_name.name }
-                  ]
-                )
-              }
-            ]
-          )
+      let types = List.map ~f:(fun e -> Expr.to_string (Option.value_exn e)) 
+        @@ (ext.e_name.typ :: (List.map ext.e_args ~f:(fun (_, t) -> t.typ))) in
+      let params = List.mapi types ~f:(fun i _ -> sprintf "p%d" i) in
+      let code = sprintf
+      {|
+      def %s(%s) -> %s:
+        ptr = _get_dlsym_ptr(%s, "%s")
+        f = function[%s](ptr)
+        return f(%s)
+      |}
+      ctx_name
+      (Util.ppl ~f:Fn.id @@ List.map2_exn (List.tl_exn params) (List.tl_exn types) ~f:(fun a b -> sprintf "%s: %s" a b))
+      (List.hd_exn types)
+      (Expr.to_string from) ext.e_name.name
+      (Util.ppl ~f:Fn.id types)
+      (Util.ppl ~f:Fn.id (List.tl_exn params))
       in
-      parse_assign ctx pos ~toplevel ~jit:false
-        ((pos, Id ctx_name), rhs, Shadow, None)
+      ctx.parser ctx ~file:ctx.filename code;
+      Llvm.Stmt.pass ()
     | "c", None ->
       let names, types =
         List.map ext.e_args ~f:(fun (_, { name; typ; _ }) ->
