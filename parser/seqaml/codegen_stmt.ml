@@ -474,7 +474,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         let fn = Llvm.Func.func name in
         let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Func (fn, names));
-        if not toplevel then Llvm.Func.set_enclosing fn ctx.base;
+        ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
         fn
     in
     let flags = Stack.create () in
