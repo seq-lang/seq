@@ -1,10 +1,6 @@
-LD = "/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib"
-
-from C import dlopen, DLException
-try:
-    dlopen(LD)
-except DLException:
-    LD = "\0" + LD
+#import os 
+#LD = os.getenv('SEQ_PYTHON', 'libpython3.7')
+LD="/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib"
 
 from LD cimport PyUnicode_AsEncodedString(cobj, cobj, cobj) -> cobj
 from LD cimport PyBytes_AsString(cobj) -> cobj

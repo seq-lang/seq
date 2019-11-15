@@ -295,9 +295,9 @@ let rec e_apply ~f (pos, node) =
     | Pipe l -> Pipe (List.map l ~f:(fun (x, y) -> x, f y))
     | Dict l -> Dict (List.map l ~f:(fun (x, y) -> f x, f y))
     | IfExpr (a, b, c) -> IfExpr (f a, f b, f c)
-    | Unary (o, e) -> Unary (o, f e) 
+    | Unary (o, e) -> Unary (o, f e)
     | Binary (l, o, r) -> Binary (f l, o, f l)
-    | Dot (e, d) -> Dot (f e, d) 
+    | Dot (e, d) -> Dot (f e, d)
     | TypeOf e -> TypeOf (f e)
     | Index (a, l) -> Index (f a, f l)
     | Call (a, l) -> Call (f a, List.map l ~f:(fun (p, v) -> p, { v with value = f v.value }))
@@ -310,7 +310,7 @@ let rec e_apply ~f (pos, node) =
     | Ptr x -> Ptr (f x)
     | t -> t)
 
-let e_annotate ~pos = e_apply ~f:(fun (p, t) -> pos, t)
+let e_annotate ~pos n = e_apply ~f:(fun (_, t) -> pos, t) n
 
 let e_id ?(pos=Ann.default) n =
   pos, Expr.Id n

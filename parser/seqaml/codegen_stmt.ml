@@ -295,11 +295,11 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let rhs = e_annotate ~pos @@
         e_call (* py_import(lib)[fn].call( x.__to_py__() ) *)
           ( e_dot
-            ( e_index 
-              (e_call (e_id "_py_import") [e_string (Ast.Expr.to_string from)]) 
-              (e_string ext.e_name.name) ) 
-            "call" ) 
-          [e_call (e_dot (e_id "x") "__to_py__") []] 
+            ( e_index
+              (e_call (e_id "_py_import") [e_string (Ast.Expr.to_string from)])
+              (e_string ext.e_name.name) )
+            "call" )
+          [e_call (e_dot (e_id "x") "__to_py__") []]
       in
       let rhs =
         match Ast.Expr.to_string (Option.value_exn ext.e_name.typ) with
@@ -317,30 +317,26 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         }
     | "py", None -> serr ~pos "pyimport requires from"
     | "c", Some from ->
-      let params = e_tuple ((Option.value_exn ext.e_name.typ) :: (List.map ext.e_args ~f:(fun (_, t) -> Option.value_exn t.typ))) in
-      let rhs = e_annotate ~pos @@
-        e_call (* function[tuple[types]]( C.dlsym(C.dlopen(lib), name) ) *)
-          (e_index (e_id "function") params) 
-          [ e_call (e_dot (e_id "C") "dlsym") [ e_call (e_dot (e_id "C") "dlopen") [from]; e_string ext.e_name.name ] ]
-      in
-      let types = List.map ~f:(fun e -> Expr.to_string (Option.value_exn e)) 
+      let types = List.map ~f:(fun e -> Expr.to_string (Option.value_exn e))
         @@ (ext.e_name.typ :: (List.map ext.e_args ~f:(fun (_, t) -> t.typ))) in
       let params = List.mapi types ~f:(fun i _ -> sprintf "p%d" i) in
-      let code = sprintf
+      let code = Util.unindent @@ sprintf
+      (* # ptr = _get_dlsym_ptr(_s, "_s") *)
       {|
-      def %s(%s) -> %s:
-        ptr = _get_dlsym_ptr(%s, "%s")
+      def %s(%s):
+        ptr = C.dlsym(C.dlopen(%s), "%s")
         f = function[%s](ptr)
-        return f(%s)
+        %sf(%s)
       |}
       ctx_name
       (Util.ppl ~f:Fn.id @@ List.map2_exn (List.tl_exn params) (List.tl_exn types) ~f:(fun a b -> sprintf "%s: %s" a b))
-      (List.hd_exn types)
       (Expr.to_string from) ext.e_name.name
       (Util.ppl ~f:Fn.id types)
+      (if (List.hd_exn types) = "void" then "" else "return ")
       (Util.ppl ~f:Fn.id (List.tl_exn params))
       in
       ctx.parser ctx ~file:ctx.filename code;
+      Util.dbg "-->\n%s\n<--" code;
       Llvm.Stmt.pass ()
     | "c", None ->
       let names, types =

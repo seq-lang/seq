@@ -26,3 +26,12 @@ let get_from_stdlib ?(ext = ".seq") res =
   let paths = String.split seqpath ~on:':' in
   List.map paths ~f:(fun dir -> sprintf "%s/%s%s" dir res ext)
   |> List.find ~f:Caml.Sys.file_exists
+
+
+let unindent s =
+  let s = String.split ~on:'\n' s |> List.filter ~f:(fun s -> String.length s > 0) in
+  match s with
+  | a :: l ->
+    let l = String.take_while a ~f:(fun s -> s = ' ') |> String.length in
+    List.map s ~f:(fun s -> String.drop_prefix s l) |> String.concat ~sep:"\n"
+  | [] -> ""

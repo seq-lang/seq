@@ -9,22 +9,10 @@ def dlerror():
     return str.from_ptr(dlerror())
 
 def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
-    if name.__len__() > 0 and name[0] == "\0":
-       raise DLException(name[1:] + " is not available and thus is disabled.")
-
-    cimport seq_get_handle(cobj) -> cobj
-    h = seq_get_handle(name.ptr)
-    if h != cobj():
-        return h
-
     cimport dlopen(cobj, int) -> cobj
     h = dlopen(name.c_str(), flag)
     if h == cobj():
         raise DLException(dlerror())
-
-    cimport seq_set_handle(cobj, cobj)
-    seq_set_handle(name.ptr, h)
-
     return h
 
 def dlsym(handle: cobj, name: str) -> cobj:
