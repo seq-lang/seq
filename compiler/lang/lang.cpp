@@ -1296,16 +1296,23 @@ Assert::Assert(Expr *expr) : Stmt("assert"), expr(expr) {}
 
 void Assert::resolveTypes() { expr->resolveTypes(); }
 
+static bool isTest(BaseFunc *base) {
+  auto *func = dynamic_cast<Func *>(base);
+  return func && func->hasAttribute("test");
+}
+
 void Assert::codegen0(BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   Module *module = block->getModule();
   Function *func = block->getParent();
 
+  const bool test = isTest(getBase());
   auto *assertFail = cast<Function>(module->getOrInsertFunction(
-      "seq_assert_failed", Type::getVoidTy(context),
+      test ? "seq_test_failed" : "seq_assert_failed", Type::getVoidTy(context),
       types::Str->getLLVMType(context), types::Int->getLLVMType(context)));
   assertFail->setDoesNotThrow();
-  assertFail->setDoesNotReturn();
+  if (!test)
+    assertFail->setDoesNotReturn();
   Value *check = expr->codegen(getBase(), block);
   check = expr->getType()->boolValue(check, block, getTryCatch());
   Value *file = StrExpr(getSrcInfo().file).codegen(getBase(), block);
@@ -1320,7 +1327,10 @@ void Assert::codegen0(BasicBlock *&block) {
 
   builder.SetInsertPoint(fail);
   builder.CreateCall(assertFail, {file, line});
-  builder.CreateUnreachable();
+  if (test)
+    builder.CreateBr(pass);
+  else
+    builder.CreateUnreachable();
 
   block = pass;
 }
