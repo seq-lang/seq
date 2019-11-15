@@ -132,6 +132,53 @@ class list[T]:
             self._slice_error()
         return list[T](self.arr[i] for i in range(s.start, self.len, s.step))
 
+
+    def __setitem__(self: list[T], s: eslice, other: generator[T]):
+        l = list[T](other)
+        self.arr = l.arr
+        self.len = l.len
+
+    def __setitem__(self: list[T], s: slice, other: generator[T]):
+        a, b = s
+        if a < 0:
+            a += len(self)
+        if b < 0:
+            b += len(self)
+        if not (0 <= a <= b <= len(self)):
+            self._slice_error()
+        lp = list(other)
+        l = list[T](self.len - (b-a) + lp.len)
+        l.ext(self[:a])
+        l.ext(lp)
+        l.ext(self[b:])
+        self.arr = l.arr
+        self.len = l.len
+        
+    def __setitem__(self: list[T], s: lslice, other: generator[T]):
+        if s.end < 0:
+            s.end += len(self)
+        if not (0 <= s.end <= len(self)):
+            self._slice_error()
+        lp = list(other)
+        l = list[T](self.len - s.end + lp.len)
+        l.ext(lp)
+        l.ext(self[s.end:])
+        self.arr = l.arr
+        self.len = l.len
+
+    def __setitem__(self: list[T], s: rslice, other: generator[T]):
+        if s.start < 0:
+            s.start += len(self)
+        if not (0 <= s.start <= len(self)):
+            self._slice_error()
+        lp = list(other)
+        l = list[T](s.start + lp.len)
+        l.ext(self[:s.start])
+        l.ext(lp)
+        self.arr = l.arr
+        self.len = l.len
+
+
     def __copy__(self: list[T]):
         return list[T](self.arr.__copy__(), self.len)
 
