@@ -53,3 +53,17 @@ def bisect(a, x, lo: int, hi: int) -> int:
     """
     # lo, hi = 0, len(a)
     return bisect_right(a, x, lo, hi)
+
+def insort_left(a, x, lo: int, hi: int):
+    """
+    insort_left(a, x, lo, hi)
+
+    Insert item x in list a, and keep it sorted assuming a is sorted.
+
+    If x is already in a, insert it to the left of the leftmost x.
+
+    Default values: lo=0, high=None
+    For now seq will use len(a) instead of None
+    """
+    lo = bisect_left(a, x, lo, hi)
+    a.insert(lo, x)
