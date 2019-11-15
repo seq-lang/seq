@@ -154,7 +154,21 @@ def bisect1():
     assert bisect.bisect([1, 2, 2, 3, 3, 3, 4, 4, 4, 4], 5, 0, 10) == 10
 # bisect1()
 
-def bisect_left():
+def insort_left():
     bisect.insort_left(li, 5, 0, len(li))
     assert li == [1, 3, 4, 4, 4, 5, 6, 7]
-bisect_left()
+insort_left()
+
+def insort_right():
+    bisect.insort_right(li, 0, 0, len(li))
+    assert li == [0, 1, 3, 4, 4, 4, 5, 6, 7]
+    # bisect.insort_right(li, 10, 0, len(li))
+    # print li
+insort_right()
+
+def insort():
+    bisect.insort_right(li, 0, 0, len(li))
+    assert li == [0, 1, 3, 4, 4, 4, 5, 6, 7]
+    # bisect.insort_right(li, 10, 0, len(li))
+    # print li
+insort()
