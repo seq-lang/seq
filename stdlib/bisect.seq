@@ -47,11 +47,9 @@ def bisect_right(a, x, lo: int, hi: int) -> int:
         else: lo = mid+1
     return lo
 
-def bisect(a, x):
-    lo, hi = 0, len(a)
-    while lo < hi:
-        mid = (lo+hi)//2
-        if x < a[mid]: hi = mid
-        else: lo = mid+1
-    return lo
-# bisect = bisect_right
+def bisect(a, x, lo: int, hi: int) -> int:
+    """
+    bisect = bisect_right
+    """
+    # lo, hi = 0, len(a)
+    return bisect_right(a, x, lo, hi)
