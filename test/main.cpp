@@ -44,45 +44,6 @@ protected:
   }
 };
 
-vector<string> splitLines(const string &output) {
-  vector<string> result;
-  string line;
-  istringstream stream(output);
-  const char delim = '\n';
-
-  while (getline(stream, line, delim))
-    result.push_back(line);
-
-  return result;
-}
-
-static string findExpectOnLine(const string &line) {
-  static const string EXPECT_STR = "# EXPECT: ";
-  size_t pos = line.find(EXPECT_STR);
-  return pos == string::npos ? "" : line.substr(pos + EXPECT_STR.length());
-}
-
-static vector<string> findExpects(const string &filename) {
-  ifstream file(filename);
-
-  if (!file.good()) {
-    cerr << "error: could not open " << filename << endl;
-    exit(EXIT_FAILURE);
-  }
-
-  string line;
-  vector<string> result;
-
-  while (getline(file, line)) {
-    string expect = findExpectOnLine(line);
-    if (!expect.empty())
-      result.push_back(expect);
-  }
-
-  file.close();
-  return result;
-}
-
 static string
 getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
   const string basename = get<0>(info.param);
@@ -105,14 +66,11 @@ TEST_P(SeqTest, Run) {
   string filename = string(TEST_DIR) + "/" + basename;
   SeqModule *module = parse(filename);
   execute(module, {}, {}, debug);
-  vector<string> expects = findExpects(filename);
-  vector<string> results = splitLines(result());
-  EXPECT_EQ(results.size(), expects.size());
-  if (expects.size() == results.size()) {
-    for (unsigned i = 0; i < expects.size(); i++) {
-      EXPECT_EQ(results[i], expects[i]);
-    }
-  }
+  string output = result();
+  const bool pass = output.find("TEST FAILED") == string::npos;
+  EXPECT_TRUE(pass);
+  if (!pass)
+    std::cerr << output << std::endl;
 }
 
 INSTANTIATE_TEST_SUITE_P(
