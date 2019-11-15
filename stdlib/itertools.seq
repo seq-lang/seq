@@ -237,18 +237,6 @@ def accumulate(iterable, func, initial):
         it.destroy()
         return
 
-# def product[T](iterables: generator[T], repeat: int):
-#     """
-#     Needs implementing.
-#     """
-#     pools = [list(pool) for pool in iterables] * repeat
-#     # is this right change from [[]]?
-#     result = [[T()]]
-#     for pool in pools:
-#         result = [x + [y] for x in result for y in pool]
-#     for prod in result:
-#         yield list(prod)
-
 def chain(iterables):
     """
     chain(iterables)
@@ -270,20 +258,43 @@ def starmap(function, iterable):
         yield function(args[0], args[1])
 
 def groupby[K, V](iterable: generator[V], key: function[K, V]):
+    """
+    groupby(iterable, key=None)
+
+    make an iterator that returns consecutive keys and groups from the iterable
+
+    iterable:
+        Elements to divide into groups according to the key function.
+    key:
+        A function for computing the group category for each element.
+        If the key function is not specified or is None, the element itself
+        is used for grouping.
+
+    Deals with only strings for now.
+    """
     if iterable.done():
         return
+
     currvalue = iterable.next()
-    currkey = currvalue
+    currkey = key(currvalue)
     group = [currvalue]
+
     while not iterable.done():
         currvalue = iterable.next()
-        key = currvalue
-        if key != currkey:
+        k = key(currvalue)
+
+        if k != currkey:
             yield currkey, group
-            currkey = key
-            group.clear()
+            currkey = k
+            group = list[V]()
         group.append(currvalue)
     yield currkey, group
+
+def product[T](iterables: generator[T], repeat: int):
+    """
+    Needs implementing.
+    """
+    pass
 
 def zip_longest[T](iterables: generator[T], fillvalue):
     """
