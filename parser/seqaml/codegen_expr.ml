@@ -48,8 +48,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Dot p -> parse_dot ctx pos p
       | TypeOf p -> parse_typeof ctx pos p
       | Ptr p -> parse_ptr ctx pos p
+      | Slice p -> parse_slice ctx pos p
       | Ellipsis p -> Ctypes.null
-      | Slice _ -> serr ~pos "slice is currently only valid within an index expression"
       | Unpack _ -> serr ~pos "invalid unpacking expression"
       | Lambda _ -> serr ~pos "lambdas not yet supported (parse)"
     in
@@ -294,12 +294,6 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       Llvm.Expr.typ @@ Llvm.Type.record names indices ""
     | _, Id "tuple", _ ->
       Llvm.Expr.typ @@ Llvm.Type.record [ "" ] [ parse_type ~ctx indices ] ""
-    | false, _, Slice (st, ed, step) ->
-      if is_some step
-      then serr ~pos "slices with stepping parameter are not yet supported";
-      let unpack st = Option.value_map st ~f:(parse ~ctx) ~default:Ctypes.null in
-      let lh_expr = parse ~ctx lh_expr in
-      Llvm.Expr.slice lh_expr (unpack st) (unpack ed)
     | _ ->
       let lh_expr = parse ~ctx lh_expr in
       let indices =
@@ -432,6 +426,21 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         let typ = Llvm.Type.expr_type lh_expr in
         Llvm.Expr.static typ rhs)
       else Llvm.Expr.element lh_expr rhs
+
+  and parse_slice ctx pos (a, b, c) =
+    let prefix, args = match a, b, c with
+      | None, None, None -> "e", [pos, Int "0"]
+      | Some a, None, None -> "r", [a]
+      | None, Some b, None -> "l", [b]
+      | Some a, Some b, None -> "", [a; b]
+      | None, None, Some c -> "es", [c]
+      | Some a, None, Some c -> "rs", [a; c]
+      | None, Some b, Some c -> "ls", [b; c]
+      | Some a, Some b, Some c -> "s", [a; b; c]
+    in
+    let open Ast in
+    parse ~ctx
+    @@ e_call ~pos (e_id ~pos (prefix ^ "slice")) args
 
   and parse_typeof ctx _ expr =
     let expr = parse ~ctx expr in

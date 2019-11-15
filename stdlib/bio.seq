@@ -83,7 +83,8 @@ extend seq:
         else:
             return seq(self.ptr + (-self.len - b), -(b - a))
 
-    def __slice__(self: seq, a: int, b: int):
+    def __getitem__(self: seq, s: slice):
+        a, b = s
         n = len(self)
         if a < 0: a += n
         if b < 0: b += n
@@ -91,7 +92,8 @@ extend seq:
         if b > n: b = n
         return self._slice_direct(a, b)
 
-    def __slice_left__(self: seq, b: int):
+    def __getitem__(self: seq, s: lslice):
+        b = s.end
         n = len(self)
         if b < 0: b += n
         if b > n: b = n
@@ -100,7 +102,9 @@ extend seq:
         else:
             return seq(self.ptr + (n - b), -b)
 
-    def __slice_right__(self: seq, a: int):
+    def __getitem__(self: seq, s: rslice):
+        a = s.start
+        b = s.SAMHeaderTarget
         n = len(self)
         if a < 0: a += n
         if a > n: a = n
@@ -767,7 +771,8 @@ type pseq(len: int, ptr: ptr[byte]):  # order is consistent with str/seq
     def _slice_direct(self: pseq, a: int, b: int):
         return pseq(self.ptr + a, b - a)
 
-    def __slice__(self: pseq, a: int, b: int):
+    def __getitem__(self: pseq, s: slice):
+        a, b = s
         n = len(self)
         if a < 0: a += n
         if b < 0: b += n
@@ -775,13 +780,15 @@ type pseq(len: int, ptr: ptr[byte]):  # order is consistent with str/seq
         if b > n: b = n
         return self._slice_direct(a, b)
 
-    def __slice_left__(self: pseq, b: int):
+    def __getitem__(self: pseq, s: lslice):
+        b = s.end
         n = len(self)
         if b < 0: b += n
         if b > n: b = n
         return pseq(self.ptr, b)
 
-    def __slice_right__(self: pseq, a: int):
+    def __getitem__(self: pseq, s: rslice):
+        a = s.start
         n = len(self)
         if a < 0: a += n
         if a > n: a = n

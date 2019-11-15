@@ -16,6 +16,15 @@ type u32 = UInt[32]
 type u64 = UInt[64]
 import C
 
+type eslice(_: int)
+type slice(start: int, end: int)
+type lslice(end: int)
+type rslice(start: int)
+type esslice(step: int)
+type sslice(start: int, end: int, step: int)
+type lsslice(end: int, step: int)
+type rsslice(start: int, step: int)
+
 type range(lo: int, hi: int, step: int):
     def __init__(self: range, lo: int, hi: int, step: int) -> range:
         if step == 0:
@@ -366,7 +375,11 @@ extend str:
             raise IndexError("string index out of range")
         return str(self.ptr + idx, 1)
 
-    def __slice__(self: str, a: int, b: int):
+    def __getitem__(self: str, s: eslice):
+        return self.__copy__()
+
+    def __getitem__(self: str, s: slice):
+        a, b = s
         if a < 0: a += len(self)
         if b < 0: b += len(self)
         if a > len(self): a = len(self)
@@ -375,14 +388,16 @@ extend str:
             self._slice_error()
         return str(self.ptr + a, b - a)
 
-    def __slice_left__(self: str, b: int):
+    def __getitem__(self: str, s: lslice):
+        b = s.end
         if b < 0: b += len(self)
         if b > len(self): b = len(self)
         if not (0 <= b <= len(self)):
             self._slice_error()
         return str(self.ptr, b)
 
-    def __slice_right__(self: str, a: int):
+    def __getitem__(self: str, s: rslice):
+        a = s.start
         if a < 0: a += len(self)
         if a > len(self): a = len(self)
         if not (0 <= a <= len(self)):
