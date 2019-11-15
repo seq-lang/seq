@@ -888,23 +888,26 @@ func:
   | extern { $1 }
 // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
 extern:
-  | from = extern_from?;
-    lang = EXTERN; name = ID; LP; p = separated_list(COMMA, extern_param); RP; typ = func_ret_type?;
-    eas = extern_as?;
-    NL
-    { let typ = match typ with
-        | Some typ -> typ
-        | None -> $6, Id "void"
-      in
-      pos (match from with Some (p, _) -> p | None -> fst lang) (fst typ),
-      ImportExtern
-        { lang = snd lang
-        ; e_from = from
-        ; e_name = { name = snd name; typ = Some typ; default = None }
-        ; e_args = p
-        ; e_as = Option.map eas ~f:snd
-        }
-     }
+  | from = extern_from?; lang = EXTERN; what = separated_nonempty_list(COMMA, extern_what); NL
+    {
+      pos (match from with Some (p, _) -> p | None -> fst lang) $4,
+      ImportExtern ( List.map what ~f:(fun e -> { e with lang = snd lang; e_from = from }) )
+    }
+extern_what:
+  | name = ID; LP; p = separated_list(COMMA, extern_param); RP; typ = func_ret_type?;
+    eas = extern_as?
+  {
+    let typ = match typ with
+      | Some typ -> typ
+      | None -> $4, Id "void"
+    in
+    { lang = ""
+    ; e_from = None
+    ; e_name = { name = snd name; typ = Some typ; default = None }
+    ; e_args = p
+    ; e_as = Option.map eas ~f:snd
+    }
+  }
 extern_from:
   | FROM dot_term
     { pos $1 (fst $2), snd $2 }
@@ -950,11 +953,11 @@ pyfunc:
         [p, { name = None; value = v }]) in
       let typ = Option.value typ ~default:($5, Id "pyobj") in
       let s' = p, ImportExtern
-        { lang = "py"
-        ; e_name = { name = snd name; typ = Some typ; default = None }
-        ; e_args = []
-        ; e_as = None
-        ; e_from = Some (p, Id "__main__") }
+        [ { lang = "py"
+          ; e_name = { name = snd name; typ = Some typ; default = None }
+          ; e_args = []
+          ; e_as = None
+          ; e_from = Some (p, Id "__main__") } ]
       in
       [ p, Expr s; s' ]
     }

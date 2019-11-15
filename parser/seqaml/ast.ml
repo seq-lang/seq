@@ -221,14 +221,16 @@ module Stmt = struct
       | ImportExtern e ->
         if pythonic
         then Err.serr ~pos:(fst snode) "Python does not support external imports"
-        else sprintf "%s%simport %s%s"
-          (match e.e_from with None -> "" | Some s -> sprintf "from %s " (e_to_string s))
-          (e.lang)
-          (sprintf "%s(%s) -> %s"
-            e.e_name.name
-            (ppl e.e_args ~f:(param_to_string ~pythonic))
-            (e_to_string (Option.value_exn e.e_name.typ)))
-          (Option.value_map e.e_as ~default:"" ~f:(fun x -> sprintf " as %s" x))
+        else
+          Util.ppl e ~sep:(sprintf "\n%s" (pad indent)) ~f:(fun e ->
+            sprintf "%s%simport %s%s"
+              (match e.e_from with None -> "" | Some s -> sprintf "from %s " (e_to_string s))
+              (e.lang)
+              (sprintf "%s(%s) -> %s"
+                e.e_name.name
+                (ppl e.e_args ~f:(param_to_string ~pythonic))
+                (e_to_string (Option.value_exn e.e_name.typ)))
+              (Option.value_map e.e_as ~default:"" ~f:(fun x -> sprintf " as %s" x)))
       | Special _ ->
         if pythonic
         then Err.serr ~pos:(fst snode) "Python does not support specials"

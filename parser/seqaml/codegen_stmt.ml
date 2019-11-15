@@ -288,6 +288,12 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     match_stmt
 
   and parse_extern ctx pos ~toplevel ext =
+    List.iter ext ~f:(fun s ->
+      let s' = parse_extern_single ctx pos ~toplevel s in
+      ignore @@ finalize ~ctx s' pos);
+    Llvm.Stmt.pass ()
+
+  and parse_extern_single ctx pos ~toplevel ext =
     let ctx_name = Option.value ext.e_as ~default:ext.e_name.name in
     let open Ast in
     match ext.lang, ext.e_from with
@@ -305,6 +311,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         match Ast.Expr.to_string (Option.value_exn ext.e_name.typ) with
         | "void" -> rhs
         | _ -> (* return typ.__from_py__ (rhs) *)
+          e_annotate ~pos @@
           e_call (e_dot (Option.value_exn ext.e_name.typ) "__from_py__") [rhs]
       in
       (* @pyhandle def y ( x : [tuple] ) -> typ: return rhs *)

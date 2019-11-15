@@ -47,7 +47,7 @@ type t =
   | Import of import list
   | ImportPaste of string
       (** [ImportPaste] is currently Seq's [import!]. _Deprecated_. *)
-  | ImportExtern of eimport
+  | ImportExtern of eimport list
   | Generic of generic
   | Try of (t ann list * catch ann list * t ann list option)
       (** [Try(stmts, catch, finally_stmts)] corresponds to
