@@ -142,13 +142,13 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       (* a.x = b *)
       let rh_expr = E.parse ~ctx rhs in
       Llvm.Stmt.assign_member (E.parse ~ctx lh_lhs) lh_rhs rh_expr
-    | pos, Index (var_expr, ((_, Slice _) as slice_expr)) ->
+    (* | pos, Index (var_expr, ((_, Slice _) as slice_expr)) ->
       (* a[slice(x)] = b -> a.__setitem__(slice(x), b) *)
       let expr =
         E.parse ~ctx
         @@ Ast.(e_call ~pos (e_dot ~pos var_expr "__setitem__") [slice_expr; rhs])
       in
-      Llvm.Stmt.expr expr
+      Llvm.Stmt.expr expr *)
     | pos, Index (var_expr, index_expr) ->
       (* a[x] = b *)
       let var_expr = E.parse ~ctx var_expr in
