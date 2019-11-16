@@ -1,0 +1,34 @@
+def _insertion_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]):
+    i = begin + 1
+    while i < end:
+        x = arr[i]
+        j = i - 1
+        while j >= begin and comp(x, arr[j]):
+            arr[j+1] = arr[j]
+            j -= 1
+        arr[j+1] = x
+        i += 1
+
+def insertion_sort_array[T](collection: array[T], size: int, compare: function[bool,T,T]):
+    """
+        Insertion Sort
+        Sorts the array inplace.
+    """
+    _insertion_sort(collection, 0, size, compare)
+
+def insertion_sort_inplace[T](collection: list[T], compare: function[bool,T,T]):
+    """
+        Insertion Sort
+        Sorts the list inplace.
+    """
+    insertion_sort_array(collection.arr, collection.len, compare)
+
+def insertion_sort[T](collection: list[T], compare: function[bool,T,T]) -> list[T]:
+    """
+        Insertion Sort
+        Returns the sorted list.
+    """
+    newlst = copy(collection)
+    insertion_sort_inplace(newlst, compare)
+    return newlst
+

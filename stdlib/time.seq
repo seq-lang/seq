@@ -1,1 +1,1 @@
-cimport seq_time () -> int as time
+time = _C.seq_time

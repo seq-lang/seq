@@ -1,6 +1,5 @@
 def system(cmd: str) -> int:
-    cimport system(cmd: ptr[byte]) -> int
-    return system(cmd.c_str())
+    return _C.system(cmd.c_str())
 
 SEEK_SET = 0
 SEEK_CUR = 1
@@ -12,13 +11,11 @@ type EnvMap(_map: dict[str,str]):
 
     def _init_if_needed(self: EnvMap):
         if len(self._map) == 0:
-            cimport seq_env() -> ptr[ptr[byte]]
-            cimport strlen(ptr[byte]) -> int
-            env = seq_env()
+            env = _C.seq_env()
             p = env[0]
             i = 0
             while p:
-                s = str(p, strlen(p))
+                s = str.from_ptr(p)
                 if s:
                     j = 0
                     found = False

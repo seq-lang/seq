@@ -1,0 +1,78 @@
+type FASTARecord(_name: str, _seq: seq):
+    @property
+    def name(self: FASTARecord):
+        return self._name
+
+    @property
+    def seq(self: FASTARecord):
+        return self._seq
+
+type FASTA(file: gzFile, fai: list[int], names: list[str]):
+    def __init__(self: FASTA, path: str) -> FASTA:
+        fai = list[int]()
+        names = list[str]()
+        with gzopen(path + ".fai", "r") as fai_file:
+            for line in fai_file:
+                assert line
+                cut = 0
+                while line[cut] != "\t":
+                    cut += 1
+                name = line[:cut]
+                line = line[cut:]
+                fai.append(_C.atoi(line.ptr))
+                names.append(name)
+        return (gzopen(path, "r"), fai, names)
+
+    def __seqs__(self: FASTA):
+        for rec in self:
+            yield rec.seq
+
+    def __iter__(self: FASTA) -> FASTARecord:
+        idx = 0
+        p = ptr[byte]()
+        n = 0
+        m = 0
+
+        for a in self.file._iter():
+            if a[0] == ">":
+                if n > 0:
+                    assert m == n
+                    yield (self.names[idx - 1], seq(p, n))
+
+                n = self.fai[idx]
+                p = ptr[byte](n)
+                m = 0
+                idx += 1
+            else:
+                assert m + len(a) <= n
+                str.memcpy(p + m, a.ptr, len(a))
+                m += len(a)
+
+        if n > 0:
+            assert m == n
+            yield (self.names[-1], seq(p, n))
+
+        self.close()
+
+    def close(self: FASTA):
+        self.file.close()
+
+    def __enter__(self: FASTA):
+        pass
+
+    def __exit__(self: FASTA):
+        self.close()
+
+    def write(seqs_iter, path):
+        LINE_LIMIT = 60
+        with open(path, "w") as f:
+            for i, s in enumerate(seqs_iter):
+                f.write(">sequence")
+                f.write(str(i))
+                f.write("\n")
+                n = 0
+                while n < len(s):
+                    end = min(len(s), n + LINE_LIMIT)
+                    f.write(str(s[n:end]))
+                    f.write("\n")
+                    n += LINE_LIMIT

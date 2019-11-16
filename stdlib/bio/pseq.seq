@@ -1,0 +1,218 @@
+type SubMat(mat: ptr[i8]):
+    def _N():
+        return 23
+
+    def __init__(self: SubMat, d: dict[tuple[str, str], int]) -> SubMat:
+        def aa_code(c: str):
+            if len(c) != 1:
+                raise ValueError("sequence length != 1: " + c)
+            AA = 'ABCDEFGHIKLMNPQRSTVWXYZ'
+            assert len(AA) == SubMat._N()
+            b = c.ptr[0]
+            i = 0
+            while i < len(AA):
+                if b == AA.ptr[i]:
+                    return i
+                i += 1
+            raise ValueError("unknown amino acid code: " + c)
+
+        N = SubMat._N()
+        p = ptr[i8](N * N)
+        for i in range(N * N):
+            p[i] = i8(0)
+        for k,v in d.items():
+            if not (-128 <= v <= 127):
+                raise ValueError("substitution score out of [-128, 127] range: " + str(v))
+            a1 = aa_code(k[0])
+            a2 = aa_code(k[1])
+            p[a1*N + a2] = i8(v)
+            p[a2*N + a1] = i8(v)
+        return (p,)
+
+    def __str__(self: SubMat):
+        N = SubMat._N()
+        s = ''
+        k = 0
+        for i in range(N):
+            for j in range(N):
+                s += str(int(self.mat[k])) + ' '
+                k += 1
+        return s
+
+type pseq(len: int, ptr: ptr[byte]):  # order is consistent with str/seq
+    def __init__(self: pseq, p: ptr[byte], n: int) -> pseq:
+        return (n, p)
+
+    def __init__(self: pseq, s: str) -> pseq:
+        return (s.len, s.ptr)
+
+    def __eq__(self: pseq, other: pseq):
+        n = len(self)
+        if n != len(other):
+            return False
+        i = 0
+        while i < n:
+            if self._at(i) != other._at(i):
+                return False
+            i += 1
+        return True
+
+    def __ne__(self: pseq, other: pseq):
+        return not (self == other)
+
+    def _cmp(self: pseq, other: pseq):
+        self_len = len(self)
+        other_len = len(other)
+        n = min(self_len, other_len)
+        i = 0
+        while i < n:
+            c1 = self._at(i)
+            c2 = other._at(i)
+            if c1 != c2:
+                return int(c1) - int(c2)
+            i += 1
+        return self_len - other_len
+
+    def __lt__(self: pseq, other: pseq):
+        return self._cmp(other) < 0
+
+    def __le__(self: pseq, other: pseq):
+        return self._cmp(other) <= 0
+
+    def __gt__(self: pseq, other: pseq):
+        return self._cmp(other) > 0
+
+    def __ge__(self: pseq, other: pseq):
+        return self._cmp(other) >= 0
+
+    def __str__(self: pseq):
+        return str(self.ptr, self.len)
+
+    def __len__(self: pseq):
+        return self.len
+
+    def __bool__(self: pseq):
+        return self.len != 0
+
+    def __hash__(self: pseq):
+        h = 0
+        for i in range(len(self)):
+            h = 31*h + int(self._at(i))
+        return h
+
+    def __getitem__(self: pseq, idx: int):
+        n = len(self)
+        if idx < 0:
+            idx += n
+        if not (0 <= idx < n):
+            raise IndexError("pseq index out of range")
+        return pseq(self.ptr + idx, 1)
+
+    def _at(self: pseq, idx: int):
+        return self.ptr[idx]
+
+    def _slice_direct(self: pseq, a: int, b: int):
+        return pseq(self.ptr + a, b - a)
+
+    def __getitem__(self: pseq, s: slice):
+        a, b = s
+        n = len(self)
+        if a < 0: a += n
+        if b < 0: b += n
+        if a > n: a = n
+        if b > n: b = n
+        return self._slice_direct(a, b)
+
+    def __getitem__(self: pseq, s: lslice):
+        b = s.end
+        n = len(self)
+        if b < 0: b += n
+        if b > n: b = n
+        return pseq(self.ptr, b)
+
+    def __getitem__(self: pseq, s: rslice):
+        a = s.start
+        n = len(self)
+        if a < 0: a += n
+        if a > n: a = n
+        return pseq(self.ptr + a, n - a)
+
+    def _copy_to(self: pseq, p: ptr[byte]):
+        str.memcpy(p, self.ptr, self.len)
+
+    def __copy__(self: pseq):
+        n = len(self)
+        p = ptr[byte](n)
+        self._copy_to(p)
+        return pseq(p, n)
+
+    def split(self: pseq, k: int, step: int):
+        i = 0
+        while i + k <= len(self):
+            yield self._slice_direct(i,i+k)
+            i += step
+
+    def __iter__(self: pseq):
+        return self.split(1, 1)
+
+    def __reversed__(self: pseq):
+        i = len(self) - 1
+        while i >= 0:
+            yield self._slice_direct(i,i+1)
+            i -= 1
+
+    def align(self: pseq, other: pseq, config: AlignConfig, sub: SubMat):
+        mat, gap1, gap2, bandwidth, zdrop, flags = config
+        out = Alignment()
+        _C.seq_palign(self, other, sub.mat, i8(gap1[0]), i8(gap1[1]), bandwidth, zdrop, flags, __ptr__(out))
+        return out
+
+    def align_dual(self: pseq, other: pseq, config: AlignConfig, sub: SubMat):
+        mat, gap1, gap2, bandwidth, zdrop, flags = config
+        out = Alignment()
+        _C.seq_palign_dual(self, other, sub.mat, i8(gap1[0]), i8(gap1[1]), i8(gap2[0]), i8(gap2[1]), bandwidth, zdrop, flags, __ptr__(out))
+        return out
+
+    def align_global(self: pseq, other: pseq, config: AlignConfig, sub: SubMat):
+        mat, gap1, gap2, bandwidth, zdrop, flags = config
+        out = Alignment()
+        _C.seq_palign_global(self, other, sub.mat, i8(gap1[0]), i8(gap1[1]), bandwidth, __ptr__(out))
+        return out
+
+    def __matmul__(self: pseq, other: pseq):
+        out = Alignment()
+        _C.seq_palign_default(self, other, __ptr__(out))
+        return out
+
+def translate(s: seq):
+    def encode_triple(s: seq):
+        type K1 = Kmer[1]
+        a, b, c = K1(s[0]), K1(s[1]), K1(s[2])
+        n = (int(c.as_int())       |
+            (int(b.as_int()) << 2) |
+            (int(a.as_int()) << 4))
+        return n
+
+    def translate_encoded(n: int):
+        # Note(!) this table must be consistent with k-mer encoding
+        table = 'KKNNRRSSTTTTIMIIEEDDGGGGAAAAVVVVQQHHRRRRPPPPLLLLXXYYXWCCSSSSLLFF'
+        return table.ptr[n]
+
+    n = len(s)
+    m = n // 3
+    p = ptr[byte](m)
+    i = 0
+    j = 0
+    while i < n:
+        p[j] = translate_encoded(encode_triple(s._slice_direct(i, i + 3)))
+        i += 3
+        j += 1
+    return pseq(p, m)
+
+extend seq:
+    def translate(self: seq):
+        return translate(self)
+
+def as_protein(s: seq):
+    return pseq(s.ptr, abs(s.len))
+

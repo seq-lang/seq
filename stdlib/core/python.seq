@@ -153,7 +153,7 @@ extend str:
 
 extend seq:
     def __to_py__(self: seq) -> pyobj:
-        return str(self).__to_py__()
+        return str(self.ptr).__to_py__()
 
     def __from_py__(s: pyobj) -> seq:
         return seq(str.__from_py__(s))

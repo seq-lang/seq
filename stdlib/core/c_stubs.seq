@@ -1,4 +1,3 @@
-
 # Seq runtime functions
 cimport seq_alloc(int) -> cobj
 cimport seq_alloc_atomic(int) -> cobj
@@ -10,10 +9,16 @@ cimport seq_gc_clear_roots()
 cimport seq_gc_exclude_static_roots(cobj, cobj)
 cimport seq_strdup(cobj) -> str
 cimport seq_check_errno() -> str
+cimport seq_stdin() -> cobj
+cimport seq_stdout() -> cobj
+cimport seq_stderr() -> cobj
+cimport seq_env() -> ptr[cobj]
+cimport seq_time () -> int
 
 # <string.h>
 cimport strtoll(cobj, ptr[cobj], i32) -> int
 cimport strtod(cobj, ptr[cobj]) -> float
+cimport strlen(cobj) -> int
 
 # <ctype.h>
 cimport isdigit(int) -> int
@@ -73,6 +78,12 @@ cimport fclose(cobj) -> int
 cimport fwrite(cobj, int, int, cobj) -> int
 cimport ftell(cobj) -> int
 cimport fseek(cobj, int, i32) -> i32
+cimport fgets(cobj, int, cobj) -> cobj
+cimport getline(ptr[cobj], n: ptr[int], file: cobj) -> int
+
+# <stdlib.h>
+cimport exit(int)
+cimport system(cmd: cobj) -> int
 
 # <dlfcn.h>
 cimport dlerror() -> cobj
@@ -91,3 +102,45 @@ cimport gzread(cobj, cobj, u32) -> i32
 cimport gzwrite(cobj, cobj, i32) -> i32
 cimport gztell(cobj) -> int
 cimport gzseek(cobj, int, i32) -> int
+
+# Seq Alignment
+cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
+cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
+cimport seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
+cimport seq_align_global(seq, seq, ptr[i8], i8, i8, int, ptr[Alignment])
+cimport seq_align_default(seq, seq, ptr[Alignment])
+cimport seq_palign(pseq, pseq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
+cimport seq_palign_dual(pseq, pseq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
+cimport seq_palign_global(pseq, pseq, ptr[i8], i8, i8, int, ptr[Alignment])
+cimport seq_palign_default(pseq, pseq, ptr[Alignment])
+
+# <htslib.h>
+cimport hts_open(cobj, cobj) -> cobj
+cimport hts_close(cobj)
+cimport hts_idx_destroy(cobj)
+cimport hts_itr_destroy(cobj)
+cimport sam_index_load(cobj, cobj) -> cobj
+cimport sam_hdr_read(cobj) -> cobj
+cimport sam_itr_querys(cobj, cobj, cobj) -> cobj
+cimport bam_init1() -> cobj
+cimport bam_cigar2qlen(int, ptr[u32]) -> int
+cimport bam_cigar2rlen(int, ptr[u32]) -> int
+cimport bam_aux2i(ptr[u8]) -> int
+cimport bam_aux2f(ptr[u8]) -> float
+cimport bam_aux2A(ptr[u8]) -> byte
+cimport bam_auxB_len(ptr[u8]) -> u32
+cimport bam_auxB2i(ptr[u8], idx: u32) -> int
+cimport bam_auxB2f(ptr[u8], idx: u32) -> float
+cimport bam_hdr_destroy(cobj)
+cimport bam_destroy1(cobj)
+
+# Seq HTSlib
+cimport seq_hts_get_name(cobj) -> str
+cimport seq_hts_get_seq(cobj) -> seq
+cimport seq_hts_get_qual(cobj) -> str
+cimport seq_hts_get_cigar(cobj) -> CIGAR
+cimport seq_hts_get_aux(cobj) -> str
+cimport seq_hts_aux_get(str, str) -> ptr[u8]
+cimport seq_hts_get_targets(cobj) -> array[SAMHeaderTarget]
+cimport seq_hts_sam_itr_next(cobj, cobj, cobj) -> int
+cimport seq_hts_get_seq(cobj) -> seq

@@ -1,27 +1,27 @@
 
-# from mymodule pyimport multiply () -> int 
-# print multiply(3, 4)
+from mymodule pyimport multiply () -> int 
+print multiply(3, 4)
 
-# from mymodule pyimport print_args () -> tuple[dict[str,float],tuple[int,float]]
-# print print_args(
-#    (4,5), 
-#    {'a': 3.14, 'b': 2.123}, 
-#    True, 
-#    {s'ACGT'}, 
-#    [['abc'], ['1.1', '2.2'], list[str]()]
-# )
+from mymodule pyimport print_args () -> tuple[dict[str,float],tuple[int,float]]
+print print_args(
+   (4,5), 
+   {'a': 3.14, 'b': 2.123}, 
+   True, 
+   {s'ACGT'}, 
+   [['abc'], ['1.1', '2.2'], list[str]()]
+)
 
-# from mymodule pyimport throw_exc () -> int
-# try:
-#    throw_exc()
-# except PyException as e:
-#    print e.pytype + ":", e.msg
+from mymodule pyimport throw_exc () -> int
+try:
+   throw_exc()
+except PyException as e:
+   print e.pytype + ":", e.msg
 
-# pydef foo(y) -> list[float]:
-#    from scipy.stats import uniform
-#    z = uniform.cdf(y, loc=1, scale=4)
-#    return list(z)
-# print foo(list(range(6)))
+pydef foo(y) -> list[float]:
+   from scipy.stats import uniform
+   z = uniform.cdf(y, loc=1, scale=4)
+   return list(z)
+print foo(list(range(6)))
 
 LIB = "libtest.dylib"
 from LIB cimport hai() -> int

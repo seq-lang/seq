@@ -1,0 +1,138 @@
+# adapted from ksw2:
+ALIGN_SCORE_NEG_INF = -0x40000000
+ALIGN_SCORE_ONLY    = 0x01
+ALIGN_RIGHT         = 0x02
+ALIGN_GENERIC_SC    = 0x04
+ALIGN_APPROX_MAX    = 0x08
+ALIGN_EXTZ_ONLY     = 0x40
+ALIGN_REV_CIGAR     = 0x80
+ALIGN_SPLICE_FOR    = 0x100
+ALIGN_SPLICE_REV    = 0x200
+ALIGN_SPLICE_FLANK  = 0x400
+
+def _validate_gap(g: int):
+    if g < 0 or g >= 128:
+        raise ArgumentError("gap penalty for alignment must be in range [0, 127]")
+
+def _validate_match(m: int):
+    if m < 0 or m >= 128:
+        raise ArgumentError("match/mismatch penalty for alignment must be in range [0, 127]")
+
+type AlignConfig(mat: ptr[i8], gap1: tuple[int,int], gap2: tuple[int,int], bandwidth: int, zdrop: int, flags: int):
+    def _gen_mat(a: int, b: int):
+        _validate_match(a)
+        _validate_match(b)
+        m = 5
+        mat = ptr[i8](m * m)
+        for i in range(m - 1):
+            for j in range(m - 1):
+                mat[i*m + j] = i8(a if i == j else -b)
+            mat[i*m + m-1] = i8(0)
+        for j in range(m):
+            mat[(m-1)*m + j] = i8(0)
+        return mat
+
+    def __init__(self: AlignConfig, match_score: int, mismatch_score: int) -> AlignConfig:
+        mat = AlignConfig._gen_mat(match_score, mismatch_score)
+        gap1 = (4,2)
+        gap2 = (13,1)
+        bandwidth = -1
+        zdrop = -1
+        flags = 0
+        return (mat, gap1, gap2, bandwidth, zdrop, flags)
+
+    def gap1(self: AlignConfig, o: int, e: int) -> AlignConfig:
+        _validate_gap(o)
+        _validate_gap(e)
+        mat, gap1, gap2, bandwidth, zdrop, flags = self
+        return (mat, (o, e), gap2, bandwidth, zdrop, flags)
+
+    def gap2(self: AlignConfig, o: int, e: int) -> AlignConfig:
+        _validate_gap(o)
+        _validate_gap(e)
+        mat, gap1, gap2, bandwidth, zdrop, flags = self
+        return (mat, gap1, (o, e), bandwidth, zdrop, flags)
+
+    def bandwidth(self: AlignConfig, w: int) -> AlignConfig:
+        mat, gap1, gap2, bandwidth, zdrop, flags = self
+        return (mat, gap1, gap2, w, zdrop, flags)
+
+    def zdrop(self: AlignConfig, z: int) -> AlignConfig:
+        mat, gap1, gap2, bandwidth, zdrop, flags = self
+        return (mat, gap1, gap2, bandwidth, z, flags)
+
+    def flags(self: AlignConfig, f: int) -> AlignConfig:
+        mat, gap1, gap2, bandwidth, zdrop, flags = self
+        return (mat, gap1, gap2, bandwidth, zdrop, f)
+
+type CIGAR(value: ptr[u32], len: int):
+    def __init__(self: CIGAR) -> CIGAR:
+        return (ptr[u32](), 0)
+
+    def __len__(self: CIGAR):
+        return self.len
+
+    @property
+    def qlen(self: CIGAR):
+        return _C.bam_cigar2qlen(self.len, self.value)
+
+    @property
+    def rlen(self: CIGAR):
+        return _C.bam_cigar2rlen(self.len, self.value)
+
+    def __getitem__(self: CIGAR, idx: int):
+        if not (0 <= idx < len(self)):
+            raise IndexError("CIGAR index out of range")
+        v = self.value[idx]
+        return (int(v) >> 4, "MIDNSHP=XB"[int(v) & 0xf])
+
+    def __iter__(self: CIGAR):
+        for i in range(len(self)):
+            yield self[i]
+
+    def __str__(self: CIGAR):
+        def op_to_str(op):
+            return str(op[0]) + str(op[1])
+        return str.cat([op_to_str(op) for op in self])
+
+type Alignment(_cigar: CIGAR, _score: int):
+    def __init__(self: Alignment) -> Alignment:
+        return (CIGAR(), 0)
+
+    @property
+    def cigar(self: Alignment):
+        return self._cigar
+
+    @property
+    def score(self: Alignment):
+        return self._score
+
+extend seq:
+    def align(self: seq, other: seq, config: AlignConfig):
+        mat, gap1, gap2, bandwidth, zdrop, flags = config
+        out = Alignment()
+        _C.seq_align(self, other, mat, i8(gap1[0]), i8(gap1[1]), bandwidth, zdrop, flags, __ptr__(out))
+        return out
+
+    def align_dual(self: seq, other: seq, config: AlignConfig):
+        mat, gap1, gap2, bandwidth, zdrop, flags = config
+        out = Alignment()
+        _C.seq_align_dual(self, other, mat, i8(gap1[0]), i8(gap1[1]), i8(gap2[0]), i8(gap2[1]), bandwidth, zdrop, flags, __ptr__(out))
+        return out
+
+    def align_splice(self: seq, other: seq, config: AlignConfig):
+        mat, gap1, gap2, bandwidth, zdrop, flags = config
+        out = Alignment()
+        _C.seq_align_splice(self, other, mat, i8(gap1[0]), i8(gap1[1]), i8(gap2[0]), i8(gap2[1]), zdrop, flags, __ptr__(out))
+        return out
+
+    def align_global(self: seq, other: seq, config: AlignConfig):
+        mat, gap1, gap2, bandwidth, zdrop, flags = config
+        out = Alignment()
+        _C.seq_align_global(self, other, mat, i8(gap1[0]), i8(gap1[1]), bandwidth, __ptr__(out))
+        return out
+
+    def __matmul__(self: seq, other: seq):
+        out = Alignment()
+        _C.seq_align_default(self, other, __ptr__(out))
+        return out

@@ -305,7 +305,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let open Ast in
     match ext.lang, ext.e_from with
     | "py", Some from ->
-      let rhs = e_annotate ~pos @@
+      let rhs =
+        (* e_annotate ~pos @@ *)
         e_call (* py_import(lib)[fn].call( x.__to_py__() ) *)
           ( e_dot
             ( e_index
@@ -318,7 +319,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         match Ast.Expr.to_string (Option.value_exn ext.e_name.typ) with
         | "void" -> rhs
         | _ -> (* return typ.__from_py__ (rhs) *)
-          e_annotate ~pos @@
+          (* e_annotate ~pos @@ *)
           e_call (e_dot (Option.value_exn ext.e_name.typ) "__from_py__") [rhs]
       in
       (* @pyhandle def y ( x : [tuple] ) -> typ: return rhs *)
