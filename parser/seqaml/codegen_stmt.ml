@@ -370,12 +370,24 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   and parse_extend ctx pos ~toplevel (name, stmts) =
     if not toplevel then serr ~pos "extensions must be declared at the toplevel";
+    let name, generics = match snd name with
+      | Id _ -> name, []
+      | Index (name, ((_, Id _) as generic)) -> name, [generic]
+      | Index (name, (_, Tuple generics)) -> name, generics
+      | _ -> serr ~pos "cannot extend non-type expression"
+    in
     let typ = E.parse_type ~ctx name in
-    (* let typ = match Ctx.in_scope ctx name with
-      | Some (Ctx_namespace.Type t, _) -> t
-      | _ -> serr ~pos "cannot extend non-existing class %s" name
-    in *)
+    let generic_types = Llvm.Generics.Type.get_names typ in
+    if List.(length generics <> length generic_types) then
+      serr ~pos "specified %d generics, but expected %d" (List.length generics) (List.length generic_types);
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
+    let generics = List.map2_exn generics generic_types ~f:(fun g t ->
+      match snd g with
+      | Id n ->
+        Util.dbg ">> extend %s :: add %s" (Ast.Expr.to_string name) n;
+        Ctx.add ~ctx:new_ctx n (Ctx_namespace.Type t)
+      | _ -> serr ~pos:(fst g) "not a valid generic specifier")
+    in
     ignore
     @@ List.map stmts ~f:(function
            | pos, Function f -> parse_function new_ctx pos f ~cls:typ
@@ -520,7 +532,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     Llvm.Stmt.func fn
 
   and parse_class ctx pos ~toplevel ?(is_type = false) cls =
-    (* ((name, types, args, stmts) as stmt) *)
     let typ =
       let typ =
         if is_type

@@ -1,0 +1,11 @@
+type i8  = Int[8]
+type i16 = Int[16]
+type i32 = Int[32]
+type i64 = Int[64]
+type u8  = UInt[8]
+type u16 = UInt[16]
+type u32 = UInt[32]
+type u64 = UInt[64]
+
+type cobj = ptr[byte]
+type Jar = ptr[byte]

@@ -1,0 +1,235 @@
+def min(a, b):
+    """
+    min(a, b)
+
+    Return the item with the lowest value
+    """
+    return a if a < b else b
+
+def max(a, b):
+    """
+    max(a, b)
+
+    Return the item with the highest value
+    """
+    return a if a > b else b
+
+def len(x):
+    """
+    len(x)
+
+    Return the length of x
+    """
+    return x.__len__()
+
+def iter(x):
+    """
+    iter(x)
+
+    Return an iterator for the given object
+    """
+    return x.__iter__()
+
+def copy(x):
+    """
+    copy(x)
+
+    Return a copy of x
+    """
+    return x.__copy__()
+
+def abs(x):
+    """
+    abs(x)
+
+    Return the absolute value of x
+    """
+    return x.__abs__()
+
+def hash(x):
+    """
+    hash(x)
+
+    Returns hashed value only for immutable objects
+    """
+    return x.__hash__()
+
+def ord(s: str):
+    """
+    ord(s)
+
+    Return an integer representing the Unicode code point of s
+    """
+    return int(s.ptr[0])
+
+def chr(i: int):
+    """
+    chr(i)
+
+    Return a string representing a character whose Unicode
+    code point is an integer
+    """
+    p = ptr[byte](1)
+    p[0] = byte(i)
+    return str(p, 1)
+
+def next(g):
+    """
+    next(g)
+
+    Return the next item from g
+    """
+    g.done()
+    return g.next()
+
+def any(x):
+    """
+    any(x)
+
+    Returns True if any item in x is true,
+    False otherwise
+    """
+    for a in x:
+        if a:
+            return True
+    return False
+
+def all(x):
+    """
+    all(x)
+
+    Returns True when all elements in x are true,
+    False otherwise
+    """
+    for a in x:
+        if not a:
+            return False
+    return True
+
+def enum(x):
+    """
+    enum(x)
+
+    Creates a tuple containing a count (from start which defaults
+    to 0) and the values obtained from iterating over x
+    """
+    i = 0
+    for a in x:
+        yield (i,a)
+        i += 1
+
+def zip(a, b):
+    """
+    zip(a, b)
+
+    Returns a zip object, which is an iterator of tuples
+    that aggregates elements based on the iterables passed
+    """
+    bi = iter(b)
+    for i in a:
+        if bi.done(): break
+        yield (i, bi.next())
+    bi.destroy()
+
+def filter(f, x):
+    """
+    filter(f, x)
+
+    Returns all a from the iterable x that are filtered by f
+    """
+    for a in x:
+        if f(a):
+            yield a
+
+def map(f, x):
+    """
+    map(f, x)
+
+    Applies a function on all a in x and returns map object
+    """
+    for a in x:
+        yield f(a)
+
+def enumerate(x):
+    """
+    enumerate(x)
+
+    Creates a tuple containing a count (from start which defaults
+    to 0) and the values obtained from iterating over x
+    """
+    i = 0
+    for a in x:
+        yield (i,a)
+        i += 1
+
+def echo(x):
+    """
+    echo(x)
+
+    Return the output of x
+    """
+    print x
+    return x
+
+def reversed(x):
+    """
+    reversed(x)
+
+    Return an iterator that accesses x in the reverse order
+    """
+    return x.__reversed__()
+
+def round(x, n) -> float:
+    """
+    round(x, n)
+
+    Return the x rounded off to the given
+    n digits after the decimal point.
+    """
+    n := _C.pow(10.0, float(n))
+    return _C.round(float(x * n)) / n
+
+def sum(xi):
+    """
+    sum(xi)
+
+    Return the sum of the items added together from xi
+    """
+    x = iter(xi)
+    if not x.done():
+        s = x.next()
+        while not x.done():
+            s += x.next()
+        x.destroy()
+        return s
+    else:
+        x.destroy()
+
+def pickle[T](x: T, jar: Jar):
+    x.__pickle__(jar)
+
+def unpickle[T](jar: Jar):
+    return T.__unpickle__(jar)
+
+def sorted(v):
+    """
+    sorted(v)
+
+    Return a sorted list of the elements in v
+    """
+    u = [a for a in v]
+    qsort(u.arr[0:len(u)])
+    return u
+
+import! bio
+
+PY_MODULES = dict[str, py.pyobj]()
+def _py_import(name: str):
+    if name in PY_MODULES:
+        return PY_MODULES[name]
+    m = py.imp(name)
+    PY_MODULES[name] = m
+    return m
+
+def _py_exec(s: str):
+    py.exec(s)

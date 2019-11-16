@@ -465,6 +465,14 @@ FOREIGN void set_func_generic_name(Func *fn, int idx, char *name) {
 
 FOREIGN void set_ref_generics(types::RefType *fn, int n) { fn->addGenerics(n); }
 
+FOREIGN size_t get_ref_generic_count(types::Type *fn) {
+  auto *f = dynamic_cast<types::RefType *>(fn);
+  if (!f)
+    return 0;
+  return f->numGenerics();
+}
+
+
 FOREIGN types::Type *get_ref_generic(types::RefType *fn, int idx) {
   return fn->getGeneric(idx);
 }
@@ -472,6 +480,10 @@ FOREIGN types::Type *get_ref_generic(types::RefType *fn, int idx) {
 FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, char *name) {
   fn->getGeneric(idx)->setName(name);
   free(name);
+}
+
+FOREIGN char *get_ref_generic_name(types::RefType *fn, int idx) {
+  return strdup(fn->getGeneric(idx)->getName().c_str());
 }
 
 FOREIGN Stmt *match_stmt(Expr *cond) {

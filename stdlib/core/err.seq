@@ -16,8 +16,14 @@ class IndexError:
 class KeyError:
     msg: str
 
+class CException:
+   msg: str
+
+class PyException:
+    msg: str
+    pytype: str
+
 def check_errno(prefix: str):
-    cimport seq_check_errno() -> str
-    msg = seq_check_errno()
+    msg = _C.seq_check_errno()
     if msg:
         raise OSError(prefix + msg)

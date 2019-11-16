@@ -34,11 +34,19 @@ from LD cimport PyDict_New() -> cobj
 from LD cimport PyDict_SetItem(cobj, cobj, cobj) -> cobj
 from LD cimport PyDict_Next(cobj, ptr[int], ptr[cobj], ptr[cobj]) -> int
 
-class PyException:
-    msg: str
-    pytype: str
-
 type pyobj(p: ptr[byte]):
+    def __getitem__(self: pyobj, name: str):
+        return pyobj.exc_wrap(pyobj(PyObject_GetAttrString(self.p, name.c_str())))
+
+    def __setitem__(self: pyobj, name: str, val: pyobj):
+        return pyobj.exc_wrap(pyobj(PyObject_SetAttrString(self.p, name.c_str(), val.p)))
+
+    def __len__(self: pyobj):
+        return pyobj.exc_wrap(PyObject_Length(self.p))
+
+    def __to_py__(self: pyobj):
+        return self
+
     def to_str(self: pyobj, errors: str, empty: str = "") -> str:
         obj = PyUnicode_AsEncodedString(self.p, "utf-8".c_str(), errors.c_str())
         if obj == cobj():
@@ -76,35 +84,29 @@ type pyobj(p: ptr[byte]):
         args_py = (~args).p if args else cobj()
         return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args_py)))
 
-    def __getitem__(self: pyobj, name: str):
-        return pyobj.exc_wrap(pyobj(PyObject_GetAttrString(self.p, name.c_str())))
-
-    def __setitem__(self: pyobj, name: str, val: pyobj):
-        return pyobj.exc_wrap(pyobj(PyObject_SetAttrString(self.p, name.c_str(), val.p)))
-
-    def __len__(self: pyobj):
-        return pyobj.exc_wrap(PyObject_Length(self.p))
-
-    def __to_py__(self: pyobj):
-        return self
-
 def init():
     Py_Initialize()
-if LD.__len__() == 0 or LD[0] != "\0":
-    init()
 
 def none():
     #cimport seq_py_none() -> ptr[byte]
     #return pyobj(seq_py_none())
     raise PyException("not yet done", "n/a")
 
-def imp(name: str) -> pyobj:
+def _imp(name: str) -> pyobj:
     return pyobj.exc_wrap(pyobj(PyImport_ImportModule(name.c_str())))
+
+_PY_MODULES = dict[str, pyobj]()
+def imp(name: str):
+    if name in _PY_MODULES:
+        return _PY_MODULES[name]
+    m = _imp(name)
+    _PY_MODULES[name] = m
+    return m
 
 def exec(code: str):
     PyRun_SimpleString(code.c_str())
 
-# conversions
+# Type conversions
 
 def py(x) -> pyobj:
     return x.__to_py__()
@@ -156,8 +158,58 @@ extend seq:
     def __from_py__(s: pyobj) -> seq:
         return seq(str.__from_py__(s))
 
-# We need cobjs here for LLVM to access them easily
+extend list[T]:
+    def __to_py__(self: list[T]) -> py.pyobj:
+        pylist = py.PyList_New(len(self))
+        py.pyobj.exc_check()
+        idx = 0
+        for a in self:
+            py.PyList_SetItem(pylist, idx, py.py(a).p)
+            py.pyobj.exc_check()
+            idx += 1
+        return py.pyobj(pylist)
 
+    def __from_py__(v: py.pyobj):
+        n = v.__len__()
+        t = list[T](n)
+        for i in range(n):
+            elem = py.pyobj(py.PyList_GetItem(v.p, i))
+            py.pyobj.exc_check()
+            t.append(py.get[T](elem))
+        return t
+
+extend dict[K, V]:
+    def __to_py__(self: dict[K,V]) -> py.pyobj:
+        pydict = py.PyDict_New()
+        py.pyobj.exc_check()
+        for k,v in self.items():
+            py.PyDict_SetItem(pydict, py.py(k).p, py.py(v).p)
+            py.pyobj.exc_check()
+        return py.pyobj(pydict)
+
+    def __from_py__(d: py.pyobj):
+        b = dict[K,V]()
+        pos = 0
+        k_ptr = cobj()
+        v_ptr = cobj()
+        while py.PyDict_Next(d.p, __ptr__(pos), __ptr__(k_ptr), __ptr__(v_ptr)):
+            py.pyobj.exc_check()
+            k = py.get[K](py.pyobj(k_ptr))
+            v = py.get[V](py.pyobj(v_ptr))
+            b[k] = v
+        return b
+
+extend set[T]:
+    def __to_py__(self: set[K]) -> py.pyobj:
+        pyset = py.PySet_New(cobj())
+        py.pyobj.exc_check()
+        for a in self:
+            py.PySet_Add(pyset, py.py(a).p)
+            py.pyobj.exc_check()
+        return py.pyobj(pyset)
+
+
+# tuple[...]: We need to provide the following toplevel functions to LLVM
 def py_tuple_new(len: int) -> cobj:
     t = PyTuple_New(len)
     pyobj.exc_check()

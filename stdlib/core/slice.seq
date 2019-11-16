@@ -1,0 +1,23 @@
+type eslice(_: int)
+""" [:] """
+
+type rslice(start: int)
+""" [start:] """
+
+type lslice(end: int)
+""" [:end] """
+
+type slice(start: int, end: int)
+""" [start:end] """
+
+type esslice(step: int)
+""" [::step] """
+
+type rsslice(start: int, step: int)
+""" [start::step] """
+
+type lsslice(end: int, step: int)
+""" [:end:step] """
+
+type sslice(start: int, end: int, step: int)
+""" [start:end:step] """

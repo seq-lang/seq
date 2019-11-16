@@ -489,6 +489,10 @@ module Generics = struct
     let set_number = foreign "set_ref_generics" (Types.typ @-> int @-> returning void)
     let get = foreign "get_ref_generic" (Types.typ @-> int @-> returning Types.typ)
 
+    let get_names f =
+      let num = foreign "get_ref_generic_count" (Types.typ @-> returning size_t) f in
+      List.init (Unsigned.Size_t.to_int num) ~f:(get f)
+
     let set_name f idx n =
       foreign
         "set_ref_generic_name"

@@ -1,8 +1,8 @@
-import python as py
-
 class list[T]:
     arr: array[T]
     len: int
+
+# Magic methods
 
     def __init__(self: list[T], arr: array[T], len: int):
         self.arr = arr
@@ -27,13 +27,6 @@ class list[T]:
         self.len = 0
         for i in other:
             self.append(i)
-
-    def _idx_check(self: list[T], idx: int, msg: str):
-        if idx >= self.len or idx < 0:
-            raise IndexError(msg)
-
-    def _slice_error(self: list[T]):
-        raise IndexError("list slice index error")
 
     def __len__(self: list[T]):
         return self.len
@@ -178,7 +171,6 @@ class list[T]:
         self.arr = l.arr
         self.len = l.len
 
-
     def __copy__(self: list[T]):
         return list[T](self.arr.__copy__(), self.len)
 
@@ -223,8 +215,6 @@ class list[T]:
         return v
 
     def __imul__(self: list[T], n: int):
-        import gc
-
         if n == 1:
             return self
 
@@ -235,7 +225,7 @@ class list[T]:
         len0 = len(self)
         new_cap = n * len0
         if self.arr.len < new_cap:
-            p = ptr[T](gc.realloc(ptr[byte](self.arr.ptr), new_cap * gc.sizeof[T]()))
+            p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
             self.arr = array[T](p, new_cap)
 
         idx = len0
@@ -251,20 +241,28 @@ class list[T]:
         self.len = new_cap
         return self
 
-    def _resize_if_full(self: list[T]):
-        import gc
-        if self.len == self.arr.len:
-            new_cap = (1 + 3*self.len) // 2
-            p = ptr[T](gc.realloc(ptr[byte](self.arr.ptr), new_cap * gc.sizeof[T]()))
-            self.arr = array[T](p, new_cap)
+    def __str__(self: list[T]) -> str:
+        n = len(self)
+        if n == 0:
+            return "[]"
+        else:
+            y = ["[", str(self[0])]
+            for i in range(1, n):
+                y.append(", ")
+                y.append(str(self[i]))
+            y.append("]")
+            return str.cat(y)
+
+
+# Helper functions
 
     def append(self: list[T], x: T):
         self._resize_if_full()
         self.arr[self.len] = x
         self.len += 1
 
-    # TODO: can't use "extend" here since it is a keyword!
     def ext(self: list[T], itr):
+        # TODO: can't use "extend" here since it is a keyword!
         for a in itr:
             self.append(a)
 
@@ -326,46 +324,17 @@ class list[T]:
     def sort(self: list[T]):
         qsort(self.arr[0:len(self)])
 
-    def __str__(self: list[T]) -> str:
-        n = len(self)
-        if n == 0:
-            return "[]"
-        else:
-            y = ["[", str(self[0])]
-            for i in range(1, n):
-                y.append(", ")
-                y.append(str(self[i]))
-            y.append("]")
-            return str.cat(y)
+# Internal helpers
 
-    def __to_py__(self: list[T]) -> py.pyobj:
-        pylist = py.PyList_New(len(self))
-        py.pyobj.exc_check()
-        idx = 0
-        for a in self:
-            py.PyList_SetItem(pylist, idx, py.py(a).p)
-            py.pyobj.exc_check()
-            idx += 1
-        return py.pyobj(pylist)
+    def _idx_check(self: list[T], idx: int, msg: str):
+        if idx >= self.len or idx < 0:
+            raise IndexError(msg)
 
-    def __from_py__(v: py.pyobj):
-        n = v.__len__()
-        t = list[T](n)
-        for i in range(n):
-            elem = py.pyobj(py.PyList_GetItem(v.p, i))
-            py.pyobj.exc_check()
-            t.append(py.get[T](elem))
-        return t
+    def _slice_error(self: list[T]):
+        raise IndexError("list slice index error")
 
-    def __pickle__(self: list[T], jar: Jar):
-        n = len(self)
-        pickle(n, jar)
-        for i in range(n):
-            pickle(self.arr[i], jar)
-
-    def __unpickle__(jar: Jar):
-        n = unpickle[int](jar)
-        arr = array[T](n)
-        for i in range(n):
-            arr[i] = unpickle[T](jar)
-        return list[T](arr, n)
+    def _resize_if_full(self: list[T]):
+        if self.len == self.arr.len:
+            new_cap = (1 + 3*self.len) // 2
+            p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
+            self.arr = array[T](p, new_cap)

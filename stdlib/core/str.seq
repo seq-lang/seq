@@ -1,0 +1,237 @@
+extend str:
+
+# Magic methods
+
+    def __init__(self: str):
+        self.ptr = ptr[byte]()
+        self.len = 0
+
+    def __hash__(self: str):
+        h = 0
+        p, n = self.ptr, self.len
+        for i in range(n):
+            h = 31*h + int(p[i])
+        return h
+
+    def __eq__(self: str, other: str):
+        if len(self) != len(other):
+            return False
+        i = 0
+        while i < len(self):
+            if self.ptr[i] != other.ptr[i]:
+                return False
+            i += 1
+        return True
+
+    def __ne__(self: str, other: str):
+        return not (self == other)
+
+    def __lt__(self: str, other: str):
+        return self._cmp(other) < 0
+
+    def __le__(self: str, other: str):
+        return self._cmp(other) <= 0
+
+    def __gt__(self: str, other: str):
+        return self._cmp(other) > 0
+
+    def __ge__(self: str, other: str):
+        return self._cmp(other) >= 0
+
+    def __str__(self: str):
+        return self
+
+    def __len__(self: str):
+        return self.len
+
+    def __bool__(self: str):
+        return self.len != 0
+
+    def __copy__(self: str):
+        return self
+
+    def __add__(self: str, other: str):
+        len1 = self.len
+        len2 = other.len
+        len3 = len1 + len2
+        p = ptr[byte](len3)
+        str.memcpy(p, self.ptr, len1)
+        str.memcpy(p + len1, other.ptr, len2)
+        return str(p, len3)
+
+    def __getitem__(self: str, idx: int):
+        if idx < 0:
+            idx += len(self)
+        if not (0 <= idx < len(self)):
+            raise IndexError("string index out of range")
+        return str(self.ptr + idx, 1)
+
+    def __getitem__(self: str, s: eslice):
+        return self.__copy__()
+
+    def __getitem__(self: str, s: slice):
+        a, b = s
+        if a < 0: a += len(self)
+        if b < 0: b += len(self)
+        if a > len(self): a = len(self)
+        if b > len(self): b = len(self)
+        if not (0 <= a <= b <= len(self)):
+            self._slice_error()
+        return str(self.ptr + a, b - a)
+
+    def __getitem__(self: str, s: lslice):
+        b = s.end
+        if b < 0: b += len(self)
+        if b > len(self): b = len(self)
+        if not (0 <= b <= len(self)):
+            self._slice_error()
+        return str(self.ptr, b)
+
+    def __getitem__(self: str, s: rslice):
+        a = s.start
+        if a < 0: a += len(self)
+        if a > len(self): a = len(self)
+        if not (0 <= a <= len(self)):
+            self._slice_error()
+        return str(self.ptr + a, len(self) - a)
+
+    def __iter__(self: str):
+        i = 0
+        n = len(self)
+        while i < n:
+            yield self[i]
+            i += 1
+
+    def __reversed__(self: str):
+        i = len(self) - 1
+        while i >= 0:
+            yield self[i]
+            i -= 1
+
+    def __mul__(self: str, x: int):
+        total = x * self.len
+        p = ptr[byte](total)
+        n = 0
+        for _ in range(x):
+            str.memcpy(p + n, self.ptr, self.len)
+            n += self.len
+        return str(p, total)
+
+    def __copy__(self: str):
+        n = len(self)
+        p = ptr[byte](n)
+        str.memcpy(p, self.ptr, n)
+        return str(p, n)
+
+# Helper methods
+
+    def c_str(self: str):
+        n = len(self)
+        assert n >= 0
+        p = ptr[byte](n + 1)
+        str.memcpy(p, self.ptr, n)
+        p[n] = byte(0)
+        return p
+
+    def cat(v: list[str]):
+        total = 0
+        for s in v:
+            total += len(s)
+        p = ptr[byte](total)
+        n = 0
+        for s in v:
+            str.memcpy(p + n, s.ptr, s.len)
+            n += s.len
+        return str(p, total)
+
+    def cati(v: generator[str], total: int):
+        p = ptr[byte](total)
+        n = 0
+        for s in v:
+            str.memcpy(p + n, s.ptr, s.len)
+            n += s.len
+        return str(p, total)
+
+    def cati_ext(v: generator[str]):
+        sz = 10
+        p = ptr[byte](sz)
+        n = 0
+        for s in v:
+            if n + s.len > sz:
+                sz = 1 + 3 * (n + s.len) // 2
+                pp = ptr[byte](sz)
+                str.memcpy(pp, p, n)
+                p = pp
+            str.memcpy(p + n, s.ptr, s.len)
+            n += s.len
+        # TODO: realloc extra space
+        return str(p, n)
+
+    def join(self: str, l: list[str]):
+        if self == "":
+            return str.cat(l)
+        assert False
+
+    def lstrip(self: str):
+        i = 0
+        while i < self.len:
+            if not str._isspace(self.ptr[i]):
+                break
+            i += 1
+        return str(self.ptr + i, self.len - i)
+
+    def rstrip(self: str):
+        i = self.len - 1
+        while i >= 0:
+            if not str._isspace(self.ptr[i]):
+                break
+            i -= 1
+        return '' if i < 0 else str(self.ptr, i + 1)
+
+    def strip(self: str):
+        return self.lstrip().rstrip()
+
+    def split(self: str, pat: str):
+        if len(pat) == 0:
+            for i in self: yield i
+        elif len(pat) == 1:
+            prev = 0
+            for i, s in enumerate(self):
+                if s == pat[0]:
+                    yield self[prev:i]
+                    prev = i + 1
+            yield self[prev:len(self)]
+        else:
+            i, l = 0, len(pat)
+            prev = 0
+            while i < len(self) - l + 1:
+                if self[i:i + l] == pat:
+                    yield self[prev:i]
+                    prev = i + l
+                    i += l
+                else:
+                    i += 1
+            yield self[prev:len(self)]
+
+    def from_ptr(t: cobj) -> str:
+        return _C.seq_strdup(t)
+
+# Internal helpers
+
+    def _cmp(self: str, other: str):
+        n = min(self.len, other.len)
+        i = 0
+        while i < n:
+            c1 = self.ptr[i]
+            c2 = other.ptr[i]
+            if c1 != c2:
+                return int(c1) - int(c2)
+            i += 1
+        return self.len - other.len
+    
+    def _slice_error(self: str):
+        raise IndexError("string slice index error")
+    
+    def _isspace(b: byte):
+        return b == byte(32) or b == byte(9) or b == byte(10) or \
+               b == byte(11) or b == byte(12) or b == byte(13)
