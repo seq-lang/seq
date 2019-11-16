@@ -472,7 +472,6 @@ FOREIGN size_t get_ref_generic_count(types::Type *fn) {
   return f->numGenerics();
 }
 
-
 FOREIGN types::Type *get_ref_generic(types::RefType *fn, int idx) {
   return fn->getGeneric(idx);
 }
