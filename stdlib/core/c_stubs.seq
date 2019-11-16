@@ -78,6 +78,7 @@ cimport fseek(cobj, int, i32) -> i32
 cimport dlerror() -> cobj
 cimport dlopen(cobj, int) -> cobj
 cimport dlsym(cobj, cobj) -> cobj
+cimport dlclose(cobj) -> i32
 RTLD_NOW = 2
 RTLD_GLOBAL = 8
 

@@ -11,8 +11,8 @@ extend float:
         str.memcpy(p, s.ptr, n)
         p[n] = byte(0)
 
-        end = ptr[byte]()
-        result = strtod(p, __ptr__(end))
+        end = cobj()
+        result = _C.strtod(p, __ptr__(end))
 
         if need_dyn_alloc:
             _gc.free(p)

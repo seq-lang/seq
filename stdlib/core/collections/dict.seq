@@ -111,7 +111,7 @@ class dict[K,V]:
         for k,v in other.items():
             self[k] = v
 
-     def pop(self: dict[K,V], key: K):
+    def pop(self: dict[K,V], key: K):
         x = self._kh_get(key)
         if x != self._kh_end():
             v = self._vals[x]

@@ -36,8 +36,8 @@ extend int:
         str.memcpy(p, s.ptr, n)
         p[n] = byte(0)
 
-        end = ptr[byte]()
-        result = strtoll(p, __ptr__(end), i32(base))
+        end = cobj()
+        result = _C.strtoll(p, __ptr__(end), i32(base))
 
         if need_dyn_alloc:
             _gc.free(p)

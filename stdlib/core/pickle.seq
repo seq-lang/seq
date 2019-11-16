@@ -1,4 +1,10 @@
-import file
+from core.file import _gz_errcheck
+
+def pickle[T](x: T, jar: Jar):
+    x.__pickle__(jar)
+
+def unpickle[T](jar: Jar):
+    return T.__unpickle__(jar)
 
 def dump[T](x: T, f: gzFile):
     x.__pickle__(f.fp)
@@ -117,7 +123,7 @@ extend dict[K, V]:
             i += 1
         return d
 
-extend set[T]:
+extend set[K]:
     def __pickle__(self: set[K], jar: Jar):
         n_buckets = self._n_buckets
         pickle(n_buckets, jar)

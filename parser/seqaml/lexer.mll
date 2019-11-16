@@ -229,10 +229,10 @@ and read state = parse
       | _          -> P.ID         (cur_pos state lexbuf ~len, id)
   }
 
-  | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
-  | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
   | stringprefix '\''     { single_string state (L.lexeme lexbuf) lexbuf }
   | stringprefix '"'      { double_string state (L.lexeme lexbuf) lexbuf }
+  | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
+  | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
 
   | "$" { escaped_id state lexbuf }
   | "(" { ignore_nl state; P.LP (cur_pos state lexbuf) }
@@ -320,8 +320,9 @@ and single_string state prefix = parse
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
-  | _ { Err.SyntaxError ("Bad string", cur_pos state lexbuf) |> raise }
-and single_docstr state prefix = parse
+  | (([^ '\\' '\r' '\n' '\''] | escape)* as s) eof { Err.SyntaxError ("string not closed", cur_pos state lexbuf) |> raise }
+
+and single_docstr state prefix = shortest
   | (([^ '\\'] | escape)* as s) "'''" {
     let lines = count_lines s in
     lexbuf.lex_curr_p <-
@@ -329,14 +330,16 @@ and single_docstr state prefix = parse
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
-  | _ { Err.SyntaxError ("Bad string", cur_pos state lexbuf) |> raise }
+  | (([^ '\\'] | escape)* as s) eof { Err.SyntaxError ("string not closed", cur_pos state lexbuf) |> raise }
+
 and double_string state prefix = parse
   | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) '"' {
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
-  | _ { Err.SyntaxError ("Bad string", cur_pos state lexbuf) |> raise }
-and double_docstr state prefix = parse
+  | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) eof { Err.SyntaxError ("string not closed", cur_pos state lexbuf) |> raise }
+
+and double_docstr state prefix = shortest
   | (([^ '\\'] | escape)* as s) "\"\"\"" {
     let lines = count_lines s in
     lexbuf.lex_curr_p <-
@@ -344,7 +347,8 @@ and double_docstr state prefix = parse
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
-  | _ { Err.SyntaxError ("Bad string", cur_pos state lexbuf) |> raise }
+  | (([^ '\\'] | escape)* as s) eof { Err.SyntaxError ("string not closed", cur_pos state lexbuf) |> raise }
+
 and escaped_id state = parse
   | (([^ '\r' '\n' '$'])* as s) '$' {
     let len = (String.length s) in

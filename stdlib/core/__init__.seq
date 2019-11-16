@@ -1,27 +1,27 @@
-import! err
-
 from core.aliases import *
+import core.c_stubs as _C
+import core.gc as _gc
+
 from core.slice import *
 from core.err import *
 from core.optional import unwrap as _unwrap
 from core.range import range
 from core.box import Box
 
-import core.C as _C
-import core.gc as _gc
+from core.builtin import *
+
+from core.collections.list import list
+from core.collections.set import set
+from core.collections.dict import dict
 
 from core.str import *
 from core.int import *
 from core.float import *
 
-from core.collections.list import list
-from core.collections.dict import dict
-from core.collections.set import set
-
-from core.builtin import *
-
 from core.file import File, gzFile, open, gzopen
-from core.pickle import dump, load
+from core.pickle import dump, load, pickle, unpickle
+
+from core.dlopen import dlsym as _dlsym
 
 from core.python import init as _py_init, imp as _py_import, exec as _py_exec
 _py_init()

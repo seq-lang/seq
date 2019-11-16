@@ -338,7 +338,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       (* # ptr = _get_dlsym_ptr(_s, "_s") *)
       {|
       def %s(%s):
-        ptr = C.dlsym(C.dlopen(%s), "%s")
+        ptr = _dlsym(%s, "%s")
         f = function[%s](ptr)
         %sf(%s)
       |}

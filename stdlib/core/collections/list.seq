@@ -321,9 +321,6 @@ class list[T]:
             self[j] = x
             i += 1
 
-    def sort(self: list[T]):
-        qsort(self.arr[0:len(self)])
-
 # Internal helpers
 
     def _idx_check(self: list[T], idx: int, msg: str):

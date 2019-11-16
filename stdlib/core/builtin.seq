@@ -204,32 +204,3 @@ def sum(xi):
         return s
     else:
         x.destroy()
-
-def pickle[T](x: T, jar: Jar):
-    x.__pickle__(jar)
-
-def unpickle[T](jar: Jar):
-    return T.__unpickle__(jar)
-
-def sorted(v):
-    """
-    sorted(v)
-
-    Return a sorted list of the elements in v
-    """
-    u = [a for a in v]
-    qsort(u.arr[0:len(u)])
-    return u
-
-import! bio
-
-PY_MODULES = dict[str, py.pyobj]()
-def _py_import(name: str):
-    if name in PY_MODULES:
-        return PY_MODULES[name]
-    m = py.imp(name)
-    PY_MODULES[name] = m
-    return m
-
-def _py_exec(s: str):
-    py.exec(s)
