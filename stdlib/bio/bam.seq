@@ -12,6 +12,10 @@ BAM_FQCFAIL        =  512
 BAM_FDUP           = 1024
 BAM_FSUPPLEMENTARY = 2048
 
+from core.c_stubs import SAMHeaderTarget
+from bio.align import CIGAR
+from bio.locus import Locus
+
 # This type must be consistent with htslib:
 type _bam_core_t(tid: i32,
                  pos: i32,
@@ -188,7 +192,7 @@ type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore
             raise ArgumentError("SAM aux tags are two characters (got: " + tag + ")")
         return SAMAux(_C.seq_hts_aux_get(self._aux, tag))
 
-type SAMHeaderTarget(_name: str, _len: int):
+extend SAMHeaderTarget:
     def __str__(self: SAMHeaderTarget):
         return self._name
 
@@ -212,7 +216,7 @@ class BAM:
 
         idx = _C.sam_index_load(file, path_c_str)
         if not idx:
-            hts_close(file)
+            _C.hts_close(file)
             raise IOError("unable to open BAM/CRAM index for " + path)
 
         hdr = _C.sam_hdr_read(file)

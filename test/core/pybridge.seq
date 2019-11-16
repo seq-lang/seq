@@ -4,7 +4,7 @@ module = import_module('mymodule')
 # EXPECT: 12
 try:
     print get[int](module['multiply'].call((3, 4)))
-except PyException as e:
+except PyError as e:
     print e.pytype + ":", e.msg
 
 # EXPECT: ((4, 5), {'a': 3.14, 'b': 2.123}, True, set(['ACGT']), [['abc'], ['1.1', '2.2'], []])
@@ -12,11 +12,11 @@ except PyException as e:
 try:
     args = ((4,5), {'a': 3.14, 'b': 2.123}, True, {s'ACGT'}, [['abc'], ['1.1', '2.2'], list[str]()])
     print get[tuple[dict[str,float],tuple[int,float]]](module['print_args'].call(args))
-except PyException as e:
+except PyError as e:
     print e.pytype + ":", e.msg
 
 # EXPECT: exceptions.IOError: foo
 try:
     print get[int](module['throw_exc'].call_void())
-except PyException as e:
+except PyError as e:
     print e.pytype + ":", e.msg

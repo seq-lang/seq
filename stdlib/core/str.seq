@@ -1,3 +1,21 @@
+import algorithms.strings as algorithms
+
+def ord(s: str) -> byte:
+    if len(s) != 1:
+        raise TypeError("TypeError: ord() expected a character, but string of length " + str(len(s)) + " found")
+    return s.ptr[0]
+
+def chr(b: int) -> str:
+    p = ptr[byte](1)
+    p[0] = byte(b)
+    return str(p, 1)
+
+def search(text: str, pattern: str) -> list[int]:
+    return algorithms.string_search_slow(text, pattern)
+
+def rsearch(text: str, pattern: str) -> list[int]:
+    return algorithms.rstring_search_slow(text, pattern)
+
 extend str:
 
 # Magic methods
@@ -230,10 +248,10 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return C.isdigit(int(self.ptr[0])) > 0
+            return _C.isdigit(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if C.isdigit(int(self.ptr[i])) == 0:
+            if _C.isdigit(int(self.ptr[i])) == 0:
                 return False
         return True
 
@@ -252,12 +270,12 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return C.islower(int(self.ptr[0])) > 0
+            return _C.islower(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if C.isupper(int(self.ptr[i])) > 0:
+            if _C.isupper(int(self.ptr[i])) > 0:
                 return False
-            elif cased == False and C.islower(int(self.ptr[i])):
+            elif cased == False and _C.islower(int(self.ptr[i])):
                 cased = True
         return cased
 
@@ -276,12 +294,12 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return C.isupper(int(self.ptr[0])) > 0
+            return _C.isupper(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if C.islower(int(self.ptr[i])) > 0:
+            if _C.islower(int(self.ptr[i])) > 0:
                 return False
-            elif cased == False and C.isupper(int(self.ptr[i])):
+            elif cased == False and _C.isupper(int(self.ptr[i])):
                 cased = True
         return cased
 
@@ -299,10 +317,10 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return C.isalnum(int(self.ptr[0])) > 0
+            return _C.isalnum(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if C.isalnum(int(self.ptr[i])) == 0:
+            if _C.isalnum(int(self.ptr[i])) == 0:
                 return False
         return True
 
@@ -320,10 +338,10 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return C.isalpha(int(self.ptr[0])) > 0
+            return _C.isalpha(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if C.isalpha(int(self.ptr[i])) == 0:
+            if _C.isalpha(int(self.ptr[i])) == 0:
                 return False
         return True
 
@@ -341,10 +359,10 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return C.isspace(int(self.ptr[0])) > 0
+            return _C.isspace(int(self.ptr[0])) > 0
 
         for i in range(len(self)):
-            if C.isspace(int(self.ptr[i])) == 0:
+            if _C.isspace(int(self.ptr[i])) == 0:
                 return False
         return True
 
@@ -364,17 +382,17 @@ extend str:
 
         # For single character strings
         if len(self) == 1:
-            return C.isupper(int(self.ptr[0])) > 0
+            return _C.isupper(int(self.ptr[0])) > 0
 
         cased = False
         prev_is_cased = False
         for i in range(len(self)):
-            if C.isupper(int(self.ptr[i])) > 0:
+            if _C.isupper(int(self.ptr[i])) > 0:
                 if prev_is_cased:
                     return False
                 prev_is_cased = True
                 cased = True
-            elif C.islower(int(self.ptr[i])) > 0:
+            elif _C.islower(int(self.ptr[i])) > 0:
                 if not prev_is_cased:
                     return False
                 prev_is_cased = True
@@ -393,12 +411,12 @@ extend str:
 
         if len(self) > 0:
             # Capitalize first letter
-            s = str(chr(C.toupper(int(self.ptr[0]))))
+            s = str(chr(_C.toupper(int(self.ptr[0]))))
 
             # Make any following char lowercase
             for i in range(1, len(self)):
-                if C.isupper(int(self.ptr[i])):
-                    s = s + str(chr(C.tolower(int(self.ptr[i]))))
+                if _C.isupper(int(self.ptr[i])):
+                    s = s + str(chr(_C.tolower(int(self.ptr[i]))))
                 else:
                     s = s + self[i]
             return s
@@ -436,8 +454,8 @@ extend str:
             return s
 
         for i in range(len(self)):
-            if C.isupper(int(self.ptr[i])):
-                s = s + str(chr(C.tolower(int(self.ptr[i]))))
+            if _C.isupper(int(self.ptr[i])):
+                s = s + str(chr(_C.tolower(int(self.ptr[i]))))
             else:
                 s = s + str(self.ptr[i])
         return s
@@ -454,8 +472,8 @@ extend str:
             return s
 
         for i in range(len(self)):
-            if C.islower(int(self.ptr[i])):
-                s = s + str(chr(C.toupper(int(self.ptr[i]))))
+            if _C.islower(int(self.ptr[i])):
+                s = s + str(chr(_C.toupper(int(self.ptr[i]))))
             else:
                 s = s + str(self.ptr[i])
         return s
@@ -493,10 +511,10 @@ extend str:
             return s
 
         for i in range(len(self)):
-            if C.islower(int(self.ptr[i])):
-                s = s + str(chr(C.toupper(int(self.ptr[i]))))
-            elif C.isupper(int(self.ptr[i])):
-                s = s + str(chr(C.tolower(int(self.ptr[i]))))
+            if _C.islower(int(self.ptr[i])):
+                s = s + str(chr(_C.toupper(int(self.ptr[i]))))
+            elif _C.isupper(int(self.ptr[i])):
+                s = s + str(chr(_C.tolower(int(self.ptr[i]))))
             else:
                 s = s + str(self.ptr[i])
         return s
@@ -516,17 +534,17 @@ extend str:
             return s
 
         for i in range(len(self)):
-            if C.islower(int(self.ptr[i])):
+            if _C.islower(int(self.ptr[i])):
                 # lowercase to uppercase
                 if not prev_is_cased:
-                    s = s + str(chr(C.toupper(int(self.ptr[i]))))
+                    s = s + str(chr(_C.toupper(int(self.ptr[i]))))
                 else:
                     s = s + str(self.ptr[i])
                 prev_is_cased = True
-            elif C.isupper(int(self.ptr[i])):
+            elif _C.isupper(int(self.ptr[i])):
                 # uppercase to lowercase
                 if prev_is_cased:
-                    s = s + str(chr(C.tolower(int(self.ptr[i]))))
+                    s = s + str(chr(_C.tolower(int(self.ptr[i]))))
                 else:
                     s = s + str(self.ptr[i])
                 prev_is_cased = True
@@ -1233,20 +1251,3 @@ extend str:
     def _isspace(b: byte):
         return b == byte(32) or b == byte(9) or b == byte(10) or \
                b == byte(11) or b == byte(12) or b == byte(13)
-
-
-def ord(s: str) -> byte:
-    if len(s) != 1:
-        raise TypeError("TypeError: ord() expected a character, but string of length " + str(len(s)) + " found")
-    return s.ptr[0]
-
-def chr(b: int) -> str:
-    p = ptr[byte](1)
-    p[0] = byte(b)
-    return str(p, 1)
-
-def search(text: str, pattern: str) -> list[int]:
-    return algorithms.string_search_slow(text, pattern)
-
-def rsearch(text: str, pattern: str) -> list[int]:
-    return algorithms.rstring_search_slow(text, pattern)

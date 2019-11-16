@@ -26,5 +26,4 @@ from core.dlopen import dlsym as _dlsym
 from core.python import init as _py_init, imp as _py_import, exec as _py_exec
 _py_init()
 
-# import! sort
-# import! bio
+from bio.__init__ import *

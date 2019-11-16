@@ -16,12 +16,15 @@ class IndexError:
 class KeyError:
     msg: str
 
-class CException:
+class CError:
    msg: str
 
-class PyException:
+class PyError:
     msg: str
     pytype: str
+
+class TypeError:
+    msg: str
 
 def check_errno(prefix: str):
     msg = _C.seq_check_errno()

@@ -84,6 +84,8 @@ cimport getline(ptr[cobj], n: ptr[int], file: cobj) -> int
 # <stdlib.h>
 cimport exit(int)
 cimport system(cmd: cobj) -> int
+cimport free(cobj)
+cimport atoi(cobj) -> int
 
 # <dlfcn.h>
 cimport dlerror() -> cobj
@@ -104,6 +106,9 @@ cimport gztell(cobj) -> int
 cimport gzseek(cobj, int, i32) -> int
 
 # Seq Alignment
+type CIGAR(value: ptr[u32], len: int)
+type Alignment(_cigar: CIGAR, _score: int)
+type pseq(len: int, ptr: cobj)
 cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
 cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
 cimport seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
@@ -122,6 +127,7 @@ cimport hts_itr_destroy(cobj)
 cimport sam_index_load(cobj, cobj) -> cobj
 cimport sam_hdr_read(cobj) -> cobj
 cimport sam_itr_querys(cobj, cobj, cobj) -> cobj
+cimport sam_read1(cobj, cobj, cobj) -> i32
 cimport bam_init1() -> cobj
 cimport bam_cigar2qlen(int, ptr[u32]) -> int
 cimport bam_cigar2rlen(int, ptr[u32]) -> int
@@ -135,6 +141,7 @@ cimport bam_hdr_destroy(cobj)
 cimport bam_destroy1(cobj)
 
 # Seq HTSlib
+type SAMHeaderTarget(_name: str, _len: int)
 cimport seq_hts_get_name(cobj) -> str
 cimport seq_hts_get_seq(cobj) -> seq
 cimport seq_hts_get_qual(cobj) -> str

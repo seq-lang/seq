@@ -7,14 +7,14 @@ def dlopen(name: str, flag: int = _C.RTLD_NOW | _C.RTLD_GLOBAL) -> cobj:
         return _DLOPEN_CACHE[name]
     h = _C.dlopen(name.c_str(), flag)
     if h == cobj():
-        raise CException(dlerror())
+        raise CError(dlerror())
     _DLOPEN_CACHE[name] = h
     return h
 
 def _dlsym(handle: cobj, name: str) -> cobj:
     fn = _C.dlsym(handle, name.c_str())
     if fn == cobj():
-        raise CException(dlerror())
+        raise CError(dlerror())
     return fn
 
 _DLSYM_CACHE = dict[str, cobj]()
@@ -29,5 +29,5 @@ def dlsym(lib: str, name: str) -> cobj:
 
 def dlclose(handle: cobj):
     if _C.dlclose(handle) != i32(0):
-        raise CException(dlerror())
+        raise CError(dlerror())
 

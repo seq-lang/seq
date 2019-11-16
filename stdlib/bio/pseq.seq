@@ -1,3 +1,6 @@
+from core.c_stubs import pseq
+from bio.align import AlignConfig, Alignment
+
 type SubMat(mat: ptr[i8]):
     def _N():
         return 23
@@ -39,7 +42,7 @@ type SubMat(mat: ptr[i8]):
                 k += 1
         return s
 
-type pseq(len: int, ptr: ptr[byte]):  # order is consistent with str/seq
+extend pseq:  # order is consistent with str/seq
     def __init__(self: pseq, p: ptr[byte], n: int) -> pseq:
         return (n, p)
 

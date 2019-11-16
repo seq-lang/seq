@@ -68,7 +68,7 @@ type pyobj(p: ptr[byte]):
             pyobj(ptraceback).decref()
             pyobj(py_msg).decref()
 
-            raise PyException(msg, typ)
+            raise PyError(msg, typ)
 
     def exc_wrap(_retval):
         pyobj.exc_check()
@@ -90,7 +90,7 @@ def init():
 def none():
     #cimport seq_py_none() -> ptr[byte]
     #return pyobj(seq_py_none())
-    raise PyException("not yet done", "n/a")
+    raise PyError("not yet done", "n/a")
 
 def _imp(name: str) -> pyobj:
     return pyobj.exc_wrap(pyobj(PyImport_ImportModule(name.c_str())))
@@ -153,7 +153,7 @@ extend str:
 
 extend seq:
     def __to_py__(self: seq) -> pyobj:
-        return str(self.ptr).__to_py__()
+        return str(self.ptr, self.len).__to_py__()
 
     def __from_py__(s: pyobj) -> seq:
         return seq(str.__from_py__(s))

@@ -5,10 +5,10 @@ from bio.builtin import *
 from bio.locus import Locus
 from bio.iter import Seqs, Block, blocks, block_seqs
 
+from bio.align import AlignConfig, CIGAR, Alignment
 from bio.pseq import pseq, translate, as_protein, SubMat
 
 from bio.fasta import FASTARecord, FASTA
 from bio.fastq import FASTQRecord, FASTQ
 
-from bio.align import AlignConfig, CIGAR, Alignment
 from bio.bam import SAM, BAM, CRAM

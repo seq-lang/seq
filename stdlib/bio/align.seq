@@ -10,6 +10,8 @@ ALIGN_SPLICE_FOR    = 0x100
 ALIGN_SPLICE_REV    = 0x200
 ALIGN_SPLICE_FLANK  = 0x400
 
+from core.c_stubs import CIGAR, Alignment
+
 def _validate_gap(g: int):
     if g < 0 or g >= 128:
         raise ArgumentError("gap penalty for alignment must be in range [0, 127]")
@@ -65,7 +67,7 @@ type AlignConfig(mat: ptr[i8], gap1: tuple[int,int], gap2: tuple[int,int], bandw
         mat, gap1, gap2, bandwidth, zdrop, flags = self
         return (mat, gap1, gap2, bandwidth, zdrop, f)
 
-type CIGAR(value: ptr[u32], len: int):
+extend CIGAR:
     def __init__(self: CIGAR) -> CIGAR:
         return (ptr[u32](), 0)
 
@@ -95,7 +97,7 @@ type CIGAR(value: ptr[u32], len: int):
             return str(op[0]) + str(op[1])
         return str.cat([op_to_str(op) for op in self])
 
-type Alignment(_cigar: CIGAR, _score: int):
+extend Alignment:
     def __init__(self: Alignment) -> Alignment:
         return (CIGAR(), 0)
 

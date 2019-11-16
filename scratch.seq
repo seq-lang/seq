@@ -14,7 +14,7 @@ print print_args(
 from mymodule pyimport throw_exc () -> int
 try:
    throw_exc()
-except PyException as e:
+except PyError as e:
    print e.pytype + ":", e.msg
 
 pydef foo(y) -> list[float]:
