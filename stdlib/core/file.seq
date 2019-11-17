@@ -88,7 +88,7 @@ class File:
         if not self.fp:
             raise IOError("file " + path + " could not be opened")
         self._reset()
-    
+
     def __enter__(self: File):
         pass
 
@@ -135,7 +135,7 @@ class File:
     def _reset(self: File):
         self.buf = cobj()
         self.sz = 0
-        
+
     def _iter(self: File):
         self._ensure_open()
         while True:
@@ -152,7 +152,7 @@ class gzFile:
     sz: int
     buf: cobj
     fp: cobj
-    
+
     def __init__(self: gzFile, fp: cobj):
         self.fp = fp
         self._reset()
@@ -166,13 +166,13 @@ class gzFile:
     def __iter__(self: gzFile):
         for a in self._iter():
             yield copy(a)
-    
+
     def __enter__(self: gzFile):
         pass
 
     def __exit__(self: gzFile):
         self.close()
-    
+
     def close(self):
         if self.fp:
             _C.gzclose(self.fp)
@@ -180,7 +180,7 @@ class gzFile:
         if self.buf:
             _gc.free(self.buf)
             self._reset()
-    
+
     def readlines(self: gzFile):
         return [l for l in self]
 
@@ -213,7 +213,7 @@ class gzFile:
                 yield str(self.buf, rd)
             else:
                 break
-    
+
     def _ensure_open(self: gzFile):
         if not self.fp:
             raise IOError("I/O operation on closed file")

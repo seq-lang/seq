@@ -86,7 +86,7 @@ type pyobj(p: cobj):
 _PY_INITIALIZED = False
 def init():
     global _PY_INITIALIZED
-    if _PY_INITIALIZED: 
+    if _PY_INITIALIZED:
         return
     Py_Initialize()
     _PY_INITIALIZED = True

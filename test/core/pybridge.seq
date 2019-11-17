@@ -1,17 +1,17 @@
 
 @test
 def test_basic():
-    from mymodule pyimport multiply () -> int 
+    from mymodule pyimport multiply () -> int
     assert multiply(3, 4) == 12
 
 # EXPECT: ((4, 5), {'a': 3.14, 'b': 2.123}, True, set(['ACGT']), [['abc'], ['1.1', '2.2'], []])
 # EXPECT: ({a: 3.14, b: 2.123}, (222, 3.14))
 # from mymodule pyimport print_args () -> tuple[dict[str,float],tuple[int,float]]
 # print print_args(
-#     (4,5), 
-#     {'a': 3.14, 'b': 2.123}, 
-#     True, 
-#     {s'ACGT'}, 
+#     (4,5),
+#     {'a': 3.14, 'b': 2.123},
+#     True,
+#     {s'ACGT'},
 #     [['abc'], ['1.1', '2.2'], list[str]()]
 # )
 

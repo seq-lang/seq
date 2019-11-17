@@ -216,7 +216,7 @@ class set[K]:
     def copy(self: set[K]):
         return self.__copy__()
 
-    
+
 # Internal helpers
 
     def _kh_clear(self: set[K]):
@@ -371,4 +371,4 @@ class set[K]:
     def _kh_exist(self: set[K], x: int):
         return not khash.__ac_iseither(self._flags, x)
 
-    
+

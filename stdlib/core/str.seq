@@ -1244,10 +1244,10 @@ extend str:
                 return int(c1) - int(c2)
             i += 1
         return self.len - other.len
-    
+
     def _slice_error(self: str):
         raise IndexError("string slice index error")
-    
+
     def _isspace(b: byte):
         return b == byte(32) or b == byte(9) or b == byte(10) or \
                b == byte(11) or b == byte(12) or b == byte(13)

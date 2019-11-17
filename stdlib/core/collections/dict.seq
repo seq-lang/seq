@@ -90,7 +90,7 @@ class dict[K,V]:
             lst.append("}")
             return str.cat(lst)
 
-    
+
 # Helper methods
 
     def resize(self: dict[K,V], new_n_buckets: int):
@@ -136,12 +136,12 @@ class dict[K,V]:
     def values(self: dict[K,V]):
         for k,v in self.items():
             yield v
-    
+
     def copy(self: dict[K,V]):
         return self.__copy__()
 
     def fromkeys[KS,V](ks: KS, v: V):
-        return {k: v for k in ks}    
+        return {k: v for k in ks}
 
 # Internal helpers
 

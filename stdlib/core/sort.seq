@@ -12,7 +12,7 @@ def sorted[K](v: generator[K], compare: optional[function[bool, K, K]] = None):
     """
     cmp = ~compare if compare else default_compare[K]
     return tim_sort(v, cmp)
-    
+
 extend list[T]:
     def sort(self: list[T], compare: optional[function[bool, T, T]] = None):
         cmp = ~compare if compare else default_compare[T]

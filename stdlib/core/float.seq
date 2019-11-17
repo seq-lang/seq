@@ -1,6 +1,6 @@
 extend float:
 
-# Magic methods 
+# Magic methods
 
     def __init__(self: float, s: str):
         buf = __array__[byte](32)

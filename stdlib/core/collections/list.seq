@@ -146,7 +146,7 @@ class list[T]:
         l.ext(self[b:])
         self.arr = l.arr
         self.len = l.len
-        
+
     def __setitem__(self: list[T], s: lslice, other: generator[T]):
         if s.end < 0:
             s.end += len(self)

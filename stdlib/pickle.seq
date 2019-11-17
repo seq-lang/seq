@@ -143,4 +143,4 @@ extend set[K]:
             k = unpickle[K](jar)
             s.add(k)
             i += 1
-        return s 
+        return s

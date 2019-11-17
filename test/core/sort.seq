@@ -8,7 +8,7 @@ def print_test[T](a: list[T], b: list[T]):
     if len(a) != len(b):
         print("FAILED: length of a (" + str(len(a)) + ") is not length of b (" + str(len(b)) + ")")
         return
-    
+
     if len(a) == 0:
         print("PASSED")
         return
@@ -17,7 +17,7 @@ def print_test[T](a: list[T], b: list[T]):
         if a[i] != b[i]:
             print("FAILED: element " + str(i) + " of a is " + str(a[i]) + " and is not equal to the element in b " + str(b[i]))
             return
-    
+
     print("PASSED")
 
 ### Comparison Functions ###
