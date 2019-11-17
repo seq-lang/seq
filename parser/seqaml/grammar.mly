@@ -85,7 +85,7 @@
 
 /* keywords */
 %token <Ast.Ann.t> FOR WHILE CONTINUE BREAK           // loops
-%token <Ast.Ann.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals
+%token <Ast.Ann.t> IF ELSE ELIF MATCH CASE AS         // conditionals
 %token <Ast.Ann.t> DEF RETURN YIELD LAMBDA PYDEF      // functions
 %token <Ast.Ann.t> TYPE CLASS TYPEOF EXTEND PTR       // types
 %token <Ast.Ann.t> IMPORT FROM GLOBAL IMPORT_CONTEXT  // variables
@@ -691,10 +691,6 @@ elif_suite:
     { (pos $1 $3, { cond = Some $2; cond_stmts = $4 }) :: rest }
 // Pattern case suites
 case_suite:
-  // default:
-  | DEFAULT COLON suite
-    {[ pos $1 $2,
-       { pattern = WildcardPattern None; case_stmts = $3 } ]}
   // case ...:
   | case
     {[ $1 ]}
@@ -704,9 +700,12 @@ case_suite:
 case:
   // case pattern
   | CASE separated_nonempty_list(OR, case_type) COLON suite
-    { let pattern =
-        if List.length $2 = 1 then List.hd_exn $2
-        else OrPattern $2
+    {
+      let pattern = match $2 with
+        | [WildcardPattern (Some "_")] ->
+          WildcardPattern None
+        | [p] -> p
+        | l -> OrPattern l
       in
       pos $1 $3,
       { pattern; case_stmts = $4 } }

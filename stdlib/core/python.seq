@@ -83,8 +83,13 @@ type pyobj(p: cobj):
         args_py = (~args).p if args else cobj()
         return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args_py)))
 
+_PY_INITIALIZED = False
 def init():
+    global _PY_INITIALIZED
+    if _PY_INITIALIZED: 
+        return
     Py_Initialize()
+    _PY_INITIALIZED = True
 
 def none():
     #cimport seq_py_none() -> ptr[byte]

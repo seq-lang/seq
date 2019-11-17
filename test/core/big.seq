@@ -64,7 +64,7 @@ class X[T]:
             match v[0]:
                 case s'A...':
                     print 'caught'
-                default:
+                case _:
                     print 'default'
 
             for v1 in input.split(64,64):

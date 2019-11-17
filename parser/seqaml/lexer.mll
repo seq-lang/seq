@@ -200,7 +200,6 @@ and read state = parse
       | "pass"     -> P.PASS       (cur_pos state lexbuf ~len)
       | "while"    -> P.WHILE      (cur_pos state lexbuf ~len)
       | "type"     -> P.TYPE       (cur_pos state lexbuf ~len)
-      | "default"  -> P.DEFAULT    (cur_pos state lexbuf ~len)
       | "lambda"   -> P.LAMBDA     (cur_pos state lexbuf ~len)
       | "assert"   -> P.ASSERT     (cur_pos state lexbuf ~len)
       | "global"   -> P.GLOBAL     (cur_pos state lexbuf ~len)

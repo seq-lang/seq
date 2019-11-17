@@ -6,147 +6,147 @@ def f(k):
     match k:
         case s'':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'GCGT':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'GCGTC':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'GCATC':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'G_GT_':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'_TG__':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'GC...ATC':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'GC...TC':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'GC...A':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'GCG...':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'GGG...':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'...TC':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'...T':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'...':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'_C...G_C':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'...G_C':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'_C...':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'A_...G_C':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'...C_C':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 0
     match k:
         case s'_T...':
             print 1
-        default:
+        case _:
             print 0
 
     # EXPECT: 1
     match k:
         case s'__...__':
             print 1
-        default:
+        case _:
             print 0
 
 s = s'GCGTC'

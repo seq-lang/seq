@@ -38,7 +38,7 @@ type FASTQ(file: gzFile):
                     qual = copy(a)
                     assert read.len >= 0
                     yield (name, read, qual)
-                default:
+                case _:
                     assert False
             line += 1
         self.close()

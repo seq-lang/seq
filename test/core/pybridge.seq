@@ -6,23 +6,23 @@ def test_basic():
 
 # EXPECT: ((4, 5), {'a': 3.14, 'b': 2.123}, True, set(['ACGT']), [['abc'], ['1.1', '2.2'], []])
 # EXPECT: ({a: 3.14, b: 2.123}, (222, 3.14))
-from mymodule pyimport print_args () -> tuple[dict[str,float],tuple[int,float]]
-print print_args(
-    (4,5), 
-    {'a': 3.14, 'b': 2.123}, 
-    True, 
-    {s'ACGT'}, 
-    [['abc'], ['1.1', '2.2'], list[str]()]
-)
+# from mymodule pyimport print_args () -> tuple[dict[str,float],tuple[int,float]]
+# print print_args(
+#     (4,5), 
+#     {'a': 3.14, 'b': 2.123}, 
+#     True, 
+#     {s'ACGT'}, 
+#     [['abc'], ['1.1', '2.2'], list[str]()]
+# )
 
-# EXPECT: OSError: foo
-from mymodule pyimport throw_exc () -> int
-try:
-   throw_exc()
-except PyError as e:
-   print e.pytype + ":", e.msg
+# # EXPECT: OSError: foo
+# from mymodule pyimport throw_exc () -> int
+# try:
+#    throw_exc()
+# except PyError as e:
+#    print e.pytype + ":", e.msg
 
-# EXPECT: [0, 0, 0.25, 0.5, 0.75, 1]
+# # EXPECT: [0, 0, 0.25, 0.5, 0.75, 1]
 pydef foo(y) -> list[float]:
    from scipy.stats import uniform
    z = uniform.cdf(y, loc=1, scale=4)
