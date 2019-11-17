@@ -252,20 +252,27 @@ def test_isprintable():
 
 @test
 def test_lstrip():
+    assert ''.lstrip() == ''
+    assert '   '.lstrip() == ''
     assert '   hello   '.lstrip('') == 'hello   '
     assert ' \t\n\rabc \t\n\r'.lstrip('') == 'abc \t\n\r'
     assert "xyzzyhelloxyzzy".lstrip('xyz') == 'helloxyzzy'
 
 @test
 def test_rstrip():
+    assert ''.rstrip() == ''
+    assert '   '.rstrip() == ''
     assert '   hello   '.rstrip('') == '   hello'
     assert ' \t\n\rabc \t\n\r'.rstrip('') == ' \t\n\rabc'
     assert "xyzzyhelloxyzzy".rstrip('xyz') == 'xyzzyhello'
 
 @test
 def test_strip():
+    assert ''.strip() == ''
+    assert '   '.strip() == ''
     assert '   hello   '.strip('') == 'hello'
-    assert ' \t\n\rabc \t\n\r'.strip('') == 'abc'
+    assert '   hello   '.strip() == 'hello'
+    assert ' \t\n\rabc \t\n\r'.strip() == 'abc'
     assert "xyzzyhelloxyzzy".strip('xyz') == 'hello'
     assert 'hello'.strip('xyz') == 'hello'
     assert 'mississippi'.strip('mississippi') == ''
@@ -419,7 +426,11 @@ def test_index():
     assert 'abc'.index('', 3, len('abc')) == 3
     assert 'rrarrrrrrrrra'.index('a', 0, len('rrarrrrrrrrra')) == 2
     assert 'rrarrrrrrrrra'.index('a', 4, len('rrarrrrrrrrra')) == 12
-    assert 'abcdefghiabc'.index('def', 4, len('abcdefghiabc')) == -1
+    try:
+        'abcdefghiabc'.index('def', 4, len('abcdefghiabc'))
+        assert False
+    except ValueError:
+        pass
 
 @test
 def test_rindex():
@@ -429,7 +440,11 @@ def test_rindex():
     assert 'abcdefghiabc'.rindex('abc', 0, -1) == 0
     assert 'rrarrrrrrrrra'.rindex('a', 0, len('rrarrrrrrrrra')) == 12
     assert 'rrarrrrrrrrra'.rindex('a', 4, len('rrarrrrrrrrra')) == 12
-    assert 'rrarrrrrrrrra'.rindex('a', 4, 6) == -1
+    try:
+        'rrarrrrrrrrra'.rindex('a', 4, 6)
+        assert False
+    except ValueError:
+        pass
 
 @test
 def test_replace():

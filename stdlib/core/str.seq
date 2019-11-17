@@ -638,7 +638,7 @@ extend str:
         if width <= len(self):
             return self
 
-        if self[0] == '+' or self[0] == '-':
+        if self and (self[0] == '+' or self[0] == '-'):
             # move sign to beginning of string
             s = s + self[0]
             sign = True
@@ -741,7 +741,16 @@ extend str:
         """
         return all(31 < int(ord(char)) < 128 for char in self)
 
-    def lstrip(self: str, chars: str) -> str:
+    def _has_char(self: str, chars: str):
+        if chars:
+            for c in chars:
+                if self[0] == c:
+                    return True
+            return False
+        else:
+            return self[0].isspace()
+
+    def lstrip(self: str, chars: str = "") -> str:
         """
         str.lstrip([chars]) -> string
 
@@ -749,36 +758,12 @@ extend str:
         If chars is given, remove characters in chars instead.
         Unlike Python, lstrip() deals with just ASCII characters.
         """
-        # no chars to strip
-        if chars == '':
-            i = 0
-            # lstrip
-            while i < len(self) and self[i].isspace():
-                i += 1
+        i = 0
+        while i < len(self) and self[i]._has_char(chars):
+            i += 1
+        return self[i:]
 
-            if i == 0:
-                return self
-
-            return self[i:]
-
-        # with chars to strip
-        else:
-            i = 0
-            # lstrip
-            for k in range(len(self)):
-                l = 0
-                for l in range(len(chars)):
-                    if chars[l] == self[i]:
-                        i += 1
-                if l == len(chars) - 1:
-                    break
-
-            if i == 0:
-                return self
-
-            return self[i:]
-
-    def rstrip(self: str, chars: str) -> str:
+    def rstrip(self: str, chars: str = "") -> str:
         """
         str.rstrip([chars]) -> string
 
@@ -786,38 +771,12 @@ extend str:
         If chars is given, remove characters in chars instead.
         Unlike Python, lstrip() deals with just ASCII characters.
         """
-        # no chars to strip
-        if chars == '':
-            i = len(self)-1
-            # rstrip
-            while i < len(self) and self[i].isspace():
-                i -= 1
+        i = len(self) - 1
+        while i >= 0 and self[i]._has_char(chars):
+            i -= 1
+        return self[:i+1]
 
-            i += 1
-            if i == len(self):
-                return self
-
-            return self[:i]
-
-        # with chars to strip
-        else:
-            i = len(self)-1
-            # rstrip
-            for k in range(len(self)):
-                l = 0
-                for l in range(len(chars)):
-                    if chars[l] == self[i]:
-                        i -= 1
-                if l == len(chars) - 1:
-                    break
-
-            i += 1
-            if i == 0:
-                return self
-
-            return self[:i]
-
-    def strip(self: str, chars: str) -> str:
+    def strip(self: str, chars: str = "") -> str:
         """
         str.strip([chars]) -> string
 
