@@ -13,7 +13,6 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
-option(SEQ_PYBRIDGE "support Python interoperability" ON)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -31,9 +30,8 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/ksw2/ksw2_extd2_sse.cpp
                          runtime/ksw2/ksw2_exts2_sse.cpp
                          runtime/ksw2/ksw2_extz2_sse.cpp
-                         runtime/ksw2/ksw2_gg2_sse.cpp
-                         runtime/pybridge.cpp)
 target_link_libraries(seqrt PUBLIC bz2 lzma ${ZLIB_LIBRARIES} ${GC_LINK_LIBRARIES} ${HTS_LIB})
+                         runtime/ksw2/ksw2_gg2_sse.cpp)
 target_include_directories(seqrt PRIVATE ${GC_INCLUDE_DIRS})
 target_compile_options(seqrt PRIVATE ${GC_CFLAGS_OTHER} -O3)
 
@@ -43,16 +41,6 @@ if(SEQ_THREADED)
   target_compile_definitions(seqrt PRIVATE THREADED=1)
 else()
   target_compile_definitions(seqrt PRIVATE THREADED=0)
-endif()
-
-if(SEQ_PYBRIDGE)
-  find_package(PythonInterp REQUIRED)
-  find_package(PythonLibs REQUIRED)
-  include_directories(${PYTHON_INCLUDE_DIRS})
-  target_link_libraries(seqrt PUBLIC ${PYTHON_LIBRARIES})
-  target_compile_definitions(seqrt PRIVATE PYBRIDGE=1)
-else()
-  target_compile_definitions(seqrt PRIVATE PYBRIDGE=0)
 endif()
 
 
