@@ -126,7 +126,7 @@ class SeqLexer(RegexLexer):
             'assert', 'async', 'await', 'break', 'continue', 'del', 'elif',
             'else', 'except', 'finally', 'for', 'global', 'if', 'lambda', 'pass',
             'raise', 'nonlocal', 'return', 'try', 'while', 'yield', 'yield from',
-            'as', 'with', 'match', 'case', 'default', 'pydef', 'extern', 'prefetch',
+            'as', 'with', 'match', 'case', 'pydef', 'extern', 'prefetch',
             'type', 'extend', 'print', 'cimport', 'pyimport'), suffix=r'\b'),
          Keyword),
         (words((
