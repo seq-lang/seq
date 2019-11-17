@@ -224,10 +224,6 @@ FOREIGN Expr *array_lookup_expr(Expr *lhs, Expr *rhs) {
   return new ArrayLookupExpr(lhs, rhs);
 }
 
-FOREIGN Expr *array_slice_expr(Expr *arr, Expr *st, Expr *ed) {
-  return new ArraySliceExpr(arr, st, ed);
-}
-
 FOREIGN Expr *in_expr(Expr *lhs, Expr *rhs) {
   return new ArrayContainsExpr(lhs, rhs);
 }

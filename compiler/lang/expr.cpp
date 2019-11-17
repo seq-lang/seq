@@ -1084,18 +1084,181 @@ static seq_int_t translateIndex(seq_int_t idx, seq_int_t len,
   return idx;
 }
 
+static types::RecordType *sliceTypeFromName(const std::string &name) {
+  using types::Int;
+  using types::RecordType;
+  static RecordType *eslice = RecordType::get({Int}, {}, "eslice");
+  static RecordType *rslice = RecordType::get({Int}, {}, "rslice");
+  static RecordType *lslice = RecordType::get({Int}, {}, "lslice");
+  static RecordType *slice = RecordType::get({Int, Int}, {}, "slice");
+  static RecordType *esslice = RecordType::get({Int}, {}, "esslice");
+  static RecordType *rsslice = RecordType::get({Int, Int}, {}, "rsslice");
+  static RecordType *lsslice = RecordType::get({Int, Int}, {}, "lsslice");
+  static RecordType *sslice = RecordType::get({Int, Int, Int}, {}, "sslice");
+  static std::vector<RecordType *> slices = {eslice,  rslice,  lslice,  slice,
+                                             esslice, rsslice, lsslice, sslice};
+  for (RecordType *rec : slices) {
+    if (rec->getName() == name)
+      return rec;
+  }
+  return nullptr;
+}
+
+struct Slice {
+  seq_int_t start;
+  seq_int_t stop;
+  seq_int_t step;
+};
+
+static Slice getSliceIndices(const std::vector<seq_int_t> &args,
+                             types::RecordType *sliceType, seq_int_t length) {
+  const std::string name = sliceType->getName();
+  if (name == "eslice") {
+    return {0, length, 1};
+  } else if (name == "rslice") {
+    return {args[0], length, 1};
+  } else if (name == "lslice") {
+    return {0, args[0], 1};
+  } else if (name == "slice") {
+    return {args[0], args[1], 1};
+  } else if (name == "esslice") {
+    const bool pos = args[0] > 0;
+    return {pos ? 0 : length, pos ? length : 0, args[0]};
+  } else if (name == "rsslice") {
+    const bool pos = args[1] > 0;
+    return {args[0], pos ? length : 0, args[1]};
+  } else if (name == "lsslice") {
+    const bool pos = args[1] > 0;
+    return {pos ? 0 : length, args[0], args[1]};
+  } else if (name == "sslice") {
+    return {args[0], args[1], args[2]};
+  } else {
+    assert(0);
+    return {0, 0, 0};
+  }
+}
+
+// adapted from Python's PySlice_AdjustIndices
+static seq_int_t sliceAdjustIndices(seq_int_t length, seq_int_t *start,
+                                    seq_int_t *stop, seq_int_t step) {
+  if (step == 0)
+    throw exc::SeqException("slice step cannot be 0");
+
+  if (*start < 0) {
+    *start += length;
+    if (*start < 0) {
+      *start = (step < 0) ? -1 : 0;
+    }
+  } else if (*start >= length) {
+    *start = (step < 0) ? length - 1 : length;
+  }
+
+  if (*stop < 0) {
+    *stop += length;
+    if (*stop < 0) {
+      *stop = (step < 0) ? -1 : 0;
+    }
+  } else if (*stop >= length) {
+    *stop = (step < 0) ? length - 1 : length;
+  }
+
+  if (step < 0) {
+    if (*stop < *start) {
+      return (*start - *stop - 1) / (-step) + 1;
+    }
+  } else {
+    if (*start < *stop) {
+      return (*stop - *start - 1) / step + 1;
+    }
+  }
+  return 0;
+}
+
+static bool extractIntLiteral(Expr *expr, seq_int_t &result) {
+  if (auto *idx = dynamic_cast<IntExpr *>(expr)) {
+    result = idx->value();
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static bool extractSliceLiteral(Expr *expr, std::vector<seq_int_t> &args,
+                                types::RecordType *&sliceType) {
+  auto *construct = dynamic_cast<ConstructExpr *>(expr);
+  if (!construct)
+    return false;
+  auto *rec = dynamic_cast<types::RecordType *>(construct->getConstructType());
+  if (!rec)
+    return false;
+  sliceType = sliceTypeFromName(rec->getName());
+  if (!sliceType)
+    return false;
+
+  for (Expr *expr : construct->getArgs()) {
+    seq_int_t n = 0;
+    if (extractIntLiteral(expr, n)) {
+      args.push_back(n);
+    } else {
+      return false;
+    }
+  }
+
+  return args.size() == sliceType->numBaseTypes();
+}
+
+static bool getExprForTupleIndex(Expr *arr, Expr *idx, types::RecordType *rec,
+                                 GetElemExpr *result) {
+  seq_int_t idxLit = 0;
+  if (extractIntLiteral(idx, idxLit) &&
+      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
+    seq_int_t idx = translateIndex(idxLit, rec->numBaseTypes());
+    *result = GetElemExpr(arr,
+                          (unsigned)(idx + 1)); // GetElemExpr is 1-based
+    return true;
+  }
+  return false;
+}
+
+static bool getExprForTupleSlice(Expr *arr, Expr *idx, types::RecordType *rec,
+                                 RecordExpr *result) {
+  std::vector<seq_int_t> args;
+  types::RecordType *sliceType = nullptr;
+  if (extractSliceLiteral(idx, args, sliceType) &&
+      !rec->magicOut("__getitem__", {sliceType}, /*nullOnMissing=*/true)) {
+    const seq_int_t length = rec->numBaseTypes();
+    Slice s = getSliceIndices(args, sliceType, length);
+    const seq_int_t resultLength =
+        sliceAdjustIndices(length, &s.start, &s.stop, s.step);
+
+    std::vector<Expr *> values;
+    if (resultLength > 0) {
+      for (seq_int_t i = s.start; (s.step >= 0) ? (i < s.stop) : (i >= s.stop);
+           i += s.step) {
+        values.push_back(new GetElemExpr(arr, (unsigned)(i + 1)));
+      }
+    }
+    *result = RecordExpr(values);
+    return true;
+  }
+  return false;
+}
+
 Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = arr->getType();
   types::RecordType *rec = type->asRec();
-  auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
   // check if this is a record lookup, and that __getitem__ is not overriden
-  if (rec && idxLit &&
-      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
-    seq_int_t idx = translateIndex(idxLit->value(), rec->numBaseTypes());
-    GetElemExpr e(arr,
-                  (unsigned)(idx + 1)); // GetElemExpr is 1-based
-    return e.codegen0(base, block);
+  if (rec) {
+    // simple x[i]
+    GetElemExpr e1(nullptr, {});
+    if (getExprForTupleIndex(arr, idx, rec, &e1))
+      return e1.codegen(base, block);
+
+    // slice x[i:j:k] (or variant thereof)
+    RecordExpr e2({});
+    if (getExprForTupleSlice(arr, idx, rec, &e2))
+      return e2.codegen(base, block);
   }
 
   Value *arr = this->arr->codegen(base, block);
@@ -1107,15 +1270,18 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 types::Type *ArrayLookupExpr::getType0() const {
   types::Type *type = arr->getType();
   types::RecordType *rec = type->asRec();
-  auto *idxLit = dynamic_cast<IntExpr *>(idx);
 
   // check if this is a record lookup, and that __getitem__ is not overriden
-  if (rec && idxLit &&
-      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
-    seq_int_t idx = translateIndex(idxLit->value(), rec->numBaseTypes());
-    GetElemExpr e(arr,
-                  (unsigned)(idx + 1)); // GetElemExpr is 1-based
-    return e.getType();
+  if (rec) {
+    // simple x[i]
+    GetElemExpr e1(nullptr, {});
+    if (getExprForTupleIndex(arr, idx, rec, &e1))
+      return e1.getType();
+
+    // slice x[i:j:k] (or variant thereof)
+    RecordExpr e2({});
+    if (getExprForTupleSlice(arr, idx, rec, &e2))
+      return e2.getType();
   }
 
   return type->magicOut("__getitem__", {idx->getType()});
@@ -1123,131 +1289,6 @@ types::Type *ArrayLookupExpr::getType0() const {
 
 ArrayLookupExpr *ArrayLookupExpr::clone(Generic *ref) {
   SEQ_RETURN_CLONE(new ArrayLookupExpr(arr->clone(ref), idx->clone(ref)));
-}
-
-ArraySliceExpr::ArraySliceExpr(Expr *arr, Expr *from, Expr *to)
-    : arr(arr), from(from), to(to) {}
-
-void ArraySliceExpr::resolveTypes() {
-  arr->resolveTypes();
-  if (from)
-    from->resolveTypes();
-  if (to)
-    to->resolveTypes();
-}
-
-Value *ArraySliceExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::Type *type = arr->getType();
-  types::RecordType *rec = type->asRec();
-  auto *fromLit = dynamic_cast<IntExpr *>(from);
-  auto *toLit = dynamic_cast<IntExpr *>(to);
-
-  // check if this is a record lookup
-  if (rec && (!from || fromLit) && (!to || toLit)) {
-    std::string name = "__slice__";
-    std::vector<types::Type *> types = {types::Int, types::Int};
-    if (!from && !to) {
-      name = "__copy__";
-      types = {};
-    } else if (!from && to) {
-      name = "__slice_left__";
-      types = {types::Int};
-    } else if (to && !from) {
-      name = "__slice_right__";
-      types = {types::Int};
-    }
-
-    if (!rec->magicOut(name, types, /*nullOnMissing=*/true)) {
-      seq_int_t len = rec->numBaseTypes();
-      seq_int_t from =
-          fromLit ? translateIndex(fromLit->value(), len, /*clamp=*/true) : 0;
-      seq_int_t to =
-          toLit ? translateIndex(toLit->value(), len, /*clamp=*/true) : len;
-      std::vector<Expr *> values;
-
-      for (seq_int_t i = from; i < to; i++)
-        values.push_back(new GetElemExpr(arr, (unsigned)(i + 1)));
-
-      RecordExpr e(values);
-      return e.codegen(base, block);
-    }
-  }
-
-  Value *arr = this->arr->codegen(base, block);
-
-  if (!from && !to)
-    return type->callMagic("__copy__", {}, arr, {}, block, getTryCatch());
-
-  if (!from) {
-    Value *to = this->to->codegen(base, block);
-    return type->callMagic("__slice_left__", {this->to->getType()}, arr, {to},
-                           block, getTryCatch());
-  } else if (!to) {
-    Value *from = this->from->codegen(base, block);
-    return type->callMagic("__slice_right__", {this->from->getType()}, arr,
-                           {from}, block, getTryCatch());
-  } else {
-    Value *from = this->from->codegen(base, block);
-    Value *to = this->to->codegen(base, block);
-    return type->callMagic("__slice__",
-                           {this->from->getType(), this->to->getType()}, arr,
-                           {from, to}, block, getTryCatch());
-  }
-}
-
-types::Type *ArraySliceExpr::getType0() const {
-  types::Type *type = arr->getType();
-  types::RecordType *rec = type->asRec();
-  auto *fromLit = dynamic_cast<IntExpr *>(from);
-  auto *toLit = dynamic_cast<IntExpr *>(to);
-
-  // check if this is a record lookup
-  if (rec && (!from || fromLit) && (!to || toLit)) {
-    std::string name = "__slice__";
-    std::vector<types::Type *> types = {types::Int, types::Int};
-    if (!from && !to) {
-      name = "__copy__";
-      types = {};
-    } else if (!from && to) {
-      name = "__slice_left__";
-      types = {types::Int};
-    } else if (to && !from) {
-      name = "__slice_right__";
-      types = {types::Int};
-    }
-
-    if (!rec->magicOut(name, types, /*nullOnMissing=*/true)) {
-      seq_int_t len = rec->numBaseTypes();
-      seq_int_t from =
-          fromLit ? translateIndex(fromLit->value(), len, /*clamp=*/true) : 0;
-      seq_int_t to =
-          toLit ? translateIndex(toLit->value(), len, /*clamp=*/true) : len;
-
-      if (to <= from)
-        return types::RecordType::get({});
-
-      std::vector<types::Type *> newTypes = rec->getTypes();
-      return types::RecordType::get(std::vector<types::Type *>(
-          newTypes.begin() + from, newTypes.begin() + to));
-    }
-  }
-
-  if (!from && !to)
-    return type->magicOut("__copy__", {});
-
-  if (!from) {
-    return type->magicOut("__slice_left__", {to->getType()});
-  } else if (!to) {
-    return type->magicOut("__slice_right__", {from->getType()});
-  } else {
-    return type->magicOut("__slice__", {from->getType(), to->getType()});
-  }
-}
-
-ArraySliceExpr *ArraySliceExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new ArraySliceExpr(arr->clone(ref),
-                                      from ? from->clone(ref) : nullptr,
-                                      to ? to->clone(ref) : nullptr));
 }
 
 ArrayContainsExpr::ArrayContainsExpr(Expr *val, Expr *arr)
@@ -1894,6 +1935,10 @@ MatchExpr *MatchExpr::clone(Generic *ref) {
 
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args)
     : Expr(), type(type), args(std::move(args)) {}
+
+types::Type *ConstructExpr::getConstructType() { return type; }
+
+std::vector<Expr *> ConstructExpr::getArgs() { return args; }
 
 void ConstructExpr::resolveTypes() {
   for (auto *arg : args)

@@ -412,20 +412,6 @@ public:
   ArrayLookupExpr *clone(Generic *ref) override;
 };
 
-class ArraySliceExpr : public Expr {
-private:
-  Expr *arr;
-  Expr *from;
-  Expr *to;
-
-public:
-  ArraySliceExpr(Expr *arr, Expr *from, Expr *to);
-  void resolveTypes() override;
-  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
-  ArraySliceExpr *clone(Generic *ref) override;
-};
-
 class ArrayContainsExpr : public Expr {
 private:
   Expr *val;
@@ -556,6 +542,8 @@ private:
 
 public:
   ConstructExpr(types::Type *type, std::vector<Expr *> args);
+  types::Type *getConstructType();
+  std::vector<Expr *> getArgs();
   void resolveTypes() override;
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
   types::Type *getType0() const override;
