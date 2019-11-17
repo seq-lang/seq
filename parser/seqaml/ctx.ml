@@ -122,7 +122,7 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser
     then (
       let args = Llvm.Module.get_args mdl in
       add ~ctx ~internal ~global ~toplevel "__argv__" (Ctx_namespace.Var args));
-    match Util.get_from_stdlib "core/__init__" with
+    match Util.get_from_stdlib "core" with
     | Some file -> parse_file ~ctx file
     | None -> Err.ierr "cannot locate Seq standard library");
   Hashtbl.iteri stdlib ~f:(fun ~key ~data ->

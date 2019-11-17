@@ -43,7 +43,7 @@ extend seq:
 
     def __str__(self: seq):
         n = len(self)
-        p = ptr[byte](n)
+        p = cobj(n)
         for i in range(n):
             p[i] = self._at(i)
         return str(p, n)
@@ -111,7 +111,7 @@ extend seq:
         else:
             return seq(self.ptr, -(n - a))
 
-    def _copy_to(self: seq, p: ptr[byte]):
+    def _copy_to(self: seq, p: cobj):
         if self.len >= 0:
             str.memcpy(p, self.ptr, self.len)
         else:
@@ -121,7 +121,7 @@ extend seq:
 
     def __copy__(self: seq):
         n = len(self)
-        p = ptr[byte](n)
+        p = cobj(n)
         self._copy_to(p)
         return seq(p, n)
 

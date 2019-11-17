@@ -1,6 +1,5 @@
-#import os 
-#LD = os.getenv('SEQ_PYTHON', 'libpython3.7')
-LD="/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib"
+import os
+LD = os.getenv('SEQ_PYTHON', dflt='libpython3.7')
 
 from LD cimport PyUnicode_AsEncodedString(cobj, cobj, cobj) -> cobj
 from LD cimport PyBytes_AsString(cobj) -> cobj
@@ -34,7 +33,7 @@ from LD cimport PyDict_New() -> cobj
 from LD cimport PyDict_SetItem(cobj, cobj, cobj) -> cobj
 from LD cimport PyDict_Next(cobj, ptr[int], ptr[cobj], ptr[cobj]) -> int
 
-type pyobj(p: ptr[byte]):
+type pyobj(p: cobj):
     def __getitem__(self: pyobj, name: str):
         return pyobj.exc_wrap(pyobj(PyObject_GetAttrString(self.p, name.c_str())))
 

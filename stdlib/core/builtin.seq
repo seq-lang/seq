@@ -69,7 +69,7 @@ def chr(i: int):
     Return a string representing a character whose Unicode
     code point is an integer
     """
-    p = ptr[byte](1)
+    p = cobj(1)
     p[0] = byte(i)
     return str(p, 1)
 

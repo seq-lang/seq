@@ -43,7 +43,7 @@ type SubMat(mat: ptr[i8]):
         return s
 
 extend pseq:  # order is consistent with str/seq
-    def __init__(self: pseq, p: ptr[byte], n: int) -> pseq:
+    def __init__(self: pseq, p: cobj, n: int) -> pseq:
         return (n, p)
 
     def __init__(self: pseq, s: str) -> pseq:
@@ -140,12 +140,12 @@ extend pseq:  # order is consistent with str/seq
         if a > n: a = n
         return pseq(self.ptr + a, n - a)
 
-    def _copy_to(self: pseq, p: ptr[byte]):
+    def _copy_to(self: pseq, p: cobj):
         str.memcpy(p, self.ptr, self.len)
 
     def __copy__(self: pseq):
         n = len(self)
-        p = ptr[byte](n)
+        p = cobj(n)
         self._copy_to(p)
         return pseq(p, n)
 
@@ -203,7 +203,7 @@ def translate(s: seq):
 
     n = len(s)
     m = n // 3
-    p = ptr[byte](m)
+    p = cobj(m)
     i = 0
     j = 0
     while i < n:

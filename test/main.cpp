@@ -64,7 +64,7 @@ TEST_P(SeqTest, Run) {
   const string basename = get<0>(GetParam());
   const bool debug = get<1>(GetParam());
   string filename = string(TEST_DIR) + "/" + basename;
-  SeqModule *module = parse(filename);
+  SeqModule *module = parse("", filename);
   execute(module, {}, {}, debug);
   string output = result();
   const bool pass = output.find("TEST FAILED") == string::npos;

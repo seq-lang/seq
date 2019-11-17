@@ -79,7 +79,7 @@ type SAMAux(s: ptr[u8]):
         return _C.bam_auxB2f(self.s, u32(idx))
 
 type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore, _aux: str):
-    def __init__(self: SAMRecord, aln: ptr[byte]) -> SAMRecord:
+    def __init__(self: SAMRecord, aln: cobj) -> SAMRecord:
         name = _C.seq_hts_get_name(aln)
         read = _C.seq_hts_get_seq(aln)
         qual = _C.seq_hts_get_qual(aln)
@@ -200,11 +200,11 @@ extend SAMHeaderTarget:
         return self._len
 
 class BAM:
-    file: ptr[byte]
-    idx: ptr[byte]
-    hdr: ptr[byte]
-    itr: ptr[byte]
-    aln: ptr[byte]
+    file: cobj
+    idx: cobj
+    hdr: cobj
+    itr: cobj
+    aln: cobj
     targets: list[SAMHeaderTarget]
 
     def _init(self: BAM, path: str, region: str):
@@ -285,9 +285,9 @@ class BAM:
         self.close()
 
 class SAM:
-    file: ptr[byte]
-    hdr: ptr[byte]
-    aln: ptr[byte]
+    file: cobj
+    hdr: cobj
+    aln: cobj
     targets: list[SAMHeaderTarget]
 
     def __init__(self: SAM, path: str):
@@ -342,9 +342,9 @@ class SAM:
         if self.file:
             _C.hts_close(self.file)
 
-        self.file = ptr[byte]()
-        self.hdr = ptr[byte]()
-        self.aln = ptr[byte]()
+        self.file = cobj()
+        self.hdr = cobj()
+        self.aln = cobj()
 
     def __enter__(self: SAM):
         pass

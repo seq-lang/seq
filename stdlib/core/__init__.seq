@@ -18,6 +18,8 @@ from core.str import *
 from core.int import *
 from core.float import *
 
+from core.sort import sorted
+
 from core.file import File, gzFile, open, gzopen
 from core.pickle import dump, load, pickle, unpickle
 

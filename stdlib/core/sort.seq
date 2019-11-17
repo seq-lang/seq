@@ -1,0 +1,17 @@
+
+from algorithms.timsort import tim_sort, tim_sort_inplace
+
+def default_compare[K](a: K, b: K) -> bool:
+    return a < b
+
+def sorted[K](v: generator[K], compare: function[bool, K, K] = default_compare):
+    """
+    sorted(v)
+
+    Return a sorted list of the elements in v
+    """
+    return tim_sort(v, compare)
+    
+extend list[T]:
+    def sort(self: list[T], compare: function[bool, T, T] = default_compare):
+        tim_sort_inplace(self, default_compare)

@@ -2,6 +2,8 @@ BLOCK_SIZE = 64
 CACHELINE_SIZE = 64
 MIN_GALLOP = 7
 
+from algorithms.insertionsort import _insertion_sort
+
 def _count_run[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]) -> tuple[int,int]:
     """
         Returns the # of elements in the next run and if the run is "inorder" or "reversed"

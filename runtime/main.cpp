@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  SeqModule *s = parse(input.c_str());
+  SeqModule *s = parse(argv[0], input.c_str());
 
   if (output.getValue().empty()) {
     argsVec.insert(argsVec.begin(), input);

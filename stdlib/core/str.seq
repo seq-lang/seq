@@ -6,7 +6,7 @@ def ord(s: str) -> byte:
     return s.ptr[0]
 
 def chr(b: int) -> str:
-    p = ptr[byte](1)
+    p = cobj(1)
     p[0] = byte(b)
     return str(p, 1)
 
@@ -21,7 +21,7 @@ extend str:
 # Magic methods
 
     def __init__(self: str):
-        self.ptr = ptr[byte]()
+        self.ptr = cobj()
         self.len = 0
 
     def __hash__(self: str):
@@ -72,7 +72,7 @@ extend str:
         len1 = self.len
         len2 = other.len
         len3 = len1 + len2
-        p = ptr[byte](len3)
+        p = cobj(len3)
         str.memcpy(p, self.ptr, len1)
         str.memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
@@ -128,7 +128,7 @@ extend str:
 
     def __mul__(self: str, x: int):
         total = x * self.len
-        p = ptr[byte](total)
+        p = cobj(total)
         n = 0
         for _ in range(x):
             str.memcpy(p + n, self.ptr, self.len)
@@ -137,7 +137,7 @@ extend str:
 
     def __copy__(self: str):
         n = len(self)
-        p = ptr[byte](n)
+        p = cobj(n)
         str.memcpy(p, self.ptr, n)
         return str(p, n)
 
@@ -146,7 +146,7 @@ extend str:
     def c_str(self: str):
         n = len(self)
         assert n >= 0
-        p = ptr[byte](n + 1)
+        p = cobj(n + 1)
         str.memcpy(p, self.ptr, n)
         p[n] = byte(0)
         return p
@@ -155,7 +155,7 @@ extend str:
         total = 0
         for s in v:
             total += len(s)
-        p = ptr[byte](total)
+        p = cobj(total)
         n = 0
         for s in v:
             str.memcpy(p + n, s.ptr, s.len)
@@ -163,7 +163,7 @@ extend str:
         return str(p, total)
 
     def cati(v: generator[str], total: int):
-        p = ptr[byte](total)
+        p = cobj(total)
         n = 0
         for s in v:
             str.memcpy(p + n, s.ptr, s.len)
@@ -172,12 +172,12 @@ extend str:
 
     def cati_ext(v: generator[str]):
         sz = 10
-        p = ptr[byte](sz)
+        p = cobj(sz)
         n = 0
         for s in v:
             if n + s.len > sz:
                 sz = 1 + 3 * (n + s.len) // 2
-                pp = ptr[byte](sz)
+                pp = cobj(sz)
                 str.memcpy(pp, p, n)
                 p = pp
             str.memcpy(p + n, s.ptr, s.len)
