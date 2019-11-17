@@ -113,7 +113,7 @@ cd ..
 Then build Seq via:
 
 ```bash
-cmake .. -DLLVM_DIR=`llvm-config --cmakedir` -DHTS_LIB=htslib-1.9/libhts.a 
+cmake .. -DLLVM_DIR=`llvm-config --cmakedir` -DHTS_LIB=htslib-1.9/libhts.a -DGC_LIB=gc-8.0.4/rel/lib/libgc.a
 CPATH=gc-8.0.4/rel/include:htslib-1.9 cmake --build .
 ```
 
