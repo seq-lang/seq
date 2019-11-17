@@ -1,14 +1,7 @@
-import C
 import sys
 from math import inf as INF, sqrt as _sqrt, acos as _acos, cos as _cos
 from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
 from bisect import bisect as _bisect
-
-class ZeroDivisionError:
-    msg: str
-
-class TypeError:
-    msg: str
 
 N = 624
 M = 397
@@ -33,7 +26,7 @@ class Generator:
         type timeval(tv_sec: int, tv_usec: int)
         tv = timeval(0, 0)
 
-        cdef gettimeofday(ptr[timeval], ptr[byte]) -> i32
+        cimport gettimeofday(ptr[timeval], ptr[byte]) -> i32
         err = gettimeofday(__ptr__(tv), ptr[byte]())
         if int(err) != 0:
             raise OSError("whoops") # Todo get nice message via seterr
@@ -179,7 +172,7 @@ class Generator:
         key[0] = u64(now & u64(0xffffffff))
         key[1] = u64(now >> u64(32))
 
-        cdef getpid() -> int
+        cimport getpid() -> int
         key[2] = u64(getpid())
 
         getmonotonicclock = 12345

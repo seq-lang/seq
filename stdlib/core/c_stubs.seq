@@ -67,7 +67,7 @@ cimport erfc(float) -> float
 cimport gamma(float) -> float
 cimport lgamma(float) -> float
 cimport remainder(float, float) -> float
-cimport frexp(float, ptr[int]) -> float
+cimport frexp(float, ptr[Int[32]]) -> float
 cimport modf(float, ptr[float]) -> float
 
 # <stdio.h>

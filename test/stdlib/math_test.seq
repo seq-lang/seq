@@ -1,8 +1,8 @@
 import math
 
-NAN = math.NAN
-INF = math.INF
-NINF = -math.INF
+NAN = math.nan
+INF = math.inf
+NINF = -math.inf
 
 @test
 def test_isnan():

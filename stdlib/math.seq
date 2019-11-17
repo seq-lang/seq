@@ -1,10 +1,9 @@
-E = 2.718281828459045
-PI = 3.141592653589793
-TAU = 6.283185307179586
+e = 2.718281828459045
+pi = 3.141592653589793
+tau = 6.283185307179586
 
-INF = float('inf')
-NINF = -INF
-NAN = float('nan')
+inf = float('inf')
+nan = float('nan')
 
 def isnan(x: float) -> bool:
     """
@@ -24,7 +23,7 @@ def isinf(x: float) -> bool:
 
     Return True if float arg is an INF, else False.
     """
-    return x == INF or x == NINF
+    return x == inf or x == -inf
 
 def isfinite(x: float) -> bool:
     """
@@ -126,7 +125,7 @@ def degrees(x: float) -> float:
 
     Convert angle x from radians to degrees.
     """
-    radToDeg = 180.0/PI
+    radToDeg = 180.0/pi
     return x * radToDeg
 
 def radians(x: float) -> float:
@@ -135,7 +134,7 @@ def radians(x: float) -> float:
 
     Convert angle x from degrees to radians.
     """
-    degToRad = PI/180.0
+    degToRad = pi/180.0
     return x * degToRad
 
 def sqrt(x: float) -> float:
@@ -401,11 +400,11 @@ def isclose(a: float, b: float) -> bool:
     # sign would otherwise have an infinite relative tolerance.
     # Two infinities of the same sign are caught by the equality check
     # above.
-    if a == INF or b == INF:
+    if a == inf or b == inf:
         return False
 
     # NAN is not close to anything, not even itself
-    if a == NAN or b == NAN:
+    if a == nan or b == nan:
         return False
 
     # regular computation
