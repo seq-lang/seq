@@ -1,5 +1,10 @@
 # Building from source 
 
+Unless you really need to build Seq for whatever reason, we strongly recommend
+using [pre-build binaries](https://github.com/seq-lang/seq/releases). 
+
+Really.
+
 ## Dependencies
 
 - Linux or macOS
@@ -13,8 +18,6 @@
 - bz2
 - Python 3.6+
 - git
-
-### Installation
 
 #### Platform-independent notes
 
