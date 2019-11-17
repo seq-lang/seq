@@ -223,9 +223,9 @@ class gzFile:
         self.sz = 0
 
 
-def open(path: str, mode: str):
+def open(path: str, mode: str = "r"):
     return File(path, mode)
 
 
-def gzopen(path: str, mode: str):
+def gzopen(path: str, mode: str = "r"):
     return gzFile(path, mode)

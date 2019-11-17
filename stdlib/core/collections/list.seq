@@ -278,11 +278,14 @@ class list[T]:
         self.arr[idx] = x
         self.len += 1
 
-    def pop(self: list[T]):
+    def pop(self: list[T], idx: int = -1):
         if len(self) == 0:
             raise IndexError("pop from empty list")
-        x = self[self.len - 1]
-        self.len -= 1
+        if idx < 0:
+            idx += len(self)
+        self._idx_check(idx, "pop index out of range")
+        x = self[idx]
+        del self[idx]
         return x
 
     def remove(self: list[T], x: T):
