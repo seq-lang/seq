@@ -84,7 +84,13 @@ INSTANTIATE_TEST_SUITE_P(
                                      "core/match.seq", "core/proteins.seq",
                                      "core/pybridge.seq",
                                      "core/serialization.seq",
-                                     "core/trees.seq"),
+                                     "core/trees.seq",
+                                     // Jordan's tests
+                                     "stdlib/str.seq",
+                                     "stdlib/math.seq",
+                                     "stdlib/random.seq",
+                                     "stdlib/itertools.seq",
+                                     "stdlib/bisect.seq"),
                      testing::Values(true, false)),
     getTestNameFromParam);
 

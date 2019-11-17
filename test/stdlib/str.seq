@@ -1,5 +1,4 @@
-import str
-
+@test
 def test_isdigit():
     assert '0'.isdigit() == True
     assert ''.isdigit() == False
@@ -8,6 +7,8 @@ def test_isdigit():
     assert 'kshfkjhe'.isdigit() == False
     assert '9735g385497'.isdigit() == False
 
+
+@test
 def test_islower():
     assert ''.islower() == False
     assert 'a'.islower() == True
@@ -18,6 +19,7 @@ def test_islower():
     assert '9735g385497'.islower() == True
     assert '9735G385497'.islower() == False
 
+@test
 def test_isupper():
     assert ''.isupper() == False
     assert 'a'.isupper() == False
@@ -29,6 +31,7 @@ def test_isupper():
     assert '9735g385497'.isupper() == False
     assert '9735G385497'.isupper() == True
 
+@test
 def test_isalnum():
     assert ''.isalnum() == False
     assert 'a'.isalnum() == True
@@ -41,6 +44,7 @@ def test_isalnum():
     assert '973 g38597'.isalnum() == False
     assert '9735G3-5497'.isalnum() == False
 
+@test
 def test_isalpha():
     assert ''.isalpha() == False
     assert 'a'.isalpha() == True
@@ -53,6 +57,7 @@ def test_isalpha():
     assert '973 g38597'.isalpha() == False
     assert '9735G3-5497'.isalpha() == False
 
+@test
 def test_isspace():
     assert ''.isspace() == False
     assert ' '.isspace() == True
@@ -62,6 +67,7 @@ def test_isspace():
     assert '\t\ngh\r '.isspace() == False
     assert 'A4kki 3UE'.isspace() == False
 
+@test
 def test_istitle():
     assert ''.istitle() == False
     assert ' '.istitle() == False
@@ -71,6 +77,7 @@ def test_istitle():
     assert 'Hter Hewri'.istitle() == True
     assert 'Kweiur oiejf'.istitle() == False
 
+@test
 def test_capitalize():
     assert ' hello '.capitalize() == ' hello '
     assert 'Hello '.capitalize() == 'Hello '
@@ -78,6 +85,7 @@ def test_capitalize():
     assert 'aaaa'.capitalize() == 'Aaaa'
     assert 'AaAa'.capitalize() == 'Aaaa'
 
+@test
 def test_isdecimal():
     assert ''.isdecimal() == False
     assert 'a'.isdecimal() == False
@@ -86,18 +94,21 @@ def test_isdecimal():
     assert '0123456789'.isdecimal() == True
     assert '0123456789a'.isdecimal() == False
 
+@test
 def test_lower():
     assert 'HeLLo'.lower() == 'hello'
     assert 'hello'.lower() == 'hello'
     assert 'HELLO'.lower() == 'hello'
     assert 'HEL _ LO'.lower() == 'hel _ lo'
 
+@test
 def test_upper():
     assert 'HeLLo'.upper() == 'HELLO'
     assert 'hello'.upper() == 'HELLO'
     assert 'HELLO'.upper() == 'HELLO'
     assert 'HEL _ LO'.upper() == 'HEL _ LO'
 
+@test
 def test_isascii():
     assert ''.isascii() == True
     assert '\x00'.isascii() == True
@@ -107,6 +118,7 @@ def test_isascii():
     assert 'строка'.isascii() == False
     assert '\xe9'.isascii() == False
 
+@test
 def test_casefold():
     assert ''.casefold() == ''
     assert 'HeLLo'.casefold() == 'hello'
@@ -114,11 +126,13 @@ def test_casefold():
     assert 'HELLO'.casefold() == 'hello'
     assert 'HEL _ LO'.casefold() == 'hel _ lo'
 
+@test
 def test_swapcase():
     assert ''.swapcase() == ''
     assert 'HeLLo cOmpUteRs'.swapcase() == 'hEllO CoMPuTErS'
     assert 'H.e_L,L-o cOmpUteRs'.swapcase() == 'h.E_l,l-O CoMPuTErS'
 
+@test
 def test_title():
     assert ''.title() == ''
     assert ' hello '.title() == ' Hello '
@@ -128,6 +142,7 @@ def test_title():
     assert 'fOrMaT,thIs-aS*titLe;String'.title() == 'Format,This-As*Title;String'
     assert 'getInt'.title() == 'Getint'
 
+@test
 def test_isnumeric():
     assert ''.isdecimal() == False
     assert 'a'.isdecimal() == False
@@ -136,6 +151,7 @@ def test_isnumeric():
     assert '0123456789'.isdecimal() == True
     assert '0123456789a'.isdecimal() == False
 
+@test
 def test_ljust():
     assert 'abc'.ljust(10, ' ') == 'abc       '
     assert 'abc'.ljust(6, ' ') == 'abc   '
@@ -143,6 +159,7 @@ def test_ljust():
     assert 'abc'.ljust(2, ' ') == 'abc'
     assert 'abc'.ljust(10, '*') == 'abc*******'
 
+@test
 def test_rjust():
     assert 'abc'.rjust(10, ' ') == '       abc'
     assert 'abc'.rjust(6, ' ') == '   abc'
@@ -150,6 +167,7 @@ def test_rjust():
     assert 'abc'.rjust(2, ' ') == 'abc'
     assert 'abc'.rjust(10, '*') == '*******abc'
 
+@test
 def test_center():
     assert 'abc'.center(10, ' ') == '   abc    '
     assert 'abc'.center(6, ' ') == ' abc  '
@@ -157,6 +175,7 @@ def test_center():
     assert 'abc'.center(2, ' ') == 'abc'
     assert 'abc'.center(10, '*') == '***abc****'
 
+@test
 def test_zfill():
     assert '123'.zfill(2) == '123'
     assert '123'.zfill(3) == '123'
@@ -171,6 +190,7 @@ def test_zfill():
     assert '34'.zfill(1) == '34'
     assert '34'.zfill(4) == '0034'
 
+@test
 def test_count():
     assert 'aaa'.count('a', 0, len('aaa')) == 3
     assert 'aaa'.count('b', 0, len('aaa')) == 0
@@ -181,6 +201,7 @@ def test_count():
     assert 'aaa'.count('a', 0, 10) == 3
     assert 'aaa'.count('a', 0, -1) == 2
 
+@test
 def test_find():
     assert 'abcdefghiabc'.find('abc', 0, len('abcdefghiabc')) == 0
     assert 'abcdefghiabc'.find('abc', 1, len('abcdefghiabc')) == 9
@@ -192,6 +213,7 @@ def test_find():
     assert 'abc'.find('', 3, len('abc')) == 3
     assert 'abc'.find('', 4, len('abc')) == -1
 
+@test
 def test_rfind():
     assert 'abcdefghiabc'.rfind('abc', 0, len('abcdefghiabc')) == 9
     assert 'abcdefghiabc'.rfind('', 0, len('abcdefghiabc')) == 12
@@ -204,6 +226,7 @@ def test_rfind():
     assert 'abc'.rfind('', 3, len('abc')) == 3
     assert 'abc'.rfind('', 4, len('abc')) == -1
 
+@test
 def test_isidentifier():
     assert 'a'.isidentifier() == True
     assert 'Z'.isidentifier() == True
@@ -215,6 +238,7 @@ def test_isidentifier():
     assert '3t'.isidentifier() == False
     assert '_gth_45'.isidentifier() == True
 
+@test
 def test_isprintable():
     assert ''.isprintable() == True
     assert '\"'.isprintable() == True
@@ -227,16 +251,19 @@ def test_isprintable():
     assert '!#$%&()*+,-./:;?@[\\]^_`{|}~'.isprintable() == True
     assert 'abcdef\n'.isprintable() == False
 
+@test
 def test_lstrip():
     assert '   hello   '.lstrip('') == 'hello   '
     assert ' \t\n\rabc \t\n\r'.lstrip('') == 'abc \t\n\r'
     assert "xyzzyhelloxyzzy".lstrip('xyz') == 'helloxyzzy'
 
+@test
 def test_rstrip():
     assert '   hello   '.rstrip('') == '   hello'
     assert ' \t\n\rabc \t\n\r'.rstrip('') == ' \t\n\rabc'
     assert "xyzzyhelloxyzzy".rstrip('xyz') == 'xyzzyhello'
 
+@test
 def test_strip():
     assert '   hello   '.strip('') == 'hello'
     assert ' \t\n\rabc \t\n\r'.strip('') == 'abc'
@@ -245,6 +272,7 @@ def test_strip():
     assert 'mississippi'.strip('mississippi') == ''
     assert 'mississippi'.strip('i') == 'mississipp'
 
+@test
 def test_partition():
     assert 'hello'.partition('l') == ('he', 'l', 'lo')
     assert 'this is the partition method'.partition('ti') == ('this is the par', 'ti', 'tion method')
@@ -253,6 +281,7 @@ def test_partition():
     assert 'http://www.seq.org'.partition('http://') == ('', 'http://', 'www.seq.org')
     assert 'http://www.seq.org'.partition('org') == ('http://www.seq.', 'org', '')
 
+@test
 def test_rpartition():
     assert 'hello'.rpartition('l') == ('hel', 'l', 'o')
     assert 'this is the rpartition method'.rpartition('ti') == ('this is the rparti', 'ti', 'on method')
@@ -261,6 +290,7 @@ def test_rpartition():
     assert 'http://www.seq.org'.rpartition('http://') == ('', 'http://', 'www.seq.org')
     assert 'http://www.seq.org'.rpartition('org') == ('http://www.seq.', 'org', '')
 
+@test
 def test_split():
     assert 'h l l o'.split(' ', -1) == ['h', 'l', 'l', 'o']
     assert 'a|b|c|d'.split('|', -1) == ['a', 'b', 'c', 'd']
@@ -285,6 +315,7 @@ def test_split():
     assert 'a|b|c|d'.split('|', 4) == ['a', 'b', 'c', 'd']
     assert 'a||b||c||d'.split('|', 2) == ['a', '', 'b||c||d']
 
+@test
 def test_rsplit():
     assert 'a|b|c|d'.rsplit('|', -1) == ['a', 'b', 'c', 'd']
     assert 'a|b|c|d'.rsplit('|', 1) == ['a|b|c', 'd']
@@ -310,6 +341,7 @@ def test_rsplit():
     assert ('a|'*20)[:-1].rsplit('|', 15) == ['a|a|a|a|a'] + ['a']*15
     assert 'a||b||c||d'.rsplit('|', 2) == ['a||b||c', '', 'd']
 
+@test
 def test_splitlines():
     assert '\n\nasdf\nsadf\nsdf\n'.splitlines(False) == ['', '', 'asdf', 'sadf', 'sdf']
     assert 'abc\ndef\n\rghi'.splitlines(False) == ['abc', 'def', '', 'ghi']
@@ -321,6 +353,7 @@ def test_splitlines():
     assert '\nabc\ndef\r\nghi\n\r'.splitlines(True) == ['\n', 'abc\n', 'def\r\n', 'ghi\n', '\r']
     assert 'abc\ndef\r\nghi\n'.splitlines(True) == ['abc\n', 'def\r\n', 'ghi\n']
 
+@test
 def test_startswith():
     assert 'hello'.startswith('he', 0, len('hello')) == True
     assert 'hello'.startswith('hello', 0, len('hello')) == True
@@ -347,6 +380,7 @@ def test_startswith():
     assert 'hello'.startswith('', -3, -3) == True
     assert 'hello'.startswith('o', -1, len('hello')) == True
 
+@test
 def test_endswith():
     assert 'hello'.endswith('lo', 0, len('hello')) == True
     assert 'hello'.endswith('he', 0, len('hello')) == False
@@ -378,6 +412,7 @@ def test_endswith():
     assert 'helloworld'.endswith('lowo', 3, -4) == False
     assert 'helloworld'.endswith('lowo', -8, -2) == False
 
+@test
 def test_index():
     assert 'abcdefghiabc'.index('abc', 0, len('abcdefghiabc')) == 0
     assert 'abcdefghiabc'.index('abc', 1, len('abcdefghiabc')) == 9
@@ -387,6 +422,7 @@ def test_index():
     assert 'rrarrrrrrrrra'.index('a', 4, len('rrarrrrrrrrra')) == 12
     assert 'abcdefghiabc'.index('def', 4, len('abcdefghiabc')) == -1
 
+@test
 def test_rindex():
     assert 'abcdefghiabc'.rindex('', 0, len('abcdefghiabc')) == 12
     assert 'abcdefghiabc'.rindex('def', 0, len('abcdefghiabc')) == 3
@@ -396,6 +432,7 @@ def test_rindex():
     assert 'rrarrrrrrrrra'.rindex('a', 4, len('rrarrrrrrrrra')) == 12
     assert 'rrarrrrrrrrra'.rindex('a', 4, 6) == -1
 
+@test
 def test_replace():
     # interleave-- default will be len(str) + 1
     assert 'A'.replace('', '', len('A')+1) == 'A'
@@ -478,6 +515,7 @@ def test_replace():
     assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 1) == 'ham, spam, eggs and spam'
     assert 'spam, spam, eggs and spam'.replace('spam', 'ham', 0) == 'spam, spam, eggs and spam'
 
+@test
 def test_expandtabs():
     assert 'abc\rab\tdef\ng\thi'.expandtabs(8) == 'abc\rab      def\ng       hi'
     assert 'abc\rab\tdef\ng\thi'.expandtabs(4) == 'abc\rab  def\ng   hi'
@@ -487,6 +525,7 @@ def test_expandtabs():
     assert ' \ta\n\tb'.expandtabs(1) == '  a\n b'
     assert '\tdndhd\ty\ty\tyu\t'.expandtabs(3) == '   dndhd y  y  yu '
 
+@test
 def test_translate():
     assert 'I yor ge'.translate({'g': 'w', 'y': 'f'}) == 'I for we'
     assert 'abababc'.translate({'a': ''}) == 'bbbc'
@@ -494,43 +533,3 @@ def test_translate():
     assert 'abababc'.translate({'a': '', 'b': 'i', 'c': 'x'}) == 'iiix'
     assert 'abababc'.translate({'a': '', 'b': ''}) == 'c'
     assert 'xzx'.translate({'z': 'yy'}) == 'xyyx'
-
-# test_isdigit()
-# test_islower()
-# test_isupper()
-# test_isalnum()
-# test_isalpha()
-# test_isspace()
-# test_istitle()
-# test_capitalize()
-# test_isdecimal()
-# test_lower()
-# test_upper()
-# test_isascii()
-# test_casefold()
-# test_swapcase()
-# test_title()
-# test_isnumeric()
-# test_ljust()
-# test_rjust()
-# test_center()
-# test_count()
-# test_find()
-# test_rfind()
-# test_isidentifier()
-# test_isprintable()
-# test_lstrip()
-# test_rstrip()
-# test_strip()
-# test_partition()
-# test_rpartition()
-# test_split()
-# test_rsplit()
-# test_splitlines()
-# test_startswith()
-# test_endswith()
-# test_index()
-# test_rindex()
-# test_replace()
-# test_expandtabs()
-test_translate()

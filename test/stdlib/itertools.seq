@@ -15,6 +15,7 @@ def take(n, seq):
     """Convenience function for partially consuming a long of infinite iterable"""
     return list(itertools.islice(seq, 0, n, 1))
 
+@test
 def combinations():
     assert list(itertools.combinations('ABCD', 2)) == [['A','B'], ['A','C'], ['A','D'], ['B','C'], ['B','D'], ['C','D']]
     test_intermediate = itertools.combinations('ABCD', 2)
@@ -24,17 +25,17 @@ def combinations():
     test_intermediat = itertools.combinations(range(4), 3)
     next(test_intermediat)
     assert list(test_intermediat) == [[0, 1, 3], [0, 2, 3], [1, 2, 3]]
-# combinations()
 
+@test
 def combinations_with_replacement():
     assert list(itertools.combinations_with_replacement(range(3), 3)) == [[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 1], [0, 1, 2], [0, 2, 2], [1, 1, 1], [1, 1, 2], [1, 2, 2], [2, 2, 2]]
     assert list(itertools.combinations_with_replacement('ABC', 2)) == [['A', 'A'], ['A', 'B'], ['A', 'C'], ['B', 'B'], ['B', 'C'], ['C', 'C']]
     test_intermediate = itertools.combinations_with_replacement('ABC', 2)
     next(test_intermediate)
     assert list(test_intermediate) == [['A', 'B'], ['A', 'C'], ['B', 'B'], ['B', 'C'], ['C', 'C']]
-# combinations_with_replacement()
 
 # something wrong
+@test
 def islice():
     ra100 = range(100)
     ra = range(10)
@@ -49,23 +50,23 @@ def islice():
     assert list(itertools.islice(iter(ra), 2, 10, 1)) == [2, 3, 4, 5, 6, 7, 8, 9]
     assert list(itertools.islice(iter(ra), 1, 10, 2)) == [1, 3, 5, 7, 9]
     assert list(itertools.islice(iter(ra), -5, 10, 1))
-# islice()
 
+@test
 def count():
     # infinite loop here
     # print take(3, itertools.count(3.25, 1.0))
     assert take(3, zip('abc', itertools.count(3.25, 1.0))) == [('a', 3.25), ('b', 4.25), ('c', 5.25)]
     assert take(2, zip('abc', itertools.count(-1.0, 1.0))) == [('a', -1.0), ('b', 0.0)]
     assert take(2, zip('abc', itertools.count(-3.0, 1.0))) == [('a', -3.0), ('b', -2.0)]
-# count()
 
+@test
 def repeat():
     assert list(itertools.repeat('a', 3)) == ['a', 'a', 'a']
     assert list(itertools.repeat(1, 10)) == [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     assert list(itertools.repeat('a', -1)) == ['a']
     assert len(list(itertools.repeat('a', 0))) == 0
-# repeat()
 
+@test
 def cycle():
     assert take(10, zip('zzzzzzzzzzz', itertools.cycle(iter('abc')))) == [('z', 'a'), ('z', 'b'), ('z', 'c'), ('z', 'a'), ('z', 'b'), ('z', 'c'), ('z', 'a'), ('z', 'b'), ('z', 'c'), ('z', 'a')]
     # print take(10, zip('zzzzzzzzzzz', itertools.cycle(['a', 'b'])))
@@ -82,30 +83,30 @@ def cycle():
             break
         i += 1
         print x
-# cycle()
 
+@test
 def compress():
     assert itertools.compress('ABCDEF', [1, 0, 1, 0, 1, 1]) == ['A', 'C', 'E', 'F']
     assert itertools.compress('ABCDEF', [1, 1, 1, 1, 1, 1]) == ['A', 'B', 'C', 'D', 'E', 'F']
     assert itertools.compress('ABCDEF', [1, 0, 1]) == ['A', 'C']
     assert itertools.compress('ABC', [0, 1, 1, 1, 1, 1]) == ['B', 'C']
-# compress()
 
+@test
 def dropwhile():
     data = [1, 3, 5, 20, 2, 4, 6, 8]
     assert list(itertools.dropwhile(underten, data)) == [20, 2, 4, 6, 8]
-# dropwhile()
 
+@test
 def takewhile():
     data = [1, 3, 5, 20, 2, 4, 6, 8]
     assert list(itertools.takewhile(underten, data)) == [1, 3, 5]
-# takewhile()
 
+@test
 def filterfalse():
     assert list(itertools.filterfalse(isEven, range(10))) == [1, 3, 5, 7, 9]
     assert list(itertools.filterfalse(boolean, [0, 1, 0, 2, 0])) == [0, 0, 0]
-# filterfalse()
 
+@test
 def permutations():
     assert list(itertools.permutations(range(3), 2)) == [[0, 1], [0,2], [1,0], [1,2], [2,0], [2,1]]
 
@@ -117,8 +118,8 @@ def permutations():
                 assert len(result) == 0
             # factorial is not yet implemented in math
             # else: fact(n) / fact(n - r)
-# permutations()
 
+@test
 def accumulate():
     # addition
     assert list(itertools.accumulate(range(10), int.__add__, 0)) == [0, 1, 3, 6, 10, 15, 21, 28, 36, 45]
@@ -129,21 +130,20 @@ def accumulate():
     assert list(itertools.accumulate(range(10), int.__mul__, 0)) == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     assert list(itertools.accumulate([1, 2, 3, 4, 5], int.__mul__, 0)) == [1, 2, 6, 24, 120]
     assert list(itertools.accumulate([7], int.__mul__, 0)) == [7]
-# accumulate()
 
+@test
 def chain():
     assert list(itertools.chain(['abc', 'def'])) == ['a', 'b', 'c', 'd', 'e', 'f']
     assert list(itertools.chain(['abc'])) == ['a', 'b', 'c']
     assert list(itertools.chain(['a', 'b', 'c'])) == ['a', 'b', 'c']
-# chain()
 
+@test
 def starmap():
     assert list(itertools.starmap(math.pow, [(2.0, 5.0), (3.0, 2.0), (10.0, 3.0)])) == [32.0, 9.0,  1000.0]
     assert list(itertools.starmap(math.pow, [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0)])) == [0.0**1.0, 1.0**2.0, 2.0**3.0]
-# starmap()
 
+@test
 def groupby():
     def key_str(s: str):
         return s
     assert list(itertools.groupby(iter('AAAABBBCCDAABBC'), key_str)) == [('A', ['A', 'A', 'A', 'A']), ('B', ['B', 'B', 'B']), ('C', ['C', 'C']), ('D', ['D']), ('A', ['A', 'A']), ('B', ['B', 'B']), ('C', ['C'])]
-groupby()
