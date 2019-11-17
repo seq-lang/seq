@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <unordered_map>
 #include <unwind.h>
 #include <vector>
 
@@ -30,7 +31,6 @@ using namespace std;
  */
 
 void seq_exc_init();
-void seq_py_init();
 
 SEQ_FUNC void seq_init() {
   GC_INIT();
@@ -48,7 +48,6 @@ SEQ_FUNC void seq_init() {
 #endif
 
   seq_exc_init();
-  seq_py_init();
 }
 
 SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line) {
@@ -108,6 +107,13 @@ static seq_str_t string_conv(const char *fmt, const size_t size, T t) {
     n = snprintf(p, n2, fmt, t);
   }
   return {(seq_int_t)n, p};
+}
+
+SEQ_FUNC seq_str_t seq_strdup(const char *s) {
+  size_t len = strlen(s);
+  auto *s2 = (char *)seq_alloc_atomic(len + 1);
+  strcpy(s2, s);
+  return {(seq_int_t)len, s2};
 }
 
 SEQ_FUNC seq_str_t seq_str_int(seq_int_t n) {
@@ -179,6 +185,24 @@ SEQ_FUNC int seq_time() {
   gettimeofday(&ts, nullptr);
   auto time_ms = (int)((ts.tv_sec * 1000000 + ts.tv_usec) / 1000);
   return time_ms;
+}
+
+/*
+ * dlopen
+ */
+
+static std::unordered_map<std::string, void *> dlopen_handles;
+
+SEQ_FUNC void *seq_get_handle(const char *c) {
+  auto it = dlopen_handles.find(std::string(c));
+  if (it != dlopen_handles.end())
+    return it->second;
+  else
+    return nullptr;
+}
+
+SEQ_FUNC void seq_set_handle(const char *c, void *h) {
+  dlopen_handles[std::string(c)] = h;
 }
 
 /*

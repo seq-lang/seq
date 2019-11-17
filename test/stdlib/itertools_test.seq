@@ -147,3 +147,19 @@ def groupby():
     def key_str(s: str):
         return s
     assert list(itertools.groupby(iter('AAAABBBCCDAABBC'), key_str)) == [('A', ['A', 'A', 'A', 'A']), ('B', ['B', 'B', 'B']), ('C', ['C', 'C']), ('D', ['D']), ('A', ['A', 'A']), ('B', ['B', 'B']), ('C', ['C'])]
+
+combinations()
+combinations_with_replacement()
+islice()
+count()
+repeat()
+cycle()
+compress()
+dropwhile()
+takewhile()
+filterfalse()
+permutations()
+accumulate()
+chain()
+starmap()
+groupby()

@@ -131,7 +131,6 @@ INSTANTIATE_TEST_SUITE_P(
                                      "core/generators.seq", "core/generics.seq",
                                      "core/helloworld.seq", "core/kmers.seq",
                                      "core/match.seq", "core/proteins.seq",
-                                     "core/pybridge.seq",
                                      "core/serialization.seq",
                                      "core/trees.seq"),
                      testing::Values(true, false)),
@@ -139,11 +138,17 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     StdlibTests, SeqTest,
-    testing::Combine(testing::Values("stdlib/str.seq", "stdlib/math.seq",
-                                     "stdlib/random.seq",
-                                     "stdlib/itertools.seq",
-                                     "stdlib/bisect.seq"),
+    testing::Combine(testing::Values("stdlib/str.seq", "stdlib/math_test.seq",
+                                     "stdlib/random_test.seq",
+                                     "stdlib/itertools_test.seq",
+                                     "stdlib/bisect_test.seq"),
                      testing::Values(true, false)),
+    getTestNameFromParam);
+
+INSTANTIATE_TEST_SUITE_P(
+    PythonTests, SeqTest,
+    testing::Combine(testing::Values("python/pybridge.seq"),
+                     testing::Values(false)),
     getTestNameFromParam);
 
 int main(int argc, char *argv[]) {

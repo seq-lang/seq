@@ -1,0 +1,36 @@
+@test
+def test_basic():
+    from mymodule pyimport multiply () -> int
+    assert multiply(3, 4) == 12
+test_basic()
+
+@test
+def test_pybridge():
+    pydef test_pydef(n: int) -> str:
+        return ''.join(map(str, range(n)))
+    assert test_pydef(5) == '01234'
+test_pybridge()
+
+from mymodule pyimport print_args () -> tuple[dict[str,float],tuple[int,float]]
+@test
+def test_conversions():
+    t = print_args(
+        (4,5),
+        {'a': 3.14, 'b': 2.123},
+        True,
+        {s'ACGT'},
+        [['abc'], ['1.1', '2.2'], list[str]()]
+    )
+    assert t == ({'a': 3.14, 'b': 2.123}, (222, 3.14))
+test_conversions()
+
+@test
+def test_pythrow():
+    from mymodule pyimport throw_exc () -> int
+    try:
+        throw_exc()
+    except PyError as e:
+        assert e.pytype + ":" + e.msg == "ValueError:foo"
+        return
+    assert False
+test_pythrow()

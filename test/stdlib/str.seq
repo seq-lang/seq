@@ -7,7 +7,6 @@ def test_isdigit():
     assert 'kshfkjhe'.isdigit() == False
     assert '9735g385497'.isdigit() == False
 
-
 @test
 def test_islower():
     assert ''.islower() == False
@@ -533,3 +532,44 @@ def test_translate():
     assert 'abababc'.translate({'a': '', 'b': 'i', 'c': 'x'}) == 'iiix'
     assert 'abababc'.translate({'a': '', 'b': ''}) == 'c'
     assert 'xzx'.translate({'z': 'yy'}) == 'xyyx'
+
+test_isdigit()
+test_islower()
+test_isupper()
+test_isalnum()
+test_isalpha()
+test_isspace()
+test_istitle()
+test_capitalize()
+test_isdecimal()
+test_lower()
+test_upper()
+test_isascii()
+test_casefold()
+test_swapcase()
+test_title()
+test_isnumeric()
+test_ljust()
+test_rjust()
+test_center()
+test_zfill()
+test_count()
+test_find()
+test_rfind()
+test_isidentifier()
+test_isprintable()
+test_lstrip()
+test_rstrip()
+test_strip()
+test_partition()
+test_rpartition()
+test_split()
+test_rsplit()
+test_splitlines()
+test_startswith()
+test_endswith()
+test_index()
+test_rindex()
+test_replace()
+test_expandtabs()
+test_translate()
