@@ -1,176 +1,133 @@
-# Don't forget to change expects below this function
-# when modifying; it is tested on both sequence and
-# k-mer inputs.
 def f(k):
-    # EXPECT: 0
     match k:
         case s'':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'GCGT':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'GCGTC':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'GCATC':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'G_GT_':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'_TG__':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'GC...ATC':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'GC...TC':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'GC...A':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'GCG...':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'GGG...':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'...TC':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'...T':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'...':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'_C...G_C':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'...G_C':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'_C...':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'A_...G_C':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'...C_C':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 0
     match k:
         case s'_T...':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-    # EXPECT: 1
     match k:
         case s'__...__':
-            print 1
+            yield 1
         case _:
-            print 0
+            yield 0
 
-s = s'GCGTC'
-f(s)
-f(Kmer[5](s))
-
-# EXPECT: 0
-# EXPECT: 0
-# EXPECT: 1
-# EXPECT: 0
-# EXPECT: 1
-# EXPECT: 0
-# EXPECT: 0
-# EXPECT: 1
-# EXPECT: 0
-# EXPECT: 1
-# EXPECT: 0
-# EXPECT: 1
-# EXPECT: 0
-# EXPECT: 1
-# EXPECT: 1
-# EXPECT: 1
-# EXPECT: 1
-# EXPECT: 0
-# EXPECT: 0
-# EXPECT: 0
-# EXPECT: 1
+@test
+def test_match():
+    s = s'GCGTC'
+    assert list(f(s)) == [0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1]
+    assert list(f(Kmer[5](s))) == [0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1]
+test_match()

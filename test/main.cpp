@@ -44,6 +44,45 @@ protected:
   }
 };
 
+vector<string> splitLines(const string &output) {
+  vector<string> result;
+  string line;
+  istringstream stream(output);
+  const char delim = '\n';
+
+  while (getline(stream, line, delim))
+    result.push_back(line);
+
+  return result;
+}
+
+static string findExpectOnLine(const string &line) {
+  static const string EXPECT_STR = "# EXPECT: ";
+  size_t pos = line.find(EXPECT_STR);
+  return pos == string::npos ? "" : line.substr(pos + EXPECT_STR.length());
+}
+
+static vector<string> findExpects(const string &filename) {
+  ifstream file(filename);
+
+  if (!file.good()) {
+    cerr << "error: could not open " << filename << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  string line;
+  vector<string> result;
+
+  while (getline(file, line)) {
+    string expect = findExpectOnLine(line);
+    if (!expect.empty())
+      result.push_back(expect);
+  }
+
+  file.close();
+  return result;
+}
+
 static string
 getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
   const string basename = get<0>(info.param);
@@ -67,10 +106,20 @@ TEST_P(SeqTest, Run) {
   SeqModule *module = parse("", filename);
   execute(module, {}, {}, debug);
   string output = result();
-  const bool pass = output.find("TEST FAILED") == string::npos;
-  EXPECT_TRUE(pass);
-  if (!pass)
+  const bool assertsFailed = output.find("TEST FAILED") != string::npos;
+  EXPECT_FALSE(assertsFailed);
+  if (assertsFailed)
     std::cerr << output << std::endl;
+  vector<string> expects = findExpects(filename);
+  if (!expects.empty()) {
+    vector<string> results = splitLines(output);
+    EXPECT_EQ(results.size(), expects.size());
+    if (expects.size() == results.size()) {
+      for (unsigned i = 0; i < expects.size(); i++) {
+        EXPECT_EQ(results[i], expects[i]);
+      }
+    }
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -84,10 +133,13 @@ INSTANTIATE_TEST_SUITE_P(
                                      "core/match.seq", "core/proteins.seq",
                                      "core/pybridge.seq",
                                      "core/serialization.seq",
-                                     "core/trees.seq",
-                                     // Jordan's tests
-                                     "stdlib/str.seq",
-                                     "stdlib/math.seq",
+                                     "core/trees.seq"),
+                     testing::Values(true, false)),
+    getTestNameFromParam);
+
+INSTANTIATE_TEST_SUITE_P(
+    StdlibTests, SeqTest,
+    testing::Combine(testing::Values("stdlib/str.seq", "stdlib/math.seq",
                                      "stdlib/random.seq",
                                      "stdlib/itertools.seq",
                                      "stdlib/bisect.seq"),

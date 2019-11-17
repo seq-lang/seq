@@ -1,24 +1,33 @@
-def baz(x, y, z = 3):
-    print 'baz', x, y, z
-baz(1, 2, 3)  # EXPECT: baz 1 2 3
-baz(1, 3)     # EXPECT: baz 1 3 3
-baz(z = 'z', y = 'y', x = 'x')  # EXPECT: baz x y z
-baz(y = 'y', x = 'x')  # EXPECT: baz x y 3
-baz('x', y = 'y')  # EXPECT: baz x y 3
+@test
+def t1():
+    def baz(x, y, z = 3):
+        return x, y, z
+    assert baz(1, 2, 3) == (1, 2, 3)
+    assert baz(1, 3) == (1, 3, 3)
+    assert baz(z = 'z', y = 'y', x = 'x') == ('x', 'y', 'z')
+    assert baz(y = 'y', x = 'x') == ('x', 'y', 3)
+    assert baz('x', y = 'y') == ('x', 'y', 3)
+t1()
 
 class A:
     def foo(self: A, x = 3, y = 'hello'):
-        print x, y
+        return x, y
 
-A().foo(y = 3.14, x = 42)  # EXPECT: 42 3.14
+@test
+def t2():
+    assert A().foo(y = 3.14, x = 42) == (42, 3.14)
+t2()
 
 def g[T](a: T, b: optional[T] = None):
     b_ = ~b if b else T()
-    print a, b_
+    return a, b_
 
-g(99, 4242)  # EXPECT: 99 4242
-g(99)  # EXPECT: 99 0
-None |> g(a=1, b=...)  # EXPECT: 1 0
+@test
+def t3():
+    assert g(99, 4242) == (99, 4242)
+    assert g(99) == (99, 0)
+    assert (None |> g(a=1, b=...)) == (1, 0)
+t3()
 
 def _unwrap(opt):
     return ~opt
@@ -27,10 +36,13 @@ def foo(x: int, y: int, z: optional[list[float]]):
     xs = str(x)
     ys = str(y)
     zs = str(_unwrap(z)) if z else 'None'
-    print xs, ys, zs
+    return xs, ys, zs
 
-foo(1, 2, [3.14])  # EXPECT: 1 2 [3.14]
-foo(77, 99, None)  # EXPECT: 77 99 None
+@test
+def t4():
+    assert foo(1, 2, [3.14]) == ('1', '2', '[3.14]')
+    assert foo(77, 99, None) == ('77', '99', 'None')
+t4()
 
 class A:
     def __init__(self: A):
@@ -40,38 +52,44 @@ class A:
         xs = str(x)
         ys = str(y)
         zs = str(_unwrap(z)) if z else 'None'
-        print xs, ys, zs
+        return xs, ys, zs
 
     def bar[S](self: A, x: S, y: S, z: optional[typeof(S() + 0.0)] = None):
         xs = str(x)
         ys = str(y)
         zs = str(_unwrap(z)) if z else 'None'
-        print xs, ys, zs
+        return xs, ys, zs
 
-A.foo(1, 2, [3.14])  # EXPECT: 1 2 [3.14]
-A.foo(77, 99, None)  # EXPECT: 77 99 None
+@test
+def t5():
+    assert A.foo(1, 2, [3.14]) == ('1', '2', '[3.14]')
+    assert A.foo(77, 99, None) == ('77', '99', 'None')
 
-A().bar(1.0, 2.0, 3.14)  # EXPECT: 1 2 3.14
-A().bar(77, 99, None)  # EXPECT: 77 99 None
-A().bar(77, 99)  # EXPECT: 77 99 None
+    assert A().bar(1.0, 2.0, 3.14) == ('1', '2', '3.14')
+    assert A().bar(77, 99, None) == ('77', '99', 'None')
+    assert A().bar(77, 99) == ('77', '99', 'None')
 
-1 |> foo(2, [3.14])  # EXPECT: 1 2 [3.14]
-1 |> foo(77, ..., None)  # EXPECT: 77 1 None
-None |> foo(-5, -1, ...)  # EXPECT: -5 -1 None
-[1.23] |> foo(-5, -1, ...)  # EXPECT: -5 -1 [1.23]
+    assert (1 |> foo(2, [3.14])) == ('1', '2', '[3.14]')
+    assert (1 |> foo(77, ..., None)) == ('77', '1', 'None')
+    assert (None |> foo(-5, -1, ...)) == ('-5', '-1', 'None')
+    assert ([1.23] |> foo(-5, -1, ...)) == ('-5', '-1', '[1.23]')
+t5()
 
 # test auto-iter
-print list('abc')  # EXPECT: [a, b, c]
+@test
+def t6():
+    assert list('abc') == ['a', 'b', 'c']
 
-def it1[T](v: generator[T]):
-    return list(v)
+    def it1[T](v: generator[T]):
+        return list(v)
 
-def it2[T](v: T):
-    return list(v)
+    def it2[T](v: T):
+        return list(v)
 
-def it3[T](v: generator[T] = 'xyz'):
-    return list(v)
+    def it3[T](v: generator[T] = 'xyz'):
+        return list(v)
 
-print it1([1, 2, 3])  # EXPECT: [1, 2, 3]
-print it2(iter([1.1, 2.2, 3.3]))  # EXPECT: [1.1, 2.2, 3.3]
-print it3()  # EXPECT: [x, y, z]
+    assert it1([1, 2, 3]) == [1, 2, 3]
+    assert it2(iter([1.1, 2.2, 3.3])) == [1.1, 2.2, 3.3]
+    assert it3() == ['x', 'y', 'z']
+t6()
