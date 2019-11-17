@@ -117,6 +117,9 @@ extend pseq:  # order is consistent with str/seq
     def _slice_direct(self: pseq, a: int, b: int):
         return pseq(self.ptr + a, b - a)
 
+    def __getitem__(self: pseq, s: eslice):
+        return self.__copy__()
+
     def __getitem__(self: pseq, s: slice):
         a, b = s
         n = len(self)

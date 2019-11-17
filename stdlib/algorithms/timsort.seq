@@ -306,13 +306,13 @@ def tim_sort_inplace[T](collection: list[T], compare: function[bool,T,T]):
     """
     tim_sort_array(collection.arr, collection.len, compare)
 
-def tim_sort[T](collection: list[T], compare: function[bool,T,T]) -> list[T]:
+def tim_sort[T](collection: generator[T], compare: function[bool,T,T]) -> list[T]:
     """
         Timsort
         By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
 
         Returns a sorted list.
     """
-    newlst = copy(collection)
+    newlst = list(collection)
     tim_sort_inplace(newlst, compare)
     return newlst

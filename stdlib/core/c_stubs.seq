@@ -101,7 +101,7 @@ cimport gzerror(cobj, ptr[i32]) -> cobj
 cimport gzgetc(cobj) -> i32
 cimport gzclose(cobj) -> int
 cimport gzread(cobj, cobj, u32) -> i32
-cimport gzwrite(cobj, cobj, i32) -> i32
+cimport gzwrite(cobj, cobj, u32) -> i32
 cimport gztell(cobj) -> int
 cimport gzseek(cobj, int, i32) -> int
 
