@@ -28,10 +28,9 @@ type t =
         Needed for parsing [import] statements.
         Usage: [parses ctx ?file code], where [file] is an optional file name that is used
         to populate [Ast.Ann] annotations. *)
+  ; stdlib : Ctx_namespace.t
+        (** A context that holds the internal Seq objects and libraries. *)
   }
-
-(** A context that holds the internal Seq objects and libraries. *)
-let stdlib : Ctx_namespace.t = String.Table.create ()
 
 (** [add_block context] adds a new block to the context stack. *)
 let add_block ctx = Stack.push ctx.stack (String.Hash_set.create ())
@@ -93,6 +92,7 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser
     ; map = String.Table.create ()
     ; imported = String.Table.create ()
     ; trycatch = Ctypes.null
+    ; stdlib = String.Table.create ()
     }
   in
   add_block ctx;
@@ -100,9 +100,9 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser
   let toplevel = true in
   let global = true in
   let internal = true in
-  if Hashtbl.length stdlib = 0
+  if Hashtbl.length ctx.stdlib = 0
   then (
-    let ctx = { ctx with map = stdlib } in
+    let ctx = { ctx with map = ctx.stdlib } in
     (* initialize POD types *)
     let pod_types =
       Llvm.Type.
@@ -125,7 +125,7 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser
     match Util.get_from_stdlib "core" with
     | Some file -> parse_file ~ctx file
     | None -> Err.ierr "cannot locate Seq standard library");
-  Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
+  Hashtbl.iteri ctx.stdlib ~f:(fun ~key ~data ->
       add ~ctx ~internal ~global ~toplevel key (fst @@ List.hd_exn data));
   ctx
 
@@ -134,7 +134,7 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser
 let init_empty ctx =
   let ctx = { ctx with stack = Stack.create (); map = String.Table.create () } in
   add_block ctx;
-  Hashtbl.iteri stdlib ~f:(fun ~key ~data ->
+  Hashtbl.iteri ctx.stdlib ~f:(fun ~key ~data ->
       add ~ctx ~internal:true ~global:true ~toplevel:true key (fst @@ List.hd_exn data));
   ctx
 

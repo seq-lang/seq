@@ -83,30 +83,7 @@ This will install Seq in a new ``.seq`` directory within your home directory. Be
 
 ### Build from source
 
-#### Dependencies
-
-- Linux or macOS
-- [CMake](https://cmake.org) 3.12+
-- [LLVM](https://llvm.org) 6.0
-- [OCaml](https://ocaml.org) 4.08
-- [Boehm GC](https://github.com/ivmai/bdwgc) 7.6+
-- [HTSlib](https://htslib.org) 1.9+
-- [libffi](https://sourceware.org/libffi) 3.2+
-
-The following packages must be installed with `opam`: core, dune, ctypes, ctypes-foreign, menhir, ppx_deriving
-
-#### Build
-
-Make sure the `LLVM_DIR` environment variable is set (to the result of `llvm-config --cmakedir`). Then:
-
-```bash
-mkdir seq/build
-cd seq/builld
-cmake ..
-cmake --build .
-```
-
-This will produce a `seqc` executable for compiling/running Seq programs, and a `seqtest` executable for running the test suite.
+See [Building from source](build.md).
 
 #### Documentation
 

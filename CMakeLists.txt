@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -15,14 +15,24 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GC REQUIRED bdw-gc)
+
+# find_package(PkgConfig REQUIRED)
+# pkg_check_modules(GC REQUIRED bdw-gc)
+
 find_library(HTS_LIB NAMES libhts.a libhts)
 if(NOT HTS_LIB)
   message(FATAL_ERROR "HTSlib not found")
 else()
   message(STATUS "Found HTSlib: ${HTS_LIB}")
 endif()
+
+find_library(GC_LIB NAMES libgc.a libgc)
+if(NOT GC_LIB)
+  message(FATAL_ERROR "GC not found")
+else()
+  message(STATUS "Found GC: ${GC_LIB}")
+endif()
+
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
                          runtime/exc.cpp
@@ -31,9 +41,8 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/ksw2/ksw2_exts2_sse.cpp
                          runtime/ksw2/ksw2_extz2_sse.cpp
                          runtime/ksw2/ksw2_gg2_sse.cpp)
-target_link_libraries(seqrt PUBLIC bz2 lzma ${ZLIB_LIBRARIES} ${GC_LINK_LIBRARIES} ${HTS_LIB})
-target_include_directories(seqrt PRIVATE ${GC_INCLUDE_DIRS})
-target_compile_options(seqrt PRIVATE ${GC_CFLAGS_OTHER} -O3)
+target_link_libraries(seqrt PUBLIC bz2 lzma ${ZLIB_LIBRARIES} ${GC_LIB} ${HTS_LIB})
+target_compile_options(seqrt PRIVATE -O3)
 
 if(SEQ_THREADED)
   find_package(OpenMP REQUIRED)
