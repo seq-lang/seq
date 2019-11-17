@@ -1,7 +1,7 @@
 # Building from source 
 
 Unless you really need to build Seq for whatever reason, we strongly recommend
-using [pre-build binaries](https://github.com/seq-lang/seq/releases). 
+using [pre-built binaries](https://github.com/seq-lang/seq/releases). 
 
 Really.
 
