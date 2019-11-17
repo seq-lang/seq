@@ -485,7 +485,10 @@ extend str:
         Return True if str is empty or all characters in str are ASCII,
         False otherwise.
         """
-        return all(int(ord(char)) < 128 for char in self)
+        for char in self:
+            if int(ord(char)) >= 128:
+                return False
+        return True
 
     def casefold(self: str) -> str:
         """
@@ -739,7 +742,10 @@ extend str:
         Return True if the string is printable or empty, False otherwise.
         Unlike Python, isprintable() deals with just ASCII characters.
         """
-        return all(31 < int(ord(char)) < 128 for char in self)
+        for char in self:
+            if not (31 < int(ord(char)) < 128):
+                return False
+        return True
 
     def _has_char(self: str, chars: str):
         if chars:
