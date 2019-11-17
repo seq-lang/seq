@@ -149,7 +149,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     PythonTests, SeqTest,
     testing::Combine(testing::Values("python/pybridge.seq"),
-                     testing::Values(false)),
+                     testing::Values(true, false)),
     getTestNameFromParam);
 
 int main(int argc, char *argv[]) {
