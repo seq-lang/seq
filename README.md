@@ -83,7 +83,7 @@ This will install Seq in a new ``.seq`` directory within your home directory. Be
 
 ### Build from source
 
-See [Building from source](build.md).
+See [Building from Source](docs/sphinx/build.rst).
 
 #### Documentation
 
