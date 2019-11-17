@@ -198,7 +198,6 @@ module Expr = struct
     let arr, len = list_to_carr t exprs in
     fn arr len
 
-  let slice = foreign "array_slice_expr" (t @-> t @-> t @-> returning t)
   let lookup = foreign "array_lookup_expr" (t @-> t @-> returning t)
   let alloc_array = foreign "array_expr_alloca" (Types.typ @-> t @-> returning t)
 
