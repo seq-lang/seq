@@ -23,7 +23,6 @@ We have found that these features are rarely needed in bioinformatics/genomics s
 
 Finally, the following features are not supported by the *current* version of Seq, but we have plans of implementing them in the near future:
 
-- Named and default function arguments
 - Empty collection literals: ``[]`` and ``{}`` (these must be replaced with ``list[T]()`` and ``dict[K,V]()``, respectively)
 - ``lambda``
 - Various Python standard modules, methods or built-ins (although many built-in functions are already supported, some do not have the full flexibility of Python's)
@@ -139,7 +138,7 @@ Seq provides the conventional ``match`` construct, which works on integers, list
                 print 'zero'
             case m if 0 < m < 10:
                 print 'small'
-            default:
+            case _:
                 print 'large'
 
 A novel aspect of Seq's ``match`` statement is that it also works on sequences, and allows for concise recursive representations of several sequence operations such as subsequence search, reverse complementation tests and base counting, as shown in this example:
@@ -153,7 +152,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
                 return True
             case t if len(t) >= 8:
                 return has_spaced_acgt(s[1:])
-            default:
+            case _:
                 return False
 
     # (b)
@@ -163,7 +162,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
                 return is_own_revcomp(s[1:-1])
             case s'':
                 return True
-            default:
+            case _:
                 return False
 
     # (c)
@@ -179,7 +178,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
             case s'C...': return count_bases(s[1:]) + (0,1,0,0)
             case s'G...': return count_bases(s[1:]) + (0,0,1,0)
             case s'T...': return count_bases(s[1:]) + (0,0,0,1)
-            default: return BaseCount(0,0,0,0)
+            case _: return BaseCount(0,0,0,0)
 
 - Example (a) checks if a given sequence contains the subsequence ``A_C_G_T``, where ``_`` is a wildcard base.
 - Example (b) checks if the given sequence is its own reverse complement.
