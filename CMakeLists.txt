@@ -13,13 +13,11 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
-
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(GC REQUIRED bdw-gc)
 
 find_library(HTS_LIB NAMES libhts.a libhts)
 if(NOT HTS_LIB)

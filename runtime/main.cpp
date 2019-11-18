@@ -20,8 +20,7 @@ static void versMsg(raw_ostream &out) {
 }
 
 int main(int argc, char **argv) {
-  opt<string> input(Positional, desc("<input file>"),
-                    NumOccurrencesFlag::Required);
+  opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "
                             "print LLVM IR to stderr)"));
   opt<string> output(
@@ -34,20 +33,6 @@ int main(int argc, char **argv) {
   ParseCommandLineOptions(argc, argv);
   vector<string> libsVec(libs);
   vector<string> argsVec(args);
-
-  if (FILE *file = fopen(input.c_str(), "r")) {
-    fclose(file);
-  } else {
-    compilationError("could not open '" + input + "' for reading");
-    return EXIT_FAILURE;
-  }
-
-  // make sure path is set
-  if (!getenv(SEQ_PATH_ENV_VAR)) {
-    compilationError(SEQ_PATH_ENV_VAR " environment variable is not set");
-    return EXIT_FAILURE;
-  }
-
   SeqModule *s = parse(argv[0], input.c_str());
 
   if (output.getValue().empty()) {
