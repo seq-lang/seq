@@ -626,7 +626,6 @@ FOREIGN char is_ref_type(types::Type *t) {
   return 1;
 }
 
-
 FOREIGN BaseFunc *get_func(FuncExpr *e) { return e->getFunc(); }
 
 FOREIGN types::Type *get_var_type(Var *e) { return e->getType(); }
