@@ -1,0 +1,9 @@
+{
+    "argv": [
+        "python3",
+        "/home/jodiew/seq/jupyter/seqkernel/kernel.py",
+        "-f",
+        "{connection_file}"
+    ],
+    "display_name": "Seq"
+}

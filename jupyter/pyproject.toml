@@ -1,0 +1,15 @@
+[build-system]
+requires = ["flit"]
+build-backend = "flit.buildapi"
+
+[tool.flit.metadata]
+module = "seq_kernel"
+author = ""
+author-email = ""
+home-page = "https://github.com/seq-lang/seq"
+description-file = "README.md"
+classifiers = [
+    "Framework :: IPython",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+]
