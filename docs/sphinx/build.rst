@@ -61,7 +61,13 @@ Install the dependencies via:
 
 .. code-block:: bash
 
-   apt install cmake pkg-config clang-6.0 llvm-6.0 zlib1g-dev libbz2-dev opam libffi-dev python3 git liblzma-dev
+   apt install cmake pkg-config llvm-6.0 zlib1g-dev libbz2-dev libffi-dev python3 git liblzma-dev m4 unzip
+
+To install OPAM, do
+
+.. code-block:: bash
+
+    sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)
 
 CentOS/RHEL
 ^^^^^^^^^^^
@@ -94,6 +100,12 @@ To set up OPAM, do:
     eval $(opam env)
     opam install core dune menhir ctypes ctypes-foreign ppx_deriving
 
+If OPAM keeps complaining about missing `bwrap` or `bubblewrap` and your distribution does not contain such package, run:
+
+.. code-block:: bash
+    
+    opam init --bare --disable-sandboxing
+
 Building
 --------
 
@@ -111,8 +123,8 @@ Then build the necessary dependencies:
     # Build bdw-gc
     curl -L https://www.hboehm.info/gc/gc_source/gc-8.0.4.tar.gz | tar zxvf -
     cd gc-8.0.4
-    mkdir -p rel
-    ./configure --prefix=`pwd`/rel --enable-threads=posix --enable-cplusplus --enable-thread-local-alloc --enable-large-config
+    mkdir -p release
+    ./configure --prefix=`pwd`/release --enable-threads=posix --enable-cplusplus --enable-thread-local-alloc --enable-large-config
     make LDFLAGS="-static"
     make install
     cd ..
@@ -128,8 +140,8 @@ Then build Seq via:
 
 .. code-block:: bash
 
-    cmake .. -DLLVM_DIR=`llvm-config --cmakedir` -DHTS_LIB=htslib-1.9/libhts.a -DGC_LIB=gc-8.0.4/rel/lib/libgc.a
-    CPATH=gc-8.0.4/rel/include:htslib-1.9 cmake --build .
+    cmake .. -DLLVM_DIR=`llvm-config --cmakedir` -DHTS_LIB=htslib-1.9/libhts.a -DGC_LIB=gc-8.0.4/release/lib/libgc.a
+    CPATH=gc-8.0.4/release/include:htslib-1.9 cmake --build .
 
 This will produce a ``seqc`` executable for compiling/running Seq programs, and a ``seqtest`` executable for running the test suite.
 

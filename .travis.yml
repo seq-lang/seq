@@ -75,17 +75,16 @@ install:
   - cd -
 
   # install Boehm GC:
-  - wget -c https://github.com/ivmai/bdwgc/releases/download/v7.6.12/gc-7.6.12.tar.gz -O - | tar -xz
-  - cd gc-7.6.12
-  - wget -c https://github.com/ivmai/libatomic_ops/releases/download/v7.6.10/libatomic_ops-7.6.10.tar.gz -O - | tar -xz
-  - mv libatomic_ops-7.6.10 libatomic_ops
+  - wget -c https://github.com/ivmai/bdwgc/releases/download/v8.0.4/gc-8.0.4.tar.gz -O - | tar -xz
+  - cd gc-8.0.4
   - mkdir release
   - |
     ./configure CFLAGS="-fPIC" --enable-threads=posix \
                                --enable-cplusplus \
                                --enable-thread-local-alloc \
                                --enable-large-config \
-                               --prefix=`pwd`/release
+                               --prefix=`pwd`/release \
+                               --with-libatomic-ops=yes
   - make LDFLAGS="-static"
   - make check
   - make install
@@ -104,7 +103,7 @@ install:
   - sudo pip3 install wheel sphinx sphinx-rtd-theme breathe exhale
 
 before_script:
-  - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
+  # - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
   - export LDFLAGS="-L/usr/local/lib"
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
@@ -116,8 +115,8 @@ script:
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
                           -DCMAKE_C_COMPILER=clang \
                           -DCMAKE_CXX_COMPILER=clang++ \
-                          -DGC_LIB=gc-7.6.12/release/lib/libgc.a)
-  - CPATH=`pwd`/gc-7.6.12/release/include cmake --build build --config Release
+                          -DGC_LIB=gc-8.0.4/release/lib/libgc.a)
+  - CPATH=`pwd`/gc-8.0.4/release/include cmake --build build --config Release
   - build/seqtest
   - build/seqc test/core/helloworld.seq
   - (cd docs/sphinx && make html 2> /dev/null)
