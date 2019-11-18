@@ -1,21 +1,5 @@
 import algorithms.strings as algorithms
 
-def ord(s: str) -> byte:
-    if len(s) != 1:
-        raise TypeError("TypeError: ord() expected a character, but string of length " + str(len(s)) + " found")
-    return s.ptr[0]
-
-def chr(b: int) -> str:
-    p = cobj(1)
-    p[0] = byte(b)
-    return str(p, 1)
-
-def search(text: str, pattern: str) -> list[int]:
-    return algorithms.string_search_slow(text, pattern)
-
-def rsearch(text: str, pattern: str) -> list[int]:
-    return algorithms.rstring_search_slow(text, pattern)
-
 extend str:
 
 # Magic methods
@@ -112,6 +96,9 @@ extend str:
         if not (0 <= a <= len(self)):
             self._slice_error()
         return str(self.ptr + a, len(self) - a)
+
+    def __contains__(self: str, pattern: str):
+        return self.find(pattern, 0, len(self)) >= 0
 
     def __iter__(self: str):
         i = 0
@@ -665,7 +652,7 @@ extend str:
         bytes str[start:end].  Optional arguments start and end are interpreted
         as in slice notation.
         """
-        return len(search(self[start:end], sub))
+        return len(self[start:end]._search(sub))
 
     def find(self: str, sub: str, start: int, end: int) -> int:
         """
@@ -677,7 +664,7 @@ extend str:
 
         Return -1 on failure.
         """
-        sub_list = search(self[start:end], sub)
+        sub_list = self[start:end]._search(sub)
 
         if len(sub_list) == 0:
             return -1
@@ -700,7 +687,7 @@ extend str:
 
         Return -1 on failure.
         """
-        sub_list = search(self[start:end], sub)
+        sub_list = self[start:end]._search(sub)
 
         if len(sub_list) == 0:
             return -1
@@ -803,7 +790,7 @@ extend str:
         the separator itself, and the part after it.  If the separator is not
         found, return str and two empty strings.
         """
-        li = search(self, sep)
+        li = self._search(sep)
 
         if len(li) == 0:
             return self,'',''
@@ -821,7 +808,7 @@ extend str:
         the part before it, the separator itself, and the part after it.  If the
         separator is not found, return two empty strings and str.
         """
-        li = search(self, sep)
+        li = self._search(sep)
         i = len(li)-1
 
         if len(li) == 0:
@@ -842,7 +829,7 @@ extend str:
         whitespace string is a separator and empty strings are removed
         from the result.
         """
-        li = search(self, sep)
+        li = self._search(sep)
         str_split = list[str]()
 
         # no delimiter found
@@ -893,7 +880,7 @@ extend str:
         done. If sep is not specified, any whitespace string
         is a separator.
         """
-        li = rsearch(self, sep)
+        li = self._rsearch(sep)
         str_split = list[str]()
         end_of_li = len(li)-1
 
@@ -1111,7 +1098,7 @@ extend str:
         else:
             return i
 
-    def replace(self: str, old: str, new: str, maxcount: int) -> str:
+    def replace(self: str, old: str, new: str, maxcount: int = -1) -> str:
         """
         str.replace(old, new[, count]) -> string
 
@@ -1146,14 +1133,12 @@ extend str:
         # delete all occurances of old in self
         return algorithms.replace_delete_substring(self, old, new, maxcount)
 
-    def expandtabs(self: str, tabsize: int) -> str:
+    def expandtabs(self: str, tabsize: int = 8) -> str:
         """
         str.expandtabs([tabsize]) -> string
 
         Return a copy of str where all tab characters are expanded using spaces.
         If tabsize is not given, a tab size of 8 characters is assumed.
-
-        tabsize is required for now.
         """
         incr = 0
         i = 0   # chars up to and including most recent \n or \r
@@ -1216,3 +1201,9 @@ extend str:
     def _isspace(b: byte):
         return b == byte(32) or b == byte(9) or b == byte(10) or \
                b == byte(11) or b == byte(12) or b == byte(13)
+
+    def _search(self: str, pattern: str) -> list[int]:
+        return algorithms.string_search_slow(self, pattern)
+
+    def _rsearch(self: str, pattern: str) -> list[int]:
+        return algorithms.rstring_search_slow(self, pattern)
