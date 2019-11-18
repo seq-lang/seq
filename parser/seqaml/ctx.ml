@@ -73,11 +73,14 @@ let remove ctx key =
   | _ -> ()
 
 (** [parse_file ~ctx file] parses a file [file] within the context [ctx]. *)
+let parse_code ~ctx ~file code =
+  ctx.parser ~file ctx (code ^ "\n")
+
 let parse_file ~ctx file =
   Util.dbg "parsing %s" file;
   let lines = In_channel.read_lines file in
-  let code = String.concat ~sep:"\n" lines ^ "\n" in
-  ctx.parser ~file:(Filename.realpath file) ctx code
+  let code = String.concat ~sep:"\n" lines in
+  parse_code ~ctx ~file:(Filename.realpath file) code
 
 (** [init ...] returns an empty context with a toplevel block that contains internal Seq types. *)
 let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser =
