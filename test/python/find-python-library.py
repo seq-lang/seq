@@ -73,4 +73,4 @@ def get_python_library(python_version):
 
     return python_library
 
-print('x=>', get_python_library('{}.{}'.format(sys.version_info[0], sys.version_info[1])))
+print(get_python_library('{}.{}'.format(sys.version_info[0], sys.version_info[1])))
