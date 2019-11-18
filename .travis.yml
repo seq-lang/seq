@@ -83,8 +83,7 @@ install:
                                --enable-cplusplus \
                                --enable-thread-local-alloc \
                                --enable-large-config \
-                               --prefix=`pwd`/release \
-                               --with-libatomic-ops=yes
+                               --prefix=`pwd`/release
   - make LDFLAGS="-static"
   - make check
   - make install
