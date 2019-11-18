@@ -92,10 +92,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     match lhs with
     | pos, Id var ->
       (match jit && toplevel, Hashtbl.find ctx.map var, shadow with
-      | _, None, Update -> serr ~pos "%s not found" var
+      | _, None, Update -> serr ~pos "identifier '%s' not found" var
       | false, Some ((Ctx_namespace.Var _, { base; global; _ }) :: _), Update
         when ctx.base <> base && not global ->
-        serr ~pos "%s not found" var
+        serr ~pos "identifier '%s' not found" var
       | _, Some ((Ctx_namespace.Var v, { base; global; toplevel; _ }) :: _), _
         when ctx.base = base || global ->
         if is_some typ
@@ -445,7 +445,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             | Some ((var, ({ global = true; internal = false; _ } as ann)) :: _) ->
               let name = Option.value import_as ~default:name in
               Ctx.add ~ctx ~toplevel ~global:toplevel name var
-            | _ -> serr ~pos "name %s not found in %s" name from)
+            | _ -> serr ~pos "symbol '%s' not found in '%s'" name from)
     in
     List.iter imports ~f:(fun i ->
         let from = snd i.from in
@@ -616,7 +616,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       then serr ~pos "only toplevel symbols can be set as a local global";
       if ann.base <> ctx.base then Ctx.add ~ctx var ~global:true (Ctx_namespace.Var v);
       Llvm.Stmt.pass ()
-    | _ -> serr ~pos "variable %s not found" var
+    | _ -> serr ~pos "identifier '%s' not found" var
 
   and parse_special ctx pos (kind, stmts, inputs) =
     ierr ~pos "not yet implemented (parse_special)"

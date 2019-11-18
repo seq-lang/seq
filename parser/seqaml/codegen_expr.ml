@@ -136,7 +136,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     (* Make sure that a variable is either accessible within
       the same base (function) or that it is global variable  *)
     | _, Some ((Ctx_namespace.Type t, _) :: _) -> Llvm.Expr.typ t
-    | true, _ -> serr ~pos "type %s not found or realized" var
+    | true, _ -> serr ~pos "type '%s' not found or realized" var
     | false, Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
       when ctx.base = base || global ->
       let e = Llvm.Expr.var v in
@@ -144,7 +144,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       then Llvm.Var.set_atomic e;
       e
     | false, Some ((Ctx_namespace.Func (t, _), _) :: _) -> Llvm.Expr.func t
-    | _ -> serr ~pos "identifier %s not found or realized" var
+    | _ -> serr ~pos "identifier '%s' not found" var
 
   and parse_tuple ctx _ args =
     let args = List.map args ~f:(parse ~ctx) in
@@ -452,7 +452,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
         when ctx.base = base || global ->
         Llvm.Expr.ptr v
-      | _ -> serr ~pos "symbol %s not found" var)
+      | _ -> serr ~pos "identifier '%s' not found" var)
     | _ -> serr ~pos "ptr requires an identifier as a parameter"
     (* ***************************************************************
      Helper functions
