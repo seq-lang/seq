@@ -114,8 +114,8 @@ script:
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
                           -DCMAKE_C_COMPILER=clang \
                           -DCMAKE_CXX_COMPILER=clang++ \
-                          -DGC_LIB=gc-8.0.4/release/lib/libgc.a)
-  - CPATH=`pwd`/gc-8.0.4/release/include cmake --build build --config Release
+                          -DGC_LIB=`pwd`/gc-8.0.4/release/lib/libgc.a)
+  - CPATH=`pwd`/build/gc-8.0.4/release/include cmake --build build --config Release
   - build/seqtest
   - build/seqc test/core/helloworld.seq
   - (cd docs/sphinx && make html 2> /dev/null)
