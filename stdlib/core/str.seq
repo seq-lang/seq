@@ -169,54 +169,19 @@ extend str:
                 p = pp
             str.memcpy(p + n, s.ptr, s.len)
             n += s.len
-        # TODO: realloc extra space
         return str(p, n)
 
     def join(self: str, l: list[str]):
-        if self == "":
+        if len(self) == 0:
             return str.cat(l)
-        assert False
-
-    def lstrip(self: str):
+        v = list[str](2 * len(l))
         i = 0
-        while i < self.len:
-            if not str._isspace(self.ptr[i]):
-                break
+        while i < len(l):
+            v.append(l[i])
+            if i < len(l) - 1:
+                v.append(self)
             i += 1
-        return str(self.ptr + i, self.len - i)
-
-    def rstrip(self: str):
-        i = self.len - 1
-        while i >= 0:
-            if not str._isspace(self.ptr[i]):
-                break
-            i -= 1
-        return '' if i < 0 else str(self.ptr, i + 1)
-
-    def strip(self: str):
-        return self.lstrip().rstrip()
-
-    def split(self: str, pat: str):
-        if len(pat) == 0:
-            for i in self: yield i
-        elif len(pat) == 1:
-            prev = 0
-            for i, s in enumerate(self):
-                if s == pat[0]:
-                    yield self[prev:i]
-                    prev = i + 1
-            yield self[prev:len(self)]
-        else:
-            i, l = 0, len(pat)
-            prev = 0
-            while i < len(self) - l + 1:
-                if self[i:i + l] == pat:
-                    yield self[prev:i]
-                    prev = i + l
-                    i += l
-                else:
-                    i += 1
-            yield self[prev:len(self)]
+        return str.cat(v)
 
     def from_ptr(t: cobj) -> str:
         return _C.seq_strdup(t)
@@ -644,7 +609,7 @@ extend str:
             s = s + self
         return s
 
-    def count(self: str, sub: str, start: int, end: int) -> int:
+    def count(self: str, sub: str, start: int = 0, end: int = 0x7fffffffffffffff) -> int:
         """
         str.count(sub[, start[, end]]) -> int
 
@@ -652,9 +617,10 @@ extend str:
         bytes str[start:end].  Optional arguments start and end are interpreted
         as in slice notation.
         """
+        start, end = self._correct_indices(start, end)
         return len(self[start:end]._search(sub))
 
-    def find(self: str, sub: str, start: int, end: int) -> int:
+    def find(self: str, sub: str, start: int = 0, end: int = 0x7fffffffffffffff) -> int:
         """
         str.find(sub [,start [,end]]) -> int
 
@@ -664,6 +630,7 @@ extend str:
 
         Return -1 on failure.
         """
+        start, end = self._correct_indices(start, end)
         sub_list = self[start:end]._search(sub)
 
         if len(sub_list) == 0:
@@ -677,7 +644,7 @@ extend str:
 
         return sub_list[0] + start  # add start position because of truncation
 
-    def rfind(self: str, sub: str, start: int, end: int) -> int:
+    def rfind(self: str, sub: str, start: int = 0, end: int = 0x7fffffffffffffff) -> int:
         """
         str.rfind(sub [,start [,end]]) -> int
 
@@ -687,6 +654,7 @@ extend str:
 
         Return -1 on failure.
         """
+        start, end = self._correct_indices(start, end)
         sub_list = self[start:end]._search(sub)
 
         if len(sub_list) == 0:
@@ -819,7 +787,7 @@ extend str:
 
         return self[:li[i]], sep, self[li[i]+len(sep):]
 
-    def split(self, sep: str, maxsplit: int) -> list[str]:
+    def split(self, sep: str, maxsplit: int = -1) -> list[str]:
         """
         str.split([sep [,maxsplit]]) -> list of strings
 
@@ -842,7 +810,7 @@ extend str:
         if maxsplit == 0:
             return [self]
 
-        if maxsplit == -1 or maxsplit > len(li):
+        if maxsplit < 0 or maxsplit > len(li):
             maxsplit = len(li)
 
         prev = li[0]
@@ -870,7 +838,7 @@ extend str:
         else:
             return  str_split
 
-    def rsplit(self: str, sep: str, maxsplit: int) -> list[str]:
+    def rsplit(self: str, sep: str, maxsplit: int = -1) -> list[str]:
         """
         str.rsplit([sep [,maxsplit]]) -> list of strings
 
@@ -891,7 +859,7 @@ extend str:
         if maxsplit == 0:
             return [self]
 
-        if maxsplit == -1 or maxsplit > len(li):
+        if maxsplit < 0 or maxsplit > len(li):
             maxsplit = len(li)
 
         prev = li[end_of_li]
@@ -932,15 +900,13 @@ extend str:
                 final_string.append(str_split[len(str_split)-i])
             return final_string
 
-    def splitlines(self: str, keepends: bool) -> list[str]:
+    def splitlines(self: str, keepends: bool = False) -> list[str]:
         """
         str.splitlines([keepends]) -> list of strings
 
         Return a list of the lines in str, breaking at line boundaries.
         Line breaks are not included in the resulting list unless keepends
         is given and true.
-
-        keepends is required for now.
         """
         line_split = list[str]()
 
@@ -1013,7 +979,7 @@ extend str:
         return line_split
 
 
-    def startswith(self: str, prefix: str, start: int, end: int) -> bool:
+    def startswith(self: str, prefix: str, start: int = 0, end: int = 0x7fffffffffffffff) -> bool:
         """
         str.startswith(prefix[, start[, end]]) -> bool
 
@@ -1040,7 +1006,7 @@ extend str:
 
         return prefix == self[start:start + len(prefix)]
 
-    def endswith(self: str, suffix: str, start: int, end: int) -> bool:
+    def endswith(self: str, suffix: str, start: int = 0, end: int = 0x7fffffffffffffff) -> bool:
         """
         str.endswith(prefix[, start[, end]]) -> bool
 
@@ -1072,25 +1038,26 @@ extend str:
 
         return suffix == self[start:start + len(suffix)]
 
-    def index(self: str, sub: str, start: int, end: int) -> int:
+    def index(self: str, sub: str, start: int = 0, end: int = 0x7fffffffffffffff) -> int:
         """
         str.index(sub [,start [,end]]) -> int
 
         Like str.find() but raise ValueError when the substring is not found.
         """
+        start, end = self._correct_indices(start, end)
         i = self.find(sub, start, end)
         if i == -1:
             raise ValueError("ValueError: substring not found")
         else:
             return i
 
-    def rindex(self: str, sub: str, start, end) -> int:
+    def rindex(self: str, sub: str, start: int = 0, end: int = 0x7fffffffffffffff) -> int:
         """
         str.index(sub [,start [,end]]) -> int
 
         Like str.find() but raise ValueError when the substring is not found.
         """
-
+        start, end = self._correct_indices(start, end)
         i = self.rfind(sub, start, end)
         if i == -1:
             raise ValueError("ValueError: substring not found")
@@ -1207,3 +1174,15 @@ extend str:
 
     def _rsearch(self: str, pattern: str) -> list[int]:
         return algorithms.rstring_search_slow(self, pattern)
+
+    def _correct_indices(self: str, start: int, end: int):
+        n = len(self)
+        if start < 0:
+            start += n
+            if start < 0:
+                start = 0
+        if end < 0:
+            end += n
+            if end < 0:
+                end = 0
+        return (start, end)
