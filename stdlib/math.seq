@@ -317,7 +317,7 @@ def gamma(x: float) -> float:
 
     Return the Gamma function at x.
     """
-    return _C.gamma(x)
+    return _C.tgamma(x)
 
 def lgamma(x: float) -> float:
     """

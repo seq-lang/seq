@@ -344,9 +344,9 @@ def test_gamma():
     assert close(math.gamma(1.0), 1.0)
     assert close(math.gamma(2.0), 1.0)
     assert close(math.gamma(3.0), 2.0)
-    # assert math.isnan(math.gamma(-1.0)) == True
+    assert math.isnan(math.gamma(-1.0)) == True
     assert math.gamma(INF) == INF
-    # assert math.isnan(math.gamma(NINF)) == True
+    assert math.isnan(math.gamma(NINF)) == True
     assert math.isnan(math.gamma(NAN)) == True
 
 @test

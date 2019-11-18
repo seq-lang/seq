@@ -64,7 +64,7 @@ cimport trunc(float) -> float
 cimport log2(float) -> float
 cimport erf(float) -> float
 cimport erfc(float) -> float
-cimport gamma(float) -> float
+cimport tgamma(float) -> float
 cimport lgamma(float) -> float
 cimport remainder(float, float) -> float
 cimport frexp(float, ptr[Int[32]]) -> float
