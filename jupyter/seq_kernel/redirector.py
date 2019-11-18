@@ -1,3 +1,8 @@
+"""
+    Stdout and stderr redirector.
+    Based on https://eli.thegreenplace.net/2015/redirecting-all-kinds-of-stdout-in-python/
+"""
+
 from contextlib import contextmanager
 import ctypes
 import io
