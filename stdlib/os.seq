@@ -48,5 +48,5 @@ type EnvMap(_map: dict[str,str]):
 
 environ = EnvMap()
 
-def getenv(key: str, dflt: str = ""):
-    return environ[key] if key in environ else dflt
+def getenv(key: str, default: str = ""):
+    return environ[key] if key in environ else default
