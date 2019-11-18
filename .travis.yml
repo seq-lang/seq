@@ -106,6 +106,7 @@ before_script:
   - export LDFLAGS="-L/usr/local/lib"
   - export GCLIB=$(realpath gc-8.0.4/release/lib/libgc.a)
   - export CPATH=`pwd`/gc-8.0.4/release/include:${CPATH}
+  - export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
 
 script:
@@ -117,7 +118,7 @@ script:
                           -DCMAKE_CXX_COMPILER=clang++ \
                           -DGC_LIB=${GCLIB})
   - cmake --build build --config Release
-  - build/seqtest --gtest_filter=-"*PythonTests*"
+  - build/seqtest
   - build/seqc test/core/helloworld.seq
   - (cd docs/sphinx && make html 2> /dev/null)
 
