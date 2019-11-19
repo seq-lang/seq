@@ -247,8 +247,8 @@ bool Func::hasAttribute(const std::string &attr) {
  * the name.
  */
 std::string Func::getMangledFuncName() {
-  // don't mangle external or built-in ("seq."-prefixed) function names:
-  if (external || name.rfind("seq.", 0) == 0)
+  // don't mangle external, built-in ("seq."-prefixed) or exported functions:
+  if (external || name.rfind("seq.", 0) == 0 || hasAttribute("export"))
     return name;
 
   // a nested function can't be a class method:
@@ -350,7 +350,15 @@ void Func::codegen(Module *module) {
   if (external)
     return;
 
-  func->setLinkage(GlobalValue::PrivateLinkage);
+  if (hasAttribute("export")) {
+    if (parentType || parentFunc)
+      throw exc::SeqException("can only export top-level functions");
+    if (numGenerics() > 0)
+      throw exc::SeqException("cannot export generic function");
+    func->setLinkage(GlobalValue::ExternalLinkage);
+  } else {
+    func->setLinkage(GlobalValue::PrivateLinkage);
+  }
   func->setPersonalityFn(makePersonalityFunc(module));
   preambleBlock = BasicBlock::Create(context, "preamble", func);
   IRBuilder<> builder(preambleBlock);
