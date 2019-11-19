@@ -11,7 +11,8 @@ Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can
    intro
    tutorial
    cookbook
-   build
+   python
    embed
+   build
    internals
    api/doxygen
