@@ -303,6 +303,11 @@ def test_rpartition():
 
 @test
 def test_split():
+    assert '  h    l \t\n l   o '.split() == ['h', 'l', 'l', 'o']
+    assert '  h    l \t\n l   o '.split(None, 2) == ['h', 'l', 'l   o ']
+    assert '  h    l \t\n l   o '.split(None, 0) == ['h    l \t\n l   o ']
+    assert not ''.split()
+    assert not '   '.split()
     assert 'h l l o'.split(' ', -1) == ['h', 'l', 'l', 'o']
     assert 'a|b|c|d'.split('|', -1) == ['a', 'b', 'c', 'd']
     assert 'h l l o'.split(' ') == ['h', 'l', 'l', 'o']
@@ -330,6 +335,11 @@ def test_split():
 
 @test
 def test_rsplit():
+    assert '  h    l \t\n l   o '.rsplit() == ['h', 'l', 'l', 'o']
+    assert '  h    l \t\n l   o '.rsplit(None, 2) == ['  h    l', 'l', 'o']
+    assert '  h    l \t\n l   o '.rsplit(None, 0) == ['  h    l \t\n l   o']
+    assert not ''.rsplit()
+    assert not '   '.rsplit()
     assert 'a|b|c|d'.rsplit('|', -1) == ['a', 'b', 'c', 'd']
     assert 'a|b|c|d'.rsplit('|') == ['a', 'b', 'c', 'd']
     assert 'a|b|c|d'.rsplit('|', 1) == ['a|b|c', 'd']

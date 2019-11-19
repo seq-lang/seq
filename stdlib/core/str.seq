@@ -787,7 +787,7 @@ extend str:
 
         return self[:li[i]], sep, self[li[i]+len(sep):]
 
-    def split(self, sep: str, maxsplit: int = -1) -> list[str]:
+    def split(self, sep: optional[str] = None, maxsplit: int = -1) -> list[str]:
         """
         str.split([sep [,maxsplit]]) -> list of strings
 
@@ -797,14 +797,18 @@ extend str:
         whitespace string is a separator and empty strings are removed
         from the result.
         """
-        li = self._search(sep)
+        if not sep:
+            return self._split_whitespace(maxsplit if maxsplit >= 0 else 0x7fffffffffffffff)
+        sepx = ~sep
+
+        li = self._search(sepx)
         str_split = list[str]()
 
         # no delimiter found
         if len(li) == 0:
             return [self]
 
-        if len(sep) > len(self):
+        if len(sepx) > len(self):
             return [self]
 
         if maxsplit == 0:
@@ -829,16 +833,16 @@ extend str:
                     str_split.append('')
                     prev = li[j]
                 else:
-                    str_split.append(self[prev+len(sep):li[j]])
+                    str_split.append(self[prev+len(sepx):li[j]])
                     prev = li[j]
 
         if prev != len(self):
-            str_split.append(self[prev+len(sep):])
+            str_split.append(self[prev+len(sepx):])
             return str_split
         else:
             return  str_split
 
-    def rsplit(self: str, sep: str, maxsplit: int = -1) -> list[str]:
+    def rsplit(self: str, sep: optional[str] = None, maxsplit: int = -1) -> list[str]:
         """
         str.rsplit([sep [,maxsplit]]) -> list of strings
 
@@ -848,13 +852,17 @@ extend str:
         done. If sep is not specified, any whitespace string
         is a separator.
         """
-        li = self._rsearch(sep)
+        if not sep:
+            return self._rsplit_whitespace(maxsplit if maxsplit >= 0 else 0x7fffffffffffffff)
+        sepx = ~sep
+
+        li = self._rsearch(sepx)
         str_split = list[str]()
         end_of_li = len(li)-1
 
         if len(li) == 0:
             return [self]
-        if len(sep) > len(self):
+        if len(sepx) > len(self):
             return [self]
         if maxsplit == 0:
             return [self]
@@ -865,10 +873,10 @@ extend str:
         prev = li[end_of_li]
         # append first part of string
         # if sep is found in the last index, add '' to separate
-        if prev == len(self)- len(sep):
+        if prev == len(self) - len(sepx):
             str_split.append('')
         else:
-            str_split.append(self[prev+len(sep):])
+            str_split.append(self[prev+len(sepx):])
 
         # split the rest of the string according to separator
         if len(li) > 1 and maxsplit > 1:
@@ -878,7 +886,7 @@ extend str:
                     str_split.append('')
                     prev = li[end_of_li-j]
                 else:
-                    str_split.append(self[li[end_of_li-j]+len(sep):prev])
+                    str_split.append(self[li[end_of_li-j]+len(sepx):prev])
                     prev = li[end_of_li-j]
 
         if prev != 0:
@@ -1186,3 +1194,58 @@ extend str:
             if end < 0:
                 end = 0
         return (start, end)
+
+    def _split_whitespace(self: str, maxcount: int):
+        PREALLOC_MAX = 12
+        l = list[str](PREALLOC_MAX if maxcount >= PREALLOC_MAX else maxcount + 1)
+
+        str_len = len(self)
+        i = 0
+        j = 0
+        while maxcount > 0:
+            maxcount -= 1
+            while i < str_len and str._isspace(self.ptr[i]):
+                i += 1
+            if i == str_len:
+                break
+            j = i
+            i += 1
+            while i < str_len and not str._isspace(self.ptr[i]):
+                i += 1
+            l.append(self[j:i])
+
+        if i < str_len:
+            while i < str_len and str._isspace(self.ptr[i]):
+                i += 1
+            if i != str_len:
+                l.append(self[i:str_len])
+
+        return l
+
+    def _rsplit_whitespace(self: str, maxcount: int):
+        PREALLOC_MAX = 12
+        l = list[str](PREALLOC_MAX if maxcount >= PREALLOC_MAX else maxcount + 1)
+
+        str_len = len(self)
+        i = str_len - 1
+        j = str_len - 1
+        while maxcount > 0:
+            maxcount -= 1
+            while i >= 0 and str._isspace(self.ptr[i]):
+                i -= 1
+            if i < 0:
+                break
+            j = i
+            i -= 1
+            while i >= 0 and not str._isspace(self.ptr[i]):
+                i -= 1
+            l.append(self[i+1:j+1])
+
+        if i >= 0:
+            while i >= 0 and str._isspace(self.ptr[i]):
+                i -= 1
+            if i >= 0:
+                l.append(self[0:i+1])
+
+        l.reverse()
+        return l
