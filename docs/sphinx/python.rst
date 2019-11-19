@@ -33,6 +33,10 @@ We can call this function in Seq using ``pyimport``:
 
 (Be sure the ``PYTHONPATH`` environment variable includes the path of *mymodule.py*!)
 
+Whatever the number of arguments your Python function expects is, make sure to pass ``()`` to ``pyimport``.
+Seq will pass all arguments to the Pythonic function at the invocation time (e.g. ``multiply(1, 2)``).
+This is useful if the number of arguments for your Pythonic functions is variable. 
+
 ``pydef``
 ---------
 
