@@ -51,4 +51,4 @@ extend list[T]:
         else:
             _sort_list(self, ident[T], alg)
 
-        
+
