@@ -308,7 +308,7 @@ def tim_sort_inplace[S,T](collection: list[T], keyf: function[S,T]):
     """
     tim_sort_array(collection.arr, collection.len, keyf)
 
-def tim_sort[S,T](collection: generator[T], keyf: function[S,T]) -> list[T]:
+def tim_sort[S,T](collection: list[T], keyf: function[S,T]) -> list[T]:
     """
         Timsort
         By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187

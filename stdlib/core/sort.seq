@@ -1,29 +1,34 @@
 from algorithms.timsort import tim_sort, tim_sort_inplace
+from algorithms.pdqsort import pdq_sort, pdq_sort_inplace
 
 @deduceall
-def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None):
+def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None, stable: bool = False):
     """
     sorted(v)
 
     Return a sorted list of the elements in v
     """
-    def ident[T](x: T):
-        return x
+    newlist = [a for a in v]
     if key:
-        f = ~key
-        return tim_sort(v, f)
+        newlist.sort(~key, stable)
     else:
-        f = ident[T]
-        return tim_sort(v, f)
+        newlist.sort(None, stable)
+    return newlist
 
 extend list[T]:
     @deduceall
-    def sort[S](self: list[T], key: optional[function[S,T]] = None):
+    def sort[S](self: list[T], key: optional[function[S,T]] = None, stable: bool = False):
         def ident[T](x: T):
             return x
         if key:
             f = ~key
-            tim_sort_inplace(self, f)
+            if stable:
+                tim_sort_inplace(self, f)
+            else:
+                pdq_sort_inplace(self, f)
         else:
             f = ident[T]
-            tim_sort_inplace(self, f)
+            if stable:
+                tim_sort_inplace(self, f)
+            else:
+                pdq_sort_inplace(self, f)
