@@ -471,11 +471,18 @@ Generic::deduceTypesFromArgTypes(const std::vector<types::Type *> &inTypes,
     }
   }
 
-  for (auto *type : types) {
-    if (!type)
+  for (auto *&type : types) {
+    if (!type) {
+      if (auto *func = dynamic_cast<Func *>(this)) {
+        if (func->hasAttribute("deduceall")) {
+          type = types::Int;
+          continue;
+        }
+      }
       throw exc::SeqException(
           "cannot deduce all type parameters for generic '" + genericName() +
           "'");
+    }
   }
 
   return types;

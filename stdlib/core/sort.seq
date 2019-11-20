@@ -1,19 +1,29 @@
-
 from algorithms.timsort import tim_sort, tim_sort_inplace
 
-def default_compare[K](a: K, b: K) -> bool:
-    return a < b
-
-def sorted[K](v: generator[K], compare: optional[function[bool, K, K]] = None):
+@deduceall
+def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None):
     """
     sorted(v)
 
     Return a sorted list of the elements in v
     """
-    cmp = ~compare if compare else default_compare[K]
-    return tim_sort(v, cmp)
+    def ident[T](x: T):
+        return x
+    if key:
+        f = ~key
+        return tim_sort(v, f)
+    else:
+        f = ident[T]
+        return tim_sort(v, f)
 
 extend list[T]:
-    def sort(self: list[T], compare: optional[function[bool, T, T]] = None):
-        cmp = ~compare if compare else default_compare[T]
-        tim_sort_inplace(self, cmp)
+    @deduceall
+    def sort[S](self: list[T], key: optional[function[S,T]] = None):
+        def ident[T](x: T):
+            return x
+        if key:
+            f = ~key
+            tim_sort_inplace(self, f)
+        else:
+            f = ident[T]
+            tim_sort_inplace(self, f)
