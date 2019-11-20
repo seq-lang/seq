@@ -100,10 +100,10 @@ To set up OPAM, do:
     eval $(opam env)
     opam install core dune menhir ctypes ctypes-foreign ppx_deriving
 
-If OPAM keeps complaining about missing `bwrap` or `bubblewrap` and your distribution does not contain such package, run:
+If OPAM keeps complaining about missing ``bwrap`` or ``bubblewrap`` and your distribution does not contain such packages, run:
 
 .. code-block:: bash
-    
+
     opam init --bare --disable-sandboxing
 
 Building
