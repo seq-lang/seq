@@ -54,5 +54,3 @@ extend list[T]:
             _sort_list(self, ~key, stable, alg)
         else:
             _sort_list(self, ident[T], stable, alg)
-
-        

@@ -5,12 +5,12 @@ def string_search_slow(text: str, pattern: str):
     Return a list containing the non-overlapping position of each index
     the pattern is found.
     """
-    
+
     if pattern == '':
         for i in range(len(text) + 1):
             yield i
         return
-    
+
     for i in range(len(text) - len(pattern) + 1):
         if text[i:i + len(pattern)] == pattern:
             yield i
@@ -40,7 +40,7 @@ def string_search_rabin_karp(text: str, pattern: str, prime: int = 645419):
     the pattern is found.
     """
     BASE = 256
-    
+
     # hash formula
     hash = 1
     for i in range(len(pattern) - 1):
@@ -60,15 +60,15 @@ def string_search_rabin_karp(text: str, pattern: str, prime: int = 645419):
         # characters one by one
         if p == t and text[i:i + len(pattern)] == pattern:
             yield i
-            
+
         # calculate hash value for next position of text.
         # the leading digit is removed while trailing digit is added
         t = BASE * (t - (ord(text[i]) * hash) % prime + prime) % prime
         t = (t + ord(text[i + len(pattern)])) % prime
-    
+
     if p == t and text[-len(pattern):] == pattern:
         yield len(text) - len(pattern)
-        
+
 def computeLPArray(pattern: str, len_pat: int) -> list[int]:
     """
     computeLPArray(pattern, len_pat) -> list
@@ -127,7 +127,7 @@ def replace_interleave(self: str, new: str, maxcount: int) -> str:
 
     Returns a string inserting the 'new' string everywhere.
     """
-    
+
     j = 0
     res = list[str]()
     # insert the new string for maxcount <= len(self) times.
