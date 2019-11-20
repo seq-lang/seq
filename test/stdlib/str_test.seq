@@ -203,6 +203,7 @@ def test_count():
 @test
 def test_find():
     assert 'abcdefghiabc'.find('abc', 0, len('abcdefghiabc')) == 0
+    assert 'abcdefghiabc'.find('abc') == 0
     assert 'abcdefghiabc'.find('abc', 1, len('abcdefghiabc')) == 9
     assert 'abcdefghiabc'.find('def', 4, len('abcdefghiabc')) == -1
     assert 'rrarrrrrrrrra'.find('a', 0, len('rrarrrrrrrrra')) == 2
@@ -218,6 +219,10 @@ def test_rfind():
     assert 'abcdefghiabc'.rfind('', 0, len('abcdefghiabc')) == 12
     assert 'abcdefghiabc'.rfind('abcd', 0, len('abcdefghiabc')) == 0
     assert 'abcdefghiabc'.rfind('abcz', 0, len('abcdefghiabc')) == -1
+    assert 'abcdefghiabc'.rfind('abc') == 9
+    assert 'abcdefghiabc'.rfind('') == 12
+    assert 'abcdefghiabc'.rfind('abcd') == 0
+    assert 'abcdefghiabc'.rfind('abcz') == -1
     assert 'rrarrrrrrrrra'.rfind('a', 0, len('rrarrrrrrrrra')) == 12
     assert 'rrarrrrrrrrra'.rfind('a', 4, len('rrarrrrrrrrra')) == 12
     assert 'rrarrrrrrrrra'.rfind('a', 4, 6) == -1
@@ -298,8 +303,15 @@ def test_rpartition():
 
 @test
 def test_split():
+    assert '  h    l \t\n l   o '.split() == ['h', 'l', 'l', 'o']
+    assert '  h    l \t\n l   o '.split(None, 2) == ['h', 'l', 'l   o ']
+    assert '  h    l \t\n l   o '.split(None, 0) == ['h    l \t\n l   o ']
+    assert not ''.split()
+    assert not '   '.split()
     assert 'h l l o'.split(' ', -1) == ['h', 'l', 'l', 'o']
     assert 'a|b|c|d'.split('|', -1) == ['a', 'b', 'c', 'd']
+    assert 'h l l o'.split(' ') == ['h', 'l', 'l', 'o']
+    assert 'a|b|c|d'.split('|') == ['a', 'b', 'c', 'd']
     assert 'a|b|c|d'.split('|', 0) == ['a|b|c|d']
     assert 'abcd'.split('|', -1) == ['abcd']
     assert ''.split('|', -1) == ['']
@@ -323,7 +335,13 @@ def test_split():
 
 @test
 def test_rsplit():
+    assert '  h    l \t\n l   o '.rsplit() == ['h', 'l', 'l', 'o']
+    assert '  h    l \t\n l   o '.rsplit(None, 2) == ['  h    l', 'l', 'o']
+    assert '  h    l \t\n l   o '.rsplit(None, 0) == ['  h    l \t\n l   o']
+    assert not ''.rsplit()
+    assert not '   '.rsplit()
     assert 'a|b|c|d'.rsplit('|', -1) == ['a', 'b', 'c', 'd']
+    assert 'a|b|c|d'.rsplit('|') == ['a', 'b', 'c', 'd']
     assert 'a|b|c|d'.rsplit('|', 1) == ['a|b|c', 'd']
     assert 'a|b|c|d'.rsplit('|', 2) == ['a|b', 'c', 'd']
     assert 'a|b|c|d'.rsplit('|', 3) == ['a', 'b', 'c', 'd']
@@ -350,6 +368,7 @@ def test_rsplit():
 @test
 def test_splitlines():
     assert '\n\nasdf\nsadf\nsdf\n'.splitlines(False) == ['', '', 'asdf', 'sadf', 'sdf']
+    assert '\n\nasdf\nsadf\nsdf\n'.splitlines() == ['', '', 'asdf', 'sadf', 'sdf']
     assert 'abc\ndef\n\rghi'.splitlines(False) == ['abc', 'def', '', 'ghi']
     assert 'abc\ndef\n\r\nghi'.splitlines(False) == ['abc', 'def', '', 'ghi']
     assert 'abc\ndef\r\nghi'.splitlines(False) == ['abc', 'def', 'ghi']
@@ -366,6 +385,11 @@ def test_startswith():
     assert 'hello'.startswith('hello world', 0, len('hello')) == False
     assert 'hello'.startswith('', 0, len('hello')) == True
     assert 'hello'.startswith('ello', 0, len('hello')) == False
+    assert 'hello'.startswith('he') == True
+    assert 'hello'.startswith('hello') == True
+    assert 'hello'.startswith('hello world') == False
+    assert 'hello'.startswith('') == True
+    assert 'hello'.startswith('ello') == False
     assert 'hello'.startswith('ello', 1, len('hello')) == True
     assert 'hello'.startswith('o', 4, len('hello')) == True
     assert 'hello'.startswith('o', 5, len('hello')) == False
@@ -392,6 +416,10 @@ def test_endswith():
     assert 'hello'.endswith('he', 0, len('hello')) == False
     assert 'hello'.endswith('', 0, len('hello')) == True
     assert 'hello'.endswith('hello world', 0, len('hello')) == False
+    assert 'hello'.endswith('lo') == True
+    assert 'hello'.endswith('he') == False
+    assert 'hello'.endswith('') == True
+    assert 'hello'.endswith('hello world') == False
     assert 'helloworld'.endswith('worl', 0, len('hello')) == False
     assert 'helloworld'.endswith('worl', 3, 9) == True
     assert 'helloworld'.endswith('world', 3, 12) == True
@@ -421,6 +449,7 @@ def test_endswith():
 @test
 def test_index():
     assert 'abcdefghiabc'.index('abc', 0, len('abcdefghiabc')) == 0
+    assert 'abcdefghiabc'.index('abc') == 0
     assert 'abcdefghiabc'.index('abc', 1, len('abcdefghiabc')) == 9
     assert 'abc'.index('', 0, len('abc')) == 0
     assert 'abc'.index('', 3, len('abc')) == 3
@@ -435,6 +464,7 @@ def test_index():
 @test
 def test_rindex():
     assert 'abcdefghiabc'.rindex('', 0, len('abcdefghiabc')) == 12
+    assert 'abcdefghiabc'.rindex('') == 12
     assert 'abcdefghiabc'.rindex('def', 0, len('abcdefghiabc')) == 3
     assert 'abcdefghiabc'.rindex('abc', 0, len('abcdefghiabc')) == 9
     assert 'abcdefghiabc'.rindex('abc', 0, -1) == 0
@@ -455,6 +485,7 @@ def test_replace():
     assert 'A'.replace('', '*-#', len('A')+1) == '*-#A*-#'
     assert 'AA'.replace('', '*-', len('AA')+1) == '*-A*-A*-'
     assert 'AA'.replace('', '*-', -1) == '*-A*-A*-'
+    assert 'AA'.replace('', '*-') == '*-A*-A*-'
     assert 'AA'.replace('', '*-', 4) == '*-A*-A*-'
     assert 'AA'.replace('', '*-', 3) == '*-A*-A*-'
     assert 'AA'.replace('', '*-', 2) == '*-A*-A'
@@ -465,6 +496,7 @@ def test_replace():
     assert 'A'.replace('A', '', len('A')+1) == ''
     assert 'AAA'.replace('A', '', len('AAA')+1) == ''
     assert 'AAA'.replace('A', '', -1) == ''
+    assert 'AAA'.replace('A', '') == ''
     assert 'AAA'.replace('A', '', 4) == ''
     assert 'AAA'.replace('A', '', 3) == ''
     assert 'AAA'.replace('A', '', 2) == 'A'
@@ -531,6 +563,7 @@ def test_replace():
 
 @test
 def test_expandtabs():
+    assert 'abc\rab\tdef\ng\thi'.expandtabs(8) == 'abc\rab      def\ng       hi'
     assert 'abc\rab\tdef\ng\thi'.expandtabs(8) == 'abc\rab      def\ng       hi'
     assert 'abc\rab\tdef\ng\thi'.expandtabs(4) == 'abc\rab  def\ng   hi'
     assert 'abc\r\nab\tdef\ng\thi'.expandtabs(8) == 'abc\r\nab      def\ng       hi'

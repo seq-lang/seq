@@ -91,6 +91,7 @@ module Type = struct
   (* Getters & Setters *)
 
   let expr_type = foreign "get_type" (Types.expr @-> returning t)
+  let is_ref_type = foreign "is_ref_type" (Types.typ @-> returning Ctypes.bool)
 
   let set_cls_args typ names types =
     let rt = record names types "" in

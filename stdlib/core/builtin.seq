@@ -60,6 +60,8 @@ def ord(s: str):
 
     Return an integer representing the Unicode code point of s
     """
+    if len(s) != 1:
+        raise TypeError("ord() expected a character, but string of length " + str(len(s)) + " found")
     return int(s.ptr[0])
 
 def chr(i: int):
@@ -73,13 +75,17 @@ def chr(i: int):
     p[0] = byte(i)
     return str(p, 1)
 
-def next(g):
+def next[T](g: generator[T], default: optional[T] = None):
     """
     next(g)
 
     Return the next item from g
     """
-    g.done()
+    if g.done():
+        if default:
+            return ~default
+        else:
+            raise StopIteration("StopIteration")
     return g.next()
 
 def any(x):
@@ -105,18 +111,6 @@ def all(x):
         if not a:
             return False
     return True
-
-def enum(x):
-    """
-    enum(x)
-
-    Creates a tuple containing a count (from start which defaults
-    to 0) and the values obtained from iterating over x
-    """
-    i = 0
-    for a in x:
-        yield (i,a)
-        i += 1
 
 def zip(a, b):
     """
@@ -150,14 +144,14 @@ def map(f, x):
     for a in x:
         yield f(a)
 
-def enumerate(x):
+def enumerate(x, start: int = 0):
     """
     enumerate(x)
 
     Creates a tuple containing a count (from start which defaults
     to 0) and the values obtained from iterating over x
     """
-    i = 0
+    i = start
     for a in x:
         yield (i,a)
         i += 1

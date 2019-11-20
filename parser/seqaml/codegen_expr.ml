@@ -308,8 +308,11 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         match Llvm.Expr.get_name lh_expr with
         | "type" ->
           let typ = Llvm.Type.expr_type lh_expr in
-          let typ = Llvm.Generics.Type.realize typ indices in
-          Llvm.Expr.typ typ
+          if Llvm.Type.is_ref_type typ then
+            let typ = Llvm.Generics.Type.realize typ indices in
+            Llvm.Expr.typ typ
+          else
+            serr ~pos "not a reference type"
         | ("func" | "elem" | "static") as kind ->
           Llvm.Generics.set_types ~kind lh_expr indices;
           lh_expr

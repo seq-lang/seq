@@ -619,6 +619,13 @@ FOREIGN types::Type *get_type(Expr *e) {
   return ret;
 }
 
+FOREIGN char is_ref_type(types::Type *t) {
+  auto *f = dynamic_cast<types::RefType *>(t);
+  if (!f)
+    return 0;
+  return 1;
+}
+
 FOREIGN BaseFunc *get_func(FuncExpr *e) { return e->getFunc(); }
 
 FOREIGN types::Type *get_var_type(Var *e) { return e->getType(); }

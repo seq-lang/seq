@@ -306,7 +306,7 @@ The ``ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``ptr[byte]
 
 Seq also provides ``__ptr__`` for obtaining a pointer to a variable (as in ``__ptr__(myvar)``) and ``__array__`` for declaring stack-allocated arrays (as in ``__array__[int](10)``).
 
-C/C++ interoperability
+C/C++ and Python interoperability
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Seq enables seamless interoperability with C and C++ via ``cimport`` functions as such:
@@ -314,8 +314,29 @@ Seq enables seamless interoperability with C and C++ via ``cimport`` functions a
 .. code-block:: seq
 
     cimport sqrt(float) -> float
-    cimport puts(ptr[byte])
+    cimport puts(cobj)  # cobj is void*
     print sqrt(100.0)
     puts("hello world".c_str())
 
+    LD_LIBRARY="mylib.so"
+    from LD_LIBRARY cimport foo(cobj) -> int
+    print foo("hello".c_str())
+
 Primitive types like ``int``, ``float``, ``bool`` etc. are directly interoperable with the corresponding types in C/C++, while compound types like tuples are interoperable with the corresponding struct types. Other built-in types like ``str`` provide methods to convert to C analogs, such as ``c_str()`` as shown above.
+
+Seq also supports calling Python functions as follows:
+
+.. code-block:: seq
+
+    from mymodule pyimport multiply () -> int # assumes that there is myltiple in mymodule.py
+    print multiply(3, 4)  # 12
+
+    pydef myrange(n: int) -> list[int]: # gets completely executed by Python runtime
+        from numpy import arange
+        return list(arange(n))
+
+    print myrange(5)  # [0, 1, 2, 3, 4]
+
+Please check `Python interop <python.rst>`_ for more information.
+
+
