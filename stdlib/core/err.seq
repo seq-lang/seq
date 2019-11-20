@@ -29,6 +29,9 @@ class TypeError:
 class ZeroDivisionError:
     msg: str
 
+class NotImplementedError:
+    msg: str
+
 class StopIteration:
     msg: str
 

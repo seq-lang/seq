@@ -3,14 +3,14 @@ from math import inf as INF, sqrt as _sqrt, acos as _acos, cos as _cos
 from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
 from bisect import bisect as _bisect
 
+raise NotImplementedError("NotImplementedError: 'random' module is not production-ready yet!")
+
 N = 624
 M = 397
 LOG4 = _log(4.0)
 NV_MAGICCONST = 4 * _exp(-0.5) / _sqrt(2.0)
 SG_MAGICCONST = 1.0 + _log(4.5)
 TWOPI = 2.0 * _pi
-
-raise ArgumentError("random module is not production-ready yet!")
 
 class Generator:
     state: array[u64]     # the array for the state vector

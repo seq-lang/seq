@@ -1,3 +1,5 @@
+raise NotImplementedError("NotImplementedError: 'heapq' module is not production-ready yet!")
+
 def _siftdown[T](heap: list[T], startpos: int, pos: int):
     """
     """
