@@ -102,6 +102,10 @@ def string_search_KMP(text: str, pattern: str):
     Return a list containing the position of each index
     the pattern is found.
     """
+    if not pattern:
+        for i in range(len(text) + 1):
+            yield i
+        return
 
     lp_array = computeLPArray(pattern, len(pattern))
     i, j = 0, 0   # indices for text and pattern
