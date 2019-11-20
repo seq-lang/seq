@@ -1,8 +1,11 @@
-from algorithms.timsort import tim_sort, tim_sort_inplace
-from algorithms.pdqsort import pdq_sort, pdq_sort_inplace
+from algorithms.timsort import tim_sort_inplace
+from algorithms.pdqsort import pdq_sort_inplace
+from algorithms.insertionsort import insertion_sort_inplace
+from algorithms.heapsort import heap_sort_inplace
+from algorithms.qsort import qsort_inplace
 
 @deduceall
-def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None, stable: bool = False):
+def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None, stable: bool = False, algorithm: optional[str] = None):
     """
     sorted(v)
 
@@ -10,25 +13,46 @@ def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None, stable: bo
     """
     newlist = [a for a in v]
     if key:
-        newlist.sort(~key, stable)
+        if algorithm:
+            newlist.sort(~key, stable, ~algorithm)
+        else:
+            newlist.sort(~key, stable, None)
     else:
-        newlist.sort(None, stable)
+        if algorithm:
+            newlist.sort(None, stable, ~algorithm)
+        else:
+            newlist.sort(None, stable, None)
     return newlist
+
+def _sort_list[T,S](self: list[T], key: function[S,T], stable: bool, algorithm: str):
+    match (algorithm, stable):
+        case ('tim', True):
+            tim_sort_inplace(self, key)
+        case (_, True):
+            raise ArgumentError("Stable sort requires timsort")
+        case ('pdq', False):
+            pdq_sort_inplace(self, key)
+        case ('insertion', False):
+            insertion_sort_inplace(self, key)
+        case ('heap', False):
+            heap_sort_inplace(self, key)
+        case ('tim', False):
+            tim_sort_inplace(self, key)
+        case ('quick', False):
+            qsort_inplace(self, key)
+        case _:
+            raise ArgumentError("Algorithm '" + algorithm + "' does not exist")
 
 extend list[T]:
     @deduceall
-    def sort[S](self: list[T], key: optional[function[S,T]] = None, stable: bool = False):
+    def sort[S](self: list[T], key: optional[function[S,T]] = None, stable: bool = False, algorithm: optional[str] = None):
         def ident[T](x: T):
             return x
+
+        alg = ~algorithm if algorithm else ('tim' if stable else 'pdq')
         if key:
-            f = ~key
-            if stable:
-                tim_sort_inplace(self, f)
-            else:
-                pdq_sort_inplace(self, f)
+            _sort_list(self, ~key, stable, alg)
         else:
-            f = ident[T]
-            if stable:
-                tim_sort_inplace(self, f)
-            else:
-                pdq_sort_inplace(self, f)
+            _sort_list(self, ident[T], stable, alg)
+
+        
