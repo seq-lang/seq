@@ -1,4 +1,3 @@
-
 def bisect_left(a, x, lo: int, hi: int) -> int:
     """
     bisect_left(a, x, lo, hi) -> int

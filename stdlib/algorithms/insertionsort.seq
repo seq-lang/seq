@@ -1,34 +1,33 @@
-def _insertion_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]):
+def _insertion_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]):
     i = begin + 1
     while i < end:
         x = arr[i]
         j = i - 1
-        while j >= begin and comp(x, arr[j]):
+        while j >= begin and keyf(x) < keyf(arr[j]):
             arr[j+1] = arr[j]
             j -= 1
         arr[j+1] = x
         i += 1
 
-def insertion_sort_array[T](collection: array[T], size: int, compare: function[bool,T,T]):
+def insertion_sort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
     """
         Insertion Sort
         Sorts the array inplace.
     """
-    _insertion_sort(collection, 0, size, compare)
+    _insertion_sort(collection, 0, size, keyf)
 
-def insertion_sort_inplace[T](collection: list[T], compare: function[bool,T,T]):
+def insertion_sort_inplace[S,T](collection: list[T], keyf: function[S,T]):
     """
         Insertion Sort
         Sorts the list inplace.
     """
-    insertion_sort_array(collection.arr, collection.len, compare)
+    insertion_sort_array(collection.arr, collection.len, keyf)
 
-def insertion_sort[T](collection: list[T], compare: function[bool,T,T]) -> list[T]:
+def insertion_sort[S,T](collection: list[T], keyf: function[S,T]) -> list[T]:
     """
         Insertion Sort
         Returns the sorted list.
     """
     newlst = copy(collection)
-    insertion_sort_inplace(newlst, compare)
+    insertion_sort_inplace(newlst, keyf)
     return newlst
-

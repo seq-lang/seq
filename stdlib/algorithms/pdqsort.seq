@@ -4,6 +4,7 @@ PARTIAL_INSERTION_SORT_LIMIT = 8
 
 from math import floor, log2
 from algorithms.insertionsort import _insertion_sort
+from algorithms.heapsort import _heap_sort
 
 def _floor_log2(n: int) -> int:
     """
@@ -11,7 +12,7 @@ def _floor_log2(n: int) -> int:
     """
     return int(floor(log2(float(n))))
 
-def _partial_insertion_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]) -> bool:
+def _partial_insertion_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]) -> bool:
     if begin == end:
         return True
 
@@ -24,14 +25,14 @@ def _partial_insertion_sort[T](arr: array[T], begin: int, end: int, comp: functi
         sift = cur
         sift_1 = cur -1
 
-        if comp(arr[sift], arr[sift_1]):
+        if keyf(arr[sift]) < keyf(arr[sift_1]):
             tmp = arr[sift]
 
             while True:
                 arr[sift] = arr[sift_1]
                 sift -= 1
                 sift_1 -= 1
-                if sift == begin or not comp(tmp, arr[sift_1]):
+                if sift == begin or keyf(tmp) >= keyf(arr[sift_1]):
                     break
 
             arr[sift] = tmp
@@ -41,37 +42,37 @@ def _partial_insertion_sort[T](arr: array[T], begin: int, end: int, comp: functi
 
     return True
 
-def _partition_left[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]) -> int:
+def _partition_left[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]) -> int:
     pivot = arr[begin]
     first = begin
     last = end
 
     while True:
         last -= 1
-        if not comp(pivot, arr[last]):
+        if keyf(pivot) >= keyf(arr[last]):
             break
 
     if (last + 1 == end):
         while first < last:
             first += 1
-            if comp(pivot, arr[first]):
+            if keyf(pivot) < keyf(arr[first]):
                 break
 
     else:
         while True:
             first += 1
-            if comp(pivot, arr[first]):
+            if keyf(pivot) < keyf(arr[first]):
                 break
 
     while first < last:
         arr[first], arr[last] = arr[last], arr[first]
         while True:
             last -= 1
-            if not comp(pivot, arr[last]):
+            if keyf(pivot) >= keyf(arr[last]):
                 break
         while True:
             first += 1
-            if comp(pivot, arr[first]):
+            if keyf(pivot) < keyf(arr[first]):
                 break
 
     pivot_pos = last
@@ -80,26 +81,26 @@ def _partition_left[T](arr: array[T], begin: int, end: int, comp: function[bool,
 
     return pivot_pos
 
-def _partition_right[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T]) -> tuple[int,int]:
+def _partition_right[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]) -> tuple[int,int]:
     pivot = arr[begin]
     first = begin
     last = end
 
     while True:
         first += 1
-        if not comp(arr[first], pivot):
+        if keyf(arr[first]) >= keyf(pivot):
             break
 
     if first - 1 == begin:
         while first < last:
             last -= 1
-            if comp(arr[last], pivot):
+            if keyf(arr[last]) < keyf(pivot):
                 break
 
     else:
         while True:
             last -= 1
-            if comp(arr[last], pivot):
+            if keyf(arr[last]) < keyf(pivot):
                 break
 
     already_partitioned = 0
@@ -111,12 +112,12 @@ def _partition_right[T](arr: array[T], begin: int, end: int, comp: function[bool
 
         while True:
             first += 1
-            if not comp(arr[first], pivot):
+            if keyf(arr[first]) >= keyf(pivot):
                 break
 
         while True:
             last -= 1
-            if comp(arr[last], pivot):
+            if keyf(arr[last]) < keyf(pivot):
                 break
 
     pivot_pos = first - 1
@@ -125,37 +126,37 @@ def _partition_right[T](arr: array[T], begin: int, end: int, comp: function[bool
 
     return (pivot_pos, already_partitioned)
 
-def _sort2[T](arr: array[T], i: int, j: int, comp: function[bool,T,T]):
-    if comp(arr[j], arr[i]):
+def _sort2[S,T](arr: array[T], i: int, j: int, keyf: function[S,T]):
+    if keyf(arr[j]) < keyf(arr[i]):
         arr[i], arr[j] = arr[j], arr[i]
 
-def _sort3[T](arr: array[T], i: int, j: int, k: int, comp: function[bool,T,T]):
-    _sort2(arr, i, j, comp)
-    _sort2(arr, j, k, comp)
-    _sort2(arr, i, j, comp)
+def _sort3[S,T](arr: array[T], i: int, j: int, k: int, keyf: function[S,T]):
+    _sort2(arr, i, j, keyf)
+    _sort2(arr, j, k, keyf)
+    _sort2(arr, i, j, keyf)
 
-def _pdq_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T], bad_allowed: int, leftmost: bool):
+def _pdq_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T], bad_allowed: int, leftmost: bool):
     while True:
         size = end - begin
         if size < INSERTION_SORT_THRESHOLD:
-            _insertion_sort(arr, begin, end, comp)
+            _insertion_sort(arr, begin, end, keyf)
             return
 
         size_2 = int(size / 2)
         if size > NINTHER_THRESHOLD:
-            _sort3(arr, begin, begin + size_2, end - 1, comp)
-            _sort3(arr, begin + 1, begin + (size_2 - 1), end - 2, comp)
-            _sort3(arr, begin + 2, begin + (size_2 + 1), end - 3, comp)
-            _sort3(arr, begin + (size_2 - 1), begin + size_2, begin + (size_2 + 1), comp)
+            _sort3(arr, begin, begin + size_2, end - 1, keyf)
+            _sort3(arr, begin + 1, begin + (size_2 - 1), end - 2, keyf)
+            _sort3(arr, begin + 2, begin + (size_2 + 1), end - 3, keyf)
+            _sort3(arr, begin + (size_2 - 1), begin + size_2, begin + (size_2 + 1), keyf)
             arr[begin], arr[begin + size_2] = arr[begin + size_2], arr[begin]
         else:
-            _sort3(arr, begin + size_2, begin, end - 1, comp)
+            _sort3(arr, begin + size_2, begin, end - 1, keyf)
 
-        if not leftmost and not comp(arr[begin - 1], arr[begin]):
-            begin = _partition_left(arr, begin, end, comp) + 1
+        if not leftmost and keyf(arr[begin - 1]) >= keyf(arr[begin]):
+            begin = _partition_left(arr, begin, end, keyf) + 1
             continue
 
-        part_result = _partition_right(arr, begin, end, comp)
+        part_result = _partition_right(arr, begin, end, keyf)
         pivot_pos = part_result[0]
         already_partitioned = part_result[1] == 1
 
@@ -166,7 +167,7 @@ def _pdq_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T], 
         if hightly_unbalanced:
             bad_allowed -= 1
             if bad_allowed == 0:
-                _heap_sort(arr, begin, end, comp)
+                _heap_sort(arr, begin, end, keyf)
                 return
 
             if l_size >= INSERTION_SORT_THRESHOLD:
@@ -190,32 +191,32 @@ def _pdq_sort[T](arr: array[T], begin: int, end: int, comp: function[bool,T,T], 
                     arr[end - 3], arr[int(end - (2 + r_size / 4))] = arr[int(end - (2 + r_size / 4))], arr[end - 3]
 
         else:
-            if (already_partitioned and _partial_insertion_sort(arr, begin, pivot_pos, comp) and _partial_insertion_sort(arr, pivot_pos + 1, end, comp)):
+            if (already_partitioned and _partial_insertion_sort(arr, begin, pivot_pos, keyf) and _partial_insertion_sort(arr, pivot_pos + 1, end, keyf)):
                 return
 
-        _pdq_sort(arr, begin, pivot_pos, comp, bad_allowed, leftmost)
+        _pdq_sort(arr, begin, pivot_pos, keyf, bad_allowed, leftmost)
         begin = pivot_pos + 1
         leftmost = False
 
-def pdq_sort_array[T](collection: array[T], size: int, compare: function[bool,T,T]):
+def pdq_sort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort
 
         Sorts the array inplace.
     """
-    _pdq_sort(collection, 0, size, compare, _floor_log2(size), True)
+    _pdq_sort(collection, 0, size, keyf, _floor_log2(size), True)
 
-def pdq_sort_inplace[T](collection: list[T], compare: function[bool,T,T]):
+def pdq_sort_inplace[S,T](collection: list[T], keyf: function[S,T]):
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort
 
         Sorts the list inplace.
     """
-    pdq_sort_array(collection.arr, collection.len, compare)
+    pdq_sort_array(collection.arr, collection.len, keyf)
 
-def pdq_sort[T](collection: list[T], compare: function[bool,T,T]) -> list[T]:
+def pdq_sort[S,T](collection: list[T], keyf: function[S,T]) -> list[T]:
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort
@@ -223,5 +224,5 @@ def pdq_sort[T](collection: list[T], compare: function[bool,T,T]) -> list[T]:
         Returns a sorted list.
     """
     newlst = copy(collection)
-    pdq_sort_inplace(newlst, compare)
+    pdq_sort_inplace(newlst, keyf)
     return newlst

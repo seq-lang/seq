@@ -328,15 +328,13 @@ Seq also supports calling Python functions as follows:
 
 .. code-block:: seq
 
-    from mymodule pyimport multiply () -> int # assumes that there is myltiple in mymodule.py
+    from mymodule pyimport multiply () -> int  # assumes multiply in mymodule.py
     print multiply(3, 4)  # 12
 
-    pydef myrange(n: int) -> list[int]: # gets completely executed by Python runtime
+    pydef myrange(n: int) -> list[int]:  # completely executed by Python runtime
         from numpy import arange
         return list(arange(n))
 
     print myrange(5)  # [0, 1, 2, 3, 4]
 
-Please check `Python interop <python.rst>`_ for more information.
-
-
+Please check `Python interop <python.html>`_ for more information.
