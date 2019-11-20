@@ -618,7 +618,10 @@ extend str:
         as in slice notation.
         """
         start, end = self._correct_indices(start, end)
-        return len(self[start:end]._search(sub))
+        count = 0
+        for _ in self[start:end]._search(sub):
+            count += 1
+        return count
 
     def find(self: str, sub: str, start: int = 0, end: int = 0x7fffffffffffffff) -> int:
         """
@@ -631,9 +634,9 @@ extend str:
         Return -1 on failure.
         """
         start, end = self._correct_indices(start, end)
-        sub_list = self[start:end]._search(sub)
+        pos = str._getfirst(self[start:end]._search(sub))
 
-        if len(sub_list) == 0:
+        if pos < 0:
             return -1
 
         if sub == '' and start > len(self):
@@ -642,7 +645,7 @@ extend str:
         if sub == '' and (start <= end <= len(self)):
             return start
 
-        return sub_list[0] + start  # add start position because of truncation
+        return pos + start  # add start position because of truncation
 
     def rfind(self: str, sub: str, start: int = 0, end: int = 0x7fffffffffffffff) -> int:
         """
@@ -655,15 +658,15 @@ extend str:
         Return -1 on failure.
         """
         start, end = self._correct_indices(start, end)
-        sub_list = self[start:end]._search(sub)
+        pos = str._getlast(self[start:end]._search(sub))
 
-        if len(sub_list) == 0:
+        if pos < 0:
             return -1
 
         if sub == '' and start > len(self):
             return -1
 
-        return sub_list[len(sub_list)-1] + start  # add start position because of truncation
+        return pos + start  # add start position because of truncation
 
     def isidentifier(self: str) -> bool:
         """
@@ -758,15 +761,15 @@ extend str:
         the separator itself, and the part after it.  If the separator is not
         found, return str and two empty strings.
         """
-        li = self._search(sep)
+        pos = str._getfirst(self._search(sep))
 
-        if len(li) == 0:
+        if pos < 0:
             return self,'',''
 
-        if not li[0]:
-            return '',  sep, self[li[0]+len(sep):]
+        if not pos:
+            return '',  sep, self[pos+len(sep):]
 
-        return self[:li[0]],sep,self[li[0]+len(sep):]
+        return self[:pos],sep,self[pos+len(sep):]
 
     def rpartition(self: str, sep: str) -> tuple[str, str, str]:
         """
@@ -776,16 +779,20 @@ extend str:
         the part before it, the separator itself, and the part after it.  If the
         separator is not found, return two empty strings and str.
         """
-        li = self._search(sep)
-        i = len(li)-1
+        pos0 = -1
+        pos1 = -1
+        for pos in self._search(sep):
+            if pos0 == -1:
+                pos0 = pos
+            pos1 = pos
 
-        if len(li) == 0:
+        if pos0 < 0:
             return '', '', self
 
-        if not li[0]:
-            return '',  sep, self[li[i]+len(sep):]
+        if not pos0:
+            return '',  sep, self[pos1+len(sep):]
 
-        return self[:li[i]], sep, self[li[i]+len(sep):]
+        return self[:pos1], sep, self[pos1+len(sep):]
 
     def split(self, sep: optional[str] = None, maxsplit: int = -1) -> list[str]:
         """
@@ -801,7 +808,7 @@ extend str:
             return self._split_whitespace(maxsplit if maxsplit >= 0 else 0x7fffffffffffffff)
         sepx = ~sep
 
-        li = self._search(sepx)
+        li = list(self._search(sepx))
         str_split = list[str]()
 
         # no delimiter found
@@ -856,7 +863,7 @@ extend str:
             return self._rsplit_whitespace(maxsplit if maxsplit >= 0 else 0x7fffffffffffffff)
         sepx = ~sep
 
-        li = list(string_search_KMP(self, sepx))[::-1]
+        li = list(self._search(sepx))
         str_split = list[str]()
         end_of_li = len(li)-1
 
@@ -870,7 +877,7 @@ extend str:
         if maxsplit < 0 or maxsplit > len(li):
             maxsplit = len(li)
 
-        prev = li[end_of_li]
+        prev = li[0]
         # append first part of string
         # if sep is found in the last index, add '' to separate
         if prev == len(self) - len(sepx):
@@ -882,12 +889,12 @@ extend str:
         if len(li) > 1 and maxsplit > 1:
             for j in range(1, maxsplit):
                 # when separators are beside each other, append '' to list
-                if li[end_of_li-j] + 1 == prev:
+                if li[j] + 1 == prev:
                     str_split.append('')
-                    prev = li[end_of_li-j]
+                    prev = li[j]
                 else:
-                    str_split.append(self[li[end_of_li-j]+len(sepx):prev])
-                    prev = li[end_of_li-j]
+                    str_split.append(self[li[j]+len(sepx):prev])
+                    prev = li[j]
 
         if prev != 0:
             str_split.append(self[:prev])
@@ -898,7 +905,7 @@ extend str:
             return final_string
         else:
             # NOT PICKING UP '' at start of string so manually putting it in
-            if li[0] == 0:
+            if li[end_of_li] == 0:
                 str_split.append('')
             else:
                 str_split.append(self[:li[0]])
@@ -1177,8 +1184,22 @@ extend str:
         return b == byte(32) or b == byte(9) or b == byte(10) or \
                b == byte(11) or b == byte(12) or b == byte(13)
 
-    def _search(self: str, pattern: str) -> list[int]:
+    def _search(self: str, pattern: str):
         return algorithms.string_search_KMP(self, pattern)
+
+    def _getfirst(v: generator[int]):
+        n = -1
+        if not v.done():
+            n = v.next()
+        v.destroy()
+        return n
+
+    def _getlast(v: generator[int]):
+        n = -1
+        while not v.done():
+            n = v.next()
+        v.destroy()
+        return n
 
     def _correct_indices(self: str, start: int, end: int):
         n = len(self)
