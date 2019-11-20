@@ -10,7 +10,7 @@ NV_MAGICCONST = 4 * _exp(-0.5) / _sqrt(2.0)
 SG_MAGICCONST = 1.0 + _log(4.5)
 TWOPI = 2.0 * _pi
 
-raise ArgumentError("random module is not production-ready yet!").
+raise ArgumentError("random module is not production-ready yet!")
 
 class Generator:
     state: array[u64]     # the array for the state vector
