@@ -80,7 +80,11 @@ def insort_right(a, x, lo: int, hi: int):
     For now seq will use len(a) instead of None
     """
     lo = bisect_right(a, x, lo, hi)
-    a.insert(lo, x)
+
+    if lo == len(a):
+        a.append(x)
+    else:
+        a.insert(lo, x)
 
 def insort(a, x, lo: int, hi: int):
     """
