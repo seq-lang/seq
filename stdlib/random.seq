@@ -10,6 +10,8 @@ NV_MAGICCONST = 4 * _exp(-0.5) / _sqrt(2.0)
 SG_MAGICCONST = 1.0 + _log(4.5)
 TWOPI = 2.0 * _pi
 
+raise ArgumentError("random module is not production-ready yet!").
+
 class Generator:
     state: array[u64]     # the array for the state vector
     state_size: int
@@ -190,7 +192,8 @@ class Generator:
         """
         self.random_seed_time_pid()
 
-"""Random number generator base class used by bound module functions.
+"""
+Random number generator base class used by bound module functions.
 Used to instantiate instances of Random to get generators that don't
 share state.
 Class Random can also be subclassed if you want to use a different basic
