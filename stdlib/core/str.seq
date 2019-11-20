@@ -856,7 +856,7 @@ extend str:
             return self._rsplit_whitespace(maxsplit if maxsplit >= 0 else 0x7fffffffffffffff)
         sepx = ~sep
 
-        li = self._rsearch(sepx)
+        li = list(string_search_KMP(self, sepx))[::-1]
         str_split = list[str]()
         end_of_li = len(li)-1
 
@@ -1178,10 +1178,7 @@ extend str:
                b == byte(11) or b == byte(12) or b == byte(13)
 
     def _search(self: str, pattern: str) -> list[int]:
-        return algorithms.string_search_slow(self, pattern)
-
-    def _rsearch(self: str, pattern: str) -> list[int]:
-        return algorithms.rstring_search_slow(self, pattern)
+        return algorithms.string_search_KMP(self, pattern)
 
     def _correct_indices(self: str, start: int, end: int):
         n = len(self)
