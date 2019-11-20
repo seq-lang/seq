@@ -45,7 +45,7 @@ extend list[T]:
         def ident[T](x: T):
             return x
 
-        alg = ~algorithm if algorithm else 'pqd'
+        alg = ~algorithm if algorithm else 'pdq'
         if key:
             _sort_list(self, ~key, alg)
         else:
