@@ -34,36 +34,19 @@ void types::OptionalType::initOps() {
        {},
        Bool,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return has(self, b.GetInsertBlock());
+         return b.CreateZExt(has(self, b.GetInsertBlock()),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__invert__",
+       {},
+       getBaseType(0),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return val(self, b.GetInsertBlock());
        },
        false},
   };
-
-  addMethod(
-      "get",
-      new BaseFuncLite({this}, getBaseType(0),
-                       [this](Module *module) {
-                         const std::string name = "seq." + getName() + ".get";
-                         Function *func = module->getFunction(name);
-
-                         if (!func) {
-                           LLVMContext &context = module->getContext();
-                           func = cast<Function>(module->getOrInsertFunction(
-                               name, getBaseType(0)->getLLVMType(context),
-                               getLLVMType(context)));
-                           func->setDoesNotThrow();
-                           func->setLinkage(GlobalValue::PrivateLinkage);
-                           func->addFnAttr(Attribute::AlwaysInline);
-                           Value *self = func->arg_begin();
-                           BasicBlock *block =
-                               BasicBlock::Create(context, "entry", func);
-                           IRBuilder<> builder(block);
-                           builder.CreateRet(val(self, block));
-                         }
-
-                         return func;
-                       }),
-      true);
 }
 
 bool types::OptionalType::isAtomic() const { return baseType->isAtomic(); }

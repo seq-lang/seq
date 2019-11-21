@@ -1,0 +1,44 @@
+raise NotImplementedError("NotImplementedError: 'heapq' module is not production-ready yet!")
+
+def _siftdown[T](heap: list[T], startpos: int, pos: int):
+    """
+    """
+    newitem = heap[pos]
+    # Follow the path to the root, moving parents down until finding
+    # a place newitem fits.
+    while pos > startpos:
+        parentpos = (pos - 1) >> 1
+        parent = heap[parentpos]
+        if newitem < parent:
+            heap[pos] = parent
+            pos = parentpos
+            continue
+        break
+    heap[pos] = newitem
+
+def heappush[T](heap: list[T], item: T):
+    """
+    """
+    heap.append(item)
+    _siftdown(heap, 0, len(heap)-1)
+
+def heappop(heap):
+    pass
+
+def heappushpop(heap, item):
+    pass
+
+def heapify(x):
+    pass
+
+def heapreplace(heap, item):
+    pass
+
+#def merge(*iterables, key=None, reverse: optional[bool]=False):
+#    pass
+
+def nlargest(n, iterable, key=None):
+    pass
+
+def nsmallest(n, iterable, key=None):
+    pass

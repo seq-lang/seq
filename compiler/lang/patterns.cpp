@@ -108,7 +108,7 @@ Value *BoolPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   IRBuilder<> builder(block);
   Value *pat =
       ConstantInt::get(types::Bool->getLLVMType(context), (uint64_t)this->val);
-  return builder.CreateFCmpOEQ(val, pat);
+  return builder.CreateICmpEQ(val, pat);
 }
 
 Value *StrPattern::codegen(BaseFunc *base, types::Type *type, Value *val,

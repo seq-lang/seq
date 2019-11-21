@@ -1,4 +1,14 @@
-def combinations(pool, r):
+import math
+import collections
+
+def combinations(pool, r: int):
+    """
+    combinations(iterable, r)
+
+    Return successive r-length combinations of elements in the iterable.
+
+    combinations(range(4), 3) --> (0,1,2), (0,1,3), (0,2,3), (1,2,3)
+    """
     n = len(pool)
     if r > n:
         return
@@ -16,3 +26,284 @@ def combinations(pool, r):
         for j in range(b+1, r):
             indices[j] = indices[j-1] + 1
         yield [pool[i] for i in indices]
+
+def combinations_with_replacement(pool, r: int):
+    """
+    combinations_with_replacement(iterable, r)
+
+    Return successive r-length combinations of elements in the iterable
+    allowing individual elements to have successive repeats.
+    """
+    if r < 0:
+        raise ValueError("ValueError: r must be a positive integer.")
+    n = len(pool)
+    if not n and r:
+        return
+    indices = [0] * r
+    yield [pool[i] for i in indices]
+    while True:
+        b = -1
+        for i in reversed(range(r)):
+            if indices[i] != n - 1:
+                b = i
+                break
+        if b == -1:
+            return
+
+        indices = [indices[i] for i in range(b)] + [indices[b]+1 for i in range(r-b)]
+        yield [pool[indices[i]] for i in range(len(indices))]
+
+
+def islice[T](iterable: generator[T], start: int, stop: int, step: int):
+    """
+    Make an iterator that returns selected elements from the iterable.
+
+    unlike python, seq requires start, stop and step for now.
+    default: start = 0, stop = len(iterable), step = 1
+    """
+    if start < 0 or stop < 0:
+        raise ValueError("ValueError: Indices for islice() must be None or an integer: 0 <= x <= maxint")
+    elif step < 0:
+        raise ValueError("ValueError: Step for islice() must be a positive integer or None.")
+    elif stop <= start:
+        if iterable.done():
+            iterable.destroy()
+            return
+        element = iterable.next()
+        iterable.destroy()
+        yield element
+
+    # Consume *iterable* up to the *start* position.
+    for i in range(start):
+        if iterable.done():
+            iterable.destroy()
+            return
+        iterable.next()
+
+    # Consume to *stop*.
+    for i in range(start, stop, step):
+        if iterable.done():
+            iterable.destroy()
+            return
+        element = iterable.next()
+
+        iterable.destroy()
+        yield element
+
+        # consume step amount
+        for i in range(step-1):
+            if iterable.done():
+                iterable.destroy()
+                return
+            iterable.next()
+
+def count(start: float, step: float):
+    """
+    count(start=0, step=1)
+
+    Return a count object whose .__next__() method returns consecutive values.
+    default: start = 0.0, step = 1.0
+    """
+    n = start
+    while True:
+        yield n
+        n += step
+
+def repeat(object, times: int):
+    """
+
+    default for times = None, for now seq will use -1
+    """
+    if times == -1:
+        yield object
+    else:
+        for i in range(times):
+            yield object
+
+def cycle[T](iterable: generator[T]):
+    """
+    fixed
+    """
+    saved = [T()] * 0
+    for element in iterable:
+        yield element
+        saved.append(element)
+    while saved:
+        for element in saved:
+              yield element
+
+def compress(data, selectors):
+    """
+    compress(data, selectors)
+
+    Return data elements corresponding to true selector elements.
+
+    Forms a shorter iterator from selected data elements using the selectors to
+    choose the data elements.
+    """
+    return [d for d, s in zip(data, selectors) if s]
+
+def dropwhile(predicate, iterable):
+    """
+    dropwhile(predicate, iterable)
+
+    Drop items from the iterable while predicate(item) is true.
+
+    Afterwards, return every element until the iterable is exhausted.
+    """
+    it = iter(iterable)
+    for x in it:
+        if not predicate(x):
+            yield x
+            break
+    for x in it:
+        yield x
+
+def takewhile(predicate, iterable):
+    """
+    takewhile(predicate, iterable)
+
+    Return successive entries from an iterable as long as the predicate evaluates to true for each entry.
+    """
+    for x in iterable:
+        if predicate(x):
+            yield x
+        else:
+            break
+
+def filterfalse(predicate, iterable):
+    """
+    filterfalse(function, iterable)
+
+    Return those items of iterable for which function(item) is false.
+
+    Unlike python, seq will not allow predicate to equal None for now.
+        if predicate is None:
+            predicate = bool
+    """
+    for x in iterable:
+        if not predicate(x):
+            yield x
+
+def permutations(pool, r: int):
+    """
+    permutations(iterable, r)
+
+    Return successive r-length permutations of elements in the iterable.
+
+    Unlike python, seq does not use None for now so default for r will be len(pool)
+    """
+    n = len(pool)
+    if r > n:
+        return
+
+    indices = list(iter(range(n)))
+    cycles = list(iter(range(n, n-r, -1)))
+    yield [pool[i] for i in indices[:r]]
+    while n:
+        b = -1
+        for i in reversed(range(r)):
+            cycles[i] -= 1
+            if cycles[i] == 0:
+                indices = indices[:i] + indices[i+1:] + indices[i:i+1]
+                cycles[i] = n - i
+            else:
+                b = i
+                j = cycles[i]
+                indices[i], indices[-j] = indices[-j], indices[i]
+                yield [pool[i] for i in indices[:r]]
+                break
+        if b == -1:
+            return
+
+def accumulate(iterable, func, initial):
+    """
+    accumulate(iterable, func, initial)
+
+    Return series of accumulated sums (or other binary function results).
+
+    Default: func = operator.add, initial = None.
+    For now seq will assume initial is None.
+    """
+    it = iter(iterable)
+    if not it.done():
+        total = it.next()
+        yield total
+        while not it.done():
+            total = func(total, it.next())
+            yield total
+        it.destroy()
+    else:
+        it.destroy()
+        return
+
+def chain(iterables):
+    """
+    chain(iterables)
+
+    For now chain() == chain.from_iterable()
+    """
+    for it in iterables:
+        for element in it:
+            yield element
+
+def starmap(function, iterable):
+    """
+    starmap(function, iterable)
+
+    Return an iterator whose values are returned from the function
+    evaluated with an argument tuple taken from the given sequence.
+    """
+    for args in iterable:
+        yield function(args[0], args[1])
+
+def groupby[K, V](iterable: generator[V], key: function[K, V]):
+    """
+    groupby(iterable, key=None)
+
+    make an iterator that returns consecutive keys and groups from the iterable
+
+    iterable:
+        Elements to divide into groups according to the key function.
+    key:
+        A function for computing the group category for each element.
+        If the key function is not specified or is None, the element itself
+        is used for grouping.
+
+    Deals with only strings for now.
+    """
+    if iterable.done():
+        return
+
+    currvalue = iterable.next()
+    currkey = key(currvalue)
+    group = [currvalue]
+
+    while not iterable.done():
+        currvalue = iterable.next()
+        k = key(currvalue)
+
+        if k != currkey:
+            yield currkey, group
+            currkey = k
+            group = list[V]()
+        group.append(currvalue)
+    yield currkey, group
+
+def product[T](iterables: generator[T], repeat: int):
+    """
+    Needs implementing.
+    """
+    pass
+
+def zip_longest[T](iterables: generator[T], fillvalue):
+    """
+    Needs implementing.
+    """
+    pass
+
+def tee(iterable, n):
+    """
+    Needs implementing.
+    """
+    pass

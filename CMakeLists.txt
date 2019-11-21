@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -10,20 +10,29 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
-option(SEQ_PYBRIDGE "support Python interoperability" ON)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GC REQUIRED bdw-gc)
+
 find_library(HTS_LIB NAMES libhts.a libhts)
 if(NOT HTS_LIB)
   message(FATAL_ERROR "HTSlib not found")
 else()
   message(STATUS "Found HTSlib: ${HTS_LIB}")
 endif()
+
+find_library(GC_LIB NAMES libgc.a libgc)
+if(NOT GC_LIB)
+  message(FATAL_ERROR "GC not found")
+else()
+  message(STATUS "Found GC: ${GC_LIB}")
+endif()
+
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
                          runtime/exc.cpp
@@ -31,11 +40,9 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/ksw2/ksw2_extd2_sse.cpp
                          runtime/ksw2/ksw2_exts2_sse.cpp
                          runtime/ksw2/ksw2_extz2_sse.cpp
-                         runtime/ksw2/ksw2_gg2_sse.cpp
-                         runtime/pybridge.cpp)
-target_link_libraries(seqrt PUBLIC bz2 lzma ${ZLIB_LIBRARIES} ${GC_LINK_LIBRARIES} ${HTS_LIB})
-target_include_directories(seqrt PRIVATE ${GC_INCLUDE_DIRS})
-target_compile_options(seqrt PRIVATE ${GC_CFLAGS_OTHER} -O3)
+                         runtime/ksw2/ksw2_gg2_sse.cpp)
+target_link_libraries(seqrt PUBLIC bz2 lzma ${ZLIB_LIBRARIES} ${GC_LIB} ${HTS_LIB} Threads::Threads)
+target_compile_options(seqrt PRIVATE -O3)
 
 if(SEQ_THREADED)
   find_package(OpenMP REQUIRED)
@@ -43,16 +50,6 @@ if(SEQ_THREADED)
   target_compile_definitions(seqrt PRIVATE THREADED=1)
 else()
   target_compile_definitions(seqrt PRIVATE THREADED=0)
-endif()
-
-if(SEQ_PYBRIDGE)
-  find_package(PythonInterp REQUIRED)
-  find_package(PythonLibs REQUIRED)
-  include_directories(${PYTHON_INCLUDE_DIRS})
-  target_link_libraries(seqrt PUBLIC ${PYTHON_LIBRARIES})
-  target_compile_definitions(seqrt PRIVATE PYBRIDGE=1)
-else()
-  target_compile_definitions(seqrt PRIVATE PYBRIDGE=0)
 endif()
 
 

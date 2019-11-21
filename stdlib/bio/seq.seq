@@ -1,0 +1,218 @@
+extend seq:
+    def __init__(self: seq, s: str):
+        return seq(s.ptr, s.len)
+
+    def __eq__(self: seq, other: seq):
+        n = len(self)
+        if n != len(other):
+            return False
+        i = 0
+        while i < n:
+            if self._at(i) != other._at(i):
+                return False
+            i += 1
+        return True
+
+    def __ne__(self: seq, other: seq):
+        return not (self == other)
+
+    def _cmp(self: seq, other: seq):
+        self_len = len(self)
+        other_len = len(other)
+        n = min(self_len, other_len)
+        i = 0
+        while i < n:
+            c1 = self._at(i)
+            c2 = other._at(i)
+            if c1 != c2:
+                return int(c1) - int(c2)
+            i += 1
+        return self_len - other_len
+
+    def __lt__(self: seq, other: seq):
+        return self._cmp(other) < 0
+
+    def __le__(self: seq, other: seq):
+        return self._cmp(other) <= 0
+
+    def __gt__(self: seq, other: seq):
+        return self._cmp(other) > 0
+
+    def __ge__(self: seq, other: seq):
+        return self._cmp(other) >= 0
+
+    def __str__(self: seq):
+        n = len(self)
+        p = cobj(n)
+        for i in range(n):
+            p[i] = self._at(i)
+        return str(p, n)
+
+    def __len__(self: seq):
+        return abs(self.len)
+
+    def __bool__(self: seq):
+        return self.len != 0
+
+    def __hash__(self: seq):
+        h = 0
+        for i in range(len(self)):
+            h = 31*h + int(self._at(i))
+        return h
+
+    def __getitem__(self: seq, idx: int):
+        n = len(self)
+        if idx < 0:
+            idx += n
+        if not (0 <= idx < n):
+            raise IndexError("seq index out of range")
+        if self.len >= 0:
+            return seq(self.ptr + idx, 1)
+        else:
+            return seq(self.ptr + (n - idx - 1), -1)
+
+    def _at(self: seq, idx: int):
+        b = self.ptr[(-self.len - idx - 1) if (self.len < 0) else idx]
+        return b.comp() if self.len < 0 else b
+
+    def _slice_direct(self: seq, a: int, b: int):
+        if self.len >= 0:
+            return seq(self.ptr + a, b - a)
+        else:
+            return seq(self.ptr + (-self.len - b), -(b - a))
+
+    def __getitem__(self: seq, s: slice):
+        a, b = s
+        n = len(self)
+        if a < 0: a += n
+        if b < 0: b += n
+        if a > n: a = n
+        if b > n: b = n
+        return self._slice_direct(a, b)
+
+    def __getitem__(self: seq, s: lslice):
+        b = s.end
+        n = len(self)
+        if b < 0: b += n
+        if b > n: b = n
+        if self.len >= 0:
+            return seq(self.ptr, b)
+        else:
+            return seq(self.ptr + (n - b), -b)
+
+    def __getitem__(self: seq, s: rslice):
+        a = s.start
+        b = s.SAMHeaderTarget
+        n = len(self)
+        if a < 0: a += n
+        if a > n: a = n
+        if self.len >= 0:
+            return seq(self.ptr + a, n - a)
+        else:
+            return seq(self.ptr, -(n - a))
+
+    def _copy_to(self: seq, p: cobj):
+        if self.len >= 0:
+            str.memcpy(p, self.ptr, self.len)
+        else:
+            n = -self.len
+            for i in range(n):
+                p[i] = self.ptr[n - i - 1]
+
+    def __copy__(self: seq):
+        n = len(self)
+        p = cobj(n)
+        self._copy_to(p)
+        return seq(p, n)
+
+    def split(self: seq, k: int, step: int):
+        i = 0
+        while i + k <= len(self):
+            yield self._slice_direct(i,i+k)
+            i += step
+
+    def __iter__(self: seq):
+        return self.split(1, 1)
+
+    def __reversed__(self: seq):
+        i = len(self) - 1
+        while i >= 0:
+            yield self._slice_direct(i,i+1)
+            i -= 1
+
+    def kmers[K](self: seq, step: int):
+        for pos, kmer in self.kmers_with_pos[K](step):
+            yield kmer
+
+    def kmers_with_pos[K](self: seq, step: int):
+        # This function is intentionally written this way. It could be simplified,
+        # but this version was found to be the most performant due to inlining etc.
+        k = K.len()
+        if self.len >= 0:
+            n = self.len
+            i = 0
+            kmer = K()
+            refresh = True
+            while i + k <= n:
+                if refresh:
+                    sub = self._slice_direct(i,i+k)
+                    if not sub.N():
+                        kmer = K(sub, False)
+                        refresh = step >= k
+                        yield (i, kmer)
+                else:
+                    sub = self._slice_direct(i+k-step,i+k)
+                    if not sub.N():
+                        kmer <<= sub
+                        yield (i, kmer)
+                    else:
+                        refresh = True
+                i += step
+        else:
+            n = -self.len
+            i = 0
+            kmer = K()
+            refresh = True
+            while i + k <= n:
+                if refresh:
+                    sub = self._slice_direct(i,i+k)
+                    if not sub.N():
+                        kmer = K(sub, True)
+                        refresh = step >= k
+                        yield (i, kmer)
+                else:
+                    sub = self._slice_direct(i+k-step,i+k)
+                    if not sub.N():
+                        kmer <<= sub
+                        yield (i, kmer)
+                    else:
+                        refresh = True
+                i += step
+
+    def N(self: seq):
+        invalid = ('\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x00'
+                   '\x01\x01\x01\x00\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x00\x01\x01'
+                   '\x01\x00\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                   '\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01')
+        i = 0
+        n = len(self)
+        while i < n:
+            if invalid.ptr[int(self.ptr[i])]:
+                return i + 1
+            i += 1
+        return 0
+
+    def __invert__(self: seq):
+        return seq(self.ptr, -self.len)
+

@@ -12,18 +12,18 @@
   module L = Lexing
   module P = Grammar
 
-  open Core
+  (* open Core *)
 
   (* Used for tracking indentation levels *)
   type stack =
-    { stack: int Stack.t;
+    { stack: int Core.Stack.t;
       fname: string;
       mutable offset: int;
       mutable ignore_newline: int; }
 
   let stack_create fname =
-    let stack = Stack.create () in
-    Stack.push stack 0;
+    let stack = Core.Stack.create () in
+    Core.Stack.push stack 0;
     { stack = stack; offset = 0; ignore_newline = 0; fname }
 
   (* flags to set should we ignore newlines (e.g. within parentheses) or not *)
@@ -41,10 +41,11 @@
         len }
 
   let count_lines s =
-    String.fold ~init:0 ~f:(fun acc c -> if c = '\n' then acc + 1 else acc) s
+    Core.String.fold ~init:0 ~f:(fun acc c -> if c = '\n' then acc + 1 else acc) s
 
   (* given a (named) string (e.g. s'foo' or 'bar'), decide the proper token *)
   let seq_string pfx u st =
+    let open Core in
     let fix_literals ?(is_raw=false) s =
       let buf = Buffer.create (String.length s) in
       let rec scan i =
@@ -136,6 +137,7 @@ let ident = alpha alphanum*
 rule token state = parse
   | "" {
     (* TODO: Python-style indentation detection (i.e. more strict rules) *)
+    let open Core in
     let cur = state.offset in
     let last = Stack.top_exn state.stack in
     if cur < last then begin
@@ -200,7 +202,6 @@ and read state = parse
       | "pass"     -> P.PASS       (cur_pos state lexbuf ~len)
       | "while"    -> P.WHILE      (cur_pos state lexbuf ~len)
       | "type"     -> P.TYPE       (cur_pos state lexbuf ~len)
-      | "default"  -> P.DEFAULT    (cur_pos state lexbuf ~len)
       | "lambda"   -> P.LAMBDA     (cur_pos state lexbuf ~len)
       | "assert"   -> P.ASSERT     (cur_pos state lexbuf ~len)
       | "global"   -> P.GLOBAL     (cur_pos state lexbuf ~len)
@@ -210,7 +211,9 @@ and read state = parse
       | "typeof"   -> P.TYPEOF     (cur_pos state lexbuf ~len)
       | "__ptr__"  -> P.PTR        (cur_pos state lexbuf ~len)
       | "extend"   -> P.EXTEND     (cur_pos state lexbuf ~len)
-      | "cdef"     -> P.EXTERN     (cur_pos state lexbuf ~len)
+      | "cimport"  -> P.EXTERN     (cur_pos state lexbuf ~len, "c")
+      | "pyimport" -> P.EXTERN     (cur_pos state lexbuf ~len, "py")
+      | "pydef"    -> P.PYDEF      (cur_pos state lexbuf ~len)
       | "del"      -> P.DEL        (cur_pos state lexbuf ~len)
       | "None"     -> P.NONE       (cur_pos state lexbuf ~len)
       | "try"      -> P.TRY        (cur_pos state lexbuf ~len)
@@ -247,17 +250,17 @@ and read state = parse
   | ">>=" as op { P.RSHEQ (cur_pos state lexbuf ~len:3, op) }
   | "<<"  as op { P.B_LSH (cur_pos state lexbuf ~len:2, op) }
   | ">>"  as op { P.B_RSH (cur_pos state lexbuf ~len:2, op) }
-  | "&"   as op { P.B_AND (cur_pos state lexbuf, Char.to_string op) }
-  | "^"   as op { P.B_XOR (cur_pos state lexbuf, Char.to_string op) }
-  | "~"   as op { P.B_NOT (cur_pos state lexbuf, Char.to_string op) }
+  | "&"   as op { P.B_AND (cur_pos state lexbuf, Core.Char.to_string op) }
+  | "^"   as op { P.B_XOR (cur_pos state lexbuf, Core.Char.to_string op) }
+  | "~"   as op { P.B_NOT (cur_pos state lexbuf, Core.Char.to_string op) }
   | "||>" as op { P.PPIPE (cur_pos state lexbuf ~len:2, op) }
   | ">|"  as op { P.SPIPE (cur_pos state lexbuf ~len:2, op) }
   | "|>"  as op { P.PIPE  (cur_pos state lexbuf ~len:2, op) }
-  | "|"   as op { P.B_OR  (cur_pos state lexbuf, Char.to_string op) }
+  | "|"   as op { P.B_OR  (cur_pos state lexbuf, Core.Char.to_string op) }
   | ":="  as op { P.ASSGN_EQ  (cur_pos state lexbuf ~len:2, op) }
-  | "="   as op { P.EQ        (cur_pos state lexbuf, Char.to_string op) }
+  | "="   as op { P.EQ        (cur_pos state lexbuf, Core.Char.to_string op) }
   | "..." as op { P.ELLIPSIS  (cur_pos state lexbuf ~len:3, op) }
-  | "@"   as op { P.AT        (cur_pos state lexbuf, Char.to_string op) }
+  | "@"   as op { P.AT        (cur_pos state lexbuf, Core.Char.to_string op) }
 
   | "->"  { P.OF        (cur_pos state lexbuf ~len:2) }
   | ":"   { P.COLON     (cur_pos state lexbuf) }
@@ -272,19 +275,19 @@ and read state = parse
   | "//=" as op { P.FDIVEQ (cur_pos state lexbuf ~len:3, op) }
   | "/="  as op { P.DIVEQ  (cur_pos state lexbuf ~len:2, op) }
   | "%="  as op { P.MODEQ  (cur_pos state lexbuf ~len:2, op) }
-  | "+"   as op { P.ADD    (cur_pos state lexbuf, Char.to_string op) }
-  | "-"   as op { P.SUB    (cur_pos state lexbuf, Char.to_string op) }
+  | "+"   as op { P.ADD    (cur_pos state lexbuf, Core.Char.to_string op) }
+  | "-"   as op { P.SUB    (cur_pos state lexbuf, Core.Char.to_string op) }
   | "**"  as op { P.POW    (cur_pos state lexbuf ~len:2, op) }
-  | "*"   as op { P.MUL    (cur_pos state lexbuf, Char.to_string op) }
+  | "*"   as op { P.MUL    (cur_pos state lexbuf, Core.Char.to_string op) }
   | "=="  as op { P.EEQ    (cur_pos state lexbuf ~len:2, op) }
   | "!="  as op { P.NEQ    (cur_pos state lexbuf ~len:2, op) }
   | ">="  as op { P.GEQ    (cur_pos state lexbuf ~len:2, op) }
-  | ">"   as op { P.GREAT  (cur_pos state lexbuf, Char.to_string op) }
+  | ">"   as op { P.GREAT  (cur_pos state lexbuf, Core.Char.to_string op) }
   | "<="  as op { P.LEQ    (cur_pos state lexbuf ~len:2, op) }
-  | "<"   as op { P.LESS   (cur_pos state lexbuf, Char.to_string op) }
+  | "<"   as op { P.LESS   (cur_pos state lexbuf, Core.Char.to_string op) }
   | "//"  as op { P.FDIV   (cur_pos state lexbuf ~len:2, op) }
-  | "/"   as op { P.DIV    (cur_pos state lexbuf, Char.to_string op) }
-  | "%"   as op { P.MOD    (cur_pos state lexbuf, Char.to_string op) }
+  | "/"   as op { P.DIV    (cur_pos state lexbuf, Core.Char.to_string op) }
+  | "%"   as op { P.MOD    (cur_pos state lexbuf, Core.Char.to_string op) }
 
   | (int | hexint) as i
     { P.INT (cur_pos state lexbuf ~len:(String.length i), i) }
@@ -294,10 +297,10 @@ and read state = parse
 
   | ((int | hexint) as i) (intsuffix as k)
     { P.INT_S (cur_pos state lexbuf ~len:(String.length i),
-        (i, Char.to_string k)) }
+        (i, Core.Char.to_string k)) }
   | (float as f) (intsuffix as k)
     { P.FLOAT_S (cur_pos state lexbuf ~len:(String.length f),
-        (float_of_string f, Char.to_string k)) }
+        (float_of_string f, Core.Char.to_string k)) }
 
   | eof { P.EOF (cur_pos state lexbuf) }
   | _ {
@@ -318,6 +321,8 @@ and single_string state prefix = parse
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
+  | (([^ '\\' '\r' '\n' '\''] | escape)* as s) (newline | eof) { Err.SyntaxError ("string not closed", cur_pos state lexbuf) |> raise }
+
 and single_docstr state prefix = shortest
   | (([^ '\\'] | escape)* as s) "'''" {
     let lines = count_lines s in
@@ -326,11 +331,15 @@ and single_docstr state prefix = shortest
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
+  | (([^ '\\'] | escape)* as s) eof { Err.SyntaxError ("string not closed", cur_pos state lexbuf) |> raise }
+
 and double_string state prefix = parse
   | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) '"' {
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
+  | (([^ '\\' '\r' '\n' '\"'] | escape)* as s) (newline | eof) { Err.SyntaxError ("string not closed", cur_pos state lexbuf) |> raise }
+
 and double_docstr state prefix = shortest
   | (([^ '\\'] | escape)* as s) "\"\"\"" {
     let lines = count_lines s in
@@ -339,10 +348,11 @@ and double_docstr state prefix = shortest
     let len = (String.length s) + (String.length prefix) in
     seq_string prefix s (cur_pos state lexbuf ~len)
   }
+  | (([^ '\\'] | escape)* as s) eof { Err.SyntaxError ("string not closed", cur_pos state lexbuf) |> raise }
 
 and escaped_id state = parse
-  | (([^ '\r' '\n' '$' ])* as s) '$' {
+  | (([^ '\r' '\n' '$'])* as s) '$' {
     let len = (String.length s) in
     P.ID (cur_pos state lexbuf ~len, s)
   }
-
+  (* | _ { Err.SyntaxError ("Bad identifier", cur_pos state lexbuf) |> raise } *)

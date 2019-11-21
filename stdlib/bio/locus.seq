@@ -1,0 +1,30 @@
+type Locus(_tid: u32, _pos: u32):
+    def __init__(self: Locus, tid: int, pos: int) -> Locus:
+        return (u32(tid), u32(pos))
+
+    def __lt__(self: Locus, other: Locus):
+        return (self.tid, self.pos) < (other.tid, other.pos)
+
+    def __gt__(self: Locus, other: Locus):
+        return (self.tid, self.pos) > (other.tid, other.pos)
+
+    def __le__(self: Locus, other: Locus):
+        return (self.tid, self.pos) <= (other.tid, other.pos)
+
+    def __ge__(self: Locus, other: Locus):
+        return (self.tid, self.pos) >= (other.tid, other.pos)
+
+    @property
+    def tid(self: Locus):
+        return int(self._tid)
+
+    @property
+    def pos(self: Locus):
+        return abs(int(i32(int(self._pos))))
+
+    @property
+    def reversed(self: Locus):
+        return i32(int(self._pos)) < i32(0)
+
+    def __invert__(self: Locus):
+        return Locus(self.tid, self.pos if self.reversed else -self.pos)

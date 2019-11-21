@@ -103,29 +103,52 @@ TEST_P(SeqTest, Run) {
   const string basename = get<0>(GetParam());
   const bool debug = get<1>(GetParam());
   string filename = string(TEST_DIR) + "/" + basename;
-  SeqModule *module = parse(filename);
+  SeqModule *module = parse("", filename);
   execute(module, {}, {}, debug);
+  string output = result();
+  const bool assertsFailed = output.find("TEST FAILED") != string::npos;
+  EXPECT_FALSE(assertsFailed);
+  if (assertsFailed)
+    std::cerr << output << std::endl;
   vector<string> expects = findExpects(filename);
-  vector<string> results = splitLines(result());
-  EXPECT_EQ(results.size(), expects.size());
-  if (expects.size() == results.size()) {
-    for (unsigned i = 0; i < expects.size(); i++) {
-      EXPECT_EQ(results[i], expects[i]);
+  if (!expects.empty()) {
+    vector<string> results = splitLines(output);
+    EXPECT_EQ(results.size(), expects.size());
+    if (expects.size() == results.size()) {
+      for (unsigned i = 0; i < expects.size(); i++) {
+        EXPECT_EQ(results[i], expects[i]);
+      }
     }
   }
 }
 
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,
-    testing::Combine(testing::Values("core/align.seq", "core/arithmetic.seq",
-                                     "core/big.seq", "core/containers.seq",
-                                     "core/empty.seq", "core/exceptions.seq",
-                                     "core/formats.seq", "core/generators.seq",
-                                     "core/generics.seq", "core/helloworld.seq",
-                                     "core/kmers.seq", "core/match.seq",
-                                     "core/proteins.seq", "core/pybridge.seq",
+    testing::Combine(testing::Values("core/align.seq", "core/arguments.seq",
+                                     "core/arithmetic.seq", "core/big.seq",
+                                     "core/containers.seq", "core/empty.seq",
+                                     "core/exceptions.seq", "core/formats.seq",
+                                     "core/generators.seq", "core/generics.seq",
+                                     "core/helloworld.seq", "core/kmers.seq",
+                                     "core/match.seq", "core/proteins.seq",
                                      "core/serialization.seq",
                                      "core/trees.seq"),
+                     testing::Values(true, false)),
+    getTestNameFromParam);
+
+INSTANTIATE_TEST_SUITE_P(
+    StdlibTests, SeqTest,
+    testing::Combine(testing::Values("stdlib/str_test.seq",
+                                     "stdlib/math_test.seq",
+                                     "stdlib/itertools_test.seq",
+                                     "stdlib/bisect_test.seq",
+                                     "stdlib/sort_test.seq"),
+                     testing::Values(true, false)),
+    getTestNameFromParam);
+
+INSTANTIATE_TEST_SUITE_P(
+    PythonTests, SeqTest,
+    testing::Combine(testing::Values("python/pybridge.seq"),
                      testing::Values(true, false)),
     getTestNameFromParam);
 

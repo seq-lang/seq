@@ -103,7 +103,7 @@ Count bases
             case s'C...': return count_bases(s[1:]) + (0,1,0,0)
             case s'G...': return count_bases(s[1:]) + (0,0,1,0)
             case s'T...': return count_bases(s[1:]) + (0,0,0,1)
-            default: return BaseCount(0,0,0,0)
+            case _: return BaseCount(0,0,0,0)
 
 Spaced seed search
 ------------------
@@ -116,7 +116,7 @@ Spaced seed search
                 return True
             case t if len(t) >= 8:
                 return has_spaced_acgt(s[1:])
-            default:
+            case _:
                 return False
 
 Reverse-complement palindrome
@@ -130,7 +130,7 @@ Reverse-complement palindrome
                 return is_own_revcomp(s[1:-1])
             case s'':
                 return True
-            default:
+            case _:
                 return False
 
 Sequence alignment

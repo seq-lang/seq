@@ -1,0 +1,57 @@
+type range(lo: int, hi: int, step: int):
+
+# Magic methods
+
+    def __init__(self: range, lo: int, hi: int, step: int) -> range:
+        if step == 0:
+            raise ValueError("range() step argument must not be zero")
+        return (lo, hi, step)
+
+    def __init__(self: range, lo: int, hi: int) -> range:
+        return (lo, hi, 1)
+
+    def __init__(self: range, hi: int) -> range:
+        return (0, hi, 1)
+
+    def __getitem__(self: range, idx: int):
+        n = self.__len__()
+        if idx < 0:
+            idx += n
+        if idx < 0 or idx >= n:
+            raise IndexError("range object index out of range")
+        return self.lo + (idx * self.step)
+
+    def __contains__(self: range, idx: int):
+        lo, hi, step = self.lo, self.hi, self.step
+        if (step > 0 and not (lo <= idx < hi)) or (step < 0 and not (hi < idx <= lo)):
+            return False
+        return (idx - lo) % step == 0
+
+    def __iter__(self: range):
+        lo, hi, step = self.lo, self.hi, self.step
+        i = lo
+        if step > 0:
+            while i < hi:
+                yield i
+                i += step
+        else:
+            while i > hi:
+                yield i
+                i += step
+
+    def __len__(self: range):
+        lo, hi, step = self.lo, self.hi, self.step
+        if step > 0 and lo < hi:
+            return 1 + (hi - 1 - lo) // step
+        elif step < 0 and lo > hi:
+            return 1 + (lo - 1 - hi) // (-step)
+        else:
+            return 0
+
+    def __bool__(self: range):
+        return self.__len__() > 0
+
+    def __reversed__(self: range):
+        lo, hi, step = self.lo, self.hi, self.step
+        n = self.__len__()
+        return range(lo + (n - 1)*step, lo - step, -step).__iter__()

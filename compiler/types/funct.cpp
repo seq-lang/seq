@@ -10,18 +10,58 @@ types::FuncType::FuncType(std::vector<types::Type *> inTypes,
 
 unsigned types::FuncType::argCount() const { return (unsigned)inTypes.size(); }
 
+static types::OptionalType *asOpt(types::Type *type) {
+  return dynamic_cast<types::OptionalType *>(type);
+}
+
 Value *types::FuncType::call(BaseFunc *base, Value *self,
                              const std::vector<Value *> &args,
                              BasicBlock *block, BasicBlock *normal,
                              BasicBlock *unwind) {
+  LLVMContext &context = block->getContext();
+  std::vector<Value *> argsFixed;
+  assert(args.size() == inTypes.size());
+  for (unsigned i = 0; i < args.size(); i++) {
+    // implicit optional conversion allows cases like foo(x, y, z, None)
+    if (types::OptionalType *opt = ::asOpt(inTypes[i])) {
+      Value *arg = dyn_cast<ConstantPointerNull>(args[i]) ? nullptr : args[i];
+      if (arg) {
+        llvm::Type *t1 = opt->getBaseType(0)->getLLVMType(context);
+        llvm::Type *t2 = arg->getType();
+        // this can only happen when passing a variable None as a POD optional,
+        // since the type checker allows 'NoneType' arguments on any optional.
+        if (t1 != t2)
+          arg = nullptr;
+      }
+      argsFixed.push_back(opt->make(arg, block));
+    } else {
+      argsFixed.push_back(args[i]);
+    }
+  }
+
   IRBuilder<> builder(block);
-  return normal ? (Value *)builder.CreateInvoke(self, normal, unwind, args)
-                : builder.CreateCall(self, args);
+  return normal ? (Value *)builder.CreateInvoke(self, normal, unwind, argsFixed)
+                : builder.CreateCall(self, argsFixed);
 }
 
 Value *types::FuncType::defaultValue(BasicBlock *block) {
   return ConstantPointerNull::get(
       cast<PointerType>(getLLVMType(block->getContext())));
+}
+
+void types::FuncType::initOps() {
+  if (!vtable.magic.empty())
+    return;
+
+  vtable.magic = {
+      {"__init__",
+       {PtrType::get(Byte)},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+       },
+       false},
+  };
 }
 
 bool types::FuncType::is(Type *type) const {
@@ -44,6 +84,20 @@ types::Type *types::FuncType::getBaseType(unsigned idx) const {
   return idx ? inTypes[idx - 1] : outType;
 }
 
+static bool compatibleArgType(types::Type *got, types::Type *exp) {
+  if (::asOpt(exp))
+    return got == types::RefType::none() || types::is(exp->getBaseType(0), got);
+  else
+    return types::is(got, exp);
+}
+
+static std::string expectedTypeName(types::Type *exp) {
+  if (::asOpt(exp))
+    return exp->getBaseType(0)->getName();
+  else
+    return exp->getName();
+}
+
 types::Type *types::FuncType::getCallType(const std::vector<Type *> &inTypes) {
   if (this->inTypes.size() != inTypes.size())
     throw exc::SeqException("expected " + std::to_string(this->inTypes.size()) +
@@ -51,10 +105,10 @@ types::Type *types::FuncType::getCallType(const std::vector<Type *> &inTypes) {
                             std::to_string(inTypes.size()));
 
   for (unsigned i = 0; i < inTypes.size(); i++)
-    if (!types::is(inTypes[i], this->inTypes[i]))
+    if (!compatibleArgType(inTypes[i], this->inTypes[i]))
       throw exc::SeqException("expected function input type '" +
-                              this->inTypes[i]->getName() + "', but got '" +
-                              inTypes[i]->getName() + "'");
+                              expectedTypeName(this->inTypes[i]) +
+                              "', but got '" + inTypes[i]->getName() + "'");
 
   return outType;
 }

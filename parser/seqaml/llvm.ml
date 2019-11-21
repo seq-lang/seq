@@ -91,6 +91,7 @@ module Type = struct
   (* Getters & Setters *)
 
   let expr_type = foreign "get_type" (Types.expr @-> returning t)
+  let is_ref_type = foreign "is_ref_type" (Types.typ @-> returning Ctypes.bool)
 
   let set_cls_args typ names types =
     let rt = record names types "" in
@@ -198,7 +199,6 @@ module Expr = struct
     let arr, len = list_to_carr t exprs in
     fn arr len
 
-  let slice = foreign "array_slice_expr" (t @-> t @-> t @-> returning t)
   let lookup = foreign "array_lookup_expr" (t @-> t @-> returning t)
   let alloc_array = foreign "array_expr_alloca" (Types.typ @-> t @-> returning t)
 
@@ -208,9 +208,10 @@ module Expr = struct
     fn typ arr len
 
   let call ?(kind = "call") expr args =
-    let fn = foreign (kind ^ "_expr") (t @-> ptr t @-> size_t @-> returning t) in
-    let arr, len = list_to_carr t args in
-    fn expr arr len
+    let names = array_of_string_list (List.map args ~f:fst) in
+    let arr, len = list_to_carr t (List.map args ~f:snd) in
+    let fn = foreign (kind ^ "_expr_with_names") (t @-> ptr t @-> ptr cstring @-> size_t @-> returning t) in
+    fn expr arr (CArray.start names) len
 
   let element elem what =
     foreign "get_elem_expr" (t @-> cstring @-> returning t) elem (strdup what)
@@ -418,11 +419,17 @@ module Func = struct
     List.rev names |> List.tl_exn |> List.rev
 
   let get_attrs f =
-    let s = foreign "get_func_attrs" (t @-> returning string) f in
+    let s = foreign "get_func_attrs" (Expr.t @-> returning string) f in
     String.split ~on:'\b' s
 
   let set_attr f at =
     foreign "set_func_attr" (t @-> cstring @-> returning void) f (strdup at)
+
+   let set_defaults f defs =
+      let arr, len = list_to_carr Types.expr defs in
+      foreign "set_func_defaults"
+        (t @-> ptr Types.expr @-> size_t @-> returning void)
+        f arr len
 
   let set_return = foreign "set_func_return" (t @-> Types.expr @-> returning void)
   let set_prefetch = foreign "set_func_prefetch" (t @-> Types.stmt @-> returning void)
@@ -481,6 +488,10 @@ module Generics = struct
   module Type = struct
     let set_number = foreign "set_ref_generics" (Types.typ @-> int @-> returning void)
     let get = foreign "get_ref_generic" (Types.typ @-> int @-> returning Types.typ)
+
+    let get_names f =
+      let num = foreign "get_ref_generic_count" (Types.typ @-> returning size_t) f in
+      List.init (Unsigned.Size_t.to_int num) ~f:(get f)
 
     let set_name f idx n =
       foreign

@@ -1,0 +1,26 @@
+import heapq
+import random
+
+def check_invariant(heap: list[int]):
+    """
+    check_invariant(self, heap)
+
+    Check the heap invariant
+    """
+    for pos, item in enumerate(heap):
+        if pos: # pos 0 has no parent
+            parentpos = (pos-1) >> 1
+            assert heap[parentpos] <= item
+
+
+@test
+def heappush():
+    heap = list[int]()
+    data = list[int]()
+    check_invariant(heap)
+    for i in range(256):
+        item = i
+        data.append(item)
+        heapq.heappush(heap, item)
+        check_invariant(heap)
+heappush()

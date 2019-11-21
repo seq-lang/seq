@@ -85,14 +85,15 @@
 
 /* keywords */
 %token <Ast.Ann.t> FOR WHILE CONTINUE BREAK           // loops
-%token <Ast.Ann.t> IF ELSE ELIF MATCH CASE AS DEFAULT // conditionals
-%token <Ast.Ann.t> DEF RETURN YIELD EXTERN LAMBDA     // functions
+%token <Ast.Ann.t> IF ELSE ELIF MATCH CASE AS         // conditionals
+%token <Ast.Ann.t> DEF RETURN YIELD LAMBDA PYDEF      // functions
 %token <Ast.Ann.t> TYPE CLASS TYPEOF EXTEND PTR       // types
 %token <Ast.Ann.t> IMPORT FROM GLOBAL IMPORT_CONTEXT  // variables
 %token <Ast.Ann.t> PRINT PASS ASSERT DEL              // keywords
 %token <Ast.Ann.t> TRUE FALSE NONE                    // booleans
 %token <Ast.Ann.t> TRY EXCEPT FINALLY THROW WITH      // exceptions
 %token <Ast.Ann.t> PREFETCH                           // prefetch
+%token <Ast.Ann.t * string> EXTERN
 
 /* operators */
 %token<Ast.Ann.t * string> EQ ASSGN_EQ ELLIPSIS // =, :=, ...
@@ -446,10 +447,11 @@ statement:
   | MATCH expr COLON NL INDENT case_suite DEDENT
     {[ pos $1 $4,
        Match ($2, $6) ]}
-  // Try statement
-  | try_statement
   // Function and clas definitions
   | func_statement
+    { $1 }
+  // Try statement
+  | try_statement
   | class_statement
   | decl_statement
   | with_statement
@@ -544,20 +546,23 @@ type_alias:
       TypeAlias (snd $2, $4) }
 // Typed argument rule where type is optional (name [ : type])
 typed_param:
-  | ID param_type?
+  | ID param_type? default_val?
     { let last = Option.value_map $2 ~f:fst ~default:(fst $1) in
       pos (fst $1) last,
-      { name = snd $1; typ = $2 } }
+      { name = snd $1; typ = $2; default = $3 } }
 // Type parameter rule (: type)
 param_type:
   | COLON expr
+    { $2 }
+default_val:
+  | EQ expr
     { $2 }
 
 // Expressions and assignments
 decl_statement:
   | ID COLON expr NL
     { pos (fst $1) (fst $3),
-      Generic (Declare { name = snd $1; typ = Some($3) }) }
+      Generic (Declare { name = snd $1; typ = Some($3); default = None }) }
 assign_statement:
   // Assignment for modifying operators
   // (+=, -=, *=, /=, %=, **=, //=)
@@ -686,10 +691,6 @@ elif_suite:
     { (pos $1 $3, { cond = Some $2; cond_stmts = $4 }) :: rest }
 // Pattern case suites
 case_suite:
-  // default:
-  | DEFAULT COLON suite
-    {[ pos $1 $2,
-       { pattern = WildcardPattern None; case_stmts = $3 } ]}
   // case ...:
   | case
     {[ $1 ]}
@@ -699,9 +700,12 @@ case_suite:
 case:
   // case pattern
   | CASE separated_nonempty_list(OR, case_type) COLON suite
-    { let pattern =
-        if List.length $2 = 1 then List.hd_exn $2
-        else OrPattern $2
+    {
+      let pattern = match $2 with
+        | [WildcardPattern (Some "_")] ->
+          WildcardPattern None
+        | [p] -> p
+        | l -> OrPattern l
       in
       pos $1 $3,
       { pattern; case_stmts = $4 } }
@@ -851,15 +855,16 @@ with_clause:
 
 // Function statement
 func_statement:
-  | func { $1 }
+  | func { [$1] }
+  | pyfunc { $1 }
   | decorator+ func
     {
       let fn = match snd $2 with
         | Generic Function f -> f
         | _ -> ierr "decorator parsing failure (grammar)"
       in
-      fst $2,
-      Generic (Function { fn with fn_attrs = $1 })
+      [ fst $2,
+       Generic (Function { fn with fn_attrs = $1 }) ]
     }
 
 // Function definition
@@ -867,67 +872,94 @@ func:
   // Seq function (def foo [ [type+] ] (param+) [ -> return ])
   | DEF; name = ID;
     intypes = generic_list?;
-    LP fn_args = separated_list(COMMA, func_param); RP
+    LP fn_args = separated_list(COMMA, typed_param); RP
     typ = func_ret_type?;
     COLON;
     s = suite
     { let fn_generics = Option.value intypes ~default:[] in
       pos $1 $8,
       Generic (Function
-        { fn_name = { name = snd name; typ };
+        { fn_name = { name = snd name; typ; default = None };
           fn_generics;
           fn_args;
           fn_stmts = s;
           fn_attrs = [] }) }
-  // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
-  | EXTERN; dylib = dylib_spec?; name = ID;
-    LP params = separated_list(COMMA, extern_param); RP
-    typ = func_ret_type?; NL
-    { let typ = match typ with
-        | Some typ -> typ
-        | None -> $6, Id("void")
-      in
-      pos $1 (fst typ),
-      Extern ("c", dylib, snd name,
-        (fst name, { name = snd name; typ = Some(typ) }), params) }
-  | EXTERN; dylib = dylib_spec?; name = ID; AS alt_name = ID
-    LP params = separated_list(COMMA, extern_param); RP
-    typ = func_ret_type?; NL
-    { let typ = match typ with
-        | Some typ -> typ
-        | None -> $6, Id("void")
-      in
-      pos $1 (fst typ),
-      Extern ("c", dylib, snd name,
-        (fst name, { name = snd alt_name; typ = Some(typ) }), params) }
+  | extern { $1 }
+// Extern function (extern lang [ (dylib) ] foo (param+) -> return)
+extern:
+  | from = extern_from?; lang = EXTERN; what = separated_nonempty_list(COMMA, extern_what); NL
+    {
+      pos (match from with Some (p, _) -> p | None -> fst lang) $4,
+      ImportExtern ( List.map what ~f:(fun e -> { e with lang = snd lang; e_from = from }) )
+    }
+extern_what:
+  | name = ID; LP; p = separated_list(COMMA, extern_param); RP; typ = func_ret_type?;
+    eas = extern_as?
+  {
+    let typ = match typ with
+      | Some typ -> typ
+      | None -> $4, Id "void"
+    in
+    { lang = ""
+    ; e_from = None
+    ; e_name = { name = snd name; typ = Some typ; default = None }
+    ; e_args = p
+    ; e_as = Option.map eas ~f:snd
+    }
+  }
+extern_from:
+  | FROM dot_term
+    { pos $1 (fst $2), snd $2 }
+extern_as:
+  | AS ID { $2 }
 
 // Extern paramerers
 extern_param:
   | expr
     { fst $1,
-      { name = ""; typ = Some $1 } }
+      { name = ""; typ = Some $1; default = None } }
   | ID param_type
     { pos (fst $1) (fst $2),
-      { name = snd $1; typ = Some $2 } }
+      { name = snd $1; typ = Some $2; default = None } }
 // Generic specifiers
 generic_list:
   | LS; separated_nonempty_list(COMMA, ID); RS
     { $2 }
-// Parameter rule (a, a: type, a = b)
-func_param:
-  | typed_param
-    { $1 }
-  | ID EQ expr
-    { noimp "NamedArg"(*NamedArg ($1, $3)*) }
 // Return type rule (-> type)
 func_ret_type:
   | OF; expr
     { $2 }
-// dylib specification
-dylib_spec:
-  | LP STRING RP
-    { snd $2 }
 
+
+pyfunc:
+  // Seq function (def foo [ [type+] ] (param+) [ -> return ])
+  | PYDEF; name = ID;
+    LP fn_args = separated_list(COMMA, typed_param); RP
+    typ = func_ret_type?;
+    COLON;
+    s = suite
+    { let str = Util.ppl ~sep:"\n" s ~f:(Ast.Stmt.to_string ~pythonic:true ~indent:1) in
+      let p = $7 in
+      (* py.exec ("""def foo(): [ind] ... """) *)
+      (* from __main__ pyimport foo () -> ret *)
+      let v = p, String
+        (sprintf "def %s(%s):\n%s\n"
+          (snd name)
+          (Util.ppl fn_args ~f:(fun (_, { name; _ }) -> name))
+          str) in
+      let s = p, Call (
+        (p, Id "_py_exec"),
+        [p, { name = None; value = v }]) in
+      let typ = Option.value typ ~default:($5, Id "pyobj") in
+      let s' = p, ImportExtern
+        [ { lang = "py"
+          ; e_name = { name = snd name; typ = Some typ; default = None }
+          ; e_args = []
+          ; e_as = None
+          ; e_from = Some (p, Id "__main__") } ]
+      in
+      [ p, Expr s; s' ]
+    }
 
 // Class statement
 class_statement:
@@ -972,7 +1004,9 @@ typ:
       Generic (Type { (snd $1) with members = List.filter_opt members }) }
 type_head:
   | TYPE ID LP separated_list(COMMA, typed_param) RP
-    { pos $1 $5,
+    { List.iter $4 ~f:(fun (_, x) ->
+      if is_some x.default then Err.serr ~pos:(pos $1 $5) "type definitions cannot have default arguments");
+      pos $1 $5,
       { class_name = snd $2;
         generics = [];
         args = Some $4;
@@ -987,11 +1021,13 @@ extend:
 // Class suite members
 class_member:
   // Empty statements
-  | PASS NL { None }
+  | PASS NL | STRING NL { None }
   // TODO later: | class_statement
   // Functions
   | func_statement
-    { Some (fst $1, match snd $1 with Generic c -> c | _ -> assert false) }
+    { match $1 with
+      | [l] -> Some (fst l, match snd l with Generic c -> c | _ -> assert false)
+      | l -> Err.serr ~pos:(fst @@ List.hd_exn l) "no pydefs allowed in classes" }
 
 // Decorators
 decorator:

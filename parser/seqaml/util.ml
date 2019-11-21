@@ -23,6 +23,23 @@ let dbg fmt =
     (defined via environmental variable [SEQ_PATH]). *)
 let get_from_stdlib ?(ext = ".seq") res =
   let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
+  let path = Filename.realpath Sys.argv.(0) in
+  let path = Filename.dirname @@ Filename.dirname path in
+  let seqpath = sprintf "%s:%s/stdlib" seqpath path in
+  (* let other_paths  *)
   let paths = String.split seqpath ~on:':' in
-  List.map paths ~f:(fun dir -> sprintf "%s/%s%s" dir res ext)
-  |> List.find ~f:Caml.Sys.file_exists
+  List.find_map paths ~f:(fun dir ->
+    (* first look for res.ext  *)
+    let f = sprintf "%s/%s%s" dir res ext in
+    if Caml.Sys.file_exists f then Some f else (
+      let f = sprintf "%s/%s/__init__%s" dir res ext in
+      if Caml.Sys.file_exists f then Some f else None
+    ))
+
+let unindent s =
+  let s = String.split ~on:'\n' s |> List.filter ~f:(fun s -> String.length s > 0) in
+  match s with
+  | a :: l ->
+    let l = String.take_while a ~f:(fun s -> s = ' ') |> String.length in
+    List.map s ~f:(fun s -> String.drop_prefix s l) |> String.concat ~sep:"\n"
+  | [] -> ""

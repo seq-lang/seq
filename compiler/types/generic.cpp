@@ -328,7 +328,11 @@ static bool findInTypeHelper(types::GenericType *gen, types::Type *type,
 }
 
 bool types::GenericType::findInType(types::Type *type,
-                                    std::vector<unsigned> &path) {
+                                    std::vector<unsigned> &path,
+                                    bool unwrapOptionals) {
+  if (unwrapOptionals)
+    if (auto *opt = dynamic_cast<types::OptionalType *>(type))
+      type = opt->getBaseType(0);
   std::vector<types::Type *> seen;
   return findInTypeHelper(this, type, path, seen);
 }
@@ -418,7 +422,8 @@ Generic *Generic::realizeGeneric(std::vector<types::Type *> types) {
 
 std::vector<types::Type *>
 Generic::deduceTypesFromArgTypes(const std::vector<types::Type *> &inTypes,
-                                 const std::vector<types::Type *> &argTypes) {
+                                 const std::vector<types::Type *> &argTypes,
+                                 bool unwrapOptionals) {
   assert(numGenerics() > 0 && !realized());
 
   if (argTypes.size() != inTypes.size())
@@ -437,8 +442,11 @@ Generic::deduceTypesFromArgTypes(const std::vector<types::Type *> &inTypes,
       path.clear();
       types::Type *inType = inTypes[j];
 
-      if (getGeneric(i)->findInType(inType, path)) {
+      if (getGeneric(i)->findInType(inType, path, unwrapOptionals)) {
         types::Type *argType = argTypes[j];
+        if (inType->asGen() &&
+            argType->hasMethod("__iter__")) // implicit generator conversion
+          argType = argType->magicOut("__iter__", {});
 
         /*
          * OK, we found the generic type nested in `inType`;
@@ -463,11 +471,18 @@ Generic::deduceTypesFromArgTypes(const std::vector<types::Type *> &inTypes,
     }
   }
 
-  for (auto *type : types) {
-    if (!type)
+  for (auto *&type : types) {
+    if (!type) {
+      if (auto *func = dynamic_cast<Func *>(this)) {
+        if (func->hasAttribute("deduceall")) {
+          type = types::Int;
+          continue;
+        }
+      }
       throw exc::SeqException(
           "cannot deduce all type parameters for generic '" + genericName() +
           "'");
+    }
   }
 
   return types;

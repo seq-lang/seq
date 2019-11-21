@@ -126,8 +126,8 @@ class SeqLexer(RegexLexer):
             'assert', 'async', 'await', 'break', 'continue', 'del', 'elif',
             'else', 'except', 'finally', 'for', 'global', 'if', 'lambda', 'pass',
             'raise', 'nonlocal', 'return', 'try', 'while', 'yield', 'yield from',
-            'as', 'with', 'match', 'case', 'default', 'cdef', 'extern', 'prefetch',
-            'type', 'extend', 'print'), suffix=r'\b'),
+            'as', 'with', 'match', 'case', 'pydef', 'extern', 'prefetch',
+            'type', 'extend', 'print', 'cimport', 'pyimport'), suffix=r'\b'),
          Keyword),
         (words((
             'True', 'False', 'None'), suffix=r'\b'),
@@ -143,7 +143,7 @@ class SeqLexer(RegexLexer):
                 'open', 'ord', 'pow', 'property', 'range', 'repr', 'reversed',
                 'round', 'set', 'setattr', 'slice', 'sorted', 'staticmethod', 'str',
                 'sum', 'super', 'tuple', 'vars', 'zip', 'seq', 'byte', 'ptr', 'array',
-                'Kmer', 'Int', 'UInt']
+                'Kmer', 'Int', 'UInt', 'optional']
 
     tokens['builtins'] = [
         (words(seqwords, prefix=r'(?<!\.)', suffix=r'\b'),

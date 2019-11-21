@@ -1,0 +1,153 @@
+# Seq runtime functions
+cimport seq_alloc(int) -> cobj
+cimport seq_alloc_atomic(int) -> cobj
+cimport seq_realloc(cobj, int) -> cobj
+cimport seq_free(cobj)
+cimport seq_gc_add_roots(cobj, cobj)
+cimport seq_gc_remove_roots(cobj, cobj)
+cimport seq_gc_clear_roots()
+cimport seq_gc_exclude_static_roots(cobj, cobj)
+cimport seq_strdup(cobj) -> str
+cimport seq_check_errno() -> str
+cimport seq_stdin() -> cobj
+cimport seq_stdout() -> cobj
+cimport seq_stderr() -> cobj
+cimport seq_env() -> ptr[cobj]
+cimport seq_time () -> int
+
+# <string.h>
+cimport strtoll(cobj, ptr[cobj], i32) -> int
+cimport strtod(cobj, ptr[cobj]) -> float
+cimport strlen(cobj) -> int
+
+# <ctype.h>
+cimport isdigit(int) -> int
+cimport isspace(int) -> int
+cimport isupper(int) -> int
+cimport islower(int) -> int
+cimport toupper(int) -> int
+cimport tolower(int) -> int
+cimport isalnum(int) -> int
+cimport isalpha(int) -> int
+cimport istitle(int) -> int
+
+# <math.h>
+cimport ceil(float) -> float
+cimport floor(float) -> float
+cimport fabs(float) -> float
+cimport fmod(float, float) -> float
+cimport exp(float) -> float
+cimport expm1(float) -> float
+cimport ldexp(float, int) -> float
+cimport log(float) -> float
+cimport log2(float) -> float
+cimport log10(float) -> float
+cimport sqrt(float) -> float
+cimport pow(float, float) -> float
+cimport round(float) -> float
+cimport acos(float) -> float
+cimport asin(float) -> float
+cimport atan(float) -> float
+cimport atan2(float, float) -> float
+cimport cos(float) -> float
+cimport sin(float) -> float
+cimport tan(float) -> float
+cimport cosh(float) -> float
+cimport sinh(float) -> float
+cimport tanh(float) -> float
+cimport acosh(float) -> float
+cimport asinh(float) -> float
+cimport atanh(float) -> float
+cimport copysign(float, float) -> float
+cimport log1p(float) -> float
+cimport trunc(float) -> float
+cimport log2(float) -> float
+cimport erf(float) -> float
+cimport erfc(float) -> float
+cimport tgamma(float) -> float
+cimport lgamma(float) -> float
+cimport remainder(float, float) -> float
+cimport frexp(float, ptr[Int[32]]) -> float
+cimport modf(float, ptr[float]) -> float
+
+# <stdio.h>
+cimport ferror(cobj) -> i32
+cimport fgetc(cobj) -> i32
+cimport fopen(cobj, cobj) -> cobj
+cimport fclose(cobj) -> int
+cimport fwrite(cobj, int, int, cobj) -> int
+cimport ftell(cobj) -> int
+cimport fseek(cobj, int, i32) -> i32
+cimport fgets(cobj, int, cobj) -> cobj
+cimport getline(ptr[cobj], n: ptr[int], file: cobj) -> int
+
+# <stdlib.h>
+cimport exit(int)
+cimport system(cmd: cobj) -> int
+cimport free(cobj)
+cimport atoi(cobj) -> int
+
+# <dlfcn.h>
+cimport dlerror() -> cobj
+cimport dlopen(cobj, int) -> cobj
+cimport dlsym(cobj, cobj) -> cobj
+cimport dlclose(cobj) -> i32
+RTLD_NOW = 2
+RTLD_GLOBAL = 8
+
+# <zlib.h>
+cimport gzopen(cobj, cobj) -> cobj
+cimport gzerror(cobj, ptr[i32]) -> cobj
+cimport gzgetc(cobj) -> i32
+cimport gzclose(cobj) -> int
+cimport gzread(cobj, cobj, u32) -> i32
+cimport gzwrite(cobj, cobj, u32) -> i32
+cimport gztell(cobj) -> int
+cimport gzseek(cobj, int, i32) -> int
+
+# Seq Alignment
+type CIGAR(value: ptr[u32], len: int)
+type Alignment(_cigar: CIGAR, _score: int)
+type pseq(len: int, ptr: cobj)
+cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
+cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
+cimport seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
+cimport seq_align_global(seq, seq, ptr[i8], i8, i8, int, ptr[Alignment])
+cimport seq_align_default(seq, seq, ptr[Alignment])
+cimport seq_palign(pseq, pseq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
+cimport seq_palign_dual(pseq, pseq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
+cimport seq_palign_global(pseq, pseq, ptr[i8], i8, i8, int, ptr[Alignment])
+cimport seq_palign_default(pseq, pseq, ptr[Alignment])
+
+# <htslib.h>
+cimport hts_open(cobj, cobj) -> cobj
+cimport hts_close(cobj)
+cimport hts_idx_destroy(cobj)
+cimport hts_itr_destroy(cobj)
+cimport sam_index_load(cobj, cobj) -> cobj
+cimport sam_hdr_read(cobj) -> cobj
+cimport sam_itr_querys(cobj, cobj, cobj) -> cobj
+cimport sam_read1(cobj, cobj, cobj) -> i32
+cimport bam_init1() -> cobj
+cimport bam_cigar2qlen(int, ptr[u32]) -> int
+cimport bam_cigar2rlen(int, ptr[u32]) -> int
+cimport bam_aux2i(ptr[u8]) -> int
+cimport bam_aux2f(ptr[u8]) -> float
+cimport bam_aux2A(ptr[u8]) -> byte
+cimport bam_auxB_len(ptr[u8]) -> u32
+cimport bam_auxB2i(ptr[u8], idx: u32) -> int
+cimport bam_auxB2f(ptr[u8], idx: u32) -> float
+cimport bam_hdr_destroy(cobj)
+cimport bam_destroy1(cobj)
+
+# Seq HTSlib
+type SAMHeaderTarget(_name: str, _len: int)
+cimport seq_hts_get_name(cobj) -> str
+cimport seq_hts_get_seq(cobj) -> seq
+cimport seq_hts_get_qual(cobj) -> str
+cimport seq_hts_get_cigar(cobj) -> CIGAR
+cimport seq_hts_get_aux(cobj) -> str
+cimport seq_hts_aux_get(str, str) -> ptr[u8]
+cimport seq_hts_get_targets(cobj) -> array[SAMHeaderTarget]
+cimport seq_hts_sam_itr_next(cobj, cobj, cobj) -> int
+cimport seq_hts_get_seq(cobj) -> seq
