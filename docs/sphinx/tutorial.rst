@@ -307,7 +307,7 @@ The ``ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``ptr[byte]
 Seq also provides ``__ptr__`` for obtaining a pointer to a variable (as in ``__ptr__(myvar)``) and ``__array__`` for declaring stack-allocated arrays (as in ``__array__[int](10)``).
 
 C/C++ and Python interoperability
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Seq enables seamless interoperability with C and C++ via ``cimport`` functions as such:
 

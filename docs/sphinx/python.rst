@@ -62,7 +62,9 @@ This makes calling Python modules like NumPy very easy:
 
     print myrange(5)  # [0, 1, 2, 3, 4]
 
-WARNING: Currently, any code within a ``pydef`` block must be valid Seq code.
-Thus, words such as ``extend``, ``match``, ``case``, ``pydef``, ``cimport``, ``pyimport``, ``type``, ``typeof`` and ``prefetch``
-are reserved and you will not be abel to use such words as identifiers in your Python code.
-This restriction will be lifted in later versions of Seq.
+
+.. caution::
+    Currently, any code within a ``pydef`` block must be valid Seq code. Thus, words such as
+    ``extend``, ``match``, ``case``, ``pydef``, ``cimport``, ``pyimport``, ``type``, ``typeof``
+    and ``prefetch`` are reserved and you will not be able to use such words as identifiers in
+    your Python code. This restriction will be lifted in later versions of Seq.
