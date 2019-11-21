@@ -25,6 +25,7 @@ public:
 
   llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
+  void initOps() override;
   bool is(Type *type) const override;
   unsigned numBaseTypes() const override;
   Type *getBaseType(unsigned idx) const override;

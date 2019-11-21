@@ -36,10 +36,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       | While p -> parse_while ctx pos p
       | For p -> parse_for ~ctx pos p
       | Match p -> parse_match ctx pos p
-      | Extern p -> parse_extern ctx pos p ~toplevel
       | Extend p -> parse_extend ctx pos p ~toplevel
       | Import p -> parse_import ctx pos p ~toplevel
       | ImportPaste p -> parse_impaste ctx pos p
+      | ImportExtern p -> parse_extern ctx pos p ~toplevel
       | Pass p -> parse_pass ctx pos p
       | Try p -> parse_try ctx pos p
       | Throw p -> parse_throw ctx pos p
@@ -56,6 +56,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   (** [parse_module ~ctx stmts] parses a module.
       A module is just a simple list [stmts] of statements. *)
   and parse_module ?(jit = false) ~(ctx : Ctx.t) stmts =
+    Util.dbg "%s\n" @@ Util.ppl ~sep:"\n" stmts ~f:Ast.Stmt.to_string;
     let stmts =
       if jit
       then
@@ -91,10 +92,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     match lhs with
     | pos, Id var ->
       (match jit && toplevel, Hashtbl.find ctx.map var, shadow with
-      | _, None, Update -> serr ~pos "%s not found" var
+      | _, None, Update -> serr ~pos "identifier '%s' not found" var
       | false, Some ((Ctx_namespace.Var _, { base; global; _ }) :: _), Update
         when ctx.base <> base && not global ->
-        serr ~pos "%s not found" var
+        serr ~pos "identifier '%s' not found" var
       | _, Some ((Ctx_namespace.Var v, { base; global; toplevel; _ }) :: _), _
         when ctx.base = base || global ->
         if is_some typ
@@ -141,6 +142,13 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       (* a.x = b *)
       let rh_expr = E.parse ~ctx rhs in
       Llvm.Stmt.assign_member (E.parse ~ctx lh_lhs) lh_rhs rh_expr
+    (* | pos, Index (var_expr, ((_, Slice _) as slice_expr)) ->
+      (* a[slice(x)] = b -> a.__setitem__(slice(x), b) *)
+      let expr =
+        E.parse ~ctx
+        @@ Ast.(e_call ~pos (e_dot ~pos var_expr "__setitem__") [slice_expr; rhs])
+      in
+      Llvm.Stmt.expr expr *)
     | pos, Index (var_expr, index_expr) ->
       (* a[x] = b *)
       let var_expr = E.parse ~ctx var_expr in
@@ -149,7 +157,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
     | _ -> serr ~pos "invalid assignment statement"
 
-  and parse_declare ctx pos ~toplevel ~jit { name; typ } =
+  and parse_declare ctx pos ~toplevel ~jit { name; typ; _ } =
     if jit then serr ~pos "declarations not yet supported in JIT mode";
     match Hashtbl.find ctx.map name with
     | Some ((Ctx_namespace.Var _, { base; global; toplevel; _ }) :: _)
@@ -286,33 +294,101 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             | None -> ()));
     match_stmt
 
-  and parse_extern ctx
-                   pos
-                   ~toplevel
-                   (lang, dylib, ctx_name, (_, { name; typ }), args) =
-    if lang <> "c" then serr ~pos "only cdef externs are currently supported";
-    let names, types =
-      List.map args ~f:(fun (_, { name; typ }) ->
-          name, E.parse_type ~ctx (Option.value_exn typ))
-      |> List.unzip
-    in
-    let fn = Llvm.Func.func name in
-    Llvm.Func.set_args fn names types;
-    Llvm.Func.set_extern fn;
-    let typ = E.parse_type ~ctx (Option.value_exn typ) in
-    Llvm.Func.set_type fn typ;
-    let names = List.map args ~f:(fun (_, x) -> x.name) in
-    Ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Ctx_namespace.Func (fn, names));
-    Llvm.Stmt.func fn
+  and parse_extern ctx pos ~toplevel ext =
+    List.iter ext ~f:(fun s ->
+      let s' = parse_extern_single ctx pos ~toplevel s in
+      ignore @@ finalize ~ctx s' pos);
+    Llvm.Stmt.pass ()
+
+  and parse_extern_single ctx pos ~toplevel ext =
+    let ctx_name = Option.value ext.e_as ~default:ext.e_name.name in
+    let open Ast in
+    match ext.lang, ext.e_from with
+    | "py", Some from ->
+      let rhs =
+        (* e_annotate ~pos @@ *)
+        e_call (* py_import(lib)[fn].call( x.__to_py__() ) *)
+          ( e_dot
+            ( e_index
+              (e_call (e_id "_py_import") [e_string (Ast.Expr.to_string from)])
+              (e_string ext.e_name.name) )
+            "call" )
+          [e_call (e_dot (e_id "x") "__to_py__") []]
+      in
+      let rhs =
+        match Ast.Expr.to_string (Option.value_exn ext.e_name.typ) with
+        | "void" -> rhs
+        | _ -> (* return typ.__from_py__ (rhs) *)
+          (* e_annotate ~pos @@ *)
+          e_call (e_dot (Option.value_exn ext.e_name.typ) "__from_py__") [rhs]
+      in
+      (* @pyhandle def y ( x : [tuple] ) -> typ: return rhs *)
+      parse_function ctx pos ~toplevel
+        { fn_name = { ext.e_name with name = ctx_name }
+        ; fn_generics = []
+        ; fn_args = [ pos, { name = "x"; typ = None; default = None } ]
+        ; fn_stmts = [ s_return ~pos (Some rhs) ]
+        ; fn_attrs = [ pos, "pyhandle" ]
+        }
+    | "py", None -> serr ~pos "pyimport requires from"
+    | "c", Some from ->
+      let types = List.map ~f:(fun e -> Expr.to_string (Option.value_exn e))
+        @@ (ext.e_name.typ :: (List.map ext.e_args ~f:(fun (_, t) -> t.typ))) in
+      let params = List.mapi types ~f:(fun i _ -> sprintf "p%d" i) in
+      let code = Util.unindent @@ sprintf
+      (* # ptr = _get_dlsym_ptr(_s, "_s") *)
+      {|
+      def %s(%s):
+        ptr = _dlsym(%s, "%s")
+        f = function[%s](ptr)
+        %sf(%s)
+      |}
+      ctx_name
+      (Util.ppl ~f:Fn.id @@ List.map2_exn (List.tl_exn params) (List.tl_exn types) ~f:(fun a b -> sprintf "%s: %s" a b))
+      (Expr.to_string from) ext.e_name.name
+      (Util.ppl ~f:Fn.id types)
+      (if (List.hd_exn types) = "void" then "" else "return ")
+      (Util.ppl ~f:Fn.id (List.tl_exn params))
+      in
+      ctx.parser ctx ~file:ctx.filename code;
+      Util.dbg "-->\n%s\n<--" code;
+      Llvm.Stmt.pass ()
+    | "c", None ->
+      let names, types =
+        List.map ext.e_args ~f:(fun (_, { name; typ; _ }) ->
+            name, E.parse_type ~ctx (Option.value_exn typ))
+        |> List.unzip
+      in
+      let fn = Llvm.Func.func ext.e_name.name in
+      Llvm.Func.set_args fn names types;
+      Llvm.Func.set_extern fn;
+      let typ = E.parse_type ~ctx (Option.value_exn ext.e_name.typ) in
+      Llvm.Func.set_type fn typ;
+      let names = List.map ext.e_args ~f:(fun (_, x) -> x.name) in
+      Ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Ctx_namespace.Func (fn, names));
+      Llvm.Stmt.func fn
+    | l, _ -> serr ~pos "language %s not supported" l
 
   and parse_extend ctx pos ~toplevel (name, stmts) =
     if not toplevel then serr ~pos "extensions must be declared at the toplevel";
+    let name, generics = match snd name with
+      | Id _ -> name, []
+      | Index (name, ((_, Id _) as generic)) -> name, [generic]
+      | Index (name, (_, Tuple generics)) -> name, generics
+      | _ -> serr ~pos "cannot extend non-type expression"
+    in
     let typ = E.parse_type ~ctx name in
-    (* let typ = match Ctx.in_scope ctx name with
-      | Some (Ctx_namespace.Type t, _) -> t
-      | _ -> serr ~pos "cannot extend non-existing class %s" name
-    in *)
+    let generic_types = Llvm.Generics.Type.get_names typ in
+    if List.(length generics <> length generic_types) then
+      serr ~pos "specified %d generics, but expected %d" (List.length generics) (List.length generic_types);
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map } in
+    let generics = List.map2_exn generics generic_types ~f:(fun g t ->
+      match snd g with
+      | Id n ->
+        Util.dbg ">> extend %s :: add %s" (Ast.Expr.to_string name) n;
+        Ctx.add ~ctx:new_ctx n (Ctx_namespace.Type t)
+      | _ -> serr ~pos:(fst g) "not a valid generic specifier")
+    in
     ignore
     @@ List.map stmts ~f:(function
            | pos, Function f -> parse_function new_ctx pos f ~cls:typ
@@ -369,7 +445,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             | Some ((var, ({ global = true; internal = false; _ } as ann)) :: _) ->
               let name = Option.value import_as ~default:name in
               Ctx.add ~ctx ~toplevel ~global:toplevel name var
-            | _ -> serr ~pos "name %s not found in %s" name from)
+            | _ -> serr ~pos "symbol '%s' not found in '%s'" name from)
     in
     List.iter imports ~f:(fun i ->
         let from = snd i.from in
@@ -400,7 +476,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       pos
       ?cls
       ?(toplevel = false)
-      { fn_name = { name; typ }; fn_generics; fn_args; fn_stmts; fn_attrs }
+      { fn_name = { name; typ; _ }; fn_generics; fn_args; fn_stmts; fn_attrs }
     =
     let fn =
       match cls with
@@ -412,7 +488,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         let fn = Llvm.Func.func name in
         let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Func (fn, names));
-        if not toplevel then Llvm.Func.set_enclosing fn ctx.base;
+        ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
         fn
     in
     let flags = Stack.create () in
@@ -434,7 +510,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       }
     in
     Ctx.add_block new_ctx;
-    let names, types =
+    let names, types, defaults =
       parse_generics
         new_ctx
         fn_generics
@@ -445,6 +521,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           Llvm.Generics.Func.get fn idx)
     in
     Llvm.Func.set_args fn names types;
+    Llvm.Func.set_defaults fn defaults;
     Option.value_map
       typ
       ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type ~ctx:new_ctx typ))
@@ -456,7 +533,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     Llvm.Stmt.func fn
 
   and parse_class ctx pos ~toplevel ?(is_type = false) cls =
-    (* ((name, types, args, stmts) as stmt) *)
     let typ =
       let typ =
         if is_type
@@ -468,33 +544,34 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     in
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map; stack = Stack.create () } in
     Ctx.add_block new_ctx;
-    (match cls.args with
-    | None when is_type -> serr ~pos "type definitions must have at least one member"
-    | None -> ()
-    | Some args ->
-      List.iter args ~f:(fun (pos, { name; typ }) ->
-          if is_none typ then serr ~pos "class member %s needs type specification" name);
-      let names, types =
-        if is_type
-        then
-          List.unzip
-          @@ List.map args ~f:(function
-                 | pos, { name; typ = None } ->
-                   serr ~pos "type member %s needs type specification" name
-                 | _, { name; typ = Some t } -> name, E.parse_type ~ctx t)
-        else
-          parse_generics
-            new_ctx
-            cls.generics
-            args
-            (Llvm.Generics.Type.set_number typ)
-            (fun idx name ->
-              Llvm.Generics.Type.set_name typ idx name;
-              Llvm.Generics.Type.get typ idx)
-      in
+    let args = match cls.args with
+      | None when is_type -> serr ~pos "type definitions must have at least one member"
+      | None -> []
+      | Some args -> args
+    in
+    List.iter args ~f:(fun (pos, { name; typ; _ }) ->
+        if is_none typ then serr ~pos "class member %s needs type specification" name);
+    let names, types, _ =
       if is_type
-      then Llvm.Type.set_record_names typ names types
-      else Llvm.Type.set_cls_args typ names types);
+      then
+        List.unzip3
+        @@ List.map args ~f:(function
+                | pos, { name; typ = None; _ } ->
+                  serr ~pos "type member %s needs type specification" name
+                | _, { name; typ = Some t; _ } -> name, E.parse_type ~ctx t, Ctypes.null)
+      else
+        parse_generics
+          new_ctx
+          cls.generics
+          args
+          (Llvm.Generics.Type.set_number typ)
+          (fun idx name ->
+            Llvm.Generics.Type.set_name typ idx name;
+            Llvm.Generics.Type.get typ idx)
+    in
+    if is_type
+    then Llvm.Type.set_record_names typ names types
+    else Llvm.Type.set_cls_args typ names types;
     ignore
     @@ List.map cls.members ~f:(function
            | pos, Function f -> parse_function new_ctx pos f ~cls:typ
@@ -539,7 +616,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       then serr ~pos "only toplevel symbols can be set as a local global";
       if ann.base <> ctx.base then Ctx.add ~ctx var ~global:true (Ctx_namespace.Var v);
       Llvm.Stmt.pass ()
-    | _ -> serr ~pos "variable %s not found" var
+    | _ -> serr ~pos "identifier '%s' not found" var
 
   and parse_special ctx pos (kind, stmts, inputs) =
     ierr ~pos "not yet implemented (parse_special)"
@@ -615,12 +692,26 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Parses generic parameters, assigns names to unnamed generics and calls C++ APIs to denote generic functions/classes.
       Also adds generics types to the context. *)
   and parse_generics ctx generic_types args set_generic_count get_generic =
-    let names, types =
-      List.map args ~f:(function
-          | _, { name; typ = Some typ } -> name, typ
-          | pos, { name; typ = None } -> name, (pos, Ast.Expr.Id (sprintf "'%s" name)))
-      |> List.unzip
+    let names_seen = String.Hash_set.create () in
+    let defaults_started = ref false in
+    let names, types, defaults =
+      List.map args ~f:(fun (pos, { name; typ; default }) ->
+          let typ = match typ with
+            | Some typ -> typ
+            | None -> pos, Ast.Expr.Id (sprintf "'%s" name)
+          in
+          if Hash_set.mem names_seen name then
+            serr ~pos "argument %s already specified" name;
+          Hash_set.add names_seen name;
+          (match default with
+            | Some x -> defaults_started := true
+            | None when !defaults_started -> serr ~pos "cannot have argument without default value here"
+            | None -> ());
+          name, typ, default
+        )
+      |> List.unzip3
     in
+    (* Util.dbg "== generics: %s" @@ Util.ppl generic_types ~f:snd ; *)
     let type_args = List.map generic_types ~f:snd in
     let generic_args =
       List.filter_map types ~f:(fun x ->
@@ -631,7 +722,11 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let generics = List.append type_args generic_args |> List.dedup_and_sort ~compare in
     set_generic_count (List.length generics);
     List.iteri generics ~f:(fun cnt key ->
+        Util.dbg "adding %s ..." key;
         Ctx.add ~ctx key (Ctx_namespace.Type (get_generic cnt key)));
     let types = List.map types ~f:(E.parse_type ~ctx) in
-    names, types
+    let defaults = List.map defaults ~f:(function
+      | None -> Ctypes.null
+      | Some expr -> E.parse ~ctx expr) in
+    names, types, defaults
 end

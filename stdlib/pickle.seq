@@ -1,4 +1,10 @@
-import file
+from core.file import _gz_errcheck
+
+def pickle[T](x: T, jar: Jar):
+    x.__pickle__(jar)
+
+def unpickle[T](jar: Jar):
+    return T.__unpickle__(jar)
 
 def dump[T](x: T, f: gzFile):
     x.__pickle__(f.fp)
@@ -6,30 +12,27 @@ def dump[T](x: T, f: gzFile):
 def load[T](f: gzFile):
     return T.__unpickle__(f.fp)
 
-def _write_raw(jar: Jar, p: ptr[byte], n: int):
-    cdef gzwrite(ptr[byte], ptr[byte], u32) -> i32
-    status = int(gzwrite(jar, p, u32(n)))
+def _write_raw(jar: Jar, p: cobj, n: int):
+    status = int(_C.gzwrite(jar, p, u32(n)))
     if status != n:
         _gz_errcheck(jar)
         raise IOError("pickle error: gzwrite returned " + str(status))
 
-def _read_raw(jar: Jar, p: ptr[byte], n: int):
-    cdef gzread(ptr[byte], ptr[byte], u32) -> i32
-    status = int(gzread(jar, p, u32(n)))
+def _read_raw(jar: Jar, p: cobj, n: int):
+    status = int(_C.gzread(jar, p, u32(n)))
     if status != n:
         _gz_errcheck(jar)
         raise IOError("pickle error: gzread returned " + str(status))
 
 def _write[T](jar: Jar, x: T):
-    import gc
-    _write_raw(jar, ptr[byte](__ptr__(x)), gc.sizeof[T]())
+    _write_raw(jar, cobj(__ptr__(x)), _gc.sizeof[T]())
 
 def _read[T](jar: Jar):
-    import gc
-    cdef gzread(ptr[byte], ptr[byte], u32) -> i32
     x = T()
-    _read_raw(jar, ptr[byte](__ptr__(x)), gc.sizeof[T]())
+    _read_raw(jar, cobj(__ptr__(x)), _gc.sizeof[T]())
     return x
+
+# Extend core types to allow pickling
 
 extend int:
     def __pickle__(self: int, jar: Jar):
@@ -66,7 +69,7 @@ extend str:
 
     def __unpickle__(jar: Jar):
         n = _read[int](jar)
-        p = ptr[byte](n)
+        p = cobj(n)
         _read_raw(jar, p, n)
         return str(p, n)
 
@@ -78,6 +81,66 @@ extend seq:
     def __unpickle__(jar: Jar):
         n = _read[int](jar)
         m = abs(n)
-        p = ptr[byte](m)
+        p = cobj(m)
         _read_raw(jar, p, m)
         return seq(p, n)
+
+extend list[T]:
+    def __pickle__(self: list[T], jar: Jar):
+        n = len(self)
+        pickle(n, jar)
+        for i in range(n):
+            pickle(self.arr[i], jar)
+
+    def __unpickle__(jar: Jar):
+        n = unpickle[int](jar)
+        arr = array[T](n)
+        for i in range(n):
+            arr[i] = unpickle[T](jar)
+        return list[T](arr, n)
+
+extend dict[K, V]:
+    def __pickle__(self: dict[K,V], jar: Jar):
+        n_buckets = self._n_buckets
+        pickle(n_buckets, jar)
+        size = len(self)
+        pickle(size, jar)
+
+        for k,v in self.items():
+            pickle(k, jar)
+            pickle(v, jar)
+
+    def __unpickle__(jar: Jar):
+        n_buckets = unpickle[int](jar)
+        size = unpickle[int](jar)
+        d = dict[K,V]()
+        d.resize(n_buckets)
+        i = 0
+        while i < size:
+            k = unpickle[K](jar)
+            v = unpickle[V](jar)
+            d[k] = v
+            i += 1
+        return d
+
+extend set[K]:
+    def __pickle__(self: set[K], jar: Jar):
+        n_buckets = self._n_buckets
+        pickle(n_buckets, jar)
+        size = len(self)
+        pickle(size, jar)
+
+        for k in self:
+            pickle(k, jar)
+
+    def __unpickle__(jar: Jar):
+        n_buckets = unpickle[int](jar)
+        size = unpickle[int](jar)
+        s = set[K]()
+        s.resize(n_buckets)
+        i = 0
+        while i < size:
+            k = unpickle[K](jar)
+            s.add(k)
+            i += 1
+        return s

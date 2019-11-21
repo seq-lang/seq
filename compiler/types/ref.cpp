@@ -124,7 +124,8 @@ types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes) {
       types.push_back(funcType->getBaseType(i));
 
     try {
-      return Generic::deduceTypesFromArgTypes(types, argTypes);
+      return Generic::deduceTypesFromArgTypes(types, argTypes,
+                                              /*unwrapOptionals=*/false);
     } catch (exc::SeqException &) {
     }
   }

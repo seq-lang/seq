@@ -39,10 +39,11 @@ BaseFunc *BaseFunc::clone(Generic *ref) { return this; }
 
 Func::Func()
     : BaseFunc(), Generic(), SrcObject(), external(false), name(), inTypes(),
-      outType(types::Void), outType0(types::Void), scope(new Block()),
-      argNames(), argVars(), attributes(), parentFunc(nullptr), ret(nullptr),
-      yield(nullptr), prefetch(false), resolved(false), cache(), gen(false),
-      promise(nullptr), handle(nullptr), cleanup(nullptr), suspend(nullptr) {
+      outType(types::Void), outType0(types::Void), defaultArgs(),
+      scope(new Block()), argNames(), argVars(), attributes(),
+      parentFunc(nullptr), ret(nullptr), yield(nullptr), prefetch(false),
+      resolved(false), cache(), gen(false), promise(nullptr), handle(nullptr),
+      cleanup(nullptr), suspend(nullptr) {
   if (!this->argNames.empty())
     assert(this->argNames.size() == this->inTypes.size());
 }
@@ -73,6 +74,127 @@ Func *Func::realize(std::vector<types::Type *> types) {
 std::vector<types::Type *>
 Func::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes) {
   return Generic::deduceTypesFromArgTypes(inTypes, argTypes);
+}
+
+std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
+                                          std::vector<std::string> names,
+                                          bool methodCall) {
+#define ENSURE_NO_DUP(i)                                                       \
+  if (argsFixed[i] || partials[i])                                             \
+  throw exc::SeqException("multiple values given for '" + argNames[i] +        \
+                          "' parameter")
+
+  const unsigned offset = methodCall ? 1 : 0; // handle 'self'
+  const unsigned size = inTypes.size();
+  assert(defaultArgs.empty() || defaultArgs.size() == size);
+  assert(argNames.size() == size);
+  if (names.empty())
+    names = std::vector<std::string>(args.size(), "");
+  assert(args.size() == names.size());
+
+  bool sawName = false;
+  for (unsigned i = 0; i < args.size(); i++) {
+    // disallow unnamed args after named args
+    if (names[i].empty()) {
+      assert(!sawName);
+    } else {
+      sawName = true;
+    }
+  }
+
+  if (args.size() + offset > size) {
+    throw exc::SeqException("expected " + std::to_string(size) +
+                            " argument(s), but got " +
+                            std::to_string(args.size()));
+  }
+
+  bool hasDefaults = false;
+  for (auto *e : defaultArgs) {
+    if (e) {
+      hasDefaults = true;
+      break;
+    }
+  }
+
+  std::vector<Expr *> argsFixed(size, nullptr);
+  // explicit partial args ("...") are given as null arguments; they are denoted
+  // here
+  std::vector<bool> partials(size, false);
+
+  // first, deal with named args:
+  for (unsigned i = 0; i < args.size(); i++) {
+    if (!names[i].empty()) {
+      unsigned name_idx = 0;
+      for (unsigned j = 0; j < size; j++) {
+        if (argNames[j] == names[i]) {
+          name_idx = j;
+          break;
+        }
+      }
+
+      if (argNames[name_idx] == names[i]) {
+        ENSURE_NO_DUP(name_idx);
+        argsFixed[name_idx] = args[i];
+        if (!args[i])
+          partials[name_idx] = true;
+      } else {
+        throw exc::SeqException("no function argument named '" + names[i] +
+                                "'");
+      }
+    }
+  }
+
+  // now fill in regular args:
+  if (hasDefaults) {
+    // left to right for functions with defaults
+    unsigned next = offset;
+    for (unsigned i = 0; i < args.size(); i++) {
+      if (!names[i].empty())
+        continue;
+
+      assert(next < size);
+      ENSURE_NO_DUP(next);
+      argsFixed[next++] = args[i];
+    }
+  } else {
+    // right to left otherwise, to support implicit partials
+    int j = (int)args.size() - 1;
+    while (j >= 0 && !names[j].empty())
+      --j;
+    for (int i = (int)size - 1; i >= 0; i--) {
+      if (j < 0)
+        break;
+
+      if (!argsFixed[i] && !partials[i])
+        argsFixed[i] = args[j--];
+    }
+    assert(j < 0); // i.e. no unused args
+  }
+
+  // fill in defaults:
+  if (!defaultArgs.empty()) {
+    for (unsigned i = offset; i < size; i++) {
+      // the second condition checks for explicit nulls, which indicate a
+      // partial call; we don't want to override these with the default argument
+      if (!argsFixed[i] && !partials[i]) {
+        argsFixed[i] = defaultArgs[i];
+      }
+    }
+  }
+
+  // implicitly convert generator arguments:
+  for (unsigned i = 0; i < size; i++) {
+    if (argsFixed[i] && inTypes[i]->asGen() &&
+        argsFixed[i]->getType()->hasMethod("__iter__"))
+      argsFixed[i] =
+          new CallExpr(new GetElemExpr(argsFixed[i], "__iter__"), {});
+  }
+
+  if (offset)
+    argsFixed = std::vector<Expr *>(argsFixed.begin() + 1, argsFixed.end());
+
+  return argsFixed;
+#undef ENSURE_NO_DUP
 }
 
 void Func::setEnclosingFunc(Func *parentFunc) { this->parentFunc = parentFunc; }
@@ -125,8 +247,8 @@ bool Func::hasAttribute(const std::string &attr) {
  * the name.
  */
 std::string Func::getMangledFuncName() {
-  // don't mangle external or built-in ("seq."-prefixed) function names:
-  if (external || name.rfind("seq.", 0) == 0)
+  // don't mangle external, built-in ("seq."-prefixed) or exported functions:
+  if (external || name.rfind("seq.", 0) == 0 || hasAttribute("export"))
     return name;
 
   // a nested function can't be a class method:
@@ -168,6 +290,9 @@ void Func::resolveTypes() {
   resolved = true;
 
   try {
+    for (Expr *defaultArg : defaultArgs)
+      if (defaultArg)
+        defaultArg->resolveTypes();
     scope->resolveTypes();
 
     // return type deduction
@@ -225,7 +350,15 @@ void Func::codegen(Module *module) {
   if (external)
     return;
 
-  func->setLinkage(GlobalValue::PrivateLinkage);
+  if (hasAttribute("export")) {
+    if (parentType || parentFunc)
+      throw exc::SeqException("can only export top-level functions");
+    if (numGenerics() > 0)
+      throw exc::SeqException("cannot export generic function");
+    func->setLinkage(GlobalValue::ExternalLinkage);
+  } else {
+    func->setLinkage(GlobalValue::PrivateLinkage);
+  }
   func->setPersonalityFn(makePersonalityFunc(module));
   preambleBlock = BasicBlock::Create(context, "preamble", func);
   IRBuilder<> builder(preambleBlock);
@@ -479,6 +612,10 @@ void Func::setIns(std::vector<types::Type *> inTypes) {
 
 void Func::setOut(types::Type *outType) { this->outType = outType0 = outType; }
 
+void Func::setDefaults(std::vector<Expr *> defaultArgs) {
+  this->defaultArgs = std::move(defaultArgs);
+}
+
 void Func::setName(std::string name) { this->name = std::move(name); }
 
 void Func::setArgNames(std::vector<std::string> argNames) {
@@ -502,11 +639,16 @@ Func *Func::clone(Generic *ref) {
   for (auto *type : inTypes)
     inTypesCloned.push_back(type->clone(ref));
 
+  std::vector<Expr *> defaultArgsCloned;
+  for (auto *expr : defaultArgs)
+    defaultArgsCloned.push_back(expr ? expr->clone(ref) : nullptr);
+
   x->external = external;
   x->name = name;
   x->argNames = argNames;
   x->inTypes = inTypesCloned;
   x->outType = x->outType0 = outType0->clone(ref);
+  x->defaultArgs = defaultArgsCloned;
   x->scope = scope->clone(ref);
   x->attributes = attributes;
 

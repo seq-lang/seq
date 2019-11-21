@@ -48,8 +48,8 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Dot p -> parse_dot ctx pos p
       | TypeOf p -> parse_typeof ctx pos p
       | Ptr p -> parse_ptr ctx pos p
+      | Slice p -> parse_slice ctx pos p
       | Ellipsis p -> Ctypes.null
-      | Slice _ -> serr ~pos "slice is currently only valid within an index expression"
       | Unpack _ -> serr ~pos "invalid unpacking expression"
       | Lambda _ -> serr ~pos "lambdas not yet supported (parse)"
     in
@@ -136,7 +136,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     (* Make sure that a variable is either accessible within
       the same base (function) or that it is global variable  *)
     | _, Some ((Ctx_namespace.Type t, _) :: _) -> Llvm.Expr.typ t
-    | true, _ -> serr ~pos "type %s not found or realized" var
+    | true, _ -> serr ~pos "type '%s' not found or realized" var
     | false, Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
       when ctx.base = base || global ->
       let e = Llvm.Expr.var v in
@@ -144,7 +144,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       then Llvm.Var.set_atomic e;
       e
     | false, Some ((Ctx_namespace.Func (t, _), _) :: _) -> Llvm.Expr.func t
-    | _ -> serr ~pos "identifier %s not found or realized" var
+    | _ -> serr ~pos "identifier '%s' not found" var
 
   and parse_tuple ctx _ args =
     let args = List.map args ~f:(parse ~ctx) in
@@ -261,9 +261,9 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
      Check GOTCHAS for details. *)
   and parse_index ?(is_type = false) ctx pos (lh_expr, indices) =
     match is_type, snd lh_expr, snd indices with
-    | _, Id (("array" | "ptr" | "generator") as name), Tuple _ ->
+    | _, Id (("array" | "ptr" | "generator" | "optional") as name), Tuple _ ->
       serr ~pos "%s requires a single type" name
-    | _, Id (("array" | "ptr" | "generator") as name), _ ->
+    | _, Id (("array" | "ptr" | "generator" | "optional") as name), _ ->
       let typ = parse_type ~ctx indices in
       Llvm.Expr.typ @@ Llvm.Type.param ~name typ
     | _, Id "Kmer", Int n ->
@@ -281,11 +281,11 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       if n < 1 || n > 2048
       then serr ~pos "invalid UInt parameter (must be an integer in 1..2048)";
       Llvm.Expr.typ @@ Llvm.Type.uintN n
-    | true, Id "function", Tuple indices ->
+    | _, Id "function", Tuple indices ->
       let indices = List.map indices ~f:(parse_type ~ctx) in
       let ret, args = List.hd_exn indices, List.tl_exn indices in
       Llvm.Expr.typ @@ Llvm.Type.func ret args
-    | true, Id "function", _ ->
+    | _, Id "function", _ ->
       let ret, args = parse_type ~ctx indices, [] in
       Llvm.Expr.typ @@ Llvm.Type.func ret args
     | _, Id "tuple", Tuple indices ->
@@ -294,12 +294,6 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       Llvm.Expr.typ @@ Llvm.Type.record names indices ""
     | _, Id "tuple", _ ->
       Llvm.Expr.typ @@ Llvm.Type.record [ "" ] [ parse_type ~ctx indices ] ""
-    | false, _, Slice (st, ed, step) ->
-      if is_some step
-      then serr ~pos "slices with stepping parameter are not yet supported";
-      let unpack st = Option.value_map st ~f:(parse ~ctx) ~default:Ctypes.null in
-      let lh_expr = parse ~ctx lh_expr in
-      Llvm.Expr.slice lh_expr (unpack st) (unpack ed)
     | _ ->
       let lh_expr = parse ~ctx lh_expr in
       let indices =
@@ -314,8 +308,11 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         match Llvm.Expr.get_name lh_expr with
         | "type" ->
           let typ = Llvm.Type.expr_type lh_expr in
-          let typ = Llvm.Generics.Type.realize typ indices in
-          Llvm.Expr.typ typ
+          if Llvm.Type.is_ref_type typ then
+            let typ = Llvm.Generics.Type.realize typ indices in
+            Llvm.Expr.typ typ
+          else
+            serr ~pos "not a reference type"
         | ("func" | "elem" | "static") as kind ->
           Llvm.Generics.set_types ~kind lh_expr indices;
           lh_expr
@@ -378,43 +375,31 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
 
   and parse_call_real ctx pos (callee_expr, args) =
     let callee_expr = parse ~ctx callee_expr in
-    let names = Llvm.Func.get_arg_names callee_expr in
+    let attrs = Llvm.Func.get_attrs callee_expr in
     let args =
-      if List.length names = 0
-      then
-        List.mapi args ~f:(fun i (pos, { name; value }) ->
-            match name with
-            | None -> parse ~ctx value
-            | Some _ -> serr ~pos "cannot use named arguments here")
-      else (
-        (* Check names *)
-        let has_named_args =
-          List.fold args ~init:false ~f:(fun acc (pos, { name; _ }) ->
+      (* foo(a, b, c) -> foo( (a, b, c) ) *)
+      if List.exists attrs ~f:((=) "pyhandle")
+      then (
+        Util.dbg "woohoo!";
+        [ pos, { name = None ; value = pos, Tuple (List.map args ~f:(fun (_, x) -> x.value)) } ]
+      )
+      else args
+    in
+    let names = Llvm.Func.get_arg_names callee_expr in
+    let _, args =
+          List.fold_map args ~init:false ~f:(fun acc (pos, { name; value }) ->
               match name with
               | None when acc ->
                 serr ~pos "unnamed argument cannot follow a named argument"
-              | None -> false
-              | Some _ -> true)
+              | None -> false, ("", parse ~ctx value)
+              | Some name -> true, (name, parse ~ctx value))
         in
-        if has_named_args
-        then
-          List.mapi names ~f:(fun i n ->
-              match List.findi args ~f:(fun _ x -> (snd x).name = Some n) with
-              | Some (idx, x) -> parse ~ctx (snd x).value
-              | None ->
-                (match List.nth args i with
-                | Some (pos, { name; _ }) when is_some name ->
-                  serr ~pos "argument %s expected here" n
-                | Some (_, { value; _ }) -> parse ~ctx value
-                | None -> serr ~pos "cannot find an argument %s" n))
-        else List.map args ~f:(fun x -> parse ~ctx (snd x).value))
-    in
     if Llvm.Expr.is_type callee_expr
     then (
       let typ = Llvm.Type.expr_type callee_expr in
-      Llvm.Expr.construct typ args)
+      Llvm.Expr.construct typ (List.map args ~f:snd))
     else (
-      let kind = if List.exists args ~f:(( = ) Ctypes.null) then "partial" else "call" in
+      let kind = if List.exists args ~f:(fun (_, x) -> x = Ctypes.null) then "partial" else "call" in
       Llvm.Expr.call ~kind callee_expr args)
 
   and parse_dot ctx pos (lh_expr, rhs) =
@@ -445,6 +430,21 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         Llvm.Expr.static typ rhs)
       else Llvm.Expr.element lh_expr rhs
 
+  and parse_slice ctx pos (a, b, c) =
+    let prefix, args = match a, b, c with
+      | None, None, None -> "e", [pos, Int "0"]
+      | Some a, None, None -> "r", [a]
+      | None, Some b, None -> "l", [b]
+      | Some a, Some b, None -> "", [a; b]
+      | None, None, Some c -> "es", [c]
+      | Some a, None, Some c -> "rs", [a; c]
+      | None, Some b, Some c -> "ls", [b; c]
+      | Some a, Some b, Some c -> "s", [a; b; c]
+    in
+    let open Ast in
+    parse ~ctx
+    @@ e_call ~pos (e_id ~pos (prefix ^ "slice")) args
+
   and parse_typeof ctx _ expr =
     let expr = parse ~ctx expr in
     Llvm.Expr.typ @@ Llvm.Expr.typeof expr
@@ -455,7 +455,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
         when ctx.base = base || global ->
         Llvm.Expr.ptr v
-      | _ -> serr ~pos "symbol %s not found" var)
+      | _ -> serr ~pos "identifier '%s' not found" var)
     | _ -> serr ~pos "ptr requires an identifier as a parameter"
     (* ***************************************************************
      Helper functions

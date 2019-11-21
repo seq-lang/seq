@@ -36,7 +36,8 @@ type t =
   | If of if_case ann list
   | Match of (texpr ann * match_case ann list)
   | Extend of (texpr ann * generic ann list)
-  | Extern of (string * string option * string * param ann * param ann list)
+  (* | Extern of (string * string option * string * param ann * param ann list) *)
+  (* | Extern of (string * string option * string * param ann * param ann list) *)
       (** [Extern] consists of:
       - external language name (right now, only ["c"] is supported via [cdef]),
       - external library name (not supported; defaults to [None]),
@@ -46,6 +47,7 @@ type t =
   | Import of import list
   | ImportPaste of string
       (** [ImportPaste] is currently Seq's [import!]. _Deprecated_. *)
+  | ImportExtern of eimport list
   | Generic of generic
   | Try of (t ann list * catch ann list * t ann list option)
       (** [Try(stmts, catch, finally_stmts)] corresponds to
@@ -76,6 +78,7 @@ and match_case =
 and param =
   { name : string
   ; typ : texpr ann option
+  ; default : texpr ann option
   }
 
 and catch =
@@ -117,6 +120,14 @@ and import =
   { from : string ann
   ; what : (string * string option) ann list option
   ; import_as : string option
+  }
+
+and eimport =
+  { lang: string
+  ; e_from: texpr ann option
+  ; e_name: param
+  ; e_args: param ann list
+  ; e_as: string option
   }
 
 and pattern =

@@ -46,6 +46,7 @@ Thumbs.db
 #######################
 .idea
 .mypy_cache
+.vscode
 
 # Doxygen #
 ###########
@@ -59,3 +60,7 @@ dox
 *.dSYM
 *.conflicts
 .merlin
+
+# Testing playground #
+######################
+scratch.seq

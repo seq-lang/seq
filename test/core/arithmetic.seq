@@ -1,16 +1,19 @@
-print 2 + 2     # EXPECT: 4
-print 3.14 * 2  # EXPECT: 6.28
-print 2 + 3*2   # EXPECT: 8
-print 1.0/0     # EXPECT: inf
-print 0.0/0     # EXPECT: nan
+@test
+def t1():
+    assert 2 + 2 == 4
+    assert 3.14 * 2 == 6.28
+    assert 2 + 3*2 == 8
+    assert 1.0/0 == float('inf')
+    assert str(0.0/0) == 'nan'
 
-print 5 // 2                   # EXPECT: 2
-print 5 / 2                    # EXPECT: 2.5
-print 5.0 // 2.0               # EXPECT: 2
-print 5.0 / 2.0                # EXPECT: 2.5
-print 5 // 2.0                 # EXPECT: 2
-print 5 / 2.0                  # EXPECT: 2.5
-print 5.0 // 2                 # EXPECT: 2
-print 5.0 / 2                  # EXPECT: 2.5
-print int(Int[128](5) // Int[128](2))  # EXPECT: 2
-print Int[128](5) / Int[128](2)        # EXPECT: 2.5
+    assert 5 // 2 == 2
+    assert 5 / 2 == 2.5
+    assert 5.0 // 2.0 == 2
+    assert 5.0 / 2.0 == 2.5
+    assert 5 // 2.0 == 2
+    assert 5 / 2.0 == 2.5
+    assert 5.0 // 2 == 2
+    assert 5.0 / 2 == 2.5
+    assert int(Int[128](5) // Int[128](2)) == 2
+    assert Int[128](5) / Int[128](2) == 2.5
+t1()

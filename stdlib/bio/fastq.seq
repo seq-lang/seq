@@ -1,0 +1,53 @@
+type FASTQRecord(_name: str, _read: seq, _qual: str):
+    @property
+    def name(self: FASTQRecord):
+        return self._name
+
+    @property
+    def read(self: FASTQRecord):
+        return self._read
+
+    @property
+    def qual(self: FASTQRecord):
+        return self._qual
+
+type FASTQ(file: gzFile):
+    def __init__(self: FASTQ, path: str) -> FASTQ:
+        return (gzopen(path, "r"),)
+
+    def __seqs__(self: FASTQ):
+        line = 0
+        for a in self.file._iter():
+            if line % 4 == 1:
+                yield copy(seq(a.ptr, a.len))
+            line += 1
+        self.file.close()
+
+    def __iter__(self: FASTQ) -> FASTQRecord:
+        line = 0
+        name, read, qual = "", s"", ""
+        for a in self.file._iter():
+            match line % 4:
+                case 0:
+                    name = copy(a)
+                case 1:
+                    read = copy(seq(a.ptr, a.len))
+                case 2:
+                    pass  # separator
+                case 3:
+                    qual = copy(a)
+                    assert read.len >= 0
+                    yield (name, read, qual)
+                case _:
+                    assert False
+            line += 1
+        self.close()
+
+    def close(self: FASTQ):
+        self.file.close()
+
+    def __enter__(self: FASTQ):
+        pass
+
+    def __exit__(self: FASTQ):
+        self.close()

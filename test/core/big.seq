@@ -44,17 +44,17 @@ class X[T]:
         a = array[seq](2)
         a[0] = s'ACGT'
         a[1] = s'NANANANANANANANANANANANANANANANANANANANANANANANANANANANANANANANA'
-        for i in enum(myiter(a)):
+        for i in enumerate(myiter(a)):
             print i[0], i[1]
 
         y = f(a[1])
         print y.len
-        for i in enum(myiter(y)):
+        for i in enumerate(myiter(y)):
             print i[0], i[1]
 
         def process_input(input: seq):
             v = f(input)
-            for r in enum(myiter(v)):
+            for r in enumerate(myiter(v)):
                 print r[0], r[1]
             print input
             print ident(input)
@@ -64,7 +64,7 @@ class X[T]:
             match v[0]:
                 case s'A...':
                     print 'caught'
-                default:
+                case _:
                     print 'default'
 
             for v1 in input.split(64,64):

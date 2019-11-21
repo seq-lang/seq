@@ -369,9 +369,6 @@ void SeqModule::compile(const std::string &out, bool debug) {
   optimize(debug);
   verify();
 
-  if (debug)
-    errs() << *module;
-
 #if SEQ_HAS_TAPIR
   resetOMPABI();
 #endif
@@ -435,9 +432,6 @@ void SeqModule::execute(const std::vector<std::string> &args,
   verify();
   optimize(debug);
   verify();
-
-  if (debug)
-    errs() << *module;
 
 #if SEQ_HAS_TAPIR
   resetOMPABI();

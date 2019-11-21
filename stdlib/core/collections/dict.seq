@@ -1,0 +1,305 @@
+# dict implementation based on klib's khash
+
+import core.collections.khash as khash
+
+def _dict_hash(key):
+    k = hash(key)
+    return (k >> 33) ^ k ^ (k << 11)
+
+class dict[K,V]:
+    _n_buckets: int
+    _size: int
+    _n_occupied: int
+    _upper_bound: int
+
+    _flags: ptr[u32]
+    _keys: ptr[K]
+    _vals: ptr[V]
+
+# Magic methods
+
+    def __init__(self: dict[K,V]):
+        self._n_buckets = 0
+        self._size = 0
+        self._n_occupied = 0
+        self._upper_bound = 0
+        self._flags = ptr[u32]()
+        self._keys = ptr[K]()
+        self._vals = ptr[V]()
+
+    def __getitem__(self: dict[K,V], key: K):
+        x = self._kh_get(key)
+        if x != self._kh_end():
+            return self._vals[x]
+        raise KeyError(str(key))
+
+    def __setitem__(self: dict[K,V], key: K, val: V):
+        ret, x = self._kh_put(key)
+        self._vals[x] = val
+
+    def __delitem__(self: dict[K,V], key: K):
+        x = self._kh_get(key)
+        if x != self._kh_end():
+            self._kh_del(x)
+        else:
+            raise KeyError(str(key))
+
+    def __contains__(self: dict[K,V], key: K):
+        return self._kh_get(key) != self._kh_end()
+
+    def __eq__(self: dict[K,V], other: dict[K,V]):
+        if len(self) != len(other):
+            return False
+        for k,v in self.items():
+            if k not in other or other[k] != v:
+                return False
+        return True
+
+    def __ne__(self: dict[K,V], other: dict[K,V]):
+        return not (self == other)
+
+    def __iter__(self: dict[K,V]):
+        return self.keys()
+
+    def __len__(self: dict[K,V]):
+        return self._size
+
+    def __copy__(self: dict[K,V]):
+        d = dict[K,V]()
+        d.resize(self.n_buckets)
+        for k,v in self.items():
+            d[k] = v
+        return d
+
+    def __str__(self: dict[K,V]):
+        n = len(self)
+        if n == 0:
+            return "{}"
+        else:
+            lst = list[str]()
+            lst.append("{")
+            first = True
+            for k,v in self.items():
+                if not first:
+                    lst.append(", ")
+                else:
+                    first = False
+                lst.append(str(k))
+                lst.append(": ")
+                lst.append(str(v))
+            lst.append("}")
+            return str.cat(lst)
+
+
+# Helper methods
+
+    def resize(self: dict[K,V], new_n_buckets: int):
+        self._kh_resize(new_n_buckets)
+
+    def get(self: dict[K,V], key: K, s: V):
+        x = self._kh_get(key)
+        return self._vals[x] if x != self._kh_end() else s
+
+    def setdefault(self: dict[K,V], key: K, val: V):
+        ret, x = self._kh_put(key)
+        if ret != 0:  # i.e. key present
+            self._vals[x] = val
+            return val
+        return self._vals[x]
+
+    def update(self: dict[K,V], other: dict[K,V]):
+        for k,v in other.items():
+            self[k] = v
+
+    def pop(self: dict[K,V], key: K):
+        x = self._kh_get(key)
+        if x != self._kh_end():
+            v = self._vals[x]
+            self._kh_del(x)
+            return v
+        raise KeyError(str(key))
+
+    def clear(self: dict[K,V]):
+        self._kh_clear()
+
+    def items(self: dict[K,V]):
+        i = self._kh_begin()
+        while i < self._kh_end():
+            if self._kh_exist(i):
+                yield self._keys[i], self._vals[i]
+            i += 1
+
+    def keys(self: dict[K,V]):
+        for k,v in self.items():
+            yield k
+
+    def values(self: dict[K,V]):
+        for k,v in self.items():
+            yield v
+
+    def copy(self: dict[K,V]):
+        return self.__copy__()
+
+    def fromkeys[KS,V](ks: KS, v: V):
+        return {k: v for k in ks}
+
+# Internal helpers
+
+    def _kh_clear(self: dict[K,V]):
+        if self._flags:
+            i = 0
+            n = khash.__ac_fsize(self._n_buckets)
+            while i < n:
+                self._flags[i] = u32(0xaaaaaaaa)
+                i += 1
+            self._size = 0
+            self._n_occupied = 0
+
+    def _kh_get(self: dict[K,V], key: K):
+        if self._n_buckets:
+            step = 0
+            mask = self._n_buckets - 1
+            k = _dict_hash(key)
+            i = k & mask
+            last = i
+            while not khash.__ac_isempty(self._flags, i) and (khash.__ac_isdel(self._flags, i) or self._keys[i] != key):
+                step += 1
+                i = (i + step) & mask
+                if i == last:
+                    return self._n_buckets
+            return self._n_buckets if khash.__ac_iseither(self._flags, i) else i
+        else:
+            return 0
+
+    def _kh_resize(self: dict[K,V], new_n_buckets: int):
+        HASH_UPPER = 0.77
+        new_flags = ptr[u32]()
+        j = 1
+
+        # round up to next power of 2
+        new_n_buckets -= 1
+        new_n_buckets |= new_n_buckets >> 1
+        new_n_buckets |= new_n_buckets >> 2
+        new_n_buckets |= new_n_buckets >> 4
+        new_n_buckets |= new_n_buckets >> 8
+        new_n_buckets |= new_n_buckets >> 16
+        new_n_buckets |= new_n_buckets >> 32
+        new_n_buckets += 1
+
+        if new_n_buckets < 4:
+            new_n_buckets = 4
+
+        if self._size >= int(new_n_buckets*HASH_UPPER + 0.5):
+            j = 0
+        else:
+            fsize = khash.__ac_fsize(new_n_buckets)
+            new_flags = ptr[u32](fsize)
+            i = 0
+            while i < fsize:
+                new_flags[i] = u32(0xaaaaaaaa)
+                i += 1
+
+            if self._n_buckets < new_n_buckets:
+                self._keys = ptr[K](_gc.realloc(cobj(self._keys), new_n_buckets * _gc.sizeof[K]()))
+                self._vals = ptr[V](_gc.realloc(cobj(self._vals), new_n_buckets * _gc.sizeof[V]()))
+
+        if j:
+            j = 0
+            while j != self._n_buckets:
+                if khash.__ac_iseither(self._flags, j) == 0:
+                    key = self._keys[j]
+                    val = self._vals[j]
+                    new_mask = new_n_buckets - 1
+                    khash.__ac_set_isdel_true(self._flags, j)
+
+                    while True:
+                        step = 0
+                        k = _dict_hash(key)
+                        i = k & new_mask
+
+                        while not khash.__ac_isempty(new_flags, i):
+                            step += 1
+                            i = (i + step) & new_mask
+
+                        khash.__ac_set_isempty_false(new_flags, i)
+                        if i < self._n_buckets and khash.__ac_iseither(self._flags, i) == 0:
+                            self._keys[i], key = key, self._keys[i]
+                            self._vals[i], val = val, self._vals[i]
+                            khash.__ac_set_isdel_true(self._flags, i)
+                        else:
+                            self._keys[i] = key
+                            self._vals[i] = val
+                            break
+                j += 1
+
+            if self._n_buckets > new_n_buckets:
+                self._keys = ptr[K](_gc.realloc(cobj(self._keys), new_n_buckets * _gc.sizeof[K]()))
+                self._vals = ptr[V](_gc.realloc(cobj(self._vals), new_n_buckets * _gc.sizeof[V]()))
+
+            self._flags = new_flags
+            self._n_buckets = new_n_buckets
+            self._n_occupied = self._size
+            self._upper_bound = int(self._n_buckets*HASH_UPPER + 0.5)
+
+    def _kh_put(self: dict[K,V], key: K):
+        if self._n_occupied >= self._upper_bound:
+            if self._n_buckets > (self._size << 1):
+                self._kh_resize(self._n_buckets - 1)
+            else:
+                self._kh_resize(self._n_buckets + 1)
+
+        mask = self._n_buckets - 1
+        step = 0
+        site = self._n_buckets
+        x = site
+        k = _dict_hash(key)
+        i = k & mask
+        if khash.__ac_isempty(self._flags, i):
+            x = i
+        else:
+            last = i
+            while not khash.__ac_isempty(self._flags, i) and (khash.__ac_isdel(self._flags, i) or self._keys[i] != key):
+                if khash.__ac_isdel(self._flags, i):
+                    site = i
+                step += 1
+                i = (i + step) & mask
+                if i == last:
+                    x = site
+                    break
+
+            if x == self._n_buckets:
+                if khash.__ac_isempty(self._flags, i) and site != self._n_buckets:
+                    x = site
+                else:
+                    x = i
+
+        ret = 0
+        if khash.__ac_isempty(self._flags, x):
+            self._keys[x] = key
+            khash.__ac_set_isboth_false(self._flags, x)
+            self._size += 1
+            self._n_occupied += 1
+            ret = 1
+        elif khash.__ac_isdel(self._flags, x):
+            self._keys[x] = key
+            khash.__ac_set_isboth_false(self._flags, x)
+            self._size += 1
+            ret = 2
+
+        return (ret, x)
+
+    def _kh_del(self: dict[K,V], x: int):
+        if x != self._n_buckets and not khash.__ac_iseither(self._flags, x):
+            khash.__ac_set_isdel_true(self._flags, x)
+            self._size -= 1
+
+    def _kh_begin(self: dict[K,V]):
+        return 0
+
+    def _kh_end(self: dict[K,V]):
+        return self._n_buckets
+
+    def _kh_exist(self: dict[K,V], x: int):
+        return not khash.__ac_iseither(self._flags, x)
+
+
