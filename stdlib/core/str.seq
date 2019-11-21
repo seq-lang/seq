@@ -794,7 +794,7 @@ extend str:
 
         return self[:pos1], sep, self[pos1+len(sep):]
 
-    def split(self, sep: optional[str] = None, maxsplit: int = -1) -> list[str]:
+    def split(self: str, sep: optional[str] = None, maxsplit: int = -1) -> list[str]:
         """
         str.split([sep [,maxsplit]]) -> list of strings
 
@@ -808,7 +808,7 @@ extend str:
             return self._split_whitespace(maxsplit if maxsplit >= 0 else 0x7fffffffffffffff)
         sepx = ~sep
 
-        li = list(self._search(sepx))
+        li = list(algorithms.filter_overlaps(self._search(sepx), len(sepx)))
         str_split = list[str]()
 
         # no delimiter found
@@ -838,16 +838,14 @@ extend str:
                 # when separators are beside each other, append '' to list
                 if li[j] - 1 == prev:
                     str_split.append('')
-                    prev = li[j]
                 else:
                     str_split.append(self[prev+len(sepx):li[j]])
-                    prev = li[j]
+                prev = li[j]
 
         if prev != len(self):
             str_split.append(self[prev+len(sepx):])
-            return str_split
-        else:
-            return  str_split
+
+        return str_split
 
     def rsplit(self: str, sep: optional[str] = None, maxsplit: int = -1) -> list[str]:
         """
@@ -863,9 +861,9 @@ extend str:
             return self._rsplit_whitespace(maxsplit if maxsplit >= 0 else 0x7fffffffffffffff)
         sepx = ~sep
 
-        li = list(self._search(sepx))
+        li = list(algorithms.rfilter_overlaps(reversed(list(self._search(sepx))), len(sepx)))
         str_split = list[str]()
-        end_of_li = len(li)-1
+        end_of_li = len(li) - 1
 
         if len(li) == 0:
             return [self]
@@ -891,29 +889,20 @@ extend str:
                 # when separators are beside each other, append '' to list
                 if li[j] + 1 == prev:
                     str_split.append('')
-                    prev = li[j]
                 else:
                     str_split.append(self[li[j]+len(sepx):prev])
-                    prev = li[j]
+                prev = li[j]
 
         if prev != 0:
             str_split.append(self[:prev])
-            # reverse list
-            final_string = list[str]()
-            for i in range(1, len(str_split)+1):
-                final_string.append(str_split[len(str_split)-i])
-            return final_string
         else:
             # NOT PICKING UP '' at start of string so manually putting it in
             if li[end_of_li] == 0:
                 str_split.append('')
             else:
                 str_split.append(self[:li[0]])
-            # reverse list
-            final_string = list[str]()
-            for i in range(1, len(str_split)+1):
-                final_string.append(str_split[len(str_split)-i])
-            return final_string
+        str_split.reverse()
+        return str_split
 
     def splitlines(self: str, keepends: bool = False) -> list[str]:
         """
