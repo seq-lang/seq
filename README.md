@@ -2,7 +2,7 @@
  <img src="docs/images/logo.png?raw=true" width="200" alt="Seq"/>
 </p>
 
-<h1 align="center"> Seq — a  language for bioinformatics </h1>
+<h1 align="center"> Seq — a  language for bioinformatics</h1>
 
 <p align="center">
   <a href="https://travis-ci.com/seq-lang/seq">
@@ -24,6 +24,8 @@
 </p>
 
 ## Introduction
+
+> **A strongly-typed and statically-compiled high-performance Pythonic language!**
 
 Seq is a programming language for computational genomics and bioinformatics. With a Python-compatible syntax and a host of domain-specific features and optimizations, Seq makes writing high-performance genomics software as easy as writing Python code, and achieves performance comparable to (and in many cases better than) C/C++.
 
