@@ -171,6 +171,12 @@ class list[T]:
         self.arr = l.arr
         self.len = l.len
 
+    def __contains__(self: list[T], x: T):
+        for a in self:
+            if a == x:
+                return True
+        return False
+
     def __copy__(self: list[T]):
         return list[T](self.arr.__copy__(), self.len)
 
