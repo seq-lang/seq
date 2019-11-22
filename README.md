@@ -2,7 +2,7 @@
  <img src="docs/images/logo.png?raw=true" width="200" alt="Seq"/>
 </p>
 
-<h1 align="center"> Seq — a  language for bioinformatics</h1>
+<h1 align="center"> Seq — a language for bioinformatics</h1>
 
 <p align="center">
   <a href="https://travis-ci.com/seq-lang/seq">
@@ -31,9 +31,9 @@ Seq is a programming language for computational genomics and bioinformatics. Wit
 
 **Think of Seq as a strongly-typed and statically-compiled Python: all the bells and whistles of Python, boosted with strong type system, without any performance overhead.**
 
-Seq is able to outperform a Python code up to 160x. Seq can further beat equivalent C/C++ code up to 2x without any manual interventions. Seq also natively supports parallelism out of the box. Implementation details and benchmarks are discussed [in our paper](https://dl.acm.org/citation.cfm?id=3360551).
+Seq is able to outperform Python code by up to 160x. Seq can further beat equivalent C/C++ code by up to 2x without any manual interventions, and also natively supports parallelism out of the box. Implementation details and benchmarks are discussed [in our paper](https://dl.acm.org/citation.cfm?id=3360551).
 
-Learn more by following the [tutorial](docs/sphinx/tutorial.rst) or from the [cookbook](docs/sphinx/cookbook.rst).
+Learn more by following the [tutorial](https://seq-lang.org/tutorial.html) or from the [cookbook](https://seq-lang.org/cookbook.html).
 
 ## Example
 
@@ -46,9 +46,9 @@ def check_prime(n):
             if n % i == 0:
                 return False
         return True
-    else: 
+    else:
         return False
-       
+
 n = 1009
 print n, 'is', 'a' if check_prime(n) else 'not a', 'prime'
 ```
@@ -91,8 +91,6 @@ A few notable aspects of this code:
 
 For a concrete example of `genomeindex`, check out our [re-implementation of SNAP's index](test/snap).
 
-Learn more by following the [tutorial](docs/sphinx/tutorial.rst) or from the [cookbook](docs/sphinx/cookbook.rst).
-
 ## Install
 
 ### Pre-built binaries
@@ -109,7 +107,7 @@ This will install Seq in a new ``.seq`` directory within your home directory. Be
 
 See [Building from Source](docs/sphinx/build.rst).
 
-## Documentation 
+## Documentation
 
 Please check [seq-lang.org](https://seq-lang.org) for in-depth documentation.
 

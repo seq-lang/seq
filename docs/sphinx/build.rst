@@ -149,10 +149,10 @@ This will produce a ``seqc`` executable for compiling/running Seq programs, and 
 Documentation
 ^^^^^^^^^^^^^
 
-`Sphinx <https://www.sphinx-doc.org>`_ (with the `RTD theme <https://sphinx-rtd-theme.readthedocs.io/en/stable/>`_), `Breathe <https://breathe.readthedocs.io/en/latest/>`_ and `Exhale <https://exhale.readthedocs.io/en/latest/index.html`_ are required to compile the documentation. Once these are installed, just:
+`Sphinx <https://www.sphinx-doc.org>`_ (with the `RTD theme <https://sphinx-rtd-theme.readthedocs.io/en/stable/>`_), `Breathe <https://breathe.readthedocs.io/en/latest/>`_ and `Exhale <https://exhale.readthedocs.io/en/latest/index.html>`_ are required to compile the documentation. Once these are installed, just:
 
 .. code-block:: bash
-    
+
     cd seq/docs/sphinx
     make html
 
