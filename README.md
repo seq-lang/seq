@@ -35,7 +35,7 @@ Learn more by following the [tutorial](docs/sphinx/tutorial.rst) or from the [co
 
 ## Example
 
-Seq is a Python-compatible language, where vast majority of Python programs should work without any issues:
+Seq is a Python-compatible language, and the vast majority of Python programs should work without any modifications:
 
 ```python
 def check_prime(n):
