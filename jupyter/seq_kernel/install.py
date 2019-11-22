@@ -5,11 +5,12 @@ import argparse
 
 from jupyter_client.kernelspec import KernelSpecManager
 from IPython.utils.tempdir import TemporaryDirectory
+from shutil import copyfile
 
 kernel_json = {
     "argv":[sys.executable,"-m","seq_kernel", "-f", "{connection_file}"],
     "display_name":"Seq",
-    "language":"seq"
+    "language":"seq",
 }
 
 def install_my_kernel_spec(user=True, prefix=None):
@@ -20,6 +21,11 @@ def install_my_kernel_spec(user=True, prefix=None):
 
         print('Installing IPython kernel spec')
         KernelSpecManager().install_kernel_spec(td, 'seq', user=user, prefix=prefix)
+
+def install_my_kernel_javascript():
+    seq_js_file = os.path.join(os.environ['SEQ_PATH'][:-7], 'jupyter', 'seq_kernel', 'kernel.js')
+    kernel_js_file = os.path.join(KernelSpecManager().get_kernel_spec('seq').resource_dir, 'kernel.js')
+    os.system(f'cp {seq_js_file} {kernel_js_file}')
 
 def _is_root():
     try:
@@ -62,6 +68,7 @@ def main(argv=None):
         user = True
 
     install_my_kernel_spec(user=user, prefix=prefix)
+    install_my_kernel_javascript()
 
 if __name__ == '__main__':
     main()

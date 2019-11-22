@@ -11,7 +11,7 @@ __version__ = '0.0.0'
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
 class SeqKernel(Kernel):
-    implementation = 'seqkernel'
+    implementation = 'seq_kernel'
     implementation_version = __version__
 
     @property
@@ -28,7 +28,7 @@ class SeqKernel(Kernel):
         return self._banner
 
     language_info = {
-        'name': 'Seq',
+        'name': 'seq',
         'mimetype': 'application/seq',
         'file_extension': '.seq',
     }
