@@ -16,14 +16,21 @@ class set[K]:
     _keys: ptr[K]
 
 # Magic methods
-
-    def __init__(self: set[K]):
+    def _init(self: set[K]):
         self._n_buckets = 0
         self._size = 0
         self._n_occupied = 0
         self._upper_bound = 0
         self._flags = ptr[u32]()
         self._keys = ptr[K]()
+
+    def __init__(self: set[K]):
+        self._init()
+
+    def __init__(self: set[K], g: generator[K]):
+        self._init()
+        for a in g:
+            self.add(a)
 
     def __sub__(self: set[K], other: set[K]):
         return self.difference(other)
