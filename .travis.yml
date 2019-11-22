@@ -10,7 +10,6 @@ matrix:
 
 addons:
   apt:
-    update: true
     packages:
       - libsnappy-dev
       - binutils-dev
@@ -22,7 +21,6 @@ addons:
       - python-sphinx
       - doxygen
   homebrew:
-    update: true
     packages:
       - snappy
       - binutils
@@ -31,7 +29,6 @@ addons:
       - python3
       - sphinx-doc
       - doxygen
-      - cmake
 
 before_install:
   # build and cache LLVM/Tapir:
