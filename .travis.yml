@@ -28,6 +28,7 @@ addons:
       - sphinx-doc
       - doxygen
       - cmake
+      - openssl
 
 before_install:
   # build and cache LLVM/Tapir:
