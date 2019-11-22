@@ -1,282 +1,38 @@
-import random
-from math import inf as INF
+import random as R
 
-init = array[u64](4)
-init[0] = u64(0x123)
-init[1] = u64(0x234)
-init[2] = u64(0x345)
-init[3] = u64(0x456)
-length = 4
+@test
+def test_rnd_result(name, results, invariant):
+    print name
+    for a in results:
+        assert invariant(a)
 
-rand_gen = random.Generator()
-rand_o = random.Random(rand_gen)
+test_rnd_result('randrange', [R.randrange(10) for _ in range(100)], range(10).__contains__)
+test_rnd_result('randrange', [R.randrange(5, 20) for _ in range(100)], range(5, 20).__contains__)
+test_rnd_result('randrange', [R.randrange(9, 99, 3) for _ in range(100)], range(9, 99, 3).__contains__)
+test_rnd_result('randint', [R.randint(5, 20) for _ in range(100)], range(5, 20 + 1).__contains__)
 
-# rand_o.seed()
+population = list('ABCDEFGHIJKLMNOP')
+test_rnd_result('choice', [R.choice(population) for _ in range(100)], population.__contains__)
+test_rnd_result('choice', [R.choice(population) for _ in range(100)], population.__contains__)
+test_rnd_result('choices', R.choices(population), population.__contains__)
+test_rnd_result('choices', R.choices(population, k=100), population.__contains__)
 
-def random():
-    print rand_o.random()
-    print rand_o.random()
-    print rand_o.random()
-# random()
+@test
+def test_shuffle(v):
+    s = copy(v)
+    R.shuffle(s)
+    assert sorted(v) == sorted(s)
 
-def uniform():
-    print rand_o.uniform(0, 100)
-    print rand_o.uniform(0, 100)
-    print rand_o.uniform(0, 100)
-# uniform()
+test_shuffle(list(range(100)))
 
-def triangular():
-    print rand_o.triangular(0.0, 1.0)
-    print rand_o.triangular(0.0, 1.0)
-    print rand_o.triangular(0.0, 1.0)
-# triangular()
+@test
+def test_sample(n: int, k: int):
+    s = R.sample(list(range(n)), k=k)
+    assert len(s) == k
+    assert len(set(s)) == len(s)
+    for a in s:
+        assert a in range(n)
 
-def from_bytes_big():
-    print rand_o.from_bytes_big([u64(250), u64(0), u64(0)])
-    print rand_o.from_bytes_big(init)
-# from_bytes_big()
-
-def getrandbits():
-    print rand_o.getrandbits(0)
-    print rand_o.getrandbits(3)
-    print rand_o.getrandbits(9)
-    print rand_o.getrandbits(9)
-    print rand_o.getrandbits(9)
-    print rand_o.getrandbits(33)
-    print rand_o.getrandbits(33)
-    print rand_o.getrandbits(33)
-# getrandbits()
-
-def bit_length():
-    print rand_o.bit_length(u64(7))
-    print rand_o.bit_length(u64(8))
-    print rand_o.bit_length(u64(9))
-    print rand_o.bit_length(u64(16))
-    print rand_o.bit_length(u64(31))
-    print rand_o.bit_length(u64(32))
-# bit_length()
-
-def _randbelow_with_getrandbits():
-    print rand_o._randbelow_with_getrandbits(3)
-    print rand_o._randbelow_with_getrandbits(3)
-    print rand_o._randbelow_with_getrandbits(3)
-    print rand_o._randbelow_with_getrandbits(3)
-    print rand_o._randbelow_with_getrandbits(3)
-    print rand_o._randbelow_with_getrandbits(3)
-    print rand_o._randbelow_with_getrandbits(3)
-    print rand_o._randbelow_with_getrandbits(3)
-    print rand_o._randbelow_with_getrandbits(45)
-    print rand_o._randbelow_with_getrandbits(45)
-    print rand_o._randbelow_with_getrandbits(45)
-    print rand_o._randbelow_with_getrandbits(45)
-    print rand_o._randbelow_with_getrandbits(45)
-    print rand_o._randbelow_with_getrandbits(45)
-    print rand_o._randbelow_with_getrandbits(45)
-    print rand_o._randbelow_with_getrandbits(45)
-# _randbelow_with_getrandbits()
-
-def randrange1():
-    #randrange(stop)
-    print rand_o.randrange(3, 0, 1)
-    print rand_o.randrange(3, 0, 1)
-    print rand_o.randrange(3, 0, 1)
-    print rand_o.randrange(66, 0, 1)
-    print rand_o.randrange(66, 0, 1)
-    print rand_o.randrange(66, 0, 1)
-    print rand_o.randrange(1000, 0, 1)
-    print rand_o.randrange(1000, 0, 1)
-    print rand_o.randrange(1000, 0, 1)
-# randrange1()
-
-def randrange2():
-# randrange(start, stop[, step])
-    print rand_o.randrange(3, 8, 1)
-    print rand_o.randrange(3, 8, 1)
-    print rand_o.randrange(3, 8, 1)
-    print rand_o.randrange(66, 1000, 1)
-    print rand_o.randrange(66, 1000, 1)
-    print rand_o.randrange(66, 1000, 1)
-    print rand_o.randrange(1000, 2000, 2)
-    print rand_o.randrange(1000, 2000, 2)
-    print rand_o.randrange(1000, 2000, 2)
-# randrange2()
-
-def randint():
-    print rand_o.randint(2, 200)
-    print rand_o.randint(2, 200)
-    print rand_o.randint(2, 200)
-    print rand_o.randint(2, 200)
-    print rand_o.randint(2, 100)
-    print rand_o.randint(2, 100)
-    print rand_o.randint(2, 100)
-    print rand_o.randint(2, 100)
-# randint()
-
-li1 = ['a', 'b', 'c', 'd', 'e', 'f']
-li2 = [1, 2, 3, 4, 5, 6]
-def choice():
-    print rand_o.choice(li1)
-    print rand_o.choice(li1)
-    print rand_o.choice(li1)
-    print rand_o.choice(li1)
-    print rand_o.choice(li1)
-    print rand_o.choice(li2)
-    print rand_o.choice(li2)
-    print rand_o.choice(li2)
-    print rand_o.choice(li2)
-    print rand_o.choice(li2)
-# choice()
-
-def shuffle():
-    rand_o.shuffle(li1)
-    print li1
-    rand_o.shuffle(li1)
-    print li1
-    rand_o.shuffle(li1)
-    print li1
-    rand_o.shuffle(li2)
-    print li2
-    rand_o.shuffle(li2)
-    print li2
-    rand_o.shuffle(li2)
-    print li2
-# shuffle()
-
-def gammavariate():
-    # alpha > 1
-    print rand_o.gammavariate(3.0, 2.0)
-    print rand_o.gammavariate(3.0, 2.0)
-    # alpha = 1
-    print rand_o.gammavariate(1.0, 1.0)
-    print rand_o.gammavariate(1.0, 1.0)
-    # 0 < alpha < 1
-    print rand_o.gammavariate(0.4, 0.3)
-    print rand_o.gammavariate(0.4, 0.3)
-    # alpha <= 0
-    print rand_o.gammavariate(0.0, 0.0)
-# gammavariate()
-
-def betavariate():
-    print rand_o.betavariate(2.71828, 3.14159)
-    print rand_o.betavariate(2.71828, 3.14159)
-    print rand_o.betavariate(3.0, 3.0)
-    print rand_o.betavariate(3.0, 3.0)
-    print rand_o.betavariate(1.0, 1.0)
-    print rand_o.betavariate(1.0, 1.0)
-    print rand_o.betavariate(1.0, 1.0)
-    print rand_o.betavariate(0.0, 1.0)
-# betavariate()
-
-def expovariate():
-    print rand_o.expovariate(1.0)
-    print rand_o.expovariate(1.0)
-    print rand_o.expovariate(1.0)
-    print rand_o.expovariate(0.2)
-    print rand_o.expovariate(0.2)
-    print rand_o.expovariate(0.2)
-    print rand_o.expovariate(-0.2)
-    print rand_o.expovariate(-0.2)
-    print rand_o.expovariate(-0.2)
-    assert rand_o.expovariate(INF) == 0
-    assert rand_o.expovariate(-INF) == -0
-    print rand_o.expovariate(0.0)
-# expovariate()
-
-def gauss():
-    print rand_o.gauss(-1.0, 0.5)
-    print rand_o.gauss(1.0, -0.5)
-    print rand_o.gauss(1.0, 0.5)
-    print rand_o.gauss(1.0, 0.5)
-    print rand_o.gauss(1.0, 0.5)
-    print rand_o.gauss(0.0, 1.0)
-    print rand_o.gauss(0.0, 1.0)
-    print rand_o.gauss(0.0, 1.0)
-    assert rand_o.gauss(INF, 1.0) == INF
-    assert rand_o.gauss(-INF, 1.0) == -INF
-# gauss()
-
-def paretovariate():
-    print rand_o.paretovariate(1.0)
-    print rand_o.paretovariate(1.0)
-    print rand_o.paretovariate(2.0)
-    print rand_o.paretovariate(2.0)
-    print rand_o.paretovariate(4.0)
-    print rand_o.paretovariate(4.0)
-# paretovariate()
-
-def weibullvariate():
-    print rand_o.weibullvariate(1.0, 1.0)
-    print rand_o.weibullvariate(1.0, 1.0)
-    print rand_o.weibullvariate(1.0, 3.0)
-    print rand_o.weibullvariate(1.0, 3.0)
-    assert rand_o.weibullvariate(1.0, -INF) == 1
-    assert rand_o.weibullvariate(1.0, INF) == 1
-    assert rand_o.weibullvariate(-INF, 1.0) == -INF
-    assert rand_o.weibullvariate(INF, 1.0) == INF
-# weibullvariate()
-
-def normalvariate():
-    print rand_o.normalvariate(0.0, 1.0)
-    print rand_o.normalvariate(0.0, 1.0)
-    assert rand_o.normalvariate(INF, 1.0) == INF
-    assert rand_o.normalvariate(-INF, 1.0) == -INF
-    assert rand_o.normalvariate(0.0, INF) == INF
-    assert rand_o.normalvariate(0.0, -INF) == -INF
-    assert rand_o.normalvariate(10.0, 0.0) == 10.0
-    assert rand_o.normalvariate(10.0, 0.0) == 10.0
-# normalvariate()
-
-def lognormvariate():
-    print rand_o.lognormvariate(0.0, 1.0)
-    print rand_o.lognormvariate(0.0, 1.0)
-    assert rand_o.lognormvariate(0.0, 0.0) == 1.0
-    assert rand_o.lognormvariate(-INF, 0.0) == 0.0
-    assert rand_o.lognormvariate(INF, 0.0) == INF
-# lognormvariate()
-
-def vonmisesvariate():
-    print rand_o.vonmisesvariate(0.0, 1.0)
-    print rand_o.vonmisesvariate(0.0, 1e15)
-    print rand_o.vonmisesvariate(1.0, 1.0)
-    print rand_o.vonmisesvariate(1.23, 0.0)
-    assert rand_o.vonmisesvariate(3.0, INF) == 3.0
-# vonmisesvariate()
-
-def sample():
-    # n <= setsize && k <= 5
-    print rand_o.sample([1, 2, 3, 4, 5, 6], 3)
-    print rand_o.sample([1, 2, 3, 4, 5, 6], 3)
-    # n <= setsize && k > 5
-    print rand_o.sample([1.1, 2.2, 3.3, 4.4, 5.5, 6.6], 6)
-    print rand_o.sample([1.1, 2.2, 3.3, 4.4, 5.5, 6.6], 6)
-    print rand_o.sample([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 6)
-    print rand_o.sample([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 6)
-    # n > setsize
-    print rand_o.sample([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], 1)
-    print rand_o.sample([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], 1)
-    print rand_o.sample(['a', 'b', 'c'], 3)
-sample()
-
-def choices():
-    print rand_o.choices(["apples", "bananas", "cherries"], [-1], [-1], 5)
-    print rand_o.choices(["apples", "bananas", "cherries"], [-1], [-1], 5)
-    print rand_o.choices([1, 2, 8], [-1], [-1], 5)
-    print rand_o.choices([1, 2, 8], [-1], [-1], 5)
-    print rand_o.choices(["apples", "bananas", "cherries"], [10, 1, 1], [-1], 5)
-    print rand_o.choices(["apples", "bananas", "cherries"], [10, 1, 1], [-1], 5)
-    print rand_o.choices(["apples", "bananas", "cherries"], [-1], [10, 1, 1], 6)
-    print rand_o.choices(["apples", "bananas", "cherries"], [-1], [10, 1, 1], 6)
-# choices()
-
-# print rand_gen.genrand_int32()
-# print rand_gen.genrand_int32()
-
-# print rand_o.shuffle([3, 2, 4, 5])
-# print rand_o.gen.gettimeofday()
-# print rand_o.gen.gettimeofday()
-
-# gauss = rand_o.gauss
-#
-# rand_obj = Generator()
-# # rand_obj.init_by_array(init, length)
-# rand_obj.genrand_res53()
+test_sample(100, 5)
+test_sample(100, 100)
+test_sample(100, 0)

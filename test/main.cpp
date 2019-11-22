@@ -138,12 +138,11 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     StdlibTests, SeqTest,
-    testing::Combine(testing::Values("stdlib/str_test.seq",
-                                     "stdlib/math_test.seq",
-                                     "stdlib/itertools_test.seq",
-                                     "stdlib/bisect_test.seq",
-                                     "stdlib/sort_test.seq"),
-                     testing::Values(true, false)),
+    testing::Combine(
+        testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
+                        "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
+                        "stdlib/sort_test.seq", "stdlib/random_test.seq"),
+        testing::Values(true, false)),
     getTestNameFromParam);
 
 INSTANTIATE_TEST_SUITE_P(

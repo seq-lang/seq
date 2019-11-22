@@ -2,8 +2,7 @@ import sys
 from math import inf as INF, sqrt as _sqrt, acos as _acos, cos as _cos
 from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
 from bisect import bisect as _bisect
-
-raise NotImplementedError("NotImplementedError: 'random' module is not production-ready yet!")
+from time import time as _time
 
 N = 624
 M = 397
@@ -369,13 +368,13 @@ class Random:
                 j = int(self.random() * (i+1))
                 x[i], x[j] = x[j], x[i]
 
-    def uniform(self: Random, a: int, b: int) -> float:
+    def uniform(self: Random, a, b) -> float:
         """
         Get a random number in the range [a, b) or [a, b] depending on rounding.
         """
         return a + (b-a) * self.random()
 
-    def triangular(self: Random, low: float, high: float) -> float:
+    def triangular(self: Random, low: float, high: float, mode: float) -> float:
         """Triangular distribution.
 
         Continuous distribution bounded by given lower and upper limits,
@@ -387,12 +386,10 @@ class Random:
         default for low and high : low = 0.0, high = 1.0
         """
         # mode = None
-        u = self.random()
-        c = 0.0
-        try:
-            c = 0.5         # if mode is None else (mode - low) / (high - low)
-        except ZeroDivisionError:
+        if high == low:
             return low
+        u = self.random()
+        c = (mode - low) / (high - low)
         if u > c:
             u = 1.0 - u
             c = 1.0 - c
@@ -615,7 +612,7 @@ class Random:
         n = len(population)
         if not 0 <= k <= n:
             raise ValueError("Sample larger than population or is negative")
-        result = [T()] * k
+        result = [T() for _ in range(k)]
         setsize = 21.0        # size of a small set minus size of an empty list
         if k > 5:
             # Should be _log(k * 3, 4)
@@ -639,7 +636,7 @@ class Random:
                 result[i] = population[j]
         return result
 
-    def choices(self: Random, population, weights, cum_weights, k: int):
+    def choices(self: Random, population, weights: list[int], cum_weights: list[int], k: int):
         """Return a k sized list of population elements chosen with replacement.
 
         If the relative weights or cumulative weights are not specified,
@@ -647,39 +644,102 @@ class Random:
 
         Since weights and cum_weights is assumed to be positive, we will replace None with [-1].
         """
-        def accumulate(weight: list[int]) -> list[int]:
+        def accumulate(weights: list[int]) -> list[int]:
             """
             Calculate cum_weights
             """
-            n = len(weight)
-            cum_weight = list[int]()
+            n = len(weights)
+            cum_weight = list[int](n)
             accum = 0
             if n > 0:
                 for i in range(n):
-                    accum += weight[i]
+                    accum += weights[i]
                     cum_weight.append(accum)
 
             return cum_weight
 
         random = self.random
         n = len(population)
-
-        if cum_weights == [-1]:
-            if weights == [-1]:
-                n += 0    # convert to float for a small speed improvement
+        if cum_weights is None:
+            if weights is None:
                 return [population[int(random() * n)] for i in range(k)]
             cum_weights = accumulate(weights)
-
-        elif weights != [-1]:
+        elif weights is not None:
             raise TypeError('Cannot specify both weights and cumulative weights')
-
         if len(cum_weights) != n:
             raise ValueError('The number of weights does not match the population')
 
         total = float(cum_weights[-1])  # convert to float
-
-        return [population[_bisect(cum_weights, int(random() * total))]
+        hi = n - 1
+        return [population[_bisect(cum_weights, int(random() * total), 0, hi)]
                 for i in range(k)]
 
-gen = Generator()
-rand = Random(gen)
+_gen = Generator()
+_rnd = Random(_gen)
+
+def seed(a: int):
+    _gen.init_genrand(u64(a))
+
+seed(int(_time()))
+
+def getrandbits(k: int):
+    return _rnd.getrandbits(k)
+
+def randrange(start: int, stop: optional[int] = None, step: int = 1):
+    stopx = start
+    if stop:
+        stopx = ~stop
+    else:
+        start = 0
+    return _rnd.randrange(start, stopx, step)
+
+def randint(a: int, b: int):
+    return _rnd.randint(a, b)
+
+def choice(s):
+    return _rnd.choice(s)
+
+def choices(population, weights: list[int] = None, cum_weights: list[int] = None, k: int = 1):
+    return _rnd.choices(population, weights, cum_weights, k)
+
+def shuffle(s):
+    _rnd.shuffle(s)
+
+def sample(population, k: int):
+    return _rnd.sample(population, k)
+
+def random():
+    return _rnd.random()
+
+def uniform(a, b):
+    return _rnd.uniform(a, b)
+
+def triangular(low: float = 0.0, high: float = 1.0, mode: optional[float] = None):
+    return _rnd.triangular(low, high, ~mode if mode else (low + high)/2)
+
+def betavariate(alpha: float, beta: float):
+    return _rnd.betavariate(alpha, beta)
+
+def expovariate(lambd: float):
+    return _rnd.expovariate(lambd)
+
+def gammavariate(alpha: float, beta: float):
+    return _rnd.gammavariate(alpha, beta)
+
+def gauss(mu: float, sigma: float):
+    return _rnd.gauss(mu, sigma)
+
+def lognormvariate(mu: float, sigma: float):
+    return _rnd.lognormvariate(mu, sigma)
+
+def normalvariate(mu: float, sigma: float):
+    return _rnd.normalvariate(mu, sigma)
+
+def vonmisesvariate(mu: float, kappa: float):
+    return _rnd.vonmisesvariate(mu, kappa)
+
+def paretovariate(alpha: float):
+    return _rnd.paretovariate(alpha)
+
+def weibullvariate(alpha: float, beta: float):
+    return _rnd.weibullvariate(alpha, beta)
