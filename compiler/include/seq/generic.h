@@ -11,12 +11,23 @@
 namespace seq {
 class Expr;
 
+/// Checks if two type vectors are "equal".
+/// @param strict if true, do not treat isomorphic tuples with different names
+/// as equal
 template <typename T = types::Type>
-static bool typeMatch(const std::vector<T *> &v1, const std::vector<T *> &v2) {
+static bool typeMatch(const std::vector<T *> &v1, const std::vector<T *> &v2,
+                      bool strict = false) {
   if (v1.size() != v2.size())
     return false;
 
   for (unsigned i = 0; i < v1.size(); i++) {
+    if (strict) {
+      types::RecordType *r1 = v1[i]->asRec();
+      types::RecordType *r2 = v2[i]->asRec();
+      if (r1 && r2) {
+        return r1->isStrict(r2);
+      }
+    }
     if (!types::is(v1[i], v2[i]))
       return false;
   }
@@ -42,7 +53,7 @@ public:
 
   T *find(const std::vector<types::Type *> &types) {
     for (auto &v : cache) {
-      if (typeMatch<>(v.first, types))
+      if (typeMatch<>(v.first, types, /*strict=*/true))
         return v.second;
     }
     return nullptr;

@@ -31,6 +31,7 @@ public:
   void initFields() override;
   bool isAtomic() const override;
   bool is(Type *type) const override;
+  bool isStrict(Type *type) const;
   unsigned numBaseTypes() const override;
   Type *getBaseType(unsigned idx) const override;
   llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
