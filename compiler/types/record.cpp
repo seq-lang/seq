@@ -79,6 +79,18 @@ bool types::RecordType::is(types::Type *type) const {
   return true;
 }
 
+bool types::RecordType::isStrict(types::Type *type) const {
+  if (!isGeneric(type))
+    return false;
+
+  auto *rec = dynamic_cast<types::RecordType *>(type);
+  if (!name.empty() || !rec->name.empty()) {
+    return name == rec->name;
+  }
+
+  return is(type);
+}
+
 Function *types::RecordType::getContainsFunc(Module *module) {
   // only support __contains__ for homogeneous tuples:
   assert(types.size() > 0);

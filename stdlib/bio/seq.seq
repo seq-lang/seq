@@ -102,7 +102,6 @@ extend seq:
 
     def __getitem__(self: seq, s: rslice):
         a = s.start
-        b = s.SAMHeaderTarget
         n = len(self)
         if a < 0: a += n
         if a > n: a = n

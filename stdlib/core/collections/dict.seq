@@ -18,7 +18,7 @@ class dict[K,V]:
 
 # Magic methods
 
-    def __init__(self: dict[K,V]):
+    def _init(self: dict[K,V]):
         self._n_buckets = 0
         self._size = 0
         self._n_occupied = 0
@@ -26,6 +26,14 @@ class dict[K,V]:
         self._flags = ptr[u32]()
         self._keys = ptr[K]()
         self._vals = ptr[V]()
+
+    def __init__(self: dict[K,V]):
+        self._init()
+
+    def __init__(self: dict[K,V], g: generator[tuple[K,V]]):
+        self._init()
+        for k,v in g:
+            self[k] = v
 
     def __getitem__(self: dict[K,V], key: K):
         x = self._kh_get(key)

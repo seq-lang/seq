@@ -1,4 +1,4 @@
-def bisect_left(a, x, lo: int, hi: int) -> int:
+def bisect_left(a, x, lo: int = 0, hi: int = -1) -> int:
     """
     bisect_left(a, x, lo, hi) -> int
 
@@ -14,15 +14,17 @@ def bisect_left(a, x, lo: int, hi: int) -> int:
     Default values: lo=0, high=None
     For now seq will use len(a) instead of None
     """
-    # lo = 0
-    # hi = len(a)
+    if lo < 0:
+        raise ValueError('lo must be non-negative')
+    if hi == -1:
+        hi = len(a)
     while lo < hi:
         mid = (lo + hi) // 2
         if a[mid] < x: lo = mid+1
         else: hi = mid
     return lo
 
-def bisect_right(a, x, lo: int, hi: int) -> int:
+def bisect_right(a, x, lo: int = 0, hi: int = -1) -> int:
     """
     bisect_right(a, x, lo, hi) -> int
 
@@ -40,6 +42,10 @@ def bisect_right(a, x, lo: int, hi: int) -> int:
     """
     # lo = 0
     # hi = len(a)
+    if lo < 0:
+        raise ValueError('lo must be non-negative')
+    if hi == -1:
+        hi = len(a)
     while lo < hi:
         mid = (lo + hi) // 2
         if x < a[mid]: hi = mid
@@ -53,7 +59,7 @@ def bisect(a, x, lo: int, hi: int) -> int:
     # lo, hi = 0, len(a)
     return bisect_right(a, x, lo, hi)
 
-def insort_left(a, x, lo: int, hi: int):
+def insort_left(a, x, lo: int = 0, hi: int = -1):
     """
     insort_left(a, x, lo, hi)
 
@@ -67,7 +73,7 @@ def insort_left(a, x, lo: int, hi: int):
     lo = bisect_left(a, x, lo, hi)
     a.insert(lo, x)
 
-def insort_right(a, x, lo: int, hi: int):
+def insort_right(a, x, lo: int = 0, hi: int = -1):
     """
     insort_right(a, x, lo, hi)
 
@@ -85,7 +91,7 @@ def insort_right(a, x, lo: int, hi: int):
     else:
         a.insert(lo, x)
 
-def insort(a, x, lo: int, hi: int):
+def insort(a, x, lo: int = 0, hi: int = -1):
     """
     insort = insort_right
     """

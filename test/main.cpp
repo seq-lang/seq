@@ -104,7 +104,7 @@ TEST_P(SeqTest, Run) {
   const bool debug = get<1>(GetParam());
   string filename = string(TEST_DIR) + "/" + basename;
   SeqModule *module = parse("", filename);
-  execute(module, {}, {}, debug);
+  execute(module, {filename}, {}, debug);
   string output = result();
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
   EXPECT_FALSE(assertsFailed);
@@ -138,12 +138,12 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     StdlibTests, SeqTest,
-    testing::Combine(testing::Values("stdlib/str_test.seq",
-                                     "stdlib/math_test.seq",
-                                     "stdlib/itertools_test.seq",
-                                     "stdlib/bisect_test.seq",
-                                     "stdlib/sort_test.seq"),
-                     testing::Values(true, false)),
+    testing::Combine(
+        testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
+                        "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
+                        "stdlib/sort_test.seq", "stdlib/random_test.seq",
+                        "stdlib/heapq_test.seq"),
+        testing::Values(true, false)),
     getTestNameFromParam);
 
 INSTANTIATE_TEST_SUITE_P(

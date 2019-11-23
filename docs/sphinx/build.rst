@@ -145,6 +145,20 @@ Then build Seq via:
 
 This will produce a ``seqc`` executable for compiling/running Seq programs, and a ``seqtest`` executable for running the test suite.
 
+
+Documentation
+^^^^^^^^^^^^^
+
+`Sphinx <https://www.sphinx-doc.org>`_ (with the `RTD theme <https://sphinx-rtd-theme.readthedocs.io/en/stable/>`_), `Breathe <https://breathe.readthedocs.io/en/latest/>`_ and `Exhale <https://exhale.readthedocs.io/en/latest/index.html>`_ are required to compile the documentation. Once these are installed, just:
+
+.. code-block:: bash
+
+    cd seq/docs/sphinx
+    make html
+
+You can then open ``_build/html/index.html`` with your browser.
+
+
 .. _pre-built binaries: https://github.com/seq-lang/seq/releases
 .. _CMake: https://cmake.org
 .. _LLVM: https://llvm.org

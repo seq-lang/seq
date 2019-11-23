@@ -2,7 +2,7 @@
  <img src="docs/images/logo.png?raw=true" width="200" alt="Seq"/>
 </p>
 
-<h1 align="center"> Seq — a language for bioinformatics </h1>
+<h1 align="center"> Seq — a language for bioinformatics</h1>
 
 <p align="center">
   <a href="https://travis-ci.com/seq-lang/seq">
@@ -25,13 +25,35 @@
 
 ## Introduction
 
+> **A strongly-typed and statically-compiled high-performance Pythonic language!**
+
 Seq is a programming language for computational genomics and bioinformatics. With a Python-compatible syntax and a host of domain-specific features and optimizations, Seq makes writing high-performance genomics software as easy as writing Python code, and achieves performance comparable to (and in many cases better than) C/C++.
 
-Learn more by following the [tutorial](docs/sphinx/tutorial.rst) or from the [cookbook](docs/sphinx/cookbook.rst).
+**Think of Seq as a strongly-typed and statically-compiled Python: all the bells and whistles of Python, boosted with strong type system, without any performance overhead.**
+
+Seq is able to outperform Python code by up to 160x. Seq can further beat equivalent C/C++ code by up to 2x without any manual interventions, and also natively supports parallelism out of the box. Implementation details and benchmarks are discussed [in our paper](https://dl.acm.org/citation.cfm?id=3360551).
+
+Learn more by following the [tutorial](https://seq-lang.org/tutorial.html) or from the [cookbook](https://seq-lang.org/cookbook.html).
 
 ## Example
 
-Here is an example seeding application in Seq using a hypothetical genome index, like what is typically found in seed-and-extend alignment algorithms:
+Seq is a Python-compatible language, and the vast majority of Python programs should work without any modifications:
+
+```python
+def check_prime(n):
+    if n > 1:
+        for i in range(2, n):
+            if n % i == 0:
+                return False
+        return True
+    else:
+        return False
+
+n = 1009
+print n, 'is', 'a' if check_prime(n) else 'not a', 'prime'
+```
+
+Here is an example that showcases Seq's bioinformatics features: a seeding application in Seq using a hypothetical genome index, like what is typically found in seed-and-extend alignment algorithms:
 
 ```python
 from sys import argv
@@ -85,16 +107,9 @@ This will install Seq in a new ``.seq`` directory within your home directory. Be
 
 See [Building from Source](docs/sphinx/build.rst).
 
-#### Documentation
+## Documentation
 
-[Sphinx](https://www.sphinx-doc.org) (with the [RTD theme](https://sphinx-rtd-theme.readthedocs.io/en/stable/)), [Breathe](https://breathe.readthedocs.io/en/latest/) and [Exhale](https://exhale.readthedocs.io/en/latest/index.html) are required to compile the documentation. Once these are installed, just:
-
-```bash
-cd seq/docs/sphinx
-make html
-```
-
-You can then open `_build/html/index.html` with your browser.
+Please check [seq-lang.org](https://seq-lang.org) for in-depth documentation.
 
 ## Citing Seq
 
