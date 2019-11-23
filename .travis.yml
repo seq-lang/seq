@@ -4,12 +4,11 @@ sudo: required
 matrix:
   include:
     - os: linux
-      dist: xenial
     - os: osx
-      osx_image: xcode11
 
 addons:
   apt:
+    update: true
     packages:
       - libsnappy-dev
       - binutils-dev
@@ -21,6 +20,7 @@ addons:
       - python-sphinx
       - doxygen
   homebrew:
+    update: true
     packages:
       - snappy
       - binutils
@@ -29,6 +29,8 @@ addons:
       - python3
       - sphinx-doc
       - doxygen
+      - cmake
+      - wget
 
 before_install:
   # build and cache LLVM/Tapir:
@@ -106,18 +108,15 @@ before_script:
   - export GCLIB=$(realpath gc-8.0.4/release/lib/libgc.a)
   - export CPATH=`pwd`/gc-8.0.4/release/include:${CPATH}
   - export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      export CC=clang
-      export CXX=clang++
-      sudo ldconfig
-    fi
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
 
 script:
   - mkdir build
   - |
     (cd build && cmake .. -DSEQ_THREADED=ON \
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
+                          -DCMAKE_C_COMPILER=clang \
+                          -DCMAKE_CXX_COMPILER=clang++ \
                           -DGC_LIB=${GCLIB})
   - cmake --build build --config Release
   - build/seqtest
