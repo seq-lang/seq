@@ -257,7 +257,8 @@ def starmap(function, iterable):
     for args in iterable:
         yield function(args[0], args[1])
 
-def groupby[K, V](iterable: generator[V], key: function[K, V]):
+@deduceall
+def groupby[K,V](iterable: generator[V], key: optional[function[K,V]] = None):
     """
     groupby(iterable, key=None)
 
@@ -273,23 +274,42 @@ def groupby[K, V](iterable: generator[V], key: function[K, V]):
     Deals with only strings for now.
     """
     if iterable.done():
+        iterable.destroy()
         return
 
-    currvalue = iterable.next()
-    currkey = key(currvalue)
-    group = [currvalue]
-
-    while not iterable.done():
+    if key:
         currvalue = iterable.next()
-        k = key(currvalue)
+        currkey = (~key)(currvalue)
+        group = [currvalue]
 
-        if k != currkey:
-            yield currkey, group
-            currkey = k
-            group = list[V]()
-        group.append(currvalue)
-    yield currkey, group
+        while not iterable.done():
+            currvalue = iterable.next()
+            k = (~key)(currvalue)
 
+            if k != currkey:
+                yield currkey, group
+                currkey = k
+                group = list[V]()
+            group.append(currvalue)
+        yield currkey, group
+    else:
+        currvalue = iterable.next()
+        currkey = currvalue
+        group = [currvalue]
+
+        while not iterable.done():
+            currvalue = iterable.next()
+            k = currvalue
+
+            if k != currkey:
+                yield currkey, group
+                currkey = k
+                group = list[V]()
+            group.append(currvalue)
+        yield currkey, group
+    iterable.destroy()
+
+'''
 def product[T](iterables: generator[T], repeat: int):
     """
     Needs implementing.
@@ -307,3 +327,4 @@ def tee(iterable, n):
     Needs implementing.
     """
     pass
+'''
