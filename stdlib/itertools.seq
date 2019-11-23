@@ -309,14 +309,27 @@ def groupby[K,V](iterable: generator[V], key: optional[function[K,V]] = None):
         yield currkey, group
     iterable.destroy()
 
+def zip_longest[T](a: generator[T], b: generator[T], fillvalue: T):
+    a_done = False
+    b_done = False
+
+    while not a.done():
+        a_val = a.next()
+        b_val = fillvalue
+        if not b_done:
+            b_done = b.done()
+            if not b_done: b_val = b.next()
+        yield a_val, b_val
+
+    if not b_done:
+        while not b.done():
+            yield fillvalue, b.next()
+
+    a.destroy()
+    b.destroy()
+
 '''
 def product[T](iterables: generator[T], repeat: int):
-    """
-    Needs implementing.
-    """
-    pass
-
-def zip_longest[T](iterables: generator[T], fillvalue):
     """
     Needs implementing.
     """

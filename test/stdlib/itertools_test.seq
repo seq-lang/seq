@@ -152,6 +152,15 @@ def groupby():
         return s
     assert list(itertools.groupby(iter('AAAABBBCCDAABBC'), key_str)) == [('A', ['A', 'A', 'A', 'A']), ('B', ['B', 'B', 'B']), ('C', ['C', 'C']), ('D', ['D']), ('A', ['A', 'A']), ('B', ['B', 'B']), ('C', ['C'])]
 
+@test
+def zip_longest():
+    assert list(itertools.zip_longest('ABCDE', '12345', fillvalue='-')) == [('A', '1'), ('B', '2'), ('C', '3'), ('D', '4'), ('E', '5')]
+    assert list(itertools.zip_longest('ABCDE', '123', fillvalue='-')) == [('A', '1'), ('B', '2'), ('C', '3'), ('D', '-'), ('E', '-')]
+    assert list(itertools.zip_longest('123', 'ABCDE', fillvalue='-')) == [('1', 'A'), ('2', 'B'), ('3', 'C'), ('-', 'D'), ('-', 'E')]
+    assert list(itertools.zip_longest('', 'ABCDE', fillvalue='-')) == [('-', 'A'), ('-', 'B'), ('-', 'C'), ('-', 'D'), ('-', 'E')]
+    assert list(itertools.zip_longest('ABCDE', '', fillvalue='-')) == [('A', '-'), ('B', '-'), ('C', '-'), ('D', '-'), ('E', '-')]
+    assert not list(itertools.zip_longest('', '', fillvalue='-'))
+
 combinations()
 combinations_with_replacement()
 islice()
@@ -167,3 +176,4 @@ accumulate()
 chain()
 starmap()
 groupby()
+zip_longest()
