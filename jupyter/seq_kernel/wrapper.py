@@ -13,3 +13,9 @@ class SeqWrapper:
 
    def exec(self, code):
       self._exec_fn(self.handle, code.encode('utf-8'))
+   
+   def inspect(self, request_object, detail_level):
+      # TODO: Inspect the requested object and return the doc and/or source
+      return {
+         'text/plain': f'Hello, World! {request_object} {detail_level}'
+      }

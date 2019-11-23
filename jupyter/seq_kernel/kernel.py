@@ -63,3 +63,18 @@ class SeqKernel(Kernel):
 
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payload': [], 'user_expressions': {}}
+
+    def _get_object(self, code, cursor_pos):
+        # TODO: Get the correct section of code to be inspected
+        left = code[:cursor_pos].rsplit(' ', 1)[-1]
+        right = code[cursor_pos:].split(' ', 1)[0]
+        return left + right
+
+    def do_inspect(self, code, cursor_pos, detail_level=0):
+        data = self.seqwrapper.inspect(self._get_object(code, cursor_pos), detail_level)
+        return {
+            'status': 'ok',
+            'found': True,
+            'data': data,
+            'metadata': {}
+        }
