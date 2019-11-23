@@ -104,7 +104,7 @@ TEST_P(SeqTest, Run) {
   const bool debug = get<1>(GetParam());
   string filename = string(TEST_DIR) + "/" + basename;
   SeqModule *module = parse("", filename);
-  execute(module, {}, {}, debug);
+  execute(module, {filename}, {}, debug);
   string output = result();
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
   EXPECT_FALSE(assertsFailed);

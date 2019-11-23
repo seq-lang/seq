@@ -1,4 +1,10 @@
 import random as R
+import time
+import sys
+
+seed = int(time.time())
+sys.stderr.write('seed: ' + str(seed) + '\n')
+R.seed(seed)
 
 @test
 def test_rnd_result(name, results, invariant):
