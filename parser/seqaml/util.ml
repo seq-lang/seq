@@ -23,11 +23,11 @@ let dbg fmt =
     (defined via environmental variable [SEQ_PATH]). *)
 let get_from_stdlib ?(ext = ".seq") res =
   let seqpath = Option.value (Sys.getenv "SEQ_PATH") ~default:"" in
-  let seqpath = 
+  let seqpath =
     if Sys.argv.(0) = ""
     then seqpath
     else (
-      try 
+      try
         let path = Filename.realpath Sys.argv.(0) in
         let path = Filename.dirname @@ Filename.dirname path in
         sprintf "%s:%s/stdlib" seqpath path
