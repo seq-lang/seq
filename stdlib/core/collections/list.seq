@@ -77,7 +77,7 @@ class list[T]:
             b += len(self)
         if not (0 <= a <= b <= len(self)):
             self._slice_error()
-        return list[T](self.arr.__slice__(a, b), b - a)
+        return list[T](copy(self.arr.__slice__(a, b)), b - a)
 
     def __getitem__(self: list[T], s: lslice):
         end = s.end
@@ -85,7 +85,7 @@ class list[T]:
             end += len(self)
         if not (0 <= end <= len(self)):
             self._slice_error()
-        return list[T](self.arr.__slice_left__(end), end)
+        return list[T](copy(self.arr.__slice_left__(end)), end)
 
     def __getitem__(self: list[T], s: rslice):
         start = s.start
@@ -93,7 +93,7 @@ class list[T]:
             start += len(self)
         if not (0 <= start <= len(self)):
             self._slice_error()
-        return list[T](self.arr.__slice_right__(start), self.len - start)
+        return list[T](copy(self.arr.__slice_right__(start)), self.len - start)
 
     def __getitem__(self: list[T], s: esslice):
         if s.step == 0:
@@ -128,7 +128,6 @@ class list[T]:
         if not (0 <= start <= len(self)) or s.step == 0:
             self._slice_error()
         return list[T](self.arr[i] for i in range(start, self.len, s.step))
-
 
     def __setitem__(self: list[T], s: eslice, other: generator[T]):
         l = list[T](other)
