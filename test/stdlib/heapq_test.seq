@@ -1,10 +1,5 @@
 import heapq
-# from random import random, randrange
-
-def random():
-    return 42
-def randrange(i: int):
-    return 42
+from random import random, randrange
 
 @test
 def check_invariant(heap):
@@ -185,25 +180,13 @@ def test_comparison_operator():
     target = list(reversed(sorted(data)))
     assert hsort[LT](data) == target
 
-from time import time 
-t= time()
 test_heapify()
-t=time()-t ; print '0', t
 test_naive_nbest()
-t=time()-t ; print '1', t
 test_nsmallest()
-t=time()-t ; print '2', t
 test_nlargest()
-t=time()-t ; print '3', t
 test_nbest()
-t=time()-t ; print '4', t
 test_nbest_with_pushpop()
-t=time()-t ; print '5', t
 test_heappushpop()
-t=time()-t ; print '6', t
 test_heappop_max()
-t=time()-t ; print '7', t
 test_heapsort()
-t=time()-t ; print '8', t
 test_comparison_operator()
-t=time()-t ; print '9', t
