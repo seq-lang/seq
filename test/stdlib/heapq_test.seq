@@ -1,5 +1,5 @@
 import heapq
-import random
+from random import random, randrange
 
 @test
 def check_invariant(heap):
@@ -12,13 +12,13 @@ def check_invariant(heap):
 @test
 def test_heapify():
     for size in list(range(30)) + [20000]:
-        heap = [random.random() for dummy in range(size)]
+        heap = [random() for dummy in range(size)]
         heapq.heapify(heap)
         check_invariant(heap)
 
 @test
 def test_naive_nbest():
-    data = [random.randrange(2000) for i in range(1000)]
+    data = [randrange(2000) for i in range(1000)]
     heap = list[int]()
     for item in data:
         heapq.heappush(heap, item)
@@ -39,7 +39,7 @@ def test_nbest():
     # heap instead of a min heap, it could go faster still via
     # heapify'ing all of data (linear time), then doing 10 heappops
     # (10 log-time steps).
-    data = [random.randrange(2000) for i in range(1000)]
+    data = [randrange(2000) for i in range(1000)]
     heap = data[:10]
     heapq.heapify(heap)
     for item in data[10:]:
@@ -49,7 +49,7 @@ def test_nbest():
 
 @test
 def test_nbest_with_pushpop():
-    data = [random.randrange(2000) for i in range(1000)]
+    data = [randrange(2000) for i in range(1000)]
     heap = data[:10]
     heapq.heapify(heap)
     for item in data[10:]:
@@ -83,8 +83,8 @@ def test_heappop_max():
 def test_heapsort():
     # Exercise everything with repeated heapsort checks
     for trial in range(100):
-        size = random.randrange(50)
-        data = [random.randrange(25) for i in range(size)]
+        size = randrange(50)
+        data = [randrange(25) for i in range(size)]
         heap: list[int] = None
         if trial & 1:     # Half of the time, use heapify
             heap = data[:]
@@ -99,10 +99,10 @@ def test_heapsort():
 '''
 def test_merge(self):
     inputs = []
-    for i in range(random.randrange(25)):
+    for i in range(randrange(25)):
         row = []
-        for j in range(random.randrange(100)):
-            tup = random.choice('ABC'), random.randrange(-500, 500)
+        for j in range(randrange(100)):
+            tup = choice('ABC'), randrange(-500, 500)
             row.append(tup)
         inputs.append(row)
 
@@ -135,8 +135,8 @@ def test_merge_stability(self):
         pass
     inputs = [[], [], [], []]
     for i in range(20000):
-        stream = random.randrange(4)
-        x = random.randrange(500)
+        stream = randrange(4)
+        x = randrange(500)
         obj = Int(x)
         obj.pair = (x, stream)
         inputs[stream].append(obj)
@@ -150,7 +150,7 @@ def mykey(x: tuple[int,int]): return (x[0] * 547 % 2000, x[1] * 547 % 2000)
 
 @test
 def test_nsmallest():
-    data = [(random.randrange(2000), i) for i in range(1000)]
+    data = [(randrange(2000), i) for i in range(1000)]
     for n in (10,):
         assert list(heapq.nsmallest(n, data)) == sorted(data)[:min(n, len(data))]
         assert list(heapq.nsmallest(n, data, key=mykey)) == sorted(data, key=mykey)[:min(n, len(data))]
@@ -158,7 +158,7 @@ def test_nsmallest():
 
 @test
 def test_nlargest():
-    data = [(random.randrange(2000), i) for i in range(1000)]
+    data = [(randrange(2000), i) for i in range(1000)]
     for n in (0, 1, 2, 10, 100, 400, 999, 1000, 1100):
         assert list(heapq.nlargest(n, data)) == sorted(data)[::-1][:min(n, len(data))]
         assert list(heapq.nlargest(n, data, key=mykey)) == sorted(data, key=mykey)[::-1][:min(n, len(data))]
@@ -176,7 +176,7 @@ def test_comparison_operator():
             self.x = x
         def __lt__(self: LT, other: LT):
             return self.x > other.x
-    data = [random.random() for i in range(100)]
+    data = [random() for i in range(100)]
     target = list(reversed(sorted(data)))
     assert hsort[LT](data) == target
 

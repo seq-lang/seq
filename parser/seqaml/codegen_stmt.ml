@@ -56,7 +56,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   (** [parse_module ~ctx stmts] parses a module.
       A module is just a simple list [stmts] of statements. *)
   and parse_module ?(jit = false) ~(ctx : Ctx.t) stmts =
-    Util.dbg "%s\n" @@ Util.ppl ~sep:"\n" stmts ~f:Ast.Stmt.to_string;
+    (* Util.dbg "%s\n" @@ Util.ppl ~sep:"\n" stmts ~f:Ast.Stmt.to_string; *)
     let stmts =
       if jit
       then
@@ -351,7 +351,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       (Util.ppl ~f:Fn.id (List.tl_exn params))
       in
       ctx.parser ctx ~file:ctx.filename code;
-      Util.dbg "-->\n%s\n<--" code;
+      (* Util.dbg "-->\n%s\n<--" code; *)
       Llvm.Stmt.pass ()
     | "c", None ->
       let names, types =
@@ -385,7 +385,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let generics = List.map2_exn generics generic_types ~f:(fun g t ->
       match snd g with
       | Id n ->
-        Util.dbg ">> extend %s :: add %s" (Ast.Expr.to_string name) n;
+        (* Util.dbg ">> extend %s :: add %s" (Ast.Expr.to_string name) n; *)
         Ctx.add ~ctx:new_ctx n (Ctx_namespace.Type t)
       | _ -> serr ~pos:(fst g) "not a valid generic specifier")
     in
@@ -415,8 +415,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
                 | (_, { global; internal; _ }) :: _ -> global && not internal)
           in
           Hashtbl.set ctx.imported ~key:file ~data:map;
-          Util.dbg "importing %s <%s>" file from;
-          Ctx.to_dbg_output { new_ctx with map };
+          (* Util.dbg "importing %s <%s>" file from; *)
+          (* Ctx.to_dbg_output { new_ctx with map }; *)
           map
       in
       match what with
@@ -435,7 +435,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         Hashtbl.iteri vtable ~f:(fun ~key ~data ->
             match data with
             | (var, { global = true; internal = false; _ }) :: _ ->
-              Util.dbg "[import] adding %s::%s" from key;
+              (* Util.dbg "[import] adding %s::%s" from key; *)
               Ctx.add ~ctx ~toplevel ~global:toplevel key var
             | _ -> ())
       | Some lst ->
@@ -722,7 +722,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let generics = List.append type_args generic_args |> List.dedup_and_sort ~compare in
     set_generic_count (List.length generics);
     List.iteri generics ~f:(fun cnt key ->
-        Util.dbg "adding %s ..." key;
+        (* Util.dbg "adding %s ..." key; *)
         Ctx.add ~ctx key (Ctx_namespace.Type (get_generic cnt key)));
     let types = List.map types ~f:(E.parse_type ~ctx) in
     let defaults = List.map defaults ~f:(function

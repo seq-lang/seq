@@ -74,10 +74,12 @@ let remove ctx key =
 
 (** [parse_file ~ctx file] parses a file [file] within the context [ctx]. *)
 let parse_code ~ctx ~file code =
-  ctx.parser ~file ctx (code ^ "\n")
+  Util.dbg "parsing %s" file;
+  let _t = Unix.gettimeofday () in
+  ctx.parser ~file ctx (code ^ "\n");
+  Util.dbg "... took %f for %s" (Unix.gettimeofday() -. _t) file
 
 let parse_file ~ctx file =
-  Util.dbg "parsing %s" file;
   let lines = In_channel.read_lines file in
   let code = String.concat ~sep:"\n" lines in
   parse_code ~ctx ~file:(Filename.realpath file) code

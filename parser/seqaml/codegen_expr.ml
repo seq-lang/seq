@@ -420,7 +420,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     in
     match imports ctx.map lh_expr with
     | Some ictx ->
-      Util.dbg "import helper...";
+      (* Util.dbg "import helper..."; *)
       parse_id ctx ~map:ictx pos rhs
     | None ->
       let lh_expr = parse ~ctx lh_expr in
