@@ -32,8 +32,8 @@ def _sort_list[T,S](self: list[T], key: function[S,T], algorithm: str):
             insertion_sort_inplace(self, key)
         case 'heap':
             heap_sort_inplace(self, key)
-        case 'tim':
-            tim_sort_inplace(self, key)
+        #case 'tim':
+        #    tim_sort_inplace(self, key)
         case 'quick':
             qsort_inplace(self, key)
         case _:
@@ -45,7 +45,7 @@ extend list[T]:
         def ident[T](x: T):
             return x
 
-        alg = ~algorithm if algorithm else 'quick'
+        alg = ~algorithm if algorithm else 'pdq'
         if key:
             _sort_list(self, ~key, alg)
         else:
