@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -g -pedantic -Wall -Wno-return-type-c-linkage")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 include_directories(compiler/include)
 include_directories(runtime)
 
@@ -42,7 +44,6 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/ksw2/ksw2_extz2_sse.cpp
                          runtime/ksw2/ksw2_gg2_sse.cpp)
 target_link_libraries(seqrt PUBLIC bz2 lzma ${ZLIB_LIBRARIES} ${GC_LIB} ${HTS_LIB} Threads::Threads)
-target_compile_options(seqrt PRIVATE -O3)
 
 if(SEQ_THREADED)
   find_package(OpenMP REQUIRED)
