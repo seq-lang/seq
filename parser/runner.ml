@@ -69,12 +69,16 @@ let parse_c fname =
       | Some seq_module -> Ctypes.raw_address_of_ptr (Ctypes.to_voidp seq_module)
       | None -> Nativeint.zero )
   | f when Caml.Sys.file_exists f ->
+    let _t = Unix.gettimeofday () in
     let lines = In_channel.read_lines f in
     let code = String.concat ~sep:"\n" lines in
     let seq_module = init ~filename:(Filename.realpath f) code error_handler in
-    ( match seq_module with
+    let ret = match seq_module with
       | Some seq_module -> Ctypes.raw_address_of_ptr (Ctypes.to_voidp seq_module)
-      | None -> Nativeint.zero )
+      | None -> Nativeint.zero
+    in
+    Util.dbg "... took %f for the whole OCaml part" (Unix.gettimeofday() -. _t);
+    ret
   | f ->
     error_handler (Lexer (sprintf "file '%s' does not exist" f)) [Ast.Ann.default];
     Nativeint.zero
