@@ -2,6 +2,32 @@ import statistics
 
 @test
 def med():
-    y = [5, 2, 3, 4, 1]
-    statistics.median(y)
+    
+    # Test median with even nuber of int data points.
+    data = [1, 2, 3, 4, 5, 6]
+    assert statistics.median(data) == 3.5
+
+    # Test median with an odd number of int data points.
+    data = [1, 2, 3, 4, 5, 6, 9]
+    assert statistics.median(data) == 4
+    
+    # Test median works with an odd number of Fractions.
+    fdata = [1/7, 2/7, 3/7, 4/7, 5/7]
+    assert statistics.median(fdata) == 3/7
+
+    # Test median works with an even number of Fractions.
+    fdata = [1/7, 2/7, 3/7, 4/7, 5/7, 6/7]
+    assert statistics.median(fdata) == 1/2
+
+    # Test median works with an odd number of Decimals.
+    ddata = [2.5, 3.1, 4.2, 5.7, 5.8]
+    assert statistics.median(ddata) == 4.2
+
+    # Test median works with an even number of Decimals.
+    ddata = [1.2, 2.5, 3.1, 4.2, 5.7, 5.8]
+    # SOMETHING IS WEIRD HERE!
+    # assert statistics.median(ddata) == 3.65
+    print statistics.median(ddata) 
+    print statistics.median(ddata) == 3.65
+
 med()
