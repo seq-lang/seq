@@ -30,6 +30,10 @@ cd $SEQ_INSTALL_DIR
 wget -c https://github.com/seq-lang/seq/releases/latest/download/$SEQ_BUILD_ARCHIVE -O - | tar -xz
 wget -c https://github.com/seq-lang/seq/releases/latest/download/$SEQ_STDLIB_ARCHIVE -O - | tar -xz
 cp build/seqc build/libseq.* build/libseqrt.* .
+if [ "$OS" == "linux" ]; then
+  ln -s `find /usr/lib64/ -type f -name "libbz2.so.1*"` libbz2.so.1.0
+  ln -s `find /usr/lib64/ -type f -name "libomp.so*"`   libomp.so.5
+fi
 rm -rf build
 
 echo ""
