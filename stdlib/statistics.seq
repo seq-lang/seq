@@ -1,5 +1,7 @@
 import bisect
 
+from math import exp as _exp
+
 def median[T](data: list[T]) -> float:
     """
     median(data)
@@ -90,3 +92,110 @@ def median_grouped[T](data: list[T], interval = 1) -> float:
     cf = l1
     f = l2 - l1 + 1
     return L + interval*(n/2 - cf)/f
+
+def mode[T](data: list[T]) -> T:
+    """
+    mode(data)
+
+    Return the most common data point from discrete or nominal data.
+    """
+    counter = 0
+    elem = data[0]
+
+    for i in data:
+        curr_frequency = data.count(i)
+        if curr_frequency > counter:
+            counter = curr_frequency
+            elem = i
+    return elem
+
+# def as_integer_ratio(self):
+#     """
+#     as_integer_ratio()
+
+#     Express a float in the form n / d.
+    
+#     Returns a pair (n, d) of integers. 
+#     """
+#     n = int(self)
+#     if _exp(self) >= 0:
+#         # self is an integer.
+#         n, d = n * 10**_exp(self), 1
+#     else:
+#         # Find d2, d5 such that abs(self) = n / (2**d2 * 5**d5).
+#         d5 = _exp(-self)
+#         while d5 > 0 and n % 5 == 0:
+#             n //= 5
+#             d5 -= 1
+        
+#         d2 = _exp(-self)
+
+#         bit_length = 0
+#         num = (n & -n)
+#         while num > 1:
+#             bit_length += 1
+#             num //= 2
+
+#         shift2 = min(bit_length - 1, d2)
+#         if shift2:
+#             n >>= shift2
+#             d2 -= shift2
+        
+#         d = 5**d5 << d2
+#         if self < 0:
+#             n = -n
+#         return n, d
+
+# def _exact_ratio[T](x: T):
+#     """
+#     _exact_ratio(x)
+
+#     Return Real number x to exact (numerator, denominator) pair.
+#     """
+#     # if type(x) is float:
+#     return x.as_integer_ratio()
+#     # return (x.numberator, x.denominator)
+
+# def _sum[T](data: list[T], start: T):
+#     """
+#     _sum(data [, start]) -> (type, sum, count)
+
+#     Return a high-precision sum of the given numeric data as a fraction,
+#     together with the type to be converted to and the count of items.
+    
+#     If optional argument ``start`` is given, it is added to the total.
+#     If ``data`` is empty, ``start`` (defaulting to 0) is returned.
+    
+#     TODO/CAVEATS
+#     @jordan - the start argument should default to 0 or 0.0
+#     """
+#     #---------NOT DONE-------------
+#     count = 0
+#     # TODO!!! _exact_ratio()
+#     n, d = _exact_ratio(start)
+#     partials = {d: n}
+#     partials_get = partials.get
+
+#     for n, d in map(_exact_ratio, data):
+#         count += 1
+#         partials[d] = partials_get(d, 0) + n
+    
+#     total = sum(n/d for d, n in sorted(partials.items()))
+
+#     return (total, count, T)
+    
+
+# def mean[T](data: list[T]):
+#     """
+#     mean(data)
+
+#     Return the sample arithmetic mean of data.
+#     """
+#     n = len(data)
+#     if n >= 1:
+#         T, total, count = _sum(data)
+#         assert count == n
+#         # TODO!!! _convert
+#         return _convert(total/n, T)
+#     return
+ 

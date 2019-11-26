@@ -21,13 +21,6 @@ def med():
     # Test median works with an odd number of Decimals.
     ddata = [2.5, 3.1, 4.2, 5.7, 5.8]
     assert statistics.median(ddata) == 4.2
-
-    # Test median works with an even number of Decimals.
-    ddata = [1.2, 2.5, 3.1, 4.2, 5.7, 5.8]
-    # SOMETHING IS WEIRD HERE it = 3.65 when printed!
-    # assert statistics.median(ddata) == 3.65
-    # print statistics.median(ddata) 
-    # print statistics.median(ddata) == 3.65
 med()
 
 @test
@@ -99,3 +92,26 @@ def med_grouped():
     ddata = [5.5, 5.5, 6.5, 6.5, 7.5, 8.5]
     assert statistics.median_grouped(ddata) == 6.5
 med_grouped()
+
+def test_mode():
+    data = [12, 13, 14, 14, 14, 15, 15]
+    assert statistics.mode(data) == 14
+
+    data = list(range(20, 50, 3))
+    assert statistics.mode(data) == 20
+
+    # Test mode with nominal data.
+    ndata = ['a', 'b', 'c', 'b', 'd', 'b']
+    assert statistics.mode(ndata) == 'b'
+
+    ndata = ['fe', 'fi', 'fo', 'fum', 'fi', 'fi']
+    assert statistics.mode(ndata) == 'fi'
+
+    # Test mode with bimodal data.
+    data = [1, 1, 2, 2, 2, 2, 3, 4, 5, 6, 6, 6, 6, 7, 8, 9, 9]
+    assert statistics.mode(data) == 2
+
+    # Test mode when data points are all unique.
+    data = list(range(10))
+    assert statistics.mode(data) == 0
+test_mode()
