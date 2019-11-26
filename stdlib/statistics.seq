@@ -1,5 +1,6 @@
+import bisect
 
-def median[T](data: list[T]):
+def median[T](data: list[T]) -> float:
     """
     median(data)
 
@@ -17,7 +18,7 @@ def median[T](data: list[T]):
     i = n//2
     return (data[i - 1] + data[i]) / 2
 
-def median_low[T](data: list[T]):
+def median_low[T](data: list[T]) -> float:
     """
     median_low(data)
 
@@ -34,7 +35,7 @@ def median_low[T](data: list[T]):
     else:
         return float(data[n//2 -1])
 
-def median_high[T](data: list[T]):
+def median_high[T](data: list[T]) -> float:
     """
     median_high(data)
 
@@ -46,3 +47,46 @@ def median_high[T](data: list[T]):
     data = sorted(data)
     n = len(data)
     return float(data[n//2])
+
+def _find_lteq[T](a: list[T], x: float):
+    """
+    Locate the leftmost value exactly equal to x
+    """
+    i = bisect.bisect_left(a, x)
+    if i != len(a) and a[i] == x:
+        return i
+
+def _find_rteq[T](a: list[T], l: int, x: float):
+    """
+    Locate the rightmost value exactly equal to x
+    """
+    i = bisect.bisect_right(a, x, lo=l)
+    if i != (len(a)+1) and a[i-1] == x:
+        return i-1
+
+def median_grouped[T](data: list[T], interval = 1) -> float:
+    """
+    median_grouped(data, interval)
+
+    Return the 50th percentile (median) of grouped continuous data.
+    
+    TODO/CAVEATS:
+    @jordan - interval only accepts integers for now
+    """
+    data = sorted(data)
+    n = len(data)
+    if n == 1:
+        return float(data[0])
+
+    # Find the value at the midpoint.
+    x = float(data[n//2])
+    L = x - float(interval)/2  # The lower limit of the median interval.
+
+    # Find the position of leftmost occurrence of x in data
+    l1 = _find_lteq(data, x)
+    # Find the position of rightmost occurrence of x in data[l1...len(data)]
+    # Assuming always l1 <= l2
+    l2 = _find_rteq(data, l1, x)
+    cf = l1
+    f = l2 - l1 + 1
+    return L + interval*(n/2 - cf)/f

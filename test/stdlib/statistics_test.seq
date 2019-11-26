@@ -59,3 +59,43 @@ def med_high():
     ddata = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6]
     assert statistics.median_high(ddata) == 4.4
 med_high()
+
+@test
+def med_grouped():
+    # Test median_grouped with repeated median values.
+    data = [12, 13, 14, 14, 14, 15, 15]
+    assert statistics.median_grouped(data) == 14
+
+    data = [12, 13, 14, 14, 14, 14, 15]
+    assert statistics.median_grouped(data) == 13.875
+
+    data = [5, 10, 10, 15, 20, 20, 20, 20, 25, 25, 30]
+    assert statistics.median_grouped(data, 5) == 19.375
+
+    # Test median_grouped with repeated median values.
+    data = [2, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6]
+    assert statistics.median_grouped(data) == 4.5
+
+    data = [3, 4, 4, 4, 5, 5, 5, 5, 6, 6]
+    assert statistics.median_grouped(data) == 4.75
+
+    # Test median_grouped with repeated single values.
+    ddata = [3.2]
+    assert statistics.median_grouped(ddata) == 3.2
+
+    # Test median_grouped works with an odd number of Fractions.
+    fdata = [5/4, 9/4, 13/4, 13/4, 17/4]
+    assert statistics.median_grouped(fdata) == 3.0
+
+    # Test median_grouped works with an even number of Fractions.
+    fdata = [5/4, 9/4, 13/4, 13/4, 17/4, 17/4]
+    assert statistics.median_grouped(fdata) == 3.25
+
+    # Test median_grouped works with an odd number of Decimals.
+    ddata = [5.5, 6.5, 6.5, 7.5, 8.5]
+    assert statistics.median_grouped(ddata) == 6.75
+
+    # Test median_grouped works with an even number of Decimals.
+    ddata = [5.5, 5.5, 6.5, 6.5, 7.5, 8.5]
+    assert statistics.median_grouped(ddata) == 6.5
+med_grouped()
