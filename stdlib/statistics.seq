@@ -33,3 +33,16 @@ def median_low[T](data: list[T]):
         return float(data[n//2])
     else:
         return float(data[n//2 -1])
+
+def median_high[T](data: list[T]):
+    """
+    median_high(data)
+
+    Return the high median of data.
+  
+    When the number of data points is odd, the middle value is returned.
+    When it is even, the larger of the two middle values is returned.
+    """
+    data = sorted(data)
+    n = len(data)
+    return float(data[n//2])

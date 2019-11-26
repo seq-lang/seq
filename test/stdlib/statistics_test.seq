@@ -2,7 +2,6 @@ import statistics
 
 @test
 def med():
-    
     # Test median with even nuber of int data points.
     data = [1, 2, 3, 4, 5, 6]
     assert statistics.median(data) == 3.5
@@ -33,7 +32,6 @@ med()
 
 @test
 def med_low():
-
     # Test median_low with an even number of ints.
     data = [1, 2, 3, 4, 5, 6]
     assert statistics.median_low(data) == 3
@@ -46,3 +44,18 @@ def med_low():
     ddata = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6]
     assert statistics.median_low(ddata) == 3.3
 med_low()
+
+@test
+def med_high():
+    # Test median_high with an even number of ints.
+    data = [1, 2, 3, 4, 5, 6]
+    assert statistics.median_high(data) == 4
+
+    # Test median_high works with an even number of Fractions.
+    fdata = [1/7, 2/7, 3/7, 4/7, 5/7, 6/7]
+    assert statistics.median_high(fdata) == 4/7
+
+    # Test median_high works with an even number of Decimals.
+    ddata = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6]
+    assert statistics.median_high(ddata) == 4.4
+med_high()
