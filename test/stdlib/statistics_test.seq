@@ -25,9 +25,24 @@ def med():
 
     # Test median works with an even number of Decimals.
     ddata = [1.2, 2.5, 3.1, 4.2, 5.7, 5.8]
-    # SOMETHING IS WEIRD HERE!
+    # SOMETHING IS WEIRD HERE it = 3.65 when printed!
     # assert statistics.median(ddata) == 3.65
-    print statistics.median(ddata) 
-    print statistics.median(ddata) == 3.65
-
+    # print statistics.median(ddata) 
+    # print statistics.median(ddata) == 3.65
 med()
+
+@test
+def med_low():
+
+    # Test median_low with an even number of ints.
+    data = [1, 2, 3, 4, 5, 6]
+    assert statistics.median_low(data) == 3
+
+    # Test median_low works with an even number of Fractions.
+    fdata = [1/7, 2/7, 3/7, 4/7, 5/7, 6/7]
+    assert statistics.median_low(fdata) == 3/7
+
+    # Test median_low works with an even number of Decimals.
+    ddata = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6]
+    assert statistics.median_low(ddata) == 3.3
+med_low()
