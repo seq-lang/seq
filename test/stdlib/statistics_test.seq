@@ -1,0 +1,7 @@
+import statistics
+
+@test
+def med():
+    y = [5, 2, 3, 4, 1]
+    statistics.median(y)
+med()
