@@ -1,4 +1,5 @@
 import bisect
+import random
 
 from math import exp as _exp
 
@@ -275,3 +276,25 @@ def quantiles[T](data: list[T], n = 4, method = 'exclusive') -> list[float]:
 #         return _convert(total/n, T)
 #     return
  
+class NormalDist:
+    """
+    Normal distribution of a random variable
+    """
+    def __init__(self: NormalDist, mu=0.0, sigma=1.0):
+        """
+        NormalDist where mu is the mean and sigma is the standard deviation.
+        TODO/CAVEATS:
+        @jordan- if sigma < 0.0: raise StatisticsError('sigma must be non-negative')
+        """
+        self.mu = mu
+        self.sigma = sigma
+    
+    def samples(self: NormalDist, n, seed=None):
+        """
+        samples(self, n, seed)
+
+        Generate *n* samples for a given mean and standard deviation.
+        """
+        gauss = random.gauss if seed is None else random.Random(seed).gauss
+
+        return [gauss(self.mu, self.sigma) for i in range(n)]

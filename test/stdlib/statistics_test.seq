@@ -149,3 +149,13 @@ def test_quantiles():
         (15, [120.0, 140.0, 160.0, 180.0, 200.0, 240.0, 280.0, 320.0, 360.0, 400.0, 480.0, 560.0, 640.0, 720.0])]:
         assert statistics.quantiles(data, n=n, method="inclusive") == expected
 test_quantiles()
+
+normalDist = statistics.NormalDist()
+
+@test
+def test_samples():
+    mu, sigma = 10000, 3.0
+    X = normalDist(mu, sigma)
+    n = 1000
+    print X.samples(n)
+test_samples()
