@@ -308,6 +308,17 @@ class NormalDist:
         """
         return self.mu
     
+    def mode(self: NormalDist):
+        """
+        mode(self)
+
+        Return the mode of the normal distribution
+        
+        The mode is the value x where which the probability density
+        function (pdf) takes its maximum value.
+        """
+        return self.mu
+        
     # def samples(self: NormalDist, n, seed=None):
     #     """
     #     samples(self, n, seed)
