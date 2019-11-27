@@ -93,6 +93,7 @@ def med_grouped():
     assert statistics.median_grouped(ddata) == 6.5
 med_grouped()
 
+@test
 def test_mode():
     data = [12, 13, 14, 14, 14, 15, 15]
     assert statistics.mode(data) == 14
@@ -115,3 +116,15 @@ def test_mode():
     data = list(range(10))
     assert statistics.mode(data) == 0
 test_mode()
+
+@test
+def test_multimode():
+    data = [1, 1, 2, 2, 2, 2, 3, 4, 5, 6, 6, 6, 6, 7, 8, 9, 9]
+    assert statistics.multimode(data) == [2, 6]
+
+    ndata = ['a', 'a', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'c', 'c']
+    assert statistics.multimode(ndata) == ['b']
+
+    ndata = ['a', 'a', 'b', 'b', 'b', 'b', 'c', 'c', 'd', 'd', 'd', 'd', 'e', 'e', 'f', 'f', 'f', 'f', 'g', 'g']
+    assert statistics.multimode(ndata) == ['b', 'd', 'f']
+test_multimode()

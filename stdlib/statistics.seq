@@ -98,6 +98,9 @@ def mode[T](data: list[T]) -> T:
     mode(data)
 
     Return the most common data point from discrete or nominal data.
+    
+    TODO/CAVEATS:
+    @jordan- implement mode with Counter(data).most_common(1) when Counter is implemented
     """
     counter = 0
     elem = data[0]
@@ -108,6 +111,33 @@ def mode[T](data: list[T]) -> T:
             counter = curr_frequency
             elem = i
     return elem
+
+def multimode[T](data: list[T]):
+    """
+    multimode(data)
+
+    Return a list of the most frequently occurring values.
+    
+    Will return more than one result if there are multiple modes
+    or an empty list if *data* is empty.
+
+    TODO/CAVEATS:
+    @jordan- implement multimode with Counter(data).most_commone() when Counter is implemented
+    """
+    elem = data[0]
+    counter = data.count(elem)
+    li = sorted(data)
+    mulmode = list[T]()
+    
+    for i in li:
+        curr_frequency = data.count(i)
+        if curr_frequency > counter:
+            mulmode = list[T]()
+            mulmode.append(i)
+            counter = curr_frequency
+        elif curr_frequency == counter and i not in mulmode:
+            mulmode.append(i)
+    return mulmode
 
 # def as_integer_ratio(self):
 #     """
