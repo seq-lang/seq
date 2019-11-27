@@ -186,13 +186,43 @@ _BWA_IDX_PAC = i32(0x4)
 _BWA_IDX_ALL = i32(0x7)
 
 from BWA_LIB cimport mem_opt_init() -> cobj
+from BWA_LIB cimport bwa_fill_scmat(i32, i32, ptr[i8]) -> cobj
 from BWA_LIB cimport bwa_idx_load(cobj, i32) -> ptr[bwaidx_t]
 from BWA_LIB cimport mem_align1(ptr[mem_alnreg_v], cobj, cobj, ptr[bntseq_t], cobj, i32, ptr[byte])
 from BWA_LIB cimport mem_reg2aln(ptr[mem_aln_t], cobj, ptr[bntseq_t], cobj, i32, ptr[byte], ptr[mem_alnreg_t])
 
+def options(match_score: int = 1,
+            mismatch_score: int = 4,
+            open_del: int = 6,
+            open_ins: int = 6,
+            extend_del: int = 1,
+            extend_ins: int = 1,
+            bandwidth: int = 100,
+            zdrop: int = 100,
+            clip_penalty: tuple[int,int] = (5,5),
+            unpaired_penalty: int = 17):
+    # offsets below are based on BWA mem_opt_t definition
+    opt = mem_opt_init()
+    p = ptr[i32](ptr[byte](opt) + 0 * 4); p[0] = i32(match_score)
+    p = ptr[i32](ptr[byte](opt) + 1 * 4); p[0] = i32(mismatch_score)
+    p = ptr[i32](ptr[byte](opt) + 2 * 4); p[0] = i32(open_del)
+    p = ptr[i32](ptr[byte](opt) + 3 * 4); p[0] = i32(extend_del)
+    p = ptr[i32](ptr[byte](opt) + 4 * 4); p[0] = i32(open_ins)
+    p = ptr[i32](ptr[byte](opt) + 5 * 4); p[0] = i32(extend_ins)
+    p = ptr[i32](ptr[byte](opt) + 6 * 4); p[0] = i32(unpaired_penalty)
+    p = ptr[i32](ptr[byte](opt) + 7 * 4); p[0] = i32(clip_penalty[0])
+    p = ptr[i32](ptr[byte](opt) + 8 * 4); p[0] = i32(clip_penalty[1])
+    p = ptr[i32](ptr[byte](opt) + 9 * 4); p[0] = i32(bandwidth)
+    p = ptr[i32](ptr[byte](opt) + 10 * 4); p[0] = i32(zdrop)
+    bwa_fill_scmat(i32(match_score), i32(mismatch_score), ptr[i8](ptr[byte](opt) + 140))
+    return opt
+
 type BWA(opt: cobj, p: ptr[bwaidx_t]):
     def __init__(self: BWA, hint: str) -> BWA:
         return (mem_opt_init(), bwa_idx_load(hint.c_str(), _BWA_IDX_ALL))
+
+    def __init__(self: BWA, opt: cobj, hint: str) -> BWA:
+        return (opt, bwa_idx_load(hint.c_str(), _BWA_IDX_ALL))
 
     def name(self: BWA, aln: mem_aln_t):
         return self.p[0].name(aln)
