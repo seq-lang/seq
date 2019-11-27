@@ -150,12 +150,17 @@ def test_quantiles():
         assert statistics.quantiles(data, n=n, method="inclusive") == expected
 test_quantiles()
 
-normalDist = statistics.NormalDist()
+def test_mean():
+    X = statistics.NormalDist(10000.0, 3.0)
+    assert X.mean() == 10000.0
+test_mean()
 
 @test
 def test_samples():
-    mu, sigma = 10000, 3.0
-    X = normalDist(mu, sigma)
+    mu, sigma = 10000.0, 3.0
+    X = statistics.NormalDist(mu, sigma)
     n = 1000
-    print X.samples(n)
-test_samples()
+    data = X.samples(n)
+    assert len(data) == n
+# test_samples()
+

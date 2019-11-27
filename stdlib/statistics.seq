@@ -280,7 +280,10 @@ class NormalDist:
     """
     Normal distribution of a random variable
     """
-    def __init__(self: NormalDist, mu=0.0, sigma=1.0):
+    mu: float
+    sigma: float
+
+    def __init__(self: NormalDist, mu: optional[float]=0.0, sigma: optional[float]=1.0):
         """
         NormalDist where mu is the mean and sigma is the standard deviation.
         TODO/CAVEATS:
@@ -289,12 +292,18 @@ class NormalDist:
         self.mu = mu
         self.sigma = sigma
     
-    def samples(self: NormalDist, n, seed=None):
+    def mean(self: NormalDist):
         """
-        samples(self, n, seed)
-
-        Generate *n* samples for a given mean and standard deviation.
+        Arithmetic mean of the normal distribution.
         """
-        gauss = random.gauss if seed is None else random.Random(seed).gauss
+        return self.mu
 
-        return [gauss(self.mu, self.sigma) for i in range(n)]
+    # def samples(self: NormalDist, n, seed=None):
+    #     """
+    #     samples(self, n, seed)
+
+    #     Generate *n* samples for a given mean and standard deviation.
+    #     """
+    #     gauss = random.gauss #if seed is None else random.Random(seed).gauss
+
+    #     return [gauss(self.mu, self.sigma) for i in range(n)]
