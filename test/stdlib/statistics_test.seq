@@ -153,14 +153,20 @@ test_quantiles()
 @test
 def test_mean():
     X = statistics.NormalDist(10000.0, 3.0)
-    assert X.mean() == 10000.0
+    assert X.mean == 10000.0
 test_mean()
 
 @test
 def test_stdev():
     X = statistics.NormalDist(10000.0, 3.0)
-    assert X.stdev() == 3.0
+    assert X.stdev == 3.0
 test_stdev()
+
+@test
+def test_variance():
+    X = statistics.NormalDist(10000.0, 3.0)
+    assert X.variance == 9.0
+test_variance()
 
 @test
 def test_samples():

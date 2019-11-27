@@ -292,6 +292,7 @@ class NormalDist:
         self.mu = mu
         self.sigma = sigma
     
+    @property
     def mean(self: NormalDist):
         """
         mean(self)
@@ -300,6 +301,7 @@ class NormalDist:
         """
         return self.mu
     
+    @property
     def median(self: NormalDist):
         """
         median(self)
@@ -308,6 +310,7 @@ class NormalDist:
         """
         return self.mu
     
+    @property
     def mode(self: NormalDist):
         """
         mode(self)
@@ -319,6 +322,7 @@ class NormalDist:
         """
         return self.mu
     
+    @property
     def stdev(self: NormalDist):
         """
         stdev(self)
@@ -326,6 +330,15 @@ class NormalDist:
         Standard deviation of the normal distribution.
         """
         return self.sigma
+
+    @property
+    def variance(self: NormalDist):
+        """
+        variance(self)
+
+        Square of the standard deviation.
+        """
+        return self.sigma ** 2.0
 
     # def samples(self: NormalDist, n, seed=None):
     #     """
