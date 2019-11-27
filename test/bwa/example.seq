@@ -8,4 +8,4 @@ for read in FASTQ(argv[2]):
     for reg in bwa.align(read.read):
         if reg.secondary >= 0: continue
         aln = bwa.reg2aln(read.read, reg)
-        print read.name, '-' if aln.rev else '-', bwa.name(aln), aln.pos, aln.mapq, aln.cigar, aln.NM
+        print read.name, '-' if aln.rev else '+', bwa.name(aln), aln.pos, aln.mapq, aln.cigar, aln.NM
