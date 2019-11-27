@@ -294,10 +294,20 @@ class NormalDist:
     
     def mean(self: NormalDist):
         """
+        mean(self)
+
         Arithmetic mean of the normal distribution.
         """
         return self.mu
+    
+    def median(self: NormalDist):
+        """
+        median(self)
 
+        Return the median of the normal distribution
+        """
+        return self.mu
+    
     # def samples(self: NormalDist, n, seed=None):
     #     """
     #     samples(self, n, seed)
