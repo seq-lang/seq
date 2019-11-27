@@ -318,7 +318,15 @@ class NormalDist:
         function (pdf) takes its maximum value.
         """
         return self.mu
-        
+    
+    def stdev(self: NormalDist):
+        """
+        stdev(self)
+
+        Standard deviation of the normal distribution.
+        """
+        return self.sigma
+
     # def samples(self: NormalDist, n, seed=None):
     #     """
     #     samples(self, n, seed)
