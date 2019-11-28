@@ -228,12 +228,32 @@ type BWA(opt: cobj, p: ptr[bwaidx_t]):
         return self.p[0].name(aln)
 
     def reg2aln(self: BWA, s: seq, reg: mem_alnreg_t):
+        cimport free(ptr[byte])
         a = mem_aln_t()
         mem_reg2aln(__ptr__(a), self.opt, self.p[0]._bns, self.p[0]._pac, i32(len(s)), s.ptr, __ptr__(reg))
+        # fix CIGAR & marshal to GC:
+        n_cigar = int(a._n_cigar)
+        cigar = ptr[u32](n_cigar)
+        for i in range(n_cigar):
+            c = a._cigar[i]
+            n, op = c >> u32(4), c & u32(0xf)
+            if u32(3) <= op < u32(0xf):
+                op += u32(1)
+            cigar[i] = (n << u32(4)) | op
+        free(ptr[byte](a._cigar))
+        ptr[ptr[u32]](ptr[byte](__ptr__(a)) + 24)[0] = cigar  # note offset
         return a
 
     def align(self: BWA, s: seq):
+        import core.gc as gc
+        cimport free(ptr[byte])
         p = s.ptr if s.len >= 0 else str(s).ptr
         ar = mem_alnreg_v()
         mem_align1(__ptr__(ar), self.opt, self.p[0]._bwt, self.p[0]._bns, self.p[0]._pac, i32(len(s)), p)
+        # marshal to GC:
+        n_bytes = ar.n * gc.sizeof[mem_alnreg_t]()
+        copy = gc.alloc_atomic(n_bytes)
+        str.memcpy(ptr[byte](copy), ptr[byte](ar.a), n_bytes)
+        free(ptr[byte](ar.a))
+        ptr[ptr[mem_alnreg_t]](ptr[byte](__ptr__(ar)) + 16)[0] = ptr[mem_alnreg_t](copy)  # note offset
         return ar
