@@ -565,6 +565,17 @@ module JIT = struct
   let init = foreign "jit_init" (void @-> returning t)
   let var = foreign "jit_var" (t @-> Types.expr @-> returning Types.var)
 
+  let get_pos expr =
+    let str = foreign "get_pos_str" Ctypes.(t @-> returning string) expr in
+    if str = "" then None else 
+      let l = Array.of_list @@ String.split ~on:'\b' str in
+      assert (Array.length l = 5);
+      let file = l.(0) in
+      let line = Int.of_string l.(1) in
+      let col = Int.of_string l.(2) in
+      let len = Int.of_string l.(3) in
+      Some Ast_ann.{ file; line; col; len }
+        
   let func jit fn =
     let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
     foreign

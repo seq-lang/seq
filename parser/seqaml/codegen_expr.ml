@@ -135,15 +135,20 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     match is_type, Hashtbl.find map var with
     (* Make sure that a variable is either accessible within
       the same base (function) or that it is global variable  *)
-    | _, Some ((Ctx_namespace.Type t, _) :: _) -> Llvm.Expr.typ t
+    | _, Some ((Ctx_namespace.Type t, _) :: _) -> 
+      Ctx.add_inspect pos var t;
+      Llvm.Expr.typ t
     | true, _ -> serr ~pos "type '%s' not found or realized" var
     | false, Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
       when ctx.base = base || global ->
+      Ctx.add_inspect pos var v;
       let e = Llvm.Expr.var v in
       if global && ctx.base = base && Stack.exists ctx.flags ~f:(( = ) "atomic")
       then Llvm.Var.set_atomic e;
       e
-    | false, Some ((Ctx_namespace.Func (t, _), _) :: _) -> Llvm.Expr.func t
+    | false, Some ((Ctx_namespace.Func (t, _), _) :: _) -> 
+      Ctx.add_inspect pos var t;
+      Llvm.Expr.func t
     | _ -> serr ~pos "identifier '%s' not found" var
 
   and parse_tuple ctx _ args =
@@ -418,17 +423,21 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         | _ -> None)
       | _, _ -> None
     in
+    let npos = { pos with col = (fst lh_expr).col + (fst lh_expr).len } in
     match imports ctx.map lh_expr with
     | Some ictx ->
       (* Util.dbg "import helper..."; *)
       parse_id ctx ~map:ictx pos rhs
     | None ->
       let lh_expr = parse ~ctx lh_expr in
-      if Llvm.Expr.is_type lh_expr
+      let el = if Llvm.Expr.is_type lh_expr
       then (
         let typ = Llvm.Type.expr_type lh_expr in
         Llvm.Expr.static typ rhs)
       else Llvm.Expr.element lh_expr rhs
+      in
+      Ctx.add_inspect npos (sprintf ".%s" rhs) el;
+      el
 
   and parse_slice ctx pos (a, b, c) =
     let prefix, args = match a, b, c with

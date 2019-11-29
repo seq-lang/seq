@@ -549,6 +549,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       typ
       ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type ~ctx:new_ctx typ))
       ~default:();
+    ( match List.hd fn_stmts with
+      | Some (_, Expr (_, String doc)) ->
+        Ctx.add_origin pos doc
+      | _ -> () );
     add_block new_ctx fn_stmts ~preprocess:(fun ctx ->
         List.iter names ~f:(fun name ->
             let var = Ctx_namespace.Var (Llvm.Func.get_arg fn name) in

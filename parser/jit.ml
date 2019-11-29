@@ -62,6 +62,22 @@ let exec (jit : t) code =
   with
   | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])
 
+let locate cmd f l c = 
+  let open Option.Monad_infix in
+  Hashtbl.find Ctx.inspect_lookup f
+  >>= (fun t -> Hashtbl.find t l)
+  >>= (fun s -> Stack.find_map s ~f:(fun Ctx.{ pos; el; name } ->
+    if pos.col < c || pos.col + pos.len >= c 
+    then None
+    else match Llvm.JIT.get_pos el with
+      | None -> None
+      | Some orig_pos ->
+        eprintf "%%JIT%%: found %s, orig pos %s"
+          name (Ast.Ann.to_string orig_pos);
+        Some 1
+  ))
+  
+
 (** JIT entry point. *)
 let repl () =
   let banner = String.make 78 '=' in
@@ -83,15 +99,26 @@ let repl () =
         code := !code ^ s ^ "\n"
       with
       | End_of_file ->
-        eprintf "      \r%!";
-        (try exec jit !code with
-        | Err.CompilerError (typ, pos_lst) ->
-          eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:!code typ);
-        if !code = ""
-        then raise Exit
-        else (
+        eprintf "------------------\n%!";
+        match String.is_prefix ~prefix:"%%" !code with
+        | true ->
+          let ll = Array.of_list @@ String.split ~on:' ' !code in
+          let cmd = ll.(0) in
+          let file = ll.(1) in
+          let line = Int.of_string @@ ll.(2) in
+          let pos = Int.of_string @@ ll.(3) in
+          ignore @@ locate cmd file line pos;
           code := "";
-          start := true)
+          start := true
+        | false -> 
+          (try exec jit !code with
+          | Err.CompilerError (typ, pos_lst) ->
+            eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:!code typ);
+          if !code = ""
+          then raise Exit
+          else (
+            code := "";
+            start := true)
     done
   with
   | Exit -> eprintf "\n\027[31mbye (%d) \027[0m\n%!" jit.cnt

@@ -20,6 +20,7 @@ static void versMsg(raw_ostream &out) {
 }
 
 int main(int argc, char **argv) {
+  repl(""); exit(0);
   opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "
                             "print LLVM IR to stderr)"));

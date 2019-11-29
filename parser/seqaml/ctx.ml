@@ -32,6 +32,37 @@ type t =
         (** A context that holds the internal Seq objects and libraries. *)
   }
 
+(*
+  lookup:
+    file -> line -> [ pos ; pointer ]
+  origin:
+    file -> line -> [ doc; type_name ]
+*)
+
+type tinspect = 
+  { pos: Ast_ann.t
+  ; el: Llvm.Types.typ_t
+  ; name: string }
+let inspect_lookup : 
+  (string, (int, tinspect Stack.t) Hashtbl.t) Hashtbl.t
+  = String.Table.create ()
+type torigin = 
+  { doc: string
+  }
+let origin_lookup :
+  (string, (int, torigin Stack.t) Hashtbl.t) Hashtbl.t
+  = String.Table.create ()
+
+let add_inspect (pos: Ast_ann.t) name el = 
+  let s = Hashtbl.find_or_add inspect_lookup pos.file ~default:Int.Table.create in
+  let s = Hashtbl.find_or_add s pos.line ~default:Stack.create in
+  Stack.push s { pos; el; name }
+
+let add_origin (pos: Ast_ann.t) doc = 
+  let s = Hashtbl.find_or_add origin_lookup pos.file ~default:Int.Table.create in
+  let s = Hashtbl.find_or_add s pos.line ~default:Stack.create in
+  Stack.push s { doc }
+
 (** [add_block context] adds a new block to the context stack. *)
 let add_block ctx = Stack.push ctx.stack (String.Hash_set.create ())
 
@@ -54,6 +85,7 @@ let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) ?(a
   (match Hashtbl.find ctx.map key with
   | None -> Hashtbl.set ctx.map ~key ~data:[ var ]
   | Some lst -> Hashtbl.set ctx.map ~key ~data:(var :: lst));
+  
   Hash_set.add (Stack.top_exn ctx.stack) key
 
 (** [remove ~ctx name] removes the most recent variable [name] from the namespace. *)

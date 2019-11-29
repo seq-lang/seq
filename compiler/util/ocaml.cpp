@@ -664,6 +664,16 @@ FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types,
   return types::GenericType::get(t, vector<types::Type *>(types, types + sz));
 }
 
+FOREIGN char* get_pos_str (SrcObject *v)
+{
+  if (!v) return strdup("");
+  auto info = v->getSrcInfo();
+  char *er = 0;
+  asprintf(&er, "%s\b%d\b%d\b%d", info.file.c_str(), info.line,
+           info.col, info.len);
+  return er;
+}
+
 /// Anything below throws exceptions
 
 // Yes, separator character here is \b
