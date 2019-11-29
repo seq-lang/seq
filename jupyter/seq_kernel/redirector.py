@@ -11,8 +11,12 @@ import sys
 import tempfile
 
 libc = ctypes.CDLL(None)
-c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
-c_stderr = ctypes.c_void_p.in_dll(libc, 'stderr')
+if sys.platform == "darwin":
+    c_stdout = ctypes.c_void_p.in_dll(libc, '__stdoutp')
+    c_stderr = ctypes.c_void_p.in_dll(libc, '__stderrp')
+else:
+    c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
+    c_stderr = ctypes.c_void_p.in_dll(libc, 'stderr')
 
 @contextmanager
 def stdout_stderr_redirector(out_stream, err_stream):
