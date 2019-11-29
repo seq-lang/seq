@@ -1,4 +1,4 @@
-import sys 
+import sys
 
 class AVLNode[K,V]:
     key: K

@@ -16,33 +16,33 @@ type t =
   | Internal of string
 
 (** Default exception that includes the source of the error and the location where it occurred. *)
-exception CompilerError of t * Ast.Ann.t list
+exception CompilerError of t * Ast_ann.t list
 
 (** LLVM/C++ exception. *)
-exception SeqCError of string * Ast.Ann.t
+exception SeqCError of string * Ast_ann.t
 
 (** Seqaml exception. *)
-exception SeqCamlError of string * Ast.Ann.t list
+exception SeqCamlError of string * Ast_ann.t list
 
 (** Lexer exception. *)
-exception SyntaxError of string * Ast.Ann.t
+exception SyntaxError of string * Ast_ann.t
 
 (** Internal exception that should never reach an user.
-    Indicates either a bug or non-implement functionality. *)
-exception InternalError of string * Ast.Ann.t
+    Indicates either a bug or non-implemented functionality. *)
+exception InternalError of string * Ast_ann.t
 
 (** [serr ~pos format_string ...] raises an Seqaml error at file location [pos]
     with message formatted via sprintf-style [format_string]. *)
-let serr ?(pos = Ast.Ann.default) fmt =
+let serr ?(pos = Ast_ann.default) fmt =
   Core.ksprintf (fun msg -> raise (SeqCamlError (msg, [ pos ]))) fmt
 
 (** [ierr ~pos format_string ...] raises an internal error at file location [pos]
     with message formatted via sprintf-style [format_string]. *)
-let ierr ?(pos = Ast.Ann.default) fmt =
+let ierr ?(pos = Ast_ann.default) fmt =
   Core.ksprintf (fun msg -> raise (InternalError (msg, pos))) fmt
 
 (** Helper function that parses string exception messages raised from C++
-    and extracts [Ast.Ann] information from them.
+    and extracts [Ast_ann] information from them.
     Currently done in a very primitive way (C++ library serializes messages
     by using '\b' as a field separator).*)
 let split_error msg =
@@ -53,7 +53,7 @@ let split_error msg =
   let line = Int.of_string l.(2) in
   let col = Int.of_string l.(3) in
   let len = Int.of_string l.(4) in
-  raise @@ SeqCError (msg, Ast.Ann.{ file; line; col; len })
+  raise @@ SeqCError (msg, Ast_ann.{ file; line; col; len })
 
 (** [to_string ?file ~pos_lst err] returns a nicely formatted error string
     that contains the problematic source line(s) (specified in [pos_lst]) from the source [file].
@@ -90,7 +90,7 @@ let to_string ?file ~pos_lst err =
   in
   let lines =
     List.mapi pos_lst ~f:(fun i pos ->
-        let Ast.Ann.{ file; line; col; len } = pos in
+        let Ast_ann.{ file; line; col; len } = pos in
         match file_line file line with
         | Some file_line ->
           let col =

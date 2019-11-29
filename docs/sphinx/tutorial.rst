@@ -23,7 +23,6 @@ We have found that these features are rarely needed in bioinformatics/genomics s
 
 Finally, the following features are not supported by the *current* version of Seq, but we have plans of implementing them in the near future:
 
-- Named and default function arguments
 - Empty collection literals: ``[]`` and ``{}`` (these must be replaced with ``list[T]()`` and ``dict[K,V]()``, respectively)
 - ``lambda``
 - Various Python standard modules, methods or built-ins (although many built-in functions are already supported, some do not have the full flexibility of Python's)
@@ -139,7 +138,7 @@ Seq provides the conventional ``match`` construct, which works on integers, list
                 print 'zero'
             case m if 0 < m < 10:
                 print 'small'
-            default:
+            case _:
                 print 'large'
 
 A novel aspect of Seq's ``match`` statement is that it also works on sequences, and allows for concise recursive representations of several sequence operations such as subsequence search, reverse complementation tests and base counting, as shown in this example:
@@ -153,7 +152,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
                 return True
             case t if len(t) >= 8:
                 return has_spaced_acgt(s[1:])
-            default:
+            case _:
                 return False
 
     # (b)
@@ -163,7 +162,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
                 return is_own_revcomp(s[1:-1])
             case s'':
                 return True
-            default:
+            case _:
                 return False
 
     # (c)
@@ -179,7 +178,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
             case s'C...': return count_bases(s[1:]) + (0,1,0,0)
             case s'G...': return count_bases(s[1:]) + (0,0,1,0)
             case s'T...': return count_bases(s[1:]) + (0,0,0,1)
-            default: return BaseCount(0,0,0,0)
+            case _: return BaseCount(0,0,0,0)
 
 - Example (a) checks if a given sequence contains the subsequence ``A_C_G_T``, where ``_`` is a wildcard base.
 - Example (b) checks if the given sequence is its own reverse complement.
@@ -307,16 +306,35 @@ The ``ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``ptr[byte]
 
 Seq also provides ``__ptr__`` for obtaining a pointer to a variable (as in ``__ptr__(myvar)``) and ``__array__`` for declaring stack-allocated arrays (as in ``__array__[int](10)``).
 
-C/C++ interoperability
-^^^^^^^^^^^^^^^^^^^^^^
+C/C++ and Python interoperability
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Seq enables seamless interoperability with C and C++ via ``cdef`` functions as such:
+Seq enables seamless interoperability with C and C++ via ``cimport`` functions as such:
 
 .. code-block:: seq
 
-    cdef sqrt(float) -> float
-    cdef puts(ptr[byte])
+    cimport sqrt(float) -> float
+    cimport puts(cobj)  # cobj is void*
     print sqrt(100.0)
     puts("hello world".c_str())
 
+    LD_LIBRARY="mylib.so"
+    from LD_LIBRARY cimport foo(cobj) -> int
+    print foo("hello".c_str())
+
 Primitive types like ``int``, ``float``, ``bool`` etc. are directly interoperable with the corresponding types in C/C++, while compound types like tuples are interoperable with the corresponding struct types. Other built-in types like ``str`` provide methods to convert to C analogs, such as ``c_str()`` as shown above.
+
+Seq also supports calling Python functions as follows:
+
+.. code-block:: seq
+
+    from mymodule pyimport multiply () -> int  # assumes multiply in mymodule.py
+    print multiply(3, 4)  # 12
+
+    pydef myrange(n: int) -> list[int]:  # completely executed by Python runtime
+        from numpy import arange
+        return list(arange(n))
+
+    print myrange(5)  # [0, 1, 2, 3, 4]
+
+Please check `Python interop <python.html>`_ for more information.

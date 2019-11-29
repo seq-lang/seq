@@ -79,6 +79,18 @@ bool types::RecordType::is(types::Type *type) const {
   return true;
 }
 
+bool types::RecordType::isStrict(types::Type *type) const {
+  if (!isGeneric(type))
+    return false;
+
+  auto *rec = dynamic_cast<types::RecordType *>(type);
+  if (!name.empty() || !rec->name.empty()) {
+    return name == rec->name;
+  }
+
+  return is(type);
+}
+
 Function *types::RecordType::getContainsFunc(Module *module) {
   // only support __contains__ for homogeneous tuples:
   assert(types.size() > 0);
@@ -236,7 +248,7 @@ void types::RecordType::initOps() {
     return;
 
   static RecordType *pyObjType =
-      RecordType::get({PtrType::get(Byte)}, {"p"}, "PyObject");
+      RecordType::get({PtrType::get(Byte)}, {"p"}, "pyobj");
 
   vtable.magic = {
       {"__init__", types, this,
@@ -412,7 +424,7 @@ void types::RecordType::initOps() {
            if (!types[i]->magicOut("__hash__", {})->is(Int))
              throw exc::SeqException("__hash__ for type '" +
                                      types[i]->getName() +
-                                     "' does return an 'int'");
+                                     "' does not return an 'int'");
            Value *hash =
                types[i]->callMagic("__hash__", {}, val, {}, block, nullptr);
            Value *p1 = b.CreateShl(seed, 6);
@@ -452,11 +464,12 @@ void types::RecordType::initOps() {
          Module *module = block->getModule();
 
          auto *pyTupNew = cast<Function>(module->getOrInsertFunction(
-             "seq_py_tuple_new", PtrType::get(Byte)->getLLVMType(context),
-             seqIntLLVM(context)));
+             "py_tuple_new.ptr[byte].int",
+             PtrType::get(Byte)->getLLVMType(context), seqIntLLVM(context)));
 
          auto *pyTupSet = cast<Function>(module->getOrInsertFunction(
-             "seq_py_tuple_setitem", llvm::Type::getVoidTy(context),
+             "py_tuple_setitem.void.ptr[byte].int.ptr[byte]",
+             llvm::Type::getVoidTy(context),
              PtrType::get(Byte)->getLLVMType(context), seqIntLLVM(context),
              PtrType::get(Byte)->getLLVMType(context)));
 
@@ -470,7 +483,7 @@ void types::RecordType::initOps() {
            if (!types[i]->magicOut("__to_py__", {})->is(pyObjType))
              throw exc::SeqException("__to_py__ for type '" +
                                      types[i]->getName() +
-                                     "' does return a 'PyObject'");
+                                     "' does not return a 'pyobj'");
            Value *pyVal =
                types[i]->callMagic("__to_py__", {}, val, {}, block, nullptr);
            Value *ptr = pyObjType->memb(pyVal, "p", block);
@@ -493,7 +506,8 @@ void types::RecordType::initOps() {
          Module *module = block->getModule();
 
          auto *pyTupGet = cast<Function>(module->getOrInsertFunction(
-             "seq_py_tuple_getitem", PtrType::get(Byte)->getLLVMType(context),
+             "py_tuple_getitem.ptr[byte].ptr[byte].int",
+             PtrType::get(Byte)->getLLVMType(context),
              PtrType::get(Byte)->getLLVMType(context), seqIntLLVM(context)));
          pyTupGet->setDoesNotThrow();
 

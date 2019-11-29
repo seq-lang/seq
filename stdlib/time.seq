@@ -1,1 +1,1 @@
-cdef time as seq_time () -> int
+time = _C.seq_time

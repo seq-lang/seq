@@ -39,6 +39,10 @@ FOREIGN types::Type *array_type(types::Type *base) {
   return types::ArrayType::get(base);
 }
 
+FOREIGN types::Type *optional_type(types::Type *base) {
+  return types::OptionalType::get(base);
+}
+
 FOREIGN char *get_type_name(types::Type *ex) {
   return strdup(ex->getName().c_str());
 }
@@ -166,8 +170,28 @@ FOREIGN Expr *call_expr(Expr *fn, Expr **args, size_t size) {
   return new CallExpr(fn, vector<Expr *>(args, args + size));
 }
 
+FOREIGN Expr *call_expr_with_names(Expr *fn, Expr **args, char **names,
+                                   size_t size) {
+  vector<string> s;
+  for (size_t i = 0; i < size; i++) {
+    s.emplace_back(names[i]);
+    free(names[i]);
+  }
+  return new CallExpr(fn, vector<Expr *>(args, args + size), s);
+}
+
 FOREIGN Expr *partial_expr(Expr *fn, Expr **args, size_t size) {
   return new PartialCallExpr(fn, vector<Expr *>(args, args + size));
+}
+
+FOREIGN Expr *partial_expr_with_names(Expr *fn, Expr **args, char **names,
+                                      size_t size) {
+  vector<string> s;
+  for (size_t i = 0; i < size; i++) {
+    s.emplace_back(names[i]);
+    free(names[i]);
+  }
+  return new PartialCallExpr(fn, vector<Expr *>(args, args + size), s);
 }
 
 FOREIGN Expr *pipe_expr(Expr **args, size_t size) {
@@ -198,10 +222,6 @@ FOREIGN Expr *construct_expr(types::Type *ty, Expr **args, size_t len) {
 
 FOREIGN Expr *array_lookup_expr(Expr *lhs, Expr *rhs) {
   return new ArrayLookupExpr(lhs, rhs);
-}
-
-FOREIGN Expr *array_slice_expr(Expr *arr, Expr *st, Expr *ed) {
-  return new ArraySliceExpr(arr, st, ed);
 }
 
 FOREIGN Expr *in_expr(Expr *lhs, Expr *rhs) {
@@ -373,6 +393,10 @@ FOREIGN Func *func(char *name) {
 
 FOREIGN void set_func_out(Func *f, types::Type *typ) { f->setOut(typ); }
 
+FOREIGN void set_func_defaults(Func *f, Expr **defaults, size_t size) {
+  f->setDefaults(vector<Expr *>(defaults, defaults + size));
+}
+
 FOREIGN Block *get_func_block(Func *st) { return st->getBlock(); }
 
 FOREIGN Var *get_func_arg(Func *f, char *arg) {
@@ -437,6 +461,13 @@ FOREIGN void set_func_generic_name(Func *fn, int idx, char *name) {
 
 FOREIGN void set_ref_generics(types::RefType *fn, int n) { fn->addGenerics(n); }
 
+FOREIGN size_t get_ref_generic_count(types::Type *fn) {
+  auto *f = dynamic_cast<types::RefType *>(fn);
+  if (!f)
+    return 0;
+  return f->numGenerics();
+}
+
 FOREIGN types::Type *get_ref_generic(types::RefType *fn, int idx) {
   return fn->getGeneric(idx);
 }
@@ -444,6 +475,10 @@ FOREIGN types::Type *get_ref_generic(types::RefType *fn, int idx) {
 FOREIGN void set_ref_generic_name(types::RefType *fn, int idx, char *name) {
   fn->getGeneric(idx)->setName(name);
   free(name);
+}
+
+FOREIGN char *get_ref_generic_name(types::RefType *fn, int idx) {
+  return strdup(fn->getGeneric(idx)->getName().c_str());
 }
 
 FOREIGN Stmt *match_stmt(Expr *cond) {
@@ -535,7 +570,15 @@ FOREIGN void set_thread_local(Var *v) { v->setThreadLocal(); }
 
 FOREIGN char type_eq(types::Type *a, types::Type *b) { return types::is(a, b); }
 
-FOREIGN char *get_func_attrs(Func *f) {
+FOREIGN char *get_func_attrs(Expr *e) {
+  auto *fn = dynamic_cast<FuncExpr *>(e);
+  if (!fn)
+    return (char *)"";
+
+  auto f = dynamic_cast<Func *>(fn->getFunc());
+  if (!f)
+    return (char *)"";
+
   string r;
   for (auto s : f->getAttributes())
     r += s + "\b";
@@ -574,6 +617,13 @@ FOREIGN Var *get_for_var(For *f) { return f->getVar(); }
 FOREIGN types::Type *get_type(Expr *e) {
   auto ret = e->getType();
   return ret;
+}
+
+FOREIGN char is_ref_type(types::Type *t) {
+  auto *f = dynamic_cast<types::RefType *>(t);
+  if (!f)
+    return 0;
+  return 1;
 }
 
 FOREIGN BaseFunc *get_func(FuncExpr *e) { return e->getFunc(); }

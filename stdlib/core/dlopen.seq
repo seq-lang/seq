@@ -1,0 +1,33 @@
+def dlerror():
+    return str.from_ptr(_C.dlerror())
+
+_DLOPEN_CACHE = dict[str, cobj]()
+def dlopen(name: str, flag: int = _C.RTLD_NOW | _C.RTLD_GLOBAL) -> cobj:
+    if name in _DLOPEN_CACHE:
+        return _DLOPEN_CACHE[name]
+    h = _C.dlopen(name.c_str(), flag)
+    if h == cobj():
+        raise CError(dlerror())
+    _DLOPEN_CACHE[name] = h
+    return h
+
+def _dlsym(handle: cobj, name: str) -> cobj:
+    fn = _C.dlsym(handle, name.c_str())
+    if fn == cobj():
+        raise CError(dlerror())
+    return fn
+
+_DLSYM_CACHE = dict[str, cobj]()
+def dlsym(lib: str, name: str) -> cobj:
+    key = lib + "/" + name
+    if key in _DLSYM_CACHE:
+        return _DLSYM_CACHE[key]
+    h = dlopen(lib)
+    f = _dlsym(h, name)
+    _DLSYM_CACHE[key] = f
+    return f
+
+def dlclose(handle: cobj):
+    if _C.dlclose(handle) != i32(0):
+        raise CError(dlerror())
+

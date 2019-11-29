@@ -1,0 +1,48 @@
+extend int:
+
+# Magic methods
+
+    def __init__(self: int, s: str):
+        return int._from_str(s, 10)
+
+    def __init__(self: int, s: str, base: int):
+        return int._from_str(s, base)
+
+    def __pow__(self: int, exp: int):
+        result = 1
+        while True:
+            if exp & 1:
+                result *= self
+            exp >>= 1
+            if not exp:
+                break
+            self *= self
+        return result
+
+    def __pow__(self: int, exp: float):
+        return float(self) ** exp
+
+# Internal helpers
+
+    def _from_str(s: str, base: int):
+        if base < 0 or base > 36 or base == 1:
+            raise ValueError("int() base must be >= 2 and <= 36, or 0")
+
+        buf = __array__[byte](32)
+        n = len(s)
+        need_dyn_alloc = (n >= len(buf))
+
+        p = _gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+        str.memcpy(p, s.ptr, n)
+        p[n] = byte(0)
+
+        end = cobj()
+        result = _C.strtoll(p, __ptr__(end), i32(base))
+
+        if need_dyn_alloc:
+            _gc.free(p)
+
+        if end != p + n:
+            raise ValueError("invalid literal for int() with base " + str(base) + ": " + s)
+
+        return result

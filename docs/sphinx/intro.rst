@@ -15,40 +15,21 @@ Pre-built binaries for Linux and macOS on x86_64 are available alongside `each r
 
 This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
 
-Build from source
-^^^^^^^^^^^^^^^^^
+Building from source
+^^^^^^^^^^^^^^^^^^^^
 
-Dependencies
-""""""""""""
-
-- Linux or macOS
-- `CMake <https://cmake.org>`_ 3.12+
-- `LLVM <https://llvm.org>`_ 6.0
-- `OCaml <https://ocaml.org>`_ 4.08
-- `Boehm GC <https://github.com/ivmai/bdwgc>`_ 7.6+
-- `HTSlib <https://htslib.org>`_ 1.9+
-- `libffi <https://sourceware.org/libffi>`_ 3.2+
-
-The following packages must be installed with ``opam``: core, ctypes, ctypes-foreign, menhir, ppx_deriving
-
-Compile & Test
-""""""""""""""
-
-Make sure the ``LLVM_DIR`` environment variable is set (to the result of ``llvm-config --cmakedir``). Then:
-
-.. code-block:: bash
-
-    mkdir seq/build
-    cd seq/builld
-    cmake ..
-    cmake --build .
-
-This will produce a ``seqc`` executable for compiling/running Seq progrms, and a ``seqtest`` executable for running the test suite.
+See `Building from Source <build.html>`_.
 
 Usage
 -----
 
-The ``seqc`` program can either directly run Seq source in JIT mode, or produce an LLVM bitcode file if a ``-o <out.bc>`` argument is provided. In the latter case, `llc <https://llvm.org/docs/CommandGuide/llc.html>`_ and the system compiler can be used to convert the bitcode file to an object file and link it to produce an executable, respectively:
+The ``seqc`` program can either directly run Seq source in JIT mode:
+
+.. code-block:: bash
+
+    seqc myprogram.seq
+
+or produce an LLVM bitcode file if a ``-o <out.bc>`` argument is provided. In the latter case, `llc <https://llvm.org/docs/CommandGuide/llc.html>`_ and the system compiler can be used to convert the bitcode file to an object file and link it to produce an executable, respectively:
 
 .. code-block:: bash
 

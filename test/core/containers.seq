@@ -1,288 +1,224 @@
-# tuples:
-# EXPECT: 0 False False
-# EXPECT: 1 True False
-# EXPECT: 2 False False
-# EXPECT: 3 True False
-# EXPECT: 4 True False
-# EXPECT: 5 False False
-# EXPECT: 6 False False
-# EXPECT: 7 False True
-# EXPECT: 8 False False
-# EXPECT: 9 True False
-for i in range(10):
-    print i, i in (4, 9, 10, -1, 3, 1), i in (7,)
-
-def test_cmp[T](a: T, b: T):
-    print a, b
-    print 'EQ', a == b
-    print 'NE', a != b
-    print 'LT', a < b
-    print 'GT', a > b
-    print 'LE', a <= b
-    print 'GE', a >= b
-
-# EXPECT: (1, 2) (1, 2)
-# EXPECT: EQ True
-# EXPECT: NE False
-# EXPECT: LT False
-# EXPECT: GT False
-# EXPECT: LE True
-# EXPECT: GE True
-test_cmp((1,2), (1,2))
-
-# EXPECT: (1, 2, 2) (1, 2, 3)
-# EXPECT: EQ False
-# EXPECT: NE True
-# EXPECT: LT True
-# EXPECT: GT False
-# EXPECT: LE True
-# EXPECT: GE False
-test_cmp((1,2,2), (1,2,3))
-
-# EXPECT: (1, 2, -1) (1, 0, 1)
-# EXPECT: EQ False
-# EXPECT: NE True
-# EXPECT: LT False
-# EXPECT: GT True
-# EXPECT: LE False
-# EXPECT: GE True
-test_cmp((1,2,-1), (1,0,1))
-
-# EXPECT: () ()
-# EXPECT: EQ True
-# EXPECT: NE False
-# EXPECT: LT False
-# EXPECT: GT False
-# EXPECT: LE True
-# EXPECT: GE True
-test_cmp((), ())
-
-t = (1,2,3)
-print t[0], t[1], t[2]     # EXPECT: 1 2 3
-print t[-1], t[-2], t[-3]  # EXPECT: 3 2 1
-print t[1:3]               # EXPECT: (2, 3)
-print t[-3:1]              # EXPECT: (1)
-print t[-10:2]             # EXPECT: (1, 2)
-print t[0:]                # EXPECT: (1, 2, 3)
-print t[-2:]               # EXPECT: (2, 3)
-print t[3:]                # EXPECT: ()
-print t[:-1]               # EXPECT: (1, 2)
-print t[:1]                # EXPECT: (1)
-print t[:]                 # EXPECT: (1, 2, 3)
-
-# make sure we can override magics correctly:
 type A(a: int, b: float):
     def __getitem__(self: A, n: int):
         return 1
 
-    def __slice_left__(self: A, b: int):
+    def __getitem__(self: A, x: lslice):
         return '2'
 
-    def __slice_right__(self: A, a: int):
+    def __getitem__(self: A, x: rslice):
         return 3.0
 
-    def __slice__(self: A, a: int, b: int):
+    def __getitem__(self: A, x: slice):
         return self.a
 
-    def __copy__(self: A):
+    def __getitem__(self: A, x: eslice):
         return -1
 
-a = A(42, 3.14)
-print a[0]    # EXPECT: 1
-print a[:1]   # EXPECT: 2
-print a[0:]   # EXPECT: 3
-print a[0:1]  # EXPECT: 42
-print a[:]    # EXPECT: -1
+@test
+def test_tuple():
+    def test_in():
+        for i in range(10):
+            yield i, i in (4, 9, 10, -1, 3, 1), i in (7,)
+    assert list(test_in()) == [(0, False, False), (1, True, False), (2, False, False), (3, True, False), (4, True, False), (5, False, False), (6, False, False), (7, False, True), (8, False, False), (9, True, False)]
 
+    def test_cmp[T](a: T, b: T):
+        yield 'EQ', a == b
+        yield 'NE', a != b
+        yield 'LT', a < b
+        yield 'GT', a > b
+        yield 'LE', a <= b
+        yield 'GE', a >= b
 
-# lists:
-l1 = [i+1 for i in range(100)]
-print len(l1)  # EXPECT: 100
-l1 = l1[98:]
-l2 = [1, 2] * 2
+    assert list(test_cmp((1,2), (1,2))) == [('EQ', True), ('NE', False), ('LT', False), ('GT', False), ('LE', True), ('GE', True)]
+    assert list(test_cmp((1,2,2), (1,2,3))) == [('EQ', False), ('NE', True), ('LT', True), ('GT', False), ('LE', True), ('GE', False)]
+    assert list(test_cmp((1,2,-1), (1,0,1))) == [('EQ', False), ('NE', True), ('LT', False), ('GT', True), ('LE', False), ('GE', True)]
+    assert list(test_cmp((), ())) == [('EQ', True), ('NE', False), ('LT', False), ('GT', False), ('LE', True), ('GE', True)]
 
-# EXPECT: 99
-# EXPECT: 100
-for a in l1:
-    print a
+    t = (1,2,3)
+    assert (t[0], t[1], t[2]) == (1, 2, 3)
+    assert (t[-1], t[-2], t[-3]) == (3, 2, 1)
+    assert t[1:3] == (2, 3)
+    assert t[-3:1] == (1,)
+    assert t[-10:2] == (1, 2)
+    assert t[0:] == (1, 2, 3)
+    assert t[-2:] == (2, 3)
+    assert t[3:] == ()
+    assert t[:-1] == (1, 2)
+    assert t[:1] == (1,)
+    assert t[:] == (1, 2, 3)
+    assert t[1::1] == (2, 3)
+    assert t[:2:1] == (1, 2)
+    assert t[::2] == (1, 3)
+    assert t[::-1] == (3, 2, 1)
+    assert t[0:3:-1] == ()
+    assert t[3:0:-1] == (3, 2, 1)
 
-# EXPECT: 1
-# EXPECT: 2
-# EXPECT: 1
-# EXPECT: 2
-for a in l2:
-    print a
+    a = A(42, 3.14)
+    assert a[0] == 1
+    assert a[:1] == '2'
+    assert a[0:] == 3.0
+    assert a[0:1] == 42
+    assert a[:] == -1
+test_tuple()
 
-l1 = [i*2 for i in range(3)]
-l1.insert(0, 99)
-l1[0] += 1
-del l1[1]
+@test
+def test_list():
+    l1 = [i+1 for i in range(100)]
+    assert len(l1) == 100
+    l1 = l1[98:]
+    l2 = [1, 2] * 2
 
-# EXPECT: 100
-# EXPECT: 2
-# EXPECT: 4
-for a in l1[0:3]:
-    print a
+    assert [a for a in l1] == [99, 100]
+    assert [a for a in l2] == [1, 2, 1, 2]
 
-l3 = [1, 2, 3]
-print l3.remove(2)           # EXPECT: True
-print l3.remove(2)           # EXPECT: False
-print l3                     # EXPECT: [1, 3]
-print list[int]().remove(0)  # EXPECT: False
+    l1 = [i*2 for i in range(3)]
+    l1.insert(0, 99)
+    l1[0] += 1
+    del l1[1]
+    assert [a for a in l1[0:3]] == [100, 2, 4]
 
-l4 = [5, 1, 4, 2, 1, -10, 10, 100, -100]
-print sorted(l4)  # EXPECT: [-100, -10, 1, 1, 2, 4, 5, 10, 100]
-l4.sort()
-print l4  # EXPECT: [-100, -10, 1, 1, 2, 4, 5, 10, 100]
-print sorted(list[int]())  # EXPECT: []
+    l3 = [1, 2, 3]
+    assert l3.remove(2) == True
+    assert l3.remove(2) == False
+    assert l3 == [1, 3]
+    assert list[int]().remove(0) == False
 
-l5 = [11, 22, 33, 44]
-del l5[-1]
-print l5  # EXPECT: [11, 22, 33]
-l5.insert(-1, 55)
-print l5  # EXPECT: [11, 22, 55, 33]
-print l5 + [1,2,3]  # EXPECT: [11, 22, 55, 33, 1, 2, 3]
-l5 += [1,2,3]
-print l5  # EXPECT: [11, 22, 55, 33, 1, 2, 3]
-print l5.pop()  # EXPECT: 3
-print l5 * 2  # EXPECT: [11, 22, 55, 33, 1, 2, 11, 22, 55, 33, 1, 2]
-l5 *= 2
-print l5  # EXPECT: [11, 22, 55, 33, 1, 2, 11, 22, 55, 33, 1, 2]
-print l5.index(33)  # EXPECT: 3
-l5 *= 0
-print l5  # EXPECT: []
+    #l4 = [5, 1, 4, 2, 1, -10, 10, 100, -100]
+    #assert sorted(l4) == [-100, -10, 1, 1, 2, 4, 5, 10, 100]
+    #l4.sort()
+    #assert l4 == [-100, -10, 1, 1, 2, 4, 5, 10, 100]
+    #assert str(sorted(list[int]())) == "[]"
 
+    l5 = [11, 22, 33, 44]
+    del l5[-1]
+    assert l5 == [11, 22, 33]
+    l5.insert(-1, 55)
+    assert l5 == [11, 22, 55, 33]
+    assert l5 + [1,2,3] == [11, 22, 55, 33, 1, 2, 3]
+    l5 += [1,2,3]
+    assert l5 == [11, 22, 55, 33, 1, 2, 3]
+    assert l5.pop() == 3
+    assert l5 * 2 == [11, 22, 55, 33, 1, 2, 11, 22, 55, 33, 1, 2]
+    l5 *= 2
+    assert l5 == [11, 22, 55, 33, 1, 2, 11, 22, 55, 33, 1, 2]
+    assert l5.index(33) == 3
+    l5 *= 0
+    assert len(l5) == 0
+test_list()
 
-# sets:
-s1 = {a for a in range(100)}
-print len(s1)  # EXPECT: 100
-s1 = {a%8 for a in range(100)}
-for a in range(8):
-    if a not in s1:
-        print "fail"
+@test
+def test_set():
+    s1 = {a for a in range(100)}
+    assert len(s1) == 100
+    s1 = {a%8 for a in range(100)}
+    for a in range(8):
+        assert a in s1
+    for a in range(8,100):
+        assert a not in s1
 
-for a in range(8,100):
-    if a in s1:
-        print "fail"
+    assert 5 in s1
+    s1.remove(5)
+    assert 5 not in s1
+    assert len(s1) == 7
 
-print 5 in s1  # EXPECT: True
-s1.remove(5)
-print 5 in s1  # EXPECT: False
-print len(s1)  # EXPECT: 7
+    s1 = {1,2,3,4}
+    s2 = {2,3,4,5}
+    s3 = set[int]()
 
-s1 = {1,2,3,4}
-s2 = {2,3,4,5}
-s3 = set[int]()
+    assert (s1 | s2) == {1, 2, 3, 4, 5}
+    assert (s1 & s2) == {4, 2, 3}
+    assert (s1 ^ s2) == {1, 5}
+    assert (s1 | s3) == {1, 2, 3, 4}
+    assert (s1 & s3) == set[int]()
+    assert (s1 ^ s3) == {1, 2, 3, 4}
+    assert (s1 - s2) == {1}
+    assert (s2 - s1) == {5}
+    assert (s3 - s1 - s2) == set[int]()
+    assert (s1 > s2) == False
+    assert (s1 < s2) == False
+    assert (s3 <= s1) == True
+    assert (s2 >= s1) == False
+    assert ((s1 | s2) > s1) == True
 
-print s1 | s2       # EXPECT: {1, 2, 3, 4, 5}
-print s1 & s2       # EXPECT: {4, 2, 3}
-print s1 ^ s2       # EXPECT: {1, 5}
-print s1 | s3       # EXPECT: {1, 2, 3, 4}
-print s1 & s3       # EXPECT: {}
-print s1 ^ s3       # EXPECT: {1, 2, 3, 4}
-print s1 - s2       # EXPECT: {1}
-print s2 - s1       # EXPECT: {5}
-print s3 - s1 - s2  # EXPECT: {}
-print s1 > s2       # EXPECT: False
-print s1 < s2       # EXPECT: False
-print s3 <= s1      # EXPECT: True
-print s2 >= s1      # EXPECT: False
-print (s1 | s2) > s1  # EXPECT: True
+    s1c = copy(s1)
+    s2c = copy(s2)
+    s3c = copy(s3)
 
-s1c = copy(s1)
-s2c = copy(s2)
-s3c = copy(s3)
+    assert s1c == {1, 2, 3, 4}
+    s1c &= s2c
+    assert s1c == {2, 3, 4}
+    s1c -= s3c
+    assert s1c == {2, 3, 4}
+    s1c ^= s1c
+    assert s1c == set[int]()
+    s1c |= s2c
+    assert s1c == {2, 3, 4, 5}
+    assert s1 == {1, 2, 3, 4}
+test_set()
 
-print s1c  # EXPECT: {1, 2, 3, 4}
-s1c &= s2c
-print s1c  # EXPECT: {2, 3, 4}
-s1c -= s3c
-print s1c  # EXPECT: {2, 3, 4}
-s1c ^= s1c
-print s1c  # EXPECT: {}
-s1c |= s2c
-print s1c  # EXPECT: {2, 3, 4, 5}
-print s1   # EXPECT: {1, 2, 3, 4}
+@test
+def test_dict():
+    d1 = {a: a*a for a in range(100)}
+    assert len(d1) == 100
+    d1 = {a: a*a for a in range(5)}
 
+    assert [d1.get(a, -1) for a in range(6)] == [0, 1, 4, 9, 16, -1]
 
-# dicts:
-d1 = {a: a*a for a in range(100)}
-print len(d1)  # EXPECT: 100
-d1 = {a: a*a for a in range(5)}
+    assert 2 in d1
+    del d1[2]
+    assert 2 not in d1
+    d1[2] = 44
+    assert 2 in d1
+    assert d1.get(2, -1) == 44
+    assert d1[3] == 9
 
-# EXPECT: 0
-# EXPECT: 1
-# EXPECT: 4
-# EXPECT: 9
-# EXPECT: 16
-# EXPECT: -1
-for a in range(6):
-    print d1.get(a, -1)
+    del d1[3]
+    del d1[4]
 
-print 2 in d1        # EXPECT: True
-del d1[2]
-print 2 in d1        # EXPECT: False
-d1[2] = 44
-print 2 in d1        # EXPECT: True
-print d1.get(2, -1)  # EXPECT: 44
-print d1[3]          # EXPECT: 9
+    assert [k for k in d1] == [0, 1, 2]
+    assert [t for t in d1.items()] == [(0, 0), (1, 1), (2, 44)]
+test_dict()
 
-del d1[3]
-del d1[4]
+@test
+def test_deque():
+    from collections import deque
 
-# EXPECT: 0
-# EXPECT: 1
-# EXPECT: 2
-for k in d1:
-    print k
+    dq = deque[int]()
+    dq.append(1)
+    dq.append(2)
+    dq.append(3)
+    dq.appendleft(11)
+    dq.appendleft(22)
+    assert str(dq) == '[22, 11, 1, 2, 3]'
+    assert bool(dq) == True
 
-# EXPECT: 0 0
-# EXPECT: 1 1
-# EXPECT: 2 44
-for t in d1.items():
-    print t[0], t[1]
+    # test cap increase:
+    dq.clear()
+    assert bool(dq) == False
+    for i in range(20):
+        dq.append(i)
+        dq.appendleft(i)
+    assert str(dq) == '[19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]'
+    assert len(dq) == 40
 
+    for i in range(19):
+        dq.pop()
+        dq.popleft()
+    assert str(dq) == '[0, 0]'
+    for a in dq:
+        assert a == 0
 
-# deque:
-from collections import deque
+    assert (0 in dq) == True
+    assert (1 in dq) == False
+    assert str(copy(dq)) == '[0, 0]'
 
-dq = deque[int]()
-dq.append(1)
-dq.append(2)
-dq.append(3)
-dq.appendleft(11)
-dq.appendleft(22)
-print dq  # EXPECT: [22, 11, 1, 2, 3]
-print bool(dq)  # EXPECT: True
+    # test maxlen:
+    dq = deque[int](5)
+    for i in range(100):
+        dq.append(i)
+    assert str(dq) == '[95, 96, 97, 98, 99]'
 
-# test cap increase:
-dq.clear()
-print bool(dq)  # EXPECT: False
-for i in range(20):
-    dq.append(i)
-    dq.appendleft(i)
-print dq  # EXPECT: [19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-print len(dq)  # EXPECT: 40
-
-for i in range(19):
-    dq.pop()
-    dq.popleft()
-print dq  # EXPECT: [0, 0]
-for a in dq:
-    # EXPECT: 0
-    # EXPECT: 0
-    print a
-
-print 0 in dq  # EXPECT: True
-print 1 in dq  # EXPECT: False
-print copy(dq)  # EXPECT: [0, 0]
-
-# test maxlen:
-dq = deque[int](5)
-for i in range(100):
-    dq.append(i)
-print dq  # EXPECT: [95, 96, 97, 98, 99]
-
-for i in range(5):
-    dq.append(i)
-print dq  # EXPECT: [0, 1, 2, 3, 4]
+    for i in range(5):
+        dq.append(i)
+    assert str(dq) == '[0, 1, 2, 3, 4]'
+test_deque()

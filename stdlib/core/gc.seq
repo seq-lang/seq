@@ -1,0 +1,31 @@
+# Primarily for internal use. Regular users should not use this module.
+
+def sizeof[T]():
+    return array[T].__elemsize__()
+
+def alloc(sz: int):
+    return _C.seq_alloc(sz)
+
+# Allocates a block of memory via GC, where the
+# caller guarantees that this block will not store
+# pointers to other GC-allocated data.
+def alloc_atomic(sz: int):
+    return _C.seq_alloc_atomic(sz)
+
+def realloc(p: cobj, sz: int):
+    return _C.seq_realloc(p, sz)
+
+def free(p: cobj):
+    _C.seq_free(p)
+
+def add_roots(start: cobj, end: cobj):
+    _C.seq_gc_add_roots(start, end)
+
+def remove_roots(start: cobj, end: cobj):
+    _C.seq_gc_remove_roots(start, end)
+
+def clear_roots():
+    _C.seq_gc_clear_roots()
+
+def exclude_static_roots(start: cobj, end: cobj):
+    _C.seq_gc_exclude_static_roots(start, end)

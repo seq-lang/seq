@@ -1,8 +1,8 @@
-import python as py
-
 class list[T]:
     arr: array[T]
     len: int
+
+# Magic methods
 
     def __init__(self: list[T], arr: array[T], len: int):
         self.arr = arr
@@ -27,13 +27,6 @@ class list[T]:
         self.len = 0
         for i in other:
             self.append(i)
-
-    def _idx_check(self: list[T], idx: int, msg: str):
-        if idx >= self.len or idx < 0:
-            raise IndexError(msg)
-
-    def _slice_error(self: list[T]):
-        raise IndexError("list slice index error")
 
     def __len__(self: list[T]):
         return self.len
@@ -73,28 +66,121 @@ class list[T]:
     def __ne__(self: list[T], other: list[T]):
         return not (self == other)
 
-    def __slice__(self: list[T], a: int, b: int):
+    def __getitem__(self: list[T], s: eslice):
+        return self.__copy__()
+
+    def __getitem__(self: list[T], s: slice):
+        a, b = s
         if a < 0:
             a += len(self)
         if b < 0:
             b += len(self)
         if not (0 <= a <= b <= len(self)):
             self._slice_error()
-        return list[T](self.arr[a:b], b - a)
+        return list[T](copy(self.arr.__slice__(a, b)), b - a)
 
-    def __slice_left__(self: list[T], b: int):
-        if b < 0:
-            b += len(self)
-        if not (0 <= b <= len(self)):
+    def __getitem__(self: list[T], s: lslice):
+        end = s.end
+        if end < 0:
+            end += len(self)
+        if not (0 <= end <= len(self)):
             self._slice_error()
-        return list[T](self.arr[:b], b)
+        return list[T](copy(self.arr.__slice_left__(end)), end)
 
-    def __slice_right__(self: list[T], a: int):
+    def __getitem__(self: list[T], s: rslice):
+        start = s.start
+        if start < 0:
+            start += len(self)
+        if not (0 <= start <= len(self)):
+            self._slice_error()
+        return list[T](copy(self.arr.__slice_right__(start)), self.len - start)
+
+    def __getitem__(self: list[T], s: esslice):
+        if s.step == 0:
+            self._slice_error()
+        if s.step > 0:
+            return list[T](self.arr[i] for i in range(0, self.len, s.step))
+        else:
+            return list[T](self.arr[i] for i in range(self.len - 1, -1, s.step))
+
+    def __getitem__(self: list[T], s: sslice):
+        a, b, step = s
         if a < 0:
             a += len(self)
-        if not (0 <= a <= len(self)):
+        if b < 0:
+            b += len(self)
+        if not (0 <= a <= b <= len(self)) or step == 0:
             self._slice_error()
-        return list[T](self.arr[a:], self.len - a)
+        return list[T](self.arr[i] for i in range(a, b, step))
+
+    def __getitem__(self: list[T], s: lsslice):
+        end = s.end
+        if end < 0:
+            end += len(self)
+        if not (0 <= end <= len(self)) or s.step == 0:
+            self._slice_error()
+        return list[T](self.arr[i] for i in range(0, end, s.step))
+
+    def __getitem__(self: list[T], s: rsslice):
+        start = s.start
+        if start < 0:
+            start += len(self)
+        if not (0 <= start <= len(self)) or s.step == 0:
+            self._slice_error()
+        return list[T](self.arr[i] for i in range(start, self.len, s.step))
+
+    def __setitem__(self: list[T], s: eslice, other: generator[T]):
+        l = list[T](other)
+        self.arr = l.arr
+        self.len = l.len
+
+    def __setitem__(self: list[T], s: slice, other: generator[T]):
+        a, b = s
+        if a < 0:
+            a += len(self)
+        if b < 0:
+            b += len(self)
+        if not (0 <= a <= b <= len(self)):
+            self._slice_error()
+        lp = list(other)
+        l = list[T](self.len - (b-a) + lp.len)
+        l.ext(self[:a])
+        l.ext(lp)
+        l.ext(self[b:])
+        self.arr = l.arr
+        self.len = l.len
+
+    def __setitem__(self: list[T], s: lslice, other: generator[T]):
+        end = s.end
+        if end < 0:
+            end += len(self)
+        if not (0 <= end <= len(self)):
+            self._slice_error()
+        lp = list(other)
+        l = list[T](self.len - end + lp.len)
+        l.ext(lp)
+        l.ext(self[end:])
+        self.arr = l.arr
+        self.len = l.len
+
+    def __setitem__(self: list[T], s: rslice, other: generator[T]):
+        start = s.start
+        if start < 0:
+            start += len(self)
+        if not (0 <= start <= len(self)):
+            self._slice_error()
+        lp = list(other)
+        l = list[T](start + lp.len)
+        l.ext(self[:start])
+        l.ext(lp)
+        self.arr = l.arr
+        self.len = l.len
+
+    def __contains__(self: list[T], x: T):
+        for a in self:
+            if a == x:
+                return True
+        return False
 
     def __copy__(self: list[T]):
         return list[T](self.arr.__copy__(), self.len)
@@ -140,8 +226,6 @@ class list[T]:
         return v
 
     def __imul__(self: list[T], n: int):
-        import gc
-
         if n == 1:
             return self
 
@@ -152,7 +236,7 @@ class list[T]:
         len0 = len(self)
         new_cap = n * len0
         if self.arr.len < new_cap:
-            p = ptr[T](gc.realloc(ptr[byte](self.arr.ptr), new_cap * gc.sizeof[T]()))
+            p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
             self.arr = array[T](p, new_cap)
 
         idx = len0
@@ -168,20 +252,28 @@ class list[T]:
         self.len = new_cap
         return self
 
-    def _resize_if_full(self: list[T]):
-        import gc
-        if self.len == self.arr.len:
-            new_cap = (1 + 3*self.len) // 2
-            p = ptr[T](gc.realloc(ptr[byte](self.arr.ptr), new_cap * gc.sizeof[T]()))
-            self.arr = array[T](p, new_cap)
+    def __str__(self: list[T]) -> str:
+        n = len(self)
+        if n == 0:
+            return "[]"
+        else:
+            y = ["[", str(self[0])]
+            for i in range(1, n):
+                y.append(", ")
+                y.append(str(self[i]))
+            y.append("]")
+            return str.cat(y)
+
+
+# Helper functions
 
     def append(self: list[T], x: T):
         self._resize_if_full()
         self.arr[self.len] = x
         self.len += 1
 
-    # TODO: can't use "extend" here since it is a keyword!
     def ext(self: list[T], itr):
+        # TODO: can't use "extend" here since it is a keyword!
         for a in itr:
             self.append(a)
 
@@ -197,11 +289,14 @@ class list[T]:
         self.arr[idx] = x
         self.len += 1
 
-    def pop(self: list[T]):
+    def pop(self: list[T], idx: int = -1):
         if len(self) == 0:
             raise IndexError("pop from empty list")
-        x = self[self.len - 1]
-        self.len -= 1
+        if idx < 0:
+            idx += len(self)
+        self._idx_check(idx, "pop index out of range")
+        x = self[idx]
+        del self[idx]
         return x
 
     def remove(self: list[T], x: T):
@@ -240,52 +335,17 @@ class list[T]:
             self[j] = x
             i += 1
 
-    def sort(self: list[T]):
-        qsort(self.arr[0:len(self)])
+# Internal helpers
 
-    def __str__(self: list[T]) -> str:
-        n = len(self)
-        if n == 0:
-            return "[]"
-        else:
-            y = ["[", str(self[0])]
-            for i in range(1, n):
-                y.append(", ")
-                y.append(str(self[i]))
-            y.append("]")
-            return str.cat(y)
+    def _idx_check(self: list[T], idx: int, msg: str):
+        if idx >= self.len or idx < 0:
+            raise IndexError(msg)
 
-    def __to_py__(self: list[T]):
-        cdef seq_py_list_new(int) -> ptr[byte]
-        cdef seq_py_list_setitem(ptr[byte], int, ptr[byte])
+    def _slice_error(self: list[T]):
+        raise IndexError("list slice index error")
 
-        pylist = seq_py_list_new(len(self))
-        idx = 0
-        for a in self:
-            seq_py_list_setitem(pylist, idx, py.py(a).p)
-            idx += 1
-        return py.PyObject(pylist)
-
-    def __from_py__(v: py.PyObject):
-        cdef seq_py_list_len(ptr[byte]) -> int
-        cdef seq_py_list_getitem(ptr[byte], int) -> ptr[byte]
-
-        n = seq_py_list_len(v.p)
-        t = list[T](n)
-        for i in range(n):
-            elem = py.PyObject(seq_py_list_getitem(v.p, i))
-            t.append(py.get[T](elem))
-        return t
-
-    def __pickle__(self: list[T], jar: Jar):
-        n = len(self)
-        pickle(n, jar)
-        for i in range(n):
-            pickle(self.arr[i], jar)
-
-    def __unpickle__(jar: Jar):
-        n = unpickle[int](jar)
-        arr = array[T](n)
-        for i in range(n):
-            arr[i] = unpickle[T](jar)
-        return list[T](arr, n)
+    def _resize_if_full(self: list[T]):
+        if self.len == self.arr.len:
+            new_cap = (1 + 3*self.len) // 2
+            p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
+            self.arr = array[T](p, new_cap)
