@@ -65,24 +65,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         match List.rev stmts with
         | (pos, Expr e) :: tl -> (pos, Print ([ e ], "\n")) :: tl
         | l -> l
-      else 
-        List.map stmts ~f:(fun s ->
-          (match snd s with
-          | Generic (Function p) ->
-            let name = p.fn_name.name in
-            let fn = Llvm.Func.func name in
-            let names = List.map p.fn_args ~f:(fun (_, x) -> x.name) in
-            Ctx.add ~ctx ~toplevel:true ~global:true ~attrs:["preload"] name (Ctx_namespace.Func (fn, names))
-          | Generic (Class p) -> 
-            let name = p.class_name in 
-            let t = Llvm.Type.cls name in
-            Ctx.add ~ctx ~toplevel:true ~global:true ~attrs:["preload"] name (Ctx_namespace.Type t)
-          | Generic (Type p) -> 
-            let name = p.class_name in 
-            let t = Llvm.Type.record [] [] name in
-            Ctx.add ~ctx ~toplevel:true ~global:true ~attrs:["preload"] name (Ctx_namespace.Type t)
-          | _ -> ());
-          s)
+      else stmts
     in
     ignore @@ List.map stmts ~f:(parse ~ctx ~toplevel:true ~jit)
 
@@ -495,7 +478,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       ?(toplevel = false)
       { fn_name = { name; typ; _ }; fn_generics; fn_args; fn_stmts; fn_attrs }
     =
-    Util.dbg "==> FN %s" name;
     let fn =
       match cls with
       | Some cls ->
@@ -503,16 +485,11 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         Llvm.Type.add_cls_method cls name fn;
         fn
       | None ->
-        match toplevel, Ctx.in_block ~ctx name with 
-        | true, Some ((Ctx_namespace.Func (fn, names)), annt) when Hash_set.mem annt.attrs "preload" ->
-          ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
-          fn
-        | _ -> 
-          let fn = Llvm.Func.func name in
-          let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
-          Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Func (fn, names));
-          ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
-          fn
+        let fn = Llvm.Func.func name in
+        let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
+        Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Func (fn, names));
+        ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
+        fn
     in
     let flags = Stack.create () in
     List.iter fn_attrs ~f:(fun (_, x) ->
@@ -557,17 +534,13 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   and parse_class ctx pos ~toplevel ?(is_type = false) cls =
     let typ =
-      match toplevel, Ctx.in_block ~ctx cls.class_name with 
-      | true, Some ((Ctx_namespace.Type typ), annt) when Hash_set.mem annt.attrs "preload" ->
-        typ
-      | _ ->
-        let typ =
-          if is_type
-          then Llvm.Type.record [] [] cls.class_name
-          else Llvm.Type.cls cls.class_name
-        in
-        Ctx.add ~ctx ~toplevel ~global:toplevel cls.class_name (Ctx_namespace.Type typ);
-        typ
+      let typ =
+        if is_type
+        then Llvm.Type.record [] [] cls.class_name
+        else Llvm.Type.cls cls.class_name
+      in
+      Ctx.add ~ctx ~toplevel ~global:toplevel cls.class_name (Ctx_namespace.Type typ);
+      typ
     in
     let new_ctx = { ctx with map = Hashtbl.copy ctx.map; stack = Stack.create () } in
     Ctx.add_block new_ctx;
@@ -738,7 +711,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         )
       |> List.unzip3
     in
-    Util.dbg "== generics: %s" @@ Util.ppl generic_types ~f:snd ;
+    (* Util.dbg "== generics: %s" @@ Util.ppl generic_types ~f:snd ; *)
     let type_args = List.map generic_types ~f:snd in
     let generic_args =
       List.filter_map types ~f:(fun x ->
@@ -749,7 +722,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     let generics = List.append type_args generic_args |> List.dedup_and_sort ~compare in
     set_generic_count (List.length generics);
     List.iteri generics ~f:(fun cnt key ->
-        Util.dbg "adding %s ..." key;
+        (* Util.dbg "adding %s ..." key; *)
         Ctx.add ~ctx key (Ctx_namespace.Type (get_generic cnt key)));
     let types = List.map types ~f:(E.parse_type ~ctx) in
     let defaults = List.map defaults ~f:(function
