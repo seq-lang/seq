@@ -1,7 +1,6 @@
 import bisect
 import random
-
-from math import exp as _exp
+from math import frexp as _frexp, floor as _floor, fabs as _fabs, gcd as _gcd
 
 def median[T](data: list[T]) -> float:
     """
@@ -184,97 +183,84 @@ def quantiles[T](data: list[T], n = 4, method = 'exclusive') -> list[float]:
             interpolated = (data[j-1] * (n - delta) + data[j] * delta) / n
             result.append(interpolated)
         return result
+
+def as_integer_ratio(x: float):
+    """
+    as_integer_ratio()
+
+    Express a float in the form n / d.
     
+    Returns a pair (n, d) of integers. 
+    """
+    float_part, exponent = _frexp(x)      # x == float_part * 2**exponent exactly 
+   
 
-# def as_integer_ratio(self):
-#     """
-#     as_integer_ratio()
+    for i in range(300):
+        if float_part == _floor(float_part): break
+        float_part *= 2.0
+        exponent -= 1
 
-#     Express a float in the form n / d.
+    numerator = int(float_part)
+    denominator = 1
+    _exponent = int(_fabs(float(exponent)))
     
-#     Returns a pair (n, d) of integers. 
-#     """
-#     n = int(self)
-#     if _exp(self) >= 0:
-#         # self is an integer.
-#         n, d = n * 10**_exp(self), 1
-#     else:
-#         # Find d2, d5 such that abs(self) = n / (2**d2 * 5**d5).
-#         d5 = _exp(-self)
-#         while d5 > 0 and n % 5 == 0:
-#             n //= 5
-#             d5 -= 1
-        
-#         d2 = _exp(-self)
+    # fold in 2**exponent
+    if exponent > 0: numerator <<= _exponent
+    else: denominator <<= _exponent
 
-#         bit_length = 0
-#         num = (n & -n)
-#         while num > 1:
-#             bit_length += 1
-#             num //= 2
+    return (numerator, denominator)
 
-#         shift2 = min(bit_length - 1, d2)
-#         if shift2:
-#             n >>= shift2
-#             d2 -= shift2
-        
-#         d = 5**d5 << d2
-#         if self < 0:
-#             n = -n
-#         return n, d
+def _sum(data: list[float]) -> float:
+    """
+    _sum(data [, start]) -> (type, sum, count)
 
-# def _exact_ratio[T](x: T):
-#     """
-#     _exact_ratio(x)
-
-#     Return Real number x to exact (numerator, denominator) pair.
-#     """
-#     # if type(x) is float:
-#     return x.as_integer_ratio()
-#     # return (x.numberator, x.denominator)
-
-# def _sum[T](data: list[T], start: T):
-#     """
-#     _sum(data [, start]) -> (type, sum, count)
-
-#     Return a high-precision sum of the given numeric data as a fraction,
-#     together with the type to be converted to and the count of items.
+    Return a high-precision sum of the given numeric data as a fraction,
+    together with the type to be converted to and the count of items.
     
-#     If optional argument ``start`` is given, it is added to the total.
-#     If ``data`` is empty, ``start`` (defaulting to 0) is returned.
+    If optional argument ``start`` is given, it is added to the total.
+    If ``data`` is empty, ``start`` (defaulting to 0) is returned.
     
-#     TODO/CAVEATS
-#     @jordan - the start argument should default to 0 or 0.0
-#     """
-#     #---------NOT DONE-------------
-#     count = 0
-#     # TODO!!! _exact_ratio()
-#     n, d = _exact_ratio(start)
-#     partials = {d: n}
-#     partials_get = partials.get
+    TODO/CAVEATS
+    @jordan - the start argument should default to 0 or 0.0
+            - Assumes input is floats
+    """
+    if len(data) == 1:
+        return data[0]
 
-#     for n, d in map(_exact_ratio, data):
-#         count += 1
-#         partials[d] = partials_get(d, 0) + n
-    
-#     total = sum(n/d for d, n in sorted(partials.items()))
+    n, d = as_integer_ratio(data[0])    # First fraction
+    total = 0.0
 
-#     return (total, count, T)
-    
+    # sum fractions (n, d) + (a, b)
+    for a, b in map(as_integer_ratio, data[1:]):
+        bottom = b
+        denom = d
+        n *= bottom
+        d *= bottom
+        a *= denom
 
-# def mean[T](data: list[T]):
-#     """
-#     mean(data)
+        n += a
+        gcd = int(_gcd(float(n), float(d)))
+        n //= gcd
+        d //= gcd
 
-#     Return the sample arithmetic mean of data.
-#     """
-#     n = len(data)
-#     if n >= 1:
-#         T, total, count = _sum(data)
-#         assert count == n
-#         # TODO!!! _convert
-#         return _convert(total/n, T)
-#     return
+    total = n/d
+    return total
+
+def mean(data: list[float]) -> float:
+    """
+    mean(data)
+
+    Return the sample arithmetic mean of data.
+
+    TODO/CAVEATS
+    @jordan - Assumes input is floats
+            - Does not address NAN or INF
+    """
+    n = len(data)
+    if n < 1:
+        raise StatisticsError('mean requires at least one data point')
+    total = _sum(data)
+    return total/n
  
 class NormalDist:
     """
@@ -283,12 +269,12 @@ class NormalDist:
     mu: float
     sigma: float
 
-    def __init__(self: NormalDist, mu: optional[float]=0.0, sigma: optional[float]=1.0):
+    def __init__(self: NormalDist, mu: float=0.0, sigma: float=1.0):
         """
         NormalDist where mu is the mean and sigma is the standard deviation.
-        TODO/CAVEATS:
-        @jordan- if sigma < 0.0: raise StatisticsError('sigma must be non-negative')
         """
+        if sigma < 0.0:
+            raise StatisticsError('sigma must be non-negative')
         self.mu = mu
         self.sigma = sigma
     
@@ -340,12 +326,20 @@ class NormalDist:
         """
         return self.sigma ** 2.0
 
-    # def samples(self: NormalDist, n, seed=None):
-    #     """
-    #     samples(self, n, seed)
+    def samples[T](self: NormalDist, n, seed: optional[T]=None):
+        """
+        samples(self, n, seed)
 
-    #     Generate *n* samples for a given mean and standard deviation.
-    #     """
-    #     gauss = random.gauss #if seed is None else random.Random(seed).gauss
+        Generate *n* samples for a given mean and standard deviation.
+        
+        TODO/CAVEATS:
+        @jordan- gauss needs to deal with seed=None
+                 gauss = random.gauss if seed is None else random.Random(seed).gauss
+        """
+        if seed:
+            print('here')
+        else:
+            print 'None'
+        gauss = random.gauss if seed else random.Random(seed).gauss
 
-    #     return [gauss(self.mu, self.sigma) for i in range(n)]
+        return [gauss(self.mu, self.sigma) for i in range(n)]
