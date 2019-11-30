@@ -7,14 +7,14 @@ def median[T](data: list[T]) -> float:
     median(data)
 
     Return the median (middle value) of numeric data.
-    
+
     When the number of data points is odd, return the middle data point.
     When the number of data points is even, the median is interpolated by
     taking the average of the two middle values:
     """
     data = sorted(data)
     n = len(data)
-    
+
     if n%2 == 1:
         return float(data[n//2])
     i = n//2
@@ -25,7 +25,7 @@ def median_low[T](data: list[T]) -> float:
     median_low(data)
 
     Return the low median of numeric data.
-    
+
     When the number of data points is odd, the middle value is returned.
     When it is even, the smaller of the two middle values is returned.
     """
@@ -42,7 +42,7 @@ def median_high[T](data: list[T]) -> float:
     median_high(data)
 
     Return the high median of data.
-  
+
     When the number of data points is odd, the middle value is returned.
     When it is even, the larger of the two middle values is returned.
     """
@@ -71,7 +71,7 @@ def median_grouped[T](data: list[T], interval = 1) -> float:
     median_grouped(data, interval)
 
     Return the 50th percentile (median) of grouped continuous data.
-    
+
     TODO/CAVEATS:
     @jordan - interval only accepts integers for now
     """
@@ -98,7 +98,7 @@ def mode[T](data: list[T]) -> T:
     mode(data)
 
     Return the most common data point from discrete or nominal data.
-    
+
     TODO/CAVEATS:
     @jordan- implement mode with Counter(data).most_common(1) when Counter is implemented
     """
@@ -117,7 +117,7 @@ def multimode[T](data: list[T]):
     multimode(data)
 
     Return a list of the most frequently occurring values.
-    
+
     Will return more than one result if there are multiple modes
     or an empty list if *data* is empty.
 
@@ -128,7 +128,7 @@ def multimode[T](data: list[T]):
     counter = data.count(elem)
     li = sorted(data)
     mulmode = list[T]()
-    
+
     for i in li:
         curr_frequency = data.count(i)
         if curr_frequency > counter:
@@ -144,16 +144,16 @@ def quantiles[T](data: list[T], n = 4, method = 'exclusive') -> list[float]:
     quantiles(data, n, method)
 
     Divide *data* into *n* continuous intervals with equal probability.
-    
+
     Returns a list of (n - 1) cut points separating the intervals.
-    
+
     Set *n* to 4 for quartiles (the default).  Set *n* to 10 for deciles.
     Set *n* to 100 for percentiles which gives the 99 cuts points that
     separate *data* in to 100 equal sized groups.
-   
+
     The *data* can be any iterable containing sample.
     The cut points are linearly interpolated between data points.
-    
+
     If *method* is set to *inclusive*, *data* is treated as population
     data.  The minimum value is treated as the 0th percentile and the
     maximum value is treated as the 100th percentile.
@@ -163,7 +163,7 @@ def quantiles[T](data: list[T], n = 4, method = 'exclusive') -> list[float]:
     """
     data = sorted(data)
     ld = len(data)
-    
+
     if method == 'inclusive':
         m = ld - 1
         result = list[float]()
@@ -189,11 +189,11 @@ def as_integer_ratio(x: float):
     as_integer_ratio()
 
     Express a float in the form n / d.
-    
-    Returns a pair (n, d) of integers. 
+
+    Returns a pair (n, d) of integers.
     """
-    float_part, exponent = _frexp(x)      # x == float_part * 2**exponent exactly 
-   
+    float_part, exponent = _frexp(x)      # x == float_part * 2**exponent exactly
+
 
     for i in range(300):
         if float_part == _floor(float_part): break
@@ -203,7 +203,7 @@ def as_integer_ratio(x: float):
     numerator = int(float_part)
     denominator = 1
     _exponent = int(_fabs(float(exponent)))
-    
+
     # fold in 2**exponent
     if exponent > 0: numerator <<= _exponent
     else: denominator <<= _exponent
@@ -216,10 +216,10 @@ def _sum(data: list[float]) -> float:
 
     Return a high-precision sum of the given numeric data as a fraction,
     together with the type to be converted to and the count of items.
-    
+
     If optional argument ``start`` is given, it is added to the total.
     If ``data`` is empty, ``start`` (defaulting to 0) is returned.
-    
+
     TODO/CAVEATS
     @jordan - the start argument should default to 0 or 0.0
             - Assumes input is floats
@@ -261,7 +261,7 @@ def mean(data: list[float]) -> float:
         raise StatisticsError('mean requires at least one data point')
     total = _sum(data)
     return total/n
- 
+
 class NormalDist:
     """
     Normal distribution of a random variable
@@ -277,7 +277,7 @@ class NormalDist:
             raise StatisticsError('sigma must be non-negative')
         self.mu = mu
         self.sigma = sigma
-    
+
     @property
     def mean(self: NormalDist):
         """
@@ -286,7 +286,7 @@ class NormalDist:
         Arithmetic mean of the normal distribution.
         """
         return self.mu
-    
+
     @property
     def median(self: NormalDist):
         """
@@ -295,19 +295,19 @@ class NormalDist:
         Return the median of the normal distribution
         """
         return self.mu
-    
+
     @property
     def mode(self: NormalDist):
         """
         mode(self)
 
         Return the mode of the normal distribution
-        
+
         The mode is the value x where which the probability density
         function (pdf) takes its maximum value.
         """
         return self.mu
-    
+
     @property
     def stdev(self: NormalDist):
         """
@@ -331,7 +331,7 @@ class NormalDist:
         samples(self, n, seed)
 
         Generate *n* samples for a given mean and standard deviation.
-        
+
         TODO/CAVEATS:
         @jordan- gauss needs to deal with seed=None
                  gauss = random.gauss if seed is None else random.Random(seed).gauss
