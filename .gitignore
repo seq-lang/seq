@@ -64,3 +64,5 @@ dox
 # Testing playground #
 ######################
 scratch.seq
+
+.venv
