@@ -55,34 +55,18 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   (** [parse_module ~ctx stmts] parses a module.
       A module is just a simple list [stmts] of statements. *)
-  and parse_module ?(jit = false) ~(ctx : Ctx.t) stmts =
+  and parse_module ?(cell=false) ?(jit = false) ~(ctx : Ctx.t) stmts =
     (* Util.dbg "%s\n" @@ Util.ppl ~sep:"\n" stmts ~f:Ast.Stmt.to_string; *)
     let stmts =
-      if jit
+      if jit && cell
       then
         List.rev
         @@
         match List.rev stmts with
         | (pos, Expr e) :: tl -> (pos, Print ([ e ], "\n")) :: tl
         | l -> l
-      else 
-        List.map stmts ~f:(fun s ->
-          (match snd s with
-          | Generic (Function p) ->
-            let name = p.fn_name.name in
-            let fn = Llvm.Func.func name in
-            let names = List.map p.fn_args ~f:(fun (_, x) -> x.name) in
-            Ctx.add ~ctx ~toplevel:true ~global:true ~attrs:["preload"] name (Ctx_namespace.Func (fn, names))
-          | Generic (Class p) -> 
-            let name = p.class_name in 
-            let t = Llvm.Type.cls name in
-            Ctx.add ~ctx ~toplevel:true ~global:true ~attrs:["preload"] name (Ctx_namespace.Type t)
-          | Generic (Type p) -> 
-            let name = p.class_name in 
-            let t = Llvm.Type.record [] [] name in
-            Ctx.add ~ctx ~toplevel:true ~global:true ~attrs:["preload"] name (Ctx_namespace.Type t)
-          | _ -> ());
-          s)
+      else
+        stmts
     in
     ignore @@ List.map stmts ~f:(parse ~ctx ~toplevel:true ~jit)
 
@@ -142,6 +126,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         let var_expr = Llvm.Expr.var v in
         (* eprintf ">> jit_var %s := %s\n%!" (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs); *)
         (* finalize ~ctx stmt pos; *)
+        (* Llvm.Stmt.set_pos v (fst lhs); *)
         Ctx.add ~ctx ~toplevel ~global:true var (Ctx_namespace.Var v);
         (* Llvm.Stmt.expr var_expr *)
         (* Llvm.Stmt.assign v rh_expr *)
@@ -153,6 +138,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         let var_stmt = Llvm.Stmt.var ~typ rh_expr in
         let v = Llvm.Var.stmt var_stmt in
         if toplevel then Llvm.Var.set_global v;
+        (* Llvm.Stmt.set_pos v (fst lhs); *)
         Ctx.add ~ctx ~toplevel ~global:toplevel var (Ctx_namespace.Var v);
         var_stmt)
     | pos, Dot (lh_lhs, lh_rhs) ->
@@ -185,6 +171,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let var_stmt = Llvm.Stmt.var ~typ Ctypes.null in
       let v = Llvm.Var.stmt var_stmt in
       if toplevel then Llvm.Var.set_global v;
+      (* Llvm.Stmt.set_pos v pos; *)
       Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Var v);
       var_stmt
 
@@ -235,6 +222,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   and parse_type_alias ctx pos ~toplevel (name, expr) =
     let typ = E.parse_type ~ctx expr in
+    (* Llvm.Stmt.set_pos typ pos; *)
     Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Type typ);
     Llvm.Stmt.pass ()
 
@@ -382,6 +370,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let typ = E.parse_type ~ctx (Option.value_exn ext.e_name.typ) in
       Llvm.Func.set_type fn typ;
       let names = List.map ext.e_args ~f:(fun (_, x) -> x.name) in
+      (* Llvm.Stmt.set_pos fn pos; *)
       Ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Ctx_namespace.Func (fn, names));
       if toplevel && jit then (
         ignore @@ finalize ~ctx ~add:false (Llvm.Stmt.func fn) pos;
@@ -406,6 +395,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       match snd g with
       | Id n ->
         (* Util.dbg ">> extend %s :: add %s" (Ast.Expr.to_string name) n; *)
+        (* Llvm.Stmt.set_pos t (fst g); *)
         Ctx.add ~ctx:new_ctx n (Ctx_namespace.Type t)
       | _ -> serr ~pos:(fst g) "not a valid generic specifier")
     in
@@ -507,13 +497,14 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         Llvm.Type.add_cls_method cls name fn;
         fn
       | None ->
-        match toplevel, Ctx.in_block ~ctx name with 
+        match toplevel, Ctx.in_block ~ctx name with
         | true, Some ((Ctx_namespace.Func (fn, names)), annt) when Hash_set.mem annt.attrs "preload" ->
           ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
           fn
-        | _ -> 
+        | _ ->
           let fn = Llvm.Func.func name in
           let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
+          (* Llvm.Stmt.set_pos fn pos; *)
           Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Func (fn, names));
           ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
           fn
@@ -568,7 +559,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   and parse_class ctx pos ~toplevel ?(is_type = false) cls =
     let typ =
-      match toplevel, Ctx.in_block ~ctx cls.class_name with 
+      match toplevel, Ctx.in_block ~ctx cls.class_name with
       | true, Some ((Ctx_namespace.Type typ), annt) when Hash_set.mem annt.attrs "preload" ->
         typ
       | _ ->
@@ -577,6 +568,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           then Llvm.Type.record [] [] cls.class_name
           else Llvm.Type.cls cls.class_name
         in
+        (* Llvm.Stmt.set_pos typ pos; *)
         Ctx.add ~ctx ~toplevel ~global:toplevel cls.class_name (Ctx_namespace.Type typ);
         typ
     in

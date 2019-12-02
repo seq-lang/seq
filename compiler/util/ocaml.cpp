@@ -668,6 +668,9 @@ FOREIGN char* get_pos_str (SrcObject *v)
 {
   if (!v) return strdup("");
   auto info = v->getSrcInfo();
+  fprintf(stderr, "--? %s %d %d %d\n",
+    info.file.c_str(), info.line, info.col, info.len);
+
   char *er = 0;
   asprintf(&er, "%s\b%d\b%d\b%d", info.file.c_str(), info.line,
            info.col, info.len);

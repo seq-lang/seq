@@ -26,7 +26,7 @@ let init () : t =
         ~base:anon_fn
         ~block:(Llvm.Block.func anon_fn)
         ~jit:true
-        (Runner.exec_string ~debug:false ~jit:true)
+        (Runner.exec_string ~debug:false ~jit:true ~cell:false)
     in
     let jit = { cnt = 1; ctx } in
     (* load stdlib *)
@@ -52,7 +52,7 @@ let exec (jit : t) code =
   in
   Ctx.add_block anon_ctx;
   jit.cnt <- jit.cnt + 1;
-  Runner.exec_string ~file:"<jit>" ~jit:true anon_ctx code;
+  Runner.exec_string ~file:"<jit>" ~jit:true ~cell:true anon_ctx code;
   try
     Llvm.JIT.func jit.ctx.mdl anon_fn;
     Hash_set.iter (Stack.pop_exn anon_ctx.stack) ~f:(fun key ->
@@ -65,21 +65,38 @@ let exec (jit : t) code =
   with
   | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])
 
-let locate cmd f l c = 
+let locate f l c =
   let open Option.Monad_infix in
+  let f = sprintf "<anon_%s>" f in
+  Some (sprintf "Cell %s, line %d, col %d" f l c)
+  (* Hashtbl.iteri Ctx.inspect_lookup ~f:(fun ~key ~data ->
+    eprintf "File %s:\n" key;
+    Hashtbl.iteri data ~f:(fun ~key ~data ->
+      eprintf "  Line %d:\n" key;
+      Stack.iter data ~f:(fun {name;pos;el} ->
+        eprintf "    %s: %s << " name (Ast.Ann.to_string pos);
+        ( match Llvm.JIT.get_pos el with
+        | None -> eprintf "-";
+        | Some orig_pos ->
+          eprintf "%s" @@ Ast.Ann.to_string orig_pos );
+        eprintf "\n";
+        );
+    )
+  );
+  eprintf "\n%!";
+
   Hashtbl.find Ctx.inspect_lookup f
   >>= (fun t -> Hashtbl.find t l)
   >>= (fun s -> Stack.find_map s ~f:(fun Ctx.{ pos; el; name } ->
-    if pos.col < c || pos.col + pos.len >= c 
+    if pos.col < c || pos.col + pos.len >= c
     then None
     else match Llvm.JIT.get_pos el with
       | None -> None
       | Some orig_pos ->
-        eprintf "%%JIT%%: found %s, orig pos %s"
-          name (Ast.Ann.to_string orig_pos);
-        Some 1
-  ))
-  
+        Some (sprintf "%%JIT%%: found %s, orig pos %s"
+          name (Ast.Ann.to_string orig_pos))
+  )) *)
+
 
 (** JIT entry point. *)
 let repl () =
@@ -105,15 +122,15 @@ let repl () =
         eprintf "------------------\n%!";
         match String.is_prefix ~prefix:"%%" !code with
         | true ->
-          let ll = Array.of_list @@ String.split ~on:' ' !code in
-          let cmd = ll.(0) in
+          let ll = Array.of_list @@ String.split ~on:' ' @@ String.strip !code in
+          (* let cmd = ll.(0) in *)
           let file = ll.(1) in
           let line = Int.of_string @@ ll.(2) in
           let pos = Int.of_string @@ ll.(3) in
-          ignore @@ locate cmd file line pos;
+          ignore @@ locate file line pos;
           code := "";
           start := true
-        | false -> 
+        | false ->
           (try exec jit !code with
           | Err.CompilerError (typ, pos_lst) ->
             eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:!code typ);
@@ -141,13 +158,45 @@ let c_exec hnd code =
   let jit = Hashtbl.find_exn jits hnd in
   (* Hashtbl.iter_keys jit.ctx.map ~f:(fun k ->
     eprintf "[lib] keys: %s ... \n%!" k); *)
-  try
-    exec jit code
-  with
-  | Err.CompilerError (typ, pos_lst) ->
-    eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:code typ
+  match String.is_prefix ~prefix:"%%" code with
+  | true ->
+    let ll = Array.of_list @@ String.split ~on:' ' code in
+    (* let cmd = ll.(0) in *)
+    let file = ll.(1) in
+    let line = Int.of_string @@ ll.(2) in
+    let pos = Int.of_string @@ ll.(3) in
+    ignore @@ locate file line pos;
+  | false ->
+    try
+      exec jit code
+    with
+    | Err.CompilerError (typ, pos_lst) ->
+      eprintf "%s\n%!" @@ Err.to_string ~pos_lst ~file:code typ
 
 let c_close hnd =
   let jit = Hashtbl.find_exn jits hnd in
   eprintf "Closing JIT handle, %d commands executed\n%!" jit.cnt;
   ()
+
+let c_inspect hnd file line col =
+  let jit = Hashtbl.find_exn jits hnd in
+  (* match locate file line col with
+  | Some s ->
+    sprintf "JIT %s\n" s;
+  | None -> *)
+    sprintf "JIT %s %d %d" file line col
+
+let c_document hnd identifier =
+  sprintf "Some docs for %s --- to be done!" identifier
+  (* match locate file line col with
+  | Some s ->
+    eprintf "JIT %s\n" s;
+  | None ->
+    eprintf "JIT\n" *)
+
+let c_complete hnd prefix =
+  let jit = Hashtbl.find_exn jits hnd in
+  Hashtbl.filter_mapi jit.ctx.map ~f:(fun ~key ~data ->
+    if String.is_prefix ~prefix key then Some data else None)
+  |> Hashtbl.keys
+  |> String.concat ~sep:"\b"

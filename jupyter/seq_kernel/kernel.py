@@ -18,7 +18,7 @@ class SeqKernel(Kernel):
     def language_version(self):
         m = version_pat.search(self.banner)
         return m.group(1)
-    
+
     _banner = None
 
     @property
@@ -36,6 +36,7 @@ class SeqKernel(Kernel):
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
         self.seqwrapper = SeqWrapper()
+        self.cells = set()
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
         if not code.strip():
@@ -44,19 +45,20 @@ class SeqKernel(Kernel):
 
         fout = BytesIO()
         ferr = BytesIO()
-        
+
         with stdout_stderr_redirector(fout, ferr):
-            self.seqwrapper.exec(code.rstrip())
-        
+            code = code.rstrip()
+            self.seqwrapper.exec(code)
+            self.cells.add(code)
+
         fout_string = fout.getvalue().decode('utf-8').strip()
         ferr_string = ferr.getvalue().decode('utf-8').strip()
-        
+
         if ferr_string:
             if not silent:
                 self.send_response(self.iopub_socket, 'stream', {'name': 'stderr', 'text': ferr_string})
-
             return {'status': 'error', 'execution_count': self.execution_count}
-        
+
         else:
             if not silent:
                 self.send_response(self.iopub_socket, 'stream', {'name': 'stdout', 'text': fout_string})
@@ -64,14 +66,26 @@ class SeqKernel(Kernel):
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payload': [], 'user_expressions': {}}
 
-    def _get_object(self, code, cursor_pos):
+    def _get_object(self, code, cursor_pos, detail_level):
         # TODO: Get the correct section of code to be inspected
-        left = code[:cursor_pos].rsplit(' ', 1)[-1]
-        right = code[cursor_pos:].split(' ', 1)[0]
-        return left + right
+        print(code, cursor_pos)
+        if code not in self.cells:
+            return None
+
+        cell = self.cells[code]
+        lines = code.split('\n')
+        line = code[:cursor_pos].count('\n')
+        col = cursor_pos - code[:cursor_pos].rsearch('\n')
+
+        fout = BytesIO()
+        ferr = BytesIO()
+        with stdout_stderr_redirector(fout, ferr):
+            self.seqwrapper.inspect(cell, line, col)
+        ferr_string = ferr.getvalue().decode('utf-8').strip()
+        return {'text/plain': f'Hello, World! {cell} {line} {col} -> {ferr_string}'}
 
     def do_inspect(self, code, cursor_pos, detail_level=0):
-        data = self.seqwrapper.inspect(self._get_object(code, cursor_pos), detail_level)
+        data = self._get_object(code, cursor_pos, detail_level)
         return {
             'status': 'ok',
             'found': True,

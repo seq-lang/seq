@@ -11,8 +11,8 @@ open Seqaml
 (** [exec_string ~file ~debug context code] parses a code
     within string [code] as a module and returns parsed module AST.
     [file] is code filename used for error reporting. *)
-let exec_string ctx ?(file = "<internal>") ?(debug = false) ?(jit = false) code =
-  ignore @@ Codegen.parse ~file code ~f:(Codegen.Stmt.parse_module ~jit ~ctx)
+let exec_string ctx ?(file = "<internal>") ?(debug = false) ?(jit = false) ?(cell=false) code =
+  ignore @@ Codegen.parse ~file code ~f:(Codegen.Stmt.parse_module ~cell ~jit ~ctx)
 
 (** [init file error_handler] initializes Seq session with file [file].
     [error_handler typ position] is a callback called upon encountering
@@ -20,7 +20,7 @@ let exec_string ctx ?(file = "<internal>") ?(debug = false) ?(jit = false) code 
 let init ~filename code error_handler =
   let mdl = Llvm.Module.init () in
   try
-    let exec = exec_string ~debug:false ~jit:false in
+    let exec = exec_string ~debug:false ~jit:false ~cell:false in
     let ctx = Ctx.init_module ~filename ~mdl ~base:mdl ~block:(Llvm.Module.block mdl) exec in
     (* parse the file *)
     Ctx.parse_code ~ctx ~file:filename code;
