@@ -305,14 +305,57 @@ def geometric_mean(data: list[float]) -> float:
     Convert data to floats and compute the geometric mean.
     
     Raises a StatisticsError if the input dataset is empty,
-    if it contains a zero, or if it contains a negative value.
 
     TODO/CAVEATS:
     @jordan- Assumes input is a list of floats
+           - Does not handle data that contains a zero, or if it contains a negative value.
     """
-    if len(data) == 0:
+    if len(data) < 1:
         raise StatisticsError("geometric mean requires a non-empty dataset")
     return _exp(mean(list(map(_log, data))))
+
+def _fail_neg(values: list[float], errmsg: str):
+    """
+    _fail_neg(values, errmsg)
+
+    Iterate over values, failing if any are less than zero.
+    """
+    for x in values:
+        if x < 0:
+            raise StatisticsError(errmsg)
+        yield x
+
+def harmonic_mean(data: list[float]) -> float:
+    """
+    harmonic_mean(data)
+
+    Return the harmonic mean of data.
+
+    The harmonic mean, sometimes called the subcontrary mean, is the
+    reciprocal of the arithmetic mean of the reciprocals of the data,
+    and is often appropriate when averaging quantities which are rates
+    or ratios.
+    """
+    errmsg = "harmonic mean does not support negative values"
+    n = len(data)
+    if n < 1:
+        raise StatisticsError("harmonic_mean requires at least one data point")
+    
+    x = data[0]
+
+    if n == 1:
+        return x
+    total = 0.0
+
+    li = list[float]()
+    for x in _fail_neg(data, errmsg):
+        #ZeroDivisionError
+        if x == 0.0:
+            return 0.0
+        li.append(1/x)
+    total = _sum(li)
+    return n/total
+
 
 class NormalDist:
     """

@@ -181,6 +181,21 @@ def test_geometric_mean():
 test_geometric_mean()
 
 @test
+def test_harmonic_mean():
+    data = [1.0, 0.0, 2.0]
+    assert statistics.harmonic_mean(data) == 0
+
+    data = [2.0, 4.0, 4.0, 8.0, 16.0, 16.0]
+    assert statistics.harmonic_mean(data) == 6*4/5
+
+    data = [1/8, 1/4, 1/4, 1/2, 1/2]
+    assert statistics.harmonic_mean(data) == 1/4
+
+    for x in range(1, 101):
+        assert statistics.harmonic_mean([float(x)]) == float(x)
+test_harmonic_mean()
+
+@test
 def test_mean_NormalDist():
     X = statistics.NormalDist(10000.0, 3.0)
     assert X.mean == 10000.0
