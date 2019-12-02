@@ -1,6 +1,6 @@
 import bisect
 import random
-from math import frexp as _frexp, floor as _floor, fabs as _fabs, gcd as _gcd
+from math import frexp as _frexp, floor as _floor, fabs as _fabs, gcd as _gcd, exp as _exp, log as _log
 
 def median[T](data: list[T]) -> float:
     """
@@ -210,6 +210,25 @@ def as_integer_ratio(x: float):
 
     return (numerator, denominator)
 
+def _lcm(x: int, y: int):
+    """
+    _lcm(x, y)
+
+    Returns the lowest common multiple bewteen x and y
+    """
+    greater = 0
+    if x > y:
+        greater = x
+    else:
+        greater = y
+    
+    while(True):
+        if greater % x == 0 and greater % y == 0:
+            lcm = greater
+            return lcm
+        greater += 1
+        
+
 def _sum(data: list[float]) -> float:
     """
     _sum(data [, start]) -> (type, sum, count)
@@ -232,11 +251,16 @@ def _sum(data: list[float]) -> float:
 
     # sum fractions (n, d) + (a, b)
     for a, b in map(as_integer_ratio, data[1:]):
-        bottom = b
-        denom = d
-        n *= bottom
-        d *= bottom
-        a *= denom
+        lcm = _lcm(d, b)
+    
+        if lcm > d:
+            multiplier = lcm//d
+            n *= multiplier
+            d *= multiplier
+        
+        if lcm > b:
+            multiplier = lcm//b
+            a *= multiplier
 
         n += a
         gcd = int(_gcd(float(n), float(d)))
@@ -261,7 +285,36 @@ def mean(data: list[float]) -> float:
         raise StatisticsError('mean requires at least one data point')
     total = _sum(data)
     return total/n
- 
+
+def fmean(data: list[float]) -> float:
+    """
+    fmean(data)
+
+    Convert data to floats and compute the arithmetic mean.
+    
+    TODO/CAVEATS
+    @jordan- fsum is not implemented in math.seq yet and the above 
+             mean(data) deals with only floats. Thus this function is passed for now.
+    """
+    pass
+
+def geometric_mean(data: list[float]) -> float:
+    """
+    geometric_mean(data)
+
+    Convert data to floats and compute the geometric mean.
+    
+    Raises a StatisticsError if the input dataset is empty,
+    if it contains a zero, or if it contains a negative value.
+
+    TODO/CAVEATS:
+    @jordan- Assumes input is a list of floats
+    """
+    if len(data) == 0:
+        raise StatisticsError("geometric mean requires a non-empty dataset")
+    return _exp(mean(list(map(_log, data))))
+
+
 class NormalDist:
     """
     Normal distribution of a random variable
