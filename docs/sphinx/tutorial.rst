@@ -338,3 +338,48 @@ Seq also supports calling Python functions as follows:
     print myrange(5)  # [0, 1, 2, 3, 4]
 
 Please check `Python interop <python.html>`_ for more information.
+
+Calling BWA from Seq
+--------------------
+
+Seq provides a built-in module for interfacing with BWA. To use this module, simply build a shared BWA library and set ``BWA_LIB`` accordingly:
+
+.. code-block:: bash
+
+    git clone https://github.com/lh3/bwa
+    cd bwa
+    make
+    gcc -shared -o libbwa.so *.o -lz
+    export BWA_LIB=`pwd`/libbwa.so
+
+Now BWA can be used in Seq as such:
+
+.. code-block:: seq
+
+    # Implementation of https://github.com/lh3/bwa/blob/master/example.c
+    from sys import argv
+    from bio.bwa import *
+
+    bwa = BWA(argv[1])
+    for read in FASTQ(argv[2]):
+        for reg in bwa.align(read.read):
+            if reg.secondary >= 0: continue
+            aln = bwa.reg2aln(read.read, reg)
+            print read.name, '-' if aln.rev else '+', bwa.name(aln), aln.pos, aln.mapq, aln.cigar, aln.NM
+
+This program can be invoked as ``seqc example.seq /path/to/hg19.fa /path/to/reads.fq``.
+
+BWA options can be passed via ``BWA(options(...), ...)``. For example, to set a mismatch score of 5, use ``BWA(options(mismatch_score=5), "hg19.fa")``. Valid options are:
+
+- ``match_score``
+- ``mismatch_score``
+- ``open_del``
+- ``open_ins``
+- ``extend_del``
+- ``extend_ins``
+- ``bandwidth``
+- ``zdrop``
+- ``clip_penalty``
+- ``unpaired_penalty``
+
+Consult the BWA documentation for a detailed description of each of these.

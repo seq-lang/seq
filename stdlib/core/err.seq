@@ -35,6 +35,9 @@ class NotImplementedError:
 class StopIteration:
     msg: str
 
+class StatisticsError:
+    msg: str
+
 def check_errno(prefix: str):
     msg = _C.seq_check_errno()
     if msg:
