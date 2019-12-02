@@ -1021,7 +1021,8 @@ extend:
 // Class suite members
 class_member:
   // Empty statements
-  | PASS NL | STRING NL { None }
+  | PASS NL { None } 
+  | STRING NL { Some (fst $1, Docstring (snd $1)) }
   // TODO later: | class_statement
   // Functions
   | func_statement

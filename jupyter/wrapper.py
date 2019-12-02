@@ -34,7 +34,8 @@ class SeqWrapper:
       self._exec_fn(self.handle, code.encode('utf-8'))
 
    def inspect(self, cell, line, column):
-      return self._inspect_fn(self.handle, str(cell).encode('utf-8'), line, column).decode('ascii')
+      file = f'<jit_{cell}>'
+      return self._inspect_fn(self.handle, file.encode('utf-8'), line, column).decode('ascii')
 
    def document(self, idn):
       return self._document_fn(self.handle, idn.encode('utf-8')).decode('ascii')
@@ -50,6 +51,7 @@ print 'hello'
 x = 1
 print x
 def foo(bar):
+   ''' HAI '''
    print 'foo', bar
 y = 2
 print x, y, x + y
@@ -61,7 +63,9 @@ print x
 foo(x+100)
 """)
 
-print('i: ', s.inspect(1, 2, 7))
-print('d: ', s.document("x"))
+print('i: ', s.inspect(2, 3, 6))
+print('i: ', s.inspect(2, 4, 1))
+print('d: ', s.document("foo"))
+print('d: ', s.document("list"))
 print('c: ', s.complete("m"))
 

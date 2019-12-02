@@ -252,6 +252,8 @@ module Stmt = struct
           (ppl f.fn_args ~f:(param_to_string ~pythonic))
           (Option.value_map f.fn_name.typ ~default:"" ~f:(fun x -> sprintf " -> %s" (e_to_string x)))
           (ppl f.fn_stmts ~sep:"\n" ~f:(to_string ~indent:(indent + 1)))
+      | Generic (Docstring x) ->
+        sprintf "\"%s\"" (String.escaped x)
       | Generic (Class f | Type f) ->
         sprintf "%s %s%s%s%s"
           ( match pythonic, snd snode with

@@ -628,6 +628,8 @@ FOREIGN char is_ref_type(types::Type *t) {
 
 FOREIGN BaseFunc *get_func(FuncExpr *e) { return e->getFunc(); }
 
+FOREIGN types::Type *get_func_type(Func *e) { return e->getFuncType(); }
+
 FOREIGN types::Type *get_var_type(Var *e) { return e->getType(); }
 
 FOREIGN void set_base(Stmt *st, BaseFunc *base) {
@@ -668,9 +670,6 @@ FOREIGN char* get_pos_str (SrcObject *v)
 {
   if (!v) return strdup("");
   auto info = v->getSrcInfo();
-  fprintf(stderr, "--? %s %d %d %d\n",
-    info.file.c_str(), info.line, info.col, info.len);
-
   char *er = 0;
   asprintf(&er, "%s\b%d\b%d\b%d", info.file.c_str(), info.line,
            info.col, info.len);

@@ -249,6 +249,8 @@ module Expr = struct
 
   let get_name = foreign "get_expr_name" (t @-> returning string)
 
+  let get_type = foreign "get_type" (t @-> returning Types.typ)
+
   (* Utilities *)
 
   let is_type expr =
@@ -389,6 +391,8 @@ module Var = struct
 
   let set_global = foreign "set_global" (t @-> returning void)
   let set_atomic = foreign "var_expr_set_atomic" (Types.expr @-> returning Ctypes.void)
+
+  let get_type = foreign "get_var_type" (t @-> returning Types.typ)
 end
 
 (** [Func] wraps Seq BaseFunc methods and helpers. *)
@@ -437,6 +441,8 @@ module Func = struct
   let set_type = foreign "set_func_out" (t @-> Types.typ @-> returning void)
   let set_extern = foreign "set_func_extern" (t @-> returning void)
   let set_enclosing = foreign "set_func_enclosing" (t @-> t @-> returning void)
+
+  let get_type = foreign "get_func_type" (t @-> returning Types.typ)
 end
 
 (** [Generics] wraps Seq generic methods and helpers. *)

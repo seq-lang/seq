@@ -136,18 +136,18 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     (* Make sure that a variable is either accessible within
       the same base (function) or that it is global variable  *)
     | _, Some ((Ctx_namespace.Type t, _) :: _) -> 
-      Ctx.add_inspect pos var t;
+      Ctx.add_inspect ~ctx pos var (Ctx.IType t);
       Llvm.Expr.typ t
     | true, _ -> serr ~pos "type '%s' not found or realized" var
     | false, Some ((Ctx_namespace.Var v, { base; global; _ }) :: _)
       when ctx.base = base || global ->
-      Ctx.add_inspect pos var v;
+      Ctx.add_inspect ~ctx pos var (Ctx.IVar v);
       let e = Llvm.Expr.var v in
       if global && ctx.base = base && Stack.exists ctx.flags ~f:(( = ) "atomic")
       then Llvm.Var.set_atomic e;
       e
     | false, Some ((Ctx_namespace.Func (t, _), _) :: _) -> 
-      Ctx.add_inspect pos var t;
+      Ctx.add_inspect ~ctx pos var (Ctx.IFunc t);
       Llvm.Expr.func t
     | _ -> serr ~pos "identifier '%s' not found" var
 
@@ -436,7 +436,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         Llvm.Expr.static typ rhs)
       else Llvm.Expr.element lh_expr rhs
       in
-      Ctx.add_inspect npos (sprintf ".%s" rhs) el;
+      Ctx.add_inspect ~ctx npos (sprintf ".%s" rhs) (Ctx.IExpr el);
       el
 
   and parse_slice ctx pos (a, b, c) =

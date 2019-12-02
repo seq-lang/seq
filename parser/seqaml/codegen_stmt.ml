@@ -19,15 +19,15 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
      *************************************************************** *)
 
   (** [parse ~ctx expr] dispatches a statement AST node [expr] to the proper code generation function. *)
-  let rec parse ?(toplevel = false) ?(jit = false) ~(ctx : Ctx.t) (pos, node) =
+  let rec parse ?(toplevel = false) ~(ctx : Ctx.t) (pos, node) =
     let stmt =
       match node with
       | Break p -> parse_break ctx pos p
       | Continue p -> parse_continue ctx pos p
       | Expr p -> parse_expr ctx pos p
-      | Assign p -> parse_assign ctx pos p ~toplevel ~jit
+      | Assign p -> parse_assign ctx pos p ~toplevel
       | Del p -> parse_del ctx pos p
-      | Print p -> parse_print ctx pos p ~jit
+      | Print p -> parse_print ctx pos p
       | Return p -> parse_return ctx pos p
       | Yield p -> parse_yield ctx pos p
       | Assert p -> parse_assert ctx pos p
@@ -39,15 +39,16 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       | Extend p -> parse_extend ctx pos p ~toplevel
       | Import p -> parse_import ctx pos p ~toplevel
       | ImportPaste p -> parse_impaste ctx pos p
-      | ImportExtern p -> parse_extern ctx pos p ~toplevel ~jit
+      | ImportExtern p -> parse_extern ctx pos p ~toplevel
       | Pass p -> parse_pass ctx pos p
       | Try p -> parse_try ctx pos p
       | Throw p -> parse_throw ctx pos p
       | Global p -> parse_global ctx pos p
-      | Generic (Function p) -> parse_function ctx pos p ~toplevel ~jit
+      | Generic (Function p) -> parse_function ctx pos p ~toplevel
       | Generic (Class p) -> parse_class ctx pos p ~toplevel
-      | Generic (Declare p) -> parse_declare ctx pos p ~toplevel ~jit
+      | Generic (Declare p) -> parse_declare ctx pos p ~toplevel
       | Generic (Type p) -> parse_class ctx pos p ~toplevel ~is_type:true
+      | Generic (Docstring _) -> Llvm.Stmt.pass ()
       | Special p -> parse_special ctx pos p
       | Prefetch p -> parse_prefetch ctx pos p
     in
@@ -55,10 +56,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
 
   (** [parse_module ~ctx stmts] parses a module.
       A module is just a simple list [stmts] of statements. *)
-  and parse_module ?(cell=false) ?(jit = false) ~(ctx : Ctx.t) stmts =
+  and parse_module ?(cell=false) ~(ctx : Ctx.t) stmts =
     (* Util.dbg "%s\n" @@ Util.ppl ~sep:"\n" stmts ~f:Ast.Stmt.to_string; *)
     let stmts =
-      if jit && cell
+      if ctx.is_jit && cell
       then
         List.rev
         @@
@@ -67,7 +68,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         | l -> l
       else stmts
     in
-    ignore @@ List.map stmts ~f:(parse ~ctx ~toplevel:true ~jit)
+    ignore @@ List.map stmts ~f:(parse ~ctx ~toplevel:true)
 
   (* ***************************************************************
      Node code generators
@@ -88,10 +89,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let expr = E.parse ~ctx expr in
       Llvm.Stmt.expr expr
 
-  and parse_assign ctx pos ~toplevel ~jit (lhs, rhs, shadow, typ) =
+  and parse_assign ctx pos ~toplevel (lhs, rhs, shadow, typ) =
     match lhs with
     | pos, Id var ->
-      (match jit && toplevel, Hashtbl.find ctx.map var, shadow with
+      (match ctx.is_jit && toplevel, Hashtbl.find ctx.map var, shadow with
       | _, None, Update -> serr ~pos "identifier '%s' not found" var
       | false, Some ((Ctx_namespace.Var _, { base; global; _ }) :: _), Update
         when ctx.base <> base && not global ->
@@ -126,6 +127,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         (* eprintf ">> jit_var %s := %s\n%!" (Ast.Expr.to_string lhs) (Ast.Expr.to_string rhs); *)
         (* finalize ~ctx stmt pos; *)
         (* Llvm.Stmt.set_pos v (fst lhs); *)
+        Ctx.add_inspect_var ~ctx v (fst lhs) var "";
+        Ctx.add_inspect ~ctx (fst lhs) var (Ctx.IVar v);
         Ctx.add ~ctx ~toplevel ~global:true var (Ctx_namespace.Var v);
         (* Llvm.Stmt.expr var_expr *)
         (* Llvm.Stmt.assign v rh_expr *)
@@ -138,6 +141,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         let v = Llvm.Var.stmt var_stmt in
         if toplevel then Llvm.Var.set_global v;
         (* Llvm.Stmt.set_pos v (fst lhs); *)
+        Ctx.add_inspect_var ~ctx v (fst lhs) var "";
+        Ctx.add_inspect ~ctx (fst lhs) var (Ctx.IVar v);
         Ctx.add ~ctx ~toplevel ~global:toplevel var (Ctx_namespace.Var v);
         var_stmt)
     | pos, Dot (lh_lhs, lh_rhs) ->
@@ -159,8 +164,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Llvm.Stmt.assign_index var_expr index_expr rh_expr
     | _ -> serr ~pos "invalid assignment statement"
 
-  and parse_declare ctx pos ~toplevel ~jit { name; typ; _ } =
-    if jit then serr ~pos "declarations not yet supported in JIT mode";
+  and parse_declare ctx pos ~toplevel { name; typ; _ } =
+    if ctx.is_jit then serr ~pos "declarations not yet supported in JIT mode";
     match Hashtbl.find ctx.map name with
     | Some ((Ctx_namespace.Var _, { base; global; toplevel; _ }) :: _)
       when ctx.base = base ->
@@ -171,6 +176,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       let v = Llvm.Var.stmt var_stmt in
       if toplevel then Llvm.Var.set_global v;
       (* Llvm.Stmt.set_pos v pos; *)
+      Ctx.add_inspect_var ~ctx v pos name "";
+      Ctx.add_inspect ~ctx pos name (Ctx.IVar v);
       Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Var v);
       var_stmt
 
@@ -188,8 +195,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       | _ -> serr ~pos "cannot find %s" var)
     | _ -> serr ~pos "cannot delete a non-index expression"
 
-  and parse_print ctx pos ~jit (exprs, ed) =
-    let ll = if jit then Llvm.Stmt.print_jit else Llvm.Stmt.print in
+  and parse_print ctx pos (exprs, ed) =
+    let ll = if ctx.is_jit then Llvm.Stmt.print_jit else Llvm.Stmt.print in
     List.iteri exprs ~f:(fun i expr ->
         let expr = E.parse ~ctx expr in
         ignore @@ finalize ~ctx (ll expr) pos;
@@ -222,6 +229,8 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   and parse_type_alias ctx pos ~toplevel (name, expr) =
     let typ = E.parse_type ~ctx expr in
     (* Llvm.Stmt.set_pos typ pos; *)
+    Ctx.add_inspect_var ~ctx typ pos name "";
+    Ctx.add_inspect ~ctx pos name (Ctx.IType typ);
     Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Type typ);
     Llvm.Stmt.pass ()
 
@@ -255,7 +264,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       match next with
       | Some next -> next ctx for_ctx for_stmt
       | None ->
-        ignore @@ List.map stmts ~f:(parse ~ctx:for_ctx ~toplevel:false ~jit:false)
+        ignore @@ List.map stmts ~f:(parse ~ctx:for_ctx ~toplevel:false)
     in
     Ctx.clear_block for_ctx;
     for_stmt
@@ -298,13 +307,13 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             | None -> ()));
     match_stmt
 
-  and parse_extern ctx pos ~toplevel ?(jit = false) ext =
+  and parse_extern ctx pos ~toplevel ext =
     List.iter ext ~f:(fun s ->
-      let s' = parse_extern_single ctx pos ~toplevel ~jit s in
+      let s' = parse_extern_single ctx pos ~toplevel s in
       ignore @@ finalize ~ctx s' pos);
     Llvm.Stmt.pass ()
 
-  and parse_extern_single ctx pos ~toplevel ~jit ext =
+  and parse_extern_single ctx pos ~toplevel ext =
     let ctx_name = Option.value ext.e_as ~default:ext.e_name.name in
     let open Ast in
     match ext.lang, ext.e_from with
@@ -327,7 +336,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           e_call (e_dot (Option.value_exn ext.e_name.typ) "__from_py__") [rhs]
       in
       (* @pyhandle def y ( x : [tuple] ) -> typ: return rhs *)
-      parse_function ctx pos ~toplevel ~jit
+      parse_function ctx pos ~toplevel
         { fn_name = { ext.e_name with name = ctx_name }
         ; fn_generics = []
         ; fn_args = [ pos, { name = "x"; typ = None; default = None } ]
@@ -370,8 +379,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Llvm.Func.set_type fn typ;
       let names = List.map ext.e_args ~f:(fun (_, x) -> x.name) in
       (* Llvm.Stmt.set_pos fn pos; *)
+      Ctx.add_inspect_var ~ctx fn pos ctx_name "";
+      Ctx.add_inspect ~ctx pos ctx_name (Ctx.IFunc fn);
       Ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Ctx_namespace.Func (fn, names));
-      if toplevel && jit then (
+      if toplevel && ctx.is_jit then (
         ignore @@ finalize ~ctx ~add:false (Llvm.Stmt.func fn) pos;
         Llvm.Stmt.pass ())
       else Llvm.Stmt.func fn
@@ -485,7 +496,6 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       pos
       ?cls
       ?(toplevel = false)
-      ?(jit = false)
       { fn_name = { name; typ; _ }; fn_generics; fn_args; fn_stmts; fn_attrs }
     =
     let fn =
@@ -498,6 +508,12 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         let fn = Llvm.Func.func name in
         let names = List.map fn_args ~f:(fun (_, x) -> x.name) in
         (* Llvm.Stmt.set_pos fn pos; *)
+        let doc = match List.hd fn_stmts with
+          | Some (_, Expr (_, String doc)) -> doc
+          | _ -> "" 
+        in
+        Ctx.add_inspect_var ~ctx fn pos name doc;
+        Ctx.add_inspect ~ctx pos name (Ctx.IFunc fn);
         Ctx.add ~ctx ~toplevel ~global:toplevel name (Ctx_namespace.Func (fn, names));
         ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
         fn
@@ -537,15 +553,11 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       typ
       ~f:(fun typ -> Llvm.Func.set_type fn (E.parse_type ~ctx:new_ctx typ))
       ~default:();
-    ( match List.hd fn_stmts with
-      | Some (_, Expr (_, String doc)) ->
-        Ctx.add_origin pos doc
-      | _ -> () );
     add_block new_ctx fn_stmts ~preprocess:(fun ctx ->
         List.iter names ~f:(fun name ->
             let var = Ctx_namespace.Var (Llvm.Func.get_arg fn name) in
             Ctx.add ~ctx name var));
-    if toplevel && jit then (
+    if toplevel && ctx.is_jit then (
       ignore @@ finalize ~ctx ~add:false (Llvm.Stmt.func fn) pos;
       Llvm.Stmt.pass ())
     else Llvm.Stmt.func fn
@@ -558,6 +570,12 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         else Llvm.Type.cls cls.class_name
       in
       (* Llvm.Stmt.set_pos typ pos; *)
+      let doc = match List.hd cls.members with
+        | Some (_, Docstring s) -> s
+        | _ -> ""
+      in
+      Ctx.add_inspect_var ~ctx typ pos cls.class_name doc;
+      Ctx.add_inspect ~ctx pos cls.class_name (Ctx.IType typ);
       Ctx.add ~ctx ~toplevel ~global:toplevel cls.class_name (Ctx_namespace.Type typ);
       typ
     in
@@ -594,6 +612,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     ignore
     @@ List.map cls.members ~f:(function
            | pos, Function f -> parse_function new_ctx pos f ~cls:typ
+           | pos, Docstring _ -> Ctypes.null
            | _ -> serr ~pos "only function can be defined within a class definition");
     if not is_type then Llvm.Type.set_cls_done typ;
     Llvm.Stmt.pass ()

@@ -64,6 +64,7 @@ and generic =
   | Class of class_t
   | Type of class_t
   | Declare of param
+  | Docstring of string
 
 and if_case =
   { cond : texpr ann option
