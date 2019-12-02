@@ -10,7 +10,7 @@ def med():
     # Test median with an odd number of int data points.
     data = [1, 2, 3, 4, 5, 6, 9]
     assert statistics.median(data) == 4
-    
+
     # Test median works with an odd number of Fractions.
     fdata = [1/7, 2/7, 3/7, 4/7, 5/7]
     assert statistics.median(fdata) == 3/7
@@ -213,7 +213,7 @@ def test_samples():
     # data3 = X.samples(n, seed='happiness and joy')
     # data4 = X.samples(n, seed='trouble and despair')
 
-    # print data1 
+    # print data1
     # print data3
     # print data2 == data4
 # test_samples()

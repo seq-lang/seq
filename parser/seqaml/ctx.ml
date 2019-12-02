@@ -45,10 +45,10 @@ let clear_block ctx =
       | Some [] | None -> Err.ierr "cannot find variable %s (clear_block)" key)
 
 (** [add ~ctx name var] adds a variable [name] with the handle [var] to the context [ctx]. *)
-let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) ?(attrs = []) key var =
+let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) key var =
   let annot =
     Ctx_namespace.
-      { base = ctx.base; global; toplevel; internal; attrs = String.Hash_set.of_list attrs }
+      { base = ctx.base; global; toplevel; internal; attrs = String.Hash_set.create () }
   in
   let var = var, annot in
   (match Hashtbl.find ctx.map key with
