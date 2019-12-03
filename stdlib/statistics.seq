@@ -590,7 +590,6 @@ class NormalDist:
             x = -x
         return mu + (x * sigma)
         
-
     def inv_cdf(self: NormalDist, p: float):
         """
         inv_cdf(self, p)
@@ -607,12 +606,19 @@ class NormalDist:
             raise StatisticsError('cdf() not defined when sigma at or below zero')
         return self._normal_dist_inv_cdf(p, self.mu, self.sigma)
 
-    def quantiles(self: NormalDist, n: float=4.0):
+    def quantiles(self: NormalDist, n: int=4):
         """
         quantiles(self, n)
 
-
+        Divide into *n* continuous intervals with equal probability.
+        
+        Returns a list of (n - 1) cut points separating the intervals.
+        
+        Set *n* to 4 for quartiles (the default).  Set *n* to 10 for deciles.
+        Set *n* to 100 for percentiles which gives the 99 cuts points that
+        separate the normal distribution in to 100 equal sized groups.
         """
+        return [self.inv_cdf(float(i)/float(n)) for i in range(1, n)]
 
     # troubles with random.Radnomg(seed).gauss
     def samples[T](self: NormalDist, n: int, seed: T):

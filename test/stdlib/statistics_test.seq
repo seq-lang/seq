@@ -291,6 +291,20 @@ def test_inv_cdf():
 test_inv_cdf ()
 
 @test
+def test_ND_qualtiles():
+    PRECISION = 1e-6
+    Z = statistics.NormalDist(0.0, 1.0)
+    for n, expected in [
+        (2, [0.0]),
+        (3, [-0.430727, 0.430727]),
+        (4 ,[-0.67449, 0.0, 0.67449])
+        ]:
+        actual = Z.quantiles(n)
+        for i in range(len(expected)):
+            assert math.fabs(actual[i] - expected[i]) < PRECISION
+test_ND_qualtiles()
+
+@test
 def test_samples():
     mu, sigma = 10000.0, 3.0
     X = statistics.NormalDist(mu, sigma)
