@@ -221,7 +221,11 @@ test_pstdev()
 
 @test
 def test_variance():
-    pass
+    data = [4.0, 7.0, 13.0, 16.0]
+    assert statistics.variance(data) == 30.0
+    
+    data = [1/4, 1/4, 3/4, 7/4]
+    assert statistics.variance(data) == 1/2
 test_variance()
 
 @test

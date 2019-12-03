@@ -413,10 +413,11 @@ def variance(data: list[float], xbar: optional[float]=None):
     The optional argument xbar, if given, should be the mean of
     the data. If it is missing or None, the mean is automatically calculated.
     """
+    xbar1 = ~xbar if xbar else mean(data)
     n = len(data)
     if n < 2:
         raise StatisticsError("variance requires at least two data points")
-    ss = _ss(data, xbar)
+    ss = _ss(data, xbar1)
     return ss/(n-1)
 
 def stdev(data, xbar: optional[float]=None):
