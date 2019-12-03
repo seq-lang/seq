@@ -195,6 +195,34 @@ def test_harmonic_mean():
         assert statistics.harmonic_mean([float(x)]) == float(x)
 test_harmonic_mean()
 
+# NOT FINISHED TESTING!!!!!
+@test
+def test_pvariance():
+    data = [float(i) for i in range(10000)]
+    assert statistics.pvariance(data) == (10000**2 - 1)/12
+
+    data = [4.0, 7.0, 13.0, 16.0]
+    assert statistics.pvariance(data) == 22.5
+
+    data = [1/4, 1/4, 3/4, 7/4]
+    assert statistics.pvariance(data) == 3/8
+test_pvariance()
+
+@test
+def test_pstdev():
+    pass
+test_pstdev()
+
+@test
+def test_variance():
+    pass
+test_variance()
+
+@test
+def test_stdev():
+    pass
+test_stdev()
+
 @test
 def test_mean_NormalDist():
     X = statistics.NormalDist(10000.0, 3.0)
@@ -212,6 +240,17 @@ def test_variance():
     X = statistics.NormalDist(10000.0, 3.0)
     assert X.variance == 9.0
 test_variance()
+
+#NOT FINISHED TESTING!!!
+@test
+def test_pdf():
+    pass
+test_pdf()
+
+@test
+def test_cdf():
+    pass
+test_cdf()
 
 @test
 def test_samples():

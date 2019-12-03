@@ -1,6 +1,7 @@
 import bisect
 import random
-from math import frexp as _frexp, floor as _floor, fabs as _fabs, gcd as _gcd, exp as _exp, log as _log
+from math import frexp as _frexp, floor as _floor, fabs as _fabs, erf as _erf
+from math import gcd as _gcd, exp as _exp, log as _log, sqrt as _sqrt, tau as _tau
 
 def median[T](data: list[T]) -> float:
     """
@@ -356,6 +357,75 @@ def harmonic_mean(data: list[float]) -> float:
     total = _sum(li)
     return n/total
 
+def _ss(data: list[float], c: float):
+    """
+    Return sum of square deviations of sequence data.
+    
+    If c is None, the mean is calculated in one pass, and the deviations
+    from the mean are calculated in a second pass. Otherwise, deviations are
+    calculated from c as given.
+    """
+    total = _sum([(x-c)**2 for x in data])
+    total2 = _sum([(x-c) for x in data])
+
+    total -= total2**2/len(data)
+    return total
+
+def pvariance(data: list[float], mu: optional[float]=None):
+    """
+    pvariance(data, mu)
+
+    Return the population variance of `data`.
+
+    Should contain atleast one value.
+    The optional argument mu, if given, should be the mean of
+    the data. If it is missing or None, the mean is automatically calculated.
+
+    TODO/CAVEATS:
+    @jordan - Assumes input is a list of floats
+    """
+    mu1 = ~mu if mu else mean(data)
+
+    n = len(data)
+    if n < 1:
+        raise StatisticsError("pvariance requires at least one data point")
+    
+    ss = _ss(data, mu1)
+    return ss/n
+
+def pstdev(data: list[float], mu: optional[float]=None):
+    """
+    pstdev(data, mu)
+
+    Return the square root of the population variance.
+    """
+    var = pvariance(data, mu)
+    return var._sqrt()
+
+def variance(data: list[float], xbar: optional[float]=None):
+    """
+    variance(data, xbar)
+
+    Return the sample variance of data.
+    
+    Shoulw contain atleast two values.
+    The optional argument xbar, if given, should be the mean of
+    the data. If it is missing or None, the mean is automatically calculated.
+    """
+    n = len(data)
+    if n < 2:
+        raise StatisticsError("variance requires at least two data points")
+    ss = _ss(data, xbar)
+    return ss/(n-1)
+
+def stdev(data, xbar: optional[float]=None):
+    """
+    stdev(data, xbar)
+
+    Return the square root of the sample variance.
+    """
+    var = variance(data, xbar)
+    return var.sqrt()
 
 class NormalDist:
     """
@@ -420,6 +490,27 @@ class NormalDist:
         Square of the standard deviation.
         """
         return self.sigma ** 2.0
+    
+    def pdf(self, x):
+        """
+        pdf(self, x)
+
+        Probability density function.  P(x <= X < x+dx) / dx
+        """
+        variance = self.sigma ** 2.0
+        if not variance:
+            raise StatisticsError('pdf() not defined when sigma is zero')
+        return _exp((x - self.mu) ** 2.0 / (-2.0 * variance)) / _sqrt(_tau * variance)
+    
+    def cdf(self, x):
+        """
+        cdf(self, x)
+
+        Cumulative distribution function.  P(X <= x)
+        """
+        if not self.sigma:
+            raise StatisticsError('cdf() not defined when sigma is zero')
+        return 0.5 * (1.0 + _erf((x - self.mu) / (self.sigma * _sqrt(2.0))))
 
     def samples[T](self: NormalDist, n, seed: optional[T]=None):
         """
