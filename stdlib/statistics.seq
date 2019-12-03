@@ -399,8 +399,9 @@ def pstdev(data: list[float], mu: optional[float]=None):
 
     Return the square root of the population variance.
     """
-    var = pvariance(data, mu)
-    return var._sqrt()
+    mu1 = ~mu if mu else mean(data)
+    var = pvariance(data, mu1)
+    return _sqrt(var)
 
 def variance(data: list[float], xbar: optional[float]=None):
     """

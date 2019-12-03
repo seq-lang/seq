@@ -195,7 +195,6 @@ def test_harmonic_mean():
         assert statistics.harmonic_mean([float(x)]) == float(x)
 test_harmonic_mean()
 
-# NOT FINISHED TESTING!!!!!
 @test
 def test_pvariance():
     data = [float(i) for i in range(10000)]
@@ -210,7 +209,14 @@ test_pvariance()
 
 @test
 def test_pstdev():
-    pass
+    data = [float(i) for i in range(10000)]
+    assert statistics.pstdev(data) == math.sqrt(statistics.pvariance(data))
+
+    data = [4.0, 7.0, 13.0, 16.0]
+    assert statistics.pstdev(data) == math.sqrt(statistics.pvariance(data))
+
+    data = [1/4, 1/4, 3/4, 7/4]
+    assert statistics.pstdev(data) == math.sqrt(statistics.pvariance(data))
 test_pstdev()
 
 @test
