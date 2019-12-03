@@ -620,6 +620,39 @@ class NormalDist:
         """
         return [self.inv_cdf(float(i)/float(n)) for i in range(1, n)]
 
+    def overlap(self: NormalDist, other: NormalDist) -> float:
+        """
+        overlap(self, other)
+
+        Compute the overlapping coefficient (OVL) between two normal distributions.
+        
+        Measures the agreement between two normal probability distributions.
+        Returns a value between 0.0 and 1.0 giving the overlapping area in
+        the two underlying probability density functions.
+        """
+        X, Y = self, other
+        
+        if (Y.sigma, Y.mu) < (X.sigma, X.mu):       # sort to assure commutativity
+            X, Y = Y, X
+        
+        X_var, Y_var = X.variance, Y.variance
+        
+        if not X_var or not Y_var:
+            raise StatisticsError('overlap() not defined when sigma is zero')
+        
+        dv = Y_var - X_var
+        dm = _fabs(Y.mu - X.mu)
+        
+        if not dv:
+            return 1.0 - _erf(dm / (2.0 * X.sigma * _sqrt(2.0)))
+        
+        a = X.mu * Y_var - Y.mu * X_var
+        b = X.sigma * Y.sigma * _sqrt(dm**2.0 + dv * _log(Y_var / X_var))
+        x1 = (a + b) / dv
+        x2 = (a - b) / dv
+        
+        return 1.0 - (_fabs(Y.cdf(x1) - X.cdf(x1)) + _fabs(Y.cdf(x2) - X.cdf(x2)))
+
     # troubles with random.Radnomg(seed).gauss
     def samples[T](self: NormalDist, n: int, seed: T):
         """

@@ -305,6 +305,17 @@ def test_ND_qualtiles():
 test_ND_qualtiles()
 
 @test
+def test_overlap():
+    PRECISION = 1e-5
+    for X1, X2, published_result in [
+                (statistics.NormalDist(0.0, 2.0), statistics.NormalDist(1.0, 2.0), 0.80258),
+                (statistics.NormalDist(0.0, 1.0), statistics.NormalDist(1.0, 2.0), 0.60993),
+            ]:
+        assert math.fabs(X1.overlap(X2) - published_result) < PRECISION
+        assert math.fabs(X2.overlap(X1) - published_result) < PRECISION
+test_overlap()
+
+@test
 def test_samples():
     mu, sigma = 10000.0, 3.0
     X = statistics.NormalDist(mu, sigma)
