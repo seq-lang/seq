@@ -426,8 +426,9 @@ def stdev(data, xbar: optional[float]=None):
 
     Return the square root of the sample variance.
     """
-    var = variance(data, xbar)
-    return var.sqrt()
+    xbar1 = ~xbar if xbar else mean(data)
+    var = variance(data, xbar1)
+    return _sqrt(var)
 
 class NormalDist:
     """

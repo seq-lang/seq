@@ -230,7 +230,11 @@ test_variance()
 
 @test
 def test_stdev():
-    pass
+    data = [4.0, 7.0, 13.0, 16.0]
+    assert statistics.stdev(data) == math.sqrt(statistics.variance(data))
+    
+    data = [1/4, 1/4, 3/4, 7/4]
+    assert statistics.stdev(data) == math.sqrt(statistics.variance(data))
 test_stdev()
 
 @test
