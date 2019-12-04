@@ -1,0 +1,44 @@
+n = 0
+
+@atomic
+def inc(_):
+    global n
+    n += 1
+    return 0
+
+@atomic
+def dec(_):
+    global n
+    n -= 1
+    return 0
+
+def foo(_):
+    yield 0
+
+@test
+def test_parallel_pipe(m: int):
+    global n
+    n = 0
+    range(m) |> iter ||> inc
+    assert n == m
+    range(m) |> iter ||> dec
+    assert n == 0
+    range(m) |> iter ||> inc |> dec
+    assert n == 0
+
+@test
+def test_nested_parallel_pipe(m: int):
+    global n
+    n = 0
+    range(m) |> iter ||> inc |> foo ||> dec
+    assert n == 0
+
+test_parallel_pipe(0)
+test_parallel_pipe(1)
+test_parallel_pipe(10)
+test_parallel_pipe(10000)
+
+test_nested_parallel_pipe(0)
+test_nested_parallel_pipe(1)
+test_nested_parallel_pipe(10)
+test_nested_parallel_pipe(10000)

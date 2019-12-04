@@ -138,7 +138,8 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     PipelineTests, SeqTest,
-    testing::Combine(testing::Values("pipeline/prefetch.seq",
+    testing::Combine(testing::Values("pipeline/parallel.seq",
+                                     "pipeline/prefetch.seq",
                                      "pipeline/revcomp_opt.seq"),
                      testing::Values(true, false)),
     getTestNameFromParam);
