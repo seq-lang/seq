@@ -6,7 +6,7 @@ import re
 from .redirector import stdout_stderr_redirector
 from .wrapper import SeqWrapper
 
-__version__ = '0.0.1'
+__version__ = '0.0.0'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
@@ -105,7 +105,7 @@ class SeqKernel(Kernel):
             'payload': [],
             'user_expressions': {}
         }
-    
+
     def do_complete(self, code, cursor_pos):
         """
             Code completion.
@@ -128,7 +128,7 @@ class SeqKernel(Kernel):
                 'evalue': ferr_string,
                 'traceback': []
             }
-        
+
         return {
             'status': 'ok',
             'matches': [ match for match in matches],
@@ -160,7 +160,7 @@ class SeqKernel(Kernel):
             col = cursor_pos - code[:cursor_pos].rfind('\n') - 1
             if col < 0:
                 col = 0
-            
+
 
         with stdout_stderr_redirector(BytesIO(), ferr):
             if cell > 0:
@@ -178,7 +178,7 @@ class SeqKernel(Kernel):
                 'evalue': ferr_string,
                 'traceback': []
             }
-        
+
         if inspect_text:
             # TODO: This piece of code will break on any format changes from the jit side.
             obj_name, obj_type, obj_loc, obj_doc = inspect_text[7:].split('\b')
@@ -197,7 +197,7 @@ class SeqKernel(Kernel):
                 'data': {'text/plain': "\n".join(inspect_obj)},
                 'metadata': {}
             }
-        
+
         if doc_text:
             return {
                 'status': 'ok',

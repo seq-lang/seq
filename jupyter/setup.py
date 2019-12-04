@@ -12,9 +12,11 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/seq-lang/seq',
     packages=setuptools.find_packages(),
+    entry_points={'pygments.lexers': 'seq = seq_kernel.seqlex:SeqLexer'},
     classifiers=[
         'Framework :: Jupyter',
         'Intended Audience :: Science/Research',
+        'Programming Language :: Python'
         'Programming Language :: Seq',
     ]
 )
