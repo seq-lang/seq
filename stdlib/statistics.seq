@@ -309,6 +309,7 @@ def geometric_mean(data: list[float]) -> float:
 
     TODO/CAVEATS:
     @jordan- Assumes input is a list of floats
+           - uses mean instead of fmean for now
            - Does not handle data that contains a zero, or if it contains a negative value.
     """
     if len(data) < 1:
@@ -434,13 +435,18 @@ class NormalDist:
     """
     Normal distribution of a random variable
     """
+    PRECISION: float
     mu: float
     sigma: float
+
+    def __eq__(self: NormalDist, other: NormalDist):
+        return (self.mu - other.mu) < self.PRECISION and (self.sigma - other.sigma) < self.PRECISION
 
     def __init__(self: NormalDist, mu: float=0.0, sigma: float=1.0):
         """
         NormalDist where mu is the mean and sigma is the standard deviation.
         """
+        self.PRECISION = 1e-6
         if sigma < 0.0:
             raise StatisticsError('sigma must be non-negative')
         self.mu = mu
@@ -653,17 +659,30 @@ class NormalDist:
         
         return 1.0 - (_fabs(Y.cdf(x1) - X.cdf(x1)) + _fabs(Y.cdf(x2) - X.cdf(x2)))
 
-    # troubles with random.Radnomg(seed).gauss
-    def samples[T](self: NormalDist, n: int, seed: T):
+    def samples[T](self: NormalDist, n: int):
         """
         samples(self, n, seed)
 
         Generate *n* samples for a given mean and standard deviation.
 
         TODO/CAVEATS:
-        @jordan- for now seed is not optional
+        @jordan- for now seed is removed
                  should be: `gauss = random.gauss if seed is None else random.Random(seed).gauss`
                         ** having troubles with random.Random(seed).gauss 
         """
-        gauss = random.gauss if seed is None else random.Random(seed).gauss
+        gauss = random.gauss 
         return [gauss(self.mu, self.sigma) for i in range(n)]
+
+    def from_samples(data: list[float]):
+        """
+        from_samples(cls, data)
+
+        Make a normal distribution instance from sample data.
+        TODO/CAVEATS:
+        @jordan- Assumes input is a list of floats
+               - uses mean instead of fmean for now
+        """
+        xbar = mean(data)
+        return NormalDist(xbar, stdev(data, xbar))
+
+
