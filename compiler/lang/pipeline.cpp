@@ -1,5 +1,6 @@
 #include "seq/seq.h"
 #include <queue>
+#include <utility>
 
 using namespace seq;
 using namespace llvm;
@@ -20,6 +21,7 @@ void PipeExpr::resolveTypes() {
     stage->resolveTypes();
 }
 
+// Some useful info for codegen'ing the "drain" step after prefetch transform.
 struct DrainState {
   Value *states;             // coroutine states buffer
   Value *filled;             // how many coroutines have been added (alloca'd)
@@ -30,6 +32,101 @@ struct DrainState {
   DrainState()
       : states(nullptr), filled(nullptr), type(nullptr), stages(), parallel() {}
 };
+
+// Details of a stage for optimization purposes.
+struct UnpackedStage {
+  FuncExpr *func;
+  std::vector<Expr *> args;
+  bool isCall;
+
+  UnpackedStage(FuncExpr *func, std::vector<Expr *> args, bool isCall)
+      : func(func), args(std::move(args)), isCall(isCall) {}
+
+  UnpackedStage(Expr *stage) : UnpackedStage(nullptr, {}, false) {
+    if (auto *funcExpr = dynamic_cast<FuncExpr *>(stage)) {
+      this->func = funcExpr;
+      this->args = {};
+      this->isCall = false;
+    } else if (auto *callExpr = dynamic_cast<CallExpr *>(stage)) {
+      if (auto *funcExpr = dynamic_cast<FuncExpr *>(callExpr->getFuncExpr())) {
+        this->func = funcExpr;
+        this->args = callExpr->getArgs();
+        this->isCall = true;
+      }
+    } else if (auto *partialExpr = dynamic_cast<PartialCallExpr *>(stage)) {
+      if (auto *funcExpr =
+              dynamic_cast<FuncExpr *>(partialExpr->getFuncExpr())) {
+        this->func = funcExpr;
+        this->args = partialExpr->getArgs();
+        this->isCall = true;
+      }
+    }
+  }
+
+  bool matches(const std::string &name, int argCount = -1) {
+    if (!func || (argCount >= 0 && args.size() != (unsigned)argCount))
+      return false;
+    Func *f = dynamic_cast<Func *>(func->getFunc());
+    return f && f->genericName() == name && f->hasAttribute("builtin");
+  }
+
+  Expr *repack(Func *f) {
+    assert(func);
+    FuncExpr *newFunc = new FuncExpr(f, func->getTypes());
+    if (!isCall)
+      return newFunc;
+
+    bool isPartial = false;
+    for (Expr *arg : args) {
+      if (!arg) {
+        isPartial = true;
+        break;
+      }
+    }
+
+    if (isPartial)
+      return new PartialCallExpr(newFunc, args);
+    else
+      return new CallExpr(newFunc, args);
+  }
+};
+
+/*
+ * RevComp optimization swaps k-merization loop with revcomp loop so that
+ * the latter is only done once.
+ */
+static void applyRevCompOptimization(std::vector<Expr *> &stages,
+                                     std::vector<bool> &parallel) {
+  std::vector<Expr *> stagesNew;
+  std::vector<bool> parallelNew;
+  unsigned i = 0;
+  while (i < stages.size()) {
+    if (i < stages.size() - 1) {
+      UnpackedStage f1(stages[i]);
+      UnpackedStage f2(stages[i + 1]);
+
+      std::string replacement = "";
+      if (f1.matches("kmers", 1) && f2.matches("revcomp"))
+        replacement = "_kmers_revcomp";
+      if (f1.matches("kmers_with_pos", 1) && f2.matches("revcomp_with_pos"))
+        replacement = "_kmers_revcomp_with_pos";
+
+      if (!replacement.empty()) {
+        stagesNew.push_back(f1.repack(Func::getBuiltin(replacement)));
+        stagesNew.back()->resolveTypes();
+        parallelNew.push_back(parallel[i] || parallel[i + 1]);
+        i += 2;
+        continue;
+      }
+    }
+
+    stagesNew.push_back(stages[i]);
+    parallelNew.push_back(parallel[i]);
+    ++i;
+  }
+  stages = stagesNew;
+  parallel = parallelNew;
+}
 
 static Value *codegenPipe(BaseFunc *base,
                           Value *val,        // value of current pipeline output
@@ -290,6 +387,10 @@ static Value *codegenPipe(BaseFunc *base,
 Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   Function *func = block->getParent();
+
+  std::vector<Expr *> stages(this->stages);
+  std::vector<bool> parallel(this->parallel);
+  applyRevCompOptimization(stages, parallel);
 
   std::queue<Expr *> queue;
   std::queue<bool> parallelQueue;

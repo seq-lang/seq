@@ -298,6 +298,7 @@ public:
   FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types = {});
   explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types = {});
   BaseFunc *getFunc();
+  std::vector<types::Type *> getTypes() const;
   bool isRealized() const;
   void setRealizeTypes(std::vector<types::Type *> types);
   void resolveTypes() override;
@@ -481,6 +482,7 @@ public:
   CallExpr(Expr *func, std::vector<Expr *> args,
            std::vector<std::string> names = {});
   Expr *getFuncExpr() const;
+  std::vector<Expr *> getArgs() const;
   void setFuncExpr(Expr *func);
   void resolveTypes() override;
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
@@ -498,6 +500,7 @@ public:
   PartialCallExpr(Expr *func, std::vector<Expr *> args,
                   std::vector<std::string> names = {});
   Expr *getFuncExpr() const;
+  std::vector<Expr *> getArgs() const;
   void setFuncExpr(Expr *func);
   void resolveTypes() override;
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;

@@ -693,6 +693,8 @@ FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types)
 
 BaseFunc *FuncExpr::getFunc() { return func; }
 
+std::vector<types::Type *> FuncExpr::getTypes() const { return types; }
+
 bool FuncExpr::isRealized() const { return !types.empty(); }
 
 void FuncExpr::setRealizeTypes(std::vector<seq::types::Type *> types) {
@@ -1463,6 +1465,8 @@ CallExpr::CallExpr(Expr *func, std::vector<Expr *> args,
 
 Expr *CallExpr::getFuncExpr() const { return func; }
 
+std::vector<Expr *> CallExpr::getArgs() const { return args; }
+
 void CallExpr::setFuncExpr(Expr *func) { this->func = func; }
 
 void CallExpr::resolveTypes() {
@@ -1720,6 +1724,8 @@ PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args,
     : func(func), args(std::move(args)), names(std::move(names)) {}
 
 Expr *PartialCallExpr::getFuncExpr() const { return func; }
+
+std::vector<Expr *> PartialCallExpr::getArgs() const { return args; }
 
 void PartialCallExpr::setFuncExpr(Expr *func) { this->func = func; }
 
