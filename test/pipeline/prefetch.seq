@@ -1,14 +1,19 @@
 class MyIndex[K]:
     special: K
+    getitem_calls: int
+    prefetch_calls: int
 
     def __init__(self: MyIndex[K], special: K):
         self.special = special
+        self.getitem_calls = 0
+        self.prefetch_calls = 0
 
     def __getitem__(self: MyIndex[K], k: K):
+        self.getitem_calls += 1
         return 1 if k == self.special else 0
 
     def __prefetch__(self: MyIndex[K], k: K):
-        pass
+        self.prefetch_calls += 1
 
 def lookup1[K](kmer: K, idx: MyIndex[K]):
     return (kmer, idx[kmer])
@@ -21,15 +26,19 @@ type K = Kmer[3]
 
 @test
 def test_prefetch_transformation():
-    idx = MyIndex[K](K())
+    idx1 = MyIndex[K](K())
+    idx2 = MyIndex[K](K())
     v1 = list[tuple[K, int]]()
     v2 = list[tuple[K, int]]()
     s = s'ACGTACGTAAAACGTACGT'
 
-    s |> kmers[K](1) |> lookup1(idx) |> v1.append
-    s |> kmers[K](1) |> lookup2(idx) |> v2.append
+    s |> kmers[K](1) |> lookup1(idx1) |> v1.append
+    s |> kmers[K](1) |> lookup2(idx2) |> v2.append
 
     assert set(v1) == set(v2)
+    assert idx1.prefetch_calls == 0
+    assert idx1.getitem_calls == idx2.getitem_calls
+    assert idx2.prefetch_calls == idx2.prefetch_calls
 test_prefetch_transformation()
 
 @test
