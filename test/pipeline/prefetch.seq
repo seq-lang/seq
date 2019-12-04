@@ -1,0 +1,46 @@
+class MyIndex[K]:
+    special: K
+
+    def __init__(self: MyIndex[K], special: K):
+        self.special = special
+
+    def __getitem__(self: MyIndex[K], k: K):
+        return 1 if k == self.special else 0
+
+    def __prefetch__(self: MyIndex[K], k: K):
+        pass
+
+def lookup1[K](kmer: K, idx: MyIndex[K]):
+    return (kmer, idx[kmer])
+
+def lookup2[K](kmer: K, idx: MyIndex[K]):
+    prefetch idx[kmer]
+    return (kmer, idx[kmer])
+
+type K = Kmer[3]
+
+@test
+def test_prefetch_transformation():
+    idx = MyIndex[K](K())
+    v1 = list[tuple[K, int]]()
+    v2 = list[tuple[K, int]]()
+    s = s'ACGTACGTAAAACGTACGT'
+
+    s |> kmers[K](1) |> lookup1(idx) |> v1.append
+    s |> kmers[K](1) |> lookup2(idx) |> v2.append
+
+    assert set(v1) == set(v2)
+test_prefetch_transformation()
+
+@test
+def test_list_prefetch():
+    v = [0]
+    v.__prefetch__(0)
+test_list_prefetch()
+
+@test
+def test_dict_prefetch():
+    d = {0:1}
+    d.__prefetch__(0)
+    d.__prefetch__(42)
+test_dict_prefetch()
