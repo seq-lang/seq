@@ -1,3 +1,5 @@
+# Exec
+
 class SeqWrapper:
    def __init__(self):
       import ctypes
@@ -32,7 +34,8 @@ class SeqWrapper:
       self._exec_fn(self.handle, code.encode('utf-8'))
 
    def inspect(self, cell, line, column):
-      return self._inspect_fn(self.handle, str(cell).encode('utf-8'), line, column).decode('ascii')
+      file = f'<jit_{cell}>'
+      return self._inspect_fn(self.handle, file.encode('utf-8'), line, column).decode('ascii')
 
    def document(self, idn):
       return self._document_fn(self.handle, idn.encode('utf-8')).decode('ascii')

@@ -88,11 +88,11 @@ let locate ~(ctx : Ctx.t) ?(full = true) f l c  =
       | t, Some orig when t <> Ctypes.null ->
         let typ = Llvm.Type.get_name (gt el) in
         Some (
-          sprintf "%s |- %s => defined at %s%s"
+          sprintf "%s\b%s\b%s\b%s"
             orig.name 
             typ
             (Ast.Ann.to_string orig.pos) 
-            (if full && orig.doc <> "" then sprintf "\nDocs: %s" orig.doc else ""))
+            (if full && orig.doc <> "" then sprintf "%s" orig.doc else ""))
       | _ -> None
     )))
 
