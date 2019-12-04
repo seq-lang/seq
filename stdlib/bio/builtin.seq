@@ -24,12 +24,10 @@ def revcomp_with_pos(t):
 
 @builtin
 def _kmers_revcomp_with_pos[K](self: seq, step: int):
-    print 'H'
     return self._kmers_revcomp_with_pos[K](step)
 
 @builtin
 def _kmers_revcomp[K](self: seq, step: int):
-    print 'H'
     return self._kmers_revcomp[K](step)
 
 @builtin
