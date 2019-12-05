@@ -36,7 +36,6 @@ class SeqKernel(Kernel):
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
         self.seqwrapper = SeqWrapper()
-        self.seqwrapper.exec('from jupyter import *')
         self.cells = []
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=False):
