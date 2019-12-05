@@ -1,5 +1,5 @@
 define(
-  ["codemirror/lib/codemirror", "base/js/namespace"],
+  ["codemirror/lib/codemirror", "base/js/namespace", "https://cdn.jsdelivr.net/npm/igv@2.3.5/dist/igv.min.js"],
   function(CodeMirror){
     "use strict";
     var onload = function() {
@@ -7,6 +7,12 @@ define(
       enableSeqMode(CodeMirror);
     };
     return{onload: onload};
+});
+
+require.config({
+  paths: { 
+      igv: 'https://cdn.jsdelivr.net/npm/igv@2.3.5/dist/igv.min'
+  }
 });
 
 var enableSeqMode = function (CodeMirror) {

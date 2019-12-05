@@ -14,32 +14,6 @@ type t =
   ; ctx : Ctx.t (** Execution context. *)
   }
 
-(** Initialize a JIT context. *)
-let init () : t =
-  try
-    let anon_fn = Llvm.Func.func "<anon_init>" in
-    let ctx =
-      Ctx.init_module
-        ~argv:false
-        ~filename:"<jit>"
-        ~mdl:(Llvm.JIT.init ())
-        ~base:anon_fn
-        ~block:(Llvm.Block.func anon_fn)
-        ~jit:true
-        (Runner.exec_string ~debug:false ~cell:false)
-    in
-    let jit = { cnt = 1; ctx } in
-    (* load stdlib *)
-    Util.dbg "===== launching exec...";
-    let _t = Unix.gettimeofday () in
-    Llvm.JIT.func ctx.mdl anon_fn;
-    Util.dbg "... took %f for the whole OCaml part" (Unix.gettimeofday() -. _t);
-    jit
-  with
-  | Err.CompilerError (typ, pos_lst) ->
-    eprintf "%s\n%!" @@ Err.to_string ~pos_lst typ;
-    exit 1
-
 (** Execute [code] within a JIT context [jit]. *)
 let exec (jit : t) code =
   let file = sprintf "<jit_%d>" jit.cnt in
@@ -66,6 +40,33 @@ let exec (jit : t) code =
   with
   | Err.SeqCError (msg, pos) -> raise @@ Err.CompilerError (Compiler msg, [ pos ])
 
+(** Initialize a JIT context. *)
+let init () : t =
+  try
+    let anon_fn = Llvm.Func.func "<anon_init>" in
+    let ctx =
+      Ctx.init_module
+        ~argv:false
+        ~filename:"<jit>"
+        ~mdl:(Llvm.JIT.init ())
+        ~base:anon_fn
+        ~block:(Llvm.Block.func anon_fn)
+        ~jit:true
+        (Runner.exec_string ~debug:false ~cell:false)
+    in
+    let jit = { cnt = 1; ctx } in
+    (* load stdlib *)
+    Util.dbg "===== launching exec...";
+    let _t = Unix.gettimeofday () in
+    Llvm.JIT.func ctx.mdl anon_fn;
+    Util.dbg "... took %f for the whole OCaml part" (Unix.gettimeofday() -. _t);
+    exec jit "from jupyter import *";
+    jit
+  with
+  | Err.CompilerError (typ, pos_lst) ->
+    eprintf "%s\n%!" @@ Err.to_string ~pos_lst typ;
+    exit 1
+
 let locate ~(ctx : Ctx.t) ?(full = true) f l c  =
   let open Option.Monad_infix in
   (* let f = sprintf "<anon_%s>" f in *)
@@ -89,14 +90,14 @@ let locate ~(ctx : Ctx.t) ?(full = true) f l c  =
         let typ = Llvm.Type.get_name (gt el) in
         Some (
           sprintf "%s\b%s\b%s\b%s"
-            orig.name 
+            orig.name
             typ
-            (Ast.Ann.to_string orig.pos) 
+            (Ast.Ann.to_string orig.pos)
             (if full && orig.doc <> "" then sprintf "%s" orig.doc else ""))
       | _ -> None
     )))
 
-let locate_dump ~(ctx : Ctx.t) = 
+let locate_dump ~(ctx : Ctx.t) =
   Hashtbl.iteri ctx.inspect_lookup ~f:(fun ~key ~data ->
     if String.is_prefix key ~prefix:"<jit_" then (
       eprintf "File %s:\n" key;
@@ -104,7 +105,7 @@ let locate_dump ~(ctx : Ctx.t) =
       Hashtbl.iteri data ~f:(fun ~key ~data ->
         eprintf "  Line %d:\n" key;
         Stack.iter data ~f:(fun {name;pos;el} ->
-          eprintf "    %s\n" 
+          eprintf "    %s\n"
             (Option.value (locate ~ctx file key pos.col) ~default:"?")))));
   eprintf "%!"
 
@@ -167,7 +168,7 @@ let c_document hnd identifier =
   match document jit.ctx identifier with
     | Some d -> d
     | None -> ""
-  
+
 let c_complete hnd prefix =
   let jit = Hashtbl.find_exn jits hnd in
   Hashtbl.filter_mapi jit.ctx.map ~f:(fun ~key ~data ->
@@ -201,7 +202,7 @@ let repl () =
         match String.is_prefix ~prefix:"%%" !code with
         | true ->
           let ll = Array.of_list @@ String.split ~on:' ' @@ String.strip !code in
-          ( match ll.(0) with 
+          ( match ll.(0) with
             | "%%i" ->
               let file = ll.(1) in
               let line = Int.of_string @@ ll.(2) in
@@ -212,7 +213,7 @@ let repl () =
               in
               eprintf "%s\n%!" str
 
-            | _ -> 
+            | _ ->
               eprintf "Unknown JIT command\n%!"
           );
           code := "";

@@ -64,7 +64,12 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         List.rev
         @@
         match List.rev stmts with
-        | (pos, Expr e) :: tl -> (pos, Print ([ e ], "\n")) :: tl
+        (* x -> JupyterView(s).s *)
+        | (pos, Expr e) :: tl ->
+          (pos, Print ([
+            pos, Dot ((pos, Call ((pos, Id "JupyterView"),
+              [pos, { name = None; value = e }])) , "s")
+          ], "\n")) :: tl
         | l -> l
       else stmts
     in
@@ -510,7 +515,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         (* Llvm.Stmt.set_pos fn pos; *)
         let doc = match List.hd fn_stmts with
           | Some (_, Expr (_, String doc)) -> doc
-          | _ -> "" 
+          | _ -> ""
         in
         Ctx.add_inspect_var ~ctx fn pos name doc;
         Ctx.add_inspect ~ctx pos name (Ctx.IFunc fn);
