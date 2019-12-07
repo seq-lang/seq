@@ -25,7 +25,9 @@ static bool typeMatch(const std::vector<T *> &v1, const std::vector<T *> &v2,
       auto *r1 = dynamic_cast<types::RecordType *>(v1[i]);
       auto *r2 = dynamic_cast<types::RecordType *>(v2[i]);
       if (r1 && r2) {
-        return r1->isStrict(r2);
+        if (!r1->isStrict(r2))
+          return false;
+        continue;
       }
     }
     if (!types::is(v1[i], v2[i]))
