@@ -72,7 +72,7 @@ type FASTA(file: gzFile, fai: list[int], names: list[str]):
                 f.write("\n")
                 n = 0
                 while n < len(s):
-                    end = min(len(s), n + LINE_LIMIT)
+                    end = min2(len(s), n + LINE_LIMIT)
                     f.write(str(s[n:end]))
                     f.write("\n")
                     n += LINE_LIMIT

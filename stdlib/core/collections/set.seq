@@ -191,7 +191,7 @@ class set[K]:
 
     def union(self: set[K], other: set[K]):
         s = set[K]()
-        s.resize(max(self._n_buckets, other._n_buckets))
+        s.resize(max2(self._n_buckets, other._n_buckets))
         for a in self:
             s.add(a)
         for a in other:
