@@ -63,7 +63,7 @@
 %token <Ast.Ann.t * float> FLOAT
 %token <Ast.Ann.t * (string * string)> INT_S
 %token <Ast.Ann.t * (float * string)> FLOAT_S
-%token <Ast.Ann.t * string> STRING ID
+%token <Ast.Ann.t * string> STRING ID FSTRING
 %token <Ast.Ann.t * string * string> SEQ
 %token <Ast.Ann.t * string> KMER
 
@@ -165,6 +165,9 @@ atom:
   | STRING+
     { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1),
       String (String.concat @@ List.map $1 ~f:snd) }
+  | FSTRING+
+    { pos (fst @@ List.hd_exn $1) (fst @@ List.last_exn $1),
+      FString (String.concat @@ List.map $1 ~f:snd) }
   | SEQ+
     { let f3 (x, _, _) = x in
       let s3 (_, x, _) = x in

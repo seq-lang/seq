@@ -35,6 +35,7 @@ module Expr = struct
     | Float x -> sprintf "%f" x
     | FloatS (x, k) -> sprintf "%f%s" x k
     | String x -> sprintf "\"%s\"" (String.escaped x)
+    | FString x -> sprintf "f\"%s\"" (String.escaped x)
     | Kmer x -> sprintf "k'%s'" x
     | Seq (p, x) -> sprintf "%s'%s'" p x
     | Id x -> sprintf "%s" x
@@ -287,10 +288,10 @@ module Stmt = struct
 end
 
 
-let rec e_apply ~f (pos, node) =
-  let f = e_apply ~f in
+let rec e_setpos new_pos (_, node) =
+  let f = e_setpos new_pos in
   let rec fg (p, c) = p, Expr.{ c with gen = f c.gen; cond = Option.map c.cond ~f; next = Option.map c.next ~f:fg } in
-  f (pos, match node with
+  new_pos, match node with
     | Expr.Tuple l -> Expr.Tuple (List.map l ~f)
     | List l -> List (List.map l ~f)
     | Set l -> Set (List.map l ~f)
@@ -310,9 +311,7 @@ let rec e_apply ~f (pos, node) =
     | Slice (a, b, c) -> Slice (Option.map a ~f, Option.map b ~f, Option.map c ~f)
     | Lambda (s, a) -> Lambda (s, f a)
     | Ptr x -> Ptr (f x)
-    | t -> t)
-
-let e_annotate ~pos n = e_apply ~f:(fun (_, t) -> pos, t) n
+    | t -> t
 
 let e_id ?(pos=Ann.default) n =
   pos, Expr.Id n

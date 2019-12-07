@@ -101,6 +101,7 @@
     | "r" -> P.STRING (st, fix_literals ~is_raw:true u)
     | ("s" | "p") as p -> P.SEQ (st, p, fix_literals u)
     | "k" -> P.KMER (st, fix_literals u)
+    | "f" -> P.FSTRING (st, fix_literals u)
     | _ -> P.STRING (st, fix_literals u)
 }
 
@@ -126,7 +127,7 @@ let escape = '\\' _
 let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
 
-let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')? ('p' | 'P')?
+let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')? ('p' | 'P')? ('f' | 'F')?
 let intsuffix = ('s' | 'S' | 'z' | 'Z' | 'u' | 'U')
 
 let ident = alpha alphanum*

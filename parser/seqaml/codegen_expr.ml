@@ -28,6 +28,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Float p -> parse_float ctx pos p
       | FloatS p -> parse_float ctx pos (fst p) ~kind:(snd p)
       | String p -> parse_str ctx pos p
+      | FString p -> parse_fstr ctx pos p
       | Kmer p -> parse_kmer ctx pos p
       | Seq p -> parse_seq ctx pos p
       | Id p -> parse_id ctx pos p
@@ -111,6 +112,31 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     | _ -> f
 
   and parse_str _ _ s = Llvm.Expr.str s
+
+  and parse_fstr ctx pos s =
+    let acc, depth, last =
+      String.foldi s ~init:([], 0, 0) ~f:(fun i (acc, depth, last) c ->
+        match c with
+        | '{' when depth = 0 ->
+          let str = String.sub s ~pos:last ~len:(i - last) in
+          (if str = "" then acc else (pos, String str) :: acc), depth + 1, i + 1
+        | '{' -> acc, depth + 1, last
+        | '}' when depth = 1 ->
+          let code = String.sub s ~pos:last ~len:(i - last) in
+          let expr = match Parser.parse ~file:ctx.filename code with
+            | [ _, Expr e ] -> Ast.(e_call ~pos (e_id ~pos "str") [e_setpos pos e])
+            | _ -> failwith "invalid f-parse"
+          in
+          (expr :: acc), 0, i + 1
+        | '}' -> acc, depth - 1, last
+        | _ -> acc, depth, last)
+    in
+    if depth <> 0 then serr ~pos "malformed f-string (%d unbalanced brackets)" depth;
+    let str = String.drop_prefix s last in
+    let acc = List.rev @@ (if str = "" then acc else (pos, String str) :: acc) in
+    let lh_expr = Ast.(e_dot ~pos (e_id ~pos "str") "cat") in
+    let rh_expr = pos, List acc in
+    parse_call ctx pos (lh_expr, [ pos, { name = None; value = rh_expr } ])
 
   and parse_seq ctx pos (p, s) =
     match p with

@@ -23,6 +23,7 @@ type t =
   | Float of float
   | FloatS of (float * string)
   | String of string
+  | FString of string
   | Kmer of string
   | Seq of (string * string)
   | Id of string
