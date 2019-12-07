@@ -13,7 +13,9 @@ cimport seq_stdin() -> cobj
 cimport seq_stdout() -> cobj
 cimport seq_stderr() -> cobj
 cimport seq_env() -> ptr[cobj]
-cimport seq_time () -> int
+cimport seq_time() -> int
+cimport seq_time_monotonic() -> int
+cimport seq_pid() -> int
 
 # <string.h>
 cimport strtoll(cobj, ptr[cobj], i32) -> int

@@ -1,6 +1,7 @@
 #include <array>
 #include <cassert>
 #include <cerrno>
+#include <chrono>
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
@@ -9,6 +10,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <unwind.h>
 #include <vector>
@@ -22,7 +24,6 @@
 #include "lib.h"
 #include <gc.h>
 #include <htslib/sam.h>
-#include <sys/time.h>
 
 using namespace std;
 
@@ -48,6 +49,22 @@ SEQ_FUNC void seq_init() {
 #endif
 
   seq_exc_init();
+}
+
+SEQ_FUNC seq_int_t seq_pid() { return (seq_int_t)getpid(); }
+
+SEQ_FUNC seq_int_t seq_time() {
+  auto duration = chrono::system_clock::now().time_since_epoch();
+  seq_int_t nanos =
+      chrono::duration_cast<chrono::nanoseconds>(duration).count();
+  return nanos;
+}
+
+SEQ_FUNC seq_int_t seq_time_monotonic() {
+  auto duration = chrono::steady_clock::now().time_since_epoch();
+  seq_int_t nanos =
+      chrono::duration_cast<chrono::nanoseconds>(duration).count();
+  return nanos;
 }
 
 SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line) {
@@ -179,13 +196,6 @@ SEQ_FUNC void *seq_stdin() { return stdin; }
 SEQ_FUNC void *seq_stdout() { return stdout; }
 
 SEQ_FUNC void *seq_stderr() { return stderr; }
-
-SEQ_FUNC int seq_time() {
-  timeval ts;
-  gettimeofday(&ts, nullptr);
-  auto time_ms = (int)((ts.tv_sec * 1000000 + ts.tv_usec) / 1000);
-  return time_ms;
-}
 
 /*
  * dlopen

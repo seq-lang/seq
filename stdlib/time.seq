@@ -1,1 +1,2 @@
-time = _C.seq_time
+def time():
+    return _C.seq_time() / (1000 * 1000 * 1000)

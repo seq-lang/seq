@@ -24,16 +24,7 @@ class Generator:
         self.next = 0
 
     def gettimeofday(self: Generator):
-        type timeval(tv_sec: int, tv_usec: int)
-        tv = timeval(0, 0)
-
-        cimport gettimeofday(ptr[timeval], ptr[byte]) -> i32
-        err = gettimeofday(__ptr__(tv), ptr[byte]())
-        if int(err) != 0:
-            raise OSError("whoops") # Todo get nice message via seterr
-
-        SEC_TO_NS = 1000 * 1000
-        return tv.tv_sec * SEC_TO_NS + tv.tv_usec
+        return _C.seq_time() * 1000
 
     def init_genrand(self: Generator, s: u32):
         """
@@ -168,15 +159,11 @@ class Generator:
         """
 
         now = u32(self.gettimeofday())
-        key = array[u32](5)
+        key = __array__[u32](5)
         key[0] = u32(now & u32(0xffffffff))
         key[1] = u32(now >> u32(32))
-
-        cimport getpid() -> int
-        key[2] = u32(getpid())
-
-        getmonotonicclock = 12345
-        now = u32(getmonotonicclock)       # = getmonotonicclock()
+        key[2] = u32(_C.seq_pid())
+        now = u32(_C.seq_time_monotonic())
         key[3] = u32(now & u32(0xffffffff))
         key[4] = u32(now >> u32(32))
 
@@ -256,14 +243,15 @@ class Random:
             return m
 
         words = (k - 1) // 32 + 1
-        wordarray = array[u32](words)
+        assert words <= 4
+        wordarray = __array__[u32](4)
         for i in range(words):
             r = int(self.gen.genrand_int32())
             if k < 32: r >>= (32 - k)
             wordarray[i] = u32(r)
             k -= 32
 
-        return self.from_bytes_big(wordarray)
+        return self.from_bytes_big(wordarray.__slice__(0, words))
 
     def bit_length(self: Random, n: int) -> int:
         """
