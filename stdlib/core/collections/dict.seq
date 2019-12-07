@@ -83,7 +83,7 @@ class dict[K,V]:
 
     def __copy__(self: dict[K,V]):
         d = dict[K,V]()
-        d.resize(self.n_buckets)
+        d.resize(self._n_buckets)
         for k,v in self.items():
             d[k] = v
         return d

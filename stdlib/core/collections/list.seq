@@ -352,3 +352,10 @@ class list[T]:
             new_cap = (1 + 3*self.len) // 2
             p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
             self.arr = array[T](p, new_cap)
+
+    def __hash__(self: list[T]):
+        # https://www.boost.org/doc/libs/1_35_0/doc/html/boost/hash_combine_id241013.html
+        seed = 0
+        for v in self:
+            seed ^= v.__hash__() + 0x9e3779b9 + (seed << 6) + (seed >> 2)
+        return seed

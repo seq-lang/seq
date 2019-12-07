@@ -1155,7 +1155,7 @@ extend str:
 # Internal helpers
 
     def _cmp(self: str, other: str):
-        n = min(self.len, other.len)
+        n = min2(self.len, other.len)
         i = 0
         while i < n:
             c1 = self.ptr[i]

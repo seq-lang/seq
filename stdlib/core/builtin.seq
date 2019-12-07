@@ -1,18 +1,44 @@
-def min(a, b):
+def min2(a, b):
+    return a if a < b else b
+
+def max2(a, b):
+    return a if a > b else b
+
+def min[T](a: generator[T]):
     """
     min(a, b)
 
     Return the item with the lowest value
     """
-    return a if a < b else b
+    x = a.__iter__()
+    if not x.done():
+        s = x.next()
+        while not x.done():
+            i = x.next()
+            if i < s: s = i
+        x.destroy()
+        return s
+    else:
+        x.destroy()
+    raise ValueError("empty sequence") 
 
-def max(a, b):
+def max[T](a: generator[T]):
     """
     max(a, b)
 
     Return the item with the highest value
     """
-    return a if a > b else b
+    x = a.__iter__()
+    if not x.done():
+        s = x.next()
+        while not x.done():
+            i = x.next()
+            if i > s: s = i
+        x.destroy()
+        return s
+    else:
+        x.destroy()
+    raise ValueError("empty sequence") 
 
 def len(x):
     """
