@@ -20,9 +20,6 @@ static void versMsg(raw_ostream &out) {
 }
 
 int main(int argc, char **argv) {
-  repl(argv[0]);
-  exit(0);
-
   opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "
                             "print LLVM IR to stderr)"));
@@ -31,7 +28,6 @@ int main(int argc, char **argv) {
       desc("Write LLVM bitcode to specified file instead of running with JIT"));
   cl::list<string> libs("L", desc("Load and link the specified library"));
   cl::list<string> args(ConsumeAfter, desc("<program arguments>..."));
-
 
   SetVersionPrinter(versMsg);
   ParseCommandLineOptions(argc, argv);
