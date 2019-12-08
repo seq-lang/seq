@@ -222,13 +222,13 @@ def _lcm(x: int, y: int):
         greater = x
     else:
         greater = y
-    
+
     while(True):
         if greater % x == 0 and greater % y == 0:
             lcm = greater
             return lcm
         greater += 1
-        
+
 
 def _sum(data: list[float]) -> float:
     """
@@ -253,12 +253,12 @@ def _sum(data: list[float]) -> float:
     # sum fractions (n, d) + (a, b)
     for a, b in map(as_integer_ratio, data[1:]):
         lcm = _lcm(d, b)
-    
+
         if lcm > d:
             multiplier = lcm//d
             n *= multiplier
             d *= multiplier
-        
+
         if lcm > b:
             multiplier = lcm//b
             a *= multiplier
@@ -292,9 +292,9 @@ def fmean(data: list[float]) -> float:
     fmean(data)
 
     Convert data to floats and compute the arithmetic mean.
-    
+
     TODO/CAVEATS
-    @jordan- fsum is not implemented in math.seq yet and the above 
+    @jordan- fsum is not implemented in math.seq yet and the above
              mean(data) deals with only floats. Thus this function is passed for now.
     """
     pass
@@ -304,7 +304,7 @@ def geometric_mean(data: list[float]) -> float:
     geometric_mean(data)
 
     Convert data to floats and compute the geometric mean.
-    
+
     Raises a StatisticsError if the input dataset is empty,
 
     TODO/CAVEATS:
@@ -342,7 +342,7 @@ def harmonic_mean(data: list[float]) -> float:
     n = len(data)
     if n < 1:
         raise StatisticsError("harmonic_mean requires at least one data point")
-    
+
     x = data[0]
 
     if n == 1:
@@ -361,7 +361,7 @@ def harmonic_mean(data: list[float]) -> float:
 def _ss(data: list[float], c: float):
     """
     Return sum of square deviations of sequence data.
-    
+
     If c is None, the mean is calculated in one pass, and the deviations
     from the mean are calculated in a second pass. Otherwise, deviations are
     calculated from c as given.
@@ -390,7 +390,7 @@ def pvariance(data: list[float], mu: optional[float]=None):
     n = len(data)
     if n < 1:
         raise StatisticsError("pvariance requires at least one data point")
-    
+
     ss = _ss(data, mu1)
     return ss/n
 
@@ -409,7 +409,7 @@ def variance(data: list[float], xbar: optional[float]=None):
     variance(data, xbar)
 
     Return the sample variance of data.
-    
+
     Shoulw contain atleast two values.
     The optional argument xbar, if given, should be the mean of
     the data. If it is missing or None, the mean is automatically calculated.
@@ -499,7 +499,7 @@ class NormalDist:
         Square of the standard deviation.
         """
         return self.sigma ** 2.0
-    
+
     def pdf(self, x):
         """
         pdf(self, x)
@@ -510,7 +510,7 @@ class NormalDist:
         if not variance:
             raise StatisticsError('pdf() not defined when sigma is zero')
         return _exp((x - self.mu) ** 2.0 / (-2.0 * variance)) / _sqrt(_tau * variance)
-    
+
     def cdf(self, x):
         """
         cdf(self, x)
@@ -595,13 +595,13 @@ class NormalDist:
         if q < 0.0:
             x = -x
         return mu + (x * sigma)
-        
+
     def inv_cdf(self: NormalDist, p: float):
         """
         inv_cdf(self, p)
 
         Inverse cumulative distribution function.  x : P(X <= x) = p
-        
+
         Finds the value of the random variable such that the probability of
         the variable being less than or equal to that value equals the given
         probability.
@@ -617,9 +617,9 @@ class NormalDist:
         quantiles(self, n)
 
         Divide into *n* continuous intervals with equal probability.
-        
+
         Returns a list of (n - 1) cut points separating the intervals.
-        
+
         Set *n* to 4 for quartiles (the default).  Set *n* to 10 for deciles.
         Set *n* to 100 for percentiles which gives the 99 cuts points that
         separate the normal distribution in to 100 equal sized groups.
@@ -631,32 +631,32 @@ class NormalDist:
         overlap(self, other)
 
         Compute the overlapping coefficient (OVL) between two normal distributions.
-        
+
         Measures the agreement between two normal probability distributions.
         Returns a value between 0.0 and 1.0 giving the overlapping area in
         the two underlying probability density functions.
         """
         X, Y = self, other
-        
+
         if (Y.sigma, Y.mu) < (X.sigma, X.mu):       # sort to assure commutativity
             X, Y = Y, X
-        
+
         X_var, Y_var = X.variance, Y.variance
-        
+
         if not X_var or not Y_var:
             raise StatisticsError('overlap() not defined when sigma is zero')
-        
+
         dv = Y_var - X_var
         dm = _fabs(Y.mu - X.mu)
-        
+
         if not dv:
             return 1.0 - _erf(dm / (2.0 * X.sigma * _sqrt(2.0)))
-        
+
         a = X.mu * Y_var - Y.mu * X_var
         b = X.sigma * Y.sigma * _sqrt(dm**2.0 + dv * _log(Y_var / X_var))
         x1 = (a + b) / dv
         x2 = (a - b) / dv
-        
+
         return 1.0 - (_fabs(Y.cdf(x1) - X.cdf(x1)) + _fabs(Y.cdf(x2) - X.cdf(x2)))
 
     def samples[T](self: NormalDist, n: int):
@@ -668,9 +668,9 @@ class NormalDist:
         TODO/CAVEATS:
         @jordan- for now seed is removed
                  should be: `gauss = random.gauss if seed is None else random.Random(seed).gauss`
-                        ** having troubles with random.Random(seed).gauss 
+                        ** having troubles with random.Random(seed).gauss
         """
-        gauss = random.gauss 
+        gauss = random.gauss
         return [gauss(self.mu, self.sigma) for i in range(n)]
 
     def from_samples(data: list[float]):

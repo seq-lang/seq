@@ -223,7 +223,7 @@ test_pstdev()
 def test_variance():
     data = [4.0, 7.0, 13.0, 16.0]
     assert statistics.variance(data) == 30.0
-    
+
     data = [1/4, 1/4, 3/4, 7/4]
     assert statistics.variance(data) == 1/2
 test_variance()
@@ -232,7 +232,7 @@ test_variance()
 def test_stdev():
     data = [4.0, 7.0, 13.0, 16.0]
     assert statistics.stdev(data) == math.sqrt(statistics.variance(data))
-    
+
     data = [1/4, 1/4, 3/4, 7/4]
     assert statistics.stdev(data) == math.sqrt(statistics.variance(data))
 test_stdev()
@@ -328,6 +328,6 @@ test_samples()
 def test_from_samples():
     data = [96.0, 107.0, 90.0, 92.0, 110.0]
     ND = statistics.NormalDist.from_samples(data)
-    assert ND == statistics.NormalDist(99.0, 9.0) 
+    assert ND == statistics.NormalDist(99.0, 9.0)
 test_from_samples()
 
