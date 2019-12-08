@@ -92,8 +92,10 @@ SEQ_FUNC void seq_terminate(void *exc) {
   void *obj = base->obj;
   auto *hdr = (SeqExcHeader_t *)obj;
   fwrite(hdr->type.str, 1, (size_t)hdr->type.len, stderr);
-  fputs(": ", stderr);
-  fwrite(hdr->msg.str, 1, (size_t)hdr->msg.len, stderr);
+  if (hdr->msg.len > 0) {
+    fputs(": ", stderr);
+    fwrite(hdr->msg.str, 1, (size_t)hdr->msg.len, stderr);
+  }
   fputs("\n\n", stderr);
   fputs("raised from: ", stderr);
   fwrite(hdr->func.str, 1, (size_t)hdr->func.len, stderr);

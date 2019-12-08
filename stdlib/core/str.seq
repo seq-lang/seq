@@ -1050,7 +1050,7 @@ extend str:
         start, end = self._correct_indices(start, end)
         i = self.find(sub, start, end)
         if i == -1:
-            raise ValueError("ValueError: substring not found")
+            raise ValueError("substring not found")
         else:
             return i
 
@@ -1063,7 +1063,7 @@ extend str:
         start, end = self._correct_indices(start, end)
         i = self.rfind(sub, start, end)
         if i == -1:
-            raise ValueError("ValueError: substring not found")
+            raise ValueError("substring not found")
             return -1
         else:
             return i

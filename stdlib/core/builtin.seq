@@ -109,7 +109,7 @@ def next[T](g: generator[T], default: optional[T] = None):
         if default:
             return ~default
         else:
-            raise StopIteration("StopIteration")
+            raise StopIteration()
     return g.next()
 
 def any(x):
