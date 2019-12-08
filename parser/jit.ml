@@ -30,7 +30,10 @@ let init () : t =
     in
     let jit = { cnt = 1; ctx } in
     (* load stdlib *)
+    Util.dbg "===== launching exec...";
+    let _t = Unix.gettimeofday () in
     Llvm.JIT.func ctx.mdl anon_fn;
+    Util.dbg "... took %f for the whole OCaml part" (Unix.gettimeofday() -. _t);
     jit
   with
   | Err.CompilerError (typ, pos_lst) ->
