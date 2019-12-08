@@ -154,6 +154,31 @@ def test_set():
     s1c |= s2c
     assert s1c == {2, 3, 4, 5}
     assert s1 == {1, 2, 3, 4}
+
+    s1 = {1, 2, 3, 999999}
+    s2 = {1, 2, 3, 999999}
+    v = s1.pop()
+    assert v in s2
+    s2.remove(v)
+
+    v = s1.pop()
+    assert v in s2
+    s2.remove(v)
+
+    v = s1.pop()
+    assert v in s2
+    s2.remove(v)
+
+    v = s1.pop()
+    assert v in s2
+    s2.remove(v)
+
+    try:
+        s1.pop()
+        assert False
+    except ValueError:
+        pass
+
 test_set()
 
 @test
