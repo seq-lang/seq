@@ -141,6 +141,15 @@ class set[K]:
         else:
             raise KeyError(str(key))
 
+    def pop(self: set[K]):
+        i = self._kh_begin()
+        while i < self._kh_end():
+            if self._kh_exist(i):
+                k = self._keys[i]
+                self._kh_del(i)
+                return k
+        raise ValueError("empty set")
+
     def discard(self: set[K], key: K):
         x = self._kh_get(key)
         if x != self._kh_end():
