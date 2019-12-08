@@ -189,7 +189,7 @@ type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore
 
     def aux(self: SAMRecord, tag: str):
         if len(tag) != 2:
-            raise ArgumentError("SAM aux tags are two characters (got: " + tag + ")")
+            raise ValueError("SAM aux tags are two characters (got: " + tag + ")")
         return SAMAux(_C.seq_hts_aux_get(self._aux, tag))
 
 extend SAMHeaderTarget:

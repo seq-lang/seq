@@ -1,27 +1,63 @@
 class Exc1:
-    msg: str
+    _hdr: ExcHeader
+    def __init__(self: Exc1, msg: str):
+        self._hdr = ('Exc1', msg, '', '', 0, 0)
     def show(self):
-        print self.msg
+        print self._hdr.msg
+    @property
+    def message(self: Exc1):
+        return self._hdr.msg
+
 
 class Exc2:
-    msg: str
+    _hdr: ExcHeader
+    def __init__(self: Exc2, msg: str):
+        self._hdr = ('Exc2', msg, '', '', 0, 0)
     def show(self):
-        print self.msg
+        print self._hdr.msg
+    @property
+    def message(self: Exc2):
+        return self._hdr.msg
 
 class A:
-    msg: str
+    _hdr: ExcHeader
+    def __init__(self: A, msg: str):
+        self._hdr = ('A', msg, '', '', 0, 0)
+    @property
+    def message(self: A):
+        return self._hdr.msg
 
 class B:
-    msg: str
+    _hdr: ExcHeader
+    def __init__(self: B, msg: str):
+        self._hdr = ('B', msg, '', '', 0, 0)
+    @property
+    def message(self: B):
+        return self._hdr.msg
 
 class C:
-    msg: str
+    _hdr: ExcHeader
+    def __init__(self: C, msg: str):
+        self._hdr = ('C', msg, '', '', 0, 0)
+    @property
+    def message(self: C):
+        return self._hdr.msg
 
 class D:
-    msg: str
+    _hdr: ExcHeader
+    def __init__(self: D, msg: str):
+        self._hdr = ('D', msg, '', '', 0, 0)
+    @property
+    def message(self: D):
+        return self._hdr.msg
 
 class E:
-    msg: str
+    _hdr: ExcHeader
+    def __init__(self: E, msg: str):
+        self._hdr = ('E', msg, '', '', 0, 0)
+    @property
+    def message(self: E):
+        return self._hdr.msg
 
 def foo1(x):
     if x:
@@ -45,11 +81,11 @@ def bar(x):
         print 'error'
     except Exc1 as e:
         print 'catch Exc1 1'
-        print e.msg
+        print e.message
         print 'catch Exc1 2'
     except Exc2 as e:
         print 'catch Exc2 1'
-        print e.msg
+        print e.message
         print 'catch Exc2 2'
     finally:
         print 'finally'
@@ -62,11 +98,11 @@ def baz(x):
         print 'try 2'
     except Exc1 as e:
         print 'catch Exc1 1'
-        print e.msg
+        print e.message
         print 'catch Exc1 2'
     except Exc2 as e:
         print 'catch Exc2 1'
-        print e.msg
+        print e.message
         print 'catch Exc2 2'
     finally:
         print 'finally'
@@ -79,7 +115,7 @@ def baz1(x):
         print 'try 1.2'
     except Exc1 as e:
         print 'catch Exc1 1.1'
-        print e.msg
+        print e.message
         print 'catch Exc1 1.2'
     finally:
         print 'finally 1'
@@ -117,7 +153,7 @@ def nest2(b):
             finally:
                 print 'f B'
         except C as c:
-            print c.msg
+            print c.message
         finally:
             print 'f C'
     except D:

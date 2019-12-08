@@ -52,16 +52,23 @@ struct OurBaseException_t {
 
 typedef struct OurBaseException_t OurException;
 
+struct SeqExcHeader_t {
+  seq_str_t type;
+  seq_str_t msg;
+  seq_str_t func;
+  seq_str_t file;
+  seq_int_t line;
+  seq_int_t col;
+};
+
 void seq_exc_init() {
   ourBaseFromUnwindOffset = seq_exc_offset();
   ourBaseExceptionClass = seq_exc_class();
 }
 
 static void seq_delete_exc(_Unwind_Exception *expToDelete) {
-  /*
   if (expToDelete && (expToDelete->exception_class == ourBaseExceptionClass))
-          free((char *)expToDelete + ourBaseFromUnwindOffset);
-   */
+    seq_free((char *)expToDelete + ourBaseFromUnwindOffset);
 }
 
 static void seq_delete_unwind_exc(_Unwind_Reason_Code reason,
@@ -83,9 +90,20 @@ SEQ_FUNC void *seq_alloc_exc(int type, void *obj) {
 SEQ_FUNC void seq_terminate(void *exc) {
   auto *base = (OurBaseException_t *)((char *)exc + seq_exc_offset());
   void *obj = base->obj;
-  auto *msg = (seq_str_t *)obj;
-  fputs("terminating with exception: ", stderr);
-  fwrite(msg->str, 1, (size_t)msg->len, stderr);
+  auto *hdr = (SeqExcHeader_t *)obj;
+  fwrite(hdr->type.str, 1, (size_t)hdr->type.len, stderr);
+  fputs(": ", stderr);
+  fwrite(hdr->msg.str, 1, (size_t)hdr->msg.len, stderr);
+  fputs("\n\n", stderr);
+  fputs("raised from: ", stderr);
+  fwrite(hdr->func.str, 1, (size_t)hdr->func.len, stderr);
+  fputs("\n", stderr);
+  fwrite(hdr->file.str, 1, (size_t)hdr->file.len, stderr);
+  if (hdr->line > 0) {
+    fprintf(stderr, ":%lld", hdr->line);
+    if (hdr->col > 0)
+      fprintf(stderr, ":%lld", hdr->col);
+  }
   fputs("\n", stderr);
   abort();
 }

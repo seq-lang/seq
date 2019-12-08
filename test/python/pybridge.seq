@@ -30,7 +30,7 @@ def test_pythrow():
     try:
         throw_exc()
     except PyError as e:
-        assert e.pytype + ":" + e.msg == "ValueError:foo"
+        assert e.pytype + ":" + e.message == "ValueError:foo"
         return
     assert False
 test_pythrow()

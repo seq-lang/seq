@@ -878,9 +878,12 @@ void Throw::codegen0(BasicBlock *&block) {
     throw exc::SeqException("cannot throw generic type '" + type->getName() +
                             "'");
 
-  if (refType->numBaseTypes() < 1 || !refType->getBaseType(0)->is(types::Str))
+  static types::RecordType *excHeader = types::RecordType::get(
+      {types::Str, types::Str, types::Str, types::Str, types::Int, types::Int},
+      {}, "ExcHeader");
+  if (refType->numBaseTypes() < 1 || !refType->getBaseType(0)->is(excHeader))
     throw exc::SeqException(
-        "first member of thrown exception must be of type 'str'");
+        "first member of thrown exception must be of type 'ExcHeader'");
 
   LLVMContext &context = block->getContext();
   Module *module = block->getModule();
@@ -889,6 +892,36 @@ void Throw::codegen0(BasicBlock *&block) {
 
   Value *obj = expr->codegen(getBase(), block);
   IRBuilder<> builder(block);
+
+  // add meta-info like func/file/line/col
+  Type *hdrType = excHeader->getLLVMType(context);
+  Value *hdrPtr = builder.CreateBitCast(obj, hdrType->getPointerTo());
+  Value *hdr = builder.CreateLoad(hdrPtr);
+
+  std::string funcNameStr = "<main>";
+  if (auto *func = dynamic_cast<Func *>(getBase())) {
+    funcNameStr = func->genericName() + "()";
+  }
+  std::string fileNameStr = getSrcInfo().file;
+  seq_int_t fileLine = getSrcInfo().line;
+  seq_int_t fileCol = getSrcInfo().col;
+
+  StrExpr funcNameExpr(funcNameStr);
+  Value *funcNameVal = funcNameExpr.codegen(getBase(), block);
+
+  StrExpr fileNameExpr(fileNameStr);
+  Value *fileNameVal = fileNameExpr.codegen(getBase(), block);
+
+  Value *fileLineVal = ConstantInt::get(seqIntLLVM(context), fileLine, true);
+  Value *fileColVal = ConstantInt::get(seqIntLLVM(context), fileCol, true);
+
+  hdr = excHeader->setMemb(hdr, "3", funcNameVal, block);
+  hdr = excHeader->setMemb(hdr, "4", fileNameVal, block);
+  hdr = excHeader->setMemb(hdr, "5", fileLineVal, block);
+  hdr = excHeader->setMemb(hdr, "6", fileColVal, block);
+  builder.SetInsertPoint(block);
+  builder.CreateStore(hdr, hdrPtr);
+
   Value *exc = builder.CreateCall(
       excAllocFunc, {ConstantInt::get(IntegerType::getInt32Ty(context),
                                       (uint64_t)type->getID(), true),

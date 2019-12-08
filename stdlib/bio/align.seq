@@ -14,11 +14,11 @@ from core.c_stubs import CIGAR, Alignment
 
 def _validate_gap(g: int):
     if g < 0 or g >= 128:
-        raise ArgumentError("gap penalty for alignment must be in range [0, 127]")
+        raise ValueError("gap penalty for alignment must be in range [0, 127]")
 
 def _validate_match(m: int):
     if m < 0 or m >= 128:
-        raise ArgumentError("match/mismatch penalty for alignment must be in range [0, 127]")
+        raise ValueError("match/mismatch penalty for alignment must be in range [0, 127]")
 
 type AlignConfig(mat: ptr[i8], gap1: tuple[int,int], gap2: tuple[int,int], bandwidth: int, zdrop: int, flags: int):
     def _gen_mat(a: int, b: int):
