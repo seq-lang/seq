@@ -299,7 +299,7 @@ let rec e_setpos new_pos (_, node) =
     | Dict l -> Dict (List.map l ~f:(fun (x, y) -> f x, f y))
     | IfExpr (a, b, c) -> IfExpr (f a, f b, f c)
     | Unary (o, e) -> Unary (o, f e)
-    | Binary (l, o, r) -> Binary (f l, o, f l)
+    | Binary (l, o, r) -> Binary (f l, o, f r)
     | Dot (e, d) -> Dot (f e, d)
     | TypeOf e -> TypeOf (f e)
     | Index (a, l) -> Index (f a, f l)

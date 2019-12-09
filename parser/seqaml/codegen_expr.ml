@@ -123,6 +123,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         | '{' -> acc, depth + 1, last
         | '}' when depth = 1 ->
           let code = String.sub s ~pos:last ~len:(i - last) in
+          eprintf "??? %s\n" @@ code;
           let expr = match Parser.parse ~file:ctx.filename code with
             | [ _, Expr e ] -> Ast.(e_call ~pos (e_id ~pos "str") [e_setpos pos e])
             | _ -> failwith "invalid f-parse"
@@ -136,7 +137,9 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     let acc = List.rev @@ (if str = "" then acc else (pos, String str) :: acc) in
     let lh_expr = Ast.(e_dot ~pos (e_id ~pos "str") "cat") in
     let rh_expr = pos, List acc in
-    parse_call ctx pos (lh_expr, [ pos, { name = None; value = rh_expr } ])
+    let expr = Ast.e_call lh_expr [rh_expr] in
+    eprintf "--> %s\n%!" @@ Ast.Expr.to_string expr;
+    parse ~ctx expr
 
   and parse_seq ctx pos (p, s) =
     match p with
