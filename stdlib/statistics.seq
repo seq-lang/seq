@@ -1,7 +1,20 @@
 import bisect
 import random
 from math import frexp as _frexp, floor as _floor, fabs as _fabs, erf as _erf
-from math import gcd as _gcd, exp as _exp, log as _log, sqrt as _sqrt, tau as _tau
+from math import gcd as _gcd, exp as _exp, log as _log, sqrt as _sqrt, tau as _tau, hypot as _hypot
+
+class StatisticsError:
+    _hdr: ExcHeader
+
+    def __init__(self: StatisticsError):
+        self._hdr = ('StatisticsError', '', '', '', 0, 0)
+
+    def __init__(self: StatisticsError, message: str):
+        self._hdr = ('StatisticsError', message, '', '', 0, 0)
+
+    @property
+    def message(self: StatisticsError):
+        return self._hdr.msg
 
 def median[T](data: list[T]) -> float:
     """
@@ -15,11 +28,13 @@ def median[T](data: list[T]) -> float:
     """
     data = sorted(data)
     n = len(data)
-
+    if n == 0:
+        raise StatisticsError("no median for empty data")
     if n%2 == 1:
         return float(data[n//2])
-    i = n//2
-    return (data[i - 1] + data[i]) / 2
+    else:
+        i = n//2
+        return (data[i - 1] + data[i]) / 2
 
 def median_low[T](data: list[T]) -> float:
     """
@@ -32,7 +47,8 @@ def median_low[T](data: list[T]) -> float:
     """
     data = sorted(data)
     n = len(data)
-
+    if n == 0:
+        raise StatisticsError("no median for empty data")
     if n%2 == 1:
         return float(data[n//2])
     else:
@@ -49,6 +65,8 @@ def median_high[T](data: list[T]) -> float:
     """
     data = sorted(data)
     n = len(data)
+    if n == 0:
+        raise StatisticsError("no median for empty data")
     return float(data[n//2])
 
 def _find_lteq[T](a: list[T], x: float):
@@ -58,6 +76,7 @@ def _find_lteq[T](a: list[T], x: float):
     i = bisect.bisect_left(a, x)
     if i != len(a) and a[i] == x:
         return i
+    assert False
 
 def _find_rteq[T](a: list[T], l: int, x: float):
     """
@@ -66,19 +85,20 @@ def _find_rteq[T](a: list[T], l: int, x: float):
     i = bisect.bisect_right(a, x, lo=l)
     if i != (len(a)+1) and a[i-1] == x:
         return i-1
+    assert False
 
-def median_grouped[T](data: list[T], interval = 1) -> float:
+@deduceall
+def median_grouped[T,S](data: list[T], interval: S = 1) -> float:
     """
     median_grouped(data, interval)
 
     Return the 50th percentile (median) of grouped continuous data.
-
-    TODO/CAVEATS:
-    @jordan - interval only accepts integers for now
     """
     data = sorted(data)
     n = len(data)
-    if n == 1:
+    if n == 0:
+        raise StatisticsError("no median for empty data")
+    elif n == 1:
         return float(data[0])
 
     # Find the value at the midpoint.
@@ -140,7 +160,7 @@ def multimode[T](data: list[T]):
             mulmode.append(i)
     return mulmode
 
-def quantiles[T](data: list[T], n = 4, method = 'exclusive') -> list[float]:
+def quantiles[T](data: list[T], n: int = 4, method: str = 'exclusive') -> list[float]:
     """
     quantiles(data, n, method)
 
@@ -162,8 +182,12 @@ def quantiles[T](data: list[T], n = 4, method = 'exclusive') -> list[float]:
     TODO/CAVEATS:
     @jordan- need to check if n<1 and len(data)<2 and correct method called
     """
+    if n < 1:
+        raise StatisticsError('n must be at least 1')
     data = sorted(data)
     ld = len(data)
+    if ld < 2:
+        raise StatisticsError('must have at least two data points')
 
     if method == 'inclusive':
         m = ld - 1
@@ -184,6 +208,7 @@ def quantiles[T](data: list[T], n = 4, method = 'exclusive') -> list[float]:
             interpolated = (data[j-1] * (n - delta) + data[j] * delta) / n
             result.append(interpolated)
         return result
+    raise ValueError(f'Unknown method: {method}')
 
 def as_integer_ratio(x: float):
     """
@@ -194,7 +219,6 @@ def as_integer_ratio(x: float):
     Returns a pair (n, d) of integers.
     """
     float_part, exponent = _frexp(x)      # x == float_part * 2**exponent exactly
-
 
     for i in range(300):
         if float_part == _floor(float_part): break
@@ -223,7 +247,7 @@ def _lcm(x: int, y: int):
     else:
         greater = y
 
-    while(True):
+    while True:
         if greater % x == 0 and greater % y == 0:
             lcm = greater
             return lcm
@@ -287,6 +311,7 @@ def mean(data: list[float]) -> float:
     total = _sum(data)
     return total/n
 
+'''
 def fmean(data: list[float]) -> float:
     """
     fmean(data)
@@ -298,6 +323,7 @@ def fmean(data: list[float]) -> float:
              mean(data) deals with only floats. Thus this function is passed for now.
     """
     pass
+'''
 
 def geometric_mean(data: list[float]) -> float:
     """
@@ -349,9 +375,8 @@ def harmonic_mean(data: list[float]) -> float:
         return x
     total = 0.0
 
-    li = list[float]()
+    li = list[float](n)
     for x in _fail_neg(data, errmsg):
-        #ZeroDivisionError
         if x == 0.0:
             return 0.0
         li.append(1/x)
@@ -436,21 +461,39 @@ class NormalDist:
     Normal distribution of a random variable
     """
     PRECISION: float
-    mu: float
-    sigma: float
+    _mu: float
+    _sigma: float
 
     def __eq__(self: NormalDist, other: NormalDist):
-        return (self.mu - other.mu) < self.PRECISION and (self.sigma - other.sigma) < self.PRECISION
+        return (self._mu - other._mu) < self.PRECISION and (self._sigma - other._sigma) < self.PRECISION
 
-    def __init__(self: NormalDist, mu: float=0.0, sigma: float=1.0):
-        """
-        NormalDist where mu is the mean and sigma is the standard deviation.
-        """
+    def _init(self: NormalDist, mu: float, sigma: float):
         self.PRECISION = 1e-6
         if sigma < 0.0:
             raise StatisticsError('sigma must be non-negative')
-        self.mu = mu
-        self.sigma = sigma
+        self._mu = mu
+        self._sigma = sigma
+
+    def __init__(self: NormalDist, mu: float, sigma: float):
+        self._init(float(mu), float(sigma))
+
+    def __init__(self: NormalDist, mu: int, sigma: int):
+        self._init(float(mu), float(sigma))
+
+    def __init__(self: NormalDist, mu: float, sigma: int):
+        self._init(float(mu), float(sigma))
+
+    def __init__(self: NormalDist, mu: int, sigma: float):
+        self._init(float(mu), float(sigma))
+
+    def __init__(self: NormalDist, mu: float):
+        self._init(mu, 1.0)
+
+    def __init__(self: NormalDist, mu: int):
+        self._init(float(mu), 1.0)
+
+    def __init__(self: NormalDist):
+        self._init(0.0, 1.0)
 
     @property
     def mean(self: NormalDist):
@@ -459,7 +502,7 @@ class NormalDist:
 
         Arithmetic mean of the normal distribution.
         """
-        return self.mu
+        return self._mu
 
     @property
     def median(self: NormalDist):
@@ -468,7 +511,7 @@ class NormalDist:
 
         Return the median of the normal distribution
         """
-        return self.mu
+        return self._mu
 
     @property
     def mode(self: NormalDist):
@@ -480,7 +523,7 @@ class NormalDist:
         The mode is the value x where which the probability density
         function (pdf) takes its maximum value.
         """
-        return self.mu
+        return self._mu
 
     @property
     def stdev(self: NormalDist):
@@ -489,7 +532,7 @@ class NormalDist:
 
         Standard deviation of the normal distribution.
         """
-        return self.sigma
+        return self._sigma
 
     @property
     def variance(self: NormalDist):
@@ -498,7 +541,7 @@ class NormalDist:
 
         Square of the standard deviation.
         """
-        return self.sigma ** 2.0
+        return self._sigma ** 2.0
 
     def pdf(self, x):
         """
@@ -506,10 +549,10 @@ class NormalDist:
 
         Probability density function.  P(x <= X < x+dx) / dx
         """
-        variance = self.sigma ** 2.0
+        variance = self._sigma ** 2.0
         if not variance:
             raise StatisticsError('pdf() not defined when sigma is zero')
-        return _exp((x - self.mu) ** 2.0 / (-2.0 * variance)) / _sqrt(_tau * variance)
+        return _exp((x - self._mu) ** 2.0 / (-2.0 * variance)) / _sqrt(_tau * variance)
 
     def cdf(self, x):
         """
@@ -517,9 +560,9 @@ class NormalDist:
 
         Cumulative distribution function.  P(X <= x)
         """
-        if not self.sigma:
+        if not self._sigma:
             raise StatisticsError('cdf() not defined when sigma is zero')
-        return 0.5 * (1.0 + _erf((x - self.mu) / (self.sigma * _sqrt(2.0))))
+        return 0.5 * (1.0 + _erf((x - self._mu) / (self._sigma * _sqrt(2.0))))
 
     def _normal_dist_inv_cdf(self, p: float, mu: float, sigma: float):
         """
@@ -608,9 +651,9 @@ class NormalDist:
         """
         if p <= 0.0 or p >= 1.0:
             raise StatisticsError('p must be in the range 0.0 < p < 1.0')
-        if self.sigma <= 0.0:
+        if self._sigma <= 0.0:
             raise StatisticsError('cdf() not defined when sigma at or below zero')
-        return self._normal_dist_inv_cdf(p, self.mu, self.sigma)
+        return self._normal_dist_inv_cdf(p, self._mu, self._sigma)
 
     def quantiles(self: NormalDist, n: int=4):
         """
@@ -638,7 +681,7 @@ class NormalDist:
         """
         X, Y = self, other
 
-        if (Y.sigma, Y.mu) < (X.sigma, X.mu):       # sort to assure commutativity
+        if (Y._sigma, Y._mu) < (X._sigma, X._mu):       # sort to assure commutativity
             X, Y = Y, X
 
         X_var, Y_var = X.variance, Y.variance
@@ -647,13 +690,13 @@ class NormalDist:
             raise StatisticsError('overlap() not defined when sigma is zero')
 
         dv = Y_var - X_var
-        dm = _fabs(Y.mu - X.mu)
+        dm = _fabs(Y._mu - X._mu)
 
         if not dv:
-            return 1.0 - _erf(dm / (2.0 * X.sigma * _sqrt(2.0)))
+            return 1.0 - _erf(dm / (2.0 * X._sigma * _sqrt(2.0)))
 
-        a = X.mu * Y_var - Y.mu * X_var
-        b = X.sigma * Y.sigma * _sqrt(dm**2.0 + dv * _log(Y_var / X_var))
+        a = X._mu * Y_var - Y._mu * X_var
+        b = X._sigma * Y._sigma * _sqrt(dm**2.0 + dv * _log(Y_var / X_var))
         x1 = (a + b) / dv
         x2 = (a - b) / dv
 
@@ -671,7 +714,7 @@ class NormalDist:
                         ** having troubles with random.Random(seed).gauss
         """
         gauss = random.gauss
-        return [gauss(self.mu, self.sigma) for i in range(n)]
+        return [gauss(self._mu, self._sigma) for i in range(n)]
 
     def from_samples(data: list[float]):
         """
@@ -685,4 +728,80 @@ class NormalDist:
         xbar = mean(data)
         return NormalDist(xbar, stdev(data, xbar))
 
+    def __add__(x1: NormalDist, x2: NormalDist):
+        """Add a constant or another NormalDist instance.
+        If *other* is a constant, translate mu by the constant,
+        leaving sigma unchanged.
+        If *other* is a NormalDist, add both the means and the variances.
+        Mathematically, this works only if the two distributions are
+        independent or if they are jointly normally distributed.
+        """
+        return NormalDist(x1._mu + x2._mu, _hypot(x1._sigma, x2._sigma))
 
+    def __add__(x1: NormalDist, x2: float):
+        """Add a constant or another NormalDist instance.
+        If *other* is a constant, translate mu by the constant,
+        leaving sigma unchanged.
+        If *other* is a NormalDist, add both the means and the variances.
+        Mathematically, this works only if the two distributions are
+        independent or if they are jointly normally distributed.
+        """
+        return NormalDist(x1._mu + x2, x1._sigma)
+
+    def __sub__(x1: NormalDist, x2: NormalDist):
+        """Subtract a constant or another NormalDist instance.
+        If *other* is a constant, translate by the constant mu,
+        leaving sigma unchanged.
+        If *other* is a NormalDist, subtract the means and add the variances.
+        Mathematically, this works only if the two distributions are
+        independent or if they are jointly normally distributed.
+        """
+        return NormalDist(x1._mu - x2._mu, _hypot(x1._sigma, x2._sigma))
+
+    def __sub__(x1: NormalDist, x2: float):
+        """Subtract a constant or another NormalDist instance.
+        If *other* is a constant, translate by the constant mu,
+        leaving sigma unchanged.
+        If *other* is a NormalDist, subtract the means and add the variances.
+        Mathematically, this works only if the two distributions are
+        independent or if they are jointly normally distributed.
+        """
+        return NormalDist(x1._mu - x2, x1._sigma)
+
+    def __mul__(x1: NormalDist, x2: float):
+        """Multiply both mu and sigma by a constant.
+        Used for rescaling, perhaps to change measurement units.
+        Sigma is scaled with the absolute value of the constant.
+        """
+        return NormalDist(x1._mu * x2, x1._sigma * _fabs(x2))
+
+    def __truediv__(x1: NormalDist, x2: float):
+        """Divide both mu and sigma by a constant.
+        Used for rescaling, perhaps to change measurement units.
+        Sigma is scaled with the absolute value of the constant.
+        """
+        return NormalDist(x1._mu / x2, x1._sigma / _fabs(x2))
+
+    def __pos__(x1: NormalDist):
+        return NormalDist(x1._mu, x1._sigma)
+
+    def __neg__(x1: NormalDist):
+        return NormalDist(-x1._mu, x1._sigma)
+
+    def __radd__(x1: NormalDist, x2: float):
+        return x1 + x2
+
+    def __rsub__(x1: NormalDist, x2: NormalDist):
+        return -(x1 - x2)
+
+    def __rmul__(x1: NormalDist, x2: float):
+        return x1 * x2
+
+    def __eq__(x1: NormalDist, x2: NormalDist):
+        return x1._mu == x2._mu and x1._sigma == x2._sigma
+
+    def __hash__(self: NormalDist):
+        return hash((self._mu, self._sigma))
+
+    def __str__(self: NormalDist):
+        return f'NormalDist(mu={self._mu}, sigma={self._sigma})'
