@@ -149,19 +149,6 @@ class StopIteration:
     def message(self: StopIteration):
         return self._hdr.msg
 
-class StatisticsError:
-    _hdr: ExcHeader
-
-    def __init__(self: StatisticsError):
-        self._hdr = ('StatisticsError', '', '', '', 0, 0)
-
-    def __init__(self: StatisticsError, message: str):
-        self._hdr = ('StatisticsError', message, '', '', 0, 0)
-
-    @property
-    def message(self: StatisticsError):
-        return self._hdr.msg
-
 def check_errno(prefix: str):
     msg = _C.seq_check_errno()
     if msg:

@@ -330,4 +330,3 @@ def test_from_samples():
     ND = statistics.NormalDist.from_samples(data)
     assert ND == statistics.NormalDist(99.0, 9.0)
 test_from_samples()
-

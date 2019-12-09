@@ -150,7 +150,7 @@ INSTANTIATE_TEST_SUITE_P(
         testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
                         "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
                         "stdlib/sort_test.seq", "stdlib/random_test.seq",
-                        "stdlib/heapq_test.seq"),
+                        "stdlib/heapq_test.seq", "stdlib/statistics_test.seq"),
         testing::Values(true, false)),
     getTestNameFromParam);
 
