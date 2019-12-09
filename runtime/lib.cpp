@@ -308,12 +308,11 @@ struct Alignment {
 
 SEQ_FUNC void seq_align(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
                         int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
-                        seq_int_t flags, Alignment *out) {
+                        seq_int_t end_bonus, seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(encode);
   ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo, gape,
-                (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -332,12 +331,12 @@ SEQ_FUNC void seq_align_default(seq_t query, seq_t target, Alignment *out) {
 SEQ_FUNC void seq_align_dual(seq_t query, seq_t target, int8_t *mat,
                              int8_t gapo1, int8_t gape1, int8_t gapo2,
                              int8_t gape2, seq_int_t bandwidth, seq_int_t zdrop,
-                             seq_int_t flags, Alignment *out) {
+                             seq_int_t end_bonus, seq_int_t flags,
+                             Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(encode);
   ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo1, gape1, gapo2,
-                gape2, (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                gape2, (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -369,12 +368,11 @@ SEQ_FUNC void seq_align_global(seq_t query, seq_t target, int8_t *mat,
 
 SEQ_FUNC void seq_palign(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
                          int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
-                         seq_int_t flags, Alignment *out) {
+                         seq_int_t end_bonus, seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(pencode);
   ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo, gape,
-                (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -423,13 +421,12 @@ SEQ_FUNC void seq_palign_default(seq_t query, seq_t target, Alignment *out) {
 SEQ_FUNC void seq_palign_dual(seq_t query, seq_t target, int8_t *mat,
                               int8_t gapo1, int8_t gape1, int8_t gapo2,
                               int8_t gape2, seq_int_t bandwidth,
-                              seq_int_t zdrop, seq_int_t flags,
-                              Alignment *out) {
+                              seq_int_t zdrop, seq_int_t end_bonus,
+                              seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(pencode);
   ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo1, gape1, gapo2,
-                gape2, (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                gape2, (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
