@@ -11,17 +11,14 @@ NV_MAGICCONST = 4 * _exp(-0.5) / _sqrt(2.0)
 SG_MAGICCONST = 1.0 + _log(4.5)
 TWOPI = 2.0 * _pi
 
+# http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c
 class Generator:
     state: array[u32]     # the array for the state vector
-    state_size: int
-    initf: int
     next: int
 
     def __init__(self: Generator):
         self.state = array[u32](N)
-        self.state_size = 0
-        self.initf = 0
-        self.next = 0
+        self.next = N+1
 
     def gettimeofday(self: Generator):
         return _C.seq_time() * 1000
@@ -34,13 +31,8 @@ class Generator:
         """
         self.state[0] = s & u32(0xffffffff)
         for i in range(1, N):
-            self.state[i] = u32(1812433253 * (int(self.state[i-1]) ^ (int(self.state[i-1]) >> 30)) + i)
-
-            # for > 32 bit machines
-            self.state[i] &= u32(0xffffffff)
-
-        self.state_size = 1
-        self.initf = 1
+            self.state[i] = u32(1812433253) * (self.state[i-1] ^ (self.state[i-1]) >> u32(30)) + u32(i)
+        self.next = N
 
     def init_by_array(self: Generator, init_key: array[u32], key_length: int):
         """
@@ -52,21 +44,10 @@ class Generator:
         self.init_genrand(u32(19650218))
         i = 1
         j = 0
-        k = 0
-        if N > key_length:
-            k = N
-        else:
-            k = key_length
+        k = N if N > key_length else key_length
 
-        for l in reversed(range(0, k)):
-            self.state[i] = u32((int(self.state[i])
-                        ^ ((int(self.state[i-1])
-                        ^ (int(self.state[i-1]) >> 30))
-                        * 1664525))
-                        + int(init_key[j])
-                        + j)
-            # for WORDSIZE > 32 machines
-            self.state[i] &= u32(0xffffffff)
+        while k > 0:
+            self.state[i] = (self.state[i] ^ ((self.state[i-1] ^ (self.state[i-1] >> u32(30))) * u32(1664525))) + init_key[j] + j
             i += 1
             j += 1
 
@@ -75,51 +56,18 @@ class Generator:
                 i = 1
             if j >= key_length:
                 j = 0
+            k -= 1
 
-        for l in reversed(range(0, N-1)):
-            self.state[i] = u32((int(self.state[i])
-                        ^ ((int(self.state[i-1])
-                        ^ (int(self.state[i-1]) >> 30))
-                        * 1566083941))
-                        - i)
-            # for WORDSIZE > 32 machines
-            self.state[i] &= u32(0xffffffff)
+        k = N - 1
+        while k > 0:
+            self.state[i] = (self.state[i] ^ ((self.state[i-1] ^ (self.state[i-1] >> u32(30))) * u32(1566083941))) - i
             i += 1
             if i >= N:
                 self.state[0] = self.state[N-1]
                 i = 1
+            k -= 1
 
         self.state[0] = u32(0x80000000)
-        self.state_size = 1
-        self.initf = 1
-
-    def next_state(self: Generator):
-        """
-        next_state()
-        """
-
-        def mixbits(u, v):
-            return ((u) & u32(0x80000000)) | ((v) & u32(0x7fffffff))
-
-        def twist(u, v):
-            return (mixbits(u,v) >> u32(1)) ^ (u32(0x9908b0df) if (v)& u32(1) else u32(0))
-
-        # if init_genrand() has not been called, a default initial seed is used
-        if self.initf == 0:
-            self.init_genrand(u32(5489))
-
-        self.next = 0
-        self.state_size = N
-        i = 0
-        for j in range(N-M+1, -1, -1):
-            self.state[i] = self.state[M] ^ twist(self.state[i], self.state[i+1])
-            i += 1
-
-        for j in range(M, -1, -1):
-            self.state[i] = self.state[M-N] ^ twist(self.state[i], self.state[i+1])
-            i += 1
-
-        self.state[i] = self.state[M-N] ^ twist(self.state[i], self.state[0])
 
     def genrand_int32(self: Generator) -> u32:
         """
@@ -127,11 +75,36 @@ class Generator:
 
         generates a random number on [0,0xffffffff]-interval
         """
-        if self.next == self.state_size:
-            self.next_state()
-        self.next +=1
+        MATRIX_A = u32(0x9908b0df)
+        UPPER_MASK = u32(0x80000000)
+        LOWER_MASK = u32(0x7fffffff)
+        mag01 = __array__[u32](2)
+        mag01[0] = u32(0)
+        mag01[1] = MATRIX_A
 
-        y = u32(int(self.state[self.next]))
+        if self.next >= N:
+            if self.next == N+1:
+                self.init_genrand(u32(5489))
+
+            mt = self.state
+            kk = 0
+
+            while kk < N - M:
+                y = (mt[kk] & UPPER_MASK) | (mt[kk+1] & LOWER_MASK)
+                mt[kk] = mt[kk+M] ^ (y >> u32(1)) ^ mag01[int(y & u32(1))]
+                kk += 1
+
+            while kk < N - 1:
+                y = (mt[kk] & UPPER_MASK) | (mt[kk+1] & LOWER_MASK)
+                mt[kk] = mt[kk+(M-N)] ^ (y >> u32(1)) ^ mag01[int(y & u32(1))]
+                kk += 1
+
+            y = (mt[N-1] & UPPER_MASK) | (mt[0] & LOWER_MASK)
+            mt[N-1] = mt[M-1] ^ (y >> u32(1)) ^ mag01[int(y & u32(1))]
+            self.next = 0
+
+        y = self.state[self.next]
+        self.next += 1
 
         # Tempering
         y ^= (y >> u32(11))
@@ -150,8 +123,7 @@ class Generator:
 
         a = self.genrand_int32() >> u32(5)
         b = self.genrand_int32() >> u32(6)
-
-        return float((int(a) * 67108864.0 + int(b)) * (1.0 / 9007199254740992.0))
+        return (int(a)*67108864.0 + int(b)) * (1.0 / 9007199254740992.0)
 
     def random_seed_time_pid(self: Generator):
         """
