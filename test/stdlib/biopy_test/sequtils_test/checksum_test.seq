@@ -1,0 +1,13 @@
+import checksum
+
+str_light_chain_one =  ("QSALTQPASVSGSPGQSITISCTGTSSDVGSYNLVSWYQQ"
+                        "HPGKAPKLMIYEGSKRPSGVSNRFSGSKSGNTASLTISGL"
+                        "QAEDEADYYCSSYAGSSTLVFGGGTKLTVL")
+
+str_light_chain_two =  ("QSALTQPASVSGSPGQSITISCTGTSSDVGSYNLVSWYQQ"
+                        "HPGKAPKLMIYEGSKRPSGVSNRFSGSKSGNTASLTISGL"
+                        "QAEDEADYYCCSYAGSSTWVFGGGTKLTVL")
+
+def test_checksum():
+    num = checksum.crc64(str_light_chain_one)
+    print num

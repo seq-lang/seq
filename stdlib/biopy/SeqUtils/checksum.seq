@@ -1,0 +1,44 @@
+# def crc32(seq):
+#     """
+#     crc32(seq)
+
+#     Return the crc32 checksum for a sequence (string or Seq object).
+#     """
+#     return _crc32(_as_bytes(str(seq)))
+
+def _init_table_h():
+    _table_h = list[int]()
+    for i in range(256):
+        part_l = i
+        part_h = 0
+        for j in range(8):
+            rflag = part_l & 1
+            part_l >>= 1
+            if part_h & 1:
+                part_l |= 1 << 31
+            part_h >>= 1
+            if rflag:
+                part_h ^= 0xD8000000
+        _table_h.append(part_h)
+    return _table_h
+
+#Initialisation
+_table_h = _init_table_h()
+
+def crc64(s: str):
+    """
+    crc64(s)
+
+    Return the crc64 checksum for a sequence (string or Seq object).
+    """
+    crcl = 0
+    crch = 0
+    for c in s:
+        shr = (crch & 0xFF) << 24
+        temp1h = crch >> 8
+        temp1l = (crcl >> 8) | shr
+        idx = (crcl ^ ord(c)) & 0xFF
+        crch = temp1h ^ _table_h[idx]
+        crcl = temp1l
+
+    return "CRC-%08X%08X" % (crch, crcl)
