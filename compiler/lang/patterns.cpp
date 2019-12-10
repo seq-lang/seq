@@ -199,7 +199,10 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
 
   for (unsigned i = 0; i < patterns.size(); i++) {
     if (dynamic_cast<StarPattern *>(patterns[i])) {
-      assert(!hasStar);
+      if (hasStar) {
+        throw exc::SeqException("can have at most one ... in list pattern",
+                                getSrcInfo());
+      }
       star = i;
       hasStar = true;
     }
