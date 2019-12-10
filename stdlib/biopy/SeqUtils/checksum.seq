@@ -1,12 +1,15 @@
+
+# TODO/ CAVEATS:
+# @jordan - crc32() needs to be implemented
 # def crc32(seq):
 #     """
 #     crc32(seq)
 
 #     Return the crc32 checksum for a sequence (string or Seq object).
 #     """
-#     return _crc32(_as_bytes(str(seq)))
+#     return _crc32(seq)
 
-def _init_table_h():
+def _init_table_h() -> list[int]:
     _table_h = list[int]()
     for i in range(256):
         part_l = i
@@ -25,7 +28,7 @@ def _init_table_h():
 #Initialisation
 _table_h = _init_table_h()
 
-def crc64(s: str):
+def crc64(s: str) -> str:
     """
     crc64(s)
 
@@ -41,4 +44,53 @@ def crc64(s: str):
         crch = temp1h ^ _table_h[idx]
         crcl = temp1l
 
-    return "CRC-%08X%08X" % (crch, crcl)
+    # need it in 08X return f"CRC-{crch}{crcl}" 
+    return f"CRC-{crch}{crcl}"
+    #"CRC-%08X%08X" % (crch, crcl)
+
+def gcg(s: seq) -> int:
+    """
+    gcg(s)
+
+    Given a nucleotide or amino-acid secuence (or any string),
+    returns the GCG checksum (int). Checksum used by GCG program.
+    seq type = str.
+    """
+
+    index = 0
+    checksum = 0
+
+    for char in s:
+        index += 1
+        checksum += index * ord(char.upper())
+        if index == 57:
+            index = 0
+    return checksum % 10000
+
+# TODO/CAVEATS:
+# @jordan - This still needs to be implemented
+#hashlib and base64??
+# def seguid(s: seq) -> str:
+#     """
+#     seguid(seq: seq)
+
+#     Return the SEGUID (string) for a sequence (string or Seq object).
+    
+#     Given a nucleotide or amino-acid secuence (or any string),
+#     returns the SEGUID string (A SEquence Globally Unique IDentifier).
+#     seq type = str.
+#     """
+#     import hashlib
+#     import base64
+
+#     m = hashlib.sha1()
+#     m.update(_as_bytes(s.upper()))
+#     try:
+#         # For Python 3+
+#         tmp = base64.encodebytes(m.digest())
+#         return tmp.decode().replace("\n", "").rstrip("=")
+#     except AttributeError:
+#         pass
+#     # For all other Pythons
+#     return base64.b64encode(m.digest()).rstrip("=")
+

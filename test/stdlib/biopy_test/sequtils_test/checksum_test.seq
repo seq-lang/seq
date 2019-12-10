@@ -1,4 +1,4 @@
-import checksum
+from biopy.sequtils.checksum import crc64
 
 str_light_chain_one =  ("QSALTQPASVSGSPGQSITISCTGTSSDVGSYNLVSWYQQ"
                         "HPGKAPKLMIYEGSKRPSGVSNRFSGSKSGNTASLTISGL"
@@ -8,6 +8,9 @@ str_light_chain_two =  ("QSALTQPASVSGSPGQSITISCTGTSSDVGSYNLVSWYQQ"
                         "HPGKAPKLMIYEGSKRPSGVSNRFSGSKSGNTASLTISGL"
                         "QAEDEADYYCCSYAGSSTWVFGGGTKLTVL")
 
+@test
 def test_checksum():
-    num = checksum.crc64(str_light_chain_one)
-    print num
+    num1 = crc64(str_light_chain_one)
+    num2 = crc64(str_light_chain_two)
+    assert num1 == num2
+test_checksum()
