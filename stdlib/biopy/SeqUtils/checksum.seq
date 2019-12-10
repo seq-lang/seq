@@ -33,6 +33,9 @@ def crc64(s: str) -> str:
     crc64(s)
 
     Return the crc64 checksum for a sequence (string or Seq object).
+    
+    TODO/CAVEATS:
+    @jordan - return formatting crch and crcl as hex
     """
     crcl = 0
     crch = 0
@@ -48,7 +51,7 @@ def crc64(s: str) -> str:
     return f"CRC-{crch}{crcl}"
     #"CRC-%08X%08X" % (crch, crcl)
 
-def gcg(s: seq) -> int:
+def gcg(s: str) -> int:
     """
     gcg(s)
 
@@ -57,8 +60,7 @@ def gcg(s: seq) -> int:
     seq type = str.
     """
 
-    index = 0
-    checksum = 0
+    index = checksum = 0
 
     for char in s:
         index += 1
