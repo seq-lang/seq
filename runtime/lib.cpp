@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <string>
 #include <unistd.h>
 #include <unordered_map>
@@ -213,6 +214,57 @@ SEQ_FUNC void *seq_get_handle(const char *c) {
 
 SEQ_FUNC void seq_set_handle(const char *c, void *h) {
   dlopen_handles[std::string(c)] = h;
+}
+
+/*
+ * Threading
+ */
+
+SEQ_FUNC void *seq_lock_new() {
+  return (void *)new (seq_alloc_atomic(sizeof(timed_mutex))) timed_mutex();
+}
+
+SEQ_FUNC bool seq_lock_acquire(void *lock, bool block, double timeout) {
+  auto *m = (timed_mutex *)lock;
+  if (timeout < 0.0) {
+    if (block) {
+      m->lock();
+      return true;
+    } else {
+      return m->try_lock();
+    }
+  } else {
+    return m->try_lock_for(chrono::duration<double>(timeout));
+  }
+}
+
+SEQ_FUNC void seq_lock_release(void *lock) {
+  auto *m = (timed_mutex *)lock;
+  m->unlock();
+}
+
+SEQ_FUNC void *seq_rlock_new() {
+  return (void *)new (seq_alloc_atomic(sizeof(recursive_timed_mutex)))
+      recursive_timed_mutex();
+}
+
+SEQ_FUNC bool seq_rlock_acquire(void *lock, bool block, double timeout) {
+  auto *m = (recursive_timed_mutex *)lock;
+  if (timeout < 0.0) {
+    if (block) {
+      m->lock();
+      return true;
+    } else {
+      return m->try_lock();
+    }
+  } else {
+    return m->try_lock_for(chrono::duration<double>(timeout));
+  }
+}
+
+SEQ_FUNC void seq_rlock_release(void *lock) {
+  auto *m = (recursive_timed_mutex *)lock;
+  m->unlock();
 }
 
 /*
