@@ -284,6 +284,12 @@ class BAM:
         if self.file:
             _C.hts_close(self.file)
 
+        self.itr = cobj()
+        self.idx = cobj()
+        self.aln = cobj()
+        self.hdr = cobj()
+        self.file = cobj()
+
     def __enter__(self: BAM):
         pass
 
