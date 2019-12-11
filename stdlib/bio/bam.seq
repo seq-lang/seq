@@ -86,7 +86,7 @@ class SAMRecord:
     _core: SAMCore 
     _aux: str
     
-    def __init__(self: SAMRecord, aln: cobj) -> SAMRecord:
+    def __init__(self: SAMRecord, aln: cobj):
         name = _C.seq_hts_get_name(aln)
         read = _C.seq_hts_get_seq(aln)
         qual = _C.seq_hts_get_qual(aln)
