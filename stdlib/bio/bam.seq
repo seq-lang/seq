@@ -94,7 +94,7 @@ class SAMRecord:
         aux = _C.seq_hts_get_aux(aln)
         hts_core = ptr[_bam_core_t](aln)[0]
         core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
-        return (name, read, qual, cigar, core, aux)
+        # return (name, read, qual, cigar, core, aux)
 
     @property
     def name(self: SAMRecord):
