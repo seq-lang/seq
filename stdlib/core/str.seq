@@ -71,6 +71,7 @@ extend str:
         return self.__copy__()
 
     def __getitem__(self: str, s: slice):
+        if not len(self): return ""
         a, b = s
         if a < 0: a += len(self)
         if b < 0: b += len(self)
@@ -81,6 +82,7 @@ extend str:
         return str(self.ptr + a, b - a)
 
     def __getitem__(self: str, s: lslice):
+        if not len(self): return ""
         b = s.end
         if b < 0: b += len(self)
         if b > len(self): b = len(self)
@@ -89,6 +91,7 @@ extend str:
         return str(self.ptr, b)
 
     def __getitem__(self: str, s: rslice):
+        if not len(self): return ""
         a = s.start
         if a < 0: a += len(self)
         if a > len(self): a = len(self)
