@@ -227,7 +227,8 @@ public:
   ///                      exception if magic is missing
   /// @return output type of specified magic method
   virtual Type *magicOut(const std::string &name, std::vector<Type *> args,
-                         bool nullOnMissing = false);
+                         bool nullOnMissing = false,
+                         bool overloadsOnly = false);
 
   /// Codegens a call to the specified magic method. Throws
   /// an exception if the specified magic method does not

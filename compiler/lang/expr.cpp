@@ -1212,7 +1212,8 @@ static bool getExprForTupleIndex(Expr *arr, Expr *idx, types::RecordType *rec,
                                  GetElemExpr *result) {
   seq_int_t idxLit = 0;
   if (extractIntLiteral(idx, idxLit) &&
-      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
+      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true,
+                     /*overloadsOnly=*/true)) {
     seq_int_t idx = translateIndex(idxLit, rec->numBaseTypes());
     *result = GetElemExpr(arr,
                           (unsigned)(idx + 1)); // GetElemExpr is 1-based
@@ -1226,7 +1227,8 @@ static bool getExprForTupleSlice(Expr *arr, Expr *idx, types::RecordType *rec,
   std::vector<seq_int_t> args;
   types::RecordType *sliceType = nullptr;
   if (extractSliceLiteral(idx, args, sliceType) &&
-      !rec->magicOut("__getitem__", {sliceType}, /*nullOnMissing=*/true)) {
+      !rec->magicOut("__getitem__", {sliceType}, /*nullOnMissing=*/true,
+                     /*overloadsOnly=*/true)) {
     const seq_int_t length = rec->numBaseTypes();
     Slice s = getSliceIndices(args, sliceType, length);
     const seq_int_t resultLength =
