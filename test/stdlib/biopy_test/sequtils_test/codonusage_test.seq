@@ -14,11 +14,6 @@ def cai_for_gene():
     CAI = CodonAdaptationIndex()
     value = CAI.cai_for_gene("ATGCGTATCGATCGCGATACGATTAGGCGGATG")
     assert math.fabs(value - 0.09978) < PRECISION
-
-    C = CodonAdaptationIndex()
-    cai = X.cai_for_gene("ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGA")
-    print cai
-    # assert math.fabs(cai - 0.6723) < PRECISION
 cai_for_gene()
 
 def print_index():
