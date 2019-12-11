@@ -79,22 +79,21 @@ type SAMAux(s: ptr[u8]):
         return _C.bam_auxB2f(self.s, u32(idx))
 
 class SAMRecord:
-    _name: str 
-    _read: seq 
-    _qual: str 
-    _cigar: CIGAR 
-    _core: SAMCore 
+    _name: str
+    _read: seq
+    _qual: str
+    _cigar: CIGAR
+    _core: SAMCore
     _aux: str
-    
+
     def __init__(self: SAMRecord, aln: cobj):
-        name = _C.seq_hts_get_name(aln)
-        read = _C.seq_hts_get_seq(aln)
-        qual = _C.seq_hts_get_qual(aln)
-        cigar = _C.seq_hts_get_cigar(aln)
-        aux = _C.seq_hts_get_aux(aln)
+        self._name = _C.seq_hts_get_name(aln)
+        self._read = _C.seq_hts_get_seq(aln)
+        self._qual = _C.seq_hts_get_qual(aln)
+        self._cigar = _C.seq_hts_get_cigar(aln)
+        self._aux = _C.seq_hts_get_aux(aln)
         hts_core = ptr[_bam_core_t](aln)[0]
-        core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
-        # return (name, read, qual, cigar, core, aux)
+        self._core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
 
     @property
     def name(self: SAMRecord):
