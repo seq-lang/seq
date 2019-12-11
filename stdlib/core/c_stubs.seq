@@ -16,6 +16,12 @@ cimport seq_env() -> ptr[cobj]
 cimport seq_time() -> int
 cimport seq_time_monotonic() -> int
 cimport seq_pid() -> int
+cimport seq_lock_new() -> cobj
+cimport seq_lock_acquire(cobj, bool, float) -> bool
+cimport seq_lock_release(cobj)
+cimport seq_rlock_new() -> cobj
+cimport seq_rlock_acquire(cobj, bool, float) -> bool
+cimport seq_rlock_release(cobj)
 
 # <string.h>
 cimport strtoll(cobj, ptr[cobj], i32) -> int
@@ -111,13 +117,13 @@ cimport gzseek(cobj, int, i32) -> int
 type CIGAR(value: ptr[u32], len: int)
 type Alignment(_cigar: CIGAR, _score: int)
 type pseq(len: int, ptr: cobj)
-cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
-cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
+cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
+cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
 cimport seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
 cimport seq_align_global(seq, seq, ptr[i8], i8, i8, int, ptr[Alignment])
 cimport seq_align_default(seq, seq, ptr[Alignment])
-cimport seq_palign(pseq, pseq, ptr[i8], i8, i8, int, int, int, ptr[Alignment])
-cimport seq_palign_dual(pseq, pseq, ptr[i8], i8, i8, i8, i8, int, int, int, ptr[Alignment])
+cimport seq_palign(pseq, pseq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
+cimport seq_palign_dual(pseq, pseq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
 cimport seq_palign_global(pseq, pseq, ptr[i8], i8, i8, int, ptr[Alignment])
 cimport seq_palign_default(pseq, pseq, ptr[Alignment])
 

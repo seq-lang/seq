@@ -98,11 +98,15 @@ class set[K]:
         return self._size
 
     def __copy__(self: set[K]):
-        s = set[K]()
-        s.resize(self._n_buckets)
-        for k in self:
-            s.add(k)
-        return s
+        if len(self) == 0:
+            return set[K]()
+        n = self._n_buckets
+        f = khash.__ac_fsize(n)
+        flags_copy = ptr[u32](f)
+        keys_copy = ptr[K](n)
+        str.memcpy(ptr[byte](flags_copy), ptr[byte](self._flags), f * _gc.sizeof[u32]())
+        str.memcpy(ptr[byte](keys_copy), ptr[byte](self._keys), n * _gc.sizeof[K]())
+        return set[K](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy)
 
     def __str__(self: set[K]):
         n = len(self)

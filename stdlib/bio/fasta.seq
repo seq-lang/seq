@@ -34,6 +34,7 @@ type FASTA(file: gzFile, fai: list[int], names: list[str]):
         m = 0
 
         for a in self.file._iter():
+            if a == "": continue
             if a[0] == ">":
                 if n > 0:
                     assert m == n
@@ -51,7 +52,6 @@ type FASTA(file: gzFile, fai: list[int], names: list[str]):
         if n > 0:
             assert m == n
             yield (self.names[-1], seq(p, n))
-
         self.close()
 
     def close(self: FASTA):

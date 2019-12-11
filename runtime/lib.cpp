@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <string>
 #include <unistd.h>
 #include <unordered_map>
@@ -216,6 +217,57 @@ SEQ_FUNC void seq_set_handle(const char *c, void *h) {
 }
 
 /*
+ * Threading
+ */
+
+SEQ_FUNC void *seq_lock_new() {
+  return (void *)new (seq_alloc_atomic(sizeof(timed_mutex))) timed_mutex();
+}
+
+SEQ_FUNC bool seq_lock_acquire(void *lock, bool block, double timeout) {
+  auto *m = (timed_mutex *)lock;
+  if (timeout < 0.0) {
+    if (block) {
+      m->lock();
+      return true;
+    } else {
+      return m->try_lock();
+    }
+  } else {
+    return m->try_lock_for(chrono::duration<double>(timeout));
+  }
+}
+
+SEQ_FUNC void seq_lock_release(void *lock) {
+  auto *m = (timed_mutex *)lock;
+  m->unlock();
+}
+
+SEQ_FUNC void *seq_rlock_new() {
+  return (void *)new (seq_alloc_atomic(sizeof(recursive_timed_mutex)))
+      recursive_timed_mutex();
+}
+
+SEQ_FUNC bool seq_rlock_acquire(void *lock, bool block, double timeout) {
+  auto *m = (recursive_timed_mutex *)lock;
+  if (timeout < 0.0) {
+    if (block) {
+      m->lock();
+      return true;
+    } else {
+      return m->try_lock();
+    }
+  } else {
+    return m->try_lock_for(chrono::duration<double>(timeout));
+  }
+}
+
+SEQ_FUNC void seq_rlock_release(void *lock) {
+  auto *m = (recursive_timed_mutex *)lock;
+  m->unlock();
+}
+
+/*
  * Alignment
  *
  * Adapted from ksw2
@@ -308,12 +360,11 @@ struct Alignment {
 
 SEQ_FUNC void seq_align(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
                         int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
-                        seq_int_t flags, Alignment *out) {
+                        seq_int_t end_bonus, seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(encode);
   ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo, gape,
-                (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -332,12 +383,12 @@ SEQ_FUNC void seq_align_default(seq_t query, seq_t target, Alignment *out) {
 SEQ_FUNC void seq_align_dual(seq_t query, seq_t target, int8_t *mat,
                              int8_t gapo1, int8_t gape1, int8_t gapo2,
                              int8_t gape2, seq_int_t bandwidth, seq_int_t zdrop,
-                             seq_int_t flags, Alignment *out) {
+                             seq_int_t end_bonus, seq_int_t flags,
+                             Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(encode);
   ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo1, gape1, gapo2,
-                gape2, (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                gape2, (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -369,12 +420,11 @@ SEQ_FUNC void seq_align_global(seq_t query, seq_t target, int8_t *mat,
 
 SEQ_FUNC void seq_palign(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
                          int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
-                         seq_int_t flags, Alignment *out) {
+                         seq_int_t end_bonus, seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(pencode);
   ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo, gape,
-                (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -423,13 +473,12 @@ SEQ_FUNC void seq_palign_default(seq_t query, seq_t target, Alignment *out) {
 SEQ_FUNC void seq_palign_dual(seq_t query, seq_t target, int8_t *mat,
                               int8_t gapo1, int8_t gape1, int8_t gapo2,
                               int8_t gape2, seq_int_t bandwidth,
-                              seq_int_t zdrop, seq_int_t flags,
-                              Alignment *out) {
+                              seq_int_t zdrop, seq_int_t end_bonus,
+                              seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(pencode);
   ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo1, gape1, gapo2,
-                gape2, (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                gape2, (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }

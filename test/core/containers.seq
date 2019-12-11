@@ -183,9 +183,10 @@ test_set()
 
 @test
 def test_dict():
-    d1 = {a: a*a for a in range(100)}
+    d1 = copy({a: a*a for a in range(100)})
     assert len(d1) == 100
     d1 = {a: a*a for a in range(5)}
+    assert len(copy(dict[int,int]())) == 0
 
     assert [d1.get(a, -1) for a in range(6)] == [0, 1, 4, 9, 16, -1]
 
