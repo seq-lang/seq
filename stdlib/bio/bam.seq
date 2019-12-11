@@ -78,7 +78,14 @@ type SAMAux(s: ptr[u8]):
     def B2f(self: SAMAux, idx: int):
         return _C.bam_auxB2f(self.s, u32(idx))
 
-type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore, _aux: str):
+class SAMRecord:
+    _name: str 
+    _read: seq 
+    _qual: str 
+    _cigar: CIGAR 
+    _core: SAMCore 
+    _aux: str
+    
     def __init__(self: SAMRecord, aln: cobj) -> SAMRecord:
         name = _C.seq_hts_get_name(aln)
         read = _C.seq_hts_get_seq(aln)
