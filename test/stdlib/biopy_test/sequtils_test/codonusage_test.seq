@@ -1,0 +1,26 @@
+from biopy.sequtils.codonusage import CodonAdaptationIndex
+import math
+
+X = CodonAdaptationIndex()
+path = "/Users/jordanwatson1/seq/test/stdlib/biopy_test/sequtils_test/scratch.fasta"
+
+X.generate_index(path)
+
+@test
+def cai_for_gene():
+    PRECISION = 1e-6
+
+    # Test Codon Adaptation Index (CAI) using default E. coli data.
+    CAI = CodonAdaptationIndex()
+    value = CAI.cai_for_gene("ATGCGTATCGATCGCGATACGATTAGGCGGATG")
+    assert math.fabs(value - 0.09978) < PRECISION
+
+    C = CodonAdaptationIndex()
+    cai = X.cai_for_gene("ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGA")
+    print cai
+    # assert math.fabs(cai - 0.6723) < PRECISION
+cai_for_gene()
+
+def print_index():
+    X.print_index()
+# print_index()

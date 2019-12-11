@@ -28,7 +28,7 @@ def _init_table_h() -> list[int]:
 #Initialisation
 _table_h = _init_table_h()
 
-def crc64(s: str) -> str:
+def crc64(s) -> str:
     """
     crc64(s)
 
@@ -51,7 +51,7 @@ def crc64(s: str) -> str:
     return f"CRC-{crch}{crcl}"
     #"CRC-%08X%08X" % (crch, crcl)
 
-def gcg(s: str) -> int:
+def gcg(s) -> int:
     """
     gcg(s)
 
@@ -72,7 +72,7 @@ def gcg(s: str) -> int:
 # TODO/CAVEATS:
 # @jordan - This still needs to be implemented
 #hashlib and base64??
-# def seguid(s: seq) -> str:
+# def seguid(s) -> str:
 #     """
 #     seguid(seq: seq)
 
