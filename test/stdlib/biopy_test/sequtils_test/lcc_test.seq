@@ -1,0 +1,25 @@
+from biopy.sequtils.lcc import lcc_simp, lcc_mult
+import math
+
+str_light_chain_one =  ("QSALTQPASVSGSPGQSITISCTGTSSDVGSYNLVSWYQQ"
+                        "HPGKAPKLMIYEGSKRPSGVSNRFSGSKSGNTASLTISGL"
+                        "QAEDEADYYCSSYAGSSTLVFGGGTKLTVL")
+
+exp_simple_LCC = 1.03
+exp_window_LCC = (0.00, 1.00, 0.96, 0.96, 0.96, 0.65, 0.43, 0.35, 0.35, 0.35, 0.35, 0.53, 0.59, 0.26)
+
+@test
+def lcc_simp_test():
+    PRECISION = 1e2
+    assert math.fabs(lcc_simp(str_light_chain_one) - exp_simple_LCC) < PRECISION
+lcc_simp_test()
+
+@test
+def lcc_mult_test():
+    PRECISION = 1e2
+    values = lcc_mult(str_light_chain_one, 20)
+    assert len(values) == len(exp_window_LCC)
+
+    for val1, val2 in zip(values, exp_window_LCC):
+        assert math.fabs(val1 - val2) < PRECISION
+lcc_mult_test()
