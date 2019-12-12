@@ -71,33 +71,16 @@ extend str:
         return self.__copy__()
 
     def __getitem__(self: str, s: slice):
-        if not len(self): return ""
-        a, b = s
-        if a < 0: a += len(self)
-        if b < 0: b += len(self)
-        if a > len(self): a = len(self)
-        if b > len(self): b = len(self)
-        if not (0 <= a <= b <= len(self)):
-            self._slice_error()
-        return str(self.ptr + a, b - a)
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end)
+        return str(self.ptr + start, length)
 
     def __getitem__(self: str, s: lslice):
-        if not len(self): return ""
-        b = s.end
-        if b < 0: b += len(self)
-        if b > len(self): b = len(self)
-        if not (0 <= b <= len(self)):
-            self._slice_error()
-        return str(self.ptr, b)
+        start, stop, step, length = slice.adjust_indices(len(self), stop=s.end)
+        return str(self.ptr, length)
 
     def __getitem__(self: str, s: rslice):
-        if not len(self): return ""
-        a = s.start
-        if a < 0: a += len(self)
-        if a > len(self): a = len(self)
-        if not (0 <= a <= len(self)):
-            self._slice_error()
-        return str(self.ptr + a, len(self) - a)
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start)
+        return str(self.ptr + start, length)
 
     def __contains__(self: str, pattern: str):
         return self.find(pattern, 0, len(self)) >= 0
@@ -1167,9 +1150,6 @@ extend str:
                 return int(c1) - int(c2)
             i += 1
         return self.len - other.len
-
-    def _slice_error(self: str):
-        raise IndexError("string slice index error")
 
     def _isspace(b: byte):
         return b == byte(32) or b == byte(9) or b == byte(10) or \

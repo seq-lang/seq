@@ -624,15 +624,19 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   Function *func = implicitGen.getFunc();
 
   Value *gen;
+  // We codegen calls ourselves rather than going through funcType
+  // to avoid problems with automatic optional conversions (we don't
+  // want them here).
+  IRBuilder<> builder(block);
   if (getTryCatch()) {
     LLVMContext &context = block->getContext();
     Function *parent = block->getParent();
     BasicBlock *unwind = getTryCatch()->getExceptionBlock();
     BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
-    gen = funcType->call(base, func, args, block, normal, unwind);
+    gen = builder.CreateInvoke(func, normal, unwind, args);
     block = normal;
   } else {
-    gen = funcType->call(base, func, args, block, nullptr, nullptr);
+    gen = builder.CreateCall(func, args);
   }
 
   setBodyBase(body, oldBase);
