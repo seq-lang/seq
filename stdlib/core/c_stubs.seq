@@ -136,6 +136,7 @@ cimport sam_index_load(cobj, cobj) -> cobj
 cimport sam_hdr_read(cobj) -> cobj
 cimport sam_itr_querys(cobj, cobj, cobj) -> cobj
 cimport sam_read1(cobj, cobj, cobj) -> i32
+cimport bam_read1(cobj, cobj) -> i32
 cimport bam_init1() -> cobj
 cimport bam_cigar2qlen(int, ptr[u32]) -> int
 cimport bam_cigar2rlen(int, ptr[u32]) -> int
