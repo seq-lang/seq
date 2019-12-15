@@ -9,15 +9,21 @@
 #include <unordered_map>
 #include <vector>
 
+#ifdef __APPLE__
+#define BACKTRACE
+#endif
+
+#ifdef BACKTRACE
 #define UNW_LOCAL_ONLY
 #include <libunwind.h>
+
+#define BACKTRACE_LIMIT 20
+#endif
 
 /*
  * This is largely based on
  * llvm/examples/ExceptionDemo/ExceptionDemo.cpp
  */
-
-#define BACKTRACE_LIMIT 20
 
 namespace {
 template <typename Type_> static uintptr_t ReadType(const uint8_t *&p) {
@@ -51,17 +57,21 @@ struct OurExceptionType_t {
   int type;
 };
 
+#ifdef BACKTRACE
 struct BTItem {
   unw_word_t pc;
   unw_word_t offset;
   char *name;
 };
+#endif
 
 struct OurBaseException_t {
   OurExceptionType_t type; // Seq exception type
   void *obj;               // Seq exception instance
-  BTItem *bt;              // backtrace
-  unsigned bt_count;       // size of backtrace
+#ifdef BACKTRACE
+  BTItem *bt;        // backtrace
+  unsigned bt_count; // size of backtrace
+#endif
   _Unwind_Exception unwindException;
 };
 
@@ -85,10 +95,12 @@ static void seq_delete_exc(_Unwind_Exception *expToDelete) {
   if (!expToDelete || expToDelete->exception_class != ourBaseExceptionClass)
     return;
   auto *exc = (OurException *)((char *)expToDelete + ourBaseFromUnwindOffset);
+#ifdef BACKTRACE
   for (unsigned i = 0; i < exc->bt_count; i++) {
     seq_free(exc->bt[i].name);
   }
   seq_free(exc->bt);
+#endif
   seq_free(exc);
 }
 
@@ -109,6 +121,7 @@ SEQ_FUNC std::string seq_get_symbol(void *addr) {
 }
 
 SEQ_FUNC void *seq_alloc_exc(int type, void *obj) {
+#ifdef BACKTRACE
   // generate backtrace
   unw_cursor_t cursor;
   unw_context_t context;
@@ -152,19 +165,23 @@ SEQ_FUNC void *seq_alloc_exc(int type, void *obj) {
     bt = (BTItem *)seq_alloc(btv.size() * sizeof(*bt));
     memcpy(bt, &btv[0], btv.size() * sizeof(*bt));
   }
+#endif
 
   const size_t size = sizeof(OurException);
   auto *e = (OurException *)memset(seq_alloc(size), 0, size);
   assert(e);
   e->type.type = type;
   e->obj = obj;
+#ifdef BACKTRACE
   e->bt = bt;
   e->bt_count = btv.size();
+#endif
   e->unwindException.exception_class = ourBaseExceptionClass;
   e->unwindException.exception_cleanup = seq_delete_unwind_exc;
   return &(e->unwindException);
 }
 
+#ifdef BACKTRACE
 static void pretty_print_name(const char *name) {
   if (!name || *name == '\0') {
     fprintf(stderr, "\033[32m(?)\033[0m");
@@ -182,6 +199,7 @@ static void pretty_print_name(const char *name) {
     i++;
   }
 }
+#endif
 
 SEQ_FUNC void seq_terminate(void *exc) {
   auto *base = (OurBaseException_t *)((char *)exc + seq_exc_offset());
@@ -209,6 +227,7 @@ SEQ_FUNC void seq_terminate(void *exc) {
   }
   fprintf(stderr, "\n");
 
+#ifdef BACKTRACE
   if (base->bt_count) {
     BTItem *bt = base->bt;
     fprintf(stderr, "\n\033[1mbacktrace:\033[0m\n");
@@ -220,6 +239,7 @@ SEQ_FUNC void seq_terminate(void *exc) {
       fprintf(stderr, "\n");
     }
   }
+#endif
 
   abort();
 }
