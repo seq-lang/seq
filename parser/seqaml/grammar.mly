@@ -533,6 +533,8 @@ small_statement:
       in
       [ pos,
         Yield expr ]}
+  //| YIELD FROM expr 
+  //  { }
   // global statement
   | GLOBAL separated_nonempty_list(COMMA, ID)
     { List.map $2 ~f:(fun expr ->
@@ -870,7 +872,7 @@ func:
   // Seq function (def foo [ [type+] ] (param+) [ -> return ])
   | DEF; name = ID;
     intypes = generic_list?;
-    LP fn_args = separated_list(COMMA, typed_param); RP
+    LP fn_args = separated_list(COMMA, typed_param); COMMA? RP
     typ = func_ret_type?;
     COLON;
     s = suite
