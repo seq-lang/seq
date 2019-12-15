@@ -82,8 +82,7 @@ void StarPattern::resolveTypes(types::Type *type) {}
 
 Value *StarPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                             BasicBlock *&block) {
-  assert(0);
-  return nullptr;
+  throw exc::SeqException("misplaced '...'", getSrcInfo());
 }
 
 IntPattern::IntPattern(seq_int_t val) : Pattern(types::Int), val(val) {}
@@ -607,6 +606,7 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);
   } else {
     assert(0);
+    return nullptr;
   }
 }
 
