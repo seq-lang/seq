@@ -676,10 +676,9 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       | StrPattern s -> Llvm.Pattern.str s
       | SeqPattern s -> Llvm.Pattern.seq s
       | TuplePattern tl ->
-        List.iter tl ~f:(function
+        let tl = List.map tl ~f:(function
           | StarPattern -> serr ~pos "invalid tuple pattern"
-          | _ -> ());
-        let tl = List.map tl ~f:(parse_pattern ctx pos) in
+          | p -> parse_pattern ctx pos p) in
         Llvm.Pattern.record tl
       | RangePattern (i, j) -> Llvm.Pattern.range i j
       | ListPattern tl ->
@@ -702,6 +701,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     in 
     Llvm.Stmt.set_pos p pos;
     p
+
 
   (** Helper for parsing generic parameters.
       Parses generic parameters, assigns names to unnamed generics and calls C++ APIs to denote generic functions/classes.

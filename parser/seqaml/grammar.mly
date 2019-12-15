@@ -727,7 +727,7 @@ case_int:
 case_or:
   | p = separated_nonempty_list(OR, case_type)
     {
-      OrPattern(p)
+      if List.length(p) = 1 then List.hd_exn p else OrPattern(p)
     }
 // Pattern rules
 case_type:
