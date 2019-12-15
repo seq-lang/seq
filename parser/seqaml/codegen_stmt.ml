@@ -676,6 +676,9 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       | StrPattern s -> Llvm.Pattern.str s
       | SeqPattern s -> Llvm.Pattern.seq s
       | TuplePattern tl ->
+        List.iter tl ~f:(function
+          | StarPattern -> serr ~pos "invalid tuple pattern"
+          | _ -> ());
         let tl = List.map tl ~f:(parse_pattern ctx pos) in
         Llvm.Pattern.record tl
       | RangePattern (i, j) -> Llvm.Pattern.range i j
