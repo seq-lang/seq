@@ -702,42 +702,33 @@ case_suite:
 // Specific pattern suites
 case:
   // case pattern
-  | CASE separated_nonempty_list(OR, case_type) COLON suite
+  | CASE case_or COLON suite
     {
-      let pattern = match $2 with
-        | [WildcardPattern (Some "_")] ->
-          WildcardPattern None
-        | [p] -> p
-        | l -> OrPattern l
-      in
       pos $1 $3,
-      { pattern; case_stmts = $4 } }
+      { pattern = $2; case_stmts = $4 } }
   // guarded: case pattern if foo
-  | CASE separated_nonempty_list(OR, case_type) IF bool_expr COLON suite
-    { let pattern =
-        if List.length $2 = 1 then List.hd_exn $2
-        else OrPattern $2
-      in
-      pos $1 $5,
-      { pattern = GuardedPattern (pattern, $4); case_stmts = $6 } }
+  | CASE case_or IF bool_expr COLON suite
+    { pos $1 $5,
+      { pattern = GuardedPattern ($2, $4); case_stmts = $6 } }
   // bounded: case pattern as id:
-  | CASE separated_nonempty_list(OR, case_type) AS ID COLON suite
-    { let pattern =
-        if List.length $2 = 1 then List.hd_exn $2
-        else OrPattern $2
-      in
-      pos $1 $5,
-      { pattern = BoundPattern (snd $4, pattern); case_stmts = $6 } }
+  | CASE case_or AS ID COLON suite
+    { pos $1 $5,
+      { pattern = BoundPattern (snd $4, $2); case_stmts = $6 } }
 case_int:
   | INT { Int64.of_string @@ snd $1 }
-  | ADD INT { Int64.of_string @@ snd $1 }
-  | SUB INT { Int64.neg (Int64.of_string @@ snd $1) }
+  | ADD INT { Int64.of_string @@ snd $2 }
+  | SUB INT { Int64.neg (Int64.of_string @@ snd $2) }
+case_or:
+  | p = separated_nonempty_list(OR, case_type)
+    {
+      OrPattern(p)
+    }
 // Pattern rules
 case_type:
   | ELLIPSIS
     { StarPattern }
   | ID
-    { WildcardPattern (Some (snd $1)) }
+    { match snd $1 with "_" -> WildcardPattern None | s -> WildcardPattern (Some s) }
   | case_int
     { IntPattern ($1) }
   | bool
@@ -748,9 +739,9 @@ case_type:
     { let pos, p, s = $1 in
       if p = "s" then SeqPattern s else Err.serr ~pos "cannot match protein sequences" }
   // Tuples & lists
-  | LP separated_nonempty_list(COMMA, case_type) RP
+  | LP separated_nonempty_list(COMMA, case_or) RP
     { TuplePattern ($2) }
-  | LS separated_list(COMMA, case_type) RS
+  | LS separated_list(COMMA, case_or) RS
     { ListPattern ($2) }
   // Ranges
   | case_int ELLIPSIS case_int
