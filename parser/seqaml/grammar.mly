@@ -728,14 +728,18 @@ case:
       in
       pos $1 $5,
       { pattern = BoundPattern (snd $4, pattern); case_stmts = $6 } }
+case_int:
+  | INT { Int64.of_string @@ snd $1 }
+  | ADD INT { Int64.of_string @@ snd $1 }
+  | SUB INT { Int64.neg (Int64.of_string @@ snd $1) }
 // Pattern rules
 case_type:
   | ELLIPSIS
     { StarPattern }
   | ID
     { WildcardPattern (Some (snd $1)) }
-  | INT
-    { IntPattern (Int64.of_string @@ snd $1) }
+  | case_int
+    { IntPattern ($1) }
   | bool
     { BoolPattern (snd $1) }
   | STRING
@@ -746,11 +750,11 @@ case_type:
   // Tuples & lists
   | LP separated_nonempty_list(COMMA, case_type) RP
     { TuplePattern ($2) }
-  | LS separated_nonempty_list(COMMA, case_type) RS
+  | LS separated_list(COMMA, case_type) RS
     { ListPattern ($2) }
   // Ranges
-  | INT ELLIPSIS INT
-    { RangePattern(Int64.of_string @@ snd $1, Int64.of_string @@ snd $3) }
+  | case_int ELLIPSIS case_int
+    { RangePattern($1, $3) }
 
 // Import statments
 import_statement:
