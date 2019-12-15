@@ -747,7 +747,7 @@ case_type:
   // Tuples & lists
   | LP separated_nonempty_list(COMMA, case_or) RP
     { TuplePattern ($2) }
-  | LS flexible_nonempty_list(COMMA, case_or) RS
+  | LS flexible_list(COMMA, case_or) RS
     { ListPattern ($2) }
   // Ranges
   | case_int ELLIPSIS case_int
