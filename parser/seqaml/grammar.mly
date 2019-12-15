@@ -531,8 +531,15 @@ small_statement:
       in
       [ pos,
         Yield expr ]}
-  //| YIELD FROM expr 
-  //  { }
+  | YIELD FROM expr 
+    {
+      (* for i in expr: yield i *)
+      let p = pos $1 (fst $3) in
+      let vname = new_assign () in
+      let var = p, Id (vname) in
+      let expr = p, Yield (Some var) in
+      [ p, For ([vname], $3, [expr]) ]
+    }
   // global statement
   | GLOBAL flexible_nonempty_list(COMMA, ID)
     { List.map $2 ~f:(fun expr ->
