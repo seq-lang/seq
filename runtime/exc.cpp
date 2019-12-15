@@ -120,10 +120,8 @@ SEQ_FUNC void *seq_alloc_exc(int type, void *obj) {
     unw_word_t pc, offset = -1;
     unw_proc_info_t info;
     unw_get_reg(&cursor, UNW_REG_IP, &pc);
-    if (pc == 0 || unw_get_proc_info(&cursor, &info) != 0) {
-      btv.clear();
+    if (pc == 0 || unw_get_proc_info(&cursor, &info) != 0)
       break;
-    }
 
     std::string sym;
     if (!symbols.empty()) {
