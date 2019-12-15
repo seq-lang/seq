@@ -620,9 +620,7 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   implicitGen.codegen(block->getModule());
 
   // now call the generator:
-  types::FuncType *funcType = implicitGen.getFuncType();
   Function *func = implicitGen.getFunc();
-
   Value *gen;
   // We codegen calls ourselves rather than going through funcType
   // to avoid problems with automatic optional conversions (we don't

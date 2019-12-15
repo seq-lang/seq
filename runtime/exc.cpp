@@ -205,9 +205,9 @@ SEQ_FUNC void seq_terminate(void *exc) {
   fprintf(stderr, "\033[0m\n");
   fwrite(hdr->file.str, 1, (size_t)hdr->file.len, stderr);
   if (hdr->line > 0) {
-    fprintf(stderr, ":%lld", hdr->line);
+    fprintf(stderr, ":%lld", (long long)hdr->line);
     if (hdr->col > 0)
-      fprintf(stderr, ":%lld", hdr->col);
+      fprintf(stderr, ":%lld", (long long)hdr->col);
   }
   fprintf(stderr, "\n");
 
@@ -215,10 +215,10 @@ SEQ_FUNC void seq_terminate(void *exc) {
     BTItem *bt = base->bt;
     fprintf(stderr, "\n\033[1mbacktrace:\033[0m\n");
     for (unsigned i = 0; i < base->bt_count; i++) {
-      fprintf(stderr, "  [\033[33m0x%llx\033[0m] ", bt[i].pc);
+      fprintf(stderr, "  [\033[33m0x%llx\033[0m] ", (long long)bt[i].pc);
       pretty_print_name(bt[i].name);
       if (bt[i].offset != -1)
-        fprintf(stderr, " (\033[33m+0x%llx\033[0m)", bt[i].offset);
+        fprintf(stderr, " (\033[33m+0x%llx\033[0m)", (long long)bt[i].offset);
       fprintf(stderr, "\n");
     }
   }

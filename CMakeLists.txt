@@ -44,6 +44,9 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/ksw2/ksw2_extz2_sse.cpp
                          runtime/ksw2/ksw2_gg2_sse.cpp)
 target_link_libraries(seqrt PUBLIC bz2 lzma ${ZLIB_LIBRARIES} ${GC_LIB} ${HTS_LIB} Threads::Threads)
+if(NOT APPLE)
+  target_link_libraries(seqrt unwind)
+endif()
 
 if(SEQ_THREADED)
   find_package(OpenMP REQUIRED)
