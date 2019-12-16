@@ -162,6 +162,19 @@ class AttributeError:
     def message(self: AttributeError):
         return self._hdr.msg
 
+class RuntimeError:
+    _hdr: ExcHeader
+
+    def __init__(self: RuntimeError):
+        self._hdr = ('RuntimeError', '', '', '', 0, 0)
+
+    def __init__(self: RuntimeError, message: str):
+        self._hdr = ('RuntimeError', message, '', '', 0, 0)
+
+    @property
+    def message(self: RuntimeError):
+        return self._hdr.msg
+
 def check_errno(prefix: str):
     msg = _C.seq_check_errno()
     if msg:
