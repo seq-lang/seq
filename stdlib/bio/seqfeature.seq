@@ -423,7 +423,7 @@ class SeqFeature:
                           typ=self.typ,
                           location_operator=self.location_operator,
                           id=self.id,
-                          qualifiers=OrderedDict(self.qualifiers.items()))
+                          qualifiers=self.OrderedDict(self.qualifiers.items()))
 
     def _flip(self: SeqFeature, length: int):
         """
@@ -433,7 +433,7 @@ class SeqFeature:
                           typ=self.typ,
                           location_operator=self.location_operator,
                           id=self.id,
-                          qualifiers=OrderedDict(self.qualifiers.items()))
+                          qualifiers=self.OrderedDict(self.qualifiers.items()))
 
     def extract(self: SeqFeature, parent_sequence: seq):
         """
@@ -514,7 +514,7 @@ class Reference:
     """
     Represent a Generic Reference object.
     """
-    location: list[Location]
+    location: list[FeatureLocation]
     authors: str
     title: str
     journal: str
@@ -526,7 +526,7 @@ class Reference:
         """
         Initialize the class.
         """
-        self.location = list[Location]()
+        self.location = list[FeatureLocation]()
         self.authors = ""
         self.consrtm = ""
         self.title = ""
@@ -556,7 +556,7 @@ class Reference:
         """
         Represent the Reference object as a string for debugging.
         """
-        return f"{self.__class__.__name__}(title={repr(self.title)}, ...)" 
+        return f"{self.__class__.__name__}(title={self.repr(self.title)}, ...)" 
 
     def __eq__(self: Reference, other: Reference):
         """
@@ -599,7 +599,7 @@ class CompoundLocation:
         """
         Return a representation of the CompoundLocation object.
         """
-        return f"{self.operator}, {", ".join(str(loc) for loc in self.parts)}"
+        return f"""{self.operator}, {(", ".join(str(loc) for loc in self.parts))}"""
 
     def __repr__(self: CompoundLocation):
         """
@@ -625,7 +625,7 @@ class CompoundLocation:
             loc.strand = value
     
     @property
-    def strand(self: CompoundLocation, fget=_get_strand, fset=_set_strand,
+    def strand(self: CompoundLocation, fget: optional[int]=None, fset: optional[int]=None,
                 doc="""Overall strand of the compound location.
                 If all the parts have the same strand, that is returned. Otherwise
                 for mixed strands, this returns None.
@@ -650,6 +650,10 @@ class CompoundLocation:
                 >>> f.strand
                 1
                 """):
+        if fget is None:
+            fget = self._get_strand
+        if fset is None:
+            fset = self._set_strand
         return self._strand
 
     def __add__(self: CompoundLocation, other: FeatureLocation):
@@ -841,14 +845,14 @@ class ExactPosition:
     position: int
     extension: int
 
-    def __new__(cls: ExactPosition, position: int, extension: int=0):
+    def __init__(cls: ExactPosition, position: int, extension: int=0):
         """
         Create an ExactPosition object.
         """
         if extension != 0:
             raise AttributeError(f"Non-zero extension {extension} for exact position.")
                     
-        return int.__new__(cls, position)
+        return int.__init__(cls, position)
 
     def __str__(self: ExactPosition):
         """
@@ -955,20 +959,20 @@ class WithinPosition:
     left: int
     right: int
 
-    def __new__(cls: WithinPosition, position: int, left: int, right: int):
+    def __init__(cls: WithinPosition, position: int, left: int, right: int):
         """
         Create a WithinPosition object.
         """
         if not (position == left or position == right):
             raise RuntimeError(f"WithinPosition: {position} should match left {left} or right {right}")
-        obj = int.__new__(cls, position)
+        obj = int.__init__(cls, position)
         obj._left = left
         obj._right = right
         return obj
 
     def __getnewargs__(self: WithinPosition):
         """
-        Return the arguments accepted by __new__.
+        Return the arguments accepted by __init__.
         Necessary to allow pickling and unpickling of class instances.
         """
         return (int(self), self._left, self._right)
@@ -1025,19 +1029,19 @@ class BetweenPosition:
     left: int
     right: int
 
-    def __new__(cls: BetweenPosition, position: int, left: int, right: int):
+    def __init__(cls: BetweenPosition, position: int, left: int, right: int):
         """
         Create a new instance in BetweenPosition object.
         """
         assert position == left or position == right
-        obj = int.__new__(cls, position)
+        obj = int.__init__(cls, position)
         obj._left = left
         obj._right = right
         return obj
 
     def __getnewargs__(self: BetweenPosition):
         """
-        Return the arguments accepted by __new__.
+        Return the arguments accepted by __init__.
         Necessary to allow pickling and unpickling of class instances.
         """
         return (int(self), self._left, self._right)
@@ -1093,14 +1097,14 @@ class BeforePosition:
     extension: int
 
     # Subclasses int so can't use __init__
-    def __new__(cls: BeforePosition, position: int, extension: int=0):
+    def __init__(cls: BeforePosition, position: int, extension: int=0):
         """
         Create a new instance in BeforePosition object.
         """
         if extension != 0:
             raise AttributeError(f"Non-zero extension {extension} for exact position.")
                                  
-        return int.__new__(cls, position)
+        return int.__init__(cls, position)
 
     @property
     def position(self: BeforePosition):
@@ -1138,7 +1142,7 @@ class BeforePosition:
         """
         Return a copy of the location after the parent is reversed (PRIVATE).
         """
-        return AfterPosition(length - int(self))
+        return self.AfterPosition(length - int(self))
 
 # class AfterPosition(int, AbstractPosition):
 class AfterPosition:
@@ -1149,13 +1153,13 @@ class AfterPosition:
     extension: int
 
     # Subclasses int so can't use __init__
-    def __new__(cls: AfterPosition, position: int, extension: int=0):
+    def __init__(cls: AfterPosition, position: int, extension: int=0):
         """
         Create a new instance of the AfterPosition object.
         """
         if extension != 0:
             raise AttributeError(f"Non-zero extension {extension} for exact position.")
-        return int.__new__(cls, position)
+        return int.__init__(cls, position)
 
     @property
     def position(self: AfterPosition):
@@ -1203,7 +1207,7 @@ class OneOfPosition:
     position: int
     choices: list[ExactPosition]
 
-    def __new__(cls: OneOfPosition, position: int, choices: list[ExactPosition]):
+    def __init__(cls: OneOfPosition, position: int, choices: list[ExactPosition]):
         """
         Initialize with a set of possible positions.
         position_list is a list of AbstractPosition derived objects,
@@ -1212,13 +1216,13 @@ class OneOfPosition:
         """
         if position not in choices:
             raise ValueError(f"OneOfPosition: {position} should match one of {choices}")
-        obj = int.__new__(cls, position)
+        obj = int.__init__(cls, position)
         obj.position_choices = choices
         return obj
 
     def __getnewargs__(self: OneOfPosition):
         """
-        Return the arguments accepted by __new__.
+        Return the arguments accepted by __init__.
         Necessary to allow pickling and unpickling of class instances.
         """
         return (int(self), self.position_choices)
@@ -1286,7 +1290,7 @@ class PositionGap:
         """
         Represent the position gap as a string for debugging.
         """
-        return f"{self.__class__.__name__}({repr(self.gap_size)})" 
+        return f"{self.__class__.__name__}({self.repr(self.gap_size)})" 
 
     def __str__(self: PositionGap):
         """
