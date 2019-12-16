@@ -1,0 +1,529 @@
+
+"""Represent a Sequence Record, a sequence with annotation."""
+
+_NO_SEQRECORD_COMPARISON = "SeqRecord comparison is deliberately not implemented. Explicitly compare the attributes of interest."
+
+
+class _RestrictedDict:
+    """
+    Dict which only allows sequences of given length as values (PRIVATE).
+    """
+    d: dict[str, str]
+    _length: int
+
+    def __init__(self: _RestrictedDict, length: int):
+        """Create an EMPTY restricted dictionary."""
+        self.d.__init__(self)
+        self._length = length
+
+    def __setitem__(self, key, value):
+        self.d.__setitem__(self, key, value)
+
+    def update(self, new_dict):
+        # Force this to go via our strict __setitem__ method
+        for key, value in new_dict.items():
+            self[key] = value
+        
+class SeqRecord:
+    """
+    A SeqRecord object holds a sequence and information about it.
+    """
+    _seq: seq
+    id: str
+    name: str
+    description: str
+    dbxrefs: list[str]
+    annotations: dict[str, str]
+    letter_annotations: dict[int, str]
+    features: list[SeqFeature]
+
+    def __init__(self: SeqRecord, s: seq, id: str="<unknown id>", name: str="<unknown name>",
+                 description: str="<unknown description>", dbxrefs: optional[list[str]]=None,
+                 features: list[SeqFeature]=None, annotations: optional[dict[str, str]]=None,
+                 letter_annotations: dict[int, str]=None):
+        """
+        Create a SeqRecord.
+        """
+        self._seq = s
+        self.id = id
+        self.name = name
+        self.description = description
+
+        # database cross references (for the whole sequence)
+        if dbxrefs is None:
+            dbxrefs = list[str]()
+        self.dbxrefs = dbxrefs
+
+        # annotations about the whole sequence
+        if annotations is None:
+            annotations = dict[str, str]()
+        self.annotations = annotations
+
+        if letter_annotations is None:
+            # annotations about each letter in the sequence
+            if s is None:
+                self._per_letter_annotations = _RestrictedDict(length=0)
+            else:
+                self._per_letter_annotations = \
+                    _RestrictedDict(length=len(s))
+            
+        else:
+            # This will be handled via the property set function, which will
+            # turn this into a _RestrictedDict and thus ensure all the values
+            # in the dict are the right length
+            self.letter_annotations = letter_annotations
+
+        # annotations about parts of the sequence
+        if features is None:
+            features = list[SeqFeature]
+        self.features = features
+
+    def _set_per_letter_annotations(self, value):
+        # Turn this into a restricted-dictionary (and check the entries)
+        try:
+            self._per_letter_annotations = _RestrictedDict(length=len(self.s))
+        except AttributeError:
+            # e.g. s is None
+            self._per_letter_annotations = _RestrictedDict(length=0)
+        self._per_letter_annotations.update(value)
+
+    # letter_annotations = property(
+    #     fget=lambda self: self._per_letter_annotations,
+    #     fset=_set_per_letter_annotations,
+    #     doc="""Dictionary of per-letter-annotation for the sequence.
+    #     For example, this can hold quality scores used in FASTQ or QUAL files.
+    #     Consider this example using Bio.SeqIO to read in an example Solexa
+    #     variant FASTQ file as a SeqRecord:
+    #     >>> from Bio import SeqIO
+    #     >>> record = SeqIO.read("Quality/solexa_faked.fastq", "fastq-solexa")
+    #     >>> print("%s %s" % (record.id, record.seq))
+    #     slxa_0001_1_0001_01 ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTNNNNNN
+    #     >>> print(list(record.letter_annotations))
+    #     ['solexa_quality']
+    #     >>> print(record.letter_annotations["solexa_quality"])
+    #     [40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5]
+    #     The letter_annotations get sliced automatically if you slice the
+    #     parent SeqRecord, for example taking the last ten bases:
+    #     >>> sub_record = record[-10:]
+    #     >>> print("%s %s" % (sub_record.id, sub_record.seq))
+    #     slxa_0001_1_0001_01 ACGTNNNNNN
+    #     >>> print(sub_record.letter_annotations["solexa_quality"])
+    #     [4, 3, 2, 1, 0, -1, -2, -3, -4, -5]
+    #     Any python sequence (i.e. list, tuple or string) can be recorded in
+    #     the SeqRecord's letter_annotations dictionary as long as the length
+    #     matches that of the SeqRecord's sequence.  e.g.
+    #     >>> len(sub_record.letter_annotations)
+    #     1
+    #     >>> sub_record.letter_annotations["dummy"] = "abcdefghij"
+    #     >>> len(sub_record.letter_annotations)
+    #     2
+    #     You can delete entries from the letter_annotations dictionary as usual:
+    #     >>> del sub_record.letter_annotations["solexa_quality"]
+    #     >>> sub_record.letter_annotations
+    #     {'dummy': 'abcdefghij'}
+    #     You can completely clear the dictionary easily as follows:
+    #     >>> sub_record.letter_annotations = {}
+    #     >>> sub_record.letter_annotations
+    #     {}
+    #     Note that if replacing the record's sequence with a sequence of a
+    #     different length you must first clear the letter_annotations dict.
+    #     """)
+
+    def _set_seq(self, value):
+        if self._per_letter_annotations:
+            if len(self) != len(value):
+                raise ValueError("You must empty the letter annotations first!")
+            else:
+                # Leave the existing per letter annotations unchanged:
+                self._seq = value
+        else:
+            self._seq = value
+            # Reset the (empty) letter annotations dict with new length:
+            try:
+                self._per_letter_annotations = _RestrictedDict(length=len(self.seq))
+            except AttributeError:
+                # e.g. seq is None
+                self._per_letter_annotations = _RestrictedDict(length=0)
+
+    # seq = property(fget=lambda self: self._seq,
+    #                fset=_set_seq,
+    #                doc="The sequence itself, as a Seq or MutableSeq object.")
+
+    def __getitem__(self: SeqRecord, index: int):
+        """
+        Return a an individual letter.
+        """
+        return self.seq[index]
+
+        
+    def __getitem__(self: SeqRecord, index: slice):
+        """
+        Return a sub-sequence.
+        Slicing, e.g. my_record[5:10], returns a new SeqRecord for
+        that sub-sequence with some annotation preserved.
+        """
+        if self.seq is None:
+            raise ValueError("If the sequence is None, we cannot slice it.")
+        parent_length = len(self)
+
+        answer = SeqRecord(self.seq[index],
+                            id=self.id,
+                            name=self.name,
+                            description=self.description)
+
+        start, stop, step = index.indices(parent_length)
+        if step == 1:
+            # Select relevant features, add them with shifted locations
+            # assert str(self.seq)[index] == str(self.seq)[start:stop]
+            for f in self.features:
+                if start <= f.location.nofuzzy_start \
+                        and f.location.nofuzzy_end <= stop:
+                    answer.features.append(f._shift(-start))
+
+        # Slice all the values to match the sliced sequence
+        # (this should also work with strides, even negative strides):
+        for key, value in self.letter_annotations.items():
+            answer._per_letter_annotations[key] = value[index]
+
+        return answer
+
+    def __iter__(self: SeqRecord):
+        """
+        Iterate over the letters in the sequence.
+        """
+        lines = list[str]
+        if self.id:
+            lines.append(f"ID: {self.id}")
+        if self.name:
+            lines.append(f"Name: {self.name}")
+        if self.description:
+            lines.append(f"Description: {self.description}")
+        if self.dbxrefs:
+            lines.append("Database cross-references: " + ", ".join(self.dbxrefs))
+        lines.append(f"Number of features: {self.features}")
+        for a in self.annotations:
+            lines.append(f"/{a}={self.annotations[a]}")
+        if self.letter_annotations:
+            lines.append("Per letter annotation for: " + ", ".join(self.letter_annotations))
+        # Don't want to include the entire sequence,
+        # and showing the alphabet is useful:
+        lines.append(repr(self.seq))
+        return "\n".join(lines)
+
+    def __repr__(self: SeqRecord):
+        """
+        Return a concise summary of the record for debugging (string).
+        """
+        # TODO!!! how to do this?
+        return "{self.__class__.__name__}(seq={self.seq}, id={self.id}, name={self.name}, description={self.description}, dbxrefs={self.dbxrefs})"
+
+    # TODO/CAVEATS:
+    # @jordan - `format` and `__format__ still need to be implemented` 
+    # def format(self: SeqRecord, format):
+    #     """
+    #     Return the record as a string in the specified file format.
+    #     """
+    #     # See also the __format__ added for Python 2.6 / 3.0, PEP 3101
+    #     # See also the Bio.Align.Generic.Alignment class and its format()
+    #     return self.__format__(format)
+
+    # def __format__(self: SeqRecord, format_spec: str):
+    #     """
+    #     Return the record as a string in the specified file format.
+    #     This method supports the python format() function added in
+    #     Python 2.6/3.0.  The format_spec should be a lower case string
+    #     supported by Bio.SeqIO as an output file format. See also the
+    #     SeqRecord's format() method.
+    #     Under Python 3 binary formats raise a ValueError, while on
+    #     Python 2 this will work with a deprecation warning.
+    #     """
+    #     if not islower(format_spec):
+    #         # Follow python convention and default to using __str__
+    #         return str(self)
+    #     # NOT IMPLEMENTED YET
+    #     from Bio import SeqIO
+
+    #     # Easy case, can call string-building function directly
+    #     if format_spec in SeqIO._FormatToString:
+    #         return SeqIO._FormatToString[format_spec](self)
+
+    #     if format_spec in SeqIO._BinaryFormats:
+    #         import sys
+    #         if sys.version_info[0] < 3:
+    #             import warnings
+    #             from Bio import BiopythonDeprecationWarning
+    #             warnings.warn(
+    #                 "Binary format %s cannot be used with SeqRecord format method on Python 3"
+    #                 % format_spec,
+    #                 BiopythonDeprecationWarning
+    #             )
+    #             # Continue - Python 2 StringIO will work...
+    #         else:
+    #             raise ValueError(
+    #                 "Binary format %s cannot be used with SeqRecord format method"
+    #                 % format_spec
+    #             )
+
+    #     # Harder case, make a temp handle instead
+    #     from Bio._py3k import StringIO
+    #     handle = StringIO()
+    #     SeqIO.write(self, handle, format_spec)
+    #     return handle.getvalue()
+
+    def __len__(self):
+        """
+        Return the length of the sequence.
+        """
+        return len(self.seq)
+
+    def __lt__(self, other):
+        """
+        Define the less-than operand (not implemented).
+        """
+        raise NotImplementedError(_NO_SEQRECORD_COMPARISON)
+
+    def __le___(self, other):
+        """
+        Define the less-than-or-equal-to operand (not implemented).
+        """
+        raise NotImplementedError(_NO_SEQRECORD_COMPARISON)
+
+    def __eq__(self, other):
+        """
+        Define the equal-to operand (not implemented).
+        """
+        raise NotImplementedError(_NO_SEQRECORD_COMPARISON)
+
+    def __ne__(self, other):
+        """
+        Define the not-equal-to operand (not implemented).
+        """
+        raise NotImplementedError(_NO_SEQRECORD_COMPARISON)
+
+    def __gt__(self, other):
+        """
+        Define the greater-than operand (not implemented).
+        """
+        raise NotImplementedError(_NO_SEQRECORD_COMPARISON)
+
+    def __ge__(self, other):
+        """
+        Define the greater-than-or-equal-to operand (not implemented).
+        """
+        raise NotImplementedError(_NO_SEQRECORD_COMPARISON)
+
+    # Note Python 3 does not use __cmp__ and there is no need to
+    # define __cmp__ on Python 2 as have all of  _lt__ etc defined.
+
+    # Python 3:
+    def __bool__(self):
+        """
+        Boolean value of an instance of this class (True).
+        """
+        return True
+
+    def __add__(self: SeqRecord, other: str):
+        """
+        Add another sequence or string to this sequence.
+        """
+        # Note can't transfer any per-letter-annotations
+        return SeqRecord(self.seq + other,
+                            id=self.id, name=self.name,
+                            description=self.description,
+                            features=self.features[:],
+                            annotations=self.annotations.copy(),
+                            dbxrefs=self.dbxrefs[:])
+
+    def __add__(self: SeqRecord, other: seq):
+        """
+        Add another sequence or string to this sequence.
+        """
+        # Note can't transfer any per-letter-annotations
+        return SeqRecord(self.seq + other,
+                            id=self.id, name=self.name,
+                            description=self.description,
+                            features=self.features[:],
+                            annotations=self.annotations.copy(),
+                            dbxrefs=self.dbxrefs[:])
+
+    def __add__(self: SeqRecord, other: SeqRecord):
+        """
+        Add another sequence or string to this sequence.
+        """
+
+        # Adding two SeqRecord objects... must merge annotation.
+        answer = SeqRecord(self.seq + other.seq,
+                           features=self.features[:],
+                           dbxrefs=self.dbxrefs[:])
+        # Will take all the features and all the db cross refs,
+        length = len(self)
+        for f in other.features:
+            answer.features.append(f._shift(length))
+        del length
+        for ref in other.dbxrefs:
+            if ref not in answer.dbxrefs:
+                answer.dbxrefs.append(ref)
+        # Take common id/name/description/annotation
+        if self.id == other.id:
+            answer.id = self.id
+        if self.name == other.name:
+            answer.name = self.name
+        if self.description == other.description:
+            answer.description = self.description
+        for k, v in self.annotations.items():
+            if k in other.annotations and other.annotations[k] == v:
+                answer.annotations[k] = v
+        # Can append matching per-letter-annotation
+        for k, v in self.letter_annotations.items():
+            if k in other.letter_annotations:
+                answer.letter_annotations[k] = v + other.letter_annotations[k]
+        return answer
+
+    def __radd__(self: SeqRecord, other: str):
+        """
+        Add another string to this sequence (from the left).
+        """
+        # Note can't transfer any per-letter-annotations
+        offset = len(other)
+        return SeqRecord(other + self.seq,
+                         id=self.id, name=self.name,
+                         description=self.description,
+                         features=[f._shift(offset) for f in self.features],
+                         annotations=self.annotations.copy(),
+                         dbxrefs=self.dbxrefs[:])
+    
+    def __radd__(self: SeqRecord, other: seq):
+        """
+        Add another sequence to this sequence (from the left).
+        """
+        # Note can't transfer any per-letter-annotations
+        offset = len(other)
+        return SeqRecord(other + self.seq,
+                         id=self.id, name=self.name,
+                         description=self.description,
+                         features=[f._shift(offset) for f in self.features],
+                         annotations=self.annotations.copy(),
+                         dbxrefs=self.dbxrefs[:])
+
+    def upper(self):
+        """
+        Return a copy of the record with an upper case sequence.
+        """
+        return SeqRecord(self.seq.upper(),
+                         id=self.id, name=self.name,
+                         description=self.description,
+                         dbxrefs=self.dbxrefs[:],
+                         features=self.features[:],
+                         annotations=self.annotations.copy(),
+                         letter_annotations=self.letter_annotations.copy())
+
+    def lower(self):
+        """
+        Return a copy of the record with a lower case sequence.
+        """
+        return SeqRecord(self.seq.lower(),
+                         id=self.id, name=self.name,
+                         description=self.description,
+                         dbxrefs=self.dbxrefs[:],
+                         features=self.features[:],
+                         annotations=self.annotations.copy(),
+                         letter_annotations=self.letter_annotations.copy())
+
+    def reverse_complement(self: SeqRecord, id: str=False, name: str=False, description: str=False,
+                           features: list[SeqFeature]=False, annotations: dict[str, str]=False,
+                           letter_annotations: dict[int, str]=False, dbxrefs: list[str]=False):
+        """
+        Return new SeqRecord with reverse complement sequence.
+        """
+        answer = SeqRecord(self.seq.reverse_complement())
+        if id:
+            answer.id = id
+        else: 
+            answer.id = self.id
+
+        if name:
+            answer.name = name
+        else:
+            answer.name = self.name
+
+        if description:
+            answer.description = description
+        else:
+            answer.description = self.description
+
+        if dbxrefs:
+            answer.dbxrefs = dbxrefs
+        else:
+            answer.dbxrefs = self.dbxrefs[:]
+
+        if features:
+            answer.features = features
+        else:
+            # Copy the old features, adjusting location and string
+            length = len(answer)
+            answer.features = [f._flip(length) for f in self.features]
+            answer.features.sort(key=lambda x: x.location.start.position)
+
+        if annotations:
+            answer.annotations = annotations
+        else:
+            answer.annotations = self.annotations.copy()
+
+        if letter_annotations:
+            answer.letter_annotations = letter_annotations
+        else:
+            # Copy the old per letter annotations, reversing them
+            for key, value in self.letter_annotations.items():
+                answer._per_letter_annotations[key] = value[::-1]
+                
+        return answer
+
+    def translate(self: SeqRecord,
+                  # Seq translation arguments:
+                  table="Standard", stop_symbol="*", to_stop=False,
+                  cds=False, gap=None,
+                  # SeqRecord annotation arguments:
+                  id: str=False, name: str=False, description: str=False,
+                  features: list[SeqFeature]=False, annotations: dict[str, str]=False,
+                  letter_annotations: dict[int, str]=False, dbxrefs: list[str]=False):
+        """
+        Return new SeqRecord with translated sequence.
+        """
+        answer = SeqRecord(self.seq.translate(table=table,
+                                              stop_symbol=stop_symbol,
+                                              to_stop=to_stop,
+                                              cds=cds,
+                                              gap=gap))
+        if id:
+            answer.id = id
+        else: 
+            answer.id = self.id
+
+        if name:
+            answer.name = name
+        else:
+            answer.name = self.name
+
+        if description:
+            answer.description = description
+        else:
+            answer.description = self.description
+
+        if dbxrefs:
+            answer.dbxrefs = dbxrefs
+        else:
+            answer.dbxrefs = self.dbxrefs[:]
+
+        if features:
+            answer.features = features
+       
+        if annotations:
+            answer.annotations = annotations
+        else:
+            # Copy the old annotations
+            answer.annotations = self.annotations.copy()
+
+        if letter_annotations:
+            answer.letter_annotations = letter_annotations
+
+        return answer
