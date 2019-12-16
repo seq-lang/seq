@@ -43,6 +43,8 @@ Var *Wildcard::getVar() { return var; }
 Value *Wildcard::codegen(BaseFunc *base, types::Type *type, Value *val,
                          BasicBlock *&block) {
   LLVMContext &context = block->getContext();
+  BasicBlock *preamble = base->getPreamble();
+  var->store(base, type->defaultValue(preamble), preamble);
   var->store(base, val, block);
   return ConstantInt::get(IntegerType::getInt1Ty(context), 1);
 }
