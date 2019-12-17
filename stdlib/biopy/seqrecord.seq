@@ -1,6 +1,8 @@
 
 """Represent a Sequence Record, a sequence with annotation."""
 
+from bio.seqfeature import SeqFeature
+
 _NO_SEQRECORD_COMPARISON = "SeqRecord comparison is deliberately not implemented. Explicitly compare the attributes of interest."
 
 
@@ -24,6 +26,7 @@ class _RestrictedDict:
         for key, value in new_dict.items():
             self[key] = value
         
+
 class SeqRecord:
     """
     A SeqRecord object holds a sequence and information about it.
@@ -207,7 +210,7 @@ class SeqRecord:
             lines.append("Per letter annotation for: " + ", ".join(self.letter_annotations))
         # Don't want to include the entire sequence,
         # and showing the alphabet is useful:
-        lines.append(repr(self.seq))
+        lines.append(self.repr(self.seq))
         return "\n".join(lines)
 
     def __repr__(self: SeqRecord):
@@ -434,6 +437,9 @@ class SeqRecord:
                            letter_annotations: dict[int, str]=False, dbxrefs: list[str]=False):
         """
         Return new SeqRecord with reverse complement sequence.
+        TODO/CAVEATS:
+        @jordan- seq does not support lamda (check line 471)
+                 answer.features.sort(key=lambda x: x.location.start.position)
         """
         answer = SeqRecord(self.seq.reverse_complement())
         if id:
@@ -462,8 +468,9 @@ class SeqRecord:
             # Copy the old features, adjusting location and string
             length = len(answer)
             answer.features = [f._flip(length) for f in self.features]
-            answer.features.sort(key=lambda x: x.location.start.position)
 
+            # answer.features.sort(key=lambda x: x.location.start.position)
+            answer.features.sort(key= self.location.start.position)
         if annotations:
             answer.annotations = annotations
         else:

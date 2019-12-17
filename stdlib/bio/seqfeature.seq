@@ -5,7 +5,113 @@ TODO/CAVEATS:
 @jordan- For now MutableSeq is left out
 """
 
-#from bio.seq import reverse_complement
+# class BeforePosition(int, AbstractPosition):
+type BeforePosition(position: int):
+    """
+    Specify a position where the actual location occurs before it.
+    """
+
+    # Subclasses int so can't use __init__
+    def __init__(cls: BeforePosition, position: int, extension: int=0):
+        """
+        Create a new instance in BeforePosition object.
+        """
+        if extension != 0:
+            raise AttributeError(f"Non-zero extension {extension} for exact position.")
+                                 
+        return cls.position
+
+    @property
+    def position(self: BeforePosition):
+        """
+        Legacy attribute to get position as integer (OBSOLETE).
+        """
+        return int(self.position)
+
+    @property
+    def extension(self: BeforePosition):  # noqa: D402
+        """
+        Legacy attribute to get extension (zero) as integer (OBSOLETE).
+        """
+        return 0
+
+    def __repr__(self: BeforePosition):
+        """
+        Represent the location as a string for debugging.
+        """
+        return f"{self.__class__.__name__}({int(self)})" 
+
+    def __str__(self: BeforePosition):
+        """
+        Return a representation of the BeforePosition object (with python counting).
+        """
+        return "<{self.position}"
+
+    def _shift(self: BeforePosition, offset: int):
+        """
+        Return a copy of the position object with its location shifted (PRIVATE).
+        """
+        return self.__class__(int(self) + offset)
+
+    def _flip(self: BeforePosition, length: int):
+        """
+        Return a copy of the location after the parent is reversed (PRIVATE).
+        """
+        return self.AfterPosition(length - int(self))
+
+# class AfterPosition(int, AbstractPosition):
+type AfterPosition(position: int):
+    """
+    Specify a position where the actual location is found after it.
+    """
+
+    # Subclasses int so can't use __init__
+    def __init__(cls: AfterPosition, position: int, extension: int=0):
+        """
+        Create a new instance of the AfterPosition object.
+        """
+        if extension != 0:
+            raise AttributeError(f"Non-zero extension {extension} for exact position.")
+        return cls.position
+
+    @property
+    def position(self: AfterPosition):
+        """
+        Legacy attribute to get position as integer (OBSOLETE).
+        """
+        return int(self)
+
+    @property
+    def extension(self: AfterPosition):  # noqa: D402
+        """
+        Legacy attribute to get extension (zero) as integer (OBSOLETE).
+        """
+        return 0
+
+    def __repr__(self: AfterPosition):
+        """
+        Represent the location as a string for debugging.
+        """
+        return f"{self.__class__.__name__}({int(self)})"
+
+    def __str__(self: AfterPosition):
+        """
+        Return a representation of the AfterPosition object (with python counting).
+        """
+        return f">{self.position}"
+
+    def _shift(self: AfterPosition, offset: int):
+        """
+        Return a copy of the position object with its location shifted (PRIVATE).
+        """
+        return self.__class__(int(self) + offset)
+
+    def _flip(self: AfterPosition, length: int):
+        """
+        Return a copy of the location after the parent is reversed (PRIVATE).
+        """
+        return BeforePosition(length - int(self))
+
 
 # --- Handling feature locations
 
@@ -14,13 +120,13 @@ class FeatureLocation:
     """
     Specify the location of a feature along a sequence.
     """
-    start: int
-    end: int
-    strand: int
-    ref: int 
-    ref_db: int
+    _start: int
+    _end: int
+    _strand: int
+    _ref: str 
+    _ref_db: str
 
-    def __init__(self: FeatureLocation, start: int, end: int, strand: optional[int]=None, ref: optional[int]=None, ref_db: optional[int]=None):
+    def __init__(self: FeatureLocation, start: int, end: int, strand: optional[int]=None, ref: optional[str]=None, ref_db: optional[str]=None):
         """
         Initialize the class.
         """
@@ -36,7 +142,23 @@ class FeatureLocation:
         self.ref = ref
         self.ref_db = ref_db
 
-    def _get_strand(self: FeatureLocation):
+    def __init__(self: FeatureLocation, start: BeforePosition, end: AfterPosition, strand: optional[int]=None, ref: optional[str]=None, ref_db: optional[str]=None):
+        """
+        Initialize the class.
+        """
+        # TODO - Check 0 <= start <= end (<= length of reference)
+        self._start = start
+    
+        self._end = end
+
+        if self.start > self.end:
+            raise ValueError(f"""End location ({self.end}) must be greater than or equal 
+                             to start location ({self.start})""")
+        self.strand = strand
+        self.ref = ref
+        self.ref_db = ref_db
+
+    def _get_strand(self: FeatureLocation) -> int:
         """
         Get function for the strand property (PRIVATE).
         """
@@ -51,7 +173,7 @@ class FeatureLocation:
         self._strand = value
 
     @property
-    def strand(self: FeatureLocation, fget: optional[int]=None, fset: optional[int]=None, doc="Strand of the location (+1, -1, 0 or None)."):
+    def strand(self: FeatureLocation, fget: optional[int]=None, fset: optional[int]=None, doc: str="Strand of the location (+1, -1, 0 or None)."):
         if fget is None:
             fget = self._get_strand
         if fset is None:
@@ -62,16 +184,16 @@ class FeatureLocation:
         """
         Return a representation of the FeatureLocation object.
         """
-        answer = f"[{self._start}:{self._end}]"
-        if self.ref and self.ref_db:
-            answer = f"{self.ref_db}:{self.ref}{answer}"
-        elif self.ref:
-            answer = self.ref + answer
-        if self.strand is None:
+        answer = f"[{self.start}:{self.end}]"
+        if self._ref and self._ref_db:
+            answer = f"{self._ref_db}:{self._ref}{answer}"
+        elif self._ref:
+            answer = self._ref + answer
+        if self._strand:
             return answer
-        elif self.strand == +1:
+        elif self._strand == +1:
             return answer + "(+)"
-        elif self.strand == -1:
+        elif self._strand == -1:
             return answer + "(-)"
         else:
             # strand = 0, stranded but strand unknown, ? in GFF3
@@ -142,9 +264,9 @@ class FeatureLocation:
         """
         return self._start == other.start and \
             self._end == other.end and \
-            self._strand == other.strand and \
-            self.ref == other.ref and \
-            self.ref_db == other.ref_db
+            self._strand == other._strand and \
+            self._ref == other._ref and \
+            self._ref_db == other._ref_db
 
     def __ne__(self: FeatureLocation, other: FeatureLocation):
         """
@@ -255,14 +377,14 @@ class SeqFeature:
     strand: int
     id: str
     qualifiers: dict[str, list[str]]
-    ref: int
-    ref_db: int
+    ref: str
+    ref_db: str
     
 
     def __init__(self: SeqFeature, location: optional[FeatureLocation]=None, typ: str="", location_operator: str="",
                  strand: optional[int]=None, id: str="<unknown id>",
                  qualifiers: optional[dict[str, list[str]]]=None,
-                 ref: optional[int]=None, ref_db: optional[int]=None):
+                 ref: optional[str]=None, ref_db: optional[str]=None):
         """
         Initialize a SeqFeature on a Sequence.
         location can either be a FeatureLocation (with strand argument also
@@ -854,7 +976,7 @@ class ExactPosition:
                     
         return int.__init__(cls, position)
 
-    def __str__(self: ExactPosition):
+    def __str__(self: ExactPosition) -> str:
         """
         Return a representation of the ExactPosition object.
         """
@@ -1088,116 +1210,6 @@ class BetweenPosition:
                               length - self._right,
                               length - self._left)
 
-# class BeforePosition(int, AbstractPosition):
-class BeforePosition:
-    """
-    Specify a position where the actual location occurs before it.
-    """
-    position: int
-    extension: int
-
-    # Subclasses int so can't use __init__
-    def __init__(cls: BeforePosition, position: int, extension: int=0):
-        """
-        Create a new instance in BeforePosition object.
-        """
-        if extension != 0:
-            raise AttributeError(f"Non-zero extension {extension} for exact position.")
-                                 
-        return int.__init__(cls, position)
-
-    @property
-    def position(self: BeforePosition):
-        """
-        Legacy attribute to get position as integer (OBSOLETE).
-        """
-        return int(self)
-
-    @property
-    def extension(self: BeforePosition):  # noqa: D402
-        """
-        Legacy attribute to get extension (zero) as integer (OBSOLETE).
-        """
-        return 0
-
-    def __repr__(self: BeforePosition):
-        """
-        Represent the location as a string for debugging.
-        """
-        return f"{self.__class__.__name__}({int(self)})" 
-
-    def __str__(self: BeforePosition):
-        """
-        Return a representation of the BeforePosition object (with python counting).
-        """
-        return "<{self.position}"
-
-    def _shift(self: BeforePosition, offset: int):
-        """
-        Return a copy of the position object with its location shifted (PRIVATE).
-        """
-        return self.__class__(int(self) + offset)
-
-    def _flip(self: BeforePosition, length: int):
-        """
-        Return a copy of the location after the parent is reversed (PRIVATE).
-        """
-        return self.AfterPosition(length - int(self))
-
-# class AfterPosition(int, AbstractPosition):
-class AfterPosition:
-    """
-    Specify a position where the actual location is found after it.
-    """
-    position: int
-    extension: int
-
-    # Subclasses int so can't use __init__
-    def __init__(cls: AfterPosition, position: int, extension: int=0):
-        """
-        Create a new instance of the AfterPosition object.
-        """
-        if extension != 0:
-            raise AttributeError(f"Non-zero extension {extension} for exact position.")
-        return int.__init__(cls, position)
-
-    @property
-    def position(self: AfterPosition):
-        """
-        Legacy attribute to get position as integer (OBSOLETE).
-        """
-        return int(self)
-
-    @property
-    def extension(self: AfterPosition):  # noqa: D402
-        """
-        Legacy attribute to get extension (zero) as integer (OBSOLETE).
-        """
-        return 0
-
-    def __repr__(self: AfterPosition):
-        """
-        Represent the location as a string for debugging.
-        """
-        return f"{self.__class__.__name__}({int(self)})"
-
-    def __str__(self: AfterPosition):
-        """
-        Return a representation of the AfterPosition object (with python counting).
-        """
-        return f">{self.position}"
-
-    def _shift(self: AfterPosition, offset: int):
-        """
-        Return a copy of the position object with its location shifted (PRIVATE).
-        """
-        return self.__class__(int(self) + offset)
-
-    def _flip(self: AfterPosition, length: int):
-        """
-        Return a copy of the location after the parent is reversed (PRIVATE).
-        """
-        return BeforePosition(length - int(self))
 
 #class OneOfPosition(int, AbstractPosition)
 class OneOfPosition:
@@ -1220,7 +1232,7 @@ class OneOfPosition:
         obj.position_choices = choices
         return obj
 
-    def __getnewargs__(self: OneOfPosition):
+    def __getnewargs__(self: OneOfPosition) -> tuple[int, list[ExactPosition]]:
         """
         Return the arguments accepted by __init__.
         Necessary to allow pickling and unpickling of class instances.
