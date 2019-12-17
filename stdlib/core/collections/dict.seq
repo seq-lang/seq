@@ -41,6 +41,15 @@ class dict[K,V]:
             return self._vals[x]
         raise KeyError(str(key))
 
+    def __prefetch__(self: dict[K,V], key: K):
+        if self._n_buckets:
+            mask = self._n_buckets - 1
+            k = _dict_hash(key)
+            i = k & mask
+            (self._keys + i).__prefetch_r1__()
+            (self._vals + i).__prefetch_r1__()
+            (self._flags + (i >> 4)).__prefetch_r1__()
+
     def __setitem__(self: dict[K,V], key: K, val: V):
         ret, x = self._kh_put(key)
         self._vals[x] = val
@@ -73,11 +82,17 @@ class dict[K,V]:
         return self._size
 
     def __copy__(self: dict[K,V]):
-        d = dict[K,V]()
-        d.resize(self.n_buckets)
-        for k,v in self.items():
-            d[k] = v
-        return d
+        if len(self) == 0:
+            return dict[K,V]()
+        n = self._n_buckets
+        f = khash.__ac_fsize(n)
+        flags_copy = ptr[u32](f)
+        keys_copy = ptr[K](n)
+        vals_copy = ptr[V](n)
+        str.memcpy(ptr[byte](flags_copy), ptr[byte](self._flags), f * _gc.sizeof[u32]())
+        str.memcpy(ptr[byte](keys_copy), ptr[byte](self._keys), n * _gc.sizeof[K]())
+        str.memcpy(ptr[byte](vals_copy), ptr[byte](self._vals), n * _gc.sizeof[V]())
+        return dict[K,V](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy, vals_copy)
 
     def __str__(self: dict[K,V]):
         n = len(self)

@@ -296,7 +296,31 @@ static TargetMachine *getTargetMachine(Triple triple, StringRef cpuStr,
                                      CodeGenOpt::Aggressive);
 }
 
+static void applyDebugTransformations(Module *module) {
+  // remove tail calls and fix linkage for stack traces
+  for (Function &f : *module) {
+    f.setLinkage(GlobalValue::ExternalLinkage);
+    if (f.hasFnAttribute(Attribute::AttrKind::AlwaysInline))
+      f.removeFnAttr(Attribute::AttrKind::AlwaysInline);
+    f.addFnAttr(Attribute::AttrKind::NoInline);
+    f.setHasUWTable();
+    f.addFnAttr("no-frame-pointer-elim", "true");
+    f.addFnAttr("no-frame-pointer-elim-non-leaf");
+    f.addFnAttr("no-jump-tables", "false");
+
+    for (BasicBlock &block : f.getBasicBlockList()) {
+      for (Instruction &inst : block) {
+        if (CallInst *call = dyn_cast<CallInst>(&inst)) {
+          call->setTailCall(false);
+        }
+      }
+    }
+  }
+}
+
 static void optimizeModule(Module *module, bool debug) {
+  if (debug)
+    applyDebugTransformations(module);
   std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
   std::unique_ptr<legacy::FunctionPassManager> fpm(
       new legacy::FunctionPassManager(module));
@@ -357,6 +381,8 @@ static void optimizeModule(Module *module, bool debug) {
     fpm->run(f);
   fpm->doFinalization();
   pm->run(*module);
+  if (debug)
+    applyDebugTransformations(module);
 }
 
 void SeqModule::optimize(bool debug) { optimizeModule(module, debug); }
@@ -392,6 +418,7 @@ void SeqModule::compile(const std::string &out, bool debug) {
 
 extern "C" void seq_gc_add_roots(void *start, void *end);
 extern "C" void seq_gc_remove_roots(void *start, void *end);
+extern "C" void seq_add_symbol(void *addr, const std::string &symbol);
 /**
  * Simple extension of LLVM's SectionMemoryManager which catches data section
  * allocations and registers them with the GC. This allows the GC to know not
@@ -437,6 +464,13 @@ void SeqModule::execute(const std::vector<std::string> &args,
   resetOMPABI();
 #endif
 
+  std::vector<std::string> functionNames;
+  if (debug) {
+    for (Function &f : *module) {
+      functionNames.push_back(f.getName());
+    }
+  }
+
   std::unique_ptr<Module> owner(module);
   module = nullptr;
   EngineBuilder EB(std::move(owner));
@@ -454,6 +488,15 @@ void SeqModule::execute(const std::vector<std::string> &args,
     if (sys::DynamicLibrary::LoadLibraryPermanently(lib.c_str(), &err)) {
       std::cerr << "error: " << err << std::endl;
       exit(EXIT_FAILURE);
+    }
+  }
+
+  if (debug) {
+    for (const std::string &name : functionNames) {
+      void *addr =
+          eng->getPointerToNamedFunction(name, /*AbortOnFailure=*/false);
+      if (addr)
+        seq_add_symbol(addr, name);
     }
   }
 

@@ -39,12 +39,12 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       | Extend p -> parse_extend ctx pos p ~toplevel
       | Import p -> parse_import ctx pos p ~toplevel
       | ImportPaste p -> parse_impaste ctx pos p
-      | ImportExtern p -> parse_extern ctx pos p ~toplevel
+      | ImportExtern p -> parse_extern ctx pos p ~toplevel ~jit
       | Pass p -> parse_pass ctx pos p
       | Try p -> parse_try ctx pos p
       | Throw p -> parse_throw ctx pos p
       | Global p -> parse_global ctx pos p
-      | Generic (Function p) -> parse_function ctx pos p ~toplevel
+      | Generic (Function p) -> parse_function ctx pos p ~toplevel ~jit
       | Generic (Class p) -> parse_class ctx pos p ~toplevel
       | Generic (Declare p) -> parse_declare ctx pos p ~toplevel ~jit
       | Generic (Type p) -> parse_class ctx pos p ~toplevel ~is_type:true
@@ -272,18 +272,19 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
   and parse_match ctx pos (what, cases) =
     let what = E.parse ~ctx what in
     let match_stmt = Llvm.Stmt.matchs what in
-    List.iter cases ~f:(fun (_, { pattern; case_stmts }) ->
+    List.iter cases ~f:(fun (pat_pos, { pattern; case_stmts }) ->
         let pat, var =
           match pattern with
           | BoundPattern (name, pat) ->
             Ctx.add_block ctx;
-            let pat = parse_pattern ctx pos pat in
+            let pat = parse_pattern ctx pat_pos pat in
             let pat = Llvm.Pattern.bound pat in
+            Llvm.Stmt.set_pos pat pat_pos;
             Ctx.clear_block ctx;
             pat, Some (name, Llvm.Var.bound_pattern pat)
           | _ as pat ->
             Ctx.add_block ctx;
-            let pat = parse_pattern ctx pos pat in
+            let pat = parse_pattern ctx pat_pos pat in
             Ctx.clear_block ctx;
             pat, None
         in
@@ -294,13 +295,13 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
             | None -> ()));
     match_stmt
 
-  and parse_extern ctx pos ~toplevel ext =
+  and parse_extern ctx pos ~toplevel ?(jit = false) ext =
     List.iter ext ~f:(fun s ->
-      let s' = parse_extern_single ctx pos ~toplevel s in
+      let s' = parse_extern_single ctx pos ~toplevel ~jit s in
       ignore @@ finalize ~ctx s' pos);
     Llvm.Stmt.pass ()
 
-  and parse_extern_single ctx pos ~toplevel ext =
+  and parse_extern_single ctx pos ~toplevel ~jit ext =
     let ctx_name = Option.value ext.e_as ~default:ext.e_name.name in
     let open Ast in
     match ext.lang, ext.e_from with
@@ -323,7 +324,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
           e_call (e_dot (Option.value_exn ext.e_name.typ) "__from_py__") [rhs]
       in
       (* @pyhandle def y ( x : [tuple] ) -> typ: return rhs *)
-      parse_function ctx pos ~toplevel
+      parse_function ctx pos ~toplevel ~jit
         { fn_name = { ext.e_name with name = ctx_name }
         ; fn_generics = []
         ; fn_args = [ pos, { name = "x"; typ = None; default = None } ]
@@ -366,7 +367,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       Llvm.Func.set_type fn typ;
       let names = List.map ext.e_args ~f:(fun (_, x) -> x.name) in
       Ctx.add ~ctx ~toplevel ~global:toplevel ctx_name (Ctx_namespace.Func (fn, names));
-      Llvm.Stmt.func fn
+      if toplevel && jit then (
+        ignore @@ finalize ~ctx ~add:false (Llvm.Stmt.func fn) pos;
+        Llvm.Stmt.pass ())
+      else Llvm.Stmt.func fn
     | l, _ -> serr ~pos "language %s not supported" l
 
   and parse_extend ctx pos ~toplevel (name, stmts) =
@@ -476,6 +480,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
       pos
       ?cls
       ?(toplevel = false)
+      ?(jit = false)
       { fn_name = { name; typ; _ }; fn_generics; fn_args; fn_stmts; fn_attrs }
     =
     let fn =
@@ -530,7 +535,10 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         List.iter names ~f:(fun name ->
             let var = Ctx_namespace.Var (Llvm.Func.get_arg fn name) in
             Ctx.add ~ctx name var));
-    Llvm.Stmt.func fn
+    if toplevel && jit then (
+      ignore @@ finalize ~ctx ~add:false (Llvm.Stmt.func fn) pos;
+      Llvm.Stmt.pass ())
+    else Llvm.Stmt.func fn
 
   and parse_class ctx pos ~toplevel ?(is_type = false) cls =
     let typ =
@@ -659,34 +667,41 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     Ctx.clear_block ctx
 
   (** Helper for parsing match patterns *)
-  and parse_pattern ctx pos = function
-    | StarPattern -> Llvm.Pattern.star ()
-    | BoundPattern _ -> serr ~pos "invalid bound pattern"
-    | IntPattern i -> Llvm.Pattern.int i
-    | BoolPattern b -> Llvm.Pattern.bool b
-    | StrPattern s -> Llvm.Pattern.str s
-    | SeqPattern s -> Llvm.Pattern.seq s
-    | TuplePattern tl ->
-      let tl = List.map tl ~f:(parse_pattern ctx pos) in
-      Llvm.Pattern.record tl
-    | RangePattern (i, j) -> Llvm.Pattern.range i j
-    | ListPattern tl ->
-      let tl = List.map tl ~f:(parse_pattern ctx pos) in
-      Llvm.Pattern.array tl
-    | OrPattern tl ->
-      let tl = List.map tl ~f:(parse_pattern ctx pos) in
-      Llvm.Pattern.orp tl
-    | WildcardPattern wild ->
-      let pat = Llvm.Pattern.wildcard () in
-      if is_some wild
-      then (
-        let var = Llvm.Var.bound_pattern pat in
-        Ctx.add ~ctx (Option.value_exn wild) (Ctx_namespace.Var var));
-      pat
-    | GuardedPattern (pat, expr) ->
-      let pat = parse_pattern ctx pos pat in
-      let expr = E.parse ~ctx expr in
-      Llvm.Pattern.guarded pat expr
+  and parse_pattern ctx pos p = 
+    let p = match p with
+      | StarPattern -> Llvm.Pattern.star ()
+      | BoundPattern _ -> serr ~pos "invalid bound pattern"
+      | IntPattern i -> Llvm.Pattern.int i
+      | BoolPattern b -> Llvm.Pattern.bool b
+      | StrPattern s -> Llvm.Pattern.str s
+      | SeqPattern s -> Llvm.Pattern.seq s
+      | TuplePattern tl ->
+        let tl = List.map tl ~f:(function
+          | StarPattern -> serr ~pos "invalid tuple pattern"
+          | p -> parse_pattern ctx pos p) in
+        Llvm.Pattern.record tl
+      | RangePattern (i, j) -> Llvm.Pattern.range i j
+      | ListPattern tl ->
+        let tl = List.map tl ~f:(parse_pattern ctx pos) in
+        Llvm.Pattern.array tl
+      | OrPattern tl ->
+        let tl = List.map tl ~f:(parse_pattern ctx pos) in
+        Llvm.Pattern.orp tl
+      | WildcardPattern wild ->
+        let pat = Llvm.Pattern.wildcard () in
+        if is_some wild
+        then (
+          let var = Llvm.Var.bound_pattern pat in
+          Ctx.add ~ctx (Option.value_exn wild) (Ctx_namespace.Var var));
+        pat
+      | GuardedPattern (pat, expr) ->
+        let pat = parse_pattern ctx pos pat in
+        let expr = E.parse ~ctx expr in
+        Llvm.Pattern.guarded pat expr
+    in 
+    Llvm.Stmt.set_pos p pos;
+    p
+
 
   (** Helper for parsing generic parameters.
       Parses generic parameters, assigns names to unnamed generics and calls C++ APIs to denote generic functions/classes.

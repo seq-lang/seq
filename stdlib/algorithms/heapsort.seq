@@ -20,12 +20,20 @@ def _heap_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]):
     if end - begin < 2:
         return
 
-    for i in range(end, begin - 1, -1):
-        _heapify(arr, i, end, keyf)
+    arr = arr.__slice__(begin, end)
+    end -= begin
+    begin = 0
 
-    for i in range(end -1, begin, -1):
-        arr[i], arr[begin] = arr[begin], arr[i]
-        _heapify(arr, begin, i, keyf)
+    i = end // 2 - 1
+    while i >= 0:
+        _heapify(arr, i, end, keyf)
+        i -= 1
+
+    i = end - 1
+    while i >= 0:
+        arr[i], arr[0] = arr[0], arr[i]
+        _heapify(arr, 0, i, keyf)
+        i -= 1
 
 def heap_sort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
     """

@@ -1,39 +1,153 @@
+# Warning(!): This type must be consistent with the exception
+# header type defined in runtime/exc.cpp.
+type ExcHeader(typename: str,
+               msg: str,
+               func: str,
+               file: str,
+               line: int,
+               col: int)
+
 class OSError:
-    msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: OSError):
+        self._hdr = ('OSError', '', '', '', 0, 0)
+
+    def __init__(self: OSError, message: str):
+        self._hdr = ('OSError', message, '', '', 0, 0)
+
+    @property
+    def message(self: OSError):
+        return self._hdr.msg
 
 class IOError:
-    msg: str
+    _hdr: ExcHeader
 
-class ArgumentError:
-    msg: str
+    def __init__(self: IOError):
+        self._hdr = ('IOError', '', '', '', 0, 0)
+
+    def __init__(self: IOError, message: str):
+        self._hdr = ('IOError', message, '', '', 0, 0)
+
+    @property
+    def message(self: IOError):
+        return self._hdr.msg
 
 class ValueError:
-    msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: ValueError):
+        self._hdr = ('ValueError', '', '', '', 0, 0)
+
+    def __init__(self: ValueError, message: str):
+        self._hdr = ('ValueError', message, '', '', 0, 0)
+
+    @property
+    def message(self: ValueError):
+        return self._hdr.msg
 
 class IndexError:
-    msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: IndexError):
+        self._hdr = ('IndexError', '', '', '', 0, 0)
+
+    def __init__(self: IndexError, message: str):
+        self._hdr = ('IndexError', message, '', '', 0, 0)
+
+    @property
+    def message(self: IndexError):
+        return self._hdr.msg
 
 class KeyError:
-    msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: KeyError):
+        self._hdr = ('KeyError', '', '', '', 0, 0)
+
+    def __init__(self: KeyError, message: str):
+        self._hdr = ('KeyError', message, '', '', 0, 0)
+
+    @property
+    def message(self: KeyError):
+        return self._hdr.msg
 
 class CError:
-   msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: CError):
+        self._hdr = ('CError', '', '', '', 0, 0)
+
+    def __init__(self: CError, message: str):
+        self._hdr = ('CError', message, '', '', 0, 0)
+
+    @property
+    def message(self: CError):
+        return self._hdr.msg
 
 class PyError:
-    msg: str
+    _hdr: ExcHeader
     pytype: str
 
+    def __init__(self: PyError, message: str, pytype: str):
+        self._hdr = ('PyError', message, '', '', 0, 0)
+        self.pytype = pytype
+
+    @property
+    def message(self: PyError):
+        return self._hdr.msg
+
 class TypeError:
-    msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: TypeError):
+        self._hdr = ('TypeError', '', '', '', 0, 0)
+
+    def __init__(self: TypeError, message: str):
+        self._hdr = ('TypeError', message, '', '', 0, 0)
+
+    @property
+    def message(self: TypeError):
+        return self._hdr.msg
 
 class ZeroDivisionError:
-    msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: ZeroDivisionError):
+        self._hdr = ('ZeroDivisionError', '', '', '', 0, 0)
+
+    def __init__(self: ZeroDivisionError, message: str):
+        self._hdr = ('ZeroDivisionError', message, '', '', 0, 0)
+
+    @property
+    def message(self: ZeroDivisionError):
+        return self._hdr.msg
 
 class NotImplementedError:
-    msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: NotImplementedError):
+        self._hdr = ('NotImplementedError', '', '', '', 0, 0)
+
+    def __init__(self: NotImplementedError, message: str):
+        self._hdr = ('NotImplementedError', message, '', '', 0, 0)
+
+    @property
+    def message(self: NotImplementedError):
+        return self._hdr.msg
 
 class StopIteration:
-    msg: str
+    _hdr: ExcHeader
+
+    def __init__(self: StopIteration):
+        self._hdr = ('StopIteration', '', '', '', 0, 0)
+
+    def __init__(self: StopIteration, message: str):
+        self._hdr = ('StopIteration', message, '', '', 0, 0)
+
+    @property
+    def message(self: StopIteration):
+        return self._hdr.msg
 
 def check_errno(prefix: str):
     msg = _C.seq_check_errno()

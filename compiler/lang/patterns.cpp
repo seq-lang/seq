@@ -43,6 +43,8 @@ Var *Wildcard::getVar() { return var; }
 Value *Wildcard::codegen(BaseFunc *base, types::Type *type, Value *val,
                          BasicBlock *&block) {
   LLVMContext &context = block->getContext();
+  BasicBlock *preamble = base->getPreamble();
+  var->store(base, type->defaultValue(preamble), preamble);
   var->store(base, val, block);
   return ConstantInt::get(IntegerType::getInt1Ty(context), 1);
 }
@@ -82,8 +84,7 @@ void StarPattern::resolveTypes(types::Type *type) {}
 
 Value *StarPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                             BasicBlock *&block) {
-  assert(0);
-  return nullptr;
+  throw exc::SeqException("misplaced '...'", getSrcInfo());
 }
 
 IntPattern::IntPattern(seq_int_t val) : Pattern(types::Int), val(val) {}
@@ -176,9 +177,14 @@ ArrayPattern::ArrayPattern(std::vector<Pattern *> patterns)
     : Pattern(types::Any), patterns(std::move(patterns)) {}
 
 void ArrayPattern::resolveTypes(types::Type *type) {
-  if (!type->isGeneric(types::Array))
-    throw exc::SeqException("cannot match array pattern with non-array value",
+  types::RefType *ref = type->asRef();
+  if (!ref || ref->genericName().rfind("list[", 0) != 0)
+    throw exc::SeqException("cannot match list pattern with non-list value",
                             getSrcInfo());
+
+  if (ref->numBaseTypes() != 1) {
+    throw exc::SeqException("list type overriden", getSrcInfo());
+  }
 
   types::Type *baseType = type->getBaseType(0);
   for (auto *pattern : patterns)
@@ -194,13 +200,25 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
 
   for (unsigned i = 0; i < patterns.size(); i++) {
     if (dynamic_cast<StarPattern *>(patterns[i])) {
-      assert(!hasStar);
+      if (hasStar) {
+        throw exc::SeqException("can have at most one ... in list pattern",
+                                getSrcInfo());
+      }
       star = i;
       hasStar = true;
     }
   }
 
+  assert(type->numBaseTypes() == 1);
+  types::ArrayType *arrType = types::ArrayType::get(type->getBaseType(0));
+  if (!type->membType("len")->is(types::Int) ||
+      !type->membType("arr")->is(arrType)) {
+    throw exc::SeqException("list type overriden");
+  }
+
   Value *len = type->memb(val, "len", block);
+  val = type->memb(val, "arr", block);
+  type = arrType;
   Value *lenMatch = nullptr;
   BasicBlock *startBlock = block;
   IRBuilder<> builder(block);
@@ -590,6 +608,7 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);
   } else {
     assert(0);
+    return nullptr;
   }
 }
 

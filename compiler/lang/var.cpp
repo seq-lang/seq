@@ -155,9 +155,7 @@ void Var::setType(types::Type *type) {
 types::Type *Var::getType() {
   if (!mapped.empty())
     return mapped.top()->getType();
-
-  assert(type);
-  return type;
+  return type ? type : types::Void;
 }
 
 Var *Var::clone(Generic *ref) {

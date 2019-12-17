@@ -1,2 +1,2 @@
-def open(path: str, mode: str):
+def open(path: str, mode: str = 'r'):
     return gzFile(path, mode)

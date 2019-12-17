@@ -186,6 +186,46 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
 
 Sequence patterns consist of literal ``ACGT`` characters, single-base wildcards (``_``) or "zero or more" wildcards (``...``) that match zero or more of any base.
 
+Sequence alignment
+^^^^^^^^^^^^^^^^^^
+
+Aligning sequences is very straightforward in Seq, and supports numerous options/variants:
+
+.. code-block:: seq
+
+    # default parameters
+    s1 = s'CGCGAGTCTT'
+    s2 = s'CGCAGAGTT'
+    aln = s1 @ s2
+    print aln.cigar, aln.score
+
+    # custom parameters
+    # match = 2; mismatch = 4; gap1(k) = 2k + 4; gap2(k) = k + 13
+    aln = s1.align(s2, a=2, b=4, gapo=4, gape=2, gapo2=13, gape2=1)
+    print aln.cigar, aln.score
+
+Here is the list of options supported by the ``align()`` method; all are optional:
+
+- ``a``: match score
+- ``b``: mismatch score
+- ``ambig``: ambiguous (i.e. N) match score
+- ``gapo``: gap open cost
+- ``gape``: gap extension cost
+- ``gapo2``: 2nd gap open cost for dual gap cost function
+- ``gape2``: 2nd gap extension cost for dual gap cost function
+- ``bandwidth``: bandwidth for DP alignment
+- ``zdrop``: off-diagonal drop-off to stop extension
+- ``score_only``: if true, don't compute CIGAR
+- ``right``: if true, right-align gaps
+- ``approx_max``: if true, approximate max
+- ``approx_drop``: if true, approximate Z-drop
+- ``rev_cigar``: if true, reverse CIGAR in output
+- ``ext_only``: if true, only perform extension
+- ``splice``: if true, perform spliced alignment
+- ``glob``: if true, perform global alignment
+
+Note that all costs/scores are positive by convention.
+
 Pipelines
 ^^^^^^^^^
 
@@ -211,6 +251,9 @@ Here's an example of pipeline usage, which shows the same two loops from above, 
     dna |> kmers[Kmer[5]](1) |> f
 
 First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers[Kmer[5]](..., 1)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
+
+.. caution::
+    The Seq compiler may perform optimizations that change the order of elements passed through a pipeline. Therefore, it is best to not rely on order when using pipelines. If order needs to be maintained, consider using a regular loop or passing an index alongside each element sent through the pipeline.
 
 Genomic index prefetching
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -338,3 +381,48 @@ Seq also supports calling Python functions as follows:
     print myrange(5)  # [0, 1, 2, 3, 4]
 
 Please check `Python interop <python.html>`_ for more information.
+
+Calling BWA from Seq
+--------------------
+
+Seq provides a built-in module for interfacing with BWA. To use this module, simply build a shared BWA library and set ``BWA_LIB`` accordingly:
+
+.. code-block:: bash
+
+    git clone https://github.com/lh3/bwa
+    cd bwa
+    make
+    gcc -shared -o libbwa.so *.o -lz
+    export BWA_LIB=`pwd`/libbwa.so
+
+Now BWA can be used in Seq as such:
+
+.. code-block:: seq
+
+    # Implementation of https://github.com/lh3/bwa/blob/master/example.c
+    from sys import argv
+    from bio.bwa import *
+
+    bwa = BWA(argv[1])
+    for read in FASTQ(argv[2]):
+        for reg in bwa.align(read.read):
+            if reg.secondary >= 0: continue
+            aln = bwa.reg2aln(read.read, reg)
+            print read.name, '-' if aln.rev else '+', bwa.name(aln), aln.pos, aln.mapq, aln.cigar, aln.NM
+
+This program can be invoked as ``seqc example.seq /path/to/hg19.fa /path/to/reads.fq``.
+
+BWA options can be passed via ``BWA(options(...), ...)``. For example, to set a mismatch score of 5, use ``BWA(options(mismatch_score=5), "hg19.fa")``. Valid options are:
+
+- ``match_score``
+- ``mismatch_score``
+- ``open_del``
+- ``open_ins``
+- ``extend_del``
+- ``extend_ins``
+- ``bandwidth``
+- ``zdrop``
+- ``clip_penalty``
+- ``unpaired_penalty``
+
+Consult the BWA documentation for a detailed description of each of these.

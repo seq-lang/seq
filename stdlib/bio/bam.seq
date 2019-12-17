@@ -78,16 +78,22 @@ type SAMAux(s: ptr[u8]):
     def B2f(self: SAMAux, idx: int):
         return _C.bam_auxB2f(self.s, u32(idx))
 
-type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore, _aux: str):
-    def __init__(self: SAMRecord, aln: cobj) -> SAMRecord:
-        name = _C.seq_hts_get_name(aln)
-        read = _C.seq_hts_get_seq(aln)
-        qual = _C.seq_hts_get_qual(aln)
-        cigar = _C.seq_hts_get_cigar(aln)
-        aux = _C.seq_hts_get_aux(aln)
+class SAMRecord:
+    _name: str
+    _read: seq
+    _qual: str
+    _cigar: CIGAR
+    _core: SAMCore
+    _aux: str
+
+    def __init__(self: SAMRecord, aln: cobj):
+        self._name = _C.seq_hts_get_name(aln)
+        self._read = _C.seq_hts_get_seq(aln)
+        self._qual = _C.seq_hts_get_qual(aln)
+        self._cigar = _C.seq_hts_get_cigar(aln)
+        self._aux = _C.seq_hts_get_aux(aln)
         hts_core = ptr[_bam_core_t](aln)[0]
-        core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
-        return (name, read, qual, cigar, core, aux)
+        self._core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
 
     @property
     def name(self: SAMRecord):
@@ -189,7 +195,7 @@ type SAMRecord(_name: str, _read: seq, _qual: str, _cigar: CIGAR, _core: SAMCore
 
     def aux(self: SAMRecord, tag: str):
         if len(tag) != 2:
-            raise ArgumentError("SAM aux tags are two characters (got: " + tag + ")")
+            raise ValueError("SAM aux tags are two characters (got: " + tag + ")")
         return SAMAux(_C.seq_hts_aux_get(self._aux, tag))
 
 extend SAMHeaderTarget:
@@ -277,6 +283,12 @@ class BAM:
 
         if self.file:
             _C.hts_close(self.file)
+
+        self.itr = cobj()
+        self.idx = cobj()
+        self.aln = cobj()
+        self.hdr = cobj()
+        self.file = cobj()
 
     def __enter__(self: BAM):
         pass

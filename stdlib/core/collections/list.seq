@@ -40,6 +40,9 @@ class list[T]:
         self._idx_check(idx, "list index out of range")
         return self.arr[idx]
 
+    def __prefetch__(self: list[T], idx: int):
+        (self.arr.ptr + idx).__prefetch_r3__()
+
     def __setitem__(self: list[T], idx: int, val: T):
         if idx < 0:
             idx += len(self)
@@ -70,111 +73,84 @@ class list[T]:
         return self.__copy__()
 
     def __getitem__(self: list[T], s: slice):
-        a, b = s
-        if a < 0:
-            a += len(self)
-        if b < 0:
-            b += len(self)
-        if not (0 <= a <= b <= len(self)):
-            self._slice_error()
-        return list[T](copy(self.arr.__slice__(a, b)), b - a)
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end)
+        return list[T](self._copy_arr(start, stop, length), length)
 
     def __getitem__(self: list[T], s: lslice):
-        end = s.end
-        if end < 0:
-            end += len(self)
-        if not (0 <= end <= len(self)):
-            self._slice_error()
-        return list[T](copy(self.arr.__slice_left__(end)), end)
+        start, stop, step, length = slice.adjust_indices(len(self), stop=s.end)
+        return list[T](self._copy_arr(start, stop, length), length)
 
     def __getitem__(self: list[T], s: rslice):
-        start = s.start
-        if start < 0:
-            start += len(self)
-        if not (0 <= start <= len(self)):
-            self._slice_error()
-        return list[T](copy(self.arr.__slice_right__(start)), self.len - start)
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start)
+        return list[T](self._copy_arr(start, stop, length), length)
 
     def __getitem__(self: list[T], s: esslice):
         if s.step == 0:
             self._slice_error()
-        if s.step > 0:
-            return list[T](self.arr[i] for i in range(0, self.len, s.step))
-        else:
-            return list[T](self.arr[i] for i in range(self.len - 1, -1, s.step))
+        start, stop, step, length = slice.adjust_indices(len(self), step=s.step)
+        other = list[T](length)
+        for i in range(start, stop, step):
+            other.append(self.arr[i])
+        return other
 
     def __getitem__(self: list[T], s: sslice):
-        a, b, step = s
-        if a < 0:
-            a += len(self)
-        if b < 0:
-            b += len(self)
-        if not (0 <= a <= b <= len(self)) or step == 0:
+        if s.step == 0:
             self._slice_error()
-        return list[T](self.arr[i] for i in range(a, b, step))
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end, step=s.step)
+        other = list[T](length)
+        for i in range(start, stop, step):
+            other.append(self.arr[i])
+        return other
 
     def __getitem__(self: list[T], s: lsslice):
-        end = s.end
-        if end < 0:
-            end += len(self)
-        if not (0 <= end <= len(self)) or s.step == 0:
+        if s.step == 0:
             self._slice_error()
-        return list[T](self.arr[i] for i in range(0, end, s.step))
+        start, stop, step, length = slice.adjust_indices(len(self), stop=s.end, step=s.step)
+        other = list[T](length)
+        for i in range(start, stop, step):
+            other.append(self.arr[i])
+        return other
 
     def __getitem__(self: list[T], s: rsslice):
-        start = s.start
-        if start < 0:
-            start += len(self)
-        if not (0 <= start <= len(self)) or s.step == 0:
+        if s.step == 0:
             self._slice_error()
-        return list[T](self.arr[i] for i in range(start, self.len, s.step))
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, step=s.step)
+        other = list[T](length)
+        for i in range(start, stop, step):
+            other.append(self.arr[i])
+        return other
 
     def __setitem__(self: list[T], s: eslice, other: generator[T]):
-        l = list[T](other)
-        self.arr = l.arr
-        self.len = l.len
+        self.clear()
+        for a in other:
+            self.append(a)
 
     def __setitem__(self: list[T], s: slice, other: generator[T]):
-        a, b = s
-        if a < 0:
-            a += len(self)
-        if b < 0:
-            b += len(self)
-        if not (0 <= a <= b <= len(self)):
-            self._slice_error()
-        lp = list(other)
-        l = list[T](self.len - (b-a) + lp.len)
-        l.ext(self[:a])
-        l.ext(lp)
-        l.ext(self[b:])
-        self.arr = l.arr
-        self.len = l.len
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end)
+        self._assign_slice(start, stop, other)
 
     def __setitem__(self: list[T], s: lslice, other: generator[T]):
-        end = s.end
-        if end < 0:
-            end += len(self)
-        if not (0 <= end <= len(self)):
-            self._slice_error()
-        lp = list(other)
-        l = list[T](self.len - end + lp.len)
-        l.ext(lp)
-        l.ext(self[end:])
-        self.arr = l.arr
-        self.len = l.len
+        start, stop, step, length = slice.adjust_indices(len(self), stop=s.end)
+        self._assign_slice(start, stop, other)
 
     def __setitem__(self: list[T], s: rslice, other: generator[T]):
-        start = s.start
-        if start < 0:
-            start += len(self)
-        if not (0 <= start <= len(self)):
-            self._slice_error()
-        lp = list(other)
-        l = list[T](start + lp.len)
-        l.ext(self[:start])
-        l.ext(lp)
-        self.arr = l.arr
-        self.len = l.len
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start)
+        self._assign_slice(start, stop, other)
+
+    def __delitem__(self: list[T], s: eslice):
+        self.clear()
+
+    def __delitem__(self: list[T], s: slice):
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end)
+        self._assign_slice(start, stop, None)
+
+    def __delitem__(self: list[T], s: lslice):
+        start, stop, step, length = slice.adjust_indices(len(self), stop=s.end)
+        self._assign_slice(start, stop, None)
+
+    def __delitem__(self: list[T], s: rslice):
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start)
+        self._assign_slice(start, stop, None)
 
     def __contains__(self: list[T], x: T):
         for a in self:
@@ -342,10 +318,69 @@ class list[T]:
             raise IndexError(msg)
 
     def _slice_error(self: list[T]):
-        raise IndexError("list slice index error")
+        raise IndexError("slice step cannot be zero")
+
+    def _resize(self: list[T], new_cap: int):
+        p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
+        self.arr = array[T](p, new_cap)
 
     def _resize_if_full(self: list[T]):
         if self.len == self.arr.len:
             new_cap = (1 + 3*self.len) // 2
-            p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
-            self.arr = array[T](p, new_cap)
+            self._resize(new_cap)
+
+    def __hash__(self: list[T]):
+        # https://www.boost.org/doc/libs/1_35_0/doc/html/boost/hash_combine_id241013.html
+        seed = 0
+        for v in self:
+            seed ^= v.__hash__() + 0x9e3779b9 + (seed << 6) + (seed >> 2)
+        return seed
+
+    def _assign_slice(self: list[T], ilow: int, ihigh: int, v: optional[generator[T]]):
+        a = self
+        recycle = ptr[T]()
+        vitem = list[T](a for a in ~v) if v else None
+        n = len(vitem) if vitem is not None else 0
+
+        if ilow < 0:
+            ilow = 0
+        elif ilow > len(a):
+            ilow = len(a)
+
+        if ihigh < ilow:
+            ihigh = ilow
+        elif ihigh > len(a):
+            ihigh = len(a)
+
+        norig = ihigh - ilow
+        assert norig >= 0
+        d = n - norig
+        if len(a) + d == 0:
+            a.clear()
+            return
+
+        s = norig * _gc.sizeof[T]()
+        if s:
+            recycle = ptr[T](s)
+            str.memcpy(ptr[byte](recycle), ptr[byte](a.arr.ptr + ilow), s)
+
+        if d < 0:
+            tail = len(a) - ihigh
+            str.memmove(ptr[byte](a.arr.ptr + (ihigh + d)), ptr[byte](a.arr.ptr + ihigh), tail)
+            a._resize(len(a) + d)
+        elif d > 0:
+            k = len(a)
+            a._resize(k + d)
+            str.memmove(ptr[byte](a.arr.ptr + (ihigh + d)), ptr[byte](a.arr.ptr + ihigh), (k - ihigh) * _gc.sizeof[T]())
+
+        k = 0
+        while k < n:
+            a.arr[ilow] = vitem.arr[k]
+            k += 1
+            ilow += 1
+        a.len += d
+
+    def _copy_arr(self: list[T], start: int, stop: int, length: int):
+        if length <= 0:
+            return array[T](ptr[T](), 0)
+        return copy(self.arr.__slice__(start, stop))

@@ -35,6 +35,7 @@ module Expr = struct
     | Float x -> sprintf "%f" x
     | FloatS (x, k) -> sprintf "%f%s" x k
     | String x -> sprintf "\"%s\"" (String.escaped x)
+    | FString x -> sprintf "f\"%s\"" (String.escaped x)
     | Kmer x -> sprintf "k'%s'" x
     | Seq (p, x) -> sprintf "%s'%s'" p x
     | Id x -> sprintf "%s" x
@@ -284,13 +285,31 @@ module Stmt = struct
     let typ = Option.value_map typ ~default:"" ~f:(fun x -> " : " ^ Expr.to_string ~pythonic x) in
     let def = Option.value_map default ~default:"" ~f:(fun x -> " = " ^ Expr.to_string ~pythonic x) in
     sprintf "%s%s%s" name typ def
+
+  (* TODO *)
+  and px = function
+      | StarPattern -> "Star"
+      | IntPattern i -> "Int"
+      | BoolPattern b -> "Bool"
+      | StrPattern s -> "Str"
+      | SeqPattern s -> "Seq"
+      | TuplePattern tl ->
+        sprintf "Tuple(%s)" @@ Util.ppl tl ~f:px
+      | RangePattern (i, j) -> "Range"
+      | ListPattern tl ->
+        sprintf "List(%s)" @@ Util.ppl tl ~f:px
+      | OrPattern tl ->
+        sprintf "Or(%s)" @@ Util.ppl tl ~f:px
+      | WildcardPattern wild -> "*"
+      | GuardedPattern (pat, expr) -> sprintf "Guarded(%s)" (px pat)
+      | BoundPattern _ -> "Bound"
 end
 
 
-let rec e_apply ~f (pos, node) =
-  let f = e_apply ~f in
+let rec e_setpos new_pos (_, node) =
+  let f = e_setpos new_pos in
   let rec fg (p, c) = p, Expr.{ c with gen = f c.gen; cond = Option.map c.cond ~f; next = Option.map c.next ~f:fg } in
-  f (pos, match node with
+  new_pos, match node with
     | Expr.Tuple l -> Expr.Tuple (List.map l ~f)
     | List l -> List (List.map l ~f)
     | Set l -> Set (List.map l ~f)
@@ -298,7 +317,7 @@ let rec e_apply ~f (pos, node) =
     | Dict l -> Dict (List.map l ~f:(fun (x, y) -> f x, f y))
     | IfExpr (a, b, c) -> IfExpr (f a, f b, f c)
     | Unary (o, e) -> Unary (o, f e)
-    | Binary (l, o, r) -> Binary (f l, o, f l)
+    | Binary (l, o, r) -> Binary (f l, o, f r)
     | Dot (e, d) -> Dot (f e, d)
     | TypeOf e -> TypeOf (f e)
     | Index (a, l) -> Index (f a, f l)
@@ -310,9 +329,7 @@ let rec e_apply ~f (pos, node) =
     | Slice (a, b, c) -> Slice (Option.map a ~f, Option.map b ~f, Option.map c ~f)
     | Lambda (s, a) -> Lambda (s, f a)
     | Ptr x -> Ptr (f x)
-    | t -> t)
-
-let e_annotate ~pos n = e_apply ~f:(fun (_, t) -> pos, t) n
+    | t -> t
 
 let e_id ?(pos=Ann.default) n =
   pos, Expr.Id n

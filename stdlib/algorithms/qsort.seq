@@ -60,10 +60,10 @@ def _qsort[S,T](arr: array[T], frm: int, cnt: int, keyf: function[S,T]):
         c -= 1
 
     hi = frm + cnt
-    span = min(a - frm, b - a)
+    span = min2(a - frm, b - a)
     _vecswap(frm, b - span, span, arr)
 
-    span = min(d - c, hi - d - 1)
+    span = min2(d - c, hi - d - 1)
     _vecswap(b, hi - span, span, arr)
 
     span = b - a

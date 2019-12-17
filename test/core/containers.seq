@@ -107,6 +107,94 @@ def test_list():
 test_list()
 
 @test
+def test_setslice():
+    l = [0, 1]
+    a = l
+
+    for i in range(-3, 4):
+        a[:i] = l[:i]
+        assert a == l
+        a2 = a[:]
+        a2[:i] = a[:i]
+        assert a2 == a
+        a[i:] = l[i:]
+        assert a == l
+        a2 = a[:]
+        a2[i:] = a[i:]
+        assert a2 == a
+        for j in range(-3, 4):
+            a[i:j] = l[i:j]
+            assert a == l
+            a2 = a[:]
+            a2[i:j] = a[i:j]
+            assert a2 == a
+
+    a2 = a[:]
+    aa2 = a2[:]
+    aa2[:0] = [-2, -1]
+    assert aa2 == [-2, -1, 0, 1]
+    aa2[0:] = list[int]()
+    assert aa2 == list[int]()
+
+    a = [1, 2, 3, 4, 5]
+    a[:-1] = a
+    assert a == [1, 2, 3, 4, 5, 5]
+    a = [1, 2, 3, 4, 5]
+    a[1:] = a
+    assert a == [1, 1, 2, 3, 4, 5]
+    a = [1, 2, 3, 4, 5]
+    a[1:-1] = a
+    assert a == [1, 1, 2, 3, 4, 5, 5]
+
+    a = list[int]()
+    a[:] = list(range(10))
+    assert a == list(range(10))
+test_setslice()
+
+@test
+def test_delslice():
+    a = [0, 1]
+    del a[1:2]
+    del a[0:1]
+    assert a == list[int]()
+
+    a = [0, 1]
+    del a[1:2]
+    del a[0:1]
+    assert a == list[int]()
+
+    a = [0, 1]
+    del a[-2:-1]
+    assert a == [1]
+
+    a = [0, 1]
+    del a[-2:-1]
+    assert a == [1]
+
+    a = [0, 1]
+    del a[1:]
+    del a[:1]
+    assert a == list[int]()
+
+    a = [0, 1]
+    del a[1:]
+    del a[:1]
+    assert a == list[int]()
+
+    a = [0, 1]
+    del a[-1:]
+    assert a == [0]
+
+    a = [0, 1]
+    del a[-1:]
+    assert a == [0]
+
+    a = [0,1]
+    del a[:]
+    assert a == list[int]()
+test_delslice()
+
+@test
 def test_set():
     s1 = {a for a in range(100)}
     assert len(s1) == 100
@@ -154,13 +242,39 @@ def test_set():
     s1c |= s2c
     assert s1c == {2, 3, 4, 5}
     assert s1 == {1, 2, 3, 4}
+
+    s1 = {1, 2, 3, 999999}
+    s2 = {1, 2, 3, 999999}
+    v = s1.pop()
+    assert v in s2
+    s2.remove(v)
+
+    v = s1.pop()
+    assert v in s2
+    s2.remove(v)
+
+    v = s1.pop()
+    assert v in s2
+    s2.remove(v)
+
+    v = s1.pop()
+    assert v in s2
+    s2.remove(v)
+
+    try:
+        s1.pop()
+        assert False
+    except ValueError:
+        pass
+
 test_set()
 
 @test
 def test_dict():
-    d1 = {a: a*a for a in range(100)}
+    d1 = copy({a: a*a for a in range(100)})
     assert len(d1) == 100
     d1 = {a: a*a for a in range(5)}
+    assert len(copy(dict[int,int]())) == 0
 
     assert [d1.get(a, -1) for a in range(6)] == [0, 1, 4, 9, 16, -1]
 

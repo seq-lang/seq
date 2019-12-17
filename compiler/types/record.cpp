@@ -17,12 +17,14 @@ void types::RecordType::setContents(std::vector<Type *> types,
   assert(this->names.empty() || this->names.size() == this->types.size());
 }
 
+bool types::RecordType::named() const { return !name.empty(); }
+
 bool types::RecordType::empty() const { return types.empty(); }
 
 std::vector<types::Type *> types::RecordType::getTypes() { return types; }
 
 std::string types::RecordType::getName() const {
-  if (!name.empty())
+  if (named())
     return name;
 
   std::string name = "tuple[";
@@ -64,7 +66,7 @@ bool types::RecordType::is(types::Type *type) const {
   if (!isGeneric(type) || b != type->numBaseTypes())
     return false;
 
-  if (!name.empty()) {
+  if (named()) {
     auto *rec = dynamic_cast<types::RecordType *>(type);
     assert(rec);
     if (name != rec->name)
@@ -84,7 +86,7 @@ bool types::RecordType::isStrict(types::Type *type) const {
     return false;
 
   auto *rec = dynamic_cast<types::RecordType *>(type);
-  if (!name.empty() || !rec->name.empty()) {
+  if (named() || rec->named()) {
     return name == rec->name;
   }
 
@@ -304,11 +306,64 @@ void types::RecordType::initOps() {
        },
        false},
 
+      {"__getitem__",
+       {types::Int},
+       empty() ? Void : types[0],
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         if (empty()) {
+           throw exc::SeqException("cannot index empty tuple");
+         }
+
+         for (auto *type : types) {
+           if (!types::is(type, types[0])) {
+             throw exc::SeqException("cannot index heterogeneous tuple");
+           }
+         }
+
+         LLVMContext &context = b.getContext();
+         BasicBlock *block = b.GetInsertBlock();
+         Module *module = block->getModule();
+         const std::string getitemName = "seq." + getName() + ".__getitem__";
+         Function *getitem = module->getFunction(getitemName);
+         llvm::Type *type = getLLVMType(context);
+         llvm::Type *baseType = types[0]->getLLVMType(context);
+
+         if (!getitem) {
+           getitem = cast<Function>(module->getOrInsertFunction(
+               getitemName, baseType, type, seqIntLLVM(context)));
+           getitem->setLinkage(GlobalValue::PrivateLinkage);
+
+           auto iter = getitem->arg_begin();
+           Value *self = iter++;
+           Value *idx = iter;
+           BasicBlock *entry = BasicBlock::Create(context, "entry", getitem);
+           b.SetInsertPoint(entry);
+           Value *ptr = b.CreateAlloca(type);
+           b.CreateStore(self, ptr);
+           ptr = b.CreateBitCast(ptr, baseType->getPointerTo());
+           ptr = b.CreateGEP(ptr, idx);
+           b.CreateRet(b.CreateLoad(ptr));
+         }
+
+         Func *fixIndex = Func::getBuiltin("_tuple_fix_index");
+         FuncExpr fixIndexExpr(fixIndex);
+         ValueExpr idx(types::Int, args[0]);
+         ValueExpr len(types::Int,
+                       ConstantInt::get(seqIntLLVM(context), types.size()));
+         CallExpr fixIndexCall(&fixIndexExpr, {&idx, &len});
+         fixIndexCall.resolveTypes();
+         Value *idxFixed = fixIndexCall.codegen(nullptr, block);
+
+         b.SetInsertPoint(block);
+         return b.CreateCall(getitem, {self, idxFixed});
+       },
+       false},
+
       {"__iter__",
        {},
-       GenType::get(types.empty() ? Void : types[0]),
+       GenType::get(empty() ? Void : types[0]),
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         if (types.empty())
+         if (empty())
            throw exc::SeqException("cannot iterate over empty tuple");
 
          for (auto *type : types) {
@@ -439,10 +494,10 @@ void types::RecordType::initOps() {
        false},
 
       {"__contains__",
-       {types.empty() ? Base : types[0]},
+       {empty() ? Base : types[0]},
        Bool,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         if (types.empty())
+         if (empty())
            throw exc::SeqException("cannot use 'in' on empty tuple");
 
          for (auto *type : types) {

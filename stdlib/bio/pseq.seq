@@ -1,46 +1,5 @@
 from core.c_stubs import pseq
-from bio.align import AlignConfig, Alignment
-
-type SubMat(mat: ptr[i8]):
-    def _N():
-        return 23
-
-    def __init__(self: SubMat, d: dict[tuple[str, str], int]) -> SubMat:
-        def aa_code(c: str):
-            if len(c) != 1:
-                raise ValueError("sequence length != 1: " + c)
-            AA = 'ABCDEFGHIKLMNPQRSTVWXYZ'
-            assert len(AA) == SubMat._N()
-            b = c.ptr[0]
-            i = 0
-            while i < len(AA):
-                if b == AA.ptr[i]:
-                    return i
-                i += 1
-            raise ValueError("unknown amino acid code: " + c)
-
-        N = SubMat._N()
-        p = ptr[i8](N * N)
-        for i in range(N * N):
-            p[i] = i8(0)
-        for k,v in d.items():
-            if not (-128 <= v <= 127):
-                raise ValueError("substitution score out of [-128, 127] range: " + str(v))
-            a1 = aa_code(k[0])
-            a2 = aa_code(k[1])
-            p[a1*N + a2] = i8(v)
-            p[a2*N + a1] = i8(v)
-        return (p,)
-
-    def __str__(self: SubMat):
-        N = SubMat._N()
-        s = ''
-        k = 0
-        for i in range(N):
-            for j in range(N):
-                s += str(int(self.mat[k])) + ' '
-                k += 1
-        return s
+from bio.align import Alignment
 
 extend pseq:  # order is consistent with str/seq
     def __init__(self: pseq, p: cobj, n: int) -> pseq:
@@ -66,7 +25,7 @@ extend pseq:  # order is consistent with str/seq
     def _cmp(self: pseq, other: pseq):
         self_len = len(self)
         other_len = len(other)
-        n = min(self_len, other_len)
+        n = min2(self_len, other_len)
         i = 0
         while i < n:
             c1 = self._at(i)
@@ -167,29 +126,6 @@ extend pseq:  # order is consistent with str/seq
             yield self._slice_direct(i,i+1)
             i -= 1
 
-    def align(self: pseq, other: pseq, config: AlignConfig, sub: SubMat):
-        mat, gap1, gap2, bandwidth, zdrop, flags = config
-        out = Alignment()
-        _C.seq_palign(self, other, sub.mat, i8(gap1[0]), i8(gap1[1]), bandwidth, zdrop, flags, __ptr__(out))
-        return out
-
-    def align_dual(self: pseq, other: pseq, config: AlignConfig, sub: SubMat):
-        mat, gap1, gap2, bandwidth, zdrop, flags = config
-        out = Alignment()
-        _C.seq_palign_dual(self, other, sub.mat, i8(gap1[0]), i8(gap1[1]), i8(gap2[0]), i8(gap2[1]), bandwidth, zdrop, flags, __ptr__(out))
-        return out
-
-    def align_global(self: pseq, other: pseq, config: AlignConfig, sub: SubMat):
-        mat, gap1, gap2, bandwidth, zdrop, flags = config
-        out = Alignment()
-        _C.seq_palign_global(self, other, sub.mat, i8(gap1[0]), i8(gap1[1]), bandwidth, __ptr__(out))
-        return out
-
-    def __matmul__(self: pseq, other: pseq):
-        out = Alignment()
-        _C.seq_palign_default(self, other, __ptr__(out))
-        return out
-
 def translate(s: seq):
     def encode_triple(s: seq):
         type K1 = Kmer[1]
@@ -221,4 +157,3 @@ extend seq:
 
 def as_protein(s: seq):
     return pseq(s.ptr, abs(s.len))
-

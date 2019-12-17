@@ -37,7 +37,7 @@ def _sort_list[T,S](self: list[T], key: function[S,T], algorithm: str):
         case 'quick':
             qsort_inplace(self, key)
         case _:
-            raise ArgumentError("Algorithm '" + algorithm + "' does not exist")
+            raise ValueError("Algorithm '" + algorithm + "' does not exist")
 
 extend list[T]:
     @deduceall

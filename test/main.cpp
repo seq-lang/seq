@@ -137,12 +137,20 @@ INSTANTIATE_TEST_SUITE_P(
     getTestNameFromParam);
 
 INSTANTIATE_TEST_SUITE_P(
+    PipelineTests, SeqTest,
+    testing::Combine(testing::Values("pipeline/parallel.seq",
+                                     "pipeline/prefetch.seq",
+                                     "pipeline/revcomp_opt.seq"),
+                     testing::Values(true, false)),
+    getTestNameFromParam);
+
+INSTANTIATE_TEST_SUITE_P(
     StdlibTests, SeqTest,
     testing::Combine(
         testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
                         "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
                         "stdlib/sort_test.seq", "stdlib/random_test.seq",
-                        "stdlib/heapq_test.seq"),
+                        "stdlib/heapq_test.seq", "stdlib/statistics_test.seq"),
         testing::Values(true, false)),
     getTestNameFromParam);
 

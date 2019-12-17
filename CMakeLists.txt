@@ -133,6 +133,7 @@ add_library(seq SHARED compiler/include/seq/any.h
                        compiler/include/seq/optional.h
                        compiler/include/seq/parser.h
                        compiler/include/seq/patterns.h
+                       compiler/include/seq/pipeline.h
                        compiler/include/seq/ptr.h
                        compiler/include/seq/record.h
                        compiler/include/seq/ref.h
@@ -147,6 +148,7 @@ add_library(seq SHARED compiler/include/seq/any.h
                        compiler/lang/lang.cpp
                        compiler/lang/ops.cpp
                        compiler/lang/patterns.cpp
+                       compiler/lang/pipeline.cpp
                        compiler/lang/seq.cpp
                        compiler/lang/stmt.cpp
                        compiler/lang/var.cpp

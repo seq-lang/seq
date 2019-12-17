@@ -338,7 +338,7 @@ static types::Type *callType(BaseFunc *func, std::vector<types::Type *> args) {
 
 types::Type *types::Type::magicOut(const std::string &name,
                                    std::vector<types::Type *> args,
-                                   bool nullOnMissing) {
+                                   bool nullOnMissing, bool overloadsOnly) {
   initOps();
 
   const bool isStatic = (!args.empty() && args.back() == nullptr);
@@ -360,9 +360,11 @@ types::Type *types::Type::magicOut(const std::string &name,
   if (!isStatic)
     args.erase(args.begin());
 
-  for (auto &magic : vtable.magic) {
-    if (name == magic.name && typeMatch<>(args, magic.args))
-      return magic.out;
+  if (!overloadsOnly) {
+    for (auto &magic : vtable.magic) {
+      if (name == magic.name && typeMatch<>(args, magic.args))
+        return magic.out;
+    }
   }
 
   if (nullOnMissing)

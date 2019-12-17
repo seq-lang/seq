@@ -19,7 +19,7 @@ extend seq:
     def _cmp(self: seq, other: seq):
         self_len = len(self)
         other_len = len(other)
-        n = min(self_len, other_len)
+        n = min2(self_len, other_len)
         i = 0
         while i < n:
             c1 = self._at(i)
@@ -154,13 +154,13 @@ extend seq:
             refresh = True
             while i + k <= n:
                 if refresh:
-                    sub = self._slice_direct(i,i+k)
+                    sub = self._slice_direct(i, i + k)
                     if not sub.N():
                         kmer = K(sub, False)
                         refresh = step >= k
                         yield (i, kmer)
                 else:
-                    sub = self._slice_direct(i+k-step,i+k)
+                    sub = self._slice_direct(i + k - step, i + k)
                     if not sub.N():
                         kmer <<= sub
                         yield (i, kmer)
@@ -174,19 +174,68 @@ extend seq:
             refresh = True
             while i + k <= n:
                 if refresh:
-                    sub = self._slice_direct(i,i+k)
+                    sub = self._slice_direct(i, i + k)
                     if not sub.N():
                         kmer = K(sub, True)
                         refresh = step >= k
                         yield (i, kmer)
                 else:
-                    sub = self._slice_direct(i+k-step,i+k)
+                    sub = self._slice_direct(i + k - step, i + k)
                     if not sub.N():
                         kmer <<= sub
                         yield (i, kmer)
                     else:
                         refresh = True
                 i += step
+
+    def _kmers_revcomp[K](self: seq, step: int):
+        for pos, kmer in self._kmers_revcomp_with_pos[K](step):
+            yield kmer
+
+    def _kmers_revcomp_with_pos[K](self: seq, step: int):
+        # This function is intentionally written this way. It could be simplified,
+        # but this version was found to be the most performant due to inlining etc.
+        k = K.len()
+        if self.len >= 0:
+            n = self.len
+            i = step * ((n - k) // step) + k - 1
+            kmer = K()
+            refresh = True
+            while i + 1 - k >= 0:
+                if refresh:
+                    sub = ~self._slice_direct(i + 1 - k, i + 1)
+                    if not sub.N():
+                        kmer = K(sub, True)
+                        refresh = step >= k
+                        yield (i - k + 1, kmer)
+                else:
+                    sub = self._slice_direct(i + 1 - k, i + 1 - k + step)
+                    if not sub.N():
+                        kmer <<= ~sub
+                        yield (i - k + 1, kmer)
+                    else:
+                        refresh = True
+                i -= step
+        else:
+            n = -self.len
+            i = step * ((n - k) // step) + k - 1
+            kmer = K()
+            refresh = True
+            while i + 1 - k >= 0:
+                if refresh:
+                    sub = ~self._slice_direct(i + 1 - k, i + 1)
+                    if not sub.N():
+                        kmer = K(sub, False)
+                        refresh = step >= k
+                        yield (i - k + 1, kmer)
+                else:
+                    sub = self._slice_direct(i + 1 - k, i + 1 - k + step)
+                    if not sub.N():
+                        kmer <<= ~sub
+                        yield (i - k + 1, kmer)
+                    else:
+                        refresh = True
+                i -= step
 
     def N(self: seq):
         invalid = ('\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'

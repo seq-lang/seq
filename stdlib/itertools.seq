@@ -35,7 +35,7 @@ def combinations_with_replacement(pool, r: int):
     allowing individual elements to have successive repeats.
     """
     if r < 0:
-        raise ValueError("ValueError: r must be a positive integer.")
+        raise ValueError("r must be a positive integer.")
     n = len(pool)
     if not n and r:
         return
@@ -62,9 +62,9 @@ def islice[T](iterable: generator[T], start: int, stop: int, step: int):
     default: start = 0, stop = len(iterable), step = 1
     """
     if start < 0 or stop < 0:
-        raise ValueError("ValueError: Indices for islice() must be None or an integer: 0 <= x <= maxint")
+        raise ValueError("Indices for islice() must be None or an integer: 0 <= x <= maxint")
     elif step < 0:
-        raise ValueError("ValueError: Step for islice() must be a positive integer or None.")
+        raise ValueError("Step for islice() must be a positive integer or None.")
     elif stop <= start:
         if iterable.done():
             iterable.destroy()

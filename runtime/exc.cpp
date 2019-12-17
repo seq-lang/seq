@@ -6,9 +6,22 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <unordered_map>
+#include <vector>
+
+#ifdef __APPLE__
+#define BACKTRACE
+#endif
+
+#ifdef BACKTRACE
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+
+#define BACKTRACE_LIMIT 20
+#endif
 
 /*
- * All of this is largely based on
+ * This is largely based on
  * llvm/examples/ExceptionDemo/ExceptionDemo.cpp
  */
 
@@ -44,13 +57,34 @@ struct OurExceptionType_t {
   int type;
 };
 
+#ifdef BACKTRACE
+struct BTItem {
+  unw_word_t pc;
+  unw_word_t offset;
+  char *name;
+};
+#endif
+
 struct OurBaseException_t {
-  OurExceptionType_t type;
-  void *obj;
+  OurExceptionType_t type; // Seq exception type
+  void *obj;               // Seq exception instance
+#ifdef BACKTRACE
+  BTItem *bt;        // backtrace
+  unsigned bt_count; // size of backtrace
+#endif
   _Unwind_Exception unwindException;
 };
 
 typedef struct OurBaseException_t OurException;
+
+struct SeqExcHeader_t {
+  seq_str_t type;
+  seq_str_t msg;
+  seq_str_t func;
+  seq_str_t file;
+  seq_int_t line;
+  seq_int_t col;
+};
 
 void seq_exc_init() {
   ourBaseFromUnwindOffset = seq_exc_offset();
@@ -58,10 +92,16 @@ void seq_exc_init() {
 }
 
 static void seq_delete_exc(_Unwind_Exception *expToDelete) {
-  /*
-  if (expToDelete && (expToDelete->exception_class == ourBaseExceptionClass))
-          free((char *)expToDelete + ourBaseFromUnwindOffset);
-   */
+  if (!expToDelete || expToDelete->exception_class != ourBaseExceptionClass)
+    return;
+  auto *exc = (OurException *)((char *)expToDelete + ourBaseFromUnwindOffset);
+#ifdef BACKTRACE
+  for (unsigned i = 0; i < exc->bt_count; i++) {
+    seq_free(exc->bt[i].name);
+  }
+  seq_free(exc->bt);
+#endif
+  seq_free(exc);
 }
 
 static void seq_delete_unwind_exc(_Unwind_Reason_Code reason,
@@ -69,24 +109,138 @@ static void seq_delete_unwind_exc(_Unwind_Reason_Code reason,
   seq_delete_exc(expToDelete);
 }
 
+static std::unordered_map<void *, std::string> symbols;
+
+SEQ_FUNC void seq_add_symbol(void *addr, const std::string &symbol) {
+  symbols.insert({addr, symbol});
+}
+
+SEQ_FUNC std::string seq_get_symbol(void *addr) {
+  auto iter = symbols.find(addr);
+  return iter == symbols.end() ? "" : iter->second;
+}
+
 SEQ_FUNC void *seq_alloc_exc(int type, void *obj) {
+#ifdef BACKTRACE
+  // generate backtrace
+  unw_cursor_t cursor;
+  unw_context_t context;
+  unw_getcontext(&context);
+  unw_init_local(&cursor, &context);
+  std::vector<BTItem> btv;
+
+  while (btv.size() < BACKTRACE_LIMIT && unw_step(&cursor) > 0) {
+    unw_word_t pc, offset = -1;
+    unw_proc_info_t info;
+    unw_get_reg(&cursor, UNW_REG_IP, &pc);
+    if (pc == 0 || unw_get_proc_info(&cursor, &info) != 0)
+      break;
+
+    std::string sym;
+    if (!symbols.empty()) {
+      sym = seq_get_symbol((void *)info.start_ip);
+    } else {
+      char symbuf[256];
+      if (unw_get_proc_name(&cursor, symbuf, sizeof(symbuf), &offset) == 0) {
+        sym = std::string(symbuf);
+      }
+    }
+
+    BTItem item;
+    if (sym.empty()) {
+      item.name = nullptr;
+    } else {
+      auto *name = (char *)seq_alloc_atomic(sym.length() + 1);
+      memcpy(name, sym.c_str(), sym.length() + 1);
+      item.name = name;
+    }
+
+    item.pc = pc;
+    item.offset = offset;
+    btv.push_back(item);
+  }
+
+  BTItem *bt = nullptr;
+  if (!btv.empty()) {
+    bt = (BTItem *)seq_alloc(btv.size() * sizeof(*bt));
+    memcpy(bt, &btv[0], btv.size() * sizeof(*bt));
+  }
+#endif
+
   const size_t size = sizeof(OurException);
   auto *e = (OurException *)memset(seq_alloc(size), 0, size);
   assert(e);
   e->type.type = type;
   e->obj = obj;
+#ifdef BACKTRACE
+  e->bt = bt;
+  e->bt_count = btv.size();
+#endif
   e->unwindException.exception_class = ourBaseExceptionClass;
   e->unwindException.exception_cleanup = seq_delete_unwind_exc;
   return &(e->unwindException);
 }
 
+#ifdef BACKTRACE
+static void pretty_print_name(const char *name) {
+  if (!name || *name == '\0') {
+    fprintf(stderr, "\033[32m(?)\033[0m");
+    return;
+  }
+  unsigned i = 0;
+  fprintf(stderr, "\033[32m");
+  while (name[i] && name[i] != '.') {
+    fputc(name[i], stderr);
+    i++;
+  }
+  fprintf(stderr, "\033[0m");
+  while (name[i]) {
+    fputc(name[i], stderr);
+    i++;
+  }
+}
+#endif
+
 SEQ_FUNC void seq_terminate(void *exc) {
   auto *base = (OurBaseException_t *)((char *)exc + seq_exc_offset());
   void *obj = base->obj;
-  auto *msg = (seq_str_t *)obj;
-  fputs("terminating with exception: ", stderr);
-  fwrite(msg->str, 1, (size_t)msg->len, stderr);
-  fputs("\n", stderr);
+  auto *hdr = (SeqExcHeader_t *)obj;
+  fprintf(stderr, "\033[1m");
+  fwrite(hdr->type.str, 1, (size_t)hdr->type.len, stderr);
+  if (hdr->msg.len > 0) {
+    fprintf(stderr, ": ");
+    fprintf(stderr, "\033[0m");
+    fwrite(hdr->msg.str, 1, (size_t)hdr->msg.len, stderr);
+  } else {
+    fprintf(stderr, "\033[0m");
+  }
+
+  fprintf(stderr, "\n\n");
+  fprintf(stderr, "\033[1mraised from:\033[0m \033[32m");
+  fwrite(hdr->func.str, 1, (size_t)hdr->func.len, stderr);
+  fprintf(stderr, "\033[0m\n");
+  fwrite(hdr->file.str, 1, (size_t)hdr->file.len, stderr);
+  if (hdr->line > 0) {
+    fprintf(stderr, ":%lld", (long long)hdr->line);
+    if (hdr->col > 0)
+      fprintf(stderr, ":%lld", (long long)hdr->col);
+  }
+  fprintf(stderr, "\n");
+
+#ifdef BACKTRACE
+  if (base->bt_count) {
+    BTItem *bt = base->bt;
+    fprintf(stderr, "\n\033[1mbacktrace:\033[0m\n");
+    for (unsigned i = 0; i < base->bt_count; i++) {
+      fprintf(stderr, "  [\033[33m0x%llx\033[0m] ", (long long)bt[i].pc);
+      pretty_print_name(bt[i].name);
+      if (bt[i].offset != -1)
+        fprintf(stderr, " (\033[33m+0x%llx\033[0m)", (long long)bt[i].offset);
+      fprintf(stderr, "\n");
+    }
+  }
+#endif
+
   abort();
 }
 
