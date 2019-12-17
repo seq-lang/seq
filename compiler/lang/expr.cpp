@@ -620,19 +620,21 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   implicitGen.codegen(block->getModule());
 
   // now call the generator:
-  types::FuncType *funcType = implicitGen.getFuncType();
   Function *func = implicitGen.getFunc();
-
   Value *gen;
+  // We codegen calls ourselves rather than going through funcType
+  // to avoid problems with automatic optional conversions (we don't
+  // want them here).
+  IRBuilder<> builder(block);
   if (getTryCatch()) {
     LLVMContext &context = block->getContext();
     Function *parent = block->getParent();
     BasicBlock *unwind = getTryCatch()->getExceptionBlock();
     BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
-    gen = funcType->call(base, func, args, block, normal, unwind);
+    gen = builder.CreateInvoke(func, normal, unwind, args);
     block = normal;
   } else {
-    gen = funcType->call(base, func, args, block, nullptr, nullptr);
+    gen = builder.CreateCall(func, args);
   }
 
   setBodyBase(body, oldBase);
@@ -1212,7 +1214,8 @@ static bool getExprForTupleIndex(Expr *arr, Expr *idx, types::RecordType *rec,
                                  GetElemExpr *result) {
   seq_int_t idxLit = 0;
   if (extractIntLiteral(idx, idxLit) &&
-      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
+      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true,
+                     /*overloadsOnly=*/true)) {
     seq_int_t idx = translateIndex(idxLit, rec->numBaseTypes());
     *result = GetElemExpr(arr,
                           (unsigned)(idx + 1)); // GetElemExpr is 1-based
@@ -1226,7 +1229,8 @@ static bool getExprForTupleSlice(Expr *arr, Expr *idx, types::RecordType *rec,
   std::vector<seq_int_t> args;
   types::RecordType *sliceType = nullptr;
   if (extractSliceLiteral(idx, args, sliceType) &&
-      !rec->magicOut("__getitem__", {sliceType}, /*nullOnMissing=*/true)) {
+      !rec->magicOut("__getitem__", {sliceType}, /*nullOnMissing=*/true,
+                     /*overloadsOnly=*/true)) {
     const seq_int_t length = rec->numBaseTypes();
     Slice s = getSliceIndices(args, sliceType, length);
     const seq_int_t resultLength =

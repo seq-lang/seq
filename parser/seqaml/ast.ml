@@ -285,6 +285,24 @@ module Stmt = struct
     let typ = Option.value_map typ ~default:"" ~f:(fun x -> " : " ^ Expr.to_string ~pythonic x) in
     let def = Option.value_map default ~default:"" ~f:(fun x -> " = " ^ Expr.to_string ~pythonic x) in
     sprintf "%s%s%s" name typ def
+
+  (* TODO *)
+  and px = function
+      | StarPattern -> "Star"
+      | IntPattern i -> "Int"
+      | BoolPattern b -> "Bool"
+      | StrPattern s -> "Str"
+      | SeqPattern s -> "Seq"
+      | TuplePattern tl ->
+        sprintf "Tuple(%s)" @@ Util.ppl tl ~f:px
+      | RangePattern (i, j) -> "Range"
+      | ListPattern tl ->
+        sprintf "List(%s)" @@ Util.ppl tl ~f:px
+      | OrPattern tl ->
+        sprintf "Or(%s)" @@ Util.ppl tl ~f:px
+      | WildcardPattern wild -> "*"
+      | GuardedPattern (pat, expr) -> sprintf "Guarded(%s)" (px pat)
+      | BoundPattern _ -> "Bound"
 end
 
 

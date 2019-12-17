@@ -122,11 +122,31 @@
 %start <Ast.Stmt.t Ast.Ann.ann list> program
 %%
 
-%public separated_nonempty_trailing_list(separator, X):
-  | x = X separator
-    { [ x ] }
-  | x = X; separator; xs = separated_nonempty_trailing_list(separator, X)
-    { x :: xs }
+// http://gallium.inria.fr/blog/lr-lists/
+reverse_separated_nonempty_llist(separator, X):
+  | x = X { [ x ] }
+  | xs = reverse_separated_nonempty_llist(separator, X); separator; x = X
+      { x :: xs }
+
+%inline reverse_separated_llist(separator, X):
+  | { [] }
+  | xs = reverse_separated_nonempty_llist(separator, X) { xs }
+
+%inline separated_llist(separator, X):
+  | xs = reverse_separated_llist(separator, X) { List.rev xs }
+
+%inline flexible_list(delim, X):
+  | xs = separated_llist(delim, X) delim? { xs }
+
+%inline flexible_nonempty_list(delim, X):
+  | x = X { [x] }
+  | x = X; delim; xs = separated_llist(delim, X) delim? { x :: xs }
+
+%inline flexible_nonempty_list_flag(delim, X):
+  | x = X { [x], false }
+  | x = X; delim; xs = separated_llist(delim, X); f= delim? 
+    { x :: xs, Option.is_some f }
+
 
 /******************************************************************************
   Notes:
@@ -196,34 +216,20 @@ bool:
   | FALSE { $1, false }
 tuple: // Tuples: (1, 2, 3)
   | LP RP
-    { pos $1 $2,
-      [] }
-  | LP expr COMMA RP
-    { pos $1 $4,
-      [$2] }
-  | LP expr COMMA expr_list RP
-    { pos $1 $5,
-      $2 :: $4 }
-lists: // Lists: [1, 2, 3]
-  // TODO needs trailing comma support
-  | LS RS
-    { pos $1 $2,
-      [] }
-
-  | LS expr_list RS
-    { pos $1 $3,
-      $2 }
-set:
-  | LB expr_list RB
-    { pos $1 $3,
-      $2 }
-dict: // Dictionaries: {1: 2, 3: 4}
-  | LB RB
     { pos $1 $2, [] }
-  | LB separated_nonempty_list(COMMA, dictitem) RB
-  | LB separated_nonempty_trailing_list(COMMA, dictitem) RB
-    { pos $1 $3,
-      $2 }
+  | LP expr COMMA RP
+    { pos $1 $4, [$2] }
+  | LP expr COMMA flexible_nonempty_list(COMMA, expr) RP
+    { pos $1 $5, $2 :: $4 }
+lists: // Lists: [1, 2, 3]
+  | LS flexible_list(COMMA, expr) RS
+    { pos $1 $3, $2 }
+set:
+  | LB flexible_nonempty_list(COMMA, expr) RB
+    { pos $1 $3, $2 }
+dict: // Dictionaries: {1: 2, 3: 4}
+  | LB flexible_list(COMMA, dictitem) RB
+    { pos $1 $3, $2 }
 dictitem:
   | expr COLON expr
     { $1, $3 }
@@ -231,24 +237,20 @@ dictitem:
 // Generators
 tuple_gen:
   | LP expr comprehension RP
-    { pos $1 $4,
-      Generator ($2, $3) }
+    { pos $1 $4, Generator ($2, $3) }
 list_gen:
   | LS expr comprehension RS
-    { pos $1 $4,
-      ListGenerator ($2, $3) }
+    { pos $1 $4, ListGenerator ($2, $3) }
 set_gen:
   | LB expr comprehension RB
-    { pos $1 $4,
-      SetGenerator ($2, $3) }
+    { pos $1 $4, SetGenerator ($2, $3) }
 dict_gen:
   | LB dictitem comprehension RB
-    { pos $1 $4,
-      DictGenerator ($2, $3) }
+    { pos $1 $4, DictGenerator ($2, $3) }
 
 // Comprehensions
 comprehension:
-  | FOR separated_list(COMMA, ID) IN pipe_expr comprehension_if? comprehension?
+  | FOR flexible_nonempty_list(COMMA, ID) IN pipe_expr comprehension_if? comprehension?
     { let last = match $6, $5, $4 with
         | Some (p, _), _, _
         | None, Some (p, _), _
@@ -287,7 +289,6 @@ expr:
       Lambda ($2, $4) }
 expr_list:
   | separated_nonempty_list(COMMA, expr)
-  | separated_nonempty_trailing_list(COMMA, expr)
     { $1 }
 
 // The following rules are defined in the order of operator precedence:
@@ -368,7 +369,7 @@ arith_term:
   | atom
     { $1 }
   // Call (foo(bar))
-  | arith_term LP; args = separated_list(COMMA, call_term); RP
+  | arith_term LP; args = flexible_list(COMMA, call_term); RP
     { pos (fst $1) $4,
       Call ($1, args) }
   // Call with single generator parameter without parentheses
@@ -378,11 +379,13 @@ arith_term:
       Call ($1, [pos $2 $5,
                  { name = None; value = (pos $2 $5, Generator ($3, $4)) }]) }
   // Index (foo[bar])
-  | arith_term LS separated_nonempty_list(COMMA, index_term) RS
-    { pos (fst $1) $4,
-      if List.length $3 = 1 then Index ($1, List.hd_exn $3)
-      else Index ($1,
-        (pos (fst @@ List.hd_exn $3) (fst @@ List.last_exn $3), Tuple $3)) }
+  | arith_term LS index_term RS 
+   { pos (fst $1) $4, Index ($1, $3) }
+  | arith_term LS index_term COMMA RS 
+    { pos (fst $1) $4, Index ($1, (fst $3, Tuple [$3])) }
+  | arith_term LS index_term COMMA flexible_nonempty_list(COMMA, index_term) RS
+    { pos (fst $1) $6,
+      Index ($1, (pos (fst $3) (fst @@ List.last_exn $5), Tuple ($3 :: $5))) }
   // Access (foo.bar)
   | arith_term DOT ID
     { pos (fst $1) (fst $3),
@@ -426,7 +429,7 @@ index_term:
 // General statements
 statement:
   // List of small statements optionally separated by ;
-  | separated_nonempty_list(SEMICOLON, small_statement) NL
+  | flexible_nonempty_list(SEMICOLON, small_statement) NL
     { List.concat $1 }
   // Empty statement
   | NL
@@ -436,7 +439,7 @@ statement:
   | WHILE expr COLON suite
     {[ pos $1 $3,
        While ($2, $4) ]}
-  | FOR separated_list(COMMA, ID) IN expr COLON suite
+  | FOR flexible_nonempty_list(COMMA, ID) IN expr COLON suite
     {[ pos $1 $5,
        For (List.map $2 ~f:snd, $4, $6) ]}
   // Conditionals if and if-else
@@ -491,21 +494,16 @@ small_statement:
     {[ $1,
        Continue () ]}
   // del statement
-  | DEL separated_nonempty_list(COMMA, expr)
+  | DEL flexible_nonempty_list(COMMA, expr)
     { List.map $2 ~f:(fun expr ->
         fst expr, Del expr) }
   // print statement
   | PRINT
-    {[ $1,
-       Print ([], "\n") ]}
-  | PRINT separated_nonempty_list(COMMA, expr)
-    {[ pos $1 (fst @@ List.last_exn $2),
-       Print ($2, "\n") ]}
-  | PRINT separated_nonempty_trailing_list(COMMA, expr)
-    {[ pos $1 (fst @@ List.last_exn $2),
-       Print ($2, " ") ]}
+    { [ $1, Print ([], "\n") ]}
+  | PRINT flexible_nonempty_list_flag(COMMA, expr)
+    { [ $1, Print (fst $2, if snd $2 then " " else "\n") ]}
   // assert statement
-  | ASSERT expr_list
+  | ASSERT flexible_nonempty_list(COMMA, expr)
     { List.map $2 ~f:(fun expr ->
         fst expr, Assert expr) }
   // return and yield statements
@@ -533,14 +531,22 @@ small_statement:
       in
       [ pos,
         Yield expr ]}
+  | YIELD FROM expr 
+    {
+      (* for i in expr: yield i *)
+      let p = pos $1 (fst $3) in
+      let vname = new_assign () in
+      let var = p, Id (vname) in
+      let expr = p, Yield (Some var) in
+      [ p, For ([vname], $3, [expr]) ]
+    }
   // global statement
-  | GLOBAL separated_nonempty_list(COMMA, ID)
+  | GLOBAL flexible_nonempty_list(COMMA, ID)
     { List.map $2 ~f:(fun expr ->
         fst expr, Global (snd expr)) }
-  | PREFETCH separated_nonempty_list(COMMA, expr)
+  | PREFETCH flexible_nonempty_list(COMMA, expr)
     {[ pos $1 (fst @@ List.last_exn $2),
        Prefetch $2 ]}
-
 
 // Type definitions
 type_alias:
@@ -675,7 +681,7 @@ assign_statement:
 // Suites (indented blocks of code)
 suite:
   // Same-line suite (if foo: suite)
-  | separated_nonempty_list(SEMICOLON, small_statement) NL
+  | flexible_nonempty_list(SEMICOLON, small_statement) NL
     { List.concat $1 }
   // Indented suites
   | NL INDENT statement+ DEDENT
@@ -702,40 +708,35 @@ case_suite:
 // Specific pattern suites
 case:
   // case pattern
-  | CASE separated_nonempty_list(OR, case_type) COLON suite
+  | CASE case_or COLON suite
     {
-      let pattern = match $2 with
-        | [WildcardPattern (Some "_")] ->
-          WildcardPattern None
-        | [p] -> p
-        | l -> OrPattern l
-      in
       pos $1 $3,
-      { pattern; case_stmts = $4 } }
+      { pattern = $2; case_stmts = $4 } }
   // guarded: case pattern if foo
-  | CASE separated_nonempty_list(OR, case_type) IF bool_expr COLON suite
-    { let pattern =
-        if List.length $2 = 1 then List.hd_exn $2
-        else OrPattern $2
-      in
-      pos $1 $5,
-      { pattern = GuardedPattern (pattern, $4); case_stmts = $6 } }
+  | CASE case_or IF bool_expr COLON suite
+    { pos $1 $5,
+      { pattern = GuardedPattern ($2, $4); case_stmts = $6 } }
   // bounded: case pattern as id:
-  | CASE separated_nonempty_list(OR, case_type) AS ID COLON suite
-    { let pattern =
-        if List.length $2 = 1 then List.hd_exn $2
-        else OrPattern $2
-      in
-      pos $1 $5,
-      { pattern = BoundPattern (snd $4, pattern); case_stmts = $6 } }
+  | CASE case_or AS ID COLON suite
+    { pos $1 $5,
+      { pattern = BoundPattern (snd $4, $2); case_stmts = $6 } }
+case_int:
+  | INT { Int64.of_string @@ snd $1 }
+  | ADD INT { Int64.of_string @@ snd $2 }
+  | SUB INT { Int64.neg (Int64.of_string @@ snd $2) }
+case_or:
+  | p = separated_nonempty_list(OR, case_type)
+    {
+      if List.length(p) = 1 then List.hd_exn p else OrPattern(p)
+    }
 // Pattern rules
 case_type:
   | ELLIPSIS
     { StarPattern }
   | ID
-    { WildcardPattern (Some (snd $1)) }
-  | INT
-    { IntPattern (Int64.of_string @@ snd $1) }
+    { match snd $1 with "_" -> WildcardPattern None | s -> WildcardPattern (Some s) }
+  | case_int
+    { IntPattern ($1) }
   | bool
     { BoolPattern (snd $1) }
   | STRING
@@ -744,13 +745,13 @@ case_type:
     { let pos, p, s = $1 in
       if p = "s" then SeqPattern s else Err.serr ~pos "cannot match protein sequences" }
   // Tuples & lists
-  | LP separated_nonempty_list(COMMA, case_type) RP
+  | LP separated_nonempty_list(COMMA, case_or) RP
     { TuplePattern ($2) }
-  | LS separated_nonempty_list(COMMA, case_type) RS
+  | LS flexible_list(COMMA, case_or) RS
     { ListPattern ($2) }
   // Ranges
-  | INT ELLIPSIS INT
-    { RangePattern(Int64.of_string @@ snd $1, Int64.of_string @@ snd $3) }
+  | case_int ELLIPSIS case_int
+    { RangePattern($1, $3) }
 
 // Import statments
 import_statement:
@@ -761,7 +762,7 @@ import_statement:
       Import [{ from; what = Some([fst $4, ("*", None)]);
                 import_as = None }] }
   // from x import y, z
-  | FROM dot_term IMPORT separated_list(COMMA, import_term)
+  | FROM dot_term IMPORT flexible_nonempty_list(COMMA, import_term)
     { let from = flatten_dot ~sep:"/" $2 in
       let what = List.map $4 ~f:(fun (pos, (what, ias)) ->
         pos, (snd @@ flatten_dot ~sep:"/" what, ias))
@@ -769,7 +770,7 @@ import_statement:
       pos $1 (fst @@ List.last_exn $4),
       Import [{ from; what = Some what; import_as = None }] }
   // import x, y
-  | IMPORT separated_list(COMMA, import_term)
+  | IMPORT flexible_nonempty_list(COMMA, import_term)
     { pos $1 (fst @@ List.last_exn $2),
       Import (List.map $2 ~f:(fun (_, (from, import_as)) ->
         let from = flatten_dot ~sep:"/" from in
@@ -826,7 +827,7 @@ throw:
       Throw $2 }
 
 with_statement:
-  | WITH separated_nonempty_list(COMMA, with_clause) COLON suite
+  | WITH flexible_nonempty_list(COMMA, with_clause) COLON suite
     {
       let rec traverse (expr, var) lst =
         let var = Option.value var ~default:(fst expr, Id (new_assign ())) in
@@ -875,12 +876,12 @@ func:
   // Seq function (def foo [ [type+] ] (param+) [ -> return ])
   | DEF; name = ID;
     intypes = generic_list?;
-    LP fn_args = separated_list(COMMA, typed_param); RP
+    LP fn_args = flexible_list(COMMA, typed_param); RP
     typ = func_ret_type?;
-    COLON;
+    col = COLON;
     s = suite
     { let fn_generics = Option.value intypes ~default:[] in
-      pos $1 $8,
+      pos $1 col,
       Generic (Function
         { fn_name = { name = snd name; typ; default = None };
           fn_generics;
@@ -890,13 +891,13 @@ func:
   | extern { $1 }
 // Extern function (extern lang [ (dylib) ] foo (param+) -> return)
 extern:
-  | from = extern_from?; lang = EXTERN; what = separated_nonempty_list(COMMA, extern_what); NL
+  | from = extern_from?; lang = EXTERN; what = flexible_nonempty_list(COMMA, extern_what); NL
     {
       pos (match from with Some (p, _) -> p | None -> fst lang) $4,
       ImportExtern ( List.map what ~f:(fun e -> { e with lang = snd lang; e_from = from }) )
     }
 extern_what:
-  | name = ID; LP; p = separated_list(COMMA, extern_param); RP; typ = func_ret_type?;
+  | name = ID; LP; p = flexible_list(COMMA, extern_param); RP; typ = func_ret_type?;
     eas = extern_as?
   {
     let typ = match typ with
@@ -926,7 +927,7 @@ extern_param:
       { name = snd $1; typ = Some $2; default = None } }
 // Generic specifiers
 generic_list:
-  | LS; separated_nonempty_list(COMMA, ID); RS
+  | LS; flexible_nonempty_list(COMMA, ID); RS
     { $2 }
 // Return type rule (-> type)
 func_ret_type:
@@ -937,7 +938,7 @@ func_ret_type:
 pyfunc:
   // Seq function (def foo [ [type+] ] (param+) [ -> return ])
   | PYDEF; name = ID;
-    LP fn_args = separated_list(COMMA, typed_param); RP
+    LP fn_args = flexible_list(COMMA, typed_param); RP
     typ = func_ret_type?;
     COLON;
     s = suite
@@ -1006,7 +1007,7 @@ typ:
     { pos (fst $1) $2,
       Generic (Type { (snd $1) with members = List.filter_opt members }) }
 type_head:
-  | TYPE ID LP separated_list(COMMA, typed_param) RP
+  | TYPE ID LP flexible_list(COMMA, typed_param) RP
     { List.iter $4 ~f:(fun (_, x) ->
       if is_some x.default then Err.serr ~pos:(pos $1 $5) "type definitions cannot have default arguments");
       pos $1 $5,
@@ -1038,6 +1039,6 @@ decorator:
     { match $2 with
       | pos, Id s -> pos, s
       | _ -> noimp "decorator dot" }
-  | AT dot_term LP separated_list(COMMA, expr) RP NL
+  | AT dot_term LP flexible_list(COMMA, expr) RP NL
     { noimp "decorator" (* Decorator ($2, $4) *) }
 

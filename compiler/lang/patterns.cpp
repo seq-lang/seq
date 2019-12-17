@@ -43,6 +43,8 @@ Var *Wildcard::getVar() { return var; }
 Value *Wildcard::codegen(BaseFunc *base, types::Type *type, Value *val,
                          BasicBlock *&block) {
   LLVMContext &context = block->getContext();
+  BasicBlock *preamble = base->getPreamble();
+  var->store(base, type->defaultValue(preamble), preamble);
   var->store(base, val, block);
   return ConstantInt::get(IntegerType::getInt1Ty(context), 1);
 }
@@ -82,8 +84,7 @@ void StarPattern::resolveTypes(types::Type *type) {}
 
 Value *StarPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                             BasicBlock *&block) {
-  assert(0);
-  return nullptr;
+  throw exc::SeqException("misplaced '...'", getSrcInfo());
 }
 
 IntPattern::IntPattern(seq_int_t val) : Pattern(types::Int), val(val) {}
@@ -607,6 +608,7 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);
   } else {
     assert(0);
+    return nullptr;
   }
 }
 

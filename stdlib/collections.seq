@@ -1,98 +1,102 @@
 class deque[T]:
-    arr: array[T]
-    head: int
-    tail: int
-    maxlen: int
+    _arr: array[T]
+    _head: int
+    _tail: int
+    _maxlen: int
 
     def __init__(self: deque[T], arr: array[T], head: int, tail: int, maxlen: int):
-        self.arr = arr
-        self.head = head
-        self.tail = tail
-        self.maxlen = maxlen
+        self._arr = arr
+        self._head = head
+        self._tail = tail
+        self._maxlen = maxlen
 
     def __init__(self: deque[T]):
-        self.arr = array[T](16)
-        self.head = 0
-        self.tail = 0
-        self.maxlen = -1
+        self._arr = array[T](16)
+        self._head = 0
+        self._tail = 0
+        self._maxlen = -1
 
     def __init__(self: deque[T], maxlen: int):
         cap = 1
         while cap < maxlen:
             cap *= 2
-        self.arr = array[T](cap)
-        self.head = 0
-        self.tail = 0
-        self.maxlen = maxlen
+        self._arr = array[T](cap)
+        self._head = 0
+        self._tail = 0
+        self._maxlen = maxlen
 
     def __init__(self: deque[T], it: generator[T]):
-        self.arr = array[T](16)
-        self.head = 0
-        self.tail = 0
-        self.maxlen = -1
+        self._arr = array[T](16)
+        self._head = 0
+        self._tail = 0
+        self._maxlen = -1
         for i in it:
             self.append(i)
 
+    @property
+    def maxlen(self: deque[T]):
+        return self._maxlen
+
     def _double_cap(self: deque[T]):
-        p = self.head
-        n = len(self.arr)
+        p = self._head
+        n = len(self._arr)
         r = n - p
         new_cap = n * 2
         new_arr = array[T](new_cap)
         for i in range(r):
-            new_arr[i] = self.arr[p + i]
+            new_arr[i] = self._arr[p + i]
         for i in range(p):
-            new_arr[i + r] = self.arr[i]
-        self.arr = new_arr
-        self.head = 0
-        self.tail = n
+            new_arr[i + r] = self._arr[i]
+        self._arr = new_arr
+        self._head = 0
+        self._tail = n
 
     def _check_not_empty(self: deque[T]):
         if not self:
             raise IndexError("pop from an empty deque")
 
     def __bool__(self: deque[T]):
-        return self.head != self.tail
+        return self._head != self._tail
 
     def __len__(self: deque[T]):
-        return (self.tail - self.head) & (len(self.arr) - 1)
+        return (self._tail - self._head) & (len(self._arr) - 1)
 
     def appendleft(self: deque[T], x: T):
-        self.head = (self.head - 1) & (len(self.arr) - 1)
-        self.arr[self.head] = x
-        if self.maxlen >= 0 and len(self) > self.maxlen:
+        self._head = (self._head - 1) & (len(self._arr) - 1)
+        self._arr[self._head] = x
+        if self._maxlen >= 0 and len(self) > self._maxlen:
             self.pop()
-        if self.head == self.tail:
+        if self._head == self._tail:
             self._double_cap()
 
     def append(self: deque[T], x: T):
-        self.arr[self.tail] = x
-        self.tail = (self.tail + 1) & (len(self.arr) - 1)
-        if self.maxlen >= 0 and len(self) > self.maxlen:
+        self._arr[self._tail] = x
+        self._tail = (self._tail + 1) & (len(self._arr) - 1)
+        if self._maxlen >= 0 and len(self) > self._maxlen:
             self.popleft()
-        if self.head == self.tail:
+        if self._head == self._tail:
             self._double_cap()
 
     def popleft(self: deque[T]):
         self._check_not_empty()
-        res = self.arr[self.head]
-        self.head = (self.head + 1) & (len(self.arr) - 1)
+        res = self._arr[self._head]
+        self._head = (self._head + 1) & (len(self._arr) - 1)
         return res
 
     def pop(self: deque[T]):
         self._check_not_empty()
-        self.tail = (self.tail - 1) & (len(self.arr) - 1)
-        return self.arr[self.tail]
+        self._tail = (self._tail - 1) & (len(self._arr) - 1)
+        return self._arr[self._tail]
 
     def clear(self: deque[T]):
-        self.head = 0
-        self.tail = 0
+        self._head = 0
+        self._tail = 0
 
     def __iter__(self: deque[T]):
-        i = self.head
-        while i != self.tail:
-            yield self.arr[i]
-            i = (i + 1) & (len(self.arr) - 1)
+        i = self._head
+        while i != self._tail:
+            yield self._arr[i]
+            i = (i + 1) & (len(self._arr) - 1)
 
     def __contains__(self: deque[T], x: T):
         for i in self:
@@ -101,7 +105,10 @@ class deque[T]:
         return False
 
     def __copy__(self: deque[T]):
-        return deque[T](copy(self.arr), self.head, self.tail, self.maxlen)
+        return deque[T](copy(self._arr), self._head, self._tail, self._maxlen)
+
+    def copy(self: deque[T]):
+        return self.__copy__()
 
     def __str__(self: deque[T]):
         return str(list[T](iter(self)))

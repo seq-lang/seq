@@ -900,7 +900,7 @@ void Throw::codegen0(BasicBlock *&block) {
 
   std::string funcNameStr = "<main>";
   if (auto *func = dynamic_cast<Func *>(getBase())) {
-    funcNameStr = func->genericName() + "()";
+    funcNameStr = func->genericName();
   }
   std::string fileNameStr = getSrcInfo().file;
   seq_int_t fileLine = getSrcInfo().line;

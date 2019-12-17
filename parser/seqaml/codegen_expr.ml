@@ -123,12 +123,20 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         | '{' -> acc, depth + 1, last
         | '}' when depth = 1 ->
           let code = String.sub s ~pos:last ~len:(i - last) in
+          let extra, code = 
+            if (String.suffix code 1) = "="
+            then true, String.prefix code ((String.length code) - 1)
+            else false, code
+          in
           (* eprintf "??? %s\n" @@ code; *)
           let expr = match Parser.parse ~file:ctx.filename code with
             | [ _, Expr e ] -> Ast.(e_call ~pos (e_id ~pos "str") [e_setpos pos e])
             | _ -> failwith "invalid f-parse"
           in
-          (expr :: acc), 0, i + 1
+          if extra then 
+            (expr :: ((pos, String ((String.strip code) ^ "=")) :: acc)), 0, i + 1
+          else
+            (expr :: acc), 0, i + 1
         | '}' -> acc, depth - 1, last
         | _ -> acc, depth, last)
     in
