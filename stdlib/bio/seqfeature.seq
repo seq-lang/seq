@@ -4,113 +4,72 @@ Represent a Sequence Feature holding info about a part of a sequence.
 TODO/CAVEATS:
 @jordan- For now MutableSeq is left out
 """
+EXACT = 0
+BEFORE = 1
+AFTER = 2
 
-# class BeforePosition(int, AbstractPosition):
-type BeforePosition(position: int):
+type Position(position: int, mode: int, extension: int):
     """
-    Specify a position where the actual location occurs before it.
+    Specify the specific position of a boundary.
     """
 
-    # Subclasses int so can't use __init__
-    def __init__(cls: BeforePosition, position: int, extension: int=0):
-        """
-        Create a new instance in BeforePosition object.
-        """
+    def __init__(cls: Position, position: int, mode: int, extension: int=0):
         if extension != 0:
             raise AttributeError(f"Non-zero extension {extension} for exact position.")
-                                 
-        return cls.position
 
+        if not 0 <= mode <= 2:
+            raise ValueError(f"mode must be a value of EXACT={EXACT}, BEFORE={BEFORE}, AFTER={AFTER}.")
+
+        return cls.position
+    
     @property
-    def position(self: BeforePosition):
+    def position(self: Position):
         """
         Legacy attribute to get position as integer (OBSOLETE).
         """
         return int(self.position)
-
+    
     @property
-    def extension(self: BeforePosition):  # noqa: D402
+    def extension(self: Position):  # noqa: D402
         """
         Legacy attribute to get extension (zero) as integer (OBSOLETE).
         """
         return 0
 
-    def __repr__(self: BeforePosition):
+    def __repr__(self: Position):
         """
         Represent the location as a string for debugging.
         """
         return f"{self.__class__.__name__}({int(self)})" 
 
-    def __str__(self: BeforePosition):
+    def __str__(self: Position):
         """
-        Return a representation of the BeforePosition object (with python counting).
+        Return a representation of the Position object.
         """
-        return "<{self.position}"
+        if self.mode == EXACT:
+            return f"{self.position}"
+        elif self.mode == BEFORE:
+            return "<{self.position}"
+        else:
+            return ">{self.position}"
 
-    def _shift(self: BeforePosition, offset: int):
+    def _shift(self: Position, offset: int):
         """
         Return a copy of the position object with its location shifted (PRIVATE).
         """
         return self.__class__(int(self) + offset)
 
-    def _flip(self: BeforePosition, length: int):
+    def _flip(self: Position, length: int):
         """
         Return a copy of the location after the parent is reversed (PRIVATE).
         """
-        return self.AfterPosition(length - int(self))
-
-# class AfterPosition(int, AbstractPosition):
-type AfterPosition(position: int):
-    """
-    Specify a position where the actual location is found after it.
-    """
-
-    # Subclasses int so can't use __init__
-    def __init__(cls: AfterPosition, position: int, extension: int=0):
-        """
-        Create a new instance of the AfterPosition object.
-        """
-        if extension != 0:
-            raise AttributeError(f"Non-zero extension {extension} for exact position.")
-        return cls.position
-
-    @property
-    def position(self: AfterPosition):
-        """
-        Legacy attribute to get position as integer (OBSOLETE).
-        """
-        return int(self)
-
-    @property
-    def extension(self: AfterPosition):  # noqa: D402
-        """
-        Legacy attribute to get extension (zero) as integer (OBSOLETE).
-        """
-        return 0
-
-    def __repr__(self: AfterPosition):
-        """
-        Represent the location as a string for debugging.
-        """
-        return f"{self.__class__.__name__}({int(self)})"
-
-    def __str__(self: AfterPosition):
-        """
-        Return a representation of the AfterPosition object (with python counting).
-        """
-        return f">{self.position}"
-
-    def _shift(self: AfterPosition, offset: int):
-        """
-        Return a copy of the position object with its location shifted (PRIVATE).
-        """
-        return self.__class__(int(self) + offset)
-
-    def _flip(self: AfterPosition, length: int):
-        """
-        Return a copy of the location after the parent is reversed (PRIVATE).
-        """
-        return BeforePosition(length - int(self))
+        if self.mode == EXACT:
+            # By default perserve any subclass
+            return self.__class__(length = int(self))
+        elif self.mode == BEFORE:
+            return Position(length - int(self), 2, 0)
+        else:
+            return Position(length - int(self), 1, 0)
 
 
 # --- Handling feature locations
@@ -130,25 +89,23 @@ class FeatureLocation:
         """
         Initialize the class.
         """
-        # TODO - Check 0 <= start <= end (<= length of reference)
+
         self._start = start
-    
         self._end = end
 
-        if self.start > self.end:
-            raise ValueError(f"""End location ({self.end}) must be greater than or equal 
-                             to start location ({self.start})""")
+        if self._start > self._end:
+            raise ValueError(f"End location {self._end} must be greater than or equal to start location {self._start}.")
+
         self.strand = strand
         self.ref = ref
         self.ref_db = ref_db
-
-    def __init__(self: FeatureLocation, start: BeforePosition, end: AfterPosition, strand: optional[int]=None, ref: optional[str]=None, ref_db: optional[str]=None):
+    
+    def __init__(self: FeatureLocation, start: Position, end: Position, strand: optional[int]=None, ref: optional[str]=None, ref_db: optional[str]=None):
         """
         Initialize the class.
         """
-        # TODO - Check 0 <= start <= end (<= length of reference)
+
         self._start = start
-    
         self._end = end
 
         if self.start > self.end:
@@ -211,12 +168,6 @@ class FeatureLocation:
         if self.ref_db is not None:
             optional += f", ref_db={self.ref_db}" 
         return f"{self.__class__.__name__}({self.start}, {self.end}{optional})" \
-
-    def __add__(self: FeatureLocation, other: FeatureLocation):
-        """
-        Combine location with another FeatureLocation object, or shift it.
-        """
-        return self.CompoundLocation([self, other])
 
     # Not sure about `other` type
     def __radd__(self: FeatureLocation, other: int):
@@ -721,7 +672,7 @@ class CompoundLocation:
         """
         Return a representation of the CompoundLocation object.
         """
-        return f"""{self.operator}, {(", ".join(str(loc) for loc in self.parts))}"""
+        return f"""{self.operator}{{(", ".join(list(str(loc) for loc in self.parts)))}} """
 
     def __repr__(self: CompoundLocation):
         """
@@ -943,6 +894,13 @@ class CompoundLocation:
             f_seq += part
         return f_seq
 
+extend FeatureLocation:
+    def __add__(self: FeatureLocation, other: FeatureLocation):
+        """
+        Combine location with another FeatureLocation object, or shift it.
+        """
+        return CompoundLocation([self, other], "join")
+
 # class AbstractPosition(object):
 class AbstractPosition:
     """
@@ -955,69 +913,7 @@ class AbstractPosition:
         """
         return f"{self.__class__.__name__}(...)"
 
-# class ExactPosition(int, AbstractPosition):
-class ExactPosition:
-    """
-    Specify the specific position of a boundary.
-     - position - The position of the boundary.
-     - extension - An optional argument which must be zero since we don't
-       have an extension. The argument is provided so that the same number
-       of arguments can be passed to all position types.
-    """
-    position: int
-    extension: int
-
-    def __init__(cls: ExactPosition, position: int, extension: int=0):
-        """
-        Create an ExactPosition object.
-        """
-        if extension != 0:
-            raise AttributeError(f"Non-zero extension {extension} for exact position.")
-                    
-        return int.__init__(cls, position)
-
-    def __str__(self: ExactPosition) -> str:
-        """
-        Return a representation of the ExactPosition object.
-        """
-        return str(int(self))
-
-    def __repr__(self: ExactPosition):
-        """
-        Represent the ExactPosition object as a string for debugging.
-        """
-        return f"{self.__class__.__name__}({int(self)})"
-
-    @property
-    def position(self: ExactPosition):
-        """
-        Legacy attribute to get position as integer (OBSOLETE).
-        """
-        return int(self)
-
-    @property
-    def extension(self: ExactPosition):
-        """
-        Not present in this object, return zero (OBSOLETE).
-        """
-        return 0
-
-    def _shift(self: ExactPosition, offset: int):
-        """
-        Return a copy of the position object with its location shifted (PRIVATE).
-        """
-        # By default preserve any subclass
-        return self.__class__(int(self) + offset)
-
-    def _flip(self: ExactPosition, length: int):
-        """
-        Return a copy of the location after the parent is reversed (PRIVATE).
-        """
-        # By default perserve any subclass
-        return self.__class__(length - int(self))
-
-
-# class UncertainPosition(ExactPosition):
+# class UncertainPosition(Position):
 #     """
 #     Specify a specific position which is uncertain.
 #     This is used in UniProt, e.g. ?222 for uncertain position 222, or in the
@@ -1217,9 +1113,9 @@ class OneOfPosition:
     Specify a position where the location can be multiple positions.
     """
     position: int
-    choices: list[ExactPosition]
+    choices: list[Position]
 
-    def __init__(cls: OneOfPosition, position: int, choices: list[ExactPosition]):
+    def __init__(cls: OneOfPosition, position: int, choices: list[Position]):
         """
         Initialize with a set of possible positions.
         position_list is a list of AbstractPosition derived objects,
@@ -1232,7 +1128,7 @@ class OneOfPosition:
         obj.position_choices = choices
         return obj
 
-    def __getnewargs__(self: OneOfPosition) -> tuple[int, list[ExactPosition]]:
+    def __getnewargs__(self: OneOfPosition) -> tuple[int, list[Position]]:
         """
         Return the arguments accepted by __init__.
         Necessary to allow pickling and unpickling of class instances.
