@@ -100,6 +100,10 @@ class SAMRecord:
         return self._name
 
     @property
+    def query_name(self: SAMRecord):
+        return self._name
+
+    @property
     def read(self: SAMRecord):
         return self._read
 
@@ -295,6 +299,11 @@ class BAM:
 
     def __exit__(self: BAM):
         self.close()
+
+    def reference_name(self: BAM, tid: int) -> str:
+        if 0 <= tid < len(self.targets):
+            return str(self.targets[tid])
+        return "*"
 
 class SAM:
     file: cobj

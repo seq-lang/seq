@@ -83,6 +83,7 @@ cimport ferror(cobj) -> i32
 cimport fgetc(cobj) -> i32
 cimport fopen(cobj, cobj) -> cobj
 cimport fclose(cobj) -> int
+cimport fread(cobj, int, int, cobj) -> int
 cimport fwrite(cobj, int, int, cobj) -> int
 cimport ftell(cobj) -> int
 cimport fseek(cobj, int, i32) -> i32

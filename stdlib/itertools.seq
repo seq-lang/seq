@@ -185,15 +185,14 @@ def filterfalse(predicate, iterable):
         if not predicate(x):
             yield x
 
-def permutations(pool, r: int):
+def permutations[T](pool: list[T], r_: optional[int] = None) -> list[T]:
     """
     permutations(iterable, r)
 
     Return successive r-length permutations of elements in the iterable.
-
-    Unlike python, seq does not use None for now so default for r will be len(pool)
     """
-    n = len(pool)
+    r = ~r_ if r_ else len(pool)
+    n = len(pool) 
     if r > n:
         return
 

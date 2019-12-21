@@ -128,11 +128,12 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
             then true, String.prefix code ((String.length code) - 1)
             else false, code
           in
-          (* eprintf "??? %s\n" @@ code; *)
+          Lexer.global_offset.line <- pos.line - 1;
           let expr = match Parser.parse ~file:ctx.filename code with
             | [ _, Expr e ] -> Ast.(e_call ~pos (e_id ~pos "str") [e_setpos pos e])
             | _ -> failwith "invalid f-parse"
           in
+          Lexer.global_offset.line <- 0;
           if extra then 
             (expr :: ((pos, String ((String.strip code) ^ "=")) :: acc)), 0, i + 1
           else

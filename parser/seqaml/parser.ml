@@ -23,8 +23,8 @@ let parse ?f ?(file = "") code =
     let pos =
       Ast.Ann.
         { file
-        ; line = lexbuf.lex_start_p.pos_lnum
-        ; col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol
+        ; line = lexbuf.lex_start_p.pos_lnum + Lexer.global_offset.line
+        ; col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol + Lexer.global_offset.col
         ; len = 1
         }
     in
