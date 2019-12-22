@@ -64,7 +64,7 @@ def do_longs(opts: list[tuple[str, str]], opt: str, longopts: list[str], args: l
         i = opt.index('=')
         opt, optarg = opt[:i], opt[i+1:]
     except ValueError:
-        pass    
+        pass
 
     has_arg, opt = long_has_args(opt, longopts)
     if has_arg:
@@ -100,8 +100,8 @@ def do_shorts(opts: list[tuple[str, str]], optstring: str, shortopts: str, args:
 
 
 def getopt(
-    args: list[str], 
-    shortopts: str, 
+    args: list[str],
+    shortopts: str,
     longopts: list[str] = list[str]()
 ):
     """getopt(args, options[, long_options]) -> opts, args
@@ -141,7 +141,7 @@ def getopt(
 
     opts = list[tuple[str, str]]()
     prog_args = list[str]()
-    
+
     # Allow options after non-option arguments?
     all_options_first = False
     if shortopts.startswith('+'):
@@ -149,7 +149,7 @@ def getopt(
         all_options_first = True
     elif "POSIXLY_CORRECT" in os.environ:
         all_options_first = True
-    
+
     while args:
         if args[0] == '--':
             prog_args += args[1:]

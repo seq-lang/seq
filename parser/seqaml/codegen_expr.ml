@@ -123,7 +123,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         | '{' -> acc, depth + 1, last
         | '}' when depth = 1 ->
           let code = String.sub s ~pos:last ~len:(i - last) in
-          let extra, code = 
+          let extra, code =
             if (String.suffix code 1) = "="
             then true, String.prefix code ((String.length code) - 1)
             else false, code
@@ -134,7 +134,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
             | _ -> failwith "invalid f-parse"
           in
           Lexer.global_offset.line <- 0;
-          if extra then 
+          if extra then
             (expr :: ((pos, String ((String.strip code) ^ "=")) :: acc)), 0, i + 1
           else
             (expr :: acc), 0, i + 1

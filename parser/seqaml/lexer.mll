@@ -14,7 +14,7 @@
 
   (* open Core *)
 
-  type offset = 
+  type offset =
     { mutable line: int
     ; mutable col: int }
   let global_offset = { line = 0; col = 0 }

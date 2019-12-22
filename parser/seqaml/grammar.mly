@@ -144,7 +144,7 @@ reverse_separated_nonempty_llist(separator, X):
 
 %inline flexible_nonempty_list_flag(delim, X):
   | x = X { [x], false }
-  | x = X; delim; xs = separated_llist(delim, X); f= delim? 
+  | x = X; delim; xs = separated_llist(delim, X); f= delim?
     { x :: xs, Option.is_some f }
 
 
@@ -379,9 +379,9 @@ arith_term:
       Call ($1, [pos $2 $5,
                  { name = None; value = (pos $2 $5, Generator ($3, $4)) }]) }
   // Index (foo[bar])
-  | arith_term LS index_term RS 
+  | arith_term LS index_term RS
    { pos (fst $1) $4, Index ($1, $3) }
-  | arith_term LS index_term COMMA RS 
+  | arith_term LS index_term COMMA RS
     { pos (fst $1) $4, Index ($1, (fst $3, Tuple [$3])) }
   | arith_term LS index_term COMMA flexible_nonempty_list(COMMA, index_term) RS
     { pos (fst $1) $6,
@@ -531,7 +531,7 @@ small_statement:
       in
       [ pos,
         Yield expr ]}
-  | YIELD FROM expr 
+  | YIELD FROM expr
     {
       (* for i in expr: yield i *)
       let p = pos $1 (fst $3) in
