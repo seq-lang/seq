@@ -596,6 +596,27 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock *&block,
   }
 }
 
+Value *Func::codegenYieldExpr(BasicBlock *&block) {
+  if (!gen)
+    throw exc::SeqException("yield expression in non-generator");
+
+  LLVMContext &context = block->getContext();
+  Function *suspFn = Intrinsic::getDeclaration(module, Intrinsic::coro_suspend);
+  Value *tok = ConstantTokenNone::get(context);
+  Value *final = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
+  IRBuilder<> builder(block);
+  Value *susp = builder.CreateCall(suspFn, {tok, final});
+
+  block = BasicBlock::Create(block->getContext(), "", block->getParent());
+
+  SwitchInst *inst = builder.CreateSwitch(susp, suspend, 2);
+  inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 0), block);
+  inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 1), cleanup);
+
+  builder.SetInsertPoint(block);
+  return builder.CreateLoad(promise);
+}
+
 bool Func::isGen() { return yield != nullptr; }
 
 std::vector<std::string> Func::getArgNames() { return argNames; }

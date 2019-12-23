@@ -578,6 +578,18 @@ public:
   OptExpr *clone(Generic *ref) override;
 };
 
+class YieldExpr : public Expr {
+private:
+  Func *base;
+
+public:
+  YieldExpr(Func *base);
+  void resolveTypes() override;
+  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  types::Type *getType0() const override;
+  YieldExpr *clone(Generic *ref) override;
+};
+
 class DefaultExpr : public Expr {
 public:
   explicit DefaultExpr(types::Type *type);

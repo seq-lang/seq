@@ -168,7 +168,7 @@ void types::GenType::resume(Value *self, BasicBlock *block, BasicBlock *normal,
     builder.CreateCall(resFn, self);
 }
 
-Value *types::GenType::promise(Value *self, BasicBlock *block) {
+Value *types::GenType::promise(Value *self, BasicBlock *block, bool returnPtr) {
   if (outType->is(types::Void))
     return nullptr;
 
@@ -187,7 +187,15 @@ Value *types::GenType::promise(Value *self, BasicBlock *block) {
   Value *ptr = builder.CreateCall(promFn, {self, aln, from});
   ptr = builder.CreateBitCast(
       ptr, PointerType::get(outType->getLLVMType(context), 0));
-  return builder.CreateLoad(ptr);
+  return returnPtr ? ptr : builder.CreateLoad(ptr);
+}
+
+void types::GenType::send(Value *self, Value *val, BasicBlock *block) {
+  Value *promisePtr = promise(self, block, /*returnPtr=*/true);
+  if (!promisePtr)
+    throw exc::SeqException("cannot send value to void generator");
+  IRBuilder<> builder(block);
+  builder.CreateStore(val, promisePtr);
 }
 
 void types::GenType::destroy(Value *self, BasicBlock *block) {
@@ -268,6 +276,36 @@ void types::GenType::initOps() {
             return func;
           }),
       true);
+
+  addMethod("send",
+            new BaseFuncLite(
+                {this, outType}, Void,
+                [this](Module *module) {
+                  const std::string name = "seq." + getName() + ".send";
+                  Function *func = module->getFunction(name);
+
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, Void->getLLVMType(context), getLLVMType(context),
+                        outType->getLLVMType(context)));
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->setDoesNotThrow();
+                    func->addFnAttr(Attribute::AlwaysInline);
+
+                    auto iter = func->arg_begin();
+                    Value *self = iter++;
+                    Value *val = iter;
+                    BasicBlock *entry =
+                        BasicBlock::Create(context, "entry", func);
+                    send(self, val, entry);
+                    IRBuilder<> builder(entry);
+                    builder.CreateRetVoid();
+                  }
+
+                  return func;
+                }),
+            true);
 
   addMethod(
       "destroy",

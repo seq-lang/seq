@@ -287,6 +287,8 @@ FOREIGN Expr *method_expr(Expr *self, Func *func) {
   return new MethodExpr(self, func);
 }
 
+FOREIGN Expr *yield_expr(Func *base) { return new YieldExpr(base); }
+
 FOREIGN Expr *typeof_expr(Expr *val) { return new TypeOfExpr(val); }
 
 FOREIGN Expr *ptr_expr(Var *val) { return new VarPtrExpr(val); }

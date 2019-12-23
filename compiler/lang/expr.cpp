@@ -2089,6 +2089,26 @@ OptExpr *OptExpr::clone(Generic *ref) {
   SEQ_RETURN_CLONE(new OptExpr(val->clone(ref)));
 }
 
+YieldExpr::YieldExpr(Func *base) : Expr(), base(base) {}
+
+void YieldExpr::resolveTypes() { base->resolveTypes(); }
+
+Value *YieldExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+  assert(dynamic_cast<Func *>(base) == this->base);
+  return this->base->codegenYieldExpr(block);
+}
+
+types::Type *YieldExpr::getType0() const {
+  types::GenType *gen = base->getFuncType()->getBaseType(0)->asGen();
+  if (!gen)
+    throw exc::SeqException("yield expression in non-generator");
+  return gen->getBaseType(0);
+}
+
+YieldExpr *YieldExpr::clone(Generic *ref) {
+  SEQ_RETURN_CLONE(new YieldExpr(base->clone(ref)));
+}
+
 DefaultExpr::DefaultExpr(types::Type *type) : Expr(type) {}
 
 Value *DefaultExpr::codegen0(BaseFunc *base, BasicBlock *&block) {

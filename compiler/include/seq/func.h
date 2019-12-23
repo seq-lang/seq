@@ -162,6 +162,7 @@ public:
   void codegenYield(llvm::Value *val, types::Type *type,
                     llvm::BasicBlock *&block, bool empty = false,
                     bool dryrun = false);
+  llvm::Value *codegenYieldExpr(llvm::BasicBlock *&block);
 
   bool isGen() override;
   Var *getArgVar(std::string name);
