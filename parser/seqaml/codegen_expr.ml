@@ -39,8 +39,6 @@ let rec parse ~(ctx : C.t) (ann, node) =
     | TypeOf p -> parse_typeof ctx p
     | Ptr p -> parse_ptr ctx p
     | Ellipsis p -> Ctypes.null
-    | Slice _ -> C.err ~ctx "slice is currently only valid within an index expression"
-    | Unpack _ -> C.err ~ctx "invalid unpacking expression"
     | _ -> C.err ~ctx "not yet supported (parse)"
   in
   (* Update C++ bookkeeping members *)
@@ -143,8 +141,7 @@ and parse_dot ctx (lh_expr, rhs) =
   | Some (Var t) ->
     let lh_expr = parse ~ctx lh_expr in
     Llvm.Expr.element lh_expr rhs
-  | _ -> ierr ~ann:(C.ann ctx) "bad dot : %s [%s.%s]" (Ann.t_to_string (C.ann ctx).typ)
-    (Expr.to_string lh_expr) rhs
+  | _ -> ierr ~ann:(C.ann ctx) "bad dot"
 
 and parse_typeof ctx expr =
   match Ann.real_t (fst expr).typ with

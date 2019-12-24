@@ -64,17 +64,15 @@ and t = (tel, tenv, tglobal) Ctx.t
 let push_ann ~(ctx : t) ann = Stack.push ctx.env.annotations ann
 let pop_ann ~(ctx : t) = Stack.pop ctx.env.annotations
 
-let ann ?typ (ctx : t) =
-  let ann = Stack.top_exn ctx.env.annotations in
-  { ann with typ }
+let ann (ctx : t) = Stack.top_exn ctx.env.annotations
 
 let var v =
   v.Ann.typ |> Ann.var_of_typ >>| Ann.real_type
 
-let err ?(pos : Ann.t option option) ?(ctx : t option) fmt =
-  let pos = Option.value_map pos ~f:Option.value_exn ~default:(
-      Option.value_map ctx ~f:ann ~default:(Ast.Ann.create ()))
-  in
+let err ?(pos : Ann.t option) ?(ctx : t option) fmt =
+  let cpos = Option.value_map ctx ~f:ann ~default:(Ast.Ann.create ()) in
+  let pos = Option.value pos ~default:(Ann.default) in
+  let pos = if pos = Ann.default then cpos else pos in
   Core.ksprintf (fun msg -> raise @@ Err.SeqCamlError (msg, [ pos ])) fmt
 
 let is_accessible ~(ctx : t) { base; global; _} =
@@ -190,7 +188,7 @@ let to_dbg_output ~(ctx : t) =
       dump_map ~depth:2 data)
 
 
-let rec get_realization ~(ctx : t) ?(pos = None) typ =
+let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
   Util.A.dy ~force:true "%% realizing %s" (Ann.var_to_string typ);
   let open Ast in
   let open Ann in
@@ -226,6 +224,11 @@ let rec get_realization ~(ctx : t) ?(pos = None) typ =
             | _ -> err ~ctx ~pos "cannot instantiate internal type %s" p)
           | _ -> err ~ctx ~pos "cannot instantiate internal type %s" p
       in
+
+      (* Llvm.Type.get_methods ptr
+      |> List.iter ~f:(fun (s, t) ->
+        add_internal_method n s (get_name t)); *)
+
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
       ptr
     | Some ({ realized_typ; realized_ast = Some (pos, (Class cls | Type cls)); _ } as data), Class (_, { is_type }) ->
@@ -235,7 +238,7 @@ let rec get_realization ~(ctx : t) ?(pos = None) typ =
       Ctx.add_block ~ctx:new_ctx;
       gen.args
       |> List.map ~f:(function (name, typ) ->
-          name, get_realization ~ctx ~pos:(Some pos) (real_type typ))
+          name, get_realization ~ctx ~pos (real_type typ))
       |> List.unzip
       |> (fun (names, types) ->
           match types, is_type with
@@ -259,9 +262,9 @@ let rec get_realization ~(ctx : t) ?(pos = None) typ =
         }
       in
       Ctx.add_block ~ctx:new_ctx;
-      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~pos:(Some pos) ~ctx t) in
+      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~pos ~ctx t) in
       Llvm.Func.set_args ptr names types;
-      Llvm.Func.set_type ptr (get_realization ~ctx ~pos:(Some pos) ret);
+      Llvm.Func.set_type ptr (get_realization ~ctx ~pos ret);
       List.iter names ~f:(fun n -> add ~ctx:new_ctx n (Var (Llvm.Func.get_arg ptr n)));
       List.ignore_map f.fn_stmts ~f:(ctx.globals.sparse ~ctx:new_ctx ~toplevel:false);
       Ctx.clear_block ~ctx:new_ctx;
@@ -273,14 +276,17 @@ let rec get_realization ~(ctx : t) ?(pos = None) typ =
       then err ~ctx "only cdef externs are currently supported";
       let name = sprintf "%s:%s" name real_name in
       let ptr = Llvm.Func.func name in
-      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~pos:(Some pos) ~ctx t) in
+      let names, types = List.unzip @@ List.map gen.args ~f:(fun (n, t) -> n, get_realization ~pos ~ctx t) in
       Llvm.Func.set_args ptr names types;
-      Llvm.Func.set_type ptr (get_realization ~pos:(Some pos) ~ctx ret);
+      Llvm.Func.set_type ptr (get_realization ~pos ~ctx ret);
       Llvm.Func.set_extern ptr;
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
       ptr
     | p, _ ->
-      err ~pos ~ctx "%s not realized by a type-checker [C/T] %s" (Ann.var_to_string ~full:true typ)
-      (Option.value_map p ~default:"_" ~f:(fun x -> Stmt.to_string @@ Option.value_exn x.realized_ast))
+      err ~pos ~ctx "%s:%s.%s => %s not realized by a type-checker [C/T]"
+      (fst gen.cache) (Ann.pos_to_string (snd gen.cache))
+      (Ann.var_to_string ~full:true typ)
+      real_name
+      (* (Option.value_map p ~default:"_" ~f:(fun x -> Stmt.to_string @@ Option.value_exn x.realized_ast)) *)
     )
   | _ -> err ~pos ~ctx "%s not realized by a type-checker" (Ann.var_to_string ~full:true typ)

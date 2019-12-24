@@ -433,7 +433,7 @@ and parse_extern ctx ?(prefix = "") f =
         ; name = prefix ^ fn.name
         ; parent = ctx.env.enclosing_name, None
         ; args = List.map args ~f:snd
-        ; cache = fn.name, (C.ann ctx).pos
+        ; cache = prefix ^ fn.name, (C.ann ctx).pos
         }
       , { ret = var_of_node_exn fret; used = String.Hash_set.create () } ))
   in
@@ -442,7 +442,7 @@ and parse_extern ctx ?(prefix = "") f =
   let fn = { fn with typ = Some fret } in
   let node = C.ann ~typ:(Var typ) ctx, Extern (lang, dylib, ctxn, fn, List.map ~f:fst args) in
   Hashtbl.set C.realizations ~key:(fst tf').cache ~data:(node, String.Table.create ());
-  ignore @@ R.realize ~ctx typ;
+  ignore @@ R.realize ~ctx ~force:true typ;
   snd node
 
 and parse_function ctx ?(prefix = "") ?(shalow = false) f =
@@ -486,7 +486,7 @@ and parse_function ctx ?(prefix = "") ?(shalow = false) f =
         ; name = fname
         ; parent = ctx.env.enclosing_name, None
         ; args = List.map args ~f:(fun (n, t) -> n, T.generalize ~level:(ctx.env.level - 1) t)
-        ; cache = f.fn_name.name, (C.ann ctx).pos
+        ; cache = fname, (C.ann ctx).pos
         }
       , { ret = T.generalize ~level:(ctx.env.level - 1) fret; used = String.Hash_set.create () }
       ))
@@ -532,7 +532,7 @@ and parse_function ctx ?(prefix = "") ?(shalow = false) f =
   let node = C.ann ctx ~typ:(Var tfun), Function { f with fn_name; fn_args; fn_stmts } in
   Hashtbl.set C.realizations ~key:(fst tf').cache ~data:(node, String.Table.create ());
   (* Util.dbg "|| [fun] %s |- %s %b" fname (Ann.var_to_string tfun) (Ann.is_realizable tfun); *)
-  let tfun = if Ann.is_realizable tfun then R.realize ~ctx tfun else tfun in
+  let tfun = R.realize ~ctx tfun in
   snd node
 
 (* and prn_class ?(generics = Int.Table.create ()) lev (name, typ) =
@@ -600,7 +600,7 @@ and parse_extend (ctx : C.t) (name, new_members) =
 
 and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
   let { class_name; generics; members; _ } = cls in
-  let cache = class_name, (C.ann ctx).pos in
+  let cache = prefix ^ class_name, (C.ann ctx).pos in
   (* Ctx.push ctx; *)
   let ctx = C.enter_level ~ctx in
   let old_explicits = List.map generics ~f:(Ctx.in_scope ~ctx) in
@@ -727,7 +727,7 @@ and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
             Some (Var typ), stmt, name
           | _ -> ierr "invalid class member"
         in
-        (* Util.A.dy
+        (* Util.A.db
           ">> %s :: adding %s = %s"
           class_name
           name
@@ -744,11 +744,7 @@ and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
   let n = { cls with class_name; generics; members = cls_members } in
   let node = C.ann ~typ:(Type tcls) ctx, if istype then Type n else Class n in
   Hashtbl.set C.realizations ~key:cache ~data:(node, String.Table.create ());
-  let tcls =
-    if Ann.is_realizable tcls
-    then R.realize ~ctx:{ ctx with env = { ctx.env with realizing = true } } tcls
-    else tcls
-  in
+  let tcls = R.realize ~ctx:{ ctx with env = { ctx.env with realizing = true } } tcls in
   (* prn_class 0 (cls.class_name, tcls); *)
   snd node
 

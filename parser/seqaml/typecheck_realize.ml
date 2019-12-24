@@ -7,18 +7,26 @@
 
 open Core
 open Err
+open Util
 open Option.Monad_infix
 
 open Ast
 module C = Typecheck_ctx
 module T = Typecheck_infer
 
-let rec realize ~(ctx : C.t) (typ : Ann.tvar) =
-  Util.A.db "about to realize %s" (Ann.var_to_string typ);
-  match ctx.env.realizing, typ with
-  | true, Func f -> realize_function ctx typ f
-  | true, Class c -> realize_type ctx typ c
-  | (true | false), t -> t
+let rec realize ~(ctx : C.t) ?(force = false) (typ : Ann.tvar) =
+  (* Util.A.db "about to realize %s" (Ann.var_to_string typ); *)
+  let r = function
+    | Ann.Func f -> realize_function ctx typ f
+    | Class c -> realize_type ctx typ c
+    | t -> t
+  in
+  match force, Ann.is_realizable typ, ctx.env.realizing with
+  | true, _, true -> r typ
+  | true, _, false -> typ
+  | false, false, _ -> typ
+  | false, true, true -> r typ
+  | false, true, false -> typ
 
 and realize_function ctx typ (fn, f_ret) =
   let real_name, parents = C.get_full_name ~being_realized:ctx.env.being_realized typ in
@@ -60,6 +68,7 @@ and realize_function ctx typ (fn, f_ret) =
     let fn_name = Stmt.{ name = fn.name; typ = None } in
     C.add_realization ~ctx:fctx fn.cache typ;
 
+    List.ignore_map fn.generics ~f:(fun (_, (_, t)) -> realize ~ctx ~force:true t);
     let fn_stmts = List.concat @@ List.map fn_stmts ~f:(ctx.globals.sparse ~ctx:(C.enter_level ~ctx:fctx)) in
     Stack.iter ctx.env.unbounds ~f:(fun u ->
         if Ann.has_unbound (Ann.var_of_typ_exn u.typ)
@@ -119,6 +128,8 @@ and realize_type ctx typ (cls, cls_t) =
         Hashtbl.set inst ~key:i ~data:t;
         Ctx.add ~ctx n (Type t));
     C.add_realization ~ctx cls.cache typ;
+
+    List.ignore_map cls.generics ~f:(fun (_, (_, t)) -> realize ~ctx ~force:true t);
     List.iter c_args ~f:(fun (c, (x, t')) ->
         T.instantiate ~ctx ~inst c |> realize ~ctx |> T.unify_inplace ~ctx t');
     C.remove_last_realization ~ctx cls.cache;

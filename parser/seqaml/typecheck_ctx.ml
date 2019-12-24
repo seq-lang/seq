@@ -157,21 +157,10 @@ let get_full_name ?being_realized (ann : Ann.tvar) =
 
 let dump_ctx (ctx : t) =
   Stack.iter ctx.stack ~f:(fun map ->
+      Util.dbg "🥞 Stack  🥞";
       Hash_set.to_list map
       |> List.sort ~compare:String.compare
       |> List.iter ~f:(fun key ->
-             let printable k =
-               match k.[0], k.[1] with
-               | ('u' | 'i' | 'k'), i ->
-                 if i > '3'
-                 then false
-                 else if String.length k > 2 && Char.is_digit k.[2]
-                 then false
-                 else not (String.is_substring key ~substring:"__")
-               | _ -> not (String.is_substring key ~substring:"__")
-             in
-             if printable key
-             then (
                let t = Option.value_exn (Ctx.in_scope ~ctx key) in
                match t with
                | Type t | Var t ->
@@ -184,7 +173,7 @@ let dump_ctx (ctx : t) =
                      (fst g.cache)
                      (Ann.pos_to_string (snd g.cache))
                  | _ -> Util.dbg "%10s: %s" key (Ann.var_to_string ~full:true t))
-               | t -> Util.dbg "%10s: %s" key (Ann.typ_to_string t))))
+               | t -> Util.dbg "%10s: %s" key (Ann.typ_to_string t)))
 
 let init_module ?(argv = false) ~filename sparse =
   let internal_cnt = ref 0 in
@@ -247,7 +236,8 @@ let init_module ?(argv = false) ~filename sparse =
        ~key:cache
        ~data:((Ann.create ~typ (), cls), String.Table.create ())
    in
-   let add_internal_method class_name name signature =
+   let add_internal_method class_name name ptr =
+     let signature = Llvm.Type.get_name ptr in
      assert (String.prefix signature 9 = "function[");
      assert (String.suffix signature 1 = "]");
      try
@@ -267,29 +257,44 @@ let init_module ?(argv = false) ~filename sparse =
          | ret :: args -> ret, args
          | _ -> failwith "bad type"
        in
-       let f_cache = name, Ann.default_pos in
+       let full_name = sprintf "%s.%s" class_name name in
+       let f_cache = full_name, Ann.default_pos in
        let typ =
          Ann.Var
            (Ann.Func
               ( { generics = []
-                ; name = sprintf "%s.%s" class_name name
+                ; name = full_name
                 ; cache = f_cache
                 ; parent = (class_name, Ann.default_pos), None
                 ; args = List.mapi args ~f:(fun i a -> sprintf "a%d" i, Ann.var_of_typ_exn a)
                 }
               , { ret = Ann.var_of_typ_exn ret; used = String.Hash_set.create () } ))
        in
-       Ctx.add ~ctx (sprintf "%s.%s" class_name name) typ;
+       Ctx.add ~ctx full_name typ;
        let ast = Stmt.Pass () in
+       let realization = Typecheck_ctx.
+        { realized_llvm = ptr; realized_ast = None; realized_typ = Ann.create ~typ () }
+       in
+       (*
+       add realization bool.__bool__:<internal>.function((bool),bool) => bool:function((bool),bool) := 7fb819788510
+                       bool.__bool__:<internal>.function((),bool) => bool:function((),bool)
+       *)
+       let realization_name = sprintf "%s:%s" class_name (Ann.typ_to_string typ) in
+       Util.A.db "add realization %s:%s.%s => %s := %nx"
+        (fst f_cache) (Ann.pos_to_string (snd f_cache))
+        (Ann.typ_to_string ~full:true typ)
+        realization_name
+        (Ctypes.raw_address_of_ptr ptr)
+        ;
        Hashtbl.set
          realizations
          ~key:f_cache
-         ~data:((Ann.create ~typ (), ast), String.Table.create ());
+         ~data:((Ann.create ~typ (), ast), String.Table.of_alist_exn [ realization_name, realization ]);
        Hashtbl.find_and_call
          ctx.globals.classes
          (class_name, Ann.default_pos)
          ~if_found:(Hashtbl.add_multi ~key:name ~data:typ)
-         ~if_not_found:(const ())
+         ~if_not_found:(fun _ -> Util.A.dy "can't find class %s" class_name)
      with
      | SeqCamlError _ -> ()
    in
@@ -361,7 +366,7 @@ let init_module ?(argv = false) ~filename sparse =
      ~f:(fun (n, ll) ->
        let open Llvm.Type in
        get_methods ll
-       |> List.iter ~f:(fun (s, t) -> add_internal_method n s (get_name t)));
+       |> List.iter ~f:(fun (s, t) -> add_internal_method n s t));
    dump_ctx ctx;
 
    (* argv! *)
@@ -399,10 +404,19 @@ let make_internal_magic ~ctx name ret_typ arg_types =
   sannotate (ann ctx) @@ s_extern ~lang:"llvm" name ret_typ arg_types
 
 let magic_call ~ctx ?(args = []) ~magic parse e =
-  let e = parse ~ctx e in
+  (* let e = parse ~ctx e in
   match Ann.var_of_typ (fst e).Ann.typ >>| Ann.real_type with
   | Some (Class ({ cache = (p, m); _ }, _)) when magic = (sprintf "__%s__" p) && m = Ann.default_pos ->
     e
-  | _ ->
-    parse ~ctx @@ eannotate ~ctx (e_call (e_dot e magic) args)
+  | _ -> *)
+    let y = parse ~ctx @@ eannotate ~ctx (e_call (e_dot e magic) args) in
+    match y with
+    | Expr.(ac, Call ((ad, Dot (i, _)) as d, _)) as c ->
+      (* Util.A.dy "%s [%s] . %s [%s]"
+      (Expr.to_string d)
+      (Ann.t_to_string ad.Ann.typ)
+      (Expr.to_string c)
+      (Ann.t_to_string ac.Ann.typ); *)
+      y
+    | _ -> failwith ""
 

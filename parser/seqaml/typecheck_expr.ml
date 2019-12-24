@@ -100,14 +100,10 @@ and parse_kmer ctx s =
   @@ e_call (e_index (e_id "Kmer") [e_int (String.length s)]) [e_string s]
 
 and parse_id ctx name =
-  let inst t =
-    let t = T.instantiate ~ctx t in
-    if Ann.is_realizable t then R.realize ~ctx t else t
-  in
   let typ =
     match Ctx.in_scope ~ctx name with
-    | Some (Type t) -> Ann.Type (inst t)
-    | Some (Var t) -> Var (inst t)
+    | Some (Type t) -> Ann.Type (R.realize ~ctx (T.instantiate ~ctx t))
+    | Some (Var t) -> Var (R.realize ~ctx (T.instantiate ~ctx t))
     | Some (Import s) -> Import s
     (* Ann.var_of_typ_exn (C.ann ctx).typ *)
     | _ -> C.err ~ctx "%s not found" name
@@ -301,7 +297,7 @@ and parse_call_real ctx (expr, args) =
       C.ann ~typ:(Var typ) ctx, Call (expr, args))
     else (
       (* TODO: reorder args *)
-      let typ = R.realize ~ctx typ in
+      let typ = R.realize ~ctx ~force:true typ in
       let expr = Ann.patch (fst expr) ~f:(fun _ -> typ), snd expr in
       C.ann ~typ:(Var f.ret) ctx, Call (expr, args))
   | Class (_, { is_type }) ->
@@ -352,7 +348,7 @@ and parse_index ctx (lh_expr', indices') =
         then C.err ~ctx "Generic length does not match";
         List.iter2_exn g.generics indices ~f:(fun (_, (_, t)) (i, _) ->
             T.unify_inplace ~ctx t (Ann.var_of_typ_exn i.typ));
-        let typ = if Ann.is_realizable typ then R.realize ~ctx typ else typ in
+        let typ = R.realize ~ctx typ in
         if not ctx.env.realizing
         then C.ann ~typ:(Type typ) ctx, Index (lh_expr, indices)
         else (* remove type info: e.g. T[t,u] -> T *)
