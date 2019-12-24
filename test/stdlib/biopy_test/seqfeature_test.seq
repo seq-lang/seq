@@ -1,7 +1,6 @@
 from Bio.SeqFeature import FeatureLocation, Position
 from Bio.SeqFeature import CompoundLocation, UnknownPosition, SeqFeature
 from Bio.SeqFeature import WithinPosition, BetweenPosition
-from Bio.SeqFeature import OneOfPosition
 
 
 ####### Test FeatureLocation #######
@@ -22,9 +21,9 @@ def test_eq_identical():
     loc2 = FeatureLocation(23, 42, -1, '', '')
     assert loc1 == loc2
 
-    # loc1 = FeatureLocation(Position(23, 1, 0), Position(42, 2, 0), 1, '', '')
-    # loc2 = FeatureLocation(23, 42, 1, '', '')
-    # print (loc1, loc2)
+    loc1 = FeatureLocation(Position(23, 1, 0), Position(42, 2, 0), 1, '', '')
+    loc2 = FeatureLocation(23, 42, 1, '', '')
+    assert loc1 == loc2
 
     loc1 = FeatureLocation(23, 42, 1, "foo", "bar")
     loc2 = FeatureLocation(23, 42, 1, "foo", "bar")
@@ -58,7 +57,7 @@ def test_eq_not_identical():
 test_eq_not_identical()
 
 @test
-# not finished
+# not finished need to have raise error with start > end
 def test_start_before_end():
     expected = "must be greater than or equal to start location"
     print FeatureLocation(42, 23, 1, '', '')
@@ -92,3 +91,32 @@ def test_eq_not_identical1():
     loc2 = CompoundLocation([FeatureLocation(12, 17, 1, '', ''), FeatureLocation(23, 42, 1, '', '')], 'order')
     assert loc1 != loc2
 test_eq_not_identical1()  
+
+####### Test Locations #######
+
+@test
+# Not finished
+def test_fuzzy():
+    exact_pos = Position(5, 0, 0)
+    within_pos_s = WithinPosition(10, left=10, right=13)
+    within_pos_e = WithinPosition(13, left=10, right=13)
+    between_pos_e = BetweenPosition(24, 20, 24)
+    before_pos = Position(15, 1, 0)
+    after_pos = Position(40, 2, 0)
+
+    assert int(within_pos_s) == 10
+    assert str(within_pos_s) == "(10.13)"
+    assert int(within_pos_e) == 13
+    assert str(within_pos_e) == "(10.13)"
+    assert int(between_pos_e) == 24
+    assert str(between_pos_e) == "(20^24)"
+    assert str(before_pos) == "<15"
+    assert str(after_pos) == ">40"
+
+    # TODO/CAVEATS:
+    # FeatureLocation does not support these types for now.
+    # location1 = FeatureLocation(exact_pos, within_pos_e, 1, '', '')
+    # location2 = FeatureLocation(before_pos, between_pos_e)
+    # location3 = FeatureLocation(within_pos_s, after_pos)
+test_fuzzy()
+
