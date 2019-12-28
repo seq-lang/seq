@@ -120,7 +120,7 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block sparse
     then (
       let args = Llvm.Module.get_args mdl in
       add ~ctx ~internal ~global ~toplevel "__argv__" (Var args));
-    match Util.get_from_stdlib "stdlib" with
+    match Util.get_from_stdlib "scratch" with
     | Some file ->
 
     Hashtbl.find_exn Typecheck_ctx.imports file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx ~toplevel:true)

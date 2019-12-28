@@ -153,7 +153,7 @@ let get_full_name ?being_realized (ann : Ann.tvar) =
         >>= List.hd
         >>= fun x -> Ann.var_of_typ x.Ann.typ >>| Ann.real_type >>| iter_parent)
   in
-  ppl ~sep:":" ~f:Ann.var_to_string (List.rev (ann :: parents)), parents
+  ppl ~sep:":" ~f:(Ann.var_to_string ~useds:true) (List.rev (ann :: parents)), parents
 
 let dump_ctx (ctx : t) =
   Stack.iter ctx.stack ~f:(fun map ->
@@ -372,7 +372,7 @@ let init_module ?(argv = false) ~filename sparse =
    (* argv! *)
    if true
    then (
-     match Util.get_from_stdlib "stdlib" with
+     match Util.get_from_stdlib "scratch" with
      | Some file ->
         let statements =
           Codegen.parse_file file
@@ -418,5 +418,5 @@ let magic_call ~ctx ?(args = []) ~magic parse e =
       (Expr.to_string c)
       (Ann.t_to_string ac.Ann.typ); *)
       y
-    | _ -> failwith ""
+    | _ -> failwith "invalid magic ?"
 

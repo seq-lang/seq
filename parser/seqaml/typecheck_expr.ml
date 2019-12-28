@@ -23,7 +23,6 @@ module R = Typecheck_realize
 (** [parse ~ctx expr] dispatches an expression AST node [expr] to the proper code generation function. *)
 let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
   C.push_ann ~ctx ann;
-  (* Util.A.db "[e] >> %s" (Expr.to_string (ann,node)); *)
   let expr : Expr.t Ann.ann =
     match node with
     | Empty _ -> parse_none ctx node
@@ -54,7 +53,11 @@ let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
     | Unpack _ -> C.err ~ctx "unpack is not valid here"
   in
   ignore @@ C.pop_ann ~ctx;
-  (* Util.A.db "[e] %s |= %s" (Expr.to_string expr) (Ann.t_to_string (fst expr).typ); *)
+  Util.A.dbg "[e] %s [%s] -> %s [%s]"
+    (Expr.to_string (ann,node))
+    (Ann.to_string ann)
+    (Expr.to_string expr)
+    (Ann.to_string (fst expr));
   expr
 
 and parse_none ctx n =

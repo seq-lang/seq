@@ -22,7 +22,7 @@ module Ann = struct
     | "/internal" -> "<internal>"
     | f -> sprintf "%s:%d:%d" (Filename.basename f) t.line t.col
 
-  let rec var_to_string ?(generics = Int.Table.create ()) ?(full=false) t =
+  let rec var_to_string ?(generics = Int.Table.create ()) ?(useds=false) ?(full=false) t =
     let f = var_to_string ~generics ~full in
     let gen2str g = ppl ~sep:"," g ~f:(fun (_, (g, t)) -> sprintf "%s" (f t)) in
     match t with
@@ -33,7 +33,7 @@ module Ann = struct
       sprintf
         "function%s((%s),%s)"
         (if g = "" then "" else sprintf "[%s]" g)
-        (ppl ~sep:"," (List.filter args ~f:(fun (n, _) -> not (Hash_set.exists used ~f:((=)n)) ))
+        (ppl ~sep:"," (List.filter args ~f:(fun (n, _) -> useds || not (Hash_set.exists used ~f:((=)n)) ))
           ~f:(fun (_, t) -> f t))
         (f ret)
     | Class ({ name; generics; _ }, _) ->

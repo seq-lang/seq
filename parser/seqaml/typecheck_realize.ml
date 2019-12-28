@@ -37,7 +37,8 @@ and realize_function ctx typ (fn, f_ret) =
     T.link_to_parent ~parent:(List.hd parents) (Ann.var_of_typ_exn realized_typ.typ)
   (* Case 2 - needs realization *)
   | None ->
-    Util.dbg "[real] realizing fn %s ==> %s" fn.name real_name;
+    Util.dbg "[real] realizing fn %s ==> %s [%s]" fn.name real_name
+      (Ast.Ann.to_string @@ C.ann ctx);
     let tv = Ann.Func ({ fn with parent = fst fn.parent, List.hd parents }, f_ret) in
     let typ = C.ann ~typ:(Var tv) ctx in
     let fn_stmts =

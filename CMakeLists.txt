@@ -172,7 +172,8 @@ add_library(seq SHARED compiler/include/seq/any.h
                        compiler/types/types.cpp
                        compiler/types/void.cpp
                        compiler/util/ocaml.cpp
-                       ${LIB_SEQPARSE})
+                       # ${LIB_SEQPARSE}
+                       )
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} ${OCAML_STATIC} ffi seqrt)
 
