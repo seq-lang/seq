@@ -121,20 +121,24 @@ module Type = struct
 
   let get_methods typ =
     let f =
-      foreign "get_methods" (t @-> ptr (ptr char) @-> ptr (ptr Types.func) @-> returning size_t)
+      foreign "get_methods" (t @-> ptr (ptr char) @-> ptr (ptr char) @-> ptr (ptr Types.func) @-> returning size_t)
     in
     let fns_addr = Ctypes.allocate (ptr Types.func) (from_voidp Types.func null) in
     let names_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
-    let sz = Unsigned.Size_t.to_int (f typ names_addr fns_addr) in
+    let sigs_addr = Ctypes.allocate (ptr char) (from_voidp char null) in
+    let sz = Unsigned.Size_t.to_int (f typ names_addr sigs_addr fns_addr) in
     if sz = 0
     then []
     else (
       assert (not (Ctypes.is_null !@fns_addr));
       assert (not (Ctypes.is_null !@names_addr));
+      assert (not (Ctypes.is_null !@sigs_addr));
       let msg = coerce (ptr char) string !@names_addr in
       let names = String.split ~on:'\b' msg |> List.rev |> List.tl_exn |> List.rev in
+      let msg = coerce (ptr char) string !@sigs_addr in
+      let sigs = String.split ~on:'\b' msg |> List.rev |> List.tl_exn |> List.rev in
       let fa = !@fns_addr in
-      List.mapi names ~f:(fun i n -> n, !@(fa +@ i)))
+      List.mapi (List.zip_exn names sigs) ~f:(fun i (n, s) -> n, s, !@(fa +@ i)))
 end
 
 (** [Expr] wraps Seq Expr methods and helpers. *)

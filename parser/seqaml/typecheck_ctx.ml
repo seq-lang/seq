@@ -236,8 +236,9 @@ let init_module ?(argv = false) ~filename sparse =
        ~key:cache
        ~data:((Ann.create ~typ (), cls), String.Table.create ())
    in
-   let add_internal_method class_name name ptr =
-     let signature = Llvm.Type.get_name ptr in
+   let add_internal_method class_name name signature ptr =
+     (* let signature = Llvm.Type.get_name ptr in *)
+     Util.A.dy "%s" signature;
      assert (String.prefix signature 9 = "function[");
      assert (String.suffix signature 1 = "]");
      try
@@ -275,10 +276,6 @@ let init_module ?(argv = false) ~filename sparse =
        let realization = Typecheck_ctx.
         { realized_llvm = ptr; realized_ast = None; realized_typ = Ann.create ~typ () }
        in
-       (*
-       add realization bool.__bool__:<internal>.function((bool),bool) => bool:function((bool),bool) := 7fb819788510
-                       bool.__bool__:<internal>.function((),bool) => bool:function((),bool)
-       *)
        let realization_name = sprintf "%s:%s" class_name (Ann.typ_to_string typ) in
        Util.A.db "add realization %s:%s.%s => %s := %nx"
         (fst f_cache) (Ann.pos_to_string (snd f_cache))
@@ -368,7 +365,7 @@ let init_module ?(argv = false) ~filename sparse =
      ~f:(fun (n, ll) ->
        let open Llvm.Type in
        get_methods ll
-       |> List.iter ~f:(fun (s, t) -> add_internal_method n s t));
+       |> List.iter ~f:(fun (s, g, t) -> add_internal_method n s g t));
    dump_ctx ctx;
 
    (* argv! *)
