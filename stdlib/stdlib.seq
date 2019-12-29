@@ -1,506 +1,507 @@
 
 base = 0
-if base < 0 or base > 36 or base == 1:
-    print 'hai!'
-
-extend str:
-    def __bool__(self: str):
-        return self.len != 0
-
-    def __str__(self: str):
-        return self
-
-    def __len__(self: str):
-        return self.len
-
-    def __copy__(self: str):
-        return self
-
-    def __add__(self: str, other: str):
-        len1 = self.len
-        len2 = other.len
-        len3 = len1 + len2
-        p = ptr[byte](len3)
-        str.memcpy(p, self.ptr, len1)
-        str.memcpy(p + len1, other.ptr, len2)
-        return str(p, len3)
-
-    def c_str(self: str):
-        n = self.len
-        assert n >= 0
-        p = ptr[byte](n + 1)
-        str.memcpy(p, self.ptr, n)
-        p[n] = byte(0)
-        return p
-
-    def cat(v):
-        total = 0
-        for s in v:
-            total += s.__len__()
-        p = ptr[byte](total)
-        n = 0
-        for s in v:
-            str.memcpy(p + n, s.ptr, s.len)
-            n += s.len
-        return str(p, total)
-
-import! err
-
-# type i8  = Int[8]
-# type i16 = Int[16]
-# type i32 = Int[32]
-# type i64 = Int[64]
-# type u8  = UInt[8]
-# type u16 = UInt[16]
-# type u32 = UInt[32]
-# type u64 = UInt[64]
-
-type range(lo: int, hi: int, step: int):
-    def __init__(self: range, lo: int, hi: int, step: int) -> range:
-        if step == 0:
-            raise ValueError("range() step argument must not be zero")
-        return (lo, hi, step)
-
-    def __init__(self: range, lo: int, hi: int) -> range:
-        return (lo, hi, 1)
-
-    def __init__(self: range, hi: int) -> range:
-        return (0, hi, 1)
-
-    def __getitem__(self: range, idx: int):
-        n = self.__len__()
-        if idx < 0:
-            idx += n
-        if idx < 0 or idx >= n:
-            raise IndexError("range object index out of range")
-        return self.lo + (idx * self.step)
-
-    def __contains__(self: range, idx: int):
-        lo, hi, step = self.lo, self.hi, self.step
-        if (step > 0 and not (lo <= idx < hi)) or (step < 0 and not (hi < idx <= lo)):
-            return False
-        return (idx - lo) % step == 0
-
-    def __iter__(self: range):
-        lo, hi, step = self.lo, self.hi, self.step
-        i = lo
-        if step > 0:
-            while i < hi:
-                yield i
-                i += step
-        else:
-            while i > hi:
-                yield i
-                i += step
-
-    def __len__(self: range):
-        lo, hi, step = self.lo, self.hi, self.step
-        if step > 0 and lo < hi:
-            return 1 + (hi - 1 - lo) // step
-        elif step < 0 and lo > hi:
-            return 1 + (lo - 1 - hi) // (-step)
-        else:
-            return 0
-
-    def __bool__(self: range):
-        return self.__len__() > 0
-
-    def __reversed__(self: range):
-        lo, hi, step = self.lo, self.hi, self.step
-        n = self.__len__()
-        return range(lo + (n - 1)*step, lo - step, -step).__iter__()
-
-class Box[T]:
-    val: T
-
-def min(a, b):
-    return a if a < b else b
-
-def max(a, b):
-    return a if a > b else b
-
-def len(x):
-    return x.__len__()
-
-def iter(x):
-    return x.__iter__()
-
-def copy(x):
-    return x.__copy__()
-
-def abs(x):
-    return x.__abs__()
-
-def hash(x):
-    return x.__hash__()
-
-def ord(s: str):
-    return int(s.ptr[0])
-
-def chr(i: int):
-    p = ptr[byte](1)
-    p[0] = byte(i)
-    return str(p, 1)
-
-def next(g):
-    g.done()
-    return g.next()
-
-def any(x):
-    for a in x:
-        if a:
-            return True
-    return False
-
-def all(x):
-    for a in x:
-        if not a:
-            return False
-    return True
-
-def enum(x):
-    i = 0
-    for a in x:
-        yield (i,a)
-        i += 1
-
-def zip(a, b):
-    bi = iter(b)
-    for i in a:
-        if bi.done(): break
-        yield (i, bi.next())
-    bi.destroy()
-
-def filter(f, x):
-    for a in x:
-        if f(a):
-            yield a
-
-def map(f, x):
-    for a in x:
-        yield f(a)
-
-def enumerate(x):
-    i = 0
-    for a in x:
-        yield (i,a)
-        i += 1
-
-def echo(x):
-    print x
-    return x
-
-def reversed(x):
-    return x.__reversed__()
-
-def round(x, n) -> float:
-    cdef round(float) -> float
-    cdef pow(float, float) -> float
-    n := pow(10.0, float(n))
-    return round(float(x * n)) / n
-
-def sum(xi):
-    x = iter(xi)
-    if not x.done():
-        s = x.next()
-        while not x.done():
-            s += x.next()
-        x.destroy()
-        return s
-    else:
-        x.destroy()
+#if True: #base < 0 or base > 36 or base == 1:
+print base
+#     print 'hai!'
+
+# extend str:
+#     def __bool__(self: str):
+#         return self.len != 0
+
+#     def __str__(self: str):
+#         return self
+
+#     def __len__(self: str):
+#         return self.len
+
+#     def __copy__(self: str):
+#         return self
+
+#     def __add__(self: str, other: str):
+#         len1 = self.len
+#         len2 = other.len
+#         len3 = len1 + len2
+#         p = ptr[byte](len3)
+#         str.memcpy(p, self.ptr, len1)
+#         str.memcpy(p + len1, other.ptr, len2)
+#         return str(p, len3)
+
+#     def c_str(self: str):
+#         n = self.len
+#         assert n >= 0
+#         p = ptr[byte](n + 1)
+#         str.memcpy(p, self.ptr, n)
+#         p[n] = byte(0)
+#         return p
+
+#     def cat(v):
+#         total = 0
+#         for s in v:
+#             total += s.__len__()
+#         p = ptr[byte](total)
+#         n = 0
+#         for s in v:
+#             str.memcpy(p + n, s.ptr, s.len)
+#             n += s.len
+#         return str(p, total)
+
+# import! err
+
+# # type i8  = Int[8]
+# # type i16 = Int[16]
+# # type i32 = Int[32]
+# # type i64 = Int[64]
+# # type u8  = UInt[8]
+# # type u16 = UInt[16]
+# # type u32 = UInt[32]
+# # type u64 = UInt[64]
+
+# type range(lo: int, hi: int, step: int):
+#     def __init__(self: range, lo: int, hi: int, step: int) -> range:
+#         if step == 0:
+#             raise ValueError("range() step argument must not be zero")
+#         return (lo, hi, step)
+
+#     def __init__(self: range, lo: int, hi: int) -> range:
+#         return (lo, hi, 1)
+
+#     def __init__(self: range, hi: int) -> range:
+#         return (0, hi, 1)
+
+#     def __getitem__(self: range, idx: int):
+#         n = self.__len__()
+#         if idx < 0:
+#             idx += n
+#         if idx < 0 or idx >= n:
+#             raise IndexError("range object index out of range")
+#         return self.lo + (idx * self.step)
+
+#     def __contains__(self: range, idx: int):
+#         lo, hi, step = self.lo, self.hi, self.step
+#         if (step > 0 and not (lo <= idx < hi)) or (step < 0 and not (hi < idx <= lo)):
+#             return False
+#         return (idx - lo) % step == 0
+
+#     def __iter__(self: range):
+#         lo, hi, step = self.lo, self.hi, self.step
+#         i = lo
+#         if step > 0:
+#             while i < hi:
+#                 yield i
+#                 i += step
+#         else:
+#             while i > hi:
+#                 yield i
+#                 i += step
+
+#     def __len__(self: range):
+#         lo, hi, step = self.lo, self.hi, self.step
+#         if step > 0 and lo < hi:
+#             return 1 + (hi - 1 - lo) // step
+#         elif step < 0 and lo > hi:
+#             return 1 + (lo - 1 - hi) // (-step)
+#         else:
+#             return 0
+
+#     def __bool__(self: range):
+#         return self.__len__() > 0
+
+#     def __reversed__(self: range):
+#         lo, hi, step = self.lo, self.hi, self.step
+#         n = self.__len__()
+#         return range(lo + (n - 1)*step, lo - step, -step).__iter__()
+
+# class Box[T]:
+#     val: T
+
+# def min(a, b):
+#     return a if a < b else b
+
+# def max(a, b):
+#     return a if a > b else b
+
+# def len(x):
+#     return x.__len__()
+
+# def iter(x):
+#     return x.__iter__()
+
+# def copy(x):
+#     return x.__copy__()
+
+# def abs(x):
+#     return x.__abs__()
+
+# def hash(x):
+#     return x.__hash__()
+
+# def ord(s: str):
+#     return int(s.ptr[0])
+
+# def chr(i: int):
+#     p = ptr[byte](1)
+#     p[0] = byte(i)
+#     return str(p, 1)
+
+# def next(g):
+#     g.done()
+#     return g.next()
+
+# def any(x):
+#     for a in x:
+#         if a:
+#             return True
+#     return False
+
+# def all(x):
+#     for a in x:
+#         if not a:
+#             return False
+#     return True
+
+# def enum(x):
+#     i = 0
+#     for a in x:
+#         yield (i,a)
+#         i += 1
+
+# def zip(a, b):
+#     bi = iter(b)
+#     for i in a:
+#         if bi.done(): break
+#         yield (i, bi.next())
+#     bi.destroy()
+
+# def filter(f, x):
+#     for a in x:
+#         if f(a):
+#             yield a
+
+# def map(f, x):
+#     for a in x:
+#         yield f(a)
+
+# def enumerate(x):
+#     i = 0
+#     for a in x:
+#         yield (i,a)
+#         i += 1
+
+# def echo(x):
+#     print x
+#     return x
+
+# def reversed(x):
+#     return x.__reversed__()
+
+# def round(x, n) -> float:
+#     cdef round(float) -> float
+#     cdef pow(float, float) -> float
+#     n := pow(10.0, float(n))
+#     return round(float(x * n)) / n
+
+# def sum(xi):
+#     x = iter(xi)
+#     if not x.done():
+#         s = x.next()
+#         while not x.done():
+#             s += x.next()
+#         x.destroy()
+#         return s
+#     else:
+#         x.destroy()
 
-extend int:
-    def __pow__(self: int, exp: int):
-        result = 1
-        while True:
-            if exp & 1:
-                result *= self
-            exp >>= 1
-            if not exp:
-                break
-            self *= self
-        return result
+# extend int:
+#     def __pow__(self: int, exp: int):
+#         result = 1
+#         while True:
+#             if exp & 1:
+#                 result *= self
+#             exp >>= 1
+#             if not exp:
+#                 break
+#             self *= self
+#         return result
 
-    def __pow__(self: int, exp: float):
-        return float(self) ** exp
-
-    def _from_str(s: str, base: int):
-        cdef strtoll(ptr[byte], ptr[ptr[byte]], i32) -> int
-        import gc
-
-        if base < 0 or base > 36 or base == 1:
-            raise ValueError("int() base must be >= 2 and <= 36, or 0")
-
-        buf = __array__[byte](32)
-        n = len(s)
-        need_dyn_alloc = (n >= len(buf))
-
-        p = gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
-        str.memcpy(p, s.ptr, n)
-        p[n] = byte(0)
-
-        end = ptr[byte]()
-        result = strtoll(p, __ptr__(end), i32(base))
-
-        if need_dyn_alloc:
-            gc.free(p)
-
-        if end != p + n:
-            raise ValueError("invalid literal for int() with base " + str(base) + ": " + s)
-
-        return result
-
-    def __init__(self: int, s: str):
-        return int._from_str(s, 10)
-
-    def __init__(self: int, s: str, base: int):
-        return int._from_str(s, base)
-
-extend float:
-    def __init__(self: float, s: str):
-        cdef strtod(ptr[byte], ptr[ptr[byte]]) -> float
-        import gc
-
-        buf = __array__[byte](32)
-        n = len(s)
-        need_dyn_alloc = (n >= len(buf))
-
-        p = gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
-        str.memcpy(p, s.ptr, n)
-        p[n] = byte(0)
-
-        end = ptr[byte]()
-        result = strtod(p, __ptr__(end))
-
-        if need_dyn_alloc:
-            gc.free(p)
-
-        if end != p + n:
-            raise ValueError("could not convert string to float: " + s)
-
-        return result
-
-# pickle
-type Jar = ptr[byte]
-
-def pickle[T](x: T, jar: Jar):
-    x.__pickle__(jar)
-
-def unpickle[T](jar: Jar):
-    return T.__unpickle__(jar)
-
-# khash utils
-def __ac_isempty(flag: ptr[u32], i: int):
-    return int(flag[i >> 4] >> u32((i & 0xf) << 1)) & 2
-
-def __ac_isdel(flag: ptr[u32], i: int):
-    return int(flag[i >> 4] >> u32((i & 0xf) << 1)) & 1
-
-def __ac_iseither(flag: ptr[u32], i: int):
-    return int(flag[i >> 4] >> u32((i & 0xf) << 1)) & 3
-
-def __ac_set_isdel_false(flag: ptr[u32], i: int):
-    flag[i >> 4] &= u32(~(1 << ((i & 0xf) << 1)))
-
-def __ac_set_isempty_false(flag: ptr[u32], i: int):
-    flag[i >> 4] &= u32(~(2 << ((i & 0xf) << 1)))
-
-def __ac_set_isboth_false(flag: ptr[u32], i: int):
-    flag[i >> 4] &= u32(~(3 << ((i & 0xf) << 1)))
-
-def __ac_set_isdel_true(flag: ptr[u32], i: int):
-    flag[i >> 4] |= u32(1 << ((i & 0xf) << 1))
-
-def __ac_fsize(m):
-    return 1 if m < 16 else m >> 4
-
-import! sort
-import! list
-import! dict
-import! set
-
-def sorted(v):
-    u = [a for a in v]
-    qsort(u.arr[0:len(u)])
-    return u
-
-extend str:
-    def __hash__(self: str):
-        h = 0
-        p, n = self.ptr, self.len
-        for i in range(n):
-            h = 31*h + int(p[i])
-        return h
-
-    def __eq__(self: str, other: str):
-        if len(self) != len(other):
-            return False
-        i = 0
-        while i < len(self):
-            if self.ptr[i] != other.ptr[i]:
-                return False
-            i += 1
-        return True
-
-    def __ne__(self: str, other: str):
-        return not (self == other)
-
-    def _cmp(self: str, other: str):
-        n = min(self.len, other.len)
-        i = 0
-        while i < n:
-            c1 = self.ptr[i]
-            c2 = other.ptr[i]
-            if c1 != c2:
-                return int(c1) - int(c2)
-            i += 1
-        return self.len - other.len
-
-    def __lt__(self: str, other: str):
-        return self._cmp(other) < 0
-
-    def __le__(self: str, other: str):
-        return self._cmp(other) <= 0
-
-    def __gt__(self: str, other: str):
-        return self._cmp(other) > 0
-
-    def __ge__(self: str, other: str):
-        return self._cmp(other) >= 0
-
-    def _slice_error(self: str):
-        raise IndexError("string slice index error")
-
-    def __getitem__(self: str, idx: int):
-        if idx < 0:
-            idx += len(self)
-        if not (0 <= idx < len(self)):
-            raise IndexError("string index out of range")
-        return str(self.ptr + idx, 1)
-
-    def __slice__(self: str, a: int, b: int):
-        if a < 0: a += len(self)
-        if b < 0: b += len(self)
-        if a > len(self): a = len(self)
-        if b > len(self): b = len(self)
-        if not (0 <= a <= b <= len(self)):
-            self._slice_error()
-        return str(self.ptr + a, b - a)
-
-    def __slice_left__(self: str, b: int):
-        if b < 0: b += len(self)
-        if b > len(self): b = len(self)
-        if not (0 <= b <= len(self)):
-            self._slice_error()
-        return str(self.ptr, b)
-
-    def __slice_right__(self: str, a: int):
-        if a < 0: a += len(self)
-        if a > len(self): a = len(self)
-        if not (0 <= a <= len(self)):
-            self._slice_error()
-        return str(self.ptr + a, len(self) - a)
-
-    def __iter__(self: str):
-        i = 0
-        n = len(self)
-        while i < n:
-            yield self[i]
-            i += 1
-
-    def __reversed__(self: str):
-        i = len(self) - 1
-        while i >= 0:
-            yield self[i]
-            i -= 1
-
-    def __mul__(self: str, x: int):
-        total = x * self.len
-        p = ptr[byte](total)
-        n = 0
-        for _ in range(x):
-            str.memcpy(p + n, self.ptr, self.len)
-            n += self.len
-        return str(p, total)
-
-    def __copy__(self: str):
-        n = len(self)
-        p = ptr[byte](n)
-        str.memcpy(p, self.ptr, n)
-        return str(p, n)
-
-    def cati(v: generator[str], total: int):
-        p = ptr[byte](total)
-        n = 0
-        for s in v:
-            str.memcpy(p + n, s.ptr, s.len)
-            n += s.len
-        return str(p, total)
-
-    def cati_ext(v: generator[str]):
-        sz = 10
-        p = ptr[byte](sz)
-        n = 0
-        for s in v:
-            if n + s.len > sz:
-                sz = 1 + 3 * (n + s.len) // 2
-                pp = ptr[byte](sz)
-                str.memcpy(pp, p, n)
-                p = pp
-            str.memcpy(p + n, s.ptr, s.len)
-            n += s.len
-        # TODO: realloc extra space
-        return str(p, n)
-
-    def join(self: str, l: list[str]):
-        if self == "":
-            return str.cat(l)
-        assert False
-
-    def _isspace(b: byte):
-        return b == byte(32) or b == byte(9) or b == byte(10) or \
-               b == byte(11) or b == byte(12) or b == byte(13)
-
-    def lstrip(self: str):
-        i = 0
-        while i < self.len:
-            if not str._isspace(self.ptr[i]):
-                break
-            i += 1
-        return str(self.ptr + i, self.len - i)
-
-    def rstrip(self: str):
-        i = self.len - 1
-        while i >= 0:
-            if not str._isspace(self.ptr[i]):
-                break
-            i -= 1
-        return '' if i < 0 else str(self.ptr, i + 1)
-
-    def strip(self: str):
-        return self.lstrip().rstrip()
-
-    def split(self: str, pat: str):
-        if len(pat) == 0:
-            for i in self: yield i
-        elif len(pat) == 1:
-            prev = 0
-            for i, s in enumerate(self):
-                if s == pat[0]:
-                    yield self[prev:i]
-                    prev = i + 1
-            yield self[prev:len(self)]
-        else:
-            i, l = 0, len(pat)
-            prev = 0
-            while i < len(self) - l + 1:
-                if self[i:i + l] == pat:
-                    yield self[prev:i]
-                    prev = i + l
-                    i += l
-                else:
-                    i += 1
-            yield self[prev:len(self)]
-
-import! bio
+#     def __pow__(self: int, exp: float):
+#         return float(self) ** exp
+
+#     def _from_str(s: str, base: int):
+#         cdef strtoll(ptr[byte], ptr[ptr[byte]], i32) -> int
+#         import gc
+
+#         if base < 0 or base > 36 or base == 1:
+#             raise ValueError("int() base must be >= 2 and <= 36, or 0")
+
+#         buf = __array__[byte](32)
+#         n = len(s)
+#         need_dyn_alloc = (n >= len(buf))
+
+#         p = gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+#         str.memcpy(p, s.ptr, n)
+#         p[n] = byte(0)
+
+#         end = ptr[byte]()
+#         result = strtoll(p, __ptr__(end), i32(base))
+
+#         if need_dyn_alloc:
+#             gc.free(p)
+
+#         if end != p + n:
+#             raise ValueError("invalid literal for int() with base " + str(base) + ": " + s)
+
+#         return result
+
+#     def __init__(self: int, s: str):
+#         return int._from_str(s, 10)
+
+#     def __init__(self: int, s: str, base: int):
+#         return int._from_str(s, base)
+
+# extend float:
+#     def __init__(self: float, s: str):
+#         cdef strtod(ptr[byte], ptr[ptr[byte]]) -> float
+#         import gc
+
+#         buf = __array__[byte](32)
+#         n = len(s)
+#         need_dyn_alloc = (n >= len(buf))
+
+#         p = gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+#         str.memcpy(p, s.ptr, n)
+#         p[n] = byte(0)
+
+#         end = ptr[byte]()
+#         result = strtod(p, __ptr__(end))
+
+#         if need_dyn_alloc:
+#             gc.free(p)
+
+#         if end != p + n:
+#             raise ValueError("could not convert string to float: " + s)
+
+#         return result
+
+# # pickle
+# type Jar = ptr[byte]
+
+# def pickle[T](x: T, jar: Jar):
+#     x.__pickle__(jar)
+
+# def unpickle[T](jar: Jar):
+#     return T.__unpickle__(jar)
+
+# # khash utils
+# def __ac_isempty(flag: ptr[u32], i: int):
+#     return int(flag[i >> 4] >> u32((i & 0xf) << 1)) & 2
+
+# def __ac_isdel(flag: ptr[u32], i: int):
+#     return int(flag[i >> 4] >> u32((i & 0xf) << 1)) & 1
+
+# def __ac_iseither(flag: ptr[u32], i: int):
+#     return int(flag[i >> 4] >> u32((i & 0xf) << 1)) & 3
+
+# def __ac_set_isdel_false(flag: ptr[u32], i: int):
+#     flag[i >> 4] &= u32(~(1 << ((i & 0xf) << 1)))
+
+# def __ac_set_isempty_false(flag: ptr[u32], i: int):
+#     flag[i >> 4] &= u32(~(2 << ((i & 0xf) << 1)))
+
+# def __ac_set_isboth_false(flag: ptr[u32], i: int):
+#     flag[i >> 4] &= u32(~(3 << ((i & 0xf) << 1)))
+
+# def __ac_set_isdel_true(flag: ptr[u32], i: int):
+#     flag[i >> 4] |= u32(1 << ((i & 0xf) << 1))
+
+# def __ac_fsize(m):
+#     return 1 if m < 16 else m >> 4
+
+# import! sort
+# import! list
+# import! dict
+# import! set
+
+# def sorted(v):
+#     u = [a for a in v]
+#     qsort(u.arr[0:len(u)])
+#     return u
+
+# extend str:
+#     def __hash__(self: str):
+#         h = 0
+#         p, n = self.ptr, self.len
+#         for i in range(n):
+#             h = 31*h + int(p[i])
+#         return h
+
+#     def __eq__(self: str, other: str):
+#         if len(self) != len(other):
+#             return False
+#         i = 0
+#         while i < len(self):
+#             if self.ptr[i] != other.ptr[i]:
+#                 return False
+#             i += 1
+#         return True
+
+#     def __ne__(self: str, other: str):
+#         return not (self == other)
+
+#     def _cmp(self: str, other: str):
+#         n = min(self.len, other.len)
+#         i = 0
+#         while i < n:
+#             c1 = self.ptr[i]
+#             c2 = other.ptr[i]
+#             if c1 != c2:
+#                 return int(c1) - int(c2)
+#             i += 1
+#         return self.len - other.len
+
+#     def __lt__(self: str, other: str):
+#         return self._cmp(other) < 0
+
+#     def __le__(self: str, other: str):
+#         return self._cmp(other) <= 0
+
+#     def __gt__(self: str, other: str):
+#         return self._cmp(other) > 0
+
+#     def __ge__(self: str, other: str):
+#         return self._cmp(other) >= 0
+
+#     def _slice_error(self: str):
+#         raise IndexError("string slice index error")
+
+#     def __getitem__(self: str, idx: int):
+#         if idx < 0:
+#             idx += len(self)
+#         if not (0 <= idx < len(self)):
+#             raise IndexError("string index out of range")
+#         return str(self.ptr + idx, 1)
+
+#     def __slice__(self: str, a: int, b: int):
+#         if a < 0: a += len(self)
+#         if b < 0: b += len(self)
+#         if a > len(self): a = len(self)
+#         if b > len(self): b = len(self)
+#         if not (0 <= a <= b <= len(self)):
+#             self._slice_error()
+#         return str(self.ptr + a, b - a)
+
+#     def __slice_left__(self: str, b: int):
+#         if b < 0: b += len(self)
+#         if b > len(self): b = len(self)
+#         if not (0 <= b <= len(self)):
+#             self._slice_error()
+#         return str(self.ptr, b)
+
+#     def __slice_right__(self: str, a: int):
+#         if a < 0: a += len(self)
+#         if a > len(self): a = len(self)
+#         if not (0 <= a <= len(self)):
+#             self._slice_error()
+#         return str(self.ptr + a, len(self) - a)
+
+#     def __iter__(self: str):
+#         i = 0
+#         n = len(self)
+#         while i < n:
+#             yield self[i]
+#             i += 1
+
+#     def __reversed__(self: str):
+#         i = len(self) - 1
+#         while i >= 0:
+#             yield self[i]
+#             i -= 1
+
+#     def __mul__(self: str, x: int):
+#         total = x * self.len
+#         p = ptr[byte](total)
+#         n = 0
+#         for _ in range(x):
+#             str.memcpy(p + n, self.ptr, self.len)
+#             n += self.len
+#         return str(p, total)
+
+#     def __copy__(self: str):
+#         n = len(self)
+#         p = ptr[byte](n)
+#         str.memcpy(p, self.ptr, n)
+#         return str(p, n)
+
+#     def cati(v: generator[str], total: int):
+#         p = ptr[byte](total)
+#         n = 0
+#         for s in v:
+#             str.memcpy(p + n, s.ptr, s.len)
+#             n += s.len
+#         return str(p, total)
+
+#     def cati_ext(v: generator[str]):
+#         sz = 10
+#         p = ptr[byte](sz)
+#         n = 0
+#         for s in v:
+#             if n + s.len > sz:
+#                 sz = 1 + 3 * (n + s.len) // 2
+#                 pp = ptr[byte](sz)
+#                 str.memcpy(pp, p, n)
+#                 p = pp
+#             str.memcpy(p + n, s.ptr, s.len)
+#             n += s.len
+#         # TODO: realloc extra space
+#         return str(p, n)
+
+#     def join(self: str, l: list[str]):
+#         if self == "":
+#             return str.cat(l)
+#         assert False
+
+#     def _isspace(b: byte):
+#         return b == byte(32) or b == byte(9) or b == byte(10) or \
+#                b == byte(11) or b == byte(12) or b == byte(13)
+
+#     def lstrip(self: str):
+#         i = 0
+#         while i < self.len:
+#             if not str._isspace(self.ptr[i]):
+#                 break
+#             i += 1
+#         return str(self.ptr + i, self.len - i)
+
+#     def rstrip(self: str):
+#         i = self.len - 1
+#         while i >= 0:
+#             if not str._isspace(self.ptr[i]):
+#                 break
+#             i -= 1
+#         return '' if i < 0 else str(self.ptr, i + 1)
+
+#     def strip(self: str):
+#         return self.lstrip().rstrip()
+
+#     def split(self: str, pat: str):
+#         if len(pat) == 0:
+#             for i in self: yield i
+#         elif len(pat) == 1:
+#             prev = 0
+#             for i, s in enumerate(self):
+#                 if s == pat[0]:
+#                     yield self[prev:i]
+#                     prev = i + 1
+#             yield self[prev:len(self)]
+#         else:
+#             i, l = 0, len(pat)
+#             prev = 0
+#             while i < len(self) - l + 1:
+#                 if self[i:i + l] == pat:
+#                     yield self[prev:i]
+#                     prev = i + l
+#                     i += l
+#                 else:
+#                     i += 1
+#             yield self[prev:len(self)]
+
+# import! bio

@@ -21,7 +21,7 @@ module E = Codegen_expr
 (** [parse ~ctx expr] dispatches a statement AST node [expr] to the proper code generation function. *)
 let rec parse ~(ctx : C.t) ?(toplevel=false) ?(jit = false) (ann, node) =
   C.push_ann ~ctx ann;
-  Util.A.dy "-> %s" @@ Ast.Stmt.to_string (ann, node);
+  Util.A.dy "-> %s" @@ Ast.s_dbg (ann, node);
   let stmt =
     match node with
     | Break p -> parse_break ctx p

@@ -23,7 +23,7 @@ module Ann = struct
     | f -> sprintf "%s:%d:%d" (Filename.basename f) t.line t.col
 
   let rec var_to_string ?(generics = Int.Table.create ()) ?(useds=false) ?(full=false) t =
-    let f = var_to_string ~generics ~full in
+    let f = var_to_string ~generics ~useds ~full in
     let gen2str g = ppl ~sep:"," g ~f:(fun (_, (g, t)) -> sprintf "%s" (f t)) in
     match t with
     | Tuple args ->
@@ -54,15 +54,15 @@ module Ann = struct
           Hashtbl.set generics ~key:u ~data:w;
           w)
 
-  let typ_to_string ?(full=false) = function
+  let typ_to_string ?(useds=false) ?(full=false) = function
     | Import s -> sprintf "<import: %s>" s
     | Type t ->
-      if full then sprintf "<type: %s>" (var_to_string ~full t) else var_to_string t
-    | Var t -> var_to_string ~full t
+      if full then sprintf "<type: %s>" (var_to_string ~full ~useds t) else (var_to_string ~useds t)
+    | Var t -> var_to_string ~full ~useds t
 
-  let t_to_string ?(full=false) = function
+  let t_to_string ?(useds=false) ?(full=false) = function
     | None -> "_"
-    | Some s -> typ_to_string ~full s
+    | Some s -> typ_to_string ~full ~useds s
 
   let to_string t =
     sprintf "<%s |= %s>" (pos_to_string t.pos) (t_to_string t.typ)
@@ -159,6 +159,7 @@ module Expr = struct
     | Binary (l, o, r) -> sprintf "(%s %s %s)" (to_string l) o (to_string r)
     | Unary (o, x) -> sprintf "(%s %s)" o (to_string x)
     | Index (x, l) -> sprintf "%s[%s]" (to_string x) (ppl l ~f:to_string)
+    | Method (x, s) -> sprintf "%s.%s" (to_string x) s
     | Dot (x, s) -> sprintf "%s.%s" (to_string x) s
     | Call (x, l) -> sprintf "%s(%s)" (to_string x) (ppl l ~f:call_to_string)
     | TypeOf x -> sprintf "typeof(%s)" (to_string x)
@@ -215,6 +216,7 @@ module Expr = struct
       | Call (t, l) -> Call (walk t, List.map l
           ~f:(fun { name; value } -> { name; value = walk value }))
       | Slice (a, b, c) -> Slice (a >>| walk, b >>| walk, c >>| walk)
+      | Method (a, s) -> Method (walk a, s)
       | Dot (a, s) -> Dot (walk a, s)
       | TypeOf t -> TypeOf (walk t)
       | Ptr t -> Ptr (walk t)
@@ -427,3 +429,141 @@ let s_extern ?(ann=default) ?(lang="c") name ret params =
     , { name = name; typ = Some ret }
     , List.map params ~f:(fun (name, typ) -> Stmt.{ name; typ = Some typ })
     )
+
+
+let rec e_dbg (enode : Expr.t ann) =
+  let s = match snd enode with
+  | Empty _ -> "#empty("
+  | Ellipsis _ -> "#ellipsis("
+  | Bool x -> if x then "#bool(1" else "#bool(0"
+  | Int (x, k) -> sprintf "#int(%s, %s" x k
+  | Float (x, k) -> sprintf "#float(%s, %s" x k
+  | String x -> sprintf "#string('%s'" (String.escaped x)
+  | Kmer x -> sprintf "#kmer('%s'" x
+  | Seq x -> sprintf "#seq('%s'" x
+  | Id x -> sprintf "#id(%s" x
+  | Unpack x -> sprintf "#unpack(%s" x
+  | Tuple l when List.length l = 1 -> sprintf "#tuple(%s" (ppl l ~f:e_dbg)
+  | Tuple l -> sprintf "#tuple(%s" (ppl l ~f:e_dbg)
+  | List l -> sprintf "#list(%s" (ppl l ~f:e_dbg)
+  | Set l -> sprintf "#set(%s" (ppl l ~f:e_dbg)
+  | Dict l ->
+    List.chunks_of l ~length:2
+    |> ppl ~f:(function
+      | [a; b] -> sprintf "(%s, %s)" (e_dbg a) (e_dbg b)
+      | _ -> failwith "cannot happen")
+    |> sprintf "#dict(%s"
+  | IfExpr (x, i, e) ->
+    sprintf "#eif(%s, %s, %s" (e_dbg x) (e_dbg i) (e_dbg e)
+  | Pipe l ->
+    sprintf "#pipe(%s" (ppl l ~sep:", " ~f:(fun (p, e) -> sprintf "#op='%s', %s" p @@ e_dbg e))
+  | Binary (l, o, r) -> sprintf "#op(%s, %s, %s" o (e_dbg l) (e_dbg r)
+  | Unary (o, x) -> sprintf "#op(%s, %s" o (e_dbg x)
+  | Index (x, l) -> sprintf "#index(%s, %s" (e_dbg x) (ppl l ~f:e_dbg)
+  | Method (x, s) -> sprintf "#method(%s, %s" (e_dbg x) s
+  | Dot (x, s) -> sprintf "#dot(%s, %s" (e_dbg x) s
+  | Call (x, l) -> sprintf "#call(%s, %s" (e_dbg x) (ppl l ~f:(fun Expr.{name; value} ->
+    sprintf
+      "%s%s"
+      (Option.value_map name ~default:"" ~f:(fun x -> sprintf "%s=" x))
+      (e_dbg value)
+    ))
+  | TypeOf x -> sprintf "#typeof(%s" (e_dbg x)
+  | Ptr x -> sprintf "#ptr(%s" (e_dbg x)
+  | Slice (a, b, c) ->
+    let l = List.map [ ("st", a); ("ed", b); ("step", c) ] ~f:(function (x, y) ->
+      match y with None -> ""
+      | Some y -> sprintf "#%s=%s" x (e_dbg y)) in
+    sprintf "#slice(%s" (ppl l ~f:Fn.id)
+  | Lambda (l, x) -> sprintf "#lambda(%s, %s" (ppl l ~f:Fn.id) (e_dbg x)
+  | Generator (t, x, c) ->
+    let c = comp_dbg c in
+    match t, x with
+    | "list", [x] -> sprintf "#lgen(%s, @next=%s" (e_dbg x) c
+    | "set", [x] -> sprintf "#sgen(%s, @next=%s" (e_dbg x) c
+    | "tuple", [x] -> sprintf "#gen(%s, @next=%s" (e_dbg x) c
+    | "dict", [x; y] -> sprintf "#dgen(%s, %s, @next=%s" (e_dbg x) (e_dbg y) c
+    | _ -> failwith "invalid generator"
+  in
+  sprintf "%s, @typ=%s)" s (Ann.t_to_string ~useds:true (fst enode).typ)
+and comp_dbg { var; gen; cond; next } =
+  sprintf
+    "#gen(%s, %s%s%s)"
+    (ppl var ~f:Fn.id)
+    (e_dbg gen)
+    (Option.value_map cond ~default:"" ~f:(fun x -> sprintf ", @cond=%s" (e_dbg x)))
+    (Option.value_map next ~default:"" ~f:(fun x -> ", @next=%s" ^ comp_dbg x))
+and s_dbg ?(indent = 0) (snode : Stmt.t ann) =
+  let s = match snd snode with
+    | Pass _ -> sprintf "#pass"
+    | Break _ -> sprintf "#break"
+    | Continue _ -> sprintf "#continue"
+    | Expr x -> sprintf "#expr(%s)" @@ e_dbg x
+    | AssignEq (l, op, r) ->
+      sprintf "#assign(%s, %s, @op='%s=')" (e_dbg l) (e_dbg r) op
+    | Assign (l, r, s, q) ->
+      (match q with
+      | Some q ->
+        sprintf
+          "#assign(%s, %s, @op='%s', @typ=%s)"
+          (ppl ~sep:"," l ~f:e_dbg)
+          (ppl ~sep:"," r ~f:e_dbg)
+          (match s with
+          | Shadow -> ":="
+          | _ -> "=")
+          (e_dbg q)
+      | None ->
+        sprintf
+          "#assign(%s, %s, @op='%s')"
+          (ppl ~sep:"," l ~f:e_dbg)
+          (ppl ~sep:"," r ~f:e_dbg)
+          (match s with
+          | Shadow -> ":="
+          | _ -> "="))
+    | Print (x, n) ->
+      sprintf "#print(%s, @end='%s')" (ppl x ~f:e_dbg) (String.escaped n)
+    | Del x -> sprintf "#del(%s)" (e_dbg x)
+    | Assert x -> sprintf "#assert(%s)" (e_dbg x)
+    | Yield x -> sprintf "#yield(%s)" (Option.value_map x ~default:"" ~f:e_dbg)
+    | Return x ->
+      sprintf "#return(%s)" (Option.value_map x ~default:"" ~f:e_dbg)
+    | TypeAlias (x, l) -> sprintf "#alias(%s, %s)" x (e_dbg l)
+    | While (x, l) ->
+      sprintf
+        "#while(%s,\n%s)"
+        (e_dbg x)
+        (ppl l ~sep:",\n" ~f:(s_dbg ~indent:(indent + 1)))
+    | For (v, x, l) ->
+      sprintf
+        "#for(%s, %s,\n%s)"
+        (ppl v ~f:Fn.id)
+        (e_dbg x)
+        (ppl l ~sep:",\n" ~f:(s_dbg ~indent:(indent + 1)))
+    | If l ->
+      String.concat ~sep:"\n"
+      @@ List.mapi l ~f:(fun i { cond; cond_stmts } ->
+              let cond = Option.value_map cond ~default:"" ~f:e_dbg in
+              let case =
+                if i = 0 then "#if" else if cond = "" then "#else" else "#elif"
+              in
+              sprintf
+                "%s(%s,\n%s)"
+                case
+                cond
+                (ppl cond_stmts ~sep:",\n" ~f:(s_dbg ~indent:(indent + 1))))
+    | Match (x, l) ->
+      sprintf
+        "#match(%s,\n%s"
+        (e_dbg x)
+        (ppl l ~sep:"\n" ~f:(fun Stmt.{ pattern; case_stmts } ->
+              sprintf
+                "case <?>:\n%s"
+                (ppl case_stmts ~sep:",\n" ~f:(s_dbg ~indent:(indent + 1)))))
+    | _ -> "?"
+  in
+  let pad l = String.make (l * 2) ' ' in
+  sprintf "%s%s" (pad indent) s
+
+(* and param_to_string (_, { name; typ }) =
+  let typ = Option.value_map typ ~default:"" ~f:(fun x -> " : " ^ Expr.to_string x) in
+  sprintf "%s%s" name typ *)

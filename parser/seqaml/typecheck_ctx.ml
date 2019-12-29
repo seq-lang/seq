@@ -351,7 +351,9 @@ let init_module ?(argv = false) ~filename sparse =
         cdef __getitem__(self: __array__[T], i: int) -> T
         cdef __setitem__(self: __array__[T], i: int, j: T) -> void
       type str(ptr: ptr[byte], len: int):
-        cdef __str__(self: str) -> str
+        def __str__(self: str) -> str:
+          return self
+      #  cdef __str__(self: str) -> str
       type seq(ptr: ptr[byte], len: int)
       # type optional[T](has: void, val: T):
       #  cdef __bool__(self) -> bool
@@ -372,7 +374,7 @@ let init_module ?(argv = false) ~filename sparse =
    (* argv! *)
    if true
    then (
-     match Util.get_from_stdlib "scratch" with
+     match Util.get_from_stdlib "stdlib" with
      | Some file ->
         let statements =
           Codegen.parse_file file
@@ -411,7 +413,7 @@ let magic_call ~ctx ?(args = []) ~magic parse e =
   | _ -> *)
     let y = parse ~ctx @@ eannotate ~ctx (e_call (e_dot e magic) args) in
     match y with
-    | Expr.(ac, Call ((ad, Dot (i, _)) as d, _)) as c ->
+    | Expr.(ac, Call ((ad, Method (i, _)) as d, _)) as c ->
       (* Util.A.dy "%s [%s] . %s [%s]"
       (Expr.to_string d)
       (Ann.t_to_string ad.Ann.typ)

@@ -120,7 +120,7 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block sparse
     then (
       let args = Llvm.Module.get_args mdl in
       add ~ctx ~internal ~global ~toplevel "__argv__" (Var args));
-    match Util.get_from_stdlib "scratch" with
+    match Util.get_from_stdlib "stdlib" with
     | Some file ->
 
     Hashtbl.find_exn Typecheck_ctx.imports file |> List.ignore_map ~f:(ctx.globals.sparse ~ctx ~toplevel:true)
@@ -189,19 +189,21 @@ let to_dbg_output ~(ctx : t) =
 
 
 let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
-  Util.A.dy ~force:true "%% realizing %s" (Ann.var_to_string typ);
   let open Ast in
   let open Ann in
   let module TC = Typecheck_ctx in
+  Util.A.db "[codegen] %s ... " (Ann.var_to_string ~useds:true typ);
   match typ with
   | Class (gen, _) | Func (gen, _) ->
     let real_name, _ = TC.get_full_name typ in
     let ast, str2real = Hashtbl.find_exn TC.realizations gen.cache in
     (match Hashtbl.find str2real real_name, typ with
     | Some { realized_llvm; _ }, _ when realized_llvm <> Ctypes.null  ->
+      Util.A.dg "<already realized>";
       (* Case 1 - already realized *)
       realized_llvm
     | Some data, Class ({ cache = p, n; _ }, { is_type }) when n = Ann.default_pos ->
+      Util.A.dg "<internal>";
       let ptr = match p, (String.prefix p 1, int_of_string_opt (String.drop_prefix p 1)) with
         | "void", _ -> Llvm.Type.void ()
         | "int", _ -> Llvm.Type.int ()
@@ -224,15 +226,11 @@ let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
             | _ -> err ~ctx ~pos "cannot instantiate internal type %s" p)
           | _ -> err ~ctx ~pos "cannot instantiate internal type %s" p
       in
-
-      (* Llvm.Type.get_methods ptr
-      |> List.iter ~f:(fun (s, t) ->
-        add_internal_method n s (get_name t)); *)
-
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
       ptr
     | Some ({ realized_typ; realized_ast = Some (pos, (Class cls | Type cls)); _ } as data), Class (_, { is_type }) ->
       let name = sprintf "%s:%s" cls.class_name real_name in
+      Util.A.dg "generating type %s" name;
       let ptr = (if is_type then Llvm.Type.record [] [] else Llvm.Type.cls) name in
       let new_ctx = { ctx with map = Hashtbl.copy ctx.map; stack = Stack.create () } in
       Ctx.add_block ~ctx:new_ctx;
@@ -250,10 +248,12 @@ let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
       ptr
     | Some ({ realized_typ; realized_ast = Some (pos, Function f); _ } as data), Func (gen, { ret; _ }) ->
       let name = sprintf "%s:%s" f.fn_name.name real_name in
+      Util.A.dg "generating fn %s" name;
       let ptr = Llvm.Func.func name in
       let block = Llvm.Block.func ptr in
       (* --> NEED THIS? *)
-      (* if not toplevel then Llvm.Func.set_enclosing ptr ctx.env.base; *)
+      (* if not toplevel then  *)
+      Llvm.Func.set_enclosing ptr ctx.env.base;
       let new_ctx =
         { ctx with
           stack = Stack.create ()
@@ -272,6 +272,7 @@ let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
       ptr
     | Some ({ realized_typ; realized_ast = Some (pos, Extern f); _ } as data), Func (gen, { ret; _ }) ->
       let lang, dylib, ctx_name, Stmt.{ name; _ }, _ = f in
+      Util.A.dg "generating extern %s" name;
       if lang <> "c"
       then err ~ctx "only cdef externs are currently supported";
       let name = sprintf "%s:%s" name real_name in

@@ -43,7 +43,7 @@ let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
     | Binary p -> parse_binary ctx p
     | Call p -> parse_call ctx p
     | Index p -> parse_index ctx p
-    | Dot p -> parse_dot ctx p
+    | Method p | Dot p -> parse_dot ctx p
     | TypeOf p -> parse_typeof ctx p
     | Lambda p -> parse_lambda ctx p
     | Pipe p -> parse_pipe ctx p
@@ -51,13 +51,14 @@ let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
     | Ellipsis _ -> parse_ellipsis ctx node
     | Slice _ -> C.err ~ctx "slice is only valid within an index"
     | Unpack _ -> C.err ~ctx "unpack is not valid here"
+    (* | Method _ -> C.err ~ctx "method is not valid in this stage" *)
   in
   ignore @@ C.pop_ann ~ctx;
-  Util.A.dbg "[e] %s [%s] -> %s [%s]"
+  (* Util.A.dbg "[e] %s [%s] -> %s [%s]"
     (Expr.to_string (ann,node))
     (Ann.to_string ann)
     (Expr.to_string expr)
-    (Ann.to_string (fst expr));
+    (Ann.to_string (fst expr)); *)
   expr
 
 and parse_none ctx n =
@@ -435,9 +436,9 @@ and parse_dot ctx (lh_expr', rhs) =
       (match ast with
       | _, Function { fn_attrs; _ } when List.exists fn_attrs ~f:((=) "property") ->
         (* Util.A.db "property! %s" rhs; *)
-        C.ann ~typ:(Var f.ret) ctx, Call ((C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)), [])
+        C.ann ~typ:(Var f.ret) ctx, Call ((C.ann ~typ:(Var typ) ctx, Method (lh_expr, rhs)), [])
       | _ ->
-        C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs))
+        C.ann ~typ:(Var typ) ctx, Method (lh_expr, rhs))
     | _ -> ierr "cannot happen")
   (* Nested member access: X.member *)
   | Some (Var lt), Some (Var t) ->
