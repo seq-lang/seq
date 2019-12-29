@@ -541,6 +541,7 @@ public:
 class ConstructExpr : public Expr {
 private:
   mutable types::Type *type;
+  mutable types::Type *type0; // type before deduction, saved for clone
   std::vector<Expr *> args;
 
 public:

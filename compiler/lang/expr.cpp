@@ -1943,7 +1943,7 @@ MatchExpr *MatchExpr::clone(Generic *ref) {
 }
 
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args)
-    : Expr(), type(type), args(std::move(args)) {}
+    : Expr(), type(type), type0(nullptr), args(std::move(args)) {}
 
 types::Type *ConstructExpr::getConstructType() { return type; }
 
@@ -2035,8 +2035,10 @@ types::Type *ConstructExpr::getType0() const {
 
   // type parameter deduction if constructing generic class:
   auto *ref = dynamic_cast<types::RefType *>(type);
-  if (ref && ref->numGenerics() > 0 && !ref->realized())
+  if (ref && ref->numGenerics() > 0 && !ref->realized()) {
+    type0 = type;
     type = ref->realize(ref->deduceTypesFromArgTypes(types));
+  }
 
   types::Type *ret = type->magicOut("__init__", types);
   return ret->is(types::Void) ? type : ret;
@@ -2046,7 +2048,8 @@ ConstructExpr *ConstructExpr::clone(Generic *ref) {
   std::vector<Expr *> argsCloned;
   for (auto *arg : args)
     argsCloned.push_back(arg->clone(ref));
-  SEQ_RETURN_CLONE(new ConstructExpr(type->clone(ref), argsCloned));
+  SEQ_RETURN_CLONE(
+      new ConstructExpr((type0 ? type0 : type)->clone(ref), argsCloned));
 }
 
 MethodExpr::MethodExpr(Expr *self, Func *func)
