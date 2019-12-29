@@ -1,7 +1,7 @@
 
 base = 0
-#if True: #base < 0 or base > 36 or base == 1:
 print base
+#if True: #base < 0 or base > 36 or base == 1:
 #     print 'hai!'
 
 # extend str:
