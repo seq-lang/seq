@@ -298,6 +298,7 @@ public:
   FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types = {});
   explicit FuncExpr(BaseFunc *func, std::vector<types::Type *> types = {});
   BaseFunc *getFunc();
+  std::vector<types::Type *> getTypes() const;
   bool isRealized() const;
   void setRealizeTypes(std::vector<types::Type *> types);
   void resolveTypes() override;
@@ -481,6 +482,7 @@ public:
   CallExpr(Expr *func, std::vector<Expr *> args,
            std::vector<std::string> names = {});
   Expr *getFuncExpr() const;
+  std::vector<Expr *> getArgs() const;
   void setFuncExpr(Expr *func);
   void resolveTypes() override;
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
@@ -498,6 +500,7 @@ public:
   PartialCallExpr(Expr *func, std::vector<Expr *> args,
                   std::vector<std::string> names = {});
   Expr *getFuncExpr() const;
+  std::vector<Expr *> getArgs() const;
   void setFuncExpr(Expr *func);
   void resolveTypes() override;
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
@@ -538,6 +541,7 @@ public:
 class ConstructExpr : public Expr {
 private:
   mutable types::Type *type;
+  mutable types::Type *type0; // type before deduction, saved for clone
   std::vector<Expr *> args;
 
 public:
@@ -573,6 +577,18 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
   types::Type *getType0() const override;
   OptExpr *clone(Generic *ref) override;
+};
+
+class YieldExpr : public Expr {
+private:
+  Func *base;
+
+public:
+  YieldExpr(Func *base);
+  void resolveTypes() override;
+  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  types::Type *getType0() const override;
+  YieldExpr *clone(Generic *ref) override;
 };
 
 class DefaultExpr : public Expr {

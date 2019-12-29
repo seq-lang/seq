@@ -1,4 +1,5 @@
 import statistics
+import math
 
 @test
 def med():
@@ -163,10 +164,84 @@ def test_mean():
 test_mean()
 
 @test
-def test_mean1():
+def test_geometric_mean():
+    PRECISION = 1e-6
+
+    data = [54.0, 24.0, 36.0]
+    assert math.fabs(statistics.geometric_mean(data) - 36) < PRECISION
+
+    data = [4.0, 9.0]
+    assert math.fabs(statistics.geometric_mean(data) - 6) < PRECISION
+
+    data = [17.625]
+    assert math.fabs(statistics.geometric_mean(data) - 17.625) < PRECISION
+
+    data = [3.5, 4.0, 5.25]
+    assert math.fabs(statistics.geometric_mean(data) - 4.18886) < PRECISION
+test_geometric_mean()
+
+@test
+def test_harmonic_mean():
+    data = [1.0, 0.0, 2.0]
+    assert statistics.harmonic_mean(data) == 0
+
+    data = [2.0, 4.0, 4.0, 8.0, 16.0, 16.0]
+    assert statistics.harmonic_mean(data) == 6*4/5
+
+    data = [1/8, 1/4, 1/4, 1/2, 1/2]
+    assert statistics.harmonic_mean(data) == 1/4
+
+    for x in range(1, 101):
+        assert statistics.harmonic_mean([float(x)]) == float(x)
+test_harmonic_mean()
+
+@test
+def test_pvariance():
+    data = [float(i) for i in range(10000)]
+    assert statistics.pvariance(data) == (10000**2 - 1)/12
+
+    data = [4.0, 7.0, 13.0, 16.0]
+    assert statistics.pvariance(data) == 22.5
+
+    data = [1/4, 1/4, 3/4, 7/4]
+    assert statistics.pvariance(data) == 3/8
+test_pvariance()
+
+@test
+def test_pstdev():
+    data = [float(i) for i in range(10000)]
+    assert statistics.pstdev(data) == math.sqrt(statistics.pvariance(data))
+
+    data = [4.0, 7.0, 13.0, 16.0]
+    assert statistics.pstdev(data) == math.sqrt(statistics.pvariance(data))
+
+    data = [1/4, 1/4, 3/4, 7/4]
+    assert statistics.pstdev(data) == math.sqrt(statistics.pvariance(data))
+test_pstdev()
+
+@test
+def test_variance():
+    data = [4.0, 7.0, 13.0, 16.0]
+    assert statistics.variance(data) == 30.0
+
+    data = [1/4, 1/4, 3/4, 7/4]
+    assert statistics.variance(data) == 1/2
+test_variance()
+
+@test
+def test_stdev():
+    data = [4.0, 7.0, 13.0, 16.0]
+    assert statistics.stdev(data) == math.sqrt(statistics.variance(data))
+
+    data = [1/4, 1/4, 3/4, 7/4]
+    assert statistics.stdev(data) == math.sqrt(statistics.variance(data))
+test_stdev()
+
+@test
+def test_mean_NormalDist():
     X = statistics.NormalDist(10000.0, 3.0)
     assert X.mean == 10000.0
-test_mean1()
+test_mean_NormalDist()
 
 @test
 def test_stdev():
@@ -181,23 +256,77 @@ def test_variance():
 test_variance()
 
 @test
+def test_pdf():
+    PRECISION = 1e-6
+    X = statistics.NormalDist(100.0, 15.0)
+
+    # verify peak around center
+    assert X.pdf(99.0) < X.pdf(100.0)
+    assert X.pdf(101.0) < X.pdf(100.0)
+
+    for i in range(50):
+        assert math.fabs((X.pdf(100.0 - float(i)) - X.pdf(100.0 + float(i)))) < PRECISION
+test_pdf()
+
+@test
+def test_cdf():
+    X = statistics.NormalDist(100.0, 15.0)
+    # Verify center (should be exact)
+    assert X.cdf(100.0) == 0.50
+test_cdf()
+
+@test
+def test_inv_cdf():
+    PRECISION = 1e-6
+    iq = statistics.NormalDist(100.0, 15.0)
+    assert iq.inv_cdf(0.50) == iq.mean
+
+    # One hundred ever smaller probabilities to test tails out to
+    # extreme probabilities: 1 / 2**50 and (2**50-1) / 2 ** 50
+    for e in range(1, 51):
+        p = 2.0 ** (-e)
+        assert math.fabs(iq.cdf(iq.inv_cdf(p)) - p) < PRECISION
+        p = 1.0 - p
+        assert math.fabs(iq.cdf(iq.inv_cdf(p)) - p) < PRECISION
+test_inv_cdf ()
+
+@test
+def test_ND_qualtiles():
+    PRECISION = 1e-6
+    Z = statistics.NormalDist(0.0, 1.0)
+    for n, expected in [
+        (2, [0.0]),
+        (3, [-0.430727, 0.430727]),
+        (4 ,[-0.67449, 0.0, 0.67449])
+        ]:
+        actual = Z.quantiles(n)
+        for i in range(len(expected)):
+            assert math.fabs(actual[i] - expected[i]) < PRECISION
+test_ND_qualtiles()
+
+@test
+def test_overlap():
+    PRECISION = 1e-5
+    for X1, X2, published_result in [
+                (statistics.NormalDist(0.0, 2.0), statistics.NormalDist(1.0, 2.0), 0.80258),
+                (statistics.NormalDist(0.0, 1.0), statistics.NormalDist(1.0, 2.0), 0.60993),
+            ]:
+        assert math.fabs(X1.overlap(X2) - published_result) < PRECISION
+        assert math.fabs(X2.overlap(X1) - published_result) < PRECISION
+test_overlap()
+
+@test
 def test_samples():
     mu, sigma = 10000.0, 3.0
     X = statistics.NormalDist(mu, sigma)
     n = 1000
     data = X.samples(n)
     assert len(data) == n
+test_samples()
 
-    # verify that seeding makes reproducible sequences
-    n = 5
-    # data1 = X.samples(n, seed='happiness and joy')
-    # data2 = X.samples(n, seed='trouble and despair')
-    # data3 = X.samples(n, seed='happiness and joy')
-    # data4 = X.samples(n, seed='trouble and despair')
-
-    # print data1
-    # print data3
-    # print data2 == data4
-# test_samples()
-
-
+@test
+def test_from_samples():
+    data = [96.0, 107.0, 90.0, 92.0, 110.0]
+    ND = statistics.NormalDist.from_samples(data)
+    assert ND == statistics.NormalDist(99.0, 9.0)
+test_from_samples()

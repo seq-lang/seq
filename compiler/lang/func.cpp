@@ -223,7 +223,11 @@ void Func::sawPrefetch(Prefetch *prefetch) {
   outType0 = types::GenType::get(outType0, true);
 }
 
-void Func::addAttribute(std::string attr) { attributes.push_back(attr); }
+void Func::addAttribute(std::string attr) {
+  attributes.push_back(attr);
+  if (attr == "builtin")
+    builtins[genericName()] = this;
+}
 
 std::vector<std::string> Func::getAttributes() { return attributes; }
 
@@ -358,6 +362,9 @@ void Func::codegen(Module *module) {
     func->setLinkage(GlobalValue::ExternalLinkage);
   } else {
     func->setLinkage(GlobalValue::PrivateLinkage);
+  }
+  if (hasAttribute("inline")) {
+    func->addFnAttr(Attribute::AttrKind::AlwaysInline);
   }
   func->setPersonalityFn(makePersonalityFunc(module));
   preambleBlock = BasicBlock::Create(context, "preamble", func);
@@ -589,6 +596,27 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock *&block,
   }
 }
 
+Value *Func::codegenYieldExpr(BasicBlock *&block) {
+  if (!gen)
+    throw exc::SeqException("yield expression in non-generator");
+
+  LLVMContext &context = block->getContext();
+  Function *suspFn = Intrinsic::getDeclaration(module, Intrinsic::coro_suspend);
+  Value *tok = ConstantTokenNone::get(context);
+  Value *final = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
+  IRBuilder<> builder(block);
+  Value *susp = builder.CreateCall(suspFn, {tok, final});
+
+  block = BasicBlock::Create(block->getContext(), "", block->getParent());
+
+  SwitchInst *inst = builder.CreateSwitch(susp, suspend, 2);
+  inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 0), block);
+  inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 1), cleanup);
+
+  builder.SetInsertPoint(block);
+  return builder.CreateLoad(promise);
+}
+
 bool Func::isGen() { return yield != nullptr; }
 
 std::vector<std::string> Func::getArgNames() { return argNames; }
@@ -669,6 +697,13 @@ Func *Func::clone(Generic *ref) {
   x->gen = gen;
   x->setSrcInfo(getSrcInfo());
   return x;
+}
+
+std::unordered_map<std::string, Func *> Func::builtins = {};
+Func *Func::getBuiltin(const std::string &name) {
+  auto itr = builtins.find(name);
+  assert(itr != builtins.end());
+  return itr->second;
 }
 
 BaseFuncLite::BaseFuncLite(

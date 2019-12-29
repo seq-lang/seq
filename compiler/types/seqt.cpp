@@ -782,6 +782,22 @@ void types::KMer::initOps() {
        true},
   };
 
+  if (k == 1) {
+    vtable.magic.push_back(
+        {"__init__",
+         {Byte},
+         this,
+         [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+           GlobalVariable *table =
+               get2bitTable(b.GetInsertBlock()->getModule());
+           Value *base = b.CreateZExt(args[0], b.getInt64Ty());
+           Value *bits =
+               b.CreateLoad(b.CreateInBoundsGEP(table, {b.getInt64(0), base}));
+           return bits;
+         },
+         false});
+  }
+
   addMethod(
       "len",
       new BaseFuncLite(

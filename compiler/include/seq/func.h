@@ -6,6 +6,7 @@
 #include "generic.h"
 #include "stmt.h"
 #include "types.h"
+#include <unordered_map>
 
 namespace seq {
 class Expr;
@@ -52,6 +53,9 @@ public:
  */
 class Func : public BaseFunc, public Generic, public SrcObject {
 private:
+  /// Cache of built-in functions
+  static std::unordered_map<std::string, Func *> builtins;
+
   /// Whether this function is externally-defined (e.g. via `cdef`)
   bool external;
 
@@ -158,6 +162,7 @@ public:
   void codegenYield(llvm::Value *val, types::Type *type,
                     llvm::BasicBlock *&block, bool empty = false,
                     bool dryrun = false);
+  llvm::Value *codegenYieldExpr(llvm::BasicBlock *&block);
 
   bool isGen() override;
   Var *getArgVar(std::string name);
@@ -172,6 +177,8 @@ public:
   void setArgNames(std::vector<std::string> argNames);
 
   Func *clone(Generic *ref) override;
+
+  static Func *getBuiltin(const std::string &name);
 };
 
 /**

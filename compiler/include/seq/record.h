@@ -21,6 +21,7 @@ public:
   void operator=(RecordType const &) = delete;
 
   void setContents(std::vector<Type *> types, std::vector<std::string> names);
+  bool named() const;
   bool empty() const;
   std::vector<Type *> getTypes();
 

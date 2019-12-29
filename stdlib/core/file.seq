@@ -12,37 +12,6 @@ def _gz_errcheck(stream: cobj):
             l += 1
         raise IOError("zlib error: " + str(msg, l))
 
-def _f_getline(lineptr: ptr[cobj], n: ptr[int], stream: cobj):
-    if not lineptr[0]:
-        N = 128
-        n[0] = N
-        lineptr[0] = _gc.alloc_atomic(N)
-
-    cur_pos = lineptr[0]
-    while True:
-        c = int(_C.fgetc(stream))
-        if c == -1:
-            _f_errcheck(stream, "error in read")
-            if cur_pos == lineptr[0]:
-                return -1
-            else:
-                break
-
-        if (lineptr[0] + n[0]) - cur_pos < 2:
-            new_lineptr_len = 2 * n[0]
-            new_lineptr = _gc.realloc(lineptr[0], new_lineptr_len)
-            cur_pos = new_lineptr + (cur_pos - lineptr[0])
-            lineptr[0] = new_lineptr
-            n[0] = new_lineptr_len
-
-        cur_pos[0] = byte(c)
-        cur_pos += 1
-        if byte(c) == '\n'.ptr[0]:
-            break
-
-    cur_pos[0] = byte(0)
-    return cur_pos - lineptr[0]
-
 def _gz_getline(lineptr: ptr[cobj], n: ptr[int], stream: cobj):
     if not lineptr[0]:
         N = 128
@@ -111,6 +80,13 @@ class File:
         for s in g:
             self.write(str(s))
 
+    def read(self: File, sz: int):
+        self._ensure_open()
+        buf = cobj(sz)
+        ret = _C.fread(buf, 1, sz, self.fp)
+        _f_errcheck(self.fp, "error in read")
+        return str(buf, ret)
+
     def tell(self: File):
         ret = _C.ftell(self.fp)
         _f_errcheck(self.fp, "error in tell")
@@ -125,7 +101,7 @@ class File:
             _C.fclose(self.fp)
             self.fp = cobj()
         if self.buf:
-            _gc.free(self.buf)
+            _C.free(self.buf)
             self._reset()
 
     def _ensure_open(self: File):
@@ -140,7 +116,7 @@ class File:
         self._ensure_open()
         while True:
             # pass pointers to individual class fields:
-            rd = _f_getline(ptr[cobj](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
+            rd = _C.getline(ptr[cobj](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
             if rd != -1:
                 if self.buf[rd - 1] == byte(10):
                     rd -= 1
@@ -222,10 +198,14 @@ class gzFile:
         self.buf = cobj()
         self.sz = 0
 
-
 def open(path: str, mode: str = "r"):
     return File(path, mode)
 
-
 def gzopen(path: str, mode: str = "r"):
     return gzFile(path, mode)
+
+def is_binary(path: str):
+    textchars = {7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7f}
+    with open(path, "rb") as f:
+        header = f.read(1024)
+        return any(ord(c) not in textchars for c in header)

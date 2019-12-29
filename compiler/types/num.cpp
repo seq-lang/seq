@@ -1334,12 +1334,10 @@ void types::BoolType::initOps() {
   };
 }
 
-// ASCII complement table
-static GlobalVariable *
-getByteCompTable(Module *module,
-                 const std::string &name = "seq.byte_comp_table") {
+GlobalVariable *types::ByteType::getByteCompTable(Module *module,
+                                                  const std::string &name) {
   LLVMContext &context = module->getContext();
-  Type *ty = IntegerType::getInt8Ty(context);
+  auto *ty = IntegerType::getInt8Ty(context);
   GlobalVariable *table = module->getGlobalVariable(name);
 
   if (!table) {

@@ -12,7 +12,7 @@ open Seqaml
     within string [code] as a module and returns parsed module AST.
     [file] is code filename used for error reporting. *)
 let exec_string ctx ?(file = "<internal>") ?(debug = false) ?(cell=false) code =
-  ignore @@ Codegen.parse ~file code ~f:(Codegen.Stmt.parse_module ~cell ~ctx)
+  ignore @@ Parser.parse ~file code ~f:(Codegen.Stmt.parse_module ~cell ~ctx)
 
 (** [init file error_handler] initializes Seq session with file [file].
     [error_handler typ position] is a callback called upon encountering

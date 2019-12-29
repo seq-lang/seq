@@ -4,18 +4,14 @@ from algorithms.pdqsort import pdq_sort_inplace
 from algorithms.timsort import tim_sort_inplace
 from time import time
 
-cimport srand(u32)
-cimport rand() -> i32
-
-srand(u32(1))
-
 def key(n: int):
     return -n
 
 def gen_list(n: int):
+    import random
     v = list[int](n)
     for _ in range(n):
-        v.append(int(rand()))
+        v.append(random.randint(0, 10000))
     return v
 
 def copy_to(a, b):
@@ -36,7 +32,7 @@ def test_sort1(name, sort):
     t0 = time()
     sort(v1, key)
     t1 = time()
-    print name, (t1 - t0)/1000
+    print name, t1 - t0
     ensure_sorted(v1)
 
 test_sort1('qsort   :', qsort_inplace[int,int])

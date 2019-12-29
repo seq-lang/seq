@@ -287,6 +287,8 @@ FOREIGN Expr *method_expr(Expr *self, Func *func) {
   return new MethodExpr(self, func);
 }
 
+FOREIGN Expr *yield_expr(Func *base) { return new YieldExpr(base); }
+
 FOREIGN Expr *typeof_expr(Expr *val) { return new TypeOfExpr(val); }
 
 FOREIGN Expr *ptr_expr(Var *val) { return new VarPtrExpr(val); }
@@ -560,7 +562,7 @@ FOREIGN Var *get_trycatch_var(TryCatch *tc, unsigned idx) {
 }
 
 FOREIGN void set_enclosing_trycatch(Expr *e, TryCatch *tc) {
-  if (tc)
+  if (e && tc)
     e->setTryCatch(tc);
 }
 

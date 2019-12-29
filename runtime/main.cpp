@@ -35,7 +35,6 @@ int main(int argc, char **argv) {
   cl::list<string> libs("L", desc("Load and link the specified library"));
   cl::list<string> args(ConsumeAfter, desc("<program arguments>..."));
 
-
   SetVersionPrinter(versMsg);
   ParseCommandLineOptions(argc, argv);
   vector<string> libsVec(libs);

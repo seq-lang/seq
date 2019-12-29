@@ -145,9 +145,8 @@ Sequence alignment
     print aln.cigar, aln.score
 
     # custom parameters
-    # match = 2; mismatch = 4; gap1(k) = 4k + 2; gap2(k) = 13k + 1
-    config = AlignConfig(2, 4).gap1(4, 2).gap2(13, 1)
-    aln = s1.align_dual(s2, config)
+    # match = 2; mismatch = 4; gap1(k) = 2k + 4; gap2(k) = k + 13
+    aln = s1.align(s2, a=2, b=4, gapo=4, gape=2, gapo2=13, gape2=1)
     print aln.cigar, aln.score
 
 Reading FASTA/FASTQ

@@ -620,19 +620,21 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   implicitGen.codegen(block->getModule());
 
   // now call the generator:
-  types::FuncType *funcType = implicitGen.getFuncType();
   Function *func = implicitGen.getFunc();
-
   Value *gen;
+  // We codegen calls ourselves rather than going through funcType
+  // to avoid problems with automatic optional conversions (we don't
+  // want them here).
+  IRBuilder<> builder(block);
   if (getTryCatch()) {
     LLVMContext &context = block->getContext();
     Function *parent = block->getParent();
     BasicBlock *unwind = getTryCatch()->getExceptionBlock();
     BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
-    gen = funcType->call(base, func, args, block, normal, unwind);
+    gen = builder.CreateInvoke(func, normal, unwind, args);
     block = normal;
   } else {
-    gen = funcType->call(base, func, args, block, nullptr, nullptr);
+    gen = builder.CreateCall(func, args);
   }
 
   setBodyBase(body, oldBase);
@@ -692,6 +694,8 @@ FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types)
     : FuncExpr(func, nullptr, std::move(types)) {}
 
 BaseFunc *FuncExpr::getFunc() { return func; }
+
+std::vector<types::Type *> FuncExpr::getTypes() const { return types; }
 
 bool FuncExpr::isRealized() const { return !types.empty(); }
 
@@ -1210,7 +1214,8 @@ static bool getExprForTupleIndex(Expr *arr, Expr *idx, types::RecordType *rec,
                                  GetElemExpr *result) {
   seq_int_t idxLit = 0;
   if (extractIntLiteral(idx, idxLit) &&
-      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true)) {
+      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true,
+                     /*overloadsOnly=*/true)) {
     seq_int_t idx = translateIndex(idxLit, rec->numBaseTypes());
     *result = GetElemExpr(arr,
                           (unsigned)(idx + 1)); // GetElemExpr is 1-based
@@ -1224,7 +1229,8 @@ static bool getExprForTupleSlice(Expr *arr, Expr *idx, types::RecordType *rec,
   std::vector<seq_int_t> args;
   types::RecordType *sliceType = nullptr;
   if (extractSliceLiteral(idx, args, sliceType) &&
-      !rec->magicOut("__getitem__", {sliceType}, /*nullOnMissing=*/true)) {
+      !rec->magicOut("__getitem__", {sliceType}, /*nullOnMissing=*/true,
+                     /*overloadsOnly=*/true)) {
     const seq_int_t length = rec->numBaseTypes();
     Slice s = getSliceIndices(args, sliceType, length);
     const seq_int_t resultLength =
@@ -1462,6 +1468,8 @@ CallExpr::CallExpr(Expr *func, std::vector<Expr *> args,
     : func(func), args(std::move(args)), names(std::move(names)) {}
 
 Expr *CallExpr::getFuncExpr() const { return func; }
+
+std::vector<Expr *> CallExpr::getArgs() const { return args; }
 
 void CallExpr::setFuncExpr(Expr *func) { this->func = func; }
 
@@ -1721,6 +1729,8 @@ PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args,
 
 Expr *PartialCallExpr::getFuncExpr() const { return func; }
 
+std::vector<Expr *> PartialCallExpr::getArgs() const { return args; }
+
 void PartialCallExpr::setFuncExpr(Expr *func) { this->func = func; }
 
 void PartialCallExpr::resolveTypes() {
@@ -1933,7 +1943,7 @@ MatchExpr *MatchExpr::clone(Generic *ref) {
 }
 
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args)
-    : Expr(), type(type), args(std::move(args)) {}
+    : Expr(), type(type), type0(nullptr), args(std::move(args)) {}
 
 types::Type *ConstructExpr::getConstructType() { return type; }
 
@@ -2025,8 +2035,10 @@ types::Type *ConstructExpr::getType0() const {
 
   // type parameter deduction if constructing generic class:
   auto *ref = dynamic_cast<types::RefType *>(type);
-  if (ref && ref->numGenerics() > 0 && !ref->realized())
+  if (ref && ref->numGenerics() > 0 && !ref->realized()) {
+    type0 = type;
     type = ref->realize(ref->deduceTypesFromArgTypes(types));
+  }
 
   types::Type *ret = type->magicOut("__init__", types);
   return ret->is(types::Void) ? type : ret;
@@ -2036,7 +2048,8 @@ ConstructExpr *ConstructExpr::clone(Generic *ref) {
   std::vector<Expr *> argsCloned;
   for (auto *arg : args)
     argsCloned.push_back(arg->clone(ref));
-  SEQ_RETURN_CLONE(new ConstructExpr(type->clone(ref), argsCloned));
+  SEQ_RETURN_CLONE(
+      new ConstructExpr((type0 ? type0 : type)->clone(ref), argsCloned));
 }
 
 MethodExpr::MethodExpr(Expr *self, Func *func)
@@ -2077,6 +2090,26 @@ types::Type *OptExpr::getType0() const {
 
 OptExpr *OptExpr::clone(Generic *ref) {
   SEQ_RETURN_CLONE(new OptExpr(val->clone(ref)));
+}
+
+YieldExpr::YieldExpr(Func *base) : Expr(), base(base) {}
+
+void YieldExpr::resolveTypes() { base->resolveTypes(); }
+
+Value *YieldExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+  assert(dynamic_cast<Func *>(base) == this->base);
+  return this->base->codegenYieldExpr(block);
+}
+
+types::Type *YieldExpr::getType0() const {
+  types::GenType *gen = base->getFuncType()->getBaseType(0)->asGen();
+  if (!gen)
+    throw exc::SeqException("yield expression in non-generator");
+  return gen->getBaseType(0);
+}
+
+YieldExpr *YieldExpr::clone(Generic *ref) {
+  SEQ_RETURN_CLONE(new YieldExpr(base->clone(ref)));
 }
 
 DefaultExpr::DefaultExpr(types::Type *type) : Expr(type) {}

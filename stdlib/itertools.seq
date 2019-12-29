@@ -1,7 +1,7 @@
 import math
 import collections
 
-def combinations(pool, r: int):
+def combinations[T](pool: generator[T], r: int):
     """
     combinations(iterable, r)
 
@@ -9,11 +9,12 @@ def combinations(pool, r: int):
 
     combinations(range(4), 3) --> (0,1,2), (0,1,3), (0,2,3), (1,2,3)
     """
-    n = len(pool)
+    pool_list = [a for a in pool]
+    n = len(pool_list)
     if r > n:
         return
     indices = list(range(r).__iter__())
-    yield [pool[i] for i in indices]
+    yield [pool_list[i] for i in indices]
     while True:
         b = -1
         for i in reversed(range(r)):
@@ -25,9 +26,9 @@ def combinations(pool, r: int):
         indices[b] += 1
         for j in range(b+1, r):
             indices[j] = indices[j-1] + 1
-        yield [pool[i] for i in indices]
+        yield [pool_list[i] for i in indices]
 
-def combinations_with_replacement(pool, r: int):
+def combinations_with_replacement[T](pool: generator[T], r: int):
     """
     combinations_with_replacement(iterable, r)
 
@@ -35,12 +36,13 @@ def combinations_with_replacement(pool, r: int):
     allowing individual elements to have successive repeats.
     """
     if r < 0:
-        raise ValueError("ValueError: r must be a positive integer.")
-    n = len(pool)
+        raise ValueError("r must be a positive integer.")
+    pool_list = [a for a in pool]
+    n = len(pool_list)
     if not n and r:
         return
     indices = [0] * r
-    yield [pool[i] for i in indices]
+    yield [pool_list[i] for i in indices]
     while True:
         b = -1
         for i in reversed(range(r)):
@@ -51,8 +53,7 @@ def combinations_with_replacement(pool, r: int):
             return
 
         indices = [indices[i] for i in range(b)] + [indices[b]+1 for i in range(r-b)]
-        yield [pool[indices[i]] for i in range(len(indices))]
-
+        yield [pool_list[indices[i]] for i in range(len(indices))]
 
 def islice[T](iterable: generator[T], start: int, stop: int, step: int):
     """
@@ -62,9 +63,9 @@ def islice[T](iterable: generator[T], start: int, stop: int, step: int):
     default: start = 0, stop = len(iterable), step = 1
     """
     if start < 0 or stop < 0:
-        raise ValueError("ValueError: Indices for islice() must be None or an integer: 0 <= x <= maxint")
+        raise ValueError("Indices for islice() must be None or an integer: 0 <= x <= maxint")
     elif step < 0:
-        raise ValueError("ValueError: Step for islice() must be a positive integer or None.")
+        raise ValueError("Step for islice() must be a positive integer or None.")
     elif stop <= start:
         if iterable.done():
             iterable.destroy()
@@ -185,24 +186,24 @@ def filterfalse(predicate, iterable):
         if not predicate(x):
             yield x
 
-def permutations(pool, r: int):
+def permutations[T](pool: generator[T], r: optional[int] = None) -> list[T]:
     """
     permutations(iterable, r)
 
     Return successive r-length permutations of elements in the iterable.
-
-    Unlike python, seq does not use None for now so default for r will be len(pool)
     """
-    n = len(pool)
-    if r > n:
+    pool_list = [a for a in pool]
+    n = len(pool_list)
+    rx = ~r if r else n
+    if rx > n:
         return
 
     indices = list(iter(range(n)))
-    cycles = list(iter(range(n, n-r, -1)))
-    yield [pool[i] for i in indices[:r]]
+    cycles = list(iter(range(n, n-rx, -1)))
+    yield [pool_list[i] for i in indices[:rx]]
     while n:
         b = -1
-        for i in reversed(range(r)):
+        for i in reversed(range(rx)):
             cycles[i] -= 1
             if cycles[i] == 0:
                 indices = indices[:i] + indices[i+1:] + indices[i:i+1]
@@ -211,7 +212,7 @@ def permutations(pool, r: int):
                 b = i
                 j = cycles[i]
                 indices[i], indices[-j] = indices[-j], indices[i]
-                yield [pool[i] for i in indices[:r]]
+                yield [pool_list[i] for i in indices[:rx]]
                 break
         if b == -1:
             return

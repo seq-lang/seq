@@ -1,6 +1,7 @@
 #include <array>
 #include <cassert>
 #include <cerrno>
+#include <chrono>
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
@@ -8,7 +9,9 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <unwind.h>
 #include <vector>
@@ -22,7 +25,6 @@
 #include "lib.h"
 #include <gc.h>
 #include <htslib/sam.h>
-#include <sys/time.h>
 
 using namespace std;
 
@@ -48,6 +50,22 @@ SEQ_FUNC void seq_init() {
 #endif
 
   seq_exc_init();
+}
+
+SEQ_FUNC seq_int_t seq_pid() { return (seq_int_t)getpid(); }
+
+SEQ_FUNC seq_int_t seq_time() {
+  auto duration = chrono::system_clock::now().time_since_epoch();
+  seq_int_t nanos =
+      chrono::duration_cast<chrono::nanoseconds>(duration).count();
+  return nanos;
+}
+
+SEQ_FUNC seq_int_t seq_time_monotonic() {
+  auto duration = chrono::steady_clock::now().time_since_epoch();
+  seq_int_t nanos =
+      chrono::duration_cast<chrono::nanoseconds>(duration).count();
+  return nanos;
 }
 
 SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line) {
@@ -180,13 +198,6 @@ SEQ_FUNC void *seq_stdout() { return stdout; }
 
 SEQ_FUNC void *seq_stderr() { return stderr; }
 
-SEQ_FUNC int seq_time() {
-  timeval ts;
-  gettimeofday(&ts, nullptr);
-  auto time_ms = (int)((ts.tv_sec * 1000000 + ts.tv_usec) / 1000);
-  return time_ms;
-}
-
 /*
  * dlopen
  */
@@ -203,6 +214,57 @@ SEQ_FUNC void *seq_get_handle(const char *c) {
 
 SEQ_FUNC void seq_set_handle(const char *c, void *h) {
   dlopen_handles[std::string(c)] = h;
+}
+
+/*
+ * Threading
+ */
+
+SEQ_FUNC void *seq_lock_new() {
+  return (void *)new (seq_alloc_atomic(sizeof(timed_mutex))) timed_mutex();
+}
+
+SEQ_FUNC bool seq_lock_acquire(void *lock, bool block, double timeout) {
+  auto *m = (timed_mutex *)lock;
+  if (timeout < 0.0) {
+    if (block) {
+      m->lock();
+      return true;
+    } else {
+      return m->try_lock();
+    }
+  } else {
+    return m->try_lock_for(chrono::duration<double>(timeout));
+  }
+}
+
+SEQ_FUNC void seq_lock_release(void *lock) {
+  auto *m = (timed_mutex *)lock;
+  m->unlock();
+}
+
+SEQ_FUNC void *seq_rlock_new() {
+  return (void *)new (seq_alloc_atomic(sizeof(recursive_timed_mutex)))
+      recursive_timed_mutex();
+}
+
+SEQ_FUNC bool seq_rlock_acquire(void *lock, bool block, double timeout) {
+  auto *m = (recursive_timed_mutex *)lock;
+  if (timeout < 0.0) {
+    if (block) {
+      m->lock();
+      return true;
+    } else {
+      return m->try_lock();
+    }
+  } else {
+    return m->try_lock_for(chrono::duration<double>(timeout));
+  }
+}
+
+SEQ_FUNC void seq_rlock_release(void *lock) {
+  auto *m = (recursive_timed_mutex *)lock;
+  m->unlock();
 }
 
 /*
@@ -298,12 +360,11 @@ struct Alignment {
 
 SEQ_FUNC void seq_align(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
                         int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
-                        seq_int_t flags, Alignment *out) {
+                        seq_int_t end_bonus, seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(encode);
   ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo, gape,
-                (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -322,12 +383,12 @@ SEQ_FUNC void seq_align_default(seq_t query, seq_t target, Alignment *out) {
 SEQ_FUNC void seq_align_dual(seq_t query, seq_t target, int8_t *mat,
                              int8_t gapo1, int8_t gape1, int8_t gapo2,
                              int8_t gape2, seq_int_t bandwidth, seq_int_t zdrop,
-                             seq_int_t flags, Alignment *out) {
+                             seq_int_t end_bonus, seq_int_t flags,
+                             Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(encode);
   ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo1, gape1, gapo2,
-                gape2, (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                gape2, (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -359,12 +420,11 @@ SEQ_FUNC void seq_align_global(seq_t query, seq_t target, int8_t *mat,
 
 SEQ_FUNC void seq_palign(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
                          int8_t gape, seq_int_t bandwidth, seq_int_t zdrop,
-                         seq_int_t flags, Alignment *out) {
+                         seq_int_t end_bonus, seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(pencode);
   ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo, gape,
-                (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }
@@ -413,13 +473,12 @@ SEQ_FUNC void seq_palign_default(seq_t query, seq_t target, Alignment *out) {
 SEQ_FUNC void seq_palign_dual(seq_t query, seq_t target, int8_t *mat,
                               int8_t gapo1, int8_t gape1, int8_t gapo2,
                               int8_t gape2, seq_int_t bandwidth,
-                              seq_int_t zdrop, seq_int_t flags,
-                              Alignment *out) {
+                              seq_int_t zdrop, seq_int_t end_bonus,
+                              seq_int_t flags, Alignment *out) {
   ksw_extz_t ez;
   ALIGN_ENCODE(pencode);
   ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo1, gape1, gapo2,
-                gape2, (int)bandwidth, (int)zdrop,
-                /* end_bonus */ 0, (int)flags, &ez);
+                gape2, (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
   *out = {{ez.cigar, ez.n_cigar}, ez.score};
 }

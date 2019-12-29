@@ -14,6 +14,11 @@
 
   (* open Core *)
 
+  type offset =
+    { mutable line: int
+    ; mutable col: int }
+  let global_offset = { line = 0; col = 0 }
+
   (* Used for tracking indentation levels *)
   type stack =
     { stack: int Core.Stack.t;
@@ -36,8 +41,8 @@
   let cur_pos state ?(len=1) (lexbuf: Lexing.lexbuf) =
     Ast.Ann.
       { file = state.fname;
-        line = lexbuf.lex_start_p.pos_lnum;
-        col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol;
+        line = lexbuf.lex_start_p.pos_lnum + global_offset.line;
+        col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol + global_offset.col;
         len }
 
   let count_lines s =
@@ -101,6 +106,7 @@
     | "r" -> P.STRING (st, fix_literals ~is_raw:true u)
     | ("s" | "p") as p -> P.SEQ (st, p, fix_literals u)
     | "k" -> P.KMER (st, fix_literals u)
+    | "f" -> P.FSTRING (st, fix_literals u)
     | _ -> P.STRING (st, fix_literals u)
 }
 
@@ -126,7 +132,7 @@ let escape = '\\' _
 let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
 
-let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')? ('p' | 'P')?
+let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')? ('p' | 'P')? ('f' | 'F')?
 let intsuffix = ('s' | 'S' | 'z' | 'Z' | 'u' | 'U')
 
 let ident = alpha alphanum*

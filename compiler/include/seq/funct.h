@@ -54,7 +54,9 @@ public:
   llvm::Value *done(llvm::Value *self, llvm::BasicBlock *block);
   void resume(llvm::Value *self, llvm::BasicBlock *block,
               llvm::BasicBlock *normal, llvm::BasicBlock *unwind);
-  llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block);
+  llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block,
+                       bool returnPtr = false);
+  void send(llvm::Value *self, llvm::Value *val, llvm::BasicBlock *block);
   void destroy(llvm::Value *self, llvm::BasicBlock *block);
   bool fromPrefetch();
 

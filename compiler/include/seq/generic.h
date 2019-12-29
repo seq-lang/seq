@@ -22,10 +22,12 @@ static bool typeMatch(const std::vector<T *> &v1, const std::vector<T *> &v2,
 
   for (unsigned i = 0; i < v1.size(); i++) {
     if (strict) {
-      types::RecordType *r1 = v1[i]->asRec();
-      types::RecordType *r2 = v2[i]->asRec();
+      auto *r1 = dynamic_cast<types::RecordType *>(v1[i]);
+      auto *r2 = dynamic_cast<types::RecordType *>(v2[i]);
       if (r1 && r2) {
-        return r1->isStrict(r2);
+        if (!r1->isStrict(r2))
+          return false;
+        continue;
       }
     }
     if (!types::is(v1[i], v2[i]))
@@ -43,19 +45,28 @@ static bool typeMatch(const std::vector<T *> &v1, const std::vector<T *> &v2,
 template <typename T> class RCache {
 private:
   std::vector<std::pair<std::vector<types::Type *>, T *>> cache;
+  std::vector<std::vector<types::Type *>> inProgress;
 
 public:
-  RCache() : cache() {}
+  RCache() : cache(), inProgress() {}
 
   void add(std::vector<types::Type *> types, T *t) {
     cache.emplace_back(std::move(types), t);
   }
 
   T *find(const std::vector<types::Type *> &types) {
-    for (auto &v : cache) {
-      if (typeMatch<>(v.first, types, /*strict=*/true))
-        return v.second;
+    for (auto &v : inProgress) {
+      if (v == types)
+        return nullptr;
     }
+    inProgress.push_back(types);
+    for (auto &v : cache) {
+      if (typeMatch<>(v.first, types, /*strict=*/true)) {
+        inProgress.pop_back();
+        return v.second;
+      }
+    }
+    inProgress.pop_back();
     return nullptr;
   }
 };
@@ -150,7 +161,8 @@ public:
   void initOps() override;
   void initFields() override;
   Type *magicOut(const std::string &name, std::vector<Type *> args,
-                 bool nullOnMissing = false) override;
+                 bool nullOnMissing = false,
+                 bool overloadsOnly = false) override;
   llvm::Value *callMagic(const std::string &name, std::vector<Type *> argTypes,
                          llvm::Value *self, std::vector<llvm::Value *> args,
                          llvm::BasicBlock *&block, TryCatch *tc) override;
