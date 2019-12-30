@@ -63,6 +63,7 @@ private:
   llvm::Function *initFunc;
   llvm::Function *strlenFunc;
   llvm::Function *makeCanonicalMainFunc(llvm::Function *realMain);
+  void runCodegenPipeline(bool debug);
 
 public:
   SeqModule();

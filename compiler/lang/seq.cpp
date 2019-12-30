@@ -318,6 +318,37 @@ static void applyDebugTransformations(Module *module) {
   }
 }
 
+static void applyGCTransformations(Module *module) {
+  LLVMContext &context = module->getContext();
+  auto *addRoots = cast<Function>(module->getOrInsertFunction(
+      "seq_gc_add_roots", Type::getVoidTy(context),
+      IntegerType::getInt8PtrTy(context), IntegerType::getInt8PtrTy(context)));
+  addRoots->setDoesNotThrow();
+
+  // insert add_roots calls where needed
+  for (Function &f : *module) {
+    for (BasicBlock &block : f.getBasicBlockList()) {
+      for (Instruction &inst : block) {
+        if (CallInst *call = dyn_cast<CallInst>(&inst)) {
+          if (Function *g = call->getCalledFunction()) {
+            // tell GC about OpenMP's allocation
+            if (g->getName() == "__kmpc_omp_task_alloc") {
+              Value *taskSize = call->getArgOperand(3);
+              Value *sharedSize = call->getArgOperand(4);
+              IRBuilder<> builder(call->getNextNode());
+              Value *baseOffset = builder.CreateSub(taskSize, sharedSize);
+              Value *ptr = builder.CreateBitCast(call, builder.getInt8PtrTy());
+              Value *lo = builder.CreateGEP(ptr, baseOffset);
+              Value *hi = builder.CreateGEP(ptr, taskSize);
+              builder.CreateCall(addRoots, {lo, hi});
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 static void optimizeModule(Module *module, bool debug) {
   if (debug)
     applyDebugTransformations(module);
@@ -387,18 +418,21 @@ static void optimizeModule(Module *module, bool debug) {
 
 void SeqModule::optimize(bool debug) { optimizeModule(module, debug); }
 
-void SeqModule::compile(const std::string &out, bool debug) {
+void SeqModule::runCodegenPipeline(bool debug) {
   codegen(module);
   verify();
   optimize(debug);
+  applyGCTransformations(module);
   verify();
   optimize(debug);
   verify();
-
 #if SEQ_HAS_TAPIR
   resetOMPABI();
 #endif
+}
 
+void SeqModule::compile(const std::string &out, bool debug) {
+  runCodegenPipeline(debug);
   std::error_code err;
   raw_fd_ostream stream(out, err, llvm::sys::fs::F_None);
 
@@ -453,17 +487,7 @@ public:
 
 void SeqModule::execute(const std::vector<std::string> &args,
                         const std::vector<std::string> &libs, bool debug) {
-  codegen(module);
-  verify();
-  optimize(debug);
-  verify();
-  optimize(debug);
-  verify();
-
-#if SEQ_HAS_TAPIR
-  resetOMPABI();
-#endif
-
+  runCodegenPipeline(debug);
   std::vector<std::string> functionNames;
   if (debug) {
     for (Function &f : *module) {
