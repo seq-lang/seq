@@ -21,7 +21,7 @@ module E = Codegen_expr
 (** [parse ~ctx expr] dispatches a statement AST node [expr] to the proper code generation function. *)
 let rec parse ~(ctx : C.t) ?(toplevel=false) ?(jit = false) (ann, node) =
   C.push_ann ~ctx ann;
-  Util.A.dy "-> %s" @@ Ast.s_dbg (ann, node);
+  (* Util.A.dg "| %s | %s" (Filename.basename ctx.env.filename) @@ Ast.s_dbg (ann, node); *)
   let stmt =
     match node with
     | Break p -> parse_break ctx p
@@ -227,7 +227,8 @@ and parse_pattern ctx = function
 (** [parse_import ?ext context position data] parses import AST.
     Import file extension is set via [seq] (default is [".seq"]). *)
 and parse_import ctx ?(ext = ".seq") ~toplevel imports =
-  let { from; what; import_as } = List.hd_exn imports in
+  let { from; what; file; import_as } = List.hd_exn imports in
+  let from = Option.value_exn file in
   let vtable =
     match Hashtbl.find ctx.globals.imported from with
     | Some t -> t

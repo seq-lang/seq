@@ -192,18 +192,44 @@ let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
   let open Ast in
   let open Ann in
   let module TC = Typecheck_ctx in
-  Util.A.db "[codegen] %s ... " (Ann.var_to_string ~useds:true typ);
-  match typ with
+  (* Util.A.db "[codegen] %s ... " (Ann.var_to_string ~useds:true typ); *)
+
+  let realize_magics_hack cache ptr  =
+    Util.A.dr "realizing magics for %s || %s" (fst cache) (Ann.to_string pos);
+    Hashtbl.find_exn TC.classes cache
+      |> Hashtbl.to_alist
+      |> List.filter_map ~f:(function
+              | key, [ Ann.Var var ] when (String.prefix key 2) = "__" && (String.suffix key 2) = "__" ->
+                (match Ann.real_type var with
+                | Func (f, _) -> Some (key, f.cache)
+                | _ -> None)
+          | _ -> None)
+      |> List.iter ~f:(fun (k, c) ->
+          Hashtbl.find_exn TC.realizations c
+          |> snd
+          |> Hashtbl.copy
+          |> Hashtbl.iteri ~f:(fun ~key ~data ->
+            if data.TC.realized_llvm = Ctypes.null then (
+              Util.A.dr "realizing %s :: %s %s " (fst cache) k (fst c);
+              let fn = get_realization ~ctx ~pos (Ann.var_of_typ_exn data.TC.realized_typ.typ) in
+              Llvm.Type.add_cls_method ptr k fn;
+            ) else (
+              Util.A.dr "realized! %s :: %s %s " (fst cache) k (fst c);
+            )
+          )
+      );
+  in
+  match Ann.real_type typ with
   | Class (gen, _) | Func (gen, _) ->
     let real_name, _ = TC.get_full_name typ in
     let ast, str2real = Hashtbl.find_exn TC.realizations gen.cache in
     (match Hashtbl.find str2real real_name, typ with
     | Some { realized_llvm; _ }, _ when realized_llvm <> Ctypes.null  ->
-      Util.A.dg "<already realized>";
+      (* Util.A.dg "<already realized>"; *)
       (* Case 1 - already realized *)
       realized_llvm
     | Some data, Class ({ cache = p, n; _ }, { is_type }) when n = Ann.default_pos ->
-      Util.A.dg "<internal>";
+      (* Util.A.dg "<internal>"; *)
       let ptr = match p, (String.prefix p 1, int_of_string_opt (String.drop_prefix p 1)) with
         | "void", _ -> Llvm.Type.void ()
         | "int", _ -> Llvm.Type.int ()
@@ -227,10 +253,11 @@ let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
           | _ -> err ~ctx ~pos "cannot instantiate internal type %s" p
       in
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
+      (* realize_magics_hack (p, n) ptr; *)
       ptr
     | Some ({ realized_typ; realized_ast = Some (pos, (Class cls | Type cls)); _ } as data), Class (_, { is_type }) ->
       let name = sprintf "%s:%s" cls.class_name real_name in
-      Util.A.dg "generating type %s" name;
+      (* Util.A.dg "generating type %s" name; *)
       let ptr = (if is_type then Llvm.Type.record [] [] else Llvm.Type.cls) name in
       let new_ctx = { ctx with map = Hashtbl.copy ctx.map; stack = Stack.create () } in
       Ctx.add_block ~ctx:new_ctx;
@@ -245,15 +272,16 @@ let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
           | t, false -> Llvm.Type.set_cls_args ptr names types);
       if not is_type then Llvm.Type.set_cls_done ptr;
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
+      (* realize_magics_hack gen.cache ptr; *)
       ptr
     | Some ({ realized_typ; realized_ast = Some (pos, Function f); _ } as data), Func (gen, { ret; _ }) ->
       let name = sprintf "%s:%s" f.fn_name.name real_name in
-      Util.A.dg "generating fn %s" name;
+      (* Util.A.dg "generating fn %s" name; *)
       let ptr = Llvm.Func.func name in
       let block = Llvm.Block.func ptr in
       (* --> NEED THIS? *)
       (* if not toplevel then  *)
-      Llvm.Func.set_enclosing ptr ctx.env.base;
+      (* Llvm.Func.set_enclosing ptr ctx.env.base; *)
       let new_ctx =
         { ctx with
           stack = Stack.create ()
@@ -269,10 +297,21 @@ let rec get_realization ~(ctx : t) ?(pos = Ann.default) typ =
       List.ignore_map f.fn_stmts ~f:(ctx.globals.sparse ~ctx:new_ctx ~toplevel:false);
       Ctx.clear_block ~ctx:new_ctx;
       Hashtbl.set str2real ~key:real_name ~data:{ data with realized_llvm = ptr };
+      (* Hack for C++ side *)
+      let ky = List.last_exn @@ String.split ~on:'.' f.fn_name.name in
+      if (String.prefix ky 2) = "__" && (String.suffix ky 2) = "__" then (
+        let par = snd gen.parent in
+        match par with
+        | Some t ->
+          Util.A.dr "realizing %s :: %s -> %s " (Ann.var_to_string t) ky name;
+          let clst = get_realization ~ctx ~pos t in
+          Llvm.Type.add_cls_method clst ky ptr;
+        | None -> ()
+      );
       ptr
     | Some ({ realized_typ; realized_ast = Some (pos, Extern f); _ } as data), Func (gen, { ret; _ }) ->
       let lang, dylib, ctx_name, Stmt.{ name; _ }, _ = f in
-      Util.A.dg "generating extern %s" name;
+      (* Util.A.dg "generating extern %s" name; *)
       if lang <> "c"
       then err ~ctx "only cdef externs are currently supported";
       let name = sprintf "%s:%s" name real_name in

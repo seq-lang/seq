@@ -44,6 +44,7 @@ and tgeneric =
 
 and tfun =
   { ret : tvar
+  (* ; parent_class : tlookup option *)
   ; used : string Core.Hash_set.t
   }
 

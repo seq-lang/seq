@@ -40,7 +40,6 @@ type tenv =
 type tglobal =
   { unbound_counter : int ref
   ; temp_counter : int ref
-  ; classes : (Ann.tlookup, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; imports : (string, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
   ; pod_types : (string, Ann.tlookup) Hashtbl.t
   ; sparse : ctx:t -> Stmt.t Ann.ann -> Stmt.t Ann.ann list
@@ -58,6 +57,9 @@ and t = (Ast.Ann.ttyp, tenv, tglobal) Ctx.t
 let imports : (string, Stmt.t Ann.ann list) Hashtbl.t
   = String.Table.create ()
 
+
+let classes : (Ann.tlookup, (string, Ast.Ann.ttyp list) Hashtbl.t) Hashtbl.t
+  = Hashtbl.Poly.create ()
 
 let realizations : (Ann.tlookup, Stmt.t Ann.ann * (string, trealization) Hashtbl.t) Hashtbl.t
   = Hashtbl.Poly.create ()
@@ -186,7 +188,6 @@ let init_module ?(argv = false) ~filename sparse =
     Ctx.init
       { unbound_counter = ref 0
       ; temp_counter = ref 0
-      ; classes = Hashtbl.Poly.create ()
       ; pod_types = String.Table.create ()
       ; imports = String.Table.create ()
       ; sparse
@@ -230,7 +231,7 @@ let init_module ?(argv = false) ~filename sparse =
             , { is_type } ))
      in
      Ctx.add ~ctx class_name typ;
-     Hashtbl.set ctx.globals.classes ~key:cache ~data:(String.Table.create ());
+     Hashtbl.set classes ~key:cache ~data:(String.Table.create ());
      Hashtbl.set
        realizations
        ~key:cache
@@ -238,7 +239,7 @@ let init_module ?(argv = false) ~filename sparse =
    in
    let add_internal_method class_name name signature ptr =
      (* let signature = Llvm.Type.get_name ptr in *)
-     Util.A.dy "%s" signature;
+     (* Util.A.dy "%s" signature; *)
      assert (String.prefix signature 9 = "function[");
      assert (String.suffix signature 1 = "]");
      try
@@ -273,22 +274,22 @@ let init_module ?(argv = false) ~filename sparse =
        in
        Ctx.add ~ctx full_name typ;
        let ast = Stmt.Pass () in
-       let realization = Typecheck_ctx.
+       let realization =
         { realized_llvm = ptr; realized_ast = None; realized_typ = Ann.create ~typ () }
        in
        let realization_name = sprintf "%s:%s" class_name (Ann.typ_to_string typ) in
-       Util.A.db "add realization %s:%s.%s => %s := %nx"
+       (* Util.A.db "add realization %s:%s.%s => %s := %nx"
         (fst f_cache) (Ann.pos_to_string (snd f_cache))
         (Ann.typ_to_string ~full:true typ)
         realization_name
         (Ctypes.raw_address_of_ptr ptr)
-        ;
+        ; *)
        Hashtbl.set
          realizations
          ~key:f_cache
          ~data:((Ann.create ~typ (), ast), String.Table.of_alist_exn [ realization_name, realization ]);
        Hashtbl.find_and_call
-         ctx.globals.classes
+         classes
          (class_name, Ann.default_pos)
          ~if_found:(Hashtbl.add_multi ~key:name ~data:typ)
          ~if_not_found:(fun _ -> Util.A.dy "can't find class %s" class_name)
@@ -333,9 +334,10 @@ let init_module ?(argv = false) ~filename sparse =
         # TODO: prefetchs
       class generator[T]:
         cdef __iter__(self: generator[T]) -> generator[T]
-      type array[T](ptr: ptr[byte], len: int):
+      type array[T](ptr: ptr[T], len: int):
         cdef __elemsize__() -> int
-        cdef __init__(self: array[T], int)
+        cdef __init__(self: array[T], p: ptr[T], i: int) -> array[T]
+        cdef __init__(self: array[T], i: int) -> array[T]
         cdef __copy__(self: array[T]) -> array[T]
         cdef __len__(self: array[T]) -> int
         cdef __bool__(self: array[T]) -> bool
@@ -344,21 +346,16 @@ let init_module ?(argv = false) ~filename sparse =
         cdef __slice_left__(self: array[T], i: int) -> array[T]
         cdef __slice_right__(self: array[T], i: int) -> array[T]
         cdef __setitem__(self: array[T], i: int, j: T) -> void
-      type __array__[T](ptr: ptr[byte], len: int):
+      type __array__[T](ptr: ptr[T], len: int):
         cdef __getitem__(self: __array__[T], i: int) -> T
         cdef __setitem__(self: __array__[T], i: int, j: T) -> void
-      type str(ptr: ptr[byte], len: int):
-        def __str__(self: str) -> str:
-          return self
-      #  cdef __str__(self: str) -> str
+      type str(ptr: ptr[byte], len: int)
       type seq(ptr: ptr[byte], len: int)
-      # type optional[T](has: void, val: T):
-      #  cdef __bool__(self) -> bool
       |})
    |> List.map ~f:(sannotate Ann.default)
    |> List.ignore_map ~f:(ctx.globals.sparse ~ctx);
    List.iter [ "str" ; "seq" ] ~f:(fun s ->
-     let h = Hashtbl.find_exn ctx.globals.classes (s, Ann.default_pos) in
+     let h = Hashtbl.find_exn classes (s, Ann.default_pos) in
      Hashtbl.remove h "__init__");
    List.iter
      (pod_types @ Llvm.Type.[ "str", str (); "seq", seq () ])
@@ -366,7 +363,7 @@ let init_module ?(argv = false) ~filename sparse =
        let open Llvm.Type in
        get_methods ll
        |> List.iter ~f:(fun (s, g, t) -> add_internal_method n s g t));
-   dump_ctx ctx;
+   (* dump_ctx ctx; *)
 
    (* argv! *)
    if true
@@ -410,12 +407,12 @@ let magic_call ~ctx ?(args = []) ~magic parse e =
   | _ -> *)
     let y = parse ~ctx @@ eannotate ~ctx (e_call (e_dot e magic) args) in
     match y with
-    | Expr.(ac, Call ((ad, Method (i, _)) as d, _)) as c ->
+    | Expr.(ac, Call ((ad, Dot (i, _)) as d, _)) as c ->
       (* Util.A.dy "%s [%s] . %s [%s]"
       (Expr.to_string d)
       (Ann.t_to_string ad.Ann.typ)
       (Expr.to_string c)
       (Ann.t_to_string ac.Ann.typ); *)
       y
-    | _ -> failwith "invalid magic ?"
+    | _ -> err ~ctx "invalid magic %s" magic
 

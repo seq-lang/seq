@@ -94,7 +94,7 @@ let bop2magic ?(prefix = "") op =
     | "-" -> "sub"
     | "*" -> "mul"
     | "/" -> "truediv"
-    | "//" -> "floordiv"
+    | "//" -> "div"
     | "**" -> "pow"
     | "%" -> "mod"
     | "@" -> "mathmul"

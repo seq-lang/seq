@@ -104,7 +104,7 @@ and realize_type ctx typ (cls, cls_t) =
   | None ->
     Util.dbg "[real] realizing class %s ==> %s" cls.name real_name;
     let c_args =
-      Hashtbl.find_exn ctx.globals.classes cls.cache
+      Hashtbl.find_exn C.classes cls.cache
       |> Hashtbl.to_alist
       |> List.filter_map ~f:(function
               | key, [ Ann.Var var ] ->
@@ -164,7 +164,7 @@ and magic ~(ctx : C.t) ?(idx = 0) ?(args = []) typ name =
     match Ann.real_type typ, name with
     | Tuple el, "__getitem__" -> List.nth el idx
     | Class ({ cache; _ }, _), _ ->
-      Hashtbl.find ctx.globals.classes cache
+      Hashtbl.find C.classes cache
       >>= fun h ->
       Hashtbl.find h name
       >>| List.filter_map ~f:(function
@@ -208,5 +208,5 @@ and magic ~(ctx : C.t) ?(idx = 0) ?(args = []) typ name =
       | None, _ -> None (* C.err ~ctx "cannot find fitting magic function") *))
     | _ -> None
   in
-  ret
+  ret >>| realize ~ctx
   (* C.err ~ctx "can't find magic %s in %s for args %s" name (Ann.typ_to_string typ) (Util.ppl args ~f:Ann.typ_to_string) *)

@@ -39,7 +39,6 @@ type t =
   | Call of (t ann * tcall list)
       (** Each call arguments is of type [tcall] to account for argument names. *)
   | Slice of (t ann option * t ann option * t ann option)
-  | Method of (t ann * string)
   | Dot of (t ann * string)
   | Ellipsis of unit (** [Ellipsis] is currently used only for partial function definitions. *)
   | TypeOf of t ann

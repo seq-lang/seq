@@ -371,19 +371,18 @@ FOREIGN Func *func(char *name) {
   return f;
 }
 
-FOREIGN size_t get_methods(types::Type *base, char **names, types::Type ***funs)
+FOREIGN size_t get_methods(types::Type *base, char **names, char **sigs, BaseFunc ***funs)
 {
   auto fns = base->methods();
-  string n = "";
-  types::Type **f = (types::Type**) malloc(sizeof(types::Type*) * fns.size());
-  // fprintf(stderr,"== %s:\n", base->getName().c_str());
+  string n = "", s = "";
+  BaseFunc **f = (BaseFunc**) malloc(sizeof(BaseFunc*) * fns.size());
   for (int i = 0; i < fns.size(); i++) {
-    //fprintf(stderr, "  m: %s -->> %s\n", fns[i].first.c_str(),
-    //  fns[i].second->getFunctypes::Type()->getName().c_str());
     n += fns[i].first + "\b";
-    f[i] = fns[i].second->getFuncType();
+    s += fns[i].second->getFuncType()->getName() + "\b";
+    f[i] = fns[i].second;
   }
   *names = strdup(n.c_str());
+  *sigs = strdup(s.c_str());
   *funs = f;
   return fns.size();
 }

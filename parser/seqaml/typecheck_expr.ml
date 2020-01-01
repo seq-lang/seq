@@ -43,7 +43,7 @@ let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
     | Binary p -> parse_binary ctx p
     | Call p -> parse_call ctx p
     | Index p -> parse_index ctx p
-    | Method p | Dot p -> parse_dot ctx p
+    | Dot p -> parse_dot ctx p
     | TypeOf p -> parse_typeof ctx p
     | Lambda p -> parse_lambda ctx p
     | Pipe p -> parse_pipe ctx p
@@ -54,11 +54,7 @@ let rec parse ~(ctx : C.t) ((ann, node) : Expr.t Ann.ann) : Expr.t Ann.ann =
     (* | Method _ -> C.err ~ctx "method is not valid in this stage" *)
   in
   ignore @@ C.pop_ann ~ctx;
-  (* Util.A.dbg "[e] %s [%s] -> %s [%s]"
-    (Expr.to_string (ann,node))
-    (Ann.to_string ann)
-    (Expr.to_string expr)
-    (Ann.to_string (fst expr)); *)
+  (* Util.A.dbg "[e] %s" (e_dbg expr); *)
   expr
 
 and parse_none ctx n =
@@ -229,6 +225,10 @@ and parse_call ctx (expr, args) =
       @@ C.eannotate ~ctx
       @@ e_call (e_dot (e_id "str") "cati_ext") [ a, Generator g ]
     | _ -> parse_call_real ctx (expr, args))
+  | Id ("str"), [arg] ->
+    parse ~ctx
+      @@ C.eannotate ~ctx
+      @@ e_call (e_dot arg "__str__") []
   | _ -> parse_call_real ctx (parse ~ctx expr, args)
 
 and parse_call_real ctx (expr, args) =
@@ -304,25 +304,35 @@ and parse_call_real ctx (expr, args) =
       let typ = R.realize ~ctx ~force:true typ in
       let expr = Ann.patch (fst expr) ~f:(fun _ -> typ), snd expr in
       C.ann ~typ:(Var f.ret) ctx, Call (expr, args))
-  | Class (_, { is_type }) ->
+  | Class ({ cache; _ }, { is_type }) ->
+    Util.A.dy "calling init for %s" (Ann.var_to_string typ);
     let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
     let arg_typs = List.map args ~f:(fun p -> var_of_node_exn p.value) in
     (match R.magic ~ctx typ "__init__" ~args:arg_typs with
     | None when ctx.env.realizing ->
-      C.err
+      let f = if cache = ("ptr", Ann.default_pos) && (List.length arg_typs) = 1 then (
+        (* Speacial case: ptr[int] *)
+        (* Util.A.dbg "%s :: %s" (fst cache) (Ann.var_to_string @@ List.hd_exn arg_typs); *)
+        match Ann.real_type @@ List.hd_exn arg_typs with
+        | Class ({ cache = c; _ }, _) when c = ("ptr", Ann.default_pos) ->
+          true
+        | _ -> false
+      ) else false in
+      if not f then C.err
         ~ctx
         "cannot locate %s.__init__(%s)"
         (Ann.var_to_string typ)
         (Util.ppl arg_typs ~f:Ann.var_to_string)
-    | Some (Func (_, { ret; _ })) when is_type -> T.unify_inplace ~ctx ret typ
+    | Some (Func (_, { ret; _ }) as t) ->
+      if is_type then T.unify_inplace ~ctx ret typ
     | _ -> ());
+    (* ignore @@ R.realize ~ctx ~force:true typ ; *)
     C.ann ~typ:(Var typ) ctx, Call (expr, args)
   | Link { contents = Unbound _ } ->
     let args = List.map args ~f:(fun p -> { p with value = parse ~ctx p.value }) in
     let typ = C.make_unbound ctx in
     C.ann ~typ:(Var typ) ctx, Call (expr, args)
   | _ -> C.err ~ctx "wrong call type %s" (Ann.var_to_string typ))
-
 
 and parse_index ctx (lh_expr', indices') =
   match indices' with
@@ -378,7 +388,7 @@ and parse_index ctx (lh_expr', indices') =
       let lt = Ann.real_type (var_of_node_exn lh_expr) in
       (match lt, indices' with
       | Class ({ args = ts; cache; _ }, { is_type = true }), [_, Int i] ->
-        let h = Hashtbl.find_exn ctx.globals.classes cache in
+        let h = Hashtbl.find_exn C.classes cache in
         (match Hashtbl.find h "__getitem__" with
         | Some _ -> parse ~ctx getitem_ast
         | None ->
@@ -408,7 +418,7 @@ and parse_dot ctx (lh_expr', rhs) =
     | Some (Type lt | Var lt) ->
       (match Ann.real_type lt with
       | Class (g, _) ->
-        Hashtbl.find ctx.globals.classes g.cache
+        Hashtbl.find C.classes g.cache
         >>= fun dict -> Hashtbl.find dict rhs >>= List.hd
       | _ -> None)
   in
@@ -436,9 +446,9 @@ and parse_dot ctx (lh_expr', rhs) =
       (match ast with
       | _, Function { fn_attrs; _ } when List.exists fn_attrs ~f:((=) "property") ->
         (* Util.A.db "property! %s" rhs; *)
-        C.ann ~typ:(Var f.ret) ctx, Call ((C.ann ~typ:(Var typ) ctx, Method (lh_expr, rhs)), [])
+        C.ann ~typ:(Var f.ret) ctx, Call ((C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs)), [])
       | _ ->
-        C.ann ~typ:(Var typ) ctx, Method (lh_expr, rhs))
+        C.ann ~typ:(Var typ) ctx, Dot (lh_expr, rhs))
     | _ -> ierr "cannot happen")
   (* Nested member access: X.member *)
   | Some (Var lt), Some (Var t) ->

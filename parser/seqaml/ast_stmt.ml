@@ -113,6 +113,7 @@ and import =
   { from : string
   ; what : (string * string option) list option
   ; import_as : string option
+  ; file : string option
   }
 
 and pattern =

@@ -159,7 +159,6 @@ module Expr = struct
     | Binary (l, o, r) -> sprintf "(%s %s %s)" (to_string l) o (to_string r)
     | Unary (o, x) -> sprintf "(%s %s)" o (to_string x)
     | Index (x, l) -> sprintf "%s[%s]" (to_string x) (ppl l ~f:to_string)
-    | Method (x, s) -> sprintf "%s.%s" (to_string x) s
     | Dot (x, s) -> sprintf "%s.%s" (to_string x) s
     | Call (x, l) -> sprintf "%s(%s)" (to_string x) (ppl l ~f:call_to_string)
     | TypeOf x -> sprintf "typeof(%s)" (to_string x)
@@ -216,7 +215,6 @@ module Expr = struct
       | Call (t, l) -> Call (walk t, List.map l
           ~f:(fun { name; value } -> { name; value = walk value }))
       | Slice (a, b, c) -> Slice (a >>| walk, b >>| walk, c >>| walk)
-      | Method (a, s) -> Method (walk a, s)
       | Dot (a, s) -> Dot (walk a, s)
       | TypeOf t -> TypeOf (walk t)
       | Ptr t -> Ptr (walk t)
@@ -460,7 +458,6 @@ let rec e_dbg (enode : Expr.t ann) =
   | Binary (l, o, r) -> sprintf "#op(%s, %s, %s" o (e_dbg l) (e_dbg r)
   | Unary (o, x) -> sprintf "#op(%s, %s" o (e_dbg x)
   | Index (x, l) -> sprintf "#index(%s, %s" (e_dbg x) (ppl l ~f:e_dbg)
-  | Method (x, s) -> sprintf "#method(%s, %s" (e_dbg x) s
   | Dot (x, s) -> sprintf "#dot(%s, %s" (e_dbg x) s
   | Call (x, l) -> sprintf "#call(%s, %s" (e_dbg x) (ppl l ~f:(fun Expr.{name; value} ->
     sprintf

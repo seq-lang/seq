@@ -36,7 +36,6 @@ let rec parse ~(ctx : C.t) (ann, node) =
     | Index p -> parse_index ctx p
     | Call p -> parse_call ctx p
     | Dot p -> parse_dot ctx p
-    | Method p -> parse_method ctx p
     | TypeOf p -> parse_typeof ctx p
     | Ptr p -> parse_ptr ctx p
     | Ellipsis p -> Ctypes.null
@@ -124,9 +123,12 @@ and parse_call ctx (callee_expr, args) =
     let args = List.map args ~f:(fun x -> parse ~ctx x.value) in
     Llvm.Expr.construct (C.get_realization ~ctx t) args
   | Some (Var t), _ ->
-    let callee_expr = parse ~ctx callee_expr in
+    let callee_expr = (match Ann.real_type t, snd callee_expr with
+      | (Func _) as t, Id y -> C.get_realization ~ctx t
+      | _ -> parse ~ctx callee_expr)
+    in
     let args = List.map args ~f:(fun x -> parse ~ctx x.value) in
-    Util.A.db "call: lh %s | ark len = %d" (Ann.var_to_string ~useds:true t) (List.length args);
+    (* Util.A.db "call: lh %s | ark len = %d" (Ann.var_to_string ~useds:true t) (List.length args); *)
     if List.exists args ~f:(( = ) Ctypes.null)
     then Llvm.Expr.call ~kind:"partial" callee_expr args
     else Llvm.Expr.call ~kind:"call" callee_expr args
@@ -139,20 +141,17 @@ and parse_dot ctx (lh_expr, rhs) =
   | Some (Type t) ->
     Llvm.Expr.typ (C.get_realization ~ctx t)
   | Some (Var (Func _ as t)) ->
-    Llvm.Expr.func (C.get_realization ~ctx t)
+    (match (fst lh_expr).typ with
+    | Some (Var lt) -> (** method *)
+      (* Util.A.db "metoda : %s %s" (e_dbg lh_expr) rhs; *)
+      let lh_expr = parse ~ctx lh_expr in
+      let f = Llvm.Expr.func (C.get_realization ~ctx t) in
+      Llvm.Expr.call ~kind:"partial" f [lh_expr]
+    | _ -> Llvm.Expr.func (C.get_realization ~ctx t))
   | Some (Var t) ->
     let lh_expr = parse ~ctx lh_expr in
     Llvm.Expr.element lh_expr rhs
   | _ -> ierr ~ann:(C.ann ctx) "bad dot"
-
-and parse_method ctx (lh_expr, rhs) =
-  (* Imports should be avoided here... put to assign special checks! *)
-  match Ann.real_t (C.ann ctx).typ with
-  | Some (Var (Func _ as t)) ->
-    let lh_expr = parse ~ctx lh_expr in
-    let f = Llvm.Expr.func (C.get_realization ~ctx t) in
-    Llvm.Expr.call ~kind:"partial" f [lh_expr]
-  | _ -> ierr ~ann:(C.ann ctx) "bad method"
 
 and parse_typeof ctx expr =
   match Ann.real_t (fst expr).typ with

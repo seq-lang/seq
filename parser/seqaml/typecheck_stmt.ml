@@ -327,7 +327,7 @@ and parse_pattern ctx what_typ = function
     Tuple (List.map l ~f:fst), TuplePattern (List.map l ~f:snd)
 
 and parse_import (ctx : C.t) ?(ext = ".seq") imports =
-  let import (ctx : C.t) file Stmt.{ from; what; import_as } =
+  let import (ctx : C.t) file Stmt.{ from; what; import_as; _ } =
     let vtable =
       match Hashtbl.find ctx.globals.imports file with
       | Some t -> t
@@ -362,7 +362,7 @@ and parse_import (ctx : C.t) ?(ext = ".seq") imports =
             | _ -> C.err ~ctx "name %s not found in %s" name from)
     in
     List.iter additions ~f:(fun (key, data) -> Ctx.add ~ctx key data);
-    { from = file; what; import_as = Some (Option.value import_as ~default:from) }
+    { from; file = Some file; what; import_as = Some (Option.value import_as ~default:from) }
   in
   List.iter imports ~f:(fun i ->
       let from = i.from in
@@ -576,7 +576,7 @@ and parse_extend (ctx : C.t) (name, new_members) =
         }
     }
   in
-  let members = Hashtbl.find_exn ctx.globals.classes tcls.cache in
+  let members = Hashtbl.find_exn C.classes tcls.cache in
   List.iter new_members ~f:(fun s ->
       let prefix = sprintf "%s." class_name in
       match snd s with
@@ -646,7 +646,7 @@ and parse_class ctx ?(prefix = "") ?member_of ?(istype = false) cls =
   in
   Ctx.add ~ctx class_name (Type tcls);
 
-  Hashtbl.set ctx.globals.classes ~key:cache ~data:member_table;
+  Hashtbl.set C.classes ~key:cache ~data:member_table;
   (match member_of with
   | Some m -> Hashtbl.set m ~key:cls.class_name ~data:[Ann.Type tcls];
   | None -> ());

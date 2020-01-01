@@ -643,7 +643,7 @@ import_statement:
   | FROM dot_term IMPORT MUL
     { let from = flatten_dot ~sep:"/" $2 in
       pos $1 (fst $4),
-      Import [{ from; what = Some ["*", None]; import_as = None }] }
+      Import [{ from; what = Some ["*", None]; import_as = None; file = None }] }
   // from x import y, z
   | FROM dot_term IMPORT separated_list(COMMA, import_term)
     { let from = flatten_dot ~sep:"/" $2 in
@@ -651,13 +651,13 @@ import_statement:
         flatten_dot ~sep:"/" what, ias)
       in
       pos $1 (fst @@ List.last_exn $4),
-      Import [{ from; what = Some what; import_as = None }] }
+      Import [{ from; what = Some what; import_as = None; file = None }] }
   // import x, y
   | IMPORT separated_list(COMMA, import_term)
     { pos $1 (fst @@ List.last_exn $2),
       Import (List.map $2 ~f:(fun (_, (from, import_as)) ->
         let from = flatten_dot ~sep:"/" from in
-        { from; what = None; import_as })) }
+        { from; what = None; import_as; file = None })) }
   // import!
   | IMPORT_CONTEXT ID
     { pos $1 (fst $2),
