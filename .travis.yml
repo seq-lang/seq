@@ -67,6 +67,9 @@ before_install:
     fi
   - eval $(opam env)
 
+  # fix Python:
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --overwrite python3; fi
+
 install:
   # install libffi:
   - wget -c https://sourceware.org/pub/libffi/libffi-3.2.1.tar.gz -O - | tar -xz
