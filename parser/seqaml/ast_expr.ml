@@ -53,6 +53,7 @@ type t =
   | Ptr of t ann (** [Ptr(x)] corresponds to [__ptr__[x]]. *)
   | Lambda of (string ann list * t ann)
       (** {b NOTE} : Lambdas are currently not supported. *)
+  | Yield of unit
 
 and tcall =
   { name : string option

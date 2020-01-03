@@ -368,6 +368,8 @@ arith_expr:
 arith_term:
   | atom
     { $1 }
+  | LP YIELD RP
+    { pos $1 $3, Ast.Expr.Yield () }
   // Call (foo(bar))
   | arith_term LP; args = flexible_list(COMMA, call_term); RP
     { pos (fst $1) $4,

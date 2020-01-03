@@ -51,6 +51,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Ptr p -> parse_ptr ctx pos p
       | Slice p -> parse_slice ctx pos p
       | Ellipsis p -> Ctypes.null
+      | Yield p -> parse_yield ctx pos p
       | Unpack _ -> serr ~pos "invalid unpacking expression"
       | Lambda _ -> serr ~pos "lambdas not yet supported (parse)"
     in
@@ -82,8 +83,10 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
      Each AST node is dispatched to the proper codegen function.
      Each codegen function [f] is called as [f context position data]
      where [data] is a node-specific type defined in [Ast_expr]. *)
+  and parse_yield _ _ _ = Llvm.Expr.yield ()
   and parse_none _ _ _ = Llvm.Expr.none ()
   and parse_bool _ _ b = Llvm.Expr.bool b
+
 
   and parse_int ctx pos ?(kind = "") i =
     let is_unsigned =

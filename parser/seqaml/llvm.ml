@@ -222,6 +222,8 @@ module Expr = struct
   let typeof = foreign "type_of_expr" (t @-> returning Types.typ)
   let ptr = foreign "ptr_expr" (Types.var @-> returning t)
 
+  let yield = foreign "yield_expr" (void @-> returning t)
+
   (* Getters & Setters *)
 
   let set_pos expr (pos : Ast.Ann.t) =

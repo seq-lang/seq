@@ -79,6 +79,7 @@ module Expr = struct
     | DictGenerator ((x1, x2), c) ->
       sprintf "{%s: %s %s}" (to_string x1) (to_string x2) (comprehension_to_string ~pythonic c)
     | Lambda (l, x) -> sprintf "lambda (%s): %s" (ppl l ~f:snd) (to_string x)
+    | Yield _ -> sprintf "(yield)"
 
   and call_to_string ~pythonic (_, { name; value }) =
     sprintf
