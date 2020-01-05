@@ -581,10 +581,10 @@ public:
 
 class YieldExpr : public Expr {
 private:
-  Func *base;
+  BaseFunc *base;
 
 public:
-  YieldExpr(Func *base);
+  YieldExpr(BaseFunc *base);
   void resolveTypes() override;
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
   types::Type *getType0() const override;

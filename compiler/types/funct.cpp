@@ -279,7 +279,7 @@ void types::GenType::initOps() {
 
   addMethod("send",
             new BaseFuncLite(
-                {this, outType}, Void,
+                {this, outType}, outType,
                 [this](Module *module) {
                   const std::string name = "seq." + getName() + ".send";
                   Function *func = module->getFunction(name);
@@ -287,8 +287,8 @@ void types::GenType::initOps() {
                   if (!func) {
                     LLVMContext &context = module->getContext();
                     func = cast<Function>(module->getOrInsertFunction(
-                        name, Void->getLLVMType(context), getLLVMType(context),
-                        outType->getLLVMType(context)));
+                        name, outType->getLLVMType(context),
+                        getLLVMType(context), outType->getLLVMType(context)));
                     func->setLinkage(GlobalValue::PrivateLinkage);
                     func->setDoesNotThrow();
                     func->addFnAttr(Attribute::AlwaysInline);
@@ -299,8 +299,9 @@ void types::GenType::initOps() {
                     BasicBlock *entry =
                         BasicBlock::Create(context, "entry", func);
                     send(self, val, entry);
+                    resume(self, entry, nullptr, nullptr);
                     IRBuilder<> builder(entry);
-                    builder.CreateRetVoid();
+                    builder.CreateRet(promise(self, entry));
                   }
 
                   return func;

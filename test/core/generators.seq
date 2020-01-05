@@ -63,3 +63,26 @@ for a in perms([1,2,3,4]):
 # EXPECT: [4, 1, 3, 2]
 # EXPECT: [4, 3, 1, 2]
 # EXPECT: [4, 3, 2, 1]
+
+
+def mysum[T](start: T) -> T:
+    m = start
+    while True:
+        a = (yield)
+        if a == -1:
+            break
+        m += a
+    yield m
+
+iadder = mysum(0)
+next(iadder)
+for i in range(10):
+    iadder.send(i)
+print(iadder.send(-1))  # EXPECT: 45
+
+fadder = mysum(0.0)
+next(fadder)
+for i in range(10):
+    fadder.send(float(i))
+print(fadder.send(-1.0))  # EXPECT: 45
+
