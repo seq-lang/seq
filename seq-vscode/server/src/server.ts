@@ -12,7 +12,7 @@ import SeqWrapper from './wrapper';
 
 let connection = createConnection();
 
-let wrapper: SeqWrapper = new SeqWrapper();
+let wrapper: SeqWrapper = new SeqWrapper(connection);
 
 let documents: TextDocuments = new TextDocuments();
 
@@ -89,14 +89,21 @@ connection.onCompletion(
 			return [];
 		}
 		connection.console.log(`prefix ${prefix}`);
-		// TODO: Use the seq wrapper to get the list of completion items.
-		return [];
+		const result: CompletionItem[] = [];
+		const textMatches = wrapper.complete(prefix);
+		connection.console.log(`text ${textMatches}`);
+		// textMatches.forEach((match) => {
+		// 	result.push({
+		// 		label: match
+		// 	});
+		// });
+		return result;
 	}
 );
 
 connection.onCompletionResolve(
 	(item: CompletionItem): CompletionItem => {
-		connection.console.log(`onCompletionResolve ${item}`);
+		connection.console.log(`onCompletionResolve ${item.label}`);
 		return item;
 	}
 );
