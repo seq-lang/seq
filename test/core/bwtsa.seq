@@ -1,0 +1,41 @@
+Q,T = ['test/data/' + a for a in ('MT-orang.fa','MT-human.fa')]
+
+def suffix_array_slow[T](s: T):
+    def key(t: tuple[T, int]):
+        return t[0][t[1]:]
+    v = [(s, i) for i in range(len(s))]
+    v.sort(key=key)
+    return [i for s,i in v]
+
+def bwt_slow[T](s: T):
+    t = str(s) + '$'
+    n = len(t)
+    m = sorted([t[i:n]+t[0:i] for i in range(n)])
+    return ''.join([q[-1] for q in m])
+
+@test
+def test_suffix_array():
+    assert len(s''.suffix_array()) == 0
+    assert s'A'.suffix_array() == [0]
+
+    for s in list(FASTA(Q) |> seqs) + list(FASTA(T) |> seqs):
+        SA = s.suffix_array()
+        assert SA == suffix_array_slow(s)
+        s = ~s
+        SA = s.suffix_array()
+        assert SA == suffix_array_slow(s)
+
+@test
+def test_bwt():
+    assert s''.bwt() == s'$'
+    assert s'A'.bwt() == s'A$'
+
+    for s in list(FASTA(Q) |> seqs) + list(FASTA(T) |> seqs):
+        b = str(s.bwt())
+        assert b == bwt_slow(s)
+        s = ~s
+        b = str(s.bwt())
+        assert b == bwt_slow(s)
+
+test_suffix_array()
+test_bwt()

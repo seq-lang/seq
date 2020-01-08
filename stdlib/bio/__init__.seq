@@ -5,6 +5,7 @@ from bio.builtin import *
 from bio.locus import Locus
 from bio.iter import Seqs, Block, blocks, block_seqs
 
+from bio.bwt import _saisxx, _saisxx_bwt
 from bio.align import SubMat, CIGAR, Alignment
 from bio.pseq import pseq, translate, as_protein
 
