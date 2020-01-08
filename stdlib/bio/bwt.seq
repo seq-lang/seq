@@ -859,3 +859,17 @@ extend seq:
             n = -n
         B = _saisxx_bwt(p, n)
         return seq(B, n + 1)
+
+from bio.pseq import pseq
+extend pseq:
+    def suffix_array(self: pseq):
+        p = self.ptr
+        n = self.len
+        SA = _saisxx(p, n)
+        return list[int](array[int](SA, n), n)
+
+    def bwt(self: pseq):
+        p = self.ptr
+        n = self.len
+        B = _saisxx_bwt(p, n)
+        return seq(B, n + 1)
