@@ -84,7 +84,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
      Each codegen function [f] is called as [f context position data]
      where [data] is a node-specific type defined in [Ast_expr]. *)
   and parse_yield ctx _ _ = Llvm.Expr.yield ctx.base
-  
+
   and parse_none _ _ _ = Llvm.Expr.none ()
   and parse_bool _ _ b = Llvm.Expr.bool b
 
