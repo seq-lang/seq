@@ -421,9 +421,6 @@ class FMIndex:
             n -= u32(15 - (k&15))
         return int(n)
 
-    def occ_kmer(self: FMIndex, k: int, c: Kmer[1]):
-        return self._occ_internal(k, int(c.as_int()))
-
     def occ(self: FMIndex, k: int, c: seq):
         if len(c) != 1:
             raise ValueError("occ() expects length-1 sequence argument")
@@ -446,6 +443,23 @@ class FMIndex:
         occ1 = self._occ_internal(lo - 1, b)
         occ2 = self._occ_internal(hi, b)
         return FMInterval(c0 + occ1 + 1, c0 + occ2)
+
+    def __prefetch__(self: FMIndex, x: tuple[FMInterval, seq]):
+        intv, c = x
+        assert len(c) == 1
+        lo, hi = intv
+        b = _enc(c._at(0))
+        k1 = lo - 1
+        k2 = hi
+        if k1 >= self._primary:
+            k1 -= 1
+        if k2 >= self._primary:
+            k2 -= 1
+
+        (self._occ + (k1//16<<2|b)).__prefetch_r0__()
+        (self._occ + (k2//16<<2|b)).__prefetch_r0__()
+        (self._bwt + (k1//16)).__prefetch_r0__()
+        (self._bwt + (k2//16)).__prefetch_r0__()
 
     def _get_interval(self: FMIndex, s: seq):
         if not s:
