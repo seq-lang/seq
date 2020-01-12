@@ -162,6 +162,37 @@ void types::StrType::initOps() {
             return func;
           }),
       true);
+
+  addMethod("memset",
+            new BaseFuncLite(
+                {PtrType::get(Byte), Byte, Int}, Void,
+                [](Module *module) {
+                  const std::string name = "seq.memset";
+                  Function *func = module->getFunction(name);
+
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, llvm::Type::getVoidTy(context),
+                        IntegerType::getInt8PtrTy(context),
+                        IntegerType::getInt8Ty(context), seqIntLLVM(context)));
+                    func->setDoesNotThrow();
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->addFnAttr(Attribute::AlwaysInline);
+                    auto iter = func->arg_begin();
+                    Value *dst = iter++;
+                    Value *val = iter++;
+                    Value *len = iter;
+                    BasicBlock *block =
+                        BasicBlock::Create(context, "entry", func);
+                    IRBuilder<> builder(block);
+                    builder.CreateMemSet(dst, val, len, 0);
+                    builder.CreateRetVoid();
+                  }
+
+                  return func;
+                }),
+            true);
 }
 
 Value *types::StrType::make(Value *ptr, Value *len, BasicBlock *block) {
