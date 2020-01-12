@@ -291,6 +291,39 @@ Now, if we were to process data in a pipeline as such:
 
 The Seq compiler will perform pipeline transformations to overlap cache misses in ``MyIndex`` with other useful work, increasing overall throughput. In our benchmarks, we often find these transformations to improve performance by 50% to 2×. However, the improvement is dataset- and application-dependent (and can potentially even decrease performance, although we rarely observed this), so users are encouraged to experiment with it for their own use case.
 
+As a concrete example, consider Seq's built-in FM-index type, ``FMIndex``, and a toy application that counts occurences of 20-mers from an input FASTQ. ``FMIndex`` provides end-to-end search methods like ``locate()`` and ``count()``, but we can take advantage of Seq's prefetch optimization by working with FM-index intervals:
+
+.. code-block:: seq
+
+    from bio.fmindex import FMIndex
+
+    fmi = FMIndex('/path/to/genome.fa')
+    k = 20
+    step = 20
+    n = 0
+
+    def update(count: int):
+        n += count
+
+    def find(s: seq, fmi: FMIndex):
+        intv = fmi.interval(s[-1])          # initial FM-index interval
+        s = s[:-1]                          # trim off last base of sequence
+        while s and intv:
+            prefetch fmi[(intv, s[-1])]     # prefetch for backwards extension
+            intv = fmi.update(intv, s[-1])  # backwards extend FM-index interval
+            s = s[:-1]                      # trim off last base of sequence
+        return len(intv)                    # return count of sequence in index
+
+    FASTQ('/path/to/reads.fq') |> seqs |> split(k, step=step) |> find(fmi) |> update
+    print f'{n=}'
+
+That single ``prefetch`` line can have a significant impact, especially for larger ``k``. Here is a graph of the performance of this exact snippet for various ``k`` using hg19 as the reference:
+
+.. image:: ../images/prefetch.png
+    :width: 500px
+    :align: center
+    :alt: prefetch performance
+
 Other features
 --------------
 
