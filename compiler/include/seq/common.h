@@ -10,12 +10,12 @@
 namespace seq {
 struct SrcInfo {
   std::string file;
-  int line;
-  int col;
-  int len;
-  SrcInfo(std::string file, int line, int col, int len)
-      : file(std::move(file)), line(line), col(col), len(len){};
-  SrcInfo() : SrcInfo("<internal>", 0, 0, 0){};
+  int line, endLine;
+  int col, endCol;
+  SrcInfo(std::string file, int line, int endLine, int col, int endCol)
+      : file(std::move(file)), line(line), endLine(endLine),
+       col(col), endCol(endCol){};
+  SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
 };
 
 struct SrcObject {

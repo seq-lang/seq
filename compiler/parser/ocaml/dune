@@ -1,0 +1,11 @@
+;(env
+;   (dev (flags (:standard -w @a-4-29-40-41-42-44-45-48-58-59-60-40-26-27 -warn-error -A))))
+
+(ocamllex lexer)
+(menhir (modules grammar))
+
+(executable
+   (name main)
+   (modes (native object))
+   ;(link_flags (:standard -noautolink -runtime-variant _pic))
+)

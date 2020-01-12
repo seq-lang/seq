@@ -1,4 +1,4 @@
-#include "seq/parser.h"
+#include "parser/parser.h"
 #include "seq/seq.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdio>

@@ -3,7 +3,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
-#include <seq/parser.h>
+#include <parser/parser.h>
 #include <seq/seq.h>
 #include <sstream>
 #include <string>
@@ -103,7 +103,7 @@ TEST_P(SeqTest, Run) {
   const string basename = get<0>(GetParam());
   const bool debug = get<1>(GetParam());
   string filename = string(TEST_DIR) + "/" + basename;
-  SeqModule *module = parse("", filename);
+  SeqModule *module = parse("", filename.c_str());
   execute(module, {filename}, {}, debug);
   string output = result();
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
