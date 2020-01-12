@@ -471,25 +471,33 @@ class FMIndex:
             i -= 1
         return intv
 
-    def __getitem__(self: FMIndex, s: seq):
-        lo, hi = self._get_interval(s)
+    def __getitem__(self: FMIndex, intv: FMInterval):
+        lo, hi = intv
         while lo <= hi:
             yield int(self._sa[lo])
             lo += 1
 
+    def __getitem__(self: FMIndex, s: seq):
+        return self[self._get_interval(s)]
+
     def count(self: FMIndex, s: seq):
         return len(self._get_interval(s))
 
-    def locate(self: FMIndex, s: seq):
+    def results(self: FMIndex, intv: FMInterval):
         if self._bseq is None:
-            raise ValueError("locate() requires FASTA-based FM-index")
-        lo, hi = self._get_interval(s)
+            raise ValueError("results() requires FASTA-based FM-index")
+        lo, hi = intv
         while lo <= hi:
             pos = int(self._sa[lo])
             rid = self._bseq.pos2rid(pos)
             ann = self._bseq._anns[rid]
             yield (rid, ann._name, pos - ann._offset)
             lo += 1
+
+    def locate(self: FMIndex, s: seq):
+        if self._bseq is None:
+            raise ValueError("locate() requires FASTA-based FM-index")
+        return self.results(self._get_interval(s))
 
     def sequence(self: FMIndex, start: int, stop: int, rid: int = -1, name: str = ''):
         if self._bseq is None:
