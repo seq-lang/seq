@@ -31,6 +31,19 @@ using std::vector;
 
 #define Return(T, ...) Set(make_unique<T>(__VA_ARGS__))
 
+unique_ptr<SuiteStmt> TransformStmtVisitor::apply(unique_ptr<SuiteStmt> stmts) {
+  auto tv = TransformStmtVisitor();
+  for (auto &s: stmts->stmts) {
+    fmt::print("> {}\n", s->to_string());
+  }
+  fmt::print("-----\n");
+  auto result = tv.Visit(*stmts);
+  for (auto &s: result->stmts) {
+    fmt::print("> {}\n", s->to_string());
+  }
+  return result;
+}
+
 void TransformStmtVisitor::Set(StmtPtr &&stmt) { result = move(stmt); }
 StmtPtr TransformStmtVisitor::Visit(Stmt &stmt) {
   TransformStmtVisitor v;
@@ -43,6 +56,12 @@ StmtPtr TransformStmtVisitor::Visit(Stmt &stmt) {
   if (v.newSrcInfo)
     newSrcInfo = move(v.newSrcInfo);
   return move(v.result);
+}
+SuiteStmtPtr TransformStmtVisitor::Visit(SuiteStmt &stmt) {
+  for (auto &i: stmt.stmts) {
+    i = Visit(*i);
+  }
+  return make_unique<SuiteStmt>(move(stmt.stmts));
 }
 StmtPtr TransformStmtVisitor::Visit(Stmt &stmt, const seq::SrcInfo &newInfo) {
   TransformStmtVisitor v;
@@ -68,6 +87,12 @@ ExprPtr TransformStmtVisitor::Visit(Expr &expr, const seq::SrcInfo &newInfo) {
   return move(v.result);
 }
 
+void TransformStmtVisitor::visit(SuiteStmt &stmt) {
+  for (auto &i : stmt.stmts) {
+    i = Visit(*i);
+  }
+  Return(SuiteStmt, move(stmt.stmts));
+}
 void TransformStmtVisitor::visit(PassStmt &stmt) { Return(PassStmt, ); }
 void TransformStmtVisitor::visit(BreakStmt &stmt) { Return(BreakStmt, ); }
 void TransformStmtVisitor::visit(ContinueStmt &stmt) { Return(ContinueStmt, ); }
@@ -89,10 +114,16 @@ void TransformStmtVisitor::visit(DelStmt &stmt) {
   }
 }
 void TransformStmtVisitor::visit(PrintStmt &stmt) {
-  for (auto &i : stmt.items) {
-    i = Visit(*i);
+  vector<StmtPtr> suite;
+  for (int i = 0; i < stmt.items.size(); i++) {
+    StmtPtr p = make_unique<PrintStmt>(Visit(*stmt.items[i]));
+    p->setSrcInfo(stmt.items[i]->getSrcInfo());
+    suite.push_back(move(p));
+    p = make_unique<PrintStmt>(make_unique<StringExpr>(i == stmt.items.size() - 1 ? stmt.terminator : " "));
+    p->setSrcInfo(stmt.items[i]->getSrcInfo());
+    suite.push_back(move(p));
   }
-  Return(PrintStmt, move(stmt.items), stmt.terminator);
+  Return(SuiteStmt, move(suite));
 }
 void TransformStmtVisitor::visit(ReturnStmt &stmt) {
   Return(ReturnStmt, stmt.expr ? Visit(*stmt.expr) : nullptr);
@@ -107,38 +138,28 @@ void TransformStmtVisitor::visit(TypeAliasStmt &stmt) {
   Return(TypeAliasStmt, stmt.name, Visit(*stmt.expr));
 }
 void TransformStmtVisitor::visit(WhileStmt &stmt) {
-  for (auto &i : stmt.suite) {
-    i = Visit(*i);
-  }
-  Return(WhileStmt, Visit(*stmt.cond), move(stmt.suite));
+  Return(WhileStmt, Visit(*stmt.cond), Visit(*stmt.suite));
 }
 void TransformStmtVisitor::visit(ForStmt &stmt) {
-  for (auto &i : stmt.suite) {
-    i = Visit(*i);
-  }
-  Return(ForStmt, stmt.vars, Visit(*stmt.iter), move(stmt.suite));
+  Return(ForStmt, stmt.vars, Visit(*stmt.iter), Visit(*stmt.suite));
 }
 void TransformStmtVisitor::visit(IfStmt &stmt) {
   for (auto &ifc : stmt.ifs) {
     ifc.cond = Visit(*ifc.cond);
-    for (auto &i : ifc.suite) {
-      i = Visit(*i);
-    }
+    ifc.suite = Visit(*ifc.suite);
   }
   Return(IfStmt, move(stmt.ifs));
 }
 void TransformStmtVisitor::visit(MatchStmt &stmt) {
   for (auto &c : stmt.cases) {
-    error("TODO");
+    error(stmt.getSrcInfo(), "TODO");
     // c.what = move(Visit(*stmt.what));
-    for (auto &i : c.second) {
-      i = Visit(*i);
-    }
+    c.second = Visit(*c.second);
   }
   Return(MatchStmt, Visit(*stmt.what), move(stmt.cases));
 }
 void TransformStmtVisitor::visit(ExtendStmt &stmt) {
-  for (auto &i : stmt.suite) {
+  for (auto &i : stmt.suite->stmts) {
     if (dynamic_cast<FunctionStmt *>(i.get())) {
       i = Visit(*i);
     } else {
@@ -159,19 +180,11 @@ void TransformStmtVisitor::visit(ExternImportStmt &stmt) {
          stmt.lang);
 }
 void TransformStmtVisitor::visit(TryStmt &stmt) {
-  for (auto &i : stmt.suite) {
-    i = Visit(*i);
-  }
   for (auto &c : stmt.catches) {
     c.exc = Visit(*c.exc);
-    for (auto &i : c.suite) {
-      i = Visit(*i);
-    }
+    c.suite = Visit(*c.suite);
   }
-  for (auto &i : stmt.finally) {
-    i = Visit(*i);
-  }
-  Return(TryStmt, move(stmt.suite), move(stmt.catches), move(stmt.finally));
+  Return(TryStmt, Visit(*stmt.suite), move(stmt.catches), Visit(*stmt.finally));
 }
 void TransformStmtVisitor::visit(GlobalStmt &stmt) { Return(GlobalStmt, stmt.var); }
 void TransformStmtVisitor::visit(ThrowStmt &stmt) {
@@ -185,14 +198,11 @@ void TransformStmtVisitor::visit(PrefetchStmt &stmt) {
 }
 void TransformStmtVisitor::visit(FunctionStmt &stmt) {
   for (auto &a : stmt.args) {
-    a.type = Visit(*a.type);
-    a.deflt = Visit(*a.deflt);
-  }
-  for (auto &i : stmt.suite) {
-    i = Visit(*i);
+    if (a.type) a.type = Visit(*a.type);
+    if (a.deflt) a.deflt = Visit(*a.deflt);
   }
   Return(FunctionStmt, stmt.name, stmt.ret ? Visit(*stmt.ret) : nullptr, stmt.generics, move(stmt.args),
-    move(stmt.suite),
+    Visit(*stmt.suite),
     stmt.attributes
   );
 }
@@ -201,7 +211,7 @@ void TransformStmtVisitor::visit(ClassStmt &stmt) {
     a.type = Visit(*a.type);
     a.deflt = Visit(*a.deflt);
   }
-  for (auto &i : stmt.suite) {
+  for (auto &i : stmt.suite->stmts) {
     if (dynamic_cast<FunctionStmt *>(i.get())) {
       i = Visit(*i);
     } else {

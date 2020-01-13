@@ -62,6 +62,7 @@ struct ExprVisitor {
   virtual void visit(YieldExpr &) = 0;
 };
 
+struct SuiteStmt;
 struct PassStmt;
 struct BreakStmt;
 struct ContinueStmt;
@@ -89,6 +90,7 @@ struct ClassStmt;
 struct DeclareStmt;
 
 struct StmtVisitor {
+  virtual void visit(SuiteStmt &) {};
   virtual void visit(PassStmt &) {};
   virtual void visit(BreakStmt &) {};
   virtual void visit(ContinueStmt &) {};

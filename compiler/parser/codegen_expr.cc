@@ -30,7 +30,7 @@ using std::vector;
 
 CodegenExprVisitor::CodegenExprVisitor(Context &ctx,
                                        CodegenStmtVisitor &stmtVisitor)
-    : ctx(ctx), stmtVisitor(stmtVisitor) {}
+    : ctx(ctx), stmtVisitor(stmtVisitor), result(nullptr) {}
 
 void CodegenExprVisitor::Set(seq::Expr *stmt) { result = stmt; }
 seq::Expr *CodegenExprVisitor::Visit(Expr &expr) {
@@ -45,28 +45,28 @@ seq::Expr *CodegenExprVisitor::Visit(Expr &expr) {
   return v.result;
 }
 
-void CodegenExprVisitor::visit(EmptyExpr &_) { Return(seq::NoneExpr, ); }
+void CodegenExprVisitor::visit(EmptyExpr &_) { RETURN(seq::NoneExpr, ); }
 void CodegenExprVisitor::visit(BoolExpr &expr) {
-  Return(seq::BoolExpr, expr.value);
+  RETURN(seq::BoolExpr, expr.value);
 }
 void CodegenExprVisitor::visit(IntExpr &expr) {
   try {
     if (expr.suffix == "u") {
       uint64_t i = std::stoull(expr.value, nullptr, 10);
-      Return(seq::IntExpr, i);
+      RETURN(seq::IntExpr, i);
     } else {
       int64_t i = std::stoll(expr.value, nullptr, 10);
-      Return(seq::IntExpr, i);
+      RETURN(seq::IntExpr, i);
     }
   } catch (std::out_of_range &) {
     error(expr.getSrcInfo(), "integer {} out of range", expr.value);
   }
 }
 void CodegenExprVisitor::visit(FloatExpr &expr) {
-  Return(seq::FloatExpr, expr.value);
+  RETURN(seq::FloatExpr, expr.value);
 }
 void CodegenExprVisitor::visit(StringExpr &expr) {
-  Return(seq::StrExpr, expr.value);
+  RETURN(seq::StrExpr, expr.value);
 }
 void CodegenExprVisitor::visit(FStringExpr &expr) {
   error(expr.getSrcInfo(), "unexpected f-string");
@@ -78,7 +78,7 @@ void CodegenExprVisitor::visit(SeqExpr &expr) {
   if (expr.prefix != "s") {
     error(expr.getSrcInfo(), "unexpected custom sequence");
   }
-  Return(seq::SeqExpr, expr.value);
+  RETURN(seq::SeqExpr, expr.value);
 }
 void CodegenExprVisitor::visit(IdExpr &expr) {
   auto i = ctx.find(expr.value);
@@ -100,21 +100,21 @@ void CodegenExprVisitor::visit(TupleExpr &expr) {
   vector<seq::Expr *> items;
   for (auto &&i : expr.items)
     items.push_back(Visit(*i));
-  Return(seq::RecordExpr, items, vector<string>(items.size(), ""));
+  RETURN(seq::RecordExpr, items, vector<string>(items.size(), ""));
 }
 void CodegenExprVisitor::visit(ListExpr &expr) {
   vector<seq::Expr *> items;
   for (auto &&i : expr.items)
     items.push_back(Visit(*i));
   auto typ = ctx.getType("list");
-  Return(seq::ListExpr, items, typ);
+  RETURN(seq::ListExpr, items, typ);
 }
 void CodegenExprVisitor::visit(SetExpr &expr) {
   vector<seq::Expr *> items;
   for (auto &&i : expr.items)
     items.push_back(Visit(*i));
   auto typ = ctx.getType("set");
-  Return(seq::SetExpr, items, typ);
+  RETURN(seq::SetExpr, items, typ);
 }
 void CodegenExprVisitor::visit(DictExpr &expr) {
   vector<seq::Expr *> items;
@@ -123,7 +123,7 @@ void CodegenExprVisitor::visit(DictExpr &expr) {
     items.push_back(Visit(*i.value));
   }
   auto typ = ctx.getType("dict");
-  Return(seq::DictExpr, items, typ);
+  RETURN(seq::DictExpr, items, typ);
 }
 void CodegenExprVisitor::visit(GeneratorExpr &expr) {
   error(expr.getSrcInfo(), "TODO");
@@ -132,14 +132,14 @@ void CodegenExprVisitor::visit(DictGeneratorExpr &expr) {
   error(expr.getSrcInfo(), "TODO");
 }
 void CodegenExprVisitor::visit(IfExpr &expr) {
-  Return(seq::CondExpr, Visit(*expr.cond), Visit(*expr.eif),
+  RETURN(seq::CondExpr, Visit(*expr.cond), Visit(*expr.eif),
          Visit(*expr.eelse));
 }
 void CodegenExprVisitor::visit(UnaryExpr &expr) {
-  Return(seq::UOpExpr, seq::uop(expr.op), Visit(*expr.expr));
+  RETURN(seq::UOpExpr, seq::uop(expr.op), Visit(*expr.expr));
 }
 void CodegenExprVisitor::visit(BinaryExpr &expr) {
-  Return(seq::BOpExpr, seq::bop(expr.op), Visit(*expr.lexpr),
+  RETURN(seq::BOpExpr, seq::bop(expr.op), Visit(*expr.lexpr),
          Visit(*expr.rexpr), true);
 }
 void CodegenExprVisitor::visit(PipeExpr &expr) {
@@ -162,17 +162,17 @@ void CodegenExprVisitor::visit(IndexExpr &expr) {
 
   //   } else if (i->)
   // }
-  Return(seq::ArrayLookupExpr, Visit(*expr.expr), Visit(*expr.index));
+  RETURN(seq::ArrayLookupExpr, Visit(*expr.expr), Visit(*expr.index));
 }
 void CodegenExprVisitor::visit(CallExpr &expr) {
   vector<seq::Expr *> items;
   for (auto &&i : expr.args) {
     items.push_back(Visit(*i.value));
   }
-  Return(seq::CallExpr, Visit(*expr.expr), items);
+  RETURN(seq::CallExpr, Visit(*expr.expr), items);
 }
 void CodegenExprVisitor::visit(DotExpr &expr) {
-  Return(seq::GetElemExpr, Visit(*expr.expr), expr.member);
+  RETURN(seq::GetElemExpr, Visit(*expr.expr), expr.member);
 }
 void CodegenExprVisitor::visit(SliceExpr &expr) {
   error(expr.getSrcInfo(), "unexpected slice");
@@ -181,7 +181,7 @@ void CodegenExprVisitor::visit(EllipsisExpr &expr) {
   error(expr.getSrcInfo(), "unexpected ellipsis");
 }
 void CodegenExprVisitor::visit(TypeOfExpr &expr) {
-  Return(seq::TypeOfExpr, Visit(*expr.expr));
+  RETURN(seq::TypeOfExpr, Visit(*expr.expr));
 }
 void CodegenExprVisitor::visit(PtrExpr &expr) {
   error(expr.getSrcInfo(), "TODO");

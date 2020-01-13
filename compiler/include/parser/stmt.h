@@ -32,10 +32,17 @@ struct Stmt : public seq::SrcObject {
 };
 
 typedef unique_ptr<Stmt> StmtPtr;
-typedef vector<StmtPtr> StmtSuite;
 
 #define ACCEPT_VISITOR                                                      \
   virtual void accept(StmtVisitor &visitor) { visitor.visit(*this); }
+
+struct SuiteStmt : public Stmt {
+  vector<StmtPtr> stmts;
+  SuiteStmt(vector<StmtPtr> s);
+  string to_string() const;
+  ACCEPT_VISITOR;
+};
+typedef unique_ptr<SuiteStmt> SuiteStmtPtr;
 
 struct PassStmt : public Stmt {
   PassStmt();
@@ -80,6 +87,7 @@ struct DelStmt : public Stmt {
 struct PrintStmt : public Stmt {
   vector<ExprPtr> items;
   string terminator;
+  PrintStmt(ExprPtr i);
   PrintStmt(vector<ExprPtr> i, string t);
   string to_string() const;
   ACCEPT_VISITOR;
@@ -116,8 +124,8 @@ struct TypeAliasStmt : public Stmt {
 
 struct WhileStmt : public Stmt {
   ExprPtr cond;
-  StmtSuite suite;
-  WhileStmt(ExprPtr c, StmtSuite s);
+  SuiteStmtPtr suite;
+  WhileStmt(ExprPtr c, SuiteStmtPtr s);
   string to_string() const;
   ACCEPT_VISITOR;
 };
@@ -125,8 +133,8 @@ struct WhileStmt : public Stmt {
 struct ForStmt : public Stmt {
   vector<string> vars;
   ExprPtr iter;
-  StmtSuite suite;
-  ForStmt(vector<string> v, ExprPtr i, StmtSuite s);
+  SuiteStmtPtr suite;
+  ForStmt(vector<string> v, ExprPtr i, SuiteStmtPtr s);
   string to_string() const;
   ACCEPT_VISITOR;
 };
@@ -134,7 +142,7 @@ struct ForStmt : public Stmt {
 struct IfStmt : public Stmt {
   struct If {
     ExprPtr cond;
-    StmtSuite suite;
+    SuiteStmtPtr suite;
   };
   vector<If> ifs;
   IfStmt(vector<If> i);
@@ -144,16 +152,16 @@ struct IfStmt : public Stmt {
 
 struct MatchStmt : public Stmt {
   ExprPtr what;
-  vector<pair<PatternPtr, StmtSuite>> cases;
-  MatchStmt(ExprPtr w, vector<pair<PatternPtr, StmtSuite>> c);
+  vector<pair<PatternPtr, SuiteStmtPtr>> cases;
+  MatchStmt(ExprPtr w, vector<pair<PatternPtr, SuiteStmtPtr>> c);
   string to_string() const;
   ACCEPT_VISITOR;
 };
 
 struct ExtendStmt : public Stmt {
   ExprPtr what;
-  StmtSuite suite;
-  ExtendStmt(ExprPtr e, StmtSuite s);
+  SuiteStmtPtr suite;
+  ExtendStmt(ExprPtr e, SuiteStmtPtr s);
   string to_string() const;
   ACCEPT_VISITOR;
 };
@@ -182,13 +190,13 @@ struct TryStmt : public Stmt {
   struct Catch {
     string var;
     ExprPtr exc;
-    StmtSuite suite;
+    SuiteStmtPtr suite;
   };
-  StmtSuite suite;
+  SuiteStmtPtr suite;
   vector<Catch> catches;
-  StmtSuite finally;
+  SuiteStmtPtr finally;
 
-  TryStmt(StmtSuite s, vector<Catch> c, StmtSuite f);
+  TryStmt(SuiteStmtPtr s, vector<Catch> c, SuiteStmtPtr f);
   string to_string() const;
   ACCEPT_VISITOR;
 };
@@ -219,9 +227,9 @@ struct FunctionStmt : public Stmt {
   ExprPtr ret;
   vector<string> generics;
   vector<Param> args;
-  StmtSuite suite;
+  SuiteStmtPtr suite;
   vector<string> attributes;
-  FunctionStmt(string n, ExprPtr r, vector<string> g, vector<Param> a, StmtSuite s, vector<string> at);
+  FunctionStmt(string n, ExprPtr r, vector<string> g, vector<Param> a, SuiteStmtPtr s, vector<string> at);
   string to_string() const;
   ACCEPT_VISITOR;
 };
@@ -231,8 +239,8 @@ struct ClassStmt : public Stmt {
   string name;
   vector<string> generics;
   vector<Param> args;
-  StmtSuite suite;
-  ClassStmt(bool i, string n, vector<string> g, vector<Param> a, StmtSuite s);
+  SuiteStmtPtr suite;
+  ClassStmt(bool i, string n, vector<string> g, vector<Param> a, SuiteStmtPtr s);
   string to_string() const;
   ACCEPT_VISITOR;
 };

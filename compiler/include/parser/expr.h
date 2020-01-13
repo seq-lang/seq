@@ -134,7 +134,8 @@ struct GeneratorExpr : public Expr {
   enum Kind { Generator, ListGenerator, SetGenerator };
   struct Body {
     vector<string> vars;
-    ExprPtr gen, cond;
+    ExprPtr gen;
+    vector<ExprPtr> conds;
   };
   Kind kind;
   ExprPtr expr;

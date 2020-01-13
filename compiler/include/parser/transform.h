@@ -63,12 +63,16 @@ class TransformStmtVisitor : public StmtVisitor {
   unique_ptr<seq::SrcInfo> newSrcInfo{nullptr};
 
 public:
+  static unique_ptr<SuiteStmt> apply(unique_ptr<SuiteStmt> s);
+
   void Set(StmtPtr &&p);
   StmtPtr Visit(Stmt &e);
   StmtPtr Visit(Stmt &e, const seq::SrcInfo &newInfo);
+  SuiteStmtPtr Visit(SuiteStmt &stmt);
   ExprPtr Visit(Expr &e);
   ExprPtr Visit(Expr &e, const seq::SrcInfo &newInfo);
 
+  virtual void visit(SuiteStmt &) override;
   virtual void visit(PassStmt &) override;
   virtual void visit(BreakStmt &) override;
   virtual void visit(ContinueStmt &) override;

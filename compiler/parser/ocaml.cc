@@ -69,7 +69,7 @@ seq::SrcInfo parse_pos(value val) {
   p1 = Field(val, 1);
   int line2 = Int_val(Field(p1, 1));
   int col2 = Int_val(Field(p1, 3)) - Int_val(Field(p1, 2));
-  return seq::SrcInfo(file, line1, line2, col1, col2);
+  return seq::SrcInfo(file, line1 + 1, line2 + 1, col1 + 1, col2 + 1);
 }
 
 unique_ptr<Expr> parse_expr(value val) {
@@ -135,7 +135,7 @@ unique_ptr<Expr> parse_expr(value val) {
       f1 = Field(f1, 1); // TODO: ignore position here for now
       loops.push_back({parse_list(Field(f1, 0), parse_string),
                        parse_expr(Field(f1, 1)),
-                       parse_optional(Field(f1, 2), parse_expr)});
+                       parse_list(Field(f1, 2), parse_expr)});
       if (Field(f1, 3) == Val_int(0)) {
         break;
       }
@@ -247,6 +247,11 @@ unique_ptr<Pattern> parse_pattern(value val) {
 #undef Return
 }
 
+unique_ptr<Stmt> parse_stmt(value val);
+unique_ptr<SuiteStmt> parse_stmt_list(value val) {
+  return make_unique<SuiteStmt>(parse_list(val, parse_stmt));
+}
+
 unique_ptr<Stmt> parse_stmt(value val) {
 #define Return(x, ...)                                                         \
   do {                                                                         \
@@ -301,23 +306,22 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 10:
     Return(TypeAlias, String_val(Field(t, 0)), parse_expr(Field(t, 1)));
   case 11:
-    Return(While, parse_expr(Field(t, 0)), parse_list(Field(t, 1), parse_stmt));
+    Return(While, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
   case 12:
     Return(For, parse_list(Field(t, 0), parse_string), parse_expr(Field(t, 1)),
-           parse_list(Field(t, 2), parse_stmt));
+           parse_stmt_list(Field(t, 2)));
   case 13:
     Return(If, parse_list(t, [](value i) {
              return IfStmt::If{parse_optional(Field(i, 0), parse_expr),
-                               parse_list(Field(i, 1), parse_stmt)};
+                               parse_stmt_list(Field(i, 1))};
            }));
   case 14:
     Return(Match, parse_expr(Field(t, 0)), parse_list(Field(t, 1), [](value i) {
              return make_pair(parse_pattern(Field(i, 0)),
-                              parse_list(Field(i, 1), parse_stmt));
+                              parse_stmt_list(Field(i, 1)));
            }));
   case 15:
-    Return(Extend, parse_expr(Field(t, 0)),
-           parse_list(Field(t, 1), parse_stmt));
+    Return(Extend, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
   case 16:
     f0 = Field(t, 0);
     Return(Import,
@@ -334,7 +338,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
            parse_optional(Field(t, 1), parse_expr), parse_expr(Field(t, 3)),
            parse_list(Field(t, 4), parse_param), parse_string(Field(t, 0)));
   case 18:
-    Return(Try, parse_list(Field(t, 0), parse_stmt),
+    Return(Try, parse_stmt_list(Field(t, 0)),
            parse_list(Field(t, 1),
                       [](value t) {
                         CAMLparam1(t);
@@ -343,9 +347,9 @@ unique_ptr<Stmt> parse_stmt(value val) {
                         OcamlReturn((TryStmt::Catch{
                             parse_optional(Field(v, 1), parse_string),
                             parse_optional(Field(v, 0), parse_expr),
-                            parse_list(Field(v, 2), parse_stmt)}));
+                            parse_stmt_list(Field(v, 2))}));
                       }),
-           parse_list(Field(t, 2), parse_stmt));
+           parse_stmt_list(Field(t, 2)));
   case 19:
     Return(Global, parse_string(t));
   case 20:
@@ -358,7 +362,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
            parse_optional(Field(t, 1), parse_expr),
            parse_list(Field(t, 2), parse_string),
            parse_list(Field(t, 3), parse_param),
-           parse_list(Field(t, 4), parse_stmt),
+           parse_stmt_list(Field(t, 4)),
            parse_list(Field(t, 5), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
@@ -367,7 +371,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(Class, tv == 25, parse_string(Field(t, 0)),
            parse_list(Field(t, 1), parse_string),
            parse_list(Field(t, 2), parse_param),
-           parse_list(Field(t, 3), parse_stmt));
+           parse_stmt_list(Field(t, 3)));
   case 26:
     Return(Declare, parse_param(t));
   default: {
@@ -378,25 +382,19 @@ unique_ptr<Stmt> parse_stmt(value val) {
 #undef Return
 }
 
-vector<unique_ptr<Stmt>> ocaml_parse(string file, string code) {
+unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset, int col_offset) {
   CAMLparam0();
   CAMLlocal2(p1, h);
   static value *closure_f = NULL;
   if (!closure_f) {
     closure_f = caml_named_value("menhir_parse");
   }
-  p1 = caml_callback2(*closure_f, caml_copy_string(file.c_str()),
-                      caml_copy_string(code.c_str()));
-  vector<unique_ptr<Stmt>> v;
-  while (p1 != Val_emptylist) {
-    h = Field(p1, 0);
-    auto s = parse_stmt(h);
-    // fmt::print(stderr, "  {}\n", *s);
-    v.push_back(move(s));
-    p1 = Field(p1, 1);
-  }
-  // fmt::print("{} statements\n", v.size());
-  return v;
+  value args[] = { caml_copy_string(file.c_str()),
+                   caml_copy_string(code.c_str()),
+                   Val_int(line_offset),
+                   Val_int(col_offset) };
+  p1 = caml_callbackN(*closure_f, 4, args);
+  return parse_stmt_list(p1);
 }
 
 void ocaml_initialize() {
@@ -404,20 +402,20 @@ void ocaml_initialize() {
   caml_main((char **)argv);
 }
 
-vector<unique_ptr<Stmt>> parse(string file, string code) {
+unique_ptr<SuiteStmt> parse(string file, string code, int line_offset, int col_offset) {
   static bool initialized(false);
   if (!initialized) {
     ocaml_initialize();
   }
-  return ocaml_parse(file, code);
+  return ocaml_parse(file, code, line_offset, col_offset);
 }
 
-unique_ptr<Expr> parse_expr(string code) {
-  auto result = parse("<?>", code);
-  if (result.size() != 1) {
+unique_ptr<Expr> parse_expr(string code, const seq::SrcInfo &offset) {
+  auto result = parse(offset.file, code, offset.line, offset.col);
+  if (result->stmts.size() != 1) {
     error("incorrect expression parse");
   }
-  if (ExprStmt *s = dynamic_cast<ExprStmt *>(result[0].get())) {
+  if (ExprStmt *s = dynamic_cast<ExprStmt *>(result->stmts[0].get())) {
     return move(s->expr);
   } else {
     error("incorrect expression parse");
@@ -425,14 +423,14 @@ unique_ptr<Expr> parse_expr(string code) {
   }
 }
 
-vector<unique_ptr<Stmt>> parse_file(string file) {
+unique_ptr<SuiteStmt> parse_file(string file) {
   ifstream fin(file);
   string result, line;
   while (getline(fin, line)) {
     result += line + "\n";
   }
   fin.close();
-  return parse(file, result);
+  return parse(file, result, 0, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////////

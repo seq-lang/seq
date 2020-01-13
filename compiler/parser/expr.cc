@@ -50,7 +50,7 @@ string KmerExpr::to_string() const {
   return format("(#kmer '{}')", escape(value));
 }
 
-SeqExpr::SeqExpr(string p, string v) : prefix(p), value(v) {}
+SeqExpr::SeqExpr(string v, string p) : prefix(p), value(v) {}
 string SeqExpr::to_string() const {
   return format("(#seq '{}'{})", value,
                 prefix == "" ? "" : format(" :prefix {}", prefix));
@@ -95,9 +95,12 @@ string GeneratorExpr::to_string() const {
   if (kind == Kind::SetGenerator)
     prefix = "set_";
   string s;
-  for (auto &i : loops)
-    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->to_string(),
-                i.cond ? " " + i.cond->to_string() : "");
+  for (auto &i : loops) {
+    string q;
+    for (auto &k: i.conds)
+      q += format(" (#if {})", *k);
+    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->to_string(), q);
+  }
   return format("(#{}gen {}{})", prefix, *expr, s);
 }
 
@@ -106,9 +109,12 @@ DictGeneratorExpr::DictGeneratorExpr(ExprPtr k, ExprPtr e,
     : key(move(k)), expr(move(e)), loops(move(l)) {}
 string DictGeneratorExpr::to_string() const {
   string s;
-  for (auto &i : loops)
-    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->to_string(),
-                i.cond ? " " + i.cond->to_string() : "");
+  for (auto &i : loops) {
+    string q;
+    for (auto &k: i.conds)
+      q += format(" (#if {})", *k);
+    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->to_string(), q);
+  }
   return format("(#dict_gen {} {}{})", *key, *expr, s);
 }
 

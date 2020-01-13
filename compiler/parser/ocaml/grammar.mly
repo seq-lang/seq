@@ -84,7 +84,7 @@ atom:
   | MUL ID { $loc, Unpack $2 }
 bool: TRUE { true } | FALSE { false }
 dictitem: expr COLON expr { $1, $3 }
-comprehension: FOR FLNE(COMMA, ID) IN pipe_expr comprehension_if? comprehension?
+comprehension: FOR FLNE(COMMA, ID) IN pipe_expr comprehension_if* comprehension?
   { $loc, { var = $2; gen = flat_pipe $4; cond = $5; next = $6 } }
 comprehension_if: IF pipe_expr { $loc, snd (flat_pipe $2) }
 

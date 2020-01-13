@@ -119,12 +119,12 @@ int xyzmain(int argc, char **argv) {
       " case _: pass"
     };
 
-  for (int i = 0; i < tests.size(); i++) {
-    auto stmts = parse(fmt::format("<test_{}>", i), tests[i]);
-    //assert (stmts.size() == 1);
-    for (auto &s: stmts)
-      fmt::print("{:02d}:  {}\n", i, *s);
-  }
+  // for (int i = 0; i < tests.size(); i++) {
+  //   auto stmts = parse(fmt::format("<test_{}>", i), tests[i]);
+  //   //assert (stmts.size() == 1);
+  //   for (auto &s: stmts)
+  //     fmt::print("{:02d}:  {}\n", i, *s);
+  // }
 
   return 0;
 }

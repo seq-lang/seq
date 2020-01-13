@@ -6,6 +6,7 @@
  * *****************************************************************************)
 
 (** File position annotation for an AST node. *)
+
 (* type tpos =
   { file : string
   ; line : int
@@ -13,7 +14,7 @@
   ; len : int
   } *)
 
-type tpos = (Lexing.position * Lexing.position)
+type tpos = Lexing.position * Lexing.position
 
 (** Annotated type specification. *)
 type 'a ann = tpos * 'a
@@ -57,7 +58,7 @@ type texpr =
 and tcomprehension =
   { var : string list
   ; gen : texpr ann
-  ; cond : texpr ann option
+  ; cond : texpr ann list
   ; next : tcomprehension ann option
   }
 
@@ -91,12 +92,12 @@ type tstmt =
   | Declare of param ann
 
 and eimport =
-  { lang: string
-  ; e_from: texpr ann option
-  ; e_name: string
-  ; e_typ: texpr ann
-  ; e_args: param ann list
-  ; e_as: string option
+  { lang : string
+  ; e_from : texpr ann option
+  ; e_name : string
+  ; e_typ : texpr ann
+  ; e_args : param ann list
+  ; e_as : string option
   }
 
 and catch =
@@ -113,7 +114,7 @@ and param =
 
 and fn_t =
   { fn_name : string
-  ; fn_rettyp: texpr ann option
+  ; fn_rettyp : texpr ann option
   ; fn_generics : string list
   ; fn_args : param ann list
   ; fn_stmts : tstmt ann list
@@ -145,11 +146,12 @@ let assign_cnt = ref 0
 
 let new_assign () =
   incr assign_cnt;
-  Printf.sprintf "$A%d" @@ pred !assign_cnt
+  Printf.sprintf "$%d" @@ pred !assign_cnt
+
 let flat_pipe x =
   match x with
-  | _, []  -> failwith "empty pipeline expression (grammar)"
-  | _, [h] -> snd h
+  | _, [] -> failwith "empty pipeline expression (grammar)"
+  | _, [ h ] -> snd h
   | pos, l -> pos, Pipe l
 
 (* Converts list of conditionals into the AND AST node
@@ -160,10 +162,11 @@ type cond_t =
   | CondBinary of (texpr ann * string * cond_t ann)
 
 let rec flat_cond x =
-  let expr = match snd x with
-    | CondBinary (lhs, op, (_, CondBinary (next_lhs, _, _) as rhs)) ->
+  let expr =
+    match snd x with
+    | CondBinary (lhs, op, ((_, CondBinary (next_lhs, _, _)) as rhs)) ->
       Binary ((fst lhs, Binary (lhs, op, next_lhs)), "&&", flat_cond rhs)
-    | CondBinary (lhs, op, (pos, Cond (rhs))) -> Binary (lhs, op, (pos, rhs))
+    | CondBinary (lhs, op, (pos, Cond rhs)) -> Binary (lhs, op, (pos, rhs))
     | Cond n -> n
   in
   fst x, expr
@@ -176,41 +179,55 @@ let rec flatten_dot ~sep = function
 let rec parse_assign pos lhs rhs shadow =
   (* wrap RHS in tuple for consistency (e.g. x, y -> (x, y)) *)
   let init_exprs, rhs =
-    if List.length rhs > 1 then (
+    if List.length rhs > 1
+    then (
       let var = pos, Id (new_assign ()) in
-      [pos, Assign (var, (pos, Tuple rhs), 1, None)], var
-    ) else if List.length lhs > 1 then (
+      [ pos, Assign (var, (pos, Tuple rhs), 1, None) ], var)
+    else if List.length lhs > 1
+    then (
       let var = pos, Id (new_assign ()) in
-      [pos, Assign (var, List.hd rhs, 1, None)], var
-    ) else ([], List.hd rhs)
+      [ pos, Assign (var, List.hd rhs, 1, None) ], var)
+    else [], List.hd rhs
   in
   (* wrap LHS in tuple as well (e.g. x, y -> (x, y)) *)
-  let lhs = match lhs with [_, (Tuple l | List l)] -> l | l -> l in
-  let exprs = match lhs with
-    | [lhs] -> [pos, Assign (lhs, rhs, shadow, None)]
+  let lhs =
+    match lhs with
+    | [ (_, (Tuple l | List l)) ] -> l
+    | l -> l
+  in
+  let exprs =
+    match lhs with
+    | [ lhs ] -> [ pos, Assign (lhs, rhs, shadow, None) ]
     | lhs ->
       let len = List.length lhs in
       let unpack_i = ref (-1) in
-      List.concat (List.mapi
-        (fun i expr ->
-          match snd expr with
-          | Unpack var when !unpack_i = -1 ->
-            unpack_i := i;
-            let start = Some (pos, Int (string_of_int i, "")) in
-            let eend =
-              if i = len - 1 then None
-              else Some (pos, Int (string_of_int @@ i +  1 - len, ""))
-            in
-            let slice = pos, Slice (start, eend, None) in
-            let rhs = pos, Index (rhs, slice) in
-            [pos, Assign ((pos, Id var), rhs, shadow, None)]
-          | Unpack _ when !unpack_i > -1 ->
-            raise (GrammarError ("cannot have two tuple unpackings on LHS", fst pos))
-          | _ ->
-            (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
-            (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
-            let i = if !unpack_i = -1 then i else i - len in
-            parse_assign pos [expr] [pos, Index (rhs, (pos, Int (string_of_int i, "")))] shadow)
-        lhs) (* TODO: add assertes *)
+      List.concat
+        (List.mapi
+           (fun i expr ->
+             match snd expr with
+             | Unpack var when !unpack_i = -1 ->
+               unpack_i := i;
+               let start = Some (pos, Int (string_of_int i, "")) in
+               let eend =
+                 if i = len - 1
+                 then None
+                 else Some (pos, Int (string_of_int @@ (i + 1 - len), ""))
+               in
+               let slice = pos, Slice (start, eend, None) in
+               let rhs = pos, Index (rhs, slice) in
+               [ pos, Assign ((pos, Id var), rhs, shadow, None) ]
+             | Unpack _ when !unpack_i > -1 ->
+               raise (GrammarError ("cannot have two tuple unpackings on LHS", fst pos))
+             | _ ->
+               (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
+               (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
+               let i = if !unpack_i = -1 then i else i - len in
+               parse_assign
+                 pos
+                 [ expr ]
+                 [ pos, Index (rhs, (pos, Int (string_of_int i, ""))) ]
+                 shadow)
+           lhs)
+    (* TODO: add assertes *)
   in
   init_exprs @ exprs

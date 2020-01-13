@@ -77,7 +77,9 @@ void TransformExprVisitor::visit(FStringExpr &expr) {
       braces_count--;
       if (!braces_count) {
         string code = expr.value.substr(brace_start, i - brace_start);
-        auto newExpr = parse_expr(code);
+        auto offset = expr.getSrcInfo();
+        offset.col += i;
+        auto newExpr = parse_expr(code, offset);
         items.push_back(Visit(*newExpr, expr.getSrcInfo()));
       }
       brace_start = i + 1;
@@ -100,7 +102,7 @@ void TransformExprVisitor::visit(KmerExpr &expr) {
       make_unique<IndexExpr>(
           make_unique<IdExpr>("Kmer"),
           make_unique<IntExpr>(std::to_string(expr.value.size()), "")),
-      make_unique<SeqExpr>(expr.value, "s"));
+      make_unique<SeqExpr>(expr.value));
   Set(Visit(*p, expr.getSrcInfo()));
 }
 void TransformExprVisitor::visit(SeqExpr &expr) {
@@ -109,9 +111,9 @@ void TransformExprVisitor::visit(SeqExpr &expr) {
                                       make_unique<StringExpr>(expr.value));
     Set(Visit(*p, expr.getSrcInfo()));
   } else if (expr.prefix == "s") {
-    Return(SeqExpr, expr);
+    Return(SeqExpr, expr.value, expr.prefix);
   } else {
-    error(expr.getSrcInfo(), "invalid seq prefix");
+    error(expr.getSrcInfo(), "invalid seq prefix '{}'", expr.prefix);
   }
 }
 void TransformExprVisitor::visit(IdExpr &expr) { Return(IdExpr, expr); }
@@ -146,7 +148,9 @@ void TransformExprVisitor::visit(DictExpr &expr) {
 void TransformExprVisitor::visit(GeneratorExpr &expr) {
   for (auto &l : expr.loops) {
     l.gen = Visit(*l.gen);
-    l.cond = Visit(*l.cond);
+    for (auto &c: l.conds) {
+      c = Visit(*c);
+    }
   }
   Return(GeneratorExpr, expr.kind, Visit(*expr.expr), move(expr.loops));
   /* TODO transform:
@@ -157,7 +161,9 @@ void TransformExprVisitor::visit(GeneratorExpr &expr) {
 void TransformExprVisitor::visit(DictGeneratorExpr &expr) {
   for (auto &l : expr.loops) {
     l.gen = Visit(*l.gen);
-    l.cond = Visit(*l.cond);
+    for (auto &c: l.conds) {
+      c = Visit(*c);
+    }
   }
   Return(DictGeneratorExpr, Visit(*expr.key), Visit(*expr.expr),
          move(expr.loops));

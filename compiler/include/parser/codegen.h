@@ -65,10 +65,13 @@ class CodegenStmtVisitor : public StmtVisitor {
 public:
   CodegenStmtVisitor(Context &ctx);
 
+  static void apply(Context &ctx, unique_ptr<SuiteStmt> &s);
   void Set(seq::Stmt *p);
   seq::Stmt *Visit(Stmt &e);
   seq::Expr *Visit(Expr &e);
+  seq::types::Type *VisitType(Expr &e);
 
+  virtual void visit(SuiteStmt &) override;
   virtual void visit(PassStmt &) override;
   virtual void visit(BreakStmt &) override;
   virtual void visit(ContinueStmt &) override;
@@ -95,4 +98,4 @@ public:
   virtual void visit(ClassStmt &) override;
 };
 
-#define Return(T, ...) Set(new T(__VA_ARGS__))
+#define RETURN(T, ...) Set(new T(__VA_ARGS__))

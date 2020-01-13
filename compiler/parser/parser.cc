@@ -15,20 +15,12 @@ using std::vector;
 
 SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file) {
   try {
-    auto module = new seq::SeqModule();
     auto stmts = parse_file(file);
-    auto tv = TransformStmtVisitor();
-    for (auto &s: stmts) {
-      s->accept(tv);
-    }
-    auto context = Context(module, file);
-    auto cv = CodegenStmtVisitor(context);
-    for (auto &s: stmts) {
-      fmt::print("> {}", s->to_string());
-      s->accept(cv);
-    }
-    module->setFileName(file);
-    return module;
+    auto tv = TransformStmtVisitor::apply(move(stmts));
+
+    auto context = Context(new seq::SeqModule(), file);
+    CodegenStmtVisitor::apply(context, tv);
+    return context.getModule();
   } catch (seq::exc::SeqException &e) {
     seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                      e.getSrcInfo().col);
