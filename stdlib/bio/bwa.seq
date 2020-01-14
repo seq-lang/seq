@@ -115,7 +115,7 @@ type mem_aln_t(_pos: i64,
 
     @property
     def pos(self: mem_aln_t):
-        return self._pos
+        return int(self._pos)
 
     @property
     def rid(self: mem_aln_t):
@@ -131,11 +131,11 @@ type mem_aln_t(_pos: i64,
 
     @property
     def mapq(self: mem_aln_t):
-        return (self._bitfields & u32(0x3fc)) >> u32(2)
+        return int((self._bitfields & u32(0x3fc)) >> u32(2))
 
     @property
     def NM(self: mem_aln_t):
-        return (self._bitfields & u32(0xfffffc00)) >> u32(10)
+        return int((self._bitfields & u32(0xfffffc00)) >> u32(10))
 
     @property
     def cigar(self: mem_aln_t):
