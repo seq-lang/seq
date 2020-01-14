@@ -309,7 +309,7 @@ As a concrete example, consider Seq's built-in FM-index type, ``FMIndex``, and a
         intv = fmi.interval(s[-1])          # initial FM-index interval
         s = s[:-1]                          # trim off last base of sequence
         while s and intv:
-            prefetch fmi[(intv, s[-1])]     # prefetch for backwards extension
+            prefetch fmi[intv, s[-1]]       # prefetch for backwards extension
             intv = fmi.update(intv, s[-1])  # backwards extend FM-index interval
             s = s[:-1]                      # trim off last base of sequence
         return len(intv)                    # return count of sequence in index
