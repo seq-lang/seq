@@ -75,10 +75,10 @@ void CodegenStmtVisitor::visit(const SuiteStmt *stmt) {
 void CodegenStmtVisitor::visit(const PassStmt *stmt) {
 }
 void CodegenStmtVisitor::visit(const BreakStmt *stmt) {
-  ERROR("TODO");
+  RETURN(seq::Break, );
 }
 void CodegenStmtVisitor::visit(const ContinueStmt *stmt) {
-  ERROR("TODO");
+  RETURN(seq::Continue, );
 }
 void CodegenStmtVisitor::visit(const ExprStmt *stmt) {
   RETURN(seq::ExprStmt, transform(stmt->expr));
@@ -87,7 +87,7 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
   ERROR("TODO");
 }
 void CodegenStmtVisitor::visit(const DelStmt *stmt) {
-  ERROR("TODO");
+  RETURN(seq::Del, VAR);
 }
 void CodegenStmtVisitor::visit(const PrintStmt *stmt) {
   if (stmt->items.size() != 1) {
@@ -98,21 +98,27 @@ void CodegenStmtVisitor::visit(const PrintStmt *stmt) {
 void CodegenStmtVisitor::visit(const ReturnStmt *stmt) {
   if (!stmt->expr) {
     RETURN(seq::Return, nullptr);
-  } else {
+  } else if (auto f = dynamic_cast<seq::Func*>(ctx.getBase())) {
     auto ret = new seq::Return(transform(stmt->expr));
-    if (auto f = dynamic_cast<seq::Func*>(ctx.getBase())) {
-      f->sawReturn(ret);
-    } else {
-      ERROR("return outside function");
-    }
+    f->sawReturn(ret);
     this->result = ret;
+  } else {
+    ERROR("return outside function");
   }
 }
 void CodegenStmtVisitor::visit(const YieldStmt *stmt) {
-  ERROR("TODO");
+  if (!stmt->expr) {
+    RETURN(seq::Yield, nullptr);
+  } else if (auto f = dynamic_cast<seq::Func*>(ctx.getBase())) {
+    auto ret = new seq::Yield(transform(stmt->expr));
+    f->sawYield(ret);
+    this->result = ret;
+  } else {
+    ERROR("yield outside function");
+  }
 }
 void CodegenStmtVisitor::visit(const AssertStmt *stmt) {
-  ERROR("TODO");
+  RETURN(seq::Assert, transform(stmt->expr));
 }
 void CodegenStmtVisitor::visit(const TypeAliasStmt *stmt) {
   ERROR("TODO");
@@ -172,7 +178,7 @@ void CodegenStmtVisitor::visit(const GlobalStmt *stmt) {
   ERROR("TODO");
 }
 void CodegenStmtVisitor::visit(const ThrowStmt *stmt) {
-  ERROR("TODO");
+  RETURN(seq::Throw, transform(stmt->expr));
 }
 void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) {
   ERROR("TODO");
@@ -251,5 +257,46 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   RETURN(seq::FuncStmt, f);
 }
 void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
-  ERROR("TODO");
+  seq::types::Type *t;
+  if (stmt->isType) {
+    t = types::RecordType::get({}, {}, stmt->name);
+  } else {
+    t = new seq::types::RefType::get(stmt->name);
+  }
+  ctx.add(stmt->name, t);
+  ctx.setEnclosingType(t);
+  ctx.addBlock();
+
+  if (!stmt->isType) {
+    unordered_set<string> generics(stmt->generics.begin(), stmt->generics.end());
+    f->addGenerics(generics.size());
+    int gc = 0;
+    for (auto &g: generics) {
+      f->getGeneric(gc)->setName(g);
+      ctx.add(g, f->getGeneric(gc++));
+    }
+  } else if (stmt->generics.size()) {
+    ERROR("types cannot be generic")
+  }
+
+  vector<seq::types::Type*> types;
+  vector<string> names;
+  vector<seq::Expr*> defaults;
+  if (stmt->isType && !stmt->args.size()) {
+    ERROR("types need at least one member");
+  } else for (auto &arg: stmt->args) {
+    if (!arg.type) {
+      ERROR("type information needed for '{}'", arg.name);
+    }
+    types.push_back(transformType(arg.type));
+    names.push_back(arg.name);
+  }
+  if (stmt->isType) {
+    t->setContents(types, names);
+  } else {
+    t->setContents(types::RecordType::get(types, names, ""));
+  }
+  transform(stmt->suite);
+  ctx.popBlock();
+  ctx.setEnclosingType(nullptr);
 }
