@@ -1,8 +1,10 @@
 #pragma once
 
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "seq/seq.h"
 

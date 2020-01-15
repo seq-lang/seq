@@ -34,6 +34,7 @@ CodegenExprVisitor::CodegenExprVisitor(Context &ctx,
 
 void CodegenExprVisitor::Set(seq::Expr *stmt) { result = stmt; }
 seq::Expr *CodegenExprVisitor::Visit(Expr &expr) {
+  fmt::print("<e> {} :pos {}\n", expr, expr.getSrcInfo());
   CodegenExprVisitor v(ctx, stmtVisitor);
   expr.accept(v);
   if (v.result) {

@@ -16,7 +16,7 @@ using std::vector;
 struct Expr : public seq::SrcObject {
   virtual ~Expr() {}
   virtual string to_string() const = 0;
-  virtual void accept(ExprVisitor &) = 0;
+  virtual void accept(ExprVisitor &) const = 0;
   friend ostream &operator<<(ostream &out, const Expr &c) {
     return out << c.to_string();
   }
@@ -25,7 +25,7 @@ struct Expr : public seq::SrcObject {
 typedef unique_ptr<Expr> ExprPtr;
 
 #define ACCEPT_VISITOR                                                         \
-  virtual void accept(ExprVisitor &visitor) { visitor.visit(*this); }
+  virtual void accept(ExprVisitor &visitor) const override { visitor.visit(this); }
 
 struct EmptyExpr : public Expr {
   EmptyExpr();

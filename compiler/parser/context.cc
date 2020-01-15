@@ -63,6 +63,7 @@ Context::Context(seq::SeqModule *module, const string &filename):
     VTable<ContextItem>::add(i.first,
       make_shared<TypeContextItem>(i.second, getBase(), true, true, true));
   }
+  add("__argv__", module->getArgVar());
 }
 
 shared_ptr<ContextItem> Context::find(const string &name) const {

@@ -29,211 +29,199 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-#define Return(T, ...) Set(make_unique<T>(__VA_ARGS__))
-
-void TransformExprVisitor::Set(ExprPtr &&expr) { result = move(expr); }
-ExprPtr TransformExprVisitor::Visit(Expr &expr) {
-  TransformExprVisitor v;
-  if (newSrcInfo)
-    v.newSrcInfo = move(newSrcInfo);
-  expr.accept(v);
-  if (v.result && v.newSrcInfo) {
-    v.result->setSrcInfo(*v.newSrcInfo);
-  }
-  if (v.newSrcInfo)
-    newSrcInfo = move(v.newSrcInfo);
-  return move(v.result);
-}
-ExprPtr TransformExprVisitor::Visit(Expr &expr, const seq::SrcInfo &newInfo) {
-  TransformExprVisitor v;
-  v.newSrcInfo = make_unique<seq::SrcInfo>(newInfo);
-  expr.accept(v);
-  if (v.result && v.newSrcInfo) {
-    v.result->setSrcInfo(*v.newSrcInfo);
-  }
-  return move(v.result);
+#define RETURN(T, ...) (this->result = make_unique<T>(__VA_ARGS__))
+template <typename T> T &&setSrcInfo(T &&t, const seq::SrcInfo &i) {
+  t->setSrcInfo(i);
+  return t;
 }
 
-void TransformExprVisitor::visit(EmptyExpr &expr) { Return(EmptyExpr, ); }
-void TransformExprVisitor::visit(BoolExpr &expr) { Return(BoolExpr, expr); }
-void TransformExprVisitor::visit(IntExpr &expr) { Return(IntExpr, expr); }
-void TransformExprVisitor::visit(FloatExpr &expr) { Return(FloatExpr, expr); }
-void TransformExprVisitor::visit(StringExpr &expr) { Return(StringExpr, expr); }
-void TransformExprVisitor::visit(FStringExpr &expr) {
+#define E(T, ...) make_unique<T>(__VA_ARGS__)
+#define EP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
+#define ERROR(...) error(expr->getSrcInfo(), __VA_ARGS__)
+
+ExprPtr TransformExprVisitor::transform(const ExprPtr &expr) {
+  TransformExprVisitor v;
+  expr->accept(v);
+  fmt::print("==> {} :pos {} \n => {} : pos {}\n", expr, expr->getSrcInfo(),
+             *v.result, v.result->getSrcInfo());
+  return move(v.result);
+}
+vector<ExprPtr> TransformExprVisitor::transform(const vector<ExprPtr> &exprs) {
+  vector<ExprPtr> r(exprs.size());
+  for (auto &e : exprs) {
+    r.push_back(transform(e));
+  }
+  return move(r);
+}
+
+void TransformExprVisitor::visit(const EmptyExpr *expr) { RETURN(EmptyExpr, ); }
+void TransformExprVisitor::visit(const BoolExpr *expr) {
+  RETURN(BoolExpr, expr->value);
+}
+void TransformExprVisitor::visit(const IntExpr *expr) {
+  RETURN(IntExpr, expr->value);
+}
+void TransformExprVisitor::visit(const FloatExpr *expr) {
+  RETURN(FloatExpr, expr->value);
+}
+void TransformExprVisitor::visit(const StringExpr *expr) {
+  RETURN(StringExpr, expr->value);
+}
+void TransformExprVisitor::visit(const FStringExpr *expr) {
   int braces_count = 0, brace_start = 0;
   vector<ExprPtr> items;
-  for (int i = 0; i < expr.value.size(); i++) {
-    if (expr.value[i] == '{') {
+  for (int i = 0; i < expr->value.size(); i++) {
+    if (expr->value[i] == '{') {
       if (brace_start < i) {
-        ExprPtr p = make_unique<StringExpr>(
-            expr.value.substr(brace_start, i - brace_start));
-        items.push_back(Visit(*p, expr.getSrcInfo()));
+        items.push_back(
+            EP(StringExpr, expr->value.substr(brace_start, i - brace_start)));
       }
       if (!braces_count) {
         brace_start = i + 1;
       }
       braces_count++;
-    } else if (expr.value[i] == '}') {
+    } else if (expr->value[i] == '}') {
       braces_count--;
       if (!braces_count) {
-        string code = expr.value.substr(brace_start, i - brace_start);
-        auto offset = expr.getSrcInfo();
+        string code = expr->value.substr(brace_start, i - brace_start);
+        auto offset = expr->getSrcInfo();
         offset.col += i;
-        auto newExpr = parse_expr(code, offset);
-        items.push_back(Visit(*newExpr, expr.getSrcInfo()));
+        items.push_back(transform(parse_expr(code, offset)));
       }
       brace_start = i + 1;
     }
   }
   if (braces_count) {
-    error(expr.getSrcInfo(), "f-string braces not balanced");
+    ERROR("f-string braces not balanced");
   }
-  if (brace_start != expr.value.size()) {
-    ExprPtr p = make_unique<StringExpr>(
-        expr.value.substr(brace_start, expr.value.size() - brace_start));
-    items.push_back(Visit(*p, expr.getSrcInfo()));
+  if (brace_start != expr->value.size()) {
+    items.push_back(transform(
+        EP(StringExpr,
+           expr->value.substr(brace_start, expr->value.size() - brace_start))));
   }
-  ExprPtr p = make_unique<CallExpr>(
-      make_unique<DotExpr>(make_unique<IdExpr>("str"), "cat"), move(items));
-  Set(Visit(*p, expr.getSrcInfo()));
+  this->result = transform(
+      EP(CallExpr, EP(DotExpr, EP(IdExpr, "str"), "cat"), move(items)));
 }
-void TransformExprVisitor::visit(KmerExpr &expr) {
-  ExprPtr p = make_unique<CallExpr>(
-      make_unique<IndexExpr>(
-          make_unique<IdExpr>("Kmer"),
-          make_unique<IntExpr>(std::to_string(expr.value.size()), "")),
-      make_unique<SeqExpr>(expr.value));
-  Set(Visit(*p, expr.getSrcInfo()));
+void TransformExprVisitor::visit(const KmerExpr *expr) {
+  this->result =
+      transform(EP(CallExpr,
+                   EP(IndexExpr, EP(IdExpr, "Kmer"),
+                      EP(IntExpr, std::to_string(expr->value.size()), "")),
+                   EP(SeqExpr, expr->value)));
 }
-void TransformExprVisitor::visit(SeqExpr &expr) {
-  if (expr.prefix == "p") {
-    ExprPtr p = make_unique<CallExpr>(make_unique<IdExpr>("pseq"),
-                                      make_unique<StringExpr>(expr.value));
-    Set(Visit(*p, expr.getSrcInfo()));
-  } else if (expr.prefix == "s") {
-    Return(SeqExpr, expr.value, expr.prefix);
+void TransformExprVisitor::visit(const SeqExpr *expr) {
+  if (expr->prefix == "p") {
+    this->result =
+        transform(EP(CallExpr, EP(IdExpr, "seq"), EP(StringExpr, expr->value)));
+  } else if (expr->prefix == "s") {
+    RETURN(SeqExpr, expr->value, expr->prefix);
   } else {
-    error(expr.getSrcInfo(), "invalid seq prefix '{}'", expr.prefix);
+    ERROR("invalid seq prefix '{}'", expr->prefix);
   }
 }
-void TransformExprVisitor::visit(IdExpr &expr) { Return(IdExpr, expr); }
-void TransformExprVisitor::visit(UnpackExpr &expr) {
-  error(expr.getSrcInfo(), "unexpected unpacking operator");
+void TransformExprVisitor::visit(const IdExpr *expr) { RETURN(IdExpr, expr); }
+void TransformExprVisitor::visit(const UnpackExpr *expr) {
+  ERROR("unexpected unpacking operator");
 }
-void TransformExprVisitor::visit(TupleExpr &expr) {
-  for (auto &i : expr.items) {
-    i = Visit(*i);
+void TransformExprVisitor::visit(const TupleExpr *expr) {
+  RETURN(TupleExpr, transform(expr->items));
+}
+void TransformExprVisitor::visit(const ListExpr *expr) {
+  RETURN(ListExpr, transform(expr->items));
+}
+void TransformExprVisitor::visit(const SetExpr *expr) {
+  RETURN(SetExpr, transform(expr->items));
+}
+void TransformExprVisitor::visit(const DictExpr *expr) {
+  vector<DictExpr::KeyValue> items;
+  for (auto &l : expr->items) {
+    items.push_back({transform(l.key), transform(l.value)});
   }
-  Return(TupleExpr, move(expr.items));
+  RETURN(DictExpr, move(items));
 }
-void TransformExprVisitor::visit(ListExpr &expr) {
-  for (auto &i : expr.items) {
-    i = Visit(*i);
+void TransformExprVisitor::visit(const GeneratorExpr *expr) {
+  vector<GeneratorExpr::Body> loops;
+  for (auto &l : expr->loops) {
+    loops.push_back({l.vars, transform(l.gen), transform(l.conds)});
   }
-  Return(ListExpr, move(expr.items));
+  RETURN(GeneratorExpr, expr->kind, transform(expr->expr), move(loops));
+  /* TODO transform: T = list[T]() for_1: cond_1: for_2: cond_2: expr */
 }
-void TransformExprVisitor::visit(SetExpr &expr) {
-  for (auto &i : expr.items) {
-    i = Visit(*i);
+void TransformExprVisitor::visit(const DictGeneratorExpr *expr) {
+  vector<GeneratorExpr::Body> loops;
+  for (auto &l : expr->loops) {
+    loops.push_back({l.vars, transform(l.gen), transform(l.conds)});
   }
-  Return(SetExpr, move(expr.items));
+  RETURN(DictGeneratorExpr, transform(expr->key), transform(expr->expr),
+         move(loops));
 }
-void TransformExprVisitor::visit(DictExpr &expr) {
-  for (auto &i : expr.items) {
-    i.key = Visit(*i.key);
-    i.value = Visit(*i.value);
+void TransformExprVisitor::visit(const IfExpr *expr) {
+  RETURN(IfExpr, transform(expr->cond), transform(expr->eif),
+         transform(expr->eelse));
+}
+void TransformExprVisitor::visit(const UnaryExpr *expr) {
+  RETURN(UnaryExpr, expr->op, transform(expr->expr));
+}
+void TransformExprVisitor::visit(const BinaryExpr *expr) {
+  RETURN(BinaryExpr, transform(expr->lexpr), expr->op, transform(expr->rexpr));
+}
+void TransformExprVisitor::visit(const PipeExpr *expr) {
+  vector<PipeExpr::Pipe> items;
+  for (auto &l : expr->items) {
+    items.push_back({l.op, transform(l.expr)});
   }
-  Return(DictExpr, move(expr.items));
+  RETURN(PipeExpr, move(items));
 }
-void TransformExprVisitor::visit(GeneratorExpr &expr) {
-  for (auto &l : expr.loops) {
-    l.gen = Visit(*l.gen);
-    for (auto &c: l.conds) {
-      c = Visit(*c);
-    }
-  }
-  Return(GeneratorExpr, expr.kind, Visit(*expr.expr), move(expr.loops));
-  /* TODO transform:
-   T = list[T]()
-   for_1: cond_1: for_2: cond_2: expr
-   */
+void TransformExprVisitor::visit(const IndexExpr *expr) {
+  RETURN(IndexExpr, transform(expr->expr), transform(expr->index));
 }
-void TransformExprVisitor::visit(DictGeneratorExpr &expr) {
-  for (auto &l : expr.loops) {
-    l.gen = Visit(*l.gen);
-    for (auto &c: l.conds) {
-      c = Visit(*c);
-    }
-  }
-  Return(DictGeneratorExpr, Visit(*expr.key), Visit(*expr.expr),
-         move(expr.loops));
-}
-void TransformExprVisitor::visit(IfExpr &expr) {
-  Return(IfExpr, Visit(*expr.cond), Visit(*expr.eif), Visit(*expr.eelse));
-}
-void TransformExprVisitor::visit(UnaryExpr &expr) {
-  Return(UnaryExpr, expr.op, Visit(*expr.expr));
-}
-void TransformExprVisitor::visit(BinaryExpr &expr) {
-  Return(BinaryExpr, Visit(*expr.lexpr), expr.op, Visit(*expr.rexpr));
-}
-void TransformExprVisitor::visit(PipeExpr &expr) {
-  for (auto &i : expr.items) {
-    i.expr = Visit(*i.expr);
-  }
-  Return(PipeExpr, move(expr.items));
-}
-void TransformExprVisitor::visit(IndexExpr &expr) {
-  Return(IndexExpr, Visit(*expr.expr), Visit(*expr.index));
-}
-void TransformExprVisitor::visit(CallExpr &expr) {
+void TransformExprVisitor::visit(const CallExpr *expr) {
   // TODO: name resolution should come here!
-  for (auto &i : expr.args) {
-    i.value = Visit(*i.value);
+  vector<CallExpr::Arg> args;
+  for (auto &i : expr->args) {
+    args.push_back({i.name, transform(i.value)});
   }
-  Return(CallExpr, Visit(*expr.expr), move(expr.args));
+  RETURN(CallExpr, transform(expr->expr), move(args));
 }
-void TransformExprVisitor::visit(DotExpr &expr) {
-  Return(DotExpr, Visit(*expr.expr), expr.member);
+void TransformExprVisitor::visit(const DotExpr *expr) {
+  RETURN(DotExpr, transform(expr->expr), expr->member);
 }
-void TransformExprVisitor::visit(SliceExpr &expr) {
+void TransformExprVisitor::visit(const SliceExpr *expr) {
   string prefix;
-  if (!expr.st && expr.ed) {
+  if (!expr->st && expr->ed) {
     prefix = "l";
-  } else if (expr.st && !expr.ed) {
+  } else if (expr->st && !expr->ed) {
     prefix = "r";
-  } else if (!expr.st && expr.ed) {
+  } else if (!expr->st && expr->ed) {
     prefix = "e";
   }
-  if (expr.step) {
+  if (expr->step) {
     prefix += "s";
   }
   vector<ExprPtr> args;
-  if (expr.st) {
-    args.push_back(move(expr.st));
+  if (expr->st) {
+    args.push_back(transform(expr->st));
   }
-  if (expr.ed) {
-    args.push_back(move(expr.ed));
+  if (expr->ed) {
+    args.push_back(transform(expr->ed));
   }
-  if (expr.step) {
-    args.push_back(move(expr.step));
+  if (expr->step) {
+    args.push_back(transform(expr->step));
   }
   if (!args.size()) {
-    ExprPtr p = make_unique<IntExpr>("0");
-    args.push_back(Visit(*p, expr.getSrcInfo()));
+    args.push_back(transform(EP(IntExpr, "0")));
   }
-  ExprPtr p =
-      make_unique<CallExpr>(make_unique<IdExpr>(prefix + "slice"), move(args));
-  Set(Visit(*p, expr.getSrcInfo()));
+  // TODO: might need transform later
+  this->result = EP(CallExpr, EP(IdExpr, prefix + "slice"), move(args));
 }
-void TransformExprVisitor::visit(EllipsisExpr &expr) { Return(EllipsisExpr, ); }
-void TransformExprVisitor::visit(TypeOfExpr &expr) {
-  Return(TypeOfExpr, Visit(*expr.expr));
+void TransformExprVisitor::visit(const EllipsisExpr *expr) {
+  RETURN(EllipsisExpr, );
 }
-void TransformExprVisitor::visit(PtrExpr &expr) {
-  Return(PtrExpr, Visit(*expr.expr));
+void TransformExprVisitor::visit(const TypeOfExpr *expr) {
+  RETURN(TypeOfExpr, transform(expr->expr));
 }
-void TransformExprVisitor::visit(LambdaExpr &expr) {
-  error(expr.getSrcInfo(), "TODO");
+void TransformExprVisitor::visit(const PtrExpr *expr) {
+  RETURN(PtrExpr, transform(expr->expr));
 }
-void TransformExprVisitor::visit(YieldExpr &expr) { Return(YieldExpr, ); }
+void TransformExprVisitor::visit(const LambdaExpr *expr) { ERROR("TODO"); }
+void TransformExprVisitor::visit(const YieldExpr *expr) { RETURN(YieldExpr, ); }

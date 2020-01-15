@@ -55,6 +55,13 @@ void error(const seq::SrcInfo &p, const char *format) {
   seq::compilationError(string(format), p.file, p.line, p.col);
 }
 
+namespace seq {
+std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c) {
+    out << c.file << ":" << c.line << ":" << c.col;
+    return out;
+}
+}
+
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 

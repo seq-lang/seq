@@ -23,9 +23,24 @@ string Param::to_string() const {
                 deflt ? " :default " + deflt->to_string() : "");
 }
 
+Stmt::Stmt(const seq::SrcInfo &s) {
+  setSrcInfo(s);
+}
+
+vector<Stmt*> Stmt::getStatements() {
+  return { this };
+}
+
 SuiteStmt::SuiteStmt(vector<StmtPtr> s) : stmts(move(s)) {}
 string SuiteStmt::to_string() const {
   return format("({})", combine(stmts));
+}
+vector<Stmt*> SuiteStmt::getStatements() {
+  vector<Stmt*> result;
+  for (auto &s: stmts) {
+    result.push_back(s.get());
+  }
+  return result;
 }
 
 PassStmt::PassStmt() {}
@@ -75,12 +90,12 @@ string AssertStmt::to_string() const { return format("(#assert {})", *expr); }
 TypeAliasStmt::TypeAliasStmt(string n, ExprPtr e) : name(n), expr(move(e)) {}
 string TypeAliasStmt::to_string() const { return format("(#alias {})", *expr); }
 
-WhileStmt::WhileStmt(ExprPtr c, SuiteStmtPtr s) : cond(move(c)), suite(move(s)) {}
+WhileStmt::WhileStmt(ExprPtr c, StmtPtr s) : cond(move(c)), suite(move(s)) {}
 string WhileStmt::to_string() const {
   return format("(#while {} {})", *cond, *suite);
 }
 
-ForStmt::ForStmt(vector<string> v, ExprPtr i, SuiteStmtPtr s)
+ForStmt::ForStmt(vector<string> v, ExprPtr i, StmtPtr s)
     : vars(v), iter(move(i)), suite(move(s)) {}
 string ForStmt::to_string() const {
   return format("(#for ({}) {} {})", fmt::join(vars, " "), *iter, *suite);
@@ -95,7 +110,7 @@ string IfStmt::to_string() const {
   return format("(#if{})", s);
 }
 
-MatchStmt::MatchStmt(ExprPtr w, vector<pair<PatternPtr, SuiteStmtPtr>> c) : what(move(w)), cases(move(c)) {}
+MatchStmt::MatchStmt(ExprPtr w, vector<pair<PatternPtr, StmtPtr>> c) : what(move(w)), cases(move(c)) {}
 string MatchStmt::to_string() const {
   string s;
   for (auto &i : cases)
@@ -131,22 +146,22 @@ string ExternImportStmt::to_string() const {
   );
 }
 
-ExtendStmt::ExtendStmt(ExprPtr e, SuiteStmtPtr s)
+ExtendStmt::ExtendStmt(ExprPtr e, StmtPtr s)
     : what(move(e)), suite(move(s)) {}
 string ExtendStmt::to_string() const {
   return format("(#extend {} {})", *what, *suite);
 }
 
 
-TryStmt::TryStmt(SuiteStmtPtr s, vector<Catch> c, SuiteStmtPtr f)
+TryStmt::TryStmt(StmtPtr s, vector<Catch> c, StmtPtr f)
     : suite(move(s)), catches(move(c)), finally(move(f)) {}
 string TryStmt::to_string() const {
   string s;
   for (auto &i : catches)
     s += format(" ({}{}{})", i.var != "" ? format(":var {} ", i.var) : "",
                 i.exc ? format(":exc {} ", *i.exc) : "", *i.suite);
-  return format("(#try {}{}{})", *suite, s,
-                finally->stmts.size() ? format(" :finally {}", *finally) : "");
+  auto f = format("{}", *finally);
+  return format("(#try {}{}{})", *suite, s, f.size() ? format(" :finally {}", f) : "");
 }
 
 GlobalStmt::GlobalStmt(string v) : var(v) {}
@@ -161,7 +176,7 @@ string PrefetchStmt::to_string() const {
 }
 
 FunctionStmt::FunctionStmt(string n, ExprPtr r, vector<string> g,
-                           vector<Param> a, SuiteStmtPtr s, vector<string> at)
+                           vector<Param> a, StmtPtr s, vector<string> at)
     : name(n), ret(move(r)), generics(g), args(move(a)), suite(move(s)),
       attributes(at) {}
 string FunctionStmt::to_string() const {
@@ -179,7 +194,7 @@ string FunctionStmt::to_string() const {
 }
 
 ClassStmt::ClassStmt(bool i, string n, vector<string> g, vector<Param> a,
-                     SuiteStmtPtr s)
+                     StmtPtr s)
     : is_type(i), name(n), generics(g), args(move(a)), suite(move(s)) {}
 string ClassStmt::to_string() const {
   string as;

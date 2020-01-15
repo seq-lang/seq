@@ -248,8 +248,8 @@ unique_ptr<Pattern> parse_pattern(value val) {
 }
 
 unique_ptr<Stmt> parse_stmt(value val);
-unique_ptr<SuiteStmt> parse_stmt_list(value val) {
-  return make_unique<SuiteStmt>(parse_list(val, parse_stmt));
+unique_ptr<Stmt> parse_stmt_list(value val) {
+  return StmtPtr(new SuiteStmt(parse_list(val, parse_stmt)));
 }
 
 unique_ptr<Stmt> parse_stmt(value val) {
@@ -394,7 +394,7 @@ unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset, int
                    Val_int(line_offset),
                    Val_int(col_offset) };
   p1 = caml_callbackN(*closure_f, 4, args);
-  return parse_stmt_list(p1);
+  return make_unique<SuiteStmt>(parse_list(p1, parse_stmt));
 }
 
 void ocaml_initialize() {

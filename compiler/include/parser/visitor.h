@@ -31,35 +31,35 @@ struct LambdaExpr;
 struct YieldExpr;
 
 struct ExprVisitor {
-  virtual void visit(EmptyExpr &) = 0;
-  virtual void visit(BoolExpr &) = 0;
-  virtual void visit(IntExpr &) = 0;
-  virtual void visit(FloatExpr &) = 0;
-  virtual void visit(StringExpr &) = 0;
-  virtual void visit(FStringExpr &) = 0;
-  virtual void visit(KmerExpr &) = 0;
-  virtual void visit(SeqExpr &) = 0;
-  virtual void visit(IdExpr &) = 0;
-  virtual void visit(UnpackExpr &) = 0;
-  virtual void visit(TupleExpr &) = 0;
-  virtual void visit(ListExpr &) = 0;
-  virtual void visit(SetExpr &) = 0;
-  virtual void visit(DictExpr &) = 0;
-  virtual void visit(GeneratorExpr &) = 0;
-  virtual void visit(DictGeneratorExpr &) = 0;
-  virtual void visit(IfExpr &) = 0;
-  virtual void visit(UnaryExpr &) = 0;
-  virtual void visit(BinaryExpr &) = 0;
-  virtual void visit(PipeExpr &) = 0;
-  virtual void visit(IndexExpr &) = 0;
-  virtual void visit(CallExpr &) = 0;
-  virtual void visit(DotExpr &) = 0;
-  virtual void visit(SliceExpr &) = 0;
-  virtual void visit(EllipsisExpr &) = 0;
-  virtual void visit(TypeOfExpr &) = 0;
-  virtual void visit(PtrExpr &) = 0;
-  virtual void visit(LambdaExpr &) = 0;
-  virtual void visit(YieldExpr &) = 0;
+  virtual void visit(const EmptyExpr *) = 0;
+  virtual void visit(const BoolExpr *) = 0;
+  virtual void visit(const IntExpr *) = 0;
+  virtual void visit(const FloatExpr *) = 0;
+  virtual void visit(const StringExpr *) = 0;
+  virtual void visit(const FStringExpr *) = 0;
+  virtual void visit(const KmerExpr *) = 0;
+  virtual void visit(const SeqExpr *) = 0;
+  virtual void visit(const IdExpr *) = 0;
+  virtual void visit(const UnpackExpr *) = 0;
+  virtual void visit(const TupleExpr *) = 0;
+  virtual void visit(const ListExpr *) = 0;
+  virtual void visit(const SetExpr *) = 0;
+  virtual void visit(const DictExpr *) = 0;
+  virtual void visit(const GeneratorExpr *) = 0;
+  virtual void visit(const DictGeneratorExpr *) = 0;
+  virtual void visit(const IfExpr *) = 0;
+  virtual void visit(const UnaryExpr *) = 0;
+  virtual void visit(const BinaryExpr *) = 0;
+  virtual void visit(const PipeExpr *) = 0;
+  virtual void visit(const IndexExpr *) = 0;
+  virtual void visit(const CallExpr *) = 0;
+  virtual void visit(const DotExpr *) = 0;
+  virtual void visit(const SliceExpr *) = 0;
+  virtual void visit(const EllipsisExpr *) = 0;
+  virtual void visit(const TypeOfExpr *) = 0;
+  virtual void visit(const PtrExpr *) = 0;
+  virtual void visit(const LambdaExpr *) = 0;
+  virtual void visit(const YieldExpr *) = 0;
 };
 
 struct SuiteStmt;
@@ -90,30 +90,30 @@ struct ClassStmt;
 struct DeclareStmt;
 
 struct StmtVisitor {
-  virtual void visit(SuiteStmt &) {};
-  virtual void visit(PassStmt &) {};
-  virtual void visit(BreakStmt &) {};
-  virtual void visit(ContinueStmt &) {};
-  virtual void visit(ExprStmt &) {};
-  virtual void visit(AssignStmt &) {};
-  virtual void visit(DelStmt &) {};
-  virtual void visit(PrintStmt &) {};
-  virtual void visit(ReturnStmt &) {};
-  virtual void visit(YieldStmt &) {};
-  virtual void visit(AssertStmt &) {};
-  virtual void visit(TypeAliasStmt &) {};
-  virtual void visit(WhileStmt &) {};
-  virtual void visit(ForStmt &) {};
-  virtual void visit(IfStmt &) {}
-  virtual void visit(MatchStmt &) {}
-  virtual void visit(ExtendStmt &) {}
-  virtual void visit(ImportStmt &) {}
-  virtual void visit(ExternImportStmt &) {}
-  virtual void visit(TryStmt &) {}
-  virtual void visit(GlobalStmt &) {}
-  virtual void visit(ThrowStmt &) {}
-  virtual void visit(PrefetchStmt &) {}
-  virtual void visit(FunctionStmt &) {}
-  virtual void visit(ClassStmt &) {}
-  virtual void visit(DeclareStmt &) {}
+  virtual void visit(const SuiteStmt *) {};
+  virtual void visit(const PassStmt *) {};
+  virtual void visit(const BreakStmt *) {};
+  virtual void visit(const ContinueStmt *) {};
+  virtual void visit(const ExprStmt *) {};
+  virtual void visit(const AssignStmt *) {};
+  virtual void visit(const DelStmt *) {};
+  virtual void visit(const PrintStmt *) {};
+  virtual void visit(const ReturnStmt *) {};
+  virtual void visit(const YieldStmt *) {};
+  virtual void visit(const AssertStmt *) {};
+  virtual void visit(const TypeAliasStmt *) {};
+  virtual void visit(const WhileStmt *) {};
+  virtual void visit(const ForStmt *) {};
+  virtual void visit(const IfStmt *) {}
+  virtual void visit(const MatchStmt *) {}
+  virtual void visit(const ExtendStmt *) {}
+  virtual void visit(const ImportStmt *) {}
+  virtual void visit(const ExternImportStmt *) {}
+  virtual void visit(const TryStmt *) {}
+  virtual void visit(const GlobalStmt *) {}
+  virtual void visit(const ThrowStmt *) {}
+  virtual void visit(const PrefetchStmt *) {}
+  virtual void visit(const FunctionStmt *) {}
+  virtual void visit(const ClassStmt *) {}
+  virtual void visit(const DeclareStmt *) {}
 };

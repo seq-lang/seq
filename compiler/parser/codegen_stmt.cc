@@ -49,6 +49,7 @@ void CodegenStmtVisitor::apply(Context &ctx, unique_ptr<SuiteStmt> &stmts) {
 
 void CodegenStmtVisitor::Set(seq::Stmt *stmt) { result = stmt; }
 seq::Stmt *CodegenStmtVisitor::Visit(Stmt &stmt) {
+  fmt::print("<s> {} :pos {}\n", stmt, stmt.getSrcInfo());
   CodegenStmtVisitor v(ctx);
   stmt.accept(v);
   if (v.result) {

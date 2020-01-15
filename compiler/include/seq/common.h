@@ -5,6 +5,7 @@
 #include "llvm.h"
 #include <cstdint>
 #include <memory>
+#include <ostream>
 #include <stdexcept>
 
 namespace seq {
@@ -16,6 +17,7 @@ struct SrcInfo {
       : file(std::move(file)), line(line), endLine(endLine),
        col(col), endCol(endCol){};
   SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
+  friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c);
 };
 
 struct SrcObject {
