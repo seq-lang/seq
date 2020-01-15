@@ -29,12 +29,7 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-#define RETURN(T, ...) (this->result = make_unique<T>(__VA_ARGS__))
-template <typename T> T &&setSrcInfo(T &&t, const seq::SrcInfo &i) {
-  t->setSrcInfo(i);
-  return t;
-}
-
+#define RETURN(T, ...) (this->result = setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()))
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
 #define EP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
 #define ERROR(...) error(expr->getSrcInfo(), __VA_ARGS__)
@@ -42,8 +37,6 @@ template <typename T> T &&setSrcInfo(T &&t, const seq::SrcInfo &i) {
 ExprPtr TransformExprVisitor::transform(const ExprPtr &expr) {
   TransformExprVisitor v;
   expr->accept(v);
-  fmt::print("==> {} :pos {} \n => {} : pos {}\n", expr, expr->getSrcInfo(),
-             *v.result, v.result->getSrcInfo());
   return move(v.result);
 }
 vector<ExprPtr> TransformExprVisitor::transform(const vector<ExprPtr> &exprs) {
@@ -51,7 +44,7 @@ vector<ExprPtr> TransformExprVisitor::transform(const vector<ExprPtr> &exprs) {
   for (auto &e : exprs) {
     r.push_back(transform(e));
   }
-  return move(r);
+  return r;
 }
 
 void TransformExprVisitor::visit(const EmptyExpr *expr) { RETURN(EmptyExpr, ); }
@@ -119,7 +112,7 @@ void TransformExprVisitor::visit(const SeqExpr *expr) {
     ERROR("invalid seq prefix '{}'", expr->prefix);
   }
 }
-void TransformExprVisitor::visit(const IdExpr *expr) { RETURN(IdExpr, expr); }
+void TransformExprVisitor::visit(const IdExpr *expr) { RETURN(IdExpr, expr->value); }
 void TransformExprVisitor::visit(const UnpackExpr *expr) {
   ERROR("unexpected unpacking operator");
 }

@@ -113,26 +113,29 @@ void Context::addBlock(seq::Block *newBlock, seq::BaseFunc *newBase) {
     topBaseIndex = bases.size();
   }
   bases.push_back(newBase);
+  // fmt::print("[ctx] ++ block {} base {} mod {}\n", (void*)blocks[topBlockIndex], (void*)bases[topBaseIndex], (void*)module);
 }
 
 void Context::popBlock() {
   bases.pop_back();
-  topBaseIndex = blocks.size() - 1;
+  topBaseIndex = bases.size() - 1;
   while (!bases[topBaseIndex]) topBaseIndex--;
   blocks.pop_back();
   topBlockIndex = blocks.size() - 1;
   while (!blocks[topBlockIndex]) topBlockIndex--;
   VTable<ContextItem>::popBlock();
+  // fmt::print("[ctx] -- block {} base {} mod {}\n", (void*)blocks[topBlockIndex], (void*)bases[topBaseIndex], (void*)module);
 }
 
 void Context::add(const string &name, seq::Var *v) {
-  VTable<ContextItem>::add(name, make_shared<VarContextItem>(v, getBase(), getBase() == getModule(), getBase() == getModule()));
+  VTable<ContextItem>::add(name, make_shared<VarContextItem>(v, getBase(), isToplevel(), isToplevel()));
 }
 
 void Context::add(const string &name, seq::types::Type *t) {
-  VTable<ContextItem>::add(name, make_shared<TypeContextItem>(t, getBase(), getBase() == getModule(), getBase() == getModule()));
+  VTable<ContextItem>::add(name, make_shared<TypeContextItem>(t, getBase(), isToplevel(), isToplevel()));
 }
 
 void Context::add(const string &name, seq::Func *f, vector<string> names) {
-  VTable<ContextItem>::add(name, make_shared<FuncContextItem>(f, names, getBase(), getBase() == getModule(), getBase() == getModule()));
+  fmt::print("adding... {} {} \n", name, isToplevel());
+  VTable<ContextItem>::add(name, make_shared<FuncContextItem>(f, names, getBase(), isToplevel(), isToplevel()));
 }

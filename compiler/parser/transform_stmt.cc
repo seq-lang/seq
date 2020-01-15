@@ -12,7 +12,7 @@
 #include "parser/common.h"
 #include "parser/context.h"
 #include "parser/expr.h"
-#include "parser/stmt->h"
+#include "parser/stmt.h"
 #include "parser/transform.h"
 #include "parser/visitor.h"
 #include "seq/seq.h"
@@ -29,44 +29,35 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-#define RETURN(T, ...) (this->result = make_unique<T>(__VA_ARGS__))
-template <typename T> T &&setSrcInfo(T &&t, const seq::SrcInfo &i) {
-  t->setSrcInfo(i);
-  return t;
-}
-
+#define RETURN(T, ...) (this->result = setSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()))
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
 #define EP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
+#define EPX(e, T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), e->getSrcInfo())
 #define S(T, ...) make_unique<T>(__VA_ARGS__)
 #define SP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo())
 #define ERROR(...) error(stmt->getSrcInfo(), __VA_ARGS__)
 
-unique_ptr<SuiteStmt> TransformStmtVisitor::apply(unique_ptr<SuiteStmt> stmts) {
+StmtPtr TransformStmtVisitor::apply(const StmtPtr &stmts) {
   auto tv = TransformStmtVisitor();
-  for (auto &s : stmts->stmts) {
-    fmt::print("> {}\n", s->to_string());
-  }
-  fmt::print("-----\n");
   stmts->accept(tv);
-  return unique_ptr<SuiteStmt>(dynamic_cast<SuiteStmt *>(tv.result.release()));
+  return move(tv.result);
 }
 
-StmtPtr TransformStmtVisitor::transform(const StmtPtr &stmt) {
+StmtPtr TransformStmtVisitor::transform(const Stmt *stmt) {
   if (!stmt) {
     return nullptr;
   }
   TransformStmtVisitor v;
-  v.newSrcInfo = newSrcInfo;
   stmt->accept(v);
-  if (newSrcInfo.line) {
-    v.result->setSrcInfo(newSrcInfo);
-  }
-  fmt::print("==> {} :pos {} \n => {} : pos {}\n", stmt, stmt->getSrcInfo(),
-             *v.result, v.result->getSrcInfo());
   return move(v.result);
 }
+
+StmtPtr TransformStmtVisitor::transform(const StmtPtr &stmt) {
+    return transform(stmt.get());
+}
+
 ExprPtr TransformStmtVisitor::transform(const ExprPtr &expr) {
-  if (!stmt) {
+  if (!expr) {
     return nullptr;
   }
   TransformExprVisitor v;
@@ -75,9 +66,11 @@ ExprPtr TransformStmtVisitor::transform(const ExprPtr &expr) {
 }
 
 void TransformStmtVisitor::visit(const SuiteStmt *stmt) {
-  vector<StmtPtr> result(stmt->stmts.size());
+  vector<StmtPtr> result;
   for (auto &i : stmt->stmts) {
-    result.push_back(transform(i));
+    if (auto s = transform(i)) {
+      result.push_back(move(s));
+    }
   }
   RETURN(SuiteStmt, move(result));
 }
@@ -94,10 +87,10 @@ void TransformStmtVisitor::visit(const AssignStmt *stmt) {
          transform(stmt->type));
 }
 void TransformStmtVisitor::visit(const DelStmt *stmt) {
-  if (auto expr = dynamic_cast<IndexExpr *>(stmt->expr)) {
+  if (auto expr = dynamic_cast<const IndexExpr *>(stmt->expr.get())) {
     RETURN(ExprStmt,
-           transform(EP(CallExpr, EP(DotExpr, expr->expr, "__delitem__"),
-                         expr->index)));
+           transform(EP(CallExpr, EP(DotExpr, transform(expr->expr), "__delitem__"),
+                        transform(expr->index))));
   } else {
     RETURN(DelStmt, transform(stmt->expr));
   }
@@ -107,7 +100,7 @@ void TransformStmtVisitor::visit(const PrintStmt *stmt) {
   for (int i = 0; i < stmt->items.size(); i++) {
     suite.push_back(SP(PrintStmt, transform(stmt->items[i])));
     auto terminator = i == stmt->items.size() - 1 ? stmt->terminator : " ";
-    suite.push_back(SP(PrintStmt, EP(StringExpr, terminator)));
+    suite.push_back(SP(PrintStmt, EPX(stmt, StringExpr, terminator)));
   }
   RETURN(SuiteStmt, move(suite));
 }
@@ -130,7 +123,7 @@ void TransformStmtVisitor::visit(const ForStmt *stmt) {
   RETURN(ForStmt, stmt->vars, transform(stmt->iter), transform(stmt->suite));
 }
 void TransformStmtVisitor::visit(const IfStmt *stmt) {
-  vector<IfExpr::If> ifs;
+  vector<IfStmt::If> ifs;
   for (auto &ifc : stmt->ifs) {
     ifs.push_back({transform(ifc.cond), transform(ifc.suite)});
   }
@@ -145,76 +138,73 @@ void TransformStmtVisitor::visit(const MatchStmt *stmt) {
   // RETURN(MatchStmt, visit(*stmt->what), move(stmt->cases));
 }
 void TransformStmtVisitor::visit(const ExtendStmt *stmt) {
+  auto suite = make_unique<SuiteStmt>(stmt->getSrcInfo());
   for (auto s : stmt->suite->getStatements()) {
-    if (!dynamic_cast<FunctionStmt *>(s)) {
-      suite->stmts.push_back(visit(*s));
+    if (dynamic_cast<FunctionStmt *>(s)) {
+      suite->stmts.push_back(transform(s));
     } else {
-      ERROR("types can be extended with functions only");
+      error(s->getSrcInfo(), "types can be extended with functions only");
     }
   }
-  RETURN(ExtendStmt, transform(*stmt->what), transform(stmt->suite));
+  RETURN(ExtendStmt, transform(stmt->what), move(suite));
 }
 void TransformStmtVisitor::visit(const ImportStmt *stmt) {
   RETURN(ImportStmt, stmt->from, stmt->what);
 }
 void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
+  vector<Param> args;
   for (auto &a : stmt->args) {
-    a.type = visit(*a.type);
-    a.deflt = visit(*a.deflt);
+    args.push_back({a.name, transform(a.type), transform(a.deflt)});
   }
-  RETURN(ExternImportStmt, stmt->name, visit(*stmt->from), visit(*stmt->ret),
-         move(stmt->args), stmt->lang);
+  RETURN(ExternImportStmt, stmt->name, transform(stmt->from),
+         transform(stmt->ret), move(args), stmt->lang);
 }
 void TransformStmtVisitor::visit(const TryStmt *stmt) {
+  vector<TryStmt::Catch> catches;
   for (auto &c : stmt->catches) {
-    c.exc = visit(*c.exc);
-    c.suite = visit(*c.suite);
+    catches.push_back({c.var, transform(c.exc), transform(c.suite)});
   }
-  RETURN(TryStmt, visit(*stmt->suite), move(stmt->catches),
-         visit(*stmt->finally));
+  RETURN(TryStmt, transform(stmt->suite), move(catches),
+         transform(stmt->finally));
 }
 void TransformStmtVisitor::visit(const GlobalStmt *stmt) {
   RETURN(GlobalStmt, stmt->var);
 }
 void TransformStmtVisitor::visit(const ThrowStmt *stmt) {
-  RETURN(ThrowStmt, visit(*stmt->expr));
+  RETURN(ThrowStmt, transform(stmt->expr));
 }
 void TransformStmtVisitor::visit(const PrefetchStmt *stmt) {
+  vector<ExprPtr> what;
   for (auto &i : stmt->what) {
-    i = visit(*i);
+    what.push_back(transform(i));
   }
-  RETURN(PrefetchStmt, move(stmt->what));
+  RETURN(PrefetchStmt, move(what));
 }
 void TransformStmtVisitor::visit(const FunctionStmt *stmt) {
+  vector<Param> args;
   for (auto &a : stmt->args) {
-    if (a.type)
-      a.type = visit(*a.type);
-    if (a.deflt)
-      a.deflt = visit(*a.deflt);
+    args.push_back({a.name, transform(a.type), transform(a.deflt)});
   }
-  RETURN(FunctionStmt, stmt->name, stmt->ret ? visit(*stmt->ret) : nullptr,
-         stmt->generics, move(stmt->args), visit(*stmt->suite),
-         stmt->attributes);
+  RETURN(FunctionStmt, stmt->name, transform(stmt->ret), stmt->generics,
+         move(args), transform(stmt->suite), stmt->attributes);
 }
 void TransformStmtVisitor::visit(const ClassStmt *stmt) {
+  vector<Param> args;
   for (auto &a : stmt->args) {
-    a.type = visit(*a.type);
-    a.deflt = visit(*a.deflt);
+    args.push_back({a.name, transform(a.type), transform(a.deflt)});
   }
-  auto suite = make_unique<SuiteStmt>();
-  suite->setSrcInfo(stmt->getSrcInfo());
+  auto suite = make_unique<SuiteStmt>(stmt->getSrcInfo());
   for (auto s : stmt->suite->getStatements()) {
     if (dynamic_cast<FunctionStmt *>(s)) {
-      suite->stmts.push_back(visit(*s));
+      suite->stmts.push_back(transform(s));
     } else {
       error(s->getSrcInfo(), "types can only contain functions");
     }
   }
-  RETURN(ClassStmt, stmt->is_type, stmt->name, stmt->generics, move(stmt->args),
+  RETURN(ClassStmt, stmt->is_type, stmt->name, stmt->generics, move(args),
          move(suite));
 }
 void TransformStmtVisitor::visit(const DeclareStmt *stmt) {
-  stmt->param.type = visit(*stmt->param.type);
-  stmt->param.deflt = visit(*stmt->param.deflt);
-  RETURN(DeclareStmt, move(stmt->param));
+  RETURN(DeclareStmt, Param{stmt->param.name, transform(stmt->param.type),
+                            transform(stmt->param.deflt)});
 }

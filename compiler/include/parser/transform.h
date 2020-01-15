@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <utility>
 
 #include "parser/common.h"
 #include "parser/context.h"
@@ -58,12 +59,13 @@ public:
 
 class TransformStmtVisitor : public StmtVisitor {
   // Context &ctx;
+  // seq::SrcInfo newSrcInfo;
   StmtPtr result{nullptr};
-  seq::SrcInfo newSrcInfo;
 
 public:
-  static unique_ptr<SuiteStmt> apply(unique_ptr<SuiteStmt> s);
+  static StmtPtr apply(const StmtPtr &s);
 
+  StmtPtr transform(const Stmt *stmt);
   StmtPtr transform(const StmtPtr &stmt);
   ExprPtr transform(const ExprPtr &expr);
 
@@ -94,3 +96,8 @@ public:
   virtual void visit(const ClassStmt *) override;
   virtual void visit(const DeclareStmt *) override;
 };
+
+template <typename T> T &&setSrcInfo(T &&t, const seq::SrcInfo &i) {
+  t->setSrcInfo(i);
+  return std::forward<T>(t);
+}
