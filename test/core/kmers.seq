@@ -105,3 +105,8 @@ print h1 == h4  # EXPECT: False
 print h2 == h3  # EXPECT: False
 print h2 == h4  # EXPECT: False
 print h3 == h4  # EXPECT: False
+
+print k'ACGT' in s'GGACGTGG'  # EXPECT: True
+print k'ACGT' in s'GGAGTGG'   # EXPECT: False
+print s'ACGT' in k'GGACGTGG'  # EXPECT: True
+print s'ACGT' in k'GGAGTGG'   # EXPECT: False

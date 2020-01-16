@@ -31,6 +31,13 @@ def _kmers_revcomp[K](self: seq, step: int):
     return self._kmers_revcomp[K](step)
 
 @builtin
+def _kmer_in_seq[K](kmer: K, s: seq) -> bool:
+    for k in s.kmers[K](step=1):
+        if k == kmer:
+            return True
+    return False
+
+@builtin
 def base[K,T](kmer: K, idx: int, b: T):
     type U = typeof(kmer.as_int())
     if idx < 0:

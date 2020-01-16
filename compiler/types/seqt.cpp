@@ -59,6 +59,19 @@ void types::SeqType::initOps() {
        },
        false},
   };
+
+  for (unsigned k = 1; k <= KMer::MAX_LEN; k++) {
+    vtable.magic.push_back(
+        {"__contains__",
+         {KMer::get(k)},
+         Bool,
+         [k](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+           Func *f = Func::getBuiltin("_kmer_in_seq")->realize({KMer::get(k)});
+           f->codegen(b.GetInsertBlock()->getModule());
+           return b.CreateCall(f->getFunc(), {args[0], self});
+         },
+         false});
+  }
 }
 
 Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block) {
@@ -788,6 +801,17 @@ void types::KMer::initOps() {
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateZExt(b.CreateICmpUGE(self, args[0]),
                              Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__contains__",
+       {Seq},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         BasicBlock *block = b.GetInsertBlock();
+         Value *s1 = this->strValue(self, block, nullptr);
+         Value *s2 = Seq->strValue(args[0], block, nullptr);
+         return Str->callMagic("__contains__", {Str}, s1, {s2}, block, nullptr);
        },
        false},
 
