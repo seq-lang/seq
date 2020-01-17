@@ -1,5 +1,4 @@
 language: cpp
-sudo: required
 
 matrix:
   include:
@@ -139,11 +138,11 @@ before_deploy:
 
 deploy:
   - provider: releases
-    api_key: $GITHUB_TOKEN
+    token: $GITHUB_TOKEN
     file:
       - ${SEQ_BUILD_ARCHIVE}
       - ${SEQ_STDLIB_ARCHIVE}
-    skip_cleanup: true
+    cleanup: false
     on:
       repo: seq-lang/seq
       tags: true
@@ -151,10 +150,10 @@ deploy:
     local_dir: docs/sphinx/_build/html
     target_branch: gh-pages
     fqdn: seq-lang.org
-    github_token: $GITHUB_TOKEN
+    token: $GITHUB_TOKEN
     committer_from_gh: true
     keep_history: false
-    skip_cleanup: true
+    cleanup: false
     on:
       branch: master
       condition: $TRAVIS_OS_NAME = linux
