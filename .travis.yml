@@ -1,6 +1,6 @@
 language: cpp
 
-matrix:
+jobs:
   include:
     - os: linux
     - os: osx
