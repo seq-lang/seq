@@ -24,7 +24,7 @@
 %token IMPORT FROM GLOBAL PRINT PASS ASSERT DEL TRUE FALSE NONE
 %token TRY EXCEPT FINALLY THROW WITH PREFETCH
 /* operators */
-%token<string> EQ ASSGN_EQ ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
+%token<string> EQ ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
 %token<string> PLUSEQ MINEQ MULEQ DIVEQ FDIVEQ POWEQ MODEQ AT GEQ
 %token<string> AND OR NOT IS ISNOT IN NOTIN EEQ NEQ LESS LEQ GREAT
 %token<string> PIPE PPIPE SPIPE B_AND B_OR B_XOR B_NOT B_LSH B_RSH
@@ -70,9 +70,7 @@ atom:
     }
   | KMER { $loc, Kmer $1 }
   | bool { $loc, Bool $1 }
-  | LP RP { $loc, Tuple [] }
-  | LP expr COMMA RP { $loc, Tuple [$2] }
-  | LP expr COMMA FLNE(COMMA, expr) RP { $loc, Tuple ($2 :: $4) }
+  | tuple { $1 }
   | LS FL(COMMA, expr) RS { $loc, List $2 }
   | LB FLNE(COMMA, expr) RB { $loc, Set $2 }
   | LB FL(COMMA, dictitem) RB { $loc, Dict $2 }
@@ -81,8 +79,13 @@ atom:
   | LS expr comprehension RS { $loc, ListGenerator ($2, $3) }
   | LB expr comprehension RB { $loc, SetGenerator ($2, $3) }
   | LB dictitem comprehension RB { $loc, DictGenerator ($2, $3) }
-  | MUL ID { $loc, Unpack $2 }
+  | MUL ID { $loc, Unpack ($loc($2), Id $2) }
+  | MUL tuple { $loc, Unpack $2 }
 bool: TRUE { true } | FALSE { false }
+tuple:
+  | LP RP { $loc, Tuple [] }
+  | LP expr COMMA RP { $loc, Tuple [$2] }
+  | LP expr COMMA FLNE(COMMA, expr) RP { $loc, Tuple ($2 :: $4) }
 dictitem: expr COLON expr { $1, $3 }
 comprehension: FOR FLNE(COMMA, ID) IN pipe_expr comprehension_if* comprehension?
   { $loc, { var = $2; gen = flat_pipe $4; cond = $5; next = $6 } }
@@ -176,14 +179,7 @@ small_single_statement:
     { $loc, Return (match $2 with [] -> None | [e] -> Some e | l -> Some ($loc, Tuple l)) }
   | YIELD separated_list(COMMA, expr)
     { $loc, Yield (match $2 with [] -> None | [e] -> Some e | l -> Some ($loc, Tuple l)) }
-  | YIELD FROM expr /* TODO: rewrite in C++ */
-    { (* for i in expr: yield i *)
-      let p = $loc in
-      let vname = new_assign () in
-      let var = p, Id (vname) in
-      let expr = p, Yield (Some var) in
-      p, For ([vname], $3, [expr])
-    }
+  | YIELD FROM expr { $loc, YieldFrom $3 }
   | TYPE ID EQ expr { $loc, TypeAlias ($2, $4) }
   | PREFETCH FLNE(COMMA, expr) { $loc, Prefetch $2 }
   | THROW expr { $loc, Throw $2 }
@@ -239,19 +235,11 @@ import_term:
 dot_term: ID { $loc, Id $1 } | dot_term DOT ID { $loc, Dot ($1, $3) }
 
 assign_statement:
-  | expr aug_eq expr /* TODO: fix this (+=, -=, *=, /=, %=, **=, //=) */
-    { let op = String.sub $2 0 (String.length $2 - 1) in
-      [$loc, Assign ($1, ($loc, Binary ($1, "inplace_" ^ op, $3)), 2, None)]
-    }
-  | ID COLON expr EQ expr | ID COLON expr ASSGN_EQ expr
-    { [$loc, Assign (($loc($1), Id $1), $5, (if $4 = ":=" then 1 else 0), Some $3)] }
-  | expr_list ASSGN_EQ separated_nonempty_list(ASSGN_EQ, expr_list)
+  | expr aug_eq expr { [$loc, AssignEq ($1, $3, String.sub $2 0 (String.length $2 - 1))] }
+  | ID COLON expr EQ expr { [$loc, Assign (($loc($1), Id $1), $5, Some $3)] }
   | expr_list EQ separated_nonempty_list(EQ, expr_list)
-    { let shadow = if $2 = ":=" then 1 else 0 in
-      let sides = List.rev ($1 :: $3) in
-      List.concat @@ snd @@ List.fold_left
-        (fun (rhs, acc) lhs -> rhs, ((parse_assign $loc lhs rhs shadow) :: acc))
-        (List.hd sides, []) (List.tl sides)
+    { let all = List.map (function [l] -> l | l -> $loc, Tuple l) (List.rev ($1 :: $3)) in
+      List.rev @@ List.map (fun i -> $loc, Assign (i, List.hd all, None)) (List.tl all)
     }
 %inline aug_eq: PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ | LSHEQ | RSHEQ | ANDEQ | OREQ | XOREQ { $1 }
 decl_statement: ID COLON expr NL { $loc, Declare ($loc, { name = $1; typ = Some $3; default = None }) }
@@ -264,21 +252,8 @@ catch:
   | EXCEPT expr AS ID COLON suite { $loc, { exc = Some $2; var = Some $4; stmts = $6 } }
 finally: FINALLY COLON suite { $3 }
 
-with_statement:
-  /* TODO: move to C++ */
-  | WITH FLNE(COMMA, with_clause) COLON suite
-  {
-    let rec traverse (expr, var) lst =
-      let var = opt_val var (fst expr, Id (new_assign ())) in
-      let s1 = fst expr, Assign (var, expr, 1, None) in
-      let s2 = fst expr, Expr (fst expr, Call ((fst expr, Dot (var, "__enter__")), [])) in
-      let within = match lst with [] -> $4 | hd :: tl -> [traverse hd tl] in
-      let s3 = fst expr, Try (within, [], [fst expr, Expr (fst expr, Call ((fst expr, Dot (var, "__exit__")), []))]) in
-      fst expr, If [Some (fst expr, Bool true), [s1; s2; s3]]
-    in
-    traverse (List.hd $2) (List.tl $2)
-  }
-with_clause: expr { $1, None } | expr AS ID { $1, Some ($loc($3), Id $3) }
+with_statement: WITH FLNE(COMMA, with_clause) COLON suite { $loc, With ($2, $4) }
+with_clause: expr { $1, None } | expr AS ID { $1, Some $3 }
 
 func_statement:
   | func | pyfunc { $1 }
@@ -309,30 +284,9 @@ extern_param:
 extern_as: AS ID { $2 }
 decorator: AT ID NL { $loc, $2 } /* AT dot_term NL | AT dot_term LP FL(COMMA, expr) RP NL */
 pyfunc:
-  /* Seq function (def foo [ [type+] ] (param+) [ -> return ]) */
-  | PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON suite
-    { [$loc, Pass ()] }
-    /*  (* let str = Util.ppl ~sep:"\n" s ~f:(Ast.Stmt.to_string ~pythonic:true ~indent:1) in
-      let p = $7 in
-      (* py.exec ("""def foo(): [ind] ... """) *)
-      (* from __main__ pyimport foo () -> ret *)
-      let v = p, String
-        (sprintf "def %s(%s):\n%s\n"
-          (snd name)
-          (Util.ppl fn_args ~f:(fun (_, { name; _ }) -> name))
-          str) in
-      let s = p, Call (
-        (p, Id "_py_exec"),
-        [p, { name = None; value = v }]) in
-      let typ = opt_val typ ~default:($5, Id "pyobj") in
-      let s' = p, ImportExtern
-        [ { lang = "py"
-          ; e_name = { name = snd name; typ = Some typ; default = None }
-          ; e_args = []
-          ; e_as = None
-          ; e_from = Some (p, Id "__main__") } ]
-      in
-      [ p, Expr s; s' ] *) */
+  /* TODO: C++ :: Seq function (def foo [ [type+] ] (param+) [ -> return ]) */
+  | PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON suite { [$loc, Pass ()] }
+
 
 class_statement: cls | extend | typ { $1 }
 cls:
@@ -357,4 +311,3 @@ typ:
   | type_head COLON NL INDENT class_member+ DEDENT { $loc, Type { (snd $1) with members = filter_opt $5 } }
 /* TODO: C++ check for default arguments */
 type_head: TYPE ID LP FL(COMMA, typed_param) RP { $loc, { class_name = $2; generics = []; args = $4; members = [] } }
-

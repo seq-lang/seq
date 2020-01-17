@@ -76,15 +76,16 @@ struct ExprStmt : public Stmt {
 
 struct AssignStmt : public Stmt {
   ExprPtr lhs, rhs, type;
-  int kind; // 0 normal 1 shadow 2 update
-  AssignStmt(ExprPtr l, ExprPtr r, int k, ExprPtr t);
+  AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr);
   string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct DelStmt : public Stmt {
   ExprPtr expr;
+  string var;
   DelStmt(ExprPtr e);
+  DelStmt(const string &v);
   string to_string() const override;
   ACCEPT_VISITOR;
 };
@@ -240,7 +241,7 @@ struct FunctionStmt : public Stmt {
 };
 
 struct ClassStmt : public Stmt {
-  bool is_type;
+  bool isType;
   string name;
   vector<string> generics;
   vector<Param> args;
@@ -253,6 +254,30 @@ struct ClassStmt : public Stmt {
 struct DeclareStmt : public Stmt {
   Param param;
   DeclareStmt(Param p);
+  string to_string() const override;
+  ACCEPT_VISITOR;
+};
+
+struct AssignEqStmt : public Stmt {
+  ExprPtr lhs, rhs;
+  string op;
+  AssignEqStmt(ExprPtr l, ExprPtr r, string o);
+  string to_string() const override;
+  ACCEPT_VISITOR;
+};
+
+struct YieldFromStmt : public Stmt {
+  ExprPtr expr;
+  YieldFromStmt(ExprPtr e);
+  string to_string() const override;
+  ACCEPT_VISITOR;
+};
+
+struct WithStmt : public Stmt {
+  typedef pair<ExprPtr, string> Item;
+  vector<Item> items;
+  StmtPtr suite;
+  WithStmt(vector<Item> i, StmtPtr s);
   string to_string() const override;
   ACCEPT_VISITOR;
 };

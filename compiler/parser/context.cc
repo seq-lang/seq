@@ -26,6 +26,7 @@ base(base), toplevel(toplevel), global(global), internal(internal) {}
 VarContextItem::VarContextItem(seq::Var *var, seq::BaseFunc *base, bool toplevel, bool global, bool internal):
   ContextItem(base, toplevel, global, internal), var(var) {}
 seq::Expr *VarContextItem::getExpr() const { return new seq::VarExpr(var); }
+seq::Var *VarContextItem::getVar() const { return var; }
 
 FuncContextItem::FuncContextItem(seq::Func *func, vector<string> names, seq::BaseFunc *base, bool toplevel, bool global, bool internal):
   ContextItem(base, toplevel, global, internal), func(func), names(names) {}
@@ -42,7 +43,7 @@ seq::Expr *ImportContextItem::getExpr() const {
 
 
 Context::Context(seq::SeqModule *module, const string &filename):
-  filename(filename), module(module), enclosingType(nullptr), tryCatch(nullptr)
+  filename(filename), module(module), enclosingType(nullptr), tryCatch(nullptr), tmpVarCounter(0)
 {
   module->setFileName(filename);
   stack.push(unordered_set<string>());

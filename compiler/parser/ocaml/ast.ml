@@ -32,7 +32,7 @@ type texpr =
   | Kmer of string
   | Seq of (string * string)
   | Id of string
-  | Unpack of string
+  | Unpack of texpr ann
   | Tuple of texpr ann list
   | List of texpr ann list
   | Set of texpr ann list
@@ -67,7 +67,7 @@ type tstmt =
   | Break of unit
   | Continue of unit
   | Expr of texpr ann
-  | Assign of (texpr ann * texpr ann * int * texpr ann option)
+  | Assign of (texpr ann * texpr ann * texpr ann option)
   | Del of texpr ann
   | Print of (texpr ann list * string)
   | Return of texpr ann option
@@ -90,6 +90,9 @@ type tstmt =
   | Class of class_t
   | Type of class_t
   | Declare of param ann
+  | AssignEq of (texpr ann * texpr ann * string)
+  | YieldFrom of texpr ann
+  | With of ((texpr ann * string option) list * tstmt ann list)
 
 and eimport =
   { lang : string
@@ -142,12 +145,6 @@ and pattern =
   | GuardedPattern of (pattern ann * texpr ann)
   | BoundPattern of (string * pattern ann)
 
-let assign_cnt = ref 0
-
-let new_assign () =
-  incr assign_cnt;
-  Printf.sprintf "$%d" @@ pred !assign_cnt
-
 let flat_pipe x =
   match x with
   | _, [] -> failwith "empty pipeline expression (grammar)"
@@ -175,59 +172,3 @@ let rec flatten_dot ~sep = function
   | _, Id s -> s
   | _, Dot (d, s) -> Printf.sprintf "%s%s%s" (flatten_dot ~sep d) sep s
   | _ -> failwith "invalid import construct (grammar)"
-
-let rec parse_assign pos lhs rhs shadow =
-  (* wrap RHS in tuple for consistency (e.g. x, y -> (x, y)) *)
-  let init_exprs, rhs =
-    if List.length rhs > 1
-    then (
-      let var = pos, Id (new_assign ()) in
-      [ pos, Assign (var, (pos, Tuple rhs), 1, None) ], var)
-    else if List.length lhs > 1
-    then (
-      let var = pos, Id (new_assign ()) in
-      [ pos, Assign (var, List.hd rhs, 1, None) ], var)
-    else [], List.hd rhs
-  in
-  (* wrap LHS in tuple as well (e.g. x, y -> (x, y)) *)
-  let lhs =
-    match lhs with
-    | [ (_, (Tuple l | List l)) ] -> l
-    | l -> l
-  in
-  let exprs =
-    match lhs with
-    | [ lhs ] -> [ pos, Assign (lhs, rhs, shadow, None) ]
-    | lhs ->
-      let len = List.length lhs in
-      let unpack_i = ref (-1) in
-      List.concat
-        (List.mapi
-           (fun i expr ->
-             match snd expr with
-             | Unpack var when !unpack_i = -1 ->
-               unpack_i := i;
-               let start = Some (pos, Int (string_of_int i, "")) in
-               let eend =
-                 if i = len - 1
-                 then None
-                 else Some (pos, Int (string_of_int @@ (i + 1 - len), ""))
-               in
-               let slice = pos, Slice (start, eend, None) in
-               let rhs = pos, Index (rhs, slice) in
-               [ pos, Assign ((pos, Id var), rhs, shadow, None) ]
-             | Unpack _ when !unpack_i > -1 ->
-               raise (GrammarError ("cannot have two tuple unpackings on LHS", fst pos))
-             | _ ->
-               (* left of unpack: a, b, *c = x <=> a = x[0]; b = x[1] *)
-               (* right of unpack: *c, b, a = x <=> a = x[-1]; b = x[-2] *)
-               let i = if !unpack_i = -1 then i else i - len in
-               parse_assign
-                 pos
-                 [ expr ]
-                 [ pos, Index (rhs, (pos, Int (string_of_int i, ""))) ]
-                 shadow)
-           lhs)
-    (* TODO: add assertes *)
-  in
-  init_exprs @ exprs

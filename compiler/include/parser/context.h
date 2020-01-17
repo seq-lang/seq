@@ -30,14 +30,7 @@ public:
   void addBlock() { stack.push(unordered_set<string>()); }
   void popBlock() {
     for (auto &name : stack.top()) {
-      auto i = map.find(name);
-      if (i == map.end() || !i->second.size()) {
-        error("variable {} not found in the map", name);
-      }
-      i->second.pop();
-      if (!i->second.size()) {
-        map.erase(name);
-      }
+      remove(name);
     }
     stack.pop();
   }
@@ -47,6 +40,16 @@ public:
       return nullptr;
     }
     return it->second.top();
+  }
+  virtual void remove(const string &name) {
+    auto i = map.find(name);
+    if (i == map.end() || !i->second.size()) {
+      error("variable {} not found in the map", name);
+    }
+    i->second.pop();
+    if (!i->second.size()) {
+      map.erase(name);
+    }
   }
   void setFlag(const string &s) {
     flags.insert(s);
@@ -85,6 +88,7 @@ class VarContextItem : public ContextItem {
 public:
   VarContextItem(seq::Var *var, seq::BaseFunc *base, bool toplevel = false, bool global = false, bool internal = false);
   seq::Expr *getExpr() const override;
+  seq::Var *getVar() const;
 };
 
 class FuncContextItem : public ContextItem {
@@ -125,6 +129,8 @@ class Context : public VTable<ContextItem> {
   unordered_map<string, VTable<ContextItem>> imports;
   VTable<ContextItem> stdlib;
 
+  int tmpVarCounter;
+
 public:
   Context(seq::SeqModule *module, const string &filename);
   shared_ptr<ContextItem> find(const string &name) const override;
@@ -136,7 +142,7 @@ public:
   seq::types::Type *getType(const string &name) const;
   seq::types::Type *getEnclosingType();
   void setEnclosingType(seq::types::Type *t);
-  void addBlock(seq::Block *newBlock, seq::BaseFunc *newBase);
+  void addBlock(seq::Block *newBlock = nullptr, seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
   void add(const string &name, seq::Var *v);

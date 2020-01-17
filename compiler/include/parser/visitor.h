@@ -88,6 +88,9 @@ struct PrefetchStmt;
 struct FunctionStmt;
 struct ClassStmt;
 struct DeclareStmt;
+struct AssignEqStmt;
+struct YieldFromStmt;
+struct WithStmt;
 
 struct StmtVisitor {
   virtual void visit(const SuiteStmt *) {};
@@ -116,4 +119,7 @@ struct StmtVisitor {
   virtual void visit(const FunctionStmt *) {}
   virtual void visit(const ClassStmt *) {}
   virtual void visit(const DeclareStmt *) {}
+  virtual void visit(const AssignEqStmt *) {}
+  virtual void visit(const YieldFromStmt *) {}
+  virtual void visit(const WithStmt *) {}
 };

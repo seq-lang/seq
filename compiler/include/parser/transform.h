@@ -23,8 +23,11 @@ class TransformExprVisitor : public ExprVisitor {
   friend class TransformStmtVisitor;
 
 public:
-  ExprPtr transform(const ExprPtr &e);
+  ExprPtr transform(const Expr *e);
   vector<ExprPtr> transform(const vector<ExprPtr> &e);
+  template<typename T> auto transform(const unique_ptr<T> &t) -> decltype(transform(t.get())) {
+    return transform(t.get());
+  }
 
   void visit(const EmptyExpr *) override;
   void visit(const BoolExpr *) override;
@@ -62,12 +65,18 @@ class TransformStmtVisitor : public StmtVisitor {
   // seq::SrcInfo newSrcInfo;
   StmtPtr result{nullptr};
 
+  StmtPtr addAssignment(const Expr *lhs, const Expr *rhs);
+  void processAssignment(const Expr *lhs, const Expr *rhs, vector<StmtPtr> &stmts);
+  string getTemporaryVar(const string &prefix = "") const;
+
 public:
   static StmtPtr apply(const StmtPtr &s);
 
   StmtPtr transform(const Stmt *stmt);
-  StmtPtr transform(const StmtPtr &stmt);
-  ExprPtr transform(const ExprPtr &expr);
+  ExprPtr transform(const Expr *stmt);
+  template<typename T> auto transform(const unique_ptr<T> &t) -> decltype(transform(t.get())) {
+    return transform(t.get());
+  }
 
   virtual void visit(const SuiteStmt *) override;
   virtual void visit(const PassStmt *) override;
@@ -95,6 +104,9 @@ public:
   virtual void visit(const FunctionStmt *) override;
   virtual void visit(const ClassStmt *) override;
   virtual void visit(const DeclareStmt *) override;
+  virtual void visit(const AssignEqStmt *) override;
+  virtual void visit(const YieldFromStmt *) override;
+  virtual void visit(const WithStmt *) override;
 };
 
 template <typename T> T &&setSrcInfo(T &&t, const seq::SrcInfo &i) {

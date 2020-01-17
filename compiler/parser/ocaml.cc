@@ -111,7 +111,7 @@ unique_ptr<Expr> parse_expr(value val) {
   case 8:
     Return(Id, String_val(t));
   case 9:
-    Return(Unpack, String_val(t));
+    Return(Unpack, parse_expr(t));
   case 10:
     Return(Tuple, parse_list(t, parse_expr));
   case 11:
@@ -292,7 +292,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 4:
     f0 = Field(t, 3);
     Return(Assign, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
-           Int_val(Field(t, 2)), parse_optional(Field(t, 3), parse_expr));
+           parse_optional(Field(t, 2), parse_expr));
   case 5:
     Return(Del, parse_expr(t));
   case 6:
@@ -361,8 +361,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(Function, parse_string(Field(t, 0)),
            parse_optional(Field(t, 1), parse_expr),
            parse_list(Field(t, 2), parse_string),
-           parse_list(Field(t, 3), parse_param),
-           parse_stmt_list(Field(t, 4)),
+           parse_list(Field(t, 3), parse_param), parse_stmt_list(Field(t, 4)),
            parse_list(Field(t, 5), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
@@ -370,10 +369,23 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 25:
     Return(Class, tv == 25, parse_string(Field(t, 0)),
            parse_list(Field(t, 1), parse_string),
-           parse_list(Field(t, 2), parse_param),
-           parse_stmt_list(Field(t, 3)));
+           parse_list(Field(t, 2), parse_param), parse_stmt_list(Field(t, 3)));
   case 26:
     Return(Declare, parse_param(t));
+  case 27:
+    Return(AssignEq, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
+           parse_string(Field(t, 2)));
+  case 28:
+    Return(YieldFrom, parse_expr(t));
+  case 29:
+    Return(With,
+           parse_list(Field(t, 0),
+                      [](value j) {
+                        return make_pair(
+                            parse_expr(Field(j, 0)),
+                            parse_optional(Field(j, 1), parse_string));
+                      }),
+           parse_stmt_list(Field(t, 1)));
   default: {
     // fprintf(stderr, "[s] %d\n", Tag_val(v));
     throw ParsingError("[s] tag variant mismatch ...");
@@ -382,17 +394,17 @@ unique_ptr<Stmt> parse_stmt(value val) {
 #undef Return
 }
 
-unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset, int col_offset) {
+unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset,
+                                  int col_offset) {
   CAMLparam0();
   CAMLlocal2(p1, h);
   static value *closure_f = NULL;
   if (!closure_f) {
     closure_f = caml_named_value("menhir_parse");
   }
-  value args[] = { caml_copy_string(file.c_str()),
-                   caml_copy_string(code.c_str()),
-                   Val_int(line_offset),
-                   Val_int(col_offset) };
+  value args[] = {caml_copy_string(file.c_str()),
+                  caml_copy_string(code.c_str()), Val_int(line_offset),
+                  Val_int(col_offset)};
   p1 = caml_callbackN(*closure_f, 4, args);
   return make_unique<SuiteStmt>(parse_list(p1, parse_stmt));
 }
@@ -402,7 +414,8 @@ void ocaml_initialize() {
   caml_main((char **)argv);
 }
 
-unique_ptr<SuiteStmt> parse(string file, string code, int line_offset, int col_offset) {
+unique_ptr<SuiteStmt> parse(string file, string code, int line_offset,
+                            int col_offset) {
   static bool initialized(false);
   if (!initialized) {
     ocaml_initialize();

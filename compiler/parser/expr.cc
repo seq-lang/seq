@@ -23,6 +23,7 @@ string EmptyExpr::to_string() const { return "#empty"; }
 BoolExpr::BoolExpr(bool v) : value(v) {}
 string BoolExpr::to_string() const { return format("(#bool {})", int(value)); }
 
+IntExpr::IntExpr(int v) : value(std::to_string(v)), suffix("") {}
 IntExpr::IntExpr(string v, string s) : value(v), suffix(s) {}
 string IntExpr::to_string() const {
   return format("(#int {}{})", value,
@@ -59,8 +60,8 @@ string SeqExpr::to_string() const {
 IdExpr::IdExpr(string v) : value(v) {}
 string IdExpr::to_string() const { return format("(#id {})", value); }
 
-UnpackExpr::UnpackExpr(string v) : value(v) {}
-string UnpackExpr::to_string() const { return format("(#id {})", value); }
+UnpackExpr::UnpackExpr(ExprPtr v) : what(move(v)) {}
+string UnpackExpr::to_string() const { return format("(#unpack {})", *what); }
 
 TupleExpr::TupleExpr(vector<ExprPtr> i) : items(move(i)) {}
 string TupleExpr::to_string() const {

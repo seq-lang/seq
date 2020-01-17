@@ -43,6 +43,7 @@ struct BoolExpr : public Expr {
 struct IntExpr : public Expr {
   string value;
   string suffix;
+  IntExpr(int v);
   IntExpr(string v, string s = "");
   string to_string() const override;
   ACCEPT_VISITOR;
@@ -93,8 +94,8 @@ struct IdExpr : public Expr {
 };
 
 struct UnpackExpr : public Expr {
-  string value;
-  UnpackExpr(string v);
+  ExprPtr what;
+  UnpackExpr(ExprPtr w);
   string to_string() const override;
   ACCEPT_VISITOR;
 };

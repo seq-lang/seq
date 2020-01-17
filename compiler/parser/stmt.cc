@@ -23,21 +23,15 @@ string Param::to_string() const {
                 deflt ? " :default " + deflt->to_string() : "");
 }
 
-Stmt::Stmt(const seq::SrcInfo &s) {
-  setSrcInfo(s);
-}
+Stmt::Stmt(const seq::SrcInfo &s) { setSrcInfo(s); }
 
-vector<Stmt*> Stmt::getStatements() {
-  return { this };
-}
+vector<Stmt *> Stmt::getStatements() { return {this}; }
 
 SuiteStmt::SuiteStmt(vector<StmtPtr> s) : stmts(move(s)) {}
-string SuiteStmt::to_string() const {
-  return format("({})", combine(stmts));
-}
-vector<Stmt*> SuiteStmt::getStatements() {
-  vector<Stmt*> result;
-  for (auto &s: stmts) {
+string SuiteStmt::to_string() const { return format("({})", combine(stmts)); }
+vector<Stmt *> SuiteStmt::getStatements() {
+  vector<Stmt *> result;
+  for (auto &s : stmts) {
     result.push_back(s.get());
   }
   return result;
@@ -55,19 +49,18 @@ string ContinueStmt::to_string() const { return "#continue"; }
 ExprStmt::ExprStmt(ExprPtr e) : expr(move(e)) {}
 string ExprStmt::to_string() const { return format("(#expr {})", *expr); }
 
-AssignStmt::AssignStmt(ExprPtr l, ExprPtr r, int k, ExprPtr t)
-    : lhs(move(l)), rhs(move(r)), type(move(t)), kind(k) {}
+AssignStmt::AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t)
+    : lhs(move(l)), rhs(move(r)), type(move(t)) {}
 string AssignStmt::to_string() const {
-  return format("(#assign {} {} :kind {}{})", *lhs, *rhs, kind,
+  return format("(#assign {} {}{})", *lhs, *rhs,
                 type ? format(" :type {}", *type) : "");
 }
 
 DelStmt::DelStmt(ExprPtr e) : expr(move(e)) {}
+DelStmt::DelStmt(const string &v) : expr(nullptr), var(v) {}
 string DelStmt::to_string() const { return format("(#del {})", *expr); }
 
-PrintStmt::PrintStmt(ExprPtr i): terminator("") {
-  items.push_back(move(i));
-}
+PrintStmt::PrintStmt(ExprPtr i) : terminator("") { items.push_back(move(i)); }
 PrintStmt::PrintStmt(vector<ExprPtr> i, string t)
     : items(move(i)), terminator(t) {}
 string PrintStmt::to_string() const {
@@ -105,12 +98,12 @@ IfStmt::IfStmt(vector<IfStmt::If> i) : ifs(move(i)) {}
 string IfStmt::to_string() const {
   string s;
   for (auto &i : ifs)
-    s += format(" ({}{})", i.cond ? format(":cond {} ", *i.cond) : "",
-                i.suite);
+    s += format(" ({}{})", i.cond ? format(":cond {} ", *i.cond) : "", i.suite);
   return format("(#if{})", s);
 }
 
-MatchStmt::MatchStmt(ExprPtr w, vector<pair<PatternPtr, StmtPtr>> c) : what(move(w)), cases(move(c)) {}
+MatchStmt::MatchStmt(ExprPtr w, vector<pair<PatternPtr, StmtPtr>> c)
+    : what(move(w)), cases(move(c)) {}
 string MatchStmt::to_string() const {
   string s;
   for (auto &i : cases)
@@ -118,40 +111,39 @@ string MatchStmt::to_string() const {
   return format("(#match{})", s);
 }
 
-ImportStmt::ImportStmt(Item f, vector<Item> w)
-    : from(f), what(w) {}
+ImportStmt::ImportStmt(Item f, vector<Item> w) : from(f), what(w) {}
 string ImportStmt::to_string() const {
   vector<string> s;
-  for (auto &w: what) {
-    s.push_back(w.second.size() ? format("({} :as {})", w.first, w.second) : w.first);
+  for (auto &w : what) {
+    s.push_back(w.second.size() ? format("({} :as {})", w.first, w.second)
+                                : w.first);
   }
   return format("(#import {}{})",
-    from.second.size() ? format("({} :as {})", from.first, from.second) : from.first,
-    s.size() ? format(" :what {}", fmt::join(s, " ")) : ""
-  );
+                from.second.size()
+                    ? format("({} :as {})", from.first, from.second)
+                    : from.first,
+                s.size() ? format(" :what {}", fmt::join(s, " ")) : "");
 }
 
-ExternImportStmt::ExternImportStmt(ImportStmt::Item n, ExprPtr f, ExprPtr t, vector<Param> a, string l)
+ExternImportStmt::ExternImportStmt(ImportStmt::Item n, ExprPtr f, ExprPtr t,
+                                   vector<Param> a, string l)
     : name(n), from(move(f)), ret(move(t)), args(move(a)), lang(l) {}
 string ExternImportStmt::to_string() const {
   string as;
   for (auto &a : args)
     as += " " + a.to_string();
   return format("(#extern {} :lang {} :typ {}{}{})",
-    name.second.size() ? format("({} :as {})", name.first, name.second) : name.first,
-    lang,
-    *ret,
-    args.size() ? " :args" + as : "",
-    from ? " :from" + from->to_string() : ""
-  );
+                name.second.size()
+                    ? format("({} :as {})", name.first, name.second)
+                    : name.first,
+                lang, *ret, args.size() ? " :args" + as : "",
+                from ? " :from" + from->to_string() : "");
 }
 
-ExtendStmt::ExtendStmt(ExprPtr e, StmtPtr s)
-    : what(move(e)), suite(move(s)) {}
+ExtendStmt::ExtendStmt(ExprPtr e, StmtPtr s) : what(move(e)), suite(move(s)) {}
 string ExtendStmt::to_string() const {
   return format("(#extend {} {})", *what, *suite);
 }
-
 
 TryStmt::TryStmt(StmtPtr s, vector<Catch> c, StmtPtr f)
     : suite(move(s)), catches(move(c)), finally(move(f)) {}
@@ -161,7 +153,8 @@ string TryStmt::to_string() const {
     s += format(" ({}{}{})", i.var != "" ? format(":var {} ", i.var) : "",
                 i.exc ? format(":exc {} ", *i.exc) : "", *i.suite);
   auto f = format("{}", *finally);
-  return format("(#try {}{}{})", *suite, s, f.size() ? format(" :finally {}", f) : "");
+  return format("(#try {}{}{})", *suite, s,
+                f.size() ? format(" :finally {}", f) : "");
 }
 
 GlobalStmt::GlobalStmt(string v) : var(v) {}
@@ -183,27 +176,51 @@ string FunctionStmt::to_string() const {
   string as;
   for (auto &a : args)
     as += " " + a.to_string();
-  return format("(#fun {}{}{}{}{} {})", name,
-                ret ? " :ret " + ret->to_string() : "",
-                generics.size() ? format(" :gen {}", fmt::join(generics, " ")) : "",
-                args.size() ? " :args" + as : "",
-                attributes.size()
-                    ? format(" :attrs ({})", fmt::join(attributes, " "))
-                    : "",
-                *suite);
+  return format(
+      "(#fun {}{}{}{}{} {})", name, ret ? " :ret " + ret->to_string() : "",
+      generics.size() ? format(" :gen {}", fmt::join(generics, " ")) : "",
+      args.size() ? " :args" + as : "",
+      attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " "))
+                        : "",
+      *suite);
 }
 
 ClassStmt::ClassStmt(bool i, string n, vector<string> g, vector<Param> a,
                      StmtPtr s)
-    : is_type(i), name(n), generics(g), args(move(a)), suite(move(s)) {}
+    : isType(i), name(n), generics(g), args(move(a)), suite(move(s)) {}
 string ClassStmt::to_string() const {
   string as;
   for (auto &a : args)
     as += " " + a.to_string();
-  return format("(#{} {}{}{} {})", (is_type ? "type" : "class"), name,
-                generics.size() ? format(" :gen {}", fmt::join(generics, " ")) : "",
+  return format("(#{} {}{}{} {})", (isType ? "type" : "class"), name,
+                generics.size() ? format(" :gen {}", fmt::join(generics, " "))
+                                : "",
                 args.size() ? " :args" + as : "", *suite);
 }
 
 DeclareStmt::DeclareStmt(Param p) : param(move(p)) {}
-string DeclareStmt::to_string() const { return format("(#declare {})", param.to_string()); }
+string DeclareStmt::to_string() const {
+  return format("(#declare {})", param.to_string());
+}
+
+AssignEqStmt::AssignEqStmt(ExprPtr l, ExprPtr r, string o)
+    : lhs(move(l)), rhs(move(r)), op(o) {}
+string AssignEqStmt::to_string() const {
+  return format("(#assigneq {} {} :op '{}')", *lhs, *rhs, op);
+}
+
+YieldFromStmt::YieldFromStmt(ExprPtr e) : expr(move(e)) {}
+string YieldFromStmt::to_string() const {
+  return format("(#yieldfrom {})", *expr);
+}
+
+WithStmt::WithStmt(vector<Item> i, StmtPtr s)
+    : items(move(i)), suite(move(s)) {}
+string WithStmt::to_string() const {
+  vector<string> as;
+  for (auto &a : items) {
+    as.push_back(a.second.size() ? format("({} :var {})", *a.first, a.second)
+                                 : a.first->to_string());
+  }
+  return format("(#with ({}) {})", fmt::join(as, " "), *suite);
+}

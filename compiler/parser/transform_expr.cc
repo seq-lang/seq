@@ -29,18 +29,19 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-#define RETURN(T, ...) (this->result = setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()))
+#define RETURN(T, ...)                                                         \
+  (this->result = setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()))
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
 #define EP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
 #define ERROR(...) error(expr->getSrcInfo(), __VA_ARGS__)
 
-ExprPtr TransformExprVisitor::transform(const ExprPtr &expr) {
+ExprPtr TransformExprVisitor::transform(const Expr *expr) {
   TransformExprVisitor v;
   expr->accept(v);
   return move(v.result);
 }
 vector<ExprPtr> TransformExprVisitor::transform(const vector<ExprPtr> &exprs) {
-  vector<ExprPtr> r(exprs.size());
+  vector<ExprPtr> r;
   for (auto &e : exprs) {
     r.push_back(transform(e));
   }
@@ -96,11 +97,10 @@ void TransformExprVisitor::visit(const FStringExpr *expr) {
       EP(CallExpr, EP(DotExpr, EP(IdExpr, "str"), "cat"), move(items)));
 }
 void TransformExprVisitor::visit(const KmerExpr *expr) {
-  this->result =
-      transform(EP(CallExpr,
-                   EP(IndexExpr, EP(IdExpr, "Kmer"),
-                      EP(IntExpr, std::to_string(expr->value.size()), "")),
-                   EP(SeqExpr, expr->value)));
+  this->result = transform(
+      EP(CallExpr,
+         EP(IndexExpr, EP(IdExpr, "Kmer"), EP(IntExpr, expr->value.size())),
+         EP(SeqExpr, expr->value)));
 }
 void TransformExprVisitor::visit(const SeqExpr *expr) {
   if (expr->prefix == "p") {
@@ -112,9 +112,11 @@ void TransformExprVisitor::visit(const SeqExpr *expr) {
     ERROR("invalid seq prefix '{}'", expr->prefix);
   }
 }
-void TransformExprVisitor::visit(const IdExpr *expr) { RETURN(IdExpr, expr->value); }
+void TransformExprVisitor::visit(const IdExpr *expr) {
+  RETURN(IdExpr, expr->value);
+}
 void TransformExprVisitor::visit(const UnpackExpr *expr) {
-  ERROR("unexpected unpacking operator");
+  RETURN(CallExpr, EP(IdExpr, "list"), transform(expr->what));
 }
 void TransformExprVisitor::visit(const TupleExpr *expr) {
   RETURN(TupleExpr, transform(expr->items));
@@ -202,7 +204,7 @@ void TransformExprVisitor::visit(const SliceExpr *expr) {
     args.push_back(transform(expr->step));
   }
   if (!args.size()) {
-    args.push_back(transform(EP(IntExpr, "0")));
+    args.push_back(transform(EP(IntExpr, 0)));
   }
   // TODO: might need transform later
   this->result = EP(CallExpr, EP(IdExpr, prefix + "slice"), move(args));

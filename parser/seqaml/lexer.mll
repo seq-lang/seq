@@ -263,7 +263,6 @@ and read state = parse
   | ">|"  as op { P.SPIPE (cur_pos state lexbuf ~len:2, op) }
   | "|>"  as op { P.PIPE  (cur_pos state lexbuf ~len:2, op) }
   | "|"   as op { P.B_OR  (cur_pos state lexbuf, Core.Char.to_string op) }
-  | ":="  as op { P.ASSGN_EQ  (cur_pos state lexbuf ~len:2, op) }
   | "="   as op { P.EQ        (cur_pos state lexbuf, Core.Char.to_string op) }
   | "..." as op { P.ELLIPSIS  (cur_pos state lexbuf ~len:3, op) }
   | "@"   as op { P.AT        (cur_pos state lexbuf, Core.Char.to_string op) }
