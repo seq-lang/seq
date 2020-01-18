@@ -150,6 +150,7 @@ string IndexExpr::to_string() const {
   return format("(#index {} {})", *expr, *index);
 }
 
+CallExpr::CallExpr(ExprPtr e): expr(move(e)) {}
 CallExpr::CallExpr(ExprPtr e, vector<CallExpr::Arg> a)
     : expr(move(e)), args(move(a)) {}
 CallExpr::CallExpr(ExprPtr e, vector<ExprPtr> arg) : expr(move(e)) {

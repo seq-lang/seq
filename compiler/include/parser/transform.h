@@ -16,13 +16,12 @@
 class TransformStmtVisitor;
 
 class TransformExprVisitor : public ExprVisitor {
-  // Context &ctx;
-  // TransformStmtVisitor &stmtVisitor;
-  // seq::SrcInfo newSrcInfo;
   ExprPtr result{nullptr};
+  vector<StmtPtr> &prependStmts;
   friend class TransformStmtVisitor;
 
 public:
+  TransformExprVisitor(vector<StmtPtr> &prepend);
   ExprPtr transform(const Expr *e);
   vector<ExprPtr> transform(const vector<ExprPtr> &e);
   template<typename T> auto transform(const unique_ptr<T> &t) -> decltype(transform(t.get())) {
@@ -61,16 +60,15 @@ public:
 };
 
 class TransformStmtVisitor : public StmtVisitor {
-  // Context &ctx;
-  // seq::SrcInfo newSrcInfo;
+  vector<StmtPtr> prependStmts;
   StmtPtr result{nullptr};
 
   StmtPtr addAssignment(const Expr *lhs, const Expr *rhs);
   void processAssignment(const Expr *lhs, const Expr *rhs, vector<StmtPtr> &stmts);
-  string getTemporaryVar(const string &prefix = "") const;
 
 public:
   static StmtPtr apply(const StmtPtr &s);
+  void prepend(StmtPtr s);
 
   StmtPtr transform(const Stmt *stmt);
   ExprPtr transform(const Expr *stmt);

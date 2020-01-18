@@ -7,6 +7,11 @@
 using std::string;
 using std::vector;
 
+int tmpVarCounter = 0;
+string getTemporaryVar(const string &prefix) {
+  return fmt::format("$_{}_{}", prefix, ++tmpVarCounter);
+}
+
 string escape(string s) {
   string r;
   for (unsigned char c : s) {

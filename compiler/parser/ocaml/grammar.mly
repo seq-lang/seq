@@ -66,8 +66,7 @@ atom:
   | SEQ+
     { $loc, Seq (fst (List.hd $1), String.concat "" @@ List.map (fun (i, j) ->
         if i <> fst (List.hd $1) then raise (Ast.GrammarError ("cannot concatenate different types", $startpos));
-        j) $1)
-    }
+        j) $1) }
   | KMER { $loc, Kmer $1 }
   | bool { $loc, Bool $1 }
   | tuple { $1 }
@@ -130,8 +129,7 @@ arith_expr:
       | 1, "-", Int (f, s) -> Int ("-" ^ f, s)
       | 1, "-", Float (f, s) -> Float (-.f, s)
       | 1, "-", _ -> Unary ("-", $2)
-      | _ -> snd $2
-    }
+      | _ -> snd $2 }
 %inline arith_op:
   ADD | SUB | MUL | DIV | FDIV | MOD | POW | AT | B_AND | B_OR | B_XOR | B_LSH | B_RSH { $1 }
 arith_term:
@@ -166,28 +164,37 @@ small_statement:
   | DEL FLNE(COMMA, expr) { List.map (fun e -> fst e, Del e) $2 }
   | ASSERT FLNE(COMMA, expr) { List.map (fun e -> fst e, Assert e) $2 }
   | GLOBAL FLNE(COMMA, ID) { List.map (fun e -> $loc, Global e) $2 }
+  | PREFETCH FLNE(COMMA, expr) { List.map (fun e -> fst e, Prefetch e) $2 }
+  | print_statement { $1 }
   | import_statement { $1 }
   | assign_statement { $1 }
 small_single_statement:
   | PASS { $loc, Pass () }
   | BREAK { $loc, Break () }
   | CONTINUE { $loc, Continue () }
-  | PRINT { $loc, Print ([], "\n") }
-  | PRINT FLNE_HAS(COMMA, expr)
-    { $loc, Print (fst $2, if snd $2 then " " else "\n") }
   | RETURN separated_list(COMMA, expr)
     { $loc, Return (match $2 with [] -> None | [e] -> Some e | l -> Some ($loc, Tuple l)) }
   | YIELD separated_list(COMMA, expr)
     { $loc, Yield (match $2 with [] -> None | [e] -> Some e | l -> Some ($loc, Tuple l)) }
   | YIELD FROM expr { $loc, YieldFrom $3 }
   | TYPE ID EQ expr { $loc, TypeAlias ($2, $4) }
-  | PREFETCH FLNE(COMMA, expr) { $loc, Prefetch $2 }
   | THROW expr { $loc, Throw $2 }
+print_statement:
+  | PRINT { [$loc, Print ($loc, String "\n")] }
+  | PRINT FLNE_HAS(COMMA, expr)
+    { let space, l = not (snd $2), (List.length (fst $2)) - 1 in
+      List.concat @@ List.mapi (fun i e ->
+        [fst e, Print e ; fst e, Print (fst e, String (if i < l || space then " " else "\n"))])
+      (fst $2) }
 
 single_statement:
   | NL { $loc, Pass () }
   | WHILE expr COLON suite { $loc, While ($2, $4) }
-  | FOR FLNE(COMMA, ID) IN expr COLON suite { $loc, For ($2, $4, $6) }
+  | FOR FLNE(COMMA, ID) IN expr COLON suite {
+    let var = $loc($2), match $2 with [e] -> Id e | l -> Tuple (List.map (fun i -> $loc($2), Id i) l) in
+    $loc, For (var, $4, $6) }
+  /* TODO: allow any lhs-expression without parentheses */
+  | FOR tuple IN expr COLON suite { $loc, For ($2, $4, $6) }
   | IF expr COLON suite { $loc, If [Some $2, $4] }
   | IF expr COLON suite elif_suite { $loc, If ((Some $2, $4) :: $5) }
   | MATCH expr COLON NL INDENT case_suite DEDENT { $loc, Match ($2, $6) }
@@ -225,8 +232,7 @@ import_statement:
     { [$loc, Import ((flatten_dot ~sep:"/" $2, None), ["*", None])] }
   | FROM dot_term IMPORT FLNE(COMMA, import_term)
     { let what = List.map (fun (_, (what, ias)) -> (flatten_dot ~sep:"/" what, ias)) $4 in
-      [$loc, Import ((flatten_dot ~sep:"/" $2, None), what)]
-    }
+      [$loc, Import ((flatten_dot ~sep:"/" $2, None), what)] }
   | IMPORT FLNE(COMMA, import_term)
     { List.map (fun (pos, (from, import_as)) -> pos, Import ((flatten_dot ~sep:"/" from, import_as), [])) $2 }
 import_term:
@@ -239,8 +245,7 @@ assign_statement:
   | ID COLON expr EQ expr { [$loc, Assign (($loc($1), Id $1), $5, Some $3)] }
   | expr_list EQ separated_nonempty_list(EQ, expr_list)
     { let all = List.map (function [l] -> l | l -> $loc, Tuple l) (List.rev ($1 :: $3)) in
-      List.rev @@ List.map (fun i -> $loc, Assign (i, List.hd all, None)) (List.tl all)
-    }
+      List.rev @@ List.map (fun i -> $loc, Assign (i, List.hd all, None)) (List.tl all) }
 %inline aug_eq: PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ | LSHEQ | RSHEQ | ANDEQ | OREQ | XOREQ { $1 }
 decl_statement: ID COLON expr NL { $loc, Declare ($loc, { name = $1; typ = Some $3; default = None }) }
 
@@ -260,8 +265,7 @@ func_statement:
   | decorator+ func
     { match $2 with
       | [pos, Function f] -> [pos, Function { f with fn_attrs = $1 }]
-      | _ -> failwith "impossible decorator case"
-    }
+      | _ -> failwith "impossible decorator case" }
 func:
   | DEF ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type? COLON suite
     { [$loc, Function { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = $9; fn_attrs = [] }] }
@@ -276,8 +280,7 @@ extern_from: FROM dot_term { $2 }
 extern_what:
   | ID LP FL(COMMA, extern_param) RP func_ret_type? extern_as?
   { let e_typ = match $5 with Some typ -> typ | None -> $loc($4), Id "void" in
-    $loc, { lang = ""; e_from = None; e_name = $1; e_typ; e_args = $3; e_as = $6 }
-  }
+    $loc, { lang = ""; e_from = None; e_name = $1; e_typ; e_args = $3; e_as = $6 } }
 extern_param:
   | expr { $loc, { name = ""; typ = Some $1; default = None } }
   | ID param_type { $loc, { name = $1; typ = Some $2; default = None } }
@@ -287,20 +290,16 @@ pyfunc:
   /* TODO: C++ :: Seq function (def foo [ [type+] ] (param+) [ -> return ]) */
   | PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON suite { [$loc, Pass ()] }
 
-
 class_statement: cls | extend | typ { $1 }
 cls:
   | CLASS ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
     { let args = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc)
-        [] $7
+        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc) [] $7
       in
       let members = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc)
-        [] $7
+        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $7
       in
-      $loc, Class { class_name = $2; generics = opt_val $3 []; args; members }
-    }
+      $loc, Class { class_name = $2; generics = opt_val $3 []; args; members } }
 dataclass_member: class_member { $1 } | decl_statement { Some $1 }
 class_member:
   | PASS NL | STRING NL { None }

@@ -30,7 +30,7 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-#define RETURN(T, ...) (this->result = new T(__VA_ARGS__))
+#define RETURN(T, ...) (this->result = new T(__VA_ARGS__)); return
 #define ERROR(...) error(stmt->getSrcInfo(), __VA_ARGS__)
 
 CodegenStmtVisitor::CodegenStmtVisitor(Context &ctx)
@@ -59,14 +59,7 @@ seq::Expr *CodegenStmtVisitor::transform(const ExprPtr &expr) {
 }
 
 seq::types::Type *CodegenStmtVisitor::transformType(const ExprPtr &expr) {
-  CodegenExprVisitor v(ctx, *this);
-  expr->accept(v);
-  if (v.result->getName() == "type") {
-    return v.result->getType();
-  } else {
-    error(expr->getSrcInfo(), "expected type");
-    return nullptr;
-  }
+  return CodegenExprVisitor(ctx, *this).transformType(expr);
 }
 
 void CodegenStmtVisitor::visit(const SuiteStmt *stmt) {
@@ -75,7 +68,9 @@ void CodegenStmtVisitor::visit(const SuiteStmt *stmt) {
   }
 }
 void CodegenStmtVisitor::visit(const PassStmt *stmt) {}
-void CodegenStmtVisitor::visit(const BreakStmt *stmt) { RETURN(seq::Break, ); }
+void CodegenStmtVisitor::visit(const BreakStmt *stmt) {
+  RETURN(seq::Break, );
+}
 void CodegenStmtVisitor::visit(const ContinueStmt *stmt) {
   RETURN(seq::Continue, );
 }
@@ -84,36 +79,36 @@ void CodegenStmtVisitor::visit(const ExprStmt *stmt) {
 }
 void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
   // TODO: JIT
-  if (auto i = dynamic_cast<IdExpr*>(stmt->lhs.get())) {
+  if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
     auto var = i->value;
-    if (auto v = dynamic_cast<VarContextItem*>(ctx.find(var).get())) { // assignment
+    if (auto v =
+            dynamic_cast<VarContextItem *>(ctx.find(var).get())) { // assignment
       RETURN(seq::Assign, v->getVar(), transform(stmt->rhs));
-    } else { // TODO: types &
-      auto varStmt = new seq::VarStmt(transform(stmt->rhs), transformType(stmt->type));
+    } else {
+      auto varStmt =
+          new seq::VarStmt(transform(stmt->rhs),
+                           stmt->type ? transformType(stmt->type) : nullptr);
       ctx.add(var, varStmt->getVar());
       this->result = varStmt;
     }
-  } if (auto i = dynamic_cast<DotExpr*>(stmt->lhs.get())) {
-    RETURN(seq::AssignMember, transform(i->expr), i->member, transform(stmt->rhs));
+  } else if (auto i = dynamic_cast<DotExpr *>(stmt->lhs.get())) {
+    RETURN(seq::AssignMember, transform(i->expr), i->member,
+           transform(stmt->rhs));
   } else {
     ERROR("invalid assignment");
   }
 }
 void CodegenStmtVisitor::visit(const DelStmt *stmt) {
-  assert(stmt->var.size() && !stmt->expr);
-  auto item = ctx.find(stmt->var);
-  if (auto v = dynamic_cast<VarContextItem *>(item.get())) {
-    ctx.remove(stmt->var);
-    RETURN(seq::Del, v->getVar());
-  } else {
-    ERROR("cannot delete non-variable");
+  if (auto expr = dynamic_cast<IdExpr *>(stmt->expr.get())) {
+    if (auto v = dynamic_cast<VarContextItem *>(ctx.find(expr->value).get())) {
+      ctx.remove(expr->value);
+      RETURN(seq::Del, v->getVar());
+    }
   }
+  ERROR("cannot delete non-variable");
 }
 void CodegenStmtVisitor::visit(const PrintStmt *stmt) {
-  if (stmt->items.size() != 1) {
-    ERROR("expected single expression");
-  }
-  RETURN(seq::Print, transform(stmt->items[0]));
+  RETURN(seq::Print, transform(stmt->expr));
 }
 void CodegenStmtVisitor::visit(const ReturnStmt *stmt) {
   if (!stmt->expr) {
@@ -140,48 +135,89 @@ void CodegenStmtVisitor::visit(const YieldStmt *stmt) {
 void CodegenStmtVisitor::visit(const AssertStmt *stmt) {
   RETURN(seq::Assert, transform(stmt->expr));
 }
-void CodegenStmtVisitor::visit(const TypeAliasStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const WhileStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const ForStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const IfStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const MatchStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const ExtendStmt *stmt) {
-  /*
-  let name, generics = match snd name with
-      | Id _ -> name, []
-      | Index (name, ((_, Id _) as generic)) -> name, [generic]
-      | Index (name, (_, Tuple generics)) -> name, generics
-      | _ -> serr ~pos "cannot extend non-type expression"
-    in
-    let typ = E.parse_type ~ctx name in
-    let generic_types = Llvm.Generics.Type.get_names typ in
-    if List.(length generics <> length generic_types) then
-      serr ~pos "specified %d generics, but expected %d" (List.length generics)
-  (List.length generic_types); let new_ctx = { ctx with map = Hashtbl.copy
-  ctx.map } in let generics = List.map2_exn generics generic_types ~f:(fun g t
-  -> match snd g with | Id n ->
-        (* Util.dbg ">> extend %s :: add %s" (Ast.Expr.to_string name) n; *)
-        Ctx.add ~ctx:new_ctx n (Ctx_namespace.Type t)
-      | _ -> serr ~pos:(fst g) "not a valid generic specifier")
-    in
-    ignore
-    @@ List.map stmts ~f:(function
-           | pos, Function f -> parse_function new_ctx pos f ~cls:typ
-           | pos, _ -> serr ~pos "type extensions can only specify functions");
-    Llvm.Stmt.pass ()
-  */
-  ctx.setEnclosingType(transformType(stmt->what));
-  transform(stmt->suite);
-  ctx.setEnclosingType(nullptr);
+void CodegenStmtVisitor::visit(const TypeAliasStmt *stmt) {
+  ctx.add(stmt->name, transformType(stmt->expr));
 }
+void CodegenStmtVisitor::visit(const WhileStmt *stmt) {
+  auto r = new seq::While(transform(stmt->cond));
+  ctx.addBlock(r->getBlock());
+  transform(stmt->suite);
+  ctx.popBlock();
+  this->result = r;
+}
+void CodegenStmtVisitor::visit(const ForStmt *stmt) {
+  auto r = new seq::For(transform(stmt->iter));
+  string forVar;
+  if (auto expr = dynamic_cast<IdExpr*>(stmt->var.get())) {
+    forVar = expr->value;
+  } else {
+    error("expected valid assignment statement");
+  }
+  ctx.addBlock(r->getBlock());
+  ctx.add(forVar, r->getVar());
+  transform(stmt->suite);
+  ctx.popBlock();
+  this->result = r;
+}
+void CodegenStmtVisitor::visit(const IfStmt *stmt) {
+  auto r = new seq::If();
+  for (auto &i: stmt->ifs) {
+    auto b = i.cond ? r->addCond(transform(i.cond)) : r->addElse();
+    ctx.addBlock(b);
+    transform(i.suite);
+    ctx.popBlock();
+  }
+  this->result = r;
+}
+void CodegenStmtVisitor::visit(const MatchStmt *stmt) { ERROR("TODO"); }
 void CodegenStmtVisitor::visit(const ImportStmt *stmt) { ERROR("TODO"); }
 void CodegenStmtVisitor::visit(const ExternImportStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const TryStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const GlobalStmt *stmt) { ERROR("TODO"); }
+void CodegenStmtVisitor::visit(const TryStmt *stmt) {
+  auto r = new seq::TryCatch();
+  ctx.addBlock(r->getBlock());
+  transform(stmt->suite);
+  ctx.popBlock();
+  int varIdx = 0;
+  for (auto &c: stmt->catches) {
+    ctx.addBlock(r->addCatch(c.exc ? transformType(c.exc) : nullptr));
+    ctx.add(c.var, r->getVar(varIdx++));
+    transform(c.suite);
+    ctx.popBlock();
+  }
+  if (stmt->finally) {
+    ctx.addBlock(r->getFinally());
+    transform(stmt->finally);
+    ctx.popBlock();
+  }
+  this->result = r;
+}
+void CodegenStmtVisitor::visit(const GlobalStmt *stmt) {
+  if (auto var = dynamic_cast<VarContextItem*>(ctx.find(stmt->var).get())) {
+    if (var->isGlobal()) {
+      if (var->getBase() != ctx.getBase()) {
+        ctx.add(stmt->var, var->getVar(), true);
+      }
+      return;
+    }
+  }
+  error("identifier '{}' not found", stmt->var);
+}
 void CodegenStmtVisitor::visit(const ThrowStmt *stmt) {
   RETURN(seq::Throw, transform(stmt->expr));
 }
-void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) { ERROR("TODO"); }
+void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) {
+  if (auto e = dynamic_cast<IndexExpr *>(stmt->expr.get())) {
+    if (auto f = dynamic_cast<seq::Func *>(ctx.getBase())) {
+      auto r = new seq::Prefetch({transform(e->expr)}, {transform(e->index)});
+      f->sawPrefetch(r);
+      this->result = r;
+    } else {
+      ERROR("prefetch outside of function");
+    }
+  } else {
+    ERROR("prefetch needs index expression");
+  }
+}
 void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   auto f = new seq::Func();
   f->setName(stmt->name);
@@ -298,6 +334,46 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
     }
     auto tn = getMembers();
     t->setContents(seq::types::RecordType::get(tn.first, tn.second, ""));
+  }
+  transform(stmt->suite);
+  ctx.popBlock();
+  ctx.setEnclosingType(nullptr);
+}
+void CodegenStmtVisitor::visit(const ExtendStmt *stmt) {
+  seq::types::Type *type;
+  vector<string> generics;
+  if (auto w = dynamic_cast<IdExpr *>(stmt->what.get())) {
+    type = transformType(stmt->what);
+  } if (auto w = dynamic_cast<IndexExpr *>(stmt->what.get())) {
+    type = transformType(w->expr);
+    if (auto t = dynamic_cast<TupleExpr *>(w->index.get())) {
+      for (auto &ti: t->items) {
+        if (auto l = dynamic_cast<IdExpr *>(ti.get())) {
+          generics.push_back(l->value);
+        } else {
+          ERROR("invalid generic variable");
+        }
+      }
+    } else if (auto l = dynamic_cast<IdExpr *>(w->index.get())) {
+      generics.push_back(l->value);
+    } else {
+      ERROR("invalid generic variable");
+    }
+  } else {
+    ERROR("cannot extend non-type");
+  }
+  ctx.setEnclosingType(transformType(stmt->what));
+  ctx.addBlock();
+  int count = 0;
+  if (auto g = dynamic_cast<seq::types::RefType *>(type)) {
+    if (g->numGenerics() != generics.size()) {
+      ERROR("generic count mismatch");
+    }
+    for (int i = 0; i < g->numGenerics(); i++) {
+      ctx.add(generics[i], g->getGeneric(i));
+    }
+  } else if (count) {
+    ERROR("unexpected generics");
   }
   transform(stmt->suite);
   ctx.popBlock();

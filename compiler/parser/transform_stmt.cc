@@ -39,10 +39,10 @@ using std::vector;
 #define SPX(s, T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), s->getSrcInfo())
 #define ERROR(...) error(stmt->getSrcInfo(), __VA_ARGS__)
 
-int tmpVarCounter = 0;
-string TransformStmtVisitor::getTemporaryVar(const string &prefix) const {
-  return format("$_{}_{}", prefix, ++tmpVarCounter);
+void TransformStmtVisitor::prepend(StmtPtr s) {
+  prependStmts.push_back(move(s));
 }
+
 
 StmtPtr TransformStmtVisitor::apply(const StmtPtr &stmts) {
   auto tv = TransformStmtVisitor();
@@ -54,19 +54,26 @@ StmtPtr TransformStmtVisitor::transform(const Stmt *stmt) {
   if (!stmt) {
     return nullptr;
   }
-  fmt::print("I--> {}\n", stmt->to_string());
   TransformStmtVisitor v;
   stmt->accept(v);
-  fmt::print("O--> {}\n", v.result->to_string());
-  return move(v.result);
+  if (v.prependStmts.size()) {
+    v.prependStmts.push_back(move(v.result));
+    return make_unique<SuiteStmt>(move(v.prependStmts));
+  } else {
+    return move(v.result);
+  }
 }
 
 ExprPtr TransformStmtVisitor::transform(const Expr *expr) {
   if (!expr) {
     return nullptr;
   }
-  TransformExprVisitor v;
+  vector<StmtPtr> prepend;
+  TransformExprVisitor v(prepend);
   expr->accept(v);
+  for (auto &s: prepend) {
+    prependStmts.push_back(move(s));
+  }
   return move(v.result);
 }
 
@@ -89,7 +96,7 @@ void TransformStmtVisitor::visit(const ExprStmt *stmt) {
 }
 
 StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs) {
-  fmt::print("## ass {} = {}\n", *lhs, *rhs);
+  // fmt::print("## ass {} = {}\n", *lhs, *rhs);
   if (auto l = dynamic_cast<const IndexExpr *>(lhs)) {
     vector<ExprPtr> args;
     args.push_back(transform(l->index));
@@ -110,7 +117,6 @@ StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs) {
 
 void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
                                              vector<StmtPtr> &stmts) {
-  // fmt::print("!! ass {} = {}\n", *lhs, *rhs);
   vector<Expr *> lefts;
   if (auto l = dynamic_cast<const TupleExpr *>(lhs)) {
     for (auto &i : l->items) {
@@ -197,19 +203,13 @@ void TransformStmtVisitor::visit(const DelStmt *stmt) {
                         EP(DotExpr, transform(expr->expr), "__delitem__"),
                         transform(expr->index))));
   } else if (auto expr = dynamic_cast<const IdExpr *>(stmt->expr.get())) {
-    RETURN(DelStmt, expr->value);
+    RETURN(DelStmt, transform(expr));
   } else {
     ERROR("this expression cannot be deleted");
   }
 }
 void TransformStmtVisitor::visit(const PrintStmt *stmt) {
-  vector<StmtPtr> suite;
-  for (int i = 0; i < stmt->items.size(); i++) {
-    suite.push_back(SP(PrintStmt, transform(stmt->items[i])));
-    auto terminator = i == stmt->items.size() - 1 ? stmt->terminator : " ";
-    suite.push_back(SP(PrintStmt, EPX(stmt, StringExpr, terminator)));
-  }
-  RETURN(SuiteStmt, move(suite));
+  RETURN(PrintStmt, transform(stmt->expr));
 }
 void TransformStmtVisitor::visit(const ReturnStmt *stmt) {
   RETURN(ReturnStmt, transform(stmt->expr));
@@ -227,7 +227,21 @@ void TransformStmtVisitor::visit(const WhileStmt *stmt) {
   RETURN(WhileStmt, transform(stmt->cond), transform(stmt->suite));
 }
 void TransformStmtVisitor::visit(const ForStmt *stmt) {
-  RETURN(ForStmt, stmt->vars, transform(stmt->iter), transform(stmt->suite));
+  auto iter = transform(stmt->iter);
+  StmtPtr suite;
+  ExprPtr var;
+  if (dynamic_cast<IdExpr*>(stmt->var.get())) {
+    var = transform(stmt->var);
+    suite = transform(stmt->suite);
+  } else {
+    string varName = getTemporaryVar("for");
+    vector<StmtPtr> stmts;
+    auto rhs = EPX(stmt, IdExpr, varName);
+    processAssignment(stmt->var.get(), rhs.get(), stmts);
+    stmts.push_back(transform(stmt->suite));
+    suite = SP(SuiteStmt, move(stmts));
+  }
+  RETURN(ForStmt, move(var), move(iter), move(suite));
 }
 void TransformStmtVisitor::visit(const IfStmt *stmt) {
   vector<IfStmt::If> ifs;
@@ -281,11 +295,7 @@ void TransformStmtVisitor::visit(const ThrowStmt *stmt) {
   RETURN(ThrowStmt, transform(stmt->expr));
 }
 void TransformStmtVisitor::visit(const PrefetchStmt *stmt) {
-  vector<ExprPtr> what;
-  for (auto &i : stmt->what) {
-    what.push_back(transform(i));
-  }
-  RETURN(PrefetchStmt, move(what));
+  RETURN(PrefetchStmt, transform(stmt->expr));
 }
 void TransformStmtVisitor::visit(const FunctionStmt *stmt) {
   vector<Param> args;
@@ -322,7 +332,7 @@ void TransformStmtVisitor::visit(const YieldFromStmt *stmt) {
   auto var = getTemporaryVar("yield");
   vector<StmtPtr> stmts;
   stmts.push_back(SP(YieldStmt, EPX(stmt, IdExpr, var)));
-  RETURN(ForStmt, vector<string>{var}, transform(stmt->expr),
+  RETURN(ForStmt, EPX(stmt, IdExpr, var), transform(stmt->expr),
          SP(SuiteStmt, move(stmts)));
 }
 

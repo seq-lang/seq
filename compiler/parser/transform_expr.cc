@@ -33,10 +33,14 @@ using std::vector;
   (this->result = setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()))
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
 #define EP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
+#define SP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
 #define ERROR(...) error(expr->getSrcInfo(), __VA_ARGS__)
 
+TransformExprVisitor::TransformExprVisitor(vector<StmtPtr> &prepend)
+    : prependStmts(prepend) {}
+
 ExprPtr TransformExprVisitor::transform(const Expr *expr) {
-  TransformExprVisitor v;
+  TransformExprVisitor v(this->prependStmts);
   expr->accept(v);
   return move(v.result);
 }
@@ -122,17 +126,82 @@ void TransformExprVisitor::visit(const TupleExpr *expr) {
   RETURN(TupleExpr, transform(expr->items));
 }
 void TransformExprVisitor::visit(const ListExpr *expr) {
-  RETURN(ListExpr, transform(expr->items));
+  if (!expr->items.size()) {
+    error("empty lists are not supported");
+  }
+  string headVar = getTemporaryVar("head");
+  string listVar = getTemporaryVar("list");
+  prependStmts.push_back(
+      SP(AssignStmt, EP(IdExpr, headVar), transform(expr->items[0])));
+  prependStmts.push_back(SP(
+      AssignStmt, EP(IdExpr, listVar),
+      EP(CallExpr,
+         EP(IndexExpr, EP(IdExpr, "list"), EP(TypeOfExpr, EP(IdExpr, headVar))),
+         EP(IntExpr, expr->items.size()))));
+
+#define ADD(x)                                                                 \
+  prependStmts.push_back(SP(                                                   \
+      ExprStmt, EP(CallExpr, EP(DotExpr, EP(IdExpr, listVar), "append"), x)))
+  ADD(EP(IdExpr, headVar));
+  for (int i = 1; i < expr->items.size(); i++) {
+    ADD(transform(expr->items[i]));
+  }
+#undef ADD
+  RETURN(IdExpr, listVar);
 }
 void TransformExprVisitor::visit(const SetExpr *expr) {
-  RETURN(SetExpr, transform(expr->items));
+  if (!expr->items.size()) {
+    error("empty sets are not supported");
+  }
+  string headVar = getTemporaryVar("head");
+  string setVar = getTemporaryVar("set");
+  prependStmts.push_back(
+      SP(AssignStmt, EP(IdExpr, headVar), transform(expr->items[0])));
+  prependStmts.push_back(
+      SP(AssignStmt, EP(IdExpr, setVar),
+         EP(CallExpr, EP(IndexExpr, EP(IdExpr, "set"),
+                         EP(TypeOfExpr, EP(IdExpr, headVar))))));
+#define ADD(x)                                                                 \
+  prependStmts.push_back(                                                      \
+      SP(ExprStmt, EP(CallExpr, EP(DotExpr, EP(IdExpr, setVar), "add"), x)))
+  ADD(EP(IdExpr, headVar));
+  for (int i = 1; i < expr->items.size(); i++) {
+    ADD(transform(expr->items[i]));
+  }
+#undef ADD
+  RETURN(IdExpr, setVar);
 }
 void TransformExprVisitor::visit(const DictExpr *expr) {
-  vector<DictExpr::KeyValue> items;
-  for (auto &l : expr->items) {
-    items.push_back({transform(l.key), transform(l.value)});
+  if (!expr->items.size()) {
+    error("empty dicts are not supported");
   }
-  RETURN(DictExpr, move(items));
+  string headKey = getTemporaryVar("headk");
+  string headVal = getTemporaryVar("headv");
+  string dictVar = getTemporaryVar("dict");
+  prependStmts.push_back(
+      SP(AssignStmt, EP(IdExpr, headKey), transform(expr->items[0].key)));
+  prependStmts.push_back(
+      SP(AssignStmt, EP(IdExpr, headVal), transform(expr->items[0].value)));
+  vector<ExprPtr> types;
+  types.push_back(EP(TypeOfExpr, EP(IdExpr, headKey)));
+  types.push_back(EP(TypeOfExpr, EP(IdExpr, headVal)));
+  prependStmts.push_back(SP(AssignStmt, EP(IdExpr, dictVar),
+                            EP(CallExpr, EP(IndexExpr, EP(IdExpr, "dict"),
+                                            EP(TupleExpr, move(types))))));
+
+#define ADD(k, v)                                                              \
+  vector<ExprPtr> _s;                                                          \
+  _s.push_back(k);                                                             \
+  _s.push_back(v);                                                             \
+  prependStmts.push_back(SP(                                                   \
+      ExprStmt, EP(CallExpr, EP(DotExpr, EP(IdExpr, dictVar), "__setitem__"),  \
+                   move(_s))))
+  ADD(EP(IdExpr, headKey), EP(IdExpr, headVal));
+  for (int i = 1; i < expr->items.size(); i++) {
+    ADD(transform(expr->items[i].key), transform(expr->items[i].value));
+  }
+#undef ADD
+  RETURN(IdExpr, dictVar);
 }
 void TransformExprVisitor::visit(const GeneratorExpr *expr) {
   vector<GeneratorExpr::Body> loops;

@@ -129,8 +129,6 @@ class Context : public VTable<ContextItem> {
   unordered_map<string, VTable<ContextItem>> imports;
   VTable<ContextItem> stdlib;
 
-  int tmpVarCounter;
-
 public:
   Context(seq::SeqModule *module, const string &filename);
   shared_ptr<ContextItem> find(const string &name) const override;
@@ -145,7 +143,7 @@ public:
   void addBlock(seq::Block *newBlock = nullptr, seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
-  void add(const string &name, seq::Var *v);
-  void add(const string &name, seq::types::Type *t);
-  void add(const string &name, seq::Func *f, vector<string> names);
+  void add(const string &name, seq::Var *v, bool global = false);
+  void add(const string &name, seq::types::Type *t, bool global = false);
+  void add(const string &name, seq::Func *f, vector<string> names, bool global = false);
 };

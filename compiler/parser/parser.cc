@@ -17,7 +17,8 @@ SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file) {
   try {
     auto stmts = parse_file(file);
     auto tv = TransformStmtVisitor::apply(move(stmts));
-
+    fmt::print("{}\n",*tv);
+    exit(0);
     auto context = Context(new seq::SeqModule(), file);
     CodegenStmtVisitor::apply(context, tv);
     return context.getModule();

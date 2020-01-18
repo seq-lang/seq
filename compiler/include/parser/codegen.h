@@ -24,6 +24,7 @@ class CodegenExprVisitor : public ExprVisitor {
 public:
   CodegenExprVisitor(Context &ctx, CodegenStmtVisitor &stmtVisitor);
   seq::Expr *transform(const ExprPtr &e);
+  seq::types::Type *transformType(const ExprPtr &expr);
 
   void visit(const EmptyExpr *) override;
   void visit(const BoolExpr *) override;

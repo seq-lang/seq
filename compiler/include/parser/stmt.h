@@ -83,18 +83,14 @@ struct AssignStmt : public Stmt {
 
 struct DelStmt : public Stmt {
   ExprPtr expr;
-  string var;
   DelStmt(ExprPtr e);
-  DelStmt(const string &v);
   string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct PrintStmt : public Stmt {
-  vector<ExprPtr> items;
-  string terminator;
+  ExprPtr expr;
   PrintStmt(ExprPtr i);
-  PrintStmt(vector<ExprPtr> i, string t);
   string to_string() const override;
   ACCEPT_VISITOR;
 };
@@ -137,10 +133,10 @@ struct WhileStmt : public Stmt {
 };
 
 struct ForStmt : public Stmt {
-  vector<string> vars;
+  ExprPtr var;
   ExprPtr iter;
   StmtPtr suite;
-  ForStmt(vector<string> v, ExprPtr i, StmtPtr s);
+  ForStmt(ExprPtr v, ExprPtr i, StmtPtr s);
   string to_string() const override;
   ACCEPT_VISITOR;
 };
@@ -222,8 +218,8 @@ struct ThrowStmt : public Stmt {
 };
 
 struct PrefetchStmt : public Stmt {
-  vector<ExprPtr> what;
-  PrefetchStmt(vector<ExprPtr> w);
+  ExprPtr expr;
+  PrefetchStmt(ExprPtr e);
   string to_string() const override;
   ACCEPT_VISITOR;
 };

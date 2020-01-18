@@ -69,13 +69,13 @@ type tstmt =
   | Expr of texpr ann
   | Assign of (texpr ann * texpr ann * texpr ann option)
   | Del of texpr ann
-  | Print of (texpr ann list * string)
+  | Print of texpr ann
   | Return of texpr ann option
   | Yield of texpr ann option
   | Assert of texpr ann
   | TypeAlias of (string * texpr ann)
   | While of (texpr ann * tstmt ann list)
-  | For of (string list * texpr ann * tstmt ann list)
+  | For of (texpr ann * texpr ann * tstmt ann list)
   | If of (texpr ann option * tstmt ann list) list
   | Match of (texpr ann * (pattern ann * tstmt ann list) list)
   | Extend of (texpr ann * tstmt ann list)
@@ -84,7 +84,7 @@ type tstmt =
   | Try of (tstmt ann list * catch ann list * tstmt ann list)
   | Global of string
   | Throw of texpr ann
-  | Prefetch of texpr ann list
+  | Prefetch of texpr ann
   | Special of (string * tstmt ann list * string list)
   | Function of fn_t
   | Class of class_t

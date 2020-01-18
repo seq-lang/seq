@@ -296,7 +296,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 5:
     Return(Del, parse_expr(t));
   case 6:
-    Return(Print, parse_list(Field(t, 0), parse_expr), String_val(Field(t, 1)));
+    Return(Print, parse_expr(t));
   case 7:
     Return(Return, parse_optional(t, parse_expr));
   case 8:
@@ -308,7 +308,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 11:
     Return(While, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
   case 12:
-    Return(For, parse_list(Field(t, 0), parse_string), parse_expr(Field(t, 1)),
+    Return(For, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
            parse_stmt_list(Field(t, 2)));
   case 13:
     Return(If, parse_list(t, [](value i) {
@@ -355,7 +355,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 20:
     Return(Throw, parse_expr(t));
   case 21:
-    Return(Prefetch, parse_list(t, parse_expr));
+    Return(Prefetch, parse_expr(t));
   // | Special of (string * tstmt ann list * string list)
   case 23:
     Return(Function, parse_string(Field(t, 0)),

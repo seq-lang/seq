@@ -205,6 +205,7 @@ struct CallExpr : public Expr {
   CallExpr(ExprPtr e, vector<Arg> a);
   CallExpr(ExprPtr e, vector<ExprPtr> a);
   CallExpr(ExprPtr e, ExprPtr arg);
+  CallExpr(ExprPtr e);
   string to_string() const override;
   ACCEPT_VISITOR;
 };

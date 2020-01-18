@@ -28,7 +28,7 @@ Stmt::Stmt(const seq::SrcInfo &s) { setSrcInfo(s); }
 vector<Stmt *> Stmt::getStatements() { return {this}; }
 
 SuiteStmt::SuiteStmt(vector<StmtPtr> s) : stmts(move(s)) {}
-string SuiteStmt::to_string() const { return format("({})", combine(stmts)); }
+string SuiteStmt::to_string() const { return format("({})", combine(stmts, "\n  ")); }
 vector<Stmt *> SuiteStmt::getStatements() {
   vector<Stmt *> result;
   for (auto &s : stmts) {
@@ -57,14 +57,11 @@ string AssignStmt::to_string() const {
 }
 
 DelStmt::DelStmt(ExprPtr e) : expr(move(e)) {}
-DelStmt::DelStmt(const string &v) : expr(nullptr), var(v) {}
 string DelStmt::to_string() const { return format("(#del {})", *expr); }
 
-PrintStmt::PrintStmt(ExprPtr i) : terminator("") { items.push_back(move(i)); }
-PrintStmt::PrintStmt(vector<ExprPtr> i, string t)
-    : items(move(i)), terminator(t) {}
+PrintStmt::PrintStmt(ExprPtr e) : expr(move(e)) {}
 string PrintStmt::to_string() const {
-  return format("(#print {} :end '{}')", combine(items), escape(terminator));
+  return format("(#print {})", *expr);
 }
 
 ReturnStmt::ReturnStmt(ExprPtr e) : expr(move(e)) {}
@@ -88,10 +85,10 @@ string WhileStmt::to_string() const {
   return format("(#while {} {})", *cond, *suite);
 }
 
-ForStmt::ForStmt(vector<string> v, ExprPtr i, StmtPtr s)
-    : vars(v), iter(move(i)), suite(move(s)) {}
+ForStmt::ForStmt(ExprPtr v, ExprPtr i, StmtPtr s)
+    : var(move(v)), iter(move(i)), suite(move(s)) {}
 string ForStmt::to_string() const {
-  return format("(#for ({}) {} {})", fmt::join(vars, " "), *iter, *suite);
+  return format("(#for {} {} {})", *var, *iter, *suite);
 }
 
 IfStmt::IfStmt(vector<IfStmt::If> i) : ifs(move(i)) {}
@@ -163,9 +160,9 @@ string GlobalStmt::to_string() const { return format("(#global {})", var); }
 ThrowStmt::ThrowStmt(ExprPtr e) : expr(move(e)) {}
 string ThrowStmt::to_string() const { return format("(#throw {})", *expr); }
 
-PrefetchStmt::PrefetchStmt(vector<ExprPtr> w) : what(move(w)) {}
+PrefetchStmt::PrefetchStmt(ExprPtr e) : expr(move(e)) {}
 string PrefetchStmt::to_string() const {
-  return format("(#prefetch {})", combine(what));
+  return format("(#prefetch {})", *expr);
 }
 
 FunctionStmt::FunctionStmt(string n, ExprPtr r, vector<string> g,
