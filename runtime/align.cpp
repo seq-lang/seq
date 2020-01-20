@@ -239,11 +239,7 @@ private:
 #define DP2 6
 #define DP3 7
 
-#define DEFAULT_MATCH 1
-#define DEFAULT_MISMATCH 2
-#define DEFAULT_OPEN 2
-#define DEFAULT_EXTEND 1
-#define DEFAULT_AMBIG -1
+#define SORT_PAIRS 0
 
 static void bwa_fill_scmat(int a, int b, int ambig, int8_t mat[25]) {
   int i, j, k;
@@ -256,8 +252,7 @@ static void bwa_fill_scmat(int a, int b, int ambig, int8_t mat[25]) {
     mat[k++] = ambig;
 }
 
-// type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, bandwidth:
-// i8, zdrop: i8, end_bonus: i8)
+// must be consistent with bio/align.seq
 struct InterAlignParams {
   int8_t a;
   int8_t b;
@@ -311,6 +306,11 @@ SEQ_FUNC void seq_inter_align1(InterAlignParams *paramsx, SeqPair *seqPairArray,
   bsw.scalarBandedSWAWrapper(seqPairArray, seqBufRef, seqBufQer, numPairs,
                              numThreads, params.bandwidth);
 }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
+// original code
 
 #if defined(__clang__) || defined(__GNUC__)
 #define __mmask8 uint8_t
@@ -397,8 +397,8 @@ BandedPairWiseSW::~BandedPairWiseSW() {
 int64_t BandedPairWiseSW::getTicks() {
   // printf("oneCount = %ld, totalCount = %ld\n", oneCount, totalCount);
   int64_t totalTicks = sort1Ticks + setupTicks + swTicks + sort2Ticks;
-  printf("cost breakup: %lld, %lld, %ld, %ld, %ld\n", sort1Ticks, setupTicks,
-         swTicks, sort2Ticks, totalTicks);
+  // printf("cost breakup: %lld, %lld, %ld, %ld, %ld\n", sort1Ticks, setupTicks,
+  //       swTicks, sort2Ticks, totalTicks);
 
   return totalTicks;
 }
@@ -3830,7 +3830,7 @@ void BandedPairWiseSW::smithWatermanBatchWrapper16(
     SeqPair *pairArray, uint8_t *seqBufRef, uint8_t *seqBufQer,
     int32_t numPairs, uint16_t numThreads, int8_t w) {
   // printf("numThreads: %d\n", numThreads);
-  int64_t st1, st2, st3, st4, st5;
+  int64_t st1 = 0, st2 = 0, st3 = 0, st4 = 0, st5 = 0;
 
   // st1 = ___rdtsc();
   uint16_t *seq1SoA = (uint16_t *)_mm_malloc(
@@ -4588,7 +4588,7 @@ void BandedPairWiseSW::smithWatermanBatchWrapper8(
     SeqPair *pairArray, uint8_t *seqBufRef, uint8_t *seqBufQer,
     int32_t numPairs, uint16_t numThreads, int8_t w) {
   // printf("numThreads: %d\n", numThreads);
-  int64_t st1, st2, st3, st4, st5;
+  int64_t st1 = 0, st2 = 0, st3 = 0, st4 = 0, st5 = 0;
   // st1 = ___rdtsc();
   uint8_t *seq1SoA = (uint8_t *)_mm_malloc(
       MAX_SEQ_LEN8 * SIMD_WIDTH8 * numThreads * sizeof(uint8_t), 64);
@@ -5272,3 +5272,5 @@ void BandedPairWiseSW::smithWaterman128_8(uint8_t seq1SoA[], uint8_t seq2SoA[],
 }
 
 #endif
+
+#pragma GCC diagnostic pop
