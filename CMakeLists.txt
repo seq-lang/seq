@@ -37,6 +37,7 @@ endif()
 
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
+                         runtime/align.cpp
                          runtime/exc.cpp
                          runtime/ksw2/ksw2.h
                          runtime/ksw2/ksw2_extd2_sse.cpp

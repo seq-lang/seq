@@ -101,6 +101,9 @@ private:
   /// Whether this function contains a `prefetch` statement
   bool prefetch;
 
+  /// Whether this function performs inter-sequence alignment
+  bool interAlign;
+
   /// Whether types in this function have been resolved
   bool resolved;
 
@@ -162,7 +165,7 @@ public:
   void codegenYield(llvm::Value *val, types::Type *type,
                     llvm::BasicBlock *&block, bool empty = false,
                     bool dryrun = false);
-  llvm::Value *codegenYieldExpr(llvm::BasicBlock *&block);
+  llvm::Value *codegenYieldExpr(llvm::BasicBlock *&block, bool suspend = true);
 
   bool isGen() override;
   Var *getArgVar(std::string name);
