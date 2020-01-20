@@ -587,9 +587,12 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       }
 
       types::GenType *genType = type->asGen();
-      if (genType && genType->fromInterAlign()) {
-        unparallelize = true;
-        break;
+      if (genType) {
+        if (genType->fromInterAlign()) {
+          unparallelize = true;
+          break;
+        }
+        type = genType->getBaseType(0);
       }
     }
   }
