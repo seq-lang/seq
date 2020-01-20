@@ -11,6 +11,8 @@
 using std::string;
 using std::vector;
 
+#define DBG(c, ...) fmt::print(c "\n", __VA_ARGS__)
+
 template <typename T> string combine(const vector<T> &items, string delim = " ") {
   string s = "";
   for (int i = 0; i < items.size(); i++)
@@ -26,12 +28,12 @@ void error(const char *format);
 void error(const seq::SrcInfo &p, const char *format);
 
 template <typename... TArgs> void error(const char *format, TArgs &&... args) {
-  seq::compilationError(fmt::format(format, args...));
+  throw seq::exc::SeqException(fmt::format(format, args...));
 }
 
 template <typename... TArgs>
 void error(const seq::SrcInfo &p, const char *format, TArgs &&... args) {
-  seq::compilationError(fmt::format(format, args...), p.file, p.line, p.col);
+  throw seq::exc::SeqException(fmt::format(format, args...), p);
 }
 
 string getTemporaryVar(const string &prefix = "");

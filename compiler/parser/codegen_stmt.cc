@@ -30,7 +30,9 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-#define RETURN(T, ...) (this->result = new T(__VA_ARGS__)); return
+#define RETURN(T, ...)                                                         \
+  (this->result = new T(__VA_ARGS__));                                         \
+  return
 #define ERROR(...) error(stmt->getSrcInfo(), __VA_ARGS__)
 
 CodegenStmtVisitor::CodegenStmtVisitor(Context &ctx)
@@ -68,9 +70,7 @@ void CodegenStmtVisitor::visit(const SuiteStmt *stmt) {
   }
 }
 void CodegenStmtVisitor::visit(const PassStmt *stmt) {}
-void CodegenStmtVisitor::visit(const BreakStmt *stmt) {
-  RETURN(seq::Break, );
-}
+void CodegenStmtVisitor::visit(const BreakStmt *stmt) { RETURN(seq::Break, ); }
 void CodegenStmtVisitor::visit(const ContinueStmt *stmt) {
   RETURN(seq::Continue, );
 }
@@ -97,6 +97,9 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
   } else {
     ERROR("invalid assignment");
   }
+}
+void CodegenStmtVisitor::visit(const AssignEqStmt *stmt) {
+  ERROR("unexpected assignEq statement");
 }
 void CodegenStmtVisitor::visit(const DelStmt *stmt) {
   if (auto expr = dynamic_cast<IdExpr *>(stmt->expr.get())) {
@@ -148,7 +151,7 @@ void CodegenStmtVisitor::visit(const WhileStmt *stmt) {
 void CodegenStmtVisitor::visit(const ForStmt *stmt) {
   auto r = new seq::For(transform(stmt->iter));
   string forVar;
-  if (auto expr = dynamic_cast<IdExpr*>(stmt->var.get())) {
+  if (auto expr = dynamic_cast<IdExpr *>(stmt->var.get())) {
     forVar = expr->value;
   } else {
     error("expected valid assignment statement");
@@ -161,7 +164,7 @@ void CodegenStmtVisitor::visit(const ForStmt *stmt) {
 }
 void CodegenStmtVisitor::visit(const IfStmt *stmt) {
   auto r = new seq::If();
-  for (auto &i: stmt->ifs) {
+  for (auto &i : stmt->ifs) {
     auto b = i.cond ? r->addCond(transform(i.cond)) : r->addElse();
     ctx.addBlock(b);
     transform(i.suite);
@@ -170,15 +173,65 @@ void CodegenStmtVisitor::visit(const IfStmt *stmt) {
   this->result = r;
 }
 void CodegenStmtVisitor::visit(const MatchStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const ImportStmt *stmt) { ERROR("TODO"); }
-void CodegenStmtVisitor::visit(const ExternImportStmt *stmt) { ERROR("TODO"); }
+void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
+  auto file = ctx.getImportFile(stmt->from.first);
+  if (file == "") {
+    ERROR("cannot locate import '{}'", stmt->from.first);
+  }
+  auto table = ctx.importFile(file);
+  if (!stmt->what.size()) {
+    ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
+            file);
+  } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
+    if (stmt->what[0].second != "") {
+      ERROR("cannot rename star-import");
+    }
+    for (auto &i : *table) {
+      ctx.add(i.first, i.second.top());
+    }
+  } else
+    for (auto &w : stmt->what) {
+      if (auto c = table->find(w.first)) {
+        ctx.add(w.second == "" ? w.first : w.second, c);
+      } else {
+        ERROR("symbol '{}' not found in {}", w.first, file);
+      }
+    }
+}
+void CodegenStmtVisitor::visit(const ExternImportStmt *stmt) {
+  vector<string> names;
+  vector<seq::types::Type *> types;
+  for (auto &arg : stmt->args) {
+    if (!arg.type) {
+      ERROR("C imports need a type for each argument");
+    }
+    if (arg.name != "" &&
+        std::find(names.begin(), names.end(), arg.name) != names.end()) {
+      ERROR("argument '{}' already specified", arg.name);
+    }
+    names.push_back(arg.name);
+    types.push_back(transformType(arg.type));
+  }
+  auto f = new seq::Func();
+  f->setName(stmt->name.first);
+  ctx.add(stmt->name.second != "" ? stmt->name.second : stmt->name.first, f,
+          names);
+  f->setExternal();
+  f->setIns(types);
+  f->setArgNames(names);
+  if (!stmt->ret) {
+    ERROR("C imports need a return type");
+  }
+  f->setOut(transformType(stmt->ret));
+  RETURN(seq::FuncStmt, f);
+}
 void CodegenStmtVisitor::visit(const TryStmt *stmt) {
   auto r = new seq::TryCatch();
   ctx.addBlock(r->getBlock());
   transform(stmt->suite);
   ctx.popBlock();
   int varIdx = 0;
-  for (auto &c: stmt->catches) {
+  for (auto &c : stmt->catches) {
     ctx.addBlock(r->addCatch(c.exc ? transformType(c.exc) : nullptr));
     ctx.add(c.var, r->getVar(varIdx++));
     transform(c.suite);
@@ -192,7 +245,7 @@ void CodegenStmtVisitor::visit(const TryStmt *stmt) {
   this->result = r;
 }
 void CodegenStmtVisitor::visit(const GlobalStmt *stmt) {
-  if (auto var = dynamic_cast<VarContextItem*>(ctx.find(stmt->var).get())) {
+  if (auto var = dynamic_cast<VarContextItem *>(ctx.find(stmt->var).get())) {
     if (var->isGlobal()) {
       if (var->getBase() != ctx.getBase()) {
         ctx.add(stmt->var, var->getVar(), true);
@@ -221,7 +274,9 @@ void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) {
 void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   auto f = new seq::Func();
   f->setName(stmt->name);
-  if (auto c = ctx.getEnclosingType()) {
+  seq::types::Type *c = nullptr;
+  if (ctx.isToplevel() && (c = ctx.getEnclosingType())) {
+    // Make sure that it is toplever--- otherwise it is a nested function
     c->addMethod(stmt->name, f, false);
   } else {
     if (!ctx.isToplevel()) {
@@ -344,10 +399,11 @@ void CodegenStmtVisitor::visit(const ExtendStmt *stmt) {
   vector<string> generics;
   if (auto w = dynamic_cast<IdExpr *>(stmt->what.get())) {
     type = transformType(stmt->what);
-  } if (auto w = dynamic_cast<IndexExpr *>(stmt->what.get())) {
+  }
+  if (auto w = dynamic_cast<IndexExpr *>(stmt->what.get())) {
     type = transformType(w->expr);
     if (auto t = dynamic_cast<TupleExpr *>(w->index.get())) {
-      for (auto &ti: t->items) {
+      for (auto &ti : t->items) {
         if (auto l = dynamic_cast<IdExpr *>(ti.get())) {
           generics.push_back(l->value);
         } else {

@@ -19,6 +19,7 @@
 
 using fmt::format;
 using std::get;
+using std::make_unique;
 using std::move;
 using std::ostream;
 using std::stack;
@@ -34,12 +35,14 @@ using std::vector;
 #define ERROR(...) error(expr->getSrcInfo(), __VA_ARGS__)
 
 CodegenExprVisitor::CodegenExprVisitor(Context &ctx,
-                                       CodegenStmtVisitor &stmtVisitor)
-    : ctx(ctx), stmtVisitor(stmtVisitor), result(nullptr) {}
+                                       CodegenStmtVisitor &stmtVisitor,
+                                       vector<seq::Var *> *captures)
+    : ctx(ctx), stmtVisitor(stmtVisitor), result(nullptr), captures(captures) {}
 
-seq::Expr *CodegenExprVisitor::transform(const ExprPtr &expr) {
+seq::Expr *CodegenExprVisitor::transform(const ExprPtr &expr,
+                                         vector<seq::Var *> *captures) {
   // fmt::print("<e> {} :pos {}\n", expr, expr->getSrcInfo());
-  CodegenExprVisitor v(ctx, stmtVisitor);
+  CodegenExprVisitor v(ctx, stmtVisitor, captures);
   expr->accept(v);
   if (v.result) {
     v.result->setSrcInfo(expr->getSrcInfo());
@@ -105,6 +108,9 @@ void CodegenExprVisitor::visit(const IdExpr *expr) {
   }
   this->result = i->getExpr();
   if (auto var = dynamic_cast<VarContextItem *>(i.get())) {
+    if (captures) {
+      captures->push_back(var->getVar());
+    }
     if (var->isGlobal() && var->getBase() == ctx.getBase() &&
         ctx.hasFlag("atomic")) {
       dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
@@ -130,8 +136,59 @@ void CodegenExprVisitor::visit(const SetExpr *expr) {
 void CodegenExprVisitor::visit(const DictExpr *expr) {
   ERROR("unexpected dict expression");
 }
-void CodegenExprVisitor::visit(const GeneratorExpr *expr) { ERROR("TODO"); }
-void CodegenExprVisitor::visit(const DictGeneratorExpr *expr) { ERROR("TODO"); }
+seq::For *
+CodegenExprVisitor::parseComprehension(const Expr *expr,
+                                       const vector<GeneratorExpr::Body> &loops,
+                                       vector<seq::Var *> *captures) {
+  seq::For *topFor = nullptr;
+  seq::Block *block = nullptr;
+  for (auto &l : loops) {
+    auto f = new seq::For(transform(l.gen, captures));
+    if (!topFor) {
+      topFor = f;
+    }
+    ctx.addBlock(f->getBlock());
+    if (l.vars.size() == 1) {
+      ctx.add(l.vars[0], f->getVar());
+    } else {
+      ERROR("TODO not yet supported");
+    }
+    f->setSrcInfo(expr->getSrcInfo());
+    f->setBase(ctx.getBase());
+    if (block) {
+      block->add(f);
+    }
+    block = ctx.getBlock();
+    if (l.conds.size()) {
+      auto i = new seq::If();
+      auto b = i->addCond(transform(l.conds[0], captures));
+      i->setSrcInfo(expr->getSrcInfo());
+      i->setBase(ctx.getBase());
+      block->add(i);
+      block = b;
+    }
+  }
+  return topFor;
+}
+void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
+  vector<seq::Var *> captures;
+  auto topFor = parseComprehension(expr, expr->loops, &captures);
+  auto e = transform(expr->expr, &captures);
+  if (expr->kind == GeneratorExpr::ListGenerator) {
+    RETURN(seq::ListCompExpr, e, topFor,
+           transformType(make_unique<IdExpr>("list")));
+  } else if (expr->kind == GeneratorExpr::SetGenerator) {
+    RETURN(seq::SetCompExpr, e, topFor,
+           transformType(make_unique<IdExpr>("set")));
+  } else if (expr->kind == GeneratorExpr::Generator) {
+    RETURN(seq::GenExpr, e, topFor, captures);
+  }
+}
+void CodegenExprVisitor::visit(const DictGeneratorExpr *expr) {
+  auto topFor = parseComprehension(expr, expr->loops);
+  RETURN(seq::DictCompExpr, transform(expr->key), transform(expr->expr), topFor,
+         transformType(make_unique<IdExpr>("dict")));
+}
 void CodegenExprVisitor::visit(const IfExpr *expr) {
   RETURN(seq::CondExpr, transform(expr->cond), transform(expr->eif),
          transform(expr->eelse));
@@ -141,7 +198,7 @@ void CodegenExprVisitor::visit(const UnaryExpr *expr) {
 }
 void CodegenExprVisitor::visit(const BinaryExpr *expr) {
   RETURN(seq::BOpExpr, seq::bop(expr->op), transform(expr->lexpr),
-         transform(expr->rexpr), true);
+         transform(expr->rexpr), expr->inPlace);
 }
 void CodegenExprVisitor::visit(const PipeExpr *expr) {
   vector<seq::Expr *> items;
@@ -252,6 +309,41 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
   }
 }
 void CodegenExprVisitor::visit(const DotExpr *expr) {
+  // Check if this is an import
+  vector<string> imports;
+  auto e = expr->expr.get();
+  while (true) {
+    if (auto en = dynamic_cast<DotExpr *>(e)) {
+      imports.push_back(en->member);
+      e = en->expr.get();
+    } else if (auto en = dynamic_cast<IdExpr *>(e)) {
+      imports.push_back(en->value);
+      break;
+    } else {
+      imports.clear();
+      break;
+    }
+  }
+  bool isImport = imports.size();
+  Context *c = &ctx;
+  for (int i = imports.size() - 1; i >= 0; i--) {
+    if (auto f = dynamic_cast<ImportContextItem*>(c->find(imports[i]).get())) {
+      c = c->importFile(f->getFile()).get();
+    } else {
+      isImport = false;
+      break;
+    }
+  }
+  if (isImport) {
+    if (auto i = c->find(expr->member)) {
+      this->result = i->getExpr();
+    } else {
+      ERROR("cannot locate '{}'", expr->member);
+    }
+    return;
+  }
+
+  // Not an import
   auto lhs = transform(expr->expr);
   if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
     RETURN(seq::GetStaticElemExpr, e->getType(), expr->member);

@@ -172,7 +172,8 @@ struct UnaryExpr : public Expr {
 struct BinaryExpr : public Expr {
   string op;
   ExprPtr lexpr, rexpr;
-  BinaryExpr(ExprPtr l, string o, ExprPtr r);
+  bool inPlace;
+  BinaryExpr(ExprPtr l, string o, ExprPtr r, bool i = false);
   string to_string() const override;
   ACCEPT_VISITOR;
 };

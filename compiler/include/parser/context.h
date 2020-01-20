@@ -17,12 +17,17 @@ using std::unordered_map;
 using std::unordered_set;
 
 template <typename T> class VTable {
+  typedef unordered_map<string, stack<shared_ptr<T>>> VTableMap;
+
 protected:
-  unordered_map<string, stack<shared_ptr<T>>> map;
+  VTableMap map;
   stack<unordered_set<string>> stack;
   unordered_set<string> flags;
 
 public:
+  typename VTableMap::iterator begin() { return map.begin(); }
+  typename VTableMap::iterator end() { return map.end(); }
+
   void add(const string &name, shared_ptr<T> var) {
     map[name].push(var);
     stack.top().insert(name);
@@ -65,13 +70,11 @@ public:
 class ContextItem {
 protected:
   seq::BaseFunc *base;
-  bool toplevel;
   bool global;
-  bool internal;
   unordered_set<string> attributes;
 
 public:
-  ContextItem(seq::BaseFunc *base, bool toplevel = false, bool global = false, bool internal = false);
+  ContextItem(seq::BaseFunc *base, bool global = false);
   virtual ~ContextItem() {}
   virtual seq::Expr *getExpr() const = 0;
 
@@ -86,7 +89,7 @@ class VarContextItem : public ContextItem {
   seq::Var *var;
 
 public:
-  VarContextItem(seq::Var *var, seq::BaseFunc *base, bool toplevel = false, bool global = false, bool internal = false);
+  VarContextItem(seq::Var *var, seq::BaseFunc *base, bool global = false);
   seq::Expr *getExpr() const override;
   seq::Var *getVar() const;
 };
@@ -96,7 +99,7 @@ class FuncContextItem : public ContextItem {
   vector<string> names;
 
 public:
-  FuncContextItem(seq::Func *f, vector<string> n, seq::BaseFunc *base, bool toplevel = false, bool global = false, bool internal = false);
+  FuncContextItem(seq::Func *f, vector<string> n, seq::BaseFunc *base, bool global = false);
   seq::Expr *getExpr() const override;
 };
 
@@ -104,7 +107,7 @@ class TypeContextItem : public ContextItem {
   seq::types::Type *type;
 
 public:
-  TypeContextItem(seq::types::Type *t, seq::BaseFunc *base, bool toplevel = false, bool global = false, bool internal = false);
+  TypeContextItem(seq::types::Type *t, seq::BaseFunc *base, bool global = false);
 
   seq::types::Type *getType() const;
   seq::Expr *getExpr() const override;
@@ -114,11 +117,14 @@ class ImportContextItem : public ContextItem {
   string import;
 
 public:
+  ImportContextItem(const string &import,seq::BaseFunc *base, bool global = false);
   seq::Expr *getExpr() const override;
+  string getFile() const;
 };
 
 class Context : public VTable<ContextItem> {
   string filename;
+  string argv0;
   seq::SeqModule *module;
   vector<seq::BaseFunc*> bases;
   vector<seq::Block*> blocks;
@@ -126,11 +132,13 @@ class Context : public VTable<ContextItem> {
   seq::types::Type *enclosingType;
 
   seq::TryCatch *tryCatch;
-  unordered_map<string, VTable<ContextItem>> imports;
-  VTable<ContextItem> stdlib;
+  unordered_map<string, shared_ptr<Context>> imports;
+  Context *stdlib;
 
 public:
-  Context(seq::SeqModule *module, const string &filename);
+  Context(const string &argv0, seq::SeqModule *module); // initialize standard library
+  Context(const string &argv0, seq::SeqModule *module, const string &filename, Context *stdlib);
+  virtual ~Context() {}
   shared_ptr<ContextItem> find(const string &name) const override;
   seq::TryCatch *getTryCatch() const;
   seq::Block *getBlock() const;
@@ -143,7 +151,12 @@ public:
   void addBlock(seq::Block *newBlock = nullptr, seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
+  void add(const string &name, shared_ptr<ContextItem> var);
   void add(const string &name, seq::Var *v, bool global = false);
   void add(const string &name, seq::types::Type *t, bool global = false);
   void add(const string &name, seq::Func *f, vector<string> names, bool global = false);
+  void add(const string &name, const string &import, bool global = false);
+  string getFilename() const;
+  string getImportFile(const string &what, bool forceStdlib = false);
+  shared_ptr<Context> importFile(const string &file);
 };

@@ -122,44 +122,106 @@ TEST_P(SeqTest, Run) {
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    CoreTests, SeqTest,
-    testing::Combine(testing::Values("core/align.seq", "core/arguments.seq",
-                                     "core/arithmetic.seq", "core/big.seq",
-                                     "core/bwtsa.seq", "core/containers.seq",
-                                     "core/empty.seq", "core/exceptions.seq",
-                                     "core/formats.seq", "core/generators.seq",
-                                     "core/generics.seq", "core/helloworld.seq",
-                                     "core/kmers.seq", "core/match.seq",
-                                     "core/proteins.seq",
-                                     "core/serialization.seq",
-                                     "core/trees.seq"),
-                     testing::Values(true, false)),
-    getTestNameFromParam);
+class ParserTestFixture : public testing::TestWithParam<
+                    tuple<const char* /*code*/, bool /*success*/, const char* /*output*/>> {
+protected:
+  vector<char> buf;
+  int out_pipe[2];
+  int save;
 
-INSTANTIATE_TEST_SUITE_P(
-    PipelineTests, SeqTest,
-    testing::Combine(testing::Values("pipeline/parallel.seq",
-                                     "pipeline/prefetch.seq",
-                                     "pipeline/revcomp_opt.seq"),
-                     testing::Values(true, false)),
-    getTestNameFromParam);
+  ParserTestFixture() : buf(65536), out_pipe(), save() {}
 
-INSTANTIATE_TEST_SUITE_P(
-    StdlibTests, SeqTest,
-    testing::Combine(
-        testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
-                        "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
-                        "stdlib/sort_test.seq", "stdlib/random_test.seq",
-                        "stdlib/heapq_test.seq", "stdlib/statistics_test.seq"),
-        testing::Values(true, false)),
-    getTestNameFromParam);
+  void SetUp() override {
+    save = dup(STDOUT_FILENO);
+    assert(pipe(out_pipe) == 0);
+    long flags = fcntl(out_pipe[0], F_GETFL);
+    flags |= O_NONBLOCK;
+    fcntl(out_pipe[0], F_SETFL, flags);
+    dup2(out_pipe[1], STDOUT_FILENO);
+    close(out_pipe[1]);
+  }
 
+  void TearDown() override { dup2(save, STDOUT_FILENO); }
+
+  string result() {
+    fflush(stdout);
+    read(out_pipe[0], buf.data(), buf.size() - 1);
+    return string(buf.data());
+  }
+};
+
+TEST_P(ParserTestFixture, Run) {
+  string code = get<0>(GetParam());
+  bool success = get<1>(GetParam());
+  string output = get<2>(GetParam());
+  string filename = "<test>";
+  try {
+    SeqModule *module = parse(filename.c_str(), code.c_str(), true, true);
+    execute(module, {filename}, {}, false);
+    string seqOutput = result();
+    EXPECT_TRUE(success);
+    EXPECT_EQ(output, seqOutput);
+  } catch (seq::exc::SeqException &e) {
+    EXPECT_FALSE(success);
+  }
+}
+
+vector<tuple<const char*, bool, const char*>> cases {
+  {"1", true, "1"},
+  {"0xFFFFFFFFFFFFFFFFu", true, ""},
+  {"-45.353", true, "-45.353"},
+  {"245.e12", true, "245.e12"},
+  {"'hai'", true, "hai"},
+  {"\"\"\"\nEEE\"\"\"", true, "\nEEE"},
+  // {"f'{1} + {2} = {1+2}'", true, "1 + 2 = 3"},
+  {"k'ACGT'", true, "ACGT"},
+  {"s'ACGT'", true, "ACGT"},
+  {"p'ACGT'", true, "ACGT"}
+};
 INSTANTIATE_TEST_SUITE_P(
-    PythonTests, SeqTest,
-    testing::Combine(testing::Values("python/pybridge.seq"),
-                     testing::Values(true, false)),
-    getTestNameFromParam);
+  CppParserTests, ParserTestFixture,
+  testing::ValuesIn(cases)
+);
+
+
+// INSTANTIATE_TEST_SUITE_P(
+//     CoreTests, SeqTest,
+//     testing::Combine(testing::Values("core/align.seq", "core/arguments.seq",
+//                                      "core/arithmetic.seq", "core/big.seq",
+//                                      "core/bwtsa.seq", "core/containers.seq",
+//                                      "core/empty.seq", "core/exceptions.seq",
+//                                      "core/formats.seq", "core/generators.seq",
+//                                      "core/generics.seq", "core/helloworld.seq",
+//                                      "core/kmers.seq", "core/match.seq",
+//                                      "core/proteins.seq",
+//                                      "core/serialization.seq",
+//                                      "core/trees.seq"),
+//                      testing::Values(true, false)),
+//     getTestNameFromParam);
+
+// INSTANTIATE_TEST_SUITE_P(
+//     PipelineTests, SeqTest,
+//     testing::Combine(testing::Values("pipeline/parallel.seq",
+//                                      "pipeline/prefetch.seq",
+//                                      "pipeline/revcomp_opt.seq"),
+//                      testing::Values(true, false)),
+//     getTestNameFromParam);
+
+// INSTANTIATE_TEST_SUITE_P(
+//     StdlibTests, SeqTest,
+//     testing::Combine(
+//         testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
+//                         "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
+//                         "stdlib/sort_test.seq", "stdlib/random_test.seq",
+//                         "stdlib/heapq_test.seq", "stdlib/statistics_test.seq"),
+//         testing::Values(true, false)),
+//     getTestNameFromParam);
+
+// INSTANTIATE_TEST_SUITE_P(
+//     PythonTests, SeqTest,
+//     testing::Combine(testing::Values("python/pybridge.seq"),
+//                      testing::Values(true, false)),
+//     getTestNameFromParam);
 
 int main(int argc, char *argv[]) {
   testing::InitGoogleTest(&argc, argv);

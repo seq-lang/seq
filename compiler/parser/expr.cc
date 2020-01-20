@@ -98,9 +98,10 @@ string GeneratorExpr::to_string() const {
   string s;
   for (auto &i : loops) {
     string q;
-    for (auto &k: i.conds)
+    for (auto &k : i.conds)
       q += format(" (#if {})", *k);
-    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->to_string(), q);
+    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->to_string(),
+                q);
   }
   return format("(#{}gen {}{})", prefix, *expr, s);
 }
@@ -112,9 +113,10 @@ string DictGeneratorExpr::to_string() const {
   string s;
   for (auto &i : loops) {
     string q;
-    for (auto &k: i.conds)
+    for (auto &k : i.conds)
       q += format(" (#if {})", *k);
-    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->to_string(), q);
+    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->to_string(),
+                q);
   }
   return format("(#dict_gen {} {}{})", *key, *expr, s);
 }
@@ -130,10 +132,11 @@ string UnaryExpr::to_string() const {
   return format("(#unary {} :op '{}')", *expr, op);
 }
 
-BinaryExpr::BinaryExpr(ExprPtr l, string o, ExprPtr r)
-    : op(o), lexpr(move(l)), rexpr(move(r)) {}
+BinaryExpr::BinaryExpr(ExprPtr l, string o, ExprPtr r, bool i)
+    : op(o), lexpr(move(l)), rexpr(move(r)), inPlace(i) {}
 string BinaryExpr::to_string() const {
-  return format("(#binary {} {} :op '{}')", *lexpr, *rexpr, op);
+  return format("(#binary {} {} :op '{}' :inplace {})", *lexpr, *rexpr, op,
+                inPlace);
 }
 
 PipeExpr::PipeExpr(vector<PipeExpr::Pipe> i) : items(move(i)) {}
@@ -150,11 +153,11 @@ string IndexExpr::to_string() const {
   return format("(#index {} {})", *expr, *index);
 }
 
-CallExpr::CallExpr(ExprPtr e): expr(move(e)) {}
+CallExpr::CallExpr(ExprPtr e) : expr(move(e)) {}
 CallExpr::CallExpr(ExprPtr e, vector<CallExpr::Arg> a)
     : expr(move(e)), args(move(a)) {}
 CallExpr::CallExpr(ExprPtr e, vector<ExprPtr> arg) : expr(move(e)) {
-  for (auto &i: arg) {
+  for (auto &i : arg) {
     args.push_back(CallExpr::Arg{"", move(i)});
   }
 }

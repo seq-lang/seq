@@ -137,3 +137,7 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 add_executable(seqtest test/main.cpp)
 target_link_libraries(seqtest seq gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
+
+include(GoogleTest)
+gtest_discover_tests(seqtest)
+enable_testing()

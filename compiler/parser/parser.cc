@@ -2,34 +2,40 @@
 #include <string>
 #include <vector>
 
-#include "seq/seq.h"
 #include "fmt/format.h"
-#include "parser/parser.h"
-#include "parser/context.h"
-#include "parser/transform.h"
 #include "parser/codegen.h"
+#include "parser/context.h"
 #include "parser/ocaml.h"
+#include "parser/parser.h"
+#include "parser/transform.h"
+#include "seq/seq.h"
 
 using std::string;
 using std::vector;
+using std::make_shared;
 
-SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file) {
+SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file,
+                                    bool isCode, bool isTest) {
   try {
-    auto stmts = parse_file(file);
+    auto stmts = isCode ? parse(argv0, file) : parse_file(file);
     auto tv = TransformStmtVisitor::apply(move(stmts));
-    fmt::print("{}\n",*tv);
-    exit(0);
-    auto context = Context(new seq::SeqModule(), file);
-    CodegenStmtVisitor::apply(context, tv);
-    return context.getModule();
+    auto module = new seq::SeqModule();
+    auto stdlib = make_shared<Context>(argv0, module);
+    auto context = make_shared<Context>(argv0, module, file, stdlib.get());
+    CodegenStmtVisitor::apply(*context, tv);
+    return context->getModule();
   } catch (seq::exc::SeqException &e) {
+    if (isTest) {
+      throw;
+    }
     seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-                     e.getSrcInfo().col);
+                          e.getSrcInfo().col);
     return nullptr;
   }
 }
 
-void seq::execute(seq::SeqModule *module, vector<string> args, vector<string> libs, bool debug) {
+void seq::execute(seq::SeqModule *module, vector<string> args,
+                  vector<string> libs, bool debug) {
   try {
     module->execute(args, libs, debug);
   } catch (exc::SeqException &e) {

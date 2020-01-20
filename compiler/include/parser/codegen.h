@@ -19,12 +19,18 @@ class CodegenExprVisitor : public ExprVisitor {
   Context &ctx;
   CodegenStmtVisitor &stmtVisitor;
   seq::Expr *result;
+  vector<seq::Var *> *captures;
   friend class CodegenStmtVisitor;
 
 public:
-  CodegenExprVisitor(Context &ctx, CodegenStmtVisitor &stmtVisitor);
-  seq::Expr *transform(const ExprPtr &e);
+  CodegenExprVisitor(Context &ctx, CodegenStmtVisitor &stmtVisitor,
+                     vector<seq::Var *> *captures = nullptr);
+  seq::Expr *transform(const ExprPtr &e,
+                       vector<seq::Var *> *captures = nullptr);
   seq::types::Type *transformType(const ExprPtr &expr);
+  seq::For *parseComprehension(const Expr *expr,
+                               const vector<GeneratorExpr::Body> &loops,
+                               vector<seq::Var *> *captures = nullptr);
 
   void visit(const EmptyExpr *) override;
   void visit(const BoolExpr *) override;
@@ -94,4 +100,5 @@ public:
   virtual void visit(const PrefetchStmt *) override;
   virtual void visit(const FunctionStmt *) override;
   virtual void visit(const ClassStmt *) override;
+  virtual void visit(const AssignEqStmt *) override;
 };

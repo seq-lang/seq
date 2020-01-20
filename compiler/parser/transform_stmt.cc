@@ -43,7 +43,6 @@ void TransformStmtVisitor::prepend(StmtPtr s) {
   prependStmts.push_back(move(s));
 }
 
-
 StmtPtr TransformStmtVisitor::apply(const StmtPtr &stmts) {
   auto tv = TransformStmtVisitor();
   stmts->accept(tv);
@@ -71,7 +70,7 @@ ExprPtr TransformStmtVisitor::transform(const Expr *expr) {
   vector<StmtPtr> prepend;
   TransformExprVisitor v(prepend);
   expr->accept(v);
-  for (auto &s: prepend) {
+  for (auto &s : prepend) {
     prependStmts.push_back(move(s));
   }
   return move(v.result);
@@ -164,7 +163,7 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
     processAssignment(unpack->what.get(),
                       EPX(rhs, IndexExpr, transform(rhs),
                           EPX(rhs, SliceExpr, EPX(rhs, IntExpr, st),
-                              EPX(rhs, IntExpr, ed+1), nullptr))
+                              EPX(rhs, IntExpr, ed + 1), nullptr))
                           .release(),
                       stmts);
 }
@@ -230,7 +229,7 @@ void TransformStmtVisitor::visit(const ForStmt *stmt) {
   auto iter = transform(stmt->iter);
   StmtPtr suite;
   ExprPtr var;
-  if (dynamic_cast<IdExpr*>(stmt->var.get())) {
+  if (dynamic_cast<IdExpr *>(stmt->var.get())) {
     var = transform(stmt->var);
     suite = transform(stmt->suite);
   } else {
@@ -273,12 +272,18 @@ void TransformStmtVisitor::visit(const ImportStmt *stmt) {
   RETURN(ImportStmt, stmt->from, stmt->what);
 }
 void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
-  vector<Param> args;
-  for (auto &a : stmt->args) {
-    args.push_back({a.name, transform(a.type), transform(a.deflt)});
+  if (stmt->lang == "c" && stmt->from) {
+    ERROR("not yet supported");
+  } else if (stmt->lang == "c") {
+    vector<Param> args;
+    for (auto &a : stmt->args) {
+      args.push_back({a.name, transform(a.type), transform(a.deflt)});
+    }
+    RETURN(ExternImportStmt, stmt->name, transform(stmt->from),
+           transform(stmt->ret), move(args), stmt->lang);
+  } else {
+    ERROR("not yet supported");
   }
-  RETURN(ExternImportStmt, stmt->name, transform(stmt->from),
-         transform(stmt->ret), move(args), stmt->lang);
 }
 void TransformStmtVisitor::visit(const TryStmt *stmt) {
   vector<TryStmt::Catch> catches;
@@ -326,7 +331,12 @@ void TransformStmtVisitor::visit(const DeclareStmt *stmt) {
                             transform(stmt->param.deflt)});
 }
 
-void TransformStmtVisitor::visit(const AssignEqStmt *stmt) { ERROR("TODO"); }
+void TransformStmtVisitor::visit(const AssignEqStmt *stmt) {
+  RETURN(AssignStmt,
+    transform(stmt->lhs),
+    EPX(stmt, BinaryExpr, transform(stmt->lhs), stmt->op, transform(stmt->rhs), true)
+  );
+}
 
 void TransformStmtVisitor::visit(const YieldFromStmt *stmt) {
   auto var = getTemporaryVar("yield");
@@ -337,19 +347,28 @@ void TransformStmtVisitor::visit(const YieldFromStmt *stmt) {
 }
 
 void TransformStmtVisitor::visit(const WithStmt *stmt) {
-  /*
-   let rec traverse (expr, var) lst =
-      let var = opt_val var (fst expr, Id (new_assign ())) in
-      let s1 = fst expr, Assign (var, expr, 1, None) in
-      let s2 = fst expr, Expr (fst expr, Call ((fst expr, Dot (var,
-   "__enter__")), [])) in let within = match lst with [] -> $4 | hd :: tl ->
-   [traverse hd tl] in let s3 = fst expr, Try (within, [], [fst expr, Expr (fst
-   expr, Call ((fst expr, Dot (var, "__exit__")), []))]) in fst expr, If [Some
-   (fst expr, Bool true), [s1; s2; s3]] in traverse (List.hd $2) (List.tl $2)
-  */
-  ERROR("TODO");
-  // RETURN(DeclareStmt, Param{stmt->param.name, transform(stmt->param.type),
-  //                           transform(stmt->param.deflt)});
+  vector<StmtPtr> internals;
+  vector<StmtPtr> finally;
+  vector<string> vars;
+  for (auto &i : stmt->items) {
+    string var = i.second == "" ? getTemporaryVar("with") : i.second;
+    internals.push_back(
+        SP(AssignStmt, EPX(stmt, IdExpr, var), transform(i.first)));
+    internals.push_back(
+        SP(ExprStmt,
+           EPX(stmt, CallExpr,
+               EPX(stmt, DotExpr, EPX(stmt, IdExpr, var), "__enter__"))));
+    finally.push_back(SP(
+        ExprStmt, EPX(stmt, CallExpr,
+                      EPX(stmt, DotExpr, EPX(stmt, IdExpr, var), "__exit__"))));
+    vars.push_back(var);
+  }
+  internals.push_back(SP(TryStmt, transform(stmt->suite),
+                         vector<TryStmt::Catch>(),
+                         transform(SP(SuiteStmt, move(finally)))));
+  vector<IfStmt::If> ifs;
+  ifs.push_back({EPX(stmt, BoolExpr, true), SP(SuiteStmt, move(internals))});
+  RETURN(IfStmt, move(ifs));
 }
 
 // void TransformStmtVisitor::visit(const PyStmt *stmt) {

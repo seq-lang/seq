@@ -333,8 +333,8 @@ unique_ptr<Stmt> parse_stmt(value val) {
            }));
   case 17:
     Return(ExternImport,
-           make_pair(parse_string(Field(0, 2)),
-                     parse_optional(Field(0, 5), parse_string)),
+           make_pair(parse_string(Field(t, 2)),
+                     parse_optional(Field(t, 5), parse_string)),
            parse_optional(Field(t, 1), parse_expr), parse_expr(Field(t, 3)),
            parse_list(Field(t, 4), parse_param), parse_string(Field(t, 0)));
   case 18:
