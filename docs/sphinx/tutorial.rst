@@ -186,6 +186,35 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
 
 Sequence patterns consist of literal ``ACGT`` characters, single-base wildcards (``_``) or "zero or more" wildcards (``...``) that match zero or more of any base.
 
+Pipelines
+^^^^^^^^^
+
+Pipelining is a natural model for thinking about processing genomic data, as sequences are typically processed in stages (e.g. read from input file, split into :math:`k`-mers, query :math:`k`-mers in index, perform full dynamic programming alignment, output results to file), and are almost always independent of one another as far as this processing is concerned. Because of this, Seq supports a pipe operator: ``|>``, similar to F#'s pipe and R's ``magrittr`` (``%>%``).
+
+Pipeline stages in Seq can be regular functions or generators. In the case of standard functions, the function is simply applied to the input data and the result is carried to the remainder of the pipeline, akin to F#'s functional piping. If, on the other hand, a stage is a generator, the values yielded by the generator are passed lazily to the remainder of the pipeline, which in many ways mirrors how piping is implemented in Bash. Note that Seq ensures that generator pipelines do not collect any data unless explicitly requested, thus allowing the processing of terabytes of data in a streaming fashion with no memory and minimal CPU overhead.
+
+Here's an example of pipeline usage, which shows the same two loops from above, but as pipelines:
+
+.. code-block:: seq
+
+    dna = s'ACGTACGTACGT'  # sequence literal
+
+    # (a) split into subsequences of length 3
+    #     with a stride of 2
+    dna |> split(..., 3, 2) |> echo
+
+    # (b) split into 5-mers with stride 1
+    def f(kmer):
+        print kmer
+        print ~kmer
+
+    dna |> kmers[Kmer[5]](1) |> f
+
+First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers[Kmer[5]](..., 1)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
+
+.. caution::
+    The Seq compiler may perform optimizations that change the order of elements passed through a pipeline. Therefore, it is best to not rely on order when using pipelines. If order needs to be maintained, consider using a regular loop or passing an index alongside each element sent through the pipeline.
+
 Sequence alignment
 ^^^^^^^^^^^^^^^^^^
 
@@ -226,34 +255,22 @@ Here is the list of options supported by the ``align()`` method; all are optiona
 
 Note that all costs/scores are positive by convention.
 
-Pipelines
-^^^^^^^^^
+Inter-sequence alignment
+""""""""""""""""""""""""
 
-Pipelining is a natural model for thinking about processing genomic data, as sequences are typically processed in stages (e.g. read from input file, split into :math:`k`-mers, query :math:`k`-mers in index, perform full dynamic programming alignment, output results to file), and are almost always independent of one another as far as this processing is concerned. Because of this, Seq supports a pipe operator: ``|>``, similar to F#'s pipe and R's ``magrittr`` (``%>%``).
-
-Pipeline stages in Seq can be regular functions or generators. In the case of standard functions, the function is simply applied to the input data and the result is carried to the remainder of the pipeline, akin to F#'s functional piping. If, on the other hand, a stage is a generator, the values yielded by the generator are passed lazily to the remainder of the pipeline, which in many ways mirrors how piping is implemented in Bash. Note that Seq ensures that generator pipelines do not collect any data unless explicitly requested, thus allowing the processing of terabytes of data in a streaming fashion with no memory and minimal CPU overhead.
-
-Here's an example of pipeline usage, which shows the same two loops from above, but as pipelines:
+Seq uses `ksw2 <https://github.com/lh3/ksw2>`_ as its default alignment kernel. ksw2 does a good job of applying SIMD parallelization to align a single pair of sequences, which is referred to as *intra-sequence* alignment. However, we can often get better performance by aligning multiple sequences at once, referred to as *inter-sequence* alignment. Inter-sequence alignment is usually more cumbersome to program in general-purpose languages because many sequences need to be batched before performing the alignment. However, in Seq, inter-sequence alignment is as easy as intra-sequence, using the ``@inter_align`` annotation:
 
 .. code-block:: seq
 
-    dna = s'ACGTACGTACGT'  # sequence literal
+    @inter_align
+    def process(t):
+        query, target = t
+        score = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+        print query, target, score
 
-    # (a) split into subsequences of length 3
-    #     with a stride of 2
-    dna |> split(..., 3, 2) |> echo
+    zip(seqs('queries.txt'), seqs('targets.txt')) |> process
 
-    # (b) split into 5-mers with stride 1
-    def f(kmer):
-        print kmer
-        print ~kmer
-
-    dna |> kmers[Kmer[5]](1) |> f
-
-First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers[Kmer[5]](..., 1)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
-
-.. caution::
-    The Seq compiler may perform optimizations that change the order of elements passed through a pipeline. Therefore, it is best to not rely on order when using pipelines. If order needs to be maintained, consider using a regular loop or passing an index alongside each element sent through the pipeline.
+Internally, the Seq compiler performs pipeline transformations when the ``inter_align`` function is used within a function tagged ``@inter_align``, so as to suspend execution of the calling function, batch sequences that need to be aligned, perform inter-sequence alignment and return the results to the suspended functions. Note that the inter-sequence alignment kernel used by Seq is adapted from `BWA-MEM2 <https://github.com/bwa-mem2/bwa-mem2>`_.
 
 Genomic index prefetching
 ^^^^^^^^^^^^^^^^^^^^^^^^^
