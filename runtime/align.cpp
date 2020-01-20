@@ -270,9 +270,9 @@ struct InterAlignParams {
 };
 
 // Seq entry point:
-SEQ_FUNC void seq_inter_align(InterAlignParams *paramsx, SeqPair *seqPairArray,
-                              uint8_t *seqBufRef, uint8_t *seqBufQer,
-                              int numPairs) {
+SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
+                                 SeqPair *seqPairArray, uint8_t *seqBufRef,
+                                 uint8_t *seqBufQer, int numPairs) {
   InterAlignParams params = *paramsx;
   int numThreads = omp_get_num_threads();
   int8_t mat[25];
@@ -282,6 +282,34 @@ SEQ_FUNC void seq_inter_align(InterAlignParams *paramsx, SeqPair *seqPairArray,
                        numThreads);
   bsw.getScores8(seqPairArray, seqBufRef, seqBufQer, numPairs, numThreads,
                  params.bandwidth);
+}
+
+SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
+                                SeqPair *seqPairArray, uint8_t *seqBufRef,
+                                uint8_t *seqBufQer, int numPairs) {
+  InterAlignParams params = *paramsx;
+  int numThreads = omp_get_num_threads();
+  int8_t mat[25];
+  bwa_fill_scmat(params.a, params.b, params.ambig, mat);
+  BandedPairWiseSW bsw(params.gapo, params.gape, params.gapo, params.gape,
+                       params.zdrop, params.end_bonus, mat, params.a, params.b,
+                       numThreads);
+  bsw.getScores16(seqPairArray, seqBufRef, seqBufQer, numPairs, numThreads,
+                  params.bandwidth);
+}
+
+SEQ_FUNC void seq_inter_align1(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                               uint8_t *seqBufRef, uint8_t *seqBufQer,
+                               int numPairs) {
+  InterAlignParams params = *paramsx;
+  int numThreads = omp_get_num_threads();
+  int8_t mat[25];
+  bwa_fill_scmat(params.a, params.b, params.ambig, mat);
+  BandedPairWiseSW bsw(params.gapo, params.gape, params.gapo, params.gape,
+                       params.zdrop, params.end_bonus, mat, params.a, params.b,
+                       numThreads);
+  bsw.scalarBandedSWAWrapper(seqPairArray, seqBufRef, seqBufQer, numPairs,
+                             numThreads, params.bandwidth);
 }
 
 #if defined(__clang__) || defined(__GNUC__)

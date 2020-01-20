@@ -27,18 +27,22 @@ struct DrainState {
   Value *filled; // how many coroutines have been added (alloca'd)
 
   // inter-align-specific fields
+  Value *statesTemp;
   Value *pairs;
+  Value *pairsTemp;
   Value *bufRef;
   Value *bufQer;
   Value *params;
+  Value *hist;
 
   types::GenType *type;      // type of prefetch generator
   std::queue<Expr *> stages; // remaining pipeline stages
   std::queue<bool> parallel;
 
   DrainState()
-      : states(nullptr), filled(nullptr), pairs(nullptr), bufRef(nullptr),
-        bufQer(nullptr), params(nullptr), type(nullptr), stages(), parallel() {}
+      : states(nullptr), filled(nullptr), statesTemp(nullptr), pairs(nullptr),
+        pairsTemp(nullptr), bufRef(nullptr), bufQer(nullptr), params(nullptr),
+        hist(nullptr), type(nullptr), stages(), parallel() {}
 };
 
 // Details of a stage for optimization purposes.
@@ -375,6 +379,8 @@ static Value *codegenPipe(BaseFunc *base,
     // following defs are from bio/align.seq
     const int MAX_SEQ_LEN_REF = 256;
     const int MAX_SEQ_LEN_QER = 128;
+    const int MAX_SEQ_LEN8 = 128;
+    const int MAX_SEQ_LEN16 = 32768;
     types::RecordType *pairType = PipeExpr::getInterAlignSeqPairType();
     Func *queueFunc = Func::getBuiltin("_interaln_queue");
     Func *flushFunc = Func::getBuiltin("_interaln_flush");
@@ -399,14 +405,23 @@ static Value *codegenPipe(BaseFunc *base,
     Value *bufRefSize = builder.getInt64(MAX_SEQ_LEN_REF * W);
     Value *bufQerSize = builder.getInt64(MAX_SEQ_LEN_QER * W);
     Value *pairsSize = builder.getInt64(pairType->size(module) * W);
+    Value *histSize = builder.getInt64((MAX_SEQ_LEN8 + MAX_SEQ_LEN16 + 32) * 4);
     Value *states = builder.CreateCall(alloc, statesSize);
     states = builder.CreateBitCast(
         states, genType->getLLVMType(context)->getPointerTo());
+    Value *statesTemp = builder.CreateCall(alloc, statesSize);
+    statesTemp = builder.CreateBitCast(
+        statesTemp, genType->getLLVMType(context)->getPointerTo());
     Value *bufRef = builder.CreateCall(allocAtomic, bufRefSize);
     Value *bufQer = builder.CreateCall(allocAtomic, bufQerSize);
     Value *pairs = builder.CreateCall(allocAtomic, pairsSize);
     pairs = builder.CreateBitCast(
         pairs, pairType->getLLVMType(context)->getPointerTo());
+    Value *pairsTemp = builder.CreateCall(allocAtomic, pairsSize);
+    pairsTemp = builder.CreateBitCast(
+        pairsTemp, pairType->getLLVMType(context)->getPointerTo());
+    Value *hist = builder.CreateCall(allocAtomic, histSize);
+    hist = builder.CreateBitCast(hist, builder.getInt32Ty()->getPointerTo());
     Value *filled = makeAlloca(seqIntLLVM(context), preamble);
 
     builder.SetInsertPoint(entry);
@@ -419,7 +434,8 @@ static Value *codegenPipe(BaseFunc *base,
     builder.CreateCondBr(cond, notFull, full);
 
     builder.SetInsertPoint(full);
-    N = builder.CreateCall(flush, {pairs, bufRef, bufQer, states, N, params});
+    N = builder.CreateCall(flush, {pairs, bufRef, bufQer, states, N, params,
+                                   hist, pairsTemp, statesTemp});
     builder.CreateStore(N, filled);
     cond = builder.CreateICmpSLT(N, M);
     builder.CreateCondBr(cond, notFull, full); // keep flushing while full
@@ -427,10 +443,13 @@ static Value *codegenPipe(BaseFunc *base,
     // store the current state for the drain step:
     drain->states = states;
     drain->filled = filled;
+    drain->statesTemp = statesTemp;
     drain->pairs = pairs;
+    drain->pairsTemp = pairsTemp;
     drain->bufRef = bufRef;
     drain->bufQer = bufQer;
     drain->params = params;
+    drain->hist = hist;
     drain->type = genType;
     drain->stages = stages;
     drain->parallel = parallel;
@@ -669,7 +688,8 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
       builder.SetInsertPoint(loop);
       N = builder.CreateCall(flush, {drain.pairs, drain.bufRef, drain.bufQer,
-                                     states, N, drain.params});
+                                     states, N, drain.params, drain.hist,
+                                     drain.pairsTemp, drain.statesTemp});
       builder.CreateStore(N, filled);
       cond = builder.CreateICmpSGT(N, builder.getInt64(0));
       builder.CreateCondBr(cond, loop, exit); // keep flushing while not empty

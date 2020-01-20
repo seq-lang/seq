@@ -1710,7 +1710,7 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
               yieldType->setMemb(yieldVal, "reference", reference, block);
 
           baseFunc->codegenYield(yieldVal, yieldType, block);
-          yieldVal = baseFunc->codegenYieldExpr(block);
+          yieldVal = baseFunc->codegenYieldExpr(block, /*suspend=*/false);
           Value *score = yieldType->memb(yieldVal, "score", block);
 
           // realign if score < 0
