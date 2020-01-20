@@ -59,7 +59,7 @@ seq::types::Type *CodegenExprVisitor::transformType(const ExprPtr &expr) {
   if (auto t = dynamic_cast<seq::TypeExpr *>(v.result)) {
     return t->getType();
   } else {
-    error(expr->getSrcInfo(), "expected type");
+    error(expr->getSrcInfo(), "expected type: {}", *expr);
     return nullptr;
   }
 }
@@ -136,10 +136,9 @@ void CodegenExprVisitor::visit(const SetExpr *expr) {
 void CodegenExprVisitor::visit(const DictExpr *expr) {
   ERROR("unexpected dict expression");
 }
-seq::For *
-CodegenExprVisitor::parseComprehension(const Expr *expr,
-                                       const vector<GeneratorExpr::Body> &loops,
-                                       vector<seq::Var *> *captures) {
+seq::For *CodegenExprVisitor::parseComprehension(
+    const Expr *expr, const vector<GeneratorExpr::Body> &loops,
+    vector<seq::Var *> *captures, int &added) {
   seq::For *topFor = nullptr;
   seq::Block *block = nullptr;
   for (auto &l : loops) {
@@ -148,6 +147,7 @@ CodegenExprVisitor::parseComprehension(const Expr *expr,
       topFor = f;
     }
     ctx.addBlock(f->getBlock());
+    added++;
     if (l.vars.size() == 1) {
       ctx.add(l.vars[0], f->getVar());
     } else {
@@ -166,28 +166,39 @@ CodegenExprVisitor::parseComprehension(const Expr *expr,
       i->setBase(ctx.getBase());
       block->add(i);
       block = b;
+      ctx.addBlock(b);
+      added++;
     }
   }
   return topFor;
 }
 void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
   vector<seq::Var *> captures;
-  auto topFor = parseComprehension(expr, expr->loops, &captures);
+  int added = 0;
+  auto topFor = parseComprehension(expr, expr->loops, &captures, added);
   auto e = transform(expr->expr, &captures);
   if (expr->kind == GeneratorExpr::ListGenerator) {
-    RETURN(seq::ListCompExpr, e, topFor,
-           transformType(make_unique<IdExpr>("list")));
+    this->result = new seq::ListCompExpr(
+        e, topFor, transformType(make_unique<IdExpr>("list")));
   } else if (expr->kind == GeneratorExpr::SetGenerator) {
-    RETURN(seq::SetCompExpr, e, topFor,
-           transformType(make_unique<IdExpr>("set")));
+    this->result = new seq::SetCompExpr(
+        e, topFor, transformType(make_unique<IdExpr>("set")));
   } else if (expr->kind == GeneratorExpr::Generator) {
-    RETURN(seq::GenExpr, e, topFor, captures);
+    this->result = new seq::GenExpr(e, topFor, captures);
+  }
+  while (added--) {
+    ctx.popBlock();
   }
 }
 void CodegenExprVisitor::visit(const DictGeneratorExpr *expr) {
-  auto topFor = parseComprehension(expr, expr->loops);
-  RETURN(seq::DictCompExpr, transform(expr->key), transform(expr->expr), topFor,
-         transformType(make_unique<IdExpr>("dict")));
+  int added = 0;
+  auto topFor = parseComprehension(expr, expr->loops, nullptr, added);
+  this->result =
+      new seq::DictCompExpr(transform(expr->key), transform(expr->expr), topFor,
+                            transformType(make_unique<IdExpr>("dict")));
+  while (added--) {
+    ctx.popBlock();
+  }
 }
 void CodegenExprVisitor::visit(const IfExpr *expr) {
   RETURN(seq::CondExpr, transform(expr->cond), transform(expr->eif),
@@ -197,8 +208,22 @@ void CodegenExprVisitor::visit(const UnaryExpr *expr) {
   RETURN(seq::UOpExpr, seq::uop(expr->op), transform(expr->expr));
 }
 void CodegenExprVisitor::visit(const BinaryExpr *expr) {
-  RETURN(seq::BOpExpr, seq::bop(expr->op), transform(expr->lexpr),
-         transform(expr->rexpr), expr->inPlace);
+  if (expr->op == "is") {
+    RETURN(seq::IsExpr, transform(expr->lexpr), transform(expr->rexpr));
+  } else if (expr->op == "is not") {
+    RETURN(seq::UOpExpr, seq::uop("!"),
+           new seq::IsExpr(transform(expr->lexpr), transform(expr->rexpr)));
+  } else if (expr->op == "in") {
+    RETURN(seq::ArrayContainsExpr, transform(expr->lexpr),
+           transform(expr->rexpr));
+  } else if (expr->op == "not in") {
+    RETURN(seq::UOpExpr, seq::uop("!"),
+           new seq::ArrayContainsExpr(transform(expr->lexpr),
+                                      transform(expr->rexpr)));
+  } else {
+    RETURN(seq::BOpExpr, seq::bop(expr->op), transform(expr->lexpr),
+           transform(expr->rexpr), expr->inPlace);
+  }
 }
 void CodegenExprVisitor::visit(const PipeExpr *expr) {
   vector<seq::Expr *> items;
@@ -265,22 +290,52 @@ void CodegenExprVisitor::visit(const IndexExpr *expr) {
                                 ty, vector<string>(ty.size(), ""), ""));
     }
   }
+
   auto lhs = transform(expr->expr);
-  if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
-    if (auto ref = dynamic_cast<seq::types::RefType *>(e->getType())) {
-      RETURN(seq::TypeExpr,
-             seq::types::GenericType::get(ref, getTypeArr(expr->index)));
-    } else {
-      ERROR("types do not accept type arguments");
+  vector<seq::Expr *> indices;
+  if (auto t = dynamic_cast<TupleExpr *>(expr->index.get())) {
+    for (auto &e : t->items) {
+      indices.push_back(transform(e));
     }
-  } else if (auto e = dynamic_cast<seq::FuncExpr *>(lhs)) {
-    e->setRealizeTypes(getTypeArr(expr->index));
-  } else if (auto e = dynamic_cast<seq::GetElemExpr *>(lhs)) {
-    e->setRealizeTypes(getTypeArr(expr->index));
-  } else if (auto e = dynamic_cast<seq::GetStaticElemExpr *>(lhs)) {
-    e->setRealizeTypes(getTypeArr(expr->index));
   } else {
-    RETURN(seq::ArrayLookupExpr, lhs, transform(expr->index));
+    indices.push_back(transform(expr->index));
+  }
+  vector<seq::types::Type *> types;
+  for (auto &e : indices) {
+    if (auto t = dynamic_cast<seq::TypeExpr *>(e)) {
+      types.push_back(e->getType());
+    }
+  }
+  if (types.size() && types.size() != indices.size()) {
+    ERROR("all arguments must be either types or expressions");
+  }
+  if (types.size()) {
+    if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
+      if (auto ref = dynamic_cast<seq::types::RefType *>(e->getType())) {
+        RETURN(seq::TypeExpr,
+               seq::types::GenericType::get(ref, types));
+      } else {
+        ERROR("types do not accept type arguments");
+      }
+      /* TODO: all these below are for the functions: should be done better
+       * later on ... */
+    } else if (auto e = dynamic_cast<seq::FuncExpr *>(lhs)) {
+      e->setRealizeTypes(types);
+      this->result = lhs;
+    } else if (auto e = dynamic_cast<seq::GetElemExpr *>(lhs)) {
+      e->setRealizeTypes(types);
+      this->result = lhs;
+    } else if (auto e = dynamic_cast<seq::GetStaticElemExpr *>(lhs)) {
+      e->setRealizeTypes(types);
+      this->result = lhs;
+    } else {
+      ERROR("cannot realize expression (is it generic?)");
+    }
+  } else if (indices.size() == 1) {
+    RETURN(seq::ArrayLookupExpr, lhs, indices[0]);
+  } else {
+    RETURN(seq::ArrayLookupExpr, lhs,
+           new seq::RecordExpr(indices, vector<string>(indices.size(), "")));
   }
 }
 void CodegenExprVisitor::visit(const CallExpr *expr) {
@@ -305,6 +360,7 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
   } else if (isPartial) {
     RETURN(seq::PartialCallExpr, lhs, items);
   } else {
+    assert(lhs);
     RETURN(seq::CallExpr, lhs, items);
   }
 }
@@ -327,8 +383,8 @@ void CodegenExprVisitor::visit(const DotExpr *expr) {
   bool isImport = imports.size();
   Context *c = &ctx;
   for (int i = imports.size() - 1; i >= 0; i--) {
-    if (auto f = dynamic_cast<ImportContextItem*>(c->find(imports[i]).get())) {
-      c = c->importFile(f->getFile()).get();
+    if (auto f = dynamic_cast<ImportContextItem *>(c->find(imports[i]).get())) {
+      c = c->getCache().importFile(c->getModule(), f->getFile()).get();
     } else {
       isImport = false;
       break;

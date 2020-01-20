@@ -174,11 +174,11 @@ void CodegenStmtVisitor::visit(const IfStmt *stmt) {
 }
 void CodegenStmtVisitor::visit(const MatchStmt *stmt) { ERROR("TODO"); }
 void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
-  auto file = ctx.getImportFile(stmt->from.first);
+  auto file = ctx.getCache().getImportFile(stmt->from.first, ctx.getFilename());
   if (file == "") {
     ERROR("cannot locate import '{}'", stmt->from.first);
   }
-  auto table = ctx.importFile(file);
+  auto table = ctx.getCache().importFile(ctx.getModule(), file);
   if (!stmt->what.size()) {
     ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
             file);
@@ -276,7 +276,7 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   f->setName(stmt->name);
   seq::types::Type *c = nullptr;
   if (ctx.isToplevel() && (c = ctx.getEnclosingType())) {
-    // Make sure that it is toplever--- otherwise it is a nested function
+    // Make sure that it is toplevel--- otherwise it is a nested function
     c->addMethod(stmt->name, f, false);
   } else {
     if (!ctx.isToplevel()) {
@@ -395,12 +395,11 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
   ctx.setEnclosingType(nullptr);
 }
 void CodegenStmtVisitor::visit(const ExtendStmt *stmt) {
-  seq::types::Type *type;
   vector<string> generics;
+  seq::types::Type *type = nullptr;
   if (auto w = dynamic_cast<IdExpr *>(stmt->what.get())) {
     type = transformType(stmt->what);
-  }
-  if (auto w = dynamic_cast<IndexExpr *>(stmt->what.get())) {
+  } else if (auto w = dynamic_cast<IndexExpr *>(stmt->what.get())) {
     type = transformType(w->expr);
     if (auto t = dynamic_cast<TupleExpr *>(w->index.get())) {
       for (auto &ti : t->items) {
@@ -418,7 +417,7 @@ void CodegenStmtVisitor::visit(const ExtendStmt *stmt) {
   } else {
     ERROR("cannot extend non-type");
   }
-  ctx.setEnclosingType(transformType(stmt->what));
+  ctx.setEnclosingType(type);
   ctx.addBlock();
   int count = 0;
   if (auto g = dynamic_cast<seq::types::RefType *>(type)) {

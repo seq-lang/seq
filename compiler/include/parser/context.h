@@ -30,11 +30,13 @@ public:
 
   void add(const string &name, shared_ptr<T> var) {
     map[name].push(var);
+    // DBG("adding {}", name);
     stack.top().insert(name);
   }
   void addBlock() { stack.push(unordered_set<string>()); }
   void popBlock() {
     for (auto &name : stack.top()) {
+      // DBG("removing {}", name);
       remove(name);
     }
     stack.pop();
@@ -122,9 +124,19 @@ public:
   string getFile() const;
 };
 
-class Context : public VTable<ContextItem> {
-  string filename;
+class Context;
+struct ImportCache {
   string argv0;
+  Context *stdlib;
+  unordered_map<string, shared_ptr<Context>> imports;
+
+  string getImportFile(const string &what, const string &relativeTo, bool forceStdlib = false);
+  shared_ptr<Context> importFile(seq::SeqModule *module, const string &file);
+};
+
+class Context : public VTable<ContextItem> {
+  ImportCache &cache;
+  string filename;
   seq::SeqModule *module;
   vector<seq::BaseFunc*> bases;
   vector<seq::Block*> blocks;
@@ -132,12 +144,9 @@ class Context : public VTable<ContextItem> {
   seq::types::Type *enclosingType;
 
   seq::TryCatch *tryCatch;
-  unordered_map<string, shared_ptr<Context>> imports;
-  Context *stdlib;
 
 public:
-  Context(const string &argv0, seq::SeqModule *module); // initialize standard library
-  Context(const string &argv0, seq::SeqModule *module, const string &filename, Context *stdlib);
+  Context(seq::SeqModule *module, ImportCache &cache, const string &filename = ""); // initialize standard library
   virtual ~Context() {}
   shared_ptr<ContextItem> find(const string &name) const override;
   seq::TryCatch *getTryCatch() const;
@@ -157,6 +166,5 @@ public:
   void add(const string &name, seq::Func *f, vector<string> names, bool global = false);
   void add(const string &name, const string &import, bool global = false);
   string getFilename() const;
-  string getImportFile(const string &what, bool forceStdlib = false);
-  shared_ptr<Context> importFile(const string &file);
+  ImportCache &getCache();
 };

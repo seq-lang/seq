@@ -85,11 +85,15 @@ void TransformStmtVisitor::visit(const SuiteStmt *stmt) {
   }
   RETURN(SuiteStmt, move(result));
 }
+
 void TransformStmtVisitor::visit(const PassStmt *stmt) { RETURN(PassStmt, ); }
+
 void TransformStmtVisitor::visit(const BreakStmt *stmt) { RETURN(BreakStmt, ); }
+
 void TransformStmtVisitor::visit(const ContinueStmt *stmt) {
   RETURN(ContinueStmt, );
 }
+
 void TransformStmtVisitor::visit(const ExprStmt *stmt) {
   RETURN(ExprStmt, transform(stmt->expr));
 }
@@ -195,6 +199,7 @@ void TransformStmtVisitor::visit(const AssignStmt *stmt) {
     RETURN(SuiteStmt, move(stmts));
   }
 }
+
 void TransformStmtVisitor::visit(const DelStmt *stmt) {
   if (auto expr = dynamic_cast<const IndexExpr *>(stmt->expr.get())) {
     RETURN(ExprStmt,
@@ -207,24 +212,31 @@ void TransformStmtVisitor::visit(const DelStmt *stmt) {
     ERROR("this expression cannot be deleted");
   }
 }
+
 void TransformStmtVisitor::visit(const PrintStmt *stmt) {
   RETURN(PrintStmt, transform(stmt->expr));
 }
+
 void TransformStmtVisitor::visit(const ReturnStmt *stmt) {
   RETURN(ReturnStmt, transform(stmt->expr));
 }
+
 void TransformStmtVisitor::visit(const YieldStmt *stmt) {
   RETURN(YieldStmt, transform(stmt->expr));
 }
+
 void TransformStmtVisitor::visit(const AssertStmt *stmt) {
   RETURN(AssertStmt, transform(stmt->expr));
 }
+
 void TransformStmtVisitor::visit(const TypeAliasStmt *stmt) {
   RETURN(TypeAliasStmt, stmt->name, transform(stmt->expr));
 }
+
 void TransformStmtVisitor::visit(const WhileStmt *stmt) {
   RETURN(WhileStmt, transform(stmt->cond), transform(stmt->suite));
 }
+
 void TransformStmtVisitor::visit(const ForStmt *stmt) {
   auto iter = transform(stmt->iter);
   StmtPtr suite;
@@ -235,13 +247,14 @@ void TransformStmtVisitor::visit(const ForStmt *stmt) {
   } else {
     string varName = getTemporaryVar("for");
     vector<StmtPtr> stmts;
-    auto rhs = EPX(stmt, IdExpr, varName);
-    processAssignment(stmt->var.get(), rhs.get(), stmts);
+    var = EPX(stmt, IdExpr, varName);
+    processAssignment(stmt->var.get(), var.get(), stmts);
     stmts.push_back(transform(stmt->suite));
     suite = SP(SuiteStmt, move(stmts));
   }
   RETURN(ForStmt, move(var), move(iter), move(suite));
 }
+
 void TransformStmtVisitor::visit(const IfStmt *stmt) {
   vector<IfStmt::If> ifs;
   for (auto &ifc : stmt->ifs) {
@@ -249,6 +262,7 @@ void TransformStmtVisitor::visit(const IfStmt *stmt) {
   }
   RETURN(IfStmt, move(ifs));
 }
+
 void TransformStmtVisitor::visit(const MatchStmt *stmt) {
   ERROR("TODO");
   // for (auto &c : stmt->cases) {
@@ -257,6 +271,7 @@ void TransformStmtVisitor::visit(const MatchStmt *stmt) {
   // }
   // RETURN(MatchStmt, visit(*stmt->what), move(stmt->cases));
 }
+
 void TransformStmtVisitor::visit(const ExtendStmt *stmt) {
   auto suite = make_unique<SuiteStmt>(stmt->getSrcInfo());
   for (auto s : stmt->suite->getStatements()) {
@@ -268,9 +283,11 @@ void TransformStmtVisitor::visit(const ExtendStmt *stmt) {
   }
   RETURN(ExtendStmt, transform(stmt->what), move(suite));
 }
+
 void TransformStmtVisitor::visit(const ImportStmt *stmt) {
   RETURN(ImportStmt, stmt->from, stmt->what);
 }
+
 void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
   if (stmt->lang == "c" && stmt->from) {
     ERROR("not yet supported");
@@ -285,6 +302,7 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
     ERROR("not yet supported");
   }
 }
+
 void TransformStmtVisitor::visit(const TryStmt *stmt) {
   vector<TryStmt::Catch> catches;
   for (auto &c : stmt->catches) {
@@ -293,15 +311,19 @@ void TransformStmtVisitor::visit(const TryStmt *stmt) {
   RETURN(TryStmt, transform(stmt->suite), move(catches),
          transform(stmt->finally));
 }
+
 void TransformStmtVisitor::visit(const GlobalStmt *stmt) {
   RETURN(GlobalStmt, stmt->var);
 }
+
 void TransformStmtVisitor::visit(const ThrowStmt *stmt) {
   RETURN(ThrowStmt, transform(stmt->expr));
 }
+
 void TransformStmtVisitor::visit(const PrefetchStmt *stmt) {
   RETURN(PrefetchStmt, transform(stmt->expr));
 }
+
 void TransformStmtVisitor::visit(const FunctionStmt *stmt) {
   vector<Param> args;
   for (auto &a : stmt->args) {
@@ -310,6 +332,7 @@ void TransformStmtVisitor::visit(const FunctionStmt *stmt) {
   RETURN(FunctionStmt, stmt->name, transform(stmt->ret), stmt->generics,
          move(args), transform(stmt->suite), stmt->attributes);
 }
+
 void TransformStmtVisitor::visit(const ClassStmt *stmt) {
   vector<Param> args;
   for (auto &a : stmt->args) {
@@ -326,16 +349,16 @@ void TransformStmtVisitor::visit(const ClassStmt *stmt) {
   RETURN(ClassStmt, stmt->isType, stmt->name, stmt->generics, move(args),
          move(suite));
 }
+
 void TransformStmtVisitor::visit(const DeclareStmt *stmt) {
   RETURN(DeclareStmt, Param{stmt->param.name, transform(stmt->param.type),
                             transform(stmt->param.deflt)});
 }
 
 void TransformStmtVisitor::visit(const AssignEqStmt *stmt) {
-  RETURN(AssignStmt,
-    transform(stmt->lhs),
-    EPX(stmt, BinaryExpr, transform(stmt->lhs), stmt->op, transform(stmt->rhs), true)
-  );
+  this->result = transform(SP(AssignStmt, transform(stmt->lhs),
+                              EPX(stmt, BinaryExpr, transform(stmt->lhs),
+                                  stmt->op, transform(stmt->rhs), true)));
 }
 
 void TransformStmtVisitor::visit(const YieldFromStmt *stmt) {

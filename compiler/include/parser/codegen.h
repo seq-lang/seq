@@ -30,7 +30,8 @@ public:
   seq::types::Type *transformType(const ExprPtr &expr);
   seq::For *parseComprehension(const Expr *expr,
                                const vector<GeneratorExpr::Body> &loops,
-                               vector<seq::Var *> *captures = nullptr);
+                               vector<seq::Var *> *captures,
+                               int &added);
 
   void visit(const EmptyExpr *) override;
   void visit(const BoolExpr *) override;

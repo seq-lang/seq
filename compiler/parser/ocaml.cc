@@ -397,21 +397,33 @@ unique_ptr<Stmt> parse_stmt(value val) {
 unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset,
                                   int col_offset) {
   CAMLparam0();
-  CAMLlocal2(p1, h);
-  static value *closure_f = NULL;
+  CAMLlocal3(p1, f, c);
+  static value *closure_f = nullptr;
   if (!closure_f) {
     closure_f = caml_named_value("menhir_parse");
   }
-  value args[] = {caml_copy_string(file.c_str()),
-                  caml_copy_string(code.c_str()), Val_int(line_offset),
-                  Val_int(col_offset)};
+  f = caml_copy_string(file.c_str());
+  c = caml_copy_string(code.c_str());
+  value args[] = {f, c, Val_int(line_offset), Val_int(col_offset)};
   p1 = caml_callbackN(*closure_f, 4, args);
-  return make_unique<SuiteStmt>(parse_list(p1, parse_stmt));
+  OcamlReturn(make_unique<SuiteStmt>(parse_optional(p1, [](value v) {
+    CAMLparam1(v);
+    return parse_list(v, parse_stmt);
+  })));
 }
 
 void ocaml_initialize() {
   const char *argv[] = {"parser", 0};
   caml_main((char **)argv);
+}
+
+SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
+                                            value col) {
+  CAMLparam4(msg, file, line, col);
+  error(seq::SrcInfo(String_val(file), Int_val(line), Int_val(line),
+                     Int_val(col), Int_val(col)),
+        String_val(msg));
+  CAMLreturn(Val_unit);
 }
 
 unique_ptr<SuiteStmt> parse(string file, string code, int line_offset,

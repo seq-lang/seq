@@ -10,9 +10,9 @@
 #include "parser/transform.h"
 #include "seq/seq.h"
 
+using std::make_shared;
 using std::string;
 using std::vector;
-using std::make_shared;
 
 SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file,
                                     bool isCode, bool isTest) {
@@ -20,8 +20,9 @@ SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file,
     auto stmts = isCode ? parse(argv0, file) : parse_file(file);
     auto tv = TransformStmtVisitor::apply(move(stmts));
     auto module = new seq::SeqModule();
-    auto stdlib = make_shared<Context>(argv0, module);
-    auto context = make_shared<Context>(argv0, module, file, stdlib.get());
+    auto cache = ImportCache{string(argv0), nullptr, {}};
+    auto stdlib = make_shared<Context>(module, cache);
+    auto context = make_shared<Context>(module, cache, file);
     CodegenStmtVisitor::apply(*context, tv);
     return context->getModule();
   } catch (seq::exc::SeqException &e) {

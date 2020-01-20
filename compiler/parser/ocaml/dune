@@ -6,6 +6,6 @@
 
 (executable
    (name main)
-   (modes (native object))
+   (modes (native object) (native exe))
    ;(link_flags (:standard -noautolink -runtime-variant _pic))
 )

@@ -5,6 +5,13 @@
  * License: see LICENSE
  * *****************************************************************************)
 
+external raise_exception: string -> string -> int -> int -> unit = "seq_ocaml_exception"
+
+(* let raise_exception a b c d =
+  Printf.eprintf "[error] %s %s %d %d" a b c d;
+  ignore @@ exit 1;
+  () *)
+
 let parse file code line_offset col_offset =
   let lexbuf = Lexing.from_string (code ^ "\n") in
   lexbuf.lex_curr_p
@@ -18,21 +25,25 @@ let parse file code line_offset col_offset =
     Stack.push 0 stack;
     let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = file } in
     let ast = Grammar.program (Lexer.token state) lexbuf in
-    ast
+    Printf.eprintf "[ocaml] done!\n%!";
+    Some ast
   with
   | Grammar.Error ->
-    let line = lexbuf.lex_start_p.pos_lnum + Lexer.global_offset.line in
-    let col =
-      lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol + Lexer.global_offset.col
-    in
-    Printf.eprintf "[ocaml] parser error: %s:%d:%d\n%!" file line col;
-    exit 1
+    raise_exception "parser error" file
+      (lexbuf.lex_start_p.pos_lnum)
+      (lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol);
+    None
   | Ast.GrammarError (s, pos) | Ast.SyntaxError (s, pos) ->
-    let line = pos.pos_lnum in
-    let col = pos.pos_cnum - lexbuf.lex_start_p.pos_bol in
-    Printf.eprintf "[ocaml] parser error: %s:%d:%d -- %s\n%!" file line col s;
-    exit 1
+    raise_exception s file
+      pos.pos_lnum
+      (pos.pos_cnum - lexbuf.lex_start_p.pos_bol);
+    None
 
 let () =
   Callback.register "menhir_parse" parse;
-  Printf.eprintf "[ocaml] initialized!\n"
+  Printf.eprintf "[ocaml] initialized!\n%!";
+  (* let lines = ref [] in
+  let chan = open_in Sys.argv.(1) in
+  ( try while true; do lines := input_line chan :: !lines done
+    with End_of_file -> close_in chan );
+  ignore @@ parse Sys.argv.(1) (String.concat "\n" @@ List.rev !lines) 0 0 *)

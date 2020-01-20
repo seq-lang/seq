@@ -49,53 +49,45 @@ seq::Expr *ImportContextItem::getExpr() const {
   return nullptr;
 }
 
-Context::Context(const string &argv0, seq::SeqModule *module)
-    : argv0(argv0), module(module), enclosingType(nullptr),
-      tryCatch(nullptr), stdlib(nullptr) {
-  filename = getImportFile("core", true);
-  if (filename == "") {
-    throw seq::exc::SeqException("cannot load standard library");
-  }
-  module->setFileName(filename);
+Context::Context(seq::SeqModule *module, ImportCache &cache,
+                 const string &filename)
+    : cache(cache), filename(filename), module(module),
+      enclosingType(nullptr), tryCatch(nullptr) {
   stack.push(unordered_set<string>());
   bases.push_back(module);
   blocks.push_back(module->getBlock());
   topBaseIndex = topBlockIndex = 0;
-
-  vector<pair<string, seq::types::Type *>> pods = {
-      {"void", seq::types::Void},   {"bool", seq::types::Bool},
-      {"byte", seq::types::Byte},   {"int", seq::types::Int},
-      {"float", seq::types::Float}, {"str", seq::types::Str},
-      {"seq", seq::types::Seq}};
-  for (auto &i : pods) {
-    add(i.first, i.second);
-  }
-  add("__argv__", module->getArgVar());
-
-  DBG("loading stdlib from {}...", filename);
-  auto stmts = parse_file(filename);
-  auto tv = TransformStmtVisitor::apply(move(stmts));
-  stdlib = this;
-  CodegenStmtVisitor::apply(*this, tv);
-}
-
-Context::Context(const string &argv0, seq::SeqModule *module,
-                 const string &filename, Context *stdlib)
-    : filename(filename), argv0(argv0), module(module), enclosingType(nullptr),
-      tryCatch(nullptr), stdlib(stdlib) {
   module->setFileName(filename);
-  stack.push(unordered_set<string>());
-  bases.push_back(module);
-  blocks.push_back(module->getBlock());
-  topBaseIndex = topBlockIndex = 0;
+  if (this->filename == "") {
+    this->filename = cache.getImportFile("core", "", true);
+    if (this->filename == "") {
+      throw seq::exc::SeqException("cannot load standard library");
+    }
+    module->setFileName(this->filename);
+    vector<pair<string, seq::types::Type *>> pods = {
+        {"void", seq::types::Void},   {"bool", seq::types::Bool},
+        {"byte", seq::types::Byte},   {"int", seq::types::Int},
+        {"float", seq::types::Float}, {"str", seq::types::Str},
+        {"seq", seq::types::Seq}};
+    for (auto &i : pods) {
+      add(i.first, i.second);
+    }
+    add("__argv__", module->getArgVar());
+
+    // DBG("loading stdlib from {}...", this->filename);
+    auto stmts = parse_file(this->filename);
+    auto tv = TransformStmtVisitor::apply(move(stmts));
+    cache.stdlib = this;
+    CodegenStmtVisitor::apply(*this, tv);
+  }
 }
 
 shared_ptr<ContextItem> Context::find(const string &name) const {
   auto i = VTable<ContextItem>::find(name);
   if (i && (i->isGlobal() || getBase() == i->getBase())) {
     return i;
-  } else if (this->stdlib && this != this->stdlib) {
-    return stdlib->find(name);
+  } else if (cache.stdlib && this != cache.stdlib) {
+    return cache.stdlib->find(name);
   } else {
     return nullptr;
   }
@@ -175,11 +167,12 @@ void Context::add(const string &name, const string &import, bool global) {
 
 string Context::getFilename() const { return filename; }
 
-string Context::getImportFile(const string &what, bool forceStdlib) {
+string ImportCache::getImportFile(const string &what, const string &relativeTo,
+                                  bool forceStdlib) {
   vector<string> paths;
   char abs[PATH_MAX + 1];
   if (!forceStdlib) {
-    realpath(getFilename().c_str(), abs);
+    realpath(relativeTo.c_str(), abs);
     auto parent = dirname(abs);
     paths.push_back(format("{}/{}.seq", parent, what));
     paths.push_back(format("{}/{}/__init__.seq", parent, what));
@@ -205,16 +198,21 @@ string Context::getImportFile(const string &what, bool forceStdlib) {
   return "";
 }
 
-shared_ptr<Context> Context::importFile(const string &file) {
-  DBG("loading {}", file);
+shared_ptr<Context> ImportCache::importFile(seq::SeqModule *module,
+                                            const string &file) {
   auto i = imports.find(file);
   if (i != imports.end()) {
     return i->second;
   } else {
+    DBG("loading {}", file);
     auto stmts = parse_file(file);
     auto tv = TransformStmtVisitor::apply(move(stmts));
-    auto context = make_shared<Context>(argv0, getModule(), file, stdlib);
+    auto context = make_shared<Context>(module, *this, file);
     CodegenStmtVisitor::apply(*context, tv);
     return (imports[file] = context);
   }
+}
+
+ImportCache &Context::getCache() {
+  return cache;
 }

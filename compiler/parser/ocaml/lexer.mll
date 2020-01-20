@@ -12,7 +12,6 @@
   module P = Grammar
 
   type offset = { mutable line: int ; mutable col: int }
-  let global_offset = { line = 0; col = 0 }
   type stack = (* Used for tracking indentation levels *)
     { stack: int Stack.t
     ; fname: string

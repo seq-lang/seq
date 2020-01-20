@@ -5,19 +5,8 @@
  * License: see LICENSE
  * *****************************************************************************)
 
-(** File position annotation for an AST node. *)
-
-(* type tpos =
-  { file : string
-  ; line : int
-  ; col : int
-  ; len : int
-  } *)
-
-type tpos = Lexing.position * Lexing.position
-
 (** Annotated type specification. *)
-type 'a ann = tpos * 'a
+type 'a ann = (Lexing.position * Lexing.position) * 'a
 
 exception SyntaxError of string * Lexing.position
 exception GrammarError of string * Lexing.position
