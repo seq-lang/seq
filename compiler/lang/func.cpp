@@ -247,7 +247,8 @@ void Func::addAttribute(std::string attr) {
           getSrcInfo());
     if (!(outType->is(types::Void) && outType0->is(types::Void)))
       throw exc::SeqException("functions performing inter-sequence alignment "
-                              "cannot return a value");
+                              "cannot return a value",
+                              getSrcInfo());
     interAlign = true;
     gen = true;
     types::RecordType *yieldType = PipeExpr::getInterAlignYieldType();
@@ -314,7 +315,7 @@ std::string Func::getMangledFuncName() {
 }
 
 void Func::resolveTypes() {
-  if (prefetch && yield)
+  if ((prefetch || interAlign) && yield)
     throw exc::SeqException("prefetch statement cannot be used in generator");
 
   if (external || resolved)
@@ -386,9 +387,10 @@ void Func::codegen(Module *module) {
 
   if (hasAttribute("export")) {
     if (parentType || parentFunc)
-      throw exc::SeqException("can only export top-level functions");
+      throw exc::SeqException("can only export top-level functions",
+                              getSrcInfo());
     if (numGenerics() > 0)
-      throw exc::SeqException("cannot export generic function");
+      throw exc::SeqException("cannot export generic function", getSrcInfo());
     func->setLinkage(GlobalValue::ExternalLinkage);
   } else {
     func->setLinkage(GlobalValue::PrivateLinkage);
@@ -675,7 +677,8 @@ void Func::setIns(std::vector<types::Type *> inTypes) {
 void Func::setOut(types::Type *outType) {
   if (interAlign && !outType->is(types::Void))
     throw exc::SeqException(
-        "functions performing inter-sequence alignment cannot return a value");
+        "functions performing inter-sequence alignment cannot return a value",
+        getSrcInfo());
   this->outType = outType0 = outType;
 }
 
