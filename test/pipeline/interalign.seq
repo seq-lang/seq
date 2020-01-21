@@ -1,0 +1,39 @@
+Q,T = ['test/data/' + a for a in ('MT-orang.fa','MT-human.fa')]
+
+@inter_align
+@test
+def aln1(t):
+    query, target = t
+    score = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+    score_exp = query.align(target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5).score
+    assert abs(score - score_exp) <= 8
+
+@inter_align
+@test
+def aln2(t):
+    query, target = t
+    score = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+    score_exp = query.align(target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5).score
+    assert abs(score - score_exp) <= 8
+    score2 = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+    assert score == score2
+
+@inter_align
+@test
+def aln3(t):
+    query, target = t
+    if query[0] == target[0]:
+        score = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+        score_exp = query.align(target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5).score
+        assert abs(score - score_exp) <= 8
+        score2 = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+        assert score == score2
+
+def subs(path: str):
+    for a in seqs(FASTQ(path)):
+        for b in a.split(20, 1):
+            yield b
+
+zip(subs(Q), subs(T)) |> aln1
+zip(subs(Q), subs(T)) |> aln2
+zip(subs(Q), subs(T)) |> aln3
