@@ -764,7 +764,7 @@ void BandedPairWiseSW::smithWatermanBatchWrapper8(
     int32_t numPairs, uint16_t numThreads, int8_t w) {
   // printf("numThreads: %d %d\n", numThreads, omp_get_thread_num());
 
-  int64_t st1, st2, st3, st4, st5;
+  int64_t st1 = 0, st2 = 0, st3 = 0, st4 = 0, st5 = 0;
   // st1 = ___rdtsc();
   uint8_t *seq1SoA = NULL;
   seq1SoA = (uint8_t *)_mm_malloc(
@@ -1482,7 +1482,7 @@ void BandedPairWiseSW::smithWatermanBatchWrapper16(
     SeqPair *pairArray, uint8_t *seqBufRef, uint8_t *seqBufQer,
     int32_t numPairs, uint16_t numThreads, int8_t w) {
   // printf("numThreads: %d\n", numThreads);
-  int64_t st1, st2, st3, st4, st5;
+  int64_t st1 = 0, st2 = 0, st3 = 0, st4 = 0, st5 = 0;
 
   // st1 = ___rdtsc();
   uint16_t *seq1SoA = (uint16_t *)_mm_malloc(
