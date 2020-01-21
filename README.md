@@ -103,6 +103,8 @@ wget -O - https://raw.githubusercontent.com/seq-lang/seq/master/install.sh | bas
 
 This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
 
+> Seq binaries require a [libomp](https://openmp.llvm.org/) to be present on your machine. `brew install libomp` or `apt install libomp5` should do the trick.
+
 ### Build from source
 
 See [Building from Source](docs/sphinx/build.rst).
