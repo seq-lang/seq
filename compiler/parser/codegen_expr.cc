@@ -143,6 +143,7 @@ seq::For *CodegenExprVisitor::parseComprehension(
   seq::Block *block = nullptr;
   for (auto &l : loops) {
     auto f = new seq::For(transform(l.gen, captures));
+    f->setSrcInfo(l.gen->getSrcInfo());
     if (!topFor) {
       topFor = f;
     }
@@ -161,6 +162,7 @@ seq::For *CodegenExprVisitor::parseComprehension(
     block = ctx.getBlock();
     if (l.conds.size()) {
       auto i = new seq::If();
+      i->setSrcInfo(l.conds[0]->getSrcInfo());
       auto b = i->addCond(transform(l.conds[0], captures));
       i->setSrcInfo(expr->getSrcInfo());
       i->setBase(ctx.getBase());
@@ -360,7 +362,6 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
   } else if (isPartial) {
     RETURN(seq::PartialCallExpr, lhs, items);
   } else {
-    assert(lhs);
     RETURN(seq::CallExpr, lhs, items);
   }
 }

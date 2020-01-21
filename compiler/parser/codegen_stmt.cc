@@ -213,6 +213,7 @@ void CodegenStmtVisitor::visit(const ExternImportStmt *stmt) {
     types.push_back(transformType(arg.type));
   }
   auto f = new seq::Func();
+  f->setSrcInfo(stmt->getSrcInfo());
   f->setName(stmt->name.first);
   ctx.add(stmt->name.second != "" ? stmt->name.second : stmt->name.first, f,
           names);
@@ -274,6 +275,7 @@ void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) {
 void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   auto f = new seq::Func();
   f->setName(stmt->name);
+  f->setSrcInfo(stmt->getSrcInfo());
   seq::types::Type *c = nullptr;
   if (ctx.isToplevel() && (c = ctx.getEnclosingType())) {
     // Make sure that it is toplevel--- otherwise it is a nested function
@@ -291,12 +293,12 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   ctx.addBlock(f->getBlock(), f);
 
   unordered_set<string> seen;
-  unordered_set<string> generics(stmt->generics.begin(), stmt->generics.end());
+  auto generics = stmt->generics;
   bool hasDefault = false;
   for (auto &arg : stmt->args) {
     if (!arg.type) {
       string typName = format("'{}", arg.name);
-      generics.insert(typName);
+      generics.push_back(typName);
     }
     if (seen.find(arg.name) != seen.end()) {
       ERROR("argument '{}' already specified", arg.name);
@@ -309,10 +311,14 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
     }
   }
   f->addGenerics(generics.size());
-  int gc = 0;
-  for (auto &g : generics) {
-    f->getGeneric(gc)->setName(g);
-    ctx.add(g, f->getGeneric(gc++));
+  seen.clear();
+  for (int g = 0; g < generics.size(); g++) {
+    if (seen.find(generics[g]) != seen.end()) {
+      ERROR("repeated generic identifier '{}'", generics[g]);
+    }
+    f->getGeneric(g)->setName(generics[g]);
+    ctx.add(generics[g], f->getGeneric(g));
+    seen.insert(generics[g]);
   }
   vector<seq::types::Type *> types;
   vector<string> names;
@@ -379,13 +385,15 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
     ctx.add(stmt->name, t);
     ctx.setEnclosingType(t);
     ctx.addBlock();
-    unordered_set<string> generics(stmt->generics.begin(),
-                                   stmt->generics.end());
-    t->addGenerics(generics.size());
-    int gc = 0;
-    for (auto &g : generics) {
-      t->getGeneric(gc)->setName(g);
-      ctx.add(g, t->getGeneric(gc++));
+    unordered_set<string> seenGenerics;
+    t->addGenerics(stmt->generics.size());
+    for (int g = 0; g < stmt->generics.size(); g++) {
+      if (seenGenerics.find(stmt->generics[g]) != seenGenerics.end()) {
+        ERROR("repeated generic identifier '{}'", stmt->generics[g]);
+      }
+      t->getGeneric(g)->setName(stmt->generics[g]);
+      ctx.add(stmt->generics[g], t->getGeneric(g));
+      seenGenerics.insert(stmt->generics[g]);
     }
     auto tn = getMembers();
     t->setContents(seq::types::RecordType::get(tn.first, tn.second, ""));
