@@ -67,6 +67,6 @@ def subs(path: str):
         for b in a.split(20, 1):
             yield b
 
-#zip(subs(Q), subs(T)) |> aln1
-#zip(subs(Q), subs(T)) |> aln2
-zip(subs(Q), subs(T)) |> aln3
+zip(subs(Q), subs(T)) |> aln1
+zip(subs(Q), subs(T)) |> aln1
+#zip(subs(Q), subs(T)) |> aln3
