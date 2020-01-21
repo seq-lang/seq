@@ -22,6 +22,9 @@ extend int:
     def __pow__(self: int, exp: float):
         return float(self) ** exp
 
+    def popcnt(self: int):
+        return Int[64](self).popcnt()
+
 # Internal helpers
 
     def _from_str(s: str, base: int):

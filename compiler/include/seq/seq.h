@@ -35,7 +35,7 @@
 
 #define SEQ_VERSION_MAJOR 0
 #define SEQ_VERSION_MINOR 9
-#define SEQ_VERSION_PATCH 2
+#define SEQ_VERSION_PATCH 3
 
 namespace seq {
 namespace types {
@@ -63,6 +63,7 @@ private:
   llvm::Function *initFunc;
   llvm::Function *strlenFunc;
   llvm::Function *makeCanonicalMainFunc(llvm::Function *realMain);
+  void runCodegenPipeline(bool debug);
 
 public:
   SeqModule();

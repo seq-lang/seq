@@ -35,6 +35,11 @@ class dict[K,V]:
         for k,v in g:
             self[k] = v
 
+    def __init__(self: dict[K,V], g: tuple[K,V]):
+        self._init()
+        k, v = g
+        self[k] = v
+
     def __getitem__(self: dict[K,V], key: K):
         x = self._kh_get(key)
         if x != self._kh_end():

@@ -139,9 +139,9 @@ types::FuncType *types::FuncType::clone(Generic *ref) {
   return get(inTypesCloned, outType->clone(ref));
 }
 
-types::GenType::GenType(Type *outType, bool prefetch)
-    : Type("generator", BaseType::get()), outType(outType), prefetch(prefetch) {
-}
+types::GenType::GenType(Type *outType, GenTypeKind kind)
+    : Type("generator", BaseType::get()), outType(outType), kind(kind),
+      alnParams() {}
 
 bool types::GenType::isAtomic() const { return false; }
 
@@ -168,7 +168,7 @@ void types::GenType::resume(Value *self, BasicBlock *block, BasicBlock *normal,
     builder.CreateCall(resFn, self);
 }
 
-Value *types::GenType::promise(Value *self, BasicBlock *block) {
+Value *types::GenType::promise(Value *self, BasicBlock *block, bool returnPtr) {
   if (outType->is(types::Void))
     return nullptr;
 
@@ -187,7 +187,15 @@ Value *types::GenType::promise(Value *self, BasicBlock *block) {
   Value *ptr = builder.CreateCall(promFn, {self, aln, from});
   ptr = builder.CreateBitCast(
       ptr, PointerType::get(outType->getLLVMType(context), 0));
-  return builder.CreateLoad(ptr);
+  return returnPtr ? ptr : builder.CreateLoad(ptr);
+}
+
+void types::GenType::send(Value *self, Value *val, BasicBlock *block) {
+  Value *promisePtr = promise(self, block, /*returnPtr=*/true);
+  if (!promisePtr)
+    throw exc::SeqException("cannot send value to void generator");
+  IRBuilder<> builder(block);
+  builder.CreateStore(val, promisePtr);
 }
 
 void types::GenType::destroy(Value *self, BasicBlock *block) {
@@ -197,7 +205,25 @@ void types::GenType::destroy(Value *self, BasicBlock *block) {
   builder.CreateCall(destFn, self);
 }
 
-bool types::GenType::fromPrefetch() { return prefetch; }
+bool types::GenType::fromPrefetch() { return kind == GenTypeKind::PREFETCH; }
+
+bool types::GenType::fromInterAlign() {
+  return kind == GenTypeKind::INTERALIGN;
+}
+
+void types::GenType::setAlignParams(GenType::InterAlignParams alnParams) {
+  if (!fromInterAlign())
+    throw exc::SeqException(
+        "inter-sequence alignment functions must be marked '@interalign'");
+  this->alnParams = alnParams;
+}
+
+types::GenType::InterAlignParams types::GenType::getAlignParams() {
+  if (!fromInterAlign())
+    throw exc::SeqException(
+        "inter-sequence alignment functions must be marked '@interalign'");
+  return alnParams;
+}
 
 void types::GenType::initOps() {
   if (!vtable.magic.empty())
@@ -209,6 +235,40 @@ void types::GenType::initOps() {
        this,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return self;
+       },
+       false},
+
+      {"__raw__",
+       {},
+       PtrType::get(Byte),
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
+
+      {"__done__",
+       {},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(done(self, b.GetInsertBlock()),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__promise__",
+       {},
+       PtrType::get(getBaseType(0)),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return promise(self, b.GetInsertBlock(), /*returnPtr=*/true);
+       },
+       false},
+
+      {"__resume__",
+       {},
+       Void,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         resume(self, b.GetInsertBlock(), nullptr, nullptr);
+         return (Value *)nullptr;
        },
        false},
   };
@@ -269,6 +329,37 @@ void types::GenType::initOps() {
           }),
       true);
 
+  addMethod("send",
+            new BaseFuncLite(
+                {this, outType}, outType,
+                [this](Module *module) {
+                  const std::string name = "seq." + getName() + ".send";
+                  Function *func = module->getFunction(name);
+
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, outType->getLLVMType(context),
+                        getLLVMType(context), outType->getLLVMType(context)));
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->setDoesNotThrow();
+                    func->addFnAttr(Attribute::AlwaysInline);
+
+                    auto iter = func->arg_begin();
+                    Value *self = iter++;
+                    Value *val = iter;
+                    BasicBlock *entry =
+                        BasicBlock::Create(context, "entry", func);
+                    send(self, val, entry);
+                    resume(self, entry, nullptr, nullptr);
+                    IRBuilder<> builder(entry);
+                    builder.CreateRet(promise(self, entry));
+                  }
+
+                  return func;
+                }),
+            true);
+
   addMethod(
       "destroy",
       new BaseFuncLite(
@@ -317,16 +408,16 @@ size_t types::GenType::size(Module *module) const {
 
 types::GenType *types::GenType::asGen() { return this; }
 
-types::GenType *types::GenType::get(Type *outType, bool prefetch) noexcept {
-  return new GenType(outType, prefetch);
+types::GenType *types::GenType::get(Type *outType, GenTypeKind kind) noexcept {
+  return new GenType(outType, kind);
 }
 
-types::GenType *types::GenType::get(bool prefetch) noexcept {
-  return get(types::BaseType::get(), prefetch);
+types::GenType *types::GenType::get(GenTypeKind kind) noexcept {
+  return get(types::BaseType::get(), kind);
 }
 
 types::GenType *types::GenType::clone(Generic *ref) {
-  return get(outType->clone(ref), prefetch);
+  return get(outType->clone(ref), kind);
 }
 
 types::PartialFuncType::PartialFuncType(types::Type *callee,

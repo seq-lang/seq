@@ -272,6 +272,7 @@ private:
 
 public:
   explicit VarExpr(Var *var, bool atomic = false);
+  Var *getVar();
   void setAtomic();
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
   types::Type *getType0() const override;
@@ -541,6 +542,7 @@ public:
 class ConstructExpr : public Expr {
 private:
   mutable types::Type *type;
+  mutable types::Type *type0; // type before deduction, saved for clone
   std::vector<Expr *> args;
 
 public:
@@ -576,6 +578,18 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
   types::Type *getType0() const override;
   OptExpr *clone(Generic *ref) override;
+};
+
+class YieldExpr : public Expr {
+private:
+  BaseFunc *base;
+
+public:
+  YieldExpr(BaseFunc *base);
+  void resolveTypes() override;
+  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  types::Type *getType0() const override;
+  YieldExpr *clone(Generic *ref) override;
 };
 
 class DefaultExpr : public Expr {

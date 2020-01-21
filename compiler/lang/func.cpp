@@ -42,8 +42,8 @@ Func::Func()
       outType(types::Void), outType0(types::Void), defaultArgs(),
       scope(new Block()), argNames(), argVars(), attributes(),
       parentFunc(nullptr), ret(nullptr), yield(nullptr), prefetch(false),
-      resolved(false), cache(), gen(false), promise(nullptr), handle(nullptr),
-      cleanup(nullptr), suspend(nullptr) {
+      interAlign(false), resolved(false), cache(), gen(false), promise(nullptr),
+      handle(nullptr), cleanup(nullptr), suspend(nullptr) {
   if (!this->argNames.empty())
     assert(this->argNames.size() == this->inTypes.size());
 }
@@ -200,6 +200,10 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
 void Func::setEnclosingFunc(Func *parentFunc) { this->parentFunc = parentFunc; }
 
 void Func::sawReturn(Return *ret) {
+  if (interAlign && ret->getExpr())
+    throw exc::SeqException(
+        "functions performing inter-sequence alignment cannot return a value",
+        getSrcInfo());
   if (this->ret)
     return;
 
@@ -207,6 +211,10 @@ void Func::sawReturn(Return *ret) {
 }
 
 void Func::sawYield(Yield *yield) {
+  if (interAlign)
+    throw exc::SeqException(
+        "functions performing inter-sequence alignment cannot be generators",
+        getSrcInfo());
   if (this->yield)
     return;
 
@@ -217,16 +225,38 @@ void Func::sawYield(Yield *yield) {
 }
 
 void Func::sawPrefetch(Prefetch *prefetch) {
+  if (interAlign)
+    throw exc::SeqException(
+        "function cannot perform both prefetch and inter-sequence alignment",
+        getSrcInfo());
   this->prefetch = true;
   gen = true;
-  outType = types::GenType::get(outType, true);
-  outType0 = types::GenType::get(outType0, true);
+  outType = types::GenType::get(outType, types::GenType::GenTypeKind::PREFETCH);
+  outType0 =
+      types::GenType::get(outType0, types::GenType::GenTypeKind::PREFETCH);
 }
 
 void Func::addAttribute(std::string attr) {
   attributes.push_back(attr);
   if (attr == "builtin")
     builtins[genericName()] = this;
+  else if (attr == "inter_align") {
+    if (prefetch)
+      throw exc::SeqException(
+          "function cannot perform both prefetch and inter-sequence alignment",
+          getSrcInfo());
+    if (!(outType->is(types::Void) && outType0->is(types::Void)))
+      throw exc::SeqException("functions performing inter-sequence alignment "
+                              "cannot return a value",
+                              getSrcInfo());
+    interAlign = true;
+    gen = true;
+    types::RecordType *yieldType = PipeExpr::getInterAlignYieldType();
+    outType =
+        types::GenType::get(yieldType, types::GenType::GenTypeKind::INTERALIGN);
+    outType0 =
+        types::GenType::get(yieldType, types::GenType::GenTypeKind::INTERALIGN);
+  }
 }
 
 std::vector<std::string> Func::getAttributes() { return attributes; }
@@ -285,7 +315,7 @@ std::string Func::getMangledFuncName() {
 }
 
 void Func::resolveTypes() {
-  if (prefetch && yield)
+  if ((prefetch || interAlign) && yield)
     throw exc::SeqException("prefetch statement cannot be used in generator");
 
   if (external || resolved)
@@ -310,7 +340,8 @@ void Func::resolveTypes() {
         outType = ret->getExpr() ? ret->getExpr()->getType() : types::Void;
 
         if (prefetch)
-          outType = types::GenType::get(outType, true);
+          outType = types::GenType::get(outType,
+                                        types::GenType::GenTypeKind::PREFETCH);
       } else {
         assert(0);
       }
@@ -356,9 +387,10 @@ void Func::codegen(Module *module) {
 
   if (hasAttribute("export")) {
     if (parentType || parentFunc)
-      throw exc::SeqException("can only export top-level functions");
+      throw exc::SeqException("can only export top-level functions",
+                              getSrcInfo());
     if (numGenerics() > 0)
-      throw exc::SeqException("cannot export generic function");
+      throw exc::SeqException("cannot export generic function", getSrcInfo());
     func->setLinkage(GlobalValue::ExternalLinkage);
   } else {
     func->setLinkage(GlobalValue::PrivateLinkage);
@@ -508,7 +540,7 @@ void Func::codegen(Module *module) {
 
 void Func::codegenReturn(Value *val, types::Type *type, BasicBlock *&block,
                          bool dryrun) {
-  if (prefetch) {
+  if (prefetch || interAlign) {
     codegenYield(val, type, block, false, dryrun);
   } else {
     if (gen) {
@@ -596,6 +628,31 @@ void Func::codegenYield(Value *val, types::Type *type, BasicBlock *&block,
   }
 }
 
+Value *Func::codegenYieldExpr(BasicBlock *&block, bool suspend) {
+  if (!gen)
+    throw exc::SeqException("yield expression in non-generator");
+
+  IRBuilder<> builder(block);
+  if (suspend) {
+    LLVMContext &context = block->getContext();
+    Function *suspFn =
+        Intrinsic::getDeclaration(module, Intrinsic::coro_suspend);
+    Value *tok = ConstantTokenNone::get(context);
+    Value *final = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
+    Value *susp = builder.CreateCall(suspFn, {tok, final});
+
+    block = BasicBlock::Create(block->getContext(), "", block->getParent());
+
+    SwitchInst *inst = builder.CreateSwitch(susp, this->suspend, 2);
+    inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 0), block);
+    inst->addCase(ConstantInt::get(IntegerType::getInt8Ty(context), 1),
+                  cleanup);
+  }
+
+  builder.SetInsertPoint(block);
+  return builder.CreateLoad(promise);
+}
+
 bool Func::isGen() { return yield != nullptr; }
 
 std::vector<std::string> Func::getArgNames() { return argNames; }
@@ -617,7 +674,13 @@ void Func::setIns(std::vector<types::Type *> inTypes) {
   this->inTypes = std::move(inTypes);
 }
 
-void Func::setOut(types::Type *outType) { this->outType = outType0 = outType; }
+void Func::setOut(types::Type *outType) {
+  if (interAlign && !outType->is(types::Void))
+    throw exc::SeqException(
+        "functions performing inter-sequence alignment cannot return a value",
+        getSrcInfo());
+  this->outType = outType0 = outType;
+}
 
 void Func::setDefaults(std::vector<Expr *> defaultArgs) {
   this->defaultArgs = std::move(defaultArgs);
@@ -673,6 +736,7 @@ Func *Func::clone(Generic *ref) {
   if (yield)
     x->yield = yield->clone(ref);
   x->prefetch = prefetch;
+  x->interAlign = interAlign;
   x->gen = gen;
   x->setSrcInfo(getSrcInfo());
   return x;

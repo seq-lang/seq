@@ -5,7 +5,9 @@
 #include "types.h"
 
 namespace seq {
+class Expr;
 namespace types {
+
 class FuncType : public Type {
 private:
   std::vector<Type *> inTypes;
@@ -39,10 +41,20 @@ public:
 
 // Generator types really represent generator handles in LLVM
 class GenType : public Type {
+public:
+  enum GenTypeKind { NORMAL, PREFETCH, INTERALIGN };
+  struct InterAlignParams { // see bio/align.seq for definition
+    Expr *a, *b, *ambig, *gapo, *gape, *bandwidth, *zdrop, *end_bonus;
+    InterAlignParams()
+        : a(nullptr), b(nullptr), ambig(nullptr), gapo(nullptr), gape(nullptr),
+          bandwidth(nullptr), zdrop(nullptr), end_bonus(nullptr) {}
+  };
+
 private:
   Type *outType;
-  bool prefetch; // does this generator represent a prefetch function?
-  explicit GenType(Type *outType, bool prefetch = false);
+  GenTypeKind kind;
+  InterAlignParams alnParams;
+  explicit GenType(Type *outType, GenTypeKind = GenTypeKind::NORMAL);
 
 public:
   GenType(GenType const &) = delete;
@@ -54,9 +66,14 @@ public:
   llvm::Value *done(llvm::Value *self, llvm::BasicBlock *block);
   void resume(llvm::Value *self, llvm::BasicBlock *block,
               llvm::BasicBlock *normal, llvm::BasicBlock *unwind);
-  llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block);
+  llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block,
+                       bool returnPtr = false);
+  void send(llvm::Value *self, llvm::Value *val, llvm::BasicBlock *block);
   void destroy(llvm::Value *self, llvm::BasicBlock *block);
   bool fromPrefetch();
+  bool fromInterAlign();
+  void setAlignParams(InterAlignParams alnParams);
+  InterAlignParams getAlignParams();
 
   void initOps() override;
   bool is(Type *type) const override;
@@ -67,8 +84,9 @@ public:
 
   GenType *asGen() override;
 
-  static GenType *get(Type *outType, bool prefetch = false) noexcept;
-  static GenType *get(bool prefetch = false) noexcept;
+  static GenType *get(Type *outType,
+                      GenTypeKind kind = GenTypeKind::NORMAL) noexcept;
+  static GenType *get(GenTypeKind kind = GenTypeKind::NORMAL) noexcept;
 
   GenType *clone(Generic *ref) override;
 };

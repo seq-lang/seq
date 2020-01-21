@@ -312,6 +312,29 @@ void SeqPattern::resolveTypes(types::Type *type) {
         getSrcInfo());
 }
 
+// Returns the appropriate character for the given logical index, respecting
+// reverse complementation. Given `lenActual` should be non-negative.
+static Value *indexIntoSeq(Value *ptr, Value *lenActual, Value *rc, Value *idx,
+                           BasicBlock *block) {
+  LLVMContext &context = block->getContext();
+  IRBuilder<> builder(block);
+  Value *backIdx = builder.CreateSub(lenActual, idx);
+  backIdx = builder.CreateSub(backIdx, oneLLVM(context));
+
+  Value *charFwdPtr = builder.CreateGEP(ptr, idx);
+  Value *charRevPtr = builder.CreateGEP(ptr, backIdx);
+
+  Value *charFwd = builder.CreateLoad(charFwdPtr);
+  Value *charRev = builder.CreateLoad(charRevPtr);
+
+  GlobalVariable *table = types::ByteType::getByteCompTable(block->getModule());
+  charRev = builder.CreateZExt(charRev, builder.getInt64Ty());
+  charRev = builder.CreateInBoundsGEP(table, {builder.getInt64(0), charRev});
+  charRev = builder.CreateLoad(charRev);
+
+  return builder.CreateSelect(rc, charRev, charFwd);
+}
+
 static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
                                     BaseFunc *base, types::Type *type,
                                     Value *val, BasicBlock *&block) {
@@ -330,14 +353,16 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
   Value *lenMatch = nullptr;
   BasicBlock *startBlock = block;
   IRBuilder<> builder(block);
+  Value *rc = builder.CreateICmpSLT(len, zeroLLVM(context));
+  Value *lenActual = builder.CreateSelect(rc, builder.CreateNeg(len), len);
 
   // check lengths:
   if (hasStar) {
     Value *minLen = ConstantInt::get(seqIntLLVM(context), patterns.size() - 1);
-    lenMatch = builder.CreateICmpSGE(len, minLen);
+    lenMatch = builder.CreateICmpSGE(lenActual, minLen);
   } else {
     Value *expectedLen = ConstantInt::get(seqIntLLVM(context), patterns.size());
-    lenMatch = builder.CreateICmpEQ(len, expectedLen);
+    lenMatch = builder.CreateICmpEQ(lenActual, expectedLen);
   }
 
   block = BasicBlock::Create(
@@ -353,7 +378,7 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
       if (patterns[i] == '_')
         continue;
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
-      Value *sub = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+      Value *sub = indexIntoSeq(ptr, lenActual, rc, idx, block);
       Value *c = ConstantInt::get(IntegerType::getInt8Ty(context),
                                   (uint64_t)patterns[i]);
       Value *subRes = builder.CreateICmpEQ(sub, c);
@@ -366,11 +391,11 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
       if (patterns[i] == '_')
         continue;
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
-      idx = builder.CreateAdd(idx, len);
+      idx = builder.CreateAdd(idx, lenActual);
       idx = builder.CreateSub(
           idx, ConstantInt::get(seqIntLLVM(context), patterns.size()));
 
-      Value *sub = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+      Value *sub = indexIntoSeq(ptr, lenActual, rc, idx, block);
       Value *c = ConstantInt::get(IntegerType::getInt8Ty(context),
                                   (uint64_t)patterns[i]);
       Value *subRes = builder.CreateICmpEQ(sub, c);
@@ -383,7 +408,7 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
       if (patterns[i] == '_')
         continue;
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
-      Value *sub = builder.CreateLoad(builder.CreateGEP(ptr, idx));
+      Value *sub = indexIntoSeq(ptr, lenActual, rc, idx, block);
       Value *c = ConstantInt::get(IntegerType::getInt8Ty(context),
                                   (uint64_t)patterns[i]);
       Value *subRes = builder.CreateICmpEQ(sub, c);
@@ -413,9 +438,13 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
 static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
                                      BaseFunc *base, types::KMer *type,
                                      Value *val, BasicBlock *&block) {
+  static const unsigned BRUTE_MATCH_K_CUTOFF = 256;
+  static const unsigned BRUTE_MATCH_P_CUTOFF = 100;
+
   LLVMContext &context = block->getContext();
   Value *fail = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
   Value *succ = ConstantInt::get(IntegerType::getInt1Ty(context), 1);
+  Value *falseBool = ConstantInt::get(types::Bool->getLLVMType(context), 0);
 
   if (patterns.empty())
     return fail; // k-mer length must be at least 1
@@ -451,11 +480,59 @@ static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
   }
 
   Type *llvmType = type->getLLVMType(context);
+
+  // if k is small and pattern is small, brute force matching is fastest:
+  if (hasStar && k <= BRUTE_MATCH_K_CUTOFF &&
+      patterns.size() <= BRUTE_MATCH_P_CUTOFF) {
+    types::KMer *k1Type = types::KMer::get(1);
+
+    BasicBlock *succBlock = block;
+    BasicBlock *failBlock = BasicBlock::Create(context, "", block->getParent());
+
+    IRBuilder<> builder(succBlock);
+    bool backIndex = false;
+
+    for (unsigned i = 0; i < patterns.size(); i++) {
+      const char c = patterns[i];
+      if (c == '_')
+        continue;
+      if (c == '\0') {
+        assert(!backIndex);
+        backIndex = true;
+        continue;
+      }
+      unsigned idx = backIndex ? (k + i - patterns.size()) : i;
+      Value *idxVal = ConstantInt::get(seqIntLLVM(context), idx);
+      Value *base = type->callMagic("__getitem__", {types::Int}, val, {idxVal},
+                                    succBlock, nullptr);
+      Value *expected =
+          k1Type->callMagic("__init__", {types::Byte}, nullptr,
+                            {builder.getInt8(c)}, succBlock, nullptr);
+      Value *match = builder.CreateICmpEQ(base, expected);
+      succBlock = BasicBlock::Create(context, "", block->getParent());
+      builder.CreateCondBr(match, succBlock, failBlock);
+      builder.SetInsertPoint(succBlock);
+    }
+
+    block = BasicBlock::Create(context, "", block->getParent());
+    builder.CreateBr(block);
+
+    builder.SetInsertPoint(failBlock);
+    builder.CreateBr(block);
+
+    builder.SetInsertPoint(block);
+    PHINode *result = builder.CreatePHI(IntegerType::getInt1Ty(context), 2);
+    result->addIncoming(succ, succBlock);
+    result->addIncoming(fail, failBlock);
+    return result;
+  }
+
   if (!hasStar) {
     SeqExpr s(std::string(patterns.begin(), patterns.end()));
     Value *expectedSeq = s.codegen(base, block);
-    Value *expectedKmer = type->callMagic("__init__", {types::Seq}, nullptr,
-                                          {expectedSeq}, block, nullptr);
+    Value *expectedKmer =
+        type->callMagic("__init__", {types::Seq, types::Bool}, nullptr,
+                        {expectedSeq, falseBool}, block, nullptr);
     IRBuilder<> builder(block);
 
     if (!hasWildcard) {
@@ -488,8 +565,9 @@ static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
       SeqExpr sLeft(leftString);
       Value *expectedSeqLeft = sLeft.codegen(base, block);
       typeLeft = types::KMer::get(leftString.size());
-      expectedKmerLeft = typeLeft->callMagic("__init__", {types::Seq}, nullptr,
-                                             {expectedSeqLeft}, block, nullptr);
+      expectedKmerLeft =
+          typeLeft->callMagic("__init__", {types::Seq, types::Bool}, nullptr,
+                              {expectedSeqLeft, falseBool}, block, nullptr);
     }
 
     if (!rightString.empty()) {

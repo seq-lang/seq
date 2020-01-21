@@ -1,7 +1,6 @@
 language: cpp
-sudo: required
 
-matrix:
+jobs:
   include:
     - os: linux
     - os: osx
@@ -67,6 +66,9 @@ before_install:
     fi
   - eval $(opam env)
 
+  # fix Python:
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --overwrite python3; fi
+
 install:
   # install libffi:
   - wget -c https://sourceware.org/pub/libffi/libffi-3.2.1.tar.gz -O - | tar -xz
@@ -94,7 +96,7 @@ install:
   # install htslib:
   - wget -c https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 -O - | tar -xj
   - cd htslib-1.9
-  - ./configure CFLAGS="-fPIC" --disable-libcurl --without-curses
+  - ./configure CFLAGS="-fPIC" --disable-libcurl
   - make
   - sudo make install
   - cd -
@@ -121,7 +123,10 @@ script:
                           -DCMAKE_CXX_COMPILER=clang++ \
                           -DGC_LIB=${GCLIB})
   - cmake --build build --config Release
-  - build/seqtest
+  - build/seqtest --gtest_filter="CoreTests/*"
+  - build/seqtest --gtest_filter="PipelineTests/*"
+  - build/seqtest --gtest_filter="StdlibTests/*"
+  - build/seqtest --gtest_filter="PythonTests/*"
   - build/seqc test/core/helloworld.seq
   - (cd docs/sphinx && make html 2> /dev/null)
 
@@ -133,11 +138,11 @@ before_deploy:
 
 deploy:
   - provider: releases
-    api_key: $GITHUB_TOKEN
+    token: $GITHUB_TOKEN
     file:
       - ${SEQ_BUILD_ARCHIVE}
       - ${SEQ_STDLIB_ARCHIVE}
-    skip_cleanup: true
+    cleanup: false
     on:
       repo: seq-lang/seq
       tags: true
@@ -145,10 +150,10 @@ deploy:
     local_dir: docs/sphinx/_build/html
     target_branch: gh-pages
     fqdn: seq-lang.org
-    github_token: $GITHUB_TOKEN
+    token: $GITHUB_TOKEN
     committer_from_gh: true
     keep_history: false
-    skip_cleanup: true
+    cleanup: false
     on:
       branch: master
       condition: $TRAVIS_OS_NAME = linux

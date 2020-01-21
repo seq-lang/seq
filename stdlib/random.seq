@@ -296,16 +296,17 @@ class Random:
         """
         return self.gen.genrand_res53()
 
-    def choice(self: Random, seq):
+    def choice[T](self: Random, seq: generator[T]) -> T:
         """
         Choose a random element from a non-empty sequence.
         """
         i = 0
+        l = list(seq)
         try:
-            i = self._randbelow_with_getrandbits(len(seq))
+            i = self._randbelow_with_getrandbits(len(l))
         except ValueError:
             raise IndexError("Cannot choose from an empty sequence")
-        return seq[i]
+        return l[i]
 
     def shuffle(self: Random, x):
         """Shuffle list x in place, and return None.

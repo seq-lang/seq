@@ -667,7 +667,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
     Ctx.clear_block ctx
 
   (** Helper for parsing match patterns *)
-  and parse_pattern ctx pos p = 
+  and parse_pattern ctx pos p =
     let p = match p with
       | StarPattern -> Llvm.Pattern.star ()
       | BoundPattern _ -> serr ~pos "invalid bound pattern"
@@ -698,7 +698,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         let pat = parse_pattern ctx pos pat in
         let expr = E.parse ~ctx expr in
         Llvm.Pattern.guarded pat expr
-    in 
+    in
     Llvm.Stmt.set_pos p pos;
     p
 

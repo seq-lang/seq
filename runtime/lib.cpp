@@ -83,32 +83,69 @@ SEQ_FUNC char **seq_env() { return environ; }
 /*
  * GC
  */
+#define USE_STANDARD_MALLOC 0
 
-SEQ_FUNC void *seq_alloc(size_t n) { return GC_MALLOC(n); }
+SEQ_FUNC void *seq_alloc(size_t n) {
+#if USE_STANDARD_MALLOC
+  return malloc(n);
+#else
+  return GC_MALLOC(n);
+#endif
+}
 
-SEQ_FUNC void *seq_alloc_atomic(size_t n) { return GC_MALLOC_ATOMIC(n); }
+SEQ_FUNC void *seq_alloc_atomic(size_t n) {
+#if USE_STANDARD_MALLOC
+  return malloc(n);
+#else
+  return GC_MALLOC_ATOMIC(n);
+#endif
+}
 
-SEQ_FUNC void *seq_realloc(void *p, size_t n) { return GC_REALLOC(p, n); }
+SEQ_FUNC void *seq_realloc(void *p, size_t n) {
+#if USE_STANDARD_MALLOC
+  return realloc(p, n);
+#else
+  return GC_REALLOC(p, n);
+#endif
+}
 
-SEQ_FUNC void seq_free(void *p) { GC_FREE(p); }
+SEQ_FUNC void seq_free(void *p) {
+#if USE_STANDARD_MALLOC
+  free(p);
+#else
+  GC_FREE(p);
+#endif
+}
 
 SEQ_FUNC void seq_register_finalizer(void *p,
                                      void (*f)(void *obj, void *data)) {
+#if !USE_STANDARD_MALLOC
   GC_REGISTER_FINALIZER(p, f, nullptr, nullptr, nullptr);
+#endif
 }
 
 SEQ_FUNC void seq_gc_add_roots(void *start, void *end) {
+#if !USE_STANDARD_MALLOC
   GC_add_roots(start, end);
+#endif
 }
 
 SEQ_FUNC void seq_gc_remove_roots(void *start, void *end) {
+#if !USE_STANDARD_MALLOC
   GC_remove_roots(start, end);
+#endif
 }
 
-SEQ_FUNC void seq_gc_clear_roots() { GC_clear_roots(); }
+SEQ_FUNC void seq_gc_clear_roots() {
+#if !USE_STANDARD_MALLOC
+  GC_clear_roots();
+#endif
+}
 
 SEQ_FUNC void seq_gc_exclude_static_roots(void *start, void *end) {
+#if !USE_STANDARD_MALLOC
   GC_exclude_static_roots(start, end);
+#endif
 }
 
 /*

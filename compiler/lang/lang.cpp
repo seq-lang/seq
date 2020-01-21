@@ -228,6 +228,10 @@ void AssignMember::resolveTypes() {
 }
 
 void AssignMember::codegen0(BasicBlock *&block) {
+  types::Type *type = expr->getType();
+  if (!type->asRef())
+    throw exc::SeqException("cannot assign member of non-reference type '" +
+                            type->getName() + "'");
   value->ensure(expr->getType()->membType(memb));
   Value *x = expr->codegen(getBase(), block);
   Value *v = value->codegen(getBase(), block);

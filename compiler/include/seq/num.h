@@ -98,6 +98,10 @@ public:
   llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
   size_t size(llvm::Module *module) const override;
   static ByteType *get() noexcept;
+  /// returns ASCII complement table
+  static llvm::GlobalVariable *
+  getByteCompTable(llvm::Module *module,
+                   const std::string &name = "seq.byte_comp_table");
 };
 
 } // namespace types

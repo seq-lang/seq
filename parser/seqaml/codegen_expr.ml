@@ -51,6 +51,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       | Ptr p -> parse_ptr ctx pos p
       | Slice p -> parse_slice ctx pos p
       | Ellipsis p -> Ctypes.null
+      | Yield p -> parse_yield ctx pos p
       | Unpack _ -> serr ~pos "invalid unpacking expression"
       | Lambda _ -> serr ~pos "lambdas not yet supported (parse)"
     in
@@ -82,8 +83,11 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
      Each AST node is dispatched to the proper codegen function.
      Each codegen function [f] is called as [f context position data]
      where [data] is a node-specific type defined in [Ast_expr]. *)
+  and parse_yield ctx _ _ = Llvm.Expr.yield ctx.base
+
   and parse_none _ _ _ = Llvm.Expr.none ()
   and parse_bool _ _ b = Llvm.Expr.bool b
+
 
   and parse_int ctx pos ?(kind = "") i =
     let is_unsigned =
@@ -123,17 +127,18 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
         | '{' -> acc, depth + 1, last
         | '}' when depth = 1 ->
           let code = String.sub s ~pos:last ~len:(i - last) in
-          let extra, code = 
+          let extra, code =
             if (String.suffix code 1) = "="
             then true, String.prefix code ((String.length code) - 1)
             else false, code
           in
-          (* eprintf "??? %s\n" @@ code; *)
+          Lexer.global_offset.line <- pos.line - 1;
           let expr = match Parser.parse ~file:ctx.filename code with
             | [ _, Expr e ] -> Ast.(e_call ~pos (e_id ~pos "str") [e_setpos pos e])
             | _ -> failwith "invalid f-parse"
           in
-          if extra then 
+          Lexer.global_offset.line <- 0;
+          if extra then
             (expr :: ((pos, String ((String.strip code) ^ "=")) :: acc)), 0, i + 1
           else
             (expr :: acc), 0, i + 1

@@ -14,6 +14,11 @@
 
   (* open Core *)
 
+  type offset =
+    { mutable line: int
+    ; mutable col: int }
+  let global_offset = { line = 0; col = 0 }
+
   (* Used for tracking indentation levels *)
   type stack =
     { stack: int Core.Stack.t;
@@ -36,8 +41,8 @@
   let cur_pos state ?(len=1) (lexbuf: Lexing.lexbuf) =
     Ast.Ann.
       { file = state.fname;
-        line = lexbuf.lex_start_p.pos_lnum;
-        col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol;
+        line = lexbuf.lex_start_p.pos_lnum + global_offset.line;
+        col = lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol + global_offset.col;
         len }
 
   let count_lines s =
