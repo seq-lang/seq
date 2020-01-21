@@ -309,3 +309,188 @@ extend pseq:
         out = Alignment()
         _C.seq_palign_default(self, other, __ptr__(out))
         return out
+
+# inter-sequence alignment
+# much of what follows is adapted from BWA-MEM2 (https://github.com/bwa-mem2/bwa-mem2)
+type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, bandwidth: i8, zdrop: i8, end_bonus: i8)
+
+@builtin
+def inter_align(query: seq,
+                target: seq,
+                a: int = 2,
+                b: int = 4,
+                ambig: int = 0,
+                gapo: int = 4,
+                gape: int = 2,
+                bandwidth: int = -1,
+                zdrop: int = -1,
+                end_bonus: int = 0) -> int:
+    return query.align(target, a=a, b=b, ambig=ambig, gapo=gapo, gape=gape, bandwidth=bandwidth, zdrop=zdrop, end_bonus=end_bonus, score_only=True).score
+
+_MAX_SEQ_LEN_REF = 256
+_MAX_SEQ_LEN_QER = 128
+_MAX_SEQ_LEN8    = 128
+_MAX_SEQ_LEN16   = 32768
+
+type SeqPair(
+    idr: i32, idq: i32, id: i32,
+    len1: i32, len2: i32,
+    h0: i32,
+    seqid: i32, regid: i32,
+    score: i32, tle: i32, gtle: i32, qle: i32,
+    gscore: i32, max_off: i32):
+
+    def __init__(self: SeqPair, id: int, len1: int, len2: int) -> SeqPair:
+        return (i32(id * _MAX_SEQ_LEN_REF), i32(id * _MAX_SEQ_LEN_QER),
+                i32(id), i32(len1), i32(len2), i32(10), i32(-1), i32(-1),
+                i32(-1), i32(-1), i32(-1), i32(-1), i32(-1), i32(-1))
+
+@builtin
+@inline
+def _interaln_add_to_buf(s: seq, buf: ptr[byte], step: int, idx: int):
+    n = len(s)
+    if len(s) > step:
+        raise ValueError(f"sequence too long for inter-sequence alignment (len={n}, max={step})")
+    if s.len >= 0:
+        str.memcpy(buf + (idx * step), s.ptr, n)
+    else:
+        i = n - 1
+        while i >= 0:
+            buf[(idx * step) + (n - i - 1)] = s.ptr[i].comp()
+            i -= 1
+
+def _interaln_max(a: i32, b: i32) -> i32:
+    return a if a > b else b
+
+def _interaln_min(a: i32, b: i32) -> i32:
+    return a if a < b else b
+
+@builtin
+@inline
+def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPair], count: int, hist: ptr[i32]) -> tuple[int,int,int]:
+    num_pairs128 = 0
+    num_pairs16  = 0
+    num_pairs1   = 0
+    str.memset(ptr[byte](hist), byte(0), (_MAX_SEQ_LEN8 + _MAX_SEQ_LEN16 + 1) * _gc.sizeof[i32]())
+
+    hist2 = hist + _MAX_SEQ_LEN8
+    hist3 = hist + (_MAX_SEQ_LEN8 + _MAX_SEQ_LEN16)
+
+    i = 0
+    while i < count:
+        sp = pairs_array[i]
+        val = _interaln_max(sp.len1, sp.len2)
+        minval = sp.h0 + _interaln_min(sp.len1, sp.len2)
+        if val < i32(_MAX_SEQ_LEN8) and minval < i32(_MAX_SEQ_LEN8):
+            hist[int(minval)] += i32(1)
+        elif val < i32(_MAX_SEQ_LEN16) and minval < i32(_MAX_SEQ_LEN16):
+            hist2[int(minval)] += i32(1)
+        else:
+            hist3[0] += i32(1)
+        i += 1
+
+    cumul_sum = i32(0)
+    i = 0
+    while i < _MAX_SEQ_LEN8:
+        cur = hist[i]
+        hist[i] = cumul_sum
+        cumul_sum += cur
+        i += 1
+
+    i = 0
+    while i < _MAX_SEQ_LEN16:
+        cur = hist2[i]
+        hist2[i] = cumul_sum
+        cumul_sum += cur
+        i += 1
+
+    hist3[0] = cumul_sum
+
+    i = 0
+    while i < count:
+        sp = pairs_array[i]
+        val = _interaln_max(sp.len1, sp.len2)
+        minval = sp.h0 + _interaln_min(sp.len1, sp.len2)
+
+        if val < i32(_MAX_SEQ_LEN8) and minval < i32(_MAX_SEQ_LEN8):
+            pos = int(hist[int(minval)])
+            tmp_array[pos] = sp
+            hist[int(minval)] += i32(1)
+            num_pairs128 += 1
+        elif val < i32(_MAX_SEQ_LEN16) and minval < i32(_MAX_SEQ_LEN16):
+            pos = int(hist2[int(minval)])
+            tmp_array[pos] = sp
+            hist2[int(minval)] += i32(1)
+            num_pairs16 += 1
+        else:
+            pos = int(hist3[0])
+            tmp_array[pos] = sp
+            hist3[0] += i32(1)
+            num_pairs1 += 1
+
+        i += 1
+
+    i = 0
+    while i < count:
+        pairs_array[i] = tmp_array[i]
+        i += 1
+
+    return num_pairs128, num_pairs16, num_pairs1
+
+@builtin
+@inline
+def _interaln_queue(coro: generator[tuple[seq,seq,int]], pairs_array: ptr[SeqPair], seq_buf_ref: ptr[byte], seq_buf_qer: ptr[byte], pending: ptr[generator[tuple[seq,seq,int]]], m: int) -> int:
+    coro.__resume__()  # resume coro to get next sequence to align
+    if not coro.__done__():
+        t, s, _ = coro.__promise__()[0]  # coro yields seqs to align
+        pending[m] = coro
+        pairs_array[m] = SeqPair(m, len(s), len(t))
+        _interaln_add_to_buf(s, seq_buf_ref, _MAX_SEQ_LEN_REF, m)
+        _interaln_add_to_buf(t, seq_buf_qer, _MAX_SEQ_LEN_QER, m)
+        m += 1
+    return m
+
+@builtin
+@inline
+def _interaln_flush(pairs_array: ptr[SeqPair], seq_buf_ref: ptr[byte], seq_buf_qer: ptr[byte], pending: ptr[generator[tuple[seq,seq,int]]], m: int, params: InterAlignParams, hist: ptr[i32], tmp_array: ptr[SeqPair], tmp_pending: ptr[generator[tuple[seq,seq,int]]]) -> int:
+    cimport seq_inter_align128(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
+    cimport seq_inter_align16(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
+    cimport seq_inter_align1(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
+    num_pairs128, num_pairs16, num_pairs1 = _interaln_sort_pairs_len_ext(pairs_array, tmp_array, m, hist)
+
+    if num_pairs128 > 0:
+        seq_inter_align128(__ptr__(params), pairs_array, seq_buf_ref, seq_buf_qer, num_pairs128)
+    if num_pairs16 > 0:
+        seq_inter_align16(__ptr__(params), pairs_array + num_pairs128, seq_buf_ref, seq_buf_qer, num_pairs16)
+    if num_pairs1 > 0:
+        seq_inter_align1(__ptr__(params), pairs_array + (num_pairs128 + num_pairs16), seq_buf_ref, seq_buf_qer, num_pairs1)
+
+    i = 0
+    j = 0
+    while i < m:
+        sp = pairs_array[i]
+        coro = pending[int(tmp_array[i].id)]  # alignment kernel may overwrite IDs, so read from temp array
+        score = int(sp.gscore - sp.h0)
+        coro.__promise__()[0] = (s'', s'', int(score))
+        # coro.__resume__()  # resume coro; have it wait to get score back -- (!) not needed with no-suspend yield-expression
+        j = _interaln_queue(coro, pairs_array, seq_buf_ref, seq_buf_qer, tmp_pending, j)
+        i += 1
+    m = j
+    str.memcpy(ptr[byte](pending), ptr[byte](tmp_pending), m * _gc.sizeof[generator[tuple[seq,seq,int]]]())
+    str.memset(ptr[byte](tmp_pending), byte(0), m * _gc.sizeof[generator[tuple[seq,seq,int]]]())
+    return m
+
+@builtin
+@inline
+def _interaln_realign(query: seq, target: seq, score: int, params: InterAlignParams) -> int:
+    if score >= 0:
+        return score
+    a = int(params.a)
+    b = int(params.b)
+    ambig = int(params.ambig)
+    gapo = int(params.gapo)
+    gape = int(params.gape)
+    bandwidth = int(params.bandwidth)
+    zdrop = int(params.zdrop)
+    end_bonus = int(params.end_bonus)
+    return query.align(target, a=a, b=b, ambig=ambig, gapo=gapo, gape=gape, bandwidth=bandwidth, zdrop=zdrop, end_bonus=end_bonus, score_only=True).score

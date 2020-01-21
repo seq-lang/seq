@@ -659,6 +659,8 @@ GenExpr *GenExpr::clone(Generic *ref) {
 
 VarExpr::VarExpr(Var *var, bool atomic) : var(var), atomic(atomic) {}
 
+Var *VarExpr::getVar() { return var; }
+
 void VarExpr::setAtomic() { atomic = true; }
 
 Value *VarExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
@@ -1663,6 +1665,70 @@ static std::vector<Expr *> rectifyCallArgs(Expr *func, std::vector<Expr *> args,
 Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = getType(); // validates call
   std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
+
+  // catch inter-sequence alignment calls
+  auto *baseFunc = dynamic_cast<Func *>(base);
+  if (baseFunc && baseFunc->hasAttribute("inter_align")) {
+    if (auto *funcExpr = dynamic_cast<FuncExpr *>(func)) {
+      if (Func *g = getFuncFromFuncExpr(func)) {
+        // see bio/align.seq for definition
+        if (g->hasAttribute("builtin") && g->genericName() == "inter_align") {
+          if (args.size() != 10) // arg count of inter_align function
+            throw exc::SeqException(
+                "inter-sequence alignment call cannot be partial");
+
+          // expose params to pipeline codegen via the generator type
+          types::GenType::InterAlignParams paramExprs;
+          paramExprs.a = args[2];
+          paramExprs.b = args[3];
+          paramExprs.ambig = args[4];
+          paramExprs.gapo = args[5];
+          paramExprs.gape = args[6];
+          paramExprs.bandwidth = args[7];
+          paramExprs.zdrop = args[8];
+          paramExprs.end_bonus = args[9];
+          types::GenType *gen =
+              baseFunc->getFuncType()->getBaseType(0)->asGen();
+          assert(gen);
+          gen->setAlignParams(paramExprs);
+
+          // now do the codegen for this function:
+          // first yield the sequences to be aligned, then read score
+          // back from coroutine promise via yield expresssion.
+          if (!args[0]->getType()->is(types::Seq))
+            throw exc::SeqException(
+                "query for inter-sequence alignment is not of type seq");
+          if (!args[1]->getType()->is(types::Seq))
+            throw exc::SeqException(
+                "reference for inter-sequence alignment is not of type seq");
+          Value *query = args[0]->codegen(base, block);
+          Value *reference = args[1]->codegen(base, block);
+          types::RecordType *yieldType = PipeExpr::getInterAlignYieldType();
+          Value *yieldVal = yieldType->defaultValue(block);
+          yieldVal = yieldType->setMemb(yieldVal, "query", query, block);
+          yieldVal =
+              yieldType->setMemb(yieldVal, "reference", reference, block);
+
+          baseFunc->codegenYield(yieldVal, yieldType, block);
+          yieldVal = baseFunc->codegenYieldExpr(block, /*suspend=*/false);
+          Value *score = yieldType->memb(yieldVal, "score", block);
+
+          // realign if score < 0
+          Func *realignFunc = Func::getBuiltin("_interaln_realign");
+          realignFunc->codegen(block->getModule());
+          Function *realign = realignFunc->getFunc();
+          Value *params = PipeExpr::validateAndCodegenInterAlignParams(
+              paramExprs, base, block);
+
+          IRBuilder<> builder(block);
+          score =
+              builder.CreateCall(realign, {query, reference, score, params});
+          return score;
+        }
+      }
+    }
+  }
+
   Value *f = func->codegen(base, block);
   std::vector<Value *> x;
   bool saw_null = false;
