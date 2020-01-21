@@ -84,7 +84,7 @@ k-mer minimizer
             if kmer < kmer_min: kmer_min = kmer
         return kmer_min
 
-    print minimizer[Kmer[10]](s)
+    print minimizer[Kmer[10]](s'ACGTACGTACGT')
 
 Count bases
 -----------
