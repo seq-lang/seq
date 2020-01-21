@@ -142,7 +142,7 @@ deploy:
     file:
       - ${SEQ_BUILD_ARCHIVE}
       - ${SEQ_STDLIB_ARCHIVE}
-    cleanup: false
+    skip_cleanup: true
     on:
       repo: seq-lang/seq
       tags: true
@@ -153,7 +153,7 @@ deploy:
     token: $GITHUB_TOKEN
     committer_from_gh: true
     keep_history: false
-    cleanup: false
+    skip_cleanup: true
     on:
       branch: master
       condition: $TRAVIS_OS_NAME = linux
