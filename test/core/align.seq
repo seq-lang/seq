@@ -68,5 +68,5 @@ def subs(path: str):
             yield b
 
 #zip(subs(Q), subs(T)) |> aln1
-zip(subs(Q), subs(T)) |> aln2
-#zip(subs(Q), subs(T)) |> aln3
+#zip(subs(Q), subs(T)) |> aln2
+zip(subs(Q), subs(T)) |> aln3
