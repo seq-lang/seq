@@ -400,6 +400,17 @@ module Func = struct
 
   (* Getters & Setters *)
 
+  let set_pos expr (pos : Ast.Ann.t) =
+    foreign
+      "set_func_pos"
+      Ctypes.(t @-> cstring @-> int @-> int @-> int @-> returning void)
+      expr
+      (strdup pos.file)
+      pos.line
+      pos.col
+      pos.len
+
+
   let set_args fn names types =
     assert (List.length names = List.length types);
     let names = array_of_string_list names in

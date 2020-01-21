@@ -496,6 +496,7 @@ module Codegen (E : Codegen_intf.Expr) : Codegen_intf.Stmt = struct
         ( if ctx.base <> ctx.mdl then Llvm.Func.set_enclosing fn ctx.base );
         fn
     in
+    Llvm.Func.set_pos fn pos;
     let flags = Stack.create () in
     List.iter fn_attrs ~f:(fun (_, x) ->
       if is_none cls
