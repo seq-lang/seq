@@ -23,7 +23,9 @@ public:
 
   seq::Stmt *transform(const StmtPtr &stmt);
   seq::Expr *transform(const ExprPtr &expr);
+  seq::Pattern *transform(const PatternPtr &pat);
   seq::types::Type *transformType(const ExprPtr &expr);
+  Context &getContext();
 
   virtual void visit(const SuiteStmt *) override;
   virtual void visit(const PassStmt *) override;

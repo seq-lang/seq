@@ -82,7 +82,7 @@ PatternPtr TransformStmtVisitor::transform(const Pattern *pat) {
   if (!pat) {
     return nullptr;
   }
-  TransformPatternVisitor v;
+  TransformPatternVisitor v(*this);
   pat->accept(v);
   return move(v.result);
 }

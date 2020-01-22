@@ -9,14 +9,13 @@
 #include "parser/ast/codegen/stmt.h"
 
 class CodegenPatternVisitor : public PatternVisitor {
-  Context &ctx;
   CodegenStmtVisitor &stmtVisitor;
   seq::Pattern *result;
   friend class CodegenStmtVisitor;
 
 public:
-  CodegenPatternVisitor();
-  seq::Pattern *transform(const Pattern *ptr);
+  CodegenPatternVisitor(CodegenStmtVisitor &);
+  seq::Pattern *transform(const PatternPtr &ptr);
 
   void visit(const StarPattern *) override;
   void visit(const IntPattern *) override;

@@ -33,10 +33,12 @@ using std::vector;
 #define RETURN(T, ...)                                                         \
   (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), pat->getSrcInfo()))
 
-TransformPatternVisitor::TransformPatternVisitor() {}
+TransformPatternVisitor::TransformPatternVisitor(
+    TransformStmtVisitor &stmtVisitor)
+    : stmtVisitor(stmtVisitor) {}
 
 PatternPtr TransformPatternVisitor::transform(const Pattern *ptr) {
-  TransformPatternVisitor v;
+  TransformPatternVisitor v(stmtVisitor);
   ptr->accept(v);
   return move(v.result);
 }
@@ -53,18 +55,20 @@ TransformPatternVisitor::transform(const vector<PatternPtr> &pats) {
 void TransformPatternVisitor::visit(const TuplePattern *pat) {
   RETURN(TuplePattern, transform(pat->patterns));
 }
+
 void TransformPatternVisitor::visit(const ListPattern *pat) {
   RETURN(ListPattern, transform(pat->patterns));
 }
+
 void TransformPatternVisitor::visit(const OrPattern *pat) {
   RETURN(OrPattern, transform(pat->patterns));
 }
+
 void TransformPatternVisitor::visit(const GuardedPattern *pat) {
-  error("todo");
-  // TransformExprVisitor v;
-  // pat->expr.accept(v);
-  // RETURN(GuardedPattern, transform(pat->pattern), move(v.result));
+  RETURN(GuardedPattern, transform(pat->pattern),
+         stmtVisitor.transform(pat->cond));
 }
+
 void TransformPatternVisitor::visit(const BoundPattern *pat) {
   RETURN(BoundPattern, pat->var, transform(pat->pattern));
 }

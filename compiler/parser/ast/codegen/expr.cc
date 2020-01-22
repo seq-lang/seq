@@ -313,8 +313,6 @@ void CodegenExprVisitor::visit(const IndexExpr *expr) {
   } else if (types.size()) {
     if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
       if (auto ref = dynamic_cast<seq::types::RefType *>(e->getType())) {
-        DBG("{} -- here, sz {} t {}", e->getSrcInfo(), types.size(),
-            types[0]->getName());
         RETURN(seq::TypeExpr, seq::types::GenericType::get(ref, types));
       } else {
         ERROR("types do not accept type arguments");
@@ -358,8 +356,6 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
     isPartial |= !items.back();
   }
   if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
-    DBG("--> {} construction of {}", lhs->getSrcInfo(),
-        e->getType()->getName());
     RETURN(seq::ConstructExpr, e->getType(), items);
   } else if (isPartial) {
     RETURN(seq::PartialCallExpr, lhs, items);

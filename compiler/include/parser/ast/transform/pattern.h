@@ -16,11 +16,12 @@ using std::unique_ptr;
 using std::vector;
 
 class TransformPatternVisitor : public PatternVisitor {
+  TransformStmtVisitor &stmtVisitor;
   PatternPtr result;
   friend TransformStmtVisitor;
 
 public:
-  TransformPatternVisitor();
+  TransformPatternVisitor(TransformStmtVisitor &);
   PatternPtr transform(const Pattern *ptr);
   vector<PatternPtr> transform(const vector<PatternPtr> &pats);
 

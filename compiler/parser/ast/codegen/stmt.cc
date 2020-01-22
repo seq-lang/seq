@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "parser/ast/codegen/expr.h"
+#include "parser/ast/codegen/pattern.h"
 #include "parser/ast/codegen/stmt.h"
 #include "parser/ast/expr.h"
 #include "parser/ast/stmt.h"
@@ -38,10 +39,13 @@ using std::vector;
 
 CodegenStmtVisitor::CodegenStmtVisitor(Context &ctx)
     : ctx(ctx), result(nullptr) {}
+
 void CodegenStmtVisitor::apply(Context &ctx, const StmtPtr &stmts) {
   auto tv = CodegenStmtVisitor(ctx);
   tv.transform(stmts);
 }
+
+Context &CodegenStmtVisitor::getContext() { return ctx; }
 
 seq::Stmt *CodegenStmtVisitor::transform(const StmtPtr &stmt) {
   fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
@@ -61,6 +65,12 @@ seq::Expr *CodegenStmtVisitor::transform(const ExprPtr &expr) {
   return v.result;
 }
 
+seq::Pattern *CodegenStmtVisitor::transform(const PatternPtr &expr) {
+  CodegenPatternVisitor v(*this);
+  expr->accept(v);
+  return v.result;
+}
+
 seq::types::Type *CodegenStmtVisitor::transformType(const ExprPtr &expr) {
   return CodegenExprVisitor(ctx, *this).transformType(expr);
 }
@@ -70,14 +80,17 @@ void CodegenStmtVisitor::visit(const SuiteStmt *stmt) {
     transform(s);
   }
 }
+
 void CodegenStmtVisitor::visit(const PassStmt *stmt) {}
 void CodegenStmtVisitor::visit(const BreakStmt *stmt) { RETURN(seq::Break, ); }
 void CodegenStmtVisitor::visit(const ContinueStmt *stmt) {
   RETURN(seq::Continue, );
 }
+
 void CodegenStmtVisitor::visit(const ExprStmt *stmt) {
   RETURN(seq::ExprStmt, transform(stmt->expr));
 }
+
 void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
   // TODO: JIT
   if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
@@ -99,9 +112,11 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
     ERROR("invalid assignment");
   }
 }
+
 void CodegenStmtVisitor::visit(const AssignEqStmt *stmt) {
   ERROR("unexpected assignEq statement");
 }
+
 void CodegenStmtVisitor::visit(const DelStmt *stmt) {
   if (auto expr = dynamic_cast<IdExpr *>(stmt->expr.get())) {
     if (auto v = dynamic_cast<VarContextItem *>(ctx.find(expr->value).get())) {
@@ -111,9 +126,11 @@ void CodegenStmtVisitor::visit(const DelStmt *stmt) {
   }
   ERROR("cannot delete non-variable");
 }
+
 void CodegenStmtVisitor::visit(const PrintStmt *stmt) {
   RETURN(seq::Print, transform(stmt->expr));
 }
+
 void CodegenStmtVisitor::visit(const ReturnStmt *stmt) {
   if (!stmt->expr) {
     RETURN(seq::Return, nullptr);
@@ -125,6 +142,7 @@ void CodegenStmtVisitor::visit(const ReturnStmt *stmt) {
     ERROR("return outside function");
   }
 }
+
 void CodegenStmtVisitor::visit(const YieldStmt *stmt) {
   if (!stmt->expr) {
     RETURN(seq::Yield, nullptr);
@@ -136,12 +154,15 @@ void CodegenStmtVisitor::visit(const YieldStmt *stmt) {
     ERROR("yield outside function");
   }
 }
+
 void CodegenStmtVisitor::visit(const AssertStmt *stmt) {
   RETURN(seq::Assert, transform(stmt->expr));
 }
+
 void CodegenStmtVisitor::visit(const TypeAliasStmt *stmt) {
   ctx.add(stmt->name, transformType(stmt->expr));
 }
+
 void CodegenStmtVisitor::visit(const WhileStmt *stmt) {
   auto r = new seq::While(transform(stmt->cond));
   ctx.addBlock(r->getBlock());
@@ -149,6 +170,7 @@ void CodegenStmtVisitor::visit(const WhileStmt *stmt) {
   ctx.popBlock();
   this->result = r;
 }
+
 void CodegenStmtVisitor::visit(const ForStmt *stmt) {
   auto r = new seq::For(transform(stmt->iter));
   string forVar;
@@ -163,6 +185,7 @@ void CodegenStmtVisitor::visit(const ForStmt *stmt) {
   ctx.popBlock();
   this->result = r;
 }
+
 void CodegenStmtVisitor::visit(const IfStmt *stmt) {
   auto r = new seq::If();
   for (auto &i : stmt->ifs) {
@@ -173,22 +196,24 @@ void CodegenStmtVisitor::visit(const IfStmt *stmt) {
   }
   this->result = r;
 }
+
 void CodegenStmtVisitor::visit(const MatchStmt *stmt) {
-  auto m = new seq::Match(transform(stmt->what));
+  auto m = new seq::Match();
+  m->setValue(transform(stmt->what));
   for (auto &c : stmt->cases) {
     string varName;
     seq::Var *var = nullptr;
     seq::Pattern *pat;
     if (auto p = dynamic_cast<BoundPattern *>(c.first.get())) {
       ctx.addBlock();
-      auto boundPat = new seq::BoundPattern(transform(p->what));
+      auto boundPat = new seq::BoundPattern(transform(p->pattern));
       var = boundPat->getVar();
-      varName = boundPat->var;
+      varName = p->var;
       pat = boundPat;
       ctx.popBlock();
     } else {
       ctx.addBlock();
-      pat = transform(p->what);
+      pat = transform(c.first);
       ctx.popBlock();
     }
     auto block = m->addCase(pat);
@@ -201,6 +226,7 @@ void CodegenStmtVisitor::visit(const MatchStmt *stmt) {
   }
   this->result = m;
 }
+
 void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
   auto file = ctx.getCache().getImportFile(stmt->from.first, ctx.getFilename());
   if (file == "") {
@@ -226,6 +252,7 @@ void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
       }
     }
 }
+
 void CodegenStmtVisitor::visit(const ExternImportStmt *stmt) {
   vector<string> names;
   vector<seq::types::Type *> types;
@@ -254,6 +281,7 @@ void CodegenStmtVisitor::visit(const ExternImportStmt *stmt) {
   f->setOut(transformType(stmt->ret));
   RETURN(seq::FuncStmt, f);
 }
+
 void CodegenStmtVisitor::visit(const TryStmt *stmt) {
   auto r = new seq::TryCatch();
   ctx.addBlock(r->getBlock());
@@ -273,6 +301,7 @@ void CodegenStmtVisitor::visit(const TryStmt *stmt) {
   }
   this->result = r;
 }
+
 void CodegenStmtVisitor::visit(const GlobalStmt *stmt) {
   if (auto var = dynamic_cast<VarContextItem *>(ctx.find(stmt->var).get())) {
     if (var->isGlobal()) {
@@ -284,9 +313,11 @@ void CodegenStmtVisitor::visit(const GlobalStmt *stmt) {
   }
   error("identifier '{}' not found", stmt->var);
 }
+
 void CodegenStmtVisitor::visit(const ThrowStmt *stmt) {
   RETURN(seq::Throw, transform(stmt->expr));
 }
+
 void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) {
   if (auto e = dynamic_cast<IndexExpr *>(stmt->expr.get())) {
     if (auto f = dynamic_cast<seq::Func *>(ctx.getBase())) {
@@ -300,6 +331,7 @@ void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) {
     ERROR("prefetch needs index expression");
   }
 }
+
 void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   auto f = new seq::Func();
   f->setName(stmt->name);
@@ -381,6 +413,7 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   ctx.popBlock();
   RETURN(seq::FuncStmt, f);
 }
+
 void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
   auto getMembers = [&]() {
     vector<seq::types::Type *> types;
@@ -408,6 +441,8 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
     }
     auto tn = getMembers();
     t->setContents(tn.first, tn.second);
+    transform(stmt->suite);
+    ctx.popBlock();
   } else {
     auto t = seq::types::RefType::get(stmt->name);
     ctx.add(stmt->name, t);
@@ -425,11 +460,13 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
     }
     auto tn = getMembers();
     t->setContents(seq::types::RecordType::get(tn.first, tn.second, ""));
+    transform(stmt->suite);
+    ctx.popBlock();
+    t->setDone();
   }
-  transform(stmt->suite);
-  ctx.popBlock();
   ctx.setEnclosingType(nullptr);
 }
+
 void CodegenStmtVisitor::visit(const ExtendStmt *stmt) {
   vector<string> generics;
   seq::types::Type *type = nullptr;
