@@ -67,9 +67,11 @@ seq::types::Type *CodegenExprVisitor::transformType(const ExprPtr &expr) {
 void CodegenExprVisitor::visit(const EmptyExpr *expr) {
   RETURN(seq::NoneExpr, );
 }
+
 void CodegenExprVisitor::visit(const BoolExpr *expr) {
   RETURN(seq::BoolExpr, expr->value);
 }
+
 void CodegenExprVisitor::visit(const IntExpr *expr) {
   try {
     if (expr->suffix == "u") {
@@ -83,24 +85,30 @@ void CodegenExprVisitor::visit(const IntExpr *expr) {
     ERROR("integer {} out of range", expr->value);
   }
 }
+
 void CodegenExprVisitor::visit(const FloatExpr *expr) {
   RETURN(seq::FloatExpr, expr->value);
 }
+
 void CodegenExprVisitor::visit(const StringExpr *expr) {
   RETURN(seq::StrExpr, expr->value);
 }
+
 void CodegenExprVisitor::visit(const FStringExpr *expr) {
   ERROR("unexpected f-string");
 }
+
 void CodegenExprVisitor::visit(const KmerExpr *expr) {
   ERROR("unexpected k-mer");
 }
+
 void CodegenExprVisitor::visit(const SeqExpr *expr) {
   if (expr->prefix != "s") {
     ERROR("unexpected custom sequence");
   }
   RETURN(seq::SeqExpr, expr->value);
 }
+
 void CodegenExprVisitor::visit(const IdExpr *expr) {
   auto i = ctx.find(expr->value);
   if (!i) {
@@ -117,9 +125,11 @@ void CodegenExprVisitor::visit(const IdExpr *expr) {
     }
   }
 }
+
 void CodegenExprVisitor::visit(const UnpackExpr *expr) {
   ERROR("unexpected unpacking operator");
 }
+
 void CodegenExprVisitor::visit(const TupleExpr *expr) {
   vector<seq::Expr *> items;
   for (auto &&i : expr->items) {
@@ -127,15 +137,33 @@ void CodegenExprVisitor::visit(const TupleExpr *expr) {
   }
   RETURN(seq::RecordExpr, items, vector<string>(items.size(), ""));
 }
+
 void CodegenExprVisitor::visit(const ListExpr *expr) {
-  ERROR("unexpected list expression");
+  // ERROR("unexpected list expression");
+  vector<seq::Expr *> items;
+  for (auto &i : expr->items) {
+    items.push_back(transform(i));
+  }
+  RETURN(seq::ListExpr, items, ctx.getType("list"));
 }
+
 void CodegenExprVisitor::visit(const SetExpr *expr) {
-  ERROR("unexpected set expression");
+  vector<seq::Expr *> items;
+  for (auto &i : expr->items) {
+    items.push_back(transform(i));
+  }
+  RETURN(seq::SetExpr, items, ctx.getType("set"));
 }
+
 void CodegenExprVisitor::visit(const DictExpr *expr) {
-  ERROR("unexpected dict expression");
+  vector<seq::Expr *> items;
+  for (auto &i : expr->items) {
+    items.push_back(transform(i.key));
+    items.push_back(transform(i.value));
+  }
+  RETURN(seq::DictExpr, items, ctx.getType("dict"));
 }
+
 seq::For *CodegenExprVisitor::parseComprehension(
     const Expr *expr, const vector<GeneratorExpr::Body> &loops,
     vector<seq::Var *> *captures, int &added) {
@@ -174,6 +202,7 @@ seq::For *CodegenExprVisitor::parseComprehension(
   }
   return topFor;
 }
+
 void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
   vector<seq::Var *> captures;
   int added = 0;
@@ -192,6 +221,7 @@ void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
     ctx.popBlock();
   }
 }
+
 void CodegenExprVisitor::visit(const DictGeneratorExpr *expr) {
   int added = 0;
   auto topFor = parseComprehension(expr, expr->loops, nullptr, added);
@@ -202,14 +232,28 @@ void CodegenExprVisitor::visit(const DictGeneratorExpr *expr) {
     ctx.popBlock();
   }
 }
+
 void CodegenExprVisitor::visit(const IfExpr *expr) {
   RETURN(seq::CondExpr, transform(expr->cond), transform(expr->eif),
          transform(expr->eelse));
 }
+
 void CodegenExprVisitor::visit(const UnaryExpr *expr) {
   RETURN(seq::UOpExpr, seq::uop(expr->op), transform(expr->expr));
 }
+
 void CodegenExprVisitor::visit(const BinaryExpr *expr) {
+  auto getAtomicOp = [](const string &op) {
+    if (op == "+") return seq::AtomicExpr::Op::ADD;
+    if (op == "-") return seq::AtomicExpr::Op::SUB;
+    if (op == "&") return seq::AtomicExpr::Op::AND;
+    if (op == "|") return seq::AtomicExpr::Op::OR;
+    if (op == "^") return seq::AtomicExpr::Op::XOR;
+    if (op == "min") return seq::AtomicExpr::Op::MIN;
+    if (op == "max") return seq::AtomicExpr::Op::MAX;
+    // TODO: XCHG, NAND
+    return (seq::AtomicExpr::Op)0;
+  };
   if (expr->op == "is") {
     RETURN(seq::IsExpr, transform(expr->lexpr), transform(expr->rexpr));
   } else if (expr->op == "is not") {
@@ -222,11 +266,18 @@ void CodegenExprVisitor::visit(const BinaryExpr *expr) {
     RETURN(seq::UOpExpr, seq::uop("!"),
            new seq::ArrayContainsExpr(transform(expr->lexpr),
                                       transform(expr->rexpr)));
-  } else {
-    RETURN(seq::BOpExpr, seq::bop(expr->op), transform(expr->lexpr),
-           transform(expr->rexpr), expr->inPlace);
   }
+  auto l = transform(expr->lexpr);
+  auto r = transform(expr->rexpr);
+  auto op = getAtomicOp(expr->op);
+  if (expr->inPlace && op && ctx.hasFlag("atomic")) {
+    if (auto e = dynamic_cast<seq::VarExpr*>(l)) {
+      RETURN(seq::AtomicExpr, op, e->getVar(), r);
+    }
+  }
+  RETURN(seq::BOpExpr, seq::bop(expr->op), l, r, expr->inPlace);
 }
+
 void CodegenExprVisitor::visit(const PipeExpr *expr) {
   vector<seq::Expr *> items;
   for (auto &&i : expr->items) {
@@ -240,10 +291,15 @@ void CodegenExprVisitor::visit(const PipeExpr *expr) {
   }
   this->result = pexpr;
 }
+
 void CodegenExprVisitor::visit(const IndexExpr *expr) {
-  auto getInt = [&](const ExprPtr &e) {
+  auto getInt = [&](const ExprPtr &e, int limit) {
     if (auto i = dynamic_cast<IntExpr *>(e.get())) {
-      return std::stol(i->value);
+      auto r = std::stol(i->value);
+      if (r <= 0 || r > limit) {
+        ERROR("invalid integer parameter (maximum allowed is {})", limit);
+      }
+      return r;
     } else {
       ERROR("expected integer");
       return long(0);
@@ -271,13 +327,13 @@ void CodegenExprVisitor::visit(const IndexExpr *expr) {
       RETURN(seq::TypeExpr,
              seq::types::GenType::get(transformType(expr->index)));
     } else if (lhs->value == "Kmer") {
-      RETURN(seq::TypeExpr, seq::types::KMer::get(getInt(expr->index)));
+      RETURN(seq::TypeExpr, seq::types::KMer::get(getInt(expr->index, 1024)));
     } else if (lhs->value == "Int") {
       RETURN(seq::TypeExpr,
-             seq::types::IntNType::get(getInt(expr->index), true));
+             seq::types::IntNType::get(getInt(expr->index, 2048), true));
     } else if (lhs->value == "UInt") {
       RETURN(seq::TypeExpr,
-             seq::types::IntNType::get(getInt(expr->index), false));
+             seq::types::IntNType::get(getInt(expr->index, 2048), false));
     } else if (lhs->value == "optional") {
       RETURN(seq::TypeExpr,
              seq::types::OptionalType::get(transformType(expr->index)));
@@ -338,6 +394,7 @@ void CodegenExprVisitor::visit(const IndexExpr *expr) {
            new seq::RecordExpr(indices, vector<string>(indices.size(), "")));
   }
 }
+
 void CodegenExprVisitor::visit(const CallExpr *expr) {
   // Special case: __array__ transformation
   if (auto lhs = dynamic_cast<IndexExpr *>(expr->expr.get())) {
@@ -348,21 +405,37 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
       }
     }
   }
+
   auto lhs = transform(expr->expr);
-  vector<seq::Expr *> items;
+  // vector<string> names;
+  // if (auto l = dynamic_cast<seq::FuncExpr *>(lhs)) {
+  //   auto f = dynamic_cast<seq::Func*>(l->getFunc());
+  //   assert(f);
+  //   names = f->getArgNames();
+  // }
+  bool namesStarted = false;
   bool isPartial = false;
+  vector<seq::Expr *> items;
+  vector<string> names;
   for (auto &&i : expr->args) {
+    if (i.name == "" && namesStarted) {
+      ERROR("unexpected unnamed argument after a named argument");
+    }
+    namesStarted |= i.name != "";
+    names.push_back(i.name);
     items.push_back(transform(i.value));
     isPartial |= !items.back();
   }
+
   if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
     RETURN(seq::ConstructExpr, e->getType(), items);
   } else if (isPartial) {
-    RETURN(seq::PartialCallExpr, lhs, items);
+    RETURN(seq::PartialCallExpr, lhs, items, names);
   } else {
-    RETURN(seq::CallExpr, lhs, items);
+    RETURN(seq::CallExpr, lhs, items, names);
   }
 }
+
 void CodegenExprVisitor::visit(const DotExpr *expr) {
   // Check if this is an import
   vector<string> imports;
@@ -406,13 +479,16 @@ void CodegenExprVisitor::visit(const DotExpr *expr) {
     RETURN(seq::GetElemExpr, lhs, expr->member);
   }
 }
+
 void CodegenExprVisitor::visit(const SliceExpr *expr) {
   ERROR("unexpected slice");
 }
+
 void CodegenExprVisitor::visit(const EllipsisExpr *expr) {}
 void CodegenExprVisitor::visit(const TypeOfExpr *expr) {
   RETURN(seq::TypeOfExpr, transform(expr->expr));
 }
+
 void CodegenExprVisitor::visit(const PtrExpr *expr) {
   if (auto e = dynamic_cast<IdExpr *>(expr->expr.get())) {
     if (auto v = dynamic_cast<VarContextItem *>(ctx.find(e->value).get())) {
@@ -424,6 +500,7 @@ void CodegenExprVisitor::visit(const PtrExpr *expr) {
     ERROR("not an identifier");
   }
 }
+
 void CodegenExprVisitor::visit(const LambdaExpr *expr) { ERROR("TODO"); }
 void CodegenExprVisitor::visit(const YieldExpr *expr) {
   RETURN(seq::YieldExpr, ctx.getBase());

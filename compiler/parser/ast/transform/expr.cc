@@ -126,6 +126,8 @@ void TransformExprVisitor::visit(const TupleExpr *expr) {
   RETURN(TupleExpr, transform(expr->items));
 }
 void TransformExprVisitor::visit(const ListExpr *expr) {
+  RETURN(ListExpr, transform(expr->items));
+  // TODO later
   if (!expr->items.size()) {
     error("empty lists are not supported");
   }
@@ -150,6 +152,8 @@ void TransformExprVisitor::visit(const ListExpr *expr) {
   RETURN(IdExpr, listVar);
 }
 void TransformExprVisitor::visit(const SetExpr *expr) {
+  RETURN(SetExpr, transform(expr->items));
+  // TODO later
   if (!expr->items.size()) {
     error("empty sets are not supported");
   }
@@ -172,6 +176,12 @@ void TransformExprVisitor::visit(const SetExpr *expr) {
   RETURN(IdExpr, setVar);
 }
 void TransformExprVisitor::visit(const DictExpr *expr) {
+  vector<DictExpr::KeyValue> items;
+  for (auto &i : expr->items) {
+    items.push_back({transform(i.key), transform(i.value)});
+  }
+  RETURN(DictExpr, move(items));
+  // TODO later
   if (!expr->items.size()) {
     error("empty dicts are not supported");
   }
