@@ -74,6 +74,7 @@ extend CIGAR:
                 d = 10 * d + ord(c) - ord('0')
             elif c in "MIDNSHP=XB":
                 ops.append((d << 4) | "MIDNSHP=XB".find(c))
+                d = 0
             else:
                 raise ValueError(f"Invalid CIGAR string: unexpected {c}")
         p = ptr[u32](len(ops))
