@@ -50,6 +50,8 @@ Pull requests should generally be based on the `develop` branch. Before submitti
 - ... to include tests for any new or changed code.
 - ... that all code is formatted as per the guidelines above.
 
+Please be patient with pull request reviews, as our throughput is limited!
+
 ## Issues
 
 We use [GitHub's issue tracker](https://github.com/seq-lang/seq/issues), so that's where you'll find the most recent list of open bugs, feature requests and general issues. If applicable, we try to tag each issue with at least one of the following tags:
