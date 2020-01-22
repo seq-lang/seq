@@ -15,6 +15,8 @@ Pre-built binaries for Linux and macOS on x86_64 are available alongside `each r
 
 This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
 
+Seq binaries require a `libomp <https://openmp.llvm.org>`_ to be present on your machine. ``brew install libomp`` or ``apt install libomp5`` should do the trick.
+
 Building from source
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -35,8 +37,8 @@ or produce an LLVM bitcode file if a ``-o <out.bc>`` argument is provided. In th
 
     seqc -o myprogram.bc myprogram.seq
     llc myprogram.bc -filetype=obj -o myprogram.o
-    g++ -L/path/to/libseqrt/ -lseqrt -o myprogram myprogram.o
+    gcc -L/path/to/libseqrt/ -lseqrt -lomp -o myprogram myprogram.o
 
-This produces a ``myprogram`` executable. (If multithreading is needed, the ``g++`` invocation should also include ``-fopenmp``.)
+This produces a ``myprogram`` executable.
 
 **Interfacing with C:** If a Seq program uses C functions from a particular library, that library can be specified via a ``-L/path/to/lib`` argument to ``seqc``. Otherwise it can be linked during the linking stage if producing an executable.
