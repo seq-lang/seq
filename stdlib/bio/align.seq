@@ -66,6 +66,21 @@ extend CIGAR:
     def __len__(self: CIGAR):
         return self.len
 
+    def __init__(self: CIGAR, cigar: str) -> CIGAR:
+        ops = list[int]()
+        d = 0
+        for c in cigar:
+            if c.isdigit():
+                d = 10 * d + ord(c) - ord('0')
+            elif c in "MIDNSHP=XB":
+                ops.append((d << 4) | "MIDNSHP=XB".find(c))
+            else:
+                raise ValueError(f"Invalid CIGAR string: unexpected {c}")
+        p = ptr[u32](len(ops))
+        for i, o in enumerate(ops):
+            p[i] = u32(o)
+        return (p, len(ops))
+
     @property
     def qlen(self: CIGAR):
         return _C.bam_cigar2qlen(self.len, self.value)
