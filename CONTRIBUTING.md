@@ -26,7 +26,7 @@ Example:
 ```python
 @test
 def my_test():
-	assert 2 + 2 == 4
+    assert 2 + 2 == 4
 my_test()
 ```
 
