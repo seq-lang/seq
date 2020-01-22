@@ -18,15 +18,24 @@ def aln2(t):
     score2 = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
     assert score == score2
 
+a = 1
+b = 2
+ambig = 0
+gapo = 2
+gape = 1
+zdrop = 100
+bandwidth = 100
+end_bonus = 5
+
 @inter_align
 @test
 def aln3(t):
     query, target = t
     if query[0] == target[0]:
-        score = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+        score = inter_align(query, target, a=a, b=b, ambig=ambig, gapo=gapo, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
         score_exp = query.align(target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5).score
         assert abs(score - score_exp) <= 8
-        score2 = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+        score2 = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=gape, zdrop=zdrop, bandwidth=bandwidth, end_bonus=end_bonus)
         assert score == score2
 
 def subs(path: str):

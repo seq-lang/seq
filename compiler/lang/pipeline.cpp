@@ -396,8 +396,8 @@ static Value *codegenPipe(BaseFunc *base,
     BasicBlock *preamble = base->getPreamble();
     // construct parameters
     types::GenType::InterAlignParams paramExprs = genType->getAlignParams();
-    Value *params = PipeExpr::validateAndCodegenInterAlignParams(
-        paramExprs, base, preamble);
+    Value *params =
+        PipeExpr::validateAndCodegenInterAlignParams(paramExprs, base, entry);
 
     IRBuilder<> builder(preamble);
     const unsigned W = PipeExpr::SCHED_WIDTH_INTERALIGN;
