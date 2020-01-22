@@ -93,20 +93,20 @@ struct YieldFromStmt;
 struct WithStmt;
 
 struct StmtVisitor {
-  virtual void visit(const SuiteStmt *) {};
-  virtual void visit(const PassStmt *) {};
-  virtual void visit(const BreakStmt *) {};
-  virtual void visit(const ContinueStmt *) {};
-  virtual void visit(const ExprStmt *) {};
-  virtual void visit(const AssignStmt *) {};
-  virtual void visit(const DelStmt *) {};
-  virtual void visit(const PrintStmt *) {};
-  virtual void visit(const ReturnStmt *) {};
-  virtual void visit(const YieldStmt *) {};
-  virtual void visit(const AssertStmt *) {};
-  virtual void visit(const TypeAliasStmt *) {};
-  virtual void visit(const WhileStmt *) {};
-  virtual void visit(const ForStmt *) {};
+  virtual void visit(const SuiteStmt *){};
+  virtual void visit(const PassStmt *){};
+  virtual void visit(const BreakStmt *){};
+  virtual void visit(const ContinueStmt *){};
+  virtual void visit(const ExprStmt *){};
+  virtual void visit(const AssignStmt *){};
+  virtual void visit(const DelStmt *){};
+  virtual void visit(const PrintStmt *){};
+  virtual void visit(const ReturnStmt *){};
+  virtual void visit(const YieldStmt *){};
+  virtual void visit(const AssertStmt *){};
+  virtual void visit(const TypeAliasStmt *){};
+  virtual void visit(const WhileStmt *){};
+  virtual void visit(const ForStmt *){};
   virtual void visit(const IfStmt *) {}
   virtual void visit(const MatchStmt *) {}
   virtual void visit(const ExtendStmt *) {}
@@ -122,4 +122,32 @@ struct StmtVisitor {
   virtual void visit(const AssignEqStmt *) {}
   virtual void visit(const YieldFromStmt *) {}
   virtual void visit(const WithStmt *) {}
+};
+
+struct StarPattern;
+struct IntPattern;
+struct BoolPattern;
+struct StrPattern;
+struct SeqPattern;
+struct RangePattern;
+struct TuplePattern;
+struct ListPattern;
+struct OrPattern;
+struct WildcardPattern;
+struct GuardedPattern;
+struct BoundPattern;
+
+struct PatternVisitor {
+  virtual void visit(const StarPattern *){};
+  virtual void visit(const IntPattern *){};
+  virtual void visit(const BoolPattern *){};
+  virtual void visit(const StrPattern *){};
+  virtual void visit(const SeqPattern *){};
+  virtual void visit(const RangePattern *){};
+  virtual void visit(const TuplePattern *){};
+  virtual void visit(const ListPattern *){};
+  virtual void visit(const OrPattern *){};
+  virtual void visit(const WildcardPattern *){};
+  virtual void visit(const GuardedPattern *){};
+  virtual void visit(const BoundPattern *){};
 };

@@ -5,13 +5,18 @@
 #include <string>
 #include <vector>
 
-#include "parser/visitor.h"
+#include "parser/ast/visitor.h"
 #include "seq/seq.h"
 
 using std::ostream;
 using std::string;
 using std::unique_ptr;
 using std::vector;
+
+#define ACCEPT_VISITOR                                                         \
+  virtual void accept(ExprVisitor &visitor) const override {                   \
+    visitor.visit(this);                                                       \
+  }
 
 struct Expr : public seq::SrcObject {
   virtual ~Expr() {}
@@ -23,9 +28,6 @@ struct Expr : public seq::SrcObject {
 };
 
 typedef unique_ptr<Expr> ExprPtr;
-
-#define ACCEPT_VISITOR                                                         \
-  virtual void accept(ExprVisitor &visitor) const override { visitor.visit(this); }
 
 struct EmptyExpr : public Expr {
   EmptyExpr();

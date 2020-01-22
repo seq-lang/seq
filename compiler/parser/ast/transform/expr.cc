@@ -9,13 +9,13 @@
 #include <unordered_set>
 #include <vector>
 
+#include "parser/ast/expr.h"
+#include "parser/ast/stmt.h"
+#include "parser/ast/transform/expr.h"
+#include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
-#include "parser/expr.h"
 #include "parser/ocaml.h"
-#include "parser/stmt.h"
-#include "parser/transform.h"
-#include "parser/visitor.h"
 
 using fmt::format;
 using std::get;
@@ -30,10 +30,10 @@ using std::unordered_set;
 using std::vector;
 
 #define RETURN(T, ...)                                                         \
-  (this->result = setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()))
+  (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()))
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
-#define EP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
-#define SP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
+#define EP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
+#define SP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
 #define ERROR(...) error(expr->getSrcInfo(), __VA_ARGS__)
 
 TransformExprVisitor::TransformExprVisitor(vector<StmtPtr> &prepend)

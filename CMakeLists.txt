@@ -92,8 +92,19 @@ set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-file(GLOB SEQ_HFILES   compiler/include/fmt/*.h compiler/include/parser/*.h compiler/include/seq/*.h)
-file(GLOB SEQ_CPPFILES compiler/lang/*.cpp compiler/types/*.cpp compiler/parser/*.cc compiler/util/format.cc)
+file(GLOB SEQ_HFILES compiler/include/fmt/*.h
+                     compiler/include/parser/*.h
+                     compiler/include/parser/ast/*.h
+                     compiler/include/parser/ast/transform/*.h
+                     compiler/include/parser/ast/codegen/*.h
+                     compiler/include/seq/*.h)
+file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
+                       compiler/types/*.cpp
+                       compiler/parser/*.cc
+                       compiler/parser/ast/*.cc
+                       compiler/parser/ast/transform/*.cc
+                       compiler/parser/ast/codegen/*.cc
+                       compiler/util/format.cc)
 
 add_library(seq SHARED ${SEQ_HFILES} ${SEQ_CPPFILES} ${LIB_SEQPARSE})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)

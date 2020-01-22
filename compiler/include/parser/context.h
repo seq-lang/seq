@@ -58,15 +58,9 @@ public:
       map.erase(name);
     }
   }
-  void setFlag(const string &s) {
-    flags.insert(s);
-  }
-  void unsetFlag(const string &s) {
-    flags.erase(s);
-  }
-  bool hasFlag(const string &s) {
-    return flags.find(s) != flags.end();
-  }
+  void setFlag(const string &s) { flags.insert(s); }
+  void unsetFlag(const string &s) { flags.erase(s); }
+  bool hasFlag(const string &s) { return flags.find(s) != flags.end(); }
 };
 
 class ContextItem {
@@ -101,7 +95,8 @@ class FuncContextItem : public ContextItem {
   vector<string> names;
 
 public:
-  FuncContextItem(seq::Func *f, vector<string> n, seq::BaseFunc *base, bool global = false);
+  FuncContextItem(seq::Func *f, vector<string> n, seq::BaseFunc *base,
+                  bool global = false);
   seq::Expr *getExpr() const override;
 };
 
@@ -109,7 +104,8 @@ class TypeContextItem : public ContextItem {
   seq::types::Type *type;
 
 public:
-  TypeContextItem(seq::types::Type *t, seq::BaseFunc *base, bool global = false);
+  TypeContextItem(seq::types::Type *t, seq::BaseFunc *base,
+                  bool global = false);
 
   seq::types::Type *getType() const;
   seq::Expr *getExpr() const override;
@@ -119,7 +115,8 @@ class ImportContextItem : public ContextItem {
   string import;
 
 public:
-  ImportContextItem(const string &import,seq::BaseFunc *base, bool global = false);
+  ImportContextItem(const string &import, seq::BaseFunc *base,
+                    bool global = false);
   seq::Expr *getExpr() const override;
   string getFile() const;
 };
@@ -130,7 +127,8 @@ struct ImportCache {
   Context *stdlib;
   unordered_map<string, shared_ptr<Context>> imports;
 
-  string getImportFile(const string &what, const string &relativeTo, bool forceStdlib = false);
+  string getImportFile(const string &what, const string &relativeTo,
+                       bool forceStdlib = false);
   shared_ptr<Context> importFile(seq::SeqModule *module, const string &file);
 };
 
@@ -138,15 +136,16 @@ class Context : public VTable<ContextItem> {
   ImportCache &cache;
   string filename;
   seq::SeqModule *module;
-  vector<seq::BaseFunc*> bases;
-  vector<seq::Block*> blocks;
+  vector<seq::BaseFunc *> bases;
+  vector<seq::Block *> blocks;
   int topBlockIndex, topBaseIndex;
   seq::types::Type *enclosingType;
 
   seq::TryCatch *tryCatch;
 
 public:
-  Context(seq::SeqModule *module, ImportCache &cache, const string &filename = ""); // initialize standard library
+  Context(seq::SeqModule *module, ImportCache &cache,
+          const string &filename = ""); // initialize standard library
   virtual ~Context() {}
   shared_ptr<ContextItem> find(const string &name) const override;
   seq::TryCatch *getTryCatch() const;
@@ -157,13 +156,15 @@ public:
   seq::types::Type *getType(const string &name) const;
   seq::types::Type *getEnclosingType();
   void setEnclosingType(seq::types::Type *t);
-  void addBlock(seq::Block *newBlock = nullptr, seq::BaseFunc *newBase = nullptr);
+  void addBlock(seq::Block *newBlock = nullptr,
+                seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
   void add(const string &name, shared_ptr<ContextItem> var);
   void add(const string &name, seq::Var *v, bool global = false);
   void add(const string &name, seq::types::Type *t, bool global = false);
-  void add(const string &name, seq::Func *f, vector<string> names, bool global = false);
+  void add(const string &name, seq::Func *f, vector<string> names,
+           bool global = false);
   void add(const string &name, const string &import, bool global = false);
   string getFilename() const;
   ImportCache &getCache();

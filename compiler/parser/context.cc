@@ -4,11 +4,11 @@
 #include <sys/stat.h>
 #include <vector>
 
-#include "parser/codegen.h"
+#include "parser/ast/codegen/stmt.h"
+#include "parser/ast/transform/stmt.h"
 #include "parser/common.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
-#include "parser/transform.h"
 #include "seq/seq.h"
 
 using fmt::format;
@@ -51,8 +51,8 @@ seq::Expr *ImportContextItem::getExpr() const {
 
 Context::Context(seq::SeqModule *module, ImportCache &cache,
                  const string &filename)
-    : cache(cache), filename(filename), module(module),
-      enclosingType(nullptr), tryCatch(nullptr) {
+    : cache(cache), filename(filename), module(module), enclosingType(nullptr),
+      tryCatch(nullptr) {
   stack.push(unordered_set<string>());
   bases.push_back(module);
   blocks.push_back(module->getBlock());
@@ -73,12 +73,12 @@ Context::Context(seq::SeqModule *module, ImportCache &cache,
       add(i.first, i.second);
     }
     add("__argv__", module->getArgVar());
+    cache.stdlib = this;
 
     // DBG("loading stdlib from {}...", this->filename);
-    auto stmts = parse_file(this->filename);
-    auto tv = TransformStmtVisitor::apply(move(stmts));
-    cache.stdlib = this;
-    CodegenStmtVisitor::apply(*this, tv);
+    // auto stmts = parse_file(this->filename);
+    // auto tv = TransformStmtVisitor::apply(move(stmts));
+    // CodegenStmtVisitor::apply(*this, tv);
   }
 }
 
@@ -213,6 +213,4 @@ shared_ptr<Context> ImportCache::importFile(seq::SeqModule *module,
   }
 }
 
-ImportCache &Context::getCache() {
-  return cache;
-}
+ImportCache &Context::getCache() { return cache; }

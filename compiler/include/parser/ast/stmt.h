@@ -5,16 +5,21 @@
 #include <string>
 #include <vector>
 
-#include "parser/expr.h"
-#include "parser/pattern.h"
-#include "parser/visitor.h"
+#include "parser/ast/expr.h"
+#include "parser/ast/pattern.h"
+#include "parser/ast/visitor.h"
 #include "seq/seq.h"
 
 using std::ostream;
+using std::pair;
 using std::string;
 using std::unique_ptr;
 using std::vector;
-using std::pair;
+
+#define ACCEPT_VISITOR                                                         \
+  virtual void accept(StmtVisitor &visitor) const override {                   \
+    visitor.visit(this);                                                       \
+  }
 
 struct Param {
   string name;
@@ -29,7 +34,7 @@ struct Stmt : public seq::SrcObject {
   virtual ~Stmt() {}
   virtual string to_string() const = 0;
   virtual void accept(StmtVisitor &) const = 0;
-  virtual vector<Stmt*> getStatements();
+  virtual vector<Stmt *> getStatements();
   friend ostream &operator<<(ostream &out, const Stmt &c) {
     return out << c.to_string();
   }
@@ -37,15 +42,12 @@ struct Stmt : public seq::SrcObject {
 
 typedef unique_ptr<Stmt> StmtPtr;
 
-#define ACCEPT_VISITOR                                                      \
-  virtual void accept(StmtVisitor &visitor) const override { visitor.visit(this); }
-
 struct SuiteStmt : public Stmt {
   using Stmt::Stmt;
   vector<StmtPtr> stmts;
   SuiteStmt(vector<StmtPtr> s);
   string to_string() const override;
-  vector<Stmt*> getStatements() override;
+  vector<Stmt *> getStatements() override;
   ACCEPT_VISITOR;
 };
 
@@ -183,7 +185,8 @@ struct ExternImportStmt : public Stmt {
   ExprPtr ret;
   vector<Param> args;
   string lang;
-  ExternImportStmt(ImportStmt::Item n, ExprPtr f, ExprPtr t, vector<Param> a, string l);
+  ExternImportStmt(ImportStmt::Item n, ExprPtr f, ExprPtr t, vector<Param> a,
+                   string l);
   string to_string() const override;
   ACCEPT_VISITOR;
 };
@@ -231,7 +234,8 @@ struct FunctionStmt : public Stmt {
   vector<Param> args;
   StmtPtr suite;
   vector<string> attributes;
-  FunctionStmt(string n, ExprPtr r, vector<string> g, vector<Param> a, StmtPtr s, vector<string> at);
+  FunctionStmt(string n, ExprPtr r, vector<string> g, vector<Param> a,
+               StmtPtr s, vector<string> at);
   string to_string() const override;
   ACCEPT_VISITOR;
 };

@@ -9,12 +9,14 @@
 #include <unordered_set>
 #include <vector>
 
+#include "parser/ast/expr.h"
+#include "parser/ast/stmt.h"
+#include "parser/ast/transform/expr.h"
+#include "parser/ast/transform/pattern.h"
+#include "parser/ast/transform/stmt.h"
+#include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
-#include "parser/expr.h"
-#include "parser/stmt.h"
-#include "parser/transform.h"
-#include "parser/visitor.h"
 #include "seq/seq.h"
 
 using fmt::format;
@@ -30,13 +32,13 @@ using std::unordered_set;
 using std::vector;
 
 #define RETURN(T, ...)                                                         \
-  (this->result = setSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()))
+  (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()))
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
-#define EP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
-#define EPX(e, T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), e->getSrcInfo())
+#define EP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
+#define EPX(e, T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), e->getSrcInfo())
 #define S(T, ...) make_unique<T>(__VA_ARGS__)
-#define SP(T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo())
-#define SPX(s, T, ...) setSrcInfo(make_unique<T>(__VA_ARGS__), s->getSrcInfo())
+#define SP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo())
+#define SPX(s, T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), s->getSrcInfo())
 #define ERROR(...) error(stmt->getSrcInfo(), __VA_ARGS__)
 
 void TransformStmtVisitor::prepend(StmtPtr s) {
@@ -73,6 +75,15 @@ ExprPtr TransformStmtVisitor::transform(const Expr *expr) {
   for (auto &s : prepend) {
     prependStmts.push_back(move(s));
   }
+  return move(v.result);
+}
+
+PatternPtr TransformStmtVisitor::transform(const Pattern *pat) {
+  if (!pat) {
+    return nullptr;
+  }
+  TransformPatternVisitor v;
+  pat->accept(v);
   return move(v.result);
 }
 
@@ -264,12 +275,11 @@ void TransformStmtVisitor::visit(const IfStmt *stmt) {
 }
 
 void TransformStmtVisitor::visit(const MatchStmt *stmt) {
-  ERROR("TODO");
-  // for (auto &c : stmt->cases) {
-  //   // c.what = move(visit(*stmt->what));
-  //   c.second = visit(*c.second);
-  // }
-  // RETURN(MatchStmt, visit(*stmt->what), move(stmt->cases));
+  vector<pair<PatternPtr, StmtPtr>> cases;
+  for (auto &c : stmt->cases) {
+    cases.push_back({transform(c.first), transform(c.second)});
+  }
+  RETURN(MatchStmt, transform(stmt->what), move(cases));
 }
 
 void TransformStmtVisitor::visit(const ExtendStmt *stmt) {

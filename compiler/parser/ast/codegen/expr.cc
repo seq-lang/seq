@@ -9,12 +9,12 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parser/codegen.h"
+#include "parser/ast/codegen/expr.h"
+#include "parser/ast/expr.h"
+#include "parser/ast/stmt.h"
+#include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
-#include "parser/expr.h"
-#include "parser/stmt.h"
-#include "parser/visitor.h"
 #include "seq/seq.h"
 
 using fmt::format;
@@ -310,12 +310,12 @@ void CodegenExprVisitor::visit(const IndexExpr *expr) {
   }
   if (types.size() && types.size() != indices.size()) {
     ERROR("all arguments must be either types or expressions");
-  }
-  if (types.size()) {
+  } else if (types.size()) {
     if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
       if (auto ref = dynamic_cast<seq::types::RefType *>(e->getType())) {
-        RETURN(seq::TypeExpr,
-               seq::types::GenericType::get(ref, types));
+        DBG("{} -- here, sz {} t {}", e->getSrcInfo(), types.size(),
+            types[0]->getName());
+        RETURN(seq::TypeExpr, seq::types::GenericType::get(ref, types));
       } else {
         ERROR("types do not accept type arguments");
       }
@@ -350,14 +350,16 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
       }
     }
   }
+  auto lhs = transform(expr->expr);
   vector<seq::Expr *> items;
   bool isPartial = false;
   for (auto &&i : expr->args) {
     items.push_back(transform(i.value));
     isPartial |= !items.back();
   }
-  auto lhs = transform(expr->expr);
   if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
+    DBG("--> {} construction of {}", lhs->getSrcInfo(),
+        e->getType()->getName());
     RETURN(seq::ConstructExpr, e->getType(), items);
   } else if (isPartial) {
     RETURN(seq::PartialCallExpr, lhs, items);

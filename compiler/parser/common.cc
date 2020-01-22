@@ -55,9 +55,7 @@ string escape(string s) {
   return r;
 }
 
-void error(const char *format) {
-  throw seq::exc::SeqException(format);
-}
+void error(const char *format) { throw seq::exc::SeqException(format); }
 
 void error(const seq::SrcInfo &p, const char *format) {
   throw seq::exc::SeqException(format, p);
@@ -65,13 +63,13 @@ void error(const seq::SrcInfo &p, const char *format) {
 
 namespace seq {
 std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c) {
-    char buf[PATH_MAX + 1];
-    strncpy(buf, c.file.c_str(), PATH_MAX);
-    auto f = basename(buf);
-    out << f << ":" << c.line << ":" << c.col;
-    return out;
+  char buf[PATH_MAX + 1];
+  strncpy(buf, c.file.c_str(), PATH_MAX);
+  auto f = basename(buf);
+  out << f << ":" << c.line << ":" << c.col;
+  return out;
 }
-}
+} // namespace seq
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>

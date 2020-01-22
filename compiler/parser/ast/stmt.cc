@@ -7,8 +7,8 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+#include "parser/ast/stmt.h"
 #include "parser/common.h"
-#include "parser/stmt.h"
 
 using fmt::format;
 using std::move;
@@ -28,7 +28,9 @@ Stmt::Stmt(const seq::SrcInfo &s) { setSrcInfo(s); }
 vector<Stmt *> Stmt::getStatements() { return {this}; }
 
 SuiteStmt::SuiteStmt(vector<StmtPtr> s) : stmts(move(s)) {}
-string SuiteStmt::to_string() const { return format("({})", combine(stmts, "\n  ")); }
+string SuiteStmt::to_string() const {
+  return format("({})", combine(stmts, "\n  "));
+}
 vector<Stmt *> SuiteStmt::getStatements() {
   vector<Stmt *> result;
   for (auto &s : stmts) {
@@ -60,9 +62,7 @@ DelStmt::DelStmt(ExprPtr e) : expr(move(e)) {}
 string DelStmt::to_string() const { return format("(#del {})", *expr); }
 
 PrintStmt::PrintStmt(ExprPtr e) : expr(move(e)) {}
-string PrintStmt::to_string() const {
-  return format("(#print {})", *expr);
-}
+string PrintStmt::to_string() const { return format("(#print {})", *expr); }
 
 ReturnStmt::ReturnStmt(ExprPtr e) : expr(move(e)) {}
 string ReturnStmt::to_string() const {

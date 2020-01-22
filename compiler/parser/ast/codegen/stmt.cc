@@ -9,12 +9,13 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parser/codegen.h"
+#include "parser/ast/codegen/expr.h"
+#include "parser/ast/codegen/stmt.h"
+#include "parser/ast/expr.h"
+#include "parser/ast/stmt.h"
+#include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
-#include "parser/expr.h"
-#include "parser/stmt.h"
-#include "parser/visitor.h"
 #include "seq/seq.h"
 
 using fmt::format;
@@ -172,7 +173,34 @@ void CodegenStmtVisitor::visit(const IfStmt *stmt) {
   }
   this->result = r;
 }
-void CodegenStmtVisitor::visit(const MatchStmt *stmt) { ERROR("TODO"); }
+void CodegenStmtVisitor::visit(const MatchStmt *stmt) {
+  auto m = new seq::Match(transform(stmt->what));
+  for (auto &c : stmt->cases) {
+    string varName;
+    seq::Var *var = nullptr;
+    seq::Pattern *pat;
+    if (auto p = dynamic_cast<BoundPattern *>(c.first.get())) {
+      ctx.addBlock();
+      auto boundPat = new seq::BoundPattern(transform(p->what));
+      var = boundPat->getVar();
+      varName = boundPat->var;
+      pat = boundPat;
+      ctx.popBlock();
+    } else {
+      ctx.addBlock();
+      pat = transform(p->what);
+      ctx.popBlock();
+    }
+    auto block = m->addCase(pat);
+    ctx.addBlock(block);
+    transform(c.second);
+    if (var) {
+      ctx.add(varName, var);
+    }
+    ctx.popBlock();
+  }
+  this->result = m;
+}
 void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
   auto file = ctx.getCache().getImportFile(stmt->from.first, ctx.getFilename());
   if (file == "") {
