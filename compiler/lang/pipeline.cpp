@@ -364,6 +364,7 @@ static Value *codegenPipe(BaseFunc *base,
     assert(!inParallel);
 
     BasicBlock *notFull = BasicBlock::Create(context, "not_full", func);
+    BasicBlock *notFull0 = notFull;
     BasicBlock *full = BasicBlock::Create(context, "full", func);
     BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 
@@ -431,14 +432,14 @@ static Value *codegenPipe(BaseFunc *base,
     Value *N = builder.CreateLoad(filled);
     Value *M = ConstantInt::get(seqIntLLVM(context), W);
     Value *cond = builder.CreateICmpSLT(N, M);
-    builder.CreateCondBr(cond, notFull, full);
+    builder.CreateCondBr(cond, notFull0, full);
 
     builder.SetInsertPoint(full);
     N = builder.CreateCall(flush, {pairs, bufRef, bufQer, states, N, params,
                                    hist, pairsTemp, statesTemp});
     builder.CreateStore(N, filled);
     cond = builder.CreateICmpSLT(N, M);
-    builder.CreateCondBr(cond, notFull, full); // keep flushing while full
+    builder.CreateCondBr(cond, notFull0, full); // keep flushing while full
 
     // store the current state for the drain step:
     drain->states = states;
