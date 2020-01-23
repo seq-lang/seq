@@ -186,7 +186,7 @@ vector<tuple<const char *, bool, const char *>> cases{
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,
     testing::Combine(testing::Values(//"core/align.seq",
-    "core/arguments.seq",
+                                     "core/arguments.seq",
                                      "core/arithmetic.seq", "core/big.seq",
                                      //"core/bwtsa.seq",
                                      "core/containers.seq",
@@ -194,7 +194,7 @@ INSTANTIATE_TEST_SUITE_P(
                                      "core/formats.seq", "core/generators.seq",
                                      "core/generics.seq", "core/helloworld.seq",
                                      "core/kmers.seq", "core/match.seq",
-                                     //"core/proteins.seq",
+                                     "core/proteins.seq",
                                      "core/serialization.seq",
                                      "core/trees.seq"),
                      testing::Values(true, false)),

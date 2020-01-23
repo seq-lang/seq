@@ -52,6 +52,30 @@ TransformPatternVisitor::transform(const vector<PatternPtr> &pats) {
   return r;
 }
 
+void TransformPatternVisitor::visit(const StarPattern *pat) {
+  RETURN(StarPattern, );
+}
+
+void TransformPatternVisitor::visit(const IntPattern *pat) {
+  RETURN(IntPattern, pat->value);
+}
+
+void TransformPatternVisitor::visit(const BoolPattern *pat) {
+  RETURN(BoolPattern, pat->value);
+}
+
+void TransformPatternVisitor::visit(const StrPattern *pat) {
+  RETURN(StrPattern, pat->value);
+}
+
+void TransformPatternVisitor::visit(const SeqPattern *pat) {
+  RETURN(SeqPattern, pat->value);
+}
+
+void TransformPatternVisitor::visit(const RangePattern *pat) {
+  RETURN(RangePattern, pat->start, pat->end);
+}
+
 void TransformPatternVisitor::visit(const TuplePattern *pat) {
   RETURN(TuplePattern, transform(pat->patterns));
 }
@@ -62,6 +86,10 @@ void TransformPatternVisitor::visit(const ListPattern *pat) {
 
 void TransformPatternVisitor::visit(const OrPattern *pat) {
   RETURN(OrPattern, transform(pat->patterns));
+}
+
+void TransformPatternVisitor::visit(const WildcardPattern *pat) {
+  RETURN(WildcardPattern, pat->var);
 }
 
 void TransformPatternVisitor::visit(const GuardedPattern *pat) {

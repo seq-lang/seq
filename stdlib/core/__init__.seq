@@ -29,4 +29,4 @@ from core.dlopen import dlsym as _dlsym
 #     _py_init()
 # except CError:
 #     pass
-# from bio import *
+from bio import *
