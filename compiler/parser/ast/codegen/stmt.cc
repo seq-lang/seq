@@ -48,7 +48,7 @@ void CodegenStmtVisitor::apply(Context &ctx, const StmtPtr &stmts) {
 Context &CodegenStmtVisitor::getContext() { return ctx; }
 
 seq::Stmt *CodegenStmtVisitor::transform(const StmtPtr &stmt) {
-  fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
+  // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
   CodegenStmtVisitor v(ctx);
   stmt->accept(v);
   if (v.result) {
@@ -336,10 +336,9 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   auto f = new seq::Func();
   f->setName(stmt->name);
   f->setSrcInfo(stmt->getSrcInfo());
-  seq::types::Type *c = nullptr;
-  if (ctx.isToplevel() && (c = ctx.getEnclosingType())) {
+  if (ctx.isToplevel() && ctx.getEnclosingType()) {
     // Make sure that it is toplevel--- otherwise it is a nested function
-    c->addMethod(stmt->name, f, false);
+    ctx.getEnclosingType()->addMethod(stmt->name, f, false);
   } else {
     if (!ctx.isToplevel()) {
       f->setEnclosingFunc(dynamic_cast<seq::Func *>(ctx.getBase()));

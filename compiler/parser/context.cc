@@ -84,7 +84,9 @@ Context::Context(seq::SeqModule *module, ImportCache &cache,
 
 shared_ptr<ContextItem> Context::find(const string &name) const {
   auto i = VTable<ContextItem>::find(name);
-  if (i && (i->isGlobal() || getBase() == i->getBase())) {
+  if (i && dynamic_cast<VarContextItem *>(i.get())) {
+    return (i->isGlobal() || getBase() == i->getBase()) ? i : nullptr;
+  } else if (i) {
     return i;
   } else if (cache.stdlib && this != cache.stdlib) {
     return cache.stdlib->find(name);

@@ -244,13 +244,20 @@ void CodegenExprVisitor::visit(const UnaryExpr *expr) {
 
 void CodegenExprVisitor::visit(const BinaryExpr *expr) {
   auto getAtomicOp = [](const string &op) {
-    if (op == "+") return seq::AtomicExpr::Op::ADD;
-    if (op == "-") return seq::AtomicExpr::Op::SUB;
-    if (op == "&") return seq::AtomicExpr::Op::AND;
-    if (op == "|") return seq::AtomicExpr::Op::OR;
-    if (op == "^") return seq::AtomicExpr::Op::XOR;
-    if (op == "min") return seq::AtomicExpr::Op::MIN;
-    if (op == "max") return seq::AtomicExpr::Op::MAX;
+    if (op == "+")
+      return seq::AtomicExpr::Op::ADD;
+    if (op == "-")
+      return seq::AtomicExpr::Op::SUB;
+    if (op == "&")
+      return seq::AtomicExpr::Op::AND;
+    if (op == "|")
+      return seq::AtomicExpr::Op::OR;
+    if (op == "^")
+      return seq::AtomicExpr::Op::XOR;
+    if (op == "min")
+      return seq::AtomicExpr::Op::MIN;
+    if (op == "max")
+      return seq::AtomicExpr::Op::MAX;
     // TODO: XCHG, NAND
     return (seq::AtomicExpr::Op)0;
   };
@@ -271,7 +278,7 @@ void CodegenExprVisitor::visit(const BinaryExpr *expr) {
   auto r = transform(expr->rexpr);
   auto op = getAtomicOp(expr->op);
   if (expr->inPlace && op && ctx.hasFlag("atomic")) {
-    if (auto e = dynamic_cast<seq::VarExpr*>(l)) {
+    if (auto e = dynamic_cast<seq::VarExpr *>(l)) {
       RETURN(seq::AtomicExpr, op, e->getVar(), r);
     }
   }
@@ -322,7 +329,7 @@ void CodegenExprVisitor::visit(const IndexExpr *expr) {
              seq::types::ArrayType::get(transformType(expr->index)));
     } else if (lhs->value == "ptr") {
       RETURN(seq::TypeExpr,
-             seq::types::ArrayType::get(transformType(expr->index)));
+             seq::types::PtrType::get(transformType(expr->index)));
     } else if (lhs->value == "generator") {
       RETURN(seq::TypeExpr,
              seq::types::GenType::get(transformType(expr->index)));
@@ -485,8 +492,9 @@ void CodegenExprVisitor::visit(const SliceExpr *expr) {
 }
 
 void CodegenExprVisitor::visit(const EllipsisExpr *expr) {}
+
 void CodegenExprVisitor::visit(const TypeOfExpr *expr) {
-  RETURN(seq::TypeOfExpr, transform(expr->expr));
+  RETURN(seq::TypeExpr, seq::types::GenericType::get(transform(expr->expr)));
 }
 
 void CodegenExprVisitor::visit(const PtrExpr *expr) {

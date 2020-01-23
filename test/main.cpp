@@ -122,8 +122,9 @@ TEST_P(SeqTest, Run) {
   }
 }
 
-class ParserTestFixture : public testing::TestWithParam<
-                    tuple<const char* /*code*/, bool /*success*/, const char* /*output*/>> {
+class ParserTestFixture
+    : public testing::TestWithParam<tuple<
+          const char * /*code*/, bool /*success*/, const char * /*output*/>> {
 protected:
   vector<char> buf;
   int out_pipe[2];
@@ -166,38 +167,38 @@ TEST_P(ParserTestFixture, Run) {
   }
 }
 
-vector<tuple<const char*, bool, const char*>> cases {
-  {"1", true, "1"},
-  {"0xFFFFFFFFFFFFFFFFu", true, ""},
-  {"-45.353", true, "-45.353"},
-  {"245.e12", true, "245.e12"},
-  {"'hai'", true, "hai"},
-  {"\"\"\"\nEEE\"\"\"", true, "\nEEE"},
-  // {"f'{1} + {2} = {1+2}'", true, "1 + 2 = 3"},
-  {"k'ACGT'", true, "ACGT"},
-  {"s'ACGT'", true, "ACGT"},
-  {"p'ACGT'", true, "ACGT"}
-};
-INSTANTIATE_TEST_SUITE_P(
-  CppParserTests, ParserTestFixture,
-  testing::ValuesIn(cases)
-);
-
-
+vector<tuple<const char *, bool, const char *>> cases{
+    {"1", true, "1"},
+    {"0xFFFFFFFFFFFFFFFFu", true, ""},
+    {"-45.353", true, "-45.353"},
+    {"245.e12", true, "245.e12"},
+    {"'hai'", true, "hai"},
+    {"\"\"\"\nEEE\"\"\"", true, "\nEEE"},
+    // {"f'{1} + {2} = {1+2}'", true, "1 + 2 = 3"},
+    {"k'ACGT'", true, "ACGT"},
+    {"s'ACGT'", true, "ACGT"},
+    {"p'ACGT'", true, "ACGT"}};
 // INSTANTIATE_TEST_SUITE_P(
-//     CoreTests, SeqTest,
-//     testing::Combine(testing::Values("core/align.seq", "core/arguments.seq",
-//                                      "core/arithmetic.seq", "core/big.seq",
-//                                      "core/bwtsa.seq", "core/containers.seq",
-//                                      "core/empty.seq", "core/exceptions.seq",
-//                                      "core/formats.seq", "core/generators.seq",
-//                                      "core/generics.seq", "core/helloworld.seq",
-//                                      "core/kmers.seq", "core/match.seq",
-//                                      "core/proteins.seq",
-//                                      "core/serialization.seq",
-//                                      "core/trees.seq"),
-//                      testing::Values(true, false)),
-//     getTestNameFromParam);
+//   CppParserTests, ParserTestFixture,
+//   testing::ValuesIn(cases)
+// );
+
+INSTANTIATE_TEST_SUITE_P(
+    CoreTests, SeqTest,
+    testing::Combine(testing::Values(//"core/align.seq",
+    "core/arguments.seq",
+                                     "core/arithmetic.seq", "core/big.seq",
+                                     //"core/bwtsa.seq",
+                                     "core/containers.seq",
+                                     "core/empty.seq", "core/exceptions.seq",
+                                     "core/formats.seq", "core/generators.seq",
+                                     "core/generics.seq", "core/helloworld.seq",
+                                     "core/kmers.seq", "core/match.seq",
+                                     //"core/proteins.seq",
+                                     "core/serialization.seq",
+                                     "core/trees.seq"),
+                     testing::Values(true, false)),
+    getTestNameFromParam);
 
 // INSTANTIATE_TEST_SUITE_P(
 //     PipelineTests, SeqTest,
@@ -211,9 +212,10 @@ INSTANTIATE_TEST_SUITE_P(
 //     StdlibTests, SeqTest,
 //     testing::Combine(
 //         testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
-//                         "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
-//                         "stdlib/sort_test.seq", "stdlib/random_test.seq",
-//                         "stdlib/heapq_test.seq", "stdlib/statistics_test.seq"),
+//                         "stdlib/itertools_test.seq",
+//                         "stdlib/bisect_test.seq", "stdlib/sort_test.seq",
+//                         "stdlib/random_test.seq", "stdlib/heapq_test.seq",
+//                         "stdlib/statistics_test.seq"),
 //         testing::Values(true, false)),
 //     getTestNameFromParam);
 
