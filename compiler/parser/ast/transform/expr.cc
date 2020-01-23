@@ -292,7 +292,7 @@ void TransformExprVisitor::visit(const SliceExpr *expr) {
     prefix = "l";
   } else if (expr->st && !expr->ed) {
     prefix = "r";
-  } else if (!expr->st && expr->ed) {
+  } else if (!expr->st && !expr->ed) {
     prefix = "e";
   }
   if (expr->step) {

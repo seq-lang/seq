@@ -206,7 +206,7 @@ shared_ptr<Context> ImportCache::importFile(seq::SeqModule *module,
   if (i != imports.end()) {
     return i->second;
   } else {
-    DBG("loading {}", file);
+    // DBG("loading {}", file);
     auto stmts = parse_file(file);
     auto tv = TransformStmtVisitor::apply(move(stmts));
     auto context = make_shared<Context>(module, *this, file);
