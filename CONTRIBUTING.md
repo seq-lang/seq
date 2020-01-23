@@ -1,6 +1,6 @@
 # Contributing to Seq
 
-Thank you for considering contributing to Seq! This document contains some helpful information for getting started. The best place to ask questions or get feedback is [our Gitter chatroom](https://gitter.im/seq-lang/Seq).
+Thank you for considering contributing to Seq! This document contains some helpful information for getting started. The best place to ask questions or get feedback is [our Gitter chatroom](https://gitter.im/seq-lang/Seq). For a high-level outline of the features we aim to add in the future, check the [roadmap](https://github.com/seq-lang/seq/wiki/Roadmap).
 
 ## An overview
 
