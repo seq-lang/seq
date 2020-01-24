@@ -22,23 +22,39 @@ def lookup2[K](kmer: K, idx: MyIndex[K]):
     prefetch idx[kmer]
     return (kmer, idx[kmer])
 
+def lookup3[K](kmer: K, idx: MyIndex[K]):
+    try:
+        prefetch idx[kmer]
+        prefetch idx[~kmer]
+        return (kmer, -99999999)
+    finally:
+        prefetch idx[kmer]
+        prefetch idx[~kmer]
+        return (kmer, idx[kmer])
+
 type K = Kmer[3]
 
 @test
 def test_prefetch_transformation():
     idx1 = MyIndex[K](K())
     idx2 = MyIndex[K](K())
+    idx3 = MyIndex[K](K())
     v1 = list[tuple[K, int]]()
     v2 = list[tuple[K, int]]()
-    s = s'ACGTACGTAAAACGTACGT'
+    v3 = list[tuple[K, int]]()
+    s = s'ACGTACGTAAAACGTACGTAAAACGTACGT'
 
     s |> kmers[K](1) |> lookup1(idx1) |> v1.append
     s |> kmers[K](1) |> lookup2(idx2) |> v2.append
+    s |> kmers[K](1) |> lookup3(idx3) |> v3.append
 
     assert set(v1) == set(v2)
+    assert set(v1) == set(v3)
     assert idx1.prefetch_calls == 0
     assert idx1.getitem_calls == idx2.getitem_calls
-    assert idx2.prefetch_calls == idx2.prefetch_calls
+    assert idx1.getitem_calls == idx3.getitem_calls
+    assert idx2.prefetch_calls == idx2.getitem_calls
+    assert idx3.prefetch_calls == 4 * idx2.prefetch_calls
 test_prefetch_transformation()
 
 @test

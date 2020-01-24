@@ -530,6 +530,11 @@ void TryCatch::codegen0(BasicBlock *&block) {
   BasicBlock *preambleBlock = base->getPreamble();
   types::Type *retType = base->getFuncType()->getBaseType(0);
 
+  if (types::GenType *gen = retType->asGen()) {
+    if (gen->fromPrefetch() || gen->fromInterAlign())
+      retType = gen->getBaseType(0);
+  }
+
   // entry block:
   BasicBlock *entryBlock = BasicBlock::Create(context, "entry", func);
   BasicBlock *entryBlock0 = entryBlock;
