@@ -48,7 +48,8 @@ void CodegenStmtVisitor::apply(Context &ctx, const StmtPtr &stmts) {
 Context &CodegenStmtVisitor::getContext() { return ctx; }
 
 seq::Stmt *CodegenStmtVisitor::transform(const StmtPtr &stmt) {
-  // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
+  // if (stmt->getSrcInfo().file.find("scratch.seq") != string::npos)
+    // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
   CodegenStmtVisitor v(ctx);
   stmt->accept(v);
   if (v.result) {

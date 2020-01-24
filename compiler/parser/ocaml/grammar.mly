@@ -51,9 +51,8 @@ reverse_separated_nonempty_llist(separator, X):
 %inline FL(delim, X): separated_llist(delim, X) delim? { $1 } /* list that has optional delim at the end */
 %inline FLNE(delim, X): /* non-empty list that has optional delim at the end */
   X { [$1] } | X delim separated_llist(delim, X) delim? { $1 :: $3 }
-%inline FLNE_HAS(delim, X): /* non-empty list that signals if there is an optional delim at the end */
-  | X { [$1], false }
-  | X delim separated_llist(delim, X) delim? { $1 :: $3, match $4 with Some _ -> true | None -> false }
+%inline FL_HAS(delim, X): /* non-empty list that signals if there is an optional delim at the end */
+  | separated_llist(delim, X) delim? { $1, match $2 with Some _ -> true | None -> false }
 
 /* 1. Atoms  */
 atom:
@@ -180,12 +179,13 @@ small_single_statement:
   | TYPE ID EQ expr { $loc, TypeAlias ($2, $4) }
   | THROW expr { $loc, Throw $2 }
 print_statement:
-  | PRINT { [$loc, Print ($loc, String "\n")] }
-  | PRINT FLNE_HAS(COMMA, expr)
-    { let space, l = not (snd $2), (List.length (fst $2)) - 1 in
-      List.concat @@ List.mapi (fun i e ->
-        [fst e, Print e ; fst e, Print (fst e, String (if i < l || space then " " else "\n"))])
-      (fst $2) }
+  /* | PRINT { [$loc, Print ($loc, String "\n")] } */
+  | PRINT FL_HAS(COMMA, expr)
+    { let term, len = (if snd $2 then " " else "\n"), List.length (fst $2) in
+      if len = 0 then [$loc, Print ($loc, String term)]
+      else List.concat (List.mapi (fun i e -> [fst e, Print e;
+                                               fst e, Print (fst e, String (if i < len - 1 then " " else term))])
+                                  (fst $2)) }
 
 single_statement:
   | NL { $loc, Pass () }
