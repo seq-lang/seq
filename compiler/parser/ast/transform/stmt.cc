@@ -32,7 +32,10 @@ using std::unordered_set;
 using std::vector;
 
 #define RETURN(T, ...)                                                         \
-  (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()))
+  (this->result =                                                              \
+       fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()));           \
+  return
+
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
 #define EP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
 #define EPX(e, T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), e->getSrcInfo())
@@ -112,13 +115,14 @@ void TransformStmtVisitor::visit(const ExprStmt *stmt) {
 StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs) {
   // fmt::print("## ass {} = {}\n", *lhs, *rhs);
   if (auto l = dynamic_cast<const IndexExpr *>(lhs)) {
-    vector<ExprPtr> args;
-    args.push_back(transform(l->index));
-    args.push_back(transform(rhs));
-    return SPX(lhs, ExprStmt,
-               EPX(lhs, CallExpr,
-                   EPX(lhs, DotExpr, transform(l->expr), "__setitem__"),
-                   move(args)));
+    // vector<ExprPtr> args;
+    // args.push_back(transform(l->index));
+    // args.push_back(transform(rhs));
+    // return SPX(lhs, ExprStmt,
+    //            EPX(lhs, CallExpr,
+    //                EPX(lhs, DotExpr, transform(l->expr), "__setitem__"),
+    //                move(args)));
+    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const DotExpr *>(lhs)) {
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const IdExpr *>(lhs)) {
@@ -212,6 +216,9 @@ void TransformStmtVisitor::visit(const AssignStmt *stmt) {
 }
 
 void TransformStmtVisitor::visit(const DelStmt *stmt) {
+  RETURN(DelStmt, transform(stmt->expr));
+
+  // TODO later with types
   if (auto expr = dynamic_cast<const IndexExpr *>(stmt->expr.get())) {
     RETURN(ExprStmt,
            transform(EP(CallExpr,

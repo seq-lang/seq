@@ -49,7 +49,7 @@ Context &CodegenStmtVisitor::getContext() { return ctx; }
 
 seq::Stmt *CodegenStmtVisitor::transform(const StmtPtr &stmt) {
   // if (stmt->getSrcInfo().file.find("scratch.seq") != string::npos)
-    // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
+  // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
   CodegenStmtVisitor v(ctx);
   stmt->accept(v);
   if (v.result) {
@@ -83,7 +83,9 @@ void CodegenStmtVisitor::visit(const SuiteStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const PassStmt *stmt) {}
+
 void CodegenStmtVisitor::visit(const BreakStmt *stmt) { RETURN(seq::Break, ); }
+
 void CodegenStmtVisitor::visit(const ContinueStmt *stmt) {
   RETURN(seq::Continue, );
 }
@@ -93,6 +95,7 @@ void CodegenStmtVisitor::visit(const ExprStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
+
   // TODO: JIT
   if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
     auto var = i->value;
@@ -109,6 +112,9 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
   } else if (auto i = dynamic_cast<DotExpr *>(stmt->lhs.get())) {
     RETURN(seq::AssignMember, transform(i->expr), i->member,
            transform(stmt->rhs));
+  } else if (auto i = dynamic_cast<IndexExpr *>(stmt->lhs.get())) {
+    RETURN(seq::AssignIndex, transform(i->expr), transform(i->index),
+           transform(stmt->rhs));
   } else {
     ERROR("invalid assignment");
   }
@@ -124,6 +130,8 @@ void CodegenStmtVisitor::visit(const DelStmt *stmt) {
       ctx.remove(expr->value);
       RETURN(seq::Del, v->getVar());
     }
+  } else if (auto i = dynamic_cast<IndexExpr *>(stmt->expr.get())) {
+    RETURN(seq::DelIndex, transform(i->expr), transform(i->index));
   }
   ERROR("cannot delete non-variable");
 }
