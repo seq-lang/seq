@@ -23,12 +23,11 @@ class CodegenExprVisitor : public ExprVisitor {
 public:
   CodegenExprVisitor(Context &ctx, CodegenStmtVisitor &stmtVisitor,
                      vector<seq::Var *> *captures = nullptr);
-  seq::Expr *transform(const ExprPtr &e,
-                       vector<seq::Var *> *captures = nullptr);
+  seq::Expr *transform(const ExprPtr &e);
   seq::types::Type *transformType(const ExprPtr &expr);
   seq::For *parseComprehension(const Expr *expr,
                                const vector<GeneratorExpr::Body> &loops,
-                               vector<seq::Var *> *captures, int &added);
+                               int &added);
 
   void visit(const EmptyExpr *) override;
   void visit(const BoolExpr *) override;

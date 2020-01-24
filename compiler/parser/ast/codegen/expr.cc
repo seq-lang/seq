@@ -39,8 +39,7 @@ CodegenExprVisitor::CodegenExprVisitor(Context &ctx,
                                        vector<seq::Var *> *captures)
     : ctx(ctx), stmtVisitor(stmtVisitor), result(nullptr), captures(captures) {}
 
-seq::Expr *CodegenExprVisitor::transform(const ExprPtr &expr,
-                                         vector<seq::Var *> *captures) {
+seq::Expr *CodegenExprVisitor::transform(const ExprPtr &expr) {
   // fmt::print("<e> {} :pos {}\n", expr, expr->getSrcInfo());
   CodegenExprVisitor v(ctx, stmtVisitor, captures);
   expr->accept(v);
@@ -54,7 +53,7 @@ seq::Expr *CodegenExprVisitor::transform(const ExprPtr &expr,
 }
 
 seq::types::Type *CodegenExprVisitor::transformType(const ExprPtr &expr) {
-  CodegenExprVisitor v(ctx, this->stmtVisitor);
+  CodegenExprVisitor v(ctx, this->stmtVisitor, captures);
   expr->accept(v);
   if (auto t = dynamic_cast<seq::TypeExpr *>(v.result)) {
     return t->getType();
@@ -117,6 +116,7 @@ void CodegenExprVisitor::visit(const IdExpr *expr) {
   this->result = i->getExpr();
   if (auto var = dynamic_cast<VarContextItem *>(i.get())) {
     if (captures) {
+      // DBG("capturing {}", expr->value);
       captures->push_back(var->getVar());
     }
     if (var->isGlobal() && var->getBase() == ctx.getBase() &&
@@ -165,12 +165,11 @@ void CodegenExprVisitor::visit(const DictExpr *expr) {
 }
 
 seq::For *CodegenExprVisitor::parseComprehension(
-    const Expr *expr, const vector<GeneratorExpr::Body> &loops,
-    vector<seq::Var *> *captures, int &added) {
+    const Expr *expr, const vector<GeneratorExpr::Body> &loops, int &added) {
   seq::For *topFor = nullptr;
   seq::Block *block = nullptr;
   for (auto &l : loops) {
-    auto f = new seq::For(transform(l.gen, captures));
+    auto f = new seq::For(transform(l.gen));
     f->setSrcInfo(l.gen->getSrcInfo());
     if (!topFor) {
       topFor = f;
@@ -191,7 +190,7 @@ seq::For *CodegenExprVisitor::parseComprehension(
     if (l.conds.size()) {
       auto i = new seq::If();
       i->setSrcInfo(l.conds[0]->getSrcInfo());
-      auto b = i->addCond(transform(l.conds[0], captures));
+      auto b = i->addCond(transform(l.conds[0]));
       i->setSrcInfo(expr->getSrcInfo());
       i->setBase(ctx.getBase());
       block->add(i);
@@ -204,10 +203,13 @@ seq::For *CodegenExprVisitor::parseComprehension(
 }
 
 void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
-  vector<seq::Var *> captures;
   int added = 0;
-  auto topFor = parseComprehension(expr, expr->loops, &captures, added);
-  auto e = transform(expr->expr, &captures);
+
+  auto oldCaptures = this->captures;
+  vector<seq::Var *> captures;
+  this->captures = &captures;
+  auto topFor = parseComprehension(expr, expr->loops, added);
+  auto e = transform(expr->expr);
   if (expr->kind == GeneratorExpr::ListGenerator) {
     this->result = new seq::ListCompExpr(
         e, topFor, transformType(make_unique<IdExpr>("list")));
@@ -220,11 +222,12 @@ void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
   while (added--) {
     ctx.popBlock();
   }
+  this->captures = oldCaptures;
 }
 
 void CodegenExprVisitor::visit(const DictGeneratorExpr *expr) {
   int added = 0;
-  auto topFor = parseComprehension(expr, expr->loops, nullptr, added);
+  auto topFor = parseComprehension(expr, expr->loops, added);
   this->result =
       new seq::DictCompExpr(transform(expr->key), transform(expr->expr), topFor,
                             transformType(make_unique<IdExpr>("dict")));

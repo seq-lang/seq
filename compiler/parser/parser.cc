@@ -24,6 +24,7 @@ SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file,
     auto stdlib = make_shared<Context>(module, cache);
     auto context = make_shared<Context>(module, cache, file);
     CodegenStmtVisitor::apply(*context, tv);
+    // DBG("done with parsing!", "");
     return context->getModule();
   } catch (seq::exc::SeqException &e) {
     if (isTest) {
