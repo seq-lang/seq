@@ -53,7 +53,7 @@ Context::Context(seq::SeqModule *module, ImportCache &cache,
                  const string &filename)
     : cache(cache), filename(filename), module(module), enclosingType(nullptr),
       tryCatch(nullptr) {
-  stack.push(unordered_set<string>());
+  stack.push(vector<string>());
   bases.push_back(module);
   blocks.push_back(module->getBlock());
   topBaseIndex = topBlockIndex = 0;
@@ -82,10 +82,14 @@ Context::Context(seq::SeqModule *module, ImportCache &cache,
   }
 }
 
-shared_ptr<ContextItem> Context::find(const string &name) const {
+shared_ptr<ContextItem> Context::find(const string &name, bool onlyLocal) const {
   auto i = VTable<ContextItem>::find(name);
   if (i && dynamic_cast<VarContextItem *>(i.get())) {
-    return (i->isGlobal() || getBase() == i->getBase()) ? i : nullptr;
+    if (onlyLocal) {
+      return (getBase() == i->getBase()) ? i : nullptr;
+    } else {
+      return i;
+    }
   } else if (i) {
     return i;
   } else if (cache.stdlib && this != cache.stdlib) {
@@ -108,6 +112,7 @@ seq::types::Type *Context::getType(const string &name) const {
 }
 seq::Block *Context::getBlock() const { return blocks[topBlockIndex]; }
 seq::TryCatch *Context::getTryCatch() const { return tryCatch; }
+void Context::setTryCatch(seq::TryCatch *t) { tryCatch = t; }
 
 seq::types::Type *Context::getEnclosingType() { return enclosingType; }
 

@@ -24,7 +24,7 @@ from core.file import File, gzFile, open, gzopen
 from pickle import pickle, unpickle
 
 from core.dlopen import dlsym as _dlsym
-# from core.python import init as _py_init, imp as _py_import, exec as _py_exec
+from core.python import init as _py_init, imp as _py_import, exec as _py_exec
 # try:
 #     _py_init()
 # except CError:

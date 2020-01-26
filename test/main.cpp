@@ -185,39 +185,38 @@ vector<tuple<const char *, bool, const char *>> cases{
 
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,
-    testing::Combine(testing::Values(//"core/align.seq",
-                                     "core/arguments.seq",
+    testing::Combine(testing::Values("core/align.seq", "core/arguments.seq",
                                      "core/arithmetic.seq", "core/big.seq",
-                                     //"core/bwtsa.seq",
-                                     "core/containers.seq",
+                                     "core/bwtsa.seq", "core/containers.seq",
                                      "core/empty.seq", "core/exceptions.seq",
-                                     "core/formats.seq", "core/generators.seq",
-                                     "core/generics.seq", "core/helloworld.seq",
-                                     "core/kmers.seq", "core/match.seq",
-                                     "core/proteins.seq",
+                                     //"core/formats.seq",
+                                     "core/generators.seq", "core/generics.seq",
+                                     "core/helloworld.seq", "core/kmers.seq",
+                                     "core/match.seq", "core/proteins.seq",
                                      "core/serialization.seq",
                                      "core/trees.seq"),
                      testing::Values(true, false)),
     getTestNameFromParam);
 
-// INSTANTIATE_TEST_SUITE_P(
-//     PipelineTests, SeqTest,
-//     testing::Combine(testing::Values("pipeline/parallel.seq",
-//                                      "pipeline/prefetch.seq",
-//                                      "pipeline/revcomp_opt.seq"),
-//                      testing::Values(true, false)),
-//     getTestNameFromParam);
+INSTANTIATE_TEST_SUITE_P(
+    PipelineTests, SeqTest,
+    testing::Combine(testing::Values("pipeline/parallel.seq",
+                                     "pipeline/prefetch.seq",
+                                     "pipeline/revcomp_opt.seq"),
+                     testing::Values(true, false)),
+    getTestNameFromParam);
 
-// INSTANTIATE_TEST_SUITE_P(
-//     StdlibTests, SeqTest,
-//     testing::Combine(
-//         testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
-//                         "stdlib/itertools_test.seq",
-//                         "stdlib/bisect_test.seq", "stdlib/sort_test.seq",
-//                         "stdlib/random_test.seq", "stdlib/heapq_test.seq",
-//                         "stdlib/statistics_test.seq"),
-//         testing::Values(true, false)),
-//     getTestNameFromParam);
+INSTANTIATE_TEST_SUITE_P(
+    StdlibTests, SeqTest,
+    testing::Combine(
+        testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
+                        "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
+                        // Assertion failed: (done && contents), function clone, file /Users/inumanag/Desktop/Projekti/seq/cpp/compiler/types/ref.cpp, line 349.
+                        "stdlib/sort_test.seq",
+                        "stdlib/random_test.seq", "stdlib/heapq_test.seq",
+                        "stdlib/statistics_test.seq"),
+        testing::Values(true, false)),
+    getTestNameFromParam);
 
 // INSTANTIATE_TEST_SUITE_P(
 //     PythonTests, SeqTest,

@@ -178,13 +178,14 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
   if (st < lefts.size() && st != ed) {
     error(lefts[st]->getSrcInfo(), "two starred expressions in assignment");
   }
-  if (unpack)
+  if (unpack) {
     processAssignment(unpack->what.get(),
                       EPX(rhs, IndexExpr, transform(rhs),
                           EPX(rhs, SliceExpr, EPX(rhs, IntExpr, st),
                               EPX(rhs, IntExpr, ed + 1), nullptr))
                           .release(),
                       stmts);
+  }
 }
 
 void TransformStmtVisitor::visit(const AssignStmt *stmt) {
@@ -307,7 +308,58 @@ void TransformStmtVisitor::visit(const ImportStmt *stmt) {
 
 void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
   if (stmt->lang == "c" && stmt->from) {
-    ERROR("not yet supported");
+    vector<StmtPtr> stmts;
+    // ptr = _dlsym(FROM, WHAT)
+    vector<ExprPtr> args;
+    args.push_back(transform(stmt->from));
+    args.push_back(EPX(stmt, StringExpr, stmt->name.first));
+    stmts.push_back(
+        SP(AssignStmt, EPX(stmt, IdExpr, "ptr"),
+           EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_dlsym"), move(args))));
+    // f = function[ARGS](ptr)
+    args.clear();
+    args.push_back(stmt->ret ? transform(stmt->ret)
+                             : EPX(stmt, IdExpr, "void"));
+    for (auto &a : stmt->args) {
+      args.push_back(transform(a.type));
+    }
+    stmts.push_back(SP(AssignStmt, EPX(stmt, IdExpr, "f"),
+                       EPX(stmt, CallExpr,
+                           EPX(stmt, IndexExpr, EPX(stmt, IdExpr, "function"),
+                               EPX(stmt, TupleExpr, move(args))),
+                           EPX(stmt, IdExpr, "ptr"))));
+    bool isVoid = true;
+    if (stmt->ret) {
+      if (auto f = dynamic_cast<IdExpr *>(stmt->ret.get())) {
+        isVoid = f->value == "void";
+      } else {
+        isVoid = false;
+      }
+    }
+    args.clear();
+    int ia = 0;
+    for (auto &a : stmt->args) {
+      args.push_back(
+          EPX(stmt, IdExpr, a.name != "" ? a.name : format("$a{}", ia++)));
+    }
+    // return f(args)
+    auto call = EPX(stmt, CallExpr, EPX(stmt, IdExpr, "f"), move(args));
+    if (!isVoid) {
+      stmts.push_back(SP(ReturnStmt, move(call)));
+    } else {
+      stmts.push_back(SP(ExprStmt, move(call)));
+    }
+    // def WHAT(args):
+    vector<Param> params;
+    ia = 0;
+    for (auto &a : stmt->args) {
+      params.push_back(
+          {a.name != "" ? a.name : format("$a{}", ia++), transform(a.type)});
+    }
+    RETURN(FunctionStmt,
+           stmt->name.second != "" ? stmt->name.second : stmt->name.first,
+           transform(stmt->ret), vector<string>(), move(params),
+           SP(SuiteStmt, move(stmts)), vector<string>());
   } else if (stmt->lang == "c") {
     vector<Param> args;
     for (auto &a : stmt->args) {
@@ -373,9 +425,10 @@ void TransformStmtVisitor::visit(const DeclareStmt *stmt) {
 }
 
 void TransformStmtVisitor::visit(const AssignEqStmt *stmt) {
-  this->result = transform(SP(AssignStmt, transform(stmt->lhs),
-                              EPX(stmt, BinaryExpr, transform(stmt->lhs),
-                                  stmt->op, transform(stmt->rhs), true)));
+  RETURN(AssignStmt, transform(stmt->lhs),
+         EPX(stmt, BinaryExpr, transform(stmt->lhs), stmt->op,
+             transform(stmt->rhs), true),
+         nullptr, true);
 }
 
 void TransformStmtVisitor::visit(const YieldFromStmt *stmt) {
@@ -387,30 +440,52 @@ void TransformStmtVisitor::visit(const YieldFromStmt *stmt) {
 }
 
 void TransformStmtVisitor::visit(const WithStmt *stmt) {
-  vector<StmtPtr> internals;
-  vector<StmtPtr> finally;
-  vector<string> vars;
-  for (auto &i : stmt->items) {
-    string var = i.second == "" ? getTemporaryVar("with") : i.second;
-    internals.push_back(
-        SP(AssignStmt, EPX(stmt, IdExpr, var), transform(i.first)));
+  if (!stmt->items.size()) {
+    ERROR("malformed with statement");
+  }
+  vector<StmtPtr> content;
+  for (int i = stmt->items.size() - 1; i >= 0; i--) {
+    vector<StmtPtr> internals;
+    string var = stmt->items[i].second == "" ? getTemporaryVar("with")
+                                             : stmt->items[i].second;
+    internals.push_back(SP(AssignStmt, EPX(stmt, IdExpr, var),
+                           transform(stmt->items[i].first)));
     internals.push_back(
         SP(ExprStmt,
            EPX(stmt, CallExpr,
                EPX(stmt, DotExpr, EPX(stmt, IdExpr, var), "__enter__"))));
-    finally.push_back(SP(
-        ExprStmt, EPX(stmt, CallExpr,
-                      EPX(stmt, DotExpr, EPX(stmt, IdExpr, var), "__exit__"))));
-    vars.push_back(var);
+    internals.push_back(
+        SP(TryStmt,
+           content.size() ? transform(SP(SuiteStmt, move(content)))
+                          : transform(stmt->suite),
+           vector<TryStmt::Catch>(),
+           transform(SP(ExprStmt, EPX(stmt, CallExpr,
+                                      EPX(stmt, DotExpr, EPX(stmt, IdExpr, var),
+                                          "__exit__"))))));
+    content = move(internals);
   }
-  internals.push_back(SP(TryStmt, transform(stmt->suite),
-                         vector<TryStmt::Catch>(),
-                         transform(SP(SuiteStmt, move(finally)))));
   vector<IfStmt::If> ifs;
-  ifs.push_back({EPX(stmt, BoolExpr, true), SP(SuiteStmt, move(internals))});
+  ifs.push_back({EPX(stmt, BoolExpr, true), SP(SuiteStmt, move(content))});
   RETURN(IfStmt, move(ifs));
 }
+/*
+with a as b, c as d: ...
 
+->
+
+if True:
+  b = a
+  b.__enter__()
+  try:
+    d = c
+    c.__enter__()
+    try:
+      ...
+    finally:
+      c.__exit__()
+  finally:
+    b.__exit__()
+*/
 // void TransformStmtVisitor::visit(const PyStmt *stmt) {
 //   RETURN(DeclareStmt, Param{stmt->param.name, transform(stmt->param.type),
 //                             transform(stmt->param.deflt)});

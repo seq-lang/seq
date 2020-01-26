@@ -34,7 +34,9 @@ struct ParsingError {
   ParsingError(string s) : msg(s) {}
 };
 
-string parse_string(value v) { return string(String_val(v)); }
+string parse_string(value v) {
+  return string(String_val(v), caml_string_length(v));
+}
 
 template <typename TF>
 auto parse_list(value v, TF f) -> vector<decltype(f(v))> {
@@ -97,19 +99,19 @@ unique_ptr<Expr> parse_expr(value val) {
   case 1:
     Return(Bool, Bool_val(t));
   case 2:
-    Return(Int, String_val(Field(t, 0)), String_val(Field(t, 1)));
+    Return(Int, parse_string(Field(t, 0)), parse_string(Field(t, 1)));
   case 3:
-    Return(Float, Double_val(Field(t, 0)), String_val(Field(t, 1)));
+    Return(Float, Double_val(Field(t, 0)), parse_string(Field(t, 1)));
   case 4:
-    Return(String, String_val(t));
+    Return(String, parse_string(t));
   case 5:
-    Return(FString, String_val(t));
+    Return(FString, parse_string(t));
   case 6:
-    Return(Kmer, String_val(t));
+    Return(Kmer, parse_string(t));
   case 7:
-    Return(Seq, String_val(Field(t, 1)), String_val(Field(t, 0)));
+    Return(Seq, parse_string(Field(t, 1)), parse_string(Field(t, 0)));
   case 8:
-    Return(Id, String_val(t));
+    Return(Id, parse_string(t));
   case 9:
     Return(Unpack, parse_expr(t));
   case 10:
@@ -153,9 +155,9 @@ unique_ptr<Expr> parse_expr(value val) {
     Return(If, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
            parse_expr(Field(t, 2)));
   case 19:
-    Return(Unary, String_val(Field(t, 0)), parse_expr(Field(t, 1)));
+    Return(Unary, parse_string(Field(t, 0)), parse_expr(Field(t, 1)));
   case 20:
-    Return(Binary, parse_expr(Field(t, 0)), String_val(Field(t, 1)),
+    Return(Binary, parse_expr(Field(t, 0)), parse_string(Field(t, 1)),
            parse_expr(Field(t, 2)));
   case 21:
     Return(Pipe, parse_list(t, [](value in) {
@@ -177,7 +179,7 @@ unique_ptr<Expr> parse_expr(value val) {
            parse_optional(Field(t, 1), parse_expr),
            parse_optional(Field(t, 2), parse_expr));
   case 25:
-    Return(Dot, parse_expr(Field(t, 0)), String_val(Field(t, 1)));
+    Return(Dot, parse_expr(Field(t, 0)), parse_string(Field(t, 1)));
   case 26:
     Return(Ellipsis, );
   case 27:
@@ -304,7 +306,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 9:
     Return(Assert, parse_expr(t));
   case 10:
-    Return(TypeAlias, String_val(Field(t, 0)), parse_expr(Field(t, 1)));
+    Return(TypeAlias, parse_string(Field(t, 0)), parse_expr(Field(t, 1)));
   case 11:
     Return(While, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
   case 12:
@@ -420,9 +422,9 @@ void ocaml_initialize() {
 SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
                                             value col) {
   CAMLparam4(msg, file, line, col);
-  error(seq::SrcInfo(String_val(file), Int_val(line), Int_val(line),
+  error(seq::SrcInfo(parse_string(file), Int_val(line), Int_val(line),
                      Int_val(col), Int_val(col)),
-        String_val(msg));
+        parse_string(msg).c_str());
   CAMLreturn(Val_unit);
 }
 

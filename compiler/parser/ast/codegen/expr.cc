@@ -53,9 +53,8 @@ seq::Expr *CodegenExprVisitor::transform(const ExprPtr &expr) {
 }
 
 seq::types::Type *CodegenExprVisitor::transformType(const ExprPtr &expr) {
-  CodegenExprVisitor v(ctx, this->stmtVisitor, captures);
-  expr->accept(v);
-  if (auto t = dynamic_cast<seq::TypeExpr *>(v.result)) {
+  auto v = CodegenExprVisitor(ctx, this->stmtVisitor, captures).transform(expr);
+  if (auto t = dynamic_cast<seq::TypeExpr *>(v)) {
     return t->getType();
   } else {
     error(expr->getSrcInfo(), "expected type: {}", *expr);
@@ -74,10 +73,10 @@ void CodegenExprVisitor::visit(const BoolExpr *expr) {
 void CodegenExprVisitor::visit(const IntExpr *expr) {
   try {
     if (expr->suffix == "u") {
-      uint64_t i = std::stoull(expr->value, nullptr, 10);
+      uint64_t i = std::stoull(expr->value, nullptr, 0);
       RETURN(seq::IntExpr, i);
     } else {
-      int64_t i = std::stoll(expr->value, nullptr, 10);
+      int64_t i = std::stoll(expr->value, nullptr, 0);
       RETURN(seq::IntExpr, i);
     }
   } catch (std::out_of_range &) {
@@ -116,7 +115,6 @@ void CodegenExprVisitor::visit(const IdExpr *expr) {
   this->result = i->getExpr();
   if (auto var = dynamic_cast<VarContextItem *>(i.get())) {
     if (captures) {
-      // DBG("capturing {}", expr->value);
       captures->push_back(var->getVar());
     }
     if (var->isGlobal() && var->getBase() == ctx.getBase() &&
@@ -179,7 +177,15 @@ seq::For *CodegenExprVisitor::parseComprehension(
     if (l.vars.size() == 1) {
       ctx.add(l.vars[0], f->getVar());
     } else {
-      ERROR("TODO not yet supported");
+      string varName = getTemporaryVar("for");
+      ctx.add(varName, f->getVar());
+      for (int i = 0; i < l.vars.size(); i++) {
+        auto varStmt = new seq::VarStmt(new seq::ArrayLookupExpr(
+            ctx.find(varName)->getExpr(), new seq::IntExpr(i)));
+        varStmt->setBase(ctx.getBase());
+        ctx.getBlock()->add(varStmt);
+        ctx.add(l.vars[i], varStmt->getVar());
+      }
     }
     f->setSrcInfo(expr->getSrcInfo());
     f->setBase(ctx.getBase());
@@ -246,24 +252,6 @@ void CodegenExprVisitor::visit(const UnaryExpr *expr) {
 }
 
 void CodegenExprVisitor::visit(const BinaryExpr *expr) {
-  auto getAtomicOp = [](const string &op) {
-    if (op == "+")
-      return seq::AtomicExpr::Op::ADD;
-    if (op == "-")
-      return seq::AtomicExpr::Op::SUB;
-    if (op == "&")
-      return seq::AtomicExpr::Op::AND;
-    if (op == "|")
-      return seq::AtomicExpr::Op::OR;
-    if (op == "^")
-      return seq::AtomicExpr::Op::XOR;
-    if (op == "min")
-      return seq::AtomicExpr::Op::MIN;
-    if (op == "max")
-      return seq::AtomicExpr::Op::MAX;
-    // TODO: XCHG, NAND
-    return (seq::AtomicExpr::Op)0;
-  };
   if (expr->op == "is") {
     RETURN(seq::IsExpr, transform(expr->lexpr), transform(expr->rexpr));
   } else if (expr->op == "is not") {
@@ -277,15 +265,8 @@ void CodegenExprVisitor::visit(const BinaryExpr *expr) {
            new seq::ArrayContainsExpr(transform(expr->lexpr),
                                       transform(expr->rexpr)));
   }
-  auto l = transform(expr->lexpr);
-  auto r = transform(expr->rexpr);
-  auto op = getAtomicOp(expr->op);
-  if (expr->inPlace && op && ctx.hasFlag("atomic")) {
-    if (auto e = dynamic_cast<seq::VarExpr *>(l)) {
-      RETURN(seq::AtomicExpr, op, e->getVar(), r);
-    }
-  }
-  RETURN(seq::BOpExpr, seq::bop(expr->op), l, r, expr->inPlace);
+  RETURN(seq::BOpExpr, seq::bop(expr->op), transform(expr->lexpr),
+         transform(expr->rexpr), expr->inPlace);
 }
 
 void CodegenExprVisitor::visit(const PipeExpr *expr) {
@@ -305,7 +286,7 @@ void CodegenExprVisitor::visit(const PipeExpr *expr) {
 void CodegenExprVisitor::visit(const IndexExpr *expr) {
   auto getInt = [&](const ExprPtr &e, int limit) {
     if (auto i = dynamic_cast<IntExpr *>(e.get())) {
-      auto r = std::stol(i->value);
+      auto r = std::stol(i->value, nullptr, 0);
       if (r <= 0 || r > limit) {
         ERROR("invalid integer parameter (maximum allowed is {})", limit);
       }
@@ -502,7 +483,8 @@ void CodegenExprVisitor::visit(const TypeOfExpr *expr) {
 
 void CodegenExprVisitor::visit(const PtrExpr *expr) {
   if (auto e = dynamic_cast<IdExpr *>(expr->expr.get())) {
-    if (auto v = dynamic_cast<VarContextItem *>(ctx.find(e->value).get())) {
+    if (auto v =
+            dynamic_cast<VarContextItem *>(ctx.find(e->value, true).get())) {
       RETURN(seq::VarPtrExpr, v->getVar());
     } else {
       ERROR("identifier '{}' not found", e->value);

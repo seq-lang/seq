@@ -119,7 +119,7 @@ void TransformExprVisitor::visit(const KmerExpr *expr) {
 void TransformExprVisitor::visit(const SeqExpr *expr) {
   if (expr->prefix == "p") {
     this->result =
-        transform(EP(CallExpr, EP(IdExpr, "seq"), EP(StringExpr, expr->value)));
+        transform(EP(CallExpr, EP(IdExpr, "pseq"), EP(StringExpr, expr->value)));
   } else if (expr->prefix == "s") {
     RETURN(SeqExpr, expr->value, expr->prefix);
   } else {

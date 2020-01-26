@@ -78,7 +78,8 @@ struct ExprStmt : public Stmt {
 
 struct AssignStmt : public Stmt {
   ExprPtr lhs, rhs, type;
-  AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr);
+  bool mustExist;
+  AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr, bool m = false);
   string to_string() const override;
   ACCEPT_VISITOR;
 };

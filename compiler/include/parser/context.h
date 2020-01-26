@@ -14,6 +14,7 @@ using std::shared_ptr;
 using std::stack;
 using std::string;
 using std::unordered_map;
+using std::vector;
 using std::unordered_set;
 
 template <typename T> class VTable {
@@ -21,8 +22,16 @@ template <typename T> class VTable {
 
 protected:
   VTableMap map;
-  stack<unordered_set<string>> stack;
+  stack<vector<string>> stack;
   unordered_set<string> flags;
+
+  shared_ptr<T> find(const string &name) const {
+    auto it = map.find(name);
+    if (it == map.end()) {
+      return nullptr;
+    }
+    return it->second.top();
+  }
 
 public:
   typename VTableMap::iterator begin() { return map.begin(); }
@@ -31,22 +40,15 @@ public:
   void add(const string &name, shared_ptr<T> var) {
     map[name].push(var);
     // DBG("adding {}", name);
-    stack.top().insert(name);
+    stack.top().push_back(name);
   }
-  void addBlock() { stack.push(unordered_set<string>()); }
+  void addBlock() { stack.push(vector<string>()); }
   void popBlock() {
     for (auto &name : stack.top()) {
       // DBG("removing {}", name);
       remove(name);
     }
     stack.pop();
-  }
-  virtual shared_ptr<T> find(const string &name) const {
-    auto it = map.find(name);
-    if (it == map.end()) {
-      return nullptr;
-    }
-    return it->second.top();
   }
   virtual void remove(const string &name) {
     auto i = map.find(name);
@@ -147,8 +149,9 @@ public:
   Context(seq::SeqModule *module, ImportCache &cache,
           const string &filename = ""); // initialize standard library
   virtual ~Context() {}
-  shared_ptr<ContextItem> find(const string &name) const override;
+  shared_ptr<ContextItem> find(const string &name, bool onlyLocal = false) const;
   seq::TryCatch *getTryCatch() const;
+  void setTryCatch(seq::TryCatch *t);
   seq::Block *getBlock() const;
   seq::SeqModule *getModule() const;
   seq::BaseFunc *getBase() const;

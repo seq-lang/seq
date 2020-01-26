@@ -49,7 +49,7 @@ Context &CodegenStmtVisitor::getContext() { return ctx; }
 
 seq::Stmt *CodegenStmtVisitor::transform(const StmtPtr &stmt) {
   // if (stmt->getSrcInfo().file.find("scratch.seq") != string::npos)
-  // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
+    // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
   CodegenStmtVisitor v(ctx);
   stmt->accept(v);
   if (v.result) {
@@ -61,15 +61,11 @@ seq::Stmt *CodegenStmtVisitor::transform(const StmtPtr &stmt) {
 }
 
 seq::Expr *CodegenStmtVisitor::transform(const ExprPtr &expr) {
-  CodegenExprVisitor v(ctx, *this);
-  expr->accept(v);
-  return v.result;
+  return CodegenExprVisitor(ctx, *this).transform(expr);
 }
 
 seq::Pattern *CodegenStmtVisitor::transform(const PatternPtr &expr) {
-  CodegenPatternVisitor v(*this);
-  expr->accept(v);
-  return v.result;
+  return CodegenPatternVisitor(*this).transform(expr);
 }
 
 seq::types::Type *CodegenStmtVisitor::transformType(const ExprPtr &expr) {
@@ -95,19 +91,80 @@ void CodegenStmtVisitor::visit(const ExprStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
-
+  auto getAtomicOp = [](const string &op) {
+    if (op == "+") {
+      return seq::AtomicExpr::Op::ADD;
+    } else if (op == "-") {
+      return seq::AtomicExpr::Op::SUB;
+    } else if (op == "&") {
+      return seq::AtomicExpr::Op::AND;
+    } else if (op == "|") {
+      return seq::AtomicExpr::Op::OR;
+    } else if (op == "^") {
+      return seq::AtomicExpr::Op::XOR;
+    } else if (op == "min") {
+      return seq::AtomicExpr::Op::MIN;
+    } else if (op == "max") {
+      return seq::AtomicExpr::Op::MAX;
+    } else { // TODO: XCHG, NAND
+      return (seq::AtomicExpr::Op)0;
+    }
+  };
   // TODO: JIT
+  /* Currently, a var can shadow a function or a type, but not another var. */
   if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
     auto var = i->value;
-    if (auto v =
-            dynamic_cast<VarContextItem *>(ctx.find(var).get())) { // assignment
-      RETURN(seq::Assign, v->getVar(), transform(stmt->rhs));
-    } else {
+    if (auto v = dynamic_cast<VarContextItem *>(ctx.find(var, true).get())) {
+      // Variable update
+      bool isAtomic = v->isGlobal() && ctx.hasFlag("atomic");
+      seq::AtomicExpr::Op op = (seq::AtomicExpr::Op)0;
+      seq::Expr *expr = nullptr;
+      if (isAtomic) {
+        if (auto b = dynamic_cast<BinaryExpr *>(stmt->rhs.get())) {
+          // First possibility: += / -= / other inplace operators
+          op = getAtomicOp(b->op);
+          if (b->inPlace && op) {
+            expr = transform(b->rexpr);
+          }
+        } else if (auto b = dynamic_cast<CallExpr *>(stmt->rhs.get())) {
+          // Second possibility: min/max operator
+          if (auto i = dynamic_cast<IdExpr *>(b->expr.get())) {
+            if (b->args.size() == 2 &&
+                (i->value == "min" || i->value == "max")) {
+              string expected = format("(#id {})", var);
+              if (b->args[0].value->to_string() == expected) {
+                expr = transform(b->args[1].value);
+              } else if (b->args[1].value->to_string() == expected) {
+                expr = transform(b->args[0].value);
+              }
+              if (expr) {
+                op = getAtomicOp(i->value);
+              }
+            }
+          }
+        }
+      }
+      if (op && expr) {
+        RETURN(seq::ExprStmt, new seq::AtomicExpr(op, v->getVar(), expr));
+      } else {
+        auto s = new seq::Assign(v->getVar(), transform(stmt->rhs));
+        if (isAtomic) {
+          s->setAtomic();
+        }
+        this->result = s;
+        return;
+      }
+    } else if (!stmt->mustExist) {
+      // New variable
       auto varStmt =
           new seq::VarStmt(transform(stmt->rhs),
                            stmt->type ? transformType(stmt->type) : nullptr);
+      if (ctx.isToplevel()) {
+        varStmt->getVar()->setGlobal();
+      }
       ctx.add(var, varStmt->getVar());
       this->result = varStmt;
+      return;
     }
   } else if (auto i = dynamic_cast<DotExpr *>(stmt->lhs.get())) {
     RETURN(seq::AssignMember, transform(i->expr), i->member,
@@ -115,9 +172,8 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
   } else if (auto i = dynamic_cast<IndexExpr *>(stmt->lhs.get())) {
     RETURN(seq::AssignIndex, transform(i->expr), transform(i->index),
            transform(stmt->rhs));
-  } else {
-    ERROR("invalid assignment");
   }
+  ERROR("invalid assignment");
 }
 
 void CodegenStmtVisitor::visit(const AssignEqStmt *stmt) {
@@ -126,7 +182,8 @@ void CodegenStmtVisitor::visit(const AssignEqStmt *stmt) {
 
 void CodegenStmtVisitor::visit(const DelStmt *stmt) {
   if (auto expr = dynamic_cast<IdExpr *>(stmt->expr.get())) {
-    if (auto v = dynamic_cast<VarContextItem *>(ctx.find(expr->value).get())) {
+    if (auto v =
+            dynamic_cast<VarContextItem *>(ctx.find(expr->value, true).get())) {
       ctx.remove(expr->value);
       RETURN(seq::Del, v->getVar());
     }
@@ -293,9 +350,12 @@ void CodegenStmtVisitor::visit(const ExternImportStmt *stmt) {
 
 void CodegenStmtVisitor::visit(const TryStmt *stmt) {
   auto r = new seq::TryCatch();
+  auto oldTryCatch = ctx.getTryCatch();
+  ctx.setTryCatch(r);
   ctx.addBlock(r->getBlock());
   transform(stmt->suite);
   ctx.popBlock();
+  ctx.setTryCatch(oldTryCatch);
   int varIdx = 0;
   for (auto &c : stmt->catches) {
     ctx.addBlock(r->addCatch(c.exc ? transformType(c.exc) : nullptr));
@@ -312,15 +372,20 @@ void CodegenStmtVisitor::visit(const TryStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const GlobalStmt *stmt) {
-  if (auto var = dynamic_cast<VarContextItem *>(ctx.find(stmt->var).get())) {
-    if (var->isGlobal()) {
-      if (var->getBase() != ctx.getBase()) {
-        ctx.add(stmt->var, var->getVar(), true);
-      }
-      return;
-    }
+  if (ctx.isToplevel()) {
+    ERROR("can only use global within function blocks");
   }
-  error("identifier '{}' not found", stmt->var);
+  if (auto var = dynamic_cast<VarContextItem *>(ctx.find(stmt->var).get())) {
+    if (!var->isGlobal()) { // must be toplevel!
+      ERROR("can only mark toplevel variables as global");
+    }
+    if (var->getBase() == ctx.getBase()) {
+      ERROR("can only mark outer variables as global");
+    }
+    ctx.add(stmt->var, var->getVar(), true);
+  } else {
+    ERROR("identifier '{}' not found", stmt->var);
+  }
 }
 
 void CodegenStmtVisitor::visit(const ThrowStmt *stmt) {
@@ -330,7 +395,7 @@ void CodegenStmtVisitor::visit(const ThrowStmt *stmt) {
 void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) {
   if (auto e = dynamic_cast<IndexExpr *>(stmt->expr.get())) {
     if (auto f = dynamic_cast<seq::Func *>(ctx.getBase())) {
-      auto r = new seq::Prefetch({transform(e->expr)}, {transform(e->index)});
+      auto r = new seq::Prefetch({transform(e->index)}, {transform(e->expr)});
       f->sawPrefetch(r);
       this->result = r;
     } else {
