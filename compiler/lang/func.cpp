@@ -229,6 +229,9 @@ void Func::sawPrefetch(Prefetch *prefetch) {
     throw exc::SeqException(
         "function cannot perform both prefetch and inter-sequence alignment",
         getSrcInfo());
+  if (this->prefetch)
+    return;
+
   this->prefetch = true;
   gen = true;
   outType = types::GenType::get(outType, types::GenType::GenTypeKind::PREFETCH);

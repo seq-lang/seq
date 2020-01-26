@@ -261,8 +261,11 @@ class BAM:
         self._ensure_open()
         while _C.seq_hts_sam_itr_next(self.file, self.itr, self.aln) >= 0:
             yield self.aln
-
         self.close()
+
+    def __blocks__(self: BAM, size: int):
+        from bio.block import _blocks
+        return _blocks(self.__iter__(), size)
 
     def __seqs__(self: BAM):
         for aln in self._iter():
@@ -352,6 +355,10 @@ class SAM:
     def __iter__(self: SAM):
         for aln in self._iter():
             yield SAMRecord(aln)
+
+    def __blocks__(self: SAM, size: int):
+        from bio.block import _blocks
+        return _blocks(self.__iter__(), size)
 
     def close(self: SAM):
         if self.aln:

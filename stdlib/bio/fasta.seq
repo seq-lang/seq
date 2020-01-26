@@ -54,6 +54,10 @@ type FASTA(file: gzFile, fai: list[int], names: list[str]):
             yield (self.names[-1], seq(p, n))
         self.close()
 
+    def __blocks__(self: FASTA, size: int):
+        from bio.block import _blocks
+        return _blocks(self.__iter__(), size)
+
     def close(self: FASTA):
         self.file.close()
 
