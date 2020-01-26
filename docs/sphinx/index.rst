@@ -31,3 +31,11 @@ There are many great bioinformatics libraries on the market today, including `Bi
     *What about interoperability with other languages and frameworks?*
 
 Interoperability is and will continue to be a priority for the Seq project. We don't want using Seq to render you unable to use all the other great frameworks and libraries that exist. Seq already supports interoperability with C/C++ and Python (see :ref:`interop`), which we are in the process of expanding (e.g. by allowing Python libraries to be written in Seq).
+
+   *I want to contribute! How do I get started?*
+
+Great! Check out our `contribution guidelines <https://github.com/seq-lang/seq/blob/master/CONTRIBUTING.md>`_ and `open issues <https://github.com/seq-lang/seq/issues>`_ to get started. Also don't hesitate to drop by our `Gitter chatroom <https://gitter.im/seq-lang/Seq?utm_source=share-link&utm_medium=link&utm_campaign=share-link>`_ if you have any questions.
+
+   *What is planned for the future?*
+
+See the `roadmap <https://github.com/seq-lang/seq/wiki/Roadmap>`_ for information about this.
