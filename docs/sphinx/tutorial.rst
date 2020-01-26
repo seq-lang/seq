@@ -123,6 +123,8 @@ Common formats like FASTQ, FASTA, SAM, BAM and CRAM are supported.
 
 Sequences can be reverse complemented in-place using the ``revcomp()`` method; both sequence and :math:`k`-mer types also support the ``~`` operator for reverse complementation, as shown above.
 
+.. _match:
+
 Sequence matching
 ^^^^^^^^^^^^^^^^^
 
@@ -185,6 +187,8 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
 - Example (c) counts how many times each base appears in the given sequence.
 
 Sequence patterns consist of literal ``ACGT`` characters, single-base wildcards (``_``) or "zero or more" wildcards (``...``) that match zero or more of any base.
+
+.. _pipeline:
 
 Pipelines
 ^^^^^^^^^
@@ -255,6 +259,8 @@ Here is the list of options supported by the ``align()`` method; all are optiona
 
 Note that all costs/scores are positive by convention.
 
+.. _interalign:
+
 Inter-sequence alignment
 """"""""""""""""""""""""
 
@@ -271,6 +277,8 @@ Seq uses `ksw2 <https://github.com/lh3/ksw2>`_ as its default alignment kernel. 
     zip(seqs('queries.txt'), seqs('targets.txt')) |> process
 
 Internally, the Seq compiler performs pipeline transformations when the ``inter_align`` function is used within a function tagged ``@inter_align``, so as to suspend execution of the calling function, batch sequences that need to be aligned, perform inter-sequence alignment and return the results to the suspended functions. Note that the inter-sequence alignment kernel used by Seq is adapted from `BWA-MEM2 <https://github.com/bwa-mem2/bwa-mem2>`_.
+
+.. _prefetch:
 
 Genomic index prefetching
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -398,6 +406,8 @@ Seq provides arbitrary-width signed and unsigned integers up to ``Int[512]`` and
 The ``ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``ptr[byte]`` is equivalent to ``char*`` in C). The ``array[T]`` type represents a fixed-length array (essentially a pointer with a length).
 
 Seq also provides ``__ptr__`` for obtaining a pointer to a variable (as in ``__ptr__(myvar)``) and ``__array__`` for declaring stack-allocated arrays (as in ``__array__[int](10)``).
+
+.. _interop:
 
 C/C++ and Python interoperability
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
