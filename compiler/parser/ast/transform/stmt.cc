@@ -112,7 +112,8 @@ void TransformStmtVisitor::visit(const ExprStmt *stmt) {
   RETURN(ExprStmt, transform(stmt->expr));
 }
 
-StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs) {
+StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
+                                            const Expr *type) {
   // fmt::print("## ass {} = {}\n", *lhs, *rhs);
   if (auto l = dynamic_cast<const IndexExpr *>(lhs)) {
     // vector<ExprPtr> args;
@@ -126,7 +127,8 @@ StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs) {
   } else if (auto l = dynamic_cast<const DotExpr *>(lhs)) {
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const IdExpr *>(lhs)) {
-    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
+    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs),
+               transform(type));
   } else {
     error(lhs->getSrcInfo(), "invalid assignment");
     return nullptr;
@@ -197,18 +199,17 @@ void TransformStmtVisitor::visit(const AssignStmt *stmt) {
   // *(a, *b), c = this
   // a = *iterable
 
+  vector<StmtPtr> stmts;
   if (stmt->type) {
     if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
-      // TODO: wrap it in the constructor?
-      // TODO: check list/sets etc
-      ERROR("TODO type annotaions");
+      stmts.push_back(
+          addAssignment(stmt->lhs.get(), stmt->rhs.get(), stmt->type.get()));
     } else {
       ERROR("only single target can be annotated");
     }
+  } else {
+    processAssignment(stmt->lhs.get(), stmt->rhs.get(), stmts);
   }
-
-  vector<StmtPtr> stmts;
-  processAssignment(stmt->lhs.get(), stmt->rhs.get(), stmts);
   if (stmts.size() == 1) {
     this->result = move(stmts[0]);
   } else {

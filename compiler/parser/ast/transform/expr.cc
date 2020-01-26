@@ -92,7 +92,8 @@ void TransformExprVisitor::visit(const FStringExpr *expr) {
         string code = expr->value.substr(brace_start, i - brace_start);
         auto offset = expr->getSrcInfo();
         offset.col += i;
-        items.push_back(transform(parse_expr(code, offset)));
+        items.push_back(EP(CallExpr, EP(IdExpr, "str"),
+                           transform(parse_expr(code, offset))));
       }
       brace_start = i + 1;
     }
@@ -105,8 +106,8 @@ void TransformExprVisitor::visit(const FStringExpr *expr) {
         EP(StringExpr,
            expr->value.substr(brace_start, expr->value.size() - brace_start))));
   }
-  this->result = transform(
-      EP(CallExpr, EP(DotExpr, EP(IdExpr, "str"), "cat"), move(items)));
+  this->result = transform(EP(CallExpr, EP(DotExpr, EP(IdExpr, "str"), "cat"),
+                              EP(ListExpr, move(items))));
 }
 
 void TransformExprVisitor::visit(const KmerExpr *expr) {
@@ -118,8 +119,8 @@ void TransformExprVisitor::visit(const KmerExpr *expr) {
 
 void TransformExprVisitor::visit(const SeqExpr *expr) {
   if (expr->prefix == "p") {
-    this->result =
-        transform(EP(CallExpr, EP(IdExpr, "pseq"), EP(StringExpr, expr->value)));
+    this->result = transform(
+        EP(CallExpr, EP(IdExpr, "pseq"), EP(StringExpr, expr->value)));
   } else if (expr->prefix == "s") {
     RETURN(SeqExpr, expr->value, expr->prefix);
   } else {

@@ -211,10 +211,8 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(
         testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
                         "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
-                        // Assertion failed: (done && contents), function clone, file /Users/inumanag/Desktop/Projekti/seq/cpp/compiler/types/ref.cpp, line 349.
-                        "stdlib/sort_test.seq",
-                        "stdlib/random_test.seq", "stdlib/heapq_test.seq",
-                        "stdlib/statistics_test.seq"),
+                        "stdlib/sort_test.seq", "stdlib/random_test.seq",
+                        "stdlib/heapq_test.seq", "stdlib/statistics_test.seq"),
         testing::Values(true, false)),
     getTestNameFromParam);
 

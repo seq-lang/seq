@@ -410,8 +410,7 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   auto f = new seq::Func();
   f->setName(stmt->name);
   f->setSrcInfo(stmt->getSrcInfo());
-  if (ctx.isToplevel() && ctx.getEnclosingType()) {
-    // Make sure that it is toplevel--- otherwise it is a nested function
+  if (ctx.getEnclosingType()) {
     ctx.getEnclosingType()->addMethod(stmt->name, f, false);
   } else {
     if (!ctx.isToplevel()) {
@@ -482,7 +481,12 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   for (auto &arg : stmt->args) {
     ctx.add(arg.name, f->getArgVar(arg.name));
   }
+
+  auto oldEnclosing = ctx.getEnclosingType();
+  // ensure that nested functions do not end up as class methods
+  ctx.setEnclosingType(nullptr);
   transform(stmt->suite);
+  ctx.setEnclosingType(oldEnclosing);
   ctx.popBlock();
   RETURN(seq::FuncStmt, f);
 }

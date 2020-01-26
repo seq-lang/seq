@@ -17,7 +17,8 @@ class TransformStmtVisitor : public StmtVisitor {
   vector<StmtPtr> prependStmts;
   StmtPtr result{nullptr};
 
-  StmtPtr addAssignment(const Expr *lhs, const Expr *rhs);
+  StmtPtr addAssignment(const Expr *lhs, const Expr *rhs,
+                        const Expr *type = nullptr);
   void processAssignment(const Expr *lhs, const Expr *rhs,
                          vector<StmtPtr> &stmts);
 
