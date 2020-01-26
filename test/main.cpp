@@ -189,7 +189,7 @@ INSTANTIATE_TEST_SUITE_P(
                                      "core/arithmetic.seq", "core/big.seq",
                                      "core/bwtsa.seq", "core/containers.seq",
                                      "core/empty.seq", "core/exceptions.seq",
-                                     //"core/formats.seq",
+                                     "core/formats.seq",
                                      "core/generators.seq", "core/generics.seq",
                                      "core/helloworld.seq", "core/kmers.seq",
                                      "core/match.seq", "core/proteins.seq",
