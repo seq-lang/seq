@@ -198,7 +198,8 @@ single_statement:
   | IF expr COLON suite { $loc, If [Some $2, $4] }
   | IF expr COLON suite elif_suite { $loc, If ((Some $2, $4) :: $5) }
   | MATCH expr COLON NL INDENT case_suite DEDENT { $loc, Match ($2, $6) }
-  | decl_statement | try_statement | with_statement | class_statement { $1 }
+  /* | decl_statement  */
+  | try_statement | with_statement | class_statement { $1 }
 suite:
   | FLNE(SEMICOLON, small_statement) NL { List.concat $1 }
   | NL INDENT statement+ DEDENT { List.concat $3 }
@@ -279,16 +280,16 @@ func_ret_type: OF expr { $2 }
 extern_from: FROM dot_term { $2 }
 extern_what:
   | ID LP FL(COMMA, extern_param) RP func_ret_type? extern_as?
-  { let e_typ = match $5 with Some typ -> typ | None -> $loc($4), Id "void" in
-    $loc, { lang = ""; e_from = None; e_name = $1; e_typ; e_args = $3; e_as = $6 } }
+    { let e_typ = match $5 with Some typ -> typ | None -> $loc($4), Id "void" in
+      $loc, { lang = ""; e_from = None; e_name = $1; e_typ; e_args = $3; e_as = $6 } }
 extern_param:
   | expr { $loc, { name = ""; typ = Some $1; default = None } }
   | ID param_type { $loc, { name = $1; typ = Some $2; default = None } }
 extern_as: AS ID { $2 }
 decorator: AT ID NL { $loc, $2 } /* AT dot_term NL | AT dot_term LP FL(COMMA, expr) RP NL */
 pyfunc:
-  /* TODO: C++ :: Seq function (def foo [ [type+] ] (param+) [ -> return ]) */
-  | PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON suite { [$loc, Pass ()] }
+  | PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON INDENT STRING DEDENT
+   { [$loc, PyDef ($2, $6, $4, $9)] }
 
 class_statement: cls | extend | typ { $1 }
 cls:

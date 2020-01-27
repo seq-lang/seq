@@ -26,7 +26,6 @@ struct Expr : public seq::SrcObject {
     return out << c.to_string();
   }
 };
-
 typedef unique_ptr<Expr> ExprPtr;
 
 struct EmptyExpr : public Expr {

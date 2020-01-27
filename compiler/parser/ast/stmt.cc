@@ -182,6 +182,17 @@ string FunctionStmt::to_string() const {
       *suite);
 }
 
+PyDefStmt::PyDefStmt(string n, ExprPtr r, vector<Param> a, const string &c)
+    : name(n), ret(move(r)), args(move(a)), code(c) {}
+string PyDefStmt::to_string() const {
+  string as;
+  for (auto &a : args)
+    as += " " + a.to_string();
+  return format("(#pydef {}{}{} {})", name,
+                ret ? " :ret " + ret->to_string() : "",
+                args.size() ? " :args" + as : "", escape(code));
+}
+
 ClassStmt::ClassStmt(bool i, string n, vector<string> g, vector<Param> a,
                      StmtPtr s)
     : isType(i), name(n), generics(g), args(move(a)), suite(move(s)) {}

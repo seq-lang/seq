@@ -49,7 +49,7 @@ Context &CodegenStmtVisitor::getContext() { return ctx; }
 
 seq::Stmt *CodegenStmtVisitor::transform(const StmtPtr &stmt) {
   // if (stmt->getSrcInfo().file.find("scratch.seq") != string::npos)
-    // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
+  // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
   CodegenStmtVisitor v(ctx);
   stmt->accept(v);
   if (v.result) {
@@ -583,4 +583,20 @@ void CodegenStmtVisitor::visit(const ExtendStmt *stmt) {
   transform(stmt->suite);
   ctx.popBlock();
   ctx.setEnclosingType(nullptr);
+}
+
+void CodegenStmtVisitor::visit(const YieldFromStmt *stmt) {
+  ERROR("unexpected yieldFrom statement");
+}
+
+void CodegenStmtVisitor::visit(const WithStmt *stmt) {
+  ERROR("unexpected with statement");
+}
+
+void CodegenStmtVisitor::visit(const PyDefStmt *stmt) {
+  ERROR("unexpected pyDef statement");
+}
+
+void CodegenStmtVisitor::visit(const DeclareStmt *stmt) {
+  ERROR("unexpected declare statement");
 }

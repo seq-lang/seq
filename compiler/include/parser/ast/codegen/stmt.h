@@ -53,4 +53,8 @@ public:
   virtual void visit(const FunctionStmt *) override;
   virtual void visit(const ClassStmt *) override;
   virtual void visit(const AssignEqStmt *) override;
+  virtual void visit(const YieldFromStmt *) override;
+  virtual void visit(const WithStmt *) override;
+  virtual void visit(const PyDefStmt *) override;
+  virtual void visit(const DeclareStmt *) override;
 };

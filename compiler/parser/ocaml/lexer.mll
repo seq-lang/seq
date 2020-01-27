@@ -46,8 +46,8 @@
             | 'v' -> 1, Char.chr 11
             | 'x' ->
               let n =
-                if i < (l - 3) then 
-                try Some (int_of_string ("0x" ^ (String.sub s (i + 2) 2))) 
+                if i < (l - 3) then
+                try Some (int_of_string ("0x" ^ (String.sub s (i + 2) 2)))
                 with Failure _ -> None
                 else None
               in

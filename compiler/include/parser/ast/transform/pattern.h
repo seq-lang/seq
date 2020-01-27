@@ -8,13 +8,6 @@
 #include "parser/ast/pattern.h"
 #include "parser/ast/transform/stmt.h"
 
-
-using std::ostream;
-using std::pair;
-using std::string;
-using std::unique_ptr;
-using std::vector;
-
 class TransformPatternVisitor : public PatternVisitor {
   TransformStmtVisitor &stmtVisitor;
   PatternPtr result;

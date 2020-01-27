@@ -388,6 +388,10 @@ unique_ptr<Stmt> parse_stmt(value val) {
                             parse_optional(Field(j, 1), parse_string));
                       }),
            parse_stmt_list(Field(t, 1)));
+  case 30:
+    Return(PyDef, parse_string(Field(t, 0)),
+           parse_optional(Field(t, 1), parse_expr),
+           parse_list(Field(t, 2), parse_param), parse_string(Field(t, 3)));
   default: {
     // fprintf(stderr, "[s] %d\n", Tag_val(v));
     throw ParsingError("[s] tag variant mismatch ...");

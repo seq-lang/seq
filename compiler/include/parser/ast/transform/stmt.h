@@ -14,13 +14,13 @@
 #include "parser/context.h"
 
 class TransformStmtVisitor : public StmtVisitor {
-  vector<StmtPtr> prependStmts;
+  std::vector<StmtPtr> prependStmts;
   StmtPtr result{nullptr};
 
   StmtPtr addAssignment(const Expr *lhs, const Expr *rhs,
                         const Expr *type = nullptr);
   void processAssignment(const Expr *lhs, const Expr *rhs,
-                         vector<StmtPtr> &stmts);
+                         std::vector<StmtPtr> &stmts);
 
 public:
   static StmtPtr apply(const StmtPtr &s);
@@ -64,4 +64,5 @@ public:
   virtual void visit(const AssignEqStmt *) override;
   virtual void visit(const YieldFromStmt *) override;
   virtual void visit(const WithStmt *) override;
+  virtual void visit(const PyDefStmt *) override;
 };

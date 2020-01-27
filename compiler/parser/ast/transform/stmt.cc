@@ -368,8 +368,44 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
     }
     RETURN(ExternImportStmt, stmt->name, transform(stmt->from),
            transform(stmt->ret), move(args), stmt->lang);
+  } else if (stmt->lang == "py") {
+    vector<StmtPtr> stmts;
+    auto call =
+        EPX(stmt, CallExpr, // _py_import(LIB)[WHAT].call ( ...
+            EPX(stmt, DotExpr,
+                EPX(stmt, IndexExpr,
+                    EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_py_import"),
+                        transform(stmt->from)),
+                    EPX(stmt, IdExpr, stmt->name.first)),
+                "call"),
+            EPX(stmt, CallExpr, // ... x.__to_py__() )
+                EPX(stmt, DotExpr, EPX(stmt, IdExpr, "x"), "__to_py__")));
+    bool isVoid = true;
+    if (stmt->ret) {
+      if (auto f = dynamic_cast<IdExpr *>(stmt->ret.get())) {
+        isVoid = f->value == "void";
+      } else {
+        isVoid = false;
+      }
+    }
+    if (!isVoid) {
+      // return TYP.__from_py__(call)
+      stmts.push_back(
+          SP(ReturnStmt,
+             EPX(stmt, CallExpr,
+                 EPX(stmt, DotExpr, transform(stmt->ret), "__from_py__"),
+                 move(call))));
+    } else {
+      stmts.push_back(SP(ExprStmt, move(call)));
+    }
+    vector<Param> params;
+    params.push_back({"x", nullptr, nullptr});
+    RETURN(FunctionStmt,
+           stmt->name.second != "" ? stmt->name.second : stmt->name.first,
+           transform(stmt->ret), vector<string>(), move(params),
+           SP(SuiteStmt, move(stmts)), vector<string>{"pyhandle"});
   } else {
-    ERROR("not yet supported");
+    ERROR("language {} not yet supported", stmt->lang);
   }
 }
 
@@ -469,47 +505,24 @@ void TransformStmtVisitor::visit(const WithStmt *stmt) {
   ifs.push_back({EPX(stmt, BoolExpr, true), SP(SuiteStmt, move(content))});
   RETURN(IfStmt, move(ifs));
 }
-/*
-with a as b, c as d: ...
 
-->
-
-if True:
-  b = a
-  b.__enter__()
-  try:
-    d = c
-    c.__enter__()
-    try:
-      ...
-    finally:
-      c.__exit__()
-  finally:
-    b.__exit__()
-*/
-// void TransformStmtVisitor::visit(const PyStmt *stmt) {
-//   RETURN(DeclareStmt, Param{stmt->param.name, transform(stmt->param.type),
-//                             transform(stmt->param.deflt)});
-// }
-// pydef
-/*  (* let str = Util.ppl ~sep:"\n" s ~f:(Ast.Stmt.to_string ~pythonic:true
-   ~indent:1) in let p = $7 in
-      (* py.exec ("""def foo(): [ind] ... """) *)
-      (* from __main__ pyimport foo () -> ret *)
-      let v = p, String
-        (sprintf "def %s(%s):\n%s\n"
-          (snd name)
-          (Util.ppl fn_args ~f:(fun (_, { name; _ }) -> name))
-          str) in
-      let s = p, Call (
-        (p, Id "_py_exec"),
-        [p, { name = None; value = v }]) in
-      let typ = opt_val typ ~default:($5, Id "pyobj") in
-      let s' = p, ImportExtern
-        [ { lang = "py"
-          ; e_name = { name = snd name; typ = Some typ; default = None }
-          ; e_args = []
-          ; e_as = None
-          ; e_from = Some (p, Id "__main__") } ]
-      in
-      [ p, Expr s; s' ] *) */
+void TransformStmtVisitor::visit(const PyDefStmt *stmt) {
+  // py.exec(""" str """)
+  vector<string> args;
+  for (auto &a : stmt->args) {
+    args.push_back(a.name);
+  }
+  auto code = stmt->code;
+  code = format("def %s(%s):\n%s\n", stmt->name, fmt::join(args, ", "), stmt->code);
+  vector<StmtPtr> stmts;
+  stmts.push_back(
+      SP(ExprStmt,
+         EPX(stmt, CallExpr,
+             EPX(stmt, DotExpr, EPX(stmt, IdExpr, "py"), "exec"),
+             EPX(stmt, StringExpr, code))));
+  // from __main__ pyimport foo () -> ret
+  stmts.push_back(transform(SP(ExternImportStmt, make_pair(stmt->name, ""),
+                               EPX(stmt, IdExpr, "__main__"),
+                               transform(stmt->ret), vector<Param>(), "py")));
+  RETURN(SuiteStmt, move(stmts));
+}

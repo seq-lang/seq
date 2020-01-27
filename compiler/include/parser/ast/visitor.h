@@ -91,37 +91,39 @@ struct DeclareStmt;
 struct AssignEqStmt;
 struct YieldFromStmt;
 struct WithStmt;
+struct PyDefStmt;
 
 struct StmtVisitor {
-  virtual void visit(const SuiteStmt *){};
-  virtual void visit(const PassStmt *){};
-  virtual void visit(const BreakStmt *){};
-  virtual void visit(const ContinueStmt *){};
-  virtual void visit(const ExprStmt *){};
-  virtual void visit(const AssignStmt *){};
-  virtual void visit(const DelStmt *){};
-  virtual void visit(const PrintStmt *){};
-  virtual void visit(const ReturnStmt *){};
-  virtual void visit(const YieldStmt *){};
-  virtual void visit(const AssertStmt *){};
-  virtual void visit(const TypeAliasStmt *){};
-  virtual void visit(const WhileStmt *){};
-  virtual void visit(const ForStmt *){};
-  virtual void visit(const IfStmt *) {}
-  virtual void visit(const MatchStmt *) {}
-  virtual void visit(const ExtendStmt *) {}
-  virtual void visit(const ImportStmt *) {}
-  virtual void visit(const ExternImportStmt *) {}
-  virtual void visit(const TryStmt *) {}
-  virtual void visit(const GlobalStmt *) {}
-  virtual void visit(const ThrowStmt *) {}
-  virtual void visit(const PrefetchStmt *) {}
-  virtual void visit(const FunctionStmt *) {}
-  virtual void visit(const ClassStmt *) {}
-  virtual void visit(const DeclareStmt *) {}
-  virtual void visit(const AssignEqStmt *) {}
-  virtual void visit(const YieldFromStmt *) {}
-  virtual void visit(const WithStmt *) {}
+  virtual void visit(const SuiteStmt *) = 0;
+  virtual void visit(const PassStmt *) = 0;
+  virtual void visit(const BreakStmt *) = 0;
+  virtual void visit(const ContinueStmt *) = 0;
+  virtual void visit(const ExprStmt *) = 0;
+  virtual void visit(const AssignStmt *) = 0;
+  virtual void visit(const DelStmt *) = 0;
+  virtual void visit(const PrintStmt *) = 0;
+  virtual void visit(const ReturnStmt *) = 0;
+  virtual void visit(const YieldStmt *) = 0;
+  virtual void visit(const AssertStmt *) = 0;
+  virtual void visit(const TypeAliasStmt *) = 0;
+  virtual void visit(const WhileStmt *) = 0;
+  virtual void visit(const ForStmt *) = 0;
+  virtual void visit(const IfStmt *) = 0;
+  virtual void visit(const MatchStmt *) = 0;
+  virtual void visit(const ExtendStmt *) = 0;
+  virtual void visit(const ImportStmt *) = 0;
+  virtual void visit(const ExternImportStmt *) = 0;
+  virtual void visit(const TryStmt *) = 0;
+  virtual void visit(const GlobalStmt *) = 0;
+  virtual void visit(const ThrowStmt *) = 0;
+  virtual void visit(const PrefetchStmt *) = 0;
+  virtual void visit(const FunctionStmt *) = 0;
+  virtual void visit(const ClassStmt *) = 0;
+  virtual void visit(const DeclareStmt *) = 0;
+  virtual void visit(const AssignEqStmt *) = 0;
+  virtual void visit(const YieldFromStmt *) = 0;
+  virtual void visit(const WithStmt *) = 0;
+  virtual void visit(const PyDefStmt *) = 0;
 };
 
 struct StarPattern;
@@ -138,16 +140,16 @@ struct GuardedPattern;
 struct BoundPattern;
 
 struct PatternVisitor {
-  virtual void visit(const StarPattern *){};
-  virtual void visit(const IntPattern *){};
-  virtual void visit(const BoolPattern *){};
-  virtual void visit(const StrPattern *){};
-  virtual void visit(const SeqPattern *){};
-  virtual void visit(const RangePattern *){};
-  virtual void visit(const TuplePattern *){};
-  virtual void visit(const ListPattern *){};
-  virtual void visit(const OrPattern *){};
-  virtual void visit(const WildcardPattern *){};
-  virtual void visit(const GuardedPattern *){};
-  virtual void visit(const BoundPattern *){};
+  virtual void visit(const StarPattern *) = 0;
+  virtual void visit(const IntPattern *) = 0;
+  virtual void visit(const BoolPattern *) = 0;
+  virtual void visit(const StrPattern *) = 0;
+  virtual void visit(const SeqPattern *) = 0;
+  virtual void visit(const RangePattern *) = 0;
+  virtual void visit(const TuplePattern *) = 0;
+  virtual void visit(const ListPattern *) = 0;
+  virtual void visit(const OrPattern *) = 0;
+  virtual void visit(const WildcardPattern *) = 0;
+  virtual void visit(const GuardedPattern *) = 0;
+  virtual void visit(const BoundPattern *) = 0;
 };

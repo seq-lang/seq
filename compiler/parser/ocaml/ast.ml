@@ -82,6 +82,7 @@ type tstmt =
   | AssignEq of (texpr ann * texpr ann * string)
   | YieldFrom of texpr ann
   | With of ((texpr ann * string option) list * tstmt ann list)
+  | PyDef of (string * texpr ann option * param ann list * string)
 
 and eimport =
   { lang : string

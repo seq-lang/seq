@@ -68,7 +68,7 @@ link_directories(${OCAML_STDLIB_PATH})
 
 # Menhir grammar generation: menhir grammar.mly --base grammar && rm grammar.mli
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/ocaml/seqparser.o")
-add_custom_command(OUTPUT ${LIB_SEQPARSE}
+add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
                    COMMAND cp -r ${CMAKE_SOURCE_DIR}/compiler/parser/ocaml .
                    COMMAND cd ocaml && ocamllex -q -o lexer.ml lexer.mll
                    COMMAND cd ocaml && ocamlopt 

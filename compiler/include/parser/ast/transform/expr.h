@@ -9,11 +9,10 @@
 
 #include "parser/ast/expr.h"
 #include "parser/ast/stmt.h"
+#include "parser/ast/transform/stmt.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
-
-class TransformStmtVisitor;
 
 class TransformExprVisitor : public ExprVisitor {
   ExprPtr result{nullptr};

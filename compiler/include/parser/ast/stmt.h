@@ -241,6 +241,16 @@ struct FunctionStmt : public Stmt {
   ACCEPT_VISITOR;
 };
 
+struct PyDefStmt : public Stmt {
+  string name;
+  ExprPtr ret;
+  vector<Param> args;
+  string code;
+  PyDefStmt(string n, ExprPtr r, vector<Param> a, const string &c);
+  string to_string() const override;
+  ACCEPT_VISITOR;
+};
+
 struct ClassStmt : public Stmt {
   bool isType;
   string name;
