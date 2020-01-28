@@ -828,9 +828,10 @@ void TryCatch::codegen0(BasicBlock *&block) {
         var->store(base, obj, catchBlock0);
       }
 
-      catchBlocks[i]->codegen(catchBlock0);
       builder.SetInsertPoint(catchBlock0);
       builder.CreateStore(excStateCaught, excFlag);
+      catchBlocks[i]->codegen(catchBlock0);
+      builder.SetInsertPoint(catchBlock0); // could be different after previous codegen
       builder.CreateBr(finallyStart);
     }
   }
