@@ -42,11 +42,16 @@ extend seq:
         return self._cmp(other) >= 0
 
     def __str__(self: seq):
-        n = len(self)
-        p = cobj(n)
+        if self.len >= 0:
+            return str(self.ptr, self.len)
+        n = -self.len
+        p = ptr[byte](n)
         for i in range(n):
             p[i] = self._at(i)
         return str(p, n)
+
+    def __contains__(self: seq, other: seq):
+        return str(other) in str(self)
 
     def __len__(self: seq):
         return abs(self.len)

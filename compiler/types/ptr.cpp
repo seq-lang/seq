@@ -52,6 +52,14 @@ void types::PtrType::initOps() {
        },
        false},
 
+      {"__int__",
+       {},
+       Int,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreatePtrToInt(self, seqIntLLVM(b.getContext()));
+       },
+       false},
+
       {"__copy__",
        {},
        this,

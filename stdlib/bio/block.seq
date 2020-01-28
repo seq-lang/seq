@@ -1,0 +1,43 @@
+class Block[T]:
+    _data: ptr[T]
+    _size: int
+
+    def __init__(self: Block[T], size: int):
+        self._data = ptr[T](size)
+        self._size = 0
+
+    def __iter__(self: Block[T]):
+        data = self._data
+        size = self._size
+        i = 0
+        while i < size:
+            yield data[i]
+            i += 1
+
+    def __len__(self: Block[T]):
+        return self._size
+
+    def __bool__(self: Block[T]):
+        return len(self) != 0
+
+    def __str__(self: Block[T]):
+        return f'<block of size {self._size}>'
+
+    def _add(self: Block[T], elem: T):
+        self._data[self._size] = elem
+        self._size += 1
+
+def _blocks[T](g: generator[T], size: int):
+    b = Block[T](size)
+    for a in g:
+        if len(b) == size:
+            yield b
+            b = Block[T](size)
+        b._add(a)
+    if b:
+        yield b
+
+def blocks(x, size: int):
+    if size <= 0:
+        raise ValueError(f"invalid block size: {size}")
+    return x.__blocks__(size)

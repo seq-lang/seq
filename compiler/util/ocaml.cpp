@@ -606,6 +606,13 @@ FOREIGN void set_pos(SrcObject *obj, char *f, int l, int c, int len) {
   free(f);
 }
 
+FOREIGN void set_func_pos(Func *func, char *f, int l, int c, int len) {
+  if (!func)
+    return;
+  func->setSrcInfo(SrcInfo(string(f), l, c, len));
+  free(f);
+}
+
 FOREIGN seq_srcinfo get_pos(SrcObject *obj) {
   if (!obj) {
     return seq_srcinfo{(char *)"", 0, 0, 0};

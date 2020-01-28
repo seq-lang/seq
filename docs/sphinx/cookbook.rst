@@ -84,7 +84,7 @@ k-mer minimizer
             if kmer < kmer_min: kmer_min = kmer
         return kmer_min
 
-    print minimizer[Kmer[10]](s)
+    print minimizer[Kmer[10]](s'ACGTACGTACGT')
 
 Count bases
 -----------
@@ -196,7 +196,7 @@ Parallel FASTQ processing
 
     # Sometimes batching reads into blocks can improve performance,
     # especially if each is quick to process.
-    FASTQ('reads.fq') |> iter |> block(1000) ||> process
+    FASTQ('reads.fq') |> blocks(size=1000) ||> iter |> process
 
 Reading SAM/BAM/CRAM
 --------------------

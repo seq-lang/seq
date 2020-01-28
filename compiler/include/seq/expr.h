@@ -272,6 +272,7 @@ private:
 
 public:
   explicit VarExpr(Var *var, bool atomic = false);
+  Var *getVar();
   void setAtomic();
   Var *getVar() const;
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;

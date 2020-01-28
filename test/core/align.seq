@@ -30,4 +30,35 @@ def align_test():
             assert a.score == 16102
             assert str(a.cigar) == '1M155I4M63I5M103I4M56I3M6I4M192I37M1I85M1I232M1D559M1I6M1D550M1I2M1I146M2D3M1I3M1I132M1I3M1D40M3D13M1I1M1I335M3D4M1I3M2I342M1I52M1D13M3D1M2I52M1D592M1I3M1D485M1I5M1D974M3D4M3I230M1I59M1I156M1I31M1D98M1D26M14D329M3D7M3I1203M1I4M1D70M1I345M1I9M1D398M7D8M8D1M1D9M3D2M1I2M1D390M1D5M1I193M1D6M1I195M1I7M1D1826M1I10M1D1256M1I49M1I157M3I5M3D48M2D1M1D3M3I1203M1D2M2I1M1D44M2I2M1D2M1D38M2I16M2D2081M1I3M1D50M1I3M1D43M5D57M1D54M4I19M1D39M2I8M1D7M1D22M1D5M1D4M1I5M1D2M2I29M2D20M1I13M1I1M2D8M1I45M1I15M3I4M2D17M1I56M1I2M1D131M1D37M474D1M'
 
+@test
+def cigar_test():
+    def check_cigar(s: str):
+        return str(CIGAR(s)) == s
+
+    def check_cigar_fail(s: str):
+        try:
+            CIGAR(s)
+            return False
+        except ValueError:
+            return True
+
+    assert check_cigar('')
+    assert check_cigar('1M')
+    assert check_cigar('11M')
+    assert check_cigar('3M11I12H111D')
+    assert check_cigar_fail('3M11I12q111D')
+    assert check_cigar_fail('3M11I12H111')
+    assert check_cigar_fail(' ')
+    assert check_cigar_fail('M')
+    assert check_cigar_fail('1')
+    assert check_cigar_fail('M1')
+    assert check_cigar_fail('MMM')
+    assert check_cigar_fail('MM1')
+    assert check_cigar_fail('M1M')
+    assert check_cigar_fail('M11')
+    assert check_cigar_fail('1MM')
+    assert check_cigar_fail('1M1')
+    assert check_cigar_fail('111')
+
 align_test()
+cigar_test()

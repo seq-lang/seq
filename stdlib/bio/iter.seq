@@ -11,6 +11,10 @@ type Seqs(file: gzFile):
             yield copy(seq(a.ptr, a.len))
         self.close()
 
+    def __blocks__(self: Seqs, size: int):
+        from bio.block import _blocks
+        return _blocks(self.__iter__(), size)
+
     def close(self: Seqs):
         self.file.close()
 
@@ -24,72 +28,6 @@ extend str:
     def __seqs__(self: str):
         return iter(Seqs(self))
 
-type Block(p: cobj, seq_len: int, num_seqs: int):
-    def __iter__(self: Block):
-        p, seq_len, num_seqs = self.p, self.seq_len, self.num_seqs
-        for i in range(num_seqs):
-            yield seq(p + i*seq_len, seq_len)
-
-def _blocks_diff_line_lens():
-    raise IOError("all sequences must be of same length for blocking")
-
-def blocks(gg, sz: int):
-    buf = cobj()
-    n = l = i = 0
-    for s in iter(gg):
-        if l == 0:
-            l = len(s)
-            i = 0
-            buf = cobj(l * sz)
-        if len(s) != l:
-            _blocks_diff_line_lens()
-        s._copy_to(buf + n)
-        n += l
-        i += 1
-        if i == sz:
-            yield Block(buf, l, i)
-            buf = cobj(l * sz)
-            n, i = 0, 0
-    if i > 0:
-        yield Block(buf, l, i)
-
-def block_seqs(name: str, size: int):
-    fp = _C.fopen(name.c_str(), "r".ptr)
-
-    if not fp:
-        raise IOError("file " + name + " could not be opened")
-
-    buf = cobj()
-    sz = 0
-    rd = _C.getline(__ptr__(buf), __ptr__(sz), fp)
-
-    if rd != -1:
-        if buf[rd - 1] == byte(10):
-            rd -= 1
-
-        done = False
-        while not done:
-            idx = 0
-            block = cobj(size*rd + 2)  # one for '\n', one for '\0'
-            if buf:
-                str.memcpy(block, buf, rd)
-                _C.free(buf)
-                buf = cobj()
-                idx += 1
-
-            while idx < size:
-                off = idx * rd
-                p = _C.fgets(block + off, rd + 2, fp)
-
-                if not p:
-                    done = True
-                    break
-
-                if block[off + rd] != byte(10):
-                    _blocks_diff_line_lens()
-
-                idx += 1
-
-            yield Block(block, rd, idx)
-
-    _C.fclose(fp)
+    def __blocks__(self: str, size: int):
+        from bio.block import _blocks
+        return _blocks(self.__seqs__(), size)

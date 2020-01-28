@@ -37,5 +37,35 @@ def test_bwt():
         b = str(s.bwt())
         assert b == bwt_slow(s)
 
+@test
+def test_fmindex():
+    from bio.fmindex import FMIndex
+    import gzip
+    import pickle
+
+    # sequence-based
+    fmi = FMIndex(s'TAACGAGGCGGCTCGTAGTATAAACGCTTTGGACTAGACTCGATACCTAG')
+    assert fmi.count(s'TA') == 7
+    assert fmi.count(s'TAA') == 2
+    assert fmi.count(s'TATT') == 0
+    assert sorted(list(fmi[s'TAA'])) == sorted(list(fmi[~s'TTA'])) == [0, 20]
+    assert len(list(fmi[s'TATT'])) == 0
+
+    # FASTA-based
+    fmi = FMIndex('test/data/seqs.fasta')
+    with gzip.open('build/fmi.bin', 'wb') as jar:
+        pickle.dump(fmi, jar)
+
+    with gzip.open('build/fmi.bin', 'r') as jar:
+        fmi = pickle.load[FMIndex](jar)
+
+    assert fmi.sequence(1, 20, rid=0) == fmi.sequence(1, 20, name='chrA') == s'CCTCCCCGTTCGCTGGACC'
+    assert fmi.sequence(1, 20, rid=3) == fmi.sequence(1, 20, name='chrD') == s'GCCGTGACCACCCCGCGAG'
+    assert list(fmi.contigs()) == [('chrA', 460), ('chrB', 489), ('chrC', 500), ('chrD', 49)]
+    assert fmi.count(s'TATA') == 6  # note TATATA in chrC
+    assert fmi.count(s'TATAC') == 0
+    assert sorted(list(fmi.locate(s'TATAA'))) == [(1, 'chrB', 168), (2, 'chrC', 275), (2, 'chrC', 485)]
+
 test_suffix_array()
 test_bwt()
+test_fmindex()

@@ -2,10 +2,11 @@ import bio.seq
 
 from bio.builtin import *
 
+from bio.block import Block, blocks
 from bio.locus import Locus
-from bio.iter import Seqs, Block, blocks, block_seqs
+from bio.iter import Seqs
 
-from bio.align import SubMat, CIGAR, Alignment
+from bio.align import SubMat, CIGAR, Alignment, inter_align
 from bio.pseq import pseq, translate, as_protein
 from bio.bwt import _saisxx, _saisxx_bwt
 

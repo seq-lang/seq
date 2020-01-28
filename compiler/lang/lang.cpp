@@ -228,6 +228,10 @@ void AssignMember::resolveTypes() {
 }
 
 void AssignMember::codegen0(BasicBlock *&block) {
+  types::Type *type = expr->getType();
+  if (!type->asRef())
+    throw exc::SeqException("cannot assign member of non-reference type '" +
+                            type->getName() + "'");
   value->ensure(expr->getType()->membType(memb));
   Value *x = expr->codegen(getBase(), block);
   Value *v = value->codegen(getBase(), block);
@@ -525,6 +529,11 @@ void TryCatch::codegen0(BasicBlock *&block) {
   BaseFunc *base = getBase();
   BasicBlock *preambleBlock = base->getPreamble();
   types::Type *retType = base->getFuncType()->getBaseType(0);
+
+  if (types::GenType *gen = retType->asGen()) {
+    if (gen->fromPrefetch() || gen->fromInterAlign())
+      retType = gen->getBaseType(0);
+  }
 
   // entry block:
   BasicBlock *entryBlock = BasicBlock::Create(context, "entry", func);

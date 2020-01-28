@@ -1,7 +1,6 @@
 language: cpp
-sudo: required
 
-matrix:
+jobs:
   include:
     - os: linux
     - os: osx
@@ -124,7 +123,10 @@ script:
                           -DCMAKE_CXX_COMPILER=clang++ \
                           -DGC_LIB=${GCLIB})
   - cmake --build build --config Release
-  - build/seqtest
+  - build/seqtest --gtest_filter="CoreTests/*"
+  - build/seqtest --gtest_filter="PipelineTests/*"
+  - build/seqtest --gtest_filter="StdlibTests/*"
+  - build/seqtest --gtest_filter="PythonTests/*"
   - build/seqc test/core/helloworld.seq
   - (cd docs/sphinx && make html 2> /dev/null)
 
@@ -136,7 +138,7 @@ before_deploy:
 
 deploy:
   - provider: releases
-    api_key: $GITHUB_TOKEN
+    token: $GITHUB_TOKEN
     file:
       - ${SEQ_BUILD_ARCHIVE}
       - ${SEQ_STDLIB_ARCHIVE}
@@ -148,7 +150,7 @@ deploy:
     local_dir: docs/sphinx/_build/html
     target_branch: gh-pages
     fqdn: seq-lang.org
-    github_token: $GITHUB_TOKEN
+    token: $GITHUB_TOKEN
     committer_from_gh: true
     keep_history: false
     skip_cleanup: true

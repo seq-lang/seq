@@ -139,9 +139,9 @@ types::FuncType *types::FuncType::clone(Generic *ref) {
   return get(inTypesCloned, outType->clone(ref));
 }
 
-types::GenType::GenType(Type *outType, bool prefetch)
-    : Type("generator", BaseType::get()), outType(outType), prefetch(prefetch) {
-}
+types::GenType::GenType(Type *outType, GenTypeKind kind)
+    : Type("generator", BaseType::get()), outType(outType), kind(kind),
+      alnParams() {}
 
 bool types::GenType::isAtomic() const { return false; }
 
@@ -205,7 +205,25 @@ void types::GenType::destroy(Value *self, BasicBlock *block) {
   builder.CreateCall(destFn, self);
 }
 
-bool types::GenType::fromPrefetch() { return prefetch; }
+bool types::GenType::fromPrefetch() { return kind == GenTypeKind::PREFETCH; }
+
+bool types::GenType::fromInterAlign() {
+  return kind == GenTypeKind::INTERALIGN;
+}
+
+void types::GenType::setAlignParams(GenType::InterAlignParams alnParams) {
+  if (!fromInterAlign())
+    throw exc::SeqException(
+        "inter-sequence alignment functions must be marked '@interalign'");
+  this->alnParams = alnParams;
+}
+
+types::GenType::InterAlignParams types::GenType::getAlignParams() {
+  if (!fromInterAlign())
+    throw exc::SeqException(
+        "inter-sequence alignment functions must be marked '@interalign'");
+  return alnParams;
+}
 
 void types::GenType::initOps() {
   if (!vtable.magic.empty())
@@ -217,6 +235,40 @@ void types::GenType::initOps() {
        this,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return self;
+       },
+       false},
+
+      {"__raw__",
+       {},
+       PtrType::get(Byte),
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
+
+      {"__done__",
+       {},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateZExt(done(self, b.GetInsertBlock()),
+                             Bool->getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__promise__",
+       {},
+       PtrType::get(getBaseType(0)),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return promise(self, b.GetInsertBlock(), /*returnPtr=*/true);
+       },
+       false},
+
+      {"__resume__",
+       {},
+       Void,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         resume(self, b.GetInsertBlock(), nullptr, nullptr);
+         return (Value *)nullptr;
        },
        false},
   };
@@ -356,16 +408,16 @@ size_t types::GenType::size(Module *module) const {
 
 types::GenType *types::GenType::asGen() { return this; }
 
-types::GenType *types::GenType::get(Type *outType, bool prefetch) noexcept {
-  return new GenType(outType, prefetch);
+types::GenType *types::GenType::get(Type *outType, GenTypeKind kind) noexcept {
+  return new GenType(outType, kind);
 }
 
-types::GenType *types::GenType::get(bool prefetch) noexcept {
-  return get(types::BaseType::get(), prefetch);
+types::GenType *types::GenType::get(GenTypeKind kind) noexcept {
+  return get(types::BaseType::get(), kind);
 }
 
 types::GenType *types::GenType::clone(Generic *ref) {
-  return get(outType->clone(ref), prefetch);
+  return get(outType->clone(ref), kind);
 }
 
 types::PartialFuncType::PartialFuncType(types::Type *callee,

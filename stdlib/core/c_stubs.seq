@@ -161,3 +161,9 @@ cimport seq_hts_aux_get(str, str) -> ptr[u8]
 cimport seq_hts_get_targets(cobj) -> array[SAMHeaderTarget]
 cimport seq_hts_sam_itr_next(cobj, cobj, cobj) -> int
 cimport seq_hts_get_seq(cobj) -> seq
+
+# OpenMP
+cimport omp_get_num_threads() -> i32
+cimport omp_get_thread_num() -> i32
+cimport omp_get_max_threads() -> i32
+cimport omp_get_num_procs() -> i32

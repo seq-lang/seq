@@ -29,28 +29,12 @@ print 'num_kmers:', num_kmers
 kmer_list = list[tuple[K,Locus]](num_kmers)
 
 type EqClass(idx: int, count: int):
-    def __lt__(self: EqClass, other: EqClass):
-        a = kmer_list[self.idx][1]
-        b = kmer_list[other.idx][1]
-        return (a.tid, a.pos) < (b.tid, b.pos)
-
-    def __gt__(self: EqClass, other: EqClass):
-        a = kmer_list[self.idx][1]
-        b = kmer_list[other.idx][1]
-        return (a.tid, a.pos) > (b.tid, b.pos)
-
-    def __le__(self: EqClass, other: EqClass):
-        a = kmer_list[self.idx][1]
-        b = kmer_list[other.idx][1]
-        return (a.tid, a.pos) <= (b.tid, b.pos)
-
-    def __ge__(self: EqClass, other: EqClass):
-        a = kmer_list[self.idx][1]
-        b = kmer_list[other.idx][1]
-        return (a.tid, a.pos) >= (b.tid, b.pos)
-
     def __getitem__(self: EqClass, idx: int):
         return kmer_list[self.idx + idx][1]
+
+    def sort_key(self: EqClass) -> tuple[int,int]:
+        a = kmer_list[self.idx][1]
+        return (a.tid, a.pos)
 
 bitsets = list[BitSet]()  # markers for equivalence class representatives
 for tid, rec in enumerate(FASTA(path)):
@@ -98,7 +82,7 @@ while i < len(kmer_list):
     i = j
 
 print 'sorting eq_set...'
-eq_set.sort()
+eq_set.sort(key=EqClass.sort_key)
 print 'done'
 
 def find_block_size(start: int, eq_set: list[EqClass]):

@@ -861,6 +861,37 @@ void types::IntNType::initOps() {
             }),
         true);
   }
+
+  addMethod("popcnt",
+            new BaseFuncLite(
+                {this}, types::IntType::get(),
+                [this](Module *module) {
+                  const std::string name = "seq." + getName() + ".popcnt";
+                  Function *func = module->getFunction(name);
+
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, seqIntLLVM(context), getLLVMType(context)));
+                    func->setDoesNotThrow();
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->addFnAttr(Attribute::AlwaysInline);
+                    BasicBlock *block =
+                        BasicBlock::Create(context, "entry", func);
+                    Value *arg = func->arg_begin();
+
+                    Function *popcnt = Intrinsic::getDeclaration(
+                        module, Intrinsic::ctpop, {getLLVMType(context)});
+                    IRBuilder<> builder(block);
+                    Value *count = builder.CreateCall(popcnt, arg);
+                    count =
+                        builder.CreateZExtOrTrunc(count, seqIntLLVM(context));
+                    builder.CreateRet(count);
+                  }
+
+                  return func;
+                }),
+            true);
 }
 
 void types::FloatType::initOps() {
