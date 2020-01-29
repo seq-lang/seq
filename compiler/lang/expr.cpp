@@ -2008,8 +2008,10 @@ MatchExpr *MatchExpr::clone(Generic *ref) {
   SEQ_RETURN_CLONE(x);
 }
 
-ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args)
-    : Expr(), type(type), type0(nullptr), args(std::move(args)) {}
+ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args,
+                             std::vector<std::string> names)
+    : Expr(), type(type), type0(nullptr), args(std::move(args)),
+      names(std::move(names)) {}
 
 types::Type *ConstructExpr::getConstructType() { return type; }
 
@@ -2115,7 +2117,7 @@ ConstructExpr *ConstructExpr::clone(Generic *ref) {
   for (auto *arg : args)
     argsCloned.push_back(arg->clone(ref));
   SEQ_RETURN_CLONE(
-      new ConstructExpr((type0 ? type0 : type)->clone(ref), argsCloned));
+      new ConstructExpr((type0 ? type0 : type)->clone(ref), argsCloned, names));
 }
 
 MethodExpr::MethodExpr(Expr *self, Func *func)
