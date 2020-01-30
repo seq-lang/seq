@@ -203,9 +203,10 @@ module Expr = struct
   let alloc_array = foreign "array_expr_alloca" (Types.typ @-> t @-> returning t)
 
   let construct typ args =
-    let fn = foreign "construct_expr" (Types.typ @-> ptr t @-> size_t @-> returning t) in
-    let arr, len = list_to_carr t args in
-    fn typ arr len
+    let names = array_of_string_list (List.map args ~f:fst) in
+    let arr, len = list_to_carr t (List.map args ~f:snd) in
+    let fn = foreign "construct_expr_with_names" (t @-> ptr t @-> ptr cstring @-> size_t @-> returning t) in
+    fn typ arr (CArray.start names) len
 
   let call ?(kind = "call") expr args =
     let names = array_of_string_list (List.map args ~f:fst) in
