@@ -762,10 +762,15 @@ void types::KMer::initOps() {
        {},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         // For very small (or kind of small non-4-mer-multiple k-mers),
-         // use a lookup table. For longer k-mers, use SIMD shuffle.
-         if (k < 8 || (k < 20 && k % 4 != 0)) {
+         // The following are heuristics found to be roughly optimal on
+         // several architectures. For smaller k, lookup is almost always
+         // better. For larger k, SIMD is almost always better. For medium k,
+         // it varies based on whether k is a power of 2, but bitwise is
+         // almost always close to (if not) the best.
+         if (k <= 20) {
            return codegenRevCompByLookup(this, self, b);
+         } else if (k < 32) {
+           return codegenRevCompByBitShift(this, self, b);
          } else {
            return codegenRevCompBySIMD(this, self, b);
          }
