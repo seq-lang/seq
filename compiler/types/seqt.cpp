@@ -517,6 +517,148 @@ static Function *getStrFunc(types::KMer *kmerType, Module *module) {
   return func;
 }
 
+static Value *codegenRevCompByBitShift(types::KMer *kmerType, Value *self,
+                                       IRBuilder<> &b) {
+  const unsigned k = kmerType->getK();
+  LLVMContext &context = b.getContext();
+
+  unsigned kpow2 = 1;
+  while (kpow2 < k)
+    kpow2 *= 2;
+  const unsigned w = 2 * kpow2;
+
+  llvm::Type *ty = IntegerType::get(context, w);
+  Value *comp = b.CreateNot(self);
+  comp = b.CreateZExt(comp, ty);
+  Value *result = comp;
+
+  for (unsigned i = 2; i <= kpow2; i = i * 2) {
+    Value *mask = ConstantInt::get(ty, 0);
+    Value *bitpattern = ConstantInt::get(ty, 1);
+    bitpattern = b.CreateShl(bitpattern, i);
+    bitpattern = b.CreateSub(bitpattern, ConstantInt::get(ty, 1));
+
+    unsigned j = 0;
+    while (j < w) {
+      Value *shift = b.CreateShl(bitpattern, j);
+      mask = b.CreateOr(mask, shift);
+      j += 2 * i;
+    }
+
+    Value *r1 = b.CreateLShr(result, i);
+    r1 = b.CreateAnd(r1, mask);
+    Value *r2 = b.CreateAnd(result, mask);
+    r2 = b.CreateShl(r2, i);
+    result = b.CreateOr(r1, r2);
+  }
+
+  if (w != 2 * k) {
+    assert(w > 2 * k);
+    result = b.CreateLShr(result, w - (2 * k));
+    result = b.CreateTrunc(result, kmerType->getLLVMType(context));
+  }
+  return result;
+}
+
+static Value *codegenRevCompByLookup(types::KMer *kmerType, Value *self,
+                                     IRBuilder<> &b) {
+  const unsigned k = kmerType->getK();
+  LLVMContext &context = b.getContext();
+  Module *module = b.GetInsertBlock()->getModule();
+  Value *table = getRevCompTable(module);
+  Value *mask = ConstantInt::get(kmerType->getLLVMType(context), 0xffu);
+  Value *result = ConstantInt::get(kmerType->getLLVMType(context), 0);
+
+  // deal with 8-bit chunks:
+  for (unsigned i = 0; i < k / 4; i++) {
+    Value *slice = b.CreateShl(mask, i * 8);
+    slice = b.CreateAnd(self, slice);
+    slice = b.CreateLShr(slice, i * 8);
+    slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
+
+    Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
+    sliceRC = b.CreateLoad(sliceRC);
+    sliceRC = b.CreateZExtOrTrunc(sliceRC, kmerType->getLLVMType(context));
+    sliceRC = b.CreateShl(sliceRC, (k - 4 * (i + 1)) * 2);
+    result = b.CreateOr(result, sliceRC);
+  }
+
+  // deal with remaining high bits:
+  unsigned rem = k % 4;
+  if (rem > 0) {
+    mask =
+        ConstantInt::get(kmerType->getLLVMType(context), (1u << (rem * 2)) - 1);
+    Value *slice = b.CreateShl(mask, (k - rem) * 2);
+    slice = b.CreateAnd(self, slice);
+    slice = b.CreateLShr(slice, (k - rem) * 2);
+    slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
+
+    Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
+    sliceRC = b.CreateLoad(sliceRC);
+    sliceRC = b.CreateAShr(sliceRC,
+                           (4 - rem) *
+                               2); // slice isn't full 8-bits, so shift out junk
+    sliceRC = b.CreateZExtOrTrunc(sliceRC, kmerType->getLLVMType(context));
+    sliceRC = b.CreateAnd(sliceRC, mask);
+    result = b.CreateOr(result, sliceRC);
+  }
+
+  return result;
+}
+
+static Value *codegenRevCompBySIMD(types::KMer *kmerType, Value *self,
+                                   IRBuilder<> &b) {
+  const unsigned k = kmerType->getK();
+  LLVMContext &context = b.getContext();
+  Value *comp = b.CreateNot(self);
+
+  llvm::Type *ty = kmerType->getLLVMType(context);
+  const unsigned w = ((2 * k + 7) / 8) * 8;
+  const unsigned m = w / 8;
+
+  if (w != 2 * k) {
+    ty = IntegerType::get(context, w);
+    comp = b.CreateZExt(comp, ty);
+  }
+
+  VectorType *vecTy = VectorType::get(b.getInt8Ty(), m);
+  std::vector<unsigned> shufMask;
+  for (unsigned i = 0; i < m; i++)
+    shufMask.push_back(m - 1 - i);
+
+  Value *vec = UndefValue::get(VectorType::get(ty, 1));
+  vec = b.CreateInsertElement(vec, comp, (uint64_t)0);
+  vec = b.CreateBitCast(vec, vecTy);
+  // shuffle reverses bytes
+  vec = b.CreateShuffleVector(vec, UndefValue::get(vecTy), shufMask);
+
+  // shifts reverse 2-bit chunks in each byte
+  Value *shift1 = ConstantVector::getSplat(m, b.getInt8(6));
+  Value *shift2 = ConstantVector::getSplat(m, b.getInt8(2));
+  Value *mask1 = ConstantVector::getSplat(m, b.getInt8(0x0c));
+  Value *mask2 = ConstantVector::getSplat(m, b.getInt8(0x30));
+
+  Value *vec1 = b.CreateLShr(vec, shift1);
+  Value *vec2 = b.CreateShl(vec, shift1);
+  Value *vec3 = b.CreateLShr(vec, shift2);
+  Value *vec4 = b.CreateShl(vec, shift2);
+  vec3 = b.CreateAnd(vec3, mask1);
+  vec4 = b.CreateAnd(vec4, mask2);
+
+  vec = b.CreateOr(vec1, vec2);
+  vec = b.CreateOr(vec, vec3);
+  vec = b.CreateOr(vec, vec4);
+
+  vec = b.CreateBitCast(vec, VectorType::get(ty, 1));
+  Value *result = b.CreateExtractElement(vec, (uint64_t)0);
+  if (w != 2 * k) {
+    assert(w > 2 * k);
+    result = b.CreateLShr(result, w - (2 * k));
+    result = b.CreateTrunc(result, kmerType->getLLVMType(context));
+  }
+  return result;
+}
+
 void types::KMer::initOps() {
   if (!vtable.magic.empty())
     return;
@@ -620,102 +762,37 @@ void types::KMer::initOps() {
        {},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         LLVMContext &context = b.getContext();
-
          // For very small (or kind of small non-4-mer-multiple k-mers),
          // use a lookup table. For longer k-mers, use SIMD shuffle.
          if (k < 8 || (k < 20 && k % 4 != 0)) {
-           Module *module = b.GetInsertBlock()->getModule();
-           Value *table = getRevCompTable(module);
-           Value *mask = ConstantInt::get(getLLVMType(context), 0xffu);
-           Value *result = ConstantInt::get(getLLVMType(context), 0);
-
-           // deal with 8-bit chunks:
-           for (unsigned i = 0; i < k / 4; i++) {
-             Value *slice = b.CreateShl(mask, i * 8);
-             slice = b.CreateAnd(self, slice);
-             slice = b.CreateLShr(slice, i * 8);
-             slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
-
-             Value *sliceRC =
-                 b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
-             sliceRC = b.CreateLoad(sliceRC);
-             sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
-             sliceRC = b.CreateShl(sliceRC, (k - 4 * (i + 1)) * 2);
-             result = b.CreateOr(result, sliceRC);
-           }
-
-           // deal with remaining high bits:
-           unsigned rem = k % 4;
-           if (rem > 0) {
-             mask =
-                 ConstantInt::get(getLLVMType(context), (1u << (rem * 2)) - 1);
-             Value *slice = b.CreateShl(mask, (k - rem) * 2);
-             slice = b.CreateAnd(self, slice);
-             slice = b.CreateLShr(slice, (k - rem) * 2);
-             slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
-
-             Value *sliceRC =
-                 b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
-             sliceRC = b.CreateLoad(sliceRC);
-             sliceRC = b.CreateAShr(
-                 sliceRC,
-                 (4 - rem) * 2); // slice isn't full 8-bits, so shift out junk
-             sliceRC = b.CreateZExtOrTrunc(sliceRC, getLLVMType(context));
-             sliceRC = b.CreateAnd(sliceRC, mask);
-             result = b.CreateOr(result, sliceRC);
-           }
-
-           return result;
+           return codegenRevCompByLookup(this, self, b);
          } else {
-           Value *comp = b.CreateNot(self);
-
-           llvm::Type *ty = getLLVMType(context);
-           const unsigned w = ((2 * k + 7) / 8) * 8;
-           const unsigned m = w / 8;
-
-           if (w != 2 * k) {
-             ty = IntegerType::get(context, w);
-             comp = b.CreateZExt(comp, ty);
-           }
-
-           VectorType *vecTy = VectorType::get(b.getInt8Ty(), m);
-           std::vector<unsigned> shufMask;
-           for (unsigned i = 0; i < m; i++)
-             shufMask.push_back(m - 1 - i);
-
-           Value *vec = UndefValue::get(VectorType::get(ty, 1));
-           vec = b.CreateInsertElement(vec, comp, (uint64_t)0);
-           vec = b.CreateBitCast(vec, vecTy);
-           // shuffle reverses bytes
-           vec = b.CreateShuffleVector(vec, UndefValue::get(vecTy), shufMask);
-
-           // shifts reverse 2-bit chunks in each byte
-           Value *shift1 = ConstantVector::getSplat(m, b.getInt8(6));
-           Value *shift2 = ConstantVector::getSplat(m, b.getInt8(2));
-           Value *mask1 = ConstantVector::getSplat(m, b.getInt8(0x0c));
-           Value *mask2 = ConstantVector::getSplat(m, b.getInt8(0x30));
-
-           Value *vec1 = b.CreateLShr(vec, shift1);
-           Value *vec2 = b.CreateShl(vec, shift1);
-           Value *vec3 = b.CreateLShr(vec, shift2);
-           Value *vec4 = b.CreateShl(vec, shift2);
-           vec3 = b.CreateAnd(vec3, mask1);
-           vec4 = b.CreateAnd(vec4, mask2);
-
-           vec = b.CreateOr(vec1, vec2);
-           vec = b.CreateOr(vec, vec3);
-           vec = b.CreateOr(vec, vec4);
-
-           vec = b.CreateBitCast(vec, VectorType::get(ty, 1));
-           Value *result = b.CreateExtractElement(vec, (uint64_t)0);
-           if (w != 2 * k) {
-             assert(w > 2 * k);
-             result = b.CreateLShr(result, w - 2 * k);
-             result = b.CreateTrunc(result, getLLVMType(context));
-           }
-           return result;
+           return codegenRevCompBySIMD(this, self, b);
          }
+       },
+       false},
+
+      {"__rc_bitwise__",
+       {},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return codegenRevCompByBitShift(this, self, b);
+       },
+       false},
+
+      {"__rc_lookup__",
+       {},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return codegenRevCompByLookup(this, self, b);
+       },
+       false},
+
+      {"__rc_simd__",
+       {},
+       this,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return codegenRevCompBySIMD(this, self, b);
        },
        false},
 
