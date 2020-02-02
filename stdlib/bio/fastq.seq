@@ -7,6 +7,11 @@ type FASTQRecord(_name: str, _read: seq, _qual: str):
     def read(self: FASTQRecord):
         return self._read
 
+    # FASTA compatibility
+    @property
+    def seq(self: FASTQRecord):
+        return self._read
+
     @property
     def qual(self: FASTQRecord):
         return self._qual
