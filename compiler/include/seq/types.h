@@ -246,6 +246,39 @@ public:
                                  std::vector<llvm::Value *> args,
                                  llvm::BasicBlock *&block, TryCatch *tc);
 
+  /// Returns the output type of the "__init__" magic method
+  /// with specified argument types/names. Throws an exception if
+  /// the "__init__" magic method does not exist for specified types/names by
+  /// default. If \p initFunc is specified, always returns null but stores
+  /// the found init function in that pointer and sets \p args to the fixed
+  /// argument types based on \p names.
+  /// @param args vector of argument types (excluding 'self');
+  ///             last element being null indicates static.
+  /// @param names vector of argument names (same size as \p args)
+  /// @param nullOnMissing return null instead of throwing an
+  ///                      exception if magic is missing
+  /// @param initFunc will store resulting init function if non-null
+  /// @return output type of "__init__" magic method
+  virtual Type *initOut(std::vector<Type *> &args,
+                        std::vector<std::string> names,
+                        bool nullOnMissing = false, Func **initFunc = nullptr);
+
+  /// Codegens a call to the "__init__" magic method. Throws
+  /// an exception if the "__init__" magic method does not
+  /// exist for specified names/argument types.
+  /// @param argTypes vector of argument types (exclusing self)
+  /// @param names vector of argument names (same size as \p argTypes)
+  /// @param self value of this type; null if magic is static
+  /// @param args vector of argument values (same size as \p argTypes)
+  /// @param block where to codegen the call
+  /// @param tc enclosing try-catch statement, or null if none
+  /// @return result of calling the "__init__" magic method
+  virtual llvm::Value *callInit(std::vector<Type *> argTypes,
+                                std::vector<std::string> names,
+                                llvm::Value *self,
+                                std::vector<llvm::Value *> args,
+                                llvm::BasicBlock *&block, TryCatch *tc);
+
   /// Checks whether this type "is" another type.
   virtual bool is(Type *type) const;
 

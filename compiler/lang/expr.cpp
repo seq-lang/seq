@@ -2011,7 +2011,18 @@ MatchExpr *MatchExpr::clone(Generic *ref) {
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args,
                              std::vector<std::string> names)
     : Expr(), type(type), type0(nullptr), args(std::move(args)),
-      names(std::move(names)) {}
+      names(std::move(names)) {
+  // if all names are empty, clear names vector
+  bool empty = true;
+  for (const std::string &name : this->names) {
+    if (!name.empty()) {
+      empty = false;
+      break;
+    }
+  }
+  if (empty)
+    this->names.clear();
+}
 
 types::Type *ConstructExpr::getConstructType() { return type; }
 
@@ -2083,9 +2094,8 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
     self = type->defaultValue(block);
   }
 
-  Value *ret =
-      type->callMagic("__init__", types, self, vals, block, getTryCatch());
-  return type->magicOut("__init__", types)->is(types::Void) ? self : ret;
+  Value *ret = type->callInit(types, names, self, vals, block, getTryCatch());
+  return type->initOut(types, names)->is(types::Void) ? self : ret;
 }
 
 types::Type *ConstructExpr::getType0() const {
@@ -2105,10 +2115,10 @@ types::Type *ConstructExpr::getType0() const {
   auto *ref = dynamic_cast<types::RefType *>(type);
   if (ref && ref->numGenerics() > 0 && !ref->realized()) {
     type0 = type;
-    type = ref->realize(ref->deduceTypesFromArgTypes(types));
+    type = ref->realize(ref->deduceTypesFromArgTypes(types, names));
   }
 
-  types::Type *ret = type->magicOut("__init__", types);
+  types::Type *ret = type->initOut(types, names);
   return ret->is(types::Void) ? type : ret;
 }
 

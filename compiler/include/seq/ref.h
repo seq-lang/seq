@@ -54,7 +54,8 @@ public:
   std::string genericName() override;
   types::Type *realize(std::vector<types::Type *> types);
   std::vector<types::Type *>
-  deduceTypesFromArgTypes(std::vector<types::Type *> argTypes);
+  deduceTypesFromArgTypes(std::vector<types::Type *> argTypes,
+                          std::vector<std::string> names = {});
 
   llvm::Value *memb(llvm::Value *self, const std::string &name,
                     llvm::BasicBlock *block) override;

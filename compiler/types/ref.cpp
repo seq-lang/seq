@@ -104,7 +104,20 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types) {
 }
 
 std::vector<types::Type *>
-types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes) {
+types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes,
+                                        std::vector<std::string> names) {
+  Func *init = nullptr;
+  if (!names.empty()) {
+    initOut(argTypes, names, /*nullOnMissing=*/false, &init);
+    types::FuncType *funcType = init->getFuncType();
+    std::vector<types::Type *> types;
+    // start loop from 2 since 0th base type is return type and 1st is self
+    for (unsigned i = 2; i < funcType->numBaseTypes(); i++)
+      types.push_back(funcType->getBaseType(i));
+    return Generic::deduceTypesFromArgTypes(types, argTypes,
+                                            /*unwrapOptionals=*/false);
+  }
+
   // deal with custom __init__s:
   bool foundInit = false;
   for (auto &magic : vtable.overloads) {
