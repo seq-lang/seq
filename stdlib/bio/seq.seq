@@ -129,7 +129,7 @@ extend seq:
         self._copy_to(p)
         return seq(p, n)
 
-    def split(self: seq, k: int, step: int):
+    def split(self: seq, k: int, step: int = 1):
         i = 0
         while i + k <= len(self):
             yield self._slice_direct(i,i+k)
@@ -144,11 +144,11 @@ extend seq:
             yield self._slice_direct(i,i+1)
             i -= 1
 
-    def kmers[K](self: seq, step: int):
+    def kmers[K](self: seq, step: int = 1):
         for pos, kmer in self.kmers_with_pos[K](step):
             yield kmer
 
-    def kmers_with_pos[K](self: seq, step: int):
+    def kmers_with_pos[K](self: seq, step: int = 1):
         # This function is intentionally written this way. It could be simplified,
         # but this version was found to be the most performant due to inlining etc.
         k = K.len()
@@ -262,9 +262,9 @@ extend seq:
         n = len(self)
         while i < n:
             if invalid.ptr[int(self.ptr[i])]:
-                return i + 1
+                return True
             i += 1
-        return 0
+        return False
 
     def __invert__(self: seq):
         return seq(self.ptr, -self.len)
