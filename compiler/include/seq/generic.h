@@ -166,6 +166,12 @@ public:
   llvm::Value *callMagic(const std::string &name, std::vector<Type *> argTypes,
                          llvm::Value *self, std::vector<llvm::Value *> args,
                          llvm::BasicBlock *&block, TryCatch *tc) override;
+  Type *initOut(std::vector<Type *> &args, std::vector<std::string> names,
+                bool nullOnMissing = false, Func **initFunc = nullptr) override;
+  llvm::Value *callInit(std::vector<Type *> argTypes,
+                        std::vector<std::string> names, llvm::Value *self,
+                        std::vector<llvm::Value *> args,
+                        llvm::BasicBlock *&block, TryCatch *tc) override;
 
   bool is(Type *type) const override;
   bool isGeneric(Type *type) const override;

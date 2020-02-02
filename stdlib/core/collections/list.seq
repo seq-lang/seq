@@ -8,8 +8,8 @@ class list[T]:
         self.arr = arr
         self.len = len
 
-    def __init__(self: list[T], cap: int):
-        self.arr = array[T](cap)
+    def __init__(self: list[T], capacity: int):
+        self.arr = array[T](capacity)
         self.len = 0
 
     def __init__(self: list[T]):

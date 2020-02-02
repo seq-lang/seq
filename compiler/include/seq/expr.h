@@ -545,9 +545,11 @@ private:
   mutable types::Type *type;
   mutable types::Type *type0; // type before deduction, saved for clone
   std::vector<Expr *> args;
+  std::vector<std::string> names;
 
 public:
-  ConstructExpr(types::Type *type, std::vector<Expr *> args);
+  ConstructExpr(types::Type *type, std::vector<Expr *> args,
+                std::vector<std::string> names = {});
   types::Type *getConstructType();
   std::vector<Expr *> getArgs();
   void resolveTypes() override;

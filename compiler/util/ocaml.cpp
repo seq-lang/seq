@@ -216,8 +216,18 @@ FOREIGN Expr *array_expr_alloca(types::Type *ty, Expr *cnt) {
   return new ArrayExpr(ty, cnt, true);
 }
 
-FOREIGN Expr *construct_expr(types::Type *ty, Expr **args, size_t len) {
-  return new ConstructExpr(ty, vector<Expr *>(args, args + len));
+FOREIGN Expr *construct_expr(types::Type *ty, Expr **args, size_t size) {
+  return new ConstructExpr(ty, vector<Expr *>(args, args + size));
+}
+
+FOREIGN Expr *construct_expr_with_names(types::Type *ty, Expr **args,
+                                        char **names, size_t size) {
+  vector<string> s;
+  for (size_t i = 0; i < size; i++) {
+    s.emplace_back(names[i]);
+    free(names[i]);
+  }
+  return new ConstructExpr(ty, vector<Expr *>(args, args + size), s);
 }
 
 FOREIGN Expr *array_lookup_expr(Expr *lhs, Expr *rhs) {

@@ -104,7 +104,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     | "z" | "Z" ->
       (* z-variables are used in Sequre and are syntactic sugar for [MInt] class. *)
       let t = get_internal_type ~pos ~ctx "MInt" in
-      Llvm.Expr.construct t [ i ]
+      Llvm.Expr.construct t [ "", i ]
     | _ -> i
 
   and parse_float ctx pos ?(kind = "") f =
@@ -112,7 +112,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     match kind with
     | "z" | "Z" ->
       let t = get_internal_type ~pos ~ctx "ModFloat" in
-      Llvm.Expr.construct t [ f ]
+      Llvm.Expr.construct t [ "", f ]
     | _ -> f
 
   and parse_str _ _ s = Llvm.Expr.str s
@@ -422,7 +422,6 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
       (* foo(a, b, c) -> foo( (a, b, c) ) *)
       if List.exists attrs ~f:((=) "pyhandle")
       then (
-        Util.dbg "woohoo!";
         [ pos, { name = None ; value = pos, Tuple (List.map args ~f:(fun (_, x) -> x.value)) } ]
       )
       else args
@@ -439,7 +438,7 @@ module Codegen (S : Codegen_intf.Stmt) : Codegen_intf.Expr = struct
     if Llvm.Expr.is_type callee_expr
     then (
       let typ = Llvm.Type.expr_type callee_expr in
-      Llvm.Expr.construct typ (List.map args ~f:snd))
+      Llvm.Expr.construct typ args)
     else (
       let kind = if List.exists args ~f:(fun (_, x) -> x = Ctypes.null) then "partial" else "call" in
       Llvm.Expr.call ~kind callee_expr args)
