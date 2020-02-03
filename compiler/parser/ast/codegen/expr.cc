@@ -76,7 +76,7 @@ void CodegenExprVisitor::visit(const IntExpr *expr) {
       uint64_t i = std::stoull(expr->value, nullptr, 0);
       RETURN(seq::IntExpr, i);
     } else {
-      int64_t i = std::stoll(expr->value, nullptr, 0);
+      int64_t i = std::stoull(expr->value, nullptr, 0);
       RETURN(seq::IntExpr, i);
     }
   } catch (std::out_of_range &) {

@@ -217,11 +217,11 @@ INSTANTIATE_TEST_SUITE_P(
         testing::Values(true, false)),
     getTestNameFromParam);
 
-// INSTANTIATE_TEST_SUITE_P(
-//     PythonTests, SeqTest,
-//     testing::Combine(testing::Values("python/pybridge.seq"),
-//                      testing::Values(true, false)),
-//     getTestNameFromParam);
+INSTANTIATE_TEST_SUITE_P(
+    PythonTests, SeqTest,
+    testing::Combine(testing::Values("python/pybridge.seq"),
+                     testing::Values(true, false)),
+    getTestNameFromParam);
 
 int main(int argc, char *argv[]) {
   testing::InitGoogleTest(&argc, argv);

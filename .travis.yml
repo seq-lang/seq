@@ -19,6 +19,8 @@ addons:
       - python3-setuptools
       - python-sphinx
       - doxygen
+      - ocaml
+      - menhir
   homebrew:
     update: true
     packages:
@@ -31,6 +33,8 @@ addons:
       - doxygen
       - cmake
       - wget
+      - ocaml
+      - menhir
 
 before_install:
   # build and cache LLVM/Tapir:
@@ -51,20 +55,6 @@ before_install:
       cmake --build . --config Release
       cd -
     fi
-
-  # install OCaml:
-  - export OCAML_VERSION=4.07
-  - |
-    if [[ -z "$(ls -A ${HOME}/.opam)" ]]; then
-      wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
-      bash -ex .travis-ocaml.sh
-      opam update
-      opam install -y ocamlfind core dune ctypes ctypes-foreign menhir ppx_deriving
-      sudo cp /usr/local/bin/opam ${HOME}/.opam/
-    else
-      sudo cp ${HOME}/.opam/opam /usr/local/bin/
-    fi
-  - eval $(opam env)
 
   # fix Python:
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --overwrite python3; fi
@@ -162,7 +152,6 @@ cache:
   timeout: 1000
   directories:
     - Tapir-LLVM
-    - $HOME/.opam
 
 notifications:
   webhooks:
