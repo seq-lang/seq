@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "parser/ast/codegen/stmt.h"
+#include "parser/ast/format/stmt.h"
 #include "parser/ast/transform/stmt.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"

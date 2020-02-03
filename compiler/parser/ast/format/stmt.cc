@@ -31,13 +31,14 @@ using std::stack;
 using std::string;
 using std::vector;
 
+#define RETURN0(T) this->result = fmt::format("{}" T "\n", pad());
+
 #define RETURN(T, ...)                                                         \
-  this->result = fmt::format(T "\n", __VA_ARGS__);                             \
-  return
+  this->result = fmt::format("{}" T "\n", pad(), __VA_ARGS__);
 
 string FormatStmtVisitor::transform(const StmtPtr &stmt, int indent) {
   FormatStmtVisitor v;
-  v.indent = indent + 2 * indent;
+  v.indent = this->indent + indent;
   stmt->accept(v);
   return v.result;
 }
@@ -62,15 +63,11 @@ void FormatStmtVisitor::visit(const SuiteStmt *stmt) {
   this->result = result;
 }
 
-void FormatStmtVisitor::visit(const PassStmt *stmt) { this->result = "pass\n"; }
+void FormatStmtVisitor::visit(const PassStmt *stmt) { RETURN0("pass"); }
 
-void FormatStmtVisitor::visit(const BreakStmt *stmt) {
-  this->result = "break\n";
-}
+void FormatStmtVisitor::visit(const BreakStmt *stmt) { RETURN0("break"); }
 
-void FormatStmtVisitor::visit(const ContinueStmt *stmt) {
-  this->result = "continue\n";
-}
+void FormatStmtVisitor::visit(const ContinueStmt *stmt) { RETURN0("continue"); }
 
 void FormatStmtVisitor::visit(const ExprStmt *stmt) {
   RETURN("{}", transform(stmt->expr));
@@ -125,14 +122,14 @@ void FormatStmtVisitor::visit(const IfStmt *stmt) {
   string prefix = "";
   for (auto &ifc : stmt->ifs) {
     if (ifc.cond) {
-      ifs += format("{}if {}:\n{}\n", prefix, transform(ifc.cond),
+      ifs += format("{}{}if {}:\n{}", pad(), prefix, transform(ifc.cond),
                     transform(ifc.suite, 1));
     } else {
-      ifs += format("else:\n{}\n", transform(ifc.suite, 1));
+      ifs += format("{}else:\n{}", pad(), transform(ifc.suite, 1));
     }
     prefix = "el";
   }
-  this->result = ifs;
+  this->result = ifs + "\n";
 }
 
 void FormatStmtVisitor::visit(const MatchStmt *stmt) {
@@ -141,12 +138,11 @@ void FormatStmtVisitor::visit(const MatchStmt *stmt) {
     s += format("{}case {}:\n{}\n", pad(1), transform(c.first),
                 transform(c.second, 2));
   }
-  this->result = format("match {}:\n{}", transform(stmt->what), s);
+  RETURN("match {}:\n{}", transform(stmt->what), s);
 }
 
 void FormatStmtVisitor::visit(const ExtendStmt *stmt) {
-  this->result = format("extend {}:\n{}", transform(stmt->what),
-                        transform(stmt->suite, 1));
+  RETURN("extend {}:\n{}", transform(stmt->what), transform(stmt->suite, 1));
 }
 
 void FormatStmtVisitor::visit(const ImportStmt *stmt) {
@@ -202,7 +198,7 @@ void FormatStmtVisitor::visit(const PrefetchStmt *stmt) {
 void FormatStmtVisitor::visit(const FunctionStmt *stmt) {
   string attrs;
   for (auto &a : stmt->attributes) {
-    attrs += format("{}{}\n", pad(), a);
+    attrs += format("{}@{}\n", pad(), a);
   }
   vector<string> args;
   for (auto &a : stmt->args) {
@@ -210,13 +206,13 @@ void FormatStmtVisitor::visit(const FunctionStmt *stmt) {
                           a.type ? format(": {}", transform(a.type)) : "",
                           a.deflt ? format(" = {}", transform(a.deflt)) : ""));
   }
-  RETURN("{}def {}{}({}){}:\n{}", attrs, stmt->name,
-         !stmt->generics.empty()
-             ? format("[{}]", fmt::join(stmt->generics, ", "))
-             : "",
-         fmt::join(args, ", "),
-         stmt->ret ? format(" -> {}", transform(stmt->ret)) : "",
-         transform(stmt->suite, 1));
+  this->result = format("{}{}def {}{}({}){}:\n{}", attrs, pad(), stmt->name,
+                        !stmt->generics.empty()
+                            ? format("[{}]", fmt::join(stmt->generics, ", "))
+                            : "",
+                        fmt::join(args, ", "),
+                        stmt->ret ? format(" -> {}", transform(stmt->ret)) : "",
+                        transform(stmt->suite, 1));
 }
 
 void FormatStmtVisitor::visit(const ClassStmt *stmt) {
@@ -228,8 +224,10 @@ void FormatStmtVisitor::visit(const ClassStmt *stmt) {
   }
 
   if (stmt->isType) {
-    RETURN("type {}({}){}:\n{}", stmt->name, fmt::join(args, ", "),
-           transform(stmt->suite, 1));
+    auto t = transform(stmt->suite, 1);
+    RETURN("type {}({}){}", stmt->name, fmt::join(args, ", "),
+           !t.empty() ? format(":\n{}", t) : "");
+
   } else {
     string as;
     for (auto &a : args) {
@@ -248,7 +246,7 @@ void FormatStmtVisitor::visit(const DeclareStmt *stmt) {
 }
 
 void FormatStmtVisitor::visit(const AssignEqStmt *stmt) {
-  RETURN("{} {} {}", transform(stmt->lhs), stmt->op, transform(stmt->rhs));
+  RETURN("{} {}= {}", transform(stmt->lhs), stmt->op, transform(stmt->rhs));
 }
 
 void FormatStmtVisitor::visit(const YieldFromStmt *stmt) {
@@ -263,3 +261,5 @@ void FormatStmtVisitor::visit(const WithStmt *stmt) {
   }
   RETURN("with {}:\n{}", fmt::join(what, ", "), transform(stmt->suite, 1));
 }
+
+void FormatStmtVisitor::visit(const PyDefStmt *stmt) {}

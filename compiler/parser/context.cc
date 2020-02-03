@@ -7,6 +7,7 @@
 #include "parser/ast/codegen/stmt.h"
 #include "parser/ast/transform/stmt.h"
 #include "parser/common.h"
+#include "parser/ast/format/stmt.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
 #include "seq/seq.h"

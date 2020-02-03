@@ -56,4 +56,8 @@ public:
   virtual void visit(const YieldFromStmt *) override;
   virtual void visit(const WithStmt *) override;
   virtual void visit(const PyDefStmt *) override;
+
+  friend ostream &operator<<(ostream &out, const FormatStmtVisitor &c) {
+    return out << c.result;
+  }
 };

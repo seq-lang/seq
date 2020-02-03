@@ -285,9 +285,7 @@ extern_param:
   | ID param_type { $loc, { name = $1; typ = Some $2; default = None } }
 extern_as: AS ID { $2 }
 decorator: AT ID NL { $loc, $2 } /* AT dot_term NL | AT dot_term LP FL(COMMA, expr) RP NL */
-pyfunc:
-  | PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON NL INDENT STRING NL DEDENT
-    { [$loc, PyDef ($2, $6, $4, $10)] }
+pyfunc: PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON suite { [$loc, PyDef ($2, $6, $4, $8)] }
 
 class_statement: cls | extend | typ { $1 }
 cls:

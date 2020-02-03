@@ -14,6 +14,7 @@
 #include "parser/ast/transform/expr.h"
 #include "parser/ast/transform/pattern.h"
 #include "parser/ast/transform/stmt.h"
+#include "parser/ast/format/stmt.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
@@ -520,9 +521,9 @@ void TransformStmtVisitor::visit(const PyDefStmt *stmt) {
   for (auto &a : stmt->args) {
     args.push_back(a.name);
   }
-  auto code = stmt->code;
-  code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), stmt->code);
-  DBG("py code:\n{}", code);
+  auto code = FormatStmtVisitor().transform(stmt->suite, 1);
+  code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), code);
+  // DBG("py code:\n{}", code);
   vector<StmtPtr> stmts;
   stmts.push_back(
       SP(ExprStmt,

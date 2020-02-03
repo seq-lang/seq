@@ -245,8 +245,8 @@ struct PyDefStmt : public Stmt {
   string name;
   ExprPtr ret;
   vector<Param> args;
-  string code;
-  PyDefStmt(string n, ExprPtr r, vector<Param> a, const string &c);
+  StmtPtr suite;
+  PyDefStmt(string n, ExprPtr r, vector<Param> a, StmtPtr s);
   string to_string() const override;
   ACCEPT_VISITOR;
 };
