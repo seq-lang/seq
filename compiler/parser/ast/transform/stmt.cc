@@ -55,6 +55,8 @@ StmtPtr TransformStmtVisitor::apply(const StmtPtr &stmts) {
 }
 
 StmtPtr TransformStmtVisitor::transform(const Stmt *stmt) {
+  // if (stmt->getSrcInfo().file.find("scratch.seq") != string::npos)
+  // fmt::print("<transform> {} :pos {}\n", *stmt, stmt->getSrcInfo());
   if (!stmt) {
     return nullptr;
   }
@@ -370,13 +372,19 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
            transform(stmt->ret), move(args), stmt->lang);
   } else if (stmt->lang == "py") {
     vector<StmtPtr> stmts;
+    string from = "";
+    if (auto i = dynamic_cast<IdExpr*>(stmt->from.get())) {
+      from = i->value;
+    } else {
+      ERROR("invalid pyimport query");
+    }
     auto call =
         EPX(stmt, CallExpr, // _py_import(LIB)[WHAT].call ( ...
             EPX(stmt, DotExpr,
                 EPX(stmt, IndexExpr,
                     EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_py_import"),
-                        transform(stmt->from)),
-                    EPX(stmt, IdExpr, stmt->name.first)),
+                        EPX(stmt, StringExpr, from)),
+                    EPX(stmt, StringExpr, stmt->name.first)),
                 "call"),
             EPX(stmt, CallExpr, // ... x.__to_py__() )
                 EPX(stmt, DotExpr, EPX(stmt, IdExpr, "x"), "__to_py__")));
@@ -507,18 +515,19 @@ void TransformStmtVisitor::visit(const WithStmt *stmt) {
 }
 
 void TransformStmtVisitor::visit(const PyDefStmt *stmt) {
-  // py.exec(""" str """)
+  // _py_exec(""" str """)
   vector<string> args;
   for (auto &a : stmt->args) {
     args.push_back(a.name);
   }
   auto code = stmt->code;
-  code = format("def %s(%s):\n%s\n", stmt->name, fmt::join(args, ", "), stmt->code);
+  code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), stmt->code);
+  DBG("py code:\n{}", code);
   vector<StmtPtr> stmts;
   stmts.push_back(
       SP(ExprStmt,
          EPX(stmt, CallExpr,
-             EPX(stmt, DotExpr, EPX(stmt, IdExpr, "py"), "exec"),
+             EPX(stmt, IdExpr, "_py_exec"),
              EPX(stmt, StringExpr, code))));
   // from __main__ pyimport foo () -> ret
   stmts.push_back(transform(SP(ExternImportStmt, make_pair(stmt->name, ""),

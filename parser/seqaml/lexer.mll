@@ -48,8 +48,6 @@
   let count_lines s =
     Core.String.fold ~init:0 ~f:(fun acc c -> if c = '\n' then acc + 1 else acc) s
 
-  let is_pydef = ref false ;;
-
   (* given a (named) string (e.g. s'foo' or 'bar'), decide the proper token *)
   let seq_string pfx u st =
     let open Core in
@@ -221,7 +219,7 @@ and read state = parse
       | "extend"   -> P.EXTEND     (cur_pos state lexbuf ~len)
       | "cimport"  -> P.EXTERN     (cur_pos state lexbuf ~len, "c")
       | "pyimport" -> P.EXTERN     (cur_pos state lexbuf ~len, "py")
-      | "pydef"    -> P.PYDEF      (cur_pos state lexbuf ~len); is_pydef := true;
+      | "pydef"    -> P.PYDEF      (cur_pos state lexbuf ~len)
       | "del"      -> P.DEL        (cur_pos state lexbuf ~len)
       | "None"     -> P.NONE       (cur_pos state lexbuf ~len)
       | "try"      -> P.TRY        (cur_pos state lexbuf ~len)

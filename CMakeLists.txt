@@ -73,6 +73,7 @@ set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/ocaml/seqparser.o")
 add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
                    COMMAND cp -r ${CMAKE_SOURCE_DIR}/compiler/parser/ocaml .
                    COMMAND cd ocaml && ocamllex -q -o lexer.ml lexer.mll
+                   COMMAND cd ocaml && menhir grammar.mly --base grammar && rm -f grammar.mli && echo "Menhir done"
                    COMMAND cd ocaml && ocamlopt 
                     -strict-sequence -strict-formats -short-paths -keep-locs -g -output-complete-obj 
                     -o ${LIB_SEQPARSE}
@@ -95,6 +96,7 @@ file(GLOB SEQ_HFILES compiler/include/fmt/*.h
                      compiler/include/parser/ast/*.h
                      compiler/include/parser/ast/transform/*.h
                      compiler/include/parser/ast/codegen/*.h
+                     compiler/include/parser/ast/format/*.h
                      compiler/include/seq/*.h)
 file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/types/*.cpp
@@ -102,6 +104,7 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/parser/ast/*.cc
                        compiler/parser/ast/transform/*.cc
                        compiler/parser/ast/codegen/*.cc
+                       compiler/parser/ast/format/*.cc
                        compiler/util/format.cc)
 
 add_library(seq SHARED ${SEQ_HFILES} ${SEQ_CPPFILES} ${LIB_SEQPARSE})

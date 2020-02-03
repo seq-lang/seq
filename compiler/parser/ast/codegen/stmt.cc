@@ -510,7 +510,6 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
 
   if (stmt->isType) {
     auto t = seq::types::RecordType::get({}, {}, stmt->name);
-    t->setSrcInfo(stmt->getSrcInfo());
     ctx.add(stmt->name, t);
     ctx.setEnclosingType(t);
     ctx.addBlock();
@@ -523,7 +522,6 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
     ctx.popBlock();
   } else {
     auto t = seq::types::RefType::get(stmt->name);
-    t->setSrcInfo(stmt->getSrcInfo());
     ctx.add(stmt->name, t);
     ctx.setEnclosingType(t);
     ctx.addBlock();

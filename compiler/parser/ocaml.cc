@@ -29,11 +29,6 @@ using namespace std;
     return (caml__temp_result);                                                \
   } while (0)
 
-struct ParsingError {
-  string msg;
-  ParsingError(string s) : msg(s) {}
-};
-
 string parse_string(value v) {
   return string(String_val(v), caml_string_length(v));
 }
@@ -89,7 +84,7 @@ unique_ptr<Expr> parse_expr(value val) {
   auto pos = parse_pos(Field(val, 0));
   v = Field(val, 1);
   if (Is_long(v)) {
-    throw ParsingError("[e] long variant mismatch");
+    seq::compilationError("[internal] long variant mismatch");
   }
   int tv = Tag_val(v);
   t = Field(v, 0);
@@ -191,10 +186,9 @@ unique_ptr<Expr> parse_expr(value val) {
            parse_expr(Field(t, 1)));
   case 30:
     Return(Yield, );
-  default: {
-    fprintf(stderr, "[e] %d\n", Tag_val(v));
-    throw ParsingError("[e] tag variant mismatch ...");
-  }
+  default:
+    seq::compilationError("[internal] tag variant mismatch ...");
+    return nullptr;
   }
 #undef Return
 }
@@ -214,7 +208,7 @@ unique_ptr<Pattern> parse_pattern(value val) {
   auto pos = parse_pos(Field(val, 0));
   v = Field(val, 1);
   if (Is_long(v)) {
-    throw ParsingError("[p] long variant mismatch");
+    seq::compilationError("[internal] long variant mismatch ...");
   }
   int tv = Tag_val(v);
   t = Field(v, 0);
@@ -244,7 +238,8 @@ unique_ptr<Pattern> parse_pattern(value val) {
   case 11:
     Return(Bound, parse_string(Field(t, 0)), parse_pattern(Field(t, 1)));
   default:
-    throw ParsingError("[p] tag variant mismatch ...");
+    seq::compilationError("[internal] tag variant mismatch ...");
+    return nullptr;
   }
 #undef Return
 }
@@ -278,7 +273,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
   auto pos = parse_pos(Field(val, 0));
   v = Field(val, 1);
   if (Is_long(v)) {
-    throw ParsingError("[s] long variant mismatch");
+    seq::compilationError("[internal] long variant mismatch ...");
   }
   int tv = Tag_val(v);
   t = Field(v, 0);
@@ -392,10 +387,9 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(PyDef, parse_string(Field(t, 0)),
            parse_optional(Field(t, 1), parse_expr),
            parse_list(Field(t, 2), parse_param), parse_string(Field(t, 3)));
-  default: {
-    // fprintf(stderr, "[s] %d\n", Tag_val(v));
-    throw ParsingError("[s] tag variant mismatch ...");
-  }
+  default:
+    seq::compilationError("[internal] tag variant mismatch ...");
+    return nullptr;
   }
 #undef Return
 }

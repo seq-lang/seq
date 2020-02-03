@@ -7,8 +7,6 @@
 
 %{
   open Ast
-  let opt_val s def = match s with Some s -> s | None -> def
-  let filter_opt s = List.rev @@ List.fold_left (fun acc i -> match i with Some s -> s::acc | None -> acc) [] s
 %}
 
 /* constants */
@@ -288,8 +286,8 @@ extern_param:
 extern_as: AS ID { $2 }
 decorator: AT ID NL { $loc, $2 } /* AT dot_term NL | AT dot_term LP FL(COMMA, expr) RP NL */
 pyfunc:
-  | PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON INDENT STRING DEDENT
-   { [$loc, PyDef ($2, $6, $4, $9)] }
+  | PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON NL INDENT STRING NL DEDENT
+    { [$loc, PyDef ($2, $6, $4, $10)] }
 
 class_statement: cls | extend | typ { $1 }
 cls:

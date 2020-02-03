@@ -398,28 +398,41 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
   }
 
   auto lhs = transform(expr->expr);
-  // vector<string> names;
-  // if (auto l = dynamic_cast<seq::FuncExpr *>(lhs)) {
-  //   auto f = dynamic_cast<seq::Func*>(l->getFunc());
-  //   assert(f);
-  //   names = f->getArgNames();
-  // }
-  bool namesStarted = false;
-  bool isPartial = false;
+  bool isTuple = false;
+  if (auto fn = dynamic_cast<seq::FuncExpr *>(lhs)) {
+    if (auto f = dynamic_cast<seq::Func *>(fn->getFunc())) {
+      for (auto &a: f->getAttributes()) {
+        if (a == "pyhandle") isTuple = true;
+      }
+    }
+  }
+
   vector<seq::Expr *> items;
   vector<string> names;
-  for (auto &&i : expr->args) {
-    if (i.name == "" && namesStarted) {
-      ERROR("unexpected unnamed argument after a named argument");
+  bool isPartial = false;
+  if (isTuple) {
+    for (auto &&i : expr->args) {
+      items.push_back(transform(i.value));
+      names.push_back("");
     }
-    namesStarted |= i.name != "";
-    names.push_back(i.name);
-    items.push_back(transform(i.value));
-    isPartial |= !items.back();
+    auto i = new seq::RecordExpr(items, names);
+    items = { i };
+    names = { "" };
+  } else {
+    bool namesStarted = false;
+    for (auto &&i : expr->args) {
+      if (i.name == "" && namesStarted) {
+        ERROR("unexpected unnamed argument after a named argument");
+      }
+      namesStarted |= i.name != "";
+      names.push_back(i.name);
+      items.push_back(transform(i.value));
+      isPartial |= !items.back();
+    }
   }
 
   if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
-    RETURN(seq::ConstructExpr, e->getType(), items);
+    RETURN(seq::ConstructExpr, e->getType(), items, names);
   } else if (isPartial) {
     RETURN(seq::PartialCallExpr, lhs, items, names);
   } else {

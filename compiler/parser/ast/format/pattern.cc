@@ -20,24 +20,18 @@
 
 using fmt::format;
 using std::get;
-using std::make_unique;
 using std::move;
 using std::ostream;
 using std::stack;
 using std::string;
-using std::unique_ptr;
-using std::unordered_map;
-using std::unordered_set;
 using std::vector;
 
 #define RETURN(T, ...)                                                         \
   this->result = fmt::format(T, __VA_ARGS__);                                  \
   return
 
-FormatPatternVisitor::FormatPatternVisitor() {}
-
-PatternPtr FormatPatternVisitor::transform(const Pattern *ptr) {
-  FormatPatternVisitor v(stmtVisitor);
+string FormatPatternVisitor::transform(const Pattern *ptr) {
+  FormatPatternVisitor v;
   ptr->accept(v);
   return v.result;
 }
@@ -87,7 +81,7 @@ void FormatPatternVisitor::visit(const OrPattern *pat) {
   for (auto &e : pat->patterns) {
     r.push_back(format("({})", transform(e)));
   }
-  RETURN("{}", combine(r, " or "));
+  RETURN("{}", fmt::join(r, " or "));
 }
 
 void FormatPatternVisitor::visit(const WildcardPattern *pat) {

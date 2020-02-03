@@ -162,3 +162,14 @@ let rec flatten_dot ~sep = function
   | _, Id s -> s
   | _, Dot (d, s) -> Printf.sprintf "%s%s%s" (flatten_dot ~sep d) sep s
   | _ -> failwith "invalid import construct (grammar)"
+
+let ppl ?(sep = ", ") ~f l =
+  String.concat sep (List.map f l)
+
+let opt_val s def =
+  match s with Some s -> s | None -> def
+
+let opt_map f def = function Some s -> f s | None -> def
+
+let filter_opt s =
+  List.rev @@ List.fold_left (fun acc i -> match i with Some s -> s::acc | None -> acc) [] s
