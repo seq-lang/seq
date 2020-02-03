@@ -86,6 +86,19 @@ k-mer minimizer
 
     print minimizer[Kmer[10]](s'ACGTACGTACGT')
 
+de Bruijn edge
+--------------
+
+.. code-block:: seq
+
+    def de_bruijn_edge[K](a: K, b: K):
+        a = a |> base(0, k'A')  # reset first base: [T]GAG -> [A]GAG
+        b = b >> s'A'           # shift right to A: [GAG]C -> A[GAG]
+        return a == b           # suffix of a == prefix of b
+
+    print de_bruijn_edge(k'TGAG', k'GAGC')  # True
+    print de_bruijn_edge(k'TCAG', k'GAGC')  # False
+
 Count bases
 -----------
 
