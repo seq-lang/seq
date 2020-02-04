@@ -8,7 +8,6 @@ test_basic()
 def test_pybridge():
     pydef test_pydef(n: int) -> str:
         return ''.join(map(str, range(n)))
-
     print test_pydef(5) , '01234'
 test_pybridge()
 
