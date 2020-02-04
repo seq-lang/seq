@@ -182,15 +182,15 @@ string FunctionStmt::to_string() const {
       *suite);
 }
 
-PyDefStmt::PyDefStmt(string n, ExprPtr r, vector<Param> a, StmtPtr s)
-    : name(n), ret(move(r)), args(move(a)), suite(move(s)) {}
+PyDefStmt::PyDefStmt(string n, ExprPtr r, vector<Param> a, string s)
+    : name(n), ret(move(r)), args(move(a)), code(s) {}
 string PyDefStmt::to_string() const {
   string as;
   for (auto &a : args)
     as += " " + a.to_string();
-  return format("(#pydef {}{}{} {})", name,
+  return format("(#pydef {}{}{} '{}')", name,
                 ret ? " :ret " + ret->to_string() : "",
-                args.size() ? " :args" + as : "", suite);
+                args.size() ? " :args" + as : "", escape(code));
 }
 
 ClassStmt::ClassStmt(bool i, string n, vector<string> g, vector<Param> a,

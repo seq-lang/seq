@@ -7,9 +7,10 @@
 
 external raise_exception: string -> string -> int -> int -> unit = "seq_ocaml_exception"
 
+open Printf
+
 let print_token t =
   let open Grammar in
-  let open Printf in
   match t with
   | YIELD -> "YIELD"
   | XOREQ s -> sprintf "XOREQ(%s)" s
@@ -114,27 +115,29 @@ let print_token t =
   | ANDEQ s -> sprintf "ANDEQ(%s)" s
   | AND s -> sprintf "AND(%s)" s
   | ADD s -> sprintf "ADD(%s)" s
+  | PYDEF_RAW s -> sprintf "PYDEF_RAW(\n%s)" s
 
 
 module I = Grammar.MenhirInterpreter
 
-let rec loop lexbuf state (checkpoint : int I.checkpoint) =
+let rec loop lexbuf state checkpoint =
   match checkpoint with
   | I.InputNeeded _env ->
     let token = Lexer.token state lexbuf in
     let checkpoint = I.offer checkpoint (token, lexbuf.lex_start_p, lexbuf.lex_curr_p) in
     loop lexbuf state checkpoint
   | I.HandlingError _env ->
+    let state = I.current_state_number _env in
     let msg =
-      match I.stack env with
-      | lazy Nil -> ""
-      | lazy (Cons (I.Element (state, _, _, _), _)) ->
-        try sprintf ": %s" @@ Grammar_messages.message (I.number state)
-        with Not_found -> ""
+      try
+        let msg = String.trim @@ Grammar_messages.message state in
+        if msg.[0] = '!'
+        then sprintf ": %s ('%s')" (String.sub msg 1 (String.length msg - 1)) (Lexing.lexeme lexbuf)
+        else sprintf ": %s" msg
+      with Not_found -> ""
     in
-    raise_exception (sprintf "syntax error%s" msg) file
-      (lexbuf.lex_start_p.pos_lnum)
-      (lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol);
+    let msg, pos =  (sprintf "parsing error%s" msg), lexbuf.lex_start_p in
+    raise_exception msg pos.pos_fname (pos.pos_lnum + 1) (pos.pos_cnum - pos.pos_bol + 1);
     None
   | I.Shifting _ | I.AboutToReduce _ -> loop lexbuf state (I.resume checkpoint)
   | I.Accepted v -> Some v
@@ -148,9 +151,9 @@ let test code =
   while true do
     let t = Lexer.token state lexbuf in
     match t with
-    | EOF -> Printf.eprintf "EOF\n%!"; exit 0
-    | NL | INDENT | DEDENT -> Printf.eprintf "%s\n%!" @@ print_token t
-    | t -> Printf.eprintf "%s %!" @@ print_token t
+    | EOF -> eprintf "EOF\n%!"; exit 0
+    | NL | INDENT | DEDENT -> eprintf "%s\n%!" @@ print_token t
+    | t -> eprintf "%s %!" @@ print_token t
   done
 
 let parse file code line_offset col_offset =
@@ -162,17 +165,14 @@ let parse file code line_offset col_offset =
      ; pos_bol = -col_offset
      };
   try
-    (* test code ; *)
+    (* test code; *)
     let stack = Stack.create () in
     Stack.push 0 stack;
     let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = file } in
-    loop lexbuf state (Grammar.Incremental.main lexbuf.lex_curr_p)
-    (* let ast = Grammar.program (Lexer.token state) lexbuf in *)
-    (* Some ast *)
-  with Ast.GrammarError (s, pos) | Ast.SyntaxError (s, pos) ->
-    raise_exception s file
-      pos.pos_lnum
-      (pos.pos_cnum - lexbuf.lex_start_p.pos_bol);
+    loop lexbuf state (Grammar.Incremental.program lexbuf.lex_curr_p)
+  with Ast.SyntaxError (s, pos) ->
+    let s = sprintf "lexing error: %s" s in
+    raise_exception s file (pos.pos_lnum + 1) (pos.pos_cnum - pos.pos_bol + 1);
     None
 
 let () =

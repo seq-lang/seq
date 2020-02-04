@@ -9,7 +9,6 @@
 type 'a ann = (Lexing.position * Lexing.position) * 'a
 
 exception SyntaxError of string * Lexing.position
-exception GrammarError of string * Lexing.position
 
 type texpr =
   | Empty of unit
@@ -42,7 +41,7 @@ type texpr =
   | TypeOf of texpr ann
   | Ptr of texpr ann
   | Lambda of (string list * texpr ann)
-  | Yield of unit
+  | YieldTo of unit
 
 and tcomprehension =
   { var : string list
@@ -82,7 +81,7 @@ type tstmt =
   | AssignEq of (texpr ann * texpr ann * string)
   | YieldFrom of texpr ann
   | With of ((texpr ann * string option) list * tstmt ann list)
-  | PyDef of (string * texpr ann option * param ann list * tstmt ann list)
+  | PyDef of (string * texpr ann option * param ann list * string)
 
 and eimport =
   { lang : string

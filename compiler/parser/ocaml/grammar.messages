@@ -253,8 +253,11 @@ program: YIELD SEMICOLON TYPE ID YIELD
 program: YIELD SEMICOLON TYPE YIELD
 program: YIELD TRUE XOREQ
 program: YIELD YIELD
+program: CLASS ID LS ID RS CLASS
+program: WITH TRUE COMMA COMMA CLASS
+program: TRUE ELSE
 
-unexpected keyword (yield)
+!unexpected keyword
 
 
 program: YIELD SEMICOLON XOREQ
@@ -345,13 +348,7 @@ program: WITH TRUE COMMA TRUE COLON XOREQ
 program: WITH TRUE XOREQ
 program: XOREQ
 
-unexpected assignment operator
-
-
-program: CLASS ID LS ID RS CLASS
-program: WITH TRUE COMMA COMMA CLASS
-
-unexpected keyword (class)
+!unexpected symbol
 
 
 program: DEF ID LP ID RP OF FALSE AS
@@ -360,7 +357,7 @@ program: PYDEF ID LP ID RP OF TRUE AS
 program: PYDEF ID LP RP OF FALSE AS
 program: TRUE LS COLON TRUE AS
 
-unexpected keyword (as)
+!unexpected keyword
 
 
 program: NL DEDENT
@@ -375,7 +372,7 @@ missing function argument specification
 
 program: DEF ID LS ID RS LESS
 
-unexpected operator
+!unexpected operator
 
 
 program: FOR ID COMMA ID COMMA SEMICOLON
@@ -390,14 +387,10 @@ program: MATCH TRUE COLON NL INDENT CASE LP TRUE RS
 program: MATCH TRUE COLON NL INDENT CASE TRUE RS
 program: TRUE LP TRUE FOR ID IN FALSE RS
 program: TRUE RS
-
-unexpected brace ('}')
-
-
 program: LS TRUE FOR ID IN FALSE RP
 program: MATCH TRUE COLON NL INDENT CASE LS TRUE RP
 
-unexpected brace (')')
+!unexpected brace
 
 
 program: LB TRUE COMMA TRUE COMMA SEMICOLON
@@ -406,11 +399,6 @@ program: LS TRUE COMMA SEMICOLON
 program: LS TRUE FOR ID COMMA ID COMMA SEMICOLON
 
 unexpected semicolon
-
-
-program: TRUE ELSE
-
-unexpected keyword (else)
 
 
 program: TRY COLON NL INDENT NL EOF

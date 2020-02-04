@@ -10,6 +10,7 @@
 {
   module L = Lexing
   module P = Grammar
+  module B = Buffer
 
   type offset = { mutable line: int ; mutable col: int }
   type stack = (* Used for tracking indentation levels *)
@@ -18,6 +19,13 @@
     ; mutable offset: int
     ; mutable ignore_newline: int
     }
+  type pystate =
+    { start: int
+    ; mutable p_offset: int
+    ; mutable trail: int
+    }
+
+  let is_pydef = ref false
 
   let char_to_string = String.make 1
   let ignore_nl t = t.ignore_newline <- t.ignore_newline + 1
@@ -118,7 +126,22 @@ and read state = parse
         pos_lnum = lexbuf.lex_curr_p.pos_lnum + lines
       ; pos_bol = lexbuf.lex_curr_p.pos_cnum
       };
-      if state.ignore_newline <= 0 then (state.offset <- 0; offset state lexbuf; P.NL)
+      if state.ignore_newline <= 0 then (
+        let pydef_start = if !is_pydef then state.offset else 0 in
+        state.offset <- 0;
+        if !is_pydef then (
+          let buf = B.create 100 in
+          let pstate = { start = pydef_start; p_offset = 0; trail = 0 } in
+          pydef_offset buf pstate lexbuf;
+          (* Printf.eprintf "loc lexeme: %d %d ; off %d\n%!"
+            (lexbuf.lex_curr_p.pos_lnum) (lexbuf.lex_curr_p.pos_cnum-lexbuf.lex_curr_p.pos_bol)
+            (pstate.trail); *)
+          is_pydef := false;
+          lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - 1;
+          state.offset <- pstate.trail;
+          P.PYDEF_RAW (Buffer.contents buf)
+        ) else (offset state lexbuf; P.NL)
+      )
       else read state lexbuf }
   | '\\' newline white*
     { lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with
@@ -161,7 +184,7 @@ and read state = parse
       | "extend"   -> P.EXTEND
       | "cimport"  -> P.EXTERN "c"
       | "pyimport" -> P.EXTERN "py"
-      | "pydef"    -> P.PYDEF
+      | "pydef"    -> is_pydef := true; P.PYDEF
       | "del"      -> P.DEL
       | "None"     -> P.NONE
       | "try"      -> P.TRY
@@ -264,4 +287,23 @@ and double_docstr state prefix = shortest
       seq_string prefix s lexbuf.lex_start_p }
   | ([^ '\\'] | escape)* eof { raise (Ast.SyntaxError ("string not closed", lexbuf.lex_start_p)) }
 
-(* and escaped_id state = parse | (([^ '\r' '\n' '$'])* as s) '$' { P.ID s } *)
+(* PyDef lexing *)
+
+and pydef buf state = parse
+  | eof {}
+  | newline
+    { B.add_string buf (L.lexeme lexbuf);
+      state.p_offset <- 0;
+      pydef_offset buf state lexbuf }
+  | _ { B.add_string buf (L.lexeme lexbuf); pydef buf state lexbuf }
+
+and pydef_offset buf state = parse
+  | (' ' | '\t') as t
+    { if state.p_offset >= state.start then B.add_string buf (char_to_string t);
+      state.p_offset <- state.p_offset + (if t = ' ' then 1 else 8);
+      pydef_offset buf state lexbuf }
+  | _ {
+    if state.p_offset <= state.start
+    then state.trail <- state.p_offset
+    else (B.add_string buf (L.lexeme lexbuf); pydef buf state lexbuf)
+  }

@@ -12,7 +12,7 @@
 /* constants */
 %token <string * string> INT_S SEQ
 %token <float * string> FLOAT_S
-%token <string> STRING ID FSTRING KMER EXTERN
+%token <string> STRING ID FSTRING KMER EXTERN PYDEF_RAW
 /* blocks & parentheses */
 %token INDENT DEDENT EOF NL DOT COLON SEMICOLON COMMA OF
 %token LP RP /* () */ LS RS /* [] */ LB RB /* {} */
@@ -62,7 +62,8 @@ atom:
   | FSTRING+ { $loc, FString (String.concat "" $1) }
   | SEQ+
     { $loc, Seq (fst (List.hd $1), String.concat "" @@ List.map (fun (i, j) ->
-        if i <> fst (List.hd $1) then raise (Ast.GrammarError ("cannot concatenate different types", $startpos));
+        if i <> fst (List.hd $1)
+          then raise (Ast.SyntaxError ("cannot concatenate different types", $startpos));
         j) $1) }
   | KMER { $loc, Kmer $1 }
   | bool { $loc, Bool $1 }
@@ -139,7 +140,7 @@ arith_term:
   | arith_term LS index_term COMMA FLNE(COMMA, index_term) RS
     { $loc, Index ($1, (($startpos($3), $endpos($5)), Tuple ($3 :: $5))) }
   | arith_term DOT ID { $loc, Dot ($1, $3) }
-  | LP YIELD RP { $loc, Yield () }
+  | LP YIELD RP { $loc, YieldTo () }
 call_term:
   | ELLIPSIS { None, ($loc, Ellipsis ()) }
   | expr { None, $1 }
@@ -285,7 +286,7 @@ extern_param:
   | ID param_type { $loc, { name = $1; typ = Some $2; default = None } }
 extern_as: AS ID { $2 }
 decorator: AT ID NL { $loc, $2 } /* AT dot_term NL | AT dot_term LP FL(COMMA, expr) RP NL */
-pyfunc: PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON suite { [$loc, PyDef ($2, $6, $4, $8)] }
+pyfunc: PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON PYDEF_RAW { [$loc, PyDef ($2, $6, $4, $8)] }
 
 class_statement: cls | extend | typ { $1 }
 cls:

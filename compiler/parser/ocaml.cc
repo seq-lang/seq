@@ -387,7 +387,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(PyDef, parse_string(Field(t, 0)),
            parse_optional(Field(t, 1), parse_expr),
            parse_list(Field(t, 2), parse_param),
-           parse_stmt_list(Field(t, 3)));
+           parse_string(Field(t, 3)));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
     return nullptr;

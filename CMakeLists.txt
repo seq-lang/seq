@@ -68,23 +68,31 @@ message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
 include_directories(${OCAML_STDLIB_PATH})
 link_directories(${OCAML_STDLIB_PATH})
 
-# Menhir grammar generation: menhir grammar.mly --base grammar && rm grammar.mli
-set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/ocaml/seqparser.o")
+# Seq parsing library
+find_program(OCAMLFIND NAMES ocamlfind)
+execute_process(COMMAND ${OCAMLFIND} ocamlc -where
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE OCAML_STDLIB_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(result)
+  message(FATAL_ERROR "CMake step for ocamlfind failed: ${result}")
+endif()
+
+message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
+include_directories(${OCAML_STDLIB_PATH})
+link_directories(${OCAML_STDLIB_PATH})
+
+set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
+set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/seqparser.o")
+set(DUNE_OUTPUT_NAME "main.exe.o")
+find_program(OPAM NAMES opam)
+if(NOT OPAM)
+  message(FATAL_ERROR "opam command not found")
+endif()
 add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
-                   COMMAND cp -r ${CMAKE_SOURCE_DIR}/compiler/parser/ocaml .
-                   COMMAND cd ocaml 
-                        && ocamllex -q -o lexer.ml lexer.mll
-                   COMMAND cd ocaml 
-                        && menhir --compile-errors grammar.messages grammar.mly > grammar_messages.ml 
-                        && menhir --base grammar --table grammar.mly 
-                        && rm -f grammar.mli 
-                        && echo "Menhir done"
-                   COMMAND cd ocaml 
-                        && ocamlfind ocamlopt -strict-sequence -strict-formats -short-paths -keep-locs -g -output-complete-obj 
-                           -package menhirLib 
-                           -o ${LIB_SEQPARSE}
-                          ast.ml grammar_messages.ml grammar.ml lexer.ml main.ml
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                   COMMAND ${OPAM} exec -- dune build --build-dir=${DUNE_BUILD_DIR} ${DUNE_OUTPUT_NAME}
+                   COMMAND cp ${DUNE_BUILD_DIR}/default/${DUNE_OUTPUT_NAME} ${LIB_SEQPARSE}
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/compiler/parser/ocaml"
                    COMMENT "Compiling Seq's OCaml components"
                    VERBATIM)
 add_custom_target(seqparse_target DEPENDS ${LIB_SEQPARSE})

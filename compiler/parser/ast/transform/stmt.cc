@@ -521,8 +521,7 @@ void TransformStmtVisitor::visit(const PyDefStmt *stmt) {
   for (auto &a : stmt->args) {
     args.push_back(a.name);
   }
-  auto code = FormatStmtVisitor().transform(stmt->suite, 1);
-  code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), code);
+  string code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), stmt->code);
   // DBG("py code:\n{}", code);
   vector<StmtPtr> stmts;
   stmts.push_back(
