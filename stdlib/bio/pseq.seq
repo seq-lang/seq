@@ -154,14 +154,3 @@ def translate(s: seq):
 extend seq:
     def translate(self: seq):
         return translate(self)
-
-def as_protein(s: seq, validate: bool = True):
-    from bio.builtin import _is_iupac_aa
-    if validate:
-        i = 0
-        while i < s.len:
-            b = s.ptr[i]
-            if not _is_iupac_aa(b):
-                raise ValueError(f"invalid amino acid '{b}' at position {i} of sequence")
-            i += 1
-    return pseq(s.ptr, abs(s.len))

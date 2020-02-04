@@ -256,5 +256,5 @@ Reading protein sequences from FASTA
 
 .. code-block:: seq
 
-    for s in FASTA('test/data/seqs.fasta') |> seqs |> as_protein:
+    for s in pFASTA('seqs.fasta') |> seqs:
         print s
