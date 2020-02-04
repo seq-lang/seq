@@ -121,8 +121,6 @@ In practice, reads would be inputted from e.g. a FASTQ file:
 
 Common formats like FASTQ, FASTA, SAM, BAM and CRAM are supported.
 
-Sequences can be reverse complemented in-place using the ``revcomp()`` method; both sequence and :math:`k`-mer types also support the ``~`` operator for reverse complementation, as shown above.
-
 .. _match:
 
 Sequence matching
