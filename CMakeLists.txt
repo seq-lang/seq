@@ -72,12 +72,18 @@ link_directories(${OCAML_STDLIB_PATH})
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/ocaml/seqparser.o")
 add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
                    COMMAND cp -r ${CMAKE_SOURCE_DIR}/compiler/parser/ocaml .
-                   COMMAND cd ocaml && ocamllex -q -o lexer.ml lexer.mll
-                   COMMAND cd ocaml && menhir grammar.mly --base grammar && rm -f grammar.mli && echo "Menhir done"
-                   COMMAND cd ocaml && ocamlopt 
-                    -strict-sequence -strict-formats -short-paths -keep-locs -g -output-complete-obj 
-                    -o ${LIB_SEQPARSE}
-                    ast.ml grammar.ml lexer.ml main.ml
+                   COMMAND cd ocaml 
+                        && ocamllex -q -o lexer.ml lexer.mll
+                   COMMAND cd ocaml 
+                        && menhir --compile-errors grammar.messages grammar.mly > grammar_messages.ml 
+                        && menhir --base grammar --table grammar.mly 
+                        && rm -f grammar.mli 
+                        && echo "Menhir done"
+                   COMMAND cd ocaml 
+                        && ocamlfind ocamlopt -strict-sequence -strict-formats -short-paths -keep-locs -g -output-complete-obj 
+                           -package menhirLib 
+                           -o ${LIB_SEQPARSE}
+                          ast.ml grammar_messages.ml grammar.ml lexer.ml main.ml
                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                    COMMENT "Compiling Seq's OCaml components"
                    VERBATIM)

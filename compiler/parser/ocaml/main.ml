@@ -116,6 +116,29 @@ let print_token t =
   | ADD s -> sprintf "ADD(%s)" s
 
 
+module I = Grammar.MenhirInterpreter
+
+let rec loop lexbuf state (checkpoint : int I.checkpoint) =
+  match checkpoint with
+  | I.InputNeeded _env ->
+    let token = Lexer.token state lexbuf in
+    let checkpoint = I.offer checkpoint (token, lexbuf.lex_start_p, lexbuf.lex_curr_p) in
+    loop lexbuf state checkpoint
+  | I.HandlingError _env ->
+    let msg =
+      match I.stack env with
+      | lazy Nil -> ""
+      | lazy (Cons (I.Element (state, _, _, _), _)) ->
+        try sprintf ": %s" @@ Grammar_messages.message (I.number state)
+        with Not_found -> ""
+    in
+    raise_exception (sprintf "syntax error%s" msg) file
+      (lexbuf.lex_start_p.pos_lnum)
+      (lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol);
+    None
+  | I.Shifting _ | I.AboutToReduce _ -> loop lexbuf state (I.resume checkpoint)
+  | I.Accepted v -> Some v
+  | I.Rejected -> assert false
 
 let test code =
   let lexbuf = Lexing.from_string (code ^ "\n") in
@@ -143,15 +166,10 @@ let parse file code line_offset col_offset =
     let stack = Stack.create () in
     Stack.push 0 stack;
     let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = file } in
-    let ast = Grammar.program (Lexer.token state) lexbuf in
-    Some ast
-  with
-  | Grammar.Error ->
-    raise_exception "parser error" file
-      (lexbuf.lex_start_p.pos_lnum)
-      (lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol);
-    None
-  | Ast.GrammarError (s, pos) | Ast.SyntaxError (s, pos) ->
+    loop lexbuf state (Grammar.Incremental.main lexbuf.lex_curr_p)
+    (* let ast = Grammar.program (Lexer.token state) lexbuf in *)
+    (* Some ast *)
+  with Ast.GrammarError (s, pos) | Ast.SyntaxError (s, pos) ->
     raise_exception s file
       pos.pos_lnum
       (pos.pos_cnum - lexbuf.lex_start_p.pos_bol);
