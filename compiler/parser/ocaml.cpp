@@ -425,7 +425,7 @@ SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
   CAMLreturn(Val_unit);
 }
 
-unique_ptr<SuiteStmt> parse(string file, string code, int line_offset,
+unique_ptr<SuiteStmt> parse_code(string file, string code, int line_offset,
                             int col_offset) {
   static bool initialized(false);
   if (!initialized) {
@@ -435,7 +435,7 @@ unique_ptr<SuiteStmt> parse(string file, string code, int line_offset,
 }
 
 unique_ptr<Expr> parse_expr(string code, const seq::SrcInfo &offset) {
-  auto result = parse(offset.file, code, offset.line, offset.col);
+  auto result = parse_code(offset.file, code, offset.line, offset.col);
   if (result->stmts.size() != 1) {
     error("incorrect expression parse");
   }
@@ -454,7 +454,7 @@ unique_ptr<SuiteStmt> parse_file(string file) {
     result += line + "\n";
   }
   fin.close();
-  return parse(file, result, 0, 0);
+  return parse_code(file, result, 0, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////////
