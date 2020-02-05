@@ -78,7 +78,7 @@
       scan 0;
       Buffer.contents buf
     in
-    match String.lowercase (String.sub pfx 0 1) with
+    match String.lowercase_ascii (String.sub pfx 0 1) with
     | "r" -> P.STRING (fix_literals ~is_raw:true u)
     | ("s" | "p") as p -> P.SEQ (p, fix_literals u)
     | "k" -> P.KMER (fix_literals u)
@@ -116,7 +116,7 @@ rule token state = parse
       let last = Stack.top state.stack in
       if cur < last then (ignore (Stack.pop state.stack); P.DEDENT)
       else if cur > last then (Stack.push cur state.stack; P.INDENT)
-      else read state lexbuf (* go ahead with parsing *) }
+      else read state lexbuf }
 
 (* Token rules *)
 and read state = parse
@@ -133,12 +133,11 @@ and read state = parse
           let buf = B.create 100 in
           let pstate = { start = pydef_start; p_offset = 0; trail = 0 } in
           pydef_offset buf pstate lexbuf;
-          (* Printf.eprintf "loc lexeme: %d %d ; off %d\n%!"
-            (lexbuf.lex_curr_p.pos_lnum) (lexbuf.lex_curr_p.pos_cnum-lexbuf.lex_curr_p.pos_bol)
-            (pstate.trail); *)
           is_pydef := false;
-          lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - 1;
-          state.offset <- pstate.trail;
+          lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - state.offset - 1;
+          if pstate.trail = 0 (* encountered newline \n *)
+          then state.offset <- Stack.top state.stack
+          else state.offset <- pstate.trail;
           P.PYDEF_RAW (Buffer.contents buf)
         ) else (offset state lexbuf; P.NL)
       )
@@ -291,19 +290,20 @@ and double_docstr state prefix = shortest
 
 and pydef buf state = parse
   | eof {}
-  | newline
+  | white* newline
     { B.add_string buf (L.lexeme lexbuf);
       state.p_offset <- 0;
       pydef_offset buf state lexbuf }
-  | _ { B.add_string buf (L.lexeme lexbuf); pydef buf state lexbuf }
+  | _
+    { B.add_string buf (L.lexeme lexbuf);
+      pydef buf state lexbuf }
 
 and pydef_offset buf state = parse
   | (' ' | '\t') as t
     { if state.p_offset >= state.start then B.add_string buf (char_to_string t);
       state.p_offset <- state.p_offset + (if t = ' ' then 1 else 8);
       pydef_offset buf state lexbuf }
-  | _ {
-    if state.p_offset <= state.start
-    then state.trail <- state.p_offset
-    else (B.add_string buf (L.lexeme lexbuf); pydef buf state lexbuf)
-  }
+  | _
+    { if state.p_offset <= state.start
+      then state.trail <- state.p_offset
+      else (B.add_string buf (L.lexeme lexbuf); pydef buf state lexbuf) }
