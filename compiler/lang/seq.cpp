@@ -564,7 +564,8 @@ void SeqJIT::init() {
 }
 
 std::unique_ptr<Module> SeqJIT::makeModule() {
-  auto module = llvm::make_unique<Module>("seq." + std::to_string(inputNum), context);
+  auto module =
+      llvm::make_unique<Module>("seq." + std::to_string(inputNum), context);
   module->setTargetTriple(target->getTargetTriple().str());
   module->setDataLayout(target->createDataLayout());
   return module;

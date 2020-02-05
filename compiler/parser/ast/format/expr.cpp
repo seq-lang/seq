@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "parser/ast/expr.h"
+#include "parser/ast/format/expr.h"
 #include "parser/ast/stmt.h"
 #include "parser/ast/transform/expr.h"
-#include "parser/ast/format/expr.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
@@ -48,9 +48,7 @@ string FormatExprVisitor::transform(const vector<ExprPtr> &exprs) {
   return r;
 }
 
-void FormatExprVisitor::visit(const EmptyExpr *expr) {
-  this->result = "None";
-}
+void FormatExprVisitor::visit(const EmptyExpr *expr) { this->result = "None"; }
 
 void FormatExprVisitor::visit(const BoolExpr *expr) {
   RETURN("{}", expr->value ? "True" : "False");
@@ -80,9 +78,7 @@ void FormatExprVisitor::visit(const SeqExpr *expr) {
   RETURN("{}\"{}\"", expr->prefix, escape(expr->value));
 }
 
-void FormatExprVisitor::visit(const IdExpr *expr) {
-  RETURN("{}", expr->value);
-}
+void FormatExprVisitor::visit(const IdExpr *expr) { RETURN("{}", expr->value); }
 
 void FormatExprVisitor::visit(const UnpackExpr *expr) {
   RETURN("*{}", transform(expr->what));

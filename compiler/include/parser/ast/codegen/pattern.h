@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "parser/ast/pattern.h"
 #include "parser/ast/codegen/stmt.h"
+#include "parser/ast/pattern.h"
 
 class CodegenPatternVisitor : public PatternVisitor {
   CodegenStmtVisitor &stmtVisitor;

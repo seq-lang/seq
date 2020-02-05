@@ -401,8 +401,9 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
   bool isTuple = false;
   if (auto fn = dynamic_cast<seq::FuncExpr *>(lhs)) {
     if (auto f = dynamic_cast<seq::Func *>(fn->getFunc())) {
-      for (auto &a: f->getAttributes()) {
-        if (a == "pyhandle") isTuple = true;
+      for (auto &a : f->getAttributes()) {
+        if (a == "pyhandle")
+          isTuple = true;
       }
     }
   }
@@ -416,8 +417,8 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
       names.push_back("");
     }
     auto i = new seq::RecordExpr(items, names);
-    items = { i };
-    names = { "" };
+    items = {i};
+    names = {""};
   } else {
     bool namesStarted = false;
     for (auto &&i : expr->args) {

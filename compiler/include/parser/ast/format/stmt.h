@@ -17,7 +17,7 @@ using std::string;
 
 class FormatStmtVisitor : public StmtVisitor {
   string result;
-  int indent { 0 };
+  int indent{0};
 
 public:
   string transform(const StmtPtr &stmt, int indent = 0);

@@ -14,8 +14,8 @@ using std::shared_ptr;
 using std::stack;
 using std::string;
 using std::unordered_map;
-using std::vector;
 using std::unordered_set;
+using std::vector;
 
 template <typename T> class VTable {
   typedef unordered_map<string, stack<shared_ptr<T>>> VTableMap;
@@ -149,7 +149,8 @@ public:
   Context(seq::SeqModule *module, ImportCache &cache,
           const string &filename = ""); // initialize standard library
   virtual ~Context() {}
-  shared_ptr<ContextItem> find(const string &name, bool onlyLocal = false) const;
+  shared_ptr<ContextItem> find(const string &name,
+                               bool onlyLocal = false) const;
   seq::TryCatch *getTryCatch() const;
   void setTryCatch(seq::TryCatch *t);
   seq::Block *getBlock() const;

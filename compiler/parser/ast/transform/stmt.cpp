@@ -10,11 +10,11 @@
 #include <vector>
 
 #include "parser/ast/expr.h"
+#include "parser/ast/format/stmt.h"
 #include "parser/ast/stmt.h"
 #include "parser/ast/transform/expr.h"
 #include "parser/ast/transform/pattern.h"
 #include "parser/ast/transform/stmt.h"
-#include "parser/ast/format/stmt.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
@@ -374,7 +374,7 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
   } else if (stmt->lang == "py") {
     vector<StmtPtr> stmts;
     string from = "";
-    if (auto i = dynamic_cast<IdExpr*>(stmt->from.get())) {
+    if (auto i = dynamic_cast<IdExpr *>(stmt->from.get())) {
       from = i->value;
     } else {
       ERROR("invalid pyimport query");
@@ -521,14 +521,13 @@ void TransformStmtVisitor::visit(const PyDefStmt *stmt) {
   for (auto &a : stmt->args) {
     args.push_back(a.name);
   }
-  string code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), stmt->code);
+  string code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "),
+                       stmt->code);
   // DBG("py code:\n{}", code);
   vector<StmtPtr> stmts;
   stmts.push_back(
-      SP(ExprStmt,
-         EPX(stmt, CallExpr,
-             EPX(stmt, IdExpr, "_py_exec"),
-             EPX(stmt, StringExpr, code))));
+      SP(ExprStmt, EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_py_exec"),
+                       EPX(stmt, StringExpr, code))));
   // from __main__ pyimport foo () -> ret
   stmts.push_back(transform(SP(ExternImportStmt, make_pair(stmt->name, ""),
                                EPX(stmt, IdExpr, "__main__"),

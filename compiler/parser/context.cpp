@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "parser/ast/codegen/stmt.h"
+#include "parser/ast/format/stmt.h"
 #include "parser/ast/transform/stmt.h"
 #include "parser/common.h"
-#include "parser/ast/format/stmt.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
 #include "seq/seq.h"
@@ -83,7 +83,8 @@ Context::Context(seq::SeqModule *module, ImportCache &cache,
   }
 }
 
-shared_ptr<ContextItem> Context::find(const string &name, bool onlyLocal) const {
+shared_ptr<ContextItem> Context::find(const string &name,
+                                      bool onlyLocal) const {
   auto i = VTable<ContextItem>::find(name);
   if (i && dynamic_cast<VarContextItem *>(i.get())) {
     if (onlyLocal) {

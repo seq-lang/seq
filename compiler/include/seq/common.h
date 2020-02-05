@@ -14,8 +14,8 @@ struct SrcInfo {
   int line, endLine;
   int col, endCol;
   SrcInfo(std::string file, int line, int endLine, int col, int endCol)
-      : file(std::move(file)), line(line), endLine(endLine),
-       col(col), endCol(endCol){};
+      : file(std::move(file)), line(line), endLine(endLine), col(col),
+        endCol(endCol){};
   SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
   friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c);
 };

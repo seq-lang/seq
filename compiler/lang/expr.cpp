@@ -667,9 +667,7 @@ Value *VarExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return var->load(base, block, atomic);
 }
 
-Var *VarExpr::getVar() const {
-  return var;
-}
+Var *VarExpr::getVar() const { return var; }
 
 types::Type *VarExpr::getType0() const { return var->getType(); }
 
