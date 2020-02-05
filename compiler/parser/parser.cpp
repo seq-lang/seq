@@ -18,7 +18,7 @@ using std::vector;
 SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file,
                                     bool isCode, bool isTest) {
   try {
-    auto stmts = isCode ? parse(argv0, file) : parse_file(file);
+    auto stmts = isCode ? ::parse(argv0, file) : parse_file(file);
     auto tv = TransformStmtVisitor::apply(move(stmts));
 
     auto module = new seq::SeqModule();

@@ -165,7 +165,7 @@ let parse file code line_offset col_offset =
      ; pos_bol = -col_offset
      };
   try
-    test code;
+    (* test code; *)
     let stack = Stack.create () in
     Stack.push 0 stack;
     let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = file } in
