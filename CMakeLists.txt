@@ -114,12 +114,12 @@ file(GLOB SEQ_HFILES compiler/include/fmt/*.h
                      compiler/include/seq/*.h)
 file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/types/*.cpp
-                       compiler/parser/*.cc
-                       compiler/parser/ast/*.cc
-                       compiler/parser/ast/transform/*.cc
-                       compiler/parser/ast/codegen/*.cc
-                       compiler/parser/ast/format/*.cc
-                       compiler/util/format.cc)
+                       compiler/parser/*.cpp
+                       compiler/parser/ast/*.cpp
+                       compiler/parser/ast/transform/*.cpp
+                       compiler/parser/ast/codegen/*.cpp
+                       compiler/parser/ast/format/*.cpp
+                       compiler/util/format.cpp)
 
 add_library(seq SHARED ${SEQ_HFILES} ${SEQ_CPPFILES} ${LIB_SEQPARSE})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
