@@ -4,7 +4,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <variant>
 #include <vector>
 
 #include <fmt/format.h>

@@ -151,33 +151,32 @@ protected:
   }
 };
 
-TEST_P(ParserTestFixture, Run) {
-  string code = get<0>(GetParam());
-  bool success = get<1>(GetParam());
-  string output = get<2>(GetParam());
-  string filename = "<test>";
-  try {
-    SeqModule *module = parse(filename.c_str(), code.c_str(), true, true);
-    execute(module, {filename}, {}, false);
-    string seqOutput = result();
-    EXPECT_TRUE(success);
-    EXPECT_EQ(output, seqOutput);
-  } catch (seq::exc::SeqException &e) {
-    EXPECT_FALSE(success);
-  }
-}
-
-vector<tuple<const char *, bool, const char *>> cases{
-    {"1", true, "1"},
-    {"0xFFFFFFFFFFFFFFFFu", true, ""},
-    {"-45.353", true, "-45.353"},
-    {"245.e12", true, "245.e12"},
-    {"'hai'", true, "hai"},
-    {"\"\"\"\nEEE\"\"\"", true, "\nEEE"},
-    // {"f'{1} + {2} = {1+2}'", true, "1 + 2 = 3"},
-    {"k'ACGT'", true, "ACGT"},
-    {"s'ACGT'", true, "ACGT"},
-    {"p'ACGT'", true, "ACGT"}};
+// TEST_P(ParserTestFixture, Run) {
+//   string code = get<0>(GetParam());
+//   bool success = get<1>(GetParam());
+//   string output = get<2>(GetParam());
+//   string filename = "<test>";
+//   try {
+//     SeqModule *module = parse(filename.c_str(), code.c_str(), true, true);
+//     execute(module, {filename}, {}, false);
+//     string seqOutput = result();
+//     EXPECT_TRUE(success);
+//     EXPECT_EQ(output, seqOutput);
+//   } catch (seq::exc::SeqException &e) {
+//     EXPECT_FALSE(success);
+//   }
+// }
+// vector<tuple<const char *, bool, const char *>> cases{
+//     {"1", true, "1"},
+//     {"0xFFFFFFFFFFFFFFFFu", true, ""},
+//     {"-45.353", true, "-45.353"},
+//     {"245.e12", true, "245.e12"},
+//     {"'hai'", true, "hai"},
+//     {"\"\"\"\nEEE\"\"\"", true, "\nEEE"},
+//     // {"f'{1} + {2} = {1+2}'", true, "1 + 2 = 3"},
+//     {"k'ACGT'", true, "ACGT"},
+//     {"s'ACGT'", true, "ACGT"},
+//     {"p'ACGT'", true, "ACGT"}};
 // INSTANTIATE_TEST_SUITE_P(
 //   CppParserTests, ParserTestFixture,
 //   testing::ValuesIn(cases)

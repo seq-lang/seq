@@ -10,4 +10,5 @@
 (executable
   (name main)
   (libraries menhirLib)
+  (link_flags (:standard -runtime-variant _pic))
   (modes (native object)))

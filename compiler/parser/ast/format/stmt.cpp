@@ -256,7 +256,7 @@ void FormatStmtVisitor::visit(const YieldFromStmt *stmt) {
 void FormatStmtVisitor::visit(const WithStmt *stmt) {
   vector<string> what;
   for (auto &w : stmt->items) {
-    what.push_back(format("{}{}", w.first,
+    what.push_back(format("{}{}", *w.first,
                           w.second == "" ? "" : format(" as {}", w.second)));
   }
   RETURN("with {}:\n{}", fmt::join(what, ", "), transform(stmt->suite, 1));
