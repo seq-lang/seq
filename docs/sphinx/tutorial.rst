@@ -100,28 +100,61 @@ Sequences can be seamlessly converted between these various types:
     dna = s'ACGTACGTACGT'  # sequence literal
 
     # (a) split into subsequences of length 3
-    #     with a stride of 2
-    for sub in dna.split(3, 2):
+    #     with a step of 2
+    for sub in dna.split(3, step=2):
         print sub
+        print ~sub  # reverse complement
 
-    # (b) split into 5-mers with stride 1
-    for kmer in dna.kmers[Kmer[5]](1):
+    # (b) split into 5-mers with step 1 (default)
+    for kmer in dna.kmers[Kmer[5]]():
         print kmer
         print ~kmer  # reverse complement
 
     # (c) convert entire sequence to 12-mer
     kmer = Kmer[12](dna)
 
-In practice, reads would be inputted from e.g. a FASTQ file:
+Seq also supports a ``pseq`` type for protein sequences:
 
 .. code-block:: seq
 
-    for read in FASTQ('input.fq'):
+    protein = p'HEAGAWGHE'           # pseq literal
+    print list(protein.split(3, 3))  # [HEA, GAW, GHE]
+    print s'ACCATGACA' |> translate  # TMT
+
+In practice, sequences would be read from e.g. a FASTQ file:
+
+.. code-block:: seq
+
+    for record in FASTQ('input.fq'):
+        print 'processing', record.name
+        process(record.seq)
+
+If you only care about the sequences, you can also do this:
+
+.. code-block:: seq
+
+    for read in FASTQ('input.fq') |> seqs:
         process(read)
 
-Common formats like FASTQ, FASTA, SAM, BAM and CRAM are supported.
+Common formats like FASTQ, FASTA, SAM, BAM and CRAM are supported. The ``FASTQ`` and ``FASTA`` parsers support several additional options:
 
-Sequences can be reverse complemented in-place using the ``revcomp()`` method; both sequence and :math:`k`-mer types also support the ``~`` operator for reverse complementation, as shown above.
+- ``validate`` (``True`` by default): Perform data validation as sequences are read
+- ``gzip`` (``True`` by default): Perform I/O using zlib, supporting gzip'd files (note that plain text files will still work with this enabled)
+- ``fai`` (``True`` by default; FASTA only): Look for a ``.fai`` file to determine sequence lengths before reading
+
+For example:
+
+.. code-block:: seq
+
+    for read in FASTQ('input.fq', validate=False, gzip=False) |> seqs:
+        process(read)
+
+To read protein sequences, you can use ``pFASTA``, which has the same interface as ``FASTA`` (but does not support ``fai``):
+
+.. code-block:: seq
+
+    for p in pFASTA('input.fa') |> seqs:
+        process(p)
 
 .. _match:
 

@@ -154,6 +154,3 @@ def translate(s: seq):
 extend seq:
     def translate(self: seq):
         return translate(self)
-
-def as_protein(s: seq):
-    return pseq(s.ptr, abs(s.len))

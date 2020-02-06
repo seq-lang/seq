@@ -39,7 +39,7 @@ def aln3(t):
         assert score == score2
 
 def subs(path: str):
-    for a in seqs(FASTQ(path)):
+    for a in seqs(FASTA(path)):
         for b in a.split(20, 1):
             yield b
 

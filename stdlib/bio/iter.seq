@@ -1,28 +1,65 @@
-# Interface for iterating over sequences in some format
-# (e.g. FASTA, FASTQ, SAM, etc.).
+# Sequence reader in text, line-by-line format.
+type SeqReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
+    def __init__(self: SeqReader, path: str, validate: bool, gzip: bool, copy: bool) -> SeqReader:
+        return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), validate, gzip, copy)
 
-type Seqs(file: gzFile):
-    def __init__(self: Seqs, path: str) -> Seqs:
-        return (gzopen(path, "r"),)
+    @property
+    def file(self: SeqReader):
+        assert not self.gzip
+        p = __array__[cobj](1)
+        p.ptr[0] = self._file
+        return ptr[File](p.ptr)[0]
 
-    def __iter__(self: Seqs):
-        for a in self.file._iter():
-            assert a.len >= 0
-            yield copy(seq(a.ptr, a.len))
+    @property
+    def gzfile(self: SeqReader):
+        assert self.gzip
+        p = __array__[cobj](1)
+        p.ptr[0] = self._file
+        return ptr[gzFile](p.ptr)[0]
+
+    def _preprocess(self: SeqReader, a: str):
+        from bio.builtin import _validate_str_as_seq
+        if self.validate:
+            return _validate_str_as_seq(a, self.copy)
+        else:
+            return copy(seq(a.ptr, a.len)) if self.copy else seq(a.ptr, a.len)
+
+    def __seqs__(self: SeqReader):
+        return self.__iter__()
+
+    def __iter__(self: SeqReader):
+        if self.gzip:
+            for a in self.gzfile._iter():
+                s = self._preprocess(a)
+                assert s.len >= 0
+                yield s
+        else:
+            for a in self.file._iter():
+                s = self._preprocess(a)
+                assert s.len >= 0
+                yield s
         self.close()
 
-    def __blocks__(self: Seqs, size: int):
+    def __blocks__(self: SeqReader, size: int):
         from bio.block import _blocks
+        if not self.copy:
+            raise ValueError("cannot read sequences in blocks with copy=False")
         return _blocks(self.__iter__(), size)
 
-    def close(self: Seqs):
-        self.file.close()
+    def close(self: SeqReader):
+        if self.gzip:
+            self.gzfile.close()
+        else:
+            self.file.close()
 
-    def __enter__(self: Seqs):
+    def __enter__(self: SeqReader):
         pass
 
-    def __exit__(self: Seqs):
+    def __exit__(self: SeqReader):
         self.close()
+
+def Seqs(path: str, validate: bool = True, gzip: bool = True, copy: bool = True):
+    return SeqReader(path=path, validate=validate, gzip=gzip, copy=copy)
 
 extend str:
     def __seqs__(self: str):
