@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 #include <iostream>
 #include <map>
 #include <string>

@@ -6,18 +6,18 @@
 #include <string>
 #include <vector>
 
-#include <fmt/format.h>
-#include <fmt/ostream.h>
+#include "util/fmt/format.h"
+#include "util/fmt/ostream.h"
 
 #include <caml/alloc.h>
 #include <caml/callback.h>
 #include <caml/memory.h>
 #include <caml/mlvalues.h>
 
+#include "lang/seq.h"
 #include "parser/ast/expr.h"
 #include "parser/ast/stmt.h"
 #include "parser/common.h"
-#include "seq/seq.h"
 
 using namespace std;
 

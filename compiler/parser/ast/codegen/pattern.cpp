@@ -1,5 +1,5 @@
-#include <fmt/format.h>
-#include <fmt/ostream.h>
+#include "util/fmt/format.h"
+#include "util/fmt/ostream.h"
 #include <memory>
 #include <ostream>
 #include <stack>
@@ -9,13 +9,13 @@
 #include <unordered_set>
 #include <vector>
 
+#include "lang/seq.h"
 #include "parser/ast/codegen/pattern.h"
 #include "parser/ast/expr.h"
 #include "parser/ast/stmt.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
-#include "seq/seq.h"
 
 using fmt::format;
 using std::get;

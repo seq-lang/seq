@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 #include <cassert>
 #include <iostream>
 #include <memory>

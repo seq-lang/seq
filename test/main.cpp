@@ -3,14 +3,14 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
-#include <parser/parser.h>
-#include <seq/seq.h>
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <unistd.h>
 #include <vector>
 
+#include "lang/seq.h"
+#include "parser/parser.h"
 #include "gtest/gtest.h"
 
 using namespace seq;
@@ -122,7 +122,7 @@ TEST_P(SeqTest, Run) {
   }
 }
 
-class ParserTestFixture
+class ParserTest
     : public testing::TestWithParam<tuple<
           const char * /*code*/, bool /*success*/, const char * /*output*/>> {
 protected:
@@ -130,7 +130,7 @@ protected:
   int out_pipe[2];
   int save;
 
-  ParserTestFixture() : buf(65536), out_pipe(), save() {}
+  ParserTest() : buf(65536), out_pipe(), save() {}
 
   void SetUp() override {
     save = dup(STDOUT_FILENO);
@@ -151,7 +151,7 @@ protected:
   }
 };
 
-// TEST_P(ParserTestFixture, Run) {
+// TEST_P(ParserTest, Run) {
 //   string code = get<0>(GetParam());
 //   bool success = get<1>(GetParam());
 //   string output = get<2>(GetParam());
@@ -178,7 +178,7 @@ protected:
 //     {"s'ACGT'", true, "ACGT"},
 //     {"p'ACGT'", true, "ACGT"}};
 // INSTANTIATE_TEST_SUITE_P(
-//   CppParserTests, ParserTestFixture,
+//   CppParserTests, ParserTest,
 //   testing::ValuesIn(cases)
 // );
 

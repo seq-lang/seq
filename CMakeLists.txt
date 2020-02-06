@@ -5,8 +5,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-include_directories(compiler/include)
-include_directories(runtime)
+include_directories(.)
+include_directories(compiler)
 
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -53,7 +53,6 @@ if(SEQ_THREADED)
 else()
   target_compile_definitions(seqrt PRIVATE THREADED=0)
 endif()
-
 
 # Seq parsing library
 execute_process(COMMAND ocamlc -where
@@ -105,13 +104,15 @@ set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-file(GLOB SEQ_HFILES compiler/include/fmt/*.h
-                     compiler/include/parser/*.h
-                     compiler/include/parser/ast/*.h
-                     compiler/include/parser/ast/transform/*.h
-                     compiler/include/parser/ast/codegen/*.h
-                     compiler/include/parser/ast/format/*.h
-                     compiler/include/seq/*.h)
+file(GLOB SEQ_HPPFILES compiler/lang/*.h
+                       compiler/types/*.h
+                       compiler/parser/*.h
+                       compiler/parser/ast/*.h
+                       compiler/parser/ast/transform/*.h
+                       compiler/parser/ast/codegen/*.h
+                       compiler/parser/ast/format/*.h
+                       compiler/util/*.h
+                       compiler/util/fmt/*.h)
 file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/types/*.cpp
                        compiler/parser/*.cpp
@@ -119,9 +120,10 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/parser/ast/transform/*.cpp
                        compiler/parser/ast/codegen/*.cpp
                        compiler/parser/ast/format/*.cpp
-                       compiler/util/format.cpp)
+                       compiler/util/*.cpp
+                       compiler/util/fmt/*.cpp)
 
-add_library(seq SHARED ${SEQ_HFILES} ${SEQ_CPPFILES} ${LIB_SEQPARSE})
+add_library(seq SHARED ${SEQ_HPPFILES} ${SEQ_CPPFILES} ${LIB_SEQPARSE})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} dl seqrt)
 

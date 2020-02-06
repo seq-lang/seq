@@ -4,8 +4,8 @@
 #include <tuple>
 #include <vector>
 
-#include <fmt/format.h>
-#include <fmt/ostream.h>
+#include "util/fmt/format.h"
+#include "util/fmt/ostream.h"
 
 #include "parser/ast/stmt.h"
 #include "parser/common.h"
