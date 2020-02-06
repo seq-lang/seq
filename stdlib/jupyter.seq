@@ -1,0 +1,57 @@
+
+COUNTER = 1
+
+class SequencingBrowser:
+    url: str
+    genome: str 
+    chr: str
+    start: int
+    end: int
+
+    def __jupyter__(self: SequencingBrowser) -> str:
+        global COUNTER
+        cnt = COUNTER
+        COUNTER += 1
+
+        format = self.url.split('.')[-1]
+        fidx = 'bai'
+        if format == 'cram': fidx = 'crai'
+        js = str.cat([
+            "igv.createBrowser(document.getElementById('igv-div-" + str(cnt) + "'), {",
+            "genome: '" + self.genome + "', locus: '" + self.chr + ":" + str(self.start) + "-" + str(self.end) + "',",
+            "tracks: [ {",
+            '"name": "Sample",',
+            '"url": "' + self.url + '",',
+            '"indexURL": "' + self.url + '.' + fidx + '",',
+            '"format": "' + format + '"',
+            "}]}).then(function (browser) { })" 
+        ])
+        return '\0x1text/html\b<div id="igv-div-' + str(cnt) + '" /><script>require(["igv"], function (igv) {' + js + '});</script>'
+
+class JupyterView[T]:
+    s: str
+    
+    def __init__(self: JupyterView[T], x: T):
+        self.s = str(x)
+
+    def __init__(self: JupyterView[T], x: SequencingBrowser):
+        self.s = x.__jupyter__()
+
+
+# pydef seq_plot(g: pyobj) -> str:
+#     from io import BytesIO
+#     import base64
+#     figfile = BytesIO()
+#     g.save(figfile, format='png')
+#     figfile.seek(0)
+#     figdata_png = base64.b64encode(figfile.getvalue()).decode('ascii')
+#     return '\1text/html\b<img src="data:image/png;base64,' + figdata_png + '}" />'
+
+# pydef plot(y: list[float]) -> pyobj:
+#     from plotnine import ggplot, aes, geom_line
+#     import pandas as pd
+#     df = pd.DataFrame.from_dict({'x': range(len(y)), 'y': y})
+#     return ggplot(df) + aes(x='x', y='y') + geom_line()
+    
+# p = plot([1.0, 2.0, -3.4, 8.3, 4.4])
+# print seq_plot(p)

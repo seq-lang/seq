@@ -637,6 +637,8 @@ FOREIGN char is_ref_type(types::Type *t) {
 
 FOREIGN BaseFunc *get_func(FuncExpr *e) { return e->getFunc(); }
 
+FOREIGN types::Type *get_func_type(Func *e) { return e->getFuncType(); }
+
 FOREIGN types::Type *get_var_type(Var *e) { return e->getType(); }
 
 FOREIGN void set_base(Stmt *st, BaseFunc *base) {
@@ -671,6 +673,16 @@ FOREIGN void set_static_realize_types(GetStaticElemExpr *e, types::Type **types,
 FOREIGN types::Type *realize_type(types::RefType *t, types::Type **types,
                                   size_t sz, char **error) {
   return types::GenericType::get(t, vector<types::Type *>(types, types + sz));
+}
+
+FOREIGN char* get_pos_str (SrcObject *v)
+{
+  if (!v) return strdup("");
+  auto info = v->getSrcInfo();
+  char *er = 0;
+  asprintf(&er, "%s\b%d\b%d\b%d", info.file.c_str(), info.line,
+           info.col, info.len);
+  return er;
 }
 
 /// Anything below throws exceptions

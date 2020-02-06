@@ -22,13 +22,12 @@ module type Stmt = sig
   (** Parses an [Ast_stmt.t] within a context [Ctx.t] and returns a LLVM handle. *)
   val parse
     :  ?toplevel:bool
-    -> ?jit:bool
     -> ctx:Ctx.t
     -> Stmt.t Ann.ann
     -> Llvm.Types.stmt_t
 
   (** Parses a module ([Ast.t]) AST *)
-  val parse_module : ?jit:bool -> ctx:Ctx.t -> Stmt.t Ann.ann list -> unit
+  val parse_module : ?cell:bool -> ctx:Ctx.t -> Stmt.t Ann.ann list -> unit
 
   (** Parses a [For] statement AST. Public in order to allow access to it from [ExprIntf]. *)
   val parse_for

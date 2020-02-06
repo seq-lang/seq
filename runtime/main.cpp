@@ -20,6 +20,12 @@ static void versMsg(raw_ostream &out) {
 }
 
 int main(int argc, char **argv) {
+  if (argc==2 && string(argv[1])=="--repl")
+  {
+    repl(argv[0]);
+    exit(0);
+  }
+
   opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "
                             "print LLVM IR to stderr)"));

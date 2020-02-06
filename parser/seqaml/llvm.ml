@@ -251,6 +251,8 @@ module Expr = struct
 
   let get_name = foreign "get_expr_name" (t @-> returning string)
 
+  let get_type = foreign "get_type" (t @-> returning Types.typ)
+
   (* Utilities *)
 
   let is_type expr =
@@ -391,6 +393,8 @@ module Var = struct
 
   let set_global = foreign "set_global" (t @-> returning void)
   let set_atomic = foreign "var_expr_set_atomic" (Types.expr @-> returning Ctypes.void)
+
+  let get_type = foreign "get_var_type" (t @-> returning Types.typ)
 end
 
 (** [Func] wraps Seq BaseFunc methods and helpers. *)
@@ -450,6 +454,8 @@ module Func = struct
   let set_type = foreign "set_func_out" (t @-> Types.typ @-> returning void)
   let set_extern = foreign "set_func_extern" (t @-> returning void)
   let set_enclosing = foreign "set_func_enclosing" (t @-> t @-> returning void)
+
+  let get_type = foreign "get_func_type" (t @-> returning Types.typ)
 end
 
 (** [Generics] wraps Seq generic methods and helpers. *)
@@ -577,6 +583,17 @@ module JIT = struct
   let t = Types.jit
   let init = foreign "jit_init" (void @-> returning t)
   let var = foreign "jit_var" (t @-> Types.expr @-> returning Types.var)
+
+  let get_pos expr =
+    let str = foreign "get_pos_str" Ctypes.(t @-> returning string) expr in
+    if str = "" then None else
+      let l = Array.of_list @@ String.split ~on:'\b' str in
+      assert (Array.length l = 4);
+      let file = l.(0) in
+      let line = Int.of_string l.(1) in
+      let col = Int.of_string l.(2) in
+      let len = Int.of_string l.(3) in
+      Some Ast_ann.{ file; line; col; len }
 
   let func jit fn =
     let err_addr = Ctypes.allocate (ptr char) (from_voidp char null) in

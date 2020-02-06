@@ -7,6 +7,28 @@
 
 open Core
 
+(*
+  lookup:
+    file -> line -> [ pos ; pointer ]
+  origin:
+    file -> line -> [ doc; type_name ]
+*)
+type tinstecttype =
+  | IFunc of Llvm.Types.func_t
+  | IType of Llvm.Types.typ_t
+  | IVar of Llvm.Types.var_t
+  | IExpr of Llvm.Types.expr_t
+  | IImport of string
+type tinspect = 
+  { pos: Ast_ann.t
+  ; el: tinstecttype
+  ; name: string }
+type tinspectvar = 
+  { doc: string
+  ; pos: Ast_ann.t
+  ; name: string
+  }
+
 (** Main parsing context. *)
 type t =
   { filename : string (** The file that is being parsed. *)
@@ -30,8 +52,26 @@ type t =
         to populate [Ast.Ann] annotations. *)
   ; stdlib : Ctx_namespace.t
         (** A context that holds the internal Seq objects and libraries. *)
+
+  ; is_jit: bool
+  ; inspect_lookup : 
+    (string, (int, tinspect Stack.t) Hashtbl.t) Hashtbl.t
+  ; inspect_var_lookup:
+    (unit Ctypes_static.ptr, tinspectvar) Hashtbl.t
   }
 
+let add_inspect ~ctx (pos: Ast_ann.t) name el = 
+  if ctx.is_jit then 
+    let s = Hashtbl.find_or_add ctx.inspect_lookup pos.file ~default:Int.Table.create in
+    let s = Hashtbl.find_or_add s pos.line ~default:Stack.create in
+    Stack.push s { pos; el; name }
+
+let add_inspect_var ~ctx key (pos: Ast_ann.t) name doc = 
+  if ctx.is_jit then 
+    ( (* eprintf "< adding %s: %nx\n%!" name (Ctypes.raw_address_of_ptr key); *)
+      ignore @@ Hashtbl.add ctx.inspect_var_lookup ~key ~data:{ name; doc; pos };
+    )
+  
 (** [add_block context] adds a new block to the context stack. *)
 let add_block ctx = Stack.push ctx.stack (String.Hash_set.create ())
 
@@ -54,6 +94,7 @@ let add ~(ctx : t) ?(toplevel = false) ?(global = false) ?(internal = false) key
   (match Hashtbl.find ctx.map key with
   | None -> Hashtbl.set ctx.map ~key ~data:[ var ]
   | Some lst -> Hashtbl.set ctx.map ~key ~data:(var :: lst));
+  
   Hash_set.add (Stack.top_exn ctx.stack) key
 
 (** [remove ~ctx name] removes the most recent variable [name] from the namespace. *)
@@ -98,6 +139,9 @@ let init_module ?(argv = true) ?(jit = false) ~filename ~mdl ~base ~block parser
     ; imported = String.Table.create ()
     ; trycatch = Ctypes.null
     ; stdlib = String.Table.create ()
+    ; is_jit = jit
+    ; inspect_lookup = String.Table.create ()
+    ; inspect_var_lookup = Hashtbl.Poly.create ()
     }
   in
   add_block ctx;
