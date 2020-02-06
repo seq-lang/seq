@@ -95,7 +95,8 @@ IfStmt::IfStmt(vector<IfStmt::If> i) : ifs(move(i)) {}
 string IfStmt::to_string() const {
   string s;
   for (auto &i : ifs)
-    s += format(" ({}{})", i.cond ? format(":cond {} ", *i.cond) : "", *i.suite);
+    s +=
+        format(" ({}{})", i.cond ? format(":cond {} ", *i.cond) : "", *i.suite);
   return format("(#if{})", s);
 }
 

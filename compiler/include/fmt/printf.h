@@ -8,8 +8,8 @@
 #ifndef FMT_PRINTF_H_
 #define FMT_PRINTF_H_
 
-#include <algorithm>  // std::max
-#include <limits>     // std::numeric_limits
+#include <algorithm> // std::max
+#include <limits>    // std::numeric_limits
 
 #include "ostream.h"
 
@@ -35,7 +35,7 @@ template <> struct int_checker<true> {
 };
 
 class printf_precision_handler {
- public:
+public:
   template <typename T, FMT_ENABLE_IF(std::is_integral<T>::value)>
   int operator()(T value) {
     if (!int_checker<std::numeric_limits<T>::is_signed>::fits_in_int(value))
@@ -52,7 +52,7 @@ class printf_precision_handler {
 
 // An argument visitor that returns true iff arg is a zero integer.
 class is_zero_int {
- public:
+public:
   template <typename T, FMT_ENABLE_IF(std::is_integral<T>::value)>
   bool operator()(T value) {
     return value == 0;
@@ -69,18 +69,19 @@ template <typename T> struct make_unsigned_or_bool : std::make_unsigned<T> {};
 template <> struct make_unsigned_or_bool<bool> { using type = bool; };
 
 template <typename T, typename Context> class arg_converter {
- private:
+private:
   using char_type = typename Context::char_type;
 
-  basic_format_arg<Context>& arg_;
+  basic_format_arg<Context> &arg_;
   char_type type_;
 
- public:
-  arg_converter(basic_format_arg<Context>& arg, char_type type)
+public:
+  arg_converter(basic_format_arg<Context> &arg, char_type type)
       : arg_(arg), type_(type) {}
 
   void operator()(bool value) {
-    if (type_ != 's') operator()<bool>(value);
+    if (type_ != 's')
+      operator()<bool>(value);
   }
 
   template <typename U, FMT_ENABLE_IF(std::is_integral<U>::value)>
@@ -111,7 +112,7 @@ template <typename T, typename Context> class arg_converter {
   }
 
   template <typename U, FMT_ENABLE_IF(!std::is_integral<U>::value)>
-  void operator()(U) {}  // No conversion needed for non-integral types.
+  void operator()(U) {} // No conversion needed for non-integral types.
 };
 
 // Converts an integer argument to T for printf, if T is an integral type.
@@ -119,17 +120,17 @@ template <typename T, typename Context> class arg_converter {
 // type depending on the type specifier: 'd' and 'i' - signed, other -
 // unsigned).
 template <typename T, typename Context, typename Char>
-void convert_arg(basic_format_arg<Context>& arg, Char type) {
+void convert_arg(basic_format_arg<Context> &arg, Char type) {
   visit_format_arg(arg_converter<T, Context>(arg, type), arg);
 }
 
 // Converts an integer argument to char for printf.
 template <typename Context> class char_converter {
- private:
-  basic_format_arg<Context>& arg_;
+private:
+  basic_format_arg<Context> &arg_;
 
- public:
-  explicit char_converter(basic_format_arg<Context>& arg) : arg_(arg) {}
+public:
+  explicit char_converter(basic_format_arg<Context> &arg) : arg_(arg) {}
 
   template <typename T, FMT_ENABLE_IF(std::is_integral<T>::value)>
   void operator()(T value) {
@@ -138,19 +139,19 @@ template <typename Context> class char_converter {
   }
 
   template <typename T, FMT_ENABLE_IF(!std::is_integral<T>::value)>
-  void operator()(T) {}  // No conversion needed for non-integral types.
+  void operator()(T) {} // No conversion needed for non-integral types.
 };
 
 // Checks if an argument is a valid printf width specifier and sets
 // left alignment if it is negative.
 template <typename Char> class printf_width_handler {
- private:
+private:
   using format_specs = basic_format_specs<Char>;
 
-  format_specs& specs_;
+  format_specs &specs_;
 
- public:
-  explicit printf_width_handler(format_specs& specs) : specs_(specs) {}
+public:
+  explicit printf_width_handler(format_specs &specs) : specs_(specs) {}
 
   template <typename T, FMT_ENABLE_IF(std::is_integral<T>::value)>
   unsigned operator()(T value) {
@@ -160,7 +161,8 @@ template <typename Char> class printf_width_handler {
       width = 0 - width;
     }
     unsigned int_max = max_value<int>();
-    if (width > int_max) FMT_THROW(format_error("number is too big"));
+    if (width > int_max)
+      FMT_THROW(format_error("number is too big"));
     return static_cast<unsigned>(width);
   }
 
@@ -172,20 +174,20 @@ template <typename Char> class printf_width_handler {
 };
 
 template <typename Char, typename Context>
-void printf(buffer<Char>& buf, basic_string_view<Char> format,
+void printf(buffer<Char> &buf, basic_string_view<Char> format,
             basic_format_args<Context> args) {
   Context(std::back_inserter(buf), format, args).format();
 }
 
 template <typename OutputIt, typename Char, typename Context>
-internal::truncating_iterator<OutputIt> printf(
-    internal::truncating_iterator<OutputIt> it, basic_string_view<Char> format,
-    basic_format_args<Context> args) {
+internal::truncating_iterator<OutputIt>
+printf(internal::truncating_iterator<OutputIt> it,
+       basic_string_view<Char> format, basic_format_args<Context> args) {
   return Context(it, format, args).format();
 }
-}  // namespace internal
+} // namespace internal
 
-using internal::printf;  // For printing into memory_buffer.
+using internal::printf; // For printing into memory_buffer.
 
 template <typename Range> class printf_arg_formatter;
 
@@ -198,15 +200,15 @@ template <typename OutputIt, typename Char> class basic_printf_context;
  */
 template <typename Range>
 class printf_arg_formatter : public internal::arg_formatter_base<Range> {
- public:
+public:
   using iterator = typename Range::iterator;
 
- private:
+private:
   using char_type = typename Range::value_type;
   using base = internal::arg_formatter_base<Range>;
   using context_type = basic_printf_context<iterator, char_type>;
 
-  context_type& context_;
+  context_type &context_;
 
   void write_null_pointer(char) {
     this->specs()->type = 0;
@@ -218,7 +220,7 @@ class printf_arg_formatter : public internal::arg_formatter_base<Range> {
     this->write(L"(nil)");
   }
 
- public:
+public:
   using format_specs = typename base::format_specs;
 
   /**
@@ -228,7 +230,7 @@ class printf_arg_formatter : public internal::arg_formatter_base<Range> {
     specifier information for standard argument types.
     \endrst
    */
-  printf_arg_formatter(iterator iter, format_specs& specs, context_type& ctx)
+  printf_arg_formatter(iterator iter, format_specs &specs, context_type &ctx)
       : base(Range(iter), &specs, internal::locale_ref()), context_(ctx) {}
 
   template <typename T, FMT_ENABLE_IF(fmt::internal::is_integral<T>::value)>
@@ -236,12 +238,13 @@ class printf_arg_formatter : public internal::arg_formatter_base<Range> {
     // MSVC2013 fails to compile separate overloads for bool and char_type so
     // use std::is_same instead.
     if (std::is_same<T, bool>::value) {
-      format_specs& fmt_specs = *this->specs();
-      if (fmt_specs.type != 's') return base::operator()(value ? 1 : 0);
+      format_specs &fmt_specs = *this->specs();
+      if (fmt_specs.type != 's')
+        return base::operator()(value ? 1 : 0);
       fmt_specs.type = 0;
       this->write(value != 0);
     } else if (std::is_same<T, char_type>::value) {
-      format_specs& fmt_specs = *this->specs();
+      format_specs &fmt_specs = *this->specs();
       if (fmt_specs.type && fmt_specs.type != 'c')
         return (*this)(static_cast<int>(value));
       fmt_specs.sign = sign::none;
@@ -260,7 +263,7 @@ class printf_arg_formatter : public internal::arg_formatter_base<Range> {
   }
 
   /** Formats a null-terminated C string. */
-  iterator operator()(const char* value) {
+  iterator operator()(const char *value) {
     if (value)
       base::operator()(value);
     else if (this->specs()->type == 'p')
@@ -271,7 +274,7 @@ class printf_arg_formatter : public internal::arg_formatter_base<Range> {
   }
 
   /** Formats a null-terminated wide C string. */
-  iterator operator()(const wchar_t* value) {
+  iterator operator()(const wchar_t *value) {
     if (value)
       base::operator()(value);
     else if (this->specs()->type == 'p')
@@ -288,8 +291,9 @@ class printf_arg_formatter : public internal::arg_formatter_base<Range> {
   iterator operator()(monostate value) { return base::operator()(value); }
 
   /** Formats a pointer. */
-  iterator operator()(const void* value) {
-    if (value) return base::operator()(value);
+  iterator operator()(const void *value) {
+    if (value)
+      return base::operator()(value);
     this->specs()->type = 0;
     write_null_pointer(char_type());
     return this->out();
@@ -304,12 +308,12 @@ class printf_arg_formatter : public internal::arg_formatter_base<Range> {
 
 template <typename T> struct printf_formatter {
   template <typename ParseContext>
-  auto parse(ParseContext& ctx) -> decltype(ctx.begin()) {
+  auto parse(ParseContext &ctx) -> decltype(ctx.begin()) {
     return ctx.begin();
   }
 
   template <typename FormatContext>
-  auto format(const T& value, FormatContext& ctx) -> decltype(ctx.out()) {
+  auto format(const T &value, FormatContext &ctx) -> decltype(ctx.out()) {
     internal::format_value(internal::get_container(ctx.out()), value);
     return ctx.out();
   }
@@ -317,30 +321,30 @@ template <typename T> struct printf_formatter {
 
 /** This template formats data and writes the output to a writer. */
 template <typename OutputIt, typename Char> class basic_printf_context {
- public:
+public:
   /** The character type for the output. */
   using char_type = Char;
   using format_arg = basic_format_arg<basic_printf_context>;
   template <typename T> using formatter_type = printf_formatter<T>;
 
- private:
+private:
   using format_specs = basic_format_specs<char_type>;
 
   OutputIt out_;
   basic_format_args<basic_printf_context> args_;
   basic_format_parse_context<Char> parse_ctx_;
 
-  static void parse_flags(format_specs& specs, const Char*& it,
-                          const Char* end);
+  static void parse_flags(format_specs &specs, const Char *&it,
+                          const Char *end);
 
   // Returns the argument with specified index or, if arg_index is -1, the next
   // argument.
   format_arg get_arg(int arg_index = -1);
 
   // Parses argument index, flags and width and returns the argument index.
-  int parse_header(const Char*& it, const Char* end, format_specs& specs);
+  int parse_header(const Char *&it, const Char *end, format_specs &specs);
 
- public:
+public:
   /**
    \rst
    Constructs a ``printf_context`` object. References to the arguments and
@@ -357,9 +361,9 @@ template <typename OutputIt, typename Char> class basic_printf_context {
 
   format_arg arg(int id) const { return args_.get(id); }
 
-  basic_format_parse_context<Char>& parse_context() { return parse_ctx_; }
+  basic_format_parse_context<Char> &parse_context() { return parse_ctx_; }
 
-  FMT_CONSTEXPR void on_error(const char* message) {
+  FMT_CONSTEXPR void on_error(const char *message) {
     parse_ctx_.on_error(message);
   }
 
@@ -369,9 +373,9 @@ template <typename OutputIt, typename Char> class basic_printf_context {
 };
 
 template <typename OutputIt, typename Char>
-void basic_printf_context<OutputIt, Char>::parse_flags(format_specs& specs,
-                                                       const Char*& it,
-                                                       const Char* end) {
+void basic_printf_context<OutputIt, Char>::parse_flags(format_specs &specs,
+                                                       const Char *&it,
+                                                       const Char *end) {
   for (; it != end; ++it) {
     switch (*it) {
     case '-':
@@ -406,8 +410,9 @@ basic_printf_context<OutputIt, Char>::get_arg(int arg_index) {
 }
 
 template <typename OutputIt, typename Char>
-int basic_printf_context<OutputIt, Char>::parse_header(
-    const Char*& it, const Char* end, format_specs& specs) {
+int basic_printf_context<OutputIt, Char>::parse_header(const Char *&it,
+                                                       const Char *end,
+                                                       format_specs &specs) {
   int arg_index = -1;
   char_type c = *it;
   if (c >= '0' && c <= '9') {
@@ -415,11 +420,12 @@ int basic_printf_context<OutputIt, Char>::parse_header(
     // preceded with '0' flag(s).
     internal::error_handler eh;
     int value = parse_nonnegative_int(it, end, eh);
-    if (it != end && *it == '$') {  // value is an argument index
+    if (it != end && *it == '$') { // value is an argument index
       ++it;
       arg_index = value;
     } else {
-      if (c == '0') specs.fill[0] = '0';
+      if (c == '0')
+        specs.fill[0] = '0';
       if (value != 0) {
         // Nonzero value means that we parsed width and don't need to
         // parse it or flags again, so return now.
@@ -447,12 +453,13 @@ template <typename OutputIt, typename Char>
 template <typename ArgFormatter>
 OutputIt basic_printf_context<OutputIt, Char>::format() {
   auto out = this->out();
-  const Char* start = parse_ctx_.begin();
-  const Char* end = parse_ctx_.end();
+  const Char *start = parse_ctx_.begin();
+  const Char *end = parse_ctx_.end();
   auto it = start;
   while (it != end) {
     char_type c = *it++;
-    if (c != '%') continue;
+    if (c != '%')
+      continue;
     if (it != end && *it == c) {
       out = std::copy(start, it, out);
       start = ++it;
@@ -465,7 +472,8 @@ OutputIt basic_printf_context<OutputIt, Char>::format() {
 
     // Parse argument index, flags and width.
     int arg_index = parse_header(it, end, specs);
-    if (arg_index == 0) on_error("argument index out of range");
+    if (arg_index == 0)
+      on_error("argument index out of range");
 
     // Parse precision.
     if (it != end && *it == '.') {
@@ -476,8 +484,8 @@ OutputIt basic_printf_context<OutputIt, Char>::format() {
         specs.precision = parse_nonnegative_int(it, end, eh);
       } else if (c == '*') {
         ++it;
-        specs.precision =
-            static_cast<int>(visit_format_arg(internal::printf_precision_handler(), get_arg()));
+        specs.precision = static_cast<int>(
+            visit_format_arg(internal::printf_precision_handler(), get_arg()));
       } else {
         specs.precision = 0;
       }
@@ -490,7 +498,7 @@ OutputIt basic_printf_context<OutputIt, Char>::format() {
       if (arg.is_arithmetic())
         specs.align = align::numeric;
       else
-        specs.fill[0] = ' ';  // Ignore '0' flag for non-numeric types.
+        specs.fill[0] = ' '; // Ignore '0' flag for non-numeric types.
     }
 
     // Parse length and convert the argument to the required type.
@@ -535,7 +543,8 @@ OutputIt basic_printf_context<OutputIt, Char>::format() {
     }
 
     // Parse type.
-    if (it == end) FMT_THROW(format_error("invalid format string"));
+    if (it == end)
+      FMT_THROW(format_error("invalid format string"));
     specs.type = static_cast<char>(*it++);
     if (arg.is_integral()) {
       // Normalize type.
@@ -577,8 +586,8 @@ using wprintf_args = basic_format_args<wprintf_context>;
   \endrst
  */
 template <typename... Args>
-inline format_arg_store<printf_context, Args...> make_printf_args(
-    const Args&... args) {
+inline format_arg_store<printf_context, Args...>
+make_printf_args(const Args &... args) {
   return {args...};
 }
 
@@ -589,14 +598,15 @@ inline format_arg_store<printf_context, Args...> make_printf_args(
   \endrst
  */
 template <typename... Args>
-inline format_arg_store<wprintf_context, Args...> make_wprintf_args(
-    const Args&... args) {
+inline format_arg_store<wprintf_context, Args...>
+make_wprintf_args(const Args &... args) {
   return {args...};
 }
 
 template <typename S, typename Char = char_t<S>>
-inline std::basic_string<Char> vsprintf(
-    const S& format, basic_format_args<basic_printf_context_t<Char>> args) {
+inline std::basic_string<Char>
+vsprintf(const S &format,
+         basic_format_args<basic_printf_context_t<Char>> args) {
   basic_memory_buffer<Char> buffer;
   printf(buffer, to_string_view(format), args);
   return to_string(buffer);
@@ -613,13 +623,13 @@ inline std::basic_string<Char> vsprintf(
 */
 template <typename S, typename... Args,
           typename Char = enable_if_t<internal::is_string<S>::value, char_t<S>>>
-inline std::basic_string<Char> sprintf(const S& format, const Args&... args) {
+inline std::basic_string<Char> sprintf(const S &format, const Args &... args) {
   using context = basic_printf_context_t<Char>;
   return vsprintf(to_string_view(format), {make_format_args<context>(args...)});
 }
 
 template <typename S, typename Char = char_t<S>>
-inline int vfprintf(std::FILE* f, const S& format,
+inline int vfprintf(std::FILE *f, const S &format,
                     basic_format_args<basic_printf_context_t<Char>> args) {
   basic_memory_buffer<Char> buffer;
   printf(buffer, to_string_view(format), args);
@@ -640,14 +650,14 @@ inline int vfprintf(std::FILE* f, const S& format,
  */
 template <typename S, typename... Args,
           typename Char = enable_if_t<internal::is_string<S>::value, char_t<S>>>
-inline int fprintf(std::FILE* f, const S& format, const Args&... args) {
+inline int fprintf(std::FILE *f, const S &format, const Args &... args) {
   using context = basic_printf_context_t<Char>;
   return vfprintf(f, to_string_view(format),
                   {make_format_args<context>(args...)});
 }
 
 template <typename S, typename Char = char_t<S>>
-inline int vprintf(const S& format,
+inline int vprintf(const S &format,
                    basic_format_args<basic_printf_context_t<Char>> args) {
   return vfprintf(stdout, to_string_view(format), args);
 }
@@ -663,14 +673,14 @@ inline int vprintf(const S& format,
  */
 template <typename S, typename... Args,
           FMT_ENABLE_IF(internal::is_string<S>::value)>
-inline int printf(const S& format_str, const Args&... args) {
+inline int printf(const S &format_str, const Args &... args) {
   using context = basic_printf_context_t<char_t<S>>;
   return vprintf(to_string_view(format_str),
                  {make_format_args<context>(args...)});
 }
 
 template <typename S, typename Char = char_t<S>>
-inline int vfprintf(std::basic_ostream<Char>& os, const S& format,
+inline int vfprintf(std::basic_ostream<Char> &os, const S &format,
                     basic_format_args<basic_printf_context_t<Char>> args) {
   basic_memory_buffer<Char> buffer;
   printf(buffer, to_string_view(format), args);
@@ -682,7 +692,7 @@ inline int vfprintf(std::basic_ostream<Char>& os, const S& format,
 template <typename ArgFormatter, typename Char,
           typename Context =
               basic_printf_context<typename ArgFormatter::iterator, Char>>
-typename ArgFormatter::iterator vprintf(internal::buffer<Char>& out,
+typename ArgFormatter::iterator vprintf(internal::buffer<Char> &out,
                                         basic_string_view<Char> format_str,
                                         basic_format_args<Context> args) {
   typename ArgFormatter::iterator iter(out);
@@ -700,12 +710,12 @@ typename ArgFormatter::iterator vprintf(internal::buffer<Char>& out,
   \endrst
  */
 template <typename S, typename... Args, typename Char = char_t<S>>
-inline int fprintf(std::basic_ostream<Char>& os, const S& format_str,
-                   const Args&... args) {
+inline int fprintf(std::basic_ostream<Char> &os, const S &format_str,
+                   const Args &... args) {
   using context = basic_printf_context_t<Char>;
   return vfprintf(os, to_string_view(format_str),
                   {make_format_args<context>(args...)});
 }
 FMT_END_NAMESPACE
 
-#endif  // FMT_PRINTF_H_
+#endif // FMT_PRINTF_H_

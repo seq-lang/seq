@@ -426,7 +426,7 @@ SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
 }
 
 unique_ptr<SuiteStmt> parse_code(string file, string code, int line_offset,
-                            int col_offset) {
+                                 int col_offset) {
   static bool initialized(false);
   if (!initialized) {
     ocaml_initialize();
