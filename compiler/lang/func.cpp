@@ -26,7 +26,8 @@ types::FuncType *BaseFunc::getFuncType() {
   return types::FuncType::get({}, types::Void);
 }
 
-Function *BaseFunc::getFunc() {
+Function *BaseFunc::getFunc(Module *module) {
+  codegen(module);
   assert(func);
   return func;
 }
@@ -759,17 +760,10 @@ BaseFuncLite::BaseFuncLite(
       codegenLambda(std::move(codegenLambda)) {}
 
 void BaseFuncLite::codegen(Module *module) {
-  if (this->module != module) {
-    func = nullptr;
-    this->module = module;
-  }
-
-  if (func)
-    return;
-
   resolveTypes();
   func = codegenLambda(module);
   preambleBlock = &*func->getBasicBlockList().begin();
+  module = preambleBlock->getModule();
 }
 
 types::FuncType *BaseFuncLite::getFuncType() {

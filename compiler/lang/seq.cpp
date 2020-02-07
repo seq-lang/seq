@@ -525,6 +525,7 @@ void SeqModule::execute(const std::vector<std::string> &args,
   }
 
   eng->runFunctionAsMain(func, args, nullptr);
+  delete eng;
 }
 
 /*
@@ -606,14 +607,12 @@ Func SeqJIT::makeFunc() {
 }
 
 void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
-  func->resolveTypes();
-  func->codegen(module.get());
-  func->getFunc()->setLinkage(GlobalValue::ExternalLinkage);
+  Function *f = func->getFunc(module.get());
+  f->setLinkage(GlobalValue::ExternalLinkage);
 
   // expose globals to the new function:
   IRBuilder<> builder(context);
-  builder.SetInsertPoint(
-      &*(*func->getFunc()->getBasicBlockList().begin()).begin());
+  builder.SetInsertPoint(&*(*f->getBasicBlockList().begin()).begin());
   for (auto *var : globals) {
     Value *ptr = var->getPtr(func);
     auto sym = findSymbol(var->getName());

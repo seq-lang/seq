@@ -66,9 +66,10 @@ void types::SeqType::initOps() {
          {KMer::get(k)},
          Bool,
          [k](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+           Module *module = b.GetInsertBlock()->getModule();
            Func *f = Func::getBuiltin("_kmer_in_seq")->realize({KMer::get(k)});
            f->codegen(b.GetInsertBlock()->getModule());
-           return b.CreateCall(f->getFunc(), {args[0], self});
+           return b.CreateCall(f->getFunc(module), {args[0], self});
          },
          false});
   }

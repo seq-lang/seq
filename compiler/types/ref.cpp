@@ -6,8 +6,8 @@ using namespace llvm;
 
 types::RefType::RefType(std::string name)
     : Type(std::move(name), BaseType::get(), false, true), Generic(),
-      done(false), root(this), llvmCache(), realizationCache(),
-      contents(nullptr), membNamesDeduced(), membExprsDeduced() {}
+      done(false), root(this), realizationCache(), contents(nullptr),
+      membNamesDeduced(), membExprsDeduced() {}
 
 void types::RefType::setDone() {
   assert(this == root && !done);
@@ -315,15 +315,8 @@ types::Type *types::RefType::getBaseType(unsigned idx) const {
 }
 
 Type *types::RefType::getStructPointerType(LLVMContext &context) const {
-  std::vector<types::Type *> types = getRealizedTypes();
-  StructType *structType = root->llvmCache.find(types);
-
-  if (structType)
-    return PointerType::get(structType, 0);
-
   assert(contents);
-  structType = StructType::create(context, name);
-  root->llvmCache.add(types, structType);
+  StructType *structType = StructType::create(context, name);
   contents->addLLVMTypesToStruct(structType);
   return PointerType::get(structType, 0);
 }

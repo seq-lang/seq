@@ -620,7 +620,8 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   implicitGen.codegen(block->getModule());
 
   // now call the generator:
-  Function *func = implicitGen.getFunc();
+  Module *module = block->getModule();
+  Function *func = implicitGen.getFunc(module);
   Value *gen;
   // We codegen calls ourselves rather than going through funcType
   // to avoid problems with automatic optional conversions (we don't
@@ -727,8 +728,7 @@ void FuncExpr::resolveTypes() {
 }
 
 Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  func->codegen(block->getModule());
-  return func->getFunc();
+  return func->getFunc(block->getModule());
 }
 
 types::Type *FuncExpr::getType0() const { return func->getFuncType(); }
@@ -1375,9 +1375,9 @@ Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   }
 
   if (func && func->hasAttribute("property")) {
-    func->codegen(block->getModule());
+    Module *module = block->getModule();
     IRBuilder<> builder(block);
-    return builder.CreateCall(func->getFunc(), self);
+    return builder.CreateCall(func->getFunc(module), self);
   }
 
   if (!types.empty()) {
@@ -1717,8 +1717,7 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
           // realign if score < 0
           Func *realignFunc = Func::getBuiltin("_interaln_realign");
-          realignFunc->codegen(block->getModule());
-          Function *realign = realignFunc->getFunc();
+          Function *realign = realignFunc->getFunc(block->getModule());
           Value *params = PipeExpr::validateAndCodegenInterAlignParams(
               paramExprs, base, block);
 
@@ -2143,7 +2142,7 @@ void MethodExpr::resolveTypes() {
 Value *MethodExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::MethodType *type = getType0();
   Value *self = this->self->codegen(base, block);
-  Value *func = this->func->getFunc();
+  Value *func = this->func->getFunc(block->getModule());
   return type->make(self, func, block);
 }
 

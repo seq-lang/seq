@@ -42,7 +42,7 @@ public:
   llvm::LLVMContext &getContext();
   llvm::BasicBlock *getPreamble() const;
   virtual types::FuncType *getFuncType();
-  virtual llvm::Function *getFunc();
+  virtual llvm::Function *getFunc(llvm::Module *module);
   virtual void setEnclosingClass(types::Type *parentType);
   virtual BaseFunc *clone(Generic *ref);
 };

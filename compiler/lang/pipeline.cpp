@@ -211,6 +211,7 @@ static Value *codegenPipe(BaseFunc *base,
     return val;
 
   LLVMContext &context = block->getContext();
+  Module *module = block->getModule();
   Function *func = block->getParent();
 
   Expr *stage = stages.front();
@@ -386,11 +387,8 @@ static Value *codegenPipe(BaseFunc *base,
     Func *queueFunc = Func::getBuiltin("_interaln_queue");
     Func *flushFunc = Func::getBuiltin("_interaln_flush");
 
-    Module *module = block->getModule();
-    queueFunc->codegen(module);
-    flushFunc->codegen(module);
-    Function *queue = queueFunc->getFunc();
-    Function *flush = flushFunc->getFunc();
+    Function *queue = queueFunc->getFunc(module);
+    Function *flush = flushFunc->getFunc(module);
     Function *alloc = makeAllocFunc(module, /*atomic=*/false);
     Function *allocAtomic = makeAllocFunc(module, /*atomic=*/true);
 
@@ -474,7 +472,6 @@ static Value *codegenPipe(BaseFunc *base,
     builder.CreateBr(loop);
 
 #if SEQ_HAS_TAPIR
-    Module *module = block->getModule();
     Value *syncReg = nullptr;
     if (parallelize) {
       builder.SetInsertPoint(loop);
@@ -569,6 +566,7 @@ static Value *codegenPipe(BaseFunc *base,
 
 Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
+  Module *module = block->getModule();
   Function *func = block->getParent();
 
   // unparallelize inter-seq alignment pipelines
@@ -683,8 +681,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       block = exit;
     } else if (genType->fromInterAlign()) {
       Func *flushFunc = Func::getBuiltin("_interaln_flush");
-      flushFunc->codegen(block->getModule());
-      Function *flush = flushFunc->getFunc();
+      Function *flush = flushFunc->getFunc(module);
 
       Value *cond = builder.CreateICmpSGT(N, builder.getInt64(0));
       BasicBlock *exit = BasicBlock::Create(context, "exit", func);

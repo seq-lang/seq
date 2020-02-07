@@ -26,11 +26,6 @@ private:
   RefType *root;
 
   /*
-   * Cache for LLVM types
-   */
-  RCache<llvm::StructType> llvmCache;
-
-  /*
    * Our own realization cache
    */
   RCache<types::Type> realizationCache;
