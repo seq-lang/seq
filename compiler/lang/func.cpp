@@ -103,10 +103,10 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
     }
   }
 
-  if (args.size() + offset > size) {
+  const unsigned argsGot = args.size() + offset;
+  if (argsGot > size) {
     throw exc::SeqException("expected " + std::to_string(size) +
-                            " argument(s), but got " +
-                            std::to_string(args.size()));
+                            " argument(s), but got " + std::to_string(argsGot));
   }
 
   bool hasDefaults = false;
