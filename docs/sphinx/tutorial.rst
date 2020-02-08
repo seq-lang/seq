@@ -304,12 +304,12 @@ Seq uses `ksw2 <https://github.com/lh3/ksw2>`_ as its default alignment kernel. 
     @inter_align
     def process(t):
         query, target = t
-        score = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+        score = query.align(target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
         print query, target, score
 
     zip(seqs('queries.txt'), seqs('targets.txt')) |> process
 
-Internally, the Seq compiler performs pipeline transformations when the ``inter_align`` function is used within a function tagged ``@inter_align``, so as to suspend execution of the calling function, batch sequences that need to be aligned, perform inter-sequence alignment and return the results to the suspended functions. Note that the inter-sequence alignment kernel used by Seq is adapted from `BWA-MEM2 <https://github.com/bwa-mem2/bwa-mem2>`_.
+Internally, the Seq compiler performs pipeline transformations when sequence alignment is performed within a function tagged ``@inter_align``, so as to suspend execution of the calling function, batch sequences that need to be aligned, perform inter-sequence alignment and return the results to the suspended functions. Note that the inter-sequence alignment kernel used by Seq is adapted from `BWA-MEM2 <https://github.com/bwa-mem2/bwa-mem2>`_.
 
 .. _prefetch:
 

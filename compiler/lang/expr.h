@@ -137,6 +137,7 @@ private:
 public:
   explicit BoolExpr(bool b);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  bool value() const;
 };
 
 class StrExpr : public Expr {

@@ -133,6 +133,7 @@ def _validate_gap(g: int):
         raise ValueError("gap penalty for alignment must be in range [0, 127]")
 
 extend seq:
+    @builtin
     def align(self: seq,
               other: seq,
               a: int = 2,
@@ -334,19 +335,6 @@ extend pseq:
 # much of what follows is adapted from BWA-MEM2 (https://github.com/bwa-mem2/bwa-mem2)
 type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, bandwidth: i8, zdrop: i8, end_bonus: i8)
 
-@builtin
-def inter_align(query: seq,
-                target: seq,
-                a: int = 2,
-                b: int = 4,
-                ambig: int = 0,
-                gapo: int = 4,
-                gape: int = 2,
-                bandwidth: int = -1,
-                zdrop: int = -1,
-                end_bonus: int = 0) -> int:
-    return query.align(target, a=a, b=b, ambig=ambig, gapo=gapo, gape=gape, bandwidth=bandwidth, zdrop=zdrop, end_bonus=end_bonus, score_only=True).score
-
 _MAX_SEQ_LEN_REF = 256
 _MAX_SEQ_LEN_QER = 128
 _MAX_SEQ_LEN8    = 128
@@ -459,7 +447,12 @@ def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPa
 
 @builtin
 @inline
-def _interaln_queue(coro: generator[tuple[seq,seq,int]], pairs_array: ptr[SeqPair], seq_buf_ref: ptr[byte], seq_buf_qer: ptr[byte], pending: ptr[generator[tuple[seq,seq,int]]], m: int) -> int:
+def _interaln_queue(coro: generator[tuple[seq,seq,int]],
+                    pairs_array: ptr[SeqPair],
+                    seq_buf_ref: ptr[byte],
+                    seq_buf_qer: ptr[byte],
+                    pending: ptr[generator[tuple[seq,seq,int]]],
+                    m: int) -> int:
     coro.__resume__()  # resume coro to get next sequence to align
     if not coro.__done__():
         t, s, _ = coro.__promise__()[0]  # coro yields seqs to align
@@ -472,7 +465,15 @@ def _interaln_queue(coro: generator[tuple[seq,seq,int]], pairs_array: ptr[SeqPai
 
 @builtin
 @inline
-def _interaln_flush(pairs_array: ptr[SeqPair], seq_buf_ref: ptr[byte], seq_buf_qer: ptr[byte], pending: ptr[generator[tuple[seq,seq,int]]], m: int, params: InterAlignParams, hist: ptr[i32], tmp_array: ptr[SeqPair], tmp_pending: ptr[generator[tuple[seq,seq,int]]]) -> int:
+def _interaln_flush(pairs_array: ptr[SeqPair],
+                    seq_buf_ref: ptr[byte],
+                    seq_buf_qer: ptr[byte],
+                    pending: ptr[generator[tuple[seq,seq,int]]],
+                    m: int,
+                    params: InterAlignParams,
+                    hist: ptr[i32],
+                    tmp_array: ptr[SeqPair],
+                    tmp_pending: ptr[generator[tuple[seq,seq,int]]]) -> int:
     cimport seq_inter_align128(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
     cimport seq_inter_align16(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
     cimport seq_inter_align1(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
@@ -502,9 +503,9 @@ def _interaln_flush(pairs_array: ptr[SeqPair], seq_buf_ref: ptr[byte], seq_buf_q
 
 @builtin
 @inline
-def _interaln_realign(query: seq, target: seq, score: int, params: InterAlignParams) -> int:
+def _interaln_realign(query: seq, target: seq, score: int, params: InterAlignParams) -> Alignment:
     if score >= 0:
-        return score
+        return (CIGAR(), score)
     a = int(params.a)
     b = int(params.b)
     ambig = int(params.ambig)
@@ -513,4 +514,4 @@ def _interaln_realign(query: seq, target: seq, score: int, params: InterAlignPar
     bandwidth = int(params.bandwidth)
     zdrop = int(params.zdrop)
     end_bonus = int(params.end_bonus)
-    return query.align(target, a=a, b=b, ambig=ambig, gapo=gapo, gape=gape, bandwidth=bandwidth, zdrop=zdrop, end_bonus=end_bonus, score_only=True).score
+    return query.align(target, a=a, b=b, ambig=ambig, gapo=gapo, gape=gape, bandwidth=bandwidth, zdrop=zdrop, end_bonus=end_bonus, score_only=True)
