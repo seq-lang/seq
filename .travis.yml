@@ -112,6 +112,7 @@ before_script:
   - export CPATH=`pwd`/gc-8.0.4/release/include:${CPATH}
   - export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then free -h; fi
 
 script:
   - mkdir build
