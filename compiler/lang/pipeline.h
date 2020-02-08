@@ -9,6 +9,11 @@ class PipeExpr : public Expr {
 private:
   std::vector<Expr *> stages;
   std::vector<bool> parallel;
+  llvm::BasicBlock *entry;
+  llvm::Value *syncReg;
+
+  struct PipelineCodegenState;
+  llvm::Value *codegenPipe(BaseFunc *base, PipelineCodegenState &state);
 
 public:
   static const unsigned SCHED_WIDTH_PREFETCH = 16;

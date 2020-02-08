@@ -31,6 +31,7 @@
 
 #include "util/common.h"
 #include "util/llvm.h"
+#include "util/tapir.h"
 
 #define SEQ_VERSION_MAJOR 0
 #define SEQ_VERSION_MINOR 9

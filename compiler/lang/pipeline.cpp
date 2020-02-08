@@ -6,7 +6,8 @@ using namespace seq;
 using namespace llvm;
 
 PipeExpr::PipeExpr(std::vector<seq::Expr *> stages, std::vector<bool> parallel)
-    : Expr(), stages(std::move(stages)), parallel(std::move(parallel)) {
+    : Expr(), stages(std::move(stages)), parallel(std::move(parallel)),
+      entry(nullptr), syncReg(nullptr) {
   if (this->parallel.empty())
     this->parallel = std::vector<bool>(this->stages.size(), false);
 }
@@ -43,6 +44,43 @@ struct DrainState {
       : states(nullptr), filled(nullptr), statesTemp(nullptr), pairs(nullptr),
         pairsTemp(nullptr), bufRef(nullptr), bufQer(nullptr), params(nullptr),
         hist(nullptr), type(nullptr), stages(), parallel() {}
+};
+
+struct seq::PipeExpr::PipelineCodegenState {
+  types::Type *type;         // type of current pipeline output
+  Value *val;                // value of current pipeline output
+  BasicBlock *block;         // current codegen block
+  std::queue<Expr *> stages; // stages left to codegen
+  std::queue<bool> parallel; // parallel ("||>") stages
+
+  bool inParallel; // whether current stage is in parallel section
+  bool inLoop;     // whether we are in a loop (i.e. past some generator stage)
+  bool nestedParallel; // whether this pipeline has multiple parallel stages
+
+  DrainState drain; // drain state for prefetch and inter-align optimizations
+
+  PipelineCodegenState(BasicBlock *block, std::queue<Expr *> stages,
+                       std::queue<bool> parallel)
+      : type(nullptr), val(nullptr), block(block), stages(std::move(stages)),
+        parallel(), inParallel(false), inLoop(false), nestedParallel(false),
+        drain() {
+    int numParallels = 0;
+    while (!parallel.empty()) {
+      bool p = parallel.front();
+      parallel.pop();
+      this->parallel.push(p);
+      numParallels += p ? 1 : 0;
+    }
+    nestedParallel = numParallels > 1;
+  }
+
+  PipelineCodegenState getDrainState(Value *val, types::Type *type,
+                                     BasicBlock *block) {
+    PipelineCodegenState state(block, drain.stages, drain.parallel);
+    state.val = val;
+    state.type = type;
+    return state;
+  }
 };
 
 // Details of a stage for optimization purposes.
@@ -198,52 +236,47 @@ Value *PipeExpr::validateAndCodegenInterAlignParams(
   return params;
 }
 
-static Value *codegenPipe(BaseFunc *base,
-                          Value *val,        // value of current pipeline output
-                          types::Type *type, // type of current pipeline output
-                          BasicBlock *entry, // block before pipeline start
-                          BasicBlock *&block, // current codegen block
-                          std::queue<Expr *> &stages,
-                          std::queue<bool> &parallel, TryCatch *tc,
-                          DrainState *drain, bool inParallel) {
-  assert(stages.size() == parallel.size());
-  if (stages.empty())
-    return val;
+Value *PipeExpr::codegenPipe(BaseFunc *base,
+                             PipeExpr::PipelineCodegenState &state) {
+  assert(state.stages.size() == state.parallel.size());
+  if (state.stages.empty())
+    return state.val;
 
-  LLVMContext &context = block->getContext();
-  Module *module = block->getModule();
-  Function *func = block->getParent();
+  LLVMContext &context = state.block->getContext();
+  Module *module = state.block->getModule();
+  Function *func = state.block->getParent();
+  TryCatch *tc = getTryCatch();
 
-  Expr *stage = stages.front();
-  bool parallelize = parallel.front();
-  stages.pop();
-  parallel.pop();
+  Expr *stage = state.stages.front();
+  bool parallelize = state.parallel.front();
+  state.stages.pop();
+  state.parallel.pop();
 
-  Value *val0 = val;
-  types::Type *type0 = type;
+  Value *val0 = state.val;
+  types::Type *type0 = state.type;
 
-  if (!val) {
-    assert(!type);
-    type = stage->getType();
-    val = stage->codegen(base, block);
+  if (!state.val) {
+    assert(!state.type);
+    state.type = stage->getType();
+    state.val = stage->codegen(base, state.block);
   } else {
-    assert(val && type);
-    ValueExpr arg(type, val);
+    assert(state.val && state.type);
+    ValueExpr arg(state.type, state.val);
     CallExpr call(
         stage, {&arg}); // do this through CallExpr for type-parameter deduction
     call.setTryCatch(tc);
-    type = call.getType();
-    types::GenType *genType = type->asGen();
+    state.type = call.getType();
+    types::GenType *genType = state.type->asGen();
 
     if (!(genType && (genType->fromPrefetch() || genType->fromInterAlign()))) {
-      val = call.codegen(base, block);
-    } else if (drain->states) {
+      state.val = call.codegen(base, state.block);
+    } else if (state.drain.states) {
       throw exc::SeqException("cannot have multiple prefetch or inter-seq "
                               "alignment functions in single pipeline");
     }
   }
 
-  types::GenType *genType = type->asGen();
+  types::GenType *genType = state.type->asGen();
   if (genType && genType->fromPrefetch()) {
     /*
      * Function has a prefetch statement
@@ -254,7 +287,7 @@ static Value *codegenPipe(BaseFunc *base,
      * this point in the pipeline, as well as a "drain" loop after
      * the pipeline to complete any remaining calls.
      */
-    if (parallelize || inParallel)
+    if (parallelize || state.inParallel)
       throw exc::SeqException(
           "parallel prefetch transformation currently not supported");
 
@@ -273,7 +306,7 @@ static Value *codegenPipe(BaseFunc *base,
     BasicBlock *full = BasicBlock::Create(context, "full", func);
     BasicBlock *exit = BasicBlock::Create(context, "exit", func);
 
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(state.block);
     Value *N = builder.CreateLoad(filled);
     Value *M =
         ConstantInt::get(seqIntLLVM(context), PipeExpr::SCHED_WIDTH_PREFETCH);
@@ -316,18 +349,20 @@ static Value *codegenPipe(BaseFunc *base,
     builder.SetInsertPoint(full);
     builder.CreateCondBr(done, genDone, genNotDone);
 
-    type = genType->getBaseType(0);
-    val = type->is(types::Void) ? nullptr : genType->promise(gen, genDone);
+    state.type = genType->getBaseType(0);
+    state.val =
+        state.type->is(types::Void) ? nullptr : genType->promise(gen, genDone);
 
     // store the current state for the drain step:
-    drain->states = states;
-    drain->filled = filled;
-    drain->type = genType;
-    drain->stages = stages;
-    drain->parallel = parallel;
+    state.drain.states = states;
+    state.drain.filled = filled;
+    state.drain.type = genType;
+    state.drain.stages = state.stages;
+    state.drain.parallel = state.parallel;
 
-    codegenPipe(base, val, type, entry, genDone, stages, parallel, tc, drain,
-                inParallel);
+    state.block = genDone;
+    codegenPipe(base, state);
+    genDone = state.block;
     genType->destroy(gen, genDone);
 
     {
@@ -349,7 +384,7 @@ static Value *codegenPipe(BaseFunc *base,
     builder.CreateStore(nextVal, next);
     builder.CreateBr(full0);
 
-    block = exit;
+    state.block = exit;
     return nullptr;
   } else if (genType && genType->fromInterAlign()) {
     /*
@@ -362,7 +397,7 @@ static Value *codegenPipe(BaseFunc *base,
      */
     // we unparallelize inter-seq alignment pipelines (see below)
     assert(!parallelize);
-    assert(!inParallel);
+    assert(!state.inParallel);
 
     BasicBlock *notFull = BasicBlock::Create(context, "not_full", func);
     BasicBlock *notFull0 = notFull;
@@ -426,7 +461,7 @@ static Value *codegenPipe(BaseFunc *base,
     builder.SetInsertPoint(entry);
     builder.CreateStore(zeroLLVM(context), filled);
 
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(state.block);
     Value *N = builder.CreateLoad(filled);
     Value *M = ConstantInt::get(seqIntLLVM(context), W);
     Value *cond = builder.CreateICmpSLT(N, M);
@@ -440,46 +475,36 @@ static Value *codegenPipe(BaseFunc *base,
     builder.CreateCondBr(cond, notFull0, full); // keep flushing while full
 
     // store the current state for the drain step:
-    drain->states = states;
-    drain->filled = filled;
-    drain->statesTemp = statesTemp;
-    drain->pairs = pairs;
-    drain->pairsTemp = pairsTemp;
-    drain->bufRef = bufRef;
-    drain->bufQer = bufQer;
-    drain->params = params;
-    drain->hist = hist;
-    drain->type = genType;
-    drain->stages = stages;
-    drain->parallel = parallel;
+    state.drain.states = states;
+    state.drain.filled = filled;
+    state.drain.statesTemp = statesTemp;
+    state.drain.pairs = pairs;
+    state.drain.pairsTemp = pairsTemp;
+    state.drain.bufRef = bufRef;
+    state.drain.bufQer = bufQer;
+    state.drain.params = params;
+    state.drain.hist = hist;
+    state.drain.type = genType;
+    state.drain.stages = state.stages;
+    state.drain.parallel = state.parallel;
 
     builder.SetInsertPoint(notFull);
     N = builder.CreateLoad(filled);
     N = builder.CreateCall(queue, {task, pairs, bufRef, bufQer, states, N});
     builder.CreateStore(N, filled);
     builder.CreateBr(exit);
-    block = exit;
+    state.block = exit;
     return nullptr;
-  } else if (genType && stage != stages.back()) {
+  } else if (genType && stage != state.stages.back()) {
     /*
      * Plain generator -- create implicit for-loop
      */
-    Value *gen = val;
-    IRBuilder<> builder(block);
+    Value *gen = state.val;
+    IRBuilder<> builder(state.block);
 
     BasicBlock *loop = BasicBlock::Create(context, "pipe", func);
     BasicBlock *loop0 = loop;
     builder.CreateBr(loop);
-
-#if SEQ_HAS_TAPIR
-    Value *syncReg = nullptr;
-    if (parallelize) {
-      builder.SetInsertPoint(loop);
-      Function *syncStart =
-          Intrinsic::getDeclaration(module, Intrinsic::syncregion_start);
-      syncReg = builder.CreateCall(syncStart);
-    }
-#endif
 
     if (tc) {
       BasicBlock *normal = BasicBlock::Create(context, "normal", func);
@@ -496,30 +521,38 @@ static Value *codegenPipe(BaseFunc *base,
     BranchInst *branch =
         builder.CreateCondBr(cond, body, body); // we set true-branch below
 
-    block = body;
-    type = genType->getBaseType(0);
-    val = type->is(types::Void) ? nullptr : genType->promise(gen, block);
+    state.block = body;
+    state.type = genType->getBaseType(0);
+    state.val = state.type->is(types::Void)
+                    ? nullptr
+                    : genType->promise(gen, state.block);
 
 #if SEQ_HAS_TAPIR
     if (parallelize) {
       BasicBlock *unwind = tc ? tc->getExceptionBlock() : nullptr;
       BasicBlock *detach = BasicBlock::Create(context, "detach", func);
-      builder.SetInsertPoint(block);
+      builder.SetInsertPoint(state.block);
       if (unwind)
         builder.CreateDetach(detach, loop0, unwind, syncReg);
       else
         builder.CreateDetach(detach, loop0, syncReg);
-      block = detach;
+      state.block = detach;
     }
 #endif
 
-    if (parallelize)
-      inParallel = true;
+    BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
+    branch->setSuccessor(0, cleanup);
 
-    codegenPipe(base, val, type, entry, block, stages, parallel, tc, drain,
-                inParallel);
+    // save and restore state to codegen next stage
+    bool oldInLoop = state.inLoop;
+    bool oldInParallel = state.inParallel;
+    state.inLoop = true;
+    state.inParallel = parallelize;
+    codegenPipe(base, state);
+    state.inLoop = oldInLoop;
+    state.inParallel = oldInParallel;
 
-    builder.SetInsertPoint(block);
+    builder.SetInsertPoint(state.block);
 
 #if SEQ_HAS_TAPIR
     if (parallelize) {
@@ -531,36 +564,47 @@ static Value *codegenPipe(BaseFunc *base,
     }
 #endif
 
-    BasicBlock *cleanup = BasicBlock::Create(context, "cleanup", func);
-    branch->setSuccessor(0, cleanup);
-
-#if SEQ_HAS_TAPIR
-    if (parallelize) {
-      BasicBlock *cleanupReal =
-          BasicBlock::Create(context, "cleanup_real", func);
-      builder.SetInsertPoint(cleanup);
-      builder.CreateSync(cleanupReal, syncReg);
-      cleanup = cleanupReal;
-    }
-#endif
-
     genType->destroy(gen, cleanup);
-
     BasicBlock *exit = BasicBlock::Create(context, "exit", func);
     builder.SetInsertPoint(cleanup);
     builder.CreateBr(exit);
-    block = exit;
+    state.block = exit;
     return nullptr;
   } else {
     /*
      * Simple function -- just a plain call
      */
-    if (parallelize)
-      throw exc::SeqException(
-          "function pipeline stage cannot be marked parallel");
+#if SEQ_HAS_TAPIR
+    if (parallelize) {
+      if (!state.inLoop)
+        throw exc::SeqException(
+            "parallel pipeline stage is not preceded by generator stage");
 
-    return codegenPipe(base, val, type, entry, block, stages, parallel, tc,
-                       drain, inParallel);
+      BasicBlock *unwind = tc ? tc->getExceptionBlock() : nullptr;
+      BasicBlock *detach = BasicBlock::Create(context, "detach", func);
+      BasicBlock *cont = BasicBlock::Create(context, "continue", func);
+
+      IRBuilder<> builder(state.block);
+      if (unwind)
+        builder.CreateDetach(detach, cont, unwind, syncReg);
+      else
+        builder.CreateDetach(detach, cont, syncReg);
+
+      bool oldInParallel = state.inParallel;
+      state.inParallel = true;
+      state.block = detach;
+      codegenPipe(base, state);
+      state.inParallel = oldInParallel;
+
+      builder.SetInsertPoint(state.block);
+      builder.CreateReattach(cont, syncReg);
+
+      state.block = cont;
+      return nullptr;
+    }
+#endif /* SEQ_HAS_TAPIR */
+
+    return codegenPipe(base, state);
   }
 }
 
@@ -609,16 +653,59 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   for (bool parallelize : parallel)
     parallelQueue.push(parallelize && !unparallelize);
 
-  BasicBlock *entry = block;
+  entry = block;
+  IRBuilder<> builder(entry);
+
+#if SEQ_HAS_TAPIR
+  Function *syncStart =
+      Intrinsic::getDeclaration(module, Intrinsic::syncregion_start);
+  syncReg = builder.CreateCall(syncStart);
+#endif
+
   BasicBlock *start = BasicBlock::Create(context, "pipe_start", func);
   block = start;
 
   TryCatch *tc = getTryCatch();
-  DrainState drain;
-  Value *result = codegenPipe(base, nullptr, nullptr, entry, block, queue,
-                              parallelQueue, tc, &drain, false);
-  IRBuilder<> builder(block);
+  PipeExpr::PipelineCodegenState state(block, queue, parallelQueue);
 
+#if SEQ_HAS_TAPIR
+  // If we have nested parallelism, make sure we use a task group
+  // TODO: move this to Tapir? OpenMP backend should detect nested parallelism
+  // and use a task group automatically
+  const bool nestedParallel = state.nestedParallel;
+  getOrCreateIdentTy(module);
+  auto *threadNumFunc = cast<Function>(module->getOrInsertFunction(
+      "__kmpc_global_thread_num", builder.getInt32Ty(), getIdentTyPointerTy()));
+  threadNumFunc->setDoesNotThrow();
+
+  auto *taskGroupFunc = cast<Function>(
+      module->getOrInsertFunction("__kmpc_taskgroup", builder.getVoidTy(),
+                                  getIdentTyPointerTy(), builder.getInt32Ty()));
+  taskGroupFunc->setDoesNotThrow();
+
+  auto *endTaskGroupFunc = cast<Function>(
+      module->getOrInsertFunction("__kmpc_end_taskgroup", builder.getVoidTy(),
+                                  getIdentTyPointerTy(), builder.getInt32Ty()));
+  endTaskGroupFunc->setDoesNotThrow();
+
+  Value *gtid = nullptr;
+  Value *ompLoc = nullptr;
+  if (nestedParallel) {
+    ompLoc = getOrCreateDefaultLocation(module);
+    BasicBlock *preamble = base->getPreamble();
+    builder.SetInsertPoint(preamble);
+    gtid = builder.CreateCall(threadNumFunc, ompLoc);
+
+    builder.SetInsertPoint(block);
+    builder.CreateCall(taskGroupFunc, {ompLoc, gtid});
+  }
+#endif
+
+  Value *result = codegenPipe(base, state);
+  block = state.block;
+  builder.SetInsertPoint(block);
+
+  DrainState &drain = state.drain;
   if (drain.states) {
     // drain step:
     types::GenType *genType = drain.type;
@@ -671,8 +758,10 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       builder.CreateCondBr(done, finalize, notDoneLoop0);
 
       Value *val = genType->promise(gen, finalize);
-      codegenPipe(base, val, genType->getBaseType(0), entry, finalize,
-                  drain.stages, drain.parallel, tc, &drain, false);
+      PipeExpr::PipelineCodegenState drainState =
+          state.getDrainState(val, genType->getBaseType(0), finalize);
+      codegenPipe(base, drainState);
+      finalize = drainState.block;
       genType->destroy(gen, finalize);
       builder.SetInsertPoint(finalize);
       builder.CreateBr(loop0);
@@ -700,6 +789,18 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       assert(0);
     }
   }
+
+#if SEQ_HAS_TAPIR
+  builder.SetInsertPoint(block);
+  // create sync
+  if (nestedParallel) {
+    builder.CreateCall(endTaskGroupFunc, {ompLoc, gtid});
+  } else {
+    BasicBlock *exit = BasicBlock::Create(context, "exit", func);
+    builder.CreateSync(exit, syncReg);
+    block = exit;
+  }
+#endif
 
   // connect entry block:
   builder.SetInsertPoint(entry);
