@@ -1,18 +1,20 @@
-# @test
+import python
+
+@test
 def test_basic():
     from mymodule pyimport multiply () -> int
-    print multiply(3, 4) , 12
+    assert multiply(3, 4) == 12
 test_basic()
 
-# @test
+@test
 def test_pybridge():
     pydef test_pydef(n: int) -> str:
         return ''.join(map(str, range(n)))
-    print test_pydef(5) , '01234'
+    assert test_pydef(5) == '01234'
 test_pybridge()
 
 from mymodule pyimport print_args () -> tuple[dict[str,float],tuple[int,float]]
-# @test
+@test
 def test_conversions():
     t = print_args(
         (4,5),
@@ -21,16 +23,16 @@ def test_conversions():
         {s'ACGT'},
         [['abc'], ['1.1', '2.2'], list[str]()]
     )
-    print t , ({'a': 3.14, 'b': 2.123}, (222, 3.14))
+    assert t == ({'a': 3.14, 'b': 2.123}, (222, 3.14))
 test_conversions()
 
-# @test
+@test
 def test_pythrow():
     from mymodule pyimport throw_exc () -> int
     try:
         throw_exc()
     except PyError as e:
-        print e.pytype + ":" + e.message , "ValueError:foo"
+        assert e.pytype + ":" + e.message == "ValueError:foo"
         return
-    print False
+    assert False
 test_pythrow()

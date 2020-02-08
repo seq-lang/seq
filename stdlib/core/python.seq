@@ -91,16 +91,20 @@ def init():
     Py_Initialize()
     _PY_INITIALIZED = True
 
+def ensure_initialized():
+    if not _PY_INITIALIZED:
+        raise ValueError("Python not initialized; make sure to 'import python'")
+
 def none():
-    #cimport seq_py_none() -> ptr[byte]
-    #return pyobj(seq_py_none())
-    raise PyError("not yet done", "n/a")
+    raise NotImplementedError()
 
 def _imp(name: str) -> pyobj:
+    ensure_initialized()
     return pyobj.exc_wrap(pyobj(PyImport_ImportModule(name.c_str())))
 
 _PY_MODULE_CACHE = dict[str, pyobj]()
 def imp(name: str):
+    ensure_initialized()
     if name in _PY_MODULE_CACHE:
         return _PY_MODULE_CACHE[name]
     m = _imp(name)
@@ -108,6 +112,7 @@ def imp(name: str):
     return m
 
 def exec(code: str):
+    ensure_initialized()
     PyRun_SimpleString(code.c_str())
 
 # Type conversions

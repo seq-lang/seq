@@ -464,6 +464,8 @@ Seq also supports calling Python functions as follows:
 
 .. code-block:: seq
 
+    import python
+
     from mymodule pyimport multiply () -> int  # assumes multiply in mymodule.py
     print multiply(3, 4)  # 12
 
