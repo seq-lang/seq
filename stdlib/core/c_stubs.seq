@@ -108,6 +108,7 @@ RTLD_GLOBAL = 8
 cimport gzopen(cobj, cobj) -> cobj
 cimport gzerror(cobj, ptr[i32]) -> cobj
 cimport gzgetc(cobj) -> i32
+cimport gzgets(cobj, cobj, i32) -> cobj
 cimport gzclose(cobj) -> int
 cimport gzread(cobj, cobj, u32) -> i32
 cimport gzwrite(cobj, cobj, u32) -> i32
