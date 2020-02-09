@@ -5,12 +5,13 @@
 
 #include "lang/seq.h"
 
-SEQ_FUNC seq::SeqModule *parse(const char *argv0, const char *file,
-                               bool isCode = false, bool isTest = false);
-
 namespace seq {
+
+SeqModule *parse(const std::string &argv0, const std::string &file,
+                 bool isCode = false, bool isTest = false);
 void execute(seq::SeqModule *module, std::vector<std::string> args = {},
              std::vector<std::string> libs = {}, bool debug = false);
 void compile(seq::SeqModule *module, const std::string &out,
              bool debug = false);
+
 } // namespace seq

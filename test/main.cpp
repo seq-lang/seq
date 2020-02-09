@@ -27,11 +27,13 @@ protected:
 
   SeqTest() : buf(65536), out_pipe(), pid() {}
 
-  string runInChildProcess() {
+  string filename() {
     const string basename = get<0>(GetParam());
-    const bool debug = get<1>(GetParam());
-    string filename = string(TEST_DIR) + "/" + basename;
+    return string(TEST_DIR) + "/" + basename;
+  }
 
+  int runInChildProcess() {
+    const bool debug = get<1>(GetParam());
     assert(pipe(out_pipe) != -1);
     pid = fork();
     assert(pid != -1);
@@ -41,18 +43,19 @@ protected:
       close(out_pipe[0]);
       close(out_pipe[1]);
 
-      SeqModule *module = parse("", filename.c_str(), false, false);
-      execute(module, {filename}, {}, debug);
+      SeqModule *module = parse("", filename(), false, false);
+      execute(module, {filename()}, {}, debug);
       fflush(stdout);
       exit(EXIT_SUCCESS);
     } else {
+      int status = -1;
       close(out_pipe[1]);
-      wait(nullptr);
+      assert(waitpid(pid, &status, 0) == pid);
       read(out_pipe[0], buf.data(), buf.size() - 1);
       close(out_pipe[0]);
+      return status;
     }
-
-    return filename;
+    return -1;
   }
 
   string result() { return string(buf.data()); }
@@ -114,13 +117,15 @@ getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
 }
 
 TEST_P(SeqTest, Run) {
-  string filename = runInChildProcess();
+  const int status = runInChildProcess();
+  ASSERT_TRUE(WIFEXITED(status));
+  ASSERT_EQ(WEXITSTATUS(status), 0);
   string output = result();
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
   EXPECT_FALSE(assertsFailed);
   if (assertsFailed)
     std::cerr << output << std::endl;
-  vector<string> expects = findExpects(filename);
+  vector<string> expects = findExpects(filename());
   if (!expects.empty()) {
     vector<string> results = splitLines(output);
     EXPECT_EQ(results.size(), expects.size());

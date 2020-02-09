@@ -15,8 +15,8 @@ using std::make_shared;
 using std::string;
 using std::vector;
 
-SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file,
-                                    bool isCode, bool isTest) {
+seq::SeqModule *seq::parse(const std::string &argv0, const std::string &file,
+                           bool isCode, bool isTest) {
   try {
     auto stmts = isCode ? parse_code(argv0, file) : parse_file(file);
     auto tv = TransformStmtVisitor::apply(move(stmts));
@@ -26,7 +26,6 @@ SEQ_FUNC seq::SeqModule *seq::parse(const char *argv0, const char *file,
     auto stdlib = make_shared<Context>(module, cache);
     auto context = make_shared<Context>(module, cache, file);
     CodegenStmtVisitor::apply(*context, tv);
-    // DBG("done with parsing!", "");
     return context->getModule();
   } catch (seq::exc::SeqException &e) {
     if (isTest) {
