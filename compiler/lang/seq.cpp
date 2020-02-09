@@ -497,6 +497,7 @@ void SeqModule::execute(const std::vector<std::string> &args,
   delete eng;
 }
 
+#if SEQ_HAS_TAPIR
 void tapir::resetOMPABI() {
   IdentTy = nullptr;
   Kmpc_MicroTy = nullptr;
@@ -504,6 +505,7 @@ void tapir::resetOMPABI() {
   DefaultOpenMPLocation = nullptr;
   KmpRoutineEntryPtrTy = nullptr;
 }
+#endif
 
 /*
  * JIT
