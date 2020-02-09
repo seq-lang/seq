@@ -126,7 +126,14 @@ script:
   - cmake --build build --config Release
   - build/seqtest --gtest_filter="CoreTests/*"
   - build/seqtest --gtest_filter="PipelineTests/*"
-  - build/seqtest --gtest_filter="StdlibTests/*"
+  - build/seqtest --gtest_filter="StdlibTests/*/bisect_*"
+  - build/seqtest --gtest_filter="StdlibTests/*/heapq_*"
+  - build/seqtest --gtest_filter="StdlibTests/*/itertools_*"
+  - build/seqtest --gtest_filter="StdlibTests/*/math_*"
+  - build/seqtest --gtest_filter="StdlibTests/*/random_*"
+  - build/seqtest --gtest_filter="StdlibTests/*/sort_*"
+  - build/seqtest --gtest_filter="StdlibTests/*/statistics_*"
+  - build/seqtest --gtest_filter="StdlibTests/*/str_*"
   - build/seqtest --gtest_filter="PythonTests/*"
   - build/seqc test/core/helloworld.seq
   - (cd docs/sphinx && make html 2> /dev/null)
