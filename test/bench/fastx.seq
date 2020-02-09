@@ -4,6 +4,7 @@ n, m = 0, 0
 
 def test_fasta_options(path: str):
     def process(rec: FASTARecord):
+        global n
         n += len(rec.name) + len(rec.seq)
     global n, m
     m = 0
@@ -13,7 +14,7 @@ def test_fasta_options(path: str):
                        for d in (True, False)]
     for validate, gzip, copy, fai in opts4:
         n = 0
-        with timing(f'{validate=} {gzip=} {copy=} {fai=}'):
+        with timing(f'validate={validate} gzip={gzip} copy={copy} fai={fai}'):
             FASTA(path, validate=validate, gzip=gzip, copy=copy, fai=fai) |> iter |> process
         if m == 0:
             m = n
@@ -22,6 +23,7 @@ def test_fasta_options(path: str):
 
 def test_fastq_options(path: str):
     def process(rec: FASTQRecord):
+        global n
         n += len(rec.name) + len(rec.seq) + len(rec.qual)
     global n, m
     m = 0
@@ -29,7 +31,7 @@ def test_fastq_options(path: str):
                    for b in (True, False)]
     for validate, gzip in opts2:
         n = 0
-        with timing(f'{validate=} {gzip=}'):
+        with timing(f'validate={validate} gzip={gzip}'):
             FASTQ(path, validate=validate, gzip=gzip, copy=True) |> iter |> process
         if m == 0:
             m = n
@@ -38,6 +40,7 @@ def test_fastq_options(path: str):
 
 def test_seqs_options(path: str):
     def process(rec: seq):
+        global n
         n += len(rec)
     global n, m
     m = 0
@@ -46,7 +49,7 @@ def test_seqs_options(path: str):
                      for c in (True, False)]
     for validate, gzip, copy in opts3:
         n = 0
-        with timing(f'{validate=} {gzip=} {copy=}'):
+        with timing(f'validate={validate} gzip={gzip} copy={copy}'):
             Seqs(path, validate=validate, gzip=gzip, copy=copy) |> iter |> process
         if m == 0:
             m = n
