@@ -5,6 +5,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <tuple>
 #include <unistd.h>
 #include <vector>
@@ -21,27 +23,39 @@ class SeqTest : public testing::TestWithParam<
 protected:
   vector<char> buf;
   int out_pipe[2];
-  int save;
+  pid_t pid;
 
-  SeqTest() : buf(65536), out_pipe(), save() {}
+  SeqTest() : buf(65536), out_pipe(), pid() {}
 
-  void SetUp() override {
-    save = dup(STDOUT_FILENO);
-    assert(pipe(out_pipe) == 0);
-    long flags = fcntl(out_pipe[0], F_GETFL);
-    flags |= O_NONBLOCK;
-    fcntl(out_pipe[0], F_SETFL, flags);
-    dup2(out_pipe[1], STDOUT_FILENO);
-    close(out_pipe[1]);
+  string runInChildProcess() {
+    const string basename = get<0>(GetParam());
+    const bool debug = get<1>(GetParam());
+    string filename = string(TEST_DIR) + "/" + basename;
+
+    assert(pipe(out_pipe) != -1);
+    pid = fork();
+    assert(pid != -1);
+
+    if (pid == 0) {
+      dup2(out_pipe[1], STDOUT_FILENO);
+      close(out_pipe[0]);
+      close(out_pipe[1]);
+
+      SeqModule *module = parse("", filename.c_str(), false, false);
+      execute(module, {filename}, {}, debug);
+      fflush(stdout);
+      exit(EXIT_SUCCESS);
+    } else {
+      close(out_pipe[1]);
+      wait(nullptr);
+      read(out_pipe[0], buf.data(), buf.size() - 1);
+      close(out_pipe[0]);
+    }
+
+    return filename;
   }
 
-  void TearDown() override { dup2(save, STDOUT_FILENO); }
-
-  string result() {
-    fflush(stdout);
-    read(out_pipe[0], buf.data(), buf.size() - 1);
-    return string(buf.data());
-  }
+  string result() { return string(buf.data()); }
 };
 
 vector<string> splitLines(const string &output) {
@@ -100,11 +114,7 @@ getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
 }
 
 TEST_P(SeqTest, Run) {
-  const string basename = get<0>(GetParam());
-  const bool debug = get<1>(GetParam());
-  string filename = string(TEST_DIR) + "/" + basename;
-  SeqModule *module = parse("", filename.c_str(), false, false);
-  execute(module, {filename}, {}, debug);
+  string filename = runInChildProcess();
   string output = result();
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
   EXPECT_FALSE(assertsFailed);
