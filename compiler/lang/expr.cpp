@@ -1258,6 +1258,7 @@ static bool getExprForTupleSlice(Expr *arr, Expr *idx, types::RecordType *rec,
 Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = arr->getType();
   types::RecordType *rec = type->asRec();
+  types::Type *idxType = this->idx->getType();
 
   // check if this is a record lookup, and that __getitem__ is not overriden
   if (rec) {
@@ -1274,8 +1275,18 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
   Value *arr = this->arr->codegen(base, block);
   Value *idx = this->idx->codegen(base, block);
-  return type->callMagic("__getitem__", {this->idx->getType()}, arr, {idx},
-                         block, getTryCatch());
+
+  if (auto *func = dynamic_cast<Func *>(base)) {
+    if (func->hasAttribute("prefetch") &&
+        type->magicOut("__prefetch__", {idxType}, /*nullOnMissing=*/true)) {
+      type->callMagic("__prefetch__", {idxType}, arr, {idx}, block,
+                      getTryCatch());
+      func->codegenYield(nullptr, nullptr, block, true);
+    }
+  }
+
+  return type->callMagic("__getitem__", {idxType}, arr, {idx}, block,
+                         getTryCatch());
 }
 
 types::Type *ArrayLookupExpr::getType0() const {

@@ -60,7 +60,6 @@ public:
   virtual void visit(const TryStmt *) override;
   virtual void visit(const GlobalStmt *) override;
   virtual void visit(const ThrowStmt *) override;
-  virtual void visit(const PrefetchStmt *) override;
   virtual void visit(const FunctionStmt *) override;
   virtual void visit(const ClassStmt *) override;
   virtual void visit(const DeclareStmt *) override;

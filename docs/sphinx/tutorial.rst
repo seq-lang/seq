@@ -319,7 +319,7 @@ Genomic index prefetching
 Large genomic indices---ranging from several to tens or even hundreds of gigabytes---used in many applications result in extremely poor cache performance and, ultimately, a substantial fraction of stalled memory-bound cycles. For this reason, Seq performs pipeline optimizations to enable data prefetching and to hide memory latencies. You, the user, must provide just:
 
 - a ``__prefetch__`` magic method definition in the index class, which is logically similar to ``__getitem__`` (indexing construct) but performs a prefetch instead of actually loading the requested value (and can simply delegate to ``__prefetch__`` methods of built-in types);
-- a one-line ``prefetch`` hint indicating where a software prefetch should be performed, which can typically be just before the actual load.
+- a one-line ``@prefetch`` annotation on functions that should perform prefetching.
 
 In particular, a typical prefetch-friendly index class would look like this:
 
@@ -336,11 +336,11 @@ Now, if we were to process data in a pipeline as such:
 
 .. code-block:: seq
 
+    @prefetch
     def process(read: seq, index: MyIndex):
         ...
         for kmer in read.kmers[Kmer[20]](step):
-            prefetch index[kmer], index[~kmer]
-            hits = index[kmer]
+            hits_fwd = index[kmer]
             hits_rev = index[~kmer]
             ...
         return x
@@ -363,19 +363,19 @@ As a concrete example, consider Seq's built-in FM-index type, ``FMIndex``, and a
     def update(count: int):
         n += count
 
+    @prefetch
     def find(s: seq, fmi: FMIndex):
         intv = fmi.interval(s[-1])          # initial FM-index interval
         s = s[:-1]                          # trim off last base of sequence
         while s and intv:
-            prefetch fmi[intv, s[-1]]       # prefetch for backwards extension
-            intv = fmi.update(intv, s[-1])  # backwards extend FM-index interval
+            intv = fmi[intv, s[-1]]         # backwards extend FM-index interval
             s = s[:-1]                      # trim off last base of sequence
         return len(intv)                    # return count of sequence in index
 
     FASTQ('/path/to/reads.fq') |> seqs |> split(k, step=step) |> find(fmi) |> update
     print f'{n=}'
 
-That single ``prefetch`` line can have a significant impact, especially for larger ``k``. Here is a graph of the performance of this exact snippet for various ``k`` using hg19 as the reference:
+That single ``@prefetch`` line can have a significant impact, especially for larger ``k``. Here is a graph of the performance of this exact snippet for various ``k`` using hg19 as the reference:
 
 .. image:: ../images/prefetch.png
     :width: 500px

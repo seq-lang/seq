@@ -218,13 +218,6 @@ struct ThrowStmt : public Stmt {
   ACCEPT_VISITOR;
 };
 
-struct PrefetchStmt : public Stmt {
-  ExprPtr expr;
-  PrefetchStmt(ExprPtr e);
-  std::string to_string() const override;
-  ACCEPT_VISITOR;
-};
-
 struct FunctionStmt : public Stmt {
   std::string name;
   ExprPtr ret;

@@ -439,10 +439,6 @@ void TransformStmtVisitor::visit(const ThrowStmt *stmt) {
   RETURN(ThrowStmt, transform(stmt->expr));
 }
 
-void TransformStmtVisitor::visit(const PrefetchStmt *stmt) {
-  RETURN(PrefetchStmt, transform(stmt->expr));
-}
-
 void TransformStmtVisitor::visit(const FunctionStmt *stmt) {
   vector<Param> args;
   for (auto &a : stmt->args) {

@@ -87,7 +87,6 @@ struct ExternImportStmt;
 struct TryStmt;
 struct GlobalStmt;
 struct ThrowStmt;
-struct PrefetchStmt;
 struct FunctionStmt;
 struct ClassStmt;
 struct DeclareStmt;
@@ -119,7 +118,6 @@ struct StmtVisitor {
   virtual void visit(const TryStmt *) = 0;
   virtual void visit(const GlobalStmt *) = 0;
   virtual void visit(const ThrowStmt *) = 0;
-  virtual void visit(const PrefetchStmt *) = 0;
   virtual void visit(const FunctionStmt *) = 0;
   virtual void visit(const ClassStmt *) = 0;
   virtual void visit(const DeclareStmt *) = 0;

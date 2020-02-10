@@ -165,11 +165,6 @@ string GlobalStmt::to_string() const { return format("(#global {})", var); }
 ThrowStmt::ThrowStmt(ExprPtr e) : expr(move(e)) {}
 string ThrowStmt::to_string() const { return format("(#throw {})", *expr); }
 
-PrefetchStmt::PrefetchStmt(ExprPtr e) : expr(move(e)) {}
-string PrefetchStmt::to_string() const {
-  return format("(#prefetch {})", *expr);
-}
-
 FunctionStmt::FunctionStmt(string n, ExprPtr r, vector<string> g,
                            vector<Param> a, StmtPtr s, vector<string> at)
     : name(n), ret(move(r)), generics(g), args(move(a)), suite(move(s)),

@@ -40,7 +40,7 @@ class list[T]:
         self._idx_check(idx, "list index out of range")
         return self.arr[idx]
 
-    def __prefetch__(self: list[T], idx: int):
+    def prefetch(self: list[T], idx: int):
         (self.arr.ptr + idx).__prefetch_r3__()
 
     def __setitem__(self: list[T], idx: int, val: T):

@@ -12,7 +12,6 @@ class Expr;
 class Var;
 class Return;
 class Yield;
-class Prefetch;
 
 /**
  * Abstract base function class, representing functions in a program
@@ -152,7 +151,6 @@ public:
   void setEnclosingFunc(Func *parentFunc);
   void sawReturn(Return *ret);
   void sawYield(Yield *yield);
-  void sawPrefetch(Prefetch *prefetch);
   void addAttribute(std::string attr);
   std::vector<std::string> getAttributes();
   bool hasAttribute(const std::string &attr);

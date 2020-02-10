@@ -194,10 +194,6 @@ void FormatStmtVisitor::visit(const ThrowStmt *stmt) {
   RETURN("raise {}", transform(stmt->expr));
 }
 
-void FormatStmtVisitor::visit(const PrefetchStmt *stmt) {
-  RETURN("prefetch {}", transform(stmt->expr));
-}
-
 void FormatStmtVisitor::visit(const FunctionStmt *stmt) {
   string attrs;
   for (auto &a : stmt->attributes) {

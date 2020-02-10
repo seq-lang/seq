@@ -353,8 +353,6 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(Global, parse_string(t));
   case 20:
     Return(Throw, parse_expr(t));
-  case 21:
-    Return(Prefetch, parse_expr(t));
   // | Special of (string * tstmt ann list * string list)
   case 23:
     Return(Function, parse_string(Field(t, 0)),

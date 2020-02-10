@@ -395,20 +395,6 @@ void CodegenStmtVisitor::visit(const ThrowStmt *stmt) {
   RETURN(seq::Throw, transform(stmt->expr));
 }
 
-void CodegenStmtVisitor::visit(const PrefetchStmt *stmt) {
-  if (auto e = dynamic_cast<IndexExpr *>(stmt->expr.get())) {
-    if (auto f = dynamic_cast<seq::Func *>(ctx.getBase())) {
-      auto r = new seq::Prefetch({transform(e->index)}, {transform(e->expr)});
-      f->sawPrefetch(r);
-      this->result = r;
-    } else {
-      ERROR("prefetch outside of function");
-    }
-  } else {
-    ERROR("prefetch needs index expression");
-  }
-}
-
 void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   auto f = new seq::Func();
   f->setName(stmt->name);
