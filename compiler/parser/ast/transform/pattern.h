@@ -8,6 +8,9 @@
 #include "parser/ast/pattern.h"
 #include "parser/ast/transform/stmt.h"
 
+namespace seq {
+namespace ast {
+
 class TransformPatternVisitor : public PatternVisitor {
   TransformStmtVisitor &stmtVisitor;
   PatternPtr result;
@@ -16,10 +19,10 @@ class TransformPatternVisitor : public PatternVisitor {
 public:
   TransformPatternVisitor(TransformStmtVisitor &);
   PatternPtr transform(const Pattern *ptr);
-  vector<PatternPtr> transform(const vector<PatternPtr> &pats);
+  std::vector<PatternPtr> transform(const std::vector<PatternPtr> &pats);
 
   template <typename T>
-  auto transform(const unique_ptr<T> &t) -> decltype(transform(t.get())) {
+  auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
     return transform(t.get());
   }
 
@@ -36,3 +39,6 @@ public:
   void visit(const GuardedPattern *) override;
   void visit(const BoundPattern *) override;
 };
+
+} // namespace ast
+} // namespace seq

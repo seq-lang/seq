@@ -8,117 +8,115 @@
 #include "lang/seq.h"
 #include "parser/ast/visitor.h"
 
-using std::ostream;
-using std::string;
-using std::unique_ptr;
-using std::vector;
-
 #define ACCEPT_VISITOR                                                         \
   virtual void accept(ExprVisitor &visitor) const override {                   \
     visitor.visit(this);                                                       \
   }
 
+namespace seq {
+namespace ast {
+
 struct Expr : public seq::SrcObject {
   virtual ~Expr() {}
-  virtual string to_string() const = 0;
+  virtual std::string to_string() const = 0;
   virtual void accept(ExprVisitor &) const = 0;
-  friend ostream &operator<<(ostream &out, const Expr &c) {
+  friend std::ostream &operator<<(std::ostream &out, const Expr &c) {
     return out << c.to_string();
   }
 };
-typedef unique_ptr<Expr> ExprPtr;
+typedef std::unique_ptr<Expr> ExprPtr;
 
 struct EmptyExpr : public Expr {
   EmptyExpr();
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct BoolExpr : public Expr {
   bool value;
   BoolExpr(bool v);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct IntExpr : public Expr {
-  string value;
-  string suffix;
+  std::string value;
+  std::string suffix;
   IntExpr(int v);
-  IntExpr(string v, string s = "");
-  string to_string() const override;
+  IntExpr(std::string v, std::string s = "");
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct FloatExpr : public Expr {
   double value;
-  string suffix;
-  FloatExpr(double v, string s = "");
-  string to_string() const override;
+  std::string suffix;
+  FloatExpr(double v, std::string s = "");
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct StringExpr : public Expr {
-  string value;
-  StringExpr(string v);
-  string to_string() const override;
+  std::string value;
+  StringExpr(std::string v);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct FStringExpr : public Expr {
-  string value;
-  FStringExpr(string v);
-  string to_string() const override;
+  std::string value;
+  FStringExpr(std::string v);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct KmerExpr : public Expr {
-  string value;
-  KmerExpr(string v);
-  string to_string() const override;
+  std::string value;
+  KmerExpr(std::string v);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct SeqExpr : public Expr {
-  string prefix;
-  string value;
-  SeqExpr(string v, string p = "s");
-  string to_string() const override;
+  std::string prefix;
+  std::string value;
+  SeqExpr(std::string v, std::string p = "s");
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct IdExpr : public Expr {
-  string value;
-  IdExpr(string v);
-  string to_string() const override;
+  std::string value;
+  IdExpr(std::string v);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct UnpackExpr : public Expr {
   ExprPtr what;
   UnpackExpr(ExprPtr w);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct TupleExpr : public Expr {
-  vector<ExprPtr> items;
-  TupleExpr(vector<ExprPtr> i);
-  string to_string() const override;
+  std::vector<ExprPtr> items;
+  TupleExpr(std::vector<ExprPtr> i);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct ListExpr : public Expr {
-  vector<ExprPtr> items;
-  ListExpr(vector<ExprPtr> i);
-  string to_string() const override;
+  std::vector<ExprPtr> items;
+  ListExpr(std::vector<ExprPtr> i);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct SetExpr : public Expr {
-  vector<ExprPtr> items;
-  SetExpr(vector<ExprPtr> i);
-  string to_string() const override;
+  std::vector<ExprPtr> items;
+  SetExpr(std::vector<ExprPtr> i);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
@@ -126,139 +124,142 @@ struct DictExpr : public Expr {
   struct KeyValue {
     ExprPtr key, value;
   };
-  vector<KeyValue> items;
-  DictExpr(vector<KeyValue> it);
-  string to_string() const override;
+  std::vector<KeyValue> items;
+  DictExpr(std::vector<KeyValue> it);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct GeneratorExpr : public Expr {
   enum Kind { Generator, ListGenerator, SetGenerator };
   struct Body {
-    vector<string> vars;
+    std::vector<std::string> vars;
     ExprPtr gen;
-    vector<ExprPtr> conds;
+    std::vector<ExprPtr> conds;
   };
   Kind kind;
   ExprPtr expr;
-  vector<Body> loops;
-  GeneratorExpr(Kind k, ExprPtr e, vector<Body> l);
-  string to_string() const override;
+  std::vector<Body> loops;
+  GeneratorExpr(Kind k, ExprPtr e, std::vector<Body> l);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct DictGeneratorExpr : public Expr {
   ExprPtr key, expr;
-  vector<GeneratorExpr::Body> loops;
-  DictGeneratorExpr(ExprPtr k, ExprPtr e, vector<GeneratorExpr::Body> l);
-  string to_string() const override;
+  std::vector<GeneratorExpr::Body> loops;
+  DictGeneratorExpr(ExprPtr k, ExprPtr e, std::vector<GeneratorExpr::Body> l);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct IfExpr : public Expr {
   ExprPtr cond, eif, eelse;
   IfExpr(ExprPtr c, ExprPtr i, ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct UnaryExpr : public Expr {
-  string op;
+  std::string op;
   ExprPtr expr;
-  UnaryExpr(string o, ExprPtr e);
-  string to_string() const override;
+  UnaryExpr(std::string o, ExprPtr e);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct BinaryExpr : public Expr {
-  string op;
+  std::string op;
   ExprPtr lexpr, rexpr;
   bool inPlace;
-  BinaryExpr(ExprPtr l, string o, ExprPtr r, bool i = false);
-  string to_string() const override;
+  BinaryExpr(ExprPtr l, std::string o, ExprPtr r, bool i = false);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct PipeExpr : public Expr {
   struct Pipe {
-    string op;
+    std::string op;
     ExprPtr expr;
   };
-  vector<Pipe> items;
-  PipeExpr(vector<Pipe> it);
-  string to_string() const override;
+  std::vector<Pipe> items;
+  PipeExpr(std::vector<Pipe> it);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct IndexExpr : public Expr {
   ExprPtr expr, index;
   IndexExpr(ExprPtr e, ExprPtr i);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct CallExpr : public Expr {
   struct Arg {
-    string name;
+    std::string name;
     ExprPtr value;
   };
   ExprPtr expr;
-  vector<Arg> args;
-  CallExpr(ExprPtr e, vector<Arg> a);
-  CallExpr(ExprPtr e, vector<ExprPtr> a);
+  std::vector<Arg> args;
+  CallExpr(ExprPtr e, std::vector<Arg> a);
+  CallExpr(ExprPtr e, std::vector<ExprPtr> a);
   CallExpr(ExprPtr e, ExprPtr arg);
   CallExpr(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct DotExpr : public Expr {
   ExprPtr expr;
-  string member;
-  DotExpr(ExprPtr e, string m);
-  string to_string() const override;
+  std::string member;
+  DotExpr(ExprPtr e, std::string m);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct SliceExpr : public Expr {
   ExprPtr st, ed, step;
   SliceExpr(ExprPtr s, ExprPtr e, ExprPtr st);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct EllipsisExpr : public Expr {
   EllipsisExpr();
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct TypeOfExpr : public Expr {
   ExprPtr expr;
   TypeOfExpr(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct PtrExpr : public Expr {
   ExprPtr expr;
   PtrExpr(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct LambdaExpr : public Expr {
-  vector<string> vars;
+  std::vector<std::string> vars;
   ExprPtr expr;
-  LambdaExpr(vector<string> v, ExprPtr e);
-  string to_string() const override;
+  LambdaExpr(std::vector<std::string> v, ExprPtr e);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct YieldExpr : public Expr {
   YieldExpr();
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
+
+} // namespace ast
+} // namespace seq
 
 #undef ACCEPT_VISITOR

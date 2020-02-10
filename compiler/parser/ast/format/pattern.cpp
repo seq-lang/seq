@@ -30,6 +30,9 @@ using std::vector;
   this->result = fmt::format(T, __VA_ARGS__);                                  \
   return
 
+namespace seq {
+namespace ast {
+
 string FormatPatternVisitor::transform(const Pattern *ptr) {
   FormatPatternVisitor v;
   ptr->accept(v);
@@ -96,3 +99,6 @@ void FormatPatternVisitor::visit(const GuardedPattern *pat) {
 void FormatPatternVisitor::visit(const BoundPattern *pat) {
   RETURN("({}) as {}", transform(pat->pattern), pat->var);
 }
+
+} // namespace ast
+} // namespace seq

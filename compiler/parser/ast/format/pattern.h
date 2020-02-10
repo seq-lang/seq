@@ -3,21 +3,21 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#include <vector>
 
 #include "parser/ast/pattern.h"
 #include "parser/ast/transform/stmt.h"
 
-using std::string;
+namespace seq {
+namespace ast {
 
 class FormatPatternVisitor : public PatternVisitor {
-  string result;
+  std::string result;
 
 public:
-  string transform(const Pattern *ptr);
+  std::string transform(const Pattern *ptr);
 
   template <typename T>
-  auto transform(const unique_ptr<T> &t) -> decltype(transform(t.get())) {
+  auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
     return transform(t.get());
   }
 
@@ -34,3 +34,6 @@ public:
   void visit(const GuardedPattern *) override;
   void visit(const BoundPattern *) override;
 };
+
+} // namespace ast
+} // namespace seq

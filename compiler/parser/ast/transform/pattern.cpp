@@ -33,6 +33,9 @@ using std::vector;
 #define RETURN(T, ...)                                                         \
   (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), pat->getSrcInfo()))
 
+namespace seq {
+namespace ast {
+
 TransformPatternVisitor::TransformPatternVisitor(
     TransformStmtVisitor &stmtVisitor)
     : stmtVisitor(stmtVisitor) {}
@@ -100,3 +103,6 @@ void TransformPatternVisitor::visit(const GuardedPattern *pat) {
 void TransformPatternVisitor::visit(const BoundPattern *pat) {
   RETURN(BoundPattern, pat->var, transform(pat->pattern));
 }
+
+} // namespace ast
+} // namespace seq

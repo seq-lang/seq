@@ -33,6 +33,9 @@ using std::vector;
   this->result = new T(__VA_ARGS__);                                           \
   return
 
+namespace seq {
+namespace ast {
+
 CodegenPatternVisitor::CodegenPatternVisitor(CodegenStmtVisitor &stmtVisitor)
     : stmtVisitor(stmtVisitor), result(nullptr) {}
 
@@ -112,3 +115,6 @@ void CodegenPatternVisitor::visit(const GuardedPattern *pat) {
 void CodegenPatternVisitor::visit(const BoundPattern *pat) {
   error(pat->getSrcInfo(), "unexpected bound pattern");
 }
+
+} // namespace ast
+} // namespace seq

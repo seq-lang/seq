@@ -28,6 +28,9 @@ using namespace std;
     return (caml__temp_result);                                                \
   } while (0)
 
+namespace seq {
+namespace ast {
+
 string parse_string(value v) {
   return string(String_val(v), caml_string_length(v));
 }
@@ -517,3 +520,6 @@ unique_ptr<SuiteStmt> parse_file(string file) {
 //     value += e.value + "\n";
 //   }
 // };
+
+} // namespace ast
+} // namespace seq

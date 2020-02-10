@@ -13,6 +13,9 @@
 #include "parser/common.h"
 #include "parser/context.h"
 
+namespace seq {
+namespace ast {
+
 class CodegenStmtVisitor : public StmtVisitor {
   Context &ctx;
   seq::Stmt *result;
@@ -58,3 +61,6 @@ public:
   virtual void visit(const PyDefStmt *) override;
   virtual void visit(const DeclareStmt *) override;
 };
+
+} // namespace ast
+} // namespace seq

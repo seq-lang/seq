@@ -36,6 +36,9 @@ using std::vector;
 #define RETURN(T, ...)                                                         \
   this->result = fmt::format("{}" T "\n", pad(), __VA_ARGS__);
 
+namespace seq {
+namespace ast {
+
 string FormatStmtVisitor::transform(const StmtPtr &stmt, int indent) {
   FormatStmtVisitor v;
   v.indent = this->indent + indent;
@@ -263,3 +266,6 @@ void FormatStmtVisitor::visit(const WithStmt *stmt) {
 }
 
 void FormatStmtVisitor::visit(const PyDefStmt *stmt) {}
+
+} // namespace ast
+} // namespace seq

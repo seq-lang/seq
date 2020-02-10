@@ -13,20 +13,23 @@
 #include "parser/common.h"
 #include "parser/context.h"
 
+namespace seq {
+namespace ast {
+
 class CodegenExprVisitor : public ExprVisitor {
   Context &ctx;
   CodegenStmtVisitor &stmtVisitor;
   seq::Expr *result;
-  vector<seq::Var *> *captures;
+  std::vector<seq::Var *> *captures;
   friend class CodegenStmtVisitor;
 
 public:
   CodegenExprVisitor(Context &ctx, CodegenStmtVisitor &stmtVisitor,
-                     vector<seq::Var *> *captures = nullptr);
+                     std::vector<seq::Var *> *captures = nullptr);
   seq::Expr *transform(const ExprPtr &e);
   seq::types::Type *transformType(const ExprPtr &expr);
   seq::For *parseComprehension(const Expr *expr,
-                               const vector<GeneratorExpr::Body> &loops,
+                               const std::vector<GeneratorExpr::Body> &loops,
                                int &added);
 
   void visit(const EmptyExpr *) override;
@@ -59,3 +62,6 @@ public:
   void visit(const LambdaExpr *) override;
   void visit(const YieldExpr *) override;
 };
+
+} // namespace ast
+} // namespace seq

@@ -25,6 +25,7 @@ using std::get;
 using std::make_unique;
 using std::move;
 using std::ostream;
+using std::pair;
 using std::stack;
 using std::string;
 using std::unique_ptr;
@@ -44,6 +45,9 @@ using std::vector;
 #define SP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo())
 #define SPX(s, T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), s->getSrcInfo())
 #define ERROR(...) error(stmt->getSrcInfo(), __VA_ARGS__)
+
+namespace seq {
+namespace ast {
 
 void TransformStmtVisitor::prepend(StmtPtr s) {
   prependStmts.push_back(move(s));
@@ -534,3 +538,6 @@ void TransformStmtVisitor::visit(const PyDefStmt *stmt) {
                                transform(stmt->ret), vector<Param>(), "py")));
   RETURN(SuiteStmt, move(stmts));
 }
+
+} // namespace ast
+} // namespace seq

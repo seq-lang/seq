@@ -1,5 +1,8 @@
 #pragma once
 
+namespace seq {
+namespace ast {
+
 struct EmptyExpr;
 struct BoolExpr;
 struct IntExpr;
@@ -153,3 +156,6 @@ struct PatternVisitor {
   virtual void visit(const GuardedPattern *) = 0;
   virtual void visit(const BoundPattern *) = 0;
 };
+
+} // namespace ast
+} // namespace seq

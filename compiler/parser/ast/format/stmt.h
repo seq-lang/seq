@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <vector>
 
 #include "parser/ast/expr.h"
 #include "parser/ast/stmt.h"
@@ -13,18 +12,19 @@
 #include "parser/common.h"
 #include "parser/context.h"
 
-using std::string;
+namespace seq {
+namespace ast {
 
 class FormatStmtVisitor : public StmtVisitor {
-  string result;
+  std::string result;
   int indent{0};
 
 public:
-  string transform(const StmtPtr &stmt, int indent = 0);
-  string transform(const ExprPtr &stmt);
-  string transform(const PatternPtr &stmt);
+  std::string transform(const StmtPtr &stmt, int indent = 0);
+  std::string transform(const ExprPtr &stmt);
+  std::string transform(const PatternPtr &stmt);
 
-  string pad(int indent = 0);
+  std::string pad(int indent = 0);
 
   virtual void visit(const SuiteStmt *) override;
   virtual void visit(const PassStmt *) override;
@@ -57,7 +57,11 @@ public:
   virtual void visit(const WithStmt *) override;
   virtual void visit(const PyDefStmt *) override;
 
-  friend ostream &operator<<(ostream &out, const FormatStmtVisitor &c) {
+  friend std::ostream &operator<<(std::ostream &out,
+                                  const FormatStmtVisitor &c) {
     return out << c.result;
   }
 };
+
+} // namespace ast
+} // namespace seq

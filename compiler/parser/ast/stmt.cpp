@@ -13,10 +13,14 @@
 using fmt::format;
 using std::move;
 using std::ostream;
+using std::pair;
 using std::string;
 using std::tuple;
 using std::unique_ptr;
 using std::vector;
+
+namespace seq {
+namespace ast {
 
 string Param::to_string() const {
   return format("({}{}{})", name, type ? " :typ " + type->to_string() : "",
@@ -233,3 +237,6 @@ string WithStmt::to_string() const {
   }
   return format("(#with ({}) {})", fmt::join(as, " "), *suite);
 }
+
+} // namespace ast
+} // namespace seq

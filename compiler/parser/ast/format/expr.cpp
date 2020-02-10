@@ -34,6 +34,9 @@ using std::vector;
   this->result = fmt::format(T, __VA_ARGS__);                                  \
   return
 
+namespace seq {
+namespace ast {
+
 string FormatExprVisitor::transform(const Expr *expr) {
   FormatExprVisitor v;
   expr->accept(v);
@@ -217,3 +220,6 @@ void FormatExprVisitor::visit(const LambdaExpr *expr) {
 void FormatExprVisitor::visit(const YieldExpr *expr) {
   this->result = "(yield)";
 }
+
+} // namespace ast
+} // namespace seq

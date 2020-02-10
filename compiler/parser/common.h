@@ -8,22 +8,22 @@
 
 #include "lang/seq.h"
 
-using std::string;
-using std::vector;
-
 #define DBG(c, ...) fmt::print(c "\n", __VA_ARGS__)
 
+namespace seq {
+namespace ast {
+
 template <typename T>
-string combine(const vector<T> &items, string delim = " ") {
-  string s = "";
+std::string combine(const std::vector<T> &items, std::string delim = " ") {
+  std::string s = "";
   for (int i = 0; i < items.size(); i++)
     s += (i ? delim : "") + items[i]->to_string();
   return s;
 }
 
-string escape(string s);
+std::string escape(std::string s);
 
-string executable_path(const char *argv0);
+std::string executable_path(const char *argv0);
 
 void error(const char *format);
 void error(const seq::SrcInfo &p, const char *format);
@@ -37,9 +37,12 @@ void error(const seq::SrcInfo &p, const char *format, TArgs &&... args) {
   throw seq::exc::SeqException(fmt::format(format, args...), p);
 }
 
-string getTemporaryVar(const string &prefix = "");
+std::string getTemporaryVar(const std::string &prefix = "");
 
 template <typename T> T &&fwdSrcInfo(T &&t, const seq::SrcInfo &i) {
   t->setSrcInfo(i);
   return std::forward<T>(t);
 }
+
+} // namespace ast
+} // namespace seq
