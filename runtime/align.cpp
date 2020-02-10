@@ -269,7 +269,11 @@ SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
                                  SeqPair *seqPairArray, uint8_t *seqBufRef,
                                  uint8_t *seqBufQer, int numPairs) {
   InterAlignParams params = *paramsx;
+#ifdef _OPENMP
   int numThreads = omp_get_num_threads();
+#else
+  int numThreads = 1;
+#endif
   int8_t mat[25];
   bwa_fill_scmat(params.a, params.b, params.ambig, mat);
   BandedPairWiseSW bsw(params.gapo, params.gape, params.gapo, params.gape,
@@ -283,7 +287,11 @@ SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
                                 SeqPair *seqPairArray, uint8_t *seqBufRef,
                                 uint8_t *seqBufQer, int numPairs) {
   InterAlignParams params = *paramsx;
+#ifdef _OPENMP
   int numThreads = omp_get_num_threads();
+#else
+  int numThreads = 1;
+#endif
   int8_t mat[25];
   bwa_fill_scmat(params.a, params.b, params.ambig, mat);
   BandedPairWiseSW bsw(params.gapo, params.gape, params.gapo, params.gape,
@@ -297,7 +305,11 @@ SEQ_FUNC void seq_inter_align1(InterAlignParams *paramsx, SeqPair *seqPairArray,
                                uint8_t *seqBufRef, uint8_t *seqBufQer,
                                int numPairs) {
   InterAlignParams params = *paramsx;
+#ifdef _OPENMP
   int numThreads = omp_get_num_threads();
+#else
+  int numThreads = 1;
+#endif
   int8_t mat[25];
   bwa_fill_scmat(params.a, params.b, params.ambig, mat);
   BandedPairWiseSW bsw(params.gapo, params.gape, params.gapo, params.gape,

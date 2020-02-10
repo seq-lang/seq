@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 
 using namespace seq;
 using namespace llvm;
@@ -26,7 +26,8 @@ types::FuncType *BaseFunc::getFuncType() {
   return types::FuncType::get({}, types::Void);
 }
 
-Function *BaseFunc::getFunc() {
+Function *BaseFunc::getFunc(Module *module) {
+  codegen(module);
   assert(func);
   return func;
 }
@@ -102,10 +103,10 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
     }
   }
 
-  if (args.size() + offset > size) {
+  const unsigned argsGot = args.size() + offset;
+  if (argsGot > size) {
     throw exc::SeqException("expected " + std::to_string(size) +
-                            " argument(s), but got " +
-                            std::to_string(args.size()));
+                            " argument(s), but got " + std::to_string(argsGot));
   }
 
   bool hasDefaults = false;
@@ -224,26 +225,28 @@ void Func::sawYield(Yield *yield) {
   outType0 = types::GenType::get(outType0);
 }
 
-void Func::sawPrefetch(Prefetch *prefetch) {
-  if (interAlign)
-    throw exc::SeqException(
-        "function cannot perform both prefetch and inter-sequence alignment",
-        getSrcInfo());
-  if (this->prefetch)
-    return;
-
-  this->prefetch = true;
-  gen = true;
-  outType = types::GenType::get(outType, types::GenType::GenTypeKind::PREFETCH);
-  outType0 =
-      types::GenType::get(outType0, types::GenType::GenTypeKind::PREFETCH);
-}
-
 void Func::addAttribute(std::string attr) {
   attributes.push_back(attr);
-  if (attr == "builtin")
+
+  if (attr == "builtin") {
     builtins[genericName()] = this;
-  else if (attr == "inter_align") {
+  } else if (attr == "prefetch") {
+    if (prefetch)
+      return;
+    if (interAlign)
+      throw exc::SeqException(
+          "function cannot perform both prefetch and inter-sequence alignment",
+          getSrcInfo());
+
+    prefetch = true;
+    gen = true;
+    outType =
+        types::GenType::get(outType, types::GenType::GenTypeKind::PREFETCH);
+    outType0 =
+        types::GenType::get(outType0, types::GenType::GenTypeKind::PREFETCH);
+  } else if (attr == "inter_align") {
+    if (interAlign)
+      return;
     if (prefetch)
       throw exc::SeqException(
           "function cannot perform both prefetch and inter-sequence alignment",
@@ -759,17 +762,10 @@ BaseFuncLite::BaseFuncLite(
       codegenLambda(std::move(codegenLambda)) {}
 
 void BaseFuncLite::codegen(Module *module) {
-  if (this->module != module) {
-    func = nullptr;
-    this->module = module;
-  }
-
-  if (func)
-    return;
-
   resolveTypes();
   func = codegenLambda(module);
   preambleBlock = &*func->getBasicBlockList().begin();
+  module = preambleBlock->getModule();
 }
 
 types::FuncType *BaseFuncLite::getFuncType() {

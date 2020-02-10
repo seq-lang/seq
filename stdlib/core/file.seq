@@ -1,51 +1,6 @@
-def _f_errcheck(stream: cobj, msg: str):
-    err = int(_C.ferror(stream))
-    if err:
-        raise IOError("file I/O error: " + msg)
-
-def _gz_errcheck(stream: cobj):
-    errnum = i32(0)
-    msg = _C.gzerror(stream, __ptr__(errnum))
-    if msg and msg[0]:
-        l = 1
-        while msg[l]:
-            l += 1
-        raise IOError("zlib error: " + str(msg, l))
-
-def _gz_getline(lineptr: ptr[cobj], n: ptr[int], stream: cobj):
-    if not lineptr[0]:
-        N = 128
-        n[0] = N
-        lineptr[0] = _gc.alloc_atomic(N)
-
-    cur_pos = lineptr[0]
-    while True:
-        c = int(_C.gzgetc(stream))
-        if c == -1:
-            _gz_errcheck(stream)
-            if cur_pos == lineptr[0]:
-                return -1
-            else:
-                break
-
-        if (lineptr[0] + n[0]) - cur_pos < 2:
-            new_lineptr_len = 2 * n[0]
-            new_lineptr = _gc.realloc(lineptr[0], new_lineptr_len)
-            cur_pos = new_lineptr + (cur_pos - lineptr[0])
-            lineptr[0] = new_lineptr
-            n[0] = new_lineptr_len
-
-        cur_pos[0] = byte(c)
-        cur_pos += 1
-        if byte(c) == '\n'.ptr[0]:
-            break
-
-    cur_pos[0] = byte(0)
-    return cur_pos - lineptr[0]
-
 class File:
     sz: int
-    buf: cobj
+    buf: ptr[byte]
     fp: cobj
 
     def __init__(self: File, fp: cobj):
@@ -57,6 +12,11 @@ class File:
         if not self.fp:
             raise IOError("file " + path + " could not be opened")
         self._reset()
+
+    def _errcheck(self: File, msg: str):
+        err = int(_C.ferror(self.fp))
+        if err:
+            raise IOError("file I/O error: " + msg)
 
     def __enter__(self: File):
         pass
@@ -74,7 +34,7 @@ class File:
     def write(self: File, s: str):
         self._ensure_open()
         _C.fwrite(s.ptr, 1, len(s), self.fp)
-        _f_errcheck(self.fp, "error in write")
+        self._errcheck("error in write")
 
     def write_gen[T](self: File, g: generator[T]):
         for s in g:
@@ -82,19 +42,19 @@ class File:
 
     def read(self: File, sz: int):
         self._ensure_open()
-        buf = cobj(sz)
+        buf = ptr[byte](sz)
         ret = _C.fread(buf, 1, sz, self.fp)
-        _f_errcheck(self.fp, "error in read")
+        self._errcheck("error in read")
         return str(buf, ret)
 
     def tell(self: File):
         ret = _C.ftell(self.fp)
-        _f_errcheck(self.fp, "error in tell")
+        self._errcheck("error in tell")
         return ret
 
     def seek(self: File, offset: int, whence: int):
         _C.fseek(self.fp, offset, i32(whence))
-        _f_errcheck(self.fp, "error in seek")
+        self._errcheck("error in seek")
 
     def close(self):
         if self.fp:
@@ -109,14 +69,14 @@ class File:
             raise IOError("I/O operation on closed file")
 
     def _reset(self: File):
-        self.buf = cobj()
+        self.buf = ptr[byte]()
         self.sz = 0
 
     def _iter(self: File):
         self._ensure_open()
         while True:
             # pass pointers to individual class fields:
-            rd = _C.getline(ptr[cobj](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
+            rd = _C.getline(ptr[ptr[byte]](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
             if rd != -1:
                 if self.buf[rd - 1] == byte(10):
                     rd -= 1
@@ -124,9 +84,15 @@ class File:
             else:
                 break
 
+def _gz_errcheck(stream: cobj):
+    errnum = i32(0)
+    msg = _C.gzerror(stream, __ptr__(errnum))
+    if msg and msg[0]:
+        raise IOError("zlib error: " + str(msg, _C.strlen(msg)))
+
 class gzFile:
     sz: int
-    buf: cobj
+    buf: ptr[byte]
     fp: cobj
 
     def __init__(self: gzFile, fp: cobj):
@@ -138,6 +104,29 @@ class gzFile:
         if not self.fp:
             raise IOError("file " + path + " could not be opened")
         self._reset()
+
+    def _getline(self: gzFile):
+        if not self.buf:
+            self.sz = 128
+            self.buf = ptr[byte](self.sz)
+
+        offset = 0
+        while True:
+            if not _C.gzgets(self.fp, self.buf + offset, i32(self.sz - offset)):
+                _gz_errcheck(self.fp)
+                if offset == 0:
+                    return -1
+                break
+
+            offset += _C.strlen(self.buf + offset)
+
+            if self.buf[offset - 1] == byte(10):  # '\n'
+                break
+
+            self.sz *= 2
+            self.buf = _gc.realloc(self.buf, self.sz)
+
+        return offset
 
     def __iter__(self: gzFile):
         for a in self._iter():
@@ -182,7 +171,7 @@ class gzFile:
         self._ensure_open()
         while True:
             # pass pointers to individual class fields:
-            rd = _gz_getline(ptr[cobj](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
+            rd = self._getline()
             if rd != -1:
                 if self.buf[rd - 1] == byte(10):
                     rd -= 1

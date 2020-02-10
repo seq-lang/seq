@@ -61,9 +61,9 @@ from genomeindex import *
 type K = Kmer[20]
 
 # index and process 20-mers
+@prefetch
 def process(kmer: K,
             index: GenomeIndex[K]):
-    prefetch index[kmer], index[~kmer]
     hits_fwd = index[kmer]
     hits_rev = index[~kmer]
     ...
@@ -87,7 +87,7 @@ A few notable aspects of this code:
 - k-mers can be reverse-complemented with `~`.
 - Seq provides easy iteration over common formats like FASTQ (`FASTQ` above).
 - Complex pipelines are easily expressible in Seq (via the `|>` syntax).
-- Seq can perform pipeline transformations to make genomic index lookups faster via `prefetch`.
+- Seq can perform pipeline transformations to make genomic index lookups faster via `@prefetch`.
 
 For a concrete example of `genomeindex`, check out our [re-implementation of SNAP's index](test/snap).
 

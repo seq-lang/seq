@@ -42,6 +42,27 @@ extend str:
     def __str__(self: str):
         return self
 
+    def __repr__(self: str):
+        v = list[str](capacity=len(self) + 2)
+        v.append("'")
+        for c in self:
+            d = c
+            match c:
+                case '\a': d = "\\a"
+                case '\b': d = "\\b"
+                case '\f': d = "\\f"
+                case '\n': d = "\\n"
+                case '\r': d = "\\r"
+                case '\t': d = "\\t"
+                case '\v': d = "\\v"
+                case '\\': d = "\\\\"
+                case '\'': d = "\\'"
+                case '\?': d = "\\\?"
+                case _: pass
+            v.append(d)
+        v.append("'")
+        return str.cat(v)
+
     def __len__(self: str):
         return self.len
 

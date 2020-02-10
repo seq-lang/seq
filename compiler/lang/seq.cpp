@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 #include <cassert>
 #include <iostream>
 #include <memory>
@@ -39,38 +39,6 @@ void SeqModule::setFileName(std::string file) {
 }
 
 void SeqModule::resolveTypes() { scope->resolveTypes(); }
-
-#if SEQ_HAS_TAPIR
-/*
- * Adapted from Tapir OpenMP backend source
- */
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Tapir/OpenMPABI.h"
-
-static OpenMPABI omp;
-
-extern StructType *IdentTy;
-extern FunctionType *Kmpc_MicroTy;
-extern Constant *DefaultOpenMPPSource;
-extern Constant *DefaultOpenMPLocation;
-extern PointerType *KmpRoutineEntryPtrTy;
-
-extern Type *getOrCreateIdentTy(Module *module);
-extern Value *getOrCreateDefaultLocation(Module *M);
-extern PointerType *getIdentTyPointerTy();
-extern FunctionType *getOrCreateKmpc_MicroTy(LLVMContext &context);
-extern PointerType *getKmpc_MicroPointerTy(LLVMContext &context);
-
-extern cl::opt<bool> fastOpenMP;
-
-static void resetOMPABI() {
-  IdentTy = nullptr;
-  Kmpc_MicroTy = nullptr;
-  DefaultOpenMPPSource = nullptr;
-  DefaultOpenMPLocation = nullptr;
-  KmpRoutineEntryPtrTy = nullptr;
-}
-#endif
 
 static void invokeMain(Function *main, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -387,6 +355,7 @@ static void optimizeModule(Module *module, bool debug) {
   PassManagerBuilder builder;
 
 #if SEQ_HAS_TAPIR
+  static OpenMPABI omp;
   builder.tapirTarget = &omp;
 #endif
 
@@ -427,7 +396,7 @@ void SeqModule::runCodegenPipeline(bool debug) {
   optimize(debug);
   verify();
 #if SEQ_HAS_TAPIR
-  resetOMPABI();
+  tapir::resetOMPABI();
 #endif
 }
 
@@ -525,7 +494,18 @@ void SeqModule::execute(const std::vector<std::string> &args,
   }
 
   eng->runFunctionAsMain(func, args, nullptr);
+  delete eng;
 }
+
+#if SEQ_HAS_TAPIR
+void tapir::resetOMPABI() {
+  IdentTy = nullptr;
+  Kmpc_MicroTy = nullptr;
+  DefaultOpenMPPSource = nullptr;
+  DefaultOpenMPLocation = nullptr;
+  KmpRoutineEntryPtrTy = nullptr;
+}
+#endif
 
 /*
  * JIT
@@ -564,7 +544,8 @@ void SeqJIT::init() {
 }
 
 std::unique_ptr<Module> SeqJIT::makeModule() {
-  auto module = make_unique<Module>("seq." + std::to_string(inputNum), context);
+  auto module =
+      llvm::make_unique<Module>("seq." + std::to_string(inputNum), context);
   module->setTargetTriple(target->getTargetTriple().str());
   module->setDataLayout(target->createDataLayout());
   return module;
@@ -605,14 +586,12 @@ Func SeqJIT::makeFunc() {
 }
 
 void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
-  func->resolveTypes();
-  func->codegen(module.get());
-  func->getFunc()->setLinkage(GlobalValue::ExternalLinkage);
+  Function *f = func->getFunc(module.get());
+  f->setLinkage(GlobalValue::ExternalLinkage);
 
   // expose globals to the new function:
   IRBuilder<> builder(context);
-  builder.SetInsertPoint(
-      &*(*func->getFunc()->getBasicBlockList().begin()).begin());
+  builder.SetInsertPoint(&*(*f->getBasicBlockList().begin()).begin());
   for (auto *var : globals) {
     Value *ptr = var->getPtr(func);
     auto sym = findSymbol(var->getName());

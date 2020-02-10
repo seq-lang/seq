@@ -3,14 +3,16 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
-#include <seq/parser.h>
-#include <seq/seq.h>
 #include <sstream>
 #include <string>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <tuple>
 #include <unistd.h>
 #include <vector>
 
+#include "lang/seq.h"
+#include "parser/parser.h"
 #include "gtest/gtest.h"
 
 using namespace seq;
@@ -21,27 +23,42 @@ class SeqTest : public testing::TestWithParam<
 protected:
   vector<char> buf;
   int out_pipe[2];
-  int save;
+  pid_t pid;
 
-  SeqTest() : buf(65536), out_pipe(), save() {}
+  SeqTest() : buf(65536), out_pipe(), pid() {}
 
-  void SetUp() override {
-    save = dup(STDOUT_FILENO);
-    assert(pipe(out_pipe) == 0);
-    long flags = fcntl(out_pipe[0], F_GETFL);
-    flags |= O_NONBLOCK;
-    fcntl(out_pipe[0], F_SETFL, flags);
-    dup2(out_pipe[1], STDOUT_FILENO);
-    close(out_pipe[1]);
+  string filename() {
+    const string basename = get<0>(GetParam());
+    return string(TEST_DIR) + "/" + basename;
   }
 
-  void TearDown() override { dup2(save, STDOUT_FILENO); }
+  int runInChildProcess() {
+    const bool debug = get<1>(GetParam());
+    assert(pipe(out_pipe) != -1);
+    pid = fork();
+    assert(pid != -1);
 
-  string result() {
-    fflush(stdout);
-    read(out_pipe[0], buf.data(), buf.size() - 1);
-    return string(buf.data());
+    if (pid == 0) {
+      dup2(out_pipe[1], STDOUT_FILENO);
+      close(out_pipe[0]);
+      close(out_pipe[1]);
+
+      SeqModule *module = parse("", filename(), false, false);
+      execute(module, {filename()}, {}, debug);
+      fflush(stdout);
+      exit(EXIT_SUCCESS);
+    } else {
+      int status = -1;
+      close(out_pipe[1]);
+      assert(waitpid(pid, &status, 0) == pid);
+      read(out_pipe[0], buf.data(), buf.size() - 1);
+      close(out_pipe[0]);
+      return status;
+    }
+    return -1;
   }
+
+  string result() { return string(buf.data()); }
 };
 
 vector<string> splitLines(const string &output) {
@@ -100,17 +117,15 @@ getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
 }
 
 TEST_P(SeqTest, Run) {
-  const string basename = get<0>(GetParam());
-  const bool debug = get<1>(GetParam());
-  string filename = string(TEST_DIR) + "/" + basename;
-  SeqModule *module = parse("", filename);
-  execute(module, {filename}, {}, debug);
+  const int status = runInChildProcess();
+  ASSERT_TRUE(WIFEXITED(status));
+  ASSERT_EQ(WEXITSTATUS(status), 0);
   string output = result();
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
   EXPECT_FALSE(assertsFailed);
   if (assertsFailed)
     std::cerr << output << std::endl;
-  vector<string> expects = findExpects(filename);
+  vector<string> expects = findExpects(filename());
   if (!expects.empty()) {
     vector<string> results = splitLines(output);
     EXPECT_EQ(results.size(), expects.size());
@@ -121,6 +136,66 @@ TEST_P(SeqTest, Run) {
     }
   }
 }
+
+class ParserTest
+    : public testing::TestWithParam<tuple<
+          const char * /*code*/, bool /*success*/, const char * /*output*/>> {
+protected:
+  vector<char> buf;
+  int out_pipe[2];
+  int save;
+
+  ParserTest() : buf(65536), out_pipe(), save() {}
+
+  void SetUp() override {
+    save = dup(STDOUT_FILENO);
+    assert(pipe(out_pipe) == 0);
+    long flags = fcntl(out_pipe[0], F_GETFL);
+    flags |= O_NONBLOCK;
+    fcntl(out_pipe[0], F_SETFL, flags);
+    dup2(out_pipe[1], STDOUT_FILENO);
+    close(out_pipe[1]);
+  }
+
+  void TearDown() override { dup2(save, STDOUT_FILENO); }
+
+  string result() {
+    fflush(stdout);
+    read(out_pipe[0], buf.data(), buf.size() - 1);
+    return string(buf.data());
+  }
+};
+
+// TEST_P(ParserTest, Run) {
+//   string code = get<0>(GetParam());
+//   bool success = get<1>(GetParam());
+//   string output = get<2>(GetParam());
+//   string filename = "<test>";
+//   try {
+//     SeqModule *module = parse(filename.c_str(), code.c_str(), true, true);
+//     execute(module, {filename}, {}, false);
+//     string seqOutput = result();
+//     EXPECT_TRUE(success);
+//     EXPECT_EQ(output, seqOutput);
+//   } catch (seq::exc::SeqException &e) {
+//     EXPECT_FALSE(success);
+//   }
+// }
+// vector<tuple<const char *, bool, const char *>> cases{
+//     {"1", true, "1"},
+//     {"0xFFFFFFFFFFFFFFFFu", true, ""},
+//     {"-45.353", true, "-45.353"},
+//     {"245.e12", true, "245.e12"},
+//     {"'hai'", true, "hai"},
+//     {"\"\"\"\nEEE\"\"\"", true, "\nEEE"},
+//     // {"f'{1} + {2} = {1+2}'", true, "1 + 2 = 3"},
+//     {"k'ACGT'", true, "ACGT"},
+//     {"s'ACGT'", true, "ACGT"},
+//     {"p'ACGT'", true, "ACGT"}};
+// INSTANTIATE_TEST_SUITE_P(
+//   CppParserTests, ParserTest,
+//   testing::ValuesIn(cases)
+// );
 
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,

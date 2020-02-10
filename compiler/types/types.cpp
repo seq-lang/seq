@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 #include <cstdlib>
 #include <iostream>
 #include <typeinfo>
@@ -301,13 +301,23 @@ void types::Type::initOps() {}
 
 void types::Type::initFields() {}
 
-static std::string argsVecToStr(const std::vector<types::Type *> &args) {
+static std::string argsVecToStrElem(const std::vector<types::Type *> &args,
+                                    const std::vector<std::string> &names,
+                                    const unsigned idx) {
+  if (idx >= names.size() || names[idx].empty())
+    return args[idx]->getName();
+  else
+    return names[idx] + "=" + args[idx]->getName();
+}
+
+static std::string argsVecToStr(const std::vector<types::Type *> &args,
+                                const std::vector<std::string> names = {}) {
   if (args.empty())
     return "()";
 
-  std::string result = "(" + args[0]->getName();
+  std::string result = "(" + argsVecToStrElem(args, names, 0);
   for (unsigned i = 1; i < args.size(); i++)
-    result += ", " + args[i]->getName();
+    result += ", " + argsVecToStrElem(args, names, i);
 
   result += ")";
   return result;
@@ -419,6 +429,187 @@ Value *types::Type::callMagic(const std::string &name,
   throw exc::SeqException("cannot find method '" + name + "' for type '" +
                           getName() + "' with specified argument types " +
                           argsVecToStr(argTypes));
+}
+
+static bool sortArgsByNames(std::vector<types::Type *> &argTypes,
+                            const std::vector<std::string> &namesGot,
+                            const std::vector<std::string> &namesExp,
+                            std::vector<Value *> *args = nullptr) {
+  if (namesGot.size() != namesExp.size())
+    return false;
+  if (args)
+    assert(args->size() == argTypes.size());
+
+  std::vector<types::Type *> argTypesFixed(argTypes.size(), nullptr);
+  std::vector<Value *> argsFixed(argTypes.size(), nullptr);
+  bool sawName = false;
+  for (unsigned i = 0; i < argTypes.size(); i++) {
+    if (namesGot[i].empty()) {
+      assert(!sawName); // no unnamed parameters after named
+      if (argTypesFixed[i])
+        return false; // duplicate arg for this position
+      argTypesFixed[i] = argTypes[i];
+      if (args)
+        argsFixed[i] = (*args)[i];
+    } else {
+      // find name in expected names
+      unsigned j = 0;
+      for (; j < namesExp.size() && namesGot[i] != namesExp[j]; j++)
+        ;
+      if (j >= namesExp.size()) // name not found
+        return false;
+      if (argTypesFixed[j]) // duplicate arg for this position
+        return false;
+      argTypesFixed[j] = argTypes[i];
+      if (args)
+        argsFixed[j] = (*args)[i];
+      sawName = true;
+    }
+  }
+
+  for (types::Type *type : argTypesFixed) {
+    if (!type) // arg for this position not specified
+      return false;
+  }
+
+  argTypes = argTypesFixed;
+  if (args)
+    *args = argsFixed;
+  return true;
+}
+
+types::Type *types::Type::initOut(std::vector<types::Type *> &args,
+                                  std::vector<std::string> names,
+                                  bool nullOnMissing, Func **initFunc) {
+  initOps();
+  if (names.empty())
+    return magicOut("__init__", args, nullOnMissing);
+
+  args.insert(args.begin(), this);
+  names.insert(names.begin(), "");
+
+  // make sure there is only one __init__ with given names
+  bool foundValidInit = false;
+  for (auto &magic : vtable.overloads) {
+    if (magic.name != "__init__")
+      continue;
+
+    auto *func = dynamic_cast<Func *>(magic.func);
+    if (!func)
+      continue;
+
+    func->resolveTypes();
+    std::vector<std::string> namesExp = func->getArgNames();
+    std::vector<types::Type *> argsFixed(args);
+    if (sortArgsByNames(argsFixed, names, namesExp)) {
+      if (foundValidInit)
+        throw exc::SeqException("multiple candidate __init__ methods found for "
+                                "given argument names");
+      foundValidInit = true;
+    }
+  }
+
+  for (auto &magic : vtable.overloads) {
+    if (magic.name != "__init__")
+      continue;
+
+    auto *func = dynamic_cast<Func *>(magic.func);
+    if (!func)
+      continue;
+
+    func->resolveTypes();
+    std::vector<std::string> namesExp = func->getArgNames();
+    std::vector<types::Type *> argsFixed(args);
+    if (!sortArgsByNames(argsFixed, names, namesExp))
+      continue;
+
+    if (initFunc) {
+      *initFunc = func;
+      args = argsFixed;
+      args.erase(args.begin()); // remove self
+      return nullptr;
+    } else {
+      types::Type *type = callType(magic.func, argsFixed);
+      if (type)
+        return type;
+      break;
+    }
+  }
+
+  if (nullOnMissing)
+    return nullptr;
+
+  throw exc::SeqException("cannot find method '__init__' for type '" +
+                          getName() + "' with specified argument names/types " +
+                          argsVecToStr(args, names));
+}
+
+Value *types::Type::callInit(std::vector<types::Type *> argTypes,
+                             std::vector<std::string> names, Value *self,
+                             std::vector<Value *> args, BasicBlock *&block,
+                             TryCatch *tc) {
+  initOps();
+  if (names.empty())
+    return callMagic("__init__", argTypes, self, args, block, tc);
+
+  argTypes.insert(argTypes.begin(), this);
+  args.insert(args.begin(), self);
+  names.insert(names.begin(), "");
+
+  // make sure there is only one __init__ with given names
+  bool foundValidInit = false;
+  for (auto &magic : vtable.overloads) {
+    if (magic.name != "__init__")
+      continue;
+
+    auto *func = dynamic_cast<Func *>(magic.func);
+    if (!func)
+      continue;
+
+    func->resolveTypes();
+    std::vector<std::string> namesExp = func->getArgNames();
+    std::vector<types::Type *> argTypesFixed(argTypes);
+    std::vector<Value *> argsFixed(args);
+    if (sortArgsByNames(argTypesFixed, names, namesExp, &argsFixed)) {
+      if (foundValidInit)
+        throw exc::SeqException("multiple candidate __init__ methods found for "
+                                "given argument names");
+      foundValidInit = true;
+    }
+  }
+
+  for (auto &magic : vtable.overloads) {
+    if (magic.name != "__init__")
+      continue;
+
+    auto *func = dynamic_cast<Func *>(magic.func);
+    if (!func)
+      continue;
+
+    func->resolveTypes();
+    std::vector<std::string> namesExp = func->getArgNames();
+    std::vector<types::Type *> argTypesFixed(argTypes);
+    std::vector<Value *> argsFixed(args);
+    if (!sortArgsByNames(argTypesFixed, names, namesExp, &argsFixed))
+      continue;
+    if (!callType(magic.func, argTypesFixed))
+      break;
+
+    std::vector<Expr *> argExprs;
+    assert(argTypesFixed.size() == argsFixed.size());
+    for (unsigned i = 0; i < argsFixed.size(); i++)
+      argExprs.push_back(new ValueExpr(argTypesFixed[i], argsFixed[i]));
+
+    FuncExpr funcExpr(magic.func);
+    CallExpr call(&funcExpr, argExprs);
+    call.setTryCatch(tc);
+    call.resolveTypes();
+    return call.codegen(nullptr, block);
+  }
+
+  throw exc::SeqException("cannot find method '__init__' for type '" +
+                          getName() + "' with specified argument names/types " +
+                          argsVecToStr(argTypes, names));
 }
 
 bool types::Type::isAtomic() const { return true; }

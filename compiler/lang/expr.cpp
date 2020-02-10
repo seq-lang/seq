@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 
 using namespace seq;
 using namespace llvm;
@@ -98,6 +98,8 @@ Value *BoolExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   return ConstantInt::get(getType()->getLLVMType(context), b ? 1 : 0);
 }
+
+bool BoolExpr::value() const { return b; }
 
 StrExpr::StrExpr(std::string s) : Expr(types::Str), s(std::move(s)) {}
 
@@ -620,7 +622,8 @@ Value *GenExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   implicitGen.codegen(block->getModule());
 
   // now call the generator:
-  Function *func = implicitGen.getFunc();
+  Module *module = block->getModule();
+  Function *func = implicitGen.getFunc(module);
   Value *gen;
   // We codegen calls ourselves rather than going through funcType
   // to avoid problems with automatic optional conversions (we don't
@@ -666,6 +669,8 @@ void VarExpr::setAtomic() { atomic = true; }
 Value *VarExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return var->load(base, block, atomic);
 }
+
+Var *VarExpr::getVar() const { return var; }
 
 types::Type *VarExpr::getType0() const { return var->getType(); }
 
@@ -725,8 +730,7 @@ void FuncExpr::resolveTypes() {
 }
 
 Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  func->codegen(block->getModule());
-  return func->getFunc();
+  return func->getFunc(block->getModule());
 }
 
 types::Type *FuncExpr::getType0() const { return func->getFuncType(); }
@@ -1254,6 +1258,7 @@ static bool getExprForTupleSlice(Expr *arr, Expr *idx, types::RecordType *rec,
 Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = arr->getType();
   types::RecordType *rec = type->asRec();
+  types::Type *idxType = this->idx->getType();
 
   // check if this is a record lookup, and that __getitem__ is not overriden
   if (rec) {
@@ -1270,8 +1275,18 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
   Value *arr = this->arr->codegen(base, block);
   Value *idx = this->idx->codegen(base, block);
-  return type->callMagic("__getitem__", {this->idx->getType()}, arr, {idx},
-                         block, getTryCatch());
+
+  if (auto *func = dynamic_cast<Func *>(base)) {
+    if (func->hasAttribute("prefetch") &&
+        type->magicOut("__prefetch__", {idxType}, /*nullOnMissing=*/true)) {
+      type->callMagic("__prefetch__", {idxType}, arr, {idx}, block,
+                      getTryCatch());
+      func->codegenYield(nullptr, nullptr, block, true);
+    }
+  }
+
+  return type->callMagic("__getitem__", {idxType}, arr, {idx}, block,
+                         getTryCatch());
 }
 
 types::Type *ArrayLookupExpr::getType0() const {
@@ -1373,9 +1388,9 @@ Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   }
 
   if (func && func->hasAttribute("property")) {
-    func->codegen(block->getModule());
+    Module *module = block->getModule();
     IRBuilder<> builder(block);
-    return builder.CreateCall(func->getFunc(), self);
+    return builder.CreateCall(func->getFunc(module), self);
   }
 
   if (!types.empty()) {
@@ -1662,68 +1677,153 @@ static std::vector<Expr *> rectifyCallArgs(Expr *func, std::vector<Expr *> args,
   return args;
 }
 
+static bool isLiteralFalse(Expr *e) {
+  if (auto *b = dynamic_cast<BoolExpr *>(e))
+    return b->value() == false;
+  return false;
+}
+
+static bool isLiteralNegOne(Expr *e) {
+  if (auto *i = dynamic_cast<IntExpr *>(e))
+    return i->value() == -1;
+  return false;
+}
+
 Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = getType(); // validates call
   std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
 
   // catch inter-sequence alignment calls
+  // arguments are defined in stdlib/align.seq:
+  /*
+      def align(self: seq,
+              other: seq,
+              a: int = 2,
+              b: int = 4,
+              ambig: int = 0,
+              gapo: int = 4,
+              gape: int = 2,
+              gapo2: int = -1,
+              gape2: int = -1,
+              bandwidth: int = -1,
+              zdrop: int = -1,
+              end_bonus: int = 0,
+              score_only: bool = False,
+              right: bool = False,
+              generic_sc: bool = False,
+              approx_max: bool = False,
+              approx_drop: bool = False,
+              ext_only: bool = False,
+              rev_cigar: bool = False,
+              splice: bool = False,
+              splice_fwd: bool = False,
+              splice_rev: bool = False,
+              splice_flank: bool = False,
+              glob: bool = False):
+    */
+  // not all are supported for inter-sequence alignment!
+  std::vector<std::string> argNames = {"",           "",
+                                       "",           "",
+                                       "",           "",
+                                       "gapo2",      "gape2",
+                                       "",           "",
+                                       "",           "",
+                                       "right",      "generic_sc",
+                                       "approx_max", "approx_drop",
+                                       "ext_only",   "rev_cigar",
+                                       "splice",     "splice_fwd",
+                                       "splice_rev", "splice_flank",
+                                       "glob"};
   auto *baseFunc = dynamic_cast<Func *>(base);
   if (baseFunc && baseFunc->hasAttribute("inter_align")) {
-    if (auto *funcExpr = dynamic_cast<FuncExpr *>(func)) {
-      if (Func *g = getFuncFromFuncExpr(func)) {
-        // see bio/align.seq for definition
-        if (g->hasAttribute("builtin") && g->genericName() == "inter_align") {
-          if (args.size() != 10) // arg count of inter_align function
-            throw exc::SeqException(
-                "inter-sequence alignment call cannot be partial");
+    if (auto *elemExpr = dynamic_cast<GetElemExpr *>(func)) {
+      Expr *self = elemExpr->getRec();
+      std::string name = elemExpr->getMemb();
+      if (name == "align") {
+        types::Type *type = self->getType();
+        if (type->is(types::Seq) && type->hasMethod(name)) {
+          auto *f = dynamic_cast<Func *>(type->getMethod(name));
+          if (f && f->hasAttribute("builtin")) {
+            // make sure call is not partial
+            bool isPartial = false;
+            if (args.size() != argNames.size()) {
+              isPartial = true;
+            } else {
+              for (Expr *e : args) {
+                if (!e) {
+                  isPartial = true;
+                  break;
+                }
+              }
+            }
+            if (isPartial)
+              throw exc::SeqException(
+                  "inter-sequence alignment call cannot be partial");
 
-          // expose params to pipeline codegen via the generator type
-          types::GenType::InterAlignParams paramExprs;
-          paramExprs.a = args[2];
-          paramExprs.b = args[3];
-          paramExprs.ambig = args[4];
-          paramExprs.gapo = args[5];
-          paramExprs.gape = args[6];
-          paramExprs.bandwidth = args[7];
-          paramExprs.zdrop = args[8];
-          paramExprs.end_bonus = args[9];
-          types::GenType *gen =
-              baseFunc->getFuncType()->getBaseType(0)->asGen();
-          assert(gen);
-          gen->setAlignParams(paramExprs);
+            // make sure we're not using unsupported parameters
+            assert(args.size() == argNames.size());
+            for (unsigned i = 0; i < argNames.size(); i++) {
+              if (argNames[i].empty())
+                continue;
+              bool unsupported = false;
+              if (argNames[i] == "gapo2" || argNames[i] == "gape2")
+                unsupported = !isLiteralNegOne(args[i]);
+              else
+                unsupported = !isLiteralFalse(args[i]);
+              if (unsupported)
+                throw exc::SeqException(
+                    "inter-sequence alignment does not support argument '" +
+                    argNames[i] + "'");
+            }
 
-          // now do the codegen for this function:
-          // first yield the sequences to be aligned, then read score
-          // back from coroutine promise via yield expresssion.
-          if (!args[0]->getType()->is(types::Seq))
-            throw exc::SeqException(
-                "query for inter-sequence alignment is not of type seq");
-          if (!args[1]->getType()->is(types::Seq))
-            throw exc::SeqException(
-                "reference for inter-sequence alignment is not of type seq");
-          Value *query = args[0]->codegen(base, block);
-          Value *reference = args[1]->codegen(base, block);
-          types::RecordType *yieldType = PipeExpr::getInterAlignYieldType();
-          Value *yieldVal = yieldType->defaultValue(block);
-          yieldVal = yieldType->setMemb(yieldVal, "query", query, block);
-          yieldVal =
-              yieldType->setMemb(yieldVal, "reference", reference, block);
+            // expose params to pipeline codegen via the generator type
+            types::GenType::InterAlignParams paramExprs;
+            paramExprs.a = args[1];
+            paramExprs.b = args[2];
+            paramExprs.ambig = args[3];
+            paramExprs.gapo = args[4];
+            paramExprs.gape = args[5];
+            paramExprs.bandwidth = args[8];
+            paramExprs.zdrop = args[9];
+            paramExprs.end_bonus = args[10];
 
-          baseFunc->codegenYield(yieldVal, yieldType, block);
-          yieldVal = baseFunc->codegenYieldExpr(block, /*suspend=*/false);
-          Value *score = yieldType->memb(yieldVal, "score", block);
+            types::GenType *gen =
+                baseFunc->getFuncType()->getBaseType(0)->asGen();
+            assert(gen);
+            gen->setAlignParams(paramExprs);
 
-          // realign if score < 0
-          Func *realignFunc = Func::getBuiltin("_interaln_realign");
-          realignFunc->codegen(block->getModule());
-          Function *realign = realignFunc->getFunc();
-          Value *params = PipeExpr::validateAndCodegenInterAlignParams(
-              paramExprs, base, block);
+            // now do the codegen for this function:
+            // first yield the sequences to be aligned, then read score
+            // back from coroutine promise via yield expresssion.
+            if (!self->getType()->is(types::Seq))
+              throw exc::SeqException(
+                  "query for inter-sequence alignment is not of type seq");
+            if (!args[0]->getType()->is(types::Seq))
+              throw exc::SeqException(
+                  "reference for inter-sequence alignment is not of type seq");
+            Value *query = self->codegen(base, block);
+            Value *reference = args[0]->codegen(base, block);
+            types::RecordType *yieldType = PipeExpr::getInterAlignYieldType();
+            Value *yieldVal = yieldType->defaultValue(block);
+            yieldVal = yieldType->setMemb(yieldVal, "query", query, block);
+            yieldVal =
+                yieldType->setMemb(yieldVal, "reference", reference, block);
 
-          IRBuilder<> builder(block);
-          score =
-              builder.CreateCall(realign, {query, reference, score, params});
-          return score;
+            baseFunc->codegenYield(yieldVal, yieldType, block);
+            yieldVal = baseFunc->codegenYieldExpr(block, /*suspend=*/false);
+            Value *score = yieldType->memb(yieldVal, "score", block);
+
+            // realign if score < 0
+            Func *realignFunc = Func::getBuiltin("_interaln_realign");
+            Function *realign = realignFunc->getFunc(block->getModule());
+            Value *params = PipeExpr::validateAndCodegenInterAlignParams(
+                paramExprs, base, block);
+
+            IRBuilder<> builder(block);
+            Value *alignment =
+                builder.CreateCall(realign, {query, reference, score, params});
+            return alignment;
+          }
         }
       }
     }
@@ -2008,8 +2108,21 @@ MatchExpr *MatchExpr::clone(Generic *ref) {
   SEQ_RETURN_CLONE(x);
 }
 
-ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args)
-    : Expr(), type(type), type0(nullptr), args(std::move(args)) {}
+ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args,
+                             std::vector<std::string> names)
+    : Expr(), type(type), type0(nullptr), args(std::move(args)),
+      names(std::move(names)) {
+  // if all names are empty, clear names vector
+  bool empty = true;
+  for (const std::string &name : this->names) {
+    if (!name.empty()) {
+      empty = false;
+      break;
+    }
+  }
+  if (empty)
+    this->names.clear();
+}
 
 types::Type *ConstructExpr::getConstructType() { return type; }
 
@@ -2081,9 +2194,8 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
     self = type->defaultValue(block);
   }
 
-  Value *ret =
-      type->callMagic("__init__", types, self, vals, block, getTryCatch());
-  return type->magicOut("__init__", types)->is(types::Void) ? self : ret;
+  Value *ret = type->callInit(types, names, self, vals, block, getTryCatch());
+  return type->initOut(types, names)->is(types::Void) ? self : ret;
 }
 
 types::Type *ConstructExpr::getType0() const {
@@ -2103,10 +2215,10 @@ types::Type *ConstructExpr::getType0() const {
   auto *ref = dynamic_cast<types::RefType *>(type);
   if (ref && ref->numGenerics() > 0 && !ref->realized()) {
     type0 = type;
-    type = ref->realize(ref->deduceTypesFromArgTypes(types));
+    type = ref->realize(ref->deduceTypesFromArgTypes(types, names));
   }
 
-  types::Type *ret = type->magicOut("__init__", types);
+  types::Type *ret = type->initOut(types, names);
   return ret->is(types::Void) ? type : ret;
 }
 
@@ -2115,7 +2227,7 @@ ConstructExpr *ConstructExpr::clone(Generic *ref) {
   for (auto *arg : args)
     argsCloned.push_back(arg->clone(ref));
   SEQ_RETURN_CLONE(
-      new ConstructExpr((type0 ? type0 : type)->clone(ref), argsCloned));
+      new ConstructExpr((type0 ? type0 : type)->clone(ref), argsCloned, names));
 }
 
 MethodExpr::MethodExpr(Expr *self, Func *func)
@@ -2129,7 +2241,7 @@ void MethodExpr::resolveTypes() {
 Value *MethodExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::MethodType *type = getType0();
   Value *self = this->self->codegen(base, block);
-  Value *func = this->func->getFunc();
+  Value *func = this->func->getFunc(block->getModule());
   return type->make(self, func, block);
 }
 

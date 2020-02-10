@@ -18,18 +18,19 @@ class MyIndex[K]:
 def lookup1[K](kmer: K, idx: MyIndex[K]):
     return (kmer, idx[kmer])
 
+@prefetch
 def lookup2[K](kmer: K, idx: MyIndex[K]):
-    prefetch idx[kmer]
     return (kmer, idx[kmer])
 
+@prefetch
 def lookup3[K](kmer: K, idx: MyIndex[K]):
     try:
-        prefetch idx[kmer]
-        prefetch idx[~kmer]
+        idx[kmer]   # issues prefetch
+        idx[~kmer]  # issues prefetch
         return (kmer, -99999999)
     finally:
-        prefetch idx[kmer]
-        prefetch idx[~kmer]
+        idx[kmer]   # issues prefetch
+        idx[~kmer]  # issues prefetch
         return (kmer, idx[kmer])
 
 type K = Kmer[3]
@@ -52,20 +53,20 @@ def test_prefetch_transformation():
     assert set(v1) == set(v3)
     assert idx1.prefetch_calls == 0
     assert idx1.getitem_calls == idx2.getitem_calls
-    assert idx1.getitem_calls == idx3.getitem_calls
+    assert idx3.getitem_calls == 5 * idx1.getitem_calls
     assert idx2.prefetch_calls == idx2.getitem_calls
-    assert idx3.prefetch_calls == 4 * idx2.prefetch_calls
+    assert idx3.prefetch_calls == 5 * idx2.prefetch_calls
 test_prefetch_transformation()
 
 @test
 def test_list_prefetch():
     v = [0]
-    v.__prefetch__(0)
+    v.prefetch(0)
 test_list_prefetch()
 
 @test
 def test_dict_prefetch():
     d = {0:1}
-    d.__prefetch__(0)
-    d.__prefetch__(42)
+    d.prefetch(0)
+    d.prefetch(42)
 test_dict_prefetch()

@@ -46,7 +46,7 @@ class dict[K,V]:
             return self._vals[x]
         raise KeyError(str(key))
 
-    def __prefetch__(self: dict[K,V], key: K):
+    def prefetch(self: dict[K,V], key: K):
         if self._n_buckets:
             mask = self._n_buckets - 1
             k = _dict_hash(key)

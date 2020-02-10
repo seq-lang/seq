@@ -581,6 +581,21 @@ def test_translate():
     assert 'abababc'.translate({'a': '', 'b': ''}) == 'c'
     assert 'xzx'.translate({'z': 'yy'}) == 'xyyx'
 
+@test
+def test_repr():
+    assert repr('') == "''"
+    assert repr('hello') == "'hello'"
+    assert repr('     ') == "'     '"
+    assert repr('\r\a\n\t') == "'\\r\\a\\n\\t'"
+
+@test
+def test_fstr():
+    assert f'{2+2}' == '4'
+    n = 42
+    assert f"{n}{n}xx{n}" == '4242xx42'
+    assert f'{n=}' == 'n=42'
+    assert f"hello {n=} world" == 'hello n=42 world'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -621,3 +636,5 @@ test_rindex()
 test_replace()
 test_expandtabs()
 test_translate()
+test_repr()
+test_fstr()

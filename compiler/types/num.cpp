@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 #include <iostream>
 #include <map>
 #include <string>
@@ -1377,8 +1377,8 @@ GlobalVariable *types::ByteType::getByteCompTable(Module *module,
     for (auto &a : v)
       a = ConstantInt::get(ty, 'N');
 
-    std::string from = "ACBDGHKMNSRUTWVYacbdghkmnsrutwvy";
-    std::string to = "TGVHCDMKNSYAAWBRtgvhcdmknsyaawbr";
+    std::string from = "ACBDGHKMNSRUTWVYacbdghkmnsrutwvy.-";
+    std::string to = "TGVHCDMKNSYAAWBRtgvhcdmknsyaawbr.-";
 
     for (unsigned i = 0; i < from.size(); i++)
       v[from[i]] = ConstantInt::get(ty, (uint64_t)to[i]);

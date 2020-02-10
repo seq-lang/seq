@@ -229,6 +229,77 @@ def finally_break_continue2():
     finally:
         print 'f4'
 
+def test_try_with_loop1(_):
+    try:
+        print 'A'
+        while True:
+            print 'B'
+            try:
+                print 'C'
+                raise ValueError()
+                assert False
+            except ValueError:
+                print 'D'
+                break
+    finally:
+        print 'E'
+
+def test_try_with_loop2(_):
+    try:
+        print 'A'
+        while True:
+            print 'B'
+            try:
+                print 'C'
+                raise ValueError()
+                assert False
+            except:
+                print 'D'
+                break
+    finally:
+        print 'E'
+
+def test_try_with_loop3(_):
+    try:
+        try:
+            print 'A'
+            while True:
+                print 'B'
+                try:
+                    print 'C'
+                    raise ValueError()
+                    assert False
+                except IOError:
+                    print 'D'
+                    break
+        finally:
+            print 'E'
+    except:
+        print 'F'
+    finally:
+        print 'G'
+
+def test_try_with_loop4(_):
+    try:
+        try:
+            print 'A'
+            while True:
+                print 'B'
+                try:
+                    print 'C'
+                    raise ValueError()
+                    assert False
+                except:
+                    print 'D'
+                    raise IOError()
+                    break
+        finally:
+            print 'E'
+    except:
+        print 'F'
+    finally:
+        print 'G'
+
 # EXPECT: try
 # EXPECT: catch Exc1 1
 # EXPECT: e1
@@ -326,6 +397,36 @@ finally_break_continue1()
 # EXPECT: f4
 finally_break_continue2()
 
+# EXPECT: A
+# EXPECT: B
+# EXPECT: C
+# EXPECT: D
+# EXPECT: E
+test_try_with_loop1(0)
+
+# EXPECT: A
+# EXPECT: B
+# EXPECT: C
+# EXPECT: D
+# EXPECT: E
+test_try_with_loop2(0.0)
+
+# EXPECT: A
+# EXPECT: B
+# EXPECT: C
+# EXPECT: E
+# EXPECT: F
+# EXPECT: G
+test_try_with_loop3('')
+
+# EXPECT: A
+# EXPECT: B
+# EXPECT: C
+# EXPECT: D
+# EXPECT: E
+# EXPECT: F
+# EXPECT: G
+test_try_with_loop4(False)
 
 class Foo:
     i: int

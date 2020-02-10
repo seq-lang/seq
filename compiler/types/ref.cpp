@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 #include <cassert>
 
 using namespace seq;
@@ -6,8 +6,8 @@ using namespace llvm;
 
 types::RefType::RefType(std::string name)
     : Type(std::move(name), BaseType::get(), false, true), Generic(),
-      done(false), root(this), llvmCache(), realizationCache(),
-      contents(nullptr), membNamesDeduced(), membExprsDeduced() {}
+      done(false), root(this), realizationCache(), contents(nullptr),
+      membNamesDeduced(), membExprsDeduced() {}
 
 void types::RefType::setDone() {
   assert(this == root && !done);
@@ -104,7 +104,20 @@ types::Type *types::RefType::realize(std::vector<types::Type *> types) {
 }
 
 std::vector<types::Type *>
-types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes) {
+types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes,
+                                        std::vector<std::string> names) {
+  Func *init = nullptr;
+  if (!names.empty()) {
+    initOut(argTypes, names, /*nullOnMissing=*/false, &init);
+    types::FuncType *funcType = init->getFuncType();
+    std::vector<types::Type *> types;
+    // start loop from 2 since 0th base type is return type and 1st is self
+    for (unsigned i = 2; i < funcType->numBaseTypes(); i++)
+      types.push_back(funcType->getBaseType(i));
+    return Generic::deduceTypesFromArgTypes(types, argTypes,
+                                            /*unwrapOptionals=*/false);
+  }
+
   // deal with custom __init__s:
   bool foundInit = false;
   for (auto &magic : vtable.overloads) {
@@ -302,15 +315,8 @@ types::Type *types::RefType::getBaseType(unsigned idx) const {
 }
 
 Type *types::RefType::getStructPointerType(LLVMContext &context) const {
-  std::vector<types::Type *> types = getRealizedTypes();
-  StructType *structType = root->llvmCache.find(types);
-
-  if (structType)
-    return PointerType::get(structType, 0);
-
   assert(contents);
-  structType = StructType::create(context, name);
-  root->llvmCache.add(types, structType);
+  StructType *structType = StructType::create(context, name);
   contents->addLLVMTypesToStruct(structType);
   return PointerType::get(structType, 0);
 }

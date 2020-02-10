@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 
 using namespace seq;
 using namespace llvm;
@@ -186,6 +186,21 @@ Value *types::GenericType::callMagic(const std::string &name,
                                      BasicBlock *&block, TryCatch *tc) {
   ensure();
   return type->callMagic(name, argTypes, self, args, block, tc);
+}
+
+types::Type *types::GenericType::initOut(std::vector<types::Type *> &args,
+                                         std::vector<std::string> names,
+                                         bool nullOnMissing, Func **initFunc) {
+  ensure();
+  return type->initOut(args, names, nullOnMissing, initFunc);
+}
+
+Value *types::GenericType::callInit(std::vector<types::Type *> argTypes,
+                                    std::vector<std::string> names, Value *self,
+                                    std::vector<Value *> args,
+                                    BasicBlock *&block, TryCatch *tc) {
+  ensure();
+  return type->callInit(argTypes, names, self, args, block, tc);
 }
 
 bool types::GenericType::isAtomic() const {
