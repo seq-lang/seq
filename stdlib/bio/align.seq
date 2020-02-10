@@ -74,13 +74,13 @@ extend CIGAR:
                 d = 10 * d + ord(c) - ord('0')
             elif c in "MIDNSHP=XB":
                 if d == 0:
-                    raise ValueError(f"cigar op '{c}' in string '{cigar}' has no count or count zero")
+                    raise ValueError(f"cigar op {repr(c)} in string {repr(cigar)} has no count or count zero")
                 ops.append((d << 4) | "MIDNSHP=XB".find(c))
                 d = 0
             else:
-                raise ValueError(f"invalid CIGAR string '{cigar}': unexpected '{c}'")
+                raise ValueError(f"invalid CIGAR string {repr(cigar)}: unexpected {repr(c)}")
         if d != 0:
-            raise ValueError(f"unclosed cigar op in string '{cigar}'")
+            raise ValueError(f"unclosed cigar op in string {repr(cigar)}")
         p = ptr[u32](len(ops))
         for i, o in enumerate(ops):
             p[i] = u32(o)

@@ -47,7 +47,7 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
     def _check(b: byte, i: int):
         from bio.builtin import _is_iupac_nt
         if not _is_iupac_nt(b):
-            raise ValueError(f"invalid base '{b}' at position {i} of sequence")
+            raise ValueError(f"invalid base {repr(b)} at position {i} of sequence")
 
     def _append(p: ptr[byte], n: int, m: int, s: str, validate: bool):
         if n + s.len > m:
@@ -194,7 +194,7 @@ type pFASTAReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
     def _check(b: byte, i: int):
         from bio.builtin import _is_iupac_aa
         if not _is_iupac_aa(b):
-            raise ValueError(f"invalid amino acid '{b}' at position {i} of sequence")
+            raise ValueError(f"invalid amino acid {repr(b)} at position {i} of sequence")
 
     def _append(p: ptr[byte], n: int, m: int, s: str, validate: bool):
         if n + s.len > m:

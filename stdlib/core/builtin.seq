@@ -244,6 +244,14 @@ def sum(xi):
         x.destroy()
 
 @builtin
+def repr(x):
+    """
+    repr(x)
+    Return the string representation of x
+    """
+    return x.__repr__()
+
+@builtin
 def _tuple_fix_index(idx: int, len: int) -> int:
     if idx < 0:
         idx += len
