@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 
 using namespace seq;
 using namespace llvm;
@@ -393,9 +393,7 @@ void types::RecordType::initOps() {
                iterFunc.sawYield(yield);
            }
 
-           iterFunc.resolveTypes();
-           iterFunc.codegen(module);
-           iter = iterFunc.getFunc();
+           iter = iterFunc.getFunc(module);
          }
 
          return b.CreateCall(iter, self);

@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 
 using namespace seq;
 using namespace llvm;
@@ -1392,59 +1392,6 @@ Assert *Assert::clone(Generic *ref) {
     return (Assert *)ref->getClone(this);
 
   auto *x = new Assert(expr->clone(ref));
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
-Prefetch::Prefetch(std::vector<Expr *> keys, std::vector<Expr *> where)
-    : Stmt("prefetch"), keys(std::move(keys)), where(std::move(where)) {
-  assert(this->keys.size() == this->where.size());
-}
-
-void Prefetch::resolveTypes() {
-  for (auto *e : keys)
-    e->resolveTypes();
-  for (auto *e : where)
-    e->resolveTypes();
-}
-
-void Prefetch::codegen0(BasicBlock *&block) {
-  BaseFunc *base = getBase();
-
-  // issue all prefetch's:
-  for (unsigned i = 0; i < keys.size(); i++) {
-    Expr *key = keys[i];
-    Expr *idx = where[i];
-    types::Type *keyType = key->getType();
-    types::Type *idxType = idx->getType();
-
-    Value *keyVal = key->codegen(base, block);
-    Value *idxVal = idx->codegen(base, block);
-    idxType->callMagic("__prefetch__", {keyType}, idxVal, {keyVal}, block,
-                       getTryCatch());
-  }
-
-  // empty yield:
-  auto *func = dynamic_cast<Func *>(base);
-  if (!func)
-    throw exc::SeqException("misplaced prefetch");
-  func->codegenYield(nullptr, nullptr, block, true);
-}
-
-Prefetch *Prefetch::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Prefetch *)ref->getClone(this);
-
-  std::vector<Expr *> keysCloned;
-  std::vector<Expr *> whereCloned;
-
-  for (auto *e : keys)
-    keysCloned.push_back(e->clone(ref));
-  for (auto *e : where)
-    whereCloned.push_back(e->clone(ref));
-
-  auto *x = new Prefetch(keysCloned, whereCloned);
   ref->addClone(this, x);
   Stmt::setCloneBase(x, ref);
   SEQ_RETURN_CLONE(x);

@@ -223,8 +223,8 @@ def round(x, n) -> float:
     Return the x rounded off to the given
     n digits after the decimal point.
     """
-    n := _C.pow(10.0, float(n))
-    return _C.round(float(x * n)) / n
+    nx = _C.pow(10.0, float(n))
+    return _C.round(float(x * nx)) / n
 
 @builtin
 def sum(xi):
@@ -242,6 +242,14 @@ def sum(xi):
         return s
     else:
         x.destroy()
+
+@builtin
+def repr(x):
+    """
+    repr(x)
+    Return the string representation of x
+    """
+    return x.__repr__()
 
 @builtin
 def _tuple_fix_index(idx: int, len: int) -> int:

@@ -1,3 +1,5 @@
+import python
+
 @test
 def test_basic():
     from mymodule pyimport multiply () -> int

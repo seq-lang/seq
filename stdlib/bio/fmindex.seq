@@ -444,6 +444,9 @@ class FMIndex:
         occ2 = self._occ_internal(hi, b)
         return FMInterval(c0 + occ1 + 1, c0 + occ2)
 
+    def __getitem__(self: FMIndex, x: tuple[FMInterval, seq]):
+        return self.update(x[0], x[1])
+
     def __prefetch__(self: FMIndex, x: tuple[FMInterval, seq]):
         intv, c = x
         assert len(c) == 1

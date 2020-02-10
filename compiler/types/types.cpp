@@ -1,4 +1,4 @@
-#include "seq/seq.h"
+#include "lang/seq.h"
 #include <cstdlib>
 #include <iostream>
 #include <typeinfo>

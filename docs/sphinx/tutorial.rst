@@ -304,12 +304,12 @@ Seq uses `ksw2 <https://github.com/lh3/ksw2>`_ as its default alignment kernel. 
     @inter_align
     def process(t):
         query, target = t
-        score = inter_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
+        score = query.align(target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
         print query, target, score
 
     zip(seqs('queries.txt'), seqs('targets.txt')) |> process
 
-Internally, the Seq compiler performs pipeline transformations when the ``inter_align`` function is used within a function tagged ``@inter_align``, so as to suspend execution of the calling function, batch sequences that need to be aligned, perform inter-sequence alignment and return the results to the suspended functions. Note that the inter-sequence alignment kernel used by Seq is adapted from `BWA-MEM2 <https://github.com/bwa-mem2/bwa-mem2>`_.
+Internally, the Seq compiler performs pipeline transformations when sequence alignment is performed within a function tagged ``@inter_align``, so as to suspend execution of the calling function, batch sequences that need to be aligned, perform inter-sequence alignment and return the results to the suspended functions. Note that the inter-sequence alignment kernel used by Seq is adapted from `BWA-MEM2 <https://github.com/bwa-mem2/bwa-mem2>`_.
 
 .. _prefetch:
 
@@ -319,7 +319,7 @@ Genomic index prefetching
 Large genomic indices---ranging from several to tens or even hundreds of gigabytes---used in many applications result in extremely poor cache performance and, ultimately, a substantial fraction of stalled memory-bound cycles. For this reason, Seq performs pipeline optimizations to enable data prefetching and to hide memory latencies. You, the user, must provide just:
 
 - a ``__prefetch__`` magic method definition in the index class, which is logically similar to ``__getitem__`` (indexing construct) but performs a prefetch instead of actually loading the requested value (and can simply delegate to ``__prefetch__`` methods of built-in types);
-- a one-line ``prefetch`` hint indicating where a software prefetch should be performed, which can typically be just before the actual load.
+- a one-line ``@prefetch`` annotation on functions that should perform prefetching.
 
 In particular, a typical prefetch-friendly index class would look like this:
 
@@ -336,11 +336,11 @@ Now, if we were to process data in a pipeline as such:
 
 .. code-block:: seq
 
+    @prefetch
     def process(read: seq, index: MyIndex):
         ...
         for kmer in read.kmers[Kmer[20]](step):
-            prefetch index[kmer], index[~kmer]
-            hits = index[kmer]
+            hits_fwd = index[kmer]
             hits_rev = index[~kmer]
             ...
         return x
@@ -363,19 +363,19 @@ As a concrete example, consider Seq's built-in FM-index type, ``FMIndex``, and a
     def update(count: int):
         n += count
 
+    @prefetch
     def find(s: seq, fmi: FMIndex):
         intv = fmi.interval(s[-1])          # initial FM-index interval
         s = s[:-1]                          # trim off last base of sequence
         while s and intv:
-            prefetch fmi[intv, s[-1]]       # prefetch for backwards extension
-            intv = fmi.update(intv, s[-1])  # backwards extend FM-index interval
+            intv = fmi[intv, s[-1]]         # backwards extend FM-index interval
             s = s[:-1]                      # trim off last base of sequence
         return len(intv)                    # return count of sequence in index
 
     FASTQ('/path/to/reads.fq') |> seqs |> split(k, step=step) |> find(fmi) |> update
     print f'{n=}'
 
-That single ``prefetch`` line can have a significant impact, especially for larger ``k``. Here is a graph of the performance of this exact snippet for various ``k`` using hg19 as the reference:
+That single ``@prefetch`` line can have a significant impact, especially for larger ``k``. Here is a graph of the performance of this exact snippet for various ``k`` using hg19 as the reference:
 
 .. image:: ../images/prefetch.png
     :width: 500px
@@ -463,6 +463,8 @@ Primitive types like ``int``, ``float``, ``bool`` etc. are directly interoperabl
 Seq also supports calling Python functions as follows:
 
 .. code-block:: seq
+
+    import python
 
     from mymodule pyimport multiply () -> int  # assumes multiply in mymodule.py
     print multiply(3, 4)  # 12

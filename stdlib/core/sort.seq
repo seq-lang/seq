@@ -25,19 +25,18 @@ def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None, algorithm:
     return newlist
 
 def _sort_list[T,S](self: list[T], key: function[S,T], algorithm: str):
-    match algorithm:
-        case 'pdq':
-            pdq_sort_inplace(self, key)
-        case 'insertion':
-            insertion_sort_inplace(self, key)
-        case 'heap':
-            heap_sort_inplace(self, key)
+    if algorithm == 'pdq':
+        pdq_sort_inplace(self, key)
+    elif algorithm == 'insertion':
+        insertion_sort_inplace(self, key)
+    elif algorithm == 'heap':
+        heap_sort_inplace(self, key)
         #case 'tim':
         #    tim_sort_inplace(self, key)
-        case 'quick':
-            qsort_inplace(self, key)
-        case _:
-            raise ValueError("Algorithm '" + algorithm + "' does not exist")
+    elif algorithm == 'quick':
+        qsort_inplace(self, key)
+    else:
+        raise ValueError("Algorithm '" + algorithm + "' does not exist")
 
 extend list[T]:
     @deduceall

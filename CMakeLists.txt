@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(Seq)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-include_directories(compiler/include)
-include_directories(runtime)
+include_directories(.)
+include_directories(compiler)
 
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -14,7 +14,6 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-
 
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
@@ -55,6 +54,18 @@ else()
   target_compile_definitions(seqrt PRIVATE THREADED=0)
 endif()
 
+# Seq parsing library
+execute_process(COMMAND ocamlc -where
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE OCAML_STDLIB_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(result)
+  message(FATAL_ERROR "CMake step for ocaml failed: ${result}")
+endif()
+
+message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
+include_directories(${OCAML_STDLIB_PATH})
+link_directories(${OCAML_STDLIB_PATH})
 
 # Seq parsing library
 find_program(OCAMLFIND NAMES ocamlfind)
@@ -73,16 +84,14 @@ link_directories(${OCAML_STDLIB_PATH})
 set(DUNE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dune")
 set(LIB_SEQPARSE "${CMAKE_CURRENT_BINARY_DIR}/seqparser.o")
 set(DUNE_OUTPUT_NAME "main.exe.o")
-
 find_program(OPAM NAMES opam)
 if(NOT OPAM)
   message(FATAL_ERROR "opam command not found")
 endif()
-
 add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
                    COMMAND ${OPAM} exec -- dune build --build-dir=${DUNE_BUILD_DIR} ${DUNE_OUTPUT_NAME}
                    COMMAND cp ${DUNE_BUILD_DIR}/default/${DUNE_OUTPUT_NAME} ${LIB_SEQPARSE}
-                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/parser"
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/compiler/parser/ocaml"
                    COMMENT "Compiling Seq's OCaml components"
                    VERBATIM)
 add_custom_target(seqparse_target DEPENDS ${LIB_SEQPARSE})
@@ -90,98 +99,42 @@ add_dependencies(seqparse_target seq)
 add_library(seqparse SHARED IMPORTED)
 add_dependencies(seqparse seqparse_target)
 set_target_properties(seqparse PROPERTIES IMPORTED_LOCATION ${LIB_SEQPARSE})
-list(APPEND OCAML_STATIC "")
-foreach(OCAML_STUB IN ITEMS
-    ctypes/libctypes-foreign-threaded_stubs.a
-    ctypes/libctypes-foreign-base_stubs.a
-    ctypes/libctypes_stubs.a
-    core/libcore_stubs.a
-    core_kernel/libcore_kernel_stubs.a
-    spawn/libspawn_stubs.a
-    time_now/libtime_now_stubs.a
-    ppx_expect/collector/libexpect_test_collector_stubs.a
-    bin_prot/libbin_prot_stubs.a
-    base_bigstring/libbase_bigstring_stubs.a
-    base/libbase_stubs.a
-    integers/libintegers_stubs.a
-    integers/libintegers.a
-    ocaml/libcamlstr.a
-    ocaml/libbigarray.a
-    ocaml/libthreadsnat.a
-    ocaml/libthreads.a
-    ocaml/libunix.a)
-  set(OCAML_STUB_PATH "${OCAML_STDLIB_PATH}/../${OCAML_STUB}")
-  if(EXISTS ${OCAML_STUB_PATH})
-    list(APPEND OCAML_STATIC ${OCAML_STUB_PATH})
-  endif()
-endforeach(OCAML_STUB)
-
 
 # Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-add_library(seq SHARED compiler/include/seq/any.h
-                       compiler/include/seq/array.h
-                       compiler/include/seq/base.h
-                       compiler/include/seq/common.h
-                       compiler/include/seq/expr.h
-                       compiler/include/seq/func.h
-                       compiler/include/seq/funct.h
-                       compiler/include/seq/generic.h
-                       compiler/include/seq/lang.h
-                       compiler/include/seq/llvm.h
-                       compiler/include/seq/num.h
-                       compiler/include/seq/ops.h
-                       compiler/include/seq/optional.h
-                       compiler/include/seq/parser.h
-                       compiler/include/seq/patterns.h
-                       compiler/include/seq/pipeline.h
-                       compiler/include/seq/ptr.h
-                       compiler/include/seq/record.h
-                       compiler/include/seq/ref.h
-                       compiler/include/seq/seq.h
-                       compiler/include/seq/seqt.h
-                       compiler/include/seq/stmt.h
-                       compiler/include/seq/types.h
-                       compiler/include/seq/void.h
-                       compiler/include/seq/var.h
-                       compiler/lang/expr.cpp
-                       compiler/lang/func.cpp
-                       compiler/lang/lang.cpp
-                       compiler/lang/ops.cpp
-                       compiler/lang/patterns.cpp
-                       compiler/lang/pipeline.cpp
-                       compiler/lang/seq.cpp
-                       compiler/lang/stmt.cpp
-                       compiler/lang/var.cpp
-                       compiler/types/any.cpp
-                       compiler/types/array.cpp
-                       compiler/types/base.cpp
-                       compiler/types/funct.cpp
-                       compiler/types/generic.cpp
-                       compiler/types/num.cpp
-                       compiler/types/optional.cpp
-                       compiler/types/ptr.cpp
-                       compiler/types/record.cpp
-                       compiler/types/ref.cpp
-                       compiler/types/seqt.cpp
-                       compiler/types/types.cpp
-                       compiler/types/void.cpp
-                       compiler/util/ocaml.cpp
-                       ${LIB_SEQPARSE})
+
+file(GLOB SEQ_HPPFILES compiler/lang/*.h
+                       compiler/types/*.h
+                       compiler/parser/*.h
+                       compiler/parser/ast/*.h
+                       compiler/parser/ast/transform/*.h
+                       compiler/parser/ast/codegen/*.h
+                       compiler/parser/ast/format/*.h
+                       compiler/util/*.h
+                       compiler/util/fmt/*.h)
+file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
+                       compiler/types/*.cpp
+                       compiler/parser/*.cpp
+                       compiler/parser/ast/*.cpp
+                       compiler/parser/ast/transform/*.cpp
+                       compiler/parser/ast/codegen/*.cpp
+                       compiler/parser/ast/format/*.cpp
+                       compiler/util/*.cpp
+                       compiler/util/fmt/*.cpp)
+
+add_library(seq SHARED ${SEQ_HPPFILES} ${SEQ_CPPFILES} ${LIB_SEQPARSE})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} ${OCAML_STATIC} ffi seqrt)
+target_link_libraries(seq ${LLVM_LIBS} dl seqrt)
 
 if(SEQ_JITBRIDGE)
   add_library(seqjit SHARED compiler/util/jit.cpp)
   target_link_libraries(seqjit seq)
 endif()
 
-
 # Seq command-line tool
 add_executable(seqc runtime/main.cpp)
 target_link_libraries(seqc seq)
-
 
 # Seq test
 # Download and unpack googletest at configure time
@@ -212,3 +165,7 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 add_executable(seqtest test/main.cpp)
 target_link_libraries(seqtest seq gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
+
+include(GoogleTest)
+gtest_discover_tests(seqtest)
+enable_testing()

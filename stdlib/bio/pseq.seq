@@ -126,8 +126,10 @@ extend pseq:  # order is consistent with str/seq
             yield self._slice_direct(i,i+1)
             i -= 1
 
-def translate(s: seq):
+def translate(s: seq, table: dict[seq, pseq] = None):
     def encode_triple(s: seq):
+        if s.N():
+            raise ValueError("codon '{s}' contains an ambiguous base")
         type K1 = Kmer[1]
         a, b, c = K1(s[0]), K1(s[1]), K1(s[2])
         n = (int(c.as_int())       |
@@ -137,8 +139,17 @@ def translate(s: seq):
 
     def translate_encoded(n: int):
         # Note(!) this table must be consistent with k-mer encoding
-        table = 'KKNNRRSSTTTTIMIIEEDDGGGGAAAAVVVVQQHHRRRRPPPPLLLLXXYYXWCCSSSSLLFF'
+        table = 'KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSS*CWCLFLF'
         return table.ptr[n]
+
+    if table is not None:
+        for k,v in table.items():
+            if len(k) != 3:
+                raise ValueError("translation table key does not have length 3")
+            if k.N():
+                raise ValueError("ambiguous base in translation table key '{k}'")
+            if len(v) != 1:
+                raise ValueError("translation table value does not have length 1")
 
     n = len(s)
     m = n // 3
@@ -146,7 +157,11 @@ def translate(s: seq):
     i = 0
     j = 0
     while i < n:
-        p[j] = translate_encoded(encode_triple(s._slice_direct(i, i + 3)))
+        codon = s._slice_direct(i, i + 3)
+        if table is None:
+            p[j] = translate_encoded(encode_triple(codon))
+        else:
+            p[j] = table.get(codon, p'X').ptr[0]
         i += 3
         j += 1
     return pseq(p, m)

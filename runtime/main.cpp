@@ -1,5 +1,5 @@
-#include "seq/parser.h"
-#include "seq/seq.h"
+#include "lang/seq.h"
+#include "parser/parser.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdio>
 #include <cstdlib>
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
   ParseCommandLineOptions(argc, argv);
   vector<string> libsVec(libs);
   vector<string> argsVec(args);
-  SeqModule *s = parse(argv[0], input.c_str());
+  SeqModule *s = parse(argv[0], input.c_str(), false, false);
 
   if (output.getValue().empty()) {
     argsVec.insert(argsVec.begin(), input);
