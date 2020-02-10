@@ -92,6 +92,10 @@ void TransformExprVisitor::visit(const FStringExpr *expr) {
         string code = expr->value.substr(brace_start, i - brace_start);
         auto offset = expr->getSrcInfo();
         offset.col += i;
+        if (code.size() && code.back() == '=') {
+          code = code.substr(0, code.size() - 1);
+          items.push_back(EP(StringExpr, format("{} = ", code)));
+        }
         items.push_back(EP(CallExpr, EP(IdExpr, "str"),
                            transform(parse_expr(code, offset))));
       }

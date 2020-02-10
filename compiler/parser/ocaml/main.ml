@@ -34,7 +34,6 @@ let print_token t =
   | PYDEF -> "PYDEF"
   | PTR -> "PTR"
   | PRINT -> "PRINT"
-  | PREFETCH -> "PREFETCH"
   | PPIPE s -> sprintf "PPIPE(%s)" s
   | POWEQ s -> sprintf "POWEQ(%s)" s
   | POW s -> sprintf "POW(%s)" s

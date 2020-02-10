@@ -189,7 +189,6 @@ and read state = parse
       | "try"      -> P.TRY
       | "except"   -> P.EXCEPT
       | "finally"  -> P.FINALLY
-      | "prefetch" -> P.PREFETCH
       | "with"     -> P.WITH
       | "raise"    -> P.THROW
       | "is"       -> P.IS "is"

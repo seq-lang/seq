@@ -20,7 +20,7 @@
 %token FOR WHILE CONTINUE BREAK IF ELSE ELIF MATCH CASE EXTEND
 %token DEF RETURN YIELD LAMBDA PYDEF TYPE CLASS TYPEOF AS PTR
 %token IMPORT FROM GLOBAL PRINT PASS ASSERT DEL TRUE FALSE NONE
-%token TRY EXCEPT FINALLY THROW WITH PREFETCH
+%token TRY EXCEPT FINALLY THROW WITH
 /* operators */
 %token<string> EQ ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
 %token<string> PLUSEQ MINEQ MULEQ DIVEQ FDIVEQ POWEQ MODEQ AT GEQ
@@ -162,7 +162,7 @@ small_statement:
   | DEL FLNE(COMMA, expr) { List.map (fun e -> fst e, Del e) $2 }
   | ASSERT FLNE(COMMA, expr) { List.map (fun e -> fst e, Assert e) $2 }
   | GLOBAL FLNE(COMMA, ID) { List.map (fun e -> $loc, Global e) $2 }
-  | PREFETCH FLNE(COMMA, expr) { List.map (fun e -> fst e, Prefetch e) $2 }
+  /* | PREFETCH FLNE(COMMA, expr) { List.map (fun e -> fst e, Prefetch e) $2 } */
   | print_statement { $1 }
   | import_statement { $1 }
   | assign_statement { $1 }
