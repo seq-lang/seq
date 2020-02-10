@@ -15,17 +15,19 @@ using std::make_shared;
 using std::string;
 using std::vector;
 
-seq::SeqModule *seq::parse(const std::string &argv0, const std::string &file,
-                           bool isCode, bool isTest) {
+namespace seq {
+
+seq::SeqModule *parse(const std::string &argv0, const std::string &file,
+                      bool isCode, bool isTest) {
   try {
-    auto stmts = isCode ? parse_code(argv0, file) : parse_file(file);
-    auto tv = TransformStmtVisitor::apply(move(stmts));
+    auto stmts = isCode ? ast::parse_code(argv0, file) : ast::parse_file(file);
+    auto tv = ast::TransformStmtVisitor::apply(move(stmts));
 
     auto module = new seq::SeqModule();
-    auto cache = ImportCache{string(argv0), nullptr, {}};
-    auto stdlib = make_shared<Context>(module, cache);
-    auto context = make_shared<Context>(module, cache, file);
-    CodegenStmtVisitor::apply(*context, tv);
+    auto cache = ast::ImportCache{string(argv0), nullptr, {}};
+    auto stdlib = make_shared<ast::Context>(module, cache);
+    auto context = make_shared<ast::Context>(module, cache, file);
+    ast::CodegenStmtVisitor::apply(*context, tv);
     return context->getModule();
   } catch (seq::exc::SeqException &e) {
     if (isTest) {
@@ -37,8 +39,8 @@ seq::SeqModule *seq::parse(const std::string &argv0, const std::string &file,
   }
 }
 
-void seq::execute(seq::SeqModule *module, vector<string> args,
-                  vector<string> libs, bool debug) {
+void execute(seq::SeqModule *module, vector<string> args, vector<string> libs,
+             bool debug) {
   try {
     module->execute(args, libs, debug);
   } catch (exc::SeqException &e) {
@@ -47,7 +49,7 @@ void seq::execute(seq::SeqModule *module, vector<string> args,
   }
 }
 
-void seq::compile(seq::SeqModule *module, const string &out, bool debug) {
+void compile(seq::SeqModule *module, const string &out, bool debug) {
   try {
     module->compile(out, debug);
   } catch (exc::SeqException &e) {
@@ -55,3 +57,5 @@ void seq::compile(seq::SeqModule *module, const string &out, bool debug) {
                      e.getSrcInfo().col);
   }
 }
+
+} // namespace seq

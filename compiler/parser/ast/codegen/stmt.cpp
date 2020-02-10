@@ -37,6 +37,9 @@ using std::vector;
   return
 #define ERROR(...) error(stmt->getSrcInfo(), __VA_ARGS__)
 
+namespace seq {
+namespace ast {
+
 CodegenStmtVisitor::CodegenStmtVisitor(Context &ctx)
     : ctx(ctx), result(nullptr) {}
 
@@ -600,3 +603,6 @@ void CodegenStmtVisitor::visit(const PyDefStmt *stmt) {
 void CodegenStmtVisitor::visit(const DeclareStmt *stmt) {
   ERROR("unexpected declare statement");
 }
+
+} // namespace ast
+} // namespace seq

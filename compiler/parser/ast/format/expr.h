@@ -14,17 +14,18 @@
 #include "parser/common.h"
 #include "parser/context.h"
 
-using std::string;
+namespace seq {
+namespace ast {
 
 class FormatExprVisitor : public ExprVisitor {
-  string result;
+  std::string result;
 
 public:
-  string transform(const Expr *e);
-  string transform(const vector<ExprPtr> &e);
+  std::string transform(const Expr *e);
+  std::string transform(const std::vector<ExprPtr> &e);
 
   template <typename T>
-  auto transform(const unique_ptr<T> &t) -> decltype(transform(t.get())) {
+  auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
     return transform(t.get());
   }
 
@@ -58,3 +59,6 @@ public:
   void visit(const LambdaExpr *) override;
   void visit(const YieldExpr *) override;
 };
+
+} // namespace ast
+} // namespace seq

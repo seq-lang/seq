@@ -10,69 +10,66 @@
 #include "parser/ast/pattern.h"
 #include "parser/ast/visitor.h"
 
-using std::ostream;
-using std::pair;
-using std::string;
-using std::unique_ptr;
-using std::vector;
-
 #define ACCEPT_VISITOR                                                         \
   virtual void accept(StmtVisitor &visitor) const override {                   \
     visitor.visit(this);                                                       \
   }
 
+namespace seq {
+namespace ast {
+
 struct Param {
-  string name;
+  std::string name;
   ExprPtr type;
   ExprPtr deflt;
-  string to_string() const;
+  std::string to_string() const;
 };
 
 struct Stmt : public seq::SrcObject {
   Stmt() = default;
   Stmt(const seq::SrcInfo &s);
   virtual ~Stmt() {}
-  virtual string to_string() const = 0;
+  virtual std::string to_string() const = 0;
   virtual void accept(StmtVisitor &) const = 0;
-  virtual vector<Stmt *> getStatements();
-  friend ostream &operator<<(ostream &out, const Stmt &c) {
+  virtual std::vector<Stmt *> getStatements();
+  friend std::ostream &operator<<(std::ostream &out, const Stmt &c) {
     return out << c.to_string();
   }
 };
 
-typedef unique_ptr<Stmt> StmtPtr;
+typedef std::unique_ptr<Stmt> StmtPtr;
 
 struct SuiteStmt : public Stmt {
   using Stmt::Stmt;
-  vector<StmtPtr> stmts;
-  SuiteStmt(vector<StmtPtr> s);
-  string to_string() const override;
-  vector<Stmt *> getStatements() override;
+  std::vector<StmtPtr> stmts;
+  SuiteStmt(std::vector<StmtPtr> s);
+  std::string to_string() const override;
+  std::vector<Stmt *> getStatements() override;
   ACCEPT_VISITOR;
 };
 
 struct PassStmt : public Stmt {
   PassStmt();
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct BreakStmt : public Stmt {
   BreakStmt();
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct ContinueStmt : public Stmt {
   ContinueStmt();
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct ExprStmt : public Stmt {
   ExprPtr expr;
   ExprStmt(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
@@ -80,50 +77,50 @@ struct AssignStmt : public Stmt {
   ExprPtr lhs, rhs, type;
   bool mustExist;
   AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr, bool m = false);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct DelStmt : public Stmt {
   ExprPtr expr;
   DelStmt(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct PrintStmt : public Stmt {
   ExprPtr expr;
   PrintStmt(ExprPtr i);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct ReturnStmt : public Stmt {
   ExprPtr expr;
   ReturnStmt(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct YieldStmt : public Stmt {
   ExprPtr expr;
   YieldStmt(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct AssertStmt : public Stmt {
   ExprPtr expr;
   AssertStmt(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct TypeAliasStmt : public Stmt {
-  string name;
+  std::string name;
   ExprPtr expr;
-  TypeAliasStmt(string n, ExprPtr e);
-  string to_string() const override;
+  TypeAliasStmt(std::string n, ExprPtr e);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
@@ -131,7 +128,7 @@ struct WhileStmt : public Stmt {
   ExprPtr cond;
   StmtPtr suite;
   WhileStmt(ExprPtr c, StmtPtr s);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
@@ -140,7 +137,7 @@ struct ForStmt : public Stmt {
   ExprPtr iter;
   StmtPtr suite;
   ForStmt(ExprPtr v, ExprPtr i, StmtPtr s);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
@@ -149,17 +146,17 @@ struct IfStmt : public Stmt {
     ExprPtr cond;
     StmtPtr suite;
   };
-  vector<If> ifs;
-  IfStmt(vector<If> i);
-  string to_string() const override;
+  std::vector<If> ifs;
+  IfStmt(std::vector<If> i);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct MatchStmt : public Stmt {
   ExprPtr what;
-  vector<pair<PatternPtr, StmtPtr>> cases;
-  MatchStmt(ExprPtr w, vector<pair<PatternPtr, StmtPtr>> c);
-  string to_string() const override;
+  std::vector<std::pair<PatternPtr, StmtPtr>> cases;
+  MatchStmt(ExprPtr w, std::vector<std::pair<PatternPtr, StmtPtr>> c);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
@@ -167,16 +164,16 @@ struct ExtendStmt : public Stmt {
   ExprPtr what;
   StmtPtr suite;
   ExtendStmt(ExprPtr e, StmtPtr s);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct ImportStmt : public Stmt {
-  typedef pair<string, string> Item;
+  typedef std::pair<std::string, std::string> Item;
   Item from;
-  vector<Item> what;
-  ImportStmt(Item f, vector<Item> w);
-  string to_string() const override;
+  std::vector<Item> what;
+  ImportStmt(Item f, std::vector<Item> w);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
@@ -184,113 +181,117 @@ struct ExternImportStmt : public Stmt {
   ImportStmt::Item name;
   ExprPtr from;
   ExprPtr ret;
-  vector<Param> args;
-  string lang;
-  ExternImportStmt(ImportStmt::Item n, ExprPtr f, ExprPtr t, vector<Param> a,
-                   string l);
-  string to_string() const override;
+  std::vector<Param> args;
+  std::string lang;
+  ExternImportStmt(ImportStmt::Item n, ExprPtr f, ExprPtr t,
+                   std::vector<Param> a, std::string l);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct TryStmt : public Stmt {
   struct Catch {
-    string var;
+    std::string var;
     ExprPtr exc;
     StmtPtr suite;
   };
   StmtPtr suite;
-  vector<Catch> catches;
+  std::vector<Catch> catches;
   StmtPtr finally;
 
-  TryStmt(StmtPtr s, vector<Catch> c, StmtPtr f);
-  string to_string() const override;
+  TryStmt(StmtPtr s, std::vector<Catch> c, StmtPtr f);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct GlobalStmt : public Stmt {
-  string var;
-  GlobalStmt(string v);
-  string to_string() const override;
+  std::string var;
+  GlobalStmt(std::string v);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct ThrowStmt : public Stmt {
   ExprPtr expr;
   ThrowStmt(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct PrefetchStmt : public Stmt {
   ExprPtr expr;
   PrefetchStmt(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct FunctionStmt : public Stmt {
-  string name;
+  std::string name;
   ExprPtr ret;
-  vector<string> generics;
-  vector<Param> args;
+  std::vector<std::string> generics;
+  std::vector<Param> args;
   StmtPtr suite;
-  vector<string> attributes;
-  FunctionStmt(string n, ExprPtr r, vector<string> g, vector<Param> a,
-               StmtPtr s, vector<string> at);
-  string to_string() const override;
+  std::vector<std::string> attributes;
+  FunctionStmt(std::string n, ExprPtr r, std::vector<std::string> g,
+               std::vector<Param> a, StmtPtr s, std::vector<std::string> at);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct PyDefStmt : public Stmt {
-  string name;
+  std::string name;
   ExprPtr ret;
-  vector<Param> args;
-  string code;
-  PyDefStmt(string n, ExprPtr r, vector<Param> a, string s);
-  string to_string() const override;
+  std::vector<Param> args;
+  std::string code;
+  PyDefStmt(std::string n, ExprPtr r, std::vector<Param> a, std::string s);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct ClassStmt : public Stmt {
   bool isType;
-  string name;
-  vector<string> generics;
-  vector<Param> args;
+  std::string name;
+  std::vector<std::string> generics;
+  std::vector<Param> args;
   StmtPtr suite;
-  ClassStmt(bool i, string n, vector<string> g, vector<Param> a, StmtPtr s);
-  string to_string() const override;
+  ClassStmt(bool i, std::string n, std::vector<std::string> g,
+            std::vector<Param> a, StmtPtr s);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct DeclareStmt : public Stmt {
   Param param;
   DeclareStmt(Param p);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct AssignEqStmt : public Stmt {
   ExprPtr lhs, rhs;
-  string op;
-  AssignEqStmt(ExprPtr l, ExprPtr r, string o);
-  string to_string() const override;
+  std::string op;
+  AssignEqStmt(ExprPtr l, ExprPtr r, std::string o);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct YieldFromStmt : public Stmt {
   ExprPtr expr;
   YieldFromStmt(ExprPtr e);
-  string to_string() const override;
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
 
 struct WithStmt : public Stmt {
-  typedef pair<ExprPtr, string> Item;
-  vector<Item> items;
+  typedef std::pair<ExprPtr, std::string> Item;
+  std::vector<Item> items;
   StmtPtr suite;
-  WithStmt(vector<Item> i, StmtPtr s);
-  string to_string() const override;
+  WithStmt(std::vector<Item> i, StmtPtr s);
+  std::string to_string() const override;
   ACCEPT_VISITOR;
 };
+
+} // namespace ast
+} // namespace seq
 
 #undef ACCEPT_VISITOR

@@ -8,6 +8,9 @@
 #include "parser/ast/codegen/stmt.h"
 #include "parser/ast/pattern.h"
 
+namespace seq {
+namespace ast {
+
 class CodegenPatternVisitor : public PatternVisitor {
   CodegenStmtVisitor &stmtVisitor;
   seq::Pattern *result;
@@ -30,3 +33,6 @@ public:
   void visit(const GuardedPattern *) override;
   void visit(const BoundPattern *) override;
 };
+
+} // namespace ast
+} // namespace seq

@@ -16,6 +16,12 @@ using fmt::format;
 using std::make_pair;
 using std::make_shared;
 using std::pair;
+using std::shared_ptr;
+using std::string;
+using std::vector;
+
+namespace seq {
+namespace ast {
 
 const seq::BaseFunc *ContextItem::getBase() const { return base; }
 bool ContextItem::isGlobal() const { return global; }
@@ -223,3 +229,6 @@ shared_ptr<Context> ImportCache::importFile(seq::SeqModule *module,
 }
 
 ImportCache &Context::getCache() { return cache; }
+
+} // namespace ast
+} // namespace seq

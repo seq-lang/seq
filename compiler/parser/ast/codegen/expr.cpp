@@ -34,6 +34,9 @@ using std::vector;
   return
 #define ERROR(...) error(expr->getSrcInfo(), __VA_ARGS__)
 
+namespace seq {
+namespace ast {
+
 CodegenExprVisitor::CodegenExprVisitor(Context &ctx,
                                        CodegenStmtVisitor &stmtVisitor,
                                        vector<seq::Var *> *captures)
@@ -512,3 +515,6 @@ void CodegenExprVisitor::visit(const LambdaExpr *expr) { ERROR("TODO"); }
 void CodegenExprVisitor::visit(const YieldExpr *expr) {
   RETURN(seq::YieldExpr, ctx.getBase());
 }
+
+} // namespace ast
+} // namespace seq

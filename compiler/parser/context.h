@@ -10,22 +10,19 @@
 #include "lang/seq.h"
 #include "parser/common.h"
 
-using std::shared_ptr;
-using std::stack;
-using std::string;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
+namespace seq {
+namespace ast {
 
 template <typename T> class VTable {
-  typedef unordered_map<string, stack<shared_ptr<T>>> VTableMap;
+  typedef std::unordered_map<std::string, std::stack<std::shared_ptr<T>>>
+      VTableMap;
 
 protected:
   VTableMap map;
-  stack<vector<string>> stack;
-  unordered_set<string> flags;
+  std::stack<std::vector<std::string>> stack;
+  std::unordered_set<std::string> flags;
 
-  shared_ptr<T> find(const string &name) const {
+  std::shared_ptr<T> find(const std::string &name) const {
     auto it = map.find(name);
     if (it == map.end()) {
       return nullptr;
@@ -37,12 +34,12 @@ public:
   typename VTableMap::iterator begin() { return map.begin(); }
   typename VTableMap::iterator end() { return map.end(); }
 
-  void add(const string &name, shared_ptr<T> var) {
+  void add(const std::string &name, std::shared_ptr<T> var) {
     map[name].push(var);
     // DBG("adding {}", name);
     stack.top().push_back(name);
   }
-  void addBlock() { stack.push(vector<string>()); }
+  void addBlock() { stack.push(std::vector<std::string>()); }
   void popBlock() {
     for (auto &name : stack.top()) {
       // DBG("removing {}", name);
@@ -50,7 +47,7 @@ public:
     }
     stack.pop();
   }
-  virtual void remove(const string &name) {
+  virtual void remove(const std::string &name) {
     auto i = map.find(name);
     if (i == map.end() || !i->second.size()) {
       error("variable {} not found in the map", name);
@@ -60,16 +57,16 @@ public:
       map.erase(name);
     }
   }
-  void setFlag(const string &s) { flags.insert(s); }
-  void unsetFlag(const string &s) { flags.erase(s); }
-  bool hasFlag(const string &s) { return flags.find(s) != flags.end(); }
+  void setFlag(const std::string &s) { flags.insert(s); }
+  void unsetFlag(const std::string &s) { flags.erase(s); }
+  bool hasFlag(const std::string &s) { return flags.find(s) != flags.end(); }
 };
 
 class ContextItem {
 protected:
   seq::BaseFunc *base;
   bool global;
-  unordered_set<string> attributes;
+  std::unordered_set<std::string> attributes;
 
 public:
   ContextItem(seq::BaseFunc *base, bool global = false);
@@ -80,7 +77,7 @@ public:
   bool isGlobal() const;
   bool isToplevel() const;
   bool isInternal() const;
-  bool hasAttr(const string &s) const;
+  bool hasAttr(const std::string &s) const;
 };
 
 class VarContextItem : public ContextItem {
@@ -94,10 +91,10 @@ public:
 
 class FuncContextItem : public ContextItem {
   seq::Func *func;
-  vector<string> names;
+  std::vector<std::string> names;
 
 public:
-  FuncContextItem(seq::Func *f, vector<string> n, seq::BaseFunc *base,
+  FuncContextItem(seq::Func *f, std::vector<std::string> n, seq::BaseFunc *base,
                   bool global = false);
   seq::Expr *getExpr() const override;
 };
@@ -114,32 +111,34 @@ public:
 };
 
 class ImportContextItem : public ContextItem {
-  string import;
+  std::string import;
 
 public:
-  ImportContextItem(const string &import, seq::BaseFunc *base,
+  ImportContextItem(const std::string &import, seq::BaseFunc *base,
                     bool global = false);
   seq::Expr *getExpr() const override;
-  string getFile() const;
+  std::string getFile() const;
 };
 
 class Context;
 struct ImportCache {
-  string argv0;
+  std::string argv0;
   Context *stdlib;
-  unordered_map<string, shared_ptr<Context>> imports;
+  std::unordered_map<std::string, std::shared_ptr<Context>> imports;
 
-  string getImportFile(const string &what, const string &relativeTo,
-                       bool forceStdlib = false);
-  shared_ptr<Context> importFile(seq::SeqModule *module, const string &file);
+  std::string getImportFile(const std::string &what,
+                            const std::string &relativeTo,
+                            bool forceStdlib = false);
+  std::shared_ptr<Context> importFile(seq::SeqModule *module,
+                                      const std::string &file);
 };
 
 class Context : public VTable<ContextItem> {
   ImportCache &cache;
-  string filename;
+  std::string filename;
   seq::SeqModule *module;
-  vector<seq::BaseFunc *> bases;
-  vector<seq::Block *> blocks;
+  std::vector<seq::BaseFunc *> bases;
+  std::vector<seq::Block *> blocks;
   int topBlockIndex, topBaseIndex;
   seq::types::Type *enclosingType;
 
@@ -147,29 +146,33 @@ class Context : public VTable<ContextItem> {
 
 public:
   Context(seq::SeqModule *module, ImportCache &cache,
-          const string &filename = ""); // initialize standard library
+          const std::string &filename = ""); // initialize standard library
   virtual ~Context() {}
-  shared_ptr<ContextItem> find(const string &name,
-                               bool onlyLocal = false) const;
+  std::shared_ptr<ContextItem> find(const std::string &name,
+                                    bool onlyLocal = false) const;
   seq::TryCatch *getTryCatch() const;
   void setTryCatch(seq::TryCatch *t);
   seq::Block *getBlock() const;
   seq::SeqModule *getModule() const;
   seq::BaseFunc *getBase() const;
   bool isToplevel() const;
-  seq::types::Type *getType(const string &name) const;
+  seq::types::Type *getType(const std::string &name) const;
   seq::types::Type *getEnclosingType();
   void setEnclosingType(seq::types::Type *t);
   void addBlock(seq::Block *newBlock = nullptr,
                 seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
-  void add(const string &name, shared_ptr<ContextItem> var);
-  void add(const string &name, seq::Var *v, bool global = false);
-  void add(const string &name, seq::types::Type *t, bool global = false);
-  void add(const string &name, seq::Func *f, vector<string> names,
+  void add(const std::string &name, std::shared_ptr<ContextItem> var);
+  void add(const std::string &name, seq::Var *v, bool global = false);
+  void add(const std::string &name, seq::types::Type *t, bool global = false);
+  void add(const std::string &name, seq::Func *f,
+           std::vector<std::string> names, bool global = false);
+  void add(const std::string &name, const std::string &import,
            bool global = false);
-  void add(const string &name, const string &import, bool global = false);
-  string getFilename() const;
+  std::string getFilename() const;
   ImportCache &getCache();
 };
+
+} // namespace ast
+} // namespace seq

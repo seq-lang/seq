@@ -8,6 +8,9 @@
 using std::string;
 using std::vector;
 
+namespace seq {
+namespace ast {
+
 int tmpVarCounter = 0;
 string getTemporaryVar(const string &prefix) {
   return fmt::format("$_{}_{}", prefix, ++tmpVarCounter);
@@ -55,14 +58,14 @@ string escape(string s) {
   return r;
 }
 
-void error(const char *format) { throw seq::exc::SeqException(format); }
+void error(const char *format) { throw ::seq::exc::SeqException(format); }
 
-void error(const seq::SrcInfo &p, const char *format) {
-  throw seq::exc::SeqException(format, p);
+void error(const ::seq::SrcInfo &p, const char *format) {
+  throw ::seq::exc::SeqException(format, p);
 }
 
 namespace seq {
-std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c) {
+std::ostream &operator<<(std::ostream &out, const ::seq::SrcInfo &c) {
   char buf[PATH_MAX + 1];
   strncpy(buf, c.file.c_str(), PATH_MAX);
   auto f = basename(buf);
@@ -129,3 +132,6 @@ string executable_path(const char *argv0) {
 #else
 string executable_path(const char *argv0) { return string(argv0); }
 #endif
+
+} // namespace ast
+} // namespace seq

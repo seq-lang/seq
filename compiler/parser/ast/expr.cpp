@@ -17,6 +17,9 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
+namespace seq {
+namespace ast {
+
 EmptyExpr::EmptyExpr() {}
 string EmptyExpr::to_string() const { return "#empty"; }
 
@@ -203,3 +206,6 @@ string LambdaExpr::to_string() const {
 }
 YieldExpr::YieldExpr() {}
 string YieldExpr::to_string() const { return "#yield"; }
+
+} // namespace ast
+} // namespace seq

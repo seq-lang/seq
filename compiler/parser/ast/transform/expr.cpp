@@ -38,6 +38,9 @@ using std::vector;
 #define SP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
 #define ERROR(...) error(expr->getSrcInfo(), __VA_ARGS__)
 
+namespace seq {
+namespace ast {
+
 TransformExprVisitor::TransformExprVisitor(vector<StmtPtr> &prepend)
     : prependStmts(prepend) {}
 
@@ -331,3 +334,6 @@ void TransformExprVisitor::visit(const PtrExpr *expr) {
 void TransformExprVisitor::visit(const LambdaExpr *expr) { ERROR("TODO"); }
 
 void TransformExprVisitor::visit(const YieldExpr *expr) { RETURN(YieldExpr, ); }
+
+} // namespace ast
+} // namespace seq

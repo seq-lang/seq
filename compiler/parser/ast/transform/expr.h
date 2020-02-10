@@ -14,18 +14,21 @@
 #include "parser/common.h"
 #include "parser/context.h"
 
+namespace seq {
+namespace ast {
+
 class TransformExprVisitor : public ExprVisitor {
   ExprPtr result{nullptr};
-  vector<StmtPtr> &prependStmts;
+  std::vector<StmtPtr> &prependStmts;
   friend class TransformStmtVisitor;
 
 public:
-  TransformExprVisitor(vector<StmtPtr> &prepend);
+  TransformExprVisitor(std::vector<StmtPtr> &prepend);
   ExprPtr transform(const Expr *e);
-  vector<ExprPtr> transform(const vector<ExprPtr> &e);
+  std::vector<ExprPtr> transform(const std::vector<ExprPtr> &e);
 
   template <typename T>
-  auto transform(const unique_ptr<T> &t) -> decltype(transform(t.get())) {
+  auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
     return transform(t.get());
   }
 
@@ -59,3 +62,6 @@ public:
   void visit(const LambdaExpr *) override;
   void visit(const YieldExpr *) override;
 };
+
+} // namespace ast
+} // namespace seq

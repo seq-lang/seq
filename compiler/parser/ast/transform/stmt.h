@@ -13,6 +13,9 @@
 #include "parser/common.h"
 #include "parser/context.h"
 
+namespace seq {
+namespace ast {
+
 class TransformStmtVisitor : public StmtVisitor {
   std::vector<StmtPtr> prependStmts;
   StmtPtr result{nullptr};
@@ -31,7 +34,7 @@ public:
   PatternPtr transform(const Pattern *stmt);
 
   template <typename T>
-  auto transform(const unique_ptr<T> &t) -> decltype(transform(t.get())) {
+  auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
     return transform(t.get());
   }
 
@@ -66,3 +69,6 @@ public:
   virtual void visit(const WithStmt *) override;
   virtual void visit(const PyDefStmt *) override;
 };
+
+} // namespace ast
+} // namespace seq

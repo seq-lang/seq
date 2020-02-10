@@ -18,6 +18,9 @@ using std::tuple;
 using std::unique_ptr;
 using std::vector;
 
+namespace seq {
+namespace ast {
+
 StarPattern::StarPattern() {}
 string StarPattern::to_string() const { return "#star"; }
 
@@ -72,3 +75,6 @@ BoundPattern::BoundPattern(string v, PatternPtr p) : var(v), pattern(move(p)) {}
 string BoundPattern::to_string() const {
   return format("(#bound {} {})", var, *pattern);
 }
+
+} // namespace ast
+} // namespace seq
