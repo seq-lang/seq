@@ -251,8 +251,8 @@ get2bitTable(Module *module, const std::string &name = "seq.2bit_table") {
   if (!table) {
     std::vector<Constant *> v(256, ConstantInt::get(ty, 0));
     v['A'] = v['a'] = ConstantInt::get(ty, 0);
-    v['G'] = v['g'] = ConstantInt::get(ty, 1);
-    v['C'] = v['c'] = ConstantInt::get(ty, 2);
+    v['C'] = v['c'] = ConstantInt::get(ty, 1);
+    v['G'] = v['g'] = ConstantInt::get(ty, 2);
     v['T'] = v['t'] = v['U'] = v['u'] = ConstantInt::get(ty, 3);
 
     auto *arrTy =
@@ -276,7 +276,7 @@ get2bitTableInv(Module *module,
     table = new GlobalVariable(
         *module, llvm::ArrayType::get(IntegerType::getInt8Ty(context), 4), true,
         GlobalValue::PrivateLinkage,
-        ConstantDataArray::getString(context, "AGCT", false), name);
+        ConstantDataArray::getString(context, "ACGT", false), name);
   }
 
   return table;
