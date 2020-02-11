@@ -1,0 +1,80 @@
+{
+	"name": "seq-lang",
+	"description": "A language server for seq",
+	"author": "seq-lang",
+	"license": "MIT",
+	"version": "0.0.1",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/seq-lang/seq"
+	},
+	"categories": [],
+	"keywords": [
+		"multi-root ready"
+	],
+	"engines": {
+		"vscode": "^1.33.0"
+	},
+	"activationEvents": [
+		"onLanguage:seq"
+	],
+	"main": "./client/out/extension",
+	"contributes": {
+		"languages": [
+			{
+				"id": "seq",
+				"aliases": [
+					"Seq",
+					"seq-lang"
+				],
+				"extensions": [
+					".seq"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "seq",
+				"scopeName": "source.seq",
+				"path": "./syntaxes/seq.tmLanguage.json"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "Seq configuration",
+			"properties": {
+				"languageServerSeq.maxNumberOfProblems": {
+					"scope": "resource",
+					"type": "number",
+					"default": 100,
+					"description": "Controls the maximum number of problems produced by the server."
+				},
+				"languageServerSeq.trace.server": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "off",
+					"description": "Traces the communication between VS Code and the language server."
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "cd client && yarn run update-vscode && cd .. && yarn run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"postinstall": "cd client && yarn && cd ../server && yarn && cd .."
+	},
+	"devDependencies": {
+		"@types/mocha": "^5.2.7",
+		"@types/node": "^12.11.7",
+		"tslint": "^5.16.0",
+		"typescript": "^3.6.4"
+	},
+	"dependencies": {}
+}

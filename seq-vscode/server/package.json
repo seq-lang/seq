@@ -1,0 +1,23 @@
+{
+	"name": "lsp-seq-server",
+	"description": "The seq language server.",
+	"version": "0.0.1",
+	"author": "seq-lang",
+	"license": "MIT",
+	"engines": {
+		"node": "*"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/seq-lang/seq"
+	},
+	"dependencies": {
+		"@types/ffi": "^0.2.2",
+		"@types/ref": "^0.0.28",
+		"bindings": "^1.5.0",
+		"ffi": "lxe/node-ffi#node-12",
+		"ref": "lxe/ref#node-12",
+		"vscode-languageserver": "^5.2.1"
+	},
+	"scripts": {}
+}

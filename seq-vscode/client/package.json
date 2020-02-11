@@ -1,0 +1,24 @@
+{
+	"name": "lsp-seq-client",
+	"description": "VSCode part of a language server",
+	"author": "seq-lang",
+	"license": "MIT",
+	"version": "0.0.1",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/seq-lang/seq"
+	},
+	"engines": {
+		"vscode": "^1.33.0"
+	},
+	"scripts": {
+		"update-vscode": "vscode-install",
+		"postinstall": "vscode-install"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^5.2.1"
+	},
+	"devDependencies": {
+		"vscode": "^1.1.35"
+	}
+}
