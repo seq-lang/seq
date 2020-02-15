@@ -131,3 +131,15 @@ def _validate_str_as_qual(s: str, copy: bool = False):
             ensure_valid(p[i], i)
             i += 1
         return str(p, n)
+
+@builtin
+def _split_header_on_space(s: str):
+    a = 0
+    while a < len(s) and not s[a].isspace():
+        a += 1
+
+    b = a
+    while b < len(s) and s[b].isspace():
+        b += 1
+
+    return s[:a], s[b:]
