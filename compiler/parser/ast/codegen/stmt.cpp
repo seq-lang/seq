@@ -113,7 +113,6 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
       return (seq::AtomicExpr::Op)0;
     }
   };
-  // TODO: JIT
   /* Currently, a var can shadow a function or a type, but not another var. */
   if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
     auto var = i->value;
@@ -159,14 +158,18 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
       }
     } else if (!stmt->mustExist) {
       // New variable
-      auto varStmt =
-          new seq::VarStmt(transform(stmt->rhs),
-                           stmt->type ? transformType(stmt->type) : nullptr);
-      if (ctx.isToplevel()) {
-        varStmt->getVar()->setGlobal();
+      if (ctx.getJIT()) {
+        ctx.add(var, ctx.getJIT()->addVar(transform(stmt->rhs)));
+      } else {
+        auto varStmt =
+            new seq::VarStmt(transform(stmt->rhs),
+                              stmt->type ? transformType(stmt->type) : nullptr);
+        if (ctx.isToplevel()) {
+          varStmt->getVar()->setGlobal();
+        }
+        ctx.add(var, varStmt->getVar());
+        this->result = varStmt;
       }
-      ctx.add(var, varStmt->getVar());
-      this->result = varStmt;
       return;
     }
   } else if (auto i = dynamic_cast<DotExpr *>(stmt->lhs.get())) {
@@ -197,7 +200,7 @@ void CodegenStmtVisitor::visit(const DelStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const PrintStmt *stmt) {
-  RETURN(seq::Print, transform(stmt->expr));
+  RETURN(seq::Print, transform(stmt->expr), ctx.getJit());
 }
 
 void CodegenStmtVisitor::visit(const ReturnStmt *stmt) {

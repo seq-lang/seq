@@ -42,7 +42,6 @@ public:
   void addBlock() { stack.push(std::vector<std::string>()); }
   void popBlock() {
     for (auto &name : stack.top()) {
-      // DBG("removing {}", name);
       remove(name);
     }
     stack.pop();
