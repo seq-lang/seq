@@ -166,6 +166,6 @@ You can then open ``_build/html/index.html`` with your browser.
 .. _Boehm GC: https://github.com/ivmai/bdwgc
 .. _HTSlib: https://htslib.org
 .. _libffi: https://sourceware.org/libffi
-.. _our Travis script: .travis.yml
+.. _our Travis script: https://github.com/seq-lang/seq/blob/master/.travis.yml
 .. _coroutine regression bug: https://bugs.llvm.org/show_bug.cgi?id=40656
 .. _here: https://www.reddit.com/r/cpp/comments/aoad7l/coroutine_allocation_elision_broken_in_clang_7

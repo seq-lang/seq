@@ -406,6 +406,19 @@ def test_fastq_bad_qual_len():
             found_invalid = True
     assert found_invalid
 
+@test
+def test_fasta_comments():
+    v = [(rec.header, rec.name, rec.comment) for rec in FASTA('test/data/seqs.fasta', fai=False)]
+    assert v == [('chrA    my random comment', 'chrA', 'my random comment'), ('chrB', 'chrB', ''), ('chrC', 'chrC', ''), ('chrD hello', 'chrD', 'hello')]
+
+@test
+def test_fastq_comments():
+    v = [(rec.header, rec.name, rec.comment) for rec in FASTQ('test/data/seqs.fastq')]
+    assert v == [('SL-HXF:348:HKLFWCCXX:1:2101:15676:57231:CACCAAAAGTACATGA comment A B C', 'SL-HXF:348:HKLFWCCXX:1:2101:15676:57231:CACCAAAAGTACATGA', 'comment A B C'),
+                 ('SL-HXF:348:HKLFWCCXX:1:2121:24495:55877:CACCAAAAGTACATGA', 'SL-HXF:348:HKLFWCCXX:1:2121:24495:55877:CACCAAAAGTACATGA', ''),
+                 ('SL-HXF:348:HKLFWCCXX:1:2220:28361:38491:CACCAAAAGTACATGA\t\tcomment with tabs', 'SL-HXF:348:HKLFWCCXX:1:2220:28361:38491:CACCAAAAGTACATGA', 'comment with tabs'),
+                 ('SL-HXF:348:HKLFWCCXX:4:1106:4553:37893:CACCAAAAGTACATGA', 'SL-HXF:348:HKLFWCCXX:4:1106:4553:37893:CACCAAAAGTACATGA', '')]
+
 test_fasta_options()
 test_fastq_options()
 test_seqs_options()
@@ -418,3 +431,5 @@ test_fastq_bad_qual_len()
 test_fastq_bad_name()
 test_fastq_bad_base()
 test_fasta_bad_base()
+test_fasta_comments()
+test_fastq_comments()

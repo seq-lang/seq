@@ -1,9 +1,19 @@
 # FASTA format parser
 # https://en.wikipedia.org/wiki/FASTA_format
-type FASTARecord(_name: str, _seq: seq):
+type FASTARecord(_header: str, _seq: seq):
+    @property
+    def header(self: FASTARecord):
+        return self._header
+
     @property
     def name(self: FASTARecord):
-        return self._name
+        from bio.builtin import _split_header_on_space
+        return _split_header_on_space(self.header)[0]
+
+    @property
+    def comment(self: FASTARecord):
+        from bio.builtin import _split_header_on_space
+        return _split_header_on_space(self.header)[1]
 
     @property
     def seq(self: FASTARecord):
@@ -68,18 +78,28 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
         return p, n, m
 
     def _iter_core(self: FASTAReader, file) -> FASTARecord:
+        def header_check(rec_name: str, fai_name: str):
+            if rec_name != fai_name:
+                raise ValueError(f"FASTA index name mismatch: got {repr(rec_name)} but expected {repr(fai_name)}")
+
         if self.fai is not None:
             idx = 0
             p = ptr[byte]()
             n = 0
             m = 0
+            prev_header = ''
             for a in file._iter():
                 if a == "": continue
                 if a[0] == ">":
                     if n > 0:
                         assert m == n
-                        yield (self.names[idx - 1], seq(p, n))
-
+                        rec = FASTARecord(prev_header, seq(p, n))
+                        if self.validate:
+                            rec_name = rec.name
+                            fai_name = self.names[idx - 1]
+                            header_check(rec_name, fai_name)
+                        yield rec
+                    prev_header = copy(a[1:])
                     n = self.fai[idx]
                     p = ptr[byte](n)
                     m = 0
@@ -98,7 +118,12 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
                     m += len(a)
             if n > 0:
                 assert m == n
-                yield (self.names[-1], seq(p, n))
+                rec = FASTARecord(prev_header, seq(p, n))
+                if self.validate:
+                    rec_name = rec.name
+                    fai_name = self.names[-1]
+                    header_check(rec_name, fai_name)
+                yield rec
         else:
             m = 256
             p = ptr[byte](m)

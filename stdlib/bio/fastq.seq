@@ -1,9 +1,19 @@
 # FASTQ format parser
 # https://en.wikipedia.org/wiki/FASTQ_format
-type FASTQRecord(_name: str, _read: seq, _qual: str):
+type FASTQRecord(_header: str, _read: seq, _qual: str):
+    @property
+    def header(self: FASTQRecord):
+        return self._header
+
     @property
     def name(self: FASTQRecord):
-        return self._name
+        from bio.builtin import _split_header_on_space
+        return _split_header_on_space(self.header)[0]
+
+    @property
+    def comment(self: FASTQRecord):
+        from bio.builtin import _split_header_on_space
+        return _split_header_on_space(self.header)[1]
 
     @property
     def read(self: FASTQRecord):
