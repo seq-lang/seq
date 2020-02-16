@@ -258,3 +258,8 @@ def _tuple_fix_index(idx: int, len: int) -> int:
     if idx < 0 or idx >= len:
         raise IndexError("tuple index out of range")
     return idx
+
+@builtin
+def _ensure_not_none(p: ptr[byte], memb: str):
+    if not p:
+        raise AttributeError("'NoneType' object has no attribute '" + memb + "'")

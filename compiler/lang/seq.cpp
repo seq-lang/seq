@@ -14,7 +14,12 @@ using namespace llvm::orc;
 #include "llvm/CodeGen/CommandFlags.def"
 #endif
 
-static LLVMContext context;
+config::Config::Config() : context(), debug(false) {}
+
+config::Config &seq::config::config() {
+  static Config config;
+  return config;
+}
 
 SeqModule::SeqModule()
     : BaseFunc(), scope(new Block()),
@@ -23,7 +28,7 @@ SeqModule::SeqModule()
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
 
-  module = new Module("seq", context);
+  module = new Module("seq", config::config().context);
   module->setTargetTriple(
       EngineBuilder().selectTarget()->getTargetTriple().str());
   module->setDataLayout(EngineBuilder().selectTarget()->createDataLayout());
@@ -317,7 +322,8 @@ static void applyGCTransformations(Module *module) {
   }
 }
 
-static void optimizeModule(Module *module, bool debug) {
+static void optimizeModule(Module *module) {
+  const bool debug = config::config().debug;
   if (debug)
     applyDebugTransformations(module);
   std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
@@ -385,23 +391,23 @@ static void optimizeModule(Module *module, bool debug) {
     applyDebugTransformations(module);
 }
 
-void SeqModule::optimize(bool debug) { optimizeModule(module, debug); }
+void SeqModule::optimize() { optimizeModule(module); }
 
-void SeqModule::runCodegenPipeline(bool debug) {
+void SeqModule::runCodegenPipeline() {
   codegen(module);
   verify();
-  optimize(debug);
+  optimize();
   applyGCTransformations(module);
   verify();
-  optimize(debug);
+  optimize();
   verify();
 #if SEQ_HAS_TAPIR
   tapir::resetOMPABI();
 #endif
 }
 
-void SeqModule::compile(const std::string &out, bool debug) {
-  runCodegenPipeline(debug);
+void SeqModule::compile(const std::string &out) {
+  runCodegenPipeline();
   std::error_code err;
   raw_fd_ostream stream(out, err, llvm::sys::fs::F_None);
 
@@ -455,8 +461,9 @@ public:
 };
 
 void SeqModule::execute(const std::vector<std::string> &args,
-                        const std::vector<std::string> &libs, bool debug) {
-  runCodegenPipeline(debug);
+                        const std::vector<std::string> &libs) {
+  const bool debug = config::config().debug;
+  runCodegenPipeline();
   std::vector<std::string> functionNames;
   if (debug) {
     for (Function &f : *module) {
@@ -511,9 +518,8 @@ void tapir::resetOMPABI() {
  * JIT
  */
 #if LLVM_VERSION_MAJOR == 6
-static std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> module,
-                                              bool debug) {
-  optimizeModule(module.get(), debug);
+static std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> module) {
+  optimizeModule(module.get());
   verifyModuleFailFast(*module);
   return module;
 }
@@ -525,7 +531,7 @@ SeqJIT::SeqJIT()
       comLayer(objLayer, SimpleCompiler(*target)),
       optLayer(comLayer,
                [](std::shared_ptr<Module> M) {
-                 return optimizeModule(std::move(M), true);
+                 return optimizeModule(std::move(M));
                }),
       callbackManager(
           orc::createLocalCompileCallbackManager(target->getTargetTriple(), 0)),
@@ -544,8 +550,8 @@ void SeqJIT::init() {
 }
 
 std::unique_ptr<Module> SeqJIT::makeModule() {
-  auto module =
-      llvm::make_unique<Module>("seq." + std::to_string(inputNum), context);
+  auto module = llvm::make_unique<Module>("seq." + std::to_string(inputNum),
+                                          config::config().context);
   module->setTargetTriple(target->getTargetTriple().str());
   module->setDataLayout(target->createDataLayout());
   return module;
@@ -586,6 +592,7 @@ Func SeqJIT::makeFunc() {
 }
 
 void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
+  LLVMContext &context = config::config().context;
   Function *f = func->getFunc(module.get());
   f->setLinkage(GlobalValue::ExternalLinkage);
 
