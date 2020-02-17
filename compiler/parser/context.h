@@ -140,8 +140,8 @@ class Context : public VTable<ContextItem> {
   std::vector<seq::Block *> blocks;
   int topBlockIndex, topBaseIndex;
   seq::types::Type *enclosingType;
-
   seq::TryCatch *tryCatch;
+  seq::SeqJIT *jit;
 
 public:
   Context(seq::SeqModule *module, ImportCache &cache,
@@ -161,6 +161,8 @@ public:
   void addBlock(seq::Block *newBlock = nullptr,
                 seq::BaseFunc *newBase = nullptr);
   void popBlock();
+
+  seq::SeqJIT *getJIT();
 
   void add(const std::string &name, std::shared_ptr<ContextItem> var);
   void add(const std::string &name, seq::Var *v, bool global = false);

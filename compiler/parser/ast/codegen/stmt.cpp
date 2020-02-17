@@ -200,7 +200,7 @@ void CodegenStmtVisitor::visit(const DelStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const PrintStmt *stmt) {
-  RETURN(seq::Print, transform(stmt->expr), ctx.getJit());
+  RETURN(seq::Print, transform(stmt->expr), ctx.getJIT() != nullptr);
 }
 
 void CodegenStmtVisitor::visit(const ReturnStmt *stmt) {

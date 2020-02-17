@@ -59,7 +59,7 @@ seq::Expr *ImportContextItem::getExpr() const {
 Context::Context(seq::SeqModule *module, ImportCache &cache,
                  const string &filename)
     : cache(cache), filename(filename), module(module), enclosingType(nullptr),
-      tryCatch(nullptr) {
+      tryCatch(nullptr), jit(nullptr) {
   stack.push(vector<string>());
   bases.push_back(module);
   blocks.push_back(module->getBlock());
@@ -229,6 +229,8 @@ shared_ptr<Context> ImportCache::importFile(seq::SeqModule *module,
 }
 
 ImportCache &Context::getCache() { return cache; }
+
+seq::SeqJIT *Context::getJIT() { return jit; }
 
 } // namespace ast
 } // namespace seq
