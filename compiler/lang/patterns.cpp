@@ -749,6 +749,58 @@ OptPattern *OptPattern::clone(Generic *ref) {
   SEQ_RETURN_CLONE(new OptPattern(pattern ? pattern->clone(ref) : nullptr));
 }
 
+UnionPattern::UnionPattern(types::Type *innerType, Pattern *pattern)
+    : Pattern(types::Any), innerType(innerType), pattern(pattern) {}
+
+void UnionPattern::resolveTypes(types::Type *type) {
+  types::UnionType *unionType = type->asUnion();
+  if (!unionType)
+    throw exc::SeqException(
+        "cannot match union pattern against non-union value", getSrcInfo());
+
+  unionType->indexFor(innerType); // raises exception if type not in union
+  pattern->resolveTypes(innerType);
+}
+
+Value *UnionPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
+                             BasicBlock *&block) {
+  LLVMContext &context = block->getContext();
+
+  types::UnionType *unionType = type->asUnion();
+  assert(unionType);
+
+  Value *hasType = unionType->has(val, innerType, block);
+  BasicBlock *startBlock = block;
+  IRBuilder<> builder(block);
+  block = BasicBlock::Create(context, "",
+                             block->getParent()); // pattern eval block
+  BranchInst *branch = builder.CreateCondBr(hasType, block, block);
+
+  Value *had = unionType->val(val, innerType, block);
+  Value *patternResult = pattern->codegen(base, innerType, had, block);
+  BasicBlock *checkBlock = block;
+  builder.SetInsertPoint(block);
+
+  block = BasicBlock::Create(context, "",
+                             block->getParent()); // final result block
+  builder.CreateBr(block);
+  branch->setSuccessor(1, block);
+
+  builder.SetInsertPoint(block);
+  PHINode *resultFinal = builder.CreatePHI(IntegerType::getInt1Ty(context), 2);
+  resultFinal->addIncoming(ConstantInt::get(IntegerType::getInt1Ty(context), 0),
+                           startBlock); // no value
+  resultFinal->addIncoming(patternResult,
+                           checkBlock); // result of pattern match
+
+  return resultFinal;
+}
+
+UnionPattern *UnionPattern::clone(Generic *ref) {
+  SEQ_RETURN_CLONE(
+      new UnionPattern(innerType->clone(ref), pattern->clone(ref)));
+}
+
 RangePattern::RangePattern(seq_int_t a, seq_int_t b)
     : Pattern(types::Int), a(a), b(b) {}
 

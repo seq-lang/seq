@@ -278,6 +278,11 @@ types::OptionalType *types::GenericType::asOpt() {
   return type ? type->asOpt() : nullptr;
 }
 
+types::UnionType *types::GenericType::asUnion() {
+  realize();
+  return type ? type->asUnion() : nullptr;
+}
+
 types::KMer *types::GenericType::asKMer() {
   realize();
   return type ? type->asKMer() : nullptr;

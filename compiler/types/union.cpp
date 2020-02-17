@@ -138,6 +138,8 @@ size_t types::UnionType::size(Module *module) const {
       getLLVMType(module->getContext()));
 }
 
+types::UnionType *types::UnionType::asUnion() { return this; }
+
 Value *types::UnionType::make(types::Type *type, Value *val,
                               BasicBlock *block) {
   LLVMContext &context = block->getContext();

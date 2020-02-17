@@ -185,6 +185,7 @@ public:
   RefType *asRef() override;
   GenType *asGen() override;
   OptionalType *asOpt() override;
+  UnionType *asUnion() override;
   KMer *asKMer() override;
 
   static GenericType *get();

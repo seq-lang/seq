@@ -21,6 +21,7 @@ class RecordType;
 class RefType;
 class GenType;
 class OptionalType;
+class UnionType;
 class KMer;
 
 /**
@@ -329,6 +330,12 @@ public:
   /// RTTI/`dynamic_cast` so that generic types can be converted
   /// to their actual types.
   virtual OptionalType *asOpt();
+
+  /// Returns this type as a union type, or null if it isn't
+  /// a union type. This is basically for overriding C++'s
+  /// RTTI/`dynamic_cast` so that generic types can be converted
+  /// to their actual types.
+  virtual UnionType *asUnion();
 
   /// Returns this type as a k-mer type, or null if it isn't
   /// a k-mer type. This is basically for overriding C++'s
