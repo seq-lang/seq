@@ -38,6 +38,17 @@
 #define SEQ_VERSION_PATCH 5
 
 namespace seq {
+namespace config {
+struct Config {
+  llvm::LLVMContext context;
+  bool debug;
+
+  Config();
+};
+
+Config &config();
+} // namespace config
+
 namespace types {
 static AnyType *Any = AnyType::get();
 static BaseType *Base = BaseType::get();
@@ -63,7 +74,7 @@ private:
   llvm::Function *initFunc;
   llvm::Function *strlenFunc;
   llvm::Function *makeCanonicalMainFunc(llvm::Function *realMain);
-  void runCodegenPipeline(bool debug);
+  void runCodegenPipeline();
 
 public:
   SeqModule();
@@ -74,10 +85,10 @@ public:
   void resolveTypes() override;
   void codegen(llvm::Module *module) override;
   void verify();
-  void optimize(bool debug = false);
-  void compile(const std::string &out, bool debug = false);
+  void optimize();
+  void compile(const std::string &out);
   void execute(const std::vector<std::string> &args = {},
-               const std::vector<std::string> &libs = {}, bool debug = false);
+               const std::vector<std::string> &libs = {});
 };
 
 // following is largely from LLVM docs

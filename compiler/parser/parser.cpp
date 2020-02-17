@@ -41,8 +41,9 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
 
 void execute(seq::SeqModule *module, vector<string> args, vector<string> libs,
              bool debug) {
+  config::config().debug = debug;
   try {
-    module->execute(args, libs, debug);
+    module->execute(args, libs);
   } catch (exc::SeqException &e) {
     compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                      e.getSrcInfo().col);
@@ -50,8 +51,9 @@ void execute(seq::SeqModule *module, vector<string> args, vector<string> libs,
 }
 
 void compile(seq::SeqModule *module, const string &out, bool debug) {
+  config::config().debug = debug;
   try {
-    module->compile(out, debug);
+    module->compile(out);
   } catch (exc::SeqException &e) {
     compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                      e.getSrcInfo().col);

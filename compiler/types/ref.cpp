@@ -150,10 +150,37 @@ types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes,
   return Generic::deduceTypesFromArgTypes(contents->getTypes(), argTypes);
 }
 
+static void codegenNotNoneCheck(Value *self, const std::string &name,
+                                BasicBlock *block) {
+  if (config::config().debug) {
+    LLVMContext &context = block->getContext();
+    Module *module = block->getModule();
+    IRBuilder<> builder(block);
+    self = builder.CreateBitCast(self, builder.getInt8PtrTy());
+
+    GlobalVariable *strVar = new GlobalVariable(
+        *module,
+        llvm::ArrayType::get(IntegerType::getInt8Ty(context),
+                             name.length() + 1),
+        true, GlobalValue::PrivateLinkage,
+        ConstantDataArray::getString(context, name), "str_memb");
+    strVar->setAlignment(1);
+
+    Value *str =
+        builder.CreateBitCast(strVar, IntegerType::getInt8PtrTy(context));
+    Value *len = ConstantInt::get(seqIntLLVM(context), name.length());
+    Value *membVal = types::Str->make(str, len, builder.GetInsertBlock());
+    Function *ensureNotNone =
+        Func::getBuiltin("_ensure_not_none")->getFunc(module);
+    builder.CreateCall(ensureNotNone, {self, membVal});
+  }
+}
+
 Value *types::RefType::memb(Value *self, const std::string &name,
                             BasicBlock *block) {
   initFields();
   initOps();
+  codegenNotNoneCheck(self, name, block);
 
   // Defer to contained tuple, unless this is a method reference.
   if (!contents || contents->hasMethod(name) || Type::hasMethod(name))
@@ -196,6 +223,7 @@ types::Type *types::RefType::membType(const std::string &name) {
 Value *types::RefType::setMemb(Value *self, const std::string &name, Value *val,
                                BasicBlock *block) {
   initFields();
+  codegenNotNoneCheck(self, name, block);
   LLVMContext &context = block->getContext();
   IRBuilder<> builder(block);
   self = builder.CreateBitCast(self, getStructPointerType(context));
