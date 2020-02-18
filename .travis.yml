@@ -111,6 +111,7 @@ before_script:
   - export GCLIB=$(realpath gc-8.0.4/release/lib/libgc.a)
   - export CPATH=`pwd`/gc-8.0.4/release/include:${CPATH}
   - export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
+  - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
 
 script:
