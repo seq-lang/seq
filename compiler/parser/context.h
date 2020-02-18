@@ -133,7 +133,7 @@ struct ImportCache {
 class Context : public VTable<ContextItem> {
   ImportCache &cache;
   std::string filename;
-  seq::SeqModule *module;
+  seq::BaseFunc *module;
   seq::SeqJIT *jit;
   std::vector<seq::BaseFunc *> bases;
   std::vector<seq::Block *> blocks;
@@ -143,9 +143,8 @@ class Context : public VTable<ContextItem> {
   void loadStdlib();
 
 public:
-  Context(seq::SeqJIT *jit, seq::Func *fn, ImportCache &cache,
-          const std::string &filename = "");
-  Context(seq::SeqModule *module, ImportCache &cache,
+  Context(seq::BaseFunc *module, ImportCache &cache,
+          seq::SeqJIT *jit = nullptr,
           const std::string &filename = "");
   virtual ~Context() {}
   std::shared_ptr<ContextItem> find(const std::string &name,
@@ -153,7 +152,6 @@ public:
   seq::TryCatch *getTryCatch() const;
   void setTryCatch(seq::TryCatch *t);
   seq::Block *getBlock() const;
-  // seq::SeqModule *getModule() const;
   seq::BaseFunc *getBase() const;
   bool isToplevel() const;
   seq::types::Type *getType(const std::string &name) const;
@@ -176,8 +174,7 @@ public:
   ImportCache &getCache();
 
   std::shared_ptr<Context> importFile(const std::string &file);
-  std::vector<std::pair<std::string, std::shared_ptr<seq::ast::ContextItem>>>
-  top();
+  void executeJIT(const std::string &name, const std::string &code);
 };
 
 } // namespace ast

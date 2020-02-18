@@ -9,6 +9,7 @@
 #include "parser/context.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"
+#include "util/jit.h"
 
 using fmt::format;
 using std::make_pair;
@@ -22,13 +23,6 @@ using std::vector;
 
 // #if 1 || LLVM_VERSION_MAJOR == 6
 
-struct JitInstance {
-  int counter;
-  shared_ptr<seq::ast::Context> context;
-
-  JitInstance(shared_ptr<seq::ast::Context> c) : counter(0), context(c) {}
-};
-
 FOREIGN JitInstance *jit_init() {
   try {
     seq::SeqJIT::init();
@@ -36,7 +30,8 @@ FOREIGN JitInstance *jit_init() {
     fn->setName("$jit_init");
     auto jit = new seq::SeqJIT();
     auto cache = seq::ast::ImportCache{"", nullptr, {}};
-    auto context = make_shared<seq::ast::Context>(jit, fn, cache, "");
+    auto context = make_shared<seq::ast::Context>(fn, cache, jit, "");
+    jit->addFunc(fn);
     return new JitInstance(context);
   } catch (seq::exc::SeqException &e) {
     seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
@@ -48,35 +43,20 @@ FOREIGN JitInstance *jit_init() {
 FOREIGN void jit_execute(JitInstance *jit, const char *code) {
   try {
     auto file = format("$jit_{}", jit->counter);
-    auto fn = new seq::Func();
-    fn->setName(format("$jit_{}", jit->counter));
-    jit->context->addBlock(fn->getBlock(), fn);
+    jit->context->executeJIT(file, code);
     jit->counter += 1;
-
-    auto stmts = seq::ast::parse_code(file, code);
-    auto tv = seq::ast::TransformStmtVisitor::apply(move(stmts));
-    seq::ast::CodegenStmtVisitor::apply(*jit->context, tv);
-    jit->context->getJIT()->addFunc(fn);
-    auto items = jit->context->top();
-    jit->context->popBlock();
-    for (auto &i : items) {
-      if (i.second->isGlobal()) {
-        jit->context->add(i.first, i.second);
-      }
-    }
   } catch (seq::exc::SeqException &e) {
     fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line,
                e.getSrcInfo().col, e.what());
   }
 }
 
-FOREIGN char *jit_inspect(JitInstance *jit, const char *file, int line, int col) {
+FOREIGN char *jit_inspect(JitInstance *jit, const char *file, int line,
+                          int col) {
   return nullptr;
 }
 
-FOREIGN char *jit_document(JitInstance *jit, const char *id) {
-  return nullptr;
-}
+FOREIGN char *jit_document(JitInstance *jit, const char *id) { return nullptr; }
 
 FOREIGN char *jit_complete(JitInstance *jit, const char *prefix) {
   return nullptr;

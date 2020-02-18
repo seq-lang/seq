@@ -1,5 +1,6 @@
 #include "lang/seq.h"
 #include "parser/parser.h"
+#include "util/jit.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdio>
 #include <cstdlib>
@@ -20,6 +21,10 @@ static void versMsg(raw_ostream &out) {
 }
 
 int main(int argc, char **argv) {
+  // auto j = jit_init();
+  // jit_execute(j, argv[1]);
+  // exit(0);
+
   opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "
                             "print LLVM IR to stderr)"));

@@ -224,7 +224,7 @@ def round(x, n) -> float:
     n digits after the decimal point.
     """
     nx = _C.pow(10.0, float(n))
-    return _C.round(float(x * nx)) / n
+    return _C.round(float(x * nx)) / nx
 
 @builtin
 def sum(xi):

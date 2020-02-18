@@ -27,9 +27,9 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     // exit(0); // 265M
     auto module = new seq::SeqModule();
     auto cache = ast::ImportCache{string(argv0), nullptr, {}};
-    auto stdlib = make_shared<ast::Context>(module, cache, "");
+    auto stdlib = make_shared<ast::Context>(module, cache, nullptr, "");
     // exit(0); // 266M
-    auto context = make_shared<ast::Context>(module, cache, file);
+    auto context = make_shared<ast::Context>(module, cache, nullptr, file);
     ast::CodegenStmtVisitor::apply(*context, tv);
     // exit(0); // 265M
     return module;
