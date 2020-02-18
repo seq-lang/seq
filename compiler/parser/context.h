@@ -128,31 +128,32 @@ struct ImportCache {
   std::string getImportFile(const std::string &what,
                             const std::string &relativeTo,
                             bool forceStdlib = false);
-  std::shared_ptr<Context> importFile(seq::SeqModule *module,
-                                      const std::string &file);
 };
 
 class Context : public VTable<ContextItem> {
   ImportCache &cache;
   std::string filename;
   seq::SeqModule *module;
+  seq::SeqJIT *jit;
   std::vector<seq::BaseFunc *> bases;
   std::vector<seq::Block *> blocks;
   int topBlockIndex, topBaseIndex;
   seq::types::Type *enclosingType;
   seq::TryCatch *tryCatch;
-  seq::SeqJIT *jit;
+  void loadStdlib();
 
 public:
+  Context(seq::SeqJIT *jit, seq::Func *fn, ImportCache &cache,
+          const std::string &filename = "");
   Context(seq::SeqModule *module, ImportCache &cache,
-          const std::string &filename = ""); // initialize standard library
+          const std::string &filename = "");
   virtual ~Context() {}
   std::shared_ptr<ContextItem> find(const std::string &name,
                                     bool onlyLocal = false) const;
   seq::TryCatch *getTryCatch() const;
   void setTryCatch(seq::TryCatch *t);
   seq::Block *getBlock() const;
-  seq::SeqModule *getModule() const;
+  // seq::SeqModule *getModule() const;
   seq::BaseFunc *getBase() const;
   bool isToplevel() const;
   seq::types::Type *getType(const std::string &name) const;
@@ -173,6 +174,10 @@ public:
            bool global = false);
   std::string getFilename() const;
   ImportCache &getCache();
+
+  std::shared_ptr<Context> importFile(const std::string &file);
+  std::vector<std::pair<std::string, std::shared_ptr<seq::ast::ContextItem>>>
+  top();
 };
 
 } // namespace ast

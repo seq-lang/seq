@@ -251,6 +251,7 @@ static void verifyModuleFailFast(Module &module) {
     errs() << module;
     assert(0);
   }
+  errs() << module;
 }
 
 void SeqModule::verify() { verifyModuleFailFast(*module); }

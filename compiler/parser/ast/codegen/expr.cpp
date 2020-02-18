@@ -473,7 +473,7 @@ void CodegenExprVisitor::visit(const DotExpr *expr) {
   Context *c = &ctx;
   for (int i = imports.size() - 1; i >= 0; i--) {
     if (auto f = dynamic_cast<ImportContextItem *>(c->find(imports[i]).get())) {
-      c = c->getCache().importFile(c->getModule(), f->getFile()).get();
+      c = c->importFile(f->getFile()).get();
     } else {
       isImport = false;
       break;

@@ -24,55 +24,50 @@ using std::vector;
 
 struct JitInstance {
   int counter;
-  shared_ptr<seq::ast::Context> ctx;
+  shared_ptr<seq::ast::Context> context;
 
-  JitInstance(shared_ptr<seq::ast::Context> c): counter(0), ctx(c) {}
+  JitInstance(shared_ptr<seq::ast::Context> c) : counter(0), context(c) {}
 };
 
 FOREIGN JitInstance *jit_init() {
-  // try {
-  //   seq::SeqJIT::init();
-  //   auto module = new seq::SeqJIT();
-  //   auto fn = new seq::Func("<anon_init>");
-  //   auto cache = ast::ImportCache{string(argv0), nullptr, {}};
-  //   auto stdlib = make_shared<ast::Context>(module, cache);
-  //   auto context = make_shared<ast::Context>(module, cache, file);
-  //   jit->addFunc(fn);
-  //   fflush(stdout);
-  //   return new JitInstance(context);
-  // } catch (seq::exc::SeqException &e) {
-  //   seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-  //                         e.getSrcInfo().col);
+  try {
+    seq::SeqJIT::init();
+    auto fn = new seq::Func();
+    fn->setName("<anon_init>");
+    auto jit = new seq::SeqJIT();
+    auto cache = seq::ast::ImportCache{"", nullptr, {}};
+    auto context = make_shared<seq::ast::Context>(jit, fn, cache, "");
+    return new JitInstance(context);
+  } catch (seq::exc::SeqException &e) {
+    seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
+                          e.getSrcInfo().col);
     return nullptr;
-  // }
+  }
 }
 
 FOREIGN void jit_execute(JitInstance *jit, const char *code) {
-  // try {
-  //   auto file = format("<jit_{}>", ctx->counter);
-  //   auto fn = new seq::Func(format("<jit_{}>", ctx->counter));
-  //   ctx->context->addBlock(fn->getBlock(), fn);
-  //   ctx->counter += 1;
+  try {
+    auto file = format("<jit_{}>", jit->counter);
+    auto fn = new seq::Func();
+    fn->setName(format("<jit_{}>", jit->counter));
+    jit->context->addBlock(fn->getBlock(), fn);
+    jit->counter += 1;
 
-  //   auto stmts = ast::parse_code("", file);
-  //   auto tv = ast::TransformStmtVisitor::apply(move(stmts));
-  //   ast::CodegenStmtVisitor::apply(*context, tv);
-  //   jit->addFunc(fn);
-  //   vector<pair<string, shared_ptr<ContextItem>>> items;
-  //   for (auto &i: ctx->context->top()) {
-  //     if (i->second->isGlobal() && i->second->isInternal()) {
-  //       items.push_back(i);
-  //     }
-  //   }
-  //   ctx->context->popBlock();
-  //   for (auto &i: items) {
-  //     ctx->context->add(i.first, i.second);
-  //   }
-  // } catch (seq::exc::SeqException &e) {
-  //   seq::compilationMessage("\033[1;31merror:\033[0m",
-  //     e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-  //     e.getSrcInfo().col);
-  // }
+    auto stmts = seq::ast::parse_code("", file);
+    auto tv = seq::ast::TransformStmtVisitor::apply(move(stmts));
+    seq::ast::CodegenStmtVisitor::apply(*jit->context, tv);
+    jit->context->getJIT()->addFunc(fn);
+    auto items = jit->context->top();
+    jit->context->popBlock();
+    for (auto &i : items) {
+      if (i.second->isGlobal()) {
+        jit->context->add(i.first, i.second);
+      }
+    }
+  } catch (seq::exc::SeqException &e) {
+    fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line,
+               e.getSrcInfo().col, e.what());
+  }
 }
 
 FOREIGN char *jit_inspect(JitInstance *jit, const char *file, int line, int col) {

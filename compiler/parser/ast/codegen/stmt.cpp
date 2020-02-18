@@ -304,7 +304,7 @@ void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
   if (file == "") {
     ERROR("cannot locate import '{}'", stmt->from.first);
   }
-  auto table = ctx.getCache().importFile(ctx.getModule(), file);
+  auto table = ctx.importFile(file);
   if (!stmt->what.size()) {
     ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
             file);
