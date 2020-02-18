@@ -246,7 +246,7 @@ class list[T]:
     def append(self: list[T], x: T):
         self._resize_if_full()
         self.arr[self.len] = x
-        self.len = 1
+        self.len += 1
 
     def ext(self: list[T], itr):
         # TODO: can't use "extend" here since it is a keyword!
