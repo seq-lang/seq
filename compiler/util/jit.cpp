@@ -33,7 +33,7 @@ FOREIGN JitInstance *jit_init() {
   try {
     seq::SeqJIT::init();
     auto fn = new seq::Func();
-    fn->setName("<anon_init>");
+    fn->setName("$jit_init");
     auto jit = new seq::SeqJIT();
     auto cache = seq::ast::ImportCache{"", nullptr, {}};
     auto context = make_shared<seq::ast::Context>(jit, fn, cache, "");
@@ -47,13 +47,13 @@ FOREIGN JitInstance *jit_init() {
 
 FOREIGN void jit_execute(JitInstance *jit, const char *code) {
   try {
-    auto file = format("<jit_{}>", jit->counter);
+    auto file = format("$jit_{}", jit->counter);
     auto fn = new seq::Func();
-    fn->setName(format("<jit_{}>", jit->counter));
+    fn->setName(format("$jit_{}", jit->counter));
     jit->context->addBlock(fn->getBlock(), fn);
     jit->counter += 1;
 
-    auto stmts = seq::ast::parse_code("", file);
+    auto stmts = seq::ast::parse_code(file, code);
     auto tv = seq::ast::TransformStmtVisitor::apply(move(stmts));
     seq::ast::CodegenStmtVisitor::apply(*jit->context, tv);
     jit->context->getJIT()->addFunc(fn);

@@ -105,9 +105,9 @@ void Context::loadStdlib() {
   cache.stdlib = this;
 
   // DBG("loading stdlib from {}...", this->filename);
-  auto stmts = parse_file(this->filename);
-  auto tv = TransformStmtVisitor::apply(move(stmts));
-  CodegenStmtVisitor::apply(*this, tv);
+  // auto stmts = parse_file(this->filename);
+  // auto tv = TransformStmtVisitor::apply(move(stmts));
+  // CodegenStmtVisitor::apply(*this, tv);
 }
 
 shared_ptr<ContextItem> Context::find(const string &name,
