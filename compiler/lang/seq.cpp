@@ -1,4 +1,5 @@
 #include "lang/seq.h"
+#include "parser/common.h"
 #include <cassert>
 #include <iostream>
 #include <memory>
@@ -610,6 +611,7 @@ void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
   }
 
   verifyModuleFailFast(*module);
+  errs()<<*module<<"===================\n";
   addModule(std::move(module));
   auto sym = findSymbol(func->genericName());
   void (*fn)() = (void (*)())cantFail(sym.getAddress());

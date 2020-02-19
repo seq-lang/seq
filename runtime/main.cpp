@@ -21,9 +21,9 @@ static void versMsg(raw_ostream &out) {
 }
 
 int main(int argc, char **argv) {
-  // auto j = jit_init();
-  // jit_execute(j, argv[1]);
-  // exit(0);
+  auto j = jit_init();
+  jit_execute(j, argv[1]);
+  exit(0);
 
   opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "

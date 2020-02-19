@@ -1,28 +1,65 @@
-from core.aliases import *
-import core.c_stubs as _C
-import core.gc as _gc
+extend str:
+    def __str__(self: str):
+        return self
+    def __add__(self: str, other: str):
+        len1 = self.len
+        len2 = other.len
+        len3 = len1 + len2
+        p = ptr[byte](len3)
+        str.memcpy(p, self.ptr, len1)
+        str.memcpy(p + len1, other.ptr, len2)
+        return str(p, len3)
 
-from core.slice import *
-from core.err import *
-from core.optional import unwrap as _unwrap
-from core.range import range
-from core.box import Box
+class list[T]:
+    arr: array[T]
+    len: int
 
-from core.builtin import *
+    def __init__(self: list[T]):
+        self.arr = array[T](50)
+        self.len = 0
 
-from core.collections.list import list
-from core.collections.set import set
-from core.collections.dict import dict
+    def __str__(self: list[T]) -> str:
+        n = self.len
+        if n == 0: return "[]"
+        else:
+            y = "["
+            i=0
+            while i < n:
+                y+=str(self.arr[i])
+                y+=", "
+                i+=1
+            return y+"]"
 
-from core.str import *
-from core.int import *
-from core.float import *
+    def append(self: list[T], x: T):
+        self.arr[self.len] = x
+        self.len += 1
 
-from core.sort import sorted
 
-from core.file import File, gzFile, open, gzopen
-from pickle import pickle, unpickle
+# from core.aliases import *
+# import core.c_stubs as _C
+# import core.gc as _gc
 
-from core.dlopen import dlsym as _dlsym
-from core.python import init as _py_init, imp as _py_import, exec as _py_exec
-from bio import *
+# from core.slice import *
+# from core.err import *
+# from core.optional import unwrap as _unwrap
+# from core.range import range
+# from core.box import Box
+
+# from core.builtin import *
+
+# from core.collections.list import list
+# # from core.collections.set import set
+# # from core.collections.dict import dict
+
+# from core.str import *
+# from core.int import *
+# from core.float import *
+
+# # from core.sort import sorted
+
+# # from core.file import File, gzFile, open, gzopen
+# # from pickle import pickle, unpickle
+
+# # from core.dlopen import dlsym as _dlsym
+# # from core.python import init as _py_init, imp as _py_import, exec as _py_exec
+# # from bio import *
