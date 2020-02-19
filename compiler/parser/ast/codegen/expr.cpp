@@ -217,7 +217,16 @@ void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
   auto oldCaptures = this->captures;
   vector<seq::Var *> captures;
   this->captures = &captures;
+
+  auto oldTryCatch = ctx.getTryCatch();
+  if (expr->kind == GeneratorExpr::Generator) {
+    ctx.setTryCatch(nullptr);
+  }
   auto topFor = parseComprehension(expr, expr->loops, added);
+  if (expr->kind == GeneratorExpr::Generator) {
+    ctx.setTryCatch(oldTryCatch);
+  }
+
   auto e = transform(expr->expr);
   if (expr->kind == GeneratorExpr::ListGenerator) {
     this->result = new seq::ListCompExpr(
@@ -464,7 +473,7 @@ void CodegenExprVisitor::visit(const DotExpr *expr) {
   Context *c = &ctx;
   for (int i = imports.size() - 1; i >= 0; i--) {
     if (auto f = dynamic_cast<ImportContextItem *>(c->find(imports[i]).get())) {
-      c = c->getCache().importFile(c->getModule(), f->getFile()).get();
+      c = c->importFile(f->getFile()).get();
     } else {
       isImport = false;
       break;

@@ -56,37 +56,49 @@ seq::Expr *ImportContextItem::getExpr() const {
   return nullptr;
 }
 
-Context::Context(seq::SeqModule *module, ImportCache &cache,
-                 const string &filename)
-    : cache(cache), filename(filename), module(module), enclosingType(nullptr),
-      tryCatch(nullptr) {
+Context::Context(seq::BaseFunc *module, ImportCache &cache, seq::SeqJIT *jit,
+                 const std::string &filename)
+    : cache(cache), filename(filename), module(module), jit(jit),
+      enclosingType(nullptr), tryCatch(nullptr) {
   stack.push(vector<string>());
   bases.push_back(module);
-  blocks.push_back(module->getBlock());
-  topBaseIndex = topBlockIndex = 0;
-  module->setFileName(filename);
-  if (this->filename == "") {
-    this->filename = cache.getImportFile("core", "", true);
-    if (this->filename == "") {
-      throw seq::exc::SeqException("cannot load standard library");
-    }
-    module->setFileName(this->filename);
-    vector<pair<string, seq::types::Type *>> pods = {
-        {"void", seq::types::Void},   {"bool", seq::types::Bool},
-        {"byte", seq::types::Byte},   {"int", seq::types::Int},
-        {"float", seq::types::Float}, {"str", seq::types::Str},
-        {"seq", seq::types::Seq}};
-    for (auto &i : pods) {
-      add(i.first, i.second);
-    }
-    add("__argv__", module->getArgVar());
-    cache.stdlib = this;
-
-    // DBG("loading stdlib from {}...", this->filename);
-    auto stmts = parse_file(this->filename);
-    auto tv = TransformStmtVisitor::apply(move(stmts));
-    CodegenStmtVisitor::apply(*this, tv);
+  if (jit) {
+    blocks.push_back(((seq::Func *)module)->getBlock());
+  } else {
+    blocks.push_back(((seq::SeqModule *)module)->getBlock());
   }
+  topBaseIndex = topBlockIndex = 0;
+  if (!jit) {
+    ((seq::SeqModule *)module)->setFileName(filename);
+  }
+  if (this->filename == "") {
+    loadStdlib();
+  }
+}
+
+void Context::loadStdlib() {
+  this->filename = cache.getImportFile("core", "", true);
+  if (this->filename == "") {
+    throw seq::exc::SeqException("cannot load standard library");
+  }
+  if (!jit) {
+    ((seq::SeqModule *)module)->setFileName(this->filename);
+  }
+  vector<pair<string, seq::types::Type *>> pods = {
+      {"void", seq::types::Void},   {"bool", seq::types::Bool},
+      {"byte", seq::types::Byte},   {"int", seq::types::Int},
+      {"float", seq::types::Float}, {"str", seq::types::Str},
+      {"seq", seq::types::Seq}};
+  for (auto &i : pods) {
+    add(i.first, i.second);
+  }
+  if (!jit) {
+    add("__argv__", ((seq::SeqModule *)module)->getArgVar());
+  }
+  cache.stdlib = this;
+  auto stmts = parse_file(this->filename);
+  auto tv = TransformStmtVisitor::apply(move(stmts));
+  CodegenStmtVisitor::apply(*this, tv);
 }
 
 shared_ptr<ContextItem> Context::find(const string &name,
@@ -108,7 +120,6 @@ shared_ptr<ContextItem> Context::find(const string &name,
 }
 
 seq::BaseFunc *Context::getBase() const { return bases[topBaseIndex]; }
-seq::SeqModule *Context::getModule() const { return module; }
 seq::types::Type *Context::getType(const string &name) const {
   if (auto i = find(name)) {
     if (auto t = dynamic_cast<TypeContextItem *>(i.get())) {
@@ -192,18 +203,20 @@ string ImportCache::getImportFile(const string &what, const string &relativeTo,
     paths.push_back(format("{}/{}.seq", parent, what));
     paths.push_back(format("{}/{}/__init__.seq", parent, what));
   }
-  strncpy(abs, executable_path(argv0.c_str()).c_str(), PATH_MAX);
-  auto parent = format("{}/../stdlib", dirname(abs));
-  realpath(parent.c_str(), abs);
-  paths.push_back(format("{}/{}.seq", abs, what));
-  paths.push_back(format("{}/{}/__init__.seq", abs, what));
+  if (argv0 != "") {
+    strncpy(abs, executable_path(argv0.c_str()).c_str(), PATH_MAX);
+    auto parent = format("{}/../stdlib", dirname(abs));
+    realpath(parent.c_str(), abs);
+    paths.push_back(format("{}/{}.seq", abs, what));
+    paths.push_back(format("{}/{}/__init__.seq", abs, what));
+  }
   if (auto c = getenv("SEQ_PATH")) {
     char abs[PATH_MAX];
     realpath(c, abs);
-    auto parent = dirname(abs);
-    paths.push_back(format("{}/{}.seq", parent, what));
-    paths.push_back(format("{}/{}/__init__.seq", parent, what));
+    paths.push_back(format("{}/{}.seq", abs, what));
+    paths.push_back(format("{}/{}/__init__.seq", abs, what));
   }
+  // for (auto &x: paths) DBG("-- {}", x);
   for (auto &p : paths) {
     struct stat buffer;
     if (!stat(p.c_str(), &buffer)) {
@@ -213,22 +226,52 @@ string ImportCache::getImportFile(const string &what, const string &relativeTo,
   return "";
 }
 
-shared_ptr<Context> ImportCache::importFile(seq::SeqModule *module,
-                                            const string &file) {
-  auto i = imports.find(file);
-  if (i != imports.end()) {
+shared_ptr<Context> Context::importFile(const string &file) {
+  auto i = cache.imports.find(file);
+  if (i != cache.imports.end()) {
     return i->second;
   } else {
-    // DBG("loading {}", file);
     auto stmts = parse_file(file);
     auto tv = TransformStmtVisitor::apply(move(stmts));
-    auto context = make_shared<Context>(module, *this, file);
+    auto context = make_shared<Context>(module, cache, jit, file);
     CodegenStmtVisitor::apply(*context, tv);
-    return (imports[file] = context);
+    return (cache.imports[file] = context);
   }
 }
 
 ImportCache &Context::getCache() { return cache; }
+
+seq::SeqJIT *Context::getJIT() { return jit; }
+
+void Context::executeJIT(const string &name, const string &code) {
+  assert(jit != nullptr);
+
+  auto fn = new seq::Func();
+  fn->setName(name);
+
+  auto oldModule = module;
+  module = fn;
+  addBlock(fn->getBlock(), fn);
+
+  auto tv =
+      seq::ast::TransformStmtVisitor::apply(seq::ast::parse_code(name, code));
+  seq::ast::CodegenStmtVisitor::apply(*this, tv);
+
+  jit->addFunc(fn);
+  vector<pair<string, shared_ptr<seq::ast::ContextItem>>> items;
+  for (auto &name : stack.top()) {
+    auto i = find(name);
+    if (i && i->isGlobal()) {
+      items.push_back(make_pair(name, i));
+    }
+  }
+  popBlock();
+  for (auto &i : items) {
+    add(i.first, i.second);
+  }
+
+  module = oldModule;
+}
 
 } // namespace ast
 } // namespace seq

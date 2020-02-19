@@ -1,39 +1,63 @@
-#include <caml/alloc.h>
-#include <caml/callback.h>
-#include <caml/mlvalues.h>
-#include <stdio.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "lang/seq.h"
+#include "parser/ast/codegen/stmt.h"
+#include "parser/ast/format/stmt.h"
+#include "parser/ast/transform/stmt.h"
+#include "parser/context.h"
+#include "parser/ocaml.h"
+#include "parser/parser.h"
+#include "util/jit.h"
+
+using fmt::format;
+using std::make_pair;
+using std::make_shared;
+using std::pair;
+using std::shared_ptr;
+using std::string;
+using std::vector;
 
 #define FOREIGN extern "C"
 
-value *caml_jit_init_f() {
-  static value *closure_f = nullptr;
-  if (!closure_f) {
-    closure_f = caml_named_value("jit_init_c");
+// #if 1 || LLVM_VERSION_MAJOR == 6
+
+FOREIGN JitInstance *jit_init() {
+  try {
+    seq::SeqJIT::init();
+    auto fn = new seq::Func();
+    fn->setName("$jit_init");
+    auto jit = new seq::SeqJIT();
+    auto cache = seq::ast::ImportCache{"", nullptr, {}};
+    auto context = make_shared<seq::ast::Context>(fn, cache, jit, "");
+    jit->addFunc(fn);
+    return new JitInstance(context);
+  } catch (seq::exc::SeqException &e) {
+    seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
+                          e.getSrcInfo().col);
+    return nullptr;
   }
-  return closure_f;
 }
 
-value *caml_jit_exec_f() {
-  static value *closure_f = nullptr;
-  if (!closure_f) {
-    closure_f = caml_named_value("jit_exec_c");
+FOREIGN void jit_execute(JitInstance *jit, const char *code) {
+  try {
+    auto file = format("$jit_{}", jit->counter);
+    jit->context->executeJIT(file, code);
+    jit->counter += 1;
+  } catch (seq::exc::SeqException &e) {
+    fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line,
+               e.getSrcInfo().col, e.what());
   }
-  return closure_f;
 }
 
-FOREIGN void *caml_jit_init() {
-  static char *caml_argv[] = {(char *)"main.so", (char *)"--parse", nullptr};
-  caml_startup(caml_argv);
-
-  value *closure_f = caml_jit_init_f();
-  void *res = (void *)Nativeint_val(caml_callback(*closure_f, Val_unit));
-  // fprintf(stderr, "[link] got %llx\n", res);
-  return res;
+FOREIGN char *jit_inspect(JitInstance *jit, const char *file, int line,
+                          int col) {
+  return nullptr;
 }
 
-FOREIGN void caml_jit_exec(void *handle, const char *code) {
-  value *closure_f = caml_jit_exec_f();
-  // fprintf(stderr, "[link] ex.got %llx\n", handle);
-  caml_callback2(*closure_f, caml_copy_nativeint((unsigned long)handle),
-                 caml_copy_string(code));
+FOREIGN char *jit_document(JitInstance *jit, const char *id) { return nullptr; }
+
+FOREIGN char *jit_complete(JitInstance *jit, const char *prefix) {
+  return nullptr;
 }

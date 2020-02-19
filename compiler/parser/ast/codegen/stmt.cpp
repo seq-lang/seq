@@ -113,7 +113,6 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
       return (seq::AtomicExpr::Op)0;
     }
   };
-  // TODO: JIT
   /* Currently, a var can shadow a function or a type, but not another var. */
   if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
     auto var = i->value;
@@ -159,14 +158,20 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
       }
     } else if (!stmt->mustExist) {
       // New variable
-      auto varStmt =
-          new seq::VarStmt(transform(stmt->rhs),
-                           stmt->type ? transformType(stmt->type) : nullptr);
-      if (ctx.isToplevel()) {
-        varStmt->getVar()->setGlobal();
+      if (ctx.getJIT() && ctx.isToplevel()) {
+        // DBG("adding jit var {}", var);
+        auto rhs = transform(stmt->rhs);
+        ctx.add(var, ctx.getJIT()->addVar(rhs));
+      } else {
+        auto varStmt =
+            new seq::VarStmt(transform(stmt->rhs),
+                             stmt->type ? transformType(stmt->type) : nullptr);
+        if (ctx.isToplevel()) {
+          varStmt->getVar()->setGlobal();
+        }
+        ctx.add(var, varStmt->getVar());
+        this->result = varStmt;
       }
-      ctx.add(var, varStmt->getVar());
-      this->result = varStmt;
       return;
     }
   } else if (auto i = dynamic_cast<DotExpr *>(stmt->lhs.get())) {
@@ -197,7 +202,7 @@ void CodegenStmtVisitor::visit(const DelStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const PrintStmt *stmt) {
-  RETURN(seq::Print, transform(stmt->expr));
+  RETURN(seq::Print, transform(stmt->expr), ctx.getJIT() != nullptr);
 }
 
 void CodegenStmtVisitor::visit(const ReturnStmt *stmt) {
@@ -301,7 +306,7 @@ void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
   if (file == "") {
     ERROR("cannot locate import '{}'", stmt->from.first);
   }
-  auto table = ctx.getCache().importFile(ctx.getModule(), file);
+  auto table = ctx.importFile(file);
   if (!stmt->what.size()) {
     ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
             file);
@@ -348,7 +353,14 @@ void CodegenStmtVisitor::visit(const ExternImportStmt *stmt) {
     ERROR("C imports need a return type");
   }
   f->setOut(transformType(stmt->ret));
-  RETURN(seq::FuncStmt, f);
+  if (ctx.getJIT() && ctx.isToplevel() && !ctx.getEnclosingType()) {
+    // DBG("adding jit fn {}", stmt->name.first);
+    auto fs = new seq::FuncStmt(f);
+    fs->setSrcInfo(stmt->getSrcInfo());
+    fs->setBase(ctx.getBase());
+  } else {
+    RETURN(seq::FuncStmt, f);
+  }
 }
 
 void CodegenStmtVisitor::visit(const TryStmt *stmt) {
@@ -477,7 +489,14 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   transform(stmt->suite);
   ctx.setEnclosingType(oldEnclosing);
   ctx.popBlock();
-  RETURN(seq::FuncStmt, f);
+  if (ctx.getJIT() && ctx.isToplevel() && !ctx.getEnclosingType()) {
+    // DBG("adding jit fn {}", stmt->name);
+    auto fs = new seq::FuncStmt(f);
+    fs->setSrcInfo(stmt->getSrcInfo());
+    fs->setBase(ctx.getBase());
+  } else {
+    RETURN(seq::FuncStmt, f);
+  }
 }
 
 void CodegenStmtVisitor::visit(const ClassStmt *stmt) {

@@ -10,8 +10,10 @@ extend str:
     def __hash__(self: str):
         h = 0
         p, n = self.ptr, self.len
-        for i in range(n):
+        i = 0
+        while i < n:
             h = 31*h + int(p[i])
+            i += 1
         return h
 
     def __eq__(self: str, other: str):

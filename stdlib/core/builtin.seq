@@ -224,7 +224,7 @@ def round(x, n) -> float:
     n digits after the decimal point.
     """
     nx = _C.pow(10.0, float(n))
-    return _C.round(float(x * nx)) / n
+    return _C.round(float(x * nx)) / nx
 
 @builtin
 def sum(xi):
@@ -258,3 +258,8 @@ def _tuple_fix_index(idx: int, len: int) -> int:
     if idx < 0 or idx >= len:
         raise IndexError("tuple index out of range")
     return idx
+
+@builtin
+def _ensure_not_none(p: ptr[byte], memb: str):
+    if not p:
+        raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
