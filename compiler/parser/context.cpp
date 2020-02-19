@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/codegen/stmt.h"
-#include "parser/ast/format/stmt.h"
-#include "parser/ast/transform/stmt.h"
+#include "parser/ast/codegen.h"
+#include "parser/ast/format.h"
+#include "parser/ast/transform.h"
 #include "parser/common.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
@@ -96,9 +96,8 @@ void Context::loadStdlib() {
     add("__argv__", ((seq::SeqModule *)module)->getArgVar());
   }
   cache.stdlib = this;
-  auto stmts = parse_file(this->filename);
-  auto tv = TransformStmtVisitor::apply(move(stmts));
-  CodegenStmtVisitor::apply(*this, tv);
+  auto tv = TransformStmtVisitor().transform(parse_file(this->filename));
+  CodegenStmtVisitor(*this).transform(tv);
 }
 
 shared_ptr<ContextItem> Context::find(const string &name,
@@ -232,9 +231,9 @@ shared_ptr<Context> Context::importFile(const string &file) {
     return i->second;
   } else {
     auto stmts = parse_file(file);
-    auto tv = TransformStmtVisitor::apply(move(stmts));
+    auto tv = TransformStmtVisitor().transform(parse_file(file));
     auto context = make_shared<Context>(module, cache, jit, file);
-    CodegenStmtVisitor::apply(*context, tv);
+    CodegenStmtVisitor(*context).transform(tv);
     return (cache.imports[file] = context);
   }
 }
@@ -254,8 +253,8 @@ void Context::executeJIT(const string &name, const string &code) {
   addBlock(fn->getBlock(), fn);
 
   auto tv =
-      seq::ast::TransformStmtVisitor::apply(seq::ast::parse_code(name, code));
-  seq::ast::CodegenStmtVisitor::apply(*this, tv);
+      seq::ast::TransformStmtVisitor().transform(seq::ast::parse_code(name, code));
+  seq::ast::CodegenStmtVisitor(*this).transform(tv);
 
   jit->addFunc(fn);
   vector<pair<string, shared_ptr<seq::ast::ContextItem>>> items;

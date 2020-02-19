@@ -3,9 +3,9 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/codegen/stmt.h"
-#include "parser/ast/format/stmt.h"
-#include "parser/ast/transform/stmt.h"
+#include "parser/ast/codegen.h"
+#include "parser/ast/format.h"
+#include "parser/ast/transform.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"

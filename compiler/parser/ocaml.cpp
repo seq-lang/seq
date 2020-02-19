@@ -15,8 +15,7 @@
 #include <caml/mlvalues.h>
 
 #include "lang/seq.h"
-#include "parser/ast/expr.h"
-#include "parser/ast/stmt.h"
+#include "parser/ast/ast.h"
 #include "parser/common.h"
 
 using namespace std;

@@ -5,8 +5,7 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/expr.h"
-#include "parser/ast/stmt.h"
+#include "parser/ast/ast.h"
 
 namespace seq {
 namespace ast {
