@@ -56,21 +56,20 @@ seq::Expr *ImportContextItem::getExpr() const {
   return nullptr;
 }
 
-Context::Context(seq::BaseFunc *module, ImportCache &cache,
-          seq::SeqJIT *jit,
-          const std::string &filename)
+Context::Context(seq::BaseFunc *module, ImportCache &cache, seq::SeqJIT *jit,
+                 const std::string &filename)
     : cache(cache), filename(filename), module(module), jit(jit),
       enclosingType(nullptr), tryCatch(nullptr) {
   stack.push(vector<string>());
   bases.push_back(module);
   if (jit) {
-    blocks.push_back(((seq::Func*)module)->getBlock());
+    blocks.push_back(((seq::Func *)module)->getBlock());
   } else {
-    blocks.push_back(((seq::SeqModule*)module)->getBlock());
+    blocks.push_back(((seq::SeqModule *)module)->getBlock());
   }
   topBaseIndex = topBlockIndex = 0;
   if (!jit) {
-    ((seq::SeqModule*)module)->setFileName(filename);
+    ((seq::SeqModule *)module)->setFileName(filename);
   }
   if (this->filename == "") {
     loadStdlib();
@@ -83,7 +82,7 @@ void Context::loadStdlib() {
     throw seq::exc::SeqException("cannot load standard library");
   }
   if (!jit) {
-    ((seq::SeqModule*)module)->setFileName(this->filename);
+    ((seq::SeqModule *)module)->setFileName(this->filename);
   }
   vector<pair<string, seq::types::Type *>> pods = {
       {"void", seq::types::Void},   {"bool", seq::types::Bool},
@@ -94,7 +93,7 @@ void Context::loadStdlib() {
     add(i.first, i.second);
   }
   if (!jit) {
-    add("__argv__", ((seq::SeqModule*)module)->getArgVar());
+    add("__argv__", ((seq::SeqModule *)module)->getArgVar());
   }
   cache.stdlib = this;
   auto stmts = parse_file(this->filename);
@@ -244,9 +243,8 @@ ImportCache &Context::getCache() { return cache; }
 
 seq::SeqJIT *Context::getJIT() { return jit; }
 
-void Context::executeJIT(const string &name, const string &code)
-{
-  assert (jit != nullptr);
+void Context::executeJIT(const string &name, const string &code) {
+  assert(jit != nullptr);
 
   auto fn = new seq::Func();
   fn->setName(name);

@@ -143,8 +143,7 @@ class Context : public VTable<ContextItem> {
   void loadStdlib();
 
 public:
-  Context(seq::BaseFunc *module, ImportCache &cache,
-          seq::SeqJIT *jit = nullptr,
+  Context(seq::BaseFunc *module, ImportCache &cache, seq::SeqJIT *jit = nullptr,
           const std::string &filename = "");
   virtual ~Context() {}
   std::shared_ptr<ContextItem> find(const std::string &name,

@@ -165,7 +165,7 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
       } else {
         auto varStmt =
             new seq::VarStmt(transform(stmt->rhs),
-                              stmt->type ? transformType(stmt->type) : nullptr);
+                             stmt->type ? transformType(stmt->type) : nullptr);
         if (ctx.isToplevel()) {
           varStmt->getVar()->setGlobal();
         }
