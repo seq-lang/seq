@@ -1,0 +1,98 @@
+
+# TODO/ CAVEATS:
+# @jordan - crc32() needs to be implemented
+# def crc32(seq):
+#     """
+#     crc32(seq)
+
+#     Return the crc32 checksum for a sequence (string or Seq object).
+#     """
+#     return _crc32(seq)
+
+def _init_table_h() -> list[int]:
+    _table_h = list[int]()
+    for i in range(256):
+        part_l = i
+        part_h = 0
+        for j in range(8):
+            rflag = part_l & 1
+            part_l >>= 1
+            if part_h & 1:
+                part_l |= 1 << 31
+            part_h >>= 1
+            if rflag:
+                part_h ^= 0xD8000000
+        _table_h.append(part_h)
+    return _table_h
+
+#Initialisation
+_table_h = _init_table_h()
+
+def crc64(s) -> str:
+    """
+    crc64(s)
+
+    Return the crc64 checksum for a sequence (string or Seq object).
+    
+    TODO/CAVEATS:
+    @jordan - return formatting crch and crcl as hex
+    """
+    crcl = 0
+    crch = 0
+    for c in s:
+        shr = (crch & 0xFF) << 24
+        temp1h = crch >> 8
+        temp1l = (crcl >> 8) | shr
+        idx = (crcl ^ ord(c)) & 0xFF
+        crch = temp1h ^ _table_h[idx]
+        crcl = temp1l
+
+    # need it in 08X return f"CRC-{crch}{crcl}" 
+    return f"CRC-{crch}{crcl}"
+    #"CRC-%08X%08X" % (crch, crcl)
+
+def gcg(s) -> int:
+    """
+    gcg(s)
+
+    Given a nucleotide or amino-acid secuence (or any string),
+    returns the GCG checksum (int). Checksum used by GCG program.
+    seq type = str.
+    """
+
+    index = checksum = 0
+
+    for char in s:
+        index += 1
+        checksum += index * ord(char.upper())
+        if index == 57:
+            index = 0
+    return checksum % 10000
+
+# TODO/CAVEATS:
+# @jordan - This still needs to be implemented
+#hashlib and base64??
+# def seguid(s) -> str:
+#     """
+#     seguid(seq: seq)
+
+#     Return the SEGUID (string) for a sequence (string or Seq object).
+    
+#     Given a nucleotide or amino-acid secuence (or any string),
+#     returns the SEGUID string (A SEquence Globally Unique IDentifier).
+#     seq type = str.
+#     """
+#     import hashlib
+#     import base64
+
+#     m = hashlib.sha1()
+#     m.update(_as_bytes(s.upper()))
+#     try:
+#         # For Python 3+
+#         tmp = base64.encodebytes(m.digest())
+#         return tmp.decode().replace("\n", "").rstrip("=")
+#     except AttributeError:
+#         pass
+#     # For all other Pythons
+#     return base64.b64encode(m.digest()).rstrip("=")
+

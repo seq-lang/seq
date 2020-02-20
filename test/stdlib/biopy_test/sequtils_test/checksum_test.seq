@@ -1,0 +1,23 @@
+from biopy.sequtils.checksum import crc64, gcg
+
+str_light_chain_one =  ("QSALTQPASVSGSPGQSITISCTGTSSDVGSYNLVSWYQQ"
+                        "HPGKAPKLMIYEGSKRPSGVSNRFSGSKSGNTASLTISGL"
+                        "QAEDEADYYCSSYAGSSTLVFGGGTKLTVL")
+
+str_light_chain_two =  ("QSALTQPASVSGSPGQSITISCTGTSSDVGSYNLVSWYQQ"
+                        "HPGKAPKLMIYEGSKRPSGVSNRFSGSKSGNTASLTISGL"
+                        "QAEDEADYYCCSYAGSSTWVFGGGTKLTVL")
+
+@test
+def test_checksum():
+    num1 = crc64(str_light_chain_one)
+    num2 = crc64(str_light_chain_two)
+    assert num1 == num2
+test_checksum()
+
+@test
+def test_gcg():
+    num1 = gcg(str_light_chain_one)
+    num2 = gcg(str_light_chain_two)
+    assert num1 != num2
+test_gcg()
