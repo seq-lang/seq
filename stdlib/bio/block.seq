@@ -14,6 +14,11 @@ class Block[T]:
             yield data[i]
             i += 1
 
+    def __getitem__(self: Block[T], idx: int):
+        if not (0 <= idx < len(self)):
+            raise ValueError("block index out of range")
+        return self._data[idx]
+
     def __len__(self: Block[T]):
         return self._size
 
