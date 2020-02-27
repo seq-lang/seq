@@ -15,28 +15,15 @@ ERR_THRESH  = 2
 NUM_SAMPLES = ERR_THRESH + 1
 SEQ_LENGTH  = NUM_SAMPLES * K.len()
 
-type Pair(_hv: i32, _pos: i32, _chsum: u64):
-    def __init__(self: Pair, hv: int, chsum: int, pos: int) -> Pair:
-        return (i32(hv), i32(pos), u64(chsum))
-
-    def key(self: Pair) -> tuple[int,int]:
-        return (self.hv, self.chsum)
-
-    @property
-    def hv(self: Pair):
-        return int(self._hv)
-
-    @property
-    def chsum(self: Pair):
-        return int(self._chsum)
-
-    @property
-    def pos(self: Pair):
-        return int(self._pos)
-
-type GeneralIndex(_chsum: u64, _info: u32):
+type GeneralIndex(_chsum: u64, _info: u32, _hv: i32):
     def __init__(self: GeneralIndex, chsum: int, info: int) -> GeneralIndex:
-        return (u64(chsum), u32(info))
+        return (u64(chsum), u32(info), i32(0))
+
+    def __init__(self: GeneralIndex, hv: int, chsum: int, pos: int) -> GeneralIndex:
+        return (u64(chsum), u32(pos), i32(hv))
+
+    def pair_key(self: GeneralIndex) -> tuple[int,int]:
+        return (self.hv, self.chsum)
 
     @property
     def chsum(self: GeneralIndex):
@@ -46,7 +33,15 @@ type GeneralIndex(_chsum: u64, _info: u32):
     def info(self: GeneralIndex):
         return int(self._info)
 
-    # returns (read index, kmer index, direction)
+    @property
+    def pos(self: GeneralIndex):
+        return int(self._info)
+
+    @property
+    def hv(self: GeneralIndex):
+        return int(self._hv)
+
+    # returns (read index, k-mer index, direction)
     def decode_read_info(self: GeneralIndex):
         ridx = self.info // (2 * NUM_SAMPLES)
         rem = self.info % (2 * NUM_SAMPLES)
@@ -54,9 +49,28 @@ type GeneralIndex(_chsum: u64, _info: u32):
         didx = True if rem // NUM_SAMPLES else False
         return (ridx, kidx, didx)
 
-type ReadIndexTab(hv: int, glist: list[GeneralIndex])
+type ReadIndexTab(_hv: i32, _a: i32, _b: i32):
+    def __init__(self: ReadIndexTab) -> ReadIndexTab:
+        return (i32(0), i32(0), i32(0))
 
-type ReadIndex(rlist: list[ReadIndexTab], reads: Block[FASTQRecord])
+    def __init__(self: ReadIndexTab, hv: int, a: int, b: int) -> ReadIndexTab:
+        return (i32(hv), i32(a), i32(b))
+
+    @property
+    def hv(self: ReadIndexTab):
+        return int(self._hv)
+
+    @property
+    def a(self: ReadIndexTab):
+        return int(self._a)
+
+    @property
+    def b(self: ReadIndexTab):
+        return int(self._b)
+
+type ReadIndex(rlist: list[ReadIndexTab],
+               glist: list[GeneralIndex],
+               reads: Block[FASTQRecord])
 
 type GenomeIndex(rec: FASTARecord,
                  offsets: list[i32],
@@ -136,7 +150,7 @@ def index_load(basename: str):
 
 def preprocess_reads(block: Block[FASTQRecord]):
     stderr.write(f'processing block of size {len(block)}...\n')
-    pairs = [Pair(0,0,0) for _ in range(2 * NUM_SAMPLES * len(block))]
+    pairs = [GeneralIndex(0,0,0) for _ in range(2 * NUM_SAMPLES * len(block))]
     pos = 0
     for record in block:
         read = record.seq
@@ -148,28 +162,28 @@ def preprocess_reads(block: Block[FASTQRecord]):
 
         if N > ERR_THRESH:
             for _ in range(2 * NUM_SAMPLES):
-                pairs[pos] = Pair(-1, 0, pos)
+                pairs[pos] = GeneralIndex(-1, 0, pos)
                 pos += 1
         else:
             for sample in read.split(K.len(), K.len()):
-                pair = Pair(-1, 0, pos)
+                pair = GeneralIndex(-1, 0, pos)
                 if not sample.N():
                     kmer = K(sample)
                     hv, chsum = partition(kmer)
-                    pair = Pair(hv, chsum, pos)
+                    pair = GeneralIndex(hv, chsum, pos)
                 pairs[pos] = pair
                 pos += 1
 
             for sample in (~read).split(K.len(), K.len()):
-                pair = Pair(-1, 0, pos)
+                pair = GeneralIndex(-1, 0, pos)
                 if not sample.N():
                     kmer = K(sample)
                     hv, chsum = partition(kmer)
-                    pair = Pair(hv, chsum, pos)
+                    pair = GeneralIndex(hv, chsum, pos)
                 pairs[pos] = pair
                 pos += 1
     stderr.write('sorting k-mers...\n')
-    pairs.sort(key=Pair.key)
+    pairs.sort(key=GeneralIndex.pair_key)
 
     stderr.write('finding uniques...\n')
     uniq = 0
@@ -181,21 +195,19 @@ def preprocess_reads(block: Block[FASTQRecord]):
 
     read_index_size = uniq
     stderr.write('building index...\n')
-    read_index_tabs = [ReadIndexTab(0, None) for _ in range(read_index_size)]
+    read_index_tabs = [ReadIndexTab() for _ in range(read_index_size)]
 
-    prev = -2
     j = 0
     beg = 0
     while beg < len(pairs):
         end = beg
         while end + 1 < len(pairs) and pairs[end + 1].hv == pairs[beg].hv:
             end += 1
-        glist = [GeneralIndex(pairs[i].chsum, info=pairs[i].pos) for i in range(beg, end + 1)]
-        read_index_tabs[j] = ReadIndexTab(pairs[beg].hv, glist)
+        read_index_tabs[j] = ReadIndexTab(pairs[beg].hv, beg, end + 1)
         j += 1
         beg = end + 1
 
-    return ReadIndex(read_index_tabs, block)
+    return ReadIndex(read_index_tabs, pairs, block)
 
 def verify_match(s1: seq, s2: seq, offset: int):
     assert len(s1) == len(s2) == SEQ_LENGTH
@@ -236,14 +248,13 @@ def map_seq_list_bal(l1: list[GeneralIndex], b1: int, s1: int, l2: list[GeneralI
             if d: read = ~read
             A_seq, C_seq, G_seq, T_seq, N_seq = read.bases
             for z in range(s1):
-                gen_loc = gen_info[gen_start + z].info - (K.len() * o)
+                gen_loc = gen_info[gen_start + z].pos - (K.len() * o)
                 if not (0 <= gen_loc < len(ref)):
                     continue
 
                 err = -1
                 A_ref, C_ref, G_ref, T_ref = genome_index.get_qgram(gen_loc)
                 if min(A_seq, A_ref) + min(C_seq, C_ref) + min(G_seq, G_ref) + min(T_seq, T_ref) >= SEQ_LENGTH - ERR_THRESH:
-                    # err = verifySeq(genLoc, _tmpCmpSeq, o, id);
                     err = verify_match(ref[gen_loc:gen_loc + SEQ_LENGTH], read, o)
                 if err != -1:
                     # mderr = calculateMD(genLoc, _tmpCmpSeq, _tmpSeq, _tmpQual, err, &_msf_op[id]);
@@ -310,9 +321,9 @@ def map_seqs(read_index: ReadIndex, genome_index: GenomeIndex, out: File):
             assert b >= a
             if b > a:
                 ss = b
-                seq_info = table.glist
-                rs = len(seq_info)
-                rb, re, sb, se = 0, 1, a, (a + 1)
+                seq_info = read_index.glist
+                rs = table.b
+                rb, re, sb, se = table.a, (table.a + 1), a, (a + 1)
                 while rb < rs:
                     while re < rs and seq_info[re].chsum == seq_info[rb].chsum: re += 1
                     while sb < ss and gen_info[sb].chsum < seq_info[rb].chsum: sb += 1
@@ -346,7 +357,7 @@ def main_search():
     genome_index = index_load(ref_path)
     stderr.write('running alignment pipeline...\n')
     with open(out_path, 'w') as out:
-        FASTQ(fastq_path) |> blocks(size=1000000) |> preprocess_reads |> map_seqs(genome_index, out)
+        FASTQ(fastq_path) |> blocks(size=6000000) |> preprocess_reads |> map_seqs(genome_index, out)
 
 mode = argv[1]
 match mode:
