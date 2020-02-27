@@ -1,0 +1,359 @@
+# Implementation of mrsFAST single-end all-mapping in Seq.
+# Currently only aligns to a single contig.
+# https://github.com/sfu-compbio/mrsfast
+
+# Usage:
+#   Index:  seqc mrsfast.seq index reference.fa
+#   Search: seqc mrsfast.seq search reference.fa reads.fq output.sam
+
+from sys import argv, stderr, exit
+from time import timing
+
+type K = Kmer[32]  # sample
+type W = Kmer[14]  # window
+ERR_THRESH  = 2
+NUM_SAMPLES = ERR_THRESH + 1
+SEQ_LENGTH  = NUM_SAMPLES * K.len()
+
+type Pair(_hv: i32, _pos: i32, _chsum: u64):
+    def __init__(self: Pair, hv: int, chsum: int, pos: int) -> Pair:
+        return (i32(hv), i32(pos), u64(chsum))
+
+    def key(self: Pair) -> tuple[int,int]:
+        return (self.hv, self.chsum)
+
+    @property
+    def hv(self: Pair):
+        return int(self._hv)
+
+    @property
+    def chsum(self: Pair):
+        return int(self._chsum)
+
+    @property
+    def pos(self: Pair):
+        return int(self._pos)
+
+type GeneralIndex(_chsum: u64, _info: u32):
+    def __init__(self: GeneralIndex, chsum: int, info: int) -> GeneralIndex:
+        return (u64(chsum), u32(info))
+
+    @property
+    def chsum(self: GeneralIndex):
+        return int(self._chsum)
+
+    @property
+    def info(self: GeneralIndex):
+        return int(self._info)
+
+    # returns (read index, kmer index, direction)
+    def decode_read_info(self: GeneralIndex):
+        ridx = self.info // (2 * NUM_SAMPLES)
+        rem = self.info % (2 * NUM_SAMPLES)
+        kidx = rem % NUM_SAMPLES
+        didx = True if rem // NUM_SAMPLES else False
+        return (ridx, kidx, didx)
+
+type ReadIndexTab(hv: int, glist: list[GeneralIndex])
+
+type ReadIndex(rlist: list[ReadIndexTab], reads: Block[FASTQRecord])
+
+type GenomeIndex(rec: FASTARecord,
+                 offsets: list[i32],
+                 glist: list[GeneralIndex],
+                 qgrams: list[tuple[byte,byte,byte,byte]]):
+    def get_candidates(self: GenomeIndex, hv: int):
+        a, b = int(self.offsets[hv]), int(self.offsets[hv + 1])
+        return self.glist, a, b
+
+    def get_qgram(self: GenomeIndex, pos: int):
+        A, C, G, T = self.qgrams[pos]
+        return int(A), int(C), int(G), int(T)
+
+def partition(kmer: K):
+    k = len(kmer)
+    assert k <= 32
+    n = u64(kmer.as_int())
+    hi = (n & u64(0xfffffff000000000)) >> u64(64 - 2*W.len())
+    lo = (n & u64(0x0000000fffffffff))
+    return int(hi), int(lo)
+
+def count_qgrams[T](s: seq, window: int):
+    def bases2bytes(bases):
+        return (T(bases.A), T(bases.C), T(bases.G), T(bases.T))
+    type CountType = tuple[T,T,T,T]
+    if len(s) < window:
+        return list[CountType]()
+    z = T(0)
+    counts = [CountType(z,z,z,z) for _ in range(len(s) - window + 1)]
+    bases = s[:window].bases
+    counts[0] = bases2bytes(bases)
+    for i in range(window, len(s)):
+        bases += s[i].bases - s[i - window].bases
+        counts[i - window + 1] = bases2bytes(bases)
+    return counts
+
+def open_index_file(basename: str, mode: str):
+    import gzip
+    return gzip.open(f'{basename}.w{W.len()}.idx', mode)
+
+def index_make(rec: FASTARecord):
+    s = rec.seq
+    assert len(s) >= K.len()
+    v = list[tuple[K,int]](len(s) - W.len() + 1)
+    stderr.write('reading k-mers...\n')
+    for pos, kmer in s.kmers_with_pos[K](step=1): v.append((kmer, pos))
+    stderr.write('sorting...\n')
+    v.sort()
+
+    N = 4 ** W.len()
+    offsets = [i32(-1) for _ in range(N + 1)]
+
+    stderr.write('computing offsets...\n')
+    last_hv = -1
+    i = 0
+    while i < len(v):
+        hv, chsum = partition(v[i][0])
+        assert last_hv <= hv
+        if hv != last_hv:
+            for h in range(last_hv + 1, hv + 1):
+                offsets[h] = i32(i)
+            last_hv = hv
+        i += 1
+    for h in range(last_hv + 1, N + 1):
+        offsets[h] = i32(len(v))
+
+    stderr.write('making glist...\n')
+    glist = [GeneralIndex(chsum=partition(kmer)[1], info=pos) for kmer, pos in v]
+    stderr.write('counting q-grams...\n')
+    qgrams = count_qgrams[byte](s, SEQ_LENGTH)
+    return GenomeIndex(rec, offsets, glist, qgrams)
+
+def index_load(basename: str):
+    from pickle import load
+    with open_index_file(basename, 'rb') as jar:
+        return load[GenomeIndex](jar)
+
+def preprocess_reads(block: Block[FASTQRecord]):
+    stderr.write(f'processing block of size {len(block)}...\n')
+    pairs = [Pair(0,0,0) for _ in range(2 * NUM_SAMPLES * len(block))]
+    pos = 0
+    for record in block:
+        read = record.seq
+        if len(read) < SEQ_LENGTH:
+            stderr.write(f'error: read {record.name} too short (min: {SEQ_LENGTH})\n')
+            exit(1)
+        read = read[:SEQ_LENGTH]
+        A, C, G, T, N = read.bases
+
+        if N > ERR_THRESH:
+            for _ in range(2 * NUM_SAMPLES):
+                pairs[pos] = Pair(-1, 0, pos)
+                pos += 1
+        else:
+            for sample in read.split(K.len(), K.len()):
+                pair = Pair(-1, 0, pos)
+                if not sample.N():
+                    kmer = K(sample)
+                    hv, chsum = partition(kmer)
+                    pair = Pair(hv, chsum, pos)
+                pairs[pos] = pair
+                pos += 1
+
+            for sample in (~read).split(K.len(), K.len()):
+                pair = Pair(-1, 0, pos)
+                if not sample.N():
+                    kmer = K(sample)
+                    hv, chsum = partition(kmer)
+                    pair = Pair(hv, chsum, pos)
+                pairs[pos] = pair
+                pos += 1
+    stderr.write('sorting k-mers...\n')
+    pairs.sort(key=Pair.key)
+
+    stderr.write('finding uniques...\n')
+    uniq = 0
+    prev = -2
+    for pair in pairs:
+        if prev != pair.hv:
+            uniq += 1
+            prev = pair.hv
+
+    read_index_size = uniq
+    stderr.write('building index...\n')
+    read_index_tabs = [ReadIndexTab(0, None) for _ in range(read_index_size)]
+
+    prev = -2
+    j = 0
+    beg = 0
+    while beg < len(pairs):
+        end = beg
+        while end + 1 < len(pairs) and pairs[end + 1].hv == pairs[beg].hv:
+            end += 1
+        glist = [GeneralIndex(pairs[i].chsum, info=pairs[i].pos) for i in range(beg, end + 1)]
+        read_index_tabs[j] = ReadIndexTab(pairs[beg].hv, glist)
+        j += 1
+        beg = end + 1
+
+    return ReadIndex(read_index_tabs, block)
+
+def verify_match(s1: seq, s2: seq, offset: int):
+    assert len(s1) == len(s2) == SEQ_LENGTH
+    assert 0 <= offset < NUM_SAMPLES
+    err = 0
+
+    for j in range(offset):
+        sample_err = 0
+        for i in range(j * K.len(), (j + 1) * K.len()):
+            a, b = s1[i].__int__(), s2[i].__int__()
+            e = 1 if (a > 3 or b > 3 or a != b) else 0
+            sample_err += e
+            err += e
+            if err > ERR_THRESH:
+                return -1
+        if sample_err == 0:  # match reported already
+            return -1
+
+    for i in range((offset + 1) * K.len(), len(s1)):
+        a, b = s1[i].__int__(), s2[i].__int__()
+        err += 1 if (a > 3 or b > 3 or a != b) else 0
+        if err > ERR_THRESH:
+            return -1
+
+    return err
+
+def map_seq_list_bal(l1: list[GeneralIndex], b1: int, s1: int, l2: list[GeneralIndex], b2: int, s2: int, dir: bool,
+                     read_index: ReadIndex, genome_index: GenomeIndex, out: File):
+    if s1 == 0 or s2 == 0:
+        return
+    elif s1 == s2 and s1 <= 200:
+        gen_info, seq_info, gen_start, seq_start = ((l1, l2, b1, b2) if dir else (l2, l1, b2, b1))
+        ref = genome_index.rec.seq
+        for j in range(s2):
+            r, o, d = seq_info[seq_start + j].decode_read_info()
+            rec = read_index.reads[r]
+            read = rec.seq[:SEQ_LENGTH]
+            if d: read = ~read
+            A_seq, C_seq, G_seq, T_seq, N_seq = read.bases
+            for z in range(s1):
+                gen_loc = gen_info[gen_start + z].info - (K.len() * o)
+                if not (0 <= gen_loc < len(ref)):
+                    continue
+
+                err = -1
+                A_ref, C_ref, G_ref, T_ref = genome_index.get_qgram(gen_loc)
+                if min(A_seq, A_ref) + min(C_seq, C_ref) + min(G_seq, G_ref) + min(T_seq, T_ref) >= SEQ_LENGTH - ERR_THRESH:
+                    # err = verifySeq(genLoc, _tmpCmpSeq, o, id);
+                    err = verify_match(ref[gen_loc:gen_loc + SEQ_LENGTH], read, o)
+                if err != -1:
+                    # mderr = calculateMD(genLoc, _tmpCmpSeq, _tmpSeq, _tmpQual, err, &_msf_op[id]);
+                    mderr = 0
+                    if mderr < 0:
+                        continue
+
+                    out.write(rec.name)  # QNAME
+                    out.write('\t')
+                    out.write('16' if d else '0')  # FLAG
+                    out.write('\t')
+                    out.write(genome_index.rec.name)  # RNAME
+                    out.write('\t')
+                    out.write(str(gen_loc + 1))  # POS (0-based --> 1-based)
+                    out.write('\t')
+                    out.write('255')  # MAPQ
+                    out.write('\t')
+                    out.write(str(SEQ_LENGTH))  # CIGAR
+                    out.write('M')  # (only Hamming distance, so no indels)
+                    out.write('\t')
+                    out.write('*')  # RNEXT
+                    out.write('\t')
+                    out.write('0')  # PNEXT
+                    out.write('\t')
+                    out.write('0')  # TLEN
+                    out.write('\t')
+                    out.write(str(rec.seq[:SEQ_LENGTH]))  # SEQ
+                    out.write('\t')
+                    out.write(str(rec.qual[:SEQ_LENGTH]))  # QUAL
+                    out.write('\t')
+                    out.write('NM:i:')  # NM-tag
+                    out.write(str(err))
+                    # TODO: MD
+                    out.write('\n')
+    else:
+        tmp1, tmp2 = s1 // 2, s2 // 2
+        if tmp1 != 0 and s2 - tmp2 != 0:
+            map_seq_list_bal(l1, b1, tmp1, l2, b2 + tmp2, s2 - tmp2, dir, read_index, genome_index, out)
+        if s2 - tmp2 != 0 and s1 - tmp1 != 0:
+            map_seq_list_bal(l2, b2 + tmp2, s2 - tmp2, l1, b1 + tmp1, s1 - tmp1, not dir, read_index, genome_index, out)
+        if s1 - tmp1 != 0 and tmp2 != 0:
+            map_seq_list_bal(l1, b1 + tmp1, s1 - tmp1, l2, b2, tmp2, dir, read_index, genome_index, out)
+        if tmp1 != 0 and tmp2 != 0:
+            map_seq_list_bal(l2, b2, tmp2, l1, b1, tmp1, not dir, read_index, genome_index, out)
+
+def map_seq_list(l1: list[GeneralIndex], b1: int, s1: int, l2: list[GeneralIndex], b2: int, s2: int,
+                 read_index: ReadIndex, genome_index: GenomeIndex, out: File):
+    if s1 < s2:
+        map_seq_list_bal(l1, b1, s1, l2, b2, s1, True, read_index, genome_index, out)
+        map_seq_list(l1, b1, s1, l2, b2 + s1, s2 - s1, read_index, genome_index, out)
+    elif s1 > s2:
+        map_seq_list_bal(l1, b1, s2, l2, b2, s2, True, read_index, genome_index, out)
+        map_seq_list(l1, b1 + s2, s1 - s2, l2, b2, s2, read_index, genome_index, out)
+    else:
+        map_seq_list_bal(l1, b1, s1, l2, b2, s2, True, read_index, genome_index, out)
+
+def map_seqs(read_index: ReadIndex, genome_index: GenomeIndex, out: File):
+    stderr.write('mapping block...\n')
+    with timing('mapping block'):
+        for table in read_index.rlist:
+            if table.hv < 0:
+                continue
+            gen_info, a, b = genome_index.get_candidates(table.hv)
+            assert b >= a
+            if b > a:
+                ss = b
+                seq_info = table.glist
+                rs = len(seq_info)
+                rb, re, sb, se = 0, 1, a, (a + 1)
+                while rb < rs:
+                    while re < rs and seq_info[re].chsum == seq_info[rb].chsum: re += 1
+                    while sb < ss and gen_info[sb].chsum < seq_info[rb].chsum: sb += 1
+                    if seq_info[rb].chsum == gen_info[sb].chsum:
+                        se = sb + 1
+                        while se < ss and gen_info[se].chsum == gen_info[sb].chsum: se += 1
+                        map_seq_list(gen_info, sb, se - sb, seq_info, rb, re - rb, read_index, genome_index, out)
+                    rb = re
+                    re += 1
+
+def main_index():
+    from pickle import dump
+    basename = argv[2]
+    stderr.write('reading reference...\n')
+    ref = [rec for rec in FASTA(basename, validate=False)]
+    if len(ref) != 1:
+        stderr.write('error: can only index single contig!\n')
+        exit(1)
+
+    stderr.write('indexing...\n')
+    index = index_make(ref[0])
+    stderr.write('writing to disk...\n')
+    with open_index_file(basename, 'wb0') as jar:
+        dump(index, jar)
+
+def main_search():
+    ref_path = argv[2]
+    fastq_path = argv[3]
+    out_path = argv[4]
+    stderr.write('loading index...\n')
+    genome_index = index_load(ref_path)
+    stderr.write('running alignment pipeline...\n')
+    with open(out_path, 'w') as out:
+        FASTQ(fastq_path) |> blocks(size=1000000) |> preprocess_reads |> map_seqs(genome_index, out)
+
+mode = argv[1]
+match mode:
+    case 'index':
+        main_index()
+    case 'search':
+        main_search()
+    case _:
+        stderr.write("error: unknown mode: valid modes are 'index' and 'search'\n")
+        exit(1)
