@@ -5,6 +5,7 @@ type BEDRecord(_chrom: str, _chromStart: int, _chromEnd: int,
     @property
     def chrom(self: BEDRecord):
         return self._chrom
+        
     @property
     def chromStart(self: BEDRecord):
         return self._chromStart
@@ -15,14 +16,50 @@ type BEDRecord(_chrom: str, _chromStart: int, _chromEnd: int,
 
     @property
     def misc(self: BEDRecord):
-        return self._misc
+        return self._name
 
-def get_num_from_bed_col_val(val: str, col_name: str, lnum: int) -> int:
+    @property
+    def score(self: BEDRecord):
+        return self._score
+
+    @property
+    def strand(self: BEDRecord):
+        return self._strand
+    
+    @property
+    def thickStart(self: BEDRecord):
+        return self._thickStart
+
+    @property
+    def thickEnd(self: BEDRecord):
+        return self._thickEnd
+
+    @property
+    def itemRgb(self: BEDRecord):
+        return self._itemRgb
+    
+    @property
+    def blockCount(self: BEDRecord):
+        return self._blockCount
+
+    @property
+    def blockSizes(self: BEDRecord):
+        return self._blockSizes
+    
+    @property
+    def blockStarts(self: BEDRecord):
+        return self._blockStarts
+
+    def numCols(self: BEDRecord):
+        return self._numCols
+
+def get_num_from_bed(val: str, col_name: str, lnum: int) -> int:
     try:
         return int(val)
     except:
         raise ValueError(f"{col_name}, must be integer, line: {lnum}")
-def get_block_vals_from_bed_col(val: str, blockCount: int, col_name: str, lnum: int) -> list[int]:
+
+def get_block_vals_from_bed(val: str, blockCount: int, col_name: str, lnum: int) -> list[int]:
     block_vals = val.split(",")
     block_list = list[int]()
     if len(block_vals) != blockCount:
@@ -35,7 +72,6 @@ def get_block_vals_from_bed_col(val: str, blockCount: int, col_name: str, lnum: 
             raise ValueError(f"{col_name}, must be a comma separated list of integer values, line: {lnum}")
     return block_list
 
-
 class BEDReader:
     validate: bool
     gzip: bool
@@ -44,15 +80,14 @@ class BEDReader:
     _header: list[str]
     col_names: list[str]
     num_necessary_cols: int
+    data_start_line: int
 
     def __init__(self: BEDReader, path: str, validate: bool, gzip: bool, copy: bool):
         self.validate = validate
         self.gzip = gzip
         self.copy = copy
         self._file = gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__()
-        self.init_header()
-        self.close()
-        self._file = gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__()
+        self.init_header(path)
         self.col_names = ["chrom", "chromStart", "chromEnd", "name", "score", "strand", "thickStart", "thickEnd", "itemRgb", "blockCount", "blockSizes", "blockStarts"]
         self.num_necessary_cols = 3
             
@@ -74,15 +109,20 @@ class BEDReader:
     def header(self: BEDReader) -> list[str]:
         return self._header
 
-    def init_header(self: BEDReader):
+    def init_header(self: BEDReader, path: str):
         h: list[str] = list[str]()
+        lnum = 0
         for a in self.file._iter():
             if self.is_line_header(a):
                 h_line = copy(a) if self.copy else a
                 h.append(h_line)
             else:
                 break
+            lnum += 1
         self._header = h
+        self.data_start_line = lnum
+        self.close()
+        self._file = gzopen(path, "r").__raw__() if self.gzip else open(path, "r").__raw__()
 
     def is_line_header(self:BEDReader, line: str) -> bool:
         if line[0] == "#": # is a comment
@@ -95,12 +135,14 @@ class BEDReader:
         return False
 
     def _iter_core(self: BEDReader, file) -> BEDRecord:
+        for i, _ in enumerate(file._iter()):
+            if i == self.data_start_line - 1:
+                break
 
         for lnum, a in enumerate(file._iter()):
             line = copy(a) if self.copy else a #TODO ask why copy
-            if not self.is_line_header(a):
-                rec: BEDRecord = self.BEDRecord_from_str(line, lnum)
-                yield rec
+            rec: BEDRecord = self.BEDRecord_from_str(line, lnum)
+            yield rec
             
     
     def __iter__(self: BEDReader) -> BEDRecord:
@@ -130,27 +172,33 @@ class BEDReader:
         blockStarts: list[int] = list[int]()
 
         lnum = 0
+
+        val_ptrs: list[ptr[byte]] = [ptr[byte](__ptr__(chrom)), ptr[byte](__ptr__(chromStart)),
+                                    ptr[byte](__ptr__(chromEnd)), ptr[byte](__ptr__(name)),
+                                    ptr[byte](__ptr__(score)), ptr[byte](__ptr__(strand)),
+                                    ptr[byte](__ptr__(thickStart)), ptr[byte](__ptr__(thickEnd)),
+                                    ptr[byte](__ptr__(itemRgb)), ptr[byte](__ptr__(blockCount)),
+                                    ptr[byte](__ptr__(blockSizes)), ptr[byte](__ptr__(blockStarts))]
+
         for i in range(len(col_vals)):
             col_name = self.col_names[i]
             val = col_vals[i]
+            val_ptr = val_ptrs[i]
             match col_name:
+                case "chromStart" or "chromEnd" or "score" or "thickStart" or "thickEnd" or "blockCount":
+                    val_num_ptr = ptr[int](val_ptr)
+                    val_num_ptr[0] = get_num_from_bed(val, col_name, lnum)
+                case "blockSizes" or "blockStarts":
+                    block_val_ptr = ptr[list[int]](val_ptr)
+                    block_val_ptr[0] = get_block_vals_from_bed(val, blockCount, col_name, lnum)
+                case "chrom" or "name":
+                    val_str_ptr = ptr[str](val_ptr)
+                    val_str_ptr[0] = val
                 case "strand":
                     if val == "+" or val == "-":
                         strand = val
                     else:
                         raise ValueError(f"Strand must be + or - was {val}, line {lnum}")
-                case "chromStart":
-                    chromStart = get_num_from_bed_col_val(val, col_name, lnum)
-                case "chromEnd":
-                    chromEnd = get_num_from_bed_col_val(val, col_name, lnum)
-                case "score":
-                    score = get_num_from_bed_col_val(val, col_name, lnum)
-                case "thickStart":
-                    thickStart = get_num_from_bed_col_val(val, col_name, lnum)
-                case "thickEnd":
-                    thickEnd = get_num_from_bed_col_val(val, col_name, lnum)
-                case "blockCount":
-                    blockCount = get_num_from_bed_col_val(val, col_name, lnum)
                 case "itemRgb":
                     rgb_vals = val.split(",")
                     if len(rgb_vals) != 3:
@@ -159,14 +207,6 @@ class BEDReader:
                         itemRgb = (int(rgb_vals[0]), int(rgb_vals[1]), int(rgb_vals[2]))
                     except:
                         raise ValueError(f"{col_name}, must be integers, line: {lnum}")
-                case "blockSizes":
-                    blockSizes = get_block_vals_from_bed_col(val, blockCount, col_name, lnum)
-                case "blockStarts":
-                    blockStarts = get_block_vals_from_bed_col(val, blockCount, col_name, lnum)
-                case "chrom":
-                    chrom = val
-                case "name":
-                    name = val
                 case _:
                     pass
             lnum += 1
@@ -176,12 +216,16 @@ class BEDReader:
                          thickStart, thickEnd, itemRgb, blockCount, 
                          blockSizes, blockStarts, len(col_vals))
 
-
     def close(self: BEDReader):
         if self.gzip:
             self.gzfile.close()
         else:
             self.file.close()
 
+def BED(path: str, validate: bool = True, gzip: bool = True, copy: bool = True) -> BEDReader:
+    return BEDReader(path=path, validate=validate, gzip=gzip, copy=copy)
 
-
+parser: BEDReader = BED("./happy_test.bed", True, False, True)
+for row in parser:
+    print(row)
+print(parser.header)
