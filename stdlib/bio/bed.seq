@@ -91,6 +91,7 @@ class BEDReader:
         return self._header
 
     def init_header(self: BEDReader, path: str):
+        # store header as a list of str
         h: list[str] = list[str]()
         lnum = 0
         for a in self.file._iter():
@@ -157,7 +158,7 @@ class BEDReader:
         blockStarts: list[int] = list[int]()
 
         lnum = 0
-
+        # use pointers so that we can combine validations for columns of same data type
         val_ptrs: list[ptr[byte]] = [ptr[byte](__ptr__(chrom)), ptr[byte](__ptr__(chromStart)),
                                     ptr[byte](__ptr__(chromEnd)), ptr[byte](__ptr__(name)),
                                     ptr[byte](__ptr__(score)), ptr[byte](__ptr__(strand)),
@@ -179,12 +180,12 @@ class BEDReader:
                 case "chrom" or "name":
                     val_str_ptr = ptr[str](val_ptr)
                     val_str_ptr[0] = val
-                case "strand":
+                case "strand": # can only be + or -
                     if val == "+" or val == "-":
                         strand = val
                     else:
                         raise ValueError(f"Strand must be + or - was {val}, line {lnum}")
-                case "itemRgb":
+                case "itemRgb": #3 comma separated ints
                     rgb_vals = val.split(",")
                     if len(rgb_vals) != 3:
                         raise ValueError(f"{col_name}, must be 3 comma separated values, line: {lnum}")
