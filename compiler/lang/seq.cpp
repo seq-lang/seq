@@ -534,13 +534,6 @@ SeqJIT::SeqJIT()
                [](std::shared_ptr<Module> M) {
                  return optimizeModule(std::move(M));
                }),
-      callbackManager(
-          orc::createLocalCompileCallbackManager(target->getTargetTriple(), 0)),
-      codLayer(
-          optLayer, [](Function &F) { return std::set<Function *>({&F}); },
-          *callbackManager,
-          orc::createLocalIndirectStubsManagerBuilder(
-              target->getTargetTriple())),
       globals(), inputNum(0) {
   sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
 }
@@ -561,7 +554,7 @@ std::unique_ptr<Module> SeqJIT::makeModule() {
 SeqJIT::ModuleHandle SeqJIT::addModule(std::unique_ptr<Module> module) {
   auto resolver = createLambdaResolver(
       [&](const std::string &name) {
-        if (auto sym = codLayer.findSymbol(name, false))
+        if (auto sym = optLayer.findSymbol(name, false))
           return sym;
         return JITSymbol(nullptr);
       },
@@ -570,18 +563,18 @@ SeqJIT::ModuleHandle SeqJIT::addModule(std::unique_ptr<Module> module) {
           return JITSymbol(symAddr, JITSymbolFlags::Exported);
         return JITSymbol(nullptr);
       });
-  return cantFail(codLayer.addModule(std::move(module), std::move(resolver)));
+  return cantFail(optLayer.addModule(std::move(module), std::move(resolver)));
 }
 
 JITSymbol SeqJIT::findSymbol(std::string name) {
   std::string mangledName;
   raw_string_ostream mangledNameStream(mangledName);
   Mangler::getNameWithPrefix(mangledNameStream, name, layout);
-  return codLayer.findSymbol(mangledNameStream.str(), false);
+  return optLayer.findSymbol(mangledNameStream.str(), false);
 }
 
 void SeqJIT::removeModule(SeqJIT::ModuleHandle handle) {
-  cantFail(codLayer.removeModule(handle));
+  cantFail(optLayer.removeModule(handle));
 }
 
 Func SeqJIT::makeFunc() {
@@ -611,7 +604,7 @@ void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
   }
 
   verifyModuleFailFast(*module);
-  errs()<<*module<<"===================\n";
+  errs() << *module << "===================\n";
   addModule(std::move(module));
   auto sym = findSymbol(func->genericName());
   void (*fn)() = (void (*)())cantFail(sym.getAddress());
