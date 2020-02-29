@@ -159,15 +159,16 @@ void TransformExprVisitor::visit(const ListExpr *expr) {
   string listVar = getTemporaryVar("list");
   prependStmts.push_back(
       SPX(expr, AssignStmt, EP(IdExpr, headVar), transform(expr->items[0])));
-  prependStmts.push_back(SPX(expr,
-      AssignStmt, EP(IdExpr, listVar),
+  prependStmts.push_back(SPX(
+      expr, AssignStmt, EP(IdExpr, listVar),
       EP(CallExpr,
          EP(IndexExpr, EP(IdExpr, "list"), EP(TypeOfExpr, EP(IdExpr, headVar))),
          EP(IntExpr, expr->items.size()))));
 
 #define ADD(x)                                                                 \
-  prependStmts.push_back(SPX(expr,                                                   \
-      ExprStmt, EP(CallExpr, EP(DotExpr, EP(IdExpr, listVar), "append"), x)))
+  prependStmts.push_back(                                                      \
+      SPX(expr, ExprStmt,                                                      \
+          EP(CallExpr, EP(DotExpr, EP(IdExpr, listVar), "append"), x)))
   ADD(EP(IdExpr, headVar));
   for (int i = 1; i < expr->items.size(); i++) {
     ADD(transform(expr->items[i]));

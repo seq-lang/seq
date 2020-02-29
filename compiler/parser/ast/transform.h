@@ -63,7 +63,6 @@ public:
   void visit(const YieldExpr *) override;
 };
 
-
 class TransformStmtVisitor : public StmtVisitor {
   std::vector<StmtPtr> prependStmts;
   StmtPtr result{nullptr};

@@ -64,7 +64,6 @@ public:
   void visit(const YieldExpr *) override;
 };
 
-
 class CodegenStmtVisitor : public StmtVisitor {
   Context &ctx;
   seq::Stmt *result;
