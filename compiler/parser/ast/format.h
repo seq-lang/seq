@@ -59,7 +59,6 @@ public:
   void visit(const YieldExpr *) override;
 };
 
-
 class FormatStmtVisitor : public StmtVisitor {
   std::string result;
   int indent{0};

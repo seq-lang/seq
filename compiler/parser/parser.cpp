@@ -5,9 +5,9 @@
 
 #include "lang/seq.h"
 #include "parser/ast/codegen.h"
+#include "parser/ast/doc.h"
 #include "parser/ast/format.h"
 #include "parser/ast/transform.h"
-#include "parser/ast/doc.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"

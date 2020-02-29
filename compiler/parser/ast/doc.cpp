@@ -81,8 +81,7 @@ void DocStmtVisitor::visit(const ClassStmt *stmt) {
   string as;
   for (auto &a : stmt->args)
     as += " " + a.to_string();
-  DBG(
-      "(#{} {}{}{} {})", (stmt->isType ? "type" : "class"), stmt->name,
+  DBG("(#{} {}{}{} {})", (stmt->isType ? "type" : "class"), stmt->name,
       stmt->generics.size() ? format(" :gen {}", fmt::join(stmt->generics, " "))
                             : "",
       stmt->args.size() ? " :args" + as : "",

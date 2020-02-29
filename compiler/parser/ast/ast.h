@@ -9,7 +9,7 @@
 #include "parser/ast/visitor.h"
 
 #define ACCEPT_VISITOR(X)                                                      \
-  virtual void accept(X ## Visitor &visitor) const override {                   \
+  virtual void accept(X##Visitor &visitor) const override {                    \
     visitor.visit(this);                                                       \
   }
 

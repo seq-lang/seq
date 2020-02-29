@@ -252,8 +252,8 @@ void Context::executeJIT(const string &name, const string &code) {
   module = fn;
   addBlock(fn->getBlock(), fn);
 
-  auto tv =
-      seq::ast::TransformStmtVisitor().transform(seq::ast::parse_code(name, code));
+  auto tv = seq::ast::TransformStmtVisitor().transform(
+      seq::ast::parse_code(name, code));
   seq::ast::CodegenStmtVisitor(*this).transform(tv);
 
   jit->addFunc(fn);
