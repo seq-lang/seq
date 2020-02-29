@@ -21,9 +21,11 @@ static void versMsg(raw_ostream &out) {
 }
 
 int main(int argc, char **argv) {
+  if (string(argv[1]) == "-j") {
   auto j = jit_init();
-  jit_execute(j, argv[1]);
+  jit_execute(j, argv[2]);
   exit(0);
+  }
 
   opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "

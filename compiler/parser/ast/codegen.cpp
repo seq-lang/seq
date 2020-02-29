@@ -36,13 +36,11 @@ namespace seq {
 namespace ast {
 
 CodegenExprVisitor::CodegenExprVisitor(Context &ctx,
-                                       CodegenStmtVisitor &stmtVisitor,
-                                       vector<seq::Var *> *captures)
-    : ctx(ctx), stmtVisitor(stmtVisitor), result(nullptr), captures(captures) {}
+                                       CodegenStmtVisitor &stmtVisitor)
+    : ctx(ctx), stmtVisitor(stmtVisitor), result(nullptr) {}
 
 seq::Expr *CodegenExprVisitor::transform(const ExprPtr &expr) {
-  // fmt::print("<e> {} :pos {}\n", expr, expr->getSrcInfo());
-  CodegenExprVisitor v(ctx, stmtVisitor, captures);
+  CodegenExprVisitor v(ctx, stmtVisitor);
   expr->accept(v);
   if (v.result) {
     v.result->setSrcInfo(expr->getSrcInfo());
@@ -54,7 +52,7 @@ seq::Expr *CodegenExprVisitor::transform(const ExprPtr &expr) {
 }
 
 seq::types::Type *CodegenExprVisitor::transformType(const ExprPtr &expr) {
-  auto v = CodegenExprVisitor(ctx, this->stmtVisitor, captures).transform(expr);
+  auto v = CodegenExprVisitor(ctx, this->stmtVisitor).transform(expr);
   if (auto t = dynamic_cast<seq::TypeExpr *>(v)) {
     return t->getType();
   } else {
@@ -115,9 +113,6 @@ void CodegenExprVisitor::visit(const IdExpr *expr) {
   }
   this->result = i->getExpr();
   if (auto var = dynamic_cast<VarContextItem *>(i.get())) {
-    if (captures) {
-      captures->push_back(var->getVar());
-    }
     if (var->isGlobal() && var->getBase() == ctx.getBase() &&
         ctx.hasFlag("atomic")) {
       dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
@@ -208,23 +203,30 @@ seq::For *CodegenExprVisitor::parseComprehension(
   return topFor;
 }
 
+CaptureExprVisitor::CaptureExprVisitor(Context &ctx) : ctx(ctx) {}
+
+void CaptureExprVisitor::visit(const IdExpr *expr) {
+  if (auto var = dynamic_cast<VarContextItem *>(ctx.find(expr->value).get())) {
+    captures[expr->value] = var->getVar();
+  }
+}
+
 void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
   int added = 0;
 
-  auto oldCaptures = this->captures;
-  vector<seq::Var *> captures;
-  this->captures = &captures;
+  CaptureExprVisitor captures(ctx);
+  expr->accept(captures);
 
   auto oldTryCatch = ctx.getTryCatch();
   if (expr->kind == GeneratorExpr::Generator) {
     ctx.setTryCatch(nullptr);
   }
   auto topFor = parseComprehension(expr, expr->loops, added);
+  auto e = transform(expr->expr);
   if (expr->kind == GeneratorExpr::Generator) {
     ctx.setTryCatch(oldTryCatch);
   }
 
-  auto e = transform(expr->expr);
   if (expr->kind == GeneratorExpr::ListGenerator) {
     this->result = new seq::ListCompExpr(
         e, topFor, transformType(make_unique<IdExpr>("list")));
@@ -232,12 +234,17 @@ void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
     this->result = new seq::SetCompExpr(
         e, topFor, transformType(make_unique<IdExpr>("set")));
   } else if (expr->kind == GeneratorExpr::Generator) {
-    this->result = new seq::GenExpr(e, topFor, captures);
+    vector<seq::Var*> v;
+    // DBG("gen {} getting {} captures", expr->to_string(), captures.captures.size());
+    for (auto &kv: captures.captures) {
+      // DBG("cap {} ", kv.first);
+      v.push_back(kv.second);
+    }
+    this->result = new seq::GenExpr(e, topFor, v);
   }
   while (added--) {
     ctx.popBlock();
   }
-  this->captures = oldCaptures;
 }
 
 void CodegenExprVisitor::visit(const DictGeneratorExpr *expr) {
@@ -477,6 +484,7 @@ void CodegenExprVisitor::visit(const DotExpr *expr) {
     }
   }
   if (isImport) {
+    // DBG(">> import {}", expr->member);
     if (auto i = c->find(expr->member)) {
       this->result = i->getExpr();
     } else {
@@ -488,8 +496,10 @@ void CodegenExprVisitor::visit(const DotExpr *expr) {
   // Not an import
   auto lhs = transform(expr->expr);
   if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
+    // DBG(">> sta_elem {}", expr->member);
     RETURN(seq::GetStaticElemExpr, e->getType(), expr->member);
   } else {
+    // DBG(">> elem {}", expr->member);
     RETURN(seq::GetElemExpr, lhs, expr->member);
   }
 }
@@ -594,7 +604,8 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
   /* Currently, a var can shadow a function or a type, but not another var. */
   if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
     auto var = i->value;
-    if (auto v = dynamic_cast<VarContextItem *>(ctx.find(var, true).get())) {
+    auto v = dynamic_cast<VarContextItem *>(ctx.find(var, true).get());
+    if (!stmt->force && v) {
       // Variable update
       bool isAtomic = v->isGlobal() && ctx.hasFlag("atomic");
       seq::AtomicExpr::Op op = (seq::AtomicExpr::Op)0;

@@ -159,15 +159,16 @@ void TransformExprVisitor::visit(const ListExpr *expr) {
   string listVar = getTemporaryVar("list");
   prependStmts.push_back(
       SPX(expr, AssignStmt, EP(IdExpr, headVar), transform(expr->items[0])));
-  prependStmts.push_back(SPX(expr,
-      AssignStmt, EP(IdExpr, listVar),
+  prependStmts.push_back(SPX(
+      expr, AssignStmt, EP(IdExpr, listVar),
       EP(CallExpr,
          EP(IndexExpr, EP(IdExpr, "list"), EP(TypeOfExpr, EP(IdExpr, headVar))),
          EP(IntExpr, expr->items.size()))));
 
 #define ADD(x)                                                                 \
-  prependStmts.push_back(SPX(expr,                                                   \
-      ExprStmt, EP(CallExpr, EP(DotExpr, EP(IdExpr, listVar), "append"), x)))
+  prependStmts.push_back(                                                      \
+      SPX(expr, ExprStmt,                                                      \
+          EP(CallExpr, EP(DotExpr, EP(IdExpr, listVar), "append"), x)))
   ADD(EP(IdExpr, headVar));
   for (int i = 1; i < expr->items.size(); i++) {
     ADD(transform(expr->items[i]));
@@ -416,14 +417,14 @@ void TransformStmtVisitor::visit(const ExprStmt *stmt) {
 }
 
 StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
-                                            const Expr *type) {
+                                            const Expr *type, bool force) {
   if (auto l = dynamic_cast<const IndexExpr *>(lhs)) {
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const DotExpr *>(lhs)) {
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const IdExpr *>(lhs)) {
-    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs),
-               transform(type));
+    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs), transform(type),
+               false, force);
   } else {
     error(lhs->getSrcInfo(), "invalid assignment");
     return nullptr;
@@ -431,7 +432,8 @@ StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
 }
 
 void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
-                                             vector<StmtPtr> &stmts) {
+                                             vector<StmtPtr> &stmts,
+                                             bool force) {
   vector<Expr *> lefts;
   if (auto l = dynamic_cast<const TupleExpr *>(lhs)) {
     for (auto &i : l->items) {
@@ -442,13 +444,13 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
       lefts.push_back(i.get());
     }
   } else {
-    stmts.push_back(addAssignment(lhs, rhs));
+    stmts.push_back(addAssignment(lhs, rhs, nullptr, force));
     return;
   }
   if (!dynamic_cast<const IdExpr *>(rhs)) { // store any non-trivial expression
     auto var = getTemporaryVar("assign");
     auto newRhs = EPX(rhs, IdExpr, var).release();
-    stmts.push_back(addAssignment(newRhs, rhs));
+    stmts.push_back(addAssignment(newRhs, rhs, nullptr, force));
     rhs = newRhs;
   }
   UnpackExpr *unpack = nullptr;
@@ -462,7 +464,8 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
     // messing up with unique_ptr. Better solution needed?
     stmts.push_back(addAssignment(
         lefts[st],
-        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, st)).release()));
+        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, st)).release(),
+        nullptr, force));
   }
   for (int i = 1; ed > st; i++, ed--) {
     if (dynamic_cast<UnpackExpr *>(lefts[ed])) {
@@ -470,7 +473,9 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
     }
     stmts.push_back(addAssignment(
         lefts[ed],
-        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, -i)).release()));
+        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, -i)).release(),
+        nullptr,
+        force));
   }
   if (st < lefts.size() && st != ed) {
     error(lefts[st]->getSrcInfo(), "two starred expressions in assignment");
@@ -481,7 +486,7 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
                           EPX(rhs, SliceExpr, EPX(rhs, IntExpr, st),
                               EPX(rhs, IntExpr, ed + 1), nullptr))
                           .release(),
-                      stmts);
+                      stmts, force);
   }
 }
 
@@ -563,7 +568,7 @@ void TransformStmtVisitor::visit(const ForStmt *stmt) {
     string varName = getTemporaryVar("for");
     vector<StmtPtr> stmts;
     var = EPX(stmt, IdExpr, varName);
-    processAssignment(stmt->var.get(), var.get(), stmts);
+    processAssignment(stmt->var.get(), var.get(), stmts, true);
     stmts.push_back(transform(stmt->suite));
     suite = SP(SuiteStmt, move(stmts));
   }

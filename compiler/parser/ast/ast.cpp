@@ -241,8 +241,8 @@ string ContinueStmt::to_string() const { return "#continue"; }
 ExprStmt::ExprStmt(ExprPtr e) : expr(move(e)) {}
 string ExprStmt::to_string() const { return format("(#expr {})", *expr); }
 
-AssignStmt::AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t, bool m)
-    : lhs(move(l)), rhs(move(r)), type(move(t)), mustExist(m) {}
+AssignStmt::AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t, bool m, bool f)
+    : lhs(move(l)), rhs(move(r)), type(move(t)), mustExist(m), force(f) {}
 string AssignStmt::to_string() const {
   return format("(#assign {} {}{})", *lhs, *rhs,
                 type ? format(" :type {}", *type) : "");

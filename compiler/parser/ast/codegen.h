@@ -9,6 +9,7 @@
 #include "lang/seq.h"
 #include "parser/ast/ast.h"
 #include "parser/ast/visitor.h"
+#include "parser/ast/walk.h"
 #include "parser/common.h"
 #include "parser/context.h"
 
@@ -21,12 +22,10 @@ class CodegenExprVisitor : public ExprVisitor {
   Context &ctx;
   CodegenStmtVisitor &stmtVisitor;
   seq::Expr *result;
-  std::vector<seq::Var *> *captures;
   friend class CodegenStmtVisitor;
 
 public:
-  CodegenExprVisitor(Context &ctx, CodegenStmtVisitor &stmtVisitor,
-                     std::vector<seq::Var *> *captures = nullptr);
+  CodegenExprVisitor(Context &ctx, CodegenStmtVisitor &stmtVisitor);
   seq::Expr *transform(const ExprPtr &e);
   seq::types::Type *transformType(const ExprPtr &expr);
   seq::For *parseComprehension(const Expr *expr,
@@ -64,6 +63,16 @@ public:
   void visit(const YieldExpr *) override;
 };
 
+class CaptureExprVisitor : public WalkExprVisitor {
+  Context &ctx;
+  std::unordered_map<std::string, seq::Var *> captures;
+  friend class CodegenExprVisitor;
+
+public:
+  using WalkExprVisitor::visit;
+  CaptureExprVisitor(Context &ctx);
+  virtual void visit(const IdExpr *) override;
+};
 
 class CodegenStmtVisitor : public StmtVisitor {
   Context &ctx;

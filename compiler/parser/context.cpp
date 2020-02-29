@@ -266,7 +266,7 @@ void Context::executeJIT(const string &name, const string &code) {
   }
   popBlock();
   for (auto &i : items) {
-    DBG("readding {}", i.first);
+    // DBG("readding  {}", i.first);
     add(i.first, i.second);
   }
 

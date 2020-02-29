@@ -63,15 +63,14 @@ public:
   void visit(const YieldExpr *) override;
 };
 
-
 class TransformStmtVisitor : public StmtVisitor {
   std::vector<StmtPtr> prependStmts;
   StmtPtr result{nullptr};
 
   StmtPtr addAssignment(const Expr *lhs, const Expr *rhs,
-                        const Expr *type = nullptr);
+                        const Expr *type = nullptr, bool force = false);
   void processAssignment(const Expr *lhs, const Expr *rhs,
-                         std::vector<StmtPtr> &stmts);
+                         std::vector<StmtPtr> &stmts, bool force = false);
 
 public:
   void prepend(StmtPtr s);
