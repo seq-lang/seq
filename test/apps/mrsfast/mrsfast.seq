@@ -246,16 +246,16 @@ def map_seq_list_bal(l1: list[GeneralIndex], b1: int, s1: int, l2: list[GeneralI
             rec = read_index.reads[r]
             read = rec.seq[:SEQ_LENGTH]
             if d: read = ~read
-            A_seq, C_seq, G_seq, T_seq, N_seq = read.bases
+            #A_seq, C_seq, G_seq, T_seq, N_seq = read.bases
             for z in range(s1):
                 gen_loc = gen_info[gen_start + z].pos - (K.len() * o)
                 if not (0 <= gen_loc < len(ref)):
                     continue
 
                 err = -1
-                A_ref, C_ref, G_ref, T_ref = genome_index.get_qgram(gen_loc)
-                if min(A_seq, A_ref) + min(C_seq, C_ref) + min(G_seq, G_ref) + min(T_seq, T_ref) >= SEQ_LENGTH - ERR_THRESH:
-                    err = verify_match(ref[gen_loc:gen_loc + SEQ_LENGTH], read, o)
+                #A_ref, C_ref, G_ref, T_ref = genome_index.get_qgram(gen_loc)
+                #if min(A_seq, A_ref) + min(C_seq, C_ref) + min(G_seq, G_ref) + min(T_seq, T_ref) >= SEQ_LENGTH - ERR_THRESH:
+                err = verify_match(ref[gen_loc:gen_loc + SEQ_LENGTH], read, o)
                 if err != -1:
                     # mderr = calculateMD(genLoc, _tmpCmpSeq, _tmpSeq, _tmpQual, err, &_msf_op[id]);
                     mderr = 0
@@ -327,7 +327,7 @@ def map_seqs(read_index: ReadIndex, genome_index: GenomeIndex, out: File):
                 while rb < rs:
                     while re < rs and seq_info[re].chsum == seq_info[rb].chsum: re += 1
                     while sb < ss and gen_info[sb].chsum < seq_info[rb].chsum: sb += 1
-                    if seq_info[rb].chsum == gen_info[sb].chsum:
+                    if sb < ss and seq_info[rb].chsum == gen_info[sb].chsum:
                         se = sb + 1
                         while se < ss and gen_info[se].chsum == gen_info[sb].chsum: se += 1
                         map_seq_list(gen_info, sb, se - sb, seq_info, rb, re - rb, read_index, genome_index, out)
@@ -357,7 +357,7 @@ def main_search():
     genome_index = index_load(ref_path)
     stderr.write('running alignment pipeline...\n')
     with open(out_path, 'w') as out:
-        FASTQ(fastq_path) |> blocks(size=6000000) |> preprocess_reads |> map_seqs(genome_index, out)
+        FASTQ(fastq_path) |> blocks(size=12000000) |> preprocess_reads |> map_seqs(genome_index, out)
 
 mode = argv[1]
 match mode:
