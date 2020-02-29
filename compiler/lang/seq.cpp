@@ -520,8 +520,8 @@ void tapir::resetOMPABI() {
  */
 #if LLVM_VERSION_MAJOR == 6
 static std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> module) {
-  optimizeModule(module.get());
-  verifyModuleFailFast(*module);
+  // optimizeModule(module.get());
+  // verifyModuleFailFast(*module);
   return module;
 }
 
@@ -604,7 +604,7 @@ void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
   }
 
   verifyModuleFailFast(*module);
-  errs() << *module << "===================\n";
+  // errs() << *module << "===================\n";
   addModule(std::move(module));
   auto sym = findSymbol(func->genericName());
   void (*fn)() = (void (*)())cantFail(sym.getAddress());
