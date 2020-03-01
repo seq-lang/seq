@@ -121,13 +121,15 @@ class BEDReader:
     def _iter_core(self: BEDReader, file) -> BEDRecord:
 
         # iterate past header
+        header_offset = 0
         for i, _ in enumerate(file._iter()):
             if i == self.data_start_line - 1:
+                header_offset = i + 1
                 break
 
         for lnum, a in enumerate(file._iter()):
             line = copy(a) if self.copy else a
-            rec: BEDRecord = self.BEDRecord_from_str(line, lnum)
+            rec: BEDRecord = self.BEDRecord_from_str(line, lnum + header_offset + 1)
             yield rec
             
     
@@ -157,7 +159,6 @@ class BEDReader:
         blockSizes: list[int] = list[int]()
         blockStarts: list[int] = list[int]()
 
-        lnum = 0
         # use pointers so that we can combine validations for columns of same data type
         val_ptrs: list[ptr[byte]] = [ptr[byte](__ptr__(chrom)), ptr[byte](__ptr__(chromStart)),
                                     ptr[byte](__ptr__(chromEnd)), ptr[byte](__ptr__(name)),
@@ -195,8 +196,6 @@ class BEDReader:
                         raise ValueError(f"{col_name}, must be integers, line: {lnum}")
                 case _:
                     pass
-            lnum += 1
-
 
         return BEDRecord(chrom, chromStart, chromEnd, name, score, strand,
                          thickStart, thickEnd, itemRgb, blockCount, 
