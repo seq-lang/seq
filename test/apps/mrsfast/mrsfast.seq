@@ -68,14 +68,22 @@ type ReadIndexTab(_hv: i32, _a: i32, _b: i32):
     def b(self: ReadIndexTab):
         return int(self._b)
 
+type QGram(A: byte, C: byte, G: byte, T: byte):
+    def __init__(self: QGram, A: int, C: int, G: int, T: int) -> QGram:
+        return (byte(A), byte(C), byte(G), byte(T))
+
 type ReadIndex(rlist: list[ReadIndexTab],
                glist: list[GeneralIndex],
-               reads: Block[FASTQRecord])
+               reads: Block[FASTQRecord],
+               qgrams: list[QGram]):
+    def get_qgram(self: ReadIndex, pos: int):
+        A, C, G, T = self.qgrams[pos]
+        return int(A), int(C), int(G), int(T)
 
 type GenomeIndex(rec: FASTARecord,
                  offsets: list[i32],
                  glist: list[GeneralIndex],
-                 qgrams: list[tuple[byte,byte,byte,byte]]):
+                 qgrams: list[QGram]):
     def get_candidates(self: GenomeIndex, hv: int):
         a, b = int(self.offsets[hv]), int(self.offsets[hv + 1])
         return self.glist, a, b
@@ -151,6 +159,7 @@ def index_load(basename: str):
 def preprocess_reads(block: Block[FASTQRecord]):
     stderr.write(f'processing block of size {len(block)}...\n')
     pairs = [GeneralIndex(0,0,0) for _ in range(2 * NUM_SAMPLES * len(block))]
+    qgrams = list[QGram](len(block))
     pos = 0
     for record in block:
         read = record.seq
@@ -159,6 +168,7 @@ def preprocess_reads(block: Block[FASTQRecord]):
             exit(1)
         read = read[:SEQ_LENGTH]
         A, C, G, T, N = read.bases
+        qgrams.append(QGram(A, C, G, T))
 
         if N > ERR_THRESH:
             for _ in range(2 * NUM_SAMPLES):
@@ -207,7 +217,7 @@ def preprocess_reads(block: Block[FASTQRecord]):
         j += 1
         beg = end + 1
 
-    return ReadIndex(read_index_tabs, pairs, block)
+    return ReadIndex(read_index_tabs, pairs, block, qgrams)
 
 def verify_match(s1: seq, s2: seq, offset: int):
     assert len(s1) == len(s2) == SEQ_LENGTH
@@ -234,6 +244,7 @@ def verify_match(s1: seq, s2: seq, offset: int):
 
     return err
 
+output_buf = list[str](200)
 def map_seq_list_bal(l1: list[GeneralIndex], b1: int, s1: int, l2: list[GeneralIndex], b2: int, s2: int, dir: bool,
                      read_index: ReadIndex, genome_index: GenomeIndex, out: File):
     if s1 == 0 or s2 == 0:
@@ -244,51 +255,43 @@ def map_seq_list_bal(l1: list[GeneralIndex], b1: int, s1: int, l2: list[GeneralI
         for j in range(s2):
             r, o, d = seq_info[seq_start + j].decode_read_info()
             rec = read_index.reads[r]
+            A_seq, C_seq, G_seq, T_seq = read_index.get_qgram(r)
             read = rec.seq[:SEQ_LENGTH]
-            if d: read = ~read
-            #A_seq, C_seq, G_seq, T_seq, N_seq = read.bases
+            qual = rec.qual[:SEQ_LENGTH]
+            if d:
+                read = ~read
+                A_seq, T_seq = T_seq, A_seq
+                C_seq, G_seq = G_seq, C_seq
             for z in range(s1):
                 gen_loc = gen_info[gen_start + z].pos - (K.len() * o)
                 if not (0 <= gen_loc < len(ref)):
                     continue
 
                 err = -1
-                #A_ref, C_ref, G_ref, T_ref = genome_index.get_qgram(gen_loc)
-                #if min(A_seq, A_ref) + min(C_seq, C_ref) + min(G_seq, G_ref) + min(T_seq, T_ref) >= SEQ_LENGTH - ERR_THRESH:
-                err = verify_match(ref[gen_loc:gen_loc + SEQ_LENGTH], read, o)
+                A_ref, C_ref, G_ref, T_ref = genome_index.get_qgram(gen_loc)
+                if min(A_seq, A_ref) + min(C_seq, C_ref) + min(G_seq, G_ref) + min(T_seq, T_ref) >= SEQ_LENGTH - ERR_THRESH:
+                    err = verify_match(ref[gen_loc:gen_loc + SEQ_LENGTH], read, o)
                 if err != -1:
-                    # mderr = calculateMD(genLoc, _tmpCmpSeq, _tmpSeq, _tmpQual, err, &_msf_op[id]);
-                    mderr = 0
-                    if mderr < 0:
-                        continue
-
-                    out.write(rec.name)  # QNAME
-                    out.write('\t')
-                    out.write('16' if d else '0')  # FLAG
-                    out.write('\t')
-                    out.write(genome_index.rec.name)  # RNAME
-                    out.write('\t')
-                    out.write(str(gen_loc + 1))  # POS (0-based --> 1-based)
-                    out.write('\t')
-                    out.write('255')  # MAPQ
-                    out.write('\t')
-                    out.write(str(SEQ_LENGTH))  # CIGAR
-                    out.write('M')  # (only Hamming distance, so no indels)
-                    out.write('\t')
-                    out.write('*')  # RNEXT
-                    out.write('\t')
-                    out.write('0')  # PNEXT
-                    out.write('\t')
-                    out.write('0')  # TLEN
-                    out.write('\t')
-                    out.write(str(rec.seq[:SEQ_LENGTH]))  # SEQ
-                    out.write('\t')
-                    out.write(str(rec.qual[:SEQ_LENGTH]))  # QUAL
-                    out.write('\t')
-                    out.write('NM:i:')  # NM-tag
-                    out.write(str(err))
-                    # TODO: MD
-                    out.write('\n')
+                    output_buf.clear()
+                    output_buf.append(rec.name)
+                    output_buf.append('\t16\t' if d else '\t0\t')
+                    output_buf.append(genome_index.rec.name)
+                    output_buf.append('\t')
+                    output_buf.append(str(gen_loc + 1))
+                    output_buf.append('\t255\t')
+                    output_buf.append(str(SEQ_LENGTH))
+                    output_buf.append('M\t*\t0\t0\t')
+                    output_buf.append(str(read))
+                    output_buf.append('\t')
+                    if dir:
+                        for i in range(len(qual)):
+                            output_buf.append(qual[-1-i])
+                    else:
+                        output_buf.append(qual)
+                    output_buf.append('\tNM:i:')
+                    output_buf.append(str(err))
+                    output_buf.append('\n')
+                    out.write(''.join(output_buf))
     else:
         tmp1, tmp2 = s1 // 2, s2 // 2
         if tmp1 != 0 and s2 - tmp2 != 0:
