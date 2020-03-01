@@ -283,7 +283,7 @@ def map_seq_list_bal(l1: list[GeneralIndex], b1: int, s1: int, l2: list[GeneralI
                     output_buf.append('M\t*\t0\t0\t')
                     output_buf.append(str(read))
                     output_buf.append('\t')
-                    if dir:
+                    if d:
                         for i in range(len(qual)):
                             output_buf.append(qual[-1-i])
                     else:
