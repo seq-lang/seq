@@ -16,3 +16,4 @@ from bio.fastq import FASTQRecord, FASTQ
 from bio.bam import SAM, BAM, CRAM
 
 from bio.bed import BED
+from bio.bed import BEDRecord
