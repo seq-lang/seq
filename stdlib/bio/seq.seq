@@ -147,6 +147,9 @@ extend seq:
         else:
             return seq(self.ptr, -(n - a))
 
+    def __getitem__(self: seq, s: eslice):
+        return self
+
     def _copy_to(self: seq, p: cobj):
         if self.len >= 0:
             str.memcpy(p, self.ptr, self.len)
