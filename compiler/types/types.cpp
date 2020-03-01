@@ -43,18 +43,20 @@ Value *types::Type::alloc(Value *count, BasicBlock *block) {
 
   LLVMContext &context = block->getContext();
   Module *module = block->getModule();
+  const unsigned sz = size(module);
+  if (sz == 0)
+    return ConstantPointerNull::get(getLLVMType(context)->getPointerTo());
+
   auto *allocFunc = makeAllocFunc(module, isAtomic());
 
   if (!count)
     count = ConstantInt::get(seqIntLLVM(context), 1, true);
 
   IRBuilder<> builder(block);
-  Value *elemSize =
-      ConstantInt::get(seqIntLLVM(context), size(block->getModule()));
+  Value *elemSize = ConstantInt::get(seqIntLLVM(context), sz);
   Value *fullSize = builder.CreateMul(count, elemSize);
   Value *mem = builder.CreateCall(allocFunc, fullSize);
-  return builder.CreatePointerCast(mem,
-                                   PointerType::get(getLLVMType(context), 0));
+  return builder.CreatePointerCast(mem, getLLVMType(context)->getPointerTo());
 }
 
 Value *types::Type::call(BaseFunc *base, Value *self,
