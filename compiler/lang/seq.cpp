@@ -428,6 +428,7 @@ void SeqModule::compile(const std::string &out) {
 extern "C" void seq_gc_add_roots(void *start, void *end);
 extern "C" void seq_gc_remove_roots(void *start, void *end);
 extern "C" void seq_add_symbol(void *addr, const std::string &symbol);
+namespace {
 /**
  * Simple extension of LLVM's SectionMemoryManager which catches data section
  * allocations and registers them with the GC. This allows the GC to know not
@@ -459,6 +460,7 @@ public:
     }
   }
 };
+} // namespace
 
 void SeqModule::execute(const std::vector<std::string> &args,
                         const std::vector<std::string> &libs) {
