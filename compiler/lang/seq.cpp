@@ -587,6 +587,8 @@ Func *SeqJIT::makeFunc() {
 
 void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
   LLVMContext &context = config::config().context;
+  for (auto *var : globals)
+    var->reset();
   Function *f = func->getFunc(module.get());
   f->setLinkage(GlobalValue::ExternalLinkage);
 

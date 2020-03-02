@@ -91,6 +91,12 @@ void Var::setExternal() {
   }
 }
 
+void Var::reset() {
+  ptr = nullptr;
+  module = nullptr;
+  mapped = std::stack<Var *>();
+}
+
 void Var::mapTo(Var *other) { mapped.push(other); }
 
 void Var::unmap() { mapped.pop(); }
