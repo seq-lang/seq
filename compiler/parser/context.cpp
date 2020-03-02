@@ -56,7 +56,7 @@ seq::Expr *ImportContextItem::getExpr() const {
   return nullptr;
 }
 
-Context::Context(seq::BaseFunc *module, ImportCache &cache, seq::SeqJIT *jit,
+Context::Context(seq::BaseFunc *module, shared_ptr<ImportCache> cache, seq::SeqJIT *jit,
                  const std::string &filename)
     : cache(cache), filename(filename), module(module), jit(jit),
       enclosingType(nullptr), tryCatch(nullptr) {
@@ -77,7 +77,7 @@ Context::Context(seq::BaseFunc *module, ImportCache &cache, seq::SeqJIT *jit,
 }
 
 void Context::loadStdlib() {
-  this->filename = cache.getImportFile("core", "", true);
+  this->filename = cache->getImportFile("core", "", true);
   if (this->filename == "") {
     throw seq::exc::SeqException("cannot load standard library");
   }
@@ -95,7 +95,7 @@ void Context::loadStdlib() {
   if (!jit) {
     add("__argv__", ((seq::SeqModule *)module)->getArgVar());
   }
-  cache.stdlib = this;
+  cache->stdlib = this;
   auto tv = TransformStmtVisitor().transform(parse_file(this->filename));
   CodegenStmtVisitor(*this).transform(tv);
 }
@@ -111,8 +111,8 @@ shared_ptr<ContextItem> Context::find(const string &name,
     }
   } else if (i) {
     return i;
-  } else if (cache.stdlib && this != cache.stdlib) {
-    return cache.stdlib->find(name);
+  } else if (cache->stdlib != nullptr && this != cache->stdlib) {
+    return cache->stdlib->find(name);
   } else {
     return nullptr;
   }
@@ -153,11 +153,11 @@ void Context::addBlock(seq::Block *newBlock, seq::BaseFunc *newBase) {
 void Context::popBlock() {
   bases.pop_back();
   topBaseIndex = bases.size() - 1;
-  while (!bases[topBaseIndex])
+  while (topBaseIndex && !bases[topBaseIndex])
     topBaseIndex--;
   blocks.pop_back();
   topBlockIndex = blocks.size() - 1;
-  while (!blocks[topBlockIndex])
+  while (topBlockIndex && !blocks[topBlockIndex])
     topBlockIndex--;
   VTable<ContextItem>::popBlock();
 }
@@ -226,19 +226,19 @@ string ImportCache::getImportFile(const string &what, const string &relativeTo,
 }
 
 shared_ptr<Context> Context::importFile(const string &file) {
-  auto i = cache.imports.find(file);
-  if (i != cache.imports.end()) {
+  auto i = cache->imports.find(file);
+  if (i != cache->imports.end()) {
     return i->second;
   } else {
     auto stmts = parse_file(file);
     auto tv = TransformStmtVisitor().transform(parse_file(file));
     auto context = make_shared<Context>(module, cache, jit, file);
     CodegenStmtVisitor(*context).transform(tv);
-    return (cache.imports[file] = context);
+    return (cache->imports[file] = context);
   }
 }
 
-ImportCache &Context::getCache() { return cache; }
+shared_ptr<ImportCache> Context::getCache() { return cache; }
 
 seq::SeqJIT *Context::getJIT() { return jit; }
 

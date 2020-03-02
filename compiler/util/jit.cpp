@@ -28,11 +28,13 @@ FOREIGN JitInstance *jit_init() {
     seq::SeqJIT::init();
     auto fn = new seq::Func();
     fn->setName("$jit_init");
+    auto inst = new JitInstance();
+    inst->counter = 0;
+    auto cache = make_shared<seq::ast::ImportCache>();
     auto jit = new seq::SeqJIT();
-    auto cache = seq::ast::ImportCache{"", nullptr, {}};
-    auto context = make_shared<seq::ast::Context>(fn, cache, jit, "");
+    inst->context = make_shared<seq::ast::Context>(fn, cache, jit, "");
     jit->addFunc(fn);
-    return new JitInstance(context);
+    return inst;
   } catch (seq::exc::SeqException &e) {
     seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                           e.getSrcInfo().col);

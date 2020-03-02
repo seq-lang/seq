@@ -648,9 +648,10 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
     } else if (!stmt->mustExist) {
       // New variable
       if (ctx.getJIT() && ctx.isToplevel()) {
-        // DBG("adding jit var {}", var);
+        DBG("adding jit var {} = {}", var, * stmt->rhs);
         auto rhs = transform(stmt->rhs);
         ctx.add(var, ctx.getJIT()->addVar(rhs));
+        DBG("done with var {}", var);
       } else {
         auto varStmt =
             new seq::VarStmt(transform(stmt->rhs),
@@ -791,7 +792,7 @@ void CodegenStmtVisitor::visit(const MatchStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
-  auto file = ctx.getCache().getImportFile(stmt->from.first, ctx.getFilename());
+  auto file = ctx.getCache()->getImportFile(stmt->from.first, ctx.getFilename());
   if (file == "") {
     ERROR(stmt, "cannot locate import '{}'", stmt->from.first);
   }

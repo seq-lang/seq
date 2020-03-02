@@ -114,7 +114,7 @@ private:
   ModuleHandle addModule(std::unique_ptr<llvm::Module> module);
   llvm::JITSymbol findSymbol(std::string name);
   void removeModule(ModuleHandle key);
-  Func makeFunc();
+  Func *makeFunc();
   void exec(Func *func, std::unique_ptr<llvm::Module> module);
 
 public:
