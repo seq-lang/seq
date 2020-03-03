@@ -474,8 +474,7 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
     stmts.push_back(addAssignment(
         lefts[ed],
         EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, -i)).release(),
-        nullptr,
-        force));
+        nullptr, force));
   }
   if (st < lefts.size() && st != ed) {
     error(lefts[st]->getSrcInfo(), "two starred expressions in assignment");

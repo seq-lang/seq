@@ -234,9 +234,10 @@ void CodegenExprVisitor::visit(const GeneratorExpr *expr) {
     this->result = new seq::SetCompExpr(
         e, topFor, transformType(make_unique<IdExpr>("set")));
   } else if (expr->kind == GeneratorExpr::Generator) {
-    vector<seq::Var*> v;
-    // DBG("gen {} getting {} captures", expr->to_string(), captures.captures.size());
-    for (auto &kv: captures.captures) {
+    vector<seq::Var *> v;
+    // DBG("gen {} getting {} captures", expr->to_string(),
+    // captures.captures.size());
+    for (auto &kv : captures.captures) {
       // DBG("cap {} ", kv.first);
       v.push_back(kv.second);
     }
@@ -648,7 +649,7 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
     } else if (!stmt->mustExist) {
       // New variable
       if (ctx.getJIT() && ctx.isToplevel()) {
-        DBG("adding jit var {} = {}", var, * stmt->rhs);
+        DBG("adding jit var {} = {}", var, *stmt->rhs);
         auto rhs = transform(stmt->rhs);
         ctx.execJIT(var, rhs);
         DBG("done with var {}", var);
@@ -792,7 +793,8 @@ void CodegenStmtVisitor::visit(const MatchStmt *stmt) {
 }
 
 void CodegenStmtVisitor::visit(const ImportStmt *stmt) {
-  auto file = ctx.getCache()->getImportFile(stmt->from.first, ctx.getFilename());
+  auto file =
+      ctx.getCache()->getImportFile(stmt->from.first, ctx.getFilename());
   if (file == "") {
     ERROR(stmt, "cannot locate import '{}'", stmt->from.first);
   }

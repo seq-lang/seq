@@ -59,8 +59,8 @@ seq::Expr *ImportContextItem::getExpr() const {
 Context::Context(shared_ptr<ImportCache> cache, seq::Block *block,
                  seq::BaseFunc *base, seq::SeqJIT *jit,
                  const std::string &filename)
-    : cache(cache), filename(filename), jit(jit),
-      enclosingType(nullptr), tryCatch(nullptr) {
+    : cache(cache), filename(filename), jit(jit), enclosingType(nullptr),
+      tryCatch(nullptr) {
   stack.push(vector<string>());
   topBaseIndex = topBlockIndex = 0;
   if (block) {
@@ -221,7 +221,8 @@ shared_ptr<Context> Context::importFile(const string &file) {
   } else {
     auto stmts = parse_file(file);
     auto tv = TransformStmtVisitor().transform(parse_file(file));
-    auto context = make_shared<Context>(cache, getBlock(), getBase(), getJIT(), file);
+    auto context =
+        make_shared<Context>(cache, getBlock(), getBase(), getJIT(), file);
     CodegenStmtVisitor(*context).transform(tv);
     return (cache->imports[file] = context);
   }

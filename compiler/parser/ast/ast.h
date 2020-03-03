@@ -327,7 +327,8 @@ struct ExprStmt : public Stmt {
 struct AssignStmt : public Stmt {
   ExprPtr lhs, rhs, type;
   bool mustExist, force;
-  AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr, bool m = false, bool f = false);
+  AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr, bool m = false,
+             bool f = false);
   std::string to_string() const override;
   ACCEPT_VISITOR(Stmt);
 };

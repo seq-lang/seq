@@ -143,8 +143,8 @@ class Context : public VTable<ContextItem> {
   seq::TryCatch *tryCatch;
 
 public:
-  Context(std::shared_ptr<ImportCache> cache, seq::Block *block, seq::BaseFunc *base,
-          seq::SeqJIT *jit, const std::string &filename);
+  Context(std::shared_ptr<ImportCache> cache, seq::Block *block,
+          seq::BaseFunc *base, seq::SeqJIT *jit, const std::string &filename);
   virtual ~Context() {}
   std::shared_ptr<ContextItem> find(const std::string &name,
                                     bool onlyLocal = false) const;
