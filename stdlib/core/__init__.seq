@@ -18,7 +18,6 @@ from core.str import *
 from core.int import *
 from core.float import *
 
-import math
 from core.sort import sorted
 
 from core.file import File, gzFile, open, gzopen

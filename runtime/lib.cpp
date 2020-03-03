@@ -83,7 +83,7 @@ SEQ_FUNC char **seq_env() { return environ; }
 /*
  * GC
  */
-#define USE_STANDARD_MALLOC 1
+#define USE_STANDARD_MALLOC 0
 
 SEQ_FUNC void *seq_alloc(size_t n) {
 #if USE_STANDARD_MALLOC

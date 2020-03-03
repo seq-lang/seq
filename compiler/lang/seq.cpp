@@ -608,7 +608,6 @@ void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
   }
 
   verifyModuleFailFast(*module);
-  errs() << *module << "===================\n";
   addModule(std::move(module));
   auto sym = findSymbol(func->genericName());
   void (*fn)() = (void (*)())cantFail(sym.getAddress());
