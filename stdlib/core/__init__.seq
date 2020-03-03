@@ -1,3 +1,11 @@
+def foo(x: int):
+    return x+1
+
+# a = 1
+# b = 1
+b = foo(2)
+a = foo(1)
+
 # from core.aliases import *
 # import core.c_stubs as _C
 # import core.gc as _gc
@@ -18,6 +26,7 @@
 # from core.int import *
 # from core.float import *
 
+# import math
 # from core.sort import sorted
 
 # from core.file import File, gzFile, open, gzopen

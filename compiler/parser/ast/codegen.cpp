@@ -449,6 +449,7 @@ void CodegenExprVisitor::visit(const CallExpr *expr) {
   }
 
   if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
+    DBG(">> CONSTR {}",1);
     RETURN(seq::ConstructExpr, e->getType(), items, names);
   } else if (isPartial) {
     RETURN(seq::PartialCallExpr, lhs, items, names);
@@ -650,7 +651,7 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
       if (ctx.getJIT() && ctx.isToplevel()) {
         DBG("adding jit var {} = {}", var, * stmt->rhs);
         auto rhs = transform(stmt->rhs);
-        ctx.add(var, ctx.getJIT()->addVar(rhs));
+        ctx.execJIT(var, rhs);
         DBG("done with var {}", var);
       } else {
         auto varStmt =
@@ -980,7 +981,7 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   ctx.setEnclosingType(oldEnclosing);
   ctx.popBlock();
   if (ctx.getJIT() && ctx.isToplevel() && !ctx.getEnclosingType()) {
-    // DBG("adding jit fn {}", stmt->name);
+    DBG("adding jit fn {}", stmt->name);
     auto fs = new seq::FuncStmt(f);
     fs->setSrcInfo(stmt->getSrcInfo());
     fs->setBase(ctx.getBase());

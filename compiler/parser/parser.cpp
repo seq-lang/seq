@@ -30,9 +30,13 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     auto stmts = isCode ? ast::parse_code(argv0, file) : ast::parse_file(file);
     auto tv = ast::TransformStmtVisitor().transform(move(stmts));
     auto module = new seq::SeqModule();
+    module->setFileName(file);
     auto cache = make_shared<ast::ImportCache>(argv0);
-    auto stdlib = make_shared<ast::Context>(module, cache, nullptr, "");
-    auto context = make_shared<ast::Context>(module, cache, nullptr, file);
+    auto stdlib = make_shared<ast::Context>(cache, module->getBlock(), module,
+                                            nullptr, "");
+    stdlib->loadStdlib(module->getArgVar());
+    auto context = make_shared<ast::Context>(cache, module->getBlock(), module,
+                                             nullptr, file);
     ast::CodegenStmtVisitor(*context).transform(tv);
     return module;
   } catch (seq::exc::SeqException &e) {

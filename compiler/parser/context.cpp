@@ -56,33 +56,22 @@ seq::Expr *ImportContextItem::getExpr() const {
   return nullptr;
 }
 
-Context::Context(seq::BaseFunc *module, shared_ptr<ImportCache> cache, seq::SeqJIT *jit,
+Context::Context(shared_ptr<ImportCache> cache, seq::Block *block,
+                 seq::BaseFunc *base, seq::SeqJIT *jit,
                  const std::string &filename)
-    : cache(cache), filename(filename), module(module), jit(jit),
+    : cache(cache), filename(filename), jit(jit),
       enclosingType(nullptr), tryCatch(nullptr) {
   stack.push(vector<string>());
-  bases.push_back(module);
-  if (jit) {
-    blocks.push_back(((seq::Func *)module)->getBlock());
-  } else {
-    blocks.push_back(((seq::SeqModule *)module)->getBlock());
-  }
   topBaseIndex = topBlockIndex = 0;
-  if (!jit) {
-    ((seq::SeqModule *)module)->setFileName(filename);
-  }
-  if (this->filename == "") {
-    loadStdlib();
+  if (block) {
+    addBlock(block, base);
   }
 }
 
-void Context::loadStdlib() {
-  this->filename = cache->getImportFile("core", "", true);
-  if (this->filename == "") {
+void Context::loadStdlib(seq::Var *argVar) {
+  filename = cache->getImportFile("core", "", true);
+  if (filename == "") {
     throw seq::exc::SeqException("cannot load standard library");
-  }
-  if (!jit) {
-    ((seq::SeqModule *)module)->setFileName(this->filename);
   }
   vector<pair<string, seq::types::Type *>> pods = {
       {"void", seq::types::Void},   {"bool", seq::types::Bool},
@@ -92,11 +81,11 @@ void Context::loadStdlib() {
   for (auto &i : pods) {
     add(i.first, i.second);
   }
-  if (!jit) {
-    add("__argv__", ((seq::SeqModule *)module)->getArgVar());
+  if (argVar) {
+    add("__argv__", argVar);
   }
   cache->stdlib = this;
-  auto tv = TransformStmtVisitor().transform(parse_file(this->filename));
+  auto tv = TransformStmtVisitor().transform(parse_file(filename));
   CodegenStmtVisitor(*this).transform(tv);
 }
 
@@ -136,7 +125,7 @@ seq::types::Type *Context::getEnclosingType() { return enclosingType; }
 
 void Context::setEnclosingType(seq::types::Type *t) { enclosingType = t; }
 
-bool Context::isToplevel() const { return module == getBase(); }
+bool Context::isToplevel() const { return bases.size() == 1; }
 
 void Context::addBlock(seq::Block *newBlock, seq::BaseFunc *newBase) {
   VTable<ContextItem>::addBlock();
@@ -232,7 +221,7 @@ shared_ptr<Context> Context::importFile(const string &file) {
   } else {
     auto stmts = parse_file(file);
     auto tv = TransformStmtVisitor().transform(parse_file(file));
-    auto context = make_shared<Context>(module, cache, jit, file);
+    auto context = make_shared<Context>(cache, getBlock(), getBase(), getJIT(), file);
     CodegenStmtVisitor(*context).transform(tv);
     return (cache->imports[file] = context);
   }
@@ -240,23 +229,27 @@ shared_ptr<Context> Context::importFile(const string &file) {
 
 shared_ptr<ImportCache> Context::getCache() { return cache; }
 
+void Context::initJIT() {
+  jit = new seq::SeqJIT();
+  auto fn = new seq::Func();
+  fn->setName("$jit_0");
+
+  addBlock(fn->getBlock(), fn);
+  assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
+
+  loadStdlib();
+  execJIT();
+}
+
 seq::SeqJIT *Context::getJIT() { return jit; }
 
-void Context::executeJIT(const string &name, const string &code) {
+void Context::execJIT(string varName, seq::Expr *varExpr) {
+  static int counter = 0;
+
   assert(jit != nullptr);
+  assert(bases.size() == 1);
+  jit->addFunc((seq::Func *)bases[0]);
 
-  auto fn = new seq::Func();
-  fn->setName(name);
-
-  auto oldModule = module;
-  module = fn;
-  addBlock(fn->getBlock(), fn);
-
-  auto tv = seq::ast::TransformStmtVisitor().transform(
-      seq::ast::parse_code(name, code));
-  seq::ast::CodegenStmtVisitor(*this).transform(tv);
-
-  jit->addFunc(fn);
   vector<pair<string, shared_ptr<seq::ast::ContextItem>>> items;
   for (auto &name : stack.top()) {
     auto i = find(name);
@@ -266,11 +259,19 @@ void Context::executeJIT(const string &name, const string &code) {
   }
   popBlock();
   for (auto &i : items) {
-    // DBG("readding  {}", i.first);
     add(i.first, i.second);
   }
+  if (varExpr) {
+    auto var = jit->addVar(varExpr);
+    add(varName, var);
+  }
 
-  module = oldModule;
+  // Set up new block
+
+  auto fn = new seq::Func();
+  fn->setName(format("$jit_{}", ++counter));
+  addBlock(fn->getBlock(), fn);
+  assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
 }
 
 } // namespace ast

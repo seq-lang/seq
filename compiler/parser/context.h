@@ -135,18 +135,16 @@ struct ImportCache {
 class Context : public VTable<ContextItem> {
   std::shared_ptr<ImportCache> cache;
   std::string filename;
-  seq::BaseFunc *module;
   seq::SeqJIT *jit;
   std::vector<seq::BaseFunc *> bases;
   std::vector<seq::Block *> blocks;
   int topBlockIndex, topBaseIndex;
   seq::types::Type *enclosingType;
   seq::TryCatch *tryCatch;
-  void loadStdlib();
 
 public:
-  Context(seq::BaseFunc *module, std::shared_ptr<ImportCache> cache, seq::SeqJIT *jit = nullptr,
-          const std::string &filename = "");
+  Context(std::shared_ptr<ImportCache> cache, seq::Block *block, seq::BaseFunc *base,
+          seq::SeqJIT *jit, const std::string &filename);
   virtual ~Context() {}
   std::shared_ptr<ContextItem> find(const std::string &name,
                                     bool onlyLocal = false) const;
@@ -162,8 +160,7 @@ public:
                 seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
-  seq::SeqJIT *getJIT();
-
+  void loadStdlib(seq::Var *argVar = nullptr);
   void add(const std::string &name, std::shared_ptr<ContextItem> var);
   void add(const std::string &name, seq::Var *v, bool global = false);
   void add(const std::string &name, seq::types::Type *t, bool global = false);
@@ -175,7 +172,10 @@ public:
   std::shared_ptr<ImportCache> getCache();
 
   std::shared_ptr<Context> importFile(const std::string &file);
-  void executeJIT(const std::string &name, const std::string &code);
+
+  void initJIT();
+  seq::SeqJIT *getJIT();
+  void execJIT(std::string varName = "", seq::Expr *varExpr = nullptr);
 };
 
 } // namespace ast
