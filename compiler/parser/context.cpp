@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/codegen/stmt.h"
-#include "parser/ast/format/stmt.h"
-#include "parser/ast/transform/stmt.h"
+#include "parser/ast/codegen.h"
+#include "parser/ast/format.h"
+#include "parser/ast/transform.h"
 #include "parser/common.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
@@ -56,33 +56,22 @@ seq::Expr *ImportContextItem::getExpr() const {
   return nullptr;
 }
 
-Context::Context(seq::BaseFunc *module, ImportCache &cache, seq::SeqJIT *jit,
+Context::Context(shared_ptr<ImportCache> cache, seq::Block *block,
+                 seq::BaseFunc *base, seq::SeqJIT *jit,
                  const std::string &filename)
-    : cache(cache), filename(filename), module(module), jit(jit),
+    : cache(cache), filename(filename), jit(jit),
       enclosingType(nullptr), tryCatch(nullptr) {
   stack.push(vector<string>());
-  bases.push_back(module);
-  if (jit) {
-    blocks.push_back(((seq::Func *)module)->getBlock());
-  } else {
-    blocks.push_back(((seq::SeqModule *)module)->getBlock());
-  }
   topBaseIndex = topBlockIndex = 0;
-  if (!jit) {
-    ((seq::SeqModule *)module)->setFileName(filename);
-  }
-  if (this->filename == "") {
-    loadStdlib();
+  if (block) {
+    addBlock(block, base);
   }
 }
 
-void Context::loadStdlib() {
-  this->filename = cache.getImportFile("core", "", true);
-  if (this->filename == "") {
+void Context::loadStdlib(seq::Var *argVar) {
+  filename = cache->getImportFile("core", "", true);
+  if (filename == "") {
     throw seq::exc::SeqException("cannot load standard library");
-  }
-  if (!jit) {
-    ((seq::SeqModule *)module)->setFileName(this->filename);
   }
   vector<pair<string, seq::types::Type *>> pods = {
       {"void", seq::types::Void},   {"bool", seq::types::Bool},
@@ -92,13 +81,12 @@ void Context::loadStdlib() {
   for (auto &i : pods) {
     add(i.first, i.second);
   }
-  if (!jit) {
-    add("__argv__", ((seq::SeqModule *)module)->getArgVar());
+  if (argVar) {
+    add("__argv__", argVar);
   }
-  cache.stdlib = this;
-  auto stmts = parse_file(this->filename);
-  auto tv = TransformStmtVisitor::apply(move(stmts));
-  CodegenStmtVisitor::apply(*this, tv);
+  cache->stdlib = this;
+  auto tv = TransformStmtVisitor().transform(parse_file(filename));
+  CodegenStmtVisitor(*this).transform(tv);
 }
 
 shared_ptr<ContextItem> Context::find(const string &name,
@@ -112,8 +100,8 @@ shared_ptr<ContextItem> Context::find(const string &name,
     }
   } else if (i) {
     return i;
-  } else if (cache.stdlib && this != cache.stdlib) {
-    return cache.stdlib->find(name);
+  } else if (cache->stdlib != nullptr && this != cache->stdlib) {
+    return cache->stdlib->find(name);
   } else {
     return nullptr;
   }
@@ -137,7 +125,7 @@ seq::types::Type *Context::getEnclosingType() { return enclosingType; }
 
 void Context::setEnclosingType(seq::types::Type *t) { enclosingType = t; }
 
-bool Context::isToplevel() const { return module == getBase(); }
+bool Context::isToplevel() const { return bases.size() == 1; }
 
 void Context::addBlock(seq::Block *newBlock, seq::BaseFunc *newBase) {
   VTable<ContextItem>::addBlock();
@@ -154,11 +142,11 @@ void Context::addBlock(seq::Block *newBlock, seq::BaseFunc *newBase) {
 void Context::popBlock() {
   bases.pop_back();
   topBaseIndex = bases.size() - 1;
-  while (!bases[topBaseIndex])
+  while (topBaseIndex && !bases[topBaseIndex])
     topBaseIndex--;
   blocks.pop_back();
   topBlockIndex = blocks.size() - 1;
-  while (!blocks[topBlockIndex])
+  while (topBlockIndex && !blocks[topBlockIndex])
     topBlockIndex--;
   VTable<ContextItem>::popBlock();
 }
@@ -227,37 +215,41 @@ string ImportCache::getImportFile(const string &what, const string &relativeTo,
 }
 
 shared_ptr<Context> Context::importFile(const string &file) {
-  auto i = cache.imports.find(file);
-  if (i != cache.imports.end()) {
+  auto i = cache->imports.find(file);
+  if (i != cache->imports.end()) {
     return i->second;
   } else {
     auto stmts = parse_file(file);
-    auto tv = TransformStmtVisitor::apply(move(stmts));
-    auto context = make_shared<Context>(module, cache, jit, file);
-    CodegenStmtVisitor::apply(*context, tv);
-    return (cache.imports[file] = context);
+    auto tv = TransformStmtVisitor().transform(parse_file(file));
+    auto context = make_shared<Context>(cache, getBlock(), getBase(), getJIT(), file);
+    CodegenStmtVisitor(*context).transform(tv);
+    return (cache->imports[file] = context);
   }
 }
 
-ImportCache &Context::getCache() { return cache; }
+shared_ptr<ImportCache> Context::getCache() { return cache; }
+
+void Context::initJIT() {
+  jit = new seq::SeqJIT();
+  auto fn = new seq::Func();
+  fn->setName("$jit_0");
+
+  addBlock(fn->getBlock(), fn);
+  assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
+
+  loadStdlib();
+  execJIT();
+}
 
 seq::SeqJIT *Context::getJIT() { return jit; }
 
-void Context::executeJIT(const string &name, const string &code) {
+void Context::execJIT(string varName, seq::Expr *varExpr) {
+  static int counter = 0;
+
   assert(jit != nullptr);
+  assert(bases.size() == 1);
+  jit->addFunc((seq::Func *)bases[0]);
 
-  auto fn = new seq::Func();
-  fn->setName(name);
-
-  auto oldModule = module;
-  module = fn;
-  addBlock(fn->getBlock(), fn);
-
-  auto tv =
-      seq::ast::TransformStmtVisitor::apply(seq::ast::parse_code(name, code));
-  seq::ast::CodegenStmtVisitor::apply(*this, tv);
-
-  jit->addFunc(fn);
   vector<pair<string, shared_ptr<seq::ast::ContextItem>>> items;
   for (auto &name : stack.top()) {
     auto i = find(name);
@@ -269,8 +261,17 @@ void Context::executeJIT(const string &name, const string &code) {
   for (auto &i : items) {
     add(i.first, i.second);
   }
+  if (varExpr) {
+    auto var = jit->addVar(varExpr);
+    add(varName, var);
+  }
 
-  module = oldModule;
+  // Set up new block
+
+  auto fn = new seq::Func();
+  fn->setName(format("$jit_{}", ++counter));
+  addBlock(fn->getBlock(), fn);
+  assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
 }
 
 } // namespace ast

@@ -21,13 +21,16 @@ static void versMsg(raw_ostream &out) {
 }
 
 int main(int argc, char **argv) {
+  // if (string(argv[1]) == "-j") {
   // auto j = jit_init();
-  // jit_execute(j, argv[1]);
+  // jit_execute(j, argv[2]);
   // exit(0);
+  // }
 
   opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode (disable optimizations; "
                             "print LLVM IR to stderr)"));
+  opt<bool> docstr("docstr", desc("Generate docstrings"));
   opt<string> output(
       "o",
       desc("Write LLVM bitcode to specified file instead of running with JIT"));
@@ -38,8 +41,13 @@ int main(int argc, char **argv) {
   ParseCommandLineOptions(argc, argv);
   vector<string> libsVec(libs);
   vector<string> argsVec(args);
-  SeqModule *s = parse(argv[0], input.c_str(), false, false);
 
+  if (docstr.getValue()) {
+    generateDocstr(input);
+    return EXIT_SUCCESS;
+  }
+
+  SeqModule *s = parse(argv[0], input.c_str(), false, false);
   if (output.getValue().empty()) {
     argsVec.insert(argsVec.begin(), input);
     execute(s, argsVec, libsVec, debug.getValue());

@@ -105,17 +105,16 @@ private:
       std::shared_ptr<llvm::Module>)>;
 
   llvm::orc::IRTransformLayer<decltype(comLayer), OptimizeFunction> optLayer;
-  std::unique_ptr<llvm::orc::JITCompileCallbackManager> callbackManager;
-  llvm::orc::CompileOnDemandLayer<decltype(optLayer)> codLayer;
+
   std::vector<Var *> globals;
   int inputNum;
 
-  using ModuleHandle = decltype(codLayer)::ModuleHandleT;
+  using ModuleHandle = decltype(optLayer)::ModuleHandleT;
   std::unique_ptr<llvm::Module> makeModule();
   ModuleHandle addModule(std::unique_ptr<llvm::Module> module);
   llvm::JITSymbol findSymbol(std::string name);
   void removeModule(ModuleHandle key);
-  Func makeFunc();
+  Func *makeFunc();
   void exec(Func *func, std::unique_ptr<llvm::Module> module);
 
 public:

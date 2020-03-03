@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(Seq)
 
+# -fsanitize=address -fno-omit-frame-pointer
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
