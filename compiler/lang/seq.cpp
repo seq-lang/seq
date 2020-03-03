@@ -15,7 +15,7 @@ using namespace llvm::orc;
 #include "llvm/CodeGen/CommandFlags.def"
 #endif
 
-config::Config::Config() : context(), debug(true) {}
+config::Config::Config() : context(), debug(false) {}
 
 config::Config &seq::config::config() {
   static Config config;
