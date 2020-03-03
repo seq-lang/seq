@@ -2,7 +2,7 @@ from bio import *
 
 @test
 def test_parse_valid_with_header():
-    parser = BED("../data/valid_with_header.bed", True, False, True)
+    parser = BED("test/data/valid_with_header.bed", True, False, True)
     first_row_expected = BEDRecord("chr7", 127471196, 127472363, "Pos1", 0, "+", 127471196, 127472363, (255, 0, 0), 4, [11, 12, 13, 14], [14, 55, 66, 99], 12)
     header_expected = ["browser position chr7:127471196-127495720", "browser hide all", "track name=\"ItemRGBDemo\" description=\"Item RGB demonstration\" visibility=2 itemRgb=\"On\""]
 
@@ -12,7 +12,7 @@ def test_parse_valid_with_header():
 
 @test
 def test_parse_invalid_with_header():
-    parser = BED("../data/invalid/invalid_with_header.bed", True, False, True)
+    parser = BED("test/data/invalid/invalid_with_header.bed", True, False, True)
     try:
         next(parser)
         parser.close()
