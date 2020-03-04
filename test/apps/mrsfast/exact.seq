@@ -1,0 +1,101 @@
+# Implementation of exact mapping using FM-index
+# Usage:
+#   Index:  seqc exact.seq index reference.fa
+#   Search: seqc exact.seq search reference.fa reads.fq output.sam
+
+from sys import argv, stderr, exit
+from bio.fmindex import FMIndex
+
+type GenomeIndex(ref: list[FASTARecord], fmi: FMIndex)
+
+def open_index_file(basename: str, mode: str):
+    import gzip
+    return gzip.open(f'{basename}.exact.idx', mode)
+
+def index_load(basename: str):
+    from pickle import load
+    with open_index_file(basename, 'rb') as jar:
+        return load[GenomeIndex](jar)
+
+def main_index():
+    from pickle import dump
+    basename = argv[2]
+    stderr.write('counting q-grams...\n')
+    ref = [rec for rec in FASTA(basename)]
+    stderr.write('making FM-index...\n')
+    fmi = FMIndex(basename)
+    index = GenomeIndex(ref, fmi)
+    stderr.write('writing to disk...\n')
+    with open_index_file(basename, 'wb0') as jar:
+        dump(index, jar)
+
+num_aligned = 0
+output_buf = list[str](200)
+
+@prefetch
+def align(read: FASTQRecord, genome_index: GenomeIndex, out: File):
+    global num_aligned
+    for rc in (False, True):
+        read_seq = read.seq
+        read_len = len(read_seq)
+        if rc:
+            read_seq = ~read_seq
+
+        s = read_seq
+        intv = genome_index.fmi.interval(s[-1])
+        s = s[:-1]
+        while s and intv:
+            intv = genome_index.fmi[intv, s[-1]]
+            s = s[:-1]
+
+        for rid, name, ref_pos in genome_index.fmi.results(intv):
+            ref_len = len(genome_index.ref[rid].seq)
+            if not (0 <= ref_pos <= ref_len - read_len):
+                continue
+            if genome_index.ref[rid].seq[ref_pos:ref_pos + read_len].N():
+                continue
+
+            qual = read.qual
+            output_buf.clear()
+            output_buf.append(read.name)
+            output_buf.append('\t16\t' if rc else '\t0\t')
+            output_buf.append(name)
+            output_buf.append('\t')
+            output_buf.append(str(ref_pos + 1))
+            output_buf.append('\t255\t')
+            output_buf.append(str(read_len))
+            output_buf.append('M\t*\t0\t0\t')
+            output_buf.append(str(read_seq))
+            output_buf.append('\t')
+            if rc:
+                for i in range(len(read.qual)):
+                    output_buf.append(read.qual[-1-i])
+            else:
+                output_buf.append(read.qual)
+            output_buf.append('\tNM:i:0\n')
+            out.write(''.join(output_buf))
+
+    num_aligned += 1
+    if num_aligned % 10000000 == 0:
+        print 'aligned 10M reads'
+
+def main_search():
+    from time import timing
+    ref_path = argv[2]
+    fastq_path = argv[3]
+    out_path = argv[4]
+    stderr.write('loading index...\n')
+    genome_index = index_load(ref_path)
+    stderr.write('running alignment pipeline...\n')
+    with open(out_path, 'w') as out, timing('alignment pipeline'):
+        FASTQ(fastq_path) |> iter |> align(genome_index, out)
+
+mode = argv[1]
+match mode:
+    case 'index':
+        main_index()
+    case 'search':
+        main_search()
+    case _:
+        stderr.write("error: unknown mode: valid modes are 'index' and 'search'\n")
+        exit(1)
