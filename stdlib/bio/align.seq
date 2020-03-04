@@ -66,6 +66,9 @@ extend CIGAR:
     def __len__(self: CIGAR):
         return self.len
 
+    def __bool__(self: CIGAR):
+        return self.len > 0
+
     def __init__(self: CIGAR, cigar: str) -> CIGAR:
         ops = list[int]()
         d = 0
@@ -105,9 +108,11 @@ extend CIGAR:
             yield self[i]
 
     def __str__(self: CIGAR):
-        def op_to_str(op):
-            return str(op[0]) + str(op[1])
-        return str.cat([op_to_str(op) for op in self])
+        v = list[str](len(self) * 2)
+        for op in self:
+            v.append(str(op[0]))
+            v.append(str(op[1]))
+        return str.cat(v)
 
 extend Alignment:
     def __init__(self: Alignment) -> Alignment:
