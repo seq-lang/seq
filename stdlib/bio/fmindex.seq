@@ -68,6 +68,7 @@ class bseq:
     _n_seqs: int
     _anns: list[bntann1_t]
     _ambs: list[bntamb1_t]
+
     def __pickle__(self: bseq, jar: Jar):
         _pickle_ptr(self._pac, self._l_pac, jar)
         pickle((self._n_seqs, self._anns, self._ambs), jar)
@@ -173,7 +174,7 @@ class bseq:
         right = self._n_seqs
         while left < right:
             mid = (left + right) >> 1
-            if pos > self._anns[mid]._offset:
+            if pos >= self._anns[mid]._offset:
                 if mid == self._n_seqs - 1:
                     break
                 if pos < self._anns[mid + 1]._offset:
@@ -199,13 +200,14 @@ class bseq:
             mid = (left + right) >> 1
             if pos >= self._ambs[mid]._offset + self._ambs[mid]._len:
                 left = mid + 1
-            elif pos + len <= self._ambs[mid].offset:
+            elif pos + len <= self._ambs[mid]._offset:
                 right = mid
             else:
                 if pos >= self._ambs[mid]._offset:
                     nn += (self._ambs[mid]._offset + self._ambs[mid]._len - pos) if (self._ambs[mid]._offset + self._ambs[mid]._len < pos + len) else len
                 else:
                     nn += (self._ambs[mid]._len) if (self._ambs[mid]._offset + self._ambs[mid]._len < pos + len) else (len - (self._ambs[mid]._offset - len))
+                break
         return nn
 
     def __len__(self: bseq):
