@@ -105,6 +105,30 @@ extend str:
         start, stop, step, length = slice.adjust_indices(len(self), start=s.start)
         return str(self.ptr + start, length)
 
+    def _make_from_range(self: str, start: int, stop: int, step: int, length: int):
+        p = ptr[byte](length)
+        j = 0
+        for i in range(start, stop, step):
+            p[j] = self.ptr[i]
+            j += 1
+        return str(p, length)
+
+    def __getitem__(self: str, s: esslice):
+        start, stop, step, length = slice.adjust_indices(len(self), step=s.step)
+        return self._make_from_range(start, stop, step, length)
+
+    def __getitem__(self: str, s: rsslice):
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, step=s.step)
+        return self._make_from_range(start, stop, step, length)
+
+    def __getitem__(self: str, s: lsslice):
+        start, stop, step, length = slice.adjust_indices(len(self), end=s.end, step=s.step)
+        return self._make_from_range(start, stop, step, length)
+
+    def __getitem__(self: str, s: sslice):
+        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end, step=s.step)
+        return self._make_from_range(start, stop, step, length)
+
     def __contains__(self: str, pattern: str):
         return self.find(pattern, 0, len(self)) >= 0
 

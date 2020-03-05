@@ -596,6 +596,15 @@ def test_fstr():
     assert f'{n=}' == 'n=42'
     assert f"hello {n=} world" == 'hello n=42 world'
 
+@test
+def test_slice(s = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+               indices = (0, 1, 3, 41, 0xfffffffffff, -1, -2, -37)):
+    for start in indices:
+        for stop in indices:
+            for step in indices[1:]:
+                L = list(s)[start:stop:step]
+                assert s[start:stop:step] == ''.join(L)
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -638,3 +647,4 @@ test_expandtabs()
 test_translate()
 test_repr()
 test_fstr()
+test_slice()
