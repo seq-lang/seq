@@ -34,6 +34,9 @@ extend seq:
     def __init__(self: seq, s: str):
         return seq(s.ptr, s.len)
 
+    def __init__(self: seq):
+        return seq(cobj(), 0)
+
     def __eq__(self: seq, other: seq):
         n = len(self)
         if n != len(other):
