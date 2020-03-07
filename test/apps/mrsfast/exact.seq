@@ -20,7 +20,6 @@ def index_load(basename: str):
 def main_index():
     from pickle import dump
     basename = argv[2]
-    stderr.write('counting q-grams...\n')
     ref = [rec for rec in FASTA(basename)]
     stderr.write('making FM-index...\n')
     fmi = FMIndex(basename)
