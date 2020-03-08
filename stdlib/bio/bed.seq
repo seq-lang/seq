@@ -1,5 +1,5 @@
 type BEDRecord(_chrom: str, _chromStart: int, _chromEnd: int, 
-                _name: str, _score: int, _strand: str, _thickStart: int,
+                _name: str, _score: float, _strand: str, _thickStart: int,
                  _thickEnd: int, _itemRgb: tuple[int, int, int], _blockCount: int, 
                  _blockSizes: list[int], _blockStarts: list[int], numCols: int):
     @property
@@ -150,7 +150,7 @@ class BEDReader:
         chromStart = 0
         chromEnd = 0
         name: str = ""
-        score: int = 0
+        score: float = 0.
         strand: str = ""
         thickStart: int = 0
         thickEnd: int = 0
@@ -172,9 +172,9 @@ class BEDReader:
             val = col_vals[i]
             val_ptr = val_ptrs[i]
             match col_name:
-                case "chromStart" or "chromEnd" or "score" or "thickStart" or "thickEnd" or "blockCount":
-                    val_num_ptr = ptr[int](val_ptr)
-                    val_num_ptr[0] = self.get_num_from_bed(val, col_name, lnum)
+                case "chromStart" or "chromEnd" or "thickStart" or "thickEnd" or "blockCount":
+                    val_int_ptr = ptr[int](val_ptr)
+                    val_int_ptr[0] = self.get_int_from_bed(val, col_name, lnum)
                 case "blockSizes" or "blockStarts":
                     block_val_ptr = ptr[list[int]](val_ptr)
                     block_val_ptr[0] = self.get_block_vals_from_bed(val, blockCount, col_name, lnum)
@@ -186,6 +186,9 @@ class BEDReader:
                         strand = val
                     else:
                         raise ValueError(f"Strand must be + or - was {val}, line {lnum}")
+                case "score": # between 0 and 1000, can be float
+                    val_float_ptr = ptr[float](val_ptr)
+                    val_float_ptr[0] = self.get_score_from_bed(val, col_name, lnum)
                 case "itemRgb": #3 comma separated ints
                     rgb_vals = val.split(",")
                     if len(rgb_vals) != 3:
@@ -201,13 +204,24 @@ class BEDReader:
                          thickStart, thickEnd, itemRgb, blockCount, 
                          blockSizes, blockStarts, len(col_vals))
 
-    def get_num_from_bed(self: BEDReader, val: str, col_name: str, lnum: int) -> int:
+    def get_int_from_bed(self: BEDReader, val: str, col_name: str, lnum: int) -> int:
         if self.validate:
             try:
                 return int(val)
             except:
                 raise ValueError(f"{col_name}, must be integer, line: {lnum}")
         return int(val)
+
+    def get_score_from_bed(self: BEDReader, val: str, col_name: str, lnum: int) -> float:
+        if self.validate:
+            f = 0.
+            try:
+                f = float(val)
+            except:
+                raise ValueError(f"{col_name}, must be float or integer, line: {lnum}")
+            if f < 0 or f > 1000:
+                raise ValueError(f"{col_name}, must be float or integer between 0 and 1000, line {lnum}")
+        return float(val)
 
     def get_block_vals_from_bed(self: BEDReader, val: str, blockCount: int, col_name: str, lnum: int) -> list[int]:
         # blockCount specifies how many values we should expect in the val str
