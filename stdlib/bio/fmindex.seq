@@ -613,7 +613,14 @@ class FMIndex:
             return (FMDInterval(ok0_x0, ok0_x1, ok0_x2, info[0]), FMDInterval(ok1_x0, ok1_x1, ok1_x2, info[1]),
                     FMDInterval(ok2_x0, ok2_x1, ok2_x2, info[2]), FMDInterval(ok3_x0, ok3_x1, ok3_x2, info[3]))
 
-    def smems(self: FMIndex, q: seq, x: int, min_intv: int = 1, max_intv: int = 0):
+    def smems(self: FMIndex,
+              q: seq,
+              x: int = 0,
+              min_intv: int = 1,
+              max_intv: int = 0,
+              mem: list[FMDInterval] = None,
+              prev: list[FMDInterval] = None,
+              curr: list[FMDInterval] = None):
         # adapted from BWA-MEM's bwt_smem1a()
         def infos(ok: tuple[FMDInterval,FMDInterval,FMDInterval,FMDInterval]):
             return (ok[0]._info, ok[1]._info, ok[2]._info, ok[3]._info)
@@ -624,11 +631,22 @@ class FMIndex:
         if not (0 <= x < l):
             raise ValueError("sequence index out of range")
 
-        mem = list[FMDInterval]()
+        if mem is None:
+            mem = list[FMDInterval]()
+        else:
+            mem.clear()
         if q[x].N():
-            return mem
-        curr = list[FMDInterval]()
-        prev = list[FMDInterval]()
+            return x + 1, mem
+
+        if prev is None:
+            prev = list[FMDInterval]()
+        else:
+            prev.clear()
+
+        if curr is None:
+            curr = list[FMDInterval]()
+        else:
+            curr.clear()
 
         if min_intv < 1:
             min_intv = 1
@@ -689,7 +707,7 @@ class FMIndex:
             i -= 1
 
         mem.reverse()  # s.t. sorted by the start coordinate
-        return mem
+        return ret, mem
 
     def update(self: FMIndex, intv: FMInterval, c: seq):
         if len(c) != 1:

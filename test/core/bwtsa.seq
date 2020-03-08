@@ -80,11 +80,11 @@ def test_smems():
         fmi = pickle.load[FMIndex](jar)
 
     q = s'ACCAAACCCAGCTACGCAAAATCTTAGCATACTCCTCAATTACCCACATAGGATGAATAA'
-    v = [[(name, pos, is_rev, ref[rid].seq[pos:pos + intv.match_size]) for rid, name, pos, is_rev in fmi.biresults(intv)] for intv in fmi.smems(q, x=20, min_intv=1)]
+    v = [[(name, pos, is_rev, ref[rid].seq[pos:pos + intv.match_size]) for rid, name, pos, is_rev in fmi.biresults(intv)] for intv in fmi.smems(q, x=20, min_intv=1)[1]]
     assert v == [[('chrC', 61, True, s'TATTCATCCTATGTGGGTAATTGAGGAGTATGCTAAGATTTTGCGTAGC'), ('chrC', 10, False, s'GCTACGCAAAATCTTAGCATACTCCTCAATTACCCACATAGGATGAATA')]]
 
     q = s'CTTAA'
-    v = [[(name, pos, is_rev, ref[rid].seq[pos:pos + intv.match_size]) for rid, name, pos, is_rev in fmi.biresults(intv)] for intv in fmi.smems(q, x=1, min_intv=1)]
+    v = [[(name, pos, is_rev, ref[rid].seq[pos:pos + intv.match_size]) for rid, name, pos, is_rev in fmi.biresults(intv)] for intv in fmi.smems(q, x=1, min_intv=1)[1]]
     assert v == [[('chrA', 2, False, s'CTTAA')]]
 
 test_suffix_array()
