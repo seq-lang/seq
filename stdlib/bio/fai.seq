@@ -1,0 +1,86 @@
+type FAIRecord(_name: str, _length: int, _offset: int, _linebases: int, _linewidth: int, _qualoffset:int):
+
+    @property
+    def name(self: FAIRecord):
+        return self._name
+        
+class FAIReader:
+    validate: bool
+    gzip: bool
+    copy: bool
+    _file: cobj
+    col_names: list[str]
+    num_necessary_cols: int # min number of columns for valid fai
+
+    def __init__(self: FAIReader, path: str, validate: bool, gzip: bool, copy: bool):
+        self.validate = validate
+        self.gzip = gzip
+        self.copy = copy
+        self._file = gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__()
+        self.col_names = ["name", "length", "offset", "line_bases", "line_width", "qual_offset"]
+        self.num_necessary_cols = 6
+
+    @property
+    def file(self: FAIReader):
+        assert not self.gzip
+        p = __array__[cobj](1)
+        p.ptr[0] = self._file
+        return ptr[File](p.ptr)[0]
+
+    @property
+    def gzfile(self: FAIReader):
+        assert self.gzip
+        p = __array__[cobj](1)
+        p.ptr[0] = self._file
+        return ptr[gzFile](p.ptr)[0]
+
+    def _iter_core(self: FAIReader, file):
+        for lnum, l in enumerate(file._iter()):
+            line = copy(l) if self.copy else l
+            yield self.FAIRecord_from_str(line, lnum)
+    
+    def __iter__(self: FAIReader) -> FAIRecord:
+        if self.gzip:
+            yield from self._iter_core(self.gzfile)
+        else:
+            yield from self._iter_core(self.file)
+
+    def FAIRecord_from_str(self: FAIReader, s: str, lnum: int):
+        col_strs = s.split("\t")
+
+        if self.validate and len(col_strs) != self.num_necessary_cols:
+            raise ValueError(f"Line {lnum} does not have the required number of columns, {self.num_necessary_cols}")
+
+        name, length, offset = "", 0, 0
+        line_bases, line_width, qual_offset = 0, 0, 0
+
+        val_ptrs: list[ptr[byte]] = [ptr[byte](__ptr__(name)), ptr[byte](__ptr__(length)), 
+                                    ptr[byte](__ptr__(offset)), ptr[byte](__ptr__(line_bases)), 
+                                    ptr[byte](__ptr__(line_width)), ptr[byte](__ptr__(qual_offset))]
+
+        for i in range(self.num_necessary_cols):
+            col_name = self.col_names[i]
+            val_ptr = val_ptrs[i]
+            val_str = col_strs[i]
+            match col_name:
+                case "name":
+                    val_str_ptr = ptr[str](val_ptr)
+                    val_str_ptr[0] = val_str
+                case _:
+                    val_num_ptr = ptr[int](val_ptr)
+                    val_num_ptr[0] = self.get_num_from_fai(val_str, col_name, lnum)
+        
+        return FAIRecord(name, length, offset, line_bases, line_width, qual_offset)
+    
+    def get_num_from_fai(self: FAIReader, val_str: str, col_name: str, lnum: int):
+        if self.validate:
+            try:
+                return int(val_str)
+            except:
+                raise ValueError(f"{col_name}, must be integer, line: {lnum}")
+        return int(val_str)
+
+parser: FAIReader = FAIReader("valid_fai.fai", True, True, True)
+
+for i in parser:
+    print(i)
