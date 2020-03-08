@@ -71,7 +71,7 @@ before_install:
 
 install:
   # install libffi:
-  - wget -c https://sourceware.org/pub/libffi/libffi-3.2.1.tar.gz -O - | tar -xz
+  - wget -c ftp://sourceware.org/pub/libffi/libffi-3.2.1.tar.gz -O - | tar -xz
   - cd libffi-3.2.1
   - ./configure CFLAGS="-fPIC" --enable-portable-binary --enable-static --disable-shared
   - make LDFLAGS="-static"
