@@ -287,6 +287,9 @@ type FMInterval(_lo: int, _hi: int):
     def __len__(self: FMInterval):
         return self._hi - self._lo + 1 if self else 0
 
+    def invalid():
+        return FMInterval(-2, -1)
+
 type FMDInterval(_lo: int, _lo_rev: int, _size: int, _info: int):
     def __bool__(self: FMDInterval):
         return self._size > 0
@@ -313,6 +316,659 @@ type FMDInterval(_lo: int, _lo_rev: int, _size: int, _info: int):
     @property
     def offset(self: FMDInterval):
         return int(u64(self._info) >> u64(32))
+
+    def invalid():
+        return FMDInterval(0, 0, 0, 0)
+
+def _extend(self, ik: FMDInterval, is_back: bool, info: tuple[int,int,int,int]):
+    # adapted from BWA-MEM's bwt_extend()
+    if is_back:
+        tk, tl = self._2occ4(ik._lo - 1, ik._lo - 1 + ik._size)
+
+        ok0_x0 = int(self._L2[0]) + 1 + tk[0]
+        ok0_x2 = tl[0] - tk[0]
+        ok1_x0 = int(self._L2[1]) + 1 + tk[1]
+        ok1_x2 = tl[1] - tk[1]
+        ok2_x0 = int(self._L2[2]) + 1 + tk[2]
+        ok2_x2 = tl[2] - tk[2]
+        ok3_x0 = int(self._L2[3]) + 1 + tk[3]
+        ok3_x2 = tl[3] - tk[3]
+
+        ok3_x1 = ik._lo_rev + (1 if (ik._lo <= self._primary and ik._lo + ik._size - 1 >= self._primary) else 0)
+        ok2_x1 = ok3_x1 + ok3_x2
+        ok1_x1 = ok2_x1 + ok2_x2
+        ok0_x1 = ok1_x1 + ok1_x2
+        return (FMDInterval(ok0_x0, ok0_x1, ok0_x2, info[0]), FMDInterval(ok1_x0, ok1_x1, ok1_x2, info[1]),
+                FMDInterval(ok2_x0, ok2_x1, ok2_x2, info[2]), FMDInterval(ok3_x0, ok3_x1, ok3_x2, info[3]))
+    else:
+        tk, tl = self._2occ4(ik._lo_rev - 1, ik._lo_rev - 1 + ik._size)
+
+        ok0_x1 = int(self._L2[0]) + 1 + tk[0]
+        ok0_x2 = tl[0] - tk[0]
+        ok1_x1 = int(self._L2[1]) + 1 + tk[1]
+        ok1_x2 = tl[1] - tk[1]
+        ok2_x1 = int(self._L2[2]) + 1 + tk[2]
+        ok2_x2 = tl[2] - tk[2]
+        ok3_x1 = int(self._L2[3]) + 1 + tk[3]
+        ok3_x2 = tl[3] - tk[3]
+
+        ok3_x0 = ik._lo + (1 if (ik._lo_rev <= self._primary and ik._lo_rev + ik._size - 1 >= self._primary) else 0)
+        ok2_x0 = ok3_x0 + ok3_x2
+        ok1_x0 = ok2_x0 + ok2_x2
+        ok0_x0 = ok1_x0 + ok1_x2
+        return (FMDInterval(ok0_x0, ok0_x1, ok0_x2, info[0]), FMDInterval(ok1_x0, ok1_x1, ok1_x2, info[1]),
+                FMDInterval(ok2_x0, ok2_x1, ok2_x2, info[2]), FMDInterval(ok3_x0, ok3_x1, ok3_x2, info[3]))
+
+def smems(self,
+          q: seq,
+          x: int = 0,
+          min_intv: int = 1,
+          max_intv: int = 0,
+          mem: list[FMDInterval] = None,
+          prev: list[FMDInterval] = None,
+          curr: list[FMDInterval] = None):
+    # adapted from BWA-MEM's bwt_smem1a()
+    def infos(ok: tuple[FMDInterval,FMDInterval,FMDInterval,FMDInterval]):
+        return (ok[0]._info, ok[1]._info, ok[2]._info, ok[3]._info)
+
+    l = len(q)
+    if x < 0:
+        x += l
+    if not (0 <= x < l):
+        raise ValueError("sequence index out of range")
+
+    if mem is None:
+        mem = list[FMDInterval]()
+    else:
+        mem.clear()
+    if q[x].N():
+        return x + 1, mem
+
+    if prev is None:
+        prev = list[FMDInterval]()
+    else:
+        prev.clear()
+
+    if curr is None:
+        curr = list[FMDInterval]()
+    else:
+        curr.clear()
+
+    if min_intv < 1:
+        min_intv = 1
+
+    ok = (FMDInterval(0, 0, 0, 0), FMDInterval(0, 0, 0, 0), FMDInterval(0, 0, 0, 0), FMDInterval(0, 0, 0, 0))
+    ik = self.biinterval(q[x])._with_info(x + 1)
+
+    # forward search
+    i = x + 1
+    while i < l:
+        qi = _enc(q._at(i))
+        if ik._size < max_intv:  # an interval small enough
+            curr.append(ik)
+            break
+        elif qi < 4:  # an A/C/G/T base
+            c = 3 - qi
+            ok = _extend(self, ik, is_back=False, info=infos(ok))
+            if ok[c]._size != ik._size:  # change of the interval size
+                curr.append(ik)
+                if ok[c]._size < min_intv:
+                    break  # the interval size is too small to be extended further
+            ik = ok[c]._with_info(i + 1)
+        else:  # an ambiguous base
+            curr.append(ik)
+            break
+        i += 1
+
+    if i == l:
+        curr.append(ik)
+    curr.reverse()
+    ret = curr[0]._info
+    prev, curr = curr, prev
+
+    # backward search for MEMs
+    i = x - 1
+    while i >= -1:
+        qi = -1 if i < 0 else _enc(q._at(i))
+        c = qi if qi < 4 else -1
+        curr.clear()
+        j = 0
+        while j < len(prev):
+            p = prev[j]
+            if c >= 0 and ik._size >= max_intv:
+                ok = _extend(self, p, is_back=True, info=infos(ok))
+            if c < 0 or ik._size < max_intv or ok[c]._size < min_intv:
+                if len(curr) == 0:
+                    if len(mem) == 0 or i + 1 < mem[-1]._info >> 32:
+                        ik = p._with_info(p._info | ((i + 1) << 32))
+                        mem.append(ik)
+            elif len(curr) == 0 or ok[c]._size != curr[-1]._size:
+                okp = ptr[FMDInterval](__ptr__(ok))
+                okp[c] = ok[c]._with_info(p._info)
+                curr.append(ok[c])
+            j += 1
+        if len(curr) == 0:
+            break
+        prev, curr = curr, prev
+        i -= 1
+
+    mem.reverse()  # s.t. sorted by the start coordinate
+    return ret, mem
+
+OCC_INTV_SHIFT = 7
+OCC_INTERVAL   =  1 << OCC_INTV_SHIFT
+OCC_INTV_MASK  = OCC_INTERVAL - 1
+
+class FMDIndex:
+    _seq_len: int
+    _bwt_size: int
+    _primary: int
+    _bwt: ptr[u32]
+    _sa: ptr[int]
+    _n_sa: int
+    _L2: ptr[int]
+    _cnt_table: ptr[u32]
+    _sa_intv: int
+    _bntseq: bntseq
+
+    def __pickle__(self: FMDIndex, jar: Jar):
+        pickle(self._seq_len, jar)
+        pickle(self._primary, jar)
+        pickle(self._sa_intv, jar)
+        _pickle_ptr(self._bwt, self._bwt_size, jar)
+        _pickle_ptr(self._sa, self._n_sa, jar)
+        _pickle_ptr(self._L2, 5, jar)
+        _pickle_ptr(self._cnt_table, 256, jar)
+        pickle(self._bntseq, jar)
+
+    def __unpickle__(jar: Jar):
+        fmi = FMDIndex()
+        seq_len = unpickle[int](jar)
+        primary = unpickle[int](jar)
+        sa_intv = unpickle[int](jar)
+        bwt, bwt_size = _unpickle_ptr[u32](jar)
+        sa, n_sa = _unpickle_ptr[int](jar)
+        L2, _ = _unpickle_ptr[int](jar)
+        cnt_table, _ = _unpickle_ptr[u32](jar)
+        b = unpickle[bntseq](jar)
+
+        fmi._seq_len = seq_len
+        fmi._bwt_size = bwt_size
+        fmi._primary = primary
+        fmi._bwt = bwt
+        fmi._sa = sa
+        fmi._n_sa = n_sa
+        fmi._L2 = L2
+        fmi._cnt_table = cnt_table
+        fmi._sa_intv = sa_intv
+        fmi._bntseq = b
+        return fmi
+
+    def __init__(self: FMDIndex):
+        self._seq_len = 0
+        self._bwt_size = 0
+        self._primary = 0
+        self._bwt = ptr[u32]()
+        self._sa = ptr[int]()
+        self._n_sa = 0
+        self._L2 = ptr[int]()
+        self._cnt_table = ptr[u32]()
+        self._sa_intv = 0
+        self._bntseq = None
+
+    def __init__(self: FMDIndex, path: str):
+        self._bntseq = bntseq(path)
+        self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac)
+
+    def _init_from_enc(self: FMDIndex, p: ptr[u8], l: int):
+        from bio.bwt import _saisxx
+        def clear[T](p: ptr[T], n: int):
+            i = 0
+            while i < n:
+                p[i] = T()
+                i += 1
+
+        def I(b: bool):
+            return 1 if b else 0
+
+        len_L2 = 5
+        len_count_table = 256
+        self._L2 = ptr[int](len_L2)
+        clear(self._L2, len_L2)
+        self._cnt_table = ptr[u32](len_count_table)
+        clear(self._cnt_table, len_count_table)
+
+        # calculate bwt
+        self._seq_len = 2*l
+        ref_seq = ptr[u8](2*l)
+        i = 0
+        while i < l:
+            b = bntseq.get_pac(p, i)
+            self._L2[int(b) + 1] += 1
+            ref_seq[i] = b
+            i += 1
+        i = 0
+        while i < l:
+            b = u8(3) - ref_seq[l - 1 - i]
+            self._L2[int(b) + 1] += 1
+            ref_seq[l + i] = b
+            i += 1
+        l *= 2
+
+        i = 2
+        while i < 5:
+            self._L2[i] += self._L2[i - 1]
+            i += 1
+
+        SA = _saisxx(ptr[byte](ref_seq), l, k=4)
+
+        s = ptr[u8](l + 1)
+        clear(s, l + 1)
+        i = 0
+        while i <= l:
+            sa_val = l if i == 0 else SA[i - 1]
+            if sa_val == 0:
+                self._primary = i
+            else:
+                s[i] = ref_seq[sa_val - 1]
+            i += 1
+        _gc.free(ptr[byte](ref_seq))
+        _gc.free(ptr[byte](SA))
+
+        i = self._primary
+        while i < l:
+            s[i] = s[i + 1]
+            i += 1
+
+        self._bwt_size = (l + 15) // 16
+        self._bwt = ptr[u32](self._bwt_size)
+        clear(self._bwt, self._bwt_size)
+
+        i = 0
+        while i < l:
+            self._bwt[i >> 4] |= u32(int(s[i]) << ((15 - (i & 15)) << 1))
+            i += 1
+        _gc.free(ptr[byte](s))
+
+        # generate cnt_table
+        i = 0
+        while i != 256:
+            x = 0
+            j = 0
+            while j != 4:
+                x |= (I((i&3) == j) + I((i>>2&3) == j) + I((i>>4&3) == j) + I(i>>6 == j)) << (j<<3)
+                j += 1
+            self._cnt_table[i] = u32(x)
+            i += 1
+
+        self._bwt_update()
+        self._cal_sa(32)
+
+    def _bwt_get(self: FMDIndex, k: int):
+        # ((b)->bwt[((k)>>7<<4) + sizeof(bwtint_t) + (((k)&0x7f)>>4)])
+        return int(self._bwt[(k>>7<<4) + 8 + ((k&0x7f)>>4)])
+
+    def _occ_intv(self: FMDIndex, k: int):
+        # ((b)->bwt + ((k)>>7<<4))
+        return self._bwt + (k>>7<<4)
+
+    def _B0(self: FMDIndex, k: int):
+        # (bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)
+        return self._bwt_get(k) >> ((~k&0xf)<<1) & 3
+
+    def _B00(self: FMDIndex, k: int):
+        # ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
+        return int(self._bwt[k>>4]) >> ((~k&0xf)<<1) & 3
+
+    # compute inverse CSA
+    def _inv_psi(self: FMDIndex, k: int):
+        x = k - (1 if k > self._primary else 0)
+        x = self._B0(x)
+        x = self._L2[x] + self._occ(k, x)
+        return 0 if k == self._primary else x
+
+    def _cal_sa(self: FMDIndex, intv: int):
+        assert intv > 0 and (intv & (intv - 1)) == 0
+        if self._sa:
+            _gc.free(ptr[byte](self._sa))
+        self._sa_intv = intv
+        self._n_sa = (self._seq_len + intv) // intv
+        self._sa = ptr[int](_gc.alloc_atomic(self._n_sa * _gc.sizeof[int]()))
+        isa = 0
+        sa = self._seq_len
+        i = 0
+        while i < self._seq_len:
+            if isa % intv == 0:
+                self._sa[isa // intv] = sa
+            sa -= 1
+            isa = self._inv_psi(isa)
+            i += 1
+        if isa % intv == 0:
+            self._sa[isa // intv] = sa
+        self._sa[0] = -1  # before this line, bwt->sa[0] = bwt->seq_len
+
+    def _bwt_update(self: FMDIndex):
+        c = __array__[int](4)
+        n_occ = (self._seq_len + OCC_INTERVAL - 1) // OCC_INTERVAL + 1
+        self._bwt_size += n_occ * 8  # the new size
+        buf = ptr[u32](self._bwt_size)  # will be the new bwt
+        c[0] = 0
+        c[1] = 0
+        c[2] = 0
+        c[3] = 0
+        i = 0
+        k = 0
+        while i < self._seq_len:
+            if i % OCC_INTERVAL == 0:
+                str.memcpy(ptr[byte](buf + k), ptr[byte](c.ptr), 4 * 8)
+                k += 8  # in fact: sizeof(bwtint_t)=4*(sizeof(bwtint_t)/4)
+            if i % 16 == 0:  # 16 == sizeof(uint32_t)/2
+                buf[k] = self._bwt[i//16]
+                k += 1
+            c[self._B00(i)] += 1
+            i += 1
+        str.memcpy(ptr[byte](buf + k), ptr[byte](c.ptr), 4 * 8)
+        assert k + 8 == self._bwt_size
+        _gc.free(ptr[byte](self._bwt))
+        self._bwt = buf
+
+    def _sa_get(self: FMDIndex, k: int):
+        sa = 0
+        mask = self._sa_intv - 1
+        while k & mask:
+            sa += 1
+            k = self._inv_psi(k)
+
+        # without setting bwt->sa[0] = -1, the following line should be
+        # changed to (sa + bwt->sa[k/bwt->sa_intv]) % (bwt->seq_len + 1)
+        return sa + self._sa[k // self._sa_intv]
+
+    def __occ_aux(y: int, c: int):
+        # reduce nucleotide counting to bits counting
+        y = (y if c&2 else ~y) >> 1 & (y if c&1 else ~y) & 0x5555555555555555
+        # count the number of 1s in y
+        y = (y & 0x3333333333333333) + (y >> 2 & 0x3333333333333333)
+        return ((y + (y >> 4)) & 0xf0f0f0f0f0f0f0f) * 0x101010101010101 >> 56
+
+    def _occ(self: FMDIndex, k: int, c: int):
+        if k == self._seq_len:
+            return self._L2[c + 1] - self._L2[c]
+        if k < 0:
+            return 0
+        k -= 1 if k >= self._primary else 0  # because $ is not in bwt
+
+        # retrieve Occ at k/OCC_INTERVAL
+        p = self._occ_intv(k)
+        n = ptr[int](p)[c]
+        p += 8  # jump to the start of the first FMDIndex cell
+
+        # calculate Occ up to the last k/32
+        end = p + (((k>>5) - ((k&~OCC_INTV_MASK)>>5))<<1)
+        while p < end:
+            n += FMDIndex.__occ_aux(int(p[0])<<32 | int(p[1]), c)
+            p += 2
+
+        # calculate Occ
+        n += FMDIndex.__occ_aux((int(p[0])<<32 | int(p[1])) & ~((1<<((~k&31)<<1)) - 1), c)
+        if c == 0: n -= ~k&31  # corrected for the masked bits
+
+        return n
+
+    # an analogy to bwt_occ() but more efficient, requiring k <= l
+    def _2occ(self: FMDIndex, k: int, l: int, c: int):
+        _k = k - 1 if k >= self._primary else k
+        _l = l - 1 if l >= self._primary else l
+        if _l // OCC_INTERVAL != _k // OCC_INTERVAL or k < 0 or l < 0:
+            return self._occ(k, c), self._occ(l, c)
+        else:
+            if k >= self._primary: k -= 1
+            if l >= self._primary: l -= 1
+            p = self._occ_intv(k)
+            n = ptr[int](p)[c]
+            p += 8
+            # calculate ok
+            j = k >> 5 << 5
+            i = k // OCC_INTERVAL * OCC_INTERVAL
+            while i < j:
+                n += FMDIndex.__occ_aux(int(p[0])<<32 | int(p[1]), c)
+                i += 32
+                p += 2
+            m = n
+            n += FMDIndex.__occ_aux((int(p[0])<<32 | int(p[1])) & ~((1<<((~k&31)<<1)) - 1), c)
+            if c == 0: n -= ~k&31  # corrected for the masked bits
+            ok = n
+            # calculate ol
+            j = l >> 5 << 5
+            while i < j:
+                m += FMDIndex.__occ_aux(int(p[0])<<32 | int(p[1]), c)
+                i += 32
+                p += 2
+            m += FMDIndex.__occ_aux((int(p[0])<<32 | int(p[1])) & ~((1<<((~l&31)<<1)) - 1), c)
+            if c == 0: m -= ~l&31  # corrected for the masked bits
+            ol = m
+            return ok, ol
+
+    def __occ_aux4(self: FMDIndex, b: int):
+        C = self._cnt_table
+        return int(C[b&0xff] + C[b>>8&0xff] + C[b>>16&0xff] + C[b>>24])
+
+    def _occ4(self: FMDIndex, k: int):
+        cnt = __array__[int](4)
+        if k < 0:
+            return 0, 0, 0, 0
+        k -= 1 if k >= self._primary else 0
+        p = self._occ_intv(k)
+        str.memcpy(ptr[byte](cnt.ptr), ptr[byte](p), 4 * 8)
+        p += 8
+        end = p + ((k>>4) - ((k&~OCC_INTV_MASK)>>4))  # this is the end point of the following loop
+        x = 0
+        while p < end:
+            x += self.__occ_aux4(int(p[0]))
+            p += 1
+        tmp = int(p[0] & ~((u32(1)<<u32((~k&15)<<1)) - u32(1)))
+        x += self.__occ_aux4(tmp) - (~k&15)
+        cnt[0] += x&0xff
+        cnt[1] += x>>8&0xff
+        cnt[2] += x>>16&0xff
+        cnt[3] += x>>24
+        return cnt[0], cnt[1], cnt[2], cnt[3]
+
+    # an analogy to bwt_occ4() but more efficient, requiring k <= l
+    def _2occ4(self: FMDIndex, k: int, l: int):
+        cntk = __array__[int](4)
+        cntl = __array__[int](4)
+        _k = k - 1 if k >= self._primary else k
+        _l = l - 1 if l >= self._primary else l
+        if _l >> OCC_INTV_SHIFT != _k >> OCC_INTV_SHIFT or k < 0 or l < 0:
+            return self._occ4(k), self._occ4(l)
+        else:
+            k -= 1 if k >= self._primary else 0
+            l -= 1 if l >= self._primary else 0
+            p = self._occ_intv(k)
+            str.memcpy(ptr[byte](cntk.ptr), ptr[byte](p), 4 * 8)
+            p += 8
+            # prepare cntk[]
+            endk = p + ((k>>4) - ((k&~OCC_INTV_MASK)>>4))
+            endl = p + ((l>>4) - ((l&~OCC_INTV_MASK)>>4))
+            x = 0
+            while p < endk:
+                x += self.__occ_aux4(int(p[0]))
+                p += 1
+            y = x
+            tmp = int(p[0] & ~((u32(1)<<u32((~k&15)<<1)) - u32(1)))
+            x += self.__occ_aux4(tmp) - (~k&15)
+            # calculate cntl[] and finalize cntk[]
+            while p < endl:
+                y += self.__occ_aux4(int(p[0]))
+                p += 1
+            tmp = int(p[0] & ~((u32(1)<<u32((~l&15)<<1)) - u32(1)))
+            y += self.__occ_aux4(tmp) - (~l&15)
+            str.memcpy(ptr[byte](cntl.ptr), ptr[byte](cntk.ptr), 4 * 8)
+            cntk[0] += x&0xff
+            cntk[1] += x>>8&0xff
+            cntk[2] += x>>16&0xff
+            cntk[3] += x>>24
+            cntl[0] += y&0xff
+            cntl[1] += y>>8&0xff
+            cntl[2] += y>>16&0xff
+            cntl[3] += y>>24
+            return (cntk[0], cntk[1], cntk[2], cntk[3]), (cntl[0], cntl[1], cntl[2], cntl[3])
+
+    def _match_exact(self: FMDIndex, s: seq):
+        k = 0
+        l = self._seq_len
+        i = len(s) - 1
+        while i >= 0:
+            c = _enc(s._at(i))
+            if c > 3:
+                return FMInterval.invalid()
+            ok, ol = self._2occ(k - 1, l, c)
+            k = self._L2[c] + ok + 1
+            l = self._L2[c] + ol
+            if k > l:
+                break
+            i -= 1
+        if k > l:
+            return -1, -2
+        return FMInterval(k, l)
+
+    def occ(self: FMDIndex, k: int, c: seq):
+        if len(c) != 1:
+            raise ValueError("occ() expects length-1 sequence argument")
+        return self._occ1(k, _enc(c._at(0)))
+
+    def less(self: FMDIndex, c: seq):
+        if len(c) != 1:
+            raise ValueError("less() expects length-1 sequence argument")
+        b = _enc(c._at(0))
+        if b > 3:
+            return -1
+        return self._L2[b + 1]
+
+    def interval(self: FMDIndex, c: seq):
+        if len(c) != 1:
+            raise ValueError("interval() expects length-1 sequence argument")
+        b = _enc(c._at(0))
+        if b > 3:
+            return FMInterval.invalid()
+        c0 = self._L2[b] + 1
+        c1 = self._L2[b + 1]
+        return FMInterval(c0, c1)
+
+    def biinterval(self: FMDIndex, c: seq):
+        b = _enc(c._at(0))
+        if b > 3:
+            return FMDInterval.invalid()
+        x0 = int(self._L2[b]) + 1
+        x1 = int(self._L2[3 - b]) + 1
+        x2 = int(self._L2[b + 1] - self._L2[b])
+        return FMDInterval(x0, x1, x2, 0)
+
+    def smems(self: FMDIndex,
+              q: seq,
+              x: int = 0,
+              min_intv: int = 1,
+              max_intv: int = 0,
+              mem: list[FMDInterval] = None,
+              prev: list[FMDInterval] = None,
+              curr: list[FMDInterval] = None):
+        return smems(self, q, x, min_intv, max_intv, mem, prev, curr)
+
+    def update(self: FMDIndex, intv: FMInterval, c: seq):
+        if len(c) != 1:
+            raise ValueError("update() expects length-1 sequence argument")
+        b = _enc(c._at(0))
+        if b > 3:
+            return FMInterval.invalid()
+
+        k, l = intv
+        ok, ol = self._2occ(k - 1, l, b)
+        k = self._L2[b] + ok + 1
+        l = self._L2[b] + ol
+        return FMInterval(k, l)
+
+    def __getitem__(self: FMDIndex, x: tuple[FMInterval, seq]):
+        return self.update(x[0], x[1])
+
+    '''
+    def __prefetch__(self: FMDIndex, x: tuple[FMInterval, seq]):
+        # TODO
+        pass
+    '''
+
+    def _get_interval(self: FMDIndex, s: seq):
+        if not s:
+            return FMInterval.invalid()
+        intv = self.interval(s[-1])
+        i = len(s) - 2
+        while i >= 0 and intv:
+            intv = self.update(intv, s[i])
+            i -= 1
+        return intv
+
+    def __getitem__(self: FMDIndex, intv: FMInterval):
+        lo, hi = intv
+        while lo <= hi:
+            yield int(self._sa_get(lo))
+            lo += 1
+
+    def __getitem__(self: FMDIndex, s: seq):
+        return self[self._get_interval(s)]
+
+    def results(self: FMDIndex, intv: FMInterval, both_strands=False):
+        lo, hi = intv
+        while lo <= hi:
+            pos, is_rev = self._bntseq.depos(self._sa_get(lo))
+            if not is_rev or both_strands:
+                rid = self._bntseq.pos2rid(pos)
+                ann = self._bntseq._anns[rid]
+                yield (rid, ann._name, pos - ann._offset, is_rev)
+            lo += 1
+
+    def biresults(self: FMDIndex, intv: FMDInterval):
+        lo, lo_rev, size, _ = intv
+        hi = lo + size - 1
+        l = intv.match_size
+        while lo <= hi:
+            pos, is_rev = self._bntseq.depos(self._sa_get(lo))
+            if is_rev:
+                pos -= l - 1
+            rid = self._bntseq.pos2rid(pos)
+            ann = self._bntseq._anns[rid]
+            if pos + l <= ann._len:
+                yield (rid, ann._name, pos - ann._offset, is_rev)
+            lo += 1
+
+    def locate(self: FMDIndex, s: seq, both_strands=False):
+        return self.results(self._get_interval(s), both_strands)
+
+    def sequence(self: FMDIndex, start: int, stop: int, rid: int = -1, name: str = ''):
+        if rid >= 0 and name:
+            raise ValueError("cannot specify both 'rid' and 'name' in call to sequence()")
+
+        ann: bntann = None
+        if rid >= 0:
+            ann = self._bntseq._anns[rid]
+        else:
+            for a in self._bntseq._anns:
+                if a._name == name:
+                    ann = a
+                    break
+            if ann is None:
+                raise ValueError(f"no annotation with name {repr(name)}")
+
+        startx, stopx, stepx, lenx = slice.adjust_indices(length=ann._len, start=start, stop=stop)
+        startx += ann._offset
+        stopx += ann._offset
+        return self._bntseq.get_seq(startx, stopx)
+
+    def contigs(self: FMDIndex):
+        for ann in self._bntseq._anns:
+            yield (ann._name, ann._len)
+
+    def contig(self: FMDIndex, rid: int):
+        ann = self._bntseq._anns[rid]
+        return (ann._name, ann._len)
 
 class FMIndex:
     _seq_len: int
@@ -554,10 +1210,20 @@ class FMIndex:
             raise ValueError("occ() expects length-1 sequence argument")
         return self._occ1(k, _enc(c._at(0)))
 
+    def less(self: FMDIndex, c: seq):
+        if len(c) != 1:
+            raise ValueError("less() expects length-1 sequence argument")
+        b = _enc(c._at(0))
+        if b > 3:
+            return -1
+        return self._L2[b + 1]
+
     def interval(self: FMIndex, c: seq):
         if len(c) != 1:
             raise ValueError("interval() expects length-1 sequence argument")
         b = _enc(c._at(0))
+        if b > 3:
+            return FMInterval.invalid()
         c0 = int(self._L2[b]) + 1
         c1 = int(self._L2[b + 1])
         return FMInterval(c0, c1)
@@ -569,49 +1235,12 @@ class FMIndex:
     def biinterval(self: FMIndex, c: seq):
         self._fmd_check()
         b = _enc(c._at(0))
+        if b > 3:
+            return FMDInterval.invalid()
         x0 = int(self._L2[b]) + 1
         x1 = int(self._L2[3 - b]) + 1
         x2 = int(self._L2[b + 1] - self._L2[b])
         return FMDInterval(x0, x1, x2, 0)
-
-    def _extend(self: FMIndex, ik: FMDInterval, is_back: bool, info: tuple[int,int,int,int]):
-        # adapted from BWA-MEM's bwt_extend()
-        if is_back:
-            tk, tl = self._2occ4(ik._lo - 1, ik._lo - 1 + ik._size)
-
-            ok0_x0 = int(self._L2[0]) + 1 + tk[0]
-            ok0_x2 = tl[0] - tk[0]
-            ok1_x0 = int(self._L2[1]) + 1 + tk[1]
-            ok1_x2 = tl[1] - tk[1]
-            ok2_x0 = int(self._L2[2]) + 1 + tk[2]
-            ok2_x2 = tl[2] - tk[2]
-            ok3_x0 = int(self._L2[3]) + 1 + tk[3]
-            ok3_x2 = tl[3] - tk[3]
-
-            ok3_x1 = ik._lo_rev + (1 if (ik._lo <= self._primary and ik._lo + ik._size - 1 >= self._primary) else 0)
-            ok2_x1 = ok3_x1 + ok3_x2
-            ok1_x1 = ok2_x1 + ok2_x2
-            ok0_x1 = ok1_x1 + ok1_x2
-            return (FMDInterval(ok0_x0, ok0_x1, ok0_x2, info[0]), FMDInterval(ok1_x0, ok1_x1, ok1_x2, info[1]),
-                    FMDInterval(ok2_x0, ok2_x1, ok2_x2, info[2]), FMDInterval(ok3_x0, ok3_x1, ok3_x2, info[3]))
-        else:
-            tk, tl = self._2occ4(ik._lo_rev - 1, ik._lo_rev - 1 + ik._size)
-
-            ok0_x1 = int(self._L2[0]) + 1 + tk[0]
-            ok0_x2 = tl[0] - tk[0]
-            ok1_x1 = int(self._L2[1]) + 1 + tk[1]
-            ok1_x2 = tl[1] - tk[1]
-            ok2_x1 = int(self._L2[2]) + 1 + tk[2]
-            ok2_x2 = tl[2] - tk[2]
-            ok3_x1 = int(self._L2[3]) + 1 + tk[3]
-            ok3_x2 = tl[3] - tk[3]
-
-            ok3_x0 = ik._lo + (1 if (ik._lo_rev <= self._primary and ik._lo_rev + ik._size - 1 >= self._primary) else 0)
-            ok2_x0 = ok3_x0 + ok3_x2
-            ok1_x0 = ok2_x0 + ok2_x2
-            ok0_x0 = ok1_x0 + ok1_x2
-            return (FMDInterval(ok0_x0, ok0_x1, ok0_x2, info[0]), FMDInterval(ok1_x0, ok1_x1, ok1_x2, info[1]),
-                    FMDInterval(ok2_x0, ok2_x1, ok2_x2, info[2]), FMDInterval(ok3_x0, ok3_x1, ok3_x2, info[3]))
 
     def smems(self: FMIndex,
               q: seq,
@@ -621,98 +1250,14 @@ class FMIndex:
               mem: list[FMDInterval] = None,
               prev: list[FMDInterval] = None,
               curr: list[FMDInterval] = None):
-        # adapted from BWA-MEM's bwt_smem1a()
-        def infos(ok: tuple[FMDInterval,FMDInterval,FMDInterval,FMDInterval]):
-            return (ok[0]._info, ok[1]._info, ok[2]._info, ok[3]._info)
-
-        l = len(q)
-        if x < 0:
-            x += l
-        if not (0 <= x < l):
-            raise ValueError("sequence index out of range")
-
-        if mem is None:
-            mem = list[FMDInterval]()
-        else:
-            mem.clear()
-        if q[x].N():
-            return x + 1, mem
-
-        if prev is None:
-            prev = list[FMDInterval]()
-        else:
-            prev.clear()
-
-        if curr is None:
-            curr = list[FMDInterval]()
-        else:
-            curr.clear()
-
-        if min_intv < 1:
-            min_intv = 1
-
-        ok = (FMDInterval(0, 0, 0, 0), FMDInterval(0, 0, 0, 0), FMDInterval(0, 0, 0, 0), FMDInterval(0, 0, 0, 0))
-        ik = self.biinterval(q[x])._with_info(x + 1)
-
-        # forward search
-        i = x + 1
-        while i < l:
-            qi = _enc(q._at(i))
-            if ik._size < max_intv:  # an interval small enough
-                curr.append(ik)
-                break
-            elif qi < 4:  # an A/C/G/T base
-                c = 3 - qi
-                ok = self._extend(ik, is_back=False, info=infos(ok))
-                if ok[c]._size != ik._size:  # change of the interval size
-                    curr.append(ik)
-                    if ok[c]._size < min_intv:
-                        break  # the interval size is too small to be extended further
-                ik = ok[c]._with_info(i + 1)
-            else:  # an ambiguous base
-                curr.append(ik)
-                break
-            i += 1
-
-        if i == l:
-            curr.append(ik)
-        curr.reverse()
-        ret = curr[0]._info
-        prev, curr = curr, prev
-
-        # backward search for MEMs
-        i = x - 1
-        while i >= -1:
-            qi = -1 if i < 0 else _enc(q._at(i))
-            c = qi if qi < 4 else -1
-            curr.clear()
-            j = 0
-            while j < len(prev):
-                p = prev[j]
-                if c >= 0 and ik._size >= max_intv:
-                    ok = self._extend(p, is_back=True, info=infos(ok))
-                if c < 0 or ik._size < max_intv or ok[c]._size < min_intv:
-                    if len(curr) == 0:
-                        if len(mem) == 0 or i + 1 < mem[-1]._info >> 32:
-                            ik = p._with_info(p._info | ((i + 1) << 32))
-                            mem.append(ik)
-                elif len(curr) == 0 or ok[c]._size != curr[-1]._size:
-                    okp = ptr[FMDInterval](__ptr__(ok))
-                    okp[c] = ok[c]._with_info(p._info)
-                    curr.append(ok[c])
-                j += 1
-            if len(curr) == 0:
-                break
-            prev, curr = curr, prev
-            i -= 1
-
-        mem.reverse()  # s.t. sorted by the start coordinate
-        return ret, mem
+        return smems(self, q, x, min_intv, max_intv, mem, prev, curr)
 
     def update(self: FMIndex, intv: FMInterval, c: seq):
         if len(c) != 1:
             raise ValueError("update() expects length-1 sequence argument")
         b = _enc(c._at(0))
+        if b > 3:
+            return FMInterval.invalid()
         lo, hi = intv
         c0 = int(self._L2[b])
         occ1 = self._occ1(lo - 1, b)
@@ -788,7 +1333,8 @@ class FMIndex:
                 pos -= l - 1
             rid = self._bntseq.pos2rid(pos)
             ann = self._bntseq._anns[rid]
-            yield (rid, ann._name, pos - ann._offset, is_rev)
+            if pos + l <= ann._len:
+                yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
 
     def locate(self: FMIndex, s: seq):
@@ -823,3 +1369,7 @@ class FMIndex:
             raise ValueError("contigs() requires FASTA-based FM-index")
         for ann in self._bntseq._anns:
             yield (ann._name, ann._len)
+
+    def contig(self: FMDIndex, rid: int):
+        ann = self._bntseq._anns[rid]
+        return (ann._name, ann._len)

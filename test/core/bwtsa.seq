@@ -1,4 +1,4 @@
-from bio.fmindex import FMIndex
+from bio.fmindex import FMIndex, FMDIndex
 import gzip
 import pickle
 
@@ -68,16 +68,30 @@ def test_fmindex(FMD: bool):
     assert sorted(list(fmi.locate(s'TATAA'))) == [(1, 'chrB', 168), (2, 'chrC', 275), (2, 'chrC', 485)]
 
 @test
-def test_smems():
+def test_fmdindex():
     # FASTA-based
-    path = 'test/data/seqs2.fasta'
-    fmi = FMIndex(path, FMD=True)
+    fmi = FMDIndex('test/data/seqs.fasta')
+    with gzip.open('build/fmi.bin', 'wb') as jar:
+        pickle.dump(fmi, jar)
+
+    with gzip.open('build/fmi.bin', 'rb') as jar:
+        fmi = pickle.load[FMDIndex](jar)
+
+    assert fmi.sequence(1, 20, rid=0) == fmi.sequence(1, 20, name='chrA') == s'CCTCCCCGTTCGCTGGACC'
+    assert fmi.sequence(1, 20, rid=3) == fmi.sequence(1, 20, name='chrD') == s'GCCGTGACCACCCCGCGAG'
+    assert list(fmi.contigs()) == [('chrA', 460), ('chrB', 489), ('chrC', 500), ('chrD', 49)]
+    assert sorted(list(fmi.locate(s'TATAA'))) == [(1, 'chrB', 168, False), (2, 'chrC', 275, False), (2, 'chrC', 485, False)]
+    assert sorted(list(fmi.locate(s'CAGGG', both_strands=True))) == [(0, 'chrA', 214, False), (0, 'chrA', 226, False), (0, 'chrA', 338, True), (0, 'chrA', 381, False), (2, 'chrC', 448, False)]
+
+@test
+def test_smems[FM](fmi: FM, path: str):
+    # FASTA-based
     ref = [rec for rec in FASTA(path)]
     with gzip.open('build/fmi.bin', 'wb') as jar:
         pickle.dump(fmi, jar)
 
     with gzip.open('build/fmi.bin', 'rb') as jar:
-        fmi = pickle.load[FMIndex](jar)
+        fmi = pickle.load[FM](jar)
 
     q = s'ACCAAACCCAGCTACGCAAAATCTTAGCATACTCCTCAATTACCCACATAGGATGAATAA'
     v = [[(name, pos, is_rev, ref[rid].seq[pos:pos + intv.match_size]) for rid, name, pos, is_rev in fmi.biresults(intv)] for intv in fmi.smems(q, x=20, min_intv=1)[1]]
@@ -91,4 +105,8 @@ test_suffix_array()
 test_bwt()
 test_fmindex(FMD=True)
 test_fmindex(FMD=False)
-test_smems()
+test_fmdindex()
+
+path = 'test/data/seqs2.fasta'
+test_smems[FMIndex](FMIndex(path, FMD=True))
+test_smems[FMDIndex](FMDIndex(path))
