@@ -935,8 +935,7 @@ class FMDIndex:
                 pos -= l - 1
             rid = self._bntseq.pos2rid(pos)
             ann = self._bntseq._anns[rid]
-            if pos + l <= ann._len:
-                yield (rid, ann._name, pos - ann._offset, is_rev)
+            yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
 
     def locate(self: FMDIndex, s: seq, both_strands=False):
@@ -1033,6 +1032,9 @@ class FMIndex:
 
         def I(b: bool):
             return 1 if b else 0
+
+        if (2*l if FMD else l) >= 0xffffffff:
+            raise ValueError("sequence is too long for FM-index!")
 
         assert not (FMD and not packed)
         len_L2 = 5
@@ -1333,8 +1335,7 @@ class FMIndex:
                 pos -= l - 1
             rid = self._bntseq.pos2rid(pos)
             ann = self._bntseq._anns[rid]
-            if pos + l <= ann._len:
-                yield (rid, ann._name, pos - ann._offset, is_rev)
+            yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
 
     def locate(self: FMIndex, s: seq):
