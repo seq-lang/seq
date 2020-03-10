@@ -50,15 +50,15 @@ class bntamb:
         self._amb = amb
 
 def _pickle_ptr[T](p: ptr[T], n: int, jar: Jar):
+    from pickle import _write_raw
     pickle(n, jar)
-    for i in range(n):
-        pickle(p[i], jar)
+    _write_raw(jar, ptr[byte](p), n * _gc.sizeof[T]())
 
 def _unpickle_ptr[T](jar: Jar):
+    from pickle import _read_raw
     n = unpickle[int](jar)
     p = ptr[T](n)
-    for i in range(n):
-        p[i] = unpickle[T](jar)
+    _read_raw(jar, ptr[byte](p), n * _gc.sizeof[T]())
     return (p, n)
 
 class bntseq:
