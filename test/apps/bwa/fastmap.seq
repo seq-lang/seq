@@ -51,7 +51,7 @@ def fastmap(t, fmi: FMDIndex, out: File):
                 out.write(':-' if is_rev else ':+')
                 out.write(str(pos + 1))
         else:
-            out.write('\t*')
+            out.write('\t*\n')
         out.write('\n')
 
 def main_index():
