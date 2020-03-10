@@ -64,6 +64,9 @@ type SAMAux(s: ptr[u8]):
     def f(self: SAMAux):
         return _C.bam_aux2f(self.s)
 
+    def __str__(self: SAMAux):
+        return str.from_ptr(_C.bam_aux2Z(self.s))
+
     @property
     def A(self: SAMAux):
         return _C.bam_aux2A(self.s)
@@ -253,6 +256,14 @@ class BAM:
     def __init__(self: BAM, path: str, region: str):
         self._init(path, region)
 
+    def seek(self: BAM, region: str):
+        if self.itr:
+           _C.hts_itr_destroy(self.itr)
+        self.itr = _C.sam_itr_querys(self.idx, self.hdr, region.c_str())
+        if not self.itr:
+            _C.hts_close(self.file)
+            raise IOError("unable to seek to region " + region)
+
     def _ensure_open(self: BAM):
         if not self.file:
             raise IOError("I/O operation on closed BAM/CRAM file")
@@ -261,7 +272,9 @@ class BAM:
         self._ensure_open()
         while _C.seq_hts_sam_itr_next(self.file, self.itr, self.aln) >= 0:
             yield self.aln
-        self.close()
+        if self.itr:
+           _C.hts_itr_destroy(self.itr)
+           self.itr = cobj()
 
     def __blocks__(self: BAM, size: int):
         from bio.block import _blocks

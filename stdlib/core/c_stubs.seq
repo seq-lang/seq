@@ -145,6 +145,7 @@ cimport bam_cigar2rlen(int, ptr[u32]) -> int
 cimport bam_aux2i(ptr[u8]) -> int
 cimport bam_aux2f(ptr[u8]) -> float
 cimport bam_aux2A(ptr[u8]) -> byte
+cimport bam_aux2Z(ptr[u8]) -> ptr[byte]
 cimport bam_auxB_len(ptr[u8]) -> u32
 cimport bam_auxB2i(ptr[u8], idx: u32) -> int
 cimport bam_auxB2f(ptr[u8], idx: u32) -> float
