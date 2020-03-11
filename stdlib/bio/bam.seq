@@ -258,7 +258,7 @@ class BAM:
 
     def seek(self: BAM, region: str):
         if self.itr:
-           _C.hts_itr_destroy(self.itr)
+            _C.hts_itr_destroy(self.itr)
         self.itr = _C.sam_itr_querys(self.idx, self.hdr, region.c_str())
         if not self.itr:
             _C.hts_close(self.file)
@@ -273,8 +273,8 @@ class BAM:
         while _C.seq_hts_sam_itr_next(self.file, self.itr, self.aln) >= 0:
             yield self.aln
         if self.itr:
-           _C.hts_itr_destroy(self.itr)
-           self.itr = cobj()
+            _C.hts_itr_destroy(self.itr)
+            self.itr = cobj()
 
     def __blocks__(self: BAM, size: int):
         from bio.block import _blocks
