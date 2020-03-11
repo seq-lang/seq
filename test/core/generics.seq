@@ -82,3 +82,23 @@ m7[float,str]()                     # EXPECT: works
 f(99)                               # EXPECT: 99
 print b1.foo().a                    # EXPECT: 111
 print b2.foo().a                    # EXPECT: 222
+
+
+# recursive generics with different inner type parameter
+def foo(a):
+    if not a:
+        foo(True)
+    print a
+# EXPECT: True
+# EXPECT: 0
+foo(0)
+
+def bar(a):
+    def baz(x):
+        if not x:
+            bar(True)
+        print(x)
+    baz(a)
+# EXPECT: True
+# EXPECT: 0
+bar(0)

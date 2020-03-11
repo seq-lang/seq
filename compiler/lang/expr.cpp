@@ -739,10 +739,13 @@ Expr *FuncExpr::clone(Generic *ref) {
   if (orig)
     return orig->clone(ref);
 
+  const bool cloneFunc =
+      (dynamic_cast<Func *>(func) != dynamic_cast<Func *>(ref));
   std::vector<types::Type *> typesCloned;
   for (auto *type : types)
     typesCloned.push_back(type->clone(ref));
-  SEQ_RETURN_CLONE(new FuncExpr(func->clone(ref), typesCloned));
+  SEQ_RETURN_CLONE(
+      new FuncExpr(cloneFunc ? func->clone(ref) : func, typesCloned));
 }
 
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count, bool doAlloca)
