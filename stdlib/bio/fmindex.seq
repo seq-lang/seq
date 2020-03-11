@@ -2,6 +2,7 @@
 # https://github.com/lh3/bwa
 
 from random import randint
+from bio.locus import Locus
 
 # obeys A < C < G < T
 def _enc(b: byte):
@@ -915,7 +916,7 @@ class FMDIndex:
     def __getitem__(self: FMDIndex, s: seq):
         return self[self._get_interval(s)]
 
-    def results(self: FMDIndex, intv: FMInterval, both_strands=False):
+    def results(self: FMDIndex, intv: FMInterval, both_strands: bool = False):
         lo, hi = intv
         while lo <= hi:
             pos, is_rev = self._bntseq.depos(self._sa_get(lo))
@@ -924,6 +925,10 @@ class FMDIndex:
                 ann = self._bntseq._anns[rid]
                 yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
+
+    def loci(self: FMDIndex, intv: FMInterval, both_strands: bool = True):
+        for rid, name, pos, is_rev in self.results(intv, both_strands):
+            yield Locus(rid, -pos if is_rev else pos)
 
     def biresults(self: FMDIndex, intv: FMDInterval):
         lo, lo_rev, size, _ = intv
@@ -938,7 +943,11 @@ class FMDIndex:
             yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
 
-    def locate(self: FMDIndex, s: seq, both_strands=False):
+    def biloci(self: FMDIndex, intv: FMDInterval):
+        for rid, name, pos, is_rev in self.biresults(intv):
+            yield Locus(rid, -pos if is_rev else pos)
+
+    def locate(self: FMDIndex, s: seq, both_strands: bool = False):
         return self.results(self._get_interval(s), both_strands)
 
     def sequence(self: FMDIndex, start: int, stop: int, rid: int = -1, name: str = ''):
@@ -1322,6 +1331,12 @@ class FMIndex:
             yield (rid, ann._name, pos - ann._offset)
             lo += 1
 
+    def loci(self: FMIndex, intv: FMInterval):
+        if self._bntseq is None:
+            raise ValueError("loci() requires FASTA-based FM-index")
+        for rid, name, pos in self.results(intv):
+            yield Locus(rid, pos)
+
     def biresults(self: FMIndex, intv: FMDInterval):
         self._fmd_check()
         if self._bntseq is None:
@@ -1337,6 +1352,12 @@ class FMIndex:
             ann = self._bntseq._anns[rid]
             yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
+
+    def biloci(self: FMIndex, intv: FMDInterval):
+        if self._bntseq is None:
+            raise ValueError("biloci() requires FASTA-based FM-index")
+        for rid, name, pos, is_rev in self.biresults(intv):
+            yield Locus(rid, -pos if is_rev else pos)
 
     def locate(self: FMIndex, s: seq):
         if self._bntseq is None:

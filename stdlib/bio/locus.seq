@@ -28,3 +28,6 @@ type Locus(_tid: u32, _pos: u32):
 
     def __invert__(self: Locus):
         return Locus(self.tid, self.pos if self.reversed else -self.pos)
+
+    def __str__(self: Locus):
+        return f"Locus(tid={self.tid}, pos={self.pos}, reversed={self.reversed})"
