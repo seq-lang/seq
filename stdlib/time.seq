@@ -9,11 +9,12 @@ class TimeInterval:
         self.start = _C.seq_time()
 
     def __exit__(self: TimeInterval):
+        from sys import stderr
         elapsed = float(_C.seq_time() - self.start) / 1e9
         if self.msg == "":
-            print f'Block took {elapsed}s'
+            stderr.write(f'Block took {elapsed}s\n')
         else:
-            print f'{self.msg} took {elapsed}s'
+            stderr.write(f'{self.msg} took {elapsed}s\n')
 
 def timing(msg: str = ""):
     return TimeInterval(0, msg)
