@@ -1,9 +1,10 @@
 from sys import argv, stderr, exit
 from time import timing
-from bio.fmindex import FMDIndex
+from bio.fmindex import FMIndex, SMEM, FMDInterval
 
-min_len    = 17
+min_seed   = 17
 min_iwidth = 20
+min_intv   = 1
 
 def open_index_file(basename: str, mode: str):
     import gzip
@@ -12,52 +13,105 @@ def open_index_file(basename: str, mode: str):
 def index_load(basename: str):
     from pickle import load
     with open_index_file(basename, 'rb') as jar:
-        return load[FMDIndex](jar)
+        return load[FMIndex](jar)
 
-def smems(rec: FASTQRecord, fmi: FMDIndex, out: File):
-    out.write('SQ\t')
-    out.write(rec.name)
-    out.write('\t')
-    out.write(str(len(rec.seq)))
-    out.write('\n')
+@prefetch
+def fastmap(rec: FASTQRecord, fmi: FMIndex, out: File):
+    prev = list[SMEM]()
+    curr = list[SMEM]()
+    mems = list[SMEM]()
+    q = rec.seq
+    l = len(q)
+
     start = 0
     while True:
-        while start < len(rec.seq) and rec.seq[start].N():
+        while start < l and q[start].N():
             start += 1
-        if start == len(rec.seq):
+        if start >= l:
             break
-        start, mems = fmi.smems(rec.seq, x=start)
-        yield rec, mems
-    out.write('//\n')
 
-def fastmap(t, fmi: FMDIndex, out: File):
-    rec, mems = t
-    for intv in mems:
-        offset = intv.offset
-        match_size = intv.match_size
-        if match_size < min_len:
-            continue
+        mems.clear()
+        prev.clear()
+        curr.clear()
+        x = start
 
-        out.write('EM\t')
-        out.write(str(offset))
-        out.write('\t')
-        out.write(str(offset + match_size))
-        out.write('\t')
-        out.write(str(len(intv)))
-        if len(intv) <= min_iwidth:
-            for rid, name, pos, is_rev in fmi.biresults(intv):
-                out.write('\t')
-                out.write(name)
-                out.write(':-' if is_rev else ':+')
-                out.write(str(pos + 1))
-        else:
-            out.write('\t*\n')
-        out.write('\n')
+        if q[x].N():
+            return x + 1, mems
+
+        ik = SMEM(fmi.biinterval(q[x]), start=x, stop=x+1)
+
+        # forward search
+        i = x + 1
+        while i < l:
+            if not q[i].N():  # an A/C/G/T base
+                ok = ~fmi[~(ik.interval), ~q[i]]
+                if len(ok) != len(ik.interval):  # change of the interval size
+                    curr.append(ik)
+                    if len(ok) < min_intv:
+                        break  # the interval size is too small to be extended further
+                ik = SMEM(ok, start=x, stop=i+1)
+            else:  # an ambiguous base
+                curr.append(ik)
+                break
+            i += 1
+
+        if i == l:
+            curr.append(ik)
+        curr.reverse()
+        ret = curr[0].stop
+        prev, curr = curr, prev
+
+        # backward search for MEMs
+        i = x - 1
+        while i >= -1:
+            c = i >= 0 and not q[i].N()
+            curr.clear()
+            for p in prev:
+                ok = FMDInterval()
+                if c:
+                    ok = fmi[p.interval, q[i]]
+                if not c or len(ok) < min_intv:
+                    if len(curr) == 0:
+                        if len(mems) == 0 or i + 1 < mems[-1].start:
+                            ik = SMEM(p.interval, start=i+1, stop=p.stop)
+                            if len(ik) >= min_seed:
+                                mems.append(ik)
+                elif len(curr) == 0 or len(ok) != len(curr[-1].interval):
+                    curr.append(SMEM(ok, start=p.start, stop=p.stop))
+            if len(curr) == 0:
+                break
+            prev, curr = curr, prev
+            i -= 1
+
+        mems.reverse()  # s.t. sorted by the start coordinate
+        start = ret
+
+        for mem in mems:
+            intv = mem.interval
+            offset = mem.start
+            match_size = len(mem)
+
+            out.write(rec.name)
+            out.write('\tEM\t')
+            out.write(str(offset))
+            out.write('\t')
+            out.write(str(offset + match_size))
+            out.write('\t')
+            out.write(str(len(intv)))
+            if len(intv) <= min_iwidth:
+                for rid, name, pos, is_rev in fmi.biresults(mem):
+                    out.write('\t')
+                    out.write(name)
+                    out.write(':-' if is_rev else ':+')
+                    out.write(str(pos + 1))
+            else:
+                out.write('\t*\n')
+            out.write('\n')
 
 def main_index():
     from pickle import dump
     stderr.write('building FM-index...\n')
-    fmi = FMDIndex(argv[2])
+    fmi = FMIndex(argv[2], FMD=True)
     stderr.write('writing to disk...\n')
     with open_index_file(argv[2], 'wb0') as jar:
         dump(fmi, jar)
@@ -67,7 +121,7 @@ def main_search():
     fmi = index_load(argv[2])
     stderr.write('running alignment pipeline...\n')
     with open(argv[4], 'w') as out, timing('fastmap'):
-        FASTQ(argv[3]) |> iter |> smems(fmi, out) |> fastmap(fmi, out)
+        FASTQ(argv[3]) |> iter |> fastmap(fmi, out)
 
 mode = argv[1]
 match mode:
