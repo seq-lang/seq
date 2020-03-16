@@ -94,7 +94,7 @@ install:
   - cd -
 
   # install htslib:
-  - wget -c https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 -O - | tar -xj
+  - wget -c https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 -O - | tar -xj
   - cd htslib-1.9
   - ./configure CFLAGS="-fPIC" --disable-libcurl
   - make
