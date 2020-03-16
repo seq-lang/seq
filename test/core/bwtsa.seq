@@ -62,7 +62,7 @@ def test_fmindex(FMD: bool):
 
     assert fmi.sequence(1, 20, rid=0) == fmi.sequence(1, 20, name='chrA') == s'CCTCCCCGTTCGCTGGACC'
     assert fmi.sequence(1, 20, rid=3) == fmi.sequence(1, 20, name='chrD') == s'GCCGTGACCACCCCGCGAG'
-    assert list(fmi.contigs()) == [('chrA', 460), ('chrB', 489), ('chrC', 500), ('chrD', 49)]
+    assert [(a.tid, a.name, a.len) for a in fmi.contigs()] == [(0, 'chrA', 460), (1, 'chrB', 489), (2, 'chrC', 500), (3, 'chrD', 49)]
     if not FMD:
         assert fmi.count(s'TATA') == 6  # note TATATA in chrC
         assert fmi.count(s'TATAC') == 0
@@ -81,7 +81,7 @@ def test_fmdindex():
 
     assert fmi.sequence(1, 20, rid=0) == fmi.sequence(1, 20, name='chrA') == s'CCTCCCCGTTCGCTGGACC'
     assert fmi.sequence(1, 20, rid=3) == fmi.sequence(1, 20, name='chrD') == s'GCCGTGACCACCCCGCGAG'
-    assert list(fmi.contigs()) == [('chrA', 460), ('chrB', 489), ('chrC', 500), ('chrD', 49)]
+    assert [(a.tid, a.name, a.len) for a in fmi.contigs()] == [(0, 'chrA', 460), (1, 'chrB', 489), (2, 'chrC', 500), (3, 'chrD', 49)]
     assert sorted(list(fmi.locate(s'TATAA'))) == [(1, 'chrB', 168, False), (2, 'chrC', 275, False), (2, 'chrC', 485, False)]
     assert sorted(list(fmi.locate(s'CAGGG', both_strands=True))) == [(0, 'chrA', 214, False), (0, 'chrA', 226, False), (0, 'chrA', 338, True), (0, 'chrA', 381, False), (2, 'chrC', 448, False)]
     assert sorted(list(fmi.loci(fmi._get_interval(s'CAGGG')))) == [Locus(tid=0, pos=214), Locus(tid=0, pos=226), Locus(tid=0, pos=-338), Locus(tid=0, pos=381), Locus(tid=2, pos=448)]
