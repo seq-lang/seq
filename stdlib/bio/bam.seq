@@ -26,7 +26,7 @@ type _sam_hdr_t(n_targets: i32,
                 sdict: cobj,
                 hrecs: cobj,
                 ref_count: u32):
-    def targets_list(self: _sam_hdr_t) -> list[Contig]:
+    def contigs(self: _sam_hdr_t) -> list[Contig]:
         return [Contig(tid=i, name=str.from_ptr(self.target_name[i]), len=int(self.target_len[i]))
                   for i in range(int(self.n_targets))]
 
@@ -102,12 +102,13 @@ type SAMAux(s: ptr[u8]):
     def f(self: SAMAux):
         return _C.bam_aux2f(self.s)
 
-    def __str__(self: SAMAux):
-        return str.from_ptr(_C.bam_aux2Z(self.s))
-
     @property
     def A(self: SAMAux):
         return _C.bam_aux2A(self.s)
+
+    @property
+    def Z(self: SAMAux):
+        return str.from_ptr(_C.bam_aux2Z(self.s))
 
     @property
     def B_len(self: SAMAux):
@@ -118,6 +119,9 @@ type SAMAux(s: ptr[u8]):
 
     def B2f(self: SAMAux, idx: int):
         return _C.bam_auxB2f(self.s, u32(idx))
+
+    def __str__(self: SAMAux):
+        return str.from_ptr(_C.bam_aux2Z(self.s))
 
 class SAMRecord:
     _htsr: _bam1_t
@@ -270,15 +274,16 @@ class SAMRecord:
         '''
         return SAMAux(_C.bam_aux_get(self.__raw__(), ptr[byte](__ptr__(tag_arr))))
 
-class BAM:
-    aln: _bam1_t
-    file: cobj
-    idx: cobj
-    hdr: cobj
-    itr: cobj
-    targets: list[Contig]
+class BAMReader:
+    _aln: _bam1_t
+    _copy: bool
+    _file: cobj
+    _idx: cobj
+    _hdr: cobj
+    _itr: cobj
+    _contigs: list[Contig]
 
-    def _init(self: BAM, path: str, region: str):
+    def __init__(self: BAMReader, path: str, region: str, copy: bool):
         path_c_str, region_c_str = path.c_str(), region.c_str()
 
         file = _C.hts_open(path_c_str, "rb".c_str())
@@ -297,85 +302,82 @@ class BAM:
             _C.hts_close(file)
             raise IOError("unable to seek to region " + region + " in " + path)
 
-        self.aln = _bam1_t()
-        self.file = file
-        self.idx = idx
-        self.hdr = hdr
-        self.itr = itr
-        self.targets = ptr[_sam_hdr_t](hdr)[0].targets_list()
+        self._aln = _bam1_t()
+        self._copy = copy
+        self._file = file
+        self._idx = idx
+        self._hdr = hdr
+        self._itr = itr
+        self._contigs = ptr[_sam_hdr_t](hdr)[0].contigs()
 
-    def __init__(self: BAM, path: str):
-        self._init(path, ".")
-
-    def __init__(self: BAM, path: str, region: str):
-        self._init(path, region)
-
-    def seek(self: BAM, region: str):
-        if self.itr:
-            _C.hts_itr_destroy(self.itr)
-        self.itr = _C.sam_itr_querys(self.idx, self.hdr, region.c_str())
-        if not self.itr:
-            _C.hts_close(self.file)
+    def seek(self: BAMReader, region: str):
+        if self._itr:
+            _C.hts_itr_destroy(self._itr)
+        self._itr = _C.sam_itr_querys(self._idx, self._hdr, region.c_str())
+        if not self._itr:
+            _C.hts_close(self._file)
             raise IOError("unable to seek to region " + region)
 
-    def _ensure_open(self: BAM):
-        if not self.file:
+    def _ensure_open(self: BAMReader):
+        if not self._file:
             raise IOError("I/O operation on closed BAM/CRAM file")
 
-    def __blocks__(self: BAM, size: int):
+    def __blocks__(self: BAMReader, size: int):
         from bio.block import _blocks
         return _blocks(self.__iter__(), size)
 
-    def __seqs__(self: BAM):
+    def __seqs__(self: BAMReader):
         for rec in self:
             yield rec.seq
 
-    def __iter__(self: BAM):
+    def __iter__(self: BAMReader):
         self._ensure_open()
-        while _C.seq_hts_sam_itr_next(self.file, self.itr, self.__raw__()) >= 0:
-            yield SAMRecord(copy(self.aln))
-        if self.itr:
-            _C.hts_itr_destroy(self.itr)
-            self.itr = cobj()
+        while _C.seq_hts_sam_itr_next(self._file, self._itr, self.__raw__()) >= 0:
+            yield SAMRecord(copy(self._aln) if self._copy else self._aln)
+        if self._itr:
+            _C.hts_itr_destroy(self._itr)
+            self._itr = cobj()
 
-    def close(self: BAM):
+    def close(self: BAMReader):
         _C.bam_destroy1(self.__raw__())
 
-        if self.itr:
-            _C.hts_itr_destroy(self.itr)
+        if self._itr:
+            _C.hts_itr_destroy(self._itr)
 
-        if self.idx:
-            _C.hts_idx_destroy(self.idx)
+        if self._idx:
+            _C.hts_idx_destroy(self._idx)
 
-        if self.hdr:
-            _C.sam_hdr_destroy(self.hdr)
+        if self._hdr:
+            _C.sam_hdr_destroy(self._hdr)
 
-        if self.file:
-            _C.hts_close(self.file)
+        if self._file:
+            _C.hts_close(self._file)
 
-        self.itr = cobj()
-        self.idx = cobj()
-        self.hdr = cobj()
-        self.file = cobj()
+        self._itr = cobj()
+        self._idx = cobj()
+        self._hdr = cobj()
+        self._file = cobj()
 
-    def __enter__(self: BAM):
+    def __enter__(self: BAMReader):
         pass
 
-    def __exit__(self: BAM):
+    def __exit__(self: BAMReader):
         self.close()
 
-    def reference_name(self: BAM, tid: int) -> str:
-        if 0 <= tid < len(self.targets):
-            return str(self.targets[tid])
-        return "*"
+    def contigs(self: BAMReader):
+        return self._contigs
 
-class SAM:
-    aln: _bam1_t
-    file: cobj
-    hdr: cobj
-    targets: list[Contig]
+    def contig(self: BAMReader, rid: int):
+        return self._contigs[rid]
 
-    def __init__(self: SAM, path: str):
+class SAMReader:
+    _aln: _bam1_t
+    _copy: bool
+    _file: cobj
+    _hdr: cobj
+    _contigs: list[Contig]
+
+    def __init__(self: SAMReader, path: str, copy: bool):
         path_c_str = path.c_str()
 
         file = _C.hts_open(path_c_str, "r".c_str())
@@ -383,51 +385,67 @@ class SAM:
             raise IOError("file " + path + " could not be opened")
 
         hdr = _C.sam_hdr_read(file)
-        self.aln = _bam1_t()
-        self.file = file
-        self.hdr = hdr
-        self.targets = ptr[_sam_hdr_t](hdr)[0].targets_list()
+        self._aln = _bam1_t()
+        self._copy = copy
+        self._file = file
+        self._hdr = hdr
+        self._contigs = ptr[_sam_hdr_t](hdr)[0].contigs()
 
-    def _ensure_open(self: SAM):
-        if not self.file:
+    def _ensure_open(self: SAMReader):
+        if not self._file:
             raise IOError("I/O operation on closed SAM file")
 
-    def __seqs__(self: SAM):
+    def __seqs__(self: SAMReader):
         for rec in self:
             yield rec.seq
 
-    def __iter__(self: SAM):
+    def __iter__(self: SAMReader):
         self._ensure_open()
         while True:
-            status = int(_C.sam_read1(self.file, self.hdr, self.__raw__()))
+            status = int(_C.sam_read1(self._file, self._hdr, self.__raw__()))
             if status >= 0:
-                yield SAMRecord(copy(self.aln))
+                yield SAMRecord(copy(self._aln) if self._copy else self._aln)
             elif status == -1:
                 break
             else:
                 raise IOError("SAM read failed with status: " + str(status))
         self.close()
 
-    def __blocks__(self: SAM, size: int):
+    def __blocks__(self: SAMReader, size: int):
         from bio.block import _blocks
         return _blocks(self.__iter__(), size)
 
-    def close(self: SAM):
+    def close(self: SAMReader):
         _C.bam_destroy1(self.__raw__())
 
-        if self.hdr:
-            _C.sam_hdr_destroy(self.hdr)
+        if self._hdr:
+            _C.sam_hdr_destroy(self._hdr)
 
-        if self.file:
-            _C.hts_close(self.file)
+        if self._file:
+            _C.hts_close(self._file)
 
-        self.file = cobj()
-        self.hdr = cobj()
+        self._file = cobj()
+        self._hdr = cobj()
 
-    def __enter__(self: SAM):
+    def __enter__(self: SAMReader):
         pass
 
-    def __exit__(self: SAM):
+    def __exit__(self: SAMReader):
         self.close()
 
-type CRAM = BAM
+    def contigs(self: SAMReader):
+        return self._contigs
+
+    def contig(self: SAMReader, rid: int):
+        return self._contigs[rid]
+
+type CRAMReader = BAMReader
+
+def SAM(path: str, copy: bool = True):
+    return SAMReader(path, copy)
+
+def BAM(path: str, region: str = ".", copy: bool = True):
+    return BAMReader(path, region, copy)
+
+def CRAM(path: str, region: str = ".", copy: bool = True):
+    return CRAMReader(path, region, copy)

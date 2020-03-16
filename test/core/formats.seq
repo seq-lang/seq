@@ -227,6 +227,38 @@ BAM('test/data/toy.bam') |> iter |> print3
 # EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M
 
 print '-'  # EXPECT: -
+SAM('test/data/toy.sam', copy=False) |> iter |> print3
+# EXPECT: 0 6 r001 TTAGATAAAGAGGATACTG 8M4I4M1D3M
+# EXPECT: [12561, 2, 20, 112]
+# EXPECT: 0 8 r002 AAAAGATAAGGGATAAA 1S2I6M1P1I1P1I4M2I
+# EXPECT: 0 8 r003 AGCTAA 5H6M
+# EXPECT: 0 15 r004 ATAGCTCTCAGC 6M14N1I5M
+# EXPECT: 0 28 r003 TAGGC 6H5M
+# EXPECT: 0 36 r001 CAGCGCCAT 9M
+# EXPECT: 1 0 x1 AGGTTTTATAAAACAAATAA 20M
+# EXPECT: 1 1 x2 GGTTTTATAAAACAAATAATT 21M
+# EXPECT: 1 5 x3 TTATAAAACAAATAATTAAGTCTACA 9M4I13M
+# EXPECT: 1 9 x4 CAAATAATTAAGTCTACAGAGCAAC 25M
+# EXPECT: 1 11 x5 AATAATTAAGTCTACAGAGCAACT 24M
+# EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M
+
+print '-'  # EXPECT: -
+BAM('test/data/toy.bam', copy=False) |> iter |> print3
+# EXPECT: 0 6 r001 TTAGATAAAGAGGATACTG 8M4I4M1D3M
+# EXPECT: [12561, 2, 20, 112]
+# EXPECT: 0 8 r002 AAAAGATAAGGGATAAA 1S2I6M1P1I1P1I4M2I
+# EXPECT: 0 8 r003 AGCTAA 5H6M
+# EXPECT: 0 15 r004 ATAGCTCTCAGC 6M14N1I5M
+# EXPECT: 0 28 r003 TAGGC 6H5M
+# EXPECT: 0 36 r001 CAGCGCCAT 9M
+# EXPECT: 1 0 x1 AGGTTTTATAAAACAAATAA 20M
+# EXPECT: 1 1 x2 GGTTTTATAAAACAAATAATT 21M
+# EXPECT: 1 5 x3 TTATAAAACAAATAATTAAGTCTACA 9M4I13M
+# EXPECT: 1 9 x4 CAAATAATTAAGTCTACAGAGCAAC 25M
+# EXPECT: 1 11 x5 AATAATTAAGTCTACAGAGCAACT 24M
+# EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M
+
+print '-'  # EXPECT: -
 CRAM('test/data/toy.cram') |> iter |> print3
 # EXPECT: 0 6 r001 TTAGATAAAGAGGATACTG 8M4I4M1D3M
 # EXPECT: [12561, 2, 20, 112]
@@ -252,6 +284,15 @@ BAM('test/data/toy.bam', 'ref2') |> iter |> print3
 # EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M
 
 print '-'  # EXPECT: -
+BAM('test/data/toy.bam', 'ref2', copy=False) |> iter |> print3
+# EXPECT: 1 0 x1 AGGTTTTATAAAACAAATAA 20M
+# EXPECT: 1 1 x2 GGTTTTATAAAACAAATAATT 21M
+# EXPECT: 1 5 x3 TTATAAAACAAATAATTAAGTCTACA 9M4I13M
+# EXPECT: 1 9 x4 CAAATAATTAAGTCTACAGAGCAAC 25M
+# EXPECT: 1 11 x5 AATAATTAAGTCTACAGAGCAACT 24M
+# EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M
+
+print '-'  # EXPECT: -
 CRAM('test/data/toy.cram', 'ref:30') |> iter |> print3
 # EXPECT: 0 15 r004 ATAGCTCTCAGC 6M14N1I5M
 # EXPECT: 0 28 r003 TAGGC 6H5M
@@ -259,9 +300,9 @@ CRAM('test/data/toy.cram', 'ref:30') |> iter |> print3
 
 print '-'  # EXPECT: -
 with CRAM('test/data/toy.cram') as cram, BAM('test/data/toy.bam') as bam, SAM('test/data/toy.sam') as sam:
-    print [(a.tid, a.name, a.len) for a in cram.targets]   # EXPECT: [(0, ref, 45), (1, ref2, 40)]
-    print [(a.tid, str(a), a.len) for a in bam.targets]   # EXPECT: [(0, ref, 45), (1, ref2, 40)]
-    print [(a.tid, str(a), len(a)) for a in sam.targets]  # EXPECT: [(0, ref, 45), (1, ref2, 40)]
+    print [(a.tid, a.name, a.len) for a in cram.contigs()]   # EXPECT: [(0, ref, 45), (1, ref2, 40)]
+    print [(a.tid, str(a), a.len) for a in bam.contigs()]   # EXPECT: [(0, ref, 45), (1, ref2, 40)]
+    print [(a.tid, str(a), len(a)) for a in sam.contigs()]  # EXPECT: [(0, ref, 45), (1, ref2, 40)]
 
     a = [rec for rec in sam]
     b = [rec for rec in bam]
