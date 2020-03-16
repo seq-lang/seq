@@ -154,16 +154,7 @@ cimport sam_hdr_destroy(cobj)
 cimport bam_destroy1(cobj)
 
 # Seq HTSlib
-type SAMHeaderTarget(_name: str, _len: int)
-cimport seq_hts_get_name(cobj) -> str
-cimport seq_hts_get_seq(cobj) -> seq
-cimport seq_hts_get_qual(cobj) -> str
-cimport seq_hts_get_cigar(cobj) -> CIGAR
-cimport seq_hts_get_aux(cobj) -> str
-cimport seq_hts_aux_get(str, str) -> ptr[u8]
-cimport seq_hts_get_targets(cobj) -> array[SAMHeaderTarget]
 cimport seq_hts_sam_itr_next(cobj, cobj, cobj) -> int
-cimport seq_hts_get_seq(cobj) -> seq
 
 # OpenMP
 cimport omp_get_num_threads() -> i32

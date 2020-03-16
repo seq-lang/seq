@@ -12,9 +12,23 @@ BAM_FQCFAIL        =  512
 BAM_FDUP           = 1024
 BAM_FSUPPLEMENTARY = 2048
 
-from core.c_stubs import SAMHeaderTarget
 from bio.align import CIGAR
-from bio.locus import Locus
+from bio.locus import Contig, Locus
+
+# This type must be consistent with htslib:
+type _sam_hdr_t(n_targets: i32,
+                ignore_sam_err: i32,
+                l_text: int,
+                target_len: ptr[u32],
+                cigar_tab: ptr[byte],
+                target_name: ptr[ptr[byte]],
+                text: ptr[byte],
+                sdict: cobj,
+                hrecs: cobj,
+                ref_count: u32):
+    def targets_list(self: _sam_hdr_t) -> list[Contig]:
+        return [Contig(tid=i, name=str.from_ptr(self.target_name[i]), len=int(self.target_len[i]))
+                  for i in range(int(self.n_targets))]
 
 # This type must be consistent with htslib:
 type _bam_core_t(_pos: i64,
@@ -117,7 +131,7 @@ class SAMRecord:
 
     @property
     def name(self: SAMRecord):
-        return str(self._htsr.data, int(self._htsr.core._l_qname))
+        return str(self._htsr.data, int(self._htsr.core._l_qname) - int(self._htsr.core._l_extranul) - 1)
 
     @property
     def query_name(self: SAMRecord):
@@ -243,7 +257,7 @@ class SAMRecord:
 
     def aux(self: SAMRecord, tag: str):
         if len(tag) != 2:
-            raise ValueError("SAM aux tags are two characters (got: " + tag + ")")
+            raise ValueError(f"SAM aux tags are exactly two characters in length (got: tag of length {len(tag)})")
         tag_arr = (tag.ptr[0], tag.ptr[1])
         '''
         hts_aux = (self._htsr.data +
@@ -256,20 +270,13 @@ class SAMRecord:
         '''
         return SAMAux(_C.bam_aux_get(self.__raw__(), ptr[byte](__ptr__(tag_arr))))
 
-extend SAMHeaderTarget:
-    def __str__(self: SAMHeaderTarget):
-        return self._name
-
-    def __len__(self: SAMHeaderTarget):
-        return self._len
-
 class BAM:
     aln: _bam1_t
     file: cobj
     idx: cobj
     hdr: cobj
     itr: cobj
-    targets: list[SAMHeaderTarget]
+    targets: list[Contig]
 
     def _init(self: BAM, path: str, region: str):
         path_c_str, region_c_str = path.c_str(), region.c_str()
@@ -290,15 +297,12 @@ class BAM:
             _C.hts_close(file)
             raise IOError("unable to seek to region " + region + " in " + path)
 
-        targets_array = _C.seq_hts_get_targets(hdr)
-        targets = list[SAMHeaderTarget](targets_array, len(targets_array))
-
         self.aln = _bam1_t()
         self.file = file
         self.idx = idx
         self.hdr = hdr
         self.itr = itr
-        self.targets = targets
+        self.targets = ptr[_sam_hdr_t](hdr)[0].targets_list()
 
     def __init__(self: BAM, path: str):
         self._init(path, ".")
@@ -369,7 +373,7 @@ class SAM:
     aln: _bam1_t
     file: cobj
     hdr: cobj
-    targets: list[SAMHeaderTarget]
+    targets: list[Contig]
 
     def __init__(self: SAM, path: str):
         path_c_str = path.c_str()
@@ -379,13 +383,10 @@ class SAM:
             raise IOError("file " + path + " could not be opened")
 
         hdr = _C.sam_hdr_read(file)
-        targets_array = _C.seq_hts_get_targets(hdr)
-        targets = list[SAMHeaderTarget](targets_array, len(targets_array))
-
         self.aln = _bam1_t()
         self.file = file
         self.hdr = hdr
-        self.targets = targets
+        self.targets = ptr[_sam_hdr_t](hdr)[0].targets_list()
 
     def _ensure_open(self: SAM):
         if not self.file:

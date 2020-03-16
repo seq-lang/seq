@@ -257,6 +257,21 @@ CRAM('test/data/toy.cram', 'ref:30') |> iter |> print3
 # EXPECT: 0 28 r003 TAGGC 6H5M
 # EXPECT: 0 36 r001 CAGCGCCAT 9M
 
+print '-'  # EXPECT: -
+with CRAM('test/data/toy.cram') as cram, BAM('test/data/toy.bam') as bam, SAM('test/data/toy.sam') as sam:
+    print [(a.tid, a.name, a.len) for a in cram.targets]   # EXPECT: [(0, ref, 45), (1, ref2, 40)]
+    print [(a.tid, str(a), a.len) for a in bam.targets]   # EXPECT: [(0, ref, 45), (1, ref2, 40)]
+    print [(a.tid, str(a), len(a)) for a in sam.targets]  # EXPECT: [(0, ref, 45), (1, ref2, 40)]
+
+    a = [rec for rec in sam]
+    b = [rec for rec in bam]
+    c = [rec for rec in cram]
+
+    # make sure records work even if we store them (i.e. don't re-use same buffer)
+    print a[0].name, a[-1].name  # EXPECT: r001 x6
+    print b[0].name, b[-1].name  # EXPECT: r001 x6
+    print c[0].name, c[-1].name  # EXPECT: r001 x6
+
 opts1 = [True, False]
 opts2 = [(a,b) for a in (True, False) for b in (True, False)]
 opts3 = [(a,b,c) for a in (True, False) for b in (True, False) for c in (True, False)]
