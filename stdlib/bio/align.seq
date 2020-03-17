@@ -66,6 +66,11 @@ extend CIGAR:
     def __len__(self: CIGAR):
         return self.len
 
+    def __copy__(self: CIGAR) -> CIGAR:
+        p = ptr[u32](self.len)
+        str.memcpy(ptr[byte](p), ptr[byte](self.value), self.len * _gc.sizeof[u32]())
+        return CIGAR(p, self.len)
+
     def __bool__(self: CIGAR):
         return self.len > 0
 

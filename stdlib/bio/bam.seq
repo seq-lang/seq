@@ -164,11 +164,11 @@ class SAMRecord:
     def qual(self: SAMRecord):
         if not self._qual:
             hts_qual = self._htsr.data + ((int(self._htsr.core._n_cigar) << 2) + int(self._htsr.core._l_qname) + ((int(self._htsr.core._l_qseq) + 1) >> 1))
-            n = int(self.core._l_qseq)
+            n = int(self._htsr.core._l_qseq)
             buf = ptr[byte](n)
             i = 0
             while i < n:
-                buf[i] = hts_qual[i] + 33
+                buf[i] = byte(int(hts_qual[i]) + 33)
                 i += 1
             self._qual = str(buf, n)
         return self._qual
