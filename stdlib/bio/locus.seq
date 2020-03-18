@@ -1,3 +1,46 @@
+type Contig(_tid: u32, _name: str, _len: int):
+    def __init__(self: Contig, tid: int, name: str, len: int) -> Contig:
+        return (u32(tid), name, len)
+
+    @property
+    def tid(self: Contig):
+        return int(self._tid)
+
+    @property
+    def name(self: Contig):
+        return self._name
+
+    @property
+    def len(self: Contig):
+        return self._len
+
+    def __str__(self: Contig):
+        return self.name
+
+    def __len__(self: Contig):
+        return self.len
+
+    def __eq__(self: Contig, other: Contig):
+        return self.tid == other.tid
+
+    def __ne__(self: Contig, other: Contig):
+        return self.tid != other.tid
+
+    def __lt__(self: Contig, other: Contig):
+        return self.tid < other.tid
+
+    def __gt__(self: Contig, other: Contig):
+        return self.tid > other.tid
+
+    def __le__(self: Contig, other: Contig):
+        return self.tid <= other.tid
+
+    def __ge__(self: Contig, other: Contig):
+        return self.tid >= other.tid
+
+    def __hash__(self: Contig):
+        return self.tid
+
 type Locus(_tid: u32, _pos: u32):
     def __init__(self: Locus, tid: int, pos: int) -> Locus:
         return (u32(tid), u32(pos))

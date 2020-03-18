@@ -216,7 +216,10 @@ extend str:
         return str.cat(v)
 
     def from_ptr(t: cobj) -> str:
-        return _C.seq_strdup(t)
+        n = _C.strlen(t)
+        p = ptr[byte](n)
+        str.memcpy(p, t, n)
+        return str(p, n)
 
     def isdigit(self: str) -> bool:
         """

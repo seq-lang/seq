@@ -2,7 +2,7 @@
 # https://github.com/lh3/bwa
 
 from random import randint
-from bio.locus import Locus
+from bio.locus import Contig, Locus
 
 # obeys A < C < G < T
 def _enc(b: byte):
@@ -966,12 +966,14 @@ class FMDIndex:
         return self._bntseq.get_seq(startx, stopx)
 
     def contigs(self: FMDIndex):
+        i = 0
         for ann in self._bntseq._anns:
-            yield (ann._name, ann._len)
+            yield Contig(tid=i, name=ann._name, len=ann._len)
+            i += 1
 
     def contig(self: FMDIndex, rid: int):
         ann = self._bntseq._anns[rid]
-        return (ann._name, ann._len)
+        return Contig(tid=rid, name=ann._name, len=ann._len)
 
 class FMIndex:
     _seq_len: int
@@ -1438,9 +1440,11 @@ class FMIndex:
     def contigs(self: FMIndex):
         if self._bntseq is None:
             raise ValueError("contigs() requires FASTA-based FM-index")
+        i = 0
         for ann in self._bntseq._anns:
-            yield (ann._name, ann._len)
+            yield Contig(tid=i, name=ann._name, len=ann._len)
+            i += 1
 
-    def contig(self: FMDIndex, rid: int):
+    def contig(self: FMIndex, rid: int):
         ann = self._bntseq._anns[rid]
-        return (ann._name, ann._len)
+        return Contig(tid=rid, name=ann._name, len=ann._len)

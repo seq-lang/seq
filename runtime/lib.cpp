@@ -164,13 +164,6 @@ static seq_str_t string_conv(const char *fmt, const size_t size, T t) {
   return {(seq_int_t)n, p};
 }
 
-SEQ_FUNC seq_str_t seq_strdup(const char *s) {
-  size_t len = strlen(s);
-  auto *s2 = (char *)seq_alloc_atomic(len + 1);
-  strcpy(s2, s);
-  return {(seq_int_t)len, s2};
-}
-
 SEQ_FUNC seq_str_t seq_str_int(seq_int_t n) {
   return string_conv("%ld", 22, n);
 }
@@ -537,83 +530,7 @@ SEQ_FUNC void seq_palign_global(seq_t query, seq_t target, int8_t *mat,
  * htslib
  */
 
-struct seq_cigar_t {
-  uint32_t *value;
-  seq_int_t len;
-};
-
-struct seq_sam_hdr_target_t {
-  seq_str_t name;
-  seq_int_t len;
-};
-
 SEQ_FUNC seq_int_t seq_hts_sam_itr_next(htsFile *htsfp, hts_itr_t *itr,
                                         bam1_t *r) {
   return sam_itr_next(htsfp, itr, r);
-}
-
-SEQ_FUNC seq_str_t seq_hts_get_name(bam1_t *aln) {
-  char *name = bam_get_qname(aln);
-  const int len = aln->core.l_qname - aln->core.l_extranul - 1;
-  auto *buf = (char *)seq_alloc_atomic(len);
-  memcpy(buf, name, len);
-  return {len, buf};
-}
-
-SEQ_FUNC seq_t seq_hts_get_seq(bam1_t *aln) {
-  uint8_t *seqi = bam_get_seq(aln);
-  const int len = aln->core.l_qseq;
-  auto *buf = (char *)seq_alloc_atomic(len);
-  for (int i = 0; i < len; i++) {
-    buf[i] = seq_nt16_str[bam_seqi(seqi, i)];
-  }
-  return {len, buf};
-}
-
-SEQ_FUNC seq_str_t seq_hts_get_qual(bam1_t *aln) {
-  uint8_t *quali = bam_get_qual(aln);
-  const int len = aln->core.l_qseq;
-  auto *buf = (char *)seq_alloc_atomic(len);
-  for (int i = 0; i < len; i++) {
-    buf[i] = 33 + quali[i];
-  }
-  return {len, buf};
-}
-
-SEQ_FUNC seq_cigar_t seq_hts_get_cigar(bam1_t *aln) {
-  uint32_t *cigar = bam_get_cigar(aln);
-  const int len = aln->core.n_cigar;
-  auto *buf = (uint32_t *)seq_alloc_atomic(len * sizeof(uint32_t));
-  memcpy(buf, cigar, len * sizeof(uint32_t));
-  return {buf, len};
-}
-
-SEQ_FUNC seq_str_t seq_hts_get_aux(bam1_t *aln) {
-  auto *aux = (char *)bam_get_aux(aln);
-  const int len = bam_get_l_aux(aln);
-  auto *buf = (char *)seq_alloc_atomic(len);
-  memcpy(buf, aux, len);
-  return {len, buf};
-}
-
-SEQ_FUNC uint8_t *seq_hts_aux_get(seq_str_t aux, seq_str_t tag) {
-  bam1_t aln = {};
-  aln.data = (uint8_t *)aux.str;
-  aln.l_data = aln.m_data = aux.len;
-  char tag_arr[] = {tag.str[0], tag.str[1]};
-  return bam_aux_get(&aln, tag_arr);
-}
-
-SEQ_FUNC seq_arr_t<seq_sam_hdr_target_t> seq_hts_get_targets(bam_hdr_t *hdr) {
-  const int len = hdr->n_targets;
-  auto *arr =
-      (seq_sam_hdr_target_t *)seq_alloc(len * sizeof(seq_sam_hdr_target_t));
-  for (int i = 0; i < len; i++) {
-    const int name_len = strlen(hdr->target_name[i]);
-    auto *buf = (char *)seq_alloc_atomic(name_len);
-    memcpy(buf, hdr->target_name[i], name_len);
-    const int target_len = hdr->target_len[i];
-    arr[i] = {{name_len, buf}, target_len};
-  }
-  return {len, arr};
 }
