@@ -39,7 +39,15 @@ ExprStmt::ExprStmt(Expr *expr) : Stmt("expr"), expr(expr) {}
 
 void ExprStmt::resolveTypes() { expr->resolveTypes(); }
 
-void ExprStmt::codegen0(BasicBlock *&block) { expr->codegen(getBase(), block); }
+void ExprStmt::codegen0(BasicBlock *&block) {
+  if (dynamic_cast<types::PartialFuncType *>(expr->getType())) {
+    SrcInfo src = getSrcInfo();
+    compilationWarning(
+        "function call is partial; are there arguments missing on this call?",
+        src.file, src.line, src.col);
+  }
+  expr->codegen(getBase(), block);
+}
 
 ExprStmt *ExprStmt::clone(Generic *ref) {
   if (ref->seenClone(this))

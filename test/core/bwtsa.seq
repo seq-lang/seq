@@ -111,5 +111,5 @@ test_fmindex(FMD=False)
 test_fmdindex()
 
 path = 'test/data/seqs2.fasta'
-test_smems[FMIndex](FMIndex(path, FMD=True))
-test_smems[FMDIndex](FMDIndex(path))
+test_smems[FMIndex](FMIndex(path, FMD=True), path)
+test_smems[FMDIndex](FMDIndex(path), path)
