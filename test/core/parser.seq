@@ -28,7 +28,7 @@ print xz, a, b # EXPECT: (1, 2, 3) 4 5
 
 
 # *x = range(5) # ERR
-# *x, = range(5)
+*x, = [1, 2, 3]
 
 # https://stackoverflow.com/questions/6967632/unpacking-extended-unpacking-and-nested-extended-unpacking
 
