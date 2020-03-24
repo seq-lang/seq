@@ -1,5 +1,6 @@
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
+#include <deque>
 #include <memory>
 #include <ostream>
 #include <stack>
@@ -16,6 +17,7 @@
 #include "parser/ocaml.h"
 
 using fmt::format;
+using std::deque;
 using std::get;
 using std::make_unique;
 using std::move;
@@ -418,6 +420,7 @@ void TransformStmtVisitor::visit(const ExprStmt *stmt) {
 
 StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
                                             const Expr *type, bool force) {
+  // DBG("    --> {} := {}", *lhs, *rhs);
   if (auto l = dynamic_cast<const IndexExpr *>(lhs)) {
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const DotExpr *>(lhs)) {
@@ -454,7 +457,7 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
     rhs = newRhs;
   }
   UnpackExpr *unpack = nullptr;
-  int st = 0, ed = lefts.size() - 1;
+  int st = 0;
   for (; st < lefts.size(); st++) {
     if (auto u = dynamic_cast<UnpackExpr *>(lefts[st])) {
       unpack = u;
@@ -462,49 +465,44 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
     }
     // TODO: RHS here (and below) will be transformed twice in order to avoid
     // messing up with unique_ptr. Better solution needed?
-    stmts.push_back(addAssignment(
+    processAssignment(
         lefts[st],
         EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, st)).release(),
-        nullptr, force));
-  }
-  for (int i = 1; ed > st; i++, ed--) {
-    if (dynamic_cast<UnpackExpr *>(lefts[ed])) {
-      break;
-    }
-    stmts.push_back(addAssignment(
-        lefts[ed],
-        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, -i)).release(),
-        nullptr, force));
-  }
-  if (st < lefts.size() && st != ed) {
-    error(lefts[st]->getSrcInfo(), "two starred expressions in assignment");
+        stmts, force);
   }
   if (unpack) {
     processAssignment(unpack->what.get(),
                       EPX(rhs, IndexExpr, transform(rhs),
                           EPX(rhs, SliceExpr, EPX(rhs, IntExpr, st),
-                              EPX(rhs, IntExpr, ed + 1), nullptr))
+                              lefts.size() == st + 1
+                                  ? nullptr
+                                  : EPX(rhs, IntExpr, -lefts.size() + st + 1),
+                              nullptr))
                           .release(),
                       stmts, force);
+    st += 1;
+    for (; st < lefts.size(); st++) {
+      if (dynamic_cast<UnpackExpr *>(lefts[st])) {
+        error(lefts[st]->getSrcInfo(), "two unpack expressions in assignment");
+      }
+      processAssignment(lefts[st],
+                        EPX(rhs, IndexExpr, transform(rhs),
+                            EPX(rhs, IntExpr, -lefts.size() + st))
+                            .release(),
+                        stmts, force);
+    }
   }
 }
 
 void TransformStmtVisitor::visit(const AssignStmt *stmt) {
-  // a, b, *x, c, d = y
-  // (^) = y
-  // [^] = y
-  // *a = y NO ; *a, = y YES
-  // (a, b), c = d, e
-  // *(a, *b), c = this
-  // a = *iterable
-
+  // DBG("--> {}", *stmt);
   vector<StmtPtr> stmts;
   if (stmt->type) {
     if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
       stmts.push_back(
           addAssignment(stmt->lhs.get(), stmt->rhs.get(), stmt->type.get()));
     } else {
-      ERROR(stmt, "only single target can be annotated");
+      ERROR(stmt, "only a single target can be annotated");
     }
   } else {
     processAssignment(stmt->lhs.get(), stmt->rhs.get(), stmts);
