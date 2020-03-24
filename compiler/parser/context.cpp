@@ -221,8 +221,12 @@ shared_ptr<Context> Context::importFile(const string &file) {
   } else {
     auto stmts = parse_file(file);
     auto tv = TransformStmtVisitor().transform(parse_file(file));
+
+    // Import into the root module
+    auto block = blocks[0];
+    auto base = bases[0];
     auto context =
-        make_shared<Context>(cache, getBlock(), getBase(), getJIT(), file);
+        make_shared<Context>(cache, block, base, getJIT(), file);
     CodegenStmtVisitor(*context).transform(tv);
     return (cache->imports[file] = context);
   }
