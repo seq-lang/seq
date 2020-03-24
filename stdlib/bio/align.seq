@@ -51,13 +51,13 @@ type SubMat(mat: ptr[i8]):
 
     def __str__(self: SubMat):
         N = SubMat._N()
-        s = ''
+        s = []
         k = 0
         for i in range(N):
             for j in range(N):
-                s += str(int(self.mat[k])) + ' '
+                s.append(str(int(self.mat[k])) + ' ')
                 k += 1
-        return s
+        return ''.join(s)
 
 extend CIGAR:
     def __init__(self: CIGAR) -> CIGAR:

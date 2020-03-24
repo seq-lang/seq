@@ -398,15 +398,15 @@ extend str:
 
         if len(self) > 0:
             # Capitalize first letter
-            s = str(chr(_C.toupper(int(self.ptr[0]))))
+            s = [str(chr(_C.toupper(int(self.ptr[0]))))]
 
             # Make any following char lowercase
             for i in range(1, len(self)):
                 if _C.isupper(int(self.ptr[i])):
-                    s = s + str(chr(_C.tolower(int(self.ptr[i]))))
+                    s.append(str(chr(_C.tolower(int(self.ptr[i])))))
                 else:
-                    s = s + self[i]
-            return s
+                    s.append(self[i])
+            return ''.join(s)
 
         # Empty string
         return ''
@@ -435,17 +435,17 @@ extend str:
 
         Return a copy of str with all ASCII characters converted to lowercase.
         """
-        s = ''
         # Empty string
         if len(self) == 0:
-            return s
+            return ''
 
+        s = list[str]()
         for i in range(len(self)):
             if _C.isupper(int(self.ptr[i])):
-                s = s + str(chr(_C.tolower(int(self.ptr[i]))))
+                s.append(str(chr(_C.tolower(int(self.ptr[i])))))
             else:
-                s = s + str(self.ptr[i])
-        return s
+                s.append(str(self.ptr[i]))
+        return ''.join(s)
 
     def upper(self: str) -> str:
         """
@@ -453,17 +453,17 @@ extend str:
 
         Return a copy of str with all ASCII characters converted to uppercase.
         """
-        s = ''
         # Empty string
         if len(self) == 0:
-            return s
+            return ''
 
+        s = list[str]()
         for i in range(len(self)):
             if _C.islower(int(self.ptr[i])):
-                s = s + str(chr(_C.toupper(int(self.ptr[i]))))
+                s.append(str(chr(_C.toupper(int(self.ptr[i])))))
             else:
-                s = s + str(self.ptr[i])
-        return s
+                s.append(str(self.ptr[i]))
+        return ''.join(s)
 
     def isascii(self: str) -> bool:
         """
@@ -494,20 +494,20 @@ extend str:
         Return a copy of str with uppercase ASCII characters converted
         to lowercase ASCII and vice versa.
         """
-        s = ''
 
         # Empty string
         if len(self) == 0:
-            return s
+            return ''
 
+        s = list[str]()
         for i in range(len(self)):
             if _C.islower(int(self.ptr[i])):
-                s = s + str(chr(_C.toupper(int(self.ptr[i]))))
+                s.append(str(chr(_C.toupper(int(self.ptr[i])))))
             elif _C.isupper(int(self.ptr[i])):
-                s = s + str(chr(_C.tolower(int(self.ptr[i]))))
+                s.append(str(chr(_C.tolower(int(self.ptr[i])))))
             else:
-                s = s + str(self.ptr[i])
-        return s
+                s.append(str(self.ptr[i]))
+        return ''.join(s)
 
     def title(self: str) -> str:
         """
@@ -516,32 +516,32 @@ extend str:
         Return a titlecased version of str, i.e. ASCII words start with uppercase
         characters, all remaining cased characters have lowercase.
         """
-        s = ''
         prev_is_cased = False
 
         # Empty string
         if len(self) == 0:
-            return s
+            return ''
 
+        s = list[str]()
         for i in range(len(self)):
             if _C.islower(int(self.ptr[i])):
                 # lowercase to uppercase
                 if not prev_is_cased:
-                    s = s + str(chr(_C.toupper(int(self.ptr[i]))))
+                    s.append(str(chr(_C.toupper(int(self.ptr[i])))))
                 else:
-                    s = s + str(self.ptr[i])
+                    s.append(str(self.ptr[i]))
                 prev_is_cased = True
             elif _C.isupper(int(self.ptr[i])):
                 # uppercase to lowercase
                 if prev_is_cased:
-                    s = s + str(chr(_C.tolower(int(self.ptr[i]))))
+                    s.append(str(chr(_C.tolower(int(self.ptr[i])))))
                 else:
-                    s = s + str(self.ptr[i])
+                    s.append(str(self.ptr[i]))
                 prev_is_cased = True
             else:
-                s = s + str(self.ptr[i])
+                s.append(str(self.ptr[i]))
                 prev_is_cased = False
-        return s
+        return ''.join(s)
 
     def isnumeric(self: str) -> bool:
         """
@@ -563,15 +563,9 @@ extend str:
 
         Padding is done using the specified fill character (default is a space).
         """
-        s = ''
-        s = s + self
-
         if width <= len(self):
             return self
-
-        for i in range(width - len(self)):
-            s = s + fillchar
-        return s
+        return self + (fillchar * (width - len(self)))
 
     def rjust(self: str, width: int, fillchar: str) -> str:
         """
@@ -581,16 +575,9 @@ extend str:
 
         Padding is done using the specified fill character (default is a space).
         """
-        s = ''
-
         if width <= len(self):
             return self
-
-        for i in range(width - len(self)):
-            s = s + fillchar
-
-        s = s + self
-        return s
+        return (fillchar * (width - len(self))) + self
 
     def center(self: str, width: int, fillchar: str) -> str:
         """
@@ -599,8 +586,6 @@ extend str:
         Return str centered in a string of length width. Padding is
         done using the specified fill character (default is a space)
         """
-        s = ''
-
         if width <= len(self):
             return self
 
@@ -608,12 +593,7 @@ extend str:
         left_pad = pad // 2
         right_pad = width - len(self) - left_pad
 
-        for i in range(left_pad):
-            s = s + fillchar
-        s = s + self
-        for i in range(right_pad):
-            s = s + fillchar
-        return s
+        return ''.join([fillchar * left_pad, self, fillchar * right_pad])
 
     def zfill(self: str, width: int) -> str:
         """
@@ -622,27 +602,26 @@ extend str:
         Pad a numeric string str with zeros on the left, to fill a field
         of the specified width.  The string str is never truncated.
         """
-        s = ''
         sign = False
 
         if width <= len(self):
             return self
 
+        s = list[str]()
         if self and (self[0] == '+' or self[0] == '-'):
             # move sign to beginning of string
-            s = s + self[0]
+            s.append(self[0])
             sign = True
 
         fill = width - len(self)
 
-        for i in range(fill):
-            s = s + '0'
+        s.append('0' * fill)
 
         if sign:
-            s = s + self[1:]
+            s.append(self[1:])
         else:
-            s = s + self
-        return s
+            s.append(self)
+        return ''.join(s)
 
     def count(self: str, sub: str, start: int = 0, end: int = 0x7fffffffffffffff) -> int:
         """
@@ -1149,7 +1128,7 @@ extend str:
         incr = 0
         i = 0   # chars up to and including most recent \n or \r
         j = 0   # chars since most recent \n or \r (use in tab calculations)
-        u = ''
+        u = list[str]()
         j = 0   # same as first pass
 
         # create output string and fill it
@@ -1159,14 +1138,14 @@ extend str:
                     i = tabsize - (j % tabsize)
                     j += i
                     while i != 0:
-                        u = u + ' '
+                        u.append(' ')
                         i -= 1
             else:
-                u = u + self[p]
+                u.append(self[p])
                 j += 1
                 if self[p] == '\n' or self[p] == '\r':
                     j = 0
-        return u
+        return ''.join(u)
 
     def translate(self: str, table) -> str:
         """
