@@ -436,16 +436,13 @@ extend str:
         Return a copy of str with all ASCII characters converted to lowercase.
         """
         # Empty string
-        if len(self) == 0:
+        n = len(self)
+        if n == 0:
             return ''
-
-        s = list[str]()
-        for i in range(len(self)):
-            if _C.isupper(int(self.ptr[i])):
-                s.append(str(chr(_C.tolower(int(self.ptr[i])))))
-            else:
-                s.append(str(self.ptr[i]))
-        return ''.join(s)
+        p = ptr[byte](n)
+        for i in range(n):
+            p[i] = byte(_C.tolower(int(self.ptr[i])))
+        return str(p, n)
 
     def upper(self: str) -> str:
         """
@@ -454,16 +451,13 @@ extend str:
         Return a copy of str with all ASCII characters converted to uppercase.
         """
         # Empty string
-        if len(self) == 0:
+        n = len(self)
+        if n == 0:
             return ''
-
-        s = list[str]()
-        for i in range(len(self)):
-            if _C.islower(int(self.ptr[i])):
-                s.append(str(chr(_C.toupper(int(self.ptr[i])))))
-            else:
-                s.append(str(self.ptr[i]))
-        return ''.join(s)
+        p = ptr[byte](n)
+        for i in range(n):
+            p[i] = byte(_C.toupper(int(self.ptr[i])))
+        return str(p, n)
 
     def isascii(self: str) -> bool:
         """
@@ -494,20 +488,19 @@ extend str:
         Return a copy of str with uppercase ASCII characters converted
         to lowercase ASCII and vice versa.
         """
-
         # Empty string
-        if len(self) == 0:
+        n = len(self)
+        if n == 0:
             return ''
-
-        s = list[str]()
-        for i in range(len(self)):
+        p = ptr[byte](n)
+        for i in range(n):
             if _C.islower(int(self.ptr[i])):
-                s.append(str(chr(_C.toupper(int(self.ptr[i])))))
+                p[i] = byte(_C.toupper(int(self.ptr[i])))
             elif _C.isupper(int(self.ptr[i])):
-                s.append(str(chr(_C.tolower(int(self.ptr[i])))))
+                p[i] = byte(_C.tolower(int(self.ptr[i])))
             else:
-                s.append(str(self.ptr[i]))
-        return ''.join(s)
+                p[i] = self.ptr[i]
+        return str(p, n)
 
     def title(self: str) -> str:
         """
@@ -519,29 +512,30 @@ extend str:
         prev_is_cased = False
 
         # Empty string
-        if len(self) == 0:
+        n = len(self)
+        if n == 0:
             return ''
 
-        s = list[str]()
-        for i in range(len(self)):
+        p = ptr[byte](n)
+        for i in range(n):
             if _C.islower(int(self.ptr[i])):
                 # lowercase to uppercase
                 if not prev_is_cased:
-                    s.append(str(chr(_C.toupper(int(self.ptr[i])))))
+                    p[i] = byte(_C.toupper(int(self.ptr[i])))
                 else:
-                    s.append(str(self.ptr[i]))
+                    p[i] = self.ptr[i]
                 prev_is_cased = True
             elif _C.isupper(int(self.ptr[i])):
                 # uppercase to lowercase
                 if prev_is_cased:
-                    s.append(str(chr(_C.tolower(int(self.ptr[i])))))
+                    p[i] = byte(_C.tolower(int(self.ptr[i])))
                 else:
-                    s.append(str(self.ptr[i]))
+                    p[i] = self.ptr[i]
                 prev_is_cased = True
             else:
-                s.append(str(self.ptr[i]))
+                p[i] = self.ptr[i]
                 prev_is_cased = False
-        return ''.join(s)
+        return str(p, n)
 
     def isnumeric(self: str) -> bool:
         """
