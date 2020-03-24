@@ -1,0 +1,7 @@
+# Issue #116
+def foo():
+    a = 42
+    def bar():
+        print a  # <-- this should be a parser error; 'a' has to be global
+    bar()
+foo() # ERROR: identifier 'a' not found

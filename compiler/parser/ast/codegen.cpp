@@ -111,13 +111,16 @@ void CodegenExprVisitor::visit(const IdExpr *expr) {
   if (!i) {
     ERROR(expr, "identifier '{}' not found", expr->value);
   }
-  this->result = i->getExpr();
   if (auto var = dynamic_cast<VarContextItem *>(i.get())) {
+    if (!var->isGlobal() && var->getBase() != ctx.getBase()) {
+      ERROR(expr, "identifier '{}' not found", expr->value);
+    }
     if (var->isGlobal() && var->getBase() == ctx.getBase() &&
         ctx.hasFlag("atomic")) {
       dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
     }
   }
+  this->result = i->getExpr();
 }
 
 void CodegenExprVisitor::visit(const UnpackExpr *expr) {
