@@ -199,18 +199,16 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,
-    testing::Combine(testing::Values("core/parser.seq",
-                                     "core/align.seq", "core/arguments.seq",
-                                     "core/arithmetic.seq", "core/big.seq",
-                                     "core/bwtsa.seq", "core/containers.seq",
-                                     "core/empty.seq", "core/exceptions.seq",
-                                     "core/formats.seq", "core/generators.seq",
-                                     "core/generics.seq", "core/helloworld.seq",
-                                     "core/kmers.seq", "core/match.seq",
-                                     "core/proteins.seq",
-                                     "core/serialization.seq",
-                                     "core/trees.seq"),
-                     testing::Values(true, false)),
+    testing::Combine(
+        testing::Values("core/parser.seq", "core/align.seq",
+                        "core/arguments.seq", "core/arithmetic.seq",
+                        "core/big.seq", "core/bwtsa.seq", "core/containers.seq",
+                        "core/empty.seq", "core/exceptions.seq",
+                        "core/formats.seq", "core/generators.seq",
+                        "core/generics.seq", "core/helloworld.seq",
+                        "core/kmers.seq", "core/match.seq", "core/proteins.seq",
+                        "core/serialization.seq", "core/trees.seq"),
+        testing::Values(true, false)),
     getTestNameFromParam);
 
 INSTANTIATE_TEST_SUITE_P(
