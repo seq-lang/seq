@@ -1,5 +1,48 @@
 import algorithms.strings as algorithms
 
+class __str_internal_join:
+    def __init__(self: __str_internal_join, s: str, x: generator[str]):
+        if len(s) == 0:
+            return str.cat(list(x))
+        v = list[str]()
+        for a in x:
+            v.append(a)
+            v.append(s)
+        if v:
+            del v[-1]
+        return str.cat(v)
+
+    def __init__(self: __str_internal_join, s: str, x: list[str]):
+        if len(x) == 0:
+            return ''
+        if len(x) == 1:
+            return x[0]
+        if len(s) == 0:
+            return str.cat(x)
+
+        # compute length
+        n = 0
+        i = 0
+        while i < len(x):
+            n += len(x[i])
+            if i < len(x) - 1:
+                n += len(s)
+            i += 1
+
+        # copy to new buffer
+        p = ptr[byte](n)
+        r = 0
+        i = 0
+        while i < len(x):
+            str.memcpy(p + r, x[i].ptr, len(x[i]))
+            r += len(x[i])
+            if i < len(x) - 1:
+                str.memcpy(p + r, s.ptr, len(s))
+                r += len(s)
+            i += 1
+
+        return str(p, n)
+
 extend str:
 
 # Magic methods
@@ -203,17 +246,8 @@ extend str:
             n += s.len
         return str(p, n)
 
-    def join(self: str, l: list[str]):
-        if len(self) == 0:
-            return str.cat(l)
-        v = list[str](2 * len(l))
-        i = 0
-        while i < len(l):
-            v.append(l[i])
-            if i < len(l) - 1:
-                v.append(self)
-            i += 1
-        return str.cat(v)
+    def join(self: str, l):
+        return __str_internal_join(self, l)
 
     def from_ptr(t: cobj) -> str:
         n = _C.strlen(t)
