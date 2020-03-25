@@ -627,7 +627,7 @@ extend str:
         """
         start, end = self._correct_indices(start, end)
         count = 0
-        for _ in self[start:end]._search(sub):
+        for _ in algorithms.filter_overlaps(self[start:end]._search(sub), len(sub)):
             count += 1
         return count
 
@@ -666,7 +666,7 @@ extend str:
         Return -1 on failure.
         """
         start, end = self._correct_indices(start, end)
-        pos = str._getlast(self[start:end]._search(sub))
+        pos = str._getfirst(self[start:end]._rsearch(sub))
 
         if pos < 0:
             return -1
@@ -1073,7 +1073,6 @@ extend str:
         i = self.rfind(sub, start, end)
         if i == -1:
             raise ValueError("substring not found")
-            return -1
         else:
             return i
 
@@ -1179,18 +1178,32 @@ extend str:
                b == byte(11) or b == byte(12) or b == byte(13)
 
     def _search(self: str, pattern: str):
-        return algorithms.string_search_KMP(self, pattern)
+        if len(pattern) == 1:
+            c = pattern.ptr[0]
+            i = 0
+            while i < len(self):
+                if self.ptr[i] == c:
+                    yield i
+                i += 1
+        elif len(pattern) <= len(self):
+            if len(pattern) <= 5:
+                yield from algorithms.string_search_slow(self, pattern)
+            else:
+                yield from algorithms.string_search_KMP(self, pattern)
+
+    def _rsearch(self: str, pattern: str):
+        if len(pattern) == 1:
+            c = pattern.ptr[0]
+            i = len(self) - 1
+            while i >= 0:
+                if self.ptr[i] == c:
+                    yield i
+                i -= 1
+        yield from algorithms.rstring_search_slow(self, pattern)
 
     def _getfirst(v: generator[int]):
         n = -1
         if not v.done():
-            n = v.next()
-        v.destroy()
-        return n
-
-    def _getlast(v: generator[int]):
-        n = -1
-        while not v.done():
             n = v.next()
         v.destroy()
         return n
