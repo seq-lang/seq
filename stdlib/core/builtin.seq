@@ -290,6 +290,37 @@ def _tuple_fix_index(idx: int, len: int) -> int:
     return idx
 
 @builtin
+def _tuple_str(strs: ptr[str], n: int) -> str:
+    total = 2  # one for each of '(' and ')'
+    i = 0
+    while i < n:
+        total += strs[i].len
+        if i < n - 1:
+            total += 2  # ", "
+        i += 1
+
+    buf = ptr[byte](total)
+    where = 0
+    buf[where] = byte(40)  # '('
+    where += 1
+
+    i = 0
+    while i < n:
+        s = strs[i]
+        l = s.len
+        str.memcpy(buf + where, s.ptr, l)
+        where += l
+        if i < n - 1:
+            buf[where] = byte(44)  # ','
+            where += 1
+            buf[where] = byte(32)  # ' '
+            where += 1
+        i += 1
+    buf[where] = byte(41)  # ')'
+
+    return str(buf, total)
+
+@builtin
 def _ensure_not_none(p: ptr[byte], memb: str):
     if not p:
         raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
