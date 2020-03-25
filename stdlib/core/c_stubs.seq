@@ -8,6 +8,7 @@ cimport seq_gc_remove_roots(cobj, cobj)
 cimport seq_gc_clear_roots()
 cimport seq_gc_exclude_static_roots(cobj, cobj)
 cimport seq_strdup(cobj) -> str
+cimport seq_str_ptr(ptr[byte]) -> str
 cimport seq_check_errno() -> str
 cimport seq_stdin() -> cobj
 cimport seq_stdout() -> cobj

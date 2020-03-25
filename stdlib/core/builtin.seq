@@ -321,6 +321,32 @@ def _tuple_str(strs: ptr[str], n: int) -> str:
     return str(buf, total)
 
 @builtin
+def _raw_type_str(p: ptr[byte], name: str) -> str:
+    pstr = _C.seq_str_ptr(p)
+    # '<[name] at [pstr]>'
+    total = 1 + name.len + 4 + pstr.len + 1
+    buf = ptr[byte](total)
+    where = 0
+
+    buf[where] = byte(60)   # '<'
+    where += 1
+    str.memcpy(buf + where, name.ptr, name.len)
+    where += name.len
+    buf[where] = byte(32)   # ' '
+    where += 1
+    buf[where] = byte(97)   # 'a'
+    where += 1
+    buf[where] = byte(116)  # 't'
+    where += 1
+    buf[where] = byte(32)   # ' '
+    where += 1
+    str.memcpy(buf + where, pstr.ptr, pstr.len)
+    where += pstr.len
+    buf[where] = byte(62)  # '>'
+    _gc.free(pstr.ptr)
+    return str(buf, total)
+
+@builtin
 def _ensure_not_none(p: ptr[byte], memb: str):
     if not p:
         raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
