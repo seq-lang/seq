@@ -225,8 +225,7 @@ shared_ptr<Context> Context::importFile(const string &file) {
     // Import into the root module
     auto block = blocks[0];
     auto base = bases[0];
-    auto context =
-        make_shared<Context>(cache, block, base, getJIT(), file);
+    auto context = make_shared<Context>(cache, block, base, getJIT(), file);
     CodegenStmtVisitor(*context).transform(tv);
     return (cache->imports[file] = context);
   }
