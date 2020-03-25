@@ -12,45 +12,83 @@ BAM_FQCFAIL        =  512
 BAM_FDUP           = 1024
 BAM_FSUPPLEMENTARY = 2048
 
-from core.c_stubs import SAMHeaderTarget
 from bio.align import CIGAR
-from bio.locus import Locus
+from bio.locus import Contig, Locus
 
 # This type must be consistent with htslib:
-type _bam_core_t(tid: i32,
-                 pos: i32,
-                 bin: u16,
-                 qual: u8,
-                 l_extranul: u8,
-                 flag: u16,
-                 l_qname: u16,
-                 n_cigar: u32,
-                 l_qseq: i32,
-                 mtid: i32,
-                 mpos: i32,
-                 isize: i32)
+type _sam_hdr_t(n_targets: i32,
+                ignore_sam_err: i32,
+                l_text: int,
+                target_len: ptr[u32],
+                cigar_tab: ptr[byte],
+                target_name: ptr[ptr[byte]],
+                text: ptr[byte],
+                sdict: cobj,
+                hrecs: cobj,
+                ref_count: u32):
+    def contigs(self: _sam_hdr_t) -> list[Contig]:
+        return [Contig(tid=i, name=str.from_ptr(self.target_name[i]), len=int(self.target_len[i]))
+                  for i in range(int(self.n_targets))]
 
-type SAMCore(_tid: i32, _pos: i32, _mapq: u8, _flag: u16, _mtid: i32, _mpos: i32, _isize: i32):
-    def tid(self: SAMCore):
-        return int(self._tid)
+# This type must be consistent with htslib:
+type _bam_core_t(_pos: i64,
+                 _tid: i32,
+                 _bin: u16,
+                 _qual: u8,
+                 _l_extranul: u8,
+                 _flag: u16,
+                 _l_qname: u16,
+                 _n_cigar: u32,
+                 _l_qseq: i32,
+                 _mtid: i32,
+                 _mpos: i64,
+                 _isize: i64):
+    def __init__(self: _bam_core_t) -> _bam_core_t:
+        return (i64(0), i32(0), u16(0), u8(0), u8(0), u16(0), u16(0), u32(0), i32(0), i32(0), i64(0), i64(0))
 
-    def pos(self: SAMCore):
-        return int(self._pos)
+# This type must be consistent with htslib:
+type _bam1_t(core: _bam_core_t,
+             id: u64,
+             data: ptr[byte],
+             l_data: i32,
+             m_data: u32,
+             mem_policy: u32):
+    def __init__(self: _bam1_t) -> _bam1_t:
+        BAM_USER_OWNS_STRUCT = 1  # see htslib's sam.h
+        return (_bam_core_t(), u64(0), ptr[byte](), i32(0), u32(0), u32(BAM_USER_OWNS_STRUCT))
 
-    def mapq(self: SAMCore):
-        return int(self._mapq)
+    def __copy__(self: _bam1_t) -> _bam1_t:
+        data = ptr[byte](int(self.l_data))
+        str.memcpy(data, self.data, int(self.l_data))
+        return (self.core, self.id, data, self.l_data, u32(self.l_data), self.mem_policy)
 
-    def flag(self: SAMCore):
-        return int(self._flag)
+    @property
+    def tid(self: _bam1_t):
+        return int(self.core._tid)
 
-    def mtid(self: SAMCore):
-        return int(self._mtid)
+    @property
+    def pos(self: _bam1_t):
+        return int(self.core._pos)
 
-    def mpos(self: SAMCore):
-        return int(self._mtid)
+    @property
+    def mapq(self: _bam1_t):
+        return int(self.core._qual)
 
-    def isize(self: SAMCore):
-        return int(self._isize)
+    @property
+    def flag(self: _bam1_t):
+        return int(self.core._flag)
+
+    @property
+    def mtid(self: _bam1_t):
+        return int(self.core._mtid)
+
+    @property
+    def mpos(self: _bam1_t):
+        return int(self.core._mpos)
+
+    @property
+    def isize(self: _bam1_t):
+        return int(self.core._isize)
 
 type SAMAux(s: ptr[u8]):
     def __bool__(self: SAMAux):
@@ -69,6 +107,10 @@ type SAMAux(s: ptr[u8]):
         return _C.bam_aux2A(self.s)
 
     @property
+    def Z(self: SAMAux):
+        return str.from_ptr(_C.bam_aux2Z(self.s))
+
+    @property
     def B_len(self: SAMAux):
         return int(_C.bam_auxB_len(self.s))
 
@@ -78,50 +120,70 @@ type SAMAux(s: ptr[u8]):
     def B2f(self: SAMAux, idx: int):
         return _C.bam_auxB2f(self.s, u32(idx))
 
+    def __str__(self: SAMAux):
+        return str.from_ptr(_C.bam_aux2Z(self.s))
+
 class SAMRecord:
-    _name: str
+    _htsr: _bam1_t
     _read: seq
     _qual: str
-    _cigar: CIGAR
-    _core: SAMCore
-    _aux: str
 
-    def __init__(self: SAMRecord, aln: cobj):
-        self._name = _C.seq_hts_get_name(aln)
-        self._read = _C.seq_hts_get_seq(aln)
-        self._qual = _C.seq_hts_get_qual(aln)
-        self._cigar = _C.seq_hts_get_cigar(aln)
-        self._aux = _C.seq_hts_get_aux(aln)
-        hts_core = ptr[_bam_core_t](aln)[0]
-        self._core = SAMCore(hts_core.tid, hts_core.pos, hts_core.qual, hts_core.flag, hts_core.mtid, hts_core.mpos, hts_core.isize)
+    def __init__(self: SAMRecord, htslib_record: _bam1_t):
+        self._htsr = htslib_record
+        self._read = s''
+        self._qual = ''
 
     @property
     def name(self: SAMRecord):
-        return self._name
+        return str(self._htsr.data, int(self._htsr.core._l_qname) - int(self._htsr.core._l_extranul) - 1)
 
     @property
     def query_name(self: SAMRecord):
-        return self._name
+        return self.name
 
     @property
     def read(self: SAMRecord):
+        if not self._read:
+            hts_seq = self._htsr.data + ((int(self._htsr.core._n_cigar) << 2) + int(self._htsr.core._l_qname))
+            n = int(self._htsr.core._l_qseq)
+            seq_nt16_str = "=ACMGRSVTWYHKDBN"  # see htslib's hts.c
+            buf = ptr[byte](n)
+            i = 0
+            while i < n:
+                buf[i] = seq_nt16_str.ptr[int(hts_seq[i>>1]) >> ((~i&1)<<2) & 0xf]
+                i += 1
+            self._read = seq(buf, n)
+        assert self._read.len >= 0
         return self._read
 
     @property
+    def seq(self: SAMRecord):
+        return self.read
+
+    @property
     def qual(self: SAMRecord):
+        if not self._qual:
+            hts_qual = self._htsr.data + ((int(self._htsr.core._n_cigar) << 2) + int(self._htsr.core._l_qname) + ((int(self._htsr.core._l_qseq) + 1) >> 1))
+            n = int(self._htsr.core._l_qseq)
+            buf = ptr[byte](n)
+            i = 0
+            while i < n:
+                buf[i] = byte(int(hts_qual[i]) + 33)
+                i += 1
+            self._qual = str(buf, n)
         return self._qual
 
     @property
     def cigar(self: SAMRecord):
-        return self._cigar
+        return CIGAR(ptr[u32](self._htsr.data + int(self._htsr.core._l_qname)), int(self._htsr.core._n_cigar))
 
     @property
     def tid(self: SAMRecord):
-        return self._core.tid()
+        return self._htsr.tid
 
     @property
     def pos(self: SAMRecord):
-        return self._core.pos()
+        return self._htsr.pos
 
     @property
     def locus(self: SAMRecord):
@@ -130,11 +192,11 @@ class SAMRecord:
 
     @property
     def mate_tid(self: SAMRecord):
-        return self._core.mtid()
+        return self._htsr.mtid
 
     @property
     def mate_pos(self: SAMRecord):
-        return self._core.mpos()
+        return self._htsr.mpos
 
     @property
     def mate_locus(self: SAMRecord):
@@ -143,81 +205,85 @@ class SAMRecord:
 
     @property
     def mapq(self: SAMRecord):
-        return self._core.mapq()
+        return self._htsr.mapq
 
     @property
     def insert_size(self: SAMRecord):
-        return self._core.isize()
+        return self._htsr.isize
 
     @property
     def paired(self: SAMRecord):
-        return self._core.flag() & BAM_FREVERSE != 0
+        return self._htsr.flag & BAM_FREVERSE != 0
 
     @property
     def proper_pair(self: SAMRecord):
-        return self._core.flag() & BAM_FPROPER_PAIR != 0
+        return self._htsr.flag & BAM_FPROPER_PAIR != 0
 
     @property
     def unmapped(self: SAMRecord):
-        return self._core.flag() & BAM_FUNMAP != 0
+        return self._htsr.flag & BAM_FUNMAP != 0
 
     @property
     def mate_unmapped(self: SAMRecord):
-        return self._core.flag() & BAM_FMUNMAP != 0
+        return self._htsr.flag & BAM_FMUNMAP != 0
 
     @property
     def reversed(self: SAMRecord):
-        return self._core.flag() & BAM_FREVERSE != 0
+        return self._htsr.flag & BAM_FREVERSE != 0
 
     @property
     def mate_reversed(self: SAMRecord):
-        return self._core.flag() & BAM_FMREVERSE != 0
+        return self._htsr.flag & BAM_FMREVERSE != 0
 
     @property
     def read1(self: SAMRecord):
-        return self._core.flag() & BAM_FREAD1 != 0
+        return self._htsr.flag & BAM_FREAD1 != 0
 
     @property
     def read2(self: SAMRecord):
-        return self._core.flag() & BAM_FREAD2 != 0
+        return self._htsr.flag & BAM_FREAD2 != 0
 
     @property
     def secondary(self: SAMRecord):
-        return self._core.flag() & BAM_FSECONDARY != 0
+        return self._htsr.flag & BAM_FSECONDARY != 0
 
     @property
     def qc_fail(self: SAMRecord):
-        return self._core.flag() & BAM_FQCFAIL != 0
+        return self._htsr.flag & BAM_FQCFAIL != 0
 
     @property
     def duplicate(self: SAMRecord):
-        return self._core.flag() & BAM_FDUP != 0
+        return self._htsr.flag & BAM_FDUP != 0
 
     @property
     def supplementary(self: SAMRecord):
-        return self._core.flag() & BAM_FSUPPLEMENTARY != 0
+        return self._htsr.flag & BAM_FSUPPLEMENTARY != 0
 
     def aux(self: SAMRecord, tag: str):
         if len(tag) != 2:
-            raise ValueError("SAM aux tags are two characters (got: " + tag + ")")
-        return SAMAux(_C.seq_hts_aux_get(self._aux, tag))
+            raise ValueError(f"SAM aux tags are exactly two characters in length (got: tag of length {len(tag)})")
+        tag_arr = (tag.ptr[0], tag.ptr[1])
+        '''
+        hts_aux = (self._htsr.data +
+                    ((int(self._htsr.core._n_cigar) << 2) +
+                     int(self._htsr.core._l_qname) +
+                     ((int(self._htsr.core._l_qseq) + 1) >> 1) +
+                     int(self._htsr.core._l_qseq)))
+        n = int(self._htsr.l_data) - (int(self._hts.core._n_cigar) << 2) - int(self._htsr.core._l_qname) -
+            int(self._htsr.core._l_qseq) - ((int(self._htsr.core._l_qseq) + 1) >> 1)
+        '''
+        return SAMAux(_C.bam_aux_get(self.__raw__(), ptr[byte](__ptr__(tag_arr))))
 
-extend SAMHeaderTarget:
-    def __str__(self: SAMHeaderTarget):
-        return self._name
+class BAMReader:
+    _aln: _bam1_t
+    _copy: bool
+    _file: cobj
+    _idx: cobj
+    _hdr: cobj
+    _itr: cobj
+    _contigs: list[Contig]
 
-    def __len__(self: SAMHeaderTarget):
-        return self._len
-
-class BAM:
-    file: cobj
-    idx: cobj
-    hdr: cobj
-    itr: cobj
-    aln: cobj
-    targets: list[SAMHeaderTarget]
-
-    def _init(self: BAM, path: str, region: str):
+    def __init__(self: BAMReader, path: str, region: str, copy: bool):
         path_c_str, region_c_str = path.c_str(), region.c_str()
 
         file = _C.hts_open(path_c_str, "rb".c_str())
@@ -236,85 +302,82 @@ class BAM:
             _C.hts_close(file)
             raise IOError("unable to seek to region " + region + " in " + path)
 
-        aln = _C.bam_init1()
-        targets_array = _C.seq_hts_get_targets(hdr)
-        targets = list[SAMHeaderTarget](targets_array, len(targets_array))
+        self._aln = _bam1_t()
+        self._copy = copy
+        self._file = file
+        self._idx = idx
+        self._hdr = hdr
+        self._itr = itr
+        self._contigs = ptr[_sam_hdr_t](hdr)[0].contigs()
 
-        self.file = file
-        self.idx = idx
-        self.hdr = hdr
-        self.itr = itr
-        self.aln = aln
-        self.targets = targets
+    def seek(self: BAMReader, region: str):
+        if self._itr:
+            _C.hts_itr_destroy(self._itr)
+        self._itr = _C.sam_itr_querys(self._idx, self._hdr, region.c_str())
+        if not self._itr:
+            _C.hts_close(self._file)
+            raise IOError("unable to seek to region " + region)
 
-    def __init__(self: BAM, path: str):
-        self._init(path, ".")
-
-    def __init__(self: BAM, path: str, region: str):
-        self._init(path, region)
-
-    def _ensure_open(self: BAM):
-        if not self.file:
+    def _ensure_open(self: BAMReader):
+        if not self._file:
             raise IOError("I/O operation on closed BAM/CRAM file")
 
-    def _iter(self: BAM):
-        self._ensure_open()
-        while _C.seq_hts_sam_itr_next(self.file, self.itr, self.aln) >= 0:
-            yield self.aln
-        self.close()
-
-    def __blocks__(self: BAM, size: int):
+    def __blocks__(self: BAMReader, size: int):
         from bio.block import _blocks
         return _blocks(self.__iter__(), size)
 
-    def __seqs__(self: BAM):
-        for aln in self._iter():
-            yield _C.seq_hts_get_seq(aln)
+    def __seqs__(self: BAMReader):
+        for rec in self:
+            yield rec.seq
 
-    def __iter__(self: BAM):
-        for aln in self._iter():
-            yield SAMRecord(aln)
+    def __iter__(self: BAMReader):
+        self._ensure_open()
+        while _C.seq_hts_sam_itr_next(self._file, self._itr, self.__raw__()) >= 0:
+            yield SAMRecord(copy(self._aln) if self._copy else self._aln)
+        if self._itr:
+            _C.hts_itr_destroy(self._itr)
+            self._itr = cobj()
 
-    def close(self: BAM):
-        if self.itr:
-            _C.hts_itr_destroy(self.itr)
+    def close(self: BAMReader):
+        _C.bam_destroy1(self.__raw__())
 
-        if self.idx:
-            _C.hts_idx_destroy(self.idx)
+        if self._itr:
+            _C.hts_itr_destroy(self._itr)
 
-        if self.aln:
-            _C.bam_destroy1(self.aln)
+        if self._idx:
+            _C.hts_idx_destroy(self._idx)
 
-        if self.hdr:
-            _C.bam_hdr_destroy(self.hdr)
+        if self._hdr:
+            _C.sam_hdr_destroy(self._hdr)
 
-        if self.file:
-            _C.hts_close(self.file)
+        if self._file:
+            _C.hts_close(self._file)
 
-        self.itr = cobj()
-        self.idx = cobj()
-        self.aln = cobj()
-        self.hdr = cobj()
-        self.file = cobj()
+        self._itr = cobj()
+        self._idx = cobj()
+        self._hdr = cobj()
+        self._file = cobj()
 
-    def __enter__(self: BAM):
+    def __enter__(self: BAMReader):
         pass
 
-    def __exit__(self: BAM):
+    def __exit__(self: BAMReader):
         self.close()
 
-    def reference_name(self: BAM, tid: int) -> str:
-        if 0 <= tid < len(self.targets):
-            return str(self.targets[tid])
-        return "*"
+    def contigs(self: BAMReader):
+        return self._contigs
 
-class SAM:
-    file: cobj
-    hdr: cobj
-    aln: cobj
-    targets: list[SAMHeaderTarget]
+    def contig(self: BAMReader, rid: int):
+        return self._contigs[rid]
 
-    def __init__(self: SAM, path: str):
+class SAMReader:
+    _aln: _bam1_t
+    _copy: bool
+    _file: cobj
+    _hdr: cobj
+    _contigs: list[Contig]
+
+    def __init__(self: SAMReader, path: str, copy: bool):
         path_c_str = path.c_str()
 
         file = _C.hts_open(path_c_str, "r".c_str())
@@ -322,62 +385,67 @@ class SAM:
             raise IOError("file " + path + " could not be opened")
 
         hdr = _C.sam_hdr_read(file)
-        aln = _C.bam_init1()
-        targets_array = _C.seq_hts_get_targets(hdr)
-        targets = list[SAMHeaderTarget](targets_array, len(targets_array))
+        self._aln = _bam1_t()
+        self._copy = copy
+        self._file = file
+        self._hdr = hdr
+        self._contigs = ptr[_sam_hdr_t](hdr)[0].contigs()
 
-        self.file = file
-        self.hdr = hdr
-        self.aln = aln
-        self.targets = targets
-
-    def _ensure_open(self: SAM):
-        if not self.file:
+    def _ensure_open(self: SAMReader):
+        if not self._file:
             raise IOError("I/O operation on closed SAM file")
 
-    def _iter(self: SAM):
+    def __seqs__(self: SAMReader):
+        for rec in self:
+            yield rec.seq
+
+    def __iter__(self: SAMReader):
         self._ensure_open()
         while True:
-            status = int(_C.sam_read1(self.file, self.hdr, self.aln))
+            status = int(_C.sam_read1(self._file, self._hdr, self.__raw__()))
             if status >= 0:
-                yield self.aln
+                yield SAMRecord(copy(self._aln) if self._copy else self._aln)
             elif status == -1:
                 break
             else:
                 raise IOError("SAM read failed with status: " + str(status))
-
         self.close()
 
-    def __seqs__(self: SAM):
-        for aln in self._iter():
-            yield _C.seq_hts_get_seq(aln)
-
-    def __iter__(self: SAM):
-        for aln in self._iter():
-            yield SAMRecord(aln)
-
-    def __blocks__(self: SAM, size: int):
+    def __blocks__(self: SAMReader, size: int):
         from bio.block import _blocks
         return _blocks(self.__iter__(), size)
 
-    def close(self: SAM):
-        if self.aln:
-            _C.bam_destroy1(self.aln)
+    def close(self: SAMReader):
+        _C.bam_destroy1(self.__raw__())
 
-        if self.hdr:
-            _C.bam_hdr_destroy(self.hdr)
+        if self._hdr:
+            _C.sam_hdr_destroy(self._hdr)
 
-        if self.file:
-            _C.hts_close(self.file)
+        if self._file:
+            _C.hts_close(self._file)
 
-        self.file = cobj()
-        self.hdr = cobj()
-        self.aln = cobj()
+        self._file = cobj()
+        self._hdr = cobj()
 
-    def __enter__(self: SAM):
+    def __enter__(self: SAMReader):
         pass
 
-    def __exit__(self: SAM):
+    def __exit__(self: SAMReader):
         self.close()
 
-type CRAM = BAM
+    def contigs(self: SAMReader):
+        return self._contigs
+
+    def contig(self: SAMReader, rid: int):
+        return self._contigs[rid]
+
+type CRAMReader = BAMReader
+
+def SAM(path: str, copy: bool = True):
+    return SAMReader(path, copy)
+
+def BAM(path: str, region: str = ".", copy: bool = True):
+    return BAMReader(path, region, copy)
+
+def CRAM(path: str, region: str = ".", copy: bool = True):
+    return CRAMReader(path, region, copy)

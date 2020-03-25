@@ -49,6 +49,32 @@ Value *types::FuncType::defaultValue(BasicBlock *block) {
       cast<PointerType>(getLLVMType(block->getContext())));
 }
 
+static Value *codegenStr(Value *self, const std::string &name,
+                         BasicBlock *block) {
+  LLVMContext &context = block->getContext();
+  IRBuilder<> builder(block);
+  Value *ptr = builder.CreateBitCast(self, builder.getInt8PtrTy());
+
+  Func *strFunc = Func::getBuiltin("_raw_type_str");
+  FuncExpr strsRealExpr(strFunc);
+  ValueExpr ptrVal(types::PtrType::get(types::Byte), ptr);
+
+  GlobalVariable *nameVar = new GlobalVariable(
+      *block->getModule(),
+      llvm::ArrayType::get(builder.getInt8Ty(), name.length() + 1), true,
+      GlobalValue::PrivateLinkage, ConstantDataArray::getString(context, name),
+      "typename_literal");
+  nameVar->setAlignment(1);
+
+  Value *str = builder.CreateBitCast(nameVar, builder.getInt8PtrTy());
+  Value *len = ConstantInt::get(seqIntLLVM(context), name.length());
+
+  ValueExpr nameVal(types::Str, types::Str->make(str, len, block));
+  CallExpr strFuncCall(&strsRealExpr, {&ptrVal, &nameVal});
+  strFuncCall.resolveTypes();
+  return strFuncCall.codegen(nullptr, block);
+}
+
 void types::FuncType::initOps() {
   if (!vtable.magic.empty())
     return;
@@ -59,6 +85,14 @@ void types::FuncType::initOps() {
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+       },
+       false},
+
+      {"__str__",
+       {},
+       Str,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return codegenStr(self, "function", b.GetInsertBlock());
        },
        false},
   };
@@ -269,6 +303,14 @@ void types::GenType::initOps() {
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          resume(self, b.GetInsertBlock(), nullptr, nullptr);
          return (Value *)nullptr;
+       },
+       false},
+
+      {"__str__",
+       {},
+       Str,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return codegenStr(self, "generator", b.GetInsertBlock());
        },
        false},
   };

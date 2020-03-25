@@ -35,6 +35,15 @@ void types::ArrayType::initOps() {
        },
        true},
 
+      {"__atomic__",
+       {},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         const unsigned atomic = getBaseType(0)->isAtomic() ? 1 : 0;
+         return ConstantInt::get(Bool->getLLVMType(b.getContext()), atomic);
+       },
+       true},
+
       {"__init__",
        {Int},
        this,

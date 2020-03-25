@@ -60,5 +60,8 @@ def cigar_test():
     assert check_cigar_fail('1M1')
     assert check_cigar_fail('111')
 
+    assert bool(CIGAR('')) == False
+    assert bool(CIGAR('1M')) == True
+
 align_test()
 cigar_test()

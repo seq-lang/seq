@@ -4,9 +4,10 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/codegen/stmt.h"
-#include "parser/ast/format/stmt.h"
-#include "parser/ast/transform/stmt.h"
+#include "parser/ast/codegen.h"
+#include "parser/ast/doc.h"
+#include "parser/ast/format.h"
+#include "parser/ast/transform.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"
@@ -17,21 +18,26 @@ using std::vector;
 
 namespace seq {
 
+void generateDocstr(const std::string &file) {
+  DBG("DOC MODE! {}", 1);
+  ast::DocStmtVisitor d;
+  ast::parse_file(file)->accept(d);
+}
+
 seq::SeqModule *parse(const std::string &argv0, const std::string &file,
                       bool isCode, bool isTest) {
   try {
-    // exit(0); // 263M
     auto stmts = isCode ? ast::parse_code(argv0, file) : ast::parse_file(file);
-    // exit(0); // 265M
-    auto tv = ast::TransformStmtVisitor::apply(move(stmts));
-    // exit(0); // 265M
+    auto tv = ast::TransformStmtVisitor().transform(move(stmts));
     auto module = new seq::SeqModule();
-    auto cache = ast::ImportCache{string(argv0), nullptr, {}};
-    auto stdlib = make_shared<ast::Context>(module, cache, nullptr, "");
-    // exit(0); // 266M
-    auto context = make_shared<ast::Context>(module, cache, nullptr, file);
-    ast::CodegenStmtVisitor::apply(*context, tv);
-    // exit(0); // 265M
+    module->setFileName(file);
+    auto cache = make_shared<ast::ImportCache>(argv0);
+    auto stdlib = make_shared<ast::Context>(cache, module->getBlock(), module,
+                                            nullptr, "");
+    stdlib->loadStdlib(module->getArgVar());
+    auto context = make_shared<ast::Context>(cache, module->getBlock(), module,
+                                             nullptr, file);
+    ast::CodegenStmtVisitor(*context).transform(tv);
     return module;
   } catch (seq::exc::SeqException &e) {
     if (isTest) {

@@ -102,6 +102,9 @@ extend pseq:  # order is consistent with str/seq
         if a > n: a = n
         return pseq(self.ptr + a, n - a)
 
+    def __getitem__(self: pseq, s: eslice):
+        return self
+
     def _copy_to(self: pseq, p: cobj):
         str.memcpy(p, self.ptr, self.len)
 

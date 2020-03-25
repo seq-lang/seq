@@ -42,3 +42,9 @@ def get_native_id():
 
 def get_ident():
     return get_native_id() + 1
+
+extend list[T]:
+    def lock_append(self: list[T], it: T, lock: Lock):
+        with lock:
+            self.append(it)
+

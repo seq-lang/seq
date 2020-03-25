@@ -86,3 +86,25 @@ for i in range(10):
     fadder.send(float(i))
 print(fadder.send(-1.0))  # EXPECT: 45
 
+
+@test
+def test_generator_in_finally():
+    def foo(n):
+        if not n:
+            raise ValueError('not n')
+        return n
+
+    b = False
+    try:
+        try:
+            a = 1
+            x = 2
+            z = 0
+            for a in (foo(i) * x for i in [a,2,3,4,z,5] * x):
+                pass
+        finally:
+            b = True
+    except ValueError as e:
+        assert e.message == 'not n'
+    assert b
+test_generator_in_finally()

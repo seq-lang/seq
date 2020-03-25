@@ -1,4 +1,5 @@
 #include "lang/seq.h"
+#include "parser/common.h"
 #include <cassert>
 #include <iostream>
 #include <memory>
@@ -428,6 +429,7 @@ void SeqModule::compile(const std::string &out) {
 extern "C" void seq_gc_add_roots(void *start, void *end);
 extern "C" void seq_gc_remove_roots(void *start, void *end);
 extern "C" void seq_add_symbol(void *addr, const std::string &symbol);
+namespace {
 /**
  * Simple extension of LLVM's SectionMemoryManager which catches data section
  * allocations and registers them with the GC. This allows the GC to know not
@@ -459,6 +461,7 @@ public:
     }
   }
 };
+} // namespace
 
 void SeqModule::execute(const std::vector<std::string> &args,
                         const std::vector<std::string> &libs) {
@@ -533,13 +536,6 @@ SeqJIT::SeqJIT()
                [](std::shared_ptr<Module> M) {
                  return optimizeModule(std::move(M));
                }),
-      callbackManager(
-          orc::createLocalCompileCallbackManager(target->getTargetTriple(), 0)),
-      codLayer(
-          optLayer, [](Function &F) { return std::set<Function *>({&F}); },
-          *callbackManager,
-          orc::createLocalIndirectStubsManagerBuilder(
-              target->getTargetTriple())),
       globals(), inputNum(0) {
   sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
 }
@@ -560,7 +556,7 @@ std::unique_ptr<Module> SeqJIT::makeModule() {
 SeqJIT::ModuleHandle SeqJIT::addModule(std::unique_ptr<Module> module) {
   auto resolver = createLambdaResolver(
       [&](const std::string &name) {
-        if (auto sym = codLayer.findSymbol(name, false))
+        if (auto sym = optLayer.findSymbol(name, false))
           return sym;
         return JITSymbol(nullptr);
       },
@@ -569,30 +565,32 @@ SeqJIT::ModuleHandle SeqJIT::addModule(std::unique_ptr<Module> module) {
           return JITSymbol(symAddr, JITSymbolFlags::Exported);
         return JITSymbol(nullptr);
       });
-  return cantFail(codLayer.addModule(std::move(module), std::move(resolver)));
+  return cantFail(optLayer.addModule(std::move(module), std::move(resolver)));
 }
 
 JITSymbol SeqJIT::findSymbol(std::string name) {
   std::string mangledName;
   raw_string_ostream mangledNameStream(mangledName);
   Mangler::getNameWithPrefix(mangledNameStream, name, layout);
-  return codLayer.findSymbol(mangledNameStream.str(), false);
+  return optLayer.findSymbol(mangledNameStream.str(), false);
 }
 
 void SeqJIT::removeModule(SeqJIT::ModuleHandle handle) {
-  cantFail(codLayer.removeModule(handle));
+  cantFail(optLayer.removeModule(handle));
 }
 
-Func SeqJIT::makeFunc() {
-  Func func;
-  func.setName("seq.repl.input." + std::to_string(inputNum));
-  func.setIns({});
-  func.setOut(types::Void);
+Func *SeqJIT::makeFunc() {
+  auto func = new Func();
+  func->setName("seq.repl.input." + std::to_string(inputNum));
+  func->setIns({});
+  func->setOut(types::Void);
   return func;
 }
 
 void SeqJIT::exec(Func *func, std::unique_ptr<Module> module) {
   LLVMContext &context = config::config().context;
+  for (auto *var : globals)
+    var->reset();
   Function *f = func->getFunc(module.get());
   f->setLinkage(GlobalValue::ExternalLinkage);
 
@@ -625,35 +623,35 @@ void SeqJIT::addFunc(Func *func) {
 
 void SeqJIT::addExpr(Expr *expr, bool print) {
   auto module = makeModule();
-  Func func = makeFunc();
+  auto func = makeFunc();
   if (print) {
     auto *p1 = new Print(expr);
     auto *p2 = new Print(new StrExpr("\n"));
-    p1->setBase(&func);
-    p2->setBase(&func);
-    func.getBlock()->add(p1);
-    func.getBlock()->add(p2);
+    p1->setBase(func);
+    p2->setBase(func);
+    func->getBlock()->add(p1);
+    func->getBlock()->add(p2);
   } else {
     auto *e = new ExprStmt(expr);
-    e->setBase(&func);
-    func.getBlock()->add(e);
+    e->setBase(func);
+    func->getBlock()->add(e);
   }
 
-  exec(&func, std::move(module));
+  exec(func, std::move(module));
   ++inputNum;
 }
 
 Var *SeqJIT::addVar(Expr *expr) {
   auto module = makeModule();
-  Func func = makeFunc();
+  auto func = makeFunc();
   auto *v = new VarStmt(expr);
   Var *var = v->getVar();
   var->setGlobal();
   var->setExternal();
-  v->setBase(&func);
-  func.getBlock()->add(v);
+  v->setBase(func);
+  func->getBlock()->add(v);
 
-  exec(&func, std::move(module));
+  exec(func, std::move(module));
   var->setREPL();
   globals.push_back(var);
   ++inputNum;

@@ -5,7 +5,12 @@ from algorithms.heapsort import heap_sort_inplace
 from algorithms.qsort import qsort_inplace
 
 @deduceall
-def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None, algorithm: optional[str] = None):
+def sorted[S,T](
+    v: generator[T],
+    key: optional[function[S,T]] = None,
+    algorithm: optional[str] = None,
+    reversed: bool = False
+):
     """
     sorted(v)
 
@@ -14,14 +19,14 @@ def sorted[S,T](v: generator[T], key: optional[function[S,T]] = None, algorithm:
     newlist = [a for a in v]
     if key:
         if algorithm:
-            newlist.sort(~key, ~algorithm)
+            newlist.sort(~key, ~algorithm, reversed)
         else:
-            newlist.sort(~key, None)
+            newlist.sort(~key, None, reversed)
     else:
         if algorithm:
-            newlist.sort(None, ~algorithm)
+            newlist.sort(None, ~algorithm, reversed)
         else:
-            newlist.sort(None, None)
+            newlist.sort(None, None, reversed)
     return newlist
 
 def _sort_list[T,S](self: list[T], key: function[S,T], algorithm: str):
@@ -40,7 +45,12 @@ def _sort_list[T,S](self: list[T], key: function[S,T], algorithm: str):
 
 extend list[T]:
     @deduceall
-    def sort[S](self: list[T], key: optional[function[S,T]] = None, algorithm: optional[str] = None):
+    def sort[S](
+        self: list[T],
+        key: optional[function[S,T]] = None,
+        algorithm: optional[str] = None,
+        reversed: bool = False
+    ):
         def ident[T](x: T):
             return x
 
@@ -49,5 +59,7 @@ extend list[T]:
             _sort_list(self, ~key, alg)
         else:
             _sort_list(self, ident[T], alg)
+        if reversed:
+            self.reverse()
 
 
