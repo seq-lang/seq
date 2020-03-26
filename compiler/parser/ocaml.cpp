@@ -449,12 +449,18 @@ unique_ptr<Expr> parse_expr(string code, const seq::SrcInfo &offset) {
 }
 
 unique_ptr<SuiteStmt> parse_file(string file) {
-  ifstream fin(file);
   string result, line;
-  while (getline(fin, line)) {
-    result += line + "\n";
+  if (file == "-") {
+    while (getline(cin, line)) {
+      result += line + "\n";
+    }
+  } else {
+    ifstream fin(file);
+    while (getline(fin, line)) {
+      result += line + "\n";
+    }
+    fin.close();
   }
-  fin.close();
   return parse_code(file, result, 0, 0);
 }
 

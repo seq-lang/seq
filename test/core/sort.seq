@@ -110,8 +110,8 @@ def test_stable():
     assert tim_sort(data_list, compare_dict) == sorted_list
 
 ### Stdlib sort tests ###
-print_test(sorted(list[int](), compare_less, reversed=True), list[int]()) # EXPECT: []
-print_test(sorted([3, 2, 1], reversed=True), [3, 2, 1]) # EXPECT: [3, 2, 1]
+print_test(sorted(list[int](), compare_less, reverse=True), list[int]()) # EXPECT: []
+print_test(sorted([3, 2, 1], reverse=True), [3, 2, 1]) # EXPECT: [3, 2, 1]
 print_test(sorted([1, 2, 3], compare_greater), [3, 2, 1]) # EXPECT: [3, 2, 1]
-print_test(sorted([1, 2, 3], compare_greater, reversed=True), [1, 2, 3]) # EXPECT: [1, 2, 3]
+print_test(sorted([1, 2, 3], compare_greater, reverse=True), [1, 2, 3]) # EXPECT: [1, 2, 3]
 

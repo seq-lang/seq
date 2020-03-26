@@ -168,6 +168,8 @@ public:
   static llvm::StructType *getPadType(llvm::LLVMContext &context);
   static llvm::StructType *getExcType(llvm::LLVMContext &context);
   static llvm::GlobalVariable *getTypeIdxVar(llvm::Module *module,
+                                             const std::string &name);
+  static llvm::GlobalVariable *getTypeIdxVar(llvm::Module *module,
                                              types::Type *catchType);
 };
 
@@ -268,9 +270,10 @@ public:
 class Assert : public Stmt {
 private:
   Expr *expr;
+  Expr *msg;
 
 public:
-  explicit Assert(Expr *expr);
+  explicit Assert(Expr *expr, Expr *msg = nullptr);
   void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
   Assert *clone(Generic *ref) override;

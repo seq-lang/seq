@@ -68,15 +68,6 @@ SEQ_FUNC seq_int_t seq_time_monotonic() {
   return nanos;
 }
 
-SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line) {
-  fprintf(stderr, "assertion failed on line %d (%s)\n", (int)line, file.str);
-  exit(EXIT_FAILURE);
-}
-
-SEQ_FUNC void seq_test_failed(seq_str_t file, seq_int_t line) {
-  printf("\033[1;31mTEST FAILED:\033[0m %s (line %d)\n", file.str, (int)line);
-}
-
 extern char **environ;
 SEQ_FUNC char **seq_env() { return environ; }
 
