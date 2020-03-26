@@ -162,7 +162,63 @@ class StopIteration:
     def message(self: StopIteration):
         return self._hdr.msg
 
+class AssertionError:
+    _hdr: ExcHeader
+
+    def __init__(self: AssertionError):
+        self._hdr = ('AssertionError', '', '', '', 0, 0)
+
+    def __init__(self: AssertionError, message: str):
+        self._hdr = ('AssertionError', message, '', '', 0, 0)
+
+    @property
+    def message(self: AssertionError):
+        return self._hdr.msg
+
+class SystemExit:
+    _hdr: ExcHeader
+    _status: int
+
+    def __init__(self: SystemExit):
+        self._hdr = ('SystemExit', '', '', '', 0, 0)
+        self._status = 0
+
+    def __init__(self: SystemExit, status: int):
+        self._hdr = ('SystemExit', '', '', '', 0, 0)
+        self._status = status
+
+    def __init__(self: SystemExit, message: str):
+        self._hdr = ('SystemExit', message, '', '', 0, 0)
+        self._status = 0
+
+    def __init__(self: SystemExit, message: str, status: int):
+        self._hdr = ('SystemExit', message, '', '', 0, 0)
+        self._status = status
+
+    @property
+    def message(self: SystemExit):
+        return self._hdr.msg
+
+    @property
+    def status(self: SystemExit):
+        return self._status
+
 def check_errno(prefix: str):
     msg = _C.seq_check_errno()
     if msg:
         raise OSError(prefix + msg)
+
+@builtin
+def _make_assert_error(msg: str) -> AssertionError:
+    return AssertionError(msg)
+
+@builtin
+def _test_failed(file: str, line: int, msg: str):
+    s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
+    if msg:
+        s += ": " + msg
+    print s
+
+@builtin
+def _handle_exit(e: SystemExit):
+    _C.exit(e.status)
