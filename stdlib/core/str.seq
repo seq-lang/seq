@@ -1,5 +1,48 @@
 import algorithms.strings as algorithms
 
+class __str_internal_join:
+    def __init__(self: __str_internal_join, s: str, x: generator[str]):
+        if len(s) == 0:
+            return str.cat(list(x))
+        v = list[str]()
+        for a in x:
+            v.append(a)
+            v.append(s)
+        if v:
+            del v[-1]
+        return str.cat(v)
+
+    def __init__(self: __str_internal_join, s: str, x: list[str]):
+        if len(x) == 0:
+            return ''
+        if len(x) == 1:
+            return x[0]
+        if len(s) == 0:
+            return str.cat(x)
+
+        # compute length
+        n = 0
+        i = 0
+        while i < len(x):
+            n += len(x[i])
+            if i < len(x) - 1:
+                n += len(s)
+            i += 1
+
+        # copy to new buffer
+        p = ptr[byte](n)
+        r = 0
+        i = 0
+        while i < len(x):
+            str.memcpy(p + r, x[i].ptr, len(x[i]))
+            r += len(x[i])
+            if i < len(x) - 1:
+                str.memcpy(p + r, s.ptr, len(s))
+                r += len(s)
+            i += 1
+
+        return str(p, n)
+
 extend str:
 
 # Magic methods
@@ -203,17 +246,8 @@ extend str:
             n += s.len
         return str(p, n)
 
-    def join(self: str, l: list[str]):
-        if len(self) == 0:
-            return str.cat(l)
-        v = list[str](2 * len(l))
-        i = 0
-        while i < len(l):
-            v.append(l[i])
-            if i < len(l) - 1:
-                v.append(self)
-            i += 1
-        return str.cat(v)
+    def join(self: str, l):
+        return __str_internal_join(self, l)
 
     def from_ptr(t: cobj) -> str:
         n = _C.strlen(t)
@@ -627,7 +661,7 @@ extend str:
         """
         start, end = self._correct_indices(start, end)
         count = 0
-        for _ in self[start:end]._search(sub):
+        for _ in algorithms.filter_overlaps(self[start:end]._search(sub), len(sub)):
             count += 1
         return count
 
@@ -666,7 +700,7 @@ extend str:
         Return -1 on failure.
         """
         start, end = self._correct_indices(start, end)
-        pos = str._getlast(self[start:end]._search(sub))
+        pos = str._getfirst(self[start:end]._rsearch(sub))
 
         if pos < 0:
             return -1
@@ -1073,7 +1107,6 @@ extend str:
         i = self.rfind(sub, start, end)
         if i == -1:
             raise ValueError("substring not found")
-            return -1
         else:
             return i
 
@@ -1179,18 +1212,32 @@ extend str:
                b == byte(11) or b == byte(12) or b == byte(13)
 
     def _search(self: str, pattern: str):
-        return algorithms.string_search_KMP(self, pattern)
+        if len(pattern) == 1:
+            c = pattern.ptr[0]
+            i = 0
+            while i < len(self):
+                if self.ptr[i] == c:
+                    yield i
+                i += 1
+        elif len(pattern) <= len(self):
+            if len(pattern) <= 5:
+                yield from algorithms.string_search_slow(self, pattern)
+            else:
+                yield from algorithms.string_search_KMP(self, pattern)
+
+    def _rsearch(self: str, pattern: str):
+        if len(pattern) == 1:
+            c = pattern.ptr[0]
+            i = len(self) - 1
+            while i >= 0:
+                if self.ptr[i] == c:
+                    yield i
+                i -= 1
+        yield from algorithms.rstring_search_slow(self, pattern)
 
     def _getfirst(v: generator[int]):
         n = -1
         if not v.done():
-            n = v.next()
-        v.destroy()
-        return n
-
-    def _getlast(v: generator[int]):
-        n = -1
-        while not v.done():
             n = v.next()
         v.destroy()
         return n

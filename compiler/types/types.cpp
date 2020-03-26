@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <typeinfo>
+#include <unordered_map>
 #include <vector>
 
 using namespace seq;
@@ -12,9 +13,22 @@ types::Type::Type(std::string name, types::Type *parent, bool abstract,
     : name(std::move(name)), parent(parent), abstract(abstract),
       extendable(extendable) {}
 
-int types::Type::getID() const {
-  return (int)std::hash<std::string>()(getName());
+int types::Type::getID(const std::string &name) {
+  static std::unordered_map<std::string, int> cache;
+  static int next = 1000;
+  if (name.empty())
+    return 0;
+  auto id = cache.find(name);
+  if (id != cache.end()) {
+    return id->second;
+  } else {
+    const int myID = next++;
+    cache[name] = myID;
+    return myID;
+  }
 }
+
+int types::Type::getID() const { return getID(getName()); }
 
 std::string types::Type::getName() const {
   std::string nameFull = name;

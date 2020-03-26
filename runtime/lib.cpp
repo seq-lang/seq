@@ -68,15 +68,6 @@ SEQ_FUNC seq_int_t seq_time_monotonic() {
   return nanos;
 }
 
-SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line) {
-  fprintf(stderr, "assertion failed on line %d (%s)\n", (int)line, file.str);
-  exit(EXIT_FAILURE);
-}
-
-SEQ_FUNC void seq_test_failed(seq_str_t file, seq_int_t line) {
-  printf("\033[1;31mTEST FAILED:\033[0m %s (line %d)\n", file.str, (int)line);
-}
-
 extern char **environ;
 SEQ_FUNC char **seq_env() { return environ; }
 
@@ -177,32 +168,6 @@ SEQ_FUNC seq_str_t seq_str_bool(bool b) {
 SEQ_FUNC seq_str_t seq_str_byte(char c) { return string_conv("%c", 5, c); }
 
 SEQ_FUNC seq_str_t seq_str_ptr(void *p) { return string_conv("%p", 19, p); }
-
-SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n) {
-  size_t total = 2; // one for each of '(' and ')'
-  for (seq_int_t i = 0; i < n; i++) {
-    total += strs[i].len;
-    if (i < n - 1)
-      total += 2; // ", "
-  }
-
-  auto *buf = (char *)seq_alloc_atomic(total);
-  size_t where = 0;
-  buf[where++] = '(';
-  for (seq_int_t i = 0; i < n; i++) {
-    seq_str_t str = strs[i];
-    auto len = (size_t)str.len;
-    memcpy(&buf[where], str.str, len);
-    where += len;
-    if (i < n - 1) {
-      buf[where++] = ',';
-      buf[where++] = ' ';
-    }
-  }
-  buf[where] = ')';
-
-  return {(seq_int_t)total, buf};
-}
 
 /*
  * General I/O
