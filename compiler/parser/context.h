@@ -126,7 +126,7 @@ struct ImportCache {
 
   std::unordered_map<std::string, std::shared_ptr<Context>> imports;
 
-  ImportCache(const std::string &a = "") : argv0(""), stdlib(nullptr) {}
+  ImportCache(const std::string &a = "") : argv0(a), stdlib(nullptr) {}
   std::string getImportFile(const std::string &what,
                             const std::string &relativeTo,
                             bool forceStdlib = false);
