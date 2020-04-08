@@ -68,11 +68,11 @@ class FAIReader:
                     val_str_ptr[0] = val_str
                 case _:
                     val_num_ptr = ptr[int](val_ptr)
-                    val_num_ptr[0] = self.get_num_from_fai(val_str, col_name, lnum)
+                    val_num_ptr[0] = self.get_int_from_fai(val_str, col_name, lnum)
         
         return FAIRecord(name, length, offset, line_bases, line_width, qual_offset)
     
-    def get_num_from_fai(self: FAIReader, val_str: str, col_name: str, lnum: int):
+    def get_int_from_fai(self: FAIReader, val_str: str, col_name: str, lnum: int):
         if self.validate:
             try:
                 return int(val_str)
@@ -80,7 +80,7 @@ class FAIReader:
                 raise ValueError(f"{col_name}, must be integer, line: {lnum}")
         return int(val_str)
 
-parser: FAIReader = FAIReader("valid_fai.fai", True, True, True)
+parser: FAIReader = FAIReader("invalid_fai_float_.fai", True, True, True)
 
 for i in parser:
     print(i)
