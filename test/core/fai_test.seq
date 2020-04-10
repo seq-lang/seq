@@ -1,0 +1,47 @@
+from bio import *
+
+@test
+def test_parse_valid():
+    # parser = FAI("test/data/valid_fai.fai", True, False, True)
+    parser = FAI("../data/valid_fai.fai", True, False, True)
+
+    first_row_expected = FAIRecord('fastq1', 66, 8, 30, 31, 79)
+
+    assert first_row_expected == next(parser)
+    parser.close()
+
+
+@test
+def test_parse_invalid_missing_col():
+    # parser = FAI("test/data/invalid/invalid_fai_misisng_col.fai", True, False, True)
+    parser = FAI("../data/invalid/invalid_fai_missing_col.fai", True, False, True)
+    try:
+        next(parser)
+        next(parser)
+        parser.close()
+    except ValueError as e:
+        print("ValueError found", e.message)
+    # while True:
+    #     try:
+    #         next(parser)
+    #     except ValueError as e:
+    #         parser.close()
+    #         print("caught e", e.message)
+    #         assert e.message == "Line 0 does not have the required number of columns, 6"
+    #         break
+        # except StopIteration as e:
+        #     parser.close()
+        #     assert False
+        #     break
+
+@test
+def test_parse_invalid_float():
+    parser = FAI("../data/invalid/invalid_fai_float_.fai", True, False, True)
+    try:
+        next(parser)
+    except ValueError as e:
+        print("ValueError found", e.message)
+
+test_parse_valid()
+test_parse_invalid_float()
+test_parse_invalid_missing_col()

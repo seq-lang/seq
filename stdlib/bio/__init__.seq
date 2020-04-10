@@ -10,10 +10,12 @@ from bio.align import SubMat, CIGAR, Alignment
 from bio.pseq import pseq, translate
 from bio.bwt import _saisxx, _saisxx_bwt
 
-from bio.fasta import FASTARecord, FASTA, pFASTARecord, pFASTA
+from bio.fasta import FASTARecord, FASTA, FASTARecord, pFASTA
 from bio.fastq import FASTQRecord, FASTQ
 
 from bio.bam import SAM, BAM, CRAM
 
 from bio.bed import BED
 from bio.bed import BEDRecord
+from bio.fai import FAI
+from bio.fai import FAIRecord

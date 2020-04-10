@@ -37,7 +37,8 @@ class FAIReader:
     def _iter_core(self: FAIReader, file):
         for lnum, l in enumerate(file._iter()):
             line = copy(l) if self.copy else l
-            yield self.FAIRecord_from_str(line, lnum)
+            rec: FAIRecord = self.FAIRecord_from_str(line, lnum + 1)
+            yield rec
     
     def __iter__(self: FAIReader) -> FAIRecord:
         if self.gzip:
@@ -48,7 +49,7 @@ class FAIReader:
     def FAIRecord_from_str(self: FAIReader, s: str, lnum: int):
         col_strs = s.split("\t")
 
-        if self.validate and len(col_strs) != self.num_necessary_cols:
+        if self.validate and len(col_strs) < self.num_necessary_cols:
             raise ValueError(f"Line {lnum} does not have the required number of columns, {self.num_necessary_cols}")
 
         name, length, offset = "", 0, 0
@@ -80,7 +81,11 @@ class FAIReader:
                 raise ValueError(f"{col_name}, must be integer, line: {lnum}")
         return int(val_str)
 
-parser: FAIReader = FAIReader("invalid_fai_float_.fai", True, True, True)
+    def close(self: FAIReader):
+        if self.gzip:
+            self.gzfile.close()
+        else:
+            self.file.close()
 
-for i in parser:
-    print(i)
+def FAI(path: str, validate: bool = True, gzip: bool = True, copy: bool = True) -> FAIReader:
+    return FAIReader(path=path, validate=validate, gzip=gzip, copy=copy)

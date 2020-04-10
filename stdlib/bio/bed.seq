@@ -142,7 +142,7 @@ class BEDReader:
     def BEDRecord_from_str(self: BEDReader, s: str, lnum: int) -> BEDRecord:
         col_vals: list[str] = s.split()
 
-        if len(col_vals) < self.num_necessary_cols:
+        if self.validate and len(col_vals) < self.num_necessary_cols:
             raise ValueError(f"Each line in BED file must have at least 3 columns, line: {lnum}")
 
         misc: dict[str, str] = dict[str, str]()
