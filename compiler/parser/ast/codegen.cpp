@@ -543,6 +543,10 @@ CodegenStmtVisitor::CodegenStmtVisitor(Context &ctx)
 Context &CodegenStmtVisitor::getContext() { return ctx; }
 
 seq::Stmt *CodegenStmtVisitor::transform(const StmtPtr &stmt) {
+  return transform(stmt.get());
+}
+
+seq::Stmt *CodegenStmtVisitor::transform(const Stmt *stmt) {
   // if (stmt->getSrcInfo().file.find("scratch.seq") != string::npos)
   // fmt::print("<codegen> {} :pos {}\n", *stmt, stmt->getSrcInfo());
   CodegenStmtVisitor v(ctx);
@@ -627,9 +631,9 @@ void CodegenStmtVisitor::visit(const AssignStmt *stmt) {
             if (b->args.size() == 2 &&
                 (i->value == "min" || i->value == "max")) {
               string expected = format("(#id {})", var);
-              if (b->args[0].value->to_string() == expected) {
+              if (b->args[0].value->toString() == expected) {
                 expr = transform(b->args[1].value);
-              } else if (b->args[1].value->to_string() == expected) {
+              } else if (b->args[1].value->toString() == expected) {
                 expr = transform(b->args[0].value);
               }
               if (expr) {
@@ -981,7 +985,7 @@ void CodegenStmtVisitor::visit(const FunctionStmt *stmt) {
   auto oldEnclosing = ctx.getEnclosingType();
   // ensure that nested functions do not end up as class methods
   ctx.setEnclosingType(nullptr);
-  transform(stmt->suite);
+  transform(stmt->suite.get());
   ctx.setEnclosingType(oldEnclosing);
   ctx.popBlock();
   if (ctx.getJIT() && ctx.isToplevel() && !ctx.getEnclosingType()) {
@@ -997,7 +1001,7 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
   auto getMembers = [&]() {
     vector<seq::types::Type *> types;
     vector<string> names;
-    if (stmt->isType && !stmt->args.size()) {
+    if (stmt->isRecord && !stmt->args.size()) {
       ERROR(stmt, "types need at least one member");
     } else
       for (auto &arg : stmt->args) {
@@ -1010,7 +1014,7 @@ void CodegenStmtVisitor::visit(const ClassStmt *stmt) {
     return make_pair(types, names);
   };
 
-  if (stmt->isType) {
+  if (stmt->isRecord) {
     auto t = seq::types::RecordType::get({}, {}, stmt->name);
     ctx.add(stmt->name, t);
     ctx.setEnclosingType(t);

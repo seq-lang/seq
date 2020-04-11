@@ -82,6 +82,7 @@ public:
   CodegenStmtVisitor(Context &ctx);
 
   seq::Stmt *transform(const StmtPtr &stmt);
+  seq::Stmt *transform(const Stmt *stmt);
   seq::Expr *transform(const ExprPtr &expr);
   seq::Pattern *transform(const PatternPtr &pat);
   seq::types::Type *transformType(const ExprPtr &expr);

@@ -357,7 +357,8 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(Function, parse_string(Field(t, 0)),
            parse_optional(Field(t, 1), parse_expr),
            parse_list(Field(t, 2), parse_string),
-           parse_list(Field(t, 3), parse_param), parse_stmt_list(Field(t, 4)),
+           parse_list(Field(t, 3), parse_param),
+           std::shared_ptr<Stmt>(parse_stmt_list(Field(t, 4))),
            parse_list(Field(t, 5), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
@@ -399,7 +400,7 @@ unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset,
   CAMLlocal3(p1, f, c);
   static value *closure_f = nullptr;
   if (!closure_f) {
-    closure_f = caml_named_value("menhir_parse");
+    closure_f = (value *)caml_named_value("menhir_parse");
   }
   f = caml_copy_string(file.c_str());
   c = caml_copy_string(code.c_str());

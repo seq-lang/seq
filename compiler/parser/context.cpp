@@ -85,8 +85,9 @@ void Context::loadStdlib(seq::Var *argVar) {
     add("__argv__", argVar);
   }
   cache->stdlib = this;
-  auto tv = TransformStmtVisitor().transform(parse_file(filename));
-  CodegenStmtVisitor(*this).transform(tv);
+  throw std::string("todo complete here");
+  // auto tv = TransformStmtVisitor().transform(parse_file(filename));
+  // CodegenStmtVisitor(*this).transform(tv);
 }
 
 shared_ptr<ContextItem> Context::find(const string &name,
@@ -219,15 +220,16 @@ shared_ptr<Context> Context::importFile(const string &file) {
   if (i != cache->imports.end()) {
     return i->second;
   } else {
-    auto stmts = parse_file(file);
-    auto tv = TransformStmtVisitor().transform(parse_file(file));
+    throw std::string("todo");
+    // auto stmts = parse_file(file);
+    // auto tv = TransformStmtVisitor().transform(parse_file(file));
 
-    // Import into the root module
-    auto block = blocks[0];
-    auto base = bases[0];
-    auto context = make_shared<Context>(cache, block, base, getJIT(), file);
-    CodegenStmtVisitor(*context).transform(tv);
-    return (cache->imports[file] = context);
+    // // Import into the root module
+    // auto block = blocks[0];
+    // auto base = bases[0];
+    // auto context = make_shared<Context>(cache, block, base, getJIT(), file);
+    // CodegenStmtVisitor(*context).transform(tv);
+    // return (cache->imports[file] = context);
   }
 }
 

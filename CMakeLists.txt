@@ -88,7 +88,7 @@ find_program(OPAM NAMES opam)
 if(NOT OPAM)
   message(FATAL_ERROR "opam command not found")
 endif()
-add_custom_command(OUTPUT ${LIB_SEQPARSE} ${CMAKE_CURRENT_BINARY_DIR}/dummy
+add_custom_command(OUTPUT ${LIB_SEQPARSE}
                    COMMAND ${OPAM} exec -- dune build --build-dir=${DUNE_BUILD_DIR} ${DUNE_OUTPUT_NAME}
                    COMMAND cp ${DUNE_BUILD_DIR}/default/${DUNE_OUTPUT_NAME} ${LIB_SEQPARSE}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/compiler/parser/ocaml"

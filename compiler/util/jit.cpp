@@ -40,9 +40,10 @@ FOREIGN JitInstance *jit_init() {
 
 FOREIGN void jit_execute(JitInstance *jit, const char *code) {
   try {
-    auto tv = seq::ast::TransformStmtVisitor().transform(
-        seq::ast::parse_code("jit", code));
-    seq::ast::CodegenStmtVisitor(*jit->context).transform(tv);
+    seq::compilationError("not implemented");
+    // auto tv = seq::ast::TransformStmtVisitor().transform(
+    //     seq::ast::parse_code("jit", code));
+    // seq::ast::CodegenStmtVisitor(*jit->context).transform(tv);
     jit->context->execJIT();
   } catch (seq::exc::SeqException &e) {
     fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line,

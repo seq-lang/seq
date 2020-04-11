@@ -16,10 +16,15 @@
 namespace seq {
 namespace ast {
 
+class TypeContext;
+
 class FormatExprVisitor : public ExprVisitor {
+  TypeContext &ctx;
   std::string result;
 
 public:
+  FormatExprVisitor(TypeContext &ctx);
+
   std::string transform(const Expr *e);
   std::string transform(const std::vector<ExprPtr> &e);
 
@@ -60,10 +65,14 @@ public:
 };
 
 class FormatStmtVisitor : public StmtVisitor {
+  TypeContext &ctx;
   std::string result;
   int indent{0};
 
 public:
+  FormatStmtVisitor(TypeContext &ctx);
+
+  std::string transform(const Stmt *stmt, int indent = 0);
   std::string transform(const StmtPtr &stmt, int indent = 0);
   std::string transform(const ExprPtr &stmt);
   std::string transform(const PatternPtr &stmt);

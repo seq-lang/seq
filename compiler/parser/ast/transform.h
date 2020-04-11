@@ -8,6 +8,8 @@
 #include <vector>
 
 #include "parser/ast/ast.h"
+#include "parser/ast/format.h"
+#include "parser/ast/types.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 #include "parser/context.h"
@@ -17,13 +19,98 @@ namespace ast {
 
 class TransformStmtVisitor;
 
+class TypeContext : public VTable<Type> {
+private: /** Naming **/
+  // Current filename
+  std::string filename;
+  // Context module (e.g. __main__, sys etc)
+  std::string module;
+  // Current name prefix (for functions within classes)
+  std::string prefix;
+
+  // Module name counter (how many times we used a name)
+  std::unordered_map<std::string, int> moduleNames;
+  // Mapping to canonical names (each position has an unique canonical name)
+  std::unordered_map<seq::SrcInfo, std::string> canonicalNames;
+
+private: /** Lookup **/
+  // Store internal types separately for easier access
+  std::unordered_map<std::string, TypePtr> internals;
+  // List of class methods
+  std::unordered_map<std::string, std::unordered_map<std::string, TypePtr>>
+      classMembers;
+  std::unordered_map<std::string,
+                     std::unordered_map<std::string, shared_ptr<FuncType>>>
+      classMethods;
+
+private: /** Type-checking **/
+  // Type-checking level
+  int level;
+  // Current unbound type ID counter (each unbound variable must have different
+  // ID)
+  int unboundCount;
+  // Set of active unbound variables:
+  // if checker is successful, all of them should be resolved
+  std::set<TypePtr> activeUnbounds;
+
+private: /** Realization **/
+  // Template ASTs used for realization
+  std::unordered_map<std::string,
+                     std::pair<TypePtr, std::shared_ptr<FunctionStmt>>>
+      funcASTs;
+  std::unordered_map<std::string,
+                     std::pair<TypePtr, std::shared_ptr<ClassStmt>>>
+      classASTs;
+  // Realizations
+  std::unordered_map<
+      std::string,
+      std::unordered_map<std::string, std::shared_ptr<FunctionStmt>>>
+      funcRealizations;
+  std::unordered_map<
+      std::string,
+      std::unordered_map<std::string, std::shared_ptr<FunctionStmt>>>
+      classRealizations;
+
+private: /** Function utilities **/
+  // Function parsing helpers: maintain current return type
+  TypePtr returnType;
+  // Indicates if a return was seen (to account for procedures)
+  bool hasSetReturnType;
+
+  friend class TransformStmtVisitor;
+  friend class TransformExprVisitor;
+  friend class FormatStmtVisitor;
+
+public:
+  TypeContext(const std::string &filename);
+  TypePtr find(const std::string &name) const;
+  TypePtr findInternal(const std::string &name) const;
+
+  std::string getCanonicalName(const seq::SrcInfo &info);
+  std::string getCanonicalName(const std::string &name,
+                               const seq::SrcInfo &info);
+
+  void increaseLevel();
+  void decreaseLevel();
+  std::shared_ptr<LinkType> addUnbound(bool setActive = true);
+  TypePtr instantiate(TypePtr type);
+  TypePtr instantiate(TypePtr type, const vector<pair<int, TypePtr>> &generics);
+
+  std::shared_ptr<FuncType> findMethod(const ClassType *type,
+                                       const string &method);
+  TypePtr findMember(const ClassType *type, const string &member);
+  std::vector<std::pair<std::string, const FunctionStmt *>>
+  getRealizations(const FunctionStmt *stmt);
+};
+
 class TransformExprVisitor : public ExprVisitor {
+  TypeContext &ctx;
   ExprPtr result{nullptr};
-  std::vector<StmtPtr> &prependStmts;
+  TransformStmtVisitor &stmtVisitor;
   friend class TransformStmtVisitor;
 
 public:
-  TransformExprVisitor(std::vector<StmtPtr> &prepend);
+  TransformExprVisitor(TypeContext &ctx, TransformStmtVisitor &sv);
   ExprPtr transform(const Expr *e);
   std::vector<ExprPtr> transform(const std::vector<ExprPtr> &e);
 
@@ -64,6 +151,7 @@ public:
 };
 
 class TransformStmtVisitor : public StmtVisitor {
+  TypeContext &ctx;
   std::vector<StmtPtr> prependStmts;
   StmtPtr result{nullptr};
 
@@ -73,11 +161,15 @@ class TransformStmtVisitor : public StmtVisitor {
                          std::vector<StmtPtr> &stmts, bool force = false);
 
 public:
+  TransformStmtVisitor(TypeContext &ctx) : ctx(ctx) {}
   void prepend(StmtPtr s);
 
   StmtPtr transform(const Stmt *stmt);
   ExprPtr transform(const Expr *stmt);
   PatternPtr transform(const Pattern *stmt);
+
+  void realize(FuncType *type);
+  StmtPtr realizeBlock(const Stmt *stmt);
 
   template <typename T>
   auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {

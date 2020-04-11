@@ -28,7 +28,20 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
                       bool isCode, bool isTest) {
   try {
     auto stmts = isCode ? ast::parse_code(argv0, file) : ast::parse_file(file);
-    auto tv = ast::TransformStmtVisitor().transform(move(stmts));
+
+    ast::TypeContext tctx(file);
+    auto tv = ast::TransformStmtVisitor(tctx).realizeBlock(stmts.get());
+
+    auto s = ast::FormatStmtVisitor(tctx).transform(move(tv));
+
+    FILE *fo = fopen("out.htm", "w");
+    fmt::print(fo,
+               "<html><head><link rel=stylesheet href=code.css "
+               "/></head>\n<body><div class=code>\n{}\n</div></body></html>\n",
+               s);
+    fclose(fo);
+    exit(0);
+
     auto module = new seq::SeqModule();
     module->setFileName(file);
     auto cache = make_shared<ast::ImportCache>(argv0);

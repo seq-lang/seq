@@ -17,8 +17,28 @@ struct SrcInfo {
         endCol(endCol){};
   SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
   friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c);
+  bool operator==(const SrcInfo &src) const {
+    return (file == src.file) && (line == src.line)  && (col == src.col);
+  }
 };
+}
 
+namespace std {
+template <> struct hash<seq::SrcInfo> {
+  size_t operator()(const seq::SrcInfo &k) const {
+    // Compute individual hash values for first, second and third
+    // http://stackoverflow.com/a/1646913/126995
+    size_t res = 17;
+    res = res * 31 + hash<string>()(k.file);
+    res = res * 31 + hash<int>()(k.line);
+    res = res * 31 + hash<int>()(k.col);
+    return res;
+  }
+};
+} // namespace std
+
+
+namespace seq {
 struct SrcObject {
 private:
   SrcInfo info;

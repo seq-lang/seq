@@ -8,7 +8,10 @@
 
 #include "lang/seq.h"
 
-#define DBG(c, ...) fmt::print(c "\n", __VA_ARGS__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#define DBG(c, ...) fmt::print(c "\n", ##__VA_ARGS__)
+#pragma clang diagnostic pop
 
 namespace seq {
 namespace ast {
@@ -17,7 +20,7 @@ template <typename T>
 std::string combine(const std::vector<T> &items, std::string delim = " ") {
   std::string s = "";
   for (int i = 0; i < items.size(); i++)
-    s += (i ? delim : "") + items[i]->to_string();
+    s += (i ? delim : "") + items[i]->toString();
   return s;
 }
 
