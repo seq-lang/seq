@@ -731,9 +731,9 @@ void CodegenStmtVisitor::visit(const AssertStmt *stmt) {
   RETURN(seq::Assert, transform(stmt->expr));
 }
 
-void CodegenStmtVisitor::visit(const TypeAliasStmt *stmt) {
-  ctx.add(stmt->name, transformType(stmt->expr));
-}
+// void CodegenStmtVisitor::visit(const TypeAliasStmt *stmt) {
+//   ctx.add(stmt->name, transformType(stmt->expr));
+// }
 
 void CodegenStmtVisitor::visit(const WhileStmt *stmt) {
   auto r = new seq::While(transform(stmt->cond));

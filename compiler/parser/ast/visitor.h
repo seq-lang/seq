@@ -3,7 +3,7 @@
 namespace seq {
 namespace ast {
 
-struct EmptyExpr;
+struct NoneExpr;
 struct BoolExpr;
 struct IntExpr;
 struct FloatExpr;
@@ -34,7 +34,7 @@ struct LambdaExpr;
 struct YieldExpr;
 
 struct ExprVisitor {
-  virtual void visit(const EmptyExpr *) {}
+  virtual void visit(const NoneExpr *) {}
   virtual void visit(const BoolExpr *) {}
   virtual void visit(const IntExpr *) {}
   virtual void visit(const FloatExpr *) {}
@@ -76,7 +76,7 @@ struct PrintStmt;
 struct ReturnStmt;
 struct YieldStmt;
 struct AssertStmt;
-struct TypeAliasStmt;
+// struct TypeAliasStmt;
 struct WhileStmt;
 struct ForStmt;
 struct IfStmt;
@@ -107,7 +107,7 @@ struct StmtVisitor {
   virtual void visit(const ReturnStmt *) {}
   virtual void visit(const YieldStmt *) {}
   virtual void visit(const AssertStmt *) {}
-  virtual void visit(const TypeAliasStmt *) {}
+  // virtual void visit(const TypeAliasStmt *) {}
   virtual void visit(const WhileStmt *) {}
   virtual void visit(const ForStmt *) {}
   virtual void visit(const IfStmt *) {}

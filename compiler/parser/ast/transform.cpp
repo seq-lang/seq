@@ -1,3 +1,14 @@
+/**
+ * TODO here:
+ * - Finish remaining statements
+ * - Add bool transformation
+ * - Handle __iop__/__rop__ magics
+ * - Fix remaining transformation
+ * - Add SrcInfo to types to support better error messages
+ * - Redo error messages (right now they are awful)
+ * - (handle pipelines here?)
+ * - Fix all TODOs below
+ */
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
 #include <deque>
@@ -122,7 +133,7 @@ string TypeContext::getCanonicalName(const std::string &name,
 }
 
 shared_ptr<LinkType> TypeContext::addUnbound(bool setActive) {
-  auto t = make_shared<LinkType>(Unbound, unboundCount, level);
+  auto t = make_shared<LinkType>(LinkType::Unbound, unboundCount, level);
   if (setActive)
     activeUnbounds.insert(t);
   unboundCount++;
@@ -208,30 +219,22 @@ void TransformExprVisitor::visit(const NoneExpr *expr) {
 
 void TransformExprVisitor::visit(const BoolExpr *expr) {
   result = EP(BoolExpr, expr->value);
-  result->setType(expr->getType()
-                      ? expr->getType()
-                      : make_shared<LinkType>(ctx.findInternal("bool")));
+  result->setType(make_shared<LinkType>(ctx.findInternal("bool")));
 }
 
 void TransformExprVisitor::visit(const IntExpr *expr) {
   result = EP(IntExpr, expr->value);
-  result->setType(expr->getType()
-                      ? expr->getType()
-                      : make_shared<LinkType>(ctx.findInternal("int")));
+  result->setType(make_shared<LinkType>(ctx.findInternal("int")));
 }
 
 void TransformExprVisitor::visit(const FloatExpr *expr) {
   result = EP(FloatExpr, expr->value);
-  result->setType(expr->getType()
-                      ? expr->getType()
-                      : make_shared<LinkType>(ctx.findInternal("float")));
+  result->setType(make_shared<LinkType>(ctx.findInternal("float")));
 }
 
 void TransformExprVisitor::visit(const StringExpr *expr) {
   result = EP(StringExpr, expr->value);
-  result->setType(expr->getType()
-                      ? expr->getType()
-                      : make_shared<LinkType>(ctx.findInternal("str")));
+  result->setType(make_shared<LinkType>(ctx.findInternal("str")));
 }
 
 void TransformExprVisitor::visit(const FStringExpr *expr) {
@@ -288,9 +291,7 @@ void TransformExprVisitor::visit(const SeqExpr *expr) {
         EP(CallExpr, EP(IdExpr, "pseq"), EP(StringExpr, expr->value)));
   } else if (expr->prefix == "s") {
     result = EP(SeqExpr, expr->value, expr->prefix);
-    result->setType(expr->getType()
-                        ? expr->getType()
-                        : make_shared<LinkType>(ctx.findInternal("seq")));
+    result->setType(make_shared<LinkType>(ctx.findInternal("seq")));
   } else {
     ERROR(expr, "invalid seq prefix '{}'", expr->prefix);
   }
@@ -314,13 +315,10 @@ void TransformExprVisitor::visit(const UnpackExpr *expr) {
 
 void TransformExprVisitor::visit(const TupleExpr *expr) {
   auto e = EP(TupleExpr, transform(expr->items));
-  auto t = expr->getType();
-  if (!t) {
-    vector<pair<string, TypePtr>> types;
-    for (auto &i : e->items)
-      types.push_back({"", i->getType()});
-    t = make_shared<LinkType>(make_shared<RecordType>("", "", types));
-  }
+  vector<pair<string, TypePtr>> types;
+  for (auto &i : e->items)
+    types.push_back({"", i->getType()});
+  auto t = make_shared<LinkType>(make_shared<RecordType>("", "", types));
   result = move(e);
   result->setType(t);
 }
@@ -446,6 +444,7 @@ void TransformExprVisitor::visit(const BinaryExpr *expr) {
   }
 
   string magic;
+  // Maybe use hash table ...
   if (expr->op == "+")
     magic = "add";
   else if (expr->op == "-")
@@ -503,8 +502,8 @@ void TransformExprVisitor::visit(const PipeExpr *expr) {
 }
 
 void TransformExprVisitor::visit(const IndexExpr *expr) {
-  // Special handling if this is a type or a function realization
-  // (e.g. dict[type1, type2])
+  // If this is a type or function realization
+  // (e.g. dict[type1, type2]), handle it separately
   auto e = transform(expr->expr);
   if (e->isType() || e->getType()->getFunction()) {
     vector<TypePtr> generics;
@@ -541,12 +540,13 @@ void TransformExprVisitor::visit(const IndexExpr *expr) {
         if (g->generics[i].second->unify(generics[i]) < 0)
           ERROR(e, "cannot unify {} and {}", *g->generics[i].second,
                 *generics[i]);
-    } /* TODO: check tuples? */ else { // cannot realize it at this time...
-                                       // should be impossible
+    } else { // Cannot realize it at this time...
+             // Should be impossible, but you never know...
       ERROR(expr, "cannot realize unknown type");
     }
     auto t = e->getType();
-    // TODO: cast to IdExpr for easier access
+    // TODO: add class type realization at this stage
+    // TODO: cast to fully qualified and realized IdExpr for easier access
     result = EP(TypeOfExpr, move(e));
     result->markType();
     result->setType(t);
@@ -560,11 +560,12 @@ void TransformExprVisitor::visit(const IndexExpr *expr) {
 
 void TransformExprVisitor::visit(const CallExpr *expr) {
   // TODO: argument name resolution should come here!
-  // TODO: fix a case when a member is of type function[...]
+  // TODO: handle the case when a member is of type function[...]
+
   auto e = transform(expr->expr);
 
   vector<CallExpr::Arg> args;
-  // FIX: intercept obj.method() calls here for now to avoid partial types
+  // Intercept obj.method() calls here for now to avoid partial types
   if (auto d = CAST(e, DotExpr)) {
     // Transform obj.method(...) to method_fn(obj, ...)
     if (!d->expr->isType()) {
@@ -574,14 +575,12 @@ void TransformExprVisitor::visit(const CallExpr *expr) {
           args.push_back({"self", move(d->expr)});
           e = EP(IdExpr, m->getCanonicalName());
           e->setType(ctx.instantiate(m, c->generics));
-          // DBG("[call] [method.{}] {} :- {}", d->member, *m, *e->getType());
         } else {
           ERROR(d, "{} has no method '{}'", *d->expr->getType(), d->member);
         }
       } else if (d->expr->getType()->isUnbound()) {
         // Just leave it as-is;
-        // it will get become an unbound type that will be handled
-        // in the subsequent iterations
+        // it will be handled by the subsequent typecheck iterations.
         assert(e->getType()->isUnbound());
       } else {
         ERROR(d, "type {} has no methods", *d->expr->getType());
@@ -589,16 +588,15 @@ void TransformExprVisitor::visit(const CallExpr *expr) {
     }
   }
   // Handle other arguments, if any
-  for (auto &i : expr->args) {
+  for (auto &i : expr->args)
     args.push_back({i.name, transform(i.value)});
-  }
 
   // If constructor, replace with appropriate calls
   if (e->isType()) {
     if (!e->getType()->getClass()) {
       ERROR(e, "cannot call non-type");
     }
-    DBG("[call] transform {} to __new__", *e->getType());
+    // DBG("[call] transform {} to __new__", *e->getType());
     string name = e->getType()->getClass()->getCanonicalName();
     string var = getTemporaryVar("typ");
     stmtVisitor.prepend(
@@ -618,16 +616,16 @@ void TransformExprVisitor::visit(const CallExpr *expr) {
               *args[i].value->getType());
       }
     }
-    // t->canRealize());
+    // Realize the function if that is possible
     if (t->canRealize()) {
       stmtVisitor.realize(t);
     }
     DBG("[call] {} ({} + {}) :- {}", t->getCanonicalName(), torig, params, *t);
     result = EP(CallExpr, move(e), move(args));
     result->setType(make_shared<LinkType>(t->ret));
-  } else { // if (e->getType()->isUnbound()) {
+  } else { // will be handled later on
     result = EP(CallExpr, move(e), move(args));
-    result->setType(ctx.addUnbound());
+    result->setType(expr->getType() ? expr->getType() : ctx.addUnbound());
     // DBG("[call] [unbound] :- {}", *result->getType());
   }
 }
@@ -697,7 +695,6 @@ void TransformExprVisitor::visit(const SliceExpr *expr) {
 
 void TransformExprVisitor::visit(const EllipsisExpr *expr) {
   result = EP(EllipsisExpr, );
-  // TODO: something else than nullptr for the type?
 }
 
 void TransformExprVisitor::visit(const TypeOfExpr *expr) {
@@ -779,6 +776,7 @@ PatternPtr TransformStmtVisitor::transform(const Pattern *pat) {
 void TransformStmtVisitor::realize(FuncType *t) {
   ctx.addBlock();
   ctx.increaseLevel();
+  // Ensure that all inputs are realized
   for (auto &t : t->args) {
     assert(!t.second->hasUnbound());
     ctx.add(t.first, make_shared<LinkType>(t.second));
@@ -790,6 +788,7 @@ void TransformStmtVisitor::realize(FuncType *t) {
 
   assert(ctx.funcASTs.find(t->getCanonicalName()) != ctx.funcASTs.end());
   auto &ast = ctx.funcASTs[t->getCanonicalName()];
+  // There is no AST linked to internal functions, so just ignore them
   bool isInternal =
       std::find(ast.second->attributes.begin(), ast.second->attributes.end(),
                 "internal") != ast.second->attributes.end();
@@ -823,8 +822,15 @@ StmtPtr TransformStmtVisitor::realizeBlock(const Stmt *stmt) {
   }
   StmtPtr result;
 
-  int prevSize = INT_MAX;
-  while (true) {
+  FILE *fo = fopen("out.htm", "w");
+  fmt::print(fo, "<html><head><link rel=stylesheet href=code.css "
+                 "/></head>\n<body>\n");
+  // We keep running typecheck transformations until there are no more unbound
+  // types. It is assumed that the unbound count will decrease in each
+  // iteration--- if not, the program cannot be type-checked.
+  // TODO: this can be probably optimized one day...
+  int reachSize = ctx.activeUnbounds.size();
+  for (int iter = 0, prevSize = INT_MAX; prevSize > reachSize; iter++) {
     DBG("--------");
     TransformStmtVisitor v(ctx);
     stmt->accept(v);
@@ -837,16 +843,19 @@ StmtPtr TransformStmtVisitor::realizeBlock(const Stmt *stmt) {
       else
         ++it;
     }
+
+    auto s = ast::FormatStmtVisitor(ctx).transform(result.get());
+    fmt::print(fo, "<div class=code>\n{}\n</div>\n-------\n", s);
+
     if (ctx.activeUnbounds.size() >= prevSize) {
       DBG("cannot resolve unbound variables");
       // ERROR(stmt, "cannot resolve unbound variables");
       break;
-    } else {
-      prevSize = ctx.activeUnbounds.size();
     }
-    if (!prevSize)
-      break;
+    prevSize = ctx.activeUnbounds.size();
   }
+  fmt::print(fo, "</body></html>\n");
+  fclose(fo);
   return result;
 }
 
@@ -1039,10 +1048,10 @@ void TransformStmtVisitor::visit(const AssertStmt *stmt) {
 }
 
 // TODO
-void TransformStmtVisitor::visit(const TypeAliasStmt *stmt) {
-  ERROR(stmt, "deprecated");
-  RETURN(TypeAliasStmt, stmt->name, transform(stmt->expr));
-}
+// void TransformStmtVisitor::visit(const TypeAliasStmt *stmt) {
+//   ERROR(stmt, "deprecated");
+//   RETURN(TypeAliasStmt, stmt->name, transform(stmt->expr));
+// }
 
 void TransformStmtVisitor::visit(const WhileStmt *stmt) {
   auto cond = transform(stmt->cond);
@@ -1246,130 +1255,143 @@ void TransformStmtVisitor::visit(const ThrowStmt *stmt) {
 }
 
 void TransformStmtVisitor::visit(const FunctionStmt *stmt) {
-  vector<pair<int, TypePtr>> genericTypes;
-  vector<pair<string, TypePtr>> argTypes;
-  ctx.addBlock();
-  for (auto &g : stmt->generics) {
-    auto t = make_shared<LinkType>(Unbound, ctx.unboundCount, ctx.level);
-    ctx.add(g, t, true);
-    genericTypes.push_back(make_pair(ctx.unboundCount, t));
-    ctx.unboundCount++;
-  }
-  ctx.increaseLevel();
-  vector<Param> args;
-  for (auto &a : stmt->args) {
-    auto t = transform(a.type);
-    argTypes.push_back(
-        make_pair(a.name, a.type ? t->getType() : ctx.addUnbound(false)));
-    args.push_back({a.name, move(t), transform(a.deflt)});
-  }
-  auto ret =
-      stmt->ret ? transform(stmt->ret)->getType() : ctx.addUnbound(false);
-  ctx.decreaseLevel();
-  ctx.popBlock();
-
   auto canonicalName =
       ctx.getCanonicalName(ctx.prefix + stmt->name, stmt->getSrcInfo());
-  auto type = make_shared<FuncType>(stmt->name, canonicalName, genericTypes,
-                                    argTypes, ret);
-  auto t = type->generalize(ctx.level);
-  DBG("* [function] {} :- {}", ctx.prefix + stmt->name, *t);
-  ctx.add(ctx.prefix + stmt->name, t);
+  if (ctx.funcASTs.find(canonicalName) == ctx.funcASTs.end()) {
+    vector<pair<int, TypePtr>> genericTypes;
+    vector<pair<string, TypePtr>> argTypes;
+    ctx.addBlock();
+    for (auto &g : stmt->generics) {
+      auto t =
+          make_shared<LinkType>(LinkType::Unbound, ctx.unboundCount, ctx.level);
+      ctx.add(g, t, true);
+      genericTypes.push_back(make_pair(ctx.unboundCount, t));
+      ctx.unboundCount++;
+    }
+    ctx.increaseLevel();
+    vector<Param> args;
+    for (auto &a : stmt->args) {
+      auto t = transform(a.type);
+      argTypes.push_back(
+          make_pair(a.name, a.type ? t->getType() : ctx.addUnbound(false)));
+      args.push_back({a.name, move(t), transform(a.deflt)});
+    }
+    auto ret =
+        stmt->ret ? transform(stmt->ret)->getType() : ctx.addUnbound(false);
+    ctx.decreaseLevel();
+    ctx.popBlock();
 
-  auto fp = SP(FunctionStmt, stmt->name, nullptr, stmt->generics, move(args),
-               stmt->suite, stmt->attributes);
-  ctx.funcASTs[canonicalName] = make_pair(t, move(fp));
+    auto type = make_shared<FuncType>(stmt->name, canonicalName, genericTypes,
+                                      argTypes, ret);
+    auto t = type->generalize(ctx.level);
+    DBG("* [function] {} :- {}", ctx.prefix + stmt->name, *t);
+    ctx.add(ctx.prefix + stmt->name, t);
 
+    auto fp = SP(FunctionStmt, stmt->name, nullptr, stmt->generics, move(args),
+                 stmt->suite, stmt->attributes);
+    ctx.funcASTs[canonicalName] = make_pair(t, move(fp));
+  }
   result = SP(FunctionStmt, stmt->name, nullptr, vector<string>(),
               vector<Param>(), nullptr, stmt->attributes);
 }
 
 void TransformStmtVisitor::visit(const ClassStmt *stmt) {
   auto canonicalName = ctx.getCanonicalName(stmt->name, stmt->getSrcInfo());
+  vector<StmtPtr> suite;
+  if (ctx.classASTs.find(canonicalName) == ctx.classASTs.end()) {
 
-  // Classes are handled differently as they can contain recursive references
-  if (!stmt->isRecord) {
-    vector<pair<int, TypePtr>> genericTypes;
-    vector<string> generics;
-    for (auto &g : stmt->generics) {
-      auto t = make_shared<LinkType>(Generic, ctx.unboundCount);
-      genericTypes.push_back(make_pair(ctx.unboundCount, t));
+    // Classes are handled differently as they can contain recursive references
+    if (!stmt->isRecord) {
+      vector<pair<int, TypePtr>> genericTypes;
+      vector<string> generics;
+      for (auto &g : stmt->generics) {
+        auto t = make_shared<LinkType>(LinkType::Generic, ctx.unboundCount);
+        genericTypes.push_back(make_pair(ctx.unboundCount, t));
 
-      auto tp = make_shared<LinkType>(Unbound, ctx.unboundCount, ctx.level);
-      ctx.add(g, tp, true);
-      ctx.unboundCount++;
-    }
-    auto ct = make_shared<ClassType>(stmt->name, canonicalName, genericTypes);
-    ctx.add(ctx.prefix + stmt->name, ct, true);
-    DBG("* [class] {} :- {}", ctx.prefix + stmt->name, *ct);
-
-    ctx.increaseLevel();
-    for (auto &a : stmt->args) {
-      assert(a.type);
-      ctx.classMembers[canonicalName][a.name] =
-          transform(a.type)->getType()->generalize(ctx.level);
-      DBG("* [class] [member.{}] :- {}", a.name,
-          *ctx.classMembers[canonicalName][a.name]);
-    }
-    auto oldPrefix = ctx.prefix;
-    ctx.prefix += stmt->name + ".";
-    // Generate __new__
-    auto codeType = format("{}{}", stmt->name,
-                           stmt->generics.size()
-                               ? format("[{}]", fmt::join(stmt->generics, ", "))
-                               : "");
-    // DBG("{}", codeNew);
-    auto addMethod = [&](auto s) {
-      if (auto f = dynamic_cast<FunctionStmt *>(s)) {
-        transform(s);
-        auto t = dynamic_pointer_cast<FuncType>(ctx.find(ctx.prefix + f->name));
-        assert(t);
-        ctx.classMethods[canonicalName][f->name] = t;
-      } else {
-        ERROR(s, "types can only contain functions");
-      };
-    };
-    auto codeNew = format("@internal\ndef __new__() -> {}: pass", codeType);
-    auto methodNew = parse_code(ctx.filename, codeNew);
-    for (auto s : methodNew->getStatements())
-      addMethod(s);
-    for (auto s : stmt->suite->getStatements())
-      addMethod(s);
-    ctx.decreaseLevel();
-    for (auto &g : stmt->generics) {
-      // Generalize in place
-      auto t = dynamic_pointer_cast<LinkType>(ctx.find(g));
-      assert(t && t->isUnbound());
-      t->kind = Generic;
-      ctx.remove(g);
-    }
-    ctx.prefix = oldPrefix;
-  } else {
-    vector<pair<string, TypePtr>> argTypes;
-    for (auto &a : stmt->args) {
-      assert(a.type);
-      auto t = transform(a.type)->getType();
-      argTypes.push_back({a.name, t});
-      ctx.classMembers[canonicalName][a.name] = t;
-    }
-    ctx.add(stmt->name,
-            make_shared<RecordType>(stmt->name, canonicalName, argTypes), true);
-    ctx.prefix = stmt->name + "."; // TODO: supports only one nesting level
-    // Add other statements
-    for (auto s : stmt->suite->getStatements()) {
-      if (auto f = dynamic_cast<FunctionStmt *>(s)) {
-        transform(s);
-        auto t = dynamic_pointer_cast<FuncType>(ctx.find(ctx.prefix + f->name));
-        assert(t);
-        ctx.classMethods[canonicalName][f->name] = t;
-      } else {
-        ERROR(s, "types can only contain functions");
+        auto tp = make_shared<LinkType>(LinkType::Unbound, ctx.unboundCount,
+                                        ctx.level);
+        ctx.add(g, tp, true);
+        ctx.unboundCount++;
       }
+      auto ct = make_shared<ClassType>(stmt->name, canonicalName, genericTypes);
+      ctx.add(ctx.prefix + stmt->name, ct, true);
+      ctx.classASTs[canonicalName] =
+          make_pair(ct, nullptr); // TODO: fix nullptr
+      DBG("* [class] {} :- {}", ctx.prefix + stmt->name, *ct);
+
+      ctx.increaseLevel();
+      for (auto &a : stmt->args) {
+        assert(a.type);
+        ctx.classMembers[canonicalName][a.name] =
+            transform(a.type)->getType()->generalize(ctx.level);
+        DBG("* [class] [member.{}] :- {}", a.name,
+            *ctx.classMembers[canonicalName][a.name]);
+      }
+      auto oldPrefix = ctx.prefix;
+      ctx.prefix += stmt->name + ".";
+      // Generate __new__
+      auto codeType =
+          format("{}{}", stmt->name,
+                 stmt->generics.size()
+                     ? format("[{}]", fmt::join(stmt->generics, ", "))
+                     : "");
+      // DBG("{}", codeNew);
+      auto addMethod = [&](auto s) {
+        if (auto f = dynamic_cast<FunctionStmt *>(s)) {
+          suite.push_back(transform(s));
+          auto t =
+              dynamic_pointer_cast<FuncType>(ctx.find(ctx.prefix + f->name));
+          assert(t);
+          ctx.classMethods[canonicalName][f->name] = t;
+        } else {
+          ERROR(s, "types can only contain functions");
+        };
+      };
+      auto codeNew = format("@internal\ndef __new__() -> {}: pass", codeType);
+      auto methodNew = parse_code(ctx.filename, codeNew);
+      for (auto s : methodNew->getStatements())
+        addMethod(s);
+      for (auto s : stmt->suite->getStatements())
+        addMethod(s);
+      ctx.decreaseLevel();
+      for (auto &g : stmt->generics) {
+        // Generalize in place
+        auto t = dynamic_pointer_cast<LinkType>(ctx.find(g));
+        assert(t && t->isUnbound());
+        t->kind = LinkType::Generic;
+        ctx.remove(g);
+      }
+      ctx.prefix = oldPrefix;
+    } else {
+      vector<pair<string, TypePtr>> argTypes;
+      for (auto &a : stmt->args) {
+        assert(a.type);
+        auto t = transform(a.type)->getType();
+        argTypes.push_back({a.name, t});
+        ctx.classMembers[canonicalName][a.name] = t;
+      }
+      auto ct = make_shared<RecordType>(stmt->name, canonicalName, argTypes);
+      ctx.add(stmt->name, ct, true);
+      ctx.classASTs[canonicalName] =
+          make_pair(ct, nullptr);    // TODO: fix nullptr
+      ctx.prefix = stmt->name + "."; // TODO: supports only one nesting level
+      // Add other statements
+      for (auto s : stmt->suite->getStatements()) {
+        if (auto f = dynamic_cast<FunctionStmt *>(s)) {
+          suite.push_back(transform(s));
+          auto t =
+              dynamic_pointer_cast<FuncType>(ctx.find(ctx.prefix + f->name));
+          assert(t);
+          ctx.classMethods[canonicalName][f->name] = t;
+        } else {
+          ERROR(s, "types can only contain functions");
+        }
+      }
+      ctx.prefix = "";
     }
-    ctx.prefix = "";
   }
   result = SP(ClassStmt, stmt->isRecord, stmt->name, vector<string>(),
-              vector<Param>(), nullptr);
+              vector<Param>(), SP(SuiteStmt, move(suite)));
 }
 
 // TODO

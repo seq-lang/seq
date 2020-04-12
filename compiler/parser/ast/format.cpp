@@ -33,7 +33,7 @@ using std::vector;
   (format("<expr><type>{}</type><node>" s,                                     \
           t->getType() ? t->getType()->str() : "", __VA_ARGS__) +              \
    format("</node></expr>"))
-#define KEYWORD(x) "<b>" x "</b>"
+#define KEYWORD(x) "<b>" x " </b>"
 
 namespace seq {
 namespace ast {
@@ -318,10 +318,10 @@ void FormatStmtVisitor::visit(const AssertStmt *stmt) {
   result = format(KEYWORD("assert") " {}", transform(stmt->expr));
 }
 
-void FormatStmtVisitor::visit(const TypeAliasStmt *stmt) {
-  result =
-      format(KEYWORD("type") " {} = {}", stmt->name, transform(stmt->expr));
-}
+// void FormatStmtVisitor::visit(const TypeAliasStmt *stmt) {
+//   result =
+//       format(KEYWORD("type") " {} = {}", stmt->name, transform(stmt->expr));
+// }
 
 void FormatStmtVisitor::visit(const WhileStmt *stmt) {
   result = format(KEYWORD("while") " {}:" NEWLINE "{}", transform(stmt->cond),

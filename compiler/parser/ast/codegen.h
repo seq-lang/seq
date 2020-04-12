@@ -39,7 +39,7 @@ public:
                                const std::vector<GeneratorExpr::Body> &loops,
                                int &added);
 
-  void visit(const EmptyExpr *) override;
+  void visit(const NoneExpr *) override;
   void visit(const BoolExpr *) override;
   void visit(const IntExpr *) override;
   void visit(const FloatExpr *) override;
@@ -106,7 +106,7 @@ public:
   virtual void visit(const ReturnStmt *) override;
   virtual void visit(const YieldStmt *) override;
   virtual void visit(const AssertStmt *) override;
-  virtual void visit(const TypeAliasStmt *) override;
+  // virtual void visit(const TypeAliasStmt *) override;
   virtual void visit(const WhileStmt *) override;
   virtual void visit(const ForStmt *) override;
   virtual void visit(const IfStmt *) override;
