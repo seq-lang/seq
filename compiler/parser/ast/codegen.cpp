@@ -61,7 +61,7 @@ seq::types::Type *CodegenExprVisitor::transformType(const ExprPtr &expr) {
   }
 }
 
-void CodegenExprVisitor::visit(const EmptyExpr *expr) {
+void CodegenExprVisitor::visit(const NoneExpr *expr) {
   RETURN(seq::NoneExpr, );
 }
 

@@ -1,3 +1,5 @@
+/// walk.h: toy AST walker
+/// Should delete it later...
 #pragma once
 
 #include "parser/ast/ast.h"

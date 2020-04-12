@@ -32,16 +32,19 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
+// TODO: get rid of this macro
 #define RETURN(T, ...)                                                         \
   (this->result =                                                              \
        fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()));           \
   return
+// TODO: unify these into some sort of template monstrosity
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
 #define EP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
 #define EPX(e, T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), e->getSrcInfo())
 #define S(T, ...) make_unique<T>(__VA_ARGS__)
 #define SP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo())
 #define SPX(s, T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), s->getSrcInfo())
+// TODO: use hack from common.h to glob the comma from __VA_ARGS__
 #define ERROR(s, ...) error(s->getSrcInfo(), __VA_ARGS__)
 #define CAST(s, T) dynamic_cast<T *>(s.get())
 
@@ -62,15 +65,25 @@ TypeContext::TypeContext(const std::string &filename)
   /// TODO: array, __array__, ptr, generator, tuple etc
 }
 
-TypePtr TypeContext::find(const std::string &name) const {
+TypePtr TypeContext::find(const std::string &name, bool *isType) const {
   auto t = VTable<Type>::find(name);
   if (!t) {
     auto it = internals.find(name);
     if (it != internals.end()) {
+      if (isType)
+        *isType = true;
       return it->second;
+    } else {
+      return nullptr;
     }
+  } else {
+    if (isType) {
+      auto it = this->isType.find(name);
+      assert(it != this->isType.end());
+      *isType = it->second.top();
+    }
+    return t;
   }
-  return t;
 }
 
 TypePtr TypeContext::findInternal(const std::string &name) const {
@@ -124,9 +137,6 @@ TypePtr TypeContext::instantiate(TypePtr type,
                                  const vector<pair<int, TypePtr>> &generics) {
   std::unordered_map<int, TypePtr> cache;
   for (auto &g : generics) {
-    auto l = std::dynamic_pointer_cast<LinkType>(g.second);
-    assert(l);
-    // DBG("// inst {} -> {}", g.first, *g.second);
     cache[g.first] = g.second;
   }
   auto t = type->instantiate(level, unboundCount, cache);
@@ -191,29 +201,37 @@ vector<ExprPtr> TransformExprVisitor::transform(const vector<ExprPtr> &exprs) {
   return r;
 }
 
-void TransformExprVisitor::visit(const EmptyExpr *expr) {
-  result = EP(EmptyExpr, );
+void TransformExprVisitor::visit(const NoneExpr *expr) {
+  result = EP(NoneExpr, );
   result->setType(expr->getType() ? expr->getType() : ctx.addUnbound());
 }
 
 void TransformExprVisitor::visit(const BoolExpr *expr) {
   result = EP(BoolExpr, expr->value);
-  result->setType(make_shared<LinkType>(ctx.findInternal("bool")));
+  result->setType(expr->getType()
+                      ? expr->getType()
+                      : make_shared<LinkType>(ctx.findInternal("bool")));
 }
 
 void TransformExprVisitor::visit(const IntExpr *expr) {
   result = EP(IntExpr, expr->value);
-  result->setType(make_shared<LinkType>(ctx.findInternal("int")));
+  result->setType(expr->getType()
+                      ? expr->getType()
+                      : make_shared<LinkType>(ctx.findInternal("int")));
 }
 
 void TransformExprVisitor::visit(const FloatExpr *expr) {
   result = EP(FloatExpr, expr->value);
-  result->setType(make_shared<LinkType>(ctx.findInternal("float")));
+  result->setType(expr->getType()
+                      ? expr->getType()
+                      : make_shared<LinkType>(ctx.findInternal("float")));
 }
 
 void TransformExprVisitor::visit(const StringExpr *expr) {
   result = EP(StringExpr, expr->value);
-  result->setType(make_shared<LinkType>(ctx.findInternal("str")));
+  result->setType(expr->getType()
+                      ? expr->getType()
+                      : make_shared<LinkType>(ctx.findInternal("str")));
 }
 
 void TransformExprVisitor::visit(const FStringExpr *expr) {
@@ -270,32 +288,24 @@ void TransformExprVisitor::visit(const SeqExpr *expr) {
         EP(CallExpr, EP(IdExpr, "pseq"), EP(StringExpr, expr->value)));
   } else if (expr->prefix == "s") {
     result = EP(SeqExpr, expr->value, expr->prefix);
-    result->setType(make_shared<LinkType>(ctx.findInternal("seq")));
+    result->setType(expr->getType()
+                        ? expr->getType()
+                        : make_shared<LinkType>(ctx.findInternal("seq")));
   } else {
     ERROR(expr, "invalid seq prefix '{}'", expr->prefix);
   }
 }
 
 void TransformExprVisitor::visit(const IdExpr *expr) {
-  auto type = ctx.find(expr->value);
+  bool isType = false;
+  auto type = ctx.find(expr->value, &isType);
   if (!type) {
     ERROR(expr, "identifier '{}' not found", expr->value);
   }
-  // For accessing type definitions (e.g. list, int etc.)
-  // Type definitions must be stored without links!
   result = EP(IdExpr, expr->value);
-
-  if (dynamic_pointer_cast<ClassType>(type)) {
-    DBG("-- marking {}", *result);
+  if (isType)
     result->markType();
-  } else if (auto l = dynamic_pointer_cast<LinkType>(type)) {
-    if (l->isTypeUnbound) {
-      DBG("-- marking {}", *result);
-      result->markType();
-    }
-  }
   result->setType(expr->getType() ? expr->getType() : ctx.instantiate(type));
-  // DBG("[id] {} :- {}", expr->value, *result->getType());
 }
 
 void TransformExprVisitor::visit(const UnpackExpr *expr) {
@@ -304,11 +314,14 @@ void TransformExprVisitor::visit(const UnpackExpr *expr) {
 
 void TransformExprVisitor::visit(const TupleExpr *expr) {
   auto e = EP(TupleExpr, transform(expr->items));
-  vector<pair<string, TypePtr>> types;
-  for (auto &i : e->items)
-    types.push_back({"", i->getType()});
+  auto t = expr->getType();
+  if (!t) {
+    vector<pair<string, TypePtr>> types;
+    for (auto &i : e->items)
+      types.push_back({"", i->getType()});
+    t = make_shared<LinkType>(make_shared<RecordType>("", "", types));
+  }
   result = move(e);
-  auto t = make_shared<RecordType>("", "", types);
   result->setType(t);
 }
 
@@ -388,7 +401,7 @@ void TransformExprVisitor::visit(const IfExpr *expr) {
           e->eelse->getType()->str());
   }
   result = move(e);
-  result->setType(e->eif->getType());
+  result->setType(expr->getType() ? expr->getType() : e->eif->getType());
 }
 
 void TransformExprVisitor::visit(const UnaryExpr *expr) {
@@ -398,6 +411,8 @@ void TransformExprVisitor::visit(const UnaryExpr *expr) {
       ERROR(expr, "expected bool expression, got {}", *e->expr->getType());
     }
     result = move(e);
+    result->setType(expr->getType() ? expr->getType()
+                                    : ctx.findInternal("bool"));
     return;
   }
 
@@ -425,6 +440,8 @@ void TransformExprVisitor::visit(const BinaryExpr *expr) {
       ERROR(e->rexpr, "expected bool expression, got {}", *e->rexpr->getType());
     }
     result = move(e);
+    result->setType(expr->getType() ? expr->getType()
+                                    : ctx.findInternal("bool"));
     return;
   }
 
@@ -531,7 +548,6 @@ void TransformExprVisitor::visit(const IndexExpr *expr) {
     auto t = e->getType();
     // TODO: cast to IdExpr for easier access
     result = EP(TypeOfExpr, move(e));
-    DBG("-- marking {}", *result);
     result->markType();
     result->setType(t);
   }
@@ -625,7 +641,7 @@ void TransformExprVisitor::visit(const DotExpr *expr) {
     typ = expr->getType() ? expr->getType() : ctx.addUnbound();
     DBG("[dot] {} . {} :- {}", *lhs->getType(), expr->member, *typ);
   } else if (auto c = lhs->getType()->getClass()) {
-    DBG("?? {} {} {} {}", *expr, *lhs, lhs->isType(), *lhs->getType());
+    // DBG("?? {} {} {} {}", *expr, *lhs, lhs->isType(), *lhs->getType());
     if (auto m = ctx.findMethod(c, expr->member)) {
       if (lhs->isType()) {
         typ = ctx.instantiate(m, c->generics);
@@ -688,7 +704,6 @@ void TransformExprVisitor::visit(const TypeOfExpr *expr) {
   // TODO: cast to IdExpr
   result = EP(TypeOfExpr, transform(expr->expr));
   result->markType();
-  DBG("-- marking {}", *result);
   auto t = expr->expr->getType();
   result->setType(t);
 }
@@ -778,18 +793,21 @@ void TransformStmtVisitor::realize(FuncType *t) {
   bool isInternal =
       std::find(ast.second->attributes.begin(), ast.second->attributes.end(),
                 "internal") != ast.second->attributes.end();
+
+  DBG("======== BEGIN {} ========", t->getCanonicalName());
   auto realized = isInternal ? nullptr : realizeBlock(ast.second->suite.get());
-  if (!ctx.hasSetReturnType) {
+  if (realized && !ctx.hasSetReturnType && t->ret) {
     auto u = ctx.returnType->unify(ctx.findInternal("void"));
     // TODO fix this
-    // assert(u >= 0);
+    assert(u >= 0);
   }
+  DBG("======== END {} :- {} ========", t->getCanonicalName(), *t);
+
   vector<Param> args;
   assert(ast.second->args.size() == t->args.size());
   for (int i = 0; i < ast.second->args.size(); i++) {
     args.push_back({ast.second->args[i].name, nullptr, nullptr});
   }
-  DBG("[realize] realized {} :- {}", t->getCanonicalName(), *t);
   ctx.funcRealizations[t->getCanonicalName()][t->str()] =
       SPX(ast.second, FunctionStmt, ast.second->name, nullptr, vector<string>(),
           move(args), move(realized), ast.second->attributes);
@@ -807,6 +825,7 @@ StmtPtr TransformStmtVisitor::realizeBlock(const Stmt *stmt) {
 
   int prevSize = INT_MAX;
   while (true) {
+    DBG("--------");
     TransformStmtVisitor v(ctx);
     stmt->accept(v);
     result = move(v.result);
@@ -827,7 +846,6 @@ StmtPtr TransformStmtVisitor::realizeBlock(const Stmt *stmt) {
     }
     if (!prevSize)
       break;
-    DBG("--------");
   }
   return result;
 }
@@ -872,7 +890,6 @@ StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
             move(args))));
   } else if (auto l = dynamic_cast<const DotExpr *>(lhs)) {
     // TODO Member Expr
-    ERROR(lhs, "to be done");
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const IdExpr *>(lhs)) {
     // TODO type
@@ -884,8 +901,9 @@ StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
       if (t->unify(s->rhs->getType()) < 0) {
         ERROR(rhs, "type {} is not compatible with {}", *t, *s->rhs->getType());
       }
+      s->lhs->setType(t);
     } else {
-      ctx.add(l->value, s->rhs->getType());
+      ctx.add(l->value, s->rhs->getType(), s->rhs->isType());
       s->lhs->setType(s->rhs->getType());
     }
     return s;
@@ -1233,8 +1251,7 @@ void TransformStmtVisitor::visit(const FunctionStmt *stmt) {
   ctx.addBlock();
   for (auto &g : stmt->generics) {
     auto t = make_shared<LinkType>(Unbound, ctx.unboundCount, ctx.level);
-    t->isTypeUnbound = true;
-    ctx.add(g, t);
+    ctx.add(g, t, true);
     genericTypes.push_back(make_pair(ctx.unboundCount, t));
     ctx.unboundCount++;
   }
@@ -1279,12 +1296,11 @@ void TransformStmtVisitor::visit(const ClassStmt *stmt) {
       genericTypes.push_back(make_pair(ctx.unboundCount, t));
 
       auto tp = make_shared<LinkType>(Unbound, ctx.unboundCount, ctx.level);
-      tp->isTypeUnbound = true;
-      ctx.add(g, tp);
+      ctx.add(g, tp, true);
       ctx.unboundCount++;
     }
     auto ct = make_shared<ClassType>(stmt->name, canonicalName, genericTypes);
-    ctx.add(ctx.prefix + stmt->name, ct);
+    ctx.add(ctx.prefix + stmt->name, ct, true);
     DBG("* [class] {} :- {}", ctx.prefix + stmt->name, *ct);
 
     ctx.increaseLevel();
@@ -1337,7 +1353,7 @@ void TransformStmtVisitor::visit(const ClassStmt *stmt) {
       ctx.classMembers[canonicalName][a.name] = t;
     }
     ctx.add(stmt->name,
-            make_shared<RecordType>(stmt->name, canonicalName, argTypes));
+            make_shared<RecordType>(stmt->name, canonicalName, argTypes), true);
     ctx.prefix = stmt->name + "."; // TODO: supports only one nesting level
     // Add other statements
     for (auto s : stmt->suite->getStatements()) {

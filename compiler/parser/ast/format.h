@@ -1,3 +1,11 @@
+/**
+ * format.h
+ * Format AST walker.
+ *
+ * Generates HTML representation of a given AST node.
+ * Useful for debugging types.
+ */
+
 #pragma once
 
 #include <string>

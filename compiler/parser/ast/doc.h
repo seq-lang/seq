@@ -1,3 +1,10 @@
+/**
+ * doc.h
+ * Documentation AST walker.
+ *
+ * Reads docstrings and generates documentation of a given AST node.
+ */
+
 #pragma once
 
 #include <string>

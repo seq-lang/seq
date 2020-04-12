@@ -21,8 +21,8 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-EmptyExpr::EmptyExpr() {}
-string EmptyExpr::toString() const { return "#empty"; }
+NoneExpr::NoneExpr() {}
+string NoneExpr::toString() const { return "#none"; }
 
 BoolExpr::BoolExpr(bool v) : Expr(), value(v) {}
 string BoolExpr::toString() const { return format("(#bool {})", int(value)); }
@@ -268,9 +268,6 @@ string YieldStmt::toString() const {
 
 AssertStmt::AssertStmt(ExprPtr e) : expr(move(e)) {}
 string AssertStmt::toString() const { return format("(#assert {})", *expr); }
-
-TypeAliasStmt::TypeAliasStmt(string n, ExprPtr e) : name(n), expr(move(e)) {}
-string TypeAliasStmt::toString() const { return format("(#alias {})", *expr); }
 
 WhileStmt::WhileStmt(ExprPtr c, StmtPtr s) : cond(move(c)), suite(move(s)) {}
 string WhileStmt::toString() const {

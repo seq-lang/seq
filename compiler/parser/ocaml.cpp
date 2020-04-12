@@ -91,7 +91,7 @@ unique_ptr<Expr> parse_expr(value val) {
   t = Field(v, 0);
   switch (tv) {
   case 0:
-    Return(Empty, );
+    Return(None, );
   case 1:
     Return(Bool, Bool_val(t));
   case 2:
@@ -302,7 +302,8 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 9:
     Return(Assert, parse_expr(t));
   case 10:
-    Return(TypeAlias, parse_string(Field(t, 0)), parse_expr(Field(t, 1)));
+    assert(false);
+    // Return(TypeAlias, parse_string(Field(t, 0)), parse_expr(Field(t, 1)));
   case 11:
     Return(While, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
   case 12:

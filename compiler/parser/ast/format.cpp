@@ -54,7 +54,7 @@ string FormatExprVisitor::transform(const vector<ExprPtr> &exprs) {
   return r;
 }
 
-void FormatExprVisitor::visit(const EmptyExpr *expr) {
+void FormatExprVisitor::visit(const NoneExpr *expr) {
   result = format("<ruby>None<rt>{}</rt></ruby>",
                   expr->getType() ? expr->getType()->str() : "-");
 }

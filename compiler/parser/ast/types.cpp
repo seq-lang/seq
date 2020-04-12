@@ -32,7 +32,7 @@ int unifyList(const vector<pair<T, TypePtr>> &a,
 }
 
 LinkType::LinkType(LinkKind kind, int id, int level, TypePtr type)
-    : kind(kind), id(id), level(level), type(type), isTypeUnbound(false) {}
+    : kind(kind), id(id), level(level), type(type) {}
 
 string LinkType::str() const {
   if (kind == Unbound)

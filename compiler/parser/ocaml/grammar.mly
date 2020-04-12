@@ -175,7 +175,7 @@ small_single_statement:
   | YIELD separated_list(COMMA, expr)
     { $loc, Yield (match $2 with [] -> None | [e] -> Some e | l -> Some ($loc, Tuple l)) }
   | YIELD FROM expr { $loc, YieldFrom $3 }
-  | TYPE ID EQ expr { $loc, TypeAlias ($2, $4) }
+  /* | TYPE ID EQ expr { $loc, TypeAlias ($2, $4) } */
   | THROW expr { $loc, Throw $2 }
 print_statement:
   /* | PRINT { [$loc, Print ($loc, String "\n")] } */

@@ -1,3 +1,10 @@
+/**
+ * codegen.h
+ * Code generation AST walker.
+ *
+ * Transforms a given AST to a Seq LLVM AST.
+ */
+
 #pragma once
 
 #include <string>
