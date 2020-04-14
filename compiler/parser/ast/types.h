@@ -46,7 +46,7 @@ public:
 
 public:
   /// Pretty-printing.
-  virtual string str() const = 0;
+  virtual string str(bool reduced = false) const = 0;
   /// Is this an unbound type? (e.g. list[?] is not unbound while ? is).
   virtual bool isUnbound() const = 0;
   /// Does this type have an unbound type within
@@ -63,11 +63,11 @@ public:
   /// Get FuncType* if this is a function (nullptr otherwise).
   /// Simple dynamic_cast will not work because of potential LinkType
   /// indirections.
-  virtual FuncType *getFunction() = 0;
+  virtual std::shared_ptr<FuncType> getFunction() = 0;
   /// Get ClassType* if this is a function (nullptr otherwise).
   /// Simple dynamic_cast will not work because of potential LinkType
   /// indirections.
-  virtual ClassType *getClass() = 0;
+  virtual std::shared_ptr<ClassType> getClass() = 0;
 };
 
 /**
@@ -101,7 +101,7 @@ struct LinkType : public Type {
   LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type) {}
   virtual ~LinkType() {}
 
-  string str() const override;
+  string str(bool reduced) const override;
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
@@ -110,8 +110,8 @@ struct LinkType : public Type {
   bool isUnbound() const override;
   bool hasUnbound() const override;
   bool canRealize() const override;
-  FuncType *getFunction() override;
-  ClassType *getClass() override;
+  std::shared_ptr<FuncType> getFunction() override;
+  std::shared_ptr<ClassType> getClass() override;
 };
 
 /**
@@ -130,7 +130,7 @@ struct ClassType : public Type {
             const vector<pair<int, TypePtr>> &generics);
   virtual ~ClassType() {}
 
-  string str() const override;
+  string str(bool reduced = false) const override;
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
@@ -138,8 +138,10 @@ struct ClassType : public Type {
   bool isUnbound() const override { return false; }
   bool hasUnbound() const override;
   bool canRealize() const override;
-  FuncType *getFunction() override { return nullptr; }
-  ClassType *getClass() override { return this; }
+  std::shared_ptr<FuncType> getFunction() override { return nullptr; }
+  std::shared_ptr<ClassType> getClass() override {
+    return std::dynamic_pointer_cast<ClassType>(shared_from_this());
+  }
   string getCanonicalName() const { return canonicalName; }
 };
 
@@ -153,6 +155,9 @@ struct FuncType : public Type {
   /// It is necessary to maintain unique generic ID as defined in the
   /// "canonical" class type to be able to properly realize types.
   vector<pair<int, TypePtr>> generics;
+  /// We also need to keep "implicit generics" that are inherited from
+  /// a generic class (for cases like e.g. class A[T]: def foo(): x = T())
+  vector<pair<int, TypePtr>> implicitGenerics;
   vector<pair<string, TypePtr>> args;
   /// Return type. Usually deduced after the realization.
   TypePtr ret;
@@ -161,7 +166,7 @@ struct FuncType : public Type {
            const vector<pair<int, TypePtr>> &generics,
            const vector<pair<string, TypePtr>> &args, TypePtr ret);
   virtual ~FuncType() {}
-  string str() const override;
+  string str(bool reduced = false) const override;
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
@@ -169,9 +174,14 @@ struct FuncType : public Type {
   bool isUnbound() const override { return false; }
   bool hasUnbound() const override;
   bool canRealize() const override;
-  FuncType *getFunction() override { return this; }
-  ClassType *getClass() override { return nullptr; }
+  std::shared_ptr<FuncType> getFunction() override {
+    return std::dynamic_pointer_cast<FuncType>(shared_from_this());
+  }
+  std::shared_ptr<ClassType> getClass() override { return nullptr; }
   string getCanonicalName() const { return canonicalName; }
+  void setImplicits(const vector<pair<int, TypePtr>> &i) {
+    implicitGenerics = i;
+  }
 };
 
 /**
@@ -188,7 +198,7 @@ struct RecordType : public Type {
              const vector<pair<string, TypePtr>> &args);
   RecordType(const vector<Expr *> args);
   virtual ~RecordType() {}
-  string str() const override;
+  string str(bool reduced = false) const override;
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
@@ -197,8 +207,8 @@ struct RecordType : public Type {
   bool hasUnbound() const override;
   bool canRealize() const override;
 
-  FuncType *getFunction() override { return nullptr; }
-  ClassType *getClass() override { return nullptr; }
+  std::shared_ptr<FuncType> getFunction() override { return nullptr; }
+  std::shared_ptr<ClassType> getClass() override { return nullptr; }
   string getCanonicalName() const { return canonicalName; }
 };
 

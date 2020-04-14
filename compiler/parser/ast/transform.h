@@ -86,7 +86,8 @@ private: /** Realization **/
   /// of realized and fully type-checked function ASTs.
   std::unordered_map<
       std::string,
-      std::unordered_map<std::string, std::shared_ptr<FunctionStmt>>>
+      std::unordered_map<std::string,
+                         std::pair<TypePtr, std::shared_ptr<FunctionStmt>>>>
       funcRealizations;
   /// Current class realizations.
   /// Mapping from a canonical class name to a hashtable
@@ -146,9 +147,9 @@ public:
   TypePtr instantiate(TypePtr type, const vector<pair<int, TypePtr>> &generics);
 
   /// Getters and setters for the method/member/realization lookup tables
-  std::shared_ptr<FuncType> findMethod(const ClassType *type,
+  std::shared_ptr<FuncType> findMethod(std::shared_ptr<ClassType> type,
                                        const string &method);
-  TypePtr findMember(const ClassType *type, const string &member);
+  TypePtr findMember(std::shared_ptr<ClassType> type, const string &member);
   std::vector<std::pair<std::string, const FunctionStmt *>>
   getRealizations(const FunctionStmt *stmt);
 };
@@ -220,7 +221,7 @@ public:
   TransformStmtVisitor(TypeContext &ctx) : ctx(ctx) {}
   void prepend(StmtPtr s);
 
-  void realize(FuncType *type);
+  TypePtr realize(std::shared_ptr<FuncType> type);
   StmtPtr realizeBlock(const Stmt *stmt);
 
   StmtPtr transform(const Stmt *stmt);

@@ -159,7 +159,7 @@ TypePtr TypeContext::instantiate(TypePtr type,
   return t;
 }
 
-shared_ptr<FuncType> TypeContext::findMethod(const ClassType *type,
+shared_ptr<FuncType> TypeContext::findMethod(shared_ptr<ClassType> type,
                                              const string &method) {
   auto m = classMethods.find(type->getCanonicalName());
   if (m != classMethods.end()) {
@@ -171,7 +171,8 @@ shared_ptr<FuncType> TypeContext::findMethod(const ClassType *type,
   return nullptr;
 }
 
-TypePtr TypeContext::findMember(const ClassType *type, const string &member) {
+TypePtr TypeContext::findMember(shared_ptr<ClassType> type,
+                                const string &member) {
   auto m = classMembers.find(type->getCanonicalName());
   if (m != classMembers.end()) {
     auto t = m->second.find(member);
@@ -188,7 +189,7 @@ TypeContext::getRealizations(const FunctionStmt *stmt) {
   auto it = canonicalNames.find(stmt->getSrcInfo());
   if (it != canonicalNames.end()) {
     for (auto &i : funcRealizations[it->second]) {
-      result.push_back({i.first, i.second.get()});
+      result.push_back({i.first, i.second.second.get()});
     }
   }
   return result;
@@ -201,6 +202,8 @@ TransformExprVisitor::TransformExprVisitor(TypeContext &ctx,
 ExprPtr TransformExprVisitor::transform(const Expr *expr) {
   TransformExprVisitor v(ctx, stmtVisitor);
   expr->accept(v);
+  // DBG("::: {} | {} :- {} ", v.result->getSrcInfo().line, *v.result,
+  //     *v.result->getType());
   return move(v.result);
 }
 
@@ -773,7 +776,14 @@ PatternPtr TransformStmtVisitor::transform(const Pattern *pat) {
   return move(v.result);
 }
 
-void TransformStmtVisitor::realize(FuncType *t) {
+TypePtr TransformStmtVisitor::realize(shared_ptr<FuncType> t) {
+  auto it = ctx.funcRealizations.find(t->getCanonicalName());
+  if (it != ctx.funcRealizations.end()) {
+    auto it2 = it->second.find(t->str(true));
+    if (it2 != it->second.end())
+      return it2->second.first; // already realized
+  }
+
   ctx.addBlock();
   ctx.increaseLevel();
   // Ensure that all inputs are realized
@@ -793,7 +803,7 @@ void TransformStmtVisitor::realize(FuncType *t) {
       std::find(ast.second->attributes.begin(), ast.second->attributes.end(),
                 "internal") != ast.second->attributes.end();
 
-  DBG("======== BEGIN {} ========", t->getCanonicalName());
+  DBG("======== BEGIN {} :- {} ========", t->getCanonicalName(), *t);
   auto realized = isInternal ? nullptr : realizeBlock(ast.second->suite.get());
   if (realized && !ctx.hasSetReturnType && t->ret) {
     auto u = ctx.returnType->unify(ctx.findInternal("void"));
@@ -807,13 +817,15 @@ void TransformStmtVisitor::realize(FuncType *t) {
   for (int i = 0; i < ast.second->args.size(); i++) {
     args.push_back({ast.second->args[i].name, nullptr, nullptr});
   }
-  ctx.funcRealizations[t->getCanonicalName()][t->str()] =
-      SPX(ast.second, FunctionStmt, ast.second->name, nullptr, vector<string>(),
-          move(args), move(realized), ast.second->attributes);
+  ctx.funcRealizations[t->getCanonicalName()][t->str(true)] =
+      make_pair(t, SPX(ast.second, FunctionStmt, ast.second->name, nullptr,
+                       vector<string>(), move(args), move(realized),
+                       ast.second->attributes));
   ctx.returnType = old;
   ctx.hasSetReturnType = oldSeen;
   ctx.decreaseLevel();
   ctx.popBlock();
+  return t;
 }
 
 StmtPtr TransformStmtVisitor::realizeBlock(const Stmt *stmt) {
@@ -1342,6 +1354,7 @@ void TransformStmtVisitor::visit(const ClassStmt *stmt) {
           auto t =
               dynamic_pointer_cast<FuncType>(ctx.find(ctx.prefix + f->name));
           assert(t);
+          t->setImplicits(genericTypes);
           ctx.classMethods[canonicalName][f->name] = t;
         } else {
           ERROR(s, "types can only contain functions");

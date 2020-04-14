@@ -34,13 +34,13 @@ int unifyList(const vector<pair<T, TypePtr>> &a,
 LinkType::LinkType(LinkKind kind, int id, int level, TypePtr type)
     : kind(kind), id(id), level(level), type(type) {}
 
-string LinkType::str() const {
+string LinkType::str(bool reduced) const {
   if (kind == Unbound)
     return fmt::format("?-{}-{}", id, level);
   else if (kind == Generic)
     return fmt::format("T-{}", id, level);
   else
-    return "&" + type->str();
+    return /*"&" +*/ type->str(reduced);
 }
 
 bool LinkType::occurs(Type *typ) {
@@ -150,14 +150,14 @@ bool LinkType::canRealize() const {
     return type->canRealize();
 }
 
-FuncType *LinkType::getFunction() {
+shared_ptr<FuncType> LinkType::getFunction() {
   if (kind == Link)
     return type->getFunction();
   else
     return nullptr;
 }
 
-ClassType *LinkType::getClass() {
+shared_ptr<ClassType> LinkType::getClass() {
   if (kind == Link)
     return type->getClass();
   else
@@ -168,10 +168,10 @@ ClassType::ClassType(const string &name, const string &canonicalName,
                      const vector<pair<int, TypePtr>> &generics)
     : name(name), canonicalName(canonicalName), generics(generics) {}
 
-string ClassType::str() const {
+string ClassType::str(bool reduced) const {
   vector<string> gs;
   for (auto &a : generics)
-    gs.push_back(a.second->str());
+    gs.push_back(a.second->str(reduced));
   return fmt::format("{}{}", name,
                      gs.size() ? fmt::format("[{}]", fmt::join(gs, ",")) : "");
 }
@@ -226,27 +226,35 @@ FuncType::FuncType(const string &name, const string &canonicalName,
     : name(name), canonicalName(canonicalName), generics(generics), args(args),
       ret(ret) {}
 
-string FuncType::str() const {
+string FuncType::str(bool reduced) const {
   vector<string> gs, as;
   for (auto &a : generics)
-    gs.push_back(a.second->str());
+    gs.push_back(a.second->str(reduced));
   for (auto &a : args)
-    as.push_back(a.second->str());
+    as.push_back(a.second->str(reduced));
+  string r;
+  if (!reduced)
+    r = ret->str(reduced) + ", ";
+  else
+    for (auto &a : implicitGenerics)
+      r += a.second->str(reduced) + ", ";
   return fmt::format("{}{}({}{})", name,
                      gs.size() ? fmt::format("[{}]", fmt::join(gs, ",")) : "",
-                     ret->str(),
-                     as.size() ? fmt::format(", {}", fmt::join(as, ",")) : "");
+                     r, as.size() ? fmt::format("{}", fmt::join(as, ",")) : "");
 }
 
 int FuncType::unify(TypePtr typ) {
   if (auto t = dynamic_cast<FuncType *>(typ.get())) {
     if (canonicalName != t->canonicalName)
       return -1;
-    int s1, s2, s3;
+    int s1, s2, s3, s4;
     if ((s1 = unifyList(generics, t->generics)) != -1) {
       if ((s2 = unifyList(args, t->args)) != -1) {
-        if ((s3 = ret->unify(t->ret)) != -1)
-          return s1 + s2 + s3;
+        if ((s3 = ret->unify(t->ret)) != -1) {
+          if ((s4 = unifyList(implicitGenerics, t->implicitGenerics)) != -1) {
+            return s1 + s2 + s3 + s4;
+          }
+        }
       }
     }
     return -1;
@@ -263,8 +271,13 @@ TypePtr FuncType::generalize(int level) {
   auto a = args;
   for (auto &t : a)
     t.second = t.second->generalize(level);
-  return make_shared<FuncType>(name, canonicalName, g, a,
-                               ret->generalize(level));
+  auto i = implicitGenerics;
+  for (auto &t : i)
+    t.second = t.second->generalize(level);
+  auto t =
+      make_shared<FuncType>(name, canonicalName, g, a, ret->generalize(level));
+  t->setImplicits(i);
+  return t;
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
@@ -275,8 +288,13 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
   auto a = args;
   for (auto &t : a)
     t.second = t.second->instantiate(level, unboundCount, cache);
-  return make_shared<FuncType>(name, canonicalName, g, a,
-                               ret->instantiate(level, unboundCount, cache));
+  auto i = implicitGenerics;
+  for (auto &t : i)
+    t.second = t.second->instantiate(level, unboundCount, cache);
+  auto t = make_shared<FuncType>(name, canonicalName, g, a,
+                                 ret->instantiate(level, unboundCount, cache));
+  t->setImplicits(i);
+  return t;
 }
 
 bool FuncType::hasUnbound() const {
@@ -284,6 +302,9 @@ bool FuncType::hasUnbound() const {
     if (t.second->hasUnbound())
       return true;
   for (auto &t : args)
+    if (t.second->hasUnbound())
+      return true;
+  for (auto &t : implicitGenerics)
     if (t.second->hasUnbound())
       return true;
   return ret->hasUnbound();
@@ -296,6 +317,9 @@ bool FuncType::canRealize() const {
   for (auto &t : args)
     if (!t.second->canRealize())
       return false;
+  for (auto &t : implicitGenerics)
+    if (!t.second->canRealize())
+      return false;
   return true;
 }
 
@@ -303,10 +327,10 @@ RecordType::RecordType(const string &name, const string &canonicalName,
                        const vector<pair<string, TypePtr>> &args)
     : name(name), canonicalName(canonicalName), args(args) {}
 
-string RecordType::str() const {
+string RecordType::str(bool reduced) const {
   vector<string> as;
   for (auto &a : args)
-    as.push_back(a.second->str());
+    as.push_back(a.second->str(reduced));
   return fmt::format("{}[{}]", name == "" ? "tuple" : name, fmt::join(as, ","));
 }
 
