@@ -328,6 +328,7 @@ void types::GenType::initOps() {
               func = cast<Function>(module->getOrInsertFunction(
                   name, outType->getLLVMType(context), getLLVMType(context)));
               func->setLinkage(GlobalValue::PrivateLinkage);
+              func->setDoesNotThrow();
               func->setPersonalityFn(makePersonalityFunc(module));
               func->addFnAttr(Attribute::AlwaysInline);
 
@@ -355,7 +356,6 @@ void types::GenType::initOps() {
               func = cast<Function>(module->getOrInsertFunction(
                   name, Bool->getLLVMType(context), getLLVMType(context)));
               func->setLinkage(GlobalValue::PrivateLinkage);
-              func->setDoesNotThrow();
               func->addFnAttr(Attribute::AlwaysInline);
 
               Value *arg = func->arg_begin();
