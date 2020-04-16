@@ -151,6 +151,15 @@ cimport bam_auxB2f(ptr[u8], idx: u32) -> float
 cimport bam_hdr_destroy(cobj)
 cimport bam_destroy1(cobj)
 
+# <vcf.h>
+cimport bcf_hdr_read(cobj) -> cobj
+cimport bcf_read(cobj, cobj, cobj) -> int
+cimport bcf_unpack(cobj, int) -> int
+cimport bcf_hdr_destroy(cobj)
+cimport bcf_init() -> cobj
+cimport bcf_destroy(cobj)
+
+
 # Seq HTSlib
 type SAMHeaderTarget(_name: str, _len: int)
 cimport seq_hts_get_name(cobj) -> str

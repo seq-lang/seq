@@ -1,0 +1,83 @@
+BCF_UN_STR  = 1
+BCF_UN_FLT  = 2
+BCF_UN_INFO = 4
+BCF_UN_SHR  = (BCF_UN_STR|BCF_UN_FLT|BCF_UN_INFO)
+BCF_UN_FMT  = 8
+BCF_UN_IND  = BCF_UN_FMT
+BCF_UN_ALL  = (BCF_UN_SHR|BCF_UN_FMT)
+
+class BCFHeader:
+    def __init__(self: BCFHeader, bcf_hdr: cobj):
+        pass
+
+class BCFHeaderRecord:
+    def __init__(self: BCFHeaderRecord, bcf_hrec: cobj):
+        pass
+
+type BCFIDPair(bcf_idpair: cobj):
+    pass
+
+type BCFIDInfo(bcf_idinfo: cobj):
+    pass
+
+class BCFRecord:
+    def __init__(self: BCFRecord, bcf1: cobj):
+        self.bcf1 = bcf1
+        
+
+class BCF:
+    file: cobj
+    hdr: cobj
+    seq_hdr: BCFHeader
+    bcf1_recs: list[cobj]
+
+
+    def __init__(self: BCF, path: str):
+        path_c_str = path.c_str()
+        file = _C.hts_open(path_c_str, "rb".c_str())
+        if not file:
+            raise IOError("file " + path + " could not be opened")
+
+        self.file = file
+        self.hdr = _C.bcf_hdr_read(self.file)
+        self.seq_hdr = BCFHeader(self.hdr)
+        self.bcf1_recs = list[cobj]()
+
+    def _ensure_open(self: BCF):
+        if not self.file:
+            raise IOError("I/O operation on closed VCF/BCF file")
+
+    def __iter__(self: BCF):
+        self._ensure_open()
+        while True:
+            bcf1_rec = _C.bcf_init()
+            status = int(_C.bcf_read(self.file, self.hdr, bcf1_rec))
+
+            if status == 0:
+                _C.bcf_unpack(bcf1_rec, BCF_UN_ALL) # TODO maybe change waht to unpack
+                bcf1Recs.append(bcf1_rec)
+                yield BCFRecord(bcf1_rec)
+            elif status == -1:
+                # end of file
+                _C.bcf_destroy(bcf1_rec)
+                break
+            elif status < -1:
+                raise IOError("Critical error while reading BCF file")
+    
+    def close(self: BCF):
+        for bcf1_rec in self.bcf1_recs:
+            _C.bcf_destroy(bcf1_rec)
+        _C.bcf_hdr_destroy(hdr)
+
+parser = BCF('./valid_vcf.vcf')
+for rec in parser:
+    pass
+parser.close()
+
+
+
+            
+
+
+
+
