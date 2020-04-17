@@ -2,7 +2,7 @@ from bio import *
 
 @test
 def test_parse_valid():
-    parser = FAI("test/data/valid_fai.fai", True, False, True)
+    parser = FAI("test/data/valid_fai.fai", True, True, False, True)
     first_row_expected = FAIRecord('fastq1', 66, 8, 30, 31, 79)
 
     assert first_row_expected == next(parser)
@@ -11,7 +11,7 @@ def test_parse_valid():
 
 @test
 def test_parse_invalid_missing_col():
-    parser = FAI("test/data/invalid/invalid_fai_misisng_col.fai", True, False, True)
+    parser = FAI("test/data/invalid/invalid_fai_missing_col.fai", True, True, False, True)
 
     try:
         for _ in parser:
@@ -22,7 +22,7 @@ def test_parse_invalid_missing_col():
 
 @test
 def test_parse_invalid_float():
-    parser = FAI("../data/invalid/invalid_fai_float_.fai", True, False, True)
+    parser = FAI("test/data/invalid/invalid_fai_float_.fai", True, True, False, True)
     try:
         for _ in parser:
             pass

@@ -25,6 +25,7 @@
 #include "lib.h"
 #include <gc.h>
 #include <htslib/sam.h>
+#include <htslib/vcf.h>
 
 using namespace std;
 
