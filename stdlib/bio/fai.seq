@@ -5,6 +5,7 @@ type FAIRecord(_name: str, _length: int, _offset: int, _linebases: int, _linewid
         return self._name
         
 class FAIReader:
+    fastq: bool
     validate: bool
     gzip: bool
     copy: bool
@@ -12,13 +13,14 @@ class FAIReader:
     col_names: list[str]
     num_necessary_cols: int # min number of columns for valid fai
 
-    def __init__(self: FAIReader, path: str, validate: bool, gzip: bool, copy: bool):
+    def __init__(self: FAIReader, path: str, fastq: bool, validate: bool, gzip: bool, copy: bool):
         self.validate = validate
         self.gzip = gzip
         self.copy = copy
         self._file = gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__()
         self.col_names = ["name", "length", "offset", "line_bases", "line_width", "qual_offset"]
-        self.num_necessary_cols = 6
+        self.num_necessary_cols = 6 if fastq else 5
+        self.fastq = fastq
 
     @property
     def file(self: FAIReader):
@@ -87,5 +89,8 @@ class FAIReader:
         else:
             self.file.close()
 
-def FAI(path: str, validate: bool = True, gzip: bool = True, copy: bool = True) -> FAIReader:
-    return FAIReader(path=path, validate=validate, gzip=gzip, copy=copy)
+def FAI(path: str, fastq: bool, validate: bool = True, gzip: bool = True, copy: bool = True) -> FAIReader:
+    return FAIReader(path=path, fastq=fastq, validate=validate, gzip=gzip, copy=copy)
+
+
+
