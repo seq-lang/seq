@@ -138,13 +138,15 @@ public:
   /// Type-checking helpers
   void increaseLevel();
   void decreaseLevel();
-  std::shared_ptr<LinkType> addUnbound(bool setActive = true);
+  std::shared_ptr<LinkType> addUnbound(const seq::SrcInfo &srcInfo,
+                                       bool setActive = true);
   /// Calls type->instantiate, but populates the instantiation table
   /// with "parent" type.
   /// Example: for list[T].foo, list[int].foo will populate type of foo so that
   /// the generic T gets mapped to int.
-  TypePtr instantiate(TypePtr type);
-  TypePtr instantiate(TypePtr type, const vector<pair<int, TypePtr>> &generics);
+  TypePtr instantiate(const seq::SrcInfo &srcInfo, TypePtr type);
+  TypePtr instantiate(const seq::SrcInfo &srcInfo, TypePtr type,
+                      const vector<pair<int, TypePtr>> &generics);
 
   /// Getters and setters for the method/member/realization lookup tables
   std::shared_ptr<FuncType> findMethod(std::shared_ptr<ClassType> type,
@@ -154,7 +156,29 @@ public:
   getRealizations(const FunctionStmt *stmt);
 };
 
-class TransformExprVisitor : public ExprVisitor {
+class SrcPosVisitor : public seq::SrcObject {
+public:
+  template <typename Tn, typename... Ts> auto N(Ts &&... args) {
+    auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
+    t->setSrcInfo(getSrcInfo());
+    return t;
+  }
+
+  template <typename Tn, typename... Ts>
+  auto Nx(const seq::SrcObject *s, Ts &&... args) {
+    auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
+    t->setSrcInfo(s->getSrcInfo());
+    return t;
+  }
+
+  template <typename Tt, typename... Ts> auto T(Ts &&... args) {
+    auto t = std::make_shared<Tt>(std::forward<Ts>(args)...);
+    t->setSrcInfo(getSrcInfo());
+    return t;
+  }
+};
+
+class TransformExprVisitor : public ExprVisitor, public SrcPosVisitor {
   TypeContext &ctx;
   ExprPtr result{nullptr};
   TransformStmtVisitor &stmtVisitor;
@@ -164,12 +188,16 @@ public:
   TransformExprVisitor(TypeContext &ctx, TransformStmtVisitor &sv);
   ExprPtr transform(const Expr *e);
 
-  std::vector<ExprPtr> transform(const std::vector<ExprPtr> &e);
-  // ...so that I don't have to write separate transform for each
-  // unique_ptr<T> case...
   template <typename T>
   auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
     return transform(t.get());
+  }
+
+  template <typename T> auto transform(const std::vector<T> &exprs) {
+    vector<T> r;
+    for (auto &e : exprs)
+      r.push_back(transform(e));
+    return r;
   }
 
   void visit(const NoneExpr *) override;
@@ -203,7 +231,7 @@ public:
   void visit(const YieldExpr *) override;
 };
 
-class TransformStmtVisitor : public StmtVisitor {
+class TransformStmtVisitor : public StmtVisitor, public SrcPosVisitor {
   TypeContext &ctx;
   std::vector<StmtPtr> prependStmts;
   StmtPtr result{nullptr};
@@ -227,11 +255,17 @@ public:
   StmtPtr transform(const Stmt *stmt);
   ExprPtr transform(const Expr *stmt);
   PatternPtr transform(const Pattern *stmt);
-  // ...so that I don't have to write separate transform for each
-  // unique_ptr<T> case...
+
   template <typename T>
   auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
     return transform(t.get());
+  }
+
+  template <typename T> auto transform(const std::vector<T> &exprs) {
+    vector<T> r;
+    for (auto &e : exprs)
+      r.push_back(transform(e));
+    return r;
   }
 
   virtual void visit(const SuiteStmt *) override;

@@ -14,14 +14,25 @@
 #include "parser/ast/types.h"
 #include "parser/ast/visitor.h"
 
-/// Macro that makes node accept XVisitor
-#define ACCEPT_VISITOR(X)                                                      \
+/// Macro that makes node cloneable and visitable
+/// This can be done via "modern" templates if one is in overly masochistic
+/// mood.
+#define NODE_UTILITY(X, Y)                                                     \
+  virtual X##Ptr clone() const override { return std::make_unique<Y>(*this); } \
   virtual void accept(X##Visitor &visitor) const override {                    \
     visitor.visit(this);                                                       \
   }
 
 namespace seq {
 namespace ast {
+
+struct Expr;
+struct Stmt;
+struct Pattern;
+
+typedef std::unique_ptr<Expr> ExprPtr;
+typedef std::unique_ptr<Stmt> StmtPtr;
+typedef std::unique_ptr<Pattern> PatternPtr;
 
 struct Expr : public seq::SrcObject {
 private:
@@ -34,8 +45,10 @@ private:
   bool _isType;
 
 public:
-  Expr() : _type(nullptr), _isType(false) {}
+  Expr();
+  Expr(const Expr &e);
   virtual ~Expr() {}
+  virtual ExprPtr clone() const = 0;
 
   /// Convert node to a string
   virtual std::string toString() const = 0;
@@ -56,8 +69,10 @@ public:
 
 struct Stmt : public seq::SrcObject {
   Stmt() = default;
+  Stmt(const Stmt &s);
   Stmt(const seq::SrcInfo &s);
   virtual ~Stmt() {}
+  virtual StmtPtr clone() const = 0;
 
   /// Convert node to a string
   virtual std::string toString() const = 0;
@@ -76,6 +91,7 @@ struct Stmt : public seq::SrcObject {
 
 struct Pattern : public seq::SrcObject {
   virtual ~Pattern() {}
+  virtual PatternPtr clone() const = 0;
 
   /// Convert node to a string
   virtual std::string toString() const = 0;
@@ -88,31 +104,30 @@ struct Pattern : public seq::SrcObject {
   }
 };
 
-typedef std::unique_ptr<Expr> ExprPtr;
-typedef std::unique_ptr<Stmt> StmtPtr;
-typedef std::unique_ptr<Pattern> PatternPtr;
-
 /// Type that models the function parameters
 /// (name: type = deflt)
 struct Param {
   std::string name;
   ExprPtr type;
   ExprPtr deflt;
+  Param clone() const;
   std::string toString() const;
 };
 
 struct NoneExpr : public Expr {
   NoneExpr();
+  NoneExpr(const NoneExpr &e);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, NoneExpr);
 };
 
 struct BoolExpr : public Expr {
   bool value;
 
   BoolExpr(bool v);
+  BoolExpr(const BoolExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, BoolExpr);
 };
 
 struct IntExpr : public Expr {
@@ -121,9 +136,10 @@ struct IntExpr : public Expr {
   std::string suffix;
 
   IntExpr(int v);
-  IntExpr(std::string v, std::string s = "");
+  IntExpr(const IntExpr &n);
+  IntExpr(const std::string &v, const std::string &s = "");
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, IntExpr);
 };
 
 struct FloatExpr : public Expr {
@@ -131,33 +147,37 @@ struct FloatExpr : public Expr {
   /// Number suffix (e.g. "u" for "123u")
   std::string suffix;
 
-  FloatExpr(double v, std::string s = "");
+  FloatExpr(double v, const std::string &s = "");
+  FloatExpr(const FloatExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, FloatExpr);
 };
 
 struct StringExpr : public Expr {
   std::string value;
 
-  StringExpr(std::string v);
+  StringExpr(const std::string &v);
+  StringExpr(const StringExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, StringExpr);
 };
 
 struct FStringExpr : public Expr {
   std::string value;
 
-  FStringExpr(std::string v);
+  FStringExpr(const std::string &v);
+  FStringExpr(const FStringExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, FStringExpr);
 };
 
 struct KmerExpr : public Expr {
   std::string value;
 
-  KmerExpr(std::string v);
+  KmerExpr(const std::string &v);
+  KmerExpr(const KmerExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, KmerExpr);
 };
 
 struct SeqExpr : public Expr {
@@ -165,17 +185,19 @@ struct SeqExpr : public Expr {
   std::string prefix;
   std::string value;
 
-  SeqExpr(std::string v, std::string p = "s");
+  SeqExpr(const std::string &v, const std::string &p = "s");
+  SeqExpr(const SeqExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, SeqExpr);
 };
 
 struct IdExpr : public Expr {
   std::string value;
 
-  IdExpr(std::string v);
+  IdExpr(const std::string &v);
+  IdExpr(const IdExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, IdExpr);
 };
 
 struct UnpackExpr : public Expr {
@@ -183,43 +205,49 @@ struct UnpackExpr : public Expr {
   ExprPtr what;
 
   UnpackExpr(ExprPtr w);
+  UnpackExpr(const UnpackExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, UnpackExpr);
 };
 
 struct TupleExpr : public Expr {
   std::vector<ExprPtr> items;
 
-  TupleExpr(std::vector<ExprPtr> i);
+  TupleExpr(std::vector<ExprPtr> &&i);
+  TupleExpr(const TupleExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, TupleExpr);
 };
 
 struct ListExpr : public Expr {
   std::vector<ExprPtr> items;
 
-  ListExpr(std::vector<ExprPtr> i);
+  ListExpr(std::vector<ExprPtr> &&i);
+  ListExpr(const ListExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, ListExpr);
 };
 
 struct SetExpr : public Expr {
   std::vector<ExprPtr> items;
 
-  SetExpr(std::vector<ExprPtr> i);
+  SetExpr(std::vector<ExprPtr> &&i);
+  SetExpr(const SetExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, SetExpr);
 };
 
 struct DictExpr : public Expr {
   struct KeyValue {
     ExprPtr key, value;
+    KeyValue clone() const;
   };
   std::vector<KeyValue> items;
 
-  DictExpr(std::vector<KeyValue> it);
+  DictExpr(std::vector<KeyValue> &&it);
+  DictExpr(const DictExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, DictExpr);
 };
 
 struct GeneratorExpr : public Expr {
@@ -230,15 +258,17 @@ struct GeneratorExpr : public Expr {
     std::vector<std::string> vars;
     ExprPtr gen;
     std::vector<ExprPtr> conds;
+    Body clone() const;
   };
 
   Kind kind;
   ExprPtr expr;
   std::vector<Body> loops;
 
-  GeneratorExpr(Kind k, ExprPtr e, std::vector<Body> l);
+  GeneratorExpr(Kind k, ExprPtr e, std::vector<Body> &&l);
+  GeneratorExpr(const GeneratorExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, GeneratorExpr);
 };
 
 struct DictGeneratorExpr : public Expr {
@@ -248,26 +278,29 @@ struct DictGeneratorExpr : public Expr {
   ExprPtr key, expr;
   std::vector<GeneratorExpr::Body> loops;
 
-  DictGeneratorExpr(ExprPtr k, ExprPtr e, std::vector<GeneratorExpr::Body> l);
+  DictGeneratorExpr(ExprPtr k, ExprPtr e, std::vector<GeneratorExpr::Body> &&l);
+  DictGeneratorExpr(const DictGeneratorExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, DictGeneratorExpr);
 };
 
 struct IfExpr : public Expr {
   ExprPtr cond, eif, eelse;
 
   IfExpr(ExprPtr c, ExprPtr i, ExprPtr e);
+  IfExpr(const IfExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, IfExpr);
 };
 
 struct UnaryExpr : public Expr {
   std::string op;
   ExprPtr expr;
 
-  UnaryExpr(std::string o, ExprPtr e);
+  UnaryExpr(const std::string &o, ExprPtr e);
+  UnaryExpr(const UnaryExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, UnaryExpr);
 };
 
 struct BinaryExpr : public Expr {
@@ -276,9 +309,10 @@ struct BinaryExpr : public Expr {
   /// Does this expression modify lhs (e.g. a += b)?
   bool inPlace;
 
-  BinaryExpr(ExprPtr l, std::string o, ExprPtr r, bool i = false);
+  BinaryExpr(ExprPtr l, const std::string &o, ExprPtr r, bool i = false);
+  BinaryExpr(const BinaryExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, BinaryExpr);
 };
 
 struct PipeExpr : public Expr {
@@ -288,21 +322,24 @@ struct PipeExpr : public Expr {
   struct Pipe {
     std::string op;
     ExprPtr expr;
+    Pipe clone() const;
   };
 
   std::vector<Pipe> items;
 
-  PipeExpr(std::vector<Pipe> it);
+  PipeExpr(std::vector<Pipe> &&it);
+  PipeExpr(const PipeExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, PipeExpr);
 };
 
 struct IndexExpr : public Expr {
   ExprPtr expr, index;
 
   IndexExpr(ExprPtr e, ExprPtr i);
+  IndexExpr(const IndexExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, IndexExpr);
 };
 
 struct CallExpr : public Expr {
@@ -310,29 +347,32 @@ struct CallExpr : public Expr {
   struct Arg {
     std::string name;
     ExprPtr value;
+    Arg clone() const;
   };
 
   ExprPtr expr;
   std::vector<Arg> args;
 
-  CallExpr(ExprPtr e, std::vector<Arg> a);
+  CallExpr(ExprPtr e, std::vector<Arg> &&a);
+  CallExpr(const CallExpr &n);
   /// Simple call e(a...)
-  CallExpr(ExprPtr e, std::vector<ExprPtr> a);
+  CallExpr(ExprPtr e, std::vector<ExprPtr> &&a);
   /// Simple call e(arg)
   CallExpr(ExprPtr e, ExprPtr arg);
   /// Simple call e()
   CallExpr(ExprPtr e);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, CallExpr);
 };
 
 struct DotExpr : public Expr {
   ExprPtr expr;
   std::string member;
 
-  DotExpr(ExprPtr e, std::string m);
+  DotExpr(ExprPtr e, const std::string &m);
+  DotExpr(const DotExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, DotExpr);
 };
 
 struct SliceExpr : public Expr {
@@ -340,32 +380,36 @@ struct SliceExpr : public Expr {
   ExprPtr st, ed, step;
 
   SliceExpr(ExprPtr s, ExprPtr e, ExprPtr st);
+  SliceExpr(const SliceExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, SliceExpr);
 };
 
 struct EllipsisExpr : public Expr {
   /// Expression ..., currently used in partial calls
   EllipsisExpr();
+  EllipsisExpr(const EllipsisExpr &n);
 
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, EllipsisExpr);
 };
 
 struct TypeOfExpr : public Expr {
   ExprPtr expr;
 
   TypeOfExpr(ExprPtr e);
+  TypeOfExpr(const TypeOfExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, TypeOfExpr);
 };
 
 struct PtrExpr : public Expr {
   ExprPtr expr;
 
   PtrExpr(ExprPtr e);
+  PtrExpr(const PtrExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, PtrExpr);
 };
 
 struct LambdaExpr : public Expr {
@@ -374,16 +418,18 @@ struct LambdaExpr : public Expr {
   ExprPtr expr;
 
   LambdaExpr(std::vector<std::string> v, ExprPtr e);
+  LambdaExpr(const LambdaExpr &n);
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, LambdaExpr);
 };
 
 struct YieldExpr : public Expr {
   /// Expression: (yield) (send to generator)
   YieldExpr();
+  YieldExpr(const YieldExpr &n);
 
   std::string toString() const override;
-  ACCEPT_VISITOR(Expr);
+  NODE_UTILITY(Expr, YieldExpr);
 };
 
 struct SuiteStmt : public Stmt {
@@ -393,36 +439,41 @@ struct SuiteStmt : public Stmt {
 
   std::vector<StmtPtr> stmts;
 
-  SuiteStmt(std::vector<StmtPtr> s);
+  SuiteStmt(std::vector<StmtPtr> &&s);
+  SuiteStmt(const SuiteStmt &s);
   std::string toString() const override;
   std::vector<Stmt *> getStatements() override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, SuiteStmt);
 };
 
 struct PassStmt : public Stmt {
   PassStmt();
+  PassStmt(const PassStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, PassStmt);
 };
 
 struct BreakStmt : public Stmt {
   BreakStmt();
+  BreakStmt(const BreakStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, BreakStmt);
 };
 
 struct ContinueStmt : public Stmt {
   ContinueStmt();
+  ContinueStmt(const ContinueStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ContinueStmt);
 };
 
 struct ExprStmt : public Stmt {
   ExprPtr expr;
 
   ExprStmt(ExprPtr e);
+  ExprStmt(const ExprStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ExprStmt);
 };
 
 struct AssignStmt : public Stmt {
@@ -435,24 +486,27 @@ struct AssignStmt : public Stmt {
 
   AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr, bool m = false,
              bool f = false);
+  AssignStmt(const AssignStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, AssignStmt);
 };
 
 struct DelStmt : public Stmt {
   ExprPtr expr;
 
   DelStmt(ExprPtr e);
+  DelStmt(const DelStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, DelStmt);
 };
 
 struct PrintStmt : public Stmt {
   ExprPtr expr;
 
   PrintStmt(ExprPtr i);
+  PrintStmt(const PrintStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, PrintStmt);
 };
 
 struct ReturnStmt : public Stmt {
@@ -460,8 +514,9 @@ struct ReturnStmt : public Stmt {
   ExprPtr expr;
 
   ReturnStmt(ExprPtr e);
+  ReturnStmt(const ReturnStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ReturnStmt);
 };
 
 struct YieldStmt : public Stmt {
@@ -469,16 +524,18 @@ struct YieldStmt : public Stmt {
   ExprPtr expr;
 
   YieldStmt(ExprPtr e);
+  YieldStmt(const YieldStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, YieldStmt);
 };
 
 struct AssertStmt : public Stmt {
   ExprPtr expr;
 
   AssertStmt(ExprPtr e);
+  AssertStmt(const AssertStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, AssertStmt);
 };
 
 struct WhileStmt : public Stmt {
@@ -487,8 +544,9 @@ struct WhileStmt : public Stmt {
   StmtPtr suite;
 
   WhileStmt(ExprPtr c, StmtPtr s);
+  WhileStmt(const WhileStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, WhileStmt);
 };
 
 struct ForStmt : public Stmt {
@@ -498,8 +556,9 @@ struct ForStmt : public Stmt {
   StmtPtr suite;
 
   ForStmt(ExprPtr v, ExprPtr i, StmtPtr s);
+  ForStmt(const ForStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ForStmt);
 };
 
 struct IfStmt : public Stmt {
@@ -507,23 +566,28 @@ struct IfStmt : public Stmt {
   struct If {
     ExprPtr cond;
     StmtPtr suite;
+    If clone() const;
   };
 
   /// Last member of ifs has cond = nullptr (else block)
   std::vector<If> ifs;
 
-  IfStmt(std::vector<If> i);
+  IfStmt(std::vector<If> &&i);
+  IfStmt(const IfStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, IfStmt);
 };
 
 struct MatchStmt : public Stmt {
   ExprPtr what;
-  std::vector<std::pair<PatternPtr, StmtPtr>> cases;
+  std::vector<PatternPtr> patterns;
+  std::vector<StmtPtr> cases;
 
-  MatchStmt(ExprPtr w, std::vector<std::pair<PatternPtr, StmtPtr>> c);
+  MatchStmt(ExprPtr w, std::vector<PatternPtr> &&p, std::vector<StmtPtr> &&c);
+  MatchStmt(ExprPtr w, std::vector<std::pair<PatternPtr, StmtPtr>> &&v);
+  MatchStmt(const MatchStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, MatchStmt);
 };
 
 struct ExtendStmt : public Stmt {
@@ -531,8 +595,9 @@ struct ExtendStmt : public Stmt {
   StmtPtr suite;
 
   ExtendStmt(ExprPtr e, StmtPtr s);
+  ExtendStmt(const ExtendStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ExtendStmt);
 };
 
 struct ImportStmt : public Stmt {
@@ -545,9 +610,10 @@ struct ImportStmt : public Stmt {
   Item from;
   std::vector<Item> what;
 
-  ImportStmt(Item f, std::vector<Item> w);
+  ImportStmt(const Item &f, const std::vector<Item> &w);
+  ImportStmt(const ImportStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ImportStmt);
 };
 
 struct ExternImportStmt : public Stmt {
@@ -561,10 +627,11 @@ struct ExternImportStmt : public Stmt {
   /// Indicates language (c, py, r)
   std::string lang;
 
-  ExternImportStmt(ImportStmt::Item n, ExprPtr f, ExprPtr t,
-                   std::vector<Param> a, std::string l);
+  ExternImportStmt(const ImportStmt::Item &n, ExprPtr f, ExprPtr t,
+                   std::vector<Param> &&a, const std::string &l);
+  ExternImportStmt(const ExternImportStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ExternImportStmt);
 };
 
 struct TryStmt : public Stmt {
@@ -572,31 +639,36 @@ struct TryStmt : public Stmt {
     std::string var;
     ExprPtr exc;
     StmtPtr suite;
+
+    Catch clone() const;
   };
 
   StmtPtr suite;
   std::vector<Catch> catches;
   StmtPtr finally;
 
-  TryStmt(StmtPtr s, std::vector<Catch> c, StmtPtr f);
+  TryStmt(StmtPtr s, std::vector<Catch> &&c, StmtPtr f);
+  TryStmt(const TryStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, TryStmt);
 };
 
 struct GlobalStmt : public Stmt {
   std::string var;
 
-  GlobalStmt(std::string v);
+  GlobalStmt(const std::string &v);
+  GlobalStmt(const GlobalStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, GlobalStmt);
 };
 
 struct ThrowStmt : public Stmt {
   ExprPtr expr;
 
   ThrowStmt(ExprPtr e);
+  ThrowStmt(const ThrowStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ThrowStmt);
 };
 
 struct FunctionStmt : public Stmt {
@@ -608,11 +680,12 @@ struct FunctionStmt : public Stmt {
   /// List of attributes (e.g. @internal @prefetch)
   std::vector<std::string> attributes;
 
-  FunctionStmt(std::string n, ExprPtr r, std::vector<std::string> g,
-               std::vector<Param> a, std::shared_ptr<Stmt> s,
-               std::vector<std::string> at);
+  FunctionStmt(const std::string &n, ExprPtr r,
+               const std::vector<std::string> &g, std::vector<Param> &&a,
+               std::shared_ptr<Stmt> s, const std::vector<std::string> &at);
+  FunctionStmt(const FunctionStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, FunctionStmt);
 };
 
 struct PyDefStmt : public Stmt {
@@ -621,9 +694,11 @@ struct PyDefStmt : public Stmt {
   std::vector<Param> args;
   std::string code;
 
-  PyDefStmt(std::string n, ExprPtr r, std::vector<Param> a, std::string s);
+  PyDefStmt(const std::string &n, ExprPtr r, std::vector<Param> &&a,
+            const std::string &s);
+  PyDefStmt(const PyDefStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, PyDefStmt);
 };
 
 struct ClassStmt : public Stmt {
@@ -634,10 +709,11 @@ struct ClassStmt : public Stmt {
   std::vector<Param> args;
   StmtPtr suite;
 
-  ClassStmt(bool i, std::string n, std::vector<std::string> g,
-            std::vector<Param> a, StmtPtr s);
+  ClassStmt(bool i, const std::string &n, const std::vector<std::string> &g,
+            std::vector<Param> &&a, StmtPtr s);
+  ClassStmt(const ClassStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, ClassStmt);
 };
 
 struct DeclareStmt : public Stmt {
@@ -645,8 +721,9 @@ struct DeclareStmt : public Stmt {
   Param param;
 
   DeclareStmt(Param p);
+  DeclareStmt(const DeclareStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, DeclareStmt);
 };
 
 struct AssignEqStmt : public Stmt {
@@ -654,105 +731,120 @@ struct AssignEqStmt : public Stmt {
   ExprPtr lhs, rhs;
   std::string op;
 
-  AssignEqStmt(ExprPtr l, ExprPtr r, std::string o);
+  AssignEqStmt(ExprPtr l, ExprPtr r, const std::string &o);
+  AssignEqStmt(const AssignEqStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, AssignEqStmt);
 };
 
 struct YieldFromStmt : public Stmt {
   ExprPtr expr;
 
   YieldFromStmt(ExprPtr e);
+  YieldFromStmt(const YieldFromStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, YieldFromStmt);
 };
 
 struct WithStmt : public Stmt {
-  typedef std::pair<ExprPtr, std::string> Item;
-  std::vector<Item> items;
+  std::vector<ExprPtr> items;
+  std::vector<std::string> vars;
   StmtPtr suite;
 
-  WithStmt(std::vector<Item> i, StmtPtr s);
+  WithStmt(std::vector<ExprPtr> &&i, const std::vector<std::string> &v,
+           StmtPtr s);
+  WithStmt(std::vector<std::pair<ExprPtr, std::string>> &&v, StmtPtr s);
+  WithStmt(const WithStmt &s);
   std::string toString() const override;
-  ACCEPT_VISITOR(Stmt);
+  NODE_UTILITY(Stmt, WithStmt);
 };
 
 struct StarPattern : public Pattern {
   StarPattern();
+  StarPattern(const StarPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, StarPattern);
 };
 
 struct IntPattern : public Pattern {
   int value;
 
   IntPattern(int v);
+  IntPattern(const IntPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, IntPattern);
 };
 
 struct BoolPattern : public Pattern {
   bool value;
 
   BoolPattern(bool v);
+  BoolPattern(const BoolPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, BoolPattern);
 };
 
 struct StrPattern : public Pattern {
   std::string value;
 
-  StrPattern(std::string v);
+  StrPattern(const std::string &v);
+  StrPattern(const StrPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, StrPattern);
 };
 
 struct SeqPattern : public Pattern {
   std::string value;
 
-  SeqPattern(std::string v);
+  SeqPattern(const std::string &v);
+  SeqPattern(const SeqPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, SeqPattern);
 };
 
 struct RangePattern : public Pattern {
   int start, end;
 
   RangePattern(int s, int e);
+  RangePattern(const RangePattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, RangePattern);
 };
 
 struct TuplePattern : public Pattern {
   std::vector<PatternPtr> patterns;
 
-  TuplePattern(std::vector<PatternPtr> p);
+  TuplePattern(std::vector<PatternPtr> &&p);
+  TuplePattern(const TuplePattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, TuplePattern);
 };
 
 struct ListPattern : public Pattern {
   std::vector<PatternPtr> patterns;
 
-  ListPattern(std::vector<PatternPtr> p);
+  ListPattern(std::vector<PatternPtr> &&p);
+  ListPattern(const ListPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, ListPattern);
 };
 
 struct OrPattern : public Pattern {
   std::vector<PatternPtr> patterns;
 
-  OrPattern(std::vector<PatternPtr> p);
+  OrPattern(std::vector<PatternPtr> &&p);
+  OrPattern(const OrPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, OrPattern);
 };
 
 struct WildcardPattern : public Pattern {
   std::string var;
 
-  WildcardPattern(std::string v);
+  WildcardPattern(const std::string &v);
+  WildcardPattern(const WildcardPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, WildcardPattern);
 };
 
 struct GuardedPattern : public Pattern {
@@ -760,17 +852,19 @@ struct GuardedPattern : public Pattern {
   ExprPtr cond;
 
   GuardedPattern(PatternPtr p, ExprPtr c);
+  GuardedPattern(const GuardedPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, GuardedPattern);
 };
 
 struct BoundPattern : public Pattern {
   std::string var;
   PatternPtr pattern;
 
-  BoundPattern(std::string v, PatternPtr p);
+  BoundPattern(const std::string &v, PatternPtr p);
+  BoundPattern(const BoundPattern &p);
   std::string toString() const override;
-  ACCEPT_VISITOR(Pattern);
+  NODE_UTILITY(Pattern, BoundPattern);
 };
 
 } // namespace ast

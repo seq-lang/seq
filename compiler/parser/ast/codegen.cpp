@@ -772,11 +772,11 @@ void CodegenStmtVisitor::visit(const IfStmt *stmt) {
 void CodegenStmtVisitor::visit(const MatchStmt *stmt) {
   auto m = new seq::Match();
   m->setValue(transform(stmt->what));
-  for (auto &c : stmt->cases) {
+  for (auto ci = 0; ci < stmt->cases.size(); ci++) {
     string varName;
     seq::Var *var = nullptr;
     seq::Pattern *pat;
-    if (auto p = dynamic_cast<BoundPattern *>(c.first.get())) {
+    if (auto p = dynamic_cast<BoundPattern *>(stmt->patterns[ci].get())) {
       ctx.addBlock();
       auto boundPat = new seq::BoundPattern(transform(p->pattern));
       var = boundPat->getVar();
@@ -785,12 +785,12 @@ void CodegenStmtVisitor::visit(const MatchStmt *stmt) {
       ctx.popBlock();
     } else {
       ctx.addBlock();
-      pat = transform(c.first);
+      pat = transform(stmt->patterns[ci]);
       ctx.popBlock();
     }
     auto block = m->addCase(pat);
     ctx.addBlock(block);
-    transform(c.second);
+    transform(stmt->cases[ci]);
     if (var) {
       ctx.add(varName, var);
     }

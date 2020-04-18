@@ -45,34 +45,43 @@ string LinkType::str(bool reduced) const {
 
 bool LinkType::occurs(Type *typ) {
   if (auto t = dynamic_cast<LinkType *>(typ)) {
-    if (t->kind == Unbound && t->id == id) {
-      return true;
-    } else if (t->kind == Unbound) {
-      // Link higher level unbound to lower level
-      id = min(id, t->id);
-      level = min(level, t->level);
+    if (t->kind == Unbound) {
+      if (t->id == id)
+        return true;
+      if (t->level > level)
+        t->level = level;
+      return false;
     } else if (t->kind == Link) {
       return occurs(t->type.get());
+    } else {
+      return false;
     }
   } else if (auto t = dynamic_cast<ClassType *>(typ)) {
     for (auto &t : t->generics)
       if (occurs(t.second.get()))
         return true;
+    return false;
   } else if (auto t = dynamic_cast<FuncType *>(typ)) {
     if (occurs(t->ret.get()))
       return true;
+    for (auto &t : t->implicitGenerics)
+      if (occurs(t.second.get()))
+        return true;
     for (auto &t : t->generics)
       if (occurs(t.second.get()))
         return true;
     for (auto &t : t->args)
       if (occurs(t.second.get()))
         return true;
+    return false;
   } else if (auto t = dynamic_cast<RecordType *>(typ)) {
     for (auto &t : t->args)
       if (occurs(t.second.get()))
         return true;
+    return false;
+  } else {
+    return false;
   }
-  return false;
 }
 
 int LinkType::unify(TypePtr typ) {
@@ -94,6 +103,7 @@ int LinkType::unify(TypePtr typ) {
         return 1;
     }
     if (!occurs(typ.get())) {
+      DBG("UNIFIED:  {} := {}", *this, *typ);
       kind = Link;
       type = typ;
       return 0;

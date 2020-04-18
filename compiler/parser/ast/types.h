@@ -27,7 +27,7 @@ struct ClassType;
 struct Type;
 typedef shared_ptr<Type> TypePtr;
 
-struct Type : public seq::SrcInfo, public std::enable_shared_from_this<Type> {
+struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
 public:
   /// The following procedures implement the quintessential parts of
   /// Hindley-Milner's Algorithm W.

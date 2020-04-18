@@ -8,9 +8,12 @@
 
 #include "lang/seq.h"
 
+extern int __level__;
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-#define DBG(c, ...) fmt::print(c "\n", ##__VA_ARGS__)
+#define DBG(c, ...)                                                            \
+  fmt::print("{}" c "\n", string(2 * __level__, ' '), ##__VA_ARGS__)
 #pragma clang diagnostic pop
 
 namespace seq {

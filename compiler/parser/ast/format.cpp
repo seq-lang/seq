@@ -353,10 +353,9 @@ void FormatStmtVisitor::visit(const IfStmt *stmt) {
 
 void FormatStmtVisitor::visit(const MatchStmt *stmt) {
   string s;
-  for (auto &c : stmt->cases) {
+  for (int ci = 0; ci < stmt->cases.size(); ci++)
     s += format("{}" KEYWORD("case") " {}:" NEWLINE "{}" NEWLINE, pad(1),
-                transform(c.first), transform(c.second, 2));
-  }
+                transform(stmt->patterns[ci]), transform(stmt->cases[ci], 2));
   result =
       format(KEYWORD("match") " {}:" NEWLINE "{}", transform(stmt->what), s);
 }
@@ -491,9 +490,10 @@ void FormatStmtVisitor::visit(const YieldFromStmt *stmt) {
 
 void FormatStmtVisitor::visit(const WithStmt *stmt) {
   vector<string> what;
-  for (auto &w : stmt->items) {
-    what.push_back(format("{}{}", *w.first,
-                          w.second == "" ? "" : format(" as {}", w.second)));
+  for (int wi = 0; wi < stmt->items.size(); wi++) {
+    what.push_back(
+        format("{}{}", *stmt->items[wi],
+               stmt->vars[wi] == "" ? "" : format(" as {}", stmt->vars[wi])));
   }
   result = format(KEYWORD("with") " {}:" NEWLINE "{}", fmt::join(what, ", "),
                   transform(stmt->suite, 1));
