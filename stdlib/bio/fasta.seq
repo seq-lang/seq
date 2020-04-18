@@ -1,3 +1,5 @@
+from bio.fai import FAIRecord, FAI
+
 # FASTA format parser
 # https://en.wikipedia.org/wiki/FASTA_format
 type FASTARecord(_header: str, _seq: seq):
@@ -19,22 +21,31 @@ type FASTARecord(_header: str, _seq: seq):
     def seq(self: FASTARecord):
         return self._seq
 
-type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, gzip: bool, copy: bool):
-    def __init__(self: FASTAReader, path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
-        fai_list = list[int]() if fai else None
-        names = list[str]() if fai else None
+class FASTAReader:
+    _file: cobj 
+    path: str
+    fai: list[FAIRecord]
+    name_fai_map: dict[str, FAIRecord]
+    validate: bool
+    gzip: bool
+    copy: bool
+
+    def __init__(self: FASTAReader, path: str, validate: bool, gzip: bool, copy: bool, fai: bool):
+        fai_list = list[FAIRecord]() if fai else None
+        name_fai_map = dict[str, FAIRecord]() if fai else None
+
         if fai:
-            with gzopen(path + ".fai", "r") as fai_file:
-                for line in fai_file:
-                    assert line
-                    cut = 0
-                    while line[cut] != "\t":
-                        cut += 1
-                    name = line[:cut]
-                    line = line[cut:]
-                    fai_list.append(_C.atoi(line.ptr))
-                    names.append(name)
-        return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), fai_list, names, validate, gzip, copy)
+            for rec in FAI(path + ".fai", False):
+                fai_list.append(rec)
+                name_fai_map[rec.name] = rec
+
+        self._file = gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__()
+        self.path = path
+        self.fai = fai_list
+        self.name_fai_map = name_fai_map
+        self.validate = validate
+        self.gzip = gzip
+        self.copy = copy
 
     @property
     def file(self: FASTAReader):
@@ -77,11 +88,31 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
         n += s.len
         return p, n, m
 
-    def _iter_core(self: FASTAReader, file) -> FASTARecord:
-        def header_check(rec_name: str, fai_name: str):
-            if rec_name != fai_name:
-                raise ValueError(f"FASTA index name mismatch: got {repr(rec_name)} but expected {repr(fai_name)}")
+    def header_check(self: FASTAReader, rec_name: str, fai_name: str):
+        if rec_name != fai_name:
+            raise ValueError(f"FASTA index name mismatch: got {repr(rec_name)} but expected {repr(fai_name)}")
+    
+    def make_FASTARecord(self: FASTAReader, p: ptr[byte], expected_len: int, actual_len: int, fai_name: str, prev_header: str) -> FASTARecord:
+        assert expected_len == actual_len
+        rec = FASTARecord(prev_header, seq(p, expected_len))
+        if self.validate:
+            rec_name = rec.name
+            self.header_check(rec_name, fai_name)
+        return rec
+    
+    def extend_seq(self: FASTAReader, p: ptr[byte], expected_len: int, current_len: int, line: str):
+        assert current_len + len(line) <= expected_len
+        if self.validate:
+            i = 0
+            while i < len(line):
+                b = line.ptr[i]
+                FASTAReader._check(b, i + current_len)
+                p[i + current_len] = b
+                i += 1
+        else:
+            str.memcpy(p + current_len, line.ptr, len(line))
 
+    def _iter_core(self: FASTAReader, file) -> FASTARecord:
         if self.fai is not None:
             idx = 0
             p = ptr[byte]()
@@ -92,38 +123,19 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
                 if a == "": continue
                 if a[0] == ">":
                     if n > 0:
-                        assert m == n
-                        rec = FASTARecord(prev_header, seq(p, n))
-                        if self.validate:
-                            rec_name = rec.name
-                            fai_name = self.names[idx - 1]
-                            header_check(rec_name, fai_name)
-                        yield rec
+                        yield self.make_FASTARecord(p, n, m, self.fai[idx - 1].name, prev_header)
+
                     prev_header = copy(a[1:])
-                    n = self.fai[idx]
+                    n = self.fai[idx].length
                     p = ptr[byte](n)
                     m = 0
                     idx += 1
                 else:
-                    assert m + len(a) <= n
-                    if self.validate:
-                        i = 0
-                        while i < len(a):
-                            b = a.ptr[i]
-                            FASTAReader._check(b, i + m)
-                            p[i + m] = b
-                            i += 1
-                    else:
-                        str.memcpy(p + m, a.ptr, len(a))
+                    self.extend_seq(p, n, m, a)
                     m += len(a)
+
             if n > 0:
-                assert m == n
-                rec = FASTARecord(prev_header, seq(p, n))
-                if self.validate:
-                    rec_name = rec.name
-                    fai_name = self.names[-1]
-                    header_check(rec_name, fai_name)
-                yield rec
+                yield self.make_FASTARecord(p, n, m, self.fai[idx - 1].name, prev_header)
         else:
             m = 256
             p = ptr[byte](m)
@@ -154,6 +166,51 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
         if not self.copy:
             raise ValueError("cannot read sequences in blocks with copy=False")
         return _blocks(self.__iter__(), size)
+
+    def _getitem(self: FASTAReader, name: str, file):
+
+        if not self.fai:
+            raise ValueError("Need to set fai to True to reference by sequence name")
+        if not name in self.name_fai_map:
+            raise ValueError(f"Sequence with name {name} cannot be found")
+        
+        fai_rec = self.name_fai_map[name]
+        
+        old_file_pos = file.tell()
+        file.seek(fai_rec.offset, 0)
+        
+        m = 0              # length of the sequence calculated from the line length
+        n = fai_rec.length # length of the sequence, according to fai
+        p = ptr[byte](n)
+        s: seq = s''
+        prev_header = fai_rec.name
+
+        for a in file._iter():
+            if a[0] == ">":
+                if n > 0:
+                    s = self.make_FASTARecord(p, n, m, fai_rec.name, prev_header).seq
+                break
+            else:
+                self.extend_seq(p, n, m, a)
+                m += len(a)
+
+        if len(s) == 0 and n > 0:
+            s = self.make_FASTARecord(p, n, m, fai_rec.name, prev_header).seq
+
+        file.seek(old_file_pos, 0)
+
+        return s
+    
+    def __getitem__(self: FASTAReader, name: str):
+
+        if self.gzip:
+            if self.gzfile.closed():
+                self._file = gzopen(self.path, "r").__raw__() if self.gzip else open(self.path, "r").__raw__()
+            return self._getitem(name, self.gzfile)
+        else:
+            if self.gzfile.closed():
+                self._file = gzopen(self.path, "r").__raw__() if self.gzip else open(self.path, "r").__raw__()
+            return self._getitem(name, self.file)
 
     def close(self: FASTAReader):
         if self.gzip:

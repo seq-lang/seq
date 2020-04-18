@@ -419,6 +419,13 @@ def test_fastq_comments():
                  ('SL-HXF:348:HKLFWCCXX:1:2220:28361:38491:CACCAAAAGTACATGA\t\tcomment with tabs', 'SL-HXF:348:HKLFWCCXX:1:2220:28361:38491:CACCAAAAGTACATGA', 'comment with tabs'),
                  ('SL-HXF:348:HKLFWCCXX:4:1106:4553:37893:CACCAAAAGTACATGA', 'SL-HXF:348:HKLFWCCXX:4:1106:4553:37893:CACCAAAAGTACATGA', '')]
 
+@test
+def test_fasta_with_fai():
+    f = FASTA("test/data/sample_fasta_for_fai.fasta")
+    assert f['two'] == s'ATGCATGCATGCATGCATGCATGCATGC'
+    assert f['one'] == s'ATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCAT'
+    f.close()
+
 test_fasta_options()
 test_fastq_options()
 test_seqs_options()
@@ -433,3 +440,4 @@ test_fastq_bad_base()
 test_fasta_bad_base()
 test_fasta_comments()
 test_fastq_comments()
+test_fasta_with_fai()

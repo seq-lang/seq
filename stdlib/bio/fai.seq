@@ -3,7 +3,27 @@ type FAIRecord(_name: str, _length: int, _offset: int, _linebases: int, _linewid
     @property
     def name(self: FAIRecord):
         return self._name
-        
+    
+    @property
+    def length(self: FAIRecord):
+        return self._length
+
+    @property
+    def offset(self: FAIRecord):
+        return self._offset
+
+    @property
+    def linebases(self: FAIRecord):
+        return self._linebases
+
+    @property
+    def linewidth(self: FAIRecord):
+        return self._linewidth
+    
+    @property
+    def qualoffset(self: FAIRecord):
+        return self._qualoffset
+
 class FAIReader:
     fastq: bool
     validate: bool
@@ -47,6 +67,7 @@ class FAIReader:
             yield from self._iter_core(self.gzfile)
         else:
             yield from self._iter_core(self.file)
+        self.close()
 
     def FAIRecord_from_str(self: FAIReader, s: str, lnum: int):
         col_strs = s.split("\t")
@@ -88,6 +109,12 @@ class FAIReader:
             self.gzfile.close()
         else:
             self.file.close()
+
+    def __enter__(self: FAIReader):
+        pass
+
+    def __exit__(self: FAIReader):
+        self.close()
 
 def FAI(path: str, fastq: bool, validate: bool = True, gzip: bool = True, copy: bool = True) -> FAIReader:
     return FAIReader(path=path, fastq=fastq, validate=validate, gzip=gzip, copy=copy)
