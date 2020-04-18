@@ -21,6 +21,7 @@ type BCFIDInfo(bcf_idinfo: cobj):
     pass
 
 class BCFRecord:
+    bcf1: cobj
     def __init__(self: BCFRecord, bcf1: cobj):
         self.bcf1 = bcf1
         
@@ -55,7 +56,7 @@ class BCF:
 
             if status == 0:
                 _C.bcf_unpack(bcf1_rec, BCF_UN_ALL) # TODO maybe change waht to unpack
-                bcf1Recs.append(bcf1_rec)
+                self.bcf1_recs.append(bcf1_rec)
                 yield BCFRecord(bcf1_rec)
             elif status == -1:
                 # end of file
@@ -67,7 +68,7 @@ class BCF:
     def close(self: BCF):
         for bcf1_rec in self.bcf1_recs:
             _C.bcf_destroy(bcf1_rec)
-        _C.bcf_hdr_destroy(hdr)
+        _C.bcf_hdr_destroy(self.hdr)
 
 parser = BCF('./valid_vcf.vcf')
 for rec in parser:
