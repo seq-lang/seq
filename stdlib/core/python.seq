@@ -1,5 +1,6 @@
 import os
-LD = os.getenv('SEQ_PYTHON', default='libpython3.7')
+from core.dlopen import dlext
+LD = os.getenv('SEQ_PYTHON', default='libpython.' + dlext())
 
 from LD cimport PyUnicode_AsEncodedString(cobj, cobj, cobj) -> cobj
 from LD cimport PyBytes_AsString(cobj) -> cobj

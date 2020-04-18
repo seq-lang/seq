@@ -24,7 +24,6 @@
 #include "ksw2/ksw2.h"
 #include "lib.h"
 #include <gc.h>
-#include <htslib/sam.h>
 
 using namespace std;
 
@@ -491,11 +490,45 @@ SEQ_FUNC void seq_palign_global(seq_t query, seq_t target, int8_t *mat,
   *out = {{cigar, n_cigar}, score};
 }
 
-/*
- * htslib
- */
-
-SEQ_FUNC seq_int_t seq_hts_sam_itr_next(htsFile *htsfp, hts_itr_t *itr,
-                                        bam1_t *r) {
-  return sam_itr_next(htsfp, itr, r);
+SEQ_FUNC bool seq_is_macos() {
+#ifdef __APPLE__
+  return true;
+#else
+  return false;
+#endif
 }
+
+/// HTSlib
+typedef struct __kstring_t {
+  size_t l, m;
+  char *s;
+} kstring_t;
+
+typedef struct htsFormat {
+  int32_t category;
+  int32_t format;
+  struct {
+    short major, minor;
+  } version;
+  int32_t compression;
+  short compression_level;
+  void *specific;
+} htsFormat;
+
+typedef struct {
+  uint32_t is_bin : 1, is_write : 1, is_be : 1, is_cram : 1, is_bgzf : 1,
+      dummy : 27;
+  int64_t lineno;
+  kstring_t line;
+  char *fn, *fn_aux;
+  void *fp;
+  void *state; // format specific state information
+  htsFormat format;
+  void *idx;
+  const char *fnidx;
+  void *bam_header;
+} htsFile;
+
+SEQ_FUNC bool seq_is_htsfile_cram(htsFile *f) { return f->is_cram; }
+SEQ_FUNC bool seq_is_htsfile_bgzf(htsFile *f) { return f->is_bgzf; }
+SEQ_FUNC void *seq_get_htsfile_fp(htsFile *f) { return f->fp; }

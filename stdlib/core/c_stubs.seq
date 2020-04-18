@@ -23,6 +23,7 @@ cimport seq_lock_release(cobj)
 cimport seq_rlock_new() -> cobj
 cimport seq_rlock_acquire(cobj, bool, float) -> bool
 cimport seq_rlock_release(cobj)
+cimport seq_is_macos() -> bool
 
 # <string.h>
 cimport strtoll(cobj, ptr[cobj], i32) -> int
@@ -129,33 +130,6 @@ cimport seq_palign(pseq, pseq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignmen
 cimport seq_palign_dual(pseq, pseq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
 cimport seq_palign_global(pseq, pseq, ptr[i8], i8, i8, int, ptr[Alignment])
 cimport seq_palign_default(pseq, pseq, ptr[Alignment])
-
-# <htslib.h>
-cimport hts_open(cobj, cobj) -> cobj
-cimport hts_close(cobj)
-cimport hts_idx_destroy(cobj)
-cimport hts_itr_destroy(cobj)
-cimport sam_index_load(cobj, cobj) -> cobj
-cimport sam_hdr_read(cobj) -> cobj
-cimport sam_itr_querys(cobj, cobj, cobj) -> cobj
-cimport sam_read1(cobj, cobj, cobj) -> i32
-cimport bam_read1(cobj, cobj) -> i32
-cimport bam_init1() -> cobj
-cimport bam_cigar2qlen(int, ptr[u32]) -> int
-cimport bam_cigar2rlen(int, ptr[u32]) -> int
-cimport bam_aux_get(cobj, ptr[byte]) -> ptr[u8]
-cimport bam_aux2i(ptr[u8]) -> int
-cimport bam_aux2f(ptr[u8]) -> float
-cimport bam_aux2A(ptr[u8]) -> byte
-cimport bam_aux2Z(ptr[u8]) -> ptr[byte]
-cimport bam_auxB_len(ptr[u8]) -> u32
-cimport bam_auxB2i(ptr[u8], idx: u32) -> int
-cimport bam_auxB2f(ptr[u8], idx: u32) -> float
-cimport sam_hdr_destroy(cobj)
-cimport bam_destroy1(cobj)
-
-# Seq HTSlib
-cimport seq_hts_sam_itr_next(cobj, cobj, cobj) -> int
 
 # OpenMP
 cimport omp_get_num_threads() -> i32
