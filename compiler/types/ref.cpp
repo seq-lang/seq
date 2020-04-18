@@ -180,7 +180,8 @@ Value *types::RefType::memb(Value *self, const std::string &name,
                             BasicBlock *block) {
   initFields();
   initOps();
-  codegenNotNoneCheck(self, name, block);
+  if (contents->numBaseTypes() > 0)
+    codegenNotNoneCheck(self, name, block);
 
   // Defer to contained tuple, unless this is a method reference.
   if (!contents || contents->hasMethod(name) || Type::hasMethod(name))
@@ -223,7 +224,8 @@ types::Type *types::RefType::membType(const std::string &name) {
 Value *types::RefType::setMemb(Value *self, const std::string &name, Value *val,
                                BasicBlock *block) {
   initFields();
-  codegenNotNoneCheck(self, name, block);
+  if (contents->numBaseTypes() > 0)
+    codegenNotNoneCheck(self, name, block);
   LLVMContext &context = block->getContext();
   IRBuilder<> builder(block);
   self = builder.CreateBitCast(self, getStructPointerType(context));

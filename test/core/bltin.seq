@@ -1,0 +1,68 @@
+@test
+def test_min_max():
+    assert max(2, 1, 1, 1, 1) == 2
+    assert max(1, 2, 1, 1, 1) == 2
+    assert max(1, 1, 2, 1, 1) == 2
+    assert max(1, 1, 1, 2, 1) == 2
+    assert max(1, 1, 1, 1, 2) == 2
+    assert max(2, 1, 1, 1) == 2
+    assert max(1, 2, 1, 1) == 2
+    assert max(1, 1, 2, 1) == 2
+    assert max(1, 1, 1, 2) == 2
+    assert max(2, 1, 1) == 2
+    assert max(1, 2, 1) == 2
+    assert max(1, 1, 2) == 2
+    assert max(2, 1) == 2
+    assert max(1, 2) == 2
+
+    assert min(2, 1, 1, 1, 1) == 1
+    assert min(1, 2, 1, 1, 1) == 1
+    assert min(1, 1, 2, 1, 1) == 1
+    assert min(1, 1, 1, 2, 1) == 1
+    assert min(1, 1, 1, 1, 2) == 1
+    assert min(2, 1, 1, 1) == 1
+    assert min(1, 2, 1, 1) == 1
+    assert min(1, 1, 2, 1) == 1
+    assert min(1, 1, 1, 2) == 1
+    assert min(2, 1, 1) == 1
+    assert min(1, 2, 1) == 1
+    assert min(1, 1, 2) == 1
+    assert min(2, 1) == 1
+    assert min(1, 2) == 1
+
+    assert max(0, 1, 1, 1, 1) == 1
+    assert max(1, 0, 1, 1, 1) == 1
+    assert max(1, 1, 0, 1, 1) == 1
+    assert max(1, 1, 1, 0, 1) == 1
+    assert max(1, 1, 1, 1, 0) == 1
+    assert max(0, 1, 1, 1) == 1
+    assert max(1, 0, 1, 1) == 1
+    assert max(1, 1, 0, 1) == 1
+    assert max(1, 1, 1, 0) == 1
+    assert max(0, 1, 1) == 1
+    assert max(1, 0, 1) == 1
+    assert max(1, 1, 0) == 1
+    assert max(0, 1) == 1
+    assert max(1, 0) == 1
+
+    assert min(0, 1, 1, 1, 1) == 0
+    assert min(1, 0, 1, 1, 1) == 0
+    assert min(1, 1, 0, 1, 1) == 0
+    assert min(1, 1, 1, 0, 1) == 0
+    assert min(1, 1, 1, 1, 0) == 0
+    assert min(0, 1, 1, 1) == 0
+    assert min(1, 0, 1, 1) == 0
+    assert min(1, 1, 0, 1) == 0
+    assert min(1, 1, 1, 0) == 0
+    assert min(0, 1, 1) == 0
+    assert min(1, 0, 1) == 0
+    assert min(1, 1, 0) == 0
+    assert min(0, 1) == 0
+    assert min(1, 0) == 0
+
+    assert min(a*a for a in range(3)) == 0
+    assert max(a*a for a in range(3)) == 4
+    assert min([0, 2, -1]) == -1
+    assert max([0, 2, -1]) == 2
+
+test_min_max()

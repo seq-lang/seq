@@ -9,8 +9,6 @@
 struct JitInstance {
   int counter;
   std::shared_ptr<seq::ast::Context> context;
-
-  JitInstance(std::shared_ptr<seq::ast::Context> c) : counter(0), context(c) {}
 };
 
 FOREIGN JitInstance *jit_init();

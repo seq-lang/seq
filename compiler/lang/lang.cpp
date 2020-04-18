@@ -39,7 +39,15 @@ ExprStmt::ExprStmt(Expr *expr) : Stmt("expr"), expr(expr) {}
 
 void ExprStmt::resolveTypes() { expr->resolveTypes(); }
 
-void ExprStmt::codegen0(BasicBlock *&block) { expr->codegen(getBase(), block); }
+void ExprStmt::codegen0(BasicBlock *&block) {
+  if (dynamic_cast<types::PartialFuncType *>(expr->getType())) {
+    SrcInfo src = getSrcInfo();
+    compilationWarning(
+        "function call is partial; are there arguments missing on this call?",
+        src.file, src.line, src.col);
+  }
+  expr->codegen(getBase(), block);
+}
 
 ExprStmt *ExprStmt::clone(Generic *ref) {
   if (ref->seenClone(this))
@@ -434,13 +442,13 @@ StructType *TryCatch::getExcType(LLVMContext &context) {
 }
 
 GlobalVariable *TryCatch::getTypeIdxVar(Module *module,
-                                        types::Type *catchType) {
+                                        const std::string &name) {
   LLVMContext &context = module->getContext();
   auto *typeInfoType = getTypeInfoType(context);
   const std::string typeVarName =
-      "seq.typeidx." + (catchType ? catchType->getName() : "<all>");
+      "seq.typeidx." + (name.empty() ? "<all>" : name);
   GlobalVariable *tidx = module->getGlobalVariable(typeVarName);
-  int idx = catchType ? catchType->getID() : 0;
+  int idx = types::Type::getID(name);
   if (!tidx)
     tidx = new GlobalVariable(
         *module, typeInfoType, true, GlobalValue::PrivateLinkage,
@@ -449,6 +457,11 @@ GlobalVariable *TryCatch::getTypeIdxVar(Module *module,
                                              (uint64_t)idx, false)),
         typeVarName);
   return tidx;
+}
+
+GlobalVariable *TryCatch::getTypeIdxVar(Module *module,
+                                        types::Type *catchType) {
+  return getTypeIdxVar(module, catchType ? catchType->getName() : "");
 }
 
 void TryCatch::resolveTypes() {
@@ -1344,7 +1357,7 @@ Continue *Continue::clone(Generic *ref) {
   SEQ_RETURN_CLONE(x);
 }
 
-Assert::Assert(Expr *expr) : Stmt("assert"), expr(expr) {}
+Assert::Assert(Expr *expr, Expr *msg) : Stmt("assert"), expr(expr), msg(msg) {}
 
 void Assert::resolveTypes() { expr->resolveTypes(); }
 
@@ -1357,18 +1370,18 @@ void Assert::codegen0(BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   Module *module = block->getModule();
   Function *func = block->getParent();
-
   const bool test = isTest(getBase());
-  auto *assertFail = cast<Function>(module->getOrInsertFunction(
-      test ? "seq_test_failed" : "seq_assert_failed", Type::getVoidTy(context),
-      types::Str->getLLVMType(context), types::Int->getLLVMType(context)));
-  assertFail->setDoesNotThrow();
-  if (!test)
-    assertFail->setDoesNotReturn();
+
   Value *check = expr->codegen(getBase(), block);
   check = expr->getType()->boolValue(check, block, getTryCatch());
-  Value *file = StrExpr(getSrcInfo().file).codegen(getBase(), block);
-  Value *line = IntExpr(getSrcInfo().line).codegen(getBase(), block);
+
+  Value *msgVal = nullptr;
+  if (msg) {
+    msgVal = msg->codegen(getBase(), block);
+    msgVal = msg->getType()->strValue(msgVal, block, getTryCatch());
+  } else {
+    msgVal = StrExpr("").codegen(getBase(), block);
+  }
 
   BasicBlock *fail = BasicBlock::Create(context, "assert_fail", func);
   BasicBlock *pass = BasicBlock::Create(context, "assert_pass", func);
@@ -1376,13 +1389,28 @@ void Assert::codegen0(BasicBlock *&block) {
   IRBuilder<> builder(block);
   check = builder.CreateTrunc(check, builder.getInt1Ty());
   builder.CreateCondBr(check, pass, fail);
-
   builder.SetInsertPoint(fail);
-  builder.CreateCall(assertFail, {file, line});
-  if (test)
+  if (test) {
+    Function *testFailed = Func::getBuiltin("_test_failed")->getFunc(module);
+    Value *file = StrExpr(getSrcInfo().file).codegen(getBase(), fail);
+    Value *line = IntExpr(getSrcInfo().line).codegen(getBase(), fail);
+    builder.CreateCall(testFailed, {file, line, msgVal});
     builder.CreateBr(pass);
-  else
+  } else {
+    Func *f = Func::getBuiltin("_make_assert_error");
+    Function *assertExc = f->getFunc(module);
+    types::Type *assertErrorType = f->getFuncType()->getBaseType(0);
+
+    Value *excVal = builder.CreateCall(assertExc, msgVal);
+    ValueExpr excArg(assertErrorType, excVal);
+    Throw raise(&excArg);
+    raise.setBase(getBase());
+    raise.setSrcInfo(getSrcInfo());
+    raise.codegen(fail);
+
+    builder.SetInsertPoint(fail);
     builder.CreateUnreachable();
+  }
 
   block = pass;
 }
@@ -1391,7 +1419,7 @@ Assert *Assert::clone(Generic *ref) {
   if (ref->seenClone(this))
     return (Assert *)ref->getClone(this);
 
-  auto *x = new Assert(expr->clone(ref));
+  auto *x = new Assert(expr->clone(ref), msg ? msg->clone(ref) : msg);
   ref->addClone(this, x);
   Stmt::setCloneBase(x, ref);
   SEQ_RETURN_CLONE(x);

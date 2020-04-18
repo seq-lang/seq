@@ -3,9 +3,9 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/codegen/stmt.h"
-#include "parser/ast/format/stmt.h"
-#include "parser/ast/transform/stmt.h"
+#include "parser/ast/codegen.h"
+#include "parser/ast/format.h"
+#include "parser/ast/transform.h"
 #include "parser/context.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"
@@ -26,13 +26,11 @@ using std::vector;
 FOREIGN JitInstance *jit_init() {
   try {
     seq::SeqJIT::init();
-    auto fn = new seq::Func();
-    fn->setName("$jit_init");
-    auto jit = new seq::SeqJIT();
-    auto cache = seq::ast::ImportCache{"", nullptr, {}};
-    auto context = make_shared<seq::ast::Context>(fn, cache, jit, "");
-    jit->addFunc(fn);
-    return new JitInstance(context);
+    auto jit = new JitInstance{
+        0, make_shared<seq::ast::Context>(make_shared<seq::ast::ImportCache>(),
+                                          nullptr, nullptr, nullptr, "")};
+    jit->context->initJIT();
+    return jit;
   } catch (seq::exc::SeqException &e) {
     seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                           e.getSrcInfo().col);
@@ -42,9 +40,10 @@ FOREIGN JitInstance *jit_init() {
 
 FOREIGN void jit_execute(JitInstance *jit, const char *code) {
   try {
-    auto file = format("$jit_{}", jit->counter);
-    jit->context->executeJIT(file, code);
-    jit->counter += 1;
+    auto tv = seq::ast::TransformStmtVisitor().transform(
+        seq::ast::parse_code("jit", code));
+    seq::ast::CodegenStmtVisitor(*jit->context).transform(tv);
+    jit->context->execJIT();
   } catch (seq::exc::SeqException &e) {
     fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line,
                e.getSrcInfo().col, e.what());

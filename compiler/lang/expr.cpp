@@ -48,24 +48,6 @@ Expr *Expr::clone(Generic *ref) { return this; }
 
 std::string Expr::getName() const { return name; }
 
-BlankExpr::BlankExpr() : Expr(types::Void) {}
-
-Value *BlankExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  throw exc::SeqException("misplaced '_'");
-}
-
-types::Type *BlankExpr::getType0() const {
-  throw exc::SeqException("misplaced '_'");
-}
-
-NoneExpr::NoneExpr() : Expr() {}
-
-Value *NoneExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  return getType0()->defaultValue(block);
-}
-
-types::Type *NoneExpr::getType0() const { return types::RefType::none(); }
-
 TypeExpr::TypeExpr(types::Type *type) : Expr(type) { name = "type"; }
 
 Value *TypeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
@@ -76,32 +58,48 @@ ValueExpr::ValueExpr(types::Type *type, Value *val) : Expr(type), val(val) {}
 
 Value *ValueExpr::codegen0(BaseFunc *base, BasicBlock *&block) { return val; }
 
-IntExpr::IntExpr(seq_int_t n) : Expr(types::Int), n(n) {}
+NoneExpr::NoneExpr() : ConstExpr(types::RefType::none()) {}
+
+Value *NoneExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+  return getType0()->defaultValue(block);
+}
+
+Const NoneExpr::constValue() const { return Const(); }
+
+IntExpr::IntExpr(seq_int_t n) : ConstExpr(types::Int), n(n) {}
 
 Value *IntExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   return ConstantInt::get(getType()->getLLVMType(context), (uint64_t)n, true);
 }
 
+Const IntExpr::constValue() const { return Const(n); }
+
 seq_int_t IntExpr::value() const { return n; }
 
-FloatExpr::FloatExpr(double f) : Expr(types::Float), f(f) {}
+FloatExpr::FloatExpr(double f) : ConstExpr(types::Float), f(f) {}
 
 Value *FloatExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   return ConstantFP::get(getType()->getLLVMType(context), f);
 }
 
-BoolExpr::BoolExpr(bool b) : Expr(types::Bool), b(b) {}
+Const FloatExpr::constValue() const { return Const(f); }
+
+double FloatExpr::value() const { return f; }
+
+BoolExpr::BoolExpr(bool b) : ConstExpr(types::Bool), b(b) {}
 
 Value *BoolExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   return ConstantInt::get(getType()->getLLVMType(context), b ? 1 : 0);
 }
 
+Const BoolExpr::constValue() const { return Const(b); }
+
 bool BoolExpr::value() const { return b; }
 
-StrExpr::StrExpr(std::string s) : Expr(types::Str), s(std::move(s)) {}
+StrExpr::StrExpr(std::string s) : ConstExpr(types::Str), s(std::move(s)) {}
 
 Value *StrExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -122,7 +120,11 @@ Value *StrExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return types::Str->make(str, len, preambleBlock);
 }
 
-SeqExpr::SeqExpr(std::string s) : Expr(types::Seq), s(std::move(s)) {}
+Const StrExpr::constValue() const { return Const(s, /*seq=*/false); }
+
+std::string StrExpr::value() const { return s; }
+
+SeqExpr::SeqExpr(std::string s) : ConstExpr(types::Seq), s(std::move(s)) {}
 
 Value *SeqExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -142,6 +144,10 @@ Value *SeqExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   Value *len = ConstantInt::get(seqIntLLVM(context), s.length());
   return types::Seq->make(seq, len, preambleBlock);
 }
+
+Const SeqExpr::constValue() const { return Const(s, /*seq=*/true); }
+
+std::string SeqExpr::value() const { return s; }
 
 ListExpr::ListExpr(std::vector<Expr *> elems, types::Type *listType)
     : Expr(), elems(std::move(elems)), listType(listType) {}
@@ -739,10 +745,13 @@ Expr *FuncExpr::clone(Generic *ref) {
   if (orig)
     return orig->clone(ref);
 
+  const bool cloneFunc =
+      (dynamic_cast<Func *>(func) != dynamic_cast<Func *>(ref));
   std::vector<types::Type *> typesCloned;
   for (auto *type : types)
     typesCloned.push_back(type->clone(ref));
-  SEQ_RETURN_CLONE(new FuncExpr(func->clone(ref), typesCloned));
+  SEQ_RETURN_CLONE(
+      new FuncExpr(cloneFunc ? func->clone(ref) : func, typesCloned));
 }
 
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count, bool doAlloca)
