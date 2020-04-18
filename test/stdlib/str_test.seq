@@ -199,6 +199,10 @@ def test_count():
     assert 'aaa'.count('a', 0, 1) == 1
     assert 'aaa'.count('a', 0, 10) == 3
     assert 'aaa'.count('a', 0, -1) == 2
+    assert 'aaa'.count('aa') == 1
+    assert 'ababa'.count('aba') == 1
+    assert 'abababa'.count('aba') == 2
+    assert 'abababa'.count('abab') == 1
 
 @test
 def test_find():
@@ -206,6 +210,10 @@ def test_find():
     assert 'abcdefghiabc'.find('abc') == 0
     assert 'abcdefghiabc'.find('abc', 1, len('abcdefghiabc')) == 9
     assert 'abcdefghiabc'.find('def', 4, len('abcdefghiabc')) == -1
+    assert 'abcdefghiabc'.find('abcdef', 0, len('abcdefghiabc')) == 0
+    assert 'abcdefghiabc'.find('abcdef') == 0
+    assert 'abcdefghiabc'.find('hiabc', 1, len('abcdefghiabc')) == 7
+    assert 'abcdefghiabc'.find('defgh', 4, len('abcdefghiabc')) == -1
     assert 'rrarrrrrrrrra'.find('a', 0, len('rrarrrrrrrrra')) == 2
     assert 'rrarrrrrrrrra'.find('a', 4, len('rrarrrrrrrrra')) == 12
     assert 'rrarrrrrrrrra'.find('a', 4, 6) == -1
@@ -596,6 +604,29 @@ def test_fstr():
     assert f'{n=}' == 'n=42'
     assert f"hello {n=} world" == 'hello n=42 world'
 
+@test
+def test_slice(s = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+               indices = (0, 1, 3, 41, 0xfffffffffff, -1, -2, -37)):
+    for start in indices:
+        for stop in indices:
+            for step in indices[1:]:
+                L = list(s)[start:stop:step]
+                assert s[start:stop:step] == ''.join(L)
+
+@test
+def test_join():
+    assert ''.join(str(a) for a in range(0)) == ''
+    assert ''.join(list[str]()) == ''
+    assert 'a'.join(str(a) for a in range(0)) == ''
+    assert 'a'.join(list[str]()) == ''
+    assert 'ab'.join(str(a) for a in range(999, 1000)) == '999'
+    assert 'ab'.join(['999']) == '999'
+    assert 'xyz'.join(str(a) for a in range(5)) == '0xyz1xyz2xyz3xyz4'
+    assert 'xyz'.join(['00', '1', '22', '3', '44']) == '00xyz1xyz22xyz3xyz44'
+    assert 'xyz'.join(iter(['00', '1', '22', '3', '44'])) == '00xyz1xyz22xyz3xyz44'
+    assert 'xyz'.join(['00', '1', '22', '3', '44']) == '00xyz1xyz22xyz3xyz44'
+    assert 'xyz'.join(iter(['00', '', '22', '3', ''])) == '00xyzxyz22xyz3xyz'
+
 test_isdigit()
 test_islower()
 test_isupper()
@@ -638,3 +669,5 @@ test_expandtabs()
 test_translate()
 test_repr()
 test_fstr()
+test_slice()
+test_join()

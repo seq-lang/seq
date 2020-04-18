@@ -82,18 +82,29 @@ public:
   virtual Expr *clone(Generic *ref);
 };
 
-class BlankExpr : public Expr {
-public:
-  BlankExpr();
-  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
+struct Const {
+  enum Type { NONE, INT, FLOAT, BOOL, STR, SEQ };
+  Type type;
+  seq_int_t ival;
+  double fval;
+  bool bval;
+  std::string sval;
+  Const() : type(Type::NONE), ival(0), fval(0.0), bval(false), sval() {}
+  explicit Const(seq_int_t ival)
+      : type(Type::INT), ival(ival), fval(0.0), bval(false), sval() {}
+  explicit Const(double fval)
+      : type(Type::FLOAT), ival(0), fval(fval), bval(false), sval() {}
+  explicit Const(bool bval)
+      : type(Type::BOOL), ival(0), fval(0.0), bval(bval), sval() {}
+  explicit Const(std::string sval, bool seq = false)
+      : type(seq ? Type::SEQ : Type::STR), ival(0), fval(0.0), bval(false),
+        sval(std::move(sval)) {}
 };
 
-class NoneExpr : public Expr {
+class ConstExpr : public Expr {
 public:
-  NoneExpr();
-  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
+  explicit ConstExpr(types::Type *type) : Expr(type) {}
+  virtual Const constValue() const = 0;
 };
 
 class TypeExpr : public Expr {
@@ -111,51 +122,66 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
-class IntExpr : public Expr {
+class NoneExpr : public ConstExpr {
+public:
+  NoneExpr();
+  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  Const constValue() const override;
+};
+
+class IntExpr : public ConstExpr {
 private:
   seq_int_t n;
 
 public:
   explicit IntExpr(seq_int_t n);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  Const constValue() const override;
   seq_int_t value() const;
 };
 
-class FloatExpr : public Expr {
+class FloatExpr : public ConstExpr {
 private:
   double f;
 
 public:
   explicit FloatExpr(double f);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  Const constValue() const override;
+  double value() const;
 };
 
-class BoolExpr : public Expr {
+class BoolExpr : public ConstExpr {
 private:
   bool b;
 
 public:
   explicit BoolExpr(bool b);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  Const constValue() const override;
   bool value() const;
 };
 
-class StrExpr : public Expr {
+class StrExpr : public ConstExpr {
 private:
   std::string s;
 
 public:
   explicit StrExpr(std::string s);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  Const constValue() const override;
+  std::string value() const;
 };
 
-class SeqExpr : public Expr {
+class SeqExpr : public ConstExpr {
 private:
   std::string s;
 
 public:
   explicit SeqExpr(std::string s);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+  Const constValue() const override;
+  std::string value() const;
 };
 
 class ListExpr : public Expr {

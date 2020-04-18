@@ -34,6 +34,9 @@ extend seq:
     def __init__(self: seq, s: str):
         return seq(s.ptr, s.len)
 
+    def __init__(self: seq):
+        return seq(cobj(), 0)
+
     def __eq__(self: seq, other: seq):
         n = len(self)
         if n != len(other):
@@ -147,6 +150,9 @@ extend seq:
         else:
             return seq(self.ptr, -(n - a))
 
+    def __getitem__(self: seq, s: eslice):
+        return self
+
     def _copy_to(self: seq, p: cobj):
         if self.len >= 0:
             str.memcpy(p, self.ptr, self.len)
@@ -179,6 +185,44 @@ extend seq:
     def kmers[K](self: seq, step: int = 1):
         for pos, kmer in self.kmers_with_pos[K](step):
             yield kmer
+
+    def kmers_canonical[K](self: seq):
+        k = K.len()
+        n = len(self)
+        x0 = K()
+        x1 = K()
+        i = 0
+        l = 0
+        while i < n:
+            c = int(seq._nt4_table()[int(self._at(i))])
+            if c < 4:
+                x0 = K(x0.as_int() << K(2).as_int() | K(c).as_int())
+                x1 = K(x1.as_int() >> K(2).as_int() | K(3 - c).as_int() << K((k - 1)*2).as_int())
+                l += 1
+                if l >= k:
+                    yield x0 if x0 < x1 else x1
+            else:
+                l = 0
+            i += 1
+
+    def kmers_canonical_with_pos[K](self: seq):
+        k = K.len()
+        n = len(self)
+        x0 = K()
+        x1 = K()
+        i = 0
+        l = 0
+        while i < n:
+            c = int(seq._nt4_table()[int(self._at(i))])
+            if c < 4:
+                x0 = K(x0.as_int() << K(2).as_int() | K(c).as_int())
+                x1 = K(x1.as_int() >> K(2).as_int() | K(3 - c).as_int() << K((k - 1)*2).as_int())
+                l += 1
+                if l >= k:
+                    yield (i - k + 1, x0 if x0 < x1 else x1)
+            else:
+                l = 0
+            i += 1
 
     def kmers_with_pos[K](self: seq, step: int = 1):
         # This function is intentionally written this way. It could be simplified,

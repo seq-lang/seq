@@ -34,35 +34,35 @@ struct LambdaExpr;
 struct YieldExpr;
 
 struct ExprVisitor {
-  virtual void visit(const EmptyExpr *) = 0;
-  virtual void visit(const BoolExpr *) = 0;
-  virtual void visit(const IntExpr *) = 0;
-  virtual void visit(const FloatExpr *) = 0;
-  virtual void visit(const StringExpr *) = 0;
-  virtual void visit(const FStringExpr *) = 0;
-  virtual void visit(const KmerExpr *) = 0;
-  virtual void visit(const SeqExpr *) = 0;
-  virtual void visit(const IdExpr *) = 0;
-  virtual void visit(const UnpackExpr *) = 0;
-  virtual void visit(const TupleExpr *) = 0;
-  virtual void visit(const ListExpr *) = 0;
-  virtual void visit(const SetExpr *) = 0;
-  virtual void visit(const DictExpr *) = 0;
-  virtual void visit(const GeneratorExpr *) = 0;
-  virtual void visit(const DictGeneratorExpr *) = 0;
-  virtual void visit(const IfExpr *) = 0;
-  virtual void visit(const UnaryExpr *) = 0;
-  virtual void visit(const BinaryExpr *) = 0;
-  virtual void visit(const PipeExpr *) = 0;
-  virtual void visit(const IndexExpr *) = 0;
-  virtual void visit(const CallExpr *) = 0;
-  virtual void visit(const DotExpr *) = 0;
-  virtual void visit(const SliceExpr *) = 0;
-  virtual void visit(const EllipsisExpr *) = 0;
-  virtual void visit(const TypeOfExpr *) = 0;
-  virtual void visit(const PtrExpr *) = 0;
-  virtual void visit(const LambdaExpr *) = 0;
-  virtual void visit(const YieldExpr *) = 0;
+  virtual void visit(const EmptyExpr *) {}
+  virtual void visit(const BoolExpr *) {}
+  virtual void visit(const IntExpr *) {}
+  virtual void visit(const FloatExpr *) {}
+  virtual void visit(const StringExpr *) {}
+  virtual void visit(const FStringExpr *) {}
+  virtual void visit(const KmerExpr *) {}
+  virtual void visit(const SeqExpr *) {}
+  virtual void visit(const IdExpr *) {}
+  virtual void visit(const UnpackExpr *) {}
+  virtual void visit(const TupleExpr *) {}
+  virtual void visit(const ListExpr *) {}
+  virtual void visit(const SetExpr *) {}
+  virtual void visit(const DictExpr *) {}
+  virtual void visit(const GeneratorExpr *) {}
+  virtual void visit(const DictGeneratorExpr *) {}
+  virtual void visit(const IfExpr *) {}
+  virtual void visit(const UnaryExpr *) {}
+  virtual void visit(const BinaryExpr *) {}
+  virtual void visit(const PipeExpr *) {}
+  virtual void visit(const IndexExpr *) {}
+  virtual void visit(const CallExpr *) {}
+  virtual void visit(const DotExpr *) {}
+  virtual void visit(const SliceExpr *) {}
+  virtual void visit(const EllipsisExpr *) {}
+  virtual void visit(const TypeOfExpr *) {}
+  virtual void visit(const PtrExpr *) {}
+  virtual void visit(const LambdaExpr *) {}
+  virtual void visit(const YieldExpr *) {}
 };
 
 struct SuiteStmt;
@@ -96,35 +96,35 @@ struct WithStmt;
 struct PyDefStmt;
 
 struct StmtVisitor {
-  virtual void visit(const SuiteStmt *) = 0;
-  virtual void visit(const PassStmt *) = 0;
-  virtual void visit(const BreakStmt *) = 0;
-  virtual void visit(const ContinueStmt *) = 0;
-  virtual void visit(const ExprStmt *) = 0;
-  virtual void visit(const AssignStmt *) = 0;
-  virtual void visit(const DelStmt *) = 0;
-  virtual void visit(const PrintStmt *) = 0;
-  virtual void visit(const ReturnStmt *) = 0;
-  virtual void visit(const YieldStmt *) = 0;
-  virtual void visit(const AssertStmt *) = 0;
-  virtual void visit(const TypeAliasStmt *) = 0;
-  virtual void visit(const WhileStmt *) = 0;
-  virtual void visit(const ForStmt *) = 0;
-  virtual void visit(const IfStmt *) = 0;
-  virtual void visit(const MatchStmt *) = 0;
-  virtual void visit(const ExtendStmt *) = 0;
-  virtual void visit(const ImportStmt *) = 0;
-  virtual void visit(const ExternImportStmt *) = 0;
-  virtual void visit(const TryStmt *) = 0;
-  virtual void visit(const GlobalStmt *) = 0;
-  virtual void visit(const ThrowStmt *) = 0;
-  virtual void visit(const FunctionStmt *) = 0;
-  virtual void visit(const ClassStmt *) = 0;
-  virtual void visit(const DeclareStmt *) = 0;
-  virtual void visit(const AssignEqStmt *) = 0;
-  virtual void visit(const YieldFromStmt *) = 0;
-  virtual void visit(const WithStmt *) = 0;
-  virtual void visit(const PyDefStmt *) = 0;
+  virtual void visit(const SuiteStmt *) {}
+  virtual void visit(const PassStmt *) {}
+  virtual void visit(const BreakStmt *) {}
+  virtual void visit(const ContinueStmt *) {}
+  virtual void visit(const ExprStmt *) {}
+  virtual void visit(const AssignStmt *) {}
+  virtual void visit(const DelStmt *) {}
+  virtual void visit(const PrintStmt *) {}
+  virtual void visit(const ReturnStmt *) {}
+  virtual void visit(const YieldStmt *) {}
+  virtual void visit(const AssertStmt *) {}
+  virtual void visit(const TypeAliasStmt *) {}
+  virtual void visit(const WhileStmt *) {}
+  virtual void visit(const ForStmt *) {}
+  virtual void visit(const IfStmt *) {}
+  virtual void visit(const MatchStmt *) {}
+  virtual void visit(const ExtendStmt *) {}
+  virtual void visit(const ImportStmt *) {}
+  virtual void visit(const ExternImportStmt *) {}
+  virtual void visit(const TryStmt *) {}
+  virtual void visit(const GlobalStmt *) {}
+  virtual void visit(const ThrowStmt *) {}
+  virtual void visit(const FunctionStmt *) {}
+  virtual void visit(const ClassStmt *) {}
+  virtual void visit(const DeclareStmt *) {}
+  virtual void visit(const AssignEqStmt *) {}
+  virtual void visit(const YieldFromStmt *) {}
+  virtual void visit(const WithStmt *) {}
+  virtual void visit(const PyDefStmt *) {}
 };
 
 struct StarPattern;
@@ -141,18 +141,18 @@ struct GuardedPattern;
 struct BoundPattern;
 
 struct PatternVisitor {
-  virtual void visit(const StarPattern *) = 0;
-  virtual void visit(const IntPattern *) = 0;
-  virtual void visit(const BoolPattern *) = 0;
-  virtual void visit(const StrPattern *) = 0;
-  virtual void visit(const SeqPattern *) = 0;
-  virtual void visit(const RangePattern *) = 0;
-  virtual void visit(const TuplePattern *) = 0;
-  virtual void visit(const ListPattern *) = 0;
-  virtual void visit(const OrPattern *) = 0;
-  virtual void visit(const WildcardPattern *) = 0;
-  virtual void visit(const GuardedPattern *) = 0;
-  virtual void visit(const BoundPattern *) = 0;
+  virtual void visit(const StarPattern *) {}
+  virtual void visit(const IntPattern *) {}
+  virtual void visit(const BoolPattern *) {}
+  virtual void visit(const StrPattern *) {}
+  virtual void visit(const SeqPattern *) {}
+  virtual void visit(const RangePattern *) {}
+  virtual void visit(const TuplePattern *) {}
+  virtual void visit(const ListPattern *) {}
+  virtual void visit(const OrPattern *) {}
+  virtual void visit(const WildcardPattern *) {}
+  virtual void visit(const GuardedPattern *) {}
+  virtual void visit(const BoundPattern *) {}
 };
 
 } // namespace ast

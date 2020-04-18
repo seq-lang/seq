@@ -76,6 +76,10 @@ public:
        bool extendable = false);
 
   /// Returns a unique identifier for this type, based on
+  /// the given name.
+  static int getID(const std::string &name);
+
+  /// Returns a unique identifier for this type, based on
   /// \ref getName() "getName()".
   virtual int getID() const;
 

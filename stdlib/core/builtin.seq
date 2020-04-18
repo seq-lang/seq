@@ -2,6 +2,21 @@ class min[T]:
     def __init__(self: min[T], a: T, b: T) -> T:
         return a if a < b else b
 
+    def __init__(self: min[T], a: T, b: T, c: T) -> T:
+        x = a if a < b else b
+        return x if x < c else c
+
+    def __init__(self: min[T], a: T, b: T, c: T, d: T) -> T:
+        x = a if a < b else b
+        y = c if c < d else d
+        return x if x < y else y
+
+    def __init__(self: min[T], a: T, b: T, c: T, d: T, e: T) -> T:
+        x = a if a < b else b
+        y = c if c < d else d
+        z = x if x < y else y
+        return z if z < e else e
+
     def __init__(self: min[T], a: generator[T]) -> T:
         x = a.__iter__()
         if not x.done():
@@ -18,6 +33,21 @@ class min[T]:
 class max[T]:
     def __init__(self: max[T], a: T, b: T) -> T:
         return a if a > b else b
+
+    def __init__(self: max[T], a: T, b: T, c: T) -> T:
+        x = a if a > b else b
+        return x if x > c else c
+
+    def __init__(self: max[T], a: T, b: T, c: T, d: T) -> T:
+        x = a if a > b else b
+        y = c if c > d else d
+        return x if x > y else y
+
+    def __init__(self: max[T], a: T, b: T, c: T, d: T, e: T) -> T:
+        x = a if a > b else b
+        y = c if c > d else d
+        z = x if x > y else y
+        return z if z > e else e
 
     def __init__(self: max[T], a: generator[T]) -> T:
         x = a.__iter__()
@@ -258,6 +288,63 @@ def _tuple_fix_index(idx: int, len: int) -> int:
     if idx < 0 or idx >= len:
         raise IndexError("tuple index out of range")
     return idx
+
+@builtin
+def _tuple_str(strs: ptr[str], n: int) -> str:
+    total = 2  # one for each of '(' and ')'
+    i = 0
+    while i < n:
+        total += strs[i].len
+        if i < n - 1:
+            total += 2  # ", "
+        i += 1
+
+    buf = ptr[byte](total)
+    where = 0
+    buf[where] = byte(40)  # '('
+    where += 1
+
+    i = 0
+    while i < n:
+        s = strs[i]
+        l = s.len
+        str.memcpy(buf + where, s.ptr, l)
+        where += l
+        if i < n - 1:
+            buf[where] = byte(44)  # ','
+            where += 1
+            buf[where] = byte(32)  # ' '
+            where += 1
+        i += 1
+    buf[where] = byte(41)  # ')'
+
+    return str(buf, total)
+
+@builtin
+def _raw_type_str(p: ptr[byte], name: str) -> str:
+    pstr = _C.seq_str_ptr(p)
+    # '<[name] at [pstr]>'
+    total = 1 + name.len + 4 + pstr.len + 1
+    buf = ptr[byte](total)
+    where = 0
+
+    buf[where] = byte(60)   # '<'
+    where += 1
+    str.memcpy(buf + where, name.ptr, name.len)
+    where += name.len
+    buf[where] = byte(32)   # ' '
+    where += 1
+    buf[where] = byte(97)   # 'a'
+    where += 1
+    buf[where] = byte(116)  # 't'
+    where += 1
+    buf[where] = byte(32)   # ' '
+    where += 1
+    str.memcpy(buf + where, pstr.ptr, pstr.len)
+    where += pstr.len
+    buf[where] = byte(62)  # '>'
+    _gc.free(pstr.ptr)
+    return str(buf, total)
 
 @builtin
 def _ensure_not_none(p: ptr[byte], memb: str):

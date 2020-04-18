@@ -293,11 +293,13 @@ void types::RecordType::initOps() {
              b.CreateStore(s, dest);
            }
 
-           auto *strReal = cast<Function>(module->getOrInsertFunction(
-               "seq_str_tuple", Str->getLLVMType(context),
-               Str->getLLVMType(context)->getPointerTo(), seqIntLLVM(context)));
-           strReal->setDoesNotThrow();
-           Value *res = b.CreateCall(strReal, {strs, len});
+           Func *strsReal = Func::getBuiltin("_tuple_str");
+           FuncExpr strsRealExpr(strsReal);
+           ValueExpr strsVal(types::PtrType::get(types::Str), strs);
+           ValueExpr lenVal(types::Int, len);
+           CallExpr strsRealCall(&strsRealExpr, {&strsVal, &lenVal});
+           strsRealExpr.resolveTypes();
+           Value *res = strsRealCall.codegen(nullptr, entry);
            b.CreateRet(res);
          }
 

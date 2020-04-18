@@ -205,6 +205,12 @@ SEQ_FUNC void seq_terminate(void *exc) {
   auto *base = (OurBaseException_t *)((char *)exc + seq_exc_offset());
   void *obj = base->obj;
   auto *hdr = (SeqExcHeader_t *)obj;
+
+  if (std::string(hdr->type.str, hdr->type.len) == "SystemExit") {
+    seq_int_t status = *(seq_int_t *)(hdr + 1);
+    exit((int)status);
+  }
+
   fprintf(stderr, "\033[1m");
   fwrite(hdr->type.str, 1, (size_t)hdr->type.len, stderr);
   if (hdr->msg.len > 0) {
