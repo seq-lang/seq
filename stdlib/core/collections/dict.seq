@@ -130,10 +130,17 @@ class dict[K,V]:
 
     def setdefault(self: dict[K,V], key: K, val: V):
         ret, x = self._kh_put(key)
-        if ret != 0:  # i.e. key present
+        if ret != 0:  # i.e. key not present
             self._vals[x] = val
             return val
         return self._vals[x]
+
+    def increment[T](self: dict[K,V], key: K, by: T = 1):
+        ret, x = self._kh_put(key)
+        if ret != 0:  # i.e. key not present
+            self._vals[x] = by
+        else:
+            self._vals[x] += by
 
     def update(self: dict[K,V], other: dict[K,V]):
         for k,v in other.items():

@@ -3,6 +3,9 @@
 def sizeof[T]():
     return array[T].__elemsize__()
 
+def atomic[T]():
+    return array[T].__atomic__()
+
 def alloc(sz: int):
     return _C.seq_alloc(sz)
 

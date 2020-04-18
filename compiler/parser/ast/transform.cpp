@@ -1,5 +1,6 @@
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
+#include <deque>
 #include <memory>
 #include <ostream>
 #include <stack>
@@ -9,18 +10,14 @@
 #include <unordered_set>
 #include <vector>
 
-#include "lang/seq.h"
-#include "parser/ast/expr.h"
-#include "parser/ast/format/stmt.h"
-#include "parser/ast/stmt.h"
-#include "parser/ast/transform/expr.h"
-#include "parser/ast/transform/pattern.h"
-#include "parser/ast/transform/stmt.h"
-#include "parser/ast/visitor.h"
+#include "parser/ast/ast.h"
+#include "parser/ast/transform.h"
 #include "parser/common.h"
 #include "parser/context.h"
+#include "parser/ocaml.h"
 
 using fmt::format;
+using std::deque;
 using std::get;
 using std::make_unique;
 using std::move;
@@ -35,28 +32,330 @@ using std::vector;
 
 #define RETURN(T, ...)                                                         \
   (this->result =                                                              \
-       fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()));           \
+       fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()));           \
   return
-
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
 #define EP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
 #define EPX(e, T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), e->getSrcInfo())
 #define S(T, ...) make_unique<T>(__VA_ARGS__)
 #define SP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo())
 #define SPX(s, T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), s->getSrcInfo())
-#define ERROR(...) error(stmt->getSrcInfo(), __VA_ARGS__)
+#define ERROR(s, ...) error(s->getSrcInfo(), __VA_ARGS__)
 
 namespace seq {
 namespace ast {
 
-void TransformStmtVisitor::prepend(StmtPtr s) {
-  prependStmts.push_back(move(s));
+TransformExprVisitor::TransformExprVisitor(vector<StmtPtr> &prepend)
+    : prependStmts(prepend) {}
+
+ExprPtr TransformExprVisitor::transform(const Expr *expr) {
+  TransformExprVisitor v(this->prependStmts);
+  expr->accept(v);
+  return move(v.result);
 }
 
-StmtPtr TransformStmtVisitor::apply(const StmtPtr &stmts) {
-  auto tv = TransformStmtVisitor();
-  stmts->accept(tv);
-  return move(tv.result);
+vector<ExprPtr> TransformExprVisitor::transform(const vector<ExprPtr> &exprs) {
+  vector<ExprPtr> r;
+  for (auto &e : exprs) {
+    r.push_back(transform(e));
+  }
+  return r;
+}
+
+void TransformExprVisitor::visit(const EmptyExpr *expr) { RETURN(EmptyExpr, ); }
+
+void TransformExprVisitor::visit(const BoolExpr *expr) {
+  RETURN(BoolExpr, expr->value);
+}
+
+void TransformExprVisitor::visit(const IntExpr *expr) {
+  RETURN(IntExpr, expr->value);
+}
+
+void TransformExprVisitor::visit(const FloatExpr *expr) {
+  RETURN(FloatExpr, expr->value);
+}
+
+void TransformExprVisitor::visit(const StringExpr *expr) {
+  RETURN(StringExpr, expr->value);
+}
+
+void TransformExprVisitor::visit(const FStringExpr *expr) {
+  int braces_count = 0, brace_start = 0;
+  vector<ExprPtr> items;
+  for (int i = 0; i < expr->value.size(); i++) {
+    if (expr->value[i] == '{') {
+      if (brace_start < i) {
+        items.push_back(
+            EP(StringExpr, expr->value.substr(brace_start, i - brace_start)));
+      }
+      if (!braces_count) {
+        brace_start = i + 1;
+      }
+      braces_count++;
+    } else if (expr->value[i] == '}') {
+      braces_count--;
+      if (!braces_count) {
+        string code = expr->value.substr(brace_start, i - brace_start);
+        auto offset = expr->getSrcInfo();
+        offset.col += i;
+        if (code.size() && code.back() == '=') {
+          code = code.substr(0, code.size() - 1);
+          items.push_back(EP(StringExpr, format("{}=", code)));
+        }
+        items.push_back(EP(CallExpr, EP(IdExpr, "str"),
+                           transform(parse_expr(code, offset))));
+      }
+      brace_start = i + 1;
+    }
+  }
+  if (braces_count) {
+    ERROR(expr, "f-string braces not balanced");
+  }
+  if (brace_start != expr->value.size()) {
+    items.push_back(transform(
+        EP(StringExpr,
+           expr->value.substr(brace_start, expr->value.size() - brace_start))));
+  }
+  this->result = transform(EP(CallExpr, EP(DotExpr, EP(IdExpr, "str"), "cat"),
+                              EP(ListExpr, move(items))));
+}
+
+void TransformExprVisitor::visit(const KmerExpr *expr) {
+  this->result = transform(
+      EP(CallExpr,
+         EP(IndexExpr, EP(IdExpr, "Kmer"), EP(IntExpr, expr->value.size())),
+         EP(SeqExpr, expr->value)));
+}
+
+void TransformExprVisitor::visit(const SeqExpr *expr) {
+  if (expr->prefix == "p") {
+    this->result = transform(
+        EP(CallExpr, EP(IdExpr, "pseq"), EP(StringExpr, expr->value)));
+  } else if (expr->prefix == "s") {
+    RETURN(SeqExpr, expr->value, expr->prefix);
+  } else {
+    ERROR(expr, "invalid seq prefix '{}'", expr->prefix);
+  }
+}
+
+void TransformExprVisitor::visit(const IdExpr *expr) {
+  RETURN(IdExpr, expr->value);
+}
+
+void TransformExprVisitor::visit(const UnpackExpr *expr) {
+  RETURN(CallExpr, EP(IdExpr, "list"), transform(expr->what));
+}
+
+void TransformExprVisitor::visit(const TupleExpr *expr) {
+  RETURN(TupleExpr, transform(expr->items));
+}
+
+void TransformExprVisitor::visit(const ListExpr *expr) {
+  RETURN(ListExpr, transform(expr->items));
+  // TODO later
+  if (!expr->items.size()) {
+    error("empty lists are not supported");
+  }
+  string headVar = getTemporaryVar("head");
+  string listVar = getTemporaryVar("list");
+  prependStmts.push_back(
+      SPX(expr, AssignStmt, EP(IdExpr, headVar), transform(expr->items[0])));
+  prependStmts.push_back(SPX(
+      expr, AssignStmt, EP(IdExpr, listVar),
+      EP(CallExpr,
+         EP(IndexExpr, EP(IdExpr, "list"), EP(TypeOfExpr, EP(IdExpr, headVar))),
+         EP(IntExpr, expr->items.size()))));
+
+#define ADD(x)                                                                 \
+  prependStmts.push_back(                                                      \
+      SPX(expr, ExprStmt,                                                      \
+          EP(CallExpr, EP(DotExpr, EP(IdExpr, listVar), "append"), x)))
+  ADD(EP(IdExpr, headVar));
+  for (int i = 1; i < expr->items.size(); i++) {
+    ADD(transform(expr->items[i]));
+  }
+#undef ADD
+  RETURN(IdExpr, listVar);
+}
+
+void TransformExprVisitor::visit(const SetExpr *expr) {
+  RETURN(SetExpr, transform(expr->items));
+  // TODO later
+  if (!expr->items.size()) {
+    error("empty sets are not supported");
+  }
+  string headVar = getTemporaryVar("head");
+  string setVar = getTemporaryVar("set");
+  prependStmts.push_back(
+      SPX(expr, AssignStmt, EP(IdExpr, headVar), transform(expr->items[0])));
+  prependStmts.push_back(
+      SPX(expr, AssignStmt, EP(IdExpr, setVar),
+          EP(CallExpr, EP(IndexExpr, EP(IdExpr, "set"),
+                          EP(TypeOfExpr, EP(IdExpr, headVar))))));
+#define ADD(x)                                                                 \
+  prependStmts.push_back(                                                      \
+      SPX(expr, ExprStmt,                                                      \
+          EP(CallExpr, EP(DotExpr, EP(IdExpr, setVar), "add"), x)))
+  ADD(EP(IdExpr, headVar));
+  for (int i = 1; i < expr->items.size(); i++) {
+    ADD(transform(expr->items[i]));
+  }
+#undef ADD
+  RETURN(IdExpr, setVar);
+}
+
+void TransformExprVisitor::visit(const DictExpr *expr) {
+  vector<DictExpr::KeyValue> items;
+  for (auto &i : expr->items) {
+    items.push_back({transform(i.key), transform(i.value)});
+  }
+  RETURN(DictExpr, move(items));
+  // TODO later
+  if (!expr->items.size()) {
+    error("empty dicts are not supported");
+  }
+  string headKey = getTemporaryVar("headk");
+  string headVal = getTemporaryVar("headv");
+  string dictVar = getTemporaryVar("dict");
+  prependStmts.push_back(SPX(expr, AssignStmt, EP(IdExpr, headKey),
+                             transform(expr->items[0].key)));
+  prependStmts.push_back(SPX(expr, AssignStmt, EP(IdExpr, headVal),
+                             transform(expr->items[0].value)));
+  vector<ExprPtr> types;
+  types.push_back(EP(TypeOfExpr, EP(IdExpr, headKey)));
+  types.push_back(EP(TypeOfExpr, EP(IdExpr, headVal)));
+  prependStmts.push_back(SPX(expr, AssignStmt, EP(IdExpr, dictVar),
+                             EP(CallExpr, EP(IndexExpr, EP(IdExpr, "dict"),
+                                             EP(TupleExpr, move(types))))));
+
+#define ADD(k, v)                                                              \
+  vector<ExprPtr> _s;                                                          \
+  _s.push_back(k);                                                             \
+  _s.push_back(v);                                                             \
+  prependStmts.push_back(                                                      \
+      SPX(expr, ExprStmt,                                                      \
+          EP(CallExpr, EP(DotExpr, EP(IdExpr, dictVar), "__setitem__"),        \
+             move(_s))))
+  ADD(EP(IdExpr, headKey), EP(IdExpr, headVal));
+  for (int i = 1; i < expr->items.size(); i++) {
+    ADD(transform(expr->items[i].key), transform(expr->items[i].value));
+  }
+#undef ADD
+  RETURN(IdExpr, dictVar);
+}
+
+void TransformExprVisitor::visit(const GeneratorExpr *expr) {
+  vector<GeneratorExpr::Body> loops;
+  for (auto &l : expr->loops) {
+    loops.push_back({l.vars, transform(l.gen), transform(l.conds)});
+  }
+  RETURN(GeneratorExpr, expr->kind, transform(expr->expr), move(loops));
+  /* TODO transform: T = list[T]() for_1: cond_1: for_2: cond_2: expr */
+}
+
+void TransformExprVisitor::visit(const DictGeneratorExpr *expr) {
+  vector<GeneratorExpr::Body> loops;
+  for (auto &l : expr->loops) {
+    loops.push_back({l.vars, transform(l.gen), transform(l.conds)});
+  }
+  RETURN(DictGeneratorExpr, transform(expr->key), transform(expr->expr),
+         move(loops));
+}
+
+void TransformExprVisitor::visit(const IfExpr *expr) {
+  RETURN(IfExpr, transform(expr->cond), transform(expr->eif),
+         transform(expr->eelse));
+}
+
+void TransformExprVisitor::visit(const UnaryExpr *expr) {
+  RETURN(UnaryExpr, expr->op, transform(expr->expr));
+}
+
+void TransformExprVisitor::visit(const BinaryExpr *expr) {
+  RETURN(BinaryExpr, transform(expr->lexpr), expr->op, transform(expr->rexpr));
+}
+
+void TransformExprVisitor::visit(const PipeExpr *expr) {
+  vector<PipeExpr::Pipe> items;
+  for (auto &l : expr->items) {
+    items.push_back({l.op, transform(l.expr)});
+  }
+  RETURN(PipeExpr, move(items));
+}
+
+void TransformExprVisitor::visit(const IndexExpr *expr) {
+  RETURN(IndexExpr, transform(expr->expr), transform(expr->index));
+}
+
+void TransformExprVisitor::visit(const CallExpr *expr) {
+  // TODO: name resolution should come here!
+  vector<CallExpr::Arg> args;
+  for (auto &i : expr->args) {
+    args.push_back({i.name, transform(i.value)});
+  }
+  RETURN(CallExpr, transform(expr->expr), move(args));
+}
+
+void TransformExprVisitor::visit(const DotExpr *expr) {
+  RETURN(DotExpr, transform(expr->expr), expr->member);
+}
+
+void TransformExprVisitor::visit(const SliceExpr *expr) {
+  string prefix;
+  if (!expr->st && expr->ed) {
+    prefix = "l";
+  } else if (expr->st && !expr->ed) {
+    prefix = "r";
+  } else if (!expr->st && !expr->ed) {
+    prefix = "e";
+  }
+  if (expr->step) {
+    prefix += "s";
+  }
+  vector<ExprPtr> args;
+  if (expr->st) {
+    args.push_back(transform(expr->st));
+  }
+  if (expr->ed) {
+    args.push_back(transform(expr->ed));
+  }
+  if (expr->step) {
+    args.push_back(transform(expr->step));
+  }
+  if (!args.size()) {
+    args.push_back(transform(EP(IntExpr, 0)));
+  }
+  // TODO: might need transform later
+  this->result = EP(CallExpr, EP(IdExpr, prefix + "slice"), move(args));
+}
+
+void TransformExprVisitor::visit(const EllipsisExpr *expr) {
+  RETURN(EllipsisExpr, );
+}
+
+void TransformExprVisitor::visit(const TypeOfExpr *expr) {
+  RETURN(TypeOfExpr, transform(expr->expr));
+}
+
+void TransformExprVisitor::visit(const PtrExpr *expr) {
+  RETURN(PtrExpr, transform(expr->expr));
+}
+
+void TransformExprVisitor::visit(const LambdaExpr *expr) {
+  ERROR(expr, "TODO");
+}
+
+void TransformExprVisitor::visit(const YieldExpr *expr) { RETURN(YieldExpr, ); }
+
+#undef RETURN
+#define RETURN(T, ...)                                                         \
+  (this->result =                                                              \
+       fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()));           \
+  return
+
+void TransformStmtVisitor::prepend(StmtPtr s) {
+  prependStmts.push_back(move(s));
 }
 
 StmtPtr TransformStmtVisitor::transform(const Stmt *stmt) {
@@ -120,22 +419,15 @@ void TransformStmtVisitor::visit(const ExprStmt *stmt) {
 }
 
 StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
-                                            const Expr *type) {
-  // fmt::print("## ass {} = {}\n", *lhs, *rhs);
+                                            const Expr *type, bool force) {
+  // DBG("    --> {} := {}", *lhs, *rhs);
   if (auto l = dynamic_cast<const IndexExpr *>(lhs)) {
-    // vector<ExprPtr> args;
-    // args.push_back(transform(l->index));
-    // args.push_back(transform(rhs));
-    // return SPX(lhs, ExprStmt,
-    //            EPX(lhs, CallExpr,
-    //                EPX(lhs, DotExpr, transform(l->expr), "__setitem__"),
-    //                move(args)));
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const DotExpr *>(lhs)) {
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const IdExpr *>(lhs)) {
-    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs),
-               transform(type));
+    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs), transform(type),
+               false, force);
   } else {
     error(lhs->getSrcInfo(), "invalid assignment");
     return nullptr;
@@ -143,7 +435,8 @@ StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
 }
 
 void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
-                                             vector<StmtPtr> &stmts) {
+                                             vector<StmtPtr> &stmts,
+                                             bool force) {
   vector<Expr *> lefts;
   if (auto l = dynamic_cast<const TupleExpr *>(lhs)) {
     for (auto &i : l->items) {
@@ -154,17 +447,17 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
       lefts.push_back(i.get());
     }
   } else {
-    stmts.push_back(addAssignment(lhs, rhs));
+    stmts.push_back(addAssignment(lhs, rhs, nullptr, force));
     return;
   }
   if (!dynamic_cast<const IdExpr *>(rhs)) { // store any non-trivial expression
     auto var = getTemporaryVar("assign");
     auto newRhs = EPX(rhs, IdExpr, var).release();
-    stmts.push_back(addAssignment(newRhs, rhs));
+    stmts.push_back(addAssignment(newRhs, rhs, nullptr, force));
     rhs = newRhs;
   }
   UnpackExpr *unpack = nullptr;
-  int st = 0, ed = lefts.size() - 1;
+  int st = 0;
   for (; st < lefts.size(); st++) {
     if (auto u = dynamic_cast<UnpackExpr *>(lefts[st])) {
       unpack = u;
@@ -172,47 +465,44 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
     }
     // TODO: RHS here (and below) will be transformed twice in order to avoid
     // messing up with unique_ptr. Better solution needed?
-    stmts.push_back(addAssignment(
+    processAssignment(
         lefts[st],
-        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, st)).release()));
-  }
-  for (int i = 1; ed > st; i++, ed--) {
-    if (dynamic_cast<UnpackExpr *>(lefts[ed])) {
-      break;
-    }
-    stmts.push_back(addAssignment(
-        lefts[ed],
-        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, -i)).release()));
-  }
-  if (st < lefts.size() && st != ed) {
-    error(lefts[st]->getSrcInfo(), "two starred expressions in assignment");
+        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, st)).release(),
+        stmts, force);
   }
   if (unpack) {
     processAssignment(unpack->what.get(),
                       EPX(rhs, IndexExpr, transform(rhs),
                           EPX(rhs, SliceExpr, EPX(rhs, IntExpr, st),
-                              EPX(rhs, IntExpr, ed + 1), nullptr))
+                              lefts.size() == st + 1
+                                  ? nullptr
+                                  : EPX(rhs, IntExpr, -lefts.size() + st + 1),
+                              nullptr))
                           .release(),
-                      stmts);
+                      stmts, force);
+    st += 1;
+    for (; st < lefts.size(); st++) {
+      if (dynamic_cast<UnpackExpr *>(lefts[st])) {
+        error(lefts[st]->getSrcInfo(), "two unpack expressions in assignment");
+      }
+      processAssignment(lefts[st],
+                        EPX(rhs, IndexExpr, transform(rhs),
+                            EPX(rhs, IntExpr, -lefts.size() + st))
+                            .release(),
+                        stmts, force);
+    }
   }
 }
 
 void TransformStmtVisitor::visit(const AssignStmt *stmt) {
-  // a, b, *x, c, d = y
-  // (^) = y
-  // [^] = y
-  // *a = y NO ; *a, = y YES
-  // (a, b), c = d, e
-  // *(a, *b), c = this
-  // a = *iterable
-
+  // DBG("--> {}", *stmt);
   vector<StmtPtr> stmts;
   if (stmt->type) {
     if (auto i = dynamic_cast<IdExpr *>(stmt->lhs.get())) {
       stmts.push_back(
           addAssignment(stmt->lhs.get(), stmt->rhs.get(), stmt->type.get()));
     } else {
-      ERROR("only single target can be annotated");
+      ERROR(stmt, "only a single target can be annotated");
     }
   } else {
     processAssignment(stmt->lhs.get(), stmt->rhs.get(), stmts);
@@ -236,7 +526,7 @@ void TransformStmtVisitor::visit(const DelStmt *stmt) {
   } else if (auto expr = dynamic_cast<const IdExpr *>(stmt->expr.get())) {
     RETURN(DelStmt, transform(expr));
   } else {
-    ERROR("this expression cannot be deleted");
+    ERROR(stmt, "this expression cannot be deleted");
   }
 }
 
@@ -275,7 +565,7 @@ void TransformStmtVisitor::visit(const ForStmt *stmt) {
     string varName = getTemporaryVar("for");
     vector<StmtPtr> stmts;
     var = EPX(stmt, IdExpr, varName);
-    processAssignment(stmt->var.get(), var.get(), stmts);
+    processAssignment(stmt->var.get(), var.get(), stmts, true);
     stmts.push_back(transform(stmt->suite));
     suite = SP(SuiteStmt, move(stmts));
   }
@@ -381,7 +671,7 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
     if (auto i = dynamic_cast<IdExpr *>(stmt->from.get())) {
       from = i->value;
     } else {
-      ERROR("invalid pyimport query");
+      ERROR(stmt, "invalid pyimport query");
     }
     auto call =
         EPX(stmt, CallExpr, // _py_import(LIB)[WHAT].call ( ...
@@ -418,7 +708,7 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
            transform(stmt->ret), vector<string>(), move(params),
            SP(SuiteStmt, move(stmts)), vector<string>{"pyhandle"});
   } else {
-    ERROR("language {} not yet supported", stmt->lang);
+    ERROR(stmt, "language {} not yet supported", stmt->lang);
   }
 }
 
@@ -487,7 +777,7 @@ void TransformStmtVisitor::visit(const YieldFromStmt *stmt) {
 
 void TransformStmtVisitor::visit(const WithStmt *stmt) {
   if (!stmt->items.size()) {
-    ERROR("malformed with statement");
+    ERROR(stmt, "malformed with statement");
   }
   vector<StmtPtr> content;
   for (int i = stmt->items.size() - 1; i >= 0; i--) {
@@ -533,6 +823,79 @@ void TransformStmtVisitor::visit(const PyDefStmt *stmt) {
                                EPX(stmt, IdExpr, "__main__"),
                                transform(stmt->ret), vector<Param>(), "py")));
   RETURN(SuiteStmt, move(stmts));
+}
+
+#undef RETURN
+#define RETURN(T, ...)                                                         \
+  (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), pat->getSrcInfo())); \
+  return
+
+TransformPatternVisitor::TransformPatternVisitor(
+    TransformStmtVisitor &stmtVisitor)
+    : stmtVisitor(stmtVisitor) {}
+
+PatternPtr TransformPatternVisitor::transform(const Pattern *ptr) {
+  TransformPatternVisitor v(stmtVisitor);
+  ptr->accept(v);
+  return move(v.result);
+}
+
+vector<PatternPtr>
+TransformPatternVisitor::transform(const vector<PatternPtr> &pats) {
+  vector<PatternPtr> r;
+  for (auto &e : pats) {
+    r.push_back(transform(e));
+  }
+  return r;
+}
+
+void TransformPatternVisitor::visit(const StarPattern *pat) {
+  RETURN(StarPattern, );
+}
+
+void TransformPatternVisitor::visit(const IntPattern *pat) {
+  RETURN(IntPattern, pat->value);
+}
+
+void TransformPatternVisitor::visit(const BoolPattern *pat) {
+  RETURN(BoolPattern, pat->value);
+}
+
+void TransformPatternVisitor::visit(const StrPattern *pat) {
+  RETURN(StrPattern, pat->value);
+}
+
+void TransformPatternVisitor::visit(const SeqPattern *pat) {
+  RETURN(SeqPattern, pat->value);
+}
+
+void TransformPatternVisitor::visit(const RangePattern *pat) {
+  RETURN(RangePattern, pat->start, pat->end);
+}
+
+void TransformPatternVisitor::visit(const TuplePattern *pat) {
+  RETURN(TuplePattern, transform(pat->patterns));
+}
+
+void TransformPatternVisitor::visit(const ListPattern *pat) {
+  RETURN(ListPattern, transform(pat->patterns));
+}
+
+void TransformPatternVisitor::visit(const OrPattern *pat) {
+  RETURN(OrPattern, transform(pat->patterns));
+}
+
+void TransformPatternVisitor::visit(const WildcardPattern *pat) {
+  RETURN(WildcardPattern, pat->var);
+}
+
+void TransformPatternVisitor::visit(const GuardedPattern *pat) {
+  RETURN(GuardedPattern, transform(pat->pattern),
+         stmtVisitor.transform(pat->cond));
+}
+
+void TransformPatternVisitor::visit(const BoundPattern *pat) {
+  RETURN(BoundPattern, pat->var, transform(pat->pattern));
 }
 
 } // namespace ast

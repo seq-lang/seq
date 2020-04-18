@@ -123,28 +123,28 @@ class Context;
 struct ImportCache {
   std::string argv0;
   Context *stdlib;
+
   std::unordered_map<std::string, std::shared_ptr<Context>> imports;
 
+  ImportCache(const std::string &a = "") : argv0(a), stdlib(nullptr) {}
   std::string getImportFile(const std::string &what,
                             const std::string &relativeTo,
                             bool forceStdlib = false);
 };
 
 class Context : public VTable<ContextItem> {
-  ImportCache &cache;
+  std::shared_ptr<ImportCache> cache;
   std::string filename;
-  seq::BaseFunc *module;
   seq::SeqJIT *jit;
   std::vector<seq::BaseFunc *> bases;
   std::vector<seq::Block *> blocks;
   int topBlockIndex, topBaseIndex;
   seq::types::Type *enclosingType;
   seq::TryCatch *tryCatch;
-  void loadStdlib();
 
 public:
-  Context(seq::BaseFunc *module, ImportCache &cache, seq::SeqJIT *jit = nullptr,
-          const std::string &filename = "");
+  Context(std::shared_ptr<ImportCache> cache, seq::Block *block,
+          seq::BaseFunc *base, seq::SeqJIT *jit, const std::string &filename);
   virtual ~Context() {}
   std::shared_ptr<ContextItem> find(const std::string &name,
                                     bool onlyLocal = false) const;
@@ -160,8 +160,7 @@ public:
                 seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
-  seq::SeqJIT *getJIT();
-
+  void loadStdlib(seq::Var *argVar = nullptr);
   void add(const std::string &name, std::shared_ptr<ContextItem> var);
   void add(const std::string &name, seq::Var *v, bool global = false);
   void add(const std::string &name, seq::types::Type *t, bool global = false);
@@ -170,10 +169,13 @@ public:
   void add(const std::string &name, const std::string &import,
            bool global = false);
   std::string getFilename() const;
-  ImportCache &getCache();
+  std::shared_ptr<ImportCache> getCache();
 
   std::shared_ptr<Context> importFile(const std::string &file);
-  void executeJIT(const std::string &name, const std::string &code);
+
+  void initJIT();
+  seq::SeqJIT *getJIT();
+  void execJIT(std::string varName = "", seq::Expr *varExpr = nullptr);
 };
 
 } // namespace ast

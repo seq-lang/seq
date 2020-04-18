@@ -178,6 +178,53 @@ static void applyRevCompOptimization(std::vector<Expr *> &stages,
   parallel = parallelNew;
 }
 
+/*
+ * Canonical k-mer optimization optimizes kmers |> canonical by using two
+ * sliding windows to iterate over both forward and reverse k-mers
+ * simultaneously. Currently only works with step=1 but probably possible to
+ * support arbitrary step size.
+ */
+static void applyCanonicalKmerOptimization(std::vector<Expr *> &stages,
+                                           std::vector<bool> &parallel) {
+  std::vector<Expr *> stagesNew;
+  std::vector<bool> parallelNew;
+  unsigned i = 0;
+  while (i < stages.size()) {
+    if (i < stages.size() - 1) {
+      UnpackedStage f1(stages[i]);
+      UnpackedStage f2(stages[i + 1]);
+
+      seq_int_t step = -1;
+      if (!f1.args.empty()) {
+        if (auto *e = dynamic_cast<IntExpr *>(f1.args[0]))
+          step = e->value();
+      }
+
+      std::string replacement = "";
+      if (step == 1 && f1.matches("kmers", 1) && f2.matches("canonical"))
+        replacement = "_kmers_canonical";
+      if (step == 1 && f1.matches("kmers_with_pos", 1) &&
+          f2.matches("canonical_with_pos"))
+        replacement = "_kmers_canonical_with_pos";
+
+      if (!replacement.empty()) {
+        stagesNew.push_back(
+            new FuncExpr(Func::getBuiltin(replacement), f1.func->getTypes()));
+        stagesNew.back()->resolveTypes();
+        parallelNew.push_back(parallel[i] || parallel[i + 1]);
+        i += 2;
+        continue;
+      }
+    }
+
+    stagesNew.push_back(stages[i]);
+    parallelNew.push_back(parallel[i]);
+    ++i;
+  }
+  stages = stagesNew;
+  parallel = parallelNew;
+}
+
 // make sure params are globals or literals, since codegen'ing in function entry
 // block
 static Value *validateAndCodegenInterAlignParamExpr(Expr *e,
@@ -643,6 +690,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   std::vector<Expr *> stages(this->stages);
   std::vector<bool> parallel(this->parallel);
   applyRevCompOptimization(stages, parallel);
+  applyCanonicalKmerOptimization(stages, parallel);
 
   std::queue<Expr *> queue;
   std::queue<bool> parallelQueue;

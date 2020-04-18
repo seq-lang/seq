@@ -402,7 +402,13 @@ void Func::codegen(Module *module) {
     func->setLinkage(GlobalValue::PrivateLinkage);
   }
   if (hasAttribute("inline")) {
+    if (hasAttribute("noinline"))
+      throw exc::SeqException(
+          "function cannot be marked 'inline' and 'noinline'", getSrcInfo());
     func->addFnAttr(Attribute::AttrKind::AlwaysInline);
+  }
+  if (hasAttribute("noinline")) {
+    func->addFnAttr(Attribute::AttrKind::NoInline);
   }
   func->setPersonalityFn(makePersonalityFunc(module));
   preambleBlock = BasicBlock::Create(context, "preamble", func);

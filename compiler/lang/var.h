@@ -57,6 +57,7 @@ public:
   void setThreadLocal();
   void setREPL();
   void setExternal();
+  void reset();
 
   /// Map this variable to another variable. This can be necessary
   /// to implement e.g. generator expressions, which need to be

@@ -31,6 +31,23 @@ def _kmers_revcomp[K](self: seq, step: int):
     return self._kmers_revcomp[K](step)
 
 @builtin
+def canonical(k):
+    kr = ~k
+    return k if k < kr else kr
+
+@builtin
+def canonical_with_pos(t):
+    return (t[0], canonical(t[1]))
+
+@builtin
+def _kmers_canonical[K](self: seq):
+    return self.kmers_canonical[K]()
+
+@builtin
+def _kmers_canonical_with_pos[K](self: seq):
+    return self.kmers_canonical_with_pos[K]()
+
+@builtin
 def _kmer_in_seq[K](kmer: K, s: seq) -> bool:
     for k in s.kmers[K](step=1):
         if k == kmer:

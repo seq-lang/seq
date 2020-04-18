@@ -199,7 +199,8 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,
-    testing::Combine(testing::Values("core/align.seq", "core/arguments.seq",
+    testing::Combine(testing::Values("core/parser.seq", "core/align.seq",
+                                     "core/arguments.seq",
                                      "core/arithmetic.seq", "core/big.seq",
                                      "core/bwtsa.seq", "core/containers.seq",
                                      "core/empty.seq", "core/exceptions.seq",
@@ -219,6 +220,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(testing::Values("pipeline/parallel.seq",
                                      "pipeline/prefetch.seq",
                                      "pipeline/revcomp_opt.seq",
+                                     "pipeline/canonical_opt.seq",
                                      "pipeline/interalign.seq"),
                      testing::Values(true, false)),
     getTestNameFromParam);

@@ -46,6 +46,9 @@ type pyobj(p: cobj):
     def __to_py__(self: pyobj):
         return self
 
+    def __from_py__(self: pyobj):
+        return self
+
     def to_str(self: pyobj, errors: str, empty: str = "") -> str:
         obj = PyUnicode_AsEncodedString(self.p, "utf-8".c_str(), errors.c_str())
         if obj == cobj():

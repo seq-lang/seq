@@ -1,17 +1,22 @@
-type range(lo: int, hi: int, step: int):
+from slice import slice
+
+type range(start: int, stop: int, step: int):
 
 # Magic methods
 
-    def __init__(self: range, lo: int, hi: int, step: int) -> range:
+    def __init__(self: range, start: int, stop: int, step: int) -> range:
         if step == 0:
             raise ValueError("range() step argument must not be zero")
-        return (lo, hi, step)
+        return (start, stop, step)
 
-    def __init__(self: range, lo: int, hi: int) -> range:
-        return (lo, hi, 1)
+    def __init__(self: range, start: int, stop: int) -> range:
+        return (start, stop, 1)
 
-    def __init__(self: range, hi: int) -> range:
-        return (0, hi, 1)
+    def __init__(self: range, stop: int) -> range:
+        return (0, stop, 1)
+
+    def _get(self: range, idx: int):
+        return self.start + (idx * self.step)
 
     def __getitem__(self: range, idx: int):
         n = self.__len__()
@@ -19,32 +24,93 @@ type range(lo: int, hi: int, step: int):
             idx += n
         if idx < 0 or idx >= n:
             raise IndexError("range object index out of range")
-        return self.lo + (idx * self.step)
+        return self._get(idx)
+
+    def __getitem__(self: range, s: eslice):
+        return self
+
+    def __getitem__(self: range, s: slice):
+        start, stop, step, length = slice.adjust_indices(self.__len__(), start=s.start, stop=s.end)
+        substep = self.step * step
+        substart = self._get(start)
+        substop = self._get(stop)
+        return range(substart, substop, substep)
+
+    def __getitem__(self: range, s: lslice):
+        start, stop, step, length = slice.adjust_indices(self.__len__(), stop=s.end)
+        substep = self.step * step
+        substart = self._get(start)
+        substop = self._get(stop)
+        return range(substart, substop, substep)
+
+    def __getitem__(self: range, s: rslice):
+        start, stop, step, length = slice.adjust_indices(self.__len__(), start=s.start)
+        substep = self.step * step
+        substart = self._get(start)
+        substop = self._get(stop)
+        return range(substart, substop, substep)
+
+    def __getitem__(self: range, s: esslice):
+        start, stop, step, length = slice.adjust_indices(self.__len__(), step=s.step)
+        substep = self.step * step
+        substart = self._get(start)
+        substop = self._get(stop)
+        return range(substart, substop, substep)
+
+    def __getitem__(self: range, s: rsslice):
+        start, stop, step, length = slice.adjust_indices(self.__len__(), start=s.start, step=s.step)
+        substep = self.step * step
+        substart = self._get(start)
+        substop = self._get(stop)
+        return range(substart, substop, substep)
+
+    def __getitem__(self: range, s: lsslice):
+        start, stop, step, length = slice.adjust_indices(self.__len__(), stop=s.end, step=s.step)
+        substep = self.step * step
+        substart = self._get(start)
+        substop = self._get(stop)
+        return range(substart, substop, substep)
+
+    def __getitem__(self: range, s: sslice):
+        start, stop, step, length = slice.adjust_indices(self.__len__(), start=s.start, stop=s.end, step=s.step)
+        substep = self.step * step
+        substart = self._get(start)
+        substop = self._get(stop)
+        return range(substart, substop, substep)
 
     def __contains__(self: range, idx: int):
-        lo, hi, step = self.lo, self.hi, self.step
-        if (step > 0 and not (lo <= idx < hi)) or (step < 0 and not (hi < idx <= lo)):
+        start, stop, step = self.start, self.stop, self.step
+        if (step > 0 and not (start <= idx < stop)) or (step < 0 and not (stop < idx <= start)):
             return False
-        return (idx - lo) % step == 0
+        return (idx - start) % step == 0
+
+    def index(self: range, n: int):
+        if n in self:
+            return (n - self.start) // self.step
+        else:
+            raise ValueError(str(n) + ' is not in range')
+
+    def count(self: range, n: int):
+        return int(n in self)
 
     def __iter__(self: range):
-        lo, hi, step = self.lo, self.hi, self.step
-        i = lo
+        start, stop, step = self.start, self.stop, self.step
+        i = start
         if step > 0:
-            while i < hi:
+            while i < stop:
                 yield i
                 i += step
         else:
-            while i > hi:
+            while i > stop:
                 yield i
                 i += step
 
     def __len__(self: range):
-        lo, hi, step = self.lo, self.hi, self.step
-        if step > 0 and lo < hi:
-            return 1 + (hi - 1 - lo) // step
-        elif step < 0 and lo > hi:
-            return 1 + (lo - 1 - hi) // (-step)
+        start, stop, step = self.start, self.stop, self.step
+        if step > 0 and start < stop:
+            return 1 + (stop - 1 - start) // step
+        elif step < 0 and start > stop:
+            return 1 + (start - 1 - stop) // (-step)
         else:
             return 0
 
@@ -52,6 +118,12 @@ type range(lo: int, hi: int, step: int):
         return self.__len__() > 0
 
     def __reversed__(self: range):
-        lo, hi, step = self.lo, self.hi, self.step
+        start, stop, step = self.start, self.stop, self.step
         n = self.__len__()
-        return range(lo + (n - 1)*step, lo - step, -step).__iter__()
+        return range(start + (n - 1)*step, start - step, -step).__iter__()
+
+    def __str__(self: range):
+        if self.step == 1:
+            return 'range(' + str(self.start) + ', ' + str(self.stop) + ')'
+        else:
+            return 'range(' + str(self.start) + ', ' + str(self.stop) + ', ' + str(self.step) + ')'
