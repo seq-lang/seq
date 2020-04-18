@@ -64,6 +64,9 @@ class File:
             _C.free(self.buf)
             self._reset()
 
+    def closed(self: File):
+        return not self.fp
+        
     def _ensure_open(self: File):
         if not self.fp:
             raise IOError("I/O operation on closed file")
@@ -167,6 +170,9 @@ class gzFile:
         _C.gzseek(self.fp, offset, i32(whence))
         _gz_errcheck(self.fp)
 
+    def closed(self: gzFile):
+        return not self.fp
+
     def _iter(self: gzFile):
         self._ensure_open()
         while True:
@@ -182,7 +188,7 @@ class gzFile:
     def _ensure_open(self: gzFile):
         if not self.fp:
             raise IOError("I/O operation on closed file")
-
+    
     def _reset(self: gzFile):
         self.buf = cobj()
         self.sz = 0
