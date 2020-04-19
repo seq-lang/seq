@@ -1,0 +1,48 @@
+import os
+from core.dlopen import dlext
+LD = os.getenv('SEQ_HTSLIB', default='libhts.' + dlext())
+
+# <htslib.h>
+from LD cimport hts_open(cobj, cobj) -> cobj
+from LD cimport hts_close(cobj)
+from LD cimport hts_idx_destroy(cobj)
+from LD cimport hts_itr_destroy(cobj)
+from LD cimport hts_itr_destroy(cobj)
+from LD cimport hts_itr_next(cobj, cobj, cobj, cobj) -> i32
+from LD cimport sam_index_load(cobj, cobj) -> cobj
+from LD cimport sam_hdr_read(cobj) -> cobj
+from LD cimport sam_itr_querys(cobj, cobj, cobj) -> cobj
+from LD cimport sam_read1(cobj, cobj, cobj) -> i32
+from LD cimport bam_read1(cobj, cobj) -> i32
+from LD cimport bam_init1() -> cobj
+from LD cimport bam_cigar2qlen(int, ptr[u32]) -> int
+from LD cimport bam_cigar2rlen(int, ptr[u32]) -> int
+from LD cimport bam_aux_get(cobj, ptr[byte]) -> ptr[u8]
+from LD cimport bam_aux2i(ptr[u8]) -> int
+from LD cimport bam_aux2f(ptr[u8]) -> float
+from LD cimport bam_aux2A(ptr[u8]) -> byte
+from LD cimport bam_aux2Z(ptr[u8]) -> ptr[byte]
+from LD cimport bam_auxB_len(ptr[u8]) -> u32
+from LD cimport bam_auxB2i(ptr[u8], idx: u32) -> int
+from LD cimport bam_auxB2f(ptr[u8], idx: u32) -> float
+from LD cimport sam_hdr_destroy(cobj)
+from LD cimport bam_destroy1(cobj)
+from LD cimport hts_version() -> cobj
+
+cimport seq_get_htsfile_fp(cobj) -> cobj
+cimport seq_is_htsfile_cram(cobj) -> bool
+cimport seq_is_htsfile_bgzf(cobj) -> bool
+
+# print str.from_ptr(hts_version())
+
+# Seq HTSlib
+def sam_itr_next(file: cobj, itr: cobj, r: cobj) -> int:
+    is_cram = seq_is_htsfile_cram(file)
+    is_bgzf = seq_is_htsfile_bgzf(file)
+    if not is_cram and not is_bgzf:
+        raise ValueError('not BGZF compressed')
+    if not itr:
+        raise ValueError('null iterator')
+    return int(hts_itr_next(
+        seq_get_htsfile_fp(file) if is_bgzf else cobj(),
+        itr, r, file))
