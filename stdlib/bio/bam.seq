@@ -15,6 +15,8 @@ BAM_FSUPPLEMENTARY = 2048
 from bio.align import CIGAR
 from bio.locus import Contig, Locus
 
+from c_htslib import *
+
 # This type must be consistent with htslib:
 type _sam_hdr_t(n_targets: i32,
                 ignore_sam_err: i32,
@@ -96,32 +98,32 @@ type SAMAux(s: ptr[u8]):
 
     @property
     def i(self: SAMAux):
-        return _C.bam_aux2i(self.s)
+        return bam_aux2i(self.s)
 
     @property
     def f(self: SAMAux):
-        return _C.bam_aux2f(self.s)
+        return bam_aux2f(self.s)
 
     @property
     def A(self: SAMAux):
-        return _C.bam_aux2A(self.s)
+        return bam_aux2A(self.s)
 
     @property
     def Z(self: SAMAux):
-        return str.from_ptr(_C.bam_aux2Z(self.s))
+        return str.from_ptr(bam_aux2Z(self.s))
 
     @property
     def B_len(self: SAMAux):
-        return int(_C.bam_auxB_len(self.s))
+        return int(bam_auxB_len(self.s))
 
     def B2i(self: SAMAux, idx: int):
-        return _C.bam_auxB2i(self.s, u32(idx))
+        return bam_auxB2i(self.s, u32(idx))
 
     def B2f(self: SAMAux, idx: int):
-        return _C.bam_auxB2f(self.s, u32(idx))
+        return bam_auxB2f(self.s, u32(idx))
 
     def __str__(self: SAMAux):
-        return str.from_ptr(_C.bam_aux2Z(self.s))
+        return str.from_ptr(bam_aux2Z(self.s))
 
 class SAMRecord:
     _htsr: _bam1_t
@@ -272,7 +274,7 @@ class SAMRecord:
         n = int(self._htsr.l_data) - (int(self._hts.core._n_cigar) << 2) - int(self._htsr.core._l_qname) -
             int(self._htsr.core._l_qseq) - ((int(self._htsr.core._l_qseq) + 1) >> 1)
         '''
-        return SAMAux(_C.bam_aux_get(self.__raw__(), ptr[byte](__ptr__(tag_arr))))
+        return SAMAux(bam_aux_get(self.__raw__(), ptr[byte](__ptr__(tag_arr))))
 
 class BAMReader:
     _aln: _bam1_t
@@ -286,20 +288,20 @@ class BAMReader:
     def __init__(self: BAMReader, path: str, region: str, copy: bool):
         path_c_str, region_c_str = path.c_str(), region.c_str()
 
-        file = _C.hts_open(path_c_str, "rb".c_str())
+        file = hts_open(path_c_str, "rb".c_str())
         if not file:
             raise IOError("file " + path + " could not be opened")
 
-        idx = _C.sam_index_load(file, path_c_str)
+        idx = sam_index_load(file, path_c_str)
         if not idx:
-            _C.hts_close(file)
+            hts_close(file)
             raise IOError("unable to open BAM/CRAM index for " + path)
 
-        hdr = _C.sam_hdr_read(file)
-        itr = _C.sam_itr_querys(idx, hdr, region_c_str)
+        hdr = sam_hdr_read(file)
+        itr = sam_itr_querys(idx, hdr, region_c_str)
 
         if not hdr or not itr:
-            _C.hts_close(file)
+            hts_close(file)
             raise IOError("unable to seek to region " + region + " in " + path)
 
         self._aln = _bam1_t()
@@ -312,10 +314,10 @@ class BAMReader:
 
     def seek(self: BAMReader, region: str):
         if self._itr:
-            _C.hts_itr_destroy(self._itr)
-        self._itr = _C.sam_itr_querys(self._idx, self._hdr, region.c_str())
+            hts_itr_destroy(self._itr)
+        self._itr = sam_itr_querys(self._idx, self._hdr, region.c_str())
         if not self._itr:
-            _C.hts_close(self._file)
+            hts_close(self._file)
             raise IOError("unable to seek to region " + region)
 
     def _ensure_open(self: BAMReader):
@@ -332,26 +334,26 @@ class BAMReader:
 
     def __iter__(self: BAMReader):
         self._ensure_open()
-        while _C.seq_hts_sam_itr_next(self._file, self._itr, self.__raw__()) >= 0:
+        while sam_itr_next(self._file, self._itr, self.__raw__()) >= 0:
             yield SAMRecord(copy(self._aln) if self._copy else self._aln)
         if self._itr:
-            _C.hts_itr_destroy(self._itr)
+            hts_itr_destroy(self._itr)
             self._itr = cobj()
 
     def close(self: BAMReader):
-        _C.bam_destroy1(self.__raw__())
+        bam_destroy1(self.__raw__())
 
         if self._itr:
-            _C.hts_itr_destroy(self._itr)
+            hts_itr_destroy(self._itr)
 
         if self._idx:
-            _C.hts_idx_destroy(self._idx)
+            hts_idx_destroy(self._idx)
 
         if self._hdr:
-            _C.sam_hdr_destroy(self._hdr)
+            sam_hdr_destroy(self._hdr)
 
         if self._file:
-            _C.hts_close(self._file)
+            hts_close(self._file)
 
         self._itr = cobj()
         self._idx = cobj()
@@ -380,11 +382,11 @@ class SAMReader:
     def __init__(self: SAMReader, path: str, copy: bool):
         path_c_str = path.c_str()
 
-        file = _C.hts_open(path_c_str, "r".c_str())
+        file = hts_open(path_c_str, "r".c_str())
         if not file:
             raise IOError("file " + path + " could not be opened")
 
-        hdr = _C.sam_hdr_read(file)
+        hdr = sam_hdr_read(file)
         self._aln = _bam1_t()
         self._copy = copy
         self._file = file
@@ -402,7 +404,7 @@ class SAMReader:
     def __iter__(self: SAMReader):
         self._ensure_open()
         while True:
-            status = int(_C.sam_read1(self._file, self._hdr, self.__raw__()))
+            status = int(sam_read1(self._file, self._hdr, self.__raw__()))
             if status >= 0:
                 yield SAMRecord(copy(self._aln) if self._copy else self._aln)
             elif status == -1:
@@ -416,13 +418,13 @@ class SAMReader:
         return _blocks(self.__iter__(), size)
 
     def close(self: SAMReader):
-        _C.bam_destroy1(self.__raw__())
+        bam_destroy1(self.__raw__())
 
         if self._hdr:
-            _C.sam_hdr_destroy(self._hdr)
+            sam_hdr_destroy(self._hdr)
 
         if self._file:
-            _C.hts_close(self._file)
+            hts_close(self._file)
 
         self._file = cobj()
         self._hdr = cobj()
