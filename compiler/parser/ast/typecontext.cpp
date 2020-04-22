@@ -21,6 +21,20 @@ using std::vector;
 namespace seq {
 namespace ast {
 
+TContextItem::TContextItem(TypePtr t, bool isType, bool global)
+    : type(t), typeVar(isType), global(global) {}
+bool TContextItem::isType() const { return typeVar; }
+bool TContextItem::isGlobal() const { return global; }
+TypePtr TContextItem::getType() const { return type; }
+bool TContextItem::hasAttr(const std::string &s) const {
+  return attributes.find(s) != attributes.end();
+}
+
+FuncTContextItem::FuncTContextItem(TypePtr t, const string &name, bool isType,
+                                   bool global)
+    : TContextItem(t, isType, global), name(name) {}
+string FuncTContextItem::getName() const { return name; }
+
 TypeContext::TypeContext(const std::string &filename)
     : filename(filename), module(""), prefix(""), level(0), unboundCount(0),
       returnType(nullptr), hasSetReturnType(false) {
@@ -29,7 +43,8 @@ TypeContext::TypeContext(const std::string &filename)
   vector<string> podTypes = {"void", "bool", "int", "float",
                              "byte", "str",  "seq"};
   for (auto &t : podTypes) {
-    internals[t] = make_shared<ClassType>(t, t, vector<pair<int, TypePtr>>());
+    internals[t] = make_shared<ClassType>(t, true, vector<pair<int, TypePtr>>(),
+                                          vector<pair<string, TypePtr>>());
     moduleNames[t] = 1;
   }
 
@@ -37,48 +52,43 @@ TypeContext::TypeContext(const std::string &filename)
                                  "optional", "tuple", "function",
                                  "Kmer",     "UInt",  "Int"};
   for (auto &t : genericTypes) {
+    /// TODO: handle Int/UInt record/class status
     internals[t] = make_shared<ClassType>(
-        t, t,
+        t, false,
         vector<pair<int, TypePtr>>{
             {unboundCount,
-             make_shared<LinkType>(LinkType::Generic, unboundCount)}});
+             make_shared<LinkType>(LinkType::Generic, unboundCount)}},
+        vector<pair<string, TypePtr>>());
     unboundCount++;
     moduleNames[t] = 1;
   }
-
-  // handle Kmer / Int / Uiint separately
-
-  /// TODO: array, __array__, ptr, generator, tuple etc
-  /// UInt / Kmer
 }
 
-TypePtr TypeContext::find(const std::string &name, bool *isType) const {
-  auto t = VTable<Type>::find(name);
-  if (!t) {
-    auto it = internals.find(name);
-    if (it != internals.end()) {
-      if (isType)
-        *isType = true;
-      return it->second;
-    } else {
-      return nullptr;
-    }
-  } else {
-    if (isType) {
-      auto it = this->isType.find(name);
-      assert(it != this->isType.end());
-      *isType = it->second.top();
-    }
+shared_ptr<TContextItem> TypeContext::find(const std::string &name) const {
+  auto t = VTable<TContextItem>::find(name);
+  if (t)
     return t;
-  }
+  auto it = internals.find(name);
+  if (it != internals.end())
+    return make_shared<TContextItem>(it->second, true, true);
+  return nullptr;
 }
 
 TypePtr TypeContext::findInternal(const std::string &name) const {
   auto it = internals.find(name);
-  if (it != internals.end()) {
+  if (it != internals.end())
     return it->second;
-  }
   return nullptr;
+}
+
+void TypeContext::add(const string &name, TypePtr t, bool isType, bool global) {
+  VTable<TContextItem>::add(name, make_shared<TContextItem>(t, isType, global));
+}
+
+void TypeContext::add(const string &name, const string &canonicalName,
+                      FuncTypePtr t, bool global) {
+  VTable<TContextItem>::add(
+      name, make_shared<FuncTContextItem>(t, canonicalName, false, global));
 }
 
 void TypeContext::increaseLevel() { level++; }
@@ -93,8 +103,8 @@ string TypeContext::getCanonicalName(const seq::SrcInfo &info) {
   return "";
 }
 
-string TypeContext::getCanonicalName(const std::string &name,
-                                     const seq::SrcInfo &info) {
+string TypeContext::generateCanonicalName(const seq::SrcInfo &info,
+                                          const std::string &name) {
   auto it = canonicalNames.find(info);
   if (it != canonicalNames.end())
     return it->second;
@@ -132,7 +142,9 @@ TypePtr TypeContext::instantiate(const seq::SrcInfo &srcInfo, TypePtr type,
   }
   auto t = type->instantiate(level, unboundCount, cache);
   for (auto &i : cache) {
-    if (i.second->isUnbound()) {
+    if (auto l = dynamic_pointer_cast<LinkType>(i.second)) {
+      if (l->kind != LinkType::Unbound)
+        continue;
       i.second->setSrcInfo(srcInfo);
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
         DBG("UNBOUND {} ADDED # {} ",
@@ -144,24 +156,24 @@ TypePtr TypeContext::instantiate(const seq::SrcInfo &srcInfo, TypePtr type,
   return t;
 }
 
-shared_ptr<FuncType> TypeContext::findMethod(shared_ptr<ClassType> type,
-                                             const string &method) {
-  auto m = classMethods.find(type->getCanonicalName());
-  if (m != classMethods.end()) {
-    auto t = m->second.find(method);
-    if (t != m->second.end()) {
+FuncHandle TypeContext::findMethod(const string &name,
+                                   const string &method) const {
+  auto m = classes.find(name);
+  if (m != classes.end()) {
+    auto t = m->second.methods.find(method);
+    if (t != m->second.methods.end()) {
       return t->second;
     }
   }
-  return nullptr;
+  return {"", nullptr};
 }
 
-TypePtr TypeContext::findMember(shared_ptr<ClassType> type,
-                                const string &member) {
-  auto m = classMembers.find(type->getCanonicalName());
-  if (m != classMembers.end()) {
-    auto t = m->second.find(member);
-    if (t != m->second.end()) {
+TypePtr TypeContext::findMember(const string &name,
+                                const string &member) const {
+  auto m = classes.find(name);
+  if (m != classes.end()) {
+    auto t = m->second.members.find(member);
+    if (t != m->second.members.end()) {
       return t->second;
     }
   }

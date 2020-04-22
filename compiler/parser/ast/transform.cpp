@@ -52,6 +52,19 @@ int __level__ = 0;
 namespace seq {
 namespace ast {
 
+auto getFunction(TypePtr t) {
+  return dynamic_pointer_cast<FuncType>(t->follow());
+}
+auto getClass(TypePtr t) {
+  return dynamic_pointer_cast<ClassType>(t->follow());
+}
+auto getUnbound(TypePtr t) {
+  auto tp = dynamic_pointer_cast<LinkType>(t->follow());
+  if (!tp || tp->kind != LinkType::Unbound)
+    tp = nullptr;
+  return tp;
+}
+
 TransformVisitor::TransformVisitor(TypeContext &ctx,
                                    shared_ptr<vector<StmtPtr>> stmts)
     : ctx(ctx) {
@@ -117,7 +130,8 @@ PatternPtr TransformVisitor::transform(const Pattern *pat) {
 
 /*************************************************************************************/
 
-TypePtr TransformVisitor::realize(shared_ptr<FuncType> t) {
+TypePtr TransformVisitor::realizeFunc(const string &canonicalName,
+                                      FuncTypePtr t) {
   auto it = ctx.funcRealizations.find(t->getCanonicalName());
   if (it != ctx.funcRealizations.end()) {
     auto it2 = it->second.find(t->toString(true));
@@ -248,13 +262,11 @@ void TransformVisitor::visit(const FStringExpr *expr) {
   vector<ExprPtr> items;
   for (int i = 0; i < expr->value.size(); i++) {
     if (expr->value[i] == '{') {
-      if (braceStart < i) {
+      if (braceStart < i)
         items.push_back(
             N<StringExpr>(expr->value.substr(braceStart, i - braceStart)));
-      }
-      if (!braceCount) {
+      if (!braceCount)
         braceStart = i + 1;
-      }
       braceCount++;
     } else if (expr->value[i] == '}') {
       braceCount--;
@@ -272,13 +284,11 @@ void TransformVisitor::visit(const FStringExpr *expr) {
       braceStart = i + 1;
     }
   }
-  if (braceCount) {
+  if (braceCount)
     error(expr, "f-string braces not balanced");
-  }
-  if (braceStart != expr->value.size()) {
+  if (braceStart != expr->value.size())
     items.push_back(N<StringExpr>(
         expr->value.substr(braceStart, expr->value.size() - braceStart)));
-  }
   resultExpr = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"),
                                      N<ListExpr>(move(items))));
 }
@@ -306,13 +316,12 @@ void TransformVisitor::visit(const SeqExpr *expr) {
 void TransformVisitor::visit(const IdExpr *expr) {
   resultExpr = expr->clone();
   if (!expr->getType()) {
-    bool isType = false;
-    auto type = ctx.find(expr->value, &isType);
-    if (!type)
+    auto val = ctx.find(expr->value);
+    if (!val)
       error(expr, "identifier '{}' not found", expr->value);
-    if (isType)
+    if (val->isType())
       resultExpr->markType();
-    resultExpr->setType(ctx.instantiate(getSrcInfo(), type));
+    resultExpr->setType(ctx.instantiate(getSrcInfo(), val->getType()));
   }
 }
 
@@ -327,8 +336,8 @@ void TransformVisitor::visit(const TupleExpr *expr) {
   vector<pair<string, TypePtr>> args;
   for (auto &i : e->items)
     args.push_back({"", i->getType()});
-  auto rt = T<RecordType>("", "", args);
-  auto t = T<LinkType>(rt);
+  auto t = T<LinkType>(
+      T<ClassType>("tuple", true, vector<pair<int, TypePtr>>(), args));
   if (expr->getType() && expr->getType()->unify(t) < 0)
     error(expr, "cannot unify {} and {}", *expr->getType(), *t);
   e->setType(t);
@@ -372,11 +381,10 @@ void TransformVisitor::visit(const DictExpr *expr) {
 TransformVisitor::CaptureVisitor::CaptureVisitor(TypeContext &ctx) : ctx(ctx) {}
 
 void TransformVisitor::CaptureVisitor::visit(const IdExpr *expr) {
-  bool isType = false;
-  auto type = ctx.find(expr->value, &isType);
-  if (!type)
+  auto val = ctx.find(expr->value);
+  if (!val)
     error(expr, "identifier '{}' not found", expr->value);
-  if (!isType)
+  if (!val->isType())
     captures.insert(expr->value);
 }
 
@@ -571,7 +579,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   // (e.g. dict[type1, type2]), handle it separately
 
   auto e = transform(expr->expr, true);
-  if (e->isType() || e->getType()->getFunction()) {
+  if (e->isType() || getFunction(e->getType())) {
     vector<TypePtr> generics;
     if (auto t = CAST(expr->index, TupleExpr))
       for (auto &i : t->items)
@@ -589,9 +597,9 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     };
     // Instantiate the type
     // TODO: special cases (function, tuple, Kmer, Int, UInt)
-    if (auto f = e->getType()->getFunction())
+    if (auto f = getFunction(e->getType()))
       uf(f);
-    else if (auto g = e->getType()->getClass())
+    else if (auto g = getClass(e->getType()))
       uf(g);
     else
       assert(false);
@@ -617,15 +625,16 @@ void TransformVisitor::visit(const CallExpr *expr) {
     auto dotlhs = transform(d->expr, true);
     if (!dotlhs->isType()) {
       // Find appropriate function!
-      if (auto c = dotlhs->getType()->getClass()) {
-        if (auto m = ctx.findMethod(c, d->member)) {
+      if (auto c = getClass(dotlhs->getType())) {
+        auto m = ctx.findMethod(c->name, d->member);
+        if (m.type) {
           args.push_back({"self", move(dotlhs)});
-          e = N<IdExpr>(m->getCanonicalName());
-          e->setType(ctx.instantiate(getSrcInfo(), m, c->generics));
+          e = N<IdExpr>(m.canonicalName);
+          e->setType(ctx.instantiate(getSrcInfo(), m.type, c->generics));
         } else {
           error(d, "{} has no method '{}'", *dotlhs->getType(), d->member);
         }
-      } else if (!dotlhs->getType()->isUnbound()) {
+      } else if (!getUnbound(dotlhs->getType())) {
         error(d, "type {} has no methods", *d->expr->getType());
       }
     }
@@ -642,14 +651,14 @@ void TransformVisitor::visit(const CallExpr *expr) {
 
   // If constructor, replace with appropriate calls
   if (e->isType()) {
-    assert(e->getType()->getClass());
+    assert(getClass(e->getType()));
     string var = getTemporaryVar("typ");
     prepend(N<AssignStmt>(N<IdExpr>(var),
                           N<CallExpr>(N<DotExpr>(e->clone(), "__new__"))));
     prepend(N<ExprStmt>(
         N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__init__"), move(args))));
     resultExpr = transform(N<IdExpr>(var));
-  } else if (auto t = e->getType()->getFunction()) {
+  } else if (auto t = getFunction(e->getType())) {
     string torig = t->toString();
     for (int i = 0; i < args.size(); i++) {
       if (t->args[i].second->unify(args[i].value->getType()) < 0)
@@ -675,20 +684,24 @@ void TransformVisitor::visit(const DotExpr *expr) {
 
   auto lhs = transform(expr->expr, true);
   TypePtr typ = nullptr;
-  if (lhs->getType()->isUnbound()) {
+  if (getUnbound(lhs->getType())) {
     typ = expr->getType() ? expr->getType() : ctx.addUnbound(getSrcInfo());
-  } else if (auto c = lhs->getType()->getClass()) {
-    if (auto m = ctx.findMethod(c, expr->member)) {
-      if (lhs->isType())
-        typ = ctx.instantiate(getSrcInfo(), m, c->generics);
-      else
+  } else if (auto c = getClass(lhs->getType())) {
+    auto m = ctx.findMethod(c->name, expr->member);
+    if (m.type) {
+      if (lhs->isType()) {
+        resultExpr = N<IdExpr>(m.canonicalName);
+        resultExpr->setType(ctx.instantiate(getSrcInfo(), m.type, c->generics));
+        return;
+      } else
         error(expr, "cannot handle partials yet");
       // TODO: for now, this method cannot handle obj.method expression
       // (CallExpr does that for obj.method() expressions).
-    } else if (auto m = ctx.findMember(c, expr->member))
-      typ = ctx.instantiate(getSrcInfo(), m, c->generics);
-    else
+    } else if (auto mm = ctx.findMember(c->name, expr->member)) {
+      typ = ctx.instantiate(getSrcInfo(), mm, c->generics);
+    } else {
       error(expr, "cannot find '{}' in {}", expr->member, *lhs->getType());
+    }
   } else {
     error(expr, "cannot search for '{}' in {}", expr->member, *lhs->getType());
   }
@@ -739,7 +752,7 @@ void TransformVisitor::visit(const TypeOfExpr *expr) {
 void TransformVisitor::visit(const PtrExpr *expr) {
   auto param = transform(expr->expr);
   auto tp = ctx.findInternal("ptr");
-  auto id = tp->getClass()->generics[0].first;
+  auto id = getClass(tp)->generics[0].first;
   auto t = ctx.instantiate(getSrcInfo(), tp, {{id, param->getType()}});
   resultExpr = N<PtrExpr>(move(param));
   resultExpr->setType(t);
@@ -814,9 +827,10 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     auto s = Nx<AssignStmt>(lhs, Nx<IdExpr>(l, l->value), transform(rhs),
                             transform(type, true), false, force);
     if (auto t = ctx.find(l->value)) {
-      if (t->unify(s->rhs->getType()) < 0)
-        error(rhs, "type {} is not compatible with {}", *t, *s->rhs->getType());
-      s->lhs->setType(t);
+      if (t->getType()->unify(s->rhs->getType()) < 0)
+        error(rhs, "type {} is not compatible with {}", *t->getType(),
+              *s->rhs->getType());
+      s->lhs->setType(t->getType());
     } else {
       ctx.add(l->value, s->rhs->getType(), s->rhs->isType());
       s->lhs->setType(s->rhs->getType());
@@ -988,11 +1002,10 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   vector<string> generics;
   vector<pair<int, TypePtr>> genericTypes;
   if (auto e = CAST(stmt->what, IndexExpr)) {
-    if (auto i = CAST(e->expr, IdExpr)) {
+    if (auto i = CAST(e->expr, IdExpr))
       name = i->value;
-    } else {
+    else
       error(e, "not a valid type expression");
-    }
   } else if (auto i = CAST(e->expr, IdExpr)) {
     name = i->value;
   } else {
@@ -1000,7 +1013,7 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   }
   auto type = transformType(N<IdExpr>(name))->getType();
   auto canonicalName = ctx.getCanonicalName(type->getSrcInfo());
-  if (auto c = type->getClass()) {
+  if (auto c = getClass(type)) {
     if (c->generics.size() != generics.size())
       error(stmt, "generics do not match");
     for (int i = 0; i < generics.size(); i++) {
@@ -1020,10 +1033,13 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   ctx.prefix += name + ".";
   auto addMethod = [&](auto s) {
     if (auto f = dynamic_cast<FunctionStmt *>(s)) {
-      auto t = dynamic_pointer_cast<FuncType>(ctx.find(ctx.prefix + f->name));
-      assert(t);
-      t->setImplicits(genericTypes);
-      ctx.classMethods[canonicalName][f->name] = t;
+      transform(s);
+      auto val = ctx.find(ctx.prefix + f->name);
+      auto fval = dynamic_pointer_cast<FuncTContextItem>(val);
+      assert(fval && fval->getType());
+      getFunction(fval->getType())->setImplicits(genericTypes);
+      ctx.classes[canonicalName].methods[f->name] = {
+          fval->getName(), dynamic_pointer_cast<FuncType>(fval->getType())};
     } else {
       error(s, "types can only contain functions");
     }
@@ -1033,7 +1049,7 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   ctx.decreaseLevel();
   for (auto &g : generics) {
     auto t = dynamic_pointer_cast<LinkType>(ctx.find(g));
-    assert(t && t->isUnbound());
+    assert(t && getUnbound(t));
     t->kind = LinkType::Generic;
     ctx.remove(g);
   }
@@ -1158,7 +1174,7 @@ void TransformVisitor::visit(const ThrowStmt *stmt) {
 
 void TransformVisitor::visit(const FunctionStmt *stmt) {
   auto canonicalName =
-      ctx.getCanonicalName(ctx.prefix + stmt->name, stmt->getSrcInfo());
+      ctx.generateCanonicalName(stmt->getSrcInfo(), ctx.prefix + stmt->name);
   if (ctx.funcASTs.find(canonicalName) == ctx.funcASTs.end()) {
     vector<pair<int, TypePtr>> genericTypes;
     vector<pair<string, TypePtr>> argTypes;
@@ -1183,28 +1199,41 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     ctx.decreaseLevel();
     ctx.popBlock();
 
-    auto type = make_shared<FuncType>(stmt->name, canonicalName, genericTypes,
-                                      argTypes, ret);
+    auto type = make_shared<FuncType>(genericTypes, argTypes, ret);
     auto t = type->generalize(ctx.level);
-    DBG("* [function] {} :- {}", ctx.prefix + stmt->name, *t);
+    DBG("* [function] {} :- {}", canonicalName, *t);
     ctx.add(ctx.prefix + stmt->name, t);
 
-    auto fp = N<FunctionStmt>(stmt->name, nullptr, stmt->generics, move(args),
-                              stmt->suite, stmt->attributes);
-    ctx.funcASTs[canonicalName] = make_pair(t, move(fp));
+    ctx.funcASTs[canonicalName] = make_pair(
+        t, N<FunctionStmt>(canonicalName, nullptr, stmt->generics, move(args),
+                           stmt->suite, stmt->attributes));
   }
-  resultStmt = N<FunctionStmt>(stmt->name, nullptr, vector<string>(),
+  resultStmt = N<FunctionStmt>(canonicalName, nullptr, vector<string>(),
                                vector<Param>(), nullptr, stmt->attributes);
 }
 
 void TransformVisitor::visit(const ClassStmt *stmt) {
-  auto canonicalName = ctx.getCanonicalName(stmt->name, stmt->getSrcInfo());
+  auto canonicalName =
+      ctx.generateCanonicalName(stmt->getSrcInfo(), ctx.prefix + stmt->name);
   vector<StmtPtr> suite;
+  vector<pair<int, TypePtr>> genericTypes;
+  auto addMethod = [&](auto s) {
+    if (auto f = dynamic_cast<FunctionStmt *>(s)) {
+      suite.push_back(transform(s));
+      auto val = ctx.find(ctx.prefix + f->name);
+      auto fval = dynamic_pointer_cast<FuncTContextItem>(val);
+      assert(fval && fval->getType());
+      getFunction(fval->getType())->setImplicits(genericTypes);
+      ctx.classes[canonicalName].methods[f->name] = {
+          fval->getName(), dynamic_pointer_cast<FuncType>(fval->getType())};
+    } else {
+      error(s, "types can only contain functions");
+    }
+  };
   if (ctx.classASTs.find(canonicalName) == ctx.classASTs.end()) {
     // Classes are handled differently as they can contain recursive
     // references
     if (!stmt->isRecord) {
-      vector<pair<int, TypePtr>> genericTypes;
       vector<string> generics;
       for (auto &g : stmt->generics) {
         auto t = make_shared<LinkType>(LinkType::Generic, ctx.unboundCount);
@@ -1215,40 +1244,29 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
         ctx.add(g, tp, true);
         ctx.unboundCount++;
       }
-      auto ct = make_shared<ClassType>(stmt->name, canonicalName, genericTypes);
+      auto ct = make_shared<ClassType>(canonicalName, false, genericTypes,
+                                       vector<pair<string, TypePtr>>());
       ctx.add(ctx.prefix + stmt->name, ct, true);
-      ctx.classASTs[canonicalName] =
-          make_pair(ct, nullptr); // TODO: fix nullptr
-      DBG("* [class] {} :- {}", ctx.prefix + stmt->name, *ct);
+      ctx.classASTs[canonicalName] = make_pair(ct, nullptr); // TODO: fix
+      DBG("* [class] {} :- {}", canonicalName, *ct);
 
       ctx.increaseLevel();
       for (auto &a : stmt->args) {
         assert(a.type);
-        ctx.classMembers[canonicalName][a.name] =
+        ctx.classes[canonicalName].members[a.name] =
             transformType(a.type)->getType()->generalize(ctx.level);
-        DBG("* [class] [member.{}] :- {}", a.name,
-            *ctx.classMembers[canonicalName][a.name]);
+        // DBG("* [class] [member.{}] :- {}", a.name,
+        //     *ctx.classMembers[canonicalName][a.name]);
       }
       auto oldPrefix = ctx.prefix;
-      ctx.prefix += stmt->name + ".";
+      ctx.prefix = stmt->name + ".";
       // Generate __new__
       auto codeType =
           format("{}{}", stmt->name,
                  stmt->generics.size()
                      ? format("[{}]", fmt::join(stmt->generics, ", "))
                      : "");
-      // DBG("{}", codeNew);
-      auto addMethod = [&](auto s) {
-        if (auto f = dynamic_cast<FunctionStmt *>(s)) {
-          suite.push_back(transform(s));
-          auto t =
-              dynamic_pointer_cast<FuncType>(ctx.find(ctx.prefix + f->name));
-          assert(t);
-          t->setImplicits(genericTypes);
-          ctx.classMethods[canonicalName][f->name] = t;
-        } else
-          error(s, "types can only contain functions");
-      };
+
       auto codeNew = format("@internal\ndef __new__() -> {}: pass", codeType);
       auto methodNew = parse_code(ctx.filename, codeNew);
       for (auto s : methodNew->getStatements())
@@ -1259,7 +1277,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       for (auto &g : stmt->generics) {
         // Generalize in place
         auto t = dynamic_pointer_cast<LinkType>(ctx.find(g));
-        assert(t && t->isUnbound());
+        assert(t && t->kind == LinkType::Unbound);
         t->kind = LinkType::Generic;
         ctx.remove(g);
       }
@@ -1270,26 +1288,17 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
         assert(a.type);
         auto t = transformType(a.type)->getType();
         argTypes.push_back({a.name, t});
-        ctx.classMembers[canonicalName][a.name] = t;
+        ctx.classes[canonicalName].members[a.name] = t;
       }
-      auto ct = make_shared<RecordType>(stmt->name, canonicalName, argTypes);
-      ctx.add(stmt->name, ct, true);
-      ctx.classASTs[canonicalName] =
-          make_pair(ct, nullptr);    // TODO: fix nullptr
-      ctx.prefix = stmt->name + "."; // TODO: supports only one nesting level
-      // Add other statements
-      for (auto s : stmt->suite->getStatements()) {
-        if (auto f = dynamic_cast<FunctionStmt *>(s)) {
-          suite.push_back(transform(s));
-          auto t =
-              dynamic_pointer_cast<FuncType>(ctx.find(ctx.prefix + f->name));
-          assert(t);
-          ctx.classMethods[canonicalName][f->name] = t;
-        } else {
-          error(s, "types can only contain functions");
-        }
-      }
-      ctx.prefix = "";
+      auto ct =
+          make_shared<ClassType>(canonicalName, true, genericTypes, argTypes);
+      ctx.add(ctx.prefix + stmt->name, ct, true);
+      ctx.classASTs[canonicalName] = make_pair(ct, nullptr); // TODO: fix
+      auto oldPrefix = ctx.prefix;
+      ctx.prefix = stmt->name + ".";
+      for (auto s : stmt->suite->getStatements())
+        addMethod(s);
+      ctx.prefix = oldPrefix;
     }
   }
   resultStmt = N<ClassStmt>(stmt->isRecord, stmt->name, vector<string>(),

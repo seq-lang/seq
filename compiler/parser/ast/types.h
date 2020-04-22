@@ -21,6 +21,8 @@ struct FuncType;
 struct ClassType;
 struct Type;
 typedef std::shared_ptr<Type> TypePtr;
+typedef std::shared_ptr<FuncType> FuncTypePtr;
+typedef std::shared_ptr<ClassType> ClassTypePtr;
 
 struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
 public:
@@ -40,29 +42,20 @@ public:
                               std::unordered_map<int, TypePtr> &cache) = 0;
 
 public:
-  /// Pretty-printing.
-  virtual std::string toString(bool reduced = false) const = 0;
-  /// Is this an unbound type? (e.g. list[?] is not unbound while ? is).
-  virtual bool isUnbound() const = 0;
+  /// Get the  type (follow all links)
+  virtual TypePtr follow();
   /// Does this type have an unbound type within
   /// (e.g. list[?] has while list[int] does not)
   virtual bool hasUnbound() const = 0;
   /// Can we realize this type?
   virtual bool canRealize() const = 0;
 
+  /// Pretty-printing.
+  virtual std::string toString(bool reduced = false) const = 0;
   /// Allow pretty-printing to C++ streams
   friend std::ostream &operator<<(std::ostream &out, const Type &c) {
     return out << c.toString();
   }
-
-  /// Get FuncType* if this is a function (nullptr otherwise).
-  /// Simple dynamic_cast will not work because of potential LinkType
-  /// indirections.
-  virtual std::shared_ptr<FuncType> getFunction() = 0;
-  /// Get ClassType* if this is a function (nullptr otherwise).
-  /// Simple dynamic_cast will not work because of potential LinkType
-  /// indirections.
-  virtual std::shared_ptr<ClassType> getClass() = 0;
 };
 
 /**
@@ -96,56 +89,57 @@ struct LinkType : public Type {
   LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type) {}
   virtual ~LinkType() {}
 
-  std::string toString(bool reduced) const override;
+public:
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
-  bool occurs(Type *typ);
-  bool isUnbound() const override;
+
+public:
+  TypePtr follow() override;
   bool hasUnbound() const override;
   bool canRealize() const override;
-  std::shared_ptr<FuncType> getFunction() override;
-  std::shared_ptr<ClassType> getClass() override;
+  std::string toString(bool reduced) const override;
+
+private:
+  bool occurs(Type *typ);
 };
 
 /**
  * ClassType describes a (generic) class type.
  */
 struct ClassType : public Type {
-  std::string name;
   /// Global unique name for each type (generated from the getSrcPos()).
-  std::string canonicalName;
+  std::string name;
+  /// Distinguish between records and classes
+  bool isRecord;
   /// Each generic is represented as a pair (generic_id, current_type).
   /// It is necessary to maintain unique generic ID as defined in the
   /// "canonical" class type to be able to properly realize types.
   std::vector<std::pair<int, TypePtr>> generics;
+  std::vector<std::pair<std::string, TypePtr>> args;
 
-  ClassType(const std::string &name, const std::string &canonicalName,
-            const std::vector<std::pair<int, TypePtr>> &generics);
+  ClassType(const std::string &name, bool isRecord,
+            const std::vector<std::pair<int, TypePtr>> &generics,
+            const std::vector<std::pair<std::string, TypePtr>> &args);
   virtual ~ClassType() {}
 
-  std::string toString(bool reduced = false) const override;
+public:
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
-  bool isUnbound() const override { return false; }
+
+public:
   bool hasUnbound() const override;
   bool canRealize() const override;
-  std::shared_ptr<FuncType> getFunction() override { return nullptr; }
-  std::shared_ptr<ClassType> getClass() override {
-    return std::dynamic_pointer_cast<ClassType>(shared_from_this());
-  }
-  std::string getCanonicalName() const { return canonicalName; }
+  std::string toString(bool reduced = false) const override;
 };
 
 /**
  * FuncType describes a (generic) function type.
  */
 struct FuncType : public Type {
-  std::string name;
-  std::string canonicalName;
   /// Each generic is represented as a pair (generic_id, current_type).
   /// It is necessary to maintain unique generic ID as defined in the
   /// "canonical" class type to be able to properly realize types.
@@ -157,55 +151,26 @@ struct FuncType : public Type {
   /// Return type. Usually deduced after the realization.
   TypePtr ret;
 
-  FuncType(const std::string &name, const std::string &canonicalName,
-           const std::vector<std::pair<int, TypePtr>> &generics,
+  FuncType(const std::vector<std::pair<int, TypePtr>> &generics,
            const std::vector<std::pair<std::string, TypePtr>> &args,
            TypePtr ret);
   virtual ~FuncType() {}
-  std::string toString(bool reduced = false) const override;
+
+public:
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
-  bool isUnbound() const override { return false; }
+
+public:
   bool hasUnbound() const override;
   bool canRealize() const override;
-  std::shared_ptr<FuncType> getFunction() override {
-    return std::dynamic_pointer_cast<FuncType>(shared_from_this());
-  }
-  std::shared_ptr<ClassType> getClass() override { return nullptr; }
-  std::string getCanonicalName() const { return canonicalName; }
+  std::string toString(bool reduced = false) const override;
+
+public:
   void setImplicits(const std::vector<std::pair<int, TypePtr>> &i) {
     implicitGenerics = i;
   }
-};
-
-/**
- * FuncType describes a record / tuple type.
- */
-struct RecordType : public Type {
-  /// This is a record (tuple) type.
-  /// If name and canonicalName are empty, it is a tuple.
-  std::string name;
-  std::string canonicalName;
-  std::vector<std::pair<std::string, TypePtr>> args;
-
-  RecordType(const std::string &name, const std::string &canonicalName,
-             const std::vector<std::pair<std::string, TypePtr>> &args);
-  RecordType(const std::vector<Expr *> args);
-  virtual ~RecordType() {}
-  std::string toString(bool reduced = false) const override;
-  int unify(TypePtr typ) override;
-  TypePtr generalize(int level) override;
-  TypePtr instantiate(int level, int &unboundCount,
-                      std::unordered_map<int, TypePtr> &cache) override;
-  bool isUnbound() const override { return false; }
-  bool hasUnbound() const override;
-  bool canRealize() const override;
-
-  std::shared_ptr<FuncType> getFunction() override { return nullptr; }
-  std::shared_ptr<ClassType> getClass() override { return nullptr; }
-  std::string getCanonicalName() const { return canonicalName; }
 };
 
 ////////

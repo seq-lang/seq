@@ -20,8 +20,39 @@
 namespace seq {
 namespace ast {
 
+class TContextItem {
+protected:
+  TypePtr type;
+  bool typeVar;
+  bool global;
+  std::unordered_set<std::string> attributes;
+
+public:
+  TContextItem(TypePtr t, bool isType = false, bool global = false);
+  virtual ~TContextItem() {}
+
+  bool isType() const;
+  bool isGlobal() const;
+  TypePtr getType() const;
+  bool hasAttr(const std::string &s) const;
+};
+
+class FuncTContextItem : public TContextItem {
+  std::string name;
+
+public:
+  FuncTContextItem(TypePtr t, const std::string &name, bool isType = false,
+                   bool global = false);
+  std::string getName() const;
+};
+
+struct FuncHandle {
+  std::string canonicalName;
+  FuncTypePtr type;
+};
+
 /// Current identifier table
-class TypeContext : public VTable<Type> {
+class TypeContext : public VTable<TContextItem> {
 private: /** Naming **/
   /// Current filename
   std::string filename;
@@ -39,18 +70,23 @@ private: /** Naming **/
   std::unordered_map<seq::SrcInfo, std::string> canonicalNames;
 
 private: /** Lookup **/
-  /// Hashtable that determines if an identifier is a type variable
-  std::unordered_map<std::string, std::stack<bool>> isType;
   /// Store internal types separately for easier access
   std::unordered_map<std::string, TypePtr> internals;
   /// List of class methods and members
   /// Maps canonical class name to a map of methods and members
   /// and their generalized types
-  std::unordered_map<std::string, std::unordered_map<std::string, TypePtr>>
-      classMembers;
-  std::unordered_map<std::string,
-                     std::unordered_map<std::string, std::shared_ptr<FuncType>>>
-      classMethods;
+
+  struct ClassBody {
+    std::unordered_map<std::string, TypePtr> members;
+    std::unordered_map<std::string, FuncHandle> methods;
+  };
+  std::unordered_map<std::string, ClassBody> classes;
+
+public:
+  /// Getters and setters for the method/member/realization lookup tables
+  FuncHandle findMethod(const std::string &name,
+                        const std::string &method) const;
+  TypePtr findMember(const std::string &name, const std::string &member) const;
 
 private: /** Type-checking **/
   /// Current type-checking level
@@ -61,6 +97,20 @@ private: /** Type-checking **/
   /// Set of active unbound variables.
   /// If type checking is successful, all of them should be resolved.
   std::set<TypePtr> activeUnbounds;
+
+public:
+  /// Type-checking helpers
+  void increaseLevel();
+  void decreaseLevel();
+  std::shared_ptr<LinkType> addUnbound(const seq::SrcInfo &srcInfo,
+                                       bool setActive = true);
+  /// Calls type->instantiate, but populates the instantiation table
+  /// with "parent" type.
+  /// Example: for list[T].foo, list[int].foo will populate type of foo so that
+  /// the generic T gets mapped to int.
+  TypePtr instantiate(const seq::SrcInfo &srcInfo, TypePtr type);
+  TypePtr instantiate(const seq::SrcInfo &srcInfo, TypePtr type,
+                      const std::vector<std::pair<int, TypePtr>> &generics);
 
 private: /** Realization **/
   /// Template function ASTs.
@@ -103,48 +153,19 @@ private: /** Function utilities **/
 
 public:
   TypeContext(const std::string &filename);
-  TypePtr find(const std::string &name, bool *isType = nullptr) const;
+  std::shared_ptr<TContextItem> find(const std::string &name) const;
   TypePtr findInternal(const std::string &name) const;
 
-  /// add/remove overrides that handle isType flag
-  void add(const std::string &name, TypePtr var, bool type = false) {
-    map[name].push(var);
-    isType[name].push(type);
-    stack.top().push_back(name);
-  }
-  void remove(const std::string &name) override {
-    VTable::remove(name);
-    auto i = isType.find(name);
-    i->second.pop();
-    if (!i->second.size()) {
-      isType.erase(name);
-    }
-  }
-
+  void add(const std::string &name, TypePtr t, bool isType = false,
+           bool global = false);
+  void add(const std::string &name, const std::string &canonicalName,
+           FuncTypePtr t, bool global = false);
   /// Get canonical name for a SrcInfo
   std::string getCanonicalName(const seq::SrcInfo &info);
   /// Generate canonical name for a SrcInfo and original class/function name
-  std::string getCanonicalName(const std::string &name,
-                               const seq::SrcInfo &info);
+  std::string generateCanonicalName(const seq::SrcInfo &info,
+                                    const std::string &name);
 
-  /// Type-checking helpers
-  void increaseLevel();
-  void decreaseLevel();
-  std::shared_ptr<LinkType> addUnbound(const seq::SrcInfo &srcInfo,
-                                       bool setActive = true);
-  /// Calls type->instantiate, but populates the instantiation table
-  /// with "parent" type.
-  /// Example: for list[T].foo, list[int].foo will populate type of foo so that
-  /// the generic T gets mapped to int.
-  TypePtr instantiate(const seq::SrcInfo &srcInfo, TypePtr type);
-  TypePtr instantiate(const seq::SrcInfo &srcInfo, TypePtr type,
-                      const std::vector<std::pair<int, TypePtr>> &generics);
-
-  /// Getters and setters for the method/member/realization lookup tables
-  std::shared_ptr<FuncType> findMethod(std::shared_ptr<ClassType> type,
-                                       const std::string &method);
-  TypePtr findMember(std::shared_ptr<ClassType> type,
-                     const std::string &member);
   std::vector<std::pair<std::string, const FunctionStmt *>>
   getRealizations(const FunctionStmt *stmt);
 };

@@ -32,6 +32,8 @@ int unifyList(const vector<pair<T, TypePtr>> &a,
   return score;
 }
 
+TypePtr Type::follow() { return shared_from_this(); }
+
 LinkType::LinkType(LinkKind kind, int id, int level, TypePtr type)
     : kind(kind), id(id), level(level), type(type) {}
 
@@ -61,6 +63,9 @@ bool LinkType::occurs(Type *typ) {
     for (auto &t : t->generics)
       if (occurs(t.second.get()))
         return true;
+    for (auto &t : t->args)
+      if (occurs(t.second.get()))
+        return true;
     return false;
   } else if (auto t = dynamic_cast<FuncType *>(typ)) {
     if (occurs(t->ret.get()))
@@ -71,11 +76,6 @@ bool LinkType::occurs(Type *typ) {
     for (auto &t : t->generics)
       if (occurs(t.second.get()))
         return true;
-    for (auto &t : t->args)
-      if (occurs(t.second.get()))
-        return true;
-    return false;
-  } else if (auto t = dynamic_cast<RecordType *>(typ)) {
     for (auto &t : t->args)
       if (occurs(t.second.get()))
         return true;
@@ -144,10 +144,15 @@ TypePtr LinkType::instantiate(int level, int &unboundCount,
   }
 }
 
-bool LinkType::isUnbound() const { return kind == Unbound; }
+TypePtr LinkType::follow() {
+  if (kind == Link)
+    return type->follow();
+  else
+    return shared_from_this();
+}
 
 bool LinkType::hasUnbound() const {
-  if (isUnbound())
+  if (kind == Unbound)
     return true;
   else if (kind == Link)
     return type->hasUnbound();
@@ -161,27 +166,16 @@ bool LinkType::canRealize() const {
     return type->canRealize();
 }
 
-shared_ptr<FuncType> LinkType::getFunction() {
-  if (kind == Link)
-    return type->getFunction();
-  else
-    return nullptr;
-}
-
-shared_ptr<ClassType> LinkType::getClass() {
-  if (kind == Link)
-    return type->getClass();
-  else
-    return nullptr;
-}
-
-ClassType::ClassType(const string &name, const string &canonicalName,
-                     const vector<pair<int, TypePtr>> &generics)
-    : name(name), canonicalName(canonicalName), generics(generics) {}
+ClassType::ClassType(const string &name, bool isRecord,
+                     const vector<pair<int, TypePtr>> &generics,
+                     const vector<pair<string, TypePtr>> &args)
+    : name(name), isRecord(isRecord), generics(generics), args(args) {}
 
 string ClassType::toString(bool reduced) const {
   vector<string> gs;
   for (auto &a : generics)
+    gs.push_back(a.second->toString(reduced));
+  for (auto &a : args)
     gs.push_back(a.second->toString(reduced));
   return fmt::format("{}{}", name,
                      gs.size() ? fmt::format("[{}]", fmt::join(gs, ",")) : "");
@@ -189,13 +183,19 @@ string ClassType::toString(bool reduced) const {
 
 int ClassType::unify(TypePtr typ) {
   if (auto t = dynamic_cast<ClassType *>(typ.get())) {
-    if (canonicalName != t->canonicalName)
+    if (isRecord != t->isRecord)
       return -1;
-    int s;
-    if ((s = unifyList(generics, t->generics)) != -1) {
-      return s;
+    if (name != t->name) {
+      if (!isRecord || (name != "tuple" && t->name != "tuple"))
+        return -1;
     }
-    return -1;
+    int s1 = unifyList(generics, t->generics);
+    if (s1 == -1)
+      return -1;
+    int s2 = unifyList(args, t->args);
+    if (s2 == -1)
+      return -1;
+    return s1 + s2;
   } else if (auto t = dynamic_cast<LinkType *>(typ.get())) {
     return t->unify(shared_from_this());
   }
@@ -206,7 +206,10 @@ TypePtr ClassType::generalize(int level) {
   auto g = generics;
   for (auto &t : g)
     t.second = t.second->generalize(level);
-  return make_shared<ClassType>(name, canonicalName, g);
+  auto a = args;
+  for (auto &t : a)
+    t.second = t.second->generalize(level);
+  return make_shared<ClassType>(name, isRecord, g, a);
 }
 
 TypePtr ClassType::instantiate(int level, int &unboundCount,
@@ -214,11 +217,17 @@ TypePtr ClassType::instantiate(int level, int &unboundCount,
   auto g = generics;
   for (auto &t : g)
     t.second = t.second->instantiate(level, unboundCount, cache);
-  return make_shared<ClassType>(name, canonicalName, g);
+  auto a = args;
+  for (auto &t : a)
+    t.second = t.second->instantiate(level, unboundCount, cache);
+  return make_shared<ClassType>(name, isRecord, g, a);
 }
 
 bool ClassType::hasUnbound() const {
   for (auto &t : generics)
+    if (t.second->hasUnbound())
+      return true;
+  for (auto &t : args)
     if (t.second->hasUnbound())
       return true;
   return false;
@@ -228,14 +237,15 @@ bool ClassType::canRealize() const {
   for (auto &t : generics)
     if (!t.second->canRealize())
       return false;
+  for (auto &t : args)
+    if (!t.second->canRealize())
+      return false;
   return true;
 }
 
-FuncType::FuncType(const string &name, const string &canonicalName,
-                   const vector<pair<int, TypePtr>> &generics,
+FuncType::FuncType(const vector<pair<int, TypePtr>> &generics,
                    const vector<pair<string, TypePtr>> &args, TypePtr ret)
-    : name(name), canonicalName(canonicalName), generics(generics), args(args),
-      ret(ret) {}
+    : generics(generics), args(args), ret(ret) {}
 
 string FuncType::toString(bool reduced) const {
   vector<string> gs, as;
@@ -257,19 +267,19 @@ string FuncType::toString(bool reduced) const {
 
 int FuncType::unify(TypePtr typ) {
   if (auto t = dynamic_cast<FuncType *>(typ.get())) {
-    if (canonicalName != t->canonicalName)
+    int s1 = unifyList(generics, t->generics);
+    if (s1 == -1)
       return -1;
-    int s1, s2, s3, s4;
-    if ((s1 = unifyList(generics, t->generics)) != -1) {
-      if ((s2 = unifyList(args, t->args)) != -1) {
-        if ((s3 = ret->unify(t->ret)) != -1) {
-          if ((s4 = unifyList(implicitGenerics, t->implicitGenerics)) != -1) {
-            return s1 + s2 + s3 + s4;
-          }
-        }
-      }
-    }
-    return -1;
+    int s2 = unifyList(args, t->args);
+    if (s2 == -1)
+      return -1;
+    int s3 = ret->unify(t->ret);
+    if (s3 == -1)
+      return -1;
+    int s4 = unifyList(implicitGenerics, t->implicitGenerics);
+    if (s4 == -1)
+      return -1;
+    return s1 + s2 + s3 + s4;
   } else if (auto t = dynamic_cast<LinkType *>(typ.get())) {
     return t->unify(shared_from_this());
   }
@@ -286,8 +296,7 @@ TypePtr FuncType::generalize(int level) {
   auto i = implicitGenerics;
   for (auto &t : i)
     t.second = t.second->generalize(level);
-  auto t =
-      make_shared<FuncType>(name, canonicalName, g, a, ret->generalize(level));
+  auto t = make_shared<FuncType>(g, a, ret->generalize(level));
   t->setImplicits(i);
   return t;
 }
@@ -303,8 +312,8 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
   auto i = implicitGenerics;
   for (auto &t : i)
     t.second = t.second->instantiate(level, unboundCount, cache);
-  auto t = make_shared<FuncType>(name, canonicalName, g, a,
-                                 ret->instantiate(level, unboundCount, cache));
+  auto t =
+      make_shared<FuncType>(g, a, ret->instantiate(level, unboundCount, cache));
   t->setImplicits(i);
   return t;
 }
@@ -330,58 +339,6 @@ bool FuncType::canRealize() const {
     if (!t.second->canRealize())
       return false;
   for (auto &t : implicitGenerics)
-    if (!t.second->canRealize())
-      return false;
-  return true;
-}
-
-RecordType::RecordType(const string &name, const string &canonicalName,
-                       const vector<pair<string, TypePtr>> &args)
-    : name(name), canonicalName(canonicalName), args(args) {}
-
-string RecordType::toString(bool reduced) const {
-  vector<string> as;
-  for (auto &a : args)
-    as.push_back(a.second->toString(reduced));
-  return fmt::format("{}[{}]", name == "" ? "tuple" : name, fmt::join(as, ","));
-}
-
-int RecordType::unify(TypePtr typ) {
-  if (auto t = dynamic_cast<RecordType *>(typ.get())) {
-    if (!(canonicalName == "" || t->canonicalName == "") &&
-        canonicalName != t->canonicalName)
-      return -1;
-    return unifyList(args, t->args);
-  } else if (auto t = dynamic_cast<LinkType *>(typ.get())) {
-    t->unify(shared_from_this());
-  }
-  return -1;
-}
-
-TypePtr RecordType::generalize(int level) {
-  auto a = args;
-  for (auto &t : a)
-    t.second = t.second->generalize(level);
-  return make_shared<RecordType>(name, canonicalName, a);
-}
-
-TypePtr RecordType::instantiate(int level, int &unboundCount,
-                                std::unordered_map<int, TypePtr> &cache) {
-  auto a = args;
-  for (auto &t : a)
-    t.second = t.second->instantiate(level, unboundCount, cache);
-  return make_shared<RecordType>(name, canonicalName, a);
-}
-
-bool RecordType::hasUnbound() const {
-  for (auto &t : args)
-    if (t.second->hasUnbound())
-      return true;
-  return false;
-}
-
-bool RecordType::canRealize() const {
-  for (auto &t : args)
     if (!t.second->canRealize())
       return false;
   return true;
