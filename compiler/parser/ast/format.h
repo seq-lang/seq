@@ -32,7 +32,7 @@ private:
     std::string s;
     if (renderType)
       s += fmt::format("<type>{}</type>",
-                       t->getType() ? t->getType()->str() : "-");
+                       t->getType() ? t->getType()->toString() : "-");
     return fmt::format("<expr>{}<node>{}</node></expr>", s,
                        fmt::format(args...));
   }

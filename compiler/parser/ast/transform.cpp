@@ -45,13 +45,6 @@ using std::unordered_set;
 using std::vector;
 
 int __level__ = 0;
-
-// TODO: get rid of this macro
-// #define resultPattern = N<T>(...) \
-//   (this->result = \
-//        fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())); \
-//   return
-// TODO: use hack from common.h to glob the comma from __VA_ARGS__
 #define CAST(s, T) dynamic_cast<T *>(s.get())
 #define TO_BOOL(e)                                                             \
   (Nx<CallExpr>(e.get(), Nx<IdExpr>(e.get(), "bool"), e->clone()))
@@ -69,25 +62,28 @@ void TransformVisitor::prepend(StmtPtr s) {
   prependStmts->push_back(transform(s));
 }
 
-ExprPtr TransformVisitor::transform(const Expr *expr) {
+ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
   if (!expr)
     return nullptr;
   TransformVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
-  DBG("[ {} :- {} # {}", *expr, expr->getType() ? expr->getType()->str() : "-",
+  DBG("[ {} :- {} # {}", *expr,
+      expr->getType() ? expr->getType()->toString() : "-",
       expr->getSrcInfo().line);
   __level__++;
   expr->accept(v);
   __level__--;
   DBG("  {} :- {} ]", *v.resultExpr,
-      v.resultExpr->getType() ? v.resultExpr->getType()->str() : "-");
+      v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
 
+  if (!allowTypes && v.resultExpr && v.resultExpr->isType())
+    error(expr, "unexpected type");
   return move(v.resultExpr);
 }
 
 ExprPtr TransformVisitor::transformType(const ExprPtr &expr) {
-  auto e = transform(expr.get());
-  if (!e->isType())
+  auto e = transform(expr.get(), true);
+  if (e && !e->isType())
     error(expr, "expected a type");
   return e;
 }
@@ -124,7 +120,7 @@ PatternPtr TransformVisitor::transform(const Pattern *pat) {
 TypePtr TransformVisitor::realize(shared_ptr<FuncType> t) {
   auto it = ctx.funcRealizations.find(t->getCanonicalName());
   if (it != ctx.funcRealizations.end()) {
-    auto it2 = it->second.find(t->str(true));
+    auto it2 = it->second.find(t->toString(true));
     if (it2 != it->second.end())
       return it2->second.first; // already realized
   }
@@ -161,7 +157,7 @@ TypePtr TransformVisitor::realize(shared_ptr<FuncType> t) {
   vector<Param> args;
   for (auto &i : ast.second->args)
     args.push_back({i.name, nullptr, nullptr});
-  ctx.funcRealizations[t->getCanonicalName()][t->str(true)] =
+  ctx.funcRealizations[t->getCanonicalName()][t->toString(true)] =
       make_pair(t, Nx<FunctionStmt>(ast.second.get(), ast.second->name, nullptr,
                                     vector<string>(), move(args),
                                     move(realized), ast.second->attributes));
@@ -201,7 +197,7 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt) {
     if (ctx.activeUnbounds.size() >= prevSize) {
       for (auto &ub : ctx.activeUnbounds)
         DBG("NOPE {}", (*ub));
-      DBG("cannot resolve unbound variables");
+      error("cannot resolve unbound variables");
       break;
     }
     prevSize = ctx.activeUnbounds.size();
@@ -465,8 +461,8 @@ void TransformVisitor::visit(const IfExpr *expr) {
   auto e = N<IfExpr>(transform(TO_BOOL(expr->cond)), transform(expr->eif),
                      transform(expr->eelse));
   if (e->eif->getType()->unify(e->eelse->getType()) < 0)
-    error(expr, "type {} is not compatible with {}", e->eif->getType()->str(),
-          e->eelse->getType()->str());
+    error(expr, "type {} is not compatible with {}",
+          e->eif->getType()->toString(), e->eelse->getType()->toString());
   auto t = e->eif->getType();
   if (expr->getType() && expr->getType()->unify(t) < 0)
     error(expr, "cannot unify {} and {}", *expr->getType(), *t);
@@ -573,7 +569,8 @@ void TransformVisitor::visit(const PipeExpr *expr) {
 void TransformVisitor::visit(const IndexExpr *expr) {
   // If this is a type or function realization
   // (e.g. dict[type1, type2]), handle it separately
-  auto e = transform(expr->expr);
+
+  auto e = transform(expr->expr, true);
   if (e->isType() || e->getType()->getFunction()) {
     vector<TypePtr> generics;
     if (auto t = CAST(expr->index, TupleExpr))
@@ -591,6 +588,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
                 *generics[i]);
     };
     // Instantiate the type
+    // TODO: special cases (function, tuple, Kmer, Int, UInt)
     if (auto f = e->getType()->getFunction())
       uf(f);
     else if (auto g = e->getType()->getClass())
@@ -616,7 +614,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
   vector<CallExpr::Arg> args;
   // Intercept obj.foo() calls and transform obj.foo(...) to foo(obj, ...)
   if (auto d = CAST(expr->expr, DotExpr)) {
-    auto dotlhs = transform(d->expr);
+    auto dotlhs = transform(d->expr, true);
     if (!dotlhs->isType()) {
       // Find appropriate function!
       if (auto c = dotlhs->getType()->getClass()) {
@@ -627,17 +625,13 @@ void TransformVisitor::visit(const CallExpr *expr) {
         } else {
           error(d, "{} has no method '{}'", *dotlhs->getType(), d->member);
         }
-      } else if (dotlhs->getType()->isUnbound())
-        // Just leave it as-is;  will be handled by later iterations
-        assert(e->getType()->isUnbound());
-      else
+      } else if (!dotlhs->getType()->isUnbound()) {
         error(d, "type {} has no methods", *d->expr->getType());
-    } else {
-      e = transform(expr->expr);
+      }
     }
-  } else {
-    e = transform(expr->expr);
   }
+  if (!e)
+    e = transform(expr->expr, true);
   // Unify the call
   if (expr->expr->getType() && expr->expr->getType()->unify(e->getType()) < 0)
     error(expr->expr, "cannot unify {} and {}", *expr->expr->getType(),
@@ -656,7 +650,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
         N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__init__"), move(args))));
     resultExpr = transform(N<IdExpr>(var));
   } else if (auto t = e->getType()->getFunction()) {
-    string torig = t->str();
+    string torig = t->toString();
     for (int i = 0; i < args.size(); i++) {
       if (t->args[i].second->unify(args[i].value->getType()) < 0)
         error(expr, "cannot unify {} and {}", *t->args[i].second,
@@ -679,7 +673,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
 void TransformVisitor::visit(const DotExpr *expr) {
   // TODO: handle imports
 
-  auto lhs = transform(expr->expr);
+  auto lhs = transform(expr->expr, true);
   TypePtr typ = nullptr;
   if (lhs->getType()->isUnbound()) {
     typ = expr->getType() ? expr->getType() : ctx.addUnbound(getSrcInfo());
@@ -734,7 +728,7 @@ void TransformVisitor::visit(const EllipsisExpr *expr) {
 
 // Should get transformed by other functions
 void TransformVisitor::visit(const TypeOfExpr *expr) {
-  resultExpr = N<TypeOfExpr>(transform(expr->expr));
+  resultExpr = N<TypeOfExpr>(transform(expr->expr, true));
   resultExpr->markType();
   auto t = expr->expr->getType();
   if (expr->getType() && expr->getType()->unify(t) < 0)
@@ -818,7 +812,7 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     if (type)
       error(type, "to do type");
     auto s = Nx<AssignStmt>(lhs, Nx<IdExpr>(l, l->value), transform(rhs),
-                            transform(type), false, force);
+                            transform(type, true), false, force);
     if (auto t = ctx.find(l->value)) {
       if (t->unify(s->rhs->getType()) < 0)
         error(rhs, "type {} is not compatible with {}", *t, *s->rhs->getType());
@@ -1100,10 +1094,10 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
   } else if (stmt->lang == "c") {
     vector<Param> args;
     for (auto &a : stmt->args)
-      args.push_back({a.name, transform(a.type), transform(a.deflt)});
+      args.push_back({a.name, transformType(a.type), transform(a.deflt)});
     resultStmt =
         N<ExternImportStmt>(stmt->name, transform(stmt->from),
-                            transform(stmt->ret), move(args), stmt->lang);
+                            transformType(stmt->ret), move(args), stmt->lang);
   } else if (stmt->lang == "py") {
     vector<StmtPtr> stmts;
     string from = "";
@@ -1179,12 +1173,12 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     ctx.increaseLevel();
     vector<Param> args;
     for (auto &a : stmt->args) {
-      auto t = transform(a.type);
+      auto t = transformType(a.type);
       argTypes.push_back(make_pair(
           a.name, a.type ? t->getType() : ctx.addUnbound(getSrcInfo(), false)));
       args.push_back({a.name, move(t), transform(a.deflt)});
     }
-    auto ret = stmt->ret ? transform(stmt->ret)->getType()
+    auto ret = stmt->ret ? transformType(stmt->ret)->getType()
                          : ctx.addUnbound(getSrcInfo(), false);
     ctx.decreaseLevel();
     ctx.popBlock();
@@ -1231,7 +1225,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       for (auto &a : stmt->args) {
         assert(a.type);
         ctx.classMembers[canonicalName][a.name] =
-            transform(a.type)->getType()->generalize(ctx.level);
+            transformType(a.type)->getType()->generalize(ctx.level);
         DBG("* [class] [member.{}] :- {}", a.name,
             *ctx.classMembers[canonicalName][a.name]);
       }
@@ -1274,7 +1268,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       vector<pair<string, TypePtr>> argTypes;
       for (auto &a : stmt->args) {
         assert(a.type);
-        auto t = transform(a.type)->getType();
+        auto t = transformType(a.type)->getType();
         argTypes.push_back({a.name, t});
         ctx.classMembers[canonicalName][a.name] = t;
       }

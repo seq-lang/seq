@@ -370,7 +370,7 @@ void FormatVisitor::visit(const ThrowStmt *stmt) {
 void FormatVisitor::visit(const FunctionStmt *stmt) {
   auto cn = ctx.getCanonicalName(stmt->getSrcInfo());
   // result += renderComment("# DEF-FUN {} CANONICAL {} TYPE {}", stmt->name,
-  // cn, ctx.funcASTs[cn].first->str());
+  // cn, ctx.funcASTs[cn].first->toString());
   for (auto &i : ctx.getRealizations(stmt)) {
     auto *fstmt = dynamic_cast<const FunctionStmt *>(i.second);
     assert(fstmt);

@@ -41,7 +41,7 @@ public:
 
 public:
   /// Pretty-printing.
-  virtual std::string str(bool reduced = false) const = 0;
+  virtual std::string toString(bool reduced = false) const = 0;
   /// Is this an unbound type? (e.g. list[?] is not unbound while ? is).
   virtual bool isUnbound() const = 0;
   /// Does this type have an unbound type within
@@ -52,7 +52,7 @@ public:
 
   /// Allow pretty-printing to C++ streams
   friend std::ostream &operator<<(std::ostream &out, const Type &c) {
-    return out << c.str();
+    return out << c.toString();
   }
 
   /// Get FuncType* if this is a function (nullptr otherwise).
@@ -96,7 +96,7 @@ struct LinkType : public Type {
   LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type) {}
   virtual ~LinkType() {}
 
-  std::string str(bool reduced) const override;
+  std::string toString(bool reduced) const override;
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
@@ -125,7 +125,7 @@ struct ClassType : public Type {
             const std::vector<std::pair<int, TypePtr>> &generics);
   virtual ~ClassType() {}
 
-  std::string str(bool reduced = false) const override;
+  std::string toString(bool reduced = false) const override;
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
@@ -162,7 +162,7 @@ struct FuncType : public Type {
            const std::vector<std::pair<std::string, TypePtr>> &args,
            TypePtr ret);
   virtual ~FuncType() {}
-  std::string str(bool reduced = false) const override;
+  std::string toString(bool reduced = false) const override;
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
@@ -194,7 +194,7 @@ struct RecordType : public Type {
              const std::vector<std::pair<std::string, TypePtr>> &args);
   RecordType(const std::vector<Expr *> args);
   virtual ~RecordType() {}
-  std::string str(bool reduced = false) const override;
+  std::string toString(bool reduced = false) const override;
   int unify(TypePtr typ) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,

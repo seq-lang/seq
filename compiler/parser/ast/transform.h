@@ -61,7 +61,7 @@ public:
   TransformVisitor(TypeContext &ctx,
                    std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
 
-  ExprPtr transform(const Expr *e);
+  ExprPtr transform(const Expr *e, bool allowTypes = false);
   StmtPtr transform(const Stmt *s);
   PatternPtr transform(const Pattern *p);
   ExprPtr transformType(const ExprPtr &expr);

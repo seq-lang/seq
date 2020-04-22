@@ -35,13 +35,13 @@ int unifyList(const vector<pair<T, TypePtr>> &a,
 LinkType::LinkType(LinkKind kind, int id, int level, TypePtr type)
     : kind(kind), id(id), level(level), type(type) {}
 
-string LinkType::str(bool reduced) const {
+string LinkType::toString(bool reduced) const {
   if (kind == Unbound)
-    return fmt::format("?-{}-{}", id, level);
+    return fmt::format("?{}", id, level);
   else if (kind == Generic)
-    return fmt::format("T-{}", id, level);
+    return fmt::format("#{}", id, level);
   else
-    return /*"&" +*/ type->str(reduced);
+    return /*"&" +*/ type->toString(reduced);
 }
 
 bool LinkType::occurs(Type *typ) {
@@ -179,10 +179,10 @@ ClassType::ClassType(const string &name, const string &canonicalName,
                      const vector<pair<int, TypePtr>> &generics)
     : name(name), canonicalName(canonicalName), generics(generics) {}
 
-string ClassType::str(bool reduced) const {
+string ClassType::toString(bool reduced) const {
   vector<string> gs;
   for (auto &a : generics)
-    gs.push_back(a.second->str(reduced));
+    gs.push_back(a.second->toString(reduced));
   return fmt::format("{}{}", name,
                      gs.size() ? fmt::format("[{}]", fmt::join(gs, ",")) : "");
 }
@@ -237,21 +237,22 @@ FuncType::FuncType(const string &name, const string &canonicalName,
     : name(name), canonicalName(canonicalName), generics(generics), args(args),
       ret(ret) {}
 
-string FuncType::str(bool reduced) const {
+string FuncType::toString(bool reduced) const {
   vector<string> gs, as;
   for (auto &a : generics)
-    gs.push_back(a.second->str(reduced));
-  for (auto &a : args)
-    as.push_back(a.second->str(reduced));
-  string r;
+    gs.push_back(a.second->toString(reduced));
   if (!reduced)
-    r = ret->str(reduced) + ", ";
-  else
+    as.push_back(ret->toString(reduced));
+  for (auto &a : args)
+    as.push_back(a.second->toString(reduced));
+  vector<string> is;
+  if (reduced)
     for (auto &a : implicitGenerics)
-      r += a.second->str(reduced) + ", ";
-  return fmt::format("{}{}({}{})", name,
-                     gs.size() ? fmt::format("[{}]", fmt::join(gs, ",")) : "",
-                     r, as.size() ? fmt::format("{}", fmt::join(as, ",")) : "");
+      is.push_back(a.second->toString(reduced));
+  return fmt::format("function[{}{}{}]",
+                     is.size() ? fmt::format("{};", fmt::join(is, ",")) : "",
+                     gs.size() ? fmt::format("{};", fmt::join(gs, ",")) : "",
+                     as.size() ? fmt::format("{}", fmt::join(as, ",")) : "");
 }
 
 int FuncType::unify(TypePtr typ) {
@@ -338,10 +339,10 @@ RecordType::RecordType(const string &name, const string &canonicalName,
                        const vector<pair<string, TypePtr>> &args)
     : name(name), canonicalName(canonicalName), args(args) {}
 
-string RecordType::str(bool reduced) const {
+string RecordType::toString(bool reduced) const {
   vector<string> as;
   for (auto &a : args)
-    as.push_back(a.second->str(reduced));
+    as.push_back(a.second->toString(reduced));
   return fmt::format("{}[{}]", name == "" ? "tuple" : name, fmt::join(as, ","));
 }
 

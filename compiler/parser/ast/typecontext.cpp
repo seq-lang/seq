@@ -10,8 +10,8 @@
 using fmt::format;
 using std::dynamic_pointer_cast;
 using std::make_shared;
-using std::shared_ptr;
 using std::pair;
+using std::shared_ptr;
 using std::stack;
 using std::string;
 using std::unordered_map;
@@ -32,6 +32,22 @@ TypeContext::TypeContext(const std::string &filename)
     internals[t] = make_shared<ClassType>(t, t, vector<pair<int, TypePtr>>());
     moduleNames[t] = 1;
   }
+
+  vector<string> genericTypes = {"array",    "ptr",   "generator",
+                                 "optional", "tuple", "function",
+                                 "Kmer",     "UInt",  "Int"};
+  for (auto &t : genericTypes) {
+    internals[t] = make_shared<ClassType>(
+        t, t,
+        vector<pair<int, TypePtr>>{
+            {unboundCount,
+             make_shared<LinkType>(LinkType::Generic, unboundCount)}});
+    unboundCount++;
+    moduleNames[t] = 1;
+  }
+
+  // handle Kmer / Int / Uiint separately
+
   /// TODO: array, __array__, ptr, generator, tuple etc
   /// UInt / Kmer
 }
