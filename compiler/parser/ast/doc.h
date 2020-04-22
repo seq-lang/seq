@@ -21,6 +21,7 @@
 
 namespace seq {
 namespace ast {
+#ifdef HAHA2
 
 class DocStmtVisitor : public StmtVisitor {
 public:
@@ -28,6 +29,8 @@ public:
   virtual void visit(const FunctionStmt *) override;
   virtual void visit(const ClassStmt *) override;
 };
+
+#endif
 
 } // namespace ast
 } // namespace seq

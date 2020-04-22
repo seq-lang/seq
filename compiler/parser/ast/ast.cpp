@@ -1,19 +1,11 @@
-#include "util/fmt/format.h"
-#include "util/fmt/ostream.h"
 #include <memory>
-#include <ostream>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include "parser/ast/ast.h"
-#include "parser/common.h"
 
 using fmt::format;
-using std::get;
-using std::make_unique;
 using std::move;
-using std::ostream;
 using std::pair;
 using std::string;
 using std::unique_ptr;
@@ -31,6 +23,13 @@ template <typename T> vector<T> CL(const vector<T> &v) {
   for (auto &i : v)
     r.push_back(CL(i));
   return r;
+}
+template <typename T>
+std::string combine(const std::vector<T> &items, std::string delim = " ") {
+  std::string s = "";
+  for (int i = 0; i < items.size(); i++)
+    s += (i ? delim : "") + items[i]->toString();
+  return s;
 }
 
 Expr::Expr() : _type(nullptr), _isType(false) {}
@@ -230,8 +229,13 @@ CallExpr::CallExpr(ExprPtr e, vector<ExprPtr> &&arg) : Expr(), expr(move(e)) {
     args.push_back(CallExpr::Arg{"", move(i)});
   }
 }
-CallExpr::CallExpr(ExprPtr e, ExprPtr arg) : Expr(), expr(move(e)) {
+CallExpr::CallExpr(ExprPtr e, ExprPtr arg, ExprPtr arg2, ExprPtr arg3)
+    : Expr(), expr(move(e)) {
   args.push_back(CallExpr::Arg{"", move(arg)});
+  if (arg2)
+    args.push_back(CallExpr::Arg{"", move(arg2)});
+  if (arg3)
+    args.push_back(CallExpr::Arg{"", move(arg3)});
 }
 string CallExpr::toString() const {
   string s;
@@ -297,6 +301,13 @@ Stmt::Stmt(const seq::SrcInfo &s) { setSrcInfo(s); }
 vector<Stmt *> Stmt::getStatements() { return {this}; }
 
 SuiteStmt::SuiteStmt(vector<StmtPtr> &&s) : stmts(move(s)) {}
+SuiteStmt::SuiteStmt(StmtPtr s, StmtPtr s2, StmtPtr s3) {
+  stmts.push_back(move(s));
+  if (s2)
+    stmts.push_back(move(s2));
+  if (s3)
+    stmts.push_back(move(s3));
+}
 SuiteStmt::SuiteStmt(const SuiteStmt &s) : stmts(CL(s.stmts)) {}
 string SuiteStmt::toString() const {
   return format("({})", combine(stmts, "\n  "));
@@ -377,6 +388,9 @@ string ForStmt::toString() const {
 IfStmt::If IfStmt::If::clone() const { return {CL(cond), CL(suite)}; }
 
 IfStmt::IfStmt(vector<IfStmt::If> &&i) : ifs(move(i)) {}
+IfStmt::IfStmt(ExprPtr cond, StmtPtr suite) {
+  ifs.push_back(If{move(cond), move(suite)});
+}
 IfStmt::IfStmt(const IfStmt &s) : ifs(CL(s.ifs)) {}
 string IfStmt::toString() const {
   string s;

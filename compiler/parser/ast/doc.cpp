@@ -31,6 +31,8 @@ using std::vector;
 namespace seq {
 namespace ast {
 
+#ifdef HAHA2
+
 void DocStmtVisitor::visit(const SuiteStmt *stmt) {
   for (auto &i : stmt->stmts) {
     i->accept(*this);
@@ -87,6 +89,7 @@ void DocStmtVisitor::visit(const ClassStmt *stmt) {
       stmt->args.size() ? " :args" + as : "",
       docstr.size() ? format(" :docstr \"{}\"", escape(docstr)) : "");
 }
+#endif
 
 } // namespace ast
 } // namespace seq

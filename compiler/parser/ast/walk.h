@@ -8,7 +8,7 @@
 namespace seq {
 namespace ast {
 
-struct WalkExprVisitor : public ExprVisitor {
+struct WalkVisitor : public ASTVisitor {
   virtual void visit(const UnpackExpr *) override;
   virtual void visit(const TupleExpr *) override;
   virtual void visit(const ListExpr *) override;

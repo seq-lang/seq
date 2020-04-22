@@ -13,13 +13,12 @@
 #include "lang/seq.h"
 #include "parser/ast/types.h"
 #include "parser/ast/visitor.h"
+#include "parser/common.h"
 
 /// Macro that makes node cloneable and visitable
-/// This can be done via "modern" templates if one is in overly masochistic
-/// mood.
 #define NODE_UTILITY(X, Y)                                                     \
   virtual X##Ptr clone() const override { return std::make_unique<Y>(*this); } \
-  virtual void accept(X##Visitor &visitor) const override {                    \
+  virtual void accept(ASTVisitor &visitor) const override {                    \
     visitor.visit(this);                                                       \
   }
 
@@ -53,7 +52,7 @@ public:
   /// Convert node to a string
   virtual std::string toString() const = 0;
   /// Accept an AST walker/visitor
-  virtual void accept(ExprVisitor &) const = 0;
+  virtual void accept(ASTVisitor &) const = 0;
 
   /// Type utilities
   TypePtr getType() const { return _type; }
@@ -77,7 +76,7 @@ struct Stmt : public seq::SrcObject {
   /// Convert node to a string
   virtual std::string toString() const = 0;
   /// Accept an AST walker/visitor
-  virtual void accept(StmtVisitor &) const = 0;
+  virtual void accept(ASTVisitor &) const = 0;
 
   /// Get child statements (e.g. block contents).
   /// Returns the statement itself if it has no child statements.
@@ -96,7 +95,7 @@ struct Pattern : public seq::SrcObject {
   /// Convert node to a string
   virtual std::string toString() const = 0;
   /// Accept an AST walker/visitor
-  virtual void accept(PatternVisitor &) const = 0;
+  virtual void accept(ASTVisitor &) const = 0;
 
   /// Allow pretty-printing to C++ streams
   friend std::ostream &operator<<(std::ostream &out, const Pattern &c) {
@@ -358,7 +357,8 @@ struct CallExpr : public Expr {
   /// Simple call e(a...)
   CallExpr(ExprPtr e, std::vector<ExprPtr> &&a);
   /// Simple call e(arg)
-  CallExpr(ExprPtr e, ExprPtr arg);
+  CallExpr(ExprPtr e, ExprPtr arg, ExprPtr arg2 = nullptr,
+           ExprPtr arg3 = nullptr);
   /// Simple call e()
   CallExpr(ExprPtr e);
   std::string toString() const override;
@@ -440,6 +440,7 @@ struct SuiteStmt : public Stmt {
   std::vector<StmtPtr> stmts;
 
   SuiteStmt(std::vector<StmtPtr> &&s);
+  SuiteStmt(StmtPtr s, StmtPtr s2 = nullptr, StmtPtr s3 = nullptr);
   SuiteStmt(const SuiteStmt &s);
   std::string toString() const override;
   std::vector<Stmt *> getStatements() override;
@@ -573,6 +574,7 @@ struct IfStmt : public Stmt {
   std::vector<If> ifs;
 
   IfStmt(std::vector<If> &&i);
+  IfStmt(ExprPtr cond, StmtPtr suite);
   IfStmt(const IfStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, IfStmt);

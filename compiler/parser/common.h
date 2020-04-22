@@ -4,6 +4,7 @@
 #include "util/fmt/ostream.h"
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "lang/seq.h"
@@ -20,10 +21,10 @@ namespace seq {
 namespace ast {
 
 template <typename T>
-std::string combine(const std::vector<T> &items, std::string delim = " ") {
+std::string join(const std::vector<T> &items, std::string delim = " ") {
   std::string s = "";
   for (int i = 0; i < items.size(); i++)
-    s += (i ? delim : "") + items[i]->toString();
+    s += (i ? delim : "") + items[i];
   return s;
 }
 
@@ -32,23 +33,18 @@ std::string escape(std::string s);
 std::string executable_path(const char *argv0);
 
 void error(const char *format);
-void error(const seq::SrcInfo &p, const char *format);
+void error(const SrcInfo &p, const char *format);
 
 template <typename... TArgs> void error(const char *format, TArgs &&... args) {
   throw seq::exc::SeqException(fmt::format(format, args...));
 }
 
-template <typename... TArgs>
-void error(const seq::SrcInfo &p, const char *format, TArgs &&... args) {
-  throw seq::exc::SeqException(fmt::format(format, args...), p);
+template <typename T, typename... TArgs>
+void error(const T &p, const char *format, TArgs &&... args) {
+  throw exc::SeqException(fmt::format(format, args...), p->getSrcInfo());
 }
 
 std::string getTemporaryVar(const std::string &prefix = "");
-
-template <typename T> T &&fwdSrcInfo(T &&t, const seq::SrcInfo &i) {
-  t->setSrcInfo(i);
-  return std::forward<T>(t);
-}
 
 } // namespace ast
 } // namespace seq

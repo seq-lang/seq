@@ -8,39 +8,50 @@
 
 #pragma once
 
+#include <ostream>
 #include <string>
-#include <tuple>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <vector>
 
-#include "parser/ast/ast.h"
-#include "parser/ast/transform.h"
+#include "parser/ast/typecontext.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
-#include "parser/context.h"
 
 namespace seq {
 namespace ast {
 
-class TypeContext;
-
-class FormatExprVisitor : public ExprVisitor {
+class FormatVisitor : public ASTVisitor {
   TypeContext &ctx;
   std::string result;
+  std::string space;
+  bool renderType;
+  int indent;
+
+private:
+  template <typename T, typename... Ts>
+  std::string renderExpr(T &&t, Ts &&... args) {
+    std::string s;
+    if (renderType)
+      s += fmt::format("<type>{}</type>",
+                       t->getType() ? t->getType()->str() : "-");
+    return fmt::format("<expr>{}<node>{}</node></expr>", s,
+                       fmt::format(args...));
+  }
+  template <typename... Ts> std::string renderComment(Ts &&... args) {
+    return fmt::format("{}<b class=comment>{}</b><hr>", pad(),
+                       fmt::format(args...));
+  }
+  std::string pad(int indent = 0) const;
+  std::string newline() const;
+  std::string keyword(const std::string &s) const;
 
 public:
-  FormatExprVisitor(TypeContext &ctx);
+  FormatVisitor(TypeContext &ctx);
 
-  std::string transform(const Expr *e);
-  std::string transform(const std::vector<ExprPtr> &e);
+  std::string transform(const ExprPtr &e);
+  std::string transform(const StmtPtr &stmt, int indent = 0);
+  std::string transform(const PatternPtr &ptr);
 
-  template <typename T>
-  auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
-    return transform(t.get());
-  }
-
+public:
   void visit(const NoneExpr *) override;
   void visit(const BoolExpr *) override;
   void visit(const IntExpr *) override;
@@ -70,69 +81,35 @@ public:
   void visit(const PtrExpr *) override;
   void visit(const LambdaExpr *) override;
   void visit(const YieldExpr *) override;
-};
 
-class FormatStmtVisitor : public StmtVisitor {
-  TypeContext &ctx;
-  std::string result;
-  int indent{0};
-
-public:
-  FormatStmtVisitor(TypeContext &ctx);
-
-  std::string transform(const Stmt *stmt, int indent = 0);
-  std::string transform(const StmtPtr &stmt, int indent = 0);
-  std::string transform(const ExprPtr &stmt);
-  std::string transform(const PatternPtr &stmt);
-
-  std::string pad(int indent = 0);
-
-  virtual void visit(const SuiteStmt *) override;
-  virtual void visit(const PassStmt *) override;
-  virtual void visit(const BreakStmt *) override;
-  virtual void visit(const ContinueStmt *) override;
-  virtual void visit(const ExprStmt *) override;
-  virtual void visit(const AssignStmt *) override;
-  virtual void visit(const DelStmt *) override;
-  virtual void visit(const PrintStmt *) override;
-  virtual void visit(const ReturnStmt *) override;
-  virtual void visit(const YieldStmt *) override;
-  virtual void visit(const AssertStmt *) override;
-  // virtual void visit(const TypeAliasStmt *) override;
-  virtual void visit(const WhileStmt *) override;
-  virtual void visit(const ForStmt *) override;
-  virtual void visit(const IfStmt *) override;
-  virtual void visit(const MatchStmt *) override;
-  virtual void visit(const ExtendStmt *) override;
-  virtual void visit(const ImportStmt *) override;
-  virtual void visit(const ExternImportStmt *) override;
-  virtual void visit(const TryStmt *) override;
-  virtual void visit(const GlobalStmt *) override;
-  virtual void visit(const ThrowStmt *) override;
-  virtual void visit(const FunctionStmt *) override;
-  virtual void visit(const ClassStmt *) override;
-  virtual void visit(const DeclareStmt *) override;
-  virtual void visit(const AssignEqStmt *) override;
-  virtual void visit(const YieldFromStmt *) override;
-  virtual void visit(const WithStmt *) override;
-  virtual void visit(const PyDefStmt *) override;
-
-  friend std::ostream &operator<<(std::ostream &out,
-                                  const FormatStmtVisitor &c) {
-    return out << c.result;
-  }
-};
-
-class FormatPatternVisitor : public PatternVisitor {
-  std::string result;
-
-public:
-  std::string transform(const Pattern *ptr);
-
-  template <typename T>
-  auto transform(const std::unique_ptr<T> &t) -> decltype(transform(t.get())) {
-    return transform(t.get());
-  }
+  void visit(const SuiteStmt *) override;
+  void visit(const PassStmt *) override;
+  void visit(const BreakStmt *) override;
+  void visit(const ContinueStmt *) override;
+  void visit(const ExprStmt *) override;
+  void visit(const AssignStmt *) override;
+  void visit(const DelStmt *) override;
+  void visit(const PrintStmt *) override;
+  void visit(const ReturnStmt *) override;
+  void visit(const YieldStmt *) override;
+  void visit(const AssertStmt *) override;
+  void visit(const WhileStmt *) override;
+  void visit(const ForStmt *) override;
+  void visit(const IfStmt *) override;
+  void visit(const MatchStmt *) override;
+  void visit(const ExtendStmt *) override;
+  void visit(const ImportStmt *) override;
+  void visit(const ExternImportStmt *) override;
+  void visit(const TryStmt *) override;
+  void visit(const GlobalStmt *) override;
+  void visit(const ThrowStmt *) override;
+  void visit(const FunctionStmt *) override;
+  void visit(const ClassStmt *) override;
+  void visit(const DeclareStmt *) override;
+  void visit(const AssignEqStmt *) override;
+  void visit(const YieldFromStmt *) override;
+  void visit(const WithStmt *) override;
+  void visit(const PyDefStmt *) override;
 
   void visit(const StarPattern *) override;
   void visit(const IntPattern *) override;
@@ -146,6 +123,17 @@ public:
   void visit(const WildcardPattern *) override;
   void visit(const GuardedPattern *) override;
   void visit(const BoundPattern *) override;
+
+public:
+  friend std::ostream &operator<<(std::ostream &out, const FormatVisitor &c) {
+    return out << c.result;
+  }
+  template <typename T> std::string transform(const std::vector<T> &ts) {
+    std::vector<std::string> r;
+    for (auto &e : ts)
+      r.push_back(transform(e));
+    return fmt::format("{}", fmt::join(r, ", "));
+  }
 };
 
 } // namespace ast

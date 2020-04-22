@@ -23,22 +23,42 @@
 namespace seq {
 namespace ast {
 
-class CodegenStmtVisitor;
+#ifdef HAHA
 
-class CodegenExprVisitor : public ExprVisitor {
+class CodegenVisitor
+    : public ASTVisitor<seq::Expr *, seq::Stmt *, seq::Pattern *> {
   Context &ctx;
-  CodegenStmtVisitor &stmtVisitor;
-  seq::Expr *result;
-  friend class CodegenStmtVisitor;
+  seq::Expr *resultExpr;
+  seq::Stmt *resultStmt;
+  seq::Pattern *resultPattern;
 
-public:
-  CodegenExprVisitor(Context &ctx, CodegenStmtVisitor &stmtVisitor);
-  seq::Expr *transform(const ExprPtr &e);
-  seq::types::Type *transformType(const ExprPtr &expr);
+  void defaultVisit(const Expr *expr) override;
+  void defaultVisit(const Stmt *expr) override;
+  void defaultVisit(const Pattern *expr) override;
+
+  class CaptureExprVisitor : public WalkExprVisitor {
+    Context &ctx;
+    std::unordered_map<std::string, seq::Var *> captures;
+
+  public:
+    using WalkExprVisitor::visit;
+    CaptureExprVisitor(Context &ctx);
+    void visit(const IdExpr *) override;
+  };
+
   seq::For *parseComprehension(const Expr *expr,
                                const std::vector<GeneratorExpr::Body> &loops,
                                int &added);
 
+public:
+  CodegenVisitor(Context &ctx);
+
+  seq::Expr *transform(const Expr *expr) override;
+  seq::Stmt *transform(const Stmt *stmt) override;
+  seq::Pattern *transform(const Pattern *pat) override;
+  seq::types::Type *transformType(const ExprPtr &expr);
+
+public:
   void visit(const NoneExpr *) override;
   void visit(const BoolExpr *) override;
   void visit(const IntExpr *) override;
@@ -68,72 +88,35 @@ public:
   void visit(const PtrExpr *) override;
   void visit(const LambdaExpr *) override;
   void visit(const YieldExpr *) override;
-};
 
-class CaptureExprVisitor : public WalkExprVisitor {
-  Context &ctx;
-  std::unordered_map<std::string, seq::Var *> captures;
-  friend class CodegenExprVisitor;
-
-public:
-  using WalkExprVisitor::visit;
-  CaptureExprVisitor(Context &ctx);
-  virtual void visit(const IdExpr *) override;
-};
-
-class CodegenStmtVisitor : public StmtVisitor {
-  Context &ctx;
-  seq::Stmt *result;
-
-public:
-  CodegenStmtVisitor(Context &ctx);
-
-  seq::Stmt *transform(const StmtPtr &stmt);
-  seq::Stmt *transform(const Stmt *stmt);
-  seq::Expr *transform(const ExprPtr &expr);
-  seq::Pattern *transform(const PatternPtr &pat);
-  seq::types::Type *transformType(const ExprPtr &expr);
-  Context &getContext();
-
-  virtual void visit(const SuiteStmt *) override;
-  virtual void visit(const PassStmt *) override;
-  virtual void visit(const BreakStmt *) override;
-  virtual void visit(const ContinueStmt *) override;
-  virtual void visit(const ExprStmt *) override;
-  virtual void visit(const AssignStmt *) override;
-  virtual void visit(const DelStmt *) override;
-  virtual void visit(const PrintStmt *) override;
-  virtual void visit(const ReturnStmt *) override;
-  virtual void visit(const YieldStmt *) override;
-  virtual void visit(const AssertStmt *) override;
-  // virtual void visit(const TypeAliasStmt *) override;
-  virtual void visit(const WhileStmt *) override;
-  virtual void visit(const ForStmt *) override;
-  virtual void visit(const IfStmt *) override;
-  virtual void visit(const MatchStmt *) override;
-  virtual void visit(const ExtendStmt *) override;
-  virtual void visit(const ImportStmt *) override;
-  virtual void visit(const ExternImportStmt *) override;
-  virtual void visit(const TryStmt *) override;
-  virtual void visit(const GlobalStmt *) override;
-  virtual void visit(const ThrowStmt *) override;
-  virtual void visit(const FunctionStmt *) override;
-  virtual void visit(const ClassStmt *) override;
-  virtual void visit(const AssignEqStmt *) override;
-  virtual void visit(const YieldFromStmt *) override;
-  virtual void visit(const WithStmt *) override;
-  virtual void visit(const PyDefStmt *) override;
-  virtual void visit(const DeclareStmt *) override;
-};
-
-class CodegenPatternVisitor : public PatternVisitor {
-  CodegenStmtVisitor &stmtVisitor;
-  seq::Pattern *result;
-  friend class CodegenStmtVisitor;
-
-public:
-  CodegenPatternVisitor(CodegenStmtVisitor &);
-  seq::Pattern *transform(const PatternPtr &ptr);
+  void visit(const SuiteStmt *) override;
+  void visit(const PassStmt *) override;
+  void visit(const BreakStmt *) override;
+  void visit(const ContinueStmt *) override;
+  void visit(const ExprStmt *) override;
+  void visit(const AssignStmt *) override;
+  void visit(const DelStmt *) override;
+  void visit(const PrintStmt *) override;
+  void visit(const ReturnStmt *) override;
+  void visit(const YieldStmt *) override;
+  void visit(const AssertStmt *) override;
+  void visit(const WhileStmt *) override;
+  void visit(const ForStmt *) override;
+  void visit(const IfStmt *) override;
+  void visit(const MatchStmt *) override;
+  void visit(const ExtendStmt *) override;
+  void visit(const ImportStmt *) override;
+  void visit(const ExternImportStmt *) override;
+  void visit(const TryStmt *) override;
+  void visit(const GlobalStmt *) override;
+  void visit(const ThrowStmt *) override;
+  void visit(const FunctionStmt *) override;
+  void visit(const ClassStmt *) override;
+  void visit(const AssignEqStmt *) override;
+  void visit(const YieldFromStmt *) override;
+  void visit(const WithStmt *) override;
+  void visit(const PyDefStmt *) override;
+  void visit(const DeclareStmt *) override;
 
   void visit(const StarPattern *) override;
   void visit(const IntPattern *) override;
@@ -149,5 +132,6 @@ public:
   void visit(const BoundPattern *) override;
 };
 
+#endif
 } // namespace ast
 } // namespace seq
