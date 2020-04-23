@@ -89,6 +89,11 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
   DBG("  {} :- {} ]", *v.resultExpr,
       v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
 
+  if (v.resultExpr && v.resultExpr->getType() &&
+      v.resultExpr->getType()->canRealize()) {
+    if (auto c = getClass(v.resultExpr->getType()))
+      realize(c);
+  }
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
     error(expr, "unexpected type");
   return move(v.resultExpr);
@@ -130,13 +135,14 @@ PatternPtr TransformVisitor::transform(const Pattern *pat) {
 
 /*************************************************************************************/
 
-TypePtr TransformVisitor::realizeFunc(const string &canonicalName,
-                                      FuncTypePtr t) {
-  auto it = ctx.funcRealizations.find(t->getCanonicalName());
+TypeContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
+  assert(t->canRealize());
+  assert(t->name != "");
+  auto it = ctx.funcRealizations.find(t->name);
   if (it != ctx.funcRealizations.end()) {
     auto it2 = it->second.find(t->toString(true));
     if (it2 != it->second.end())
-      return it2->second.first; // already realized
+      return it2->second;
   }
 
   ctx.addBlock();
@@ -151,35 +157,76 @@ TypePtr TransformVisitor::realizeFunc(const string &canonicalName,
   ctx.returnType = t->ret;
   ctx.hasSetReturnType = false;
 
-  assert(ctx.funcASTs.find(t->getCanonicalName()) != ctx.funcASTs.end());
-  auto &ast = ctx.funcASTs[t->getCanonicalName()];
+  assert(ctx.funcASTs.find(t->name) != ctx.funcASTs.end());
+  auto &ast = ctx.funcASTs[t->name];
   // There is no AST linked to internal functions, so just ignore them
   bool isInternal =
       std::find(ast.second->attributes.begin(), ast.second->attributes.end(),
                 "internal") != ast.second->attributes.end();
 
-  DBG("======== BEGIN {} :- {} ========", t->getCanonicalName(), *t);
+  // DBG("======== BEGIN {} :- {} ========", t->name, *t);
   auto realized = isInternal ? nullptr : realizeBlock(ast.second->suite.get());
   if (realized && !ctx.hasSetReturnType && t->ret) {
     auto u = ctx.returnType->unify(ctx.findInternal("void"));
-    // TODO fix this
     assert(u >= 0);
   }
-  DBG("======== END {} :- {} ========", t->getCanonicalName(), *t);
+  // DBG("======== END {} :- {} ========", t->name, *t);
 
   assert(ast.second->args.size() == t->args.size());
   vector<Param> args;
   for (auto &i : ast.second->args)
     args.push_back({i.name, nullptr, nullptr});
-  ctx.funcRealizations[t->getCanonicalName()][t->toString(true)] =
-      make_pair(t, Nx<FunctionStmt>(ast.second.get(), ast.second->name, nullptr,
-                                    vector<string>(), move(args),
-                                    move(realized), ast.second->attributes));
+  auto ret = ctx.funcRealizations[t->name][t->toString(true)] = {
+      t,
+      Nx<FunctionStmt>(ast.second.get(), t->name, nullptr, vector<string>(),
+                       move(args), move(realized), ast.second->attributes),
+      nullptr};
   ctx.returnType = old;
   ctx.hasSetReturnType = oldSeen;
   ctx.decreaseLevel();
   ctx.popBlock();
-  return t;
+  DBG(">> realized {}::{}", t->name, *t);
+  return ret;
+}
+
+TypeContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
+  assert(t->canRealize());
+  auto it = ctx.classRealizations.find(t->name);
+  if (it != ctx.classRealizations.end()) {
+    auto it2 = it->second.find(t->toString(true));
+    if (it2 != it->second.end())
+      return it2->second;
+  }
+
+  types::Type *handle = nullptr;
+  if (t->isRecord) {
+    vector<string> names;
+    vector<types::Type *> types;
+    for (auto &m : t->args) {
+      names.push_back(m.first);
+      assert(m.second->canRealize() && getClass(m.second));
+      auto real = realize(getClass(m.second));
+      types.push_back(real.handle);
+    }
+    handle =
+        types::RecordType::get(types, names, t->name == "tuple" ? "" : t->name);
+  } else {
+    auto cls = types::RefType::get(t->name);
+    vector<string> names;
+    vector<types::Type *> types;
+    for (auto &m : ctx.classes[t->name].members) {
+      names.push_back(m.first);
+      auto mt = ctx.instantiate(t->getSrcInfo(), m.second, t->generics);
+      assert(mt->canRealize() && getClass(mt));
+      auto real = realize(getClass(mt));
+      types.push_back(real.handle);
+    }
+    cls->setContents(types::RecordType::get(types, names, ""));
+    cls->setDone();
+    handle = cls;
+  }
+  DBG(">> realized {}", *t);
+  return ctx.classRealizations[t->name][t->toString(true)] = {t, handle};
 }
 
 StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt) {
@@ -202,10 +249,13 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt) {
     result = v.transform(result ? result.get() : stmt);
 
     for (auto i = ctx.activeUnbounds.begin(); i != ctx.activeUnbounds.end();) {
-      if (!(*i)->isUnbound())
-        i = ctx.activeUnbounds.erase(i);
-      else
-        ++i;
+      if (auto l = dynamic_pointer_cast<LinkType>(*i)) {
+        if (l->kind != LinkType::Unbound) {
+          i = ctx.activeUnbounds.erase(i);
+          continue;
+        }
+      }
+      ++i;
     }
 
     if (ctx.activeUnbounds.size() >= prevSize) {
@@ -626,11 +676,10 @@ void TransformVisitor::visit(const CallExpr *expr) {
     if (!dotlhs->isType()) {
       // Find appropriate function!
       if (auto c = getClass(dotlhs->getType())) {
-        auto m = ctx.findMethod(c->name, d->member);
-        if (m.type) {
+        if (auto m = ctx.findMethod(c->name, d->member)) {
           args.push_back({"self", move(dotlhs)});
-          e = N<IdExpr>(m.canonicalName);
-          e->setType(ctx.instantiate(getSrcInfo(), m.type, c->generics));
+          e = N<IdExpr>(m->name);
+          e->setType(ctx.instantiate(getSrcInfo(), m, c->generics));
         } else {
           error(d, "{} has no method '{}'", *dotlhs->getType(), d->member);
         }
@@ -666,7 +715,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
               *args[i].value->getType());
     }
     if (t->canRealize())
-      realize(t);
+      t = realize(t).type;
     resultExpr = N<CallExpr>(move(e), move(args));
     resultExpr->setType(make_shared<LinkType>(t->ret));
     if (expr->getType() && expr->getType()->unify(resultExpr->getType()) < 0)
@@ -687,11 +736,10 @@ void TransformVisitor::visit(const DotExpr *expr) {
   if (getUnbound(lhs->getType())) {
     typ = expr->getType() ? expr->getType() : ctx.addUnbound(getSrcInfo());
   } else if (auto c = getClass(lhs->getType())) {
-    auto m = ctx.findMethod(c->name, expr->member);
-    if (m.type) {
+    if (auto m = ctx.findMethod(c->name, expr->member)) {
       if (lhs->isType()) {
-        resultExpr = N<IdExpr>(m.canonicalName);
-        resultExpr->setType(ctx.instantiate(getSrcInfo(), m.type, c->generics));
+        resultExpr = N<IdExpr>(m->name);
+        resultExpr->setType(ctx.instantiate(getSrcInfo(), m, c->generics));
         return;
       } else
         error(expr, "cannot handle partials yet");
@@ -1035,11 +1083,10 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
     if (auto f = dynamic_cast<FunctionStmt *>(s)) {
       transform(s);
       auto val = ctx.find(ctx.prefix + f->name);
-      auto fval = dynamic_pointer_cast<FuncTContextItem>(val);
-      assert(fval && fval->getType());
-      getFunction(fval->getType())->setImplicits(genericTypes);
-      ctx.classes[canonicalName].methods[f->name] = {
-          fval->getName(), dynamic_pointer_cast<FuncType>(fval->getType())};
+      auto fval = getFunction(val->getType());
+      assert(fval);
+      fval->setImplicits(genericTypes);
+      ctx.classes[canonicalName].methods[f->name] = fval;
     } else {
       error(s, "types can only contain functions");
     }
@@ -1199,7 +1246,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     ctx.decreaseLevel();
     ctx.popBlock();
 
-    auto type = make_shared<FuncType>(genericTypes, argTypes, ret);
+    auto type =
+        make_shared<FuncType>(canonicalName, genericTypes, argTypes, ret);
     auto t = type->generalize(ctx.level);
     DBG("* [function] {} :- {}", canonicalName, *t);
     ctx.add(ctx.prefix + stmt->name, t);
@@ -1221,11 +1269,11 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     if (auto f = dynamic_cast<FunctionStmt *>(s)) {
       suite.push_back(transform(s));
       auto val = ctx.find(ctx.prefix + f->name);
-      auto fval = dynamic_pointer_cast<FuncTContextItem>(val);
-      assert(fval && fval->getType());
-      getFunction(fval->getType())->setImplicits(genericTypes);
-      ctx.classes[canonicalName].methods[f->name] = {
-          fval->getName(), dynamic_pointer_cast<FuncType>(fval->getType())};
+      auto fval = getFunction(val->getType());
+      assert(fval);
+      fval->setImplicits(genericTypes);
+      ctx.classes[canonicalName].methods[f->name] = fval;
+      DBG("* [class] {} :: {} :- {}", canonicalName, f->name, *fval);
     } else {
       error(s, "types can only contain functions");
     }
@@ -1256,7 +1304,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
         ctx.classes[canonicalName].members[a.name] =
             transformType(a.type)->getType()->generalize(ctx.level);
         // DBG("* [class] [member.{}] :- {}", a.name,
-        //     *ctx.classMembers[canonicalName][a.name]);
+        // *ctx.classes[canonicalName].members[a.name]);
       }
       auto oldPrefix = ctx.prefix;
       ctx.prefix = stmt->name + ".";
@@ -1276,7 +1324,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       ctx.decreaseLevel();
       for (auto &g : stmt->generics) {
         // Generalize in place
-        auto t = dynamic_pointer_cast<LinkType>(ctx.find(g));
+        auto t = dynamic_pointer_cast<LinkType>(ctx.find(g)->getType());
         assert(t && t->kind == LinkType::Unbound);
         t->kind = LinkType::Generic;
         ctx.remove(g);

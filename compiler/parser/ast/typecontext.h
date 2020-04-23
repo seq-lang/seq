@@ -37,20 +37,6 @@ public:
   bool hasAttr(const std::string &s) const;
 };
 
-class FuncTContextItem : public TContextItem {
-  std::string name;
-
-public:
-  FuncTContextItem(TypePtr t, const std::string &name, bool isType = false,
-                   bool global = false);
-  std::string getName() const;
-};
-
-struct FuncHandle {
-  std::string canonicalName;
-  FuncTypePtr type;
-};
-
 /// Current identifier table
 class TypeContext : public VTable<TContextItem> {
 private: /** Naming **/
@@ -67,7 +53,13 @@ private: /** Naming **/
   std::unordered_map<std::string, int> moduleNames;
   /// Mapping to canonical names
   /// (each SrcInfo positions maps to a unique canonical name)
-  std::unordered_map<seq::SrcInfo, std::string> canonicalNames;
+  std::unordered_map<SrcInfo, std::string> canonicalNames;
+
+public:
+  struct ClassBody {
+    std::unordered_map<std::string, TypePtr> members;
+    std::unordered_map<std::string, FuncTypePtr> methods;
+  };
 
 private: /** Lookup **/
   /// Store internal types separately for easier access
@@ -75,18 +67,14 @@ private: /** Lookup **/
   /// List of class methods and members
   /// Maps canonical class name to a map of methods and members
   /// and their generalized types
-
-  struct ClassBody {
-    std::unordered_map<std::string, TypePtr> members;
-    std::unordered_map<std::string, FuncHandle> methods;
-  };
   std::unordered_map<std::string, ClassBody> classes;
 
 public:
   /// Getters and setters for the method/member/realization lookup tables
-  FuncHandle findMethod(const std::string &name,
-                        const std::string &method) const;
+  FuncTypePtr findMethod(const std::string &name,
+                         const std::string &method) const;
   TypePtr findMember(const std::string &name, const std::string &member) const;
+  ClassBody *findClass(const std::string &name);
 
 private: /** Type-checking **/
   /// Current type-checking level
@@ -102,14 +90,14 @@ public:
   /// Type-checking helpers
   void increaseLevel();
   void decreaseLevel();
-  std::shared_ptr<LinkType> addUnbound(const seq::SrcInfo &srcInfo,
+  std::shared_ptr<LinkType> addUnbound(const SrcInfo &srcInfo,
                                        bool setActive = true);
   /// Calls type->instantiate, but populates the instantiation table
   /// with "parent" type.
   /// Example: for list[T].foo, list[int].foo will populate type of foo so that
   /// the generic T gets mapped to int.
-  TypePtr instantiate(const seq::SrcInfo &srcInfo, TypePtr type);
-  TypePtr instantiate(const seq::SrcInfo &srcInfo, TypePtr type,
+  TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type);
+  TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type,
                       const std::vector<std::pair<int, TypePtr>> &generics);
 
 private: /** Realization **/
@@ -125,19 +113,33 @@ private: /** Realization **/
   std::unordered_map<std::string,
                      std::pair<TypePtr, std::shared_ptr<ClassStmt>>>
       classASTs;
+
+public:
+  struct FuncRealization {
+    FuncTypePtr type;
+    std::shared_ptr<FunctionStmt> ast;
+    seq::Func *handle;
+  };
+  struct ClassRealization {
+    ClassTypePtr type;
+    seq::types::Type *handle;
+  };
+
+  std::shared_ptr<Stmt> getAST(const std::string &name) const;
+
+private:
   /// Current function realizations.
   /// Mapping from a canonical function name to a hashtable
   /// of realized and fully type-checked function ASTs.
-  std::unordered_map<
-      std::string,
-      std::unordered_map<std::string,
-                         std::pair<TypePtr, std::shared_ptr<FunctionStmt>>>>
+  std::unordered_map<std::string,
+                     std::unordered_map<std::string, FuncRealization>>
       funcRealizations;
   /// Current class realizations.
   /// Mapping from a canonical class name to a hashtable
   /// of realized and fully type-checked class ASTs.
-  std::unordered_map<
-      std::string, std::unordered_map<std::string, std::shared_ptr<ClassStmt>>>
+
+  std::unordered_map<std::string,
+                     std::unordered_map<std::string, ClassRealization>>
       classRealizations;
 
 private: /** Function utilities **/
@@ -158,16 +160,15 @@ public:
 
   void add(const std::string &name, TypePtr t, bool isType = false,
            bool global = false);
-  void add(const std::string &name, const std::string &canonicalName,
-           FuncTypePtr t, bool global = false);
+
   /// Get canonical name for a SrcInfo
-  std::string getCanonicalName(const seq::SrcInfo &info);
+  std::string getCanonicalName(const SrcInfo &info);
   /// Generate canonical name for a SrcInfo and original class/function name
-  std::string generateCanonicalName(const seq::SrcInfo &info,
+  std::string generateCanonicalName(const SrcInfo &info,
                                     const std::string &name);
 
-  std::vector<std::pair<std::string, const FunctionStmt *>>
-  getRealizations(const FunctionStmt *stmt);
+  std::vector<ClassRealization> getClassRealizations(const std::string &name);
+  std::vector<FuncRealization> getFuncRealizations(const std::string &name);
 };
 
 } // namespace ast

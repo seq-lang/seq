@@ -30,22 +30,23 @@ bool TContextItem::hasAttr(const std::string &s) const {
   return attributes.find(s) != attributes.end();
 }
 
-FuncTContextItem::FuncTContextItem(TypePtr t, const string &name, bool isType,
-                                   bool global)
-    : TContextItem(t, isType, global), name(name) {}
-string FuncTContextItem::getName() const { return name; }
-
 TypeContext::TypeContext(const std::string &filename)
     : filename(filename), module(""), prefix(""), level(0), unboundCount(0),
       returnType(nullptr), hasSetReturnType(false) {
   // set up internals
   stack.push(vector<string>());
-  vector<string> podTypes = {"void", "bool", "int", "float",
-                             "byte", "str",  "seq"};
+  vector<pair<string, types::Type *>> podTypes = {
+      {"void", seq::types::Void},   {"bool", seq::types::Bool},
+      {"byte", seq::types::Byte},   {"int", seq::types::Int},
+      {"float", seq::types::Float}, {"str", seq::types::Str},
+      {"seq", seq::types::Seq}};
   for (auto &t : podTypes) {
-    internals[t] = make_shared<ClassType>(t, true, vector<pair<int, TypePtr>>(),
-                                          vector<pair<string, TypePtr>>());
-    moduleNames[t] = 1;
+    auto name = t.first;
+    auto typ = make_shared<ClassType>(name, true, vector<pair<int, TypePtr>>(),
+                                      vector<pair<string, TypePtr>>());
+    internals[name] = typ;
+    moduleNames[name] = 1;
+    classRealizations[name][name] = {typ, t.second};
   }
 
   vector<string> genericTypes = {"array",    "ptr",   "generator",
@@ -85,17 +86,11 @@ void TypeContext::add(const string &name, TypePtr t, bool isType, bool global) {
   VTable<TContextItem>::add(name, make_shared<TContextItem>(t, isType, global));
 }
 
-void TypeContext::add(const string &name, const string &canonicalName,
-                      FuncTypePtr t, bool global) {
-  VTable<TContextItem>::add(
-      name, make_shared<FuncTContextItem>(t, canonicalName, false, global));
-}
-
 void TypeContext::increaseLevel() { level++; }
 
 void TypeContext::decreaseLevel() { level--; }
 
-string TypeContext::getCanonicalName(const seq::SrcInfo &info) {
+string TypeContext::getCanonicalName(const SrcInfo &info) {
   auto it = canonicalNames.find(info);
   if (it != canonicalNames.end()) {
     return it->second;
@@ -103,7 +98,7 @@ string TypeContext::getCanonicalName(const seq::SrcInfo &info) {
   return "";
 }
 
-string TypeContext::generateCanonicalName(const seq::SrcInfo &info,
+string TypeContext::generateCanonicalName(const SrcInfo &info,
                                           const std::string &name) {
   auto it = canonicalNames.find(info);
   if (it != canonicalNames.end())
@@ -118,7 +113,7 @@ string TypeContext::generateCanonicalName(const seq::SrcInfo &info,
   return newName;
 }
 
-shared_ptr<LinkType> TypeContext::addUnbound(const seq::SrcInfo &srcInfo,
+shared_ptr<LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
                                              bool setActive) {
   auto t = make_shared<LinkType>(LinkType::Unbound, unboundCount, level);
   t->setSrcInfo(srcInfo);
@@ -130,11 +125,28 @@ shared_ptr<LinkType> TypeContext::addUnbound(const seq::SrcInfo &srcInfo,
   return t;
 }
 
-TypePtr TypeContext::instantiate(const seq::SrcInfo &srcInfo, TypePtr type) {
+TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type) {
   return instantiate(srcInfo, type, vector<pair<int, TypePtr>>());
 }
 
-TypePtr TypeContext::instantiate(const seq::SrcInfo &srcInfo, TypePtr type,
+TypeContext::ClassBody *TypeContext::findClass(const std::string &name) {
+  auto m = classes.find(name);
+  if (m != classes.end())
+    return &m->second;
+  return nullptr;
+}
+
+shared_ptr<Stmt> TypeContext::getAST(const string &name) const {
+  auto m = funcASTs.find(name);
+  if (m != funcASTs.end())
+    return m->second.second;
+  auto mx = classASTs.find(name);
+  if (mx != classASTs.end())
+    return mx->second.second;
+  return nullptr;
+}
+
+TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type,
                                  const vector<pair<int, TypePtr>> &generics) {
   std::unordered_map<int, TypePtr> cache;
   for (auto &g : generics) {
@@ -156,8 +168,8 @@ TypePtr TypeContext::instantiate(const seq::SrcInfo &srcInfo, TypePtr type,
   return t;
 }
 
-FuncHandle TypeContext::findMethod(const string &name,
-                                   const string &method) const {
+FuncTypePtr TypeContext::findMethod(const string &name,
+                                    const string &method) const {
   auto m = classes.find(name);
   if (m != classes.end()) {
     auto t = m->second.methods.find(method);
@@ -165,7 +177,7 @@ FuncHandle TypeContext::findMethod(const string &name,
       return t->second;
     }
   }
-  return {"", nullptr};
+  return nullptr;
 }
 
 TypePtr TypeContext::findMember(const string &name,
@@ -180,15 +192,19 @@ TypePtr TypeContext::findMember(const string &name,
   return nullptr;
 }
 
-vector<pair<string, const FunctionStmt *>>
-TypeContext::getRealizations(const FunctionStmt *stmt) {
-  vector<pair<string, const FunctionStmt *>> result;
-  auto it = canonicalNames.find(stmt->getSrcInfo());
-  if (it != canonicalNames.end()) {
-    for (auto &i : funcRealizations[it->second]) {
-      result.push_back({i.first, i.second.second.get()});
-    }
-  }
+vector<TypeContext::ClassRealization>
+TypeContext::getClassRealizations(const std::string &name) {
+  vector<TypeContext::ClassRealization> result;
+  for (auto &i : classRealizations[name])
+    result.push_back(i.second);
+  return result;
+}
+
+vector<TypeContext::FuncRealization>
+TypeContext::getFuncRealizations(const std::string &name) {
+  vector<TypeContext::FuncRealization> result;
+  for (auto &i : funcRealizations[name])
+    result.push_back(i.second);
   return result;
 }
 

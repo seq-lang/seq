@@ -243,9 +243,10 @@ bool ClassType::canRealize() const {
   return true;
 }
 
-FuncType::FuncType(const vector<pair<int, TypePtr>> &generics,
+FuncType::FuncType(const string &name,
+                   const vector<pair<int, TypePtr>> &generics,
                    const vector<pair<string, TypePtr>> &args, TypePtr ret)
-    : generics(generics), args(args), ret(ret) {}
+    : name(name), generics(generics), args(args), ret(ret) {}
 
 string FuncType::toString(bool reduced) const {
   vector<string> gs, as;
@@ -267,6 +268,10 @@ string FuncType::toString(bool reduced) const {
 
 int FuncType::unify(TypePtr typ) {
   if (auto t = dynamic_cast<FuncType *>(typ.get())) {
+    if (name != t->name) {
+      if (name != "" && t->name != "")
+        return -1;
+    }
     int s1 = unifyList(generics, t->generics);
     if (s1 == -1)
       return -1;
@@ -296,7 +301,7 @@ TypePtr FuncType::generalize(int level) {
   auto i = implicitGenerics;
   for (auto &t : i)
     t.second = t.second->generalize(level);
-  auto t = make_shared<FuncType>(g, a, ret->generalize(level));
+  auto t = make_shared<FuncType>(name, g, a, ret->generalize(level));
   t->setImplicits(i);
   return t;
 }
@@ -312,8 +317,8 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
   auto i = implicitGenerics;
   for (auto &t : i)
     t.second = t.second->instantiate(level, unboundCount, cache);
-  auto t =
-      make_shared<FuncType>(g, a, ret->instantiate(level, unboundCount, cache));
+  auto t = make_shared<FuncType>(name, g, a,
+                                 ret->instantiate(level, unboundCount, cache));
   t->setImplicits(i);
   return t;
 }
@@ -332,6 +337,8 @@ bool FuncType::hasUnbound() const {
 }
 
 bool FuncType::canRealize() const {
+  if (name == "")
+    return false;
   for (auto &t : generics)
     if (!t.second->canRealize())
       return false;

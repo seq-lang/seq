@@ -37,8 +37,7 @@ private:
                        fmt::format(args...));
   }
   template <typename... Ts> std::string renderComment(Ts &&... args) {
-    return fmt::format("{}<b class=comment>{}</b><hr>", pad(),
-                       fmt::format(args...));
+    return fmt::format("<b class=comment>{}</b>", pad(), fmt::format(args...));
   }
   std::string pad(int indent = 0) const;
   std::string newline() const;

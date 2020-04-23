@@ -368,62 +368,62 @@ void FormatVisitor::visit(const ThrowStmt *stmt) {
 }
 
 void FormatVisitor::visit(const FunctionStmt *stmt) {
-  auto cn = ctx.getCanonicalName(stmt->getSrcInfo());
-  // result += renderComment("# DEF-FUN {} CANONICAL {} TYPE {}", stmt->name,
-  // cn, ctx.funcASTs[cn].first->toString());
-  for (auto &i : ctx.getRealizations(stmt)) {
-    auto *fstmt = dynamic_cast<const FunctionStmt *>(i.second);
+  auto name = ctx.getCanonicalName(stmt->getSrcInfo());
+  for (auto &real : ctx.getFuncRealizations(name)) {
+    auto fstmt = real.ast;
     assert(fstmt);
     string attrs;
-    for (auto &a : fstmt->attributes) {
+    for (auto &a : fstmt->attributes)
       attrs += format("{}@{}{}", pad(), a, newline());
-    }
     vector<string> args;
-    for (auto &a : fstmt->args) {
+    for (auto &a : fstmt->args)
       args.push_back(format(
           "{}{}{}", a.name, a.type ? format(": {}", transform(a.type)) : "",
           a.deflt ? format(" = {}", transform(a.deflt)) : ""));
-    }
-
     FormatVisitor v(ctx);
     v.indent = this->indent + 1;
     if (fstmt->suite)
       fstmt->suite->accept(v);
-    result +=
-        format("{}{}{} {}.{}{}({}){}:{}{}{}", attrs, pad(), keyword("def"),
-               ctx.getCanonicalName(fstmt->getSrcInfo()), i.first,
-               !fstmt->generics.empty()
-                   ? format("[{}]", fmt::join(fstmt->generics, ", "))
-                   : "",
-               fmt::join(args, ", "),
-               fstmt->ret ? format(" -> {}", transform(fstmt->ret)) : "",
-               newline(), v.result, newline());
+    result += format("{}{}{} {}{}({}){}:{}{}{}", attrs, pad(), keyword("def"),
+                     fstmt->name,
+                     !fstmt->generics.empty()
+                         ? format("[{}]", fmt::join(fstmt->generics, ", "))
+                         : "",
+                     fmt::join(args, ", "),
+                     fstmt->ret ? format(" -> {}", transform(fstmt->ret)) : "",
+                     newline(), v.result, newline());
   }
 }
 
 void FormatVisitor::visit(const ClassStmt *stmt) {
-  vector<string> args;
-  for (auto &a : stmt->args) {
-    args.push_back(format("{}{}{}", a.name,
-                          a.type ? format(": {}", transform(a.type)) : "",
-                          a.deflt ? format(" = {}", transform(a.deflt)) : ""));
+  auto name = ctx.getCanonicalName(stmt->getSrcInfo());
+  auto c = ctx.findClass(name);
+  assert(c);
+  for (auto &real : ctx.getClassRealizations(name)) {
+    vector<string> args;
+    string key;
+    if (real.type->isRecord) {
+      key = "type";
+      for (auto &a : real.type->args)
+        args.push_back(format("{}: {}", a.first, *a.second));
+    } else {
+      key = "class";
+      for (auto &a : c->members) {
+        auto t = ctx.instantiate(real.type->getSrcInfo(), a.second,
+                                 real.type->generics);
+        args.push_back(format("{}: {}", a.first, *t));
+      }
+    }
+    result = format("{} {}({}){}", keyword(key), stmt->name,
+                    fmt::join(args, ", "), newline());
   }
-
-  if (stmt->isRecord) {
-    auto t = transform(stmt->suite, 1);
-    result = format("{} {}({}){}", keyword("type"), stmt->name,
-                    fmt::join(args, ", "),
-                    !t.empty() ? format(":{}{}", newline(), t) : "");
-
-  } else {
-    string as;
-    for (auto &a : args)
-      as += pad(1) + a + newline();
-    result = format("{} {}{}:{}{}{}", keyword("class"), stmt->name,
-                    !stmt->generics.empty()
-                        ? format("[{}]", fmt::join(stmt->generics, ", "))
-                        : "",
-                    newline(), as, transform(stmt->suite, 1));
+  for (auto &m : c->methods) {
+    FormatVisitor v(ctx);
+    v.indent = this->indent;
+    auto s = ctx.getAST(m.second->name);
+    if (s)
+      s->accept(v);
+    result += v.result;
   }
 }
 

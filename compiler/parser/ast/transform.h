@@ -45,7 +45,8 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
                             SuiteStmt *&prev);
   void prepend(StmtPtr s);
 
-  TypePtr realize(std::shared_ptr<FuncType> type);
+  TypeContext::FuncRealization realize(FuncTypePtr type);
+  TypeContext::ClassRealization realize(ClassTypePtr type);
 
   class CaptureVisitor : public WalkVisitor {
     TypeContext &ctx;
