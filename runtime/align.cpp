@@ -1600,8 +1600,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper16(
           //_mm_prefetch((const char*) seqBufRef + (int64_t)spf.id *
           // MAX_SEQ_LEN_REF, 0); _mm_prefetch((const char*) seqBufRef +
           //(int64_t)spf.id * MAX_SEQ_LEN_REF + 64, 0);
-          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr, 0);
-          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr + 64, 0);
+          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr, _MM_HINT_NTA);
+          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr + 64, _MM_HINT_NTA);
         }
 
         SeqPair sp = pairArray[i + j];
@@ -1644,8 +1644,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper16(
           //_mm_prefetch((const char*) seqBufQer + (int64_t)spf.id *
           // MAX_SEQ_LEN_QER, 0); _mm_prefetch((const char*) seqBufQer +
           //(int64_t)spf.id * MAX_SEQ_LEN_QER + 64, 0);
-          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq, 0);
-          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq + 64, 0);
+          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq, _MM_HINT_NTA);
+          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq + 64, _MM_HINT_NTA);
         }
 
         SeqPair sp = pairArray[i + j];
@@ -2468,8 +2468,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper8(
           //_mm_prefetch((const char*) seqBufRef + (int64_t)spf.id *
           // MAX_SEQ_LEN_REF, 0); _mm_prefetch((const char*) seqBufRef +
           //(int64_t)spf.id * MAX_SEQ_LEN_REF + 64, 0);
-          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr, 0);
-          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr + 64, 0);
+          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr, _MM_HINT_NTA);
+          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr + 64, _MM_HINT_NTA);
         }
         SeqPair sp = pairArray[i + j];
         h0[j] = sp.h0;
@@ -2509,8 +2509,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper8(
           //_mm_prefetch((const char*) seqBufQer + (int64_t)spf.id *
           // MAX_SEQ_LEN_QER, 0); _mm_prefetch((const char*) seqBufQer +
           //(int64_t)spf.id * MAX_SEQ_LEN_QER + 64, 0);
-          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq, 0);
-          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq + 64, 0);
+          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq, _MM_HINT_NTA);
+          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq + 64, _MM_HINT_NTA);
         }
 
         SeqPair sp = pairArray[i + j];
@@ -3162,8 +3162,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper16(
           //_mm_prefetch((const char*) seqBufRef + (int64_t)spf.id *
           // MAX_SEQ_LEN_REF, 0); _mm_prefetch((const char*) seqBufRef +
           //(int64_t)spf.id * MAX_SEQ_LEN_REF + 64, 0);
-          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr, 0);
-          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr + 64, 0);
+          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr, _MM_HINT_NTA);
+          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr + 64, _MM_HINT_NTA);
         }
         SeqPair sp = pairArray[i + j];
         h0[j] = sp.h0;
@@ -3205,8 +3205,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper16(
           //_mm_prefetch((const char*) seqBufQer + (int64_t)spf.id *
           // MAX_SEQ_LEN_QER, 0); _mm_prefetch((const char*) seqBufQer +
           //(int64_t)spf.id * MAX_SEQ_LEN_QER + 64, 0);
-          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq, 0);
-          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq + 64, 0);
+          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq, _MM_HINT_NTA);
+          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq + 64, _MM_HINT_NTA);
         }
 
         SeqPair sp = pairArray[i + j];
@@ -3945,8 +3945,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper16(
       for (j = 0; j < SIMD_WIDTH16; j++) {
         { // prefetch block
           SeqPair spf = pairArray[i + j + PFD];
-          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr, 0);
-          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr + 64, 0);
+          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr, _MM_HINT_NTA);
+          _mm_prefetch((const char *)seqBufRef + (int64_t)spf.idr + 64, _MM_HINT_NTA);
         }
         SeqPair sp = pairArray[i + j];
         h0[j] = sp.h0;
@@ -3988,8 +3988,8 @@ void BandedPairWiseSW::smithWatermanBatchWrapper16(
           //_mm_prefetch((const char*) seqBuf + (2 * (int64_t)spf.id + 1) *
           // MAX_SEQ_LEN, 0); _mm_prefetch((const char*) seqBuf + (2 *
           //(int64_t)spf.id + 1) * MAX_SEQ_LEN + 64, 0);
-          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq, 0);
-          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq + 64, 0);
+          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq, _MM_HINT_NTA);
+          _mm_prefetch((const char *)seqBufQer + (int64_t)spf.idq + 64, _MM_HINT_NTA);
         }
 
         SeqPair sp = pairArray[i + j];
