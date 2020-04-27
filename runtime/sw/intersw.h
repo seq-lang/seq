@@ -474,11 +474,8 @@ private:
 
   int end_bonus, zdrop;
   int o_del, o_ins, e_del, e_ins;
-
   int8_t w_match;
   int8_t w_mismatch;
-  int8_t w_open;
-  int8_t w_extend;
   int8_t w_ambig;
 
   int_t *F;
@@ -498,10 +495,8 @@ InterSW<W, N, CIGAR>::InterSW(const int o_del, const int e_del, const int o_ins,
   this->e_ins = e_ins;
 
   this->w_match = w_match;
-  this->w_mismatch = w_mismatch * -1;
-  this->w_open = o_del;   // redundant, used in vector code.
-  this->w_extend = e_del; // redundant, used in vector code.
-  this->w_ambig = w_ambig;
+  this->w_mismatch = -w_mismatch;
+  this->w_ambig = -w_ambig;
   this->F = this->H1 = this->H2 = nullptr;
 
   constexpr int MAX_SEQ_LEN = SIMD<W, N>::MAX_SEQ_LEN;
@@ -575,6 +570,7 @@ void InterSW<W, N, CIGAR>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
     uint_t h0[SIMD_WIDTH] __attribute__((aligned(64)));
     uint_t band[SIMD_WIDTH];
     uint_t qlen[SIMD_WIDTH] __attribute__((aligned(64)));
+    bool ext[SIMD_WIDTH];
     uint_t bsize = 0;
 
     Vec zero128 = S::zero();
@@ -611,6 +607,7 @@ void InterSW<W, N, CIGAR>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
         }
         SeqPair sp = getp(pairArray, i + j, numPairs);
         h0[j] = 0;
+        ext[j] = (sp.flags & KSW_EZ_EXTZ_ONLY) != 0;
         seq1 = seqBufRef + idr(sp);
 
         for (k = 0; k < sp.len1; k++) {
@@ -692,6 +689,7 @@ void InterSW<W, N, CIGAR>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
           int max_ins = (int)val;
           max_ins = max_ins > 1 ? max_ins : 1;
           myband[l] = min_(myband[l], max_ins);
+          myband[l] = ext[l] ? myband[l] : w;
           bsize = bsize < myband[l] ? myband[l] : bsize;
         }
       }
@@ -729,9 +727,6 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[],
 
   Vec match256 = S::set(this->w_match);
   Vec mismatch256 = S::set(this->w_mismatch);
-  Vec gapOpen256 = S::set(this->w_open);
-  Vec gapExtend256 = S::set(this->w_extend);
-  Vec gapOE256 = S::set(this->w_open + this->w_extend);
   Vec w_ambig_256 = S::set(this->w_ambig);
   Vec five256 = S::set(5);
   Vec neg_inf256 = S::set(NEG_INF);
@@ -753,12 +748,10 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[],
 
   int minq = 10000000;
   for (int l = 0; l < SIMD_WIDTH; l++) {
-    int len1 = (p + l < endp) ? p[l].len1 : 0;
-    int len2 = (p + l < endp) ? p[l].len2 : 0;
-    tlen[l] = len1;
-    qlen[l] = len2;
-    if (len2 < minq)
-      minq = len2;
+    tlen[l] = p[l].len1;
+    qlen[l] = p[l].len2;
+    if (p[l].len2 < minq)
+      minq = p[l].len2;
   }
   minq -= 1; // for gscore
 
@@ -1222,20 +1215,20 @@ void InterSW<W, N, CIGAR>::SWBacktrace(bool is_rot, bool is_rev,
 
 #if ((!__AVX512BW__) & (__AVX2__))
 typedef InterSW<256, 8, /*CIGAR=*/false> SW8;
-typedef InterSW<256, 8, /*CIGAR=*/false> SW16;
-typedef InterSW<256, 16, /*CIGAR=*/true> SWbt8;
+typedef InterSW<256, 8, /*CIGAR=*/true> SWbt8;
+typedef InterSW<256, 16, /*CIGAR=*/false> SW16;
 typedef InterSW<256, 16, /*CIGAR=*/true> SWbt16;
 #endif
 #if __AVX512BW__
 typedef InterSW<512, 8, /*CIGAR=*/false> SW8;
-typedef InterSW<512, 8, /*CIGAR=*/false> SW16;
-typedef InterSW<512, 16, /*CIGAR=*/true> SWbt8;
+typedef InterSW<512, 8, /*CIGAR=*/true> SWbt8;
+typedef InterSW<512, 16, /*CIGAR=*/false> SW16;
 typedef InterSW<512, 16, /*CIGAR=*/true> SWbt16;
 #endif
 #if ((!__AVX512BW__) & (!__AVX2__) & (__SSE2__))
 typedef InterSW<128, 8, /*CIGAR=*/false> SW8;
-typedef InterSW<128, 8, /*CIGAR=*/false> SW16;
-typedef InterSW<128, 16, /*CIGAR=*/true> SWbt8;
+typedef InterSW<128, 8, /*CIGAR=*/true> SWbt8;
+typedef InterSW<128, 16, /*CIGAR=*/false> SW16;
 typedef InterSW<128, 16, /*CIGAR=*/true> SWbt16;
 #endif
 #if ((!__AVX512BW__) & (!__AVX2__) & (!__SSE2__))

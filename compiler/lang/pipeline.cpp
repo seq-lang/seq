@@ -499,10 +499,10 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
         statesTemp, genType->getLLVMType(context)->getPointerTo());
     Value *bufRef = builder.CreateCall(allocAtomic, bufRefSize);
     Value *bufQer = builder.CreateCall(allocAtomic, bufQerSize);
-    Value *pairs = builder.CreateCall(allocAtomic, pairsSize);
+    Value *pairs = builder.CreateCall(alloc, pairsSize);
     pairs = builder.CreateBitCast(
         pairs, pairType->getLLVMType(context)->getPointerTo());
-    Value *pairsTemp = builder.CreateCall(allocAtomic, pairsSize);
+    Value *pairsTemp = builder.CreateCall(alloc, pairsSize);
     pairsTemp = builder.CreateBitCast(
         pairsTemp, pairType->getLLVMType(context)->getPointerTo());
     Value *hist = builder.CreateCall(allocAtomic, histSize);
