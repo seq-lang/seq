@@ -1,4 +1,5 @@
 from core.c_stubs import CIGAR, Alignment, pseq
+from c_htslib import bam_cigar2qlen, bam_cigar2rlen
 
 # adapted from ksw2:
 _ALIGN_SCORE_NEG_INF = -0x40000000
@@ -109,11 +110,11 @@ extend CIGAR:
 
     @property
     def qlen(self: CIGAR):
-        return _C.bam_cigar2qlen(self._len, self._data)
+        return bam_cigar2qlen(self.len, self.value)
 
     @property
     def rlen(self: CIGAR):
-        return _C.bam_cigar2rlen(self._len, self._data)
+        return bam_cigar2rlen(self.len, self.value)
 
     def __getitem__(self: CIGAR, idx: int):
         if not (0 <= idx < len(self)):

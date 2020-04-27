@@ -20,13 +20,6 @@ option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
 
-find_library(HTS_LIB NAMES libhts.a libhts)
-if(NOT HTS_LIB)
-  message(FATAL_ERROR "HTSlib not found")
-else()
-  message(STATUS "Found HTSlib: ${HTS_LIB}")
-endif()
-
 find_library(GC_LIB NAMES libgc.a libgc)
 if(NOT GC_LIB)
   message(FATAL_ERROR "GC not found")
@@ -45,7 +38,7 @@ add_library(seqrt SHARED runtime/lib.h
                          runtime/sw/intersw.h
                          runtime/sw/intersw.cpp)
 target_include_directories(seqrt PRIVATE runtime)
-target_link_libraries(seqrt PUBLIC bz2 lzma curl ${ZLIB_LIBRARIES} ${GC_LIB} ${HTS_LIB} Threads::Threads)
+target_link_libraries(seqrt PUBLIC ${ZLIB_LIBRARIES} ${GC_LIB} Threads::Threads)
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
 
 if(SEQ_THREADED)

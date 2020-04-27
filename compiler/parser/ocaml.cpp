@@ -399,7 +399,7 @@ unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset,
   CAMLlocal3(p1, f, c);
   static value *closure_f = nullptr;
   if (!closure_f) {
-    closure_f = caml_named_value("menhir_parse");
+    closure_f = (value *)caml_named_value("menhir_parse");
   }
   f = caml_copy_string(file.c_str());
   c = caml_copy_string(code.c_str());
