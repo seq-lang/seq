@@ -206,12 +206,12 @@ static inline void ksw_backtrack(
 
 static inline void ksw_reset_extz(ksw_extz_t *ez) {
   ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
-  ez->max = 0, ez->score = ez->mqe = ez->mte = KSW_NEG_INF;
-  ez->n_cigar = 0, ez->zdropped = 0, ez->reach_end = 0;
-
-  // XXX:
-  ez->m_cigar = 0;
-  ez->n_cigar = 0;
+  ez->max = 0;
+  ez->score = ez->mqe = ez->mte = KSW_NEG_INF;
+  ez->cigar = nullptr;
+  ez->n_cigar = ez->m_cigar = 0;
+  ez->zdropped = 0;
+  ez->reach_end = 0;
 }
 
 static inline int ksw_apply_zdrop(ksw_extz_t *ez, int is_rot, int32_t H, int a,

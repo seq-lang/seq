@@ -21,8 +21,8 @@
 #define GC_THREADS
 #endif
 
-#include "ksw2/ksw2.h"
 #include "lib.h"
+#include "sw/ksw2.h"
 #include <gc.h>
 #include <htslib/sam.h>
 
@@ -361,18 +361,21 @@ SEQ_FUNC void seq_align(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
   ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo, gape,
                 (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
-  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+  *out = {{ez.cigar, ez.n_cigar}, flags & KSW_EZ_EXTZ_ONLY ? ez.max : ez.score};
 }
 
 SEQ_FUNC void seq_align_default(seq_t query, seq_t target, Alignment *out) {
-  static const int8_t mat[] = {2,  -4, -4, -4, 0,  -4, 2, -4, -4, 0, -4, -4, 2,
-                               -4, 0,  -4, -4, -4, 2,  0, 0,  0,  0, 0,  0};
-  ksw_extz_t ez;
+  static const int8_t mat[] = {0,  -1, -1, -1, -1, -1, 0,  -1, -1,
+                               -1, -1, -1, 0,  -1, -1, -1, -1, -1,
+                               0,  -1, -1, -1, -1, -1, -1};
+  int m_cigar = 0;
+  int n_cigar = 0;
+  uint32_t *cigar = nullptr;
   ALIGN_ENCODE(encode);
-  ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, 4, 2, 13, 1, -1, -1,
-                /* end_bonus */ 0, 0, &ez);
+  int score = ksw_gg2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, 0, 1, -1,
+                          &m_cigar, &n_cigar, &cigar);
   ALIGN_RELEASE();
-  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+  *out = {{cigar, n_cigar}, score};
 }
 
 SEQ_FUNC void seq_align_dual(seq_t query, seq_t target, int8_t *mat,
@@ -385,7 +388,7 @@ SEQ_FUNC void seq_align_dual(seq_t query, seq_t target, int8_t *mat,
   ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo1, gape1, gapo2,
                 gape2, (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
-  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+  *out = {{ez.cigar, ez.n_cigar}, flags & KSW_EZ_EXTZ_ONLY ? ez.max : ez.score};
 }
 
 SEQ_FUNC void seq_align_splice(seq_t query, seq_t target, int8_t *mat,
@@ -397,12 +400,12 @@ SEQ_FUNC void seq_align_splice(seq_t query, seq_t target, int8_t *mat,
   ksw_exts2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo1, gape1, gapo2,
                 noncan, (int)zdrop, (int)flags, &ez);
   ALIGN_RELEASE();
-  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+  *out = {{ez.cigar, ez.n_cigar}, flags & KSW_EZ_EXTZ_ONLY ? ez.max : ez.score};
 }
 
 SEQ_FUNC void seq_align_global(seq_t query, seq_t target, int8_t *mat,
                                int8_t gapo, int8_t gape, seq_int_t bandwidth,
-                               Alignment *out) {
+                               bool backtrace, Alignment *out) {
   int m_cigar = 0;
   int n_cigar = 0;
   uint32_t *cigar = nullptr;
@@ -410,7 +413,7 @@ SEQ_FUNC void seq_align_global(seq_t query, seq_t target, int8_t *mat,
   int score = ksw_gg2_sse(nullptr, qlen, qbuf, tlen, tbuf, 5, mat, gapo, gape,
                           (int)bandwidth, &m_cigar, &n_cigar, &cigar);
   ALIGN_RELEASE();
-  *out = {{cigar, n_cigar}, score};
+  *out = {{backtrace ? cigar : nullptr, backtrace ? n_cigar : 0}, score};
 }
 
 SEQ_FUNC void seq_palign(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
@@ -421,7 +424,7 @@ SEQ_FUNC void seq_palign(seq_t query, seq_t target, int8_t *mat, int8_t gapo,
   ksw_extz2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo, gape,
                 (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
-  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+  *out = {{ez.cigar, ez.n_cigar}, flags & KSW_EZ_EXTZ_ONLY ? ez.max : ez.score};
 }
 
 SEQ_FUNC void seq_palign_default(seq_t query, seq_t target, Alignment *out) {
@@ -475,7 +478,7 @@ SEQ_FUNC void seq_palign_dual(seq_t query, seq_t target, int8_t *mat,
   ksw_extd2_sse(nullptr, qlen, qbuf, tlen, tbuf, 23, mat, gapo1, gape1, gapo2,
                 gape2, (int)bandwidth, (int)zdrop, end_bonus, (int)flags, &ez);
   ALIGN_RELEASE();
-  *out = {{ez.cigar, ez.n_cigar}, ez.score};
+  *out = {{ez.cigar, ez.n_cigar}, flags & KSW_EZ_EXTZ_ONLY ? ez.max : ez.score};
 }
 
 SEQ_FUNC void seq_palign_global(seq_t query, seq_t target, int8_t *mat,

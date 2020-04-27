@@ -270,7 +270,7 @@ Aligning sequences is very straightforward in Seq, and supports numerous options
     aln = s1.align(s2, a=2, b=4, gapo=4, gape=2, gapo2=13, gape2=1)
     print aln.cigar, aln.score
 
-Here is the list of options supported by the ``align()`` method; all are optional:
+Here is the list of options supported by the ``align()`` method; all are optional (default is global alignment):
 
 - ``a``: match score
 - ``b``: mismatch score
@@ -286,9 +286,8 @@ Here is the list of options supported by the ``align()`` method; all are optiona
 - ``approx_max``: if true, approximate max
 - ``approx_drop``: if true, approximate Z-drop
 - ``rev_cigar``: if true, reverse CIGAR in output
-- ``ext_only``: if true, only perform extension
+- ``ext_only``: if true, perform extension alignment
 - ``splice``: if true, perform spliced alignment
-- ``glob``: if true, perform global alignment
 
 Note that all costs/scores are positive by convention.
 

@@ -371,3 +371,11 @@ extend seq:
     def __invert__(self: seq):
         return seq(self.ptr, -self.len)
 
+    def __reversed__(self: seq):
+        n = len(self)
+        p = ptr[byte](n)
+        i = 0
+        while i < n:
+            p[i] = self._at(n - i - 1)
+            i += 1
+        return seq(p, n)
