@@ -753,10 +753,12 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[],
 
   int minq = 10000000;
   for (int l = 0; l < SIMD_WIDTH; l++) {
-    tlen[l] = p[l].len1;
-    qlen[l] = p[l].len2;
-    if (p[l].len2 < minq)
-      minq = p[l].len2;
+    int len1 = (p + l < endp) ? p[l].len1 : 0;
+    int len2 = (p + l < endp) ? p[l].len2 : 0;
+    tlen[l] = len1;
+    qlen[l] = len2;
+    if (len2 < minq)
+      minq = len2;
   }
   minq -= 1; // for gscore
 
