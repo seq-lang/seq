@@ -883,8 +883,8 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[],
       j256 = S::add(j256, one256);
 
       // main code
-      Vec d;
-      Cmp dcmp, dtmp;
+      Vec d, dtmp;
+      Cmp dcmp;
       Cmp cmp11 = S::eq(s10, s2);
       Vec sbt11 = S::blend(mismatch256, match256, cmp11);
       Vec tmp256 = S::umax(s10, s2);
