@@ -117,7 +117,7 @@ Value *StrPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   LLVMContext &context = block->getContext();
   Value *pat = StrExpr(this->val).codegen(base, block);
   Value *b =
-      types::Str->callMagic("__eq__", {type}, pat, {val}, block, getTryCatch());
+      types::Str->callMagic("__eq__", {type}, pat, {val}, block, nullptr);
   IRBuilder<> builder(block);
   return builder.CreateTrunc(b, IntegerType::getInt1Ty(context));
 }
@@ -243,7 +243,7 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     for (unsigned i = 0; i < star; i++) {
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
       Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx},
-                                   block, getTryCatch());
+                                   block, nullptr);
       Value *subRes = patterns[i]->codegen(
           base, type->magicOut("__getitem__", {types::Int}), sub, block);
       builder.SetInsertPoint(
@@ -258,7 +258,7 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
           idx, ConstantInt::get(seqIntLLVM(context), patterns.size()));
 
       Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx},
-                                   block, getTryCatch());
+                                   block, nullptr);
       Value *subRes = patterns[i]->codegen(
           base, type->magicOut("__getitem__", {types::Int}), sub, block);
       builder.SetInsertPoint(
@@ -269,7 +269,7 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     for (unsigned i = 0; i < patterns.size(); i++) {
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
       Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx},
-                                   block, getTryCatch());
+                                   block, nullptr);
       Value *subRes = patterns[i]->codegen(
           base, type->magicOut("__getitem__", {types::Int}), sub, block);
       builder.SetInsertPoint(
