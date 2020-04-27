@@ -1116,21 +1116,6 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[],
       break;
     const bool ext_only = (p[i].flags & KSW_EZ_EXTZ_ONLY) != 0;
     p[i].score = ext_only ? score[i] : gscore_ar[i];
-    // p[i].tle = maxi[i];
-    // p[i].qle = maxj[i];
-    // p[i].max_off = max_off_ar[i];
-    // p[i].gscore = gscore_ar[i];
-    // p[i].gtle = maxie_ar[i];
-
-    /*
-    printf("=================== Inter-SW results ===================\n");
-    printf("score = %d\n", score[i]);
-    printf("maxi = %d, maxj = %d\n", maxi[i], maxj[i]);
-    //printf("max_off = %d\n", max_off_ar[i]);
-    //printf("gscore = %d\n", p[i].gscore);
-    //printf("gtle = %d\n", maxie_ar[i]);
-    printf("========================================================\n");
-    */
 
     if (CIGAR) {
       static constexpr size_t CIGAR_INIT_CAP = 15;
