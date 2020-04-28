@@ -7,16 +7,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-
-#include "ksw2.h"
-
-#if (__AVX512BW__ || __AVX2__)
 #include <immintrin.h>
-#else
-#include <smmintrin.h> // for SSE4.1
-#define __mmask8 uint8_t
-#define __mmask16 uint16_t
-#endif
+#include "ksw2.h"
 
 extern "C" void *seq_alloc_atomic(size_t n);
 extern "C" void *seq_realloc(void *p, size_t n);
