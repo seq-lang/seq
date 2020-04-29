@@ -307,4 +307,6 @@ typ:
   | type_head NL { $loc, Type (snd $1) }
   | type_head COLON NL INDENT class_member+ DEDENT { $loc, Type { (snd $1) with members = filter_opt $5 } }
 /* TODO: C++ check for default arguments */
-type_head: TYPE ID LP FL(COMMA, typed_param) RP { $loc, { class_name = $2; generics = []; args = $4; members = [] } }
+type_head:
+  | TYPE ID generic_list? LP FL(COMMA, typed_param) RP
+    { $loc, { class_name = $2; generics = opt_val $3 []; args = $5; members = [] } }

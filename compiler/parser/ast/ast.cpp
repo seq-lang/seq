@@ -218,8 +218,6 @@ string IndexExpr::toString() const {
 }
 
 CallExpr::Arg CallExpr::Arg::clone() const { return {name, CL(value)}; }
-
-CallExpr::CallExpr(ExprPtr e) : Expr(), expr(move(e)) {}
 CallExpr::CallExpr(const CallExpr &e)
     : Expr(e), expr(CL(e.expr)), args(CL(e.args)) {}
 CallExpr::CallExpr(ExprPtr e, vector<CallExpr::Arg> &&a)
@@ -231,7 +229,8 @@ CallExpr::CallExpr(ExprPtr e, vector<ExprPtr> &&arg) : Expr(), expr(move(e)) {
 }
 CallExpr::CallExpr(ExprPtr e, ExprPtr arg, ExprPtr arg2, ExprPtr arg3)
     : Expr(), expr(move(e)) {
-  args.push_back(CallExpr::Arg{"", move(arg)});
+  if (arg)
+    args.push_back(CallExpr::Arg{"", move(arg)});
   if (arg2)
     args.push_back(CallExpr::Arg{"", move(arg2)});
   if (arg3)

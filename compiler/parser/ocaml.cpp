@@ -458,6 +458,8 @@ unique_ptr<SuiteStmt> parse_file(string file) {
     }
   } else {
     ifstream fin(file);
+    if (!fin)
+      error("cannot open {}", file);
     while (getline(fin, line)) {
       result += line + "\n";
     }

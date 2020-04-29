@@ -118,7 +118,7 @@ public:
   struct FuncRealization {
     FuncTypePtr type;
     std::shared_ptr<FunctionStmt> ast;
-    seq::Func *handle;
+    seq::BaseFunc *handle;
   };
   struct ClassRealization {
     ClassTypePtr type;

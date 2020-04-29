@@ -26,25 +26,33 @@ class FormatVisitor : public ASTVisitor {
   bool renderType;
   int indent;
 
+  std::string header, footer;
+  std::string typeStart, typeEnd;
+  std::string nodeStart, nodeEnd;
+  std::string exprStart, exprEnd;
+  std::string commentStart, commentEnd;
+  std::string keywordStart, keywordEnd;
+
 private:
   template <typename T, typename... Ts>
   std::string renderExpr(T &&t, Ts &&... args) {
     std::string s;
     if (renderType)
-      s += fmt::format("<type>{}</type>",
-                       t->getType() ? t->getType()->toString() : "-");
-    return fmt::format("<expr>{}<node>{}</node></expr>", s,
-                       fmt::format(args...));
+      s += fmt::format("{}{}{}", typeStart,
+                       t->getType() ? t->getType()->toString() : "-", typeEnd);
+    return fmt::format("{}{}{}{}{}{}", exprStart, s, nodeStart,
+                       fmt::format(args...), nodeEnd, exprEnd);
   }
   template <typename... Ts> std::string renderComment(Ts &&... args) {
-    return fmt::format("<b class=comment>{}</b>", pad(), fmt::format(args...));
+    return fmt::format("{}{}{}", commentStart, fmt::format(args...),
+                       commentEnd);
   }
   std::string pad(int indent = 0) const;
   std::string newline() const;
   std::string keyword(const std::string &s) const;
 
 public:
-  FormatVisitor(TypeContext &ctx);
+  FormatVisitor(TypeContext &ctx, bool html = false);
 
   std::string transform(const ExprPtr &e);
   std::string transform(const StmtPtr &stmt, int indent = 0);

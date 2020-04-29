@@ -357,10 +357,8 @@ struct CallExpr : public Expr {
   /// Simple call e(a...)
   CallExpr(ExprPtr e, std::vector<ExprPtr> &&a);
   /// Simple call e(arg)
-  CallExpr(ExprPtr e, ExprPtr arg, ExprPtr arg2 = nullptr,
+  CallExpr(ExprPtr e, ExprPtr arg = nullptr, ExprPtr arg2 = nullptr,
            ExprPtr arg3 = nullptr);
-  /// Simple call e()
-  CallExpr(ExprPtr e);
   std::string toString() const override;
   NODE_UTILITY(Expr, CallExpr);
 };

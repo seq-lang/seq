@@ -11,8 +11,28 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-FormatVisitor::FormatVisitor(TypeContext &ctx)
-    : ctx(ctx), space("&nbsp;"), renderType(true), indent(0) {}
+FormatVisitor::FormatVisitor(TypeContext &ctx, bool html)
+    : ctx(ctx), renderType(false), indent(0) {
+  if (html) {
+    header = "<html><head><link rel=stylesheet href=code.css/></head>\n<body>";
+    header += "<div class=code>\n";
+    footer = "\n</div></body></html>";
+    typeStart = "<type>";
+    typeEnd = "</type>";
+    nodeStart = "<node>";
+    nodeEnd = "</node>";
+    exprStart = "<expr>";
+    exprEnd = "</expr>";
+    commentStart = "<b>";
+    commentEnd = "</b>";
+    keywordStart = "<b class=comment>";
+    keywordEnd = "</b>";
+    space = "&nbsp";
+    renderType = true;
+  } else {
+    space = " ";
+  }
+}
 
 string FormatVisitor::transform(const ExprPtr &expr) {
   FormatVisitor v(ctx);
@@ -46,7 +66,7 @@ string FormatVisitor::pad(int indent) const {
 string FormatVisitor::newline() const { return "<hr>\n"; }
 
 string FormatVisitor::keyword(const string &s) const {
-  return format("<b>{}</b>", s);
+  return format("{}{}{}", keywordStart, s, keywordEnd);
 }
 
 /*************************************************************************************/

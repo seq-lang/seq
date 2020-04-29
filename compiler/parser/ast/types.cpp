@@ -175,8 +175,9 @@ string ClassType::toString(bool reduced) const {
   vector<string> gs;
   for (auto &a : generics)
     gs.push_back(a.second->toString(reduced));
-  for (auto &a : args)
-    gs.push_back(a.second->toString(reduced));
+  if (isRecord && name == "tuple")
+    for (auto &a : args)
+      gs.push_back(a.second->toString(reduced));
   return fmt::format("{}{}", name,
                      gs.size() ? fmt::format("[{}]", fmt::join(gs, ",")) : "");
 }

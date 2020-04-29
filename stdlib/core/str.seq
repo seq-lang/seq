@@ -84,9 +84,6 @@ extend str:
     def __ge__(self: str, other: str):
         return self._cmp(other) >= 0
 
-    def __str__(self: str):
-        return self
-
     def __repr__(self: str):
         v = list[str](capacity=len(self) + 2)
         v.append("'")

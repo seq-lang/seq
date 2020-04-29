@@ -5,7 +5,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parser/ast/typecontext.h"
+#include "parser/ast/transform.h"
+#include "parser/ocaml.h"
 
 using fmt::format;
 using std::dynamic_pointer_cast;
@@ -33,13 +34,14 @@ bool TContextItem::hasAttr(const std::string &s) const {
 TypeContext::TypeContext(const std::string &filename)
     : filename(filename), module(""), prefix(""), level(0), unboundCount(0),
       returnType(nullptr), hasSetReturnType(false) {
-  // set up internals
   stack.push(vector<string>());
-  vector<pair<string, types::Type *>> podTypes = {
-      {"void", seq::types::Void},   {"bool", seq::types::Bool},
-      {"byte", seq::types::Byte},   {"int", seq::types::Int},
-      {"float", seq::types::Float}, {"str", seq::types::Str},
-      {"seq", seq::types::Seq}};
+  unordered_map<string, types::Type *> podTypes = {
+      {"void", seq::types::Void},
+      {"bool", seq::types::Bool},
+      {"byte", seq::types::Byte},
+      {"int", seq::types::Int},
+      {"float", seq::types::Float}};
+
   for (auto &t : podTypes) {
     auto name = t.first;
     auto typ = make_shared<ClassType>(name, true, vector<pair<int, TypePtr>>(),
@@ -49,20 +51,75 @@ TypeContext::TypeContext(const std::string &filename)
     classRealizations[name][name] = {typ, t.second};
   }
 
-  vector<string> genericTypes = {"array",    "ptr",   "generator",
-                                 "optional", "tuple", "function",
-                                 "Kmer",     "UInt",  "Int"};
+  /// TODO: special handle function tuple
+  vector<string> genericTypes = {"ptr", "generator", "optional"};
   for (auto &t : genericTypes) {
-    /// TODO: handle Int/UInt record/class status
     internals[t] = make_shared<ClassType>(
-        t, false,
+        t, true,
         vector<pair<int, TypePtr>>{
             {unboundCount,
              make_shared<LinkType>(LinkType::Generic, unboundCount)}},
         vector<pair<string, TypePtr>>());
-    unboundCount++;
     moduleNames[t] = 1;
+    unboundCount++;
   }
+
+  setFlag("internal");
+  auto stmts = ast::parse_file("stdlib/__root__.seq");
+  auto tv = ast::TransformVisitor(*this).transform(stmts.get());
+  unsetFlag("internal");
+
+  internals["str"] = find("str")->getType();
+  classRealizations["str"]["str"] = {
+      dynamic_pointer_cast<ClassType>(internals["str"]), seq::types::Str};
+  internals["seq"] = find("seq")->getType();
+  classRealizations["seq"]["seq"] = {
+      dynamic_pointer_cast<ClassType>(internals["seq"]), seq::types::Seq};
+
+  // Mark as as internal
+  // for (auto &a: funcASTs)
+  //   a.second.second.attributes.add("internal");
+
+  // for (auto &t : podTypes) {
+  //   DBG("{} :: {}", t.first, t.second->getName());
+  //   t.second->initFields();
+  //   t.second->initOps();
+
+  //   for (auto &m : t.second->getVTable().magic) {
+  //     bool valid = true;
+  //     vector<pair<string, TypePtr>> args{
+  //         {"self", classRealizations[t.first][t.first].type}};
+  //     for (int i = 0; i < m.args.size(); i++) {
+  //       auto n = m.args[i]->getName();
+  //       if (podTypes.find(n) == podTypes.end()) {
+  //         valid = false;
+  //         // DBG("canceling {}.{}", t.first, m.name);
+  //         break;
+  //       } else {
+  //         args.push_back({format("a{}", i), classRealizations[n][n].type});
+  //       }
+  //     }
+  //     if (!valid)
+  //       continue;
+
+  //     TypePtr ret = nullptr;
+  //     auto n = m.out->getName();
+  //     if (podTypes.find(n) == podTypes.end())
+  //       continue;
+  //     else
+  //       ret = classRealizations[n][n].type;
+  //     auto fval =
+  //         make_shared<FuncType>(format("{}.{}", t.first, m.name),
+  //                               vector<pair<int, TypePtr>>(), args, ret);
+  //     // fval->setImplicits(genericTypes);
+  //     add(fval->name, fval);
+  //     classes[t.first].methods[m.name] = fval;
+  //     DBG("magic {} :- {}", fval->name, fval->toString());
+  //     funcRealizations[fval->name][fval->toString(true)] = {
+  //         fval, nullptr, nullptr}; // TODO get it
+  //     DBG("add {} :: {} :- {}", t.first, m.name, *fval);
+  //   }
+  // }
 }
 
 shared_ptr<TContextItem> TypeContext::find(const std::string &name) const {
