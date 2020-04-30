@@ -352,9 +352,9 @@ extend pseq:
 # much of what follows is adapted from BWA-MEM2 (https://github.com/bwa-mem2/bwa-mem2)
 type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, score_only: i8, bandwidth: i32, zdrop: i32, end_bonus: i32)
 
-_LEN_LIMIT       = 512
-_MAX_SEQ_LEN8    = 128
-_MAX_SEQ_LEN16   = 32768
+_LEN_LIMIT     = 512
+_MAX_SEQ_LEN8  = 128
+_MAX_SEQ_LEN16 = 32768
 
 type SeqPair(
     id: i32,
@@ -366,12 +366,11 @@ type SeqPair(
     def __init__(self: SeqPair, id: int, len1: int, len2: int, flags: int) -> SeqPair:
         return (i32(id), i32(len1), i32(len2), i32(_ALIGN_SCORE_NEG_INF), ptr[u32](), i32(0), i32(flags))
 
+# (!) caller must ensure len(s) <= LEN_LIMIT
 @builtin
 @inline
 def _interaln_add_to_buf(s: seq, buf: ptr[byte], step: int, idx: int):
     n = len(s)
-    if n > step:
-        raise ValueError(f"sequence too long for inter-sequence alignment (len={n}, max={step})")
     nt4 = seq._nt4_table()
     if s.len >= 0:
         i = 0
@@ -468,11 +467,37 @@ def _interaln_queue(coro: generator[InterAlignYield],
                     seq_buf_ref: ptr[byte],
                     seq_buf_qer: ptr[byte],
                     pending: ptr[generator[InterAlignYield]],
-                    m: int) -> int:
+                    m: int,
+                    params: InterAlignParams) -> int:
     coro.__resume__()  # resume coro to get next sequence to align
     if not coro.__done__():
         t, s, aln = coro.__promise__()[0]  # coro yields seqs to align
         flags = aln.score  # flags are sent via score field to save space
+
+        # demote to intra-sequence alignment if too long
+        while len(t) > _LEN_LIMIT or len(s) > _LEN_LIMIT:
+            a = int(params.a)
+            b = int(params.b)
+            ambig = int(params.ambig)
+            gapo = int(params.gapo)
+            gape = int(params.gape)
+            bandwidth = int(params.bandwidth)
+            zdrop = int(params.zdrop)
+            end_bonus = int(params.end_bonus)
+            score_only = (params.score_only != i8(0))
+            ext_only = ((flags & _ALIGN_EXTZ_ONLY) != 0)
+            rev_cigar = ((flags & _ALIGN_REV_CIGAR) != 0)
+            aln = s.align(t, a=a, b=b, ambig=ambig,
+                          gapo=gapo, gape=gape, bandwidth=bandwidth,
+                          zdrop=zdrop, end_bonus=end_bonus, score_only=score_only,
+                          ext_only=ext_only, rev_cigar=rev_cigar)
+            coro.__promise__()[0] = (s'', s'', aln)
+            coro.__resume__()
+            if coro.__done__():
+                return m
+            t, s, aln = coro.__promise__()[0]  # coro yields seqs to align
+            flags = aln.score  # flags are sent via score field to save space
+
         pending[m] = coro
         pairs_array[m] = SeqPair(m, len(s), len(t), flags)
         _interaln_add_to_buf(s, seq_buf_ref, _LEN_LIMIT, m)
@@ -497,10 +522,14 @@ def _interaln_flush(pairs_array: ptr[SeqPair],
     num_pairs128, num_pairs16, num_pairs1 = _interaln_sort_pairs_len_ext(pairs_array, tmp_array, m, hist)
 
     # we use align16 everywhere for now
+    '''
     if num_pairs128 > 0:
         seq_inter_align16(__ptr__(params), pairs_array, seq_buf_ref, seq_buf_qer, num_pairs128)
     if num_pairs16 > 0:
         seq_inter_align16(__ptr__(params), pairs_array + num_pairs128, seq_buf_ref, seq_buf_qer, num_pairs16)
+    '''
+    if num_pairs128 + num_pairs16 > 0:
+        seq_inter_align16(__ptr__(params), pairs_array, seq_buf_ref, seq_buf_qer, num_pairs128 + num_pairs16)
     if num_pairs1 > 0:
         seq_inter_align1(__ptr__(params), pairs_array + (num_pairs128 + num_pairs16), seq_buf_ref, seq_buf_qer, num_pairs1)
 
@@ -513,7 +542,7 @@ def _interaln_flush(pairs_array: ptr[SeqPair],
         cigar = CIGAR(sp.cigar, int(sp.n_cigar))
         coro.__promise__()[0] = (s'', s'', Alignment(cigar, score))
         # coro.__resume__()  # resume coro; have it wait to get score back -- (!) not needed with no-suspend yield-expression
-        j = _interaln_queue(coro, pairs_array, seq_buf_ref, seq_buf_qer, tmp_pending, j)
+        j = _interaln_queue(coro, pairs_array, seq_buf_ref, seq_buf_qer, tmp_pending, j, params)
         i += 1
     m = j
     str.memcpy(ptr[byte](pending), ptr[byte](tmp_pending), m * _gc.sizeof[generator[InterAlignYield]]())

@@ -2,13 +2,13 @@
 // https://github.com/bwa-mem2/bwa-mem2/blob/master/src/bandedSWA.cpp
 #pragma once
 
+#include "ksw2.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <immintrin.h>
-#include "ksw2.h"
 
 extern "C" void *seq_alloc_atomic(size_t n);
 extern "C" void *seq_realloc(void *p, size_t n);

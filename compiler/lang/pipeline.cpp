@@ -541,7 +541,8 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
 
     builder.SetInsertPoint(notFull);
     N = builder.CreateLoad(filled);
-    N = builder.CreateCall(queue, {task, pairs, bufRef, bufQer, states, N});
+    N = builder.CreateCall(queue,
+                           {task, pairs, bufRef, bufQer, states, N, params});
     builder.CreateStore(N, filled);
     builder.CreateBr(exit);
     state.block = exit;

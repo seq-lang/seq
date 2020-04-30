@@ -92,11 +92,26 @@ def aln3(t):
         score2 = query.align(target, a=1, b=2, ambig=0, gapo=2, gape=gape, zdrop=zdrop, bandwidth=bandwidth, end_bonus=end_bonus).score
         assert score == score2
 
-def subs(path: str):
+@inter_align
+@test
+def aln4(t):
+    # tests intra-alignment demotion
+    for i in range(2):
+        query, target = t
+        query = ~query
+        target = ~target
+        score = query.align(target, a=a, b=b, ambig=ambig, gapo=gapo, gape=1, zdrop=100, bandwidth=100, end_bonus=5).score
+        score_exp = normal_align(query, target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5).score
+        assert score == score_exp
+        query = query[:len(query)//2]
+        target = target[:len(target)//2]
+
+def subs(path: str, n: int = 20):
     for a in seqs(FASTA(path)):
-        for b in a.split(20, 1):
+        for b in a.split(n, 1):
             yield b
 
 zip(subs(Q), subs(T)) |> aln1
 zip(subs(Q), subs(T)) |> aln2
 zip(subs(Q), subs(T)) |> aln3
+zip(subs(Q, 1024), subs(T, 1024)) |> aln4

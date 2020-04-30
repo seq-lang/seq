@@ -91,6 +91,28 @@ SEQ_FUNC void *seq_alloc_atomic(size_t n) {
 #endif
 }
 
+SEQ_FUNC void *seq_calloc(size_t m, size_t n) {
+#if USE_STANDARD_MALLOC
+  return calloc(m, n);
+#else
+  size_t s = m * n;
+  void *p = GC_MALLOC(s);
+  memset(p, 0, s);
+  return p;
+#endif
+}
+
+SEQ_FUNC void *seq_calloc_atomic(size_t m, size_t n) {
+#if USE_STANDARD_MALLOC
+  return calloc(m, n);
+#else
+  size_t s = m * n;
+  void *p = GC_MALLOC_ATOMIC(s);
+  memset(p, 0, s);
+  return p;
+#endif
+}
+
 SEQ_FUNC void *seq_realloc(void *p, size_t n) {
 #if USE_STANDARD_MALLOC
   return realloc(p, n);
@@ -281,8 +303,6 @@ unsigned char seq_nt4_table[256] = {
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4};
 
-unsigned char seq_nt4_rc_table[5] = {3, 2, 1, 0, 4};
-
 unsigned char seq_aa20_table[256] = {
     20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
     20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
@@ -304,15 +324,10 @@ static void encode(seq_t s, uint8_t *buf) {
     for (seq_int_t i = 0; i < s.len; i++)
       buf[i] = seq_nt4_table[(int)s.seq[i]];
   } else {
-    uint8_t *p1 = &buf[0];
-    uint8_t *p2 = &buf[-s.len - 1];
-    while (p1 <= p2) {
-      uint8_t c1 = seq_nt4_rc_table[seq_nt4_table[(int)*p1]];
-      uint8_t c2 = seq_nt4_rc_table[seq_nt4_table[(int)*p2]];
-      *p1 = c2;
-      *p2 = c1;
-      p1 += 1;
-      p2 -= 1;
+    seq_int_t n = -s.len;
+    for (seq_int_t i = 0; i < n; i++) {
+      int c = seq_nt4_table[(int)s.seq[n - 1 - i]];
+      buf[i] = (c < 4) ? (3 - c) : c;
     }
   }
 }

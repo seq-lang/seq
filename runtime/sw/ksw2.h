@@ -116,10 +116,11 @@ int ksw_ll_i16(void *q, int tlen, const uint8_t *target, int gapo, int gape,
  ************************************/
 
 extern "C" void *seq_alloc_atomic(size_t n);
+extern "C" void *seq_calloc_atomic(size_t m, size_t n);
 extern "C" void *seq_realloc(void *p, size_t n);
 extern "C" void seq_free(void *p);
 #define kmalloc(km, size) seq_alloc_atomic((size))
-#define kcalloc(km, count, size) seq_alloc_atomic((count) * (size))
+#define kcalloc(km, count, size) seq_calloc_atomic((count), (size))
 #define krealloc(km, ptr, size) seq_realloc((ptr), (size))
 #define kfree(km, ptr) seq_free((ptr))
 
