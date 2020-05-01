@@ -23,17 +23,20 @@ namespace ast {
 class TContextItem {
 protected:
   TypePtr type;
+  std::string base;
   bool typeVar;
   bool global;
   std::unordered_set<std::string> attributes;
 
 public:
-  TContextItem(TypePtr t, bool isType = false, bool global = false);
+  TContextItem(TypePtr t, const std::string &base, bool isType = false,
+               bool global = false);
   virtual ~TContextItem() {}
 
   bool isType() const;
   bool isGlobal() const;
   TypePtr getType() const;
+  std::string getBase() const;
   bool hasAttr(const std::string &s) const;
 };
 
@@ -45,7 +48,7 @@ private: /** Naming **/
   /// Context module (e.g. __main__, sys etc)
   std::string module;
   /// Current name prefix (for functions within classes)
-  std::string prefix;
+  std::vector<std::string> bases;
 
   /// Name counter (how many times we used a name)
   /// Used for generating unique name for each identifier
@@ -99,6 +102,8 @@ public:
   TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type);
   TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type,
                       const std::vector<std::pair<int, TypePtr>> &generics);
+  TypePtr instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
+                             const std::vector<TypePtr> &generics);
 
 private: /** Realization **/
   /// Template function ASTs.
@@ -169,6 +174,8 @@ public:
 
   std::vector<ClassRealization> getClassRealizations(const std::string &name);
   std::vector<FuncRealization> getFuncRealizations(const std::string &name);
+
+  std::string getBase() const;
 };
 
 } // namespace ast

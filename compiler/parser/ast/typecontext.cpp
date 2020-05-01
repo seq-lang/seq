@@ -22,17 +22,19 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-TContextItem::TContextItem(TypePtr t, bool isType, bool global)
-    : type(t), typeVar(isType), global(global) {}
+TContextItem::TContextItem(TypePtr t, const string &base, bool isType,
+                           bool global)
+    : type(t), base(base), typeVar(isType), global(global) {}
 bool TContextItem::isType() const { return typeVar; }
 bool TContextItem::isGlobal() const { return global; }
 TypePtr TContextItem::getType() const { return type; }
+string TContextItem::getBase() const { return base; }
 bool TContextItem::hasAttr(const std::string &s) const {
   return attributes.find(s) != attributes.end();
 }
 
 TypeContext::TypeContext(const std::string &filename)
-    : filename(filename), module(""), prefix(""), level(0), unboundCount(0),
+    : filename(filename), module(""), level(0), unboundCount(0),
       returnType(nullptr), hasSetReturnType(false) {
   stack.push(vector<string>());
   unordered_map<string, types::Type *> podTypes = {
@@ -66,7 +68,7 @@ TypeContext::TypeContext(const std::string &filename)
 
   setFlag("internal");
   auto stmts = ast::parse_file("stdlib/__root__.seq");
-  auto tv = ast::TransformVisitor(*this).transform(stmts.get());
+  auto tv = ast::TransformVisitor(*this).realizeBlock(stmts.get());
   unsetFlag("internal");
 
   internals["str"] = find("str")->getType();
@@ -128,7 +130,7 @@ shared_ptr<TContextItem> TypeContext::find(const std::string &name) const {
     return t;
   auto it = internals.find(name);
   if (it != internals.end())
-    return make_shared<TContextItem>(it->second, true, true);
+    return make_shared<TContextItem>(it->second, "", true, true);
   return nullptr;
 }
 
@@ -140,7 +142,12 @@ TypePtr TypeContext::findInternal(const std::string &name) const {
 }
 
 void TypeContext::add(const string &name, TypePtr t, bool isType, bool global) {
-  VTable<TContextItem>::add(name, make_shared<TContextItem>(t, isType, global));
+  VTable<TContextItem>::add(
+      name, make_shared<TContextItem>(t, getBase(), isType, global));
+}
+
+string TypeContext::getBase() const {
+  return format("{}", fmt::join(bases, "."));
 }
 
 void TypeContext::increaseLevel() { level++; }
@@ -263,6 +270,18 @@ TypeContext::getFuncRealizations(const std::string &name) {
   for (auto &i : funcRealizations[name])
     result.push_back(i.second);
   return result;
+}
+
+TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
+                                        const vector<TypePtr> &generics) {
+  auto c = getClass(root);
+  assert(c);
+  vector<pair<int, TypePtr>> cache;
+  if (generics.size() != c->generics.size())
+    error(srcInfo, "generics do not match");
+  for (int i = 0; i < c->generics.size(); i++)
+    cache.push_back({c->generics[i].first, generics[i]});
+  return instantiate(srcInfo, root, cache);
 }
 
 } // namespace ast

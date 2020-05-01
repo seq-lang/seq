@@ -48,6 +48,10 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
   TypeContext::FuncRealization realize(FuncTypePtr type);
   TypeContext::ClassRealization realize(ClassTypePtr type);
 
+  ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
+                           const std::string &magic);
+  ExprPtr makeBoolExpr(const ExprPtr &e);
+
   class CaptureVisitor : public WalkVisitor {
     TypeContext &ctx;
 

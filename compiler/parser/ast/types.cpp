@@ -352,5 +352,20 @@ bool FuncType::canRealize() const {
   return true;
 }
 
+FuncTypePtr getFunction(TypePtr t) {
+  return dynamic_pointer_cast<FuncType>(t->follow());
+}
+
+ClassTypePtr getClass(TypePtr t) {
+  return dynamic_pointer_cast<ClassType>(t->follow());
+}
+
+LinkTypePtr getUnbound(TypePtr t) {
+  auto tp = dynamic_pointer_cast<LinkType>(t->follow());
+  if (!tp || tp->kind != LinkType::Unbound)
+    tp = nullptr;
+  return tp;
+}
+
 } // namespace ast
 } // namespace seq

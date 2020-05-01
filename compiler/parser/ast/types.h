@@ -19,10 +19,12 @@ namespace ast {
 
 struct FuncType;
 struct ClassType;
+struct LinkType;
 struct Type;
 typedef std::shared_ptr<Type> TypePtr;
 typedef std::shared_ptr<FuncType> FuncTypePtr;
 typedef std::shared_ptr<ClassType> ClassTypePtr;
+typedef std::shared_ptr<LinkType> LinkTypePtr;
 
 struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
 public:
@@ -140,7 +142,8 @@ public:
  * FuncType describes a (generic) function type.
  */
 struct FuncType : public Type {
-  /// Empty name indicates "free" function type that can unify to any other function type
+  /// Empty name indicates "free" function type that can unify to any other
+  /// function type
   std::string name;
   /// Each generic is represented as a pair (generic_id, current_type).
   /// It is necessary to maintain unique generic ID as defined in the
@@ -153,7 +156,8 @@ struct FuncType : public Type {
   /// Return type. Usually deduced after the realization.
   TypePtr ret;
 
-  FuncType(const std::string &name, const std::vector<std::pair<int, TypePtr>> &generics,
+  FuncType(const std::string &name,
+           const std::vector<std::pair<int, TypePtr>> &generics,
            const std::vector<std::pair<std::string, TypePtr>> &args,
            TypePtr ret);
   virtual ~FuncType() {}
@@ -174,6 +178,10 @@ public:
     implicitGenerics = i;
   }
 };
+
+FuncTypePtr getFunction(TypePtr t);
+ClassTypePtr getClass(TypePtr t);
+LinkTypePtr getUnbound(TypePtr t);
 
 ////////
 

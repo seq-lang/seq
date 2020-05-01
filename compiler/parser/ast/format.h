@@ -23,10 +23,10 @@ class FormatVisitor : public ASTVisitor {
   TypeContext &ctx;
   std::string result;
   std::string space;
-  bool renderType;
+  bool renderType, renderHTML;
   int indent;
 
-  std::string header, footer;
+  std::string header, footer, nl;
   std::string typeStart, typeEnd;
   std::string nodeStart, nodeEnd;
   std::string exprStart, exprEnd;
@@ -52,7 +52,14 @@ private:
   std::string keyword(const std::string &s) const;
 
 public:
-  FormatVisitor(TypeContext &ctx, bool html = false);
+  template <typename T>
+  static std::string format(TypeContext &ctx, const T &stmt,
+                            bool html = false) {
+    auto t = FormatVisitor(ctx, html);
+    return fmt::format("{}{}{}", t.header, t.transform(stmt), t.footer);
+  }
+
+  FormatVisitor(TypeContext &ctx, bool html);
 
   std::string transform(const ExprPtr &e);
   std::string transform(const StmtPtr &stmt, int indent = 0);

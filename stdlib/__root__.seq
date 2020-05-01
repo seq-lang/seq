@@ -4,7 +4,7 @@
 
 
 type str(len: int, ptr: ptr[byte]):
-    def __str__(self: str):
+    def __str__(self: str) -> str:
         return self
 
 
