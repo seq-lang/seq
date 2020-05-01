@@ -147,7 +147,8 @@ void TypeContext::add(const string &name, TypePtr t, bool isType, bool global) {
 }
 
 string TypeContext::getBase() const {
-  return format("{}", fmt::join(bases, "."));
+  auto s = format("{}", fmt::join(bases, "."));
+  return (s == "" ? "" : s + ".");
 }
 
 void TypeContext::increaseLevel() { level++; }

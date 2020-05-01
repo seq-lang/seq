@@ -999,8 +999,7 @@ void TransformVisitor::visit(const DelStmt *stmt) {
 
 // Transformation
 void TransformVisitor::visit(const PrintStmt *stmt) {
-  resultStmt = N<PrintStmt>(
-      transform(N<CallExpr>(N<DotExpr>(stmt->expr->clone(), "__str__"))));
+  resultStmt = N<PrintStmt>(conditionalMagic(stmt->expr, "str", "__str__"));
 }
 
 void TransformVisitor::visit(const ReturnStmt *stmt) {
@@ -1140,7 +1139,7 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   auto addMethod = [&](auto s) {
     if (auto f = dynamic_cast<FunctionStmt *>(s)) {
       transform(s);
-      auto val = ctx.find(ctx.getBase() + f->name);
+      auto val = ctx.find(format("{}{}", ctx.getBase(), f->name));
       auto fval = getFunction(val->getType());
       assert(fval);
       fval->setImplicits(genericTypes);
@@ -1278,8 +1277,8 @@ void TransformVisitor::visit(const ThrowStmt *stmt) {
 }
 
 void TransformVisitor::visit(const FunctionStmt *stmt) {
-  auto canonicalName =
-      ctx.generateCanonicalName(stmt->getSrcInfo(), ctx.getBase() + stmt->name);
+  auto canonicalName = ctx.generateCanonicalName(
+      stmt->getSrcInfo(), format("{}{}", ctx.getBase(), stmt->name));
   if (ctx.funcASTs.find(canonicalName) == ctx.funcASTs.end()) {
     vector<pair<int, TypePtr>> genericTypes;
     vector<pair<string, TypePtr>> argTypes;
@@ -1308,7 +1307,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
         make_shared<FuncType>(canonicalName, genericTypes, argTypes, ret);
     auto t = type->generalize(ctx.level);
     DBG("* [function] {} :- {}", canonicalName, *t);
-    ctx.add(ctx.getBase() + stmt->name, t);
+    ctx.add(format("{}{}", ctx.getBase(), stmt->name), t);
 
     ctx.funcASTs[canonicalName] = make_pair(
         t, N<FunctionStmt>(canonicalName, nullptr, stmt->generics, move(args),
@@ -1319,8 +1318,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
 }
 
 void TransformVisitor::visit(const ClassStmt *stmt) {
-  auto canonicalName =
-      ctx.generateCanonicalName(stmt->getSrcInfo(), ctx.getBase() + stmt->name);
+  auto canonicalName = ctx.generateCanonicalName(
+      stmt->getSrcInfo(), format("{}{}", ctx.getBase(), stmt->name));
   resultStmt = N<ClassStmt>(stmt->isRecord, canonicalName, vector<string>(),
                             vector<Param>(), N<SuiteStmt>());
   if (ctx.classASTs.find(canonicalName) != ctx.classASTs.end())
@@ -1339,7 +1338,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   auto addMethod = [&](auto s) {
     if (auto f = dynamic_cast<FunctionStmt *>(s)) {
       transform(s);
-      auto val = ctx.find(ctx.getBase() + f->name);
+      auto val = ctx.find(format("{}{}", ctx.getBase(), f->name));
       auto fval = getFunction(val->getType());
       assert(fval);
       fval->setImplicits(genericTypes);
@@ -1354,7 +1353,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   if (!stmt->isRecord) {
     auto ct = make_shared<ClassType>(canonicalName, false, genericTypes,
                                      vector<pair<string, TypePtr>>());
-    ctx.add(ctx.getBase() + stmt->name, ct, true);
+    ctx.add(format("{}{}", ctx.getBase(), stmt->name), ct, true);
     ctx.classASTs[canonicalName] = make_pair(ct, nullptr); // TODO: fix
     DBG("* [class] {} :- {}", canonicalName, *ct);
 
@@ -1417,7 +1416,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       mainType = "void";
     auto ct =
         make_shared<ClassType>(canonicalName, true, genericTypes, argTypes);
-    ctx.add(ctx.getBase() + stmt->name, ct, true);
+    ctx.add(format("{}{}", ctx.getBase(), stmt->name), ct, true);
     ctx.classASTs[canonicalName] = make_pair(ct, nullptr); // TODO: fix
     ctx.bases.push_back(stmt->name);
     if (!ctx.hasFlag("internal")) {
