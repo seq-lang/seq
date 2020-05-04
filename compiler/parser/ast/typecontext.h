@@ -20,36 +20,25 @@
 namespace seq {
 namespace ast {
 
-class TContextItem {
-protected:
-  TypePtr type;
-  std::string base;
-  bool typeVar;
-  bool global;
-  std::unordered_set<std::string> attributes;
+class TypeContext;
 
-public:
-  TContextItem(TypePtr t, const std::string &base, bool isType = false,
-               bool global = false);
-  virtual ~TContextItem() {}
+struct RealizationContext {
+  struct ClassBody {
+    std::unordered_map<std::string, TypePtr> members;
+    std::unordered_map<std::string, FuncTypePtr> methods;
+  };
+  struct FuncRealization {
+    FuncTypePtr type;
+    std::shared_ptr<FunctionStmt> ast;
+    seq::BaseFunc *handle;
+  };
+  struct ClassRealization {
+    ClassTypePtr type;
+    seq::types::Type *handle;
+  };
+  RealizationContext();
 
-  bool isType() const;
-  bool isGlobal() const;
-  TypePtr getType() const;
-  std::string getBase() const;
-  bool hasAttr(const std::string &s) const;
-};
-
-/// Current identifier table
-class TypeContext : public VTable<TContextItem> {
-private: /** Naming **/
-  /// Current filename
-  std::string filename;
-  /// Context module (e.g. __main__, sys etc)
-  std::string module;
-  /// Current name prefix (for functions within classes)
-  std::vector<std::string> bases;
-
+public: /* Names */
   /// Name counter (how many times we used a name)
   /// Used for generating unique name for each identifier
   /// (e.g. if we have two def foo, one will be known as foo and one as foo.1
@@ -57,16 +46,20 @@ private: /** Naming **/
   /// Mapping to canonical names
   /// (each SrcInfo positions maps to a unique canonical name)
   std::unordered_map<SrcInfo, std::string> canonicalNames;
+  /// Current unbound type ID counter.
+  /// Each unbound variable must have different ID.
+  int unboundCount;
 
 public:
-  struct ClassBody {
-    std::unordered_map<std::string, TypePtr> members;
-    std::unordered_map<std::string, FuncTypePtr> methods;
-  };
+  /// Get canonical name for a SrcInfo
+  std::string getCanonicalName(const SrcInfo &info);
+  /// Generate canonical name for a SrcInfo and original class/function name
+  std::string generateCanonicalName(const SrcInfo &info,
+                                    const std::string &module,
+                                    const std::string &name);
+  int &getUnboundCount();
 
-private: /** Lookup **/
-  /// Store internal types separately for easier access
-  std::unordered_map<std::string, TypePtr> internals;
+public: /* Lookup */
   /// List of class methods and members
   /// Maps canonical class name to a map of methods and members
   /// and their generalized types
@@ -74,38 +67,12 @@ private: /** Lookup **/
 
 public:
   /// Getters and setters for the method/member/realization lookup tables
+  ClassBody *findClass(const std::string &name);
   FuncTypePtr findMethod(const std::string &name,
                          const std::string &method) const;
   TypePtr findMember(const std::string &name, const std::string &member) const;
-  ClassBody *findClass(const std::string &name);
 
-private: /** Type-checking **/
-  /// Current type-checking level
-  int level;
-  /// Current unbound type ID counter.
-  /// Each unbound variable must have different ID.
-  int unboundCount;
-  /// Set of active unbound variables.
-  /// If type checking is successful, all of them should be resolved.
-  std::set<TypePtr> activeUnbounds;
-
-public:
-  /// Type-checking helpers
-  void increaseLevel();
-  void decreaseLevel();
-  std::shared_ptr<LinkType> addUnbound(const SrcInfo &srcInfo,
-                                       bool setActive = true);
-  /// Calls type->instantiate, but populates the instantiation table
-  /// with "parent" type.
-  /// Example: for list[T].foo, list[int].foo will populate type of foo so that
-  /// the generic T gets mapped to int.
-  TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type);
-  TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type,
-                      const std::vector<std::pair<int, TypePtr>> &generics);
-  TypePtr instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
-                             const std::vector<TypePtr> &generics);
-
-private: /** Realization **/
+public: /** Template ASTs **/
   /// Template function ASTs.
   /// Mapping from a canonical function name to a pair of
   /// generalized function type and the untyped function AST.
@@ -120,19 +87,9 @@ private: /** Realization **/
       classASTs;
 
 public:
-  struct FuncRealization {
-    FuncTypePtr type;
-    std::shared_ptr<FunctionStmt> ast;
-    seq::BaseFunc *handle;
-  };
-  struct ClassRealization {
-    ClassTypePtr type;
-    seq::types::Type *handle;
-  };
-
   std::shared_ptr<Stmt> getAST(const std::string &name) const;
 
-private:
+public: /* Realizations */
   /// Current function realizations.
   /// Mapping from a canonical function name to a hashtable
   /// of realized and fully type-checked function ASTs.
@@ -147,35 +104,132 @@ private:
                      std::unordered_map<std::string, ClassRealization>>
       classRealizations;
 
-private: /** Function utilities **/
+public:
+  std::vector<ClassRealization> getClassRealizations(const std::string &name);
+  std::vector<FuncRealization> getFuncRealizations(const std::string &name);
+};
+
+/**************************************************************************************/
+
+class ImportContext {
+public:
+  struct Import {
+    std::string filename;
+    std::shared_ptr<TypeContext> ctx;
+    StmtPtr statements;
+  };
+
+private:
+  std::string argv0;
+  /// By convention, stdlib is stored as ""
+  std::unordered_map<std::string, Import> imports;
+
+public:
+  ImportContext(const std::string &argv0 = "");
+  std::string getImportFile(const std::string &what,
+                            const std::string &relativeTo,
+                            bool forceStdlib = false) const;
+  std::shared_ptr<TypeContext> getImport(const std::string &path) const;
+  void addImport(const std::string &file, const std::string &name,
+                 std::shared_ptr<TypeContext> ctx);
+  void setBody(const std::string &name, StmtPtr body);
+};
+
+/**************************************************************************************/
+
+class TContextItem {
+protected:
+  TypePtr type;
+  std::string base;
+  bool var, typeVar, import;
+  bool global;
+  std::unordered_set<std::string> attributes;
+
+public:
+  TContextItem(TypePtr t, const std::string &base, bool isVar = true,
+               bool isType = false, bool isImport = false, bool global = false);
+
+  bool isType() const;
+  bool isVar() const;
+  bool isImport() const;
+  bool isGlobal() const;
+  void setGlobal();
+  TypePtr getType() const;
+  std::string getBase() const;
+  bool hasAttr(const std::string &s) const;
+};
+
+/// Current identifier table
+class TypeContext : public VTable<TContextItem>,
+                    public std::enable_shared_from_this<TypeContext> {
+  std::shared_ptr<RealizationContext> realizations;
+  std::shared_ptr<ImportContext> imports;
+
+  /** Naming **/
+  /// Current filename
+  std::string filename;
+  /// Context module (e.g. __main__, sys etc)
+  std::string module;
+  /// Current name prefix (for functions within classes)
+  std::vector<std::string> bases;
+
+  /** Type-checking **/
+  /// Current type-checking level
+  int level;
+  /// Set of active unbound variables.
+  /// If type checking is successful, all of them should be resolved.
+  std::set<TypePtr> activeUnbounds;
+
+  /** Function utilities **/
   /// Function parsing helpers: maintain current return type
   TypePtr returnType;
   /// Indicates if a return was seen (to account for procedures)
   bool hasSetReturnType;
 
+public:
+  TypeContext(const std::string &filename,
+              std::shared_ptr<RealizationContext> realizations,
+              std::shared_ptr<ImportContext> imports);
+  virtual ~TypeContext() {}
+
+  std::shared_ptr<TContextItem> find(const std::string &name,
+                                     bool checkStdlib = true) const;
+  TypePtr findInternal(const std::string &name) const;
+
+  using VTable<TContextItem>::add;
+  void add(const std::string &name, TypePtr t, bool isVar = true,
+           bool isType = false, bool global = false);
+  void add(const std::string &name, const std::string &import);
+
+public:
+  std::string getBase() const;
+  std::string getModule() const;
+  std::string getFilename() const;
+  std::shared_ptr<RealizationContext> getRealizations() const;
+  std::shared_ptr<ImportContext> getImports() const;
+  void increaseLevel();
+  void decreaseLevel();
+
+public:
+  std::shared_ptr<LinkType> addUnbound(const SrcInfo &srcInfo,
+                                       bool setActive = true);
+  /// Calls `type->instantiate`, but populates the instantiation table
+  /// with "parent" type.
+  /// Example: for list[T].foo, list[int].foo will populate type of foo so that
+  /// the generic T gets mapped to int.
+  TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type);
+  TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type,
+                      const std::vector<std::pair<int, TypePtr>> &generics);
+  TypePtr instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
+                             const std::vector<TypePtr> &generics);
+  ImportContext::Import importFile(const std::string &file);
+
+public:
+  static std::shared_ptr<TypeContext> getContext(const std::string &file);
   // I am still debating should I provide 1000 getters or setters
   // or just leave the classes below friendly as they are by design
   // rather intimate with this class.
   friend class TransformVisitor;
-
-public:
-  TypeContext(const std::string &filename);
-  std::shared_ptr<TContextItem> find(const std::string &name) const;
-  TypePtr findInternal(const std::string &name) const;
-
-  void add(const std::string &name, TypePtr t, bool isType = false,
-           bool global = false);
-
-  /// Get canonical name for a SrcInfo
-  std::string getCanonicalName(const SrcInfo &info);
-  /// Generate canonical name for a SrcInfo and original class/function name
-  std::string generateCanonicalName(const SrcInfo &info,
-                                    const std::string &name);
-
-  std::vector<ClassRealization> getClassRealizations(const std::string &name);
-  std::vector<FuncRealization> getFuncRealizations(const std::string &name);
-
-  std::string getBase() const;
 };
 
 } // namespace ast

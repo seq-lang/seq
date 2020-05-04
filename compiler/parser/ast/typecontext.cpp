@@ -1,11 +1,14 @@
+#include <libgen.h>
 #include <memory>
 #include <stack>
 #include <string>
+#include <sys/stat.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #include "parser/ast/transform.h"
+#include "parser/common.h"
 #include "parser/ocaml.h"
 
 using fmt::format;
@@ -22,140 +25,11 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-TContextItem::TContextItem(TypePtr t, const string &base, bool isType,
-                           bool global)
-    : type(t), base(base), typeVar(isType), global(global) {}
-bool TContextItem::isType() const { return typeVar; }
-bool TContextItem::isGlobal() const { return global; }
-TypePtr TContextItem::getType() const { return type; }
-string TContextItem::getBase() const { return base; }
-bool TContextItem::hasAttr(const std::string &s) const {
-  return attributes.find(s) != attributes.end();
-}
+/**************************************************************************************/
 
-TypeContext::TypeContext(const std::string &filename)
-    : filename(filename), module(""), level(0), unboundCount(0),
-      returnType(nullptr), hasSetReturnType(false) {
-  stack.push(vector<string>());
-  unordered_map<string, types::Type *> podTypes = {
-      {"void", seq::types::Void},
-      {"bool", seq::types::Bool},
-      {"byte", seq::types::Byte},
-      {"int", seq::types::Int},
-      {"float", seq::types::Float}};
+RealizationContext::RealizationContext() : unboundCount(0) {}
 
-  for (auto &t : podTypes) {
-    auto name = t.first;
-    auto typ = make_shared<ClassType>(name, true, vector<pair<int, TypePtr>>(),
-                                      vector<pair<string, TypePtr>>());
-    internals[name] = typ;
-    moduleNames[name] = 1;
-    classRealizations[name][name] = {typ, t.second};
-  }
-
-  /// TODO: special handle function tuple
-  vector<string> genericTypes = {"ptr", "generator", "optional"};
-  for (auto &t : genericTypes) {
-    internals[t] = make_shared<ClassType>(
-        t, true,
-        vector<pair<int, TypePtr>>{
-            {unboundCount,
-             make_shared<LinkType>(LinkType::Generic, unboundCount)}},
-        vector<pair<string, TypePtr>>());
-    moduleNames[t] = 1;
-    unboundCount++;
-  }
-
-  setFlag("internal");
-  auto stmts = ast::parse_file("stdlib/__root__.seq");
-  auto tv = ast::TransformVisitor(*this).realizeBlock(stmts.get());
-  unsetFlag("internal");
-
-  internals["str"] = find("str")->getType();
-  classRealizations["str"]["str"] = {
-      dynamic_pointer_cast<ClassType>(internals["str"]), seq::types::Str};
-  internals["seq"] = find("seq")->getType();
-  classRealizations["seq"]["seq"] = {
-      dynamic_pointer_cast<ClassType>(internals["seq"]), seq::types::Seq};
-
-  // Mark as as internal
-  // for (auto &a: funcASTs)
-  //   a.second.second.attributes.add("internal");
-
-  // for (auto &t : podTypes) {
-  //   DBG("{} :: {}", t.first, t.second->getName());
-  //   t.second->initFields();
-  //   t.second->initOps();
-
-  //   for (auto &m : t.second->getVTable().magic) {
-  //     bool valid = true;
-  //     vector<pair<string, TypePtr>> args{
-  //         {"self", classRealizations[t.first][t.first].type}};
-  //     for (int i = 0; i < m.args.size(); i++) {
-  //       auto n = m.args[i]->getName();
-  //       if (podTypes.find(n) == podTypes.end()) {
-  //         valid = false;
-  //         // DBG("canceling {}.{}", t.first, m.name);
-  //         break;
-  //       } else {
-  //         args.push_back({format("a{}", i), classRealizations[n][n].type});
-  //       }
-  //     }
-  //     if (!valid)
-  //       continue;
-
-  //     TypePtr ret = nullptr;
-  //     auto n = m.out->getName();
-  //     if (podTypes.find(n) == podTypes.end())
-  //       continue;
-  //     else
-  //       ret = classRealizations[n][n].type;
-  //     auto fval =
-  //         make_shared<FuncType>(format("{}.{}", t.first, m.name),
-  //                               vector<pair<int, TypePtr>>(), args, ret);
-  //     // fval->setImplicits(genericTypes);
-  //     add(fval->name, fval);
-  //     classes[t.first].methods[m.name] = fval;
-  //     DBG("magic {} :- {}", fval->name, fval->toString());
-  //     funcRealizations[fval->name][fval->toString(true)] = {
-  //         fval, nullptr, nullptr}; // TODO get it
-  //     DBG("add {} :: {} :- {}", t.first, m.name, *fval);
-  //   }
-  // }
-}
-
-shared_ptr<TContextItem> TypeContext::find(const std::string &name) const {
-  auto t = VTable<TContextItem>::find(name);
-  if (t)
-    return t;
-  auto it = internals.find(name);
-  if (it != internals.end())
-    return make_shared<TContextItem>(it->second, "", true, true);
-  return nullptr;
-}
-
-TypePtr TypeContext::findInternal(const std::string &name) const {
-  auto it = internals.find(name);
-  if (it != internals.end())
-    return it->second;
-  return nullptr;
-}
-
-void TypeContext::add(const string &name, TypePtr t, bool isType, bool global) {
-  VTable<TContextItem>::add(
-      name, make_shared<TContextItem>(t, getBase(), isType, global));
-}
-
-string TypeContext::getBase() const {
-  auto s = format("{}", fmt::join(bases, "."));
-  return (s == "" ? "" : s + ".");
-}
-
-void TypeContext::increaseLevel() { level++; }
-
-void TypeContext::decreaseLevel() { level--; }
-
-string TypeContext::getCanonicalName(const SrcInfo &info) {
+string RealizationContext::getCanonicalName(const SrcInfo &info) {
   auto it = canonicalNames.find(info);
   if (it != canonicalNames.end()) {
     return it->second;
@@ -163,8 +37,9 @@ string TypeContext::getCanonicalName(const SrcInfo &info) {
   return "";
 }
 
-string TypeContext::generateCanonicalName(const SrcInfo &info,
-                                          const std::string &name) {
+string RealizationContext::generateCanonicalName(const SrcInfo &info,
+                                                 const string &module,
+                                                 const string &name) {
   auto it = canonicalNames.find(info);
   if (it != canonicalNames.end())
     return it->second;
@@ -178,30 +53,39 @@ string TypeContext::generateCanonicalName(const SrcInfo &info,
   return newName;
 }
 
-shared_ptr<LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
-                                             bool setActive) {
-  auto t = make_shared<LinkType>(LinkType::Unbound, unboundCount, level);
-  t->setSrcInfo(srcInfo);
-  if (setActive) {
-    activeUnbounds.insert(t);
-    DBG("UNBOUND {} ADDED # {} ", t, srcInfo.line);
-  }
-  unboundCount++;
-  return t;
-}
+int &RealizationContext::getUnboundCount() { return unboundCount; }
 
-TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type) {
-  return instantiate(srcInfo, type, vector<pair<int, TypePtr>>());
-}
-
-TypeContext::ClassBody *TypeContext::findClass(const std::string &name) {
+RealizationContext::ClassBody *
+RealizationContext::findClass(const std::string &name) {
   auto m = classes.find(name);
   if (m != classes.end())
     return &m->second;
   return nullptr;
 }
 
-shared_ptr<Stmt> TypeContext::getAST(const string &name) const {
+FuncTypePtr RealizationContext::findMethod(const string &name,
+                                           const string &method) const {
+  auto m = classes.find(name);
+  if (m != classes.end()) {
+    auto t = m->second.methods.find(method);
+    if (t != m->second.methods.end())
+      return t->second;
+  }
+  return nullptr;
+}
+
+TypePtr RealizationContext::findMember(const string &name,
+                                       const string &member) const {
+  auto m = classes.find(name);
+  if (m != classes.end()) {
+    auto t = m->second.members.find(member);
+    if (t != m->second.members.end())
+      return t->second;
+  }
+  return nullptr;
+}
+
+shared_ptr<Stmt> RealizationContext::getAST(const string &name) const {
   auto m = funcASTs.find(name);
   if (m != funcASTs.end())
     return m->second.second;
@@ -211,13 +95,175 @@ shared_ptr<Stmt> TypeContext::getAST(const string &name) const {
   return nullptr;
 }
 
+vector<RealizationContext::ClassRealization>
+RealizationContext::getClassRealizations(const string &name) {
+  vector<RealizationContext::ClassRealization> result;
+  for (auto &i : classRealizations[name])
+    result.push_back(i.second);
+  return result;
+}
+
+vector<RealizationContext::FuncRealization>
+RealizationContext::getFuncRealizations(const string &name) {
+  vector<RealizationContext::FuncRealization> result;
+  for (auto &i : funcRealizations[name])
+    result.push_back(i.second);
+  return result;
+}
+
+/**************************************************************************************/
+
+ImportContext::ImportContext(const string &argv0) : argv0(argv0) {}
+
+string ImportContext::getImportFile(const string &what,
+                                    const string &relativeTo,
+                                    bool forceStdlib) const {
+  vector<string> paths;
+  char abs[PATH_MAX + 1];
+  if (!forceStdlib) {
+    realpath(relativeTo.c_str(), abs);
+    auto parent = dirname(abs);
+    paths.push_back(format("{}/{}.seq", parent, what));
+    paths.push_back(format("{}/{}/__init__.seq", parent, what));
+  }
+  if (argv0 != "") {
+    strncpy(abs, executable_path(argv0.c_str()).c_str(), PATH_MAX);
+    auto parent = format("{}/../stdlib", dirname(abs));
+    realpath(parent.c_str(), abs);
+    paths.push_back(format("{}/{}.seq", abs, what));
+    paths.push_back(format("{}/{}/__init__.seq", abs, what));
+  }
+  if (auto c = getenv("SEQ_PATH")) {
+    char abs[PATH_MAX];
+    realpath(c, abs);
+    paths.push_back(format("{}/{}.seq", abs, what));
+    paths.push_back(format("{}/{}/__init__.seq", abs, what));
+  }
+  for (auto &p : paths) {
+    struct stat buffer;
+    if (!stat(p.c_str(), &buffer))
+      return p;
+  }
+  return "";
+}
+
+shared_ptr<TypeContext> ImportContext::getImport(const string &path) const {
+  auto i = imports.find(path);
+  return i == imports.end() ? nullptr : i->second.ctx;
+}
+
+void ImportContext::addImport(const string &name, const string &file,
+                              shared_ptr<TypeContext> ctx) {
+  imports[name] = {file, ctx, nullptr};
+}
+
+void ImportContext::setBody(const string &name, StmtPtr body) {
+  imports[name].statements = move(body);
+}
+
+/**************************************************************************************/
+
+TContextItem::TContextItem(TypePtr t, const string &base, bool isVar,
+                           bool isType, bool isImport, bool global)
+    : type(t), base(base), var(isVar), typeVar(isType), import(isImport),
+      global(global) {}
+
+bool TContextItem::isType() const { return typeVar; }
+
+bool TContextItem::isGlobal() const { return global; }
+
+void TContextItem::setGlobal() { global = true; }
+
+bool TContextItem::isVar() const { return var; }
+
+bool TContextItem::isImport() const { return import; }
+
+TypePtr TContextItem::getType() const { return type; }
+
+string TContextItem::getBase() const { return base; }
+
+bool TContextItem::hasAttr(const std::string &s) const {
+  return attributes.find(s) != attributes.end();
+}
+
+/**************************************************************************************/
+
+TypeContext::TypeContext(const std::string &filename,
+                         shared_ptr<RealizationContext> realizations,
+                         shared_ptr<ImportContext> imports)
+    : realizations(realizations), imports(imports), filename(filename),
+      module(""), level(0), returnType(nullptr), hasSetReturnType(false) {
+  stack.push(vector<string>());
+}
+
+shared_ptr<TContextItem> TypeContext::find(const std::string &name,
+                                           bool checkStdlib) const {
+  auto t = VTable<TContextItem>::find(name);
+  if (t)
+    return t;
+  auto stdlib = imports->getImport("");
+  return checkStdlib ? stdlib->find(name, false) : nullptr;
+}
+
+TypePtr TypeContext::findInternal(const string &name) const {
+  auto stdlib = imports->getImport("");
+  auto t = stdlib->find(name, false);
+  assert(t);
+  return t->getType();
+}
+
+void TypeContext::add(const string &name, TypePtr t, bool isVar, bool isType,
+                      bool global) {
+  add(name,
+      make_shared<TContextItem>(t, getBase(), isVar, isType, false, global));
+}
+
+void TypeContext::add(const string &name, const string &import) {
+  add(name,
+      make_shared<TContextItem>(nullptr, import, false, false, true, false));
+}
+
+string TypeContext::getBase() const {
+  auto s = format("{}", fmt::join(bases, "."));
+  return (s == "" ? "" : s + ".");
+}
+
+string TypeContext::getModule() const { return module; }
+
+string TypeContext::getFilename() const { return filename; }
+
+shared_ptr<RealizationContext> TypeContext::getRealizations() const {
+  return realizations;
+}
+
+shared_ptr<ImportContext> TypeContext::getImports() const { return imports; }
+
+void TypeContext::increaseLevel() { level++; }
+
+void TypeContext::decreaseLevel() { level--; }
+
+shared_ptr<LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
+                                             bool setActive) {
+  auto t = make_shared<LinkType>(LinkType::Unbound,
+                                 realizations->getUnboundCount()++, level);
+  t->setSrcInfo(srcInfo);
+  if (setActive) {
+    activeUnbounds.insert(t);
+    DBG("UNBOUND {} ADDED # {} ", t, srcInfo.line);
+  }
+  return t;
+}
+
+TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type) {
+  return instantiate(srcInfo, type, vector<pair<int, TypePtr>>());
+}
+
 TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type,
                                  const vector<pair<int, TypePtr>> &generics) {
-  std::unordered_map<int, TypePtr> cache;
-  for (auto &g : generics) {
+  unordered_map<int, TypePtr> cache;
+  for (auto &g : generics)
     cache[g.first] = g.second;
-  }
-  auto t = type->instantiate(level, unboundCount, cache);
+  auto t = type->instantiate(level, realizations->getUnboundCount(), cache);
   for (auto &i : cache) {
     if (auto l = dynamic_pointer_cast<LinkType>(i.second)) {
       if (l->kind != LinkType::Unbound)
@@ -233,46 +279,6 @@ TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type,
   return t;
 }
 
-FuncTypePtr TypeContext::findMethod(const string &name,
-                                    const string &method) const {
-  auto m = classes.find(name);
-  if (m != classes.end()) {
-    auto t = m->second.methods.find(method);
-    if (t != m->second.methods.end()) {
-      return t->second;
-    }
-  }
-  return nullptr;
-}
-
-TypePtr TypeContext::findMember(const string &name,
-                                const string &member) const {
-  auto m = classes.find(name);
-  if (m != classes.end()) {
-    auto t = m->second.members.find(member);
-    if (t != m->second.members.end()) {
-      return t->second;
-    }
-  }
-  return nullptr;
-}
-
-vector<TypeContext::ClassRealization>
-TypeContext::getClassRealizations(const std::string &name) {
-  vector<TypeContext::ClassRealization> result;
-  for (auto &i : classRealizations[name])
-    result.push_back(i.second);
-  return result;
-}
-
-vector<TypeContext::FuncRealization>
-TypeContext::getFuncRealizations(const std::string &name) {
-  vector<TypeContext::FuncRealization> result;
-  for (auto &i : funcRealizations[name])
-    result.push_back(i.second);
-  return result;
-}
-
 TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
                                         const vector<TypePtr> &generics) {
   auto c = getClass(root);
@@ -284,6 +290,87 @@ TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
     cache.push_back({c->generics[i].first, generics[i]});
   return instantiate(srcInfo, root, cache);
 }
+
+shared_ptr<TypeContext> TypeContext::getContext(const string &file) {
+  auto realizations = make_shared<RealizationContext>();
+  auto imports = make_shared<ImportContext>();
+
+  auto stdlibPath = imports->getImportFile("__raw__", "", true);
+  if (stdlibPath == "")
+    error("cannot load standard library");
+  auto stdlib = make_shared<TypeContext>(stdlibPath, realizations, imports);
+  imports->addImport("", stdlibPath, stdlib);
+
+  unordered_map<string, types::Type *> podTypes = {
+      {"void", seq::types::Void},
+      {"bool", seq::types::Bool},
+      {"byte", seq::types::Byte},
+      {"int", seq::types::Int},
+      {"float", seq::types::Float}};
+  for (auto &t : podTypes) {
+    auto name = t.first;
+    auto typ = make_shared<ClassType>(name, true, vector<pair<int, TypePtr>>(),
+                                      vector<pair<string, TypePtr>>());
+    // realizations->generateCanonicalName();
+    realizations->moduleNames[name] = 1;
+    realizations->classRealizations[name][name] = {typ, t.second};
+    stdlib->add(name, typ);
+    stdlib->add("#" + name, typ);
+  }
+  vector<string> genericTypes = {"ptr", "generator", "optional"};
+  for (auto &t : genericTypes) {
+    auto typ = make_shared<ClassType>(
+        t, true,
+        vector<pair<int, TypePtr>>{
+            {realizations->unboundCount,
+             make_shared<LinkType>(LinkType::Generic,
+                                   realizations->unboundCount)}},
+        vector<pair<string, TypePtr>>());
+    realizations->moduleNames[t] = 1;
+    stdlib->add(t, typ);
+    stdlib->add("#" + t, typ);
+    realizations->unboundCount++;
+  }
+
+  stdlib->setFlag("internal");
+  auto stmts = ast::parse_file(file);
+  auto tv = TransformVisitor(stdlib).realizeBlock(stmts.get());
+  stdlib->unsetFlag("internal");
+  stdlib->add("#str", stdlib->find("str"));
+  stdlib->add("#seq", stdlib->find("seq"));
+  realizations->classRealizations["str"]["str"] = {
+      dynamic_pointer_cast<ClassType>(stdlib->find("str")->getType()),
+      seq::types::Str};
+  realizations->classRealizations["seq"]["seq"] = {
+      dynamic_pointer_cast<ClassType>(stdlib->find("seq")->getType()),
+      seq::types::Seq};
+  stdlib->add("__argv__", make_shared<LinkType>(stdlib->instantiateGeneric(
+                              SrcInfo(), stdlib->find("array")->getType(),
+                              {stdlib->find("str")->getType()})));
+  imports->setBody("", move(tv));
+
+  // auto stmts = ast::parse_file(file);
+  // auto tv = ast::TransformVisitor(stdlib).realizeBlock(stmts.get());
+
+  return make_shared<TypeContext>(file, realizations, imports);
+}
+
+ImportContext::Import TypeContext::importFile(const string &what) {
+  auto file = imports->getImportFile(what, filename);
+  if (file == "")
+    return {"", nullptr, nullptr};
+  if (auto i = imports->getImport(file))
+    return {file, i, nullptr};
+  auto stmts = ast::parse_file(file);
+  auto ctx = make_shared<TypeContext>(file, realizations, imports);
+  // TODO: set nice module name ctx->module = ;
+  imports->addImport(file, file, ctx);
+  auto tv = TransformVisitor(ctx).transform(parse_file(file));
+  imports->setBody(file, move(tv));
+  return {file, ctx, move(stmts)};
+}
+
+/**************************************************************************************/
 
 } // namespace ast
 } // namespace seq

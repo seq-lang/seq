@@ -22,11 +22,13 @@
 #include "parser/common.h"
 #include "parser/context.h"
 
+#define CAST(s, T) dynamic_cast<T *>(s.get())
+
 namespace seq {
 namespace ast {
 
 class TransformVisitor : public ASTVisitor, public seq::SrcObject {
-  TypeContext &ctx;
+  std::shared_ptr<TypeContext> ctx;
   std::shared_ptr<std::vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
   StmtPtr resultStmt;
@@ -45,25 +47,28 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
                             SuiteStmt *&prev);
   void prepend(StmtPtr s);
 
-  TypeContext::FuncRealization realize(FuncTypePtr type);
-  TypeContext::ClassRealization realize(ClassTypePtr type);
+  std::shared_ptr<TContextItem> processIdentifier(std::shared_ptr<TypeContext> tctx,
+                         const std::string &id);
+
+  RealizationContext::FuncRealization realize(FuncTypePtr type);
+  RealizationContext::ClassRealization realize(ClassTypePtr type);
 
   ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
                            const std::string &magic);
   ExprPtr makeBoolExpr(const ExprPtr &e);
 
   class CaptureVisitor : public WalkVisitor {
-    TypeContext &ctx;
+    std::shared_ptr<TypeContext> ctx;
 
   public:
     std::unordered_set<std::string> captures;
     using WalkVisitor::visit;
-    CaptureVisitor(TypeContext &ctx);
+    CaptureVisitor(std::shared_ptr<TypeContext> ctx);
     void visit(const IdExpr *) override;
   };
 
 public:
-  TransformVisitor(TypeContext &ctx,
+  TransformVisitor(std::shared_ptr<TypeContext> ctx,
                    std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
 
   ExprPtr transform(const Expr *e, bool allowTypes = false);
@@ -174,6 +179,11 @@ public:
     return r;
   }
 };
+
+template <typename T> void forceUnify(T &expr, TypePtr t) {
+  if (expr->getType() && expr->getType()->unify(t) < 0)
+    error(expr, "cannot unify {} and {}", *expr->getType(), *t);
+}
 
 } // namespace ast
 } // namespace seq

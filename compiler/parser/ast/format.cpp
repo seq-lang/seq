@@ -11,7 +11,7 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-FormatVisitor::FormatVisitor(TypeContext &ctx, bool html)
+FormatVisitor::FormatVisitor(std::shared_ptr<TypeContext> ctx, bool html)
     : ctx(ctx), renderType(false), renderHTML(html), indent(0) {
   if (renderHTML) {
     header = "<html><head><link rel=stylesheet href=code.css/></head>\n<body>";
@@ -393,8 +393,8 @@ void FormatVisitor::visit(const ThrowStmt *stmt) {
 }
 
 void FormatVisitor::visit(const FunctionStmt *stmt) {
-  auto name = ctx.getCanonicalName(stmt->getSrcInfo());
-  for (auto &real : ctx.getFuncRealizations(name)) {
+  auto name = ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo());
+  for (auto &real : ctx->getRealizations()->getFuncRealizations(name)) {
     auto fstmt = real.ast;
     assert(fstmt);
     string attrs;
@@ -426,10 +426,10 @@ void FormatVisitor::visit(const FunctionStmt *stmt) {
 }
 
 void FormatVisitor::visit(const ClassStmt *stmt) {
-  auto name = ctx.getCanonicalName(stmt->getSrcInfo());
-  auto c = ctx.findClass(name);
+  auto name = ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo());
+  auto c = ctx->getRealizations()->findClass(name);
   assert(c);
-  for (auto &real : ctx.getClassRealizations(name)) {
+  for (auto &real : ctx->getRealizations()->getClassRealizations(name)) {
     vector<string> args;
     string key;
     if (real.type->isRecord) {
@@ -439,8 +439,8 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
     } else {
       key = "class";
       for (auto &a : c->members) {
-        auto t = ctx.instantiate(real.type->getSrcInfo(), a.second,
-                                 real.type->generics);
+        auto t = ctx->instantiate(real.type->getSrcInfo(), a.second,
+                                  real.type->generics);
         args.push_back(fmt::format("{}: {}", a.first, *t));
       }
     }
@@ -450,7 +450,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   for (auto &m : c->methods) {
     FormatVisitor v(ctx, renderHTML);
     v.indent = this->indent;
-    auto s = ctx.getAST(m.second->name);
+    auto s = ctx->getRealizations()->getAST(m.second->name);
     if (s)
       s->accept(v);
     result += v.result;

@@ -29,8 +29,8 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
   try {
     auto stmts = isCode ? ast::parse_code(argv0, file) : ast::parse_file(file);
 
-    ast::TypeContext tctx(file);
-    auto tv = ast::TransformVisitor(tctx).realizeBlock(stmts.get());
+    auto ctx = ast::TypeContext::getContext(file);
+    auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get());
     exit(0);
 
     auto module = new seq::SeqModule();

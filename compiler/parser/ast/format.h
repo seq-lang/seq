@@ -20,7 +20,7 @@ namespace seq {
 namespace ast {
 
 class FormatVisitor : public ASTVisitor {
-  TypeContext &ctx;
+  std::shared_ptr<TypeContext> ctx;
   std::string result;
   std::string space;
   bool renderType, renderHTML;
@@ -53,13 +53,13 @@ private:
 
 public:
   template <typename T>
-  static std::string format(TypeContext &ctx, const T &stmt,
+  static std::string format(std::shared_ptr<TypeContext> ctx, const T &stmt,
                             bool html = false) {
     auto t = FormatVisitor(ctx, html);
     return fmt::format("{}{}{}", t.header, t.transform(stmt), t.footer);
   }
 
-  FormatVisitor(TypeContext &ctx, bool html);
+  FormatVisitor(std::shared_ptr<TypeContext> ctx, bool html);
 
   std::string transform(const ExprPtr &e);
   std::string transform(const StmtPtr &stmt, int indent = 0);
