@@ -44,7 +44,8 @@ from LD cimport bcf_get_fmt_id(cobj, int) -> cobj
 from LD cimport bcf_get_info_id(cobj, int) -> cobj
 from LD cimport bcf_get_info_values(cobj, cobj, cobj, cobj, cobj, int) -> int
 from LD cimport bcf_get_format_values(cobj, cobj, cobj, cobj, cobj, int) -> int
-
+from LD cimport bcf_float_is_vector_end(i32) -> i32
+from LD cimport bcf_float_is_missing(i32) -> i32
 
 cimport seq_get_htsfile_fp(cobj) -> cobj
 cimport seq_is_htsfile_cram(cobj) -> bool
