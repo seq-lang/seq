@@ -30,7 +30,9 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     auto stmts = isCode ? ast::parse_code(argv0, file) : ast::parse_file(file);
 
     auto ctx = ast::TypeContext::getContext(argv0, file);
-    auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get());
+    FILE *fo = fopen("tmp/out.htm", "w");
+    auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), fo);
+    fclose(fo);
     exit(0);
 
     auto module = new seq::SeqModule();

@@ -185,11 +185,7 @@ public:
     implicitGenerics = i;
   }
   int countPartials() const {
-    int i = 0;
-    for (auto &p : partialArgs)
-      if (p)
-        return i += 1;
-    return i;
+    return std::count(partialArgs.begin(), partialArgs.end(), 1);
   }
 };
 

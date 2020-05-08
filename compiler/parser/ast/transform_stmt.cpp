@@ -845,6 +845,10 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
 
   ctx->addBlock();
   ctx->increaseLevel();
+  assert(ctx->getRealizations()->funcASTs.find(t->name) !=
+         ctx->getRealizations()->funcASTs.end());
+  auto &ast = ctx->getRealizations()->funcASTs[t->name];
+  ctx->bases.push_back(ast.second->name);
   // Ensure that all inputs are realized
   for (auto &t : t->args) {
     assert(!t.second->hasUnbound());
@@ -855,11 +859,7 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
   ctx->returnType = t->ret;
   ctx->hasSetReturnType = false;
 
-  assert(ctx->getRealizations()->funcASTs.find(t->name) !=
-         ctx->getRealizations()->funcASTs.end());
-  auto &ast = ctx->getRealizations()->funcASTs[t->name];
   // There is no AST linked to internal functions, so just ignore them
-  ctx->bases.push_back(ast.second->name);
   bool isInternal =
       std::find(ast.second->attributes.begin(), ast.second->attributes.end(),
                 "internal") != ast.second->attributes.end();
@@ -949,21 +949,17 @@ RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
              ->classRealizations[t->name][t->toString(true)] = {t, handle};
 }
 
-StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt) {
-  if (!stmt) {
+StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, FILE *fo) {
+  if (!stmt)
     return nullptr;
-  }
   StmtPtr result = nullptr;
 
-  FILE *fo = fopen("out.htm", "w");
   // We keep running typecheck transformations until there are no more unbound
   // types. It is assumed that the unbound count will decrease in each
   // iteration--- if not, the program cannot be type-checked.
   // TODO: this can be probably optimized one day...
   int reachSize = ctx->activeUnbounds.size();
   for (int iter = 0, prevSize = INT_MAX; prevSize > reachSize; iter++) {
-    DBG("---------------------------------------- ROUND {} # {}", iter,
-        reachSize);
     TransformVisitor v(ctx);
     result = v.transform(result ? result.get() : stmt);
 
@@ -981,13 +977,12 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt) {
     if (ctx->activeUnbounds.size() >= prevSize) {
       for (auto &ub : ctx->activeUnbounds)
         DBG("NOPE {}", (*ub));
-      error("cannot resolve unbound variables");
+      // error("cannot resolve unbound variables");
       break;
     }
     prevSize = ctx->activeUnbounds.size();
   }
-  fmt::print(fo, "{}", FormatVisitor::format(ctx, result, true));
-  fclose(fo);
+  if (fo) fmt::print(fo, "{}", FormatVisitor::format(ctx, result, true));
 
   return result;
 }

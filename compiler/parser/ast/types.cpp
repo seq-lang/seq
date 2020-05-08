@@ -104,7 +104,8 @@ int LinkType::unify(TypePtr typ, Unification &us) {
     }
     if (!occurs(typ, us)) {
       // DBG("UNIFIED:  {} := {}", *this, *typ);
-      us.linked.push_back(std::static_pointer_cast<LinkType>(shared_from_this()));
+      us.linked.push_back(
+          std::static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
       type = typ;
       return 0;
@@ -143,9 +144,8 @@ TypePtr LinkType::generalize(int level) {
 TypePtr LinkType::instantiate(int level, int &unboundCount,
                               std::unordered_map<int, TypePtr> &cache) {
   if (kind == Generic) {
-    if (cache.find(id) != cache.end()) {
+    if (cache.find(id) != cache.end())
       return cache[id];
-    }
     return cache[id] = make_shared<LinkType>(Unbound, unboundCount++, level);
   } else if (kind == Unbound) {
     return shared_from_this();
@@ -272,8 +272,6 @@ string FuncType::toString(bool reduced) const {
     as.push_back(ret->toString(reduced));
   for (int i = 0; i < args.size(); i++)
     if (partialArgs[i])
-      as.push_back("...");
-    else
       as.push_back(args[i].second->toString(reduced));
   if (partialArgs.back())
     as.push_back("...");
@@ -281,7 +279,7 @@ string FuncType::toString(bool reduced) const {
   if (reduced)
     for (auto &a : implicitGenerics)
       is.push_back(a.second->toString(reduced));
-  return fmt::format("{}[{}{}{}]", countPartials() ? "partial" : "function",
+  return fmt::format("{}[{}{}{}]", "function",
                      is.size() ? fmt::format("{};", fmt::join(is, ",")) : "",
                      gs.size() ? fmt::format("{};", fmt::join(gs, ",")) : "",
                      as.size() ? fmt::format("{}", fmt::join(as, ",")) : "");
@@ -389,7 +387,7 @@ bool FuncType::hasUnbound() const {
 }
 
 bool FuncType::canRealize() const {
-  if (name == "" || countPartials())
+  if (name == "")
     return false;
   for (auto &t : generics)
     if (!t.second->canRealize())

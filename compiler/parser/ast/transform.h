@@ -75,7 +75,7 @@ public:
   StmtPtr transform(const Stmt *s);
   PatternPtr transform(const Pattern *p);
   ExprPtr transformType(const ExprPtr &expr);
-  StmtPtr realizeBlock(const Stmt *stmt);
+  StmtPtr realizeBlock(const Stmt *stmt, FILE *fo = nullptr);
 
 public:
   void visit(const NoneExpr *) override;

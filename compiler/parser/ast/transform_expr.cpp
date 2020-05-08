@@ -573,6 +573,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
     vector<CallExpr::Arg> reorderedArgs;
     vector<int> positions;
     unordered_map<string, ExprPtr> namedArgs;
+    auto partialArgs = t->partialArgs;
     bool namesStarted = false;
     for (int i = 0; i < args.size(); i++) {
       if (args[i].name == "" && namesStarted)
@@ -590,22 +591,24 @@ void TransformVisitor::visit(const CallExpr *expr) {
           reorderedArgs.size() == t->countPartials() + 1 &&
           CAST(reorderedArgs.back().value, EllipsisExpr)) {
         reorderedArgs.pop_back();
-        t->partialArgs.back() = 1;
+        partialArgs.back() = 1;
       }
-      error(expr, "too many arguments for {}", *t);
+      error(expr, "too many arguments for {} |- {}", t->name, *t);
     }
     for (int i = 0, added = 0; i < t->args.size(); i++) {
-      if (!t->partialArgs[i])
+      if (!partialArgs[i])
         continue;
       if (added >= reorderedArgs.size()) {
         auto it = namedArgs.find(t->args[i].first);
         if (it != namedArgs.end()) {
           reorderedArgs.push_back({"", move(it->second)});
           namedArgs.erase(it);
-        } /* TODO: else if (auto s = getDefault(t, t->args[i].first)) { // default=
+        } /* TODO: else if (auto s = getDefault(t, t->args[i].first)) { //
+        default=
           // TODO: multi-threaded safety
           reorderedArgs.push_back({"", transform(N<IdExpr>(s))});
-        } */ else {
+        } */
+        else {
           reorderedArgs.push_back({"", transform(N<EllipsisExpr>())});
         }
       }
@@ -617,17 +620,27 @@ void TransformVisitor::visit(const CallExpr *expr) {
 
     for (int i = 0; i < reorderedArgs.size(); i++) {
       if (!CAST(reorderedArgs[i].value, EllipsisExpr))
-        t->partialArgs[positions[i]] = 0;
+        partialArgs[positions[i]] = 0;
       forceUnify(t->args[positions[i]].second,
                  reorderedArgs[i].value->getType());
     }
     // special case: calling partial void f(...)()
     if (!args.size() && t->countPartials() == 1 && t->partialArgs.back())
-      t->partialArgs.back() = 0;
-    if (t->canRealize())
-      t = realize(t).type;
-    resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
-    resultExpr->setType(forceUnify(expr, make_shared<LinkType>(t->ret)));
+      partialArgs.back() = 0;
+    if (std::count(partialArgs.begin(), partialArgs.end(), 1)) {
+      if (t->canRealize())
+        t = realize(t).type;
+      resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
+      auto typ = make_shared<FuncType>(t->name, t->generics, t->args, t->ret);
+      typ->setImplicits(t->implicitGenerics);
+      typ->partialArgs = partialArgs;
+      resultExpr->setType(forceUnify(expr, make_shared<LinkType>(typ)));
+    } else {
+      if (t->canRealize())
+        forceUnify(t, realize(t).type);
+      resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
+      resultExpr->setType(forceUnify(expr, make_shared<LinkType>(t->ret)));
+    }
   } else { // will be handled later on
     resultExpr = N<CallExpr>(move(e), move(args));
     resultExpr->setType(expr->getType() ? expr->getType()
