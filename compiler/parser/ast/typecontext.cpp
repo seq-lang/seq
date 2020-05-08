@@ -69,7 +69,7 @@ FuncTypePtr RealizationContext::findMethod(const string &name,
   if (m != classes.end()) {
     auto t = m->second.methods.find(method);
     if (t != m->second.methods.end())
-      return t->second;
+      return t->second.front();
   }
   return nullptr;
 }
@@ -291,11 +291,12 @@ TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
   return instantiate(srcInfo, root, cache);
 }
 
-shared_ptr<TypeContext> TypeContext::getContext(const string &file) {
+shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
+                                                const string &file) {
   auto realizations = make_shared<RealizationContext>();
-  auto imports = make_shared<ImportContext>();
+  auto imports = make_shared<ImportContext>(argv0);
 
-  auto stdlibPath = imports->getImportFile("__raw__", "", true);
+  auto stdlibPath = imports->getImportFile("core", "", true);
   if (stdlibPath == "")
     error("cannot load standard library");
   auto stdlib = make_shared<TypeContext>(stdlibPath, realizations, imports);
@@ -311,11 +312,10 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &file) {
     auto name = t.first;
     auto typ = make_shared<ClassType>(name, true, vector<pair<int, TypePtr>>(),
                                       vector<pair<string, TypePtr>>());
-    // realizations->generateCanonicalName();
     realizations->moduleNames[name] = 1;
     realizations->classRealizations[name][name] = {typ, t.second};
-    stdlib->add(name, typ);
-    stdlib->add("#" + name, typ);
+    stdlib->add(name, typ, false, true, true);
+    stdlib->add("#" + name, typ, false, true, true);
   }
   vector<string> genericTypes = {"ptr", "generator", "optional"};
   for (auto &t : genericTypes) {
@@ -327,17 +327,26 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &file) {
                                    realizations->unboundCount)}},
         vector<pair<string, TypePtr>>());
     realizations->moduleNames[t] = 1;
-    stdlib->add(t, typ);
-    stdlib->add("#" + t, typ);
+    stdlib->add(t, typ, false, true, true);
+    stdlib->add("#" + t, typ, false, true, true);
     realizations->unboundCount++;
   }
+  auto tt = make_shared<ClassType>("tuple", true, vector<pair<int, TypePtr>>{},
+                                   vector<pair<string, TypePtr>>{});
+  stdlib->add("tuple", tt, false, true, true);
+  stdlib->add("#tuple", tt, false, true, true);
+  auto ft = make_shared<FuncType>("", vector<pair<int, TypePtr>>{},
+                                  vector<pair<string, TypePtr>>{}, nullptr);
+  stdlib->add("function", ft, false, true, true);
+  stdlib->add("#function", ft, false, true, true);
 
   stdlib->setFlag("internal");
-  auto stmts = ast::parse_file(file);
+  auto stmts = ast::parse_file(stdlibPath);
   auto tv = TransformVisitor(stdlib).realizeBlock(stmts.get());
   stdlib->unsetFlag("internal");
   stdlib->add("#str", stdlib->find("str"));
   stdlib->add("#seq", stdlib->find("seq"));
+  stdlib->add("#array", stdlib->find("array"));
   realizations->classRealizations["str"]["str"] = {
       dynamic_pointer_cast<ClassType>(stdlib->find("str")->getType()),
       seq::types::Str};

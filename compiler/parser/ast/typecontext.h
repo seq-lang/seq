@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <deque>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -25,7 +26,7 @@ class TypeContext;
 struct RealizationContext {
   struct ClassBody {
     std::unordered_map<std::string, TypePtr> members;
-    std::unordered_map<std::string, FuncTypePtr> methods;
+    std::unordered_map<std::string, std::deque<FuncTypePtr>> methods;
   };
   struct FuncRealization {
     FuncTypePtr type;
@@ -225,7 +226,8 @@ public:
   ImportContext::Import importFile(const std::string &file);
 
 public:
-  static std::shared_ptr<TypeContext> getContext(const std::string &file);
+  static std::shared_ptr<TypeContext> getContext(const std::string &argv0,
+                                                 const std::string &file);
   // I am still debating should I provide 1000 getters or setters
   // or just leave the classes below friendly as they are by design
   // rather intimate with this class.

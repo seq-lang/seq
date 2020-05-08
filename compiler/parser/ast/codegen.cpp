@@ -30,11 +30,7 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-#ifdef HAHA
-
-template <typename Tn, typename... Ts> auto N(Ts &&... args) {
-  return new Tn(std::forward<Ts>(args)...);
-}
+#if 0
 
 void CodegenVisitor::defaultVisit(const Expr *n) {
   error(n, "invalid node {}", *n);
@@ -54,34 +50,33 @@ CodegenVisitor::CodegenVisitor(Context &ctx)
 
 seq::Expr *CodegenVisitor::transform(const Expr *expr) {
   if (!expr)
-    return;
+    return nullptr;
   CodegenVisitor v(ctx);
   expr->accept(v);
-  if (v.result) {
-    v.result->setSrcInfo(expr->getSrcInfo());
-    if (auto t = ctx.getTryCatch()) {
-      v.result->setTryCatch(t);
-    }
+  if (v.resultExpr) {
+    v.resultExpr->setSrcInfo(expr->getSrcInfo());
+    if (auto t = ctx.getTryCatch())
+      v.resultExpr->setTryCatch(t);
   }
-  return v.result;
+  return v.resultExpr;
 }
 
 void CodegenVisitor::visit(const NoneExpr *expr) {
-  result = N<seq::NoneExpr>();
+  resultExpr = N<seq::NoneExpr>();
 }
 
 void CodegenVisitor::visit(const BoolExpr *expr) {
-  result = N<seq::BoolExpr>(expr->value);
+  resultExpr = N<seq::BoolExpr>(expr->value);
 }
 
 void CodegenVisitor::visit(const IntExpr *expr) {
   try {
     if (expr->suffix == "u") {
       uint64_t i = std::stoull(expr->value, nullptr, 0);
-      result = N<seq::IntExpr>(i);
+      resultExpr = N<seq::IntExpr>(i);
     } else {
       int64_t i = std::stoull(expr->value, nullptr, 0);
-      result = N<seq::IntExpr>(i);
+      resultExpr = N<seq::IntExpr>(i);
     }
   } catch (std::out_of_range &) {
     error(expr, "integer {} out of range", expr->value);
@@ -89,11 +84,11 @@ void CodegenVisitor::visit(const IntExpr *expr) {
 }
 
 void CodegenVisitor::visit(const FloatExpr *expr) {
-  result = N<seq::FloatExpr>(expr->value);
+  resultExpr = N<seq::FloatExpr>(expr->value);
 }
 
 void CodegenVisitor::visit(const StringExpr *expr) {
-  result = N<seq::StrExpr>(expr->value);
+  resultExpr = N<seq::StrExpr>(expr->value);
 }
 
 void CodegenVisitor::visit(const IdExpr *expr) {
@@ -103,47 +98,37 @@ void CodegenVisitor::visit(const IdExpr *expr) {
   if (auto var = dynamic_cast<VarContextItem *>(i.get())) {
     if (!var->isGlobal() && var->getBase() != ctx.getBase())
       error(expr, "identifier '{}' not found", expr->value);
-
     if (var->isGlobal() && var->getBase() == ctx.getBase() &&
         ctx.hasFlag("atomic"))
       dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
   }
-  result = i->getExpr();
+  resultExpr = i->getExpr();
 }
 
 void CodegenVisitor::visit(const TupleExpr *expr) {
   vector<seq::Expr *> items;
   for (auto &&i : expr->items)
     items.push_back(transform(i));
-  result = N<seq::RecordExpr>(items, vector<string>(items.size(), ""));
+  resultExpr = N<seq::RecordExpr>(items, vector<string>(items.size(), ""));
 }
 
 void CodegenVisitor::visit(const IfExpr *expr) {
-  result = N<seq::CondExpr>(transform(expr->cond), transform(expr->eif),
-                            transform(expr->eelse));
+  resultExpr = N<seq::CondExpr>(transform(expr->cond), transform(expr->eif),
+                                transform(expr->eelse));
 }
 
 void CodegenVisitor::visit(const UnaryExpr *expr) {
-  result = N<seq::UOpExpr>(seq::uop(expr->op), transform(expr->expr));
+  assert(expr->op == "!");
+  resultExpr = N<seq::UOpExpr>(seq::uop(expr->op), transform(expr->expr));
 }
 
 void CodegenVisitor::visit(const BinaryExpr *expr) {
-  if (expr->op == "is") {
-    result = N<seq::IsExpr>(transform(expr->lexpr), transform(expr->rexpr));
-  } else if (expr->op == "is not") {
-    result =
-        N<seq::UOpExpr>(seq::uop("!"), new seq::IsExpr(transform(expr->lexpr),
-                                                       transform(expr->rexpr)));
-  } else if (expr->op == "in") {
-    result = N<seq::ArrayContainsExpr>(transform(expr->lexpr),
-                                       transform(expr->rexpr));
-  } else if (expr->op == "not in") {
-    result = N<seq::UOpExpr>(
-        seq::uop("!"), new seq::ArrayContainsExpr(transform(expr->lexpr),
-                                                  transform(expr->rexpr)));
-  }
-  result = N<seq::BOpExpr>(seq::bop(expr->op), transform(expr->lexpr),
-                           transform(expr->rexpr), expr->inPlace);
+  assert(expr->op == "is" || expr->op == "&&" || expr->op == "||");
+  if (expr->op == "is")
+    resultExpr = N<seq::IsExpr>(transform(expr->lexpr), transform(expr->rexpr));
+  else
+    resultExpr = N<seq::BOpExpr>(seq::bop(expr->op), transform(expr->lexpr),
+                                 transform(expr->rexpr));
 }
 
 void CodegenVisitor::visit(const PipeExpr *expr) {
@@ -152,165 +137,37 @@ void CodegenVisitor::visit(const PipeExpr *expr) {
     if (expr->items[i].op == "||>")
       pexpr->setParallel(i);
   }
-  result = pexpr;
+  resultExpr = pexpr;
 }
 
 void CodegenVisitor::visit(const IndexExpr *expr) {
-  auto getInt = [&](const ExprPtr &e, int limit) {
-    if (auto i = dynamic_cast<IntExpr *>(e.get())) {
-      auto r = std::stol(i->value, nullptr, 0);
-      if (r <= 0 || r > limit) {
-        error(expr, "invalid integer parameter (maximum allowed is {})", limit);
-      }
-      return r;
-    } else {
-      error(expr, "expected integer");
-      return long(0);
-    }
-  };
-  auto getTypeArr = [&](const ExprPtr &e) {
-    vector<seq::types::Type *> v;
-    if (auto i = dynamic_cast<TupleExpr *>(e.get())) {
-      for (auto &t : i->items) {
-        v.push_back(transformType(t));
-      }
-    } else {
-      v.push_back(transformType(e));
-    }
-    return v;
-  };
-  if (auto lhs = dynamic_cast<IdExpr *>(expr->expr.get())) {
-    if (lhs->value == "array") {
-      result = N<seq::TypeExpr>(
-          seq::types::ArrayType::get(transformType(expr->index)));
-    } else if (lhs->value == "ptr") {
-      result = N<seq::TypeExpr>(
-          seq::types::PtrType::get(transformType(expr->index)));
-    } else if (lhs->value == "generator") {
-      result = N<seq::TypeExpr>(
-          seq::types::GenType::get(transformType(expr->index)));
-    } else if (lhs->value == "Kmer") {
-      result =
-          N<seq::TypeExpr>(seq::types::KMer::get(getInt(expr->index, 1024)));
-    } else if (lhs->value == "Int") {
-      result = N<seq::TypeExpr>(
-          seq::types::IntNType::get(getInt(expr->index, 2048), true));
-    } else if (lhs->value == "UInt") {
-      result = N<seq::TypeExpr>(
-          seq::types::IntNType::get(getInt(expr->index, 2048), false));
-    } else if (lhs->value == "optional") {
-      result = N<seq::TypeExpr>(
-          seq::types::OptionalType::get(transformType(expr->index)));
-    } else if (lhs->value == "function") {
-      auto ty = getTypeArr(expr->index);
-      result = N<seq::TypeExpr>(seq::types::FuncType::get(
-          vector<seq::types::Type *>(ty.begin() + 1, ty.end()), ty[0]));
-    } else if (lhs->value == "tuple") {
-      auto ty = getTypeArr(expr->index);
-      result = N<seq::TypeExpr>(
-          seq::types::RecordType::get(ty, vector<string>(ty.size(), ""), ""));
-    }
-  }
-
-  auto lhs = transform(expr->expr);
-  vector<seq::Expr *> indices;
-  if (auto t = dynamic_cast<TupleExpr *>(expr->index.get())) {
-    for (auto &e : t->items) {
-      indices.push_back(transform(e));
-    }
-  } else {
-    indices.push_back(transform(expr->index));
-  }
-  vector<seq::types::Type *> types;
-  for (auto &e : indices) {
-    if (auto t = dynamic_cast<seq::TypeExpr *>(e)) {
-      types.push_back(e->getType());
-    }
-  }
-  if (types.size() && types.size() != indices.size()) {
-    error(expr, "all arguments must be either types or expressions");
-  } else if (types.size()) {
-    if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
-      if (auto ref = dynamic_cast<seq::types::RefType *>(e->getType())) {
-        result = N<seq::TypeExpr>(seq::types::GenericType::get(ref, types));
-      } else {
-        error(expr, "types do not accept type arguments");
-      }
-      /* TODO: all these below are for the functions: should be done better
-       * later on ... */
-    } else if (auto e = dynamic_cast<seq::FuncExpr *>(lhs)) {
-      e->setRealizeTypes(types);
-      this->result = lhs;
-    } else if (auto e = dynamic_cast<seq::GetElemExpr *>(lhs)) {
-      e->setRealizeTypes(types);
-      this->result = lhs;
-    } else if (auto e = dynamic_cast<seq::GetStaticElemExpr *>(lhs)) {
-      e->setRealizeTypes(types);
-      this->result = lhs;
-    } else {
-      error(expr, "cannot realize expression (is it generic?)");
-    }
-  } else if (indices.size() == 1) {
-    result = N<seq::ArrayLookupExpr>(lhs, indices[0]);
-  } else {
-    result = N<seq::ArrayLookupExpr>(
-        lhs, new seq::RecordExpr(indices, vector<string>(indices.size(), "")));
-  }
+  // Tuple access
+  resultExpr = N<seq::ArrayLookupExpr>(transform(expr->expr), transform(expr->index));
 }
 
 void CodegenVisitor::visit(const CallExpr *expr) {
-  // Special case: __array__ transformation
-  if (auto lhs = dynamic_cast<IndexExpr *>(expr->expr.get())) {
-    if (auto e = dynamic_cast<IdExpr *>(lhs->expr.get())) {
-      if (e->value == "__array__" && expr->args.size() == 1) {
-        result = N<seq::ArrayExpr>(transformType(lhs->index),
-                                   transform(expr->args[0].value), true);
-      }
-    }
+  auto f = getFunction(expr->expr->getType());
+  assert(f);
+
+  // TODO: Special case: __array__ transformation
+  if (f->name == "__array__") {
+    assert(expr->args.size() == 1);
+    resultExpr = N<seq::ArrayExpr>(transformType(f->args[0].second),
+                                  transform(expr->args[0].value), true);
+    return;
   }
 
   auto lhs = transform(expr->expr);
-  bool isTuple = false;
-  if (auto fn = dynamic_cast<seq::FuncExpr *>(lhs)) {
-    if (auto f = dynamic_cast<seq::Func *>(fn->getFunc())) {
-      for (auto &a : f->getAttributes()) {
-        if (a == "pyhandle")
-          isTuple = true;
-      }
-    }
-  }
-
   vector<seq::Expr *> items;
   vector<string> names;
-  bool isPartial = false;
-  if (isTuple) {
-    for (auto &&i : expr->args) {
-      items.push_back(transform(i.value));
-      names.push_back("");
-    }
-    auto i = new seq::RecordExpr(items, names);
-    items = {i};
-    names = {""};
-  } else {
-    bool namesStarted = false;
-    for (auto &&i : expr->args) {
-      if (i.name == "" && namesStarted) {
-        error(expr, "unexpected unnamed argument after a named argument");
-      }
-      namesStarted |= i.name != "";
-      names.push_back(i.name);
-      items.push_back(transform(i.value));
-      isPartial |= !items.back();
-    }
+  for (auto &&i : expr->args) {
+    items.push_back(transform(i.value));
+    names.push_back("");
   }
-
-  if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
-    result = N<seq::ConstructExpr>(e->getType(), items, names);
-  } else if (isPartial) {
-    result = N<seq::PartialCallExpr>(lhs, items, names);
-  } else {
-    result = N<seq::CallExpr>(lhs, items, names);
-  }
+  if (f->countPartial())
+    resultExpr = N<seq::PartialCallExpr>(lhs, items, names);
+  else
+    resultExpr = N<seq::CallExpr>(lhs, items, names);
 }
 
 void CodegenVisitor::visit(const DotExpr *expr) {
@@ -342,7 +199,7 @@ void CodegenVisitor::visit(const DotExpr *expr) {
   if (isImport) {
     // DBG(">> import {}", expr->member);
     if (auto i = c->find(expr->member)) {
-      this->result = i->getExpr();
+      resultExpr = i->getExpr();
     } else {
       error(expr, "cannot locate '{}'", expr->member);
     }
@@ -353,10 +210,10 @@ void CodegenVisitor::visit(const DotExpr *expr) {
   auto lhs = transform(expr->expr);
   if (auto e = dynamic_cast<seq::TypeExpr *>(lhs)) {
     // DBG(">> sta_elem {}", expr->member);
-    result = N<seq::GetStaticElemExpr>(e->getType(), expr->member);
+    resultExpr = N<seq::GetStaticElemExpr>(e->getType(), expr->member);
   } else {
     // DBG(">> elem {}", expr->member);
-    result = N<seq::GetElemExpr>(lhs, expr->member);
+    resultExpr = N<seq::GetElemExpr>(lhs, expr->member);
   }
 }
 
@@ -367,7 +224,7 @@ void CodegenVisitor::visit(const SliceExpr *expr) {
 void CodegenVisitor::visit(const EllipsisExpr *expr) {}
 
 void CodegenVisitor::visit(const TypeOfExpr *expr) {
-  result =
+  resultExpr =
       N<seq::TypeExpr>(seq::types::GenericType::get(transform(expr->expr)));
 }
 
@@ -375,7 +232,7 @@ void CodegenVisitor::visit(const PtrExpr *expr) {
   if (auto e = dynamic_cast<IdExpr *>(expr->expr.get())) {
     if (auto v =
             dynamic_cast<VarContextItem *>(ctx.find(e->value, true).get())) {
-      result = N<seq::VarPtrExpr>(v->getVar());
+      resultExpr = N<seq::VarPtrExpr>(v->getVar());
     } else {
       error(expr, "identifier '{}' not found", e->value);
     }
@@ -387,7 +244,7 @@ void CodegenVisitor::visit(const PtrExpr *expr) {
 void CodegenVisitor::visit(const LambdaExpr *expr) { error(expr, "TODO"); }
 
 void CodegenVisitor::visit(const YieldExpr *expr) {
-  result = N<seq::YieldExpr>(ctx.getBase());
+  resultExpr = N<seq::YieldExpr>(ctx.getBase());
 }
 
 CodegenVisitor::CodegenVisitor(Context &ctx) : ctx(ctx), result(nullptr) {}

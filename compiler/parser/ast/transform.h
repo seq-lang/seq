@@ -47,8 +47,8 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
                             SuiteStmt *&prev);
   void prepend(StmtPtr s);
 
-  std::shared_ptr<TContextItem> processIdentifier(std::shared_ptr<TypeContext> tctx,
-                         const std::string &id);
+  std::shared_ptr<TContextItem>
+  processIdentifier(std::shared_ptr<TypeContext> tctx, const std::string &id);
 
   RealizationContext::FuncRealization realize(FuncTypePtr type);
   RealizationContext::ClassRealization realize(ClassTypePtr type);
@@ -178,12 +178,32 @@ public:
       r.push_back(transform(e));
     return r;
   }
-};
 
-template <typename T> void forceUnify(T &expr, TypePtr t) {
-  if (expr->getType() && expr->getType()->unify(t) < 0)
-    error(expr, "cannot unify {} and {}", *expr->getType(), *t);
-}
+  TypePtr forceUnify(const Expr *expr, TypePtr t) {
+    if (expr->getType() && t) {
+      Unification us;
+      if (expr->getType()->unify(t, us) < 0) {
+        us.undo();
+        error(expr, "cannot unify {} and {}",
+              expr->getType() ? expr->getType()->toString() : "-",
+              t ? t->toString() : "-");
+      }
+    }
+    return t;
+  }
+
+  TypePtr forceUnify(TypePtr t, TypePtr u) {
+    if (t && u) {
+      Unification us;
+      if (t->unify(u, us) >= 0)
+        return t;
+      us.undo();
+    }
+    error(this, "cannot unify {} and {}", t ? t->toString() : "-",
+          u ? u->toString() : "-");
+    return nullptr;
+  }
+};
 
 } // namespace ast
 } // namespace seq

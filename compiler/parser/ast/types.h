@@ -26,13 +26,19 @@ typedef std::shared_ptr<FuncType> FuncTypePtr;
 typedef std::shared_ptr<ClassType> ClassTypePtr;
 typedef std::shared_ptr<LinkType> LinkTypePtr;
 
+struct Unification {
+  std::vector<LinkTypePtr> linked;
+  std::vector<std::pair<LinkTypePtr, int>> leveled;
+  void undo();
+};
+
 struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
 public:
   /// The following procedures implement the quintessential parts of
   /// Hindley-Milner's Algorithm W.
   ///
   /// (a) Unification: merge (unify) t with the current type.
-  virtual int unify(TypePtr t) = 0;
+  virtual int unify(TypePtr t, Unification &us) = 0;
   /// (b) Generalization: generalize all unbound types
   ///     whose level is less than [level] to generic types.
   virtual TypePtr generalize(int level) = 0;
@@ -92,7 +98,7 @@ struct LinkType : public Type {
   virtual ~LinkType() {}
 
 public:
-  int unify(TypePtr typ) override;
+  int unify(TypePtr typ, Unification &us) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
@@ -104,7 +110,7 @@ public:
   std::string toString(bool reduced) const override;
 
 private:
-  bool occurs(Type *typ);
+  bool occurs(TypePtr typ, Unification &us);
 };
 
 /**
@@ -127,7 +133,7 @@ struct ClassType : public Type {
   virtual ~ClassType() {}
 
 public:
-  int unify(TypePtr typ) override;
+  int unify(TypePtr typ, Unification &us) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
@@ -153,6 +159,7 @@ struct FuncType : public Type {
   /// a generic class (for cases like e.g. class A[T]: def foo(): x = T())
   std::vector<std::pair<int, TypePtr>> implicitGenerics;
   std::vector<std::pair<std::string, TypePtr>> args;
+  std::vector<char> partialArgs;
   /// Return type. Usually deduced after the realization.
   TypePtr ret;
 
@@ -163,7 +170,7 @@ struct FuncType : public Type {
   virtual ~FuncType() {}
 
 public:
-  int unify(TypePtr typ) override;
+  int unify(TypePtr typ, Unification &us) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
@@ -176,6 +183,13 @@ public:
 public:
   void setImplicits(const std::vector<std::pair<int, TypePtr>> &i) {
     implicitGenerics = i;
+  }
+  int countPartials() const {
+    int i = 0;
+    for (auto &p : partialArgs)
+      if (p)
+        return i += 1;
+    return i;
   }
 };
 

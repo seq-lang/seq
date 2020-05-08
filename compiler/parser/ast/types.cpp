@@ -17,17 +17,15 @@ namespace ast {
 
 template <typename T>
 int unifyList(const vector<pair<T, TypePtr>> &a,
-              const vector<pair<T, TypePtr>> &b) {
+              const vector<pair<T, TypePtr>> &b, Unification &us) {
   int score = 0, s;
-  if (a.size() != b.size()) {
+  if (a.size() != b.size())
     return -1;
-  }
   for (int i = 0; i < a.size(); i++) {
-    if ((s = a[i].second->unify(b[i].second)) != -1) {
+    if ((s = a[i].second->unify(b[i].second, us)) != -1)
       score += s;
-    } else {
+    else
       return -1;
-    }
   }
   return score;
 }
@@ -46,38 +44,39 @@ string LinkType::toString(bool reduced) const {
     return /*"&" +*/ type->toString(reduced);
 }
 
-bool LinkType::occurs(Type *typ) {
-  if (auto t = dynamic_cast<LinkType *>(typ)) {
+bool LinkType::occurs(TypePtr typ, Unification &us) {
+  if (auto t = dynamic_pointer_cast<LinkType>(typ)) {
     if (t->kind == Unbound) {
       if (t->id == id)
         return true;
-      if (t->level > level)
+      if (t->level > level) {
+        us.leveled.push_back({t, t->level});
         t->level = level;
+      }
       return false;
-    } else if (t->kind == Link) {
-      return occurs(t->type.get());
-    } else {
+    } else if (t->kind == Link)
+      return occurs(t->type, us);
+    else
       return false;
-    }
-  } else if (auto t = dynamic_cast<ClassType *>(typ)) {
+  } else if (auto t = dynamic_pointer_cast<ClassType>(typ)) {
     for (auto &t : t->generics)
-      if (occurs(t.second.get()))
+      if (occurs(t.second, us))
         return true;
     for (auto &t : t->args)
-      if (occurs(t.second.get()))
+      if (occurs(t.second, us))
         return true;
     return false;
-  } else if (auto t = dynamic_cast<FuncType *>(typ)) {
-    if (occurs(t->ret.get()))
+  } else if (auto t = dynamic_pointer_cast<FuncType>(typ)) {
+    if (occurs(t->ret, us))
       return true;
     for (auto &t : t->implicitGenerics)
-      if (occurs(t.second.get()))
+      if (occurs(t.second, us))
         return true;
     for (auto &t : t->generics)
-      if (occurs(t.second.get()))
+      if (occurs(t.second, us))
         return true;
     for (auto &t : t->args)
-      if (occurs(t.second.get()))
+      if (occurs(t.second, us))
         return true;
     return false;
   } else {
@@ -85,9 +84,9 @@ bool LinkType::occurs(Type *typ) {
   }
 }
 
-int LinkType::unify(TypePtr typ) {
+int LinkType::unify(TypePtr typ, Unification &us) {
   if (kind == Link) {
-    return type->unify(typ);
+    return type->unify(typ, us);
   } else if (kind == Generic) {
     if (auto t = dynamic_pointer_cast<LinkType>(typ)) {
       if (t->kind == Generic && id == t->id)
@@ -97,14 +96,15 @@ int LinkType::unify(TypePtr typ) {
   } else { // if (kind == Unbound)
     if (auto t = dynamic_pointer_cast<LinkType>(typ)) {
       if (t->kind == Link)
-        return t->type->unify(shared_from_this());
+        return t->type->unify(shared_from_this(), us);
       else if (t->kind == Generic)
         return -1;
       else if (t->kind == Unbound && id == t->id)
         return 1;
     }
-    if (!occurs(typ.get())) {
-      DBG("UNIFIED:  {} := {}", *this, *typ);
+    if (!occurs(typ, us)) {
+      // DBG("UNIFIED:  {} := {}", *this, *typ);
+      us.linked.push_back(std::static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
       type = typ;
       return 0;
@@ -113,6 +113,17 @@ int LinkType::unify(TypePtr typ) {
     }
   }
   return -1;
+}
+
+void Unification::undo() {
+  for (int i = linked.size() - 1; i >= 0; i--) {
+    linked[i]->kind = LinkType::Unbound;
+    linked[i]->type = nullptr;
+  }
+  for (int i = leveled.size() - 1; i >= 0; i--) {
+    assert(leveled[i].first->kind == LinkType::Unbound);
+    leveled[i].first->level = leveled[i].second;
+  }
 }
 
 TypePtr LinkType::generalize(int level) {
@@ -182,7 +193,7 @@ string ClassType::toString(bool reduced) const {
                      gs.size() ? fmt::format("[{}]", fmt::join(gs, ",")) : "");
 }
 
-int ClassType::unify(TypePtr typ) {
+int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = dynamic_cast<ClassType *>(typ.get())) {
     if (isRecord != t->isRecord)
       return -1;
@@ -190,15 +201,15 @@ int ClassType::unify(TypePtr typ) {
       if (!isRecord || (name != "tuple" && t->name != "tuple"))
         return -1;
     }
-    int s1 = unifyList(generics, t->generics);
+    int s1 = unifyList(generics, t->generics, us);
     if (s1 == -1)
       return -1;
-    int s2 = unifyList(args, t->args);
+    int s2 = unifyList(args, t->args, us);
     if (s2 == -1)
       return -1;
     return s1 + s2;
   } else if (auto t = dynamic_cast<LinkType *>(typ.get())) {
-    return t->unify(shared_from_this());
+    return t->unify(shared_from_this(), us);
   }
   return -1;
 }
@@ -247,7 +258,11 @@ bool ClassType::canRealize() const {
 FuncType::FuncType(const string &name,
                    const vector<pair<int, TypePtr>> &generics,
                    const vector<pair<string, TypePtr>> &args, TypePtr ret)
-    : name(name), generics(generics), args(args), ret(ret) {}
+    : name(name), generics(generics), args(args), ret(ret) {
+  for (int i = 0; i < args.size(); i++)
+    partialArgs.push_back(1);
+  partialArgs.push_back(0);
+}
 
 string FuncType::toString(bool reduced) const {
   vector<string> gs, as;
@@ -255,39 +270,75 @@ string FuncType::toString(bool reduced) const {
     gs.push_back(a.second->toString(reduced));
   if (!reduced)
     as.push_back(ret->toString(reduced));
-  for (auto &a : args)
-    as.push_back(a.second->toString(reduced));
+  for (int i = 0; i < args.size(); i++)
+    if (partialArgs[i])
+      as.push_back("...");
+    else
+      as.push_back(args[i].second->toString(reduced));
+  if (partialArgs.back())
+    as.push_back("...");
   vector<string> is;
   if (reduced)
     for (auto &a : implicitGenerics)
       is.push_back(a.second->toString(reduced));
-  return fmt::format("function[{}{}{}]",
+  return fmt::format("{}[{}{}{}]", countPartials() ? "partial" : "function",
                      is.size() ? fmt::format("{};", fmt::join(is, ",")) : "",
                      gs.size() ? fmt::format("{};", fmt::join(gs, ",")) : "",
                      as.size() ? fmt::format("{}", fmt::join(as, ",")) : "");
 }
 
-int FuncType::unify(TypePtr typ) {
+int FuncType::unify(TypePtr typ, Unification &us) {
   if (auto t = dynamic_cast<FuncType *>(typ.get())) {
-    if (name != t->name) {
-      if (name != "" && t->name != "")
+    if (name == "" && t->name != "")
+      return t->unify(shared_from_this(), us);
+    if (t->name == "") {
+      if (countPartials() != t->countPartials())
         return -1;
+      int s = 0, i = 0, j = 0;
+      while (i < countPartials()) {
+        while (!partialArgs[i])
+          i++;
+        while (!t->partialArgs[j])
+          j++;
+        if ((i == args.size()) ^ (j == args.size()))
+          return -1;
+        if (i == args.size() && j == args.size())
+          break;
+        int u = args[i].second->unify(t->args[j].second, us);
+        if (u == -1)
+          return -1;
+        s += u;
+      }
+      int u = ret->unify(t->ret, us);
+      if (u == -1)
+        return -1;
+      return s + u;
+    } else {
+      if (name != t->name) {
+        if (name != "" && t->name != "")
+          return -1;
+      }
+      if (partialArgs.size() != t->partialArgs.size())
+        return -1;
+      for (int i = 0; i < partialArgs.size(); i++)
+        if (partialArgs[i] != t->partialArgs[i])
+          return -1;
+      int s1 = unifyList(generics, t->generics, us);
+      if (s1 == -1)
+        return -1;
+      int s2 = unifyList(args, t->args, us);
+      if (s2 == -1)
+        return -1;
+      int s3 = ret->unify(t->ret, us);
+      if (s3 == -1)
+        return -1;
+      int s4 = unifyList(implicitGenerics, t->implicitGenerics, us);
+      if (s4 == -1)
+        return -1;
+      return s1 + s2 + s3 + s4;
     }
-    int s1 = unifyList(generics, t->generics);
-    if (s1 == -1)
-      return -1;
-    int s2 = unifyList(args, t->args);
-    if (s2 == -1)
-      return -1;
-    int s3 = ret->unify(t->ret);
-    if (s3 == -1)
-      return -1;
-    int s4 = unifyList(implicitGenerics, t->implicitGenerics);
-    if (s4 == -1)
-      return -1;
-    return s1 + s2 + s3 + s4;
   } else if (auto t = dynamic_cast<LinkType *>(typ.get())) {
-    return t->unify(shared_from_this());
+    return t->unify(shared_from_this(), us);
   }
   return -1;
 }
@@ -338,7 +389,7 @@ bool FuncType::hasUnbound() const {
 }
 
 bool FuncType::canRealize() const {
-  if (name == "")
+  if (name == "" || countPartials())
     return false;
   for (auto &t : generics)
     if (!t.second->canRealize())

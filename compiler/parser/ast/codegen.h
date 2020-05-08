@@ -23,10 +23,7 @@
 namespace seq {
 namespace ast {
 
-#ifdef HAHA
-
-class CodegenVisitor
-    : public ASTVisitor<seq::Expr *, seq::Stmt *, seq::Pattern *> {
+class CodegenVisitor : public ASTVisitor {
   Context &ctx;
   seq::Expr *resultExpr;
   seq::Stmt *resultStmt;
@@ -36,23 +33,10 @@ class CodegenVisitor
   void defaultVisit(const Stmt *expr) override;
   void defaultVisit(const Pattern *expr) override;
 
-  class CaptureExprVisitor : public WalkExprVisitor {
-    Context &ctx;
-    std::unordered_map<std::string, seq::Var *> captures;
-
-  public:
-    using WalkExprVisitor::visit;
-    CaptureExprVisitor(Context &ctx);
-    void visit(const IdExpr *) override;
-  };
-
-  seq::For *parseComprehension(const Expr *expr,
-                               const std::vector<GeneratorExpr::Body> &loops,
-                               int &added);
-
 public:
   CodegenVisitor(Context &ctx);
 
+#if 0
   seq::Expr *transform(const Expr *expr) override;
   seq::Stmt *transform(const Stmt *stmt) override;
   seq::Pattern *transform(const Pattern *pat) override;
@@ -130,8 +114,18 @@ public:
   void visit(const WildcardPattern *) override;
   void visit(const GuardedPattern *) override;
   void visit(const BoundPattern *) override;
+
+private:
+  template <typename Tn, typename... Ts> auto N(Ts &&... args) {
+    return new Tn(std::forward<Ts>(args)...);
+  }
+  template <typename T, typename... Ts>
+  auto transform(const std::unique_ptr<T> &t, Ts &&... args)
+      -> decltype(transform(t.get())) {
+    return transform(t.get(), std::forward<Ts>(args)...);
+  }
+#endif
 };
 
-#endif
 } // namespace ast
 } // namespace seq

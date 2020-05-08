@@ -450,7 +450,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   for (auto &m : c->methods) {
     FormatVisitor v(ctx, renderHTML);
     v.indent = this->indent;
-    auto s = ctx->getRealizations()->getAST(m.second->name);
+    auto s = ctx->getRealizations()->getAST(m.second.front()->name);
     if (s)
       s->accept(v);
     result += v.result;

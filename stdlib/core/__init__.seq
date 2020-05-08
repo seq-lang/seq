@@ -1,28 +1,181 @@
+type str(len: int, ptr: ptr[byte]):
+    def __str__(self: str) -> str:
+        return self
+
+extend bool:
+    def __init__(self: bool) -> bool: pass
+    def __str__(self: bool) -> str: pass
+    def __copy__(self: bool) -> bool: pass
+    def __bool__(self: bool) -> bool: pass
+    def __invert__(self: bool) -> bool: pass
+    def __eq__(self: bool, other: bool) -> bool: pass
+    def __ne__(self: bool, other: bool) -> bool: pass
+    def __lt__(self: bool, other: bool) -> bool: pass
+    def __gt__(self: bool, other: bool) -> bool: pass
+    def __le__(self: bool, other: bool) -> bool: pass
+    def __ge__(self: bool, other: bool) -> bool: pass
+    def __and__(self: bool, other: bool) -> bool: pass
+    def __or__(self: bool, other: bool) -> bool: pass
+    def __xor__(self: bool, other: bool) -> bool: pass
+
+extend byte:
+    def __init__(self: byte) -> byte: pass
+    def __init__(self: byte, b: byte) -> byte: pass
+    def __init__(self: byte, i: int) -> byte: pass
+    def __str__(self: byte) -> str: pass
+    def __copy__(self: byte) -> byte: pass
+    def __bool__(self: byte) -> bool: pass
+    def __eq__(self: byte, other: byte) -> bool: pass
+    def __ne__(self: byte, other: byte) -> bool: pass
+    def __lt__(self: byte, other: byte) -> bool: pass
+    def __gt__(self: byte, other: byte) -> bool: pass
+    def __le__(self: byte, other: byte) -> bool: pass
+    def __ge__(self: byte, other: byte) -> bool: pass
+
+extend int:
+    def __init__(self: int) -> int: pass
+    def __init__(self: int, i: int) -> int: pass
+    def __init__(self: int, f: float) -> int: pass
+    def __init__(self: int, b: bool) -> int: pass
+    def __init__(self: int, b: byte) -> int: pass
+    def __str__(self: int) -> str: pass
+    def __copy__(self: int) -> int: pass
+    def __hash__(self: int) -> int: pass
+    def __bool__(self: int) -> bool: pass
+    def __pos__(self: int) -> int: pass
+    def __neg__(self: int) -> int: pass
+    def __invert__(self: int) -> int: pass
+    def __abs__(self: int) -> int: pass
+    def __add__(self: int, other: int) -> int: pass
+    def __sub__(self: int, other: int) -> int: pass
+    def __mul__(self: int, other: int) -> int: pass
+    def __div__(self: int, other: int) -> int: pass
+    def __truediv__(self: int, other: int) -> float: pass
+    def __mod__(self: int, other: int) -> int: pass
+    def __lshift__(self: int, other: int) -> int: pass
+    def __rshift__(self: int, other: int) -> int: pass
+    def __eq__(self: int, other: int) -> bool: pass
+    def __ne__(self: int, other: int) -> bool: pass
+    def __lt__(self: int, other: int) -> bool: pass
+    def __gt__(self: int, other: int) -> bool: pass
+    def __le__(self: int, other: int) -> bool: pass
+    def __ge__(self: int, other: int) -> bool: pass
+    def __and__(self: int, other: int) -> int: pass
+    def __or__(self: int, other: int) -> int: pass
+    def __xor__(self: int, other: int) -> int: pass
+    def __add__(self: int, other: float) -> float: pass
+    def __sub__(self: int, other: float) -> float: pass
+    def __mul__(self: int, other: float) -> float: pass
+    def __div__(self: int, other: float) -> float: pass
+    def __truediv__(self: int, other: float) -> float: pass
+    def __mod__(self: int, other: float) -> float: pass
+    def __eq__(self: int, other: float) -> bool: pass
+    def __ne__(self: int, other: float) -> bool: pass
+    def __lt__(self: int, other: float) -> bool: pass
+    def __gt__(self: int, other: float) -> bool: pass
+    def __le__(self: int, other: float) -> bool: pass
+    def __ge__(self: int, other: float) -> bool: pass
+
+extend float:
+    def __init__(self: float) -> float: pass
+    def __init__(self: float, f: float) -> float: pass
+    def __init__(self: float, i: int) -> float: pass
+    def __str__(self: float) -> str: pass
+    def __copy__(self: float) -> float: pass
+    def __bool__(self: float) -> bool: pass
+    def __pos__(self: float) -> float: pass
+    def __neg__(self: float) -> float: pass
+    def __abs__(self: float) -> float: pass
+    def __add__(self: float, other: float) -> float: pass
+    def __sub__(self: float, other: float) -> float: pass
+    def __mul__(self: float, other: float) -> float: pass
+    def __div__(self: float, other: float) -> float: pass
+    def __truediv__(self: float, other: float) -> float: pass
+    def __mod__(self: float, other: float) -> float: pass
+    def __pow__(self: float, other: float) -> float: pass
+    def __eq__(self: float, other: float) -> bool: pass
+    def __ne__(self: float, other: float) -> bool: pass
+    def __lt__(self: float, other: float) -> bool: pass
+    def __gt__(self: float, other: float) -> bool: pass
+    def __le__(self: float, other: float) -> bool: pass
+    def __ge__(self: float, other: float) -> bool: pass
+    def __add__(self: float, other: int) -> float: pass
+    def __sub__(self: float, other: int) -> float: pass
+    def __mul__(self: float, other: int) -> float: pass
+    def __div__(self: float, other: int) -> float: pass
+    def __truediv__(self: float, other: int) -> float: pass
+    def __mod__(self: float, other: int) -> float: pass
+    def __pow__(self: float, other: int) -> float: pass
+    def __eq__(self: float, other: int) -> bool: pass
+    def __ne__(self: float, other: int) -> bool: pass
+    def __lt__(self: float, other: int) -> bool: pass
+    def __gt__(self: float, other: int) -> bool: pass
+    def __le__(self: float, other: int) -> bool: pass
+    def __ge__(self: float, other: int) -> bool: pass
+
+extend optional[T]:  # type
+    def __bool__(self: optional[T]) -> bool: pass
+    def __invert__(self: optional[T]) -> T: pass
+
+extend generator[T]:  # class
+    def __iter__(self: generator[T]) -> generator[T]: pass
+    def __raw__(self: generator[T]) -> ptr[byte]: pass
+    def __done__(self: generator[T]) -> bool: pass
+    def __promise__(self: generator[T]) -> ptr[T]: pass
+    def __resume__(self: generator[T]) -> void: pass
+    def __str__(self: generator[T]) -> str: pass
+
+type array[T](len: int, ptr: ptr[T]):
+    def __elemsize__() -> int: pass
+    def __atomic__() -> bool: pass
+    def __init__(self: array[T], len: int) -> array[T]: pass
+    def __init__(self: array[T], data: ptr[T], len: int) -> array[T]: pass
+    def __copy__(self: array[T]) -> array[T]: pass
+    def __len__(self: array[T]) -> int: pass
+    def __bool__(self: array[T]) -> bool: pass
+    def __getitem__(self: array[T], index: int) -> T: pass
+    def __slice__(self: array[T], l: int, r: int) -> array[T]: pass
+    def __slice_left__(self: array[T], r: int) -> array[T]: pass
+    def __slice_right__(self: array[T], l: int) -> array[T]: pass
+    def __setitem__(self: array[T], index: int, what: T) -> void: pass
+
+extend str:
+    def memcpy(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
+    def memmove(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
+    def memset(dest: ptr[byte], b: byte, len: int) -> void: pass
+
+# type Kmer[N]
+# function: __init__(ptr[byte]), __str__
+
+type seq(len: int, ptr: ptr[byte])
+    # def __contains__[N](self: seq, what: Kmer[N]) -> void: pass
+
+
 from core.aliases import *
-import core.c_stubs as _C
-import core.gc as _gc
+# import core.c_stubs as _C
+# import core.gc as _gc
 
-from core.slice import *
-from core.err import *
-from core.optional import unwrap as _unwrap
-from core.range import range
-from core.box import Box
+# from core.slice import *
+# from core.err import *
+# from core.optional import unwrap as _unwrap
+# from core.range import range
+# from core.box import Box
 
-from core.builtin import *
+# from core.builtin import *
 
-from core.collections.list import list
-from core.collections.set import set
-from core.collections.dict import dict
+# from core.collections.list import list
+# from core.collections.set import set
+# from core.collections.dict import dict
 
-from core.str import *
-from core.int import *
-from core.float import *
+# from core.str import *
+# from core.int import *
+# from core.float import *
 
-from core.sort import sorted
+# from core.sort import sorted
 
-from core.file import File, gzFile, open, gzopen
-from pickle import pickle, unpickle
+# from core.file import File, gzFile, open, gzopen
+# from pickle import pickle, unpickle
 
-from core.dlopen import dlsym as _dlsym
-from core.python import init as _py_init, imp as _py_import, exec as _py_exec, pyobj
-from bio import *
+# from core.dlopen import dlsym as _dlsym
+# from core.python import init as _py_init, imp as _py_import, exec as _py_exec, pyobj
+# from bio import *
