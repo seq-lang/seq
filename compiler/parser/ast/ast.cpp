@@ -14,24 +14,6 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-template <typename T> T CL(const T &v) { return v.clone(); }
-template <typename T> unique_ptr<T> CL(const unique_ptr<T> &v) {
-  return v ? v->clone() : nullptr;
-}
-template <typename T> vector<T> CL(const vector<T> &v) {
-  vector<T> r;
-  for (auto &i : v)
-    r.push_back(CL(i));
-  return r;
-}
-template <typename T>
-std::string combine(const std::vector<T> &items, std::string delim = " ") {
-  std::string s = "";
-  for (int i = 0; i < items.size(); i++)
-    s += (i ? delim : "") + items[i]->toString();
-  return s;
-}
-
 Expr::Expr() : _type(nullptr), _isType(false) {}
 Expr::Expr(const Expr &e)
     : seq::SrcObject(e), _type(e._type), _isType(e._isType) {}
@@ -488,21 +470,24 @@ ThrowStmt::ThrowStmt(ExprPtr e) : expr(move(e)) {}
 ThrowStmt::ThrowStmt(const ThrowStmt &s) : expr(CL(s.expr)) {}
 string ThrowStmt::toString() const { return format("(#throw {})", *expr); }
 
-FunctionStmt::FunctionStmt(const string &n, ExprPtr r, const vector<string> &g,
+FunctionStmt::FunctionStmt(const string &n, ExprPtr r, vector<Param> &&g,
                            vector<Param> &&a, std::shared_ptr<Stmt> s,
                            const vector<string> &at)
-    : name(n), ret(move(r)), generics(g), args(move(a)), suite(s),
+    : name(n), ret(move(r)), generics(move(g)), args(move(a)), suite(s),
       attributes(at) {}
 FunctionStmt::FunctionStmt(const FunctionStmt &s)
-    : name(s.name), ret(CL(s.ret)), generics(s.generics), args(CL(s.args)),
+    : name(s.name), ret(CL(s.ret)), generics(CL(s.generics)), args(CL(s.args)),
       suite(s.suite), attributes(s.attributes) {}
 string FunctionStmt::toString() const {
+  string gs;
+  for (auto &a : generics)
+    gs += " " + a.toString();
   string as;
   for (auto &a : args)
     as += " " + a.toString();
   return format(
       "(#fun {}{}{}{}{} {})", name, ret ? " :ret " + ret->toString() : "",
-      generics.size() ? format(" :gen {}", fmt::join(generics, " ")) : "",
+      generics.size() ? format(" :gen{}", gs) : "",
       args.size() ? " :args" + as : "",
       attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " "))
                         : "",
@@ -523,20 +508,27 @@ string PyDefStmt::toString() const {
                 args.size() ? " :args" + as : "", escape(code));
 }
 
-ClassStmt::ClassStmt(bool i, const string &n, const vector<string> &g,
-                     vector<Param> &&a, StmtPtr s)
-    : isRecord(i), name(n), generics(g), args(move(a)), suite(move(s)) {}
+ClassStmt::ClassStmt(bool i, const string &n, vector<Param> &&g,
+                     vector<Param> &&a, StmtPtr s, const vector<string> &at)
+    : isRecord(i), name(n), generics(move(g)), args(move(a)), suite(move(s)),
+      attributes(at) {}
 ClassStmt::ClassStmt(const ClassStmt &s)
-    : isRecord(s.isRecord), name(s.name), generics(s.generics),
+    : isRecord(s.isRecord), name(s.name), generics(CL(s.generics)),
       args(CL(s.args)), suite(CL(s.suite)) {}
 string ClassStmt::toString() const {
+  string gs;
+  for (auto &a : generics)
+    gs += " " + a.toString();
   string as;
   for (auto &a : args)
     as += " " + a.toString();
-  return format("(#{} {}{}{} {})", (isRecord ? "type" : "class"), name,
-                generics.size() ? format(" :gen {}", fmt::join(generics, " "))
-                                : "",
-                args.size() ? " :args" + as : "", *suite);
+  return format("(#{} {}{}{} {} {})", (isRecord ? "type" : "class"), name,
+                generics.size() ? format(" :gen{}", gs) : "",
+                args.size() ? " :args" + as : "",
+                attributes.size()
+                    ? format(" :attrs ({})", fmt::join(attributes, " "))
+                    : "",
+                *suite);
 }
 
 DeclareStmt::DeclareStmt(Param p) : param(move(p)) {}

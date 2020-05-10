@@ -46,6 +46,8 @@ using std::vector;
 namespace seq {
 namespace ast {
 
+using namespace types;
+
 StmtPtr TransformVisitor::transform(const Stmt *stmt) {
   if (!stmt)
     return nullptr;
@@ -118,13 +120,14 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     TypePtr typ = typExpr ? typExpr->getType() : nullptr;
     auto s = Nx<AssignStmt>(lhs, Nx<IdExpr>(l, l->value), transform(rhs, true),
                             transform(type, true), false, force);
-    if (typ) forceUnify(typ, s->rhs->getType());
+    if (typ)
+      forceUnify(typ, s->rhs->getType());
 
     auto t = ctx->find(l->value);
     if (t && !t->isImport()) {
       s->lhs->setType(forceUnify(s->rhs.get(), t->getType()));
     } else {
-      ctx->add(l->value, s->rhs->getType(), !s->rhs->isType(), s->rhs->isType());
+      ctx->add(l->value, s->rhs->getType(), !s->rhs->isType());
       s->lhs->setType(s->rhs->getType());
     }
     return s;
@@ -270,7 +273,7 @@ void TransformVisitor::visit(const ForStmt *stmt) {
     auto iterType = getClass(iter->getType());
     if (!iterType || iterType->name != "generator")
       error(iter, "not a generator");
-    forceUnify(varType, iterType->generics[0].second);
+    forceUnify(varType, iterType->generics.explicits[0].type);
   }
 
   if (auto i = CAST(stmt->var, IdExpr)) {
@@ -307,77 +310,92 @@ void TransformVisitor::visit(const MatchStmt *stmt) {
   //  transform(stmt->cases));
 }
 
-void TransformVisitor::visit(const ExtendStmt *stmt) {
-  string name;
-  vector<string> generics;
-  vector<pair<int, TypePtr>> genericTypes;
-  if (auto e = CAST(stmt->what, IndexExpr)) {
-    if (auto i = CAST(e->expr, IdExpr)) {
-      name = i->value;
-      if (auto t = CAST(e->index, TupleExpr))
-        for (auto &ti : t->items)
-          if (auto s = CAST(ti, IdExpr))
-            generics.push_back(s->value);
-          else
-            error(ti, "not a valid generic");
-      else if (auto i = CAST(e->index, IdExpr))
-        generics.push_back(i->value);
-      else
-        error(e->index, "not a valid generic");
-    } else
-      error(e, "not a valid type expression");
-  } else if (auto i = CAST(stmt->what, IdExpr)) {
-    name = i->value;
-  } else {
-    error(stmt->what, "not a valid type expression");
+Generics TransformVisitor::parseGenerics(const vector<Param> &generics) {
+  Generics genericTypes;
+  for (auto &g : generics) {
+    if (g.type) {
+      if (g.type->toString() != "(#id int)")
+        error(this, "currently only integer static generics are allowed");
+      genericTypes.explicits.push_back({0, nullptr, 0});
+      ctx->add(g.name, 0);
+    } else {
+      genericTypes.explicits.push_back(
+          {ctx->getRealizations()->getUnboundCount(),
+           make_shared<LinkType>(LinkType::Generic,
+                                 ctx->getRealizations()->getUnboundCount())});
+      auto tp = make_shared<LinkType>(LinkType::Unbound,
+                                      ctx->getRealizations()->getUnboundCount(),
+                                      ctx->level);
+      ctx->add(g.name, tp, false);
+      ctx->getRealizations()->getUnboundCount()++;
+    }
   }
-  auto val = ctx->find(name);
-  if (!val || val->isImport())
-    error(stmt->what, "identifier '{}' not found", name);
-  if (!val->isType())
-    error(stmt->what, "not a type");
-  auto type = val->getType();
+  return genericTypes;
+}
+
+void TransformVisitor::addMethod(Stmt *s, const string &canonicalName,
+                                 const vector<Generics::Generic> &implicits) {
+  if (auto f = dynamic_cast<FunctionStmt *>(s)) {
+    transform(s);
+    auto val = ctx->find(format("{}{}", ctx->getBase(), f->name));
+    auto fval = getFunction(val->getType());
+    assert(fval);
+    fval->generics.implicits = implicits;
+    ctx->getRealizations()->classes[canonicalName].methods[f->name].push_front(
+        fval);
+  } else {
+    error(s, "types can only contain functions");
+  }
+}
+
+void TransformVisitor::visit(const ExtendStmt *stmt) {
+  TypePtr type;
+  vector<string> generics;
+  Generics genericTypes;
+  if (auto e = CAST(stmt->what, IndexExpr)) {
+    type = transformType(e->expr)->getType();
+    if (auto t = CAST(e->index, TupleExpr))
+      for (auto &ti : t->items) {
+        if (auto s = CAST(ti, IdExpr))
+          generics.push_back(s->value);
+        else
+          error(ti, "not a valid generic specifier");
+      }
+    else if (auto i = CAST(e->index, IdExpr))
+      generics.push_back(i->value);
+    else
+      error(e->index, "not a valid generic specifier");
+  } else {
+    type = transformType(stmt->what)->getType();
+  }
   auto canonicalName =
       ctx->getRealizations()->getCanonicalName(type->getSrcInfo());
-  if (auto c = getClass(type)) {
-    if (c->generics.size() != generics.size())
-      error(stmt, "generics do not match");
-    for (int i = 0; i < generics.size(); i++) {
-      genericTypes.push_back(make_pair(
-          c->generics[i].first,
-          make_shared<LinkType>(LinkType::Generic, c->generics[i].first)));
-      ctx->add(generics[i],
-               make_shared<LinkType>(LinkType::Unbound, c->generics[i].first,
-                                     ctx->level),
-               false, true);
-    }
-  } else
-    error(stmt, "cannot extend this");
-  ctx->increaseLevel();
-  ctx->bases.push_back(name);
-  auto addMethod = [&](auto s) {
-    if (auto f = dynamic_cast<FunctionStmt *>(s)) {
-      transform(s);
-      auto val = ctx->find(format("{}{}", ctx->getBase(), f->name));
-      auto fval = getFunction(val->getType());
-      assert(fval);
-      fval->setImplicits(genericTypes);
-      ctx->getRealizations()
-          ->classes[canonicalName]
-          .methods[f->name]
-          .push_front(fval);
+  auto c = getClass(type);
+  assert(c);
+  if (c->generics.explicits.size() != generics.size())
+    error(stmt, "generics do not match");
+  for (int i = 0; i < generics.size(); i++) {
+    if (!c->generics.explicits[i].type) {
+      ctx->add(generics[i], 0);
     } else {
-      error(s, "types can only contain functions");
+      auto tp = make_shared<LinkType>(LinkType::Unbound,
+                                      c->generics.explicits[i].id, ctx->level);
+      ctx->add(generics[i], tp, false);
     }
-  };
+  }
+  ctx->increaseLevel();
+  ctx->bases.push_back(c->name);
   for (auto s : stmt->suite->getStatements())
-    addMethod(s);
+    addMethod(s, canonicalName, c->generics.explicits);
   ctx->decreaseLevel();
-  for (auto &g : generics) {
-    auto t = dynamic_pointer_cast<LinkType>(ctx->find(g)->getType());
-    assert(t && getUnbound(t));
-    t->kind = LinkType::Generic;
-    ctx->remove(g);
+  for (int i = 0; i < generics.size(); i++) {
+    if (c->generics.explicits[i].type) {
+      auto t =
+          dynamic_pointer_cast<LinkType>(ctx->find(generics[i])->getType());
+      assert(t && getUnbound(t));
+      t->kind = LinkType::Generic;
+    }
+    ctx->remove(generics[i]);
   }
   ctx->bases.pop_back();
   resultStmt = nullptr;
@@ -448,7 +466,7 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
            stmt->args[i].type->clone()});
     resultStmt = transform(N<FunctionStmt>(
         stmt->name.second != "" ? stmt->name.second : stmt->name.first,
-        stmt->ret->clone(), vector<string>(), move(params),
+        stmt->ret->clone(), vector<Param>(), move(params),
         N<SuiteStmt>(move(stmts)), vector<string>()));
   } else if (stmt->lang == "c") {
     vector<Param> args;
@@ -486,7 +504,7 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
     params.push_back({"x", nullptr, nullptr});
     resultStmt = transform(N<FunctionStmt>(
         stmt->name.second != "" ? stmt->name.second : stmt->name.first,
-        stmt->ret->clone(), vector<string>(), move(params),
+        stmt->ret->clone(), vector<Param>(), move(params),
         N<SuiteStmt>(move(stmts)), vector<string>{"pyhandle"}));
   } else {
     error(stmt, "language {} not yet supported", stmt->lang);
@@ -510,7 +528,7 @@ void TransformVisitor::visit(const GlobalStmt *stmt) {
   if (ctx->getBase() == "")
     error(stmt, "global statements are only applicable within function blocks");
   auto val = ctx->find(stmt->var);
-  if (!val || val->isImport())
+  if (!val || val->isImport() || val->isType())
     error(stmt, "identifier '{}' not found", stmt->var);
   if (val->isVar() && val->getBase() != "")
     error(stmt, "can only mark toplevel variables as global");
@@ -528,25 +546,16 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       format("{}{}", ctx->getBase(), stmt->name));
   if (ctx->getRealizations()->funcASTs.find(canonicalName) ==
       ctx->getRealizations()->funcASTs.end()) {
-    vector<pair<int, TypePtr>> genericTypes;
-    vector<pair<string, TypePtr>> argTypes;
+    vector<Arg> argTypes;
     ctx->addBlock();
-    for (auto &g : stmt->generics) {
-      auto t = make_shared<LinkType>(LinkType::Unbound,
-                                     ctx->getRealizations()->getUnboundCount(),
-                                     ctx->level);
-      ctx->add(g, t, false, true);
-      genericTypes.push_back(
-          make_pair(ctx->getRealizations()->getUnboundCount(), t));
-      ctx->getRealizations()->getUnboundCount()++;
-    }
+    Generics genericTypes = parseGenerics(stmt->generics);
     ctx->increaseLevel();
     vector<Param> args;
     for (auto &a : stmt->args) {
       auto t = transformType(a.type);
-      argTypes.push_back(
-          make_pair(a.name, a.type ? t->getType()
-                                   : ctx->addUnbound(getSrcInfo(), false)));
+      argTypes.push_back({a.name, a.type
+                                      ? t->getType()
+                                      : ctx->addUnbound(getSrcInfo(), false)});
       args.push_back({a.name, move(t), transform(a.deflt)});
     }
     auto ret = stmt->ret ? transformType(stmt->ret)->getType()
@@ -558,13 +567,12 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
         make_shared<FuncType>(canonicalName, genericTypes, argTypes, ret);
     auto t = type->generalize(ctx->level);
     DBG("* [function] {} :- {}", canonicalName, *t);
-    ctx->add(format("{}{}", ctx->getBase(), stmt->name), t, false);
-
+    ctx->add(format("{}{}", ctx->getBase(), stmt->name), t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
-        t, N<FunctionStmt>(canonicalName, nullptr, stmt->generics, move(args),
-                           stmt->suite, stmt->attributes));
+        t, N<FunctionStmt>(canonicalName, nullptr, CL(stmt->generics),
+                           move(args), stmt->suite, stmt->attributes));
   }
-  resultStmt = N<FunctionStmt>(canonicalName, nullptr, vector<string>(),
+  resultStmt = N<FunctionStmt>(canonicalName, nullptr, vector<Param>(),
                                vector<Param>(), nullptr, stmt->attributes);
 }
 
@@ -572,47 +580,18 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   auto canonicalName = ctx->getRealizations()->generateCanonicalName(
       stmt->getSrcInfo(), ctx->getModule(),
       format("{}{}", ctx->getBase(), stmt->name));
-  resultStmt = N<ClassStmt>(stmt->isRecord, canonicalName, vector<string>(),
-                            vector<Param>(), N<SuiteStmt>());
+  resultStmt = N<ClassStmt>(stmt->isRecord, canonicalName, vector<Param>(),
+                            vector<Param>(), N<SuiteStmt>(), stmt->attributes);
   if (ctx->getRealizations()->classASTs.find(canonicalName) !=
       ctx->getRealizations()->classASTs.end())
     return;
 
-  vector<pair<int, TypePtr>> genericTypes;
-  vector<string> generics;
-  for (auto &g : stmt->generics) {
-    auto t = make_shared<LinkType>(LinkType::Generic,
-                                   ctx->getRealizations()->getUnboundCount());
-    genericTypes.push_back(
-        make_pair(ctx->getRealizations()->getUnboundCount(), t));
-    auto tp = make_shared<LinkType>(LinkType::Unbound,
-                                    ctx->getRealizations()->getUnboundCount(),
-                                    ctx->level);
-    ctx->add(g, tp, false, true);
-    ctx->getRealizations()->getUnboundCount()++;
-  }
-  auto addMethod = [&](auto s) {
-    if (auto f = dynamic_cast<FunctionStmt *>(s)) {
-      transform(s);
-      auto val = ctx->find(format("{}{}", ctx->getBase(), f->name));
-      auto fval = getFunction(val->getType());
-      assert(fval);
-      fval->setImplicits(genericTypes);
-      ctx->getRealizations()
-          ->classes[canonicalName]
-          .methods[f->name]
-          .push_front(fval);
-      DBG("* [class] {} :: {} :- {}", canonicalName, f->name, *fval);
-    } else {
-      error(s, "types can only contain functions");
-    }
-  };
+  auto genericTypes = parseGenerics(stmt->generics);
   // Classes are handled differently as they can contain recursive
   // references
   if (!stmt->isRecord) {
-    auto ct = make_shared<ClassType>(canonicalName, false, genericTypes,
-                                     vector<pair<string, TypePtr>>());
-    ctx->add(format("{}{}", ctx->getBase(), stmt->name), ct, false, true);
+    auto ct = make_shared<ClassType>(canonicalName, false, genericTypes);
+    ctx->add(format("{}{}", ctx->getBase(), stmt->name), ct, false);
     ctx->getRealizations()->classASTs[canonicalName] =
         make_pair(ct, nullptr); // TODO: fix
     DBG("* [class] {} :- {}", canonicalName, *ct);
@@ -630,12 +609,15 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     }
     ctx->bases.push_back(stmt->name);
 
-    if (!ctx->hasFlag("internal")) {
-      auto codeType =
-          format("{}{}", stmt->name,
-                 stmt->generics.size()
-                     ? format("[{}]", fmt::join(stmt->generics, ", "))
-                     : "");
+    if (std::find(stmt->attributes.begin(), stmt->attributes.end(),
+                  "internal") == stmt->attributes.end()) {
+      vector<string> genericNames;
+      for (auto &g : stmt->generics)
+        genericNames.push_back(g.name);
+      auto codeType = format("{}{}", stmt->name,
+                             genericNames.size()
+                                 ? format("[{}]", fmt::join(genericNames, ", "))
+                                 : "");
       auto code =
           format("@internal\ndef __new__() -> {0}: pass\n"
                  "@internal\ndef __bool__(self: {0}) -> bool: pass\n"
@@ -651,14 +633,14 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       auto methodNew =
           parse_code(ctx->filename, code, stmt->getSrcInfo().line, 100000);
       for (auto s : methodNew->getStatements())
-        addMethod(s);
+        addMethod(s, canonicalName, genericTypes.explicits);
     }
     for (auto s : stmt->suite->getStatements())
-      addMethod(s);
+      addMethod(s, canonicalName, genericTypes.explicits);
     ctx->decreaseLevel();
     ctx->bases.pop_back();
   } else {
-    vector<pair<string, TypePtr>> argTypes;
+    vector<Arg> argTypes;
     vector<string> strArgs;
     string mainType;
     for (auto &a : stmt->args) {
@@ -676,16 +658,19 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       mainType = "void";
     auto ct =
         make_shared<ClassType>(canonicalName, true, genericTypes, argTypes);
-    ctx->add(format("{}{}", ctx->getBase(), stmt->name), ct, false, true);
+    ctx->add(format("{}{}", ctx->getBase(), stmt->name), ct, false);
     ctx->getRealizations()->classASTs[canonicalName] =
         make_pair(ct, nullptr); // TODO: fix
     ctx->bases.push_back(stmt->name);
-    if (!ctx->hasFlag("internal")) {
-      auto codeType =
-          format("{}{}", stmt->name,
-                 stmt->generics.size()
-                     ? format("[{}]", fmt::join(stmt->generics, ", "))
-                     : "");
+    if (std::find(stmt->attributes.begin(), stmt->attributes.end(),
+                  "internal") == stmt->attributes.end()) {
+      vector<string> genericNames;
+      for (auto &g : stmt->generics)
+        genericNames.push_back(g.name);
+      auto codeType = format("{}{}", stmt->name,
+                             genericNames.size()
+                                 ? format("[{}]", fmt::join(genericNames, ", "))
+                                 : "");
       auto code = format(
           "@internal\ndef __init__({1}) -> {0}: pass\n"
           "@internal\ndef __str__(self: {0}) -> str: pass\n"
@@ -709,19 +694,22 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       auto methodNew =
           parse_code(ctx->filename, code, stmt->getSrcInfo().line, 100000);
       for (auto s : methodNew->getStatements())
-        addMethod(s);
+        addMethod(s, canonicalName, genericTypes.explicits);
     }
     for (auto s : stmt->suite->getStatements())
-      addMethod(s);
+      addMethod(s, canonicalName, genericTypes.explicits);
     ctx->bases.pop_back();
   }
 
   for (auto &g : stmt->generics) {
     // Generalize in place
-    auto t = dynamic_pointer_cast<LinkType>(ctx->find(g)->getType());
-    assert(t && t->kind == LinkType::Unbound);
-    t->kind = LinkType::Generic;
-    ctx->remove(g);
+    auto val = ctx->find(g.name);
+    if (val->isType()) {
+      auto t = dynamic_pointer_cast<LinkType>(val->getType());
+      assert(t && t->kind == LinkType::Unbound);
+      t->kind = LinkType::Generic;
+    }
+    ctx->remove(g.name);
   }
 }
 
@@ -850,9 +838,9 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
   auto &ast = ctx->getRealizations()->funcASTs[t->name];
   ctx->bases.push_back(ast.second->name);
   // Ensure that all inputs are realized
-  for (auto &t : t->args) {
-    assert(!t.second->hasUnbound());
-    ctx->add(t.first, make_shared<LinkType>(t.second));
+  for (auto &a : t->args) {
+    assert(a.type && !a.type->hasUnbound());
+    ctx->add(a.name, make_shared<LinkType>(a.type));
   }
   auto old = ctx->returnType;
   auto oldSeen = ctx->hasSetReturnType;
@@ -880,7 +868,7 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
   auto ret =
       ctx->getRealizations()->funcRealizations[t->name][t->toString(true)] = {
           t,
-          Nx<FunctionStmt>(ast.second.get(), t->name, nullptr, vector<string>(),
+          Nx<FunctionStmt>(ast.second.get(), t->name, nullptr, vector<Param>(),
                            move(args), move(realized), ast.second->attributes),
           nullptr};
   ctx->returnType = old;
@@ -900,39 +888,43 @@ RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
       return it2->second;
   }
 
-  types::Type *handle = nullptr;
-  vector<types::Type *> types;
-  for (auto &m : t->generics)
-    types.push_back(realize(getClass(m.second)).handle);
+  seq::types::Type *handle = nullptr;
+  vector<seq::types::Type *> types;
+  vector<int> statics;
+  for (auto &m : t->generics.explicits)
+    if (m.type)
+      types.push_back(realize(getClass(m.type)).handle);
+    else
+      statics.push_back(m.value);
   // TODO: Int, KMer, UInt, Function
   // seq::types::FuncType::get(
   // vector<seq::types::Type *>(ty.begin() + 1, ty.end()), ty[0])
   if (t->name == "array") {
-    assert(types.size() == 1);
-    handle = types::ArrayType::get(types[0]);
+    assert(types.size() == 1 && statics.size() == 0);
+    handle = seq::types::ArrayType::get(types[0]);
   } else if (t->name == "ptr") {
-    assert(types.size() == 1);
-    handle = types::PtrType::get(types[0]);
+    assert(types.size() == 1 && statics.size() == 0);
+    handle = seq::types::PtrType::get(types[0]);
   } else if (t->name == "generator") {
-    assert(types.size() == 1);
-    handle = types::GenType::get(types[0]);
+    assert(types.size() == 1 && statics.size() == 0);
+    handle = seq::types::GenType::get(types[0]);
   } else if (t->name == "optional") {
-    assert(types.size() == 1);
-    handle = types::OptionalType::get(types[0]);
+    assert(types.size() == 1 && statics.size() == 0);
+    handle = seq::types::OptionalType::get(types[0]);
   } else if (t->isRecord) {
     vector<string> names;
-    vector<types::Type *> types;
+    vector<seq::types::Type *> types;
     for (auto &m : t->args) {
-      names.push_back(m.first);
-      auto real = realize(getClass(m.second));
+      names.push_back(m.name);
+      auto real = realize(getClass(m.type));
       types.push_back(real.handle);
     }
-    handle =
-        types::RecordType::get(types, names, t->name == "tuple" ? "" : t->name);
+    handle = seq::types::RecordType::get(types, names,
+                                         t->name == "tuple" ? "" : t->name);
   } else {
-    auto cls = types::RefType::get(t->name);
+    auto cls = seq::types::RefType::get(t->name);
     vector<string> names;
-    vector<types::Type *> types;
+    vector<seq::types::Type *> types;
     for (auto &m : ctx->getRealizations()->classes[t->name].members) {
       names.push_back(m.first);
       auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t->generics);
@@ -940,7 +932,7 @@ RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
       auto real = realize(getClass(mt));
       types.push_back(real.handle);
     }
-    cls->setContents(types::RecordType::get(types, names, ""));
+    cls->setContents(seq::types::RecordType::get(types, names, ""));
     cls->setDone();
     handle = cls;
   }
@@ -982,7 +974,8 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, FILE *fo) {
     }
     prevSize = ctx->activeUnbounds.size();
   }
-  if (fo) fmt::print(fo, "{}", FormatVisitor::format(ctx, result, true));
+  if (fo)
+    fmt::print(fo, "{}", FormatVisitor::format(ctx, result, true));
 
   return result;
 }

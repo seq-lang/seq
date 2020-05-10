@@ -406,6 +406,12 @@ void FormatVisitor::visit(const FunctionStmt *stmt) {
           fmt::format("{}{}{}", a.name,
                       a.type ? fmt::format(": {}", transform(a.type)) : "",
                       a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
+    vector<string> generics;
+    for (auto &a : fstmt->generics)
+      generics.push_back(
+          fmt::format("{}{}{}", a.name,
+                      a.type ? fmt::format(": {}", transform(a.type)) : "",
+                      a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
     FormatVisitor v(ctx, renderHTML);
     v.indent = this->indent + 1;
     if (fstmt->suite)
@@ -416,8 +422,8 @@ void FormatVisitor::visit(const FunctionStmt *stmt) {
                        nodeEnd, exprEnd);
     result += fmt::format(
         "{}{}{} {}{}({}){}:{}{}{}", attrs, pad(), keyword("def"), name,
-        !fstmt->generics.empty()
-            ? fmt::format("[{}]", fmt::join(fstmt->generics, ", "))
+        generics.size()
+            ? fmt::format("[{}]", fmt::join(generics, ", "))
             : "",
         fmt::join(args, ", "),
         fstmt->ret ? fmt::format(" -> {}", transform(fstmt->ret)) : "",
@@ -435,7 +441,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
     if (real.type->isRecord) {
       key = "type";
       for (auto &a : real.type->args)
-        args.push_back(fmt::format("{}: {}", a.first, *a.second));
+        args.push_back(fmt::format("{}: {}", a.name, *a.type));
     } else {
       key = "class";
       for (auto &a : c->members) {

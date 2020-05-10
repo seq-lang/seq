@@ -21,6 +21,8 @@
 namespace seq {
 namespace ast {
 
+using namespace types;
+
 class TypeContext;
 
 struct RealizationContext {
@@ -138,30 +140,70 @@ public:
 
 /**************************************************************************************/
 
-class TContextItem {
+class TItem {
 protected:
-  TypePtr type;
   std::string base;
-  bool var, typeVar, import;
   bool global;
   std::unordered_set<std::string> attributes;
 
 public:
-  TContextItem(TypePtr t, const std::string &base, bool isVar = true,
-               bool isType = false, bool isImport = false, bool global = false);
+  TItem(const std::string &base, bool global = false);
+  virtual ~TItem() {}
 
-  bool isType() const;
-  bool isVar() const;
-  bool isImport() const;
+  virtual bool isType() const { return false; }
+  virtual bool isVar() const { return false; }
+  virtual bool isImport() const { return false; }
+  virtual bool isStatic() const { return false; }
+  virtual TypePtr getType() const { return nullptr; }
+
+  std::string getBase() const;
   bool isGlobal() const;
   void setGlobal();
-  TypePtr getType() const;
-  std::string getBase() const;
   bool hasAttr(const std::string &s) const;
 };
 
+class TImportItem : public TItem {
+  std::string name;
+
+public:
+  TImportItem(const std::string &name, const std::string &base,
+              bool global = false)
+      : TItem(base, global), name(name) {}
+  bool isImport() const override { return true; }
+};
+
+class TStaticItem : public TItem {
+  int value;
+
+public:
+  TStaticItem(int value, const std::string &base, bool global = false)
+      : TItem(base, global), value(value) {}
+  bool isStatic() const override { return true; }
+  int getValue() const { return value; }
+};
+
+class TVarItem : public TItem {
+  TypePtr type;
+
+public:
+  TVarItem(TypePtr type, const std::string &base, bool global = false)
+      : TItem(base, global), type(type) {}
+  bool isVar() const override { return true; }
+  TypePtr getType() const override { return type; }
+};
+
+class TTypeItem : public TItem {
+  TypePtr type;
+
+public:
+  TTypeItem(TypePtr type, const std::string &base, bool global = false)
+      : TItem(base, global), type(type) {}
+  bool isType() const override { return true; }
+  TypePtr getType() const override { return type; }
+};
+
 /// Current identifier table
-class TypeContext : public VTable<TContextItem>,
+class TypeContext : public VTable<TItem>,
                     public std::enable_shared_from_this<TypeContext> {
   std::shared_ptr<RealizationContext> realizations;
   std::shared_ptr<ImportContext> imports;
@@ -193,14 +235,16 @@ public:
               std::shared_ptr<ImportContext> imports);
   virtual ~TypeContext() {}
 
-  std::shared_ptr<TContextItem> find(const std::string &name,
-                                     bool checkStdlib = true) const;
+  std::shared_ptr<TItem> find(const std::string &name,
+                              bool checkStdlib = true) const;
   TypePtr findInternal(const std::string &name) const;
 
-  using VTable<TContextItem>::add;
-  void add(const std::string &name, TypePtr t, bool isVar = true,
-           bool isType = false, bool global = false);
-  void add(const std::string &name, const std::string &import);
+  using VTable<TItem>::add;
+  void add(const std::string &name, const std::string &import,
+           bool global = false);
+  void add(const std::string &name, TypePtr type, bool isVar = true,
+           bool global = false);
+  void add(const std::string &name, int value, bool global = false);
 
 public:
   std::string getBase() const;
@@ -220,7 +264,7 @@ public:
   /// the generic T gets mapped to int.
   TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type);
   TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type,
-                      const std::vector<std::pair<int, TypePtr>> &generics);
+                      const Generics &generics);
   TypePtr instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
                              const std::vector<TypePtr> &generics);
   ImportContext::Import importFile(const std::string &file);

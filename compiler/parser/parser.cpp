@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -27,11 +28,28 @@ void generateDocstr(const std::string &file) {
 seq::SeqModule *parse(const std::string &argv0, const std::string &file,
                       bool isCode, bool isTest) {
   try {
-    auto stmts = isCode ? ast::parse_code(argv0, file) : ast::parse_file(file);
+    // auto stmts = isCode ? ast::parse_code(argv0, file) :
+    // ast::parse_file(file);
 
-    auto ctx = ast::TypeContext::getContext(argv0, file);
+    vector<string> cases;
+    string line, current;
+    std::ifstream fin(file);
+    while (std::getline(fin, line)) {
+      if (line == "--") {
+        cases.push_back(current);
+        current = "";
+      } else
+        current += line + "\n";
+    }
+    if (current.size())
+      cases.push_back(current);
     FILE *fo = fopen("tmp/out.htm", "w");
-    auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), fo);
+    for (int ci = 0; ci < cases.size(); ci++) {
+      auto stmts = ast::parse_code(file, cases[ci]);
+      auto ctx = ast::TypeContext::getContext(argv0, file);
+      auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), fo);
+      fmt::print(fo, "-------------------------------<hr/>\n");
+    }
     fclose(fo);
     exit(0);
 

@@ -16,6 +16,7 @@
 
 namespace seq {
 namespace ast {
+namespace types {
 
 struct FuncType;
 struct ClassType;
@@ -30,6 +31,30 @@ struct Unification {
   std::vector<LinkTypePtr> linked;
   std::vector<std::pair<LinkTypePtr, int>> leveled;
   void undo();
+};
+
+struct Generics {
+  struct Generic {
+    int id;
+    TypePtr type;
+    int value;
+    Generic(int id, TypePtr type, int value = 0)
+        : id(id), type(type), value(value) {}
+  };
+  /// Each generic is represented as a pair (generic_id, current_type).
+  /// It is necessary to maintain unique generic ID as defined in the
+  /// "canonical" class type to be able to properly realize types.
+  /// We also need to keep "implicit generics" that are inherited from
+  /// a generic class (for cases like e.g. class A[T]: def foo(): x = T())
+  std::vector<Generic> explicits, implicits;
+  Generics(const std::vector<Generic> &explicits = std::vector<Generic>(),
+           const std::vector<Generic> &implicits = std::vector<Generic>())
+      : explicits(explicits), implicits(implicits) {}
+};
+
+struct Arg {
+  std::string name;
+  TypePtr type;
 };
 
 struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
@@ -83,9 +108,7 @@ public:
  * Type for each non-type expression is expressed as a LinkType.
  */
 struct LinkType : public Type {
-  enum LinkKind { Unbound, Generic, Link };
-
-  LinkKind kind;
+  enum Kind { Unbound, Generic, Link } kind;
   /// ID of unbound and generic variants. Should not clash!
   int id;
   /// Level of unbound variant
@@ -93,7 +116,7 @@ struct LinkType : public Type {
   /// Type of link variant. nullptr otherwise.
   TypePtr type;
 
-  LinkType(LinkKind kind, int id, int level = 0, TypePtr type = nullptr);
+  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr);
   LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type) {}
   virtual ~LinkType() {}
 
@@ -121,15 +144,12 @@ struct ClassType : public Type {
   std::string name;
   /// Distinguish between records and classes
   bool isRecord;
-  /// Each generic is represented as a pair (generic_id, current_type).
-  /// It is necessary to maintain unique generic ID as defined in the
-  /// "canonical" class type to be able to properly realize types.
-  std::vector<std::pair<int, TypePtr>> generics;
-  std::vector<std::pair<std::string, TypePtr>> args;
+  Generics generics;
+  std::vector<Arg> args;
 
   ClassType(const std::string &name, bool isRecord,
-            const std::vector<std::pair<int, TypePtr>> &generics,
-            const std::vector<std::pair<std::string, TypePtr>> &args);
+            const Generics &generics = Generics(),
+            const std::vector<Arg> &args = std::vector<Arg>());
   virtual ~ClassType() {}
 
 public:
@@ -151,22 +171,15 @@ struct FuncType : public Type {
   /// Empty name indicates "free" function type that can unify to any other
   /// function type
   std::string name;
-  /// Each generic is represented as a pair (generic_id, current_type).
-  /// It is necessary to maintain unique generic ID as defined in the
-  /// "canonical" class type to be able to properly realize types.
-  std::vector<std::pair<int, TypePtr>> generics;
-  /// We also need to keep "implicit generics" that are inherited from
-  /// a generic class (for cases like e.g. class A[T]: def foo(): x = T())
-  std::vector<std::pair<int, TypePtr>> implicitGenerics;
-  std::vector<std::pair<std::string, TypePtr>> args;
+  Generics generics;
+  std::vector<Arg> args;
   std::vector<char> partialArgs;
   /// Return type. Usually deduced after the realization.
   TypePtr ret;
 
-  FuncType(const std::string &name,
-           const std::vector<std::pair<int, TypePtr>> &generics,
-           const std::vector<std::pair<std::string, TypePtr>> &args,
-           TypePtr ret);
+  FuncType(const std::string &name, const Generics &generics = Generics(),
+           const std::vector<Arg> &args = std::vector<Arg>(),
+           TypePtr ret = nullptr);
   virtual ~FuncType() {}
 
 public:
@@ -181,9 +194,6 @@ public:
   std::string toString(bool reduced = false) const override;
 
 public:
-  void setImplicits(const std::vector<std::pair<int, TypePtr>> &i) {
-    implicitGenerics = i;
-  }
   int countPartials() const {
     return std::count(partialArgs.begin(), partialArgs.end(), 1);
   }
@@ -193,7 +203,6 @@ FuncTypePtr getFunction(TypePtr t);
 ClassTypePtr getClass(TypePtr t);
 LinkTypePtr getUnbound(TypePtr t);
 
-////////
-
+} // namespace types
 } // namespace ast
 } // namespace seq

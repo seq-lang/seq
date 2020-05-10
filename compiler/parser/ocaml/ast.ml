@@ -107,7 +107,7 @@ and param =
 and fn_t =
   { fn_name : string
   ; fn_rettyp : texpr ann option
-  ; fn_generics : string list
+  ; fn_generics : param ann list
   ; fn_args : param ann list
   ; fn_stmts : tstmt ann list
   ; fn_attrs : string ann list
@@ -115,9 +115,10 @@ and fn_t =
 
 and class_t =
   { class_name : string
-  ; generics : string list
+  ; generics : param ann list
   ; args : param ann list
   ; members : tstmt ann list
+  ; attrs : string ann list
   }
 
 and pattern =

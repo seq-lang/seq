@@ -27,6 +27,8 @@
 namespace seq {
 namespace ast {
 
+using namespace types;
+
 class TransformVisitor : public ASTVisitor, public seq::SrcObject {
   std::shared_ptr<TypeContext> ctx;
   std::shared_ptr<std::vector<StmtPtr>> prependStmts;
@@ -47,8 +49,8 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
                             SuiteStmt *&prev);
   void prepend(StmtPtr s);
 
-  std::shared_ptr<TContextItem>
-  processIdentifier(std::shared_ptr<TypeContext> tctx, const std::string &id);
+  std::shared_ptr<TItem> processIdentifier(std::shared_ptr<TypeContext> tctx,
+                                           const std::string &id);
 
   RealizationContext::FuncRealization realize(FuncTypePtr type);
   RealizationContext::ClassRealization realize(ClassTypePtr type);
@@ -56,6 +58,10 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
   ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
                            const std::string &magic);
   ExprPtr makeBoolExpr(const ExprPtr &e);
+  Generics parseGenerics(const std::vector<Param> &generics);
+
+  void addMethod(Stmt *s, const std::string &canonicalName,
+                 const std::vector<Generics::Generic> &implicits);
 
   class CaptureVisitor : public WalkVisitor {
     std::shared_ptr<TypeContext> ctx;
@@ -184,7 +190,7 @@ public:
       Unification us;
       if (expr->getType()->unify(t, us) < 0) {
         us.undo();
-        error(expr, "cannot unify {} and {}",
+        error(expr, "cannot unify e {} and {}",
               expr->getType() ? expr->getType()->toString() : "-",
               t ? t->toString() : "-");
       }

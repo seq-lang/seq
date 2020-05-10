@@ -25,6 +25,8 @@ using std::vector;
 namespace seq {
 namespace ast {
 
+using namespace types;
+
 /**************************************************************************************/
 
 RealizationContext::RealizationContext() : unboundCount(0) {}
@@ -163,26 +165,15 @@ void ImportContext::setBody(const string &name, StmtPtr body) {
 
 /**************************************************************************************/
 
-TContextItem::TContextItem(TypePtr t, const string &base, bool isVar,
-                           bool isType, bool isImport, bool global)
-    : type(t), base(base), var(isVar), typeVar(isType), import(isImport),
-      global(global) {}
+TItem::TItem(const string &base, bool global) : base(base), global(global) {}
 
-bool TContextItem::isType() const { return typeVar; }
+bool TItem::isGlobal() const { return global; }
 
-bool TContextItem::isGlobal() const { return global; }
+void TItem::setGlobal() { global = true; }
 
-void TContextItem::setGlobal() { global = true; }
+string TItem::getBase() const { return base; }
 
-bool TContextItem::isVar() const { return var; }
-
-bool TContextItem::isImport() const { return import; }
-
-TypePtr TContextItem::getType() const { return type; }
-
-string TContextItem::getBase() const { return base; }
-
-bool TContextItem::hasAttr(const std::string &s) const {
+bool TItem::hasAttr(const std::string &s) const {
   return attributes.find(s) != attributes.end();
 }
 
@@ -196,9 +187,9 @@ TypeContext::TypeContext(const std::string &filename,
   stack.push(vector<string>());
 }
 
-shared_ptr<TContextItem> TypeContext::find(const std::string &name,
-                                           bool checkStdlib) const {
-  auto t = VTable<TContextItem>::find(name);
+shared_ptr<TItem> TypeContext::find(const std::string &name,
+                                    bool checkStdlib) const {
+  auto t = VTable<TItem>::find(name);
   if (t)
     return t;
   auto stdlib = imports->getImport("");
@@ -212,15 +203,20 @@ TypePtr TypeContext::findInternal(const string &name) const {
   return t->getType();
 }
 
-void TypeContext::add(const string &name, TypePtr t, bool isVar, bool isType,
-                      bool global) {
-  add(name,
-      make_shared<TContextItem>(t, getBase(), isVar, isType, false, global));
+void TypeContext::add(const string &name, const string &import, bool global) {
+  add(name, make_shared<TImportItem>(import, getBase(), global));
 }
 
-void TypeContext::add(const string &name, const string &import) {
-  add(name,
-      make_shared<TContextItem>(nullptr, import, false, false, true, false));
+void TypeContext::add(const string &name, TypePtr type, bool isVar,
+                      bool global) {
+  if (isVar)
+    add(name, make_shared<TVarItem>(type, getBase(), global));
+  else
+    add(name, make_shared<TTypeItem>(type, getBase(), global));
+}
+
+void TypeContext::add(const string &name, int value, bool global) {
+  add(name, make_shared<TStaticItem>(value, getBase(), global));
 }
 
 string TypeContext::getBase() const {
@@ -255,14 +251,15 @@ shared_ptr<LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
 }
 
 TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type) {
-  return instantiate(srcInfo, type, vector<pair<int, TypePtr>>());
+  return instantiate(srcInfo, type, Generics());
 }
 
 TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type,
-                                 const vector<pair<int, TypePtr>> &generics) {
+                                 const Generics &generics) {
   unordered_map<int, TypePtr> cache;
-  for (auto &g : generics)
-    cache[g.first] = g.second;
+  for (auto &g : generics.explicits)
+    if (g.type)
+      cache[g.id] = g.type;
   auto t = type->instantiate(level, realizations->getUnboundCount(), cache);
   for (auto &i : cache) {
     if (auto l = dynamic_pointer_cast<LinkType>(i.second)) {
@@ -283,11 +280,13 @@ TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
                                         const vector<TypePtr> &generics) {
   auto c = getClass(root);
   assert(c);
-  vector<pair<int, TypePtr>> cache;
-  if (generics.size() != c->generics.size())
+  Generics cache;
+  if (generics.size() != c->generics.explicits.size())
     error(srcInfo, "generics do not match");
-  for (int i = 0; i < c->generics.size(); i++)
-    cache.push_back({c->generics[i].first, generics[i]});
+  for (int i = 0; i < c->generics.explicits.size(); i++) {
+    assert(c->generics.explicits[i].type);
+    cache.explicits.push_back(Generics::Generic(c->generics.explicits[i].id, generics[i]));
+  }
   return instantiate(srcInfo, root, cache);
 }
 
@@ -302,7 +301,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   auto stdlib = make_shared<TypeContext>(stdlibPath, realizations, imports);
   imports->addImport("", stdlibPath, stdlib);
 
-  unordered_map<string, types::Type *> podTypes = {
+  unordered_map<string, seq::types::Type *> podTypes = {
       {"void", seq::types::Void},
       {"bool", seq::types::Bool},
       {"byte", seq::types::Byte},
@@ -310,35 +309,30 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
       {"float", seq::types::Float}};
   for (auto &t : podTypes) {
     auto name = t.first;
-    auto typ = make_shared<ClassType>(name, true, vector<pair<int, TypePtr>>(),
-                                      vector<pair<string, TypePtr>>());
+    auto typ = make_shared<ClassType>(name, true);
     realizations->moduleNames[name] = 1;
     realizations->classRealizations[name][name] = {typ, t.second};
-    stdlib->add(name, typ, false, true, true);
-    stdlib->add("#" + name, typ, false, true, true);
+    stdlib->add(name, typ, false);
+    stdlib->add("#" + name, typ, false);
   }
   vector<string> genericTypes = {"ptr", "generator", "optional"};
   for (auto &t : genericTypes) {
     auto typ = make_shared<ClassType>(
         t, true,
-        vector<pair<int, TypePtr>>{
-            {realizations->unboundCount,
-             make_shared<LinkType>(LinkType::Generic,
-                                   realizations->unboundCount)}},
-        vector<pair<string, TypePtr>>());
+        Generics({{realizations->unboundCount,
+                   make_shared<LinkType>(LinkType::Generic,
+                                         realizations->unboundCount)}}));
     realizations->moduleNames[t] = 1;
-    stdlib->add(t, typ, false, true, true);
-    stdlib->add("#" + t, typ, false, true, true);
+    stdlib->add(t, typ, false);
+    stdlib->add("#" + t, typ, false);
     realizations->unboundCount++;
   }
-  auto tt = make_shared<ClassType>("tuple", true, vector<pair<int, TypePtr>>{},
-                                   vector<pair<string, TypePtr>>{});
-  stdlib->add("tuple", tt, false, true, true);
-  stdlib->add("#tuple", tt, false, true, true);
-  auto ft = make_shared<FuncType>("", vector<pair<int, TypePtr>>{},
-                                  vector<pair<string, TypePtr>>{}, nullptr);
-  stdlib->add("function", ft, false, true, true);
-  stdlib->add("#function", ft, false, true, true);
+  auto tt = make_shared<ClassType>("tuple", true);
+  stdlib->add("tuple", tt, false);
+  stdlib->add("#tuple", tt, false);
+  auto ft = make_shared<FuncType>("");
+  stdlib->add("function", ft, false);
+  stdlib->add("#function", ft, false);
 
   stdlib->setFlag("internal");
   auto stmts = ast::parse_file(stdlibPath);

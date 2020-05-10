@@ -37,7 +37,7 @@ struct Expr : public seq::SrcObject {
 private:
   /// Each expression comes with an associated type.
   /// Types are nullptr until realized by a typechecker.
-  TypePtr _type;
+  types::TypePtr _type;
 
   /// Flag that indicates is this expression a type expression
   /// (e.g. int, list[int], or generic T)
@@ -55,8 +55,8 @@ public:
   virtual void accept(ASTVisitor &) const = 0;
 
   /// Type utilities
-  TypePtr getType() const { return _type; }
-  void setType(TypePtr t) { _type = t; }
+  types::TypePtr getType() const { return _type; }
+  void setType(types::TypePtr t) { _type = t; }
   bool isType() const { return _isType; }
   void markType() { _isType = true; }
 
@@ -674,15 +674,15 @@ struct ThrowStmt : public Stmt {
 struct FunctionStmt : public Stmt {
   std::string name;
   ExprPtr ret;
-  std::vector<std::string> generics;
+  std::vector<Param> generics;
   std::vector<Param> args;
   std::shared_ptr<Stmt> suite;
   /// List of attributes (e.g. @internal @prefetch)
   std::vector<std::string> attributes;
 
-  FunctionStmt(const std::string &n, ExprPtr r,
-               const std::vector<std::string> &g, std::vector<Param> &&a,
-               std::shared_ptr<Stmt> s, const std::vector<std::string> &at);
+  FunctionStmt(const std::string &n, ExprPtr r, std::vector<Param> &&g,
+               std::vector<Param> &&a, std::shared_ptr<Stmt> s,
+               const std::vector<std::string> &at);
   FunctionStmt(const FunctionStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, FunctionStmt);
@@ -705,12 +705,14 @@ struct ClassStmt : public Stmt {
   /// Is it type (record) or a class?
   bool isRecord;
   std::string name;
-  std::vector<std::string> generics;
+  std::vector<Param> generics;
   std::vector<Param> args;
   StmtPtr suite;
+  std::vector<std::string> attributes;
 
-  ClassStmt(bool i, const std::string &n, const std::vector<std::string> &g,
-            std::vector<Param> &&a, StmtPtr s);
+  ClassStmt(bool i, const std::string &n, std::vector<Param> &&g,
+            std::vector<Param> &&a, StmtPtr s,
+            const std::vector<std::string> &at);
   ClassStmt(const ClassStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, ClassStmt);
@@ -866,6 +868,24 @@ struct BoundPattern : public Pattern {
   std::string toString() const override;
   NODE_UTILITY(Pattern, BoundPattern);
 };
+
+template <typename T> T CL(const T &v) { return v.clone(); }
+template <typename T> std::unique_ptr<T> CL(const std::unique_ptr<T> &v) {
+  return v ? v->clone() : nullptr;
+}
+template <typename T> std::vector<T> CL(const std::vector<T> &v) {
+  std::vector<T> r;
+  for (auto &i : v)
+    r.push_back(CL(i));
+  return r;
+}
+template <typename T>
+std::string combine(const std::vector<T> &items, std::string delim = " ") {
+  std::string s = "";
+  for (int i = 0; i < items.size(); i++)
+    s += (i ? delim : "") + items[i]->toString();
+  return s;
+}
 
 } // namespace ast
 } // namespace seq

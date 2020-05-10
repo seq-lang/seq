@@ -357,7 +357,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 23:
     Return(Function, parse_string(Field(t, 0)),
            parse_optional(Field(t, 1), parse_expr),
-           parse_list(Field(t, 2), parse_string),
+           parse_list(Field(t, 2), parse_param),
            parse_list(Field(t, 3), parse_param),
            std::shared_ptr<Stmt>(parse_stmt_list(Field(t, 4))),
            parse_list(Field(t, 5), [](value i) {
@@ -366,8 +366,11 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 24:
   case 25:
     Return(Class, tv == 25, parse_string(Field(t, 0)),
-           parse_list(Field(t, 1), parse_string),
-           parse_list(Field(t, 2), parse_param), parse_stmt_list(Field(t, 3)));
+           parse_list(Field(t, 1), parse_param),
+           parse_list(Field(t, 2), parse_param), parse_stmt_list(Field(t, 3)),
+           parse_list(Field(t, 5), [](value i) {
+             return parse_string(Field(i, 1)); // ignore position for now
+           }));
   case 26:
     Return(Declare, parse_param(t));
   case 27:

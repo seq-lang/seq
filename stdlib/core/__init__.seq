@@ -1,9 +1,13 @@
+@internal
 type str(len: int, ptr: ptr[byte]):
     def __str__(self: str) -> str:
         return self
+    def memcpy(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
+    def memmove(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
+    def memset(dest: ptr[byte], b: byte, len: int) -> void: pass
 
 extend bool:
-    def __init__(self: bool) -> bool: pass
+    def __new__() -> bool: pass
     def __str__(self: bool) -> str: pass
     def __copy__(self: bool) -> bool: pass
     def __bool__(self: bool) -> bool: pass
@@ -19,9 +23,9 @@ extend bool:
     def __xor__(self: bool, other: bool) -> bool: pass
 
 extend byte:
-    def __init__(self: byte) -> byte: pass
-    def __init__(self: byte, b: byte) -> byte: pass
-    def __init__(self: byte, i: int) -> byte: pass
+    def __new__() -> byte: pass
+    def __new__(b: byte) -> byte: pass
+    def __new__(i: int) -> byte: pass
     def __str__(self: byte) -> str: pass
     def __copy__(self: byte) -> byte: pass
     def __bool__(self: byte) -> bool: pass
@@ -33,11 +37,11 @@ extend byte:
     def __ge__(self: byte, other: byte) -> bool: pass
 
 extend int:
-    def __init__(self: int) -> int: pass
-    def __init__(self: int, i: int) -> int: pass
-    def __init__(self: int, f: float) -> int: pass
-    def __init__(self: int, b: bool) -> int: pass
-    def __init__(self: int, b: byte) -> int: pass
+    def __new__() -> int: pass
+    def __new__(i: int) -> int: pass
+    def __new__(f: float) -> int: pass
+    def __new__(b: bool) -> int: pass
+    def __new__(b: byte) -> int: pass
     def __str__(self: int) -> str: pass
     def __copy__(self: int) -> int: pass
     def __hash__(self: int) -> int: pass
@@ -77,9 +81,9 @@ extend int:
     def __ge__(self: int, other: float) -> bool: pass
 
 extend float:
-    def __init__(self: float) -> float: pass
-    def __init__(self: float, f: float) -> float: pass
-    def __init__(self: float, i: int) -> float: pass
+    def __new__() -> float: pass
+    def __new__(f: float) -> float: pass
+    def __new__(i: int) -> float: pass
     def __str__(self: float) -> str: pass
     def __copy__(self: float) -> float: pass
     def __bool__(self: float) -> bool: pass
@@ -125,11 +129,12 @@ extend generator[T]:  # class
     def __resume__(self: generator[T]) -> void: pass
     def __str__(self: generator[T]) -> str: pass
 
+@internal
 type array[T](len: int, ptr: ptr[T]):
     def __elemsize__() -> int: pass
     def __atomic__() -> bool: pass
-    def __init__(self: array[T], len: int) -> array[T]: pass
-    def __init__(self: array[T], data: ptr[T], len: int) -> array[T]: pass
+    def __new__(len: int) -> array[T]: pass
+    def __new__(data: ptr[T], len: int) -> array[T]: pass
     def __copy__(self: array[T]) -> array[T]: pass
     def __len__(self: array[T]) -> int: pass
     def __bool__(self: array[T]) -> bool: pass
@@ -139,17 +144,32 @@ type array[T](len: int, ptr: ptr[T]):
     def __slice_right__(self: array[T], l: int) -> array[T]: pass
     def __setitem__(self: array[T], index: int, what: T) -> void: pass
 
-extend str:
-    def memcpy(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
-    def memmove(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
-    def memset(dest: ptr[byte], b: byte, len: int) -> void: pass
-
 # type Kmer[N]
 # function: __init__(ptr[byte]), __str__
 
-type seq(len: int, ptr: ptr[byte])
+@internal
+type seq(len: int, ptr: ptr[byte]):
+    def __new__(s: str) -> seq:
+        return (s.len, s.ptr)
     # def __contains__[N](self: seq, what: Kmer[N]) -> void: pass
 
+class list[T]:
+    arr: array[T]
+    len: int
+    def __init__(self: list[T]):
+        self.arr = array[T]()
+        self.len = 0
+    def __init__(self: list[T], sz: int):
+        self.arr = array[T](sz)
+        self.len = 0
+    def append(self: list[T], i: T):
+        self.arr[self.len] = i
+        self.len = 1 # TODO +=
+    def __str__(self: list[T]):
+        return len.__str__()
+    def __iter__(self: list[T]):
+        for i in self.arr:
+            yield i
 
 from core.aliases import *
 # import core.c_stubs as _C

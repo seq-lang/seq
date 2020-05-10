@@ -37,6 +37,7 @@ using std::ostream;
 using std::pair;
 using std::shared_ptr;
 using std::stack;
+using std::static_pointer_cast;
 using std::string;
 using std::unique_ptr;
 using std::unordered_map;
@@ -47,6 +48,8 @@ int __level__ = 0;
 
 namespace seq {
 namespace ast {
+
+using namespace types;
 
 ExprPtr TransformVisitor::conditionalMagic(const ExprPtr &expr,
                                            const string &type,
@@ -189,18 +192,17 @@ void TransformVisitor::visit(const KmerExpr *expr) {
 
 // Transformed
 void TransformVisitor::visit(const SeqExpr *expr) {
-  if (expr->prefix == "p") {
+  if (expr->prefix == "p")
     resultExpr =
         transform(N<CallExpr>(N<IdExpr>("pseq"), N<StringExpr>(expr->value)));
-  } else if (expr->prefix == "s") {
+  else if (expr->prefix == "s")
     resultExpr =
         transform(N<CallExpr>(N<IdExpr>("seq"), N<StringExpr>(expr->value)));
-  } else {
+  else
     error(expr, "invalid seq prefix '{}'", expr->prefix);
-  }
 }
 
-shared_ptr<TContextItem>
+shared_ptr<TItem>
 TransformVisitor::processIdentifier(shared_ptr<TypeContext> tctx,
                                     const string &id) {
   auto val = tctx->find(id);
@@ -214,9 +216,14 @@ void TransformVisitor::visit(const IdExpr *expr) {
   resultExpr = expr->clone();
   if (!expr->getType()) {
     auto val = processIdentifier(ctx, expr->value);
-    if (val->isType())
-      resultExpr->markType();
-    resultExpr->setType(ctx->instantiate(getSrcInfo(), val->getType()));
+    if (val->isStatic()) {
+      resultExpr = transform(
+          N<IntExpr>(static_pointer_cast<TStaticItem>(val)->getValue()));
+    } else {
+      if (val->isType())
+        resultExpr->markType();
+      resultExpr->setType(ctx->instantiate(getSrcInfo(), val->getType()));
+    }
   }
 }
 
@@ -228,18 +235,17 @@ void TransformVisitor::visit(const UnpackExpr *expr) {
 void TransformVisitor::visit(const TupleExpr *expr) {
   auto e = N<TupleExpr>(transform(expr->items));
 
-  vector<pair<string, TypePtr>> args;
+  vector<Arg> args;
   for (auto &i : e->items)
     args.push_back({"", i->getType()});
   e->setType(forceUnify(
-      expr, T<LinkType>(T<ClassType>("tuple", true,
-                                     vector<pair<int, TypePtr>>(), args))));
+      expr, T<LinkType>(T<ClassType>("tuple", true, Generics(), args))));
   resultExpr = move(e);
 }
 
 // Transformed
 void TransformVisitor::visit(const ListExpr *expr) {
-  string listVar = getTemporaryVar("list");
+  string listVar = getTemporaryVar("lst");
   prepend(N<AssignStmt>(
       N<IdExpr>(listVar),
       N<CallExpr>(N<IdExpr>("list"), expr->items.size()
@@ -336,7 +342,7 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
     vector<Param> captures;
     for (auto &c : cv.captures)
       captures.push_back({c, nullptr, nullptr});
-    prepend(N<FunctionStmt>(fnVar, nullptr, vector<string>{}, move(captures),
+    prepend(N<FunctionStmt>(fnVar, nullptr, vector<Param>{}, move(captures),
                             move(suite), vector<string>{}));
     vector<CallExpr::Arg> args;
     for (auto &c : cv.captures)
@@ -465,39 +471,53 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   auto e = transform(expr->expr, true);
   if (e->isType() || getFunction(e->getType())) {
     vector<TypePtr> generics;
+    vector<int> statics;
+    auto parseGeneric = [&](const ExprPtr &i) {
+      if (auto ii = CAST(i, IntExpr)) {
+        // TODO: implement transformStatic
+        statics.push_back(std::stoll(ii->value));
+        generics.push_back(nullptr);
+      } else {
+        generics.push_back(transformType(i)->getType());
+      }
+    };
     if (auto t = CAST(expr->index, TupleExpr))
       for (auto &i : t->items)
-        generics.push_back(transformType(i)->getType());
+        parseGeneric(i);
     else
-      generics.push_back(transformType(expr->index)->getType());
+      parseGeneric(expr->index);
 
-    auto uf = [&](auto &f) {
-      if (f->generics.size() != generics.size())
-        error(expr, "inconsistent generic count");
-      for (int i = 0; i < generics.size(); i++)
-        forceUnify(f->generics[i].second, generics[i]);
-    };
-    // Instantiate the type
-    // TODO: special cases (Kmer, Int, UInt)
+    Generics *g = nullptr;
     if (auto f = getFunction(e->getType())) {
       if (f->name == "") {
         assert(!f->ret && !f->args.size());
+        if (statics.size())
+          error(expr, "functions do not have static arguments");
         f->ret = generics[0];
         for (int i = 1; i < generics.size(); i++)
           f->args.push_back({"", generics[i]});
-      } else {
-        uf(f);
-      }
-    } else if (auto g = getClass(e->getType())) {
-      if (g->name == "tuple") {
-        assert(!g->args.size());
+      } else
+        g = &f->generics;
+    } else if (auto c = getClass(e->getType())) {
+      if (c->name == "tuple") {
+        if (statics.size())
+          error(expr, "tuples do not have static arguments");
+        assert(!c->args.size());
         for (auto &i : generics)
-          g->args.push_back({"", i});
-      } else {
-        uf(g);
-      }
+          c->args.push_back({"", i});
+      } else
+        g = &c->generics;
     } else
       assert(false);
+    if (g) {
+      if (g->explicits.size() != generics.size())
+        error(expr, "inconsistent generic count");
+      for (int i = 0, s = 0; i < generics.size(); i++)
+        if (generics[i])
+          forceUnify(g->explicits[i].type, generics[i]);
+        else
+          g->explicits[i].value = statics[s++];
+    }
 
     auto t = e->getType();
     resultExpr = N<TypeOfExpr>(move(e));
@@ -512,7 +532,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
           if (idx < 0 || idx >= c->args.size())
             error(i, "invalid tuple index");
           resultExpr = N<IndexExpr>(move(e), move(i));
-          resultExpr->setType(forceUnify(expr, c->args[idx].second));
+          resultExpr->setType(forceUnify(expr, c->args[idx].type));
           return;
         }
       }
@@ -557,18 +577,16 @@ void TransformVisitor::visit(const CallExpr *expr) {
   // If constructor, replace with appropriate calls
   if (e->isType()) {
     assert(getClass(e->getType()));
-    string var = getTemporaryVar("typ");
     if (getClass(e->getType())->isRecord) {
-      prepend(N<AssignStmt>(
-          N<IdExpr>(var),
-          N<CallExpr>(N<DotExpr>(e->clone(), "__init__"), move(args))));
+      resultExpr = N<CallExpr>(N<DotExpr>(e->clone(), "__new__"), move(args));
     } else {
+      string var = getTemporaryVar("typ");
       prepend(N<AssignStmt>(N<IdExpr>(var),
                             N<CallExpr>(N<DotExpr>(e->clone(), "__new__"))));
       prepend(N<ExprStmt>(
           N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__init__"), move(args))));
+      resultExpr = transform(N<IdExpr>(var));
     }
-    resultExpr = transform(N<IdExpr>(var));
   } else if (auto t = getFunction(e->getType())) {
     vector<CallExpr::Arg> reorderedArgs;
     vector<int> positions;
@@ -599,7 +617,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
       if (!partialArgs[i])
         continue;
       if (added >= reorderedArgs.size()) {
-        auto it = namedArgs.find(t->args[i].first);
+        auto it = namedArgs.find(t->args[i].name);
         if (it != namedArgs.end()) {
           reorderedArgs.push_back({"", move(it->second)});
           namedArgs.erase(it);
@@ -621,8 +639,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
     for (int i = 0; i < reorderedArgs.size(); i++) {
       if (!CAST(reorderedArgs[i].value, EllipsisExpr))
         partialArgs[positions[i]] = 0;
-      forceUnify(t->args[positions[i]].second,
-                 reorderedArgs[i].value->getType());
+      forceUnify(t->args[positions[i]].type, reorderedArgs[i].value->getType());
     }
     // special case: calling partial void f(...)()
     if (!args.size() && t->countPartials() == 1 && t->partialArgs.back())
@@ -632,7 +649,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
         t = realize(t).type;
       resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
       auto typ = make_shared<FuncType>(t->name, t->generics, t->args, t->ret);
-      typ->setImplicits(t->implicitGenerics);
+      typ->generics.implicits = t->generics.implicits;
       typ->partialArgs = partialArgs;
       resultExpr->setType(forceUnify(expr, make_shared<LinkType>(typ)));
     } else {
@@ -754,7 +771,7 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
   for (auto &c : cv.captures)
     params.push_back({c, nullptr, nullptr});
   string fnVar = getTemporaryVar("anonFn");
-  prepend(N<FunctionStmt>(fnVar, nullptr, vector<string>{}, move(params),
+  prepend(N<FunctionStmt>(fnVar, nullptr, vector<Param>{}, move(params),
                           N<ReturnStmt>(expr->expr->clone()),
                           vector<string>{}));
   vector<CallExpr::Arg> args;

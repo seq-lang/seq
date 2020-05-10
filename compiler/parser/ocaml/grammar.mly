@@ -261,18 +261,19 @@ with_statement: WITH FLNE(COMMA, with_clause) COLON suite { $loc, With ($2, $4) 
 with_clause: expr { $1, None } | expr AS ID { $1, Some $3 }
 
 func_statement:
-  | func | pyfunc { $1 }
   | decorator+ func
-    { match $2 with
-      | [pos, Function f] -> [pos, Function { f with fn_attrs = $1 }]
-      | _ -> failwith "impossible decorator case" }
+    { List.map (function (pos, Function f) -> (pos, Function { f with fn_attrs = $1 }) | f -> f) $2 }
+  | pyfunc { $1 }
 func:
-  | DEF ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type? COLON suite
-    { [$loc, Function { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = $9; fn_attrs = [] }] }
+  | func_def COLON suite
+    { [$loc, Function { $1 with fn_stmts = $3 }] }
   | extern_from? EXTERN FLNE(COMMA, extern_what) NL
     { List.map (fun (pos, e) -> pos, ImportExtern { e with lang = $2; e_from = $1 }) $3 }
-generic_list: LS FLNE(COMMA, ID) RS { $2 }
+func_def:
+  | DEF ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type?
+    { { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = []; fn_attrs = [] } }
 typed_param: ID param_type? default_val? { $loc, { name = $1; typ = $2; default = $3 } }
+generic_list: LS FLNE(COMMA, typed_param) RS { $2 }
 default_val: EQ expr { $2 }
 param_type: COLON expr { $2 }
 func_ret_type: OF expr { $2 }
@@ -290,14 +291,14 @@ pyfunc: PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON PYDEF_RAW { [
 
 class_statement: cls | extend | typ { $1 }
 cls:
-  | CLASS ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
+  | decorator* CLASS ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
     { let args = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc) [] $7
+        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc) [] $8
       in
       let members = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $7
+        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $8
       in
-      $loc, Class { class_name = $2; generics = opt_val $3 []; args; members } }
+      $loc, Class { class_name = $3; generics = opt_val $4 []; args; members; attrs = $1 } }
 dataclass_member: class_member { $1 } | decl_statement { Some $1 }
 class_member:
   | PASS NL | STRING NL { None }
@@ -308,5 +309,5 @@ typ:
   | type_head COLON NL INDENT class_member+ DEDENT { $loc, Type { (snd $1) with members = filter_opt $5 } }
 /* TODO: C++ check for default arguments */
 type_head:
-  | TYPE ID generic_list? LP FL(COMMA, typed_param) RP
-    { $loc, { class_name = $2; generics = opt_val $3 []; args = $5; members = [] } }
+  | decorator* TYPE ID generic_list? LP FL(COMMA, typed_param) RP
+    { $loc, { class_name = $3; generics = opt_val $4 []; args = $6; members = []; attrs = $1 } }
