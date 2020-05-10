@@ -86,5 +86,5 @@ pam90 = {('B', 'N'): 4, ('G', 'G'): 5, ('K', 'G'): -4, ('S', 'E'): -2, ('Y', 'E'
 
 print p1.align(p2, mat=SubMat(pam90))  # EXPECT: (1M2I7M, 4)
 print p1.align(p2, gapo=4, gape=2, gapo2=13, gape2=1, mat=SubMat(pam90))  # EXPECT: (1M2I7M, 4)
-print p1.align(p2, glob=True, gapo=4, gape=2, mat=SubMat(pam90))  # EXPECT: (2M2I2M1I2M1D1M, 23)
+print p1.align(p2, gapo=4, gape=2, ext_only=True, mat=SubMat(pam90))  # EXPECT: (3M, 7)
 print p1, p2  # EXPECT: HEAGAWGHEE HPAWHEAE

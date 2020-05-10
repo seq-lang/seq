@@ -1739,10 +1739,9 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
                                        "",           "",
                                        "right",      "generic_sc",
                                        "approx_max", "approx_drop",
-                                       "ext_only",   "rev_cigar",
+                                       "",           "",
                                        "splice",     "splice_fwd",
-                                       "splice_rev", "splice_flank",
-                                       "glob"};
+                                       "splice_rev", "splice_flank"};
   auto *baseFunc = dynamic_cast<Func *>(base);
   if (baseFunc && baseFunc->hasAttribute("inter_align")) {
     if (auto *elemExpr = dynamic_cast<GetElemExpr *>(func)) {
@@ -1792,6 +1791,7 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
             paramExprs.ambig = args[3];
             paramExprs.gapo = args[4];
             paramExprs.gape = args[5];
+            paramExprs.score_only = args[11];
             paramExprs.bandwidth = args[8];
             paramExprs.zdrop = args[9];
             paramExprs.end_bonus = args[10];
@@ -1809,28 +1809,47 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
                   "query for inter-sequence alignment is not of type seq");
             if (!args[0]->getType()->is(types::Seq))
               throw exc::SeqException(
-                  "reference for inter-sequence alignment is not of type seq");
+                  "target for inter-sequence alignment is not of type seq");
             Value *query = self->codegen(base, block);
-            Value *reference = args[0]->codegen(base, block);
+            Value *target = args[0]->codegen(base, block);
             types::RecordType *yieldType = PipeExpr::getInterAlignYieldType();
+            types::Type *resultType =
+                yieldType->getBaseType(2); // (CIGAR, score)
             Value *yieldVal = yieldType->defaultValue(block);
             yieldVal = yieldType->setMemb(yieldVal, "query", query, block);
+            yieldVal = yieldType->setMemb(yieldVal, "target", target, block);
+
+            // set up flags
+            static const int KSW_EZ_EXTZ_ONLY = 0x40;
+            static const int KSW_EZ_REV_CIGAR = 0x80;
+            IRBuilder<> builder(block);
+            Value *flags = builder.getInt32(0);
+            Value *b;
+            // ext_only
+            b = args[16]->codegen(base, block);
+            builder.SetInsertPoint(block);
+            b = builder.CreateTrunc(b, builder.getInt1Ty());
+            b = builder.CreateSelect(b, builder.getInt32(KSW_EZ_EXTZ_ONLY),
+                                     builder.getInt32(0));
+            flags = builder.CreateOr(flags, b);
+            // rev_cigar
+            b = args[17]->codegen(base, block);
+            builder.SetInsertPoint(block);
+            b = builder.CreateTrunc(b, builder.getInt1Ty());
+            b = builder.CreateSelect(b, builder.getInt32(KSW_EZ_REV_CIGAR),
+                                     builder.getInt32(0));
+            flags = builder.CreateOr(flags, b);
+
+            // use the score field of the alignment to send flags
+            flags = builder.CreateZExt(flags, seqIntLLVM(block->getContext()));
+            Value *resultVal = resultType->defaultValue(block);
+            resultVal = resultType->setMemb(resultVal, "_score", flags, block);
             yieldVal =
-                yieldType->setMemb(yieldVal, "reference", reference, block);
+                yieldType->setMemb(yieldVal, "alignment", resultVal, block);
 
             baseFunc->codegenYield(yieldVal, yieldType, block);
             yieldVal = baseFunc->codegenYieldExpr(block, /*suspend=*/false);
-            Value *score = yieldType->memb(yieldVal, "score", block);
-
-            // realign if score < 0
-            Func *realignFunc = Func::getBuiltin("_interaln_realign");
-            Function *realign = realignFunc->getFunc(block->getModule());
-            Value *params = PipeExpr::validateAndCodegenInterAlignParams(
-                paramExprs, base, block);
-
-            IRBuilder<> builder(block);
-            Value *alignment =
-                builder.CreateCall(realign, {query, reference, score, params});
+            Value *alignment = yieldType->memb(yieldVal, "alignment", block);
             return alignment;
           }
         }
