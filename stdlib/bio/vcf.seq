@@ -299,6 +299,26 @@ class BCFHeaderMetaData:
             if idpair[0]._key and idpair[0]._val and idinfo.info(int(self._type_code)) & u32(0xF) != u32(0xF):
                 yield str.from_ptr(idpair[0]._key)
 
+class BCFHeaderContigs:
+    bcf_hdr: ptr[_bcf_hdr_t]
+
+    def __init__(self: BCFHeaderContigs, bcf_hdr: ptr[_bcf_hdr_t]):
+        self.bcf_hdr = bcf_hdr
+    
+    def __iter__(self: BCFHeaderContigs):
+        for i in range(int(self.bcf_hdr[0].n(int(BCF_DT_CTG)))):
+            yield str.from_ptr(_bcf_hdr_id2name(self.bcf_hdr, i))
+
+class BCFHeaderSamples:
+    bcf_hdr: ptr[_bcf_hdr_t]
+
+    def __init__(self: BCFHeaderSamples, bcf_hdr: ptr[_bcf_hdr_t]):
+        self.bcf_hdr = bcf_hdr
+    
+    def __iter__(self: BCFHeaderSamples):
+        for i in range(int(self.bcf_hdr[0].n(int(BCF_DT_SAMPLE)))):
+            yield str.from_ptr(self.bcf_hdr[0]._samples[i])
+
 class BCFHeader:
     bcf_hdr: ptr[_bcf_hdr_t]
     def __init__(self: BCFHeader, bcf_hdr: ptr[_bcf_hdr_t]):
@@ -316,6 +336,14 @@ class BCFHeader:
     @property
     def formats(self: BCFHeader):
         return BCFHeaderMetaData(self.bcf_hdr, int(BCF_HL_FMT))
+    
+    @property
+    def contigs(self: BCFHeader):
+        return BCFHeaderContigs(self.bcf_hdr)
+    
+    @property
+    def samples(self: BCFHeader):
+        return BCFHeaderSamples(self.bcf_hdr)
 
 # type_flag is one of BCF_BT_X, or BCF_HT_FLAG or BCF_AUX_NONE
 # if array_flag is True, then BCFAux represents an array of type
@@ -708,6 +736,12 @@ for k in hdr.filters:
     print(k)
 print("Header formats")
 for k in hdr.formats:
+    print(k)
+print("Header contigs")
+for k in hdr.contigs:
+    print(k)
+print("Header samples")
+for k in hdr.samples:
     print(k)
 parser.close()
 
