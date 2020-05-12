@@ -319,6 +319,40 @@ class BCFHeaderSamples:
         for i in range(int(self.bcf_hdr[0].n(int(BCF_DT_SAMPLE)))):
             yield str.from_ptr(self.bcf_hdr[0]._samples[i])
 
+METADATA_TYPES = ('FILTER', 'INFO', 'FORMAT', 'CONTIG', 'STRUCTURED', 'GENERIC')
+class BCFHeaderRecord:
+    bcf_hdr: ptr[_bcf_hdr_t]
+    bcf_hrec: ptr[_bcf_hrec_t]
+
+    def __init__(self: BCFHeaderRecord, bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]):
+        self.bcf_hdr = bcf_hdr
+        self.bcf_hrec = bcf_hrec
+    
+    @property
+    def hdr_type(self: BCFHeaderRecord):
+        if not self.bcf_hrec:
+            return 'None'
+        return METADATA_TYPES[int(self.bcf_hrec[0]._type)]
+    
+    @property
+    def key(self: BCFHeaderRecord):
+        return str.from_ptr(self.bcf_hrec[0]._key) if self.bcf_hrec and self.bcf_hrec[0]._key else 'None'
+
+    @property
+    def value(self: BCFHeaderRecord):
+        return str.from_ptr(self.bcf_hrec[0]._value) if self.bcf_hrec and self.bcf_hrec[0]._value else 'None'
+
+    @property
+    def attrs(self: BCFHeaderRecord):
+        r = self.bcf_hrec[0]
+        attrs = list[tuple[str, str]]((str.from_ptr(r._keys[i]) if r._keys[i] else 'None',
+                            str.from_ptr(r._vals[i]) if r._vals[i] else 'None')
+                            for i in range(int(self.bcf_hrec[0]._nkeys)))
+        return attrs
+    
+    def __str__(self):
+        
+
 class BCFHeader:
     bcf_hdr: ptr[_bcf_hdr_t]
     def __init__(self: BCFHeader, bcf_hdr: ptr[_bcf_hdr_t]):
@@ -344,6 +378,10 @@ class BCFHeader:
     @property
     def samples(self: BCFHeader):
         return BCFHeaderSamples(self.bcf_hdr)
+
+    def __iter__(self: BCFHeader):
+        for i in range(int(self.bcf_hdr[0]._nhrec)):
+            yield BCFHeaderRecord(self.bcf_hdr, self.bcf_hdr[0]._hrec[i])
 
 # type_flag is one of BCF_BT_X, or BCF_HT_FLAG or BCF_AUX_NONE
 # if array_flag is True, then BCFAux represents an array of type
@@ -743,6 +781,9 @@ for k in hdr.contigs:
 print("Header samples")
 for k in hdr.samples:
     print(k)
+print("Header Records")
+for r in hdr:
+    print("Record: type:", r.hdr_type, "key", r.key, "value", r.value, "attrs", r.attrs)
 parser.close()
 
 
