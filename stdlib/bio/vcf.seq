@@ -8,36 +8,36 @@ BCF_UN_FMT  = 8
 BCF_UN_IND  = BCF_UN_FMT
 BCF_UN_ALL  = (BCF_UN_SHR|BCF_UN_FMT)
 
-BCF_HL_FLT  =  0
-BCF_HL_INFO =  1
-BCF_HL_FMT  =  2
-BCF_HL_CTG  =  3
-BCF_HL_STR  =  4
-BCF_HL_GEN  =  5
+BCF_HL_FLT  =  i32(0)
+BCF_HL_INFO =  i32(1)
+BCF_HL_FMT  =  i32(2)
+BCF_HL_CTG  =  i32(3)
+BCF_HL_STR  =  i32(4)
+BCF_HL_GEN  =  i32(5)
 
-BCF_HT_FLAG = 0
-BCF_HT_INT  = 1
-BCF_HT_REAL = 2
-BCF_HT_STR  = 3
+BCF_HT_FLAG = i32(0)
+BCF_HT_INT  = i32(1)
+BCF_HT_REAL = i32(2)
+BCF_HT_STR  = i32(3)
 
-BCF_VL_FIXED = 0
-BCF_VL_VAR   = 1
-BCF_VL_A     = 2
-BCF_VL_G     = 3
-BCF_VL_R     = 4
+BCF_VL_FIXED = i32(0)
+BCF_VL_VAR   = i32(1)
+BCF_VL_A     = i32(2)
+BCF_VL_G     = i32(3)
+BCF_VL_R     = i32(4)
 
-BCF_DT_ID     =   0
-BCF_DT_CTG    =   1
-BCF_DT_SAMPLE =   2
+BCF_DT_ID     =   i32(0)
+BCF_DT_CTG    =   i32(1)
+BCF_DT_SAMPLE =   i32(2)
 
-BCF_BT_NULL   =  0
-BCF_BT_INT8   =  1
-BCF_BT_INT16  =  2
-BCF_BT_INT32  =  3
-BCF_BT_FLOAT  =  5
-BCF_BT_CHAR   =  7
+BCF_BT_NULL   =  i32(0)
+BCF_BT_INT8   =  i32(1)
+BCF_BT_INT16  =  i32(2)
+BCF_BT_INT32  =  i32(3)
+BCF_BT_FLOAT  =  i32(5)
+BCF_BT_CHAR   =  i32(7)
 
-BCF_AUX_NONE  = 8
+BCF_AUX_NONE  = i32(8)
 
 INT8_MIN  = -128
 INT16_MIN = -32768
@@ -49,8 +49,12 @@ bcf_str_vector_end   = 0
 bcf_int8_missing     = INT8_MIN
 bcf_int16_missing    = INT16_MIN
 bcf_int32_missing    = INT32_MIN
+bcf_float_missing    = 0x7F800001
+bcf_float_vector_end = 0x7F800002
 bcf_str_missing      = 0x07
 
+def ptr_off[T](base: ptr[byte], byte_offset: int) -> ptr[T]:
+    return ptr[T](base + byte_offset)
 
 type char_pp = ptr[ptr[byte]]
 type char_p  = ptr[byte]
@@ -99,7 +103,13 @@ type _bcf_hdr_t(_n0: i32,
                 _mem: _kstring_t,
                 _m0: i32,
                 _m1: i32,
-                _m2: i32)
+                _m2: i32):
+    
+    def n(self: _bcf_hdr_t, _type_code: int):
+        return ptr_off[i32](ptr[byte](self), _type_code * 4)[0]
+    
+    def id(self: _bcf_hdr_t, _type_code: int):
+        return ptr_off[_bcf_idpair_t](ptr[byte](self), 12 + _type_code * 8)
 
 type _variant_t (_type: i32, _n: i32)
 
@@ -112,6 +122,16 @@ type _bcf_fmt_t(_id: i32,
                 _p_off_free: u32 # this is a bit field p_off is first 31, p_free is the last bit
                 )
 
+def _bcf_hdr_int2id(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):  
+    
+    _id = hdr[0]._id0
+    if _type == i32(1):
+        _id = hdr[0]._id1
+    elif _type == i32(2):
+        _id = hdr[0]._id2
+    
+    return _id[int(_int_id)]._key
+
 type _bcf_info_t(_key: i32,
                  _type: i32,
                  _len: i32,
@@ -119,7 +139,26 @@ type _bcf_info_t(_key: i32,
                  _vptr: ptr[u8],
                  _vptr_len: u32,
                  _vptr_off_free: u32 # bit field, vptr_off is first 31, _free is last
-                 )
+                 ):
+
+    @property
+    def v1(self: _bcf_info_t):
+        return self._v1
+
+    @property
+    def key_code(self: _bcf_info_t):
+        return self._key
+
+    def key_str(self: _bcf_info_t, bcf_hdr: ptr[_bcf_hdr_t]):
+        key = _bcf_hdr_int2id(bcf_hdr, BCF_DT_ID, self._key)
+        return str.from_ptr(key)
+    
+    def key_code_from_ptr(self: _bcf_info_t):
+        return ptr_off[i32](ptr[byte](__ptr__(self)), 0)[0]
+    
+    def self_ptr(self:_bcf_info_t):
+        return __ptr__(self)
+
 
 type _bcf_dec_t(_m_fmt: i32, _m_info: i32, _m_id: i32, _m_als: i32, _m_allele: i32, _m_flt: i32,
                 _n_flt: i32,
@@ -151,9 +190,22 @@ type _bcf1_t(_rid: i32,
             _unpack_size_2: i32,
             _errcode: i32):
 
+            # TODO make these return ints too
             @property
             def n_info(self: _bcf1_t):
                 return self._n_info_allele & u32(0x0000ffff)
+            
+            @property
+            def n_allele(self: _bcf1_t):
+                return ((self._n_info_allele & u32(0xffff0000)) >> u32(16))
+            
+            @property
+            def n_sample(self: _bcf1_t):
+                return int((self._n_fmt_sample & u32(0xffffff00)) >> u32(8))
+
+            @property
+            def n_fmt(self: _bcf1_t):
+                return int(self._n_fmt_sample & u32(0x000000ff))
 
 #define bcf_hdr_id2length(hdr,type,int_id)  ((hdr)->id[BCF_DT_ID][int_id].val->info[type]>>8 & 0xf)
 #define bcf_hdr_id2number(hdr,type,int_id)  ((hdr)->id[BCF_DT_ID][int_id].val->info[type]>>12)
@@ -172,57 +224,65 @@ def get_idinfo(idinfo: _bcf_idinfo_t, _type: i32):
     return ret
 
 def _bcf_hdr_id2type(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    return (get_idinfo(hdr[0]._id0[_int_id]._val[0], _type) >> 4) & 0xf
+    return (get_idinfo(hdr[0]._id0[int(_int_id)]._val[0], _type) >> u32(4)) & u32(0xf)
 
 def _bcf_hdr_id2length(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    return (get_idinfo(hdr[0]._id0[_int_id]._val[0], _type) >> 8) & 0xf
+    return (get_idinfo(hdr[0]._id0[int(_int_id)]._val[0], _type) >> u32(8)) & u32(0xf)
 
 def _bcf_hdr_id2number(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    return get_idinfo(hdr[0]._id0[_int_id]._val[0], _type) >> 12
-
-def _bcf_hdr_int2id(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    _id = hdr[0]._id0
-    if _type == i32(1):
-        _id = hdr[0]._id1
-    elif _type == i32(2):
-        _id = hdr[1]._id2
-
-    return _id[int(_int_id)]._key
+    return get_idinfo(hdr[0]._id0[int(_int_id)]._val[0], _type) >> u32(12)
 
 def _bcf_hdr_id2coltype(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    return get_idinfo(hdr[0]._id0[_int_id]._val[0], _type) & 0xf
+    return get_idinfo(hdr[0]._id0[int(_int_id)]._val[0], _type) & u32(0xf)
 
 # ((int_id<0 || bcf_hdr_id2coltype(hdr,type,int_id)==0xf) ? 0 : 1)
 def _bcf_hdr_idinfo_exists(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    v = _int_id < 0 or (_bcf_hdr_id2coltype(hdr, _type, _int_id) == 0xf)
+    v = _int_id < i32(0) or (_bcf_hdr_id2coltype(hdr, _type, _int_id) == u32(0xf))
     return 0 if v else 1
 
 def check_header_id(hdr: ptr[_bcf_hdr_t], h1_type: i32, id: i32):
     n = hdr[0]._n0
-    return id >= 0 and id < n and _bcf_hdr_idinfo_exists(hdr, h1_type, id)
+    return id >= i32(0) and id < n and _bcf_hdr_idinfo_exists(hdr, h1_type, id)
 
 def is_gt_fmt(hdr: ptr[_bcf_hdr_t], fmt_id: i32):
     fmt = str.from_ptr(_bcf_hdr_int2id(hdr, BCF_DT_ID, fmt_id))
     return fmt == "GT"
 
-class BCFHeader:
-    bcf_hdr: cobj
-    def __init__(self: BCFHeader, bcf_hdr: cobj):
-        self.bcf_hdr = bcf_hdr
 
-class BCFHeaderRecord:
-    def __init__(self: BCFHeaderRecord, bcf_hrec: cobj):
-        self.bcf_hrec = bcf_hrec
+def bcf_float_is_missing(f: i32):
+    return 1 if f == i32(bcf_float_missing) else 0
+
+def bcf_float_is_vector_end(f: i32):
+    return 1 if f == i32(bcf_float_vector_end) else 0
+
+class BCFHeaderMetaData:
+    bcf_hdr: ptr[_bcf_hdr_t]
+    _type_code: int
+
+    def __init__(self: BCFHeaderMetaData, bcf_hdr: ptr[_bcf_hdr_t], _type_code: int):
+        self.bcf_hdr = bcf_hdr
+        self._type_code = _type_code
+
+    @property
+    def type_code(self: BCFHeaderMetaData):
+        return self._type_code
+    
+    def __len__(self: BCFHeaderMetaData):
+        n = 0
+        for i in range(self.bcf_hdr[0].n(int(BCF_DT_ID))):
+            pass
+    def __iter__(self: BCFHeaderMetaData):
         pass
 
-class BCFRecordFilter:
-    # filter status (PASS)
-    # or list of filters that fail
-    pass
-
-class BCFRecordFormat:
-    # mapping from format keys : samples
-    pass
+class BCFHeader:
+    bcf_hdr: ptr[_bcf_hdr_t]
+    def __init__(self: BCFHeader, bcf_hdr: ptr[_bcf_hdr_t]):
+        self.bcf_hdr = bcf_hdr
+    
+    @property
+    def info(self: BCFHeader):
+        # get metadata for info fields in Header
+        pass
 
 # type_flag is one of BCF_BT_X, or BCF_HT_FLAG or BCF_AUX_NONE
 # if array_flag is True, then BCFAux represents an array of type
@@ -261,78 +321,79 @@ def bcf_get_value_count(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], h1_type: i
     count = i64(0)
 
     if h1_type == BCF_HL_FMT and is_gt_fmt(bcf_hdr, id):
-        count = i64(number)
-    elif length == BCF_VL_FIXED:
+        count = i64(int(number))
+    elif i32(length) == BCF_VL_FIXED:
         scalar = i32(1)
-    elif length == BCF_VL_R:
-        count = i64(bcf1[0].n_allele)
-    elif length == BCF_VL_A:
-        count = i64(bcf1[0].n_allele - 1)
+    elif i32(length) == BCF_VL_R:
+        count = i64(int(bcf1[0].n_allele))
+    elif i32(length) == BCF_VL_A:
+        count = i64(int(bcf1[0].n_allele - u32(1)))
     # TODO do
     # elif length == BCF_VL_G:
     #     count[0]
-    elif length == BCF_VL_VAR:
+    elif i32(length) == BCF_VL_VAR:
         count = i64(-1)
     else:
         raise ValueError('Unknown format length')
     
     return (count, scalar)
 
-def bcf_array_to_object(data: cobj, type_code: i32, n: i64, count: i64, scalar: i32) -> BCFAux:
-    def bcf_num_array_to_object[T](data: cobj, type_code: i32, n: i64, vector_end: i32, missing_val: i32):
+def bcf_array_to_object(data: cobj, type_code: i32, n: i32, count: i64, scalar: i32) -> BCFAux:
+    def bcf_num_array_to_object[T](data: cobj, type_code: i32, n: i32, vector_end: T, missing_val: T):
         arr = list[T]()
         nums = ptr[T](data)
-        for i in range(n):
-            if type_code == BCF_BT_FLOAT:
-                if bcf_float_is_vector_end(nums[i]):
-                    break
-                if not bcf_float_is_missing(nums[i]):
-                    arr.append(nums[i])
-            else:
-                if nums[i] == vector_end:
-                    break
-                if nums[i] != missing_val:
-                    arr.append(nums[i])
-        return BCFAux(__ptr__(arr), type_code, True)
+        for i in range(int(n)):
+            if nums[i] == vector_end:
+                break
+            if nums[i] != missing_val:
+                arr.append(nums[i])
+        return BCFAux(cobj(__ptr__(arr)), type_code, True)
 
     
     none_ret = BCFAux(cobj(data), BCF_AUX_NONE, False)
-    if not data or n <= 0:
+    if not data or n <= i32(0):
         return none_ret
     
     if type_code == BCF_BT_CHAR:
         datac = char_p(data)
         # check null terminator
         b: str = ""
-        if datac[n-1] == bcf_str_vector_end:
+        if datac[int(n)-1] == byte(bcf_str_vector_end):
             b = str.from_ptr(datac)
         else:
-            copied_datac = char_p(n)
-            for i in range(n):
+            copied_datac = char_p(int(n))
+            for i in range(int(n)):
                 copied_datac[i] = datac[i]
             b = str.from_ptr(copied_datac)
         arr = list[str]()
         for c in b.split(','):
-            if c.c_str() != bcf_str_missing:
+            if c.c_str()[0] != byte(bcf_str_missing):
                 arr.append(c)
-        return BCFAux(__ptr__(arr), BCF_BT_CHAR, True)
+        return BCFAux(cobj(__ptr__(arr)), BCF_BT_CHAR, True)
     
     else:
         if type_code == BCF_BT_INT8:
-            return bcf_num_array_to_object[i8](data, BCF_BT_INT8, n, bcf_int8_vector_end, bcf_int8_missing)
+            return bcf_num_array_to_object[i8](data, BCF_BT_INT8, n, i8(bcf_int8_vector_end), i8(bcf_int8_missing))
         elif type_code == BCF_BT_INT16:
-            return bcf_num_array_to_object[i16](data, BCF_BT_INT16, n, bcf_int16_vector_end, bcf_int16_missing)
+            return bcf_num_array_to_object[i16](data, BCF_BT_INT16, n, i16(bcf_int16_vector_end), i16(bcf_int16_missing))
         elif type_code == BCF_BT_INT32:
-            return bcf_num_array_to_object[i32](data, BCF_BT_INT32, n, bcf_int32_vector_end, bcf_int32_missing)
+            return bcf_num_array_to_object[i32](data, BCF_BT_INT32, n, i32(bcf_int32_vector_end), i32(bcf_int32_missing))
         elif type_code == BCF_BT_FLOAT:
-            return bcf_num_array_to_object[i32](data, BCF_BT_FLOAT, n, 0, 0)
+            arr = list[i32]()
+            nums = ptr[i32](data)
+            for i in range(int(n)):
+                if bcf_float_is_vector_end(i32(nums[i])):
+                    break
+                if not bcf_float_is_missing(i32(nums[i])):
+                    arr.append(nums[i])
+            return BCFAux(cobj(__ptr__(arr)), BCF_BT_FLOAT, True)
         else:
             raise TypeError('unsupported info type code')
     
     return none_ret    
 
 def bcf_info_get_value(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], info: ptr[_bcf_info_t]) -> BCFAux:
-    count_and_scalar = bcf_get_value_count(bcf1, BCF_HL_INFO, info[0]._key)
+    count_and_scalar = bcf_get_value_count(bcf1, bcf_hdr, BCF_HL_INFO, info[0]._key, i32(-1))
     count = count_and_scalar[0]
     scalar = count_and_scalar[1]
 
@@ -341,32 +402,33 @@ def bcf_info_get_value(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], info: ptr[_
 
     none_ret = BCFAux(cobj(bcf1), BCF_AUX_NONE, False)
 
-    if i._len == 0:
-        if _bcf_hdr_id2type(bcf_hdr, BCF_HL_INFO, i._key) == BCF_HT_FLAG:
+    if i._len == i32(0):
+        if _bcf_hdr_id2type(bcf_hdr, BCF_HL_INFO, i._key) == u32(BCF_HT_FLAG):
             value = True
             # TODO BCF_HT_FLAG is the same as BCF_BT_NULL, this may lead to some confusion
             return BCFAux(cobj(__ptr__(value)), BCF_HT_FLAG, False)
-        elif scalar != 0:
+        elif scalar != i32(0):
             # no value
             return none_ret
         else:
             # no value
             return none_ret
-    elif i._len == 1:
+    elif i._len == i32(1):
+        value = i32(i.v1)
         if i._type == BCF_BT_INT8:
-            return BCFAux(__ptr__(i._v1), BCF_BT_INT8, False) if i8(i._v1) != bcf_int8_missing else none_ret
+            return BCFAux(cobj(__ptr__(value)), BCF_BT_INT8, False) if i._v1 != i32(bcf_int8_missing) else none_ret
         elif i._type == BCF_BT_INT16:
-            return BCFAux(__ptr__(i._v1), BCF_BT_INT16, False) if i16(i._v1) != bcf_int16_missing else none_ret 
+            return BCFAux(cobj(__ptr__(value)), BCF_BT_INT16, False) if i._v1 != i32(bcf_int16_missing) else none_ret 
         elif i._type == BCF_BT_INT32:
-            return BCFAux(__ptr__(i._v1), BCF_BT_INT32, False) if i32(i._v1) != bcf_int32_missing else none_ret
+            return BCFAux(cobj(__ptr__(value)), BCF_BT_INT32, False) if i._v1 != i32(bcf_int32_missing) else none_ret
         elif i._type == BCF_BT_FLOAT:
-            return BCFAux(__ptr__(i._v1), BCF_BT_FLOAT, False) if not bcf_float_is_missing(i._v1) else none_ret
+            return BCFAux(cobj(__ptr__(value)), BCF_BT_FLOAT, False) if not bcf_float_is_missing(i._v1) else none_ret
         elif i._type == BCF_BT_CHAR:
-            return BCFAux(__ptr__(i._v1), BCF_BT_CHAR, False)
+            return BCFAux(cobj(__ptr__(value)), BCF_BT_CHAR, False)
         else:
             raise TypeError('unsupported info type code')
     else:
-        return bcf_array_to_object(i._vptr, i._type, i._len, count, scalar)
+        return bcf_array_to_object(cobj(i._vptr), i._type, i._len, count, scalar)
 
 class BCFRecordInfo:
     # mapping from info keys: values
@@ -386,7 +448,7 @@ class BCFRecordInfo:
         for i in range(int(r[0].n_info)):
             info = r[0]._d._info[i]
             if info._vptr:
-                key = _bcf_hdr_int2id(hdr, i32(BCF_DT_ID), info._key)
+                key = _bcf_hdr_int2id(hdr, BCF_DT_ID, info._key)
                 key_s = str.from_ptr(key)
                 if key_s != 'END':
                     yield key_s
@@ -398,7 +460,6 @@ class BCFRecordInfo:
         return count
 
     def __getitem__(self: BCFRecordInfo, key: str):
-        print("trying to get", key)
         hdr = self.bcf_hdr
         r = self.bcf1
 
@@ -410,37 +471,104 @@ class BCFRecordInfo:
         c_key = key.c_str()
         info = ptr[_bcf_info_t](bcf_get_info(cobj(hdr), cobj(r), c_key))
 
-        # check for null info
-        info_id = bcf_header_get_info_id(hdr, c_key) if not info else info[0]._key
+        # TODO need to check for null info and implement bcf_header_get_info
+        # see https://github.com/pysam-developers/pysam/blob/master/pysam/libcbcf.pyx#L545
+        info_id = info[0]._key
         
-        if info_id < 0:
+        if info_id < i32(0):
             raise KeyError("Unknown info field: " + key)
 
         if not check_header_id(hdr, BCF_HL_INFO, info_id):
             raise ValueError("Invalid Header")
 
         # if flag then return whether points are not null
-        if _bcf_hdr_id2type(hdr, BCF_HL_INFO, info_id) == BCF_HT_FLAG:
+        if _bcf_hdr_id2type(hdr, BCF_HL_INFO, info_id) == u32(BCF_HT_FLAG):
             # TODO return that info and info_id are not null ptrs
-            return info and info[0].vptr
+            value = info and info[0]._vptr
+            return BCFAux(cobj(__ptr__(value)), BCF_HT_FLAG, False)
         
         if not info or not info[0]._vptr:
             raise KeyError('Invalid Info field: ' + key)
 
-        return bcf_info_get_value(bcf1, info)
+        return bcf_info_get_value(r, hdr, info)
+    
+class BCFRecordSample:
+    bcf1: ptr[_bcf1_t]
+    bcf_hdr: ptr[_bcf_hdr_t]
+    index: int
+
+    def __init__(self: BCFRecordSample, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: i32):
+        self.index = index
+        self.bcf1 = bcf1
+        self.bcf_hdr = bcf_hdr 
+
+    @property
+    def name(self: BCFRecordSample):
+        yield str.from_ptr(self.bcf_hdr[0]._samples[self.index])
+
+    # TODO, various operations like getting alleles, allele indices
+
+class BCFRecordSamples:
+    bcf1: ptr[_bcf1_t]
+    bcf_hdr: ptr[_bcf_hdr_t]
+    def __init__(self: BCFRecordSamples, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
+        self.bcf1 = bcf1
+        self.bcf_hdr = bcf_hdr
+    
+    def __len__(self: BCFRecordSamples):
+        return self.bcf1[0].n_sample
+    
+    def __iter__(self: BCFRecordSamples):
+        print(len(self), "samples")
+        for i in range(int(len(self))):
+            yield str.from_ptr(self.bcf_hdr[0]._samples[i])
+    
+    # TODO, getitem for BCFRecordSample (singular)
+
+class BCFRecordFormat:
+    bcf1: ptr[_bcf1_t]
+    bcf_hdr: ptr[_bcf_hdr_t]
+    def __init__(self: BCFRecordFormat, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
+        self.bcf1 = bcf1
+        self.bcf_hdr = bcf_hdr
+    
+    def __len__(self: BCFRecordFormat):
+        return self.bcf1[0].n_fmt
+    
+    def __iter__(self: BCFRecordFormat):
+        if bcf_unpack(cobj(self.bcf1), BCF_UN_FMT) < 0:
+            raise ValueError("Error unpacking format")
+
+        for i in range(len(self)):
+            fmt = self.bcf1[0]._d._fmt[i]
+            if fmt._p:
+                yield str.from_ptr(_bcf_hdr_int2id(self.bcf_hdr, BCF_DT_ID, fmt._id))
 
 class BCFRecord:
     bcf1: ptr[_bcf1_t]
     bcf_hdr: ptr[_bcf_hdr_t]
     _info: BCFRecordInfo
+    _samples: BCFRecordSamples
+    _format: BCFRecordFormat
+
     def __init__(self: BCFRecord, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         self.bcf1 = bcf1
         self.bcf_hdr = bcf_hdr
         self._info = BCFRecordInfo(bcf1, bcf_hdr)
+        self._samples = BCFRecordSamples(bcf1, bcf_hdr)
+        self._format = BCFRecordFormat(bcf1, bcf_hdr)
     
     @property
     def info(self: BCFRecord):
         return self._info
+    
+    @property
+    def samples(self: BCFRecord):
+        return self._samples
+
+    @property
+    def format(self: BCFRecord):
+        return self._format
 
     @property
     def n_info(self: BCFRecord):
@@ -455,7 +583,6 @@ class BCF:
     seq_hdr: BCFHeader
     bcf1_recs: list[cobj]
 
-
     def __init__(self: BCF, path: str):
         path_c_str = path.c_str()
         file = hts_open(path_c_str, "rb".c_str())
@@ -464,7 +591,7 @@ class BCF:
 
         self.file = file
         self.hdr = bcf_hdr_read(self.file)
-        self.seq_hdr = BCFHeader(self.hdr)
+        self.seq_hdr = BCFHeader(ptr[_bcf_hdr_t](self.hdr))
         self.bcf1_recs = list[cobj]()
 
     def _ensure_open(self: BCF):
@@ -498,8 +625,44 @@ class BCF:
 parser = BCF('./valid_vcf.vcf')
 for rec in parser:
     print(rec)
-    for k in rec._info:
-        print("key", k, "val", rec._info[k])
+    for k in rec.info:
+        aux = rec.info[k]
+        type_code = aux.type_code
+        is_array = aux._is_array
+        if type_code == BCF_BT_INT8 :
+            if is_array:
+                print("key", k, "val", aux.arr[i8], "type_code", type_code)
+            else:
+                print("key", k, "val", aux.val[i8], "type_code", type_code)
+        elif type_code == BCF_BT_INT16:
+            if is_array:
+                print("key", k, "val", aux.arr[i16], "type_code", type_code)
+            else:
+                print("key", k, "val", aux.val[i16], "type_code", type_code)
+        elif type_code == BCF_BT_INT32:
+            if is_array:
+                print("key", k, "val", aux.arr[i32], "type_code", type_code)
+            else:
+                print("key", k, "val", aux.val[i32], "type_code", type_code)
+        elif type_code == BCF_BT_FLOAT:
+            if is_array:
+                print("key", k, "val", aux.arr[i32], "type_code", type_code)
+            else:
+                print("key", k, "val", aux.val[i32], "type_code", type_code)
+        elif type_code == BCF_BT_CHAR :
+            if is_array:
+                print("key", k, "val", aux.arr[byte], "type_code", type_code)
+            else:
+                print("key", k, "val", aux.val[byte], "type_code", type_code)
+        elif type_code == BCF_HT_FLAG :
+            if is_array:
+                print("key", k, "val", aux.arr[bool], "type_code", type_code)
+            else:
+                print("key", k, "val", aux.val[bool], "type_code", type_code)
+    for samp in rec.samples:
+        print("sample", samp)
+    for fm in rec.format:
+        print("format", fm)
 parser.close()
 
 
