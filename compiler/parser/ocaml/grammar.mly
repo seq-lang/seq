@@ -261,7 +261,7 @@ with_statement: WITH FLNE(COMMA, with_clause) COLON suite { $loc, With ($2, $4) 
 with_clause: expr { $1, None } | expr AS ID { $1, Some $3 }
 
 func_statement:
-  | decorator+ func
+  | decorator* func
     { List.map (function (pos, Function f) -> (pos, Function { f with fn_attrs = $1 }) | f -> f) $2 }
   | pyfunc { $1 }
 func:
@@ -303,11 +303,11 @@ dataclass_member: class_member { $1 } | decl_statement { Some $1 }
 class_member:
   | PASS NL | STRING NL { None }
   | func_statement { Some (List.hd $1) }
+  | decorator* func_def { Some ($loc, Function { $2 with fn_attrs = $1 }) }
 extend: EXTEND expr COLON NL INDENT class_member+ DEDENT { $loc, Extend ($2, filter_opt $6) }
 typ:
   | type_head NL { $loc, Type (snd $1) }
   | type_head COLON NL INDENT class_member+ DEDENT { $loc, Type { (snd $1) with members = filter_opt $5 } }
-/* TODO: C++ check for default arguments */
 type_head:
   | decorator* TYPE ID generic_list? LP FL(COMMA, typed_param) RP
     { $loc, { class_name = $3; generics = opt_val $4 []; args = $6; members = []; attrs = $1 } }

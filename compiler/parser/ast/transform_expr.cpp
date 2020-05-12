@@ -573,7 +573,6 @@ void TransformVisitor::visit(const CallExpr *expr) {
   // Handle other arguments, if any
   for (auto &i : expr->args)
     args.push_back({i.name, transform(i.value)});
-
   // If constructor, replace with appropriate calls
   if (e->isType()) {
     assert(getClass(e->getType()));

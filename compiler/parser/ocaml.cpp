@@ -368,7 +368,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(Class, tv == 25, parse_string(Field(t, 0)),
            parse_list(Field(t, 1), parse_param),
            parse_list(Field(t, 2), parse_param), parse_stmt_list(Field(t, 3)),
-           parse_list(Field(t, 5), [](value i) {
+           parse_list(Field(t, 4), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
   case 26:

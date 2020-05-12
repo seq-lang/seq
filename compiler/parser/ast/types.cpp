@@ -226,10 +226,13 @@ int ClassType::unify(TypePtr typ, Unification &us) {
     int s1 = unifyList(generics.explicits, t->generics.explicits, us);
     if (s1 == -1)
       return -1;
-    int s2 = unifyList(args, t->args, us);
+    int s2 = unifyList(generics.implicits, t->generics.implicits, us);
     if (s2 == -1)
       return -1;
-    return s1 + s2;
+    int s3 = unifyList(args, t->args, us);
+    if (s3 == -1)
+      return -1;
+    return s1 + s2 + s3;
   } else if (auto t = dynamic_pointer_cast<LinkType>(typ)) {
     return t->unify(shared_from_this(), us);
   }
@@ -238,6 +241,8 @@ int ClassType::unify(TypePtr typ, Unification &us) {
 
 TypePtr ClassType::generalize(int level) {
   auto g = generics;
+  for (auto &t : g.explicits)
+    t.type = t.type ? t.type->generalize(level) : nullptr;
   for (auto &t : g.implicits)
     t.type = t.type ? t.type->generalize(level) : nullptr;
   auto a = args;
@@ -249,6 +254,8 @@ TypePtr ClassType::generalize(int level) {
 TypePtr ClassType::instantiate(int level, int &unboundCount,
                                std::unordered_map<int, TypePtr> &cache) {
   auto g = generics;
+  for (auto &t : g.explicits)
+    t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
   for (auto &t : g.implicits)
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
   auto a = args;
@@ -261,6 +268,9 @@ bool ClassType::hasUnbound() const {
   for (auto &t : generics.explicits)
     if (t.type && t.type->hasUnbound())
       return true;
+  for (auto &t : generics.implicits)
+    if (t.type && t.type->hasUnbound())
+      return true;
   for (auto &t : args)
     if (t.type->hasUnbound())
       return true;
@@ -269,6 +279,9 @@ bool ClassType::hasUnbound() const {
 
 bool ClassType::canRealize() const {
   for (auto &t : generics.explicits)
+    if (t.type && !t.type->canRealize())
+      return false;
+  for (auto &t : generics.implicits)
     if (t.type && !t.type->canRealize())
       return false;
   for (auto &t : args)
@@ -365,31 +378,29 @@ int FuncType::unify(TypePtr typ, Unification &us) {
 }
 
 TypePtr FuncType::generalize(int level) {
-  auto g = generics.implicits;
-  for (auto &t : g)
+  auto g = generics;
+  for (auto &t : g.explicits)
+    t.type = t.type ? t.type->generalize(level) : nullptr;
+  for (auto &t : g.implicits)
     t.type = t.type ? t.type->generalize(level) : nullptr;
   auto a = args;
   for (auto &t : a)
     t.type = t.type->generalize(level);
-  auto i = generics.explicits;
-  for (auto &t : i)
-    t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto t = make_shared<FuncType>(name, Generics(g, i), a, ret->generalize(level));
+  auto t = make_shared<FuncType>(name, g, a, ret->generalize(level));
   return t;
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
                               std::unordered_map<int, TypePtr> &cache) {
-  auto g = generics.implicits;
-  for (auto &t : g)
+  auto g = generics;
+  for (auto &t : g.explicits)
+    t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
+  for (auto &t : g.implicits)
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
   auto a = args;
   for (auto &t : a)
     t.type = t.type->instantiate(level, unboundCount, cache);
-  auto i = generics.explicits;
-  for (auto &t : i)
-    t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  auto t = make_shared<FuncType>(name, Generics(g, i), a,
+  auto t = make_shared<FuncType>(name, g, a,
                                  ret->instantiate(level, unboundCount, cache));
   return t;
 }
