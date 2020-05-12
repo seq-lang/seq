@@ -106,10 +106,20 @@ type _bcf_hdr_t(_n0: i32,
                 _m2: i32):
     
     def n(self: _bcf_hdr_t, _type_code: int):
-        return ptr_off[i32](ptr[byte](self), _type_code * 4)[0]
+        n = self._n0
+        if _type_code == 1:
+            n = self._n1
+        elif _type_code == 2:
+            n = self._n2
+        return n
     
     def id(self: _bcf_hdr_t, _type_code: int):
-        return ptr_off[_bcf_idpair_t](ptr[byte](self), 12 + _type_code * 8)
+        _id = self._id0
+        if _type_code == 1:
+            _id = self._id1
+        elif _type_code == 2:
+            _id = self._id2
+        return _id
 
 type _variant_t (_type: i32, _n: i32)
 
@@ -123,14 +133,7 @@ type _bcf_fmt_t(_id: i32,
                 )
 
 def _bcf_hdr_int2id(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):  
-    
-    _id = hdr[0]._id0
-    if _type == i32(1):
-        _id = hdr[0]._id1
-    elif _type == i32(2):
-        _id = hdr[0]._id2
-    
-    return _id[int(_int_id)]._key
+    return hdr[0].id(int(_type))[int(_int_id)]._key
 
 type _bcf_info_t(_key: i32,
                  _type: i32,
@@ -361,9 +364,10 @@ def bcf_array_to_object(data: cobj, type_code: i32, n: i32, count: i64, scalar: 
         if datac[int(n)-1] == byte(bcf_str_vector_end):
             b = str.from_ptr(datac)
         else:
-            copied_datac = char_p(int(n))
+            copied_datac = char_p(int(n) + 1)
             for i in range(int(n)):
                 copied_datac[i] = datac[i]
+            copied_datac[int(n)] = byte(0)
             b = str.from_ptr(copied_datac)
         arr = list[str]()
         for c in b.split(','):
@@ -483,7 +487,6 @@ class BCFRecordInfo:
 
         # if flag then return whether points are not null
         if _bcf_hdr_id2type(hdr, BCF_HL_INFO, info_id) == u32(BCF_HT_FLAG):
-            # TODO return that info and info_id are not null ptrs
             value = info and info[0]._vptr
             return BCFAux(cobj(__ptr__(value)), BCF_HT_FLAG, False)
         
@@ -651,7 +654,7 @@ for rec in parser:
                 print("key", k, "val", aux.val[i32], "type_code", type_code)
         elif type_code == BCF_BT_CHAR :
             if is_array:
-                print("key", k, "val", aux.arr[byte], "type_code", type_code)
+                print("key", k, "val", aux.arr[str], "type_code", type_code)
             else:
                 print("key", k, "val", aux.val[byte], "type_code", type_code)
         elif type_code == BCF_HT_FLAG :
