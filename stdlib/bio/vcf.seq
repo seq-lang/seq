@@ -77,7 +77,15 @@ type _bcf_idinfo_t(_info0: u32,
                    _hrec0 : ptr[_bcf_hrec_t],
                    _hrec1 : ptr[_bcf_hrec_t],
                    _hrec2 : ptr[_bcf_hrec_t], 
-                   _id: i32)
+                   _id: i32):
+                   
+    def info(self: _bcf_idinfo_t, _type: int):
+        info = self._info0
+        if _type == 1:
+            info = self._info1
+        elif _type == 2:
+            info = self._info2
+        return info
 
 type _bcf_idpair_t(_key: char_p, 
                   _val: ptr[_bcf_idinfo_t])
@@ -218,25 +226,18 @@ type _bcf1_t(_rid: i32,
 #define bcf_hdr_int2id(hdr,type,int_id) ((hdr)->id[type][int_id].key)
 
 #define bcf_hdr_id2type(hdr,type,int_id)    ((hdr)->id[BCF_DT_ID][int_id].val->info[type]>>4 & 0xf)
-def get_idinfo(idinfo: _bcf_idinfo_t, _type: i32):
-    ret = idinfo._info0
-    if _type == i32(1):
-        ret = idinfo._info1
-    elif _type == i32(2):
-        ret = idinfo._info2
-    return ret
 
 def _bcf_hdr_id2type(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    return (get_idinfo(hdr[0]._id0[int(_int_id)]._val[0], _type) >> u32(4)) & u32(0xf)
+    return (hdr[0]._id0[int(_int_id)]._val[0].info(int(_type)) >> u32(4)) & u32(0xf)
 
 def _bcf_hdr_id2length(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    return (get_idinfo(hdr[0]._id0[int(_int_id)]._val[0], _type) >> u32(8)) & u32(0xf)
+    return (hdr[0]._id0[int(_int_id)]._val[0].info(int(_type)) >> u32(8)) & u32(0xf)
 
 def _bcf_hdr_id2number(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    return get_idinfo(hdr[0]._id0[int(_int_id)]._val[0], _type) >> u32(12)
+    return hdr[0]._id0[int(_int_id)]._val[0].info(int(_type)) >> u32(12)
 
 def _bcf_hdr_id2coltype(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
-    return get_idinfo(hdr[0]._id0[int(_int_id)]._val[0], _type) & u32(0xf)
+    return hdr[0]._id0[int(_int_id)]._val[0].info(int(_type)) & u32(0xf)
 
 # ((int_id<0 || bcf_hdr_id2coltype(hdr,type,int_id)==0xf) ? 0 : 1)
 def _bcf_hdr_idinfo_exists(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
@@ -273,9 +274,18 @@ class BCFHeaderMetaData:
     def __len__(self: BCFHeaderMetaData):
         n = 0
         for i in range(self.bcf_hdr[0].n(int(BCF_DT_ID))):
-            pass
+            idpair = self.bcf_hdr[0].id(int(BCF_DT_ID)) + i
+            if idpair[0]._key and idpair[0]._val and idpair._val[0].info(int(self._type_code)) & 0xF != 0xF:
+                n += 1
+            return n
+
     def __iter__(self: BCFHeaderMetaData):
-        pass
+        for i in range(int(self.bcf_hdr[0].n(int(BCF_DT_ID)))):
+            idpair = self.bcf_hdr[0].id(int(BCF_DT_ID)) + i
+            idinfo: _bcf_idinfo_t = idpair[0]._val[0]
+
+            if idpair[0]._key and idpair[0]._val and idinfo.info(int(self._type_code)) & u32(0xF) != u32(0xF):
+                yield str.from_ptr(idpair[0]._key)
 
 class BCFHeader:
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -285,7 +295,7 @@ class BCFHeader:
     @property
     def info(self: BCFHeader):
         # get metadata for info fields in Header
-        pass
+        return BCFHeaderMetaData(self.bcf_hdr, int(BCF_HL_INFO))
 
 # type_flag is one of BCF_BT_X, or BCF_HT_FLAG or BCF_AUX_NONE
 # if array_flag is True, then BCFAux represents an array of type
@@ -582,8 +592,8 @@ class BCFRecord:
 
 class BCF:
     file: cobj
-    hdr: cobj
-    seq_hdr: BCFHeader
+    bcf_hdr: cobj
+    hdr: BCFHeader
     bcf1_recs: list[cobj]
 
     def __init__(self: BCF, path: str):
@@ -593,8 +603,8 @@ class BCF:
             raise IOError("file " + path + " could not be opened")
 
         self.file = file
-        self.hdr = bcf_hdr_read(self.file)
-        self.seq_hdr = BCFHeader(ptr[_bcf_hdr_t](self.hdr))
+        self.bcf_hdr = bcf_hdr_read(self.file)
+        self.hdr = BCFHeader(ptr[_bcf_hdr_t](self.bcf_hdr))
         self.bcf1_recs = list[cobj]()
 
     def _ensure_open(self: BCF):
@@ -605,11 +615,11 @@ class BCF:
         self._ensure_open()
         while True:
             bcf1_rec = bcf_init()
-            status = int(bcf_read(self.file, self.hdr, bcf1_rec))
+            status = int(bcf_read(self.file, self.bcf_hdr, bcf1_rec))
             if status == 0:
                 unpack_status = int(bcf_unpack(bcf1_rec, BCF_UN_FLT)) # TODO maybe change waht to unpack
                 self.bcf1_recs.append(bcf1_rec)
-                yield BCFRecord(ptr[_bcf1_t](bcf1_rec), ptr[_bcf_hdr_t](self.hdr))
+                yield BCFRecord(ptr[_bcf1_t](bcf1_rec), ptr[_bcf_hdr_t](self.bcf_hdr))
             
             elif status == -1:
                 # end of file
@@ -623,7 +633,7 @@ class BCF:
     def close(self: BCF):
         for bcf1_rec in self.bcf1_recs:
             bcf_destroy(bcf1_rec)
-        bcf_hdr_destroy(self.hdr)
+        bcf_hdr_destroy(self.bcf_hdr)
 
 parser = BCF('./valid_vcf.vcf')
 for rec in parser:
@@ -666,6 +676,12 @@ for rec in parser:
         print("sample", samp)
     for fm in rec.format:
         print("format", fm)
+
+print("Header data")
+print("Header info")
+hdr = parser.hdr
+for k in hdr.info:
+    print(k)
 parser.close()
 
 
