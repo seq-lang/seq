@@ -128,6 +128,14 @@ type _bcf_hdr_t(_n0: i32,
         elif _type_code == 2:
             _id = self._id2
         return _id
+    
+    def _dict(self: _bcf_hdr_t, _type_code):
+        _dict = self._dict0
+        if _type_code == 1:
+            _dict = self._dict1
+        elif _type_code == 2:
+            _dict = self._dict2
+        return _dict
 
 type _variant_t (_type: i32, _n: i32)
 
@@ -226,6 +234,10 @@ type _bcf1_t(_rid: i32,
 #define bcf_hdr_int2id(hdr,type,int_id) ((hdr)->id[type][int_id].key)
 
 #define bcf_hdr_id2type(hdr,type,int_id)    ((hdr)->id[BCF_DT_ID][int_id].val->info[type]>>4 & 0xf)
+# static inline const char *bcf_hdr_id2name(const bcf_hdr_t *hdr, int rid) { return hdr->id[BCF_DT_CTG][rid].key; }
+
+def _bcf_hdr_id2name(hdr: ptr[_bcf_hdr_t], rid: int):
+    return hdr[0].id(int(BCF_DT_CTG))[rid]._key
 
 def _bcf_hdr_id2type(hdr: ptr[_bcf_hdr_t], _type: i32, _int_id: i32):
     return (hdr[0]._id0[int(_int_id)]._val[0].info(int(_type)) >> u32(4)) & u32(0xf)
@@ -296,6 +308,14 @@ class BCFHeader:
     def info(self: BCFHeader):
         # get metadata for info fields in Header
         return BCFHeaderMetaData(self.bcf_hdr, int(BCF_HL_INFO))
+    
+    @property
+    def filters(self: BCFHeader):
+        return BCFHeaderMetaData(self.bcf_hdr, int(BCF_HL_FLT))
+
+    @property
+    def formats(self: BCFHeader):
+        return BCFHeaderMetaData(self.bcf_hdr, int(BCF_HL_FMT))
 
 # type_flag is one of BCF_BT_X, or BCF_HT_FLAG or BCF_AUX_NONE
 # if array_flag is True, then BCFAux represents an array of type
@@ -588,7 +608,8 @@ class BCFRecord:
         return self.bcf1[0].n_info
 
     def __str__(self: BCFRecord):
-        return "[BCFRecord: rid: " + str(self.bcf1[0]._rid) + ", pos: " + str(self.bcf1[0]._pos) + ", rlen: " + str(self.bcf1[0]._rlen) + ", n_info: " + str(self.n_info) + " ]"
+        chrom = str.from_ptr(_bcf_hdr_id2name(self.bcf_hdr, int(self.bcf1[0]._rid)))
+        return "[BCFRecord: chrom: " + chrom + ", pos: " + str(self.bcf1[0]._pos) + ", rlen: " + str(self.bcf1[0]._rlen) + ", n_info: " + str(self.n_info) + " ]"
 
 class BCF:
     file: cobj
@@ -681,6 +702,12 @@ print("Header data")
 print("Header info")
 hdr = parser.hdr
 for k in hdr.info:
+    print(k)
+print("Header filters")
+for k in hdr.filters:
+    print(k)
+print("Header formats")
+for k in hdr.formats:
     print(k)
 parser.close()
 
