@@ -331,6 +331,11 @@ class BCFHeaderSamples:
         for i in range(int(self.bcf_hdr[0].n(int(BCF_DT_SAMPLE)))):
             yield str.from_ptr(self.bcf_hdr[0]._samples[i])
 
+    def __getitem__(self: BCFHeaderSamples, index: int):
+        if index < 0 or index >= int(self.bcf_hdr[0].n(int(BCF_DT_SAMPLE))):
+            raise IndexError('Invalid sample index')
+        return str.from_ptr(self.bcf_hdr[0]._samples[index])
+
 METADATA_TYPES = ('FILTER', 'INFO', 'FORMAT', 'CONTIG', 'STRUCTURED', 'GENERIC')
 class BCFHeaderRecord:
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -383,9 +388,25 @@ class BCFHeaderRecord:
             for i in range(int(r[0]._nkeys)):
                 if r[0]._keys[i]:
                     yield str.from_ptr(r[0]._keys[i])
-
-    def __str__(self):
-        pass
+    
+    def iterkeys(self: BCFHeaderRecord):
+        return iter(self)
+    
+    def itervalues(self: BCFHeaderRecord):
+        r = self.bcf_hrec
+        if r:
+            for i in range(int(r[0]._nkeys)):
+                if r[0]._keys[i]:
+                    yield str.from_ptr(r[0]._vals[i]) if r[0].vals[i] else 'None'
+    
+    def iteritems(self: BCFHeaderRecord):
+        r = self.bcf_hrec
+        if r:
+            for i in range(int(r[0]._nkeys)):
+                if r[0]._keys[i]:
+                    val = str.from_ptr(r[0]._vals[i]) if r[0].vals[i] else 'None'
+                    key = str.from_ptr(r[0]._keys[i])
+                    yield (key, val)
 
 class BCFHeader:
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -499,7 +520,8 @@ def bcf_get_value_count(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], h1_type: i
         count = i64(int(bcf1[0].n_allele))
     elif i32(length) == BCF_VL_A:
         count = i64(int(bcf1[0].n_allele - u32(1)))
-    # TODO do
+    # TODO https://github.com/pysam-developers/pysam/blob/master/pysam/libcbcf.pyx
+    # bcf_genotype_count 
     # elif length == BCF_VL_G:
     #     count[0]
     elif i32(length) == BCF_VL_VAR:
@@ -664,7 +686,18 @@ class BCFRecordInfo:
             raise KeyError('Invalid Info field: ' + key)
 
         return bcf_info_get_value(r, hdr, info)
+
+    def iterkeys(self: BCFRecordInfo):
+        return iter(self)
     
+    def itervalues(self: BCFRecordInfo):
+        for k in self.iterkeys():
+            yield self[k]
+
+    def iteritems(self: BCFRecordInfo):
+        for k in self.iterkeys():
+            yield (k, self[k])
+
 class BCFRecordSample:
     bcf1: ptr[_bcf1_t]
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -981,8 +1014,8 @@ print("Header contigs")
 for k in hdr.contigs:
     print(k)
 print("Header samples")
-for k in hdr.samples:
-    print(k)
+for i, k in enumerate(hdr.samples):
+    print(i, k, hdr.samples[i])
 print("Header Records")
 for r in hdr:
     print("Record: type:", r.hdr_type, "key", r.key, "value", r.value, "attrs", r.attrs)
