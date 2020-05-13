@@ -1,0 +1,116 @@
+from bio import *
+
+def test_valid_rec_flat_cols():
+    parser = BCF('../data/valid_vcf.vcf')
+
+    rec = next(parser)
+
+    assert rec.chrom == '20'
+    assert rec.contig == rec.chrom
+    assert rec.pos == 14369
+    assert rec.rlen == 1
+    assert rec.id == 'rs6054257'
+    assert rec.ref == 'G'
+    assert rec.n_info == 6
+
+    parser.close()
+
+def test_valid_rec_info_col():
+    expected_keys = {'NS', 'DP', 'AF', 'DB', 'H2', 'AA'}
+    parser = BCF('../data/valid_vcf.vcf')
+
+    rec = next(parser)
+    info = rec.info
+    keys = {k for k in info}
+    assert keys == expected_keys
+
+    assert int(info['NS'].val[i8]) == 3
+    assert int(info['DP'].arr[i8][0]) == 14
+    assert int(info['DP'].arr[i8][1]) == 22
+    assert int(info['AF'].val[i32]) == 1056964608
+    assert info['DB'].val[bool] == True
+    assert info['H2'].val[bool] == True
+    assert info['AA'].arr[str][0] == 'String'
+    assert info['AA'].arr[str][1] == 'Multi'
+    assert info['AA'].arr[str][2] == 'Val'
+
+    parser.close()
+
+def test_valid_rec_filters_col():
+    parser = BCF('../data/valid_vcf.vcf')
+
+    rec = next(parser)
+    filters = rec.filters
+    expected_filter_names = {'q10', 's50'}
+    assert {f for f in filters} == expected_filter_names
+    
+    meta_q10 = filters['q10']
+    assert meta_q10.name == 'q10'
+    assert meta_q10.bcf_type == 'None'
+
+    # TODO this should evaluate to true (it prints expected), but doesnt
+    # print(meta_q10.description)
+    # assert str(meta_q10.description) == 'Quality below 10'
+
+    parser.close()
+
+def test_valid_rec_formats_col():
+    parser = BCF('../data/valid_vcf.vcf')
+
+    rec = next(parser)
+    formats = rec.formats
+    expected_format_names = {'GT', 'GQ', 'DP', 'HQ'}
+    assert {f for f in formats} == expected_format_names
+
+    meta_gt = formats['GT']
+    assert meta_gt.name == 'GT'
+    assert meta_gt.bcf_type == 'String'
+
+    # TODO this should evaluate to true (it prints expected), but doesnt
+    # print(meta_gt.description)
+    # assert meta_gt.description == 'Genotype'
+
+    parser.close()
+
+def test_valid_rec_samples_col():
+    parser = BCF('../data/valid_vcf.vcf')
+
+    rec = next(parser)
+    samples = rec.samples
+    expected_sample_names = {'NA00001', 'NA00002', 'NA00003'}
+    assert {samp.name for samp in samples} == expected_sample_names
+
+    assert samples['NA00001'].alleles == ['G', 'G']
+
+    parser.close()
+
+def test_valid_header_info():
+    pass
+
+def test_valid_header_filters():
+    pass
+
+def test_valid_header_formats():
+    pass
+
+def test_valid_header_contigs():
+    pass
+
+def test_valid_header_samples():
+    pass
+
+def test_valid_header_rec():
+    pass
+
+test_valid_rec_flat_cols()
+test_valid_rec_info_col()
+test_valid_rec_filters_col()
+test_valid_rec_formats_col()
+test_valid_rec_samples_col()
+test_valid_header_info()
+
+test_valid_header_filters()
+test_valid_header_formats()
+test_valid_header_contigs()
+test_valid_header_samples()
+test_valid_header_rec()
