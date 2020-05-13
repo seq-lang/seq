@@ -86,6 +86,14 @@ type _bcf_idinfo_t(_info0: u32,
         elif _type == 2:
             info = self._info2
         return info
+    
+    def hrec(self: _bcf_idinfo_t, _type: int):
+        hrec = self._hrec0
+        if _type == 1:
+            hrec = self._hrec1
+        elif _type == 2:
+            hrec = self._hrec2
+        return hrec
 
 type _bcf_idpair_t(_key: char_p, 
                   _val: ptr[_bcf_idinfo_t])
@@ -303,7 +311,7 @@ class BCFHeaderMetaData:
             idinfo: _bcf_idinfo_t = idpair[0]._val[0]
 
             if idpair[0]._key and idpair[0]._val and idinfo.info(int(self._type_code)) & u32(0xF) != u32(0xF):
-                yield str.from_ptr(idpair[0]._key)
+                yield str.from_ptr(idpair[0]._key)        
 
 class BCFHeaderContigs:
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -365,6 +373,12 @@ class BCFHeaderRecord:
                     return str.from_ptr(r[0]._vals[i]) if r[0]._vals[i] else 'None'
         raise KeyError('cant find key: ' + key)
     
+    def get(self: BCFHeaderRecord, key: str):
+        try:
+            return self[key]
+        except KeyError:
+            return 'None'
+    
     def __iter__(self: BCFHeaderRecord):
         r = self.bcf_hrec
         if r:
@@ -404,6 +418,44 @@ class BCFHeader:
     def __iter__(self: BCFHeader):
         for i in range(int(self.bcf_hdr[0]._nhrec)):
             yield BCFHeaderRecord(self.bcf_hdr, self.bcf_hdr[0]._hrec[i])
+
+VALUE_TYPES = ('Flag', 'Integer', 'Float', 'String')
+class BCFMetadata:
+    bcf_hdr: ptr[_bcf_hdr_t]
+    _type_code: int
+    _id: int
+
+    def __init__(self: BCFMetadata, bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int):
+        self.bcf_hdr = bcf_hdr
+        self._type_code = _type_code
+        self._id = _id
+    
+    @property
+    def name(self: BCFMetadata):
+        return str.from_ptr(self.bcf_hdr[0].id(int(BCF_DT_ID))[self._id]._key)
+    
+    @property
+    def bcf_type(self: BCFMetadata):
+        if not check_header_id(self.bcf_hdr, i32(self._type_code), i32(self._id)):
+            raise ValueError('Invalid header id')
+        if self._type_code == BCF_HL_FLT:
+            return 'None'
+        return VALUE_TYPES[_bcf_hdr_id2type(self.bcf_hdr, i32(self._type_code), i32(self._id))]
+
+    @property
+    def record(self: BCFMetadata) -> BCFHeaderRecord:
+        if not check_header_id(self.bcf_hdr, i32(self._type_code), i32(self._id)):
+            raise ValueError('Invalid header id')
+        
+        hrec = self.bcf_hdr[0].id(int(BCF_DT_ID))[self._id]._val[0].hrec(int(self._type_code))
+        
+        # TODO hrec can be None
+        return BCFHeaderRecord(self.bcf_hdr, hrec)
+    
+    @property
+    def description(self: BCFMetadata):
+        return self.record.get('Description')
+
 
 # type_flag is one of BCF_BT_X, or BCF_HT_FLAG or BCF_AUX_NONE
 # if array_flag is True, then BCFAux represents an array of type
@@ -729,6 +781,13 @@ class BCFRecordFilter:
         for i in range(int(self.bcf1[0]._d._n_flt)):
             yield str.from_ptr(_bcf_hdr_int2id(self.bcf_hdr, BCF_DT_ID, self.bcf1[0]._d._flt[i]))
 
+    def __getitem__(self: BCFRecordFilter, key: str):
+        c_key = key.c_str()
+        _id = bcf_hdr_id2int(cobj(self.bcf_hdr), BCF_DT_ID, c_key)
+        if not check_header_id(self.bcf_hdr, BCF_HL_FLT, _id) or not bcf_has_filter(cobj(self.bcf_hdr), cobj(self.bcf1), c_key):
+            raise ValueError('Invalid header id')
+        return BCFMetadata(self.bcf_hdr, int(BCF_HL_FLT), int(_id))
+
     def __len__(self: BCFRecordFilter):
         return self.bcf1[0]._d._n_flt
 
@@ -891,7 +950,7 @@ for rec in parser:
     for fm in rec.formats:
         print("format", fm)
     for fl in rec.filters:
-        print("filter", fl)
+        print("filter", fl, "description: ", rec.filters[fl].description)
 
 print("Header data")
 print("Header info")
