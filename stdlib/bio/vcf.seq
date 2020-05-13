@@ -351,7 +351,7 @@ class BCFHeaderRecord:
         return attrs
     
     def __str__(self):
-        
+        pass
 
 class BCFHeader:
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -504,9 +504,10 @@ def bcf_info_get_value(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], info: ptr[_
 
     if i._len == i32(0):
         if _bcf_hdr_id2type(bcf_hdr, BCF_HL_INFO, i._key) == u32(BCF_HT_FLAG):
-            value = True
+            value_p = ptr[bool](1)
+            value_p[0] = True
             # TODO BCF_HT_FLAG is the same as BCF_BT_NULL, this may lead to some confusion
-            return BCFAux(cobj(__ptr__(value)), BCF_HT_FLAG, False)
+            return BCFAux(cobj(value_p), BCF_HT_FLAG, False)
         elif scalar != i32(0):
             # no value
             return none_ret
@@ -583,8 +584,9 @@ class BCFRecordInfo:
 
         # if flag then return whether points are not null
         if _bcf_hdr_id2type(hdr, BCF_HL_INFO, info_id) == u32(BCF_HT_FLAG):
-            value = info and info[0]._vptr
-            return BCFAux(cobj(__ptr__(value)), BCF_HT_FLAG, False)
+            value_p = ptr[bool](1)
+            value_p[0] = info and info[0]._vptr
+            return BCFAux(cobj(value_p), BCF_HT_FLAG, False)
         
         if not info or not info[0]._vptr:
             raise KeyError('Invalid Info field: ' + key)
