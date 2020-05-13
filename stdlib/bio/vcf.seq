@@ -269,9 +269,7 @@ def check_header_id(hdr: ptr[_bcf_hdr_t], h1_type: i32, id: i32):
     return id >= i32(0) and id < n and _bcf_hdr_idinfo_exists(hdr, h1_type, id)
 
 def is_gt_fmt(hdr: ptr[_bcf_hdr_t], fmt_id: i32):
-    print("before str.from_ptr")
     fmt = str.from_ptr(_bcf_hdr_int2id(hdr, BCF_DT_ID, fmt_id))
-    print("after fmt")
     return fmt == "GT"
 
 
@@ -672,7 +670,7 @@ class BCFRecordSample:
     bcf_hdr: ptr[_bcf_hdr_t]
     index: int
 
-    def __init__(self: BCFRecordSample, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: i32):
+    def __init__(self: BCFRecordSample, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int):
         self.index = index
         self.bcf1 = bcf1
         self.bcf_hdr = bcf_hdr 
@@ -704,9 +702,7 @@ class BCFRecordSample:
 
         if not gt0 or not fmt0._n:
             return alleles
-        
-        print("fmt0 type", fmt0._type)
-
+    
         if fmt0._type == BCF_BT_INT8:
             data8 = ptr[i8](fmt0._p + index * int(fmt0._size))
             for i in range(int(fmt0._n)):
@@ -750,6 +746,13 @@ class BCFRecordSamples:
         for i in range(int(len(self))):
             yield BCFRecordSample(self.bcf1, self.bcf_hdr, i)
 
+    def __getitem__(self: BCFRecordSamples, key: str) -> BCFRecordSample:
+        c_key = key.c_str()
+        sample_index = int(bcf_hdr_id2int(cobj(self.bcf_hdr), BCF_DT_SAMPLE, c_key))
+        if sample_index < 0 or sample_index >= self.bcf1[0].n_sample:
+            raise KeyError('invalid sample name: ' + key)
+        return BCFRecordSample(self.bcf1, self.bcf_hdr, sample_index)
+
 class BCFRecordFormat:
     bcf1: ptr[_bcf1_t]
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -768,6 +771,17 @@ class BCFRecordFormat:
             fmt = self.bcf1[0]._d._fmt[i]
             if fmt._p:
                 yield str.from_ptr(_bcf_hdr_int2id(self.bcf_hdr, BCF_DT_ID, fmt._id))
+    
+    def __getitem__(self: BCFRecordFormat, key: str) -> BCFMetadata:
+        c_key = key.c_str()
+        if bcf_unpack(cobj(self.bcf1), BCF_UN_FMT) < 0:
+            raise ValueError("Error unpacking format")
+        fmt = ptr[_bcf_fmt_t](bcf_get_fmt(cobj(self.bcf_hdr), cobj(self.bcf1), c_key))
+        
+        if not fmt or not fmt[0]._p:
+            raise KeyError('Unknown format: ' + key)
+        
+        return BCFMetadata(self.bcf_hdr, int(BCF_HL_FMT), int(fmt[0]._id))
 
 class BCFRecordFilter:
     bcf1: ptr[_bcf1_t]
@@ -944,11 +958,11 @@ for rec in parser:
             else:
                 print("key", k, "val", aux.val[bool], "type_code", type_code)
     for samp in rec.samples:
-        print("sample", samp)
+        print("sample", samp, "getting from rec.samples", rec.samples[samp.name].alleles)
         for allele in samp.alleles:
             print("allele", allele)
     for fm in rec.formats:
-        print("format", fm)
+        print("format", fm, "description: ", rec.formats[fm].description)
     for fl in rec.filters:
         print("filter", fl, "description: ", rec.filters[fl].description)
 
