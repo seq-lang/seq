@@ -261,7 +261,9 @@ def check_header_id(hdr: ptr[_bcf_hdr_t], h1_type: i32, id: i32):
     return id >= i32(0) and id < n and _bcf_hdr_idinfo_exists(hdr, h1_type, id)
 
 def is_gt_fmt(hdr: ptr[_bcf_hdr_t], fmt_id: i32):
+    print("before str.from_ptr")
     fmt = str.from_ptr(_bcf_hdr_int2id(hdr, BCF_DT_ID, fmt_id))
+    print("after fmt")
     return fmt == "GT"
 
 
@@ -270,6 +272,10 @@ def bcf_float_is_missing(f: i32):
 
 def bcf_float_is_vector_end(f: i32):
     return 1 if f == i32(bcf_float_vector_end) else 0
+
+#define bcf_gt_allele(val)      (((val)>>1)-1)
+def bcf_gt_allele(val: int):
+    return int((u64(val) >> u64(1)) - u64(1))
 
 class BCFHeaderMetaData:
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -349,7 +355,23 @@ class BCFHeaderRecord:
                             str.from_ptr(r._vals[i]) if r._vals[i] else 'None')
                             for i in range(int(self.bcf_hrec[0]._nkeys)))
         return attrs
+
+    def __getitem__(self: BCFHeaderRecord, key: str):
+        r = self.bcf_hrec
+        if r:
+            c_key = key.c_str()
+            for i in range(int(r[0]._nkeys)):
+                if r[0]._keys[i] and str.from_ptr(r[0]._keys[i]) == key:
+                    return str.from_ptr(r[0]._vals[i]) if r[0]._vals[i] else 'None'
+        raise KeyError('cant find key: ' + key)
     
+    def __iter__(self: BCFHeaderRecord):
+        r = self.bcf_hrec
+        if r:
+            for i in range(int(r[0]._nkeys)):
+                if r[0]._keys[i]:
+                    yield str.from_ptr(r[0]._keys[i])
+
     def __str__(self):
         pass
 
@@ -605,9 +627,59 @@ class BCFRecordSample:
 
     @property
     def name(self: BCFRecordSample):
-        yield str.from_ptr(self.bcf_hdr[0]._samples[self.index])
+        return str.from_ptr(self.bcf_hdr[0]._samples[self.index])
 
     # TODO, various operations like getting alleles, allele indices
+    @property
+    def alleles(self: BCFRecordSample) -> list[str]:
+        r = self.bcf1[0]
+        bcf_hdr = self.bcf_hdr
+        index = self.index
+
+        nsamples = r.n_sample
+        nalleles = int(r.n_allele)
+        alleles = list[str]()
+
+        if bcf_unpack(cobj(self.bcf1), BCF_UN_ALL) < 0:
+            raise ValueError("Error unpacking format")
+        
+        if index < 0 or index >= nsamples or not r.n_fmt:
+            # TODO
+            return alleles
+
+        fmt0 = r._d._fmt[0]
+        gt0 = is_gt_fmt(bcf_hdr, fmt0._id)
+
+        if not gt0 or not fmt0._n:
+            return alleles
+        
+        print("fmt0 type", fmt0._type)
+
+        if fmt0._type == BCF_BT_INT8:
+            data8 = ptr[i8](fmt0._p + index * int(fmt0._size))
+            for i in range(int(fmt0._n)):
+                if int(data8[i]) == bcf_int8_vector_end:
+                    break
+                a = bcf_gt_allele(int(data8[i]))
+                alleles.append(str.from_ptr(r._d._allele[a]) if 0 <= a and a < nalleles else 'None')
+        if fmt0._type == BCF_BT_INT16:
+            data16 = ptr[i16](fmt0._p + index * int(fmt0._size))
+            for i in range(int(fmt0._n)):
+                if int(data16[i]) == bcf_int16_vector_end:
+                    break
+                a = bcf_gt_allele(int(data16[i]))
+                alleles.append(str.from_ptr(r._d._allele[a]) if 0 <= a and a < nalleles else 'None')
+        if fmt0._type == BCF_BT_INT32:
+            data32 = ptr[i32](fmt0._p + index * int(fmt0._size))
+            for i in range(int(fmt0._n)):
+                if int(data32[i]) == bcf_int32_vector_end:
+                    break
+                a = bcf_gt_allele(int(data32[i]))
+                alleles.append(str.from_ptr(r._d._allele[a]) if 0 <= a and a < nalleles else 'None')
+        return alleles
+    
+    def __str__(self: BCFRecordSample):
+        return self.name
 
 class BCFRecordSamples:
     bcf1: ptr[_bcf1_t]
@@ -620,11 +692,11 @@ class BCFRecordSamples:
         return self.bcf1[0].n_sample
     
     def __iter__(self: BCFRecordSamples):
-        print(len(self), "samples")
+        if bcf_unpack(cobj(self.bcf1), BCF_UN_ALL) < 0:
+            raise ValueError("Error unpacking format")
+
         for i in range(int(len(self))):
-            yield str.from_ptr(self.bcf_hdr[0]._samples[i])
-    
-    # TODO, getitem for BCFRecordSample (singular)
+            yield BCFRecordSample(self.bcf1, self.bcf_hdr, i)
 
 class BCFRecordFormat:
     bcf1: ptr[_bcf1_t]
@@ -645,19 +717,36 @@ class BCFRecordFormat:
             if fmt._p:
                 yield str.from_ptr(_bcf_hdr_int2id(self.bcf_hdr, BCF_DT_ID, fmt._id))
 
+class BCFRecordFilter:
+    bcf1: ptr[_bcf1_t]
+    bcf_hdr: ptr[_bcf_hdr_t]
+
+    def __init__(self: BCFRecordFilter, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
+        self.bcf1 = bcf1
+        self.bcf_hdr = bcf_hdr
+    
+    def __iter__(self: BCFRecordFilter):
+        for i in range(int(self.bcf1[0]._d._n_flt)):
+            yield str.from_ptr(_bcf_hdr_int2id(self.bcf_hdr, BCF_DT_ID, self.bcf1[0]._d._flt[i]))
+
+    def __len__(self: BCFRecordFilter):
+        return self.bcf1[0]._d._n_flt
+
 class BCFRecord:
     bcf1: ptr[_bcf1_t]
     bcf_hdr: ptr[_bcf_hdr_t]
     _info: BCFRecordInfo
     _samples: BCFRecordSamples
-    _format: BCFRecordFormat
+    _formats: BCFRecordFormat
+    _filters: BCFRecordFilter
 
     def __init__(self: BCFRecord, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         self.bcf1 = bcf1
         self.bcf_hdr = bcf_hdr
         self._info = BCFRecordInfo(bcf1, bcf_hdr)
         self._samples = BCFRecordSamples(bcf1, bcf_hdr)
-        self._format = BCFRecordFormat(bcf1, bcf_hdr)
+        self._formats = BCFRecordFormat(bcf1, bcf_hdr)
+        self._filters = BCFRecordFilter(bcf1, bcf_hdr)
     
     @property
     def info(self: BCFRecord):
@@ -668,16 +757,50 @@ class BCFRecord:
         return self._samples
 
     @property
-    def format(self: BCFRecord):
-        return self._format
+    def formats(self: BCFRecord):
+        return self._formats
+    
+    @property
+    def filters(self: BCFRecord):
+        return self._filters
 
     @property
     def n_info(self: BCFRecord):
         return self.bcf1[0].n_info
+    
+    @property
+    def chrom(self: BCFRecord):
+        return str.from_ptr(_bcf_hdr_id2name(self.bcf_hdr, int(self.bcf1[0]._rid)))
+
+    @property
+    def contig(self: BCFRecord):
+        return self.chrom
+
+    @property
+    def pos(self: BCFRecord):
+        return self.bcf1[0]._pos
+    
+    @property
+    def qual(self: BCFRecord):
+        return self.bcf1[0]._qual
+    
+    @property
+    def ref(self: BCFRecord):
+        allele = self.bcf1[0]._d._allele
+        return str.from_ptr(allele[0]) if allele else 'None'
+
+    @property
+    def id(self: BCFRecord):
+        _id = self.bcf1[0]._d._id
+        # ascii code for '.' is 46
+        return str.from_ptr(_id) if _id[0] != byte(46) else 'None'
+    
+    @property
+    def rlen(self: BCFRecord):
+        return self.bcf1[0]._rlen
 
     def __str__(self: BCFRecord):
-        chrom = str.from_ptr(_bcf_hdr_id2name(self.bcf_hdr, int(self.bcf1[0]._rid)))
-        return "[BCFRecord: chrom: " + chrom + ", pos: " + str(self.bcf1[0]._pos) + ", rlen: " + str(self.bcf1[0]._rlen) + ", n_info: " + str(self.n_info) + " ]"
+        return "[BCFRecord: id: " + self.id + ", chrom: " + self.chrom + ", pos: " + str(self.pos) + ", rlen: " + str(self.rlen) + ", n_info: " + str(self.n_info) + ", qual: " + str(self.qual) + ", ref: " + str(self.ref) + " ]"
 
 class BCF:
     file: cobj
@@ -763,8 +886,12 @@ for rec in parser:
                 print("key", k, "val", aux.val[bool], "type_code", type_code)
     for samp in rec.samples:
         print("sample", samp)
-    for fm in rec.format:
+        for allele in samp.alleles:
+            print("allele", allele)
+    for fm in rec.formats:
         print("format", fm)
+    for fl in rec.filters:
+        print("filter", fl)
 
 print("Header data")
 print("Header info")
@@ -786,6 +913,9 @@ for k in hdr.samples:
 print("Header Records")
 for r in hdr:
     print("Record: type:", r.hdr_type, "key", r.key, "value", r.value, "attrs", r.attrs)
+    print("looping over hdr record")
+    for _r in r:
+        print("_r", _r, r[_r])
 parser.close()
 
 
