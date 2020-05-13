@@ -20,4 +20,4 @@ from bio.bed import BEDRecord
 from bio.fai import FAI
 from bio.fai import FAIRecord
 from bio.vcf import BCFHeaderMetaData, BCFHeaderContigs, BCFHeaderSamples, BCFHeaderRecord, BCFHeader, BCFMetadata, BCFAux, BCFRecordInfo, BCFRecordSample, BCFRecordSamples, BCFRecordFormat, BCFRecordFilter, BCFRecord, BCF
-from bio.vcf import BCF_BT_NULL, BCF_BT_INT8, BCF_BT_INT16, BCF_BT_INT32, BCF_BT_FLOAT, BCF_BT_CHAR, BCF_HT_FLAG
+from bio.vcf import BCF_BT_NULL, BCF_BT_INT8, BCF_BT_INT16, BCF_BT_INT32, BCF_BT_FLOAT, BCF_BT_CHAR, BCF_HT_FLAG, BCF_HL_FLT, BCF_HL_FMT, BCF_HL_INFO

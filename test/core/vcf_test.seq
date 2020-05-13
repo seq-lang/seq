@@ -1,7 +1,7 @@
 from bio import *
 
 def test_valid_rec_flat_cols():
-    parser = BCF('../data/valid_vcf.vcf')
+    parser = BCF('data/valid_vcf.vcf')
 
     rec = next(parser)
 
@@ -27,7 +27,7 @@ def test_valid_rec_info_col():
     assert int(info['NS'].val[i8]) == 3
     assert int(info['DP'].arr[i8][0]) == 14
     assert int(info['DP'].arr[i8][1]) == 22
-    assert int(info['AF'].val[i32]) == 1056964608
+    assert info['AF'].val[float] == 0.5
     assert info['DB'].val[bool] == True
     assert info['H2'].val[bool] == True
     assert info['AA'].arr[str][0] == 'String'
@@ -85,22 +85,69 @@ def test_valid_rec_samples_col():
     parser.close()
 
 def test_valid_header_info():
-    pass
+    parser = BCF('../data/valid_vcf.vcf')
+    hdr = parser.hdr
+
+    info_name_set = {'NS', 'AN', 'AC', 'DP', 'AF', 'AA', 'DB', 'H2'}
+    assert {info for info in hdr.info} == info_name_set
+    assert hdr.info.type_code == int(BCF_HL_INFO)
+
+    parser.close()
 
 def test_valid_header_filters():
-    pass
+    parser = BCF('../data/valid_vcf.vcf')
+    hdr = parser.hdr
+
+    filter_name_set = { 'q10', 'PASS', 's50' }
+    assert {filt for filt in hdr.filters} == filter_name_set
+    assert hdr.filters.type_code == int(BCF_HL_FLT)
+
+    parser.close()
 
 def test_valid_header_formats():
-    pass
+    parser = BCF('../data/valid_vcf.vcf')
+    hdr = parser.hdr
+
+    format_name_set = { 'HQ', 'GQ', 'DP', 'GT'}
+    assert {form for form in hdr.formats} == format_name_set
+    assert hdr.formats.type_code == int(BCF_HL_FMT)
+
+    parser.close()
 
 def test_valid_header_contigs():
-    pass
+    parser = BCF('../data/valid_vcf.vcf')
+    hdr = parser.hdr
+    
+    contig_name_set = {'20'}
+    assert {contig for contig in hdr.contigs} == contig_name_set
 
+    parser.close()
 def test_valid_header_samples():
-    pass
+    parser = BCF('../data/valid_vcf.vcf')
+    hdr = parser.hdr
+
+    sample_name_set = { 'NA00003', 'NA00001', 'NA00002' }
+    assert {samp for samp in hdr.samples} == sample_name_set
+    
+    parser.close()
 
 def test_valid_header_rec():
-    pass
+    parser = BCF('../data/valid_vcf.vcf')
+    hdr = parser.hdr
+    
+    hrecs = list[BCFHeaderRecord]()
+    for hrec in hdr:
+        hrecs.append(hrec)
+    
+    hrec = hrecs[5]
+    assert hrec.hdr_type == 'CONTIG'
+    assert hrec.key == 'contig'
+    assert hrec.value == 'None'
+    assert hrec.attrs == [('ID', '20'), ('length', '62435964'), ('assembly', 'B36'), ('md5', 'f126cdf8a6e0c7f379d618ff66beb2da'), ('species', '\"Homo sapiens\"'), ('taxonomy', 'x'), ('IDX', '0')]
+    expected_items = {('ID', '20'), ('length', '62435964'), ('assembly', 'B36'), ('md5', 'f126cdf8a6e0c7f379d618ff66beb2da'), ('species', '\"Homo sapiens\"'), ('taxonomy', 'x'), ('IDX', '0')}
+    assert {item for item in hrec.iteritems()} == expected_items
+
+    parser.close()
 
 test_valid_rec_flat_cols()
 test_valid_rec_info_col()

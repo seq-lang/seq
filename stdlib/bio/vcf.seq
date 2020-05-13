@@ -1,5 +1,7 @@
 from c_htslib import *
 
+# port of PySam
+
 BCF_UN_STR  = 1
 BCF_UN_FLT  = 2
 BCF_UN_INFO = 4
@@ -404,7 +406,7 @@ class BCFHeaderRecord:
         if r:
             for i in range(int(r[0]._nkeys)):
                 if r[0]._keys[i]:
-                    val = str.from_ptr(r[0]._vals[i]) if r[0].vals[i] else 'None'
+                    val = str.from_ptr(r[0]._vals[i]) if r[0]._vals[i] else 'None'
                     key = str.from_ptr(r[0]._keys[i])
                     yield (key, val)
 
@@ -457,9 +459,9 @@ class BCFMetadata:
     def bcf_type(self: BCFMetadata):
         if not check_header_id(self.bcf_hdr, i32(self._type_code), i32(self._id)):
             raise ValueError('Invalid header id')
-        if self._type_code == BCF_HL_FLT:
+        if self._type_code == int(BCF_HL_FLT):
             return 'None'
-        return VALUE_TYPES[_bcf_hdr_id2type(self.bcf_hdr, i32(self._type_code), i32(self._id))]
+        return VALUE_TYPES[int(_bcf_hdr_id2type(self.bcf_hdr, i32(self._type_code), i32(self._id)))]
 
     @property
     def record(self: BCFMetadata) -> BCFHeaderRecord:
@@ -573,13 +575,14 @@ def bcf_array_to_object(data: cobj, type_code: i32, n: i32, count: i64, scalar: 
         elif type_code == BCF_BT_INT32:
             return bcf_num_array_to_object[i32](data, BCF_BT_INT32, n, i32(bcf_int32_vector_end), i32(bcf_int32_missing))
         elif type_code == BCF_BT_FLOAT:
-            arr = list[i32]()
+            arr = list[float]()
             nums = ptr[i32](data)
             for i in range(int(n)):
                 if bcf_float_is_vector_end(i32(nums[i])):
                     break
                 if not bcf_float_is_missing(i32(nums[i])):
-                    arr.append(nums[i])
+                    v = seq_i32_to_float(nums[i])
+                    arr.append(v)
             return BCFAux(cobj(__ptr__(arr)), BCF_BT_FLOAT, True)
         else:
             raise TypeError('unsupported info type code')
@@ -617,7 +620,9 @@ def bcf_info_get_value(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], info: ptr[_
         elif i._type == BCF_BT_INT32:
             return BCFAux(cobj(__ptr__(value)), BCF_BT_INT32, False) if i._v1 != i32(bcf_int32_missing) else none_ret
         elif i._type == BCF_BT_FLOAT:
-            return BCFAux(cobj(__ptr__(value)), BCF_BT_FLOAT, False) if not bcf_float_is_missing(i._v1) else none_ret
+            value_f = ptr[float](1)
+            value_f[0] = seq_i32_to_float(value)
+            return BCFAux(cobj(value_f), BCF_BT_FLOAT, False) if not bcf_float_is_missing(i._v1) else none_ret
         elif i._type == BCF_BT_CHAR:
             return BCFAux(cobj(__ptr__(value)), BCF_BT_CHAR, False)
         else:
@@ -872,7 +877,7 @@ class BCFRecord:
 
     @property
     def n_info(self: BCFRecord):
-        return self.bcf1[0].n_info
+        return int(self.bcf1[0].n_info)
     
     @property
     def chrom(self: BCFRecord):
@@ -884,11 +889,12 @@ class BCFRecord:
 
     @property
     def pos(self: BCFRecord):
-        return self.bcf1[0]._pos
+        return int(self.bcf1[0]._pos)
     
     @property
     def qual(self: BCFRecord):
-        return self.bcf1[0]._qual
+        #TODO float
+        return int(self.bcf1[0]._qual)
     
     @property
     def ref(self: BCFRecord):
@@ -903,7 +909,7 @@ class BCFRecord:
     
     @property
     def rlen(self: BCFRecord):
-        return self.bcf1[0]._rlen
+        return int(self.bcf1[0]._rlen)
 
     def __str__(self: BCFRecord):
         return "[BCFRecord: id: " + self.id + ", chrom: " + self.chrom + ", pos: " + str(self.pos) + ", rlen: " + str(self.rlen) + ", n_info: " + str(self.n_info) + ", qual: " + str(self.qual) + ", ref: " + str(self.ref) + " ]"
@@ -952,82 +958,3 @@ class BCF:
         for bcf1_rec in self.bcf1_recs:
             bcf_destroy(bcf1_rec)
         bcf_hdr_destroy(self.bcf_hdr)
-
-parser = BCF('./valid_vcf.vcf')
-for rec in parser:
-    print(rec)
-    for k in rec.info:
-        aux = rec.info[k]
-        type_code = aux.type_code
-        is_array = aux._is_array
-        if type_code == BCF_BT_INT8 :
-            if is_array:
-                print("key", k, "val", aux.arr[i8], "type_code", type_code)
-            else:
-                print("key", k, "val", aux.val[i8], "type_code", type_code)
-        elif type_code == BCF_BT_INT16:
-            if is_array:
-                print("key", k, "val", aux.arr[i16], "type_code", type_code)
-            else:
-                print("key", k, "val", aux.val[i16], "type_code", type_code)
-        elif type_code == BCF_BT_INT32:
-            if is_array:
-                print("key", k, "val", aux.arr[i32], "type_code", type_code)
-            else:
-                print("key", k, "val", aux.val[i32], "type_code", type_code)
-        elif type_code == BCF_BT_FLOAT:
-            if is_array:
-                print("key", k, "val", aux.arr[i32], "type_code", type_code)
-            else:
-                print("key", k, "val", aux.val[i32], "type_code", type_code)
-        elif type_code == BCF_BT_CHAR :
-            if is_array:
-                print("key", k, "val", aux.arr[str], "type_code", type_code)
-            else:
-                print("key", k, "val", aux.val[byte], "type_code", type_code)
-        elif type_code == BCF_HT_FLAG :
-            if is_array:
-                print("key", k, "val", aux.arr[bool], "type_code", type_code)
-            else:
-                print("key", k, "val", aux.val[bool], "type_code", type_code)
-    for samp in rec.samples:
-        print("sample", samp, "getting from rec.samples", rec.samples[samp.name].alleles)
-        for allele in samp.alleles:
-            print("allele", allele)
-    for fm in rec.formats:
-        print("format", fm, "description: ", rec.formats[fm].description)
-    for fl in rec.filters:
-        print("filter", fl, "description: ", rec.filters[fl].description)
-
-print("Header data")
-print("Header info")
-hdr = parser.hdr
-for k in hdr.info:
-    print(k)
-print("Header filters")
-for k in hdr.filters:
-    print(k)
-print("Header formats")
-for k in hdr.formats:
-    print(k)
-print("Header contigs")
-for k in hdr.contigs:
-    print(k)
-print("Header samples")
-for i, k in enumerate(hdr.samples):
-    print(i, k, hdr.samples[i])
-print("Header Records")
-for r in hdr:
-    print("Record: type:", r.hdr_type, "key", r.key, "value", r.value, "attrs", r.attrs)
-    print("looping over hdr record")
-    for _r in r:
-        print("_r", _r, r[_r])
-parser.close()
-
-
-
-            
-
-
-
-

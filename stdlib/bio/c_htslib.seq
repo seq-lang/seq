@@ -51,6 +51,7 @@ from LD cimport bcf_hrec_format(cobj, cobj)
 cimport seq_get_htsfile_fp(cobj) -> cobj
 cimport seq_is_htsfile_cram(cobj) -> bool
 cimport seq_is_htsfile_bgzf(cobj) -> bool
+cimport seq_i32_to_float(i32) -> float
 
 # print str.from_ptr(hts_version())
 
