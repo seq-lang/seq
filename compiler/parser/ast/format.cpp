@@ -422,9 +422,7 @@ void FormatVisitor::visit(const FunctionStmt *stmt) {
                        nodeEnd, exprEnd);
     result += fmt::format(
         "{}{}{} {}{}({}){}:{}{}{}", attrs, pad(), keyword("def"), name,
-        generics.size()
-            ? fmt::format("[{}]", fmt::join(generics, ", "))
-            : "",
+        generics.size() ? fmt::format("[{}]", fmt::join(generics, ", ")) : "",
         fmt::join(args, ", "),
         fstmt->ret ? fmt::format(" -> {}", transform(fstmt->ret)) : "",
         newline(), v.result, newline());
@@ -437,18 +435,10 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   assert(c);
   for (auto &real : ctx->getRealizations()->getClassRealizations(name)) {
     vector<string> args;
-    string key;
-    if (real.type->isRecord) {
-      key = "type";
-      for (auto &a : real.type->args)
-        args.push_back(fmt::format("{}: {}", a.name, *a.type));
-    } else {
-      key = "class";
-      for (auto &a : c->members) {
-        auto t = ctx->instantiate(real.type->getSrcInfo(), a.second,
-                                  real.type->generics);
-        args.push_back(fmt::format("{}: {}", a.first, *t));
-      }
+    string key = real.type->isRecord ? "type" : "class";
+    for (auto &a : c->members) {
+      auto t = ctx->instantiate(real.type->getSrcInfo(), a.second, real.type);
+      args.push_back(fmt::format("{}: {}", a.first, *t));
     }
     result = fmt::format("{} {}({}){}", keyword(key), stmt->name,
                          fmt::join(args, ", "), newline());
@@ -456,7 +446,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   for (auto &m : c->methods) {
     FormatVisitor v(ctx, renderHTML);
     v.indent = this->indent;
-    auto s = ctx->getRealizations()->getAST(m.second.front()->name);
+    auto s = ctx->getRealizations()->getAST(m.second.front()->getSrcInfo());
     if (s)
       s->accept(v);
     result += v.result;

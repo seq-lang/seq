@@ -52,16 +52,16 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
   std::shared_ptr<TItem> processIdentifier(std::shared_ptr<TypeContext> tctx,
                                            const std::string &id);
 
-  RealizationContext::FuncRealization realize(FuncTypePtr type);
+  RealizationContext::FuncRealization realize(const PartialExpr *t);
   RealizationContext::ClassRealization realize(ClassTypePtr type);
 
   ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
                            const std::string &magic);
   ExprPtr makeBoolExpr(const ExprPtr &e);
-  Generics parseGenerics(const std::vector<Param> &generics);
+  std::shared_ptr<GenericType> parseGenerics(const std::vector<Param> &generics);
 
   void addMethod(Stmt *s, const std::string &canonicalName,
-                 const std::vector<Generics::Generic> &implicits);
+                 const std::vector<GenericType::Generic> &implicits);
 
   class CaptureVisitor : public WalkVisitor {
     std::shared_ptr<TypeContext> ctx;
@@ -197,6 +197,10 @@ public:
     }
     return t;
   }
+  TypePtr forceUnify(const ExprPtr &expr, TypePtr t) {
+    return forceUnify(expr.get(), t);
+  }
+
 
   TypePtr forceUnify(TypePtr t, TypePtr u) {
     if (t && u) {

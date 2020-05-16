@@ -55,7 +55,7 @@ public: /* Names */
 
 public:
   /// Get canonical name for a SrcInfo
-  std::string getCanonicalName(const SrcInfo &info);
+  std::string getCanonicalName(const SrcInfo &info) const;
   /// Generate canonical name for a SrcInfo and original class/function name
   std::string generateCanonicalName(const SrcInfo &info,
                                     const std::string &module,
@@ -90,7 +90,7 @@ public: /** Template ASTs **/
       classASTs;
 
 public:
-  std::shared_ptr<Stmt> getAST(const std::string &name) const;
+  std::shared_ptr<Stmt> getAST(const SrcInfo &info) const;
 
 public: /* Realizations */
   /// Current function realizations.
@@ -154,6 +154,7 @@ public:
   virtual bool isVar() const { return false; }
   virtual bool isImport() const { return false; }
   virtual bool isStatic() const { return false; }
+  virtual bool isFunction() const { return false; }
   virtual TypePtr getType() const { return nullptr; }
 
   std::string getBase() const;
@@ -202,6 +203,19 @@ public:
   TypePtr getType() const override { return type; }
 };
 
+class TFuncItem : public TItem {
+  TypePtr type;
+  std::unique_ptr<PartialExpr> partial;
+
+public:
+  TFuncItem(TypePtr type, std::unique_ptr<PartialExpr> &&partial,
+            const std::string &base, bool global = false)
+      : TItem(base, global), type(type), partial(move(partial)) {}
+  bool isFunction() const override { return true; }
+  TypePtr getType() const override { return type; }
+  const PartialExpr *getPartial() const { return partial ? partial.get() : nullptr; }
+};
+
 /// Current identifier table
 class TypeContext : public VTable<TItem>,
                     public std::enable_shared_from_this<TypeContext> {
@@ -245,6 +259,8 @@ public:
   void add(const std::string &name, TypePtr type, bool isVar = true,
            bool global = false);
   void add(const std::string &name, int value, bool global = false);
+  void add(const std::string &name, TypePtr type,
+           std::unique_ptr<PartialExpr> &&partial, bool global = false);
 
 public:
   std::string getBase() const;
@@ -264,7 +280,7 @@ public:
   /// the generic T gets mapped to int.
   TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type);
   TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type,
-                      const Generics &generics);
+                      GenericTypePtr generics);
   TypePtr instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
                              const std::vector<TypePtr> &generics);
   ImportContext::Import importFile(const std::string &file);

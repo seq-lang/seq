@@ -21,40 +21,18 @@ namespace types {
 struct FuncType;
 struct ClassType;
 struct LinkType;
+struct GenericType;
 struct Type;
 typedef std::shared_ptr<Type> TypePtr;
 typedef std::shared_ptr<FuncType> FuncTypePtr;
 typedef std::shared_ptr<ClassType> ClassTypePtr;
 typedef std::shared_ptr<LinkType> LinkTypePtr;
+typedef std::shared_ptr<GenericType> GenericTypePtr;
 
 struct Unification {
   std::vector<LinkTypePtr> linked;
   std::vector<std::pair<LinkTypePtr, int>> leveled;
   void undo();
-};
-
-struct Generics {
-  struct Generic {
-    int id;
-    TypePtr type;
-    int value;
-    Generic(int id, TypePtr type, int value = 0)
-        : id(id), type(type), value(value) {}
-  };
-  /// Each generic is represented as a pair (generic_id, current_type).
-  /// It is necessary to maintain unique generic ID as defined in the
-  /// "canonical" class type to be able to properly realize types.
-  /// We also need to keep "implicit generics" that are inherited from
-  /// a generic class (for cases like e.g. class A[T]: def foo(): x = T())
-  std::vector<Generic> explicits, implicits;
-  Generics(const std::vector<Generic> &explicits = std::vector<Generic>(),
-           const std::vector<Generic> &implicits = std::vector<Generic>())
-      : explicits(explicits), implicits(implicits) {}
-};
-
-struct Arg {
-  std::string name;
-  TypePtr type;
 };
 
 struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
@@ -89,6 +67,12 @@ public:
   friend std::ostream &operator<<(std::ostream &out, const Type &c) {
     return out << c.toString();
   }
+
+  virtual GenericTypePtr getGeneric() { return nullptr; }
+  virtual FuncTypePtr getFunc() { return nullptr; }
+  virtual ClassTypePtr getClass() { return nullptr; }
+  virtual LinkTypePtr getLink() { return nullptr; }
+  virtual LinkTypePtr getUnbound() { return nullptr; }
 };
 
 /**
@@ -132,28 +116,62 @@ public:
   bool canRealize() const override;
   std::string toString(bool reduced) const override;
 
+  LinkTypePtr getLink() override {
+    return std::static_pointer_cast<LinkType>(shared_from_this());
+  }
+  LinkTypePtr getUnbound() override {
+    return kind == Unbound
+               ? std::static_pointer_cast<LinkType>(shared_from_this())
+               : nullptr;
+  }
+
 private:
   bool occurs(TypePtr typ, Unification &us);
+};
+
+struct GenericType : public Type {
+  struct Generic {
+    int id;
+    TypePtr type;
+    int value;
+    // -1 is for tuple "generics"
+    Generic(TypePtr type) : id(-1), type(type), value(0) {}
+    Generic(int id, TypePtr type, int value = 0)
+        : id(id), type(type), value(value) {}
+  };
+  std::vector<Generic> explicits, implicits;
+
+public:
+  GenericType(const std::vector<Generic> &explicits = std::vector<Generic>(),
+              const std::vector<Generic> &implicits = std::vector<Generic>());
+
+  virtual std::string toString(bool reduced = false) const override;
+  virtual bool hasUnbound() const override;
+  virtual bool canRealize() const override;
+  virtual TypePtr generalize(int level) override;
+  virtual TypePtr instantiate(int level, int &unboundCount,
+                              std::unordered_map<int, TypePtr> &cache) override;
+  virtual int unify(TypePtr t, Unification &us) override;
+
+  GenericTypePtr getGeneric() override {
+    return std::static_pointer_cast<GenericType>(shared_from_this());
+  }
 };
 
 /**
  * ClassType describes a (generic) class type.
  */
-struct ClassType : public Type {
+struct ClassType : public GenericType {
   /// Global unique name for each type (generated from the getSrcPos()).
   std::string name;
   /// Distinguish between records and classes
   bool isRecord;
-  Generics generics;
-  std::vector<Arg> args;
 
   ClassType(const std::string &name, bool isRecord,
-            const Generics &generics = Generics(),
-            const std::vector<Arg> &args = std::vector<Arg>());
-  virtual ~ClassType() {}
+            std::shared_ptr<GenericType> generics = nullptr);
 
 public:
-  int unify(TypePtr typ, Unification &us) override;
+  virtual int unify(TypePtr typ, Unification &us) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
@@ -162,28 +180,24 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
+  ClassTypePtr getClass() override {
+    return std::static_pointer_cast<ClassType>(shared_from_this());
+  }
 };
 
 /**
  * FuncType describes a (generic) function type.
  */
-struct FuncType : public Type {
+struct FuncType : public GenericType {
   /// Empty name indicates "free" function type that can unify to any other
   /// function type
-  std::string name;
-  Generics generics;
-  std::vector<Arg> args;
-  std::vector<char> partialArgs;
-  /// Return type. Usually deduced after the realization.
-  TypePtr ret;
+  std::vector<TypePtr> args;
 
-  FuncType(const std::string &name, const Generics &generics = Generics(),
-           const std::vector<Arg> &args = std::vector<Arg>(),
-           TypePtr ret = nullptr);
-  virtual ~FuncType() {}
+  FuncType(const std::vector<TypePtr> &args = std::vector<TypePtr>(),
+           std::shared_ptr<GenericType> generics = nullptr);
 
 public:
-  int unify(TypePtr typ, Unification &us) override;
+  virtual int unify(TypePtr typ, Unification &us) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
@@ -192,16 +206,10 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
-
-public:
-  int countPartials() const {
-    return std::count(partialArgs.begin(), partialArgs.end(), 1);
+  FuncTypePtr getFunc() override {
+    return std::static_pointer_cast<FuncType>(shared_from_this());
   }
 };
-
-FuncTypePtr getFunction(TypePtr t);
-ClassTypePtr getClass(TypePtr t);
-LinkTypePtr getUnbound(TypePtr t);
 
 } // namespace types
 } // namespace ast

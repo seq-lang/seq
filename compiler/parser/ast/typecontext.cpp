@@ -31,7 +31,7 @@ using namespace types;
 
 RealizationContext::RealizationContext() : unboundCount(0) {}
 
-string RealizationContext::getCanonicalName(const SrcInfo &info) {
+string RealizationContext::getCanonicalName(const SrcInfo &info) const {
   auto it = canonicalNames.find(info);
   if (it != canonicalNames.end()) {
     return it->second;
@@ -87,7 +87,8 @@ TypePtr RealizationContext::findMember(const string &name,
   return nullptr;
 }
 
-shared_ptr<Stmt> RealizationContext::getAST(const string &name) const {
+shared_ptr<Stmt> RealizationContext::getAST(const SrcInfo &info) const {
+  auto name = getCanonicalName(info);
   auto m = funcASTs.find(name);
   if (m != funcASTs.end())
     return m->second.second;
@@ -215,6 +216,11 @@ void TypeContext::add(const string &name, TypePtr type, bool isVar,
     add(name, make_shared<TTypeItem>(type, getBase(), global));
 }
 
+void TypeContext::add(const string &name, TypePtr type,
+                      unique_ptr<PartialExpr> &&partial, bool global) {
+  add(name, make_shared<TFuncItem>(type, partial, getBase(), global));
+}
+
 void TypeContext::add(const string &name, int value, bool global) {
   add(name, make_shared<TStaticItem>(value, getBase(), global));
 }
@@ -285,7 +291,8 @@ TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
     error(srcInfo, "generics do not match");
   for (int i = 0; i < c->generics.explicits.size(); i++) {
     assert(c->generics.explicits[i].type);
-    cache.explicits.push_back(Generics::Generic(c->generics.explicits[i].id, generics[i]));
+    cache.explicits.push_back(
+        Generics::Generic(c->generics.explicits[i].id, generics[i]));
   }
   return instantiate(srcInfo, root, cache);
 }
@@ -330,7 +337,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   auto tt = make_shared<ClassType>("tuple", true);
   stdlib->add("tuple", tt, false);
   stdlib->add("#tuple", tt, false);
-  auto ft = make_shared<FuncType>("");
+  auto ft = make_shared<FuncType>();
   stdlib->add("function", ft, false);
   stdlib->add("#function", ft, false);
 
