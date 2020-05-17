@@ -887,38 +887,5 @@ std::string combine(const std::vector<T> &items, std::string delim = " ") {
   return s;
 }
 
-////////////////////////////////////////////////////////////////////////
-
-struct TupleAccessExpr : public Expr {
-  ExprPtr expr, index;
-};
-
-struct PartialExpr : public Expr {
-  struct Arg {
-    std::string name;
-    TypePtr type;
-  };
-  std::string name;
-  std::vector<int> pending;  // loci in resolvedArgs
-  std::vector<Arg> args;  // name, value
-  TypePtr returnType;
-
-  FuncTypePtr getFullType() const {
-    assert(returnType);
-    vector<TypePtr> types { returnType };
-    for (auto &a: args) {
-      types.push_back(a.type);
-      assert(types.back());
-    }
-    return std::make_shared<FuncType>(types, getType());
-  }
-
-  PartialExpr(std::string &n, const std::vector<int> &pending,
-              std::vector<Arg> &&a, TypePtr r = nullptr);
-  PartialExpr(const PartialExpr &n);
-  std::string toString() const override;
-  NODE_UTILITY(Expr, PartialExpr);
-};
-
 } // namespace ast
 } // namespace seq

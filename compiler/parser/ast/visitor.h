@@ -32,7 +32,7 @@ struct BinaryExpr;
 struct PipeExpr;
 struct IndexExpr;
 struct CallExpr;
-struct PartialExpr;
+// struct PartialExpr;
 struct DotExpr;
 struct SliceExpr;
 struct EllipsisExpr;
@@ -112,7 +112,7 @@ public:
   virtual void visit(const PipeExpr *);
   virtual void visit(const IndexExpr *);
   virtual void visit(const CallExpr *);
-  virtual void visit(const PartialExpr *);
+  // virtual void visit(const PartialExpr *);
   virtual void visit(const DotExpr *);
   virtual void visit(const SliceExpr *);
   virtual void visit(const EllipsisExpr *);

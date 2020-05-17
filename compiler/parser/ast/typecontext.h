@@ -42,13 +42,23 @@ struct RealizationContext {
   RealizationContext();
 
 public: /* Names */
+  struct SrcInfoHash {
+    size_t operator()(const seq::SrcInfo &k) const {
+      // http://stackoverflow.com/a/1646913/126995
+      size_t res = 17;
+      res = res * 31 + std::hash<std::string>()(k.file);
+      res = res * 31 + std::hash<int>()(k.line);
+      res = res * 31 + std::hash<int>()(k.id);
+      return res;
+    }
+  };
   /// Name counter (how many times we used a name)
   /// Used for generating unique name for each identifier
   /// (e.g. if we have two def foo, one will be known as foo and one as foo.1
   std::unordered_map<std::string, int> moduleNames;
   /// Mapping to canonical names
   /// (each SrcInfo positions maps to a unique canonical name)
-  std::unordered_map<SrcInfo, std::string> canonicalNames;
+  std::unordered_map<SrcInfo, std::string, SrcInfoHash> canonicalNames;
   /// Current unbound type ID counter.
   /// Each unbound variable must have different ID.
   int unboundCount;
@@ -154,7 +164,6 @@ public:
   virtual bool isVar() const { return false; }
   virtual bool isImport() const { return false; }
   virtual bool isStatic() const { return false; }
-  virtual bool isFunction() const { return false; }
   virtual TypePtr getType() const { return nullptr; }
 
   std::string getBase() const;
@@ -203,19 +212,6 @@ public:
   TypePtr getType() const override { return type; }
 };
 
-class TFuncItem : public TItem {
-  TypePtr type;
-  std::unique_ptr<PartialExpr> partial;
-
-public:
-  TFuncItem(TypePtr type, std::unique_ptr<PartialExpr> &&partial,
-            const std::string &base, bool global = false)
-      : TItem(base, global), type(type), partial(move(partial)) {}
-  bool isFunction() const override { return true; }
-  TypePtr getType() const override { return type; }
-  const PartialExpr *getPartial() const { return partial ? partial.get() : nullptr; }
-};
-
 /// Current identifier table
 class TypeContext : public VTable<TItem>,
                     public std::enable_shared_from_this<TypeContext> {
@@ -259,8 +255,6 @@ public:
   void add(const std::string &name, TypePtr type, bool isVar = true,
            bool global = false);
   void add(const std::string &name, int value, bool global = false);
-  void add(const std::string &name, TypePtr type,
-           std::unique_ptr<PartialExpr> &&partial, bool global = false);
 
 public:
   std::string getBase() const;

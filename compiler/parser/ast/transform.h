@@ -52,7 +52,7 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
   std::shared_ptr<TItem> processIdentifier(std::shared_ptr<TypeContext> tctx,
                                            const std::string &id);
 
-  RealizationContext::FuncRealization realize(const PartialExpr *t);
+  RealizationContext::FuncRealization realize(FuncTypePtr type);
   RealizationContext::ClassRealization realize(ClassTypePtr type);
 
   ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,

@@ -10,7 +10,7 @@ private:
   std::vector<Expr *> stages;
   std::vector<bool> parallel;
   llvm::BasicBlock *entry;
-  llvm::Value *syncReg;
+  // llvm::Value *syncReg;
 
   struct PipelineCodegenState;
   llvm::Value *codegenPipe(BaseFunc *base, PipelineCodegenState &state);

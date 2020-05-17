@@ -32,6 +32,7 @@ typedef std::shared_ptr<GenericType> GenericTypePtr;
 struct Unification {
   std::vector<LinkTypePtr> linked;
   std::vector<std::pair<LinkTypePtr, int>> leveled;
+  std::shared_ptr<RealizationContext> r;
   void undo();
 };
 
@@ -116,14 +117,18 @@ public:
   bool canRealize() const override;
   std::string toString(bool reduced) const override;
 
+
   LinkTypePtr getLink() override {
-    return std::static_pointer_cast<LinkType>(shared_from_this());
+    return std::static_pointer_cast<LinkType>(follow());
   }
   LinkTypePtr getUnbound() override {
     return kind == Unbound
                ? std::static_pointer_cast<LinkType>(shared_from_this())
                : nullptr;
   }
+  GenericTypePtr getGeneric() override { return std::dynamic_pointer_cast<GenericType>(follow()); }
+  FuncTypePtr getFunc() override { return std::dynamic_pointer_cast<FuncType>(follow()); }
+  ClassTypePtr getClass() override { return std::dynamic_pointer_cast<ClassType>(follow()); }
 
 private:
   bool occurs(TypePtr typ, Unification &us);
@@ -189,6 +194,20 @@ public:
  * FuncType describes a (generic) function type.
  */
 struct FuncType : public GenericType {
+  struct RealizationInfo {
+    struct Arg {
+      std::string name;
+      TypePtr type;
+    };
+    std::string name;
+    std::vector<int> pending; // loci in resolvedArgs
+    std::vector<Arg> args;    // name, value
+    RealizationInfo(const std::string &name, const std::vector<int> &pending,
+                    const std::vector<Arg> &args)
+        : name(name), pending(pending), args(args) {}
+  };
+  std::shared_ptr<RealizationInfo> realizationInfo;
+
   /// Empty name indicates "free" function type that can unify to any other
   /// function type
   std::vector<TypePtr> args;
@@ -209,6 +228,16 @@ public:
   FuncTypePtr getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
   }
+
+  // FuncTypePtr getFullType() const {
+  //   assert(realizationInfo);
+  //   std::vector<TypePtr> types { args[0] };
+  //   for (auto &a: realizationInfo->args) {
+  //     types.push_back(a.type);
+  //     assert(types.back());
+  //   }
+  //   return std::make_shared<FuncType>(types, getGeneric());
+  // }
 };
 
 } // namespace types

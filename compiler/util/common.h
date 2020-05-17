@@ -12,31 +12,20 @@ struct SrcInfo {
   std::string file;
   int line, endLine;
   int col, endCol;
+  int id; /// used to differentiate different
   SrcInfo(std::string file, int line, int endLine, int col, int endCol)
       : file(std::move(file)), line(line), endLine(endLine), col(col),
-        endCol(endCol){};
+        endCol(endCol) {
+    static int _id(0);
+    id = _id++;
+  };
   SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
   friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c);
   bool operator==(const SrcInfo &src) const {
-    return (file == src.file) && (line == src.line)  && (col == src.col);
+    return (file == src.file) && (line == src.line) && (col == src.col);
   }
 };
-}
-
-namespace std {
-template <> struct hash<seq::SrcInfo> {
-  size_t operator()(const seq::SrcInfo &k) const {
-    // Compute individual hash values for first, second and third
-    // http://stackoverflow.com/a/1646913/126995
-    size_t res = 17;
-    res = res * 31 + hash<string>()(k.file);
-    res = res * 31 + hash<int>()(k.line);
-    res = res * 31 + hash<int>()(k.col);
-    return res;
-  }
-};
-} // namespace std
-
+} // namespace seq
 
 namespace seq {
 struct SrcObject {

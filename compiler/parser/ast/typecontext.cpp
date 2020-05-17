@@ -216,11 +216,6 @@ void TypeContext::add(const string &name, TypePtr type, bool isVar,
     add(name, make_shared<TTypeItem>(type, getBase(), global));
 }
 
-void TypeContext::add(const string &name, TypePtr type,
-                      unique_ptr<PartialExpr> &&partial, bool global) {
-  add(name, make_shared<TFuncItem>(type, partial, getBase(), global));
-}
-
 void TypeContext::add(const string &name, int value, bool global) {
   add(name, make_shared<TStaticItem>(value, getBase(), global));
 }
@@ -257,15 +252,16 @@ shared_ptr<LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
 }
 
 TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type) {
-  return instantiate(srcInfo, type, Generics());
+  return instantiate(srcInfo, type, nullptr);
 }
 
 TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type,
-                                 const Generics &generics) {
+                                 GenericTypePtr generics) {
   unordered_map<int, TypePtr> cache;
-  for (auto &g : generics.explicits)
-    if (g.type)
-      cache[g.id] = g.type;
+  if (generics)
+    for (auto &g : generics->explicits)
+      if (g.type)
+        cache[g.id] = g.type;
   auto t = type->instantiate(level, realizations->getUnboundCount(), cache);
   for (auto &i : cache) {
     if (auto l = dynamic_pointer_cast<LinkType>(i.second)) {
@@ -284,17 +280,17 @@ TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type,
 
 TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
                                         const vector<TypePtr> &generics) {
-  auto c = getClass(root);
+  auto c = root->getClass();
   assert(c);
-  Generics cache;
-  if (generics.size() != c->generics.explicits.size())
+  auto g = make_shared<ClassType>("", false);
+  if (generics.size() != c->explicits.size())
     error(srcInfo, "generics do not match");
-  for (int i = 0; i < c->generics.explicits.size(); i++) {
-    assert(c->generics.explicits[i].type);
-    cache.explicits.push_back(
-        Generics::Generic(c->generics.explicits[i].id, generics[i]));
+  for (int i = 0; i < c->explicits.size(); i++) {
+    assert(c->explicits[i].type);
+    g->explicits.push_back(
+        GenericType::Generic(c->explicits[i].id, generics[i]));
   }
-  return instantiate(srcInfo, root, cache);
+  return instantiate(srcInfo, root, g);
 }
 
 shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
@@ -326,9 +322,10 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   for (auto &t : genericTypes) {
     auto typ = make_shared<ClassType>(
         t, true,
-        Generics({{realizations->unboundCount,
-                   make_shared<LinkType>(LinkType::Generic,
-                                         realizations->unboundCount)}}));
+        make_shared<GenericType>(
+            vector<GenericType::Generic> {{realizations->unboundCount,
+              make_shared<LinkType>(LinkType::Generic,
+                                    realizations->unboundCount)}}));
     realizations->moduleNames[t] = 1;
     stdlib->add(t, typ, false);
     stdlib->add("#" + t, typ, false);

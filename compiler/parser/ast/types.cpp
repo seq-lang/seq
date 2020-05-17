@@ -66,7 +66,7 @@ bool LinkType::occurs(TypePtr typ, Unification &us) {
         if (occurs(t.type, us))
           return true;
     for (auto &t : t->args)
-      if (occurs(t.type, us))
+      if (occurs(t, us))
         return true;
     return false;
   } else {
@@ -222,8 +222,8 @@ TypePtr GenericType::instantiate(int level, int &unboundCount,
   return make_shared<GenericType>(e, i);
 }
 
-int GenericType::unify(TypePtr t, Unification &us) {
-  auto t = dynamic_pointer_cast<GenericType>(t);
+int GenericType::unify(TypePtr t_, Unification &us) {
+  auto t = dynamic_pointer_cast<GenericType>(t_);
   assert(t);
 
   if (explicits.size() != t->explicits.size() ||
@@ -231,12 +231,22 @@ int GenericType::unify(TypePtr t, Unification &us) {
     return -1;
   int s = 0, u;
   for (int i = 0; i < explicits.size(); i++) {
-    if ((u = explicits[i]->unify(t->explicits[i], us)) == -1)
+    if ((!explicits[i].type) ^ (!t->explicits[i].type))
+      return -1;
+    if (!explicits[i].type) {
+      if (explicits[i].value != t->explicits[i].value)
+        return -1;
+    } else if ((u = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
       return -1;
     s += u;
   }
   for (int i = 0; i < implicits.size(); i++) {
-    if ((u = implicits[i]->unify(t->implicits[i], us)) == -1)
+    if ((!implicits[i].type) ^ (!t->implicits[i].type))
+      return -1;
+    if (!implicits[i].type) {
+      if (implicits[i].value != t->implicits[i].value)
+        return -1;
+    } else if ((u = implicits[i].type->unify(t->implicits[i].type, us)) == -1)
       return -1;
     s += u;
   }
@@ -248,7 +258,7 @@ ClassType::ClassType(const string &name, bool isRecord,
     : name(name), isRecord(isRecord) {
   if (generics) {
     explicits = generics->explicits;
-    implicits = generics->implicits
+    implicits = generics->implicits;
   }
 }
 
@@ -261,10 +271,16 @@ int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getClass()) {
     if (isRecord != t->isRecord)
       return -1;
-    if (name != t->name) {
-      if (!isRecord || (name != "tuple" && t->name != "tuple"))
-        return -1;
+    if (isRecord && (name != "tuple" && t->name == "tuple"))
+      return t->unify(shared_from_this(), us);
+    if (isRecord && (name == "tuple" && t->name != "tuple")) {
+      assert(us.r);
+      r->findClass(t->name)->members;
+      return GenericType::unify(us.tupleFromRecord(t), us);
     }
+
+    if (name != t->name)
+        return -1;
     return GenericType::unify(t, us);
   } else if (auto t = typ->getLink()) {
     return t->unify(shared_from_this(), us);
@@ -273,13 +289,17 @@ int ClassType::unify(TypePtr typ, Unification &us) {
 }
 
 TypePtr ClassType::generalize(int level) {
-  return make_shared<ClassType>(name, isRecord, GenericType::generalize(level));
+  return make_shared<ClassType>(
+      name, isRecord,
+      static_pointer_cast<GenericType>(GenericType::generalize(level)));
 }
 
 TypePtr ClassType::instantiate(int level, int &unboundCount,
                                unordered_map<int, TypePtr> &cache) {
   return make_shared<ClassType>(
-      name, isRecord, GenericType::instantiate(level, unboundCount, cache));
+      name, isRecord,
+      static_pointer_cast<GenericType>(
+          GenericType::instantiate(level, unboundCount, cache)));
 }
 
 bool ClassType::hasUnbound() const {
@@ -290,11 +310,12 @@ bool ClassType::hasUnbound() const {
 
 bool ClassType::canRealize() const { return GenericType::canRealize(); }
 
-FuncType::FuncType(const vector<TypePtr> &args, shared_ptr<GenericType> generic)
-    : args(args) {
+FuncType::FuncType(const vector<TypePtr> &args,
+                   shared_ptr<GenericType> generics)
+    : realizationInfo(nullptr), args(args) {
   if (generics) {
     explicits = generics->explicits;
-    implicits = generics->implicits
+    implicits = generics->implicits;
   }
 }
 
@@ -329,7 +350,8 @@ TypePtr FuncType::generalize(int level) {
   auto a = args;
   for (auto &t : a)
     t = t->generalize(level);
-  return make_shared<FuncType>(GenericType::generalize(level), a);
+  return make_shared<FuncType>(
+      a, static_pointer_cast<GenericType>(GenericType::generalize(level)));
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
@@ -337,8 +359,21 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
   auto a = args;
   for (auto &t : a)
     t = t->instantiate(level, unboundCount, cache);
-  return make_shared<FuncType>(
-      GenericType::instantiate(level, unboundCount, cache), a);
+
+  /// This is only needed for instantiation
+  shared_ptr<RealizationInfo> p = nullptr;
+  if (realizationInfo) {
+    p = make_shared<RealizationInfo>(
+        realizationInfo->name, realizationInfo->pending, realizationInfo->args);
+    for (auto &a : p->args)
+      a.type = a.type->instantiate(level, unboundCount, cache);
+  }
+
+  auto f = make_shared<FuncType>(
+      a, static_pointer_cast<GenericType>(
+             GenericType::instantiate(level, unboundCount, cache)));
+  f->realizationInfo = p;
+  return f;
 }
 
 bool FuncType::hasUnbound() const {
@@ -353,8 +388,13 @@ bool FuncType::hasUnbound() const {
 bool FuncType::canRealize() const {
   if (!GenericType::canRealize())
     return false;
+  if (!realizationInfo)
+    return false;
   for (int i = 1; i < args.size(); i++)
     if (!args[i]->canRealize())
+      return false;
+  for (int i = 0; i < realizationInfo->args.size(); i++)
+    if (!realizationInfo->args[i].type->canRealize())
       return false;
   return true;
 }

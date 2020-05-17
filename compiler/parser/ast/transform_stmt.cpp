@@ -126,8 +126,6 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     auto t = ctx->find(l->value);
     if (t && !t->isImport()) {
       s->lhs->setType(forceUnify(s->rhs.get(), t->getType()));
-    } else if (auto fe = CAST(s->rhs, PartialExpr)) { // partial assignment
-      ctx->add(l->value, s->rhs->getType(), fe->clone());
     } else {
       ctx->add(l->value, s->rhs->getType(), !s->rhs->isType());
       s->lhs->setType(s->rhs->getType());
@@ -555,6 +553,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     auto genericTypes = parseGenerics(stmt->generics);
     ctx->increaseLevel();
     vector<Param> args;
+    vector<FuncType::RealizationInfo::Arg> partialArgs;
+    vector<int> pending;
     argTypes.push_back(stmt->ret ? transformType(stmt->ret)->getType()
                                  : ctx->addUnbound(getSrcInfo(), false));
     for (auto &a : stmt->args) {
@@ -562,12 +562,17 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       argTypes.push_back(
           {a.type ? t->getType() : ctx->addUnbound(getSrcInfo(), false)});
       args.push_back({a.name, move(t), transform(a.deflt)});
+      partialArgs.push_back({a.name, argTypes.back()});
+      pending.push_back(pending.size());
     }
     ctx->decreaseLevel();
     ctx->popBlock();
 
-    auto t =
-        make_shared<FuncType>(argTypes, genericTypes)->generalize(ctx->level);
+    auto t = std::static_pointer_cast<FuncType>(
+        make_shared<FuncType>(argTypes, genericTypes)->generalize(ctx->level));
+    t->realizationInfo = make_shared<FuncType::RealizationInfo>(
+      canonicalName, pending, partialArgs);
+
     DBG("* [function] {} :- {}", canonicalName, *t);
     ctx->add(format("{}{}", ctx->getBase(), stmt->name), t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
@@ -788,16 +793,10 @@ void TransformVisitor::visit(const BoundPattern *pat) {
 /*************************************************************************************/
 
 RealizationContext::FuncRealization
-TransformVisitor::realize(const PartialExpr *t) {
-  // assert(t->canRealize());
-  auto name = t->name;
-  for (auto &a: t->args)
-    if (!a.value->canRealize())
-      return {nullptr, {}, nullptr};
-  auto f = t->getType()->getFunc();
-  assert(f);
-  auto ret = f->args[0];
-
+TransformVisitor::realize(FuncTypePtr t) {
+  assert(t->canRealize());
+  auto ret = t->args[0];
+  auto name = t->realizationInfo->name;
   auto it = ctx->getRealizations()->funcRealizations.find(name);
   if (it != ctx->getRealizations()->funcRealizations.end()) {
     auto it2 = it->second.find(t->toString(true));
@@ -813,11 +812,11 @@ TransformVisitor::realize(const PartialExpr *t) {
   ctx->bases.push_back(ast.second->name);
   // Ensure that all inputs are realized
 
-  assert(t->args.size() + 1 == ast.second->args.size());
-  for (int i = 1; i < t->args.size(); i++) {
-    assert(t->args[i].value->getType() && !t->args[i].value->getType()->hasUnbound());
-    // We need AST her'z
-    ctx->add(ast.second->args[i - 1].name, make_shared<LinkType>(t->args[i].value->getType()));
+  for (int i = 0; i < t->realizationInfo->args.size(); i++) {
+    assert(t->realizationInfo->args[i].type &&
+           !t->realizationInfo->args[i].type->hasUnbound());
+    ctx->add(ast.second->args[i].name,
+             make_shared<LinkType>(t->realizationInfo->args[i].type));
   }
   auto old = ctx->returnType;
   auto oldSeen = ctx->hasSetReturnType;
@@ -837,12 +836,12 @@ TransformVisitor::realize(const PartialExpr *t) {
   assert(ret->canRealize());
   // DBG("======== END {} :- {} ========", t->name, *t);
 
-  assert(ast.second->args.size() == t->args.size());
+  assert(ast.second->args.size() == t->realizationInfo->args.size());
   vector<Param> args;
   for (auto &i : ast.second->args)
     args.push_back({i.name, nullptr, nullptr});
   DBG("<:> {} {}", name, t->toString(true));
-  auto ret =
+  auto result =
       ctx->getRealizations()->funcRealizations[name][t->toString(true)] = {
           t,
           Nx<FunctionStmt>(ast.second.get(), name, nullptr, vector<Param>(),
@@ -853,7 +852,7 @@ TransformVisitor::realize(const PartialExpr *t) {
   ctx->decreaseLevel();
   ctx->popBlock();
   DBG(">> realized {}::{}", name, *t);
-  return ret;
+  return result;
 }
 
 RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
