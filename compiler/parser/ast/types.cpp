@@ -209,7 +209,9 @@ TypePtr GenericType::generalize(int level) {
     t.type = t.type ? t.type->generalize(level) : nullptr;
   for (auto &t : i)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  return make_shared<GenericType>(e, i);
+  auto c = make_shared<GenericType>(e, i);
+  c->setSrcInfo(getSrcInfo());
+  return c;
 }
 
 TypePtr GenericType::instantiate(int level, int &unboundCount,
@@ -219,7 +221,9 @@ TypePtr GenericType::instantiate(int level, int &unboundCount,
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
   for (auto &t : i)
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  return make_shared<GenericType>(e, i);
+  auto c = make_shared<GenericType>(e, i);
+  c->setSrcInfo(getSrcInfo());
+  return c;
 }
 
 int GenericType::unify(TypePtr t_, Unification &us) {
@@ -298,9 +302,11 @@ TypePtr ClassType::generalize(int level) {
   auto a = recordMembers;
   for (auto &t : a)
     t = t->generalize(level);
-  return make_shared<ClassType>(
+  auto c = make_shared<ClassType>(
       name, record, a,
       static_pointer_cast<GenericType>(GenericType::generalize(level)));
+  c->setSrcInfo(getSrcInfo());
+  return c;
 }
 
 TypePtr ClassType::instantiate(int level, int &unboundCount,
@@ -308,10 +314,12 @@ TypePtr ClassType::instantiate(int level, int &unboundCount,
   auto a = recordMembers;
   for (auto &t : a)
     t = t->instantiate(level, unboundCount, cache);
-  return make_shared<ClassType>(
+  auto c = make_shared<ClassType>(
       name, record, a,
       static_pointer_cast<GenericType>(
           GenericType::instantiate(level, unboundCount, cache)));
+  c->setSrcInfo(getSrcInfo());
+  return c;
 }
 
 bool ClassType::hasUnbound() const {
@@ -370,8 +378,10 @@ TypePtr FuncType::generalize(int level) {
   auto a = args;
   for (auto &t : a)
     t = t->generalize(level);
-  return make_shared<FuncType>(
+  auto f = make_shared<FuncType>(
       a, static_pointer_cast<GenericType>(GenericType::generalize(level)));
+  f->setSrcInfo(getSrcInfo());
+  return f;
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
@@ -393,6 +403,7 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
       a, static_pointer_cast<GenericType>(
              GenericType::instantiate(level, unboundCount, cache)));
   f->realizationInfo = p;
+  f->setSrcInfo(getSrcInfo());
   return f;
 }
 

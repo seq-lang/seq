@@ -33,9 +33,9 @@ RealizationContext::RealizationContext() : unboundCount(0) {}
 
 string RealizationContext::getCanonicalName(const SrcInfo &info) const {
   auto it = canonicalNames.find(info);
-  if (it != canonicalNames.end()) {
+  if (it != canonicalNames.end())
     return it->second;
-  }
+  assert(false);
   return "";
 }
 

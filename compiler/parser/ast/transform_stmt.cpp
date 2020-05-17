@@ -570,6 +570,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
 
     auto t = std::static_pointer_cast<FuncType>(
         make_shared<FuncType>(argTypes, genericTypes)->generalize(ctx->level));
+    t->setSrcInfo(stmt->getSrcInfo());
     t->realizationInfo = make_shared<FuncType::RealizationInfo>(
         canonicalName, pending, partialArgs);
 
@@ -596,6 +597,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   auto genericTypes = parseGenerics(stmt->generics);
   auto ct = make_shared<ClassType>(canonicalName, stmt->isRecord,
                                    vector<TypePtr>(), genericTypes);
+  ct->setSrcInfo(stmt->getSrcInfo());
   if (!stmt->isRecord) // add classes early
     ctx->add(format("{}{}", ctx->getBase(), stmt->name), ct, false);
   ctx->getRealizations()->classASTs[canonicalName] =
