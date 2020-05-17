@@ -32,7 +32,6 @@ typedef std::shared_ptr<GenericType> GenericTypePtr;
 struct Unification {
   std::vector<LinkTypePtr> linked;
   std::vector<std::pair<LinkTypePtr, int>> leveled;
-  std::shared_ptr<RealizationContext> r;
   void undo();
 };
 
@@ -117,7 +116,6 @@ public:
   bool canRealize() const override;
   std::string toString(bool reduced) const override;
 
-
   LinkTypePtr getLink() override {
     return std::static_pointer_cast<LinkType>(follow());
   }
@@ -126,9 +124,15 @@ public:
                ? std::static_pointer_cast<LinkType>(shared_from_this())
                : nullptr;
   }
-  GenericTypePtr getGeneric() override { return std::dynamic_pointer_cast<GenericType>(follow()); }
-  FuncTypePtr getFunc() override { return std::dynamic_pointer_cast<FuncType>(follow()); }
-  ClassTypePtr getClass() override { return std::dynamic_pointer_cast<ClassType>(follow()); }
+  GenericTypePtr getGeneric() override {
+    return std::dynamic_pointer_cast<GenericType>(follow());
+  }
+  FuncTypePtr getFunc() override {
+    return std::dynamic_pointer_cast<FuncType>(follow());
+  }
+  ClassTypePtr getClass() override {
+    return std::dynamic_pointer_cast<ClassType>(follow());
+  }
 
 private:
   bool occurs(TypePtr typ, Unification &us);
@@ -170,9 +174,11 @@ struct ClassType : public GenericType {
   /// Global unique name for each type (generated from the getSrcPos()).
   std::string name;
   /// Distinguish between records and classes
-  bool isRecord;
+  bool record;
+  std::vector<TypePtr> recordMembers;
 
-  ClassType(const std::string &name, bool isRecord,
+  ClassType(const std::string &name, bool isRecord = false,
+            const std::vector<TypePtr> &recordMembers = std::vector<TypePtr>(),
             std::shared_ptr<GenericType> generics = nullptr);
 
 public:
@@ -188,6 +194,7 @@ public:
   ClassTypePtr getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
   }
+  bool isRecord() const { return record; }
 };
 
 /**

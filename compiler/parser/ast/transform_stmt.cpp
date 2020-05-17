@@ -571,7 +571,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     auto t = std::static_pointer_cast<FuncType>(
         make_shared<FuncType>(argTypes, genericTypes)->generalize(ctx->level));
     t->realizationInfo = make_shared<FuncType::RealizationInfo>(
-      canonicalName, pending, partialArgs);
+        canonicalName, pending, partialArgs);
 
     DBG("* [function] {} :- {}", canonicalName, *t);
     ctx->add(format("{}{}", ctx->getBase(), stmt->name), t);
@@ -594,7 +594,8 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     return;
 
   auto genericTypes = parseGenerics(stmt->generics);
-  auto ct = make_shared<ClassType>(canonicalName, stmt->isRecord, genericTypes);
+  auto ct = make_shared<ClassType>(canonicalName, stmt->isRecord,
+                                   vector<TypePtr>(), genericTypes);
   if (!stmt->isRecord) // add classes early
     ctx->add(format("{}{}", ctx->getBase(), stmt->name), ct, false);
   ctx->getRealizations()->classASTs[canonicalName] =
@@ -610,8 +611,10 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     strArgs.push_back(format("{}: {}", a.name, s));
     if (!mainType.size())
       mainType = s;
-    ctx->getRealizations()->classes[canonicalName].members[a.name] =
-        transformType(a.type)->getType()->generalize(ctx->level);
+    auto t = transformType(a.type)->getType()->generalize(ctx->level);
+    ctx->getRealizations()->classes[canonicalName].members[a.name] = t;
+    if (stmt->isRecord)
+      ct->recordMembers.push_back(t);
     // DBG("* [class] [member.{}] :- {}", a.name,
     // *ctx->classes[canonicalName].members[a.name]);
   }
@@ -792,8 +795,7 @@ void TransformVisitor::visit(const BoundPattern *pat) {
 
 /*************************************************************************************/
 
-RealizationContext::FuncRealization
-TransformVisitor::realize(FuncTypePtr t) {
+RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
   assert(t->canRealize());
   auto ret = t->args[0];
   auto name = t->realizationInfo->name;
@@ -897,7 +899,7 @@ RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
       auto real = realize(mt->getClass());
       types.push_back(real.handle);
     }
-    if (t->isRecord)
+    if (t->isRecord())
       handle = seq::types::RecordType::get(types, names,
                                            t->name == "tuple" ? "" : t->name);
     else {

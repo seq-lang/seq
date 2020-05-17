@@ -435,7 +435,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   assert(c);
   for (auto &real : ctx->getRealizations()->getClassRealizations(name)) {
     vector<string> args;
-    string key = real.type->isRecord ? "type" : "class";
+    string key = real.type->isRecord() ? "type" : "class";
     for (auto &a : c->members) {
       auto t = ctx->instantiate(real.type->getSrcInfo(), a.second, real.type);
       args.push_back(fmt::format("{}: {}", a.first, *t));

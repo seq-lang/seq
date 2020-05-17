@@ -254,8 +254,9 @@ int GenericType::unify(TypePtr t_, Unification &us) {
 }
 
 ClassType::ClassType(const string &name, bool isRecord,
+                     const vector<TypePtr> &recordMembers,
                      shared_ptr<GenericType> generics)
-    : name(name), isRecord(isRecord) {
+    : name(name), record(isRecord), recordMembers(recordMembers) {
   if (generics) {
     explicits = generics->explicits;
     implicits = generics->implicits;
@@ -269,18 +270,23 @@ string ClassType::toString(bool reduced) const {
 
 int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getClass()) {
-    if (isRecord != t->isRecord)
+    if (isRecord() != t->isRecord())
       return -1;
-    if (isRecord && (name != "tuple" && t->name == "tuple"))
-      return t->unify(shared_from_this(), us);
-    if (isRecord && (name == "tuple" && t->name != "tuple")) {
-      assert(us.r);
-      r->findClass(t->name)->members;
-      return GenericType::unify(us.tupleFromRecord(t), us);
-    }
-
-    if (name != t->name)
+    if (isRecord() && (name == "tuple" || t->name == "tuple")) {
+      // When unifying tuples, only record members matter
+      if (recordMembers.size() != t->recordMembers.size())
         return -1;
+      int s1 = 0, s;
+      for (int i = 0; i < recordMembers.size(); i++) {
+        if ((s = recordMembers[i]->unify(t->recordMembers[i], us)) != -1)
+          s1 += s;
+        else
+          return -1;
+      }
+      return s1;
+    }
+    if (name != t->name)
+      return -1;
     return GenericType::unify(t, us);
   } else if (auto t = typ->getLink()) {
     return t->unify(shared_from_this(), us);
@@ -289,26 +295,40 @@ int ClassType::unify(TypePtr typ, Unification &us) {
 }
 
 TypePtr ClassType::generalize(int level) {
+  auto a = recordMembers;
+  for (auto &t : a)
+    t = t->generalize(level);
   return make_shared<ClassType>(
-      name, isRecord,
+      name, record, a,
       static_pointer_cast<GenericType>(GenericType::generalize(level)));
 }
 
 TypePtr ClassType::instantiate(int level, int &unboundCount,
                                unordered_map<int, TypePtr> &cache) {
+  auto a = recordMembers;
+  for (auto &t : a)
+    t = t->instantiate(level, unboundCount, cache);
   return make_shared<ClassType>(
-      name, isRecord,
+      name, record, a,
       static_pointer_cast<GenericType>(
           GenericType::instantiate(level, unboundCount, cache)));
 }
 
 bool ClassType::hasUnbound() const {
+  for (int i = 1; i < recordMembers.size(); i++)
+    if (recordMembers[i]->hasUnbound())
+      return true;
   if (GenericType::hasUnbound())
     return true;
   return false;
 }
 
-bool ClassType::canRealize() const { return GenericType::canRealize(); }
+bool ClassType::canRealize() const {
+  for (int i = 1; i < recordMembers.size(); i++)
+    if (!recordMembers[i]->canRealize())
+      return false;
+  return GenericType::canRealize();
+}
 
 FuncType::FuncType(const vector<TypePtr> &args,
                    shared_ptr<GenericType> generics)

@@ -282,7 +282,7 @@ TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
                                         const vector<TypePtr> &generics) {
   auto c = root->getClass();
   assert(c);
-  auto g = make_shared<ClassType>("", false);
+  auto g = make_shared<ClassType>("");
   if (generics.size() != c->explicits.size())
     error(srcInfo, "generics do not match");
   for (int i = 0; i < c->explicits.size(); i++) {
@@ -321,7 +321,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   vector<string> genericTypes = {"ptr", "generator", "optional"};
   for (auto &t : genericTypes) {
     auto typ = make_shared<ClassType>(
-        t, true,
+        t, true, vector<TypePtr>(),
         make_shared<GenericType>(
             vector<GenericType::Generic> {{realizations->unboundCount,
               make_shared<LinkType>(LinkType::Generic,

@@ -228,11 +228,10 @@ void TransformVisitor::visit(const UnpackExpr *expr) {
 
 void TransformVisitor::visit(const TupleExpr *expr) {
   auto e = N<TupleExpr>(transform(expr->items));
-  vector<GenericType::Generic> args;
+  vector<TypePtr> args;
   for (auto &i : e->items)
-    args.push_back(GenericType::Generic(i->getType()));
-  e->setType(forceUnify(
-      expr, T<ClassType>("tuple", true, make_shared<GenericType>(args))));
+    args.push_back(i->getType());
+  e->setType(forceUnify( expr, T<ClassType>("tuple", true, args)));
   resultExpr = move(e);
 }
 
@@ -534,7 +533,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
 
   if (e->isType()) { // Replace constructor with appropriate calls
     assert(e->getType()->getClass());
-    if (e->getType()->getClass()->isRecord) {
+    if (e->getType()->getClass()->isRecord()) {
       resultExpr = N<CallExpr>(N<DotExpr>(e->clone(), "__new__"), move(args));
     } else {
       string var = getTemporaryVar("typ");
