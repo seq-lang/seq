@@ -339,6 +339,16 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
     stdlib->addType("#" + t, typ);
     realizations->unboundCount++;
   }
+  genericTypes = {"Int", "UInt"};
+  for (auto &t : genericTypes) {
+    auto typ = make_shared<ClassType>(
+        t, true, vector<TypePtr>(),
+        make_shared<GenericType>(
+            vector<GenericType::Generic>{{"N", 0, nullptr, 0}}));
+    realizations->moduleNames[t] = 1;
+    stdlib->addType(t, typ);
+    stdlib->addType("#" + t, typ);
+  }
   auto tt = make_shared<ClassType>("tuple", true);
   stdlib->addType("tuple", tt);
   stdlib->addType("#tuple", tt);

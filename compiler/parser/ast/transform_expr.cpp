@@ -429,10 +429,10 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
       auto magic = mi->second;
       auto lc = le->getType()->getClass(), rc = re->getType()->getClass();
       assert(lc && rc);
-      if (findBestCall(lc, magic, {re->getType()})) {
-        if (expr->inPlace && findBestCall(lc, "i" + magic, {re->getType()}))
+      if (findBestCall(lc, format("__{}__", magic), {lc, rc})) {
+        if (expr->inPlace && findBestCall(lc, format("__i{}__", magic), {lc, rc}))
           magic = "i" + magic;
-      } else if (findBestCall(rc, "r" + magic, {le->getType()})) {
+      } else if (findBestCall(rc, format("__r{}__", magic), {rc, lc})) {
         magic = "r" + magic;
       } else {
         error(expr, "cannot find appropriate {}", magic);
@@ -446,12 +446,55 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
 
 // TODO
 void TransformVisitor::visit(const PipeExpr *expr) {
-  error(expr, "to be done later");
-  // vector<PipeExpr::Pipe> items;
-  // for (auto &l : expr->items) {
-  //   items.push_back({l.op, transform(l.expr)});
-  // }
-  // resultPattern = N<PipeExpr>(move(items));
+  // error(expr, "to be done later");
+  auto extractType = [&](TypePtr t) {
+    auto c = t->getClass();
+    if (c && c->name == "generator")
+      return c->explicits[0].type;
+    else
+      return t;
+  };
+  auto updateType = [&](TypePtr t, int inTypePos, TypePtr ft) {
+    auto f = ft->getFunc();
+    assert(f);
+    // exactly one empty slot!
+    forceUnify(t, f->args[inTypePos + 1]);
+    if (f->canRealize())
+      forceUnify(f, realize(f).type);
+    return f->args[0];
+  };
+
+  vector<PipeExpr::Pipe> items;
+  items.push_back({expr->items[0].op, transform(expr->items[0].expr)});
+  TypePtr inType = extractType(items.back().expr->getType());
+  int inTypePos = 0;
+  for (int i = 1; i < expr->items.size(); i++) {
+    auto &l = expr->items[i];
+    if (auto ce = CAST(l.expr, CallExpr)) {
+      int inTypePos = -1;
+      for (int ia = 0; ia < ce->args.size(); ia++)
+        if (CAST(ce->args[ia].value, EllipsisExpr)) {
+          if (inTypePos == -1)
+            inTypePos = ia;
+          else
+            error(ce->args[ia].value, "must have only one partial argument");
+        }
+      if (inTypePos == -1) {
+        ce->args.insert(ce->args.begin(), {"", N<EllipsisExpr>()});
+        inTypePos = 0;
+      }
+      items.push_back({l.op, transform(ce)});
+    } else {
+      items.push_back(
+          {l.op, transform(N<CallExpr>(transform(l.expr), N<EllipsisExpr>()))});
+      inTypePos = 0;
+    }
+    inType = updateType(inType, inTypePos, items.back().expr->getType());
+    if (i < expr->items.size() - 1)
+      inType = extractType(inType);
+  }
+  resultExpr = N<PipeExpr>(move(items));
+  resultExpr->setType(forceUnify(expr, inType));
 }
 
 void TransformVisitor::visit(const IndexExpr *expr) {
@@ -461,12 +504,15 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     vector<TypePtr> generics;
     vector<int> statics;
     auto parseGeneric = [&](const ExprPtr &i) {
-      if (auto ii = CAST(i, IntExpr)) {
+      auto ti = transform(i, true);
+      if (auto ii = CAST(ti, IntExpr)) {
         // TODO: implement transformStatic
         statics.push_back(std::stoll(ii->value));
         generics.push_back(nullptr);
+      } else if (ti->isType()) {
+        generics.push_back(ti->getType());
       } else {
-        generics.push_back(transformType(i)->getType());
+        error(ti, "expected a type");
       }
     };
     if (auto t = CAST(expr->index, TupleExpr))
