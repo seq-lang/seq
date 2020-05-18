@@ -93,6 +93,7 @@ int LinkType::unify(TypePtr typ, Unification &us) {
         return 1;
     }
     if (!occurs(typ, us)) {
+      DBG("UNIFY: {} <- {}", id, *typ);
       us.linked.push_back(static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
       type = typ;
@@ -269,7 +270,8 @@ ClassType::ClassType(const string &name, bool isRecord,
 
 string ClassType::toString(bool reduced) const {
   auto g = GenericType::toString(reduced);
-  return fmt::format("{}{}", name, g.size() ? fmt::format("[{}]", g) : "");
+  return fmt::format("{}{}", name[0] == '#' ? name.substr(1) : name,
+                     g.size() ? fmt::format("[{}]", g) : "");
 }
 
 int ClassType::unify(TypePtr typ, Unification &us) {
@@ -348,14 +350,17 @@ FuncType::FuncType(const vector<TypePtr> &args,
 }
 
 string FuncType::toString(bool reduced) const {
-  vector<string> as{GenericType::toString(reduced)};
+  auto g = GenericType::toString(reduced);
+  vector<string> as;
   for (int i = reduced; i < args.size(); i++)
     as.push_back(args[i]->toString(reduced));
-  return fmt::format("function[{}]", fmt::join(as, ","));
+  return fmt::format("function[{}{}]", g.size() ? g + ";" : "",
+                     fmt::join(as, ","));
 }
 
 int FuncType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getFunc()) {
+    /// TODO: can it be unified to a vanilla function[?]?
     int s1 = GenericType::unify(t, us), s;
     if (s1 == -1)
       return -1;
@@ -378,8 +383,17 @@ TypePtr FuncType::generalize(int level) {
   auto a = args;
   for (auto &t : a)
     t = t->generalize(level);
+
+  shared_ptr<RealizationInfo> p = nullptr;
+  if (realizationInfo) {
+    p = make_shared<RealizationInfo>(
+        realizationInfo->name, realizationInfo->pending, realizationInfo->args);
+    for (auto &a : p->args)
+      a.type = a.type->generalize(level);
+  }
   auto f = make_shared<FuncType>(
       a, static_pointer_cast<GenericType>(GenericType::generalize(level)));
+  f->realizationInfo = p;
   f->setSrcInfo(getSrcInfo());
   return f;
 }
@@ -390,7 +404,6 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
   for (auto &t : a)
     t = t->instantiate(level, unboundCount, cache);
 
-  /// This is only needed for instantiation
   shared_ptr<RealizationInfo> p = nullptr;
   if (realizationInfo) {
     p = make_shared<RealizationInfo>(

@@ -47,7 +47,7 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     for (int ci = 0; ci < cases.size(); ci++) {
       auto stmts = ast::parse_code(file, cases[ci]);
       auto ctx = ast::TypeContext::getContext(argv0, file);
-      auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), fo);
+      auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false, fo);
       fmt::print(fo, "-------------------------------<hr/>\n");
     }
     fclose(fo);

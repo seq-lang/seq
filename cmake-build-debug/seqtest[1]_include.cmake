@@ -1,0 +1,5 @@
+if(EXISTS "/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/seqtest[1]_tests.cmake")
+  include("/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/seqtest[1]_tests.cmake")
+else()
+  add_test(seqtest_NOT_BUILT seqtest_NOT_BUILT)
+endif()

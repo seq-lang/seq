@@ -61,7 +61,7 @@ Context::Context(shared_ptr<ImportCache> cache, seq::Block *block,
                  const std::string &filename)
     : cache(cache), filename(filename), jit(jit), enclosingType(nullptr),
       tryCatch(nullptr) {
-  stack.push(vector<string>());
+  stack.push_front(vector<string>());
   topBaseIndex = topBlockIndex = 0;
   if (block) {
     addBlock(block, base);
@@ -257,7 +257,7 @@ void Context::execJIT(string varName, seq::Expr *varExpr) {
   jit->addFunc((seq::Func *)bases[0]);
 
   vector<pair<string, shared_ptr<seq::ast::ContextItem>>> items;
-  for (auto &name : stack.top()) {
+  for (auto &name : stack.front()) {
     auto i = find(name);
     if (i && i->isGlobal()) {
       items.push_back(make_pair(name, i));

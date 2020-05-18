@@ -28,7 +28,7 @@ class TypeContext;
 struct RealizationContext {
   struct ClassBody {
     std::unordered_map<std::string, TypePtr> members;
-    std::unordered_map<std::string, std::deque<FuncTypePtr>> methods;
+    std::unordered_map<std::string, std::vector<FuncTypePtr>> methods;
   };
   struct FuncRealization {
     FuncTypePtr type;
@@ -81,8 +81,8 @@ public: /* Lookup */
 public:
   /// Getters and setters for the method/member/realization lookup tables
   ClassBody *findClass(const std::string &name);
-  FuncTypePtr findMethod(const std::string &name,
-                         const std::string &method) const;
+  const std::vector<FuncTypePtr> *findMethod(const std::string &name,
+                                             const std::string &method) const;
   TypePtr findMember(const std::string &name, const std::string &member) const;
 
 public: /** Template ASTs **/
@@ -100,7 +100,7 @@ public: /** Template ASTs **/
       classASTs;
 
 public:
-  std::shared_ptr<Stmt> getAST(const SrcInfo &info) const;
+  std::shared_ptr<Stmt> getAST(const std::string &name) const;
 
 public: /* Realizations */
   /// Current function realizations.
@@ -161,6 +161,7 @@ public:
   virtual ~TItem() {}
 
   virtual bool isType() const { return false; }
+  virtual bool isFunc() const { return false; }
   virtual bool isVar() const { return false; }
   virtual bool isImport() const { return false; }
   virtual bool isStatic() const { return false; }
@@ -212,6 +213,16 @@ public:
   TypePtr getType() const override { return type; }
 };
 
+class TFuncItem : public TItem {
+  TypePtr type;
+
+public:
+  TFuncItem(TypePtr type, const std::string &base, bool global = false)
+      : TItem(base, global), type(type) {}
+  bool isFunc() const override { return true; }
+  TypePtr getType() const override { return type; }
+};
+
 /// Current identifier table
 class TypeContext : public VTable<TItem>,
                     public std::enable_shared_from_this<TypeContext> {
@@ -250,11 +261,12 @@ public:
   TypePtr findInternal(const std::string &name) const;
 
   using VTable<TItem>::add;
-  void add(const std::string &name, const std::string &import,
-           bool global = false);
-  void add(const std::string &name, TypePtr type, bool isVar = true,
-           bool global = false);
-  void add(const std::string &name, int value, bool global = false);
+  void add(const std::string &name, TypePtr type, bool global = false);
+  void addImport(const std::string &name, const std::string &import,
+                 bool global = false);
+  void addType(const std::string &name, TypePtr type, bool global = false);
+  void addFunc(const std::string &name, TypePtr type, bool global = false);
+  void addStatic(const std::string &name, int value, bool global = false);
 
 public:
   std::string getBase() const;
@@ -274,7 +286,7 @@ public:
   /// the generic T gets mapped to int.
   TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type);
   TypePtr instantiate(const SrcInfo &srcInfo, TypePtr type,
-                      GenericTypePtr generics);
+                      GenericTypePtr generics, bool activate = true);
   TypePtr instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
                              const std::vector<TypePtr> &generics);
   ImportContext::Import importFile(const std::string &file);
@@ -286,6 +298,7 @@ public:
   // or just leave the classes below friendly as they are by design
   // rather intimate with this class.
   friend class TransformVisitor;
+  void dump();
 };
 
 } // namespace ast

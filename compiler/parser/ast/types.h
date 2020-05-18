@@ -140,13 +140,15 @@ private:
 
 struct GenericType : public Type {
   struct Generic {
+    std::string name;
     int id;
     TypePtr type;
     int value;
     // -1 is for tuple "generics"
-    Generic(TypePtr type) : id(-1), type(type), value(0) {}
-    Generic(int id, TypePtr type, int value = 0)
-        : id(id), type(type), value(value) {}
+    Generic(const std::string name, TypePtr type)
+        : name(name), id(-1), type(type), value(0) {}
+    Generic(const std::string name, int id, TypePtr type, int value = 0)
+        : name(name), id(id), type(type), value(value) {}
   };
   std::vector<Generic> explicits, implicits;
 
@@ -205,6 +207,7 @@ struct FuncType : public GenericType {
     struct Arg {
       std::string name;
       TypePtr type;
+      std::string defaultVar;
     };
     std::string name;
     std::vector<int> pending; // loci in resolvedArgs

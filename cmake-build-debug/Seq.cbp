@@ -1,0 +1,928 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="Seq"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;CMake Files\..\;CMake Files\..\..\;CMake Files\..\..\..\;CMake Files\..\..\..\..\;CMake Files\..\..\..\..\..\;CMake Files\..\..\..\..\..\..\;CMake Files\..\..\..\..\..\..\usr\;CMake Files\..\..\..\..\..\..\usr\local\;CMake Files\..\..\..\..\..\..\usr\local\opt\;CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\;CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\;CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\;CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\;CMake Files\test\;CMake Files\cmake-build-debug\;CMake Files\cmake-build-debug\googletest-src\;CMake Files\cmake-build-debug\googletest-src\googlemock\;CMake Files\cmake-build-debug\googletest-src\googlemock\cmake\;CMake Files\cmake-build-debug\googletest-src\googletest\;CMake Files\cmake-build-debug\googletest-src\googletest\cmake\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="install/strip">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 install/strip"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="install/local">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 install/local"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seq">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/libseq.dylib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seq"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seq/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/libseq.dylib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seq/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seqc">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/seqc" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seqc"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seqc/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/seqc" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seqc/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="install">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 install"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="intrinsics_gen">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 intrinsics_gen"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seqtest">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/seqtest" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DTEST_DIR=&quot;/Users/inumanag/Desktop/Projekti/seq/types/test&quot;"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seqtest"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seqtest/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/seqtest" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DTEST_DIR=&quot;/Users/inumanag/Desktop/Projekti/seq/types/test&quot;"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seqtest/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="list_install_components">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 list_install_components"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seqparse_target">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seqparse_target"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 test"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seqrt">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/libseqrt.dylib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DTHREADED=0"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/runtime"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seqrt"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="seqrt/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/libseqrt.dylib" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DTHREADED=0"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/runtime"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 seqrt/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gmock">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgmockd.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 gmock"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gmock/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgmockd.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 gmock/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gmock_main">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgmock_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 gmock_main"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gmock_main/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgmock_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 gmock_main/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gtest_main">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgtest_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 gtest_main"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gtest_main/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgtest_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 gtest_main/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gtest">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgtestd.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 gtest"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gtest/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgtestd.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 gtest/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/src/gmock-all.cc">
+			<Option target="gmock"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/src/gmock_main.cc">
+			<Option target="gmock_main"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/src/gtest-all.cc">
+			<Option target="gtest"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/src/gtest_main.cc">
+			<Option target="gtest_main"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/seqparser.o">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/seqparser.o.rule">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/expr.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/expr.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/func.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/func.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/lang.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/lang.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/ops.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/ops.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/patterns.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/patterns.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/pipeline.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/pipeline.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/seq.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/seq.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/stmt.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/stmt.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/var.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/var.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/doc.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/doc.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/format.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/format.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_expr.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_stmt.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/typecontext.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/typecontext.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/visitor.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/visitor.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/walk.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/walk.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/common.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/common.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/context.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/context.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ocaml.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ocaml.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/parser.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/parser.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/any.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/any.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/array.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/array.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/base.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/base.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/func.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/func.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/generic.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/generic.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/num.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/num.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/optional.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/optional.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ptr.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ptr.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/record.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/record.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ref.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ref.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/seq.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/seq.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/void.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/void.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/common.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/chrono.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/color.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/compile.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/core.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/format-inl.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/format.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/format.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/locale.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/ostream.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/posix.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/printf.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/fmt/ranges.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/jit.cpp">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/jit.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/llvm.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/tapir.h">
+			<Option target="seq"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/exc.cpp">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/lib.cpp">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/lib.h">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/main.cpp">
+			<Option target="seqc"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/sw/intersw.cpp">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/sw/intersw.h">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/sw/ksw2.h">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/sw/ksw2_extd2_sse.cpp">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/sw/ksw2_exts2_sse.cpp">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/sw/ksw2_extz2_sse.cpp">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/runtime/sw/ksw2_gg2_sse.cpp">
+			<Option target="seqrt"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/test/main.cpp">
+			<Option target="seqtest"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVM-Config.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVMConfig.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVMConfigVersion.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVMExports-release.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVMExports.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/test/CMakeLists.txt.in">
+			<Option virtualFolder="CMake Files\test\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googlemock\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/cmake/gmock.pc.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googlemock\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/cmake/gmock_main.pc.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googlemock\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/cmake/Config.cmake.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/cmake/gtest.pc.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/cmake/gtest_main.pc.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/cmake/internal_utils.cmake">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\cmake\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

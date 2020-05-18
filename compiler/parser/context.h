@@ -3,6 +3,7 @@
 #include <memory>
 #include <stack>
 #include <string>
+#include <deque>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -19,7 +20,7 @@ template <typename T> class VTable {
 
 protected:
   VTableMap map;
-  std::stack<std::vector<std::string>> stack;
+  std::deque<std::vector<std::string>> stack;
   std::unordered_set<std::string> flags;
 
   std::shared_ptr<T> find(const std::string &name) const {
@@ -37,24 +38,35 @@ public:
   void add(const std::string &name, std::shared_ptr<T> var) {
     map[name].push(var);
     // DBG("adding {}", name);
-    stack.top().push_back(name);
+    assert(name!="");
+    stack.front().push_back(name);
   }
-  void addBlock() { stack.push(std::vector<std::string>()); }
+  void addBlock() { stack.push_front(std::vector<std::string>()); }
+  void removeFromMap(const std::string &name) {
+    auto i = map.find(name);
+    // DBG("removing {}", name);
+    if (i == map.end() || !i->second.size())
+      error("variable {} not found in the map", name);
+    i->second.pop();
+    if (!i->second.size())
+      map.erase(name);
+  }
   void popBlock() {
-    for (auto &name : stack.top()) {
-      remove(name);
-    }
-    stack.pop();
+    for (auto &name: stack.front())
+      removeFromMap(name);
+    stack.pop_front();
   }
   virtual void remove(const std::string &name) {
-    auto i = map.find(name);
-    if (i == map.end() || !i->second.size()) {
-      error("variable {} not found in the map", name);
+    removeFromMap(name);
+    // DBG("killing. {}", name);
+    for (auto &s : stack) {
+      auto i = std::find(s.begin(), s.end(), name);
+      if (i != s.end()) {
+        s.erase(i);
+        return;
+      }
     }
-    i->second.pop();
-    if (!i->second.size()) {
-      map.erase(name);
-    }
+    error("variable {} not found in the stack", name);
   }
   void setFlag(const std::string &s) { flags.insert(s); }
   void unsetFlag(const std::string &s) { flags.erase(s); }

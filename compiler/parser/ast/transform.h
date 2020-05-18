@@ -58,10 +58,13 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
   ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
                            const std::string &magic);
   ExprPtr makeBoolExpr(const ExprPtr &e);
-  std::shared_ptr<GenericType> parseGenerics(const std::vector<Param> &generics);
+  std::shared_ptr<GenericType>
+  parseGenerics(const std::vector<Param> &generics);
 
   void addMethod(Stmt *s, const std::string &canonicalName,
                  const std::vector<GenericType::Generic> &implicits);
+  FuncTypePtr findBestCall(ClassTypePtr c, const std::string &member,
+                           const std::vector<TypePtr> &args, bool warn = false);
 
   class CaptureVisitor : public WalkVisitor {
     std::shared_ptr<TypeContext> ctx;
@@ -81,7 +84,8 @@ public:
   StmtPtr transform(const Stmt *s);
   PatternPtr transform(const Pattern *p);
   ExprPtr transformType(const ExprPtr &expr);
-  StmtPtr realizeBlock(const Stmt *stmt, FILE *fo = nullptr);
+  StmtPtr realizeBlock(const Stmt *stmt, bool keepLast = false,
+                       FILE *fo = nullptr);
 
 public:
   void visit(const NoneExpr *) override;
@@ -200,7 +204,6 @@ public:
   TypePtr forceUnify(const ExprPtr &expr, TypePtr t) {
     return forceUnify(expr.get(), t);
   }
-
 
   TypePtr forceUnify(TypePtr t, TypePtr u) {
     if (t && u) {

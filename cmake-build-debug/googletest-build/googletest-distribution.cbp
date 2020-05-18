@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="googletest-distribution"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="clang"/>
+		<Option virtualFolders="CMake Files\;CMake Files\..\;CMake Files\..\..\;CMake Files\..\..\..\;CMake Files\..\..\..\..\;CMake Files\..\..\..\..\..\;CMake Files\..\..\..\..\..\..\;CMake Files\..\..\..\..\..\..\usr\;CMake Files\..\..\..\..\..\..\usr\local\;CMake Files\..\..\..\..\..\..\usr\local\opt\;CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\;CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\;CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\;CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\;CMake Files\test\;CMake Files\cmake-build-debug\;CMake Files\cmake-build-debug\googletest-src\;CMake Files\cmake-build-debug\googletest-src\googlemock\;CMake Files\cmake-build-debug\googletest-src\googlemock\cmake\;CMake Files\cmake-build-debug\googletest-src\googletest\;CMake Files\cmake-build-debug\googletest-src\googletest\cmake\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gmock">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgmockd.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 gmock"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gmock/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgmockd.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 gmock/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gmock_main">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgmock_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 gmock_main"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gmock_main/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgmock_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 gmock_main/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googlemock/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gtest_main">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgtest_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 gtest_main"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gtest_main/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgtest_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 gtest_main/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gtest">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgtestd.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 gtest"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="gtest/fast">
+				<Option output="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/lib/libgtestd.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/."/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/compiler"/>
+					<Add directory="/usr/local/lib/ocaml"/>
+					<Add directory="/usr/local/opt/llvm@6/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/include"/>
+					<Add directory="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="."/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/bin/../include/c++/v1"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 gtest/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-build/googletest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/src/gmock-all.cc">
+			<Option target="gmock"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/src/gmock_main.cc">
+			<Option target="gmock_main"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/src/gtest-all.cc">
+			<Option target="gtest"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/src/gtest_main.cc">
+			<Option target="gtest_main"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVM-Config.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVMConfig.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVMConfigVersion.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVMExports-release.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/../../../../../../usr/local/opt/llvm@6/lib/cmake/llvm/LLVMExports.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\..\usr\local\opt\llvm@6\lib\cmake\llvm\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/test/CMakeLists.txt.in">
+			<Option virtualFolder="CMake Files\test\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googlemock\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/cmake/gmock.pc.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googlemock\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googlemock/cmake/gmock_main.pc.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googlemock\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/cmake/Config.cmake.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/cmake/gtest.pc.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/cmake/gtest_main.pc.in">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\cmake\"/>
+		</Unit>
+		<Unit filename="/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-src/googletest/cmake/internal_utils.cmake">
+			<Option virtualFolder="CMake Files\cmake-build-debug\googletest-src\googletest\cmake\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

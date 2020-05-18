@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010"> 
+
+  <Type Name="std::__1::shared_ptr&lt;seq::*&gt;::element_type">
+        <DisplayString>{__ptr_->toString()}</DisplayString>
+      <!-- <SmartPointer Usage="Minimal">{__ptr_}</SmartPointer>
+      <DisplayString Condition="__ptr_ == 0">empty</DisplayString>
+      <DisplayString Condition="__ptr_ != 0">{__ptr_}</DisplayString> -->
+  </Type>
+  <!-- <Type Name="std::__1::shared_ptr&lt;*&gt;">
+      <SmartPointer Usage="Minimal">__ptr_.std::__1::__compressed_pair_elem*.__value_</SmartPointer>
+      <DisplayString Condition="__ptr_.std::__1::__compressed_pair_elem*.__value_ == 0">empty</DisplayString>
+      <DisplayString Condition="__ptr_.std::__1::__compressed_pair_elem*.__value_ != 0">__ptr_.std::__1::__compressed_pair_elem*.__value_</DisplayString>
+  </Type> -->
+</AutoVisualizer>
