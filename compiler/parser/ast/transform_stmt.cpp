@@ -1,11 +1,3 @@
-/**
- * TODO here:
- * - Finish remaining statements
- * - Redo error messages (right now they are awful)
- * - (handle pipelines here?)
- * - Fix all TODOs below
- */
-
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
 #include <deque>
@@ -633,8 +625,8 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
 
   auto cit = ctx->getRealizations()->classASTs.find(canonicalName);
   if (cit != ctx->getRealizations()->classASTs.end()) {
-    ctx->addType(canonicalName, cit->second.first);
-    ctx->addType(format("{}{}", ctx->getBase(), stmt->name), cit->second.first);
+    ctx->addType(canonicalName, cit->second);
+    ctx->addType(format("{}{}", ctx->getBase(), stmt->name), cit->second);
     auto c = ctx->getRealizations()->findClass(canonicalName);
     assert(c);
     for (auto &m : c->methods)
@@ -651,8 +643,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     ctx->addType(format("{}{}", ctx->getBase(), stmt->name), ct);
     ctx->addType(canonicalName, ct);
   }
-  ctx->getRealizations()->classASTs[canonicalName] =
-      make_pair(ct, nullptr); // TODO
+  ctx->getRealizations()->classASTs[canonicalName] = ct;
   DBG("* [class] {} :- {}", canonicalName, *ct);
 
   ctx->increaseLevel();
@@ -860,7 +851,7 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
     if (it2 != it->second.end())
       return it2->second;
   } else if (name == "$tuple_str") {
-    return {t, nullptr, nullptr};  // already realized
+    return {t, nullptr, nullptr}; // already realized
   }
 
   ctx->addBlock();
@@ -942,10 +933,15 @@ RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
       types.push_back(realize(m.type->getClass()).handle);
     else
       statics.push_back(m.value);
-  // TODO: Int, KMer, UInt, Function
-  // seq::types::FuncType::get(
-  // vector<seq::types::Type *>(ty.begin() + 1, ty.end()), ty[0])
-  if (t->name == "array") {
+  // TODO: function ?!
+  if (t->name == "Int" || t->name == "UInt") {
+    assert(statics.size() == 1 && types.size() == 0);
+    // TODO
+    // if (statics[0] <= 2048)
+    //   handle = seq::types::IntNType::get(statics[0], t->name == "Int");
+    // else
+    //   error("max len is 2018");
+  } else if (t->name == "array") {
     assert(types.size() == 1 && statics.size() == 0);
     handle = seq::types::ArrayType::get(types[0]);
   } else if (t->name == "ptr") {

@@ -1,10 +1,5 @@
 /**
- * TODO here:
- * - Finish remaining statements
- * - Handle __iop__/__rop__ magics
- * - Redo error messages (right now they are awful)
- * - (handle pipelines here?)
- * - Fix all TODOs below
+ * TODO : Redo error messages (right now they are awful)
  */
 
 #include "util/fmt/format.h"
@@ -444,7 +439,6 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
   }
 }
 
-// TODO
 void TransformVisitor::visit(const PipeExpr *expr) {
   // error(expr, "to be done later");
   auto extractType = [&](TypePtr t) {

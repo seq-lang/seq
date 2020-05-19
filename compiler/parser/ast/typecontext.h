@@ -95,9 +95,7 @@ public: /** Template ASTs **/
   /// Template class ASTs.
   /// Mapping from a canonical class name to a pair of
   /// generalized class type and the untyped class AST.
-  std::unordered_map<std::string,
-                     std::pair<TypePtr, std::shared_ptr<ClassStmt>>>
-      classASTs;
+  std::unordered_map<std::string, TypePtr> classASTs;
 
 public:
   std::shared_ptr<Stmt> getAST(const std::string &name) const;

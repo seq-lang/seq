@@ -95,9 +95,6 @@ shared_ptr<Stmt> RealizationContext::getAST(const string &name) const {
   auto m = funcASTs.find(name);
   if (m != funcASTs.end())
     return m->second.second;
-  auto mx = classASTs.find(name);
-  if (mx != classASTs.end())
-    return mx->second.second;
   return nullptr;
 }
 
