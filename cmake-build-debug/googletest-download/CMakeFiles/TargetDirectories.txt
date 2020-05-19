@@ -1,3 +1,0 @@
-/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-download/CMakeFiles/rebuild_cache.dir
-/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-download/CMakeFiles/edit_cache.dir
-/Users/inumanag/Desktop/Projekti/seq/types/cmake-build-debug/googletest-download/CMakeFiles/googletest.dir
