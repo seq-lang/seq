@@ -270,6 +270,12 @@ ClassType::ClassType(const string &name, bool isRecord,
 
 string ClassType::toString(bool reduced) const {
   auto g = GenericType::toString(reduced);
+  if (name == "tuple") {
+    vector<string> as;
+    for (int i = 0; i < recordMembers.size(); i++)
+      as.push_back(recordMembers[i]->toString(reduced));
+    g = join(as, ",");
+  }
   return fmt::format("{}{}", name[0] == '#' ? name.substr(1) : name,
                      g.size() ? fmt::format("[{}]", g) : "");
 }

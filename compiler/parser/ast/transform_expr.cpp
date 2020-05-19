@@ -204,6 +204,10 @@ TransformVisitor::processIdentifier(shared_ptr<TypeContext> tctx,
 
 void TransformVisitor::visit(const IdExpr *expr) {
   resultExpr = expr->clone();
+  if (expr->value == "tuple" || expr->value == "function") {
+    assert(expr->getType());
+    return;
+  }
   auto val = processIdentifier(ctx, expr->value);
   if (val->isStatic()) {
     resultExpr = transform(
@@ -425,7 +429,8 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
       auto lc = le->getType()->getClass(), rc = re->getType()->getClass();
       assert(lc && rc);
       if (findBestCall(lc, format("__{}__", magic), {lc, rc})) {
-        if (expr->inPlace && findBestCall(lc, format("__i{}__", magic), {lc, rc}))
+        if (expr->inPlace &&
+            findBestCall(lc, format("__i{}__", magic), {lc, rc}))
           magic = "i" + magic;
       } else if (findBestCall(rc, format("__r{}__", magic), {rc, lc})) {
         magic = "r" + magic;
@@ -492,23 +497,42 @@ void TransformVisitor::visit(const PipeExpr *expr) {
 }
 
 void TransformVisitor::visit(const IndexExpr *expr) {
+  vector<TypePtr> generics;
+  vector<int> statics;
+  auto parseGeneric = [&](const ExprPtr &i) {
+    auto ti = transform(i, true);
+    if (auto ii = CAST(ti, IntExpr)) {
+      // TODO: implement transformStatic
+      statics.push_back(std::stoll(ii->value));
+      generics.push_back(nullptr);
+    } else if (ti->isType()) {
+      generics.push_back(ti->getType());
+    } else {
+      error(ti, "expected a type");
+    }
+  };
+
+  // special cases: tuples and functions
+  if (auto i = CAST(expr->expr, IdExpr)) {
+    if (i->value == "tuple" || i->value == "function") {
+      if (auto t = CAST(expr->index, TupleExpr))
+        for (auto &i : t->items)
+          parseGeneric(i);
+      else
+        parseGeneric(expr->index);
+      resultExpr = N<IdExpr>(i->value);
+      resultExpr->markType();
+      if (i->value == "tuple")
+        resultExpr->setType(T<ClassType>("tuple", true, generics));
+      else
+        resultExpr->setType(T<FuncType>(generics));
+      return;
+    }
+  }
+
   auto e = transform(expr->expr, true);
   // Type or function realization (e.g. dict[type1, type2])
   if (e->isType() || e->getType()->getFunc()) {
-    vector<TypePtr> generics;
-    vector<int> statics;
-    auto parseGeneric = [&](const ExprPtr &i) {
-      auto ti = transform(i, true);
-      if (auto ii = CAST(ti, IntExpr)) {
-        // TODO: implement transformStatic
-        statics.push_back(std::stoll(ii->value));
-        generics.push_back(nullptr);
-      } else if (ti->isType()) {
-        generics.push_back(ti->getType());
-      } else {
-        error(ti, "expected a type");
-      }
-    };
     if (auto t = CAST(expr->index, TupleExpr))
       for (auto &i : t->items)
         parseGeneric(i);

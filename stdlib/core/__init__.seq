@@ -478,7 +478,7 @@ class list[T]:
         self.arr[self.len] = i
         self.len = 1 # TODO +=
     def __str__(self: list[T]):
-        return len.__str__()
+        return self.len.__str__()
     def __iter__(self: list[T]):
         for i in self.arr:
             yield i
