@@ -32,7 +32,7 @@ extend ptr[T]:
     @internal
     def __setitem__(self: ptr[T], index: int, what: T) -> void: pass
     @internal
-    def __add__(self: ptr[T], other: Int) -> ptr[T]: pass
+    def __add__(self: ptr[T], other: int) -> ptr[T]: pass
     @internal
     def __sub__(self: ptr[T], other: ptr[T]) -> int: pass
     @internal

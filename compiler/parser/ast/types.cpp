@@ -20,6 +20,27 @@ namespace types {
 
 TypePtr Type::follow() { return shared_from_this(); }
 
+string StaticType::toString(bool reduced) const {
+  return fmt::format("{}", value);
+}
+
+int StaticType::unify(TypePtr typ, Unification &us) {
+  if (auto t = typ->getStatic())
+    return (value == t->value) ? 0 : -1;
+  else if (auto t = typ->getLink())
+    return t->unify(shared_from_this(), us);
+  return -1;
+}
+
+TypePtr StaticType::generalize(int level) {
+  return make_shared<StaticType>(value);
+}
+
+TypePtr StaticType::instantiate(int level, int &unboundCount,
+                                unordered_map<int, TypePtr> &cache) {
+  return make_shared<StaticType>(value);
+}
+
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type)
     : kind(kind), id(id), level(level), type(type) {}
 
@@ -173,12 +194,10 @@ GenericType::GenericType(const vector<GenericType::Generic> &explicits,
 string GenericType::toString(bool reduced) const {
   vector<string> gs, is;
   for (auto &a : explicits)
-    gs.push_back(a.type ? a.type->toString(reduced)
-                        : fmt::format("{}", a.value));
+    gs.push_back(a.type->toString(reduced));
   if (reduced)
     for (auto &a : implicits)
-      is.push_back(a.type ? a.type->toString(reduced)
-                          : fmt::format("{}", a.value));
+      is.push_back(a.type->toString(reduced));
   return fmt::format("{}{}",
                      is.size() ? fmt::format("{};", fmt::join(is, ",")) : "",
                      gs.size() ? fmt::format("{}", fmt::join(gs, ",")) : "");
@@ -236,22 +255,12 @@ int GenericType::unify(TypePtr t_, Unification &us) {
     return -1;
   int s = 0, u;
   for (int i = 0; i < explicits.size(); i++) {
-    if ((!explicits[i].type) ^ (!t->explicits[i].type))
-      return -1;
-    if (!explicits[i].type) {
-      if (explicits[i].value != t->explicits[i].value)
-        return -1;
-    } else if ((u = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
+    if ((u = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
       return -1;
     s += u;
   }
   for (int i = 0; i < implicits.size(); i++) {
-    if ((!implicits[i].type) ^ (!t->implicits[i].type))
-      return -1;
-    if (!implicits[i].type) {
-      if (implicits[i].value != t->implicits[i].value)
-        return -1;
-    } else if ((u = implicits[i].type->unify(t->implicits[i].type, us)) == -1)
+    if ((u = implicits[i].type->unify(t->implicits[i].type, us)) == -1)
       return -1;
     s += u;
   }

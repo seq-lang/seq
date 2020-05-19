@@ -274,8 +274,9 @@ TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type,
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
-        DBG("UNBOUND {} ADDED # {} ",
-            dynamic_pointer_cast<LinkType>(i.second)->id, srcInfo.line);
+        DBG("UNBOUND {} ADDED # {} ~ {} {}",
+            dynamic_pointer_cast<LinkType>(i.second)->id, srcInfo.line,
+            *type, i.first);
         activeUnbounds.insert(i.second);
       }
     }
@@ -293,7 +294,7 @@ TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo, TypePtr root,
   for (int i = 0; i < c->explicits.size(); i++) {
     assert(c->explicits[i].type);
     g->explicits.push_back(
-        GenericType::Generic("", c->explicits[i].id, generics[i]));
+        GenericType::Generic("", generics[i], c->explicits[i].id));
   }
   return instantiate(srcInfo, root, g);
 }
@@ -328,9 +329,10 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
     auto typ = make_shared<ClassType>(
         t, true, vector<TypePtr>(),
         make_shared<GenericType>(vector<GenericType::Generic>{
-            {"T", realizations->unboundCount,
+            {"T",
              make_shared<LinkType>(LinkType::Generic,
-                                   realizations->unboundCount)}}));
+                                   realizations->unboundCount),
+             realizations->unboundCount}}));
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
     stdlib->addType("#" + t, typ);
@@ -340,11 +342,15 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   for (auto &t : genericTypes) {
     auto typ = make_shared<ClassType>(
         t, true, vector<TypePtr>(),
-        make_shared<GenericType>(
-            vector<GenericType::Generic>{{"N", 0, nullptr, 0}}));
+        make_shared<GenericType>(vector<GenericType::Generic>{
+            {"N",
+             make_shared<LinkType>(LinkType::Generic,
+                                   realizations->unboundCount),
+             realizations->unboundCount, true}}));
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
     stdlib->addType("#" + t, typ);
+    realizations->unboundCount++;
   }
   auto tt = make_shared<ClassType>("tuple", true);
   stdlib->addType("tuple", tt);

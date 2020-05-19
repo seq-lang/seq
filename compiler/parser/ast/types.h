@@ -22,12 +22,14 @@ struct FuncType;
 struct ClassType;
 struct LinkType;
 struct GenericType;
+struct StaticType;
 struct Type;
 typedef std::shared_ptr<Type> TypePtr;
 typedef std::shared_ptr<FuncType> FuncTypePtr;
 typedef std::shared_ptr<ClassType> ClassTypePtr;
 typedef std::shared_ptr<LinkType> LinkTypePtr;
 typedef std::shared_ptr<GenericType> GenericTypePtr;
+typedef std::shared_ptr<StaticType> StaticTypePtr;
 
 struct Unification {
   std::vector<LinkTypePtr> linked;
@@ -73,6 +75,26 @@ public:
   virtual ClassTypePtr getClass() { return nullptr; }
   virtual LinkTypePtr getLink() { return nullptr; }
   virtual LinkTypePtr getUnbound() { return nullptr; }
+  virtual StaticTypePtr getStatic() { return nullptr; }
+};
+
+struct StaticType : public Type {
+  int value;
+  StaticType(int value): value(value) {}
+
+public:
+  virtual int unify(TypePtr typ, Unification &us) override;
+  TypePtr generalize(int level) override;
+  TypePtr instantiate(int level, int &unboundCount,
+                      std::unordered_map<int, TypePtr> &cache) override;
+
+public:
+  bool hasUnbound() const override { return false; }
+  bool canRealize() const override { return true; }
+  std::string toString(bool reduced = false) const override;
+  StaticTypePtr getStatic() override {
+    return std::static_pointer_cast<StaticType>(shared_from_this());
+  }
 };
 
 /**
@@ -133,6 +155,9 @@ public:
   ClassTypePtr getClass() override {
     return std::dynamic_pointer_cast<ClassType>(follow());
   }
+  StaticTypePtr getStatic() override {
+    return std::dynamic_pointer_cast<StaticType>(follow());
+  }
 
 private:
   bool occurs(TypePtr typ, Unification &us);
@@ -143,12 +168,10 @@ struct GenericType : public Type {
     std::string name;
     int id;
     TypePtr type;
-    int value;
+    bool isStatic;
     // -1 is for tuple "generics"
-    Generic(const std::string name, TypePtr type)
-        : name(name), id(-1), type(type), value(0) {}
-    Generic(const std::string name, int id, TypePtr type, int value = 0)
-        : name(name), id(id), type(type), value(value) {}
+    Generic(const std::string name, TypePtr type, int id, bool st = false)
+        : name(name), id(id), type(type), isStatic(st) {}
   };
   std::vector<Generic> explicits, implicits;
 

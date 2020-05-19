@@ -111,7 +111,7 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
       error(typExpr, "expected a type");
     TypePtr typ = typExpr ? typExpr->getType() : nullptr;
     auto s = Nx<AssignStmt>(lhs, Nx<IdExpr>(l, l->value), transform(rhs, true),
-                            transform(type, true), false, force);
+                            move(typExpr), false, force);
     if (typ)
       forceUnify(typ, s->rhs->getType());
 
@@ -318,22 +318,25 @@ shared_ptr<GenericType>
 TransformVisitor::parseGenerics(const vector<Param> &generics) {
   auto genericTypes = make_shared<GenericType>();
   for (auto &g : generics) {
-    if (g.type) {
-      if (g.type->toString() != "(#id int)")
-        error(this, "currently only integer static generics are allowed");
-      genericTypes->explicits.push_back({g.name, 0, nullptr, 0});
-      ctx->addStatic(g.name, 0);
-    } else {
-      genericTypes->explicits.push_back(
-          {g.name, ctx->getRealizations()->getUnboundCount(),
-           make_shared<LinkType>(LinkType::Generic,
-                                 ctx->getRealizations()->getUnboundCount())});
-      auto tp = make_shared<LinkType>(LinkType::Unbound,
-                                      ctx->getRealizations()->getUnboundCount(),
-                                      ctx->level);
-      ctx->addType(g.name, tp, false);
-      ctx->getRealizations()->getUnboundCount()++;
-    }
+    // if (g.type) {
+    //   if (g.type->toString() != "(#id int)")
+    //     error(this, "currently only integer static generics are allowed");
+    //   genericTypes->explicits.push_back({g.name, StaticType(), });
+    //   ctx->addStatic(g.name, 0);
+    // } else {
+    if (g.type && g.type->toString() != "(#id int)")
+      error(this, "currently only integer static generics are allowed");
+    genericTypes->explicits.push_back(
+        {g.name,
+         make_shared<LinkType>(LinkType::Generic,
+                               ctx->getRealizations()->getUnboundCount()),
+         ctx->getRealizations()->getUnboundCount(), bool(g.type)});
+    auto tp = make_shared<LinkType>(LinkType::Unbound,
+                                    ctx->getRealizations()->getUnboundCount(),
+                                    ctx->level);
+    ctx->addType(g.name, tp, false);
+    ctx->getRealizations()->getUnboundCount()++;
+    // }
   }
   return genericTypes;
 }
@@ -392,13 +395,9 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   if (c->explicits.size() != generics.size())
     error(stmt, "generics do not match");
   for (int i = 0; i < generics.size(); i++) {
-    if (!c->explicits[i].type) {
-      ctx->addStatic(generics[i], 0);
-    } else {
-      auto tp = make_shared<LinkType>(LinkType::Unbound, c->explicits[i].id,
-                                      ctx->level);
-      ctx->addType(generics[i], tp);
-    }
+    auto tp = make_shared<LinkType>(LinkType::Unbound, c->explicits[i].id,
+                                    ctx->level);
+    ctx->addType(generics[i], tp);
   }
   ctx->increaseLevel();
   ctx->bases.push_back(c->name);
@@ -862,16 +861,16 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
   ctx->bases.push_back(ast.second->name);
   // Ensure that all inputs are realized
   for (auto &g : t->implicits) {
-    if (g.type)
-      ctx->addType(g.name, g.type);
+    if (auto s = g.type->getStatic())
+      ctx->addStatic(g.name, s->value);
     else
-      ctx->addStatic(g.name, g.value);
+      ctx->addType(g.name, g.type);
   }
   for (auto &g : t->explicits) {
-    if (g.type)
-      ctx->addType(g.name, g.type);
+    if (auto s = g.type->getStatic())
+      ctx->addStatic(g.name, s->value);
     else
-      ctx->addStatic(g.name, g.value);
+      ctx->addType(g.name, g.type);
   }
   for (int i = 0; i < t->realizationInfo->args.size(); i++) {
     assert(t->realizationInfo->args[i].type &&
@@ -929,18 +928,17 @@ RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
   vector<seq::types::Type *> types;
   vector<int> statics;
   for (auto &m : t->explicits)
-    if (m.type)
-      types.push_back(realize(m.type->getClass()).handle);
+    if (auto s = m.type->getStatic())
+      statics.push_back(s->value);
     else
-      statics.push_back(m.value);
+      types.push_back(realize(m.type->getClass()).handle);
   // TODO: function ?!
   if (t->name == "Int" || t->name == "UInt") {
     assert(statics.size() == 1 && types.size() == 0);
-    // TODO
-    // if (statics[0] <= 2048)
-    //   handle = seq::types::IntNType::get(statics[0], t->name == "Int");
-    // else
-    //   error("max len is 2018");
+    if (statics[0] >= 1 && statics[0] <= 2048)
+      handle = seq::types::IntNType::get(statics[0], t->name == "Int");
+    else
+      error("max len is 2018");
   } else if (t->name == "array") {
     assert(types.size() == 1 && statics.size() == 0);
     handle = seq::types::ArrayType::get(types[0]);

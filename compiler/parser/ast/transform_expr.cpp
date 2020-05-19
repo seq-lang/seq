@@ -230,6 +230,7 @@ void TransformVisitor::visit(const TupleExpr *expr) {
   vector<TypePtr> args;
   for (auto &i : e->items)
     args.push_back(i->getType());
+  DBG("{} -> {} ", *expr, *e);
   e->setType(forceUnify(expr, T<ClassType>("tuple", true, args)));
   resultExpr = move(e);
 }
@@ -498,13 +499,10 @@ void TransformVisitor::visit(const PipeExpr *expr) {
 
 void TransformVisitor::visit(const IndexExpr *expr) {
   vector<TypePtr> generics;
-  vector<int> statics;
   auto parseGeneric = [&](const ExprPtr &i) {
     auto ti = transform(i, true);
     if (auto ii = CAST(ti, IntExpr)) {
-      // TODO: implement transformStatic
-      statics.push_back(std::stoll(ii->value));
-      generics.push_back(nullptr);
+      generics.push_back(make_shared<StaticType>(std::stoll(ii->value)));
     } else if (ti->isType()) {
       generics.push_back(ti->getType());
     } else {
@@ -541,11 +539,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     auto g = e->getType()->getGeneric();
     if (g->explicits.size() != generics.size())
       error(expr, "inconsistent generic count");
-    for (int i = 0, s = 0; i < generics.size(); i++)
-      if (generics[i])
-        forceUnify(g->explicits[i].type, generics[i]);
-      else
-        g->explicits[i].value = statics[s++];
+    for (int i = 0; i < generics.size(); i++)
+      forceUnify(g->explicits[i].type, generics[i]);
     auto t = e->getType();
     bool isType = e->isType();
     resultExpr = N<TypeOfExpr>(move(e));
@@ -572,7 +567,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
 
 FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
                                            const vector<TypePtr> &args,
-                                           bool warn) {
+                                           bool failOnMultiple) {
   if (c->name == "tuple" && member == "__str__" && args.size() == 1) {
     auto f = make_shared<FuncType>(
         vector<TypePtr>{ctx->findInternal("str"), args[0]});
@@ -596,8 +591,8 @@ FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
     for (int j = 0; j < args.size(); j++) {
       Unification us;
       int u = args[j]->unify(mt->args[j + 1], us);
+      us.undo();
       if (u < 0) {
-        us.undo();
         s = -1;
         break;
       } else {
@@ -610,13 +605,14 @@ FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
   if (!scores.size())
     return nullptr;
   sort(scores.begin(), scores.end(), std::greater<pair<int, int>>());
-  if (warn) {
+  if (failOnMultiple) {
     for (int i = 1; i < scores.size(); i++)
       if (scores[i].first == scores[0].first)
-        compilationWarning(
-            format("multiple choices for magic call, selected {}",
-                   *(*m)[scores[0].second]),
-            getSrcInfo().file, getSrcInfo().line);
+        return nullptr;
+      // compilationWarning(
+      //     format("multiple choices for magic call, selected {}",
+      //            *(*m)[scores[0].second]),
+      //     getSrcInfo().file, getSrcInfo().line);
       else
         break;
   }
@@ -634,19 +630,21 @@ void TransformVisitor::visit(const CallExpr *expr) {
   // Intercept obj.foo() calls and transform obj.foo(...) to foo(obj, ...)
   if (auto d = CAST(expr->expr, DotExpr)) {
     auto dotlhs = transform(d->expr, true);
-    if (!dotlhs->isType())
-      if (auto c = dotlhs->getType()->getClass()) {
-        vector<TypePtr> targs{c};
-        for (auto &a : args)
-          targs.push_back(a.value->getType());
-        if (auto m = findBestCall(c, d->member, targs, true)) {
+    if (auto c = dotlhs->getType()->getClass()) {
+      vector<TypePtr> targs;
+      if (!dotlhs->isType())
+        targs.push_back(c);
+      for (auto &a : args)
+        targs.push_back(a.value->getType());
+      if (auto m = findBestCall(c, d->member, targs, true)) {
+        if (!dotlhs->isType())
           args.insert(args.begin(), {"", move(dotlhs)});
-          e = N<IdExpr>(m->realizationInfo->name);
-          e->setType(ctx->instantiate(getSrcInfo(), m, c));
-        } else {
-          error(this, "{} has no method '{}'", c->name, d->member);
-        }
+        e = N<IdExpr>(m->realizationInfo->name);
+        e->setType(ctx->instantiate(getSrcInfo(), m, c));
+      } else {
+        error(this, "{} has no method '{}'", c->name, d->member);
       }
+    }
   }
   if (!e)
     e = transform(expr->expr, true);
@@ -654,7 +652,8 @@ void TransformVisitor::visit(const CallExpr *expr) {
   if (e->isType()) { // Replace constructor with appropriate calls
     assert(e->getType()->getClass());
     if (e->getType()->getClass()->isRecord()) {
-      resultExpr = N<CallExpr>(N<DotExpr>(e->clone(), "__new__"), move(args));
+      resultExpr =
+          transform(N<CallExpr>(N<DotExpr>(e->clone(), "__new__"), move(args)));
     } else {
       string var = getTemporaryVar("typ");
       prepend(N<AssignStmt>(N<IdExpr>(var),
