@@ -244,7 +244,7 @@ class TypeContext : public VTable<TItem>,
 
   /** Function utilities **/
   /// Function parsing helpers: maintain current return type
-  TypePtr returnType;
+  TypePtr returnType, matchType;
   /// Indicates if a return was seen (to account for procedures)
   bool hasSetReturnType;
 

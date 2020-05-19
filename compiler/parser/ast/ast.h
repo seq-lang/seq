@@ -89,6 +89,10 @@ struct Stmt : public seq::SrcObject {
 };
 
 struct Pattern : public seq::SrcObject {
+  types::TypePtr _type;
+
+  Pattern();
+  Pattern(const Pattern &e);
   virtual ~Pattern() {}
   virtual PatternPtr clone() const = 0;
 
@@ -96,6 +100,9 @@ struct Pattern : public seq::SrcObject {
   virtual std::string toString() const = 0;
   /// Accept an AST walker/visitor
   virtual void accept(ASTVisitor &) const = 0;
+
+  types::TypePtr getType() const { return _type; }
+  void setType(types::TypePtr t) { _type = t; }
 
   /// Allow pretty-printing to C++ streams
   friend std::ostream &operator<<(std::ostream &out, const Pattern &c) {
@@ -716,16 +723,6 @@ struct ClassStmt : public Stmt {
   ClassStmt(const ClassStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, ClassStmt);
-};
-
-struct DeclareStmt : public Stmt {
-  /// Used only within ClassStmt to model a dataclass-like class
-  Param param;
-
-  DeclareStmt(Param p);
-  DeclareStmt(const DeclareStmt &s);
-  std::string toString() const override;
-  NODE_UTILITY(Stmt, DeclareStmt);
 };
 
 struct AssignEqStmt : public Stmt {

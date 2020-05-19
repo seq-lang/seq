@@ -812,10 +812,6 @@ void CodegenVisitor::visit(const PyDefStmt *stmt) {
   error(stmt, "unexpected pyDef statement");
 }
 
-void CodegenVisitor::visit(const DeclareStmt *stmt) {
-  error(stmt, "unexpected declare statement");
-}
-
 CodegenVisitor::CodegenVisitor(CodegenVisitor &stmtVisitor)
     : stmtVisitor(stmtVisitor), result(nullptr) {}
 

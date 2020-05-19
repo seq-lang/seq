@@ -446,15 +446,12 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   for (auto &m : c->methods) {
     FormatVisitor v(ctx, renderHTML);
     v.indent = this->indent;
-    auto s = ctx->getRealizations()->getAST(m.second.front()->realizationInfo->name);
+    auto s =
+        ctx->getRealizations()->getAST(m.second.front()->realizationInfo->name);
     if (s)
       s->accept(v);
     result += v.result;
   }
-}
-
-void FormatVisitor::visit(const DeclareStmt *stmt) {
-  result = fmt::format("{}: {}", stmt->param.name, transform(stmt->param.type));
 }
 
 void FormatVisitor::visit(const AssignEqStmt *stmt) {

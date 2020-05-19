@@ -531,12 +531,6 @@ string ClassStmt::toString() const {
                 *suite);
 }
 
-DeclareStmt::DeclareStmt(Param p) : param(move(p)) {}
-DeclareStmt::DeclareStmt(const DeclareStmt &s) : param(CL(s.param)) {}
-string DeclareStmt::toString() const {
-  return format("(#declare {})", param.toString());
-}
-
 AssignEqStmt::AssignEqStmt(ExprPtr l, ExprPtr r, const string &o)
     : lhs(move(l)), rhs(move(r)), op(o) {}
 AssignEqStmt::AssignEqStmt(const AssignEqStmt &s)
@@ -573,73 +567,82 @@ string WithStmt::toString() const {
   return format("(#with ({}) {})", fmt::join(as, " "), *suite);
 }
 
-StarPattern::StarPattern() {}
-StarPattern::StarPattern(const StarPattern &p) {}
+Pattern::Pattern() : _type(nullptr) {}
+Pattern::Pattern(const Pattern &e) : seq::SrcObject(e), _type(e._type) {}
+
+StarPattern::StarPattern() : Pattern() {}
+StarPattern::StarPattern(const StarPattern &p) : Pattern(p) {}
 string StarPattern::toString() const { return "#star"; }
 
-IntPattern::IntPattern(int v) : value(v) {}
-IntPattern::IntPattern(const IntPattern &p) : value(p.value) {}
+IntPattern::IntPattern(int v) : Pattern(), value(v) {}
+IntPattern::IntPattern(const IntPattern &p) : Pattern(p), value(p.value) {}
 string IntPattern::toString() const { return format("(#int {})", value); }
 
-BoolPattern::BoolPattern(bool v) : value(v) {}
-BoolPattern::BoolPattern(const BoolPattern &p) : value(p.value) {}
+BoolPattern::BoolPattern(bool v) : Pattern(), value(v) {}
+BoolPattern::BoolPattern(const BoolPattern &p) : Pattern(p), value(p.value) {}
 string BoolPattern::toString() const { return format("(#bool {})", value); }
 
-StrPattern::StrPattern(const string &v) : value(v) {}
-StrPattern::StrPattern(const StrPattern &p) : value(p.value) {}
+StrPattern::StrPattern(const string &v) : Pattern(), value(v) {}
+StrPattern::StrPattern(const StrPattern &p) : Pattern(p), value(p.value) {}
 string StrPattern::toString() const {
   return format("(#str '{}')", escape(value));
 }
 
-SeqPattern::SeqPattern(const string &v) : value(v) {}
-SeqPattern::SeqPattern(const SeqPattern &p) : value(p.value) {}
+SeqPattern::SeqPattern(const string &v) : Pattern(), value(v) {}
+SeqPattern::SeqPattern(const SeqPattern &p) : Pattern(p), value(p.value) {}
 string SeqPattern::toString() const {
   return format("(#seq '{}')", escape(value));
 }
 
-RangePattern::RangePattern(int s, int e) : start(s), end(e) {}
+RangePattern::RangePattern(int s, int e) : Pattern(), start(s), end(e) {}
 RangePattern::RangePattern(const RangePattern &p)
-    : start(p.start), end(p.end) {}
+    : Pattern(p), start(p.start), end(p.end) {}
 string RangePattern::toString() const {
   return format("(#range {} {})", start, end);
 }
 
-TuplePattern::TuplePattern(vector<PatternPtr> &&p) : patterns(move(p)) {}
-TuplePattern::TuplePattern(const TuplePattern &p) : patterns(CL(p.patterns)) {}
+TuplePattern::TuplePattern(vector<PatternPtr> &&p)
+    : Pattern(), patterns(move(p)) {}
+TuplePattern::TuplePattern(const TuplePattern &p)
+    : Pattern(p), patterns(CL(p.patterns)) {}
 string TuplePattern::toString() const {
   return format("(#tuple {})", combine(patterns));
 }
 
-ListPattern::ListPattern(vector<PatternPtr> &&p) : patterns(move(p)) {}
-ListPattern::ListPattern(const ListPattern &p) : patterns(CL(p.patterns)) {}
+ListPattern::ListPattern(vector<PatternPtr> &&p)
+    : Pattern(), patterns(move(p)) {}
+ListPattern::ListPattern(const ListPattern &p)
+    : Pattern(p), patterns(CL(p.patterns)) {}
 string ListPattern::toString() const {
   return format("(#list {})", combine(patterns));
 }
 
-OrPattern::OrPattern(vector<PatternPtr> &&p) : patterns(move(p)) {}
-OrPattern::OrPattern(const OrPattern &p) : patterns(CL(p.patterns)) {}
+OrPattern::OrPattern(vector<PatternPtr> &&p) : Pattern(), patterns(move(p)) {}
+OrPattern::OrPattern(const OrPattern &p)
+    : Pattern(p), patterns(CL(p.patterns)) {}
 string OrPattern::toString() const {
   return format("(#or {})", combine(patterns));
 }
 
-WildcardPattern::WildcardPattern(const string &v) : var(v) {}
-WildcardPattern::WildcardPattern(const WildcardPattern &p) : var(p.var) {}
+WildcardPattern::WildcardPattern(const string &v) : Pattern(), var(v) {}
+WildcardPattern::WildcardPattern(const WildcardPattern &p)
+    : Pattern(p), var(p.var) {}
 string WildcardPattern::toString() const {
   return var == "" ? "#wild" : format("(#wild {})", var);
 }
 
 GuardedPattern::GuardedPattern(PatternPtr p, ExprPtr c)
-    : pattern(move(p)), cond(move(c)) {}
+    : Pattern(), pattern(move(p)), cond(move(c)) {}
 GuardedPattern::GuardedPattern(const GuardedPattern &p)
-    : pattern(CL(p.pattern)), cond(CL(p.cond)) {}
+    : Pattern(p), pattern(CL(p.pattern)), cond(CL(p.cond)) {}
 string GuardedPattern::toString() const {
   return format("(#guard {} {})", *pattern, *cond);
 }
 
 BoundPattern::BoundPattern(const string &v, PatternPtr p)
-    : var(v), pattern(move(p)) {}
+    : Pattern(), var(v), pattern(move(p)) {}
 BoundPattern::BoundPattern(const BoundPattern &p)
-    : var(p.var), pattern(CL(p.pattern)) {}
+    : Pattern(p), var(p.var), pattern(CL(p.pattern)) {}
 string BoundPattern::toString() const {
   return format("(#bound {} {})", var, *pattern);
 }

@@ -184,7 +184,8 @@ TypeContext::TypeContext(const std::string &filename,
                          shared_ptr<RealizationContext> realizations,
                          shared_ptr<ImportContext> imports)
     : realizations(realizations), imports(imports), filename(filename),
-      module(""), level(0), returnType(nullptr), hasSetReturnType(false) {
+      module(""), level(0), returnType(nullptr), matchType(nullptr),
+      hasSetReturnType(false) {
   stack.push_front(vector<string>());
 }
 
@@ -275,8 +276,8 @@ TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, TypePtr type,
       i.second->setSrcInfo(srcInfo);
       if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
         DBG("UNBOUND {} ADDED # {} ~ {} {}",
-            dynamic_pointer_cast<LinkType>(i.second)->id, srcInfo.line,
-            *type, i.first);
+            dynamic_pointer_cast<LinkType>(i.second)->id, srcInfo.line, *type,
+            i.first);
         activeUnbounds.insert(i.second);
       }
     }

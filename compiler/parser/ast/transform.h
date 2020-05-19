@@ -141,7 +141,6 @@ public:
   void visit(const ThrowStmt *) override;
   void visit(const FunctionStmt *) override;
   void visit(const ClassStmt *) override;
-  void visit(const DeclareStmt *) override;
   void visit(const AssignEqStmt *) override;
   void visit(const YieldFromStmt *) override;
   void visit(const WithStmt *) override;
@@ -189,19 +188,20 @@ public:
     return r;
   }
 
-  TypePtr forceUnify(const Expr *expr, TypePtr t) {
+  template <typename T> TypePtr forceUnify(const T *expr, TypePtr t) {
     if (expr->getType() && t) {
       Unification us;
       if (expr->getType()->unify(t, us) < 0) {
         us.undo();
-        error(expr, "cannot unify e {} and {}",
+        error(expr, "cannot unify {} and {}",
               expr->getType() ? expr->getType()->toString() : "-",
               t ? t->toString() : "-");
       }
     }
     return t;
   }
-  TypePtr forceUnify(const ExprPtr &expr, TypePtr t) {
+  template <typename T>
+  TypePtr forceUnify(const std::unique_ptr<T> &expr, TypePtr t) {
     return forceUnify(expr.get(), t);
   }
 

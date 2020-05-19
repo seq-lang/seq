@@ -371,8 +371,8 @@ unique_ptr<Stmt> parse_stmt(value val) {
            parse_list(Field(t, 4), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
-  case 26:
-    Return(Declare, parse_param(t));
+    //  case 26:
+    //    Return(Declare, parse_param(t));
   case 27:
     Return(AssignEq, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
            parse_string(Field(t, 2)));

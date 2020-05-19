@@ -306,12 +306,28 @@ void TransformVisitor::visit(const IfStmt *stmt) {
   resultStmt = N<IfStmt>(move(ifs));
 }
 
-// TODO
 void TransformVisitor::visit(const MatchStmt *stmt) {
-  error(stmt, "todo match");
-  // resultPattern = N<MatchStmt>(transform(stmt->what),
-  // transform(stmt->patterns),
-  //  transform(stmt->cases));
+  auto w = transform(stmt->what);
+  ctx->matchType = w->getType();
+  vector<PatternPtr> patterns;
+  vector<StmtPtr> cases;
+  for (auto ci = 0; ci < stmt->cases.size(); ci++) {
+    string varName;
+    if (auto p = CAST(stmt->patterns[ci], BoundPattern)) {
+      ctx->addBlock();
+      auto boundPat = transform(p->pattern);
+      ctx->add(p->var, boundPat->getType());
+      patterns.push_back(move(boundPat));
+      cases.push_back(transform(stmt->cases[ci]));
+      ctx->popBlock();
+    } else {
+      ctx->addBlock();
+      patterns.push_back(transform(stmt->patterns[ci]));
+      cases.push_back(transform(stmt->cases[ci]));
+      ctx->popBlock();
+    }
+  }
+  resultStmt = N<MatchStmt>(move(w), move(patterns), move(cases));
 }
 
 shared_ptr<GenericType>
@@ -732,11 +748,6 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   }
 }
 
-// TODO
-void TransformVisitor::visit(const DeclareStmt *stmt) {
-  error(stmt, "todo declare");
-}
-
 // Transformation
 void TransformVisitor::visit(const AssignEqStmt *stmt) {
   resultStmt = transform(N<AssignStmt>(
@@ -791,51 +802,91 @@ void TransformVisitor::visit(const PyDefStmt *stmt) {
 
 void TransformVisitor::visit(const StarPattern *pat) {
   resultPattern = N<StarPattern>();
+  resultPattern->setType(forceUnify(
+      pat, forceUnify(ctx->matchType, ctx->addUnbound(getSrcInfo()))));
 }
 
 void TransformVisitor::visit(const IntPattern *pat) {
   resultPattern = N<IntPattern>(pat->value);
+  resultPattern->setType(
+      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("int"))));
 }
 
 void TransformVisitor::visit(const BoolPattern *pat) {
   resultPattern = N<BoolPattern>(pat->value);
+  resultPattern->setType(
+      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("bool"))));
 }
 
 void TransformVisitor::visit(const StrPattern *pat) {
   resultPattern = N<StrPattern>(pat->value);
+  resultPattern->setType(
+      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("str"))));
 }
 
 void TransformVisitor::visit(const SeqPattern *pat) {
   resultPattern = N<SeqPattern>(pat->value);
+  resultPattern->setType(
+      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("seq"))));
 }
 
 void TransformVisitor::visit(const RangePattern *pat) {
   resultPattern = N<RangePattern>(pat->start, pat->end);
+  resultPattern->setType(
+      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("int"))));
 }
 
 void TransformVisitor::visit(const TuplePattern *pat) {
-  resultPattern = N<TuplePattern>(transform(pat->patterns));
+  auto p = N<TuplePattern>(transform(pat->patterns));
+  vector<TypePtr> types;
+  for (auto &pp : p->patterns)
+    types.push_back(pp->getType());
+  auto t = make_shared<ClassType>("tuple", true, types);
+  resultPattern = move(p);
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
 }
 
 void TransformVisitor::visit(const ListPattern *pat) {
-  resultPattern = N<ListPattern>(transform(pat->patterns));
+  auto p = N<ListPattern>(transform(pat->patterns));
+  TypePtr ty = ctx->addUnbound(getSrcInfo());
+  for (auto &pp : p->patterns)
+    forceUnify(ty, pp->getType());
+  auto t = ctx->instantiateGeneric(getSrcInfo(),
+                                   ctx->findInternal("list"), {ty});
+  resultPattern = move(p);
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
 }
 
 void TransformVisitor::visit(const OrPattern *pat) {
-  resultPattern = N<OrPattern>(transform(pat->patterns));
+  auto p = N<OrPattern>(transform(pat->patterns));
+  assert(p->patterns.size());
+  TypePtr t = p->patterns[0]->getType();
+  for (auto &pp : p->patterns)
+    forceUnify(t, pp->getType());
+  resultPattern = move(p);
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
 }
 
 void TransformVisitor::visit(const WildcardPattern *pat) {
   resultPattern = N<WildcardPattern>(pat->var);
+  if (pat->var != "")
+    ctx->add(pat->var, ctx->matchType);
+  resultPattern->setType(forceUnify(pat, ctx->matchType));
 }
 
 void TransformVisitor::visit(const GuardedPattern *pat) {
-  resultPattern =
-      N<GuardedPattern>(transform(pat->pattern), transform(pat->cond));
+  auto p = N<GuardedPattern>(transform(pat->pattern), makeBoolExpr(pat->cond));
+  auto t = p->pattern->getType();
+  resultPattern = move(p);
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
 }
 
 void TransformVisitor::visit(const BoundPattern *pat) {
-  resultPattern = N<BoundPattern>(pat->var, transform(pat->pattern));
+  auto p = N<BoundPattern>(pat->var, transform(pat->pattern));
+  auto t = p->pattern->getType();
+  ctx->add(p->var, t);
+  resultPattern = move(p);
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
 }
 
 /*************************************************************************************/

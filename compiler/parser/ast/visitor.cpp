@@ -61,7 +61,6 @@ void ASTVisitor::visit(const GlobalStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const ThrowStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const FunctionStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const ClassStmt *e) { defaultVisit(e); }
-void ASTVisitor::visit(const DeclareStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const AssignEqStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const YieldFromStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const WithStmt *e) { defaultVisit(e); }

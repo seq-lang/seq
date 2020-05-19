@@ -113,7 +113,8 @@ ExprPtr TransformVisitor::transformType(const ExprPtr &expr) {
 
 void TransformVisitor::visit(const NoneExpr *expr) {
   resultExpr = expr->clone();
-  resultExpr->setType(forceUnify(resultExpr, ctx->addUnbound(getSrcInfo())));
+  auto t = ctx->instantiate(expr->getSrcInfo(), ctx->findInternal("optional"));
+  resultExpr->setType(forceUnify(expr, t));
 }
 
 void TransformVisitor::visit(const BoolExpr *expr) {

@@ -64,7 +64,6 @@ struct GlobalStmt;
 struct ThrowStmt;
 struct FunctionStmt;
 struct ClassStmt;
-struct DeclareStmt;
 struct AssignEqStmt;
 struct YieldFromStmt;
 struct WithStmt;
@@ -144,7 +143,6 @@ public:
   virtual void visit(const ThrowStmt *);
   virtual void visit(const FunctionStmt *);
   virtual void visit(const ClassStmt *);
-  virtual void visit(const DeclareStmt *);
   virtual void visit(const AssignEqStmt *);
   virtual void visit(const YieldFromStmt *);
   virtual void visit(const WithStmt *);

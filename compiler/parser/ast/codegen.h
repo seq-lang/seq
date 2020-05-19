@@ -100,7 +100,6 @@ public:
   void visit(const YieldFromStmt *) override;
   void visit(const WithStmt *) override;
   void visit(const PyDefStmt *) override;
-  void visit(const DeclareStmt *) override;
 
   void visit(const StarPattern *) override;
   void visit(const IntPattern *) override;
