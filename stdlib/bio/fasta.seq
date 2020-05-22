@@ -201,6 +201,9 @@ class FASTAReader:
 
         return s
     
+    # Uses already opened file if not yet closed
+    # otherwise, reopens
+    # Currently has 
     def __getitem__(self: FASTAReader, name: str):
 
         if self.gzip:
@@ -208,7 +211,7 @@ class FASTAReader:
                 self._file = gzopen(self.path, "r").__raw__() if self.gzip else open(self.path, "r").__raw__()
             return self._getitem(name, self.gzfile)
         else:
-            if self.gzfile.closed():
+            if self.file.closed():
                 self._file = gzopen(self.path, "r").__raw__() if self.gzip else open(self.path, "r").__raw__()
             return self._getitem(name, self.file)
 
