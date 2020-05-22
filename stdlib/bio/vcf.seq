@@ -1,6 +1,6 @@
 from c_htslib import *
 
-# port of PySam
+# port of PySam VariantRecord functionality
 
 BCF_UN_STR  = 1
 BCF_UN_FLT  = 2
@@ -478,7 +478,7 @@ class BCFMetadata:
         return self.record.get('Description')
 
 
-# type_flag is one of BCF_BT_X, or BCF_HT_FLAG or BCF_AUX_NONE
+# type_code is one of BCF_BT_X, or BCF_HT_FLAG or BCF_AUX_NONE
 # if array_flag is True, then BCFAux represents an array of type
 # specified by type code
 type BCFAux(_p: cobj, _type_code: i32, _is_array: bool):
@@ -522,7 +522,9 @@ def bcf_get_value_count(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], h1_type: i
         count = i64(int(bcf1[0].n_allele))
     elif i32(length) == BCF_VL_A:
         count = i64(int(bcf1[0].n_allele - u32(1)))
+    
     # TODO https://github.com/pysam-developers/pysam/blob/master/pysam/libcbcf.pyx
+    # Add support for genotype values
     # bcf_genotype_count 
     # elif length == BCF_VL_G:
     #     count[0]
@@ -717,7 +719,9 @@ class BCFRecordSample:
     def name(self: BCFRecordSample):
         return str.from_ptr(self.bcf_hdr[0]._samples[self.index])
 
-    # TODO, various operations like getting alleles, allele indices
+    # TODO, various operations like getting alleles, allele indices, phased, etc
+    # see class VariantRecordSample at:
+    # https://github.com/pysam-developers/pysam/blob/master/pysam/libcbcf.pyx
     @property
     def alleles(self: BCFRecordSample) -> list[str]:
         r = self.bcf1[0]
@@ -843,6 +847,9 @@ class BCFRecordFilter:
     def __len__(self: BCFRecordFilter):
         return self.bcf1[0]._d._n_flt
 
+# Modled after:
+# https://pysam.readthedocs.io/en/latest/api.html#pysam.VariantRecord
+# TODO Missing support for columns: alts (alt alleles)
 class BCFRecord:
     bcf1: ptr[_bcf1_t]
     bcf_hdr: ptr[_bcf_hdr_t]
@@ -893,8 +900,7 @@ class BCFRecord:
     
     @property
     def qual(self: BCFRecord):
-        #TODO float
-        return int(self.bcf1[0]._qual)
+        return float(seq_i32_to_float(i32(self.bcf1[0]._qual)))
     
     @property
     def ref(self: BCFRecord):
@@ -904,7 +910,7 @@ class BCFRecord:
     @property
     def id(self: BCFRecord):
         _id = self.bcf1[0]._d._id
-        # ascii code for '.' is 46
+        # ascii code for '.' is 46. '.' indicates empty column
         return str.from_ptr(_id) if _id[0] != byte(46) else 'None'
     
     @property

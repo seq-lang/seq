@@ -210,7 +210,7 @@ INSTANTIATE_TEST_SUITE_P(
                                      "core/match.seq", "core/proteins.seq",
                                      "core/range.seq", "core/serialization.seq",
                                      "core/trees.seq", "core/bed_test.seq",
-                                     "core/fai_test.seq"),
+                                     "core/fai_test.seq", "core/vcf_test.seq"),
                      testing::Values(true, false)),
     getTestNameFromParam);
 
