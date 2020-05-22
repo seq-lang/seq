@@ -1,3 +1,9 @@
+def dlext():
+    if _C.seq_is_macos():
+        return 'dylib'
+    else:
+        return 'so'
+
 def dlerror():
     return str.from_ptr(_C.dlerror())
 

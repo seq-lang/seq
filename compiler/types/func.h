@@ -43,10 +43,12 @@ class GenType : public Type {
 public:
   enum GenTypeKind { NORMAL, PREFETCH, INTERALIGN };
   struct InterAlignParams { // see bio/align.seq for definition
-    Expr *a, *b, *ambig, *gapo, *gape, *bandwidth, *zdrop, *end_bonus;
+    Expr *a, *b, *ambig, *gapo, *gape, *score_only, *bandwidth, *zdrop,
+        *end_bonus;
     InterAlignParams()
         : a(nullptr), b(nullptr), ambig(nullptr), gapo(nullptr), gape(nullptr),
-          bandwidth(nullptr), zdrop(nullptr), end_bonus(nullptr) {}
+          score_only(nullptr), bandwidth(nullptr), zdrop(nullptr),
+          end_bonus(nullptr) {}
   };
 
 private:
