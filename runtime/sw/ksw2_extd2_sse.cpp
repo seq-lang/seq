@@ -154,7 +154,7 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen,
       st = r - qlen + 1;
     if (en > r)
       en = r;
-    if (st<(r - wr + 1)>> 1)
+    if (st < ((r - wr + 1) >> 1))
       st = (r - wr + 1) >> 1; // take the ceil
     if (en > (r + wl) >> 1)
       en = (r + wl) >> 1; // take the floor

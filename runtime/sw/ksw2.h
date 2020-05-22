@@ -199,7 +199,7 @@ static inline void ksw_backtrack(
     cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1,
                            j + 1); // first insertion
   if (!is_rev)
-    for (i = 0; i<n_cigar>> 1; ++i) // reverse CIGAR
+    for (i = 0; i < (n_cigar >> 1); ++i) // reverse CIGAR
       tmp = cigar[i], cigar[i] = cigar[n_cigar - 1 - i],
       cigar[n_cigar - 1 - i] = tmp;
   *m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
