@@ -488,7 +488,7 @@ InterSW<W, N, CIGAR>::InterSW(const int o_del, const int e_del, const int o_ins,
 
   this->w_match = w_match;
   this->w_mismatch = -w_mismatch;
-  this->w_ambig = -w_ambig;
+  this->w_ambig = (w_ambig == 0 ? this->w_mismatch : -w_ambig);
   this->F = this->H1 = this->H2 = nullptr;
 
   constexpr int MAX_SEQ_LEN = SIMD<W, N>::MAX_SEQ_LEN;
@@ -1009,6 +1009,7 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[],
     tmp = S::sub(score256, tmp);
     cmp = S::gt(tmp, zdrop256);
     exit0 = S::blend(exit0, zero256, cmp);
+    gscore = S::blend(gscore, neg_inf256, cmp);
 
     /* Narrowing of the band */
     /* From beg */
@@ -1103,6 +1104,8 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[],
       break;
     const bool ext_only = (p[i].flags & KSW_EZ_EXTZ_ONLY) != 0;
     p[i].score = ext_only ? score[i] : gscore_ar[i];
+    if (p[i].score == NEG_INF)
+      p[i].score = KSW_NEG_INF;
 
     if (CIGAR) {
       static constexpr size_t CIGAR_INIT_CAP = 15;
@@ -1199,7 +1202,7 @@ void InterSW<W, N, CIGAR>::SWBacktrace(bool is_rot, bool is_rev,
   if (j >= 0)
     cigar = push_cigar(&n_cigar, &m_cigar, cigar, 1, j + 1); // first insertion
   if (!is_rev)
-    for (i = 0; i<n_cigar>> 1; ++i) // reverse CIGAR
+    for (i = 0; i < (n_cigar >> 1); ++i) // reverse CIGAR
       tmp = cigar[i], cigar[i] = cigar[n_cigar - 1 - i],
       cigar[n_cigar - 1 - i] = tmp;
   *m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
