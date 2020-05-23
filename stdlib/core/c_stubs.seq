@@ -118,13 +118,13 @@ cimport gztell(cobj) -> int
 cimport gzseek(cobj, int, i32) -> int
 
 # Seq Alignment
-type CIGAR(value: ptr[u32], len: int)
+type CIGAR(_data: ptr[u32], _len: int)
 type Alignment(_cigar: CIGAR, _score: int)
 type pseq(len: int, ptr: cobj)
 cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
 cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
 cimport seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
-cimport seq_align_global(seq, seq, ptr[i8], i8, i8, int, ptr[Alignment])
+cimport seq_align_global(seq, seq, ptr[i8], i8, i8, int, bool, ptr[Alignment])
 cimport seq_align_default(seq, seq, ptr[Alignment])
 cimport seq_palign(pseq, pseq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
 cimport seq_palign_dual(pseq, pseq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])

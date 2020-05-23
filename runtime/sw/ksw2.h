@@ -116,10 +116,11 @@ int ksw_ll_i16(void *q, int tlen, const uint8_t *target, int gapo, int gape,
  ************************************/
 
 extern "C" void *seq_alloc_atomic(size_t n);
+extern "C" void *seq_calloc_atomic(size_t m, size_t n);
 extern "C" void *seq_realloc(void *p, size_t n);
 extern "C" void seq_free(void *p);
 #define kmalloc(km, size) seq_alloc_atomic((size))
-#define kcalloc(km, count, size) seq_alloc_atomic((count) * (size))
+#define kcalloc(km, count, size) seq_calloc_atomic((count), (size))
 #define krealloc(km, ptr, size) seq_realloc((ptr), (size))
 #define kfree(km, ptr) seq_free((ptr))
 
@@ -198,7 +199,7 @@ static inline void ksw_backtrack(
     cigar = ksw_push_cigar(km, &n_cigar, &m_cigar, cigar, 1,
                            j + 1); // first insertion
   if (!is_rev)
-    for (i = 0; i<n_cigar>> 1; ++i) // reverse CIGAR
+    for (i = 0; i < (n_cigar >> 1); ++i) // reverse CIGAR
       tmp = cigar[i], cigar[i] = cigar[n_cigar - 1 - i],
       cigar[n_cigar - 1 - i] = tmp;
   *m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
@@ -206,12 +207,12 @@ static inline void ksw_backtrack(
 
 static inline void ksw_reset_extz(ksw_extz_t *ez) {
   ez->max_q = ez->max_t = ez->mqe_t = ez->mte_q = -1;
-  ez->max = 0, ez->score = ez->mqe = ez->mte = KSW_NEG_INF;
-  ez->n_cigar = 0, ez->zdropped = 0, ez->reach_end = 0;
-
-  // XXX:
-  ez->m_cigar = 0;
-  ez->n_cigar = 0;
+  ez->max = 0;
+  ez->score = ez->mqe = ez->mte = KSW_NEG_INF;
+  ez->cigar = nullptr;
+  ez->n_cigar = ez->m_cigar = 0;
+  ez->zdropped = 0;
+  ez->reach_end = 0;
 }
 
 static inline int ksw_apply_zdrop(ksw_extz_t *ez, int is_rot, int32_t H, int a,

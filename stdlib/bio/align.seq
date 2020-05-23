@@ -65,15 +65,28 @@ extend CIGAR:
         return (ptr[u32](), 0)
 
     def __len__(self: CIGAR):
-        return self.len
+        return self._len
+
+    def __eq__(self: CIGAR, other: CIGAR):
+        if self._len != other._len:
+            return False
+        i = 0
+        while i < len(self):
+            if self._data[i] != other._data[i]:
+                return False
+            i += 1
+        return True
+
+    def __ne__(self: CIGAR, other: CIGAR):
+        return not (self == other)
 
     def __copy__(self: CIGAR) -> CIGAR:
-        p = ptr[u32](self.len)
-        str.memcpy(ptr[byte](p), ptr[byte](self.value), self.len * _gc.sizeof[u32]())
-        return CIGAR(p, self.len)
+        p = ptr[u32](self._len)
+        str.memcpy(ptr[byte](p), ptr[byte](self._data), self._len * _gc.sizeof[u32]())
+        return CIGAR(p, self._len)
 
     def __bool__(self: CIGAR):
-        return self.len > 0
+        return self._len > 0
 
     def __init__(self: CIGAR, cigar: str) -> CIGAR:
         ops = list[int]()
@@ -106,7 +119,7 @@ extend CIGAR:
     def __getitem__(self: CIGAR, idx: int):
         if not (0 <= idx < len(self)):
             raise IndexError("CIGAR index out of range")
-        v = self.value[idx]
+        v = self._data[idx]
         return (int(v) >> 4, "MIDNSHP=XB"[int(v) & 0xf])
 
     def __iter__(self: CIGAR):
@@ -119,6 +132,15 @@ extend CIGAR:
             v.append(str(op[0]))
             v.append(str(op[1]))
         return str.cat(v)
+
+    def __reversed__(self: CIGAR):
+        n = self._len
+        p = ptr[u32](n)
+        i = 0
+        while i < n:
+            p[i] = self._data[n - i - 1]
+            i += 1
+        return CIGAR(p, n)
 
 extend Alignment:
     def __init__(self: Alignment) -> Alignment:
@@ -167,8 +189,7 @@ extend seq:
               splice: bool = False,
               splice_fwd: bool = False,
               splice_rev: bool = False,
-              splice_flank: bool = False,
-              glob: bool = False):
+              splice_flank: bool = False):
 
         # validate args
         _validate_match(a)
@@ -182,8 +203,6 @@ extend seq:
                 raise ValueError("bandwidth cannot be specified for splice alignment")
             if end_bonus != 0:
                 raise ValueError("end_bonus cannot be specified for splice alignment")
-            if glob:
-                raise ValueError("global alignment cannot be done with splice alignment")
         elif (splice_fwd or splice_rev or splice_flank):
             raise ValueError("splice flags require 'splice' argument be set to True")
 
@@ -194,38 +213,32 @@ extend seq:
             _validate_gap(gapo2)
             _validate_gap(gape2)
 
-        if glob:
-            if dual:
-                raise ValueError("dual gap costs cannot be specified for global alignment")
-            if end_bonus != 0:
-                raise ValueError("end_bonus cannot be specified for global alignment")
-
         mat = __array__[i8](25)
         mat[0]  = i8(a)
         mat[1]  = i8(-b)
         mat[2]  = i8(-b)
         mat[3]  = i8(-b)
-        mat[4]  = i8(ambig)
+        mat[4]  = i8(-ambig)
         mat[5]  = i8(-b)
         mat[6]  = i8(a)
         mat[7]  = i8(-b)
         mat[8]  = i8(-b)
-        mat[9]  = i8(ambig)
+        mat[9]  = i8(-ambig)
         mat[10] = i8(-b)
         mat[11] = i8(-b)
         mat[12] = i8(a)
         mat[13] = i8(-b)
-        mat[14] = i8(ambig)
+        mat[14] = i8(-ambig)
         mat[15] = i8(-b)
         mat[16] = i8(-b)
         mat[17] = i8(-b)
         mat[18] = i8(a)
-        mat[19] = i8(ambig)
-        mat[20] = i8(ambig)
-        mat[21] = i8(ambig)
-        mat[22] = i8(ambig)
-        mat[23] = i8(ambig)
-        mat[24] = i8(ambig)
+        mat[19] = i8(-ambig)
+        mat[20] = i8(-ambig)
+        mat[21] = i8(-ambig)
+        mat[22] = i8(-ambig)
+        mat[23] = i8(-ambig)
+        mat[24] = i8(-ambig)
 
         flags = 0
         if score_only:
@@ -238,6 +251,10 @@ extend seq:
             flags |= _ALIGN_APPROX_MAX
         if approx_drop:
             flags |= _ALIGN_APPROX_DROP
+        if ext_only:
+            flags |= _ALIGN_EXTZ_ONLY
+        if rev_cigar:
+            flags |= _ALIGN_REV_CIGAR
         if splice_fwd:
             flags |= _ALIGN_SPLICE_FOR
         if splice_rev:
@@ -250,8 +267,6 @@ extend seq:
             kind = _ALIGN_KIND_SPLICE
         elif dual:
             kind = _ALIGN_KIND_DUAL
-        elif glob:
-            kind = _ALIGN_KIND_GLOBAL
 
         out = Alignment()
         if kind == _ALIGN_KIND_REGULAR:
@@ -260,8 +275,6 @@ extend seq:
             _C.seq_align_dual(self, other, mat.ptr, i8(gapo), i8(gape), i8(gapo2), i8(gape2), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
         elif kind == _ALIGN_KIND_SPLICE:
             _C.seq_align_splice(self, other, mat.ptr, i8(gapo), i8(gape), i8(gapo2), i8(gape2), zdrop, flags, __ptr__(out))
-        elif kind == _ALIGN_KIND_GLOBAL:
-            _C.seq_align_global(self, other, mat.ptr, i8(gapo), i8(gape), bandwidth, __ptr__(out))
         else:
             assert False
         return out
@@ -288,8 +301,7 @@ extend pseq:
               approx_max: bool = False,
               approx_drop: bool = False,
               ext_only: bool = False,
-              rev_cigar: bool = False,
-              glob: bool = False):
+              rev_cigar: bool = False):
 
         # validate args
         _validate_gap(gapo)
@@ -302,12 +314,6 @@ extend pseq:
             _validate_gap(gapo2)
             _validate_gap(gape2)
 
-        if glob:
-            if dual:
-                raise ValueError("dual gap costs cannot be specified for global alignment")
-            if end_bonus != 0:
-                raise ValueError("end_bonus cannot be specified for global alignment")
-
         flags = 0
         if score_only:
             flags |= _ALIGN_SCORE_ONLY
@@ -319,20 +325,20 @@ extend pseq:
             flags |= _ALIGN_APPROX_MAX
         if approx_drop:
             flags |= _ALIGN_APPROX_DROP
+        if ext_only:
+            flags |= _ALIGN_EXTZ_ONLY
+        if rev_cigar:
+            flags |= _ALIGN_REV_CIGAR
 
         kind = _ALIGN_KIND_REGULAR
         if dual:
             kind = _ALIGN_KIND_DUAL
-        elif glob:
-            kind = _ALIGN_KIND_GLOBAL
 
         out = Alignment()
         if kind == _ALIGN_KIND_REGULAR:
             _C.seq_palign(self, other, mat.mat, i8(gapo), i8(gape), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
         elif kind == _ALIGN_KIND_DUAL:
             _C.seq_palign_dual(self, other, mat.mat, i8(gapo), i8(gape), i8(gapo2), i8(gape2), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
-        elif kind == _ALIGN_KIND_GLOBAL:
-            _C.seq_palign_global(self, other, mat.mat, i8(gapo), i8(gape), bandwidth, __ptr__(out))
         else:
             assert False
         return out
@@ -344,49 +350,45 @@ extend pseq:
 
 # inter-sequence alignment
 # much of what follows is adapted from BWA-MEM2 (https://github.com/bwa-mem2/bwa-mem2)
-type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, bandwidth: i8, zdrop: i8, end_bonus: i8)
+type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, score_only: i8, bandwidth: i32, zdrop: i32, end_bonus: i32)
 
-_MAX_SEQ_LEN_REF = 256
-_MAX_SEQ_LEN_QER = 128
-_MAX_SEQ_LEN8    = 128
-_MAX_SEQ_LEN16   = 32768
+_LEN_LIMIT     = 512
+_MAX_SEQ_LEN8  = 128
+_MAX_SEQ_LEN16 = 32768
 
 type SeqPair(
-    idr: i32, idq: i32, id: i32,
+    id: i32,
     len1: i32, len2: i32,
-    h0: i32,
-    seqid: i32, regid: i32,
-    score: i32, tle: i32, gtle: i32, qle: i32,
-    gscore: i32, max_off: i32):
+    score: i32,
+    cigar: ptr[u32], n_cigar: i32,
+    flags: i32):
 
-    def __init__(self: SeqPair, id: int, len1: int, len2: int) -> SeqPair:
-        return (i32(id * _MAX_SEQ_LEN_REF), i32(id * _MAX_SEQ_LEN_QER),
-                i32(id), i32(len1), i32(len2), i32(10), i32(-1), i32(-1),
-                i32(-1), i32(-1), i32(-1), i32(-1), i32(-1), i32(-1))
+    def __init__(self: SeqPair, id: int, len1: int, len2: int, flags: int) -> SeqPair:
+        return (i32(id), i32(len1), i32(len2), i32(_ALIGN_SCORE_NEG_INF), ptr[u32](), i32(0), i32(flags))
 
+# (!) caller must ensure len(s) <= LEN_LIMIT
 @builtin
 @inline
 def _interaln_add_to_buf(s: seq, buf: ptr[byte], step: int, idx: int):
     n = len(s)
-    if len(s) > step:
-        raise ValueError(f"sequence too long for inter-sequence alignment (len={n}, max={step})")
+    nt4 = seq._nt4_table()
     if s.len >= 0:
-        str.memcpy(buf + (idx * step), s.ptr, n)
+        i = 0
+        while i < n:
+            buf[(idx * step) + i] = nt4[int(s.ptr[i])]
+            i += 1
     else:
         i = n - 1
         while i >= 0:
-            buf[(idx * step) + (n - i - 1)] = s.ptr[i].comp()
+            c = int(nt4[int(s.ptr[i])])
+            buf[(idx * step) + (n - i - 1)] = byte(3 - c if c < 4 else c)
             i -= 1
-
-def _interaln_max(a: i32, b: i32) -> i32:
-    return a if a > b else b
-
-def _interaln_min(a: i32, b: i32) -> i32:
-    return a if a < b else b
 
 @builtin
 @inline
 def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPair], count: int, hist: ptr[i32]) -> tuple[int,int,int]:
+    def _max(a: i32, b: i32) -> i32: return a if a > b else b
+    def _min(a: i32, b: i32) -> i32: return a if a < b else b
     num_pairs128 = 0
     num_pairs16  = 0
     num_pairs1   = 0
@@ -398,8 +400,8 @@ def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPa
     i = 0
     while i < count:
         sp = pairs_array[i]
-        val = _interaln_max(sp.len1, sp.len2)
-        minval = sp.h0 + _interaln_min(sp.len1, sp.len2)
+        val = _max(sp.len1, sp.len2)
+        minval = _min(sp.len1, sp.len2)
         if val < i32(_MAX_SEQ_LEN8) and minval < i32(_MAX_SEQ_LEN8):
             hist[int(minval)] += i32(1)
         elif val < i32(_MAX_SEQ_LEN16) and minval < i32(_MAX_SEQ_LEN16):
@@ -428,8 +430,8 @@ def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPa
     i = 0
     while i < count:
         sp = pairs_array[i]
-        val = _interaln_max(sp.len1, sp.len2)
-        minval = sp.h0 + _interaln_min(sp.len1, sp.len2)
+        val = _max(sp.len1, sp.len2)
+        minval = _min(sp.len1, sp.len2)
 
         if val < i32(_MAX_SEQ_LEN8) and minval < i32(_MAX_SEQ_LEN8):
             pos = int(hist[int(minval)])
@@ -456,21 +458,50 @@ def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPa
 
     return num_pairs128, num_pairs16, num_pairs1
 
+type InterAlignYield = tuple[seq,seq,Alignment]
+
 @builtin
 @inline
-def _interaln_queue(coro: generator[tuple[seq,seq,int]],
+def _interaln_queue(coro: generator[InterAlignYield],
                     pairs_array: ptr[SeqPair],
                     seq_buf_ref: ptr[byte],
                     seq_buf_qer: ptr[byte],
-                    pending: ptr[generator[tuple[seq,seq,int]]],
-                    m: int) -> int:
+                    pending: ptr[generator[InterAlignYield]],
+                    m: int,
+                    params: InterAlignParams) -> int:
     coro.__resume__()  # resume coro to get next sequence to align
     if not coro.__done__():
-        t, s, _ = coro.__promise__()[0]  # coro yields seqs to align
+        t, s, aln = coro.__promise__()[0]  # coro yields seqs to align
+        flags = aln.score  # flags are sent via score field to save space
+
+        # demote to intra-sequence alignment if too long
+        while len(t) > _LEN_LIMIT or len(s) > _LEN_LIMIT:
+            a = int(params.a)
+            b = int(params.b)
+            ambig = int(params.ambig)
+            gapo = int(params.gapo)
+            gape = int(params.gape)
+            bandwidth = int(params.bandwidth)
+            zdrop = int(params.zdrop)
+            end_bonus = int(params.end_bonus)
+            score_only = (params.score_only != i8(0))
+            ext_only = ((flags & _ALIGN_EXTZ_ONLY) != 0)
+            rev_cigar = ((flags & _ALIGN_REV_CIGAR) != 0)
+            aln = s.align(t, a=a, b=b, ambig=ambig,
+                          gapo=gapo, gape=gape, bandwidth=bandwidth,
+                          zdrop=zdrop, end_bonus=end_bonus, score_only=score_only,
+                          ext_only=ext_only, rev_cigar=rev_cigar)
+            coro.__promise__()[0] = (s'', s'', aln)
+            coro.__resume__()
+            if coro.__done__():
+                return m
+            t, s, aln = coro.__promise__()[0]  # coro yields seqs to align
+            flags = aln.score  # flags are sent via score field to save space
+
         pending[m] = coro
-        pairs_array[m] = SeqPair(m, len(s), len(t))
-        _interaln_add_to_buf(s, seq_buf_ref, _MAX_SEQ_LEN_REF, m)
-        _interaln_add_to_buf(t, seq_buf_qer, _MAX_SEQ_LEN_QER, m)
+        pairs_array[m] = SeqPair(m, len(s), len(t), flags)
+        _interaln_add_to_buf(s, seq_buf_ref, _LEN_LIMIT, m)
+        _interaln_add_to_buf(t, seq_buf_qer, _LEN_LIMIT, m)
         m += 1
     return m
 
@@ -479,21 +510,26 @@ def _interaln_queue(coro: generator[tuple[seq,seq,int]],
 def _interaln_flush(pairs_array: ptr[SeqPair],
                     seq_buf_ref: ptr[byte],
                     seq_buf_qer: ptr[byte],
-                    pending: ptr[generator[tuple[seq,seq,int]]],
+                    pending: ptr[generator[InterAlignYield]],
                     m: int,
                     params: InterAlignParams,
                     hist: ptr[i32],
                     tmp_array: ptr[SeqPair],
-                    tmp_pending: ptr[generator[tuple[seq,seq,int]]]) -> int:
+                    tmp_pending: ptr[generator[InterAlignYield]]) -> int:
     cimport seq_inter_align128(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
     cimport seq_inter_align16(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
     cimport seq_inter_align1(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
     num_pairs128, num_pairs16, num_pairs1 = _interaln_sort_pairs_len_ext(pairs_array, tmp_array, m, hist)
 
+    # we use align16 everywhere for now
+    '''
     if num_pairs128 > 0:
-        seq_inter_align128(__ptr__(params), pairs_array, seq_buf_ref, seq_buf_qer, num_pairs128)
+        seq_inter_align16(__ptr__(params), pairs_array, seq_buf_ref, seq_buf_qer, num_pairs128)
     if num_pairs16 > 0:
         seq_inter_align16(__ptr__(params), pairs_array + num_pairs128, seq_buf_ref, seq_buf_qer, num_pairs16)
+    '''
+    if num_pairs128 + num_pairs16 > 0:
+        seq_inter_align16(__ptr__(params), pairs_array, seq_buf_ref, seq_buf_qer, num_pairs128 + num_pairs16)
     if num_pairs1 > 0:
         seq_inter_align1(__ptr__(params), pairs_array + (num_pairs128 + num_pairs16), seq_buf_ref, seq_buf_qer, num_pairs1)
 
@@ -502,27 +538,13 @@ def _interaln_flush(pairs_array: ptr[SeqPair],
     while i < m:
         sp = pairs_array[i]
         coro = pending[int(tmp_array[i].id)]  # alignment kernel may overwrite IDs, so read from temp array
-        score = int(sp.gscore - sp.h0)
-        coro.__promise__()[0] = (s'', s'', int(score))
+        score = int(sp.score)
+        cigar = CIGAR(sp.cigar, int(sp.n_cigar))
+        coro.__promise__()[0] = (s'', s'', Alignment(cigar, score))
         # coro.__resume__()  # resume coro; have it wait to get score back -- (!) not needed with no-suspend yield-expression
-        j = _interaln_queue(coro, pairs_array, seq_buf_ref, seq_buf_qer, tmp_pending, j)
+        j = _interaln_queue(coro, pairs_array, seq_buf_ref, seq_buf_qer, tmp_pending, j, params)
         i += 1
     m = j
-    str.memcpy(ptr[byte](pending), ptr[byte](tmp_pending), m * _gc.sizeof[generator[tuple[seq,seq,int]]]())
-    str.memset(ptr[byte](tmp_pending), byte(0), m * _gc.sizeof[generator[tuple[seq,seq,int]]]())
+    str.memcpy(ptr[byte](pending), ptr[byte](tmp_pending), m * _gc.sizeof[generator[InterAlignYield]]())
+    str.memset(ptr[byte](tmp_pending), byte(0), m * _gc.sizeof[generator[InterAlignYield]]())
     return m
-
-@builtin
-@inline
-def _interaln_realign(query: seq, target: seq, score: int, params: InterAlignParams) -> Alignment:
-    if score >= 0:
-        return (CIGAR(), score)
-    a = int(params.a)
-    b = int(params.b)
-    ambig = int(params.ambig)
-    gapo = int(params.gapo)
-    gape = int(params.gape)
-    bandwidth = int(params.bandwidth)
-    zdrop = int(params.zdrop)
-    end_bonus = int(params.end_bonus)
-    return query.align(target, a=a, b=b, ambig=ambig, gapo=gapo, gape=gape, bandwidth=bandwidth, zdrop=zdrop, end_bonus=end_bonus, score_only=True)

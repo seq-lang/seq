@@ -29,15 +29,17 @@ endif()
 
 add_library(seqrt SHARED runtime/lib.h
                          runtime/lib.cpp
-                         runtime/align.cpp
                          runtime/exc.cpp
-                         runtime/ksw2/ksw2.h
-                         runtime/ksw2/ksw2_extd2_sse.cpp
-                         runtime/ksw2/ksw2_exts2_sse.cpp
-                         runtime/ksw2/ksw2_extz2_sse.cpp
-                         runtime/ksw2/ksw2_gg2_sse.cpp)
+                         runtime/sw/ksw2.h
+                         runtime/sw/ksw2_extd2_sse.cpp
+                         runtime/sw/ksw2_exts2_sse.cpp
+                         runtime/sw/ksw2_extz2_sse.cpp
+                         runtime/sw/ksw2_gg2_sse.cpp
+                         runtime/sw/intersw.h
+                         runtime/sw/intersw.cpp)
+target_include_directories(seqrt PRIVATE runtime)
 target_link_libraries(seqrt PUBLIC ${ZLIB_LIBRARIES} ${GC_LIB} Threads::Threads)
-set_source_files_properties(runtime/align.cpp PROPERTIES COMPILE_FLAGS "-march=native")
+set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
 
 if(SEQ_THREADED)
   find_package(OpenMP REQUIRED)

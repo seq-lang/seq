@@ -227,28 +227,29 @@ static void applyCanonicalKmerOptimization(std::vector<Expr *> &stages,
 
 // make sure params are globals or literals, since codegen'ing in function entry
 // block
-static Value *validateAndCodegenInterAlignParamExpr(Expr *e,
-                                                    const std::string &name,
-                                                    BaseFunc *base,
-                                                    BasicBlock *block) {
+template <typename E = IntExpr>
+static Value *validateAndCodegenInterAlignParamExpr(
+    Expr *e, const std::string &name, BaseFunc *base, BasicBlock *block,
+    bool i32 = false, types::Type *expectedType = types::Int) {
   if (!e)
     throw exc::SeqException("inter-sequence alignment parameter '" + name +
                             "' not specified");
-  if (!e->getType()->is(types::Int))
+  if (!e->getType()->is(expectedType))
     throw exc::SeqException("inter-sequence alignment parameter '" + name +
-                            "' is not of type int");
+                            "' is not of type " + expectedType->getName());
   bool valid = false;
   if (auto *v = dynamic_cast<VarExpr *>(e)) {
     valid = v->getVar()->isGlobal();
   } else {
-    valid = (dynamic_cast<IntExpr *>(e) != nullptr);
+    valid = (dynamic_cast<E *>(e) != nullptr);
   }
   if (!valid)
     throw exc::SeqException("inter-sequence alignment parameters must be "
                             "constants or global variables");
   Value *val = e->codegen(base, block);
   IRBuilder<> builder(block);
-  return builder.CreateTrunc(val, builder.getInt8Ty());
+  return builder.CreateZExtOrTrunc(val, i32 ? builder.getInt32Ty()
+                                            : builder.getInt8Ty());
 }
 
 Value *PipeExpr::validateAndCodegenInterAlignParams(
@@ -271,14 +272,18 @@ Value *PipeExpr::validateAndCodegenInterAlignParams(
   paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.gape, "gape",
                                                    base, block);
   params = paramsType->setMemb(params, "gape", paramVal, block);
-  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.bandwidth,
-                                                   "bandwidth", base, block);
+  paramVal = validateAndCodegenInterAlignParamExpr<BoolExpr>(
+      paramExprs.score_only, "score_only", base, block, /*i32=*/false,
+      /*expectedType=*/types::Bool);
+  params = paramsType->setMemb(params, "score_only", paramVal, block);
+  paramVal = validateAndCodegenInterAlignParamExpr(
+      paramExprs.bandwidth, "bandwidth", base, block, /*i32=*/true);
   params = paramsType->setMemb(params, "bandwidth", paramVal, block);
   paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.zdrop, "zdrop",
-                                                   base, block);
+                                                   base, block, /*i32=*/true);
   params = paramsType->setMemb(params, "zdrop", paramVal, block);
-  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.zdrop,
-                                                   "end_bonus", base, block);
+  paramVal = validateAndCodegenInterAlignParamExpr(
+      paramExprs.end_bonus, "end_bonus", base, block, /*i32=*/true);
   params = paramsType->setMemb(params, "end_bonus", paramVal, block);
   return params;
 }
@@ -461,8 +466,7 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
     }
 
     // following defs are from bio/align.seq
-    const int MAX_SEQ_LEN_REF = 256;
-    const int MAX_SEQ_LEN_QER = 128;
+    const int LEN_LIMIT = 512;
     const int MAX_SEQ_LEN8 = 128;
     const int MAX_SEQ_LEN16 = 32768;
     types::RecordType *pairType = PipeExpr::getInterAlignSeqPairType();
@@ -483,8 +487,8 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
     IRBuilder<> builder(preamble);
     const unsigned W = PipeExpr::SCHED_WIDTH_INTERALIGN;
     Value *statesSize = builder.getInt64(genType->size(module) * W);
-    Value *bufRefSize = builder.getInt64(MAX_SEQ_LEN_REF * W);
-    Value *bufQerSize = builder.getInt64(MAX_SEQ_LEN_QER * W);
+    Value *bufRefSize = builder.getInt64(LEN_LIMIT * W);
+    Value *bufQerSize = builder.getInt64(LEN_LIMIT * W);
     Value *pairsSize = builder.getInt64(pairType->size(module) * W);
     Value *histSize = builder.getInt64((MAX_SEQ_LEN8 + MAX_SEQ_LEN16 + 32) * 4);
     Value *states = builder.CreateCall(alloc, statesSize);
@@ -495,10 +499,10 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
         statesTemp, genType->getLLVMType(context)->getPointerTo());
     Value *bufRef = builder.CreateCall(allocAtomic, bufRefSize);
     Value *bufQer = builder.CreateCall(allocAtomic, bufQerSize);
-    Value *pairs = builder.CreateCall(allocAtomic, pairsSize);
+    Value *pairs = builder.CreateCall(alloc, pairsSize);
     pairs = builder.CreateBitCast(
         pairs, pairType->getLLVMType(context)->getPointerTo());
-    Value *pairsTemp = builder.CreateCall(allocAtomic, pairsSize);
+    Value *pairsTemp = builder.CreateCall(alloc, pairsSize);
     pairsTemp = builder.CreateBitCast(
         pairsTemp, pairType->getLLVMType(context)->getPointerTo());
     Value *hist = builder.CreateCall(allocAtomic, histSize);
@@ -537,7 +541,8 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
 
     builder.SetInsertPoint(notFull);
     N = builder.CreateLoad(filled);
-    N = builder.CreateCall(queue, {task, pairs, bufRef, bufQer, states, N});
+    N = builder.CreateCall(queue,
+                           {task, pairs, bufRef, bufQer, states, N, params});
     builder.CreateStore(N, filled);
     builder.CreateBr(exit);
     state.block = exit;
@@ -887,24 +892,29 @@ PipeExpr *PipeExpr::clone(Generic *ref) {
 }
 
 types::RecordType *PipeExpr::getInterAlignYieldType() {
-  return types::RecordType::get({types::Seq, types::Seq, types::Int},
-                                {"query", "reference", "score"},
+  auto *i32 = types::IntNType::get(32, true);
+  static types::RecordType *cigarType = types::RecordType::get(
+      {types::PtrType::get(i32), types::Int}, {"_data", "_len"}, "CIGAR");
+  static types::RecordType *resultType = types::RecordType::get(
+      {cigarType, types::Int}, {"_cigar", "_score"}, "Alignment");
+  return types::RecordType::get({types::Seq, types::Seq, resultType},
+                                {"query", "target", "alignment"},
                                 "InterAlignYield");
 }
 
 types::RecordType *PipeExpr::getInterAlignParamsType() {
   auto *i8 = types::IntNType::get(8, true);
-  return types::RecordType::get(
-      {i8, i8, i8, i8, i8, i8, i8, i8},
-      {"a", "b", "ambig", "gapo", "gape", "bandwidth", "zdrop", "end_bonus"},
-      "InterAlignParams");
+  auto *i32 = types::IntNType::get(32, true);
+  return types::RecordType::get({i8, i8, i8, i8, i8, i8, i32, i32, i32},
+                                {"a", "b", "ambig", "gapo", "gape",
+                                 "score_only", "bandwidth", "zdrop",
+                                 "end_bonus"},
+                                "InterAlignParams");
 }
 
 types::RecordType *PipeExpr::getInterAlignSeqPairType() {
   auto *i32 = types::IntNType::get(32, true);
   return types::RecordType::get(
-      {i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32},
-      {"idr", "idq", "id", "len1", "len2", "h0", "seqid", "regid", "score",
-       "tle", "gtle", "qle", "gscore", "max_off"},
-      "SeqPair");
+      {i32, i32, i32, i32, types::PtrType::get(i32), i32, i32},
+      {"id", "len1", "len2", "score", "cigar", "n_cigar", "flags"}, "SeqPair");
 }
