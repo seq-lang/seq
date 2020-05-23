@@ -1,7 +1,7 @@
 from bio import *
 
 def test_valid_rec_flat_cols():
-    parser = BCF('data/valid_vcf.vcf')
+    parser = BCF('test/data/valid_vcf.vcf')
 
     rec = next(parser)
 
