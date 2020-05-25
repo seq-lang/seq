@@ -44,6 +44,9 @@ public:
   virtual llvm::Function *getFunc(llvm::Module *module);
   virtual void setEnclosingClass(types::Type *parentType);
   virtual BaseFunc *clone(Generic *ref);
+
+  virtual void sawReturn(Return *ret) {}
+  virtual void sawYield(Yield *ret) {}
 };
 
 /**
@@ -148,9 +151,9 @@ public:
                                       std::vector<std::string> names,
                                       bool methodCall = false);
 
-  void setEnclosingFunc(Func *parentFunc);
-  void sawReturn(Return *ret);
-  void sawYield(Yield *yield);
+  void setEnclosingFunc(BaseFunc *parentFunc);
+  void sawReturn(Return *ret) override;
+  void sawYield(Yield *yield) override;
   void addAttribute(std::string attr);
   std::vector<std::string> getAttributes();
   bool hasAttribute(const std::string &attr);

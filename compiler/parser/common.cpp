@@ -9,11 +9,29 @@ using std::string;
 using std::vector;
 
 namespace seq {
+
+std::ostream &operator<<(std::ostream &out, const ::seq::SrcInfo &c) {
+  char buf[PATH_MAX + 1];
+  strncpy(buf, c.file.c_str(), PATH_MAX);
+  auto f = basename(buf);
+  out << f << ":" << c.line << ":" << c.col;
+  return out;
+}
+
 namespace ast {
 
 int tmpVarCounter = 0;
 string getTemporaryVar(const string &prefix) {
   return fmt::format("$_{}_{}", prefix, ++tmpVarCounter);
+}
+
+vector<string> split(const string &s, char delim) {
+  vector<string> items;
+  string item;
+  std::istringstream iss(s);
+  while (std::getline(iss, item, delim))
+    items.push_back(item);
+  return items;
 }
 
 string escape(string s) {
@@ -63,16 +81,6 @@ void error(const char *format) { throw ::seq::exc::SeqException(format); }
 void error(const ::seq::SrcInfo &p, const char *format) {
   throw ::seq::exc::SeqException(format, p);
 }
-
-namespace seq {
-std::ostream &operator<<(std::ostream &out, const ::seq::SrcInfo &c) {
-  char buf[PATH_MAX + 1];
-  strncpy(buf, c.file.c_str(), PATH_MAX);
-  auto f = basename(buf);
-  out << f << ":" << c.line << ":" << c.col;
-  return out;
-}
-} // namespace seq
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>

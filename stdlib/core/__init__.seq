@@ -469,7 +469,7 @@ class list[T]:
     arr: array[T]
     len: int
     def __init__(self: list[T]):
-        self.arr = array[T]()
+        self.arr = array[T](10)
         self.len = 0
     def __init__(self: list[T], sz: int):
         self.arr = array[T](sz)
@@ -480,8 +480,9 @@ class list[T]:
     def __str__(self: list[T]):
         return self.len.__str__()
     def __iter__(self: list[T]):
-        for i in self.arr:
-            yield i
+        yield self.arr[0]
+        # for i in self.arr:
+        #     yield i
 
 from core.aliases import *
 import core.c_stubs as _C

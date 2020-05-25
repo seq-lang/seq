@@ -6,7 +6,6 @@
 #include "parser/ast/codegen.h"
 #include "parser/ast/format.h"
 #include "parser/ast/transform.h"
-#include "parser/context.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"
 #include "util/jit.h"
@@ -24,18 +23,19 @@ using std::vector;
 // #if 1 || LLVM_VERSION_MAJOR == 6
 
 FOREIGN JitInstance *jit_init() {
-  try {
-    seq::SeqJIT::init();
-    auto jit = new JitInstance{
-        0, make_shared<seq::ast::Context>(make_shared<seq::ast::ImportCache>(),
-                                          nullptr, nullptr, nullptr, "")};
-    jit->context->initJIT();
-    return jit;
-  } catch (seq::exc::SeqException &e) {
-    seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-                          e.getSrcInfo().col);
-    return nullptr;
-  }
+  // try {
+  //   seq::SeqJIT::init();
+  //   auto jit = new JitInstance{
+  //       0,
+  //       make_shared<seq::ast::Context>(make_shared<seq::ast::ImportCache>(),
+  //                                         nullptr, nullptr, nullptr, "")};
+  //   jit->context->initJIT();
+  //   return jit;
+  // } catch (seq::exc::SeqException &e) {
+  //   seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
+  //                         e.getSrcInfo().col);
+  return nullptr;
+  // }
 }
 
 FOREIGN void jit_execute(JitInstance *jit, const char *code) {
@@ -44,7 +44,7 @@ FOREIGN void jit_execute(JitInstance *jit, const char *code) {
     // auto tv = seq::ast::TransformStmtVisitor().transform(
     //     seq::ast::parse_code("jit", code));
     // seq::ast::CodegenStmtVisitor(*jit->context).transform(tv);
-    jit->context->execJIT();
+    // jit->context->execJIT();
   } catch (seq::exc::SeqException &e) {
     fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line,
                e.getSrcInfo().col, e.what());

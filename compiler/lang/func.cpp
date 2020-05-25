@@ -198,7 +198,11 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
 #undef ENSURE_NO_DUP
 }
 
-void Func::setEnclosingFunc(Func *parentFunc) { this->parentFunc = parentFunc; }
+void Func::setEnclosingFunc(BaseFunc *parentFunc) {
+  auto p = dynamic_cast<seq::Func*>(parentFunc);
+  assert(p);
+  this->parentFunc = p;
+}
 
 void Func::sawReturn(Return *ret) {
   if (interAlign && ret->getExpr())

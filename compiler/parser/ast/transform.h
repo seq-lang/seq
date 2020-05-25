@@ -16,20 +16,16 @@
 
 #include "parser/ast/ast.h"
 #include "parser/ast/format.h"
+#include "parser/ast/transform_ctx.h"
 #include "parser/ast/types.h"
 #include "parser/ast/visitor.h"
 #include "parser/ast/walk.h"
 #include "parser/common.h"
-#include "parser/context.h"
-
-#define CAST(s, T) dynamic_cast<T *>(s.get())
 
 namespace seq {
 namespace ast {
 
-using namespace types;
-
-class TransformVisitor : public ASTVisitor, public seq::SrcObject {
+class TransformVisitor : public ASTVisitor, public SrcObject {
   std::shared_ptr<TypeContext> ctx;
   std::shared_ptr<std::vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
@@ -49,22 +45,24 @@ class TransformVisitor : public ASTVisitor, public seq::SrcObject {
                             SuiteStmt *&prev);
   void prepend(StmtPtr s);
 
-  std::shared_ptr<TItem> processIdentifier(std::shared_ptr<TypeContext> tctx,
-                                           const std::string &id);
+  std::shared_ptr<TypeItem::Item>
+  processIdentifier(std::shared_ptr<TypeContext> tctx, const std::string &id);
 
-  RealizationContext::FuncRealization realize(FuncTypePtr type);
-  RealizationContext::ClassRealization realize(ClassTypePtr type);
+  RealizationContext::FuncRealization realizeFunc(types::FuncTypePtr type);
+  RealizationContext::ClassRealization realizeType(types::ClassTypePtr type);
 
   ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
                            const std::string &magic);
   ExprPtr makeBoolExpr(const ExprPtr &e);
-  std::shared_ptr<GenericType>
+  std::shared_ptr<types::GenericType>
   parseGenerics(const std::vector<Param> &generics);
 
   void addMethod(Stmt *s, const std::string &canonicalName,
-                 const std::vector<GenericType::Generic> &implicits);
-  FuncTypePtr findBestCall(ClassTypePtr c, const std::string &member,
-                           const std::vector<TypePtr> &args, bool warn = false);
+                 const std::vector<types::GenericType::Generic> &implicits);
+  types::FuncTypePtr findBestCall(types::ClassTypePtr c,
+                                  const std::string &member,
+                                  const std::vector<types::TypePtr> &args,
+                                  bool warn = false);
 
   class CaptureVisitor : public WalkVisitor {
     std::shared_ptr<TypeContext> ctx;
@@ -188,9 +186,10 @@ public:
     return r;
   }
 
-  template <typename T> TypePtr forceUnify(const T *expr, TypePtr t) {
+  template <typename T>
+  types::TypePtr forceUnify(const T *expr, types::TypePtr t) {
     if (expr->getType() && t) {
-      Unification us;
+      types::Unification us;
       if (expr->getType()->unify(t, us) < 0) {
         us.undo();
         error(expr, "cannot unify {} and {}",
@@ -201,13 +200,13 @@ public:
     return t;
   }
   template <typename T>
-  TypePtr forceUnify(const std::unique_ptr<T> &expr, TypePtr t) {
+  types::TypePtr forceUnify(const std::unique_ptr<T> &expr, types::TypePtr t) {
     return forceUnify(expr.get(), t);
   }
 
-  TypePtr forceUnify(TypePtr t, TypePtr u) {
+  types::TypePtr forceUnify(types::TypePtr t, types::TypePtr u) {
     if (t && u) {
-      Unification us;
+      types::Unification us;
       if (t->unify(u, us) >= 0)
         return t;
       us.undo();

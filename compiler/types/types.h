@@ -232,6 +232,8 @@ public:
                          bool nullOnMissing = false,
                          bool overloadsOnly = false);
 
+  BaseFunc *findMagic(const std::string &name, std::vector<types::Type *> args);
+
   /// Codegens a call to the specified magic method. Throws
   /// an exception if the specified magic method does not
   /// exist.

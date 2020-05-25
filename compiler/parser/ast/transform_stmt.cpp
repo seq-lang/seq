@@ -12,7 +12,7 @@
 
 #include "parser/ast/ast.h"
 #include "parser/ast/transform.h"
-#include "parser/ast/typecontext.h"
+#include "parser/ast/transform_ctx.h"
 #include "parser/ast/types.h"
 #include "parser/common.h"
 #include "parser/ocaml.h"
@@ -46,7 +46,9 @@ StmtPtr TransformVisitor::transform(const Stmt *stmt) {
   TransformVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
 
-  DBG("{{ {} ## {}", *stmt, stmt->getSrcInfo().line);
+  auto s = stmt->toString();
+  std::replace(s.begin(), s.end(), '\n', ';');
+  DBG("{{ {}", s);
   __level__++;
   stmt->accept(v);
   __level__--;
@@ -55,7 +57,9 @@ StmtPtr TransformVisitor::transform(const Stmt *stmt) {
       v.prependStmts->push_back(move(v.resultStmt));
     v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
   }
-  DBG("  <> {} }}", v.resultStmt ? v.resultStmt->toString() : "#pass");
+  s = v.resultStmt ? v.resultStmt->toString() : "#pass";
+  std::replace(s.begin(), s.end(), '\n', ';');
+  DBG("  -> {} }}", s);
   return move(v.resultStmt);
 }
 
@@ -106,7 +110,7 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     forceUnify(lh, rh->getType());
     return Nx<AssignStmt>(lhs, move(lh), move(rh));
   } else if (auto l = dynamic_cast<const IdExpr *>(lhs)) {
-    auto typExpr = transform(type);
+    auto typExpr = transform(type, true);
     if (typExpr && !typExpr->isType())
       error(typExpr, "expected a type");
     TypePtr typ = typExpr ? typExpr->getType() : nullptr;
@@ -116,7 +120,7 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
       forceUnify(typ, s->rhs->getType());
 
     auto t = ctx->find(l->value);
-    if (t && !t->isImport()) {
+    if (t && !t->getImport()) {
       s->lhs->setType(forceUnify(s->rhs.get(), t->getType()));
     } else {
       if (s->rhs->isType())
@@ -124,7 +128,7 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
       else if (dynamic_pointer_cast<FuncType>(s->rhs->getType()))
         ctx->addFunc(l->value, s->rhs->getType());
       else
-        ctx->add(l->value, s->rhs->getType());
+        ctx->addVar(l->value, s->rhs->getType());
       s->lhs->setType(s->rhs->getType());
     }
     return s;
@@ -223,31 +227,29 @@ void TransformVisitor::visit(const PrintStmt *stmt) {
   resultStmt = N<PrintStmt>(conditionalMagic(stmt->expr, "str", "__str__"));
 }
 
+// TODO check if in function!
 void TransformVisitor::visit(const ReturnStmt *stmt) {
   if (stmt->expr) {
-    ctx->hasSetReturnType = true;
+    ctx->setReturnType();
     auto e = transform(stmt->expr);
-    forceUnify(e.get(), ctx->returnType);
+    forceUnify(e.get(), ctx->getReturnType());
     resultStmt = N<ReturnStmt>(move(e));
   } else {
-    // if (ctx->returnType->unify(ctx->findInternal("void")) < 0)
-    //   error(stmt, "incompatible return types: void and {}",
-    //   *ctx->returnType);
     resultStmt = N<ReturnStmt>(nullptr);
   }
 }
 
 void TransformVisitor::visit(const YieldStmt *stmt) {
-  ctx->hasSetReturnType = true;
+  ctx->setReturnType();
   if (stmt->expr) {
     auto e = transform(stmt->expr);
-    forceUnify(ctx->returnType,
+    forceUnify(ctx->getReturnType(),
                ctx->instantiateGeneric(e->getSrcInfo(),
                                        ctx->findInternal("generator"),
                                        {e->getType()}));
     resultStmt = N<YieldStmt>(move(e));
   } else {
-    forceUnify(ctx->returnType,
+    forceUnify(ctx->getReturnType(),
                ctx->instantiateGeneric(stmt->getSrcInfo(),
                                        ctx->findInternal("generator"),
                                        {ctx->findInternal("void")}));
@@ -279,12 +281,12 @@ void TransformVisitor::visit(const ForStmt *stmt) {
   ctx->addBlock();
   if (auto i = CAST(stmt->var, IdExpr)) {
     string varName = i->value;
-    ctx->add(varName, varType);
+    ctx->addVar(varName, varType);
     resultStmt =
         N<ForStmt>(transform(stmt->var), move(iter), transform(stmt->suite));
   } else {
     string varName = getTemporaryVar("for");
-    ctx->add(varName, varType);
+    ctx->addVar(varName, varType);
     vector<StmtPtr> stmts;
     auto var = N<IdExpr>(varName);
     processAssignment(stmt->var.get(), var.get(), stmts, true);
@@ -308,7 +310,7 @@ void TransformVisitor::visit(const IfStmt *stmt) {
 
 void TransformVisitor::visit(const MatchStmt *stmt) {
   auto w = transform(stmt->what);
-  ctx->matchType = w->getType();
+  ctx->setMatchType(w->getType());
   vector<PatternPtr> patterns;
   vector<StmtPtr> cases;
   for (auto ci = 0; ci < stmt->cases.size(); ci++) {
@@ -316,7 +318,7 @@ void TransformVisitor::visit(const MatchStmt *stmt) {
     if (auto p = CAST(stmt->patterns[ci], BoundPattern)) {
       ctx->addBlock();
       auto boundPat = transform(p->pattern);
-      ctx->add(p->var, boundPat->getType());
+      ctx->addVar(p->var, boundPat->getType());
       patterns.push_back(move(boundPat));
       cases.push_back(transform(stmt->cases[ci]));
       ctx->popBlock();
@@ -349,7 +351,7 @@ TransformVisitor::parseGenerics(const vector<Param> &generics) {
          ctx->getRealizations()->getUnboundCount(), bool(g.type)});
     auto tp = make_shared<LinkType>(LinkType::Unbound,
                                     ctx->getRealizations()->getUnboundCount(),
-                                    ctx->level);
+                                    ctx->getLevel());
     ctx->addType(g.name, tp, false);
     ctx->getRealizations()->getUnboundCount()++;
     // }
@@ -382,8 +384,8 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   auto getType = [&](const ExprPtr &e) -> TypePtr {
     if (auto i = CAST(e, IdExpr)) {
       auto val = processIdentifier(ctx, i->value);
-      if (val->isType())
-        return val->getType();
+      if (auto t = val->getType())
+        return t;
     }
     error("invalid type");
     return nullptr;
@@ -412,11 +414,11 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
     error(stmt, "generics do not match");
   for (int i = 0; i < generics.size(); i++) {
     auto tp = make_shared<LinkType>(LinkType::Unbound, c->explicits[i].id,
-                                    ctx->level);
+                                    ctx->getLevel());
     ctx->addType(generics[i], tp);
   }
   ctx->increaseLevel();
-  ctx->bases.push_back(c->name);
+  ctx->pushBase(c->name);
   for (auto s : stmt->suite->getStatements())
     addMethod(s, canonicalName, c->explicits);
   ctx->decreaseLevel();
@@ -429,29 +431,39 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
     }
     ctx->remove(generics[i]);
   }
-  ctx->bases.pop_back();
+  ctx->popBase();
   resultStmt = nullptr;
 }
 
 void TransformVisitor::visit(const ImportStmt *stmt) {
-  auto import = ctx->importFile(stmt->from.first);
-  if (!import.ctx)
+  auto file = ctx->getImports()->getImportFile(stmt->from.first, ctx->getFilename());
+  if (file.empty())
     error(stmt, "cannot locate import '{}'", stmt->from.first);
+
+  auto import = ctx->getImports()->getImport(file);
+  if (!import) {
+    auto ictx = make_shared<TypeContext>(file, ctx->getRealizations(), ctx->getImports());
+    // TODO: set nice module name ctx->module = ;
+    ctx->getImports()->addImport(file, file, ictx);
+    ctx->getImports()->setBody(file, TransformVisitor(ictx).transform(parse_file(file)));
+    import = ctx->getImports()->getImport(file);
+  }
+
   if (!stmt->what.size()) {
     ctx->addImport(stmt->from.second == "" ? stmt->from.first
                                            : stmt->from.second,
-                   import.filename);
+                   file);
   } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
     if (stmt->what[0].second != "")
       error(stmt, "cannot rename star-import");
-    for (auto &i : *import.ctx)
+    for (auto &i : *(import->tctx))
       ctx->add(i.first, i.second.top());
   } else {
     for (auto &w : stmt->what) {
-      if (auto c = import.ctx->find(w.first))
+      if (auto c = import->tctx->find(w.first))
         ctx->add(w.second == "" ? w.first : w.second, c);
       else
-        error(stmt, "symbol '{}' not found in {}", w.first, import.filename);
+        error(stmt, "symbol '{}' not found in {}", w.first, file);
     }
   }
   resultStmt = stmt->clone();
@@ -553,7 +565,7 @@ void TransformVisitor::visit(const TryStmt *stmt) {
     ctx->addBlock();
     auto exc = transformType(c.exc);
     if (c.var != "")
-      ctx->add(c.var, exc->getType());
+      ctx->addVar(c.var, exc->getType());
     catches.push_back({c.var, move(exc), transform(c.suite)});
     ctx->popBlock();
   }
@@ -567,13 +579,13 @@ void TransformVisitor::visit(const GlobalStmt *stmt) {
   if (ctx->getBase() == "")
     error(stmt, "global statements are only applicable within function blocks");
   auto val = ctx->find(stmt->var);
-  if (!val || val->isImport() || val->isType())
+  if (!val || val->getImport() || val->getType())
     error(stmt, "identifier '{}' not found", stmt->var);
-  if (val->isVar() && val->getBase() != "")
+  if (val->getVar() && val->getBase() != "")
     error(stmt, "can only mark toplevel variables as global");
   val->setGlobal();
   resultStmt = N<GlobalStmt>(stmt->var);
-} // namespace ast
+}
 
 void TransformVisitor::visit(const ThrowStmt *stmt) {
   resultStmt = N<ThrowStmt>(transform(stmt->expr));
@@ -607,12 +619,21 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       pending.push_back(pending.size());
     }
     ctx->decreaseLevel();
+    for (auto &g : stmt->generics) {
+      auto val = ctx->find(g.name);
+      if (auto tx = val->getType()) {
+        auto t = dynamic_pointer_cast<LinkType>(tx);
+        assert(t && t->kind == LinkType::Unbound);
+        t->kind = LinkType::Generic;
+      }
+      ctx->remove(g.name);
+    }
 
     auto t = make_shared<FuncType>(argTypes, genericTypes);
     t->realizationInfo = make_shared<FuncType::RealizationInfo>(
         canonicalName, pending, realizationArgs);
     t->setSrcInfo(stmt->getSrcInfo());
-    t = std::static_pointer_cast<FuncType>(t->generalize(ctx->level));
+    t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
     DBG("* [function] {} :- {}", canonicalName, *t);
     ctx->addFunc(format("{}{}", ctx->getBase(), stmt->name), t);
@@ -670,7 +691,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     strArgs.push_back(format("{}: {}", a.name, s));
     if (!mainType.size())
       mainType = s;
-    auto t = transformType(a.type)->getType()->generalize(ctx->level);
+    auto t = transformType(a.type)->getType()->generalize(ctx->getLevel());
     ctx->getRealizations()->classes[canonicalName].members[a.name] = t;
     if (stmt->isRecord)
       ct->recordMembers.push_back(t);
@@ -683,7 +704,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     ctx->addType(format("{}{}", ctx->getBase(), stmt->name), ct);
     ctx->addType(canonicalName, ct);
   }
-  ctx->bases.push_back(stmt->name);
+  ctx->pushBase(stmt->name);
 
   if (std::find(stmt->attributes.begin(), stmt->attributes.end(), "internal") ==
       stmt->attributes.end()) {
@@ -728,19 +749,19 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       code += format("@internal\ndef __init__(self: {}, {}) -> void: pass\n",
                      codeType, fmt::join(strArgs, ", "));
     auto methodNew =
-        parse_code(ctx->filename, code, stmt->getSrcInfo().line, 100000);
+        parse_code(ctx->getFilename(), code, stmt->getSrcInfo().line, 100000);
     for (auto s : methodNew->getStatements())
       addMethod(s, canonicalName, genericTypes->explicits);
   }
   for (auto s : stmt->suite->getStatements())
     addMethod(s, canonicalName, genericTypes->explicits);
   ctx->decreaseLevel();
-  ctx->bases.pop_back();
+  ctx->popBlock();
   for (auto &g : stmt->generics) {
     // Generalize in place
     auto val = ctx->find(g.name);
-    if (val->isType()) {
-      auto t = dynamic_pointer_cast<LinkType>(val->getType());
+    if (auto tx = val->getType()) {
+      auto t = dynamic_pointer_cast<LinkType>(tx);
       assert(t && t->kind == LinkType::Unbound);
       t->kind = LinkType::Generic;
     }
@@ -803,37 +824,37 @@ void TransformVisitor::visit(const PyDefStmt *stmt) {
 void TransformVisitor::visit(const StarPattern *pat) {
   resultPattern = N<StarPattern>();
   resultPattern->setType(forceUnify(
-      pat, forceUnify(ctx->matchType, ctx->addUnbound(getSrcInfo()))));
+      pat, forceUnify(ctx->getMatchType(), ctx->addUnbound(getSrcInfo()))));
 }
 
 void TransformVisitor::visit(const IntPattern *pat) {
   resultPattern = N<IntPattern>(pat->value);
   resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("int"))));
+      forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("int"))));
 }
 
 void TransformVisitor::visit(const BoolPattern *pat) {
   resultPattern = N<BoolPattern>(pat->value);
   resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("bool"))));
+      forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("bool"))));
 }
 
 void TransformVisitor::visit(const StrPattern *pat) {
   resultPattern = N<StrPattern>(pat->value);
   resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("str"))));
+      forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("str"))));
 }
 
 void TransformVisitor::visit(const SeqPattern *pat) {
   resultPattern = N<SeqPattern>(pat->value);
   resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("seq"))));
+      forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("seq"))));
 }
 
 void TransformVisitor::visit(const RangePattern *pat) {
   resultPattern = N<RangePattern>(pat->start, pat->end);
   resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal("int"))));
+      forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("int"))));
 }
 
 void TransformVisitor::visit(const TuplePattern *pat) {
@@ -843,7 +864,7 @@ void TransformVisitor::visit(const TuplePattern *pat) {
     types.push_back(pp->getType());
   auto t = make_shared<ClassType>("tuple", true, types);
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->getMatchType(), t)));
 }
 
 void TransformVisitor::visit(const ListPattern *pat) {
@@ -851,10 +872,10 @@ void TransformVisitor::visit(const ListPattern *pat) {
   TypePtr ty = ctx->addUnbound(getSrcInfo());
   for (auto &pp : p->patterns)
     forceUnify(ty, pp->getType());
-  auto t = ctx->instantiateGeneric(getSrcInfo(),
-                                   ctx->findInternal("list"), {ty});
+  auto t =
+      ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("list"), {ty});
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->getMatchType(), t)));
 }
 
 void TransformVisitor::visit(const OrPattern *pat) {
@@ -864,35 +885,35 @@ void TransformVisitor::visit(const OrPattern *pat) {
   for (auto &pp : p->patterns)
     forceUnify(t, pp->getType());
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->getMatchType(), t)));
 }
 
 void TransformVisitor::visit(const WildcardPattern *pat) {
   resultPattern = N<WildcardPattern>(pat->var);
   if (pat->var != "")
-    ctx->add(pat->var, ctx->matchType);
-  resultPattern->setType(forceUnify(pat, ctx->matchType));
+    ctx->addVar(pat->var, ctx->getMatchType());
+  resultPattern->setType(forceUnify(pat, ctx->getMatchType()));
 }
 
 void TransformVisitor::visit(const GuardedPattern *pat) {
   auto p = N<GuardedPattern>(transform(pat->pattern), makeBoolExpr(pat->cond));
   auto t = p->pattern->getType();
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->getMatchType(), t)));
 }
 
 void TransformVisitor::visit(const BoundPattern *pat) {
   auto p = N<BoundPattern>(pat->var, transform(pat->pattern));
   auto t = p->pattern->getType();
-  ctx->add(p->var, t);
+  ctx->addVar(p->var, t);
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, forceUnify(ctx->getMatchType(), t)));
 }
 
 /*************************************************************************************/
 
-RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
-  assert(t->canRealize());
+RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t) {
+  assert(t->canRealize() && t->realizationInfo);
   auto ret = t->args[0];
   auto name = t->realizationInfo->name;
   auto it = ctx->getRealizations()->funcRealizations.find(name);
@@ -904,12 +925,13 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
     return {t, nullptr, nullptr}; // already realized
   }
 
+  DBG("Realizing {} |- {} :: {}", t->realizationInfo->name, *t, ctx->getRealizations()->unboundCount);
   ctx->addBlock();
   ctx->increaseLevel();
   assert(ctx->getRealizations()->funcASTs.find(name) !=
          ctx->getRealizations()->funcASTs.end());
   auto &ast = ctx->getRealizations()->funcASTs[name];
-  ctx->bases.push_back(ast.second->name);
+  ctx->pushBase(ast.second->name);
   // Ensure that all inputs are realized
   for (auto &g : t->implicits) {
     if (auto s = g.type->getStatic())
@@ -926,24 +948,24 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
   for (int i = 0; i < t->realizationInfo->args.size(); i++) {
     assert(t->realizationInfo->args[i].type &&
            !t->realizationInfo->args[i].type->hasUnbound());
-    ctx->add(ast.second->args[i].name,
+    ctx->addVar(ast.second->args[i].name,
              make_shared<LinkType>(t->realizationInfo->args[i].type));
   }
-  auto old = ctx->returnType;
-  auto oldSeen = ctx->hasSetReturnType;
-  ctx->returnType = ret;
-  ctx->hasSetReturnType = false;
+  auto old = ctx->getReturnType();
+  auto oldSeen = ctx->wasReturnSet();
+  ctx->setReturnType(ret);
+  ctx->setWasReturnSet(false);
 
   // There is no AST linked to internal functions, so just ignore them
   bool isInternal =
       std::find(ast.second->attributes.begin(), ast.second->attributes.end(),
                 "internal") != ast.second->attributes.end();
   auto realized = isInternal ? nullptr : realizeBlock(ast.second->suite.get());
-  ctx->bases.pop_back();
+  ctx->popBase();
 
   // DBG("======== BEGIN {} :- {} ========", t->name, *t);
-  if (realized && !ctx->hasSetReturnType && ret)
-    forceUnify(ctx->returnType, ctx->findInternal("void"));
+  if (realized && !ctx->wasReturnSet() && ret)
+    forceUnify(ctx->getReturnType(), ctx->findInternal("void"));
   assert(ret->canRealize());
   // DBG("======== END {} :- {} ========", t->name, *t);
 
@@ -958,15 +980,15 @@ RealizationContext::FuncRealization TransformVisitor::realize(FuncTypePtr t) {
           Nx<FunctionStmt>(ast.second.get(), name, nullptr, vector<Param>(),
                            move(args), move(realized), ast.second->attributes),
           nullptr};
-  ctx->returnType = old;
-  ctx->hasSetReturnType = oldSeen;
+  ctx->setReturnType(old);
+  ctx->setWasReturnSet(oldSeen);
   ctx->decreaseLevel();
   ctx->popBlock();
   DBG(">> realized {}::{}", name, *t);
   return result;
 }
 
-RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
+RealizationContext::ClassRealization TransformVisitor::realizeType(ClassTypePtr t) {
   assert(t && t->canRealize());
   auto it = ctx->getRealizations()->classRealizations.find(t->name);
   if (it != ctx->getRealizations()->classRealizations.end()) {
@@ -975,56 +997,16 @@ RealizationContext::ClassRealization TransformVisitor::realize(ClassTypePtr t) {
       return it2->second;
   }
 
-  seq::types::Type *handle = nullptr;
-  vector<seq::types::Type *> types;
-  vector<int> statics;
-  for (auto &m : t->explicits)
-    if (auto s = m.type->getStatic())
-      statics.push_back(s->value);
-    else
-      types.push_back(realize(m.type->getClass()).handle);
-  // TODO: function ?!
-  if (t->name == "Int" || t->name == "UInt") {
-    assert(statics.size() == 1 && types.size() == 0);
-    if (statics[0] >= 1 && statics[0] <= 2048)
-      handle = seq::types::IntNType::get(statics[0], t->name == "Int");
-    else
-      error("max len is 2018");
-  } else if (t->name == "array") {
-    assert(types.size() == 1 && statics.size() == 0);
-    handle = seq::types::ArrayType::get(types[0]);
-  } else if (t->name == "ptr") {
-    assert(types.size() == 1 && statics.size() == 0);
-    handle = seq::types::PtrType::get(types[0]);
-  } else if (t->name == "generator") {
-    assert(types.size() == 1 && statics.size() == 0);
-    handle = seq::types::GenType::get(types[0]);
-  } else if (t->name == "optional") {
-    assert(types.size() == 1 && statics.size() == 0);
-    handle = seq::types::OptionalType::get(types[0]);
-  } else {
-    vector<string> names;
-    vector<seq::types::Type *> types;
-    for (auto &m : ctx->getRealizations()->classes[t->name].members) {
-      names.push_back(m.first);
-      auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t);
-      assert(mt->canRealize() && mt->getClass());
-      auto real = realize(mt->getClass());
-      types.push_back(real.handle);
-    }
-    if (t->isRecord())
-      handle = seq::types::RecordType::get(types, names,
-                                           t->name == "tuple" ? "" : t->name);
-    else {
-      auto cls = seq::types::RefType::get(t->name);
-      cls->setContents(seq::types::RecordType::get(types, names, ""));
-      cls->setDone();
-      handle = cls;
-    }
+  vector<pair<string, ClassTypePtr>> args;
+  /// TODO map-vector order?
+  for (auto &m : ctx->getRealizations()->classes[t->name].members) {
+    auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t);
+    assert(mt->canRealize() && mt->getClass());
+    args.push_back(make_pair(m.first, realizeType(mt->getClass()).type));
   }
-  DBG(">> realized {}", *t);
+
   return ctx->getRealizations()
-             ->classRealizations[t->name][t->toString(true)] = {t, handle};
+             ->classRealizations[t->name][t->toString(true)] = {t, args, nullptr};
 }
 
 StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast,
@@ -1037,36 +1019,43 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast,
   // types. It is assumed that the unbound count will decrease in each
   // iteration--- if not, the program cannot be type-checked.
   // TODO: this can be probably optimized one day...
-  int reachSize = ctx->activeUnbounds.size();
+  // int reachSize = ctx->activeUnbounds.size();
+  int minUnbound = ctx->getRealizations()->unboundCount;
   for (int iter = 0, prevSize = INT_MAX;; iter++) {
     ctx->addBlock();
     TransformVisitor v(ctx);
     result = v.transform(result ? result.get() : stmt);
 
-    for (auto i = ctx->activeUnbounds.begin();
-         i != ctx->activeUnbounds.end();) {
-      if (auto l = dynamic_pointer_cast<LinkType>(*i)) {
-        if (l->kind != LinkType::Unbound) {
-          i = ctx->activeUnbounds.erase(i);
-          continue;
-        }
+    int newUnbounds = 0;
+    for (auto i = ctx->getActiveUnbounds().begin();
+         i != ctx->getActiveUnbounds().end();) {
+      auto l = (*i)->getLink();
+      assert(l);
+      if (l->kind != LinkType::Unbound) {
+        i = ctx->getActiveUnbounds().erase(i);
+        continue;
       }
+      if (l->id >= minUnbound)
+        newUnbounds++;
       ++i;
     }
-    // DBG("post {}", ctx->activeUnbounds.size());
-    if (ctx->activeUnbounds.size() >= prevSize) {
-      for (auto &ub : ctx->activeUnbounds)
-        DBG("NOPE {}", (*ub));
-      error("cannot resolve unbound variables");
-      break;
-    }
-    prevSize = ctx->activeUnbounds.size();
-    if (prevSize <= reachSize) {
+
+    if (ctx->getActiveUnbounds().empty() || !newUnbounds) {
       if (!keepLast)
         ctx->popBlock();
       break;
-    } else
-      ctx->popBlock();
+    }
+
+    if (newUnbounds >= prevSize) {
+      for (auto &ub : ctx->getActiveUnbounds())
+        if (ub->getLink()->id >= minUnbound)
+          DBG("NOPE {}", (*ub));
+      error("cannot resolve unbound variables");
+      break;
+    }
+    prevSize = newUnbounds;
+
+    ctx->popBlock();
   }
   if (fo)
     fmt::print(fo, "{}", FormatVisitor::format(ctx, result, true));

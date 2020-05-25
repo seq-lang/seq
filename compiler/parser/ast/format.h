@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "parser/ast/typecontext.h"
+#include "parser/ast/transform_ctx.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 

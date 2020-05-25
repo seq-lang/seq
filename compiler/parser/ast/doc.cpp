@@ -13,7 +13,6 @@
 #include "parser/ast/doc.h"
 #include "parser/ast/format.h"
 #include "parser/common.h"
-#include "parser/context.h"
 #include "parser/ocaml.h"
 
 using fmt::format;

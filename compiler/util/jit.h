@@ -2,13 +2,12 @@
 #include <string>
 #include <vector>
 
-#include "parser/context.h"
-
 #define FOREIGN extern "C"
 
 struct JitInstance {
   int counter;
-  std::shared_ptr<seq::ast::Context> context;
+  // TODO: JIT later
+  // std::shared_ptr<seq::ast::Context> context;
 };
 
 FOREIGN JitInstance *jit_init();

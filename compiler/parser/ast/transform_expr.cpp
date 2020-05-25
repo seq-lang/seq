@@ -16,7 +16,7 @@
 
 #include "parser/ast/ast.h"
 #include "parser/ast/transform.h"
-#include "parser/ast/typecontext.h"
+#include "parser/ast/transform_ctx.h"
 #include "parser/ast/types.h"
 #include "parser/common.h"
 #include "parser/ocaml.h"
@@ -95,7 +95,7 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
   if (v.resultExpr && v.resultExpr->getType() &&
       v.resultExpr->getType()->canRealize()) {
     if (auto c = v.resultExpr->getType()->getClass())
-      realize(c);
+      realizeType(c);
   }
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
     error(expr, "unexpected type");
@@ -111,10 +111,9 @@ ExprPtr TransformVisitor::transformType(const ExprPtr &expr) {
 
 /*************************************************************************************/
 
+// Transformed
 void TransformVisitor::visit(const NoneExpr *expr) {
-  resultExpr = expr->clone();
-  auto t = ctx->instantiate(expr->getSrcInfo(), ctx->findInternal("optional"));
-  resultExpr->setType(forceUnify(expr, t));
+  resultExpr = transform(N<CallExpr>(N<IdExpr>("optional")));
 }
 
 void TransformVisitor::visit(const BoolExpr *expr) {
@@ -193,12 +192,12 @@ void TransformVisitor::visit(const SeqExpr *expr) {
     error(expr, "invalid seq prefix '{}'", expr->prefix);
 }
 
-shared_ptr<TItem>
+shared_ptr<TypeItem::Item>
 TransformVisitor::processIdentifier(shared_ptr<TypeContext> tctx,
                                     const string &id) {
   auto val = tctx->find(id);
-  if (!val || val->isImport() ||
-      (val->isVar() && !val->isGlobal() && val->getBase() != ctx->getBase()))
+  if (!val || val->getImport() ||
+      (val->getVar() && !val->isGlobal() && val->getBase() != ctx->getBase()))
     error("identifier '{}' not found", id);
   return val;
 }
@@ -210,11 +209,10 @@ void TransformVisitor::visit(const IdExpr *expr) {
     return;
   }
   auto val = processIdentifier(ctx, expr->value);
-  if (val->isStatic()) {
-    resultExpr = transform(
-        N<IntExpr>(static_pointer_cast<TStaticItem>(val)->getValue()));
+  if (auto s = val->getStatic()) {
+    resultExpr = transform(N<IntExpr>(s->getValue()));
   } else {
-    if (val->isType())
+    if (val->getType())
       resultExpr->markType();
     auto typ = ctx->instantiate(getSrcInfo(), val->getType());
     resultExpr->setType(forceUnify(resultExpr, typ));
@@ -277,9 +275,7 @@ TransformVisitor::CaptureVisitor::CaptureVisitor(shared_ptr<TypeContext> ctx)
 
 void TransformVisitor::CaptureVisitor::visit(const IdExpr *expr) {
   auto val = ctx->find(expr->value);
-  if (!val)
-    error(expr, "identifier '{}' not found", expr->value);
-  if (val->isVar())
+  if (val && val->getVar())
     captures.insert(expr->value);
 }
 
@@ -460,8 +456,8 @@ void TransformVisitor::visit(const PipeExpr *expr) {
     assert(f);
     // exactly one empty slot!
     forceUnify(t, f->args[inTypePos + 1]);
-    if (f->canRealize())
-      forceUnify(f, realize(f).type);
+    if (f->canRealize() && f->realizationInfo)
+      forceUnify(f, realizeFunc(f).type);
     return f->args[0];
   };
 
@@ -554,10 +550,10 @@ void TransformVisitor::visit(const IndexExpr *expr) {
         auto i = transform(expr->index);
         if (auto ii = CAST(i, IntExpr)) {
           auto idx = std::stol(ii->value);
-          if (idx < 0 || idx >= c->explicits.size())
+          if (idx < 0 || idx >= c->recordMembers.size())
             error(i, "invalid tuple index");
           resultExpr = N<IndexExpr>(move(e), move(i));
-          resultExpr->setType(forceUnify(expr, c->explicits[idx].type));
+          resultExpr->setType(forceUnify(expr, c->recordMembers[idx]));
           return;
         }
       }
@@ -735,8 +731,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
       }
       forceUnify(reorderedArgs[i].value,
                  f->realizationInfo->args[f->realizationInfo->pending[i]].type);
-      forceUnify(f->realizationInfo->args[f->realizationInfo->pending[i]].type,
-                 f->args[i + 1]);
+      forceUnify(reorderedArgs[i].value, f->args[i + 1]);
     }
     for (auto &i : namedArgs)
       error(i.second, "unknown parameter {}", i.first);
@@ -747,6 +742,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
       if (args[i].name != "")
         error(expr, "unexpected named argument");
       reorderedArgs.push_back({"", move(args[i].value)});
+
       forceUnify(reorderedArgs[i].value, f->args[i + 1]);
       if (CAST(reorderedArgs[i].value, EllipsisExpr)) {
         newPending.push_back(i);
@@ -755,6 +751,10 @@ void TransformVisitor::visit(const CallExpr *expr) {
       }
     }
   }
+  for (auto &r : reorderedArgs)
+    if (auto f = r.value->getType()->getFunc())
+      if (f->canRealize() && f->realizationInfo)
+        forceUnify(f, realizeFunc(f).type);
   if (isPartial) {
     auto t = make_shared<FuncType>(newPendingTypes, f);
     if (f->realizationInfo) {
@@ -762,13 +762,13 @@ void TransformVisitor::visit(const CallExpr *expr) {
           f->realizationInfo->name, newPending, f->realizationInfo->args);
     }
     forceUnify(expr, t);
-    if (t->canRealize())
-      forceUnify(t, realize(t).type);
+    if (t->canRealize() && t->realizationInfo)
+      forceUnify(t, realizeFunc(t).type);
     resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
     resultExpr->setType(t);
   } else {
-    if (f->canRealize())
-      forceUnify(f, realize(f).type);
+    if (f->canRealize() && f->realizationInfo)
+      forceUnify(f, realizeFunc(f).type);
     resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
     resultExpr->setType(forceUnify(expr, make_shared<LinkType>(f->args[0])));
   }
@@ -786,11 +786,11 @@ void TransformVisitor::visit(const DotExpr *expr) {
     chain.push_front(d->value);
     auto s = join(chain, "/");
     auto val = ctx->find(s);
-    if (val && val->isImport()) {
+    if (val && val->getImport()) {
       resultExpr = N<DotExpr>(N<IdExpr>(s), expr->member);
       auto ival = processIdentifier(
-          ctx->getImports()->getImport(val->getBase()), expr->member);
-      if (ival->isType())
+          ctx->getImports()->getImport(val->getBase())->tctx, expr->member);
+      if (ival->getType())
         resultExpr->markType();
       resultExpr->setType(
           forceUnify(expr, ctx->instantiate(getSrcInfo(), ival->getType())));
@@ -871,6 +871,7 @@ void TransformVisitor::visit(const TypeOfExpr *expr) {
 }
 
 void TransformVisitor::visit(const PtrExpr *expr) {
+  // TODO: force only variables here!
   auto param = transform(expr->expr);
   auto t = ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("ptr"),
                                    {param->getType()});
@@ -884,10 +885,17 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
   expr->expr->accept(cv);
 
   vector<Param> params;
-  for (auto &s : expr->vars)
+  unordered_set<string> used;
+  for (auto &s : expr->vars) {
     params.push_back({s, nullptr, nullptr});
+    used.insert(s);
+  }
   for (auto &c : cv.captures)
-    params.push_back({c, nullptr, nullptr});
+    if (used.find(c) == used.end())
+      params.push_back({c, nullptr, nullptr});
+
+  for (auto &p : params)
+    DBG("param {}", p.name);
   string fnVar = getTemporaryVar("anonFn");
   prepend(N<FunctionStmt>(fnVar, nullptr, vector<Param>{}, move(params),
                           N<ReturnStmt>(expr->expr->clone()),
@@ -896,7 +904,8 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
   for (int i = 0; i < expr->vars.size(); i++)
     args.push_back({"", N<EllipsisExpr>()});
   for (auto &c : cv.captures)
-    args.push_back({"", N<IdExpr>(c)});
+    if (used.find(c) == used.end())
+      args.push_back({"", N<IdExpr>(c)});
   resultExpr = transform(N<CallExpr>(N<IdExpr>(fnVar), move(args)));
 }
 

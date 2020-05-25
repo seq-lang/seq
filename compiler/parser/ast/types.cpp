@@ -447,15 +447,16 @@ bool FuncType::hasUnbound() const {
 bool FuncType::canRealize() const {
   if (!GenericType::canRealize())
     return false;
-  if (!realizationInfo)
-    return false;
   for (int i = 1; i < args.size(); i++)
     if (!args[i]->canRealize())
       return false;
-  for (int i = 0; i < realizationInfo->args.size(); i++)
-    if (!realizationInfo->args[i].type->canRealize())
-      return false;
-  return true;
+  if (realizationInfo) {
+    for (int i = 0; i < realizationInfo->args.size(); i++)
+      if (!realizationInfo->args[i].type->canRealize())
+        return false;
+    return true;
+  } else
+    return args[0]->canRealize();
 }
 
 } // namespace types

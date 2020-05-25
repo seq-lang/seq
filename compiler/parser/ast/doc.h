@@ -17,7 +17,6 @@
 #include "parser/ast/ast.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
-#include "parser/context.h"
 
 namespace seq {
 namespace ast {
