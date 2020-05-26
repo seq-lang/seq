@@ -18,9 +18,11 @@ extend ptr[T]:
     @internal
     def __new__[U](other: ptr[U]) -> ptr[byte]: pass
     @internal
-    def __new__(sz: int) -> ptr[T]: pass
+    def __new__(other: ptr[byte]) -> ptr[T]: pass
     @internal
-    def __new__(what: T) -> ptr[T]: pass
+    def __new__(sz: int) -> ptr[T]: pass
+    # @internal
+    # def __new__(what: T) -> ptr[T]: pass
     @internal
     def __new__(other: ptr[T]) -> ptr[T]: pass
     @internal

@@ -62,7 +62,8 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   types::FuncTypePtr findBestCall(types::ClassTypePtr c,
                                   const std::string &member,
                                   const std::vector<types::TypePtr> &args,
-                                  bool warn = false);
+                                  bool warn = false,
+                                  types::TypePtr retType = nullptr);
 
   class CaptureVisitor : public WalkVisitor {
     std::shared_ptr<TypeContext> ctx;

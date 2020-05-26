@@ -46,6 +46,14 @@ namespace ast {
 
 using namespace types;
 
+template<typename T>
+string v2s(const vector<T> &targs) {
+  vector<string> args;
+  for (auto &t : targs)
+    args.push_back(t->toString());
+  return join(args, ", ");
+}
+
 ExprPtr TransformVisitor::conditionalMagic(const ExprPtr &expr,
                                            const string &type,
                                            const string &magic) {
@@ -565,7 +573,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
 
 FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
                                            const vector<TypePtr> &args,
-                                           bool failOnMultiple) {
+                                           bool failOnMultiple,
+                                           TypePtr retType) {
   if (c->name == "tuple" && member == "__str__" && args.size() == 1) {
     auto f = make_shared<FuncType>(
         vector<TypePtr>{ctx->findInternal("str"), args[0]});
@@ -596,6 +605,12 @@ FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
       } else {
         s += u;
       }
+    }
+    if (retType) {
+      Unification us;
+      int u = retType->unify(mt->args[0], us);
+      us.undo();
+      s = u < 0 ? -1 : s + u;
     }
     if (s >= 0)
       scores.push_back({s, i});
@@ -639,32 +654,38 @@ void TransformVisitor::visit(const CallExpr *expr) {
           args.insert(args.begin(), {"", move(dotlhs)});
         e = N<IdExpr>(m->realizationInfo->name);
         e->setType(ctx->instantiate(getSrcInfo(), m, c));
-      } else {
-        vector<string> args;
-        for (auto &t : targs)
-          args.push_back(t->toString());
+      } else
         error("cannot find method '{}' in {} with arguments {}", d->member,
-              c->toString(), join(args, ","));
-      }
+              c->toString(), v2s(targs));
     }
   }
   if (!e)
     e = transform(expr->expr, true);
   forceUnify(expr->expr.get(), e->getType());
   if (e->isType()) { // Replace constructor with appropriate calls
-    assert(e->getType()->getClass());
-    if (e->getType()->getClass()->isRecord()) {
-      resultExpr =
-          transform(N<CallExpr>(N<DotExpr>(e->clone(), "__new__"), move(args)));
+    auto c = e->getType()->getClass();
+    assert(c);
+    if (c->isRecord()) {
+      vector<TypePtr> targs;
+      for (auto &a : args)
+        targs.push_back(a.value->getType());
+      if (auto m = findBestCall(c, "__new__", targs, true, e->getType())) {
+        e = N<IdExpr>(m->realizationInfo->name);
+        e->setType(ctx->instantiate(getSrcInfo(), m, c));
+      } else {
+        error("cannot find '__new__' in {} with {} -> {}", c->toString(),
+              v2s(targs), e->getType()->toString());
+      }
     } else {
       string var = getTemporaryVar("typ");
+      /// TODO: assumes that a class cannot have multiple __new__ magics
       prepend(N<AssignStmt>(N<IdExpr>(var),
                             N<CallExpr>(N<DotExpr>(e->clone(), "__new__"))));
       prepend(N<ExprStmt>(
           N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__init__"), move(args))));
       resultExpr = transform(N<IdExpr>(var));
+      return;
     }
-    return;
   }
 
   auto f = e->getType()->getFunc();
