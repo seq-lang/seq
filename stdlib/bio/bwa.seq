@@ -110,7 +110,7 @@ type mem_aln_t(_pos: i64,
                _score: i32,
                _sub: i32,
                _alt_sc: i32):
-    def __init__(self: mem_aln_t):
+    def __new__():
         return self
 
     @property
@@ -154,7 +154,7 @@ type mem_aln_t(_pos: i64,
         return int(self._alt_sc)
 
 type mem_alnreg_v(n: int, m: int, a: ptr[mem_alnreg_t]):
-    def __init__(self: mem_alnreg_v) -> mem_alnreg_v:
+    def __new__() -> mem_alnreg_v:
         return (0, 0, ptr[mem_alnreg_t]())
 
     def __getitem__(self: mem_alnreg_v, idx: int):
@@ -218,10 +218,10 @@ def options(match_score: int = 1,
     return opt
 
 type BWA(opt: cobj, p: ptr[bwaidx_t]):
-    def __init__(self: BWA, hint: str) -> BWA:
+    def __new__(hint: str) -> BWA:
         return (mem_opt_init(), bwa_idx_load(hint.c_str(), _BWA_IDX_ALL))
 
-    def __init__(self: BWA, opt: cobj, hint: str) -> BWA:
+    def __new__(opt: cobj, hint: str) -> BWA:
         return (opt, bwa_idx_load(hint.c_str(), _BWA_IDX_ALL))
 
     def name(self: BWA, aln: mem_aln_t):

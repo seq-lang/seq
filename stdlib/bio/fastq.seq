@@ -29,7 +29,7 @@ type FASTQRecord(_header: str, _read: seq, _qual: str):
         return self._qual
 
 type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
-    def __init__(self: FASTQReader, path: str, validate: bool, gzip: bool, copy: bool) -> FASTQReader:
+    def __new__(path: str, validate: bool, gzip: bool, copy: bool) -> FASTQReader:
         return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), validate, gzip, copy)
 
     @property

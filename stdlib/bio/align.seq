@@ -23,7 +23,7 @@ type SubMat(mat: ptr[i8]):
     def _N():
         return 23
 
-    def __init__(self: SubMat, d: dict[tuple[str, str], int]) -> SubMat:
+    def __new__(d: dict[tuple[str, str], int]) -> SubMat:
         def aa_code(c: str):
             if len(c) != 1:
                 raise ValueError("sequence length != 1: " + c)
@@ -61,7 +61,7 @@ type SubMat(mat: ptr[i8]):
         return ''.join(s)
 
 extend CIGAR:
-    def __init__(self: CIGAR) -> CIGAR:
+    def __new__() -> CIGAR:
         return (ptr[u32](), 0)
 
     def __len__(self: CIGAR):
@@ -88,7 +88,7 @@ extend CIGAR:
     def __bool__(self: CIGAR):
         return self._len > 0
 
-    def __init__(self: CIGAR, cigar: str) -> CIGAR:
+    def __new__(cigar: str) -> CIGAR:
         ops = list[int]()
         d = 0
         for c in cigar:
@@ -143,7 +143,7 @@ extend CIGAR:
         return CIGAR(p, n)
 
 extend Alignment:
-    def __init__(self: Alignment) -> Alignment:
+    def __new__() -> Alignment:
         return (CIGAR(), 0)
 
     @property
@@ -363,7 +363,7 @@ type SeqPair(
     cigar: ptr[u32], n_cigar: i32,
     flags: i32):
 
-    def __init__(self: SeqPair, id: int, len1: int, len2: int, flags: int) -> SeqPair:
+    def __new__(id: int, len1: int, len2: int, flags: int) -> SeqPair:
         return (i32(id), i32(len1), i32(len2), i32(_ALIGN_SCORE_NEG_INF), ptr[u32](), i32(0), i32(flags))
 
 # (!) caller must ensure len(s) <= LEN_LIMIT

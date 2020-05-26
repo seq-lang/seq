@@ -2,7 +2,7 @@ extend float:
 
 # Magic methods
 
-    def __init__(self: float, s: str):
+    def __new__(s: str) -> float:
         buf = __array__[byte](32)
         n = len(s)
         need_dyn_alloc = (n >= len(buf))

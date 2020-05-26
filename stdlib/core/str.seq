@@ -47,9 +47,6 @@ extend str:
 
 # Magic methods
 
-    def __init__(self: str):
-        return str(cobj(), 0)
-
     def __hash__(self: str):
         h = 0
         p, n = self.ptr, self.len

@@ -1,5 +1,5 @@
 type Contig(_tid: u32, _name: str, _len: int):
-    def __init__(self: Contig, tid: int, name: str, len: int) -> Contig:
+    def __new__(tid: int, name: str, len: int) -> Contig:
         return (u32(tid), name, len)
 
     @property
@@ -42,7 +42,7 @@ type Contig(_tid: u32, _name: str, _len: int):
         return self.tid
 
 type Locus(_tid: u32, _pos: u32):
-    def __init__(self: Locus, tid: int, pos: int) -> Locus:
+    def __new__(tid: int, pos: int) -> Locus:
         return (u32(tid), u32(pos))
 
     def __lt__(self: Locus, other: Locus):

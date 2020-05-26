@@ -282,7 +282,7 @@ class bntseq:
         return seq(p, n)
 
 type FMInterval(_lo: int, _hi: int):
-    def __init__(self: FMInterval) -> FMInterval:
+    def __new__() -> FMInterval:
         return (-2, -1)
 
     def __bool__(self: FMInterval):
@@ -292,7 +292,7 @@ type FMInterval(_lo: int, _hi: int):
         return self._hi - self._lo + 1 if self else 0
 
 type FMDInterval(_lo: int, _lo_rev: int, _size: int):
-    def __init__(self: FMDInterval) -> FMDInterval:
+    def __new__() -> FMDInterval:
         return (0, 0, 0)
 
     def __bool__(self: FMDInterval):
@@ -311,15 +311,15 @@ type FMDInterval(_lo: int, _lo_rev: int, _size: int):
         return FMDInterval(self._lo_rev, self._lo, self._size)
 
 type SMEM(_intv: FMDInterval, _start: u32, _stop: u32):
-    def __init__(self: SMEM, interval: FMDInterval, start: int, stop: int) -> SMEM:
+    def __new__(interval: FMDInterval, start: int, stop: int) -> SMEM:
         if not (0 <= start <= stop):
             raise ValueError('invalid SMEM start and stop coordinates')
         return (interval, u32(start), u32(stop))
 
-    def __init__(self: SMEM, interval: FMDInterval) -> SMEM:
+    def __new__(interval: FMDInterval) -> SMEM:
         return (interval, u32(0), u32(0))
 
-    def __init__(self: SMEM) -> SMEM:
+    def __new__() -> SMEM:
         return (FMDInterval(), u32(0), u32(0))
 
     def __len__(self: SMEM):

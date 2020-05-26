@@ -1,5 +1,7 @@
 @internal
 type str(len: int, ptr: ptr[byte]):
+    def __new__() -> str:
+        return str(cobj(), 0)
     def __str__(self: str) -> str:
         return self
     @internal
@@ -471,25 +473,6 @@ type seq(len: int, ptr: ptr[byte]):
         return (s.len, s.ptr)
     # def __contains__[N](self: seq, what: Kmer[N]) -> void: pass
 
-# class list[T]:
-#     arr: array[T]
-#     len: int
-#     def __init__(self: list[T]):
-#         self.arr = array[T](10)
-#         self.len = 0
-#     def __init__(self: list[T], sz: int):
-#         self.arr = array[T](sz)
-#         self.len = 0
-#     def append(self: list[T], i: T):
-#         self.arr[self.len] = i
-#         self.len = 1 # TODO +=
-#     def __str__(self: list[T]):
-#         return self.len.__str__()
-#     def __iter__(self: list[T]):
-#         yield self.arr[0]
-#         # for i in self.arr:
-#         #     yield i
-
 from core.aliases import *
 import core.c_stubs as _C
 import core.gc as _gc
@@ -503,8 +486,8 @@ from core.box import Box
 from core.builtin import *
 
 from core.collections.list import list
-# from core.collections.set import set
-# from core.collections.dict import dict
+from core.collections.set import set
+from core.collections.dict import dict
 
 # from core.str import *
 # from core.int import *

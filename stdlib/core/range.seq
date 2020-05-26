@@ -4,15 +4,15 @@ type range(start: int, stop: int, step: int):
 
 # Magic methods
 
-    def __init__(self: range, start: int, stop: int, step: int) -> range:
+    def __new__(start: int, stop: int, step: int) -> range:
         if step == 0:
             raise ValueError("range() step argument must not be zero")
         return (start, stop, step)
 
-    def __init__(self: range, start: int, stop: int) -> range:
+    def __new__(start: int, stop: int) -> range:
         return (start, stop, 1)
 
-    def __init__(self: range, stop: int) -> range:
+    def __new__(stop: int) -> range:
         return (0, stop, 1)
 
     def _get(self: range, idx: int):

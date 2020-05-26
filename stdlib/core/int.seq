@@ -2,10 +2,10 @@ extend int:
 
 # Magic methods
 
-    def __init__(self: int, s: str):
+    def __new__(s: str) -> int:
         return int._from_str(s, 10)
 
-    def __init__(self: int, s: str, base: int):
+    def __new__(s: str, base: int) -> int:
         return int._from_str(s, base)
 
     def __pow__(self: int, exp: int):

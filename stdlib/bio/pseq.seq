@@ -2,10 +2,10 @@ from core.c_stubs import pseq
 from bio.align import Alignment
 
 extend pseq:  # order is consistent with str/seq
-    def __init__(self: pseq, p: cobj, n: int) -> pseq:
+    def __new__(p: cobj, n: int) -> pseq:
         return (n, p)
 
-    def __init__(self: pseq, s: str) -> pseq:
+    def __new__(s: str) -> pseq:
         return (s.len, s.ptr)
 
     def __eq__(self: pseq, other: pseq):

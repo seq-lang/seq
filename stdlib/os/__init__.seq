@@ -6,7 +6,7 @@ SEEK_CUR = 1
 SEEK_END = 2
 
 type EnvMap(_map: dict[str,str]):
-    def __init__(self: EnvMap) -> EnvMap:
+    def __new__() -> EnvMap:
         return (dict[str,str](),)
 
     def _init_if_needed(self: EnvMap):

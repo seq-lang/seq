@@ -20,7 +20,7 @@ type FASTARecord(_header: str, _seq: seq):
         return self._seq
 
 type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, gzip: bool, copy: bool):
-    def __init__(self: FASTAReader, path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
+    def __new__(path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
         fai_list = list[int]() if fai else None
         names = list[str]() if fai else None
         if fai:
@@ -195,7 +195,7 @@ type pFASTARecord(_name: str, _seq: pseq):
         return self._seq
 
 type pFASTAReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
-    def __init__(self: pFASTAReader, path: str, validate: bool, gzip: bool, copy: bool) -> pFASTAReader:
+    def __new__(path: str, validate: bool, gzip: bool, copy: bool) -> pFASTAReader:
         return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), validate, gzip, copy)
 
     @property

@@ -1,5 +1,5 @@
 type BaseCounts(A: int, C: int, G: int, T: int, N: int):
-    def __init__(self: BaseCounts) -> BaseCounts:
+    def __new__() -> BaseCounts:
         return (0, 0, 0, 0, 0)
 
     def __add__(self: BaseCounts, other: BaseCounts):
@@ -31,10 +31,10 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
         return f'BaseCounts({A=}, {C=}, {G=}, {T=}, {N=})'
 
 extend seq:
-    def __init__(self: seq, s: str):
+    def __new__(s: str) -> seq:
         return seq(s.ptr, s.len)
 
-    def __init__(self: seq):
+    def __new__() -> seq:
         return seq(cobj(), 0)
 
     def __eq__(self: seq, other: seq):

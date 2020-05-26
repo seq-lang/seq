@@ -1,5 +1,5 @@
 type Lock(p: cobj):
-    def __init__(self: Lock) -> Lock:
+    def __new__() -> Lock:
         return (_C.seq_lock_new(),)
 
     def acquire(self: Lock, block: bool = True, timeout: float = -1.0):
@@ -17,7 +17,7 @@ type Lock(p: cobj):
         self.release()
 
 type RLock(p: cobj):
-    def __init__(self: RLock) -> RLock:
+    def __new__() -> RLock:
         return (_C.seq_rlock_new(),)
 
     def acquire(self: RLock, block: bool = True, timeout: float = -1.0):
