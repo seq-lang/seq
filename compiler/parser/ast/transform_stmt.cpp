@@ -121,7 +121,7 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     if (typ)
       forceUnify(typ, s->rhs->getType());
 
-    auto t = ctx->find(l->value);
+    auto t = processIdentifier(ctx, l->value);
     if (t && !t->getImport()) {
       // check is it optional addition
       auto lc = t->getType()->getClass();
@@ -665,7 +665,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       args.push_back({a.name, move(t)});
       string deflt = "";
       if (a.deflt) {
-        deflt = getTemporaryVar(format("{}.default.{}", canonicalName, a.name), 0);
+        deflt =
+            getTemporaryVar(format("{}.default.{}", canonicalName, a.name), 0);
         prepend(N<AssignStmt>(N<IdExpr>(deflt), a.deflt->clone()));
       }
       realizationArgs.push_back({a.name, argTypes.back(), deflt});
@@ -1007,7 +1008,7 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     if (!isInternal)
       for (int i = 0; i < t->realizationInfo->args.size(); i++) {
         assert(t->realizationInfo->args[i].type &&
-              !t->realizationInfo->args[i].type->hasUnbound());
+               !t->realizationInfo->args[i].type->hasUnbound());
         ctx->addVar(ast.second->args[i].name,
                     make_shared<LinkType>(t->realizationInfo->args[i].type));
       }
@@ -1015,7 +1016,6 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     auto oldSeen = ctx->wasReturnSet();
     ctx->setReturnType(ret);
     ctx->setWasReturnSet(false);
-
 
     auto realized =
         isInternal ? nullptr : realizeBlock(ast.second->suite.get());
@@ -1046,7 +1046,9 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     // DBG(">> realized {}::{}", name, *t);
     return result;
   } catch (exc::ParserException &e) {
-    e.trackRealize(t->toString(), getSrcInfo());
+    e.trackRealize(
+        fmt::format("{}:{}", t->realizationInfo->name, t->toString(1)),
+        getSrcInfo());
     throw;
   }
 }

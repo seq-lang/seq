@@ -203,10 +203,8 @@ TransformVisitor::processIdentifier(shared_ptr<TypeContext> tctx,
                                     const string &id) {
   auto val = tctx->find(id);
   if (!val ||
-      (val->getVar() && !val->isGlobal() && val->getBase() != ctx->getBase())) {
-    tctx->dump();
-    error("identifier '{}' not found", id);
-  }
+      (val->getVar() && !val->isGlobal() && val->getBase() != ctx->getBase()))
+    return nullptr;
   return val;
 }
 
@@ -217,6 +215,8 @@ void TransformVisitor::visit(const IdExpr *expr) {
     return;
   }
   auto val = processIdentifier(ctx, expr->value);
+  if (!val)
+    error("identifier '{}' not found", expr->value);
   if (auto s = val->getStatic()) {
     resultExpr = transform(N<IntExpr>(s->getValue()));
   } else {
@@ -821,6 +821,8 @@ void TransformVisitor::visit(const DotExpr *expr) {
       auto ictx =
           ctx->getImports()->getImport(val->getImport()->getFile())->tctx;
       auto ival = processIdentifier(ictx, expr->member);
+      if (!ival)
+        error("identifier '{}' not found", expr->member);
       if (ival->getClass())
         resultExpr->markType();
       resultExpr->setType(

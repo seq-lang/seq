@@ -1,9 +1,18 @@
 @internal
+type __array__[T](ptr: ptr[T]):
+    @internal
+    def __new__(sz: int) -> __array__[T]: pass
+    @internal
+    def __len__(self: __array__[T]) -> int: pass
+
+@internal
 type str(len: int, ptr: ptr[byte]):
     def __new__() -> str:
         return str(cobj(), 0)
     def __str__(self: str) -> str:
         return self
+    def __new__(p: ptr[byte], l: int) -> str:
+        return (l, p)
     @internal
     def memcpy(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
     @internal
@@ -489,15 +498,16 @@ from core.collections.list import list
 from core.collections.set import set
 from core.collections.dict import dict
 
-# from core.str import *
-# from core.int import *
-# from core.float import *
+from core.str import *
+from core.int import *
+from core.float import *
 
-# from core.sort import sorted
+from core.sort import sorted
 
-# from core.file import File, gzFile, open, gzopen
-# from pickle import pickle, unpickle
+from core.file import File, gzFile, open, gzopen
+from pickle import pickle, unpickle
 
-# from core.dlopen import dlsym as _dlsym
+from core.dlopen import dlsym as _dlsym
 # from core.python import init as _py_init, imp as _py_import, exec as _py_exec, pyobj
+
 # from bio import *

@@ -227,6 +227,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
 
 void TypeContext::dump(int pad) {
   auto ordered = std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
+  DBG("base: {}", getBase());
   for (auto &i : ordered) {
     std::string s;
     auto t = i.second.top();
@@ -235,7 +236,8 @@ void TypeContext::dump(int pad) {
       getImports()->getImport(im->getFile())->tctx->dump(pad+1);
     }
     else
-      DBG("{}{:.<25} {}", string(pad*2, ' '), i.first, t->getType()->toString(true));
+      DBG("{}{:.<25} {} {}", string(pad*2, ' '), i.first, t->getType()->toString(true),
+      t->getBase());
   }
 }
 
