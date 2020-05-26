@@ -46,20 +46,20 @@ StmtPtr TransformVisitor::transform(const Stmt *stmt) {
   TransformVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
 
-  auto s = stmt->toString();
-  std::replace(s.begin(), s.end(), '\n', ';');
-  DBG("{{ {}", s);
-  __level__++;
+  // auto s = stmt->toString();
+  // std::replace(s.begin(), s.end(), '\n', ';');
+  // DBG("{{ {}", s);
+  // __level__++;
   stmt->accept(v);
-  __level__--;
+  // __level__--;
   if (v.prependStmts->size()) {
     if (v.resultStmt)
       v.prependStmts->push_back(move(v.resultStmt));
     v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
   }
-  s = v.resultStmt ? v.resultStmt->toString() : "#pass";
-  std::replace(s.begin(), s.end(), '\n', ';');
-  DBG("  -> {} }}", s);
+  // s = v.resultStmt ? v.resultStmt->toString() : "#pass";
+  // std::replace(s.begin(), s.end(), '\n', ';');
+  // DBG("  -> {} }}", s);
   return move(v.resultStmt);
 }
 
@@ -461,6 +461,14 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
     import = ctx->getImports()->getImport(file);
   }
 
+  auto addRelated = [&](string n) {
+    /// TODO switch to map maybe to make this more efficient?
+    for (auto i : *(import->tctx)) {
+      if (i.first.substr(0, n.size()) == n)
+        ctx->add(i.first, i.second.top());
+    }
+  };
+
   if (!stmt->what.size()) {
     ctx->addImport(
         stmt->from.second == "" ? stmt->from.first : stmt->from.second, file);
@@ -471,10 +479,17 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
       ctx->add(i.first, i.second.top());
   } else {
     for (auto &w : stmt->what) {
-      if (auto c = import->tctx->find(w.first))
-        ctx->add(w.second == "" ? w.first : w.second, c);
-      else
+      auto c = import->tctx->find(w.first);
+      if (!c)
         error("symbol '{}' not found in {}", w.first, file);
+      ctx->add(w.second == "" ? w.first : w.second, c);
+      if (c->getClass())
+        addRelated(c->getType()->getClass()->name);
+      else if (c->getFunc()) {
+        auto t = c->getType()->getFunc();
+        if (t->realizationInfo)
+          addRelated(t->realizationInfo->name);
+      }
     }
   }
   resultStmt = stmt->clone();
@@ -650,7 +665,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       args.push_back({a.name, move(t)});
       string deflt = "";
       if (a.deflt) {
-        deflt = getTemporaryVar(format("def.{}.{}", stmt->name, a.name));
+        deflt = getTemporaryVar(format("{}.default.{}", canonicalName, a.name), 0);
         prepend(N<AssignStmt>(N<IdExpr>(deflt), a.deflt->clone()));
       }
       realizationArgs.push_back({a.name, argTypes.back(), deflt});
@@ -1016,7 +1031,7 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     vector<Param> args;
     for (auto &i : ast.second->args)
       args.push_back({i.name, nullptr, nullptr});
-    DBG("<:> {} {}", name, t->toString(true));
+    // DBG("<:> {} {}", name, t->toString(true));
     auto result =
         ctx->getRealizations()->funcRealizations[name][t->toString(true)] = {
             t,
@@ -1028,7 +1043,7 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     ctx->setWasReturnSet(oldSeen);
     ctx->decreaseLevel();
     ctx->popBlock();
-    DBG(">> realized {}::{}", name, *t);
+    // DBG(">> realized {}::{}", name, *t);
     return result;
   } catch (exc::ParserException &e) {
     e.trackRealize(t->toString(), getSrcInfo());

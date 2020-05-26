@@ -75,7 +75,7 @@ std::string executable_path(const char *argv0);
 void error(const char *format);
 void error(const SrcInfo &p, const char *format);
 
-std::string getTemporaryVar(const std::string &prefix = "");
+std::string getTemporaryVar(const std::string &prefix = "", char p = '$');
 
 } // namespace ast
 } // namespace seq

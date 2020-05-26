@@ -46,8 +46,7 @@ namespace ast {
 
 using namespace types;
 
-template<typename T>
-string v2s(const vector<T> &targs) {
+template <typename T> string v2s(const vector<T> &targs) {
   vector<string> args;
   for (auto &t : targs)
     args.push_back(t->toString());
@@ -91,14 +90,14 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
     return nullptr;
   TransformVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
-  DBG("[ {} :- {} # {}", *expr,
-      expr->getType() ? expr->getType()->toString() : "-",
-      expr->getSrcInfo().line);
-  __level__++;
+  // DBG("[ {} :- {} # {}", *expr,
+  //     expr->getType() ? expr->getType()->toString() : "-",
+  //     expr->getSrcInfo().line);
+  // __level__++;
   expr->accept(v);
-  __level__--;
-  DBG("  {} :- {} ]", *v.resultExpr,
-      v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
+  // __level__--;
+  // DBG("  {} :- {} ]", *v.resultExpr,
+  //     v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
 
   if (v.resultExpr && v.resultExpr->getType() &&
       v.resultExpr->getType()->canRealize()) {
@@ -204,8 +203,10 @@ TransformVisitor::processIdentifier(shared_ptr<TypeContext> tctx,
                                     const string &id) {
   auto val = tctx->find(id);
   if (!val ||
-      (val->getVar() && !val->isGlobal() && val->getBase() != ctx->getBase()))
+      (val->getVar() && !val->isGlobal() && val->getBase() != ctx->getBase())) {
+    tctx->dump();
     error("identifier '{}' not found", id);
+  }
   return val;
 }
 
@@ -222,7 +223,7 @@ void TransformVisitor::visit(const IdExpr *expr) {
     if (val->getClass())
       resultExpr->markType();
     auto typ = val->getImport()
-                   ? make_shared<types::ImportType>(val->getImport()->getName())
+                   ? make_shared<types::ImportType>(val->getImport()->getFile())
                    : ctx->instantiate(getSrcInfo(), val->getType());
     resultExpr->setType(forceUnify(resultExpr, typ));
   }
@@ -238,7 +239,6 @@ void TransformVisitor::visit(const TupleExpr *expr) {
   vector<TypePtr> args;
   for (auto &i : e->items)
     args.push_back(i->getType());
-  DBG("{} -> {} ", *expr, *e);
   e->setType(forceUnify(expr, T<ClassType>("tuple", true, args)));
   resultExpr = move(e);
 }
@@ -819,7 +819,7 @@ void TransformVisitor::visit(const DotExpr *expr) {
     if (val && val->getImport()) {
       resultExpr = N<DotExpr>(N<IdExpr>(s), expr->member);
       auto ictx =
-          ctx->getImports()->getImport(val->getImport()->getName())->tctx;
+          ctx->getImports()->getImport(val->getImport()->getFile())->tctx;
       auto ival = processIdentifier(ictx, expr->member);
       if (ival->getClass())
         resultExpr->markType();
@@ -925,8 +925,6 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
     if (used.find(c) == used.end())
       params.push_back({c, nullptr, nullptr});
 
-  for (auto &p : params)
-    DBG("param {}", p.name);
   string fnVar = getTemporaryVar("anonFn");
   prepend(N<FunctionStmt>(fnVar, nullptr, vector<Param>{}, move(params),
                           N<ReturnStmt>(expr->expr->clone()),

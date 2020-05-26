@@ -123,6 +123,8 @@ public:
   void initJIT();
   void execJIT(std::string varName = "", seq::Expr *varExpr = nullptr);
 
+  // void dump(int pad = 0) override;
+
 public:
   seq::BaseFunc *getBase() const { return bases[topBaseIndex]; }
   seq::Block *getBlock() const { return blocks[topBlockIndex]; }

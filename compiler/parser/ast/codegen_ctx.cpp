@@ -136,5 +136,19 @@ void LLVMContext::execJIT(string varName, seq::Expr *varExpr) {
   // assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
 }
 
+// void LLVMContext::dump(int pad) {
+//   auto ordered = decltype(map)(map.begin(), map.end());
+//   for (auto &i : ordered) {
+//     std::string s;
+//     auto t = i.second.top();
+//     if (auto im = t->getImport()) {
+//       DBG("{}{:.<25} {}", string(pad*2, ' '), i.first, '<import>');
+//       getImports()->getImport(im->getFile())->tctx->dump(pad+1);
+//     }
+//     else
+//       DBG("{}{:.<25} {}", string(pad*2, ' '), i.first, t->getType()->toString(true));
+//   }
+// }
+
 } // namespace ast
 } // namespace seq

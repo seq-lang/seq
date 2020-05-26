@@ -21,8 +21,9 @@ std::ostream &operator<<(std::ostream &out, const ::seq::SrcInfo &c) {
 namespace ast {
 
 int tmpVarCounter = 0;
-string getTemporaryVar(const string &prefix) {
-  return fmt::format("$_{}_{}", prefix, ++tmpVarCounter);
+string getTemporaryVar(const string &prefix, char p) {
+  return fmt::format("{}{}_{}", p ? fmt::format("{}_", p) : "", prefix,
+                     ++tmpVarCounter);
 }
 
 vector<string> split(const string &s, char delim) {

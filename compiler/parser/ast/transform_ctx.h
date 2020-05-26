@@ -49,13 +49,13 @@ public:
 };
 
 class Import : public Item {
-  std::string name;
+  std::string file;
 
 public:
-  Import(const std::string &name, const std::string &base, bool global = false)
-      : Item(base, global), name(name) {}
+  Import(const std::string &file, const std::string &base, bool global = false)
+      : Item(base, global), file(file) {}
   const Import *getImport() const override { return this; }
-  std::string getName() const { return name; }
+  std::string getFile() const { return file; }
 };
 
 class Static : public Item {
@@ -139,6 +139,7 @@ public:
   void addFunc(const std::string &name, types::TypePtr type,
                bool global = false);
   void addStatic(const std::string &name, int value, bool global = false);
+  void dump(int pad = 0) override;
 
 public:
   std::string getBase() const;
@@ -179,11 +180,6 @@ public:
 public:
   static std::shared_ptr<TypeContext> getContext(const std::string &argv0,
                                                  const std::string &file);
-
-  // I am still debating should I provide 1000 getters or setters
-  // or just leave the classes below friendly as they are by design
-  // rather intimate with this class.
-  // friend class TransformVisitor;
 };
 
 } // namespace ast

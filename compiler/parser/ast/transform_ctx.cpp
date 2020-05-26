@@ -225,5 +225,19 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   return make_shared<TypeContext>(file, realizations, imports);
 }
 
+void TypeContext::dump(int pad) {
+  auto ordered = std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
+  for (auto &i : ordered) {
+    std::string s;
+    auto t = i.second.top();
+    if (auto im = t->getImport()) {
+      DBG("{}{:.<25} {}", string(pad*2, ' '), i.first, "<import>");
+      getImports()->getImport(im->getFile())->tctx->dump(pad+1);
+    }
+    else
+      DBG("{}{:.<25} {}", string(pad*2, ' '), i.first, t->getType()->toString(true));
+  }
+}
+
 } // namespace ast
 } // namespace seq

@@ -150,7 +150,7 @@ public:
 
   void add(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
-    DBG("add {}", name);
+    // DBG("add {}", name);
     map[name].push(var);
     stack.front().push_back(name);
   }
@@ -168,7 +168,7 @@ public:
     stack.pop_front();
   }
   void remove(const std::string &name) {
-    DBG("remove {}", name);
+    // DBG("remove {}", name);
     removeFromMap(name);
     for (auto &s : stack) {
       auto i = std::find(s.begin(), s.end(), name);
@@ -199,19 +199,7 @@ public:
           std::shared_ptr<ImportContext> imports)
       : realizations(realizations), imports(imports), filename(filename) {}
   virtual ~Context() {}
-  virtual void dump() {
-    auto ordered = std::map<std::string, std::stack<std::shared_ptr<T>>>(
-        map.begin(), map.end());
-    for (auto &i : ordered) {
-      std::string s;
-      auto t = i.second.top();
-      // if (!t->getType())
-      //   s = fmt::format("<notyp>");
-      // else
-      //   s = t->getType()->toString(true);
-      // DBG("{:.<25} {}", i.first, t->toString());
-    }
-  }
+  virtual void dump(int pad = 0) {}
 };
 
 } // namespace ast
