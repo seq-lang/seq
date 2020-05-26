@@ -23,6 +23,7 @@ struct ClassType;
 struct LinkType;
 struct GenericType;
 struct StaticType;
+struct ImportType;
 struct Type;
 typedef std::shared_ptr<Type> TypePtr;
 typedef std::shared_ptr<FuncType> FuncTypePtr;
@@ -30,6 +31,7 @@ typedef std::shared_ptr<ClassType> ClassTypePtr;
 typedef std::shared_ptr<LinkType> LinkTypePtr;
 typedef std::shared_ptr<GenericType> GenericTypePtr;
 typedef std::shared_ptr<StaticType> StaticTypePtr;
+typedef std::shared_ptr<ImportType> ImportTypePtr;
 
 struct Unification {
   std::vector<LinkTypePtr> linked;
@@ -76,11 +78,12 @@ public:
   virtual LinkTypePtr getLink() { return nullptr; }
   virtual LinkTypePtr getUnbound() { return nullptr; }
   virtual StaticTypePtr getStatic() { return nullptr; }
+  virtual ImportTypePtr getImport() { return nullptr; }
 };
 
 struct StaticType : public Type {
   int value;
-  StaticType(int value): value(value) {}
+  StaticType(int value) : value(value) {}
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
@@ -94,6 +97,34 @@ public:
   std::string toString(bool reduced = false) const override;
   StaticTypePtr getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
+  }
+};
+
+struct ImportType : public Type {
+  std::string name;
+
+public:
+  ImportType(const std::string &name) : name(name) {}
+
+  int unify(TypePtr typ, Unification &us) override {
+    if (auto t = CAST(typ, ImportType))
+      return name == t->name ? 0 : -1;
+    return -1;
+  }
+  TypePtr generalize(int level) override { return shared_from_this(); }
+  TypePtr instantiate(int level, int &unboundCount,
+                      std::unordered_map<int, TypePtr> &cache) override {
+    return shared_from_this();
+  }
+
+public:
+  bool hasUnbound() const override { return false; }
+  bool canRealize() const override { return false; }
+  std::string toString(bool reduced) const override {
+    return fmt::format("<{}>", name);
+  }
+  ImportTypePtr getImport() override {
+    return std::static_pointer_cast<ImportType>(shared_from_this());
   }
 };
 

@@ -398,7 +398,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
 #undef Return
 }
 
-unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset,
+unique_ptr<SuiteStmt> ocamlParse(string file, string code, int line_offset,
                                   int col_offset) {
   CAMLparam0();
   CAMLlocal3(p1, f, c);
@@ -416,7 +416,7 @@ unique_ptr<SuiteStmt> ocaml_parse(string file, string code, int line_offset,
   })));
 }
 
-void ocaml_initialize() {
+void initOcaml() {
   const char *argv[] = {"parser", 0};
   caml_main((char **)argv);
 }
@@ -430,45 +430,38 @@ SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
   CAMLreturn(Val_unit);
 }
 
-unique_ptr<SuiteStmt> parse_code(string file, string code, int line_offset,
+unique_ptr<SuiteStmt> parseCode(string file, string code, int line_offset,
                                  int col_offset) {
   static bool initialized(false);
   if (!initialized) {
-    ocaml_initialize();
+    initOcaml();
     initialized = true;
   }
-  return ocaml_parse(file, code, line_offset, col_offset);
+  return ocamlParse(file, code, line_offset, col_offset);
 }
 
-unique_ptr<Expr> parse_expr(string code, const seq::SrcInfo &offset) {
-  auto result = parse_code(offset.file, code, offset.line, offset.col);
-  if (result->stmts.size() != 1) {
-    error("incorrect expression parse");
-  }
-  if (ExprStmt *s = dynamic_cast<ExprStmt *>(result->stmts[0].get())) {
-    return move(s->expr);
-  } else {
-    error("incorrect expression parse");
-    return nullptr;
-  }
+unique_ptr<Expr> parseExpr(string code, const seq::SrcInfo &offset) {
+  auto result = parseCode(offset.file, code, offset.line, offset.col);
+  assert(result->stmts.size() == 1);
+  auto s = CAST(result->stmts[0], ExprStmt);
+  assert(s);
+  return move(s->expr);
 }
 
-unique_ptr<SuiteStmt> parse_file(string file) {
+unique_ptr<SuiteStmt> parseFile(string file) {
   string result, line;
   if (file == "-") {
-    while (getline(cin, line)) {
+    while (getline(cin, line))
       result += line + "\n";
-    }
   } else {
     ifstream fin(file);
     if (!fin)
-      error("cannot open {}", file);
-    while (getline(fin, line)) {
+      error(fmt::format("cannot open {}", file).c_str());
+    while (getline(fin, line))
       result += line + "\n";
-    }
     fin.close();
   }
-  return parse_code(file, result, 0, 0);
+  return parseCode(file, result, 0, 0);
 }
 
 } // namespace ast

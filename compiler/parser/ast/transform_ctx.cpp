@@ -207,7 +207,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   stdlib->addType("#function", ft);
 
   stdlib->setFlag("internal");
-  auto stmts = ast::parse_file(stdlibPath);
+  auto stmts = parseFile(stdlibPath);
   auto tv = TransformVisitor(stdlib).realizeBlock(stmts.get(), true);
   stdlib->unsetFlag("internal");
   stdlib->add("#str", stdlib->find("str"));

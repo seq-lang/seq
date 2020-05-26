@@ -76,10 +76,10 @@ string escape(string s) {
   return r;
 }
 
-void error(const char *format) { throw ::seq::exc::SeqException(format); }
+void error(const char *format) { throw exc::ParserException(format); }
 
 void error(const ::seq::SrcInfo &p, const char *format) {
-  throw ::seq::exc::SeqException(format, p);
+  throw exc::ParserException(format, p);
 }
 
 #ifdef __APPLE__

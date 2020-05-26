@@ -34,15 +34,15 @@ namespace seq {
 namespace ast {
 
 void CodegenVisitor::defaultVisit(const Expr *n) {
-  error(n, "invalid node {}", *n);
+  internalError("invalid node {}", *n);
 }
 
 void CodegenVisitor::defaultVisit(const Stmt *n) {
-  error(n, "invalid node {}", *n);
+  internalError("invalid node {}", *n);
 }
 
 void CodegenVisitor::defaultVisit(const Pattern *n) {
-  error(n, "invalid node {}", *n);
+  internalError("invalid node {}", *n);
 }
 
 CodegenVisitor::CodegenVisitor(std::shared_ptr<LLVMContext> ctx)
@@ -53,6 +53,7 @@ seq::Expr *CodegenVisitor::transform(const Expr *expr) {
   if (!expr)
     return nullptr;
   CodegenVisitor v(ctx);
+  v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
   if (v.resultExpr) {
     v.resultExpr->setSrcInfo(expr->getSrcInfo());
@@ -76,7 +77,9 @@ void CodegenVisitor::visit(const IntExpr *expr) {
       resultExpr = N<seq::IntExpr>(i);
     }
   } catch (std::out_of_range &) {
-    error(expr, "integer {} out of range", expr->value);
+    error(getSrcInfo(), fmt::format("integer {} out of range",
+                                    expr->value)
+                            .c_str()); /// TODO: move to transform
   }
 }
 
@@ -92,10 +95,9 @@ shared_ptr<LLVMItem::Item>
 CodegenVisitor::processIdentifier(shared_ptr<LLVMContext> tctx,
                                   const string &id) {
   auto val = tctx->find(id);
-  if (!val)
-    error(ctx, "identifier '{}' not found", id);
-  if (val->getVar() && val->isGlobal() && val->getBase() != ctx->getBase())
-    error(ctx, "identifier '{}' not found", id);
+  assert(val);
+  assert(
+      !(val->getVar() && val->isGlobal() && val->getBase() != ctx->getBase()));
   return val;
 }
 
@@ -207,6 +209,7 @@ void CodegenVisitor::visit(const YieldExpr *expr) {
 seq::Stmt *CodegenVisitor::transform(const Stmt *stmt) {
   CodegenVisitor v(ctx);
   stmt->accept(v);
+  v.setSrcInfo(stmt->getSrcInfo());
   if (v.resultStmt) {
     v.resultStmt->setSrcInfo(stmt->getSrcInfo());
     v.resultStmt->setBase(ctx->getBase());
@@ -254,7 +257,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
     resultStmt = N<seq::AssignIndex>(transform(i->expr), transform(i->index),
                                      transform(stmt->rhs));
   }
-  error(stmt, "invalid assignment");
+  assert(false);
 }
 
 void CodegenVisitor::visit(const DelStmt *stmt) {
@@ -385,11 +388,7 @@ void CodegenVisitor::visit(const ExternImportStmt *stmt) {
   vector<string> names;
   vector<seq::types::Type *> types;
   for (auto &arg : stmt->args) {
-    if (!arg.type)
-      error(stmt, "C imports need a type for each argument");
-    if (arg.name != "" &&
-        std::find(names.begin(), names.end(), arg.name) != names.end())
-      error(stmt, "argument '{}' already specified", arg.name);
+    assert(arg.type);
     names.push_back(arg.name);
     types.push_back(realizeType(arg.type->getType()->getClass()));
   }
@@ -401,8 +400,7 @@ void CodegenVisitor::visit(const ExternImportStmt *stmt) {
   f->setExternal();
   f->setIns(types);
   f->setArgNames(names);
-  if (!stmt->ret)
-    error(stmt, "C imports need a return type");
+  assert(stmt->ret);
   f->setOut(realizeType(stmt->ret->getType()->getClass()));
   // if (ctx.getJIT() && ctx.isToplevel() && !ctx.getEnclosingType()) {
   //   // DBG("adding jit fn {}", stmt->name.first);
@@ -457,6 +455,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
 
 seq::Pattern *CodegenVisitor::transform(const Pattern *ptr) {
   CodegenVisitor v(ctx);
+  v.setSrcInfo(ptr->getSrcInfo());
   ptr->accept(v);
   if (v.resultPattern) {
     v.resultPattern->setSrcInfo(ptr->getSrcInfo());
@@ -564,7 +563,7 @@ seq::BaseFunc *CodegenVisitor::realizeFunc(types::FuncTypePtr t) {
   auto f = new seq::Func();
   it2->second.handle = f;
   f->setName(stmt->name);
-  f->setSrcInfo(ctx->getSrcInfo());
+  f->setSrcInfo(getSrcInfo());
   if (!ctx->isToplevel())
     f->setEnclosingFunc(ctx->getBase());
   ctx->addFunc(stmt->name, f);
@@ -622,7 +621,8 @@ seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
     if (statics[0] >= 1 && statics[0] <= 2048)
       handle = seq::types::IntNType::get(statics[0], t->name == "Int");
     else
-      error("max len is 2018");
+      error(getSrcInfo(),
+            "max len is 2018"); /// TODO: move check to transform part
   } else if (t->name == "array") {
     assert(types.size() == 1 && statics.size() == 0);
     handle = seq::types::ArrayType::get(types[0]);

@@ -5,11 +5,11 @@
 
 #include "lang/seq.h"
 #include "parser/ast/codegen.h"
+#include "parser/ast/codegen_ctx.h"
 #include "parser/ast/doc.h"
 #include "parser/ast/format.h"
 #include "parser/ast/transform.h"
 #include "parser/ast/transform_ctx.h"
-#include "parser/ast/codegen_ctx.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"
 #include "util/fmt/format.h"
@@ -46,7 +46,7 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
       cases.push_back(current);
     FILE *fo = fopen("tmp/out.htm", "w");
     for (int ci = 0; ci < cases.size(); ci++) {
-      auto stmts = ast::parse_code(file, cases[ci]);
+      auto stmts = ast::parseCode(file, cases[ci]);
       auto ctx = ast::TypeContext::getContext(argv0, file);
       auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false, fo);
       fmt::print(fo, "-------------------------------<hr/>\n");
@@ -73,6 +73,15 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     }
     seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                           e.getSrcInfo().col);
+    return nullptr;
+  } catch (seq::exc::ParserException &e) {
+    if (isTest)
+      throw;
+    for (int i = 0; i < e.messages.size(); i++)
+      compilationMessage("\033[1;31merror:\033[0m", e.messages[i],
+                         e.locations[i].file, e.locations[i].line,
+                         e.locations[i].col);
+    exit(EXIT_FAILURE);
     return nullptr;
   }
 }

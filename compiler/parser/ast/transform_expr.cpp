@@ -58,7 +58,7 @@ ExprPtr TransformVisitor::conditionalMagic(const ExprPtr &expr,
     return transform(
         Nx<CallExpr>(e.get(), Nx<DotExpr>(e.get(), move(e), magic)));
   } else {
-    error(e, "unexpected expr");
+    error(e, "cannot find magic '{}' in {}", magic, e->getType()->toString());
   }
   return nullptr;
 }
@@ -98,14 +98,14 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
       realizeType(c);
   }
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
-    error(expr, "unexpected type");
+    error("unexpected type expression");
   return move(v.resultExpr);
 }
 
 ExprPtr TransformVisitor::transformType(const ExprPtr &expr) {
   auto e = transform(expr.get(), true);
   if (e && !e->isType())
-    error(expr, "expected a type, got {}", *e);
+    error("expected type expression");
   return e;
 }
 
@@ -158,14 +158,13 @@ void TransformVisitor::visit(const FStringExpr *expr) {
           code = code.substr(0, code.size() - 1);
           items.push_back(N<StringExpr>(format("{}=", code)));
         }
-        items.push_back(
-            N<CallExpr>(N<IdExpr>("str"), parse_expr(code, offset)));
+        items.push_back(N<CallExpr>(N<IdExpr>("str"), parseExpr(code, offset)));
       }
       braceStart = i + 1;
     }
   }
   if (braceCount)
-    error(expr, "f-string braces not balanced");
+    error("f-string braces are not balanced");
   if (braceStart != expr->value.size())
     items.push_back(N<StringExpr>(
         expr->value.substr(braceStart, expr->value.size() - braceStart)));
@@ -189,14 +188,14 @@ void TransformVisitor::visit(const SeqExpr *expr) {
     resultExpr =
         transform(N<CallExpr>(N<IdExpr>("seq"), N<StringExpr>(expr->value)));
   else
-    error(expr, "invalid seq prefix '{}'", expr->prefix);
+    error("invalid prefix '{}'", expr->prefix);
 }
 
 shared_ptr<TypeItem::Item>
 TransformVisitor::processIdentifier(shared_ptr<TypeContext> tctx,
                                     const string &id) {
   auto val = tctx->find(id);
-  if (!val || val->getImport() ||
+  if (!val ||
       (val->getVar() && !val->isGlobal() && val->getBase() != ctx->getBase()))
     error("identifier '{}' not found", id);
   return val;
@@ -212,9 +211,11 @@ void TransformVisitor::visit(const IdExpr *expr) {
   if (auto s = val->getStatic()) {
     resultExpr = transform(N<IntExpr>(s->getValue()));
   } else {
-    if (val->getType())
+    if (val->getClass())
       resultExpr->markType();
-    auto typ = ctx->instantiate(getSrcInfo(), val->getType());
+    auto typ = val->getImport()
+                   ? make_shared<types::ImportType>(val->getImport()->getName())
+                   : ctx->instantiate(getSrcInfo(), val->getType());
     resultExpr->setType(forceUnify(resultExpr, typ));
   }
 }
@@ -379,7 +380,7 @@ void TransformVisitor::visit(const UnaryExpr *expr) {
     else if (expr->op == "-")
       magic = "neg";
     else
-      error(expr, "invalid unary operator '{}'", expr->op);
+      error("invalid unary operator '{}'", expr->op);
     magic = format("__{}__", magic);
     resultExpr = transform(N<CallExpr>(N<DotExpr>(expr->expr->clone(), magic)));
   }
@@ -422,7 +423,7 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
     } else {
       auto mi = magics.find(expr->op);
       if (mi == magics.end())
-        error(expr, "invalid binary operator '{}'", expr->op);
+        error("invalid binary operator '{}'", expr->op);
       auto magic = mi->second;
       auto lc = le->getType()->getClass(), rc = re->getType()->getClass();
       assert(lc && rc);
@@ -433,7 +434,7 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
       } else if (findBestCall(rc, format("__r{}__", magic), {rc, lc})) {
         magic = "r" + magic;
       } else {
-        error(expr, "cannot find appropriate {}", magic);
+        error("cannot find magic '{}' for {}", magic, lc->toString());
       }
       magic = format("__{}__", magic);
       resultExpr =
@@ -443,7 +444,6 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
 }
 
 void TransformVisitor::visit(const PipeExpr *expr) {
-  // error(expr, "to be done later");
   auto extractType = [&](TypePtr t) {
     auto c = t->getClass();
     if (c && c->name == "generator")
@@ -474,7 +474,7 @@ void TransformVisitor::visit(const PipeExpr *expr) {
           if (inTypePos == -1)
             inTypePos = ia;
           else
-            error(ce->args[ia].value, "must have only one partial argument");
+            error(ce->args[ia].value, "unexpected partial argument");
         }
       if (inTypePos == -1) {
         ce->args.insert(ce->args.begin(), {"", N<EllipsisExpr>()});
@@ -498,13 +498,12 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   vector<TypePtr> generics;
   auto parseGeneric = [&](const ExprPtr &i) {
     auto ti = transform(i, true);
-    if (auto ii = CAST(ti, IntExpr)) {
+    if (auto ii = CAST(ti, IntExpr))
       generics.push_back(make_shared<StaticType>(std::stoll(ii->value)));
-    } else if (ti->isType()) {
+    else if (ti->isType())
       generics.push_back(ti->getType());
-    } else {
-      error(ti, "expected a type");
-    }
+    else
+      error(ti, "expected type expression");
   };
 
   // special cases: tuples and functions
@@ -535,12 +534,13 @@ void TransformVisitor::visit(const IndexExpr *expr) {
       parseGeneric(expr->index);
     auto g = e->getType()->getGeneric();
     if (g->explicits.size() != generics.size())
-      error(expr, "inconsistent generic count");
+      error("expected {} generics, got {}", g->explicits.size(),
+            generics.size());
     for (int i = 0; i < generics.size(); i++)
       forceUnify(g->explicits[i].type, generics[i]);
     auto t = e->getType();
     bool isType = e->isType();
-    resultExpr = N<TypeOfExpr>(move(e));
+    resultExpr = move(e); // N<TypeOfExpr>(move(e));
     if (isType)
       resultExpr->markType();
     resultExpr->setType(forceUnify(expr, t));
@@ -551,7 +551,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
         if (auto ii = CAST(i, IntExpr)) {
           auto idx = std::stol(ii->value);
           if (idx < 0 || idx >= c->recordMembers.size())
-            error(i, "invalid tuple index");
+            error(i, "tuple index out of range (expected 0..{}, got {})",
+                  c->recordMembers.size(), idx);
           resultExpr = N<IndexExpr>(move(e), move(i));
           resultExpr->setType(forceUnify(expr, c->recordMembers[idx]));
           return;
@@ -639,7 +640,11 @@ void TransformVisitor::visit(const CallExpr *expr) {
         e = N<IdExpr>(m->realizationInfo->name);
         e->setType(ctx->instantiate(getSrcInfo(), m, c));
       } else {
-        error(this, "{} has no method '{}'", c->name, d->member);
+        vector<string> args;
+        for (auto &t : targs)
+          args.push_back(t->toString());
+        error("cannot find method '{}' in {} with arguments {}", d->member,
+              c->toString(), join(args, ","));
       }
     }
   }
@@ -683,14 +688,14 @@ void TransformVisitor::visit(const CallExpr *expr) {
     unordered_map<string, ExprPtr> namedArgs;
     for (int i = 0; i < args.size(); i++) {
       if (args[i].name == "" && namesStarted)
-        error(expr, "unexpected unnamed argument after a named argument");
+        error("unnamed argument after a named argument");
       namesStarted |= args[i].name != "";
       if (args[i].name == "")
         reorderedArgs.push_back({"", move(args[i].value)});
       else if (namedArgs.find(args[i].name) == namedArgs.end())
         namedArgs[args[i].name] = move(args[i].value);
       else
-        error(expr, "named argument {} repeated", args[i].name);
+        error("named argument {} repeated multiple times", args[i].name);
     }
     if (namedArgs.size() == 0 &&
         reorderedArgs.size() == f->realizationInfo->pending.size() + 1 &&
@@ -699,7 +704,9 @@ void TransformVisitor::visit(const CallExpr *expr) {
       reorderedArgs.pop_back();
     } else if (reorderedArgs.size() + namedArgs.size() >
                f->realizationInfo->pending.size()) {
-      error(expr, "too many arguments for {}", *f);
+      error("too many arguments for {} (expected {}, got {}) for {}",
+            f->toString(), f->realizationInfo->pending.size(),
+            reorderedArgs.size() + namedArgs.size());
     }
     assert(f->args.size() - 1 == f->realizationInfo->pending.size());
     for (int i = 0, ra = reorderedArgs.size();
@@ -717,7 +724,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
                        f->realizationInfo->args[f->realizationInfo->pending[i]]
                            .defaultVar))});
         } else {
-          error(expr, "argument {} not provided",
+          error("argument '{}' missing",
                 f->realizationInfo->args[f->realizationInfo->pending[i]].name);
           // require explicit ... except for pipes
           // reorderedArgs.push_back({"", transform(N<EllipsisExpr>())});
@@ -734,13 +741,15 @@ void TransformVisitor::visit(const CallExpr *expr) {
       forceUnify(reorderedArgs[i].value, f->args[i + 1]);
     }
     for (auto &i : namedArgs)
-      error(i.second, "unknown parameter {}", i.first);
+      error(i.second, "unknown argument {}", i.first);
   } else { // we only know that it is function[...]; assume it is realized
     if (args.size() != f->args.size() - 1)
-      error(expr, "too many arguments for {}", *f);
+      error("too many arguments for {} (expected {}, got {})", *f,
+            f->args.size() - 1, args.size());
     for (int i = 0; i < args.size(); i++) {
       if (args[i].name != "")
-        error(expr, "unexpected named argument");
+        error("argument '{}' missing (function pointers have argument "
+              "names elided)");
       reorderedArgs.push_back({"", move(args[i].value)});
 
       forceUnify(reorderedArgs[i].value, f->args[i + 1]);
@@ -788,9 +797,10 @@ void TransformVisitor::visit(const DotExpr *expr) {
     auto val = ctx->find(s);
     if (val && val->getImport()) {
       resultExpr = N<DotExpr>(N<IdExpr>(s), expr->member);
-      auto ival = processIdentifier(
-          ctx->getImports()->getImport(val->getBase())->tctx, expr->member);
-      if (ival->getType())
+      auto ictx =
+          ctx->getImports()->getImport(val->getImport()->getName())->tctx;
+      auto ival = processIdentifier(ictx, expr->member);
+      if (ival->getClass())
         resultExpr->markType();
       resultExpr->setType(
           forceUnify(expr, ctx->instantiate(getSrcInfo(), ival->getType())));
@@ -806,7 +816,7 @@ void TransformVisitor::visit(const DotExpr *expr) {
     auto m = ctx->getRealizations()->findMethod(c->name, expr->member);
     if (m) {
       if (m->size() > 1)
-        error(expr, "ambigious partial expression"); /// TODO
+        error("ambigious partial expression"); /// TODO
       if (lhs->isType()) {
         resultExpr = N<IdExpr>((*m)[0]->realizationInfo->name);
         resultExpr->setType(ctx->instantiate(getSrcInfo(), (*m)[0], c));
@@ -825,10 +835,10 @@ void TransformVisitor::visit(const DotExpr *expr) {
                    ctx->getRealizations()->findMember(c->name, expr->member)) {
       typ = ctx->instantiate(getSrcInfo(), mm, c);
     } else {
-      error(expr, "cannot find '{}' in {}", expr->member, *lhs->getType());
+      error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
     }
   } else {
-    error(expr, "cannot find '{}' in {}", expr->member, *lhs->getType());
+    error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
   }
   resultExpr = N<DotExpr>(move(lhs), expr->member);
   resultExpr->setType(forceUnify(expr, typ));
@@ -911,7 +921,7 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
 
 // TODO
 void TransformVisitor::visit(const YieldExpr *expr) {
-  error(expr, "todo yieldexpr");
+  error("yieldexpr is not yet supported");
 }
 
 } // namespace ast

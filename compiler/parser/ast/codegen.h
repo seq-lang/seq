@@ -23,7 +23,7 @@
 namespace seq {
 namespace ast {
 
-class CodegenVisitor : public ASTVisitor {
+class CodegenVisitor : public ASTVisitor, public SrcObject {
   std::shared_ptr<LLVMContext> ctx;
   seq::Expr *resultExpr;
   seq::Stmt *resultStmt;
@@ -112,6 +112,11 @@ private:
     for (auto &e : ts)
       r.push_back(transform(e));
     return r;
+  }
+  template <typename... TArgs>
+  void internalError(const char *format, TArgs &&... args) {
+    throw exc::ParserException(fmt::format(
+        "INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
   }
 };
 

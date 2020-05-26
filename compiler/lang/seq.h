@@ -127,6 +127,9 @@ public:
 };
 #endif
 
+void compilationMessage(const std::string &header, const std::string &msg,
+                        const std::string &file, int line, int col);
+
 void compilationError(const std::string &msg, const std::string &file = "",
                       int line = 0, int col = 0);
 

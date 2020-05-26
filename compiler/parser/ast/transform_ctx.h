@@ -55,6 +55,7 @@ public:
   Import(const std::string &name, const std::string &base, bool global = false)
       : Item(base, global), name(name) {}
   const Import *getImport() const override { return this; }
+  std::string getName() const { return name; }
 };
 
 class Static : public Item {

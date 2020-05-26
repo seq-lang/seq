@@ -133,7 +133,7 @@ public:
   seq::types::Type *getType(const std::string &name) const {
     if (auto t = CAST(find(name), LLVMItem::Class))
       return t->getType();
-    error("cannot find type '{}'", name);
+    assert(false);
     return nullptr;
   }
 };

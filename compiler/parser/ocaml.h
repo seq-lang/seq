@@ -10,10 +10,10 @@
 namespace seq {
 namespace ast {
 
-std::unique_ptr<SuiteStmt> parse_code(std::string file, std::string code,
+std::unique_ptr<SuiteStmt> parseCode(std::string file, std::string code,
                                       int line_offset = 0, int col_offset = 0);
-std::unique_ptr<Expr> parse_expr(std::string code, const seq::SrcInfo &offset);
-std::unique_ptr<SuiteStmt> parse_file(std::string file);
+std::unique_ptr<Expr> parseExpr(std::string code, const seq::SrcInfo &offset);
+std::unique_ptr<SuiteStmt> parseFile(std::string file);
 
 } // namespace ast
 } // namespace seq

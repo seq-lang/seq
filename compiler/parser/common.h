@@ -21,6 +21,30 @@ extern int __level__;
 #define CAST(s, T) dynamic_cast<T *>(s.get())
 
 namespace seq {
+
+namespace exc {
+class ParserException : public std::runtime_error {
+public:
+  std::vector<SrcInfo> locations;
+  std::vector<std::string> messages;
+
+public:
+  ParserException(const std::string &msg, SrcInfo info) noexcept
+      : std::runtime_error(msg) {
+    messages.push_back(msg);
+    locations.push_back(info);
+  }
+  explicit ParserException(const std::string &msg) noexcept
+      : ParserException(msg, {}) {}
+  ParserException(const ParserException &e) noexcept : std::runtime_error(e) {}
+
+  void trackRealize(const std::string &msg, SrcInfo i) {
+    locations.push_back(i);
+    messages.push_back(fmt::format("while realizing {}", msg));
+  }
+};
+} // namespace exc
+
 namespace ast {
 
 struct SrcInfoHash {
@@ -50,21 +74,6 @@ std::string executable_path(const char *argv0);
 
 void error(const char *format);
 void error(const SrcInfo &p, const char *format);
-
-template <typename... TArgs> void error(const char *format, TArgs &&... args) {
-  throw seq::exc::SeqException(fmt::format(format, args...));
-}
-
-template <typename T, typename... TArgs>
-void error(const T &p, const char *format, TArgs &&... args) {
-  throw exc::SeqException(fmt::format(format, args...), p->getSrcInfo());
-}
-
-template <typename T, typename... TArgs>
-void internalError(const T &p, const char *format, TArgs &&... args) {
-  throw exc::SeqException(fmt::format(
-      "INTERNAL: {}", fmt::format(format, args...), p->getSrcInfo()));
-}
 
 std::string getTemporaryVar(const std::string &prefix = "");
 

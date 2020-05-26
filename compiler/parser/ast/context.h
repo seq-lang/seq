@@ -131,8 +131,7 @@ public:
 };
 
 template <typename T>
-class Context : public SrcObject,
-                public std::enable_shared_from_this<Context<T>> {
+class Context : public std::enable_shared_from_this<Context<T>> {
   typedef std::unordered_map<std::string, std::stack<std::shared_ptr<T>>> Map;
 
 protected:
@@ -150,15 +149,15 @@ public:
   typename Map::iterator end() { return map.end(); }
 
   void add(const std::string &name, std::shared_ptr<T> var) {
-    assert(name != "");
+    assert(!name.empty());
+    DBG("add {}", name);
     map[name].push(var);
     stack.front().push_back(name);
   }
   void addBlock() { stack.push_front(std::vector<std::string>()); }
   void removeFromMap(const std::string &name) {
     auto i = map.find(name);
-    if (i == map.end() || !i->second.size())
-      internalError(this, "variable {} not found in the map", name);
+    assert (!(i == map.end() || !i->second.size()));
     i->second.pop();
     if (!i->second.size())
       map.erase(name);
@@ -169,6 +168,7 @@ public:
     stack.pop_front();
   }
   void remove(const std::string &name) {
+    DBG("remove {}", name);
     removeFromMap(name);
     for (auto &s : stack) {
       auto i = std::find(s.begin(), s.end(), name);
@@ -177,7 +177,7 @@ public:
         return;
       }
     }
-    internalError(this, "variable {} not found in the stack", name);
+    assert(false);
   }
   void setFlag(const std::string &s) { flags.insert(s); }
   void unsetFlag(const std::string &s) { flags.erase(s); }

@@ -211,9 +211,25 @@ public:
         return t;
       us.undo();
     }
-    error(this, "cannot unify {} and {}", t ? t->toString() : "-",
+    error("cannot unify {} and {}", t ? t->toString() : "-",
           u ? u->toString() : "-");
     return nullptr;
+  }
+
+  template <typename... TArgs>
+  void error(const char *format, TArgs &&... args) {
+    ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
+  }
+
+  template <typename T, typename... TArgs>
+  void error(const T &p, const char *format, TArgs &&... args) {
+    ast::error(p->getSrcInfo(), fmt::format(format, args...).c_str());
+  }
+
+  template <typename T, typename... TArgs>
+  void internalError(const char *format, TArgs &&... args) {
+    throw exc::ParserException(fmt::format(
+        "INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
   }
 };
 
