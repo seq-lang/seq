@@ -53,7 +53,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen,
       st = r - qlen + 1;
     if (en > r)
       en = r;
-    if (st<(r - w + 1)>> 1)
+    if (st < ((r - w + 1) >> 1))
       st = (r - w + 1) >> 1; // take the ceil
     if (en > (r + w) >> 1)
       en = (r + w) >> 1; // take the floor

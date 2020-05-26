@@ -42,16 +42,6 @@ void types::PtrType::initOps() {
        },
        false},
 
-      {"__init__",
-       {getBaseType(0)},
-       this,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *p = getBaseType(0)->alloc(nullptr, b.GetInsertBlock());
-         b.CreateStore(args[0], p);
-         return p;
-       },
-       false},
-
       {"__int__",
        {},
        Int,

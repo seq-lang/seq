@@ -35,7 +35,7 @@
 
 #define SEQ_VERSION_MAJOR 0
 #define SEQ_VERSION_MINOR 9
-#define SEQ_VERSION_PATCH 6
+#define SEQ_VERSION_PATCH 7
 
 namespace seq {
 namespace config {
