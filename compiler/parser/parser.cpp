@@ -45,17 +45,24 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     if (current.size())
       cases.push_back(current);
     FILE *fo = fopen("tmp/out.htm", "w");
+    seq::SeqModule *module;
     for (int ci = 0; ci < cases.size(); ci++) {
       auto stmts = ast::parseCode(file, cases[ci]);
       auto ctx = ast::TypeContext::getContext(argv0, file);
       auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false, fo);
+
+      DBG("Done with typecheck");
+      module = new seq::SeqModule();
+      module->setFileName(file);
+      auto lctx = ast::LLVMContext::getContext(file, ctx, module);
+      ast::CodegenVisitor(lctx).transform(tv.get());
+
       fmt::print(fo, "-------------------------------<hr/>\n");
     }
     fclose(fo);
     exit(0);
 
-    auto module = new seq::SeqModule();
-    module->setFileName(file);
+
     // auto cache = make_shared<ast::ImportCache>(argv0);
     // auto stdlib = make_shared<ast::Context>(cache, module->getBlock(),
     // module,

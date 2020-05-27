@@ -107,7 +107,12 @@ void CodegenVisitor::visit(const IdExpr *expr) {
   // if (var->isGlobal() && var->getBase() == ctx->getBase() &&
   //     ctx->hasFlag("atomic"))
   //   dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
-  resultExpr = i->getExpr();
+
+  auto f = expr->getType()->getFunc();
+  if (val->getFunc() && f->realizationInfo) {
+    // get exact realization !
+  } else
+    resultExpr = i->getExpr();
 }
 
 void CodegenVisitor::visit(const TupleExpr *expr) {
@@ -241,8 +246,10 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
   /// TODO: atomic operations & JIT
   if (auto i = CAST(stmt->lhs, IdExpr)) {
     auto var = i->value;
-    if (auto v = ctx->find(var, true)->getVar()) {
-      resultStmt = new seq::Assign(v->getHandle(), transform(stmt->rhs));
+    auto val = ctx->find(var, true);
+    if (val && val->getVar()) {
+      resultStmt =
+          new seq::Assign(val->getVar()->getHandle(), transform(stmt->rhs));
     } else if (!stmt->mustExist) {
       auto varStmt = new seq::VarStmt(transform(stmt->rhs), nullptr);
       if (ctx->isToplevel())
@@ -256,8 +263,9 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
   } else if (auto i = CAST(stmt->lhs, IndexExpr)) {
     resultStmt = N<seq::AssignIndex>(transform(i->expr), transform(i->index),
                                      transform(stmt->rhs));
+  } else {
+    assert(false);
   }
-  assert(false);
 }
 
 void CodegenVisitor::visit(const DelStmt *stmt) {

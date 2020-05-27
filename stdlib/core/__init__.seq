@@ -9,8 +9,10 @@ type __array__[T](ptr: ptr[T]):
 type str(len: int, ptr: ptr[byte]):
     def __new__() -> str:
         return str(cobj(), 0)
-    def __str__(self: str) -> str:
-        return self
+    def __new__[T](what: T) -> str: # lowest priority!
+        return what.__str__()
+    def __str__(what: str) -> str:
+        return what
     def __new__(p: ptr[byte], l: int) -> str:
         return (l, p)
     @internal
@@ -82,6 +84,8 @@ extend ptr[T]:
 extend bool:
     @internal
     def __new__() -> bool: pass
+    def __new__[T](what: T) -> bool: # lowest priority!
+        return what.__bool__()
     @internal
     def __str__(self: bool) -> str: pass
     @internal
@@ -138,6 +142,8 @@ extend byte:
 extend int:
     @internal
     def __new__() -> int: pass
+    def __new__[T](what: T) -> int: # lowest priority!
+        return what.__int__()
     @internal
     def __new__(i: int) -> int: pass
     @internal
@@ -294,8 +300,10 @@ extend float:
     def __ge__(self: float, other: int) -> bool: pass
 
 extend optional[T]:  # type
-    @internal # TODO
+    @internal
     def __new__() -> optional[T]: pass
+    @internal
+    def __new__(what: T) -> optional[T]: pass
     @internal
     def __bool__(self: optional[T]) -> bool: pass
     @internal

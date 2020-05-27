@@ -621,11 +621,11 @@ FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
   if (failOnMultiple) {
     for (int i = 1; i < scores.size(); i++)
       if (scores[i].first == scores[0].first)
-        return nullptr;
-      // compilationWarning(
-      //     format("multiple choices for magic call, selected {}",
-      //            *(*m)[scores[0].second]),
-      //     getSrcInfo().file, getSrcInfo().line);
+        // return nullptr;
+        compilationWarning(
+            format("multiple choices for magic call, selected {}",
+                   (*m)[scores[0].second]->realizationInfo->name),
+            getSrcInfo().file, getSrcInfo().line);
       else
         break;
   }

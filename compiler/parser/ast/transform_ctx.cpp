@@ -217,7 +217,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
                               SrcInfo(), stdlib->find("array")->getType(),
                               {stdlib->find("str")->getType()})));
   imports->setBody("", move(tv));
-  stdlib->dump();
+  // stdlib->dump();
 
   // auto stmts = ast::parse_file(file);
   // auto tv = ast::TransformVisitor(stdlib).realizeBlock(stmts.get());

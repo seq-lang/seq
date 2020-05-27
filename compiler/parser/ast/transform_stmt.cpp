@@ -118,19 +118,28 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     TypePtr typ = typExpr ? typExpr->getType() : nullptr;
     auto s = Nx<AssignStmt>(lhs, Nx<IdExpr>(l, l->value), transform(rhs, true),
                             move(typExpr), false, force);
-    if (typ)
-      forceUnify(typ, s->rhs->getType());
+
+    auto fixOptional = [&](ClassTypePtr lc) {
+      auto rc = s->rhs->getType()->getClass();
+      if (lc && lc->name == "optional" && rc && rc->name != "optional") {
+        auto nr = transform(
+            Nx<CallExpr>(rhs, Nx<IdExpr>(rhs, "optional"), move(s->rhs)));
+        s->rhs = move(nr);
+        forceUnify(lc, s->rhs->getType());
+        return true;
+      }
+      return false;
+    };
 
     auto t = processIdentifier(ctx, l->value);
-    if (t && !t->getImport()) {
-      // check is it optional addition
-      auto lc = t->getType()->getClass();
-      auto rc = s->rhs->getType()->getClass();
-      if (lc && lc->name == "optional" && rc && rc->name != "optional")
-        s->lhs->setType(forceUnify(rc->explicits[0].type, t->getType()));
-      else
+    if (!typ && t && !t->getImport()) {
+      if (!fixOptional(t->getType()->getClass()))
         s->lhs->setType(forceUnify(s->rhs.get(), t->getType()));
     } else {
+      if (typ && typ->getClass()) {
+        if (!fixOptional(typ->getClass()))
+          forceUnify(typ, s->rhs->getType());
+      }
       if (s->rhs->isType())
         ctx->addType(l->value, s->rhs->getType());
       else if (dynamic_pointer_cast<FuncType>(s->rhs->getType()))
@@ -308,7 +317,7 @@ void TransformVisitor::visit(const ForStmt *stmt) {
 void TransformVisitor::visit(const IfStmt *stmt) {
   vector<IfStmt::If> ifs;
   for (auto &i : stmt->ifs) {
-    auto cond = makeBoolExpr(i.cond);
+    auto cond = i.cond ? makeBoolExpr(i.cond) : nullptr;
     ctx->addBlock();
     ifs.push_back({move(cond), transform(i.suite)});
     ctx->popBlock();
@@ -689,7 +698,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
-    DBG("* [function] {} :- {}", canonicalName, *t);
+    // DBG("* [function] {} :- {}", canonicalName, *t);
     ctx->addFunc(format("{}{}", ctx->getBase(), stmt->name), t);
     ctx->addFunc(canonicalName, t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
@@ -733,7 +742,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     ctx->addType(canonicalName, ct);
   }
   ctx->getRealizations()->classASTs[canonicalName] = ct;
-  DBG("* [class] {} :- {}", canonicalName, *ct);
+  // DBG("* [class] {} :- {}", canonicalName, *ct);
 
   ctx->increaseLevel();
   vector<string> strArgs;

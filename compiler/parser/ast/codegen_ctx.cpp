@@ -9,6 +9,8 @@
 #include "parser/ast/codegen_ctx.h"
 #include "parser/ast/format.h"
 #include "parser/ast/transform.h"
+#include "parser/ast/context.h"
+#include "parser/ast/transform_ctx.h"
 #include "parser/common.h"
 #include "parser/ocaml.h"
 
@@ -40,7 +42,7 @@ LLVMContext::~LLVMContext() {}
 shared_ptr<LLVMItem::Item> LLVMContext::find(const string &name, bool onlyLocal,
                                              bool checkStdlib) const {
   auto i = Context<LLVMItem::Item>::find(name);
-  if (i && dynamic_cast<LLVMItem::Var *>(i.get())) {
+  if (i && CAST(i, LLVMItem::Var)) {
     if (onlyLocal)
       return (getBase() == i->getBase()) ? i : nullptr;
     else
@@ -49,11 +51,10 @@ shared_ptr<LLVMItem::Item> LLVMContext::find(const string &name, bool onlyLocal,
     return i;
   } else {
     auto stdlib = imports->getImport("");
-    if (stdlib && checkStdlib) {
+    if (stdlib && checkStdlib)
       return stdlib->lctx->find(name, onlyLocal, false);
-    } else {
+    else
       return nullptr;
-    }
   }
 }
 
@@ -61,16 +62,17 @@ void LLVMContext::addVar(const string &name, seq::Var *v, bool global) {
   add(name, make_shared<LLVMItem::Var>(v, getBase(), global || isToplevel()));
 }
 
-void LLVMContext::addType(const string &name, seq::types::Type *t, bool global) {
+void LLVMContext::addType(const string &name, seq::types::Type *t,
+                          bool global) {
   add(name, make_shared<LLVMItem::Class>(t, getBase(), global || isToplevel()));
 }
 
 void LLVMContext::addFunc(const string &name, seq::BaseFunc *f, bool global) {
-  add(name,
-      make_shared<LLVMItem::Func>(f, getBase(), global || isToplevel()));
+  add(name, make_shared<LLVMItem::Func>(f, getBase(), global || isToplevel()));
 }
 
-void LLVMContext::addImport(const string &name, const string &import, bool global) {
+void LLVMContext::addImport(const string &name, const string &import,
+                            bool global) {
   add(name,
       make_shared<LLVMItem::Import>(import, getBase(), global || isToplevel()));
 }
@@ -146,9 +148,25 @@ void LLVMContext::execJIT(string varName, seq::Expr *varExpr) {
 //       getImports()->getImport(im->getFile())->tctx->dump(pad+1);
 //     }
 //     else
-//       DBG("{}{:.<25} {}", string(pad*2, ' '), i.first, t->getType()->toString(true));
+//       DBG("{}{:.<25} {}", string(pad*2, ' '), i.first,
+//       t->getType()->toString(true));
 //   }
 // }
+
+shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
+                                                shared_ptr<TypeContext> typeCtx,
+                                                seq::SeqModule *module) {
+  auto realizations = typeCtx->getRealizations();
+  auto imports = typeCtx->getImports();
+  auto stdlib = const_cast<ImportContext::Import *>(imports->getImport(""));
+
+  auto block = module->getBlock();
+  seq::BaseFunc *base = module;
+  stdlib->lctx = make_shared<LLVMContext>(stdlib->filename, realizations,
+                                          imports, block, base, nullptr);
+  return make_shared<LLVMContext>(file, realizations, imports, block, base,
+                                  nullptr);
+}
 
 } // namespace ast
 } // namespace seq

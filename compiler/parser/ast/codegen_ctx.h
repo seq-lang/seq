@@ -29,7 +29,7 @@ protected:
   std::unordered_set<std::string> attributes;
 
 public:
-  Item(seq::BaseFunc *base, bool global = false): base(base), global(global) {}
+  Item(seq::BaseFunc *base, bool global = false) : base(base), global(global) {}
   virtual ~Item() {}
 
   const seq::BaseFunc *getBase() const { return base; }
@@ -138,6 +138,11 @@ public:
     assert(false);
     return nullptr;
   }
+
+public:
+  static std::shared_ptr<LLVMContext>
+  getContext(const std::string &file, std::shared_ptr<TypeContext> typeCtx,
+             seq::SeqModule *module);
 };
 
 } // namespace ast

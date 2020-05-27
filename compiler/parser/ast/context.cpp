@@ -47,11 +47,10 @@ string RealizationContext::generateCanonicalName(const SrcInfo &info,
     return it->second;
 
   auto &num = moduleNames[name];
-  auto newName = "#" + (module == "" ? "" : module + ".");
+  auto newName = (module == "" ? "" : module + ".");
   newName += format("{}{}", name, num ? format(".{}", num) : "");
   num++;
-  canonicalNames[info] = newName;
-  return newName;
+  return canonicalNames[info] = (newName[0] == '#' ? newName : "#" + newName);
 }
 
 int &RealizationContext::getUnboundCount() { return unboundCount; }
