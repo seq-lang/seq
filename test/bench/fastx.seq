@@ -1,3 +1,6 @@
+############################
+# Format parsing benchmark #
+############################
 from sys import argv
 from time import timing
 n, m = 0, 0

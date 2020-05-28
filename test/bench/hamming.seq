@@ -1,0 +1,43 @@
+###############################
+# Hammming distance benchmark #
+###############################
+from sys import argv
+from time import timing
+
+def dist_fast[K](k1: K, k2: K):
+    return abs(k1 - k2)
+
+def dist_slow[K](k1: K, k2: K):
+    d = 0
+    for i in range(K.len()):
+        if k1[i] != k2[i]:
+            d += 1
+    return d
+
+def test[K](use_slow_dist: bool):
+    n = 0
+    with timing(f'{K.len()}-mer ({use_slow_dist=})'):
+        for s in FASTA(argv[1]) |> seqs:
+            for kmer in s |> kmers[K](1):
+                d = 0
+                rckmer = ~kmer
+                if use_slow_dist:
+                    d = dist_slow(rckmer, kmer)
+                else:
+                    d = dist_fast(rckmer, kmer)
+                n ^= d
+    print n
+
+print 'start'
+test[Kmer[4]](False)
+test[Kmer[4]](True)
+test[Kmer[8]](False)
+test[Kmer[8]](True)
+test[Kmer[16]](False)
+test[Kmer[16]](True)
+test[Kmer[32]](False)
+test[Kmer[32]](True)
+test[Kmer[64]](False)
+test[Kmer[64]](True)
+test[Kmer[128]](False)
+test[Kmer[128]](True)
