@@ -1,11 +1,13 @@
 #include <ostream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "parser/ast/format.h"
 
 using fmt::format;
 using std::string;
+using std::unordered_set;
 using std::vector;
 
 namespace seq {
@@ -33,6 +35,21 @@ FormatVisitor::FormatVisitor(std::shared_ptr<TypeContext> ctx, bool html)
   } else {
     space = " ";
   }
+}
+
+string FormatVisitor::handleImport(const string &f) {
+  static unordered_set<string> sp;
+  auto file = ctx->getImports()->getImportFile(f, ctx->getFilename());
+  if (sp.find(file) != sp.end())
+    return "";
+  sp.insert(file);
+  auto s = ctx->getImports()->getImport(file);
+  auto old = ctx->getFilename();
+  ctx->setFilename(file);
+  auto t = transform(s->statements, 1);
+  ctx->setFilename(old);
+  return fmt::format("{} {}: # {}{}{}", keyword("%import"), f, escape(file),
+                     newline(), t);
 }
 
 string FormatVisitor::transform(const ExprPtr &expr) {
@@ -345,6 +362,7 @@ void FormatVisitor::visit(const ImportStmt *stmt) {
     }
     return r;
   };
+  result += handleImport(stmt->from.first);
   if (stmt->what.size() == 0) {
     result = fmt::format(
         "{} {}{}", keyword("import"), fix(stmt->from.first),
@@ -364,9 +382,7 @@ void FormatVisitor::visit(const ImportStmt *stmt) {
   }
 }
 
-void FormatVisitor::visit(const ExternImportStmt *stmt) {
-  this->result = "<extern: todo>";
-}
+void FormatVisitor::visit(const ExternImportStmt *stmt) {}
 
 void FormatVisitor::visit(const TryStmt *stmt) {
   vector<string> catches;
@@ -416,10 +432,8 @@ void FormatVisitor::visit(const FunctionStmt *stmt) {
     v.indent = this->indent + 1;
     if (fstmt->suite)
       fstmt->suite->accept(v);
-    auto name = fmt::format("{}{}{}", typeStart,
-                            real.type ? real.type->toString() : "-", typeEnd);
-    name = fmt::format("{}{}{}{}{}{}", exprStart, name, nodeStart, fstmt->name,
-                       nodeEnd, exprEnd);
+    auto name = fmt::format("{}{}{}", typeStart, real.fullName, typeEnd);
+    name = fmt::format("{}{}{}", exprStart, name, exprEnd);
     result += fmt::format(
         "{}{}{} {}{}({}){}:{}{}{}", attrs, pad(), keyword("def"), name,
         generics.size() ? fmt::format("[{}]", fmt::join(generics, ", ")) : "",
@@ -440,7 +454,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
       auto t = ctx->instantiate(real.type->getSrcInfo(), a.second, real.type);
       args.push_back(fmt::format("{}: {}", a.first, *t));
     }
-    result = fmt::format("{} {}({}){}", keyword(key), stmt->name,
+    result = fmt::format("{} {}({}){}", keyword(key), real.fullName,
                          fmt::join(args, ", "), newline());
   }
   for (auto &m : c->methods) {

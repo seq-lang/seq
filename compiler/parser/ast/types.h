@@ -67,6 +67,7 @@ public:
 
   /// Pretty-printing.
   virtual std::string toString(bool reduced = false) const = 0;
+  virtual std::string realizeString() const = 0;
   /// Allow pretty-printing to C++ streams
   friend std::ostream &operator<<(std::ostream &out, const Type &c) {
     return out << c.toString();
@@ -95,6 +96,9 @@ public:
   bool hasUnbound() const override { return false; }
   bool canRealize() const override { return true; }
   std::string toString(bool reduced = false) const override;
+  std::string realizeString() const override {
+    return fmt::format("{}", value);
+  }
   StaticTypePtr getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }
@@ -123,6 +127,7 @@ public:
   std::string toString(bool reduced) const override {
     return fmt::format("<{}>", name);
   }
+  std::string realizeString() const override { assert(false); }
   ImportTypePtr getImport() override {
     return std::static_pointer_cast<ImportType>(shared_from_this());
   }
@@ -168,6 +173,7 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced) const override;
+  std::string realizeString() const override;
 
   LinkTypePtr getLink() override {
     return std::static_pointer_cast<LinkType>(follow());
@@ -211,6 +217,7 @@ public:
               const std::vector<Generic> &implicits = std::vector<Generic>());
 
   virtual std::string toString(bool reduced = false) const override;
+  std::string realizeString() const override;
   virtual bool hasUnbound() const override;
   virtual bool canRealize() const override;
   virtual TypePtr generalize(int level) override;
@@ -247,6 +254,7 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
+  std::string realizeString() const override;
   ClassTypePtr getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
   }
@@ -289,6 +297,7 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
+  std::string realizeString() const override;
   FuncTypePtr getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
   }

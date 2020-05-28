@@ -54,9 +54,12 @@ private:
 public:
   template <typename T>
   static std::string format(std::shared_ptr<TypeContext> ctx, const T &stmt,
-                            bool html = false) {
+                            bool html = false, bool init = false) {
     auto t = FormatVisitor(ctx, html);
-    return fmt::format("{}{}{}", t.header, t.transform(stmt), t.footer);
+    std::string h;
+    if (init)
+      h = t.handleImport("");
+    return fmt::format("{}{}{}{}", t.header, h, t.transform(stmt), t.footer);
   }
 
   FormatVisitor(std::shared_ptr<TypeContext> ctx, bool html);
@@ -64,6 +67,8 @@ public:
   std::string transform(const ExprPtr &e);
   std::string transform(const StmtPtr &stmt, int indent = 0);
   std::string transform(const PatternPtr &ptr);
+
+  std::string handleImport(const std::string &file);
 
 public:
   void visit(const NoneExpr *) override;

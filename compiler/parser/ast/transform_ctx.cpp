@@ -43,7 +43,28 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
   if (t)
     return t;
   auto stdlib = imports->getImport("")->tctx;
-  return checkStdlib ? stdlib->find(name, false) : nullptr;
+  if (checkStdlib)
+    t = stdlib->find(name, false);
+  if (t)
+    return t;
+  auto it = realizationItems.find(name);
+  if (it != realizationItems.end())
+    return it->second;
+  return nullptr;
+}
+
+void TypeContext::addRealization(types::TypePtr type) {
+  assert(type->canRealize());
+  auto name = type->realizeString();
+
+  if (realizationItems.find(name) != realizationItems.end()) {
+    DBG("whoops {} -> {}", name, *type);
+    assert(false);
+  }
+  if (auto f = CAST(type, types::FuncType))
+    realizationItems[name] = make_shared<TypeItem::Func>(type, getBase());
+  else
+    realizationItems[name] = make_shared<TypeItem::Class>(type, getBase());
 }
 
 types::TypePtr TypeContext::findInternal(const string &name) const {
@@ -167,7 +188,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
     auto name = t.first;
     auto typ = make_shared<types::ClassType>(name, true);
     realizations->moduleNames[name] = 1;
-    realizations->classRealizations[name][name] = {typ, {}, t.second};
+    realizations->classRealizations[name][name] = {name, typ, {}, t.second};
     stdlib->addType(name, typ);
     stdlib->addType("#" + name, typ);
   }
@@ -178,7 +199,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
         make_shared<types::GenericType>(vector<types::GenericType::Generic>{
             {"T",
              make_shared<types::LinkType>(types::LinkType::Generic,
-                                   realizations->unboundCount),
+                                          realizations->unboundCount),
              realizations->unboundCount}}));
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
@@ -192,7 +213,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
         make_shared<types::GenericType>(vector<types::GenericType::Generic>{
             {"N",
              make_shared<types::LinkType>(types::LinkType::Generic,
-                                   realizations->unboundCount),
+                                          realizations->unboundCount),
              realizations->unboundCount, true}}));
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
@@ -213,9 +234,10 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   stdlib->add("#str", stdlib->find("str"));
   stdlib->add("#seq", stdlib->find("seq"));
   stdlib->add("#array", stdlib->find("array"));
-  stdlib->addVar("__argv__", make_shared<types::LinkType>(stdlib->instantiateGeneric(
-                              SrcInfo(), stdlib->find("array")->getType(),
-                              {stdlib->find("str")->getType()})));
+  stdlib->addVar("__argv__",
+                 make_shared<types::LinkType>(stdlib->instantiateGeneric(
+                     SrcInfo(), stdlib->find("array")->getType(),
+                     {stdlib->find("str")->getType()})));
   imports->setBody("", move(tv));
   // stdlib->dump();
 
@@ -226,18 +248,18 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
 }
 
 void TypeContext::dump(int pad) {
-  auto ordered = std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
+  auto ordered =
+      std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
   DBG("base: {}", getBase());
   for (auto &i : ordered) {
     std::string s;
     auto t = i.second.top();
     if (auto im = t->getImport()) {
-      DBG("{}{:.<25} {}", string(pad*2, ' '), i.first, "<import>");
-      getImports()->getImport(im->getFile())->tctx->dump(pad+1);
-    }
-    else
-      DBG("{}{:.<25} {} {}", string(pad*2, ' '), i.first, t->getType()->toString(true),
-      t->getBase());
+      DBG("{}{:.<25} {}", string(pad * 2, ' '), i.first, "<import>");
+      getImports()->getImport(im->getFile())->tctx->dump(pad + 1);
+    } else
+      DBG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first,
+          t->getType()->toString(true), t->getBase());
   }
 }
 

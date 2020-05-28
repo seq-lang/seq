@@ -142,7 +142,8 @@ string ImportContext::getImportFile(const string &what,
   return "";
 }
 
-const ImportContext::Import *ImportContext::getImport(const string &path) const {
+const ImportContext::Import *
+ImportContext::getImport(const string &path) const {
   auto i = imports.find(path);
   return i == imports.end() ? nullptr : &(i->second);
 }

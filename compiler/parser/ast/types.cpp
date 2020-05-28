@@ -53,6 +53,13 @@ string LinkType::toString(bool reduced) const {
     return type->toString(reduced);
 }
 
+string LinkType::realizeString() const {
+  if (kind == Unbound)
+    return "?";
+  assert(kind == Link);
+  return type->realizeString();
+}
+
 bool LinkType::occurs(TypePtr typ, Unification &us) {
   if (auto t = typ->getLink()) {
     if (t->kind == Unbound) {
@@ -203,6 +210,15 @@ string GenericType::toString(bool reduced) const {
                      gs.size() ? fmt::format("{}", fmt::join(gs, ",")) : "");
 }
 
+string GenericType::realizeString() const {
+  vector<string> gs;
+  for (auto &a : implicits)
+    gs.push_back(a.type->realizeString());
+  for (auto &a : explicits)
+    gs.push_back(a.type->realizeString());
+  return join(gs, ",");
+}
+
 bool GenericType::hasUnbound() const {
   for (auto &t : explicits)
     if (t.type && t.type->hasUnbound())
@@ -289,6 +305,20 @@ string ClassType::toString(bool reduced) const {
                      g.size() ? fmt::format("[{}]", g) : "");
 }
 
+string ClassType::realizeString() const {
+  string s;
+  if (name == "tuple") {
+    vector<string> as;
+    for (auto &r : recordMembers)
+      as.push_back(r->realizeString());
+    s = join(as, ",");
+  } else {
+    s = GenericType::realizeString();
+  }
+  return fmt::format("{}{}", name[0] == '#' ? name.substr(1) : name,
+                     s.empty() ? "" : fmt::format("[{}]", s));
+}
+
 int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getClass()) {
     if (isRecord() != t->isRecord())
@@ -349,7 +379,7 @@ bool ClassType::hasUnbound() const {
 }
 
 bool ClassType::canRealize() const {
-  for (int i = 1; i < recordMembers.size(); i++)
+  for (int i = 0; i < recordMembers.size(); i++)
     if (!recordMembers[i]->canRealize())
       return false;
   return GenericType::canRealize();
@@ -371,6 +401,22 @@ string FuncType::toString(bool reduced) const {
     as.push_back(args[i]->toString(reduced));
   return fmt::format("function[{}{}]", g.size() ? g + ";" : "",
                      fmt::join(as, ","));
+}
+
+string FuncType::realizeString() const {
+  if (realizationInfo) {
+    string s = GenericType::realizeString();
+    vector<string> as;
+    for (int i = 1; i < args.size(); i++)
+      as.push_back(args[i]->realizeString());
+    s = s.empty() ? join(as, ",") : s + ";" + join(as, ",");
+    return fmt::format("{}[{}]", realizationInfo->name.substr(1), s);
+  } else {
+    vector<string> as;
+    for (int i = 1; i < args.size(); i++)
+      as.push_back(args[i]->realizeString());
+    return fmt::format("function[{}]", join(as, ","));
+  }
 }
 
 int FuncType::unify(TypePtr typ, Unification &us) {

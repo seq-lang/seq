@@ -119,6 +119,9 @@ class TypeContext : public Context<TypeItem::Item> {
   /// Indicates if a return was seen (to account for procedures)
   bool wasReturnTypeSet;
 
+  std::unordered_map<std::string, std::shared_ptr<TypeItem::Item>>
+      realizationItems;
+
 public:
   TypeContext(const std::string &filename,
               std::shared_ptr<RealizationContext> realizations,
@@ -139,6 +142,7 @@ public:
   void addFunc(const std::string &name, types::TypePtr type,
                bool global = false);
   void addStatic(const std::string &name, int value, bool global = false);
+  void addRealization(types::TypePtr type);
   void dump(int pad = 0) override;
 
 public:

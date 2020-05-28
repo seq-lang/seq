@@ -109,10 +109,10 @@ void CodegenVisitor::visit(const IdExpr *expr) {
   //   dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
 
   auto f = expr->getType()->getFunc();
-  if (val->getFunc() && f->realizationInfo) {
-    // get exact realization !
-  } else
-    resultExpr = i->getExpr();
+  // if (val->getFunc() && f->realizationInfo) {
+  // get exact realization !
+  // } else
+  resultExpr = i->getExpr();
 }
 
 void CodegenVisitor::visit(const TupleExpr *expr) {

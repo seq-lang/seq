@@ -45,6 +45,9 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
                             SuiteStmt *&prev);
   void prepend(StmtPtr s);
 
+  std::string patchIfRealizable(types::TypePtr typ, bool isClass);
+  void fixExprName(ExprPtr &e, const std::string &newName);
+
   std::shared_ptr<TypeItem::Item>
   processIdentifier(std::shared_ptr<TypeContext> tctx, const std::string &id);
 
@@ -83,8 +86,7 @@ public:
   StmtPtr transform(const Stmt *s);
   PatternPtr transform(const Pattern *p);
   ExprPtr transformType(const ExprPtr &expr);
-  StmtPtr realizeBlock(const Stmt *stmt, bool keepLast = false,
-                       FILE *fo = nullptr);
+  StmtPtr realizeBlock(const Stmt *stmt, bool keepLast = false);
 
 public:
   void visit(const NoneExpr *) override;

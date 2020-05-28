@@ -49,19 +49,19 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     for (int ci = 0; ci < cases.size(); ci++) {
       auto stmts = ast::parseCode(file, cases[ci]);
       auto ctx = ast::TypeContext::getContext(argv0, file);
-      auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false, fo);
+      auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
 
       DBG("Done with typecheck");
-      module = new seq::SeqModule();
-      module->setFileName(file);
-      auto lctx = ast::LLVMContext::getContext(file, ctx, module);
-      ast::CodegenVisitor(lctx).transform(tv.get());
+      DBG("{}", ast::FormatVisitor::format(ctx, tv, false, true));
+      // module = new seq::SeqModule();
+      // module->setFileName(file);
+      // auto lctx = ast::LLVMContext::getContext(file, ctx, module);
+      // ast::CodegenVisitor(lctx).transform(tv.get());
 
       fmt::print(fo, "-------------------------------<hr/>\n");
     }
     fclose(fo);
     exit(0);
-
 
     // auto cache = make_shared<ast::ImportCache>(argv0);
     // auto stdlib = make_shared<ast::Context>(cache, module->getBlock(),
