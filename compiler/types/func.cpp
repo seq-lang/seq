@@ -80,13 +80,13 @@ void types::FuncType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {PtrType::get(Byte)},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
        },
-       false},
+       true},
 
       {"__str__",
        {},

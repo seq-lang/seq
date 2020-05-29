@@ -37,6 +37,17 @@
 #define SEQ_VERSION_MINOR 9
 #define SEQ_VERSION_PATCH 7
 
+#include "util/fmt/format.h"
+#include "util/fmt/ostream.h"
+
+extern int __level__;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#define DBG(c, ...)                                                            \
+  fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__)
+#define CAST(s, T) dynamic_cast<T *>(s.get())
+#pragma clang diagnostic pop
+
 namespace seq {
 namespace config {
 struct Config {

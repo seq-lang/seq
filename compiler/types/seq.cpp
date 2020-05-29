@@ -51,13 +51,13 @@ void types::SeqType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {PtrType::get(Byte), Int},
        Seq,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return make(args[0], args[1], b.GetInsertBlock());
        },
-       false},
+       true},
   };
 
   for (unsigned k = 1; k <= KMer::MAX_LEN; k++) {
@@ -106,13 +106,13 @@ void types::StrType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {PtrType::get(Byte), Int},
        Str,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return make(args[0], args[1], b.GetInsertBlock());
        },
-       false},
+       true},
   };
 
   addMethod(

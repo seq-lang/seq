@@ -52,11 +52,11 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
       auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
 
       DBG("Done with typecheck");
-      DBG("{}", ast::FormatVisitor::format(ctx, tv, false, true));
-      // module = new seq::SeqModule();
-      // module->setFileName(file);
-      // auto lctx = ast::LLVMContext::getContext(file, ctx, module);
-      // ast::CodegenVisitor(lctx).transform(tv.get());
+      // DBG("{}", ast::FormatVisitor::format(ctx, tv, false, true));
+      module = new seq::SeqModule();
+      module->setFileName(file);
+      auto lctx = ast::LLVMContext::getContext(file, ctx, module);
+      ast::CodegenVisitor(lctx).transform(tv.get());
 
       fmt::print(fo, "-------------------------------<hr/>\n");
     }

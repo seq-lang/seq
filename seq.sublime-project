@@ -1,0 +1,24 @@
+{
+    "settings": {
+        "ecc_flags_sources": [
+            {
+                "flags": [
+                    "-DCMAKE_BUILD_TYPE=Debug"
+                ],
+                "file": "CMakeLists.txt",
+                "prefix_paths": [
+                    "/usr/local/opt/llvm@6/lib/cmake"
+                ]
+            }
+        ],
+        "ecc_verbose": true,
+        "ClangFormat": {
+            "format_on_save": true
+        }
+    },
+    "folders": [
+        {
+            "path": "/Users/inumanag/Desktop/Projekti/seq/types"
+        }
+    ]
+}

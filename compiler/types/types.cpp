@@ -405,21 +405,19 @@ BaseFunc *types::Type::findMagic(const std::string &name,
                                  std::vector<types::Type *> args) {
   initOps();
 
-  for (auto &magic : vtable.overloads) {
-    if (magic.name != name)
-      continue;
-
-    magic.func->resolveTypes();
-    types::Type *type = callType(magic.func, args);
-    if (type)
-      return magic.func;
+  DBG(".. .. looking for {} / {}", name, argsVecToStr(args));
+  for (auto &magic : vtable.magic) {
+    if (magic.name == name && typeMatch<>(args, magic.args))
+      return magic.asFunc(this);
   }
+
+  for (auto &magic : vtable.magic)
+    DBG("      .. in {} : {}", magic.name, argsVecToStr(magic.args));
 
   throw exc::SeqException("cannot find method '" + name + "' for type '" +
                           getName() + "' with specified argument types " +
                           argsVecToStr(args));
 }
-
 
 Value *types::Type::callMagic(const std::string &name,
                               std::vector<types::Type *> argTypes, Value *self,

@@ -1034,11 +1034,11 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     ctx->setReturnType(ret);
     ctx->setWasReturnSet(false);
 
-    DBG("realizing fn {} -> {}", name, t->realizeString());
-    __level__++;
+    // DBG("realizing fn {} -> {}", name, t->realizeString());
+    // __level__++;
     auto realized =
         isInternal ? nullptr : realizeBlock(ast.second->suite.get());
-    __level__--;
+    // __level__--;
     ctx->popBase();
 
     // DBG("======== BEGIN {} :- {} ========", t->name, *t);
@@ -1085,7 +1085,7 @@ TransformVisitor::realizeType(ClassTypePtr t) {
         return it2->second;
     }
 
-    DBG("realizing ty {} -> {}", t->name, t->realizeString());
+    // DBG("realizing ty {} -> {}", t->name, t->realizeString());
     vector<pair<string, ClassTypePtr>> args;
     /// TODO map-vector order?
     for (auto &m : ctx->getRealizations()->classes[t->name].members) {
@@ -1114,7 +1114,7 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
   // TODO: this can be probably optimized one day...
   int minUnbound = ctx->getRealizations()->unboundCount;
   for (int iter = 0, prevSize = INT_MAX;; iter++) {
-    DBG("{}", string(60, '-'));
+    // DBG("{}", string(60, '-'));
     ctx->addBlock();
     TransformVisitor v(ctx);
     result = v.transform(result ? result.get() : stmt);

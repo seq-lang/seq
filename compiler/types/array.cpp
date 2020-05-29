@@ -44,22 +44,22 @@ void types::ArrayType::initOps() {
        },
        true},
 
-      {"__init__",
+      {"__new__",
        {Int},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          Value *ptr = getBaseType(0)->alloc(args[0], b.GetInsertBlock());
          return make(ptr, args[0], b.GetInsertBlock());
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {PtrType::get(getBaseType(0)), Int},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return make(args[0], args[1], b.GetInsertBlock());
        },
-       false},
+       true},
 
       {"__copy__",
        {},

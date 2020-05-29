@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util/fmt/format.h"
-#include "util/fmt/ostream.h"
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -9,16 +7,6 @@
 #include <vector>
 
 #include "lang/seq.h"
-
-extern int __level__;
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-#define DBG(c, ...)                                                            \
-  fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__)
-#pragma clang diagnostic pop
-
-#define CAST(s, T) dynamic_cast<T *>(s.get())
 
 namespace seq {
 

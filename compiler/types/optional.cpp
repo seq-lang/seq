@@ -30,21 +30,21 @@ void types::OptionalType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {getBaseType(0)},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return make(args[0], b.GetInsertBlock());
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return make(nullptr, b.GetInsertBlock());
        },
-       false},
+       true},
 
       {"__bool__",
        {},

@@ -13,6 +13,7 @@
 #include "parser/ast/ast.h"
 #include "parser/ast/codegen.h"
 #include "parser/ast/codegen_ctx.h"
+#include "parser/ast/format.h"
 #include "parser/ast/transform.h"
 #include "parser/common.h"
 
@@ -63,6 +64,35 @@ seq::Expr *CodegenVisitor::transform(const Expr *expr) {
   return v.resultExpr;
 }
 
+seq::Stmt *CodegenVisitor::transform(const Stmt *stmt) {
+  CodegenVisitor v(ctx);
+
+  // FormatVisitor f(nullptr, 0);
+  // DBG(":: {}:{} -> {}", stmt->getSrcInfo().file, stmt->getSrcInfo().line,
+  // stmt->toString());
+
+  stmt->accept(v);
+  v.setSrcInfo(stmt->getSrcInfo());
+  if (v.resultStmt) {
+    v.resultStmt->setSrcInfo(stmt->getSrcInfo());
+    v.resultStmt->setBase(ctx->getBase());
+    ctx->getBlock()->add(v.resultStmt);
+  }
+  return v.resultStmt;
+}
+
+seq::Pattern *CodegenVisitor::transform(const Pattern *ptr) {
+  CodegenVisitor v(ctx);
+  v.setSrcInfo(ptr->getSrcInfo());
+  ptr->accept(v);
+  if (v.resultPattern) {
+    v.resultPattern->setSrcInfo(ptr->getSrcInfo());
+    if (auto t = ctx->getTryCatch())
+      v.resultPattern->setTryCatch(t);
+  }
+  return v.resultPattern;
+}
+
 void CodegenVisitor::visit(const BoolExpr *expr) {
   resultExpr = N<seq::BoolExpr>(expr->value);
 }
@@ -95,6 +125,8 @@ shared_ptr<LLVMItem::Item>
 CodegenVisitor::processIdentifier(shared_ptr<LLVMContext> tctx,
                                   const string &id) {
   auto val = tctx->find(id);
+  if (!val)
+    DBG("? val {}", id);
   assert(val);
   assert(
       !(val->getVar() && val->isGlobal() && val->getBase() != ctx->getBase()));
@@ -209,18 +241,6 @@ void CodegenVisitor::visit(const PtrExpr *expr) {
 
 void CodegenVisitor::visit(const YieldExpr *expr) {
   resultExpr = N<seq::YieldExpr>(ctx->getBase());
-}
-
-seq::Stmt *CodegenVisitor::transform(const Stmt *stmt) {
-  CodegenVisitor v(ctx);
-  stmt->accept(v);
-  v.setSrcInfo(stmt->getSrcInfo());
-  if (v.resultStmt) {
-    v.resultStmt->setSrcInfo(stmt->getSrcInfo());
-    v.resultStmt->setBase(ctx->getBase());
-    ctx->getBlock()->add(v.resultStmt);
-  }
-  return v.resultStmt;
 }
 
 void CodegenVisitor::visit(const SuiteStmt *stmt) {
@@ -457,20 +477,80 @@ void CodegenVisitor::visit(const ThrowStmt *stmt) {
 
 void CodegenVisitor::visit(const FunctionStmt *stmt) {
   auto name = ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo());
-  for (auto &real : ctx->getRealizations()->getFuncRealizations(name))
-    realizeFunc(real.type);
+  for (auto &real : ctx->getRealizations()->getFuncRealizations(name)) {
+    auto t = real.type;
+    assert(t->canRealize() && t->realizationInfo);
+
+    auto ast = real.ast;
+    vector<seq::types::Type *> types;
+    if (std::find(ast->attributes.begin(), ast->attributes.end(), "internal") !=
+        ast->attributes.end()) {
+      // name is sth like int.__magic__ ( ... )
+      DBG("heh, realizing {} | {} | {}", ast->name, stmt->name, real.fullName);
+
+      auto n = split(ast->name, '.');
+      assert(n.size() == 2);
+      string type = n[0], magic = n[1];
+
+      // static: has self as arg
+      seq::types::Type *typ = nullptr;
+      int startI = 2;
+      if (ast->args.size() && ast->args[0].name == "self") {
+        typ = realizeType(t->args[1]->getClass());
+      } else if (magic == "__new__") {
+        typ = realizeType(t->args[0]->getClass());
+        startI = 1;
+      } else {
+        error("todo"); // TODO: get through implicits?
+        startI = 1;
+      }
+      DBG("-- in seq::type {}", typ->getName());
+      for (int i = startI; i < t->args.size(); i++)
+        types.push_back(realizeType(t->args[i]->getClass()));
+      auto f = typ->findMagic(n[1], types);
+      real.handle = f;
+      ctx->addFunc(real.fullName, f);
+    } else {
+      auto f = new seq::Func();
+      real.handle = f;
+      f->setName(real.fullName);
+      f->setSrcInfo(getSrcInfo());
+      if (!ctx->isToplevel())
+        f->setEnclosingFunc(ctx->getBase());
+      ctx->addFunc(real.fullName, f);
+      ctx->addBlock(f->getBlock(), f);
+
+      vector<string> names;
+      for (int i = 1; i < t->args.size(); i++) {
+        types.push_back(realizeType(t->args[i]->getClass()));
+        names.push_back(ast->args[i - 1].name);
+      }
+      f->setIns(types);
+      f->setArgNames(names);
+      f->setOut(realizeType(t->args[0]->getClass()));
+
+      for (auto a : ast->attributes) {
+        f->addAttribute(a);
+        if (a == "atomic")
+          ctx->setFlag("atomic");
+      }
+      for (auto &arg : names)
+        ctx->addVar(arg, f->getArgVar(arg));
+      transform(ast.get());
+      ctx->popBlock();
+    }
+  }
 }
 
-seq::Pattern *CodegenVisitor::transform(const Pattern *ptr) {
-  CodegenVisitor v(ctx);
-  v.setSrcInfo(ptr->getSrcInfo());
-  ptr->accept(v);
-  if (v.resultPattern) {
-    v.resultPattern->setSrcInfo(ptr->getSrcInfo());
-    if (auto t = ctx->getTryCatch())
-      v.resultPattern->setTryCatch(t);
+void CodegenVisitor::visit(const ClassStmt *stmt) {
+  auto name = ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo());
+  auto c = ctx->getRealizations()->findClass(name);
+  for (auto &m : c->methods) {
+    FunctionStmt *f = CAST(
+        ctx->getRealizations()->getAST(m.second.front()->realizationInfo->name),
+        FunctionStmt);
+    visit(f);
   }
-  return v.resultPattern;
 }
 
 void CodegenVisitor::visit(const StarPattern *pat) {
@@ -528,80 +608,6 @@ void CodegenVisitor::visit(const WildcardPattern *pat) {
 void CodegenVisitor::visit(const GuardedPattern *pat) {
   resultPattern =
       N<seq::GuardedPattern>(transform(pat->pattern), transform(pat->cond));
-}
-
-seq::BaseFunc *CodegenVisitor::realizeFunc(types::FuncTypePtr t) {
-  assert(t->canRealize() && t->realizationInfo);
-  auto name = t->realizationInfo->name;
-  auto it = ctx->getRealizations()->funcRealizations.find(name);
-  assert(it != ctx->getRealizations()->funcRealizations.end());
-  auto it2 = it->second.find(t->toString(true));
-  assert(it2 != it->second.end());
-  if (it2->second.handle)
-    return it2->second.handle;
-
-  auto stmt = it2->second.ast;
-  vector<seq::types::Type *> types;
-
-  if (std::find(stmt->attributes.begin(), stmt->attributes.end(), "internal") !=
-      stmt->attributes.end()) {
-    // name is sth like int.__magic__ ( ... )
-    auto n = split(stmt->name, '.');
-    assert(n.size() == 2);
-    string type = n[0], magic = n[1];
-
-    // static: has self as arg
-    seq::types::Type *typ = nullptr;
-    auto firstArg = stmt->args[0].name;
-    if (firstArg == "self") {
-      typ = realizeType(t->args[1]->getClass());
-    } else if (magic == "__new__") {
-      typ = realizeType(t->args[0]->getClass());
-    } else {
-      error("todo");
-      // TODO: get through implicits?
-    }
-    for (int i = 1; i < t->args.size(); i++)
-      types.push_back(realizeType(t->args[i]->getClass()));
-    auto f = typ->findMagic(n[1], types);
-    it2->second.handle = f;
-    return f;
-  }
-
-  auto f = new seq::Func();
-  it2->second.handle = f;
-  f->setName(stmt->name);
-  f->setSrcInfo(getSrcInfo());
-  if (!ctx->isToplevel())
-    f->setEnclosingFunc(ctx->getBase());
-  ctx->addFunc(stmt->name, f);
-  ctx->addBlock(f->getBlock(), f);
-
-  vector<string> names;
-  for (int i = 1; i < t->args.size(); i++) {
-    types.push_back(realizeType(t->args[i]->getClass()));
-    names.push_back(stmt->args[i - 1].name);
-  }
-  f->setIns(types);
-  f->setArgNames(names);
-  f->setOut(realizeType(t->args[0]->getClass()));
-
-  for (auto a : stmt->attributes) {
-    f->addAttribute(a);
-    if (a == "atomic")
-      ctx->setFlag("atomic");
-  }
-  for (auto &arg : names)
-    ctx->addVar(arg, f->getArgVar(arg));
-
-  transform(it2->second.ast.get());
-  ctx->popBlock();
-  // if (ctx.getJIT() && ctx.isToplevel() && !ctx.getEnclosingType()) {
-  //   auto fs = new seq::FuncStmt(f);
-  //   fs->setSrcInfo(stmt->getSrcInfo());
-  //   fs->setBase(ctx.getBase());
-  // } else {
-  return f;
 }
 
 seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {

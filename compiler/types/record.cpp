@@ -253,7 +253,7 @@ void types::RecordType::initOps() {
       RecordType::get({PtrType::get(Byte)}, {"p"}, "pyobj");
 
   vtable.magic = {
-      {"__init__", types, this,
+      {"__new__", types, this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          Value *val = defaultValue(b.GetInsertBlock());
          for (unsigned i = 0; i < args.size(); i++)
@@ -261,7 +261,7 @@ void types::RecordType::initOps() {
                setMemb(val, std::to_string(i + 1), args[i], b.GetInsertBlock());
          return val;
        },
-       false},
+       true},
 
       {"__str__",
        {},

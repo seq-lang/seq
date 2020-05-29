@@ -50,45 +50,45 @@ void types::IntType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {},
        Int,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return Int->defaultValue(b.GetInsertBlock());
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Int},
        Int,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return args[0];
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Float},
        Int,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateFPToSI(args[0], Int->getLLVMType(b.getContext()));
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Bool},
        Int,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateZExt(args[0], Int->getLLVMType(b.getContext()));
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Byte},
        Int,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateZExt(args[0], Int->getLLVMType(b.getContext()));
        },
-       false},
+       true},
 
       {"__str__",
        {},
@@ -431,22 +431,22 @@ void types::IntType::initOps() {
 
   for (unsigned i = 1; i <= IntNType::MAX_LEN; i++) {
     vtable.magic.push_back(
-        {"__init__",
+        {"__new__",
          {IntNType::get(i, true)},
          Int,
          [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
            return b.CreateSExtOrTrunc(args[0],
                                       Int->getLLVMType(b.getContext()));
-         }});
+         }, true});
 
     vtable.magic.push_back(
-        {"__init__",
+        {"__new__",
          {IntNType::get(i, false)},
          Int,
          [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
            return b.CreateZExtOrTrunc(args[0],
                                       Int->getLLVMType(b.getContext()));
-         }});
+         }, true});
   }
 }
 
@@ -522,23 +522,23 @@ void types::IntNType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return defaultValue(b.GetInsertBlock());
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {this},
        this,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return args[0];
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Int},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
@@ -546,15 +546,15 @@ void types::IntNType::initOps() {
                     ? b.CreateSExtOrTrunc(args[0], getLLVMType(b.getContext()))
                     : b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {IntNType::get(len, !sign)},
        this,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return args[0];
        },
-       false},
+       true},
 
       {"__copy__",
        {},
@@ -800,12 +800,12 @@ void types::IntNType::initOps() {
 
   if (!sign && len % 2 == 0) {
     vtable.magic.push_back(
-        {"__init__",
+        {"__new__",
          {KMer::get(len / 2)},
          this,
          [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
            return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
-         }});
+         }, true});
   }
 
   addMethod("len",
@@ -899,29 +899,29 @@ void types::FloatType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {},
        Float,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return Float->defaultValue(b.GetInsertBlock());
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Float},
        Float,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return args[0];
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Int},
        Float,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
        },
-       false},
+       true},
 
       {"__str__",
        {},
@@ -1238,13 +1238,13 @@ void types::BoolType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {},
        Bool,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return Bool->defaultValue(b.GetInsertBlock());
        },
-       false},
+       true},
 
       {"__str__",
        {},
@@ -1397,29 +1397,29 @@ void types::ByteType::initOps() {
     return;
 
   vtable.magic = {
-      {"__init__",
+      {"__new__",
        {},
        Byte,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return Byte->defaultValue(b.GetInsertBlock());
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Byte},
        Byte,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return args[0];
        },
-       false},
+       true},
 
-      {"__init__",
+      {"__new__",
        {Int},
        Byte,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateTrunc(args[0], Byte->getLLVMType(b.getContext()));
        },
-       false},
+       true},
 
       {"__str__",
        {},

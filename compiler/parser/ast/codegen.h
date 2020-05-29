@@ -33,7 +33,6 @@ class CodegenVisitor : public ASTVisitor, public SrcObject {
   void defaultVisit(const Stmt *expr) override;
   void defaultVisit(const Pattern *expr) override;
 
-  seq::BaseFunc *realizeFunc(types::FuncTypePtr t);
   seq::types::Type *realizeType(types::ClassTypePtr t);
 
   std::shared_ptr<LLVMItem::Item>
@@ -85,6 +84,7 @@ public:
   void visit(const GlobalStmt *) override;
   void visit(const ThrowStmt *) override;
   void visit(const FunctionStmt *) override;
+  void visit(const ClassStmt *stmt) override;
 
   void visit(const StarPattern *) override;
   void visit(const IntPattern *) override;

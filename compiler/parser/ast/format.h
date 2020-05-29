@@ -58,17 +58,20 @@ public:
     auto t = FormatVisitor(ctx, html);
     std::string h;
     if (init)
-      h = t.handleImport("");
+      h = t.handleImport("<stdlib>", "");
     return fmt::format("{}{}{}{}", t.header, h, t.transform(stmt), t.footer);
   }
 
   FormatVisitor(std::shared_ptr<TypeContext> ctx, bool html);
 
+  std::string transform(const Stmt *stmt, int indent = 0);
   std::string transform(const ExprPtr &e);
-  std::string transform(const StmtPtr &stmt, int indent = 0);
+  std::string transform(const StmtPtr &stmt, int indent = 0) {
+    return transform(stmt.get(), indent);
+  }
   std::string transform(const PatternPtr &ptr);
 
-  std::string handleImport(const std::string &file);
+  std::string handleImport(const std::string &what, const std::string &file);
 
 public:
   void visit(const NoneExpr *) override;

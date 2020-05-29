@@ -1,14 +1,13 @@
 type eslice(_: int)
-""" [:] """
+# """ [:] """
 
 type rslice(start: int)
-""" [start:] """
+# """ [start:] """
 
 type lslice(end: int)
-""" [:end] """
+# """ [:end] """
 
 type slice(start: int, end: int):
-    """ [start:end] """
     # adapted from PySlice_AdjustIndices
     def adjust_indices(length: int, start: optional[int] = None, stop: optional[int] = None, step: optional[int] = None):
         def adjust_indices_helper(length: int, start: int, stop: int, step: int):
@@ -47,13 +46,13 @@ type slice(start: int, end: int):
         return adjust_indices_helper(length, startx, stopx, stepx)
 
 type esslice(step: int)
-""" [::step] """
+# """ [::step] """
 
 type rsslice(start: int, step: int)
-""" [start::step] """
+# """ [start::step] """
 
 type lsslice(end: int, step: int)
-""" [:end:step] """
+# """ [:end:step] """
 
 type sslice(start: int, end: int, step: int)
-""" [start:end:step] """
+# """ [start:end:step] """

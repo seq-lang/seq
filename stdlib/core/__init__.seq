@@ -34,8 +34,6 @@ extend ptr[T]:
     def __new__(other: ptr[byte]) -> ptr[T]: pass
     @internal
     def __new__(sz: int) -> ptr[T]: pass
-    # @internal
-    # def __new__(what: T) -> ptr[T]: pass
     @internal
     def __new__(other: ptr[T]) -> ptr[T]: pass
     @internal
