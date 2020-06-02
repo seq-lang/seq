@@ -199,6 +199,22 @@ string IndexExpr::toString() const {
   return format("(#index {} {})", *expr, *index);
 }
 
+TupleIndexExpr::TupleIndexExpr(ExprPtr e, int i)
+    : Expr(), expr(move(e)), index(i) {}
+TupleIndexExpr::TupleIndexExpr(const TupleIndexExpr &e)
+    : Expr(e), expr(CL(e.expr)), index(e.index) {}
+string TupleIndexExpr::toString() const {
+  return format("(#tindex {} {})", *expr, index);
+}
+
+StackAllocExpr::StackAllocExpr(ExprPtr t, ExprPtr e)
+    : Expr(), typeExpr(move(t)), expr(move(e)) {}
+StackAllocExpr::StackAllocExpr(const StackAllocExpr &e)
+    : Expr(e), typeExpr(CL(e.typeExpr)), expr(CL(e.expr)) {}
+string StackAllocExpr::toString() const {
+  return format("(#alloca {} {})", *typeExpr, *expr);
+}
+
 CallExpr::Arg CallExpr::Arg::clone() const { return {name, CL(value)}; }
 CallExpr::CallExpr(const CallExpr &e)
     : Expr(e), expr(CL(e.expr)), args(CL(e.args)) {}
@@ -325,6 +341,20 @@ AssignStmt::AssignStmt(const AssignStmt &s)
 string AssignStmt::toString() const {
   return format("(#assign {} {}{})", *lhs, *rhs,
                 type ? format(" :type {}", *type) : "");
+}
+
+AssignMemberStmt::AssignMemberStmt(ExprPtr l, const string &m, ExprPtr r)
+    : lhs(move(l)), member(m), rhs(move(r)) {}
+AssignMemberStmt::AssignMemberStmt(const AssignMemberStmt &s)
+    : lhs(CL(s.lhs)), member(s.member), rhs(CL(s.rhs)) {}
+string AssignMemberStmt::toString() const {
+  return format("(#assign {} {} {})", *lhs, member, *rhs);
+}
+
+UpdateStmt::UpdateStmt(ExprPtr l, ExprPtr r) : lhs(move(l)), rhs(move(r)) {}
+UpdateStmt::UpdateStmt(const UpdateStmt &s) : lhs(CL(s.lhs)), rhs(CL(s.rhs)) {}
+string UpdateStmt::toString() const {
+  return format("(#update {} {})", *lhs, *rhs);
 }
 
 DelStmt::DelStmt(ExprPtr e) : expr(move(e)) {}

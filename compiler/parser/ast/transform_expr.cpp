@@ -595,20 +595,36 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   } else {
     if (auto c = e->getType()->getClass())
       if (c->name == "tuple") {
-        auto i = transform(expr->index);
-        if (auto ii = CAST(i, IntExpr)) {
-          auto idx = std::stol(ii->value);
-          if (idx < 0 || idx >= c->recordMembers.size())
-            error(i, "tuple index out of range (expected 0..{}, got {})",
-                  c->recordMembers.size(), idx);
-          resultExpr = N<IndexExpr>(move(e), move(i));
-          resultExpr->setType(forceUnify(expr, c->recordMembers[idx]));
+        if (auto ii = CAST(transform(expr->index), IntExpr)) {
+          resultExpr = transform(
+              N<TupleIndexExpr>(expr->expr->clone(), std::stoll(ii->value)));
           return;
         }
       }
     resultExpr = transform(N<CallExpr>(
         N<DotExpr>(expr->expr->clone(), "__getitem__"), expr->index->clone()));
   }
+}
+
+void TransformVisitor::visit(const TupleIndexExpr *expr) {
+  auto e = transform(expr->expr);
+  auto c = e->getType()->getClass();
+  assert(c->name == "tuple");
+  if (expr->index < 0 || expr->index >= c->recordMembers.size())
+    error("tuple index out of range (expected 0..{}, got {})",
+          c->recordMembers.size(), expr->index);
+  resultExpr = N<TupleIndexExpr>(move(e), expr->index);
+  resultExpr->setType(forceUnify(expr, c->recordMembers[expr->index]));
+}
+
+void TransformVisitor::visit(const StackAllocExpr *expr) {
+  auto te = transformType(expr->typeExpr);
+  auto e = transform(expr->expr);
+  auto t = ctx->instantiateGeneric(expr->getSrcInfo(),
+                                   ctx->findInternal("array"), {te->getType()});
+  patchIfRealizable(t, true);
+  resultExpr = N<StackAllocExpr>(move(te), move(e));
+  resultExpr->setType(forceUnify(expr, t));
 }
 
 FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
@@ -674,6 +690,18 @@ FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
 
 void TransformVisitor::visit(const CallExpr *expr) {
   /// TODO: wrap pyobj arguments in tuple
+
+  if (auto ix = CAST(expr->expr, IndexExpr)) {
+    if (auto id = CAST(ix->expr, IdExpr)) {
+      if (id->value == "__array__") {
+        if (expr->args.size() != 1)
+          error("__array__ requires only size argument");
+        resultExpr = transform(N<StackAllocExpr>(ix->index->clone(),
+                                                 expr->args[0].value->clone()));
+        return;
+      }
+    }
+  }
 
   ExprPtr e = nullptr;
   vector<CallExpr::Arg> args;

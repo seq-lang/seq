@@ -60,8 +60,8 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   std::shared_ptr<types::GenericType>
   parseGenerics(const std::vector<Param> &generics);
 
-  void addMethod(Stmt *s, const std::string &canonicalName,
-                 const std::vector<types::GenericType::Generic> &implicits);
+  StmtPtr addMethod(Stmt *s, const std::string &canonicalName,
+                    const std::vector<types::GenericType::Generic> &implicits);
   types::FuncTypePtr findBestCall(types::ClassTypePtr c,
                                   const std::string &member,
                                   const std::vector<types::TypePtr> &args,
@@ -110,7 +110,9 @@ public:
   void visit(const BinaryExpr *) override;
   void visit(const PipeExpr *) override;
   void visit(const IndexExpr *) override;
+  void visit(const TupleIndexExpr *) override;
   void visit(const CallExpr *) override;
+  void visit(const StackAllocExpr *) override;
   void visit(const DotExpr *) override;
   void visit(const SliceExpr *) override;
   void visit(const EllipsisExpr *) override;
@@ -125,11 +127,13 @@ public:
   void visit(const ContinueStmt *) override;
   void visit(const ExprStmt *) override;
   void visit(const AssignStmt *) override;
+  void visit(const UpdateStmt *) override;
   void visit(const DelStmt *) override;
   void visit(const PrintStmt *) override;
   void visit(const ReturnStmt *) override;
   void visit(const YieldStmt *) override;
   void visit(const AssertStmt *) override;
+  void visit(const AssignMemberStmt *) override;
   void visit(const WhileStmt *) override;
   void visit(const ForStmt *) override;
   void visit(const IfStmt *) override;

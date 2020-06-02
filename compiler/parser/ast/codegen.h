@@ -45,6 +45,8 @@ public:
   seq::Stmt *transform(const Stmt *stmt);
   seq::Pattern *transform(const Pattern *pat);
 
+  void visitMethods(const std::string &name);
+
 public:
   void visit(const BoolExpr *) override;
   void visit(const IntExpr *) override;
@@ -56,10 +58,11 @@ public:
   void visit(const UnaryExpr *) override;
   void visit(const BinaryExpr *) override;
   void visit(const PipeExpr *) override;
-  void visit(const IndexExpr *) override;
+  void visit(const TupleIndexExpr *) override;
   void visit(const CallExpr *) override;
+  void visit(const StackAllocExpr *) override;
   void visit(const DotExpr *) override;
-  void visit(const EllipsisExpr *) override;
+  // void visit(const EllipsisExpr *) override;
   void visit(const PtrExpr *) override;
   void visit(const YieldExpr *) override;
 
@@ -69,6 +72,7 @@ public:
   void visit(const ContinueStmt *) override;
   void visit(const ExprStmt *) override;
   void visit(const AssignStmt *) override;
+  void visit(const AssignMemberStmt *) override;
   void visit(const DelStmt *) override;
   void visit(const PrintStmt *) override;
   void visit(const ReturnStmt *) override;
@@ -79,7 +83,7 @@ public:
   void visit(const IfStmt *) override;
   void visit(const MatchStmt *) override;
   void visit(const ImportStmt *) override;
-  void visit(const ExternImportStmt *) override;
+  void visit(const UpdateStmt *) override;
   void visit(const TryStmt *) override;
   void visit(const GlobalStmt *) override;
   void visit(const ThrowStmt *) override;

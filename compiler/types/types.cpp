@@ -405,14 +405,20 @@ BaseFunc *types::Type::findMagic(const std::string &name,
                                  std::vector<types::Type *> args) {
   initOps();
 
-  DBG(".. .. looking for {} / {}", name, argsVecToStr(args));
+  DBG("   .. looking for {} :: {} / {}", getName(), name, argsVecToStr(args));
   for (auto &magic : vtable.magic) {
     if (magic.name == name && typeMatch<>(args, magic.args))
       return magic.asFunc(this);
   }
+  for (auto &magic : vtable.methods) {
+    if (magic.first == name)
+      return magic.second;
+  }
 
   for (auto &magic : vtable.magic)
     DBG("      .. in {} : {}", magic.name, argsVecToStr(magic.args));
+  for (auto &magic : vtable.methods)
+    DBG("      .. in {}", magic.first);
 
   throw exc::SeqException("cannot find method '" + name + "' for type '" +
                           getName() + "' with specified argument types " +

@@ -448,9 +448,12 @@ TypePtr FuncType::generalize(int level) {
   shared_ptr<RealizationInfo> p = nullptr;
   if (realizationInfo) {
     p = make_shared<RealizationInfo>(
-        realizationInfo->name, realizationInfo->pending, realizationInfo->args);
+        realizationInfo->name, realizationInfo->pending, realizationInfo->args,
+        realizationInfo->baseClass);
     for (auto &a : p->args)
       a.type = a.type->generalize(level);
+    if (p->baseClass)
+      p->baseClass = p->baseClass->generalize(level);
   }
   auto f = make_shared<FuncType>(
       a, static_pointer_cast<GenericType>(GenericType::generalize(level)));
@@ -468,9 +471,12 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
   shared_ptr<RealizationInfo> p = nullptr;
   if (realizationInfo) {
     p = make_shared<RealizationInfo>(
-        realizationInfo->name, realizationInfo->pending, realizationInfo->args);
+        realizationInfo->name, realizationInfo->pending, realizationInfo->args,
+        realizationInfo->baseClass);
     for (auto &a : p->args)
       a.type = a.type->instantiate(level, unboundCount, cache);
+    if (p->baseClass)
+      p->baseClass = p->baseClass->instantiate(level, unboundCount, cache);
   }
 
   auto f = make_shared<FuncType>(

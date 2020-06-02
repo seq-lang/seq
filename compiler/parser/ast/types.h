@@ -274,9 +274,10 @@ struct FuncType : public GenericType {
     std::string name;
     std::vector<int> pending; // loci in resolvedArgs
     std::vector<Arg> args;    // name, value
+    TypePtr baseClass;
     RealizationInfo(const std::string &name, const std::vector<int> &pending,
-                    const std::vector<Arg> &args)
-        : name(name), pending(pending), args(args) {}
+                    const std::vector<Arg> &args, TypePtr base = nullptr)
+        : name(name), pending(pending), args(args), baseClass(base) {}
   };
   std::shared_ptr<RealizationInfo> realizationInfo;
 

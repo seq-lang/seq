@@ -169,15 +169,8 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
                             "float", "ptr",  "generic", "optional",
                             "Int",   "UInt", "tuple",   "function"};
   CodegenVisitor c(stdlib->lctx);
-  for (auto &p : pod) {
-    auto cls = realizations->findClass(p);
-    if (cls)
-      for (auto &m : cls->methods) {
-        c.transform(
-            CAST(realizations->getAST(m.second.front()->realizationInfo->name),
-                 FunctionStmt));
-      }
-  }
+  // for (auto &p : pod)
+  // c.visitMethods(p);
   c.transform(stdlib->statements.get());
   return make_shared<LLVMContext>(file, realizations, imports, block, base,
                                   nullptr);

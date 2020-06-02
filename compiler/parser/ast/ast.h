@@ -884,5 +884,48 @@ std::string combine(const std::vector<T> &items, std::string delim = " ") {
   return s;
 }
 
+/// New AST nodes
+
+struct TupleIndexExpr : Expr {
+  ExprPtr expr;
+  int index;
+
+  TupleIndexExpr(ExprPtr e, int i);
+  TupleIndexExpr(const TupleIndexExpr &n);
+  std::string toString() const override;
+  NODE_UTILITY(Expr, TupleIndexExpr);
+};
+
+struct StackAllocExpr : Expr {
+  ExprPtr typeExpr, expr;
+
+  StackAllocExpr(ExprPtr e, ExprPtr i);
+  StackAllocExpr(const StackAllocExpr &n);
+  std::string toString() const override;
+  NODE_UTILITY(Expr, StackAllocExpr);
+};
+
+struct AssignMemberStmt : Stmt {
+  ExprPtr lhs;
+  std::string member;
+  ExprPtr rhs;
+
+  AssignMemberStmt(ExprPtr l, const std::string &m, ExprPtr r);
+  AssignMemberStmt(const AssignMemberStmt &s);
+  std::string toString() const override;
+  NODE_UTILITY(Stmt, AssignMemberStmt);
+};
+
+struct UpdateStmt : public Stmt {
+  ExprPtr lhs, rhs;
+
+  UpdateStmt(ExprPtr l, ExprPtr r);
+  UpdateStmt(const UpdateStmt &s);
+  std::string toString() const override;
+  NODE_UTILITY(Stmt, UpdateStmt);
+};
+
+// A IS B?
+
 } // namespace ast
 } // namespace seq

@@ -125,8 +125,9 @@ shared_ptr<LLVMItem::Item>
 CodegenVisitor::processIdentifier(shared_ptr<LLVMContext> tctx,
                                   const string &id) {
   auto val = tctx->find(id);
-  if (!val)
-    DBG("? val {}", id);
+  if (!val) {
+    error(getSrcInfo(), fmt::format("? val {}", id).c_str());
+  }
   assert(val);
   assert(
       !(val->getVar() && val->isGlobal() && val->getBase() != ctx->getBase()));
@@ -184,26 +185,12 @@ void CodegenVisitor::visit(const PipeExpr *expr) {
   resultExpr = p;
 }
 
-void CodegenVisitor::visit(const IndexExpr *expr) {
-  // Tuple access
-  resultExpr =
-      N<seq::ArrayLookupExpr>(transform(expr->expr), transform(expr->index));
+void CodegenVisitor::visit(const TupleIndexExpr *expr) {
+  resultExpr = N<seq::ArrayLookupExpr>(transform(expr->expr),
+                                       N<seq::IntExpr>(expr->index));
 }
 
 void CodegenVisitor::visit(const CallExpr *expr) {
-  auto f = expr->expr->getType()->getFunc();
-  assert(f);
-
-  // TODO: Special case: __array__ transformation
-  if (auto c = CAST(expr->expr, IdExpr))
-    if (c->value == "__array__") {
-      assert(expr->args.size() == 1);
-      resultExpr =
-          N<seq::ArrayExpr>(realizeType(f->explicits[0].type->getClass()),
-                            transform(expr->args[0].value), true);
-      return;
-    }
-
   auto lhs = transform(expr->expr);
   vector<seq::Expr *> items;
   vector<string> names;
@@ -219,6 +206,12 @@ void CodegenVisitor::visit(const CallExpr *expr) {
     resultExpr = N<seq::CallExpr>(lhs, items, names);
 }
 
+void CodegenVisitor::visit(const StackAllocExpr *expr) {
+  auto c = expr->typeExpr->getType()->getClass();
+  assert(c);
+  resultExpr = N<seq::ArrayExpr>(realizeType(c), transform(expr->expr), true);
+}
+
 void CodegenVisitor::visit(const DotExpr *expr) {
   if (auto c = CAST(expr->expr, IdExpr))
     if (auto f = ctx->find(c->value)->getImport()) {
@@ -229,7 +222,7 @@ void CodegenVisitor::visit(const DotExpr *expr) {
   resultExpr = N<seq::GetElemExpr>(transform(expr->expr), expr->member);
 }
 
-void CodegenVisitor::visit(const EllipsisExpr *expr) {}
+// void CodegenVisitor::visit(const EllipsisExpr *expr) {}
 
 void CodegenVisitor::visit(const PtrExpr *expr) {
   auto e = CAST(expr->expr, IdExpr);
@@ -264,28 +257,34 @@ void CodegenVisitor::visit(const ExprStmt *stmt) {
 
 void CodegenVisitor::visit(const AssignStmt *stmt) {
   /// TODO: atomic operations & JIT
-  if (auto i = CAST(stmt->lhs, IdExpr)) {
-    auto var = i->value;
-    auto val = ctx->find(var, true);
-    if (val && val->getVar()) {
-      resultStmt =
-          new seq::Assign(val->getVar()->getHandle(), transform(stmt->rhs));
-    } else if (!stmt->mustExist) {
-      auto varStmt = new seq::VarStmt(transform(stmt->rhs), nullptr);
-      if (ctx->isToplevel())
-        varStmt->getVar()->setGlobal();
-      ctx->addVar(var, varStmt->getVar());
-      resultStmt = varStmt;
-    }
-  } else if (auto i = CAST(stmt->lhs, DotExpr)) {
-    resultStmt = N<seq::AssignMember>(transform(i->expr), i->member,
-                                      transform(stmt->rhs));
-  } else if (auto i = CAST(stmt->lhs, IndexExpr)) {
-    resultStmt = N<seq::AssignIndex>(transform(i->expr), transform(i->index),
-                                     transform(stmt->rhs));
+  auto i = CAST(stmt->lhs, IdExpr);
+  assert(i);
+  auto var = i->value;
+  // is it variable?
+  if (stmt->rhs->isType()) {
+    ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
   } else {
-    assert(false);
+    auto varStmt = new seq::VarStmt(transform(stmt->rhs), nullptr);
+    if (ctx->isToplevel())
+      varStmt->getVar()->setGlobal();
+    ctx->addVar(var, varStmt->getVar());
+    resultStmt = varStmt;
   }
+}
+
+void CodegenVisitor::visit(const AssignMemberStmt *stmt) {
+  resultStmt = N<seq::AssignMember>(transform(stmt->lhs), stmt->member,
+                                    transform(stmt->rhs));
+}
+
+void CodegenVisitor::visit(const UpdateStmt *stmt) {
+  auto i = CAST(stmt->lhs, IdExpr);
+  assert(i);
+  auto var = i->value;
+  auto val = ctx->find(var, true);
+  assert(val && val->getVar());
+  resultStmt =
+      new seq::Assign(val->getVar()->getHandle(), transform(stmt->rhs));
 }
 
 void CodegenVisitor::visit(const DelStmt *stmt) {
@@ -412,33 +411,6 @@ void CodegenVisitor::visit(const ImportStmt *stmt) {
     }
 }
 
-void CodegenVisitor::visit(const ExternImportStmt *stmt) {
-  vector<string> names;
-  vector<seq::types::Type *> types;
-  for (auto &arg : stmt->args) {
-    assert(arg.type);
-    names.push_back(arg.name);
-    types.push_back(realizeType(arg.type->getType()->getClass()));
-  }
-  auto f = new seq::Func();
-  f->setSrcInfo(stmt->getSrcInfo());
-  f->setName(stmt->name.first);
-  ctx->addFunc(stmt->name.second != "" ? stmt->name.second : stmt->name.first,
-               f);
-  f->setExternal();
-  f->setIns(types);
-  f->setArgNames(names);
-  assert(stmt->ret);
-  f->setOut(realizeType(stmt->ret->getType()->getClass()));
-  // if (ctx.getJIT() && ctx.isToplevel() && !ctx.getEnclosingType()) {
-  //   // DBG("adding jit fn {}", stmt->name.first);
-  //   auto fs = new seq::FuncStmt(f);
-  //   fs->setSrcInfo(stmt->getSrcInfo());
-  //   fs->setBase(ctx.getBase());
-  // } else {
-  resultStmt = N<seq::FuncStmt>(f);
-}
-
 void CodegenVisitor::visit(const TryStmt *stmt) {
   auto r = new seq::TryCatch();
   auto oldTryCatch = ctx->getTryCatch();
@@ -477,34 +449,31 @@ void CodegenVisitor::visit(const ThrowStmt *stmt) {
 
 void CodegenVisitor::visit(const FunctionStmt *stmt) {
   auto name = ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo());
+  // DBG("fn checking {}", name);
   for (auto &real : ctx->getRealizations()->getFuncRealizations(name)) {
     auto t = real.type;
     assert(t->canRealize() && t->realizationInfo);
 
     auto ast = real.ast;
+    DBG("added {}", real.fullName);
     vector<seq::types::Type *> types;
     if (std::find(ast->attributes.begin(), ast->attributes.end(), "internal") !=
         ast->attributes.end()) {
       // name is sth like int.__magic__ ( ... )
-      DBG("heh, realizing {} | {} | {}", ast->name, stmt->name, real.fullName);
 
       auto n = split(ast->name, '.');
-      assert(n.size() == 2);
+      assert(n.size() >= 2);
       string type = n[0], magic = n[1];
 
       // static: has self as arg
-      seq::types::Type *typ = nullptr;
-      int startI = 2;
-      if (ast->args.size() && ast->args[0].name == "self") {
-        typ = realizeType(t->args[1]->getClass());
-      } else if (magic == "__new__") {
-        typ = realizeType(t->args[0]->getClass());
-        startI = 1;
-      } else {
-        error("todo"); // TODO: get through implicits?
-        startI = 1;
-      }
-      DBG("-- in seq::type {}", typ->getName());
+      assert(t->realizationInfo->baseClass &&
+             t->realizationInfo->baseClass->getClass());
+      seq::types::Type *typ =
+          realizeType(t->realizationInfo->baseClass->getClass());
+      int startI = 1;
+      if (ast->args.size() && ast->args[0].name == "self")
+        startI = 2;
+      DBG("   realizing {} ~ {}", real.fullName, typ->getName());
       for (int i = startI; i < t->args.size(); i++)
         types.push_back(realizeType(t->args[i]->getClass()));
       auto f = typ->findMagic(n[1], types);
@@ -525,6 +494,10 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         types.push_back(realizeType(t->args[i]->getClass()));
         names.push_back(ast->args[i - 1].name);
       }
+      bool external = std::find(ast->attributes.begin(), ast->attributes.end(),
+                                "$external") != ast->attributes.end();
+      if (external)
+        f->setExternal();
       f->setIns(types);
       f->setArgNames(names);
       f->setOut(realizeType(t->args[0]->getClass()));
@@ -534,23 +507,30 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         if (a == "atomic")
           ctx->setFlag("atomic");
       }
-      for (auto &arg : names)
-        ctx->addVar(arg, f->getArgVar(arg));
-      transform(ast.get());
+      if (!external) {
+        for (auto &arg : names)
+          ctx->addVar(arg, f->getArgVar(arg));
+        transform(ast->suite.get());
+      }
       ctx->popBlock();
     }
   }
 }
 
-void CodegenVisitor::visit(const ClassStmt *stmt) {
-  auto name = ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo());
+void CodegenVisitor::visitMethods(const string &name) {
   auto c = ctx->getRealizations()->findClass(name);
-  for (auto &m : c->methods) {
-    FunctionStmt *f = CAST(
-        ctx->getRealizations()->getAST(m.second.front()->realizationInfo->name),
-        FunctionStmt);
-    visit(f);
-  }
+  if (c)
+    for (auto &m : c->methods)
+      for (auto &mm : m.second) {
+        FunctionStmt *f =
+            CAST(ctx->getRealizations()->getAST(mm->realizationInfo->name),
+                 FunctionStmt);
+        visit(f);
+      }
+}
+
+void CodegenVisitor::visit(const ClassStmt *stmt) {
+  // visitMethods(ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo()));
 }
 
 void CodegenVisitor::visit(const StarPattern *pat) {
@@ -611,6 +591,7 @@ void CodegenVisitor::visit(const GuardedPattern *pat) {
 }
 
 seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
+  // DBG("looking for {} / {}", t->name, t->toString(true));
   assert(t && t->canRealize());
   auto it = ctx->getRealizations()->classRealizations.find(t->name);
   assert(it != ctx->getRealizations()->classRealizations.end());
@@ -628,7 +609,7 @@ seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
     else
       types.push_back(realizeType(m.type->getClass()));
   // TODO: function ?!
-  if (t->name == "str") {
+  if (t->name == "#str") {
     handle = seq::types::Str;
   } else if (t->name == "Int" || t->name == "UInt") {
     assert(statics.size() == 1 && types.size() == 0);
@@ -637,7 +618,7 @@ seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
     else
       error(getSrcInfo(),
             "max len is 2018"); /// TODO: move check to transform part
-  } else if (t->name == "array") {
+  } else if (t->name == "#array") {
     assert(types.size() == 1 && statics.size() == 0);
     handle = seq::types::ArrayType::get(types[0]);
   } else if (t->name == "ptr") {

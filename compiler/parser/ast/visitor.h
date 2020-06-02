@@ -32,7 +32,6 @@ struct BinaryExpr;
 struct PipeExpr;
 struct IndexExpr;
 struct CallExpr;
-// struct PartialExpr;
 struct DotExpr;
 struct SliceExpr;
 struct EllipsisExpr;
@@ -40,7 +39,10 @@ struct TypeOfExpr;
 struct PtrExpr;
 struct LambdaExpr;
 struct YieldExpr;
+struct TupleIndexExpr;
+struct StackAllocExpr;
 
+struct AssignMemberStmt;
 struct SuiteStmt;
 struct PassStmt;
 struct BreakStmt;
@@ -67,6 +69,7 @@ struct ClassStmt;
 struct AssignEqStmt;
 struct YieldFromStmt;
 struct WithStmt;
+struct UpdateStmt;
 struct PyDefStmt;
 
 struct StarPattern;
@@ -119,7 +122,11 @@ public:
   virtual void visit(const PtrExpr *);
   virtual void visit(const LambdaExpr *);
   virtual void visit(const YieldExpr *);
+  virtual void visit(const TupleIndexExpr *);
+  virtual void visit(const StackAllocExpr *);
 
+  virtual void visit(const AssignMemberStmt *);
+  virtual void visit(const UpdateStmt *);
   virtual void visit(const SuiteStmt *);
   virtual void visit(const PassStmt *);
   virtual void visit(const BreakStmt *);

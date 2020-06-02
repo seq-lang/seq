@@ -115,7 +115,7 @@ class TypeContext : public Context<TypeItem::Item> {
 
   /** Function utilities **/
   /// Function parsing helpers: maintain current return type
-  types::TypePtr returnType, matchType;
+  types::TypePtr returnType, matchType, baseType;
   /// Indicates if a return was seen (to account for procedures)
   bool wasReturnTypeSet;
 
@@ -159,6 +159,8 @@ public:
   }
   types::TypePtr getMatchType() const { return matchType; }
   void setMatchType(types::TypePtr t) { matchType = t; }
+  types::TypePtr getBaseType() const { return baseType; }
+  void setBaseType(types::TypePtr t) { baseType = t; }
   bool wasReturnSet() const { return wasReturnTypeSet; }
   void setWasReturnSet(bool state) { wasReturnTypeSet = state; }
   void pushBase(const std::string &s) { bases.push_back(s); }

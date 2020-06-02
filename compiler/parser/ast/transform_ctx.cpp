@@ -30,7 +30,7 @@ TypeContext::TypeContext(const std::string &filename,
                          shared_ptr<RealizationContext> realizations,
                          shared_ptr<ImportContext> imports)
     : Context<TypeItem::Item>(filename, realizations, imports), module(""),
-      level(0), returnType(nullptr), matchType(nullptr),
+      level(0), returnType(nullptr), matchType(nullptr), baseType(nullptr),
       wasReturnTypeSet(false) {
   stack.push_front(vector<string>());
 }
@@ -231,9 +231,6 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   auto stmts = parseFile(stdlibPath);
   auto tv = TransformVisitor(stdlib).realizeBlock(stmts.get(), true);
   stdlib->unsetFlag("internal");
-  stdlib->add("#str", stdlib->find("str"));
-  stdlib->add("#seq", stdlib->find("seq"));
-  stdlib->add("#array", stdlib->find("array"));
   stdlib->addVar("__argv__",
                  make_shared<types::LinkType>(stdlib->instantiateGeneric(
                      SrcInfo(), stdlib->find("array")->getType(),

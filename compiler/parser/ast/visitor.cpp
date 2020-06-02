@@ -29,7 +29,9 @@ void ASTVisitor::visit(const UnaryExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const BinaryExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const PipeExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const IndexExpr *e) { defaultVisit(e); }
+void ASTVisitor::visit(const TupleIndexExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const CallExpr *e) { defaultVisit(e); }
+void ASTVisitor::visit(const StackAllocExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const DotExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const SliceExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const EllipsisExpr *e) { defaultVisit(e); }
@@ -44,6 +46,8 @@ void ASTVisitor::visit(const BreakStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const ContinueStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const ExprStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const AssignStmt *e) { defaultVisit(e); }
+void ASTVisitor::visit(const AssignMemberStmt *e) { defaultVisit(e); }
+void ASTVisitor::visit(const UpdateStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const DelStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const PrintStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const ReturnStmt *e) { defaultVisit(e); }
