@@ -67,9 +67,9 @@ seq::Expr *CodegenVisitor::transform(const Expr *expr) {
 seq::Stmt *CodegenVisitor::transform(const Stmt *stmt) {
   CodegenVisitor v(ctx);
 
-  // FormatVisitor f(nullptr, 0);
-  // DBG(":: {}:{} -> {}", stmt->getSrcInfo().file, stmt->getSrcInfo().line,
-  // stmt->toString());
+  FormatVisitor f(nullptr, 0);
+  DBG(":: {}:{} -> {}", stmt->getSrcInfo().file, stmt->getSrcInfo().line,
+      stmt->toString());
 
   stmt->accept(v);
   v.setSrcInfo(stmt->getSrcInfo());
