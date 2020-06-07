@@ -17,12 +17,12 @@ void Print::codegen0(BasicBlock *&block) {
   if (nopOnVoid && type->is(types::Void))
     return;
 
-  Value *str = type->strValue(val, block, getTryCatch());
+  assert(type->is(types::Str));
   auto *printFunc = cast<Function>(module->getOrInsertFunction(
       "seq_print", Type::getVoidTy(context), types::Str->getLLVMType(context)));
   printFunc->setDoesNotThrow();
   IRBuilder<> builder(block);
-  builder.CreateCall(printFunc, str);
+  builder.CreateCall(printFunc, val);
 }
 
 Print *Print::clone(Generic *ref) {
