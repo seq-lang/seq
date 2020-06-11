@@ -14,3 +14,4 @@ from bio.fasta import FASTARecord, FASTA, pFASTARecord, pFASTA
 from bio.fastq import FASTQRecord, FASTQ
 
 from bio.bam import SAM, BAM, CRAM
+from bio.bed import BED, BEDRecord
