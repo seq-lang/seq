@@ -535,3 +535,43 @@ test_minimal_bed()
 test_parse_valid_with_header()
 test_parse_invalid_with_header()
 test_parse_valid_without_header()
+
+# FAI tests
+@test
+def test_parse_valid():
+    parser = FAI("test/data/valid_fai.fai", fastq=True)
+    first_row_expected = FAIRecord('fastq1', 66, 8, 30, 31, 79)
+    #print next(parser)
+    assert first_row_expected == next(parser)
+    parser.close()
+
+@test
+def test_parse_invalid_missing_col():
+    with FAI("test/data/invalid/invalid_fai_missing_col.fai", fastq=True) as parser:
+        try:
+            for _ in parser:
+                pass
+            assert False
+        except ValueError as e:
+            assert e.message == "Line 2 does not have the required number of columns, 6"
+
+@test
+def test_parse_invalid_float():
+    with FAI("test/data/invalid/invalid_fai_float.fai", fastq=True) as parser:
+        try:
+            for _ in parser:
+                pass
+            assert False
+        except ValueError as e:
+            assert e.message == "qual_offset, must be integer, line: 1"
+
+@test
+def test_fasta_with_fai():
+    with FASTA("test/data/sample_fasta_for_fai.fasta") as f:
+        assert f['two'] == s'ATGCATGCATGCATGCATGCATGCATGC'
+        assert f['one'] == s'ATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCAT'
+
+test_parse_valid()
+test_parse_invalid_float()
+test_parse_invalid_missing_col()
+test_fasta_with_fai()
