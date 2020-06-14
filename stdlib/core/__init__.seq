@@ -20,9 +20,11 @@ type str(len: int, ptr: ptr[byte]):
 
 extend ptr[T]:
     @internal
-    def __new__() -> ptr[T]: pass
+    def as_byte(self: ptr[T]) -> ptr[byte]: pass
     @internal
-    def __new__[U](other: ptr[U]) -> ptr[byte]: pass
+    def __new__() -> ptr[T]: pass
+    # @internal
+    # def __new__[U](other: ptr[U]) -> ptr[byte]: pass
     @internal
     def __new__(other: ptr[byte]) -> ptr[T]: pass
     @internal
@@ -481,32 +483,34 @@ type seq(len: int, ptr: ptr[byte]):
         return (s.len, s.ptr)
     # def __contains__[N](self: seq, what: Kmer[N]) -> void: pass
 
-from core.aliases import *
-import core.c_stubs as _C
-import core.gc as _gc
+# from core.aliases import *
+# import core.c_stubs as _C
+# import core.gc as _gc
 
-from core.slice import *
-from core.err import *
-from core.optional import unwrap as _unwrap
-from core.range import range
-from core.box import Box
+# from core.slice import *
+# from core.err import *
+# from core.optional import unwrap as _unwrap
+# from core.range import range
+# from core.box import Box
 
-from core.builtin import *
+# from core.builtin import *
 
-from core.collections.list import list
-from core.collections.set import set
-from core.collections.dict import dict
+# from core.collections.list import list
+# from core.collections.set import set
+# from core.collections.dict import dict
 
-from core.str import *
-from core.int import *
-from core.float import *
+# from core.str import *
+# from core.int import *
+# from core.float import *
 
-from core.sort import sorted
+# from core.sort import sorted
 
-from core.file import File, gzFile, open, gzopen
-from pickle import pickle, unpickle
+# from core.file import File, gzFile, open, gzopen
+# from pickle import pickle, unpickle
 
-from core.dlopen import dlsym as _dlsym
+# from core.dlopen import dlsym as _dlsym
+
+
 # from core.python import init as _py_init, imp as _py_import, exec as _py_exec, pyobj
 
 # from bio import *

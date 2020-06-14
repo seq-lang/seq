@@ -4,6 +4,78 @@
 		"selected_items":
 		[
 			[
+				"getB",
+				"getBaseType\ttypes::TypePtr getBaseType() const"
+			],
+			[
+				"addT",
+				"addToCtx"
+			],
+			[
+				"AddT",
+				"addToCtx"
+			],
+			[
+				"Class",
+				"ClassType"
+			],
+			[
+				"real",
+				"realizeString\tstd::string realizeString() const"
+			],
+			[
+				"cla",
+				"getClass\tClassTypePtr getClass()"
+			],
+			[
+				"realiz",
+				"realizeType"
+			],
+			[
+				"get",
+				"getName"
+			],
+			[
+				"result",
+				"resultStmt"
+			],
+			[
+				"ps",
+				"push_back\tvoid push_back(value_type &&__x)"
+			],
+			[
+				"resu",
+				"resultStmt"
+			],
+			[
+				"Stmt",
+				"StmtPtr"
+			],
+			[
+				"stmt",
+				"stmts"
+			],
+			[
+				"type",
+				"typeExpr"
+			],
+			[
+				"Expr",
+				"ExprPtr"
+			],
+			[
+				"atol",
+				"atoll\tlong long atoll(const char *)"
+			],
+			[
+				"force",
+				"forceUnify"
+			],
+			[
+				"rest",
+				"resultExpr"
+			],
+			[
 				"ma",
 				"magic\tstd::vector<MagicMethod> magic"
 			],
@@ -20,10 +92,6 @@
 				"fullName\tstd::string fullName"
 			],
 			[
-				"stmt",
-				"stmts\tstd::vector<StmtPtr> stmts"
-			],
-			[
 				"fmst",
 				"fstmt"
 			],
@@ -38,14 +106,6 @@
 			[
 				"us",
 				"using"
-			],
-			[
-				"Class",
-				"ClassType\tClassType"
-			],
-			[
-				"real",
-				"realizationItems"
 			],
 			[
 				"cl",
@@ -72,10 +132,6 @@
 				"funcRealizations"
 			],
 			[
-				"realiz",
-				"realizationInfo"
-			],
-			[
 				"reali",
 				"realizationInfo"
 			],
@@ -98,10 +154,6 @@
 			[
 				"rea",
 				"realizationInfo\tstd::shared_ptr<RealizationInfo> realizationInfo"
-			],
-			[
-				"get",
-				"getFunc\tconst Func * getFunc() const"
 			],
 			[
 				"ac",
@@ -424,10 +476,6 @@
 				"Extern"
 			],
 			[
-				"type",
-				"type_of"
-			],
-			[
 				"indice",
 				"indices'\t  tann ExprNode.t sexp_list"
 			],
@@ -466,76 +514,63 @@
 			[
 				"has_",
 				"has_ellipsis"
-			],
-			[
-				"call",
-				"callee_expr"
-			],
-			[
-				"to",
-				"to_string_full"
-			],
-			[
-				"ass",
-				"assign_ref"
-			],
-			[
-				"fucn",
-				"function"
-			],
-			[
-				"uni",
-				"unify_generics"
-			],
-			[
-				"arg",
-				"arg_typ"
-			],
-			[
-				"Hash",
-				"Hashtbl\t  Module"
-			],
-			[
-				"val",
-				"value_exn"
-			],
-			[
-				"me",
-				"methods"
-			],
-			[
-				"gene",
-				"generics"
-			],
-			[
-				"class_",
-				"class_name"
-			],
-			[
-				"is_t",
-				"is_type"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "compiler/parser/ast/transform_ctx.cpp",
+			"file": "stdlib/core/__init__.seq",
 			"settings":
 			{
-				"buffer_size": 8981,
+				"buffer_size": 16168,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"contents": "Searching 872 files for \"\"__init\"\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/patterns.cpp:\n  507                                      succBlock, nullptr);\n  508        Value *expected =\n  509:           k1Type->callMagic(\"__init__\", {types::Byte}, nullptr,\n  510                              {builder.getInt8(c)}, succBlock, nullptr);\n  511        Value *match = builder.CreateICmpEQ(base, expected);\n  ...\n  532      Value *expectedSeq = s.codegen(base, block);\n  533      Value *expectedKmer =\n  534:         type->callMagic(\"__init__\", {types::Seq, types::Bool}, nullptr,\n  535                          {expectedSeq, falseBool}, block, nullptr);\n  536      IRBuilder<> builder(block);\n  ...\n  567        typeLeft = types::KMer::get(leftString.size());\n  568        expectedKmerLeft =\n  569:           typeLeft->callMagic(\"__init__\", {types::Seq, types::Bool}, nullptr,\n  570                                {expectedSeqLeft, falseBool}, block, nullptr);\n  571      }\n  ...\n  576        typeRight = types::KMer::get(rightString.size());\n  577        expectedKmerRight =\n  578:           typeRight->callMagic(\"__init__\", {types::Seq}, nullptr,\n  579                                 {expectedSeqRight}, block, nullptr);\n  580      }\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_expr.cpp:\n  724                              N<CallExpr>(N<DotExpr>(move(e), \"__new__\"))));\n  725        prepend(N<ExprStmt>(\n  726:           N<CallExpr>(N<DotExpr>(N<IdExpr>(var), \"__init__\"), move(args))));\n  727        resultExpr = transform(N<IdExpr>(var));\n  728        return;\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/array.cpp:\n   45         true},\n   46  \n   47:       {\"__init__\",\n   48         {Int},\n   49         this,\n   ..\n   54         false},\n   55  \n   56:       {\"__init__\",\n   57         {PtrType::get(getBaseType(0)), Int},\n   58         this,\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/func.cpp:\n   81  \n   82    vtable.magic = {\n   83:       {\"__init__\",\n   84         {PtrType::get(Byte)},\n   85         this,\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/num.cpp:\n   51  \n   52    vtable.magic = {\n   53:       {\"__init__\",\n   54         {},\n   55         Int,\n   ..\n   59         false},\n   60  \n   61:       {\"__init__\",\n   62         {Int},\n   63         Int,\n   ..\n   67         false},\n   68  \n   69:       {\"__init__\",\n   70         {Float},\n   71         Int,\n   ..\n   75         false},\n   76  \n   77:       {\"__init__\",\n   78         {Bool},\n   79         Int,\n   ..\n   83         false},\n   84  \n   85:       {\"__init__\",\n   86         {Byte},\n   87         Int,\n   ..\n  432    for (unsigned i = 1; i <= IntNType::MAX_LEN; i++) {\n  433      vtable.magic.push_back(\n  434:         {\"__init__\",\n  435           {IntNType::get(i, true)},\n  436           Int,\n  ...\n  441  \n  442      vtable.magic.push_back(\n  443:         {\"__init__\",\n  444           {IntNType::get(i, false)},\n  445           Int,\n  ...\n  523  \n  524    vtable.magic = {\n  525:       {\"__init__\",\n  526         {},\n  527         this,\n  ...\n  531         false},\n  532  \n  533:       {\"__init__\",\n  534         {this},\n  535         this,\n  ...\n  539         false},\n  540  \n  541:       {\"__init__\",\n  542         {Int},\n  543         this,\n  ...\n  549         false},\n  550  \n  551:       {\"__init__\",\n  552         {IntNType::get(len, !sign)},\n  553         this,\n  ...\n  801    if (!sign && len % 2 == 0) {\n  802      vtable.magic.push_back(\n  803:         {\"__init__\",\n  804           {KMer::get(len / 2)},\n  805           this,\n  ...\n  900  \n  901    vtable.magic = {\n  902:       {\"__init__\",\n  903         {},\n  904         Float,\n  ...\n  908         false},\n  909  \n  910:       {\"__init__\",\n  911         {Float},\n  912         Float,\n  ...\n  916         false},\n  917  \n  918:       {\"__init__\",\n  919         {Int},\n  920         Float,\n  ...\n 1239  \n 1240    vtable.magic = {\n 1241:       {\"__init__\",\n 1242         {},\n 1243         Bool,\n ....\n 1398  \n 1399    vtable.magic = {\n 1400:       {\"__init__\",\n 1401         {},\n 1402         Byte,\n ....\n 1406         false},\n 1407  \n 1408:       {\"__init__\",\n 1409         {Byte},\n 1410         Byte,\n ....\n 1414         false},\n 1415  \n 1416:       {\"__init__\",\n 1417         {Int},\n 1418         Byte,\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/optional.cpp:\n   31  \n   32    vtable.magic = {\n   33:       {\"__init__\",\n   34         {getBaseType(0)},\n   35         this,\n   ..\n   39         false},\n   40  \n   41:       {\"__init__\",\n   42         {},\n   43         this,\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ptr.cpp:\n   18  \n   19    vtable.magic = {\n   20:       {\"__init__\",\n   21         {},\n   22         this,\n   ..\n   27         false},\n   28  \n   29:       {\"__init__\",\n   30         {Int},\n   31         this,\n   ..\n   35         false},\n   36  \n   37:       {\"__init__\",\n   38         {PtrType::get(Base)},\n   39         this,\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/record.cpp:\n  254  \n  255    vtable.magic = {\n  256:       {\"__init__\", types, this,\n  257         [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {\n  258           Value *val = defaultValue(b.GetInsertBlock());\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ref.cpp:\n  122    bool foundInit = false;\n  123    for (auto &magic : vtable.overloads) {\n  124:     if (magic.name != \"__init__\")\n  125        continue;\n  126  \n  ...\n  308    if (contents) {\n  309      vtable.magic.push_back(\n  310:         {\"__init__\", contents->getTypes(), this,\n  311           [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {\n  312             self = b.CreateBitCast(self, getStructPointerType(b.getContext()));\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/seq.cpp:\n   52  \n   53    vtable.magic = {\n   54:       {\"__init__\",\n   55         {PtrType::get(Byte), Int},\n   56         Seq,\n   ..\n  107  \n  108    vtable.magic = {\n  109:       {\"__init__\",\n  110         {PtrType::get(Byte), Int},\n  111         Str,\n  ...\n  667    types::IntNType *iType = types::IntNType::get(2 * k, false);\n  668    vtable.magic = {\n  669:       {\"__init__\",\n  670         {},\n  671         this,\n  ...\n  675         false},\n  676  \n  677:       {\"__init__\",\n  678         {this},\n  679         this,\n  ...\n  683         false},\n  684  \n  685:       {\"__init__\",\n  686         {Seq},\n  687         this,\n  ...\n  693         false},\n  694  \n  695:       {\"__init__\",\n  696         {Seq, Bool},\n  697         this,\n  ...\n  703         false},\n  704  \n  705:       {\"__init__\",\n  706         {IntNType::get(2 * k, false)},\n  707         this,\n  ...\n  711         false},\n  712  \n  713:       {\"__init__\",\n  714         {Int},\n  715         this,\n  ...\n  979    if (k == 1) {\n  980      vtable.magic.push_back(\n  981:         {\"__init__\",\n  982           {Byte},\n  983           this,\n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.cpp:\n  518    initOps();\n  519    if (names.empty())\n  520:     return magicOut(\"__init__\", args, nullOnMissing);\n  521  \n  522    args.insert(args.begin(), this);\n  ...\n  526    bool foundValidInit = false;\n  527    for (auto &magic : vtable.overloads) {\n  528:     if (magic.name != \"__init__\")\n  529        continue;\n  530  \n  ...\n  545  \n  546    for (auto &magic : vtable.overloads) {\n  547:     if (magic.name != \"__init__\")\n  548        continue;\n  549  \n  ...\n  585    initOps();\n  586    if (names.empty())\n  587:     return callMagic(\"__init__\", argTypes, self, args, block, tc);\n  588  \n  589    argTypes.insert(argTypes.begin(), this);\n  ...\n  594    bool foundValidInit = false;\n  595    for (auto &magic : vtable.overloads) {\n  596:     if (magic.name != \"__init__\")\n  597        continue;\n  598  \n  ...\n  614  \n  615    for (auto &magic : vtable.overloads) {\n  616:     if (magic.name != \"__init__\")\n  617        continue;\n  618  \n\n/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.h:\n  251                                   llvm::BasicBlock *&block, TryCatch *tc);\n  252  \n  253:   /// Returns the output type of the \"__init__\" magic method\n  254    /// with specified argument types/names. Throws an exception if\n  255:   /// the \"__init__\" magic method does not exist for specified types/names by\n  256    /// default. If \\p initFunc is specified, always returns null but stores\n  257    /// the found init function in that pointer and sets \\p args to the fixed\n  ...\n  263    ///                      exception if magic is missing\n  264    /// @param initFunc will store resulting init function if non-null\n  265:   /// @return output type of \"__init__\" magic method\n  266    virtual Type *initOut(std::vector<Type *> &args,\n  267                          std::vector<std::string> names,\n  268                          bool nullOnMissing = false, Func **initFunc = nullptr);\n  269  \n  270:   /// Codegens a call to the \"__init__\" magic method. Throws\n  271:   /// an exception if the \"__init__\" magic method does not\n  272    /// exist for specified names/argument types.\n  273    /// @param argTypes vector of argument types (exclusing self)\n  ...\n  277    /// @param block where to codegen the call\n  278    /// @param tc enclosing try-catch statement, or null if none\n  279:   /// @return result of calling the \"__init__\" magic method\n  280    virtual llvm::Value *callInit(std::vector<Type *> argTypes,\n  281                                  std::vector<std::string> names,\n\n56 matches across 12 files\n",
+			"file": "scratch.seq",
 			"settings":
 			{
-				"buffer_size": 9569,
-				"line_ending": "Unix",
-				"name": "Find Results",
-				"scratch": true
+				"buffer_size": 8182,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "compiler/parser/parser.cpp",
+			"settings":
+			{
+				"buffer_size": 3491,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "compiler/parser/ast/transform_expr.cpp",
+			"settings":
+			{
+				"buffer_size": 36298,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "compiler/parser/ast/transform_stmt.cpp",
+			"settings":
+			{
+				"buffer_size": 42311,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "compiler/parser/ast/transform.h",
+			"settings":
+			{
+				"buffer_size": 8694,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
 			}
 		}
 	],
@@ -667,6 +702,10 @@
 		"selected_items":
 		[
 			[
+				"brow",
+				"SFTP: Browse Server…"
+			],
+			[
 				"err",
 				"ECC: Show all errors"
 			],
@@ -709,10 +748,6 @@
 			[
 				"color",
 				"UI: Select Color Scheme"
-			],
-			[
-				"brow",
-				"SFTP: Browse Server…"
 			],
 			[
 				"br",
@@ -1202,43 +1237,60 @@
 	},
 	"expanded_folders":
 	[
-		"/Users/inumanag/Desktop/Projekti/seq/types",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang"
+		"/Users/inumanag/Desktop/Projekti/seq/types"
 	],
 	"file_history":
 	[
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_ctx.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/scratch.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_expr.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_ctx.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/slice.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/parser.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/pickle.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/set.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/list.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/dict.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/context.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/pseq.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/gc.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/seq.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/__init__.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ptr.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/num.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/func.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/visitor.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/visitor.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/aliases.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/float.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_stmt.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen_ctx.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/func.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/str.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/err.seq",
+		"/Users/inumanag/Desktop/tax/calc",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1591067344/pi/home/pi/osmc_vnc_install_cli.bash",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/fmindex.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/fastq.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/random.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/format.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/format.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/seq.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/common.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/common.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/seq.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/func.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_stmt.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/scratch.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen_ctx.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/context.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_ctx.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/parser.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/context.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/err.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/c_stubs.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/float.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/slice.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_ctx.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_expr.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/__init__.seq",
 		"/Library/Developer/CommandLineTools/usr/include/c++/v1/memory",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/__init__.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/seq.sublime-project",
 		"/Users/inumanag/Library/Application Support/Sublime Text 3/Packages/Clang Format/clang_format_custom.sublime-settings",
 		"/Users/inumanag/Library/Application Support/Sublime Text 3/Packages/Clang Format/Default (OSX).sublime-keymap",
@@ -1247,7 +1299,6 @@
 		"/Users/inumanag/Desktop/Projekti/seq/types/parser/ast/transform_expr.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/parser/ast/transform_stmt.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/parser/ast/codegen.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/list.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/range.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/typecontext.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/typecontext.h",
@@ -1317,25 +1368,7 @@
 		"/Users/inumanag/Desktop/hw2/hs_small.fa",
 		"/Users/inumanag/Desktop/hw2/andrew/p3.txt",
 		"/Users/inumanag/Desktop/hw2/allison/prob6_bonus.txt",
-		"/Users/inumanag/Desktop/hw2/allison/prob5.seq",
-		"/Users/inumanag/Desktop/hw2/inumanag/p3.txt",
-		"/Users/inumanag/Desktop/hw2/allison/false_positive_rate_relationships.png",
-		"/Users/inumanag/Desktop/hw2/inumanag/xx",
-		"/Users/inumanag/Desktop/hw2/covid19.fa",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1586808000/mume/Users/inumanag/hw2/grade.sh",
-		"/Users/inumanag/Downloads/Homework #2/grade.sh",
-		"/Users/inumanag/Library/Application Support/Anki2/addons21/1128979221/templates/chinese.py",
-		"/Users/inumanag/Desktop/hw2/hs37d5.fa",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1585949103/mume/Users/inumanag/Projekti/haptreex/run.sh",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1585607617/mume/Users/inumanag/Projekti/haptreex/run.sh",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1585609830/mume/Users/inumanag/Projekti/haptreex/code/integrate.py",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1585607846/mume/Users/inumanag/Projekti/haptreex/code/integrate.py",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1585411166/mume/Users/inumanag/Projekti/haptreex/run.sh",
-		"/Users/inumanag/Desktop/Projekti/aldy/devel/aldy/lpinterface.py",
-		"/Users/inumanag/Desktop/Projekti/aldy/devel/aldy/__main__.py",
-		"/Users/inumanag/Desktop/Projekti/aldy/devel/aldy/sam.py",
-		"/Users/inumanag/Desktop/Projekti/aldy/devel/aldy/version.py",
-		"/Users/inumanag/Desktop/Projekti/aldy/devel/setup.py"
+		"/Users/inumanag/Desktop/hw2/allison/prob5.seq"
 	],
 	"find":
 	{
@@ -1346,6 +1379,12 @@
 		"height": 134.0,
 		"where_history":
 		[
+			"/Users/inumanag/Desktop/Projekti/seq/types/stdlib",
+			"/Users/inumanag/Desktop/Projekti/seq/types/compiler",
+			"/Users/inumanag/Desktop/Projekti/seq/types/stdlib",
+			"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser",
+			"<project>/compiler/parser/*",
+			"<project>/compiler/parser",
 			"<project>/compiler/lang/",
 			"<project>/compiler/lang/*.{cpp,h}",
 			"<project>/compiler/lang/**/*.{cpp,h}",
@@ -1364,6 +1403,78 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"findbestca",
+			"optional",
+			"setbasetype",
+			"Functionstmt",
+			"->find(",
+			"->find",
+			"pushbase",
+			"functionstmt",
+			"cobj(",
+			"realizationItems",
+			"dotexpr",
+			"DBG(",
+			"patchi",
+			"default",
+			"deflt",
+			"default",
+			"\\.default\\.",
+			".default",
+			"addMethod",
+			"memset",
+			"realizefunc",
+			"prepend",
+			"assignstmt",
+			"AssignMemberStmt",
+			"AssignStmt",
+			"optional",
+			"transformType",
+			"array[T]",
+			"array[byte]",
+			"[byte]",
+			"patchifrea",
+			"realizeType",
+			"baseclass",
+			"Match",
+			"match",
+			"Match",
+			"realizationinfo",
+			"realizationi",
+			"implicits",
+			"parseGenerics",
+			"addmethod",
+			"implicits",
+			"explicit",
+			"functype>",
+			"() ->",
+			"\"todo\"",
+			"error: todo",
+			"error\\: todo",
+			"error: todo",
+			"getbase()",
+			"methods",
+			"COPY_BIN",
+			"dispmanx_vncser",
+			"/dev/null",
+			"APT_UPDATE",
+			"starting",
+			"osmc",
+			"/home/osmc",
+			"isrecord",
+			"read-only",
+			"AssignStmt",
+			"IndexExpr",
+			"stackallocex",
+			"assignmember",
+			"idx",
+			"CallExpr",
+			"__array__",
+			":",
+			"[A-Z]{3,}",
+			"[^\\x00-\\x7F]",
+			"No Congregation Prayer until Further Notice",
+			"EllipsisExpr",
 			"\"__init",
 			"ctx",
 			"ctx->",
@@ -1419,45 +1530,7 @@
 			"not fo",
 			"i.value",
 			"i\\.value",
-			"not found",
-			"fixExprName",
-			"patch",
-			"realname",
-			"realName(canonicalName, fr.second.type)",
-			"realname",
-			"realiz",
-			"realizestring",
-			"fixExprName",
-			"pipeexp",
-			"partialex",
-			"realizetyp",
-			"patchIfRealizable",
-			"canrealize",
-			"idexpr",
-			"realize(Type|Func)",
-			"realizefunc",
-			"realizeFunc",
-			"ctx->addfunc",
-			"processIdentifier",
-			"\"#\" +",
-			"\"tuple\"",
-			"$tuple",
-			"$tuple_str",
-			"findBestCall",
-			"__iter__",
-			"core.range",
-			"import range",
-			"extend range",
-			"__iter",
-			"cannot fin",
-			"activeUnbounds",
-			"addUnbound",
-			"minUnbound",
-			"Realizing",
-			"_typ_5",
-			"_typ_5\\) __init__",
-			"_typ_5) __init__",
-			"326"
+			"not found"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -1482,19 +1555,19 @@
 			[
 				{
 					"buffer": 0,
-					"file": "compiler/parser/ast/transform_ctx.cpp",
+					"file": "stdlib/core/__init__.seq",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 8981,
+						"buffer_size": 16168,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								109,
-								109
+								15248,
+								15248
 							]
 						],
 						"settings":
@@ -1517,332 +1590,589 @@
 							},
 							"bracket_highlighter.regions":
 							[
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
 								"bh_angle",
 								"bh_angle_center",
 								"bh_angle_open",
 								"bh_angle_close",
 								"bh_angle_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
 								"bh_unmatched",
 								"bh_unmatched_center",
 								"bh_unmatched_open",
 								"bh_unmatched_close",
 								"bh_unmatched_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
 								"bh_curly",
 								"bh_curly_center",
 								"bh_curly_open",
 								"bh_curly_close",
 								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
 								"bh_tag",
 								"bh_tag_center",
 								"bh_tag_open",
 								"bh_tag_close",
-								"bh_tag_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content"
+								"bh_tag_content"
 							],
 							"git_gutter_is_enabled": true,
 							"incomplete_sync": null,
 							"remote_loading": false,
-							"sftp_duplicate_views": 0,
-							"sorttabs_lastactivated": 1590789301.86,
+							"sorttabs_lastactivated": 1591202503.24,
 							"synced": false,
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"tab_size": 2,
-							"tabs_extra_last_activated": 1590789303.0,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"tabs_extra_last_activated": 1591202503.24,
 							"tabs_extra_last_activated_sheet_index": 0,
-							"tabs_extra_moving":
-							[
-								4,
-								0
-							],
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 2983.0,
+						"translation.y": 6193.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "scratch.seq",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8182,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1782,
+								1782
+							]
+						],
+						"settings":
+						{
+							"bracket_highlighter.busy": false,
+							"bracket_highlighter.locations":
+							{
+								"close":
+								{
+								},
+								"icon":
+								{
+								},
+								"open":
+								{
+								},
+								"unmatched":
+								{
+								}
+							},
+							"bracket_highlighter.regions":
+							[
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content"
+							],
+							"git_gutter_is_enabled": true,
+							"incomplete_sync": null,
+							"remote_loading": false,
+							"sorttabs_lastactivated": 1591203319.97,
+							"synced": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"tabs_extra_last_activated": 1591203319.98,
+							"tabs_extra_last_activated_sheet_index": 1,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 36.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "compiler/parser/parser.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3491,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1752,
+								1752
+							]
+						],
+						"settings":
+						{
+							"bracket_highlighter.busy": false,
+							"bracket_highlighter.locations":
+							{
+								"close":
+								{
+									"1":
+									[
+										1822,
+										1823
+									]
+								},
+								"icon":
+								{
+									"1":
+									[
+										"Packages/BracketHighlighter/icons/curly_bracket.png",
+										"region.purplish"
+									]
+								},
+								"open":
+								{
+									"1":
+									[
+										1249,
+										1250
+									]
+								},
+								"unmatched":
+								{
+								}
+							},
+							"bracket_highlighter.regions":
+							[
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content"
+							],
+							"git_gutter_is_enabled": true,
+							"incomplete_sync": null,
+							"remote_loading": false,
+							"sorttabs_lastactivated": 1591202571.28,
+							"synced": false,
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 2,
+							"tabs_extra_last_activated": 1591202571.28,
+							"tabs_extra_last_activated_sheet_index": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 471.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 1,
 					"type": "text"
 				},
 				{
-					"buffer": 1,
+					"buffer": 3,
+					"file": "compiler/parser/ast/transform_expr.cpp",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 9569,
+						"buffer_size": 36298,
 						"regions":
 						{
-							"match":
-							{
-								"flags": 112,
-								"regions":
-								[
-									[
-										236,
-										243
-									],
-									[
-										542,
-										549
-									],
-									[
-										839,
-										846
-									],
-									[
-										1124,
-										1131
-									],
-									[
-										1503,
-										1510
-									],
-									[
-										1718,
-										1725
-									],
-									[
-										1821,
-										1828
-									],
-									[
-										2021,
-										2028
-									],
-									[
-										2205,
-										2212
-									],
-									[
-										2304,
-										2311
-									],
-									[
-										2406,
-										2413
-									],
-									[
-										2510,
-										2517
-									],
-									[
-										2613,
-										2620
-									],
-									[
-										2784,
-										2791
-									],
-									[
-										2924,
-										2931
-									],
-									[
-										3054,
-										3061
-									],
-									[
-										3154,
-										3161
-									],
-									[
-										3258,
-										3265
-									],
-									[
-										3361,
-										3368
-									],
-									[
-										3531,
-										3538
-									],
-									[
-										3657,
-										3664
-									],
-									[
-										3758,
-										3765
-									],
-									[
-										3864,
-										3871
-									],
-									[
-										3972,
-										3979
-									],
-									[
-										4076,
-										4083
-									],
-									[
-										4176,
-										4183
-									],
-									[
-										4280,
-										4287
-									],
-									[
-										4454,
-										4461
-									],
-									[
-										4568,
-										4575
-									],
-									[
-										4734,
-										4741
-									],
-									[
-										4834,
-										4841
-									],
-									[
-										4937,
-										4944
-									],
-									[
-										5124,
-										5131
-									],
-									[
-										5469,
-										5476
-									],
-									[
-										5594,
-										5601
-									],
-									[
-										5917,
-										5924
-									],
-									[
-										6043,
-										6050
-									],
-									[
-										6231,
-										6238
-									],
-									[
-										6331,
-										6338
-									],
-									[
-										6435,
-										6442
-									],
-									[
-										6538,
-										6545
-									],
-									[
-										6647,
-										6654
-									],
-									[
-										6774,
-										6781
-									],
-									[
-										6907,
-										6914
-									],
-									[
-										7110,
-										7117
-									],
-									[
-										7315,
-										7322
-									],
-									[
-										7449,
-										7456
-									],
-									[
-										7574,
-										7581
-									],
-									[
-										7799,
-										7806
-									],
-									[
-										7933,
-										7940
-									],
-									[
-										8177,
-										8184
-									],
-									[
-										8291,
-										8298
-									],
-									[
-										8706,
-										8713
-									],
-									[
-										8982,
-										8989
-									],
-									[
-										9047,
-										9054
-									],
-									[
-										9377,
-										9384
-									]
-								],
-								"scope": ""
-							}
 						},
 						"selection":
 						[
 							[
-								0,
+								21860,
+								21862
+							]
+						],
+						"settings":
+						{
+							"bracket_highlighter.busy": false,
+							"bracket_highlighter.locations":
+							{
+								"close":
+								{
+									"1":
+									[
+										23089,
+										23090
+									]
+								},
+								"icon":
+								{
+									"1":
+									[
+										"Packages/BracketHighlighter/icons/curly_bracket.png",
+										"region.purplish"
+									]
+								},
+								"open":
+								{
+									"1":
+									[
+										21428,
+										21429
+									]
+								},
+								"unmatched":
+								{
+								}
+							},
+							"bracket_highlighter.regions":
+							[
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content"
+							],
+							"git_gutter_is_enabled": true,
+							"incomplete_sync": null,
+							"remote_loading": false,
+							"sorttabs_lastactivated": 1591202434.72,
+							"synced": false,
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 2,
+							"tabs_extra_last_activated": 1591202434.72,
+							"tabs_extra_last_activated_sheet_index": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 9415.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "compiler/parser/ast/transform_stmt.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 42311,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2530,
+								2530
+							]
+						],
+						"settings":
+						{
+							"bracket_highlighter.busy": false,
+							"bracket_highlighter.locations":
+							{
+								"close":
+								{
+									"1":
+									[
+										2547,
+										2548
+									]
+								},
+								"icon":
+								{
+									"1":
+									[
+										"Packages/BracketHighlighter/icons/round_bracket.png",
+										"region.yellowish"
+									]
+								},
+								"open":
+								{
+									"1":
+									[
+										2525,
+										2526
+									]
+								},
+								"unmatched":
+								{
+								}
+							},
+							"bracket_highlighter.regions":
+							[
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content"
+							],
+							"git_gutter_is_enabled": true,
+							"incomplete_sync": null,
+							"remote_loading": false,
+							"sorttabs_lastactivated": 1591202468.46,
+							"synced": false,
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 2,
+							"tabs_extra_last_activated": 1591202468.46,
+							"tabs_extra_last_activated_sheet_index": 3,
+							"tabs_extra_moving":
+							[
+								2,
 								0
+							],
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1046.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "compiler/parser/ast/transform.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8694,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2539,
+								2539
 							]
 						],
 						"settings":
@@ -1863,90 +2193,85 @@
 								{
 									"1":
 									[
-										167,
-										168
+										575,
+										576
 									]
 								}
 							},
 							"bracket_highlighter.regions":
 							[
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
 								"bh_angle",
 								"bh_angle_center",
 								"bh_angle_open",
 								"bh_angle_close",
 								"bh_angle_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
 								"bh_unmatched",
 								"bh_unmatched_center",
 								"bh_unmatched_open",
 								"bh_unmatched_close",
 								"bh_unmatched_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
 								"bh_curly",
 								"bh_curly_center",
 								"bh_curly_open",
 								"bh_curly_close",
 								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
 								"bh_tag",
 								"bh_tag_center",
 								"bh_tag_open",
 								"bh_tag_close",
-								"bh_tag_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content"
+								"bh_tag_content"
 							],
-							"default_dir": "/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast",
-							"detect_indentation": false,
-							"git_gutter_is_enabled": false,
+							"git_gutter_is_enabled": true,
 							"incomplete_sync": null,
-							"line_numbers": false,
-							"output_tag": 1,
-							"result_base_dir": "",
-							"result_file_regex": "^([^ \t].*):$",
-							"result_line_regex": "^ +([0-9]+):",
-							"scroll_past_end": true,
-							"sorttabs_lastactivated": 1590789306.61,
-							"syntax": "Packages/Default/Find Results.hidden-tmLanguage",
-							"tabs_extra_last_activated": 1590789306.61,
-							"tabs_extra_last_activated_sheet_index": 1,
-							"translate_tabs_to_spaces": false
+							"remote_loading": false,
+							"sorttabs_lastactivated": 1591202470.16,
+							"synced": false,
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 2,
+							"tabs_extra_last_activated": 1591202470.16,
+							"tabs_extra_last_activated_sheet_index": 4,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 576.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 3,
 					"type": "text"
 				}
 			]
@@ -1954,7 +2279,7 @@
 	],
 	"incremental_find":
 	{
-		"height": 27.0
+		"height": 24.0
 	},
 	"input":
 	{
@@ -2027,7 +2352,7 @@
 	"project": "seq.sublime-project",
 	"replace":
 	{
-		"height": 50.0
+		"height": 44.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -2036,6 +2361,170 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"pars",
+				"compiler/parser/parser.cpp"
+			],
+			[
+				"scra",
+				"scratch.seq"
+			],
+			[
+				"_stmt",
+				"compiler/parser/ast/transform_stmt.cpp"
+			],
+			[
+				"_expr",
+				"compiler/parser/ast/transform_expr.cpp"
+			],
+			[
+				"trans",
+				"compiler/parser/ast/transform.h"
+			],
+			[
+				"_ctx",
+				"compiler/parser/ast/transform_ctx.h"
+			],
+			[
+				"sli",
+				"stdlib/core/slice.seq"
+			],
+			[
+				"__",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"sc",
+				"scratch.seq"
+			],
+			[
+				"par",
+				"compiler/parser/parser.cpp"
+			],
+			[
+				"slice",
+				"stdlib/core/slice.seq"
+			],
+			[
+				"pick",
+				"stdlib/pickle.seq"
+			],
+			[
+				"list",
+				"stdlib/core/collections/list.seq"
+			],
+			[
+				"contex",
+				"compiler/parser/ast/context.h"
+			],
+			[
+				"gc.seq",
+				"stdlib/core/gc.seq"
+			],
+			[
+				"_Ctx",
+				"compiler/parser/ast/transform_ctx.cpp"
+			],
+			[
+				"parse",
+				"compiler/parser/parser.cpp"
+			],
+			[
+				"types",
+				"compiler/parser/ast/types.h"
+			],
+			[
+				"seq.",
+				"compiler/types/seq.cpp"
+			],
+			[
+				"ptr",
+				"compiler/types/ptr.cpp"
+			],
+			[
+				"init",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"parser",
+				"compiler/parser/parser.cpp"
+			],
+			[
+				"codege",
+				"compiler/parser/ast/codegen.cpp"
+			],
+			[
+				"visit",
+				"compiler/parser/ast/visitor.cpp"
+			],
+			[
+				"ast",
+				"compiler/parser/ast/ast.h"
+			],
+			[
+				"alias",
+				"stdlib/core/aliases.seq"
+			],
+			[
+				"float",
+				"stdlib/core/float.seq"
+			],
+			[
+				"__in",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"func",
+				"compiler/lang/func.h"
+			],
+			[
+				"conte",
+				"compiler/parser/ast/context.h"
+			],
+			[
+				"code",
+				"compiler/parser/ast/codegen.h"
+			],
+			[
+				"_ct",
+				"compiler/parser/ast/codegen_ctx.cpp"
+			],
+			[
+				"str.s",
+				"stdlib/core/str.seq"
+			],
+			[
+				"err",
+				"stdlib/core/err.seq"
+			],
+			[
+				"type",
+				"compiler/parser/ast/types.h"
+			],
+			[
+				"visi",
+				"compiler/parser/ast/visitor.cpp"
+			],
+			[
+				"stmt",
+				"compiler/parser/ast/transform_stmt.cpp"
+			],
+			[
+				"expr",
+				"compiler/parser/ast/transform_expr.cpp"
+			],
+			[
+				"transf",
+				"compiler/parser/ast/transform.h"
+			],
+			[
+				"tra",
+				"compiler/parser/ast/transform.h"
+			],
+			[
+				"__i",
+				"stdlib/core/__init__.seq"
+			],
 			[
 				"format",
 				"compiler/parser/ast/format.cpp"
@@ -2061,128 +2550,40 @@
 				"compiler/parser/ast/codegen.cpp"
 			],
 			[
-				"ast",
-				"compiler/parser/ast/ast.h"
-			],
-			[
 				"_Stmt",
 				"compiler/parser/ast/transform_stmt.cpp"
-			],
-			[
-				"scra",
-				"scratch.seq"
-			],
-			[
-				"trans",
-				"compiler/parser/ast/transform_ctx.cpp"
-			],
-			[
-				"pars",
-				"compiler/parser/parser.cpp"
-			],
-			[
-				"_stmt",
-				"compiler/parser/ast/transform_stmt.cpp"
-			],
-			[
-				"conte",
-				"compiler/parser/ast/context.h"
 			],
 			[
 				"forma",
 				"compiler/parser/ast/format.cpp"
 			],
 			[
-				"codege",
-				"compiler/parser/ast/codegen.cpp"
-			],
-			[
 				"c_stu",
 				"stdlib/core/c_stubs.seq"
-			],
-			[
-				"err",
-				"stdlib/core/err.seq"
-			],
-			[
-				"slice",
-				"stdlib/core/slice.seq"
 			],
 			[
 				"floa",
 				"stdlib/core/float.seq"
 			],
 			[
-				"contex",
-				"compiler/parser/ast/context.cpp"
-			],
-			[
 				"con",
 				"compiler/parser/ast/context.h"
-			],
-			[
-				"par",
-				"compiler/parser/parser.cpp"
-			],
-			[
-				"parser",
-				"compiler/parser/parser.cpp"
-			],
-			[
-				"type",
-				"compiler/parser/ast/types.cpp"
 			],
 			[
 				"context",
 				"compiler/parser/ast/context.cpp"
 			],
 			[
-				"_ctx",
-				"compiler/parser/ast/transform_ctx.h"
-			],
-			[
-				"init",
-				"stdlib/bio/__init__.seq"
-			],
-			[
-				"float",
-				"stdlib/core/float.seq"
-			],
-			[
-				"types",
-				"compiler/parser/ast/types.cpp"
-			],
-			[
 				"scr",
 				"scratch.seq"
-			],
-			[
-				"code",
-				"compiler/parser/ast/codegen.cpp"
-			],
-			[
-				"tra",
-				"compiler/parser/ast/transform.h"
 			],
 			[
 				"types ast",
 				"compiler/parser/ast/types.cpp"
 			],
 			[
-				"_expr",
-				"compiler/parser/ast/transform_expr.cpp"
-			],
-			[
-				"__i",
-				"stdlib/core/__init__.seq"
-			],
-			[
 				"range",
 				"stdlib/core/range.seq"
-			],
-			[
-				"list",
-				"stdlib/core/collections/list.seq"
 			],
 			[
 				"_exp",
@@ -2195,14 +2596,6 @@
 			[
 				"typec",
 				"compiler/parser/ast/typecontext.h"
-			],
-			[
-				"__",
-				"stdlib/core/__init__.seq"
-			],
-			[
-				"sc",
-				"scratch.seq"
 			],
 			[
 				"gwas",
@@ -2479,74 +2872,6 @@
 			[
 				"tuti",
 				"parser/typecheck/tutil.ml"
-			],
-			[
-				"tinf",
-				"parser/typecheck/tinference.ml"
-			],
-			[
-				"texpr",
-				"parser/typecheck/texpr.ml"
-			],
-			[
-				"dune",
-				"parser/dune"
-			],
-			[
-				"tctx",
-				"parser/typecheck/tctx.ml"
-			],
-			[
-				"ocam",
-				"compiler/util/ocaml.cpp"
-			],
-			[
-				"ver",
-				"aldy/version.py"
-			],
-			[
-				"versi",
-				"aldy/version.py"
-			],
-			[
-				"setu",
-				"setup.py"
-			],
-			[
-				"com",
-				"aldy/common.py"
-			],
-			[
-				"test_fu",
-				"aldy/tests/test_full.py"
-			],
-			[
-				"cover",
-				"aldy/coverage.py"
-			],
-			[
-				".tra",
-				".travis.yml"
-			],
-			[
-				"conf",
-				"aldy/tests/conftest.py"
-			],
-			[
-				"cov",
-				"aldy/coverage.py"
-			],
-			[
-				"ref",
-				"aldy/refiner.py"
-			],
-			[
-				"cmake",
-				"CMakeLists.txt"
-			],
-			[
-				"cmakel",
-				"googletest-download/CMakeLists.txt"
 			]
 		],
 		"width": 0.0
@@ -2576,8 +2901,8 @@
 	"show_minimap": true,
 	"show_open_files": true,
 	"show_tabs": true,
-	"side_bar_visible": true,
-	"side_bar_width": 181.0,
+	"side_bar_visible": false,
+	"side_bar_width": 172.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{

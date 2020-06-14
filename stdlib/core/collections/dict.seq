@@ -235,8 +235,8 @@ class dict[K,V]:
                 i += 1
 
             if self._n_buckets < new_n_buckets:
-                self._keys = ptr[K](_gc.realloc(cobj(self._keys), new_n_buckets * _gc.sizeof[K]()))
-                self._vals = ptr[V](_gc.realloc(cobj(self._vals), new_n_buckets * _gc.sizeof[V]()))
+                self._keys = ptr[K](_gc.realloc(self._keys.as_byte(), new_n_buckets * _gc.sizeof[K]()))
+                self._vals = ptr[V](_gc.realloc(self._vals.as_byte(), new_n_buckets * _gc.sizeof[V]()))
 
         if j:
             j = 0
@@ -268,8 +268,8 @@ class dict[K,V]:
                 j += 1
 
             if self._n_buckets > new_n_buckets:
-                self._keys = ptr[K](_gc.realloc(cobj(self._keys), new_n_buckets * _gc.sizeof[K]()))
-                self._vals = ptr[V](_gc.realloc(cobj(self._vals), new_n_buckets * _gc.sizeof[V]()))
+                self._keys = ptr[K](_gc.realloc(self._keys.as_byte(), new_n_buckets * _gc.sizeof[K]()))
+                self._vals = ptr[V](_gc.realloc(self._vals.as_byte(), new_n_buckets * _gc.sizeof[V]()))
 
             self._flags = new_flags
             self._n_buckets = new_n_buckets

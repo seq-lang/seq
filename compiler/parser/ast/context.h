@@ -100,6 +100,9 @@ public: /* Realizations */
                      std::unordered_map<std::string, ClassRealization>>
       classRealizations;
 
+  std::unordered_map<std::string, std::pair<types::TypePtr, std::string>>
+      realizations;
+
 public:
   std::vector<ClassRealization> getClassRealizations(const std::string &name);
   std::vector<FuncRealization> getFuncRealizations(const std::string &name);

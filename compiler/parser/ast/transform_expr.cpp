@@ -477,7 +477,7 @@ void TransformVisitor::fixExprName(ExprPtr &e, const string &newName) {
   else if (auto i = CAST(e, DotExpr))
     i->member = newName;
   else {
-    DBG("fixing {}", *e);
+    // DBG("fixing {}", *e);
     assert(false);
   }
 }
@@ -730,6 +730,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
   if (!e)
     e = transform(expr->expr, true);
   forceUnify(expr->expr.get(), e->getType());
+  // TODO: optional promition in findBestCall
   if (e->isType()) { // Replace constructor with appropriate calls
     auto c = e->getType()->getClass();
     assert(c);
@@ -737,13 +738,18 @@ void TransformVisitor::visit(const CallExpr *expr) {
       vector<TypePtr> targs;
       for (auto &a : args)
         targs.push_back(a.value->getType());
-      if (auto m = findBestCall(c, "__new__", targs, true, e->getType())) {
-        e = N<IdExpr>(m->realizationInfo->name);
-        e->setType(ctx->instantiate(getSrcInfo(), m, c));
-      } else {
-        error("cannot find '__new__' in {} with {} -> {}", c->toString(),
-              v2s(targs), e->getType()->toString());
-      }
+      resultExpr =
+          transform(N<CallExpr>(N<DotExpr>(move(e), "__new__"), move(args)));
+      return;
+      // special treatment due to the
+      // if (auto m = findBestCall(c, "__new__", targs, true, e->getType())) {
+      //   DBG("--- {} {}", m->realizationInfo->name, m->realizeString());
+      //   e = N<IdExpr>(m->realizationInfo->name);
+      //   e->setType(ctx->instantiate(getSrcInfo(), m, c));
+      // } else {
+      //   error("cannot find '__new__' in {} with {} -> {}", c->toString(),
+      //         v2s(targs), e->getType()->toString());
+      // }
     } else {
       string var = getTemporaryVar("typ");
       /// TODO: assumes that a class cannot have multiple __new__ magics
@@ -764,6 +770,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
                                         : ctx->addUnbound(getSrcInfo()));
     return;
   }
+  // DBG("{} |- {}", *e, e->getType()->toString());
 
   vector<CallExpr::Arg> reorderedArgs;
   vector<int> newPending;

@@ -119,9 +119,6 @@ class TypeContext : public Context<TypeItem::Item> {
   /// Indicates if a return was seen (to account for procedures)
   bool wasReturnTypeSet;
 
-  std::unordered_map<std::string, std::shared_ptr<TypeItem::Item>>
-      realizationItems;
-
 public:
   TypeContext(const std::string &filename,
               std::shared_ptr<RealizationContext> realizations,

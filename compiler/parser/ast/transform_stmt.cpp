@@ -96,6 +96,18 @@ void TransformVisitor::visit(const ExprStmt *stmt) {
   resultStmt = N<ExprStmt>(transform(stmt->expr));
 }
 
+bool TransformVisitor::wrapOptional(TypePtr lt, ExprPtr &rhs) {
+  auto lc = lt->getClass();
+  auto rc = rhs->getType()->getClass();
+  if (lc && lc->name == "optional" && rc && rc->name != "optional") {
+    rhs = transform(Nx<CallExpr>(rhs.get(), Nx<IdExpr>(rhs.get(), "optional"),
+                                 rhs->clone()));
+    forceUnify(lc, rhs->getType());
+    return true;
+  }
+  return false;
+}
+
 StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
                                         const Expr *type, bool force) {
   if (auto l = dynamic_cast<const IndexExpr *>(lhs)) {
@@ -117,26 +129,14 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     auto s = Nx<AssignStmt>(lhs, l->clone(), transform(rhs, true),
                             move(typExpr), false, force);
 
-    auto fixOptional = [&](ClassTypePtr lc) {
-      auto rc = s->rhs->getType()->getClass();
-      if (lc && lc->name == "optional" && rc && rc->name != "optional") {
-        auto nr = transform(
-            Nx<CallExpr>(rhs, Nx<IdExpr>(rhs, "optional"), rhs->clone()));
-        s->rhs = move(nr);
-        forceUnify(lc, s->rhs->getType());
-        return true;
-      }
-      return false;
-    };
-
     auto t = processIdentifier(ctx, l->value);
     if (!typ && t && !t->getImport()) {
-      if (!fixOptional(t->getType()->getClass()))
+      if (!wrapOptional(t->getType(), s->rhs))
         s->lhs->setType(forceUnify(s->rhs.get(), t->getType()));
       return Nx<UpdateStmt>(lhs, move(s->lhs), move(s->rhs));
     }
     if (typ && typ->getClass()) {
-      if (!fixOptional(typ->getClass()))
+      if (!wrapOptional(typ, s->rhs))
         forceUnify(typ, s->rhs->getType());
     }
     if (s->rhs->isType())
@@ -593,10 +593,11 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
-    ctx->addFunc(
-        format("{}{}", ctx->getBase(),
-               stmt->name.second != "" ? stmt->name.second : stmt->name.first),
-        t);
+    if (!ctx->getBaseType())
+      ctx->addFunc(format("{}", // ctx->getBase(),
+                          stmt->name.second != "" ? stmt->name.second
+                                                  : stmt->name.first),
+                   t);
     ctx->addFunc(canonicalName, t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
         t, N<FunctionStmt>(canonicalName, nullptr, vector<Param>(), move(args),
@@ -721,14 +722,16 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
     // DBG("* [function] {} :- {}", canonicalName, *t);
-    ctx->addFunc(format("{}{}", ctx->getBase(), stmt->name), t);
+    if (!ctx->getBaseType())
+      ctx->addFunc(format("{}", /*ctx->getBase(),*/ stmt->name), t);
     ctx->addFunc(canonicalName, t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
         t, N<FunctionStmt>(canonicalName, nullptr, CL(stmt->generics),
                            move(args), stmt->suite, stmt->attributes));
   } else {
-    ctx->addFunc(format("{}{}", ctx->getBase(), stmt->name),
-                 ctx->getRealizations()->funcASTs[canonicalName].first);
+    if (!ctx->getBaseType())
+      ctx->addFunc(format("{}", /*ctx->getBase(),*/ stmt->name),
+                   ctx->getRealizations()->funcASTs[canonicalName].first);
     ctx->addFunc(canonicalName,
                  ctx->getRealizations()->funcASTs[canonicalName].first);
   }
@@ -1161,6 +1164,11 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
     prevSize = newUnbounds;
     ctx->popBlock();
   }
+  // Last pass; TODO: detect if it is needed...
+  ctx->addBlock();
+  TransformVisitor v(ctx);
+  result = v.transform(result);
+  ctx->popBlock();
   return result;
 }
 

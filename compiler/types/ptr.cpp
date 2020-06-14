@@ -35,12 +35,20 @@ void types::PtrType::initOps() {
        true},
 
       {"__new__",
-       {PtrType::get(Base)},
+       {PtrType::get(Byte)},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
        },
        true},
+
+      {"as_byte",
+       {},
+       PtrType::get(Byte),
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+       },
+       false},
 
       {"__int__",
        {},

@@ -35,11 +35,13 @@ def _read_raw(jar: Jar, p: cobj, n: int):
         n -= b
 
 def _write[T](jar: Jar, x: T):
-    _write_raw(jar, cobj(__ptr__(x)), _gc.sizeof[T]())
+    y = __ptr__(x)
+    _write_raw(jar, y.as_byte(), _gc.sizeof[T]())
 
 def _read[T](jar: Jar):
     x = T()
-    _read_raw(jar, cobj(__ptr__(x)), _gc.sizeof[T]())
+    y = __ptr__(x)
+    _read_raw(jar, y.as_byte(), _gc.sizeof[T]())
     return x
 
 # Extend core types to allow pickling

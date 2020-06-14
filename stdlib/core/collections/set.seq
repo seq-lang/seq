@@ -292,7 +292,7 @@ class set[K]:
                 i += 1
 
             if self._n_buckets < new_n_buckets:
-                self._keys = ptr[K](_gc.realloc(cobj(self._keys), new_n_buckets * _gc.sizeof[K]()))
+                self._keys = ptr[K](_gc.realloc(self._keys.as_byte(), new_n_buckets * _gc.sizeof[K]()))
 
         if j:
             j = 0
@@ -321,7 +321,7 @@ class set[K]:
                 j += 1
 
             if self._n_buckets > new_n_buckets:
-                self._keys = ptr[K](_gc.realloc(cobj(self._keys), new_n_buckets * _gc.sizeof[K]()))
+                self._keys = ptr[K](_gc.realloc(self._keys.as_byte(), new_n_buckets * _gc.sizeof[K]()))
 
             self._flags = new_flags
             self._n_buckets = new_n_buckets

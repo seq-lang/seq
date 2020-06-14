@@ -68,6 +68,8 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
                                   bool failOnMultiple = false,
                                   types::TypePtr retType = nullptr);
 
+  bool wrapOptional(types::TypePtr lt, ExprPtr &rhs);
+
   class CaptureVisitor : public WalkVisitor {
     std::shared_ptr<TypeContext> ctx;
 

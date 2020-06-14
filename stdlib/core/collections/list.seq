@@ -212,7 +212,7 @@ class list[T]:
         len0 = len(self)
         new_cap = n * len0
         if self.arr.len < new_cap:
-            p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
+            p = ptr[T](_gc.realloc(self.arr.ptr.as_byte(), new_cap * _gc.sizeof[T]()))
             self.arr = array[T](p, new_cap)
 
         idx = len0
@@ -325,7 +325,7 @@ class list[T]:
         raise IndexError("slice step cannot be zero")
 
     def _resize(self: list[T], new_cap: int):
-        p = ptr[T](_gc.realloc(cobj(self.arr.ptr), new_cap * _gc.sizeof[T]()))
+        p = ptr[T](_gc.realloc(self.arr.ptr.as_byte(), new_cap * _gc.sizeof[T]()))
         self.arr = array[T](p, new_cap)
 
     def _resize_if_full(self: list[T]):

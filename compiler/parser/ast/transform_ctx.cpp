@@ -47,9 +47,15 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
     t = stdlib->find(name, false);
   if (t)
     return t;
-  auto it = realizationItems.find(name);
-  if (it != realizationItems.end())
-    return it->second;
+
+  auto r = const_cast<TypeContext *>(this)->getRealizations()->realizations;
+  auto it = r.find(name);
+  if (it != r.end()) {
+    if (CAST(it->second.first, types::ClassType))
+      return make_shared<TypeItem::Class>(it->second.first, it->second.second);
+    else
+      return make_shared<TypeItem::Func>(it->second.first, it->second.second);
+  }
   return nullptr;
 }
 
@@ -57,14 +63,15 @@ void TypeContext::addRealization(types::TypePtr type) {
   assert(type->canRealize());
   auto name = type->realizeString();
 
-  if (realizationItems.find(name) != realizationItems.end()) {
+  if (getRealizations()->realizations.find(name) !=
+      getRealizations()->realizations.end()) {
     DBG("whoops {} -> {}", name, *type);
     assert(false);
   }
   if (auto f = CAST(type, types::FuncType))
-    realizationItems[name] = make_shared<TypeItem::Func>(type, getBase());
+    getRealizations()->realizations[name] = {type, getBase()};
   else
-    realizationItems[name] = make_shared<TypeItem::Class>(type, getBase());
+    getRealizations()->realizations[name] = {type, getBase()};
 }
 
 types::TypePtr TypeContext::findInternal(const string &name) const {
