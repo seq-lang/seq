@@ -52,6 +52,12 @@ template <typename T> string v2s(const vector<T> &targs) {
     args.push_back(t->toString());
   return join(args, ", ");
 }
+template <typename T> string v2s(const vector<pair<string, T>> &targs) {
+  vector<string> args;
+  for (auto &t : targs)
+    args.push_back(t.second->toString());
+  return join(args, ", ");
+}
 
 ExprPtr TransformVisitor::conditionalMagic(const ExprPtr &expr,
                                            const string &type,
@@ -60,7 +66,7 @@ ExprPtr TransformVisitor::conditionalMagic(const ExprPtr &expr,
   if (e->getType()->getUnbound())
     return e;
   if (auto c = e->getType()->getClass()) {
-    if (c->name == type)
+    if (c->name == "#" + type)
       return e;
     return transform(
         Nx<CallExpr>(e.get(), Nx<DotExpr>(e.get(), expr->clone(), magic)));
@@ -97,13 +103,13 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
   expr->accept(v);
   // __level__--;
   // DBG("  {} :- {} ]", *v.resultExpr,
-  // v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
+  //     v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
 
-  // if (v.resultExpr && v.resultExpr->getType() &&
-  //     v.resultExpr->getType()->canRealize()) {
-  //   if (auto c = v.resultExpr->getType()->getClass())
-  //     realizeType(c);
-  // }
+  if (allowTypes && v.resultExpr && v.resultExpr->getType() &&
+      v.resultExpr->getType()->canRealize()) {
+    if (auto c = v.resultExpr->getType()->getClass())
+      realizeType(c);
+  }
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
     error("unexpected type expression");
   return move(v.resultExpr);
@@ -214,10 +220,12 @@ string TransformVisitor::patchIfRealizable(TypePtr typ, bool isClass) {
     if (isClass && typ->canRealize()) {
       auto r = realizeType(typ->getClass());
       forceUnify(typ, r.type);
+      // DBG("patching ty {} -> {}", typ->toString(), r.fullName);
       return r.fullName;
     } else if (typ->getFunc() && typ->getFunc()->realizationInfo) {
       auto r = realizeFunc(typ->getFunc());
       forceUnify(typ, r.type);
+      // DBG("patching fn {} -> {}", typ->toString(), r.fullName);
       return r.fullName;
     }
   }
@@ -226,10 +234,6 @@ string TransformVisitor::patchIfRealizable(TypePtr typ, bool isClass) {
 
 void TransformVisitor::visit(const IdExpr *expr) {
   resultExpr = expr->clone();
-  if (expr->value == "tuple" || expr->value == "function") {
-    assert(expr->getType());
-    return;
-  }
   auto val = processIdentifier(ctx, expr->value);
   if (!val)
     error("identifier '{}' not found", expr->value);
@@ -254,13 +258,11 @@ void TransformVisitor::visit(const UnpackExpr *expr) {
   resultExpr = transform(N<CallExpr>(N<IdExpr>("list"), expr->what->clone()));
 }
 
+// Transformed
 void TransformVisitor::visit(const TupleExpr *expr) {
-  auto e = N<TupleExpr>(transform(expr->items));
-  vector<TypePtr> args;
-  for (auto &i : e->items)
-    args.push_back(i->getType());
-  e->setType(forceUnify(expr, T<ClassType>("tuple", true, args)));
-  resultExpr = move(e);
+  auto name = generateVariardicStub("tuple", expr->items.size());
+  resultExpr = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"),
+                                     transform(expr->items)));
 }
 
 // Transformed
@@ -428,6 +430,10 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
     e->setType(forceUnify(expr, ctx->findInternal("bool")));
     resultExpr = move(e);
   } else if (expr->op == "is") {
+    // check is Type or raw!
+    // auto l = transform(expr->lexpr), r = transform(expr->rexpr);
+    // if (r->isType()) {
+    // }
     auto e =
         N<BinaryExpr>(transform(expr->lexpr), expr->op, transform(expr->rexpr));
     e->setType(forceUnify(expr, ctx->findInternal("bool")));
@@ -455,11 +461,12 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
       auto magic = mi->second;
       auto lc = le->getType()->getClass(), rc = re->getType()->getClass();
       assert(lc && rc);
-      if (findBestCall(lc, format("__{}__", magic), {lc, rc})) {
+      if (findBestCall(lc, format("__{}__", magic), {{"", lc}, {"", rc}})) {
         if (expr->inPlace &&
-            findBestCall(lc, format("__i{}__", magic), {lc, rc}))
+            findBestCall(lc, format("__i{}__", magic), {{"", lc}, {"", rc}}))
           magic = "i" + magic;
-      } else if (findBestCall(rc, format("__r{}__", magic), {rc, lc})) {
+      } else if (findBestCall(rc, format("__r{}__", magic),
+                              {{"", rc}, {"", lc}})) {
         magic = "r" + magic;
       } else {
         error("cannot find magic '{}' for {}", magic, lc->toString());
@@ -549,24 +556,15 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   };
 
   // special cases: tuples and functions
-  if (auto i = CAST(expr->expr, IdExpr)) {
+  ExprPtr e = nullptr;
+  if (auto i = CAST(expr->expr, IdExpr))
     if (i->value == "tuple" || i->value == "function") {
-      if (auto t = CAST(expr->index, TupleExpr))
-        for (auto &i : t->items)
-          parseGeneric(i);
-      else
-        parseGeneric(expr->index);
-      resultExpr = N<IdExpr>(i->value);
-      resultExpr->markType();
-      if (i->value == "tuple")
-        resultExpr->setType(T<ClassType>("tuple", true, generics));
-      else
-        resultExpr->setType(T<FuncType>(generics));
-      return;
+      auto t = CAST(expr->index, TupleExpr);
+      auto name = generateVariardicStub(i->value, t ? t->items.size() : 1);
+      e = transform(N<IdExpr>(name), true);
     }
-  }
-
-  auto e = transform(expr->expr, true);
+  if (!e)
+    e = transform(expr->expr, true);
   // Type or function realization (e.g. dict[type1, type2])
   if (e->isType() ||
       (e->getType()->getFunc() && e->getType()->getFunc()->realizationInfo)) {
@@ -594,7 +592,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     resultExpr->setType(t);
   } else {
     if (auto c = e->getType()->getClass())
-      if (c->name == "tuple") {
+      if (c->name.substr(0, 8) == "__tuple_") {
         if (auto ii = CAST(transform(expr->index), IntExpr)) {
           resultExpr = transform(
               N<TupleIndexExpr>(expr->expr->clone(), std::stoll(ii->value)));
@@ -609,7 +607,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
 void TransformVisitor::visit(const TupleIndexExpr *expr) {
   auto e = transform(expr->expr);
   auto c = e->getType()->getClass();
-  assert(c->name == "tuple");
+  assert(c->name.substr(0, 8) == "__tuple_");
   if (expr->index < 0 || expr->index >= c->recordMembers.size())
     error("tuple index out of range (expected 0..{}, got {})",
           c->recordMembers.size(), expr->index);
@@ -627,22 +625,68 @@ void TransformVisitor::visit(const StackAllocExpr *expr) {
   resultExpr->setType(forceUnify(expr, t));
 }
 
-FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
-                                           const vector<TypePtr> &args,
-                                           bool failOnMultiple,
-                                           TypePtr retType) {
-  if (c->name == "tuple" && member == "__str__" && args.size() == 1) {
-    auto f = make_shared<FuncType>(
-        vector<TypePtr>{ctx->findInternal("str"), args[0]});
-    f->realizationInfo = make_shared<FuncType::RealizationInfo>(
-        "$tuple_str", vector<int>{0},
-        vector<FuncType::RealizationInfo::Arg>{{"", args[0], ""}});
-    return f;
-  }
+string TransformVisitor::generateVariardicStub(const string &name, int len) {
+  // TODO: handle name clashes (add special name character?)
+  static unordered_set<string> cache;
+  auto typeName = fmt::format("__{}_{}", name, len);
+  assert(len >= 1);
+  if (cache.find(typeName) == cache.end()) {
+    cache.insert(typeName);
+    vector<string> generics, args;
+    for (int i = 1; i <= len; i++) {
+      generics.push_back(format("T{}", i));
+      args.push_back(format("a{0}: T{0}", i));
+    }
+    auto code = format("type {}[{}]({})", typeName, join(generics, ", "),
+                       join(args, ", "));
 
+    if (name == "tuple") {
+      ;
+    } else if (name == "function") {
+      code = format("@internal\n{0}\n  @internal\n  def __str__(self: "
+                    "function[{1}]) -> str: pass\n "
+                    " @internal\n  "
+                    "def __new__(what: ptr[byte]) -> function[{1}]: pass\n",
+                    code, join(generics, ", "));
+    } else {
+      error("invalid variardic type");
+    }
+    DBG("generating {}...", typeName);
+    auto a = parseCode(ctx->getFilename(), code);
+    auto i = ctx->getImports()->getImport("");
+    auto stmtPtr = dynamic_cast<SuiteStmt *>(i->statements.get());
+    assert(stmtPtr);
+    stmtPtr->stmts.push_back(TransformVisitor(i->tctx).transform(a));
+    // i->tctx->dump();
+    // auto c = i->tctx->find(ctxName);
+    // assert(c);
+    // i->tctx->add(typeName, c);
+    // ctx->getImports()->getImport("")->tctx->add(typeName,
+    // ctx->find(ctxName)); DBG("  ? lookup? ... {}", ctx->find(typeName));
+  }
+  return typeName;
+}
+
+FuncTypePtr
+TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
+                               const vector<pair<string, TypePtr>> &args,
+                               bool failOnMultiple, TypePtr retType) {
   auto m = ctx->getRealizations()->findMethod(c->name, member);
   if (!m)
     return nullptr;
+
+  if (m->size() == 1) // works
+    return (*m)[0];
+
+  // TODO: For now, overloaded functions are only possible in magic methods
+  // Another assomption is that magic methods of interest have no default
+  // arguments or reordered arguments...
+  if (member.substr(0, 2) != "__" || member.substr(member.size() - 2) != "__") {
+    error("overloaded non-magic method...");
+  }
+  for (auto &a : args)
+    if (!a.first.empty())
+      error("[todo] named magic call");
 
   vector<pair<int, int>> scores;
   for (int i = 0; i < m->size(); i++) {
@@ -653,7 +697,7 @@ FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
       continue;
     for (int j = 0; j < args.size(); j++) {
       Unification us;
-      int u = args[j]->unify(mt->args[j + 1], us);
+      int u = args[j].second->unify(mt->args[j + 1], us);
       us.undo();
       if (u < 0) {
         s = -1;
@@ -712,11 +756,11 @@ void TransformVisitor::visit(const CallExpr *expr) {
   if (auto d = CAST(expr->expr, DotExpr)) {
     auto dotlhs = transform(d->expr, true);
     if (auto c = dotlhs->getType()->getClass()) {
-      vector<TypePtr> targs;
+      vector<pair<string, TypePtr>> targs;
       if (!dotlhs->isType())
-        targs.push_back(c);
+        targs.push_back({"", c});
       for (auto &a : args)
-        targs.push_back(a.value->getType());
+        targs.push_back({a.name, a.value->getType()});
       if (auto m = findBestCall(c, d->member, targs, true)) {
         if (!dotlhs->isType())
           args.insert(args.begin(), {"", move(dotlhs)});
@@ -815,11 +859,11 @@ void TransformVisitor::visit(const CallExpr *expr) {
           reorderedArgs.push_back({"", move(it->second)});
           namedArgs.erase(it);
         } else if (f->realizationInfo->args[f->realizationInfo->pending[i]]
-                       .defaultVar.size()) {
+                       .defaultValue) {
           reorderedArgs.push_back(
-              {"", transform(N<IdExpr>(
+              {"", transform(
                        f->realizationInfo->args[f->realizationInfo->pending[i]]
-                           .defaultVar))});
+                           .defaultValue)});
         } else {
           error("argument '{}' missing",
                 f->realizationInfo->args[f->realizationInfo->pending[i]].name);
@@ -941,11 +985,19 @@ void TransformVisitor::visit(const DotExpr *expr) {
           static_cast<IdExpr *>(resultExpr.get())->value = newName;
         return;
       } else { // cast y.foo to CLS.foo(y, ...)
-        auto f = ctx->instantiate(getSrcInfo(), (*m)[0], c)->getFunc();
+        auto f = (*m)[0];
         vector<ExprPtr> args;
         args.push_back(move(lhs));
-        for (int i = 0; i < f->args.size() - 2; i++)
+        for (int i = 0; i < std::max(1, (int)f->args.size() - 2); i++)
           args.push_back(N<EllipsisExpr>());
+
+        auto ast = dynamic_cast<FunctionStmt *>(
+            ctx->getRealizations()->getAST(f->realizationInfo->name).get());
+        assert(ast);
+        if (find(ast->attributes.begin(), ast->attributes.end(), "property") !=
+            ast->attributes.end()) {
+          args.pop_back();
+        }
         resultExpr = transform(
             N<CallExpr>(N<IdExpr>((*m)[0]->realizationInfo->name), move(args)));
         return;

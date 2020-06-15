@@ -213,12 +213,5 @@ def _make_assert_error(msg: str) -> AssertionError:
     return AssertionError(msg)
 
 @builtin
-def _test_failed(file: str, line: int, msg: str):
-    s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
-    if msg:
-        s += ": " + msg
-    print s
-
-@builtin
 def _handle_exit(e: SystemExit):
     _C.exit(e.status)

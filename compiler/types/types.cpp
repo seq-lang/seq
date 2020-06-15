@@ -300,6 +300,8 @@ Value *types::Type::boolValue(Value *self, BasicBlock *&block, TryCatch *tc) {
 }
 
 Value *types::Type::strValue(Value *self, BasicBlock *&block, TryCatch *tc) {
+  if (getName() == "str")
+    return self;
   if (!magicOut("__str__", {})->is(types::Str))
     throw exc::SeqException("the output type of __str__ is not string");
 

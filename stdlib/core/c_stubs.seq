@@ -1,4 +1,5 @@
 # Seq runtime functions
+cimport seq_print(str)
 cimport seq_alloc(int) -> cobj
 cimport seq_alloc_atomic(int) -> cobj
 cimport seq_realloc(cobj, int) -> cobj

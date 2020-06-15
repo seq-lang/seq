@@ -199,7 +199,7 @@ std::vector<Expr *> Func::rectifyCallArgs(std::vector<Expr *> args,
 }
 
 void Func::setEnclosingFunc(BaseFunc *parentFunc) {
-  auto p = dynamic_cast<seq::Func*>(parentFunc);
+  auto p = dynamic_cast<seq::Func *>(parentFunc);
   assert(p);
   this->parentFunc = p;
 }

@@ -402,12 +402,18 @@ void CodegenVisitor::visit(const ImportStmt *stmt) {
         stmt->from.second == "" ? stmt->from.first : stmt->from.second, file);
   } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
     for (auto &i : *(import->lctx))
-      ctx->add(i.first, i.second.top());
+      ctx->add(i.first, i.second.front());
   } else
     for (auto &w : stmt->what) {
-      auto c = import->lctx->find(w.first);
-      assert(c);
-      ctx->add(w.second == "" ? w.first : w.second, c);
+      // TODO: those should have been already resolved  ... ?
+      // for (auto i : *(import->lctx)) {
+      //   if (i.first.substr(0, w.first.size() + 1) == w.first + ".")
+      //     ctx->add(i.first, i.second.front());
+      // }
+      // auto c = import->lctx->find(w.first);
+      // DBG("finding {} in {}", w.first, stmt->from.first);
+      // assert(c);
+      // ctx->add(w.second == "" ? w.first : w.second, c);
     }
 }
 
@@ -637,10 +643,13 @@ seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
       names.push_back(m.first);
       types.push_back(realizeType(m.second));
     }
-    if (t->isRecord())
-      handle = seq::types::RecordType::get(types, names,
-                                           t->name == "tuple" ? "" : t->name);
-    else {
+    if (t->isRecord()) {
+      vector<string> x;
+      for (auto &t : types)
+        x.push_back(t->getName());
+      DBG("==> {} / {}", join(x, ","), join(names, ", "));
+      handle = seq::types::RecordType::get(types, names, t->name);
+    } else {
       auto cls = seq::types::RefType::get(t->name);
       cls->setContents(seq::types::RecordType::get(types, names, ""));
       cls->setDone();

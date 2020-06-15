@@ -18,7 +18,8 @@ namespace ast {
 
 struct RealizationContext {
   struct ClassBody {
-    std::unordered_map<std::string, types::TypePtr> members;
+    // Needs vector as the order is important
+    std::vector<std::pair<std::string, types::TypePtr>> members;
     std::unordered_map<std::string, std::vector<types::FuncTypePtr>> methods;
   };
   struct FuncRealization {
@@ -137,7 +138,7 @@ public:
 
 template <typename T>
 class Context : public std::enable_shared_from_this<Context<T>> {
-  typedef std::unordered_map<std::string, std::stack<std::shared_ptr<T>>> Map;
+  typedef std::unordered_map<std::string, std::deque<std::shared_ptr<T>>> Map;
 
 protected:
   Map map;
@@ -146,7 +147,7 @@ protected:
 
   std::shared_ptr<T> find(const std::string &name) const {
     auto it = map.find(name);
-    return it != map.end() ? it->second.top() : nullptr;
+    return it != map.end() ? it->second.front() : nullptr;
   }
 
 public:
@@ -156,14 +157,20 @@ public:
   void add(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
     // DBG("add {}", name);
-    map[name].push(var);
+    map[name].push_front(var);
     stack.front().push_back(name);
+  }
+  void addToplevel(const std::string &name, std::shared_ptr<T> var) {
+    assert(!name.empty());
+    // DBG("add {}", name);
+    map[name].push_back(var);
+    stack.back().push_back(name); // add to the latest "level"
   }
   void addBlock() { stack.push_front(std::vector<std::string>()); }
   void removeFromMap(const std::string &name) {
     auto i = map.find(name);
     assert(!(i == map.end() || !i->second.size()));
-    i->second.pop();
+    i->second.pop_front();
     if (!i->second.size())
       map.erase(name);
   }

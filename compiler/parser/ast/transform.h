@@ -62,13 +62,13 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
 
   StmtPtr addMethod(Stmt *s, const std::string &canonicalName,
                     const std::vector<types::GenericType::Generic> &implicits);
-  types::FuncTypePtr findBestCall(types::ClassTypePtr c,
-                                  const std::string &member,
-                                  const std::vector<types::TypePtr> &args,
-                                  bool failOnMultiple = false,
-                                  types::TypePtr retType = nullptr);
+  types::FuncTypePtr
+  findBestCall(types::ClassTypePtr c, const std::string &member,
+               const std::vector<std::pair<std::string, types::TypePtr>> &args,
+               bool failOnMultiple = false, types::TypePtr retType = nullptr);
 
   bool wrapOptional(types::TypePtr lt, ExprPtr &rhs);
+  std::string generateVariardicStub(const std::string &name, int len);
 
   class CaptureVisitor : public WalkVisitor {
     std::shared_ptr<TypeContext> ctx;

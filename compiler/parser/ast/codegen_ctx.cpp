@@ -165,9 +165,9 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
   stdlib->lctx = make_shared<LLVMContext>(stdlib->filename, realizations,
                                           imports, block, base, nullptr);
 
-  auto pod = vector<string>{"void",  "bool", "byte",    "int",
-                            "float", "ptr",  "generic", "optional",
-                            "Int",   "UInt", "tuple",   "function"};
+  // auto pod = vector<string>{"void",  "bool", "byte",    "int",
+  // "float", "ptr",  "generic", "optional",
+  // "Int",   "UInt", "tuple",   "function"};
   CodegenVisitor c(stdlib->lctx);
   // for (auto &p : pod)
   // c.visitMethods(p);

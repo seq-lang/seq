@@ -235,7 +235,7 @@ void TransformVisitor::visit(const AssignMemberStmt *stmt) {
   auto lh = transform(stmt->lhs), rh = transform(stmt->rhs);
   auto c = lh->getType()->getClass();
   if (c && c->isRecord())
-    error("records and tuples are read-only ^ {} , {}", *c, *lh);
+    error("records are read-only ^ {} , {}", *c, *lh);
   // find a member
   auto mm = ctx->getRealizations()->findMember(c->name, stmt->member);
   forceUnify(ctx->instantiate(getSrcInfo(), mm, c), rh->getType());
@@ -257,7 +257,9 @@ void TransformVisitor::visit(const DelStmt *stmt) {
 
 // Transformation
 void TransformVisitor::visit(const PrintStmt *stmt) {
-  resultStmt = N<PrintStmt>(conditionalMagic(stmt->expr, "str", "__str__"));
+  resultStmt =
+      N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("_C"), "seq_print"),
+                              conditionalMagic(stmt->expr, "str", "__str__")));
 }
 
 // TODO check if in function!
@@ -495,7 +497,7 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
     /// TODO switch to map maybe to make this more efficient?
     for (auto i : *(import->tctx)) {
       if (i.first.substr(0, n.size()) == n)
-        ctx->add(i.first, i.second.top());
+        ctx->add(i.first, i.second.front());
     }
   };
 
@@ -506,7 +508,7 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
     if (stmt->what[0].second != "")
       error("cannot rename star-import");
     for (auto &i : *(import->tctx))
-      ctx->add(i.first, i.second.top());
+      ctx->add(i.first, i.second.front());
   } else {
     for (auto &w : stmt->what) {
       auto c = import->tctx->find(w.first);
@@ -584,7 +586,7 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
         error("default arguments not supported here");
       args.push_back({a.name, transformType(a.type), nullptr});
       argTypes.push_back(args.back().type->getType());
-      realizationArgs.push_back({a.name, argTypes.back(), ""});
+      realizationArgs.push_back({a.name, argTypes.back(), nullptr});
       pending.push_back(pending.size());
     }
     auto t = make_shared<FuncType>(argTypes);
@@ -696,12 +698,14 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
           {a.type ? t->getType() : ctx->addUnbound(getSrcInfo(), false)});
       args.push_back({a.name, move(t)});
       string deflt = "";
-      if (a.deflt) {
-        deflt =
-            getTemporaryVar(format("{}.default.{}", canonicalName, a.name), 0);
-        prepend(N<AssignStmt>(N<IdExpr>(deflt), a.deflt->clone()));
-      }
-      realizationArgs.push_back({a.name, argTypes.back(), deflt});
+      // if (a.deflt) {
+      //   deflt =
+      //       getTemporaryVar(format("{}.default.{}", canonicalName, a.name),
+      //       0);
+      //   prepend(N<AssignStmt>(N<IdExpr>(deflt), a.deflt->clone()));
+      // }
+      realizationArgs.push_back(
+          {a.name, argTypes.back(), a.deflt ? a.deflt->clone() : nullptr});
       pending.push_back(pending.size());
     }
     ctx->decreaseLevel();
@@ -721,13 +725,20 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
-    // DBG("* [function] {} :- {}", canonicalName, *t);
     if (!ctx->getBaseType())
       ctx->addFunc(format("{}", /*ctx->getBase(),*/ stmt->name), t);
     ctx->addFunc(canonicalName, t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
         t, N<FunctionStmt>(canonicalName, nullptr, CL(stmt->generics),
                            move(args), stmt->suite, stmt->attributes));
+
+    if (std::find(stmt->attributes.begin(), stmt->attributes.end(),
+                  "builtin") != stmt->attributes.end()) {
+      if (!t->canRealize())
+        error("builtins must be realizable");
+      realizeFunc(dynamic_pointer_cast<types::FuncType>(
+          ctx->instantiate(getSrcInfo(), t)));
+    }
   } else {
     if (!ctx->getBaseType())
       ctx->addFunc(format("{}", /*ctx->getBase(),*/ stmt->name),
@@ -769,6 +780,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   ctx->increaseLevel();
   vector<string> strArgs;
   string mainType;
+  unordered_set<string> seenMembers;
   for (auto &a : stmt->args) {
     assert(a.type);
     auto s = FormatVisitor::format(ctx, a.type);
@@ -776,11 +788,13 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     if (!mainType.size())
       mainType = s;
     auto t = transformType(a.type)->getType()->generalize(ctx->getLevel());
-    ctx->getRealizations()->classes[canonicalName].members[a.name] = t;
+    ctx->getRealizations()->classes[canonicalName].members.push_back(
+        {a.name, t});
+    if (seenMembers.find(a.name) != seenMembers.end())
+      error(a.type, "{} declared twice", a.name);
+    seenMembers.insert(a.name);
     if (stmt->isRecord)
       ct->recordMembers.push_back(t);
-    // DBG("* [class] [member.{}] :- {}", a.name,
-    // *ctx->classes[canonicalName].members[a.name]);
   }
   if (!mainType.size())
     mainType = "void";
@@ -947,6 +961,8 @@ void TransformVisitor::visit(const TuplePattern *pat) {
   vector<TypePtr> types;
   for (auto &pp : p->patterns)
     types.push_back(pp->getType());
+  // TODO: Ensure type...
+  error("not yet implemented");
   auto t = make_shared<ClassType>("tuple", true, types);
   resultPattern = move(p);
   resultPattern->setType(forceUnify(pat, forceUnify(ctx->getMatchType(), t)));
@@ -1008,8 +1024,6 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
       auto it2 = it->second.find(t->realizeString());
       if (it2 != it->second.end())
         return it2->second;
-    } else if (name == "$tuple_str") {
-      return {"$tuple_str", t, nullptr, nullptr}; // TODO already realized
     }
 
     ctx->addBlock();
@@ -1044,6 +1058,7 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
       }
     auto old = ctx->getReturnType();
     auto oldSeen = ctx->wasReturnSet();
+    // DBG("ret --> {}", ret->toString());
     ctx->setReturnType(ret);
     ctx->setWasReturnSet(false);
 
@@ -1156,7 +1171,7 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
         if (ub->getLink()->id >= minUnbound) {
           if (!fu)
             fu = ub;
-          DBG("NOPE {}", (*ub));
+          DBG("NOPE {} @ {}", (*ub), ub->getSrcInfo());
         }
       error(fu, "cannot resolve unbound variables");
       break;

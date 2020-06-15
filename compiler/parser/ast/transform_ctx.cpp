@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "parser/ast/ast.h"
 #include "parser/ast/transform.h"
 #include "parser/common.h"
 #include "parser/ocaml.h"
@@ -15,6 +16,7 @@
 using fmt::format;
 using std::dynamic_pointer_cast;
 using std::make_shared;
+using std::make_unique;
 using std::pair;
 using std::shared_ptr;
 using std::stack;
@@ -65,7 +67,7 @@ void TypeContext::addRealization(types::TypePtr type) {
 
   if (getRealizations()->realizations.find(name) !=
       getRealizations()->realizations.end()) {
-    DBG("whoops {} -> {}", name, *type);
+    // DBG("whoops {} -> {}", name, *type);
     assert(false);
   }
   if (auto f = CAST(type, types::FuncType))
@@ -121,7 +123,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
       types::LinkType::Unbound, realizations->getUnboundCount()++, level);
   t->setSrcInfo(srcInfo);
   if (setActive) {
-    // DBG("UNBOUND {} ADDED # {} ", *t, srcInfo.line);
+    // DBG("UNBOUND {} ADDED # {} ", *t, srcInfo);
     activeUnbounds.insert(t);
   }
   return t;
@@ -148,8 +150,11 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo,
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
+        // if (dynamic_pointer_cast<types::LinkType>(i.second)->id == 581) {
+        // DBG("woho");
+        // }
         // DBG("UNBOUND {} ADDED # {} ~ {} {}",
-        // dynamic_pointer_cast<LinkType>(i.second)->id, srcInfo.line, *type,
+        // dynamic_pointer_cast<types::LinkType>(i.second)->id, srcInfo, *type,
         // i.first);
         activeUnbounds.insert(i.second);
       }
@@ -227,23 +232,34 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
     stdlib->addType("#" + t, typ);
     realizations->unboundCount++;
   }
-  auto tt = make_shared<types::ClassType>("tuple", true);
-  stdlib->addType("tuple", tt);
-  stdlib->addType("#tuple", tt);
-  auto ft = make_shared<types::FuncType>();
-  stdlib->addType("function", ft);
-  stdlib->addType("#function", ft);
+  // tuple types: explicit function or type instantiation (tuple[X],
+  // function[Y]) auto tt = make_shared<types::ClassType>("tuple", true);
+  // stdlib->addType("tuple", tt);
+  // stdlib->addType("#tuple", tt);
+  // auto ft = make_shared<types::FuncType>();
+  // stdlib->addType("function", ft);
+  // stdlib->addType("#function", ft);
 
   stdlib->setFlag("internal");
-  auto stmts = parseFile(stdlibPath);
-  auto tv = TransformVisitor(stdlib).realizeBlock(stmts.get(), true);
+  assert(stdlibPath.substr(stdlibPath.size() - 12) == "__init__.seq");
+  auto stmts = parseFile(stdlibPath.substr(0, stdlibPath.size() - 12) +
+                         "__internal__.seq");
+
+  imports->setBody("", make_unique<SuiteStmt>());
+  SuiteStmt *tv =
+      static_cast<SuiteStmt *>(imports->getImport("")->statements.get());
+  auto t1 = TransformVisitor(stdlib).realizeBlock(stmts.get(), true);
+  tv->stmts.push_back(move(t1));
   stdlib->unsetFlag("internal");
   stdlib->addVar("__argv__",
                  make_shared<types::LinkType>(stdlib->instantiateGeneric(
                      SrcInfo(), stdlib->find("array")->getType(),
                      {stdlib->find("str")->getType()})));
-  imports->setBody("", move(tv));
 
+  stmts = parseFile(stdlibPath);
+
+  auto t2 = TransformVisitor(stdlib).realizeBlock(stmts.get(), true);
+  tv->stmts.push_back(move(t2));
   return make_shared<TypeContext>(file, realizations, imports);
 }
 
@@ -253,7 +269,7 @@ void TypeContext::dump(int pad) {
   DBG("base: {}", getBase());
   for (auto &i : ordered) {
     std::string s;
-    auto t = i.second.top();
+    auto t = i.second.front();
     if (auto im = t->getImport()) {
       DBG("{}{:.<25} {}", string(pad * 2, ' '), i.first, "<import>");
       getImports()->getImport(im->getFile())->tctx->dump(pad + 1);

@@ -78,9 +78,9 @@ TypePtr RealizationContext::findMember(const string &name,
                                        const string &member) const {
   auto m = classes.find(name);
   if (m != classes.end()) {
-    auto t = m->second.members.find(member);
-    if (t != m->second.members.end())
-      return t->second;
+    for (auto &mm : m->second.members)
+      if (mm.first == member)
+        return mm.second;
   }
   return nullptr;
 }

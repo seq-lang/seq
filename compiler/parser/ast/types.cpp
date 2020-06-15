@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include "parser/ast/ast.h"
 #include "parser/ast/types.h"
 
 using std::dynamic_pointer_cast;
@@ -305,6 +306,8 @@ string ClassType::toString(bool reduced) const {
                      g.size() ? fmt::format("[{}]", g) : "");
 }
 
+bool ClassType::isTuple() const { return name.substr(0, 9) == "#__tuple_"; }
+
 string ClassType::realizeString() const {
   string s;
   if (name == "tuple") {
@@ -323,7 +326,7 @@ int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getClass()) {
     if (isRecord() != t->isRecord())
       return -1;
-    if (isRecord() && (name == "tuple" || t->name == "tuple")) {
+    if (isRecord() && (isTuple() || t->isTuple())) {
       // When unifying tuples, only record members matter
       if (recordMembers.size() != t->recordMembers.size())
         return -1;
@@ -509,6 +512,16 @@ bool FuncType::canRealize() const {
     return true;
   } else
     return args[0]->canRealize();
+}
+
+FuncType::RealizationInfo::RealizationInfo(const string &name,
+                                           const vector<int> &pending,
+                                           const vector<Arg> &args,
+                                           TypePtr base)
+    : name(name), pending(pending), baseClass(base) {
+  for (auto &a : args)
+    this->args.push_back(
+        {a.name, a.type, a.defaultValue ? a.defaultValue->clone() : nullptr});
 }
 
 } // namespace types

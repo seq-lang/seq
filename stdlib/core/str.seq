@@ -102,24 +102,6 @@ extend str:
         v.append("'")
         return str.cat(v)
 
-    def __len__(self: str):
-        return self.len
-
-    def __bool__(self: str):
-        return self.len != 0
-
-    def __copy__(self: str):
-        return self
-
-    def __add__(self: str, other: str):
-        len1 = self.len
-        len2 = other.len
-        len3 = len1 + len2
-        p = cobj(len3)
-        str.memcpy(p, self.ptr, len1)
-        str.memcpy(p + len1, other.ptr, len2)
-        return str(p, len3)
-
     def __getitem__(self: str, idx: int):
         if idx < 0:
             idx += len(self)

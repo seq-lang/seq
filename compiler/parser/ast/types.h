@@ -16,6 +16,9 @@
 
 namespace seq {
 namespace ast {
+
+struct Expr;
+
 namespace types {
 
 struct FuncType;
@@ -259,6 +262,7 @@ public:
     return std::static_pointer_cast<ClassType>(shared_from_this());
   }
   bool isRecord() const { return record; }
+  bool isTuple() const;
 };
 
 /**
@@ -269,15 +273,14 @@ struct FuncType : public GenericType {
     struct Arg {
       std::string name;
       TypePtr type;
-      std::string defaultVar;
+      std::unique_ptr<Expr> defaultValue;
     };
     std::string name;
     std::vector<int> pending; // loci in resolvedArgs
     std::vector<Arg> args;    // name, value
     TypePtr baseClass;
     RealizationInfo(const std::string &name, const std::vector<int> &pending,
-                    const std::vector<Arg> &args, TypePtr base = nullptr)
-        : name(name), pending(pending), args(args), baseClass(base) {}
+                    const std::vector<Arg> &args, TypePtr base = nullptr);
   };
   std::shared_ptr<RealizationInfo> realizationInfo;
 

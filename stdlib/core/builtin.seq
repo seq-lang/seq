@@ -62,15 +62,12 @@ class max[T]:
             x.destroy()
         raise ValueError("empty sequence")
 
-@builtin
 def min2(a, b):
     return a if a < b else b
 
-@builtin
 def max2(a, b):
     return a if a > b else b
 
-@builtin
 def len(x):
     """
     len(x)
@@ -79,7 +76,6 @@ def len(x):
     """
     return x.__len__()
 
-@builtin
 def iter(x):
     """
     iter(x)
@@ -88,7 +84,6 @@ def iter(x):
     """
     return x.__iter__()
 
-@builtin
 def copy(x):
     """
     copy(x)
@@ -97,7 +92,6 @@ def copy(x):
     """
     return x.__copy__()
 
-@builtin
 def abs(x):
     """
     abs(x)
@@ -106,7 +100,6 @@ def abs(x):
     """
     return x.__abs__()
 
-@builtin
 def hash(x):
     """
     hash(x)
@@ -138,7 +131,6 @@ def chr(i: int):
     p[0] = byte(i)
     return str(p, 1)
 
-@builtin
 def next[T](g: generator[T], default: optional[T] = None):
     """
     next(g)
@@ -152,7 +144,6 @@ def next[T](g: generator[T], default: optional[T] = None):
             raise StopIteration()
     return g.next()
 
-@builtin
 def any(x):
     """
     any(x)
@@ -165,7 +156,6 @@ def any(x):
             return True
     return False
 
-@builtin
 def all(x):
     """
     all(x)
@@ -178,7 +168,6 @@ def all(x):
             return False
     return True
 
-@builtin
 def zip(a, b):
     """
     zip(a, b)
@@ -192,7 +181,6 @@ def zip(a, b):
         yield (i, bi.next())
     bi.destroy()
 
-@builtin
 def filter(f, x):
     """
     filter(f, x)
@@ -203,7 +191,6 @@ def filter(f, x):
         if f(a):
             yield a
 
-@builtin
 def map(f, x):
     """
     map(f, x)
@@ -213,7 +200,6 @@ def map(f, x):
     for a in x:
         yield f(a)
 
-@builtin
 def enumerate(x, start: int = 0):
     """
     enumerate(x)
@@ -226,7 +212,6 @@ def enumerate(x, start: int = 0):
         yield (i,a)
         i += 1
 
-@builtin
 def echo(x):
     """
     echo(x)
@@ -236,7 +221,6 @@ def echo(x):
     print x
     return x
 
-@builtin
 def reversed(x):
     """
     reversed(x)
@@ -245,7 +229,6 @@ def reversed(x):
     """
     return x.__reversed__()
 
-@builtin
 def round(x, n) -> float:
     """
     round(x, n)
@@ -256,7 +239,6 @@ def round(x, n) -> float:
     nx = _C.pow(10.0, float(n))
     return _C.round(float(x * nx)) / nx
 
-@builtin
 def sum(xi):
     """
     sum(xi)
@@ -273,7 +255,6 @@ def sum(xi):
     else:
         x.destroy()
 
-@builtin
 def repr(x):
     """
     repr(x)
