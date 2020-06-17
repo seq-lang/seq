@@ -65,5 +65,17 @@ void error(const SrcInfo &p, const char *format);
 
 std::string getTemporaryVar(const std::string &prefix = "", char p = '$');
 
+std::string chop(const std::string &s);
+
+// template <typename T, typename U> auto in(const T &c, U &i) {
+//   auto f = c.find(i);
+//   return f != c.end() ? f : nullptr;
+// }
+
+template <typename T, typename U> bool in(const std::vector<T> &c, const U &i) {
+  auto f = std::find(c.begin(), c.end(), i);
+  return f != c.end();
+}
+
 } // namespace ast
 } // namespace seq

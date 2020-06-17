@@ -394,6 +394,7 @@ TransformVisitor::parseGenerics(const vector<Param> &generics) {
   return genericTypes;
 }
 
+// TODO: handle self automatic
 StmtPtr
 TransformVisitor::addMethod(Stmt *s, const string &canonicalName,
                             const vector<GenericType::Generic> &implicits) {
@@ -602,8 +603,8 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
                    t);
     ctx->addFunc(canonicalName, t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
-        t, N<FunctionStmt>(canonicalName, nullptr, vector<Param>(), move(args),
-                           nullptr, vector<string>{"$external"}));
+        t, N<FunctionStmt>(stmt->name.first, nullptr, vector<Param>(),
+                           move(args), nullptr, vector<string>{"$external"}));
     resultStmt =
         N<FunctionStmt>(stmt->name.first, nullptr, vector<Param>(),
                         vector<Param>(), nullptr, vector<string>{"$external"});
@@ -690,20 +691,35 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     vector<Param> args;
     vector<FuncType::RealizationInfo::Arg> realizationArgs;
     vector<int> pending;
-    argTypes.push_back(stmt->ret ? transformType(stmt->ret)->getType()
-                                 : ctx->addUnbound(getSrcInfo(), false));
-    for (auto &a : stmt->args) {
-      auto t = transformType(a.type);
-      argTypes.push_back(
-          {a.type ? t->getType() : ctx->addUnbound(getSrcInfo(), false)});
-      args.push_back({a.name, move(t)});
-      string deflt = "";
-      // if (a.deflt) {
-      //   deflt =
-      //       getTemporaryVar(format("{}.default.{}", canonicalName, a.name),
-      //       0);
-      //   prepend(N<AssignStmt>(N<IdExpr>(deflt), a.deflt->clone()));
+
+    auto retTyp = stmt->ret ? transformType(stmt->ret)->getType()
+                            : ctx->addUnbound(getSrcInfo(), false);
+    if (ctx->getBaseType()) {
+      // if (stmt->name == "__new__") {
+      // forceUnify(retTyp, ctx->instantiate(getSrcInfo(), ctx->getBaseType()));
+      // } else
+      // if (stmt->name == "__init__") {
+      //   forceUnify(retTyp, ctx->findInternal("void"));
+      // } else if (stmt->name == "__bool__") {
+      //   forceUnify(retTyp, ctx->findInternal("bool"));
+      // } else if (stmt->name == "__int__") {
+      //   forceUnify(retTyp, ctx->findInternal("int"));
+      // } else if (stmt->name == "__str__") {
+      //   forceUnify(retTyp, ctx->findInternal("str"));
       // }
+    }
+    argTypes.push_back(retTyp);
+
+    for (int ia = 0; ia < stmt->args.size(); ia++) {
+      auto &a = stmt->args[ia];
+      auto t = transformType(a.type);
+      types::TypePtr typ = nullptr;
+      if (ia == 0 && !a.type && a.name == "self")
+        typ = ctx->getBaseType();
+      else
+        typ = a.type ? t->getType() : ctx->addUnbound(getSrcInfo(), false);
+      argTypes.push_back(typ);
+      args.push_back({a.name, move(t)});
       realizationArgs.push_back(
           {a.name, argTypes.back(), a.deflt ? a.deflt->clone() : nullptr});
       pending.push_back(pending.size());
@@ -729,11 +745,10 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       ctx->addFunc(format("{}", /*ctx->getBase(),*/ stmt->name), t);
     ctx->addFunc(canonicalName, t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
-        t, N<FunctionStmt>(canonicalName, nullptr, CL(stmt->generics),
-                           move(args), stmt->suite, stmt->attributes));
+        t, N<FunctionStmt>(stmt->name, nullptr, CL(stmt->generics), move(args),
+                           stmt->suite, stmt->attributes));
 
-    if (std::find(stmt->attributes.begin(), stmt->attributes.end(),
-                  "builtin") != stmt->attributes.end()) {
+    if (in(stmt->attributes, "builtin")) {
       if (!t->canRealize())
         error("builtins must be realizable");
       realizeFunc(dynamic_pointer_cast<types::FuncType>(
@@ -804,8 +819,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   }
   ctx->pushBase(stmt->name);
   ctx->setBaseType(ct);
-  if (std::find(stmt->attributes.begin(), stmt->attributes.end(), "internal") ==
-      stmt->attributes.end()) {
+  if (!in(stmt->attributes, "internal")) {
     vector<string> genericNames;
     for (auto &g : stmt->generics)
       genericNames.push_back(g.name);
@@ -816,36 +830,36 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     string code;
     if (!stmt->isRecord)
       code = format("@internal\ndef __new__() -> {0}: pass\n"
-                    "@internal\ndef __bool__(self: {0}) -> bool: pass\n"
-                    "@internal\ndef __pickle__(self: {0}, dest: ptr[byte]) -> "
+                    "@internal\ndef __bool__(self) -> bool: pass\n"
+                    "@internal\ndef __pickle__(self, dest: ptr[byte]) -> "
                     "void: pass\n"
                     "@internal\ndef __unpickle__(src: ptr[byte]) -> {0}: pass\n"
-                    "@internal\ndef __raw__(self: {0}) -> ptr[byte]: pass\n",
+                    "@internal\ndef __raw__(self) -> ptr[byte]: pass\n",
                     codeType);
     else
-      code = format(
-          "@internal\ndef __new__({1}) -> {0}: pass\n"
-          "@internal\ndef __str__(self: {0}) -> str: pass\n"
-          "@internal\ndef __getitem__(self: {0}, idx: int) -> {2}: pass\n"
-          "@internal\ndef __iter__(self: {0}) -> generator[{2}]: pass\n"
-          "@internal\ndef __len__(self: {0}) -> int: pass\n"
-          "@internal\ndef __eq__(self: {0}, other: {0}) -> bool: pass\n"
-          "@internal\ndef __ne__(self: {0}, other: {0}) -> bool: pass\n"
-          "@internal\ndef __lt__(self: {0}, other: {0}) -> bool: pass\n"
-          "@internal\ndef __gt__(self: {0}, other: {0}) -> bool: pass\n"
-          "@internal\ndef __le__(self: {0}, other: {0}) -> bool: pass\n"
-          "@internal\ndef __ge__(self: {0}, other: {0}) -> bool: pass\n"
-          "@internal\ndef __hash__(self: {0}) -> int: pass\n"
-          "@internal\ndef __contains__(self: {0}, what: {2}) -> bool: pass\n"
-          "@internal\ndef __pickle__(self: {0}, dest: ptr[byte]) -> void: "
-          "pass\n"
-          "@internal\ndef __unpickle__(src: ptr[byte]) -> {0}: pass\n"
-          "@internal\ndef __to_py__(self: {0}) -> ptr[byte]: pass\n"
-          "@internal\ndef __from_py__(src: ptr[byte]) -> {0}: pass\n",
-          codeType, fmt::join(strArgs, ", "), mainType);
+      code =
+          format("@internal\ndef __new__({1}) -> {0}: pass\n"
+                 "@internal\ndef __str__(self) -> str: pass\n"
+                 "@internal\ndef __getitem__(self, idx: int) -> {2}: pass\n"
+                 "@internal\ndef __iter__(self) -> generator[{2}]: pass\n"
+                 "@internal\ndef __len__(self) -> int: pass\n"
+                 "@internal\ndef __eq__(self, other: {0}) -> bool: pass\n"
+                 "@internal\ndef __ne__(self, other: {0}) -> bool: pass\n"
+                 "@internal\ndef __lt__(self, other: {0}) -> bool: pass\n"
+                 "@internal\ndef __gt__(self, other: {0}) -> bool: pass\n"
+                 "@internal\ndef __le__(self, other: {0}) -> bool: pass\n"
+                 "@internal\ndef __ge__(self, other: {0}) -> bool: pass\n"
+                 "@internal\ndef __hash__(self) -> int: pass\n"
+                 "@internal\ndef __contains__(self, what: {2}) -> bool: pass\n"
+                 "@internal\ndef __pickle__(self, dest: ptr[byte]) -> void: "
+                 "pass\n"
+                 "@internal\ndef __unpickle__(src: ptr[byte]) -> {0}: pass\n"
+                 "@internal\ndef __to_py__(self) -> ptr[byte]: pass\n"
+                 "@internal\ndef __from_py__(src: ptr[byte]) -> {0}: pass\n",
+                 codeType, fmt::join(strArgs, ", "), mainType);
     if (!stmt->isRecord && stmt->args.size())
-      code += format("@internal\ndef __init__(self: {}, {}) -> void: pass\n",
-                     codeType, fmt::join(strArgs, ", "));
+      code += format("@internal\ndef __init__(self, {}) -> void: pass\n",
+                     fmt::join(strArgs, ", "));
     auto methodNew =
         parseCode(ctx->getFilename(), code, stmt->getSrcInfo().line, 100000);
     for (auto s : methodNew->getStatements())
@@ -1045,9 +1059,7 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
         ctx->addType(g.name, g.type);
 
     // There is no AST linked to internal functions, so just ignore them
-    bool isInternal =
-        std::find(ast.second->attributes.begin(), ast.second->attributes.end(),
-                  "internal") != ast.second->attributes.end();
+    bool isInternal = in(ast.second->attributes, "internal");
     isInternal |= ast.second->suite == nullptr;
     if (!isInternal)
       for (int i = 0; i < t->realizationInfo->args.size(); i++) {
@@ -1071,7 +1083,8 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     // DBG("======== BEGIN {} :- {} ========", t->name, *t);
     if (realized && !ctx->wasReturnSet() && ret)
       forceUnify(ctx->getReturnType(), ctx->findInternal("void"));
-    assert(ret->canRealize());
+    assert(ret->canRealize() && ret->getClass());
+    realizeType(ret->getClass());
     // DBG("======== END {} :- {} ========", t->name, *t);
 
     assert(ast.second->args.size() == t->realizationInfo->args.size());
@@ -1082,15 +1095,16 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     auto result =
         ctx->getRealizations()->funcRealizations[name][t->realizeString()] = {
             t->realizeString(), t,
-            Nx<FunctionStmt>(ast.second.get(), name, nullptr, vector<Param>(),
-                             move(args), move(realized),
+            Nx<FunctionStmt>(ast.second.get(), ast.second->name, nullptr,
+                             vector<Param>(), move(args), move(realized),
                              ast.second->attributes),
-            nullptr};
+            nullptr, ctx->getBase()};
     ctx->setReturnType(old);
     ctx->setWasReturnSet(oldSeen);
     ctx->decreaseLevel();
     ctx->popBlock();
-    ctx->addRealization(t);
+    ctx->getRealizations()->realizationLookup[t->realizeString()] = name;
+    // ctx->addRealization(t);
     return result;
   } catch (exc::ParserException &e) {
     e.trackRealize(fmt::format("{} (arguments {})", t->realizationInfo->name,
@@ -1119,10 +1133,11 @@ TransformVisitor::realizeType(ClassTypePtr t) {
       assert(mt->canRealize() && mt->getClass());
       args.push_back(make_pair(m.first, realizeType(mt->getClass()).type));
     }
-    ctx->addRealization(t);
+    ctx->getRealizations()->realizationLookup[t->realizeString()] = t->name;
+    // ctx->addRealization(t);
     return ctx->getRealizations()
                ->classRealizations[t->name][t->realizeString()] = {
-               t->realizeString(), t, args, nullptr};
+               t->realizeString(), t, args, nullptr, ctx->getBase()};
   } catch (exc::ParserException &e) {
     e.trackRealize(t->toString(), getSrcInfo());
     throw;

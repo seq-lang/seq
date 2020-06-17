@@ -254,7 +254,7 @@ void types::RefType::initOps() {
          self = b.CreateBitCast(self, getLLVMType(b.getContext()));
          return self;
        },
-       false},
+       true},
 
       {"__bool__",
        {},

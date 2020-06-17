@@ -66,7 +66,7 @@ ExprPtr TransformVisitor::conditionalMagic(const ExprPtr &expr,
   if (e->getType()->getUnbound())
     return e;
   if (auto c = e->getType()->getClass()) {
-    if (c->name == "#" + type)
+    if (chop(c->name) == type)
       return e;
     return transform(
         Nx<CallExpr>(e.get(), Nx<DotExpr>(e.get(), expr->clone(), magic)));
@@ -643,11 +643,12 @@ string TransformVisitor::generateVariardicStub(const string &name, int len) {
     if (name == "tuple") {
       ;
     } else if (name == "function") {
-      code = format("@internal\n{0}\n  @internal\n  def __str__(self: "
+      code = format("@internal\n{0}:\n  @internal\n  def __str__(self: "
                     "function[{1}]) -> str: pass\n "
                     " @internal\n  "
                     "def __new__(what: ptr[byte]) -> function[{1}]: pass\n",
                     code, join(generics, ", "));
+      DBG("--> {}", code);
     } else {
       error("invalid variardic type");
     }

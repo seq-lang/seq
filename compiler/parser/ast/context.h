@@ -27,12 +27,14 @@ struct RealizationContext {
     types::FuncTypePtr type;
     std::shared_ptr<FunctionStmt> ast;
     seq::BaseFunc *handle;
+    std::string base;
   };
   struct ClassRealization {
     std::string fullName;
     types::ClassTypePtr type;
     std::vector<std::pair<std::string, types::ClassTypePtr>> args;
     seq::types::Type *handle;
+    std::string base;
   };
   RealizationContext();
 
@@ -101,8 +103,11 @@ public: /* Realizations */
                      std::unordered_map<std::string, ClassRealization>>
       classRealizations;
 
-  std::unordered_map<std::string, std::pair<types::TypePtr, std::string>>
-      realizations;
+  // Maps (v) to (m)
+  std::unordered_map<std::string, std::string> realizationLookup;
+
+  // std::vector<std::set<std::pair<std::string>>>
+  // realizationCache; // add newly realized functions here; useful for jit
 
 public:
   std::vector<ClassRealization> getClassRealizations(const std::string &name);
@@ -201,8 +206,10 @@ protected:
   std::string filename;
 
 public:
-  std::shared_ptr<RealizationContext> getRealizations() { return realizations; }
-  std::shared_ptr<ImportContext> getImports() { return imports; }
+  std::shared_ptr<RealizationContext> getRealizations() const {
+    return realizations;
+  }
+  std::shared_ptr<ImportContext> getImports() const { return imports; }
   std::string getFilename() const { return filename; }
   void setFilename(const std::string &f) { filename = f; }
 

@@ -45,8 +45,9 @@ void types::PtrType::initOps() {
       {"as_byte",
        {},
        PtrType::get(Byte),
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return b.CreateBitCast(args[0], getLLVMType(b.getContext()));
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateBitCast(self,
+                                IntegerType::getInt8PtrTy(b.getContext()));
        },
        false},
 

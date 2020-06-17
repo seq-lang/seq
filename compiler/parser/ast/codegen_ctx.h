@@ -123,6 +123,7 @@ public:
   void initJIT();
   void execJIT(std::string varName = "", seq::Expr *varExpr = nullptr);
 
+  seq::types::Type *realizeType(types::ClassTypePtr t);
   // void dump(int pad = 0) override;
 
 public:

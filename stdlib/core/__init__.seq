@@ -10,11 +10,11 @@ from core.box import Box
 
 from core.builtin import *
 
-# from core.collections.list import list
+from core.collections.list import list
 # from core.collections.set import set
 # from core.collections.dict import dict
 
-# from core.str import *
+from core.str import *
 # from core.int import *
 # from core.float import *
 

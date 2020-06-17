@@ -50,31 +50,34 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
   if (t)
     return t;
 
-  auto r = const_cast<TypeContext *>(this)->getRealizations()->realizations;
-  auto it = r.find(name);
-  if (it != r.end()) {
-    if (CAST(it->second.first, types::ClassType))
-      return make_shared<TypeItem::Class>(it->second.first, it->second.second);
-    else
-      return make_shared<TypeItem::Func>(it->second.first, it->second.second);
+  auto it = getRealizations()->realizationLookup.find(name);
+  if (it != getRealizations()->realizationLookup.end()) {
+    auto fit = getRealizations()->funcRealizations.find(it->second);
+    if (fit != getRealizations()->funcRealizations.end())
+      return make_shared<TypeItem::Func>(fit->second[name].type,
+                                         fit->second[name].base);
+    auto cit = getRealizations()->classRealizations.find(it->second);
+    if (cit != getRealizations()->classRealizations.end())
+      return make_shared<TypeItem::Class>(cit->second[name].type,
+                                          cit->second[name].base);
   }
   return nullptr;
 }
 
-void TypeContext::addRealization(types::TypePtr type) {
-  assert(type->canRealize());
-  auto name = type->realizeString();
+// void TypeContext::addRealization(types::TypePtr type) {
+//   assert(type->canRealize());
+//   auto name = type->realizeString();
 
-  if (getRealizations()->realizations.find(name) !=
-      getRealizations()->realizations.end()) {
-    // DBG("whoops {} -> {}", name, *type);
-    assert(false);
-  }
-  if (auto f = CAST(type, types::FuncType))
-    getRealizations()->realizations[name] = {type, getBase()};
-  else
-    getRealizations()->realizations[name] = {type, getBase()};
-}
+//   if (getRealizations()->realizations.find(name) !=
+//       getRealizations()->realizations.end()) {
+//     // DBG("whoops {} -> {}", name, *type);
+//     assert(false);
+//   }
+//   if (auto f = CAST(type, types::FuncType))
+//     getRealizations()->realizations[name] = {type, getBase()};
+//   else
+//     getRealizations()->realizations[name] = {type, getBase()};
+// }
 
 types::TypePtr TypeContext::findInternal(const string &name) const {
   auto stdlib = imports->getImport("")->tctx;

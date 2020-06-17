@@ -34,6 +34,7 @@ class CodegenVisitor : public ASTVisitor, public SrcObject {
   void defaultVisit(const Pattern *expr) override;
 
   seq::types::Type *realizeType(types::ClassTypePtr t);
+  seq::BaseFunc *realizeFunc(const std::string &name);
 
   std::shared_ptr<LLVMItem::Item>
   processIdentifier(std::shared_ptr<LLVMContext> tctx, const std::string &id);

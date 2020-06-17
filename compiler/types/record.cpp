@@ -61,6 +61,8 @@ bool types::RecordType::isAtomic() const {
 }
 
 bool types::RecordType::is(types::Type *type) const {
+  // DBG("checking is here, {} {} / {}", getName(), type->getName(),
+  //     isGeneric(type));
   unsigned b = numBaseTypes();
 
   if (!isGeneric(type) || b != type->numBaseTypes())

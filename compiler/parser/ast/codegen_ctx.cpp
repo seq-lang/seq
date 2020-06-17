@@ -25,6 +25,10 @@ using std::vector;
 namespace seq {
 namespace ast {
 
+string chop(const string &s) {
+  return s.size() && s[0] == '#' ? s.substr(1) : s;
+}
+
 LLVMContext::LLVMContext(const string &filename,
                          shared_ptr<RealizationContext> realizations,
                          shared_ptr<ImportContext> imports, seq::Block *block,
@@ -42,20 +46,28 @@ LLVMContext::~LLVMContext() {}
 shared_ptr<LLVMItem::Item> LLVMContext::find(const string &name, bool onlyLocal,
                                              bool checkStdlib) const {
   auto i = Context<LLVMItem::Item>::find(name);
-  if (i && CAST(i, LLVMItem::Var)) {
-    if (onlyLocal)
-      return (getBase() == i->getBase()) ? i : nullptr;
-    else
-      return i;
-  } else if (i) {
+  if (i && CAST(i, LLVMItem::Var) && onlyLocal)
+    return (getBase() == i->getBase()) ? i : nullptr;
+  if (i)
     return i;
-  } else {
-    auto stdlib = imports->getImport("");
-    if (stdlib && checkStdlib)
-      return stdlib->lctx->find(name, onlyLocal, false);
-    else
-      return nullptr;
-  }
+
+  auto stdlib = imports->getImport("");
+  if (stdlib && checkStdlib)
+    return stdlib->lctx->find(name, onlyLocal, false);
+
+  // auto it = getRealizations()->realizationLookup.find(name);
+  // if (it != getRealizations()->realizationLookup.end()) {
+  //   auto fit = getRealizations()->funcRealizations.find(it->second);
+  //   if (fit != getRealizations()->funcRealizations.end()) {
+  //     return make_shared<LLVMItem::Func>(fit->second[name].handle, getBase(),
+  //                                        true);
+  //   }
+  //   // auto cit = getRealizations()->classRealizations.find(it->second);
+  //   // if (cit != getRealizations()->classRealizations.end())
+  //   //   return make_shared<LLVMItem::Class>(cit->second[name].handle,
+  //   //                                       cit->second[name].get);
+  // }
+  return nullptr;
 }
 
 void LLVMContext::addVar(const string &name, seq::Var *v, bool global) {
@@ -153,6 +165,70 @@ void LLVMContext::execJIT(string varName, seq::Expr *varExpr) {
 //   }
 // }
 
+seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
+  // DBG("[codegen] generating ty {} / {}", t->name, t->toString(true));
+  assert(t && t->canRealize());
+  auto it = getRealizations()->classRealizations.find(t->name);
+  assert(it != getRealizations()->classRealizations.end());
+  auto it2 = it->second.find(t->toString(true));
+  assert(it2 != it->second.end());
+  auto &real = it2->second;
+  if (real.handle)
+    return real.handle;
+
+  DBG("[codegen] generating ty {}", real.fullName);
+
+  vector<seq::types::Type *> types;
+  vector<int> statics;
+  for (auto &m : t->explicits)
+    if (auto s = m.type->getStatic())
+      statics.push_back(s->value);
+    else
+      types.push_back(realizeType(m.type->getClass()));
+  // TODO: function ?!
+  if (t->name == "#str") {
+    real.handle = seq::types::Str;
+  } else if (t->name == "Int" || t->name == "UInt") {
+    assert(statics.size() == 1 && types.size() == 0);
+    assert(statics[0] >= 1 && statics[0] <= 2048);
+    real.handle = seq::types::IntNType::get(statics[0], t->name == "Int");
+  } else if (t->name == "#array") {
+    assert(types.size() == 1 && statics.size() == 0);
+    real.handle = seq::types::ArrayType::get(types[0]);
+  } else if (t->name == "ptr") {
+    assert(types.size() == 1 && statics.size() == 0);
+    real.handle = seq::types::PtrType::get(types[0]);
+  } else if (t->name == "generator") {
+    assert(types.size() == 1 && statics.size() == 0);
+    real.handle = seq::types::GenType::get(types[0]);
+  } else if (t->name == "optional") {
+    assert(types.size() == 1 && statics.size() == 0);
+    real.handle = seq::types::OptionalType::get(types[0]);
+  } else {
+    vector<string> names;
+    vector<seq::types::Type *> types;
+    for (auto &m : real.args) {
+      names.push_back(m.first);
+      types.push_back(realizeType(m.second));
+    }
+    if (t->isRecord()) {
+      vector<string> x;
+      for (auto &t : types)
+        x.push_back(t->getName());
+      auto name = t->name;
+      if (name.substr(0, 9) == "#__tuple_")
+        name = "";
+      real.handle = seq::types::RecordType::get(types, names, chop(name));
+    } else {
+      auto cls = seq::types::RefType::get(chop(t->name));
+      cls->setContents(seq::types::RecordType::get(types, names, ""));
+      cls->setDone();
+      real.handle = cls;
+    }
+  }
+  return real.handle;
+}
+
 shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
                                                 shared_ptr<TypeContext> typeCtx,
                                                 seq::SeqModule *module) {
@@ -165,13 +241,48 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
   stdlib->lctx = make_shared<LLVMContext>(stdlib->filename, realizations,
                                           imports, block, base, nullptr);
 
-  // auto pod = vector<string>{"void",  "bool", "byte",    "int",
-  // "float", "ptr",  "generic", "optional",
-  // "Int",   "UInt", "tuple",   "function"};
+  // Now add all realization stubs
+  for (auto &ff : realizations->classRealizations)
+    for (auto &f : ff.second) {
+      auto &real = f.second;
+      stdlib->lctx->realizeType(real.type);
+      stdlib->lctx->addType(real.fullName, real.handle);
+    }
+  for (auto &ff : realizations->funcRealizations)
+    for (auto &f : ff.second) {
+      // Realization: f.second
+      auto &real = f.second;
+      auto ast = real.ast;
+      if (in(ast->attributes, "internal")) {
+        DBG("[codegen] generating internal fn {} ~ {}", real.fullName,
+            ast->name);
+        vector<seq::types::Type *> types;
+
+        // static: has self as arg
+        assert(real.type->realizationInfo->baseClass &&
+               real.type->realizationInfo->baseClass->getClass());
+        seq::types::Type *typ = stdlib->lctx->realizeType(
+            real.type->realizationInfo->baseClass->getClass());
+        int startI = 1;
+        if (ast->args.size() && ast->args[0].name == "self")
+          startI = 2;
+        // DBG("   realizing {} ~ {}", real.fullName, typ->getName());
+        for (int i = startI; i < real.type->args.size(); i++)
+          types.push_back(
+              stdlib->lctx->realizeType(real.type->args[i]->getClass()));
+        real.handle = typ->findMagic(ast->name, types);
+      } else {
+        DBG("[codegen] generating fn stub {}", real.fullName);
+        real.handle = new seq::Func();
+      }
+      stdlib->lctx->addFunc(real.fullName, real.handle);
+    }
+
   CodegenVisitor c(stdlib->lctx);
   // for (auto &p : pod)
   // c.visitMethods(p);
   c.transform(stdlib->statements.get());
+
   return make_shared<LLVMContext>(file, realizations, imports, block, base,
                                   nullptr);
 }

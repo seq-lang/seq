@@ -139,7 +139,7 @@ public:
   void addFunc(const std::string &name, types::TypePtr type,
                bool global = false);
   void addStatic(const std::string &name, int value, bool global = false);
-  void addRealization(types::TypePtr type);
+  // void addRealization(types::TypePtr type);
   void dump(int pad = 0) override;
 
 public:

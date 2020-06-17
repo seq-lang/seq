@@ -225,15 +225,20 @@ void Func::sawYield(Yield *yield) {
 
   this->yield = yield;
   gen = true;
-  outType = types::GenType::get(outType);
-  outType0 = types::GenType::get(outType0);
+  // outType = types::GenType::get(outType);
+  // outType0 = types::GenType::get(outType0);
 }
 
 void Func::addAttribute(std::string attr) {
   attributes.push_back(attr);
 
   if (attr == "builtin") {
-    builtins[genericName()] = this;
+    auto name = genericName();
+    auto i = name.find('['); // chop off realization part
+    if (i != std::string::npos)
+      name = name.substr(0, i);
+    DBG("[ariya] adding builtin {}", name);
+    builtins[name] = this;
   } else if (attr == "prefetch") {
     if (prefetch)
       return;
@@ -340,22 +345,23 @@ void Func::resolveTypes() {
     scope->resolveTypes();
 
     // return type deduction
-    if ((outType->is(types::Void) ||
-         outType->is(types::GenType::get(types::Void))) &&
-        (yield || (ret && ret->getExpr()))) {
-      if (yield) {
-        outType = types::GenType::get(
-            yield->getExpr() ? yield->getExpr()->getType() : types::Void);
-      } else if (ret) {
-        outType = ret->getExpr() ? ret->getExpr()->getType() : types::Void;
 
-        if (prefetch)
-          outType = types::GenType::get(outType,
-                                        types::GenType::GenTypeKind::PREFETCH);
-      } else {
-        assert(0);
-      }
-    }
+    // if ((outType->is(types::Void) ||
+    //      outType->is(types::GenType::get(types::Void))) &&
+    //     (yield || (ret && ret->getExpr()))) {
+    //   if (yield) {
+    //     outType = types::GenType::get(
+    //         yield->getExpr() ? yield->getExpr()->getType() : types::Void);
+    //   } else if (ret) {
+    //     outType = ret->getExpr() ? ret->getExpr()->getType() : types::Void;
+
+    //     if (prefetch)
+    //       outType = types::GenType::get(outType,
+    //                                     types::GenType::GenTypeKind::PREFETCH);
+    //   } else {
+    //     assert(0);
+    //   }
+    // }
   } catch (exc::SeqException &) {
     /*
      * Function had some generic types which could not be resolved yet; not a
@@ -563,6 +569,9 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock *&block,
       if (val)
         throw exc::SeqException("cannot return value from generator");
     } else {
+      // DBG(" ??? {} {} {} {}", (void *)val, (void *)type,
+      //     types::is(type, outType), outType->is(types::Void),
+      //     type->);
       if ((val && type && !types::is(type, outType)) ||
           (!val && !outType->is(types::Void)))
         throw exc::SeqException("cannot return '" + type->getName() +
@@ -761,7 +770,11 @@ Func *Func::clone(Generic *ref) {
 std::unordered_map<std::string, Func *> Func::builtins = {};
 Func *Func::getBuiltin(const std::string &name) {
   auto itr = builtins.find(name);
-  assert(itr != builtins.end());
+
+  if (itr == builtins.end()) {
+    DBG("[ariya] can't find builtin {}", name);
+    assert(false);
+  }
   return itr->second;
 }
 
