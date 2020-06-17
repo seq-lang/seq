@@ -190,9 +190,13 @@ void CodegenVisitor::visit(const CallExpr *expr) {
   vector<string> names;
   bool isPartial = false;
   for (auto &&i : expr->args) {
-    items.push_back(transform(i.value));
+    if (CAST(i.value, EllipsisExpr)) {
+      items.push_back(nullptr);
+      isPartial = true;
+    } else {
+      items.push_back(transform(i.value));
+    }
     names.push_back("");
-    isPartial |= !items.back();
   }
   if (isPartial)
     resultExpr = N<seq::PartialCallExpr>(lhs, items, names);
@@ -563,6 +567,7 @@ void CodegenVisitor::visit(const GuardedPattern *pat) {
 
 seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
   assert(t && t->canRealize());
+  // DBG("q : {} {}", t->name, t->realizeString());
   auto it = ctx->getRealizations()->classRealizations.find(t->name);
   assert(it != ctx->getRealizations()->classRealizations.end());
   auto it2 = it->second.find(t->realizeString());

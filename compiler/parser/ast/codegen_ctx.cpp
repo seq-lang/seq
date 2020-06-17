@@ -54,19 +54,6 @@ shared_ptr<LLVMItem::Item> LLVMContext::find(const string &name, bool onlyLocal,
   auto stdlib = imports->getImport("");
   if (stdlib && checkStdlib)
     return stdlib->lctx->find(name, onlyLocal, false);
-
-  // auto it = getRealizations()->realizationLookup.find(name);
-  // if (it != getRealizations()->realizationLookup.end()) {
-  //   auto fit = getRealizations()->funcRealizations.find(it->second);
-  //   if (fit != getRealizations()->funcRealizations.end()) {
-  //     return make_shared<LLVMItem::Func>(fit->second[name].handle, getBase(),
-  //                                        true);
-  //   }
-  //   // auto cit = getRealizations()->classRealizations.find(it->second);
-  //   // if (cit != getRealizations()->classRealizations.end())
-  //   //   return make_shared<LLVMItem::Class>(cit->second[name].handle,
-  //   //                                       cit->second[name].get);
-  // }
   return nullptr;
 }
 
@@ -185,25 +172,30 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
       statics.push_back(s->value);
     else
       types.push_back(realizeType(m.type->getClass()));
-  // TODO: function ?!
-  if (t->name == "#str") {
+  auto name = chop(t->name);
+  if (name == "str") {
     real.handle = seq::types::Str;
-  } else if (t->name == "Int" || t->name == "UInt") {
+  } else if (name == "Int" || name == "UInt") {
     assert(statics.size() == 1 && types.size() == 0);
     assert(statics[0] >= 1 && statics[0] <= 2048);
-    real.handle = seq::types::IntNType::get(statics[0], t->name == "Int");
-  } else if (t->name == "#array") {
+    real.handle = seq::types::IntNType::get(statics[0], name == "Int");
+  } else if (name == "array") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::ArrayType::get(types[0]);
-  } else if (t->name == "ptr") {
+  } else if (name == "ptr") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::PtrType::get(types[0]);
-  } else if (t->name == "generator") {
+  } else if (name == "generator") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::GenType::get(types[0]);
-  } else if (t->name == "optional") {
+  } else if (name == "optional") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::OptionalType::get(types[0]);
+  } else if (name.substr(0, 11) == "__function_") {
+    assert(types.size() >= 1 && statics.size() == 0);
+    auto ret = types[0];
+    types.erase(types.begin());
+    real.handle = seq::types::FuncType::get(types, ret);
   } else {
     vector<string> names;
     vector<seq::types::Type *> types;
@@ -215,12 +207,11 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
       vector<string> x;
       for (auto &t : types)
         x.push_back(t->getName());
-      auto name = t->name;
-      if (name.substr(0, 9) == "#__tuple_")
+      if (name.substr(0, 8) == "__tuple_")
         name = "";
-      real.handle = seq::types::RecordType::get(types, names, chop(name));
+      real.handle = seq::types::RecordType::get(types, names, name);
     } else {
-      auto cls = seq::types::RefType::get(chop(t->name));
+      auto cls = seq::types::RefType::get(name);
       cls->setContents(seq::types::RecordType::get(types, names, ""));
       cls->setDone();
       real.handle = cls;

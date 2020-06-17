@@ -111,7 +111,9 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
       types::LinkType::Unbound, realizations->getUnboundCount()++, level);
   t->setSrcInfo(srcInfo);
   if (setActive) {
-    // DBG("UNBOUND {} ADDED # {} ", t->toString(0), srcInfo);
+#ifdef TYPE_DEBUG
+    DBG("UNBOUND: {} @ {} ", t->toString(0), srcInfo);
+#endif
     activeUnbounds.insert(t);
   }
   return t;
@@ -138,12 +140,13 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo,
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
+#ifdef TYPE_DEBUG
+        DBG("UNBOUND: {} @ {} (during inst of {})", i.second->toString(0),
+            srcInfo, type->toString());
+#endif
         // if (dynamic_pointer_cast<types::LinkType>(i.second)->id == 581) {
         // DBG("woho");
         // }
-        // DBG("UNBOUND {} ADDED # {} ~ {} {}",
-        // dynamic_pointer_cast<types::LinkType>(i.second)->id, srcInfo, type->toString(),
-        // i.first);
         activeUnbounds.insert(i.second);
       }
     }

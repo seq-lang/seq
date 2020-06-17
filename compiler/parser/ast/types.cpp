@@ -112,7 +112,9 @@ int LinkType::unify(TypePtr typ, Unification &us) {
         return 1;
     }
     if (!occurs(typ, us)) {
-      // DBG("UNIFY: {} <- {}", id, *typ);
+#ifdef TYPE_DEBUG
+      DBG("UNIFY: {} <- {}", id, typ->toString());
+#endif
       us.linked.push_back(static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
       type = typ;
@@ -227,10 +229,10 @@ string ClassType::realizeString() const {
 }
 
 bool isTuple(const string &name) {
-return chop(name).substr(0, 8) == "__tuple_";
+  return chop(name).substr(0, 8) == "__tuple_";
 }
-bool isFunc(const string &name)  {
-return chop(name).substr(0, 11) == "__function_";
+bool isFunc(const string &name) {
+  return chop(name).substr(0, 11) == "__function_";
 }
 
 int ClassType::unify(TypePtr typ, Unification &us) {
@@ -338,11 +340,13 @@ bool ClassType::canRealize() const {
 FuncType::FuncType(const std::vector<TypePtr> &args,
                    const vector<Generic> &explicits,
                    const vector<Generic> &implicits)
-    : ClassType(fmt::format("__function_{}", args.size()), true, args, explicits, implicits),
+    : ClassType(fmt::format("__function_{}", args.size()), true, args,
+                explicits, implicits),
       realizationInfo(nullptr) {}
 
 FuncType::FuncType(ClassTypePtr c)
-    : ClassType(fmt::format("__function_{}", c->args.size()), c->record, c->args, c->explicits, c->implicits),
+    : ClassType(fmt::format("__function_{}", c->args.size()), c->record,
+                c->args, c->explicits, c->implicits),
       realizationInfo(nullptr) {}
 
 string FuncType::realizeString() const {
@@ -356,7 +360,8 @@ string FuncType::realizeString() const {
 }
 
 TypePtr FuncType::generalize(int level) {
-  auto f = make_shared<FuncType>(static_pointer_cast<ClassType>(ClassType::generalize(level)));
+  auto f = make_shared<FuncType>(
+      static_pointer_cast<ClassType>(ClassType::generalize(level)));
   if (realizationInfo) {
     f->realizationInfo = make_shared<RealizationInfo>(
         realizationInfo->name, realizationInfo->pending, realizationInfo->args,
@@ -372,8 +377,8 @@ TypePtr FuncType::generalize(int level) {
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
                               unordered_map<int, TypePtr> &cache) {
-  auto f =
-      make_shared<FuncType>(static_pointer_cast<ClassType>(ClassType::instantiate(level, unboundCount, cache)));
+  auto f = make_shared<FuncType>(static_pointer_cast<ClassType>(
+      ClassType::instantiate(level, unboundCount, cache)));
   if (realizationInfo) {
     f->realizationInfo = make_shared<RealizationInfo>(
         realizationInfo->name, realizationInfo->pending, realizationInfo->args,

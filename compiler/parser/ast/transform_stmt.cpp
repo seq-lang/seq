@@ -464,8 +464,8 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   ctx->decreaseLevel();
   for (int i = 0; i < generics.size(); i++) {
     if (c->explicits[i].type) {
-      auto t =
-          dynamic_pointer_cast<LinkType>(ctx->find(generics[i])->getType()->follow());
+      auto t = dynamic_pointer_cast<LinkType>(
+          ctx->find(generics[i])->getType()->follow());
       assert(t && t->kind == LinkType::Unbound);
       t->kind = LinkType::Generic;
     }
@@ -784,9 +784,14 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   stmts.push_back(move(resultStmt));
 
   auto genericTypes = parseGenerics(stmt->generics);
-  auto ct =
-      make_shared<ClassType>(canonicalName, stmt->isRecord, vector<TypePtr>(),
-                             genericTypes->explicits, genericTypes->implicits);
+  ClassTypePtr ct = nullptr;
+  if (chop(canonicalName).substr(0, 11) == "__function_")
+    ct = make_shared<FuncType>(vector<TypePtr>(), genericTypes->explicits,
+                               genericTypes->implicits);
+  else
+    ct = make_shared<ClassType>(canonicalName, stmt->isRecord,
+                                vector<TypePtr>(), genericTypes->explicits,
+                                genericTypes->implicits);
   ct->setSrcInfo(stmt->getSrcInfo());
   if (!stmt->isRecord) { // add classes early
     ctx->addType(format("{}{}", ctx->getBase(), stmt->name), ct);

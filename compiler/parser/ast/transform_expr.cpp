@@ -96,19 +96,24 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
     return nullptr;
   TransformVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
-  // DBG("[ {} :- {} # {}", *expr,
-      // expr->getType() ? expr->getType()->toString() : "-",
-      // expr->getSrcInfo().line);
-  // __level__++;
+#ifdef TYPE_DEBUG
+  DBG("[ {} :- {} # {}", *expr,
+      expr->getType() ? expr->getType()->toString() : "-",
+      expr->getSrcInfo().line);
+  __level__++;
+#endif
   expr->accept(v);
-  // __level__--;
-  // DBG("  {} :- {} ]", *v.resultExpr,
-      // v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
+#ifdef TYPE_DEBUG
+  __level__--;
+  DBG("  {} :- {} ]", *v.resultExpr,
+      v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
+#endif
 
-  if (allowTypes && v.resultExpr && v.resultExpr->getType() &&
+  if (v.resultExpr && v.resultExpr->getType() &&
       v.resultExpr->getType()->canRealize()) {
     if (auto c = v.resultExpr->getType()->getClass())
-      if (!c->getFunc())
+      /// TODO: handle this more gracefully
+      if (!c->getFunc() || !c->getFunc()->realizationInfo)
         realizeType(c);
   }
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
@@ -480,7 +485,9 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
 }
 
 void TransformVisitor::fixExprName(ExprPtr &e, const string &newName) {
-  if (auto i = CAST(e, IdExpr))
+  if (auto i = CAST(e, CallExpr)) // partial calls
+    fixExprName(i->expr, newName);
+  else if (auto i = CAST(e, IdExpr))
     i->value = newName;
   else if (auto i = CAST(e, DotExpr))
     i->member = newName;
@@ -658,9 +665,11 @@ string TransformVisitor::generateVariardicStub(const string &name, int len) {
     auto stmtPtr = dynamic_cast<SuiteStmt *>(i->statements.get());
     assert(stmtPtr);
 
-    auto nc = make_shared<TypeContext>(i->tctx->getFilename(), i->tctx->getRealizations(), i->tctx->getImports());
+    auto nc = make_shared<TypeContext>(i->tctx->getFilename(),
+                                       i->tctx->getRealizations(),
+                                       i->tctx->getImports());
     stmtPtr->stmts.push_back(TransformVisitor(nc).transform(a));
-    for (auto &ax: *nc) {
+    for (auto &ax : *nc) {
       // DBG("adding {}", a.first);
       i->tctx->addToplevel(ax.first, ax.second.front());
     }
@@ -877,7 +886,8 @@ void TransformVisitor::visit(const CallExpr *expr) {
     for (int i = 0; i < args.size(); i++) {
       if (args[i].name != "")
         error("argument '{}' missing (function pointers have argument "
-              "names elided)", args[i].name);
+              "names elided)",
+              args[i].name);
       reorderedArgs.push_back({"", move(args[i].value)});
 
       forceUnify(reorderedArgs[i].value, f->args[i + 1]);
@@ -1081,10 +1091,7 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
   for (auto &c : cv.captures)
     if (used.find(c) == used.end())
       args.push_back({"", N<IdExpr>(c)});
-  if (cv.captures.size())
-    resultExpr = transform(N<CallExpr>(N<IdExpr>(fnVar), move(args)));
-  else
-    resultExpr = N<IdExpr>(fnVar);
+  resultExpr = transform(N<CallExpr>(N<IdExpr>(fnVar), move(args)));
 }
 
 // TODO

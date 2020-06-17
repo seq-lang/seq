@@ -237,7 +237,7 @@ void Func::addAttribute(std::string attr) {
     auto i = name.find('['); // chop off realization part
     if (i != std::string::npos)
       name = name.substr(0, i);
-    DBG("[ariya] adding builtin {}", name);
+    // DBG("[ariya] adding builtin {}", name);
     builtins[name] = this;
   } else if (attr == "prefetch") {
     if (prefetch)

@@ -14,6 +14,8 @@
 
 #include "parser/common.h"
 
+// #define TYPE_DEBUG
+
 namespace seq {
 namespace ast {
 
