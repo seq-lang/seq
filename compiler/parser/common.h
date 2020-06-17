@@ -38,11 +38,11 @@ namespace ast {
 struct SrcInfoHash {
   size_t operator()(const seq::SrcInfo &k) const {
     // http://stackoverflow.com/a/1646913/126995
-    size_t res = 17;
-    res = res * 31 + std::hash<std::string>()(k.file);
-    res = res * 31 + std::hash<int>()(k.line);
-    res = res * 31 + std::hash<int>()(k.id);
-    return res;
+    // size_t res = 17;
+    // res = res * 31 + std::hash<std::string>()(k.file);
+    // res = res * 31 + std::hash<int>()(k.line);
+    // res = res * 31 + std::hash<int>()(k.id);
+    return std::hash<int>()(k.id);
   }
 };
 

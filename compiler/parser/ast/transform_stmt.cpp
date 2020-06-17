@@ -235,7 +235,7 @@ void TransformVisitor::visit(const AssignMemberStmt *stmt) {
   auto lh = transform(stmt->lhs), rh = transform(stmt->rhs);
   auto c = lh->getType()->getClass();
   if (c && c->isRecord())
-    error("records are read-only ^ {} , {}", *c, *lh);
+    error("records are read-only ^ {} , {}", c->toString(), lh->toString());
   // find a member
   auto mm = ctx->getRealizations()->findMember(c->name, stmt->member);
   forceUnify(ctx->instantiate(getSrcInfo(), mm, c), rh->getType());
@@ -367,9 +367,9 @@ void TransformVisitor::visit(const MatchStmt *stmt) {
   resultStmt = N<MatchStmt>(move(w), move(patterns), move(cases));
 }
 
-shared_ptr<GenericType>
+shared_ptr<ClassType>
 TransformVisitor::parseGenerics(const vector<Param> &generics) {
-  auto genericTypes = make_shared<GenericType>();
+  auto genericTypes = make_shared<ClassType>("");
   for (auto &g : generics) {
     // if (g.type) {
     //   if (g.type->toString() != "(#id int)")
@@ -397,7 +397,7 @@ TransformVisitor::parseGenerics(const vector<Param> &generics) {
 // TODO: handle self automatic
 StmtPtr
 TransformVisitor::addMethod(Stmt *s, const string &canonicalName,
-                            const vector<GenericType::Generic> &implicits) {
+                            const vector<ClassType::Generic> &implicits) {
   if (auto f = dynamic_cast<FunctionStmt *>(s)) {
     auto fs = transform(f);
     auto name = ctx->getRealizations()->getCanonicalName(f->getSrcInfo());
@@ -429,7 +429,6 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
     error("invalid generic identifier");
     return nullptr;
   };
-  auto genericTypes = make_shared<GenericType>();
   if (auto e = CAST(stmt->what, IndexExpr)) {
     type = getType(e->expr);
     if (auto t = CAST(e->index, TupleExpr))
@@ -466,8 +465,8 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   for (int i = 0; i < generics.size(); i++) {
     if (c->explicits[i].type) {
       auto t =
-          dynamic_pointer_cast<LinkType>(ctx->find(generics[i])->getType());
-      assert(t && t->getUnbound());
+          dynamic_pointer_cast<LinkType>(ctx->find(generics[i])->getType()->follow());
+      assert(t && t->kind == LinkType::Unbound);
       t->kind = LinkType::Generic;
     }
     ctx->remove(generics[i]);
@@ -591,6 +590,7 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
       pending.push_back(pending.size());
     }
     auto t = make_shared<FuncType>(argTypes);
+    generateVariardicStub("function", argTypes.size());
     t->realizationInfo = make_shared<FuncType::RealizationInfo>(
         canonicalName, pending, realizationArgs);
     t->setSrcInfo(stmt->getSrcInfo());
@@ -735,7 +735,9 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       ctx->remove(g.name);
     }
 
-    auto t = make_shared<FuncType>(argTypes, genericTypes);
+    auto t = make_shared<FuncType>(argTypes, genericTypes->explicits,
+                                   genericTypes->implicits);
+    generateVariardicStub("function", argTypes.size());
     t->realizationInfo = make_shared<FuncType::RealizationInfo>(
         canonicalName, pending, realizationArgs, ctx->getBaseType());
     t->setSrcInfo(stmt->getSrcInfo());
@@ -782,8 +784,9 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   stmts.push_back(move(resultStmt));
 
   auto genericTypes = parseGenerics(stmt->generics);
-  auto ct = make_shared<ClassType>(canonicalName, stmt->isRecord,
-                                   vector<TypePtr>(), genericTypes);
+  auto ct =
+      make_shared<ClassType>(canonicalName, stmt->isRecord, vector<TypePtr>(),
+                             genericTypes->explicits, genericTypes->implicits);
   ct->setSrcInfo(stmt->getSrcInfo());
   if (!stmt->isRecord) { // add classes early
     ctx->addType(format("{}{}", ctx->getBase(), stmt->name), ct);
@@ -809,7 +812,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       error(a.type, "{} declared twice", a.name);
     seenMembers.insert(a.name);
     if (stmt->isRecord)
-      ct->recordMembers.push_back(t);
+      ct->args.push_back(t);
   }
   if (!mainType.size())
     mainType = "void";
@@ -1186,7 +1189,7 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
         if (ub->getLink()->id >= minUnbound) {
           if (!fu)
             fu = ub;
-          DBG("NOPE {} @ {}", (*ub), ub->getSrcInfo());
+          DBG("NOPE {} @ {}", ub->toString(), ub->getSrcInfo());
         }
       error(fu, "cannot resolve unbound variables");
       break;

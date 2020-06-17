@@ -468,7 +468,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
     string key = real.type->isRecord() ? "type" : "class";
     for (auto &a : c->members) {
       auto t = ctx->instantiate(real.type->getSrcInfo(), a.second, real.type);
-      args.push_back(fmt::format("{}: {}", a.first, *t));
+      args.push_back(fmt::format("{}: {}", a.first, t->toString()));
     }
     result = fmt::format("{} {}({})", keyword(key), real.fullName,
                          fmt::join(args, ", "));

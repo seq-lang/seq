@@ -139,11 +139,6 @@ void CodegenVisitor::visit(const IdExpr *expr) {
   // if (var->isGlobal() && var->getBase() == ctx->getBase() &&
   //     ctx->hasFlag("atomic"))
   //   dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
-
-  auto f = expr->getType()->getFunc();
-  // if (val->getFunc() && f->realizationInfo) {
-  // get exact realization !
-  // } else
   resultExpr = i->getExpr();
 }
 
@@ -570,7 +565,7 @@ seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
   assert(t && t->canRealize());
   auto it = ctx->getRealizations()->classRealizations.find(t->name);
   assert(it != ctx->getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->toString(true));
+  auto it2 = it->second.find(t->realizeString());
   assert(it2 != it->second.end());
   assert(it2->second.handle);
   return it2->second.handle;

@@ -173,7 +173,7 @@ public:
   /// the generic T gets mapped to int.
   types::TypePtr instantiate(const SrcInfo &srcInfo, types::TypePtr type);
   types::TypePtr instantiate(const SrcInfo &srcInfo, types::TypePtr type,
-                             types::GenericTypePtr generics,
+                             types::ClassTypePtr generics,
                              bool activate = true);
   types::TypePtr
   instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,

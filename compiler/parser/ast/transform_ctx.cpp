@@ -64,21 +64,6 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
   return nullptr;
 }
 
-// void TypeContext::addRealization(types::TypePtr type) {
-//   assert(type->canRealize());
-//   auto name = type->realizeString();
-
-//   if (getRealizations()->realizations.find(name) !=
-//       getRealizations()->realizations.end()) {
-//     // DBG("whoops {} -> {}", name, *type);
-//     assert(false);
-//   }
-//   if (auto f = CAST(type, types::FuncType))
-//     getRealizations()->realizations[name] = {type, getBase()};
-//   else
-//     getRealizations()->realizations[name] = {type, getBase()};
-// }
-
 types::TypePtr TypeContext::findInternal(const string &name) const {
   auto stdlib = imports->getImport("")->tctx;
   auto t = stdlib->find(name, false);
@@ -126,7 +111,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
       types::LinkType::Unbound, realizations->getUnboundCount()++, level);
   t->setSrcInfo(srcInfo);
   if (setActive) {
-    // DBG("UNBOUND {} ADDED # {} ", *t, srcInfo);
+    // DBG("UNBOUND {} ADDED # {} ", t->toString(0), srcInfo);
     activeUnbounds.insert(t);
   }
   return t;
@@ -139,7 +124,7 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo,
 
 types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo,
                                         types::TypePtr type,
-                                        types::GenericTypePtr generics,
+                                        types::ClassTypePtr generics,
                                         bool activate) {
   unordered_map<int, types::TypePtr> cache;
   if (generics)
@@ -157,7 +142,7 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo,
         // DBG("woho");
         // }
         // DBG("UNBOUND {} ADDED # {} ~ {} {}",
-        // dynamic_pointer_cast<types::LinkType>(i.second)->id, srcInfo, *type,
+        // dynamic_pointer_cast<types::LinkType>(i.second)->id, srcInfo, type->toString(),
         // i.first);
         activeUnbounds.insert(i.second);
       }
@@ -177,7 +162,7 @@ TypeContext::instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,
   for (int i = 0; i < c->explicits.size(); i++) {
     assert(c->explicits[i].type);
     g->explicits.push_back(
-        types::GenericType::Generic("", generics[i], c->explicits[i].id));
+        types::ClassType::Generic("", generics[i], c->explicits[i].id));
   }
   return instantiate(srcInfo, root, g);
 }
@@ -211,11 +196,11 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   for (auto &t : genericTypes) {
     auto typ = make_shared<types::ClassType>(
         t, true, vector<types::TypePtr>(),
-        make_shared<types::GenericType>(vector<types::GenericType::Generic>{
+        vector<types::ClassType::Generic>{
             {"T",
              make_shared<types::LinkType>(types::LinkType::Generic,
                                           realizations->unboundCount),
-             realizations->unboundCount}}));
+             realizations->unboundCount}});
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
     stdlib->addType("#" + t, typ);
@@ -225,23 +210,16 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   for (auto &t : genericTypes) {
     auto typ = make_shared<types::ClassType>(
         t, true, vector<types::TypePtr>(),
-        make_shared<types::GenericType>(vector<types::GenericType::Generic>{
+        vector<types::ClassType::Generic>{
             {"N",
              make_shared<types::LinkType>(types::LinkType::Generic,
                                           realizations->unboundCount),
-             realizations->unboundCount, true}}));
+             realizations->unboundCount, true}});
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
     stdlib->addType("#" + t, typ);
     realizations->unboundCount++;
   }
-  // tuple types: explicit function or type instantiation (tuple[X],
-  // function[Y]) auto tt = make_shared<types::ClassType>("tuple", true);
-  // stdlib->addType("tuple", tt);
-  // stdlib->addType("#tuple", tt);
-  // auto ft = make_shared<types::FuncType>();
-  // stdlib->addType("function", ft);
-  // stdlib->addType("#function", ft);
 
   stdlib->setFlag("internal");
   assert(stdlibPath.substr(stdlibPath.size() - 12) == "__init__.seq");

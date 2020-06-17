@@ -97,18 +97,19 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
   TransformVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
   // DBG("[ {} :- {} # {}", *expr,
-  //     expr->getType() ? expr->getType()->toString() : "-",
-  //     expr->getSrcInfo().line);
+      // expr->getType() ? expr->getType()->toString() : "-",
+      // expr->getSrcInfo().line);
   // __level__++;
   expr->accept(v);
   // __level__--;
   // DBG("  {} :- {} ]", *v.resultExpr,
-  //     v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
+      // v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
 
   if (allowTypes && v.resultExpr && v.resultExpr->getType() &&
       v.resultExpr->getType()->canRealize()) {
     if (auto c = v.resultExpr->getType()->getClass())
-      realizeType(c);
+      if (!c->getFunc())
+        realizeType(c);
   }
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
     error("unexpected type expression");
@@ -484,7 +485,7 @@ void TransformVisitor::fixExprName(ExprPtr &e, const string &newName) {
   else if (auto i = CAST(e, DotExpr))
     i->member = newName;
   else {
-    // DBG("fixing {}", *e);
+    DBG("fixing {}", *e);
     assert(false);
   }
 }
@@ -573,7 +574,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
         parseGeneric(i);
     else
       parseGeneric(expr->index);
-    auto g = e->getType()->getGeneric();
+    auto g = e->getType()->getClass();
     if (g->explicits.size() != generics.size())
       error("expected {} generics, got {}", g->explicits.size(),
             generics.size());
@@ -608,11 +609,11 @@ void TransformVisitor::visit(const TupleIndexExpr *expr) {
   auto e = transform(expr->expr);
   auto c = e->getType()->getClass();
   assert(c->name.substr(0, 8) == "__tuple_");
-  if (expr->index < 0 || expr->index >= c->recordMembers.size())
-    error("tuple index out of range (expected 0..{}, got {})",
-          c->recordMembers.size(), expr->index);
+  if (expr->index < 0 || expr->index >= c->args.size())
+    error("tuple index out of range (expected 0..{}, got {})", c->args.size(),
+          expr->index);
   resultExpr = N<TupleIndexExpr>(move(e), expr->index);
-  resultExpr->setType(forceUnify(expr, c->recordMembers[expr->index]));
+  resultExpr->setType(forceUnify(expr, c->args[expr->index]));
 }
 
 void TransformVisitor::visit(const StackAllocExpr *expr) {
@@ -648,7 +649,6 @@ string TransformVisitor::generateVariardicStub(const string &name, int len) {
                     " @internal\n  "
                     "def __new__(what: ptr[byte]) -> function[{1}]: pass\n",
                     code, join(generics, ", "));
-      DBG("--> {}", code);
     } else {
       error("invalid variardic type");
     }
@@ -657,13 +657,14 @@ string TransformVisitor::generateVariardicStub(const string &name, int len) {
     auto i = ctx->getImports()->getImport("");
     auto stmtPtr = dynamic_cast<SuiteStmt *>(i->statements.get());
     assert(stmtPtr);
-    stmtPtr->stmts.push_back(TransformVisitor(i->tctx).transform(a));
-    // i->tctx->dump();
-    // auto c = i->tctx->find(ctxName);
-    // assert(c);
-    // i->tctx->add(typeName, c);
-    // ctx->getImports()->getImport("")->tctx->add(typeName,
-    // ctx->find(ctxName)); DBG("  ? lookup? ... {}", ctx->find(typeName));
+
+    auto nc = make_shared<TypeContext>(i->tctx->getFilename(), i->tctx->getRealizations(), i->tctx->getImports());
+    stmtPtr->stmts.push_back(TransformVisitor(nc).transform(a));
+    for (auto &ax: *nc) {
+      // DBG("adding {}", a.first);
+      i->tctx->addToplevel(ax.first, ax.second.front());
+    }
+    // DBG("---");
   }
   return typeName;
 }
@@ -786,15 +787,6 @@ void TransformVisitor::visit(const CallExpr *expr) {
       resultExpr =
           transform(N<CallExpr>(N<DotExpr>(move(e), "__new__"), move(args)));
       return;
-      // special treatment due to the
-      // if (auto m = findBestCall(c, "__new__", targs, true, e->getType())) {
-      //   DBG("--- {} {}", m->realizationInfo->name, m->realizeString());
-      //   e = N<IdExpr>(m->realizationInfo->name);
-      //   e->setType(ctx->instantiate(getSrcInfo(), m, c));
-      // } else {
-      //   error("cannot find '__new__' in {} with {} -> {}", c->toString(),
-      //         v2s(targs), e->getType()->toString());
-      // }
     } else {
       string var = getTemporaryVar("typ");
       /// TODO: assumes that a class cannot have multiple __new__ magics
@@ -815,17 +807,13 @@ void TransformVisitor::visit(const CallExpr *expr) {
                                         : ctx->addUnbound(getSrcInfo()));
     return;
   }
-  // DBG("{} |- {}", *e, e->getType()->toString());
 
+  // Handle named and default arguments
   vector<CallExpr::Arg> reorderedArgs;
   vector<int> newPending;
   vector<TypePtr> newPendingTypes{f->args[0]};
   bool isPartial = false;
   if (f->realizationInfo) {
-    // DBG(" // f :- {}", *f);
-    // for (auto &a: f->realizationInfo->args)
-    //   DBG(" // args: {}", *a.type);
-
     bool namesStarted = false;
     unordered_map<string, ExprPtr> namedArgs;
     for (int i = 0; i < args.size(); i++) {
@@ -882,14 +870,14 @@ void TransformVisitor::visit(const CallExpr *expr) {
     }
     for (auto &i : namedArgs)
       error(i.second, "unknown argument {}", i.first);
-  } else { // we only know that it is function[...]; assume it is realized
+  } else { // we only know that it is a function[...]; assume it is realized
     if (args.size() != f->args.size() - 1)
-      error("too many arguments for {} (expected {}, got {})", *f,
+      error("too many arguments for {} (expected {}, got {})", f->toString(),
             f->args.size() - 1, args.size());
     for (int i = 0; i < args.size(); i++) {
       if (args[i].name != "")
         error("argument '{}' missing (function pointers have argument "
-              "names elided)");
+              "names elided)", args[i].name);
       reorderedArgs.push_back({"", move(args[i].value)});
 
       forceUnify(reorderedArgs[i].value, f->args[i + 1]);
@@ -911,7 +899,8 @@ void TransformVisitor::visit(const CallExpr *expr) {
     }
 
   if (isPartial) {
-    auto t = make_shared<FuncType>(newPendingTypes, f);
+    auto t = make_shared<FuncType>(newPendingTypes, f->explicits, f->implicits);
+    generateVariardicStub("function", newPendingTypes.size());
     if (f->realizationInfo) {
       t->realizationInfo = make_shared<FuncType::RealizationInfo>(
           f->realizationInfo->name, newPending, f->realizationInfo->args);
@@ -971,8 +960,7 @@ void TransformVisitor::visit(const DotExpr *expr) {
   if (lhs->getType()->getUnbound()) {
     typ = expr->getType() ? expr->getType() : ctx->addUnbound(getSrcInfo());
   } else if (auto c = lhs->getType()->getClass()) {
-    auto m = ctx->getRealizations()->findMethod(c->name, expr->member);
-    if (m) {
+    if (auto m = ctx->getRealizations()->findMethod(c->name, expr->member)) {
       if (m->size() > 1)
         error("ambigious partial expression"); /// TODO
       if (lhs->isType()) {

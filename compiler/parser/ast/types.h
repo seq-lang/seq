@@ -24,7 +24,6 @@ namespace types {
 struct FuncType;
 struct ClassType;
 struct LinkType;
-struct GenericType;
 struct StaticType;
 struct ImportType;
 struct Type;
@@ -32,7 +31,6 @@ typedef std::shared_ptr<Type> TypePtr;
 typedef std::shared_ptr<FuncType> FuncTypePtr;
 typedef std::shared_ptr<ClassType> ClassTypePtr;
 typedef std::shared_ptr<LinkType> LinkTypePtr;
-typedef std::shared_ptr<GenericType> GenericTypePtr;
 typedef std::shared_ptr<StaticType> StaticTypePtr;
 typedef std::shared_ptr<ImportType> ImportTypePtr;
 
@@ -72,11 +70,10 @@ public:
   virtual std::string toString(bool reduced = false) const = 0;
   virtual std::string realizeString() const = 0;
   /// Allow pretty-printing to C++ streams
-  friend std::ostream &operator<<(std::ostream &out, const Type &c) {
-    return out << c.toString();
-  }
+  // friend std::ostream &operator<<(std::ostream &out, const Type &c) {
+  //   return out << c.toString();
+  // }
 
-  virtual GenericTypePtr getGeneric() { return nullptr; }
   virtual FuncTypePtr getFunc() { return nullptr; }
   virtual ClassTypePtr getClass() { return nullptr; }
   virtual LinkTypePtr getLink() { return nullptr; }
@@ -182,12 +179,11 @@ public:
     return std::static_pointer_cast<LinkType>(follow());
   }
   LinkTypePtr getUnbound() override {
-    return kind == Unbound
-               ? std::static_pointer_cast<LinkType>(shared_from_this())
-               : nullptr;
-  }
-  GenericTypePtr getGeneric() override {
-    return std::dynamic_pointer_cast<GenericType>(follow());
+    if (kind == Unbound)
+      return std::static_pointer_cast<LinkType>(shared_from_this());
+    if (kind == Link)
+      return type->getUnbound();
+    return nullptr;
   }
   FuncTypePtr getFunc() override {
     return std::dynamic_pointer_cast<FuncType>(follow());
@@ -203,7 +199,10 @@ private:
   bool occurs(TypePtr typ, Unification &us);
 };
 
-struct GenericType : public Type {
+/**
+ * ClassType describes a (generic) class type.
+ */
+struct ClassType : public Type {
   struct Generic {
     std::string name;
     int id;
@@ -215,37 +214,17 @@ struct GenericType : public Type {
   };
   std::vector<Generic> explicits, implicits;
 
-public:
-  GenericType(const std::vector<Generic> &explicits = std::vector<Generic>(),
-              const std::vector<Generic> &implicits = std::vector<Generic>());
-
-  virtual std::string toString(bool reduced = false) const override;
-  std::string realizeString() const override;
-  virtual bool hasUnbound() const override;
-  virtual bool canRealize() const override;
-  virtual TypePtr generalize(int level) override;
-  virtual TypePtr instantiate(int level, int &unboundCount,
-                              std::unordered_map<int, TypePtr> &cache) override;
-  virtual int unify(TypePtr t, Unification &us) override;
-
-  GenericTypePtr getGeneric() override {
-    return std::static_pointer_cast<GenericType>(shared_from_this());
-  }
-};
-
-/**
- * ClassType describes a (generic) class type.
- */
-struct ClassType : public GenericType {
-  /// Global unique name for each type (generated from the getSrcPos()).
+  /// Global unique name for each type (generated from the getSrcPos())
   std::string name;
   /// Distinguish between records and classes
   bool record;
-  std::vector<TypePtr> recordMembers;
+  /// Record or function members
+  std::vector<TypePtr> args;
 
   ClassType(const std::string &name, bool isRecord = false,
-            const std::vector<TypePtr> &recordMembers = std::vector<TypePtr>(),
-            std::shared_ptr<GenericType> generics = nullptr);
+            const std::vector<TypePtr> &args = std::vector<TypePtr>(),
+            const std::vector<Generic> &explicits = std::vector<Generic>(),
+            const std::vector<Generic> &implicits = std::vector<Generic>());
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
@@ -262,13 +241,12 @@ public:
     return std::static_pointer_cast<ClassType>(shared_from_this());
   }
   bool isRecord() const { return record; }
-  bool isTuple() const;
 };
 
 /**
  * FuncType describes a (generic) function type.
  */
-struct FuncType : public GenericType {
+struct FuncType : public ClassType {
   struct RealizationInfo {
     struct Arg {
       std::string name;
@@ -284,37 +262,23 @@ struct FuncType : public GenericType {
   };
   std::shared_ptr<RealizationInfo> realizationInfo;
 
-  /// Empty name indicates "free" function type that can unify to any other
-  /// function type
-  std::vector<TypePtr> args;
-
+public:
+  FuncType(ClassTypePtr c);
   FuncType(const std::vector<TypePtr> &args = std::vector<TypePtr>(),
-           std::shared_ptr<GenericType> generics = nullptr);
+           const std::vector<Generic> &explicits = std::vector<Generic>(),
+           const std::vector<Generic> &implicits = std::vector<Generic>());
 
 public:
-  virtual int unify(TypePtr typ, Unification &us) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
 
 public:
-  bool hasUnbound() const override;
   bool canRealize() const override;
-  std::string toString(bool reduced = false) const override;
   std::string realizeString() const override;
   FuncTypePtr getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
   }
-
-  // FuncTypePtr getFullType() const {
-  //   assert(realizationInfo);
-  //   std::vector<TypePtr> types { args[0] };
-  //   for (auto &a: realizationInfo->args) {
-  //     types.push_back(a.type);
-  //     assert(types.back());
-  //   }
-  //   return std::make_shared<FuncType>(types, getGeneric());
-  // }
 };
 
 } // namespace types

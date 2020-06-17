@@ -32,6 +32,9 @@ RealizationContext::RealizationContext() : unboundCount(0) {}
 
 string RealizationContext::getCanonicalName(const SrcInfo &info) const {
   auto it = canonicalNames.find(info);
+  // for (auto &i: canonicalNames)
+  //   DBG("--- {} -> {}", i.first.id, i.second);
+  // DBG("???? QUE {}.{}.{}.{} {}", info.file, info.line, info.col, info.id, it != canonicalNames.end());
   if (it != canonicalNames.end())
     return it->second;
   assert(false);
@@ -42,7 +45,7 @@ string RealizationContext::generateCanonicalName(const SrcInfo &info,
                                                  const string &module,
                                                  const string &name) {
   auto it = canonicalNames.find(info);
-  // DBG("---- QUE {}.{}.{}.{} ", info.file, info.line, info.col, info.id);
+  // DBG("---- QUE {}.{}.{}.{} {}", info.file, info.line, info.col, info.id, it != canonicalNames.end());
   if (it != canonicalNames.end())
     return it->second;
 
@@ -50,7 +53,8 @@ string RealizationContext::generateCanonicalName(const SrcInfo &info,
   auto newName = (module == "" ? "" : module + ".");
   newName += format("{}{}", name, num ? format(".{}", num) : "");
   num++;
-  return canonicalNames[info] = (newName[0] == '#' ? newName : "#" + newName);
+  canonicalNames[info] = (newName[0] == '#' ? newName : "#" + newName);
+  return canonicalNames[info];
 }
 
 int &RealizationContext::getUnboundCount() { return unboundCount; }

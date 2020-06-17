@@ -170,7 +170,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
   assert(t && t->canRealize());
   auto it = getRealizations()->classRealizations.find(t->name);
   assert(it != getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->toString(true));
+  auto it2 = it->second.find(t->realizeString());
   assert(it2 != it->second.end());
   auto &real = it2->second;
   if (real.handle)

@@ -1,0 +1,497 @@
+@internal
+type str(len: int, ptr: ptr[byte]):
+    @internal
+    def __new__(p: ptr[byte], l: int) -> str: pass
+    def __new__() -> str:
+        return str(ptr[byte](), 0)
+    def __new__[T](what: T) -> str: # lowest priority!
+        return what.__str__()
+    def __str__(what: str) -> str:
+        return what
+    def __len__(self) -> int:
+        return self.len
+    def __bool__(self) -> bool:
+        return self.len != 0
+    def __copy__(self) -> str:
+        return self
+    @internal
+    def memcpy(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
+    @internal
+    def memmove(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
+    @internal
+    def memset(dest: ptr[byte], b: byte, len: int) -> void: pass
+
+extend ptr[T]:
+    @internal
+    def as_byte(self) -> ptr[byte]: pass
+    @internal
+    def __new__() -> ptr[T]: pass
+    # @internal
+    # def __new__[U](other: ptr[U]) -> ptr[byte]: pass
+    @internal
+    def __new__(other: ptr[byte]) -> ptr[T]: pass
+    @internal
+    def __new__(sz: int) -> ptr[T]: pass
+    @internal
+    def __new__(other: ptr[T]) -> ptr[T]: pass
+    @internal
+    def __int__(self) -> int: pass
+    @internal
+    def __copy__(self) -> ptr[T]: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __getitem__(self, index: int) -> T: pass
+    @internal
+    def __setitem__(self, index: int, what: T) -> void: pass
+    @internal
+    def __add__(self, other: int) -> ptr[T]: pass
+    @internal
+    def __sub__(self, other: ptr[T]) -> int: pass
+    @internal
+    def __eq__(self, other: ptr[T]) -> bool: pass
+    @internal
+    def __ne__(self, other: ptr[T]) -> bool: pass
+    @internal
+    def __lt__(self, other: ptr[T]) -> bool: pass
+    @internal
+    def __gt__(self, other: ptr[T]) -> bool: pass
+    @internal
+    def __le__(self, other: ptr[T]) -> bool: pass
+    @internal
+    def __ge__(self, other: ptr[T]) -> bool: pass
+    @internal
+    def __prefetch_r0__(self) -> void: pass
+    @internal
+    def __prefetch_r1__(self) -> void: pass
+    @internal
+    def __prefetch_r2__(self) -> void: pass
+    @internal
+    def __prefetch_r3__(self) -> void: pass
+    @internal
+    def __prefetch_w0__(self) -> void: pass
+    @internal
+    def __prefetch_w1__(self) -> void: pass
+    @internal
+    def __prefetch_w2__(self) -> void: pass
+    @internal
+    def __prefetch_w3__(self) -> void: pass
+
+extend bool:
+    @internal
+    def __new__() -> bool: pass
+    def __new__[T](what: T) -> bool: # lowest priority!
+        return what.__bool__()
+    @internal
+    def __str__(self) -> str: pass
+    @internal
+    def __copy__(self) -> bool: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __invert__(self) -> bool: pass
+    @internal
+    def __eq__(self, other: bool) -> bool: pass
+    @internal
+    def __ne__(self, other: bool) -> bool: pass
+    @internal
+    def __lt__(self, other: bool) -> bool: pass
+    @internal
+    def __gt__(self, other: bool) -> bool: pass
+    @internal
+    def __le__(self, other: bool) -> bool: pass
+    @internal
+    def __ge__(self, other: bool) -> bool: pass
+    @internal
+    def __and__(self, other: bool) -> bool: pass
+    @internal
+    def __or__(self, other: bool) -> bool: pass
+    @internal
+    def __xor__(self, other: bool) -> bool: pass
+
+extend byte:
+    @internal
+    def __new__() -> byte: pass
+    @internal
+    def __new__(b: byte) -> byte: pass
+    @internal
+    def __new__(i: int) -> byte: pass
+    @internal
+    def __str__(self) -> str: pass
+    @internal
+    def __copy__(self) -> byte: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __eq__(self, other: byte) -> bool: pass
+    @internal
+    def __ne__(self, other: byte) -> bool: pass
+    @internal
+    def __lt__(self, other: byte) -> bool: pass
+    @internal
+    def __gt__(self, other: byte) -> bool: pass
+    @internal
+    def __le__(self, other: byte) -> bool: pass
+    @internal
+    def __ge__(self, other: byte) -> bool: pass
+
+extend int:
+    @internal
+    def __new__() -> int: pass
+    def __new__[T](what: T) -> int: # lowest priority!
+        return what.__int__()
+    @internal
+    def __new__(i: int) -> int: pass
+    @internal
+    def __new__(f: float) -> int: pass
+    @internal
+    def __new__(b: bool) -> int: pass
+    @internal
+    def __new__(b: byte) -> int: pass
+    @internal
+    def __str__(self) -> str: pass
+    @internal
+    def __copy__(self) -> int: pass
+    @internal
+    def __hash__(self) -> int: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __pos__(self) -> int: pass
+    @internal
+    def __neg__(self) -> int: pass
+    @internal
+    def __invert__(self) -> int: pass
+    @internal
+    def __abs__(self) -> int: pass
+    @internal
+    def __add__(self, other: int) -> int: pass
+    @internal
+    def __sub__(self, other: int) -> int: pass
+    @internal
+    def __mul__(self, other: int) -> int: pass
+    @internal
+    def __div__(self, other: int) -> int: pass
+    @internal
+    def __truediv__(self, other: int) -> float: pass
+    @internal
+    def __mod__(self, other: int) -> int: pass
+    @internal
+    def __lshift__(self, other: int) -> int: pass
+    @internal
+    def __rshift__(self, other: int) -> int: pass
+    @internal
+    def __eq__(self, other: int) -> bool: pass
+    @internal
+    def __ne__(self, other: int) -> bool: pass
+    @internal
+    def __lt__(self, other: int) -> bool: pass
+    @internal
+    def __gt__(self, other: int) -> bool: pass
+    @internal
+    def __le__(self, other: int) -> bool: pass
+    @internal
+    def __ge__(self, other: int) -> bool: pass
+    @internal
+    def __and__(self, other: int) -> int: pass
+    @internal
+    def __or__(self, other: int) -> int: pass
+    @internal
+    def __xor__(self, other: int) -> int: pass
+    @internal
+    def __add__(self, other: float) -> float: pass
+    @internal
+    def __sub__(self, other: float) -> float: pass
+    @internal
+    def __mul__(self, other: float) -> float: pass
+    @internal
+    def __div__(self, other: float) -> float: pass
+    @internal
+    def __truediv__(self, other: float) -> float: pass
+    @internal
+    def __mod__(self, other: float) -> float: pass
+    @internal
+    def __eq__(self, other: float) -> bool: pass
+    @internal
+    def __ne__(self, other: float) -> bool: pass
+    @internal
+    def __lt__(self, other: float) -> bool: pass
+    @internal
+    def __gt__(self, other: float) -> bool: pass
+    @internal
+    def __le__(self, other: float) -> bool: pass
+    @internal
+    def __ge__(self, other: float) -> bool: pass
+
+extend float:
+    @internal
+    def __new__() -> float: pass
+    @internal
+    def __new__(f: float) -> float: pass
+    @internal
+    def __new__(i: int) -> float: pass
+    @internal
+    def __str__(self) -> str: pass
+    @internal
+    def __copy__(self) -> float: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __pos__(self) -> float: pass
+    @internal
+    def __neg__(self) -> float: pass
+    @internal
+    def __abs__(self) -> float: pass
+    @internal
+    def __add__(self, other: float) -> float: pass
+    @internal
+    def __sub__(self, other: float) -> float: pass
+    @internal
+    def __mul__(self, other: float) -> float: pass
+    @internal
+    def __div__(self, other: float) -> float: pass
+    @internal
+    def __truediv__(self, other: float) -> float: pass
+    @internal
+    def __mod__(self, other: float) -> float: pass
+    @internal
+    def __pow__(self, other: float) -> float: pass
+    @internal
+    def __eq__(self, other: float) -> bool: pass
+    @internal
+    def __ne__(self, other: float) -> bool: pass
+    @internal
+    def __lt__(self, other: float) -> bool: pass
+    @internal
+    def __gt__(self, other: float) -> bool: pass
+    @internal
+    def __le__(self, other: float) -> bool: pass
+    @internal
+    def __ge__(self, other: float) -> bool: pass
+    @internal
+    def __add__(self, other: int) -> float: pass
+    @internal
+    def __sub__(self, other: int) -> float: pass
+    @internal
+    def __mul__(self, other: int) -> float: pass
+    @internal
+    def __div__(self, other: int) -> float: pass
+    @internal
+    def __truediv__(self, other: int) -> float: pass
+    @internal
+    def __mod__(self, other: int) -> float: pass
+    @internal
+    def __pow__(self, other: int) -> float: pass
+    @internal
+    def __eq__(self, other: int) -> bool: pass
+    @internal
+    def __ne__(self, other: int) -> bool: pass
+    @internal
+    def __lt__(self, other: int) -> bool: pass
+    @internal
+    def __gt__(self, other: int) -> bool: pass
+    @internal
+    def __le__(self, other: int) -> bool: pass
+    @internal
+    def __ge__(self, other: int) -> bool: pass
+
+extend optional[T]:  # type
+    @internal
+    def __new__() -> optional[T]: pass
+    @internal
+    def __new__(what: T) -> optional[T]: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __invert__(self) -> T: pass
+
+extend generator[T]:  # class
+    @internal
+    def __iter__(self) -> generator[T]: pass
+    @internal
+    def __raw__(self) -> ptr[byte]: pass
+    @internal
+    def __done__(self) -> bool: pass
+    @internal
+    def __promise__(self) -> ptr[T]: pass
+    @internal
+    def __resume__(self) -> void: pass
+    @internal
+    def __str__(self) -> str: pass
+
+@internal
+type array[T](len: int, ptr: ptr[T]):
+    @internal
+    def __elemsize__() -> int: pass
+    @internal
+    def __atomic__() -> bool: pass
+    @internal
+    def __new__(len: int) -> array[T]: pass
+    @internal
+    def __new__(data: ptr[T], len: int) -> array[T]: pass
+    @internal
+    def __copy__(self) -> array[T]: pass
+    @internal
+    def __len__(self) -> int: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __getitem__(self, index: int) -> T: pass
+    @internal
+    def __slice__(self, l: int, r: int) -> array[T]: pass
+    @internal
+    def __slice_left__(self, r: int) -> array[T]: pass
+    @internal
+    def __slice_right__(self, l: int) -> array[T]: pass
+    @internal
+    def __setitem__(self, index: int, what: T) -> void: pass
+
+extend Int[N]:
+    @internal
+    def __new__() -> Int[N]: pass
+    @internal
+    def __new__(what: Int[N]) -> Int[N]: pass
+    @internal
+    def __new__(what: int) -> Int[N]: pass
+    @internal
+    def __new__(what: UInt[N]) -> Int[N]: pass
+    @internal
+    def __copy__(self) -> Int[N]: pass
+    @internal
+    def __hash__(self) -> int: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __pos__(self) -> Int[N]: pass
+    @internal
+    def __neg__(self) -> Int[N]: pass
+    @internal
+    def __invert__(self) -> Int[N]: pass
+    @internal
+    def __add__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __sub__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __mul__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __div__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __truediv__(self, other: Int[N]) -> float: pass
+    @internal
+    def __mod__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __lshift__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __rshift__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __eq__(self, other: Int[N]) -> bool: pass
+    @internal
+    def __ne__(self, other: Int[N]) -> bool: pass
+    @internal
+    def __lt__(self, other: Int[N]) -> bool: pass
+    @internal
+    def __gt__(self, other: Int[N]) -> bool: pass
+    @internal
+    def __le__(self, other: Int[N]) -> bool: pass
+    @internal
+    def __ge__(self, other: Int[N]) -> bool: pass
+    @internal
+    def __and__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __or__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __xor__(self, other: Int[N]) -> Int[N]: pass
+    @internal
+    def __pickle__(self, dest: ptr[byte]) -> void: pass
+    @internal
+    def __unpickle__(self, src: ptr[byte]) -> Int[N]: pass
+    @internal
+    def __str__(self) -> str: pass
+    @internal
+    def popcnt(self) -> int: pass
+
+    def len() -> int:
+        return N
+
+extend UInt[N]:
+    @internal
+    def __new__() -> UInt[N]: pass
+    @internal
+    def __new__(what: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __new__(what: int) -> UInt[N]: pass
+    @internal
+    def __new__(what: Int[N]) -> UInt[N]: pass
+    @internal
+    def __copy__(self) -> UInt[N]: pass
+    @internal
+    def __hash__(self) -> int: pass
+    @internal
+    def __bool__(self) -> bool: pass
+    @internal
+    def __pos__(self) -> UInt[N]: pass
+    @internal
+    def __neg__(self) -> UInt[N]: pass
+    @internal
+    def __invert__(self) -> UInt[N]: pass
+    @internal
+    def __add__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __sub__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __mul__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __div__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __truediv__(self, other: UInt[N]) -> float: pass
+    @internal
+    def __mod__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __lshift__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __rshift__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __eq__(self, other: UInt[N]) -> bool: pass
+    @internal
+    def __ne__(self, other: UInt[N]) -> bool: pass
+    @internal
+    def __lt__(self, other: UInt[N]) -> bool: pass
+    @internal
+    def __gt__(self, other: UInt[N]) -> bool: pass
+    @internal
+    def __le__(self, other: UInt[N]) -> bool: pass
+    @internal
+    def __ge__(self, other: UInt[N]) -> bool: pass
+    @internal
+    def __and__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __or__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __xor__(self, other: UInt[N]) -> UInt[N]: pass
+    @internal
+    def __pickle__(self, dest: ptr[byte]) -> void: pass
+    @internal
+    def __unpickle__(self, src: ptr[byte]) -> UInt[N]: pass
+    @internal
+    def __str__(self) -> str: pass
+    @internal
+    def popcnt(self) -> int: pass
+
+    def len() -> int:
+        return N
+
+@internal
+type seq(len: int, ptr: ptr[byte]):
+    def __new__(s: str) -> seq:
+        return (s.len, s.ptr)
+    # def __contains__[N](self: seq, what: Kmer[N]) -> void: pass
+
+extend str:
+    def __add__(self, other: str) -> str:
+        len1 = self.len
+        len2 = other.len
+        len3 = len1 + len2
+        p = ptr[byte](len3)
+        str.memcpy(p, self.ptr, len1)
+        str.memcpy(p + len1, other.ptr, len2)
+        return str(p, len3)
