@@ -1081,7 +1081,10 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
   for (auto &c : cv.captures)
     if (used.find(c) == used.end())
       args.push_back({"", N<IdExpr>(c)});
-  resultExpr = transform(N<CallExpr>(N<IdExpr>(fnVar), move(args)));
+  if (cv.captures.size())
+    resultExpr = transform(N<CallExpr>(N<IdExpr>(fnVar), move(args)));
+  else
+    resultExpr = N<IdExpr>(fnVar);
 }
 
 // TODO
