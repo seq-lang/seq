@@ -9,7 +9,7 @@
 
 {
   module L = Lexing
-  module P = Grammar
+  module P = Seqgrammar
   module B = Buffer
 
   type offset = { mutable line: int ; mutable col: int }
@@ -78,7 +78,7 @@
       scan 0;
       Buffer.contents buf
     in
-    match String.lowercase_ascii (String.sub pfx 0 1) with
+    match String.lowercase (String.sub pfx 0 1) with
     | "r" -> P.STRING (fix_literals ~is_raw:true u)
     | ("s" | "p") as p -> P.SEQ (p, fix_literals u)
     | "k" -> P.KMER (fix_literals u)
