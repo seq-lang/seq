@@ -20,7 +20,6 @@ addons:
       - python-sphinx
       - doxygen
       - ocaml
-      - ocamlbuild
   homebrew:
     update: true
     packages:

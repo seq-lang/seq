@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.5)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -28,10 +28,10 @@ ExternalProject_Add(bdwgc
   BUILD_IN_SOURCE ON
   INSTALL_DIR ${CMAKE_BINARY_DIR}/bdwgc/build
   INSTALL_COMMAND make install
-  LOG_DOWNLOAD ON
-  LOG_CONFIGURE ON
-  LOG_BUILD ON
-  LOG_INSTALL ON
+  # LOG_DOWNLOAD ON
+  # LOG_CONFIGURE ON
+  # LOG_BUILD ON
+  # LOG_INSTALL ON
 )
 ExternalProject_Get_Property(bdwgc install_dir)
 set(BDWGC_DIR ${install_dir})
@@ -60,12 +60,15 @@ endif()
 
 
 add_library(seqrt_shared SHARED $<TARGET_OBJECTS:seqrt>)
+add_dependencies(seqrt_shared bdwgc)
 target_link_libraries(seqrt_shared PUBLIC ${BDWGC_DIR}/lib/libgc.a Threads::Threads)
 if (SEQ_THREADED)
   find_package(OpenMP REQUIRED)
   target_link_libraries(seqrt_shared PUBLIC OpenMP::OpenMP_CXX)
 endif()
-add_library(seqrt_static STATIC $<TARGET_OBJECTS:seqrt> ${BDWGC_DIR}/lib/libgc.a)
+add_library(seqrt_static STATIC $<TARGET_OBJECTS:seqrt>)
+add_dependencies(seqrt_static bdwgc)
+target_link_libraries(seqrt_static ${BDWGC_DIR}/lib/libgc.a)
 
 # Seq parsing library
 execute_process(COMMAND ocamlc -where
@@ -84,10 +87,9 @@ ExternalProject_Add(menhir
   CONFIGURE_COMMAND ""
   BUILD_COMMAND make -C src -j
   BUILD_IN_SOURCE ON
-  #INSTALL_DIR ${CMAKE_BINARY_DIR}/bdwgc/build
   INSTALL_COMMAND ""
-  LOG_DOWNLOAD ON
-  LOG_BUILD ON
+  # LOG_DOWNLOAD ON
+  # LOG_BUILD ON
 )
 ExternalProject_Get_Property(menhir SOURCE_DIR)
 set(MENHIR ${SOURCE_DIR}/src/_stage1/menhir.native)
@@ -101,8 +103,8 @@ ExternalProject_Add(seqparse_target
   BINARY_DIR ${CMAKE_BINARY_DIR}/seqparse
   BUILD_COMMAND make -C ocaml MENHIR=${MENHIR} MENHIR_LIB=${MENHIR_LIB}
   INSTALL_COMMAND ""
-  LOG_DOWNLOAD ON
-  LOG_BUILD ON
+  # LOG_DOWNLOAD ON
+  # LOG_BUILD ON
 )
 ExternalProject_Get_Property(seqparse_target BINARY_DIR)
 set(LIB_SEQPARSE ${BINARY_DIR}/ocaml/seqparser.o)

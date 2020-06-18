@@ -8,6 +8,7 @@ all: parser.o
 parser.o: lex menhir
 	$(OCAML) \
 		-w -40 -g \
+		-fPIC -runtime-variant _pic \
 		-strict-sequence \
 		-strict-formats \
 		-short-paths \
