@@ -137,7 +137,7 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
 add_library(seq SHARED ${SEQ_HPPFILES} ${SEQ_CPPFILES})
 add_dependencies(seq seqparse_target)
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} dl seqrt_shared ${LIB_SEQPARSE})
+target_link_libraries(seq ${LLVM_LIBS} seqrt_shared ${LIB_SEQPARSE} dl)
 
 if(SEQ_JITBRIDGE)
   add_library(seqjit SHARED compiler/util/jit.cpp)
