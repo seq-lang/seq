@@ -35,7 +35,6 @@ ExternalProject_Add(bdwgc
 )
 ExternalProject_Get_Property(bdwgc install_dir)
 set(BDWGC_DIR ${install_dir})
-message(${BDWGC_DIR})
 
 set(SEQRT_FILES runtime/lib.h
                 runtime/lib.cpp
@@ -94,8 +93,6 @@ ExternalProject_Add(menhir
 ExternalProject_Get_Property(menhir SOURCE_DIR)
 set(MENHIR ${SOURCE_DIR}/src/_stage1/menhir.native)
 set(MENHIR_LIB ${SOURCE_DIR}/src/_stage1)
-message(${MENHIR})
-message(${MENHIR_LIB})
 
 ExternalProject_Add(seqparse_target
   SOURCE_DIR ${CMAKE_SOURCE_DIR}/compiler/parser/ocaml
@@ -108,8 +105,8 @@ ExternalProject_Add(seqparse_target
 )
 ExternalProject_Get_Property(seqparse_target BINARY_DIR)
 set(LIB_SEQPARSE ${BINARY_DIR}/ocaml/seqparser.o)
-message(${LIB_SEQPARSE})
 add_dependencies(seqparse_target menhir)
+set_property(SOURCE ${LIB_SEQPARSE} PROPERTY GENERATED 1)
 
 # Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -134,8 +131,9 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/util/*.cpp
                        compiler/util/fmt/*.cpp)
 
-add_library(seq SHARED ${LIB_SEQPARSE} ${SEQ_HPPFILES} ${SEQ_CPPFILES})
+add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
+target_sources(seq PUBLIC ${LIB_SEQPARSE} ${SEQ_CPPFILES})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} seqrt_shared dl)
 
