@@ -15,7 +15,7 @@ using namespace llvm::orc;
 #include "llvm/CodeGen/CommandFlags.def"
 #endif
 
-config::Config::Config() : context(), debug(false) {}
+config::Config::Config() : context(), debug(false), profile(false) {}
 
 config::Config &seq::config::config() {
   static Config config;
@@ -271,6 +271,8 @@ static TargetMachine *getTargetMachine(Triple triple, StringRef cpuStr,
 }
 
 static void applyDebugTransformations(Module *module) {
+  if (!config::config().debug && !config::config().profile)
+    return;
   // remove tail calls and fix linkage for stack traces
   for (Function &f : *module) {
     f.setLinkage(GlobalValue::ExternalLinkage);
@@ -325,8 +327,7 @@ static void applyGCTransformations(Module *module) {
 
 static void optimizeModule(Module *module) {
   const bool debug = config::config().debug;
-  if (debug)
-    applyDebugTransformations(module);
+  applyDebugTransformations(module);
   std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
   std::unique_ptr<legacy::FunctionPassManager> fpm(
       new legacy::FunctionPassManager(module));
@@ -388,8 +389,7 @@ static void optimizeModule(Module *module) {
     fpm->run(f);
   fpm->doFinalization();
   pm->run(*module);
-  if (debug)
-    applyDebugTransformations(module);
+  applyDebugTransformations(module);
 }
 
 void SeqModule::optimize() { optimizeModule(module); }

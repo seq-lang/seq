@@ -1,0 +1,130 @@
+######################################
+# k-mer reverse complement benchmark #
+######################################
+from sys import argv
+from time import timing
+
+print 'loading ref...'
+ref = [a.seq for a in FASTA(argv[1])]
+print 'done.'
+
+def test_slow[K](kmer: K):
+    rc = K().as_int()
+    type I = typeof(rc)
+
+    for i in range(len(kmer)):
+        b = I(int((~kmer[i]).as_int()))
+        b <<= I(2*i)
+        rc |= b
+    return kmer > K(rc)
+
+def test_lookup[K]():
+    n = 0
+    with timing(f'{K.len()=} (lookup)'):
+        for s in ref:
+            for kmer in s |> kmers[K](1):
+                b = kmer > kmer.__rc_lookup__()
+                n += 1 if b else 0
+    print n
+
+def test_bitwise[K]():
+    n = 0
+    with timing(f'{K.len()=} (bitwise)'):
+        for s in ref:
+            for kmer in s |> kmers[K](1):
+                b = kmer > kmer.__rc_bitwise__()
+                n += 1 if b else 0
+    print n
+
+def test_simd[K]():
+    n = 0
+    with timing(f'{K.len()=} (SIMD)'):
+        for s in ref:
+            for kmer in s |> kmers[K](1):
+                b = kmer > kmer.__rc_simd__()
+                n += 1 if b else 0
+    print n
+
+test_lookup[Kmer[3]]()
+test_bitwise[Kmer[3]]()
+test_simd[Kmer[3]]()
+
+test_lookup[Kmer[4]]()
+test_bitwise[Kmer[4]]()
+test_simd[Kmer[4]]()
+
+test_lookup[Kmer[5]]()
+test_bitwise[Kmer[5]]()
+test_simd[Kmer[5]]()
+
+test_lookup[Kmer[7]]()
+test_bitwise[Kmer[7]]()
+test_simd[Kmer[7]]()
+
+test_lookup[Kmer[8]]()
+test_bitwise[Kmer[8]]()
+test_simd[Kmer[8]]()
+
+test_lookup[Kmer[9]]()
+test_bitwise[Kmer[9]]()
+test_simd[Kmer[9]]()
+
+test_lookup[Kmer[15]]()
+test_bitwise[Kmer[15]]()
+test_simd[Kmer[15]]()
+
+test_lookup[Kmer[16]]()
+test_bitwise[Kmer[16]]()
+test_simd[Kmer[16]]()
+
+test_lookup[Kmer[17]]()
+test_bitwise[Kmer[17]]()
+test_simd[Kmer[17]]()
+
+test_lookup[Kmer[31]]()
+test_bitwise[Kmer[31]]()
+test_simd[Kmer[31]]()
+
+test_lookup[Kmer[32]]()
+test_bitwise[Kmer[32]]()
+test_simd[Kmer[32]]()
+
+test_lookup[Kmer[33]]()
+test_bitwise[Kmer[33]]()
+test_simd[Kmer[33]]()
+
+test_lookup[Kmer[63]]()
+test_bitwise[Kmer[63]]()
+test_simd[Kmer[63]]()
+
+test_lookup[Kmer[64]]()
+test_bitwise[Kmer[64]]()
+test_simd[Kmer[64]]()
+
+test_lookup[Kmer[65]]()
+test_bitwise[Kmer[65]]()
+test_simd[Kmer[65]]()
+
+test_lookup[Kmer[127]]()
+test_bitwise[Kmer[127]]()
+test_simd[Kmer[127]]()
+
+test_lookup[Kmer[128]]()
+test_bitwise[Kmer[128]]()
+test_simd[Kmer[128]]()
+
+test_lookup[Kmer[129]]()
+test_bitwise[Kmer[129]]()
+test_simd[Kmer[129]]()
+
+test_lookup[Kmer[255]]()
+test_bitwise[Kmer[255]]()
+test_simd[Kmer[255]]()
+
+test_lookup[Kmer[256]]()
+test_bitwise[Kmer[256]]()
+test_simd[Kmer[256]]()
+
+test_lookup[Kmer[257]]()
+test_bitwise[Kmer[257]]()
+test_simd[Kmer[257]]()

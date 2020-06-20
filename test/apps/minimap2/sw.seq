@@ -1,0 +1,95 @@
+# Smith-Waterman alignment from minimap2 implemented using Seq's inter-sequence alignment
+# https://github.com/lh3/minimap2
+# https://github.com/lh3/ksw2
+# Usage: seqc sw.seq <queries> <targets>
+# <queries> and <targets> are text files of the same length with one sequence per line.
+from time import timing
+from sys import argv
+queries = argv[1]
+targets = argv[2]
+
+@inter_align
+def process_inter_score_only(t):
+    global total, num
+    query, target = t
+    inter_score = query.align(target, a=1, b=2, ambig=0, gapo=4, gape=2, zdrop=400, bandwidth=751, ext_only=False, score_only=True).score
+    total += inter_score
+    num += 1
+
+@inter_align
+def process_inter(t):
+    global total, num
+    query, target = t
+    inter_score = query.align(target, a=1, b=2, ambig=0, gapo=4, gape=2, zdrop=400, bandwidth=751, ext_only=False, score_only=False).score
+    total += inter_score
+    num += 1
+
+def process_intra_score_only(t):
+    global total, num
+    query, target = t
+    inter_score = query.align(target, a=1, b=2, ambig=0, gapo=4, gape=2, zdrop=400, bandwidth=751, ext_only=False, score_only=True).score
+    total += inter_score
+    num += 1
+
+def process_intra(t):
+    global total, num
+    query, target = t
+    inter_score = query.align(target, a=1, b=2, ambig=0, gapo=4, gape=2, zdrop=400, bandwidth=751, ext_only=False, score_only=False).score
+    total += inter_score
+    num += 1
+
+def filter_len(t):
+    query, target = t
+    if len(query) <= 512 and len(target) <= 512:
+        yield query, target
+
+for i in range(5):
+    num = 0
+    total = 0
+    with timing('intra no backtrace'):
+        zip(seqs(queries), seqs(targets)) |> process_intra_score_only
+    print num, total
+
+    num = 0
+    total = 0
+    with timing('inter no backtrace'):
+        zip(seqs(queries), seqs(targets)) |> process_inter_score_only
+    print num, total
+
+    num = 0
+    total = 0
+    with timing('intra w/ backtrace'):
+        zip(seqs(queries), seqs(targets)) |> process_intra
+    print num, total
+
+    num = 0
+    total = 0
+    with timing('inter w/ backtrace'):
+        zip(seqs(queries), seqs(targets)) |> process_inter
+    print num, total
+
+    # ---
+
+    num = 0
+    total = 0
+    with timing('intra no backtrace (<=512)'):
+        zip(seqs(queries), seqs(targets)) |> filter_len |> process_intra_score_only
+    print num, total
+
+    num = 0
+    total = 0
+    with timing('inter no backtrace (<=512)'):
+        zip(seqs(queries), seqs(targets)) |> filter_len |> process_inter_score_only
+    print num, total
+
+    num = 0
+    total = 0
+    with timing('intra w/ backtrace (<=512)'):
+        zip(seqs(queries), seqs(targets)) |> filter_len |> process_intra
+    print num, total
+
+    num = 0
+    total = 0
+    with timing('inter w/ backtrace (<=512)'):
+        zip(seqs(queries), seqs(targets)) |> filter_len |> process_inter
+    print num, total

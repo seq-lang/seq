@@ -1,5 +1,7 @@
 # FASTA format parser
 # https://en.wikipedia.org/wiki/FASTA_format
+from bio.fai import FAIRecord, FAI
+
 type FASTARecord(_header: str, _seq: seq):
     @property
     def header(self: FASTARecord):
@@ -19,22 +21,14 @@ type FASTARecord(_header: str, _seq: seq):
     def seq(self: FASTARecord):
         return self._seq
 
-type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, gzip: bool, copy: bool):
-    def __new__(path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
-        fai_list = list[int]() if fai else None
-        names = list[str]() if fai else None
+type FASTAReader(_file: cobj, fai: list[FAIRecord], validate: bool, gzip: bool, copy: bool):
+    def __init__(self: FASTAReader, path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
+        fai_list = list[FAIRecord]() if fai else None
         if fai:
-            with gzopen(path + ".fai", "r") as fai_file:
-                for line in fai_file:
-                    assert line
-                    cut = 0
-                    while line[cut] != "\t":
-                        cut += 1
-                    name = line[:cut]
-                    line = line[cut:]
-                    fai_list.append(_C.atoi(line.ptr))
-                    names.append(name)
-        return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), fai_list, names, validate, gzip, copy)
+            with FAI(path + ".fai") as fai_file:
+                for record in fai_file:
+                    fai_list.append(record)
+        return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), fai_list, validate, gzip, copy)
 
     @property
     def file(self: FASTAReader):
@@ -96,11 +90,11 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
                         rec = FASTARecord(prev_header, seq(p, n))
                         if self.validate:
                             rec_name = rec.name
-                            fai_name = self.names[idx - 1]
+                            fai_name = self.fai[idx - 1].name
                             header_check(rec_name, fai_name)
                         yield rec
                     prev_header = copy(a[1:])
-                    n = self.fai[idx]
+                    n = self.fai[idx].length
                     p = ptr[byte](n)
                     m = 0
                     idx += 1
@@ -121,7 +115,7 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
                 rec = FASTARecord(prev_header, seq(p, n))
                 if self.validate:
                     rec_name = rec.name
-                    fai_name = self.names[-1]
+                    fai_name = self.fai[-1].name
                     header_check(rec_name, fai_name)
                 yield rec
         else:
@@ -180,6 +174,37 @@ type FASTAReader(_file: cobj, fai: list[int], names: list[str], validate: bool, 
                     f.write(str(s[n:end]))
                     f.write("\n")
                     n += LINE_LIMIT
+
+    def _getitem(self: FASTAReader, name: str, file):
+        if not self.fai:
+            raise ValueError("need to set 'fai' to True to reference by sequence name")
+        for fai_rec in self.fai:
+            if name != fai_rec.name:
+                continue
+
+            old_file_pos = file.tell()
+            file.seek(fai_rec.offset, 0)
+
+            m = fai_rec.length
+            n = 0
+            p = ptr[byte](m)
+
+            for a in file._iter():
+                if not a or a[0] == ">":
+                    break
+                p, n, m = FASTAReader._append(p, n, m, a, self.validate)
+
+            file.seek(old_file_pos, 0)
+            if n != m:
+                raise ValueError("sequence length inconsistent with fai file")
+            return seq(p, n)
+        raise ValueError(f"Sequence with name {name} cannot be found")
+
+    def __getitem__(self: FASTAReader, name: str):
+        if self.gzip:
+            return self._getitem(name, self.gzfile)
+        else:
+            return self._getitem(name, self.file)
 
 def FASTA(path: str, validate: bool = True, gzip: bool = True, copy: bool = True, fai: bool = True):
     return FASTAReader(path=path, validate=validate, gzip=gzip, copy=copy, fai=fai)

@@ -53,6 +53,7 @@ namespace config {
 struct Config {
   llvm::LLVMContext context;
   bool debug;
+  bool profile;
 
   Config();
 };

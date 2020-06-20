@@ -489,3 +489,89 @@ test_fastq_bad_base()
 test_fasta_bad_base()
 test_fasta_comments()
 test_fastq_comments()
+
+# BED tests
+@test
+def test_minimal_bed():
+    v = list(iter(BED("test/data/toy.bed")))
+    assert v[0].chrom == "chr1"
+    assert v[1].chrom == "chr2"
+    assert v[2].chrom == "chr3"
+    assert v[0].chrom_start == 11
+    assert v[1].chrom_start == 33
+    assert v[2].chrom_start == 55
+    assert v[0].chrom_end == 22
+    assert v[1].chrom_end == 44
+    assert v[2].chrom_end == 66
+
+@test
+def test_parse_valid_with_header():
+    parser = BED("test/data/valid_with_header.bed", True, True)
+    first_row_expected = BEDRecord("chr7", 127471196, 127472363, "Pos1", 882.13435, "+", 127471196, 127472363, (255, 0, 0), 4, [11, 12, 13, 14], [14, 55, 66, 99], 12)
+    header_expected = ["browser position chr7:127471196-127495720", "browser hide all", "track name=\"ItemRGBDemo\" description=\"Item RGB demonstration\" visibility=2 itemRgb=\"On\""]
+    assert header_expected == parser.header
+    assert first_row_expected == next(parser)
+    parser.close()
+
+@test
+def test_parse_valid_without_header():
+    parser = BED("test/data/valid_without_header.bed", True, True)
+    first_row_expected = BEDRecord("chr7", 127471196, 127472363, "Pos1", 882.13435, "+", 127471196, 127472363, (255, 0, 0), 4, [11, 12, 13, 14], [14, 55, 66, 99], 12)
+    header_expected = list[str]()
+    assert header_expected == parser.header
+    assert first_row_expected == next(parser)
+    parser.close()
+
+@test
+def test_parse_invalid_with_header():
+    with BED("test/data/invalid/invalid_with_header.bed", True, True) as parser:
+        try:
+            next(parser)
+            assert False
+        except ValueError as e:
+            assert e.message == "chromStart, must be integer, line: 4"
+
+test_minimal_bed()
+test_parse_valid_with_header()
+test_parse_invalid_with_header()
+test_parse_valid_without_header()
+
+# FAI tests
+@test
+def test_parse_valid():
+    parser = FAI("test/data/valid_fai.fai", fastq=True)
+    first_row_expected = FAIRecord('fastq1', 66, 8, 30, 31, 79)
+    #print next(parser)
+    assert first_row_expected == next(parser)
+    parser.close()
+
+@test
+def test_parse_invalid_missing_col():
+    with FAI("test/data/invalid/invalid_fai_missing_col.fai", fastq=True) as parser:
+        try:
+            for _ in parser:
+                pass
+            assert False
+        except ValueError as e:
+            assert e.message == "Line 2 does not have the required number of columns, 6"
+
+@test
+def test_parse_invalid_float():
+    with FAI("test/data/invalid/invalid_fai_float.fai", fastq=True) as parser:
+        try:
+            for _ in parser:
+                pass
+            assert False
+        except ValueError as e:
+            assert e.message == "qual_offset, must be integer, line: 1"
+
+@test
+def test_fasta_with_fai():
+    with FASTA("test/data/sample_fasta_for_fai.fasta") as f:
+        assert f['two'] == s'ATGCATGCATGCATGCATGCATGCATGC'
+        assert f['one'] == s'ATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCAT'
+
+test_parse_valid()
+test_parse_invalid_float()
+test_parse_invalid_missing_col()
+test_fasta_with_fai()
