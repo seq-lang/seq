@@ -19,6 +19,7 @@ addons:
       - python3-setuptools
       - python-sphinx
       - doxygen
+      - ocaml
   homebrew:
     update: true
     packages:
@@ -31,6 +32,8 @@ addons:
       - doxygen
       - cmake
       - wget
+      - ocaml
+      - ocamlbuild
 
 before_install:
   # build and cache LLVM/Tapir:
@@ -52,47 +55,10 @@ before_install:
       cd -
     fi
 
-  # install OCaml:
-  - export OCAML_VERSION=4.07
-  - |
-    if [[ -z "$(ls -A ${HOME}/.opam)" ]]; then
-      wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh
-      bash -ex .travis-ocaml.sh
-      opam update
-      opam install -y ocamlfind dune menhir
-      sudo cp /usr/local/bin/opam ${HOME}/.opam/
-    else
-      sudo cp ${HOME}/.opam/opam /usr/local/bin/
-    fi
-  - eval $(opam env)
-
   # fix Python:
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --overwrite python3; fi
 
 install:
-  # install libffi:
-  - wget -c https://sourceware.org/pub/libffi/libffi-3.2.1.tar.gz -O - | tar -xz
-  - cd libffi-3.2.1
-  - ./configure CFLAGS="-fPIC" --enable-portable-binary --enable-static --disable-shared
-  - make LDFLAGS="-static"
-  - sudo make install
-  - cd -
-
-  # install Boehm GC:
-  - wget -c https://github.com/ivmai/bdwgc/releases/download/v8.0.4/gc-8.0.4.tar.gz -O - | tar -xz
-  - cd gc-8.0.4
-  - mkdir release
-  - |
-    ./configure CFLAGS="-fPIC" --enable-threads=posix \
-                               --enable-cplusplus \
-                               --enable-thread-local-alloc \
-                               --enable-large-config \
-                               --prefix=`pwd`/release
-  - make LDFLAGS="-static"
-  - make check
-  - make install
-  - cd -
-
   # install htslib:
   - wget -c https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 -O - | tar -xj
   - cd htslib-1.10.2
@@ -108,8 +74,6 @@ install:
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
   - export LDFLAGS="-L/usr/local/lib"
-  - export GCLIB=$(realpath gc-8.0.4/release/lib/libgc.a)
-  - export CPATH=`pwd`/gc-8.0.4/release/include:${CPATH}
   - export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
@@ -121,8 +85,7 @@ script:
                           -DSEQ_THREADED=ON \
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
                           -DCMAKE_C_COMPILER=clang \
-                          -DCMAKE_CXX_COMPILER=clang++ \
-                          -DGC_LIB=${GCLIB})
+                          -DCMAKE_CXX_COMPILER=clang++)
   - cmake --build build --config Release
   - build/seqtest
   - build/seqc test/core/helloworld.seq
@@ -160,7 +123,6 @@ cache:
   timeout: 1000
   directories:
     - Tapir-LLVM
-    - $HOME/.opam
 
 notifications:
   webhooks:

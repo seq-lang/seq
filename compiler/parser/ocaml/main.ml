@@ -10,7 +10,7 @@ external raise_exception: string -> string -> int -> int -> unit = "seq_ocaml_ex
 open Printf
 
 let print_token t =
-  let open Grammar in
+  let open Seqgrammar in
   match t with
   | YIELD -> "YIELD"
   | XOREQ s -> sprintf "XOREQ(%s)" s
@@ -117,7 +117,7 @@ let print_token t =
   | PYDEF_RAW s -> sprintf "PYDEF_RAW(\n%s)" s
 
 
-module I = Grammar.MenhirInterpreter
+module I = Seqgrammar.MenhirInterpreter
 
 let rec loop lexbuf state checkpoint =
   match checkpoint with
@@ -129,7 +129,7 @@ let rec loop lexbuf state checkpoint =
     let state = I.current_state_number _env in
     let msg =
       try
-        let msg = String.trim @@ Grammar_messages.message state in
+        let msg = String.trim @@ Seqgrammar_messages.message state in
         if msg.[0] = '!'
         then sprintf ": %s ('%s')" (String.sub msg 1 (String.length msg - 1)) (Lexing.lexeme lexbuf)
         else sprintf ": %s" msg
@@ -168,7 +168,7 @@ let parse file code line_offset col_offset =
     let stack = Stack.create () in
     Stack.push 0 stack;
     let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = file } in
-    loop lexbuf state (Grammar.Incremental.program lexbuf.lex_curr_p)
+    loop lexbuf state (Seqgrammar.Incremental.program lexbuf.lex_curr_p)
   with Ast.SyntaxError (s, pos) ->
     let s = sprintf "lexing error: %s" s in
     raise_exception s file (pos.pos_lnum + 1) (pos.pos_cnum - pos.pos_bol + 1);
