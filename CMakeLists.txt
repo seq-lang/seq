@@ -28,7 +28,7 @@ ExternalProject_Add(bdwgc
   BUILD_IN_SOURCE ON
   INSTALL_DIR ${CMAKE_BINARY_DIR}/bdwgc/build
   INSTALL_COMMAND make install
-  # LOG_DOWNLOAD ON
+  LOG_DOWNLOAD ON
   # LOG_CONFIGURE ON
   # LOG_BUILD ON
   # LOG_INSTALL ON
@@ -88,7 +88,7 @@ ExternalProject_Add(menhir
   BUILD_COMMAND make -C src -j
   BUILD_IN_SOURCE ON
   INSTALL_COMMAND ""
-  # LOG_DOWNLOAD ON
+  LOG_DOWNLOAD ON
   # LOG_BUILD ON
 )
 ExternalProject_Get_Property(menhir SOURCE_DIR)
@@ -134,10 +134,10 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/util/*.cpp
                        compiler/util/fmt/*.cpp)
 
-add_library(seq SHARED ${SEQ_HPPFILES} ${SEQ_CPPFILES})
+add_library(seq SHARED ${LIB_SEQPARSE} ${SEQ_HPPFILES} ${SEQ_CPPFILES})
 add_dependencies(seq seqparse_target)
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} seqrt_shared ${LIB_SEQPARSE} dl)
+target_link_libraries(seq ${LLVM_LIBS} seqrt_shared dl)
 
 if(SEQ_JITBRIDGE)
   add_library(seqjit SHARED compiler/util/jit.cpp)
