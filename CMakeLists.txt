@@ -133,7 +133,7 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
 
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
-target_sources(seq PUBLIC ${LIB_SEQPARSE} ${SEQ_CPPFILES})
+target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq ${LLVM_LIBS} seqrt_shared dl)
 
