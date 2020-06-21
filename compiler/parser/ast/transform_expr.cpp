@@ -600,8 +600,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     resultExpr->setType(t);
   } else {
     if (auto c = e->getType()->getClass())
-      if (c->name.substr(0, 8) == "__tuple_") {
-        if (auto ii = CAST(transform(expr->index), IntExpr)) {
+      if (chop(c->name).substr(0, 8) == "__tuple_") {
+        if (auto ii = CAST(expr->index, IntExpr)) {
           resultExpr = transform(
               N<TupleIndexExpr>(expr->expr->clone(), std::stoll(ii->value)));
           return;
@@ -615,10 +615,10 @@ void TransformVisitor::visit(const IndexExpr *expr) {
 void TransformVisitor::visit(const TupleIndexExpr *expr) {
   auto e = transform(expr->expr);
   auto c = e->getType()->getClass();
-  assert(c->name.substr(0, 8) == "__tuple_");
+  assert(chop(c->name).substr(0, 8) == "__tuple_");
   if (expr->index < 0 || expr->index >= c->args.size())
-    error("tuple index out of range (expected 0..{}, got {})", c->args.size(),
-          expr->index);
+    error("tuple index out of range (expected 0..{}, got {})",
+          c->args.size() - 1, expr->index);
   resultExpr = N<TupleIndexExpr>(move(e), expr->index);
   resultExpr->setType(forceUnify(expr, c->args[expr->index]));
 }
@@ -843,8 +843,8 @@ void TransformVisitor::visit(const CallExpr *expr) {
       reorderedArgs.pop_back();
     } else if (reorderedArgs.size() + namedArgs.size() >
                f->realizationInfo->pending.size()) {
-      error("too many arguments for {} (expected {}, got {}) for {}",
-            f->toString(), f->realizationInfo->pending.size(),
+      error("too many arguments for {} (expected {}, got {})", f->toString(),
+            f->realizationInfo->pending.size(),
             reorderedArgs.size() + namedArgs.size());
     }
     assert(f->args.size() - 1 == f->realizationInfo->pending.size());
@@ -910,6 +910,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
 
   if (isPartial) {
     auto t = make_shared<FuncType>(newPendingTypes, f->explicits, f->implicits);
+    t->setPartial();
     generateVariardicStub("function", newPendingTypes.size());
     if (f->realizationInfo) {
       t->realizationInfo = make_shared<FuncType::RealizationInfo>(

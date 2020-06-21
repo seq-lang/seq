@@ -469,6 +469,11 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     vector<string> names;
     vector<seq::types::Type *> types;
     for (int i = 1; i < real.type->args.size(); i++) {
+      if (auto f = real.type->args[i]->getFunc()) {
+        if (f->isPartial())
+          DBG("partial!!!");
+      }
+
       types.push_back(realizeType(real.type->args[i]->getClass()));
       names.push_back(real.ast->args[i - 1].name);
     }

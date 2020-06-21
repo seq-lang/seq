@@ -257,7 +257,6 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
         int startI = 1;
         if (ast->args.size() && ast->args[0].name == "self")
           startI = 2;
-        // DBG("   realizing {} ~ {}", real.fullName, typ->getName());
         for (int i = startI; i < real.type->args.size(); i++)
           types.push_back(
               stdlib->lctx->realizeType(real.type->args[i]->getClass()));

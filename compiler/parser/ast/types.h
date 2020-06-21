@@ -263,6 +263,9 @@ struct FuncType : public ClassType {
                     const std::vector<Arg> &args, TypePtr base = nullptr);
   };
   std::shared_ptr<RealizationInfo> realizationInfo;
+  bool partial;
+  bool isPartial() const { return partial; }
+  void setPartial() { partial = true; }
 
 public:
   FuncType(ClassTypePtr c);

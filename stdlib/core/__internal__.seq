@@ -484,6 +484,8 @@ extend UInt[N]:
 type seq(len: int, ptr: ptr[byte]):
     def __new__(s: str) -> seq:
         return (s.len, s.ptr)
+    def __new__(p: ptr[byte], l: int) -> seq:
+        return (l, p)
     # def __contains__[N](self: seq, what: Kmer[N]) -> void: pass
 
 extend str:

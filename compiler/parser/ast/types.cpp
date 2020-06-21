@@ -194,45 +194,47 @@ ClassType::ClassType(const string &name, bool isRecord,
     : explicits(explicits), implicits(implicits), name(name), record(isRecord),
       args(args) {}
 
-string ClassType::toString(bool reduced) const {
-  vector<string> gs, is;
-  for (auto &a : explicits)
-    gs.push_back(a.type->toString(reduced));
-  if (reduced)
-    for (auto &a : implicits)
-      is.push_back(a.type->toString(reduced));
-  auto g = fmt::format("{}{}",
-                       is.size() ? fmt::format("{};", fmt::join(is, ",")) : "",
-                       gs.size() ? fmt::format("{}", fmt::join(gs, ",")) : "");
-  vector<string> as;
-  for (int i = 0; i < args.size(); i++)
-    as.push_back(args[i]->toString(reduced));
-  g = (g.empty() ? "" : g + ";") + join(as, ",");
-  return fmt::format("{}{}", chop(name),
-                     g.size() ? fmt::format("[{}]", g) : "");
-}
-
-string ClassType::realizeString() const {
-  string s;
-  vector<string> gs;
-  for (auto &a : implicits)
-    gs.push_back(a.type->realizeString());
-  for (auto &a : explicits)
-    gs.push_back(a.type->realizeString());
-  s = join(gs, ",");
-  vector<string> as;
-  for (auto &r : args)
-    as.push_back(r->realizeString());
-  s = (s.empty() ? "" : s + ";") + join(as, ",");
-  return fmt::format("{}{}", chop(name),
-                     s.empty() ? "" : fmt::format("[{}]", s));
-}
-
 bool isTuple(const string &name) {
   return chop(name).substr(0, 8) == "__tuple_";
 }
 bool isFunc(const string &name) {
   return chop(name).substr(0, 11) == "__function_";
+}
+
+string ClassType::toString(bool reduced) const {
+  DBG("-- {} {} {}", name, explicits.size(), implicits.size());
+  vector<string> gs;
+  for (auto &a : explicits)
+    gs.push_back(a.type->toString(reduced));
+  if (reduced)
+    for (auto &a : implicits)
+      gs.push_back(a.type->toString(reduced));
+  auto g = join(gs, ",");
+  if (isFunc(name)) { // special case as functions have generics as well
+    vector<string> as;
+    for (int i = 0; i < args.size(); i++)
+      as.push_back(args[i]->toString(reduced));
+    g += (g.size() && as.size() ? ";" : "") + join(as, ",");
+  }
+  return fmt::format("{}{}", chop(name),
+                     g.size() ? fmt::format("[{}]", g) : "");
+}
+
+string ClassType::realizeString() const {
+  vector<string> gs;
+  for (auto &a : implicits)
+    gs.push_back(a.type->realizeString());
+  for (auto &a : explicits)
+    gs.push_back(a.type->realizeString());
+  string s = join(gs, ",");
+  if (isFunc(name)) { // special case as functions have generics as well
+    vector<string> as;
+    for (int i = 1; i < args.size(); i++) // return type is elided!
+      as.push_back(args[i]->realizeString());
+    s += (s.size() && as.size() ? ";" : "") + join(as, ",");
+  }
+  return fmt::format("{}{}", chop(name),
+                     s.empty() ? "" : fmt::format("[{}]", s));
 }
 
 int ClassType::unify(TypePtr typ, Unification &us) {
@@ -342,18 +344,18 @@ FuncType::FuncType(const std::vector<TypePtr> &args,
                    const vector<Generic> &implicits)
     : ClassType(fmt::format("__function_{}", args.size()), true, args,
                 explicits, implicits),
-      realizationInfo(nullptr) {}
+      realizationInfo(nullptr), partial(false) {}
 
 FuncType::FuncType(ClassTypePtr c)
     : ClassType(fmt::format("__function_{}", c->args.size()), c->record,
                 c->args, c->explicits, c->implicits),
-      realizationInfo(nullptr) {}
+      realizationInfo(nullptr), partial(false) {}
 
 string FuncType::realizeString() const {
   if (realizationInfo) {
     auto s = ClassType::realizeString();
     auto y = s.find('[');
-    return chop(realizationInfo->name) + s.substr(y);
+    return chop(realizationInfo->name) + (y == string::npos ? "" : s.substr(y));
   } else {
     return ClassType::realizeString();
   }
@@ -372,6 +374,8 @@ TypePtr FuncType::generalize(int level) {
       f->realizationInfo->baseClass =
           f->realizationInfo->baseClass->generalize(level);
   }
+  if (partial)
+    f->setPartial();
   return f;
 }
 
@@ -390,6 +394,8 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
           f->realizationInfo->baseClass->instantiate(level, unboundCount,
                                                      cache);
   }
+  if (partial)
+    f->setPartial();
   return f;
 }
 

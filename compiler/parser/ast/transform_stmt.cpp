@@ -776,7 +776,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   auto cit = ctx->getRealizations()->classASTs.find(canonicalName);
   if (cit != ctx->getRealizations()->classASTs.end()) {
     ctx->addType(canonicalName, cit->second);
-    ctx->addType(format("{}{}", ctx->getBase(), stmt->name), cit->second);
+    ctx->addType(format("{}", stmt->name), cit->second);
     return;
   }
 
@@ -794,7 +794,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
                                 genericTypes->implicits);
   ct->setSrcInfo(stmt->getSrcInfo());
   if (!stmt->isRecord) { // add classes early
-    ctx->addType(format("{}{}", ctx->getBase(), stmt->name), ct);
+    ctx->addType(format("{}", stmt->name), ct);
     ctx->addType(canonicalName, ct);
   }
   ctx->getRealizations()->classASTs[canonicalName] = ct;
@@ -822,7 +822,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   if (!mainType.size())
     mainType = "void";
   if (stmt->isRecord) {
-    ctx->addType(format("{}{}", ctx->getBase(), stmt->name), ct);
+    ctx->addType(format("{}", stmt->name), ct);
     ctx->addType(canonicalName, ct);
   }
   ctx->pushBase(stmt->name);
@@ -1083,6 +1083,14 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     ctx->setWasReturnSet(false);
 
     // __level__++;
+
+    // Need to populate funcRealization in advance to make recursive functions
+    // viable
+    auto &result =
+        ctx->getRealizations()->funcRealizations[name][t->realizeString()] = {
+            t->realizeString(), t, nullptr, nullptr, ctx->getBase()};
+    ctx->getRealizations()->realizationLookup[t->realizeString()] = name;
+
     auto realized =
         isInternal ? nullptr : realizeBlock(ast.second->suite.get());
     // __level__--;
@@ -1100,18 +1108,13 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     for (auto &i : ast.second->args)
       args.push_back({i.name, nullptr, nullptr});
     DBG("realized fn {} -> {}", name, t->realizeString());
-    auto result =
-        ctx->getRealizations()->funcRealizations[name][t->realizeString()] = {
-            t->realizeString(), t,
-            Nx<FunctionStmt>(ast.second.get(), ast.second->name, nullptr,
-                             vector<Param>(), move(args), move(realized),
-                             ast.second->attributes),
-            nullptr, ctx->getBase()};
+    result.ast = Nx<FunctionStmt>(ast.second.get(), ast.second->name, nullptr,
+                                  vector<Param>(), move(args), move(realized),
+                                  ast.second->attributes);
     ctx->setReturnType(old);
     ctx->setWasReturnSet(oldSeen);
     ctx->decreaseLevel();
     ctx->popBlock();
-    ctx->getRealizations()->realizationLookup[t->realizeString()] = name;
     // ctx->addRealization(t);
     return result;
   } catch (exc::ParserException &e) {
