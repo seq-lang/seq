@@ -32,7 +32,7 @@ TypeContext::TypeContext(const std::string &filename,
                          shared_ptr<RealizationContext> realizations,
                          shared_ptr<ImportContext> imports)
     : Context<TypeItem::Item>(filename, realizations, imports), module(""),
-      level(0), returnType(nullptr), matchType(nullptr), baseType(nullptr),
+      level(0), returnType(nullptr), matchType(nullptr),
       wasReturnTypeSet(false) {
   stack.push_front(vector<string>());
 }

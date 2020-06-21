@@ -909,7 +909,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
     }
 
   if (isPartial) {
-    auto t = make_shared<FuncType>(newPendingTypes, f->explicits, f->implicits);
+    auto t = make_shared<FuncType>(newPendingTypes, f->explicits, f->parent);
     t->setPartial();
     generateVariardicStub("function", newPendingTypes.size());
     if (f->realizationInfo) {

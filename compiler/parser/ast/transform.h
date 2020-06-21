@@ -57,11 +57,10 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
                            const std::string &magic);
   ExprPtr makeBoolExpr(const ExprPtr &e);
-  std::shared_ptr<types::ClassType>
+  std::vector<types::ClassType::Generic>
   parseGenerics(const std::vector<Param> &generics);
 
-  StmtPtr addMethod(Stmt *s, const std::string &canonicalName,
-                    const std::vector<types::ClassType::Generic> &implicits);
+  StmtPtr addMethod(Stmt *s, const std::string &canonicalName);
   types::FuncTypePtr
   findBestCall(types::ClassTypePtr c, const std::string &member,
                const std::vector<std::pair<std::string, types::TypePtr>> &args,

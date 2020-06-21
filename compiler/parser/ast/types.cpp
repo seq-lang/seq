@@ -77,12 +77,11 @@ bool LinkType::occurs(TypePtr typ, Unification &us) {
       return false;
   } else if (auto t = typ->getClass()) {
     for (auto &g : t->explicits)
-      if (g.type)
-        if (occurs(g.type, us))
-          return true;
-    for (auto &g : t->implicits)
-      if (g.type)
-        if (occurs(g.type, us))
+      if (g.type && occurs(g.type, us))
+        return true;
+    for (auto p = t->parent; p; p = p->parent)
+      for (auto &g : p->explicits)
+        if (g.type && occurs(g.type, us))
           return true;
     for (auto &t : t->args)
       if (occurs(t, us))
@@ -187,27 +186,24 @@ bool LinkType::canRealize() const {
     return type->canRealize();
 }
 
-ClassType::ClassType(const string &name, bool isRecord,
-                     const vector<TypePtr> &args,
-                     const vector<Generic> &explicits,
-                     const vector<Generic> &implicits)
-    : explicits(explicits), implicits(implicits), name(name), record(isRecord),
-      args(args) {}
-
 bool isTuple(const string &name) {
   return chop(name).substr(0, 8) == "__tuple_";
 }
+
 bool isFunc(const string &name) {
   return chop(name).substr(0, 11) == "__function_";
 }
 
+ClassType::ClassType(const string &name, bool isRecord,
+                     const vector<TypePtr> &args,
+                     const vector<Generic> &explicits, ClassTypePtr parent)
+    : explicits(explicits), parent(parent), name(name), record(isRecord),
+      args(args) {}
+
 string ClassType::toString(bool reduced) const {
-  DBG("-- {} {} {}", name, explicits.size(), implicits.size());
   vector<string> gs;
   for (auto &a : explicits)
-    gs.push_back(a.type->toString(reduced));
-  if (reduced)
-    for (auto &a : implicits)
+    if (!a.name.empty())
       gs.push_back(a.type->toString(reduced));
   auto g = join(gs, ",");
   if (isFunc(name)) { // special case as functions have generics as well
@@ -216,16 +212,16 @@ string ClassType::toString(bool reduced) const {
       as.push_back(args[i]->toString(reduced));
     g += (g.size() && as.size() ? ";" : "") + join(as, ",");
   }
-  return fmt::format("{}{}", chop(name),
-                     g.size() ? fmt::format("[{}]", g) : "");
+  return fmt::format("{}{}{}",
+                     reduced && parent ? parent->toString(reduced) + ":" : "",
+                     chop(name), g.size() ? fmt::format("[{}]", g) : "");
 }
 
-string ClassType::realizeString() const {
+string ClassType::realizeString(const string &className) const {
   vector<string> gs;
-  for (auto &a : implicits)
-    gs.push_back(a.type->realizeString());
   for (auto &a : explicits)
-    gs.push_back(a.type->realizeString());
+    if (!a.name.empty())
+      gs.push_back(a.type->realizeString());
   string s = join(gs, ",");
   if (isFunc(name)) { // special case as functions have generics as well
     vector<string> as;
@@ -233,9 +229,11 @@ string ClassType::realizeString() const {
       as.push_back(args[i]->realizeString());
     s += (s.size() && as.size() ? ";" : "") + join(as, ",");
   }
-  return fmt::format("{}{}", chop(name),
-                     s.empty() ? "" : fmt::format("[{}]", s));
+  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "",
+                     chop(className), s.empty() ? "" : fmt::format("[{}]", s));
 }
+
+string ClassType::realizeString() const { return realizeString(name); }
 
 int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getClass()) {
@@ -253,26 +251,23 @@ int ClassType::unify(TypePtr typ, Unification &us) {
     }
 
     // When unifying records, only record members matter
-    if (isRecord() && (isTuple(name) || isTuple(t->name))) {
+    if (isRecord() && (isTuple(name) || isTuple(t->name)))
       return s1;
-    }
-    if (isFunc(name) && isFunc(t->name)) {
+    if (isFunc(name) && isFunc(t->name))
       return s1;
-    }
-
     if (name != t->name)
       return -1;
-    if (explicits.size() != t->explicits.size() ||
-        implicits.size() != t->implicits.size())
+    if (bool(parent) ^ bool(t->parent))
       return -1;
+
     s = 0;
     for (int i = 0; i < explicits.size(); i++) {
       if ((s = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
         return -1;
       s1 += s;
     }
-    for (int i = 0; i < implicits.size(); i++) {
-      if ((s = implicits[i].type->unify(t->implicits[i].type, us)) == -1)
+    if (parent) {
+      if ((s = parent->unify(t->parent, us)) == -1)
         return -1;
       s1 += s;
     }
@@ -288,12 +283,12 @@ TypePtr ClassType::generalize(int level) {
   for (auto &t : a)
     t = t->generalize(level);
 
-  auto e = explicits, i = implicits;
+  auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  for (auto &t : i)
-    t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto c = make_shared<ClassType>(name, record, a, e, i);
+  auto p = parent ? static_pointer_cast<ClassType>(parent->generalize(level))
+                  : nullptr;
+  auto c = make_shared<ClassType>(name, record, a, e, p);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -303,12 +298,13 @@ TypePtr ClassType::instantiate(int level, int &unboundCount,
   auto a = args;
   for (auto &t : a)
     t = t->instantiate(level, unboundCount, cache);
-  auto e = explicits, i = implicits;
+  auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  for (auto &t : i)
-    t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<ClassType>(name, record, a, e, i);
+  auto p = parent ? static_pointer_cast<ClassType>(
+                        parent->instantiate(level, unboundCount, cache))
+                  : nullptr;
+  auto c = make_shared<ClassType>(name, record, a, e, p);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -320,9 +316,10 @@ bool ClassType::hasUnbound() const {
   for (auto &t : explicits)
     if (t.type && t.type->hasUnbound())
       return true;
-  for (auto &t : implicits)
-    if (t.type && t.type->hasUnbound())
-      return true;
+  for (auto p = parent; p; p = p->parent)
+    for (auto &g : p->explicits)
+      if (g.type && g.type->hasUnbound())
+        return true;
   return false;
 }
 
@@ -333,32 +330,27 @@ bool ClassType::canRealize() const {
   for (auto &t : explicits)
     if (t.type && !t.type->canRealize())
       return false;
-  for (auto &t : implicits)
-    if (t.type && !t.type->canRealize())
-      return false;
+  for (auto p = parent; p; p = p->parent)
+    for (auto &g : p->explicits)
+      if (g.type && !g.type->canRealize())
+        return false;
   return true;
 }
 
 FuncType::FuncType(const std::vector<TypePtr> &args,
-                   const vector<Generic> &explicits,
-                   const vector<Generic> &implicits)
+                   const vector<Generic> &explicits, ClassTypePtr parent)
     : ClassType(fmt::format("__function_{}", args.size()), true, args,
-                explicits, implicits),
+                explicits, parent),
       realizationInfo(nullptr), partial(false) {}
 
 FuncType::FuncType(ClassTypePtr c)
     : ClassType(fmt::format("__function_{}", c->args.size()), c->record,
-                c->args, c->explicits, c->implicits),
+                c->args, c->explicits, c->parent),
       realizationInfo(nullptr), partial(false) {}
 
 string FuncType::realizeString() const {
-  if (realizationInfo) {
-    auto s = ClassType::realizeString();
-    auto y = s.find('[');
-    return chop(realizationInfo->name) + (y == string::npos ? "" : s.substr(y));
-  } else {
-    return ClassType::realizeString();
-  }
+  return ClassType::realizeString(realizationInfo ? realizationInfo->name
+                                                  : name);
 }
 
 TypePtr FuncType::generalize(int level) {
@@ -403,9 +395,10 @@ bool FuncType::canRealize() const {
   for (auto &t : explicits)
     if (t.type && !t.type->canRealize())
       return false;
-  for (auto &t : implicits)
-    if (t.type && !t.type->canRealize())
-      return false;
+  for (auto p = parent; p; p = p->parent)
+    for (auto &g : p->explicits)
+      if (g.type && !g.type->canRealize())
+        return false;
   for (int i = 1; i < args.size(); i++)
     if (!args[i]->canRealize())
       return false;

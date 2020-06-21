@@ -367,19 +367,13 @@ void TransformVisitor::visit(const MatchStmt *stmt) {
   resultStmt = N<MatchStmt>(move(w), move(patterns), move(cases));
 }
 
-shared_ptr<ClassType>
+vector<ClassType::Generic>
 TransformVisitor::parseGenerics(const vector<Param> &generics) {
-  auto genericTypes = make_shared<ClassType>("");
+  auto genericTypes = vector<ClassType::Generic>();
   for (auto &g : generics) {
-    // if (g.type) {
-    //   if (g.type->toString() != "(#id int)")
-    //     error(this, "currently only integer static generics are allowed");
-    //   genericTypes->explicits.push_back({g.name, StaticType(), });
-    //   ctx->addStatic(g.name, 0);
-    // } else {
     if (g.type && g.type->toString() != "(#id int)")
       error("only int generic types are allowed");
-    genericTypes->explicits.push_back(
+    genericTypes.push_back(
         {g.name,
          make_shared<LinkType>(LinkType::Generic,
                                ctx->getRealizations()->getUnboundCount()),
@@ -387,17 +381,14 @@ TransformVisitor::parseGenerics(const vector<Param> &generics) {
     auto tp = make_shared<LinkType>(LinkType::Unbound,
                                     ctx->getRealizations()->getUnboundCount(),
                                     ctx->getLevel());
+    assert(!g.name.empty());
     ctx->addType(g.name, tp, false);
     ctx->getRealizations()->getUnboundCount()++;
-    // }
   }
   return genericTypes;
 }
 
-// TODO: handle self automatic
-StmtPtr
-TransformVisitor::addMethod(Stmt *s, const string &canonicalName,
-                            const vector<ClassType::Generic> &implicits) {
+StmtPtr TransformVisitor::addMethod(Stmt *s, const string &canonicalName) {
   if (auto f = dynamic_cast<FunctionStmt *>(s)) {
     auto fs = transform(f);
     auto name = ctx->getRealizations()->getCanonicalName(f->getSrcInfo());
@@ -405,7 +396,6 @@ TransformVisitor::addMethod(Stmt *s, const string &canonicalName,
     assert(val);
     auto fv = val->getType()->getFunc();
     assert(fv);
-    fv->implicits = implicits;
     ctx->getRealizations()->classes[canonicalName].methods[f->name].push_back(
         fv);
     return fs;
@@ -457,10 +447,10 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   }
   ctx->increaseLevel();
   ctx->pushBase(c->name);
-  ctx->setBaseType(c);
+  ctx->addBaseType(c);
   vector<StmtPtr> funcStmts;
   for (auto s : stmt->suite->getStatements())
-    funcStmts.push_back(addMethod(s, canonicalName, c->explicits));
+    funcStmts.push_back(addMethod(s, canonicalName));
   ctx->decreaseLevel();
   for (int i = 0; i < generics.size(); i++) {
     if (c->explicits[i].type) {
@@ -472,7 +462,7 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
     ctx->remove(generics[i]);
   }
   ctx->popBase();
-  ctx->setBaseType(nullptr);
+  ctx->popBaseType();
   resultStmt = N<SuiteStmt>(move(funcStmts));
 }
 
@@ -589,18 +579,16 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
       realizationArgs.push_back({a.name, argTypes.back(), nullptr});
       pending.push_back(pending.size());
     }
-    auto t = make_shared<FuncType>(argTypes);
+    auto t = make_shared<FuncType>(argTypes); /// It has no parent type...
     generateVariardicStub("function", argTypes.size());
     t->realizationInfo = make_shared<FuncType::RealizationInfo>(
         canonicalName, pending, realizationArgs);
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
-    if (!ctx->getBaseType())
-      ctx->addFunc(format("{}", // ctx->getBase(),
-                          stmt->name.second != "" ? stmt->name.second
-                                                  : stmt->name.first),
-                   t);
+    if (!ctx->getBaseType() || ctx->getBaseType()->getFunc()) // class member
+      ctx->addFunc(
+          stmt->name.second != "" ? stmt->name.second : stmt->name.first, t);
     ctx->addFunc(canonicalName, t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
         t, N<FunctionStmt>(stmt->name.first, nullptr, vector<Param>(),
@@ -694,7 +682,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
 
     auto retTyp = stmt->ret ? transformType(stmt->ret)->getType()
                             : ctx->addUnbound(getSrcInfo(), false);
-    if (ctx->getBaseType()) {
+    if (ctx->getBaseType() && !ctx->getBaseType()->getFunc()) { // class member
       // if (stmt->name == "__new__") {
       // forceUnify(retTyp, ctx->instantiate(getSrcInfo(), ctx->getBaseType()));
       // } else
@@ -714,10 +702,19 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       auto &a = stmt->args[ia];
       auto t = transformType(a.type);
       types::TypePtr typ = nullptr;
-      if (ia == 0 && !a.type && a.name == "self")
+      if (ctx->getBaseType() && !ctx->getBaseType()->getFunc() && ia == 0 &&
+          !a.type && a.name == "self")
         typ = ctx->getBaseType();
-      else
-        typ = a.type ? t->getType() : ctx->addUnbound(getSrcInfo(), false);
+      else if (a.type)
+        typ = t->getType();
+      else {
+        genericTypes.push_back(
+            {"",
+             make_shared<LinkType>(LinkType::Generic,
+                                   ctx->getRealizations()->getUnboundCount()),
+             ctx->getRealizations()->getUnboundCount(), false});
+        typ = ctx->addUnbound(getSrcInfo(), false);
+      }
       argTypes.push_back(typ);
       args.push_back({a.name, move(t)});
       realizationArgs.push_back(
@@ -735,16 +732,15 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       ctx->remove(g.name);
     }
 
-    auto t = make_shared<FuncType>(argTypes, genericTypes->explicits,
-                                   genericTypes->implicits);
+    auto t = make_shared<FuncType>(argTypes, genericTypes, ctx->getBaseType());
     generateVariardicStub("function", argTypes.size());
     t->realizationInfo = make_shared<FuncType::RealizationInfo>(
         canonicalName, pending, realizationArgs, ctx->getBaseType());
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
-    if (!ctx->getBaseType())
-      ctx->addFunc(format("{}", /*ctx->getBase(),*/ stmt->name), t);
+    if (!ctx->getBaseType() || ctx->getBaseType()->getFunc())
+      ctx->addFunc(stmt->name, t);
     ctx->addFunc(canonicalName, t);
     ctx->getRealizations()->funcASTs[canonicalName] = make_pair(
         t, N<FunctionStmt>(stmt->name, nullptr, CL(stmt->generics), move(args),
@@ -757,8 +753,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
           ctx->instantiate(getSrcInfo(), t)));
     }
   } else {
-    if (!ctx->getBaseType())
-      ctx->addFunc(format("{}", /*ctx->getBase(),*/ stmt->name),
+    if (!ctx->getBaseType() || ctx->getBaseType()->getFunc())
+      ctx->addFunc(stmt->name,
                    ctx->getRealizations()->funcASTs[canonicalName].first);
     ctx->addFunc(canonicalName,
                  ctx->getRealizations()->funcASTs[canonicalName].first);
@@ -786,12 +782,12 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   auto genericTypes = parseGenerics(stmt->generics);
   ClassTypePtr ct = nullptr;
   if (chop(canonicalName).substr(0, 11) == "__function_")
-    ct = make_shared<FuncType>(vector<TypePtr>(), genericTypes->explicits,
-                               genericTypes->implicits);
+    ct = make_shared<FuncType>(vector<TypePtr>(), genericTypes,
+                               ctx->getBaseType());
   else
-    ct = make_shared<ClassType>(canonicalName, stmt->isRecord,
-                                vector<TypePtr>(), genericTypes->explicits,
-                                genericTypes->implicits);
+    ct =
+        make_shared<ClassType>(canonicalName, stmt->isRecord, vector<TypePtr>(),
+                               genericTypes, ctx->getBaseType());
   ct->setSrcInfo(stmt->getSrcInfo());
   if (!stmt->isRecord) { // add classes early
     ctx->addType(format("{}", stmt->name), ct);
@@ -826,7 +822,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     ctx->addType(canonicalName, ct);
   }
   ctx->pushBase(stmt->name);
-  ctx->setBaseType(ct);
+  ctx->addBaseType(ct);
   if (!in(stmt->attributes, "internal")) {
     vector<string> genericNames;
     for (auto &g : stmt->generics)
@@ -871,13 +867,13 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     auto methodNew =
         parseCode(ctx->getFilename(), code, stmt->getSrcInfo().line, 100000);
     for (auto s : methodNew->getStatements())
-      stmts.push_back(addMethod(s, canonicalName, genericTypes->explicits));
+      stmts.push_back(addMethod(s, canonicalName));
   }
   for (auto s : stmt->suite->getStatements())
-    stmts.push_back(addMethod(s, canonicalName, genericTypes->explicits));
+    stmts.push_back(addMethod(s, canonicalName));
   ctx->decreaseLevel();
   ctx->popBase();
-  ctx->setBaseType(nullptr);
+  ctx->popBaseType();
   for (auto &g : stmt->generics) {
     // Generalize in place
     auto val = ctx->find(g.name);
@@ -1055,15 +1051,16 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     auto &ast = ctx->getRealizations()->funcASTs[name];
     ctx->pushBase(ast.second->name);
     // Ensure that all inputs are realized
-    for (auto &g : t->implicits)
-      if (auto s = g.type->getStatic())
-        ctx->addStatic(g.name, s->value);
-      else
-        ctx->addType(g.name, g.type);
+    for (auto p = t->parent; p; p = p->parent)
+      for (auto &g : p->explicits)
+        if (auto s = g.type->getStatic())
+          ctx->addStatic(g.name, s->value);
+        else if (!g.name.empty())
+          ctx->addType(g.name, g.type);
     for (auto &g : t->explicits)
       if (auto s = g.type->getStatic())
         ctx->addStatic(g.name, s->value);
-      else
+      else if (!g.name.empty())
         ctx->addType(g.name, g.type);
 
     // There is no AST linked to internal functions, so just ignore them
@@ -1081,6 +1078,7 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     // DBG("ret --> {}", ret->toString());
     ctx->setReturnType(ret);
     ctx->setWasReturnSet(false);
+    ctx->addBaseType(t);
 
     // __level__++;
 
@@ -1095,6 +1093,7 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
         isInternal ? nullptr : realizeBlock(ast.second->suite.get());
     // __level__--;
     ctx->popBase();
+    ctx->popBaseType();
 
     // DBG("======== BEGIN {} :- {} ========", t->name, *t);
     if (realized && !ctx->wasReturnSet() && ret)

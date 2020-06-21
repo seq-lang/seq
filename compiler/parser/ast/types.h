@@ -213,9 +213,16 @@ struct ClassType : public Type {
     // -1 is for tuple "generics"
     Generic(const std::string name, TypePtr type, int id, bool st = false)
         : name(name), id(id), type(type), isStatic(st) {}
-  };
-  std::vector<Generic> explicits, implicits;
 
+    bool isAutomatic() const { return name == ""; }
+  };
+  std::vector<Generic> explicits;
+  ClassTypePtr parent;
+
+public: // TODO: internalize
+  std::vector<Generic> implicits;
+
+public:
   /// Global unique name for each type (generated from the getSrcPos())
   std::string name;
   /// Distinguish between records and classes
@@ -226,7 +233,7 @@ struct ClassType : public Type {
   ClassType(const std::string &name, bool isRecord = false,
             const std::vector<TypePtr> &args = std::vector<TypePtr>(),
             const std::vector<Generic> &explicits = std::vector<Generic>(),
-            const std::vector<Generic> &implicits = std::vector<Generic>());
+            ClassTypePtr parent = nullptr);
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
@@ -238,6 +245,7 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
+  std::string realizeString(const std::string &n) const;
   std::string realizeString() const override;
   ClassTypePtr getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
@@ -271,7 +279,7 @@ public:
   FuncType(ClassTypePtr c);
   FuncType(const std::vector<TypePtr> &args = std::vector<TypePtr>(),
            const std::vector<Generic> &explicits = std::vector<Generic>(),
-           const std::vector<Generic> &implicits = std::vector<Generic>());
+           ClassTypePtr parent = nullptr);
 
 public:
   TypePtr generalize(int level) override;
