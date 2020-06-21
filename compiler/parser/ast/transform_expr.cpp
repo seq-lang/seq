@@ -744,8 +744,6 @@ TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
 }
 
 void TransformVisitor::visit(const CallExpr *expr) {
-  /// TODO: wrap pyobj arguments in tuple
-
   if (auto ix = CAST(expr->expr, IndexExpr)) {
     if (auto id = CAST(ix->expr, IdExpr)) {
       if (id->value == "__array__") {
@@ -795,7 +793,6 @@ void TransformVisitor::visit(const CallExpr *expr) {
         targs.push_back(a.value->getType());
       resultExpr =
           transform(N<CallExpr>(N<DotExpr>(move(e), "__new__"), move(args)));
-      return;
     } else {
       string var = getTemporaryVar("typ");
       /// TODO: assumes that a class cannot have multiple __new__ magics
@@ -805,17 +802,21 @@ void TransformVisitor::visit(const CallExpr *expr) {
       prepend(N<ExprStmt>(
           N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__init__"), move(args))));
       resultExpr = transform(N<IdExpr>(var));
-      return;
     }
+    return;
+  } else if (!e->getType()->getFunc()) {
+    if (auto c = e->getType()->getClass()) { // route to a call method
+      resultExpr =
+          transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(args)));
+    } else { // Unbound caller, will be handled later
+      resultExpr = N<CallExpr>(move(e), move(args));
+      resultExpr->setType(expr->getType() ? expr->getType()
+                                          : ctx->addUnbound(getSrcInfo()));
+    }
+    return;
   }
 
   auto f = e->getType()->getFunc();
-  if (!f) { // Unbound caller, will be handled later
-    resultExpr = N<CallExpr>(move(e), move(args));
-    resultExpr->setType(expr->getType() ? expr->getType()
-                                        : ctx->addUnbound(getSrcInfo()));
-    return;
-  }
 
   // Handle named and default arguments
   vector<CallExpr::Arg> reorderedArgs;
