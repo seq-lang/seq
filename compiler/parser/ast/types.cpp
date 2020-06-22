@@ -190,8 +190,9 @@ bool isTuple(const string &name) {
   return chop(name).substr(0, 8) == "__tuple_";
 }
 
-bool isFunc(const string &name) {
-  return chop(name).substr(0, 11) == "__function_";
+bool isCallable(const string &name) {
+  return chop(name).substr(0, 11) == "__function_" ||
+         chop(name).substr(0, 10) == "__partial_";
 }
 
 ClassType::ClassType(const string &name, bool isRecord,
@@ -206,7 +207,7 @@ string ClassType::toString(bool reduced) const {
     if (!a.name.empty())
       gs.push_back(a.type->toString(reduced));
   auto g = join(gs, ",");
-  if (isFunc(name)) { // special case as functions have generics as well
+  if (isCallable(name)) { // special case as functions have generics as well
     vector<string> as;
     for (int i = 0; i < args.size(); i++)
       as.push_back(args[i]->toString(reduced));
@@ -223,7 +224,7 @@ string ClassType::realizeString(const string &className) const {
     if (!a.name.empty())
       gs.push_back(a.type->realizeString());
   string s = join(gs, ",");
-  if (isFunc(name)) { // special case as functions have generics as well
+  if (isCallable(name)) { // special case as functions have generics as well
     vector<string> as;
     for (int i = 1; i < args.size(); i++) // return type is elided!
       as.push_back(args[i]->realizeString());
@@ -251,12 +252,17 @@ int ClassType::unify(TypePtr typ, Unification &us) {
     }
 
     // When unifying records, only record members matter
-    if (isRecord() && (isTuple(name) || isTuple(t->name)))
-      return s1;
-    if (isFunc(name) && isFunc(t->name))
-      return s1;
-    if (name != t->name)
-      return -1;
+    if (isRecord()) {
+      if (isTuple(name) || isTuple(t->name))
+        return s1;
+      if ((isCallable(t->name) && chop(name).substr(0, 11) == "__callable_") ||
+          (isCallable(name) && chop(t->name).substr(0, 11) == "__callable_")) {
+        // just check arguments!
+        return s1;
+      }
+      if (name != t->name)
+        return -1;
+    }
     if (bool(parent) ^ bool(t->parent))
       return -1;
 
@@ -310,7 +316,7 @@ TypePtr ClassType::instantiate(int level, int &unboundCount,
 }
 
 bool ClassType::hasUnbound() const {
-  for (int i = 1; i < args.size(); i++)
+  for (int i = isCallable(name); i < args.size(); i++)
     if (args[i]->hasUnbound())
       return true;
   for (auto &t : explicits)
@@ -324,7 +330,9 @@ bool ClassType::hasUnbound() const {
 }
 
 bool ClassType::canRealize() const {
-  for (int i = 0; i < args.size(); i++)
+  if (chop(name).substr(0, 11) == "__callable_") // traits cannot be realized
+    return false;
+  for (int i = isCallable(name); i < args.size(); i++)
     if (!args[i]->canRealize())
       return false;
   for (auto &t : explicits)
@@ -337,90 +345,75 @@ bool ClassType::canRealize() const {
   return true;
 }
 
+ClassTypePtr ClassType::getCallable() {
+  if (isCallable(name))
+    return std::static_pointer_cast<ClassType>(shared_from_this());
+  return nullptr;
+}
+
+FuncType::Arg FuncType::Arg::clone() {
+  return {name, defaultValue ? defaultValue->clone() : nullptr};
+}
+
 FuncType::FuncType(const std::vector<TypePtr> &args,
-                   const vector<Generic> &explicits, ClassTypePtr parent)
+                   const vector<Generic> &explicits, ClassTypePtr parent,
+                   const string &canonicalName, const vector<Arg> &ad)
     : ClassType(fmt::format("__function_{}", args.size()), true, args,
                 explicits, parent),
-      realizationInfo(nullptr), partial(false) {}
+      canonicalName(canonicalName), argDefs(CL(ad)) {}
 
-FuncType::FuncType(ClassTypePtr c)
+FuncType::FuncType(ClassTypePtr c, const string &canonicalName,
+                   const vector<Arg> &ad)
     : ClassType(fmt::format("__function_{}", c->args.size()), c->record,
                 c->args, c->explicits, c->parent),
-      realizationInfo(nullptr), partial(false) {}
+      canonicalName(canonicalName), argDefs(CL(ad)) {}
 
 string FuncType::realizeString() const {
-  return ClassType::realizeString(realizationInfo ? realizationInfo->name
-                                                  : name);
+  return ClassType::realizeString(canonicalName);
 }
 
 TypePtr FuncType::generalize(int level) {
-  auto f = make_shared<FuncType>(
-      static_pointer_cast<ClassType>(ClassType::generalize(level)));
-  if (realizationInfo) {
-    f->realizationInfo = make_shared<RealizationInfo>(
-        realizationInfo->name, realizationInfo->pending, realizationInfo->args,
-        realizationInfo->baseClass);
-    for (auto &a : f->realizationInfo->args)
-      a.type = a.type->generalize(level);
-    if (f->realizationInfo->baseClass)
-      f->realizationInfo->baseClass =
-          f->realizationInfo->baseClass->generalize(level);
-  }
-  if (partial)
-    f->setPartial();
-  return f;
+  return make_shared<FuncType>(ClassType::generalize(level), canonicalName,
+                               argDefs);
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
-                              unordered_map<int, TypePtr> &cache) {
-  auto f = make_shared<FuncType>(static_pointer_cast<ClassType>(
-      ClassType::instantiate(level, unboundCount, cache)));
-  if (realizationInfo) {
-    f->realizationInfo = make_shared<RealizationInfo>(
-        realizationInfo->name, realizationInfo->pending, realizationInfo->args,
-        realizationInfo->baseClass);
-    for (auto &a : f->realizationInfo->args)
-      a.type = a.type->instantiate(level, unboundCount, cache);
-    if (f->realizationInfo->baseClass)
-      f->realizationInfo->baseClass =
-          f->realizationInfo->baseClass->instantiate(level, unboundCount,
-                                                     cache);
-  }
-  if (partial)
-    f->setPartial();
-  return f;
+                              std::unordered_map<int, TypePtr> &cache) {
+  return make_shared<FuncType>(
+      ClassType::instantiate(level, unboundCount, cache), canonicalName,
+      argDefs);
 }
 
-bool FuncType::canRealize() const {
-  for (auto &t : explicits)
-    if (t.type && !t.type->canRealize())
-      return false;
-  for (auto p = parent; p; p = p->parent)
-    for (auto &g : p->explicits)
-      if (g.type && !g.type->canRealize())
-        return false;
-  for (int i = 1; i < args.size(); i++)
-    if (!args[i]->canRealize())
-      return false;
-  if (realizationInfo) {
-    for (int i = 0; i < realizationInfo->args.size(); i++)
-      if (!realizationInfo->args[i].type->canRealize())
-        return false;
-    return true;
-  } else {
-    return args[0]->canRealize();
-  }
+PartialType::PartialType(ClassTypePtr c, const vector<int> &pending)
+    : ClassType(fmt::format("__partial_{}", pending.size()), c->isRecord(),
+                c->args, c->explicits, c->parent),
+      pending(pending) {}
+
+TypePtr PartialType::generalize(int level) {
+  return make_shared<PartialType>(ClassType::generalize(level), pending);
 }
 
-FuncType::RealizationInfo::RealizationInfo(const string &name,
-                                           const vector<int> &pending,
-                                           const vector<Arg> &args,
-                                           TypePtr base)
-    : name(name), pending(pending), baseClass(base) {
-  for (auto &a : args)
-    this->args.push_back(
-        {a.name, a.type, a.defaultValue ? a.defaultValue->clone() : nullptr});
+TypePtr PartialType::instantiate(int level, int &unboundCount,
+                                 std::unordered_map<int, TypePtr> &cache) {
+  return make_shared<PartialType>(
+      ClassType::instantiate(level, unboundCount, cache), pending);
 }
+
+// TODO:
+// else {
+//   return args[0]->canRealize();
+// }
+
+// FuncType::RealizationInfo::RealizationInfo(const string &name,
+//                                            const vector<int> &pending,
+//                                            const vector<Arg> &args,
+//                                            TypePtr base)
+//     : name(name), pending(pending), baseClass(base) {
+//   for (auto &a : args)
+//     this->args.push_back(
+//         {a.name, a.type, a.defaultValue ? a.defaultValue->clone() :
+//         nullptr});
+// }
 
 } // namespace types
 } // namespace ast

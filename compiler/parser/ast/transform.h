@@ -69,6 +69,17 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   bool wrapOptional(types::TypePtr lt, ExprPtr &rhs);
   std::string generateVariardicStub(const std::string &name, int len);
 
+  std::vector<int> callCallable(types::ClassTypePtr f,
+                                std::vector<CallExpr::Arg> &args,
+                                std::vector<CallExpr::Arg> &reorderedArgs);
+  std::vector<int> callFunc(types::FuncTypePtr f,
+                            std::vector<CallExpr::Arg> &args,
+                            std::vector<CallExpr::Arg> &reorderedArgs);
+  std::vector<int> callPartial(types::PartialTypePtr f,
+                               std::vector<CallExpr::Arg> &args,
+                               std::vector<CallExpr::Arg> &reorderedArgs);
+  bool handleStackAlloc(const CallExpr *expr);
+
   class CaptureVisitor : public WalkVisitor {
     std::shared_ptr<TypeContext> ctx;
 

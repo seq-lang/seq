@@ -30,11 +30,7 @@ struct StaticType;
 struct ImportType;
 struct Type;
 typedef std::shared_ptr<Type> TypePtr;
-typedef std::shared_ptr<FuncType> FuncTypePtr;
-typedef std::shared_ptr<ClassType> ClassTypePtr;
 typedef std::shared_ptr<LinkType> LinkTypePtr;
-typedef std::shared_ptr<StaticType> StaticTypePtr;
-typedef std::shared_ptr<ImportType> ImportTypePtr;
 
 struct Unification {
   std::vector<LinkTypePtr> linked;
@@ -76,12 +72,12 @@ public:
   //   return out << c.toString();
   // }
 
-  virtual FuncTypePtr getFunc() { return nullptr; }
-  virtual ClassTypePtr getClass() { return nullptr; }
-  virtual LinkTypePtr getLink() { return nullptr; }
-  virtual LinkTypePtr getUnbound() { return nullptr; }
-  virtual StaticTypePtr getStatic() { return nullptr; }
-  virtual ImportTypePtr getImport() { return nullptr; }
+  virtual std::shared_ptr<FuncType> getFunc() { return nullptr; }
+  virtual std::shared_ptr<ClassType> getClass() { return nullptr; }
+  virtual std::shared_ptr<LinkType> getLink() { return nullptr; }
+  virtual std::shared_ptr<LinkType> getUnbound() { return nullptr; }
+  virtual std::shared_ptr<StaticType> getStatic() { return nullptr; }
+  virtual std::shared_ptr<ImportType> getImport() { return nullptr; }
 };
 
 struct StaticType : public Type {
@@ -101,10 +97,11 @@ public:
   std::string realizeString() const override {
     return fmt::format("{}", value);
   }
-  StaticTypePtr getStatic() override {
+  std::shared_ptr<StaticType> getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }
 };
+typedef std::shared_ptr<StaticType> StaticTypePtr;
 
 struct ImportType : public Type {
   std::string name;
@@ -130,10 +127,11 @@ public:
     return fmt::format("<{}>", name);
   }
   std::string realizeString() const override { assert(false); }
-  ImportTypePtr getImport() override {
+  std::shared_ptr<ImportType> getImport() override {
     return std::static_pointer_cast<ImportType>(shared_from_this());
   }
 };
+typedef std::shared_ptr<ImportType> ImportTypePtr;
 
 /**
  * LinkType is a fundamental type classifier.
@@ -187,13 +185,13 @@ public:
       return type->getUnbound();
     return nullptr;
   }
-  FuncTypePtr getFunc() override {
+  std::shared_ptr<FuncType> getFunc() override {
     return std::dynamic_pointer_cast<FuncType>(follow());
   }
-  ClassTypePtr getClass() override {
+  std::shared_ptr<ClassType> getClass() override {
     return std::dynamic_pointer_cast<ClassType>(follow());
   }
-  StaticTypePtr getStatic() override {
+  std::shared_ptr<StaticType> getStatic() override {
     return std::dynamic_pointer_cast<StaticType>(follow());
   }
 
@@ -204,6 +202,7 @@ private:
 /**
  * ClassType describes a (generic) class type.
  */
+typedef std::shared_ptr<ClassType> ClassTypePtr;
 struct ClassType : public Type {
   struct Generic {
     std::string name;
@@ -219,9 +218,6 @@ struct ClassType : public Type {
   std::vector<Generic> explicits;
   ClassTypePtr parent;
 
-public: // TODO: internalize
-  std::vector<Generic> implicits;
-
 public:
   /// Global unique name for each type (generated from the getSrcPos())
   std::string name;
@@ -230,6 +226,9 @@ public:
   /// Record or function members
   std::vector<TypePtr> args;
 
+  ClassType(ClassTypePtr c)
+      : explicits(c->explicits), parent(c->parent), name(c->name),
+        record(c->record), args(c->args) {}
   ClassType(const std::string &name, bool isRecord = false,
             const std::vector<TypePtr> &args = std::vector<TypePtr>(),
             const std::vector<Generic> &explicits = std::vector<Generic>(),
@@ -250,49 +249,50 @@ public:
   ClassTypePtr getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
   }
+  ClassTypePtr getCallable();
   bool isRecord() const { return record; }
 };
 
 /**
- * FuncType describes a (generic) function type.
+ * FuncType describes a (generic) function type that can be realized.
  */
+typedef std::shared_ptr<FuncType> FuncTypePtr;
 struct FuncType : public ClassType {
-  struct RealizationInfo {
-    struct Arg {
-      std::string name;
-      TypePtr type;
-      std::unique_ptr<Expr> defaultValue;
-    };
+  struct Arg {
     std::string name;
-    std::vector<int> pending; // loci in resolvedArgs
-    std::vector<Arg> args;    // name, value
-    TypePtr baseClass;
-    RealizationInfo(const std::string &name, const std::vector<int> &pending,
-                    const std::vector<Arg> &args, TypePtr base = nullptr);
+    std::unique_ptr<Expr> defaultValue;
+    FuncType::Arg clone() const;
   };
-  std::shared_ptr<RealizationInfo> realizationInfo;
-  bool partial;
-  bool isPartial() const { return partial; }
-  void setPartial() { partial = true; }
+  std::string canonicalName;
+  std::vector<Arg> argDefs; // name, value
+  TypePtr baseClass;
 
 public:
-  FuncType(ClassTypePtr c);
+  FuncType(ClassTypePtr c, const std::string &canonicalName = "",
+           const std::vector<Arg> &argDefs = std::vector<Arg>());
   FuncType(const std::vector<TypePtr> &args = std::vector<TypePtr>(),
            const std::vector<Generic> &explicits = std::vector<Generic>(),
-           ClassTypePtr parent = nullptr);
+           ClassTypePtr parent = nullptr, const std::string &canonicalName = "",
+           const std::vector<Arg> &argDefs = std::vector<Arg>());
 
 public:
-  TypePtr generalize(int level) override;
-  TypePtr instantiate(int level, int &unboundCount,
-                      std::unordered_map<int, TypePtr> &cache) override;
-
-public:
-  bool canRealize() const override;
   std::string realizeString() const override;
   FuncTypePtr getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
   }
+  TypePtr generalize(int level) override;
+  TypePtr instantiate(int level, int &unboundCount,
+                      std::unordered_map<int, TypePtr> &cache) override;
 };
+
+struct PartialType : public ClassType {
+  std::vector<int> pending;
+  PartialType(ClassTypePtr c, const std::vector<int> &p);
+  TypePtr generalize(int level) override;
+  TypePtr instantiate(int level, int &unboundCount,
+                      std::unordered_map<int, TypePtr> &cache) override;
+};
+typedef std::shared_ptr<PartialType> PartialTypePtr;
 
 } // namespace types
 } // namespace ast

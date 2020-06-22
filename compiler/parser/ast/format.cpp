@@ -475,12 +475,11 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   }
   bool added = 0;
   for (auto &m : c->methods) {
-    auto s =
-        FormatVisitor(ctx, renderHTML)
-            .transform(ctx->getRealizations()
-                           ->getAST(m.second.front()->realizationInfo->name)
-                           .get(),
-                       indent);
+    auto s = FormatVisitor(ctx, renderHTML)
+                 .transform(ctx->getRealizations()
+                                ->getAST(m.second.front()->canonicalName)
+                                .get(),
+                            indent);
     if (s.size()) {
       if (result.size()) {
         if (result.substr(result.size() - newline().size()) != newline())

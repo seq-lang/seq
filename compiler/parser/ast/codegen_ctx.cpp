@@ -196,6 +196,17 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
     auto ret = types[0];
     types.erase(types.begin());
     real.handle = seq::types::FuncType::get(types, ret);
+  } else if (name.substr(0, 10) == "__partial_") {
+    assert(types.size() >= 1 && statics.size() == 0);
+    auto ret = types[0];
+    types.erase(types.begin());
+    auto fn = seq::types::FuncType::get(types, ret);
+    vector<seq::types::Type *> partials;
+    auto p = std::dynamic_pointer_cast<types::PartialType>(t);
+    assert(p);
+    for (auto i : p->pending)
+      partials.push_back(realizeType(t->args[i + 1]->getClass()));
+    real.handle = seq::types::PartialFuncType::get(fn, partials);
   } else {
     vector<string> names;
     vector<seq::types::Type *> types;
@@ -250,10 +261,9 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
         vector<seq::types::Type *> types;
 
         // static: has self as arg
-        assert(real.type->realizationInfo->baseClass &&
-               real.type->realizationInfo->baseClass->getClass());
-        seq::types::Type *typ = stdlib->lctx->realizeType(
-            real.type->realizationInfo->baseClass->getClass());
+        assert(real.type->parent && real.type->parent->getClass());
+        seq::types::Type *typ =
+            stdlib->lctx->realizeType(real.type->parent->getClass());
         int startI = 1;
         if (ast->args.size() && ast->args[0].name == "self")
           startI = 2;

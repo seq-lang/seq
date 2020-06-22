@@ -395,6 +395,7 @@ StmtPtr TransformVisitor::addMethod(Stmt *s, const string &canonicalName) {
     auto val = ctx->find(name);
     assert(val);
     auto fv = val->getType()->getFunc();
+    DBG("{} ... {}", name, val->getType()->toString());
     assert(fv);
     ctx->getRealizations()->classes[canonicalName].methods[f->name].push_back(
         fv);
@@ -507,11 +508,8 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
       ctx->add(w.second == "" ? w.first : w.second, c);
       if (c->getClass())
         addRelated(c->getType()->getClass()->name);
-      else if (c->getFunc()) {
-        auto t = c->getType()->getFunc();
-        if (t->realizationInfo)
-          addRelated(t->realizationInfo->name);
-      }
+      else if (c->getFunc())
+        addRelated(c->getType()->getFunc()->canonicalName);
     }
   }
   resultStmt = stmt->clone();
@@ -569,20 +567,22 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
       error("expected return type");
     vector<Param> args;
     vector<TypePtr> argTypes{transformType(stmt->ret)->getType()};
-    vector<FuncType::RealizationInfo::Arg> realizationArgs;
-    vector<int> pending;
+    vector<FuncType::Arg> realizationArgs;
+    // vector<int> pending;
     for (auto &a : stmt->args) {
       if (a.deflt)
         error("default arguments not supported here");
       args.push_back({a.name, transformType(a.type), nullptr});
       argTypes.push_back(args.back().type->getType());
-      realizationArgs.push_back({a.name, argTypes.back(), nullptr});
-      pending.push_back(pending.size());
+      realizationArgs.push_back({a.name, nullptr});
+      // pending.push_back(pending.size());
     }
-    auto t = make_shared<FuncType>(argTypes); /// It has no parent type...
+    auto t = make_shared<FuncType>(
+        argTypes, vector<ClassType::Generic>(), nullptr, canonicalName,
+        realizationArgs); /// It has no parent type...
     generateVariardicStub("function", argTypes.size());
-    t->realizationInfo = make_shared<FuncType::RealizationInfo>(
-        canonicalName, pending, realizationArgs);
+    // t->realizationInfo = make_shared<FuncType::RealizationInfo>(
+    // canonicalName, pending, realizationArgs);
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
@@ -677,8 +677,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     auto genericTypes = parseGenerics(stmt->generics);
     ctx->increaseLevel();
     vector<Param> args;
-    vector<FuncType::RealizationInfo::Arg> realizationArgs;
-    vector<int> pending;
+    vector<FuncType::Arg> realizationArgs;
+    // vector<int> pending;
 
     auto retTyp = stmt->ret ? transformType(stmt->ret)->getType()
                             : ctx->addUnbound(getSrcInfo(), false);
@@ -705,9 +705,21 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       if (ctx->getBaseType() && !ctx->getBaseType()->getFunc() && ia == 0 &&
           !a.type && a.name == "self")
         typ = ctx->getBaseType();
-      else if (a.type)
-        typ = t->getType();
-      else {
+      else if (a.type) {
+        auto ie = CAST(a.type, IndexExpr);
+        if (ie && CAST(ie->expr, IdExpr) &&
+            CAST(ie->expr, IdExpr)->value == "Callable") {
+          vector<TypePtr> args;
+          if (auto t = CAST(ie->index, TupleExpr))
+            for (auto &i : t->items)
+              args.push_back(transformType(i)->getType());
+          else
+            args.push_back(transformType(ie->index)->getType());
+          typ = make_shared<ClassType>("__callable_", true, args);
+        } else {
+          typ = t->getType();
+        }
+      } else {
         genericTypes.push_back(
             {"",
              make_shared<LinkType>(LinkType::Generic,
@@ -717,9 +729,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       }
       argTypes.push_back(typ);
       args.push_back({a.name, move(t)});
-      realizationArgs.push_back(
-          {a.name, argTypes.back(), a.deflt ? a.deflt->clone() : nullptr});
-      pending.push_back(pending.size());
+      realizationArgs.push_back({a.name, a.deflt ? a.deflt->clone() : nullptr});
+      // pending.push_back(pending.size());
     }
     ctx->decreaseLevel();
     for (auto &g : stmt->generics) {
@@ -732,10 +743,11 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       ctx->remove(g.name);
     }
 
-    auto t = make_shared<FuncType>(argTypes, genericTypes, ctx->getBaseType());
+    auto t = make_shared<FuncType>(argTypes, genericTypes, ctx->getBaseType(),
+                                   canonicalName, realizationArgs);
     generateVariardicStub("function", argTypes.size());
-    t->realizationInfo = make_shared<FuncType::RealizationInfo>(
-        canonicalName, pending, realizationArgs, ctx->getBaseType());
+    // t->realizationInfo = make_shared<FuncType::RealizationInfo>(
+    // canonicalName, pending, realizationArgs, ctx->getBaseType());
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
@@ -779,15 +791,14 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   vector<StmtPtr> stmts;
   stmts.push_back(move(resultStmt));
 
-  auto genericTypes = parseGenerics(stmt->generics);
-  ClassTypePtr ct = nullptr;
-  if (chop(canonicalName).substr(0, 11) == "__function_")
-    ct = make_shared<FuncType>(vector<TypePtr>(), genericTypes,
-                               ctx->getBaseType());
-  else
-    ct =
-        make_shared<ClassType>(canonicalName, stmt->isRecord, vector<TypePtr>(),
-                               genericTypes, ctx->getBaseType());
+  // ClassTypePtr ct = nullptr;
+  // if (chop(canonicalName).substr(0, 11) == "__function_")
+  // ct = make_shared<FuncType>(vector<TypePtr>(), genericTypes,
+  // ctx->getBaseType());
+  // else
+  auto ct =
+      make_shared<ClassType>(canonicalName, stmt->isRecord, vector<TypePtr>(),
+                             parseGenerics(stmt->generics), ctx->getBaseType());
   ct->setSrcInfo(stmt->getSrcInfo());
   if (!stmt->isRecord) { // add classes early
     ctx->addType(format("{}", stmt->name), ct);
@@ -1033,10 +1044,10 @@ void TransformVisitor::visit(const BoundPattern *pat) {
 
 RealizationContext::FuncRealization
 TransformVisitor::realizeFunc(FuncTypePtr t) {
-  assert(t->canRealize() && t->realizationInfo);
+  assert(t->canRealize());
   try {
     auto ret = t->args[0];
-    auto name = t->realizationInfo->name;
+    auto name = t->canonicalName;
     auto it = ctx->getRealizations()->funcRealizations.find(name);
     if (it != ctx->getRealizations()->funcRealizations.end()) {
       auto it2 = it->second.find(t->realizeString());
@@ -1067,11 +1078,10 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     bool isInternal = in(ast.second->attributes, "internal");
     isInternal |= ast.second->suite == nullptr;
     if (!isInternal)
-      for (int i = 0; i < t->realizationInfo->args.size(); i++) {
-        assert(t->realizationInfo->args[i].type &&
-               !t->realizationInfo->args[i].type->hasUnbound());
-        ctx->addVar(ast.second->args[i].name,
-                    make_shared<LinkType>(t->realizationInfo->args[i].type));
+      for (int i = 1; i < t->args.size(); i++) {
+        assert(t->args[i] && !t->args[i]->hasUnbound());
+        ctx->addVar(ast.second->args[i - 1].name,
+                    make_shared<LinkType>(t->args[i]));
       }
     auto old = ctx->getReturnType();
     auto oldSeen = ctx->wasReturnSet();
@@ -1102,7 +1112,7 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     realizeType(ret->getClass());
     // DBG("======== END {} :- {} ========", t->name, *t);
 
-    assert(ast.second->args.size() == t->realizationInfo->args.size());
+    assert(ast.second->args.size() == t->args.size() - 1);
     vector<Param> args;
     for (auto &i : ast.second->args)
       args.push_back({i.name, nullptr, nullptr});
@@ -1117,9 +1127,9 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
     // ctx->addRealization(t);
     return result;
   } catch (exc::ParserException &e) {
-    e.trackRealize(fmt::format("{} (arguments {})", t->realizationInfo->name,
-                               t->toString(1)),
-                   getSrcInfo());
+    e.trackRealize(
+        fmt::format("{} (arguments {})", t->canonicalName, t->toString(1)),
+        getSrcInfo());
     throw;
   }
 }
