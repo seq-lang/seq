@@ -257,6 +257,7 @@ int ClassType::unify(TypePtr typ, Unification &us) {
         return s1;
       if ((isCallable(t->name) && chop(name).substr(0, 11) == "__callable_") ||
           (isCallable(name) && chop(t->name).substr(0, 11) == "__callable_")) {
+        // TODO: merge function types!
         // just check arguments!
         return s1;
       }
@@ -351,19 +352,19 @@ ClassTypePtr ClassType::getCallable() {
   return nullptr;
 }
 
-FuncType::Arg FuncType::Arg::clone() {
+FuncType::Arg FuncType::Arg::clone() const {
   return {name, defaultValue ? defaultValue->clone() : nullptr};
 }
 
 FuncType::FuncType(const std::vector<TypePtr> &args,
                    const vector<Generic> &explicits, ClassTypePtr parent,
-                   const string &canonicalName, const vector<Arg> &ad)
+                   const string &canonicalName, const vector<FuncType::Arg> &ad)
     : ClassType(fmt::format("__function_{}", args.size()), true, args,
                 explicits, parent),
       canonicalName(canonicalName), argDefs(CL(ad)) {}
 
 FuncType::FuncType(ClassTypePtr c, const string &canonicalName,
-                   const vector<Arg> &ad)
+                   const vector<FuncType::Arg> &ad)
     : ClassType(fmt::format("__function_{}", c->args.size()), c->record,
                 c->args, c->explicits, c->parent),
       canonicalName(canonicalName), argDefs(CL(ad)) {}
@@ -373,15 +374,17 @@ string FuncType::realizeString() const {
 }
 
 TypePtr FuncType::generalize(int level) {
-  return make_shared<FuncType>(ClassType::generalize(level), canonicalName,
-                               argDefs);
+  return make_shared<FuncType>(
+      static_pointer_cast<ClassType>(ClassType::generalize(level)),
+      canonicalName, argDefs);
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
                               std::unordered_map<int, TypePtr> &cache) {
   return make_shared<FuncType>(
-      ClassType::instantiate(level, unboundCount, cache), canonicalName,
-      argDefs);
+      static_pointer_cast<ClassType>(
+          ClassType::instantiate(level, unboundCount, cache)),
+      canonicalName, argDefs);
 }
 
 PartialType::PartialType(ClassTypePtr c, const vector<int> &pending)
@@ -390,13 +393,16 @@ PartialType::PartialType(ClassTypePtr c, const vector<int> &pending)
       pending(pending) {}
 
 TypePtr PartialType::generalize(int level) {
-  return make_shared<PartialType>(ClassType::generalize(level), pending);
+  return make_shared<PartialType>(
+      static_pointer_cast<ClassType>(ClassType::generalize(level)), pending);
 }
 
 TypePtr PartialType::instantiate(int level, int &unboundCount,
                                  std::unordered_map<int, TypePtr> &cache) {
   return make_shared<PartialType>(
-      ClassType::instantiate(level, unboundCount, cache), pending);
+      static_pointer_cast<ClassType>(
+          ClassType::instantiate(level, unboundCount, cache)),
+      pending);
 }
 
 // TODO:

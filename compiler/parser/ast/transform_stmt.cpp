@@ -700,7 +700,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
 
     for (int ia = 0; ia < stmt->args.size(); ia++) {
       auto &a = stmt->args[ia];
-      auto t = transformType(a.type);
+      ExprPtr typeAst = nullptr;
       types::TypePtr typ = nullptr;
       if (ctx->getBaseType() && !ctx->getBaseType()->getFunc() && ia == 0 &&
           !a.type && a.name == "self")
@@ -717,7 +717,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
             args.push_back(transformType(ie->index)->getType());
           typ = make_shared<ClassType>("__callable_", true, args);
         } else {
-          typ = t->getType();
+          typeAst = transformType(a.type);
+          typ = typeAst->getType();
         }
       } else {
         genericTypes.push_back(
@@ -728,7 +729,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
         typ = ctx->addUnbound(getSrcInfo(), false);
       }
       argTypes.push_back(typ);
-      args.push_back({a.name, move(t)});
+      args.push_back({a.name, move(typeAst)});
       realizationArgs.push_back({a.name, a.deflt ? a.deflt->clone() : nullptr});
       // pending.push_back(pending.size());
     }

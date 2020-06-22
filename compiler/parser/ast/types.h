@@ -261,7 +261,7 @@ struct FuncType : public ClassType {
   struct Arg {
     std::string name;
     std::unique_ptr<Expr> defaultValue;
-    FuncType::Arg clone() const;
+    Arg clone() const;
   };
   std::string canonicalName;
   std::vector<Arg> argDefs; // name, value
