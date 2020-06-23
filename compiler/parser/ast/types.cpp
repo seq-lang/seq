@@ -195,6 +195,10 @@ bool isCallable(const string &name) {
          chop(name).substr(0, 10) == "__partial_";
 }
 
+bool isFunc(const string &name) {
+  return chop(name).substr(0, 11) == "__function_";
+}
+
 ClassType::ClassType(const string &name, bool isRecord,
                      const vector<TypePtr> &args,
                      const vector<Generic> &explicits, ClassTypePtr parent)
@@ -255,12 +259,16 @@ int ClassType::unify(TypePtr typ, Unification &us) {
     if (isRecord()) {
       if (isTuple(name) || isTuple(t->name))
         return s1;
-      if ((isCallable(t->name) && chop(name).substr(0, 11) == "__callable_") ||
-          (isCallable(name) && chop(t->name).substr(0, 11) == "__callable_")) {
-        // TODO: merge function types!
-        // just check arguments!
+      if (isFunc(name) && isFunc(t->name))
         return s1;
-      }
+      // if ((isCallable(t->name) && chop(name).substr(0, 11) == "__callable_")
+      // ||
+      //     (isCallable(name) && chop(t->name).substr(0, 11) == "__callable_"))
+      //     {
+      //   // TODO: merge function types!
+      //   // just check arguments!
+      //   return s1;
+      // }
       if (name != t->name)
         return -1;
     }

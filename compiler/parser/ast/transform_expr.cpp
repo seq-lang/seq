@@ -773,6 +773,7 @@ TransformVisitor::callCallable(types::ClassTypePtr f,
 vector<int> TransformVisitor::callFunc(types::FuncTypePtr f,
                                        vector<CallExpr::Arg> &args,
                                        vector<CallExpr::Arg> &reorderedArgs) {
+  DBG("calling func {} / {}", f->toString(), f->canonicalName);
   vector<int> pending;
   bool isPartial = false;
   bool namesStarted = false;
