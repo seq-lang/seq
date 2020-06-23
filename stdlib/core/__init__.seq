@@ -11,14 +11,14 @@ from core.box import Box
 from core.builtin import *
 
 from core.collections.list import list
-# from core.collections.set import set
-# from core.collections.dict import dict
+from core.collections.set import set
+from core.collections.dict import dict
 
 from core.str import *
-# from core.int import *
-# from core.float import *
+from core.int import *
+from core.float import *
 
-# from core.sort import sorted
+from core.sort import sorted
 
 # from core.file import File, gzFile, open, gzopen
 # from pickle import pickle, unpickle

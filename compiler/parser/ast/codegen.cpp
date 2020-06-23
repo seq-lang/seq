@@ -401,19 +401,25 @@ void CodegenVisitor::visit(const ImportStmt *stmt) {
   } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
     for (auto &i : *(import->lctx))
       ctx->add(i.first, i.second.front());
-  } else
-    ;
-  // for (auto &w : stmt->what) {
-  // TODO: those should have been already resolved  ... ?
-  // for (auto i : *(import->lctx)) {
-  //   if (i.first.substr(0, w.first.size() + 1) == w.first + ".")
-  //     ctx->add(i.first, i.second.front());
-  // }
-  // auto c = import->lctx->find(w.first);
-  // DBG("finding {} in {}", w.first, stmt->from.first);
-  // assert(c);
-  // ctx->add(w.second == "" ? w.first : w.second, c);
-  // }
+  } else {
+    for (auto &w : stmt->what) {
+      for (auto i : *(import->lctx)) {
+        if (i.second.front()->getVar() && i.first == w.first)
+          ctx->add(i.first, i.second.front());
+      }
+      // for (auto &w : stmt->what) {
+      // TODO: those should have been already resolved  ... ?
+      // for (auto i : *(import->lctx)) {
+      //   if (i.first.substr(0, w.first.size() + 1) == w.first + ".")
+      //     ctx->add(i.first, i.second.front());
+      // }
+      // auto c = import->lctx->find(w.first);
+      // DBG("finding {} in {}", w.first, stmt->from.first);
+      // assert(c);
+      // ctx->add(w.second == "" ? w.first : w.second, c);
+      // }
+    }
+  }
 }
 
 void CodegenVisitor::visit(const TryStmt *stmt) {

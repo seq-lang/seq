@@ -773,7 +773,6 @@ TransformVisitor::callCallable(types::ClassTypePtr f,
 vector<int> TransformVisitor::callFunc(types::FuncTypePtr f,
                                        vector<CallExpr::Arg> &args,
                                        vector<CallExpr::Arg> &reorderedArgs) {
-  DBG("calling func {} / {}", f->toString(), f->canonicalName);
   vector<int> pending;
   bool isPartial = false;
   bool namesStarted = false;
@@ -793,7 +792,7 @@ vector<int> TransformVisitor::callFunc(types::FuncTypePtr f,
       CAST(reorderedArgs.back().value, EllipsisExpr)) {
     isPartial = true;
     reorderedArgs.pop_back();
-  } else if (reorderedArgs.size() + namedArgs.size() != f->args.size() - 1) {
+  } else if (reorderedArgs.size() + namedArgs.size() > f->args.size() - 1) {
     error("too many arguments for {} (expected {}, got {})", f->toString(),
           f->args.size() - 1, reorderedArgs.size() + namedArgs.size());
   }

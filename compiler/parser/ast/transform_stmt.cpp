@@ -479,8 +479,10 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
                                          ctx->getImports());
     // TODO: set nice module name ctx->module = ;
     ctx->getImports()->addImport(file, file, ictx);
-    ctx->getImports()->setBody(
-        file, TransformVisitor(ictx).transform(parseFile(file)));
+
+    auto s = parseFile(file);
+    auto sn = TransformVisitor(ictx).realizeBlock(s.get(), true);
+    ctx->getImports()->setBody(file, move(sn));
     import = ctx->getImports()->getImport(file);
   }
 
@@ -1195,31 +1197,29 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
       ++i;
     }
 
-    if (ctx->getActiveUnbounds().empty() || !newUnbounds) {
-      if (!keepLast)
-        ctx->popBlock();
-      break;
-    }
-
-    if (newUnbounds >= prevSize) {
-      TypePtr fu = nullptr;
-      for (auto &ub : ctx->getActiveUnbounds())
-        if (ub->getLink()->id >= minUnbound) {
-          if (!fu)
-            fu = ub;
-          DBG("NOPE {} @ {}", ub->toString(), ub->getSrcInfo());
-        }
-      error(fu, "cannot resolve unbound variables");
-      break;
-    }
-    prevSize = newUnbounds;
     ctx->popBlock();
+    if (ctx->getActiveUnbounds().empty() || !newUnbounds) {
+      break;
+    } else {
+      if (newUnbounds >= prevSize) {
+        TypePtr fu = nullptr;
+        for (auto &ub : ctx->getActiveUnbounds())
+          if (ub->getLink()->id >= minUnbound) {
+            if (!fu)
+              fu = ub;
+            DBG("NOPE {} @ {}", ub->toString(), ub->getSrcInfo());
+          }
+        error(fu, "cannot resolve unbound variables");
+      }
+      prevSize = newUnbounds;
+    }
   }
   // Last pass; TODO: detect if it is needed...
   ctx->addBlock();
   TransformVisitor v(ctx);
   result = v.transform(result);
-  ctx->popBlock();
+  if (!keepLast)
+    ctx->popBlock();
   return result;
 }
 

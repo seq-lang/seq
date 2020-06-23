@@ -119,10 +119,11 @@ types::Type *types::FuncType::getBaseType(unsigned idx) const {
 }
 
 static bool compatibleArgType(types::Type *got, types::Type *exp) {
-  if (::asOpt(exp))
-    return got == types::RefType::none() || types::is(exp->getBaseType(0), got);
-  else
-    return types::is(got, exp);
+  // if (::asOpt(exp))
+  //   return got == types::RefType::none() || types::is(exp->getBaseType(0),
+  //   got);
+  // else
+  return types::is(got, exp);
 }
 
 static std::string expectedTypeName(types::Type *exp) {
@@ -139,10 +140,12 @@ types::Type *types::FuncType::getCallType(const std::vector<Type *> &inTypes) {
                             std::to_string(inTypes.size()));
 
   for (unsigned i = 0; i < inTypes.size(); i++)
-    if (!compatibleArgType(inTypes[i], this->inTypes[i]))
+    if (!compatibleArgType(inTypes[i], this->inTypes[i])) {
+      DBG("{} / {}", getName(), i);
       throw exc::SeqException("expected function input type '" +
                               expectedTypeName(this->inTypes[i]) +
                               "', but got '" + inTypes[i]->getName() + "'");
+    }
 
   return outType;
 }
