@@ -114,9 +114,6 @@ extend str:
     def __bool__(self: str):
         return self.len != 0
 
-    def __copy__(self: str):
-        return self
-
     def __add__(self: str, other: str):
         len1 = self.len
         len2 = other.len
@@ -125,6 +122,9 @@ extend str:
         str.memcpy(p, self.ptr, len1)
         str.memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
+
+    def _slice(self: str, i: int, j: int):
+        return str(self.ptr + i, j - i)
 
     def __getitem__(self: str, idx: int):
         if idx < 0:
@@ -1271,13 +1271,13 @@ extend str:
             i += 1
             while i < str_len and not str._isspace(self.ptr[i]):
                 i += 1
-            l.append(self[j:i])
+            l.append(self._slice(j, i))
 
         if i < str_len:
             while i < str_len and str._isspace(self.ptr[i]):
                 i += 1
             if i != str_len:
-                l.append(self[i:str_len])
+                l.append(self._slice(i, str_len))
 
         return l
 
@@ -1298,13 +1298,13 @@ extend str:
             i -= 1
             while i >= 0 and not str._isspace(self.ptr[i]):
                 i -= 1
-            l.append(self[i+1:j+1])
+            l.append(self._slice(i+1, j+1))
 
         if i >= 0:
             while i >= 0 and str._isspace(self.ptr[i]):
                 i -= 1
             if i >= 0:
-                l.append(self[0:i+1])
+                l.append(self._slice(0, i+1))
 
         l.reverse()
         return l
