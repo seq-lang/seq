@@ -22,6 +22,8 @@ Value *Expr::codegen(BaseFunc *base, BasicBlock *&block) {
   }
 }
 
+void Expr::setType(types::Type *type) { this->type = type; }
+
 types::Type *Expr::getType() const {
   try {
     return getType0();

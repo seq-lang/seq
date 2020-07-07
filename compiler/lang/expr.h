@@ -49,6 +49,9 @@ public:
   /// exceptions and fills in source information.
   types::Type *getType() const;
 
+  /// Sets the type of this expression.
+  void setType(types::Type *type);
+
   /// Returns the given name of this expression.
   std::string getName() const;
 
