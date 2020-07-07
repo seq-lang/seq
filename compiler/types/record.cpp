@@ -300,7 +300,6 @@ void types::RecordType::initOps() {
            ValueExpr strsVal(types::PtrType::get(types::Str), strs);
            ValueExpr lenVal(types::Int, len);
            CallExpr strsRealCall(&strsRealExpr, {&strsVal, &lenVal});
-           strsRealExpr.resolveTypes();
            Value *res = strsRealCall.codegen(nullptr, entry);
            b.CreateRet(res);
          }
@@ -355,7 +354,6 @@ void types::RecordType::initOps() {
          ValueExpr len(types::Int,
                        ConstantInt::get(seqIntLLVM(context), types.size()));
          CallExpr fixIndexCall(&fixIndexExpr, {&idx, &len});
-         fixIndexCall.resolveTypes();
          Value *idxFixed = fixIndexCall.codegen(nullptr, block);
 
          b.SetInsertPoint(block);
@@ -665,32 +663,6 @@ size_t types::RecordType::size(Module *module) const {
 }
 
 types::RecordType *types::RecordType::asRec() { return this; }
-
-types::RecordType *types::RecordType::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (types::RecordType *)ref->getClone(this);
-
-  auto *x = types::RecordType::get({}, {}, name);
-  ref->addClone(this, x);
-
-  std::vector<Type *> typesCloned;
-  for (auto *type : types)
-    typesCloned.push_back(type->clone(ref));
-
-  std::vector<MagicOverload> overloadsCloned;
-  for (auto &magic : getVTable().overloads)
-    overloadsCloned.push_back({magic.name, magic.func->clone(ref)});
-
-  std::map<std::string, BaseFunc *> methodsCloned;
-  for (auto &method : getVTable().methods)
-    methodsCloned.insert({method.first, method.second->clone(ref)});
-
-  x->types = typesCloned;
-  x->names = names;
-  x->getVTable().overloads = overloadsCloned;
-  x->getVTable().methods = methodsCloned;
-  return x;
-}
 
 types::RecordType *types::RecordType::get(std::vector<Type *> types,
                                           std::vector<std::string> names,

@@ -134,7 +134,3 @@ types::OptionalType *types::OptionalType::get(types::Type *baseType) noexcept {
 types::OptionalType *types::OptionalType::get() {
   return get(types::BaseType::get());
 }
-
-types::OptionalType *types::OptionalType::clone(Generic *ref) {
-  return get(baseType->clone(ref));
-}

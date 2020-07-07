@@ -5,150 +5,15 @@ using namespace seq;
 using namespace llvm;
 
 types::RefType::RefType(std::string name)
-    : Type(std::move(name), BaseType::get(), false, true), Generic(),
-      done(false), root(this), realizationCache(), contents(nullptr),
-      membNamesDeduced(), membExprsDeduced() {}
-
-void types::RefType::setDone() {
-  assert(this == root && !done);
-
-  if (!contents) {
-    for (auto &magic : vtable.overloads)
-      magic.func->resolveTypes();
-
-    for (auto &e : vtable.methods)
-      e.second->resolveTypes();
-
-    try {
-      setDeducedContents();
-    } catch (exc::SeqException &) {
-      // this can fail if e.g. types are not known due to generics
-      // in this case, hope that types get resolved later...
-    }
-  }
-
-  done = true;
-}
+    : Type(std::move(name), BaseType::get(), false, true), contents(nullptr) {}
 
 void types::RefType::setContents(types::RecordType *contents) {
   this->contents = contents;
 }
 
-void types::RefType::setDeducedContents() {
-  assert(membExprsDeduced.size() == membNamesDeduced.size());
-  std::vector<types::Type *> membTypesDeduced;
-  for (unsigned i = 0; i < membExprsDeduced.size(); i++) {
-    Expr *expr = membExprsDeduced[i];
-    expr->resolveTypes();
-    membTypesDeduced.push_back(expr->getType());
-    if (membTypesDeduced.back()->is(Void)) {
-      contents = types::RecordType::get({});
-      throw exc::SeqException("member '" + membNamesDeduced[i] +
-                              "' of class '" + getName() + "' is void");
-    }
-  }
-  contents = types::RecordType::get(membTypesDeduced, membNamesDeduced);
-}
-
-void types::RefType::addMember(std::string name, Expr *expr) {
-  if (done || contents ||
-      std::find(membNamesDeduced.begin(), membNamesDeduced.end(), name) !=
-          membNamesDeduced.end())
-    return;
-
-  membNamesDeduced.push_back(name);
-  membExprsDeduced.push_back(expr);
-}
-
-std::string types::RefType::getName() const {
-  if (numGenerics() == 0)
-    return name;
-
-  std::string name = this->name + "[";
-
-  for (unsigned i = 0; i < numGenerics(); i++) {
-    name += getGeneric(i)->getName();
-    if (i < numGenerics() - 1)
-      name += ",";
-  }
-
-  name += "]";
-  return name;
-}
+std::string types::RefType::getName() const { return name; }
 
 std::string types::RefType::genericName() { return getName(); }
-
-types::Type *types::RefType::realize(std::vector<types::Type *> types) {
-  if (this != root)
-    return root->realize(types);
-
-  types::Type *cached = root->realizationCache.find(types);
-
-  if (cached)
-    return cached;
-
-  if (!done) {
-    types::GenericType *pending = types::GenericType::get(this, types);
-    return pending;
-  }
-
-  Generic *x = realizeGeneric(types);
-  auto *ref = dynamic_cast<types::RefType *>(x);
-  assert(ref);
-
-  if (!ref->contents || !ref->membNamesDeduced.empty())
-    ref->setDeducedContents();
-
-  addCachedRealized(types, ref);
-  return ref;
-}
-
-std::vector<types::Type *>
-types::RefType::deduceTypesFromArgTypes(std::vector<types::Type *> argTypes,
-                                        std::vector<std::string> names) {
-  Func *init = nullptr;
-  if (!names.empty()) {
-    initOut(argTypes, names, /*nullOnMissing=*/false, &init);
-    types::FuncType *funcType = init->getFuncType();
-    std::vector<types::Type *> types;
-    // start loop from 2 since 0th base type is return type and 1st is self
-    for (unsigned i = 2; i < funcType->numBaseTypes(); i++)
-      types.push_back(funcType->getBaseType(i));
-    return Generic::deduceTypesFromArgTypes(types, argTypes,
-                                            /*unwrapOptionals=*/false);
-  }
-
-  // deal with custom __init__s:
-  bool foundInit = false;
-  for (auto &magic : vtable.overloads) {
-    if (magic.name != "__init__")
-      continue;
-
-    foundInit = true;
-    magic.func->resolveTypes();
-    types::FuncType *funcType = magic.func->getFuncType();
-
-    if (funcType->numBaseTypes() - 2 != argTypes.size())
-      continue;
-
-    std::vector<types::Type *> types;
-    // start loop from 2 since 0th base type is return type and 1st is self
-    for (unsigned i = 2; i < funcType->numBaseTypes(); i++)
-      types.push_back(funcType->getBaseType(i));
-
-    try {
-      return Generic::deduceTypesFromArgTypes(types, argTypes,
-                                              /*unwrapOptionals=*/false);
-    } catch (exc::SeqException &) {
-    }
-  }
-
-  if (foundInit)
-    throw exc::SeqException("could not deduce type parameters of class '" +
-                            name + "'");
-
-  return Generic::deduceTypesFromArgTypes(contents->getTypes(), argTypes);
-}
 
 static void codegenNotNoneCheck(Value *self, const std::string &name,
                                 BasicBlock *block) {
@@ -328,19 +193,14 @@ bool types::RefType::isAtomic() const { return false; }
 
 bool types::RefType::is(types::Type *type) const {
   types::RefType *ref = type->asRef();
-  return ref && (ref == none() || this == none() ||
-                 (name == ref->name && Generic::is(ref)));
+  return ref && (ref == none() || this == none() || name == ref->name);
 }
 
 unsigned types::RefType::numBaseTypes() const {
-  if (numGenerics() > 0)
-    return numGenerics();
   return contents ? contents->numBaseTypes() : 0;
 }
 
 types::Type *types::RefType::getBaseType(unsigned idx) const {
-  if (numGenerics() > 0)
-    return getGeneric(idx);
   return contents ? contents->getBaseType(idx) : nullptr;
 }
 
@@ -379,46 +239,6 @@ Value *types::RefType::make(BasicBlock *block, std::vector<Value *> vals) {
 
 types::RefType *types::RefType::get(std::string name) {
   return new RefType(std::move(name));
-}
-
-types::RefType *types::RefType::clone(Generic *ref) {
-  assert(done && contents);
-
-  if (ref->seenClone(this))
-    return (types::RefType *)ref->getClone(this);
-
-  types::RefType *x = types::RefType::get(name);
-  ref->addClone(this, x);
-  setCloneBase(x, ref);
-
-  x->contents = contents->clone(ref);
-
-  std::vector<MagicOverload> overloadsCloned;
-  for (auto &magic : getVTable().overloads)
-    overloadsCloned.push_back({magic.name, magic.func->clone(ref)});
-
-  std::map<std::string, BaseFunc *> methodsCloned;
-  for (auto &method : getVTable().methods)
-    methodsCloned.insert({method.first, method.second->clone(ref)});
-
-  x->getVTable().overloads = overloadsCloned;
-  x->getVTable().methods = methodsCloned;
-
-  std::vector<Expr *> membExprsDeducedCloned;
-  for (auto *expr : membExprsDeduced)
-    membExprsDeducedCloned.push_back(expr->clone(ref));
-
-  x->membNamesDeduced = membNamesDeduced;
-  x->membExprsDeduced = membExprsDeducedCloned;
-
-  x->root = root;
-  x->done = true;
-  return x;
-}
-
-void types::RefType::addCachedRealized(std::vector<types::Type *> types,
-                                       Generic *x) {
-  root->realizationCache.add(types, dynamic_cast<types::Type *>(x));
 }
 
 types::RefType *types::RefType::none() {
@@ -469,8 +289,4 @@ Value *types::MethodType::make(Value *self, Value *func, BasicBlock *block) {
 types::MethodType *types::MethodType::get(types::Type *self,
                                           types::FuncType *func) {
   return new MethodType(self, func);
-}
-
-types::MethodType *types::MethodType::clone(Generic *ref) {
-  return MethodType::get(self->clone(ref), func->clone(ref));
 }

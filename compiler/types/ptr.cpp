@@ -307,7 +307,3 @@ types::PtrType *types::PtrType::get(Type *baseType) noexcept {
 types::PtrType *types::PtrType::get() noexcept {
   return new PtrType(types::BaseType::get());
 }
-
-types::PtrType *types::PtrType::clone(Generic *ref) {
-  return get(getBaseType(0)->clone(ref));
-}

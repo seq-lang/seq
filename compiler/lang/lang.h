@@ -12,9 +12,7 @@ private:
   bool nopOnVoid; // for REPL top-level print wraps
 public:
   explicit Print(Expr *expr, bool nopOnVoid = false);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  Print *clone(Generic *ref) override;
 };
 
 class ExprStmt : public Stmt {
@@ -23,9 +21,7 @@ private:
 
 public:
   explicit ExprStmt(Expr *expr);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  ExprStmt *clone(Generic *ref) override;
 };
 
 class VarStmt : public Stmt {
@@ -37,9 +33,7 @@ private:
 public:
   explicit VarStmt(Expr *init, types::Type *type = nullptr);
   Var *getVar();
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  VarStmt *clone(Generic *ref) override;
 };
 
 class FuncStmt : public Stmt {
@@ -48,9 +42,7 @@ private:
 
 public:
   explicit FuncStmt(Func *func);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  FuncStmt *clone(Generic *ref) override;
 };
 
 class Assign : public Stmt {
@@ -62,9 +54,7 @@ private:
 public:
   Assign(Var *var, Expr *value, bool atomic = false);
   void setAtomic();
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  Assign *clone(Generic *ref) override;
 };
 
 class AssignIndex : public Stmt {
@@ -75,9 +65,7 @@ private:
 
 public:
   AssignIndex(Expr *array, Expr *idx, Expr *value);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  AssignIndex *clone(Generic *ref) override;
 };
 
 class Del : public Stmt {
@@ -87,7 +75,6 @@ private:
 public:
   explicit Del(Var *var);
   void codegen0(llvm::BasicBlock *&block) override;
-  Del *clone(Generic *ref) override;
 };
 
 class DelIndex : public Stmt {
@@ -97,9 +84,7 @@ private:
 
 public:
   DelIndex(Expr *array, Expr *idx);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  DelIndex *clone(Generic *ref) override;
 };
 
 class AssignMember : public Stmt {
@@ -111,9 +96,7 @@ private:
 public:
   AssignMember(Expr *expr, std::string memb, Expr *value);
   AssignMember(Expr *expr, seq_int_t idx, Expr *value);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  AssignMember *clone(Generic *ref) override;
 };
 
 class If : public Stmt {
@@ -127,9 +110,7 @@ public:
   Block *addCond(Expr *cond);
   Block *addElse();
   Block *getBlock(unsigned idx = 0);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  If *clone(Generic *ref) override;
 };
 
 class TryCatch : public Stmt {
@@ -162,9 +143,7 @@ public:
   void codegenReturn(Expr *expr, llvm::BasicBlock *&block);
   void codegenBreak(llvm::BasicBlock *&block);
   void codegenContinue(llvm::BasicBlock *&block);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  TryCatch *clone(Generic *ref) override;
   static llvm::StructType *getPadType(llvm::LLVMContext &context);
   static llvm::StructType *getExcType(llvm::LLVMContext &context);
   static llvm::GlobalVariable *getTypeIdxVar(llvm::Module *module,
@@ -179,9 +158,7 @@ private:
 
 public:
   explicit Throw(Expr *expr);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  Throw *clone(Generic *ref) override;
 };
 
 class Match : public Stmt {
@@ -194,9 +171,7 @@ public:
   Match();
   void setValue(Expr *value);
   Block *addCase(Pattern *pattern);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  Match *clone(Generic *ref) override;
 };
 
 class While : public Stmt {
@@ -207,9 +182,7 @@ private:
 public:
   explicit While(Expr *cond);
   Block *getBlock();
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  While *clone(Generic *ref) override;
 };
 
 class For : public Stmt {
@@ -224,9 +197,7 @@ public:
   Block *getBlock();
   Var *getVar();
   void setGen(Expr *gen);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  For *clone(Generic *ref) override;
 };
 
 class Return : public Stmt {
@@ -236,9 +207,7 @@ private:
 public:
   explicit Return(Expr *expr);
   Expr *getExpr();
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  Return *clone(Generic *ref) override;
 };
 
 class Yield : public Stmt {
@@ -248,23 +217,19 @@ private:
 public:
   explicit Yield(Expr *expr);
   Expr *getExpr();
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  Yield *clone(Generic *ref) override;
 };
 
 class Break : public Stmt {
 public:
   Break();
   void codegen0(llvm::BasicBlock *&block) override;
-  Break *clone(Generic *ref) override;
 };
 
 class Continue : public Stmt {
 public:
   Continue();
   void codegen0(llvm::BasicBlock *&block) override;
-  Continue *clone(Generic *ref) override;
 };
 
 class Assert : public Stmt {
@@ -274,9 +239,7 @@ private:
 
 public:
   explicit Assert(Expr *expr, Expr *msg = nullptr);
-  void resolveTypes() override;
   void codegen0(llvm::BasicBlock *&block) override;
-  Assert *clone(Generic *ref) override;
 };
 
 } // namespace seq

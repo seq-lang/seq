@@ -224,7 +224,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
     } else {
       auto cls = seq::types::RefType::get(name);
       cls->setContents(seq::types::RecordType::get(types, names, ""));
-      cls->setDone();
+      // cls->setDone();
       real.handle = cls;
     }
   }

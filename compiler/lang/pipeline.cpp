@@ -17,11 +17,6 @@ void PipeExpr::setParallel(unsigned which) {
   parallel[which] = true;
 }
 
-void PipeExpr::resolveTypes() {
-  for (auto *stage : stages)
-    stage->resolveTypes();
-}
-
 // Some useful info for codegen'ing the "drain" step after prefetch transform.
 struct DrainState {
   Value *states; // coroutine states buffer
@@ -122,7 +117,7 @@ struct UnpackedStage {
 
   Expr *repack(Func *f) {
     assert(func);
-    FuncExpr *newFunc = new FuncExpr(f, func->getTypes());
+    FuncExpr *newFunc = new FuncExpr(f);
     if (!isCall)
       return newFunc;
 
@@ -163,7 +158,6 @@ static void applyRevCompOptimization(std::vector<Expr *> &stages,
 
       if (!replacement.empty()) {
         stagesNew.push_back(f1.repack(Func::getBuiltin(replacement)));
-        stagesNew.back()->resolveTypes();
         parallelNew.push_back(parallel[i] || parallel[i + 1]);
         i += 2;
         continue;
@@ -208,9 +202,7 @@ static void applyCanonicalKmerOptimization(std::vector<Expr *> &stages,
         replacement = "_kmers_canonical_with_pos";
 
       if (!replacement.empty()) {
-        stagesNew.push_back(
-            new FuncExpr(Func::getBuiltin(replacement), f1.func->getTypes()));
-        stagesNew.back()->resolveTypes();
+        stagesNew.push_back(new FuncExpr(Func::getBuiltin(replacement)));
         parallelNew.push_back(parallel[i] || parallel[i + 1]);
         i += 2;
         continue;
@@ -882,13 +874,6 @@ types::Type *PipeExpr::getType0() const {
   }
   assert(type);
   return type;
-}
-
-PipeExpr *PipeExpr::clone(Generic *ref) {
-  std::vector<Expr *> stagesCloned;
-  for (auto *stage : stages)
-    stagesCloned.push_back(stage->clone(ref));
-  SEQ_RETURN_CLONE(new PipeExpr(stagesCloned, parallel));
 }
 
 types::RecordType *PipeExpr::getInterAlignYieldType() {

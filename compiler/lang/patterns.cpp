@@ -9,34 +9,11 @@ void Pattern::setTryCatch(TryCatch *tc) { this->tc = tc; }
 
 TryCatch *Pattern::getTryCatch() { return tc; }
 
-void Pattern::resolveTypes(types::Type *type) {
-  if (!types::is(type, this->type))
-    throw exc::SeqException("pattern type mismatch: expected " +
-                                this->type->getName() + " but got " +
-                                type->getName(),
-                            getSrcInfo());
-}
-
 bool Pattern::isCatchAll() { return false; }
-
-Pattern *Pattern::clone(Generic *ref) { return this; }
 
 Wildcard::Wildcard() : Pattern(types::Any), var(new Var()) {}
 
-void Wildcard::resolveTypes(types::Type *type) { var->setType(type); }
-
 bool Wildcard::isCatchAll() { return true; }
-
-Wildcard *Wildcard::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Wildcard *)ref->getClone(this);
-
-  auto *x = new Wildcard();
-  ref->addClone(this, x);
-  delete x->var;
-  x->var = var->clone(ref);
-  SEQ_RETURN_CLONE(x);
-}
 
 Var *Wildcard::getVar() { return var; }
 
@@ -52,23 +29,7 @@ Value *Wildcard::codegen(BaseFunc *base, types::Type *type, Value *val,
 BoundPattern::BoundPattern(Pattern *pattern)
     : Pattern(types::Any), var(new Var()), pattern(pattern) {}
 
-void BoundPattern::resolveTypes(types::Type *type) {
-  var->setType(type);
-  pattern->resolveTypes(type);
-}
-
 bool BoundPattern::isCatchAll() { return pattern->isCatchAll(); }
-
-BoundPattern *BoundPattern::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (BoundPattern *)ref->getClone(this);
-
-  auto *x = new BoundPattern(pattern->clone(ref));
-  ref->addClone(this, x);
-  delete x->var;
-  x->var = var->clone(ref);
-  SEQ_RETURN_CLONE(x);
-}
 
 Var *BoundPattern::getVar() { return var; }
 
@@ -79,8 +40,6 @@ Value *BoundPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
 }
 
 StarPattern::StarPattern() : Pattern(types::Any) {}
-
-void StarPattern::resolveTypes(types::Type *type) {}
 
 Value *StarPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                             BasicBlock *&block) {
@@ -125,23 +84,6 @@ Value *StrPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
 RecordPattern::RecordPattern(std::vector<Pattern *> patterns)
     : Pattern(types::Any), patterns(std::move(patterns)) {}
 
-void RecordPattern::resolveTypes(types::Type *type) {
-  types::RecordType *rec = type->asRec();
-
-  if (!rec)
-    throw exc::SeqException("cannot match record pattern with non-record value",
-                            getSrcInfo());
-
-  std::vector<types::Type *> types = rec->getTypes();
-
-  if (types.size() != patterns.size())
-    throw exc::SeqException("record element count mismatch in pattern",
-                            getSrcInfo());
-
-  for (unsigned i = 0; i < types.size(); i++)
-    patterns[i]->resolveTypes(types[i]);
-}
-
 Value *RecordPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                               BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -166,30 +108,8 @@ bool RecordPattern::isCatchAll() {
   return true;
 }
 
-RecordPattern *RecordPattern::clone(Generic *ref) {
-  std::vector<Pattern *> patternsCloned;
-  for (auto *elem : patterns)
-    patternsCloned.push_back(elem->clone(ref));
-  SEQ_RETURN_CLONE(new RecordPattern(patternsCloned));
-}
-
 ArrayPattern::ArrayPattern(std::vector<Pattern *> patterns)
     : Pattern(types::Any), patterns(std::move(patterns)) {}
-
-void ArrayPattern::resolveTypes(types::Type *type) {
-  types::RefType *ref = type->asRef();
-  if (!ref || ref->genericName().rfind("list[", 0) != 0)
-    throw exc::SeqException("cannot match list pattern with non-list value",
-                            getSrcInfo());
-
-  if (ref->numBaseTypes() != 1) {
-    throw exc::SeqException("list type overriden", getSrcInfo());
-  }
-
-  types::Type *baseType = type->getBaseType(0);
-  for (auto *pattern : patterns)
-    pattern->resolveTypes(baseType);
-}
 
 Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                              BasicBlock *&block) {
@@ -295,22 +215,8 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   return resultFinal;
 }
 
-ArrayPattern *ArrayPattern::clone(Generic *ref) {
-  std::vector<Pattern *> patternsCloned;
-  for (auto *elem : patterns)
-    patternsCloned.push_back(elem->clone(ref));
-  SEQ_RETURN_CLONE(new ArrayPattern(patternsCloned));
-}
-
 SeqPattern::SeqPattern(std::string pattern)
     : Pattern(types::Any), pattern(std::move(pattern)) {}
-
-void SeqPattern::resolveTypes(types::Type *type) {
-  if (!type->is(types::Seq) && !type->asKMer())
-    throw exc::SeqException(
-        "sequence pattern must be used with sequence or k-mer type",
-        getSrcInfo());
-}
 
 // Returns the appropriate character for the given logical index, respecting
 // reverse complementation. Given `lenActual` should be non-negative.
@@ -693,17 +599,6 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
 OptPattern::OptPattern(Pattern *pattern)
     : Pattern(types::Any), pattern(pattern) {}
 
-void OptPattern::resolveTypes(types::Type *type) {
-  types::OptionalType *optType = type->asOpt();
-  if (!optType)
-    throw exc::SeqException(
-        "cannot match optional pattern against non-optional value",
-        getSrcInfo());
-
-  if (pattern)
-    pattern->resolveTypes(optType->getBaseType(0));
-}
-
 Value *OptPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                            BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -745,10 +640,6 @@ Value *OptPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   return resultFinal;
 }
 
-OptPattern *OptPattern::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new OptPattern(pattern ? pattern->clone(ref) : nullptr));
-}
-
 RangePattern::RangePattern(seq_int_t a, seq_int_t b)
     : Pattern(types::Int), a(a), b(b) {}
 
@@ -767,11 +658,6 @@ Value *RangePattern::codegen(BaseFunc *base, types::Type *type, Value *val,
 
 OrPattern::OrPattern(std::vector<Pattern *> patterns)
     : Pattern(types::Any), patterns(std::move(patterns)) {}
-
-void OrPattern::resolveTypes(types::Type *type) {
-  for (auto *pattern : patterns)
-    pattern->resolveTypes(type);
-}
 
 Value *OrPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                           BasicBlock *&block) {
@@ -795,19 +681,8 @@ bool OrPattern::isCatchAll() {
   return false;
 }
 
-OrPattern *OrPattern::clone(Generic *ref) {
-  std::vector<Pattern *> patternsCloned;
-  for (auto *elem : patterns)
-    patternsCloned.push_back(elem->clone(ref));
-  SEQ_RETURN_CLONE(new OrPattern(patternsCloned));
-}
-
 GuardedPattern::GuardedPattern(Pattern *pattern, Expr *guard)
     : Pattern(types::Int), pattern(pattern), guard(guard) {}
-
-void GuardedPattern::resolveTypes(types::Type *type) {
-  pattern->resolveTypes(type);
-}
 
 Value *GuardedPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                                BasicBlock *&block) {
@@ -839,8 +714,4 @@ Value *GuardedPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   resultFinal->addIncoming(guardResult, checkBlock); // result of guard
 
   return resultFinal;
-}
-
-GuardedPattern *GuardedPattern::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new GuardedPattern(pattern->clone(ref), guard->clone(ref)));
 }

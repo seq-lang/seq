@@ -2,7 +2,6 @@
 
 #include "lang/stmt.h"
 #include "types/func.h"
-#include "types/generic.h"
 #include "types/types.h"
 #include "util/common.h"
 #include <unordered_map>
@@ -36,14 +35,12 @@ protected:
 
 public:
   virtual bool isGen();
-  virtual void resolveTypes();
   virtual void codegen(llvm::Module *module) = 0;
   llvm::LLVMContext &getContext();
   llvm::BasicBlock *getPreamble() const;
   virtual types::FuncType *getFuncType();
   virtual llvm::Function *getFunc(llvm::Module *module);
   virtual void setEnclosingClass(types::Type *parentType);
-  virtual BaseFunc *clone(Generic *ref);
 
   virtual void sawReturn(Return *ret) {}
   virtual void sawYield(Yield *ret) {}
@@ -52,7 +49,7 @@ public:
 /**
  * Functions in a program are represented by this class.
  */
-class Func : public BaseFunc, public Generic, public SrcObject {
+class Func : public BaseFunc, public SrcObject {
 private:
   /// Cache of built-in functions
   static std::unordered_map<std::string, Func *> builtins;
@@ -105,13 +102,6 @@ private:
   /// Whether this function performs inter-sequence alignment
   bool interAlign;
 
-  /// Whether types in this function have been resolved
-  bool resolved;
-
-  /// Realization cache for this function (unused if function
-  /// is not generic)
-  RCache<Func> cache;
-
   /*
    * Refer to https://llvm.org/docs/Coroutines.html for more
    * details on the following fields
@@ -142,15 +132,7 @@ public:
   Func();
   Block *getBlock();
 
-  std::string genericName() override;
-  void addCachedRealized(std::vector<types::Type *> types, Generic *x) override;
-  Func *realize(std::vector<types::Type *> types);
-  std::vector<types::Type *>
-  deduceTypesFromArgTypes(std::vector<types::Type *> argTypes);
-  std::vector<Expr *> rectifyCallArgs(std::vector<Expr *> args,
-                                      std::vector<std::string> names,
-                                      bool methodCall = false);
-
+  std::string genericName();
   void setEnclosingFunc(BaseFunc *parentFunc);
   void sawReturn(Return *ret) override;
   void sawYield(Yield *yield) override;
@@ -158,7 +140,6 @@ public:
   std::vector<std::string> getAttributes();
   bool hasAttribute(const std::string &attr);
 
-  void resolveTypes() override;
   void codegen(llvm::Module *module) override;
   void codegenReturn(llvm::Value *val, types::Type *type,
                      llvm::BasicBlock *&block, bool dryrun = false);
@@ -178,9 +159,6 @@ public:
   void setName(std::string name);
   std::vector<std::string> getArgNames();
   void setArgNames(std::vector<std::string> argNames);
-
-  Func *clone(Generic *ref) override;
-
   static Func *getBuiltin(const std::string &name);
 };
 
@@ -205,7 +183,6 @@ public:
                std::function<llvm::Function *(llvm::Module *)> codegenLambda);
   void codegen(llvm::Module *module) override;
   types::FuncType *getFuncType() override;
-  BaseFuncLite *clone(Generic *ref) override;
 };
 
 } // namespace seq

@@ -39,7 +39,6 @@ public:
   size_t size(llvm::Module *module) const override;
 
   RecordType *asRec() override;
-  RecordType *clone(Generic *ref) override;
   static RecordType *get(std::vector<Type *> types,
                          std::vector<std::string> names = {},
                          std::string name = "");

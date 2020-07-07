@@ -27,8 +27,6 @@ public:
                     llvm::BasicBlock *block);
   static ArrayType *get(Type *baseType) noexcept;
   static ArrayType *get() noexcept;
-
-  ArrayType *clone(Generic *ref) override;
 };
 
 } // namespace types

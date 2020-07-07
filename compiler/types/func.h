@@ -34,8 +34,6 @@ public:
   llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
   size_t size(llvm::Module *module) const override;
   static FuncType *get(std::vector<Type *> inTypes, Type *outType);
-
-  FuncType *clone(Generic *ref) override;
 };
 
 // Generator types really represent generator handles in LLVM
@@ -88,8 +86,6 @@ public:
   static GenType *get(Type *outType,
                       GenTypeKind kind = GenTypeKind::NORMAL) noexcept;
   static GenType *get(GenTypeKind kind = GenTypeKind::NORMAL) noexcept;
-
-  GenType *clone(Generic *ref) override;
 };
 
 class PartialFuncType : public Type {
@@ -127,7 +123,6 @@ public:
 
   llvm::Value *make(llvm::Value *func, std::vector<llvm::Value *> args,
                     llvm::BasicBlock *block);
-  PartialFuncType *clone(Generic *ref) override;
 };
 
 } // namespace types

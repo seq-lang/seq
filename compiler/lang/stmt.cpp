@@ -10,30 +10,9 @@ void Block::add(Stmt *stmt) {
   stmt->setParent(this);
 }
 
-void Block::resolveTypes() {
-  for (Stmt *stmt : stmts)
-    stmt->resolveTypes();
-}
-
 void Block::codegen(BasicBlock *&block) {
   for (auto *stmt : stmts)
     stmt->codegen(block);
-}
-
-Block *Block::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Block *)ref->getClone(this);
-
-  auto *x = new Block(parent ? parent->clone(ref) : nullptr);
-  ref->addClone(this, x);
-
-  std::vector<Stmt *> stmtsCloned;
-
-  for (auto *stmt : stmts)
-    stmtsCloned.push_back(stmt->clone(ref));
-
-  x->stmts = stmtsCloned;
-  return x;
 }
 
 Stmt::Stmt(std::string name)
@@ -143,17 +122,6 @@ void Stmt::codegen(BasicBlock *&block) {
       e.setSrcInfo(getSrcInfo());
     throw e;
   }
-}
-
-void Stmt::resolveTypes() {}
-
-void Stmt::setCloneBase(Stmt *stmt, Generic *ref) {
-  if (base)
-    stmt->base = base->clone(ref);
-  if (parent)
-    stmt->parent = parent->clone(ref);
-  stmt->loop = loop;
-  stmt->name = name;
 }
 
 std::ostream &operator<<(std::ostream &os, Stmt &stmt) {

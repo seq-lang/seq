@@ -33,7 +33,6 @@ public:
   llvm::Value *val(llvm::Value *self, llvm::BasicBlock *block);
   static OptionalType *get(Type *baseType) noexcept;
   static OptionalType *get();
-  OptionalType *clone(Generic *ref) override;
 };
 
 } // namespace types

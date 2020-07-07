@@ -6,8 +6,6 @@ using namespace llvm;
 Print::Print(Expr *expr, bool nopOnVoid)
     : Stmt("print"), expr(expr), nopOnVoid(nopOnVoid) {}
 
-void Print::resolveTypes() { expr->resolveTypes(); }
-
 void Print::codegen0(BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   Module *module = block->getModule();
@@ -25,19 +23,7 @@ void Print::codegen0(BasicBlock *&block) {
   builder.CreateCall(printFunc, val);
 }
 
-Print *Print::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Print *)ref->getClone(this);
-
-  auto *x = new Print(expr->clone(ref), nopOnVoid);
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 ExprStmt::ExprStmt(Expr *expr) : Stmt("expr"), expr(expr) {}
-
-void ExprStmt::resolveTypes() { expr->resolveTypes(); }
 
 void ExprStmt::codegen0(BasicBlock *&block) {
   if (dynamic_cast<types::PartialFuncType *>(expr->getType())) {
@@ -49,28 +35,12 @@ void ExprStmt::codegen0(BasicBlock *&block) {
   expr->codegen(getBase(), block);
 }
 
-ExprStmt *ExprStmt::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (ExprStmt *)ref->getClone(this);
-
-  auto *x = new ExprStmt(expr->clone(ref));
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 VarStmt::VarStmt(Expr *init, types::Type *type)
     : Stmt("var"), init(init), type(type), var(new Var()) {
   assert(init || type);
 }
 
 Var *VarStmt::getVar() { return var; }
-
-void VarStmt::resolveTypes() {
-  if (init)
-    init->resolveTypes();
-  var->setType(type ? type : init->getType());
-}
 
 void VarStmt::codegen0(BasicBlock *&block) {
   if (type && init) {
@@ -85,21 +55,7 @@ void VarStmt::codegen0(BasicBlock *&block) {
   var->store(getBase(), val, block);
 }
 
-VarStmt *VarStmt::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (VarStmt *)ref->getClone(this);
-
-  auto *x = new VarStmt(init ? init->clone(ref) : nullptr);
-  ref->addClone(this, x);
-  x->var = var->clone(ref);
-  x->type = type ? type->clone(ref) : nullptr;
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 FuncStmt::FuncStmt(Func *func) : Stmt("func"), func(func) {}
-
-void FuncStmt::resolveTypes() { func->resolveTypes(); }
 
 void FuncStmt::codegen0(BasicBlock *&block) {
   // make sure we codegen exported functions
@@ -111,23 +67,10 @@ void FuncStmt::codegen0(BasicBlock *&block) {
   }
 }
 
-FuncStmt *FuncStmt::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (FuncStmt *)ref->getClone(this);
-
-  auto *x = new FuncStmt(nullptr);
-  ref->addClone(this, x);
-  x->func = func->clone(ref);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 Assign::Assign(Var *var, Expr *value, bool atomic)
     : Stmt("(=)"), var(var), value(value), atomic(atomic) {}
 
 void Assign::setAtomic() { atomic = true; }
-
-void Assign::resolveTypes() { value->resolveTypes(); }
 
 void Assign::codegen0(BasicBlock *&block) {
   value->ensure(var->getType());
@@ -135,24 +78,8 @@ void Assign::codegen0(BasicBlock *&block) {
   var->store(getBase(), val, block, atomic);
 }
 
-Assign *Assign::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Assign *)ref->getClone(this);
-
-  auto *x = new Assign(var->clone(ref), value->clone(ref), atomic);
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 AssignIndex::AssignIndex(Expr *array, Expr *idx, Expr *value)
     : Stmt("([]=)"), array(array), idx(idx), value(value) {}
-
-void AssignIndex::resolveTypes() {
-  array->resolveTypes();
-  idx->resolveTypes();
-  value->resolveTypes();
-}
 
 void AssignIndex::codegen0(BasicBlock *&block) {
   Value *val = value->codegen(getBase(), block);
@@ -163,17 +90,6 @@ void AssignIndex::codegen0(BasicBlock *&block) {
                               {idx, val}, block, getTryCatch());
 }
 
-AssignIndex *AssignIndex::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (AssignIndex *)ref->getClone(this);
-
-  auto *x =
-      new AssignIndex(array->clone(ref), idx->clone(ref), value->clone(ref));
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 Del::Del(Var *var) : Stmt("del"), var(var) {}
 
 void Del::codegen0(BasicBlock *&block) {
@@ -181,23 +97,8 @@ void Del::codegen0(BasicBlock *&block) {
   var->store(getBase(), empty, block);
 }
 
-Del *Del::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Del *)ref->getClone(this);
-
-  auto *x = new Del(var->clone(ref));
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 DelIndex::DelIndex(Expr *array, Expr *idx)
     : Stmt("del []"), array(array), idx(idx) {}
-
-void DelIndex::resolveTypes() {
-  array->resolveTypes();
-  idx->resolveTypes();
-}
 
 void DelIndex::codegen0(BasicBlock *&block) {
   Value *arr = array->codegen(getBase(), block);
@@ -206,34 +107,11 @@ void DelIndex::codegen0(BasicBlock *&block) {
                               block, getTryCatch());
 }
 
-DelIndex *DelIndex::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (DelIndex *)ref->getClone(this);
-
-  auto *x = new DelIndex(array->clone(ref), idx->clone(ref));
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 AssignMember::AssignMember(Expr *expr, std::string memb, Expr *value)
     : Stmt("(.=)"), expr(expr), memb(std::move(memb)), value(value) {}
 
 AssignMember::AssignMember(Expr *expr, seq_int_t idx, Expr *value)
     : AssignMember(expr, std::to_string(idx), value) {}
-
-void AssignMember::resolveTypes() {
-  expr->resolveTypes();
-  value->resolveTypes();
-
-  // auto-deduce class member types:
-  try {
-    if (types::RefType *ref = expr->getType()->asRef())
-      ref->addMember(memb, value);
-  } catch (exc::SeqException &) {
-    // if we fail, no big deal, just carry on...
-  }
-}
 
 void AssignMember::codegen0(BasicBlock *&block) {
   types::Type *type = expr->getType();
@@ -246,25 +124,7 @@ void AssignMember::codegen0(BasicBlock *&block) {
   expr->getType()->setMemb(x, memb, v, block);
 }
 
-AssignMember *AssignMember::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (AssignMember *)ref->getClone(this);
-
-  auto *x = new AssignMember(expr->clone(ref), memb, value->clone(ref));
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 If::If() : Stmt("if"), conds(), branches(), elseAdded(false) {}
-
-void If::resolveTypes() {
-  for (auto *cond : conds)
-    cond->resolveTypes();
-
-  for (auto *branch : branches)
-    branch->resolveTypes();
-}
 
 void If::codegen0(BasicBlock *&block) {
   assert(!conds.empty() && conds.size() == branches.size());
@@ -326,30 +186,6 @@ Block *If::addElse() {
 Block *If::getBlock(unsigned int idx) {
   assert(idx < branches.size());
   return branches[idx];
-}
-
-If *If::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (If *)ref->getClone(this);
-
-  auto *x = new If();
-  ref->addClone(this, x);
-
-  std::vector<Expr *> condsCloned;
-  std::vector<Block *> branchesCloned;
-
-  for (auto *cond : conds)
-    condsCloned.push_back(cond->clone(ref));
-
-  for (auto *branch : branches)
-    branchesCloned.push_back(branch->clone(ref));
-
-  x->conds = condsCloned;
-  x->branches = branchesCloned;
-  x->elseAdded = elseAdded;
-
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
 }
 
 TryCatch::TryCatch()
@@ -462,13 +298,6 @@ GlobalVariable *TryCatch::getTypeIdxVar(Module *module,
 GlobalVariable *TryCatch::getTypeIdxVar(Module *module,
                                         types::Type *catchType) {
   return getTypeIdxVar(module, catchType ? catchType->getName() : "");
-}
-
-void TryCatch::resolveTypes() {
-  scope->resolveTypes();
-  for (auto *block : catchBlocks)
-    block->resolveTypes();
-  finally->resolveTypes();
 }
 
 static bool anyMatch(types::Type *type, std::vector<types::Type *> types) {
@@ -856,39 +685,7 @@ void TryCatch::codegen0(BasicBlock *&block) {
   block = endBlock;
 }
 
-TryCatch *TryCatch::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (TryCatch *)ref->getClone(this);
-
-  auto *x = new TryCatch();
-  ref->addClone(this, x);
-  x->scope = scope->clone(ref);
-
-  std::vector<types::Type *> catchTypesCloned;
-  std::vector<Block *> catchBlocksCloned;
-  std::vector<Var *> catchVarsCloned;
-
-  for (auto *type : catchTypes)
-    catchTypesCloned.push_back(type ? type->clone(ref) : nullptr);
-
-  for (auto *block : catchBlocks)
-    catchBlocksCloned.push_back(block->clone(ref));
-
-  for (auto *var : catchVars)
-    catchVarsCloned.push_back(var ? var->clone(ref) : nullptr);
-
-  x->catchTypes = catchTypesCloned;
-  x->catchBlocks = catchBlocksCloned;
-  x->catchVars = catchVarsCloned;
-  x->finally = finally->clone(ref);
-
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 Throw::Throw(Expr *expr) : Stmt("throw"), expr(expr) {}
-
-void Throw::resolveTypes() { expr->resolveTypes(); }
 
 void Throw::codegen0(BasicBlock *&block) {
   types::Type *type = expr->getType();
@@ -897,10 +694,6 @@ void Throw::codegen0(BasicBlock *&block) {
   if (!refType)
     throw exc::SeqException("cannot throw non-reference type '" +
                             type->getName() + "'");
-
-  if (refType->numGenerics() > 0)
-    throw exc::SeqException("cannot throw generic type '" + type->getName() +
-                            "'");
 
   static types::RecordType *excHeader = types::RecordType::get(
       {types::Str, types::Str, types::Str, types::Str, types::Int, types::Int},
@@ -962,28 +755,7 @@ void Throw::codegen0(BasicBlock *&block) {
   }
 }
 
-Throw *Throw::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Throw *)ref->getClone(this);
-
-  auto *x = new Throw(expr->clone(ref));
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 Match::Match() : Stmt("match"), value(nullptr), patterns(), branches() {}
-
-void Match::resolveTypes() {
-  assert(value);
-  value->resolveTypes();
-
-  for (auto *pattern : patterns)
-    pattern->resolveTypes(value->getType());
-
-  for (auto *branch : branches)
-    branch->resolveTypes();
-}
 
 void Match::codegen0(BasicBlock *&block) {
   assert(!patterns.empty() && patterns.size() == branches.size() && value);
@@ -996,7 +768,6 @@ void Match::codegen0(BasicBlock *&block) {
 
   bool seenCatchAll = false;
   for (auto *pattern : patterns) {
-    pattern->resolveTypes(valType);
     if (pattern->isCatchAll())
       seenCatchAll = true;
   }
@@ -1052,41 +823,11 @@ Block *Match::addCase(Pattern *pattern) {
   return branch;
 }
 
-Match *Match::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Match *)ref->getClone(this);
-
-  auto *x = new Match();
-  ref->addClone(this, x);
-
-  std::vector<Pattern *> patternsCloned;
-  std::vector<Block *> branchesCloned;
-
-  for (auto *pattern : patterns)
-    patternsCloned.push_back(pattern->clone(ref));
-
-  for (auto *branch : branches)
-    branchesCloned.push_back(branch->clone(ref));
-
-  if (value)
-    x->value = value->clone(ref);
-  x->patterns = patternsCloned;
-  x->branches = branchesCloned;
-
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 While::While(Expr *cond) : Stmt("while"), cond(cond), scope(new Block(this)) {
   loop = true;
 }
 
 Block *While::getBlock() { return scope; }
-
-void While::resolveTypes() {
-  cond->resolveTypes();
-  scope->resolveTypes();
-}
 
 void While::codegen0(BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -1123,18 +864,6 @@ void While::codegen0(BasicBlock *&block) {
   setContinues(loop0);
 }
 
-While *While::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (While *)ref->getClone(this);
-
-  auto *x = new While(cond->clone(ref));
-  ref->addClone(this, x);
-  delete x->scope;
-  x->scope = scope->clone(ref);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 For::For(Expr *gen)
     : Stmt("for"), gen(gen), scope(new Block(this)), var(new Var()) {
   loop = true;
@@ -1147,24 +876,6 @@ Block *For::getBlock() { return scope; }
 Var *For::getVar() { return var; }
 
 void For::setGen(Expr *gen) { this->gen = gen; }
-
-void For::resolveTypes() {
-  gen->resolveTypes();
-
-  try {
-    types::GenType *genType = gen->getType()->magicOut("__iter__", {})->asGen();
-
-    if (!genType)
-      throw exc::SeqException("__iter__ does not return a generator");
-
-    var->setType(genType->getBaseType(0));
-  } catch (exc::SeqException &e) {
-    e.setSrcInfo(getSrcInfo());
-    throw e;
-  }
-
-  scope->resolveTypes();
-}
 
 void For::codegen0(BasicBlock *&block) {
   types::Type *type = gen->getType()->magicOut("__iter__", {});
@@ -1231,27 +942,9 @@ void For::codegen0(BasicBlock *&block) {
   setContinues(loopCont);
 }
 
-For *For::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (For *)ref->getClone(this);
-
-  auto *x = new For(gen->clone(ref));
-  ref->addClone(this, x);
-  delete x->scope;
-  x->scope = scope->clone(ref);
-  x->var = var->clone(ref);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 Return::Return(Expr *expr) : Stmt("return"), expr(expr) {}
 
 Expr *Return::getExpr() { return expr; }
-
-void Return::resolveTypes() {
-  if (expr)
-    expr->resolveTypes();
-}
 
 void Return::codegen0(BasicBlock *&block) {
   if (TryCatch *tc = getTryCatch()) {
@@ -1267,24 +960,9 @@ void Return::codegen0(BasicBlock *&block) {
   }
 }
 
-Return *Return::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Return *)ref->getClone(this);
-
-  auto *x = new Return(expr ? expr->clone(ref) : nullptr);
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 Yield::Yield(Expr *expr) : Stmt("yield"), expr(expr) {}
 
 Expr *Yield::getExpr() { return expr; }
-
-void Yield::resolveTypes() {
-  if (expr)
-    expr->resolveTypes();
-}
 
 void Yield::codegen0(BasicBlock *&block) {
   types::Type *type = expr ? expr->getType() : types::Void;
@@ -1293,16 +971,6 @@ void Yield::codegen0(BasicBlock *&block) {
   if (!func)
     throw exc::SeqException("misplaced yield");
   func->codegenYield(val, type, block);
-}
-
-Yield *Yield::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Yield *)ref->getClone(this);
-
-  auto *x = new Yield(expr ? expr->clone(ref) : nullptr);
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
 }
 
 Break::Break() : Stmt("break") {}
@@ -1321,16 +989,6 @@ void Break::codegen0(BasicBlock *&block) {
   }
 }
 
-Break *Break::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Break *)ref->getClone(this);
-
-  auto *x = new Break();
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 Continue::Continue() : Stmt("continue") {}
 
 void Continue::codegen0(BasicBlock *&block) {
@@ -1347,19 +1005,7 @@ void Continue::codegen0(BasicBlock *&block) {
   }
 }
 
-Continue *Continue::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Continue *)ref->getClone(this);
-
-  auto *x = new Continue();
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
-}
-
 Assert::Assert(Expr *expr, Expr *msg) : Stmt("assert"), expr(expr), msg(msg) {}
-
-void Assert::resolveTypes() { expr->resolveTypes(); }
 
 static bool isTest(BaseFunc *base) {
   auto *func = dynamic_cast<Func *>(base);
@@ -1413,14 +1059,4 @@ void Assert::codegen0(BasicBlock *&block) {
   }
 
   block = pass;
-}
-
-Assert *Assert::clone(Generic *ref) {
-  if (ref->seenClone(this))
-    return (Assert *)ref->getClone(this);
-
-  auto *x = new Assert(expr->clone(ref), msg ? msg->clone(ref) : msg);
-  ref->addClone(this, x);
-  Stmt::setCloneBase(x, ref);
-  SEQ_RETURN_CLONE(x);
 }

@@ -95,10 +95,6 @@ public:
 
   /// Returns the type of this variable.
   types::Type *getType();
-
-  /// Clones this variable. Note that global variables
-  /// are not cloned.
-  Var *clone(Generic *ref);
 };
 
 } // namespace seq

@@ -60,6 +60,7 @@ void types::SeqType::initOps() {
        true},
   };
 
+  /* TODO: Fix "_kmer_in_seq" builtin to not be generic
   for (unsigned k = 1; k <= KMer::MAX_LEN; k++) {
     vtable.magic.push_back(
         {"__contains__",
@@ -73,6 +74,7 @@ void types::SeqType::initOps() {
          },
          false});
   }
+   */
 }
 
 Value *types::SeqType::make(Value *ptr, Value *len, BasicBlock *block) {

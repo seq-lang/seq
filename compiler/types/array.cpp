@@ -198,7 +198,3 @@ types::ArrayType *types::ArrayType::get(Type *baseType) noexcept {
 types::ArrayType *types::ArrayType::get() noexcept {
   return new ArrayType(types::BaseType::get());
 }
-
-types::ArrayType *types::ArrayType::clone(Generic *ref) {
-  return get(getBaseType(0)->clone(ref));
-}

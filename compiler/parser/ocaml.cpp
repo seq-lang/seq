@@ -399,7 +399,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
 }
 
 unique_ptr<SuiteStmt> ocamlParse(string file, string code, int line_offset,
-                                  int col_offset) {
+                                 int col_offset) {
   CAMLparam0();
   CAMLlocal3(p1, f, c);
   static value *closure_f = nullptr;
@@ -431,7 +431,7 @@ SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
 }
 
 unique_ptr<SuiteStmt> parseCode(string file, string code, int line_offset,
-                                 int col_offset) {
+                                int col_offset) {
   static bool initialized(false);
   if (!initialized) {
     initOcaml();

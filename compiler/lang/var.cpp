@@ -163,19 +163,3 @@ types::Type *Var::getType() {
     return mapped.top()->getType();
   return type ? type : types::Void;
 }
-
-Var *Var::clone(Generic *ref) {
-  if (isGlobal())
-    return this;
-
-  if (ref->seenClone(this))
-    return (Var *)ref->getClone(this);
-
-  // we intentionally don't clone this->mapped; should be set in codegen if
-  // needed
-  auto *x = new Var();
-  ref->addClone(this, x);
-  if (type)
-    x->setType(type->clone(ref));
-  return x;
-}

@@ -19,7 +19,6 @@
 #include "types/array.h"
 #include "types/base.h"
 #include "types/func.h"
-#include "types/generic.h"
 #include "types/num.h"
 #include "types/optional.h"
 #include "types/ptr.h"
@@ -94,7 +93,6 @@ public:
   Var *getArgVar();
   void setFileName(std::string file);
 
-  void resolveTypes() override;
   void codegen(llvm::Module *module) override;
   void verify();
   void optimize();

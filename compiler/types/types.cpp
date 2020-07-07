@@ -8,6 +8,32 @@
 using namespace seq;
 using namespace llvm;
 
+/// Checks if two type vectors are "equal".
+/// @param strict if true, do not treat isomorphic tuples with different names
+/// as equal
+template <typename T = types::Type>
+static bool typeMatch(const std::vector<T *> &v1, const std::vector<T *> &v2,
+                      bool strict = false) {
+  if (v1.size() != v2.size())
+    return false;
+
+  for (unsigned i = 0; i < v1.size(); i++) {
+    if (strict) {
+      auto *r1 = dynamic_cast<types::RecordType *>(v1[i]);
+      auto *r2 = dynamic_cast<types::RecordType *>(v2[i]);
+      if (r1 && r2) {
+        if (!r1->isStrict(r2))
+          return false;
+        continue;
+      }
+    }
+    if (!types::is(v1[i], v2[i]))
+      return false;
+  }
+
+  return true;
+}
+
 types::Type::Type(std::string name, types::Type *parent, bool abstract,
                   bool extendable)
     : name(std::move(name)), parent(parent), abstract(abstract),
@@ -342,11 +368,6 @@ static std::string argsVecToStr(const std::vector<types::Type *> &args,
 }
 
 static types::Type *callType(BaseFunc *func, std::vector<types::Type *> args) {
-  auto *f = dynamic_cast<Func *>(func);
-  if (f && f->numGenerics() > 0)
-    throw exc::SeqException("magic method overrides cannot be generic (" +
-                            f->genericName() + ")");
-
   types::FuncType *funcType = func->getFuncType();
   if (args.size() != funcType->numBaseTypes() - 1)
     return nullptr;
@@ -379,7 +400,6 @@ types::Type *types::Type::magicOut(const std::string &name,
     if (magic.name != name)
       continue;
 
-    magic.func->resolveTypes();
     types::Type *type = callType(magic.func, args);
     if (type)
       return type;
@@ -452,7 +472,6 @@ Value *types::Type::callMagic(const std::string &name,
       FuncExpr func(magic.func);
       CallExpr call(&func, argExprs);
       call.setTryCatch(tc);
-      call.resolveTypes();
       return call.codegen(nullptr, block);
     }
   }
@@ -541,7 +560,6 @@ types::Type *types::Type::initOut(std::vector<types::Type *> &args,
     if (!func)
       continue;
 
-    func->resolveTypes();
     std::vector<std::string> namesExp = func->getArgNames();
     std::vector<types::Type *> argsFixed(args);
     if (sortArgsByNames(argsFixed, names, namesExp)) {
@@ -560,7 +578,6 @@ types::Type *types::Type::initOut(std::vector<types::Type *> &args,
     if (!func)
       continue;
 
-    func->resolveTypes();
     std::vector<std::string> namesExp = func->getArgNames();
     std::vector<types::Type *> argsFixed(args);
     if (!sortArgsByNames(argsFixed, names, namesExp))
@@ -609,7 +626,6 @@ Value *types::Type::callInit(std::vector<types::Type *> argTypes,
     if (!func)
       continue;
 
-    func->resolveTypes();
     std::vector<std::string> namesExp = func->getArgNames();
     std::vector<types::Type *> argTypesFixed(argTypes);
     std::vector<Value *> argsFixed(args);
@@ -629,7 +645,6 @@ Value *types::Type::callInit(std::vector<types::Type *> argTypes,
     if (!func)
       continue;
 
-    func->resolveTypes();
     std::vector<std::string> namesExp = func->getArgNames();
     std::vector<types::Type *> argTypesFixed(argTypes);
     std::vector<Value *> argsFixed(args);
@@ -646,7 +661,6 @@ Value *types::Type::callInit(std::vector<types::Type *> argTypes,
     FuncExpr funcExpr(magic.func);
     CallExpr call(&funcExpr, argExprs);
     call.setTryCatch(tc);
-    call.resolveTypes();
     return call.codegen(nullptr, block);
   }
 
@@ -688,8 +702,6 @@ types::GenType *types::Type::asGen() { return nullptr; }
 types::OptionalType *types::Type::asOpt() { return nullptr; }
 
 types::KMer *types::Type::asKMer() { return nullptr; }
-
-types::Type *types::Type::clone(Generic *ref) { return this; }
 
 BaseFunc *MagicMethod::asFunc(types::Type *type) const {
   std::vector<types::Type *> argsFull(args);

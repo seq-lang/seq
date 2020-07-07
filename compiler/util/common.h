@@ -22,7 +22,8 @@ struct SrcInfo {
   SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
   friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c);
   bool operator==(const SrcInfo &src) const {
-    return /*(file == src.file) && (line == src.line) && (col == src.col) &&*/ (id == src.id);
+    return /*(file == src.file) && (line == src.line) && (col == src.col) &&*/ (
+        id == src.id);
   }
 };
 } // namespace seq

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "types/generic.h"
 #include "util/common.h"
 #include "util/llvm.h"
 #include <cstdint>
@@ -34,15 +33,9 @@ struct Block {
   /// Adds the given statement to this block.
   void add(Stmt *stmt);
 
-  /// Resolves types on all contained statements.
-  void resolveTypes();
-
   /// Sequentially generates code for each statement
   /// in this block.
   void codegen(llvm::BasicBlock *&block);
-
-  /// Sequentially clones each statement in this block.
-  Block *clone(Generic *ref);
 };
 
 /**
@@ -149,28 +142,11 @@ public:
   /// exceptions and fills in source information.
   void codegen(llvm::BasicBlock *&block);
 
-  /// Performs type resolution on this statement and all
-  /// sub-expressions/statements/etc. This is called prior
-  /// to \ref Expr::getType() "Expr::getType()".
-  virtual void resolveTypes();
-
   /// Performs code generation for this statement.
   /// @param block reference to block where code should be
   ///              generated; possibly modified to point
   ///              to a new block where codegen should resume
   virtual void codegen0(llvm::BasicBlock *&block) = 0;
-
-  /// Clones this statement. \p ref is used internally to
-  /// keep track of cloned objects, and to make sure we
-  /// don't clone certain objects twice.
-  /// @param ref generic object that is being cloned
-  /// @return cloned statement
-  virtual Stmt *clone(Generic *ref) = 0;
-
-  /// Copies this statement's fields to a cloned statement's.
-  /// @param stmt object to copy fields to
-  /// @param ref generic object that is being cloned
-  virtual void setCloneBase(Stmt *stmt, Generic *ref);
 };
 
 } // namespace seq

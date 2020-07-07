@@ -71,7 +71,6 @@ static Value *codegenStr(Value *self, const std::string &name,
 
   ValueExpr nameVal(types::Str, types::Str->make(str, len, block));
   CallExpr strFuncCall(&strsRealExpr, {&ptrVal, &nameVal});
-  strFuncCall.resolveTypes();
   return strFuncCall.codegen(nullptr, block);
 }
 
@@ -167,13 +166,6 @@ size_t types::FuncType::size(Module *module) const {
 types::FuncType *types::FuncType::get(std::vector<Type *> inTypes,
                                       Type *outType) {
   return new FuncType(std::move(inTypes), outType);
-}
-
-types::FuncType *types::FuncType::clone(Generic *ref) {
-  std::vector<Type *> inTypesCloned;
-  for (auto *type : inTypes)
-    inTypesCloned.push_back(type->clone(ref));
-  return get(inTypesCloned, outType->clone(ref));
 }
 
 types::GenType::GenType(Type *outType, GenTypeKind kind)
@@ -461,10 +453,6 @@ types::GenType *types::GenType::get(GenTypeKind kind) noexcept {
   return get(types::BaseType::get(), kind);
 }
 
-types::GenType *types::GenType::clone(Generic *ref) {
-  return get(outType->clone(ref), kind);
-}
-
 types::PartialFuncType::PartialFuncType(types::Type *callee,
                                         std::vector<types::Type *> callTypes)
     : Type("partial", BaseType::get()), callee(callee),
@@ -578,11 +566,4 @@ Value *types::PartialFuncType::make(Value *func, std::vector<Value *> args,
   for (unsigned i = 0; i < args.size(); i++)
     self = builder.CreateInsertValue(self, args[i], i + 1);
   return self;
-}
-
-types::PartialFuncType *types::PartialFuncType::clone(Generic *ref) {
-  std::vector<types::Type *> callTypesCloned;
-  for (auto *type : callTypes)
-    callTypesCloned.push_back(type ? type->clone(ref) : nullptr);
-  return get(callee->clone(ref), callTypesCloned);
 }

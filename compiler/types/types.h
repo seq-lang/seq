@@ -341,13 +341,6 @@ public:
   /// RTTI/`dynamic_cast` so that generic types can be converted
   /// to their actual types.
   virtual KMer *asKMer();
-
-  /// Clones this type and all of its methods. \p ref is used
-  /// internally to keep track of cloned objects, and to make
-  /// sure we don't clone certain objects twice.
-  /// @param ref generic object that is being cloned
-  /// @return cloned type
-  virtual Type *clone(Generic *ref);
 };
 
 /// Convenience method for checking if two types are equal.

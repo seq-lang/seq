@@ -44,8 +44,6 @@ void SeqModule::setFileName(std::string file) {
   module->setSourceFileName(file);
 }
 
-void SeqModule::resolveTypes() { scope->resolveTypes(); }
-
 static void invokeMain(Function *main, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   Function *func = block->getParent();
@@ -211,7 +209,6 @@ void SeqModule::codegen(Module *module) {
   if (func)
     return;
 
-  resolveTypes();
   LLVMContext &context = module->getContext();
   this->module = module;
 
@@ -666,7 +663,7 @@ void SeqJIT::delVar(Var *var) {
 #endif
 
 void seq::compilationMessage(const std::string &header, const std::string &msg,
-                        const std::string &file, int line, int col) {
+                             const std::string &file, int line, int col) {
   assert(!(file.empty() && (line > 0 || col > 0)));
   assert(!(col > 0 && line <= 0));
   std::cerr << "\033[1m";

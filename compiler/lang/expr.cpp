@@ -12,8 +12,6 @@ void Expr::setTryCatch(TryCatch *tc) { this->tc = tc; }
 
 TryCatch *Expr::getTryCatch() { return tc; }
 
-void Expr::resolveTypes() {}
-
 Value *Expr::codegen(BaseFunc *base, BasicBlock *&block) {
   try {
     return codegen0(base, block);
@@ -43,8 +41,6 @@ void Expr::ensure(types::Type *type) {
                                 getType()->getName() + "'",
                             getSrcInfo());
 }
-
-Expr *Expr::clone(Generic *ref) { return this; }
 
 std::string Expr::getName() const { return name; }
 
@@ -149,523 +145,6 @@ Const SeqExpr::constValue() const { return Const(s, /*seq=*/true); }
 
 std::string SeqExpr::value() const { return s; }
 
-ListExpr::ListExpr(std::vector<Expr *> elems, types::Type *listType)
-    : Expr(), elems(std::move(elems)), listType(listType) {}
-
-void ListExpr::resolveTypes() {
-  for (auto *elem : elems)
-    elem->resolveTypes();
-}
-
-Value *ListExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::Type *type = getType();
-  assert(!elems.empty());
-  types::Type *elemType = elems[0]->getType();
-
-  ConstructExpr construct(type, {});
-  Value *list = construct.codegen(base, block);
-  ValueExpr v(type, list);
-
-  for (auto *elem : elems) {
-    if (!types::is(elemType, elem->getType()))
-      throw exc::SeqException("inconsistent list element types '" +
-                              elemType->getName() + "' and '" +
-                              elem->getType()->getName() + "'");
-
-    Value *x = elem->codegen(base, block);
-    GetElemExpr append(&v, "append");
-    ValueExpr arg(elemType, x);
-    CallExpr call(&append, {&arg});
-    call.resolveTypes();
-    call.codegen(base, block);
-  }
-
-  return list;
-}
-
-types::Type *ListExpr::getType0() const {
-  if (elems.empty())
-    throw exc::SeqException("cannot infer type of empty list");
-
-  types::Type *elemType = elems[0]->getType();
-  auto *ref = dynamic_cast<types::RefType *>(listType);
-  assert(ref);
-  return ref->realize({elemType});
-}
-
-ListExpr *ListExpr::clone(Generic *ref) {
-  std::vector<Expr *> elemsCloned;
-  for (auto *elem : elems)
-    elemsCloned.push_back(elem->clone(ref));
-  SEQ_RETURN_CLONE(new ListExpr(elemsCloned, listType->clone(ref)));
-}
-
-SetExpr::SetExpr(std::vector<Expr *> elems, types::Type *setType)
-    : Expr(), elems(std::move(elems)), setType(setType) {}
-
-void SetExpr::resolveTypes() {
-  for (auto *elem : elems)
-    elem->resolveTypes();
-}
-
-Value *SetExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::Type *type = getType();
-  assert(!elems.empty());
-  types::Type *elemType = elems[0]->getType();
-
-  ConstructExpr construct(type, {});
-  Value *set = construct.codegen(base, block);
-  ValueExpr v(type, set);
-
-  for (auto *elem : elems) {
-    if (!types::is(elemType, elem->getType()))
-      throw exc::SeqException("inconsistent set element types '" +
-                              elemType->getName() + "' and '" +
-                              elem->getType()->getName() + "'");
-
-    Value *x = elem->codegen(base, block);
-    GetElemExpr append(&v, "add");
-    ValueExpr arg(elemType, x);
-    CallExpr call(&append, {&arg});
-    call.resolveTypes();
-    call.codegen(base, block);
-  }
-
-  return set;
-}
-
-types::Type *SetExpr::getType0() const {
-  if (elems.empty())
-    throw exc::SeqException("cannot infer type of empty set");
-
-  types::Type *elemType = elems[0]->getType();
-  auto *ref = dynamic_cast<types::RefType *>(setType);
-  assert(ref);
-  return ref->realize({elemType});
-}
-
-SetExpr *SetExpr::clone(Generic *ref) {
-  std::vector<Expr *> elemsCloned;
-  for (auto *elem : elems)
-    elemsCloned.push_back(elem->clone(ref));
-  SEQ_RETURN_CLONE(new SetExpr(elemsCloned, setType->clone(ref)));
-}
-
-DictExpr::DictExpr(std::vector<Expr *> elems, types::Type *dictType)
-    : Expr(), elems(std::move(elems)), dictType(dictType) {}
-
-void DictExpr::resolveTypes() {
-  for (auto *elem : elems)
-    elem->resolveTypes();
-}
-
-Value *DictExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::Type *type = getType();
-  assert(!elems.empty() && elems.size() % 2 == 0);
-  types::Type *keyType = elems[0]->getType();
-  types::Type *valType = elems[1]->getType();
-
-  ConstructExpr construct(type, {});
-  Value *dict = construct.codegen(base, block);
-
-  for (unsigned i = 0; i < elems.size(); i += 2) {
-    Expr *key = elems[i];
-    Expr *val = elems[i + 1];
-
-    if (!types::is(keyType, key->getType()))
-      throw exc::SeqException("inconsistent dict key types '" +
-                              keyType->getName() + "' and '" +
-                              key->getType()->getName() + "'");
-
-    if (!types::is(valType, val->getType()))
-      throw exc::SeqException("inconsistent dict value types '" +
-                              valType->getName() + "' and '" +
-                              val->getType()->getName() + "'");
-
-    Value *k = key->codegen(base, block);
-    Value *v = val->codegen(base, block);
-    type->callMagic("__setitem__", {keyType, valType}, dict, {k, v}, block,
-                    getTryCatch());
-  }
-
-  return dict;
-}
-
-types::Type *DictExpr::getType0() const {
-  if (elems.empty())
-    throw exc::SeqException("cannot infer type of empty dict");
-
-  assert(elems.size() % 2 == 0);
-  types::Type *keyType = elems[0]->getType();
-  types::Type *valType = elems[1]->getType();
-  auto *ref = dynamic_cast<types::RefType *>(dictType);
-  assert(ref);
-  return ref->realize({keyType, valType});
-}
-
-DictExpr *DictExpr::clone(Generic *ref) {
-  std::vector<Expr *> elemsCloned;
-  for (auto *elem : elems)
-    elemsCloned.push_back(elem->clone(ref));
-  SEQ_RETURN_CLONE(new DictExpr(elemsCloned, dictType->clone(ref)));
-}
-
-/*
- * Assumes that comprehension bodies are structured so that `if` or `for`
- * parts are always the last statements in the blocks. This should really
- * always be the case though.
- */
-static void setBodyBase(For *body, BaseFunc *base) {
-  Block *inner = body->getBlock();
-  body->setBase(base);
-  while (!inner->stmts.empty()) {
-    for (auto *stmt : inner->stmts)
-      stmt->setBase(base);
-
-    Stmt *stmt = inner->stmts.back();
-    auto *next1 = dynamic_cast<For *>(stmt);
-    auto *next2 = dynamic_cast<If *>(stmt);
-
-    if (next1) {
-      inner = next1->getBlock();
-    } else if (next2) {
-      inner = next2->getBlock();
-    } else {
-      break;
-    }
-  }
-}
-
-ListCompExpr::ListCompExpr(Expr *val, For *body, types::Type *listType,
-                           bool realize)
-    : Expr(), val(val), body(body), listType(listType), realize(realize) {}
-
-void ListCompExpr::setBody(For *body) { this->body = body; }
-
-void ListCompExpr::resolveTypes() {
-  body->resolveTypes();
-  val->resolveTypes();
-}
-
-Value *ListCompExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  BaseFunc *oldBase = body->getBase();
-  setBodyBase(body, base);
-
-  /*
-   * If single-level and generator supports __len__, we want to call that method
-   * and allocate a list of the correct length beforehand.
-   */
-  Expr *oldGen = nullptr;
-  Expr *listLen = nullptr;
-  if (body->getBlock()->stmts.empty()) {
-    Expr *gen = body->getGen();
-    types::Type *genType = gen->getType();
-    if (genType->hasMethod("__len__")) {
-      // codegen gen here:
-      Value *genVal = gen->codegen(base, block);
-      Value *lenVal = genType->lenValue(genVal, block, getTryCatch());
-      listLen = new ValueExpr(types::Int, lenVal);
-
-      // make sure we don't codegen gen twice, so swap out body's gen:
-      oldGen = gen;
-      body->setGen(new ValueExpr(genType, genVal));
-    }
-  }
-
-  types::Type *type = getType();
-  std::vector<Expr *> constructArgs;
-  if (listLen)
-    constructArgs.push_back(listLen);
-  ConstructExpr construct(type, constructArgs);
-  Value *list = construct.codegen(base, block);
-  ValueExpr v(type, list);
-
-  // find the innermost block, where we'll be adding to the collection
-  Block *inner = body->getBlock();
-  while (!inner->stmts.empty()) {
-    Stmt *stmt = inner->stmts.back();
-    auto *next1 = dynamic_cast<For *>(stmt);
-    auto *next2 = dynamic_cast<If *>(stmt);
-
-    if (next1) {
-      inner = next1->getBlock();
-    } else if (next2) {
-      inner = next2->getBlock();
-    } else {
-      break;
-    }
-  }
-
-  GetElemExpr append(&v, "append");
-  CallExpr call(&append, {val});
-  ExprStmt callStmt(&call);
-  callStmt.setBase(base);
-  callStmt.resolveTypes();
-
-  inner->stmts.push_back(&callStmt);
-  body->codegen(block);
-  inner->stmts.pop_back();
-  setBodyBase(body, oldBase);
-  if (oldGen)
-    body->setGen(oldGen);
-
-  return list;
-}
-
-types::Type *ListCompExpr::getType0() const {
-  if (!realize)
-    return listType;
-
-  types::Type *elemType = val->getType();
-  auto *generic = dynamic_cast<Generic *>(listType);
-  assert(generic);
-  auto *realized =
-      dynamic_cast<types::Type *>(generic->realizeGeneric({elemType}));
-  assert(realized);
-  return realized;
-}
-
-ListCompExpr *ListCompExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new ListCompExpr(val->clone(ref), body->clone(ref),
-                                    listType->clone(ref), realize));
-}
-
-SetCompExpr::SetCompExpr(Expr *val, For *body, types::Type *setType,
-                         bool realize)
-    : Expr(), val(val), body(body), setType(setType), realize(realize) {}
-
-void SetCompExpr::setBody(For *body) { this->body = body; }
-
-void SetCompExpr::resolveTypes() {
-  body->resolveTypes();
-  val->resolveTypes();
-}
-
-Value *SetCompExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  BaseFunc *oldBase = body->getBase();
-  setBodyBase(body, base);
-  types::Type *type = getType();
-  ConstructExpr construct(type, {});
-  Value *set = construct.codegen(base, block);
-  ValueExpr v(type, set);
-
-  // find the innermost block, where we'll be adding to the collection
-  Block *inner = body->getBlock();
-  while (!inner->stmts.empty()) {
-    Stmt *stmt = inner->stmts.back();
-    auto *next1 = dynamic_cast<For *>(stmt);
-    auto *next2 = dynamic_cast<If *>(stmt);
-
-    if (next1) {
-      inner = next1->getBlock();
-    } else if (next2) {
-      inner = next2->getBlock();
-    } else {
-      break;
-    }
-  }
-
-  GetElemExpr append(&v, "add");
-  CallExpr call(&append, {val});
-  ExprStmt callStmt(&call);
-  callStmt.setBase(base);
-  callStmt.resolveTypes();
-
-  inner->stmts.push_back(&callStmt);
-  body->codegen(block);
-  inner->stmts.pop_back();
-  setBodyBase(body, oldBase);
-
-  return set;
-}
-
-types::Type *SetCompExpr::getType0() const {
-  if (!realize)
-    return setType;
-
-  types::Type *elemType = val->getType();
-  auto *generic = dynamic_cast<Generic *>(setType);
-  assert(generic);
-  auto *realized =
-      dynamic_cast<types::Type *>(generic->realizeGeneric({elemType}));
-  assert(realized);
-  return realized;
-}
-
-SetCompExpr *SetCompExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new SetCompExpr(val->clone(ref), body->clone(ref),
-                                   setType->clone(ref), realize));
-}
-
-DictCompExpr::DictCompExpr(Expr *key, Expr *val, For *body,
-                           types::Type *dictType, bool realize)
-    : Expr(), key(key), val(val), body(body), dictType(dictType),
-      realize(realize) {}
-
-void DictCompExpr::setBody(For *body) { this->body = body; }
-
-void DictCompExpr::resolveTypes() {
-  body->resolveTypes();
-  key->resolveTypes();
-  val->resolveTypes();
-}
-
-Value *DictCompExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  BaseFunc *oldBase = body->getBase();
-  setBodyBase(body, base);
-  types::Type *type = getType();
-  ConstructExpr construct(type, {});
-  Value *dict = construct.codegen(base, block);
-  ValueExpr v(type, dict);
-
-  // find the innermost block, where we'll be adding to the collection
-  Block *inner = body->getBlock();
-  while (!inner->stmts.empty()) {
-    Stmt *stmt = inner->stmts.back();
-    auto *next1 = dynamic_cast<For *>(stmt);
-    auto *next2 = dynamic_cast<If *>(stmt);
-
-    if (next1) {
-      inner = next1->getBlock();
-    } else if (next2) {
-      inner = next2->getBlock();
-    } else {
-      break;
-    }
-  }
-
-  AssignIndex assignStmt(&v, key, val);
-  assignStmt.setBase(base);
-  assignStmt.resolveTypes();
-
-  inner->stmts.push_back(&assignStmt);
-  body->codegen(block);
-  inner->stmts.pop_back();
-  setBodyBase(body, oldBase);
-
-  return dict;
-}
-
-types::Type *DictCompExpr::getType0() const {
-  if (!realize)
-    return dictType;
-
-  types::Type *keyType = key->getType();
-  types::Type *valType = val->getType();
-  auto *generic = dynamic_cast<Generic *>(dictType);
-  assert(generic);
-  auto *realized =
-      dynamic_cast<types::Type *>(generic->realizeGeneric({keyType, valType}));
-  assert(realized);
-  return realized;
-}
-
-DictCompExpr *DictCompExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new DictCompExpr(key->clone(ref), val->clone(ref),
-                                    body->clone(ref), dictType->clone(ref),
-                                    realize));
-}
-
-GenExpr::GenExpr(Expr *val, For *body, std::vector<Var *> captures)
-    : Expr(), val(val), body(body), captures(std::move(captures)) {}
-
-void GenExpr::setBody(For *body) { this->body = body; }
-
-void GenExpr::resolveTypes() {
-  body->resolveTypes();
-  val->resolveTypes();
-}
-
-static std::string argName(unsigned i) { return "arg" + std::to_string(i); }
-
-Value *GenExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  // find the innermost block, where we'll be yielding
-  Block *inner = body->getBlock();
-  while (!inner->stmts.empty()) {
-    Stmt *stmt = inner->stmts.back();
-    auto *next1 = dynamic_cast<For *>(stmt);
-    auto *next2 = dynamic_cast<If *>(stmt);
-
-    if (next1) {
-      inner = next1->getBlock();
-    } else if (next2) {
-      inner = next2->getBlock();
-    } else {
-      break;
-    }
-  }
-
-  Yield yieldStmt(val);
-  inner->stmts.push_back(&yieldStmt);
-  static int idx = 1;
-  Func implicitGen;
-  implicitGen.setName("seq.implicit_gen." + std::to_string(idx++));
-
-  BaseFunc *oldBase = body->getBase();
-  setBodyBase(body, &implicitGen);
-
-  std::vector<types::Type *> inTypes;
-  std::vector<std::string> names;
-  for (unsigned i = 0; i < captures.size(); i++) {
-    inTypes.push_back(captures[i]->getType());
-    names.push_back(argName(i));
-  }
-
-  implicitGen.setIns(inTypes);
-  implicitGen.setArgNames(names);
-
-  // gather the args:
-  std::vector<Value *> args;
-  for (auto *var : captures)
-    args.push_back(var->load(base, block));
-
-  // make sure we codegen wrt function argument vars:
-  for (unsigned i = 0; i < captures.size(); i++)
-    captures[i]->mapTo(implicitGen.getArgVar(argName(i)));
-
-  implicitGen.getBlock()->add(body);
-  implicitGen.sawYield(&yieldStmt);
-  implicitGen.codegen(block->getModule());
-
-  // now call the generator:
-  Module *module = block->getModule();
-  Function *func = implicitGen.getFunc(module);
-  Value *gen;
-  // We codegen calls ourselves rather than going through funcType
-  // to avoid problems with automatic optional conversions (we don't
-  // want them here).
-  IRBuilder<> builder(block);
-  if (getTryCatch()) {
-    LLVMContext &context = block->getContext();
-    Function *parent = block->getParent();
-    BasicBlock *unwind = getTryCatch()->getExceptionBlock();
-    BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
-    gen = builder.CreateInvoke(func, normal, unwind, args);
-    block = normal;
-  } else {
-    gen = builder.CreateCall(func, args);
-  }
-
-  setBodyBase(body, oldBase);
-  inner->stmts.pop_back();
-  for (auto *var : captures)
-    var->unmap();
-
-  return gen;
-}
-
-types::Type *GenExpr::getType0() const {
-  return types::GenType::get(val->getType());
-}
-
-GenExpr *GenExpr::clone(Generic *ref) {
-  std::vector<Var *> capturesCloned;
-  for (auto *var : captures)
-    capturesCloned.push_back(var->clone(ref));
-  SEQ_RETURN_CLONE(
-      new GenExpr(val->clone(ref), body->clone(ref), capturesCloned));
-}
-
 VarExpr::VarExpr(Var *var, bool atomic) : var(var), atomic(atomic) {}
 
 Var *VarExpr::getVar() { return var; }
@@ -680,10 +159,6 @@ Var *VarExpr::getVar() const { return var; }
 
 types::Type *VarExpr::getType0() const { return var->getType(); }
 
-VarExpr *VarExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new VarExpr(var->clone(ref), atomic));
-}
-
 VarPtrExpr::VarPtrExpr(Var *var) : var(var) {}
 
 Value *VarPtrExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
@@ -694,46 +169,9 @@ types::Type *VarPtrExpr::getType0() const {
   return types::PtrType::get(var->getType());
 }
 
-VarPtrExpr *VarPtrExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new VarPtrExpr(var->clone(ref)));
-}
-
-FuncExpr::FuncExpr(BaseFunc *func, Expr *orig, std::vector<types::Type *> types)
-    : func(func), types(std::move(types)), orig(orig) {
-  name = "func";
-}
-
-FuncExpr::FuncExpr(BaseFunc *func, std::vector<types::Type *> types)
-    : FuncExpr(func, nullptr, std::move(types)) {}
+FuncExpr::FuncExpr(BaseFunc *func) : func(func) { name = "func"; }
 
 BaseFunc *FuncExpr::getFunc() { return func; }
-
-std::vector<types::Type *> FuncExpr::getTypes() const { return types; }
-
-bool FuncExpr::isRealized() const { return !types.empty(); }
-
-void FuncExpr::setRealizeTypes(std::vector<seq::types::Type *> types) {
-  this->types = std::move(types);
-}
-
-void FuncExpr::resolveTypes() {
-  try {
-    auto *f = dynamic_cast<Func *>(func);
-    if (f) {
-      if (!f->realized() && !types.empty()) {
-        orig = new FuncExpr(func, types);
-        func = f->realize(types);
-      }
-    } else if (!types.empty()) {
-      throw exc::SeqException("cannot type-instantiate non-generic function");
-    }
-
-    func->resolveTypes();
-  } catch (exc::SeqException &e) {
-    e.setSrcInfo(getSrcInfo());
-    throw e;
-  }
-}
 
 Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return func->getFunc(block->getModule());
@@ -741,23 +179,8 @@ Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
 types::Type *FuncExpr::getType0() const { return func->getFuncType(); }
 
-Expr *FuncExpr::clone(Generic *ref) {
-  if (orig)
-    return orig->clone(ref);
-
-  const bool cloneFunc =
-      (dynamic_cast<Func *>(func) != dynamic_cast<Func *>(ref));
-  std::vector<types::Type *> typesCloned;
-  for (auto *type : types)
-    typesCloned.push_back(type->clone(ref));
-  SEQ_RETURN_CLONE(
-      new FuncExpr(cloneFunc ? func->clone(ref) : func, typesCloned));
-}
-
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count, bool doAlloca)
     : Expr(types::ArrayType::get(type)), count(count), doAlloca(doAlloca) {}
-
-void ArrayExpr::resolveTypes() { count->resolveTypes(); }
 
 Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   auto *type = dynamic_cast<types::ArrayType *>(getType());
@@ -789,19 +212,9 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return arr;
 }
 
-ArrayExpr *ArrayExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new ArrayExpr(getType()->clone(ref)->getBaseType(0),
-                                 count->clone(ref), doAlloca));
-}
-
 RecordExpr::RecordExpr(std::vector<Expr *> exprs,
                        std::vector<std::string> names)
     : exprs(std::move(exprs)), names(std::move(names)) {}
-
-void RecordExpr::resolveTypes() {
-  for (auto *expr : exprs)
-    expr->resolveTypes();
-}
 
 Value *RecordExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -827,19 +240,7 @@ types::Type *RecordExpr::getType0() const {
                        : types::RecordType::get(types, names);
 }
 
-RecordExpr *RecordExpr::clone(Generic *ref) {
-  std::vector<Expr *> exprsCloned;
-  for (auto *expr : exprs)
-    exprsCloned.push_back(expr->clone(ref));
-  SEQ_RETURN_CLONE(new RecordExpr(exprsCloned, names));
-}
-
 IsExpr::IsExpr(Expr *lhs, Expr *rhs) : Expr(), lhs(lhs), rhs(rhs) {}
-
-void IsExpr::resolveTypes() {
-  lhs->resolveTypes();
-  rhs->resolveTypes();
-}
 
 Value *IsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -860,13 +261,7 @@ Value *IsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
 types::Type *IsExpr::getType0() const { return types::Bool; }
 
-IsExpr *IsExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new IsExpr(lhs->clone(ref), rhs->clone(ref)));
-}
-
 UOpExpr::UOpExpr(Op op, Expr *lhs) : Expr(), op(std::move(op)), lhs(lhs) {}
-
-void UOpExpr::resolveTypes() { lhs->resolveTypes(); }
 
 static void unsupportedUOpError(std::string symbol, types::Type *lhs) {
   throw exc::SeqException("bad operand type for unary " + symbol + ": '" +
@@ -906,17 +301,8 @@ types::Type *UOpExpr::getType0() const {
   }
 }
 
-UOpExpr *UOpExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new UOpExpr(op, lhs->clone(ref)));
-}
-
 BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs, bool inPlace)
     : Expr(), op(std::move(op)), lhs(lhs), rhs(rhs), inPlace(inPlace) {}
-
-void BOpExpr::resolveTypes() {
-  lhs->resolveTypes();
-  rhs->resolveTypes();
-}
 
 static void unsupportedBOpError(std::string symbol, types::Type *lhs,
                                 types::Type *rhs) {
@@ -1028,14 +414,8 @@ types::Type *BOpExpr::getType0() const {
   }
 }
 
-BOpExpr *BOpExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new BOpExpr(op, lhs->clone(ref), rhs->clone(ref), inPlace));
-}
-
 AtomicExpr::AtomicExpr(AtomicExpr::Op op, Var *lhs, Expr *rhs)
     : Expr(types::Int), op(op), lhs(lhs), rhs(rhs) {}
-
-void AtomicExpr::resolveTypes() { rhs->resolveTypes(); }
 
 Value *AtomicExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   if (!lhs->getType()->is(types::Int) || !rhs->getType()->is(types::Int))
@@ -1072,16 +452,7 @@ Value *AtomicExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return nullptr;
 }
 
-AtomicExpr *AtomicExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new AtomicExpr(op, lhs->clone(ref), rhs->clone(ref)));
-}
-
 ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) : arr(arr), idx(idx) {}
-
-void ArrayLookupExpr::resolveTypes() {
-  arr->resolveTypes();
-  idx->resolveTypes();
-}
 
 static seq_int_t translateIndex(seq_int_t idx, seq_int_t len,
                                 bool clamp = false) {
@@ -1318,17 +689,8 @@ types::Type *ArrayLookupExpr::getType0() const {
   return type->magicOut("__getitem__", {idx->getType()});
 }
 
-ArrayLookupExpr *ArrayLookupExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new ArrayLookupExpr(arr->clone(ref), idx->clone(ref)));
-}
-
 ArrayContainsExpr::ArrayContainsExpr(Expr *val, Expr *arr)
     : val(val), arr(arr) {}
-
-void ArrayContainsExpr::resolveTypes() {
-  val->resolveTypes();
-  arr->resolveTypes();
-}
 
 Value *ArrayContainsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *valType = val->getType();
@@ -1345,68 +707,29 @@ Value *ArrayContainsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
 types::Type *ArrayContainsExpr::getType0() const { return types::Bool; }
 
-ArrayContainsExpr *ArrayContainsExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new ArrayContainsExpr(val->clone(ref), arr->clone(ref)));
-}
-
-GetElemExpr::GetElemExpr(Expr *rec, std::string memb, GetElemExpr *orig,
-                         std::vector<types::Type *> types)
-    : rec(rec), memb(std::move(memb)), types(std::move(types)), orig(orig) {
+GetElemExpr::GetElemExpr(Expr *rec, std::string memb)
+    : rec(rec), memb(std::move(memb)) {
   name = "elem";
 }
 
-GetElemExpr::GetElemExpr(Expr *rec, std::string memb,
-                         std::vector<types::Type *> types)
-    : GetElemExpr(rec, std::move(memb), nullptr, std::move(types)) {}
-
-GetElemExpr::GetElemExpr(Expr *rec, unsigned memb,
-                         std::vector<types::Type *> types)
-    : GetElemExpr(rec, std::to_string(memb), std::move(types)) {}
+GetElemExpr::GetElemExpr(Expr *rec, unsigned memb)
+    : GetElemExpr(rec, std::to_string(memb)) {}
 
 Expr *GetElemExpr::getRec() { return rec; }
 
 std::string GetElemExpr::getMemb() { return memb; }
 
-bool GetElemExpr::isRealized() const { return !types.empty(); }
-
-void GetElemExpr::setRealizeTypes(std::vector<types::Type *> types) {
-  this->types = std::move(types);
-}
-
-void GetElemExpr::resolveTypes() { rec->resolveTypes(); }
-
-static void noGenericMethodError(const std::string &typeName,
-                                 const std::string &methodName) {
-  throw exc::SeqException("generic method '" + methodName + "' of type '" +
-                          typeName + "' does not exist");
-}
-
 Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = rec->getType();
-  types::Type *outType = getType0();
   auto *func = type->hasMethod(memb)
                    ? dynamic_cast<Func *>(type->getMethod(memb))
                    : nullptr;
   Value *self = rec->codegen(base, block);
-  ;
-
-  if (!types.empty()) {
-    if (!func)
-      noGenericMethodError(type->getName(), memb);
-    func = func->realize(types);
-  }
 
   if (func && func->hasAttribute("property")) {
     Module *module = block->getModule();
     IRBuilder<> builder(block);
     return builder.CreateCall(func->getFunc(module), self);
-  }
-
-  if (!types.empty()) {
-    Value *method = FuncExpr(func).codegen(base, block);
-    auto *methodType = dynamic_cast<types::MethodType *>(outType);
-    assert(methodType);
-    return methodType->make(self, method, block);
   }
 
   return type->memb(self, memb, block);
@@ -1417,76 +740,29 @@ types::Type *GetElemExpr::getType0() const {
   auto *func = type->hasMethod(memb)
                    ? dynamic_cast<Func *>(type->getMethod(memb))
                    : nullptr;
-
-  if (!types.empty()) {
-    if (!func)
-      noGenericMethodError(type->getName(), memb);
-    func = func->realize(types);
-  }
-
   if (func && func->hasAttribute("property"))
     return func->getFuncType()->getCallType({type});
-
-  if (!types.empty())
-    return types::MethodType::get(rec->getType(), func->getFuncType());
 
   return type->membType(memb);
 }
 
-GetElemExpr *GetElemExpr::clone(Generic *ref) {
-  if (orig)
-    return orig->clone(ref);
-
-  std::vector<types::Type *> typesCloned;
-  for (auto *type : types)
-    typesCloned.push_back(type->clone(ref));
-  SEQ_RETURN_CLONE(new GetElemExpr(rec->clone(ref), memb, typesCloned));
-}
-
-GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb,
-                                     GetStaticElemExpr *orig,
-                                     std::vector<types::Type *> types)
-    : Expr(), type(type), memb(std::move(memb)), types(std::move(types)),
-      orig(orig) {
+GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb)
+    : Expr(), type(type), memb(std::move(memb)) {
   name = "static";
 }
-
-GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb,
-                                     std::vector<types::Type *> types)
-    : GetStaticElemExpr(type, std::move(memb), nullptr, std::move(types)) {}
 
 types::Type *GetStaticElemExpr::getTypeInExpr() const { return type; }
 
 std::string GetStaticElemExpr::getMemb() const { return memb; }
 
-bool GetStaticElemExpr::isRealized() const { return !types.empty(); }
-
-void GetStaticElemExpr::setRealizeTypes(std::vector<types::Type *> types) {
-  this->types = std::move(types);
-}
-
-void GetStaticElemExpr::resolveTypes() {}
-
 Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  FuncExpr f(type->getMethod(memb), types);
-  f.resolveTypes();
+  FuncExpr f(type->getMethod(memb));
   return f.codegen(base, block);
 }
 
 types::Type *GetStaticElemExpr::getType0() const {
-  FuncExpr f(type->getMethod(memb), types);
-  f.resolveTypes();
+  FuncExpr f(type->getMethod(memb));
   return f.getType();
-}
-
-GetStaticElemExpr *GetStaticElemExpr::clone(Generic *ref) {
-  if (orig)
-    return orig->clone(ref);
-
-  std::vector<types::Type *> typesCloned;
-  for (auto *type : types)
-    typesCloned.push_back(type->clone(ref));
-  SEQ_RETURN_CLONE(new GetStaticElemExpr(type->clone(ref), memb, typesCloned));
 }
 
 CallExpr::CallExpr(Expr *func, std::vector<Expr *> args,
@@ -1498,193 +774,6 @@ Expr *CallExpr::getFuncExpr() const { return func; }
 std::vector<Expr *> CallExpr::getArgs() const { return args; }
 
 void CallExpr::setFuncExpr(Expr *func) { this->func = func; }
-
-void CallExpr::resolveTypes() {
-  func->resolveTypes();
-  for (auto *arg : args)
-    arg->resolveTypes();
-}
-
-static Func *getFuncFromFuncExpr(Expr *func) {
-  auto *funcExpr = dynamic_cast<FuncExpr *>(func);
-  if (funcExpr) {
-    auto *f = dynamic_cast<Func *>(funcExpr->getFunc());
-    if (f)
-      return f;
-  }
-
-  return nullptr;
-}
-
-static bool
-getFullCallTypesForPartial(Func *func, types::PartialFuncType *parType,
-                           const std::vector<types::Type *> &argTypes,
-                           std::vector<types::Type *> &typesFull) {
-  if (func && func->numGenerics() > 0 && !func->realized() && parType) {
-    // painful process of organizing types correctly...
-    std::vector<types::Type *> callTypes = parType->getCallTypes();
-
-    unsigned next = 0;
-    for (auto *type : callTypes) {
-      if (type) {
-        typesFull.push_back(type);
-      } else {
-        if (next < argTypes.size())
-          typesFull.push_back(argTypes[next++]);
-        else
-          return false;
-      }
-    }
-
-    return true;
-  }
-
-  return false;
-}
-
-static void
-deduceTypeParametersIfNecessary(Expr *&func,
-                                const std::vector<types::Type *> &argTypes) {
-  /*
-   * Important note: If we're able to deduce type parameters, we change the
-   * structure of the AST by replacing functions etc. However, in order for
-   * generics/cloning to work properly, we need to preserve the original AST.
-   * For this reason, FuncExpr and Get(Static)ElemExpr take an optional 'orig'
-   * argument representing the original Expr to be returned when cloning.
-   */
-
-  try {
-    {
-      // simple call
-      auto *funcExpr = dynamic_cast<FuncExpr *>(func);
-      if (funcExpr && !funcExpr->isRealized()) {
-        Func *f = getFuncFromFuncExpr(func);
-        if (f && f->numGenerics() > 0 && !f->realized())
-          func = new FuncExpr(f->realize(f->deduceTypesFromArgTypes(argTypes)),
-                              func);
-      }
-    }
-
-    {
-      // partial call I -- known partial
-      auto *partialExpr = dynamic_cast<PartialCallExpr *>(func);
-      if (partialExpr) {
-        auto *parType =
-            dynamic_cast<types::PartialFuncType *>(partialExpr->getType());
-        auto *funcExpr = dynamic_cast<FuncExpr *>(partialExpr->getFuncExpr());
-        if (funcExpr && !funcExpr->isRealized()) {
-          Func *f = getFuncFromFuncExpr(partialExpr->getFuncExpr());
-          std::vector<types::Type *> typesFull;
-          if (getFullCallTypesForPartial(f, parType, argTypes, typesFull))
-            partialExpr->setFuncExpr(
-                new FuncExpr(f->realize(f->deduceTypesFromArgTypes(typesFull)),
-                             partialExpr->getFuncExpr()));
-        }
-      }
-    }
-
-    {
-      // partial call II -- partial masquerading as regular call
-      auto *callExpr = dynamic_cast<CallExpr *>(func);
-      if (callExpr) {
-        auto *parType =
-            dynamic_cast<types::PartialFuncType *>(callExpr->getType());
-        auto *funcExpr = dynamic_cast<FuncExpr *>(callExpr->getFuncExpr());
-        if (funcExpr && !funcExpr->isRealized()) {
-          Func *f = getFuncFromFuncExpr(callExpr->getFuncExpr());
-          std::vector<types::Type *> typesFull;
-          if (getFullCallTypesForPartial(f, parType, argTypes, typesFull))
-            callExpr->setFuncExpr(
-                new FuncExpr(f->realize(f->deduceTypesFromArgTypes(typesFull)),
-                             callExpr->getFuncExpr()));
-        }
-      }
-    }
-
-    {
-      // method call
-      auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
-      if (elemExpr && !elemExpr->isRealized()) {
-        std::string name = elemExpr->getMemb();
-        types::Type *type = elemExpr->getRec()->getType();
-        if (type->hasMethod(name)) {
-          auto *f = dynamic_cast<Func *>(type->getMethod(name));
-          if (f && f->numGenerics() > 0 && !f->realized()) {
-            std::vector<types::Type *> typesFull(argTypes);
-            typesFull.insert(typesFull.begin(),
-                             type); // methods take 'self' as first argument
-            func = new GetElemExpr(elemExpr->getRec(), name, elemExpr,
-                                   f->deduceTypesFromArgTypes(typesFull));
-          }
-        }
-      }
-    }
-
-    {
-      // static method call
-      auto *elemStaticExpr = dynamic_cast<GetStaticElemExpr *>(func);
-      if (elemStaticExpr && !elemStaticExpr->isRealized()) {
-        std::string name = elemStaticExpr->getMemb();
-        types::Type *type = elemStaticExpr->getTypeInExpr();
-        if (type->hasMethod(name)) {
-          auto *f = dynamic_cast<Func *>(type->getMethod(name));
-          if (f && f->numGenerics() > 0 && !f->realized())
-            func = new GetStaticElemExpr(type, name, elemStaticExpr,
-                                         f->deduceTypesFromArgTypes(argTypes));
-        }
-      }
-    }
-  } catch (exc::SeqException &) {
-    /*
-     * We weren't able to deduce type parameters now,
-     * but we may be able to do so later, so ignore
-     * any exceptions.
-     */
-  }
-}
-
-static std::vector<Expr *> rectifyCallArgs(Expr *func, std::vector<Expr *> args,
-                                           std::vector<std::string> names) {
-  {
-    // simple call
-    auto *funcExpr = dynamic_cast<FuncExpr *>(func);
-    if (funcExpr) {
-      Func *f = getFuncFromFuncExpr(func);
-      if (f)
-        return f->rectifyCallArgs(args, names);
-    }
-  }
-
-  {
-    // method call
-    auto *elemExpr = dynamic_cast<GetElemExpr *>(func);
-    if (elemExpr) {
-      std::string name = elemExpr->getMemb();
-      types::Type *type = elemExpr->getRec()->getType();
-      if (type->hasMethod(name)) {
-        auto *f = dynamic_cast<Func *>(type->getMethod(name));
-        if (f)
-          return f->rectifyCallArgs(args, names, /*methodCall=*/true);
-      }
-    }
-  }
-
-  {
-    // static method call
-    auto *elemStaticExpr = dynamic_cast<GetStaticElemExpr *>(func);
-    if (elemStaticExpr) {
-      std::string name = elemStaticExpr->getMemb();
-      types::Type *type = elemStaticExpr->getTypeInExpr();
-      if (type->hasMethod(name)) {
-        auto *f = dynamic_cast<Func *>(type->getMethod(name));
-        if (f)
-          return f->rectifyCallArgs(args, names);
-      }
-    }
-  }
-
-  return args;
-}
 
 static bool isLiteralFalse(Expr *e) {
   if (auto *b = dynamic_cast<BoolExpr *>(e))
@@ -1700,7 +789,6 @@ static bool isLiteralNegOne(Expr *e) {
 
 Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = getType(); // validates call
-  std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
 
   // catch inter-sequence alignment calls
   // arguments are defined in stdlib/align.seq:
@@ -1888,7 +976,6 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 }
 
 types::Type *CallExpr::getType0() const {
-  std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
   std::vector<types::Type *> types;
   bool saw_null = false;
   for (auto *e : args) {
@@ -1902,19 +989,10 @@ types::Type *CallExpr::getType0() const {
 
   // check if this is really a partial function
   if (saw_null) {
-    deduceTypeParametersIfNecessary(func, types);
     return types::PartialFuncType::get(func->getType(), types);
   }
 
-  deduceTypeParametersIfNecessary(func, types);
   return func->getType()->getCallType(types);
-}
-
-CallExpr *CallExpr::clone(Generic *ref) {
-  std::vector<Expr *> argsCloned;
-  for (auto *arg : args)
-    argsCloned.push_back(arg->clone(ref));
-  SEQ_RETURN_CLONE(new CallExpr(func->clone(ref), argsCloned, names));
 }
 
 PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args,
@@ -1927,18 +1005,8 @@ std::vector<Expr *> PartialCallExpr::getArgs() const { return args; }
 
 void PartialCallExpr::setFuncExpr(Expr *func) { this->func = func; }
 
-void PartialCallExpr::resolveTypes() {
-  func->resolveTypes();
-  for (auto *arg : args) {
-    if (arg)
-      arg->resolveTypes();
-  }
-}
-
 Value *PartialCallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::PartialFuncType *par = getType0();
-  std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
-
   Value *f = func->codegen(base, block);
   std::vector<Value *> x;
   for (auto *e : args) {
@@ -1950,30 +1018,15 @@ Value *PartialCallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 }
 
 types::PartialFuncType *PartialCallExpr::getType0() const {
-  std::vector<Expr *> args = rectifyCallArgs(func, this->args, names);
   std::vector<types::Type *> types;
   for (auto *e : args)
     types.push_back(e ? e->getType() : nullptr);
 
-  deduceTypeParametersIfNecessary(func, types);
   return types::PartialFuncType::get(func->getType(), types);
-}
-
-PartialCallExpr *PartialCallExpr::clone(seq::Generic *ref) {
-  std::vector<Expr *> argsCloned;
-  for (auto *arg : args)
-    argsCloned.push_back(arg ? arg->clone(ref) : nullptr);
-  SEQ_RETURN_CLONE(new PartialCallExpr(func->clone(ref), argsCloned, names));
 }
 
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse)
     : Expr(), cond(cond), ifTrue(ifTrue), ifFalse(ifFalse) {}
-
-void CondExpr::resolveTypes() {
-  cond->resolveTypes();
-  ifTrue->resolveTypes();
-  ifFalse->resolveTypes();
-}
 
 Value *CondExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -2017,11 +1070,6 @@ types::Type *CondExpr::getType0() const {
   return trueType;
 }
 
-CondExpr *CondExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(
-      new CondExpr(cond->clone(ref), ifTrue->clone(ref), ifFalse->clone(ref)));
-}
-
 MatchExpr::MatchExpr() : Expr(), value(nullptr), patterns(), exprs() {}
 
 void MatchExpr::setValue(Expr *value) {
@@ -2032,17 +1080,6 @@ void MatchExpr::setValue(Expr *value) {
 void MatchExpr::addCase(Pattern *pattern, Expr *expr) {
   patterns.push_back(pattern);
   exprs.push_back(expr);
-}
-
-void MatchExpr::resolveTypes() {
-  assert(value);
-  value->resolveTypes();
-
-  for (auto *pattern : patterns)
-    pattern->resolveTypes(value->getType());
-
-  for (auto *expr : exprs)
-    expr->resolveTypes();
 }
 
 Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
@@ -2058,7 +1095,6 @@ Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
   bool seenCatchAll = false;
   for (auto *pattern : patterns) {
-    pattern->resolveTypes(valType);
     if (pattern->isCatchAll())
       seenCatchAll = true;
   }
@@ -2116,26 +1152,6 @@ types::Type *MatchExpr::getType0() const {
   return type;
 }
 
-MatchExpr *MatchExpr::clone(Generic *ref) {
-  auto *x = new MatchExpr();
-
-  std::vector<Pattern *> patternsCloned;
-  std::vector<Expr *> exprsCloned;
-
-  for (auto *pattern : patterns)
-    patternsCloned.push_back(pattern->clone(ref));
-
-  for (auto *expr : exprs)
-    exprsCloned.push_back(expr->clone(ref));
-
-  if (value)
-    x->value = value->clone(ref);
-  x->patterns = patternsCloned;
-  x->exprs = exprsCloned;
-
-  SEQ_RETURN_CLONE(x);
-}
-
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args,
                              std::vector<std::string> names)
     : Expr(), type(type), type0(nullptr), args(std::move(args)),
@@ -2155,11 +1171,6 @@ ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args,
 types::Type *ConstructExpr::getConstructType() { return type; }
 
 std::vector<Expr *> ConstructExpr::getArgs() { return args; }
-
-void ConstructExpr::resolveTypes() {
-  for (auto *arg : args)
-    arg->resolveTypes();
-}
 
 Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
@@ -2239,32 +1250,12 @@ types::Type *ConstructExpr::getType0() const {
   for (auto *arg : args)
     types.push_back(arg->getType());
 
-  // type parameter deduction if constructing generic class:
-  auto *ref = dynamic_cast<types::RefType *>(type);
-  if (ref && ref->numGenerics() > 0 && !ref->realized()) {
-    type0 = type;
-    type = ref->realize(ref->deduceTypesFromArgTypes(types, names));
-  }
-
   types::Type *ret = type->initOut(types, names);
   return ret->is(types::Void) ? type : ret;
 }
 
-ConstructExpr *ConstructExpr::clone(Generic *ref) {
-  std::vector<Expr *> argsCloned;
-  for (auto *arg : args)
-    argsCloned.push_back(arg->clone(ref));
-  SEQ_RETURN_CLONE(
-      new ConstructExpr((type0 ? type0 : type)->clone(ref), argsCloned, names));
-}
-
 MethodExpr::MethodExpr(Expr *self, Func *func)
     : Expr(), self(self), func(func) {}
-
-void MethodExpr::resolveTypes() {
-  self->resolveTypes();
-  func->resolveTypes();
-}
 
 Value *MethodExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::MethodType *type = getType0();
@@ -2277,13 +1268,7 @@ types::MethodType *MethodExpr::getType0() const {
   return types::MethodType::get(self->getType(), func->getFuncType());
 }
 
-MethodExpr *MethodExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new MethodExpr(self->clone(ref), func->clone(ref)));
-}
-
 OptExpr::OptExpr(Expr *val) : Expr(), val(val) {}
-
-void OptExpr::resolveTypes() { val->resolveTypes(); }
 
 Value *OptExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   Value *val = this->val->codegen(base, block);
@@ -2294,16 +1279,7 @@ types::Type *OptExpr::getType0() const {
   return types::OptionalType::get(val->getType());
 }
 
-OptExpr *OptExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new OptExpr(val->clone(ref)));
-}
-
 YieldExpr::YieldExpr(BaseFunc *base) : Expr(), base(base) {}
-
-void YieldExpr::resolveTypes() {
-  if (dynamic_cast<Func *>(base))
-    base->resolveTypes();
-}
 
 Value *YieldExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   auto *func = dynamic_cast<Func *>(base);
@@ -2322,29 +1298,15 @@ types::Type *YieldExpr::getType0() const {
   throw exc::SeqException("yield expression outside function");
 }
 
-YieldExpr *YieldExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new YieldExpr(base->clone(ref)));
-}
-
 DefaultExpr::DefaultExpr(types::Type *type) : Expr(type) {}
 
 Value *DefaultExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return getType()->defaultValue(block);
 }
 
-DefaultExpr *DefaultExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new DefaultExpr(getType()->clone(ref)));
-}
-
 TypeOfExpr::TypeOfExpr(Expr *val) : Expr(types::Str), val(val) {}
-
-void TypeOfExpr::resolveTypes() { val->resolveTypes(); }
 
 Value *TypeOfExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   StrExpr s(val->getType()->getName());
   return s.codegen(base, block);
-}
-
-TypeOfExpr *TypeOfExpr::clone(Generic *ref) {
-  SEQ_RETURN_CLONE(new TypeOfExpr(val->clone(ref)));
 }

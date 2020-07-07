@@ -24,8 +24,6 @@ public:
   size_t size(llvm::Module *module) const override;
   static PtrType *get(Type *baseType) noexcept;
   static PtrType *get() noexcept;
-
-  PtrType *clone(Generic *ref) override;
 };
 
 } // namespace types

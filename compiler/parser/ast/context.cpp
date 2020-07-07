@@ -34,7 +34,8 @@ string RealizationContext::getCanonicalName(const SrcInfo &info) const {
   auto it = canonicalNames.find(info);
   // for (auto &i: canonicalNames)
   //   DBG("--- {} -> {}", i.first.id, i.second);
-  // DBG("???? QUE {}.{}.{}.{} {}", info.file, info.line, info.col, info.id, it != canonicalNames.end());
+  // DBG("???? QUE {}.{}.{}.{} {}", info.file, info.line, info.col, info.id, it
+  // != canonicalNames.end());
   if (it != canonicalNames.end())
     return it->second;
   assert(false);
@@ -45,7 +46,8 @@ string RealizationContext::generateCanonicalName(const SrcInfo &info,
                                                  const string &module,
                                                  const string &name) {
   auto it = canonicalNames.find(info);
-  // DBG("---- QUE {}.{}.{}.{} {}", info.file, info.line, info.col, info.id, it != canonicalNames.end());
+  // DBG("---- QUE {}.{}.{}.{} {}", info.file, info.line, info.col, info.id, it
+  // != canonicalNames.end());
   if (it != canonicalNames.end())
     return it->second;
 
