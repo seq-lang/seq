@@ -22,7 +22,6 @@ public:
                     std::vector<bool> parallel = {});
   void setParallel(unsigned which);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 
   static types::RecordType *getInterAlignYieldType();
   static types::RecordType *getInterAlignParamsType();

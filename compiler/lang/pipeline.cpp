@@ -854,28 +854,6 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return result;
 }
 
-types::Type *PipeExpr::getType0() const {
-  types::Type *type = nullptr;
-  for (auto *stage : stages) {
-    if (!type) {
-      type = stage->getType();
-    } else {
-      ValueExpr arg(type, nullptr);
-      CallExpr call(
-          stage,
-          {&arg}); // do this through CallExpr for type-parameter deduction
-      type = call.getType();
-    }
-
-    types::GenType *genType = type->asGen();
-    if (genType && (genType->fromPrefetch() || genType->fromInterAlign() ||
-                    stage != stages.back()))
-      return types::Void;
-  }
-  assert(type);
-  return type;
-}
-
 types::RecordType *PipeExpr::getInterAlignYieldType() {
   auto *i32 = types::IntNType::get(32, true);
   static types::RecordType *cigarType = types::RecordType::get(

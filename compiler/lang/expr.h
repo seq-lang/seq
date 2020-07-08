@@ -45,8 +45,7 @@ public:
   /// exceptions and fills in source information.
   llvm::Value *codegen(BaseFunc *base, llvm::BasicBlock *&block);
 
-  /// Delegates to \ref getType0() "getType0()"; catches
-  /// exceptions and fills in source information.
+  /// Returns the type of this expression.
   types::Type *getType() const;
 
   /// Sets the type of this expression.
@@ -63,9 +62,6 @@ public:
   /// @return value representing expression result; possibly
   ///         null if type is void
   virtual llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) = 0;
-
-  /// Determines and returns the type of this expression
-  virtual types::Type *getType0() const;
 
   /// Ensures that this expression has the specified type.
   /// Throws an exception if this is not the case.
@@ -186,7 +182,6 @@ public:
   void setAtomic();
   Var *getVar() const;
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class VarPtrExpr : public Expr {
@@ -196,7 +191,6 @@ private:
 public:
   explicit VarPtrExpr(Var *var);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class FuncExpr : public Expr {
@@ -207,7 +201,6 @@ public:
   explicit FuncExpr(BaseFunc *func);
   BaseFunc *getFunc();
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class ArrayExpr : public Expr {
@@ -229,7 +222,6 @@ public:
   explicit RecordExpr(std::vector<Expr *> exprs,
                       std::vector<std::string> names = {});
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class IsExpr : public Expr {
@@ -240,7 +232,6 @@ private:
 public:
   IsExpr(Expr *lhs, Expr *rhs);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class UOpExpr : public Expr {
@@ -251,7 +242,6 @@ private:
 public:
   UOpExpr(Op op, Expr *lhs);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class BOpExpr : public Expr {
@@ -264,7 +254,6 @@ private:
 public:
   BOpExpr(Op op, Expr *lhs, Expr *rhs, bool inPlace = false);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class AtomicExpr : public Expr {
@@ -299,7 +288,6 @@ private:
 public:
   ArrayLookupExpr(Expr *arr, Expr *idx);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class ArrayContainsExpr : public Expr {
@@ -310,7 +298,6 @@ private:
 public:
   ArrayContainsExpr(Expr *val, Expr *arr);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class GetElemExpr : public Expr {
@@ -326,7 +313,6 @@ public:
   bool isRealized() const;
   void setRealizeTypes(std::vector<types::Type *> types);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class GetStaticElemExpr : public Expr {
@@ -341,7 +327,6 @@ public:
   bool isRealized() const;
   void setRealizeTypes(std::vector<types::Type *> types);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class CallExpr : public Expr {
@@ -357,7 +342,6 @@ public:
   std::vector<Expr *> getArgs() const;
   void setFuncExpr(Expr *func);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class PartialCallExpr : public Expr {
@@ -373,7 +357,6 @@ public:
   std::vector<Expr *> getArgs() const;
   void setFuncExpr(Expr *func);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::PartialFuncType *getType0() const override;
 };
 
 class CondExpr : public Expr {
@@ -385,7 +368,6 @@ private:
 public:
   CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class MatchExpr : public Expr {
@@ -397,7 +379,6 @@ private:
 public:
   MatchExpr();
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
   void setValue(Expr *value);
   void addCase(Pattern *pattern, Expr *expr);
 };
@@ -415,7 +396,6 @@ public:
   types::Type *getConstructType();
   std::vector<Expr *> getArgs();
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class MethodExpr : public Expr {
@@ -426,7 +406,6 @@ private:
 public:
   MethodExpr(Expr *self, Func *method);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::MethodType *getType0() const override;
 };
 
 class OptExpr : public Expr {
@@ -436,7 +415,6 @@ private:
 public:
   explicit OptExpr(Expr *val);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class YieldExpr : public Expr {
@@ -446,7 +424,6 @@ private:
 public:
   YieldExpr(BaseFunc *base);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-  types::Type *getType0() const override;
 };
 
 class DefaultExpr : public Expr {

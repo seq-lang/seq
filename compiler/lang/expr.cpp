@@ -24,17 +24,7 @@ Value *Expr::codegen(BaseFunc *base, BasicBlock *&block) {
 
 void Expr::setType(types::Type *type) { this->type = type; }
 
-types::Type *Expr::getType() const {
-  try {
-    return getType0();
-  } catch (exc::SeqException &e) {
-    if (e.getSrcInfo().line <= 0)
-      e.setSrcInfo(getSrcInfo());
-    throw e;
-  }
-}
-
-types::Type *Expr::getType0() const { return type; }
+types::Type *Expr::getType() const { return type; }
 
 void Expr::ensure(types::Type *type) {
   types::Type *actual = getType();
@@ -59,7 +49,7 @@ Value *ValueExpr::codegen0(BaseFunc *base, BasicBlock *&block) { return val; }
 NoneExpr::NoneExpr() : ConstExpr(types::RefType::none()) {}
 
 Value *NoneExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  return getType0()->defaultValue(block);
+  return getType()->defaultValue(block);
 }
 
 Const NoneExpr::constValue() const { return Const(); }
@@ -159,16 +149,10 @@ Value *VarExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
 Var *VarExpr::getVar() const { return var; }
 
-types::Type *VarExpr::getType0() const { return var->getType(); }
-
 VarPtrExpr::VarPtrExpr(Var *var) : var(var) {}
 
 Value *VarPtrExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return var->getPtr(base);
-}
-
-types::Type *VarPtrExpr::getType0() const {
-  return types::PtrType::get(var->getType());
 }
 
 FuncExpr::FuncExpr(BaseFunc *func) : func(func) { name = "func"; }
@@ -178,8 +162,6 @@ BaseFunc *FuncExpr::getFunc() { return func; }
 Value *FuncExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return func->getFunc(block->getModule());
 }
-
-types::Type *FuncExpr::getType0() const { return func->getFuncType(); }
 
 ArrayExpr::ArrayExpr(types::Type *type, Expr *count, bool doAlloca)
     : Expr(types::ArrayType::get(type)), count(count), doAlloca(doAlloca) {}
@@ -234,14 +216,6 @@ Value *RecordExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return rec;
 }
 
-types::Type *RecordExpr::getType0() const {
-  std::vector<types::Type *> types;
-  for (auto *expr : exprs)
-    types.push_back(expr->getType());
-  return names.empty() ? types::RecordType::get(types)
-                       : types::RecordType::get(types, names);
-}
-
 IsExpr::IsExpr(Expr *lhs, Expr *rhs) : Expr(), lhs(lhs), rhs(rhs) {}
 
 Value *IsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
@@ -260,8 +234,6 @@ Value *IsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   is = builder.CreateZExt(is, types::Bool->getLLVMType(context));
   return is;
 }
-
-types::Type *IsExpr::getType0() const { return types::Bool; }
 
 UOpExpr::UOpExpr(Op op, Expr *lhs) : Expr(), op(std::move(op)), lhs(lhs) {}
 
@@ -283,21 +255,6 @@ Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
         lhsType->magicOut(op.magic, {}, /*nullOnMissing=*/true);
     if (outType)
       return lhsType->callMagic(op.magic, {}, self, {}, block, getTryCatch());
-    unsupportedUOpError(op.symbol, lhsType);
-    return nullptr;
-  }
-}
-
-types::Type *UOpExpr::getType0() const {
-  types::Type *lhsType = lhs->getType();
-
-  if (op == uop("!")) {
-    return types::Bool;
-  } else {
-    types::Type *outType =
-        lhsType->magicOut(op.magic, {}, /*nullOnMissing=*/true);
-    if (outType)
-      return outType;
     unsupportedUOpError(op.symbol, lhsType);
     return nullptr;
   }
@@ -377,38 +334,6 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       if (outType)
         return rhsType->callMagic(op.magicReflected, {lhsType}, arg, {self},
                                   block, getTryCatch());
-    }
-
-    unsupportedBOpError(op.symbol, lhsType, rhsType);
-    return nullptr;
-  }
-}
-
-types::Type *BOpExpr::getType0() const {
-  if (op == bop("&&") || op == bop("||")) {
-    return types::Bool;
-  } else {
-    types::Type *lhsType = lhs->getType();
-    types::Type *rhsType = rhs->getType();
-    types::Type *outType = nullptr;
-
-    if (inPlace) {
-      assert(!op.magicInPlace.empty());
-      outType =
-          lhsType->magicOut(op.magicInPlace, {rhsType}, /*nullOnMissing=*/true);
-      if (outType && types::is(outType, lhsType))
-        return outType;
-    }
-
-    outType = lhsType->magicOut(op.magic, {rhsType}, /*nullOnMissing=*/true);
-    if (outType)
-      return outType;
-
-    if (!op.magicReflected.empty()) {
-      outType = rhsType->magicOut(op.magicReflected, {lhsType},
-                                  /*nullOnMissing=*/true);
-      if (outType)
-        return outType;
     }
 
     unsupportedBOpError(op.symbol, lhsType, rhsType);
@@ -671,26 +596,6 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
                          getTryCatch());
 }
 
-types::Type *ArrayLookupExpr::getType0() const {
-  types::Type *type = arr->getType();
-  types::RecordType *rec = type->asRec();
-
-  // check if this is a record lookup, and that __getitem__ is not overriden
-  if (rec) {
-    // simple x[i]
-    GetElemExpr e1(nullptr, {});
-    if (getExprForTupleIndex(arr, idx, rec, &e1))
-      return e1.getType();
-
-    // slice x[i:j:k] (or variant thereof)
-    RecordExpr e2({});
-    if (getExprForTupleSlice(arr, idx, rec, &e2))
-      return e2.getType();
-  }
-
-  return type->magicOut("__getitem__", {idx->getType()});
-}
-
 ArrayContainsExpr::ArrayContainsExpr(Expr *val, Expr *arr)
     : val(val), arr(arr) {}
 
@@ -706,8 +611,6 @@ Value *ArrayContainsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return arrType->callMagic("__contains__", {valType}, arr, {val}, block,
                             getTryCatch());
 }
-
-types::Type *ArrayContainsExpr::getType0() const { return types::Bool; }
 
 GetElemExpr::GetElemExpr(Expr *rec, std::string memb)
     : rec(rec), memb(std::move(memb)) {
@@ -737,17 +640,6 @@ Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return type->memb(self, memb, block);
 }
 
-types::Type *GetElemExpr::getType0() const {
-  types::Type *type = rec->getType();
-  auto *func = type->hasMethod(memb)
-                   ? dynamic_cast<Func *>(type->getMethod(memb))
-                   : nullptr;
-  if (func && func->hasAttribute("property"))
-    return func->getFuncType()->getCallType({type});
-
-  return type->membType(memb);
-}
-
 GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb)
     : Expr(), type(type), memb(std::move(memb)) {
   name = "static";
@@ -760,11 +652,6 @@ std::string GetStaticElemExpr::getMemb() const { return memb; }
 Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   FuncExpr f(type->getMethod(memb));
   return f.codegen(base, block);
-}
-
-types::Type *GetStaticElemExpr::getType0() const {
-  FuncExpr f(type->getMethod(memb));
-  return f.getType();
 }
 
 CallExpr::CallExpr(Expr *func, std::vector<Expr *> args,
@@ -977,26 +864,6 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   }
 }
 
-types::Type *CallExpr::getType0() const {
-  std::vector<types::Type *> types;
-  bool saw_null = false;
-  for (auto *e : args) {
-    if (e) {
-      types.push_back(e->getType());
-    } else {
-      types.push_back(nullptr);
-      saw_null = true;
-    }
-  }
-
-  // check if this is really a partial function
-  if (saw_null) {
-    return types::PartialFuncType::get(func->getType(), types);
-  }
-
-  return func->getType()->getCallType(types);
-}
-
 PartialCallExpr::PartialCallExpr(Expr *func, std::vector<Expr *> args,
                                  std::vector<std::string> names)
     : func(func), args(std::move(args)), names(std::move(names)) {}
@@ -1008,7 +875,8 @@ std::vector<Expr *> PartialCallExpr::getArgs() const { return args; }
 void PartialCallExpr::setFuncExpr(Expr *func) { this->func = func; }
 
 Value *PartialCallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::PartialFuncType *par = getType0();
+  auto *par = dynamic_cast<types::PartialFuncType *>(getType());
+  assert(par);
   Value *f = func->codegen(base, block);
   std::vector<Value *> x;
   for (auto *e : args) {
@@ -1017,14 +885,6 @@ Value *PartialCallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   }
 
   return par->make(f, x, block);
-}
-
-types::PartialFuncType *PartialCallExpr::getType0() const {
-  std::vector<types::Type *> types;
-  for (auto *e : args)
-    types.push_back(e ? e->getType() : nullptr);
-
-  return types::PartialFuncType::get(func->getType(), types);
 }
 
 CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse)
@@ -1059,17 +919,6 @@ Value *CondExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   result->addIncoming(ifTrue, b1);
   result->addIncoming(ifFalse, b2);
   return result;
-}
-
-types::Type *CondExpr::getType0() const {
-  types::Type *trueType = ifTrue->getType();
-  types::Type *falseType = ifFalse->getType();
-  if (!types::is(trueType, falseType))
-    throw exc::SeqException("inconsistent types '" + trueType->getName() +
-                            "' and '" + falseType->getName() +
-                            "' in conditional expression");
-
-  return trueType;
 }
 
 MatchExpr::MatchExpr() : Expr(), value(nullptr), patterns(), exprs() {}
@@ -1140,18 +989,6 @@ Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   }
 
   return result;
-}
-
-types::Type *MatchExpr::getType0() const {
-  assert(!exprs.empty());
-  types::Type *type = exprs[0]->getType();
-
-  for (auto *expr : exprs) {
-    if (!types::is(type, expr->getType()))
-      throw exc::SeqException("inconsistent result types in match expression");
-  }
-
-  return type;
 }
 
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args,
@@ -1239,35 +1076,15 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return type->initOut(types, names)->is(types::Void) ? self : ret;
 }
 
-types::Type *ConstructExpr::getType0() const {
-  // special-case bool catch-all constructor:
-  if (type->is(types::Bool) && args.size() == 1)
-    return types::Bool;
-
-  // special-case str catch-all constructor:
-  if (type->is(types::Str) && args.size() == 1)
-    return types::Str;
-
-  std::vector<types::Type *> types;
-  for (auto *arg : args)
-    types.push_back(arg->getType());
-
-  types::Type *ret = type->initOut(types, names);
-  return ret->is(types::Void) ? type : ret;
-}
-
 MethodExpr::MethodExpr(Expr *self, Func *func)
     : Expr(), self(self), func(func) {}
 
 Value *MethodExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::MethodType *type = getType0();
+  auto *type = dynamic_cast<types::MethodType *>(getType());
+  assert(type);
   Value *self = this->self->codegen(base, block);
   Value *func = this->func->getFunc(block->getModule());
   return type->make(self, func, block);
-}
-
-types::MethodType *MethodExpr::getType0() const {
-  return types::MethodType::get(self->getType(), func->getFuncType());
 }
 
 OptExpr::OptExpr(Expr *val) : Expr(), val(val) {}
@@ -1277,10 +1094,6 @@ Value *OptExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return ((types::OptionalType *)getType())->make(val, block);
 }
 
-types::Type *OptExpr::getType0() const {
-  return types::OptionalType::get(val->getType());
-}
-
 YieldExpr::YieldExpr(BaseFunc *base) : Expr(), base(base) {}
 
 Value *YieldExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
@@ -1288,16 +1101,6 @@ Value *YieldExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   assert(func);
   assert(base == this->base);
   return func->codegenYieldExpr(block);
-}
-
-types::Type *YieldExpr::getType0() const {
-  if (auto *func = dynamic_cast<Func *>(base)) {
-    types::GenType *gen = func->getFuncType()->getBaseType(0)->asGen();
-    if (!gen)
-      throw exc::SeqException("yield expression in non-generator");
-    return gen->getBaseType(0);
-  }
-  throw exc::SeqException("yield expression outside function");
 }
 
 DefaultExpr::DefaultExpr(types::Type *type) : Expr(type) {}
