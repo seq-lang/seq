@@ -993,8 +993,7 @@ Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
 ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args,
                              std::vector<std::string> names)
-    : Expr(), type(type), type0(nullptr), args(std::move(args)),
-      names(std::move(names)) {
+    : Expr(), type(type), args(std::move(args)), names(std::move(names)) {
   // if all names are empty, clear names vector
   bool empty = true;
   for (const std::string &name : this->names) {

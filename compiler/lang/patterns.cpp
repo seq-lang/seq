@@ -5,9 +5,13 @@ using namespace llvm;
 
 Pattern::Pattern(types::Type *type) : SrcObject(), type(type), tc(nullptr) {}
 
+void Pattern::setType(types::Type *type) { this->type = type; }
+
+types::Type *Pattern::getType() const { return type; }
+
 void Pattern::setTryCatch(TryCatch *tc) { this->tc = tc; }
 
-TryCatch *Pattern::getTryCatch() { return tc; }
+TryCatch *Pattern::getTryCatch() const { return tc; }
 
 bool Pattern::isCatchAll() { return false; }
 

@@ -331,7 +331,7 @@ public:
 
 class CallExpr : public Expr {
 private:
-  mutable Expr *func;
+  Expr *func;
   std::vector<Expr *> args;
   std::vector<std::string> names;
 
@@ -346,7 +346,7 @@ public:
 
 class PartialCallExpr : public Expr {
 private:
-  mutable Expr *func;
+  Expr *func;
   std::vector<Expr *> args;
   std::vector<std::string> names;
 
@@ -385,8 +385,7 @@ public:
 
 class ConstructExpr : public Expr {
 private:
-  mutable types::Type *type;
-  mutable types::Type *type0; // type before deduction, saved for clone
+  types::Type *type;
   std::vector<Expr *> args;
   std::vector<std::string> names;
 
