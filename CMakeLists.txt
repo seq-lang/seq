@@ -49,7 +49,6 @@ set(SEQRT_FILES runtime/lib.h
 add_library(seqrt OBJECT ${SEQRT_FILES})
 add_dependencies(seqrt bdwgc)
 target_include_directories(seqrt PRIVATE runtime ${BDWGC_DIR}/include)
-set_property(TARGET seqrt PROPERTY POSITION_INDEPENDENT_CODE 1)
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
 if(SEQ_THREADED)
   target_compile_definitions(seqrt PRIVATE THREADED=1)
@@ -146,7 +145,7 @@ endif()
 add_executable(seqc runtime/main.cpp)
 target_link_libraries(seqc seq)
 
-# # Seq test
+# Seq test
 # Download and unpack googletest at configure time
 configure_file(test/CMakeLists.txt.in googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
