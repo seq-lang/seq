@@ -60,6 +60,11 @@ seq::Expr *CodegenVisitor::transform(const Expr *expr) {
     v.resultExpr->setSrcInfo(expr->getSrcInfo());
     if (auto t = ctx->getTryCatch())
       v.resultExpr->setTryCatch(t);
+
+    auto t = expr->getType()->getClass();
+    assert(t);
+    DBG("{} |- realizing {}", expr->toString(), t->toString());
+    v.resultExpr->setType(realizeType(t));
   }
   return v.resultExpr;
 }
@@ -265,6 +270,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
     auto varStmt = new seq::VarStmt(transform(stmt->rhs), nullptr);
     if (ctx->isToplevel())
       varStmt->getVar()->setGlobal();
+    varStmt->getVar()->setType(realizeType(stmt->rhs->getType()->getClass()));
     ctx->addVar(var, varStmt->getVar());
     resultStmt = varStmt;
   }
@@ -337,6 +343,7 @@ void CodegenVisitor::visit(const ForStmt *stmt) {
   auto expr = CAST(stmt->var, IdExpr);
   assert(expr);
   ctx->addVar(expr->value, r->getVar());
+  r->getVar()->setType(realizeType(expr->getType()->getClass()));
   transform(stmt->suite);
   ctx->popBlock();
   resultStmt = r;
@@ -575,7 +582,7 @@ seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
   // DBG("q : {} {}", t->name, t->realizeString());
   auto it = ctx->getRealizations()->classRealizations.find(t->name);
   assert(it != ctx->getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->realizeString());
+  auto it2 = it->second.find(t->realizeString(t->name));
   assert(it2 != it->second.end());
   assert(it2->second.handle);
   return it2->second.handle;

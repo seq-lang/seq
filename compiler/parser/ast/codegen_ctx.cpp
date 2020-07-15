@@ -157,7 +157,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
   assert(t && t->canRealize());
   auto it = getRealizations()->classRealizations.find(t->name);
   assert(it != getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->realizeString());
+  auto it2 = it->second.find(t->realizeString(t->name));
   assert(it2 != it->second.end());
   auto &real = it2->second;
   if (real.handle)
@@ -192,12 +192,21 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::OptionalType::get(types[0]);
   } else if (name.substr(0, 11) == "__function_") {
-    assert(types.size() >= 1 && statics.size() == 0);
+    // DBG("{} -- {} {} | {} {}", t->toString(), types.size(), statics.size(),
+    //     t->explicits.size(), t->args.size());
+    // assert(types.size() >= 1 && statics.size() == 0);
+
+    types.clear();
+    for (auto &m : t->args)
+      types.push_back(realizeType(m->getClass()));
     auto ret = types[0];
     types.erase(types.begin());
     real.handle = seq::types::FuncType::get(types, ret);
   } else if (name.substr(0, 10) == "__partial_") {
-    assert(types.size() >= 1 && statics.size() == 0);
+    // assert(types.size() >= 1 && statics.size() == 0);
+    types.clear();
+    for (auto &m : t->args)
+      types.push_back(realizeType(m->getClass()));
     auto ret = types[0];
     types.erase(types.begin());
     auto fn = seq::types::FuncType::get(types, ret);

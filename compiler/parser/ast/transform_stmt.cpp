@@ -1141,14 +1141,16 @@ RealizationContext::ClassRealization
 TransformVisitor::realizeType(ClassTypePtr t) {
   assert(t && t->canRealize());
   try {
+    auto rs =
+        t->realizeString(t->name); // necessary for generating __function stubs
     auto it = ctx->getRealizations()->classRealizations.find(t->name);
     if (it != ctx->getRealizations()->classRealizations.end()) {
-      auto it2 = it->second.find(t->realizeString());
+      auto it2 = it->second.find(rs);
       if (it2 != it->second.end())
         return it2->second;
     }
 
-    DBG("realizing ty {} -> {}", t->name, t->realizeString());
+    DBG("realizing ty {} -> {}", t->name, rs);
     vector<pair<string, ClassTypePtr>> args;
     /// TODO map-vector order?
     for (auto &m : ctx->getRealizations()->classes[t->name].members) {
@@ -1156,11 +1158,10 @@ TransformVisitor::realizeType(ClassTypePtr t) {
       assert(mt->canRealize() && mt->getClass());
       args.push_back(make_pair(m.first, realizeType(mt->getClass()).type));
     }
-    ctx->getRealizations()->realizationLookup[t->realizeString()] = t->name;
+    ctx->getRealizations()->realizationLookup[rs] = t->name;
     // ctx->addRealization(t);
-    return ctx->getRealizations()
-               ->classRealizations[t->name][t->realizeString()] = {
-               t->realizeString(), t, args, nullptr, ctx->getBase()};
+    return ctx->getRealizations()->classRealizations[t->name][rs] = {
+               rs, t, args, nullptr, ctx->getBase()};
   } catch (exc::ParserException &e) {
     e.trackRealize(t->toString(), getSrcInfo());
     throw;

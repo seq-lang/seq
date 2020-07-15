@@ -112,8 +112,8 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
   if (v.resultExpr && v.resultExpr->getType() &&
       v.resultExpr->getType()->canRealize()) {
     if (auto c = v.resultExpr->getType()->getClass())
-      if (!c->getFunc())
-        realizeType(c);
+      // if (!c->getFunc())
+      realizeType(c);
   }
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
     error("unexpected type expression");
