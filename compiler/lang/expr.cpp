@@ -155,7 +155,9 @@ Value *VarPtrExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return var->getPtr(base);
 }
 
-FuncExpr::FuncExpr(BaseFunc *func) : func(func) { name = "func"; }
+FuncExpr::FuncExpr(BaseFunc *func) : Expr(func->getFuncType()), func(func) {
+  name = "func";
+}
 
 BaseFunc *FuncExpr::getFunc() { return func; }
 
