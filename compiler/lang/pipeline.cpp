@@ -7,7 +7,7 @@ using namespace llvm;
 
 PipeExpr::PipeExpr(std::vector<seq::Expr *> stages, std::vector<bool> parallel)
     : Expr(), stages(std::move(stages)), parallel(std::move(parallel)),
-      entry(nullptr) /* syncReg(nullptr) */ {
+      intermediateTypes(), entry(nullptr), syncReg(nullptr) {
   if (this->parallel.empty())
     this->parallel = std::vector<bool>(this->stages.size(), false);
 }
@@ -15,6 +15,11 @@ PipeExpr::PipeExpr(std::vector<seq::Expr *> stages, std::vector<bool> parallel)
 void PipeExpr::setParallel(unsigned which) {
   assert(which < parallel.size());
   parallel[which] = true;
+}
+
+void PipeExpr::setIntermediateTypes(std::vector<types::Type *> types) {
+  assert(types.size() == stages.size());
+  intermediateTypes = std::move(types);
 }
 
 // Some useful info for codegen'ing the "drain" step after prefetch transform.
