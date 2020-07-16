@@ -653,10 +653,22 @@ string TransformVisitor::generateVariardicStub(const string &name, int len) {
                     " @internal\n  "
                     "def __new__(what: ptr[byte]) -> function[{1}]: pass\n",
                     code, join(generics, ", "));
-    } else if (name != "tuple" && name != "partial") {
+    } else if (name == "tuple") {
+      string str;
+      str = "  def __str__(self) -> str:\n";
+      str += format("    s = list[str]({})\n", len + 2);
+      str += format("    s.append('(')\n");
+      for (int i = 0; i < len; i++) {
+        str += format("    s.append(self[{}].__str__())\n", i);
+        str += format("    s.append('{}')\n", i == len - 1 ? ")" : ", ");
+      }
+      str += "    return str.cat(s)\n";
+      code += ":\n" + str;
+    } else if (name != "partial") {
       error("invalid variardic type");
     }
-    DBG("[VAR] generating {}...", typeName);
+    DBG("[VAR] generating {}...\n{}", typeName, code);
+
     auto a = parseCode(ctx->getFilename(), code);
     auto i = ctx->getImports()->getImport("");
     auto stmtPtr = dynamic_cast<SuiteStmt *>(i->statements.get());

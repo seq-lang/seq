@@ -63,7 +63,7 @@ seq::Expr *CodegenVisitor::transform(const Expr *expr) {
 
     auto t = expr->getType()->getClass();
     assert(t);
-    DBG("{} |- realizing {}", expr->toString(), t->toString());
+    // DBG("{} |- realizing {}", expr->toString(), t->toString());
     v.resultExpr->setType(realizeType(t));
   }
   return v.resultExpr;
@@ -272,6 +272,11 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
       varStmt->getVar()->setGlobal();
     varStmt->getVar()->setType(realizeType(stmt->rhs->getType()->getClass()));
     ctx->addVar(var, varStmt->getVar());
+    // DBG("[lhs] {} |- {}", stmt->lhs->toString(),
+    //     stmt->lhs->getType()->toString());
+    // DBG("[rhs] {} |- {} | {}", stmt->rhs->toString(),
+    //     stmt->rhs->getType()->toString(),
+    //     realizeType(stmt->rhs->getType()->getClass())->getName());
     resultStmt = varStmt;
   }
 }
@@ -473,7 +478,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     assert(f);
     if (in(real.ast->attributes, "internal"))
       continue;
-    DBG("[codegen] generating fn {}", real.fullName);
+    // DBG("[codegen] generating fn {}", real.fullName);
     f->setName(chop(real.fullName));
     f->setSrcInfo(getSrcInfo());
     if (!ctx->isToplevel())
@@ -579,10 +584,9 @@ void CodegenVisitor::visit(const GuardedPattern *pat) {
 
 seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
   assert(t && t->canRealize());
-  // DBG("q : {} {}", t->name, t->realizeString());
   auto it = ctx->getRealizations()->classRealizations.find(t->name);
   assert(it != ctx->getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->realizeString(t->name));
+  auto it2 = it->second.find(t->realizeString(t->name, false));
   assert(it2 != it->second.end());
   assert(it2->second.handle);
   return it2->second.handle;

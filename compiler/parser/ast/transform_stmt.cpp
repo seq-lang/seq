@@ -749,8 +749,6 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     auto t = make_shared<FuncType>(argTypes, genericTypes, ctx->getBaseType(),
                                    canonicalName, realizationArgs);
     generateVariardicStub("function", argTypes.size());
-    // t->realizationInfo = make_shared<FuncType::RealizationInfo>(
-    // canonicalName, pending, realizationArgs, ctx->getBaseType());
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
@@ -1141,8 +1139,8 @@ RealizationContext::ClassRealization
 TransformVisitor::realizeType(ClassTypePtr t) {
   assert(t && t->canRealize());
   try {
-    auto rs =
-        t->realizeString(t->name); // necessary for generating __function stubs
+    auto rs = t->realizeString(
+        t->name, false); // necessary for generating __function stubs
     auto it = ctx->getRealizations()->classRealizations.find(t->name);
     if (it != ctx->getRealizations()->classRealizations.end()) {
       auto it2 = it->second.find(rs);

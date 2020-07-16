@@ -157,13 +157,13 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
   assert(t && t->canRealize());
   auto it = getRealizations()->classRealizations.find(t->name);
   assert(it != getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->realizeString(t->name));
+  auto it2 = it->second.find(t->realizeString(t->name, false));
   assert(it2 != it->second.end());
   auto &real = it2->second;
   if (real.handle)
     return real.handle;
 
-  DBG("[codegen] generating ty {}", real.fullName);
+  // DBG("[codegen] generating ty {}", real.fullName);
 
   vector<seq::types::Type *> types;
   vector<int> statics;
@@ -192,10 +192,6 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::OptionalType::get(types[0]);
   } else if (name.substr(0, 11) == "__function_") {
-    // DBG("{} -- {} {} | {} {}", t->toString(), types.size(), statics.size(),
-    //     t->explicits.size(), t->args.size());
-    // assert(types.size() >= 1 && statics.size() == 0);
-
     types.clear();
     for (auto &m : t->args)
       types.push_back(realizeType(m->getClass()));
@@ -237,6 +233,8 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
       real.handle = cls;
     }
   }
+  DBG("{} -> {} -> {}", t->toString(), t->realizeString(t->name, false),
+      real.handle->getName());
   return real.handle;
 }
 
@@ -265,8 +263,8 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
       auto &real = f.second;
       auto ast = real.ast;
       if (in(ast->attributes, "internal")) {
-        DBG("[codegen] generating internal fn {} ~ {}", real.fullName,
-            ast->name);
+        // DBG("[codegen] generating internal fn {} ~ {}", real.fullName,
+        // ast->name);
         vector<seq::types::Type *> types;
 
         // static: has self as arg
@@ -281,7 +279,7 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
               stdlib->lctx->realizeType(real.type->args[i]->getClass()));
         real.handle = typ->findMagic(ast->name, types);
       } else {
-        DBG("[codegen] generating fn stub {}", real.fullName);
+        // DBG("[codegen] generating fn stub {}", real.fullName);
         real.handle = new seq::Func();
       }
       stdlib->lctx->addFunc(real.fullName, real.handle);

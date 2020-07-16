@@ -222,23 +222,26 @@ string ClassType::toString(bool reduced) const {
                      chop(name), g.size() ? fmt::format("[{}]", g) : "");
 }
 
-string ClassType::realizeString(const string &className) const {
+string ClassType::realizeString(const string &className, bool deep,
+                                int firstArg) const {
   vector<string> gs;
   for (auto &a : explicits)
     if (!a.name.empty())
       gs.push_back(a.type->realizeString());
   string s = join(gs, ",");
-  if (isCallable(name)) { // special case as functions have generics as well
+  if (isCallable(
+          name)) { // special case as functions have separate generics as well
     vector<string> as;
-    for (int i = 1; i < args.size(); i++) // return type is elided!
+    for (int i = firstArg; i < args.size(); i++) // return type is elided!
       as.push_back(args[i]->realizeString());
     s += (s.size() && as.size() ? ";" : "") + join(as, ",");
   }
-  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "",
+  return fmt::format("{}{}{}",
+                     deep && parent ? parent->realizeString() + ":" : "",
                      chop(className), s.empty() ? "" : fmt::format("[{}]", s));
 }
 
-string ClassType::realizeString() const { return realizeString(name); }
+string ClassType::realizeString() const { return realizeString(name, false); }
 
 int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getClass()) {
@@ -378,7 +381,7 @@ FuncType::FuncType(ClassTypePtr c, const string &canonicalName,
       canonicalName(canonicalName), argDefs(CL(ad)) {}
 
 string FuncType::realizeString() const {
-  return ClassType::realizeString(canonicalName);
+  return ClassType::realizeString(canonicalName, true, 1);
 }
 
 TypePtr FuncType::generalize(int level) {

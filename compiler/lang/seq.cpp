@@ -1,6 +1,7 @@
 #include "lang/seq.h"
 #include "parser/common.h"
 #include <cassert>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <system_error>
@@ -246,7 +247,10 @@ void SeqModule::codegen(Module *module) {
 
 static void verifyModuleFailFast(Module &module) {
   if (verifyModule(module, &errs())) {
-    errs() << module;
+    auto fo = fopen("llvm.dump", "w");
+    raw_fd_ostream fout(fileno(fo), true);
+    fout << module;
+    fout.close();
     assert(0);
   }
 }

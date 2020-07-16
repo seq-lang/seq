@@ -244,7 +244,8 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
-  std::string realizeString(const std::string &n) const;
+  std::string realizeString(const std::string &n, bool deep = true,
+                            int firstArg = 0) const;
   std::string realizeString() const override;
   ClassTypePtr getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
