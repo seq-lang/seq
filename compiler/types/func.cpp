@@ -19,29 +19,9 @@ Value *types::FuncType::call(BaseFunc *base, Value *self,
                              BasicBlock *block, BasicBlock *normal,
                              BasicBlock *unwind) {
   LLVMContext &context = block->getContext();
-  std::vector<Value *> argsFixed;
-  assert(args.size() == inTypes.size());
-  for (unsigned i = 0; i < args.size(); i++) {
-    // implicit optional conversion allows cases like foo(x, y, z, None)
-    if (types::OptionalType *opt = ::asOpt(inTypes[i])) {
-      Value *arg = dyn_cast<ConstantPointerNull>(args[i]) ? nullptr : args[i];
-      if (arg) {
-        llvm::Type *t1 = opt->getBaseType(0)->getLLVMType(context);
-        llvm::Type *t2 = arg->getType();
-        // this can only happen when passing a variable None as a POD optional,
-        // since the type checker allows 'NoneType' arguments on any optional.
-        if (t1 != t2)
-          arg = nullptr;
-      }
-      argsFixed.push_back(opt->make(arg, block));
-    } else {
-      argsFixed.push_back(args[i]);
-    }
-  }
-
   IRBuilder<> builder(block);
-  return normal ? (Value *)builder.CreateInvoke(self, normal, unwind, argsFixed)
-                : builder.CreateCall(self, argsFixed);
+  return normal ? (Value *)builder.CreateInvoke(self, normal, unwind, args)
+                : builder.CreateCall(self, args);
 }
 
 Value *types::FuncType::defaultValue(BasicBlock *block) {
