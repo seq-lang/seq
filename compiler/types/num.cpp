@@ -90,6 +90,14 @@ void types::IntType::initOps() {
        },
        true},
 
+      {"__int__",
+       {},
+       Int,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return self;
+       },
+       false},
+
       {"__str__",
        {},
        Str,
@@ -557,6 +565,17 @@ void types::IntNType::initOps() {
          return args[0];
        },
        true},
+
+      {"__int__",
+       {},
+       Int,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return sign ? b.CreateSExtOrTrunc(self,
+                                           Int->getLLVMType(b.getContext()))
+                     : b.CreateZExtOrTrunc(self,
+                                           Int->getLLVMType(b.getContext()));
+       },
+       false},
 
       {"__copy__",
        {},

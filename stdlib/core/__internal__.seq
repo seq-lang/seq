@@ -149,6 +149,8 @@ extend int:
     @internal
     def __new__(b: byte) -> int: pass
     @internal
+    def __int__(self) -> int: pass
+    @internal
     def __str__(self) -> str: pass
     @internal
     def __copy__(self) -> int: pass
@@ -422,6 +424,8 @@ extend UInt[N]:
     def __new__(what: int) -> UInt[N]: pass
     @internal
     def __new__(what: Int[N]) -> UInt[N]: pass
+    @internal
+    def __int__(self) -> int: pass
     @internal
     def __copy__(self) -> UInt[N]: pass
     @internal
