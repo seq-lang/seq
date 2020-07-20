@@ -23,6 +23,10 @@ type str(len: int, ptr: ptr[byte]):
 
 extend ptr[T]:
     @internal
+    def __elemsize__() -> int: pass
+    @internal
+    def __atomic__() -> bool: pass
+    @internal
     def as_byte(self) -> ptr[byte]: pass
     @internal
     def __new__() -> ptr[T]: pass
@@ -323,10 +327,6 @@ extend generator[T]:  # class
 
 @internal
 type array[T](len: int, ptr: ptr[T]):
-    @internal
-    def __elemsize__() -> int: pass
-    @internal
-    def __atomic__() -> bool: pass
     @internal
     def __new__(len: int) -> array[T]: pass
     @internal
