@@ -17,6 +17,25 @@ void types::PtrType::initOps() {
     return;
 
   vtable.magic = {
+      {"__elemsize__",
+       {},
+       Int,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         const size_t size =
+             getBaseType(0)->size(b.GetInsertBlock()->getModule());
+         return ConstantInt::get(seqIntLLVM(b.getContext()), size);
+       },
+       true},
+
+      {"__atomic__",
+       {},
+       Bool,
+       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         const unsigned atomic = getBaseType(0)->isAtomic() ? 1 : 0;
+         return ConstantInt::get(Bool->getLLVMType(b.getContext()), atomic);
+       },
+       true},
+
       {"__new__",
        {},
        this,

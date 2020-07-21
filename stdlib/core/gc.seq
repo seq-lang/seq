@@ -1,10 +1,10 @@
 # Primarily for internal use. Regular users should not use this module.
 
 def sizeof[T]():
-    return array[T].__elemsize__()
+    return ptr[T].__elemsize__()
 
 def atomic[T]():
-    return array[T].__atomic__()
+    return ptr[T].__atomic__()
 
 def alloc(sz: int):
     return _C.seq_alloc(sz)
