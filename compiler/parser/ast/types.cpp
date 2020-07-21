@@ -111,9 +111,7 @@ int LinkType::unify(TypePtr typ, Unification &us) {
         return 1;
     }
     if (!occurs(typ, us)) {
-#ifdef TYPE_DEBUG
-      DBG("UNIFY: {} <- {}", id, typ->toString());
-#endif
+      LOG9("UNIFY: {} <- {}", id, typ->toString());
       us.linked.push_back(static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
       type = typ;

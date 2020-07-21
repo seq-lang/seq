@@ -87,7 +87,6 @@ void Func::addAttribute(std::string attr) {
     auto i = name.find('['); // chop off realization part
     if (i != std::string::npos)
       name = name.substr(0, i);
-    // DBG("[ariya] adding builtin {}", name);
     builtins[name] = this;
   } else if (attr == "prefetch") {
     if (prefetch)
@@ -364,9 +363,6 @@ void Func::codegenReturn(Value *val, types::Type *type, BasicBlock *&block,
       if (val)
         throw exc::SeqException("cannot return value from generator");
     } else {
-      // DBG(" ??? {} {} {} {}", (void *)val, (void *)type,
-      //     types::is(type, outType), outType->is(types::Void),
-      //     type->);
       if ((val && type && !types::is(type, outType)) ||
           (!val && !outType->is(types::Void)))
         throw exc::SeqException("cannot return '" + type->getName() +
@@ -521,7 +517,7 @@ Func *Func::getBuiltin(const std::string &name) {
   auto itr = builtins.find(name);
 
   if (itr == builtins.end()) {
-    DBG("[ariya] can't find builtin {}", name);
+    LOG("[ariya] can't find builtin {}", name);
     assert(false);
   }
   return itr->second;

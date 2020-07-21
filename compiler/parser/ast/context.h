@@ -112,6 +112,8 @@ public: /* Realizations */
 public:
   std::vector<ClassRealization> getClassRealizations(const std::string &name);
   std::vector<FuncRealization> getFuncRealizations(const std::string &name);
+
+  std::unordered_set<std::string> variardicCache;
 };
 
 class TypeContext;
@@ -161,13 +163,11 @@ public:
 
   void add(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
-    // DBG("add {}", name);
     map[name].push_front(var);
     stack.front().push_back(name);
   }
   void addToplevel(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
-    // DBG("add {}", name);
     map[name].push_back(var);
     stack.back().push_back(name); // add to the latest "level"
   }
@@ -185,7 +185,6 @@ public:
     stack.pop_front();
   }
   void remove(const std::string &name) {
-    // DBG("remove {}", name);
     removeFromMap(name);
     for (auto &s : stack) {
       auto i = std::find(s.begin(), s.end(), name);

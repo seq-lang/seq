@@ -293,6 +293,11 @@ void FormatVisitor::visit(const AssignStmt *stmt) {
   }
 }
 
+void FormatVisitor::visit(const UpdateStmt *stmt) {
+  result = fmt::format("{} = {}  # update", transform(stmt->lhs),
+                       transform(stmt->rhs));
+}
+
 void FormatVisitor::visit(const DelStmt *stmt) {
   result = fmt::format("{} {}", keyword("del"), transform(stmt->expr));
 }

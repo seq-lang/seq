@@ -107,6 +107,7 @@ public:
   void visit(const SuiteStmt *) override;
   void visit(const PassStmt *) override;
   void visit(const BreakStmt *) override;
+  void visit(const UpdateStmt *) override;
   void visit(const ContinueStmt *) override;
   void visit(const ExprStmt *) override;
   void visit(const AssignStmt *) override;

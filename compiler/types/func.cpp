@@ -140,7 +140,6 @@ types::Type *types::FuncType::getCallType(const std::vector<Type *> &inTypes) {
 
   for (unsigned i = 0; i < inTypes.size(); i++)
     if (!compatibleArgType(inTypes[i], this->inTypes[i])) {
-      DBG("{} / {}", getName(), i);
       throw exc::SeqException("expected function input type '" +
                               expectedTypeName(this->inTypes[i]) +
                               "', but got '" + inTypes[i]->getName() + "'");

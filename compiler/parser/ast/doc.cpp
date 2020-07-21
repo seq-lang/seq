@@ -54,7 +54,7 @@ void DocStmtVisitor::visit(const FunctionStmt *stmt) {
   string as;
   for (auto &a : stmt->args)
     as += " " + a.toString();
-  DBG("(#fun {}{}{}{}{}{})", stmt->name,
+  LOG("(#fun {}{}{}{}{}{})", stmt->name,
       stmt->generics.size()
           ? format(" :generics {}", fmt::join(stmt->generics, " "))
           : "",
@@ -82,7 +82,7 @@ void DocStmtVisitor::visit(const ClassStmt *stmt) {
   string as;
   for (auto &a : stmt->args)
     as += " " + a.toString();
-  DBG("(#{} {}{}{} {})", (stmt->isRecord ? "type" : "class"), stmt->name,
+  LOG("(#{} {}{}{} {})", (stmt->isRecord ? "type" : "class"), stmt->name,
       stmt->generics.size() ? format(" :gen {}", fmt::join(stmt->generics, " "))
                             : "",
       stmt->args.size() ? " :args" + as : "",

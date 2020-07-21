@@ -46,20 +46,12 @@ StmtPtr TransformVisitor::transform(const Stmt *stmt) {
   TransformVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
 
-  // auto s = stmt->toString();
-  // std::replace(s.begin(), s.end(), '\n', ';');
-  // DBG("{{ {}", s);
-  // __level__++;
   stmt->accept(v);
-  // __level__--;
   if (v.prependStmts->size()) {
     if (v.resultStmt)
       v.prependStmts->push_back(move(v.resultStmt));
     v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
   }
-  // s = v.resultStmt ? v.resultStmt->toString() : "#pass";
-  // std::replace(s.begin(), s.end(), '\n', ';');
-  // DBG("  -> {} }}", s);
   return move(v.resultStmt);
 }
 
@@ -395,7 +387,7 @@ StmtPtr TransformVisitor::addMethod(Stmt *s, const string &canonicalName) {
     auto val = ctx->find(name);
     assert(val);
     auto fv = val->getType()->getFunc();
-    DBG("{} ... {}", name, val->getType()->toString());
+    LOG9("[add_method] {} ... {}", name, val->getType()->toString());
     assert(fv);
     ctx->getRealizations()->classes[canonicalName].methods[f->name].push_back(
         fv);
@@ -806,7 +798,6 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     ctx->addType(canonicalName, ct);
   }
   ctx->getRealizations()->classASTs[canonicalName] = ct;
-  // DBG("* [class] {} :- {}", canonicalName, *ct);
 
   ctx->increaseLevel();
   vector<string> strArgs;
@@ -1086,12 +1077,11 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
       }
     auto old = ctx->getReturnType();
     auto oldSeen = ctx->wasReturnSet();
-    // DBG("ret --> {}", ret->toString());
     ctx->setReturnType(ret);
     ctx->setWasReturnSet(false);
     ctx->addBaseType(t);
 
-    // __level__++;
+    __level__++;
 
     // Need to populate funcRealization in advance to make recursive functions
     // viable
@@ -1102,22 +1092,20 @@ TransformVisitor::realizeFunc(FuncTypePtr t) {
 
     auto realized =
         isInternal ? nullptr : realizeBlock(ast.second->suite.get());
-    // __level__--;
+    __level__--;
     ctx->popBase();
     ctx->popBaseType();
 
-    // DBG("======== BEGIN {} :- {} ========", t->name, *t);
     if (realized && !ctx->wasReturnSet() && ret)
       forceUnify(ctx->getReturnType(), ctx->findInternal("void"));
     assert(ret->canRealize() && ret->getClass());
     realizeType(ret->getClass());
-    // DBG("======== END {} :- {} ========", t->name, *t);
 
     assert(ast.second->args.size() == t->args.size() - 1);
     vector<Param> args;
     for (auto &i : ast.second->args)
       args.push_back({i.name, nullptr, nullptr});
-    DBG("realized fn {} -> {}", name, t->realizeString());
+    LOG7("realized fn {} -> {}", name, t->realizeString());
     result.ast = Nx<FunctionStmt>(ast.second.get(), ast.second->name, nullptr,
                                   vector<Param>(), move(args), move(realized),
                                   ast.second->attributes);
@@ -1148,7 +1136,7 @@ TransformVisitor::realizeType(ClassTypePtr t) {
         return it2->second;
     }
 
-    DBG("realizing ty {} -> {}", t->name, rs);
+    LOG7("realizing ty {} -> {}", t->name, rs);
     vector<pair<string, ClassTypePtr>> args;
     /// TODO map-vector order?
     for (auto &m : ctx->getRealizations()->classes[t->name].members) {
@@ -1177,7 +1165,6 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
   // TODO: this can be probably optimized one day...
   int minUnbound = ctx->getRealizations()->unboundCount;
   for (int iter = 0, prevSize = INT_MAX;; iter++) {
-    // DBG("{}", string(60, '-'));
     ctx->addBlock();
     TransformVisitor v(ctx);
     result = v.transform(result ? result.get() : stmt);
@@ -1206,7 +1193,7 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
           if (ub->getLink()->id >= minUnbound) {
             if (!fu)
               fu = ub;
-            DBG("NOPE {} @ {}", ub->toString(), ub->getSrcInfo());
+            LOG7("NOPE {} @ {}", ub->toString(), ub->getSrcInfo());
           }
         error(fu, "cannot resolve unbound variables");
       }

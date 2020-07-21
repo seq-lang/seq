@@ -39,11 +39,25 @@
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
 
-extern int __level__;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-#define DBG(c, ...)                                                            \
-  fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__)
+
+// Level 7
+extern int __dbg_level__;
+extern int __level__;
+#define DBG(l, c, ...)                                                         \
+  {                                                                            \
+    if (__dbg_level__ >= l)                                                    \
+      fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__); \
+  }
+#define LOG(c, ...) DBG(0, c, ##__VA_ARGS__)
+#define LOG1(c, ...) DBG(1, c, ##__VA_ARGS__)
+#define LOG2(c, ...) DBG(2, c, ##__VA_ARGS__)
+#define LOG3(c, ...) DBG(3, c, ##__VA_ARGS__)
+#define LOG4(c, ...) DBG(4, c, ##__VA_ARGS__)
+#define LOG7(c, ...) DBG(7, c, ##__VA_ARGS__)
+#define LOG8(c, ...) DBG(8, c, ##__VA_ARGS__)
+#define LOG9(c, ...) DBG(9, c, ##__VA_ARGS__)
 #define CAST(s, T) dynamic_cast<T *>(s.get())
 #pragma clang diagnostic pop
 

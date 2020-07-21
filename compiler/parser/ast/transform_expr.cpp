@@ -39,8 +39,6 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-int __level__ = 0;
-
 namespace seq {
 namespace ast {
 
@@ -96,19 +94,14 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
     return nullptr;
   TransformVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
-#ifdef TYPE_DEBUG
-  DBG("[ {} :- {} # {}", *expr,
-      expr->getType() ? expr->getType()->toString() : "-",
-      expr->getSrcInfo().line);
+  LOG9("[ {} :- {} # {}", *expr,
+       expr->getType() ? expr->getType()->toString() : "-",
+       expr->getSrcInfo().line);
   __level__++;
-#endif
   expr->accept(v);
-#ifdef TYPE_DEBUG
   __level__--;
-  DBG("  {} :- {} ]", *v.resultExpr,
-      v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
-#endif
-
+  LOG9("  {} :- {} ]", *v.resultExpr,
+       v.resultExpr->getType() ? v.resultExpr->getType()->toString() : "-");
   if (v.resultExpr && v.resultExpr->getType() &&
       v.resultExpr->getType()->canRealize()) {
     if (auto c = v.resultExpr->getType()->getClass())
@@ -225,12 +218,10 @@ string TransformVisitor::patchIfRealizable(TypePtr typ, bool isClass) {
     if (isClass && typ->canRealize()) {
       auto r = realizeType(typ->getClass());
       forceUnify(typ, r.type);
-      // DBG("patching ty {} -> {}", typ->toString(), r.fullName);
       return r.fullName;
     } else if (typ->getFunc()) {
       auto r = realizeFunc(typ->getFunc());
       forceUnify(typ, r.type);
-      // DBG("patching fn {} -> {}", typ->toString(), r.fullName);
       return r.fullName;
     }
   }
@@ -491,7 +482,7 @@ void TransformVisitor::fixExprName(ExprPtr &e, const string &newName) {
   else if (auto i = CAST(e, DotExpr))
     i->member = newName;
   else {
-    DBG("fixing {}", *e);
+    LOG7("fixing {}", *e);
     assert(false);
   }
 }
@@ -634,11 +625,11 @@ void TransformVisitor::visit(const StackAllocExpr *expr) {
 
 string TransformVisitor::generateVariardicStub(const string &name, int len) {
   // TODO: handle name clashes (add special name character?)
-  static unordered_set<string> cache;
   auto typeName = fmt::format("__{}_{}", name, len);
   assert(len >= 1);
-  if (cache.find(typeName) == cache.end()) {
-    cache.insert(typeName);
+  if (ctx->getRealizations()->variardicCache.find(typeName) ==
+      ctx->getRealizations()->variardicCache.end()) {
+    ctx->getRealizations()->variardicCache.insert(typeName);
     vector<string> generics, args;
     for (int i = 1; i <= len; i++) {
       generics.push_back(format("T{}", i));
@@ -667,7 +658,7 @@ string TransformVisitor::generateVariardicStub(const string &name, int len) {
     } else if (name != "partial") {
       error("invalid variardic type");
     }
-    DBG("[VAR] generating {}...\n{}", typeName, code);
+    LOG7("[VAR] generating {}...\n{}", typeName, code);
 
     auto a = parseCode(ctx->getFilename(), code);
     auto i = ctx->getImports()->getImport("");

@@ -63,7 +63,6 @@ seq::Expr *CodegenVisitor::transform(const Expr *expr) {
 
     auto t = expr->getType()->getClass();
     assert(t);
-    // DBG("{} |- realizing {}", expr->toString(), t->toString());
     v.resultExpr->setType(realizeType(t));
   }
   return v.resultExpr;
@@ -71,11 +70,6 @@ seq::Expr *CodegenVisitor::transform(const Expr *expr) {
 
 seq::Stmt *CodegenVisitor::transform(const Stmt *stmt) {
   CodegenVisitor v(ctx);
-
-  // FormatVisitor f(nullptr, 0);
-  // DBG(":: {}:{} -> {}", stmt->getSrcInfo().file, stmt->getSrcInfo().line,
-  // stmt->toString());
-
   stmt->accept(v);
   v.setSrcInfo(stmt->getSrcInfo());
   if (v.resultStmt) {
@@ -272,11 +266,6 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
       varStmt->getVar()->setGlobal();
     varStmt->getVar()->setType(realizeType(stmt->rhs->getType()->getClass()));
     ctx->addVar(var, varStmt->getVar());
-    // DBG("[lhs] {} |- {}", stmt->lhs->toString(),
-    //     stmt->lhs->getType()->toString());
-    // DBG("[rhs] {} |- {} | {}", stmt->rhs->toString(),
-    //     stmt->rhs->getType()->toString(),
-    //     realizeType(stmt->rhs->getType()->getClass())->getName());
     resultStmt = varStmt;
   }
 }
@@ -426,7 +415,6 @@ void CodegenVisitor::visit(const ImportStmt *stmt) {
       //     ctx->add(i.first, i.second.front());
       // }
       // auto c = import->lctx->find(w.first);
-      // DBG("finding {} in {}", w.first, stmt->from.first);
       // assert(c);
       // ctx->add(w.second == "" ? w.first : w.second, c);
       // }
@@ -472,13 +460,12 @@ void CodegenVisitor::visit(const ThrowStmt *stmt) {
 
 void CodegenVisitor::visit(const FunctionStmt *stmt) {
   auto name = ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo());
-  // DBG("fn checking {}", name);
   for (auto &real : ctx->getRealizations()->getFuncRealizations(name)) {
     auto f = (seq::Func *)real.handle;
     assert(f);
     if (in(real.ast->attributes, "internal"))
       continue;
-    // DBG("[codegen] generating fn {}", real.fullName);
+    // LOG7("[codegen] generating fn {}", real.fullName);
     f->setName(chop(real.fullName));
     f->setSrcInfo(getSrcInfo());
     if (!ctx->isToplevel())

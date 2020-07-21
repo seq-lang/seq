@@ -18,10 +18,13 @@ using std::make_shared;
 using std::string;
 using std::vector;
 
+int __level__ = 0;
+int __dbg_level__ = 0;
+
 namespace seq {
 
 void generateDocstr(const std::string &file) {
-  DBG("DOC MODE! {}", 1);
+  LOG("DOC MODE! {}", 1);
   // ast::DocStmtVisitor d;
   // ast::parse_file(file)->accept(d);
 }
@@ -46,19 +49,23 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
       cases.push_back(current);
     FILE *fo = fopen("tmp/out.htm", "w");
     seq::SeqModule *module;
-    for (int ci = 0; ci < cases.size(); ci++) {
+
+    int st = 8, lim = 1;
+    for (int ci = 8, ii = 0; ci < cases.size() && ii < lim; ci++, ii++) {
+      LOG("[[[ case {} ]]]", ci);
       auto stmts = ast::parseCode(file, cases[ci]);
       auto ctx = ast::TypeContext::getContext(argv0, file);
       auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
 
-      DBG("Done with typecheck\n--------------------------------");
-      DBG("{}", ast::FormatVisitor::format(ctx, tv, false, true));
+      LOG("--- Done with typecheck ---");
+      LOG("{}", ast::FormatVisitor::format(ctx, tv, false, true));
       module = new seq::SeqModule();
       module->setFileName(file);
       auto lctx = ast::LLVMContext::getContext(file, ctx, module);
       ast::CodegenVisitor(lctx).transform(tv.get());
-      DBG("Done with codegen\n--------------------------------");
-      return module;
+      LOG("--- Done with codegen ---");
+      module->execute({}, {});
+      // return module;
 
       fmt::print(fo, "-------------------------------<hr/>\n");
     }

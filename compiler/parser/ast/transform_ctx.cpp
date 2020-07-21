@@ -111,9 +111,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
       types::LinkType::Unbound, realizations->getUnboundCount()++, level);
   t->setSrcInfo(srcInfo);
   if (setActive) {
-#ifdef TYPE_DEBUG
-    DBG("UNBOUND: {} @ {} ", t->toString(0), srcInfo);
-#endif
+    LOG9("UNBOUND: {} @ {} ", t->toString(0), srcInfo);
     activeUnbounds.insert(t);
   }
   return t;
@@ -140,13 +138,8 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo,
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
-#ifdef TYPE_DEBUG
-        DBG("UNBOUND: {} @ {} (during inst of {})", i.second->toString(0),
-            srcInfo, type->toString());
-#endif
-        // if (dynamic_pointer_cast<types::LinkType>(i.second)->id == 581) {
-        // DBG("woho");
-        // }
+        LOG9("UNBOUND: {} @ {} (during inst of {})", i.second->toString(0),
+             srcInfo, type->toString());
         activeUnbounds.insert(i.second);
       }
     }
@@ -250,15 +243,15 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
 void TypeContext::dump(int pad) {
   auto ordered =
       std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
-  DBG("base: {}", getBase());
+  LOG("base: {}", getBase());
   for (auto &i : ordered) {
     std::string s;
     auto t = i.second.front();
     if (auto im = t->getImport()) {
-      DBG("{}{:.<25} {}", string(pad * 2, ' '), i.first, "<import>");
+      LOG("{}{:.<25} {}", string(pad * 2, ' '), i.first, "<import>");
       getImports()->getImport(im->getFile())->tctx->dump(pad + 1);
     } else
-      DBG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first,
+      LOG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first,
           t->getType()->toString(true), t->getBase());
   }
 }
