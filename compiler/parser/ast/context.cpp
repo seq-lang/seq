@@ -39,17 +39,15 @@ string RealizationContext::getCanonicalName(const SrcInfo &info) const {
 }
 
 string RealizationContext::generateCanonicalName(const SrcInfo &info,
-                                                 const string &module,
                                                  const string &name) {
   auto it = canonicalNames.find(info);
   if (it != canonicalNames.end())
     return it->second;
 
   auto &num = moduleNames[name];
-  auto newName = (module == "" ? "" : module + ".");
-  newName += format("{}{}", name, num ? format(".{}", num) : "");
+  string newName = format("{}{}", name, num ? format(".{}", num) : "");
   num++;
-  canonicalNames[info] = (newName[0] == '#' ? newName : "#" + newName);
+  canonicalNames[info] = (newName[0] == '.' ? newName : "." + newName);
   return canonicalNames[info];
 }
 

@@ -59,6 +59,7 @@ public:
   void setType(types::TypePtr t) { _type = t; }
   bool isType() const { return _isType; }
   void markType() { _isType = true; }
+  std::string wrap(const std::string &) const;
 
   /// Allow pretty-printing to C++ streams
   friend std::ostream &operator<<(std::ostream &out, const Expr &c) {

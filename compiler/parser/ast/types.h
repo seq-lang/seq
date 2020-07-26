@@ -81,8 +81,10 @@ public:
 };
 
 struct StaticType : public Type {
+  // std::unordered_map<std::string, TypePtr> unresolved;
+  // std::unique_ptr<Expr> expr;
   int value;
-  StaticType(int value) : value(value) {}
+  StaticType(int v);
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
@@ -91,6 +93,7 @@ public:
                       std::unordered_map<int, TypePtr> &cache) override;
 
 public:
+  // int evaluate();
   bool hasUnbound() const override { return false; }
   bool canRealize() const override { return true; }
   std::string toString(bool reduced = false) const override;
@@ -100,6 +103,7 @@ public:
   std::shared_ptr<StaticType> getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }
+  int getValue() const { return value; }
 };
 typedef std::shared_ptr<StaticType> StaticTypePtr;
 
@@ -157,6 +161,8 @@ struct LinkType : public Type {
   int level;
   /// Type of link variant. nullptr otherwise.
   TypePtr type;
+  /// is static variable?
+  bool isStatic;
 
   LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr);
   LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type) {}

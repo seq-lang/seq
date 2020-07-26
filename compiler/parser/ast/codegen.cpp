@@ -211,8 +211,9 @@ void CodegenVisitor::visit(const StackAllocExpr *expr) {
 
 void CodegenVisitor::visit(const DotExpr *expr) {
   if (auto c = CAST(expr->expr, IdExpr))
-    if (auto f = ctx->find(c->value)->getImport()) {
-      auto ictx = ctx->getImports()->getImport(f->getFile())->lctx;
+    if (c->value.size() && c->value[0] == '/') {
+      auto ictx = ctx->getImports()->getImport(c->value.substr(1))->lctx;
+      assert(ictx);
       resultExpr = processIdentifier(ictx, expr->member)->getExpr();
       return;
     }
@@ -382,9 +383,9 @@ void CodegenVisitor::visit(const MatchStmt *stmt) {
 }
 
 void CodegenVisitor::visit(const ImportStmt *stmt) {
-  auto file =
-      ctx->getImports()->getImportFile(stmt->from.first, ctx->getFilename());
-  assert(!file.empty());
+  auto file = stmt->from.first.substr(1);
+  //ctx->getImports()->getImportFile(stmt->from.first, ctx->getFilename());
+  //assert(!file.empty());
 
   auto import =
       const_cast<ImportContext::Import *>(ctx->getImports()->getImport(file));

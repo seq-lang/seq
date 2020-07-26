@@ -31,9 +31,9 @@ namespace ast {
 TypeContext::TypeContext(const std::string &filename,
                          shared_ptr<RealizationContext> realizations,
                          shared_ptr<ImportContext> imports)
-    : Context<TypeItem::Item>(filename, realizations, imports), module(""),
+    : Context<TypeItem::Item>(filename, realizations, imports), // module(""),
       level(0), returnType(nullptr), matchType(nullptr),
-      wasReturnTypeSet(false) {
+      wasReturnTypeSet(false), typecheck(true) {
   stack.push_front(vector<string>());
 }
 
@@ -50,15 +50,21 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
   if (t)
     return t;
 
+  if (name[0] == '/') 
+    return make_shared<TypeItem::Import>(name,
+                                         "", // all classes/fn are toplevel
+                                         name.substr(1));
   auto it = getRealizations()->realizationLookup.find(name);
   if (it != getRealizations()->realizationLookup.end()) {
     auto fit = getRealizations()->funcRealizations.find(it->second);
     if (fit != getRealizations()->funcRealizations.end())
       return make_shared<TypeItem::Func>(fit->second[name].type,
+                                         "", // all classes/fn are toplevel
                                          fit->second[name].base);
     auto cit = getRealizations()->classRealizations.find(it->second);
     if (cit != getRealizations()->classRealizations.end())
       return make_shared<TypeItem::Class>(cit->second[name].type,
+                                          "", // all classes/fn are toplevel
                                           cit->second[name].base);
   }
   return nullptr;
@@ -71,27 +77,39 @@ types::TypePtr TypeContext::findInternal(const string &name) const {
   return t->getType();
 }
 
-void TypeContext::addVar(const string &name, types::TypePtr type, bool global) {
-  add(name, make_shared<TypeItem::Var>(type, getBase(), global));
+shared_ptr<TypeItem::Item>
+TypeContext::addVar(const string &name, types::TypePtr type, bool global) {
+  auto t = make_shared<TypeItem::Var>(type, filename, getBase(), global);
+  add(name, t);
+  return t;
 }
 
-void TypeContext::addImport(const string &name, const string &import,
-                            bool global) {
-  add(name, make_shared<TypeItem::Import>(import, getBase(), global));
+shared_ptr<TypeItem::Item>
+TypeContext::addImport(const string &name, const string &import, bool global) {
+  auto t = make_shared<TypeItem::Import>(import, filename, getBase(), global);
+  add(name, t);
+  return t;
 }
 
-void TypeContext::addType(const string &name, types::TypePtr type,
-                          bool global) {
-  add(name, make_shared<TypeItem::Class>(type, getBase(), global));
+shared_ptr<TypeItem::Item>
+TypeContext::addType(const string &name, types::TypePtr type, bool global) {
+  auto t = make_shared<TypeItem::Class>(type, filename, getBase(), global);
+  add(name, t);
+  return t;
 }
 
-void TypeContext::addFunc(const string &name, types::TypePtr type,
-                          bool global) {
-  add(name, make_shared<TypeItem::Func>(type, getBase(), global));
+shared_ptr<TypeItem::Item>
+TypeContext::addFunc(const string &name, types::TypePtr type, bool global) {
+  auto t = make_shared<TypeItem::Func>(type, filename, getBase(), global);
+  add(name, t);
+  return t;
 }
 
-void TypeContext::addStatic(const string &name, int value, bool global) {
-  add(name, make_shared<TypeItem::Static>(value, getBase(), global));
+shared_ptr<TypeItem::Item> TypeContext::addStatic(const string &name, int value,
+                                                  bool global) {
+  auto t = make_shared<TypeItem::Static>(value, filename, getBase(), global);
+  add(name, t);
+  return t;
 }
 
 string TypeContext::getBase() const {
@@ -99,7 +117,7 @@ string TypeContext::getBase() const {
   return (s == "" ? "" : s + ".");
 }
 
-string TypeContext::getModule() const { return module; }
+// string TypeContext::getModule() const { return module; }
 
 void TypeContext::increaseLevel() { level++; }
 
@@ -111,7 +129,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
       types::LinkType::Unbound, realizations->getUnboundCount()++, level);
   t->setSrcInfo(srcInfo);
   if (setActive) {
-    LOG9("UNBOUND: {} @ {} ", t->toString(0), srcInfo);
+    LOG9("UNBOUND/{}: {} @ {} ", typecheck, t->toString(0), srcInfo);
     activeUnbounds.insert(t);
   }
   return t;
@@ -138,8 +156,8 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo,
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
-        LOG9("UNBOUND: {} @ {} (during inst of {})", i.second->toString(0),
-             srcInfo, type->toString());
+        LOG9("UNBOUND/{}: {} @ {} (during inst of {})", typecheck,
+             i.second->toString(0), srcInfo, type->toString());
         activeUnbounds.insert(i.second);
       }
     }
@@ -186,7 +204,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
     realizations->moduleNames[name] = 1;
     realizations->classRealizations[name][name] = {name, typ, {}, t.second};
     stdlib->addType(name, typ);
-    stdlib->addType("#" + name, typ);
+    stdlib->addType("." + name, typ);
   }
   vector<string> genericTypes = {"ptr", "generator", "optional"};
   for (auto &t : genericTypes) {
@@ -199,7 +217,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
              realizations->unboundCount}});
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
-    stdlib->addType("#" + t, typ);
+    stdlib->addType("." + t, typ);
     realizations->unboundCount++;
   }
   genericTypes = {"Int", "UInt"};
@@ -213,14 +231,17 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
              realizations->unboundCount, true}});
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
-    stdlib->addType("#" + t, typ);
+    stdlib->addType("." + t, typ);
     realizations->unboundCount++;
   }
 
   stdlib->setFlag("internal");
   assert(stdlibPath.substr(stdlibPath.size() - 12) == "__init__.seq");
-  auto stmts = parseFile(stdlibPath.substr(0, stdlibPath.size() - 12) +
-                         "__internal__.seq");
+  auto internal =
+      stdlibPath.substr(0, stdlibPath.size() - 12) + "__internal__.seq";
+  stdlib->filename = internal;
+  auto stmts = parseFile(internal);
+  stdlib->filename = stdlibPath;
 
   imports->setBody("", make_unique<SuiteStmt>());
   SuiteStmt *tv =

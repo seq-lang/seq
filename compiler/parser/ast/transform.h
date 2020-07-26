@@ -25,6 +25,16 @@
 namespace seq {
 namespace ast {
 
+class CaptureVisitor : public WalkVisitor {
+  std::shared_ptr<TypeContext> ctx;
+
+public:
+  std::unordered_set<std::string> captures;
+  using WalkVisitor::visit;
+  CaptureVisitor(std::shared_ptr<TypeContext> ctx);
+  void visit(const IdExpr *) override;
+};
+
 class TransformVisitor : public ASTVisitor, public SrcObject {
   std::shared_ptr<TypeContext> ctx;
   std::shared_ptr<std::vector<StmtPtr>> prependStmts;
@@ -79,16 +89,6 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
                                std::vector<CallExpr::Arg> &args,
                                std::vector<CallExpr::Arg> &reorderedArgs);
   bool handleStackAlloc(const CallExpr *expr);
-
-  class CaptureVisitor : public WalkVisitor {
-    std::shared_ptr<TypeContext> ctx;
-
-  public:
-    std::unordered_set<std::string> captures;
-    using WalkVisitor::visit;
-    CaptureVisitor(std::shared_ptr<TypeContext> ctx);
-    void visit(const IdExpr *) override;
-  };
 
 public:
   TransformVisitor(std::shared_ptr<TypeContext> ctx,

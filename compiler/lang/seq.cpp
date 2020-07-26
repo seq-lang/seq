@@ -672,7 +672,7 @@ void seq::compilationMessage(const std::string &header, const std::string &msg,
   assert(!(col > 0 && line <= 0));
   std::cerr << "\033[1m";
   if (!file.empty())
-    std::cerr << file.substr(file.rfind('/') + 1);
+    std::cerr << file; //.substr(file.rfind('/') + 1);
   if (line > 0)
     std::cerr << ":" << line;
   if (col > 0)

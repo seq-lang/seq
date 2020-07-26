@@ -14,17 +14,24 @@ using std::vector;
 namespace seq {
 namespace ast {
 
+string Expr::wrap(const string &s) const {
+  return format("({}{})", s,
+                _type ? format(" :type {}", _type->toString()) : "");
+}
+
 Expr::Expr() : _type(nullptr), _isType(false) {}
 Expr::Expr(const Expr &e)
     : seq::SrcObject(e), _type(e._type), _isType(e._isType) {}
 
 NoneExpr::NoneExpr() : Expr() {}
 NoneExpr::NoneExpr(const NoneExpr &e) : Expr(e) {}
-string NoneExpr::toString() const { return "#none"; }
+string NoneExpr::toString() const { return wrap("#none"); }
 
 BoolExpr::BoolExpr(bool v) : Expr(), value(v) {}
 BoolExpr::BoolExpr(const BoolExpr &e) : Expr(e), value(e.value) {}
-string BoolExpr::toString() const { return format("(#bool {})", int(value)); }
+string BoolExpr::toString() const {
+  return wrap(format("#bool {}", int(value)));
+}
 
 IntExpr::IntExpr(int v) : Expr(), value(std::to_string(v)), suffix("") {}
 IntExpr::IntExpr(const IntExpr &e)
@@ -32,34 +39,34 @@ IntExpr::IntExpr(const IntExpr &e)
 IntExpr::IntExpr(const string &v, const string &s)
     : Expr(), value(v), suffix(s) {}
 string IntExpr::toString() const {
-  return format("(#int {}{})", value,
-                suffix == "" ? "" : format(" :suffix {}", suffix));
+  return wrap(
+      format("#int {}{}", value, suffix == "" ? "" : format(" {}", suffix)));
 }
 
 FloatExpr::FloatExpr(double v, const string &s) : Expr(), value(v), suffix(s) {}
 FloatExpr::FloatExpr(const FloatExpr &e)
     : Expr(e), value(e.value), suffix(e.suffix) {}
 string FloatExpr::toString() const {
-  return format("(#float {}{})", value,
-                suffix == "" ? "" : format(" :suffix {}", suffix));
+  return wrap(
+      format("#float {}{}", value, suffix == "" ? "" : format(" {}", suffix)));
 }
 
 StringExpr::StringExpr(const string &v) : Expr(), value(v) {}
 StringExpr::StringExpr(const StringExpr &e) : Expr(e), value(e.value) {}
 string StringExpr::toString() const {
-  return format("(#str '{}')", escape(value));
+  return wrap(format("#str '{}'", escape(value)));
 }
 
 FStringExpr::FStringExpr(const string &v) : Expr(), value(v) {}
 FStringExpr::FStringExpr(const FStringExpr &e) : Expr(e), value(e.value) {}
 string FStringExpr::toString() const {
-  return format("(#fstr '{}')", escape(value));
+  return wrap(format("#fstr '{}'", escape(value)));
 }
 
 KmerExpr::KmerExpr(const string &v) : Expr(), value(v) {}
 KmerExpr::KmerExpr(const KmerExpr &e) : Expr(e), value(e.value) {}
 string KmerExpr::toString() const {
-  return format("(#kmer '{}')", escape(value));
+  return wrap(format("#kmer '{}'", escape(value)));
 }
 
 SeqExpr::SeqExpr(const string &v, const string &p)
@@ -67,34 +74,36 @@ SeqExpr::SeqExpr(const string &v, const string &p)
 SeqExpr::SeqExpr(const SeqExpr &e)
     : Expr(e), prefix(e.prefix), value(e.value) {}
 string SeqExpr::toString() const {
-  return format("(#seq '{}'{})", value,
-                prefix == "" ? "" : format(" :prefix {}", prefix));
+  return wrap(
+      format("#seq '{}'{}", value, prefix == "" ? "" : format(" {}", prefix)));
 }
 
 IdExpr::IdExpr(const string &v) : Expr(), value(v) {}
 IdExpr::IdExpr(const IdExpr &e) : Expr(e), value(e.value) {}
-string IdExpr::toString() const { return format("(#id {})", value); }
+string IdExpr::toString() const { return wrap(format("#id {}", value)); }
 
 UnpackExpr::UnpackExpr(ExprPtr v) : Expr(), what(move(v)) {}
 UnpackExpr::UnpackExpr(const UnpackExpr &e) : Expr(e), what(CL(e.what)) {}
-string UnpackExpr::toString() const { return format("(#unpack {})", *what); }
+string UnpackExpr::toString() const {
+  return wrap(format("#unpack {}", *what));
+}
 
 TupleExpr::TupleExpr(vector<ExprPtr> &&i) : Expr(), items(move(i)) {}
 TupleExpr::TupleExpr(const TupleExpr &e) : Expr(e), items(CL(e.items)) {}
 string TupleExpr::toString() const {
-  return format("(#tuple {})", combine(items));
+  return wrap(format("#tuple {}", combine(items)));
 }
 
 ListExpr::ListExpr(vector<ExprPtr> &&i) : Expr(), items(move(i)) {}
 ListExpr::ListExpr(const ListExpr &e) : Expr(e), items(CL(e.items)) {}
 string ListExpr::toString() const {
-  return items.size() ? format("(#list {})", combine(items)) : "#list";
+  return wrap(items.size() ? format("#list {}", combine(items)) : "#list");
 }
 
 SetExpr::SetExpr(vector<ExprPtr> &&i) : Expr(), items(move(i)) {}
 SetExpr::SetExpr(const SetExpr &e) : Expr(e), items(CL(e.items)) {}
 string SetExpr::toString() const {
-  return items.size() ? format("(#set {})", combine(items)) : "#set";
+  return wrap(items.size() ? format("#set {}", combine(items)) : "#set");
 }
 
 DictExpr::KeyValue DictExpr::KeyValue::clone() const {
@@ -106,8 +115,8 @@ DictExpr::DictExpr(const DictExpr &e) : Expr(e), items(CL(e.items)) {}
 string DictExpr::toString() const {
   vector<string> s;
   for (auto &i : items)
-    s.push_back(format("({} {})", *i.key, *i.value));
-  return s.size() ? format("(#dict {})", fmt::join(s, " ")) : "#dict";
+    s.push_back(format("{} {}", *i.key, *i.value));
+  return wrap(s.size() ? format("#dict {}", fmt::join(s, " ")) : "#dict");
 }
 
 GeneratorExpr::Body GeneratorExpr::Body::clone() const {
@@ -129,11 +138,10 @@ string GeneratorExpr::toString() const {
   for (auto &i : loops) {
     string q;
     for (auto &k : i.conds)
-      q += format(" (#if {})", *k);
-    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->toString(),
-                q);
+      q += format(" #if {}", *k);
+    s += format("#for {} {}{}", fmt::join(i.vars, " "), i.gen->toString(), q);
   }
-  return format("(#{}gen {}{})", prefix, *expr, s);
+  return wrap(format("#{}gen {}{}", prefix, *expr, s));
 }
 
 DictGeneratorExpr::DictGeneratorExpr(ExprPtr k, ExprPtr e,
@@ -146,11 +154,10 @@ string DictGeneratorExpr::toString() const {
   for (auto &i : loops) {
     string q;
     for (auto &k : i.conds)
-      q += format(" (#if {})", *k);
-    s += format("(#for ({}) {}{})", fmt::join(i.vars, " "), i.gen->toString(),
-                q);
+      q += format(" #if {}", *k);
+    s += format("#for ({}) {}{}", fmt::join(i.vars, " "), i.gen->toString(), q);
   }
-  return format("(#dict_gen {} {}{})", *key, *expr, s);
+  return wrap(format("#dict_gen {} {}{}", *key, *expr, s));
 }
 
 IfExpr::IfExpr(ExprPtr c, ExprPtr i, ExprPtr e)
@@ -158,7 +165,7 @@ IfExpr::IfExpr(ExprPtr c, ExprPtr i, ExprPtr e)
 IfExpr::IfExpr(const IfExpr &e)
     : Expr(e), cond(CL(e.cond)), eif(CL(e.eif)), eelse(CL(e.eelse)) {}
 string IfExpr::toString() const {
-  return format("(#if {} {} {})", *cond, *eif, *eelse);
+  return wrap(format("#if {} {} {}", *cond, *eif, *eelse));
 }
 
 UnaryExpr::UnaryExpr(const string &o, ExprPtr e)
@@ -166,7 +173,7 @@ UnaryExpr::UnaryExpr(const string &o, ExprPtr e)
 UnaryExpr::UnaryExpr(const UnaryExpr &e)
     : Expr(e), op(e.op), expr(CL(e.expr)) {}
 string UnaryExpr::toString() const {
-  return format("(#unary {} :op '{}')", *expr, op);
+  return wrap(format("#unary '{}' {}", op, *expr));
 }
 
 BinaryExpr::BinaryExpr(ExprPtr l, const string &o, ExprPtr r, bool i)
@@ -175,8 +182,8 @@ BinaryExpr::BinaryExpr(const BinaryExpr &e)
     : Expr(e), op(e.op), lexpr(CL(e.lexpr)), rexpr(CL(e.rexpr)),
       inPlace(e.inPlace) {}
 string BinaryExpr::toString() const {
-  return format("(#binary {} {} :op '{}' :inplace {})", *lexpr, *rexpr, op,
-                inPlace);
+  return wrap(format("#binary {} '{}' {}{}", *lexpr, op, *rexpr,
+                     inPlace ? " :inplace" : ""));
 }
 
 PipeExpr::Pipe PipeExpr::Pipe::clone() const { return {op, CL(expr)}; }
@@ -186,9 +193,8 @@ PipeExpr::PipeExpr(const PipeExpr &e) : Expr(e), items(CL(e.items)) {}
 string PipeExpr::toString() const {
   vector<string> s;
   for (auto &i : items)
-    s.push_back(format("({}{})", *i.expr,
-                       i.op.size() ? format(" :op '{}'", i.op) : ""));
-  return format("(#pipe {})", fmt::join(s, " "));
+    s.push_back(format("({}{})", *i.expr, i.op == "||>" ? " :parallel" : ""));
+  return wrap(format("#pipe {}", fmt::join(s, " ")));
 }
 
 IndexExpr::IndexExpr(ExprPtr e, ExprPtr i)
@@ -196,7 +202,7 @@ IndexExpr::IndexExpr(ExprPtr e, ExprPtr i)
 IndexExpr::IndexExpr(const IndexExpr &e)
     : Expr(e), expr(CL(e.expr)), index(CL(e.index)) {}
 string IndexExpr::toString() const {
-  return format("(#index {} {})", *expr, *index);
+  return wrap(format("#index {} {}", *expr, *index));
 }
 
 TupleIndexExpr::TupleIndexExpr(ExprPtr e, int i)
@@ -204,7 +210,7 @@ TupleIndexExpr::TupleIndexExpr(ExprPtr e, int i)
 TupleIndexExpr::TupleIndexExpr(const TupleIndexExpr &e)
     : Expr(e), expr(CL(e.expr)), index(e.index) {}
 string TupleIndexExpr::toString() const {
-  return format("(#tindex {} {})", *expr, index);
+  return wrap(format("#tupleindex {} {}", *expr, index));
 }
 
 StackAllocExpr::StackAllocExpr(ExprPtr t, ExprPtr e)
@@ -212,7 +218,7 @@ StackAllocExpr::StackAllocExpr(ExprPtr t, ExprPtr e)
 StackAllocExpr::StackAllocExpr(const StackAllocExpr &e)
     : Expr(e), typeExpr(CL(e.typeExpr)), expr(CL(e.expr)) {}
 string StackAllocExpr::toString() const {
-  return format("(#alloca {} {})", *typeExpr, *expr);
+  return wrap(format("#alloca {} {}", *typeExpr, *expr));
 }
 
 CallExpr::Arg CallExpr::Arg::clone() const { return {name, CL(value)}; }
@@ -242,7 +248,7 @@ string CallExpr::toString() const {
     } else {
       s += format(" ({} :name {})", *i.value, i.name);
     }
-  return format("(#call {}{})", *expr, s);
+  return wrap(format("#call {}{}", *expr, s));
 }
 
 DotExpr::DotExpr(ExprPtr e, const string &m)
@@ -250,7 +256,7 @@ DotExpr::DotExpr(ExprPtr e, const string &m)
 DotExpr::DotExpr(const DotExpr &e)
     : Expr(e), expr(CL(e.expr)), member(e.member) {}
 string DotExpr::toString() const {
-  return format("(#dot {} {})", *expr, member);
+  return wrap(format("#dot {} {}", *expr, member));
 }
 
 SliceExpr::SliceExpr(ExprPtr s, ExprPtr e, ExprPtr st)
@@ -258,29 +264,31 @@ SliceExpr::SliceExpr(ExprPtr s, ExprPtr e, ExprPtr st)
 SliceExpr::SliceExpr(const SliceExpr &e)
     : Expr(e), st(CL(e.st)), ed(CL(e.ed)), step(CL(e.step)) {}
 string SliceExpr::toString() const {
-  return format("(#slice{}{}{})", st ? format(" :start {}", *st) : "",
-                ed ? format(" :end {}", *ed) : "",
-                step ? format(" :step {}", *step) : "");
+  return wrap(format("#slice{}{}{)", st ? format(" :start {}", *st) : "",
+                     ed ? format(" :end {}", *ed) : "",
+                     step ? format(" :step {}", *step) : ""));
 }
 
 EllipsisExpr::EllipsisExpr() : Expr() {}
 EllipsisExpr::EllipsisExpr(const EllipsisExpr &e) : Expr(e) {}
-string EllipsisExpr::toString() const { return "#ellipsis"; }
+string EllipsisExpr::toString() const { return wrap("#ellipsis"); }
 
 TypeOfExpr::TypeOfExpr(ExprPtr e) : Expr(), expr(move(e)) {}
 TypeOfExpr::TypeOfExpr(const TypeOfExpr &e) : Expr(e), expr(CL(e.expr)) {}
-string TypeOfExpr::toString() const { return format("(#typeof {})", *expr); }
+string TypeOfExpr::toString() const {
+  return wrap(format("#typeof {}", *expr));
+}
 
 PtrExpr::PtrExpr(ExprPtr e) : Expr(), expr(move(e)) {}
 PtrExpr::PtrExpr(const PtrExpr &e) : Expr(e), expr(CL(e.expr)) {}
-string PtrExpr::toString() const { return format("(#ptr {})", *expr); }
+string PtrExpr::toString() const { return wrap(format("#ptr {}", *expr)); }
 
 LambdaExpr::LambdaExpr(vector<string> v, ExprPtr e)
     : Expr(), vars(v), expr(move(e)) {}
 LambdaExpr::LambdaExpr(const LambdaExpr &e)
     : Expr(e), vars(e.vars), expr(CL(e.expr)) {}
 string LambdaExpr::toString() const {
-  return format("(#lambda ({}) {})", fmt::join(vars, " "), *expr);
+  return wrap(format("#lambda {} {}", fmt::join(vars, " "), *expr));
 }
 
 YieldExpr::YieldExpr() : Expr() {}

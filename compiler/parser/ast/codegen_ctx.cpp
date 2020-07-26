@@ -26,7 +26,7 @@ namespace seq {
 namespace ast {
 
 string chop(const string &s) {
-  return s.size() && s[0] == '#' ? s.substr(1) : s;
+  return s.size() && s[0] == '.' ? s.substr(1) : s;
 }
 
 LLVMContext::LLVMContext(const string &filename,
@@ -233,7 +233,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
     }
   }
   // LOG7("{} -> {} -> {}", t->toString(), t->realizeString(t->name, false),
-      // real.handle->getName());
+  // real.handle->getName());
   return real.handle;
 }
 

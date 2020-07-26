@@ -19,7 +19,7 @@ using std::string;
 using std::vector;
 
 int __level__ = 0;
-int __dbg_level__ = 0;
+int __dbg_level__ = 7;
 
 namespace seq {
 
@@ -51,7 +51,7 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     seq::SeqModule *module;
 
     int st = 8, lim = 1;
-    for (int ci = 8, ii = 0; ci < cases.size() && ii < lim; ci++, ii++) {
+    for (int ci = st, ii = 0; ci < cases.size() && ii < lim; ci++, ii++) {
       LOG("[[[ case {} ]]]", ci);
       auto stmts = ast::parseCode(file, cases[ci]);
       auto ctx = ast::TypeContext::getContext(argv0, file);

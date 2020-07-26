@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "parser/ast/ast.h"
-#include "parser/ast/types.h"
+#include "parser/ast/transform.h"
 
 using std::dynamic_pointer_cast;
 using std::make_shared;
@@ -21,15 +21,19 @@ namespace types {
 
 TypePtr Type::follow() { return shared_from_this(); }
 
+StaticType::StaticType(int v) : value(v) {}
+
 string StaticType::toString(bool reduced) const {
   return fmt::format("{}", value);
 }
 
 int StaticType::unify(TypePtr typ, Unification &us) {
-  if (auto t = typ->getStatic())
+  if (auto t = typ->getStatic()) {
+    // Make sure that we can only unify resolved values!
     return (value == t->value) ? 0 : -1;
-  else if (auto t = typ->getLink())
+  } else if (auto t = typ->getLink()) {
     return t->unify(shared_from_this(), us);
+  }
   return -1;
 }
 

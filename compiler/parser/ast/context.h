@@ -55,7 +55,6 @@ public:
   std::string getCanonicalName(const SrcInfo &info) const;
   /// Generate canonical name for a SrcInfo and original class/function name
   std::string generateCanonicalName(const SrcInfo &info,
-                                    const std::string &module,
                                     const std::string &name);
   int &getUnboundCount();
 
