@@ -84,8 +84,6 @@ static FloatType *Float = FloatType::get();
 static BoolType *Bool = BoolType::get();
 static ByteType *Byte = ByteType::get();
 static StrType *Str = StrType::get();
-static ArrayType *Array = ArrayType::get();
-static GenType *Gen = GenType::get();
 } // namespace types
 
 /**
