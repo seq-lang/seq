@@ -464,6 +464,19 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   vector<StmtPtr> funcStmts;
   for (auto s : stmt->suite->getStatements())
     funcStmts.push_back(addMethod(s, canonicalName));
+
+  if (ctx->isTypeChecking())
+    for (auto s : stmt->suite->getStatements()) {
+      auto stmt = dynamic_cast<FunctionStmt *>(s);
+      assert(stmt);
+      auto canonicalName = ctx->getRealizations()->generateCanonicalName(
+          stmt->getSrcInfo(), format("{}{}", ctx->getBase(), stmt->name));
+      auto t = ctx->getRealizations()->funcASTs[canonicalName].first;
+      if (t->canRealize())
+        realizeFunc(dynamic_pointer_cast<types::FuncType>(
+            ctx->instantiate(getSrcInfo(), t)));
+    }
+
   ctx->decreaseLevel();
   for (int i = 0; i < generics.size(); i++) {
     if (ctx->isTypeChecking() && c->explicits[i].type) {
@@ -700,9 +713,13 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     vector<Param> args;
     vector<FuncType::Arg> realizationArgs;
 
-    auto retTyp = stmt->ret ? transformType(stmt->ret)->getType()
-                            : ctx->addUnbound(getSrcInfo(), false);
-    if (ctx->getBaseType() && !ctx->getBaseType()->getFunc()) { // class member
+    bool isClassMember = ctx->getBaseType() && !ctx->getBaseType()->getFunc();
+
+    // If type checking is not active, make all arguments generic
+    auto retTyp = stmt->ret && ctx->isTypeChecking()
+                      ? transformType(stmt->ret)->getType()
+                      : ctx->addUnbound(getSrcInfo(), false);
+    if (isClassMember) { // class member
       // if (stmt->name == "__new__") {
       // forceUnify(retTyp, ctx->instantiate(getSrcInfo(), ctx->getBaseType()));
       // } else
@@ -722,10 +739,11 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       auto &a = stmt->args[ia];
       ExprPtr typeAst = nullptr;
       types::TypePtr typ = nullptr;
-      if (ctx->getBaseType() && !ctx->getBaseType()->getFunc() && ia == 0 &&
-          !a.type && a.name == "self")
+      if (ctx->isTypeChecking() && ctx->getBaseType() &&
+          !ctx->getBaseType()->getFunc() && ia == 0 && !a.type &&
+          a.name == "self")
         typ = ctx->getBaseType();
-      else if (a.type) {
+      else if (ctx->isTypeChecking() && a.type) {
         auto ie = CAST(a.type, IndexExpr);
         if (ie && CAST(ie->expr, IdExpr) &&
             CAST(ie->expr, IdExpr)->value == "Callable") {
@@ -756,11 +774,12 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     ctx->decreaseLevel();
     for (auto &g : stmt->generics) {
       auto val = ctx->find(g.name);
-      if (auto tx = val->getType()) {
-        auto t = dynamic_pointer_cast<LinkType>(tx);
-        assert(t && t->kind == LinkType::Unbound);
-        t->kind = LinkType::Generic;
-      }
+      if (ctx->isTypeChecking())
+        if (auto tx = val->getType()) {
+          auto t = dynamic_pointer_cast<LinkType>(tx);
+          assert(t && t->kind == LinkType::Unbound);
+          t->kind = LinkType::Generic;
+        }
       ctx->remove(g.name);
     }
 
@@ -783,7 +802,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       realizeFunc(dynamic_pointer_cast<types::FuncType>(
           ctx->instantiate(getSrcInfo(), t)));
     } else if (!in(stmt->attributes, "internal")) {
-      if (t->canRealize())
+      if (ctx->isTypeChecking() && t->canRealize() && !isClassMember)
         realizeFunc(dynamic_pointer_cast<types::FuncType>(
             ctx->instantiate(getSrcInfo(), t)));
       else {
@@ -942,6 +961,19 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   }
   for (auto s : stmt->suite->getStatements())
     stmts.push_back(addMethod(s, canonicalName));
+
+  if (ctx->isTypeChecking())
+    for (int i = 1; i < stmts.size(); i++) {
+      auto stmt = dynamic_cast<FunctionStmt *>(stmts[i].get());
+      assert(stmt);
+      auto canonicalName = ctx->getRealizations()->generateCanonicalName(
+          stmt->getSrcInfo(), format("{}{}", ctx->getBase(), stmt->name));
+      auto t = ctx->getRealizations()->funcASTs[canonicalName].first;
+      if (t->canRealize())
+        realizeFunc(dynamic_pointer_cast<types::FuncType>(
+            ctx->instantiate(getSrcInfo(), t)));
+    }
+
   ctx->decreaseLevel();
   ctx->popBase();
   ctx->popBaseType();

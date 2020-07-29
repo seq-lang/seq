@@ -574,7 +574,7 @@ AssignEqStmt::AssignEqStmt(ExprPtr l, ExprPtr r, const string &o)
 AssignEqStmt::AssignEqStmt(const AssignEqStmt &s)
     : lhs(CL(s.lhs)), rhs(CL(s.rhs)), op(s.op) {}
 string AssignEqStmt::toString() const {
-  return format("(#assigneq {} {} :op '{}')", *lhs, *rhs, op);
+  return format("(#assigneq {} '{}' {})", *lhs, op, *rhs);
 }
 
 YieldFromStmt::YieldFromStmt(ExprPtr e) : expr(move(e)) {}

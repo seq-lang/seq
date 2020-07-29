@@ -4,6 +4,42 @@
 		"selected_items":
 		[
 			[
+				"Type",
+				"TypePtr\tTypePtr"
+			],
+			[
+				"typec",
+				"typecheck"
+			],
+			[
+				"getVa",
+				"getValue"
+			],
+			[
+				"add",
+				"addVar"
+			],
+			[
+				"realiza",
+				"realizations"
+			],
+			[
+				"un",
+				"unresolved\tstd::unordered_map<std::string, TypePtr> unresolved"
+			],
+			[
+				"Stati",
+				"StaticVisitor"
+			],
+			[
+				"c",
+				"cond\tExprPtr cond"
+			],
+			[
+				"le",
+				"lexpr\tExprPtr lexpr"
+			],
+			[
 				"to",
 				"toString"
 			],
@@ -33,10 +69,6 @@
 			],
 			[
 				"reali",
-				"realizationArgs"
-			],
-			[
-				"realiza",
 				"realizationArgs"
 			],
 			[
@@ -250,10 +282,6 @@
 			[
 				"Trans",
 				"TransformVisitor"
-			],
-			[
-				"Type",
-				"TypePtr"
 			],
 			[
 				"rea",
@@ -486,44 +514,17 @@
 			[
 				"rele",
 				"relevant_reads"
-			],
-			[
-				"len",
-				"length"
-			],
-			[
-				"reg",
-				"region"
-			],
-			[
-				"read",
-				"readName"
-			],
-			[
-				"snp",
-				"snpcovs"
-			],
-			[
-				"allele",
-				"alleleNo"
-			],
-			[
-				"SNPcov",
-				"SNPcovList"
-			],
-			[
-				"conf",
-				"conflict_mate"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "stdlib/core/__init__.seq",
+			"file": "compiler/parser/ast/transform_expr.cpp",
 			"settings":
 			{
-				"buffer_size": 906,
+				"buffer_size": 44409,
+				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
@@ -531,61 +532,24 @@
 			"file": "compiler/parser/ast/transform_stmt.cpp",
 			"settings":
 			{
-				"buffer_size": 44202,
+				"buffer_size": 47667,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "scratch.seq",
+			"file": "compiler/parser/ast/transform_ctx.cpp",
 			"settings":
 			{
-				"buffer_size": 9001,
-				"encoding": "UTF-8",
+				"buffer_size": 9816,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "compiler/parser/ast/types.h",
+			"file": "/Users/inumanag/Desktop/links_and_haptree",
 			"settings":
 			{
-				"buffer_size": 9893,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "compiler/parser/ast/types.cpp",
-			"settings":
-			{
-				"buffer_size": 12785,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "compiler/parser/ast/transform_expr.cpp",
-			"settings":
-			{
-				"buffer_size": 39706,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "compiler/parser/parser.cpp",
-			"settings":
-			{
-				"buffer_size": 3612,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "compiler/lang/seq.h",
-			"settings":
-			{
-				"buffer_size": 4484,
+				"buffer_size": 8536,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -719,7 +683,11 @@
 		"selected_items":
 		[
 			[
-				"col",
+				"gitgut",
+				"GitGutter: Compare Against HEAD"
+			],
+			[
+				"colo",
 				"UI: Select Color Scheme"
 			],
 			[
@@ -729,6 +697,34 @@
 			[
 				"bro",
 				"SFTP: Browse Server…"
+			],
+			[
+				"col",
+				"UI: Select Color Scheme"
+			],
+			[
+				"ju",
+				"CSV: Justify columns"
+			],
+			[
+				"csv se",
+				"CSV: Set delimiter"
+			],
+			[
+				"cs",
+				"CSV: Justify columns"
+			],
+			[
+				"sche",
+				"UI: Select Color Scheme"
+			],
+			[
+				"rem",
+				"Package Control: Remove Package"
+			],
+			[
+				"remove",
+				"Package Control: Remove Package"
 			],
 			[
 				"sftp ca",
@@ -757,10 +753,6 @@
 			[
 				"err",
 				"ECC: Show all errors"
-			],
-			[
-				"colo",
-				"UI: Select Color Scheme"
 			],
 			[
 				"error",
@@ -915,10 +907,6 @@
 				"GitGutter: Show Comparing Against"
 			],
 			[
-				"remove",
-				"Package Control: Remove Package"
-			],
-			[
 				"disable pa",
 				"Package Control: Disable Package"
 			],
@@ -965,10 +953,6 @@
 			[
 				"the",
 				"UI: Select Theme"
-			],
-			[
-				"sche",
-				"UI: Select Color Scheme"
 			],
 			[
 				"syntax speci",
@@ -1209,26 +1193,6 @@
 			[
 				"ui",
 				"UI: Select Theme"
-			],
-			[
-				"tabs",
-				"Indentation: Convert to Tabs"
-			],
-			[
-				"package remo",
-				"Package Control: Remove Package"
-			],
-			[
-				"jus",
-				"CSV: Justify columns"
-			],
-			[
-				"j",
-				"CSV: Justify columns"
-			],
-			[
-				"ju",
-				"CSV: Justify columns"
 			]
 		],
 		"width": 476.0
@@ -1255,81 +1219,99 @@
 	"expanded_folders":
 	[
 		"/Users/inumanag/Desktop/Projekti/seq/types",
-		"/Users/inumanag/Desktop/Projekti/seq/types/test"
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core"
 	],
 	"file_history":
 	[
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/common.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/common.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen_ctx.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/build/menhir/src/partialGrammar.ml",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_expr.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/builtin.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/parser.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_stmt.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/seq.cpp",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/mume-vvesh9/search_main.cc",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/mume-f7_bwa/fasta.cc",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/mume-2uyu5b/main.cc",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/str.seq",
-		"/Users/inumanag/.zprezto/runcoms/zprofile",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/slice.seq",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/mume-_r1bc_/search_main.cc",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/mume-bvxtnb/main.cc",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/mume-b8e1gr/search_main.cc",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/algorithms/strings.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/__internal__.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/__init__.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/list.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_ctx.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/range.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/scratch.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_ctx.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/context.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_stmt.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/parser.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/gc.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/context.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_expr.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen_ctx.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/common.cpp",
+		"/Users/inumanag/Desktop/links_and_haptree",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1595635788/mume/Users/inumanag/Projekti/haptreex/code/haptreex/paper/scripts/stats.py",
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1595635748/mume/Users/inumanag/Projekti/haptreex/code/pypy/stats.py",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/common.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ocaml.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/seq.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/__init__.seq",
+		"/Users/inumanag/Desktop/Projekti/aldy/devel/new_defs/cyp2e1.yml",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/format.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/set.seq",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/haha.txt",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/optional.cpp",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/seq.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/util/common.h",
+		"/Users/inumanag/Desktop/Projekti/seq/types/build/menhir/src/partialGrammar.ml",
+		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/builtin.seq",
+		"/Users/inumanag/.zprezto/runcoms/zprofile",
+		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ref.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/patterns.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_ctx.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/types.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/c_stubs.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/__internal__.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/runtime/main.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/visitor.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/CHANGES.md",
 		"/Users/inumanag/Desktop/Projekti/seq/types/test/main.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/test/core/parser.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/__init__.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/func.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/math.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/float.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/format.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen_ctx.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/build/bdwgc/libtool",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/fasta.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/transform_ctx.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/seq.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/CMakeLists.txt",
 		"/Users/inumanag/Desktop/Projekti/seq/types/test/core/big.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ocaml.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/expr.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/expr.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/common.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/context.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/func.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/range.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/ptr.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/seq.cpp",
 		"/usr/local/Cellar/llvm@6/6.0.1_2/include/llvm/IR/Value.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/list.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/lang.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/record.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/optional.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/num.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/array.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/seq.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/codegen.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/build/googletest-src/googlemock/test/gmock-matchers_test.cc",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/types.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/err.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/slice.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/gc.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/lang/lang.h",
 		"/Users/inumanag/Desktop/Projekti/seq/types/runtime/lib.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/optional.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/types/generic.cpp",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/ast.cpp",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/pickle.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/set.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/core/collections/dict.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/pseq.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/visitor.h",
@@ -1340,8 +1322,6 @@
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/fmindex.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/fastq.seq",
 		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/random.seq",
-		"/Users/inumanag/Desktop/Projekti/seq/types/compiler/parser/ast/format.h",
-		"/Users/inumanag/Desktop/Projekti/seq/types/stdlib/bio/__init__.seq",
 		"/Library/Developer/CommandLineTools/usr/include/c++/v1/memory",
 		"/Users/inumanag/Desktop/Projekti/seq/types/seq.sublime-project",
 		"/Users/inumanag/Library/Application Support/Sublime Text 3/Packages/Clang Format/clang_format_custom.sublime-settings",
@@ -1374,19 +1354,7 @@
 		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1588135589/cedar/scratch/inumanag/bcf/code/src/files.seq",
 		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1588136396/cedar/scratch/inumanag/bcf/code/src/output.seq",
 		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1588135683/cedar/scratch/inumanag/bcf/code/src/output.seq",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1587970310/cedar/scratch/inumanag/bcf/bcf.nf",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1588014986/godzilla/scratch2/ibrahim/ALDYX/aldy/aldy/major.py",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1588015192/godzilla/scratch2/ibrahim/ALDYX/aldy/aldy/gene.py",
-		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1588015648/godzilla/scratch2/ibrahim/ALDYX/aldy/aldy/coverage.py",
-		"/Users/inumanag/Desktop/sedef/Seq/test.seq",
-		"/Users/inumanag/Desktop/sedef/Seq/align.seq",
-		"/Users/inumanag/Desktop/sedef/Seq/hit.seq",
-		"/Users/inumanag/Desktop/sedef/Seq/fasta.seq",
-		"/Users/inumanag/Desktop/secure-gwas/code/mpc.cpp",
-		"/Users/inumanag/Desktop/secure-gwas/code/connect.cpp",
-		"/Users/inumanag/Desktop/secure-gwas/code/socket.h",
-		"/Users/inumanag/Desktop/secure-gwas/code/param.cpp",
-		"/Users/inumanag/Desktop/secure-gwas/code/Makefile"
+		"/var/folders/y6/s62ptnc95033thwkbdpljtf80000gn/T/sublime-sftp-browse-1587970310/cedar/scratch/inumanag/bcf/bcf.nf"
 	],
 	"find":
 	{
@@ -1445,6 +1413,116 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"translate",
+			"addmethod",
+			"self: str",
+			"algorithms",
+			")});",
+			"\\*i.value",
+			":op",
+			"assign_slic",
+			"__contains__",
+			"wrapop",
+			" ",
+			"\\s+$",
+			" ",
+			"\\s+$",
+			"format",
+			"\\(\"\\(",
+			"__ =",
+			"__level",
+			"not accessible",
+			"\\[",
+			"transformtype",
+			"istype\\(",
+			"marktype",
+			"istype\\(",
+			"generatecano",
+			"\"#\"",
+			"'#'",
+			"globalstmt",
+			"t",
+			"processiden",
+			"processIdentifier",
+			"^\\S+ =",
+			"dotexpr",
+			"void",
+			"void TypeContext",
+			"id, ",
+			"Item(id",
+			"const std::string &id,",
+			"->add",
+			"make_shared",
+			"add(",
+			"toplev",
+			"getBase",
+			"getModule",
+			"module",
+			"shared<TypeContext",
+			"<TypeContext",
+			"filename",
+			"module",
+			"string chop",
+			"ctx->add",
+			"makebool",
+			"conditionalMagic",
+			"makebool",
+			"shallowCheck",
+			",",
+			"catch",
+			"processiden",
+			"'",
+			"TransformVisitor",
+			"static",
+			"StaticType",
+			"static",
+			"parsegeneric",
+			"indexexp",
+			"ass CaptureVisitor : public WalkVisitor {\n  std::shared_ptr<TypeContext> ctx;\n\npublic:\n  std::unordered_set<std::string> captures;\n  using WalkVisitor::visit;\n  CaptureVisitor(std::shared_ptr<TypeContext> ctx);\n  void visit(const IdExpr *) override;\n};\n\nclass StaticVisitor : public WalkVisitor {\n  std::shared_ptr<TypeContext> ctx;\n\npublic:\n  int value;\n  using WalkVisitor::visit;\n  StaticVisitor(std::shared_ptr<TypeContext> ctx);\n  void visit(const IdExpr *) override;\n  void visit(const IntExpr *) override;\n  void visit(const UnaryExpr *) override;\n  void visit(const BinaryExpr *) override;\n};",
+			"static",
+			"parseGenerics",
+			"isType",
+			"getType",
+			"static",
+			"addtype",
+			"static",
+			"statictype",
+			"->value",
+			"transform\\(.+true\\)",
+			"transformtype",
+			"instantiate",
+			"\\.id",
+			"->id",
+			"->id =",
+			"generalize",
+			"instantiate",
+			"IntExpr",
+			"StaticVisitor",
+			"indexp",
+			"static",
+			"parseGenerics",
+			"static",
+			" +",
+			"\\s+",
+			"genes",
+			"parseCode",
+			"generatevari",
+			"not found",
+			"parseGenerics",
+			"functionstmt \\*",
+			"funcstmt *",
+			"fixExprName",
+			"4704, T>A, -333T>A, -333T>A",
+			"uptobox",
+			"uptobox.com",
+			"uptobox",
+			"<many>",
+			"uptob",
+			"upto",
+			"hlap",
+			"SR",
+			"HR",
+			"khash",
 			" DBG\\(",
 			"#define DBG",
 			"DBG",
@@ -1462,117 +1540,7 @@
 			"assignst",
 			"verifyModule",
 			"errs",
-			"verifym",
-			"cat",
-			"variard",
-			"throw exc::",
-			"memb",
-			"getmemb",
-			"getmem",
-			"getImportFile",
-			"__str__",
-			"__\\{\\}",
-			"compilationMessage",
-			"compilationError",
-			"compileError",
-			"memb",
-			"\"' has no member",
-			"\"' has no member'",
-			"cannot call type",
-			"Var",
-			"explicits",
-			"__{",
-			"__func",
-			"realizeString",
-			"realizestr",
-			"realizetype",
-			"AssignIndex",
-			"MethodExpr",
-			"ArrayExpr",
-			"import",
-			"realizeBlock",
-			"expected function in",
-			"slice.adjust_indices.1",
-			"default",
-			"iscalla",
-			"clone",
-			"canonicalName,\n                               argDefs",
-			"clone",
-			"<FuncType>",
-			"FuncType",
-			"partialtype",
-			"partial",
-			"realizationi",
-			"partial",
-			"partialfunc",
-			"partialfunction",
-			"partialtype",
-			"indexexpr \\*",
-			"indexexpr *",
-			"function",
-			"iscallab",
-			"FuncType",
-			"partialtyp",
-			"partial",
-			"ptr",
-			"functype>",
-			"argDefs",
-			"isFunc",
-			"std::string",
-			"ellipsis",
-			"FUncType|getFUnc|partial|realizationinfo",
-			"FUncType|getFUnc|partial",
-			"FUncType|getFUnc",
-			"getfunc",
-			"realizationin",
-			"partial",
-			"callexpr *",
-			"basetype",
-			"setbasetype",
-			"realizationinfo",
-			"canonicalname",
-			"basetype",
-			"g.name",
-			"explicit",
-			"unbound",
-			"parseGenerics",
-			"->Explicit",
-			"implici",
-			"make_shared<(Func|Class)Type>",
-			"implicit",
-			"implici",
-			"implic",
-			"parsegeneric",
-			"getbasetype",
-			"baseType",
-			"implicits",
-			"getBase",
-			"realizeFunc",
-			"while re",
-			"while realizing",
-			"__function",
-			"__new",
-			"callexpr *",
-			"callexpr",
-			"_slice_direct",
-			"ellipsis",
-			"functype",
-			"seqtest",
-			"fib",
-			"function",
-			"farr",
-			"function",
-			"partial",
-			"message",
-			"PartialFuncType",
-			"\"partial\"",
-			"partial[",
-			"q :",
-			"realizeType",
-			"make_shared<ClassType>",
-			"1278",
-			"patch",
-			"t->name"
+			"verifym"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -1592,24 +1560,24 @@
 	"groups":
 	[
 		{
-			"selected": 2,
+			"selected": 3,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "stdlib/core/__init__.seq",
+					"file": "compiler/parser/ast/transform_expr.cpp",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 906,
+						"buffer_size": 44409,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								289,
-								289
+								35934,
+								35934
 							]
 						],
 						"settings":
@@ -1619,12 +1587,27 @@
 							{
 								"close":
 								{
+									"1":
+									[
+										35937,
+										35938
+									]
 								},
 								"icon":
 								{
+									"1":
+									[
+										"Packages/BracketHighlighter/icons/curly_bracket.png",
+										"region.purplish"
+									]
 								},
 								"open":
 								{
+									"1":
+									[
+										35880,
+										35881
+									]
 								},
 								"unmatched":
 								{
@@ -1632,31 +1615,51 @@
 							},
 							"bracket_highlighter.regions":
 							[
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
 								"bh_c_define",
 								"bh_c_define_center",
 								"bh_c_define_open",
 								"bh_c_define_close",
 								"bh_c_define_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
 								"bh_curly",
 								"bh_curly_center",
 								"bh_curly_open",
 								"bh_curly_close",
 								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
 								"bh_double_quote",
 								"bh_double_quote_center",
 								"bh_double_quote_open",
 								"bh_double_quote_close",
 								"bh_double_quote_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
 								"bh_tag",
 								"bh_tag_center",
 								"bh_tag_open",
@@ -1666,42 +1669,24 @@
 								"bh_default_center",
 								"bh_default_open",
 								"bh_default_close",
-								"bh_default_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
+								"bh_default_content"
 							],
 							"git_gutter_is_enabled": true,
 							"incomplete_sync": null,
 							"remote_loading": false,
-							"sorttabs_lastactivated": 1594919268.01,
 							"synced": false,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tabs_extra_last_activated": 1594919268.01,
-							"tabs_extra_last_activated_sheet_index": 0
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 2,
+							"tabs_extra_last_activated": 1595801813.81,
+							"tabs_extra_last_activated_sheet_index": 0,
+							"tabs_extra_spawned": true,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 7,
+					"stack_index": 3,
 					"type": "text"
 				},
 				{
@@ -1710,15 +1695,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 44202,
+						"buffer_size": 47667,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								41012,
-								41012
+								28280,
+								28280
 							]
 						],
 						"settings":
@@ -1727,129 +1712,28 @@
 							"bracket_highlighter.locations":
 							{
 								"close":
-								{
-								},
-								"icon":
-								{
-								},
-								"open":
-								{
-								},
-								"unmatched":
 								{
 									"1":
 									[
-										41112,
-										41113
+										28300,
+										28301
 									]
-								}
-							},
-							"bracket_highlighter.regions":
-							[
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"git_gutter_is_enabled": true,
-							"incomplete_sync": null,
-							"remote_loading": false,
-							"sorttabs_lastactivated": 1594921837.02,
-							"synced": false,
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"tab_size": 2,
-							"tabs_extra_last_activated": 1594921841.36,
-							"tabs_extra_last_activated_sheet_index": 1,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 6.0,
-						"translation.y": 14363.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 4,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
-					"file": "scratch.seq",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 9001,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								43,
-								43
-							]
-						],
-						"settings":
-						{
-							"bracket_highlighter.busy": false,
-							"bracket_highlighter.locations":
-							{
-								"close":
-								{
 								},
 								"icon":
 								{
+									"1":
+									[
+										"Packages/BracketHighlighter/icons/round_bracket.png",
+										"region.yellowish"
+									]
 								},
 								"open":
 								{
+									"1":
+									[
+										28255,
+										28256
+									]
 								},
 								"unmatched":
 								{
@@ -1857,31 +1741,51 @@
 							},
 							"bracket_highlighter.regions":
 							[
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
 								"bh_c_define",
 								"bh_c_define_center",
 								"bh_c_define_open",
 								"bh_c_define_close",
 								"bh_c_define_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
 								"bh_curly",
 								"bh_curly_center",
 								"bh_curly_open",
 								"bh_curly_close",
 								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
 								"bh_double_quote",
 								"bh_double_quote_center",
 								"bh_double_quote_open",
 								"bh_double_quote_close",
 								"bh_double_quote_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
 								"bh_tag",
 								"bh_tag_center",
 								"bh_tag_open",
@@ -1891,449 +1795,37 @@
 								"bh_default_center",
 								"bh_default_open",
 								"bh_default_close",
-								"bh_default_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
+								"bh_default_content"
 							],
 							"git_gutter_is_enabled": true,
 							"incomplete_sync": null,
-							"remote_loading": false,
-							"sorttabs_lastactivated": 1594923193.09,
-							"synced": false,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tabs_extra_last_activated": 1594923193.09,
-							"tabs_extra_last_activated_sheet_index": 2
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tabs_extra_last_activated": 1595823667.96,
+							"tabs_extra_last_activated_sheet_index": 1,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 3,
-					"type": "text"
-				}
-			]
-		},
-		{
-			"selected": 4,
-			"sheets":
-			[
-				{
-					"buffer": 3,
-					"file": "compiler/parser/ast/types.h",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 9893,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								8118,
-								8118
-							]
-						],
-						"settings":
-						{
-							"bracket_highlighter.busy": false,
-							"bracket_highlighter.locations":
-							{
-								"close":
-								{
-									"1":
-									[
-										8118,
-										8119
-									]
-								},
-								"icon":
-								{
-									"1":
-									[
-										"Packages/BracketHighlighter/icons/round_bracket.png",
-										"region.yellowish"
-									]
-								},
-								"open":
-								{
-									"1":
-									[
-										8033,
-										8034
-									]
-								},
-								"unmatched":
-								{
-								}
-							},
-							"bracket_highlighter.regions":
-							[
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"git_gutter_is_enabled": true,
-							"incomplete_sync": null,
-							"remote_loading": false,
-							"sorttabs_lastactivated": 1594921726.52,
-							"synced": false,
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"tab_size": 2,
-							"tabs_extra_last_activated": 1594921726.52,
-							"tabs_extra_last_activated_sheet_index": 0,
-							"tabs_extra_moving":
-							[
-								7,
-								1
-							],
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 2975.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 6,
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "compiler/parser/ast/types.cpp",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 12785,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								5766,
-								5766
-							]
-						],
-						"settings":
-						{
-							"bracket_highlighter.busy": false,
-							"bracket_highlighter.locations":
-							{
-								"close":
-								{
-									"1":
-									[
-										5862,
-										5863
-									]
-								},
-								"icon":
-								{
-									"1":
-									[
-										"Packages/BracketHighlighter/icons/round_bracket.png",
-										"region.yellowish"
-									]
-								},
-								"open":
-								{
-									"1":
-									[
-										5701,
-										5702
-									]
-								},
-								"unmatched":
-								{
-								}
-							},
-							"bracket_highlighter.regions":
-							[
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"git_gutter_is_enabled": true,
-							"incomplete_sync": null,
-							"remote_loading": false,
-							"sorttabs_lastactivated": 1594922440.27,
-							"synced": false,
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"tab_size": 2,
-							"tabs_extra_last_activated": 1594922441.06,
-							"tabs_extra_last_activated_sheet_index": 1,
-							"tabs_extra_spawned": true,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 2796.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 5,
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "compiler/parser/ast/transform_expr.cpp",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 39706,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								2787,
-								2787
-							]
-						],
-						"settings":
-						{
-							"bracket_highlighter.busy": false,
-							"bracket_highlighter.locations":
-							{
-								"close":
-								{
-									"1":
-									[
-										3123,
-										3124
-									]
-								},
-								"icon":
-								{
-									"1":
-									[
-										"Packages/BracketHighlighter/icons/curly_bracket.png",
-										"region.purplish"
-									]
-								},
-								"open":
-								{
-									"1":
-									[
-										2386,
-										2387
-									]
-								},
-								"unmatched":
-								{
-								}
-							},
-							"bracket_highlighter.regions":
-							[
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"git_gutter_is_enabled": true,
-							"incomplete_sync": null,
-							"remote_loading": false,
-							"sorttabs_lastactivated": 1594922831.07,
-							"synced": false,
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"tab_size": 2,
-							"tabs_extra_last_activated": 1594922831.07,
-							"tabs_extra_last_activated_sheet_index": 2,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 804.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 2,
 					"type": "text"
 				},
 				{
-					"buffer": 6,
-					"file": "compiler/parser/parser.cpp",
+					"buffer": 2,
+					"file": "compiler/parser/ast/transform_ctx.cpp",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3612,
+						"buffer_size": 9816,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1038,
-								1038
+								3991,
+								3991
 							]
 						],
 						"settings":
@@ -2343,27 +1835,12 @@
 							{
 								"close":
 								{
-									"1":
-									[
-										1075,
-										1076
-									]
 								},
 								"icon":
 								{
-									"1":
-									[
-										"Packages/BracketHighlighter/icons/curly_bracket.png",
-										"region.purplish"
-									]
 								},
 								"open":
 								{
-									"1":
-									[
-										942,
-										943
-									]
 								},
 								"unmatched":
 								{
@@ -2371,36 +1848,26 @@
 							},
 							"bracket_highlighter.regions":
 							[
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
 								"bh_square",
 								"bh_square_center",
 								"bh_square_open",
 								"bh_square_close",
 								"bh_square_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
 								"bh_single_quote",
 								"bh_single_quote_center",
 								"bh_single_quote_open",
 								"bh_single_quote_close",
 								"bh_single_quote_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
 								"bh_default",
 								"bh_default_center",
 								"bh_default_open",
@@ -2411,31 +1878,41 @@
 								"bh_round_open",
 								"bh_round_close",
 								"bh_round_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
 								"bh_regex",
 								"bh_regex_center",
 								"bh_regex_open",
 								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
+								"bh_regex_content"
 							],
 							"git_gutter_is_enabled": true,
 							"incomplete_sync": null,
 							"remote_loading": false,
-							"sorttabs_lastactivated": 1594922895.18,
 							"synced": false,
 							"syntax": "Packages/C++/C++.sublime-syntax",
 							"tab_size": 2,
-							"tabs_extra_last_activated": 1594922895.28,
-							"tabs_extra_last_activated_sheet_index": 3,
+							"tabs_extra_last_activated": 1595825406.98,
+							"tabs_extra_last_activated_sheet_index": 2,
+							"tabs_extra_spawned": true,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
@@ -2446,20 +1923,20 @@
 					"type": "text"
 				},
 				{
-					"buffer": 7,
-					"file": "compiler/lang/seq.h",
+					"buffer": 3,
+					"file": "/Users/inumanag/Desktop/links_and_haptree",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4484,
+						"buffer_size": 8536,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1059,
-								1059
+								750,
+								750
 							]
 						],
 						"settings":
@@ -2469,27 +1946,12 @@
 							{
 								"close":
 								{
-									"1":
-									[
-										1287,
-										1288
-									]
 								},
 								"icon":
 								{
-									"1":
-									[
-										"Packages/BracketHighlighter/icons/curly_bracket.png",
-										"region.purplish"
-									]
 								},
 								"open":
 								{
-									"1":
-									[
-										1044,
-										1045
-									]
 								},
 								"unmatched":
 								{
@@ -2497,36 +1959,26 @@
 							},
 							"bracket_highlighter.regions":
 							[
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
 								"bh_square",
 								"bh_square_center",
 								"bh_square_open",
 								"bh_square_close",
 								"bh_square_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
 								"bh_single_quote",
 								"bh_single_quote_center",
 								"bh_single_quote_open",
 								"bh_single_quote_close",
 								"bh_single_quote_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
 								"bh_default",
 								"bh_default_center",
 								"bh_default_open",
@@ -2537,36 +1989,43 @@
 								"bh_round_open",
 								"bh_round_close",
 								"bh_round_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
 								"bh_regex",
 								"bh_regex_center",
 								"bh_regex_open",
 								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
+								"bh_regex_content"
 							],
-							"git_gutter_is_enabled": true,
+							"git_gutter_is_enabled": false,
 							"incomplete_sync": null,
 							"remote_loading": false,
-							"sorttabs_lastactivated": 1594923189.89,
 							"synced": false,
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"tab_size": 2,
-							"tabs_extra_last_activated": 1594923189.89,
-							"tabs_extra_last_activated_sheet_index": 4,
-							"tabs_extra_spawned": true,
-							"translate_tabs_to_spaces": true
+							"syntax": "Packages/Text/Plain text.tmLanguage",
+							"tabs_extra_last_activated": 1595898939.04,
+							"tabs_extra_last_activated_sheet_index": 3,
+							"tabs_extra_spawned": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 193.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
@@ -2577,7 +2036,7 @@
 	],
 	"incremental_find":
 	{
-		"height": 22.0
+		"height": 24.0
 	},
 	"input":
 	{
@@ -2592,18 +2051,11 @@
 				0,
 				1,
 				1
-			],
-			[
-				1,
-				0,
-				2,
-				1
 			]
 		],
 		"cols":
 		[
 			0.0,
-			0.45949388587,
 			1.0
 		],
 		"rows":
@@ -2657,7 +2109,7 @@
 	"project": "seq.sublime-project",
 	"replace":
 	{
-		"height": 40.0
+		"height": 44.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -2667,6 +2119,194 @@
 		"selected_items":
 		[
 			[
+				"slice",
+				"stdlib/core/slice.seq"
+			],
+			[
+				"str",
+				"stdlib/core/str.seq"
+			],
+			[
+				"__intern",
+				"stdlib/core/__internal__.seq"
+			],
+			[
+				"strings.s",
+				"stdlib/algorithms/strings.seq"
+			],
+			[
+				"__",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"list.s",
+				"stdlib/core/collections/list.seq"
+			],
+			[
+				"ast.c",
+				"compiler/parser/ast/ast.cpp"
+			],
+			[
+				"ast",
+				"compiler/parser/ast/ast.cpp"
+			],
+			[
+				"list",
+				"stdlib/core/collections/list.seq"
+			],
+			[
+				"_stmt",
+				"compiler/parser/ast/transform_stmt.cpp"
+			],
+			[
+				"range",
+				"stdlib/core/range.seq"
+			],
+			[
+				"__in",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"",
+				"scratch.seq"
+			],
+			[
+				"scra",
+				"scratch.seq"
+			],
+			[
+				"codeg",
+				"compiler/parser/ast/codegen.cpp"
+			],
+			[
+				"context",
+				"compiler/parser/ast/context.h"
+			],
+			[
+				"par",
+				"compiler/parser/parser.cpp"
+			],
+			[
+				"ast.cp",
+				"compiler/parser/ast/ast.cpp"
+			],
+			[
+				"gc",
+				"stdlib/core/gc.seq"
+			],
+			[
+				"trans",
+				"compiler/parser/ast/transform.h"
+			],
+			[
+				"__inter",
+				"stdlib/core/__internal__.seq"
+			],
+			[
+				"__init",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"types",
+				"compiler/parser/ast/types.h"
+			],
+			[
+				"contex",
+				"compiler/parser/ast/context.cpp"
+			],
+			[
+				"stmt",
+				"compiler/parser/ast/transform_stmt.cpp"
+			],
+			[
+				"_ctx",
+				"compiler/parser/ast/transform_ctx.h"
+			],
+			[
+				"m_ctx",
+				"compiler/parser/ast/transform_ctx.cpp"
+			],
+			[
+				"common",
+				"compiler/parser/common.cpp"
+			],
+			[
+				"codege",
+				"compiler/parser/ast/codegen.cpp"
+			],
+			[
+				"transf",
+				"compiler/parser/ast/transform.h"
+			],
+			[
+				"transform",
+				"compiler/parser/ast/transform.h"
+			],
+			[
+				"_Stmt",
+				"compiler/parser/ast/transform_stmt.cpp"
+			],
+			[
+				"_expr",
+				"compiler/parser/ast/transform_expr.cpp"
+			],
+			[
+				"transform.",
+				"compiler/parser/ast/transform.h"
+			],
+			[
+				"type",
+				"compiler/parser/ast/types.h"
+			],
+			[
+				"__ini",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"seq.cpp",
+				"compiler/lang/seq.cpp"
+			],
+			[
+				"__init__",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"init",
+				"stdlib/core/__init__.seq"
+			],
+			[
+				"intern",
+				"stdlib/core/__internal__.seq"
+			],
+			[
+				"pars",
+				"compiler/parser/parser.cpp"
+			],
+			[
+				"scr",
+				"scratch.seq"
+			],
+			[
+				"set.s",
+				"stdlib/core/collections/set.seq"
+			],
+			[
+				"parse",
+				"compiler/parser/parser.cpp"
+			],
+			[
+				"code",
+				"compiler/parser/ast/codegen.cpp"
+			],
+			[
+				"option",
+				"compiler/types/optional.cpp"
+			],
+			[
+				"format",
+				"compiler/parser/ast/format.h"
+			],
+			[
 				"comm",
 				"compiler/util/common.h"
 			],
@@ -2675,52 +2315,16 @@
 				"compiler/parser/parser.cpp"
 			],
 			[
-				"trans",
-				"compiler/parser/ast/transform_expr.cpp"
-			],
-			[
-				"scra",
-				"scratch.seq"
-			],
-			[
-				"_expr",
-				"compiler/parser/ast/transform_expr.cpp"
-			],
-			[
-				"_stmt",
-				"compiler/parser/ast/transform_stmt.cpp"
-			],
-			[
-				"types",
-				"compiler/parser/ast/types.h"
-			],
-			[
 				"codegen_ctx",
 				"compiler/parser/ast/codegen_ctx.cpp"
-			],
-			[
-				"codege",
-				"compiler/parser/ast/codegen.cpp"
 			],
 			[
 				"sc",
 				"scratch.seq"
 			],
 			[
-				"code",
-				"compiler/parser/ast/codegen.cpp"
-			],
-			[
 				"builti",
 				"stdlib/core/builtin.seq"
-			],
-			[
-				"str",
-				"stdlib/core/str.seq"
-			],
-			[
-				"type",
-				"compiler/types/types.cpp"
 			],
 			[
 				"core/",
@@ -2731,32 +2335,12 @@
 				"compiler/parser/ast/context.cpp"
 			],
 			[
-				"_ctx",
-				"compiler/parser/ast/transform_ctx.cpp"
-			],
-			[
-				"parse",
-				"compiler/parser/parser.cpp"
-			],
-			[
-				"__in",
-				"stdlib/core/__init__.seq"
-			],
-			[
-				"__",
-				"stdlib/core/__internal__.seq"
-			],
-			[
 				"c_st",
 				"stdlib/core/c_stubs.seq"
 			],
 			[
 				"main",
 				"runtime/main.cpp"
-			],
-			[
-				"__inter",
-				"stdlib/core/__internal__.seq"
 			],
 			[
 				"scrat",
@@ -2775,14 +2359,6 @@
 				"runtime/main.cpp"
 			],
 			[
-				"contex",
-				"compiler/parser/ast/context.cpp"
-			],
-			[
-				"_Stmt",
-				"compiler/parser/ast/transform_stmt.cpp"
-			],
-			[
 				"float",
 				"stdlib/core/float.seq"
 			],
@@ -2791,16 +2367,8 @@
 				"stdlib/math.seq"
 			],
 			[
-				"ast",
-				"compiler/parser/ast/ast.h"
-			],
-			[
 				"ctx",
 				"compiler/parser/ast/codegen_ctx.h"
-			],
-			[
-				"stmt",
-				"compiler/parser/ast/transform_stmt.cpp"
 			],
 			[
 				"tran",
@@ -2813,10 +2381,6 @@
 			[
 				"transfor",
 				"compiler/parser/ast/transform.h"
-			],
-			[
-				"scr",
-				"scratch.seq"
 			],
 			[
 				"seq.seq",
@@ -2855,10 +2419,6 @@
 				"stdlib/core/range.seq"
 			],
 			[
-				"list",
-				"stdlib/core/collections/list.seq"
-			],
-			[
 				"ptr",
 				"compiler/types/ptr.cpp"
 			],
@@ -2879,10 +2439,6 @@
 				"stdlib/core/__internal__.seq"
 			],
 			[
-				"pars",
-				"compiler/parser/parser.cpp"
-			],
-			[
 				"con",
 				"compiler/parser/ast/context.h"
 			],
@@ -2901,10 +2457,6 @@
 			[
 				"slic",
 				"stdlib/core/slice.seq"
-			],
-			[
-				"gc",
-				"stdlib/core/gc.seq"
 			],
 			[
 				"runt",
@@ -2943,14 +2495,6 @@
 				"stdlib/core/slice.seq"
 			],
 			[
-				"par",
-				"compiler/parser/parser.cpp"
-			],
-			[
-				"slice",
-				"stdlib/core/slice.seq"
-			],
-			[
 				"pick",
 				"stdlib/pickle.seq"
 			],
@@ -2961,10 +2505,6 @@
 			[
 				"seq.",
 				"compiler/types/seq.cpp"
-			],
-			[
-				"init",
-				"stdlib/core/__init__.seq"
 			],
 			[
 				"alias",
@@ -2987,20 +2527,12 @@
 				"compiler/parser/ast/transform_expr.cpp"
 			],
 			[
-				"transf",
-				"compiler/parser/ast/transform.h"
-			],
-			[
 				"tra",
 				"compiler/parser/ast/transform.h"
 			],
 			[
 				"__i",
 				"stdlib/core/__init__.seq"
-			],
-			[
-				"format",
-				"compiler/parser/ast/format.cpp"
 			],
 			[
 				"seq",
@@ -3027,16 +2559,8 @@
 				"stdlib/core/float.seq"
 			],
 			[
-				"context",
-				"compiler/parser/ast/context.cpp"
-			],
-			[
 				"types ast",
 				"compiler/parser/ast/types.cpp"
-			],
-			[
-				"range",
-				"stdlib/core/range.seq"
 			],
 			[
 				"_exp",
@@ -3105,78 +2629,6 @@
 			[
 				"grad",
 				"grade.sh"
-			],
-			[
-				"rylan prob2",
-				"rylan/prob2.seq"
-			],
-			[
-				"ryl",
-				"rylan/dbg.seq"
-			],
-			[
-				"set",
-				"setup.py"
-			],
-			[
-				"vers",
-				"aldy/version.py"
-			],
-			[
-				"minor",
-				"aldy/minor.py"
-			],
-			[
-				"major",
-				"aldy/major.py"
-			],
-			[
-				"sam",
-				"aldy/sam.py"
-			],
-			[
-				"lpin",
-				"aldy/lpinterface.py"
-			],
-			[
-				"prob2",
-				"prob2.seq"
-			],
-			[
-				"mai",
-				"pyseq/main.seq"
-			],
-			[
-				"alg",
-				"pyseq/alg.seq"
-			],
-			[
-				"datage",
-				"python/datagen.py"
-			],
-			[
-				"gene",
-				"xseq-old/gene.seq"
-			],
-			[
-				"stat",
-				"pypy/stats.py"
-			],
-			[
-				"os/",
-				"seq/stdlib/os/__init__.seq"
-			],
-			[
-				"ba",
-				"seq/stdlib/bio/bam.seq"
-			],
-			[
-				"stats",
-				"pypy/stats.py"
-			],
-			[
-				"ou",
-				"pyseq/output.seq"
 			]
 		],
 		"width": 0.0
@@ -3203,11 +2655,11 @@
 	"settings":
 	{
 	},
-	"show_minimap": false,
+	"show_minimap": true,
 	"show_open_files": true,
 	"show_tabs": true,
-	"side_bar_visible": false,
-	"side_bar_width": 201.0,
+	"side_bar_visible": true,
+	"side_bar_width": 165.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{

@@ -113,6 +113,7 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
   if (!expr)
     return nullptr;
   TransformVisitor v(ctx, prependStmts);
+  v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
   LOG9("[expr] {} -> {}", *expr, *v.resultExpr);
   if (v.resultExpr && v.resultExpr->getType() &&
@@ -249,10 +250,12 @@ void TransformVisitor::visit(const IdExpr *expr) {
   auto val = processIdentifier(ctx, expr->value);
   if (!val)
     error("identifier '{}' not found", expr->value);
-  if (val->getVar() && (val->getModule() != ctx->getFilename() ||
-                        val->getBase() != ctx->getBase())) {
-    if (!val->getVar()->getType()->canRealize())
-      error("global variables must have realized types");
+  if (val->getVar() &&
+      (val->getModule() != ctx->getFilename() ||
+       val->getBase() != ctx->getBase()) &&
+      val->getBase() == "") { // handle only toplevel calls
+    // if (!val->getVar()->getType()->canRealize())
+    //  error("the type of global variable '{}' is not realized", expr->value);
     resultExpr =
         transform(N<DotExpr>(N<IdExpr>(val->getModule()), expr->value));
     return;
@@ -391,7 +394,7 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
                             move(suite), vector<string>{}));
     vector<CallExpr::Arg> args;
     for (auto &c : cv.captures)
-      args.push_back({c, nullptr});
+      args.push_back({"", N<IdExpr>(c)});
     prepend(
         N<AssignStmt>(N<IdExpr>(var),
                       N<CallExpr>(N<IdExpr>("iter"),
@@ -475,8 +478,8 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
         "!", N<BinaryExpr>(expr->lexpr->clone(), "in", expr->rexpr->clone())));
   } else if (expr->op == "in") {
     resultExpr =
-        transform(N<CallExpr>(N<DotExpr>(expr->lexpr->clone(), "__contains__"),
-                              expr->rexpr->clone()));
+        transform(N<CallExpr>(N<DotExpr>(expr->rexpr->clone(), "__contains__"),
+                              expr->lexpr->clone()));
   } else {
     auto le = transform(expr->lexpr);
     auto re = transform(expr->rexpr);
@@ -868,7 +871,9 @@ vector<int> TransformVisitor::callFunc(types::FuncTypePtr f,
     if (CAST(reorderedArgs[i].value, EllipsisExpr))
       pending.push_back(i);
     // forceUnify(reorderedArgs[i].value, f->argDefs[i].type);
-    forceUnify(reorderedArgs[i].value, f->args[i + 1]);
+
+    if (!wrapOptional(f->args[i + 1], reorderedArgs[i].value))
+      forceUnify(reorderedArgs[i].value, f->args[i + 1]);
   }
   for (auto &i : namedArgs)
     error(i.second, "unknown argument {}", i.first);
