@@ -193,13 +193,25 @@ void TransformVisitor::visit(const IdExpr *expr) {
         transform(N<DotExpr>(N<IdExpr>(val->getModule()), expr->value));
     return;
   }
+  if (expr->value[0] != '.') {
+    auto newName = expr->value;
+    if (auto f = val->getFunc()) {
+      newName =
+          dynamic_pointer_cast<types::FuncType>(f->getType())->canonicalName;
+    } else if (auto f = val->getClass()) {
+      if (auto t = dynamic_pointer_cast<types::ClassType>(f->getType()))
+        newName = t->name;
+    }
+    if (newName.size() && newName[0] == '.')
+      resultExpr = N<IdExpr>(newName);
+  }
+  if (val->getClass() && !val->getClass()->getStatic())
+    resultExpr->markType();
   if (ctx->isTypeChecking()) {
     if (val->getClass() && val->getClass()->getStatic()) {
       resultExpr =
           transform(N<IntExpr>(val->getType()->getStatic()->getValue()));
     } else {
-      if (val->getClass())
-        resultExpr->markType();
       auto typ =
           val->getImport()
               ? make_shared<types::ImportType>(val->getImport()->getFile())
@@ -209,9 +221,6 @@ void TransformVisitor::visit(const IdExpr *expr) {
       if (!newName.empty())
         static_cast<IdExpr *>(resultExpr.get())->value = newName;
     }
-  } else {
-    if (val->getClass())
-      resultExpr->markType();
   }
 }
 

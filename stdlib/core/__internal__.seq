@@ -327,6 +327,15 @@ extend generator[T]:  # class
     @internal
     def __str__(self) -> str: pass
 
+    @internal
+    def next(self) -> T: pass
+    @internal
+    def done(self) -> bool: pass
+    @internal
+    def send(self, what: T) -> T: pass
+    @internal
+    def destroy(self) -> void: pass
+
 @internal
 type array[T](len: int, ptr: ptr[T]):
     @internal

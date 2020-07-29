@@ -163,25 +163,25 @@ extend str:
 
 import algorithms.strings as algorithms
 
-class __str_internal_join:
-    def __init__(self: __str_internal_join, s: str, x: generator[str]):
+type __str_internal_join(s: str):
+    def __new__(s: str, x: generator[str]):
         if len(s) == 0:
-            return str.cat(list(x))
+            return (str.cat(list(x)), )
         v = list[str]()
         for a in x:
             v.append(a)
             v.append(s)
         if v:
             del v[-1]
-        return str.cat(v)
+        return (str.cat(v), )
 
-    def __init__(self: __str_internal_join, s: str, x: list[str]):
+    def __new__(s: str, x: list[str]):
         if len(x) == 0:
-            return ''
+            return ('', )
         if len(x) == 1:
-            return x[0]
+            return (x[0], )
         if len(s) == 0:
-            return str.cat(x)
+            return (str.cat(x), )
 
         # compute length
         n = 0
@@ -204,7 +204,7 @@ class __str_internal_join:
                 r += len(s)
             i += 1
 
-        return str(p, n)
+        return (str(p, n), )
 
 
 extend str:
@@ -236,7 +236,7 @@ extend str:
         return str(p, n)
 
     def join(self, l):
-        return __str_internal_join(self, l)
+        return __str_internal_join(self, l).s
 
     def from_ptr(t: cobj) -> str:
         n = _C.strlen(t)

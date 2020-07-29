@@ -264,7 +264,7 @@ SliceExpr::SliceExpr(ExprPtr s, ExprPtr e, ExprPtr st)
 SliceExpr::SliceExpr(const SliceExpr &e)
     : Expr(e), st(CL(e.st)), ed(CL(e.ed)), step(CL(e.step)) {}
 string SliceExpr::toString() const {
-  return wrap(format("#slice{}{}{)", st ? format(" :start {}", *st) : "",
+  return wrap(format("#slice{}{}{}", st ? format(" :start {}", *st) : "",
                      ed ? format(" :end {}", *ed) : "",
                      step ? format(" :step {}", *step) : ""));
 }
