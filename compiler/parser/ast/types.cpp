@@ -157,6 +157,7 @@ TypePtr LinkType::instantiate(int level, int &unboundCount,
   if (kind == Generic) {
     if (cache.find(id) != cache.end())
       return cache[id];
+    // LOG9("instatiation: #{} -> ?{}", id, unboundCount);
     return cache[id] = make_shared<LinkType>(Unbound, unboundCount++, level);
   } else if (kind == Unbound) {
     return shared_from_this();

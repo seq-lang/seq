@@ -18,7 +18,7 @@ Value *types::FuncType::call(BaseFunc *base, Value *self,
                              const std::vector<Value *> &args,
                              BasicBlock *block, BasicBlock *normal,
                              BasicBlock *unwind) {
-  LLVMContext &context = block->getContext();
+  // LLVMContext &context = block->getContext();
   IRBuilder<> builder(block);
   return normal ? (Value *)builder.CreateInvoke(self, normal, unwind, args)
                 : builder.CreateCall(self, args);

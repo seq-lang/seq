@@ -17,7 +17,7 @@ private:
   std::vector<types::Type *> intermediateTypes;
 
   llvm::BasicBlock *entry;
-  llvm::Value *syncReg;
+  // llvm::Value *syncReg;
 
   struct PipelineCodegenState;
   llvm::Value *codegenPipe(BaseFunc *base, PipelineCodegenState &state);

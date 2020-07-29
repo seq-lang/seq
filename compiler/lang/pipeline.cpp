@@ -7,7 +7,7 @@ using namespace llvm;
 
 PipeExpr::PipeExpr(std::vector<seq::Expr *> stages, std::vector<bool> parallel)
     : Expr(), stages(std::move(stages)), parallel(std::move(parallel)),
-      intermediateTypes(), entry(nullptr), syncReg(nullptr) {
+      intermediateTypes(), entry(nullptr) {
   if (this->parallel.empty())
     this->parallel = std::vector<bool>(this->stages.size(), false);
 }

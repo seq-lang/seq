@@ -50,7 +50,7 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
   if (t)
     return t;
 
-  if (name[0] == '/') 
+  if (name[0] == '/')
     return make_shared<TypeItem::Import>(name,
                                          "", // all classes/fn are toplevel
                                          name.substr(1));

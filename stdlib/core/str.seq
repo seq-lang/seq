@@ -37,7 +37,7 @@ extend str:
         return self._cmp(other) >= 0
 
     def __repr__(self):
-        v = list[str](capacity=len(self) + 2)
+        v = list[str](len(self) + 2)
         v.append("'")
         for c in self:
             d = c
@@ -96,15 +96,12 @@ extend str:
         return self._make_from_range(start, stop, step, length)
 
     def __getitem__(self, s: lsslice):
-        start, stop, step, length = slice.adjust_indices(len(self), end=s.end, step=s.step)
+        start, stop, step, length = slice.adjust_indices(len(self), stop=s.end, step=s.step)
         return self._make_from_range(start, stop, step, length)
 
     def __getitem__(self, s: sslice):
         start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end, step=s.step)
         return self._make_from_range(start, stop, step, length)
-
-    def __contains__(self, pattern: str):
-        return self.find(pattern, 0, len(self)) >= 0
 
     def __iter__(self):
         i = 0
@@ -211,6 +208,9 @@ class __str_internal_join:
 
 
 extend str:
+    def __contains__(self, pattern: str):
+        return self.find(pattern, 0, len(self)) >= 0
+
 # Helper methods
 
     def cati(v: generator[str], total: int):

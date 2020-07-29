@@ -77,5 +77,20 @@ template <typename T, typename U> bool in(const std::vector<T> &c, const U &i) {
   return f != c.end();
 }
 
+template <typename T> std::string v2s(const std::vector<T> &targs) {
+  std::vector<std::string> args;
+  for (auto &t : targs)
+    args.push_back(t->toString());
+  return join(args, ", ");
+}
+
+template <typename T>
+std::string v2s(const std::vector<std::pair<std::string, T>> &targs) {
+  std::vector<std::string> args;
+  for (auto &t : targs)
+    args.push_back(t.second->toString());
+  return join(args, ", ");
+}
+
 } // namespace ast
 } // namespace seq
