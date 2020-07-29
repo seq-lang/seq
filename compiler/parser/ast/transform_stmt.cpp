@@ -657,10 +657,10 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
 
         // __level__++;
         TransformVisitor v(ctx);
-        LOG("=== BEFORE === {} \n{}", canonicalName, stmt->suite->toString());
+        LOG7("=== BEFORE === {} \n{}", canonicalName, stmt->suite->toString());
         auto result = v.transform(stmt->suite.get());
         // TODO : strip types?
-        LOG("=== AFTER ===\n{}", result->toString());
+        LOG7("=== AFTER ===\n{}", result->toString());
         ctx->getRealizations()->funcASTs[canonicalName].second->suite = move(result);
         // __level__--;
         ctx->popBase();

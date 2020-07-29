@@ -274,7 +274,7 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
   } else if (expr->kind == GeneratorExpr::SetGenerator) {
     prepend(N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>("set"))));
     prev->stmts.push_back(N<ExprStmt>(
-        N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "insert"), expr->expr->clone())));
+        N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "add"), expr->expr->clone())));
     prepend(move(suite));
   } else {
     CaptureVisitor cv(ctx);

@@ -25,16 +25,14 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-string chop(const string &s) {
-  return s.size() && s[0] == '.' ? s.substr(1) : s;
-}
+string chop(const string &s) { return s.size() && s[0] == '.' ? s.substr(1) : s; }
 
 LLVMContext::LLVMContext(const string &filename,
                          shared_ptr<RealizationContext> realizations,
                          shared_ptr<ImportContext> imports, seq::Block *block,
                          seq::BaseFunc *base, seq::SeqJIT *jit)
-    : Context<LLVMItem::Item>(filename, realizations, imports),
-      tryCatch(nullptr), jit(jit) {
+    : Context<LLVMItem::Item>(filename, realizations, imports), tryCatch(nullptr),
+      jit(jit) {
   stack.push_front(vector<string>());
   topBaseIndex = topBlockIndex = 0;
   if (block)
@@ -61,8 +59,7 @@ void LLVMContext::addVar(const string &name, seq::Var *v, bool global) {
   add(name, make_shared<LLVMItem::Var>(v, getBase(), global || isToplevel()));
 }
 
-void LLVMContext::addType(const string &name, seq::types::Type *t,
-                          bool global) {
+void LLVMContext::addType(const string &name, seq::types::Type *t, bool global) {
   add(name, make_shared<LLVMItem::Class>(t, getBase(), global || isToplevel()));
 }
 
@@ -70,10 +67,8 @@ void LLVMContext::addFunc(const string &name, seq::BaseFunc *f, bool global) {
   add(name, make_shared<LLVMItem::Func>(f, getBase(), global || isToplevel()));
 }
 
-void LLVMContext::addImport(const string &name, const string &import,
-                            bool global) {
-  add(name,
-      make_shared<LLVMItem::Import>(import, getBase(), global || isToplevel()));
+void LLVMContext::addImport(const string &name, const string &import, bool global) {
+  add(name, make_shared<LLVMItem::Import>(import, getBase(), global || isToplevel()));
 }
 
 void LLVMContext::addBlock(seq::Block *newBlock, seq::BaseFunc *newBase) {
@@ -246,8 +241,8 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
 
   auto block = module->getBlock();
   seq::BaseFunc *base = module;
-  stdlib->lctx = make_shared<LLVMContext>(stdlib->filename, realizations,
-                                          imports, block, base, nullptr);
+  stdlib->lctx = make_shared<LLVMContext>(stdlib->filename, realizations, imports,
+                                          block, base, nullptr);
 
   // Now add all realization stubs
   for (auto &ff : realizations->classRealizations)
@@ -274,8 +269,7 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
         if (ast->args.size() && ast->args[0].name == "self")
           startI = 2;
         for (int i = startI; i < real.type->args.size(); i++)
-          types.push_back(
-              stdlib->lctx->realizeType(real.type->args[i]->getClass()));
+          types.push_back(stdlib->lctx->realizeType(real.type->args[i]->getClass()));
         real.handle = typ->findMagic(ast->name, types);
       } else {
         // LOG7("[codegen] generating fn stub {}", real.fullName);
@@ -287,8 +281,11 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
   CodegenVisitor c(stdlib->lctx);
   c.transform(stdlib->statements.get());
 
-  return make_shared<LLVMContext>(file, realizations, imports, block, base,
-                                  nullptr);
+  auto def = const_cast<ImportContext::Import *>(imports->getImport(file));
+  assert(def);
+  def->lctx =
+      make_shared<LLVMContext>(file, realizations, imports, block, base, nullptr);
+  return def->lctx;
 }
 
 } // namespace ast

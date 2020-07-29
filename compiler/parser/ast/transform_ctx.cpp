@@ -271,7 +271,9 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
 
   auto t2 = TransformVisitor(stdlib).realizeBlock(stmts.get(), true);
   tv->stmts.push_back(move(t2));
-  return make_shared<TypeContext>(file, realizations, imports);
+  auto ctx = make_shared<TypeContext>(file, realizations, imports);
+  imports->addImport(file, file, ctx);
+  return ctx;
 }
 
 void TypeContext::dump(int pad) {

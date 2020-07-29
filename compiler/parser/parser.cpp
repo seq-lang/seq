@@ -29,8 +29,8 @@ void generateDocstr(const std::string &file) {
   // ast::parse_file(file)->accept(d);
 }
 
-seq::SeqModule *parse(const std::string &argv0, const std::string &file,
-                      bool isCode, bool isTest) {
+seq::SeqModule *parse(const std::string &argv0, const std::string &file, bool isCode,
+                      bool isTest) {
   try {
     // auto stmts = isCode ? ast::parse_code(argv0, file) :
     // ast::parse_file(file);
@@ -50,18 +50,20 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     FILE *fo = fopen("tmp/out.htm", "w");
     seq::SeqModule *module;
 
-    int st = 8, lim = 1;
+    int st = 0, lim = 1000;
     for (int ci = st, ii = 0; ci < cases.size() && ii < lim; ci++, ii++) {
       LOG("[[[ case {} ]]]", ci);
-      auto stmts = ast::parseCode(file, cases[ci]);
-      auto ctx = ast::TypeContext::getContext(argv0, file);
+      char abs[PATH_MAX + 1];
+      realpath(file.c_str(), abs);
+      auto stmts = ast::parseCode(abs, cases[ci]);
+      auto ctx = ast::TypeContext::getContext(argv0, abs);
       auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
 
       LOG("--- Done with typecheck ---");
-      LOG("{}", ast::FormatVisitor::format(ctx, tv, false, true));
+      LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
       module = new seq::SeqModule();
-      module->setFileName(file);
-      auto lctx = ast::LLVMContext::getContext(file, ctx, module);
+      module->setFileName(abs);
+      auto lctx = ast::LLVMContext::getContext(abs, ctx, module);
       ast::CodegenVisitor(lctx).transform(tv.get());
       LOG("--- Done with codegen ---");
       module->execute({}, {});
@@ -94,9 +96,8 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     if (isTest)
       throw;
     for (int i = 0; i < e.messages.size(); i++)
-      compilationMessage("\033[1;31merror:\033[0m", e.messages[i],
-                         e.locations[i].file, e.locations[i].line,
-                         e.locations[i].col);
+      compilationMessage("\033[1;31merror:\033[0m", e.messages[i], e.locations[i].file,
+                         e.locations[i].line, e.locations[i].col);
     exit(EXIT_FAILURE);
     return nullptr;
   }
