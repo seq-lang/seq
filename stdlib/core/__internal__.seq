@@ -61,6 +61,9 @@ extend ptr[T]:
     @internal
     def __prefetch_w3__(self) -> void: pass
 
+cobj = ptr[byte]
+type pyobj(p: cobj)
+
 extend int:
     @internal
     def __new__() -> int: pass
@@ -73,7 +76,13 @@ extend int:
     @internal
     def __new__(b: bool) -> int: pass
     @internal
+    def __new__(b: bool) -> int: pass
+    @internal
     def __new__(b: byte) -> int: pass
+    @internal
+    def __new__[N](b: Int[N]) -> int: pass
+    @internal
+    def __new__[N](b: UInt[N]) -> int: pass
     @internal
     def __int__(self) -> int: pass
     @internal

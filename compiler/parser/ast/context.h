@@ -17,11 +17,16 @@ namespace seq {
 namespace ast {
 
 struct RealizationContext {
+  /// List of class methods and members
+  /// Maps canonical class name to a map of methods and members
+  /// and their generalized types
   struct ClassBody {
     // Needs vector as the order is important
     std::vector<std::pair<std::string, types::TypePtr>> members;
     std::unordered_map<std::string, std::vector<types::FuncTypePtr>> methods;
   };
+  std::unordered_map<std::string, ClassBody> classes;
+
   struct FuncRealization {
     std::string fullName;
     types::FuncTypePtr type;
@@ -54,23 +59,16 @@ public:
   /// Get canonical name for a SrcInfo
   std::string getCanonicalName(const SrcInfo &info) const;
   /// Generate canonical name for a SrcInfo and original class/function name
-  std::string generateCanonicalName(const SrcInfo &info,
-                                    const std::string &name);
+  std::string generateCanonicalName(const SrcInfo &info, const std::string &name);
   int &getUnboundCount();
 
 public: /* Lookup */
-  /// List of class methods and members
-  /// Maps canonical class name to a map of methods and members
-  /// and their generalized types
-  std::unordered_map<std::string, ClassBody> classes;
-
 public:
   /// Getters and setters for the method/member/realization lookup tables
   ClassBody *findClass(const std::string &name);
-  const std::vector<types::FuncTypePtr> *
-  findMethod(const std::string &name, const std::string &method) const;
-  types::TypePtr findMember(const std::string &name,
-                            const std::string &member) const;
+  const std::vector<types::FuncTypePtr> *findMethod(const std::string &name,
+                                                    const std::string &method) const;
+  types::TypePtr findMember(const std::string &name, const std::string &member) const;
 
 public: /** Template ASTs **/
   /// Template function ASTs.
@@ -91,18 +89,16 @@ public: /* Realizations */
   /// Current function realizations.
   /// Mapping from a canonical function name to a hashtable
   /// of realized and fully type-checked function ASTs.
-  std::unordered_map<std::string,
-                     std::unordered_map<std::string, FuncRealization>>
+  std::unordered_map<std::string, std::unordered_map<std::string, FuncRealization>>
       funcRealizations;
   /// Current class realizations.
   /// Mapping from a canonical class name to a hashtable
   /// of realized and fully type-checked class ASTs.
 
-  std::unordered_map<std::string,
-                     std::unordered_map<std::string, ClassRealization>>
+  std::unordered_map<std::string, std::unordered_map<std::string, ClassRealization>>
       classRealizations;
 
-  // Maps (v) to (m)
+  // Maps realizedName to canonicalName
   std::unordered_map<std::string, std::string> realizationLookup;
 
   // std::vector<std::set<std::pair<std::string>>>
@@ -112,6 +108,7 @@ public:
   std::vector<ClassRealization> getClassRealizations(const std::string &name);
   std::vector<FuncRealization> getFuncRealizations(const std::string &name);
 
+  std::unordered_map<std::string, types::TypePtr> globalNames;
   std::unordered_set<std::string> variardicCache;
 };
 
@@ -133,8 +130,7 @@ private:
 
 public:
   ImportContext(const std::string &argv0 = "");
-  std::string getImportFile(const std::string &what,
-                            const std::string &relativeTo,
+  std::string getImportFile(const std::string &what, const std::string &relativeTo,
                             bool forceStdlib = false) const;
   const Import *getImport(const std::string &path) const;
   void addImport(const std::string &file, const std::string &name,
@@ -142,8 +138,7 @@ public:
   void setBody(const std::string &name, StmtPtr body);
 };
 
-template <typename T>
-class Context : public std::enable_shared_from_this<Context<T>> {
+template <typename T> class Context : public std::enable_shared_from_this<Context<T>> {
   typedef std::unordered_map<std::string, std::deque<std::shared_ptr<T>>> Map;
 
 protected:
@@ -204,16 +199,13 @@ protected:
   std::string filename;
 
 public:
-  std::shared_ptr<RealizationContext> getRealizations() const {
-    return realizations;
-  }
+  std::shared_ptr<RealizationContext> getRealizations() const { return realizations; }
   std::shared_ptr<ImportContext> getImports() const { return imports; }
   std::string getFilename() const { return filename; }
   void setFilename(const std::string &f) { filename = f; }
 
 public:
-  Context(const std::string &filename,
-          std::shared_ptr<RealizationContext> realizations,
+  Context(const std::string &filename, std::shared_ptr<RealizationContext> realizations,
           std::shared_ptr<ImportContext> imports)
       : realizations(realizations), imports(imports), filename(filename) {}
   virtual ~Context() {}

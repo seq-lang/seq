@@ -1,11 +1,10 @@
-i8  = Int[8]
+i8 = Int[8]
 i16 = Int[16]
 i32 = Int[32]
 i64 = Int[64]
-u8  = UInt[8]
+u8 = UInt[8]
 u16 = UInt[16]
 u32 = UInt[32]
 u64 = UInt[64]
 
-cobj = ptr[byte]
 Jar = ptr[byte]

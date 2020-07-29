@@ -47,8 +47,7 @@ void CodegenVisitor::defaultVisit(const Pattern *n) {
 }
 
 CodegenVisitor::CodegenVisitor(std::shared_ptr<LLVMContext> ctx)
-    : ctx(ctx), resultExpr(nullptr), resultStmt(nullptr),
-      resultPattern(nullptr) {}
+    : ctx(ctx), resultExpr(nullptr), resultStmt(nullptr), resultPattern(nullptr) {}
 
 seq::Expr *CodegenVisitor::transform(const Expr *expr) {
   if (!expr)
@@ -121,14 +120,13 @@ void CodegenVisitor::visit(const StringExpr *expr) {
 }
 
 shared_ptr<LLVMItem::Item>
-CodegenVisitor::processIdentifier(shared_ptr<LLVMContext> tctx,
-                                  const string &id) {
+CodegenVisitor::processIdentifier(shared_ptr<LLVMContext> tctx, const string &id) {
   auto val = tctx->find(id);
   if (!val)
     error(getSrcInfo(), fmt::format("? val {}", id).c_str());
   assert(val);
-  assert(
-      !(val->getVar() && val->isGlobal() && val->getBase() != ctx->getBase()));
+  // assert(
+  // !(val->getVar() && val->isGlobal() && val->getBase() != ctx->getBase()));
   return val;
 }
 
@@ -179,8 +177,8 @@ void CodegenVisitor::visit(const PipeExpr *expr) {
 }
 
 void CodegenVisitor::visit(const TupleIndexExpr *expr) {
-  resultExpr = N<seq::ArrayLookupExpr>(transform(expr->expr),
-                                       N<seq::IntExpr>(expr->index));
+  resultExpr =
+      N<seq::ArrayLookupExpr>(transform(expr->expr), N<seq::IntExpr>(expr->index));
 }
 
 void CodegenVisitor::visit(const CallExpr *expr) {
@@ -241,9 +239,7 @@ void CodegenVisitor::visit(const SuiteStmt *stmt) {
 
 void CodegenVisitor::visit(const PassStmt *stmt) {}
 
-void CodegenVisitor::visit(const BreakStmt *stmt) {
-  resultStmt = N<seq::Break>();
-}
+void CodegenVisitor::visit(const BreakStmt *stmt) { resultStmt = N<seq::Break>(); }
 
 void CodegenVisitor::visit(const ContinueStmt *stmt) {
   resultStmt = N<seq::Continue>();
@@ -272,8 +268,8 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
 }
 
 void CodegenVisitor::visit(const AssignMemberStmt *stmt) {
-  resultStmt = N<seq::AssignMember>(transform(stmt->lhs), stmt->member,
-                                    transform(stmt->rhs));
+  resultStmt =
+      N<seq::AssignMember>(transform(stmt->lhs), stmt->member, transform(stmt->rhs));
 }
 
 void CodegenVisitor::visit(const UpdateStmt *stmt) {
@@ -282,8 +278,7 @@ void CodegenVisitor::visit(const UpdateStmt *stmt) {
   auto var = i->value;
   auto val = ctx->find(var, true);
   assert(val && val->getVar());
-  resultStmt =
-      new seq::Assign(val->getVar()->getHandle(), transform(stmt->rhs));
+  resultStmt = new seq::Assign(val->getVar()->getHandle(), transform(stmt->rhs));
 }
 
 void CodegenVisitor::visit(const DelStmt *stmt) {
@@ -384,22 +379,21 @@ void CodegenVisitor::visit(const MatchStmt *stmt) {
 
 void CodegenVisitor::visit(const ImportStmt *stmt) {
   auto file = stmt->from.first.substr(1);
-  //ctx->getImports()->getImportFile(stmt->from.first, ctx->getFilename());
-  //assert(!file.empty());
+  // ctx->getImports()->getImportFile(stmt->from.first, ctx->getFilename());
+  // assert(!file.empty());
 
-  auto import =
-      const_cast<ImportContext::Import *>(ctx->getImports()->getImport(file));
+  auto import = const_cast<ImportContext::Import *>(ctx->getImports()->getImport(file));
   assert(import);
   if (!import->lctx) {
-    import->lctx = make_shared<LLVMContext>(file, ctx->getRealizations(),
-                                            ctx->getImports(), ctx->getBlock(),
-                                            ctx->getBase(), ctx->getJIT());
+    import->lctx =
+        make_shared<LLVMContext>(file, ctx->getRealizations(), ctx->getImports(),
+                                 ctx->getBlock(), ctx->getBase(), ctx->getJIT());
     CodegenVisitor(import->lctx).transform(import->statements.get());
   }
 
   if (!stmt->what.size()) {
-    ctx->addImport(
-        stmt->from.second == "" ? stmt->from.first : stmt->from.second, file);
+    ctx->addImport(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
+                   file);
   } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
     for (auto &i : *(import->lctx))
       ctx->add(i.first, i.second.front());
@@ -434,9 +428,8 @@ void CodegenVisitor::visit(const TryStmt *stmt) {
   int varIdx = 0;
   for (auto &c : stmt->catches) {
     /// TODO: get rid of typeinfo here?
-    ctx->addBlock(r->addCatch(c.exc->getType()
-                                  ? realizeType(c.exc->getType()->getClass())
-                                  : nullptr));
+    ctx->addBlock(r->addCatch(
+        c.exc->getType() ? realizeType(c.exc->getType()->getClass()) : nullptr));
     ctx->addVar(c.var, r->getVar(varIdx++));
     transform(c.suite);
     ctx->popBlock();
@@ -503,8 +496,8 @@ void CodegenVisitor::visitMethods(const string &name) {
   if (c)
     for (auto &m : c->methods)
       for (auto &mm : m.second) {
-        FunctionStmt *f = CAST(
-            ctx->getRealizations()->getAST(mm->canonicalName), FunctionStmt);
+        FunctionStmt *f =
+            CAST(ctx->getRealizations()->getAST(mm->canonicalName), FunctionStmt);
         visit(f);
       }
 }
@@ -566,8 +559,7 @@ void CodegenVisitor::visit(const WildcardPattern *pat) {
 }
 
 void CodegenVisitor::visit(const GuardedPattern *pat) {
-  resultPattern =
-      N<seq::GuardedPattern>(transform(pat->pattern), transform(pat->cond));
+  resultPattern = N<seq::GuardedPattern>(transform(pat->pattern), transform(pat->cond));
 }
 
 seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {

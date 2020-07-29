@@ -164,7 +164,7 @@ extend str:
 import algorithms.strings as algorithms
 
 type __str_internal_join(s: str):
-    def __new__(s: str, x: generator[str]):
+    def __new__(s: str, x: generator[str]) -> __str_internal_join:
         if len(s) == 0:
             return (str.cat(list(x)), )
         v = list[str]()
@@ -175,7 +175,7 @@ type __str_internal_join(s: str):
             del v[-1]
         return (str.cat(v), )
 
-    def __new__(s: str, x: list[str]):
+    def __new__(s: str, x: list[str]) -> __str_internal_join:
         if len(x) == 0:
             return ('', )
         if len(x) == 1:

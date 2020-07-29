@@ -34,7 +34,7 @@ from LD cimport PyDict_New() -> cobj
 from LD cimport PyDict_SetItem(cobj, cobj, cobj) -> cobj
 from LD cimport PyDict_Next(cobj, ptr[int], ptr[cobj], ptr[cobj]) -> int
 
-type pyobj(p: cobj):
+extend pyobj:
     def __getitem__(self: pyobj, name: str):
         return pyobj.exc_wrap(pyobj(PyObject_GetAttrString(self.p, name.c_str())))
 

@@ -79,8 +79,7 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
     if (auto c = v.resultExpr->getType()->getClass())
       realizeType(c);
   }
-  if (ctx->isTypeChecking() && !allowTypes && v.resultExpr &&
-      v.resultExpr->isType())
+  if (ctx->isTypeChecking() && !allowTypes && v.resultExpr && v.resultExpr->isType())
     error("unexpected type expression");
   return move(v.resultExpr);
 }
@@ -130,8 +129,7 @@ void TransformVisitor::visit(const FStringExpr *expr) {
   for (int i = 0; i < expr->value.size(); i++) {
     if (expr->value[i] == '{') {
       if (braceStart < i)
-        items.push_back(
-            N<StringExpr>(expr->value.substr(braceStart, i - braceStart)));
+        items.push_back(N<StringExpr>(expr->value.substr(braceStart, i - braceStart)));
       if (!braceCount)
         braceStart = i + 1;
       braceCount++;
@@ -153,27 +151,25 @@ void TransformVisitor::visit(const FStringExpr *expr) {
   if (braceCount)
     error("f-string braces are not balanced");
   if (braceStart != expr->value.size())
-    items.push_back(N<StringExpr>(
-        expr->value.substr(braceStart, expr->value.size() - braceStart)));
-  resultExpr = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"),
-                                     N<ListExpr>(move(items))));
+    items.push_back(
+        N<StringExpr>(expr->value.substr(braceStart, expr->value.size() - braceStart)));
+  resultExpr = transform(
+      N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"), N<ListExpr>(move(items))));
 }
 
 // Transformed
 void TransformVisitor::visit(const KmerExpr *expr) {
-  resultExpr = transform(N<CallExpr>(
-      N<IndexExpr>(N<IdExpr>("Kmer"), N<IntExpr>(expr->value.size())),
-      N<SeqExpr>(expr->value)));
+  resultExpr = transform(
+      N<CallExpr>(N<IndexExpr>(N<IdExpr>("Kmer"), N<IntExpr>(expr->value.size())),
+                  N<SeqExpr>(expr->value)));
 }
 
 // Transformed
 void TransformVisitor::visit(const SeqExpr *expr) {
   if (expr->prefix == "p")
-    resultExpr =
-        transform(N<CallExpr>(N<IdExpr>("pseq"), N<StringExpr>(expr->value)));
+    resultExpr = transform(N<CallExpr>(N<IdExpr>("pseq"), N<StringExpr>(expr->value)));
   else if (expr->prefix == "s")
-    resultExpr =
-        transform(N<CallExpr>(N<IdExpr>("seq"), N<StringExpr>(expr->value)));
+    resultExpr = transform(N<CallExpr>(N<IdExpr>("seq"), N<StringExpr>(expr->value)));
   else
     error("invalid prefix '{}'", expr->prefix);
 }
@@ -184,20 +180,17 @@ void TransformVisitor::visit(const IdExpr *expr) {
   if (!val)
     error("identifier '{}' not found", expr->value);
   if (val->getVar() &&
-      (val->getModule() != ctx->getFilename() ||
-       val->getBase() != ctx->getBase()) &&
+      (val->getModule() != ctx->getFilename() || val->getBase() != ctx->getBase()) &&
       val->getBase() == "") { // handle only toplevel calls
     // if (!val->getVar()->getType()->canRealize())
     //  error("the type of global variable '{}' is not realized", expr->value);
-    resultExpr =
-        transform(N<DotExpr>(N<IdExpr>(val->getModule()), expr->value));
+    resultExpr = transform(N<DotExpr>(N<IdExpr>("/" + val->getModule()), expr->value));
     return;
   }
   if (expr->value[0] != '.') {
     auto newName = expr->value;
     if (auto f = val->getFunc()) {
-      newName =
-          dynamic_pointer_cast<types::FuncType>(f->getType())->canonicalName;
+      newName = dynamic_pointer_cast<types::FuncType>(f->getType())->canonicalName;
     } else if (auto f = val->getClass()) {
       if (auto t = dynamic_pointer_cast<types::ClassType>(f->getType()))
         newName = t->name;
@@ -209,13 +202,11 @@ void TransformVisitor::visit(const IdExpr *expr) {
     resultExpr->markType();
   if (ctx->isTypeChecking()) {
     if (val->getClass() && val->getClass()->getStatic()) {
-      resultExpr =
-          transform(N<IntExpr>(val->getType()->getStatic()->getValue()));
+      resultExpr = transform(N<IntExpr>(val->getType()->getStatic()->getValue()));
     } else {
-      auto typ =
-          val->getImport()
-              ? make_shared<types::ImportType>(val->getImport()->getFile())
-              : ctx->instantiate(getSrcInfo(), val->getType());
+      auto typ = val->getImport()
+                     ? make_shared<types::ImportType>(val->getImport()->getFile())
+                     : ctx->instantiate(getSrcInfo(), val->getType());
       resultExpr->setType(forceUnify(resultExpr, typ));
       auto newName = patchIfRealizable(typ, val->getClass());
       if (!newName.empty())
@@ -232,8 +223,8 @@ void TransformVisitor::visit(const UnpackExpr *expr) {
 // Transformed
 void TransformVisitor::visit(const TupleExpr *expr) {
   auto name = generateVariardicStub("tuple", expr->items.size());
-  resultExpr = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"),
-                                     transform(expr->items)));
+  resultExpr = transform(
+      N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), transform(expr->items)));
 }
 
 // Transformed
@@ -241,9 +232,8 @@ void TransformVisitor::visit(const ListExpr *expr) {
   string listVar = getTemporaryVar("lst");
   prepend(N<AssignStmt>(
       N<IdExpr>(listVar),
-      N<CallExpr>(N<IdExpr>("list"), expr->items.size()
-                                         ? N<IntExpr>(expr->items.size())
-                                         : nullptr)));
+      N<CallExpr>(N<IdExpr>("list"),
+                  expr->items.size() ? N<IntExpr>(expr->items.size()) : nullptr)));
   for (int i = 0; i < expr->items.size(); i++)
     prepend(N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(listVar), "append"),
                                     expr->items[i]->clone())));
@@ -255,8 +245,8 @@ void TransformVisitor::visit(const SetExpr *expr) {
   string setVar = getTemporaryVar("set");
   prepend(N<AssignStmt>(N<IdExpr>(setVar), N<CallExpr>(N<IdExpr>("set"))));
   for (int i = 0; i < expr->items.size(); i++)
-    prepend(N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(setVar), "add"),
-                                    expr->items[i]->clone())));
+    prepend(N<ExprStmt>(
+        N<CallExpr>(N<DotExpr>(N<IdExpr>(setVar), "add"), expr->items[i]->clone())));
   resultExpr = transform(N<IdExpr>(setVar));
 }
 
@@ -265,9 +255,9 @@ void TransformVisitor::visit(const DictExpr *expr) {
   string dictVar = getTemporaryVar("dict");
   prepend(N<AssignStmt>(N<IdExpr>(dictVar), N<CallExpr>(N<IdExpr>("dict"))));
   for (int i = 0; i < expr->items.size(); i++)
-    prepend(N<ExprStmt>(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>(dictVar), "__setitem__"),
-        expr->items[i].key->clone(), expr->items[i].value->clone())));
+    prepend(N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(dictVar), "__setitem__"),
+                                    expr->items[i].key->clone(),
+                                    expr->items[i].value->clone())));
   resultExpr = transform(N<IdExpr>(dictVar));
 }
 
@@ -278,13 +268,13 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
   string var = getTemporaryVar("gen");
   if (expr->kind == GeneratorExpr::ListGenerator) {
     prepend(N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>("list"))));
-    prev->stmts.push_back(N<ExprStmt>(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>(var), "append"), expr->expr->clone())));
+    prev->stmts.push_back(N<ExprStmt>(
+        N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "append"), expr->expr->clone())));
     prepend(move(suite));
   } else if (expr->kind == GeneratorExpr::SetGenerator) {
     prepend(N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>("set"))));
-    prev->stmts.push_back(N<ExprStmt>(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>(var), "insert"), expr->expr->clone())));
+    prev->stmts.push_back(N<ExprStmt>(
+        N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "insert"), expr->expr->clone())));
     prepend(move(suite));
   } else {
     CaptureVisitor cv(ctx);
@@ -301,10 +291,9 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
     vector<CallExpr::Arg> args;
     for (auto &c : cv.captures)
       args.push_back({"", N<IdExpr>(c)});
-    prepend(
-        N<AssignStmt>(N<IdExpr>(var),
-                      N<CallExpr>(N<IdExpr>("iter"),
-                                  N<CallExpr>(N<IdExpr>(fnVar), move(args)))));
+    prepend(N<AssignStmt>(
+        N<IdExpr>(var),
+        N<CallExpr>(N<IdExpr>("iter"), N<CallExpr>(N<IdExpr>(fnVar), move(args)))));
   }
   resultExpr = transform(N<IdExpr>(var));
 }
@@ -323,8 +312,8 @@ void TransformVisitor::visit(const DictGeneratorExpr *expr) {
 }
 
 void TransformVisitor::visit(const IfExpr *expr) {
-  auto e = N<IfExpr>(makeBoolExpr(expr->cond), transform(expr->eif),
-                     transform(expr->eelse));
+  auto e =
+      N<IfExpr>(makeBoolExpr(expr->cond), transform(expr->eif), transform(expr->eelse));
   if (ctx->isTypeChecking())
     e->setType(forceUnify(expr, e->eif->getType()));
   resultExpr = move(e);
@@ -355,14 +344,13 @@ void TransformVisitor::visit(const UnaryExpr *expr) {
 // Transformed
 void TransformVisitor::visit(const BinaryExpr *expr) {
   auto magics = unordered_map<string, string>{
-      {"+", "add"},     {"-", "sub"},  {"*", "mul"},     {"**", "pow"},
-      {"/", "truediv"}, {"//", "div"}, {"@", "mathmul"}, {"%", "mod"},
-      {"<", "lt"},      {"<=", "le"},  {">", "gt"},      {">=", "ge"},
-      {"==", "eq"},     {"!=", "ne"},  {"<<", "lshift"}, {">>", "rshift"},
-      {"&", "and"},     {"|", "or"},   {"^", "xor"}};
+      {"+", "add"},     {"-", "sub"},     {"*", "mul"}, {"**", "pow"}, {"/", "truediv"},
+      {"//", "div"},    {"@", "mathmul"}, {"%", "mod"}, {"<", "lt"},   {"<=", "le"},
+      {">", "gt"},      {">=", "ge"},     {"==", "eq"}, {"!=", "ne"},  {"<<", "lshift"},
+      {">>", "rshift"}, {"&", "and"},     {"|", "or"},  {"^", "xor"}};
   if (expr->op == "&&" || expr->op == "||") { // Special case
-    auto e = N<BinaryExpr>(makeBoolExpr(expr->lexpr), expr->op,
-                           makeBoolExpr(expr->rexpr));
+    auto e =
+        N<BinaryExpr>(makeBoolExpr(expr->lexpr), expr->op, makeBoolExpr(expr->rexpr));
     if (ctx->isTypeChecking())
       e->setType(forceUnify(expr, ctx->findInternal("bool")));
     resultExpr = move(e);
@@ -371,8 +359,7 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
     // auto l = transform(expr->lexpr), r = transform(expr->rexpr);
     // if (r->isType()) {
     // }
-    auto e =
-        N<BinaryExpr>(transform(expr->lexpr), expr->op, transform(expr->rexpr));
+    auto e = N<BinaryExpr>(transform(expr->lexpr), expr->op, transform(expr->rexpr));
     if (ctx->isTypeChecking())
       e->setType(forceUnify(expr, ctx->findInternal("bool")));
     resultExpr = move(e);
@@ -383,9 +370,8 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
     resultExpr = transform(N<UnaryExpr>(
         "!", N<BinaryExpr>(expr->lexpr->clone(), "in", expr->rexpr->clone())));
   } else if (expr->op == "in") {
-    resultExpr =
-        transform(N<CallExpr>(N<DotExpr>(expr->rexpr->clone(), "__contains__"),
-                              expr->lexpr->clone()));
+    resultExpr = transform(N<CallExpr>(N<DotExpr>(expr->rexpr->clone(), "__contains__"),
+                                       expr->lexpr->clone()));
   } else {
     auto le = transform(expr->lexpr);
     auto re = transform(expr->rexpr);
@@ -405,15 +391,14 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
         if (expr->inPlace &&
             findBestCall(lc, format("__i{}__", magic), {{"", lc}, {"", rc}}))
           magic = "i" + magic;
-      } else if (findBestCall(rc, format("__r{}__", magic),
-                              {{"", rc}, {"", lc}})) {
+      } else if (findBestCall(rc, format("__r{}__", magic), {{"", rc}, {"", lc}})) {
         magic = "r" + magic;
       } else {
         error("cannot find magic '{}' for {}", magic, lc->toString());
       }
       magic = format("__{}__", magic);
-      resultExpr = transform(N<CallExpr>(
-          N<DotExpr>(expr->lexpr->clone(), magic), expr->rexpr->clone()));
+      resultExpr = transform(
+          N<CallExpr>(N<DotExpr>(expr->lexpr->clone(), magic), expr->rexpr->clone()));
     }
   }
 }
@@ -517,8 +502,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
       parseGeneric(expr->index);
     auto g = e->getType()->getClass();
     if (g->explicits.size() != generics.size())
-      error("expected {} generics, got {}", g->explicits.size(),
-            generics.size());
+      error("expected {} generics, got {}", g->explicits.size(), generics.size());
     for (int i = 0; i < generics.size(); i++)
       forceUnify(g->explicits[i].type, generics[i]);
     auto t = e->getType();
@@ -536,13 +520,13 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     if (auto c = e->getType()->getClass())
       if (chop(c->name).substr(0, 8) == "__tuple_") {
         if (auto ii = CAST(expr->index, IntExpr)) {
-          resultExpr = transform(
-              N<TupleIndexExpr>(expr->expr->clone(), std::stoll(ii->value)));
+          resultExpr =
+              transform(N<TupleIndexExpr>(expr->expr->clone(), std::stoll(ii->value)));
           return;
         }
       }
-    resultExpr = transform(N<CallExpr>(
-        N<DotExpr>(expr->expr->clone(), "__getitem__"), expr->index->clone()));
+    resultExpr = transform(N<CallExpr>(N<DotExpr>(expr->expr->clone(), "__getitem__"),
+                                       expr->index->clone()));
   }
 }
 
@@ -553,8 +537,8 @@ void TransformVisitor::visit(const TupleIndexExpr *expr) {
   auto c = e->getType()->getClass();
   assert(chop(c->name).substr(0, 8) == "__tuple_");
   if (expr->index < 0 || expr->index >= c->args.size())
-    error("tuple index out of range (expected 0..{}, got {})",
-          c->args.size() - 1, expr->index);
+    error("tuple index out of range (expected 0..{}, got {})", c->args.size() - 1,
+          expr->index);
   resultExpr = N<TupleIndexExpr>(move(e), expr->index);
   resultExpr->setType(forceUnify(expr, c->args[expr->index]));
 }
@@ -566,8 +550,7 @@ void TransformVisitor::visit(const StackAllocExpr *expr) {
   auto t = te->getType();
   resultExpr = N<StackAllocExpr>(move(te), move(e));
   if (ctx->isTypeChecking()) {
-    t = ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("array"),
-                                {t});
+    t = ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("array"), {t});
     patchIfRealizable(t, true);
     resultExpr->setType(forceUnify(expr, t));
   }
@@ -618,16 +601,15 @@ void TransformVisitor::visit(const CallExpr *expr) {
       vector<TypePtr> targs;
       for (auto &a : args)
         targs.push_back(a.value->getType());
-      resultExpr =
-          transform(N<CallExpr>(N<DotExpr>(move(e), "__new__"), move(args)));
+      resultExpr = transform(N<CallExpr>(N<DotExpr>(move(e), "__new__"), move(args)));
     } else {
       string var = getTemporaryVar("typ");
       /// TODO: assumes that a class cannot have multiple __new__ magics
       /// WARN: passing e & args that have already been transformed
-      prepend(N<AssignStmt>(N<IdExpr>(var),
-                            N<CallExpr>(N<DotExpr>(move(e), "__new__"))));
-      prepend(N<ExprStmt>(
-          N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__init__"), move(args))));
+      prepend(
+          N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<DotExpr>(move(e), "__new__"))));
+      prepend(
+          N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__init__"), move(args))));
       resultExpr = transform(N<IdExpr>(var));
     }
     return;
@@ -641,8 +623,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
     return;
   }
   if (c && !c->getCallable()) { // route to a call method
-    resultExpr =
-        transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(args)));
+    resultExpr = transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(args)));
     return;
   }
 
@@ -716,8 +697,7 @@ void TransformVisitor::visit(const DotExpr *expr) {
           resultExpr->markType();
         resultExpr->setType(
             forceUnify(expr, ctx->instantiate(getSrcInfo(), ival->getType())));
-        auto newName =
-            patchIfRealizable(resultExpr->getType(), ival->getClass());
+        auto newName = patchIfRealizable(resultExpr->getType(), ival->getClass());
         if (!newName.empty())
           static_cast<DotExpr *>(resultExpr.get())->member = newName;
       }
@@ -757,16 +737,14 @@ void TransformVisitor::visit(const DotExpr *expr) {
           assert(ast);
           if (in(ast->attributes, "property"))
             args.pop_back();
-          resultExpr = transform(
-              N<CallExpr>(N<IdExpr>((*m)[0]->canonicalName), move(args)));
+          resultExpr =
+              transform(N<CallExpr>(N<IdExpr>((*m)[0]->canonicalName), move(args)));
           return;
         }
-      } else if (auto mm = ctx->getRealizations()->findMember(c->name,
-                                                              expr->member)) {
+      } else if (auto mm = ctx->getRealizations()->findMember(c->name, expr->member)) {
         typ = ctx->instantiate(getSrcInfo(), mm, c);
       } else {
-        error("cannot find '{}' in {}", expr->member,
-              lhs->getType()->toString());
+        error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
       }
     } else {
       error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
@@ -831,9 +809,9 @@ void TransformVisitor::visit(const PtrExpr *expr) {
   auto t = param->getType();
   resultExpr = N<PtrExpr>(move(param));
   if (ctx->isTypeChecking())
-    resultExpr->setType(forceUnify(
-        expr, ctx->instantiateGeneric(expr->getSrcInfo(),
-                                      ctx->findInternal("ptr"), {t})));
+    resultExpr->setType(
+        forceUnify(expr, ctx->instantiateGeneric(expr->getSrcInfo(),
+                                                 ctx->findInternal("ptr"), {t})));
 }
 
 // Transformation
@@ -853,8 +831,7 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
 
   string fnVar = getTemporaryVar("anonFn");
   prepend(N<FunctionStmt>(fnVar, nullptr, vector<Param>{}, move(params),
-                          N<ReturnStmt>(expr->expr->clone()),
-                          vector<string>{}));
+                          N<ReturnStmt>(expr->expr->clone()), vector<string>{}));
   vector<CallExpr::Arg> args;
   for (auto &c : cv.captures)
     if (used.find(c) == used.end())
@@ -889,8 +866,7 @@ void CaptureVisitor::visit(const IdExpr *expr) {
     captures.insert(expr->value);
 }
 
-StaticVisitor::StaticVisitor(std::shared_ptr<TypeContext> ctx)
-    : ctx(ctx), value(0) {}
+StaticVisitor::StaticVisitor(std::shared_ptr<TypeContext> ctx) : ctx(ctx), value(0) {}
 
 int StaticVisitor::transform(const Expr *e) {
   StaticVisitor v(ctx);
