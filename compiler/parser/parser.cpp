@@ -19,7 +19,7 @@ using std::string;
 using std::vector;
 
 int __level__ = 0;
-int __dbg_level__ = 7;
+int __dbg_level__ = 0;
 
 namespace seq {
 
