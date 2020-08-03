@@ -18,6 +18,7 @@ find_package(Threads REQUIRED)
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
+find_package(ZLIB REQUIRED)
 
 include(ExternalProject)
 ExternalProject_Add(bdwgc
@@ -59,7 +60,7 @@ endif()
 
 add_library(seqrt_shared SHARED $<TARGET_OBJECTS:seqrt>)
 add_dependencies(seqrt_shared bdwgc)
-target_link_libraries(seqrt_shared PUBLIC ${BDWGC_DIR}/lib/libgc.a Threads::Threads)
+target_link_libraries(seqrt_shared PUBLIC ${ZLIB_LIBRARIES} ${BDWGC_DIR}/lib/libgc.a Threads::Threads)
 if (SEQ_THREADED)
   find_package(OpenMP REQUIRED)
   target_link_libraries(seqrt_shared PUBLIC OpenMP::OpenMP_CXX)
