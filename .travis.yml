@@ -19,7 +19,6 @@ addons:
       - python3-setuptools
       - python-sphinx
       - doxygen
-      - ocaml
   homebrew:
     update: true
     packages:
@@ -32,8 +31,6 @@ addons:
       - doxygen
       - cmake
       - wget
-      - ocaml
-      - ocamlbuild
 
 before_install:
   # build and cache LLVM/Tapir:
@@ -54,6 +51,21 @@ before_install:
       cmake --build . --config Release
       cd -
     fi
+
+  # build and cache OCaml without curses
+  - |
+    if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/ocaml)" ]]; then
+      mkdir -p ${TRAVIS_BUILD_DIR}/ocaml
+      curl -L https://github.com/ocaml/ocaml/archive/4.02.3.tar.gz | tar zxf - -C ${TRAVIS_BUILD_DIR}/ocaml
+      cd ${TRAVIS_BUILD_DIR}/ocaml/ocaml-4.02.3
+      ./configure -no-curses
+      make world.opt
+      cd -
+    fi
+    cd ${TRAVIS_BUILD_DIR}/ocaml/ocaml-4.02.3
+    sudo make install
+    cd -
+
 
   # fix Python:
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --overwrite python3; fi
@@ -123,6 +135,7 @@ cache:
   timeout: 1000
   directories:
     - Tapir-LLVM
+    - ocaml
 
 notifications:
   webhooks:
